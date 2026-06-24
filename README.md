@@ -1,4 +1,4 @@
-# SSO Demo System (基于 GOSSO & GoUno)
+# Gouno Blog (基于 GOSSO & GoUno)
 
 这是一个基于 OIDC 单点登录（SSO）架构的个人博客系统 Demo。项目整合了前端 SPA、后端 API、SSO 身份提供商（IdP）以及 Nginx 统一网关，展示了企业级单点登录系统的前后端全栈集成与部署方案。
 
@@ -40,7 +40,7 @@
 因为项目引用了 `gosso` 作为 Git 子模块，克隆时请附带 `--recursive` 参数：
 ```bash
 git clone --recursive <your-github-repo-url>
-cd sso_demo
+cd gouno-blog
 ```
 如果已经克隆了主仓库，可以通过以下命令初始化并拉取子模块：
 ```bash
@@ -83,7 +83,7 @@ docker compose up -d --build
 ## 📘 开发者集成指南
 
 在基于该架构进行深入的前后端业务开发时，请务必阅读：
-👉 [GOSSO & GoUno 前后端集成开发指南与最佳实践](file:///Users/aben/Git/sso_demo/retrospective.md)
+👉 [GOSSO & GoUno 前后端集成开发指南与最佳实践](./retrospective.md)
 
 主要内容包括：
 1. 同源网关的路由配置要点。
