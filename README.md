@@ -39,7 +39,7 @@
 ### 1. 克隆项目与初始化子模块
 因为项目引用了 `gosso` 作为 Git 子模块，克隆时请附带 `--recursive` 参数：
 ```bash
-git clone --recursive <your-github-repo-url>
+git clone --recursive https://github.com/rushairer/gouno-blog.git
 cd gouno-blog
 ```
 如果已经克隆了主仓库，可以通过以下命令初始化并拉取子模块：
