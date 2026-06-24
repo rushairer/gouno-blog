@@ -75,7 +75,7 @@ docker compose up -d --build
 - 访问后台管理（触发 SSO 登录流）：[http://localhost:8080/admin](http://localhost:8080/admin)
 - 登录默认管理员账户：
   - **用户名**：`admin`
-  - **密码**：`password`
+  - **密码**：`admin123`
 - 登录成功后，即可在后台发布和管理博客文章。
 
 ---
