@@ -1,0 +1,3 @@
+[submodule "gosso"]
+	path = gosso
+	url = https://github.com/rushairer/gosso.git
