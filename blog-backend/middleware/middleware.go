@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"github.com/gin-contrib/timeout"
@@ -47,7 +48,11 @@ func SecurityHeadersMiddleware(isProduction bool) gin.HandlerFunc {
 			ctx.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
 		}
 		ctx.Header("Permissions-Policy", "geolocation=(), camera=(), microphone=(), payment=()")
-		ctx.Header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'")
+		if strings.HasPrefix(ctx.Request.URL.Path, "/swagger") {
+			ctx.Header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: https://unpkg.com; connect-src 'self' https://unpkg.com;")
+		} else {
+			ctx.Header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'")
+		}
 		ctx.Next()
 	}
 }

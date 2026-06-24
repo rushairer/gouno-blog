@@ -3,6 +3,7 @@ package router
 import (
 	"database/sql"
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/gouno"
@@ -37,6 +38,30 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, jwksURL string) {
 
 	registerWebTestRouter(server)
 	registerWebIndexRouter(server)
+
+	// Swagger documentation routes
+	swagger := server.Group("/swagger")
+	{
+		swagger.GET("/openapi.yaml", func(ctx *gin.Context) {
+			ctx.File("./config/openapi.yaml")
+		})
+		swagger.GET("", func(ctx *gin.Context) {
+			content, err := os.ReadFile("./config/swagger.html")
+			if err != nil {
+				ctx.String(http.StatusInternalServerError, "Error reading swagger.html")
+				return
+			}
+			ctx.Data(http.StatusOK, "text/html; charset=utf-8", content)
+		})
+		swagger.GET("/", func(ctx *gin.Context) {
+			content, err := os.ReadFile("./config/swagger.html")
+			if err != nil {
+				ctx.String(http.StatusInternalServerError, "Error reading swagger.html")
+				return
+			}
+			ctx.Data(http.StatusOK, "text/html; charset=utf-8", content)
+		})
+	}
 
 	// Public Blog Routes
 	api := server.Group("/api")

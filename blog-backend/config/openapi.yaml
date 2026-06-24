@@ -1,0 +1,391 @@
+openapi: 3.0.3
+info:
+  title: Gouno Blog API
+  description: REST API for managing posts and comments in Gouno Blog.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080/api
+    description: Nginx gateway local entry point
+paths:
+  /posts:
+    get:
+      summary: List all posts
+      description: Retrieve a paginated list of blog posts, optionally filtered by tag.
+      parameters:
+        - name: tag
+          in: query
+          description: Filter posts by tag
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Page number (1-based)
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          description: Number of items per page
+          required: false
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: A list of posts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostListResponse'
+    post:
+      summary: Create a new post
+      description: Create a new blog post. Requires administrator authentication.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePostRequest'
+      responses:
+        '201':
+          description: Post created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostResponse'
+        '400':
+          description: Invalid input or missing fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (Admin role required)
+
+  /posts/{slugOrID}:
+    get:
+      summary: Get a post by slug or ID
+      description: Retrieve a single blog post details by its slug or unique ID.
+      parameters:
+        - name: slugOrID
+          in: path
+          description: Unique post ID or url slug
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Post details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostResponse'
+        '404':
+          description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /posts/{id}:
+    put:
+      summary: Update an existing post
+      description: Modify an existing blog post details. Requires administrator authentication.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: Post numeric ID
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePostRequest'
+      responses:
+        '200':
+          description: Post updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostResponse'
+        '400':
+          description: Invalid input
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+
+    delete:
+      summary: Delete a post
+      description: Permanently remove a post by ID. Requires administrator authentication.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: Post numeric ID
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Post deleted successfully
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+
+  /tags:
+    get:
+      summary: List all unique tags
+      description: Retrieve a list of all unique tags used across all posts.
+      responses:
+        '200':
+          description: A list of tags
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagsResponse'
+
+  /posts/{slugOrID}/comments:
+    get:
+      summary: List comments for a post
+      description: Retrieve all comments submitted under a specific blog post.
+      parameters:
+        - name: slugOrID
+          in: path
+          description: Unique post ID or slug
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of comments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentListResponse'
+    post:
+      summary: Add a comment to a post
+      description: Submit a new comment to a specific post. Open to public.
+      parameters:
+        - name: slugOrID
+          in: path
+          description: Numeric ID of the post
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCommentRequest'
+      responses:
+        '201':
+          description: Comment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentResponse'
+        '400':
+          description: Missing required fields
+
+  /comments/{id}:
+    delete:
+      summary: Delete a comment
+      description: Remove a comment by its unique ID. Requires administrator authentication.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: Comment numeric ID
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Comment deleted successfully
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Post:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        slug:
+          type: string
+        summary:
+          type: string
+        content:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    Comment:
+      type: object
+      properties:
+        id:
+          type: integer
+        post_id:
+          type: integer
+        author:
+          type: string
+        content:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    CreatePostRequest:
+      type: object
+      required:
+        - title
+        - content
+      properties:
+        title:
+          type: string
+          example: "Getting Started with GoUno"
+        slug:
+          type: string
+          example: "getting-started-with-gouno"
+        summary:
+          type: string
+          example: "An introductory guide to GoUno backend development."
+        content:
+          type: string
+          example: "GoUno is a highly modular Go framework built for developers..."
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["Go", "Framework", "Backend"]
+    CreateCommentRequest:
+      type: object
+      required:
+        - author
+        - content
+      properties:
+        author:
+          type: string
+          example: "John Doe"
+        content:
+          type: string
+          example: "This is a great introductory article!"
+    PostResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: "success"
+        data:
+          $ref: '#/components/schemas/Post'
+    PostListResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: "success"
+        data:
+          type: object
+          properties:
+            list:
+              type: array
+              items:
+                $ref: '#/components/schemas/Post'
+            total:
+              type: integer
+              example: 45
+            page:
+              type: integer
+              example: 1
+            pageSize:
+              type: integer
+              example: 10
+    TagsResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: "success"
+        data:
+          type: array
+          items:
+            type: string
+          example: ["Go", "Vite", "SSO"]
+    CommentResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: "success"
+        data:
+          $ref: '#/components/schemas/Comment'
+    CommentListResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: "success"
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Comment'
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: "Key: 'CreatePostRequest.Title' Error:Field validation for 'Title' failed on the 'required' tag"
+        data:
+          type: object
+          nullable: true
+          example: null
