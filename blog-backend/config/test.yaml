@@ -1,0 +1,47 @@
+web_server:
+    address: 0.0.0.0
+    port: 8080
+    idle_timeout: 60s
+    read_timeout: 5s
+    read_header_timeout: 2s
+    write_timeout: 30s
+    request_timeout: 10s
+    rate_limit_per_minute: 120
+database:
+    default: postgres
+    drivers:
+        sqlite:
+            name: sqlite
+            driver: sqlite3
+            dsn: ":memory:"
+            log_level: 1 #日志级别, 1:Silent 2:Error 3:Warn 4:Info
+        mysql:
+            name: mysql
+            driver: mysql
+            dsn: blog:password@tcp(mysql:3308)/blog_test?charset=utf8mb4&parseTime=True&loc=Local
+            log_level: 1 #日志级别, 1:Silent 2:Error 3:Warn 4:Info
+        postgres:
+            name: postgres
+            driver: pgx
+            dsn: host=127.0.0.1 user=blog password=password dbname=blog_test port=5434 sslmode=disable TimeZone=Asia/Shanghai
+            log_level: 1 #日志级别, 1:Silent 2:Error 3:Warn 4:Info
+redis:
+    dsn: redis://localhost:6379
+    max_active_conns: 6000
+    pool_timeout_seconds: 60
+bigcache:
+    hard_max_cache_size: 6
+task_pipeline:
+    flush_size: 32
+    buffer_size: 64
+    flush_interval: 1s
+smtp:
+    host: localhost
+    port: 1025
+    username: ""
+    password: ""
+    from: "noreply@blog.com"
+captcha:
+    type: math
+log:
+    level: -1 #日志级别, -1: Debug, 0: Info, 1: Warn, 2: Error, 3: DPanic, 4: Panic, 5: Fatal

@@ -1,0 +1,14 @@
+package repository
+
+import "context"
+
+type %sRepository struct {
+}
+
+func New%sRepository() *%sRepository {
+	return &%sRepository{}
+}
+
+func (r *%sRepository) Foo(ctx context.Context) (bar string, err error) {
+	return
+}

@@ -1,0 +1,12 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+logs/
+
+# Local databases & configurations
+db_data/
+*.pem
+/gosso/keys/
