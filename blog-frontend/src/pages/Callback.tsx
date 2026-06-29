@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { exchangeCodeForToken, fetchUserProfile } from '../auth';
+import { handleRedirectCallback } from '../auth';
 
 export default function Callback() {
   const [searchParams] = useSearchParams();
@@ -18,16 +18,12 @@ export default function Callback() {
 
     async function handleCallback() {
       try {
-        const tokenSet = await exchangeCodeForToken(code!, state!);
-        await fetchUserProfile(tokenSet.access_token);
-        
-        // Redirect back to the post-login destination or default to admin panel
-        const postLoginRedirect = localStorage.getItem('post_login_redirect') || '/admin';
-        localStorage.removeItem('post_login_redirect');
-        navigate(postLoginRedirect);
-      } catch (err: any) {
+        const { redirectTo } = await handleRedirectCallback(code!, state!);
+        navigate(redirectTo);
+      } catch (err: unknown) {
         console.error(err);
-        setError(err.message || 'Authentication failed during code exchange');
+        const message = err instanceof Error ? err.message : 'Authentication failed during code exchange';
+        setError(message);
       }
     }
 

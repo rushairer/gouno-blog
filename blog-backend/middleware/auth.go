@@ -35,6 +35,13 @@ type JWTVerifier struct {
 	mu      sync.RWMutex
 }
 
+type AuthOptions struct {
+	RequiredRole string
+	Issuer       string
+	Audience     string
+	ClientID     string
+}
+
 func NewJWTVerifier(jwksURL string) *JWTVerifier {
 	v := &JWTVerifier{
 		jwksURL: jwksURL,
@@ -127,6 +134,10 @@ func (v *JWTVerifier) GetPublicKey(kid string) (*rsa.PublicKey, error) {
 }
 
 func AuthMiddleware(verifier *JWTVerifier, requiredRole string) gin.HandlerFunc {
+	return AuthMiddlewareWithOptions(verifier, AuthOptions{RequiredRole: requiredRole})
+}
+
+func AuthMiddlewareWithOptions(verifier *JWTVerifier, options AuthOptions) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		authHeader := ctx.GetHeader("Authorization")
 		if authHeader == "" {
@@ -141,13 +152,20 @@ func AuthMiddleware(verifier *JWTVerifier, requiredRole string) gin.HandlerFunc 
 		}
 
 		tokenStr := parts[1]
+		parserOptions := make([]jwt.ParserOption, 0, 2)
+		if options.Issuer != "" {
+			parserOptions = append(parserOptions, jwt.WithIssuer(options.Issuer))
+		}
+		if options.Audience != "" {
+			parserOptions = append(parserOptions, jwt.WithAudience(options.Audience))
+		}
 		token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
 			kid, _ := token.Header["kid"].(string)
 			return verifier.GetPublicKey(kid)
-		})
+		}, parserOptions...)
 
 		if err != nil || !token.Valid {
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "invalid or expired token"))
@@ -165,8 +183,19 @@ func AuthMiddleware(verifier *JWTVerifier, requiredRole string) gin.HandlerFunc 
 		ctx.Set("account_id", sub)
 		ctx.Set("claims", claims)
 
+		if options.ClientID != "" {
+			if azp, _ := claims["azp"].(string); azp != "" && azp != options.ClientID {
+				ctx.AbortWithStatusJSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, "forbidden: invalid authorized party"))
+				return
+			}
+			if clientID, _ := claims["client_id"].(string); clientID != "" && clientID != options.ClientID {
+				ctx.AbortWithStatusJSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, "forbidden: invalid client"))
+				return
+			}
+		}
+
 		// Role authorization
-		if requiredRole != "" {
+		if options.RequiredRole != "" {
 			rolesRaw, exists := claims["roles"]
 			if !exists {
 				ctx.AbortWithStatusJSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, "forbidden: missing roles claim"))
@@ -179,7 +208,7 @@ func AuthMiddleware(verifier *JWTVerifier, requiredRole string) gin.HandlerFunc 
 			}
 			hasRole := false
 			for _, r := range rolesArr {
-				if rStr, ok := r.(string); ok && rStr == requiredRole {
+				if rStr, ok := r.(string); ok && rStr == options.RequiredRole {
 					hasRole = true
 					break
 				}

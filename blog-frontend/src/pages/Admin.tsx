@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Plus, Edit2, Trash2, Save, FileText, X, AlertTriangle, MessageSquare } from 'lucide-react';
-import { isLoggedIn, isAdmin, getAccessToken, redirectToAuthorize } from '../auth';
+import { apiFetch, canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
 
 interface Post {
   id: number;
@@ -42,7 +42,7 @@ export default function Admin() {
 
   // Check auth and fetch data
   useEffect(() => {
-    if (!isLoggedIn() || !isAdmin()) {
+    if (!isLoggedIn() || !canManageBlog()) {
       // Redirect to Gosso authorization flow
       redirectToAuthorize('/admin');
       return;
@@ -58,9 +58,10 @@ export default function Admin() {
       if (!response.ok) throw new Error('Failed to load posts');
       const body = await response.json();
       setPosts(body.data.list || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.message || 'Error loading posts');
+      const message = err instanceof Error ? err.message : 'Error loading posts';
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -105,12 +106,6 @@ export default function Admin() {
       .map(t => t.trim())
       .filter(t => t !== '');
 
-    const token = getAccessToken();
-    const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    };
-
     const payload = {
       title: formTitle,
       slug: formSlug,
@@ -122,15 +117,15 @@ export default function Admin() {
     try {
       let response;
       if (isCreating) {
-        response = await fetch('/api/posts', {
+        response = await apiFetch('/api/posts', {
           method: 'POST',
-          headers,
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
       } else if (editingPost) {
-        response = await fetch(`/api/posts/${editingPost.id}`, {
+        response = await apiFetch(`/api/posts/${editingPost.id}`, {
           method: 'PUT',
-          headers,
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
       }
@@ -144,21 +139,18 @@ export default function Admin() {
       setEditingPost(null);
       setIsCreating(false);
       fetchPosts();
-    } catch (err: any) {
-      alert(err.message || 'Error saving post');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error saving post';
+      alert(message);
     }
   };
 
   const handleDeletePost = async (id: number) => {
     if (!confirm('Are you sure you want to delete this post? This will delete all associated comments.')) return;
 
-    const token = getAccessToken();
     try {
-      const response = await fetch(`/api/posts/${id}`, {
+      const response = await apiFetch(`/api/posts/${id}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
       });
 
       if (!response.ok) throw new Error('Failed to delete post');
@@ -167,8 +159,9 @@ export default function Admin() {
         setModeratingPostId(null);
         setSelectedPostComments([]);
       }
-    } catch (err: any) {
-      alert(err.message || 'Error deleting post');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error deleting post';
+      alert(message);
     }
   };
 
@@ -181,29 +174,27 @@ export default function Admin() {
       if (!response.ok) throw new Error('Failed to load comments');
       const body = await response.json();
       setSelectedPostComments(body.data || []);
-    } catch (err: any) {
-      alert(err.message || 'Error fetching comments');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error fetching comments';
+      alert(message);
     }
   };
 
   const handleDeleteComment = async (commentId: number) => {
     if (!confirm('Are you sure you want to delete this comment?')) return;
 
-    const token = getAccessToken();
     try {
-      const response = await fetch(`/api/comments/${commentId}`, {
+      const response = await apiFetch(`/api/comments/${commentId}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
       });
 
       if (!response.ok) throw new Error('Failed to delete comment');
       
       // Refresh comments
       setSelectedPostComments(selectedPostComments.filter(c => c.id !== commentId));
-    } catch (err: any) {
-      alert(err.message || 'Error deleting comment');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error deleting comment';
+      alert(message);
     }
   };
 

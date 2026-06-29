@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, NavLink } from 'react-router-dom';
 import { LogIn, LogOut, BookOpen } from 'lucide-react';
-import { isLoggedIn, logout, getUserProfile, redirectToAuthorize } from './auth';
+import { canManageBlog, isLoggedIn, logout, getUserProfile, redirectToAuthorize } from './auth';
 import type { UserProfile } from './auth';
 
 // Import Pages
@@ -10,24 +10,28 @@ import PostDetail from './pages/PostDetail';
 import Callback from './pages/Callback';
 import Login from './pages/Login';
 import Admin from './pages/Admin';
+import Settings from './pages/Settings';
 
 function Layout({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [logged, setLogged] = useState(false);
+  const [canManage, setCanManage] = useState(false);
 
   useEffect(() => {
     setLogged(isLoggedIn());
     setUser(getUserProfile());
+    setCanManage(canManageBlog());
   }, []);
 
   const handleLogout = () => {
     logout();
     setLogged(false);
     setUser(null);
+    setCanManage(false);
   };
 
   const handleSignIn = () => {
-    redirectToAuthorize();
+    redirectToAuthorize('/admin');
   };
 
   return (
@@ -42,9 +46,14 @@ function Layout({ children }: { children: React.ReactNode }) {
             <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
               Home
             </NavLink>
-            {logged && (
+            {logged && canManage && (
               <NavLink to="/admin" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
                 Admin Panel
+              </NavLink>
+            )}
+            {logged && (
+              <NavLink to="/settings" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+                Settings
               </NavLink>
             )}
             
@@ -99,6 +108,7 @@ export default function App() {
         <Route path="/" element={<Layout><Home /></Layout>} />
         <Route path="/posts/:slug" element={<Layout><PostDetail /></Layout>} />
         <Route path="/admin" element={<Layout><Admin /></Layout>} />
+        <Route path="/settings" element={<Layout><Settings /></Layout>} />
       </Routes>
     </BrowserRouter>
   );

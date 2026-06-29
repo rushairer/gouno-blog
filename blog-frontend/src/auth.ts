@@ -1,201 +1,120 @@
-// OIDC Auth helper using Authorization Code Grant with PKCE
+import { createGossoClient } from '@gosso/client';
+import type { LoginResult, SessionSnapshot, TokenResponse } from '@gosso/client';
 
-const SSO_ISSUER = window.location.origin;
-const CLIENT_ID = 'blog-spa';
-const REDIRECT_URI = `${window.location.origin}/callback`;
+export type {
+  LoginResult,
+  TokenResponse,
+  UserProfile,
+  MfaStatus,
+  MfaEnrollment,
+  PasskeyInfo,
+  SessionInfo,
+  SessionSnapshot,
+} from '@gosso/client';
 
-export interface TokenResponse {
-  access_token: string;
-  refresh_token: string;
-  id_token?: string;
-  expires_in: number;
-}
+export const gossoClient = createGossoClient({
+  issuer: import.meta.env.VITE_GOSSO_ISSUER || window.location.origin,
+  clientId: import.meta.env.VITE_GOSSO_CLIENT_ID || 'blog-spa',
+  redirectUri: `${window.location.origin}/callback`,
+  scope: 'openid profile email',
+  postLoginDefaultPath: '/admin',
+  loginPath: '/login',
+  storagePrefix: 'gouno-blog',
+});
 
-export interface UserProfile {
-  sub: string;
-  name?: string;
-  preferred_username?: string;
-  email?: string;
-  roles?: string[];
-}
+const legacyStorageKeys = {
+  accessToken: 'access_token',
+  refreshToken: 'refresh_token',
+  userProfile: 'user_profile',
+  pkceVerifier: 'pkce_verifier',
+  authState: 'auth_state',
+  postLoginRedirect: 'post_login_redirect',
+  tokenIssuedAt: 'token_issued_at',
+  tokenExpiresIn: 'token_expires_in',
+  refreshLock: 'auth_refresh_lock',
+} satisfies Record<keyof typeof gossoClient.storageKeys, string>;
 
-// Helper to generate a random string for code verifier
-function generateRandomString(length: number): string {
-  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
-  let text = '';
-  for (let i = 0; i < length; i++) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
-  }
-  return text;
-}
-
-// Helper to SHA256 hash a string and base64url encode it
-async function generateCodeChallenge(verifier: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(verifier);
-  const digest = await window.crypto.subtle.digest('SHA-256', data);
-  
-  // Convert ArrayBuffer to Base64url
-  const bytes = new Uint8Array(digest);
-  let binary = '';
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  const base64 = btoa(binary);
-  return base64
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-}
-
-// Save cookie (expires in seconds)
-export function setCookie(name: string, value: string, maxAgeSeconds: number) {
-  // Scoped to localhost/current domain, path /
-  document.cookie = `${name}=${value}; path=/; max-age=${maxAgeSeconds}; SameSite=Lax`;
-}
-
-// Delete cookie
-export function deleteCookie(name: string) {
-  document.cookie = `${name}=; path=/; max-age=-1; SameSite=Lax`;
-}
-
-// Redirect to SSO authorize endpoint
-export async function redirectToAuthorize(customRedirectUri?: string) {
-  const verifier = generateRandomString(64);
-  const state = generateRandomString(16);
-  
-  localStorage.setItem('pkce_verifier', verifier);
-  localStorage.setItem('auth_state', state);
-  if (customRedirectUri) {
-    localStorage.setItem('post_login_redirect', customRedirectUri);
-  }
-
-  const challenge = await generateCodeChallenge(verifier);
-  
-  const authUrl = new URL(`${SSO_ISSUER}/oauth2/authorize`);
-  authUrl.searchParams.append('client_id', CLIENT_ID);
-  authUrl.searchParams.append('response_type', 'code');
-  authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
-  authUrl.searchParams.append('scope', 'openid profile email');
-  authUrl.searchParams.append('code_challenge', challenge);
-  authUrl.searchParams.append('code_challenge_method', 'S256');
-  authUrl.searchParams.append('state', state);
-  
-  window.location.href = authUrl.toString();
-}
-
-// Exchange code for token
-export async function exchangeCodeForToken(code: string, state: string): Promise<TokenResponse> {
-  const savedState = localStorage.getItem('auth_state');
-  const verifier = localStorage.getItem('pkce_verifier');
-  
-  if (state !== savedState) {
-    throw new Error('State mismatch. Potential CSRF attack.');
-  }
-  if (!verifier) {
-    throw new Error('PKCE verifier not found. Authentication flow expired.');
-  }
-
-  const body = new URLSearchParams();
-  body.append('grant_type', 'authorization_code');
-  body.append('client_id', CLIENT_ID);
-  body.append('code', code);
-  body.append('code_verifier', verifier);
-  body.append('redirect_uri', REDIRECT_URI);
-
-  const response = await fetch(`${SSO_ISSUER}/oauth2/token`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: body.toString(),
-  });
-
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`Token exchange failed: ${errText}`);
-  }
-
-  const data: TokenResponse = await response.json();
-  
-  // Save tokens
-  localStorage.setItem('access_token', data.access_token);
-  localStorage.setItem('refresh_token', data.refresh_token);
-  
-  // Set cookie for browser redirects (like subsequent /authorize hits)
-  // Give it the same lifetime as the access token
-  setCookie('access_token', data.access_token, data.expires_in);
-
-  // Clean up PKCE
-  localStorage.removeItem('pkce_verifier');
-  localStorage.removeItem('auth_state');
-
-  return data;
-}
-
-// Get user profile from ID token or UserInfo
-export async function fetchUserProfile(accessToken: string): Promise<UserProfile> {
-  const response = await fetch(`${SSO_ISSUER}/oidc/userinfo`, {
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to fetch user profile');
-  }
-
-  const data = await response.json();
-  
-  // Also parse custom roles from token payload if possible
-  try {
-    const payloadBase64 = accessToken.split('.')[1];
-    const base64 = payloadBase64.replace(/-/g, '+').replace(/_/g, '/');
-    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
-    const payload = JSON.parse(decodeURIComponent(escape(atob(padded))));
-    if (payload.roles) {
-      data.roles = payload.roles;
+function migrateLegacyStorageKeys() {
+  Object.entries(legacyStorageKeys).forEach(([name, legacyKey]) => {
+    const nextKey = gossoClient.storageKeys[name as keyof typeof gossoClient.storageKeys];
+    const legacyValue = localStorage.getItem(legacyKey);
+    if (legacyValue && !localStorage.getItem(nextKey)) {
+      localStorage.setItem(nextKey, legacyValue);
     }
-  } catch (e) {
-    console.error('Error parsing token roles', e);
-  }
-
-  localStorage.setItem('user_profile', JSON.stringify(data));
-  return data;
+  });
 }
 
-// Get current Access Token
-export function getAccessToken(): string | null {
-  return localStorage.getItem('access_token');
-}
+migrateLegacyStorageKeys();
 
-// Get current User Profile
-export function getUserProfile(): UserProfile | null {
-  const profile = localStorage.getItem('user_profile');
-  if (!profile) return null;
+function readClaimsFromAccessToken(accessToken: string | null): Record<string, unknown> | null {
+  if (!accessToken) return null;
   try {
-    return JSON.parse(profile);
+    const payload = accessToken.split('.')[1];
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+    return JSON.parse(atob(padded)) as Record<string, unknown>;
   } catch {
     return null;
   }
 }
 
-// Check if user is logged in
-export function isLoggedIn(): boolean {
-  return getAccessToken() !== null;
+function claimHasRole(claims: Record<string, unknown> | null, role: string): boolean {
+  const roles = claims?.roles;
+  return Array.isArray(roles) && roles.some((item) => item === role);
 }
 
-// Check if user is Admin
+export const authSession = {
+  storageKeys: gossoClient.storageKeys,
+  getAccessToken: gossoClient.getAccessToken,
+  getRefreshToken: gossoClient.getRefreshToken,
+  getUserProfile: gossoClient.getUserProfile,
+  getSnapshot: gossoClient.getSnapshot,
+  isLoggedIn: gossoClient.isLoggedIn,
+  saveTokenSet: gossoClient.saveTokenSet,
+  clear: gossoClient.clear,
+  logout: gossoClient.logout,
+
+  getPostLoginRedirect(defaultPath = '/admin'): string {
+    return localStorage.getItem(gossoClient.storageKeys.postLoginRedirect) || defaultPath;
+  },
+
+  clearPostLoginRedirect() {
+    localStorage.removeItem(gossoClient.storageKeys.postLoginRedirect);
+  },
+};
+
+export const apiFetch = gossoClient.apiFetch;
+export const redirectToAuthorize = gossoClient.redirectToAuthorize;
+export const exchangeCodeForToken = gossoClient.exchangeCodeForToken;
+export const handleRedirectCallback = gossoClient.handleRedirectCallback;
+export const fetchUserProfile = gossoClient.fetchUserProfile;
+export const refreshAccessToken = gossoClient.refreshAccessToken;
+export const getAccessToken = gossoClient.getAccessToken;
+export const getUserProfile = gossoClient.getUserProfile;
+export const isLoggedIn = gossoClient.isLoggedIn;
+
+export function canManageBlog(): boolean {
+  const snapshot: SessionSnapshot = authSession.getSnapshot();
+  if (snapshot.profile?.roles?.includes('admin')) return true;
+  return claimHasRole(readClaimsFromAccessToken(snapshot.accessToken), 'admin');
+}
+
 export function isAdmin(): boolean {
-  const profile = getUserProfile();
-  return profile?.roles?.includes('admin') || false;
+  return canManageBlog();
 }
 
-// Log out user
 export function logout() {
-  localStorage.removeItem('access_token');
-  localStorage.removeItem('refresh_token');
-  localStorage.removeItem('user_profile');
-  deleteCookie('access_token');
-  window.location.href = '/';
+  void gossoClient.logout('/');
+}
+
+export async function loginWithPassword(username: string, password: string): Promise<LoginResult> {
+  return gossoClient.loginWithPassword(username, password);
+}
+
+export async function verifyMfa(mfaToken: string, code: string): Promise<TokenResponse> {
+  return gossoClient.verifyMfa(mfaToken, code);
+}
+
+export async function loginWithPasskey(): Promise<TokenResponse> {
+  return gossoClient.loginWithPasskey();
 }

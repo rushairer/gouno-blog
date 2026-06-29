@@ -13,14 +13,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
-	gounoMiddleware "github.com/rushairer/gouno/middleware"
-	"github.com/spf13/cobra"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"github.com/rushairer/blog-backend/config"
 	"github.com/rushairer/blog-backend/middleware"
 	"github.com/rushairer/blog-backend/router"
 	"github.com/rushairer/blog-backend/utility"
+	gounoMiddleware "github.com/rushairer/gouno/middleware"
+	"github.com/spf13/cobra"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 var webCmd = &cobra.Command{
@@ -85,11 +85,16 @@ func startWebServer(cmd *cobra.Command, args []string) {
 		log.Fatalf("ping database: %v", err)
 	}
 
-	bootstrapDatabase(db, dbConfig.DSN, logger)
+	bootstrapDatabase(db, logger)
 
 	jwksURL := os.Getenv("SSO_JWKS_URL")
 	if jwksURL == "" {
-		jwksURL = "http://localhost:8080/.well-known/jwks.json"
+		jwksURL = "http://localhost:8088/.well-known/jwks.json"
+	}
+	authOptions := middleware.AuthOptions{
+		Issuer:   os.Getenv("SSO_TOKEN_ISSUER"),
+		Audience: os.Getenv("SSO_TOKEN_AUDIENCE"),
+		ClientID: os.Getenv("SSO_CLIENT_ID"),
 	}
 
 	engine := gin.New()
@@ -100,7 +105,7 @@ func startWebServer(cmd *cobra.Command, args []string) {
 		middleware.TimeoutMiddleware(globalConfig.WebServerConfig.RequestTimeout),
 		gounoMiddleware.RateLimitMiddleware(ctx, globalConfig.WebServerConfig.RateLimitPerMinute, time.Minute),
 	)
-	router.RegisterWebRouter(engine, db, jwksURL)
+	router.RegisterWebRouter(engine, db, authOptions, jwksURL)
 
 	httpServer := &http.Server{
 		Addr:              fmt.Sprintf("%s:%s", globalConfig.WebServerConfig.Address, globalConfig.WebServerConfig.Port),

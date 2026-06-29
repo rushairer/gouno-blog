@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:15-alpine
@@ -28,30 +26,6 @@ services:
       timeout: 5s
       retries: 5
 
-  gosso:
-    build:
-      context: ./gosso
-      dockerfile: Dockerfile
-    container_name: sso-identity-provider
-    command: ["web", "-e", "development"]
-    environment:
-      - GOUNO_ENV=development
-      - GOUNO_WEB_SERVER_ADDRESS=0.0.0.0
-      - GOUNO_WEB_SERVER_PORT=8080
-      - GOUNO_DATABASE_DEFAULT=postgres
-      - GOUNO_DATABASE_DRIVERS_POSTGRES_DSN=host=db user=postgres password=password dbname=gosso port=5432 sslmode=disable TimeZone=Asia/Shanghai search_path=public
-      - GOUNO_REDIS_DSN=redis://redis:6379/0
-      - GOUNO_AUTH_ISSUER=http://localhost:8080
-      - GOUNO_AUTH_PRIVATE_KEY_PATH=/app/keys/private.pem
-      - GOUNO_AUTH_TOTP_ENCRYPTION_KEY=0000000000000000000000000000000000000000000000000000000000000000
-    volumes:
-      - ./gosso/keys:/app/keys
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
   blog-backend:
     build:
       context: .
@@ -63,18 +37,20 @@ services:
       - POSTGRES_PASSWORD=password
       - POSTGRES_DATABASE=blog
       - REDIS_URL=redis://redis:6379/0
-      - SSO_JWKS_URL=http://gosso:8080/.well-known/jwks.json
+      - SSO_JWKS_URL=${SSO_JWKS_URL:-http://host.docker.internal:8088/.well-known/jwks.json}
+      - SSO_TOKEN_ISSUER=${SSO_TOKEN_ISSUER:-http://localhost:8088}
+      - SSO_CLIENT_ID=${SSO_CLIENT_ID:-blog-spa}
     depends_on:
       db:
         condition: service_healthy
-      gosso:
-        # Wait for gosso to start up so it runs migrations and blog-backend can seed
-        condition: service_started
 
   blog-frontend:
     build:
       context: ./blog-frontend
       dockerfile: Dockerfile
+      args:
+        VITE_GOSSO_ISSUER: ${VITE_GOSSO_ISSUER:-http://localhost:8088}
+        VITE_GOSSO_CLIENT_ID: ${VITE_GOSSO_CLIENT_ID:-blog-spa}
     container_name: sso-blog-frontend
     depends_on:
       - blog-backend
@@ -89,7 +65,6 @@ services:
     depends_on:
       - blog-frontend
       - blog-backend
-      - gosso
 
 volumes:
   db_data:

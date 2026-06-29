@@ -1,19 +1,18 @@
 # Gouno Blog (基于 GOSSO & GoUno)
 
-这是一个基于 OIDC 单点登录（SSO）架构的个人博客系统 Demo。项目整合了前端 SPA、后端 API、SSO 身份提供商（IdP）以及 Nginx 统一网关，展示了企业级单点登录系统的前后端全栈集成与部署方案。
+这是一个基于 OIDC 单点登录（SSO）架构的个人博客系统 Demo。项目包含前端 SPA、后端 API 和博客网关；身份提供商（例如 GOSSO）作为外部服务通过配置接入。
 
 ---
 
 ## 🏗️ 架构设计
 
-系统采用**同源反向代理网关**架构，规避了跨域（CORS）与浏览器第三方 Cookie 限制，具体拓扑如下：
+系统采用“业务应用轻依赖身份提供商”的架构。`gouno-blog` 不包含 GOSSO 源码，也不直接写入 GOSSO 数据库；它只通过 OIDC/OAuth2 和 JWKS 与外部身份服务交互。
 
 * **Nginx Gateway (`localhost:8080`)**：统一网关入口。
   - `/` -> **blog-frontend** (React SPA 门户)
   - `/api/` -> **blog-backend** (GoUno 博客后端)
-  - `/api/v1/auth/` 等 -> **gosso** (SSO 认证服务)
-* **gosso (`submodule`)**：基于 OIDC/OAuth2 协议的统一身份认证服务，配合 PostgreSQL/Redis。
-* **blog-backend**：博客 API 后端，使用 `gouno` Web 框架开发，向 `gosso` 拉取 JWKS 公钥并校验登录凭证与用户权限。
+* **外部 GOSSO / OIDC Provider**：负责登录、授权码流程、Token 签发、MFA、Passkey 等身份能力。
+* **blog-backend**：博客 API 后端，使用 `gouno` Web 框架开发，向身份服务拉取 JWKS 公钥并校验登录凭证与用户权限。
 * **blog-frontend**：基于 React 构建的单页面应用（SPA），提供门户展示与 `/admin` 博客管理控制台。
 
 ---
@@ -28,55 +27,65 @@
 ├── nginx-gateway.conf         # Nginx 反向代理配置
 ├── init.sql                   # 数据库初始化脚本
 ├── blog-backend/              # 博客后端微服务 (GoUno)
-├── blog-frontend/             # 博客前端门户 (React)
-└── gosso/                     # SSO 身份认证服务 (Git Submodule)
+└── blog-frontend/             # 博客前端门户 (React)
 ```
 
 ---
 
 ## 🚀 快速开始
 
-### 1. 克隆项目与初始化子模块
-因为项目引用了 `gosso` 作为 Git 子模块，克隆时请附带 `--recursive` 参数：
+### 1. 克隆项目
 ```bash
-git clone --recursive https://github.com/rushairer/gouno-blog.git
+git clone https://github.com/rushairer/gouno-blog.git
 cd gouno-blog
 ```
-如果已经克隆了主仓库，可以通过以下命令初始化并拉取子模块：
-```bash
-git submodule update --init --recursive
-```
 
-### 2. 生成 GOSSO 签名密钥
-SSO 服务需要一对 RSA 密钥来签发和验证 OIDC 令牌（JWT）。在运行容器前，在本地生成密钥对：
-```bash
-# 创建密钥目录
-mkdir -p gosso/keys
+### 2. 准备外部身份服务
+运行前需要有一个可访问的 GOSSO/OIDC Provider，并注册博客前端 OAuth client：
 
-# 生成 RSA 私钥（公钥会在运行时由 GOSSO 自动推导并以 JWKS 形式暴露）
-openssl genpkey -algorithm RSA -out gosso/keys/private.pem -pkeyopt rsa_keygen_bits:2048
-```
+- Client ID：`blog-spa`
+- Redirect URI：`http://localhost:8080/callback`
+- Scopes：`openid profile email`
+
+后端管理接口仍由 blog 后端执行权限校验；当前默认要求 Access Token 中包含 `roles: ["admin"]`。
 
 ### 3. 启动本地容器化环境
-使用 Docker Compose 一键编译并运行所有微服务组件：
+默认示例假设外部身份服务公开在 `http://localhost:8088`，容器内可通过 `host.docker.internal:8088` 读取 JWKS。可按需覆盖：
+
 ```bash
+export VITE_GOSSO_ISSUER=http://localhost:8088
+export VITE_GOSSO_CLIENT_ID=blog-spa
+export SSO_JWKS_URL=http://host.docker.internal:8088/.well-known/jwks.json
+export SSO_TOKEN_ISSUER=http://localhost:8088
+export SSO_CLIENT_ID=blog-spa
+
 docker compose up -d --build
 ```
+
 启动后，容器运行状态如下：
 * `sso-blog-gateway` (Nginx, 监听端口 `8080`)
 * `sso-blog-frontend` (前端 SPA)
 * `sso-blog-backend` (后端 API, 监听端口 `8082`)
-* `sso-identity-provider` (GOSSO SSO 认证服务, 监听端口 `8080`)
 * `sso-blog-db` (PostgreSQL 15 数据库)
 * `sso-blog-redis` (Redis 缓存在线 Session)
 
 ### 4. 访问测试
 - 打开浏览器访问门户：[http://localhost:8080/](http://localhost:8080/)
-- 访问后台管理（触发 SSO 登录流）：[http://localhost:8080/admin](http://localhost:8080/admin)
-- 登录默认管理员账户：
-  - **用户名**：`admin`
-  - **密码**：`admin123`
-- 登录成功后，即可在后台发布和管理博客文章。
+- 访问博客后台管理（触发 SSO 登录流）：[http://localhost:8080/admin](http://localhost:8080/admin)
+- 使用外部身份服务中的管理员账户登录。
+- 登录成功后，如果 token 中包含 blog 管理所需角色，即可在博客后台发布和管理文章。
+
+如需同时联调 `gouno-blog`、`gosso` 和 `gosso-admin`，请使用隔壁独立部署项目：
+```bash
+cd ../gouno-cluster-deploy
+docker compose up -d
+```
+集群模式会额外挂载 GOSSO 身份管理控制台：[http://localhost:8080/identity-admin](http://localhost:8080/identity-admin)。
+
+如果需要从相邻源码仓库构建联调，请在部署项目中使用：
+```bash
+docker compose -f docker-compose.yml -f docker-compose.source.yml up -d --build
+```
 
 ---
 

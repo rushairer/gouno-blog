@@ -6,14 +6,14 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rushairer/gouno"
 	"github.com/rushairer/blog-backend/internal/controller"
 	"github.com/rushairer/blog-backend/internal/repository"
 	"github.com/rushairer/blog-backend/internal/service"
 	"github.com/rushairer/blog-backend/middleware"
+	"github.com/rushairer/gouno"
 )
 
-func RegisterWebRouter(server *gin.Engine, db *sql.DB, jwksURL string) {
+func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.AuthOptions, jwksURL string) {
 	// CORS Middleware to allow requests from port 8081
 	server.Use(func(ctx *gin.Context) {
 		ctx.Header("Access-Control-Allow-Origin", "http://localhost:8081")
@@ -34,7 +34,8 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, jwksURL string) {
 
 	// Setup JWT verifier
 	verifier := middleware.NewJWTVerifier(jwksURL)
-	adminAuth := middleware.AuthMiddleware(verifier, "admin")
+	authOptions.RequiredRole = "admin"
+	adminAuth := middleware.AuthMiddlewareWithOptions(verifier, authOptions)
 
 	registerWebTestRouter(server)
 	registerWebIndexRouter(server)
@@ -69,7 +70,7 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, jwksURL string) {
 		api.GET("/posts", ctrl.List)
 		api.GET("/posts/:slugOrID", ctrl.Get)
 		api.GET("/tags", ctrl.ListTags)
-		
+
 		api.GET("/posts/:slugOrID/comments", ctrl.GetComments)
 		api.POST("/posts/:slugOrID/comments", ctrl.CreateComment)
 
