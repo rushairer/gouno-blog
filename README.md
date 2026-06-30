@@ -29,6 +29,7 @@
 ├── docker-compose.source.yml  # 本地源码构建 override
 ├── nginx-gateway.conf         # Nginx 反向代理配置
 ├── init.sql                   # 数据库初始化脚本
+├── seed/                      # 博客 OAuth client 一次性初始化镜像
 ├── keys/                      # 本地 GOSSO RSA 私钥目录（不提交）
 ├── blog-backend/              # 博客后端微服务 (GoUno)
 └── blog-frontend/             # 博客前端门户 (React)
@@ -82,6 +83,7 @@ docker compose up -d
 ```bash
 export GOUNO_BLOG_BACKEND_IMAGE_TAG=sha-...
 export GOUNO_BLOG_FRONTEND_IMAGE_TAG=sha-...
+export GOUNO_BLOG_SEED_IMAGE_TAG=sha-...
 export GOSSO_IMAGE_TAG=sha-...
 export GOSSO_ADMIN_FRONTEND_IMAGE_TAG=sha-...
 export GOSSO_ADMIN_SEED_IMAGE_TAG=sha-...
@@ -92,6 +94,8 @@ export GOSSO_ADMIN_SEED_IMAGE_TAG=sha-...
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.source.yml up -d --build
 ```
+
+`blog-client-seed` 与 `gosso-admin-seed` 一样是一次性初始化容器；默认使用 `ghcr.io/rushairer/gouno-blog-seed` 镜像，本地 source override 会从根目录 `seed/` 构建该镜像。
 
 ### 4. 访问测试
 - 打开浏览器访问门户：[http://localhost:8080/](http://localhost:8080/)

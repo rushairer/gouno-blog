@@ -1,4 +1,9 @@
 services:
+  blog-client-seed:
+    build:
+      context: ./seed
+      dockerfile: Dockerfile
+
   blog-backend:
     build:
       context: .

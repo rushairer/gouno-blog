@@ -83,32 +83,17 @@ services:
         condition: service_started
 
   blog-client-seed:
-    image: postgres:15-alpine
+    image: ghcr.io/rushairer/gouno-blog-seed:${GOUNO_BLOG_SEED_IMAGE_TAG:-main}
     container_name: sso-blog-client-seed
     environment:
-      - PGPASSWORD=password
-    command:
-      - sh
-      - -c
-      - |
-        psql "host=db user=postgres dbname=gosso port=5432 sslmode=disable" <<SQL
-        INSERT INTO oauth2_clients (account_id, client_id, name, description, redirect_uris, grant_types, scopes, is_confidential)
-        VALUES (
-          '00000000-0000-0000-0000-000000000001',
-          'blog-spa',
-          'Personal Blog SPA',
-          'OAuth2 Client for React Blog Frontend',
-          '["http://localhost:8080/callback"]'::jsonb,
-          '["authorization_code"]'::jsonb,
-          '["openid", "profile", "email"]'::jsonb,
-          false
-        )
-        ON CONFLICT (client_id) DO UPDATE SET
-          redirect_uris = EXCLUDED.redirect_uris,
-          grant_types = EXCLUDED.grant_types,
-          scopes = EXCLUDED.scopes,
-          is_confidential = EXCLUDED.is_confidential;
-        SQL
+      - PG_DSN=host=db user=postgres password=password dbname=gosso port=5432 sslmode=disable
+      - BLOG_OAUTH_ACCOUNT_ID=00000000-0000-0000-0000-000000000001
+      - BLOG_OAUTH_CLIENT_ID=blog-spa
+      - BLOG_OAUTH_CLIENT_NAME=Personal Blog SPA
+      - BLOG_OAUTH_CLIENT_DESCRIPTION=OAuth2 Client for React Blog Frontend
+      - BLOG_OAUTH_REDIRECT_URIS=http://localhost:8080/callback
+      - BLOG_OAUTH_GRANT_TYPES=authorization_code
+      - BLOG_OAUTH_SCOPES=openid,profile,email
     depends_on:
       gosso-admin-seed:
         condition: service_completed_successfully
