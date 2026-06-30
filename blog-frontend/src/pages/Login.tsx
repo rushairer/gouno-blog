@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { KeyRound } from 'lucide-react';
+import { Feedback, Field, Panel } from '../components/ui';
 import { loginWithPasskey, loginWithPassword, redirectToAuthorize, verifyMfa } from '../auth';
+import { useI18n } from '../i18n';
 
 export default function Login() {
+  const { t } = useI18n();
   const [searchParams] = useSearchParams();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -18,11 +21,7 @@ export default function Login() {
   const redirectUri = searchParams.get('redirect_uri') || '/admin';
 
   const doRedirect = () => {
-    if (redirectUri.startsWith('/')) {
-      window.location.href = `${window.location.origin}${redirectUri}`;
-      return;
-    }
-    window.location.href = redirectUri;
+    window.location.href = redirectUri.startsWith('/') ? `${window.location.origin}${redirectUri}` : redirectUri;
   };
 
   const continueAfterLogin = async () => {
@@ -33,10 +32,10 @@ export default function Login() {
     await redirectToAuthorize('/admin');
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLogin = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (!username || !password) {
-      setError('Please enter both username and password.');
+      setError(t('bothRequired'));
       return;
     }
 
@@ -53,17 +52,16 @@ export default function Login() {
       await continueAfterLogin();
     } catch (err: unknown) {
       console.error(err);
-      const message = err instanceof Error ? err.message : 'Network error occurred. Please try again.';
-      setError(message);
+      setError(err instanceof Error ? err.message : t('networkError'));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleMfaVerify = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleMfaVerify = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (!mfaCode.trim()) {
-      setError('Please enter your MFA code.');
+      setError(t('mfaRequired'));
       return;
     }
 
@@ -75,8 +73,7 @@ export default function Login() {
       await continueAfterLogin();
     } catch (err: unknown) {
       console.error(err);
-      const message = err instanceof Error ? err.message : 'MFA verification failed.';
-      setError(message);
+      setError(err instanceof Error ? err.message : t('mfaFailed'));
     } finally {
       setLoading(false);
     }
@@ -91,132 +88,84 @@ export default function Login() {
       await continueAfterLogin();
     } catch (err: unknown) {
       console.error(err);
-      const message = err instanceof Error ? err.message : 'Passkey login failed.';
-      setError(message);
+      setError(err instanceof Error ? err.message : t('passkeyFailed'));
     } finally {
       setPasskeyLoading(false);
     }
   };
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', padding: '24px' }}>
-      <div className="glass-card" style={{ maxWidth: '440px', width: '100%' }}>
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <h1
-            style={{
-              background: 'var(--accent-gradient)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              fontSize: '32px',
-              marginBottom: '8px',
-            }}
-          >
-            GOSSO
-          </h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '14.5px' }}>Single Sign-On Identity Portal</p>
+    <div className="auth-page">
+      <Panel className="auth-card">
+        <div className="auth-card__header">
+          <h1>GOSSO</h1>
+          <p>{t('ssoPortal')}</p>
         </div>
 
-        {error && (
-          <div
-            style={{
-              background: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid rgba(239, 68, 68, 0.25)',
-              color: 'var(--danger-color)',
-              padding: '12px',
-              borderRadius: '8px',
-              marginBottom: '20px',
-              fontSize: '14px',
-            }}
-          >
-            {error}
-          </div>
-        )}
+        {error && <Feedback type="error">{error}</Feedback>}
 
         {mfaToken ? (
-          <form onSubmit={handleMfaVerify}>
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', color: 'var(--color-text-muted)', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
-                Authentication code
-              </label>
+          <form className="form-stack" onSubmit={handleMfaVerify}>
+            <Field label={t('authCode')}>
               <input
                 type="text"
                 className="input-field"
-                placeholder="Enter the 6-digit code"
+                placeholder={t('enterMfa')}
                 value={mfaCode}
-                onChange={(e) => setMfaCode(e.target.value)}
+                onChange={(event) => setMfaCode(event.target.value)}
                 disabled={loading}
                 autoFocus
               />
-            </div>
-            <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
-              {loading ? 'Verifying...' : 'Verify and continue'}
+            </Field>
+            <button type="submit" className="btn btn-primary" disabled={loading}>
+              {loading ? t('verifying') : t('verifyContinue')}
             </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={{ width: '100%', marginTop: '12px' }}
-              onClick={() => setMfaToken('')}
-              disabled={loading}
-            >
-              Back
+            <button type="button" className="btn btn-secondary" onClick={() => setMfaToken('')} disabled={loading}>
+              {t('back')}
             </button>
           </form>
         ) : (
-          <>
-            <form onSubmit={handleLogin}>
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', color: 'var(--color-text-muted)', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
-                  Username / Email
-                </label>
+          <div className="form-stack">
+            <form className="form-stack" onSubmit={handleLogin}>
+              <Field label={t('usernameEmail')}>
                 <input
                   type="text"
                   className="input-field"
-                  placeholder="Enter your username"
+                  placeholder={t('enterUsername')}
                   value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  onChange={(event) => setUsername(event.target.value)}
                   disabled={loading}
                   autoFocus
                 />
-              </div>
-
-              <div style={{ marginBottom: '28px' }}>
-                <label style={{ display: 'block', color: 'var(--color-text-muted)', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>
-                  Password
-                </label>
+              </Field>
+              <Field label={t('password')}>
                 <input
                   type="password"
                   className="input-field"
-                  placeholder="Enter your password"
+                  placeholder={t('enterPassword')}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(event) => setPassword(event.target.value)}
                   disabled={loading}
                 />
-              </div>
-
-              <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
-                {loading ? 'Signing in...' : 'Sign In'}
+              </Field>
+              <button type="submit" className="btn btn-primary" disabled={loading}>
+                {loading ? t('signingIn') : t('signIn')}
               </button>
             </form>
 
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={{ width: '100%', marginTop: '12px' }}
-              onClick={handlePasskeyLogin}
-              disabled={passkeyLoading}
-            >
-              <KeyRound style={{ width: '16px', height: '16px' }} />
-              {passkeyLoading ? 'Waiting for passkey...' : 'Continue with passkey'}
+            <button type="button" className="btn btn-secondary" onClick={handlePasskeyLogin} disabled={passkeyLoading}>
+              <KeyRound />
+              {passkeyLoading ? t('passkeyWaiting') : t('passkeyContinue')}
             </button>
-          </>
+          </div>
         )}
 
         {showDevCredentials && (
-          <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '13px', color: 'var(--color-text-dark)' }}>
-            Local defaults: <strong>admin</strong> / <strong>admin123</strong>
-          </div>
+          <p className="muted" style={{ marginTop: '22px', textAlign: 'center', fontSize: '13px' }}>
+            {t('localDefaults')} <strong>admin</strong> / <strong>admin123</strong>
+          </p>
         )}
-      </div>
+      </Panel>
     </div>
   );
 }

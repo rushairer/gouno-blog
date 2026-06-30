@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { loginWithPassword, redirectToAuthorize } from '../../auth';
+import { I18nProvider } from '../../i18n';
 import Login from '../Login';
 
 vi.mock('../../auth', () => ({
@@ -14,11 +15,13 @@ vi.mock('../../auth', () => ({
 
 function renderLogin(initialEntry = '/login') {
   return render(
-    <MemoryRouter initialEntries={[initialEntry]}>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-      </Routes>
-    </MemoryRouter>
+    <I18nProvider>
+      <MemoryRouter initialEntries={[initialEntry]}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+        </Routes>
+      </MemoryRouter>
+    </I18nProvider>
   );
 }
 

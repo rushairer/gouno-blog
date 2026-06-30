@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Plus, Edit2, Trash2, Save, FileText, X, AlertTriangle, MessageSquare } from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { AlertTriangle, Edit2, FileText, MessageSquare, Plus, Save, Trash2, X } from 'lucide-react';
+import { EmptyState, Feedback, Field, IconButton, LoadingState, PageHeader, Panel } from '../components/ui';
 import { apiFetch, canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
+import { useI18n } from '../i18n';
 
 interface Post {
   id: number;
@@ -23,11 +25,11 @@ interface Comment {
 
 export default function Admin() {
   const navigate = useNavigate();
+  const { t, formatDate, formatDateTime } = useI18n();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Editor State
   const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [formTitle, setFormTitle] = useState('');
@@ -36,36 +38,32 @@ export default function Admin() {
   const [formContent, setFormContent] = useState('');
   const [formTags, setFormTags] = useState('');
 
-  // Comment Moderation State
   const [selectedPostComments, setSelectedPostComments] = useState<Comment[]>([]);
   const [moderatingPostId, setModeratingPostId] = useState<number | null>(null);
 
-  // Check auth and fetch data
+  const fetchPosts = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/posts');
+      if (!response.ok) throw new Error(t('failedLoadPosts'));
+      const body = await response.json();
+      setPosts(body.data.list || []);
+    } catch (err: unknown) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : t('failedLoadPosts'));
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
+
   useEffect(() => {
     if (!isLoggedIn() || !canManageBlog()) {
-      // Redirect to Gosso authorization flow
       redirectToAuthorize('/admin');
       return;
     }
 
     fetchPosts();
-  }, [navigate]);
-
-  const fetchPosts = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/posts');
-      if (!response.ok) throw new Error('Failed to load posts');
-      const body = await response.json();
-      setPosts(body.data.list || []);
-    } catch (err: unknown) {
-      console.error(err);
-      const message = err instanceof Error ? err.message : 'Error loading posts';
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [fetchPosts, navigate]);
 
   const handleEditClick = (post: Post) => {
     setEditingPost(post);
@@ -94,24 +92,19 @@ export default function Admin() {
     setIsCreating(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (!formTitle || !formContent) {
-      alert('Title and Content are required.');
+      alert(t('titleContentRequired'));
       return;
     }
-
-    const tagsArr = formTags
-      .split(',')
-      .map(t => t.trim())
-      .filter(t => t !== '');
 
     const payload = {
       title: formTitle,
       slug: formSlug,
       summary: formSummary,
       content: formContent,
-      tags: tagsArr,
+      tags: formTags.split(',').map((tag) => tag.trim()).filter(Boolean),
     };
 
     try {
@@ -132,36 +125,30 @@ export default function Admin() {
 
       if (!response || !response.ok) {
         const errBody = await response?.json();
-        throw new Error(errBody?.message || 'Failed to save post');
+        throw new Error(errBody?.message || t('failedSavePost'));
       }
 
-      // Success
       setEditingPost(null);
       setIsCreating(false);
       fetchPosts();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Error saving post';
-      alert(message);
+      alert(err instanceof Error ? err.message : t('errorSavingPost'));
     }
   };
 
   const handleDeletePost = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this post? This will delete all associated comments.')) return;
+    if (!confirm(t('deletePostConfirm'))) return;
 
     try {
-      const response = await apiFetch(`/api/posts/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) throw new Error('Failed to delete post');
+      const response = await apiFetch(`/api/posts/${id}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error(t('failedDeletePost'));
       fetchPosts();
       if (moderatingPostId === id) {
         setModeratingPostId(null);
         setSelectedPostComments([]);
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Error deleting post';
-      alert(message);
+      alert(err instanceof Error ? err.message : t('errorDeletePost'));
     }
   };
 
@@ -171,229 +158,177 @@ export default function Admin() {
     setIsCreating(false);
     try {
       const response = await fetch(`/api/posts/${postId}/comments`);
-      if (!response.ok) throw new Error('Failed to load comments');
+      if (!response.ok) throw new Error(t('failedLoadComments'));
       const body = await response.json();
       setSelectedPostComments(body.data || []);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Error fetching comments';
-      alert(message);
+      alert(err instanceof Error ? err.message : t('errorFetchComments'));
     }
   };
 
   const handleDeleteComment = async (commentId: number) => {
-    if (!confirm('Are you sure you want to delete this comment?')) return;
+    if (!confirm(t('deleteCommentConfirm'))) return;
 
     try {
-      const response = await apiFetch(`/api/comments/${commentId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) throw new Error('Failed to delete comment');
-      
-      // Refresh comments
-      setSelectedPostComments(selectedPostComments.filter(c => c.id !== commentId));
+      const response = await apiFetch(`/api/comments/${commentId}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error(t('failedDeleteComment'));
+      setSelectedPostComments(selectedPostComments.filter((comment) => comment.id !== commentId));
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Error deleting comment';
-      alert(message);
+      alert(err instanceof Error ? err.message : t('errorDeleteComment'));
     }
   };
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '32px' }}>Admin Dashboard</h1>
-        {!isCreating && !editingPost && (
-          <button className="btn btn-primary" onClick={handleCreateClick}>
-            <Plus style={{ width: '16px', height: '16px' }} />
-            Write New Post
-          </button>
-        )}
-      </div>
+      <PageHeader
+        title={t('adminDashboard')}
+        action={
+          !isCreating && !editingPost ? (
+            <button className="btn btn-primary" onClick={handleCreateClick} type="button">
+              <Plus />
+              {t('writeNewPost')}
+            </button>
+          ) : null
+        }
+      />
 
       {error && (
-        <div className="glass-card" style={{ borderColor: 'var(--danger-color)', padding: '16px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <AlertTriangle style={{ color: 'var(--danger-color)' }} />
-          <span style={{ color: 'var(--danger-color)' }}>{error}</span>
-        </div>
+        <Feedback type="error">
+          <AlertTriangle size={16} /> {error}
+        </Feedback>
       )}
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '60px 0' }}>
-          <div style={{ width: '30px', height: '30px', borderRadius: '50%', border: '3px solid rgba(255,255,255,0.1)', borderTopColor: 'var(--color-primary)', animation: 'spin 1s linear infinite', margin: '0 auto 12px auto' }}></div>
-          <p style={{ color: 'var(--color-text-muted)' }}>Loading resources...</p>
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-        </div>
+        <LoadingState label={t('loadingResources')} />
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '32px', gridAutoFlow: 'row dense' }}>
-          
-          {/* Main Workspace (Editor / Moderation Panel) */}
+        <div className="workspace-grid">
           {(isCreating || editingPost) && (
-            <div className="glass-card" style={{ order: 1 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', paddingBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                <h2 style={{ fontSize: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <FileText style={{ width: '20px', height: '20px', color: 'var(--color-primary)' }} />
-                  {isCreating ? 'Compose New Post' : `Edit Post: ${editingPost?.title}`}
+            <Panel>
+              <div className="panel-heading">
+                <h2>
+                  <FileText size={20} />
+                  {isCreating ? t('composeNewPost') : t('editPost', { title: editingPost?.title || '' })}
                 </h2>
-                <button style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }} onClick={handleCancel}>
-                  <X style={{ width: '20px', height: '20px' }} />
-                </button>
+                <IconButton label={t('cancel')} onClick={handleCancel} type="button">
+                  <X size={18} />
+                </IconButton>
               </div>
 
-              <form onSubmit={handleSubmit}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                  <div>
-                    <label style={{ display: 'block', color: 'var(--color-text-muted)', marginBottom: '8px', fontSize: '13px' }}>Title</label>
-                    <input 
-                      type="text" 
-                      className="input-field" 
-                      placeholder="e.g. Getting Started with Go" 
-                      value={formTitle}
-                      onChange={(e) => setFormTitle(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', color: 'var(--color-text-muted)', marginBottom: '8px', fontSize: '13px' }}>Slug (optional URL slug)</label>
-                    <input 
-                      type="text" 
-                      className="input-field" 
-                      placeholder="e.g. getting-started-go" 
-                      value={formSlug}
-                      onChange={(e) => setFormSlug(e.target.value)}
-                    />
-                  </div>
+              <form className="form-stack" onSubmit={handleSubmit}>
+                <div className="split-grid">
+                  <Field label={t('title')}>
+                    <input className="input-field" placeholder={t('titlePlaceholder')} value={formTitle} onChange={(event) => setFormTitle(event.target.value)} required />
+                  </Field>
+                  <Field label={t('slug')}>
+                    <input className="input-field" placeholder={t('slugPlaceholder')} value={formSlug} onChange={(event) => setFormSlug(event.target.value)} />
+                  </Field>
                 </div>
-
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', color: 'var(--color-text-muted)', marginBottom: '8px', fontSize: '13px' }}>Summary (short snippet)</label>
-                  <input 
-                    type="text" 
-                    className="input-field" 
-                    placeholder="Short introduction summarizing this post..." 
-                    value={formSummary}
-                    onChange={(e) => setFormSummary(e.target.value)}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', color: 'var(--color-text-muted)', marginBottom: '8px', fontSize: '13px' }}>Tags (comma-separated)</label>
-                  <input 
-                    type="text" 
-                    className="input-field" 
-                    placeholder="go, backend, tutorial" 
-                    value={formTags}
-                    onChange={(e) => setFormTags(e.target.value)}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '24px' }}>
-                  <label style={{ display: 'block', color: 'var(--color-text-muted)', marginBottom: '8px', fontSize: '13px' }}>Content (Markdown supported)</label>
-                  <textarea 
-                    className="input-field" 
-                    placeholder="Write article content here..." 
-                    rows={12}
-                    value={formContent}
-                    onChange={(e) => setFormContent(e.target.value)}
-                    required
-                    style={{ resize: 'vertical', fontFamily: 'monospace', fontSize: '14.5px' }}
-                  />
-                </div>
-
-                <div style={{ display: 'flex', gap: '12px' }}>
+                <Field label={t('summary')}>
+                  <input className="input-field" placeholder={t('summaryPlaceholder')} value={formSummary} onChange={(event) => setFormSummary(event.target.value)} />
+                </Field>
+                <Field label={t('tagsComma')}>
+                  <input className="input-field" placeholder={t('tagsPlaceholder')} value={formTags} onChange={(event) => setFormTags(event.target.value)} />
+                </Field>
+                <Field label={t('contentMarkdown')}>
+                  <textarea className="input-field mono" placeholder={t('contentPlaceholder')} rows={12} value={formContent} onChange={(event) => setFormContent(event.target.value)} required />
+                </Field>
+                <div className="row-actions" style={{ justifyContent: 'flex-start' }}>
                   <button type="submit" className="btn btn-primary">
-                    <Save style={{ width: '15px', height: '15px' }} />
-                    Save Post
+                    <Save />
+                    {t('savePost')}
                   </button>
-                  <button type="button" className="btn btn-secondary" onClick={handleCancel}>Cancel</button>
+                  <button type="button" className="btn btn-secondary" onClick={handleCancel}>
+                    {t('cancel')}
+                  </button>
                 </div>
               </form>
-            </div>
+            </Panel>
           )}
 
-          {/* Comment Moderation Panel */}
           {moderatingPostId !== null && (
-            <div className="glass-card" style={{ order: 1 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '16px' }}>
-                <h2 style={{ fontSize: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <MessageSquare style={{ width: '20px', height: '20px', color: 'var(--color-primary)' }} />
-                  Moderating Comments
+            <Panel>
+              <div className="panel-heading">
+                <h2>
+                  <MessageSquare size={20} />
+                  {t('moderatingComments')}
                 </h2>
-                <button style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }} onClick={() => setModeratingPostId(null)}>
-                  <X style={{ width: '20px', height: '20px' }} />
-                </button>
+                <IconButton label={t('cancel')} onClick={() => setModeratingPostId(null)} type="button">
+                  <X size={18} />
+                </IconButton>
               </div>
 
               {selectedPostComments.length === 0 ? (
-                <p style={{ color: 'var(--color-text-dark)', fontStyle: 'italic', padding: '12px 0' }}>No comments on this post.</p>
+                <EmptyState label={t('noPostComments')} />
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  {selectedPostComments.map(c => (
-                    <div key={c.id} style={{ background: 'rgba(255, 255, 255, 0.01)', border: '1px solid rgba(255, 255, 255, 0.04)', borderRadius: '8px', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ flex: 1, paddingRight: '16px' }}>
-                        <div style={{ display: 'flex', gap: '12px', fontSize: '13px', marginBottom: '6px' }}>
-                          <span style={{ fontWeight: '600', color: 'var(--color-text-main)' }}>{c.author}</span>
-                          <span style={{ color: 'var(--color-text-dark)' }}>{new Date(c.created_at).toLocaleString()}</span>
+                <div className="section-stack">
+                  {selectedPostComments.map((comment) => (
+                    <div key={comment.id} className="list-row">
+                      <div>
+                        <div className="inline-meta">
+                          <strong>{comment.author}</strong>
+                          <span>{formatDateTime(comment.created_at)}</span>
                         </div>
-                        <p style={{ color: 'var(--color-text-muted)', fontSize: '14px', lineHeight: '1.4' }}>{c.content}</p>
+                        <p className="muted" style={{ marginTop: '8px' }}>{comment.content}</p>
                       </div>
-                      <button className="btn btn-danger" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={() => handleDeleteComment(c.id)}>
-                        <Trash2 style={{ width: '13px', height: '13px' }} />
-                        Delete
+                      <button className="btn btn-danger" onClick={() => handleDeleteComment(comment.id)} type="button">
+                        <Trash2 />
+                        {t('delete')}
                       </button>
                     </div>
                   ))}
                 </div>
               )}
-            </div>
+            </Panel>
           )}
 
-          {/* Posts List Dashboard */}
-          <div className="glass-card" style={{ order: 2 }}>
-            <h2 style={{ fontSize: '20px', marginBottom: '20px' }}>Manage Articles</h2>
+          <Panel>
+            <div className="panel-heading">
+              <h2>{t('manageArticles')}</h2>
+            </div>
             {posts.length === 0 ? (
-              <p style={{ color: 'var(--color-text-dark)', fontStyle: 'italic' }}>No posts written yet.</p>
+              <EmptyState label={t('noWrittenPosts')} />
             ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+              <div className="table-scroll">
+                <table className="content-table">
                   <thead>
-                    <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
-                      <th style={{ padding: '12px 16px', color: 'var(--color-text-muted)', fontSize: '14px' }}>Title</th>
-                      <th style={{ padding: '12px 16px', color: 'var(--color-text-muted)', fontSize: '14px' }}>Date</th>
-                      <th style={{ padding: '12px 16px', color: 'var(--color-text-muted)', fontSize: '14px' }}>Tags</th>
-                      <th style={{ padding: '12px 16px', color: 'var(--color-text-muted)', fontSize: '14px', textAlign: 'right' }}>Actions</th>
+                    <tr>
+                      <th>{t('title')}</th>
+                      <th>{t('date')}</th>
+                      <th>{t('tags')}</th>
+                      <th style={{ textAlign: 'right' }}>{t('actions')}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {posts.map(post => (
-                      <tr key={post.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.03)' }}>
-                        <td style={{ padding: '16px', fontWeight: '500' }}>
-                          <Link to={`/posts/${post.slug}`} target="_blank" style={{ color: 'var(--color-text-main)', textDecoration: 'none' }}>
+                    {posts.map((post) => (
+                      <tr key={post.id}>
+                        <td>
+                          <Link to={`/posts/${post.slug}`} target="_blank">
                             {post.title}
                           </Link>
                         </td>
-                        <td style={{ padding: '16px', fontSize: '13px', color: 'var(--color-text-muted)' }}>
-                          {new Date(post.created_at).toLocaleDateString()}
-                        </td>
-                        <td style={{ padding: '16px' }}>
-                          <div style={{ display: 'flex', gap: '4px' }}>
-                            {post.tags.map(t => (
-                              <span key={t} className="badge" style={{ padding: '2px 8px', fontSize: '11px' }}>{t}</span>
+                        <td className="muted">{formatDate(post.created_at)}</td>
+                        <td>
+                          <div className="chip-row">
+                            {post.tags.map((tag) => (
+                              <span key={tag} className="badge">
+                                {tag}
+                              </span>
                             ))}
                           </div>
                         </td>
-                        <td style={{ padding: '16px', textAlign: 'right' }}>
-                          <div style={{ display: 'inline-flex', gap: '8px' }}>
-                            <button className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '13px' }} onClick={() => handleModerateCommentsClick(post.id)}>
-                              <MessageSquare style={{ width: '13px', height: '13px' }} />
-                              Comments
+                        <td>
+                          <div className="row-actions">
+                            <button className="btn btn-secondary" onClick={() => handleModerateCommentsClick(post.id)} type="button">
+                              <MessageSquare />
+                              {t('comments')}
                             </button>
-                            <button className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '13px' }} onClick={() => handleEditClick(post)}>
-                              <Edit2 style={{ width: '13px', height: '13px' }} />
-                              Edit
+                            <button className="btn btn-secondary" onClick={() => handleEditClick(post)} type="button">
+                              <Edit2 />
+                              {t('edit')}
                             </button>
-                            <button className="btn btn-danger" style={{ padding: '6px 12px', fontSize: '13px' }} onClick={() => handleDeletePost(post.id)}>
-                              <Trash2 style={{ width: '13px', height: '13px' }} />
-                              Delete
+                            <button className="btn btn-danger" onClick={() => handleDeletePost(post.id)} type="button">
+                              <Trash2 />
+                              {t('delete')}
                             </button>
                           </div>
                         </td>
@@ -403,8 +338,7 @@ export default function Admin() {
                 </table>
               </div>
             )}
-          </div>
-          
+          </Panel>
         </div>
       )}
     </div>

@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { LoadingState, Panel } from '../components/ui';
 import { handleRedirectCallback } from '../auth';
+import { useI18n } from '../i18n';
 
 export default function Callback() {
+  const { t } = useI18n();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
@@ -12,7 +15,7 @@ export default function Callback() {
     const state = searchParams.get('state');
 
     if (!code || !state) {
-      setError('Invalid callback parameters. Missing code or state.');
+      setError(t('invalidCallback'));
       return;
     }
 
@@ -22,38 +25,32 @@ export default function Callback() {
         navigate(redirectTo);
       } catch (err: unknown) {
         console.error(err);
-        const message = err instanceof Error ? err.message : 'Authentication failed during code exchange';
-        setError(message);
+        setError(err instanceof Error ? err.message : t('authFailed'));
       }
     }
 
     handleCallback();
-  }, [searchParams, navigate]);
+  }, [searchParams, navigate, t]);
 
   if (error) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <div className="glass-card" style={{ maxWidth: '400px', width: '100%', textAlign: 'center' }}>
-          <h2 style={{ color: 'var(--danger-color)', marginBottom: '16px' }}>Authentication Error</h2>
-          <p style={{ color: 'var(--color-text-muted)', marginBottom: '24px', fontSize: '14.5px' }}>{error}</p>
-          <a href="/" className="btn btn-primary" style={{ display: 'inline-block' }}>Go Home</a>
-        </div>
+      <div className="auth-page">
+        <Panel className="auth-card section-stack">
+          <h2>{t('authError')}</h2>
+          <p className="muted">{error}</p>
+          <a href="/" className="btn btn-primary">
+            {t('goHome')}
+          </a>
+        </Panel>
       </div>
     );
   }
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-      <div className="glass-card" style={{ maxWidth: '400px', width: '100%', textAlign: 'center' }}>
-        <h2 style={{ marginBottom: '16px' }}>Authenticating...</h2>
-        <p style={{ color: 'var(--color-text-muted)', fontSize: '14.5px' }}>Completing secure sign-in with SSO. Please wait.</p>
-        <div style={{ margin: '24px auto 0 auto', width: '30px', height: '30px', borderRadius: '50%', border: '3px solid rgba(255,255,255,0.1)', borderTopColor: 'var(--color-primary)', animation: 'spin 1s linear infinite' }}></div>
-        <style>{`
-          @keyframes spin {
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
-      </div>
+    <div className="auth-page">
+      <Panel className="auth-card">
+        <LoadingState label={t('completingSignin')} />
+      </Panel>
     </div>
   );
 }

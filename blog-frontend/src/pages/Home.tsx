@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Search, Calendar, User, ArrowRight } from 'lucide-react';
+import { ArrowRight, Calendar, Search, User } from 'lucide-react';
+import { EmptyState, LoadingState, Panel } from '../components/ui';
+import { useI18n } from '../i18n';
 
 interface Post {
   id: number;
@@ -11,7 +13,46 @@ interface Post {
   created_at: string;
 }
 
+function PostCard({ post }: { post: Post }) {
+  const { t, formatDate } = useI18n();
+
+  return (
+    <Panel as="article" className="post-card">
+      <div>
+        <Link to={`/posts/${post.slug}`} className="post-title">
+          {post.title}
+        </Link>
+        <div className="post-meta inline-meta" aria-label="metadata">
+          <span>
+            <Calendar size={14} />
+            {formatDate(post.created_at)}
+          </span>
+          <span>
+            <User size={14} />
+            {t('author')}
+          </span>
+        </div>
+        <p className="post-summary">{post.summary}</p>
+      </div>
+      <div className="post-card__footer">
+        <div className="chip-row">
+          {post.tags.map((tag) => (
+            <span key={tag} className="badge">
+              #{tag}
+            </span>
+          ))}
+        </div>
+        <Link to={`/posts/${post.slug}`} className="text-link">
+          {t('readArticle')}
+          <ArrowRight size={15} />
+        </Link>
+      </div>
+    </Panel>
+  );
+}
+
 export default function Home() {
+  const { t } = useI18n();
   const [posts, setPosts] = useState<Post[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [selectedTag, setSelectedTag] = useState<string>('');
@@ -23,151 +64,96 @@ export default function Home() {
     async function fetchData() {
       try {
         setLoading(true);
-        // Fetch posts
+        setError(null);
         const postsUrl = new URL('/api/posts', window.location.origin);
         if (selectedTag) {
           postsUrl.searchParams.append('tag', selectedTag);
         }
-        
+
         const postsResp = await fetch(postsUrl.toString());
-        if (!postsResp.ok) throw new Error('Failed to load posts');
+        if (!postsResp.ok) throw new Error(t('failedLoadPosts'));
         const postsBody = await postsResp.json();
         setPosts(postsBody.data.list || []);
 
-        // Fetch tags
         const tagsResp = await fetch('/api/tags');
         if (tagsResp.ok) {
           const tagsBody = await tagsResp.json();
           setTags(tagsBody.data || []);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error(err);
-        setError(err.message || 'Failed to fetch data');
+        setError(err instanceof Error ? err.message : t('failedFetch'));
       } finally {
         setLoading(false);
       }
     }
 
     fetchData();
-  }, [selectedTag]);
+  }, [selectedTag, t]);
 
-  // Client-side search filtering
-  const filteredPosts = posts.filter(post => 
-    post.title.toLowerCase().includes(search.toLowerCase()) || 
-    post.summary.toLowerCase().includes(search.toLowerCase())
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredPosts = posts.filter((post) =>
+    [post.title, post.summary].some((value) => value.toLowerCase().includes(normalizedSearch)),
   );
 
   return (
     <div>
-      {/* Hero Section */}
-      <section style={{ textAlign: 'center', padding: '60px 0 40px 0' }}>
-        <h1 style={{ fontSize: '48px', fontWeight: '800', background: 'var(--accent-gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '16px' }}>
-          Aben's DevBlog
-        </h1>
-        <p style={{ color: 'var(--color-text-muted)', fontSize: '18px', maxWidth: '600px', margin: '0 auto 32px auto', lineHeight: '1.6' }}>
-          Sharing insights on Go development, web applications, SSO authentication, and cloud infrastructure.
-        </p>
-
-        {/* Search and Tags Filter */}
-        <div style={{ maxWidth: '500px', margin: '0 auto', position: 'relative' }}>
-          <Search style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-dark)', width: '20px', height: '20px' }} />
-          <input 
-            type="text" 
-            className="input-field" 
-            placeholder="Search posts..." 
+      <section className="hero">
+        <div>
+          <h1 className="hero-title">{t('brand')}</h1>
+          <p className="hero-copy">{t('intro')}</p>
+        </div>
+        <div className="search-box">
+          <Search aria-hidden="true" />
+          <input
+            type="search"
+            className="input-field"
+            placeholder={t('searchPosts')}
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ paddingLeft: '48px', borderRadius: '9999px' }}
+            onChange={(event) => setSearch(event.target.value)}
           />
         </div>
       </section>
 
-      {/* Tags Carousel */}
       {tags.length > 0 && (
-        <section style={{ marginBottom: '32px', textAlign: 'center' }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px' }}>
-            <button 
-              className={`btn btn-secondary ${selectedTag === '' ? 'active' : ''}`}
-              onClick={() => setSelectedTag('')}
-              style={{ padding: '6px 16px', borderRadius: '9999px', fontSize: '13px', borderColor: selectedTag === '' ? 'var(--color-primary)' : 'rgba(255,255,255,0.08)' }}
+        <section className="chip-row" aria-label={t('allTopics')}>
+          <button className={`topic-button ${selectedTag === '' ? 'active' : ''}`} onClick={() => setSelectedTag('')} type="button">
+            {t('allTopics')}
+          </button>
+          {tags.map((tag) => (
+            <button
+              key={tag}
+              className={`topic-button ${selectedTag === tag ? 'active' : ''}`}
+              onClick={() => setSelectedTag(tag)}
+              type="button"
             >
-              All Topics
+              #{tag}
             </button>
-            {tags.map(t => (
-              <button 
-                key={t}
-                className={`btn btn-secondary ${selectedTag === t ? 'active' : ''}`}
-                onClick={() => setSelectedTag(t)}
-                style={{ padding: '6px 16px', borderRadius: '9999px', fontSize: '13px', borderColor: selectedTag === t ? 'var(--color-primary)' : 'rgba(255,255,255,0.08)' }}
-              >
-                #{t}
-              </button>
-            ))}
-          </div>
+          ))}
         </section>
       )}
 
-      {/* Blog Feed */}
-      <section>
+      <section className="section-stack" style={{ marginTop: '26px' }}>
+        <h2 className="section-title">{t('latestPosts')}</h2>
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '60px 0' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '50%', border: '4px solid rgba(255,255,255,0.1)', borderTopColor: 'var(--color-primary)', animation: 'spin 1s linear infinite', margin: '0 auto 16px auto' }}></div>
-            <p style={{ color: 'var(--color-text-muted)' }}>Loading posts...</p>
-          </div>
+          <LoadingState label={t('loadingPosts')} />
         ) : error ? (
-          <div className="glass-card" style={{ textAlign: 'center', padding: '40px', borderColor: 'var(--danger-color)' }}>
-            <p style={{ color: 'var(--danger-color)', marginBottom: '16px' }}>{error}</p>
-            <button className="btn btn-secondary" onClick={() => window.location.reload()}>Retry</button>
-          </div>
+          <Panel className="section-stack">
+            <p className="feedback feedback--error">{error}</p>
+            <button className="btn btn-secondary" onClick={() => window.location.reload()} type="button">
+              {t('retry')}
+            </button>
+          </Panel>
         ) : filteredPosts.length === 0 ? (
-          <div className="glass-card" style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--color-text-muted)' }}>
-            <BookOpen style={{ width: '48px', height: '48px', margin: '0 auto 16px auto', opacity: 0.5 }} />
-            <p style={{ fontSize: '16px' }}>No posts found. Try checking other tags or search terms.</p>
-          </div>
+          <EmptyState label={t('noPosts')} />
         ) : (
           <div className="posts-grid">
-            {filteredPosts.map(post => (
-              <article key={post.id} className="glass-card post-card">
-                <div>
-                  <div className="post-card-header">
-                    <Link to={`/posts/${post.slug}`} className="post-title" style={{ display: 'block' }}>
-                      {post.title}
-                    </Link>
-                  </div>
-                  <div className="post-meta">
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      <Calendar style={{ width: '13px', height: '13px' }} />
-                      {new Date(post.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                    </span>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      <User style={{ width: '13px', height: '13px' }} />
-                      Admin
-                    </span>
-                  </div>
-                  <p className="post-summary">{post.summary}</p>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-                  <div className="post-tags">
-                    {post.tags.map(t => (
-                      <span key={t} className="badge">#{t}</span>
-                    ))}
-                  </div>
-                  <Link to={`/posts/${post.slug}`} className="nav-link" style={{ color: 'var(--color-primary)', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '14px', fontWeight: '600' }}>
-                    Read
-                    <ArrowRight style={{ width: '14px', height: '14px' }} />
-                  </Link>
-                </div>
-              </article>
+            {filteredPosts.map((post) => (
+              <PostCard key={post.id} post={post} />
             ))}
           </div>
         )}
       </section>
-      
-      <style>{`
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 }

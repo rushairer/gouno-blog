@@ -1,25 +1,15 @@
 import { useEffect, useState } from 'react';
 import type React from 'react';
 import { KeyRound, Laptop, Mail, Shield, User } from 'lucide-react';
+import { Feedback, Field, PageHeader, Panel } from '../components/ui';
 import { getUserProfile, gossoClient, isLoggedIn, redirectToAuthorize } from '../auth';
 import type { MfaEnrollment, MfaStatus, PasskeyInfo, SessionInfo, UserProfile } from '../auth';
+import { useI18n } from '../i18n';
 
 type SettingsTab = 'profile' | 'security' | 'passkeys' | 'sessions';
 
-function FieldLabel({ children }: { children: React.ReactNode }) {
-  return <label style={{ display: 'block', color: 'var(--color-text-muted)', marginBottom: '8px', fontSize: '13px' }}>{children}</label>;
-}
-
-function Message({ type, children }: { type: 'error' | 'success'; children: React.ReactNode }) {
-  const color = type === 'error' ? 'var(--danger-color)' : 'var(--success-color)';
-  return (
-    <div style={{ border: `1px solid ${color}`, color, borderRadius: '8px', padding: '12px', marginBottom: '16px', fontSize: '14px' }}>
-      {children}
-    </div>
-  );
-}
-
 export default function Settings() {
+  const { t, formatDateTime } = useI18n();
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
   const [profile, setProfile] = useState<UserProfile | null>(() => getUserProfile());
   const [displayName, setDisplayName] = useState(profile?.name || '');
@@ -63,8 +53,7 @@ export default function Settings() {
       await action();
       setFeedback(successMessage);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'The request failed.';
-      setFeedback(null, message);
+      setFeedback(null, err instanceof Error ? err.message : t('requestFailed'));
     } finally {
       setLoading(false);
     }
@@ -96,13 +85,13 @@ export default function Settings() {
     await runAction(async () => {
       const nextProfile = await gossoClient.updateProfile(displayName.trim());
       setProfile(nextProfile);
-    }, 'Profile updated.');
+    }, t('profileUpdated'));
   };
 
   const savePassword = async (event: React.FormEvent) => {
     event.preventDefault();
     if (newPassword !== confirmPassword) {
-      setFeedback(null, 'New passwords do not match.');
+      setFeedback(null, t('passwordMismatch'));
       return;
     }
     await runAction(async () => {
@@ -110,7 +99,7 @@ export default function Settings() {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-    }, 'Password changed.');
+    }, t('passwordChanged'));
   };
 
   const requestEmailCode = async (event: React.FormEvent) => {
@@ -118,7 +107,7 @@ export default function Settings() {
     await runAction(async () => {
       await gossoClient.requestEmailChange(newEmail.trim(), emailPassword);
       setEmailPending(true);
-    }, 'Verification code sent.');
+    }, t('codeSent'));
   };
 
   const confirmEmail = async (event: React.FormEvent) => {
@@ -129,14 +118,13 @@ export default function Settings() {
       setEmailPending(false);
       setEmailPassword('');
       setEmailCode('');
-    }, 'Email updated.');
+    }, t('emailUpdated'));
   };
 
   const enrollMfa = async () => {
     await runAction(async () => {
-      const enrollment = await gossoClient.enrollMfa();
-      setMfaEnrollment(enrollment);
-    }, 'MFA enrollment started.');
+      setMfaEnrollment(await gossoClient.enrollMfa());
+    }, t('mfaStarted'));
   };
 
   const activateMfa = async (event: React.FormEvent) => {
@@ -147,7 +135,7 @@ export default function Settings() {
       setMfaEnrollment(null);
       setMfaCode('');
       setMfaStatus(await gossoClient.getMfaStatus());
-    }, 'MFA enabled.');
+    }, t('mfaEnabled'));
   };
 
   const disableMfa = async (event: React.FormEvent) => {
@@ -157,13 +145,13 @@ export default function Settings() {
       setMfaDisablePassword('');
       setMfaStatus(await gossoClient.getMfaStatus());
       setBackupCodes([]);
-    }, 'MFA disabled.');
+    }, t('mfaDisabled'));
   };
 
   const regenerateBackupCodes = async () => {
     await runAction(async () => {
       setBackupCodes(await gossoClient.generateBackupCodes());
-    }, 'Backup codes regenerated.');
+    }, t('backupRegenerated'));
   };
 
   const addPasskey = async (event: React.FormEvent) => {
@@ -171,150 +159,150 @@ export default function Settings() {
     await runAction(async () => {
       await gossoClient.registerPasskey(newPasskeyName.trim());
       setPasskeys(await gossoClient.listPasskeys());
-    }, 'Passkey added.');
+    }, t('passkeyAdded'));
   };
 
   const removePasskey = async (id: string) => {
     await runAction(async () => {
       await gossoClient.deletePasskey(id);
       setPasskeys(await gossoClient.listPasskeys());
-    }, 'Passkey removed.');
+    }, t('passkeyRemoved'));
   };
 
   const revokeSession = async (id: string) => {
     await runAction(async () => {
       await gossoClient.revokeSession(id);
       setSessions(await gossoClient.listSessions());
-    }, 'Session revoked.');
+    }, t('sessionRevoked'));
   };
+
+  const tabItems: Array<{ id: SettingsTab; label: string; icon: React.ReactNode }> = [
+    { id: 'profile', label: t('profile'), icon: <User /> },
+    { id: 'security', label: t('security'), icon: <Shield /> },
+    { id: 'passkeys', label: t('passkeys'), icon: <KeyRound /> },
+    { id: 'sessions', label: t('sessions'), icon: <Laptop /> },
+  ];
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'center', marginBottom: '28px', flexWrap: 'wrap' }}>
-        <div>
-          <h1 style={{ fontSize: '32px', marginBottom: '8px' }}>Account Settings</h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '14.5px' }}>{profile?.preferred_username || profile?.email || 'Manage your Gosso account'}</p>
-        </div>
-        <button className="btn btn-secondary" onClick={() => void refreshSettings()} disabled={loading}>
-          Refresh
-        </button>
-      </div>
+      <PageHeader
+        title={t('accountSettings')}
+        description={profile?.preferred_username || profile?.email || t('manageAccount')}
+        action={
+          <button className="btn btn-secondary" onClick={() => void refreshSettings()} disabled={loading} type="button">
+            {t('refresh')}
+          </button>
+        }
+      />
 
-      {error && <Message type="error">{error}</Message>}
-      {success && <Message type="success">{success}</Message>}
+      {error && <Feedback type="error">{error}</Feedback>}
+      {success && <Feedback type="success">{success}</Feedback>}
 
-      <div className="glass-card">
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '24px' }}>
-          <button className={`btn ${activeTab === 'profile' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('profile')}>
-            <User style={{ width: '16px', height: '16px' }} />
-            Profile
-          </button>
-          <button className={`btn ${activeTab === 'security' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('security')}>
-            <Shield style={{ width: '16px', height: '16px' }} />
-            Security
-          </button>
-          <button className={`btn ${activeTab === 'passkeys' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('passkeys')}>
-            <KeyRound style={{ width: '16px', height: '16px' }} />
-            Passkeys
-          </button>
-          <button className={`btn ${activeTab === 'sessions' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab('sessions')}>
-            <Laptop style={{ width: '16px', height: '16px' }} />
-            Sessions
-          </button>
+      <Panel>
+        <div className="tabs">
+          {tabItems.map((tab) => (
+            <button key={tab.id} className={`btn ${activeTab === tab.id ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab(tab.id)} type="button">
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
         </div>
 
         {activeTab === 'profile' && (
-          <div style={{ display: 'grid', gap: '24px' }}>
-            <form onSubmit={saveProfile}>
-              <FieldLabel>Display name</FieldLabel>
-              <input className="input-field" value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
-              <button className="btn btn-primary" style={{ marginTop: '12px' }} disabled={loading}>
-                Save profile
+          <div className="section-stack">
+            <form className="form-stack" onSubmit={saveProfile}>
+              <Field label={t('displayName')}>
+                <input className="input-field" value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
+              </Field>
+              <button className="btn btn-primary" disabled={loading}>
+                {t('saveProfile')}
               </button>
             </form>
 
-            <form onSubmit={emailPending ? confirmEmail : requestEmailCode}>
-              <h2 style={{ fontSize: '20px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Mail style={{ width: '18px', height: '18px', color: 'var(--color-primary)' }} />
-                Email
+            <form className="form-stack" onSubmit={emailPending ? confirmEmail : requestEmailCode}>
+              <h2 className="section-title">
+                <Mail size={18} />
+                {t('email')}
               </h2>
-              <FieldLabel>New email</FieldLabel>
-              <input className="input-field" type="email" value={newEmail} onChange={(event) => setNewEmail(event.target.value)} />
+              <Field label={t('newEmail')}>
+                <input className="input-field" type="email" value={newEmail} onChange={(event) => setNewEmail(event.target.value)} />
+              </Field>
               {!emailPending ? (
-                <>
-                  <FieldLabel>Current password</FieldLabel>
+                <Field label={t('currentPassword')}>
                   <input className="input-field" type="password" value={emailPassword} onChange={(event) => setEmailPassword(event.target.value)} />
-                </>
+                </Field>
               ) : (
-                <>
-                  <FieldLabel>Verification code</FieldLabel>
+                <Field label={t('verificationCode')}>
                   <input className="input-field" value={emailCode} onChange={(event) => setEmailCode(event.target.value)} />
-                </>
+                </Field>
               )}
-              <button className="btn btn-primary" style={{ marginTop: '12px' }} disabled={loading}>
-                {emailPending ? 'Confirm email' : 'Send verification code'}
+              <button className="btn btn-primary" disabled={loading}>
+                {emailPending ? t('confirmEmail') : t('sendVerification')}
               </button>
             </form>
           </div>
         )}
 
         {activeTab === 'security' && (
-          <div style={{ display: 'grid', gap: '28px' }}>
-            <form onSubmit={savePassword}>
-              <h2 style={{ fontSize: '20px', marginBottom: '16px' }}>Password</h2>
-              <FieldLabel>Current password</FieldLabel>
-              <input className="input-field" type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} />
-              <FieldLabel>New password</FieldLabel>
-              <input className="input-field" type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} />
-              <FieldLabel>Confirm new password</FieldLabel>
-              <input className="input-field" type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} />
-              <button className="btn btn-primary" style={{ marginTop: '12px' }} disabled={loading}>
-                Change password
+          <div className="section-stack">
+            <form className="form-stack" onSubmit={savePassword}>
+              <h2 className="section-title">{t('password')}</h2>
+              <Field label={t('currentPassword')}>
+                <input className="input-field" type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} />
+              </Field>
+              <Field label={t('newPassword')}>
+                <input className="input-field" type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} />
+              </Field>
+              <Field label={t('confirmPassword')}>
+                <input className="input-field" type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} />
+              </Field>
+              <button className="btn btn-primary" disabled={loading}>
+                {t('changePassword')}
               </button>
             </form>
 
-            <div>
-              <h2 style={{ fontSize: '20px', marginBottom: '8px' }}>Multi-factor authentication</h2>
-              <p style={{ color: 'var(--color-text-muted)', marginBottom: '16px', fontSize: '14px' }}>
-                Status: {mfaStatus?.enabled ? 'Enabled' : 'Disabled'}
+            <div className="section-stack">
+              <h2 className="section-title">{t('mfa')}</h2>
+              <p className="muted">
+                {t('status')}: {mfaStatus?.enabled ? t('enabled') : t('disabled')}
               </p>
               {!mfaStatus?.enabled && !mfaEnrollment && (
-                <button className="btn btn-primary" onClick={enrollMfa} disabled={loading}>
-                  Start MFA setup
+                <button className="btn btn-primary" onClick={enrollMfa} disabled={loading} type="button">
+                  {t('startMfa')}
                 </button>
               )}
               {mfaEnrollment && (
-                <form onSubmit={activateMfa} style={{ display: 'grid', gap: '12px' }}>
-                  <div style={{ color: 'var(--color-text-muted)', fontSize: '13px', overflowWrap: 'anywhere' }}>
-                    Secret: <strong style={{ color: 'var(--color-text-main)' }}>{mfaEnrollment.secret}</strong>
+                <form className="form-stack" onSubmit={activateMfa}>
+                  <p className="muted" style={{ overflowWrap: 'anywhere' }}>
+                    {t('secret')}: <strong>{mfaEnrollment.secret}</strong>
                     <br />
-                    App link: {mfaEnrollment.otpauth_url}
-                  </div>
-                  <FieldLabel>Authenticator code</FieldLabel>
-                  <input className="input-field" value={mfaCode} onChange={(event) => setMfaCode(event.target.value)} />
+                    {t('appLink')}: {mfaEnrollment.otpauth_url}
+                  </p>
+                  <Field label={t('authenticatorCode')}>
+                    <input className="input-field" value={mfaCode} onChange={(event) => setMfaCode(event.target.value)} />
+                  </Field>
                   <button className="btn btn-primary" disabled={loading}>
-                    Activate MFA
+                    {t('activateMfa')}
                   </button>
                 </form>
               )}
               {mfaStatus?.enabled && (
-                <form onSubmit={disableMfa} style={{ display: 'grid', gap: '12px' }}>
+                <form className="form-stack" onSubmit={disableMfa}>
                   <button type="button" className="btn btn-secondary" onClick={regenerateBackupCodes} disabled={loading}>
-                    Regenerate backup codes
+                    {t('regenerateBackup')}
                   </button>
-                  <FieldLabel>Password to disable MFA</FieldLabel>
-                  <input className="input-field" type="password" value={mfaDisablePassword} onChange={(event) => setMfaDisablePassword(event.target.value)} />
+                  <Field label={t('passwordDisableMfa')}>
+                    <input className="input-field" type="password" value={mfaDisablePassword} onChange={(event) => setMfaDisablePassword(event.target.value)} />
+                  </Field>
                   <button className="btn btn-danger" disabled={loading}>
-                    Disable MFA
+                    {t('disableMfa')}
                   </button>
                 </form>
               )}
               {backupCodes.length > 0 && (
-                <div style={{ marginTop: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px' }}>
+                <div className="code-grid">
                   {backupCodes.map((code) => (
-                    <code key={code} style={{ padding: '8px', borderRadius: '8px', background: 'rgba(255,255,255,0.06)' }}>
-                      {code}
-                    </code>
+                    <code key={code}>{code}</code>
                   ))}
                 </div>
               )}
@@ -323,18 +311,18 @@ export default function Settings() {
         )}
 
         {activeTab === 'passkeys' && (
-          <div style={{ display: 'grid', gap: '20px' }}>
-            <form onSubmit={addPasskey} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              <input className="input-field" style={{ flex: '1 1 240px' }} value={newPasskeyName} onChange={(event) => setNewPasskeyName(event.target.value)} />
+          <div className="section-stack">
+            <form className="list-row" onSubmit={addPasskey}>
+              <input className="input-field" value={newPasskeyName} onChange={(event) => setNewPasskeyName(event.target.value)} />
               <button className="btn btn-primary" disabled={loading}>
-                Add passkey
+                {t('addPasskey')}
               </button>
             </form>
             {passkeys.map((passkey) => (
-              <div key={passkey.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '14px' }}>
+              <div key={passkey.id} className="list-row">
                 <span>{passkey.name}</span>
-                <button className="btn btn-danger" onClick={() => void removePasskey(passkey.id)} disabled={loading}>
-                  Remove
+                <button className="btn btn-danger" onClick={() => void removePasskey(passkey.id)} disabled={loading} type="button">
+                  {t('remove')}
                 </button>
               </div>
             ))}
@@ -342,23 +330,25 @@ export default function Settings() {
         )}
 
         {activeTab === 'sessions' && (
-          <div style={{ display: 'grid', gap: '14px' }}>
+          <div className="section-stack">
             {sessions.map((session) => (
-              <div key={session.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '14px' }}>
+              <div key={session.id} className="list-row">
                 <div>
-                  <div style={{ fontWeight: 700 }}>{session.user_agent || 'Unknown device'} {session.id === currentSessionId ? '(current)' : ''}</div>
-                  <div style={{ color: 'var(--color-text-muted)', fontSize: '13px' }}>
-                    {session.ip} · {new Date(session.last_active_at).toLocaleString()}
-                  </div>
+                  <strong>
+                    {session.user_agent || t('unknownDevice')} {session.id === currentSessionId ? `(${t('current')})` : ''}
+                  </strong>
+                  <p className="muted">
+                    {session.ip} · {formatDateTime(session.last_active_at)}
+                  </p>
                 </div>
-                <button className="btn btn-danger" onClick={() => void revokeSession(session.id)} disabled={loading || session.id === currentSessionId}>
-                  Revoke
+                <button className="btn btn-danger" onClick={() => void revokeSession(session.id)} disabled={loading || session.id === currentSessionId} type="button">
+                  {t('revoke')}
                 </button>
               </div>
             ))}
           </div>
         )}
-      </div>
+      </Panel>
     </div>
   );
 }

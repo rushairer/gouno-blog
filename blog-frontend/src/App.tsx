@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, NavLink } from 'react-router-dom';
-import { LogIn, LogOut, BookOpen } from 'lucide-react';
+import { BookOpen, LogIn, LogOut } from 'lucide-react';
 import { canManageBlog, isLoggedIn, logout, getUserProfile, redirectToAuthorize } from './auth';
 import type { UserProfile } from './auth';
+import { I18nProvider, useI18n } from './i18n';
 
 // Import Pages
 import Home from './pages/Home';
@@ -13,6 +14,7 @@ import Admin from './pages/Admin';
 import Settings from './pages/Settings';
 
 function Layout({ children }: { children: React.ReactNode }) {
+  const { locale, setLocale, t } = useI18n();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [logged, setLogged] = useState(false);
   const [canManage, setCanManage] = useState(false);
@@ -36,42 +38,50 @@ function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="app-container">
-      {/* Header Navigation */}
       <header className="navbar">
         <div className="navbar-container">
           <Link to="/" className="logo">
-            Aben's DevBlog
+            <span className="logo__mark">AB</span>
+            <span>{t('brand')}</span>
           </Link>
           <nav className="nav-links">
             <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              Home
+              {t('home')}
             </NavLink>
             {logged && canManage && (
               <NavLink to="/admin" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-                Admin Panel
+                {t('adminPanel')}
               </NavLink>
             )}
             {logged && (
               <NavLink to="/settings" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-                Settings
+                {t('settings')}
               </NavLink>
             )}
-            
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: '12px', borderLeft: '1px solid rgba(255,255,255,0.08)', paddingLeft: '16px' }}>
+
+            <div className="nav-actions">
+              <div className="language-toggle" aria-label={t('language')}>
+                <button className={locale === 'en' ? 'active' : ''} type="button" onClick={() => setLocale('en')}>
+                  EN
+                </button>
+                <button className={locale === 'zh' ? 'active' : ''} type="button" onClick={() => setLocale('zh')}>
+                  中
+                </button>
+              </div>
               {logged ? (
                 <>
-                  <span style={{ fontSize: '14px', color: 'var(--color-text-muted)' }}>
-                    Hi, <strong style={{ color: 'var(--color-text-main)' }}>{user?.name || user?.preferred_username || 'Admin'}</strong>
+                  <span className="user-greeting">
+                    {t('greeting', { name: user?.name || user?.preferred_username || t('admin') })}
                   </span>
-                  <button className="btn btn-secondary" style={{ padding: '6px 14px', fontSize: '13px' }} onClick={handleLogout}>
-                    <LogOut style={{ width: '14px', height: '14px' }} />
-                    Sign Out
+                  <button className="btn btn-secondary" onClick={handleLogout}>
+                    <LogOut />
+                    {t('signOut')}
                   </button>
                 </>
               ) : (
-                <button className="btn btn-primary" style={{ padding: '6px 16px', fontSize: '13px' }} onClick={handleSignIn}>
-                  <LogIn style={{ width: '14px', height: '14px' }} />
-                  Sign In
+                <button className="btn btn-primary" onClick={handleSignIn}>
+                  <LogIn />
+                  {t('signIn')}
                 </button>
               )}
             </div>
@@ -79,18 +89,16 @@ function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      {/* Main Container */}
       <main className="main-content">
         {children}
       </main>
 
-      {/* Footer */}
       <footer className="footer">
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-          <BookOpen style={{ width: '16px', height: '16px' }} />
-          <span>Aben's DevBlog</span>
+        <div className="footer-brand">
+          <BookOpen size={16} />
+          <span>{t('brand')}</span>
         </div>
-        <p>&copy; {new Date().getFullYear()} Aben. Built with Go, React, and GOSSO SSO.</p>
+        <p>&copy; {new Date().getFullYear()} Aben. {t('footer')}</p>
       </footer>
     </div>
   );
@@ -98,18 +106,17 @@ function Layout({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* OIDC flow & Login routes run without layout wrapper to support full screen layouts */}
-        <Route path="/callback" element={<Callback />} />
-        <Route path="/login" element={<Login />} />
-
-        {/* Regular routes with standard layout header & footer */}
-        <Route path="/" element={<Layout><Home /></Layout>} />
-        <Route path="/posts/:slug" element={<Layout><PostDetail /></Layout>} />
-        <Route path="/admin" element={<Layout><Admin /></Layout>} />
-        <Route path="/settings" element={<Layout><Settings /></Layout>} />
-      </Routes>
-    </BrowserRouter>
+    <I18nProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/callback" element={<Callback />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/" element={<Layout><Home /></Layout>} />
+          <Route path="/posts/:slug" element={<Layout><PostDetail /></Layout>} />
+          <Route path="/admin" element={<Layout><Admin /></Layout>} />
+          <Route path="/settings" element={<Layout><Settings /></Layout>} />
+        </Routes>
+      </BrowserRouter>
+    </I18nProvider>
   );
 }
