@@ -25,7 +25,8 @@
 ├── .gitignore
 ├── README.md                  # 本文档
 ├── retrospective.md           # 前后端 SSO 集成开发指南与最佳实践
-├── docker-compose.yml         # 本地容器编排配置
+├── docker-compose.yml         # 镜像化本地集群编排配置
+├── docker-compose.source.yml  # 本地源码构建 override
 ├── nginx-gateway.conf         # Nginx 反向代理配置
 ├── init.sql                   # 数据库初始化脚本
 ├── keys/                      # 本地 GOSSO RSA 私钥目录（不提交）
@@ -62,7 +63,7 @@ chmod 600 keys/private.pem
 后端管理接口仍由 blog 后端执行权限校验；当前默认要求 Access Token 中包含 `roles: ["admin"]`。
 
 ```bash
-docker compose up -d --build
+docker compose up -d
 ```
 
 启动后，容器运行状态如下：
@@ -79,9 +80,17 @@ docker compose up -d --build
 镜像 tag 可按需 pin 到不可变版本：
 
 ```bash
+export GOUNO_BLOG_BACKEND_IMAGE_TAG=sha-...
+export GOUNO_BLOG_FRONTEND_IMAGE_TAG=sha-...
 export GOSSO_IMAGE_TAG=sha-...
 export GOSSO_ADMIN_FRONTEND_IMAGE_TAG=sha-...
 export GOSSO_ADMIN_SEED_IMAGE_TAG=sha-...
+```
+
+如果需要从当前 checkout 构建 blog 前后端源码，使用 source override：
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.source.yml up -d --build
 ```
 
 ### 4. 访问测试

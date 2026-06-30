@@ -114,9 +114,7 @@ services:
         condition: service_completed_successfully
 
   blog-backend:
-    build:
-      context: .
-      dockerfile: blog-backend/Dockerfile
+    image: ghcr.io/rushairer/gouno-blog-backend:${GOUNO_BLOG_BACKEND_IMAGE_TAG:-main}
     container_name: sso-blog-backend
     environment:
       - POSTGRES_HOST=db
@@ -136,12 +134,7 @@ services:
         condition: service_completed_successfully
 
   blog-frontend:
-    build:
-      context: ./blog-frontend
-      dockerfile: Dockerfile
-      args:
-        VITE_GOSSO_ISSUER: ${VITE_GOSSO_ISSUER:-}
-        VITE_GOSSO_CLIENT_ID: ${VITE_GOSSO_CLIENT_ID:-blog-spa}
+    image: ghcr.io/rushairer/gouno-blog-frontend:${GOUNO_BLOG_FRONTEND_IMAGE_TAG:-main}
     container_name: sso-blog-frontend
     depends_on:
       - blog-backend

@@ -1,0 +1,13 @@
+services:
+  blog-backend:
+    build:
+      context: .
+      dockerfile: blog-backend/Dockerfile
+
+  blog-frontend:
+    build:
+      context: ./blog-frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_GOSSO_ISSUER: ${VITE_GOSSO_ISSUER:-}
+        VITE_GOSSO_CLIENT_ID: ${VITE_GOSSO_CLIENT_ID:-blog-spa}
