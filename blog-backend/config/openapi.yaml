@@ -67,6 +67,8 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden (Admin role required)
+        '409':
+          description: Slug already in use
 
   /posts/{slugOrID}:
     get:
@@ -125,6 +127,10 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+        '404':
+          description: Post not found
+        '409':
+          description: Slug already in use
 
     delete:
       summary: Delete a post
@@ -141,10 +147,14 @@ paths:
       responses:
         '200':
           description: Post deleted successfully
+        '400':
+          description: Invalid post ID
         '401':
           description: Unauthorized
         '403':
           description: Forbidden
+        '404':
+          description: Post not found
 
   /tags:
     get:
@@ -160,12 +170,12 @@ paths:
 
   /posts/{slugOrID}/comments:
     get:
-      summary: List comments for a post
-      description: Retrieve all comments submitted under a specific blog post.
+      summary: List visible comments for a post
+      description: Retrieve public comments that an administrator has marked visible under a specific blog post by slug or numeric ID.
       parameters:
         - name: slugOrID
           in: path
-          description: Unique post ID or slug
+          description: Unique post ID or URL slug
           required: true
           schema:
             type: string
@@ -176,13 +186,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CommentListResponse'
+        '400':
+          description: Invalid post identifier
+        '404':
+          description: Post not found
     post:
       summary: Add a comment to a post
-      description: Submit a new comment to a specific post. Open to public.
+      description: Submit a new comment to a specific post by slug or numeric ID. Open to public; newly submitted comments are hidden until an administrator marks them visible.
       parameters:
         - name: slugOrID
           in: path
-          description: Numeric ID of the post
+          description: Unique post ID or URL slug
           required: true
           schema:
             type: string
@@ -201,6 +215,68 @@ paths:
                 $ref: '#/components/schemas/CommentResponse'
         '400':
           description: Missing required fields
+        '404':
+          description: Post not found
+
+  /posts/{slugOrID}/comments/all:
+    get:
+      summary: List all comments for a post
+      description: Retrieve all comments for moderation, including pending hidden comments. Requires administrator authentication.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: slugOrID
+          in: path
+          description: Unique post ID or URL slug
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of all comments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentListResponse'
+        '400':
+          description: Invalid post identifier
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Post not found
+
+  /comments/{id}/visibility:
+    put:
+      summary: Update comment visibility
+      description: Mark a comment visible or hidden for public readers. Requires administrator authentication.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: Comment numeric ID
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCommentVisibilityRequest'
+      responses:
+        '200':
+          description: Comment visibility updated
+        '400':
+          description: Invalid comment ID or request body
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Comment not found
 
   /comments/{id}:
     delete:
@@ -218,10 +294,14 @@ paths:
       responses:
         '200':
           description: Comment deleted successfully
+        '400':
+          description: Invalid comment ID
         '401':
           description: Unauthorized
         '403':
           description: Forbidden
+        '404':
+          description: Comment not found
 
 components:
   securitySchemes:
@@ -264,6 +344,9 @@ components:
           type: string
         content:
           type: string
+        is_visible:
+          type: boolean
+          description: Whether the comment is visible to public readers.
         created_at:
           type: string
           format: date-time
@@ -302,6 +385,14 @@ components:
         content:
           type: string
           example: "This is a great introductory article!"
+    UpdateCommentVisibilityRequest:
+      type: object
+      required:
+        - is_visible
+      properties:
+        is_visible:
+          type: boolean
+          example: true
     PostResponse:
       type: object
       properties:

@@ -43,7 +43,14 @@ func (r *PostRepository) Update(ctx context.Context, post *domain.Post) error {
 
 func (r *PostRepository) Delete(ctx context.Context, id int64) error {
 	query := `DELETE FROM posts WHERE id = $1`
-	_, err := r.db.ExecContext(ctx, query, id)
+	result, err := r.db.ExecContext(ctx, query, id)
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err == nil && rows == 0 {
+		return sql.ErrNoRows
+	}
 	return err
 }
 
@@ -132,7 +139,7 @@ func (r *PostRepository) List(ctx context.Context, tag string, limit, offset int
 	}
 	defer rows.Close()
 
-	var posts []*domain.Post
+	posts := make([]*domain.Post, 0)
 	for rows.Next() {
 		var post domain.Post
 		err := rows.Scan(
@@ -142,6 +149,9 @@ func (r *PostRepository) List(ctx context.Context, tag string, limit, offset int
 			return nil, 0, err
 		}
 		posts = append(posts, &post)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
 	}
 	return posts, total, nil
 }
@@ -158,7 +168,7 @@ func (r *PostRepository) ListTags(ctx context.Context) ([]string, error) {
 	}
 	defer rows.Close()
 
-	var tags []string
+	tags := make([]string, 0)
 	for rows.Next() {
 		var tag string
 		if err := rows.Scan(&tag); err != nil {
@@ -166,49 +176,91 @@ func (r *PostRepository) ListTags(ctx context.Context) ([]string, error) {
 		}
 		tags = append(tags, tag)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	return tags, nil
 }
 
 // Comments Repository Methods
 func (r *PostRepository) CreateComment(ctx context.Context, comment *domain.Comment) error {
 	query := `
-		INSERT INTO comments (post_id, author, content, created_at)
-		VALUES ($1, $2, $3, NOW())
-		RETURNING id, created_at
+		INSERT INTO comments (post_id, author, content, is_visible, created_at)
+		VALUES ($1, $2, $3, false, NOW())
+		RETURNING id, is_visible, created_at
 	`
 	err := r.db.QueryRowContext(ctx, query,
 		comment.PostID, comment.Author, comment.Content,
-	).Scan(&comment.ID, &comment.CreatedAt)
+	).Scan(&comment.ID, &comment.IsVisible, &comment.CreatedAt)
 	return err
 }
 
-func (r *PostRepository) GetCommentsByPostID(ctx context.Context, postID int64) ([]*domain.Comment, error) {
+func (r *PostRepository) GetVisibleCommentsByPostID(ctx context.Context, postID int64) ([]*domain.Comment, error) {
+	return r.getCommentsByPostID(ctx, postID, true)
+}
+
+func (r *PostRepository) GetAllCommentsByPostID(ctx context.Context, postID int64) ([]*domain.Comment, error) {
+	return r.getCommentsByPostID(ctx, postID, false)
+}
+
+func (r *PostRepository) getCommentsByPostID(ctx context.Context, postID int64, visibleOnly bool) ([]*domain.Comment, error) {
 	query := `
-		SELECT id, post_id, author, content, created_at
+		SELECT id, post_id, author, content, is_visible, created_at
 		FROM comments
 		WHERE post_id = $1
 		ORDER BY created_at ASC
 	`
+	if visibleOnly {
+		query = `
+			SELECT id, post_id, author, content, is_visible, created_at
+			FROM comments
+			WHERE post_id = $1 AND is_visible = true
+			ORDER BY created_at ASC
+		`
+	}
 	rows, err := r.db.QueryContext(ctx, query, postID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var comments []*domain.Comment
+	comments := make([]*domain.Comment, 0)
 	for rows.Next() {
 		var comment domain.Comment
-		err := rows.Scan(&comment.ID, &comment.PostID, &comment.Author, &comment.Content, &comment.CreatedAt)
+		err := rows.Scan(&comment.ID, &comment.PostID, &comment.Author, &comment.Content, &comment.IsVisible, &comment.CreatedAt)
 		if err != nil {
 			return nil, err
 		}
 		comments = append(comments, &comment)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	return comments, nil
+}
+
+func (r *PostRepository) SetCommentVisibility(ctx context.Context, id int64, isVisible bool) error {
+	query := `UPDATE comments SET is_visible = $1 WHERE id = $2`
+	result, err := r.db.ExecContext(ctx, query, isVisible, id)
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err == nil && rows == 0 {
+		return sql.ErrNoRows
+	}
+	return err
 }
 
 func (r *PostRepository) DeleteComment(ctx context.Context, id int64) error {
 	query := `DELETE FROM comments WHERE id = $1`
-	_, err := r.db.ExecContext(ctx, query, id)
+	result, err := r.db.ExecContext(ctx, query, id)
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err == nil && rows == 0 {
+		return sql.ErrNoRows
+	}
 	return err
 }

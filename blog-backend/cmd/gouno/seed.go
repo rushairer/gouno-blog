@@ -29,8 +29,12 @@ func bootstrapDatabase(blogDB *sql.DB, logger *zap.Logger) {
 			post_id INT NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
 			author VARCHAR(100) NOT NULL,
 			content TEXT NOT NULL,
+			is_visible BOOLEAN NOT NULL DEFAULT false,
 			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 		);
+
+		ALTER TABLE comments
+		ADD COLUMN IF NOT EXISTS is_visible BOOLEAN NOT NULL DEFAULT false;
 	`
 	_, err := blogDB.ExecContext(ctx, blogSchema)
 	if err != nil {

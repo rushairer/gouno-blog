@@ -2,21 +2,42 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/rushairer/blog-backend/internal/domain"
-	"github.com/rushairer/blog-backend/internal/repository"
 )
 
-type PostService struct {
-	repo *repository.PostRepository
+var (
+	ErrPostNotFound = errors.New("post not found")
+	ErrSlugInUse    = errors.New("slug is already in use")
+)
+
+type PostRepository interface {
+	Create(ctx context.Context, post *domain.Post) error
+	Update(ctx context.Context, post *domain.Post) error
+	Delete(ctx context.Context, id int64) error
+	GetByID(ctx context.Context, id int64) (*domain.Post, error)
+	GetBySlug(ctx context.Context, slug string) (*domain.Post, error)
+	List(ctx context.Context, tag string, limit, offset int) ([]*domain.Post, int, error)
+	ListTags(ctx context.Context) ([]string, error)
+	CreateComment(ctx context.Context, comment *domain.Comment) error
+	GetVisibleCommentsByPostID(ctx context.Context, postID int64) ([]*domain.Comment, error)
+	GetAllCommentsByPostID(ctx context.Context, postID int64) ([]*domain.Comment, error)
+	SetCommentVisibility(ctx context.Context, id int64, isVisible bool) error
+	DeleteComment(ctx context.Context, id int64) error
 }
 
-func NewPostService(repo *repository.PostRepository) *PostService {
+type PostService struct {
+	repo PostRepository
+}
+
+func NewPostService(repo PostRepository) *PostService {
 	return &PostService{repo: repo}
 }
 
@@ -75,21 +96,33 @@ func (s *PostService) UpdatePost(ctx context.Context, post *domain.Post) error {
 		return err
 	}
 	if existing != nil && existing.ID != post.ID {
-		return fmt.Errorf("slug '%s' is already in use by another post", post.Slug)
+		return fmt.Errorf("%w: %s", ErrSlugInUse, post.Slug)
 	}
 
 	if post.Summary == "" {
 		post.Summary = generateSummary(post.Content)
 	}
 
-	return s.repo.Update(ctx, post)
+	if err := s.repo.Update(ctx, post); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrPostNotFound
+		}
+		return err
+	}
+	return nil
 }
 
 func (s *PostService) DeletePost(ctx context.Context, id int64) error {
 	if id <= 0 {
 		return errors.New("invalid post ID")
 	}
-	return s.repo.Delete(ctx, id)
+	if err := s.repo.Delete(ctx, id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrPostNotFound
+		}
+		return err
+	}
+	return nil
 }
 
 func (s *PostService) GetPost(ctx context.Context, id int64) (*domain.Post, error) {
@@ -98,6 +131,35 @@ func (s *PostService) GetPost(ctx context.Context, id int64) (*domain.Post, erro
 
 func (s *PostService) GetPostBySlug(ctx context.Context, slug string) (*domain.Post, error) {
 	return s.repo.GetBySlug(ctx, slug)
+}
+
+func (s *PostService) ResolvePostID(ctx context.Context, slugOrID string) (int64, error) {
+	if id, err := strconv.ParseInt(slugOrID, 10, 64); err == nil {
+		if id <= 0 {
+			return 0, errors.New("invalid post id")
+		}
+		post, err := s.repo.GetByID(ctx, id)
+		if err != nil {
+			return 0, err
+		}
+		if post == nil {
+			return 0, ErrPostNotFound
+		}
+		return post.ID, nil
+	}
+
+	slug := generateSlug(slugOrID)
+	if slug == "" {
+		return 0, errors.New("invalid post slug")
+	}
+	post, err := s.repo.GetBySlug(ctx, slug)
+	if err != nil {
+		return 0, err
+	}
+	if post == nil {
+		return 0, ErrPostNotFound
+	}
+	return post.ID, nil
 }
 
 func (s *PostService) ListPosts(ctx context.Context, tag string, page, pageSize int) ([]*domain.Post, int, error) {
@@ -129,11 +191,37 @@ func (s *PostService) CreateComment(ctx context.Context, comment *domain.Comment
 }
 
 func (s *PostService) GetComments(ctx context.Context, postID int64) ([]*domain.Comment, error) {
-	return s.repo.GetCommentsByPostID(ctx, postID)
+	return s.repo.GetVisibleCommentsByPostID(ctx, postID)
+}
+
+func (s *PostService) GetAllComments(ctx context.Context, postID int64) ([]*domain.Comment, error) {
+	return s.repo.GetAllCommentsByPostID(ctx, postID)
+}
+
+func (s *PostService) SetCommentVisibility(ctx context.Context, id int64, isVisible bool) error {
+	if id <= 0 {
+		return errors.New("invalid comment id")
+	}
+	if err := s.repo.SetCommentVisibility(ctx, id, isVisible); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrPostNotFound
+		}
+		return err
+	}
+	return nil
 }
 
 func (s *PostService) DeleteComment(ctx context.Context, id int64) error {
-	return s.repo.DeleteComment(ctx, id)
+	if id <= 0 {
+		return errors.New("invalid comment id")
+	}
+	if err := s.repo.DeleteComment(ctx, id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrPostNotFound
+		}
+		return err
+	}
+	return nil
 }
 
 // Helpers
@@ -148,7 +236,7 @@ func generateSlug(src string) string {
 
 func generateSummary(content string) string {
 	// Remove markdown headers and formatters
-	clean := regexp.MustCompile(`[#*_\-` + "`" + `]`).ReplaceAllString(content, "")
+	clean := regexp.MustCompile(`[#*_\-`+"`"+`]`).ReplaceAllString(content, "")
 	clean = strings.TrimSpace(clean)
 	runes := []rune(clean)
 	if len(runes) > 150 {

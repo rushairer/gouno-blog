@@ -2,17 +2,13 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
-  Bookmark,
   ChevronRight,
   Cloud,
   Code2,
   Edit3,
   FileText,
-  Folder,
-  Image,
   ListFilter,
   Lock,
-  MoreHorizontal,
   Search,
   Tag,
   Terminal,
@@ -29,6 +25,8 @@ interface Post {
   tags: string[];
   created_at: string;
 }
+
+const pageSize = 6;
 
 function PostCard({ post }: { post: Post }) {
   const { t, formatDate } = useI18n();
@@ -56,12 +54,6 @@ function PostCard({ post }: { post: Post }) {
         </div>
       </div>
       <div className="post-row__meta">
-        <button className="ghost-icon" type="button" aria-label={t('saveArticle')}>
-          <Bookmark size={21} />
-        </button>
-        <button className="ghost-icon" type="button" aria-label={t('moreActions')}>
-          <MoreHorizontal size={22} />
-        </button>
         <time>{formatDate(post.created_at)}</time>
         <span>
           <Timer size={15} />
@@ -91,15 +83,30 @@ export default function Home() {
   const [tags, setTags] = useState<string[]>([]);
   const [selectedTag, setSelectedTag] = useState<string>('');
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchData() {
+    setPage(1);
+  }, [selectedTag]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function fetchPosts() {
       try {
-        setLoading(true);
+        if (page === 1) {
+          setLoading(true);
+        } else {
+          setLoadingMore(true);
+        }
         setError(null);
         const postsUrl = new URL('/api/posts', window.location.origin);
+        postsUrl.searchParams.set('page', String(page));
+        postsUrl.searchParams.set('pageSize', String(pageSize));
         if (selectedTag) {
           postsUrl.searchParams.append('tag', selectedTag);
         }
@@ -107,23 +114,48 @@ export default function Home() {
         const postsResp = await fetch(postsUrl.toString());
         if (!postsResp.ok) throw new Error(t('failedLoadPosts'));
         const postsBody = await postsResp.json();
-        setPosts(postsBody.data.list || []);
-
-        const tagsResp = await fetch('/api/tags');
-        if (tagsResp.ok) {
-          const tagsBody = await tagsResp.json();
-          setTags(tagsBody.data || []);
+        if (!ignore) {
+          const nextPosts = postsBody.data.list || [];
+          setPosts((current) => (page === 1 ? nextPosts : [...current, ...nextPosts]));
+          setTotal(postsBody.data.total || nextPosts.length);
         }
       } catch (err: unknown) {
         console.error(err);
-        setError(err instanceof Error ? err.message : t('failedFetch'));
+        if (!ignore) {
+          setError(err instanceof Error ? err.message : t('failedFetch'));
+        }
       } finally {
-        setLoading(false);
+        if (!ignore) {
+          setLoading(false);
+          setLoadingMore(false);
+        }
       }
     }
 
-    fetchData();
-  }, [selectedTag, t]);
+    fetchPosts();
+    return () => {
+      ignore = true;
+    };
+  }, [page, selectedTag, t]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function fetchTags() {
+      const tagsResp = await fetch('/api/tags');
+      if (tagsResp.ok && !ignore) {
+        const tagsBody = await tagsResp.json();
+        setTags(tagsBody.data || []);
+      }
+    }
+
+    fetchTags().catch((err: unknown) => {
+      console.error(err);
+    });
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const normalizedSearch = search.trim().toLowerCase();
   const filteredPosts = posts.filter((post) =>
@@ -133,6 +165,7 @@ export default function Home() {
     tag,
     count: posts.filter((post) => post.tags.includes(tag)).length,
   }));
+  const hasMore = posts.length < total;
 
   return (
     <div className="blog-shell">
@@ -184,9 +217,9 @@ export default function Home() {
               {filteredPosts.map((post) => (
                 <PostCard key={post.id} post={post} />
               ))}
-              {filteredPosts.length > 3 && (
-                <button className="load-more" type="button">
-                  {t('loadMore')}
+              {hasMore && (
+                <button className="load-more" type="button" onClick={() => setPage((current) => current + 1)} disabled={loadingMore}>
+                  {loadingMore ? t('loadingPosts') : t('loadMore')}
                   <ChevronRight size={16} />
                 </button>
               )}
@@ -238,20 +271,6 @@ export default function Home() {
             <span>
               <FileText size={18} />
               {t('managePosts')}
-            </span>
-            <ChevronRight size={18} />
-          </Link>
-          <Link className="quick-action" to="/admin">
-            <span>
-              <Folder size={18} />
-              {t('categories')}
-            </span>
-            <ChevronRight size={18} />
-          </Link>
-          <Link className="quick-action" to="/admin">
-            <span>
-              <Image size={18} />
-              {t('mediaLibrary')}
             </span>
             <ChevronRight size={18} />
           </Link>

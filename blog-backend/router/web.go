@@ -81,6 +81,8 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 			admin.POST("/posts", ctrl.Create)
 			admin.PUT("/posts/:id", ctrl.Update)
 			admin.DELETE("/posts/:id", ctrl.Delete)
+			admin.GET("/posts/:slugOrID/comments/all", ctrl.GetAllComments)
+			admin.PUT("/comments/:id/visibility", ctrl.UpdateCommentVisibility)
 			admin.DELETE("/comments/:id", ctrl.DeleteComment)
 		}
 	}

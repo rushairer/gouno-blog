@@ -1,32 +1,63 @@
-# React + TypeScript + Vite
+# Gouno Blog Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React + TypeScript + Vite single-page app for the Gouno Blog portal. It serves the public blog feed, article pages, comments, account settings, and the admin content workspace. Authentication is delegated to GOSSO through OIDC/OAuth2.
 
-Currently, two official plugins are available:
+## Local Development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Install dependencies:
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm ci
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Start the Vite dev server:
+
+```bash
+npm run dev
+```
+
+The full local product is normally accessed through the root Docker Compose gateway at `http://localhost:8080`, which proxies:
+
+- `/` to this frontend
+- `/api/` to `blog-backend`
+- `/callback` back to this SPA for OIDC callback handling
+
+## Environment Variables
+
+The app works behind the gateway without extra frontend configuration. Override these only when connecting to a different GOSSO issuer or OAuth client:
+
+```bash
+VITE_GOSSO_ISSUER=http://localhost:8080
+VITE_GOSSO_CLIENT_ID=blog-spa
+```
+
+The redirect URI is derived from the current browser origin as `${window.location.origin}/callback`.
+
+## Available Scripts
+
+```bash
+npm run dev       # start local development server
+npm run lint      # run oxlint
+npm run test:run  # run Vitest once
+npm run test      # run Vitest in watch mode
+npm run build     # type-check and build production assets
+npm run preview   # preview built assets
+```
+
+## MVP Behavior
+
+- Public feed loads paginated posts from `/api/posts?page=&pageSize=`.
+- Tags load from `/api/tags`; the selected tag is sent to the backend as `tag`.
+- Article pages resolve by slug and load comments using the resolved numeric post ID.
+- Article content supports a small Markdown subset: headings, paragraphs, bullet lists, links, inline code, bold, emphasis, and fenced code blocks.
+- Admin workspace requires a logged-in account with the `admin` role and redirects through GOSSO when access is missing.
+
+## Testing Notes
+
+The test suite uses React Testing Library and Vitest. Current coverage focuses on:
+
+- auth storage and admin role detection
+- login/MFA behavior
+- feed pagination and client-side search
+- article markdown rendering and comment posting
+- admin access redirect and save error handling

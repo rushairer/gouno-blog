@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { AlertTriangle, Edit2, FileText, MessageSquare, Plus, Save, Trash2, X } from 'lucide-react';
 import { EmptyState, Feedback, Field, IconButton, LoadingState, PageHeader, Panel } from '../components/ui';
 import { apiFetch, canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
@@ -20,15 +20,16 @@ interface Comment {
   post_id: number;
   author: string;
   content: string;
+  is_visible: boolean;
   created_at: string;
 }
 
 export default function Admin() {
-  const navigate = useNavigate();
   const { t, formatDate, formatDateTime } = useI18n();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [accessDenied, setAccessDenied] = useState(false);
 
   const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -58,12 +59,16 @@ export default function Admin() {
 
   useEffect(() => {
     if (!isLoggedIn() || !canManageBlog()) {
-      redirectToAuthorize('/admin');
-      return;
+      setAccessDenied(true);
+      setLoading(false);
+      const redirectTimer = window.setTimeout(() => {
+        redirectToAuthorize('/admin');
+      }, 900);
+      return () => window.clearTimeout(redirectTimer);
     }
 
     fetchPosts();
-  }, [fetchPosts, navigate]);
+  }, [fetchPosts]);
 
   const handleEditClick = (post: Post) => {
     setEditingPost(post);
@@ -157,12 +162,29 @@ export default function Admin() {
     setEditingPost(null);
     setIsCreating(false);
     try {
-      const response = await fetch(`/api/posts/${postId}/comments`);
+      const response = await apiFetch(`/api/posts/${postId}/comments/all`);
       if (!response.ok) throw new Error(t('failedLoadComments'));
       const body = await response.json();
       setSelectedPostComments(body.data || []);
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : t('errorFetchComments'));
+    }
+  };
+
+  const handleToggleCommentVisibility = async (comment: Comment) => {
+    const nextVisibility = !comment.is_visible;
+    try {
+      const response = await apiFetch(`/api/comments/${comment.id}/visibility`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_visible: nextVisibility }),
+      });
+      if (!response.ok) throw new Error(t('failedUpdateCommentVisibility'));
+      setSelectedPostComments((current) =>
+        current.map((item) => (item.id === comment.id ? { ...item, is_visible: nextVisibility } : item)),
+      );
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : t('errorUpdateCommentVisibility'));
     }
   };
 
@@ -198,7 +220,15 @@ export default function Admin() {
         </Feedback>
       )}
 
-      {loading ? (
+      {accessDenied && (
+        <Feedback type="error">
+          <AlertTriangle size={16} /> {t('adminAccessRequired')}
+        </Feedback>
+      )}
+
+      {accessDenied ? (
+        <LoadingState label={t('redirectingSignin')} />
+      ) : loading ? (
         <LoadingState label={t('loadingResources')} />
       ) : (
         <div className="workspace-grid">
@@ -266,14 +296,22 @@ export default function Admin() {
                       <div>
                         <div className="inline-meta">
                           <strong>{comment.author}</strong>
+                          <span className={`status-pill ${comment.is_visible ? 'status-pill--visible' : 'status-pill--pending'}`}>
+                            {comment.is_visible ? t('visibleToEveryone') : t('pendingReview')}
+                          </span>
                           <span>{formatDateTime(comment.created_at)}</span>
                         </div>
                         <p className="muted" style={{ marginTop: '8px' }}>{comment.content}</p>
                       </div>
-                      <button className="btn btn-danger" onClick={() => handleDeleteComment(comment.id)} type="button">
-                        <Trash2 />
-                        {t('delete')}
-                      </button>
+                      <div className="row-actions">
+                        <button className="btn btn-secondary" onClick={() => handleToggleCommentVisibility(comment)} type="button">
+                          {comment.is_visible ? t('hideComment') : t('showComment')}
+                        </button>
+                        <button className="btn btn-danger" onClick={() => handleDeleteComment(comment.id)} type="button">
+                          <Trash2 />
+                          {t('delete')}
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

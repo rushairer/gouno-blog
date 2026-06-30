@@ -18,5 +18,6 @@ type Comment struct {
 	PostID    int64     `json:"post_id"`
 	Author    string    `json:"author"`
 	Content   string    `json:"content"`
+	IsVisible bool      `json:"is_visible"`
 	CreatedAt time.Time `json:"created_at"`
 }

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Calendar, MessageSquare, Send, User } from 'lucide-react';
-import { EmptyState, Field, LoadingState, Panel } from '../components/ui';
+import { EmptyState, Feedback, Field, LoadingState, Panel } from '../components/ui';
 import { useI18n } from '../i18n';
 
 interface Post {
@@ -19,7 +19,115 @@ interface Comment {
   post_id: number;
   author: string;
   content: string;
+  is_visible: boolean;
   created_at: string;
+}
+
+function renderInlineMarkdown(text: string, keyPrefix: string): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
+  const pattern = /(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*|\[[^\]]+\]\([^)]+\))/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+
+    const token = match[0];
+    const key = `${keyPrefix}-${match.index}`;
+    if (token.startsWith('`')) {
+      parts.push(<code key={key}>{token.slice(1, -1)}</code>);
+    } else if (token.startsWith('**')) {
+      parts.push(<strong key={key}>{token.slice(2, -2)}</strong>);
+    } else if (token.startsWith('*')) {
+      parts.push(<em key={key}>{token.slice(1, -1)}</em>);
+    } else {
+      const linkMatch = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(token);
+      const href = linkMatch?.[2] || '';
+      const safeHref = /^(https?:|mailto:|\/|#)/.test(href) ? href : '#';
+      parts.push(
+        <a key={key} href={safeHref} target={safeHref.startsWith('http') ? '_blank' : undefined} rel={safeHref.startsWith('http') ? 'noreferrer' : undefined}>
+          {linkMatch?.[1] || token}
+        </a>,
+      );
+    }
+    lastIndex = pattern.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+  return parts.length > 0 ? parts : [text];
+}
+
+function MarkdownContent({ content }: { content: string }) {
+  const lines = content.replace(/\r\n/g, '\n').split('\n');
+  const blocks: React.ReactNode[] = [];
+  let index = 0;
+
+  while (index < lines.length) {
+    const line = lines[index];
+    if (!line.trim()) {
+      index += 1;
+      continue;
+    }
+
+    const fenceMatch = /^```(\w+)?\s*$/.exec(line);
+    if (fenceMatch) {
+      const codeLines: string[] = [];
+      index += 1;
+      while (index < lines.length && !/^```\s*$/.test(lines[index])) {
+        codeLines.push(lines[index]);
+        index += 1;
+      }
+      if (index < lines.length) index += 1;
+      blocks.push(
+        <pre key={`code-${index}`}>
+          <code>{codeLines.join('\n')}</code>
+        </pre>,
+      );
+      continue;
+    }
+
+    const headingMatch = /^(#{1,3})\s+(.+)$/.exec(line);
+    if (headingMatch) {
+      const level = headingMatch[1].length;
+      const children = renderInlineMarkdown(headingMatch[2], `heading-${index}`);
+      if (level === 1) blocks.push(<h2 key={`heading-${index}`}>{children}</h2>);
+      if (level === 2) blocks.push(<h3 key={`heading-${index}`}>{children}</h3>);
+      if (level === 3) blocks.push(<h4 key={`heading-${index}`}>{children}</h4>);
+      index += 1;
+      continue;
+    }
+
+    if (/^\s*[-*]\s+/.test(line)) {
+      const items: React.ReactNode[] = [];
+      while (index < lines.length && /^\s*[-*]\s+/.test(lines[index])) {
+        const value = lines[index].replace(/^\s*[-*]\s+/, '');
+        items.push(<li key={`item-${index}`}>{renderInlineMarkdown(value, `item-${index}`)}</li>);
+        index += 1;
+      }
+      blocks.push(<ul key={`list-${index}`}>{items}</ul>);
+      continue;
+    }
+
+    const paragraphLines = [line.trim()];
+    index += 1;
+    while (
+      index < lines.length &&
+      lines[index].trim() &&
+      !/^(#{1,3})\s+/.test(lines[index]) &&
+      !/^\s*[-*]\s+/.test(lines[index]) &&
+      !/^```/.test(lines[index])
+    ) {
+      paragraphLines.push(lines[index].trim());
+      index += 1;
+    }
+    blocks.push(<p key={`paragraph-${index}`}>{renderInlineMarkdown(paragraphLines.join(' '), `paragraph-${index}`)}</p>);
+  }
+
+  return <div className="article-content">{blocks.length > 0 ? blocks : <p>{content}</p>}</div>;
 }
 
 export default function PostDetail() {
@@ -32,6 +140,7 @@ export default function PostDetail() {
   const [loading, setLoading] = useState(true);
   const [commentLoading, setCommentLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [commentNotice, setCommentNotice] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchPostAndComments() {
@@ -79,9 +188,10 @@ export default function PostDetail() {
         throw new Error(t('failedPostComment'));
       }
 
-      const body = await response.json();
-      setComments([...comments, body.data]);
+      await response.json();
       setCommentContent('');
+      setCommentAuthor('');
+      setCommentNotice(t('commentPendingReview'));
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : t('failedPostComment'));
     } finally {
@@ -134,7 +244,7 @@ export default function PostDetail() {
             ))}
           </div>
         </header>
-        <div className="article-content">{post.content}</div>
+        <MarkdownContent content={post.content} />
       </Panel>
 
       <Panel className="section-stack">
@@ -161,6 +271,7 @@ export default function PostDetail() {
 
         <form className="form-stack" onSubmit={handleAddComment}>
           <h4>{t('leaveComment')}</h4>
+          {commentNotice && <Feedback type="success">{commentNotice}</Feedback>}
           <Field label={t('name')}>
             <input
               type="text"
