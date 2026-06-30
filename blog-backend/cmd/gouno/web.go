@@ -98,6 +98,9 @@ func startWebServer(cmd *cobra.Command, args []string) {
 	}
 
 	engine := gin.New()
+	if err := engine.SetTrustedProxies(globalConfig.WebServerConfig.TrustedProxies); err != nil {
+		log.Fatalf("invalid trusted proxies configuration: %v", err)
+	}
 	engine.Use(
 		gin.Logger(),
 		middleware.RecoveryMiddleware(),

@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/rushairer/gouno"
+	"golang.org/x/sync/singleflight"
 )
 
 type JWKS struct {
@@ -30,9 +31,11 @@ type JWK struct {
 }
 
 type JWTVerifier struct {
-	jwksURL string
-	keys    map[string]*rsa.PublicKey
-	mu      sync.RWMutex
+	jwksURL       string
+	keys          map[string]*rsa.PublicKey
+	mu            sync.RWMutex
+	sf            singleflight.Group
+	lastRefreshed time.Time
 }
 
 type AuthOptions struct {
@@ -61,32 +64,54 @@ func NewJWTVerifier(jwksURL string) *JWTVerifier {
 }
 
 func (v *JWTVerifier) refreshKeys() error {
-	client := &http.Client{Timeout: 5 * time.Second}
-	resp, err := client.Get(v.jwksURL)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
+	v.mu.RLock()
+	lastRefreshed := v.lastRefreshed
+	v.mu.RUnlock()
 
-	var jwks JWKS
-	if err := json.NewDecoder(resp.Body).Decode(&jwks); err != nil {
-		return err
+	// 1 minute cooldown to prevent cache stampede/DoS spamming
+	if time.Since(lastRefreshed) < 1*time.Minute {
+		return nil
 	}
 
-	newKeys := make(map[string]*rsa.PublicKey)
-	for _, key := range jwks.Keys {
-		if key.Kty == "RSA" && key.Use == "sig" && key.Alg == "RS256" {
-			pubKey, err := parseJWK(key)
-			if err == nil {
-				newKeys[key.Kid] = pubKey
+	_, err, _ := v.sf.Do("refresh", func() (interface{}, error) {
+		// Double check inside singleflight
+		v.mu.RLock()
+		lastRefreshedInner := v.lastRefreshed
+		v.mu.RUnlock()
+		if time.Since(lastRefreshedInner) < 1*time.Minute {
+			return nil, nil
+		}
+
+		client := &http.Client{Timeout: 5 * time.Second}
+		resp, err := client.Get(v.jwksURL)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+
+		var jwks JWKS
+		if err := json.NewDecoder(resp.Body).Decode(&jwks); err != nil {
+			return nil, err
+		}
+
+		newKeys := make(map[string]*rsa.PublicKey)
+		for _, key := range jwks.Keys {
+			if key.Kty == "RSA" && key.Use == "sig" && key.Alg == "RS256" {
+				pubKey, err := parseJWK(key)
+				if err == nil {
+					newKeys[key.Kid] = pubKey
+				}
 			}
 		}
-	}
 
-	v.mu.Lock()
-	v.keys = newKeys
-	v.mu.Unlock()
-	return nil
+		v.mu.Lock()
+		v.keys = newKeys
+		v.lastRefreshed = time.Now()
+		v.mu.Unlock()
+		return nil, nil
+	})
+
+	return err
 }
 
 func parseJWK(key JWK) (*rsa.PublicKey, error) {
@@ -138,6 +163,16 @@ func AuthMiddleware(verifier *JWTVerifier, requiredRole string) gin.HandlerFunc 
 }
 
 func AuthMiddlewareWithOptions(verifier *JWTVerifier, options AuthOptions) gin.HandlerFunc {
+	if options.Issuer == "" {
+		panic("AuthMiddleware: Issuer must not be empty")
+	}
+	if options.Audience == "" {
+		panic("AuthMiddleware: Audience must not be empty")
+	}
+	if options.ClientID == "" {
+		panic("AuthMiddleware: ClientID must not be empty")
+	}
+
 	return func(ctx *gin.Context) {
 		authHeader := ctx.GetHeader("Authorization")
 		if authHeader == "" {

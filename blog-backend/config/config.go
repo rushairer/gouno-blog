@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net"
 	"time"
 )
 
@@ -26,6 +27,7 @@ type WebServerConfig struct {
 	WriteTimeout       time.Duration `mapstructure:"write_timeout"`
 	RequestTimeout     time.Duration `mapstructure:"request_timeout"`
 	RateLimitPerMinute int           `mapstructure:"rate_limit_per_minute"`
+	TrustedProxies     []string      `mapstructure:"trusted_proxies"`
 }
 
 type DatabaseConfigDriverName string
@@ -125,5 +127,18 @@ func (c GoUnoConfig) Validate() error {
 	if c.LogConfig.Level < -1 || c.LogConfig.Level > 5 {
 		return fmt.Errorf("log: level must be between -1 and 5")
 	}
+	if !c.WebServerConfig.Debug && len(c.WebServerConfig.TrustedProxies) == 0 {
+		return fmt.Errorf("web_server: trusted_proxies must not be empty in production (set to proxy CIDRs, e.g. [\"172.22.0.0/16\"])")
+	}
+	for _, proxy := range c.WebServerConfig.TrustedProxies {
+		if net.ParseIP(proxy) == nil && !isValidCIDR(proxy) {
+			return fmt.Errorf("web_server: trusted_proxies entry %q is not a valid IP address or CIDR notation", proxy)
+		}
+	}
 	return nil
+}
+
+func isValidCIDR(s string) bool {
+	_, _, err := net.ParseCIDR(s)
+	return err == nil
 }

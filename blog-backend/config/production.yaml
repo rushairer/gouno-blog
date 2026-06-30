@@ -7,6 +7,8 @@ web_server:
     write_timeout: 30s
     request_timeout: 10s
     rate_limit_per_minute: 120
+    trusted_proxies:
+        - "172.16.0.0/12"
 database:
     default: postgres
     drivers:
