@@ -11,6 +11,7 @@
 * **Nginx Gateway (`localhost:8080`)**：统一网关入口。
   - `/` -> **blog-frontend** (React SPA 门户)
   - `/api/` -> **blog-backend** (GoUno 博客后端)
+  - `/swagger/` -> **Swagger UI & OpenAPI Spec** (API 接口文档)
   - `/identity-admin/` -> **gosso-admin-frontend** (GOSSO 身份管理控制台)
   - `/api/v1/`、`/oauth2/`、`/oidc/`、`/.well-known/` -> **gosso**
 * **GOSSO / OIDC Provider**：负责登录、授权码流程、Token 签发、MFA、Passkey 等身份能力；本地默认使用 `ghcr.io/rushairer/gosso` 镜像。
@@ -101,6 +102,7 @@ docker compose -f docker-compose.yml -f docker-compose.source.yml up -d --build
 - 打开浏览器访问门户：[http://localhost:8080/](http://localhost:8080/)
 - 访问博客后台管理（触发 SSO 登录流）：[http://localhost:8080/admin](http://localhost:8080/admin)
 - 访问 GOSSO 身份管理控制台：[http://localhost:8080/identity-admin](http://localhost:8080/identity-admin)
+- 访问 API Swagger 文档：[http://localhost:8080/swagger](http://localhost:8080/swagger)
 - 使用本地默认管理员账户登录：
   - 用户名：`admin`
   - 密码：`admin123`
@@ -116,6 +118,18 @@ export SSO_JWKS_URL=http://host.docker.internal:8088/.well-known/jwks.json
 export SSO_TOKEN_ISSUER=http://localhost:8088
 export SSO_CLIENT_ID=blog-spa
 ```
+
+### 6. 多语言与国际化 (i18n)
+
+博客前端已支持中英文（zh/en）国际化：
+- **首选语言自适应**：系统默认会根据浏览器语言自动加载对应的语言界面（中文或英文）。
+- **语言手动切换**：在设置界面或首页侧边栏，你可以自由在“English”和“简体中文”之间切换，并且切换记录会被保存在浏览器的本地存储（Local Storage）中，以便在下一次访问时继续生效。
+
+### 7. 多架构与 ARM64 支持
+
+为了支持在不同处理器架构（包括 Apple Silicon M1/M2/M3 等 ARM 设备）下流畅开发：
+- **Docker Compose 配置**：在 `docker-compose.yml` 中，各服务的 platform 已经被明确配置，以防止在 ARM 架构设备上启动时产生不兼容的警告信息。
+- **CI 多平台构建**：GitHub Actions 工作流已支持利用 Docker Buildx 自动并行构建 `linux/amd64` 和 `linux/arm64` 的多平台 Docker 镜像并推送至 GHCR。
 
 ---
 
