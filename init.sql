@@ -1,2 +1,3 @@
--- Create the blog backend database. The identity provider database is owned by its deployment.
+-- Local cluster databases. Application code still talks to Gosso only through OIDC/JWKS.
+CREATE DATABASE gosso;
 CREATE DATABASE blog;

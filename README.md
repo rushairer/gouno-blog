@@ -1,17 +1,19 @@
 # Gouno Blog (基于 GOSSO & GoUno)
 
-这是一个基于 OIDC 单点登录（SSO）架构的个人博客系统 Demo。项目包含前端 SPA、后端 API 和博客网关；身份提供商（例如 GOSSO）作为外部服务通过配置接入。
+这是一个基于 OIDC 单点登录（SSO）架构的个人博客系统 Demo。项目包含前端 SPA、后端 API、博客网关，以及本地开发用的 GOSSO 身份服务和 GOSSO Admin 镜像编排。
 
 ---
 
 ## 🏗️ 架构设计
 
-系统采用“业务应用轻依赖身份提供商”的架构。`gouno-blog` 不包含 GOSSO 源码，也不直接写入 GOSSO 数据库；它只通过 OIDC/OAuth2 和 JWKS 与外部身份服务交互。
+系统采用“业务应用轻依赖身份提供商”的架构。`gouno-blog` 不包含 GOSSO 或 GOSSO Admin 源码，也不把它们作为 Git 子模块；本地完整集群通过已发布 Docker 镜像接入，业务代码只通过 OIDC/OAuth2 和 JWKS 与身份服务交互。
 
 * **Nginx Gateway (`localhost:8080`)**：统一网关入口。
   - `/` -> **blog-frontend** (React SPA 门户)
   - `/api/` -> **blog-backend** (GoUno 博客后端)
-* **外部 GOSSO / OIDC Provider**：负责登录、授权码流程、Token 签发、MFA、Passkey 等身份能力。
+  - `/identity-admin/` -> **gosso-admin-frontend** (GOSSO 身份管理控制台)
+  - `/api/v1/`、`/oauth2/`、`/oidc/`、`/.well-known/` -> **gosso**
+* **GOSSO / OIDC Provider**：负责登录、授权码流程、Token 签发、MFA、Passkey 等身份能力；本地默认使用 `ghcr.io/rushairer/gosso` 镜像。
 * **blog-backend**：博客 API 后端，使用 `gouno` Web 框架开发，向身份服务拉取 JWKS 公钥并校验登录凭证与用户权限。
 * **blog-frontend**：基于 React 构建的单页面应用（SPA），提供门户展示与 `/admin` 博客管理控制台。
 
@@ -26,6 +28,7 @@
 ├── docker-compose.yml         # 本地容器编排配置
 ├── nginx-gateway.conf         # Nginx 反向代理配置
 ├── init.sql                   # 数据库初始化脚本
+├── keys/                      # 本地 GOSSO RSA 私钥目录（不提交）
 ├── blog-backend/              # 博客后端微服务 (GoUno)
 └── blog-frontend/             # 博客前端门户 (React)
 ```
@@ -40,8 +43,17 @@ git clone https://github.com/rushairer/gouno-blog.git
 cd gouno-blog
 ```
 
-### 2. 准备外部身份服务
-运行前需要有一个可访问的 GOSSO/OIDC Provider，并注册博客前端 OAuth client：
+### 2. 生成本地 GOSSO 签名密钥
+
+```bash
+mkdir -p keys
+test -f keys/private.pem || openssl genpkey -algorithm RSA -out keys/private.pem -pkeyopt rsa_keygen_bits:2048
+chmod 600 keys/private.pem
+```
+
+### 3. 启动本地完整业务集群
+
+默认 compose 会启动 blog、GOSSO、GOSSO Admin、PostgreSQL、Redis、Mailpit 和统一网关，并自动注册博客前端 OAuth client：
 
 - Client ID：`blog-spa`
 - Redirect URI：`http://localhost:8080/callback`
@@ -49,16 +61,7 @@ cd gouno-blog
 
 后端管理接口仍由 blog 后端执行权限校验；当前默认要求 Access Token 中包含 `roles: ["admin"]`。
 
-### 3. 启动本地容器化环境
-默认示例假设外部身份服务公开在 `http://localhost:8088`，容器内可通过 `host.docker.internal:8088` 读取 JWKS。可按需覆盖：
-
 ```bash
-export VITE_GOSSO_ISSUER=http://localhost:8088
-export VITE_GOSSO_CLIENT_ID=blog-spa
-export SSO_JWKS_URL=http://host.docker.internal:8088/.well-known/jwks.json
-export SSO_TOKEN_ISSUER=http://localhost:8088
-export SSO_CLIENT_ID=blog-spa
-
 docker compose up -d --build
 ```
 
@@ -66,25 +69,39 @@ docker compose up -d --build
 * `sso-blog-gateway` (Nginx, 监听端口 `8080`)
 * `sso-blog-frontend` (前端 SPA)
 * `sso-blog-backend` (后端 API, 监听端口 `8082`)
+* `sso-blog-gosso` (GOSSO 身份服务)
+* `sso-blog-gosso-admin-frontend` (GOSSO Admin 身份管理控制台)
+* `sso-blog-gosso-admin-seed` / `sso-blog-client-seed` (一次性初始化任务)
 * `sso-blog-db` (PostgreSQL 15 数据库)
 * `sso-blog-redis` (Redis 缓存在线 Session)
+* `sso-blog-mailpit` (本地邮件测试)
+
+镜像 tag 可按需 pin 到不可变版本：
+
+```bash
+export GOSSO_IMAGE_TAG=sha-...
+export GOSSO_ADMIN_FRONTEND_IMAGE_TAG=sha-...
+export GOSSO_ADMIN_SEED_IMAGE_TAG=sha-...
+```
 
 ### 4. 访问测试
 - 打开浏览器访问门户：[http://localhost:8080/](http://localhost:8080/)
 - 访问博客后台管理（触发 SSO 登录流）：[http://localhost:8080/admin](http://localhost:8080/admin)
-- 使用外部身份服务中的管理员账户登录。
+- 访问 GOSSO 身份管理控制台：[http://localhost:8080/identity-admin](http://localhost:8080/identity-admin)
+- 使用本地默认管理员账户登录：
+  - 用户名：`admin`
+  - 密码：`admin123`
 - 登录成功后，如果 token 中包含 blog 管理所需角色，即可在博客后台发布和管理文章。
 
-如需同时联调 `gouno-blog`、`gosso` 和 `gosso-admin`，请使用隔壁独立部署项目：
-```bash
-cd ../gouno-cluster-deploy
-docker compose up -d
-```
-集群模式会额外挂载 GOSSO 身份管理控制台：[http://localhost:8080/identity-admin](http://localhost:8080/identity-admin)。
+### 5. 使用外部身份服务
 
-如果需要从相邻源码仓库构建联调，请在部署项目中使用：
+如需让 `gouno-blog` 连接外部 OIDC/GOSSO，而不是本地 compose 内的 `gosso`，可以覆盖以下配置，并按需停用本地身份相关服务：
+
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.source.yml up -d --build
+export VITE_GOSSO_ISSUER=http://localhost:8088
+export SSO_JWKS_URL=http://host.docker.internal:8088/.well-known/jwks.json
+export SSO_TOKEN_ISSUER=http://localhost:8088
+export SSO_CLIENT_ID=blog-spa
 ```
 
 ---

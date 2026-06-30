@@ -26,6 +26,93 @@ services:
       timeout: 5s
       retries: 5
 
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: sso-blog-mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    restart: unless-stopped
+
+  gosso:
+    image: ghcr.io/rushairer/gosso:${GOSSO_IMAGE_TAG:-main}
+    container_name: sso-blog-gosso
+    command: ["web", "-e", "development"]
+    environment:
+      - GOUNO_ENV=development
+      - GOUNO_WEB_SERVER_ADDRESS=0.0.0.0
+      - GOUNO_WEB_SERVER_PORT=8080
+      - GOUNO_DATABASE_DEFAULT=postgres
+      - GOUNO_DATABASE_DRIVERS_POSTGRES_DSN=host=db user=postgres password=password dbname=gosso port=5432 sslmode=disable TimeZone=Asia/Shanghai search_path=public
+      - GOUNO_REDIS_DSN=redis://redis:6379/0
+      - GOUNO_AUTH_ISSUER=http://localhost:8080
+      - GOUNO_AUTH_PASSWORD_RESET_BASE_URL=http://localhost:8080/identity-admin/reset-password
+      - GOUNO_AUTH_PRIVATE_KEY_PATH=/app/keys/private.pem
+      - GOUNO_AUTH_TOTP_ENCRYPTION_KEY=0000000000000000000000000000000000000000000000000000000000000000
+      - GOUNO_AUTH_VERIFY_HASH_PEPPER=0000000000000000000000000000000000000000000000000000000000000000
+      - GOUNO_SMTP_HOST=mailpit
+      - GOUNO_SMTP_PORT=1025
+      - GOUNO_SMTP_TLS_POLICY=notls
+      - GOUNO_AUTH_WEBAUTHN_RP_ID=localhost
+      - GOUNO_AUTH_WEBAUTHN_RP_NAME=gouno-blog-dev
+      - GOUNO_AUTH_WEBAUTHN_RP_ORIGIN=http://localhost:8080
+    volumes:
+      - ./keys:/app/keys
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+
+  gosso-admin-seed:
+    image: ghcr.io/rushairer/gosso-admin-seed:${GOSSO_ADMIN_SEED_IMAGE_TAG:-main}
+    container_name: sso-blog-gosso-admin-seed
+    environment:
+      - GOSSO_ADMIN_ENV=development
+      - PG_DSN=host=db user=postgres password=password dbname=gosso port=5432 sslmode=disable
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=admin123
+      - ADMIN_DISPLAY_NAME=System Admin
+      - OAUTH2_CLIENT_REDIRECT_URIS=http://localhost:8080/identity-admin/callback
+    depends_on:
+      db:
+        condition: service_healthy
+      gosso:
+        condition: service_started
+
+  blog-client-seed:
+    image: postgres:15-alpine
+    container_name: sso-blog-client-seed
+    environment:
+      - PGPASSWORD=password
+    command:
+      - sh
+      - -c
+      - |
+        psql "host=db user=postgres dbname=gosso port=5432 sslmode=disable" <<SQL
+        INSERT INTO oauth2_clients (account_id, client_id, name, description, redirect_uris, grant_types, scopes, is_confidential)
+        VALUES (
+          '00000000-0000-0000-0000-000000000001',
+          'blog-spa',
+          'Personal Blog SPA',
+          'OAuth2 Client for React Blog Frontend',
+          '["http://localhost:8080/callback"]'::jsonb,
+          '["authorization_code"]'::jsonb,
+          '["openid", "profile", "email"]'::jsonb,
+          false
+        )
+        ON CONFLICT (client_id) DO UPDATE SET
+          redirect_uris = EXCLUDED.redirect_uris,
+          grant_types = EXCLUDED.grant_types,
+          scopes = EXCLUDED.scopes,
+          is_confidential = EXCLUDED.is_confidential;
+        SQL
+    depends_on:
+      gosso-admin-seed:
+        condition: service_completed_successfully
+
   blog-backend:
     build:
       context: .
@@ -37,23 +124,33 @@ services:
       - POSTGRES_PASSWORD=password
       - POSTGRES_DATABASE=blog
       - REDIS_URL=redis://redis:6379/0
-      - SSO_JWKS_URL=${SSO_JWKS_URL:-http://host.docker.internal:8088/.well-known/jwks.json}
-      - SSO_TOKEN_ISSUER=${SSO_TOKEN_ISSUER:-http://localhost:8088}
+      - SSO_JWKS_URL=${SSO_JWKS_URL:-http://gosso:8080/.well-known/jwks.json}
+      - SSO_TOKEN_ISSUER=${SSO_TOKEN_ISSUER:-http://localhost:8080}
       - SSO_CLIENT_ID=${SSO_CLIENT_ID:-blog-spa}
     depends_on:
       db:
         condition: service_healthy
+      gosso:
+        condition: service_started
+      blog-client-seed:
+        condition: service_completed_successfully
 
   blog-frontend:
     build:
       context: ./blog-frontend
       dockerfile: Dockerfile
       args:
-        VITE_GOSSO_ISSUER: ${VITE_GOSSO_ISSUER:-http://localhost:8088}
+        VITE_GOSSO_ISSUER: ${VITE_GOSSO_ISSUER:-}
         VITE_GOSSO_CLIENT_ID: ${VITE_GOSSO_CLIENT_ID:-blog-spa}
     container_name: sso-blog-frontend
     depends_on:
       - blog-backend
+
+  gosso-admin-frontend:
+    image: ghcr.io/rushairer/gosso-admin-frontend-identity-admin:${GOSSO_ADMIN_FRONTEND_IMAGE_TAG:-main}
+    container_name: sso-blog-gosso-admin-frontend
+    depends_on:
+      - gosso
 
   gateway:
     image: nginx:stable-alpine
@@ -65,6 +162,8 @@ services:
     depends_on:
       - blog-frontend
       - blog-backend
+      - gosso-admin-frontend
+      - gosso
 
 volumes:
   db_data:

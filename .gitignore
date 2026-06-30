@@ -9,4 +9,4 @@ logs/
 # Local databases & configurations
 db_data/
 *.pem
-/gosso/keys/
+keys/
