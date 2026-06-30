@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, NavLink } from 'react-router-dom';
-import { BookOpen, LogIn, LogOut } from 'lucide-react';
-import { canManageBlog, isLoggedIn, logout, getUserProfile, redirectToAuthorize } from './auth';
+import { ExternalLink, Globe2, LogIn, LogOut, Mail, Rss, Terminal, ChevronDown } from 'lucide-react';
+import { isLoggedIn, logout, getUserProfile, redirectToAuthorize } from './auth';
 import type { UserProfile } from './auth';
 import { I18nProvider, useI18n } from './i18n';
 
@@ -17,19 +17,16 @@ function Layout({ children }: { children: React.ReactNode }) {
   const { locale, setLocale, t } = useI18n();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [logged, setLogged] = useState(false);
-  const [canManage, setCanManage] = useState(false);
 
   useEffect(() => {
     setLogged(isLoggedIn());
     setUser(getUserProfile());
-    setCanManage(canManageBlog());
   }, []);
 
   const handleLogout = () => {
     logout();
     setLogged(false);
     setUser(null);
-    setCanManage(false);
   };
 
   const handleSignIn = () => {
@@ -41,43 +38,44 @@ function Layout({ children }: { children: React.ReactNode }) {
       <header className="navbar">
         <div className="navbar-container">
           <Link to="/" className="logo">
-            <span className="logo__mark">AB</span>
-            <span>{t('brand')}</span>
+            <span className="logo__mark">
+              <Terminal size={20} />
+            </span>
+            <span className="logo__text">{t('brand')}</span>
           </Link>
           <nav className="nav-links">
             <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
               {t('home')}
             </NavLink>
-            {logged && canManage && (
-              <NavLink to="/admin" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-                {t('adminPanel')}
-              </NavLink>
-            )}
-            {logged && (
-              <NavLink to="/settings" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-                {t('settings')}
-              </NavLink>
-            )}
+            <NavLink to="/admin" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+              {t('adminPanel')}
+            </NavLink>
+            <NavLink to="/settings" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+              {t('settings')}
+            </NavLink>
 
             <div className="nav-actions">
+              <span className="language-label">{t('language')}</span>
               <div className="language-toggle" aria-label={t('language')}>
+                <Globe2 size={16} />
                 <button className={locale === 'en' ? 'active' : ''} type="button" onClick={() => setLocale('en')}>
                   EN
                 </button>
                 <button className={locale === 'zh' ? 'active' : ''} type="button" onClick={() => setLocale('zh')}>
                   中
                 </button>
+                <ChevronDown size={15} />
               </div>
               {logged ? (
-                <>
+                <div className="user-menu">
+                  <span className="user-avatar">{(user?.name || user?.preferred_username || 'A').slice(0, 2).toUpperCase()}</span>
                   <span className="user-greeting">
-                    {t('greeting', { name: user?.name || user?.preferred_username || t('admin') })}
+                    {user?.name || user?.preferred_username || t('admin')}
                   </span>
-                  <button className="btn btn-secondary" onClick={handleLogout}>
+                  <button className="icon-button" onClick={handleLogout} aria-label={t('signOut')} title={t('signOut')}>
                     <LogOut />
-                    {t('signOut')}
                   </button>
-                </>
+                </div>
               ) : (
                 <button className="btn btn-primary" onClick={handleSignIn}>
                   <LogIn />
@@ -94,11 +92,18 @@ function Layout({ children }: { children: React.ReactNode }) {
       </main>
 
       <footer className="footer">
-        <div className="footer-brand">
-          <BookOpen size={16} />
-          <span>{t('brand')}</span>
+        <p>&copy; {new Date().getFullYear()} Aben K.</p>
+        <div className="footer-links" aria-label={t('footerLinks')}>
+          <a href="https://github.com/rushairer" target="_blank" rel="noreferrer">
+            GitHub <ExternalLink size={14} />
+          </a>
+          <Link to="/">
+            RSS <Rss size={14} />
+          </Link>
+          <Link to="/settings">
+            Contact <Mail size={14} />
+          </Link>
         </div>
-        <p>&copy; {new Date().getFullYear()} Aben. {t('footer')}</p>
       </footer>
     </div>
   );
