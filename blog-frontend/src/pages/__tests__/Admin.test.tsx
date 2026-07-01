@@ -51,7 +51,7 @@ describe('Admin', () => {
 
     renderAdmin();
 
-    expect(screen.getByText(/admin access is required/i)).toBeInTheDocument();
+    expect(screen.getByText(/blog admin access requires sso/i)).toBeInTheDocument();
     await act(async () => {
       vi.advanceTimersByTime(900);
     });

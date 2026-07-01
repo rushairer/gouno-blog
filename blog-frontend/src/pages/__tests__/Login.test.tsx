@@ -38,7 +38,7 @@ describe('Login', () => {
 
     await user.type(screen.getByPlaceholderText(/enter your username/i), 'admin');
     await user.type(screen.getByPlaceholderText(/enter your password/i), 'admin123');
-    await user.click(screen.getByRole('button', { name: /^sign in$/i }));
+    await user.click(screen.getByRole('button', { name: /^sso sign in$/i }));
 
     await waitFor(() => {
       expect(loginWithPassword).toHaveBeenCalledWith('admin', 'admin123');
@@ -53,7 +53,7 @@ describe('Login', () => {
 
     await user.type(screen.getByPlaceholderText(/enter your username/i), 'admin');
     await user.type(screen.getByPlaceholderText(/enter your password/i), 'admin123');
-    await user.click(screen.getByRole('button', { name: /^sign in$/i }));
+    await user.click(screen.getByRole('button', { name: /^sso sign in$/i }));
 
     expect(await screen.findByPlaceholderText(/6-digit code/i)).toBeInTheDocument();
     expect(redirectToAuthorize).not.toHaveBeenCalled();
