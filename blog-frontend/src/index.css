@@ -90,7 +90,7 @@ h4 {
   min-height: 76px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) auto minmax(330px, 1fr);
+  grid-template-columns: auto 1fr;
   align-items: center;
   gap: 28px;
 }
@@ -135,8 +135,9 @@ h4 {
 }
 
 .nav-links {
-  justify-content: center;
+  justify-content: flex-end;
   gap: 36px;
+  justify-self: end;
 }
 
 .nav-link {
@@ -168,35 +169,27 @@ h4 {
   gap: 16px;
 }
 
-.language-label {
-  color: var(--color-text-main);
-  font-size: 15px;
-}
-
 .language-toggle {
   display: inline-flex;
-  min-height: 40px;
+  min-width: 64px;
+  min-height: 38px;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   border: 1px solid var(--border-card);
   border-radius: var(--radius-sm);
   background: #ffffff;
-  padding: 0 10px;
+  padding: 0 11px;
   color: var(--color-text-main);
-}
-
-.language-toggle button {
-  border: 0;
-  background: transparent;
-  color: var(--color-text-muted);
   cursor: pointer;
   font-size: 14px;
   font-weight: 700;
-  padding: 4px 2px;
+  line-height: 1;
 }
 
-.language-toggle button.active {
-  color: var(--color-text-main);
+.language-toggle:hover {
+  border-color: #c9c0b4;
+  background: #fbfaf7;
 }
 
 .user-menu {
@@ -1141,10 +1134,6 @@ textarea.input-field {
     flex-wrap: wrap;
     gap: 10px;
     margin-top: 10px;
-  }
-
-  .language-label {
-    display: none;
   }
 
   .user-menu {

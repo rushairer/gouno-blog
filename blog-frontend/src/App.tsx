@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, NavLink } from 'react-router-dom';
-import { ExternalLink, Globe2, LogIn, LogOut, Mail, Rss, Terminal, ChevronDown } from 'lucide-react';
+import { ExternalLink, Globe2, LogIn, LogOut, Mail, Rss, Terminal } from 'lucide-react';
 import { isLoggedIn, logout, getUserProfile, redirectToAuthorize } from './auth';
 import type { UserProfile } from './auth';
 import { I18nProvider, useI18n } from './i18n';
@@ -33,6 +33,10 @@ function Layout({ children }: { children: React.ReactNode }) {
     redirectToAuthorize('/admin');
   };
 
+  const nextLocale = locale === 'en' ? 'zh' : 'en';
+  const nextLocaleShortLabel = nextLocale === 'en' ? 'EN' : '中';
+  const nextLocaleLabel = nextLocale === 'en' ? 'English' : '中文';
+
   return (
     <div className="app-container">
       <header className="navbar">
@@ -55,17 +59,16 @@ function Layout({ children }: { children: React.ReactNode }) {
             </NavLink>
 
             <div className="nav-actions">
-              <span className="language-label">{t('language')}</span>
-              <div className="language-toggle" aria-label={t('language')}>
+              <button
+                className="language-toggle"
+                type="button"
+                onClick={() => setLocale(nextLocale)}
+                aria-label={`${t('language')}: switch to ${nextLocaleLabel}`}
+                title={`${t('language')}: ${nextLocaleLabel}`}
+              >
                 <Globe2 size={16} />
-                <button className={locale === 'en' ? 'active' : ''} type="button" onClick={() => setLocale('en')}>
-                  EN
-                </button>
-                <button className={locale === 'zh' ? 'active' : ''} type="button" onClick={() => setLocale('zh')}>
-                  中
-                </button>
-                <ChevronDown size={15} />
-              </div>
+                <span>{nextLocaleShortLabel}</span>
+              </button>
               {logged ? (
                 <div className="user-menu">
                   <span className="user-avatar">{(user?.name || user?.preferred_username || 'A').slice(0, 2).toUpperCase()}</span>
