@@ -188,7 +188,6 @@ export default function Settings() {
     <div>
       <PageHeader
         title={t('accountSettings')}
-        description={profile?.preferred_username || profile?.email || t('manageAccount')}
         action={
           <button className="btn btn-secondary" onClick={() => void refreshSettings()} disabled={loading} type="button">
             {t('refresh')}
