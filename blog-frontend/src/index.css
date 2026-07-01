@@ -1041,6 +1041,34 @@ textarea.input-field {
   margin-bottom: 24px;
 }
 
+.mfa-enrollment {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 22px;
+}
+
+.mfa-qr {
+  display: grid;
+  width: 224px;
+  height: 224px;
+  place-items: center;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  background: #ffffff;
+  padding: 16px;
+}
+
+.mfa-qr svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.mfa-enrollment__details {
+  overflow-wrap: anywhere;
+}
+
 .code-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -1129,8 +1157,15 @@ textarea.input-field {
   .hero,
   .page-header,
   .split-grid,
+  .mfa-enrollment,
   .blog-sidebar {
     grid-template-columns: 1fr;
+  }
+
+  .mfa-qr {
+    width: min(100%, 224px);
+    height: auto;
+    aspect-ratio: 1;
   }
 
   .post-row {

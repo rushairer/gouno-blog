@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type React from 'react';
 import { KeyRound, Laptop, Mail, Shield, User } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { Feedback, Field, PageHeader, Panel } from '../components/ui';
 import { getUserProfile, gossoClient, isLoggedIn, redirectToAuthorize } from '../auth';
 import type { MfaEnrollment, MfaStatus, PasskeyInfo, SessionInfo, UserProfile } from '../auth';
@@ -273,11 +274,16 @@ export default function Settings() {
               )}
               {mfaEnrollment && (
                 <form className="form-stack" onSubmit={activateMfa}>
-                  <p className="muted" style={{ overflowWrap: 'anywhere' }}>
-                    {t('secret')}: <strong>{mfaEnrollment.secret}</strong>
-                    <br />
-                    {t('appLink')}: {mfaEnrollment.otpauth_url}
-                  </p>
+                  <div className="mfa-enrollment">
+                    <div className="mfa-qr" aria-label={t('appLink')}>
+                      <QRCodeSVG value={mfaEnrollment.otpauth_url} size={192} marginSize={3} level="M" />
+                    </div>
+                    <p className="muted mfa-enrollment__details">
+                      {t('secret')}: <strong>{mfaEnrollment.secret}</strong>
+                      <br />
+                      {t('appLink')}: {mfaEnrollment.otpauth_url}
+                    </p>
+                  </div>
                   <Field label={t('authenticatorCode')}>
                     <input className="input-field" value={mfaCode} onChange={(event) => setMfaCode(event.target.value)} />
                   </Field>
