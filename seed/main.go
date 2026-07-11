@@ -120,6 +120,26 @@ func main() {
 	}
 	log.Println("Schema detected. Starting database seeding...")
 
+	// Ensure the account exists in GOSSO, or fallback to the admin user
+	var exists bool
+	err = db.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM accounts WHERE id = $1)", accountID).Scan(&exists)
+	if err != nil {
+		log.Fatalf("Failed to check if account exists: %v", err)
+	}
+
+	if !exists {
+		log.Printf("Account %s does not exist in accounts table. Fetching admin account...", accountID)
+		err = db.QueryRowContext(ctx, "SELECT id FROM accounts WHERE username = 'admin' LIMIT 1").Scan(&accountID)
+		if err == sql.ErrNoRows {
+			// If admin doesn't exist, fallback to the first available account
+			err = db.QueryRowContext(ctx, "SELECT id FROM accounts LIMIT 1").Scan(&accountID)
+		}
+		if err != nil {
+			log.Fatalf("Failed to find a fallback account: %v", err)
+		}
+		log.Printf("Using fallback owner account ID: %s", accountID)
+	}
+
 	var clientCount int
 	err = db.QueryRowContext(ctx, "SELECT COUNT(*) FROM oauth2_clients WHERE client_id = $1", clientID).Scan(&clientCount)
 	if err != nil {
