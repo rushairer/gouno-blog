@@ -14,6 +14,8 @@ import (
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 	"github.com/rushairer/blog-backend/config"
+	"github.com/rushairer/blog-backend/internal/repository"
+	"github.com/rushairer/blog-backend/internal/service"
 	"github.com/rushairer/blog-backend/middleware"
 	"github.com/rushairer/blog-backend/router"
 	"github.com/rushairer/blog-backend/utility"
@@ -86,6 +88,7 @@ func startWebServer(cmd *cobra.Command, args []string) {
 	}
 
 	bootstrapDatabase(db, logger)
+	service.StartScheduledPublisher(ctx, repository.NewPostRepository(db), logger)
 
 	jwksURL := os.Getenv("SSO_JWKS_URL")
 	if jwksURL == "" {

@@ -18,12 +18,12 @@ func NewPostRepository(db *sql.DB) *PostRepository {
 
 func (r *PostRepository) Create(ctx context.Context, post *domain.Post) error {
 	query := `
-		INSERT INTO posts (title, slug, summary, content, tags, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+		INSERT INTO posts (title, slug, summary, content, tags, status, published_at, scheduled_at, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
 		RETURNING id, created_at, updated_at
 	`
 	err := r.db.QueryRowContext(ctx, query,
-		post.Title, post.Slug, post.Summary, post.Content, pq.Array(post.Tags),
+		post.Title, post.Slug, post.Summary, post.Content, pq.Array(post.Tags), post.Status, post.PublishedAt, post.ScheduledAt,
 	).Scan(&post.ID, &post.CreatedAt, &post.UpdatedAt)
 	return err
 }
@@ -31,12 +31,12 @@ func (r *PostRepository) Create(ctx context.Context, post *domain.Post) error {
 func (r *PostRepository) Update(ctx context.Context, post *domain.Post) error {
 	query := `
 		UPDATE posts
-		SET title = $1, slug = $2, summary = $3, content = $4, tags = $5, updated_at = NOW()
-		WHERE id = $6
+		SET title = $1, slug = $2, summary = $3, content = $4, tags = $5, status = $6, published_at = $7, scheduled_at = $8, updated_at = NOW()
+		WHERE id = $9
 		RETURNING updated_at
 	`
 	err := r.db.QueryRowContext(ctx, query,
-		post.Title, post.Slug, post.Summary, post.Content, pq.Array(post.Tags), post.ID,
+		post.Title, post.Slug, post.Summary, post.Content, pq.Array(post.Tags), post.Status, post.PublishedAt, post.ScheduledAt, post.ID,
 	).Scan(&post.UpdatedAt)
 	return err
 }
@@ -56,13 +56,13 @@ func (r *PostRepository) Delete(ctx context.Context, id int64) error {
 
 func (r *PostRepository) GetByID(ctx context.Context, id int64) (*domain.Post, error) {
 	query := `
-		SELECT id, title, slug, summary, content, tags, created_at, updated_at
+		SELECT id, title, slug, summary, content, tags, status, published_at, scheduled_at, created_at, updated_at
 		FROM posts
 		WHERE id = $1
 	`
 	var post domain.Post
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CreatedAt, &post.UpdatedAt,
+		&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.Status, &post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -75,13 +75,13 @@ func (r *PostRepository) GetByID(ctx context.Context, id int64) (*domain.Post, e
 
 func (r *PostRepository) GetBySlug(ctx context.Context, slug string) (*domain.Post, error) {
 	query := `
-		SELECT id, title, slug, summary, content, tags, created_at, updated_at
+		SELECT id, title, slug, summary, content, tags, status, published_at, scheduled_at, created_at, updated_at
 		FROM posts
 		WHERE slug = $1
 	`
 	var post domain.Post
 	err := r.db.QueryRowContext(ctx, query, slug).Scan(
-		&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CreatedAt, &post.UpdatedAt,
+		&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.Status, &post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -95,24 +95,21 @@ func (r *PostRepository) GetBySlug(ctx context.Context, slug string) (*domain.Po
 func (r *PostRepository) List(ctx context.Context, tag string, limit, offset int) ([]*domain.Post, int, error) {
 	var countQuery string
 	var listQuery string
-	var args []interface{}
-
 	if tag != "" {
-		countQuery = `SELECT COUNT(*) FROM posts WHERE $1 = ANY(tags)`
+		countQuery = `SELECT COUNT(*) FROM posts WHERE status = 'published' AND $1 = ANY(tags)`
 		listQuery = `
-			SELECT id, title, slug, summary, content, tags, created_at, updated_at
+			SELECT id, title, slug, summary, content, tags, status, published_at, scheduled_at, created_at, updated_at
 			FROM posts
-			WHERE $1 = ANY(tags)
-			ORDER BY created_at DESC
+			WHERE status = 'published' AND $1 = ANY(tags)
+			ORDER BY published_at DESC, created_at DESC
 			LIMIT $2 OFFSET $3
 		`
-		args = append(args, tag)
 	} else {
-		countQuery = `SELECT COUNT(*) FROM posts`
+		countQuery = `SELECT COUNT(*) FROM posts WHERE status = 'published'`
 		listQuery = `
-			SELECT id, title, slug, summary, content, tags, created_at, updated_at
-			FROM posts
-			ORDER BY created_at DESC
+			SELECT id, title, slug, summary, content, tags, status, published_at, scheduled_at, created_at, updated_at
+			FROM posts WHERE status = 'published'
+			ORDER BY published_at DESC, created_at DESC
 			LIMIT $1 OFFSET $2
 		`
 	}
@@ -143,7 +140,7 @@ func (r *PostRepository) List(ctx context.Context, tag string, limit, offset int
 	for rows.Next() {
 		var post domain.Post
 		err := rows.Scan(
-			&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CreatedAt, &post.UpdatedAt,
+			&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.Status, &post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt,
 		)
 		if err != nil {
 			return nil, 0, err
@@ -159,7 +156,7 @@ func (r *PostRepository) List(ctx context.Context, tag string, limit, offset int
 func (r *PostRepository) ListTags(ctx context.Context) ([]string, error) {
 	query := `
 		SELECT DISTINCT unnest(tags) as tag
-		FROM posts
+		FROM posts WHERE status = 'published'
 		ORDER BY tag ASC
 	`
 	rows, err := r.db.QueryContext(ctx, query)
@@ -180,6 +177,35 @@ func (r *PostRepository) ListTags(ctx context.Context) ([]string, error) {
 		return nil, err
 	}
 	return tags, nil
+}
+
+func (r *PostRepository) ListAdmin(ctx context.Context, limit, offset int) ([]*domain.Post, int, error) {
+	var total int
+	if err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM posts`).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+	rows, err := r.db.QueryContext(ctx, `SELECT id, title, slug, summary, content, tags, status, published_at, scheduled_at, created_at, updated_at FROM posts ORDER BY updated_at DESC LIMIT $1 OFFSET $2`, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	posts := make([]*domain.Post, 0)
+	for rows.Next() {
+		var post domain.Post
+		if err := rows.Scan(&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.Status, &post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt); err != nil {
+			return nil, 0, err
+		}
+		posts = append(posts, &post)
+	}
+	return posts, total, rows.Err()
+}
+
+func (r *PostRepository) PublishScheduled(ctx context.Context) (int64, error) {
+	result, err := r.db.ExecContext(ctx, `UPDATE posts SET status = 'published', published_at = NOW(), scheduled_at = NULL, updated_at = NOW() WHERE status = 'scheduled' AND scheduled_at <= NOW()`)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 // Comments Repository Methods

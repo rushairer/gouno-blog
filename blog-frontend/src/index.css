@@ -1111,6 +1111,41 @@ textarea.input-field {
   }
 }
 
+.markdown-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.markdown-editor .field-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.preview-panel {
+  min-height: 365px;
+  max-height: 520px;
+  overflow: auto;
+}
+
+.markdown-preview {
+  min-height: 320px;
+}
+
+.save-state {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.save-state--saved { color: var(--success); }
+.save-state--error { color: var(--danger); }
+.status-pill--draft { background: var(--surface-muted); }
+.status-pill--scheduled { background: #fff1c2; color: #725300; }
+.status-pill--published { background: #d9f7e5; color: #14703b; }
+.content-table small { display: flex; align-items: center; gap: 4px; margin-top: 5px; }
+
 @media (max-width: 820px) {
   .navbar-container,
   .main-content {
@@ -1148,6 +1183,10 @@ textarea.input-field {
   .split-grid,
   .mfa-enrollment,
   .blog-sidebar {
+    grid-template-columns: 1fr;
+  }
+
+  .markdown-editor {
     grid-template-columns: 1fr;
   }
 

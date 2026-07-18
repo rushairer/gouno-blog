@@ -71,6 +71,10 @@ func (s *fakeBlogService) ListPosts(context.Context, string, int, int) ([]*domai
 	return []*domain.Post{s.posts[1]}, 1, nil
 }
 
+func (s *fakeBlogService) ListAdminPosts(context.Context, int, int) ([]*domain.Post, int, error) {
+	return []*domain.Post{s.posts[1]}, 1, nil
+}
+
 func (s *fakeBlogService) ListTags(context.Context) ([]string, error) {
 	return []string{"go"}, nil
 }

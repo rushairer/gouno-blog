@@ -78,7 +78,8 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 		admin := api.Group("")
 		admin.Use(adminAuth)
 		{
-			admin.POST("/posts", ctrl.Create)
+		admin.POST("/posts", ctrl.Create)
+		admin.GET("/admin/posts", ctrl.ListAdmin)
 			admin.PUT("/posts/:id", ctrl.Update)
 			admin.DELETE("/posts/:id", ctrl.Delete)
 			admin.GET("/posts/:slugOrID/comments/all", ctrl.GetAllComments)

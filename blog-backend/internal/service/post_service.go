@@ -25,7 +25,9 @@ type PostRepository interface {
 	GetByID(ctx context.Context, id int64) (*domain.Post, error)
 	GetBySlug(ctx context.Context, slug string) (*domain.Post, error)
 	List(ctx context.Context, tag string, limit, offset int) ([]*domain.Post, int, error)
+	ListAdmin(ctx context.Context, limit, offset int) ([]*domain.Post, int, error)
 	ListTags(ctx context.Context) ([]string, error)
+	PublishScheduled(ctx context.Context) (int64, error)
 	CreateComment(ctx context.Context, comment *domain.Comment) error
 	GetVisibleCommentsByPostID(ctx context.Context, postID int64) ([]*domain.Comment, error)
 	GetAllCommentsByPostID(ctx context.Context, postID int64) ([]*domain.Comment, error)
@@ -42,27 +44,30 @@ func NewPostService(repo PostRepository) *PostService {
 }
 
 func (s *PostService) CreatePost(ctx context.Context, post *domain.Post) error {
-	if post.Title == "" {
+	if strings.TrimSpace(post.Title) == "" {
 		return errors.New("post title cannot be empty")
 	}
-	if post.Content == "" {
-		return errors.New("post content cannot be empty")
+	if err := s.preparePost(ctx, post, nil); err != nil {
+		return err
 	}
+	return s.repo.Create(ctx, post)
+}
 
-	// Generate slug from title if not set
+func (s *PostService) preparePost(ctx context.Context, post *domain.Post, current *domain.Post) error {
 	if post.Slug == "" {
 		post.Slug = generateSlug(post.Title)
 	} else {
 		post.Slug = generateSlug(post.Slug)
 	}
 
-	// Verify slug uniqueness
-	existing, err := s.repo.GetBySlug(ctx, post.Slug)
+	bySlug, err := s.repo.GetBySlug(ctx, post.Slug)
 	if err != nil {
 		return err
 	}
-	if existing != nil {
-		// Append random suffix if slug exists
+	if bySlug != nil && (post.ID == 0 || bySlug.ID != post.ID) {
+		if post.ID != 0 {
+			return fmt.Errorf("%w: %s", ErrSlugInUse, post.Slug)
+		}
 		post.Slug = fmt.Sprintf("%s-%d", post.Slug, timeNowUnixNano()%1000)
 	}
 
@@ -71,36 +76,59 @@ func (s *PostService) CreatePost(ctx context.Context, post *domain.Post) error {
 		post.Summary = generateSummary(post.Content)
 	}
 
-	return s.repo.Create(ctx, post)
+	if post.Status == "" {
+		if current != nil {
+			post.Status = current.Status
+		} else {
+			post.Status = domain.PostStatusDraft
+		}
+	}
+	if post.Status != domain.PostStatusDraft && post.Status != domain.PostStatusScheduled && post.Status != domain.PostStatusPublished {
+		return errors.New("invalid post status")
+	}
+	if post.Status != domain.PostStatusDraft && strings.TrimSpace(post.Content) == "" {
+		return errors.New("post content cannot be empty")
+	}
+
+	shanghai, _ := time.LoadLocation("Asia/Shanghai")
+	now := time.Now().In(shanghai)
+	switch post.Status {
+	case domain.PostStatusDraft:
+		post.ScheduledAt = nil
+		post.PublishedAt = nil
+	case domain.PostStatusScheduled:
+		if post.ScheduledAt == nil || !post.ScheduledAt.In(shanghai).After(now) {
+			return errors.New("scheduled_at must be in the future")
+		}
+		post.PublishedAt = nil
+	case domain.PostStatusPublished:
+		post.ScheduledAt = nil
+		if current == nil || current.Status != domain.PostStatusPublished || current.PublishedAt == nil {
+			publishedAt := now
+			post.PublishedAt = &publishedAt
+		} else {
+			post.PublishedAt = current.PublishedAt
+		}
+	}
+	return nil
 }
 
 func (s *PostService) UpdatePost(ctx context.Context, post *domain.Post) error {
 	if post.ID <= 0 {
 		return errors.New("invalid post ID")
 	}
-	if post.Title == "" {
+	if strings.TrimSpace(post.Title) == "" {
 		return errors.New("post title cannot be empty")
 	}
-	if post.Content == "" {
-		return errors.New("post content cannot be empty")
-	}
-
-	post.Slug = generateSlug(post.Slug)
-	if post.Slug == "" {
-		post.Slug = generateSlug(post.Title)
-	}
-
-	// Verify slug uniqueness for other posts
-	existing, err := s.repo.GetBySlug(ctx, post.Slug)
+	existing, err := s.repo.GetByID(ctx, post.ID)
 	if err != nil {
 		return err
 	}
-	if existing != nil && existing.ID != post.ID {
-		return fmt.Errorf("%w: %s", ErrSlugInUse, post.Slug)
+	if existing == nil {
+		return ErrPostNotFound
 	}
-
-	if post.Summary == "" {
-		post.Summary = generateSummary(post.Content)
+	if err := s.preparePost(ctx, post, existing); err != nil {
+		return err
 	}
 
 	if err := s.repo.Update(ctx, post); err != nil {
@@ -126,11 +154,19 @@ func (s *PostService) DeletePost(ctx context.Context, id int64) error {
 }
 
 func (s *PostService) GetPost(ctx context.Context, id int64) (*domain.Post, error) {
-	return s.repo.GetByID(ctx, id)
+	post, err := s.repo.GetByID(ctx, id)
+	if err != nil || post == nil || post.Status != domain.PostStatusPublished {
+		return nil, err
+	}
+	return post, nil
 }
 
 func (s *PostService) GetPostBySlug(ctx context.Context, slug string) (*domain.Post, error) {
-	return s.repo.GetBySlug(ctx, slug)
+	post, err := s.repo.GetBySlug(ctx, slug)
+	if err != nil || post == nil || post.Status != domain.PostStatusPublished {
+		return nil, err
+	}
+	return post, nil
 }
 
 func (s *PostService) ResolvePostID(ctx context.Context, slugOrID string) (int64, error) {
@@ -138,7 +174,7 @@ func (s *PostService) ResolvePostID(ctx context.Context, slugOrID string) (int64
 		if id <= 0 {
 			return 0, errors.New("invalid post id")
 		}
-		post, err := s.repo.GetByID(ctx, id)
+		post, err := s.GetPost(ctx, id)
 		if err != nil {
 			return 0, err
 		}
@@ -152,7 +188,7 @@ func (s *PostService) ResolvePostID(ctx context.Context, slugOrID string) (int64
 	if slug == "" {
 		return 0, errors.New("invalid post slug")
 	}
-	post, err := s.repo.GetBySlug(ctx, slug)
+	post, err := s.GetPostBySlug(ctx, slug)
 	if err != nil {
 		return 0, err
 	}
@@ -171,6 +207,20 @@ func (s *PostService) ListPosts(ctx context.Context, tag string, page, pageSize 
 	}
 	offset := (page - 1) * pageSize
 	return s.repo.List(ctx, tag, pageSize, offset)
+}
+
+func (s *PostService) ListAdminPosts(ctx context.Context, page, pageSize int) ([]*domain.Post, int, error) {
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 50
+	}
+	return s.repo.ListAdmin(ctx, pageSize, (page-1)*pageSize)
+}
+
+func (s *PostService) PublishScheduled(ctx context.Context) (int64, error) {
+	return s.repo.PublishScheduled(ctx)
 }
 
 func (s *PostService) ListTags(ctx context.Context) ([]string, error) {

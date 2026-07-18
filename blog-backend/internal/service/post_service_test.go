@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/rushairer/blog-backend/internal/domain"
 )
@@ -68,6 +69,12 @@ func (r *fakePostRepo) List(_ context.Context, _ string, limit, offset int) ([]*
 	}
 	return posts, len(posts), nil
 }
+
+func (r *fakePostRepo) ListAdmin(_ context.Context, limit, offset int) ([]*domain.Post, int, error) {
+	return r.List(context.Background(), "", limit, offset)
+}
+
+func (r *fakePostRepo) PublishScheduled(context.Context) (int64, error) { return 0, nil }
 
 func (r *fakePostRepo) ListTags(context.Context) ([]string, error) {
 	return []string{"go"}, nil
@@ -147,6 +154,7 @@ func TestCreatePostAppendsSuffixForDuplicateSlug(t *testing.T) {
 
 func TestUpdatePostRejectsSlugUsedByAnotherPost(t *testing.T) {
 	repo := newFakePostRepo()
+	repo.posts[1] = &domain.Post{ID: 1, Title: "Current", Slug: "current", Status: domain.PostStatusDraft}
 	repo.postsBySlug["taken"] = &domain.Post{ID: 42, Slug: "taken"}
 	svc := NewPostService(repo)
 
@@ -170,7 +178,7 @@ func TestListPostsNormalizesPagination(t *testing.T) {
 
 func TestResolvePostIDSupportsNumericIDAndSlug(t *testing.T) {
 	repo := newFakePostRepo()
-	post := &domain.Post{ID: 7, Slug: "hello-world"}
+	post := &domain.Post{ID: 7, Slug: "hello-world", Status: domain.PostStatusPublished}
 	repo.posts[post.ID] = post
 	repo.postsBySlug[post.Slug] = post
 	svc := NewPostService(repo)
@@ -183,6 +191,25 @@ func TestResolvePostIDSupportsNumericIDAndSlug(t *testing.T) {
 	id, err = svc.ResolvePostID(context.Background(), "hello-world")
 	if err != nil || id != 7 {
 		t.Fatalf("ResolvePostID by slug = %d, %v; want 7, nil", id, err)
+	}
+}
+
+func TestScheduledPostRequiresFutureShanghaiTime(t *testing.T) {
+	svc := NewPostService(newFakePostRepo())
+	past := time.Now().Add(-time.Minute)
+	err := svc.CreatePost(context.Background(), &domain.Post{Title: "Later", Content: "Body", Status: domain.PostStatusScheduled, ScheduledAt: &past})
+	if err == nil || err.Error() != "scheduled_at must be in the future" {
+		t.Fatalf("CreatePost error = %v, want future schedule validation", err)
+	}
+}
+
+func TestPublicReadsHideNonPublishedPosts(t *testing.T) {
+	repo := newFakePostRepo()
+	repo.posts[1] = &domain.Post{ID: 1, Slug: "draft", Status: domain.PostStatusDraft}
+	repo.postsBySlug["draft"] = repo.posts[1]
+	post, err := NewPostService(repo).GetPostBySlug(context.Background(), "draft")
+	if err != nil || post != nil {
+		t.Fatalf("GetPostBySlug = %#v, %v; want hidden draft", post, err)
 	}
 }
 

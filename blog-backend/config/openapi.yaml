@@ -168,6 +168,20 @@ paths:
               schema:
                 $ref: '#/components/schemas/TagsResponse'
 
+  /admin/posts:
+    get:
+      summary: List all posts for administration
+      description: Includes draft, scheduled, and published posts. Requires administrator authentication.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Administrative post list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostListResponse'
+
   /posts/{slugOrID}/comments:
     get:
       summary: List visible comments for a post
@@ -327,6 +341,17 @@ components:
           type: array
           items:
             type: string
+        status:
+          type: string
+          enum: [draft, scheduled, published]
+        published_at:
+          type: string
+          format: date-time
+          nullable: true
+        scheduled_at:
+          type: string
+          format: date-time
+          nullable: true
         created_at:
           type: string
           format: date-time
@@ -352,9 +377,6 @@ components:
           format: date-time
     CreatePostRequest:
       type: object
-      required:
-        - title
-        - content
       properties:
         title:
           type: string
@@ -373,6 +395,14 @@ components:
           items:
             type: string
           example: ["Go", "Framework", "Backend"]
+        status:
+          type: string
+          enum: [draft, scheduled, published]
+          default: draft
+        scheduled_at:
+          type: string
+          format: date-time
+          description: Required for scheduled posts; interpreted and displayed in Asia/Shanghai by the admin UI.
     CreateCommentRequest:
       type: object
       required:

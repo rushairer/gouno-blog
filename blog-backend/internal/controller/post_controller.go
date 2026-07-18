@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/domain"
@@ -20,6 +21,7 @@ type BlogService interface {
 	GetPostBySlug(ctx context.Context, slug string) (*domain.Post, error)
 	ResolvePostID(ctx context.Context, slugOrID string) (int64, error)
 	ListPosts(ctx context.Context, tag string, page, pageSize int) ([]*domain.Post, int, error)
+	ListAdminPosts(ctx context.Context, page, pageSize int) ([]*domain.Post, int, error)
 	ListTags(ctx context.Context) ([]string, error)
 	CreateComment(ctx context.Context, comment *domain.Comment) error
 	GetComments(ctx context.Context, postID int64) ([]*domain.Comment, error)
@@ -37,11 +39,13 @@ func NewPostController(svc BlogService) *PostController {
 }
 
 type CreatePostRequest struct {
-	Title   string   `json:"title" binding:"required"`
-	Slug    string   `json:"slug"`
-	Summary string   `json:"summary"`
-	Content string   `json:"content" binding:"required"`
-	Tags    []string `json:"tags"`
+	Title       string            `json:"title" binding:"required"`
+	Slug        string            `json:"slug"`
+	Summary     string            `json:"summary"`
+	Content     string            `json:"content" binding:"required"`
+	Tags        []string          `json:"tags"`
+	Status      domain.PostStatus `json:"status"`
+	ScheduledAt *time.Time        `json:"scheduled_at"`
 }
 
 func (ctrl *PostController) Create(c *gin.Context) {
@@ -52,11 +56,13 @@ func (ctrl *PostController) Create(c *gin.Context) {
 	}
 
 	post := &domain.Post{
-		Title:   req.Title,
-		Slug:    req.Slug,
-		Summary: req.Summary,
-		Content: req.Content,
-		Tags:    req.Tags,
+		Title:       req.Title,
+		Slug:        req.Slug,
+		Summary:     req.Summary,
+		Content:     req.Content,
+		Tags:        req.Tags,
+		Status:      req.Status,
+		ScheduledAt: req.ScheduledAt,
 	}
 
 	if err := ctrl.svc.CreatePost(c.Request.Context(), post); err != nil {
@@ -82,12 +88,14 @@ func (ctrl *PostController) Update(c *gin.Context) {
 	}
 
 	post := &domain.Post{
-		ID:      id,
-		Title:   req.Title,
-		Slug:    req.Slug,
-		Summary: req.Summary,
-		Content: req.Content,
-		Tags:    req.Tags,
+		ID:          id,
+		Title:       req.Title,
+		Slug:        req.Slug,
+		Summary:     req.Summary,
+		Content:     req.Content,
+		Tags:        req.Tags,
+		Status:      req.Status,
+		ScheduledAt: req.ScheduledAt,
 	}
 
 	if err := ctrl.svc.UpdatePost(c.Request.Context(), post); err != nil {
@@ -96,6 +104,17 @@ func (ctrl *PostController) Update(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(post))
+}
+
+func (ctrl *PostController) ListAdmin(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "50"))
+	posts, total, err := ctrl.svc.ListAdminPosts(c.Request.Context(), page, pageSize)
+	if err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"list": posts, "total": total, "page": page, "pageSize": pageSize}))
 }
 
 func (ctrl *PostController) Delete(c *gin.Context) {
@@ -293,6 +312,8 @@ func isValidationError(err error) bool {
 	msg := err.Error()
 	return msg == "post title cannot be empty" ||
 		msg == "post content cannot be empty" ||
+		msg == "invalid post status" ||
+		msg == "scheduled_at must be in the future" ||
 		msg == "invalid post ID" ||
 		msg == "invalid post id" ||
 		msg == "invalid post slug" ||

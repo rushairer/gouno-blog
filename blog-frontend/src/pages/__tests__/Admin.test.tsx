@@ -20,6 +20,7 @@ const post = {
   summary: 'Summary',
   content: 'Body',
   tags: ['go'],
+  status: 'published',
   created_at: '2026-01-01T00:00:00Z',
 };
 
@@ -36,7 +37,9 @@ function renderAdmin() {
 describe('Admin', () => {
   beforeEach(() => {
     vi.mocked(redirectToAuthorize).mockResolvedValue(undefined);
-    vi.mocked(apiFetch).mockResolvedValue(Response.json({ data: post }));
+    vi.mocked(apiFetch).mockImplementation(async (input: RequestInfo | URL) => input.toString() === '/api/admin/posts'
+      ? Response.json({ data: { list: [post], total: 1 } })
+      : Response.json({ data: post }));
   });
 
   afterEach(() => {
@@ -62,12 +65,9 @@ describe('Admin', () => {
   it('surfaces save failures while editing a post', async () => {
     vi.mocked(isLoggedIn).mockReturnValue(true);
     vi.mocked(canManageBlog).mockReturnValue(true);
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => Response.json({ data: { list: [post], total: 1, page: 1, pageSize: 10 } })),
-    );
-    vi.mocked(apiFetch).mockResolvedValue(Response.json({ message: 'slug is already in use' }, { status: 409 }));
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    vi.mocked(apiFetch).mockImplementation(async (input: RequestInfo | URL) => input.toString() === '/api/admin/posts'
+      ? Response.json({ data: { list: [post], total: 1 } })
+      : Response.json({ message: 'slug is already in use' }, { status: 409 }));
 
     const user = userEvent.setup();
     renderAdmin();
@@ -76,20 +76,15 @@ describe('Admin', () => {
     await user.click(screen.getByRole('button', { name: /edit/i }));
     await user.click(screen.getByRole('button', { name: /save post/i }));
 
-    await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith('slug is already in use');
-    });
+    expect(await screen.findByText('slug is already in use')).toBeInTheDocument();
   });
 
   it('loads all comments for moderation and can make a pending comment public', async () => {
     vi.mocked(isLoggedIn).mockReturnValue(true);
     vi.mocked(canManageBlog).mockReturnValue(true);
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => Response.json({ data: { list: [post], total: 1, page: 1, pageSize: 10 } })),
-    );
     vi.mocked(apiFetch).mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = input.toString();
+      if (url === '/api/admin/posts') return Response.json({ data: { list: [post], total: 1 } });
       if (url === '/api/posts/1/comments/all') {
         return Response.json({
           data: [{ id: 7, post_id: 1, author: 'Grace', content: 'Please review me', is_visible: false, created_at: '2026-01-02T00:00:00Z' }],
