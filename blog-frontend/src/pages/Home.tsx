@@ -6,7 +6,9 @@ import {
   Cloud,
   Code2,
   Edit3,
+  Eye,
   FileText,
+  Heart,
   ListFilter,
   Lock,
   Search,
@@ -23,6 +25,8 @@ interface Post {
   slug: string;
   summary: string;
   tags: string[];
+  views_count?: number;
+  likes_count?: number;
   created_at: string;
 }
 
@@ -59,6 +63,18 @@ function PostCard({ post }: { post: Post }) {
           <Timer size={15} />
           {t('readMinutes', { count: readMinutes })}
         </span>
+        {post.views_count !== undefined && (
+          <span title={t('views')}>
+            <Eye size={15} />
+            {post.views_count}
+          </span>
+        )}
+        {post.likes_count !== undefined && (
+          <span title={t('likes')}>
+            <Heart size={15} />
+            {post.likes_count}
+          </span>
+        )}
         <Link to={`/posts/${post.slug}`} className="text-link">
           {t('readArticle')}
           <ArrowRight size={16} />
@@ -91,7 +107,7 @@ export default function Home() {
 
   useEffect(() => {
     setPage(1);
-  }, [selectedTag]);
+  }, [selectedTag, search]);
 
   useEffect(() => {
     let ignore = false;
@@ -109,6 +125,9 @@ export default function Home() {
         postsUrl.searchParams.set('pageSize', String(pageSize));
         if (selectedTag) {
           postsUrl.searchParams.append('tag', selectedTag);
+        }
+        if (search.trim()) {
+          postsUrl.searchParams.append('search', search.trim());
         }
 
         const postsResp = await fetch(postsUrl.toString());
@@ -136,7 +155,7 @@ export default function Home() {
     return () => {
       ignore = true;
     };
-  }, [page, selectedTag, t]);
+  }, [page, selectedTag, search, t]);
 
   useEffect(() => {
     let ignore = false;

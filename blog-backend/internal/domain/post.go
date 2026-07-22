@@ -18,6 +18,8 @@ type Post struct {
 	Content     string     `json:"content"`
 	Tags        []string   `json:"tags"`
 	Status      PostStatus `json:"status"`
+	ViewsCount  int64      `json:"views_count"`
+	LikesCount  int64      `json:"likes_count"`
 	PublishedAt *time.Time `json:"published_at,omitempty"`
 	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
 	CreatedAt   time.Time  `json:"created_at"`
@@ -27,6 +29,7 @@ type Post struct {
 type Comment struct {
 	ID        int64     `json:"id"`
 	PostID    int64     `json:"post_id"`
+	ParentID  *int64    `json:"parent_id,omitempty"`
 	Author    string    `json:"author"`
 	Content   string    `json:"content"`
 	IsVisible bool      `json:"is_visible"`

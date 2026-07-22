@@ -60,7 +60,21 @@ func (r *fakePostRepo) GetBySlug(_ context.Context, slug string) (*domain.Post, 
 	return r.postsBySlug[slug], nil
 }
 
-func (r *fakePostRepo) List(_ context.Context, _ string, limit, offset int) ([]*domain.Post, int, error) {
+func (r *fakePostRepo) IncrementViews(_ context.Context, id int64) error {
+	if p, ok := r.posts[id]; ok {
+		p.ViewsCount++
+	}
+	return nil
+}
+
+func (r *fakePostRepo) IncrementLikes(_ context.Context, id int64) error {
+	if p, ok := r.posts[id]; ok {
+		p.LikesCount++
+	}
+	return nil
+}
+
+func (r *fakePostRepo) List(_ context.Context, _, _ string, limit, offset int) ([]*domain.Post, int, error) {
 	r.lastLimit = limit
 	r.lastOffset = offset
 	posts := make([]*domain.Post, 0, len(r.posts))
@@ -71,7 +85,7 @@ func (r *fakePostRepo) List(_ context.Context, _ string, limit, offset int) ([]*
 }
 
 func (r *fakePostRepo) ListAdmin(_ context.Context, limit, offset int) ([]*domain.Post, int, error) {
-	return r.List(context.Background(), "", limit, offset)
+	return r.List(context.Background(), "", "", limit, offset)
 }
 
 func (r *fakePostRepo) PublishScheduled(context.Context) (int64, error) { return 0, nil }
@@ -168,7 +182,7 @@ func TestListPostsNormalizesPagination(t *testing.T) {
 	repo := newFakePostRepo()
 	svc := NewPostService(repo)
 
-	if _, _, err := svc.ListPosts(context.Background(), "", 0, 0); err != nil {
+	if _, _, err := svc.ListPosts(context.Background(), "", "", 0, 0); err != nil {
 		t.Fatalf("ListPosts returned error: %v", err)
 	}
 	if repo.lastLimit != 10 || repo.lastOffset != 0 {

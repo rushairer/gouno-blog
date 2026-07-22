@@ -24,7 +24,9 @@ type PostRepository interface {
 	Delete(ctx context.Context, id int64) error
 	GetByID(ctx context.Context, id int64) (*domain.Post, error)
 	GetBySlug(ctx context.Context, slug string) (*domain.Post, error)
-	List(ctx context.Context, tag string, limit, offset int) ([]*domain.Post, int, error)
+	IncrementViews(ctx context.Context, id int64) error
+	IncrementLikes(ctx context.Context, id int64) error
+	List(ctx context.Context, tag, search string, limit, offset int) ([]*domain.Post, int, error)
 	ListAdmin(ctx context.Context, limit, offset int) ([]*domain.Post, int, error)
 	ListTags(ctx context.Context) ([]string, error)
 	PublishScheduled(ctx context.Context) (int64, error)
@@ -198,7 +200,21 @@ func (s *PostService) ResolvePostID(ctx context.Context, slugOrID string) (int64
 	return post.ID, nil
 }
 
-func (s *PostService) ListPosts(ctx context.Context, tag string, page, pageSize int) ([]*domain.Post, int, error) {
+func (s *PostService) IncrementViews(ctx context.Context, id int64) error {
+	if id <= 0 {
+		return errors.New("invalid post ID")
+	}
+	return s.repo.IncrementViews(ctx, id)
+}
+
+func (s *PostService) IncrementLikes(ctx context.Context, id int64) error {
+	if id <= 0 {
+		return errors.New("invalid post ID")
+	}
+	return s.repo.IncrementLikes(ctx, id)
+}
+
+func (s *PostService) ListPosts(ctx context.Context, tag, search string, page, pageSize int) ([]*domain.Post, int, error) {
 	if page <= 0 {
 		page = 1
 	}
@@ -206,7 +222,7 @@ func (s *PostService) ListPosts(ctx context.Context, tag string, page, pageSize 
 		pageSize = 10
 	}
 	offset := (page - 1) * pageSize
-	return s.repo.List(ctx, tag, pageSize, offset)
+	return s.repo.List(ctx, tag, search, pageSize, offset)
 }
 
 func (s *PostService) ListAdminPosts(ctx context.Context, page, pageSize int) ([]*domain.Post, int, error) {

@@ -14,9 +14,14 @@ import (
 )
 
 func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.AuthOptions, jwksURL string) {
-	// CORS Middleware to allow requests from port 8081
+	// Dynamic CORS Middleware
 	server.Use(func(ctx *gin.Context) {
-		ctx.Header("Access-Control-Allow-Origin", "http://localhost:8081")
+		origin := ctx.GetHeader("Origin")
+		if origin != "" {
+			ctx.Header("Access-Control-Allow-Origin", origin)
+		} else {
+			ctx.Header("Access-Control-Allow-Origin", "*")
+		}
 		ctx.Header("Access-Control-Allow-Credentials", "true")
 		ctx.Header("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
 		ctx.Header("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
@@ -31,6 +36,12 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 	repo := repository.NewPostRepository(db)
 	svc := service.NewPostService(repo)
 	ctrl := controller.NewPostController(svc)
+	feedCtrl := controller.NewFeedController(svc)
+
+	// RSS & Sitemap Routes
+	server.GET("/feed.xml", feedCtrl.GetRSS)
+	server.GET("/rss", feedCtrl.GetRSS)
+	server.GET("/sitemap.xml", feedCtrl.GetSitemap)
 
 	// Setup JWT verifier
 	verifier := middleware.NewJWTVerifier(jwksURL)
@@ -69,6 +80,8 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 	{
 		api.GET("/posts", ctrl.List)
 		api.GET("/posts/:slugOrID", ctrl.Get)
+		api.POST("/posts/:slugOrID/view", ctrl.IncrementViews)
+		api.POST("/posts/:slugOrID/like", ctrl.IncrementLikes)
 		api.GET("/tags", ctrl.ListTags)
 
 		api.GET("/posts/:slugOrID/comments", ctrl.GetComments)
@@ -78,8 +91,8 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 		admin := api.Group("")
 		admin.Use(adminAuth)
 		{
-		admin.POST("/posts", ctrl.Create)
-		admin.GET("/admin/posts", ctrl.ListAdmin)
+			admin.POST("/posts", ctrl.Create)
+			admin.GET("/admin/posts", ctrl.ListAdmin)
 			admin.PUT("/posts/:id", ctrl.Update)
 			admin.DELETE("/posts/:id", ctrl.Delete)
 			admin.GET("/posts/:slugOrID/comments/all", ctrl.GetAllComments)

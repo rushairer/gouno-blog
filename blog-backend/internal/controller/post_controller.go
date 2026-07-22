@@ -20,7 +20,9 @@ type BlogService interface {
 	GetPost(ctx context.Context, id int64) (*domain.Post, error)
 	GetPostBySlug(ctx context.Context, slug string) (*domain.Post, error)
 	ResolvePostID(ctx context.Context, slugOrID string) (int64, error)
-	ListPosts(ctx context.Context, tag string, page, pageSize int) ([]*domain.Post, int, error)
+	IncrementViews(ctx context.Context, id int64) error
+	IncrementLikes(ctx context.Context, id int64) error
+	ListPosts(ctx context.Context, tag, search string, page, pageSize int) ([]*domain.Post, int, error)
 	ListAdminPosts(ctx context.Context, page, pageSize int) ([]*domain.Post, int, error)
 	ListTags(ctx context.Context) ([]string, error)
 	CreateComment(ctx context.Context, comment *domain.Comment) error
@@ -160,10 +162,14 @@ func (ctrl *PostController) Get(c *gin.Context) {
 
 func (ctrl *PostController) List(c *gin.Context) {
 	tag := c.Query("tag")
+	search := c.Query("search")
+	if search == "" {
+		search = c.Query("q")
+	}
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 
-	posts, total, err := ctrl.svc.ListPosts(c.Request.Context(), tag, page, pageSize)
+	posts, total, err := ctrl.svc.ListPosts(c.Request.Context(), tag, search, page, pageSize)
 	if err != nil {
 		writeServiceError(c, err)
 		return
@@ -177,6 +183,32 @@ func (ctrl *PostController) List(c *gin.Context) {
 	}))
 }
 
+func (ctrl *PostController) IncrementViews(c *gin.Context) {
+	postID, err := ctrl.svc.ResolvePostID(c.Request.Context(), c.Param("slugOrID"))
+	if err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	if err := ctrl.svc.IncrementViews(c.Request.Context(), postID); err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
+}
+
+func (ctrl *PostController) IncrementLikes(c *gin.Context) {
+	postID, err := ctrl.svc.ResolvePostID(c.Request.Context(), c.Param("slugOrID"))
+	if err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	if err := ctrl.svc.IncrementLikes(c.Request.Context(), postID); err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
+}
+
 func (ctrl *PostController) ListTags(c *gin.Context) {
 	tags, err := ctrl.svc.ListTags(c.Request.Context())
 	if err != nil {
@@ -187,8 +219,9 @@ func (ctrl *PostController) ListTags(c *gin.Context) {
 }
 
 type CreateCommentRequest struct {
-	Author  string `json:"author" binding:"required"`
-	Content string `json:"content" binding:"required"`
+	ParentID *int64 `json:"parent_id"`
+	Author   string `json:"author" binding:"required"`
+	Content  string `json:"content" binding:"required"`
 }
 
 type UpdateCommentVisibilityRequest struct {
@@ -209,9 +242,10 @@ func (ctrl *PostController) CreateComment(c *gin.Context) {
 	}
 
 	comment := &domain.Comment{
-		PostID:  postID,
-		Author:  req.Author,
-		Content: req.Content,
+		PostID:   postID,
+		ParentID: req.ParentID,
+		Author:   req.Author,
+		Content:  req.Content,
 	}
 
 	if err := ctrl.svc.CreateComment(c.Request.Context(), comment); err != nil {

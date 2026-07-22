@@ -21,6 +21,8 @@ func bootstrapDatabase(blogDB *sql.DB, logger *zap.Logger) {
 			content TEXT,
 			tags TEXT[] NOT NULL DEFAULT '{}',
 			status VARCHAR(20) NOT NULL DEFAULT 'draft',
+			views_count INT NOT NULL DEFAULT 0,
+			likes_count INT NOT NULL DEFAULT 0,
 			published_at TIMESTAMPTZ,
 			scheduled_at TIMESTAMPTZ,
 			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -30,13 +32,22 @@ func bootstrapDatabase(blogDB *sql.DB, logger *zap.Logger) {
 		CREATE TABLE IF NOT EXISTS comments (
 			id SERIAL PRIMARY KEY,
 			post_id INT NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+			parent_id INT REFERENCES comments(id) ON DELETE CASCADE,
 			author VARCHAR(100) NOT NULL,
 			content TEXT NOT NULL,
 			is_visible BOOLEAN NOT NULL DEFAULT false,
 			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 		);
 
+		ALTER TABLE posts ADD COLUMN IF NOT EXISTS views_count INT NOT NULL DEFAULT 0;
+		ALTER TABLE posts ADD COLUMN IF NOT EXISTS likes_count INT NOT NULL DEFAULT 0;
+		ALTER TABLE comments ADD COLUMN IF NOT EXISTS parent_id INT REFERENCES comments(id) ON DELETE CASCADE;
 		ALTER TABLE comments ADD COLUMN IF NOT EXISTS is_visible BOOLEAN NOT NULL DEFAULT false;
+
+		CREATE INDEX IF NOT EXISTS idx_posts_status_published_at ON posts (status, published_at DESC);
+		CREATE INDEX IF NOT EXISTS idx_posts_tags ON posts USING GIN (tags);
+		CREATE INDEX IF NOT EXISTS idx_comments_post_visible ON comments (post_id, is_visible);
+
 		CREATE TABLE IF NOT EXISTS blog_schema_migrations (version TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
 	`
 	_, err := blogDB.ExecContext(ctx, blogSchema)

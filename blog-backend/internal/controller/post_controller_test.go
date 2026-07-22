@@ -67,7 +67,15 @@ func (s *fakeBlogService) ResolvePostID(_ context.Context, slugOrID string) (int
 	return 0, errors.New("invalid post slug")
 }
 
-func (s *fakeBlogService) ListPosts(context.Context, string, int, int) ([]*domain.Post, int, error) {
+func (s *fakeBlogService) IncrementViews(context.Context, int64) error {
+	return nil
+}
+
+func (s *fakeBlogService) IncrementLikes(context.Context, int64) error {
+	return nil
+}
+
+func (s *fakeBlogService) ListPosts(context.Context, string, string, int, int) ([]*domain.Post, int, error) {
 	return []*domain.Post{s.posts[1]}, 1, nil
 }
 

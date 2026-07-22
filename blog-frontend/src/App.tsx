@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, NavLink } from 'react-router-dom';
-import { ExternalLink, Globe2, LogIn, LogOut, Mail, Rss, Terminal } from 'lucide-react';
+import { ExternalLink, Globe2, LogIn, LogOut, Mail, Moon, Rss, Sun, Terminal } from 'lucide-react';
 import { isLoggedIn, logout, getUserProfile, redirectToAuthorize } from './auth';
 import type { UserProfile } from './auth';
 import { I18nProvider, useI18n } from './i18n';
@@ -17,6 +17,16 @@ function Layout({ children }: { children: React.ReactNode }) {
   const { locale, setLocale, t } = useI18n();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [logged, setLogged] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const saved = localStorage.getItem('gouno-blog:theme');
+    if (saved === 'dark' || saved === 'light') return saved;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('gouno-blog:theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     setLogged(isLoggedIn());
@@ -31,6 +41,10 @@ function Layout({ children }: { children: React.ReactNode }) {
 
   const handleSignIn = () => {
     redirectToAuthorize('/admin');
+  };
+
+  const toggleTheme = () => {
+    setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
   };
 
   const nextLocale = locale === 'en' ? 'zh' : 'en';
@@ -59,6 +73,15 @@ function Layout({ children }: { children: React.ReactNode }) {
             </NavLink>
 
             <div className="nav-actions">
+              <button
+                className="icon-button theme-toggle"
+                type="button"
+                onClick={toggleTheme}
+                aria-label={theme === 'dark' ? t('themeLight') : t('themeDark')}
+                title={theme === 'dark' ? t('themeLight') : t('themeDark')}
+              >
+                {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+              </button>
               <button
                 className="language-toggle"
                 type="button"
@@ -100,9 +123,9 @@ function Layout({ children }: { children: React.ReactNode }) {
           <a href="https://github.com/rushairer" target="_blank" rel="noreferrer">
             GitHub <ExternalLink size={14} />
           </a>
-          <Link to="/">
+          <a href="/feed.xml" target="_blank" rel="noreferrer">
             RSS <Rss size={14} />
-          </Link>
+          </a>
           <Link to="/settings">
             Contact <Mail size={14} />
           </Link>
