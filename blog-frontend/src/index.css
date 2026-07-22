@@ -178,7 +178,7 @@ h4 {
   gap: 8px;
   border: 1px solid var(--border-card);
   border-radius: var(--radius-sm);
-  background: #ffffff;
+  background: var(--bg-panel);
   padding: 0 11px;
   color: var(--color-text-main);
   cursor: pointer;
@@ -188,8 +188,8 @@ h4 {
 }
 
 .language-toggle:hover {
-  border-color: #c9c0b4;
-  background: #fbfaf7;
+  border-color: var(--border-strong);
+  background: var(--bg-muted);
 }
 
 .user-menu {
@@ -229,7 +229,7 @@ h4 {
   justify-content: space-between;
   gap: 24px;
   border-top: 1px solid var(--border-card);
-  background: #ffffff;
+  background: var(--bg-panel);
   color: var(--color-text-muted);
   font-size: 14px;
   padding: 0 max(48px, calc((100vw - 1320px) / 2));
@@ -271,7 +271,7 @@ h4 {
 
 .feed-header p {
   max-width: 720px;
-  color: #393734;
+  color: var(--color-text-muted);
   font-size: 17px;
   line-height: 1.65;
 }
@@ -295,7 +295,7 @@ h4 {
   top: 50%;
   width: 20px;
   height: 20px;
-  color: #111111;
+  color: var(--color-text-muted);
   transform: translateY(-50%);
 }
 
@@ -327,7 +327,7 @@ h4 {
   gap: 12px;
   border: 1px solid var(--border-card);
   border-radius: var(--radius-sm);
-  background: #ffffff;
+  background: var(--bg-panel);
   padding: 0 14px;
 }
 
@@ -337,6 +337,11 @@ h4 {
   background: transparent;
   color: var(--color-text-main);
   outline: 0;
+}
+
+select option {
+  background: var(--bg-panel);
+  color: var(--color-text-main);
 }
 
 .feed-list {
@@ -360,7 +365,7 @@ h4 {
   place-items: center;
   border: 1px solid var(--border-card);
   border-radius: var(--radius-sm);
-  background: linear-gradient(145deg, #ffffff, #faf8f4);
+  background: var(--bg-muted);
   color: var(--color-primary);
 }
 
@@ -564,7 +569,7 @@ h4 {
   min-height: 44px;
   border: 1px solid var(--border-card);
   border-radius: var(--radius-sm);
-  background: #ffffff;
+  background: var(--bg-panel);
   color: var(--color-text-main);
   outline: none;
   padding: 10px 13px;
@@ -633,7 +638,7 @@ textarea.input-field {
 
 .btn-secondary {
   border-color: var(--border-card);
-  background: #ffffff;
+  background: var(--bg-panel);
   color: var(--color-text-main);
 }
 
@@ -728,7 +733,7 @@ textarea.input-field {
   gap: 8px;
   border: 1px solid var(--border-card);
   border-radius: var(--radius-sm);
-  background: #ffffff;
+  background: var(--bg-panel);
   color: var(--color-text-main);
   cursor: pointer;
   font-weight: 500;
@@ -1245,7 +1250,7 @@ textarea.input-field {
 
 /* Dark Theme Overrides */
 [data-theme="dark"] {
-  --bg-app: #0f1419;
+  --bg-main: #0f1419;
   --bg-panel: #161e27;
   --bg-muted: #1c2530;
   --bg-warm: #263342;
@@ -1256,6 +1261,8 @@ textarea.input-field {
   --border-strong: #334155;
   --color-primary: #22c55e;
   --color-primary-hover: #16a34a;
+  --danger-color: #ef4444;
+  --success-color: #22c55e;
 }
 
 [data-theme="dark"] .input-field,
@@ -1272,8 +1279,40 @@ textarea.input-field {
 }
 
 [data-theme="dark"] .navbar {
-  background: rgba(15, 20, 25, 0.85);
+  background: rgba(15, 20, 25, 0.88);
   border-bottom-color: #273546;
+}
+
+[data-theme="dark"] select option {
+  background: #161e27;
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .topic-row.active strong {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+}
+
+[data-theme="dark"] .status-pill--visible {
+  border-color: rgba(34, 197, 94, 0.3);
+  background: #052e16;
+  color: #4ade80;
+}
+
+[data-theme="dark"] .status-pill--pending {
+  border-color: rgba(239, 68, 68, 0.3);
+  background: #450a0a;
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .btn-danger {
+  border-color: rgba(239, 68, 68, 0.3);
+  background: #450a0a;
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .btn-danger:hover {
+  background: #7f1d1d;
 }
 
 /* Code Block Copy Button */
