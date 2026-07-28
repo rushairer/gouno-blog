@@ -12,9 +12,12 @@ export type {
   SessionSnapshot,
 } from '@gosso/client';
 
+const gossoIssuer = import.meta.env.VITE_GOSSO_ISSUER || window.location.origin;
+const gossoClientID = import.meta.env.VITE_GOSSO_CLIENT_ID || 'blog-spa';
+
 export const gossoClient = createGossoClient({
-  issuer: import.meta.env.VITE_GOSSO_ISSUER || window.location.origin,
-  clientId: import.meta.env.VITE_GOSSO_CLIENT_ID || 'blog-spa',
+  issuer: gossoIssuer,
+  clientId: gossoClientID,
   redirectUri: `${window.location.origin}/callback`,
   scope: 'openid profile email',
   postLoginDefaultPath: '/admin',
@@ -83,15 +86,89 @@ export const authSession = {
   },
 };
 
-export const apiFetch = gossoClient.apiFetch;
 export const redirectToAuthorize = gossoClient.redirectToAuthorize;
 export const exchangeCodeForToken = gossoClient.exchangeCodeForToken;
 export const handleRedirectCallback = gossoClient.handleRedirectCallback;
 export const fetchUserProfile = gossoClient.fetchUserProfile;
-export const refreshAccessToken = gossoClient.refreshAccessToken;
 export const getAccessToken = gossoClient.getAccessToken;
 export const getUserProfile = gossoClient.getUserProfile;
 export const isLoggedIn = gossoClient.isLoggedIn;
+
+let refreshPromise: Promise<string> | null = null;
+
+function currentPath() {
+  return `${window.location.pathname}${window.location.search}${window.location.hash}`;
+}
+
+/**
+ * Refresh tokens issued by the OAuth authorization-code flow must be exchanged
+ * through the OAuth token endpoint. The generic session refresh endpoint drops
+ * the OAuth client binding, causing the blog backend to reject the replacement
+ * token's missing `aud`/`client_id` claims with 401.
+ */
+export async function refreshAccessToken(): Promise<string> {
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    const refreshToken = gossoClient.getRefreshToken();
+    if (!refreshToken) throw new Error('No refresh token found');
+
+    const body = new URLSearchParams({
+      grant_type: 'refresh_token',
+      client_id: gossoClientID,
+      refresh_token: refreshToken,
+    });
+    const response = await fetch(`${gossoIssuer}/oauth2/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    });
+    const data = await response.json() as TokenResponse & { error_description?: string };
+    if (!response.ok || !data.access_token) {
+      throw new Error(data.error_description || 'Token refresh failed');
+    }
+    gossoClient.saveTokenSet(data);
+    return data.access_token;
+  })().finally(() => {
+    refreshPromise = null;
+  });
+
+  return refreshPromise;
+}
+
+function tokenHasExpired() {
+  const issuedAt = Number(localStorage.getItem(gossoClient.storageKeys.tokenIssuedAt));
+  const expiresIn = Number(localStorage.getItem(gossoClient.storageKeys.tokenExpiresIn)) || 900;
+  return issuedAt > 0 && Date.now() - issuedAt > expiresIn * 1000;
+}
+
+async function authorizeRequest(input: RequestInfo | URL, options: RequestInit, token: string) {
+  const headers = new Headers(options.headers || {});
+  if (!headers.has('Authorization')) headers.set('Authorization', `Bearer ${token}`);
+  return fetch(input, { ...options, headers });
+}
+
+export async function apiFetch(input: RequestInfo | URL, options: RequestInit = {}): Promise<Response> {
+  let token = gossoClient.getAccessToken();
+  if (!token) {
+    void redirectToAuthorize(currentPath());
+    return new Response(null, { status: 401 });
+  }
+
+  try {
+    if (tokenHasExpired()) token = await refreshAccessToken();
+    let response = await authorizeRequest(input, options, token);
+    if (response.status !== 401 || !gossoClient.getRefreshToken()) return response;
+
+    token = await refreshAccessToken();
+    response = await authorizeRequest(input, options, token);
+    return response;
+  } catch {
+    authSession.clear();
+    void redirectToAuthorize(currentPath());
+    return new Response(null, { status: 401 });
+  }
+}
 
 export function canManageBlog(): boolean {
   const snapshot: SessionSnapshot = authSession.getSnapshot();

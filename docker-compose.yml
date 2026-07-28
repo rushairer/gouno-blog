@@ -92,7 +92,7 @@ services:
       - BLOG_OAUTH_CLIENT_NAME=Personal Blog SPA
       - BLOG_OAUTH_CLIENT_DESCRIPTION=OAuth2 Client for React Blog Frontend
       - BLOG_OAUTH_REDIRECT_URIS=http://localhost:8080/callback
-      - BLOG_OAUTH_GRANT_TYPES=authorization_code
+      - BLOG_OAUTH_GRANT_TYPES=authorization_code,refresh_token
       - BLOG_OAUTH_SCOPES=openid,profile,email
     depends_on:
       gosso-admin-seed:

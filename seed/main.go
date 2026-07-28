@@ -68,7 +68,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to parse BLOG_OAUTH_REDIRECT_URIS: %v", err)
 	}
-	grantTypesJSON, err := parseJSONList(os.Getenv("BLOG_OAUTH_GRANT_TYPES"), []string{"authorization_code"})
+	grantTypesJSON, err := parseJSONList(os.Getenv("BLOG_OAUTH_GRANT_TYPES"), []string{"authorization_code", "refresh_token"})
 	if err != nil {
 		log.Fatalf("Failed to parse BLOG_OAUTH_GRANT_TYPES: %v", err)
 	}

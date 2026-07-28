@@ -45,4 +45,30 @@ describe('blog auth session', () => {
 
     expect(canManageBlog()).toBe(false);
   });
+
+  it('refreshes OAuth tokens through the OAuth token endpoint and retries the request', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(Response.json({ access_token: 'fresh-access', refresh_token: 'fresh-refresh', expires_in: 900 }))
+      .mockResolvedValueOnce(Response.json({ data: { list: [] } }));
+    vi.stubGlobal('fetch', fetchMock);
+    const { apiFetch, authSession } = await import('../auth');
+    localStorage.setItem(authSession.storageKeys.accessToken, 'expired-access');
+    localStorage.setItem(authSession.storageKeys.refreshToken, 'old-refresh');
+    localStorage.setItem(authSession.storageKeys.tokenIssuedAt, String(Date.now() - 901_000));
+    localStorage.setItem(authSession.storageKeys.tokenExpiresIn, '900');
+
+    const response = await apiFetch('/api/admin/posts');
+
+    expect(response.ok).toBe(true);
+    expect(fetchMock).toHaveBeenNthCalledWith(1, 'http://localhost:8080/oauth2/token', expect.objectContaining({
+      method: 'POST',
+      body: expect.stringContaining('grant_type=refresh_token'),
+    }));
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/admin/posts', expect.objectContaining({
+      headers: expect.objectContaining({ get: expect.any(Function) }),
+    }));
+    const requestHeaders = fetchMock.mock.calls[1][1]?.headers as Headers;
+    expect(requestHeaders.get('Authorization')).toBe('Bearer fresh-access');
+    expect(localStorage.getItem(authSession.storageKeys.refreshToken)).toBe('fresh-refresh');
+  });
 });
