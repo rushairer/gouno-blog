@@ -1,0 +1,37 @@
+CREATE TABLE IF NOT EXISTS posts (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) UNIQUE NOT NULL,
+    summary TEXT,
+    content TEXT,
+    tags TEXT[] NOT NULL DEFAULT '{}',
+    status VARCHAR(20) NOT NULL DEFAULT 'draft',
+    views_count INT NOT NULL DEFAULT 0,
+    likes_count INT NOT NULL DEFAULT 0,
+    published_at TIMESTAMPTZ,
+    scheduled_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS comments (
+    id SERIAL PRIMARY KEY,
+    post_id INT NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+    parent_id INT REFERENCES comments(id) ON DELETE CASCADE,
+    author VARCHAR(100) NOT NULL,
+    content TEXT NOT NULL,
+    is_visible BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'draft';
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS views_count INT NOT NULL DEFAULT 0;
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS likes_count INT NOT NULL DEFAULT 0;
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMPTZ;
+ALTER TABLE comments ADD COLUMN IF NOT EXISTS parent_id INT REFERENCES comments(id) ON DELETE CASCADE;
+ALTER TABLE comments ADD COLUMN IF NOT EXISTS is_visible BOOLEAN NOT NULL DEFAULT false;
+
+CREATE INDEX IF NOT EXISTS idx_posts_status_published_at ON posts (status, published_at DESC);
+CREATE INDEX IF NOT EXISTS idx_posts_tags ON posts USING GIN (tags);
+CREATE INDEX IF NOT EXISTS idx_comments_post_visible ON comments (post_id, is_visible);

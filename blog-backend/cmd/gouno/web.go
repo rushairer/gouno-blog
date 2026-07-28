@@ -111,7 +111,15 @@ func startWebServer(cmd *cobra.Command, args []string) {
 		middleware.TimeoutMiddleware(globalConfig.WebServerConfig.RequestTimeout),
 		gounoMiddleware.RateLimitMiddleware(ctx, globalConfig.WebServerConfig.RateLimitPerMinute, time.Minute),
 	)
-	router.RegisterWebRouter(engine, db, authOptions, jwksURL)
+	visitorSecret := os.Getenv("BLOG_VISITOR_SECRET")
+	if env == "production" && visitorSecret == "" {
+		log.Fatal("BLOG_VISITOR_SECRET is required in production")
+	}
+	mediaDir := os.Getenv("BLOG_MEDIA_DIR")
+	if mediaDir == "" {
+		mediaDir = "./data/media"
+	}
+	router.RegisterWebRouter(engine, db, authOptions, jwksURL, globalConfig.RedisConfig.DSN, visitorSecret, mediaDir)
 
 	httpServer := &http.Server{
 		Addr:              fmt.Sprintf("%s:%s", globalConfig.WebServerConfig.Address, globalConfig.WebServerConfig.Port),

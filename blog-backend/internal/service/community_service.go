@@ -1,0 +1,182 @@
+package service
+
+import (
+	"context"
+	"database/sql"
+	"errors"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/rushairer/blog-backend/internal/domain"
+)
+
+type Actor struct {
+	Key           string
+	Subject       string
+	DisplayName   string
+	Authenticated bool
+}
+
+type CommunityRepository interface {
+	CreateComment(context.Context, *domain.Comment) error
+	GetVisibleComments(context.Context, int64) ([]*domain.Comment, error)
+	ListCommentsForAdmin(context.Context, string, bool, int, int) ([]*domain.Comment, int, error)
+	ModerateComment(context.Context, int64, string) error
+	DeleteComment(context.Context, int64) error
+	ReportComment(context.Context, int64, string, string) error
+	SetLike(context.Context, int64, string, bool) (*domain.CommunityState, error)
+	CommunityState(context.Context, int64, string, string) (*domain.CommunityState, error)
+	SetBookmark(context.Context, string, int64, bool) error
+	ListBookmarks(context.Context, string) ([]*domain.Bookmark, error)
+	ListNotifications(context.Context, string, int, int) ([]*domain.Notification, int, error)
+	ReadNotification(context.Context, string, int64) error
+	ReadAllNotifications(context.Context, string) error
+}
+
+type CommunityService struct {
+	repo  CommunityRepository
+	posts PostLookup
+}
+
+type PostLookup interface {
+	GetByID(context.Context, int64) (*domain.Post, error)
+	GetBySlug(context.Context, string) (*domain.Post, error)
+}
+
+func NewCommunityService(repo CommunityRepository, posts PostLookup) *CommunityService {
+	return &CommunityService{repo: repo, posts: posts}
+}
+
+func (s *CommunityService) ResolvePublishedPost(ctx context.Context, value string) (*domain.Post, error) {
+	var post *domain.Post
+	var err error
+	if id, parseErr := parsePositiveID(value); parseErr == nil {
+		post, err = s.posts.GetByID(ctx, id)
+	} else {
+		post, err = s.posts.GetBySlug(ctx, value)
+	}
+	if err != nil {
+		return nil, err
+	}
+	if post == nil || post.Status != domain.PostStatusPublished {
+		return nil, ErrPostNotFound
+	}
+	return post, nil
+}
+
+func (s *CommunityService) CreateComment(ctx context.Context, postID int64, parentID *int64, actor Actor, suppliedAuthor, content string) (*domain.Comment, error) {
+	content = strings.TrimSpace(content)
+	if content == "" || len([]rune(content)) > 5000 {
+		return nil, errors.New("comment content must be between 1 and 5000 characters")
+	}
+	author := strings.TrimSpace(suppliedAuthor)
+	comment := &domain.Comment{
+		PostID: postID, ParentID: parentID, Content: content,
+		AuthorType: "anonymous", Status: "pending", IsVisible: false,
+	}
+	if actor.Authenticated {
+		comment.Author = actor.DisplayName
+		comment.AuthorSubject = &actor.Subject
+		comment.AuthorType = "user"
+		comment.Status = "visible"
+		comment.IsVisible = true
+	} else {
+		if author == "" || len([]rune(author)) > 100 {
+			return nil, errors.New("author must be between 1 and 100 characters")
+		}
+		comment.Author = author
+	}
+	if err := s.repo.CreateComment(ctx, comment); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.New("parent comment not found")
+		}
+		return nil, err
+	}
+	return comment, nil
+}
+
+func (s *CommunityService) GetComments(ctx context.Context, postID int64) ([]*domain.Comment, error) {
+	return s.repo.GetVisibleComments(ctx, postID)
+}
+
+func (s *CommunityService) ListAdminComments(ctx context.Context, status string, reported bool, page, pageSize int) ([]*domain.Comment, int, error) {
+	if status != "" && status != "all" && status != "pending" && status != "visible" && status != "hidden" {
+		return nil, 0, errors.New("invalid comment status")
+	}
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 50
+	}
+	return s.repo.ListCommentsForAdmin(ctx, status, reported, pageSize, (page-1)*pageSize)
+}
+
+func (s *CommunityService) ModerateComment(ctx context.Context, id int64, status string) error {
+	if status != "visible" && status != "hidden" && status != "pending" {
+		return errors.New("invalid comment status")
+	}
+	return s.repo.ModerateComment(ctx, id, status)
+}
+
+func (s *CommunityService) DeleteComment(ctx context.Context, id int64) error {
+	return s.repo.DeleteComment(ctx, id)
+}
+
+func (s *CommunityService) ReportComment(ctx context.Context, id int64, actor Actor, reason string) error {
+	reason = strings.TrimSpace(reason)
+	if len([]rune(reason)) > 500 {
+		return errors.New("report reason is too long")
+	}
+	return s.repo.ReportComment(ctx, id, actor.Key, reason)
+}
+
+func (s *CommunityService) SetLike(ctx context.Context, postID int64, actor Actor, liked bool) (*domain.CommunityState, error) {
+	return s.repo.SetLike(ctx, postID, actor.Key, liked)
+}
+
+func (s *CommunityService) State(ctx context.Context, postID int64, actor Actor) (*domain.CommunityState, error) {
+	return s.repo.CommunityState(ctx, postID, actor.Key, actor.Subject)
+}
+
+func (s *CommunityService) SetBookmark(ctx context.Context, subject string, postID int64, bookmarked bool) error {
+	if subject == "" {
+		return errors.New("authenticated subject is required")
+	}
+	return s.repo.SetBookmark(ctx, subject, postID, bookmarked)
+}
+
+func (s *CommunityService) ListBookmarks(ctx context.Context, subject string) ([]*domain.Bookmark, error) {
+	return s.repo.ListBookmarks(ctx, subject)
+}
+
+func (s *CommunityService) ListNotifications(ctx context.Context, subject string, page, pageSize int) ([]*domain.Notification, int, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 30
+	}
+	return s.repo.ListNotifications(ctx, subject, pageSize, (page-1)*pageSize)
+}
+
+func (s *CommunityService) ReadNotification(ctx context.Context, subject string, id int64) error {
+	return s.repo.ReadNotification(ctx, subject, id)
+}
+
+func (s *CommunityService) ReadAllNotifications(ctx context.Context, subject string) error {
+	return s.repo.ReadAllNotifications(ctx, subject)
+}
+
+func parsePositiveID(value string) (int64, error) {
+	id, err := strconv.ParseInt(value, 10, 64)
+	if err != nil || id <= 0 {
+		return 0, errors.New("invalid id")
+	}
+	return id, nil
+}
+
+type RateLimiter interface {
+	Allow(context.Context, string, int, time.Duration) (bool, error)
+}

@@ -77,6 +77,9 @@ func (ctrl *PostController) Create(c *gin.Context) {
 
 func (ctrl *PostController) Update(c *gin.Context) {
 	idStr := c.Param("id")
+	if idStr == "" {
+		idStr = c.Param("slugOrID")
+	}
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "invalid post id"))
@@ -121,6 +124,9 @@ func (ctrl *PostController) ListAdmin(c *gin.Context) {
 
 func (ctrl *PostController) Delete(c *gin.Context) {
 	idStr := c.Param("id")
+	if idStr == "" {
+		idStr = c.Param("slugOrID")
+	}
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "invalid post id"))

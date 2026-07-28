@@ -41,6 +41,9 @@ describe('PostDetail', () => {
       if (url === '/api/posts/7/comments') {
         return Response.json({ data: [{ id: 1, post_id: 7, author: 'Ada', content: 'Great', is_visible: true, created_at: '2026-01-02T00:00:00Z' }] });
       }
+      if (url === '/api/posts/markdown-post/related') {
+        return Response.json({ data: [{ ...post, id: 8, title: 'Related Go Post', slug: 'related-go-post' }] });
+      }
       return new Response(null, { status: 404 });
     });
     vi.stubGlobal('fetch', fetchMock);
@@ -52,6 +55,11 @@ describe('PostDetail', () => {
     expect(screen.getByText('bold')).toBeInTheDocument();
     expect(screen.getByText('code')).toBeInTheDocument();
     expect(await screen.findByText('Great')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Related Go Post/ })).toHaveAttribute('href', '/posts/related-go-post');
+    expect(document.title).toBe("Markdown Post - Aben's DevBlog");
+    expect(document.head.querySelector('meta[name="description"]')).toHaveAttribute('content', 'Summary');
+    expect(document.head.querySelector('link[rel="canonical"]')).toHaveAttribute('href', 'http://localhost:8080/posts/markdown-post');
+    expect(document.head.querySelector('script[data-blog-seo="article"]')?.textContent).toContain('"BlogPosting"');
     expect(fetchMock).toHaveBeenCalledWith('/api/posts/markdown-post');
     expect(fetchMock).toHaveBeenCalledWith('/api/posts/7/comments');
   });
@@ -85,6 +93,43 @@ describe('PostDetail', () => {
     await waitFor(() => {
       expect(screen.getByText(/waiting for admin review/i)).toBeInTheDocument();
       expect(screen.queryByText('Hello there')).not.toBeInTheDocument();
+    });
+  });
+
+  it('renders a two-level thread and sends the selected parent id with a reply', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input.toString();
+      if (url === '/api/posts/markdown-post') return Response.json({ data: post });
+      if (url === '/api/posts/7/comments' && init?.method === 'POST') {
+        return Response.json({
+          data: { id: 3, post_id: 7, parent_id: 1, author: 'Grace', author_type: 'anonymous', status: 'pending', content: 'A reply', is_visible: false, created_at: '2026-01-04T00:00:00Z' },
+        }, { status: 201 });
+      }
+      if (url === '/api/posts/7/comments') {
+        return Response.json({
+          data: [
+            { id: 1, post_id: 7, author: 'Ada', author_type: 'user', status: 'visible', content: 'Parent', is_visible: true, created_at: '2026-01-02T00:00:00Z' },
+            { id: 2, post_id: 7, parent_id: 1, author: 'Lin', author_type: 'user', status: 'visible', content: 'Existing reply', is_visible: true, created_at: '2026-01-03T00:00:00Z' },
+          ],
+        });
+      }
+      return new Response(null, { status: 404 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const user = userEvent.setup();
+    renderPostDetail();
+
+    expect(await screen.findByText('Existing reply')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^reply$/i }));
+    expect(screen.getByText(/replying to Ada/i)).toBeInTheDocument();
+    await user.type(screen.getByPlaceholderText(/your name/i), 'Grace');
+    await user.type(screen.getByPlaceholderText(/type your comment/i), 'A reply');
+    await user.click(screen.getByRole('button', { name: /post comment/i }));
+
+    await waitFor(() => {
+      const request = fetchMock.mock.calls.find(([input, init]) => input.toString() === '/api/posts/7/comments' && init?.method === 'POST');
+      expect(request).toBeTruthy();
+      expect(JSON.parse(request?.[1]?.body as string)).toMatchObject({ parent_id: 1, author: 'Grace', content: 'A reply' });
     });
   });
 });

@@ -13,7 +13,7 @@ import (
 	"github.com/rushairer/gouno"
 )
 
-func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.AuthOptions, jwksURL string) {
+func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.AuthOptions, jwksURL, redisDSN, visitorSecret, mediaDir string) {
 	// Dynamic CORS Middleware
 	server.Use(func(ctx *gin.Context) {
 		origin := ctx.GetHeader("Origin")
@@ -37,6 +37,19 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 	svc := service.NewPostService(repo)
 	ctrl := controller.NewPostController(svc)
 	feedCtrl := controller.NewFeedController(svc)
+	communitySvc := service.NewCommunityService(repository.NewCommunityRepository(db), repo)
+	var interactionLimiter service.RateLimiter
+	if redisDSN != "" {
+		if limiter, err := service.NewRedisRateLimiter(redisDSN); err == nil {
+			interactionLimiter = limiter
+		}
+	}
+	communityCtrl := controller.NewCommunityController(communitySvc, interactionLimiter, visitorSecret)
+	growthSvc := service.NewGrowthService(repository.NewGrowthRepository(db))
+	growthCtrl := controller.NewGrowthController(growthSvc, svc, communitySvc, mediaDir)
+	if err := os.MkdirAll(mediaDir, 0o755); err == nil {
+		server.Static("/media", mediaDir)
+	}
 
 	// RSS & Sitemap Routes
 	server.GET("/feed.xml", feedCtrl.GetRSS)
@@ -47,6 +60,10 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 	verifier := middleware.NewJWTVerifier(jwksURL)
 	authOptions.RequiredRole = "admin"
 	adminAuth := middleware.AuthMiddlewareWithOptions(verifier, authOptions)
+	userAuthOptions := authOptions
+	userAuthOptions.RequiredRole = ""
+	userAuth := middleware.AuthMiddlewareWithOptions(verifier, userAuthOptions)
+	optionalAuth := middleware.OptionalAuth(verifier, userAuthOptions)
 
 	registerWebTestRouter(server)
 	registerWebIndexRouter(server)
@@ -77,15 +94,32 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 
 	// Public Blog Routes
 	api := server.Group("/api")
+	api.Use(optionalAuth)
 	{
 		api.GET("/posts", ctrl.List)
 		api.GET("/posts/:slugOrID", ctrl.Get)
-		api.POST("/posts/:slugOrID/view", ctrl.IncrementViews)
-		api.POST("/posts/:slugOrID/like", ctrl.IncrementLikes)
+		api.POST("/posts/:slugOrID/view", growthCtrl.TrackView)
+		api.GET("/posts/:slugOrID/related", growthCtrl.RelatedPosts)
+		api.GET("/posts/:slugOrID/community", communityCtrl.State)
+		api.POST("/posts/:slugOrID/like", communityCtrl.Like)
+		api.PUT("/posts/:slugOrID/like", communityCtrl.Like)
+		api.DELETE("/posts/:slugOrID/like", communityCtrl.Unlike)
 		api.GET("/tags", ctrl.ListTags)
 
-		api.GET("/posts/:slugOrID/comments", ctrl.GetComments)
-		api.POST("/posts/:slugOrID/comments", ctrl.CreateComment)
+		api.GET("/posts/:slugOrID/comments", communityCtrl.GetComments)
+		api.POST("/posts/:slugOrID/comments", communityCtrl.CreateComment)
+		api.POST("/comments/:id/report", communityCtrl.ReportComment)
+
+		me := api.Group("/me")
+		me.Use(userAuth)
+		{
+			me.GET("/bookmarks", communityCtrl.ListBookmarks)
+			me.PUT("/bookmarks/:postID", func(c *gin.Context) { communityCtrl.SetBookmark(c, true) })
+			me.DELETE("/bookmarks/:postID", func(c *gin.Context) { communityCtrl.SetBookmark(c, false) })
+			me.GET("/notifications", communityCtrl.ListNotifications)
+			me.PUT("/notifications/read-all", communityCtrl.ReadAllNotifications)
+			me.PUT("/notifications/:id/read", communityCtrl.ReadNotification)
+		}
 
 		// Protected Blog Routes (Admin Only)
 		admin := api.Group("")
@@ -93,11 +127,19 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 		{
 			admin.POST("/posts", ctrl.Create)
 			admin.GET("/admin/posts", ctrl.ListAdmin)
-			admin.PUT("/posts/:id", ctrl.Update)
-			admin.DELETE("/posts/:id", ctrl.Delete)
+			admin.PUT("/posts/:slugOrID", ctrl.Update)
+			admin.DELETE("/posts/:slugOrID", ctrl.Delete)
 			admin.GET("/posts/:slugOrID/comments/all", ctrl.GetAllComments)
-			admin.PUT("/comments/:id/visibility", ctrl.UpdateCommentVisibility)
-			admin.DELETE("/comments/:id", ctrl.DeleteComment)
+			admin.GET("/admin/comments", communityCtrl.ListAdminComments)
+			admin.PUT("/admin/comments/:id", communityCtrl.ModerateComment)
+			admin.PUT("/comments/:id/visibility", communityCtrl.LegacyVisibility)
+			admin.DELETE("/comments/:id", communityCtrl.DeleteComment)
+			admin.GET("/admin/posts/:id/versions", growthCtrl.ListVersions)
+			admin.POST("/admin/posts/:id/versions/:versionID/restore", growthCtrl.RestoreVersion)
+			admin.GET("/admin/media", growthCtrl.ListMedia)
+			admin.POST("/admin/media", growthCtrl.UploadMedia)
+			admin.DELETE("/admin/media/:id", growthCtrl.DeleteMedia)
+			admin.GET("/admin/analytics", growthCtrl.Analytics)
 		}
 	}
 }

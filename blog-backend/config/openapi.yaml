@@ -317,6 +317,297 @@ paths:
         '404':
           description: Comment not found
 
+  /posts/{slugOrID}/community:
+    get:
+      summary: Get the current visitor's article interaction state
+      parameters:
+        - name: slugOrID
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Like, bookmark, and current like count
+
+  /posts/{slugOrID}/like:
+    put:
+      summary: Idempotently like an article
+      parameters:
+        - name: slugOrID
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated interaction state
+        '429':
+          description: Interaction rate limit exceeded
+    delete:
+      summary: Remove the current visitor's like
+      parameters:
+        - name: slugOrID
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated interaction state
+
+  /comments/{id}/report:
+    post:
+      summary: Report a visible comment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  maxLength: 500
+      responses:
+        '201':
+          description: Report recorded
+        '409':
+          description: This visitor already reported the comment
+        '429':
+          description: Interaction rate limit exceeded
+
+  /me/bookmarks:
+    get:
+      summary: List the signed-in user's bookmarks
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Bookmarked published articles
+        '401':
+          description: Unauthorized
+
+  /me/bookmarks/{postID}:
+    put:
+      summary: Bookmark an article
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: postID
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Article bookmarked
+    delete:
+      summary: Remove an article bookmark
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: postID
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Bookmark removed
+
+  /me/notifications:
+    get:
+      summary: List the signed-in user's notifications and unread count
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Notification page
+        '401':
+          description: Unauthorized
+
+  /me/notifications/{id}/read:
+    put:
+      summary: Mark one owned notification as read
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Notification marked read
+        '404':
+          description: Notification does not exist or belongs to another user
+
+  /me/notifications/read-all:
+    put:
+      summary: Mark all owned notifications as read
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Notifications marked read
+
+  /admin/comments:
+    get:
+      summary: List comments across articles for moderation
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [all, pending, visible, hidden]
+        - name: reported
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Moderation queue
+
+  /admin/comments/{id}:
+    put:
+      summary: Change a comment's moderation status
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [pending, visible, hidden]
+      responses:
+        '200':
+          description: Moderation status updated
+
+  /posts/{slugOrID}/related:
+    get:
+      summary: List related published posts
+      parameters:
+        - name: slugOrID
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Up to four posts ranked by shared tags
+
+  /admin/posts/{id}/versions:
+    get:
+      summary: List saved article versions
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: The most recent 50 snapshots
+
+  /admin/posts/{id}/versions/{versionID}/restore:
+    post:
+      summary: Restore an article version
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: versionID
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Restored article; the replaced content is retained as a snapshot
+        '404':
+          description: Article version not found
+
+  /admin/media:
+    get:
+      summary: List media assets
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Media assets ordered newest first
+    post:
+      summary: Upload an image
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                alt_text:
+                  type: string
+      responses:
+        '201':
+          description: Image uploaded
+        '400':
+          description: Unsupported image type or file larger than 10 MB
+
+  /admin/media/{id}:
+    delete:
+      summary: Delete a media asset and its local file
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Media deleted
+
+  /admin/analytics:
+    get:
+      summary: Get content and engagement analytics
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Aggregate counters, top posts, and a 14-day traffic series
+
 components:
   securitySchemes:
     BearerAuth:
@@ -365,10 +656,19 @@ components:
           type: integer
         post_id:
           type: integer
+        parent_id:
+          type: integer
+          nullable: true
         author:
           type: string
+        author_type:
+          type: string
+          enum: [anonymous, user]
         content:
           type: string
+        status:
+          type: string
+          enum: [pending, visible, hidden]
         is_visible:
           type: boolean
           description: Whether the comment is visible to public readers.
@@ -405,12 +705,15 @@ components:
           description: Required for scheduled posts; interpreted and displayed in Asia/Shanghai by the admin UI.
     CreateCommentRequest:
       type: object
-      required:
-        - author
-        - content
+      required: [content]
       properties:
+        parent_id:
+          type: integer
+          nullable: true
+          description: Top-level comment to reply to. Replies cannot be nested further.
         author:
           type: string
+          description: Required for anonymous visitors and ignored for authenticated users.
           example: "John Doe"
         content:
           type: string

@@ -45,6 +45,80 @@ type AuthOptions struct {
 	ClientID     string
 }
 
+func bearerToken(ctx *gin.Context) (string, bool) {
+	authHeader := ctx.GetHeader("Authorization")
+	if authHeader == "" {
+		return "", false
+	}
+	parts := strings.SplitN(authHeader, " ", 2)
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") || strings.TrimSpace(parts[1]) == "" {
+		return "", false
+	}
+	return parts[1], true
+}
+
+func (v *JWTVerifier) VerifyToken(tokenStr string, options AuthOptions) (jwt.MapClaims, error) {
+	parserOptions := make([]jwt.ParserOption, 0, 2)
+	if options.Issuer != "" {
+		parserOptions = append(parserOptions, jwt.WithIssuer(options.Issuer))
+	}
+	if options.Audience != "" {
+		parserOptions = append(parserOptions, jwt.WithAudience(options.Audience))
+	}
+	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		kid, _ := token.Header["kid"].(string)
+		return v.GetPublicKey(kid)
+	}, parserOptions...)
+	if err != nil || !token.Valid {
+		return nil, fmt.Errorf("invalid or expired token")
+	}
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, fmt.Errorf("invalid token claims")
+	}
+	if options.ClientID != "" {
+		if azp, _ := claims["azp"].(string); azp != "" && azp != options.ClientID {
+			return nil, fmt.Errorf("invalid authorized party")
+		}
+		if clientID, _ := claims["client_id"].(string); clientID != "" && clientID != options.ClientID {
+			return nil, fmt.Errorf("invalid client")
+		}
+	}
+	return claims, nil
+}
+
+func setIdentity(ctx *gin.Context, claims jwt.MapClaims) {
+	sub, _ := claims["sub"].(string)
+	ctx.Set("account_id", sub)
+	ctx.Set("claims", claims)
+}
+
+// OptionalAuth attaches verified identity when a bearer token is present.
+// Missing credentials remain anonymous; malformed or invalid credentials are rejected.
+func OptionalAuth(verifier *JWTVerifier, options AuthOptions) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		if ctx.GetHeader("Authorization") == "" {
+			ctx.Next()
+			return
+		}
+		tokenStr, ok := bearerToken(ctx)
+		if !ok {
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "invalid authorization format"))
+			return
+		}
+		claims, err := verifier.VerifyToken(tokenStr, options)
+		if err != nil {
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, err.Error()))
+			return
+		}
+		setIdentity(ctx, claims)
+		ctx.Next()
+	}
+}
+
 func NewJWTVerifier(jwksURL string) *JWTVerifier {
 	v := &JWTVerifier{
 		jwksURL: jwksURL,
@@ -174,60 +248,17 @@ func AuthMiddlewareWithOptions(verifier *JWTVerifier, options AuthOptions) gin.H
 	}
 
 	return func(ctx *gin.Context) {
-		authHeader := ctx.GetHeader("Authorization")
-		if authHeader == "" {
+		tokenStr, ok := bearerToken(ctx)
+		if !ok {
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "missing authorization header"))
 			return
 		}
-
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
-			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "invalid authorization format"))
+		claims, err := verifier.VerifyToken(tokenStr, options)
+		if err != nil {
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, err.Error()))
 			return
 		}
-
-		tokenStr := parts[1]
-		parserOptions := make([]jwt.ParserOption, 0, 2)
-		if options.Issuer != "" {
-			parserOptions = append(parserOptions, jwt.WithIssuer(options.Issuer))
-		}
-		if options.Audience != "" {
-			parserOptions = append(parserOptions, jwt.WithAudience(options.Audience))
-		}
-		token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
-				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-			}
-			kid, _ := token.Header["kid"].(string)
-			return verifier.GetPublicKey(kid)
-		}, parserOptions...)
-
-		if err != nil || !token.Valid {
-			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "invalid or expired token"))
-			return
-		}
-
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok {
-			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "invalid token claims"))
-			return
-		}
-
-		// Store account ID and claims in context
-		sub, _ := claims["sub"].(string)
-		ctx.Set("account_id", sub)
-		ctx.Set("claims", claims)
-
-		if options.ClientID != "" {
-			if azp, _ := claims["azp"].(string); azp != "" && azp != options.ClientID {
-				ctx.AbortWithStatusJSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, "forbidden: invalid authorized party"))
-				return
-			}
-			if clientID, _ := claims["client_id"].(string); clientID != "" && clientID != options.ClientID {
-				ctx.AbortWithStatusJSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, "forbidden: invalid client"))
-				return
-			}
-		}
+		setIdentity(ctx, claims)
 
 		// Role authorization
 		if options.RequiredRole != "" {

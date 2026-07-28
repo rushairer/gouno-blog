@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, NavLink } from 'react-router-dom';
-import { ExternalLink, Globe2, LogIn, LogOut, Mail, Moon, Rss, Sun, Terminal } from 'lucide-react';
-import { isLoggedIn, logout, getUserProfile, redirectToAuthorize } from './auth';
+import { Bell, Bookmark, ExternalLink, Globe2, LogIn, LogOut, Mail, Moon, Rss, Sun, Terminal } from 'lucide-react';
+import { apiFetch, isLoggedIn, logout, getUserProfile, redirectToAuthorize } from './auth';
 import type { UserProfile } from './auth';
 import { I18nProvider, useI18n } from './i18n';
 
@@ -12,11 +12,16 @@ import Callback from './pages/Callback';
 import Login from './pages/Login';
 import Admin from './pages/Admin';
 import Settings from './pages/Settings';
+import Notifications from './pages/Notifications';
+import Bookmarks from './pages/Bookmarks';
+import Analytics from './pages/Analytics';
+import MediaLibrary from './pages/MediaLibrary';
 
 function Layout({ children }: { children: React.ReactNode }) {
   const { locale, setLocale, t } = useI18n();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [logged, setLogged] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const saved = localStorage.getItem('gouno-blog:theme');
     if (saved === 'dark' || saved === 'light') return saved;
@@ -32,6 +37,30 @@ function Layout({ children }: { children: React.ReactNode }) {
     setLogged(isLoggedIn());
     setUser(getUserProfile());
   }, []);
+
+  useEffect(() => {
+    if (!logged) {
+      setUnreadNotifications(0);
+      return;
+    }
+    let ignore = false;
+    const loadUnread = async () => {
+      try {
+        const response = await apiFetch('/api/me/notifications?pageSize=1');
+        const body = await response.json();
+        if (!ignore && response.ok) setUnreadNotifications(body.data?.unread || 0);
+      } catch {
+        // Notification status is non-critical for the global layout.
+      }
+    };
+    const handleChanged = () => void loadUnread();
+    void loadUnread();
+    window.addEventListener('community:notifications-changed', handleChanged);
+    return () => {
+      ignore = true;
+      window.removeEventListener('community:notifications-changed', handleChanged);
+    };
+  }, [logged]);
 
   const handleLogout = () => {
     logout();
@@ -94,6 +123,13 @@ function Layout({ children }: { children: React.ReactNode }) {
               </button>
               {logged ? (
                 <div className="user-menu">
+                  <Link className="icon-button nav-community-link" to="/bookmarks" aria-label={t('bookmarks')} title={t('bookmarks')}>
+                    <Bookmark size={18} />
+                  </Link>
+                  <Link className="icon-button nav-community-link" to="/notifications" aria-label={t('notifications')} title={t('notifications')}>
+                    <Bell size={18} />
+                    {unreadNotifications > 0 ? <span className="notification-badge">{unreadNotifications > 99 ? '99+' : unreadNotifications}</span> : null}
+                  </Link>
                   <span className="user-avatar">{(user?.name || user?.preferred_username || 'A').slice(0, 2).toUpperCase()}</span>
                   <span className="user-greeting">
                     {user?.name || user?.preferred_username || t('admin')}
@@ -145,7 +181,11 @@ export default function App() {
           <Route path="/" element={<Layout><Home /></Layout>} />
           <Route path="/posts/:slug" element={<Layout><PostDetail /></Layout>} />
           <Route path="/admin" element={<Layout><Admin /></Layout>} />
+          <Route path="/admin/analytics" element={<Layout><Analytics /></Layout>} />
+          <Route path="/admin/media" element={<Layout><MediaLibrary /></Layout>} />
           <Route path="/settings" element={<Layout><Settings /></Layout>} />
+          <Route path="/notifications" element={<Layout><Notifications /></Layout>} />
+          <Route path="/bookmarks" element={<Layout><Bookmarks /></Layout>} />
         </Routes>
       </BrowserRouter>
     </I18nProvider>
