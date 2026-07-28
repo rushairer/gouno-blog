@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/controller"
@@ -48,7 +49,16 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 	growthSvc := service.NewGrowthService(repository.NewGrowthRepository(db))
 	growthCtrl := controller.NewGrowthController(growthSvc, svc, communitySvc, mediaDir)
 	if err := os.MkdirAll(mediaDir, 0o755); err == nil {
-		server.Static("/media", mediaDir)
+		serveMedia := func(ctx *gin.Context) {
+			filename := ctx.Param("filename")
+			if filename == "" || filename != filepath.Base(filename) || filename == "." {
+				ctx.Status(http.StatusNotFound)
+				return
+			}
+			ctx.File(filepath.Join(mediaDir, filename))
+		}
+		server.GET("/media/:filename", serveMedia)
+		server.HEAD("/media/:filename", serveMedia)
 	}
 
 	// RSS & Sitemap Routes

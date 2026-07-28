@@ -23,6 +23,7 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 	foundLike := false
 	foundRelated := false
 	foundAnalytics := false
+	foundMedia := false
 	for _, route := range engine.Routes() {
 		if route.Method == "PUT" && route.Path == "/api/posts/:slugOrID" {
 			foundUpdate = true
@@ -36,8 +37,11 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 		if route.Method == "GET" && route.Path == "/api/admin/analytics" {
 			foundAnalytics = true
 		}
+		if route.Method == "GET" && route.Path == "/media/:filename" {
+			foundMedia = true
+		}
 	}
-	if !foundUpdate || !foundLike || !foundRelated || !foundAnalytics {
-		t.Fatalf("expected growth routes, update=%v like=%v related=%v analytics=%v", foundUpdate, foundLike, foundRelated, foundAnalytics)
+	if !foundUpdate || !foundLike || !foundRelated || !foundAnalytics || !foundMedia {
+		t.Fatalf("expected growth routes, update=%v like=%v related=%v analytics=%v media=%v", foundUpdate, foundLike, foundRelated, foundAnalytics, foundMedia)
 	}
 }
