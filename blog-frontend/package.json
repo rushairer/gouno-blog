@@ -17,7 +17,9 @@
     "qrcode.react": "^4.2.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "react-router-dom": "^7.18.0"
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.18.0",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.1",

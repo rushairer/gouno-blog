@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -150,6 +151,19 @@ func TestCreatePostNormalizesSlugAndSummary(t *testing.T) {
 	}
 }
 
+func TestCreatePostGeneratesFallbackSlugForNonLatinTitle(t *testing.T) {
+	repo := newFakePostRepo()
+	svc := NewPostService(repo)
+	post := &domain.Post{Title: "中文文章", Content: "正文"}
+
+	if err := svc.CreatePost(context.Background(), post); err != nil {
+		t.Fatalf("CreatePost returned error: %v", err)
+	}
+	if !strings.HasPrefix(post.Slug, "post-") {
+		t.Fatalf("slug = %q, want URL-safe fallback beginning with post-", post.Slug)
+	}
+}
+
 func TestCreatePostAppendsSuffixForDuplicateSlug(t *testing.T) {
 	repo := newFakePostRepo()
 	existing := &domain.Post{ID: 1, Title: "Existing", Slug: "hello"}
@@ -205,6 +219,14 @@ func TestResolvePostIDSupportsNumericIDAndSlug(t *testing.T) {
 	id, err = svc.ResolvePostID(context.Background(), "hello-world")
 	if err != nil || id != 7 {
 		t.Fatalf("ResolvePostID by slug = %d, %v; want 7, nil", id, err)
+	}
+
+	numericSlugPost := &domain.Post{ID: 8, Slug: "112", Status: domain.PostStatusPublished}
+	repo.posts[numericSlugPost.ID] = numericSlugPost
+	repo.postsBySlug[numericSlugPost.Slug] = numericSlugPost
+	id, err = svc.ResolvePostID(context.Background(), "112")
+	if err != nil || id != numericSlugPost.ID {
+		t.Fatalf("ResolvePostID by numeric slug = %d, %v; want %d, nil", id, err, numericSlugPost.ID)
 	}
 }
 

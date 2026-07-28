@@ -79,6 +79,29 @@ describe('Admin', () => {
     expect(await screen.findByText('slug is already in use')).toBeInTheDocument();
   });
 
+  it('confirms both saving a draft and publishing an article', async () => {
+    vi.mocked(isLoggedIn).mockReturnValue(true);
+    vi.mocked(canManageBlog).mockReturnValue(true);
+    vi.mocked(apiFetch).mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input.toString();
+      if (url === '/api/admin/posts') return Response.json({ data: { list: [], total: 0 } });
+      const payload = JSON.parse(String(init?.body || '{}'));
+      return Response.json({ data: { ...post, id: 2, title: payload.title, content: payload.content, status: payload.status } });
+    });
+
+    const user = userEvent.setup();
+    renderAdmin();
+
+    await user.click(await screen.findByRole('button', { name: /write new post/i }));
+    await user.type(screen.getByLabelText('Title'), 'Draft with feedback');
+    await user.type(screen.getByLabelText(/content/i), 'Body');
+    await user.click(screen.getByRole('button', { name: /save post/i }));
+    expect(await screen.findByText('Article saved successfully.')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /publish now/i }));
+    expect(await screen.findByText('Article published successfully.')).toBeInTheDocument();
+  });
+
   it('loads all comments for moderation and can make a pending comment public', async () => {
     vi.mocked(isLoggedIn).mockReturnValue(true);
     vi.mocked(canManageBlog).mockReturnValue(true);

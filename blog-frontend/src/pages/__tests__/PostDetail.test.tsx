@@ -10,7 +10,7 @@ const post = {
   title: 'Markdown Post',
   slug: 'markdown-post',
   summary: 'Summary',
-  content: '## Section\nThis has **bold** text and `code`.\n- first\n- second',
+  content: '## Section\nThis has **bold** text and `code`.\n\n![Architecture diagram](/media/diagram.jpg)\n\n- first\n- second',
   tags: ['go'],
   created_at: '2026-01-01T00:00:00Z',
 };
@@ -54,6 +54,7 @@ describe('PostDetail', () => {
     expect(screen.getByRole('heading', { name: 'Section' })).toBeInTheDocument();
     expect(screen.getByText('bold')).toBeInTheDocument();
     expect(screen.getByText('code')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Architecture diagram' })).toHaveAttribute('src', '/media/diagram.jpg');
     expect(await screen.findByText('Great')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Related Go Post/ })).toHaveAttribute('href', '/posts/related-go-post');
     expect(document.title).toBe("Markdown Post - Aben's DevBlog");

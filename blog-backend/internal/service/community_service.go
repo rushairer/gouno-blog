@@ -53,9 +53,14 @@ func (s *CommunityService) ResolvePublishedPost(ctx context.Context, value strin
 	var err error
 	if id, parseErr := parsePositiveID(value); parseErr == nil {
 		post, err = s.posts.GetByID(ctx, id)
-	} else {
-		post, err = s.posts.GetBySlug(ctx, value)
+		if err != nil {
+			return nil, err
+		}
+		if post != nil && post.Status == domain.PostStatusPublished {
+			return post, nil
+		}
 	}
+	post, err = s.posts.GetBySlug(ctx, value)
 	if err != nil {
 		return nil, err
 	}

@@ -61,6 +61,12 @@ func (s *PostService) preparePost(ctx context.Context, post *domain.Post, curren
 	} else {
 		post.Slug = generateSlug(post.Slug)
 	}
+	// A title written entirely in non-Latin characters (or symbols) normalizes to
+	// an empty string. Always persist a URL-safe fallback instead of exposing an
+	// unusable /posts/ URL for articles whose slug was left optional.
+	if post.Slug == "" {
+		post.Slug = fmt.Sprintf("post-%d", timeNowUnixNano())
+	}
 
 	bySlug, err := s.repo.GetBySlug(ctx, post.Slug)
 	if err != nil {
@@ -180,10 +186,9 @@ func (s *PostService) ResolvePostID(ctx context.Context, slugOrID string) (int64
 		if err != nil {
 			return 0, err
 		}
-		if post == nil {
-			return 0, ErrPostNotFound
+		if post != nil {
+			return post.ID, nil
 		}
-		return post.ID, nil
 	}
 
 	slug := generateSlug(slugOrID)

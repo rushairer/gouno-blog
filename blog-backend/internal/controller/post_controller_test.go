@@ -135,9 +135,13 @@ func setupControllerRouter(svc *fakeBlogService) *gin.Engine {
 }
 
 func TestGetPostSupportsIDAndSlug(t *testing.T) {
-	router := setupControllerRouter(newFakeBlogService())
+	svc := newFakeBlogService()
+	numericSlug := &domain.Post{ID: 2, Title: "Numeric slug", Slug: "112", Content: "Body"}
+	svc.posts[numericSlug.ID] = numericSlug
+	svc.postsBySlug[numericSlug.Slug] = numericSlug
+	router := setupControllerRouter(svc)
 
-	for _, path := range []string{"/api/posts/1", "/api/posts/hello"} {
+	for _, path := range []string{"/api/posts/1", "/api/posts/hello", "/api/posts/112"} {
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodGet, path, nil)
 		router.ServeHTTP(rec, req)

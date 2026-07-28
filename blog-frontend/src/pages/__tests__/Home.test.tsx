@@ -46,6 +46,7 @@ describe('Home', () => {
     renderHome();
 
     expect(await screen.findByText('Go SSO Notes')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Go SSO Notes' })).toHaveAttribute('href', '/posts/go-sso-notes');
     await user.click(screen.getByRole('button', { name: /load more posts/i }));
 
     expect(await screen.findByText('Cloud Ops')).toBeInTheDocument();

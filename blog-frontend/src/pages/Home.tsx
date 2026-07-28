@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { EmptyState, LoadingState, Panel } from '../components/ui';
 import { useI18n } from '../i18n';
+import { markdownToPlainText } from '../markdown';
 
 interface Post {
   id: number;
@@ -35,7 +36,8 @@ const pageSize = 6;
 function PostCard({ post }: { post: Post }) {
   const { t, formatDate } = useI18n();
   const primaryTag = post.tags[0] || 'go';
-  const readMinutes = Math.max(3, Math.min(12, Math.ceil(`${post.title} ${post.summary}`.length / 80)));
+  const summary = markdownToPlainText(post.summary);
+  const readMinutes = Math.max(3, Math.min(12, Math.ceil(`${post.title} ${summary}`.length / 80)));
   const icon = getTopicIcon(primaryTag);
 
   return (
@@ -48,7 +50,7 @@ function PostCard({ post }: { post: Post }) {
         <Link to={`/posts/${post.slug}`} className="post-title">
           {post.title}
         </Link>
-        <p className="post-summary">{post.summary}</p>
+        <p className="post-summary">{summary}</p>
         <div className="chip-row">
           {post.tags.slice(0, 4).map((tag) => (
             <span key={tag} className="badge">

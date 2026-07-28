@@ -68,13 +68,21 @@ func (*fakeCommunityRepo) ReadNotification(context.Context, string, int64) error
 func (*fakeCommunityRepo) ReadAllNotifications(context.Context, string) error    { return nil }
 
 type fakePostLookup struct {
-	post *domain.Post
+	post        *domain.Post
+	postsByID   map[int64]*domain.Post
+	postsBySlug map[string]*domain.Post
 }
 
-func (f fakePostLookup) GetByID(context.Context, int64) (*domain.Post, error) {
+func (f fakePostLookup) GetByID(_ context.Context, id int64) (*domain.Post, error) {
+	if f.postsByID != nil {
+		return f.postsByID[id], nil
+	}
 	return f.post, nil
 }
-func (f fakePostLookup) GetBySlug(context.Context, string) (*domain.Post, error) {
+func (f fakePostLookup) GetBySlug(_ context.Context, slug string) (*domain.Post, error) {
+	if f.postsBySlug != nil {
+		return f.postsBySlug[slug], nil
+	}
 	return f.post, nil
 }
 
@@ -130,5 +138,16 @@ func TestCommunityBookmarkRequiresAuthenticatedSubject(t *testing.T) {
 	svc := newCommunityServiceForTest(&fakeCommunityRepo{})
 	if err := svc.SetBookmark(context.Background(), "", 1, true); err == nil {
 		t.Fatal("expected empty subject to fail")
+	}
+}
+
+func TestCommunityResolvesNumericSlugWhenIDDoesNotExist(t *testing.T) {
+	post := &domain.Post{ID: 8, Slug: "112", Status: domain.PostStatusPublished}
+	svc := NewCommunityService(&fakeCommunityRepo{}, fakePostLookup{
+		postsByID: map[int64]*domain.Post{}, postsBySlug: map[string]*domain.Post{"112": post},
+	})
+	resolved, err := svc.ResolvePublishedPost(context.Background(), "112")
+	if err != nil || resolved.ID != post.ID {
+		t.Fatalf("ResolvePublishedPost = %#v, %v; want numeric slug post", resolved, err)
 	}
 }

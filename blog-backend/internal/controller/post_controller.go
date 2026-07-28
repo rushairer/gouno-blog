@@ -149,10 +149,17 @@ func (ctrl *PostController) Get(c *gin.Context) {
 	var post *domain.Post
 	if err == nil {
 		post, err = ctrl.svc.GetPost(c.Request.Context(), id)
-	} else {
-		// Treat as slug
-		post, err = ctrl.svc.GetPostBySlug(c.Request.Context(), slugOrID)
+		if err != nil {
+			writeServiceError(c, err)
+			return
+		}
+		if post != nil {
+			c.JSON(http.StatusOK, gouno.NewSuccessResponse(post))
+			return
+		}
 	}
+	// Prefer an existing numeric ID, then fall back to a numeric slug.
+	post, err = ctrl.svc.GetPostBySlug(c.Request.Context(), slugOrID)
 
 	if err != nil {
 		writeServiceError(c, err)

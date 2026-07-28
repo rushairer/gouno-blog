@@ -791,8 +791,19 @@ textarea.input-field {
 }
 
 .article-shell {
-  max-width: 900px;
+  max-width: 1180px;
   margin: 0 auto;
+}
+
+.article header .inline-meta {
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
+
+.article header .inline-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .article {
@@ -848,6 +859,35 @@ textarea.input-field {
 .article-content a {
   color: var(--color-primary);
   font-weight: 650;
+}
+
+.article-content img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-sm);
+}
+
+.article-content table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+
+.article-content th,
+.article-content td {
+  border: 1px solid var(--border-card);
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.article-content blockquote {
+  margin: 0;
+  border-left: 3px solid var(--color-primary);
+  color: var(--color-text-muted);
+  padding-left: 16px;
 }
 
 .article-content code {

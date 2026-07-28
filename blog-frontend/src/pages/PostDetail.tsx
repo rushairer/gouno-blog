@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Bookmark, Calendar, Check, Copy, Eye, Flag, Heart, List, MessageSquare, Reply, Send, User, X } from 'lucide-react';
+import { ArrowLeft, Bookmark, Calendar, Eye, Flag, Heart, List, MessageSquare, Reply, Send, User, X } from 'lucide-react';
 import { isLoggedIn, redirectToAuthorize } from '../auth';
 import type { CommunityComment } from '../community';
 import { optionalApiFetch, readResponse } from '../community';
 import { EmptyState, Feedback, Field, LoadingState, Panel } from '../components/ui';
 import { useI18n } from '../i18n';
 import { useArticleSEO } from '../seo';
+import { MarkdownRenderer } from '../components/MarkdownRenderer';
+import { extractMarkdownTOC } from '../markdown';
 
 interface Post {
   id: number;
@@ -18,12 +20,6 @@ interface Post {
   views_count?: number;
   likes_count?: number;
   created_at: string;
-}
-
-interface TOCItem {
-  id: string;
-  text: string;
-  level: number;
 }
 
 interface CommentItemProps {
@@ -56,174 +52,6 @@ function CommentItem({ comment, replies, onReply, onReport }: CommentItemProps) 
       ) : null}
     </div>
   );
-}
-
-function CodeBlock({ code }: { code: string }) {
-  const { t } = useI18n();
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <div className="code-block-wrapper">
-      <button
-        type="button"
-        className="code-copy-btn"
-        onClick={handleCopy}
-        aria-label={t('copyCode')}
-        title={t('copyCode')}
-      >
-        {copied ? <Check size={14} /> : <Copy size={14} />}
-        <span>{copied ? t('copied') : t('copyCode')}</span>
-      </button>
-      <pre>
-        <code>{code}</code>
-      </pre>
-    </div>
-  );
-}
-
-function renderInlineMarkdown(text: string, keyPrefix: string): React.ReactNode[] {
-  const parts: React.ReactNode[] = [];
-  const pattern = /(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*|\[[^\]]+\]\([^)]+\))/g;
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = pattern.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push(text.slice(lastIndex, match.index));
-    }
-
-    const token = match[0];
-    const key = `${keyPrefix}-${match.index}`;
-    if (token.startsWith('`')) {
-      parts.push(<code key={key}>{token.slice(1, -1)}</code>);
-    } else if (token.startsWith('**')) {
-      parts.push(<strong key={key}>{token.slice(2, -2)}</strong>);
-    } else if (token.startsWith('*')) {
-      parts.push(<em key={key}>{token.slice(1, -1)}</em>);
-    } else {
-      const linkMatch = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(token);
-      const href = linkMatch?.[2] || '';
-      const safeHref = /^(https?:|mailto:|\/|#)/.test(href) ? href : '#';
-      parts.push(
-        <a key={key} href={safeHref} target={safeHref.startsWith('http') ? '_blank' : undefined} rel={safeHref.startsWith('http') ? 'noreferrer' : undefined}>
-          {linkMatch?.[1] || token}
-        </a>,
-      );
-    }
-    lastIndex = pattern.lastIndex;
-  }
-
-  if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex));
-  }
-  return parts.length > 0 ? parts : [text];
-}
-
-function extractTOC(content: string): TOCItem[] {
-  const lines = content.split(/\r?\n/);
-  const toc: TOCItem[] = [];
-  lines.forEach((line, index) => {
-    const match = /^(#{1,3})\s+(.+)$/.exec(line);
-    if (match) {
-      const level = match[1].length;
-      const text = match[2].trim();
-      const id = `heading-${index}-${text.toLowerCase().replace(/[^\w\u4e00-\u9fa5]+/g, '-')}`;
-      toc.push({ id, text, level });
-    }
-  });
-  return toc;
-}
-
-function MarkdownContent({ content }: { content: string }) {
-  const lines = content.replace(/\r\n/g, '\n').split('\n');
-  const blocks: React.ReactNode[] = [];
-  let index = 0;
-
-  while (index < lines.length) {
-    const line = lines[index];
-    if (!line.trim()) {
-      index += 1;
-      continue;
-    }
-
-    const fenceMatch = /^```(\w+)?\s*$/.exec(line);
-    if (fenceMatch) {
-      const codeLines: string[] = [];
-      index += 1;
-      while (index < lines.length && !/^```\s*$/.test(lines[index])) {
-        codeLines.push(lines[index]);
-        index += 1;
-      }
-      if (index < lines.length) index += 1;
-      blocks.push(
-        <CodeBlock key={`code-${index}`} code={codeLines.join('\n')} />
-      );
-      continue;
-    }
-
-    const headingMatch = /^(#{1,3})\s+(.+)$/.exec(line);
-    if (headingMatch) {
-      const level = headingMatch[1].length;
-      const text = headingMatch[2].trim();
-      const id = `heading-${index}-${text.toLowerCase().replace(/[^\w\u4e00-\u9fa5]+/g, '-')}`;
-      const children = renderInlineMarkdown(text, `heading-${index}`);
-      if (level === 1) blocks.push(<h2 id={id} key={`heading-${index}`}>{children}</h2>);
-      if (level === 2) blocks.push(<h3 id={id} key={`heading-${index}`}>{children}</h3>);
-      if (level === 3) blocks.push(<h4 id={id} key={`heading-${index}`}>{children}</h4>);
-      index += 1;
-      continue;
-    }
-
-    if (line.startsWith('> ')) {
-      const quoteLines: string[] = [];
-      while (index < lines.length && lines[index].startsWith('> ')) {
-        quoteLines.push(lines[index].slice(2));
-        index += 1;
-      }
-      blocks.push(
-        <blockquote key={`quote-${index}`}>
-          {quoteLines.map((q, idx) => (
-            <p key={idx}>{renderInlineMarkdown(q, `q-${index}-${idx}`)}</p>
-          ))}
-        </blockquote>
-      );
-      continue;
-    }
-
-    if (/^\s*[-*]\s+/.test(line)) {
-      const items: React.ReactNode[] = [];
-      while (index < lines.length && /^\s*[-*]\s+/.test(lines[index])) {
-        const value = lines[index].replace(/^\s*[-*]\s+/, '');
-        items.push(<li key={`item-${index}`}>{renderInlineMarkdown(value, `item-${index}`)}</li>);
-        index += 1;
-      }
-      blocks.push(<ul key={`list-${index}`}>{items}</ul>);
-      continue;
-    }
-
-    const paragraphLines = [line.trim()];
-    index += 1;
-    while (
-      index < lines.length &&
-      lines[index].trim() &&
-      !/^(#{1,3})\s+/.test(lines[index]) &&
-      !/^\s*[-*]\s+/.test(lines[index]) &&
-      !/^```/.test(lines[index]) &&
-      !lines[index].startsWith('> ')
-    ) {
-      paragraphLines.push(lines[index].trim());
-      index += 1;
-    }
-    blocks.push(<p key={`paragraph-${index}`}>{renderInlineMarkdown(paragraphLines.join(' '), `paragraph-${index}`)}</p>);
-  }
-
-  return <div className="article-content">{blocks.length > 0 ? blocks : <p>{content}</p>}</div>;
 }
 
 export default function PostDetail() {
@@ -398,7 +226,7 @@ export default function PostDetail() {
     );
   }
 
-  const toc = extractTOC(post.content);
+  const toc = extractMarkdownTOC(post.content);
   const rootComments = comments.filter((comment) => !comment.parent_id);
   const repliesByParent = new Map<number, CommunityComment[]>();
   comments.forEach((comment) => {
@@ -448,7 +276,7 @@ export default function PostDetail() {
               </div>
             </header>
 
-            <MarkdownContent content={post.content} />
+            <MarkdownRenderer content={post.content} />
 
             <div className="article-actions">
               <button
