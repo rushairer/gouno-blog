@@ -143,9 +143,6 @@ func (c GoUnoConfig) Validate() error {
 		}
 	}
 	if c.AIAgentConfig.Enabled {
-		if len(c.AIAgentConfig.AllowedHosts) == 0 {
-			return fmt.Errorf("ai_agents: allowed_upstream_hosts must not be empty when enabled")
-		}
 		if c.AIAgentConfig.SchedulerInterval <= 0 {
 			return fmt.Errorf("ai_agents: scheduler_interval must be positive")
 		}

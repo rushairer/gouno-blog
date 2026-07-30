@@ -49,7 +49,5 @@ log:
     level: -1 #日志级别, -1: Debug, 0: Info, 1: Warn, 2: Error, 3: DPanic, 4: Panic, 5: Fatal
 ai_agents:
     enabled: false
-    allowed_upstream_hosts:
-        - api.openai.com
-        - api.anthropic.com
+    allowed_upstream_hosts: []
     scheduler_interval: 30s

@@ -16,7 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
-- Restricted Provider upstreams to configured hosts, rejected unsafe URLs and redirects, and kept Provider secrets out of API responses and run logs.
+- Allowed public HTTPS Provider upstreams by default while requiring explicit authorization for private hosts; DNS, resolved IPs, redirects, and forbidden network ranges remain fail-closed.
+- Recognized proxy-generated `198.18.0.0/15` Fake-IP results for domain-based Provider URLs without allowing literal benchmark-range URLs by default.
 - Required all Agent content changes to pass through conflict-aware human approval.
 
 ## [1.0.1] - 2026-06-13

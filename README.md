@@ -174,7 +174,7 @@ export BLOG_AGENT_PREVIOUS_MASTER_KEYS="1:<old-base64-key>"
 
 旧密钥只用于解密旧记录，新保存的 Provider Key 会使用当前版本。管理员重新保存所有 Provider 凭据后即可移除旧密钥；丢失仍在使用的旧密钥会导致对应 Provider 无法运行。
 
-允许访问的 Provider 主机由后端 `ai_agents.allowed_upstream_hosts` 配置控制，默认只有 `api.openai.com` 和 `api.anthropic.com`。非 HTTPS、自带用户信息、内网地址、未列入允许名单的 URL 和上游重定向都会被拒绝。
+第三方公网 Provider 无需预先加入名单：只要域名解析结果全部为公网地址并使用 HTTPS，即可直接保存。Clash/Mihomo 等代理为域名返回的 `198.18.0.0/15` Fake-IP 也受支持，但直接填写该网段的 IP 仍不会被视为公网。`ai_agents.allowed_upstream_hosts` 用于显式授权自托管、局域网或本机 Provider；本地开发时，名单内的回环地址也可以使用 HTTP。链路本地、metadata、未指定和组播地址始终禁止，DNS 会在保存及每次建连时重新校验，上游重定向也会被拒绝。
 
 完整数据模型、工具权限和发布边界参见 [AI Agent 开发计划](./doc/ai-agent-development-plan.md)；管理 API 可在 Swagger 的 `/admin/provider-profiles`、`/admin/agents`、`/admin/agent-runs` 和 `/admin/agent-approvals` 下查看。
 

@@ -21,7 +21,7 @@
 可以迁入 `blog-backend` 并改造：
 
 - `internal/provider`：OpenAI Responses API、Anthropic Messages API、同步和 SSE 解析。
-- Provider 上游域名白名单、生产环境 HTTPS、禁止重定向、密钥只从环境变量读取。
+- Provider 公网 HTTPS 自动准入、私网主机显式白名单、DNS/IP 复核、禁止重定向、密钥只从环境变量读取。
 - 请求超时、输入长度限制、未知 JSON 字段拒绝。
 - `internal/billing.UsageRecorder` 抽象和 token 用量采集思路。
 - Request ID、安全日志和健康检查模式。
@@ -128,7 +128,7 @@ Provider 和 Agent 都是 Blog 后台的一等管理资源，必须有 UI、管�
 - `max_output_tokens`
 - `created_at`, `updated_at`
 
-Provider Profile 只能由管理员管理。`base_url` 必须通过服务端允许列表校验，Agent 运行时不能覆盖。编辑 Provider 时，API Key 留空表示保留现有密钥；只有显式提交新 Key 才替换密文。
+Provider Profile 只能由管理员管理。公网 HTTPS `base_url` 在 DNS/IP 安全校验通过后自动准入；私网或回环 Provider 必须位于服务端允许列表，Agent 运行时不能覆盖。编辑 Provider 时，API Key 留空表示保留现有密钥；只有显式提交新 Key 才替换密文。
 
 ### 4.2 Agent
 
@@ -321,7 +321,7 @@ POST   /api/admin/agent-approvals/:id/reject
 
 - Provider 名称、类型、Base URL、模型、超时和最大输出 token。
 - API Key 使用密码输入框，保存后仅显示掩码；编辑时留空表示不更换。
-- 保存前校验允许主机、HTTPS 和模型字段。
+- 保存前校验公网/私网策略、DNS 解析、HTTPS 和模型字段。
 - “测试连接”只返回成功、延迟和标准化错误，不回显上游原始敏感响应。
 - 已被 Agent 使用的 Provider 不允许删除，只能停用或先迁移 Agent。
 

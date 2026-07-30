@@ -164,6 +164,27 @@ h4 {
   background: var(--color-primary);
 }
 
+.ai-workspace-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 76px;
+  text-decoration: none;
+}
+
+.ai-workspace-link svg {
+  width: 16px;
+  height: 16px;
+}
+
+.ai-workspace-link:hover,
+.ai-workspace-link.active {
+  color: var(--color-primary);
+}
+
 .nav-actions {
   justify-content: flex-end;
   gap: 16px;
@@ -1143,6 +1164,10 @@ textarea.input-field {
   }
 
   .nav-link {
+    line-height: 44px;
+  }
+
+  .ai-workspace-link {
     line-height: 44px;
   }
 

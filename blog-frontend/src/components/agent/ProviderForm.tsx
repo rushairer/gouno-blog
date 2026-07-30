@@ -66,7 +66,7 @@ export function ProviderForm({
             provider_type: providerType,
             base_url: providerType === 'openai' ? 'https://api.openai.com' : 'https://api.anthropic.com',
           }));
-        }}><option value="openai">OpenAI</option><option value="anthropic">Anthropic</option></select></Field>
+        }}><option value="openai">OpenAI / compatible</option><option value="anthropic">Anthropic native</option></select></Field>
       </div>
       <div className="split-grid">
         <Field label={labels.baseUrl}><input className="input-field mono" type="url" required value={value.base_url} onChange={(event) => setValue((current) => ({ ...current, base_url: event.target.value }))} /></Field>

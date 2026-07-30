@@ -1,46 +1,35 @@
 .agent-console {
-  --agent-accent: #5a3de1;
-  --agent-accent-soft: #f1efff;
-  --agent-border: #dedbe9;
+  --agent-accent: var(--color-primary);
+  --agent-accent-soft: rgba(22, 75, 55, .08);
+  --agent-border: var(--border-card);
 }
 
 .agent-console .page-header h1 {
   font-size: clamp(34px, 5vw, 48px);
 }
 
-.agent-console__layout {
-  display: grid;
-  grid-template-columns: 190px minmax(0, 1fr);
-  min-height: 620px;
-  overflow: hidden;
-  border: 1px solid var(--agent-border);
-  border-radius: var(--radius-lg);
-  background: var(--bg-panel);
-}
+.agent-console__layout { min-width: 0; }
 
 .agent-console__nav {
   display: flex;
-  flex-direction: column;
-  gap: 7px;
-  padding: 20px 12px;
-  border-right: 1px solid var(--agent-border);
-  background: color-mix(in srgb, var(--bg-panel) 94%, #f6f5fb);
+  align-items: center;
+  gap: 30px;
+  border-bottom: 1px solid var(--agent-border);
+  margin-bottom: 28px;
 }
 
 .agent-console__nav button {
-  display: grid;
-  grid-template-columns: 20px 1fr auto;
-  min-height: 46px;
+  display: inline-flex;
+  min-height: 48px;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   border: 0;
-  border-radius: 7px;
   background: transparent;
   color: var(--color-text-muted);
   cursor: pointer;
   font-size: 14px;
   font-weight: 700;
-  padding: 0 12px;
+  padding: 0;
   text-align: left;
 }
 
@@ -50,18 +39,13 @@
 }
 
 .agent-console__nav button.active {
-  background: var(--agent-accent-soft);
   color: var(--agent-accent);
+  box-shadow: inset 0 -3px var(--agent-accent);
 }
 
 .agent-console__nav button b {
-  display: grid;
-  min-width: 22px;
-  height: 22px;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--agent-accent);
-  color: #fff;
+  min-width: 18px;
+  color: var(--agent-accent);
   font-size: 11px;
 }
 
@@ -70,14 +54,51 @@
 }
 
 .agent-console__main > .panel {
-  min-height: 100%;
-  border: 0;
-  border-radius: 0;
+  min-height: 430px;
 }
 
 .agent-table-panel {
-  padding: 14px 18px;
+  padding: 14px 20px;
 }
+
+.agent-empty-state {
+  display: grid;
+  min-height: 420px;
+  place-content: center;
+  justify-items: center;
+  border: 1px dashed var(--agent-border);
+  color: var(--color-text-muted);
+  padding: 36px;
+  text-align: center;
+}
+
+.agent-empty-state > svg {
+  width: 36px;
+  height: 36px;
+  color: var(--color-primary);
+  margin-bottom: 16px;
+}
+
+.agent-empty-state h2 {
+  color: var(--color-text-main);
+  font-size: 20px;
+}
+
+.agent-empty-state p {
+  max-width: 420px;
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.agent-empty-state .text-link {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  margin-top: 20px;
+}
+
+.agent-empty-state .text-link svg { width: 16px; height: 16px; }
 
 .agent-table {
   min-width: 1050px;
@@ -324,7 +345,11 @@
 .agent-approval-workspace {
   display: grid;
   grid-template-columns: minmax(320px, .85fr) minmax(0, 1.5fr);
-  min-height: 620px;
+  min-height: 560px;
+  overflow: hidden;
+  border: 1px solid var(--agent-border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
 }
 
 .agent-run-list,
@@ -543,9 +568,9 @@
 }
 
 [data-theme="dark"] .agent-console {
-  --agent-accent: #a795ff;
-  --agent-accent-soft: #2c2744;
-  --agent-border: #3c3a43;
+  --agent-accent: #8bc7a3;
+  --agent-accent-soft: rgba(139, 199, 163, .12);
+  --agent-border: var(--border-card);
 }
 
 [data-theme="dark"] .agent-json-preview {
@@ -554,15 +579,8 @@
 }
 
 @media (max-width: 1050px) {
-  .agent-console__layout {
-    grid-template-columns: 1fr;
-  }
-
   .agent-console__nav {
-    flex-direction: row;
     overflow-x: auto;
-    border-right: 0;
-    border-bottom: 1px solid var(--agent-border);
   }
 
   .agent-console__nav button {
@@ -575,6 +593,18 @@
 }
 
 @media (max-width: 760px) {
+  .agent-console__nav {
+    gap: 20px;
+    overflow-x: auto;
+  }
+
+  .agent-console__nav button {
+    flex: 0 0 auto;
+  }
+
+  .agent-empty-state {
+    min-height: 320px;
+  }
   .agent-console .page-header {
     align-items: flex-start;
     flex-direction: column;

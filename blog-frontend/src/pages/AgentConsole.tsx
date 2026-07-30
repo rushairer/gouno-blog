@@ -3,7 +3,6 @@ import {
   Bot, Check, ChevronRight, CirclePause, Clock3, KeyRound, ListChecks, Play,
   Plus, RefreshCw, Settings2, ShieldCheck, Trash2, X,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { apiFetch, canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
 import type {
   Agent, AgentApproval, AgentPreset, AgentRun, AgentToolCall, ProviderProfile, ToolDefinition,
@@ -19,7 +18,7 @@ type ConsoleTab = 'agents' | 'providers' | 'runs' | 'approvals';
 
 const copy = {
   en: {
-    title: 'AI Agents', pageDescription: 'Configure providers, automate blog operations, and review every proposed change.',
+    title: 'AI Workspace', pageDescription: 'Configure providers, automate blog operations, and review every proposed change.',
     agents: 'Agents', providers: 'Providers', runs: 'Runs', approvals: 'Approvals',
     createAgent: 'Create Agent', createProvider: 'Add Provider', editAgent: 'Edit Agent', editProvider: 'Edit Provider',
     agentName: 'Agent name', providerName: 'Profile name', providerType: 'Provider type', provider: 'Provider / model',
@@ -46,7 +45,7 @@ const copy = {
     deleteProviderConfirm: 'Delete this Provider profile?', providerNeeded: 'Create a Provider profile before adding an Agent.',
   },
   zh: {
-    title: 'AI Agents', pageDescription: '配置模型供应商、自动运营博客，并审核每一项内容变更。',
+    title: 'AI 工作台', pageDescription: '配置模型供应商、自动运营博客，并审核每一项内容变更。',
     agents: 'Agents', providers: 'Providers', runs: '运行记录', approvals: '审批箱',
     createAgent: '创建 Agent', createProvider: '添加 Provider', editAgent: '编辑 Agent', editProvider: '编辑 Provider',
     agentName: 'Agent 名称', providerName: '配置名称', providerType: 'Provider 类型', provider: 'Provider / 模型',
@@ -227,18 +226,20 @@ export default function AgentConsole() {
 
   if (loading) return <LoadingState label={labels.loading} />;
 
+  const tabs = [
+    ['agents', Bot, labels.agents],
+    ['providers', KeyRound, labels.providers],
+    ['runs', Clock3, labels.runs],
+    ['approvals', ShieldCheck, labels.approvals],
+  ] as const;
+
   return <div className="agent-console">
-    <PageHeader title={labels.title} description={labels.pageDescription} action={<div className="row-actions"><Link className="btn btn-secondary" to="/admin">{labels.backAdmin}</Link><button className="btn btn-secondary" type="button" onClick={() => void refresh()}><RefreshCw />{labels.refresh}</button>{tab === 'agents' ? <button className="btn btn-primary" type="button" onClick={() => providers.length > 0 ? setEditingAgent('new') : setError(labels.providerNeeded)}><Plus />{labels.createAgent}</button> : tab === 'providers' ? <button className="btn btn-primary" type="button" onClick={() => setEditingProvider('new')}><Plus />{labels.createProvider}</button> : null}</div>} />
+    <PageHeader title={labels.title} description={labels.pageDescription} action={<div className="row-actions"><button className="btn btn-secondary" type="button" onClick={() => void refresh()}><RefreshCw />{labels.refresh}</button>{tab === 'agents' ? <button className="btn btn-primary" type="button" onClick={() => providers.length > 0 ? setEditingAgent('new') : setError(labels.providerNeeded)}><Plus />{labels.createAgent}</button> : tab === 'providers' ? <button className="btn btn-primary" type="button" onClick={() => setEditingProvider('new')}><Plus />{labels.createProvider}</button> : null}</div>} />
     {error ? <Feedback type="error">{error}</Feedback> : null}
     {notice ? <Feedback type="success">{notice}</Feedback> : null}
     <div className="agent-console__layout">
       <nav className="agent-console__nav" aria-label={labels.title}>
-        {([
-          ['agents', Bot, labels.agents],
-          ['providers', KeyRound, labels.providers],
-          ['runs', Clock3, labels.runs],
-          ['approvals', ShieldCheck, labels.approvals],
-        ] as const).map(([value, Icon, label]) => <button key={value} aria-label={label} className={tab === value ? 'active' : ''} type="button" onClick={() => setTab(value)}><Icon /><span>{label}</span>{value === 'approvals' && pendingCount > 0 ? <b>{pendingCount}</b> : null}</button>)}
+        {tabs.map(([value, Icon, label]) => <button key={value} aria-label={label} className={tab === value ? 'active' : ''} type="button" onClick={() => setTab(value)}><Icon /><span>{label}</span>{value === 'approvals' && pendingCount > 0 ? <b>{pendingCount}</b> : null}</button>)}
       </nav>
 
       <div className="agent-console__main">
@@ -246,7 +247,7 @@ export default function AgentConsole() {
         {editingAgent ? <AgentForm key={editingAgent === 'new' ? 'new' : editingAgent.id} initial={editingAgent === 'new' ? undefined : editingAgent} providers={providers} tools={tools} presets={presets} labels={labels} onSave={saveAgent} onCancel={() => setEditingAgent(null)} /> : null}
 
         {!editingAgent && !editingProvider && tab === 'agents' ? <Panel className="agent-table-panel">
-          {agents.length === 0 ? <EmptyState label={labels.noAgents} /> : <div className="table-scroll"><table className="content-table agent-table"><thead><tr><th>{labels.agents}</th><th>{labels.status}</th><th>{labels.provider}</th><th>{labels.schedule}</th><th>{labels.capabilities}</th><th>{labels.lastRun}</th><th>{labels.nextRun}</th><th>{labels.actions}</th></tr></thead><tbody>{agents.map((agent) => {
+          {agents.length === 0 ? <div className="agent-empty-state"><Bot aria-hidden="true" /><h2>{locale === 'zh' ? '还没有 Agent' : 'No Agents yet'}</h2><p>{labels.noAgents}</p><button className="text-link" type="button" onClick={() => setTab('providers')}><KeyRound />{locale === 'zh' ? '先配置 Provider' : 'Configure a Provider first'}<ChevronRight /></button></div> : <div className="table-scroll"><table className="content-table agent-table"><thead><tr><th>{labels.agents}</th><th>{labels.status}</th><th>{labels.provider}</th><th>{labels.schedule}</th><th>{labels.capabilities}</th><th>{labels.lastRun}</th><th>{labels.nextRun}</th><th>{labels.actions}</th></tr></thead><tbody>{agents.map((agent) => {
             const provider = providerMap.get(agent.provider_profile_id);
             const latestRun = runs.find((run) => run.agent_id === agent.id);
             return <tr key={agent.id}><td><div className="agent-identity"><span><Bot /></span><div><strong>{agent.name}</strong><small>{agent.description}</small></div></div></td><td><span className={`agent-state agent-state--${agent.enabled ? 'active' : 'paused'}`}><i />{agent.enabled ? labels.active : labels.paused}</span></td><td><strong>{provider?.name || '—'}</strong><small className="mono">{provider?.model || '—'}</small></td><td><strong>{agent.trigger_type === 'cron' ? agent.cron_expression : labels.manual}</strong><small>{agent.timezone}</small></td><td><div className="agent-chip-list">{agent.capabilities.slice(0, 3).map((item) => <span key={item}>{formatCapability(item)}</span>)}{agent.capabilities.length > 3 ? <span>+{agent.capabilities.length - 3}</span> : null}</div></td><td>{latestRun ? <><span className={`status-pill status-pill--${latestRun.status}`}>{latestRun.status.replace('_', ' ')}</span><small>{formatDateTime(latestRun.created_at)}</small></> : <small>{labels.never}</small>}</td><td><strong>{agent.next_run_at ? formatDateTime(agent.next_run_at) : '—'}</strong></td><td><div className="agent-row-actions"><button type="button" title={labels.runNow} onClick={() => void runAgent(agent)} disabled={!agent.enabled}><Play /></button><button type="button" title={labels.edit} onClick={() => setEditingAgent(agent)}><Settings2 /></button><button type="button" title={agent.enabled ? labels.disable : labels.enable} onClick={() => void mutate(`/api/admin/agents/${agent.id}/${agent.enabled ? 'disable' : 'enable'}`)}>{agent.enabled ? <CirclePause /> : <Check />}</button><button type="button" title={labels.delete} onClick={() => { if (confirm(labels.deleteAgentConfirm)) void mutate(`/api/admin/agents/${agent.id}`, 'DELETE'); }}><Trash2 /></button></div></td></tr>;

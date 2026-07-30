@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, NavLink } from 'react-router-dom';
-import { Bell, Bookmark, ExternalLink, Globe2, LogIn, LogOut, Mail, Moon, Rss, Sun, Terminal } from 'lucide-react';
+import { Bell, Bot, Bookmark, ExternalLink, Globe2, LogIn, LogOut, Mail, Moon, Rss, Sun, Terminal } from 'lucide-react';
 import { apiFetch, isLoggedIn, logout, getUserProfile, redirectToAuthorize } from './auth';
 import type { UserProfile } from './auth';
 import { I18nProvider, useI18n } from './i18n';
@@ -99,8 +99,9 @@ function Layout({ children }: { children: React.ReactNode }) {
             <NavLink to="/admin" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
               {t('adminPanel')}
             </NavLink>
-            <NavLink to="/admin/agents" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              AI Agents
+            <NavLink to="/admin/agents" className={({ isActive }) => `ai-workspace-link ${isActive ? 'active' : ''}`}>
+              <Bot size={16} />
+              <span>AI</span>
             </NavLink>
             <NavLink to="/settings" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
               {t('settings')}

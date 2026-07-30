@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"net/url"
 	"slices"
 	"strings"
 	"time"
@@ -58,7 +57,7 @@ func (s *ManagementService) SaveProvider(ctx context.Context, profile *domain.Pr
 	if profile.MaxOutputTokens == 0 {
 		profile.MaxOutputTokens = 2000
 	}
-	if err := s.validateProvider(profile); err != nil {
+	if err := s.validateProvider(ctx, profile); err != nil {
 		return err
 	}
 	replaceSecret := apiKey != ""
@@ -85,24 +84,15 @@ func (s *ManagementService) SaveProvider(ctx context.Context, profile *domain.Pr
 	return translateError(err)
 }
 
-func (s *ManagementService) validateProvider(profile *domain.ProviderProfile) error {
+func (s *ManagementService) validateProvider(ctx context.Context, profile *domain.ProviderProfile) error {
 	if profile.Name == "" || profile.Model == "" {
 		return fmt.Errorf("%w: name and model are required", ErrInvalid)
 	}
 	if profile.ProviderType != domain.ProviderOpenAI && profile.ProviderType != domain.ProviderAnthropic {
 		return fmt.Errorf("%w: unsupported provider type", ErrInvalid)
 	}
-	parsed, err := url.Parse(profile.BaseURL)
-	if err != nil || parsed.Host == "" || parsed.User != nil {
-		return fmt.Errorf("%w: invalid base URL", ErrInvalid)
-	}
-	if parsed.Scheme != "https" && parsed.Hostname() != "localhost" && parsed.Hostname() != "127.0.0.1" {
-		return fmt.Errorf("%w: provider URL must use HTTPS", ErrInvalid)
-	}
-	if !slices.ContainsFunc(s.allowedHosts, func(host string) bool {
-		return strings.EqualFold(host, parsed.Hostname())
-	}) {
-		return fmt.Errorf("%w: provider host is not allowed", ErrInvalid)
+	if err := provider.ValidateUpstreamURL(ctx, profile.BaseURL, s.allowedHosts); err != nil {
+		return fmt.Errorf("%w: %v", ErrInvalid, err)
 	}
 	if profile.RequestTimeoutSeconds < 1 || profile.RequestTimeoutSeconds > 600 ||
 		profile.MaxOutputTokens < 1 || profile.MaxOutputTokens > 100000 {

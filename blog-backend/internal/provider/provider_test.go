@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"strings"
 	"testing"
 	"time"
@@ -84,18 +85,64 @@ func TestAnthropicGenerateParsesTextAndToolCall(t *testing.T) {
 	}
 }
 
-func TestProviderRejectsUnsafeOrUnlistedUpstream(t *testing.T) {
-	tests := []struct {
-		url, host string
-	}{
-		{"http://example.com", "example.com"},
-		{"https://169.254.169.254", "169.254.169.254"},
-		{"https://api.openai.com", "api.anthropic.com"},
+func TestProviderAllowsPublicHTTPSWithoutAllowlist(t *testing.T) {
+	client, err := NewHTTPProvider("openai", "https://1.1.1.1/v1", "secret", "model", nil, time.Second)
+	if err != nil || client == nil {
+		t.Fatalf("expected public HTTPS upstream to be accepted: %v", err)
 	}
-	for _, tc := range tests {
-		_, err := NewHTTPProvider("openai", tc.url, "secret", "model", []string{tc.host}, time.Second)
-		if err == nil {
-			t.Fatalf("expected %s to be rejected", tc.url)
+}
+
+func TestProviderRequiresExplicitAllowlistForPrivateUpstream(t *testing.T) {
+	if _, err := NewHTTPProvider("openai", "https://10.0.0.8/v1", "secret", "model", nil, time.Second); err == nil {
+		t.Fatal("expected private upstream to require explicit allowlisting")
+	}
+	if _, err := NewHTTPProvider(
+		"openai", "https://10.0.0.8/v1", "secret", "model", []string{"10.0.0.8"}, time.Second,
+	); err != nil {
+		t.Fatalf("expected explicitly allowed private upstream: %v", err)
+	}
+}
+
+func TestProviderAlwaysRejectsUnsafeUpstream(t *testing.T) {
+	tests := []struct {
+		url   string
+		hosts []string
+	}{
+		{"http://1.1.1.1", []string{"1.1.1.1"}},
+		{"https://169.254.169.254", []string{"169.254.169.254"}},
+		{"https://224.0.0.1", []string{"224.0.0.1"}},
+		{"https://0.0.0.0", []string{"0.0.0.0"}},
+	}
+	for _, test := range tests {
+		if _, err := NewHTTPProvider("openai", test.url, "secret", "model", test.hosts, time.Second); err == nil {
+			t.Fatalf("expected %s to be rejected", test.url)
+		}
+	}
+}
+
+func TestProviderAllowsExplicitLoopbackForLocalDevelopment(t *testing.T) {
+	if _, err := NewHTTPProvider(
+		"openai", "http://127.0.0.1:8088", "secret", "model", []string{"127.0.0.1"}, time.Second,
+	); err != nil {
+		t.Fatalf("expected allowlisted loopback development upstream: %v", err)
+	}
+}
+
+func TestProviderAllowsSyntheticDNSForHostnameButNotLiteralIP(t *testing.T) {
+	address := netip.MustParseAddr("198.18.0.77")
+	if err := validateAddresses([]netip.Addr{address}, false, true); err != nil {
+		t.Fatalf("expected hostname Fake-IP to be accepted: %v", err)
+	}
+	if err := validateAddresses([]netip.Addr{address}, false, false); err == nil {
+		t.Fatal("expected literal benchmark IP to require explicit allowlisting")
+	}
+}
+
+func TestPublicAddressPolicyBlocksCarrierAndBenchmarkNetworks(t *testing.T) {
+	for _, value := range []string{"100.64.0.1", "198.18.0.1", "10.0.0.1", "127.0.0.1"} {
+		address := netip.MustParseAddr(value)
+		if isPublicAddress(address) {
+			t.Fatalf("expected %s to require allowlisting", value)
 		}
 	}
 }
