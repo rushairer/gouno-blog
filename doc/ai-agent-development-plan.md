@@ -486,13 +486,13 @@ POST   /api/admin/agent-approvals/:id/reject
 
 MVP 已完成后，不引入可执行第三方代码式插件市场。后续能力以 **受控 Tool → 可保存 Skill/Workflow → 经验证的原生能力** 的路径演进：模型负责理解和编排，核心服务继续负责数据一致性、权限、渲染与高频确定性任务。
 
-### 阶段 7：内容智能基础（当前阶段，2–3 周）
+### 阶段 7：内容智能基础（进行中，2–3 周）
 
 目标：让 Agent 能在不增加写权限的前提下，对草稿、定时文章和已发布文章提供可靠的编辑质量反馈。
 
-- 修复 Admin Tool 对草稿/定时文章的读取、链接检查和提案审批链路；公开读取仍只返回已发布文章。
-- 新增 `content.audit_post` 只读 Tool，输出确定性检查项：标题/摘要/SEO 元数据长度、Markdown 标题层级、字数、图片 alt、内部链接与外链数量。
-- 新增“发布前内容检查”手动预置 Agent，仅允许 `content.get_post`、`content.audit_post`、`content.search_posts` 和 `content.propose_update`。
+- [x] 修复 Admin Tool 对草稿/定时文章的读取、链接检查和提案审批链路；公开读取仍只返回已发布文章。
+- [x] 新增 `content.audit_post` 只读 Tool，输出确定性检查项：标题/摘要/SEO 元数据长度、Markdown 标题层级、字数、图片 alt、内部链接与外链数量。
+- [x] 新增“发布前内容检查”手动预置 Agent，仅允许 `content.get_post`、`content.audit_post`、`content.search_posts` 和 `content.propose_update`。
 - 在运行中心显示检查项和证据；AI 只能基于检查结果提出修改，不能直接发布。
 
 验收：草稿可被完整检查并形成可审批的更新提案；公开 API 仍无法读取草稿；确定性检查不依赖模型即可单测。

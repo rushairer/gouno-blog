@@ -69,6 +69,32 @@ describe('AgentConsole', () => {
     expect(screen.getByLabelText('API Key')).toBeRequired();
   });
 
+  it('renders structured content-audit evidence in a run detail', async () => {
+    const user = userEvent.setup();
+    const run = {
+      id: 9, agent_id: 1, trigger_type: 'manual', status: 'succeeded', output_summary: 'Audit complete.',
+      provider: 'openai', model: 'gpt-5-mini', input_tokens: 20, output_tokens: 30,
+      created_at: '2026-07-30T00:00:00Z',
+    };
+    vi.mocked(apiFetch).mockImplementation(async (input) => {
+      const url = input.toString();
+      if (url === '/api/admin/agent-runs?pageSize=100') return Response.json({ data: { list: [run] } });
+      if (url === '/api/admin/agent-runs/9') return Response.json({ data: { run, tool_calls: [{
+        id: 11, run_id: 9, tool_name: 'content.audit_post', risk_level: 'read', status: 'executed', arguments: { id: 3 },
+        result: { post_id: 3, metrics: { title_characters: 13, summary_characters: 0, seo_title_characters: 0, seo_description_characters: 0, content_characters: 242, heading_count: 2, image_count: 1, images_missing_alt: 1, internal_link_count: 2, external_link_count: 1 }, checks: [{ code: 'image_alt_missing', severity: 'warning', message: 'Add alt text to every inline image.' }] },
+        created_at: '2026-07-30T00:00:00Z',
+      }] } });
+      return Response.json({ data: responseFor(url) });
+    });
+    renderConsole();
+    await screen.findByText('Weekly Operations');
+    await user.click(screen.getByRole('button', { name: 'Runs' }));
+    await user.click(screen.getByText('Weekly Operations'));
+    expect(await screen.findByRole('region', { name: 'Content audit' })).toBeInTheDocument();
+    expect(screen.getByText('image alt missing')).toBeInTheDocument();
+    expect(screen.getByText('242')).toBeInTheDocument();
+  });
+
   it('redirects users without blog management access', async () => {
     vi.mocked(canManageBlog).mockReturnValue(false);
     renderConsole();
