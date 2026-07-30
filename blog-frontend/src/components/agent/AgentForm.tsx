@@ -1,7 +1,7 @@
 import { Bot, Save, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import type { Agent, AgentPreset, ProviderProfile, ToolDefinition, TriggerType, ExecutionMode } from '../../agent';
+import type { Agent, AgentPreset, AgentSkill, ProviderProfile, ToolDefinition, TriggerType, ExecutionMode } from '../../agent';
 import { emptyAgent } from '../../agent';
 import { Field, Panel } from '../ui';
 
@@ -12,6 +12,7 @@ export function AgentForm({
   providers,
   tools,
   presets,
+  skills,
   labels,
   onSave,
   onCancel,
@@ -20,6 +21,7 @@ export function AgentForm({
   providers: ProviderProfile[];
   tools: ToolDefinition[];
   presets: AgentPreset[];
+  skills: AgentSkill[];
   labels: Record<string, string>;
   onSave: (value: AgentFormValue) => Promise<void>;
   onCancel: () => void;
@@ -51,6 +53,24 @@ export function AgentForm({
     }));
   };
 
+  const applySkill = (skillID: string) => {
+    const skill = skills.find((item) => item.id === Number(skillID));
+    if (!skill) return;
+    setValue((current) => ({
+      ...current,
+      name: current.name || skill.name,
+      description: current.description || skill.description,
+      system_prompt: skill.system_prompt,
+      capabilities: skill.capabilities,
+      execution_mode: skill.execution_mode,
+      max_steps: skill.max_steps,
+      max_input_tokens: skill.max_input_tokens,
+      max_output_tokens: skill.max_output_tokens,
+      daily_run_limit: skill.daily_run_limit,
+      monthly_token_budget: skill.monthly_token_budget,
+    }));
+  };
+
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setSaving(true);
@@ -68,6 +88,7 @@ export function AgentForm({
     </div>
     <form className="form-stack" onSubmit={submit}>
       {!initial && presets.length > 0 ? <Field label={labels.startPreset}><select className="input-field" defaultValue="" onChange={(event) => applyPreset(event.target.value)}><option value="">{labels.blankAgent}</option>{presets.map((preset) => <option key={preset.id} value={preset.id}>{preset.name} — {preset.description}</option>)}</select></Field> : null}
+      {skills.length > 0 ? <Field label={labels.startSkill}><select className="input-field" defaultValue="" onChange={(event) => applySkill(event.target.value)}><option value="">{labels.blankAgent}</option>{skills.map((skill) => <option key={skill.id} value={skill.id}>{skill.name} · v{skill.version} — {skill.description}</option>)}</select></Field> : null}
       <div className="split-grid">
         <Field label={labels.agentName}><input className="input-field" required value={value.name} onChange={(event) => setValue((current) => ({ ...current, name: event.target.value }))} /></Field>
         <Field label={labels.provider}><select className="input-field" required value={value.provider_profile_id || ''} onChange={(event) => setValue((current) => ({ ...current, provider_profile_id: Number(event.target.value) }))}><option value="" disabled>{labels.chooseProvider}</option>{providers.map((provider) => <option key={provider.id} value={provider.id}>{provider.name} · {provider.model}</option>)}</select></Field>

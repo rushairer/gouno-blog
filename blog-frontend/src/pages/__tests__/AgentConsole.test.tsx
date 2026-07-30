@@ -35,6 +35,7 @@ function responseFor(url: string) {
     name: 'content.list_posts', description: 'List posts', parameters: {}, risk_level: 'read',
   }];
   if (url === '/api/admin/agent-presets') return [];
+  if (url === '/api/admin/agent-skills') return [];
   throw new Error(`unexpected URL: ${url}`);
 }
 
@@ -53,7 +54,7 @@ describe('AgentConsole', () => {
   it('loads agents, providers, runs, approvals, tools, and presets in parallel', async () => {
     renderConsole();
     expect(await screen.findByText('Weekly Operations')).toBeInTheDocument();
-    await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(6));
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(7));
     expect(screen.getByRole('button', { name: 'Agents' })).toBeInTheDocument();
     expect(screen.getByText('gpt-5-mini')).toBeInTheDocument();
   });

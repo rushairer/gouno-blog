@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { apiFetch, canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
 import type {
-  Agent, AgentApproval, AgentPreset, AgentRun, AgentToolCall, ProviderProfile, ToolDefinition,
+  Agent, AgentApproval, AgentPreset, AgentRun, AgentSkill, AgentToolCall, ProviderProfile, ToolDefinition,
 } from '../agent';
 import { AgentForm } from '../components/agent/AgentForm';
 import { ProviderForm } from '../components/agent/ProviderForm';
@@ -29,7 +29,7 @@ const copy = {
     timezone: 'Timezone', capabilities: 'Authorized capabilities', maxSteps: 'Maximum steps',
     dailyRuns: 'Daily run limit', maxInput: 'Max input tokens', maxOutput: 'Max output tokens', monthlyBudget: 'Monthly token budget',
     enableAgent: 'Enable this Agent', saveAgent: 'Save Agent', saving: 'Saving…', cancel: 'Cancel',
-    startPreset: 'Start from a preset', blankAgent: 'Blank Agent', status: 'Status', schedule: 'Schedule',
+    startPreset: 'Start from a preset', startSkill: 'Apply a Skill', blankAgent: 'Blank Agent', status: 'Status', schedule: 'Schedule',
     lastRun: 'Last run', nextRun: 'Next run', actions: 'Actions', active: 'Active', paused: 'Paused',
     never: 'Never', runNow: 'Run now', edit: 'Edit', disable: 'Disable', enable: 'Enable',
     delete: 'Delete', noAgents: 'No Agents yet. Add a Provider, then create your first Agent.',
@@ -56,7 +56,7 @@ const copy = {
     timezone: '时区', capabilities: '授权能力', maxSteps: '最大执行步数',
     dailyRuns: '每日运行上限', maxInput: '最大输入 Token', maxOutput: '最大输出 Token', monthlyBudget: '每月 Token 预算',
     enableAgent: '启用此 Agent', saveAgent: '保存 Agent', saving: '保存中…', cancel: '取消',
-    startPreset: '使用预置模板', blankAgent: '空白 Agent', status: '状态', schedule: '执行周期',
+    startPreset: '使用预置模板', startSkill: '应用 Skill', blankAgent: '空白 Agent', status: '状态', schedule: '执行周期',
     lastRun: '上次运行', nextRun: '下次运行', actions: '操作', active: '运行中', paused: '已暂停',
     never: '从未', runNow: '立即运行', edit: '编辑', disable: '停用', enable: '启用',
     delete: '删除', noAgents: '还没有 Agent。先添加 Provider，再创建第一个 Agent。',
@@ -223,6 +223,7 @@ export default function AgentConsole() {
   const [approvals, setApprovals] = useState<AgentApproval[]>([]);
   const [tools, setTools] = useState<ToolDefinition[]>([]);
   const [presets, setPresets] = useState<AgentPreset[]>([]);
+  const [skills, setSkills] = useState<AgentSkill[]>([]);
   const [selectedApproval, setSelectedApproval] = useState<AgentApproval | null>(null);
   const [selectedRun, setSelectedRun] = useState<{ run: AgentRun; tool_calls: AgentToolCall[] } | null>(null);
   const [editingAgent, setEditingAgent] = useState<Agent | 'new' | null>(null);
@@ -235,13 +236,14 @@ export default function AgentConsole() {
 
   const load = useCallback(async () => {
     const approvalStatus = approvalFilter;
-    const [providerData, agentData, runData, approvalData, toolData, presetData] = await Promise.all([
+    const [providerData, agentData, runData, approvalData, toolData, presetData, skillData] = await Promise.all([
       readData<ProviderProfile[]>(await apiFetch('/api/admin/provider-profiles')),
       readData<Agent[]>(await apiFetch('/api/admin/agents')),
       readData<{ list: AgentRun[] }>(await apiFetch('/api/admin/agent-runs?pageSize=100')),
       readData<{ list: AgentApproval[] }>(await apiFetch(`/api/admin/agent-approvals?status=${approvalStatus}&pageSize=100`)),
       readData<ToolDefinition[]>(await apiFetch('/api/admin/agent-tools')),
       readData<AgentPreset[]>(await apiFetch('/api/admin/agent-presets')),
+      readData<AgentSkill[]>(await apiFetch('/api/admin/agent-skills')),
     ]);
     setProviders(providerData);
     setAgents(agentData);
@@ -249,6 +251,7 @@ export default function AgentConsole() {
     setApprovals(approvalData.list || []);
     setTools(toolData);
     setPresets(presetData);
+    setSkills(skillData);
     setSelectedApproval((current) => approvalData.list?.find((item) => item.id === current?.id) || approvalData.list?.[0] || null);
   }, [approvalFilter]);
 
@@ -382,7 +385,7 @@ export default function AgentConsole() {
 
       <div className="agent-console__main">
         {editingProvider ? <ProviderForm key={editingProvider === 'new' ? 'new' : editingProvider.id} initial={editingProvider === 'new' ? undefined : editingProvider} labels={labels} onSave={saveProvider} onCancel={() => setEditingProvider(null)} /> : null}
-        {editingAgent ? <AgentForm key={editingAgent === 'new' ? 'new' : editingAgent.id} initial={editingAgent === 'new' ? undefined : editingAgent} providers={providers} tools={tools} presets={presets} labels={labels} onSave={saveAgent} onCancel={() => setEditingAgent(null)} /> : null}
+        {editingAgent ? <AgentForm key={editingAgent === 'new' ? 'new' : editingAgent.id} initial={editingAgent === 'new' ? undefined : editingAgent} providers={providers} tools={tools} presets={presets} skills={skills} labels={labels} onSave={saveAgent} onCancel={() => setEditingAgent(null)} /> : null}
 
         {!editingAgent && !editingProvider && tab === 'agents' ? <Panel className="agent-table-panel">
           {agents.length === 0 ? <div className="agent-empty-state"><Bot aria-hidden="true" /><h2>{locale === 'zh' ? '还没有 Agent' : 'No Agents yet'}</h2><p>{labels.noAgents}</p><button className="text-link" type="button" onClick={() => setTab('providers')}><KeyRound />{locale === 'zh' ? '先配置 Provider' : 'Configure a Provider first'}<ChevronRight /></button></div> : <div className="table-scroll"><table className="content-table agent-table"><thead><tr><th>{labels.agents}</th><th>{labels.status}</th><th>{labels.provider}</th><th>{labels.schedule}</th><th>{labels.capabilities}</th><th>{labels.lastRun}</th><th>{labels.nextRun}</th><th>{labels.actions}</th></tr></thead><tbody>{agents.map((agent) => {

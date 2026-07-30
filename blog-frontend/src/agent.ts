@@ -42,6 +42,23 @@ export interface Agent {
   updated_at: string;
 }
 
+export interface AgentSkill {
+  id: number;
+  name: string;
+  description: string;
+  system_prompt: string;
+  capabilities: string[];
+  execution_mode: ExecutionMode;
+  max_steps: number;
+  max_input_tokens: number;
+  max_output_tokens: number;
+  daily_run_limit: number;
+  monthly_token_budget: number;
+  version: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface AgentRun {
   id: number;
   agent_id: number;
