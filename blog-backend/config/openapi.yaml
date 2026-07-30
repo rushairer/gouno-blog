@@ -866,6 +866,63 @@ paths:
         '200':
           description: Tool schemas and risk levels
 
+  /admin/agent-skills:
+    get:
+      summary: List versioned AI Agent Skills
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Configured reusable Skills
+    post:
+      summary: Create a versioned AI Agent Skill
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentSkillRequest'
+      responses:
+        '201':
+          description: Skill created
+
+  /admin/agent-skills/{id}:
+    get:
+      summary: Get an AI Agent Skill
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ResourceID'
+      responses:
+        '200':
+          description: Skill configuration
+    put:
+      summary: Update an AI Agent Skill and increment its version
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ResourceID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentSkillRequest'
+      responses:
+        '200':
+          description: Skill updated
+    delete:
+      summary: Soft-delete an AI Agent Skill
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ResourceID'
+      responses:
+        '200':
+          description: Skill deleted
+
   /admin/agent-presets:
     get:
       summary: List built-in AI Agent templates
@@ -1136,6 +1193,41 @@ components:
         timezone:
           type: string
           example: Asia/Shanghai
+        capabilities:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+        execution_mode:
+          type: string
+          enum: [advisory, approval]
+        max_steps:
+          type: integer
+          minimum: 1
+          maximum: 20
+        max_input_tokens:
+          type: integer
+          minimum: 1
+        max_output_tokens:
+          type: integer
+          minimum: 1
+        daily_run_limit:
+          type: integer
+          minimum: 1
+        monthly_token_budget:
+          type: integer
+          format: int64
+          minimum: 1
+    AgentSkillRequest:
+      type: object
+      required: [name, system_prompt, capabilities]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        system_prompt:
+          type: string
         capabilities:
           type: array
           uniqueItems: true

@@ -77,3 +77,15 @@ func TestValidateAgentKeepsAdvisoryModeReadOnly(t *testing.T) {
 		t.Fatal("expected proposal capability to be rejected in advisory mode")
 	}
 }
+
+func TestValidateSkillRejectsProposalCapabilityInAdvisoryMode(t *testing.T) {
+	service := NewManagementService(nil, nil, nil, []string{"content.propose_update"}, []string{"content.propose_update"})
+	err := service.validateSkill(&domain.AgentSkill{
+		Name: "safe", SystemPrompt: "review", Capabilities: []string{"content.propose_update"},
+		ExecutionMode: domain.AgentModeAdvisory, MaxSteps: 1, MaxInputTokens: 100, MaxOutputTokens: 100,
+		DailyRunLimit: 1, MonthlyTokenBudget: 1000,
+	})
+	if err == nil {
+		t.Fatal("expected proposal capability to be rejected")
+	}
+}

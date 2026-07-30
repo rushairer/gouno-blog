@@ -201,6 +201,79 @@ func (r *AgentRepository) ListAgents(ctx context.Context) ([]*domain.Agent, erro
 	return result, rows.Err()
 }
 
+const skillColumns = `id, name, description, system_prompt, capabilities, execution_mode,
+	max_steps, max_input_tokens, max_output_tokens, daily_run_limit, monthly_token_budget,
+	version, created_by, created_at, updated_at`
+
+func scanSkill(scanner interface{ Scan(...any) error }) (*domain.AgentSkill, error) {
+	var skill domain.AgentSkill
+	var capabilities []byte
+	err := scanner.Scan(&skill.ID, &skill.Name, &skill.Description, &skill.SystemPrompt, &capabilities,
+		&skill.ExecutionMode, &skill.MaxSteps, &skill.MaxInputTokens, &skill.MaxOutputTokens,
+		&skill.DailyRunLimit, &skill.MonthlyTokenBudget, &skill.Version, &skill.CreatedBy,
+		&skill.CreatedAt, &skill.UpdatedAt)
+	if err == nil {
+		err = json.Unmarshal(capabilities, &skill.Capabilities)
+	}
+	return &skill, err
+}
+
+func (r *AgentRepository) ListSkills(ctx context.Context) ([]*domain.AgentSkill, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT `+skillColumns+` FROM ai_skills WHERE deleted_at IS NULL ORDER BY created_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := make([]*domain.AgentSkill, 0)
+	for rows.Next() {
+		skill, err := scanSkill(rows)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, skill)
+	}
+	return items, rows.Err()
+}
+
+func (r *AgentRepository) GetSkill(ctx context.Context, id int64) (*domain.AgentSkill, error) {
+	return scanSkill(r.db.QueryRowContext(ctx, `SELECT `+skillColumns+` FROM ai_skills WHERE id=$1 AND deleted_at IS NULL`, id))
+}
+
+func (r *AgentRepository) CreateSkill(ctx context.Context, skill *domain.AgentSkill) error {
+	capabilities, _ := json.Marshal(skill.Capabilities)
+	return r.db.QueryRowContext(ctx, `INSERT INTO ai_skills
+		(name, description, system_prompt, capabilities, execution_mode, max_steps, max_input_tokens,
+		 max_output_tokens, daily_run_limit, monthly_token_budget, created_by)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+		RETURNING id, version, created_at, updated_at`, skill.Name, skill.Description, skill.SystemPrompt,
+		capabilities, skill.ExecutionMode, skill.MaxSteps, skill.MaxInputTokens, skill.MaxOutputTokens,
+		skill.DailyRunLimit, skill.MonthlyTokenBudget, skill.CreatedBy,
+	).Scan(&skill.ID, &skill.Version, &skill.CreatedAt, &skill.UpdatedAt)
+}
+
+func (r *AgentRepository) UpdateSkill(ctx context.Context, skill *domain.AgentSkill) error {
+	capabilities, _ := json.Marshal(skill.Capabilities)
+	return r.db.QueryRowContext(ctx, `UPDATE ai_skills SET name=$2, description=$3, system_prompt=$4,
+		capabilities=$5, execution_mode=$6, max_steps=$7, max_input_tokens=$8, max_output_tokens=$9,
+		daily_run_limit=$10, monthly_token_budget=$11, version=version+1, updated_at=NOW()
+		WHERE id=$1 AND deleted_at IS NULL
+		RETURNING version, created_by, created_at, updated_at`, skill.ID, skill.Name, skill.Description,
+		skill.SystemPrompt, capabilities, skill.ExecutionMode, skill.MaxSteps, skill.MaxInputTokens,
+		skill.MaxOutputTokens, skill.DailyRunLimit, skill.MonthlyTokenBudget,
+	).Scan(&skill.Version, &skill.CreatedBy, &skill.CreatedAt, &skill.UpdatedAt)
+}
+
+func (r *AgentRepository) DeleteSkill(ctx context.Context, id int64) error {
+	result, err := r.db.ExecContext(ctx, `UPDATE ai_skills SET deleted_at=NOW(), updated_at=NOW() WHERE id=$1 AND deleted_at IS NULL`, id)
+	if err != nil {
+		return err
+	}
+	if affected, _ := result.RowsAffected(); affected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
 func (r *AgentRepository) DeleteAgent(ctx context.Context, id int64) error {
 	result, err := r.db.ExecContext(ctx, `UPDATE ai_agents SET enabled=false, deleted_at=NOW(), updated_at=NOW()
 		WHERE id=$1 AND deleted_at IS NULL`, id)

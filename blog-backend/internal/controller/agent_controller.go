@@ -117,6 +117,75 @@ func (ctrl *AgentController) ListAgents(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
 }
 
+func (ctrl *AgentController) ListSkills(c *gin.Context) {
+	items, err := ctrl.svc.ListSkills(c.Request.Context())
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
+}
+
+func (ctrl *AgentController) GetSkill(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	item, err := ctrl.svc.GetSkill(c.Request.Context(), id)
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(item))
+}
+
+func (ctrl *AgentController) CreateSkill(c *gin.Context) { ctrl.saveSkill(c, 0) }
+
+func (ctrl *AgentController) UpdateSkill(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	ctrl.saveSkill(c, id)
+}
+
+func (ctrl *AgentController) saveSkill(c *gin.Context, id int64) {
+	var value domain.AgentSkill
+	if err := bindAgentJSON(c, &value); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+	value.ID = id
+	if id == 0 {
+		if subject, exists := c.Get("account_id"); exists {
+			if text, ok := subject.(string); ok && text != "" {
+				value.CreatedBy = &text
+			}
+		}
+	}
+	if err := ctrl.svc.SaveSkill(c.Request.Context(), &value); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	status := http.StatusOK
+	if id == 0 {
+		status = http.StatusCreated
+	}
+	c.JSON(status, gouno.NewSuccessResponse(&value))
+}
+
+func (ctrl *AgentController) DeleteSkill(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	if err := ctrl.svc.DeleteSkill(c.Request.Context(), id); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
+}
+
 func (ctrl *AgentController) GetAgent(c *gin.Context) {
 	id, ok := agentID(c)
 	if !ok {

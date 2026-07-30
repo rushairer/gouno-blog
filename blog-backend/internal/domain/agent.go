@@ -69,6 +69,27 @@ type Agent struct {
 	UpdatedAt          time.Time          `json:"updated_at"`
 }
 
+// AgentSkill is a versioned, non-executable template for safe Agent
+// configuration. It deliberately contains no provider credential or arbitrary
+// code: an Agent chooses its Provider and remains subject to normal approval.
+type AgentSkill struct {
+	ID                 int64              `json:"id"`
+	Name               string             `json:"name"`
+	Description        string             `json:"description"`
+	SystemPrompt       string             `json:"system_prompt"`
+	Capabilities       []string           `json:"capabilities"`
+	ExecutionMode      AgentExecutionMode `json:"execution_mode"`
+	MaxSteps           int                `json:"max_steps"`
+	MaxInputTokens     int                `json:"max_input_tokens"`
+	MaxOutputTokens    int                `json:"max_output_tokens"`
+	DailyRunLimit      int                `json:"daily_run_limit"`
+	MonthlyTokenBudget int64              `json:"monthly_token_budget"`
+	Version            int                `json:"version"`
+	CreatedBy          *string            `json:"created_by,omitempty"`
+	CreatedAt          time.Time          `json:"created_at"`
+	UpdatedAt          time.Time          `json:"updated_at"`
+}
+
 type AgentRunStatus string
 
 const (

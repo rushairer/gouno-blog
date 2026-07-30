@@ -147,6 +147,79 @@ func (s *ManagementService) ListAgents(ctx context.Context) ([]*domain.Agent, er
 	return s.repo.ListAgents(ctx)
 }
 
+func (s *ManagementService) ListSkills(ctx context.Context) ([]*domain.AgentSkill, error) {
+	return s.repo.ListSkills(ctx)
+}
+
+func (s *ManagementService) GetSkill(ctx context.Context, id int64) (*domain.AgentSkill, error) {
+	value, err := s.repo.GetSkill(ctx, id)
+	return value, translateError(err)
+}
+
+func (s *ManagementService) SaveSkill(ctx context.Context, value *domain.AgentSkill) error {
+	value.Name = strings.TrimSpace(value.Name)
+	value.Description = strings.TrimSpace(value.Description)
+	value.SystemPrompt = strings.TrimSpace(value.SystemPrompt)
+	if value.MaxSteps == 0 {
+		value.MaxSteps = 6
+	}
+	if value.MaxInputTokens == 0 {
+		value.MaxInputTokens = 16000
+	}
+	if value.MaxOutputTokens == 0 {
+		value.MaxOutputTokens = 2000
+	}
+	if value.DailyRunLimit == 0 {
+		value.DailyRunLimit = 10
+	}
+	if value.MonthlyTokenBudget == 0 {
+		value.MonthlyTokenBudget = 1000000
+	}
+	if value.ExecutionMode == "" {
+		value.ExecutionMode = domain.AgentModeAdvisory
+	}
+	if err := s.validateSkill(value); err != nil {
+		return err
+	}
+	if value.ID == 0 {
+		return translateError(s.repo.CreateSkill(ctx, value))
+	}
+	return translateError(s.repo.UpdateSkill(ctx, value))
+}
+
+func (s *ManagementService) validateSkill(value *domain.AgentSkill) error {
+	if value.Name == "" || value.SystemPrompt == "" {
+		return fmt.Errorf("%w: name and system prompt are required", ErrInvalid)
+	}
+	agent := &domain.Agent{Capabilities: value.Capabilities, ExecutionMode: value.ExecutionMode,
+		MaxSteps: value.MaxSteps, MaxInputTokens: value.MaxInputTokens, MaxOutputTokens: value.MaxOutputTokens,
+		DailyRunLimit: value.DailyRunLimit, MonthlyTokenBudget: value.MonthlyTokenBudget}
+	if agent.ExecutionMode != domain.AgentModeAdvisory && agent.ExecutionMode != domain.AgentModeApproval {
+		return fmt.Errorf("%w: invalid execution mode", ErrInvalid)
+	}
+	if agent.MaxSteps < 1 || agent.MaxSteps > 20 || agent.MaxInputTokens < 1 || agent.MaxOutputTokens < 1 || agent.DailyRunLimit < 1 || agent.MonthlyTokenBudget < 1 {
+		return fmt.Errorf("%w: invalid run limits", ErrInvalid)
+	}
+	seen := make(map[string]struct{}, len(agent.Capabilities))
+	for _, capability := range agent.Capabilities {
+		if strings.TrimSpace(capability) == "" || !slices.Contains(s.allowedCapabilities, capability) {
+			return fmt.Errorf("%w: unknown capability %q", ErrInvalid, capability)
+		}
+		if agent.ExecutionMode == domain.AgentModeAdvisory && slices.Contains(s.proposalCapabilities, capability) {
+			return fmt.Errorf("%w: advisory skills cannot use proposal capability %q", ErrInvalid, capability)
+		}
+		if _, exists := seen[capability]; exists {
+			return fmt.Errorf("%w: duplicate capability %q", ErrInvalid, capability)
+		}
+		seen[capability] = struct{}{}
+	}
+	return nil
+}
+
+func (s *ManagementService) DeleteSkill(ctx context.Context, id int64) error {
+	return translateError(s.repo.DeleteSkill(ctx, id))
+}
+
 func (s *ManagementService) GetAgent(ctx context.Context, id int64) (*domain.Agent, error) {
 	value, err := s.repo.GetAgent(ctx, id)
 	return value, translateError(err)
