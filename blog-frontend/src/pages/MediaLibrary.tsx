@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Copy, ImagePlus, Search, Trash2 } from 'lucide-react';
+import { Copy, ImagePlus, Trash2 } from 'lucide-react';
 import { apiFetch, canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
-import { AdminPage, AdminPageHeader, ConfirmDialog, copyText, EmptyState, Feedback, Field, LoadingState, Panel, useToast } from '../components/ui';
+import { AdminPage, AdminPageHeader, ConfirmDialog, copyText, EmptyState, Feedback, Field, LoadingState, Panel, SearchField, Select, useToast } from '../components/ui';
 import { useI18n } from '../i18n';
 
 interface MediaAsset {
@@ -110,7 +110,7 @@ export default function MediaLibrary() {
         <Field label={t('altText')}><input className="input-field" value={altText} onChange={(event) => setAltText(event.target.value)} /></Field>
         <button className="btn btn-primary" type="submit" disabled={!file || uploading}><ImagePlus />{uploading ? t('uploading') : t('uploadImage')}</button>
       </form>
-      <div className="media-filter-bar"><div className="filter-search"><Search /><input aria-label="搜索媒体" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索文件名或替代文本" /></div><select aria-label="媒体类型" value={type} onChange={(event) => setType(event.target.value)}><option value="">全部类型</option>{contentTypes.map((item) => <option key={item} value={item}>{item.replace('image/', '').toUpperCase()}</option>)}</select><span>{visibleAssets.length} / {assets.length}</span></div>
+      <div className="media-filter-bar"><SearchField aria-label="搜索媒体" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索文件名或替代文本" /><Select size="compact" aria-label="媒体类型" value={type} onChange={(event) => setType(event.target.value)}><option value="">全部类型</option>{contentTypes.map((item) => <option key={item} value={item}>{item.replace('image/', '').toUpperCase()}</option>)}</Select><span>{visibleAssets.length} / {assets.length}</span></div>
     </Panel>
     {loading ? <LoadingState label={t('loadingResources')} /> : assets.length === 0 ? <EmptyState label={t('noMedia')} /> : visibleAssets.length === 0 ? <EmptyState label="没有符合条件的媒体资源。" /> : <div className="media-grid">{visibleAssets.map((asset) => <Panel className="media-card" key={asset.id}>
       <img src={asset.url} alt={asset.alt_text || asset.filename} loading="lazy" />

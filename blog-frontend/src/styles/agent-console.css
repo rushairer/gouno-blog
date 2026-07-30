@@ -4,44 +4,7 @@
   --agent-border: var(--admin-line);
 }
 
-.agent-console__layout { min-width: 0; }
-
-.agent-console__nav {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  border-bottom: 1px solid var(--agent-border);
-  margin-bottom: 20px;
-  scrollbar-width: thin;
-}
-
-.agent-console__nav button {
-  display: inline-flex;
-  min-height: 44px;
-  align-items: center;
-  gap: 8px;
-  border: 0;
-  background: transparent;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-  padding: 0;
-  text-align: left;
-  white-space: nowrap;
-}
-
-.agent-console__nav button svg {
-  width: 18px;
-  height: 18px;
-}
-
-.agent-console__nav button.active {
-  color: var(--agent-accent);
-  box-shadow: inset 0 -3px var(--agent-accent);
-}
-
-.agent-console__nav button b {
+.agent-console .tab b {
   min-width: 18px;
   color: var(--agent-accent);
   font-size: 11px;
@@ -49,6 +12,23 @@
 
 .agent-console__main {
   min-width: 0;
+}
+
+.workflow-list {
+  display: grid;
+  gap: 24px;
+}
+
+.workflow-card {
+  display: grid;
+  gap: 16px;
+  padding-top: 24px;
+  border-top: 1px solid var(--agent-border);
+}
+
+.workflow-card:first-child {
+  padding-top: 0;
+  border-top: 0;
 }
 
 .agent-console__main > .panel {
@@ -566,8 +546,8 @@
 .content-audit__checks li > span {
   height: max-content;
   border-radius: 4px;
-  background: #edf4ff;
-  color: #20569b;
+  background: var(--ui-info-soft);
+  color: var(--ui-info);
   font-size: 10px;
   font-weight: 750;
   padding: 3px 5px;
@@ -585,10 +565,10 @@
   line-height: 1.45;
 }
 
-.content-audit__check--warning { border-left-color: #d49a0b !important; }
-.content-audit__check--warning > span { background: #fff6d9 !important; color: #7b5b08 !important; }
-.content-audit__check--error { border-left-color: var(--danger-color) !important; }
-.content-audit__check--error > span { background: #fff0ed !important; color: var(--danger-color) !important; }
+.content-audit__check--warning { border-left-color: var(--ui-warning); }
+.content-audit__check--warning > span { background: var(--ui-warning-soft); color: var(--ui-warning); }
+.content-audit__check--error { border-left-color: var(--ui-danger); }
+.content-audit__check--error > span { background: var(--ui-danger-soft); color: var(--ui-danger); }
 
 .internal-link-suggestions {
   display: grid;
@@ -882,14 +862,6 @@
 }
 
 @media (max-width: 1050px) {
-  .agent-console__nav {
-    overflow-x: auto;
-  }
-
-  .agent-console__nav button {
-    min-width: max-content;
-  }
-
   .agent-limit-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -901,24 +873,8 @@
 }
 
 @media (max-width: 760px) {
-  .agent-console__nav {
-    justify-content: space-between;
-    gap: 10px;
-    overflow-x: auto;
-  }
-
-  .agent-console__nav button {
-    min-width: max-content;
-    flex: 0 0 auto;
-    gap: 5px;
-    font-size: 12px;
-  }
-
   .agent-empty-state {
     min-height: 320px;
-  }
-  .agent-console__nav button span {
-    display: inline;
   }
 
   .agent-split-view,

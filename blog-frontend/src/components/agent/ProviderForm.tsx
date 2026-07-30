@@ -3,7 +3,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import type { ProviderProfile, ProviderType } from '../../agent';
 import { emptyProvider } from '../../agent';
-import { Field, Panel } from '../ui';
+import { Field, Panel, Select } from '../ui';
 
 export interface ProviderFormValue {
   id?: number;
@@ -59,14 +59,14 @@ export function ProviderForm({
     <form className="form-stack" onSubmit={submit}>
       <div className="split-grid">
         <Field label={labels.providerName}><input className="input-field" required value={value.name} onChange={(event) => setValue((current) => ({ ...current, name: event.target.value }))} /></Field>
-        <Field label={labels.providerType}><select className="input-field" value={value.provider_type} onChange={(event) => {
+        <Field label={labels.providerType}><Select value={value.provider_type} onChange={(event) => {
           const providerType = event.target.value as ProviderType;
           setValue((current) => ({
             ...current,
             provider_type: providerType,
             base_url: providerType === 'openai' ? 'https://api.openai.com' : 'https://api.anthropic.com',
           }));
-        }}><option value="openai">OpenAI / compatible</option><option value="anthropic">Anthropic native</option></select></Field>
+        }}><option value="openai">OpenAI / compatible</option><option value="anthropic">Anthropic native</option></Select></Field>
       </div>
       <div className="split-grid">
         <Field label={labels.baseUrl}><input className="input-field mono" type="url" required value={value.base_url} onChange={(event) => setValue((current) => ({ ...current, base_url: event.target.value }))} /></Field>

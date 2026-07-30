@@ -1,6 +1,10 @@
-import { cloneElement, createContext, isValidElement, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { cloneElement, createContext, forwardRef, isValidElement, useCallback, useContext, useEffect, useId, useRef, useState } from 'react';
 import type React from 'react';
-import { AlertTriangle, BookOpen, CheckCircle2, X } from 'lucide-react';
+import { AlertTriangle, BookOpen, CheckCircle2, ChevronDown, Search, X } from 'lucide-react';
+
+function classes(...values: Array<string | false | null | undefined>) {
+  return values.filter(Boolean).join(' ');
+}
 
 export function PageHeader({
   title,
@@ -82,23 +86,294 @@ export function Panel({
   return <Component className={`panel ${className}`.trim()} {...props}>{children}</Component>;
 }
 
+export function WorkspacePanel({
+  children,
+  className = '',
+  ...props
+}: React.HTMLAttributes<HTMLElement>) {
+  return <section className={classes('panel', 'workspace-panel', className)} {...props}>{children}</section>;
+}
+
+export function PanelHeader({
+  title,
+  description,
+  actions,
+  headingLevel = 2,
+}: {
+  title: React.ReactNode;
+  description?: React.ReactNode;
+  actions?: React.ReactNode;
+  headingLevel?: 2 | 3;
+}) {
+  const Heading = `h${headingLevel}` as 'h2' | 'h3';
+  return (
+    <header className="panel-header">
+      <div className="panel-header__copy">
+        <Heading>{title}</Heading>
+        {description ? <p>{description}</p> : null}
+      </div>
+      {actions ? <ActionGroup>{actions}</ActionGroup> : null}
+    </header>
+  );
+}
+
+export function ActionGroup({ children, className = '' }: React.HTMLAttributes<HTMLDivElement>) {
+  return <div className={classes('action-group', className)}>{children}</div>;
+}
+
+export function FormActions({ children, className = '' }: React.HTMLAttributes<HTMLDivElement>) {
+  return <div className={classes('form-actions', className)}>{children}</div>;
+}
+
+type ControlSize = 'regular' | 'compact';
+type ControlProps = { size?: ControlSize; invalid?: boolean };
+type InputProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> & ControlProps;
+type SelectProps = Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'size'> & ControlProps;
+
+export const Input = forwardRef<HTMLInputElement, InputProps>(
+  function Input({ className = '', size = 'regular', invalid, ...props }, ref) {
+    return <input ref={ref} className={classes('ui-control', size === 'compact' && 'ui-control--compact', className)} aria-invalid={invalid || undefined} {...props} />;
+  },
+);
+
+export const Textarea = forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement> & ControlProps>(
+  function Textarea({ className = '', size = 'regular', invalid, ...props }, ref) {
+    return <textarea ref={ref} className={classes('ui-control', size === 'compact' && 'ui-control--compact', className)} aria-invalid={invalid || undefined} {...props} />;
+  },
+);
+
+export const Select = forwardRef<HTMLSelectElement, SelectProps>(
+  function Select({ className = '', size = 'regular', invalid, ...props }, ref) {
+    return (
+      <span className="select-control">
+        <select ref={ref} className={classes('ui-control', size === 'compact' && 'ui-control--compact', className)} aria-invalid={invalid || undefined} {...props} />
+        <ChevronDown aria-hidden="true" />
+      </span>
+    );
+  },
+);
+
+export const Checkbox = forwardRef<HTMLInputElement, Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'>>(
+  function Checkbox({ className = '', ...props }, ref) {
+    return <input ref={ref} className={classes('ui-checkbox', className)} type="checkbox" {...props} />;
+  },
+);
+
 export function Field({
   label,
   children,
   className = '',
+  id,
+  hint,
+  error,
+  required = false,
 }: {
-  label: string;
+  label: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  id?: string;
+  hint?: React.ReactNode;
+  error?: React.ReactNode;
+  required?: boolean;
 }) {
-  const control = isValidElement<{ className?: string }>(children)
-    ? cloneElement(children, { className: `input-field ${children.props.className || ''}`.trim() })
+  const generatedID = useId();
+  const controlID = id || `field-${generatedID.replaceAll(':', '')}`;
+  const descriptionID = hint || error ? `${controlID}-description` : undefined;
+  const control = isValidElement<{
+    id?: string;
+    className?: string;
+    required?: boolean;
+    'aria-describedby'?: string;
+    'aria-invalid'?: boolean;
+  }>(children)
+    ? cloneElement(children, {
+      id: children.props.id || controlID,
+      className: classes('input-field', children.props.className),
+      required: children.props.required ?? required,
+      'aria-describedby': children.props['aria-describedby'] || descriptionID,
+      'aria-invalid': children.props['aria-invalid'] || Boolean(error) || undefined,
+    })
     : children;
   return (
-    <label className={`field ${className}`.trim()}>
-      <span>{label}</span>
+    <div className={classes('field', Boolean(error) && 'field--invalid', className)}>
+      <label className="field__label" htmlFor={controlID}>
+        <span>{label}</span>
+        {required ? <span className="field__required" aria-hidden="true">*</span> : null}
+      </label>
       {control}
-    </label>
+      {error ? <span className="field__error" id={descriptionID}>{error}</span> : hint ? <span className="field__hint" id={descriptionID}>{hint}</span> : null}
+    </div>
+  );
+}
+
+type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
+type ButtonSize = 'regular' | 'compact';
+
+// oxlint-disable-next-line react/only-export-components -- shared by Link elements that use the button visual contract.
+export function buttonClassName({
+  variant = 'secondary',
+  size = 'regular',
+  className = '',
+}: {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  className?: string;
+} = {}) {
+  return classes('btn', `btn-${variant}`, size === 'compact' && 'btn--compact', className);
+}
+
+export function Button({
+  variant = 'secondary',
+  size = 'regular',
+  className = '',
+  loading = false,
+  disabled,
+  children,
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  loading?: boolean;
+}) {
+  return (
+    <button className={buttonClassName({ variant, size, className })} disabled={disabled || loading} aria-busy={loading || undefined} {...props}>
+      {children}
+    </button>
+  );
+}
+
+export function SearchField({
+  className = '',
+  size = 'compact',
+  ...props
+}: InputProps) {
+  return (
+    <div className={classes('search-field', className)}>
+      <Search aria-hidden="true" />
+      <Input type="search" size={size} {...props} />
+    </div>
+  );
+}
+
+export function FilterBar({ children, className = '' }: React.HTMLAttributes<HTMLDivElement>) {
+  return <Panel className={classes('filter-bar', className)}>{children}</Panel>;
+}
+
+export function FormGrid({
+  children,
+  columns = 2,
+  className = '',
+}: React.HTMLAttributes<HTMLDivElement> & { columns?: 1 | 2 | 3 | 4 | 5 }) {
+  return <div className={classes('form-grid', className)} style={{ '--form-columns': columns } as React.CSSProperties}>{children}</div>;
+}
+
+type TabsContextValue = {
+  value: string;
+  onValueChange: (value: string) => void;
+  id: string;
+};
+const TabsContext = createContext<TabsContextValue | null>(null);
+
+function useTabs() {
+  const value = useContext(TabsContext);
+  if (!value) throw new Error('Tabs components must be used inside Tabs');
+  return value;
+}
+
+export function Tabs({
+  value,
+  onValueChange,
+  children,
+  className = '',
+  id,
+}: {
+  value: string;
+  onValueChange: (value: string) => void;
+  children: React.ReactNode;
+  className?: string;
+  id?: string;
+}) {
+  const generatedID = useId();
+  return (
+    <TabsContext.Provider value={{ value, onValueChange, id: id || `tabs-${generatedID.replaceAll(':', '')}` }}>
+      <div className={classes('tabs', className)}>{children}</div>
+    </TabsContext.Provider>
+  );
+}
+
+export function TabList({ children, label }: { children: React.ReactNode; label: string }) {
+  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    const tabs = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]:not(:disabled)'));
+    const currentIndex = tabs.indexOf(document.activeElement as HTMLButtonElement);
+    if (currentIndex < 0 || tabs.length === 0) return;
+    event.preventDefault();
+    const nextIndex = event.key === 'Home' ? 0
+      : event.key === 'End' ? tabs.length - 1
+        : event.key === 'ArrowRight' ? (currentIndex + 1) % tabs.length
+          : (currentIndex - 1 + tabs.length) % tabs.length;
+    tabs[nextIndex]?.focus();
+    tabs[nextIndex]?.click();
+  };
+  return <div className="tab-list" role="tablist" aria-label={label} onKeyDown={onKeyDown}>{children}</div>;
+}
+
+export function Tab({ value, children }: { value: string; children: React.ReactNode }) {
+  const tabs = useTabs();
+  const active = tabs.value === value;
+  const ref = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (active && typeof ref.current?.scrollIntoView === 'function') ref.current.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [active]);
+  return (
+    <button
+      ref={ref}
+      className="tab"
+      id={`${tabs.id}-tab-${value}`}
+      role="tab"
+      type="button"
+      tabIndex={active ? 0 : -1}
+      aria-selected={active}
+      aria-controls={`${tabs.id}-panel-${value}`}
+      onClick={() => tabs.onValueChange(value)}
+    >
+      {children}
+    </button>
+  );
+}
+
+export function TabPanel({ value, children, className = '' }: { value: string; children: React.ReactNode; className?: string }) {
+  const tabs = useTabs();
+  if (tabs.value !== value) return null;
+  return (
+    <div className={classes('tab-panel', className)} id={`${tabs.id}-panel-${value}`} role="tabpanel" aria-labelledby={`${tabs.id}-tab-${value}`}>
+      {children}
+    </div>
+  );
+}
+
+export type SectionNavItem = { id: string; label: string };
+
+export function SectionNav({ items, label }: { items: SectionNavItem[]; label: string }) {
+  const [active, setActive] = useState(items[0]?.id || '');
+  useEffect(() => {
+    const sections = items.map((item) => document.getElementById(item.id)).filter(Boolean) as HTMLElement[];
+    if (!sections.length || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver((entries) => {
+      const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+      if (visible[0]?.target.id) setActive(visible[0].target.id);
+    }, { rootMargin: '-96px 0px -65% 0px', threshold: [0, 0.1] });
+    sections.forEach((section) => observer.observe(section));
+    return () => observer.disconnect();
+  }, [items]);
+  return (
+    <nav className="section-nav" aria-label={label}>
+      {items.map((item) => (
+        <a key={item.id} href={`#${item.id}`} aria-current={active === item.id ? 'location' : undefined} onClick={() => setActive(item.id)}>
+          {item.label}
+        </a>
+      ))}
+    </nav>
   );
 }
 
@@ -134,18 +409,15 @@ export function ErrorState({ label, action }: { label: string; action?: React.Re
   );
 }
 
-export function IconButton({
-  children,
-  label,
-  className = '',
-  ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
-  return (
-    <button className={`icon-button ${className}`.trim()} aria-label={label} title={label} {...props}>
-      {children}
-    </button>
-  );
-}
+export const IconButton = forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement> & { label: string }>(
+  function IconButton({ children, label, className = '', ...props }, ref) {
+    return (
+      <button ref={ref} className={classes('icon-button', className)} aria-label={label} title={label} {...props}>
+        {children}
+      </button>
+    );
+  },
+);
 
 type ToastType = 'success' | 'error';
 interface ToastMessage { id: number; message: string; type: ToastType }
@@ -227,7 +499,7 @@ export function Modal({
       <section className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby={description ? 'modal-description' : undefined}>
         <header>
           <div><h2 id="modal-title">{title}</h2>{description ? <p id="modal-description">{description}</p> : null}</div>
-          <button ref={closeButton} className="icon-button" type="button" aria-label="关闭弹窗" onClick={onClose}><X /></button>
+          <IconButton ref={closeButton} label="关闭弹窗" type="button" onClick={onClose}><X /></IconButton>
         </header>
         {children}
       </section>
@@ -259,10 +531,10 @@ export function ConfirmDialog({
       <div className="confirm-dialog">
         <p>{description}</p>
         <div className="modal-actions">
-          <button className="btn btn-secondary" type="button" disabled={busy} onClick={onClose}>取消</button>
-          <button className={`btn ${danger ? 'btn-danger' : 'btn-primary'}`} type="button" disabled={busy} onClick={() => void onConfirm()}>
+          <Button variant="secondary" type="button" disabled={busy} onClick={onClose}>取消</Button>
+          <Button variant={danger ? 'danger' : 'primary'} type="button" disabled={busy} onClick={() => void onConfirm()}>
             {busy ? '正在处理…' : confirmLabel}
-          </button>
+          </Button>
         </div>
       </div>
     </Modal>

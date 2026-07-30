@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import type { Agent, AgentPreset, AgentSkill, ProviderProfile, ToolDefinition, TriggerType, ExecutionMode } from '../../agent';
 import { emptyAgent } from '../../agent';
-import { Field, Panel } from '../ui';
+import { Field, Panel, Select } from '../ui';
 
 type AgentFormValue = Omit<Agent, 'id' | 'created_at' | 'updated_at'> & { id?: number };
 
@@ -88,17 +88,17 @@ export function AgentForm({
       <button className="icon-button" type="button" onClick={onCancel} aria-label={labels.cancel}><X /></button>
     </div>
     <form className="form-stack" onSubmit={submit}>
-      {!initial && presets.length > 0 ? <Field label={labels.startPreset}><select className="input-field" defaultValue="" onChange={(event) => applyPreset(event.target.value)}><option value="">{labels.blankAgent}</option>{presets.map((preset) => <option key={preset.id} value={preset.id}>{preset.name} — {preset.description}</option>)}</select></Field> : null}
-      {skills.length > 0 ? <Field label={labels.startSkill}><select className="input-field" defaultValue="" onChange={(event) => applySkill(event.target.value)}><option value="">{labels.blankAgent}</option>{skills.map((skill) => <option key={skill.id} value={skill.id}>{skill.name} · v{skill.version} — {skill.description}</option>)}</select></Field> : null}
+      {!initial && presets.length > 0 ? <Field label={labels.startPreset}><Select defaultValue="" onChange={(event) => applyPreset(event.target.value)}><option value="">{labels.blankAgent}</option>{presets.map((preset) => <option key={preset.id} value={preset.id}>{preset.name} — {preset.description}</option>)}</Select></Field> : null}
+      {skills.length > 0 ? <Field label={labels.startSkill}><Select defaultValue="" onChange={(event) => applySkill(event.target.value)}><option value="">{labels.blankAgent}</option>{skills.map((skill) => <option key={skill.id} value={skill.id}>{skill.name} · v{skill.version} — {skill.description}</option>)}</Select></Field> : null}
       <div className="split-grid">
         <Field label={labels.agentName}><input className="input-field" required value={value.name} onChange={(event) => setValue((current) => ({ ...current, name: event.target.value }))} /></Field>
-        <Field label={labels.provider}><select className="input-field" required value={value.provider_profile_id || ''} onChange={(event) => setValue((current) => ({ ...current, provider_profile_id: Number(event.target.value) }))}><option value="" disabled>{labels.chooseProvider}</option>{providers.map((provider) => <option key={provider.id} value={provider.id}>{provider.name} · {provider.model}</option>)}</select></Field>
+        <Field label={labels.provider}><Select required value={value.provider_profile_id || ''} onChange={(event) => setValue((current) => ({ ...current, provider_profile_id: Number(event.target.value) }))}><option value="" disabled>{labels.chooseProvider}</option>{providers.map((provider) => <option key={provider.id} value={provider.id}>{provider.name} · {provider.model}</option>)}</Select></Field>
       </div>
       <Field label={labels.descriptionLabel}><input className="input-field" value={value.description} onChange={(event) => setValue((current) => ({ ...current, description: event.target.value }))} /></Field>
       <Field label={labels.instructions}><textarea className="input-field mono" rows={8} required value={value.system_prompt} onChange={(event) => setValue((current) => ({ ...current, system_prompt: event.target.value }))} /></Field>
       <div className="split-grid">
-        <Field label={labels.trigger}><select className="input-field" value={value.trigger_type} onChange={(event) => setValue((current) => ({ ...current, trigger_type: event.target.value as TriggerType }))}><option value="manual">{labels.manual}</option><option value="cron">Cron</option></select></Field>
-        <Field label={labels.mode}><select className="input-field" value={value.execution_mode} onChange={(event) => {
+        <Field label={labels.trigger}><Select value={value.trigger_type} onChange={(event) => setValue((current) => ({ ...current, trigger_type: event.target.value as TriggerType }))}><option value="manual">{labels.manual}</option><option value="cron">Cron</option></Select></Field>
+        <Field label={labels.mode}><Select value={value.execution_mode} onChange={(event) => {
           const executionMode = event.target.value as ExecutionMode;
           setValue((current) => ({
             ...current,
@@ -107,7 +107,7 @@ export function AgentForm({
               ? current.capabilities.filter((name) => tools.find((item) => item.name === name)?.risk_level === 'read')
               : current.capabilities,
           }));
-        }}><option value="advisory">{labels.advisory}</option><option value="approval">{labels.approvalMode}</option></select></Field>
+        }}><option value="advisory">{labels.advisory}</option><option value="approval">{labels.approvalMode}</option></Select></Field>
       </div>
       {value.trigger_type === 'cron' ? <div className="split-grid"><Field label={labels.cron}><input className="input-field mono" required placeholder="0 9 * * 1" value={value.cron_expression || ''} onChange={(event) => setValue((current) => ({ ...current, cron_expression: event.target.value }))} /></Field><Field label={labels.timezone}><input className="input-field mono" required value={value.timezone} onChange={(event) => setValue((current) => ({ ...current, timezone: event.target.value }))} /></Field></div> : null}
       <fieldset className="agent-capabilities">

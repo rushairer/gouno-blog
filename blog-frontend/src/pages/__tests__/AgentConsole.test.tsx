@@ -63,7 +63,7 @@ describe('AgentConsole', () => {
     renderConsole();
     expect((await screen.findAllByText('Weekly Operations')).length).toBeGreaterThan(0);
     await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(15));
-    expect(screen.getByRole('button', { name: 'Agents' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Agents' })).toBeInTheDocument();
     expect(screen.getByText('gpt-5-mini')).toBeInTheDocument();
   });
 
@@ -71,7 +71,7 @@ describe('AgentConsole', () => {
     const user = userEvent.setup();
     renderConsole();
     expect((await screen.findAllByText('Weekly Operations')).length).toBeGreaterThan(0);
-    await user.click(screen.getByRole('button', { name: 'Providers' }));
+    await user.click(screen.getByRole('tab', { name: 'Providers' }));
     expect(screen.getByText('OpenAI')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Add Provider' }));
     expect(screen.getByRole('heading', { name: 'Add Provider' })).toBeInTheDocument();
@@ -114,7 +114,7 @@ describe('AgentConsole', () => {
     });
     renderConsole();
     expect((await screen.findAllByText('Weekly Operations')).length).toBeGreaterThan(0);
-    await user.click(screen.getByRole('button', { name: 'Runs' }));
+    await user.click(screen.getByRole('tab', { name: 'Runs' }));
     await user.click(screen.getByText('Weekly Operations'));
     expect(await screen.findByRole('region', { name: 'Content audit' })).toBeInTheDocument();
     expect(screen.getByText('image alt missing')).toBeInTheDocument();
