@@ -55,6 +55,11 @@ func NewBlogRegistry(posts *service.PostService, community *service.CommunitySer
 			Risk:       domain.ToolRiskRead, Execute: tools.auditPost,
 		},
 		Definition{
+			Name: "content.find_internal_links", Description: "Suggest relevant published posts that are not already linked from one post.",
+			Parameters: schema(`{"id":{"type":"integer","minimum":1},"limit":{"type":"integer","minimum":1,"maximum":10}}`, "id"),
+			Risk:       domain.ToolRiskRead, Execute: tools.findInternalLinks,
+		},
+		Definition{
 			Name: "comments.list_pending", Description: "List pending or reported comments for moderation insight.",
 			Parameters: schema(`{"reported_only":{"type":"boolean"},"limit":{"type":"integer","minimum":1,"maximum":100}}`),
 			Risk:       domain.ToolRiskRead, Execute: tools.listPendingComments,
