@@ -30,6 +30,38 @@ type ProviderProfile struct {
 	UpdatedAt             time.Time    `json:"updated_at"`
 }
 
+type EmbeddingProfile struct {
+	ID                    int64     `json:"id"`
+	Name                  string    `json:"name"`
+	BaseURL               string    `json:"base_url"`
+	Model                 string    `json:"model"`
+	Dimensions            int       `json:"dimensions"`
+	APIKeyCiphertext      []byte    `json:"-"`
+	APIKeyNonce           []byte    `json:"-"`
+	APIKeyLast4           string    `json:"api_key_last4,omitempty"`
+	KeyVersion            int       `json:"-"`
+	HasAPIKey             bool      `json:"has_api_key"`
+	Enabled               bool      `json:"enabled"`
+	RequestTimeoutSeconds int       `json:"request_timeout_seconds"`
+	CreatedAt             time.Time `json:"created_at"`
+	UpdatedAt             time.Time `json:"updated_at"`
+}
+
+type AgentCitation struct {
+	CitationID    string  `json:"citation_id"`
+	PostID        int64   `json:"post_id,omitempty"`
+	Title         string  `json:"title,omitempty"`
+	Slug          string  `json:"slug,omitempty"`
+	ChunkID       int64   `json:"chunk_id,omitempty"`
+	StartOffset   int     `json:"start_offset,omitempty"`
+	EndOffset     int     `json:"end_offset,omitempty"`
+	Snippet       string  `json:"snippet,omitempty"`
+	LexicalScore  float64 `json:"lexical_score,omitempty"`
+	SemanticScore float64 `json:"semantic_score,omitempty"`
+	Score         float64 `json:"score,omitempty"`
+	Status        string  `json:"status"`
+}
+
 type AgentTriggerType string
 
 const (
@@ -120,6 +152,7 @@ type AgentRun struct {
 	StartedAt     *time.Time       `json:"started_at,omitempty"`
 	FinishedAt    *time.Time       `json:"finished_at,omitempty"`
 	CreatedAt     time.Time        `json:"created_at"`
+	Citations     []AgentCitation  `json:"citations"`
 }
 
 type ToolRiskLevel string

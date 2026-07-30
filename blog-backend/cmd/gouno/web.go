@@ -16,6 +16,7 @@ import (
 	"github.com/rushairer/blog-backend/config"
 	agentservice "github.com/rushairer/blog-backend/internal/agent"
 	"github.com/rushairer/blog-backend/internal/controller"
+	"github.com/rushairer/blog-backend/internal/knowledge"
 	"github.com/rushairer/blog-backend/internal/repository"
 	"github.com/rushairer/blog-backend/internal/secretbox"
 	"github.com/rushairer/blog-backend/internal/service"
@@ -138,14 +139,16 @@ func startWebServer(cmd *cobra.Command, args []string) {
 		postSvc := service.NewPostService(postRepo)
 		communitySvc := service.NewCommunityService(repository.NewCommunityRepository(db), postRepo)
 		growthSvc := service.NewGrowthService(repository.NewGrowthRepository(db))
-		toolRegistry := tool.NewBlogRegistry(postSvc, communitySvc, growthSvc)
+		knowledgeSvc := knowledge.NewService(db, secrets, globalConfig.AIAgentConfig.AllowedHosts, logger)
+		knowledgeSvc.Start(ctx)
+		toolRegistry := tool.NewBlogRegistry(postSvc, communitySvc, growthSvc, knowledgeSvc)
 		management := agentservice.NewManagementService(
 			agentRepo, secrets, globalConfig.AIAgentConfig.AllowedHosts,
 			toolRegistry.Names(), toolRegistry.ProposalNames(),
 		)
 		runner := agentservice.NewRunner(agentRepo, management, toolRegistry)
 		approvals := agentservice.NewApprovalService(agentRepo, postSvc)
-		agentCtrl = controller.NewAgentController(management, runner, approvals, toolRegistry, ctx)
+		agentCtrl = controller.NewAgentController(management, runner, approvals, toolRegistry, ctx, knowledgeSvc)
 		agentservice.NewScheduler(
 			agentRepo, runner, globalConfig.AIAgentConfig.SchedulerInterval, logger,
 		).Start(ctx)

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/knowledge"
 	"github.com/rushairer/blog-backend/internal/service"
 )
 
@@ -17,12 +18,17 @@ type BlogTools struct {
 	community  *service.CommunityService
 	growth     *service.GrowthService
 	linkClient linkHTTPClient
+	knowledge  *knowledge.Service
 }
 
-func NewBlogRegistry(posts *service.PostService, community *service.CommunityService, growth *service.GrowthService) *Registry {
+func NewBlogRegistry(posts *service.PostService, community *service.CommunityService, growth *service.GrowthService, knowledgeServices ...*knowledge.Service) *Registry {
+	var knowledgeService *knowledge.Service
+	if len(knowledgeServices) > 0 {
+		knowledgeService = knowledgeServices[0]
+	}
 	tools := &BlogTools{
 		posts: posts, community: community, growth: growth,
-		linkClient: newSafeLinkClient(),
+		linkClient: newSafeLinkClient(), knowledge: knowledgeService,
 	}
 	return New(
 		Definition{
@@ -63,6 +69,11 @@ func NewBlogRegistry(posts *service.PostService, community *service.CommunitySer
 			Name: "content.find_related", Description: "Search published posts related to one post and return relevance-ranked evidence snippets.",
 			Parameters: schema(`{"id":{"type":"integer","minimum":1},"query":{"type":"string","minLength":1},"limit":{"type":"integer","minimum":1,"maximum":10}}`, "id"),
 			Risk:       domain.ToolRiskRead, Execute: tools.findRelatedContent,
+		},
+		Definition{
+			Name: "content.search_knowledge", Description: "Search indexed published content and return validated citation evidence.",
+			Parameters: schema(`{"query":{"type":"string","minLength":1},"limit":{"type":"integer","minimum":1,"maximum":20}}`, "query"),
+			Risk:       domain.ToolRiskRead, Execute: tools.searchKnowledge,
 		},
 		Definition{
 			Name: "content.list_stale_posts", Description: "List published posts that have not been updated for a chosen number of days.",

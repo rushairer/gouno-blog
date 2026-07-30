@@ -94,6 +94,18 @@ func safeTransport(allowedHosts []string, timeout time.Duration) *http.Transport
 	}
 }
 
+// NewSafeHTTPClient returns the same SSRF-hardened client used by chat
+// providers. Callers still need to validate and normalize their base URL.
+func NewSafeHTTPClient(allowedHosts []string, timeout time.Duration) *http.Client {
+	return &http.Client{
+		Timeout:   timeout,
+		Transport: safeTransport(allowedHosts, timeout),
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+}
+
 func resolveHost(ctx context.Context, host string) ([]netip.Addr, error) {
 	if parsed, err := netip.ParseAddr(host); err == nil {
 		return []netip.Addr{parsed.Unmap()}, nil

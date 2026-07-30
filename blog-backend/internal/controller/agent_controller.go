@@ -13,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin/binding"
 	agentservice "github.com/rushairer/blog-backend/internal/agent"
 	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/knowledge"
 	"github.com/rushairer/blog-backend/internal/tool"
 	"github.com/rushairer/gouno"
 )
@@ -23,10 +24,15 @@ type AgentController struct {
 	approvals *agentservice.ApprovalService
 	tools     *tool.Registry
 	workerCtx context.Context
+	knowledge *knowledge.Service
 }
 
-func NewAgentController(svc *agentservice.ManagementService, runner *agentservice.Runner, approvals *agentservice.ApprovalService, tools *tool.Registry, workerCtx context.Context) *AgentController {
-	return &AgentController{svc: svc, runner: runner, approvals: approvals, tools: tools, workerCtx: workerCtx}
+func NewAgentController(svc *agentservice.ManagementService, runner *agentservice.Runner, approvals *agentservice.ApprovalService, tools *tool.Registry, workerCtx context.Context, knowledgeServices ...*knowledge.Service) *AgentController {
+	var knowledgeService *knowledge.Service
+	if len(knowledgeServices) > 0 {
+		knowledgeService = knowledgeServices[0]
+	}
+	return &AgentController{svc: svc, runner: runner, approvals: approvals, tools: tools, workerCtx: workerCtx, knowledge: knowledgeService}
 }
 
 type providerRequest struct {
@@ -106,6 +112,105 @@ func (ctrl *AgentController) TestProvider(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"ok": true, "latency_ms": duration.Milliseconds()}))
+}
+
+type embeddingProfileRequest struct {
+	Name                  string `json:"name" binding:"required"`
+	BaseURL               string `json:"base_url" binding:"required"`
+	Model                 string `json:"model" binding:"required"`
+	Dimensions            int    `json:"dimensions" binding:"required"`
+	APIKey                string `json:"api_key"`
+	Enabled               bool   `json:"enabled"`
+	RequestTimeoutSeconds int    `json:"request_timeout_seconds"`
+}
+
+func (ctrl *AgentController) ListEmbeddingProfiles(c *gin.Context) {
+	items, err := ctrl.knowledge.ListProfiles(c.Request.Context())
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
+}
+
+func (ctrl *AgentController) CreateEmbeddingProfile(c *gin.Context) { ctrl.saveEmbeddingProfile(c, 0) }
+
+func (ctrl *AgentController) UpdateEmbeddingProfile(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	ctrl.saveEmbeddingProfile(c, id)
+}
+
+func (ctrl *AgentController) saveEmbeddingProfile(c *gin.Context, id int64) {
+	var req embeddingProfileRequest
+	if err := bindAgentJSON(c, &req); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+	value := &domain.EmbeddingProfile{ID: id, Name: req.Name, BaseURL: req.BaseURL,
+		Model: req.Model, Dimensions: req.Dimensions, Enabled: req.Enabled,
+		RequestTimeoutSeconds: req.RequestTimeoutSeconds}
+	if err := ctrl.knowledge.SaveProfile(c.Request.Context(), value, req.APIKey); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	status := http.StatusOK
+	if id == 0 {
+		status = http.StatusCreated
+	}
+	c.JSON(status, gouno.NewSuccessResponse(value))
+}
+
+func (ctrl *AgentController) DeleteEmbeddingProfile(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	if err := ctrl.knowledge.DeleteProfile(c.Request.Context(), id); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
+}
+
+func (ctrl *AgentController) TestEmbeddingProfile(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	duration, err := ctrl.knowledge.TestProfile(c.Request.Context(), id)
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"ok": true, "latency_ms": duration.Milliseconds()}))
+}
+
+func (ctrl *AgentController) IndexStatus(c *gin.Context) {
+	value, err := ctrl.knowledge.Status(c.Request.Context())
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(value))
+}
+
+func (ctrl *AgentController) RebuildIndex(c *gin.Context) {
+	if err := ctrl.knowledge.Rebuild(c.Request.Context()); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusAccepted, gouno.NewSuccessResponse(nil))
+}
+
+func (ctrl *AgentController) RetryIndex(c *gin.Context) {
+	if err := ctrl.knowledge.RetryFailed(c.Request.Context()); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusAccepted, gouno.NewSuccessResponse(nil))
 }
 
 func (ctrl *AgentController) ListAgents(c *gin.Context) {
@@ -432,6 +537,10 @@ func agentID(c *gin.Context) (int64, bool) {
 func writeAgentError(c *gin.Context, err error) {
 	status := http.StatusInternalServerError
 	switch {
+	case errors.Is(err, knowledge.ErrInvalid):
+		status = http.StatusBadRequest
+	case errors.Is(err, knowledge.ErrNotFound):
+		status = http.StatusNotFound
 	case errors.Is(err, agentservice.ErrInvalid):
 		status = http.StatusBadRequest
 	case errors.Is(err, agentservice.ErrNotFound):

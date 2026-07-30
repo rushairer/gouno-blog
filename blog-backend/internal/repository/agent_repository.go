@@ -327,16 +327,20 @@ func (r *AgentRepository) ListDueAgents(ctx context.Context, limit int) ([]*doma
 
 const runColumns = `r.id, r.agent_id, r.trigger_type, r.triggered_by, r.schedule_key, r.status,
 	r.input, r.output_summary, r.provider, r.model, r.input_tokens, r.output_tokens,
-	r.error_code, r.error_message, r.started_at, r.finished_at, r.created_at`
+	r.error_code, r.error_message, r.started_at, r.finished_at, r.created_at, r.citations`
 
 func scanRun(scanner interface{ Scan(...any) error }) (*domain.AgentRun, error) {
 	var run domain.AgentRun
+	var citations []byte
 	err := scanner.Scan(
 		&run.ID, &run.AgentID, &run.TriggerType, &run.TriggeredBy, &run.ScheduleKey, &run.Status,
 		&run.Input, &run.OutputSummary, &run.Provider, &run.Model, &run.InputTokens,
 		&run.OutputTokens, &run.ErrorCode, &run.ErrorMessage, &run.StartedAt, &run.FinishedAt,
-		&run.CreatedAt,
+		&run.CreatedAt, &citations,
 	)
+	if err == nil {
+		err = json.Unmarshal(citations, &run.Citations)
+	}
 	return &run, err
 }
 
@@ -371,6 +375,15 @@ func (r *AgentRepository) FinishRun(ctx context.Context, id int64, status domain
 		status=$2, output_summary=$3, input_tokens=$4, output_tokens=$5,
 		error_code=$6, error_message=$7, finished_at=NOW()
 		WHERE id=$1`, id, status, summary, inputTokens, outputTokens, errorCode, errorMessage)
+	return err
+}
+
+func (r *AgentRepository) SaveRunCitations(ctx context.Context, id int64, citations []domain.AgentCitation) error {
+	raw, err := json.Marshal(citations)
+	if err != nil {
+		return err
+	}
+	_, err = r.db.ExecContext(ctx, `UPDATE ai_agent_runs SET citations=$2 WHERE id=$1`, id, raw)
 	return err
 }
 

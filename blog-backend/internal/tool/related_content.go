@@ -9,13 +9,19 @@ import (
 )
 
 type relatedContentSuggestion struct {
-	PostID  int64    `json:"post_id"`
-	Title   string   `json:"title"`
-	Slug    string   `json:"slug"`
-	Summary string   `json:"summary"`
-	Snippet string   `json:"snippet"`
-	Score   float64  `json:"score"`
-	Tags    []string `json:"tags"`
+	PostID        int64    `json:"post_id"`
+	Title         string   `json:"title"`
+	Slug          string   `json:"slug"`
+	Summary       string   `json:"summary"`
+	Snippet       string   `json:"snippet"`
+	Score         float64  `json:"score"`
+	Tags          []string `json:"tags"`
+	CitationID    string   `json:"citation_id,omitempty"`
+	ChunkID       int64    `json:"chunk_id,omitempty"`
+	StartOffset   int      `json:"start_offset,omitempty"`
+	EndOffset     int      `json:"end_offset,omitempty"`
+	LexicalScore  float64  `json:"lexical_score,omitempty"`
+	SemanticScore float64  `json:"semantic_score,omitempty"`
 }
 
 func (t *BlogTools) findRelatedContent(ctx context.Context, raw json.RawMessage) (any, error) {
@@ -41,6 +47,22 @@ func (t *BlogTools) findRelatedContent(ctx context.Context, raw json.RawMessage)
 	if query == "" {
 		query = relatedQuery(source)
 	}
+	if t.knowledge != nil {
+		results, err := t.knowledge.Search(ctx, query, args.Limit, source.ID)
+		if err != nil {
+			return nil, err
+		}
+		suggestions := make([]relatedContentSuggestion, 0, len(results))
+		for _, result := range results {
+			suggestions = append(suggestions, relatedContentSuggestion{
+				PostID: result.PostID, Title: result.Title, Slug: result.Slug, Snippet: result.Snippet,
+				Score: result.Score, CitationID: result.CitationID, ChunkID: result.ChunkID,
+				StartOffset: result.StartOffset, EndOffset: result.EndOffset,
+				LexicalScore: result.LexicalScore, SemanticScore: result.SemanticScore,
+			})
+		}
+		return map[string]any{"post_id": source.ID, "query": query, "suggestions": suggestions}, nil
+	}
 	if query == "" {
 		return map[string]any{"post_id": source.ID, "query": "", "suggestions": []relatedContentSuggestion{}}, nil
 	}
@@ -62,6 +84,24 @@ func (t *BlogTools) findRelatedContent(ctx context.Context, raw json.RawMessage)
 		}
 	}
 	return map[string]any{"post_id": source.ID, "query": query, "suggestions": suggestions}, nil
+}
+
+func (t *BlogTools) searchKnowledge(ctx context.Context, raw json.RawMessage) (any, error) {
+	var args struct {
+		Query string `json:"query"`
+		Limit int    `json:"limit"`
+	}
+	if err := decodeArguments(raw, &args); err != nil || strings.TrimSpace(args.Query) == "" {
+		return nil, ErrInvalidArgument
+	}
+	if t.knowledge == nil {
+		return map[string]any{"query": args.Query, "suggestions": []any{}}, nil
+	}
+	items, err := t.knowledge.Search(ctx, args.Query, args.Limit, 0)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"query": args.Query, "suggestions": items}, nil
 }
 
 func relatedQuery(post *domain.Post) string {
