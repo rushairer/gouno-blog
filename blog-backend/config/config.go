@@ -15,6 +15,7 @@ type GoUnoConfig struct {
 	SMTPConfig         SMTPConfig         `mapstructure:"smtp"`
 	CaptchaConfig      CaptchaConfig      `mapstructure:"captcha"`
 	LogConfig          LogConfig          `mapstructure:"log"`
+	AIAgentConfig      AIAgentConfig      `mapstructure:"ai_agents"`
 }
 
 type WebServerConfig struct {
@@ -96,6 +97,12 @@ type LogConfig struct {
 	Level int `mapstructure:"level"`
 }
 
+type AIAgentConfig struct {
+	Enabled           bool          `mapstructure:"enabled"`
+	AllowedHosts      []string      `mapstructure:"allowed_upstream_hosts"`
+	SchedulerInterval time.Duration `mapstructure:"scheduler_interval"`
+}
+
 func (c GoUnoConfig) Validate() error {
 	if c.WebServerConfig.Port == "" {
 		return fmt.Errorf("web_server: port is required")
@@ -133,6 +140,14 @@ func (c GoUnoConfig) Validate() error {
 	for _, proxy := range c.WebServerConfig.TrustedProxies {
 		if net.ParseIP(proxy) == nil && !isValidCIDR(proxy) {
 			return fmt.Errorf("web_server: trusted_proxies entry %q is not a valid IP address or CIDR notation", proxy)
+		}
+	}
+	if c.AIAgentConfig.Enabled {
+		if len(c.AIAgentConfig.AllowedHosts) == 0 {
+			return fmt.Errorf("ai_agents: allowed_upstream_hosts must not be empty when enabled")
+		}
+		if c.AIAgentConfig.SchedulerInterval <= 0 {
+			return fmt.Errorf("ai_agents: scheduler_interval must be positive")
 		}
 	}
 	return nil

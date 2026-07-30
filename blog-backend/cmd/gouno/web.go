@@ -14,8 +14,12 @@ import (
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 	"github.com/rushairer/blog-backend/config"
+	agentservice "github.com/rushairer/blog-backend/internal/agent"
+	"github.com/rushairer/blog-backend/internal/controller"
 	"github.com/rushairer/blog-backend/internal/repository"
+	"github.com/rushairer/blog-backend/internal/secretbox"
 	"github.com/rushairer/blog-backend/internal/service"
+	"github.com/rushairer/blog-backend/internal/tool"
 	"github.com/rushairer/blog-backend/middleware"
 	"github.com/rushairer/blog-backend/router"
 	"github.com/rushairer/blog-backend/utility"
@@ -119,7 +123,27 @@ func startWebServer(cmd *cobra.Command, args []string) {
 	if mediaDir == "" {
 		mediaDir = "./data/media"
 	}
-	router.RegisterWebRouter(engine, db, authOptions, jwksURL, globalConfig.RedisConfig.DSN, visitorSecret, mediaDir)
+	var agentCtrl *controller.AgentController
+	if globalConfig.AIAgentConfig.Enabled {
+		secrets, err := secretbox.New(os.Getenv("BLOG_AGENT_MASTER_KEY"))
+		if err != nil {
+			log.Fatalf("configure AI Agent secret encryption: %v", err)
+		}
+		agentRepo := repository.NewAgentRepository(db)
+		postRepo := repository.NewPostRepository(db)
+		postSvc := service.NewPostService(postRepo)
+		communitySvc := service.NewCommunityService(repository.NewCommunityRepository(db), postRepo)
+		growthSvc := service.NewGrowthService(repository.NewGrowthRepository(db))
+		management := agentservice.NewManagementService(agentRepo, secrets, globalConfig.AIAgentConfig.AllowedHosts)
+		toolRegistry := tool.NewBlogRegistry(postSvc, communitySvc, growthSvc)
+		runner := agentservice.NewRunner(agentRepo, management, toolRegistry)
+		approvals := agentservice.NewApprovalService(agentRepo, postSvc)
+		agentCtrl = controller.NewAgentController(management, runner, approvals, toolRegistry, ctx)
+		agentservice.NewScheduler(
+			agentRepo, runner, globalConfig.AIAgentConfig.SchedulerInterval, logger,
+		).Start(ctx)
+	}
+	router.RegisterWebRouter(engine, db, authOptions, jwksURL, globalConfig.RedisConfig.DSN, visitorSecret, mediaDir, agentCtrl)
 
 	httpServer := &http.Server{
 		Addr:              fmt.Sprintf("%s:%s", globalConfig.WebServerConfig.Address, globalConfig.WebServerConfig.Port),

@@ -17,7 +17,7 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 	}()
 	RegisterWebRouter(engine, nil, middleware.AuthOptions{
 		Issuer: "http://issuer.test", Audience: "blog-spa", ClientID: "blog-spa",
-	}, "http://127.0.0.1:1/jwks", "", "test-secret", t.TempDir())
+	}, "http://127.0.0.1:1/jwks", "", "test-secret", t.TempDir(), nil)
 
 	foundUpdate := false
 	foundLike := false

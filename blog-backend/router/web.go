@@ -14,7 +14,7 @@ import (
 	"github.com/rushairer/gouno"
 )
 
-func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.AuthOptions, jwksURL, redisDSN, visitorSecret, mediaDir string) {
+func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.AuthOptions, jwksURL, redisDSN, visitorSecret, mediaDir string, agentCtrl *controller.AgentController) {
 	// Dynamic CORS Middleware
 	server.Use(func(ctx *gin.Context) {
 		origin := ctx.GetHeader("Origin")
@@ -150,6 +150,28 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 			admin.POST("/admin/media", growthCtrl.UploadMedia)
 			admin.DELETE("/admin/media/:id", growthCtrl.DeleteMedia)
 			admin.GET("/admin/analytics", growthCtrl.Analytics)
+			if agentCtrl != nil {
+				admin.GET("/admin/provider-profiles", agentCtrl.ListProviders)
+				admin.POST("/admin/provider-profiles", agentCtrl.CreateProvider)
+				admin.PUT("/admin/provider-profiles/:id", agentCtrl.UpdateProvider)
+				admin.DELETE("/admin/provider-profiles/:id", agentCtrl.DeleteProvider)
+				admin.POST("/admin/provider-profiles/:id/test", agentCtrl.TestProvider)
+				admin.GET("/admin/agents", agentCtrl.ListAgents)
+				admin.POST("/admin/agents", agentCtrl.CreateAgent)
+				admin.GET("/admin/agents/:id", agentCtrl.GetAgent)
+				admin.PUT("/admin/agents/:id", agentCtrl.UpdateAgent)
+				admin.DELETE("/admin/agents/:id", agentCtrl.DeleteAgent)
+				admin.POST("/admin/agents/:id/enable", agentCtrl.EnableAgent)
+				admin.POST("/admin/agents/:id/disable", agentCtrl.DisableAgent)
+				admin.POST("/admin/agents/:id/run", agentCtrl.RunAgent)
+				admin.GET("/admin/agent-tools", agentCtrl.ToolCatalog)
+				admin.GET("/admin/agent-presets", agentCtrl.Presets)
+				admin.GET("/admin/agent-runs", agentCtrl.ListRuns)
+				admin.GET("/admin/agent-runs/:id", agentCtrl.GetRun)
+				admin.GET("/admin/agent-approvals", agentCtrl.ListApprovals)
+				admin.POST("/admin/agent-approvals/:id/approve", agentCtrl.Approve)
+				admin.POST("/admin/agent-approvals/:id/reject", agentCtrl.Reject)
+			}
 		}
 	}
 }

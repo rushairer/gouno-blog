@@ -94,6 +94,8 @@ func (cm *ConfigManager) setConfigDefaults(v *viper.Viper) {
 	v.SetDefault("web_server.write_timeout", "30s")
 	v.SetDefault("web_server.request_timeout", "10s")
 	v.SetDefault("web_server.rate_limit_per_minute", 100)
+	v.SetDefault("ai_agents.enabled", false)
+	v.SetDefault("ai_agents.scheduler_interval", "30s")
 
 	// 数据库配置
 	v.SetDefault("database.default", "sqlite")

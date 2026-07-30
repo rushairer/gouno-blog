@@ -47,3 +47,9 @@ captcha:
     type: math
 log:
     level: 0 #日志级别, -1: Debug, 0: Info, 1: Warn, 2: Error, 3: DPanic, 4: Panic, 5: Fatal
+ai_agents:
+    enabled: false
+    allowed_upstream_hosts:
+        - api.openai.com
+        - api.anthropic.com
+    scheduler_interval: 30s
