@@ -14,23 +14,78 @@ import (
 	agentservice "github.com/rushairer/blog-backend/internal/agent"
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/knowledge"
+	"github.com/rushairer/blog-backend/internal/operations"
 	"github.com/rushairer/blog-backend/internal/tool"
 	workflowservice "github.com/rushairer/blog-backend/internal/workflow"
 	"github.com/rushairer/gouno"
 )
 
 type AgentController struct {
-	svc       *agentservice.ManagementService
-	runner    *agentservice.Runner
-	approvals *agentservice.ApprovalService
-	tools     *tool.Registry
-	workerCtx context.Context
-	knowledge *knowledge.Service
-	workflows *workflowservice.Service
+	svc        *agentservice.ManagementService
+	runner     *agentservice.Runner
+	approvals  *agentservice.ApprovalService
+	tools      *tool.Registry
+	workerCtx  context.Context
+	knowledge  *knowledge.Service
+	workflows  *workflowservice.Service
+	operations *operations.Service
 }
 
 func (ctrl *AgentController) SetWorkflowService(service *workflowservice.Service) {
 	ctrl.workflows = service
+}
+
+func (ctrl *AgentController) SetOperationsService(service *operations.Service) {
+	ctrl.operations = service
+}
+
+func (ctrl *AgentController) ListSuggestions(c *gin.Context) {
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "100"))
+	items, err := ctrl.operations.ListSuggestions(c.Request.Context(), c.DefaultQuery("status", "new"), limit)
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
+}
+
+func (ctrl *AgentController) RefreshSuggestions(c *gin.Context) {
+	if err := ctrl.operations.RefreshSuggestions(c.Request.Context()); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusAccepted, gouno.NewSuccessResponse(nil))
+}
+
+func (ctrl *AgentController) IgnoreSuggestion(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	var req struct {
+		Reason string `json:"reason" binding:"required"`
+	}
+	if err := bindAgentJSON(c, &req); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+	if err := ctrl.operations.IgnoreSuggestion(c.Request.Context(), id, req.Reason); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
+}
+
+func (ctrl *AgentController) ConvertSuggestion(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	if err := ctrl.operations.ConvertSuggestion(c.Request.Context(), id); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }
 
 func (ctrl *AgentController) ListWorkflows(c *gin.Context) {

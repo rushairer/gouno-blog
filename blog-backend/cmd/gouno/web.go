@@ -157,6 +157,7 @@ func startWebServer(cmd *cobra.Command, args []string) {
 		approvals := agentservice.NewApprovalService(agentRepo, postSvc)
 		agentCtrl = controller.NewAgentController(management, runner, approvals, toolRegistry, ctx, knowledgeSvc)
 		agentCtrl.SetWorkflowService(workflowservice.NewService(db, runner, management, toolRegistry))
+		agentCtrl.SetOperationsService(operationsSvc)
 		agentservice.NewScheduler(
 			agentRepo, runner, globalConfig.AIAgentConfig.SchedulerInterval, logger,
 		).Start(ctx)

@@ -44,7 +44,27 @@ func (s *Service) RegisterTools() error {
 			Parameters: schema(`{"low_usage_threshold":{"type":"integer","minimum":1,"maximum":20},"limit":{"type":"integer","minimum":1,"maximum":100}}`),
 			Risk:       domain.ToolRiskRead, Execute: s.listTagBloat,
 		},
+		tool.Definition{
+			Name: "operations.propose_suggestion", Description: "Propose an evidence-backed internal operations suggestion.",
+			Parameters: json.RawMessage(`{"type":"object","additionalProperties":false,"required":["source_type","source_key","title","description","priority","evidence"],"properties":{"source_type":{"type":"string"},"source_key":{"type":"string"},"title":{"type":"string"},"description":{"type":"string"},"priority":{"type":"string","enum":["low","medium","high"]},"evidence":{"type":"object"},"window_start":{"type":"string"},"window_end":{"type":"string"}}}`),
+			Risk:       domain.ToolRiskPropose, Propose: s.proposeSuggestion,
+		},
 	)
+}
+
+func (s *Service) proposeSuggestion(_ context.Context, raw json.RawMessage) (*tool.Proposal, error) {
+	var value domain.OperationalSuggestion
+	if err := decode(raw, &value); err != nil {
+		return nil, err
+	}
+	value.SourceType, value.SourceKey = strings.TrimSpace(value.SourceType), strings.TrimSpace(value.SourceKey)
+	value.Title, value.Description = strings.TrimSpace(value.Title), strings.TrimSpace(value.Description)
+	if value.SourceType == "" || value.SourceKey == "" || value.Title == "" || value.Description == "" ||
+		(value.Priority != "low" && value.Priority != "medium" && value.Priority != "high") ||
+		len(value.Evidence) == 0 || !json.Valid(value.Evidence) {
+		return nil, tool.ErrInvalidArgument
+	}
+	return &tool.Proposal{ActionType: "create_operational_suggestion", TargetType: "operational_suggestion", Payload: raw}, nil
 }
 
 func (s *Service) Start(ctx context.Context) {
@@ -273,4 +293,130 @@ func parsePGArray(value string) []string {
 		parts[i] = strings.Trim(parts[i], `"`)
 	}
 	return parts
+}
+
+func (s *Service) ListSuggestions(ctx context.Context, status string, limit int) ([]*domain.OperationalSuggestion, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	if limit > 200 {
+		limit = 200
+	}
+	rows, err := s.db.QueryContext(ctx, `SELECT id,source_type,source_key,source_run_id,
+		workflow_run_id,title,description,priority,evidence,window_start,window_end,status,
+		ignored_reason,created_at,updated_at FROM ai_operational_suggestions
+		WHERE ($1='' OR $1='all' OR status=$1) ORDER BY
+		CASE priority WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END, created_at DESC LIMIT $2`, status, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := make([]*domain.OperationalSuggestion, 0)
+	for rows.Next() {
+		var item domain.OperationalSuggestion
+		if err := rows.Scan(&item.ID, &item.SourceType, &item.SourceKey, &item.SourceRunID, &item.WorkflowRunID,
+			&item.Title, &item.Description, &item.Priority, &item.Evidence, &item.WindowStart, &item.WindowEnd,
+			&item.Status, &item.IgnoredReason, &item.CreatedAt, &item.UpdatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, &item)
+	}
+	return items, rows.Err()
+}
+
+func (s *Service) IgnoreSuggestion(ctx context.Context, id int64, reason string) error {
+	reason = strings.TrimSpace(reason)
+	if reason == "" {
+		return fmt.Errorf("ignore reason is required")
+	}
+	result, err := s.db.ExecContext(ctx, `UPDATE ai_operational_suggestions SET status='ignored',
+		ignored_reason=$2,updated_at=NOW() WHERE id=$1 AND status='new'`, id, reason)
+	if err != nil {
+		return err
+	}
+	if n, _ := result.RowsAffected(); n == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+func (s *Service) ConvertSuggestion(ctx context.Context, id int64) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	var title, description, priority string
+	if err = tx.QueryRowContext(ctx, `SELECT title,description,priority FROM ai_operational_suggestions
+		WHERE id=$1 AND status='new' FOR UPDATE`, id).Scan(&title, &description, &priority); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	if _, err = tx.ExecContext(ctx, `INSERT INTO ai_editorial_tasks
+		(title,description,priority,source_suggestion_id) VALUES($1,$2,$3,$4)`, title, description, priority, id); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	if _, err = tx.ExecContext(ctx, `UPDATE ai_operational_suggestions SET status='converted',updated_at=NOW() WHERE id=$1`, id); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	return tx.Commit()
+}
+
+func (s *Service) CreateSuggestion(ctx context.Context, value *domain.OperationalSuggestion) error {
+	rawKey := strings.Join([]string{value.SourceType, value.SourceKey, value.Title}, ":")
+	sum := sha256.Sum256([]byte(rawKey))
+	value.DedupeKey = hex.EncodeToString(sum[:])
+	if len(value.Evidence) == 0 {
+		value.Evidence = json.RawMessage(`{}`)
+	}
+	_, err := s.db.ExecContext(ctx, `INSERT INTO ai_operational_suggestions
+		(source_type,source_key,source_run_id,workflow_run_id,title,description,priority,evidence,
+		 window_start,window_end,dedupe_key) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+		ON CONFLICT(dedupe_key) DO UPDATE SET evidence=EXCLUDED.evidence,window_start=EXCLUDED.window_start,
+		window_end=EXCLUDED.window_end,priority=EXCLUDED.priority,updated_at=NOW()
+		WHERE ai_operational_suggestions.status='new'`, value.SourceType, value.SourceKey, value.SourceRunID,
+		value.WorkflowRunID, value.Title, value.Description, value.Priority, value.Evidence, value.WindowStart,
+		value.WindowEnd, value.DedupeKey)
+	return err
+}
+
+func (s *Service) RefreshSuggestions(ctx context.Context) error {
+	rows, err := s.db.QueryContext(ctx, `SELECT l.post_id,p.title,p.slug,COUNT(*),MAX(l.checked_at)
+		FROM ai_link_health_snapshots l JOIN posts p ON p.id=l.post_id
+		WHERE l.ok=false AND p.status='published' GROUP BY l.post_id,p.title,p.slug`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var postID, count int64
+		var title, slug string
+		var checked time.Time
+		if err := rows.Scan(&postID, &title, &slug, &count, &checked); err != nil {
+			return err
+		}
+		evidence, _ := json.Marshal(map[string]any{"post_id": postID, "slug": slug, "broken_links": count, "checked_at": checked})
+		start, end := checked.Add(-7*24*time.Hour), checked
+		if err := s.CreateSuggestion(ctx, &domain.OperationalSuggestion{SourceType: "broken_links", SourceKey: fmt.Sprint(postID),
+			Title: "Review broken links in " + title, Description: "Cached link checks found one or more failing external links.",
+			Priority: "high", Evidence: evidence, WindowStart: &start, WindowEnd: &end}); err != nil {
+			return err
+		}
+	}
+	var totalTags, lowUse int64
+	if err := s.db.QueryRowContext(ctx, `WITH counts AS(SELECT tag,COUNT(*) n FROM posts,unnest(tags) tag
+		WHERE status='published' GROUP BY tag) SELECT COUNT(*),COUNT(*) FILTER(WHERE n<=1) FROM counts`).Scan(&totalTags, &lowUse); err != nil {
+		return err
+	}
+	if lowUse > 0 {
+		now := time.Now().UTC()
+		evidence, _ := json.Marshal(map[string]any{"total_tags": totalTags, "low_use_tags": lowUse, "threshold": 1})
+		if err := s.CreateSuggestion(ctx, &domain.OperationalSuggestion{SourceType: "tag_bloat", SourceKey: "site",
+			Title: "Consolidate low-use tags", Description: "Aggregate tag counts indicate taxonomy fragmentation.",
+			Priority: "medium", Evidence: evidence, WindowEnd: &now}); err != nil {
+			return err
+		}
+	}
+	return rows.Err()
 }

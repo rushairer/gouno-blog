@@ -163,6 +163,13 @@ func (s *ApprovalService) execute(ctx context.Context, approval *domain.AgentApp
 			payload.Priority = "medium"
 		}
 		return s.repo.CreateEditorialTask(ctx, approval.ID, payload.Title, payload.Description, payload.Priority)
+	case "create_operational_suggestion":
+		var payload domain.OperationalSuggestion
+		if err := json.Unmarshal(approval.ProposedPayload, &payload); err != nil {
+			return err
+		}
+		payload.SourceRunID = &approval.RunID
+		return s.repo.CreateOperationalSuggestion(ctx, &payload)
 	default:
 		return fmt.Errorf("unsupported approval action %q", approval.ActionType)
 	}

@@ -2,10 +2,12 @@ package repository
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/rushairer/blog-backend/internal/domain"
@@ -662,6 +664,17 @@ func (r *AgentRepository) CreateEditorialTask(ctx context.Context, approvalID in
 	_, err := r.db.ExecContext(ctx, `INSERT INTO ai_editorial_tasks
 		(title, description, priority, source_approval_id) VALUES ($1,$2,$3,$4)`,
 		title, description, priority, approvalID)
+	return err
+}
+
+func (r *AgentRepository) CreateOperationalSuggestion(ctx context.Context, value *domain.OperationalSuggestion) error {
+	sum := fmt.Sprintf("%x", sha256.Sum256([]byte(strings.Join([]string{value.SourceType, value.SourceKey, value.Title}, ":"))))
+	_, err := r.db.ExecContext(ctx, `INSERT INTO ai_operational_suggestions
+		(source_type,source_key,source_run_id,workflow_run_id,title,description,priority,evidence,
+		 window_start,window_end,dedupe_key) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+		ON CONFLICT(dedupe_key) DO UPDATE SET evidence=EXCLUDED.evidence,updated_at=NOW()
+		WHERE ai_operational_suggestions.status='new'`, value.SourceType, value.SourceKey, value.SourceRunID,
+		value.WorkflowRunID, value.Title, value.Description, value.Priority, value.Evidence, value.WindowStart, value.WindowEnd, sum)
 	return err
 }
 
