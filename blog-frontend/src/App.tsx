@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { I18nProvider } from './i18n';
+import { ToastProvider } from './components/ui';
 import PublicShell from './layouts/PublicShell';
 import AdminShell from './layouts/AdminShell';
 import Home from './pages/Home';
@@ -39,7 +40,7 @@ function Admin({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  return <I18nProvider><BrowserRouter><Routes>
+  return <I18nProvider><ToastProvider><BrowserRouter><Routes>
     <Route path="/callback" element={<Callback />} />
     <Route path="/login" element={<Login />} />
     <Route path="/" element={<Public><Home /></Public>} />
@@ -74,5 +75,5 @@ export default function App() {
     <Route path="/admin/users" element={<Admin><AdminUsers /></Admin>} />
     <Route path="/admin/agents" element={<Admin><AgentConsole /></Admin>} />
     <Route path="*" element={<Public><NotFound /></Public>} />
-  </Routes></BrowserRouter></I18nProvider>;
+  </Routes></BrowserRouter></ToastProvider></I18nProvider>;
 }

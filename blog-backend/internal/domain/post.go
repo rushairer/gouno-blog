@@ -31,6 +31,13 @@ type Post struct {
 	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
+type AdminPostFilter struct {
+	Query    string
+	Status   PostStatus
+	Category string
+	Tag      string
+}
+
 type Category struct {
 	ID          int64     `json:"id"`
 	Name        string    `json:"name"`
@@ -114,6 +121,12 @@ type MediaAsset struct {
 	CreatedBy   *string   `json:"created_by,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
 	UsageCount  int64     `json:"usage_count"`
+}
+
+type MediaReference struct {
+	PostID    int64  `json:"post_id"`
+	PostTitle string `json:"post_title"`
+	PostSlug  string `json:"post_slug"`
 }
 
 type AnalyticsSummary struct {

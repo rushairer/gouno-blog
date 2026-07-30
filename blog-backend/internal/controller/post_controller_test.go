@@ -19,6 +19,9 @@ type fakeBlogService struct {
 	comments     map[int64][]*domain.Comment
 	createErr    error
 	resolveCalls []string
+	adminFilter  domain.AdminPostFilter
+	adminPage    int
+	adminSize    int
 }
 
 func newFakeBlogService() *fakeBlogService {
@@ -79,7 +82,8 @@ func (s *fakeBlogService) ListPosts(context.Context, string, string, int, int) (
 	return []*domain.Post{s.posts[1]}, 1, nil
 }
 
-func (s *fakeBlogService) ListAdminPosts(context.Context, int, int) ([]*domain.Post, int, error) {
+func (s *fakeBlogService) ListAdminPosts(_ context.Context, filter domain.AdminPostFilter, page, pageSize int) ([]*domain.Post, int, error) {
+	s.adminFilter, s.adminPage, s.adminSize = filter, page, pageSize
 	return []*domain.Post{s.posts[1]}, 1, nil
 }
 
@@ -131,7 +135,25 @@ func setupControllerRouter(svc *fakeBlogService) *gin.Engine {
 	router.POST("/api/posts/:slugOrID/comments", ctrl.CreateComment)
 	router.PUT("/api/comments/:id/visibility", ctrl.UpdateCommentVisibility)
 	router.POST("/api/posts", ctrl.Create)
+	router.GET("/api/admin/posts", ctrl.ListAdmin)
 	return router
+}
+
+func TestListAdminPassesSearchFiltersAndPagination(t *testing.T) {
+	svc := newFakeBlogService()
+	router := setupControllerRouter(svc)
+	request := httptest.NewRequest(http.MethodGet, "/api/admin/posts?q=system&status=draft&category=architecture&tag=go&page=2&pageSize=20", nil)
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", response.Code, response.Body.String())
+	}
+	if svc.adminFilter.Query != "system" || svc.adminFilter.Status != domain.PostStatusDraft || svc.adminFilter.Category != "architecture" || svc.adminFilter.Tag != "go" {
+		t.Fatalf("unexpected filters: %#v", svc.adminFilter)
+	}
+	if svc.adminPage != 2 || svc.adminSize != 20 {
+		t.Fatalf("unexpected pagination: page=%d size=%d", svc.adminPage, svc.adminSize)
+	}
 }
 
 func TestGetPostSupportsIDAndSlug(t *testing.T) {

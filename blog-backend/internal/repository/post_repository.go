@@ -193,12 +193,38 @@ func (r *PostRepository) ListTags(ctx context.Context) ([]string, error) {
 	return tags, nil
 }
 
-func (r *PostRepository) ListAdmin(ctx context.Context, limit, offset int) ([]*domain.Post, int, error) {
+func (r *PostRepository) ListAdmin(ctx context.Context, filter domain.AdminPostFilter, limit, offset int) ([]*domain.Post, int, error) {
+	args := make([]interface{}, 0, 6)
+	where := make([]string, 0, 4)
+	if filter.Query != "" {
+		args = append(args, "%"+filter.Query+"%")
+		where = append(where, fmt.Sprintf("(p.title ILIKE $%d OR p.summary ILIKE $%d OR p.content ILIKE $%d)", len(args), len(args), len(args)))
+	}
+	if filter.Status != "" {
+		args = append(args, filter.Status)
+		where = append(where, fmt.Sprintf("p.status = $%d", len(args)))
+	}
+	if filter.Category != "" {
+		args = append(args, filter.Category)
+		where = append(where, fmt.Sprintf("c.slug = $%d", len(args)))
+	}
+	if filter.Tag != "" {
+		args = append(args, filter.Tag)
+		where = append(where, fmt.Sprintf("$%d = ANY(p.tags)", len(args)))
+	}
+	whereSQL := ""
+	if len(where) > 0 {
+		whereSQL = " WHERE " + strings.Join(where, " AND ")
+	}
 	var total int
-	if err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM posts`).Scan(&total); err != nil {
+	countQuery := `SELECT COUNT(*) FROM posts p LEFT JOIN categories c ON c.id = p.category_id` + whereSQL
+	if err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
 		return nil, 0, err
 	}
-	rows, err := r.db.QueryContext(ctx, `SELECT id, title, slug, summary, content, tags, category_id, COALESCE(cover_url, ''), COALESCE(cover_alt, ''), COALESCE(seo_title, ''), COALESCE(seo_description, ''), status, views_count, likes_count, published_at, scheduled_at, created_at, updated_at FROM posts ORDER BY updated_at DESC LIMIT $1 OFFSET $2`, limit, offset)
+	args = append(args, limit, offset)
+	listQuery := fmt.Sprintf(`SELECT p.id, p.title, p.slug, p.summary, p.content, p.tags, p.category_id, COALESCE(p.cover_url, ''), COALESCE(p.cover_alt, ''), COALESCE(p.seo_title, ''), COALESCE(p.seo_description, ''), p.status, p.views_count, p.likes_count, p.published_at, p.scheduled_at, p.created_at, p.updated_at
+		FROM posts p LEFT JOIN categories c ON c.id = p.category_id%s ORDER BY p.updated_at DESC LIMIT $%d OFFSET $%d`, whereSQL, len(args)-1, len(args))
+	rows, err := r.db.QueryContext(ctx, listQuery, args...)
 	if err != nil {
 		return nil, 0, err
 	}

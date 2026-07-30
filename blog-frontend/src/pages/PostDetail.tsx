@@ -4,7 +4,7 @@ import { ArrowLeft, Bookmark, Calendar, Eye, Flag, Heart, List, MessageSquare, R
 import { isLoggedIn, redirectToAuthorize } from '../auth';
 import type { CommunityComment } from '../community';
 import { optionalApiFetch, readResponse } from '../community';
-import { EmptyState, Feedback, Field, LoadingState, Panel } from '../components/ui';
+import { EmptyState, Feedback, Field, LoadingState, Modal, Panel } from '../components/ui';
 import { useI18n } from '../i18n';
 import { useArticleSEO } from '../seo';
 import { MarkdownRenderer } from '../components/MarkdownRenderer';
@@ -67,6 +67,8 @@ export default function PostDetail() {
   const [error, setError] = useState<string | null>(null);
   const [commentNotice, setCommentNotice] = useState<string | null>(null);
   const [replyingTo, setReplyingTo] = useState<CommunityComment | null>(null);
+  const [reportingComment, setReportingComment] = useState<CommunityComment | null>(null);
+  const [reportReason, setReportReason] = useState('');
 
   const [likes, setLikes] = useState(0);
   const [liked, setLiked] = useState(false);
@@ -198,15 +200,17 @@ export default function PostDetail() {
     }
   };
 
-  const handleReport = async (comment: CommunityComment) => {
-    const reason = window.prompt(t('reportReason'));
-    if (reason === null) return;
-    const response = await optionalApiFetch(`/api/comments/${comment.id}/report`, {
+  const handleReport = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!reportingComment) return;
+    const response = await optionalApiFetch(`/api/comments/${reportingComment.id}/report`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reason }),
+      body: JSON.stringify({ reason: reportReason.trim() }),
     });
     setCommentNotice(response.status === 409 ? t('alreadyReported') : response.ok ? t('reportSubmitted') : t('requestFailed'));
+    setReportingComment(null);
+    setReportReason('');
   };
 
   if (loading) {
@@ -342,7 +346,7 @@ export default function PostDetail() {
             <EmptyState label={t('noComments')} />
           ) : (
             <div className="comments-list">
-              {rootComments.map((comment) => <CommentItem key={comment.id} comment={comment} replies={repliesByParent.get(comment.id) || []} onReply={setReplyingTo} onReport={(item) => void handleReport(item)} />)}
+              {rootComments.map((comment) => <CommentItem key={comment.id} comment={comment} replies={repliesByParent.get(comment.id) || []} onReply={setReplyingTo} onReport={setReportingComment} />)}
             </div>
           )}
 
@@ -379,6 +383,9 @@ export default function PostDetail() {
           </form>
         </Panel>
       </div>
+      <Modal open={reportingComment !== null} title={t('report')} description={t('reportReason')} onClose={() => { setReportingComment(null); setReportReason(''); }}>
+        <form className="modal-form" onSubmit={handleReport}><label>{t('reportReason')}<textarea rows={4} value={reportReason} onChange={(event) => setReportReason(event.target.value)} required /></label><div className="modal-actions"><button className="btn btn-secondary" type="button" onClick={() => { setReportingComment(null); setReportReason(''); }}>{t('cancel')}</button><button className="btn btn-primary" type="submit"><Flag /> {t('report')}</button></div></form>
+      </Modal>
     </>
   );
 }

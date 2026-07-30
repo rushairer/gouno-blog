@@ -36,6 +36,17 @@ export default function PublicShell({ children }: { children: ReactNode }) {
             {publicNavigation.map((item) => (
               <NavLink key={item.path} to={item.path} onClick={() => setOpen(false)}>{item.label}</NavLink>
             ))}
+            <form className="mobile-public-search" role="search" onSubmit={(event) => {
+              event.preventDefault();
+              const next = query.trim();
+              navigate(next ? `/search?q=${encodeURIComponent(next)}` : '/articles');
+              setOpen(false);
+            }}>
+              <label className="sr-only" htmlFor="mobile-global-search">搜索文章</label>
+              <Search />
+              <input id="mobile-global-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索文章或主题" />
+              <button type="submit">搜索</button>
+            </form>
           </nav>
           <div className="public-actions">
             <Link className="public-admin-link" to="/admin" aria-label="进入内容后台">

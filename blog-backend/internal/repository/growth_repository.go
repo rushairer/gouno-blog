@@ -137,6 +137,26 @@ func (r *GrowthRepository) CountMediaReferences(ctx context.Context, id int64) (
 	return count, err
 }
 
+func (r *GrowthRepository) ListMediaReferences(ctx context.Context, id int64) ([]*domain.MediaReference, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT p.id, p.title, p.slug FROM posts p
+		JOIN media_assets m ON m.id=$1
+		WHERE p.content LIKE '%' || m.url || '%' OR p.cover_url = m.url
+		ORDER BY p.updated_at DESC`, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := make([]*domain.MediaReference, 0)
+	for rows.Next() {
+		var item domain.MediaReference
+		if err := rows.Scan(&item.PostID, &item.PostTitle, &item.PostSlug); err != nil {
+			return nil, err
+		}
+		items = append(items, &item)
+	}
+	return items, rows.Err()
+}
+
 func (r *GrowthRepository) DeleteMedia(ctx context.Context, id int64) (*domain.MediaAsset, error) {
 	var asset domain.MediaAsset
 	err := r.db.QueryRowContext(ctx, `DELETE FROM media_assets WHERE id = $1

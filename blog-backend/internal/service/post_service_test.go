@@ -85,7 +85,7 @@ func (r *fakePostRepo) List(_ context.Context, _, _ string, limit, offset int) (
 	return posts, len(posts), nil
 }
 
-func (r *fakePostRepo) ListAdmin(_ context.Context, limit, offset int) ([]*domain.Post, int, error) {
+func (r *fakePostRepo) ListAdmin(_ context.Context, _ domain.AdminPostFilter, limit, offset int) ([]*domain.Post, int, error) {
 	return r.List(context.Background(), "", "", limit, offset)
 }
 

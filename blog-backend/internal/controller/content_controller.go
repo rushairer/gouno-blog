@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -335,6 +336,18 @@ func (ctrl *ContentController) UpdateSiteSettings(c *gin.Context) {
 	for key, value := range requested {
 		if allowedSettingKeys[key] {
 			clean[key] = strings.TrimSpace(value)
+		}
+	}
+	if title, exists := clean["site_title"]; exists && title == "" {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "site title cannot be empty"))
+		return
+	}
+	if rss, exists := clean["rss_url"]; exists {
+		if rss == "" {
+			clean["rss_url"] = "/feed.xml"
+		} else if parsed, err := url.ParseRequestURI(rss); err != nil || (!strings.HasPrefix(rss, "/") && parsed.Scheme != "http" && parsed.Scheme != "https") {
+			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "rss_url must be a site path or an http(s) URL"))
+			return
 		}
 	}
 	raw, _ := json.Marshal(clean)

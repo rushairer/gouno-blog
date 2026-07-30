@@ -17,6 +17,7 @@ type GrowthStore interface {
 	ListMedia(context.Context) ([]*domain.MediaAsset, error)
 	DeleteMedia(context.Context, int64) (*domain.MediaAsset, error)
 	CountMediaReferences(context.Context, int64) (int64, error)
+	ListMediaReferences(context.Context, int64) ([]*domain.MediaReference, error)
 	RecordEvent(context.Context, int64, string, string) error
 	AnalyticsSummary(context.Context) (*domain.AnalyticsSummary, error)
 }
@@ -82,6 +83,13 @@ func (s *GrowthService) DeleteMedia(ctx context.Context, id int64) (*domain.Medi
 		return nil, ErrPostNotFound
 	}
 	return asset, err
+}
+
+func (s *GrowthService) ListMediaReferences(ctx context.Context, id int64) ([]*domain.MediaReference, error) {
+	if id <= 0 {
+		return nil, errors.New("invalid media id")
+	}
+	return s.store.ListMediaReferences(ctx, id)
 }
 
 func (s *GrowthService) RecordView(ctx context.Context, postID int64, actorKey string) error {

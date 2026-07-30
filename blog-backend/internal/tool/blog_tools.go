@@ -125,7 +125,7 @@ func (t *BlogTools) listPosts(ctx context.Context, raw json.RawMessage) (any, er
 	if args.PageSize > 100 {
 		return nil, ErrInvalidArgument
 	}
-	posts, total, err := t.posts.ListAdminPosts(ctx, args.Page, args.PageSize)
+	posts, total, err := t.posts.ListAdminPosts(ctx, domain.AdminPostFilter{}, args.Page, args.PageSize)
 	return map[string]any{"list": compactPosts(posts), "total": total}, err
 }
 

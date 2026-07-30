@@ -33,7 +33,7 @@ export default function ArticleIndex({ mode = 'articles' }: { mode?: 'articles' 
       .finally(() => setLoading(false));
   }, [page, q, tag, category]);
 
-  const title = mode === 'search' ? `“${q}”的搜索结果` : mode === 'tag' ? `标签：${tag}` : mode === 'category' ? `分类：${category}` : '全部文章';
+  const title = mode === 'search' ? q ? `“${q}”的搜索结果` : '搜索文章' : mode === 'tag' ? `标签：${tag}` : mode === 'category' ? `分类：${category}` : '全部文章';
   const pages = Math.max(1, Math.ceil(total / 10));
   return (
     <div className="public-container index-page">
@@ -48,7 +48,7 @@ export default function ArticleIndex({ mode = 'articles' }: { mode?: 'articles' 
           <div className="filter-tags"><Link className={!tag ? 'active' : ''} to="/articles">全部</Link>{tags.slice(0, 18).map((item) => <Link className={item === tag ? 'active' : ''} key={item} to={`/tags/${encodeURIComponent(item)}`}>{item}</Link>)}</div>
         </aside>
         <section className="article-results" aria-live="polite">
-          {loading ? <LoadingState label="正在载入文章…" /> : error ? <p className="feedback feedback--error">{error}</p> : posts.length === 0 ? <EmptyState label="没有找到符合条件的文章。可以清除筛选或浏览归档。" /> : posts.map((post, index) => (
+          {loading ? <LoadingState label="正在载入文章…" /> : error ? <p className="feedback feedback--error">{error}</p> : posts.length === 0 ? <div className="public-empty-actions"><EmptyState label="没有找到符合条件的文章。" /><div><Link to="/articles">浏览全部文章</Link><Link to="/archive">浏览归档</Link></div></div> : posts.map((post, index) => (
             <article className="article-index-row" key={post.id}>
               <span>{String((page - 1) * 10 + index + 1).padStart(2, '0')}</span>
               <div><Link to={`/articles/${post.slug}`}><h2>{post.title}</h2></Link><p>{markdownToPlainText(post.summary)}</p><div>{post.tags.map((item) => <Link key={item} to={`/tags/${encodeURIComponent(item)}`}>{item}</Link>)}</div></div>

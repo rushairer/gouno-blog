@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
-import { Link, NavLink, useLocation } from 'react-router-dom';
+import type { FormEvent, ReactNode } from 'react';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { ExternalLink, LogOut, Menu, Search } from 'lucide-react';
 import { adminNavigation } from '../navigation';
 import { getUserProfile, logout } from '../auth';
@@ -15,8 +15,11 @@ function currentLabel(pathname: string) {
 
 export default function AdminShell({ children }: { children: ReactNode }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const user = getUserProfile();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [search, setSearch] = useState(() => location.pathname === '/admin/posts' ? new URLSearchParams(location.search).get('q') || '' : '');
   const [siteName, setSiteName] = useState(DEFAULT_SITE_SETTINGS.site_title);
 
   useEffect(() => {
@@ -24,6 +27,19 @@ export default function AdminShell({ children }: { children: ReactNode }) {
       // Keep the administration shell available when public site settings fail.
     });
   }, []);
+
+  useEffect(() => {
+    if (location.pathname === '/admin/posts') {
+      setSearch(new URLSearchParams(location.search).get('q') || '');
+    }
+  }, [location.pathname, location.search]);
+
+  const submitSearch = (event: FormEvent) => {
+    event.preventDefault();
+    const query = search.trim();
+    navigate(query ? `/admin/posts?q=${encodeURIComponent(query)}` : '/admin/posts');
+    setMobileSearchOpen(false);
+  };
 
   return (
     <div className={`admin-shell ${mobileOpen ? 'admin-nav-open' : ''}`}>
@@ -50,8 +66,12 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         <header className="admin-topbar">
           <button className="bare-icon admin-menu" type="button" aria-label="切换后台导航" aria-expanded={mobileOpen} aria-controls="admin-sidebar" onClick={() => setMobileOpen(!mobileOpen)}><Menu /></button>
           <div className="breadcrumb"><Link to="/admin/dashboard">后台</Link><span>/</span><strong>{currentLabel(location.pathname)}</strong></div>
-          <div className="admin-search"><Search /><input aria-label="搜索后台内容" placeholder="搜索文章、分类、标签…" /></div>
+          <form className={`admin-search ${mobileSearchOpen ? 'is-open' : ''}`} role="search" onSubmit={submitSearch}>
+            <button type="submit" aria-label="提交文章搜索"><Search /></button>
+            <input aria-label="搜索文章" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索文章标题、摘要或正文…" />
+          </form>
           <div className="admin-topbar-actions">
+            <button className="admin-search-toggle" type="button" onClick={() => setMobileSearchOpen((current) => !current)} aria-label="打开文章搜索" aria-expanded={mobileSearchOpen}><Search /><span>搜索</span></button>
             <Link to="/" target="_blank" rel="noreferrer" aria-label="在新窗口查看前台站点"><ExternalLink /><span>查看站点</span></Link>
             <button type="button" onClick={logout} aria-label="退出登录"><LogOut /><span>退出登录</span></button>
           </div>

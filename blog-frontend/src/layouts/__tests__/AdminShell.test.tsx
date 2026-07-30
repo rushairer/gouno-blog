@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminShell from '../AdminShell';
 import AdminUsers from '../../pages/admin/Users';
@@ -32,5 +32,16 @@ describe('AdminShell navigation utilities', () => {
     render(<MemoryRouter><AdminUsers /></MemoryRouter>);
     expect(screen.getByRole('link', { name: /打开 GOSSO 管理端/ })).toHaveAttribute('href', '/identity-admin/');
     expect(screen.getByText('Content Admin')).toBeInTheDocument();
+  });
+
+  it('submits the top search to the article management URL', () => {
+    function LocationProbe() {
+      const location = useLocation();
+      return <output aria-label="current location">{location.pathname}{location.search}</output>;
+    }
+    render(<MemoryRouter initialEntries={['/admin/dashboard']}><AdminShell><LocationProbe /></AdminShell></MemoryRouter>);
+    fireEvent.change(screen.getByRole('textbox', { name: '搜索文章' }), { target: { value: '系统 架构' } });
+    fireEvent.click(screen.getByRole('button', { name: '提交文章搜索' }));
+    expect(screen.getByLabelText('current location')).toHaveTextContent('/admin/posts?q=%E7%B3%BB%E7%BB%9F%20%E6%9E%B6%E6%9E%84');
   });
 });

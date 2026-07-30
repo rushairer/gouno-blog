@@ -46,8 +46,7 @@ export const adminNavigation: Array<{ label: string; items: AdminNavItem[] }> = 
     label: '站点管理',
     items: [
       { label: '站点设置', path: '/admin/settings', icon: <Settings /> },
-      { label: '用户与权限', path: '/admin/users', icon: <Users /> },
+      { label: '身份与权限', path: '/admin/users', icon: <Users /> },
     ],
   },
 ];
-

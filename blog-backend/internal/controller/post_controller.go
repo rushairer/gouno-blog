@@ -23,7 +23,7 @@ type BlogService interface {
 	IncrementViews(ctx context.Context, id int64) error
 	IncrementLikes(ctx context.Context, id int64) error
 	ListPosts(ctx context.Context, tag, search string, page, pageSize int) ([]*domain.Post, int, error)
-	ListAdminPosts(ctx context.Context, page, pageSize int) ([]*domain.Post, int, error)
+	ListAdminPosts(ctx context.Context, filter domain.AdminPostFilter, page, pageSize int) ([]*domain.Post, int, error)
 	ListTags(ctx context.Context) ([]string, error)
 	CreateComment(ctx context.Context, comment *domain.Comment) error
 	GetComments(ctx context.Context, postID int64) ([]*domain.Comment, error)
@@ -129,7 +129,13 @@ func (ctrl *PostController) Update(c *gin.Context) {
 func (ctrl *PostController) ListAdmin(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "50"))
-	posts, total, err := ctrl.svc.ListAdminPosts(c.Request.Context(), page, pageSize)
+	filter := domain.AdminPostFilter{
+		Query:    c.Query("q"),
+		Status:   domain.PostStatus(c.Query("status")),
+		Category: c.Query("category"),
+		Tag:      c.Query("tag"),
+	}
+	posts, total, err := ctrl.svc.ListAdminPosts(c.Request.Context(), filter, page, pageSize)
 	if err != nil {
 		writeServiceError(c, err)
 		return

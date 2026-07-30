@@ -7,6 +7,42 @@ servers:
   - url: http://localhost:8080/api
     description: Nginx gateway local entry point
 paths:
+  /feed.xml:
+    get:
+      summary: RSS 2.0 feed
+      servers:
+        - url: http://localhost:8080
+      responses:
+        '200':
+          description: Published article feed
+          content:
+            application/xml:
+              schema:
+                type: string
+  /rss:
+    get:
+      summary: RSS feed compatibility alias
+      servers:
+        - url: http://localhost:8080
+      responses:
+        '200':
+          description: Published article feed
+          content:
+            application/xml:
+              schema:
+                type: string
+  /sitemap.xml:
+    get:
+      summary: Public sitemap
+      servers:
+        - url: http://localhost:8080
+      responses:
+        '200':
+          description: Public site URL index
+          content:
+            application/xml:
+              schema:
+                type: string
   /posts:
     get:
       summary: List all posts
@@ -174,6 +210,37 @@ paths:
       description: Includes draft, scheduled, and published posts. Requires administrator authentication.
       security:
         - BearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: Search title, summary, or content
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, scheduled, published]
+        - name: category
+          in: query
+          schema:
+            type: string
+          description: Category slug
+        - name: tag
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
       responses:
         '200':
           description: Administrative post list
@@ -598,6 +665,23 @@ paths:
       responses:
         '200':
           description: Media deleted
+        '409':
+          description: Media is still referenced by one or more posts
+
+  /admin/media/{id}/references:
+    get:
+      summary: List posts that reference a media asset
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Referencing post IDs, titles, and slugs
 
   /admin/analytics:
     get:

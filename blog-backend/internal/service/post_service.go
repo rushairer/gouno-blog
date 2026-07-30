@@ -27,7 +27,7 @@ type PostRepository interface {
 	IncrementViews(ctx context.Context, id int64) error
 	IncrementLikes(ctx context.Context, id int64) error
 	List(ctx context.Context, tag, search string, limit, offset int) ([]*domain.Post, int, error)
-	ListAdmin(ctx context.Context, limit, offset int) ([]*domain.Post, int, error)
+	ListAdmin(ctx context.Context, filter domain.AdminPostFilter, limit, offset int) ([]*domain.Post, int, error)
 	ListTags(ctx context.Context) ([]string, error)
 	PublishScheduled(ctx context.Context) (int64, error)
 	CreateComment(ctx context.Context, comment *domain.Comment) error
@@ -230,14 +230,17 @@ func (s *PostService) ListPosts(ctx context.Context, tag, search string, page, p
 	return s.repo.List(ctx, tag, search, pageSize, offset)
 }
 
-func (s *PostService) ListAdminPosts(ctx context.Context, page, pageSize int) ([]*domain.Post, int, error) {
+func (s *PostService) ListAdminPosts(ctx context.Context, filter domain.AdminPostFilter, page, pageSize int) ([]*domain.Post, int, error) {
 	if page <= 0 {
 		page = 1
 	}
 	if pageSize <= 0 {
 		pageSize = 50
 	}
-	return s.repo.ListAdmin(ctx, pageSize, (page-1)*pageSize)
+	if pageSize > 100 {
+		pageSize = 100
+	}
+	return s.repo.ListAdmin(ctx, filter, pageSize, (page-1)*pageSize)
 }
 
 func (s *PostService) PublishScheduled(ctx context.Context) (int64, error) {

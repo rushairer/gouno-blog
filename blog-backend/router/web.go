@@ -38,7 +38,7 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 	svc := service.NewPostService(repo)
 	ctrl := controller.NewPostController(svc)
 	contentCtrl := controller.NewContentController(db)
-	feedCtrl := controller.NewFeedController(svc)
+	feedCtrl := controller.NewFeedController(svc, db)
 	communitySvc := service.NewCommunityService(repository.NewCommunityRepository(db), repo)
 	var interactionLimiter service.RateLimiter
 	if redisDSN != "" {
@@ -154,6 +154,7 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 			admin.POST("/admin/posts/:id/versions/:versionID/restore", growthCtrl.RestoreVersion)
 			admin.GET("/admin/media", growthCtrl.ListMedia)
 			admin.POST("/admin/media", growthCtrl.UploadMedia)
+			admin.GET("/admin/media/:id/references", growthCtrl.MediaReferences)
 			admin.DELETE("/admin/media/:id", growthCtrl.DeleteMedia)
 			admin.GET("/admin/analytics", growthCtrl.Analytics)
 			admin.GET("/admin/categories", contentCtrl.ListCategories)

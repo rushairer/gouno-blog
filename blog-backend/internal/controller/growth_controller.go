@@ -179,6 +179,19 @@ func (ctrl *GrowthController) DeleteMedia(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }
 
+func (ctrl *GrowthController) MediaReferences(c *gin.Context) {
+	id, ok := positiveID(c, "id")
+	if !ok {
+		return
+	}
+	items, err := ctrl.growth.ListMediaReferences(c.Request.Context(), id)
+	if err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
+}
+
 func (ctrl *GrowthController) Analytics(c *gin.Context) {
 	summary, err := ctrl.growth.AnalyticsSummary(c.Request.Context())
 	if err != nil {
