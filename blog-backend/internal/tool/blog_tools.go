@@ -65,6 +65,11 @@ func NewBlogRegistry(posts *service.PostService, community *service.CommunitySer
 			Risk:       domain.ToolRiskRead, Execute: tools.findRelatedContent,
 		},
 		Definition{
+			Name: "content.list_stale_posts", Description: "List published posts that have not been updated for a chosen number of days.",
+			Parameters: schema(`{"older_than_days":{"type":"integer","minimum":1,"maximum":3650},"limit":{"type":"integer","minimum":1,"maximum":100}}`),
+			Risk:       domain.ToolRiskRead, Execute: tools.findStalePosts,
+		},
+		Definition{
 			Name: "comments.list_pending", Description: "List pending or reported comments for moderation insight.",
 			Parameters: schema(`{"reported_only":{"type":"boolean"},"limit":{"type":"integer","minimum":1,"maximum":100}}`),
 			Risk:       domain.ToolRiskRead, Execute: tools.listPendingComments,

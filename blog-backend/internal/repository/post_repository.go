@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/lib/pq"
 	"github.com/rushairer/blog-backend/internal/domain"
@@ -269,6 +270,29 @@ func (r *PostRepository) SearchPublished(ctx context.Context, query string, limi
 		results = append(results, result)
 	}
 	return results, rows.Err()
+}
+
+func (r *PostRepository) ListStalePublished(ctx context.Context, updatedBefore time.Time, limit int) ([]*domain.Post, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT id, title, slug, summary, content, tags, category_id,
+		COALESCE(cover_url, ''), COALESCE(cover_alt, ''), COALESCE(seo_title, ''), COALESCE(seo_description, ''),
+		status, views_count, likes_count, published_at, scheduled_at, created_at, updated_at
+		FROM posts WHERE status = 'published' AND updated_at < $1
+		ORDER BY updated_at ASC LIMIT $2`, updatedBefore, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	posts := make([]*domain.Post, 0)
+	for rows.Next() {
+		var post domain.Post
+		if err := rows.Scan(&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID,
+			&post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount,
+			&post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt); err != nil {
+			return nil, err
+		}
+		posts = append(posts, &post)
+	}
+	return posts, rows.Err()
 }
 
 func (r *PostRepository) PublishScheduled(ctx context.Context) (int64, error) {

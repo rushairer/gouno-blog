@@ -303,7 +303,7 @@ func Presets() []Preset {
 			Description:  "检查旧内容、摘要、标签和内容结构，并生成待审批修改建议。",
 			SystemPrompt: "巡检博客内容质量。先列出文章，再读取需要检查的文章。识别缺失摘要、过时表述、标签问题和内容结构问题。只有证据充分时才创建更新或标签提案。",
 			TriggerType:  domain.AgentTriggerCron, CronExpression: "0 10 * * 2", Timezone: "Asia/Shanghai",
-			Capabilities:  []string{"content.list_posts", "content.get_post", "content.search_posts", "content.list_tags", "content.check_links", "content.propose_update", "content.propose_tags", "content.propose_task"},
+			Capabilities:  []string{"content.list_posts", "content.list_stale_posts", "content.get_post", "content.search_posts", "content.list_tags", "content.check_links", "content.propose_update", "content.propose_tags", "content.propose_task"},
 			ExecutionMode: domain.AgentModeApproval,
 		},
 		{

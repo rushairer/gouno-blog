@@ -29,6 +29,7 @@ type PostRepository interface {
 	List(ctx context.Context, tag, search string, limit, offset int) ([]*domain.Post, int, error)
 	ListAdmin(ctx context.Context, filter domain.AdminPostFilter, limit, offset int) ([]*domain.Post, int, error)
 	SearchPublished(ctx context.Context, query string, limit int) ([]domain.PostSearchResult, error)
+	ListStalePublished(ctx context.Context, updatedBefore time.Time, limit int) ([]*domain.Post, error)
 	ListTags(ctx context.Context) ([]string, error)
 	PublishScheduled(ctx context.Context) (int64, error)
 	CreateComment(ctx context.Context, comment *domain.Comment) error
@@ -276,6 +277,19 @@ func (s *PostService) SearchPublishedPosts(ctx context.Context, query string, li
 		limit = 20
 	}
 	return s.repo.SearchPublished(ctx, query, limit)
+}
+
+func (s *PostService) ListStalePublishedPosts(ctx context.Context, staleFor time.Duration, limit int) ([]*domain.Post, error) {
+	if staleFor < 24*time.Hour || staleFor > 10*365*24*time.Hour {
+		return nil, errors.New("stale duration must be between 1 day and 10 years")
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	return s.repo.ListStalePublished(ctx, time.Now().UTC().Add(-staleFor), limit)
 }
 
 func (s *PostService) PublishScheduled(ctx context.Context) (int64, error) {

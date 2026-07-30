@@ -99,6 +99,16 @@ func (r *fakePostRepo) SearchPublished(_ context.Context, query string, limit in
 	return results, nil
 }
 
+func (r *fakePostRepo) ListStalePublished(_ context.Context, updatedBefore time.Time, limit int) ([]*domain.Post, error) {
+	posts := make([]*domain.Post, 0, limit)
+	for _, post := range r.posts {
+		if post.Status == domain.PostStatusPublished && post.UpdatedAt.Before(updatedBefore) {
+			posts = append(posts, post)
+		}
+	}
+	return posts, nil
+}
+
 func (r *fakePostRepo) PublishScheduled(context.Context) (int64, error) { return 0, nil }
 
 func (r *fakePostRepo) ListTags(context.Context) ([]string, error) {
@@ -218,6 +228,13 @@ func TestSearchPublishedPostsRejectsOversizedQuery(t *testing.T) {
 	_, err := NewPostService(newFakePostRepo()).SearchPublishedPosts(context.Background(), strings.Repeat("a", 501), 1)
 	if err == nil {
 		t.Fatal("expected oversized query to be rejected")
+	}
+}
+
+func TestListStalePublishedPostsValidatesDuration(t *testing.T) {
+	_, err := NewPostService(newFakePostRepo()).ListStalePublishedPosts(context.Background(), time.Hour, 1)
+	if err == nil {
+		t.Fatal("expected too-short stale duration to be rejected")
 	}
 }
 
