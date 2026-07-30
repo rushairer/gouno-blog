@@ -66,6 +66,9 @@ func (r *Runner) Queue(ctx context.Context, agentID int64, trigger domain.AgentT
 	if !value.Enabled {
 		return nil, fmt.Errorf("%w: agent is disabled", ErrInvalid)
 	}
+	if len(input) > value.MaxInputTokens*4 {
+		return nil, fmt.Errorf("%w: runtime input exceeds the agent input limit", ErrInvalid)
+	}
 	profile, err := r.management.GetProvider(ctx, value.ProviderProfileID)
 	if err != nil {
 		return nil, err
@@ -130,11 +133,24 @@ func (r *Runner) execute(ctx context.Context, runID int64) error {
 	hasApproval := false
 	finalText := ""
 	for step := 0; step < value.MaxSteps; step++ {
+		if approximateInputBytes(
+			platformInstructions+"\n\nAgent instructions:\n"+value.SystemPrompt, messages,
+		) > value.MaxInputTokens*4 {
+			return fmt.Errorf("%w: assembled model input exceeds the agent input limit", ErrInvalid)
+		}
+		usedTokens, err := r.repo.MonthlyTokenUsage(ctx, value.ID)
+		if err != nil {
+			return err
+		}
+		remainingTokens := value.MonthlyTokenBudget - usedTokens
+		if remainingTokens <= 0 {
+			return ErrTokenBudget
+		}
 		requestID := fmt.Sprintf("run_%d_step_%d_%d", run.ID, step+1, time.Now().UnixNano())
 		result, err := client.Generate(ctx, provider.Request{
 			Instructions: platformInstructions + "\n\nAgent instructions:\n" + value.SystemPrompt,
 			Messages:     messages, Tools: r.tools.Definitions(value.Capabilities),
-			MaxTokens: min(value.MaxOutputTokens, int(value.MonthlyTokenBudget-inputTokens-outputTokens)),
+			MaxTokens: min(value.MaxOutputTokens, int(remainingTokens)),
 		})
 		if err != nil {
 			return err
@@ -211,6 +227,17 @@ func (r *Runner) execute(ctx context.Context, runID int64) error {
 		status = domain.AgentRunAwaitingApproval
 	}
 	return r.repo.FinishRun(ctx, run.ID, status, finalText, inputTokens, outputTokens, nil, nil)
+}
+
+func approximateInputBytes(instructions string, messages []provider.Message) int {
+	total := len(instructions)
+	for _, message := range messages {
+		total += len(message.Role) + len(message.Content) + len(message.ToolCallID)
+		for _, call := range message.ToolCalls {
+			total += len(call.ID) + len(call.Name) + len(call.Arguments)
+		}
+	}
+	return total
 }
 
 func safeError(err error) string {

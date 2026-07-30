@@ -11,6 +11,8 @@ import (
 	"github.com/rushairer/blog-backend/internal/domain"
 )
 
+var ErrResourceInUse = errors.New("resource is in use")
+
 type AgentRepository struct {
 	db *sql.DB
 }
@@ -54,7 +56,7 @@ func (r *AgentRepository) UpdateProvider(ctx context.Context, profile *domain.Pr
 			name=$2, provider_type=$3, base_url=$4, model=$5, api_key_ciphertext=$6,
 			api_key_nonce=$7, api_key_last4=$8, key_version=$9, enabled=$10,
 			request_timeout_seconds=$11, max_output_tokens=$12, updated_at=NOW()
-			WHERE id=$1 RETURNING created_at, updated_at`,
+			WHERE id=$1 AND deleted_at IS NULL RETURNING created_at, updated_at`,
 			profile.ID, profile.Name, profile.ProviderType, profile.BaseURL, profile.Model,
 			profile.APIKeyCiphertext, profile.APIKeyNonce, profile.APIKeyLast4, profile.KeyVersion,
 			profile.Enabled, profile.RequestTimeoutSeconds, profile.MaxOutputTokens)
@@ -62,7 +64,8 @@ func (r *AgentRepository) UpdateProvider(ctx context.Context, profile *domain.Pr
 		row = r.db.QueryRowContext(ctx, `UPDATE ai_provider_profiles SET
 			name=$2, provider_type=$3, base_url=$4, model=$5, enabled=$6,
 			request_timeout_seconds=$7, max_output_tokens=$8, updated_at=NOW()
-			WHERE id=$1 RETURNING api_key_ciphertext, api_key_nonce, api_key_last4, key_version, created_at, updated_at`,
+			WHERE id=$1 AND deleted_at IS NULL
+			RETURNING api_key_ciphertext, api_key_nonce, api_key_last4, key_version, created_at, updated_at`,
 			profile.ID, profile.Name, profile.ProviderType, profile.BaseURL, profile.Model,
 			profile.Enabled, profile.RequestTimeoutSeconds, profile.MaxOutputTokens)
 		return row.Scan(
@@ -74,11 +77,13 @@ func (r *AgentRepository) UpdateProvider(ctx context.Context, profile *domain.Pr
 }
 
 func (r *AgentRepository) GetProvider(ctx context.Context, id int64) (*domain.ProviderProfile, error) {
-	return scanProvider(r.db.QueryRowContext(ctx, `SELECT `+providerColumns+` FROM ai_provider_profiles WHERE id=$1`, id))
+	return scanProvider(r.db.QueryRowContext(ctx, `SELECT `+providerColumns+`
+		FROM ai_provider_profiles WHERE id=$1 AND deleted_at IS NULL`, id))
 }
 
 func (r *AgentRepository) ListProviders(ctx context.Context) ([]*domain.ProviderProfile, error) {
-	rows, err := r.db.QueryContext(ctx, `SELECT `+providerColumns+` FROM ai_provider_profiles ORDER BY name`)
+	rows, err := r.db.QueryContext(ctx, `SELECT `+providerColumns+`
+		FROM ai_provider_profiles WHERE deleted_at IS NULL ORDER BY name`)
 	if err != nil {
 		return nil, err
 	}
@@ -95,11 +100,26 @@ func (r *AgentRepository) ListProviders(ctx context.Context) ([]*domain.Provider
 }
 
 func (r *AgentRepository) DeleteProvider(ctx context.Context, id int64) error {
-	result, err := r.db.ExecContext(ctx, `DELETE FROM ai_provider_profiles WHERE id=$1`, id)
+	result, err := r.db.ExecContext(ctx, `UPDATE ai_provider_profiles p
+		SET enabled=false, deleted_at=NOW(), updated_at=NOW()
+		WHERE p.id=$1 AND p.deleted_at IS NULL
+		AND NOT EXISTS (
+			SELECT 1 FROM ai_agents a
+			WHERE a.provider_profile_id=p.id AND a.deleted_at IS NULL
+		)`, id)
 	if err != nil {
 		return err
 	}
 	if affected, _ := result.RowsAffected(); affected == 0 {
+		var exists bool
+		if err := r.db.QueryRowContext(ctx, `SELECT EXISTS (
+			SELECT 1 FROM ai_provider_profiles WHERE id=$1 AND deleted_at IS NULL
+		)`, id).Scan(&exists); err != nil {
+			return err
+		}
+		if exists {
+			return ErrResourceInUse
+		}
 		return sql.ErrNoRows
 	}
 	return nil

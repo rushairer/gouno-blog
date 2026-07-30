@@ -49,3 +49,44 @@ func TestKeyValidationAndLast4(t *testing.T) {
 		t.Fatalf("Last4 = %q", got)
 	}
 }
+
+func TestKeyringDecryptsPreviousVersionDuringRotation(t *testing.T) {
+	original, err := NewKeyring(testKey('a'), "1", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ciphertext, nonce, err := original.Encrypt("rotating-secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rotated, err := NewKeyring(testKey('b'), "2", "1:"+testKey('a'))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rotated.KeyVersion() != 2 {
+		t.Fatalf("version = %d", rotated.KeyVersion())
+	}
+	plaintext, err := rotated.Decrypt(ciphertext, nonce, 1)
+	if err != nil || plaintext != "rotating-secret" {
+		t.Fatalf("decrypt = %q, %v", plaintext, err)
+	}
+	newCiphertext, newNonce, err := rotated.Encrypt("new-secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := original.Decrypt(newCiphertext, newNonce, 2); err == nil {
+		t.Fatal("old keyring must not decrypt the new version")
+	}
+}
+
+func TestKeyringRejectsInvalidVersionConfiguration(t *testing.T) {
+	if _, err := NewKeyring(testKey('a'), "0", ""); err == nil {
+		t.Fatal("expected invalid current version")
+	}
+	if _, err := NewKeyring(testKey('a'), "2", "broken"); err == nil {
+		t.Fatal("expected malformed previous key entry")
+	}
+	if _, err := NewKeyring(testKey('a'), "2", "2:"+testKey('b')); err == nil {
+		t.Fatal("expected duplicate current version")
+	}
+}

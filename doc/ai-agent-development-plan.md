@@ -366,7 +366,7 @@ POST   /api/admin/agent-approvals/:id/reject
 
 ## 10. 分阶段实施
 
-### 阶段 0：技术基线与契约（1–2 人日）
+### 阶段 0：技术基线与契约（已完成）
 
 - 确认 Agent 状态机、Tool 风险等级和审批规则。
 - 设计 migration 和 OpenAPI 契约。
@@ -375,7 +375,7 @@ POST   /api/admin/agent-approvals/:id/reject
 
 验收：领域模型、数据库草图和 API 契约评审通过。
 
-### 阶段 1：Provider 层迁移（2–3 人日）
+### 阶段 1：Provider 层迁移（已完成）
 
 - 从 demo 迁入 Provider HTTP 安全实现和 OpenAI/Anthropic 适配器。
 - 将接口升级为 messages、tool definitions、tool calls 和 usage。
@@ -384,7 +384,7 @@ POST   /api/admin/agent-approvals/:id/reject
 
 验收：两个 Provider 均可完成普通文本和结构化 Tool Call；测试不依赖真实密钥。
 
-### 阶段 2：持久化与管理 API（3–4 人日）
+### 阶段 2：持久化与管理 API（已完成）
 
 - 新增 Provider Profile、Agent、Run、Tool Call、Approval、Usage migrations。
 - 实现 API Key 加密写入、内存解密、掩码读取和密钥版本字段。
@@ -394,7 +394,7 @@ POST   /api/admin/agent-approvals/:id/reject
 
 验收：管理员可通过 UI/API 完整配置 Provider 和 Agent；非管理员无法访问；敏感密钥不以明文进入 API 响应、数据库或日志。
 
-### 阶段 3：Tool Runtime 与 Runner（4–5 人日）
+### 阶段 3：Tool Runtime 与 Runner（已完成）
 
 - 实现 Tool Registry、Schema 校验、能力授权和结果裁剪。
 - 接入首批只读 Tool。
@@ -404,7 +404,7 @@ POST   /api/admin/agent-approvals/:id/reject
 
 验收：未授权工具无法执行；所有写操作只能形成审批；批准后通过现有 Blog Service 执行并产生文章版本。
 
-### 阶段 4：Scheduler（2–3 人日）
+### 阶段 4：Scheduler（已完成）
 
 - 使用成熟 Cron 库解析表达式。
 - 计算和持久化 `next_run_at`。
@@ -413,7 +413,7 @@ POST   /api/admin/agent-approvals/:id/reject
 
 验收：相同调度窗口只执行一次；失败可追踪；停用 Agent 不再触发。
 
-### 阶段 5：React 管理后台（4–5 人日）
+### 阶段 5：React 管理后台（已完成）
 
 - Agent 列表与编辑器。
 - Provider Profile 管理和连接测试。
@@ -423,7 +423,7 @@ POST   /api/admin/agent-approvals/:id/reject
 
 验收：管理员无需修改 YAML 即可完成 Agent 创建、试运行、查看结果和批准提案。
 
-### 阶段 6：预置 Agent、可观测性与加固（3–4 人日）
+### 阶段 6：预置 Agent、可观测性与加固（已完成）
 
 - Seed 三个预置 Agent。
 - 运行指标、结构化元数据日志和告警点。
@@ -461,7 +461,7 @@ POST   /api/admin/agent-approvals/:id/reject
 
 ## 12. 发布与回滚
 
-- 使用功能开关 `BLOG_AGENT_ENABLED`，默认关闭。
+- 使用功能开关 `GOUNO_AI_AGENTS_ENABLED`，生产配置默认关闭；本地 Compose 默认开启。
 - 生产环境启用 Agent 时强制要求 `BLOG_AGENT_MASTER_KEY`，缺失或长度不合格则启动失败。
 - migration 只新增表和索引，不修改现有文章/评论表的核心语义。
 - 首次上线只开放管理员手动运行和只读能力。
@@ -478,6 +478,6 @@ POST   /api/admin/agent-approvals/:id/reject
 - Agent 的能力由白名单控制，未授权 Tool 无法执行。
 - 所有 Blog 写操作均进入审批，没有模型直接发布/删除路径。
 - 每次运行有状态、耗时、Tool Call、token 用量和错误记录。
-- 三个预置 Agent 可在本地 compose 环境运行。
+- 三个预置模板可在本地 Compose 中选择 Provider 后创建并运行；真实模型调用需要管理员配置自己的 Provider API Key。
 - Provider 密钥只加密入库，不以明文回传或写日志，并支持主密钥版本轮换。
 - 重复调度、越权、SSRF 和审批冲突具备自动化测试。

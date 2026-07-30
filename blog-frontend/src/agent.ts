@@ -105,13 +105,12 @@ export interface AgentPreset {
   execution_mode: ExecutionMode;
 }
 
-export const emptyProvider: Omit<ProviderProfile, 'id' | 'created_at' | 'updated_at' | 'has_api_key'> & { api_key: string } = {
+export const emptyProvider: Omit<ProviderProfile, 'id' | 'created_at' | 'updated_at' | 'has_api_key' | 'api_key_last4'> & { api_key: string } = {
   name: '',
   provider_type: 'openai',
   base_url: 'https://api.openai.com',
   model: '',
   api_key: '',
-  api_key_last4: '',
   enabled: true,
   request_timeout_seconds: 60,
   max_output_tokens: 2000,

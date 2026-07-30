@@ -4,10 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	agentservice "github.com/rushairer/blog-backend/internal/agent"
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/tool"
@@ -60,7 +63,7 @@ func (ctrl *AgentController) UpdateProvider(c *gin.Context) {
 
 func (ctrl *AgentController) saveProvider(c *gin.Context, id int64) {
 	var req providerRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := bindAgentJSON(c, &req); err != nil {
 		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
 		return
 	}
@@ -141,7 +144,7 @@ func (ctrl *AgentController) UpdateAgent(c *gin.Context) {
 
 func (ctrl *AgentController) saveAgent(c *gin.Context, id int64) {
 	var value domain.Agent
-	if err := c.ShouldBindJSON(&value); err != nil {
+	if err := bindAgentJSON(c, &value); err != nil {
 		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
 		return
 	}
@@ -220,7 +223,7 @@ func (ctrl *AgentController) RunAgent(c *gin.Context) {
 		var request struct {
 			Input json.RawMessage `json:"input"`
 		}
-		if err := c.ShouldBindJSON(&request); err != nil {
+		if err := bindAgentJSON(c, &request); err != nil {
 			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
 			return
 		}
@@ -316,7 +319,7 @@ func (ctrl *AgentController) reviewApproval(c *gin.Context, approve bool) {
 	}
 	var req approvalReviewRequest
 	if c.Request.ContentLength > 0 {
-		if err := c.ShouldBindJSON(&req); err != nil {
+		if err := bindAgentJSON(c, &req); err != nil {
 			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
 			return
 		}
@@ -334,6 +337,18 @@ func (ctrl *AgentController) reviewApproval(c *gin.Context, approve bool) {
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
+}
+
+func bindAgentJSON(c *gin.Context, value any) error {
+	decoder := json.NewDecoder(c.Request.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(value); err != nil {
+		return err
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		return fmt.Errorf("request body must contain one JSON object")
+	}
+	return binding.Validator.ValidateStruct(value)
 }
 
 func agentID(c *gin.Context) (int64, bool) {

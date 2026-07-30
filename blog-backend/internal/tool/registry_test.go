@@ -54,3 +54,34 @@ func TestRegistryRejectsInvalidJSON(t *testing.T) {
 		t.Fatalf("err = %v", err)
 	}
 }
+
+func TestBlogProposalToolsValidateArgumentsBeforeApproval(t *testing.T) {
+	registry := NewBlogRegistry(nil, nil, nil)
+	tests := []struct {
+		name string
+		args string
+	}{
+		{"content.propose_draft", `{"title":"Draft","content":"","unexpected":true}`},
+		{"comments.propose_reply", `{"comment_id":0,"content":"reply"}`},
+		{"content.propose_task", `{"title":"Task","description":"Do it","priority":"urgent"}`},
+	}
+	for _, test := range tests {
+		_, _, proposal, err := registry.Invoke(
+			context.Background(), []string{test.name}, test.name, json.RawMessage(test.args),
+		)
+		if !errors.Is(err, ErrInvalidArgument) || proposal != nil {
+			t.Fatalf("%s: proposal=%#v err=%v", test.name, proposal, err)
+		}
+	}
+}
+
+func TestReplyProposalCapturesTargetAndNormalizedPayload(t *testing.T) {
+	registry := NewBlogRegistry(nil, nil, nil)
+	_, _, proposal, err := registry.Invoke(
+		context.Background(), []string{"comments.propose_reply"},
+		"comments.propose_reply", json.RawMessage(`{"comment_id":42,"content":"Thanks"}`),
+	)
+	if err != nil || proposal == nil || proposal.TargetID == nil || *proposal.TargetID != 42 {
+		t.Fatalf("proposal=%#v err=%v", proposal, err)
+	}
+}

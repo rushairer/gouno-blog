@@ -15,8 +15,8 @@
   - `/identity-admin/` -> **gosso-admin-frontend** (GOSSO 身份管理控制台)
   - `/api/v1/`、`/oauth2/`、`/oidc/`、`/.well-known/` -> **gosso**
 * **GOSSO / OIDC Provider**：负责登录、授权码流程、Token 签发、MFA、Passkey 等身份能力；本地默认使用 `ghcr.io/rushairer/gosso` 镜像。
-* **blog-backend**：博客 API 后端，使用 `gouno` Web 框架开发，向身份服务拉取 JWKS 公钥并校验登录凭证与用户权限。
-* **blog-frontend**：基于 React 构建的单页面应用（SPA），提供门户展示与 `/admin` 博客管理控制台。
+* **blog-backend**：博客 API 后端，使用 `gouno` Web 框架开发，向身份服务拉取 JWKS 公钥并校验登录凭证与用户权限；内置受控 AI Agent Runner、Cron Scheduler、Blog Tools 与人工审批。
+* **blog-frontend**：基于 React 构建的单页面应用（SPA），提供门户展示、`/admin` 博客管理控制台和 `/admin/agents` AI Agent 控制台。
 
 ---
 
@@ -105,6 +105,7 @@ docker compose -f docker-compose.yml -f docker-compose.source.yml up -d --build
 ### 4. 访问测试
 - 打开浏览器访问门户：[http://localhost:8080/](http://localhost:8080/)
 - 访问博客后台管理（触发 SSO 登录流）：[http://localhost:8080/admin](http://localhost:8080/admin)
+- 访问 AI Agent 控制台：[http://localhost:8080/admin/agents](http://localhost:8080/admin/agents)
 - 访问 GOSSO 身份管理控制台：[http://localhost:8080/identity-admin](http://localhost:8080/identity-admin)
 - 访问 API Swagger 文档：[http://localhost:8080/swagger](http://localhost:8080/swagger)
 - 使用本地默认管理员账户登录：
@@ -145,7 +146,39 @@ export SSO_CLIENT_ID=blog-spa
 - 文章每次内容变更都会自动保留数据库快照，后台最多展示最近 50 个版本并支持恢复。恢复前的当前版本也会被保留。
 - 可用 `BLOG_MEDIA_DIR` 修改媒体存储目录；当前默认使用本地文件系统，后续可在不改变 API 的情况下替换为对象存储。
 
-### 9. 多架构与 ARM64 支持
+### 9. AI Agent 博客运营
+
+后台将 Provider Profile 和 Agent 作为数据库资源管理，无需修改 YAML 即可配置：
+
+- Provider：支持 OpenAI Responses API 和 Anthropic Messages API；API Key 使用 AES-256-GCM 加密落库，读取接口只返回是否已配置和尾号。
+- Agent：可选择 Provider、模型、手动或 Cron 周期、IANA 时区、Blog Tool 能力、执行步数、每日运行上限和月度 token 预算。
+- 运行中心：记录运行状态、输出摘要、模型、token 用量和每次 Tool Call。
+- 审批箱：所有文章、标签和评论回复变更只能形成提案；管理员批准后才通过现有 Blog Service 执行。模型没有直接发布或删除路径。
+- 模板：内置“每周运营报告”“内容健康巡检”“评论洞察与回复草稿”三个可复制模板。
+
+本地 Compose 默认启用模块，并使用仅供开发的固定主密钥。生产部署应生成独立密钥并显式启用：
+
+```bash
+export BLOG_AGENT_MASTER_KEY="$(openssl rand -base64 32)"
+export GOUNO_AI_AGENTS_ENABLED=true
+docker compose up -d
+```
+
+`BLOG_AGENT_MASTER_KEY` 解码后必须恰好为 32 字节。生产配置默认关闭 Agent，且启用时缺少有效主密钥会拒绝启动。主密钥轮换时，提升 `BLOG_AGENT_MASTER_KEY_VERSION`，并暂时通过 `BLOG_AGENT_PREVIOUS_MASTER_KEYS` 保留旧版本：
+
+```bash
+export BLOG_AGENT_MASTER_KEY_VERSION=2
+export BLOG_AGENT_MASTER_KEY="<new-base64-key>"
+export BLOG_AGENT_PREVIOUS_MASTER_KEYS="1:<old-base64-key>"
+```
+
+旧密钥只用于解密旧记录，新保存的 Provider Key 会使用当前版本。管理员重新保存所有 Provider 凭据后即可移除旧密钥；丢失仍在使用的旧密钥会导致对应 Provider 无法运行。
+
+允许访问的 Provider 主机由后端 `ai_agents.allowed_upstream_hosts` 配置控制，默认只有 `api.openai.com` 和 `api.anthropic.com`。非 HTTPS、自带用户信息、内网地址、未列入允许名单的 URL 和上游重定向都会被拒绝。
+
+完整数据模型、工具权限和发布边界参见 [AI Agent 开发计划](./doc/ai-agent-development-plan.md)；管理 API 可在 Swagger 的 `/admin/provider-profiles`、`/admin/agents`、`/admin/agent-runs` 和 `/admin/agent-approvals` 下查看。
+
+### 10. 多架构与 ARM64 支持
 
 为了支持在不同处理器架构（包括 Apple Silicon M1/M2/M3 等 ARM 设备）下流畅开发：
 - **Docker Compose 配置**：在 `docker-compose.yml` 中，各服务的 platform 已经被明确配置，以防止在 ARM 架构设备上启动时产生不兼容的警告信息。

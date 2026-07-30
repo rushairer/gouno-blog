@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Added database-backed OpenAI and Anthropic Provider Profile management with encrypted API keys.
+- Added versioned Provider secret keyrings for online master-key rotation.
+- Added configurable AI Agents, Blog Tool capability controls, manual and Cron runs, usage budgets, run history, and approval-only content proposals.
+- Added the AI Agent management console and three built-in blog operations templates.
+
+### Security
+
+- Restricted Provider upstreams to configured hosts, rejected unsafe URLs and redirects, and kept Provider secrets out of API responses and run logs.
+- Required all Agent content changes to pass through conflict-aware human approval.
+
 ## [1.0.1] - 2026-06-13
 
 ### Changed

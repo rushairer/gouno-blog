@@ -76,16 +76,26 @@ export function AgentForm({
       <Field label={labels.instructions}><textarea className="input-field mono" rows={8} required value={value.system_prompt} onChange={(event) => setValue((current) => ({ ...current, system_prompt: event.target.value }))} /></Field>
       <div className="split-grid">
         <Field label={labels.trigger}><select className="input-field" value={value.trigger_type} onChange={(event) => setValue((current) => ({ ...current, trigger_type: event.target.value as TriggerType }))}><option value="manual">{labels.manual}</option><option value="cron">Cron</option></select></Field>
-        <Field label={labels.mode}><select className="input-field" value={value.execution_mode} onChange={(event) => setValue((current) => ({ ...current, execution_mode: event.target.value as ExecutionMode }))}><option value="advisory">{labels.advisory}</option><option value="approval">{labels.approvalMode}</option></select></Field>
+        <Field label={labels.mode}><select className="input-field" value={value.execution_mode} onChange={(event) => {
+          const executionMode = event.target.value as ExecutionMode;
+          setValue((current) => ({
+            ...current,
+            execution_mode: executionMode,
+            capabilities: executionMode === 'advisory'
+              ? current.capabilities.filter((name) => tools.find((item) => item.name === name)?.risk_level === 'read')
+              : current.capabilities,
+          }));
+        }}><option value="advisory">{labels.advisory}</option><option value="approval">{labels.approvalMode}</option></select></Field>
       </div>
       {value.trigger_type === 'cron' ? <div className="split-grid"><Field label={labels.cron}><input className="input-field mono" required placeholder="0 9 * * 1" value={value.cron_expression || ''} onChange={(event) => setValue((current) => ({ ...current, cron_expression: event.target.value }))} /></Field><Field label={labels.timezone}><input className="input-field mono" required value={value.timezone} onChange={(event) => setValue((current) => ({ ...current, timezone: event.target.value }))} /></Field></div> : null}
       <fieldset className="agent-capabilities">
         <legend>{labels.capabilities}</legend>
-        {groupedTools.map(([group, items]) => <div key={group} className="agent-capability-group"><strong>{group}</strong>{items.map((item) => <label key={item.name}><input type="checkbox" checked={value.capabilities.includes(item.name)} onChange={(event) => setValue((current) => ({ ...current, capabilities: event.target.checked ? [...current.capabilities, item.name] : current.capabilities.filter((name) => name !== item.name) }))} /><span><b>{item.name}</b><small>{item.description}</small></span><em className={`risk-label risk-label--${item.risk_level}`}>{item.risk_level}</em></label>)}</div>)}
+        {groupedTools.map(([group, items]) => <div key={group} className="agent-capability-group"><strong>{group}</strong>{items.map((item) => <label key={item.name}><input type="checkbox" disabled={value.execution_mode === 'advisory' && item.risk_level !== 'read'} checked={value.capabilities.includes(item.name)} onChange={(event) => setValue((current) => ({ ...current, capabilities: event.target.checked ? [...current.capabilities, item.name] : current.capabilities.filter((name) => name !== item.name) }))} /><span><b>{item.name}</b><small>{item.description}</small></span><em className={`risk-label risk-label--${item.risk_level}`}>{item.risk_level}</em></label>)}</div>)}
       </fieldset>
       <div className="agent-limit-grid">
         <Field label={labels.maxSteps}><input className="input-field" type="number" min="1" max="20" value={value.max_steps} onChange={(event) => setValue((current) => ({ ...current, max_steps: Number(event.target.value) }))} /></Field>
         <Field label={labels.dailyRuns}><input className="input-field" type="number" min="1" value={value.daily_run_limit} onChange={(event) => setValue((current) => ({ ...current, daily_run_limit: Number(event.target.value) }))} /></Field>
+        <Field label={labels.maxInput}><input className="input-field" type="number" min="1" value={value.max_input_tokens} onChange={(event) => setValue((current) => ({ ...current, max_input_tokens: Number(event.target.value) }))} /></Field>
         <Field label={labels.maxOutput}><input className="input-field" type="number" min="1" value={value.max_output_tokens} onChange={(event) => setValue((current) => ({ ...current, max_output_tokens: Number(event.target.value) }))} /></Field>
         <Field label={labels.monthlyBudget}><input className="input-field" type="number" min="1" value={value.monthly_token_budget} onChange={(event) => setValue((current) => ({ ...current, monthly_token_budget: Number(event.target.value) }))} /></Field>
       </div>

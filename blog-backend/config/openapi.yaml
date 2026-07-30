@@ -608,13 +608,372 @@ paths:
         '200':
           description: Aggregate counters, top posts, and a 14-day traffic series
 
+  /admin/provider-profiles:
+    get:
+      summary: List AI provider profiles
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Provider profiles with masked key metadata
+    post:
+      summary: Create an AI provider profile
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderProfileRequest'
+      responses:
+        '201':
+          description: Provider profile created
+        '400':
+          description: Invalid provider or upstream URL
+
+  /admin/provider-profiles/{id}:
+    put:
+      summary: Update an AI provider profile
+      description: Omit api_key to retain the existing encrypted secret.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ResourceID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderProfileRequest'
+      responses:
+        '200':
+          description: Provider profile updated
+    delete:
+      summary: Delete an unused AI provider profile
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ResourceID'
+      responses:
+        '200':
+          description: Provider profile deleted
+        '409':
+          description: Provider profile is used by an Agent
+
+  /admin/provider-profiles/{id}/test:
+    post:
+      summary: Test an AI provider connection
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ResourceID'
+      responses:
+        '200':
+          description: Connection succeeded and latency was recorded
+
+  /admin/agents:
+    get:
+      summary: List AI Agents
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Configured Agents
+    post:
+      summary: Create an AI Agent
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentRequest'
+      responses:
+        '201':
+          description: Agent created
+
+  /admin/agents/{id}:
+    get:
+      summary: Get one AI Agent
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ResourceID'
+      responses:
+        '200':
+          description: Agent configuration
+    put:
+      summary: Update an AI Agent
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ResourceID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentRequest'
+      responses:
+        '200':
+          description: Agent updated
+    delete:
+      summary: Soft-delete an AI Agent
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ResourceID'
+      responses:
+        '200':
+          description: Agent deleted
+
+  /admin/agents/{id}/enable:
+    post:
+      summary: Enable an AI Agent
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ResourceID'
+      responses:
+        '200':
+          description: Agent enabled and next run calculated
+
+  /admin/agents/{id}/disable:
+    post:
+      summary: Disable an AI Agent
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ResourceID'
+      responses:
+        '200':
+          description: Agent disabled
+
+  /admin/agents/{id}/run:
+    post:
+      summary: Queue an immediate AI Agent run
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ResourceID'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                input:
+                  type: object
+                  additionalProperties: true
+      responses:
+        '202':
+          description: Run queued
+        '409':
+          description: Run limit, token budget, or active-run conflict
+
+  /admin/agent-tools:
+    get:
+      summary: List Blog tools available to AI Agents
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Tool schemas and risk levels
+
+  /admin/agent-presets:
+    get:
+      summary: List built-in AI Agent templates
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Weekly operations, content health, and comment insight templates
+
+  /admin/agent-runs:
+    get:
+      summary: List AI Agent runs
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: agent_id
+          in: query
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+      responses:
+        '200':
+          description: Paginated run history
+
+  /admin/agent-runs/{id}:
+    get:
+      summary: Get an AI Agent run and its tool-call timeline
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ResourceID'
+      responses:
+        '200':
+          description: Run and tool calls
+
+  /admin/agent-approvals:
+    get:
+      summary: List AI Agent approvals
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            default: pending
+            enum: [pending, approved, rejected, expired, executed, failed]
+      responses:
+        '200':
+          description: Paginated approval queue
+
+  /admin/agent-approvals/{id}/approve:
+    post:
+      summary: Approve and execute an AI Agent proposal
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ResourceID'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalReviewRequest'
+      responses:
+        '200':
+          description: Proposal approved and executed
+        '409':
+          description: Proposal expired or target changed after proposal
+
+  /admin/agent-approvals/{id}/reject:
+    post:
+      summary: Reject an AI Agent proposal
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ResourceID'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalReviewRequest'
+      responses:
+        '200':
+          description: Proposal rejected
+
 components:
+  parameters:
+    ResourceID:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
   securitySchemes:
     BearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    ProviderProfileRequest:
+      type: object
+      required: [name, provider_type, base_url, model]
+      properties:
+        name:
+          type: string
+        provider_type:
+          type: string
+          enum: [openai, anthropic]
+        base_url:
+          type: string
+          format: uri
+        model:
+          type: string
+        api_key:
+          type: string
+          format: password
+          writeOnly: true
+          description: Required on create; omit on update to retain the encrypted key.
+        enabled:
+          type: boolean
+        request_timeout_seconds:
+          type: integer
+          minimum: 1
+          maximum: 600
+        max_output_tokens:
+          type: integer
+          minimum: 1
+          maximum: 100000
+    AgentRequest:
+      type: object
+      required: [name, system_prompt, provider_profile_id, capabilities]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        system_prompt:
+          type: string
+        provider_profile_id:
+          type: integer
+        enabled:
+          type: boolean
+        trigger_type:
+          type: string
+          enum: [manual, cron]
+        cron_expression:
+          type: string
+          nullable: true
+        timezone:
+          type: string
+          example: Asia/Shanghai
+        capabilities:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+        execution_mode:
+          type: string
+          enum: [advisory, approval]
+        max_steps:
+          type: integer
+          minimum: 1
+          maximum: 20
+        max_input_tokens:
+          type: integer
+          minimum: 1
+        max_output_tokens:
+          type: integer
+          minimum: 1
+        daily_run_limit:
+          type: integer
+          minimum: 1
+        monthly_token_budget:
+          type: integer
+          format: int64
+          minimum: 1
+    ApprovalReviewRequest:
+      type: object
+      properties:
+        note:
+          type: string
     Post:
       type: object
       properties:

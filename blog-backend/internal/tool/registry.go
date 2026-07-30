@@ -121,3 +121,23 @@ func (r *Registry) Catalog() []CatalogItem {
 	})
 	return result
 }
+
+func (r *Registry) Names() []string {
+	result := make([]string, 0, len(r.definitions))
+	for name := range r.definitions {
+		result = append(result, name)
+	}
+	slices.Sort(result)
+	return result
+}
+
+func (r *Registry) ProposalNames() []string {
+	result := make([]string, 0)
+	for name, definition := range r.definitions {
+		if definition.Risk == domain.ToolRiskPropose {
+			result = append(result, name)
+		}
+	}
+	slices.Sort(result)
+	return result
+}

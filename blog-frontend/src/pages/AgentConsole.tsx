@@ -27,7 +27,7 @@ const copy = {
     instructions: 'Agent instructions', trigger: 'Trigger', manual: 'Manual', mode: 'Execution mode',
     advisory: 'Advisory only', approvalMode: 'Create approval proposals', cron: 'Cron expression',
     timezone: 'Timezone', capabilities: 'Authorized capabilities', maxSteps: 'Maximum steps',
-    dailyRuns: 'Daily run limit', maxOutput: 'Max output tokens', monthlyBudget: 'Monthly token budget',
+    dailyRuns: 'Daily run limit', maxInput: 'Max input tokens', maxOutput: 'Max output tokens', monthlyBudget: 'Monthly token budget',
     enableAgent: 'Enable this Agent', saveAgent: 'Save Agent', saving: 'Saving…', cancel: 'Cancel',
     startPreset: 'Start from a preset', blankAgent: 'Blank Agent', status: 'Status', schedule: 'Schedule',
     lastRun: 'Last run', nextRun: 'Next run', actions: 'Actions', active: 'Active', paused: 'Paused',
@@ -54,7 +54,7 @@ const copy = {
     instructions: 'Agent 指令', trigger: '触发方式', manual: '手动执行', mode: '执行模式',
     advisory: '仅分析建议', approvalMode: '生成审批提案', cron: 'Cron 表达式',
     timezone: '时区', capabilities: '授权能力', maxSteps: '最大执行步数',
-    dailyRuns: '每日运行上限', maxOutput: '最大输出 Token', monthlyBudget: '每月 Token 预算',
+    dailyRuns: '每日运行上限', maxInput: '最大输入 Token', maxOutput: '最大输出 Token', monthlyBudget: '每月 Token 预算',
     enableAgent: '启用此 Agent', saveAgent: '保存 Agent', saving: '保存中…', cancel: '取消',
     startPreset: '使用预置模板', blankAgent: '空白 Agent', status: '状态', schedule: '执行周期',
     lastRun: '上次运行', nextRun: '下次运行', actions: '操作', active: '运行中', paused: '已暂停',
@@ -156,25 +156,35 @@ export default function AgentConsole() {
   };
 
   const saveProvider = async (value: ProviderFormValue) => {
-    const response = await apiFetch(value.id ? `/api/admin/provider-profiles/${value.id}` : '/api/admin/provider-profiles', {
-      method: value.id ? 'PUT' : 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(value),
-    });
-    await readData<ProviderProfile>(response);
-    setEditingProvider(null);
-    await refresh();
+    setError('');
+    try {
+      const response = await apiFetch(value.id ? `/api/admin/provider-profiles/${value.id}` : '/api/admin/provider-profiles', {
+        method: value.id ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(value),
+      });
+      await readData<ProviderProfile>(response);
+      setEditingProvider(null);
+      await refresh();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : labels.requestFailed);
+    }
   };
 
   const saveAgent = async (value: Omit<Agent, 'id' | 'created_at' | 'updated_at'> & { id?: number }) => {
-    const response = await apiFetch(value.id ? `/api/admin/agents/${value.id}` : '/api/admin/agents', {
-      method: value.id ? 'PUT' : 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(value),
-    });
-    await readData<Agent>(response);
-    setEditingAgent(null);
-    await refresh();
+    setError('');
+    try {
+      const response = await apiFetch(value.id ? `/api/admin/agents/${value.id}` : '/api/admin/agents', {
+        method: value.id ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(value),
+      });
+      await readData<Agent>(response);
+      setEditingAgent(null);
+      await refresh();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : labels.requestFailed);
+    }
   };
 
   const mutate = async (path: string, method = 'POST', body?: unknown) => {

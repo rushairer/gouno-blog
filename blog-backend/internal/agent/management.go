@@ -25,13 +25,18 @@ var (
 )
 
 type ManagementService struct {
-	repo         *repository.AgentRepository
-	secrets      *secretbox.Box
-	allowedHosts []string
+	repo                 *repository.AgentRepository
+	secrets              *secretbox.Box
+	allowedHosts         []string
+	allowedCapabilities  []string
+	proposalCapabilities []string
 }
 
-func NewManagementService(repo *repository.AgentRepository, secrets *secretbox.Box, allowedHosts []string) *ManagementService {
-	return &ManagementService{repo: repo, secrets: secrets, allowedHosts: allowedHosts}
+func NewManagementService(repo *repository.AgentRepository, secrets *secretbox.Box, allowedHosts, allowedCapabilities, proposalCapabilities []string) *ManagementService {
+	return &ManagementService{
+		repo: repo, secrets: secrets, allowedHosts: allowedHosts,
+		allowedCapabilities: allowedCapabilities, proposalCapabilities: proposalCapabilities,
+	}
 }
 
 func (s *ManagementService) ListProviders(ctx context.Context) ([]*domain.ProviderProfile, error) {
@@ -68,7 +73,7 @@ func (s *ManagementService) SaveProvider(ctx context.Context, profile *domain.Pr
 		profile.APIKeyCiphertext = ciphertext
 		profile.APIKeyNonce = nonce
 		profile.APIKeyLast4 = secretbox.Last4(apiKey)
-		profile.KeyVersion = secretbox.KeyVersion
+		profile.KeyVersion = s.secrets.KeyVersion()
 		profile.HasAPIKey = true
 	}
 	var err error
@@ -108,7 +113,7 @@ func (s *ManagementService) validateProvider(profile *domain.ProviderProfile) er
 
 func (s *ManagementService) DeleteProvider(ctx context.Context, id int64) error {
 	err := s.repo.DeleteProvider(ctx, id)
-	if repository.IsConstraintError(err) {
+	if errors.Is(err, repository.ErrResourceInUse) || repository.IsConstraintError(err) {
 		return ErrProviderInUse
 	}
 	return translateError(err)
@@ -185,7 +190,7 @@ func (s *ManagementService) SaveAgent(ctx context.Context, value *domain.Agent) 
 	if value.TriggerType == "" {
 		value.TriggerType = domain.AgentTriggerManual
 	}
-	if err := validateAgent(value); err != nil {
+	if err := s.validateAgent(value); err != nil {
 		return err
 	}
 	if _, err := time.LoadLocation(value.Timezone); err != nil {
@@ -208,7 +213,7 @@ func (s *ManagementService) SaveAgent(ctx context.Context, value *domain.Agent) 
 	return translateError(saveErr)
 }
 
-func validateAgent(value *domain.Agent) error {
+func (s *ManagementService) validateAgent(value *domain.Agent) error {
 	if value.Name == "" || value.SystemPrompt == "" || value.ProviderProfileID <= 0 {
 		return fmt.Errorf("%w: name, system prompt and provider are required", ErrInvalid)
 	}
@@ -233,6 +238,12 @@ func validateAgent(value *domain.Agent) error {
 	for _, capability := range value.Capabilities {
 		if strings.TrimSpace(capability) == "" {
 			return fmt.Errorf("%w: empty capability", ErrInvalid)
+		}
+		if !slices.Contains(s.allowedCapabilities, capability) {
+			return fmt.Errorf("%w: unknown capability %q", ErrInvalid, capability)
+		}
+		if value.ExecutionMode == domain.AgentModeAdvisory && slices.Contains(s.proposalCapabilities, capability) {
+			return fmt.Errorf("%w: advisory agents cannot use proposal capability %q", ErrInvalid, capability)
 		}
 		if _, exists := seen[capability]; exists {
 			return fmt.Errorf("%w: duplicate capability", ErrInvalid)
@@ -302,7 +313,7 @@ func Presets() []Preset {
 			Description:  "检查旧内容、摘要、标签和内容结构，并生成待审批修改建议。",
 			SystemPrompt: "巡检博客内容质量。先列出文章，再读取需要检查的文章。识别缺失摘要、过时表述、标签问题和内容结构问题。只有证据充分时才创建更新或标签提案。",
 			TriggerType:  domain.AgentTriggerCron, CronExpression: "0 10 * * 2", Timezone: "Asia/Shanghai",
-			Capabilities:  []string{"content.list_posts", "content.get_post", "content.search_posts", "content.list_tags", "content.propose_update", "content.propose_tags", "content.propose_task"},
+			Capabilities:  []string{"content.list_posts", "content.get_post", "content.search_posts", "content.list_tags", "content.check_links", "content.propose_update", "content.propose_tags", "content.propose_task"},
 			ExecutionMode: domain.AgentModeApproval,
 		},
 		{

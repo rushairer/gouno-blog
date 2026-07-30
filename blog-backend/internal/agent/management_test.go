@@ -45,3 +45,35 @@ func TestPresetsOnlyUseKnownExecutionModes(t *testing.T) {
 		}
 	}
 }
+
+func TestValidateAgentRejectsUnknownCapability(t *testing.T) {
+	service := NewManagementService(nil, nil, nil, []string{"content.list_posts"}, nil)
+	value := &domain.Agent{
+		Name: "test", SystemPrompt: "test", ProviderProfileID: 1,
+		TriggerType: domain.AgentTriggerManual, ExecutionMode: domain.AgentModeAdvisory,
+		MaxSteps: 1, MaxInputTokens: 100, MaxOutputTokens: 100,
+		DailyRunLimit: 1, MonthlyTokenBudget: 1000,
+		Capabilities: []string{"content.delete_post"},
+	}
+	if err := service.validateAgent(value); err == nil {
+		t.Fatal("expected unknown capability to be rejected")
+	}
+}
+
+func TestValidateAgentKeepsAdvisoryModeReadOnly(t *testing.T) {
+	service := NewManagementService(
+		nil, nil, nil,
+		[]string{"content.list_posts", "content.propose_update"},
+		[]string{"content.propose_update"},
+	)
+	value := &domain.Agent{
+		Name: "test", SystemPrompt: "test", ProviderProfileID: 1,
+		TriggerType: domain.AgentTriggerManual, ExecutionMode: domain.AgentModeAdvisory,
+		MaxSteps: 1, MaxInputTokens: 100, MaxOutputTokens: 100,
+		DailyRunLimit: 1, MonthlyTokenBudget: 1000,
+		Capabilities: []string{"content.propose_update"},
+	}
+	if err := service.validateAgent(value); err == nil {
+		t.Fatal("expected proposal capability to be rejected in advisory mode")
+	}
+}

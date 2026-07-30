@@ -125,7 +125,11 @@ func startWebServer(cmd *cobra.Command, args []string) {
 	}
 	var agentCtrl *controller.AgentController
 	if globalConfig.AIAgentConfig.Enabled {
-		secrets, err := secretbox.New(os.Getenv("BLOG_AGENT_MASTER_KEY"))
+		secrets, err := secretbox.NewKeyring(
+			os.Getenv("BLOG_AGENT_MASTER_KEY"),
+			os.Getenv("BLOG_AGENT_MASTER_KEY_VERSION"),
+			os.Getenv("BLOG_AGENT_PREVIOUS_MASTER_KEYS"),
+		)
 		if err != nil {
 			log.Fatalf("configure AI Agent secret encryption: %v", err)
 		}
@@ -134,8 +138,11 @@ func startWebServer(cmd *cobra.Command, args []string) {
 		postSvc := service.NewPostService(postRepo)
 		communitySvc := service.NewCommunityService(repository.NewCommunityRepository(db), postRepo)
 		growthSvc := service.NewGrowthService(repository.NewGrowthRepository(db))
-		management := agentservice.NewManagementService(agentRepo, secrets, globalConfig.AIAgentConfig.AllowedHosts)
 		toolRegistry := tool.NewBlogRegistry(postSvc, communitySvc, growthSvc)
+		management := agentservice.NewManagementService(
+			agentRepo, secrets, globalConfig.AIAgentConfig.AllowedHosts,
+			toolRegistry.Names(), toolRegistry.ProposalNames(),
+		)
 		runner := agentservice.NewRunner(agentRepo, management, toolRegistry)
 		approvals := agentservice.NewApprovalService(agentRepo, postSvc)
 		agentCtrl = controller.NewAgentController(management, runner, approvals, toolRegistry, ctx)

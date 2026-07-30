@@ -13,13 +13,17 @@ import (
 )
 
 type BlogTools struct {
-	posts     *service.PostService
-	community *service.CommunityService
-	growth    *service.GrowthService
+	posts      *service.PostService
+	community  *service.CommunityService
+	growth     *service.GrowthService
+	linkClient linkHTTPClient
 }
 
 func NewBlogRegistry(posts *service.PostService, community *service.CommunityService, growth *service.GrowthService) *Registry {
-	tools := &BlogTools{posts: posts, community: community, growth: growth}
+	tools := &BlogTools{
+		posts: posts, community: community, growth: growth,
+		linkClient: newSafeLinkClient(),
+	}
 	return New(
 		Definition{
 			Name: "content.list_posts", Description: "List blog posts, including drafts and scheduled posts.",
@@ -41,6 +45,11 @@ func NewBlogRegistry(posts *service.PostService, community *service.CommunitySer
 			Parameters: schema(`{}`), Risk: domain.ToolRiskRead, Execute: tools.listTags,
 		},
 		Definition{
+			Name: "content.check_links", Description: "Check public HTTP(S) links found in one post.",
+			Parameters: schema(`{"id":{"type":"integer","minimum":1}}`, "id"),
+			Risk:       domain.ToolRiskRead, Execute: tools.checkLinks,
+		},
+		Definition{
 			Name: "comments.list_pending", Description: "List pending or reported comments for moderation insight.",
 			Parameters: schema(`{"reported_only":{"type":"boolean"},"limit":{"type":"integer","minimum":1,"maximum":100}}`),
 			Risk:       domain.ToolRiskRead, Execute: tools.listPendingComments,
@@ -49,8 +58,11 @@ func NewBlogRegistry(posts *service.PostService, community *service.CommunitySer
 			Name: "analytics.get_summary", Description: "Read the current blog analytics summary.",
 			Parameters: schema(`{}`), Risk: domain.ToolRiskRead, Execute: tools.analyticsSummary,
 		},
-		proposalDefinition("content.propose_draft", "Create a new blog draft proposal.", "create_draft", "post", nil,
-			schema(`{"title":{"type":"string"},"slug":{"type":"string"},"summary":{"type":"string"},"content":{"type":"string"},"tags":{"type":"array","items":{"type":"string"}}}`, "title", "content")),
+		Definition{
+			Name: "content.propose_draft", Description: "Create a new blog draft proposal.",
+			Parameters: schema(`{"title":{"type":"string"},"slug":{"type":"string"},"summary":{"type":"string"},"content":{"type":"string"},"tags":{"type":"array","items":{"type":"string"}}}`, "title", "content"),
+			Risk:       domain.ToolRiskPropose, Propose: tools.proposeDraft,
+		},
 		Definition{
 			Name: "content.propose_update", Description: "Propose changes to an existing blog post.",
 			Parameters: schema(`{"id":{"type":"integer","minimum":1},"title":{"type":"string"},"slug":{"type":"string"},"summary":{"type":"string"},"content":{"type":"string"},"tags":{"type":"array","items":{"type":"string"}}}`, "id"),
@@ -61,10 +73,16 @@ func NewBlogRegistry(posts *service.PostService, community *service.CommunitySer
 			Parameters: schema(`{"id":{"type":"integer","minimum":1},"tags":{"type":"array","items":{"type":"string"}}}`, "id", "tags"),
 			Risk:       domain.ToolRiskPropose, Propose: tools.proposeTags,
 		},
-		proposalDefinition("comments.propose_reply", "Create a reply draft for a comment.", "reply_comment", "comment", nil,
-			schema(`{"comment_id":{"type":"integer","minimum":1},"content":{"type":"string"}}`, "comment_id", "content")),
-		proposalDefinition("content.propose_task", "Create an editorial task proposal.", "create_editorial_task", "task", nil,
-			schema(`{"title":{"type":"string"},"description":{"type":"string"},"priority":{"type":"string"}}`, "title", "description")),
+		Definition{
+			Name: "comments.propose_reply", Description: "Create a reply draft for a comment.",
+			Parameters: schema(`{"comment_id":{"type":"integer","minimum":1},"content":{"type":"string"}}`, "comment_id", "content"),
+			Risk:       domain.ToolRiskPropose, Propose: tools.proposeReply,
+		},
+		Definition{
+			Name: "content.propose_task", Description: "Create an editorial task proposal.",
+			Parameters: schema(`{"title":{"type":"string"},"description":{"type":"string"},"priority":{"type":"string","enum":["low","medium","high"]}}`, "title", "description"),
+			Risk:       domain.ToolRiskPropose, Propose: tools.proposeTask,
+		},
 	)
 }
 
@@ -202,40 +220,84 @@ func (t *BlogTools) analyticsSummary(ctx context.Context, raw json.RawMessage) (
 	return t.growth.AnalyticsSummary(ctx)
 }
 
-func proposalDefinition(name, description, actionType, targetType string, targetID *int64, parameters json.RawMessage) Definition {
-	return Definition{
-		Name: name, Description: description, Parameters: parameters, Risk: domain.ToolRiskPropose,
-		Propose: func(_ context.Context, raw json.RawMessage) (*Proposal, error) {
-			var payload map[string]any
-			if err := decodeArguments(raw, &payload); err != nil {
-				return nil, err
-			}
-			return &Proposal{
-				ActionType: actionType, TargetType: targetType, TargetID: targetID, Payload: raw,
-			}, nil
-		},
+func (t *BlogTools) proposeDraft(_ context.Context, raw json.RawMessage) (*Proposal, error) {
+	var args struct {
+		Title   string   `json:"title"`
+		Slug    string   `json:"slug"`
+		Summary string   `json:"summary"`
+		Content string   `json:"content"`
+		Tags    []string `json:"tags"`
 	}
+	if err := decodeArguments(raw, &args); err != nil ||
+		strings.TrimSpace(args.Title) == "" || strings.TrimSpace(args.Content) == "" {
+		return nil, ErrInvalidArgument
+	}
+	payload, _ := json.Marshal(args)
+	return &Proposal{ActionType: "create_draft", TargetType: "post", Payload: payload}, nil
+}
+
+func (t *BlogTools) proposeReply(_ context.Context, raw json.RawMessage) (*Proposal, error) {
+	var args struct {
+		CommentID int64  `json:"comment_id"`
+		Content   string `json:"content"`
+	}
+	if err := decodeArguments(raw, &args); err != nil ||
+		args.CommentID <= 0 || strings.TrimSpace(args.Content) == "" {
+		return nil, ErrInvalidArgument
+	}
+	payload, _ := json.Marshal(args)
+	return &Proposal{
+		ActionType: "reply_comment", TargetType: "comment",
+		TargetID: &args.CommentID, Payload: payload,
+	}, nil
+}
+
+func (t *BlogTools) proposeTask(_ context.Context, raw json.RawMessage) (*Proposal, error) {
+	var args struct {
+		Title       string `json:"title"`
+		Description string `json:"description"`
+		Priority    string `json:"priority"`
+	}
+	if err := decodeArguments(raw, &args); err != nil ||
+		strings.TrimSpace(args.Title) == "" || strings.TrimSpace(args.Description) == "" {
+		return nil, ErrInvalidArgument
+	}
+	if args.Priority == "" {
+		args.Priority = "medium"
+	}
+	if args.Priority != "low" && args.Priority != "medium" && args.Priority != "high" {
+		return nil, ErrInvalidArgument
+	}
+	payload, _ := json.Marshal(args)
+	return &Proposal{ActionType: "create_editorial_task", TargetType: "task", Payload: payload}, nil
 }
 
 func (t *BlogTools) proposeUpdate(ctx context.Context, raw json.RawMessage) (*Proposal, error) {
 	var args struct {
-		ID int64 `json:"id"`
+		ID      int64     `json:"id"`
+		Title   *string   `json:"title"`
+		Slug    *string   `json:"slug"`
+		Summary *string   `json:"summary"`
+		Content *string   `json:"content"`
+		Tags    *[]string `json:"tags"`
 	}
-	var payload map[string]any
-	if err := json.Unmarshal(raw, &payload); err != nil {
+	if err := decodeArguments(raw, &args); err != nil || args.ID <= 0 {
 		return nil, ErrInvalidArgument
 	}
-	number, ok := payload["id"].(float64)
-	if !ok || number <= 0 {
+	if args.Title == nil && args.Slug == nil && args.Summary == nil && args.Content == nil && args.Tags == nil {
 		return nil, ErrInvalidArgument
 	}
-	args.ID = int64(number)
 	post, err := t.posts.GetPost(ctx, args.ID)
 	if err != nil {
 		return nil, err
 	}
-	delete(payload, "id")
-	clean, _ := json.Marshal(payload)
+	clean, _ := json.Marshal(struct {
+		Title   *string   `json:"title,omitempty"`
+		Slug    *string   `json:"slug,omitempty"`
+		Summary *string   `json:"summary,omitempty"`
+		Content *string   `json:"content,omitempty"`
+		Tags    *[]string `json:"tags,omitempty"`
+	}{args.Title, args.Slug, args.Summary, args.Content, args.Tags})
 	before, _ := json.Marshal(post)
 	return &Proposal{
 		ActionType: "update_post", TargetType: "post", TargetID: &args.ID,
