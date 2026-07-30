@@ -315,6 +315,79 @@ func (ctrl *AgentController) DeleteSkill(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }
 
+func (ctrl *AgentController) ListSkillVersions(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	items, err := ctrl.svc.ListSkillVersions(c.Request.Context(), id)
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
+}
+
+func (ctrl *AgentController) ExportSkill(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	item, err := ctrl.svc.GetSkill(c.Request.Context(), id)
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="skill-%d-v%d.json"`, item.ID, item.Version))
+	c.JSON(http.StatusOK, item)
+}
+
+func (ctrl *AgentController) ImportSkill(c *gin.Context) {
+	var item domain.AgentSkill
+	if err := bindAgentJSON(c, &item); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+	if subject, exists := c.Get("account_id"); exists {
+		if text, ok := subject.(string); ok && text != "" {
+			item.CreatedBy = &text
+		}
+	}
+	if err := ctrl.svc.ImportSkill(c.Request.Context(), &item); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, gouno.NewSuccessResponse(&item))
+}
+
+func (ctrl *AgentController) SaveAgentAsSkill(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	var req struct {
+		Name string `json:"name"`
+	}
+	if c.Request.ContentLength > 0 {
+		if err := bindAgentJSON(c, &req); err != nil {
+			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+			return
+		}
+	}
+	var subject *string
+	if raw, exists := c.Get("account_id"); exists {
+		if text, ok := raw.(string); ok && text != "" {
+			subject = &text
+		}
+	}
+	item, err := ctrl.svc.SaveAgentAsSkill(c.Request.Context(), id, req.Name, subject)
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, gouno.NewSuccessResponse(item))
+}
+
 func (ctrl *AgentController) GetAgent(c *gin.Context) {
 	id, ok := agentID(c)
 	if !ok {

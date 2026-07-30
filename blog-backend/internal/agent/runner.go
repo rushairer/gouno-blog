@@ -94,6 +94,7 @@ func (r *Runner) Queue(ctx context.Context, agentID int64, trigger domain.AgentT
 	run := &domain.AgentRun{
 		AgentID: agentID, TriggerType: trigger, TriggeredBy: triggeredBy, ScheduleKey: scheduleKey,
 		Status: domain.AgentRunQueued, Input: input, Provider: profile.ProviderType, Model: profile.Model,
+		SkillVersionID: value.SkillVersionID,
 	}
 	if err := r.repo.CreateRun(ctx, run); err != nil {
 		if repository.IsConstraintError(err) {

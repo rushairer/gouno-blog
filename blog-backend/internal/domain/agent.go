@@ -82,6 +82,7 @@ type Agent struct {
 	Description        string             `json:"description"`
 	SystemPrompt       string             `json:"system_prompt"`
 	ProviderProfileID  int64              `json:"provider_profile_id"`
+	SkillVersionID     *int64             `json:"skill_version_id,omitempty"`
 	ProviderProfile    *ProviderProfile   `json:"provider_profile,omitempty"`
 	Enabled            bool               `json:"enabled"`
 	TriggerType        AgentTriggerType   `json:"trigger_type"`
@@ -117,6 +118,9 @@ type AgentSkill struct {
 	DailyRunLimit      int                `json:"daily_run_limit"`
 	MonthlyTokenBudget int64              `json:"monthly_token_budget"`
 	Version            int                `json:"version"`
+	VersionID          int64              `json:"version_id"`
+	InputSchema        json.RawMessage    `json:"input_schema"`
+	AllowedTriggers    []AgentTriggerType `json:"allowed_triggers"`
 	CreatedBy          *string            `json:"created_by,omitempty"`
 	CreatedAt          time.Time          `json:"created_at"`
 	UpdatedAt          time.Time          `json:"updated_at"`
@@ -134,25 +138,27 @@ const (
 )
 
 type AgentRun struct {
-	ID            int64            `json:"id"`
-	AgentID       int64            `json:"agent_id"`
-	AgentName     string           `json:"agent_name,omitempty"`
-	TriggerType   AgentTriggerType `json:"trigger_type"`
-	TriggeredBy   *string          `json:"triggered_by,omitempty"`
-	ScheduleKey   *string          `json:"-"`
-	Status        AgentRunStatus   `json:"status"`
-	Input         json.RawMessage  `json:"input"`
-	OutputSummary string           `json:"output_summary"`
-	Provider      ProviderType     `json:"provider"`
-	Model         string           `json:"model"`
-	InputTokens   int64            `json:"input_tokens"`
-	OutputTokens  int64            `json:"output_tokens"`
-	ErrorCode     *string          `json:"error_code,omitempty"`
-	ErrorMessage  *string          `json:"error_message,omitempty"`
-	StartedAt     *time.Time       `json:"started_at,omitempty"`
-	FinishedAt    *time.Time       `json:"finished_at,omitempty"`
-	CreatedAt     time.Time        `json:"created_at"`
-	Citations     []AgentCitation  `json:"citations"`
+	ID                int64            `json:"id"`
+	AgentID           int64            `json:"agent_id"`
+	AgentName         string           `json:"agent_name,omitempty"`
+	TriggerType       AgentTriggerType `json:"trigger_type"`
+	TriggeredBy       *string          `json:"triggered_by,omitempty"`
+	ScheduleKey       *string          `json:"-"`
+	Status            AgentRunStatus   `json:"status"`
+	Input             json.RawMessage  `json:"input"`
+	OutputSummary     string           `json:"output_summary"`
+	Provider          ProviderType     `json:"provider"`
+	Model             string           `json:"model"`
+	InputTokens       int64            `json:"input_tokens"`
+	OutputTokens      int64            `json:"output_tokens"`
+	ErrorCode         *string          `json:"error_code,omitempty"`
+	ErrorMessage      *string          `json:"error_message,omitempty"`
+	StartedAt         *time.Time       `json:"started_at,omitempty"`
+	FinishedAt        *time.Time       `json:"finished_at,omitempty"`
+	CreatedAt         time.Time        `json:"created_at"`
+	Citations         []AgentCitation  `json:"citations"`
+	SkillVersionID    *int64           `json:"skill_version_id,omitempty"`
+	WorkflowVersionID *int64           `json:"workflow_version_id,omitempty"`
 }
 
 type ToolRiskLevel string

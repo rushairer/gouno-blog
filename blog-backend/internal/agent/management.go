@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -175,6 +176,12 @@ func (s *ManagementService) SaveSkill(ctx context.Context, value *domain.AgentSk
 	if value.MonthlyTokenBudget == 0 {
 		value.MonthlyTokenBudget = 1000000
 	}
+	if len(value.InputSchema) == 0 {
+		value.InputSchema = json.RawMessage(`{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false}`)
+	}
+	if len(value.AllowedTriggers) == 0 {
+		value.AllowedTriggers = []domain.AgentTriggerType{domain.AgentTriggerManual, domain.AgentTriggerCron}
+	}
 	if value.ExecutionMode == "" {
 		value.ExecutionMode = domain.AgentModeAdvisory
 	}
@@ -200,6 +207,28 @@ func (s *ManagementService) validateSkill(value *domain.AgentSkill) error {
 	if agent.MaxSteps < 1 || agent.MaxSteps > 20 || agent.MaxInputTokens < 1 || agent.MaxOutputTokens < 1 || agent.DailyRunLimit < 1 || agent.MonthlyTokenBudget < 1 {
 		return fmt.Errorf("%w: invalid run limits", ErrInvalid)
 	}
+	if len(value.InputSchema) > 32<<10 || !json.Valid(value.InputSchema) {
+		return fmt.Errorf("%w: input_schema must be valid JSON and at most 32 KiB", ErrInvalid)
+	}
+	var schema struct {
+		Type string `json:"type"`
+	}
+	if json.Unmarshal(value.InputSchema, &schema) != nil || schema.Type != "object" {
+		return fmt.Errorf("%w: input_schema must describe an object", ErrInvalid)
+	}
+	seenTriggers := map[domain.AgentTriggerType]bool{}
+	for _, trigger := range value.AllowedTriggers {
+		if trigger != domain.AgentTriggerManual && trigger != domain.AgentTriggerCron {
+			return fmt.Errorf("%w: unsupported skill trigger", ErrInvalid)
+		}
+		if seenTriggers[trigger] {
+			return fmt.Errorf("%w: duplicate skill trigger", ErrInvalid)
+		}
+		seenTriggers[trigger] = true
+	}
+	if len(seenTriggers) == 0 {
+		return fmt.Errorf("%w: at least one skill trigger is required", ErrInvalid)
+	}
 	seen := make(map[string]struct{}, len(agent.Capabilities))
 	for _, capability := range agent.Capabilities {
 		if strings.TrimSpace(capability) == "" || !slices.Contains(s.allowedCapabilities, capability) {
@@ -214,6 +243,43 @@ func (s *ManagementService) validateSkill(value *domain.AgentSkill) error {
 		seen[capability] = struct{}{}
 	}
 	return nil
+}
+
+func (s *ManagementService) ListSkillVersions(ctx context.Context, id int64) ([]*domain.AgentSkill, error) {
+	items, err := s.repo.ListSkillVersions(ctx, id)
+	return items, translateError(err)
+}
+
+func (s *ManagementService) GetSkillVersion(ctx context.Context, id int64) (*domain.AgentSkill, error) {
+	item, err := s.repo.GetSkillVersion(ctx, id)
+	return item, translateError(err)
+}
+
+func (s *ManagementService) ImportSkill(ctx context.Context, value *domain.AgentSkill) error {
+	value.ID, value.Version, value.VersionID = 0, 0, 0
+	return s.SaveSkill(ctx, value)
+}
+
+func (s *ManagementService) SaveAgentAsSkill(ctx context.Context, agentID int64, name string, createdBy *string) (*domain.AgentSkill, error) {
+	value, err := s.GetAgent(ctx, agentID)
+	if err != nil {
+		return nil, err
+	}
+	skill := &domain.AgentSkill{
+		Name: strings.TrimSpace(name), Description: value.Description, SystemPrompt: value.SystemPrompt,
+		Capabilities: slices.Clone(value.Capabilities), ExecutionMode: value.ExecutionMode,
+		MaxSteps: value.MaxSteps, MaxInputTokens: value.MaxInputTokens, MaxOutputTokens: value.MaxOutputTokens,
+		DailyRunLimit: value.DailyRunLimit, MonthlyTokenBudget: value.MonthlyTokenBudget,
+		AllowedTriggers: []domain.AgentTriggerType{domain.AgentTriggerManual, domain.AgentTriggerCron},
+		CreatedBy:       createdBy,
+	}
+	if skill.Name == "" {
+		skill.Name = value.Name + " Skill"
+	}
+	if err := s.SaveSkill(ctx, skill); err != nil {
+		return nil, err
+	}
+	return skill, nil
 }
 
 func (s *ManagementService) DeleteSkill(ctx context.Context, id int64) error {
@@ -266,6 +332,19 @@ func (s *ManagementService) SaveAgent(ctx context.Context, value *domain.Agent) 
 	value.NextRunAt = nextRun
 	if _, err := s.repo.GetProvider(ctx, value.ProviderProfileID); err != nil {
 		return translateError(err)
+	}
+	if value.SkillVersionID != nil {
+		skill, err := s.GetSkillVersion(ctx, *value.SkillVersionID)
+		if err != nil {
+			return err
+		}
+		if !slices.Contains(skill.AllowedTriggers, value.TriggerType) ||
+			skill.SystemPrompt != value.SystemPrompt || skill.ExecutionMode != value.ExecutionMode ||
+			!slices.Equal(skill.Capabilities, value.Capabilities) || skill.MaxSteps != value.MaxSteps ||
+			skill.MaxInputTokens != value.MaxInputTokens || skill.MaxOutputTokens != value.MaxOutputTokens ||
+			skill.DailyRunLimit != value.DailyRunLimit || skill.MonthlyTokenBudget != value.MonthlyTokenBudget {
+			return fmt.Errorf("%w: agent configuration does not match its locked skill version", ErrInvalid)
+		}
 	}
 	var saveErr error
 	if value.ID == 0 {

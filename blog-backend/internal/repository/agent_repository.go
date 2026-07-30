@@ -127,7 +127,7 @@ func (r *AgentRepository) DeleteProvider(ctx context.Context, id int64) error {
 }
 
 const agentColumns = `a.id, a.name, a.description, a.system_prompt, a.provider_profile_id,
-	a.enabled, a.trigger_type, a.cron_expression, a.timezone, a.capabilities, a.execution_mode,
+	a.skill_version_id, a.enabled, a.trigger_type, a.cron_expression, a.timezone, a.capabilities, a.execution_mode,
 	a.max_steps, a.max_input_tokens, a.max_output_tokens, a.daily_run_limit,
 	a.monthly_token_budget, a.last_run_at, a.next_run_at, a.created_by, a.created_at, a.updated_at`
 
@@ -136,7 +136,7 @@ func scanAgent(scanner interface{ Scan(...any) error }) (*domain.Agent, error) {
 	var capabilities []byte
 	err := scanner.Scan(
 		&agent.ID, &agent.Name, &agent.Description, &agent.SystemPrompt, &agent.ProviderProfileID,
-		&agent.Enabled, &agent.TriggerType, &agent.CronExpression, &agent.Timezone, &capabilities,
+		&agent.SkillVersionID, &agent.Enabled, &agent.TriggerType, &agent.CronExpression, &agent.Timezone, &capabilities,
 		&agent.ExecutionMode, &agent.MaxSteps, &agent.MaxInputTokens, &agent.MaxOutputTokens,
 		&agent.DailyRunLimit, &agent.MonthlyTokenBudget, &agent.LastRunAt, &agent.NextRunAt,
 		&agent.CreatedBy, &agent.CreatedAt, &agent.UpdatedAt,
@@ -150,12 +150,12 @@ func scanAgent(scanner interface{ Scan(...any) error }) (*domain.Agent, error) {
 func (r *AgentRepository) CreateAgent(ctx context.Context, agent *domain.Agent) error {
 	capabilities, _ := json.Marshal(agent.Capabilities)
 	return r.db.QueryRowContext(ctx, `INSERT INTO ai_agents
-		(name, description, system_prompt, provider_profile_id, enabled, trigger_type,
+		(name, description, system_prompt, provider_profile_id, skill_version_id, enabled, trigger_type,
 		 cron_expression, timezone, capabilities, execution_mode, max_steps, max_input_tokens,
 		 max_output_tokens, daily_run_limit, monthly_token_budget, next_run_at, created_by)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
 		RETURNING id, created_at, updated_at`,
-		agent.Name, agent.Description, agent.SystemPrompt, agent.ProviderProfileID, agent.Enabled,
+		agent.Name, agent.Description, agent.SystemPrompt, agent.ProviderProfileID, agent.SkillVersionID, agent.Enabled,
 		agent.TriggerType, agent.CronExpression, agent.Timezone, capabilities, agent.ExecutionMode,
 		agent.MaxSteps, agent.MaxInputTokens, agent.MaxOutputTokens, agent.DailyRunLimit,
 		agent.MonthlyTokenBudget, agent.NextRunAt, agent.CreatedBy,
@@ -165,14 +165,14 @@ func (r *AgentRepository) CreateAgent(ctx context.Context, agent *domain.Agent) 
 func (r *AgentRepository) UpdateAgent(ctx context.Context, agent *domain.Agent) error {
 	capabilities, _ := json.Marshal(agent.Capabilities)
 	return r.db.QueryRowContext(ctx, `UPDATE ai_agents SET
-		name=$2, description=$3, system_prompt=$4, provider_profile_id=$5, enabled=$6,
-		trigger_type=$7, cron_expression=$8, timezone=$9, capabilities=$10,
-		execution_mode=$11, max_steps=$12, max_input_tokens=$13, max_output_tokens=$14,
-		daily_run_limit=$15, monthly_token_budget=$16, next_run_at=$17, updated_at=NOW()
+		name=$2, description=$3, system_prompt=$4, provider_profile_id=$5,
+		skill_version_id=$6, enabled=$7, trigger_type=$8, cron_expression=$9, timezone=$10, capabilities=$11,
+		execution_mode=$12, max_steps=$13, max_input_tokens=$14, max_output_tokens=$15,
+		daily_run_limit=$16, monthly_token_budget=$17, next_run_at=$18, updated_at=NOW()
 		WHERE id=$1 AND deleted_at IS NULL
 		RETURNING last_run_at, created_by, created_at, updated_at`,
 		agent.ID, agent.Name, agent.Description, agent.SystemPrompt, agent.ProviderProfileID,
-		agent.Enabled, agent.TriggerType, agent.CronExpression, agent.Timezone, capabilities,
+		agent.SkillVersionID, agent.Enabled, agent.TriggerType, agent.CronExpression, agent.Timezone, capabilities,
 		agent.ExecutionMode, agent.MaxSteps, agent.MaxInputTokens, agent.MaxOutputTokens,
 		agent.DailyRunLimit, agent.MonthlyTokenBudget, agent.NextRunAt,
 	).Scan(&agent.LastRunAt, &agent.CreatedBy, &agent.CreatedAt, &agent.UpdatedAt)
@@ -201,25 +201,31 @@ func (r *AgentRepository) ListAgents(ctx context.Context) ([]*domain.Agent, erro
 	return result, rows.Err()
 }
 
-const skillColumns = `id, name, description, system_prompt, capabilities, execution_mode,
-	max_steps, max_input_tokens, max_output_tokens, daily_run_limit, monthly_token_budget,
-	version, created_by, created_at, updated_at`
+const skillColumns = `s.id, s.name, s.description, s.system_prompt, s.capabilities, s.execution_mode,
+	s.max_steps, s.max_input_tokens, s.max_output_tokens, s.daily_run_limit, s.monthly_token_budget,
+	s.version, COALESCE((SELECT sv.id FROM ai_skill_versions sv WHERE sv.skill_id=s.id AND sv.version=s.version),0),
+	s.input_schema, s.allowed_triggers, s.created_by, s.created_at, s.updated_at`
 
 func scanSkill(scanner interface{ Scan(...any) error }) (*domain.AgentSkill, error) {
 	var skill domain.AgentSkill
-	var capabilities []byte
+	var capabilities, inputSchema, triggers []byte
 	err := scanner.Scan(&skill.ID, &skill.Name, &skill.Description, &skill.SystemPrompt, &capabilities,
 		&skill.ExecutionMode, &skill.MaxSteps, &skill.MaxInputTokens, &skill.MaxOutputTokens,
-		&skill.DailyRunLimit, &skill.MonthlyTokenBudget, &skill.Version, &skill.CreatedBy,
+		&skill.DailyRunLimit, &skill.MonthlyTokenBudget, &skill.Version, &skill.VersionID,
+		&inputSchema, &triggers, &skill.CreatedBy,
 		&skill.CreatedAt, &skill.UpdatedAt)
 	if err == nil {
 		err = json.Unmarshal(capabilities, &skill.Capabilities)
+	}
+	if err == nil {
+		skill.InputSchema = inputSchema
+		err = json.Unmarshal(triggers, &skill.AllowedTriggers)
 	}
 	return &skill, err
 }
 
 func (r *AgentRepository) ListSkills(ctx context.Context) ([]*domain.AgentSkill, error) {
-	rows, err := r.db.QueryContext(ctx, `SELECT `+skillColumns+` FROM ai_skills WHERE deleted_at IS NULL ORDER BY created_at DESC`)
+	rows, err := r.db.QueryContext(ctx, `SELECT `+skillColumns+` FROM ai_skills s WHERE s.deleted_at IS NULL ORDER BY s.created_at DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -236,31 +242,98 @@ func (r *AgentRepository) ListSkills(ctx context.Context) ([]*domain.AgentSkill,
 }
 
 func (r *AgentRepository) GetSkill(ctx context.Context, id int64) (*domain.AgentSkill, error) {
-	return scanSkill(r.db.QueryRowContext(ctx, `SELECT `+skillColumns+` FROM ai_skills WHERE id=$1 AND deleted_at IS NULL`, id))
+	return scanSkill(r.db.QueryRowContext(ctx, `SELECT `+skillColumns+` FROM ai_skills s WHERE s.id=$1 AND s.deleted_at IS NULL`, id))
 }
 
 func (r *AgentRepository) CreateSkill(ctx context.Context, skill *domain.AgentSkill) error {
 	capabilities, _ := json.Marshal(skill.Capabilities)
-	return r.db.QueryRowContext(ctx, `INSERT INTO ai_skills
+	triggers, _ := json.Marshal(skill.AllowedTriggers)
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	err = tx.QueryRowContext(ctx, `INSERT INTO ai_skills
 		(name, description, system_prompt, capabilities, execution_mode, max_steps, max_input_tokens,
-		 max_output_tokens, daily_run_limit, monthly_token_budget, created_by)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+		 max_output_tokens, daily_run_limit, monthly_token_budget, input_schema, allowed_triggers, created_by)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
 		RETURNING id, version, created_at, updated_at`, skill.Name, skill.Description, skill.SystemPrompt,
 		capabilities, skill.ExecutionMode, skill.MaxSteps, skill.MaxInputTokens, skill.MaxOutputTokens,
-		skill.DailyRunLimit, skill.MonthlyTokenBudget, skill.CreatedBy,
+		skill.DailyRunLimit, skill.MonthlyTokenBudget, skill.InputSchema, triggers, skill.CreatedBy,
 	).Scan(&skill.ID, &skill.Version, &skill.CreatedAt, &skill.UpdatedAt)
+	if err == nil {
+		err = r.insertSkillVersion(ctx, tx, skill, capabilities, triggers)
+	}
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	return tx.Commit()
 }
 
 func (r *AgentRepository) UpdateSkill(ctx context.Context, skill *domain.AgentSkill) error {
 	capabilities, _ := json.Marshal(skill.Capabilities)
-	return r.db.QueryRowContext(ctx, `UPDATE ai_skills SET name=$2, description=$3, system_prompt=$4,
+	triggers, _ := json.Marshal(skill.AllowedTriggers)
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	err = tx.QueryRowContext(ctx, `UPDATE ai_skills SET name=$2, description=$3, system_prompt=$4,
 		capabilities=$5, execution_mode=$6, max_steps=$7, max_input_tokens=$8, max_output_tokens=$9,
-		daily_run_limit=$10, monthly_token_budget=$11, version=version+1, updated_at=NOW()
+		daily_run_limit=$10, monthly_token_budget=$11, input_schema=$12, allowed_triggers=$13,
+		version=version+1, updated_at=NOW()
 		WHERE id=$1 AND deleted_at IS NULL
 		RETURNING version, created_by, created_at, updated_at`, skill.ID, skill.Name, skill.Description,
 		skill.SystemPrompt, capabilities, skill.ExecutionMode, skill.MaxSteps, skill.MaxInputTokens,
-		skill.MaxOutputTokens, skill.DailyRunLimit, skill.MonthlyTokenBudget,
+		skill.MaxOutputTokens, skill.DailyRunLimit, skill.MonthlyTokenBudget, skill.InputSchema, triggers,
 	).Scan(&skill.Version, &skill.CreatedBy, &skill.CreatedAt, &skill.UpdatedAt)
+	if err == nil {
+		err = r.insertSkillVersion(ctx, tx, skill, capabilities, triggers)
+	}
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	return tx.Commit()
+}
+
+func (r *AgentRepository) insertSkillVersion(ctx context.Context, tx *sql.Tx, skill *domain.AgentSkill, capabilities, triggers []byte) error {
+	return tx.QueryRowContext(ctx, `INSERT INTO ai_skill_versions
+		(skill_id, version, system_prompt, capabilities, execution_mode, max_steps, max_input_tokens,
+		 max_output_tokens, daily_run_limit, monthly_token_budget, input_schema, allowed_triggers, created_by)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id`,
+		skill.ID, skill.Version, skill.SystemPrompt, capabilities, skill.ExecutionMode, skill.MaxSteps,
+		skill.MaxInputTokens, skill.MaxOutputTokens, skill.DailyRunLimit, skill.MonthlyTokenBudget,
+		skill.InputSchema, triggers, skill.CreatedBy).Scan(&skill.VersionID)
+}
+
+func (r *AgentRepository) ListSkillVersions(ctx context.Context, skillID int64) ([]*domain.AgentSkill, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT sv.skill_id, s.name, s.description, sv.system_prompt,
+		sv.capabilities, sv.execution_mode, sv.max_steps, sv.max_input_tokens, sv.max_output_tokens,
+		sv.daily_run_limit, sv.monthly_token_budget, sv.version, sv.id, sv.input_schema,
+		sv.allowed_triggers, sv.created_by, s.created_at, sv.created_at
+		FROM ai_skill_versions sv JOIN ai_skills s ON s.id=sv.skill_id
+		WHERE sv.skill_id=$1 ORDER BY sv.version DESC`, skillID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := make([]*domain.AgentSkill, 0)
+	for rows.Next() {
+		item, err := scanSkill(rows)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
+func (r *AgentRepository) GetSkillVersion(ctx context.Context, versionID int64) (*domain.AgentSkill, error) {
+	return scanSkill(r.db.QueryRowContext(ctx, `SELECT sv.skill_id, s.name, s.description, sv.system_prompt,
+		sv.capabilities, sv.execution_mode, sv.max_steps, sv.max_input_tokens, sv.max_output_tokens,
+		sv.daily_run_limit, sv.monthly_token_budget, sv.version, sv.id, sv.input_schema,
+		sv.allowed_triggers, sv.created_by, s.created_at, sv.created_at
+		FROM ai_skill_versions sv JOIN ai_skills s ON s.id=sv.skill_id WHERE sv.id=$1`, versionID))
 }
 
 func (r *AgentRepository) DeleteSkill(ctx context.Context, id int64) error {
@@ -327,7 +400,8 @@ func (r *AgentRepository) ListDueAgents(ctx context.Context, limit int) ([]*doma
 
 const runColumns = `r.id, r.agent_id, r.trigger_type, r.triggered_by, r.schedule_key, r.status,
 	r.input, r.output_summary, r.provider, r.model, r.input_tokens, r.output_tokens,
-	r.error_code, r.error_message, r.started_at, r.finished_at, r.created_at, r.citations`
+	r.error_code, r.error_message, r.started_at, r.finished_at, r.created_at, r.citations,
+	r.skill_version_id, r.workflow_version_id`
 
 func scanRun(scanner interface{ Scan(...any) error }) (*domain.AgentRun, error) {
 	var run domain.AgentRun
@@ -336,7 +410,7 @@ func scanRun(scanner interface{ Scan(...any) error }) (*domain.AgentRun, error) 
 		&run.ID, &run.AgentID, &run.TriggerType, &run.TriggeredBy, &run.ScheduleKey, &run.Status,
 		&run.Input, &run.OutputSummary, &run.Provider, &run.Model, &run.InputTokens,
 		&run.OutputTokens, &run.ErrorCode, &run.ErrorMessage, &run.StartedAt, &run.FinishedAt,
-		&run.CreatedAt, &citations,
+		&run.CreatedAt, &citations, &run.SkillVersionID, &run.WorkflowVersionID,
 	)
 	if err == nil {
 		err = json.Unmarshal(citations, &run.Citations)
@@ -349,11 +423,11 @@ func (r *AgentRepository) CreateRun(ctx context.Context, run *domain.AgentRun) e
 		run.Input = json.RawMessage(`{}`)
 	}
 	return r.db.QueryRowContext(ctx, `INSERT INTO ai_agent_runs
-		(agent_id, trigger_type, triggered_by, schedule_key, status, input, provider, model)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+		(agent_id, trigger_type, triggered_by, schedule_key, status, input, provider, model, skill_version_id, workflow_version_id)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
 		RETURNING id, created_at`,
 		run.AgentID, run.TriggerType, run.TriggeredBy, run.ScheduleKey, run.Status, run.Input,
-		run.Provider, run.Model,
+		run.Provider, run.Model, run.SkillVersionID, run.WorkflowVersionID,
 	).Scan(&run.ID, &run.CreatedAt)
 }
 

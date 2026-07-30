@@ -54,6 +54,7 @@ export interface Agent {
   description: string;
   system_prompt: string;
   provider_profile_id: number;
+  skill_version_id?: number;
   enabled: boolean;
   trigger_type: TriggerType;
   cron_expression?: string;
@@ -84,6 +85,9 @@ export interface AgentSkill {
   daily_run_limit: number;
   monthly_token_budget: number;
   version: number;
+  version_id: number;
+  input_schema: Record<string, unknown>;
+  allowed_triggers: TriggerType[];
   created_at: string;
   updated_at: string;
 }

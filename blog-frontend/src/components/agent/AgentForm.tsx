@@ -61,6 +61,7 @@ export function AgentForm({
       name: current.name || skill.name,
       description: current.description || skill.description,
       system_prompt: skill.system_prompt,
+      skill_version_id: skill.version_id,
       capabilities: skill.capabilities,
       execution_mode: skill.execution_mode,
       max_steps: skill.max_steps,
