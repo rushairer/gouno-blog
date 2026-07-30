@@ -89,6 +89,16 @@ func (r *fakePostRepo) ListAdmin(_ context.Context, _ domain.AdminPostFilter, li
 	return r.List(context.Background(), "", "", limit, offset)
 }
 
+func (r *fakePostRepo) SearchPublished(_ context.Context, query string, limit int) ([]domain.PostSearchResult, error) {
+	results := make([]domain.PostSearchResult, 0, limit)
+	for _, post := range r.posts {
+		if post.Status == domain.PostStatusPublished && strings.Contains(strings.ToLower(post.Title+" "+post.Content), strings.ToLower(query)) {
+			results = append(results, domain.PostSearchResult{Post: post, Score: 1})
+		}
+	}
+	return results, nil
+}
+
 func (r *fakePostRepo) PublishScheduled(context.Context) (int64, error) { return 0, nil }
 
 func (r *fakePostRepo) ListTags(context.Context) ([]string, error) {
@@ -201,6 +211,13 @@ func TestListPostsNormalizesPagination(t *testing.T) {
 	}
 	if repo.lastLimit != 10 || repo.lastOffset != 0 {
 		t.Fatalf("limit/offset = %d/%d, want 10/0", repo.lastLimit, repo.lastOffset)
+	}
+}
+
+func TestSearchPublishedPostsRejectsOversizedQuery(t *testing.T) {
+	_, err := NewPostService(newFakePostRepo()).SearchPublishedPosts(context.Background(), strings.Repeat("a", 501), 1)
+	if err == nil {
+		t.Fatal("expected oversized query to be rejected")
 	}
 }
 

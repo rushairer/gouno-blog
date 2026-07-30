@@ -31,6 +31,12 @@ type Post struct {
 	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
+type PostSearchResult struct {
+	Post    *Post   `json:"post"`
+	Snippet string  `json:"snippet"`
+	Score   float64 `json:"score"`
+}
+
 type AdminPostFilter struct {
 	Query    string
 	Status   PostStatus

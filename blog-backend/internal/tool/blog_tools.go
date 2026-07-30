@@ -60,6 +60,11 @@ func NewBlogRegistry(posts *service.PostService, community *service.CommunitySer
 			Risk:       domain.ToolRiskRead, Execute: tools.findInternalLinks,
 		},
 		Definition{
+			Name: "content.find_related", Description: "Search published posts related to one post and return relevance-ranked evidence snippets.",
+			Parameters: schema(`{"id":{"type":"integer","minimum":1},"query":{"type":"string","minLength":1},"limit":{"type":"integer","minimum":1,"maximum":10}}`, "id"),
+			Risk:       domain.ToolRiskRead, Execute: tools.findRelatedContent,
+		},
+		Definition{
 			Name: "comments.list_pending", Description: "List pending or reported comments for moderation insight.",
 			Parameters: schema(`{"reported_only":{"type":"boolean"},"limit":{"type":"integer","minimum":1,"maximum":100}}`),
 			Risk:       domain.ToolRiskRead, Execute: tools.listPendingComments,

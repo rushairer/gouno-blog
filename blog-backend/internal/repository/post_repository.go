@@ -240,6 +240,37 @@ func (r *PostRepository) ListAdmin(ctx context.Context, filter domain.AdminPostF
 	return posts, total, rows.Err()
 }
 
+func (r *PostRepository) SearchPublished(ctx context.Context, query string, limit int) ([]domain.PostSearchResult, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		WITH search AS (SELECT websearch_to_tsquery('simple', $1) AS query)
+		SELECT p.id, p.title, p.slug, p.summary, p.content, p.tags, p.category_id,
+		       COALESCE(p.cover_url, ''), COALESCE(p.cover_alt, ''), COALESCE(p.seo_title, ''), COALESCE(p.seo_description, ''),
+		       p.status, p.views_count, p.likes_count, p.published_at, p.scheduled_at, p.created_at, p.updated_at,
+		       ts_headline('simple', p.content, search.query, 'MaxWords=28, MinWords=12, MaxFragments=2'),
+		       ts_rank_cd(p.search_document, search.query)
+		FROM posts p CROSS JOIN search
+		WHERE p.status = 'published' AND p.search_document @@ search.query
+		ORDER BY ts_rank_cd(p.search_document, search.query) DESC, p.published_at DESC NULLS LAST
+		LIMIT $2`, query, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	results := make([]domain.PostSearchResult, 0)
+	for rows.Next() {
+		var post domain.Post
+		var result domain.PostSearchResult
+		if err := rows.Scan(&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID,
+			&post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount,
+			&post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt, &result.Snippet, &result.Score); err != nil {
+			return nil, err
+		}
+		result.Post = &post
+		results = append(results, result)
+	}
+	return results, rows.Err()
+}
+
 func (r *PostRepository) PublishScheduled(ctx context.Context) (int64, error) {
 	result, err := r.db.ExecContext(ctx, `UPDATE posts SET status = 'published', published_at = NOW(), scheduled_at = NULL, updated_at = NOW() WHERE status = 'scheduled' AND scheduled_at <= NOW()`)
 	if err != nil {
