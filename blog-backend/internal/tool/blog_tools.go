@@ -70,6 +70,11 @@ func NewBlogRegistry(posts *service.PostService, community *service.CommunitySer
 			Risk:       domain.ToolRiskRead, Execute: tools.findStalePosts,
 		},
 		Definition{
+			Name: "content.list_orphan_posts", Description: "List published posts with no detected relative internal links from another published post.",
+			Parameters: schema(`{"limit":{"type":"integer","minimum":1,"maximum":100}}`),
+			Risk:       domain.ToolRiskRead, Execute: tools.findOrphanPosts,
+		},
+		Definition{
 			Name: "comments.list_pending", Description: "List pending or reported comments for moderation insight.",
 			Parameters: schema(`{"reported_only":{"type":"boolean"},"limit":{"type":"integer","minimum":1,"maximum":100}}`),
 			Risk:       domain.ToolRiskRead, Execute: tools.listPendingComments,

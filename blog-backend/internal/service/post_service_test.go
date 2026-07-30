@@ -109,6 +109,16 @@ func (r *fakePostRepo) ListStalePublished(_ context.Context, updatedBefore time.
 	return posts, nil
 }
 
+func (r *fakePostRepo) ListOrphanedPublished(_ context.Context, limit int) ([]*domain.Post, error) {
+	posts := make([]*domain.Post, 0, limit)
+	for _, post := range r.posts {
+		if post.Status == domain.PostStatusPublished {
+			posts = append(posts, post)
+		}
+	}
+	return posts, nil
+}
+
 func (r *fakePostRepo) PublishScheduled(context.Context) (int64, error) { return 0, nil }
 
 func (r *fakePostRepo) ListTags(context.Context) ([]string, error) {

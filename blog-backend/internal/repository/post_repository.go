@@ -295,6 +295,35 @@ func (r *PostRepository) ListStalePublished(ctx context.Context, updatedBefore t
 	return posts, rows.Err()
 }
 
+func (r *PostRepository) ListOrphanedPublished(ctx context.Context, limit int) ([]*domain.Post, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT target.id, target.title, target.slug, target.summary, target.content, target.tags, target.category_id,
+		COALESCE(target.cover_url, ''), COALESCE(target.cover_alt, ''), COALESCE(target.seo_title, ''), COALESCE(target.seo_description, ''),
+		target.status, target.views_count, target.likes_count, target.published_at, target.scheduled_at, target.created_at, target.updated_at
+		FROM posts target
+		WHERE target.status = 'published' AND NOT EXISTS (
+			SELECT 1 FROM posts source
+			WHERE source.status = 'published' AND source.id <> target.id
+			  AND (position('/articles/' || target.slug IN source.content) > 0 OR position('/posts/' || target.slug IN source.content) > 0)
+		)
+		ORDER BY target.published_at ASC NULLS LAST, target.created_at ASC
+		LIMIT $1`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	posts := make([]*domain.Post, 0)
+	for rows.Next() {
+		var post domain.Post
+		if err := rows.Scan(&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID,
+			&post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount,
+			&post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt); err != nil {
+			return nil, err
+		}
+		posts = append(posts, &post)
+	}
+	return posts, rows.Err()
+}
+
 func (r *PostRepository) PublishScheduled(ctx context.Context) (int64, error) {
 	result, err := r.db.ExecContext(ctx, `UPDATE posts SET status = 'published', published_at = NOW(), scheduled_at = NULL, updated_at = NOW() WHERE status = 'scheduled' AND scheduled_at <= NOW()`)
 	if err != nil {

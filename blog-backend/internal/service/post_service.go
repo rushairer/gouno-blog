@@ -30,6 +30,7 @@ type PostRepository interface {
 	ListAdmin(ctx context.Context, filter domain.AdminPostFilter, limit, offset int) ([]*domain.Post, int, error)
 	SearchPublished(ctx context.Context, query string, limit int) ([]domain.PostSearchResult, error)
 	ListStalePublished(ctx context.Context, updatedBefore time.Time, limit int) ([]*domain.Post, error)
+	ListOrphanedPublished(ctx context.Context, limit int) ([]*domain.Post, error)
 	ListTags(ctx context.Context) ([]string, error)
 	PublishScheduled(ctx context.Context) (int64, error)
 	CreateComment(ctx context.Context, comment *domain.Comment) error
@@ -290,6 +291,16 @@ func (s *PostService) ListStalePublishedPosts(ctx context.Context, staleFor time
 		limit = 100
 	}
 	return s.repo.ListStalePublished(ctx, time.Now().UTC().Add(-staleFor), limit)
+}
+
+func (s *PostService) ListOrphanedPublishedPosts(ctx context.Context, limit int) ([]*domain.Post, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	return s.repo.ListOrphanedPublished(ctx, limit)
 }
 
 func (s *PostService) PublishScheduled(ctx context.Context) (int64, error) {
