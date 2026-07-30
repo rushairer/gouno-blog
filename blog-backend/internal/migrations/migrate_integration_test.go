@@ -68,4 +68,15 @@ func TestUpAppliesCurrentSchemaAndIsIdempotent(t *testing.T) {
 	if !providerSecretNullable {
 		t.Fatal("expected deleted provider credentials to be nullable for revocation")
 	}
+	for _, trigger := range []string{"posts_search_document_update", "ai_content_chunks_search_vector_update"} {
+		var exists bool
+		if err := db.QueryRowContext(ctx, `SELECT EXISTS (
+			SELECT 1 FROM pg_trigger WHERE tgname=$1 AND NOT tgisinternal
+		)`, trigger).Scan(&exists); err != nil {
+			t.Fatal(err)
+		}
+		if !exists {
+			t.Fatalf("expected search document trigger %s to exist", trigger)
+		}
+	}
 }

@@ -50,8 +50,7 @@ CREATE TABLE IF NOT EXISTS ai_content_chunks (
     content TEXT NOT NULL,
     start_offset INT NOT NULL,
     end_offset INT NOT NULL,
-    search_vector TSVECTOR GENERATED ALWAYS AS
-        (to_tsvector('simple', concat_ws(' ', heading, content))) STORED,
+    search_vector TSVECTOR NOT NULL DEFAULT ''::tsvector,
     embedding VECTOR NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE (post_id, embedding_profile_id, version_key, chunk_index)
@@ -61,6 +60,18 @@ CREATE INDEX IF NOT EXISTS idx_ai_content_chunks_search
     ON ai_content_chunks USING GIN (search_vector);
 CREATE INDEX IF NOT EXISTS idx_ai_content_chunks_post
     ON ai_content_chunks (post_id, embedding_profile_id, chunk_index);
+
+CREATE OR REPLACE FUNCTION update_ai_content_chunk_search_vector() RETURNS TRIGGER AS $$
+BEGIN
+    NEW.search_vector := to_tsvector('simple', concat_ws(' ', NEW.heading, NEW.content));
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS ai_content_chunks_search_vector_update ON ai_content_chunks;
+CREATE TRIGGER ai_content_chunks_search_vector_update
+BEFORE INSERT OR UPDATE OF heading, content ON ai_content_chunks
+FOR EACH ROW EXECUTE FUNCTION update_ai_content_chunk_search_vector();
 
 ALTER TABLE ai_agent_runs
     ADD COLUMN IF NOT EXISTS citations JSONB NOT NULL DEFAULT '[]'::jsonb;
