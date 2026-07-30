@@ -8,6 +8,8 @@ import type {
   Agent, AgentApproval, AgentPreset, AgentRun, AgentSkill, AgentToolCall, ProviderProfile, ToolDefinition,
 } from '../agent';
 import { AgentForm } from '../components/agent/AgentForm';
+import { SkillForm } from '../components/agent/SkillForm';
+import type { SkillFormValue } from '../components/agent/SkillForm';
 import { ProviderForm } from '../components/agent/ProviderForm';
 import type { ProviderFormValue } from '../components/agent/ProviderForm';
 import { AdminPage, AdminPageHeader, AdminPageState, ConfirmDialog, EmptyState, Feedback, Panel } from '../components/ui';
@@ -228,6 +230,7 @@ export default function AgentConsole() {
   const [selectedRun, setSelectedRun] = useState<{ run: AgentRun; tool_calls: AgentToolCall[] } | null>(null);
   const [editingAgent, setEditingAgent] = useState<Agent | 'new' | null>(null);
   const [editingProvider, setEditingProvider] = useState<ProviderProfile | 'new' | null>(null);
+  const [editingSkill, setEditingSkill] = useState<AgentSkill | 'new' | null>(null);
   const [approvalFilter, setApprovalFilter] = useState<'pending' | 'all'>('pending');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -316,6 +319,16 @@ export default function AgentConsole() {
     }
   };
 
+  const saveSkill = async (value: SkillFormValue) => {
+    setError('');
+    try {
+      const response = await apiFetch(value.id ? `/api/admin/agent-skills/${value.id}` : '/api/admin/agent-skills', { method: value.id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) });
+      await readData<AgentSkill>(response);
+      setEditingSkill(null);
+      await refresh();
+    } catch (reason) { setError(reason instanceof Error ? reason.message : labels.requestFailed); }
+  };
+
   const mutate = async (path: string, method = 'POST', body?: unknown) => {
     setError('');
     const response = await apiFetch(path, {
@@ -376,7 +389,7 @@ export default function AgentConsole() {
   ] as const;
 
   return <AdminPage className="agent-console">
-    <AdminPageHeader title={labels.title} description={labels.pageDescription} actions={<div className="row-actions"><button className="btn btn-secondary" type="button" onClick={() => void refresh()}><RefreshCw />{labels.refresh}</button>{tab === 'agents' ? <button className="btn btn-primary" type="button" onClick={() => providers.length > 0 ? setEditingAgent('new') : setError(labels.providerNeeded)}><Plus />{labels.createAgent}</button> : tab === 'providers' ? <button className="btn btn-primary" type="button" onClick={() => setEditingProvider('new')}><Plus />{labels.createProvider}</button> : null}</div>} />
+    <AdminPageHeader title={labels.title} description={labels.pageDescription} actions={<div className="row-actions"><button className="btn btn-secondary" type="button" onClick={() => void refresh()}><RefreshCw />{labels.refresh}</button>{tab === 'agents' ? <button className="btn btn-primary" type="button" onClick={() => providers.length > 0 ? setEditingAgent('new') : setError(labels.providerNeeded)}><Plus />{labels.createAgent}</button> : tab === 'skills' ? <button className="btn btn-primary" type="button" onClick={() => setEditingSkill('new')}><Plus />{labels.skills}</button> : tab === 'providers' ? <button className="btn btn-primary" type="button" onClick={() => setEditingProvider('new')}><Plus />{labels.createProvider}</button> : null}</div>} />
     {error ? <Feedback type="error">{error}</Feedback> : null}
     {notice ? <Feedback type="success">{notice}</Feedback> : null}
     <div className="agent-console__layout">
@@ -387,6 +400,7 @@ export default function AgentConsole() {
       <div className="agent-console__main">
         {editingProvider ? <ProviderForm key={editingProvider === 'new' ? 'new' : editingProvider.id} initial={editingProvider === 'new' ? undefined : editingProvider} labels={labels} onSave={saveProvider} onCancel={() => setEditingProvider(null)} /> : null}
         {editingAgent ? <AgentForm key={editingAgent === 'new' ? 'new' : editingAgent.id} initial={editingAgent === 'new' ? undefined : editingAgent} providers={providers} tools={tools} presets={presets} skills={skills} labels={labels} onSave={saveAgent} onCancel={() => setEditingAgent(null)} /> : null}
+        {editingSkill ? <SkillForm key={editingSkill === 'new' ? 'new' : editingSkill.id} initial={editingSkill === 'new' ? undefined : editingSkill} tools={tools} locale={locale} onSave={saveSkill} onCancel={() => setEditingSkill(null)} /> : null}
 
         {!editingAgent && !editingProvider && tab === 'agents' ? <Panel className="agent-table-panel">
           {agents.length === 0 ? <div className="agent-empty-state"><Bot aria-hidden="true" /><h2>{locale === 'zh' ? '还没有 Agent' : 'No Agents yet'}</h2><p>{labels.noAgents}</p><button className="text-link" type="button" onClick={() => setTab('providers')}><KeyRound />{locale === 'zh' ? '先配置 Provider' : 'Configure a Provider first'}<ChevronRight /></button></div> : <div className="table-scroll"><table className="content-table agent-table"><thead><tr><th>{labels.agents}</th><th>{labels.status}</th><th>{labels.provider}</th><th>{labels.schedule}</th><th>{labels.capabilities}</th><th>{labels.lastRun}</th><th>{labels.nextRun}</th><th>{labels.actions}</th></tr></thead><tbody>{agents.map((agent) => {
@@ -396,8 +410,8 @@ export default function AgentConsole() {
           })}</tbody></table></div>}
         </Panel> : null}
 
-        {!editingAgent && !editingProvider && tab === 'skills' ? <Panel className="agent-table-panel">
-          {skills.length === 0 ? <EmptyState label={labels.noSkills} /> : <div className="table-scroll"><table className="content-table agent-table"><thead><tr><th>{labels.skills}</th><th>{labels.mode}</th><th>{labels.capabilities}</th><th>Version</th><th>{labels.created}</th></tr></thead><tbody>{skills.map((skill) => <tr key={skill.id}><td><strong>{skill.name}</strong><small>{skill.description}</small></td><td><span className={`risk-label risk-label--${skill.execution_mode === 'approval' ? 'propose' : 'read'}`}>{skill.execution_mode === 'approval' ? labels.approvalMode : labels.advisory}</span></td><td><div className="agent-chip-list">{skill.capabilities.slice(0, 4).map((item) => <span key={item}>{formatCapability(item)}</span>)}{skill.capabilities.length > 4 ? <span>+{skill.capabilities.length - 4}</span> : null}</div></td><td><strong>v{skill.version}</strong></td><td><small>{formatDateTime(skill.updated_at)}</small></td></tr>)}</tbody></table></div>}
+        {!editingAgent && !editingProvider && !editingSkill && tab === 'skills' ? <Panel className="agent-table-panel">
+          {skills.length === 0 ? <EmptyState label={labels.noSkills} /> : <div className="table-scroll"><table className="content-table agent-table"><thead><tr><th>{labels.skills}</th><th>{labels.mode}</th><th>{labels.capabilities}</th><th>Version</th><th>{labels.created}</th><th>{labels.actions}</th></tr></thead><tbody>{skills.map((skill) => <tr key={skill.id}><td><strong>{skill.name}</strong><small>{skill.description}</small></td><td><span className={`risk-label risk-label--${skill.execution_mode === 'approval' ? 'propose' : 'read'}`}>{skill.execution_mode === 'approval' ? labels.approvalMode : labels.advisory}</span></td><td><div className="agent-chip-list">{skill.capabilities.slice(0, 4).map((item) => <span key={item}>{formatCapability(item)}</span>)}{skill.capabilities.length > 4 ? <span>+{skill.capabilities.length - 4}</span> : null}</div></td><td><strong>v{skill.version}</strong></td><td><small>{formatDateTime(skill.updated_at)}</small></td><td><div className="agent-row-actions"><button type="button" title={labels.edit} onClick={() => setEditingSkill(skill)}><Settings2 /></button></div></td></tr>)}</tbody></table></div>}
         </Panel> : null}
 
         {!editingAgent && !editingProvider && tab === 'providers' ? <Panel className="agent-table-panel">
