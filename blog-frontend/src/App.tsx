@@ -17,6 +17,8 @@ import Bookmarks from './pages/Bookmarks';
 import Analytics from './pages/Analytics';
 import MediaLibrary from './pages/MediaLibrary';
 
+const AgentConsole = React.lazy(() => import('./pages/AgentConsole'));
+
 function Layout({ children }: { children: React.ReactNode }) {
   const { locale, setLocale, t } = useI18n();
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -96,6 +98,9 @@ function Layout({ children }: { children: React.ReactNode }) {
             </NavLink>
             <NavLink to="/admin" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
               {t('adminPanel')}
+            </NavLink>
+            <NavLink to="/admin/agents" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
+              AI Agents
             </NavLink>
             <NavLink to="/settings" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
               {t('settings')}
@@ -183,6 +188,10 @@ export default function App() {
           <Route path="/admin" element={<Layout><Admin /></Layout>} />
           <Route path="/admin/analytics" element={<Layout><Analytics /></Layout>} />
           <Route path="/admin/media" element={<Layout><MediaLibrary /></Layout>} />
+          <Route
+            path="/admin/agents"
+            element={<Layout><React.Suspense fallback={<div className="loading">Loading AI Agents…</div>}><AgentConsole /></React.Suspense></Layout>}
+          />
           <Route path="/settings" element={<Layout><Settings /></Layout>} />
           <Route path="/notifications" element={<Layout><Notifications /></Layout>} />
           <Route path="/bookmarks" element={<Layout><Bookmarks /></Layout>} />
