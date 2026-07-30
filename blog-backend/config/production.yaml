@@ -27,7 +27,8 @@ database:
         postgres:
             name: postgres
             driver: postgres
-            dsn: host=db user=postgres password=password dbname=blog port=5432 sslmode=disable TimeZone=Asia/Shanghai search_path=public
+            # Required through GOUNO_DATABASE_DRIVERS_POSTGRES_DSN at runtime.
+            dsn: ""
             log_level: 1 #日志级别, 1:Silent 2:Error 3:Warn 4:Info
 redis:
     dsn: redis://redis:6379/0

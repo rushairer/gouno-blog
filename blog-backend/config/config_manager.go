@@ -33,6 +33,11 @@ func NewConfigManager(
 	v.SetEnvPrefix("GOUNO")
 	v.AutomaticEnv()
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	// Values read by Unmarshal must be explicitly bound for environment
+	// overrides to take effect. Keep production credentials out of YAML files.
+	if err := v.BindEnv("database.drivers.postgres.dsn"); err != nil {
+		return nil, fmt.Errorf("bind postgres dsn environment: %w", err)
+	}
 
 	// 将 CLI flag 绑定到局部 viper 实例
 	if cmd != nil {

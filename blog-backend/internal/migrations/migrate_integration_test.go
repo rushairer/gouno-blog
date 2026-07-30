@@ -51,4 +51,14 @@ func TestUpAppliesCurrentSchemaAndIsIdempotent(t *testing.T) {
 	if !providerSoftDelete {
 		t.Fatal("expected ai_provider_profiles.deleted_at to exist")
 	}
+	var providerSecretNullable bool
+	if err := db.QueryRowContext(ctx, `SELECT bool_and(is_nullable = 'YES')
+		FROM information_schema.columns
+		WHERE table_schema='public' AND table_name='ai_provider_profiles'
+		AND column_name IN ('api_key_ciphertext', 'api_key_nonce')`).Scan(&providerSecretNullable); err != nil {
+		t.Fatal(err)
+	}
+	if !providerSecretNullable {
+		t.Fatal("expected deleted provider credentials to be nullable for revocation")
+	}
 }

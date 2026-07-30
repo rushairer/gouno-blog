@@ -101,7 +101,8 @@ func (r *AgentRepository) ListProviders(ctx context.Context) ([]*domain.Provider
 
 func (r *AgentRepository) DeleteProvider(ctx context.Context, id int64) error {
 	result, err := r.db.ExecContext(ctx, `UPDATE ai_provider_profiles p
-		SET enabled=false, deleted_at=NOW(), updated_at=NOW()
+		SET enabled=false, api_key_ciphertext=NULL, api_key_nonce=NULL,
+			api_key_last4='', key_version=0, deleted_at=NOW(), updated_at=NOW()
 		WHERE p.id=$1 AND p.deleted_at IS NULL
 		AND NOT EXISTS (
 			SELECT 1 FROM ai_agents a

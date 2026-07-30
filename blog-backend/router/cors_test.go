@@ -46,3 +46,20 @@ func TestCORSMiddlewareAllowsSameOriginAndConfiguredOrigin(t *testing.T) {
 		}
 	}
 }
+
+func TestCORSMiddlewareTreatsExplicitPortAsSameOrigin(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.Use(corsMiddleware(nil))
+	router.POST("/api/posts", func(c *gin.Context) { c.Status(http.StatusCreated) })
+
+	req := httptest.NewRequest(http.MethodPost, "http://blog.test:8080/api/posts", nil)
+	req.Host = "blog.test:8080"
+	req.Header.Set("Origin", "http://blog.test:8080")
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, req)
+
+	if response.Code != http.StatusCreated {
+		t.Fatalf("expected same-origin request with port to pass, got %d", response.Code)
+	}
+}

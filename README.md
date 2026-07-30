@@ -150,7 +150,7 @@ export SSO_CLIENT_ID=blog-spa
 
 后台将 Provider Profile 和 Agent 作为数据库资源管理，无需修改 YAML 即可配置：
 
-- Provider：支持 OpenAI Responses API 和 Anthropic Messages API；API Key 使用 AES-256-GCM 加密落库，读取接口只返回是否已配置和尾号。
+- Provider：支持 OpenAI Responses API 和 Anthropic Messages API；API Key 使用 AES-256-GCM 加密落库，读取接口只返回是否已配置和尾号。删除 Provider 会立刻清除密文；历史 Agent Run 保留审计记录，但不能再使用该凭据。
 - Agent：可选择 Provider、模型、手动或 Cron 周期、IANA 时区、Blog Tool 能力、执行步数、每日运行上限和月度 token 预算。
 - 运行中心：记录运行状态、输出摘要、模型、token 用量和每次 Tool Call。
 - 审批箱：所有文章、标签和评论回复变更只能形成提案；管理员批准后才通过现有 Blog Service 执行。模型没有直接发布或删除路径。
@@ -165,6 +165,8 @@ docker compose up -d
 ```
 
 默认部署采用同源 API，不开放跨域访问。若前端确实部署在不同的受信任 Origin，请在后端运行配置的 `web_server.cors_allowed_origins` 中逐项列出完整 Origin（例如 `https://console.example.com`）；不要使用通配符。未列入名单的跨源写请求会被拒绝。
+
+生产镜像不再内置 Blog 数据库 DSN。启动后端必须提供 `GOUNO_DATABASE_DRIVERS_POSTGRES_DSN`；Compose 为本地开发临时生成该值。部署时应至少设置独立的 `BLOG_POSTGRES_PASSWORD`、`GOUNO_DATABASE_DRIVERS_POSTGRES_DSN`、`BLOG_VISITOR_SECRET` 和 Agent 主密钥，推荐使用平台的 Secret 管理能力，而不是提交 `.env` 文件。
 
 `BLOG_AGENT_MASTER_KEY` 解码后必须恰好为 32 字节。生产配置默认关闭 Agent，且启用时缺少有效主密钥会拒绝启动。主密钥轮换时，提升 `BLOG_AGENT_MASTER_KEY_VERSION`，并暂时通过 `BLOG_AGENT_PREVIOUS_MASTER_KEYS` 保留旧版本：
 
