@@ -35,7 +35,7 @@ func (t *BlogTools) checkLinks(ctx context.Context, raw json.RawMessage) (any, e
 	if err := decodeArguments(raw, &args); err != nil || args.ID <= 0 {
 		return nil, ErrInvalidArgument
 	}
-	post, err := t.posts.GetPost(ctx, args.ID)
+	post, err := t.posts.GetAdminPost(ctx, args.ID)
 	if err != nil {
 		return nil, err
 	}

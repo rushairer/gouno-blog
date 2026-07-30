@@ -249,6 +249,22 @@ func TestPublicReadsHideNonPublishedPosts(t *testing.T) {
 	}
 }
 
+func TestGetAdminPostAllowsDraftWithoutChangingPublicReadPolicy(t *testing.T) {
+	repo := newFakePostRepo()
+	draft := &domain.Post{ID: 1, Slug: "draft", Status: domain.PostStatusDraft}
+	repo.posts[draft.ID] = draft
+	svc := NewPostService(repo)
+
+	post, err := svc.GetAdminPost(context.Background(), draft.ID)
+	if err != nil || post != draft {
+		t.Fatalf("GetAdminPost = %#v, %v; want draft, nil", post, err)
+	}
+	publicPost, err := svc.GetPost(context.Background(), draft.ID)
+	if err != nil || publicPost != nil {
+		t.Fatalf("GetPost = %#v, %v; want hidden draft", publicPost, err)
+	}
+}
+
 func TestCommentValidation(t *testing.T) {
 	svc := NewPostService(newFakePostRepo())
 

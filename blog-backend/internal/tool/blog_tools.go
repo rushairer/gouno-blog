@@ -148,7 +148,7 @@ func (t *BlogTools) getPost(ctx context.Context, raw json.RawMessage) (any, erro
 	if err := decodeArguments(raw, &args); err != nil || args.ID <= 0 {
 		return nil, ErrInvalidArgument
 	}
-	post, err := t.posts.GetPost(ctx, args.ID)
+	post, err := t.posts.GetAdminPost(ctx, args.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -287,7 +287,7 @@ func (t *BlogTools) proposeUpdate(ctx context.Context, raw json.RawMessage) (*Pr
 	if args.Title == nil && args.Slug == nil && args.Summary == nil && args.Content == nil && args.Tags == nil {
 		return nil, ErrInvalidArgument
 	}
-	post, err := t.posts.GetPost(ctx, args.ID)
+	post, err := t.posts.GetAdminPost(ctx, args.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -313,7 +313,7 @@ func (t *BlogTools) proposeTags(ctx context.Context, raw json.RawMessage) (*Prop
 	if err := decodeArguments(raw, &args); err != nil || args.ID <= 0 || len(args.Tags) == 0 {
 		return nil, ErrInvalidArgument
 	}
-	post, err := t.posts.GetPost(ctx, args.ID)
+	post, err := t.posts.GetAdminPost(ctx, args.ID)
 	if err != nil {
 		return nil, err
 	}

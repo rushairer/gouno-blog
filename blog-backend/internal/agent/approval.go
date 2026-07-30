@@ -80,7 +80,7 @@ func (s *ApprovalService) validateConflict(ctx context.Context, approval *domain
 	if err := json.Unmarshal(approval.BeforeSnapshot, &before); err != nil {
 		return ErrApprovalConflict
 	}
-	current, err := s.posts.GetPost(ctx, *approval.TargetID)
+	current, err := s.posts.GetAdminPost(ctx, *approval.TargetID)
 	if err != nil || !current.UpdatedAt.Equal(before.UpdatedAt) {
 		return ErrApprovalConflict
 	}
@@ -108,7 +108,7 @@ func (s *ApprovalService) execute(ctx context.Context, approval *domain.AgentApp
 		if approval.TargetID == nil {
 			return errors.New("post target is required")
 		}
-		current, err := s.posts.GetPost(ctx, *approval.TargetID)
+		current, err := s.posts.GetAdminPost(ctx, *approval.TargetID)
 		if err != nil {
 			return err
 		}

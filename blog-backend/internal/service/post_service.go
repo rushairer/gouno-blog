@@ -169,6 +169,23 @@ func (s *PostService) GetPost(ctx context.Context, id int64) (*domain.Post, erro
 	return post, nil
 }
 
+// GetAdminPost returns a post regardless of publication status. Callers must
+// already be on an authenticated administrative path; public reads must use
+// GetPost or GetPostBySlug instead.
+func (s *PostService) GetAdminPost(ctx context.Context, id int64) (*domain.Post, error) {
+	if id <= 0 {
+		return nil, errors.New("invalid post ID")
+	}
+	post, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if post == nil {
+		return nil, ErrPostNotFound
+	}
+	return post, nil
+}
+
 func (s *PostService) GetPostBySlug(ctx context.Context, slug string) (*domain.Post, error) {
 	post, err := s.repo.GetBySlug(ctx, slug)
 	if err != nil || post == nil || post.Status != domain.PostStatusPublished {
