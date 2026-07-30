@@ -17,6 +17,7 @@ import (
 	agentservice "github.com/rushairer/blog-backend/internal/agent"
 	"github.com/rushairer/blog-backend/internal/controller"
 	"github.com/rushairer/blog-backend/internal/knowledge"
+	"github.com/rushairer/blog-backend/internal/operations"
 	"github.com/rushairer/blog-backend/internal/repository"
 	"github.com/rushairer/blog-backend/internal/secretbox"
 	"github.com/rushairer/blog-backend/internal/service"
@@ -143,6 +144,11 @@ func startWebServer(cmd *cobra.Command, args []string) {
 		knowledgeSvc := knowledge.NewService(db, secrets, globalConfig.AIAgentConfig.AllowedHosts, logger)
 		knowledgeSvc.Start(ctx)
 		toolRegistry := tool.NewBlogRegistry(postSvc, communitySvc, growthSvc, knowledgeSvc)
+		operationsSvc := operations.NewService(db, toolRegistry, logger)
+		if err := operationsSvc.RegisterTools(); err != nil {
+			log.Fatalf("register AI operations tools: %v", err)
+		}
+		operationsSvc.Start(ctx)
 		management := agentservice.NewManagementService(
 			agentRepo, secrets, globalConfig.AIAgentConfig.AllowedHosts,
 			toolRegistry.Names(), toolRegistry.ProposalNames(),

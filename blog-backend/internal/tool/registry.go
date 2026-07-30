@@ -146,3 +146,16 @@ func (r *Registry) Risk(name string) (domain.ToolRiskLevel, bool) {
 	item, ok := r.definitions[name]
 	return item.Risk, ok
 }
+
+func (r *Registry) Register(definitions ...Definition) error {
+	for _, definition := range definitions {
+		if definition.Name == "" {
+			return fmt.Errorf("%w: empty tool name", ErrUnknownTool)
+		}
+		if _, exists := r.definitions[definition.Name]; exists {
+			return fmt.Errorf("%w: duplicate tool %q", ErrUnknownTool, definition.Name)
+		}
+		r.definitions[definition.Name] = definition
+	}
+	return nil
+}

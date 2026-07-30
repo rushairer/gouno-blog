@@ -35,6 +35,7 @@ func TestUpAppliesCurrentSchemaAndIsIdempotent(t *testing.T) {
 		"ai_retrieval_metrics", "ai_retrieval_eval_cases",
 		"ai_skill_versions",
 		"ai_workflows", "ai_workflow_versions", "ai_workflow_runs", "ai_workflow_step_runs",
+		"ai_link_health_jobs", "ai_link_health_snapshots",
 		"ai_editorial_tasks", "ai_comment_reply_drafts",
 	} {
 		var exists bool
