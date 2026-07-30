@@ -91,6 +91,10 @@ describe('AgentConsole', () => {
         id: 13, run_id: 9, tool_name: 'content.find_related', risk_level: 'read', status: 'executed', arguments: { id: 3 },
         result: { post_id: 3, suggestions: [{ post_id: 5, title: 'Search result', slug: 'search-result', snippet: 'A relevant <b>search</b> fragment.', score: 0.87, tags: ['go'] }] },
         created_at: '2026-07-30T00:00:00Z',
+      }, {
+        id: 14, run_id: 9, tool_name: 'content.list_stale_posts', risk_level: 'read', status: 'executed', arguments: {},
+        result: { older_than_days: 180, list: [{ id: 6, title: 'Old article', slug: 'old-article', summary: 'Needs a review.', updated_at: '2025-01-01T00:00:00Z', views_count: 12, likes_count: 3 }] },
+        created_at: '2026-07-30T00:00:00Z',
       }] } });
       return Response.json({ data: responseFor(url) });
     });
@@ -103,6 +107,7 @@ describe('AgentConsole', () => {
     expect(screen.getByText('242')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open article: Related article' })).toHaveAttribute('href', '/articles/related-article');
     expect(screen.getByRole('link', { name: 'Open article: Search result' })).toHaveAttribute('href', '/articles/search-result');
+    expect(screen.getByRole('link', { name: 'Open article: Old article' })).toHaveAttribute('href', '/articles/old-article');
   });
 
   it('redirects users without blog management access', async () => {
