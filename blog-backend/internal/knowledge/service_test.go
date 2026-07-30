@@ -31,3 +31,12 @@ func TestVectorLiteralSanitizesNonFiniteValues(t *testing.T) {
 		t.Fatalf("vector literal = %q", got)
 	}
 }
+
+func TestPercentile95(t *testing.T) {
+	if got := percentile95([]float64{1, 2, 3, 4, 100}); got != 100 {
+		t.Fatalf("p95 = %v", got)
+	}
+	if got := percentile95(nil); got != 0 {
+		t.Fatalf("empty p95 = %v", got)
+	}
+}

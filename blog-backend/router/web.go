@@ -165,6 +165,8 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 				admin.GET("/admin/ai-index/status", agentCtrl.IndexStatus)
 				admin.POST("/admin/ai-index/rebuild", agentCtrl.RebuildIndex)
 				admin.POST("/admin/ai-index/retry", agentCtrl.RetryIndex)
+				admin.PUT("/admin/ai-index/evaluation-cases", agentCtrl.ReplaceIndexEvaluation)
+				admin.POST("/admin/ai-index/evaluate", agentCtrl.EvaluateIndex)
 				admin.GET("/admin/agents", agentCtrl.ListAgents)
 				admin.POST("/admin/agents", agentCtrl.CreateAgent)
 				admin.GET("/admin/agents/:id", agentCtrl.GetAgent)

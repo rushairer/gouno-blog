@@ -213,6 +213,30 @@ func (ctrl *AgentController) RetryIndex(c *gin.Context) {
 	c.JSON(http.StatusAccepted, gouno.NewSuccessResponse(nil))
 }
 
+func (ctrl *AgentController) ReplaceIndexEvaluation(c *gin.Context) {
+	var req struct {
+		Cases []knowledge.EvaluationCase `json:"cases" binding:"required"`
+	}
+	if err := bindAgentJSON(c, &req); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+	if err := ctrl.knowledge.ReplaceEvaluationCases(c.Request.Context(), req.Cases); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
+}
+
+func (ctrl *AgentController) EvaluateIndex(c *gin.Context) {
+	result, err := ctrl.knowledge.Evaluate(c.Request.Context())
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(result))
+}
+
 func (ctrl *AgentController) ListAgents(c *gin.Context) {
 	items, err := ctrl.svc.ListAgents(c.Request.Context())
 	if err != nil {

@@ -13,6 +13,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -385,7 +386,18 @@ type SearchResult struct {
 	Score         float64 `json:"score"`
 }
 
-func (s *Service) Search(ctx context.Context, query string, limit int, excludePostID int64) ([]SearchResult, error) {
+func (s *Service) Search(ctx context.Context, query string, limit int, excludePostID int64) (results []SearchResult, searchErr error) {
+	started := time.Now()
+	defer func() {
+		sum := sha256.Sum256([]byte(strings.TrimSpace(query)))
+		errorCode := any(nil)
+		if searchErr != nil {
+			errorCode = "retrieval_failed"
+		}
+		_, _ = s.db.ExecContext(context.WithoutCancel(ctx), `INSERT INTO ai_retrieval_metrics
+			(query_hash, latency_ms, result_count, succeeded, error_code) VALUES ($1,$2,$3,$4,$5)`,
+			hex.EncodeToString(sum[:]), time.Since(started).Milliseconds(), len(results), searchErr == nil, errorCode)
+	}()
 	query = strings.TrimSpace(query)
 	if query == "" {
 		return nil, fmt.Errorf("%w: query is required", ErrInvalid)
@@ -455,7 +467,17 @@ func (s *Service) Status(ctx context.Context) (map[string]any, error) {
 	if oldest.Valid {
 		lag = time.Since(oldest.Time).Milliseconds()
 	}
-	return map[string]any{"queued": queued, "failed": failed, "chunks": chunks, "oldest_job_age_ms": lag}, nil
+	var p95 sql.NullFloat64
+	if err := s.db.QueryRowContext(ctx, `SELECT percentile_cont(0.95) WITHIN GROUP (ORDER BY latency_ms)
+		FROM ai_retrieval_metrics WHERE created_at >= NOW() - INTERVAL '24 hours'`).Scan(&p95); err != nil {
+		return nil, err
+	}
+	var p95Value any
+	if p95.Valid {
+		p95Value = p95.Float64
+	}
+	return map[string]any{"queued": queued, "failed": failed, "chunks": chunks,
+		"oldest_job_age_ms": lag, "retrieval_p95_ms_24h": p95Value}, nil
 }
 
 func (s *Service) RetryFailed(ctx context.Context) error {
@@ -477,4 +499,105 @@ func ValidateBaseURL(raw string) error {
 		return ErrInvalid
 	}
 	return nil
+}
+
+type EvaluationCase struct {
+	Name            string  `json:"name"`
+	Query           string  `json:"query"`
+	ExpectedPostIDs []int64 `json:"expected_post_ids"`
+}
+
+func (s *Service) ReplaceEvaluationCases(ctx context.Context, cases []EvaluationCase) error {
+	if len(cases) == 0 || len(cases) > 100 {
+		return fmt.Errorf("%w: evaluation requires 1 to 100 cases", ErrInvalid)
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	if _, err = tx.ExecContext(ctx, `UPDATE ai_retrieval_eval_cases SET enabled=false, updated_at=NOW()`); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	for _, item := range cases {
+		item.Name, item.Query = strings.TrimSpace(item.Name), strings.TrimSpace(item.Query)
+		if item.Name == "" || item.Query == "" || len(item.ExpectedPostIDs) == 0 {
+			_ = tx.Rollback()
+			return fmt.Errorf("%w: evaluation case is incomplete", ErrInvalid)
+		}
+		raw, _ := json.Marshal(item.ExpectedPostIDs)
+		if _, err = tx.ExecContext(ctx, `INSERT INTO ai_retrieval_eval_cases
+			(name, query, expected_post_ids, enabled) VALUES ($1,$2,$3,true)
+			ON CONFLICT (name) DO UPDATE SET query=EXCLUDED.query,
+			expected_post_ids=EXCLUDED.expected_post_ids, enabled=true, updated_at=NOW()`,
+			item.Name, item.Query, raw); err != nil {
+			_ = tx.Rollback()
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+func (s *Service) Evaluate(ctx context.Context) (map[string]any, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT name, query, expected_post_ids
+		FROM ai_retrieval_eval_cases WHERE enabled=true ORDER BY name`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	cases := make([]EvaluationCase, 0)
+	for rows.Next() {
+		var item EvaluationCase
+		var raw []byte
+		if err := rows.Scan(&item.Name, &item.Query, &raw); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(raw, &item.ExpectedPostIDs); err != nil {
+			return nil, err
+		}
+		cases = append(cases, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(cases) == 0 {
+		return nil, fmt.Errorf("%w: no enabled evaluation cases", ErrInvalid)
+	}
+	hits, reciprocalRank := 0, float64(0)
+	latencies := make([]float64, 0, len(cases))
+	for _, item := range cases {
+		started := time.Now()
+		results, err := s.Search(ctx, item.Query, 10, 0)
+		if err != nil {
+			return nil, err
+		}
+		latencies = append(latencies, float64(time.Since(started).Milliseconds()))
+		rank := 0
+		for index, result := range results {
+			for _, expected := range item.ExpectedPostIDs {
+				if result.PostID == expected {
+					rank = index + 1
+					break
+				}
+			}
+			if rank > 0 {
+				break
+			}
+		}
+		if rank > 0 {
+			hits++
+			reciprocalRank += 1 / float64(rank)
+		}
+	}
+	return map[string]any{"cases": len(cases), "recall_at_10": float64(hits) / float64(len(cases)),
+		"mrr": reciprocalRank / float64(len(cases)), "p95_latency_ms": percentile95(latencies)}, nil
+}
+
+func percentile95(values []float64) float64 {
+	if len(values) == 0 {
+		return 0
+	}
+	slices.Sort(values)
+	index := int(math.Ceil(float64(len(values))*0.95)) - 1
+	return values[max(0, min(index, len(values)-1))]
 }
