@@ -83,6 +83,10 @@ describe('AgentConsole', () => {
         id: 11, run_id: 9, tool_name: 'content.audit_post', risk_level: 'read', status: 'executed', arguments: { id: 3 },
         result: { post_id: 3, metrics: { title_characters: 13, summary_characters: 0, seo_title_characters: 0, seo_description_characters: 0, content_characters: 242, heading_count: 2, image_count: 1, images_missing_alt: 1, internal_link_count: 2, external_link_count: 1 }, checks: [{ code: 'image_alt_missing', severity: 'warning', message: 'Add alt text to every inline image.' }] },
         created_at: '2026-07-30T00:00:00Z',
+      }, {
+        id: 12, run_id: 9, tool_name: 'content.find_internal_links', risk_level: 'read', status: 'executed', arguments: { id: 3 },
+        result: { post_id: 3, suggestions: [{ post_id: 4, title: 'Related article', slug: 'related-article', summary: 'Useful context.', score: 5, match_hints: ['shared tag: go'] }] },
+        created_at: '2026-07-30T00:00:00Z',
       }] } });
       return Response.json({ data: responseFor(url) });
     });
@@ -93,6 +97,7 @@ describe('AgentConsole', () => {
     expect(await screen.findByRole('region', { name: 'Content audit' })).toBeInTheDocument();
     expect(screen.getByText('image alt missing')).toBeInTheDocument();
     expect(screen.getByText('242')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open article: Related article' })).toHaveAttribute('href', '/articles/related-article');
   });
 
   it('redirects users without blog management access', async () => {
