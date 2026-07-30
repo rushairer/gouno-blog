@@ -63,6 +63,14 @@ func (r *Runner) ListToolCalls(ctx context.Context, runID int64) ([]*domain.Agen
 }
 
 func (r *Runner) Queue(ctx context.Context, agentID int64, trigger domain.AgentTriggerType, triggeredBy *string, input json.RawMessage, scheduleKey *string) (*domain.AgentRun, error) {
+	return r.queue(ctx, agentID, trigger, triggeredBy, input, scheduleKey, nil)
+}
+
+func (r *Runner) QueueWorkflow(ctx context.Context, agentID int64, triggeredBy *string, input json.RawMessage, workflowVersionID int64) (*domain.AgentRun, error) {
+	return r.queue(ctx, agentID, domain.AgentTriggerManual, triggeredBy, input, nil, &workflowVersionID)
+}
+
+func (r *Runner) queue(ctx context.Context, agentID int64, trigger domain.AgentTriggerType, triggeredBy *string, input json.RawMessage, scheduleKey *string, workflowVersionID *int64) (*domain.AgentRun, error) {
 	value, err := r.management.GetAgent(ctx, agentID)
 	if err != nil {
 		return nil, err
@@ -94,7 +102,8 @@ func (r *Runner) Queue(ctx context.Context, agentID int64, trigger domain.AgentT
 	run := &domain.AgentRun{
 		AgentID: agentID, TriggerType: trigger, TriggeredBy: triggeredBy, ScheduleKey: scheduleKey,
 		Status: domain.AgentRunQueued, Input: input, Provider: profile.ProviderType, Model: profile.Model,
-		SkillVersionID: value.SkillVersionID,
+		SkillVersionID:    value.SkillVersionID,
+		WorkflowVersionID: workflowVersionID,
 	}
 	if err := r.repo.CreateRun(ctx, run); err != nil {
 		if repository.IsConstraintError(err) {
@@ -106,14 +115,22 @@ func (r *Runner) Queue(ctx context.Context, agentID int64, trigger domain.AgentT
 }
 
 func (r *Runner) Execute(ctx context.Context, runID int64) {
-	if err := r.execute(ctx, runID); err != nil {
+	r.executeAndFinish(ctx, runID, false)
+}
+
+func (r *Runner) ExecutePreview(ctx context.Context, runID int64) {
+	r.executeAndFinish(ctx, runID, true)
+}
+
+func (r *Runner) executeAndFinish(ctx context.Context, runID int64, dryRun bool) {
+	if err := r.execute(ctx, runID, dryRun); err != nil {
 		code := "agent_run_failed"
 		message := safeError(err)
 		_ = r.repo.FinishRun(ctx, runID, domain.AgentRunFailed, "", 0, 0, &code, &message)
 	}
 }
 
-func (r *Runner) execute(ctx context.Context, runID int64) error {
+func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 	run, err := r.repo.GetRun(ctx, runID)
 	if err != nil {
 		return err
@@ -201,15 +218,17 @@ func (r *Runner) execute(ctx context.Context, runID int64) error {
 				continue
 			}
 			if proposal != nil {
-				approval := &domain.AgentApproval{
-					RunID: run.ID, ToolCallID: call.ID, ActionType: proposal.ActionType,
-					TargetType: proposal.TargetType, TargetID: proposal.TargetID,
-					ProposedPayload: proposal.Payload, BeforeSnapshot: proposal.BeforeSnapshot,
+				if !dryRun {
+					approval := &domain.AgentApproval{
+						RunID: run.ID, ToolCallID: call.ID, ActionType: proposal.ActionType,
+						TargetType: proposal.TargetType, TargetID: proposal.TargetID,
+						ProposedPayload: proposal.Payload, BeforeSnapshot: proposal.BeforeSnapshot,
+					}
+					if err := r.repo.CreateApproval(ctx, approval); err != nil {
+						return err
+					}
+					hasApproval = true
 				}
-				if err := r.repo.CreateApproval(ctx, approval); err != nil {
-					return err
-				}
-				hasApproval = true
 			}
 			if err := r.repo.FinishToolCall(ctx, call.ID, domain.ToolCallExecuted, rawResult, nil); err != nil {
 				return err

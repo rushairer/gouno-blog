@@ -15,6 +15,7 @@ import (
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/knowledge"
 	"github.com/rushairer/blog-backend/internal/tool"
+	workflowservice "github.com/rushairer/blog-backend/internal/workflow"
 	"github.com/rushairer/gouno"
 )
 
@@ -25,6 +26,162 @@ type AgentController struct {
 	tools     *tool.Registry
 	workerCtx context.Context
 	knowledge *knowledge.Service
+	workflows *workflowservice.Service
+}
+
+func (ctrl *AgentController) SetWorkflowService(service *workflowservice.Service) {
+	ctrl.workflows = service
+}
+
+func (ctrl *AgentController) ListWorkflows(c *gin.Context) {
+	items, err := ctrl.workflows.List(c.Request.Context())
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
+}
+
+func (ctrl *AgentController) GetWorkflow(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	item, err := ctrl.workflows.Get(c.Request.Context(), id)
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(item))
+}
+
+func (ctrl *AgentController) CreateWorkflow(c *gin.Context) { ctrl.saveWorkflow(c, 0) }
+
+func (ctrl *AgentController) UpdateWorkflow(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	ctrl.saveWorkflow(c, id)
+}
+
+func (ctrl *AgentController) saveWorkflow(c *gin.Context, id int64) {
+	var value domain.Workflow
+	if err := bindAgentJSON(c, &value); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+	value.ID = id
+	if subject, exists := c.Get("account_id"); exists {
+		if text, ok := subject.(string); ok && text != "" {
+			value.CreatedBy = &text
+		}
+	}
+	if err := ctrl.workflows.Save(c.Request.Context(), &value); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	status := http.StatusOK
+	if id == 0 {
+		status = http.StatusCreated
+	}
+	c.JSON(status, gouno.NewSuccessResponse(&value))
+}
+
+func (ctrl *AgentController) ListWorkflowVersions(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	items, err := ctrl.workflows.Versions(c.Request.Context(), id)
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
+}
+
+func (ctrl *AgentController) RollbackWorkflow(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	var req struct {
+		Version int `json:"version" binding:"required"`
+	}
+	if err := bindAgentJSON(c, &req); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+	if err := ctrl.workflows.Rollback(c.Request.Context(), id, req.Version); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
+}
+
+func (ctrl *AgentController) SetWorkflowEnabled(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	enabled := c.Param("action") == "enable"
+	if err := ctrl.workflows.SetEnabled(c.Request.Context(), id, enabled); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"enabled": enabled}))
+}
+
+func (ctrl *AgentController) RunWorkflow(c *gin.Context)    { ctrl.queueWorkflow(c, false) }
+func (ctrl *AgentController) DryRunWorkflow(c *gin.Context) { ctrl.queueWorkflow(c, true) }
+
+func (ctrl *AgentController) queueWorkflow(c *gin.Context, dryRun bool) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	var req struct {
+		Input json.RawMessage `json:"input"`
+	}
+	if c.Request.ContentLength > 0 {
+		if err := bindAgentJSON(c, &req); err != nil {
+			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+			return
+		}
+	}
+	var subject *string
+	if raw, exists := c.Get("account_id"); exists {
+		if text, ok := raw.(string); ok && text != "" {
+			subject = &text
+		}
+	}
+	run, err := ctrl.workflows.Queue(c.Request.Context(), id, dryRun, req.Input, subject)
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	go ctrl.workflows.Execute(ctrl.workerCtx, run.ID)
+	c.JSON(http.StatusAccepted, gouno.NewSuccessResponse(run))
+}
+
+func (ctrl *AgentController) ListWorkflowRuns(c *gin.Context) {
+	workflowID, _ := strconv.ParseInt(c.Query("workflow_id"), 10, 64)
+	items, err := ctrl.workflows.ListRuns(c.Request.Context(), workflowID)
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
+}
+
+func (ctrl *AgentController) WorkflowMetrics(c *gin.Context) {
+	result, err := ctrl.workflows.Metrics(c.Request.Context())
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(result))
 }
 
 func NewAgentController(svc *agentservice.ManagementService, runner *agentservice.Runner, approvals *agentservice.ApprovalService, tools *tool.Registry, workerCtx context.Context, knowledgeServices ...*knowledge.Service) *AgentController {
@@ -634,6 +791,12 @@ func agentID(c *gin.Context) (int64, bool) {
 func writeAgentError(c *gin.Context, err error) {
 	status := http.StatusInternalServerError
 	switch {
+	case errors.Is(err, workflowservice.ErrInvalid):
+		status = http.StatusBadRequest
+	case errors.Is(err, workflowservice.ErrNotFound):
+		status = http.StatusNotFound
+	case errors.Is(err, workflowservice.ErrConflict):
+		status = http.StatusConflict
 	case errors.Is(err, knowledge.ErrInvalid):
 		status = http.StatusBadRequest
 	case errors.Is(err, knowledge.ErrNotFound):

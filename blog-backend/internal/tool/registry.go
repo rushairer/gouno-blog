@@ -141,3 +141,8 @@ func (r *Registry) ProposalNames() []string {
 	slices.Sort(result)
 	return result
 }
+
+func (r *Registry) Risk(name string) (domain.ToolRiskLevel, bool) {
+	item, ok := r.definitions[name]
+	return item.Risk, ok
+}

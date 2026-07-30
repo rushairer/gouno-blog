@@ -21,6 +21,7 @@ import (
 	"github.com/rushairer/blog-backend/internal/secretbox"
 	"github.com/rushairer/blog-backend/internal/service"
 	"github.com/rushairer/blog-backend/internal/tool"
+	workflowservice "github.com/rushairer/blog-backend/internal/workflow"
 	"github.com/rushairer/blog-backend/middleware"
 	"github.com/rushairer/blog-backend/router"
 	"github.com/rushairer/blog-backend/utility"
@@ -149,6 +150,7 @@ func startWebServer(cmd *cobra.Command, args []string) {
 		runner := agentservice.NewRunner(agentRepo, management, toolRegistry)
 		approvals := agentservice.NewApprovalService(agentRepo, postSvc)
 		agentCtrl = controller.NewAgentController(management, runner, approvals, toolRegistry, ctx, knowledgeSvc)
+		agentCtrl.SetWorkflowService(workflowservice.NewService(db, runner, management, toolRegistry))
 		agentservice.NewScheduler(
 			agentRepo, runner, globalConfig.AIAgentConfig.SchedulerInterval, logger,
 		).Start(ctx)

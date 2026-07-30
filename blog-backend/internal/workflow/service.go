@@ -1,0 +1,508 @@
+package workflow
+
+import (
+	"context"
+	"database/sql"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"strconv"
+	"strings"
+	"time"
+
+	agentservice "github.com/rushairer/blog-backend/internal/agent"
+	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/tool"
+)
+
+var (
+	ErrInvalid  = errors.New("invalid workflow")
+	ErrNotFound = errors.New("workflow not found")
+	ErrConflict = errors.New("workflow conflict")
+)
+
+type Service struct {
+	db     *sql.DB
+	runner *agentservice.Runner
+	agents *agentservice.ManagementService
+	tools  *tool.Registry
+}
+
+func NewService(db *sql.DB, runner *agentservice.Runner, agents *agentservice.ManagementService, tools *tool.Registry) *Service {
+	return &Service{db: db, runner: runner, agents: agents, tools: tools}
+}
+
+const workflowColumns = `w.id, w.name, w.description, w.enabled, w.template_key,
+	w.current_version, v.id, v.input_schema, v.steps, w.created_by, w.created_at, w.updated_at`
+
+func scanWorkflow(scanner interface{ Scan(...any) error }) (*domain.Workflow, error) {
+	var value domain.Workflow
+	var steps []byte
+	err := scanner.Scan(&value.ID, &value.Name, &value.Description, &value.Enabled, &value.TemplateKey,
+		&value.CurrentVersion, &value.VersionID, &value.InputSchema, &steps, &value.CreatedBy,
+		&value.CreatedAt, &value.UpdatedAt)
+	if err == nil {
+		err = json.Unmarshal(steps, &value.Steps)
+	}
+	return &value, err
+}
+
+func (s *Service) List(ctx context.Context) ([]*domain.Workflow, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT `+workflowColumns+`
+		FROM ai_workflows w JOIN ai_workflow_versions v
+		ON v.workflow_id=w.id AND v.version=w.current_version
+		WHERE w.deleted_at IS NULL ORDER BY w.created_at`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := make([]*domain.Workflow, 0)
+	for rows.Next() {
+		item, err := scanWorkflow(rows)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
+func (s *Service) Get(ctx context.Context, id int64) (*domain.Workflow, error) {
+	item, err := scanWorkflow(s.db.QueryRowContext(ctx, `SELECT `+workflowColumns+`
+		FROM ai_workflows w JOIN ai_workflow_versions v
+		ON v.workflow_id=w.id AND v.version=w.current_version
+		WHERE w.id=$1 AND w.deleted_at IS NULL`, id))
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	return item, err
+}
+
+func (s *Service) Save(ctx context.Context, value *domain.Workflow) error {
+	value.Name, value.Description = strings.TrimSpace(value.Name), strings.TrimSpace(value.Description)
+	if value.Name == "" || len(value.InputSchema) == 0 || !json.Valid(value.InputSchema) {
+		return fmt.Errorf("%w: name and input schema are required", ErrInvalid)
+	}
+	if len(value.InputSchema) > 32<<10 || len(value.Steps) == 0 {
+		return fmt.Errorf("%w: workflow is empty or too large", ErrInvalid)
+	}
+	if err := s.validateSteps(value.Steps, 0); err != nil {
+		return err
+	}
+	rawSteps, _ := json.Marshal(value.Steps)
+	if len(rawSteps) > 128<<10 {
+		return fmt.Errorf("%w: step definition exceeds 128 KiB", ErrInvalid)
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	if value.ID == 0 {
+		err = tx.QueryRowContext(ctx, `INSERT INTO ai_workflows
+			(name, description, enabled, created_by) VALUES ($1,$2,$3,$4)
+			RETURNING id, current_version, created_at, updated_at`, value.Name, value.Description,
+			value.Enabled, value.CreatedBy).Scan(&value.ID, &value.CurrentVersion, &value.CreatedAt, &value.UpdatedAt)
+	} else {
+		err = tx.QueryRowContext(ctx, `UPDATE ai_workflows SET name=$2, description=$3,
+			enabled=$4, current_version=current_version+1, updated_at=NOW()
+			WHERE id=$1 AND deleted_at IS NULL
+			RETURNING current_version, created_by, created_at, updated_at`, value.ID, value.Name,
+			value.Description, value.Enabled).Scan(&value.CurrentVersion, &value.CreatedBy,
+			&value.CreatedAt, &value.UpdatedAt)
+	}
+	if err == nil {
+		err = tx.QueryRowContext(ctx, `INSERT INTO ai_workflow_versions
+			(workflow_id, version, input_schema, steps, created_by)
+			VALUES ($1,$2,$3,$4,$5) RETURNING id`, value.ID, value.CurrentVersion,
+			value.InputSchema, rawSteps, value.CreatedBy).Scan(&value.VersionID)
+	}
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	return tx.Commit()
+}
+
+func (s *Service) validateSteps(steps []domain.WorkflowStep, depth int) error {
+	if depth > 3 || len(steps) > 50 {
+		return fmt.Errorf("%w: workflow nesting or step limit exceeded", ErrInvalid)
+	}
+	seen := map[string]bool{}
+	for _, step := range steps {
+		if step.ID == "" || seen[step.ID] {
+			return fmt.Errorf("%w: step IDs must be unique and non-empty", ErrInvalid)
+		}
+		seen[step.ID] = true
+		switch step.Type {
+		case "tool":
+			risk, ok := s.tools.Risk(step.ToolName)
+			if !ok || risk != domain.ToolRiskRead {
+				return fmt.Errorf("%w: deterministic tool steps must use a registered read tool", ErrInvalid)
+			}
+		case "model":
+			if step.AgentID <= 0 && step.AgentIDPointer == "" {
+				return fmt.Errorf("%w: model step must resolve an Agent", ErrInvalid)
+			}
+		case "for_each":
+			if step.CollectionPointer == "" || step.MaxItems < 1 || step.MaxItems > 100 {
+				return fmt.Errorf("%w: for_each requires a bounded collection", ErrInvalid)
+			}
+			if err := s.validateSteps(step.Steps, depth+1); err != nil {
+				return err
+			}
+		case "approval_gate", "output":
+		default:
+			return fmt.Errorf("%w: unsupported step type %q", ErrInvalid, step.Type)
+		}
+		for _, pointer := range []string{step.AgentIDPointer, step.ArgumentsPointer, step.InputPointer, step.CollectionPointer, step.OutputPointer} {
+			if pointer != "" && !strings.HasPrefix(pointer, "/") {
+				return fmt.Errorf("%w: JSON pointers must start with /", ErrInvalid)
+			}
+		}
+	}
+	return nil
+}
+
+func (s *Service) Versions(ctx context.Context, id int64) ([]*domain.Workflow, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT w.id, w.name, w.description, w.enabled, w.template_key,
+		v.version, v.id, v.input_schema, v.steps, v.created_by, w.created_at, v.created_at
+		FROM ai_workflows w JOIN ai_workflow_versions v ON v.workflow_id=w.id
+		WHERE w.id=$1 ORDER BY v.version DESC`, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := make([]*domain.Workflow, 0)
+	for rows.Next() {
+		item, err := scanWorkflow(rows)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
+func (s *Service) Rollback(ctx context.Context, id int64, version int) error {
+	result, err := s.db.ExecContext(ctx, `UPDATE ai_workflows SET current_version=$2,
+		updated_at=NOW() WHERE id=$1 AND deleted_at IS NULL
+		AND EXISTS (SELECT 1 FROM ai_workflow_versions WHERE workflow_id=$1 AND version=$2)`, id, version)
+	if err != nil {
+		return err
+	}
+	if n, _ := result.RowsAffected(); n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (s *Service) SetEnabled(ctx context.Context, id int64, enabled bool) error {
+	result, err := s.db.ExecContext(ctx, `UPDATE ai_workflows SET enabled=$2, updated_at=NOW()
+		WHERE id=$1 AND deleted_at IS NULL`, id, enabled)
+	if err != nil {
+		return err
+	}
+	if n, _ := result.RowsAffected(); n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (s *Service) Queue(ctx context.Context, id int64, dryRun bool, input json.RawMessage, triggeredBy *string) (*domain.WorkflowRun, error) {
+	value, err := s.Get(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if !value.Enabled && !dryRun {
+		return nil, fmt.Errorf("%w: workflow is disabled", ErrInvalid)
+	}
+	if len(input) == 0 {
+		input = json.RawMessage(`{}`)
+	}
+	if len(input) > 64<<10 || !json.Valid(input) {
+		return nil, fmt.Errorf("%w: invalid input", ErrInvalid)
+	}
+	run := &domain.WorkflowRun{WorkflowID: id, WorkflowVersionID: value.VersionID,
+		DryRun: dryRun, Status: "queued", Input: input, TriggeredBy: triggeredBy}
+	err = s.db.QueryRowContext(ctx, `INSERT INTO ai_workflow_runs
+		(workflow_id, workflow_version_id, dry_run, input, triggered_by)
+		VALUES ($1,$2,$3,$4,$5) RETURNING id, created_at`, run.WorkflowID, run.WorkflowVersionID,
+		run.DryRun, run.Input, run.TriggeredBy).Scan(&run.ID, &run.CreatedAt)
+	return run, err
+}
+
+func (s *Service) Execute(ctx context.Context, runID int64) {
+	if err := s.execute(ctx, runID); err != nil {
+		code, message := "workflow_failed", safeError(err)
+		_, _ = s.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status='failed',
+			error_code=$2, error_message=$3, finished_at=NOW() WHERE id=$1`, runID, code, message)
+	}
+}
+
+func (s *Service) execute(ctx context.Context, runID int64) error {
+	var run domain.WorkflowRun
+	err := s.db.QueryRowContext(ctx, `UPDATE ai_workflow_runs SET status='running', started_at=NOW()
+		WHERE id=$1 AND status='queued'
+		RETURNING workflow_id, workflow_version_id, dry_run, input, triggered_by, created_at`,
+		runID).Scan(&run.WorkflowID, &run.WorkflowVersionID, &run.DryRun, &run.Input, &run.TriggeredBy, &run.CreatedAt)
+	if err != nil {
+		return err
+	}
+	var stepsRaw []byte
+	if err := s.db.QueryRowContext(ctx, `SELECT steps FROM ai_workflow_versions WHERE id=$1`,
+		run.WorkflowVersionID).Scan(&stepsRaw); err != nil {
+		return err
+	}
+	var steps []domain.WorkflowStep
+	if err := json.Unmarshal(stepsRaw, &steps); err != nil {
+		return err
+	}
+	var input any
+	if err := json.Unmarshal(run.Input, &input); err != nil {
+		return err
+	}
+	document := map[string]any{"input": input, "steps": map[string]any{}}
+	output, awaiting, inputTokens, outputTokens, err := s.executeSteps(ctx, &run, steps, document, nil)
+	if err != nil {
+		return err
+	}
+	status := "succeeded"
+	if awaiting {
+		status = "awaiting_approval"
+	}
+	rawOutput, _ := json.Marshal(output)
+	_, err = s.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status=$2, output=$3,
+		input_tokens=$4, output_tokens=$5, finished_at=NOW() WHERE id=$1`, runID, status,
+		rawOutput, inputTokens, outputTokens)
+	return err
+}
+
+func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, steps []domain.WorkflowStep, document map[string]any, item any) (any, bool, int64, int64, error) {
+	var output any
+	var totalInput, totalOutput int64
+	awaiting := false
+	for _, step := range steps {
+		started := time.Now()
+		stepInput := any(nil)
+		var stepOutput any
+		var err error
+		switch step.Type {
+		case "tool":
+			stepInput = map[string]any{}
+			if len(step.Arguments) > 0 {
+				_ = json.Unmarshal(step.Arguments, &stepInput)
+			}
+			if step.ArgumentsPointer != "" {
+				stepInput, err = resolvePointer(document, step.ArgumentsPointer)
+			}
+			if err == nil {
+				raw, _ := json.Marshal(stepInput)
+				_, result, _, invokeErr := s.tools.Invoke(ctx, s.tools.Names(), step.ToolName, raw)
+				err = invokeErr
+				if err == nil {
+					err = json.Unmarshal(result, &stepOutput)
+				}
+			}
+		case "model":
+			agentID := step.AgentID
+			if agentID <= 0 {
+				var raw any
+				raw, err = resolvePointer(document, step.AgentIDPointer)
+				if value, ok := raw.(float64); ok {
+					agentID = int64(value)
+				} else if err == nil {
+					err = ErrInvalid
+				}
+			}
+			stepInput = inputForStep(document, item, step.InputPointer)
+			if err == nil {
+				agent, getErr := s.agents.GetAgent(ctx, agentID)
+				if getErr != nil {
+					err = getErr
+				} else if agent.SkillVersionID == nil {
+					err = fmt.Errorf("%w: workflow Agents must lock a Skill version", ErrInvalid)
+				}
+			}
+			if err == nil {
+				raw, _ := json.Marshal(stepInput)
+				agentRun, queueErr := s.runner.QueueWorkflow(ctx, agentID, run.TriggeredBy, raw, run.WorkflowVersionID)
+				if queueErr != nil {
+					err = queueErr
+				} else {
+					if run.DryRun {
+						s.runner.ExecutePreview(ctx, agentRun.ID)
+					} else {
+						s.runner.Execute(ctx, agentRun.ID)
+					}
+					agentRun, err = s.runner.GetRun(ctx, agentRun.ID)
+					if err == nil {
+						stepOutput = agentRun
+						totalInput += agentRun.InputTokens
+						totalOutput += agentRun.OutputTokens
+						awaiting = awaiting || agentRun.Status == domain.AgentRunAwaitingApproval
+					}
+				}
+			}
+		case "for_each":
+			var collection any
+			collection, err = resolvePointer(document, step.CollectionPointer)
+			if err == nil {
+				items, ok := collection.([]any)
+				if !ok {
+					err = fmt.Errorf("%w: for_each collection is not an array", ErrInvalid)
+				} else {
+					count := min(len(items), step.MaxItems)
+					results := make([]any, 0, count)
+					for index := 0; index < count; index++ {
+						childDocument := cloneDocument(document)
+						childDocument["item"] = items[index]
+						childOutput, childAwaiting, inTokens, outTokens, childErr := s.executeSteps(ctx, run, step.Steps, childDocument, items[index])
+						if childErr != nil {
+							err = childErr
+							break
+						}
+						results = append(results, childOutput)
+						awaiting = awaiting || childAwaiting
+						totalInput += inTokens
+						totalOutput += outTokens
+					}
+					stepOutput = results
+				}
+			}
+		case "approval_gate":
+			stepOutput = map[string]any{"awaiting_approval": awaiting}
+		case "output":
+			stepOutput, err = resolvePointer(document, step.OutputPointer)
+			output = stepOutput
+		}
+		s.recordStep(ctx, run.ID, step, stepInput, stepOutput, started, err)
+		if err != nil {
+			return nil, awaiting, totalInput, totalOutput, err
+		}
+		document["steps"].(map[string]any)[step.ID] = stepOutput
+		if step.Type != "output" {
+			output = stepOutput
+		}
+	}
+	return output, awaiting, totalInput, totalOutput, nil
+}
+
+func inputForStep(document map[string]any, item any, pointer string) any {
+	if pointer == "" {
+		if item != nil {
+			return item
+		}
+		return document["input"]
+	}
+	value, err := resolvePointer(document, pointer)
+	if err != nil {
+		return map[string]any{"pointer_error": true}
+	}
+	return value
+}
+
+func cloneDocument(document map[string]any) map[string]any {
+	clone := map[string]any{"input": document["input"], "steps": map[string]any{}}
+	for key, value := range document["steps"].(map[string]any) {
+		clone["steps"].(map[string]any)[key] = value
+	}
+	return clone
+}
+
+func resolvePointer(document any, pointer string) (any, error) {
+	if pointer == "" {
+		return document, nil
+	}
+	current := document
+	for _, part := range strings.Split(strings.TrimPrefix(pointer, "/"), "/") {
+		part = strings.ReplaceAll(strings.ReplaceAll(part, "~1", "/"), "~0", "~")
+		switch typed := current.(type) {
+		case map[string]any:
+			value, ok := typed[part]
+			if !ok {
+				return nil, fmt.Errorf("%w: unresolved pointer", ErrInvalid)
+			}
+			current = value
+		case []any:
+			index, err := strconv.Atoi(part)
+			if err != nil || index < 0 || index >= len(typed) {
+				return nil, fmt.Errorf("%w: invalid array pointer", ErrInvalid)
+			}
+			current = typed[index]
+		default:
+			return nil, fmt.Errorf("%w: pointer crosses scalar", ErrInvalid)
+		}
+	}
+	return current, nil
+}
+
+func (s *Service) recordStep(ctx context.Context, runID int64, step domain.WorkflowStep, input, output any, started time.Time, stepErr error) {
+	rawInput, _ := json.Marshal(input)
+	rawOutput, _ := json.Marshal(output)
+	status, errorMessage := "succeeded", any(nil)
+	if stepErr != nil {
+		status, errorMessage = "failed", safeError(stepErr)
+	}
+	_, _ = s.db.ExecContext(ctx, `INSERT INTO ai_workflow_step_runs
+		(workflow_run_id, step_id, step_type, status, input, output, error_message, started_at, finished_at)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
+		ON CONFLICT (workflow_run_id, step_id, iteration) DO NOTHING`,
+		runID, step.ID, step.Type, status, rawInput, rawOutput, errorMessage, started)
+}
+
+func safeError(err error) string {
+	if err == nil {
+		return ""
+	}
+	message := err.Error()
+	if len(message) > 1000 {
+		message = message[:1000]
+	}
+	return message
+}
+
+func (s *Service) ListRuns(ctx context.Context, workflowID int64) ([]*domain.WorkflowRun, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT id, workflow_id, workflow_version_id, dry_run,
+		status, input, output, error_code, error_message, input_tokens, output_tokens, triggered_by,
+		started_at, finished_at, created_at FROM ai_workflow_runs
+		WHERE ($1=0 OR workflow_id=$1) ORDER BY created_at DESC LIMIT 100`, workflowID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := make([]*domain.WorkflowRun, 0)
+	for rows.Next() {
+		var item domain.WorkflowRun
+		if err := rows.Scan(&item.ID, &item.WorkflowID, &item.WorkflowVersionID, &item.DryRun,
+			&item.Status, &item.Input, &item.Output, &item.ErrorCode, &item.ErrorMessage,
+			&item.InputTokens, &item.OutputTokens, &item.TriggeredBy, &item.StartedAt,
+			&item.FinishedAt, &item.CreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, &item)
+	}
+	return items, rows.Err()
+}
+
+func (s *Service) Metrics(ctx context.Context) (map[string]any, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT w.id, w.name, COUNT(r.id),
+		COUNT(r.id) FILTER (WHERE r.status='failed'),
+		COALESCE(SUM(r.input_tokens+r.output_tokens),0)
+		FROM ai_workflows w LEFT JOIN ai_workflow_runs r ON r.workflow_id=w.id
+		WHERE w.deleted_at IS NULL GROUP BY w.id, w.name ORDER BY w.name`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := make([]map[string]any, 0)
+	for rows.Next() {
+		var id, runs, failures, tokens int64
+		var name string
+		if err := rows.Scan(&id, &name, &runs, &failures, &tokens); err != nil {
+			return nil, err
+		}
+		items = append(items, map[string]any{"workflow_id": id, "name": name, "runs": runs,
+			"failures": failures, "tokens": tokens})
+	}
+	return map[string]any{"workflows": items}, rows.Err()
+}

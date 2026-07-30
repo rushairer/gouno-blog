@@ -191,6 +191,18 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 				admin.GET("/admin/agent-approvals", agentCtrl.ListApprovals)
 				admin.POST("/admin/agent-approvals/:id/approve", agentCtrl.Approve)
 				admin.POST("/admin/agent-approvals/:id/reject", agentCtrl.Reject)
+				admin.GET("/admin/ai-workflows", agentCtrl.ListWorkflows)
+				admin.POST("/admin/ai-workflows", agentCtrl.CreateWorkflow)
+				admin.GET("/admin/ai-workflows/:id", agentCtrl.GetWorkflow)
+				admin.PUT("/admin/ai-workflows/:id", agentCtrl.UpdateWorkflow)
+				admin.GET("/admin/ai-workflows/:id/versions", agentCtrl.ListWorkflowVersions)
+				admin.POST("/admin/ai-workflows/:id/rollback", agentCtrl.RollbackWorkflow)
+				admin.POST("/admin/ai-workflows/:id/enable", agentCtrl.SetWorkflowEnabled)
+				admin.POST("/admin/ai-workflows/:id/disable", agentCtrl.SetWorkflowEnabled)
+				admin.POST("/admin/ai-workflows/:id/run", agentCtrl.RunWorkflow)
+				admin.POST("/admin/ai-workflows/:id/dry-run", agentCtrl.DryRunWorkflow)
+				admin.GET("/admin/ai-workflow-runs", agentCtrl.ListWorkflowRuns)
+				admin.GET("/admin/ai-workflow-metrics", agentCtrl.WorkflowMetrics)
 			}
 		}
 	}
