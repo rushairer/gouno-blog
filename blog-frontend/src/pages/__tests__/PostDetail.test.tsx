@@ -56,10 +56,10 @@ describe('PostDetail', () => {
     expect(screen.getByText('code')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Architecture diagram' })).toHaveAttribute('src', '/media/diagram.jpg');
     expect(await screen.findByText('Great')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Related Go Post/ })).toHaveAttribute('href', '/posts/related-go-post');
-    expect(document.title).toBe("Markdown Post - Aben's DevBlog");
+    expect(screen.getByRole('link', { name: /Related Go Post/ })).toHaveAttribute('href', '/articles/related-go-post');
+    expect(document.title).toBe('Markdown Post - Gouno Blog');
     expect(document.head.querySelector('meta[name="description"]')).toHaveAttribute('content', 'Summary');
-    expect(document.head.querySelector('link[rel="canonical"]')).toHaveAttribute('href', 'http://localhost:8080/posts/markdown-post');
+    expect(document.head.querySelector('link[rel="canonical"]')).toHaveAttribute('href', 'http://localhost:8080/articles/markdown-post');
     expect(document.head.querySelector('script[data-blog-seo="article"]')?.textContent).toContain('"BlogPosting"');
     expect(fetchMock).toHaveBeenCalledWith('/api/posts/markdown-post');
     expect(fetchMock).toHaveBeenCalledWith('/api/posts/7/comments');

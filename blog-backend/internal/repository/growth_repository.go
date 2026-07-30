@@ -50,7 +50,8 @@ func (r *GrowthRepository) RelatedPosts(ctx context.Context, postID int64, tags 
 }
 
 func (r *GrowthRepository) ListVersions(ctx context.Context, postID int64) ([]*domain.PostVersion, error) {
-	rows, err := r.db.QueryContext(ctx, `SELECT id, post_id, title, slug, summary, content, tags, status,
+	rows, err := r.db.QueryContext(ctx, `SELECT id, post_id, title, slug, summary, content, tags, category_id,
+		COALESCE(cover_url, ''), COALESCE(cover_alt, ''), COALESCE(seo_title, ''), COALESCE(seo_description, ''), status,
 		published_at, scheduled_at, created_at
 		FROM post_versions WHERE post_id = $1 ORDER BY created_at DESC, id DESC LIMIT 50`, postID)
 	if err != nil {
@@ -61,7 +62,8 @@ func (r *GrowthRepository) ListVersions(ctx context.Context, postID int64) ([]*d
 	for rows.Next() {
 		var version domain.PostVersion
 		if err := rows.Scan(&version.ID, &version.PostID, &version.Title, &version.Slug, &version.Summary,
-			&version.Content, pq.Array(&version.Tags), &version.Status, &version.PublishedAt,
+			&version.Content, pq.Array(&version.Tags), &version.CategoryID, &version.CoverURL, &version.CoverAlt,
+			&version.SEOTitle, &version.SEODescription, &version.Status, &version.PublishedAt,
 			&version.ScheduledAt, &version.CreatedAt); err != nil {
 			return nil, err
 		}
@@ -78,6 +80,8 @@ func (r *GrowthRepository) RestoreVersion(ctx context.Context, postID, versionID
 	defer tx.Rollback()
 	result, err := tx.ExecContext(ctx, `UPDATE posts p SET
 		title = v.title, slug = v.slug, summary = v.summary, content = v.content, tags = v.tags,
+		category_id = v.category_id, cover_url = v.cover_url, cover_alt = v.cover_alt,
+		seo_title = v.seo_title, seo_description = v.seo_description,
 		status = v.status, published_at = v.published_at, scheduled_at = v.scheduled_at, updated_at = NOW()
 		FROM post_versions v WHERE p.id = $1 AND v.id = $2 AND v.post_id = p.id`, postID, versionID)
 	if err != nil {
@@ -105,8 +109,10 @@ func (r *GrowthRepository) CreateMedia(ctx context.Context, asset *domain.MediaA
 }
 
 func (r *GrowthRepository) ListMedia(ctx context.Context) ([]*domain.MediaAsset, error) {
-	rows, err := r.db.QueryContext(ctx, `SELECT id, filename, storage_name, url, content_type,
-		size_bytes, alt_text, created_by, created_at FROM media_assets ORDER BY created_at DESC`)
+	rows, err := r.db.QueryContext(ctx, `SELECT m.id, m.filename, m.storage_name, m.url, m.content_type,
+		m.size_bytes, m.alt_text, m.created_by, m.created_at,
+		(SELECT COUNT(*) FROM posts p WHERE p.content LIKE '%' || m.url || '%' OR p.cover_url = m.url)
+		FROM media_assets m ORDER BY m.created_at DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -115,12 +121,20 @@ func (r *GrowthRepository) ListMedia(ctx context.Context) ([]*domain.MediaAsset,
 	for rows.Next() {
 		var asset domain.MediaAsset
 		if err := rows.Scan(&asset.ID, &asset.Filename, &asset.StorageName, &asset.URL, &asset.ContentType,
-			&asset.SizeBytes, &asset.AltText, &asset.CreatedBy, &asset.CreatedAt); err != nil {
+			&asset.SizeBytes, &asset.AltText, &asset.CreatedBy, &asset.CreatedAt, &asset.UsageCount); err != nil {
 			return nil, err
 		}
 		assets = append(assets, &asset)
 	}
 	return assets, rows.Err()
+}
+
+func (r *GrowthRepository) CountMediaReferences(ctx context.Context, id int64) (int64, error) {
+	var count int64
+	err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM posts p
+		JOIN media_assets m ON m.id=$1
+		WHERE p.content LIKE '%' || m.url || '%' OR p.cover_url = m.url`, id).Scan(&count)
+	return count, err
 }
 
 func (r *GrowthRepository) DeleteMedia(ctx context.Context, id int64) (*domain.MediaAsset, error) {

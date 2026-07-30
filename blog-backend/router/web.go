@@ -37,6 +37,7 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 	repo := repository.NewPostRepository(db)
 	svc := service.NewPostService(repo)
 	ctrl := controller.NewPostController(svc)
+	contentCtrl := controller.NewContentController(db)
 	feedCtrl := controller.NewFeedController(svc)
 	communitySvc := service.NewCommunityService(repository.NewCommunityRepository(db), repo)
 	var interactionLimiter service.RateLimiter
@@ -115,6 +116,9 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 		api.PUT("/posts/:slugOrID/like", communityCtrl.Like)
 		api.DELETE("/posts/:slugOrID/like", communityCtrl.Unlike)
 		api.GET("/tags", ctrl.ListTags)
+		api.GET("/categories", contentCtrl.ListCategories)
+		api.GET("/categories/:slug/posts", contentCtrl.ListCategoryPosts)
+		api.GET("/site", contentCtrl.GetSiteSettings)
 
 		api.GET("/posts/:slugOrID/comments", communityCtrl.GetComments)
 		api.POST("/posts/:slugOrID/comments", communityCtrl.CreateComment)
@@ -137,6 +141,8 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 		{
 			admin.POST("/posts", ctrl.Create)
 			admin.GET("/admin/posts", ctrl.ListAdmin)
+			admin.GET("/admin/posts/:id", contentCtrl.GetAdminPost)
+			admin.POST("/admin/posts/batch", contentCtrl.BatchPosts)
 			admin.PUT("/posts/:slugOrID", ctrl.Update)
 			admin.DELETE("/posts/:slugOrID", ctrl.Delete)
 			admin.GET("/posts/:slugOrID/comments/all", ctrl.GetAllComments)
@@ -150,6 +156,16 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 			admin.POST("/admin/media", growthCtrl.UploadMedia)
 			admin.DELETE("/admin/media/:id", growthCtrl.DeleteMedia)
 			admin.GET("/admin/analytics", growthCtrl.Analytics)
+			admin.GET("/admin/categories", contentCtrl.ListCategories)
+			admin.POST("/admin/categories", contentCtrl.CreateCategory)
+			admin.PUT("/admin/categories/:id", contentCtrl.UpdateCategory)
+			admin.DELETE("/admin/categories/:id", contentCtrl.DeleteCategory)
+			admin.GET("/admin/tags", contentCtrl.ListAdminTags)
+			admin.PUT("/admin/tags/:name", contentCtrl.RenameTag)
+			admin.POST("/admin/tags/merge", contentCtrl.MergeTags)
+			admin.DELETE("/admin/tags/:name", contentCtrl.DeleteTag)
+			admin.GET("/admin/settings", contentCtrl.GetSiteSettings)
+			admin.PUT("/admin/settings", contentCtrl.UpdateSiteSettings)
 			if agentCtrl != nil {
 				admin.GET("/admin/provider-profiles", agentCtrl.ListProviders)
 				admin.POST("/admin/provider-profiles", agentCtrl.CreateProvider)

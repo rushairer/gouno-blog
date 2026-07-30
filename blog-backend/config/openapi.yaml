@@ -877,6 +877,114 @@ paths:
         '200':
           description: Proposal rejected
 
+  /categories:
+    get:
+      summary: List editorial categories
+      responses:
+        '200':
+          description: Categories with published article counts
+
+  /categories/{slug}/posts:
+    get:
+      summary: List published posts in a category
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Paginated category posts
+        '404':
+          description: Category not found
+
+  /site:
+    get:
+      summary: Get public site and SEO settings
+      responses:
+        '200':
+          description: Public site settings
+
+  /admin/categories:
+    get:
+      summary: List categories for administration
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Category list
+    post:
+      summary: Create a category
+      security:
+        - BearerAuth: []
+      responses:
+        '201':
+          description: Category created
+
+  /admin/categories/{id}:
+    put:
+      summary: Update a category
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Category updated
+    delete:
+      summary: Delete a category and unclassify its posts
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Category deleted
+
+  /admin/tags:
+    get:
+      summary: List tags with post counts
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Tag summaries
+
+  /admin/settings:
+    get:
+      summary: Get editable site settings
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Site settings
+    put:
+      summary: Update allow-listed site settings
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Updated site settings
+
 components:
   parameters:
     ResourceID:
@@ -991,6 +1099,17 @@ components:
           type: array
           items:
             type: string
+        category_id:
+          type: integer
+          nullable: true
+        cover_url:
+          type: string
+        cover_alt:
+          type: string
+        seo_title:
+          type: string
+        seo_description:
+          type: string
         status:
           type: string
           enum: [draft, scheduled, published]
@@ -1054,6 +1173,19 @@ components:
           items:
             type: string
           example: ["Go", "Framework", "Backend"]
+        category_id:
+          type: integer
+          nullable: true
+        cover_url:
+          type: string
+          example: "/media/article-cover.webp"
+        cover_alt:
+          type: string
+        seo_title:
+          type: string
+          maxLength: 255
+        seo_description:
+          type: string
         status:
           type: string
           enum: [draft, scheduled, published]

@@ -14,6 +14,7 @@ export type {
 
 const gossoIssuer = import.meta.env.VITE_GOSSO_ISSUER || window.location.origin;
 const gossoClientID = import.meta.env.VITE_GOSSO_CLIENT_ID || 'blog-spa';
+export const gossoAdminURL = import.meta.env.VITE_GOSSO_ADMIN_URL || '/identity-admin/';
 
 export const gossoClient = createGossoClient({
   issuer: gossoIssuer,

@@ -41,13 +41,18 @@ func NewPostController(svc BlogService) *PostController {
 }
 
 type CreatePostRequest struct {
-	Title       string            `json:"title" binding:"required"`
-	Slug        string            `json:"slug"`
-	Summary     string            `json:"summary"`
-	Content     string            `json:"content" binding:"required"`
-	Tags        []string          `json:"tags"`
-	Status      domain.PostStatus `json:"status"`
-	ScheduledAt *time.Time        `json:"scheduled_at"`
+	Title          string            `json:"title" binding:"required"`
+	Slug           string            `json:"slug"`
+	Summary        string            `json:"summary"`
+	Content        string            `json:"content" binding:"required"`
+	Tags           []string          `json:"tags"`
+	Status         domain.PostStatus `json:"status"`
+	ScheduledAt    *time.Time        `json:"scheduled_at"`
+	CategoryID     *int64            `json:"category_id"`
+	CoverURL       string            `json:"cover_url"`
+	CoverAlt       string            `json:"cover_alt"`
+	SEOTitle       string            `json:"seo_title"`
+	SEODescription string            `json:"seo_description"`
 }
 
 func (ctrl *PostController) Create(c *gin.Context) {
@@ -58,13 +63,18 @@ func (ctrl *PostController) Create(c *gin.Context) {
 	}
 
 	post := &domain.Post{
-		Title:       req.Title,
-		Slug:        req.Slug,
-		Summary:     req.Summary,
-		Content:     req.Content,
-		Tags:        req.Tags,
-		Status:      req.Status,
-		ScheduledAt: req.ScheduledAt,
+		Title:          req.Title,
+		Slug:           req.Slug,
+		Summary:        req.Summary,
+		Content:        req.Content,
+		Tags:           req.Tags,
+		Status:         req.Status,
+		ScheduledAt:    req.ScheduledAt,
+		CategoryID:     req.CategoryID,
+		CoverURL:       req.CoverURL,
+		CoverAlt:       req.CoverAlt,
+		SEOTitle:       req.SEOTitle,
+		SEODescription: req.SEODescription,
 	}
 
 	if err := ctrl.svc.CreatePost(c.Request.Context(), post); err != nil {
@@ -93,14 +103,19 @@ func (ctrl *PostController) Update(c *gin.Context) {
 	}
 
 	post := &domain.Post{
-		ID:          id,
-		Title:       req.Title,
-		Slug:        req.Slug,
-		Summary:     req.Summary,
-		Content:     req.Content,
-		Tags:        req.Tags,
-		Status:      req.Status,
-		ScheduledAt: req.ScheduledAt,
+		ID:             id,
+		Title:          req.Title,
+		Slug:           req.Slug,
+		Summary:        req.Summary,
+		Content:        req.Content,
+		Tags:           req.Tags,
+		Status:         req.Status,
+		ScheduledAt:    req.ScheduledAt,
+		CategoryID:     req.CategoryID,
+		CoverURL:       req.CoverURL,
+		CoverAlt:       req.CoverAlt,
+		SEOTitle:       req.SEOTitle,
+		SEODescription: req.SEODescription,
 	}
 
 	if err := ctrl.svc.UpdatePost(c.Request.Context(), post); err != nil {

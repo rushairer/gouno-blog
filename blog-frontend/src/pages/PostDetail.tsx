@@ -240,7 +240,7 @@ export default function PostDetail() {
     <>
       <div className="reading-progress-bar" style={{ width: `${scrollProgress}%` }} />
       <div className="article-shell section-stack">
-        <Link to="/" className="text-link">
+        <Link to="/articles" className="text-link">
           <ArrowLeft size={16} />
           {t('backToFeed')}
         </Link>
@@ -322,7 +322,7 @@ export default function PostDetail() {
             <h3 className="section-title">{t('relatedPosts')}</h3>
             <div className="related-post-grid">
               {relatedPosts.map((item) => (
-                <Link key={item.id} to={`/posts/${item.slug}`} className="related-post-card">
+                <Link key={item.id} to={`/articles/${item.slug}`} className="related-post-card">
                   <strong>{item.title}</strong>
                   <span>{item.summary}</span>
                   <small>{item.tags.slice(0, 3).map((tag) => `#${tag}`).join(' ')}</small>

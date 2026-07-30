@@ -10,7 +10,7 @@ import type {
 import { AgentForm } from '../components/agent/AgentForm';
 import { ProviderForm } from '../components/agent/ProviderForm';
 import type { ProviderFormValue } from '../components/agent/ProviderForm';
-import { EmptyState, Feedback, LoadingState, PageHeader, Panel } from '../components/ui';
+import { AdminPage, AdminPageHeader, EmptyState, Feedback, LoadingState, Panel } from '../components/ui';
 import { useI18n } from '../i18n';
 import '../styles/agent-console.css';
 
@@ -233,8 +233,8 @@ export default function AgentConsole() {
     ['approvals', ShieldCheck, labels.approvals],
   ] as const;
 
-  return <div className="agent-console">
-    <PageHeader title={labels.title} description={labels.pageDescription} action={<div className="row-actions"><button className="btn btn-secondary" type="button" onClick={() => void refresh()}><RefreshCw />{labels.refresh}</button>{tab === 'agents' ? <button className="btn btn-primary" type="button" onClick={() => providers.length > 0 ? setEditingAgent('new') : setError(labels.providerNeeded)}><Plus />{labels.createAgent}</button> : tab === 'providers' ? <button className="btn btn-primary" type="button" onClick={() => setEditingProvider('new')}><Plus />{labels.createProvider}</button> : null}</div>} />
+  return <AdminPage className="agent-console">
+    <AdminPageHeader title={labels.title} description={labels.pageDescription} actions={<div className="row-actions"><button className="btn btn-secondary" type="button" onClick={() => void refresh()}><RefreshCw />{labels.refresh}</button>{tab === 'agents' ? <button className="btn btn-primary" type="button" onClick={() => providers.length > 0 ? setEditingAgent('new') : setError(labels.providerNeeded)}><Plus />{labels.createAgent}</button> : tab === 'providers' ? <button className="btn btn-primary" type="button" onClick={() => setEditingProvider('new')}><Plus />{labels.createProvider}</button> : null}</div>} />
     {error ? <Feedback type="error">{error}</Feedback> : null}
     {notice ? <Feedback type="success">{notice}</Feedback> : null}
     <div className="agent-console__layout">
@@ -263,5 +263,5 @@ export default function AgentConsole() {
         {!editingAgent && !editingProvider && tab === 'approvals' ? <div className="agent-approval-workspace"><Panel className="agent-approval-list"><div className="agent-filter"><button className={approvalFilter === 'pending' ? 'active' : ''} type="button" onClick={() => setApprovalFilter('pending')}>{labels.pending}</button><button className={approvalFilter === 'all' ? 'active' : ''} type="button" onClick={() => setApprovalFilter('all')}>{labels.all}</button></div>{approvals.length === 0 ? <EmptyState label={labels.noApprovals} /> : approvals.map((approval) => <button className={selectedApproval?.id === approval.id ? 'active' : ''} key={approval.id} type="button" onClick={() => setSelectedApproval(approval)}><span><strong>{approval.action_type.replaceAll('_', ' ')}</strong><small>Run #{approval.run_id} · {formatDateTime(approval.created_at)}</small></span><span className={`status-pill status-pill--${approval.status}`}>{approval.status}</span></button>)}</Panel><Panel className="agent-approval-detail">{selectedApproval ? <div className="section-stack"><div className="panel-heading"><div><h2>{selectedApproval.action_type.replaceAll('_', ' ')}</h2><small>{selectedApproval.target_type} {selectedApproval.target_id ? `#${selectedApproval.target_id}` : ''}</small></div><span className={`status-pill status-pill--${selectedApproval.status}`}>{selectedApproval.status}</span></div>{selectedApproval.before_snapshot ? <section><h3>{labels.before}</h3><JsonPreview value={selectedApproval.before_snapshot} /></section> : null}<section><h3>{labels.after}</h3><JsonPreview value={selectedApproval.proposed_payload} /></section>{selectedApproval.status === 'pending' ? <div className="agent-approval-actions"><button className="btn btn-secondary" type="button" onClick={() => void review(selectedApproval, false)}><X />{labels.reject}</button><button className="btn btn-primary" type="button" onClick={() => void review(selectedApproval, true)}><ShieldCheck />{labels.approve}</button></div> : null}</div> : <EmptyState label={labels.details} />}</Panel></div> : null}
       </div>
     </div>
-  </div>;
+  </AdminPage>;
 }

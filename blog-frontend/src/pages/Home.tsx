@@ -1,302 +1,123 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { ArrowRight, GitBranch, Mail, Rss } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import {
-  ArrowRight,
-  ChevronRight,
-  Cloud,
-  Code2,
-  Edit3,
-  Eye,
-  FileText,
-  Heart,
-  ListFilter,
-  Lock,
-  Search,
-  Tag,
-  Terminal,
-  Timer,
-} from 'lucide-react';
-import { EmptyState, LoadingState, Panel } from '../components/ui';
-import { useI18n } from '../i18n';
+import { EmptyState, LoadingState } from '../components/ui';
+import { authorInitials, DEFAULT_SITE_SETTINGS } from '../config/site-defaults';
+import { getPosts, getSiteSettings, getTags } from '../lib/blog-api';
 import { markdownToPlainText } from '../markdown';
+import type { Post, SiteSettings } from '../types/blog';
 
-interface Post {
-  id: number;
-  title: string;
-  slug: string;
-  summary: string;
-  tags: string[];
-  views_count?: number;
-  likes_count?: number;
-  created_at: string;
-}
+const readTime = (post: Post) => Math.max(3, Math.ceil((post.content?.length || post.summary.length) / 500));
 
-const pageSize = 6;
-
-function PostCard({ post }: { post: Post }) {
-  const { t, formatDate } = useI18n();
-  const primaryTag = post.tags[0] || 'go';
-  const summary = markdownToPlainText(post.summary);
-  const readMinutes = Math.max(3, Math.min(12, Math.ceil(`${post.title} ${summary}`.length / 80)));
-  const icon = getTopicIcon(primaryTag);
-
+function Story({ post, index, featured = false }: { post: Post; index: number; featured?: boolean }) {
   return (
-    <article className="post-row">
-      <div className="post-thumb" aria-hidden="true">
-        {icon}
-      </div>
-      <div className="post-row__body">
-        <div className="post-kicker">{primaryTag}</div>
-        <Link to={`/posts/${post.slug}`} className="post-title">
-          {post.title}
-        </Link>
-        <p className="post-summary">{summary}</p>
-        <div className="chip-row">
-          {post.tags.slice(0, 4).map((tag) => (
-            <span key={tag} className="badge">
-              {tag}
-            </span>
-          ))}
+    <article className={`editorial-story ${featured ? 'editorial-story--featured' : ''}`}>
+      <span className="story-index">{String(index).padStart(2, '0')}</span>
+      <div>
+        <Link to={`/articles/${post.slug}`}><h3>{post.title}</h3></Link>
+        <p>{markdownToPlainText(post.summary)}</p>
+        <div className="story-meta">
+          <time>{new Date(post.published_at || post.created_at).toLocaleDateString('zh-CN')}</time>
+          <span>{readTime(post)} 分钟阅读</span>
+          {post.tags.slice(0, 2).map((tag) => <Link key={tag} to={`/tags/${encodeURIComponent(tag)}`}>{tag}</Link>)}
         </div>
-      </div>
-      <div className="post-row__meta">
-        <time>{formatDate(post.created_at)}</time>
-        <span>
-          <Timer size={15} />
-          {t('readMinutes', { count: readMinutes })}
-        </span>
-        {post.views_count !== undefined && (
-          <span title={t('views')}>
-            <Eye size={15} />
-            {post.views_count}
-          </span>
-        )}
-        {post.likes_count !== undefined && (
-          <span title={t('likes')}>
-            <Heart size={15} />
-            {post.likes_count}
-          </span>
-        )}
-        <Link to={`/posts/${post.slug}`} className="text-link">
-          {t('readArticle')}
-          <ArrowRight size={16} />
-        </Link>
+        <Link className="text-action" to={`/articles/${post.slug}`}>阅读文章 <ArrowRight /></Link>
       </div>
     </article>
   );
 }
 
-function getTopicIcon(tag: string) {
-  const normalized = tag.toLowerCase();
-  if (normalized.includes('sso') || normalized.includes('auth') || normalized.includes('security')) return <Lock />;
-  if (normalized.includes('cloud') || normalized.includes('infra') || normalized.includes('ops')) return <Cloud />;
-  if (normalized.includes('web') || normalized.includes('react') || normalized.includes('ui')) return <Code2 />;
-  if (normalized.includes('go')) return <span className="go-mark">GO</span>;
-  return <Terminal />;
-}
-
 export default function Home() {
-  const { t } = useI18n();
   const [posts, setPosts] = useState<Post[]>([]);
   const [tags, setTags] = useState<string[]>([]);
-  const [selectedTag, setSelectedTag] = useState<string>('');
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
+  const [site, setSite] = useState<SiteSettings>(DEFAULT_SITE_SETTINGS);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    setPage(1);
-  }, [selectedTag, search]);
-
-  useEffect(() => {
-    let ignore = false;
-
-    async function fetchPosts() {
-      try {
-        if (page === 1) {
-          setLoading(true);
-        } else {
-          setLoadingMore(true);
-        }
-        setError(null);
-        const postsUrl = new URL('/api/posts', window.location.origin);
-        postsUrl.searchParams.set('page', String(page));
-        postsUrl.searchParams.set('pageSize', String(pageSize));
-        if (selectedTag) {
-          postsUrl.searchParams.append('tag', selectedTag);
-        }
-        if (search.trim()) {
-          postsUrl.searchParams.append('search', search.trim());
-        }
-
-        const postsResp = await fetch(postsUrl.toString());
-        if (!postsResp.ok) throw new Error(t('failedLoadPosts'));
-        const postsBody = await postsResp.json();
-        if (!ignore) {
-          const nextPosts = postsBody.data.list || [];
-          setPosts((current) => (page === 1 ? nextPosts : [...current, ...nextPosts]));
-          setTotal(postsBody.data.total || nextPosts.length);
-        }
-      } catch (err: unknown) {
-        console.error(err);
-        if (!ignore) {
-          setError(err instanceof Error ? err.message : t('failedFetch'));
-        }
-      } finally {
-        if (!ignore) {
-          setLoading(false);
-          setLoadingMore(false);
-        }
-      }
-    }
-
-    fetchPosts();
-    return () => {
-      ignore = true;
-    };
-  }, [page, selectedTag, search, t]);
-
-  useEffect(() => {
-    let ignore = false;
-
-    async function fetchTags() {
-      const tagsResp = await fetch('/api/tags');
-      if (tagsResp.ok && !ignore) {
-        const tagsBody = await tagsResp.json();
-        setTags(tagsBody.data || []);
-      }
-    }
-
-    fetchTags().catch((err: unknown) => {
-      console.error(err);
-    });
-    return () => {
-      ignore = true;
-    };
+    Promise.all([
+      getPosts(new URLSearchParams({ page: '1', pageSize: '12' })),
+      getTags(),
+      getSiteSettings().catch(() => DEFAULT_SITE_SETTINGS),
+    ])
+      .then(([postData, tagData, siteData]) => {
+        setPosts(postData.list || []);
+        setTags(tagData || []);
+        setSite({ ...DEFAULT_SITE_SETTINGS, ...siteData });
+      })
+      .catch((reason: Error) => setError(reason.message))
+      .finally(() => setLoading(false));
   }, []);
 
-  const normalizedSearch = search.trim().toLowerCase();
-  const filteredPosts = posts.filter((post) =>
-    [post.title, post.summary].some((value) => value.toLowerCase().includes(normalizedSearch)),
-  );
-  const tagCounts = tags.map((tag) => ({
+  const tagCounts = useMemo(() => tags.map((tag) => ({
     tag,
     count: posts.filter((post) => post.tags.includes(tag)).length,
-  }));
-  const hasMore = posts.length < total;
+  })).sort((a, b) => b.count - a.count), [posts, tags]);
 
+  if (loading) return <div className="public-container state-page"><LoadingState label="正在整理文章…" /></div>;
+
+  const lead = posts[0];
   return (
-    <div className="blog-shell">
-      <section className="feed-panel">
-        <header className="feed-header">
-          <h1>{t('latestPosts')}</h1>
-          <p>{t('intro')}</p>
-        </header>
-
-        <div className="feed-tools">
-          <div className="search-box">
-            <Search aria-hidden="true" />
-            <input
-              type="search"
-              className="input-field"
-              placeholder={t('searchPosts')}
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-            <kbd>/</kbd>
-          </div>
-          <div className="topic-select">
-            <ListFilter size={18} />
-            <select value={selectedTag} onChange={(event) => setSelectedTag(event.target.value)} aria-label={t('allTopics')}>
-              <option value="">{t('allTopics')}</option>
-              {tags.map((tag) => (
-                <option key={tag} value={tag}>
-                  {tag}
-                </option>
-              ))}
-            </select>
-          </div>
+    <>
+      <section className="home-hero public-container">
+        <div className="hero-copy">
+          <h1>把复杂系统，<br />写成可理解的路径。</h1>
+          <p>关于工程架构、产品设计与 AI 实践的长期笔记。写清楚问题，也写清楚选择背后的理由。</p>
+          {lead ? <Story post={lead} index={1} featured /> : null}
         </div>
-
-        <div className="feed-list">
-          {loading ? (
-            <LoadingState label={t('loadingPosts')} />
-          ) : error ? (
-            <Panel className="section-stack">
-              <p className="feedback feedback--error">{error}</p>
-              <button className="btn btn-secondary" onClick={() => window.location.reload()} type="button">
-                {t('retry')}
-              </button>
-            </Panel>
-          ) : filteredPosts.length === 0 ? (
-            <EmptyState label={t('noPosts')} />
-          ) : (
-            <>
-              {filteredPosts.map((post) => (
-                <PostCard key={post.id} post={post} />
-              ))}
-              {hasMore && (
-                <button className="load-more" type="button" onClick={() => setPage((current) => current + 1)} disabled={loadingMore}>
-                  {loadingMore ? t('loadingPosts') : t('loadMore')}
-                  <ChevronRight size={16} />
-                </button>
-              )}
-            </>
-          )}
-        </div>
+        <figure className="system-art">
+          <img src="/editorial-system-map.png" alt="由模块、关系与路径组成的抽象系统图" />
+          <span className="art-caption">SYSTEMS / PEOPLE / DECISIONS</span>
+        </figure>
       </section>
 
-      <aside className="blog-sidebar" aria-label={t('sidebar')}>
-        <Panel className="sidebar-card about-card">
-          <h2>{t('aboutTitle')}</h2>
-          <p>{t('aboutCopy')}</p>
-          <Link to="/settings" className="text-link">
-            {t('moreAbout')}
-            <ArrowRight size={16} />
-          </Link>
-        </Panel>
+      <div className="public-container">
+        {error ? <p className="feedback feedback--error">{error}</p> : null}
+        {!error && posts.length === 0 ? <EmptyState label="这里还没有文章。完成第一篇写作后，它会成为首页主角。" /> : null}
+        {posts.length > 1 ? (
+          <section className="home-section">
+            <header className="section-heading"><h2>精选文章</h2><Link to="/articles">查看全部 <ArrowRight /></Link></header>
+            <div className="featured-layout">
+              <Story post={posts[1]} index={2} featured />
+              <div>{posts.slice(2, 4).map((post, index) => <Story key={post.id} post={post} index={index + 3} />)}</div>
+            </div>
+          </section>
+        ) : null}
 
-        <Panel className="sidebar-card">
-          <h2>{t('topics')}</h2>
-          <button className={`topic-row ${selectedTag === '' ? 'active' : ''}`} onClick={() => setSelectedTag('')} type="button">
-            <span>
-              <Tag size={18} />
-              {t('allTopics')}
-            </span>
-            <strong>{posts.length}</strong>
-          </button>
-          {tagCounts.map(({ tag, count }) => (
-            <button key={tag} className={`topic-row ${selectedTag === tag ? 'active' : ''}`} onClick={() => setSelectedTag(tag)} type="button">
-              <span>
-                {getTopicIcon(tag)}
-                {tag}
-              </span>
-              <strong>{count}</strong>
-            </button>
-          ))}
-        </Panel>
+        {posts.length > 0 ? (
+          <section className="home-section">
+            <header className="section-heading"><h2>最新文章</h2></header>
+            <div className="latest-table" role="list">
+              {posts.slice(0, 8).map((post) => (
+                <article key={post.id} role="listitem">
+                  <div><Link to={`/articles/${post.slug}`}><h3>{post.title}</h3></Link><p>{markdownToPlainText(post.summary)}</p></div>
+                  <time>{new Date(post.published_at || post.created_at).toLocaleDateString('zh-CN')}</time>
+                  <span>{readTime(post)} 分钟</span>
+                  <div>{post.tags.slice(0, 3).map((tag) => <Link key={tag} to={`/tags/${encodeURIComponent(tag)}`}>{tag}</Link>)}</div>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
-        <Panel className="sidebar-card">
-          <h2>{t('adminQuickActions')}</h2>
-          <Link className="quick-action" to="/admin">
-            <span>
-              <Edit3 size={18} />
-              {t('newPost')}
-            </span>
-            <ChevronRight size={18} />
-          </Link>
-          <Link className="quick-action" to="/admin">
-            <span>
-              <FileText size={18} />
-              {t('managePosts')}
-            </span>
-            <ChevronRight size={18} />
-          </Link>
-        </Panel>
-      </aside>
-    </div>
+        <section className="home-section topic-index">
+          <header className="section-heading"><h2>主题索引</h2></header>
+          <div className="topic-columns">
+            <div><h3>长期关注</h3>{['工程架构', '产品设计', '人工智能', '开发者体验'].map((name, index) => <Link key={name} to={`/search?q=${encodeURIComponent(name)}`}><span>{name}</span><strong>{String(index + 1).padStart(2, '0')}</strong></Link>)}</div>
+            <div><h3>热门标签</h3><div className="tag-cloud">{tagCounts.slice(0, 16).map(({ tag, count }) => <Link key={tag} to={`/tags/${encodeURIComponent(tag)}`}>{tag}<sup>{count}</sup></Link>)}</div></div>
+          </div>
+        </section>
+
+        <section className="author-section">
+          <div className="author-monogram">{authorInitials(site.author_name)}</div>
+          <div><h2>{site.author_name}</h2><p>{site.author_bio}</p></div>
+          <div className="author-links"><Link to="/about">关于本站 <ArrowRight /></Link>{site.github_url ? <a href={site.github_url} target="_blank" rel="noreferrer"><GitBranch /> GitHub</a> : null}</div>
+        </section>
+      </div>
+
+      <section className="subscribe-strip">
+        <div className="public-container"><div><h2>订阅更新</h2><p>每当有新文章发布，都可以通过你熟悉的方式收到。</p></div><div><a href={site.rss_url || '/feed.xml'}><Rss /> RSS</a>{site.email ? <a href={`mailto:${site.email}`}><Mail /> Email</a> : null}</div></div>
+      </section>
+    </>
   );
 }

@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Copy, ImagePlus, Trash2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { apiFetch, canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
-import { EmptyState, Feedback, Field, LoadingState, PageHeader, Panel } from '../components/ui';
+import { AdminPage, AdminPageHeader, EmptyState, Feedback, Field, LoadingState, Panel } from '../components/ui';
 import { useI18n } from '../i18n';
 
 interface MediaAsset {
@@ -14,6 +13,7 @@ interface MediaAsset {
   size_bytes: number;
   alt_text: string;
   created_at: string;
+  usage_count?: number;
 }
 
 export default function MediaLibrary() {
@@ -68,13 +68,18 @@ export default function MediaLibrary() {
   const remove = async (asset: MediaAsset) => {
     if (!confirm(t('deleteMediaConfirm'))) return;
     const response = await apiFetch(`/api/admin/media/${asset.id}`, { method: 'DELETE' });
-    if (response.ok) setAssets((current) => current.filter((item) => item.id !== asset.id));
+    if (response.ok) {
+      setAssets((current) => current.filter((item) => item.id !== asset.id));
+    } else {
+      const body = await response.json();
+      setError(response.status === 409 ? `该媒体仍被 ${asset.usage_count || '一篇或多篇'}文章引用，移除引用后才能删除。` : body.message || t('requestFailed'));
+    }
   };
 
-  return <div className="section-stack">
-    <PageHeader title={t('mediaLibrary')} action={<Link className="btn btn-secondary" to="/admin">{t('adminDashboard')}</Link>} />
+  return <AdminPage>
+    <AdminPageHeader title={t('mediaLibrary')} description="上传、检索和复用内容中的图片资源。" actions={<span className="admin-page-count">{assets.length} 个资源</span>} />
     {error ? <Feedback type="error">{error}</Feedback> : null}
-    <Panel>
+    <Panel className="admin-toolbar-panel">
       <form className="media-upload-form" onSubmit={upload}>
         <Field label={t('imageFile')}><input className="input-field" type="file" accept="image/jpeg,image/png,image/webp,image/gif" required onChange={(event) => setFile(event.target.files?.[0] || null)} /></Field>
         <Field label={t('altText')}><input className="input-field" value={altText} onChange={(event) => setAltText(event.target.value)} /></Field>
@@ -83,8 +88,8 @@ export default function MediaLibrary() {
     </Panel>
     {loading ? <LoadingState label={t('loadingResources')} /> : assets.length === 0 ? <EmptyState label={t('noMedia')} /> : <div className="media-grid">{assets.map((asset) => <Panel className="media-card" key={asset.id}>
       <img src={asset.url} alt={asset.alt_text || asset.filename} loading="lazy" />
-      <div><strong>{asset.filename}</strong><small>{Math.ceil(asset.size_bytes / 1024)} KB · {formatDateTime(asset.created_at)}</small></div>
+      <div><strong>{asset.filename}</strong><small>{Math.ceil(asset.size_bytes / 1024)} KB · {formatDateTime(asset.created_at)} · 引用 {asset.usage_count || 0}</small></div>
       <div className="row-actions"><button className="btn btn-secondary" type="button" onClick={() => void navigator.clipboard.writeText(`![${asset.alt_text || asset.filename}](${asset.url})`)}><Copy />{t('copyMarkdown')}</button><button className="btn btn-danger" type="button" onClick={() => void remove(asset)}><Trash2 />{t('delete')}</button></div>
     </Panel>)}</div>}
-  </div>;
+  </AdminPage>;
 }

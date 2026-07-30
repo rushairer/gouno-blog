@@ -16,9 +16,12 @@ type GrowthStore interface {
 	CreateMedia(context.Context, *domain.MediaAsset) error
 	ListMedia(context.Context) ([]*domain.MediaAsset, error)
 	DeleteMedia(context.Context, int64) (*domain.MediaAsset, error)
+	CountMediaReferences(context.Context, int64) (int64, error)
 	RecordEvent(context.Context, int64, string, string) error
 	AnalyticsSummary(context.Context) (*domain.AnalyticsSummary, error)
 }
+
+var ErrMediaInUse = errors.New("media asset is referenced by published or draft posts")
 
 type GrowthService struct{ store GrowthStore }
 
@@ -66,6 +69,13 @@ func (s *GrowthService) ListMedia(ctx context.Context) ([]*domain.MediaAsset, er
 func (s *GrowthService) DeleteMedia(ctx context.Context, id int64) (*domain.MediaAsset, error) {
 	if id <= 0 {
 		return nil, errors.New("invalid media id")
+	}
+	references, err := s.store.CountMediaReferences(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if references > 0 {
+		return nil, ErrMediaInUse
 	}
 	asset, err := s.store.DeleteMedia(ctx, id)
 	if errors.Is(err, sql.ErrNoRows) {

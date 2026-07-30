@@ -1,203 +1,78 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Link, NavLink } from 'react-router-dom';
-import { Bell, Bot, Bookmark, ExternalLink, Globe2, LogIn, LogOut, Mail, Moon, Rss, Sun, Terminal } from 'lucide-react';
-import { apiFetch, isLoggedIn, logout, getUserProfile, redirectToAuthorize } from './auth';
-import type { UserProfile } from './auth';
-import { I18nProvider, useI18n } from './i18n';
-
-// Import Pages
+import React from 'react';
+import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom';
+import { I18nProvider } from './i18n';
+import PublicShell from './layouts/PublicShell';
+import AdminShell from './layouts/AdminShell';
 import Home from './pages/Home';
+import ArticleIndex from './pages/ArticleIndex';
 import PostDetail from './pages/PostDetail';
+import TaxonomyIndex from './pages/TaxonomyIndex';
+import Archive from './pages/Archive';
+import About from './pages/About';
+import NotFound from './pages/NotFound';
 import Callback from './pages/Callback';
 import Login from './pages/Login';
-import Admin from './pages/Admin';
-import Settings from './pages/Settings';
-import Notifications from './pages/Notifications';
-import Bookmarks from './pages/Bookmarks';
-import Analytics from './pages/Analytics';
-import MediaLibrary from './pages/MediaLibrary';
-
+const Settings = React.lazy(() => import('./pages/Settings'));
+const Notifications = React.lazy(() => import('./pages/Notifications'));
+const Bookmarks = React.lazy(() => import('./pages/Bookmarks'));
+const Dashboard = React.lazy(() => import('./pages/admin/Dashboard'));
+const AdminPosts = React.lazy(() => import('./pages/admin/Posts'));
+const PostEditor = React.lazy(() => import('./pages/admin/PostEditor'));
+const AdminComments = React.lazy(() => import('./pages/admin/Comments'));
+const AdminTaxonomy = React.lazy(() => import('./pages/admin/Taxonomy'));
+const AdminSiteSettings = React.lazy(() => import('./pages/admin/SiteSettings'));
+const AdminUsers = React.lazy(() => import('./pages/admin/Users'));
+const MediaLibrary = React.lazy(() => import('./pages/MediaLibrary'));
 const AgentConsole = React.lazy(() => import('./pages/AgentConsole'));
 
-function Layout({ children }: { children: React.ReactNode }) {
-  const { locale, setLocale, t } = useI18n();
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [logged, setLogged] = useState(false);
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    const saved = localStorage.getItem('gouno-blog:theme');
-    if (saved === 'dark' || saved === 'light') return saved;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  });
+function LegacyPostRedirect() {
+  const { slug } = useParams();
+  return <Navigate replace to={`/articles/${slug || ''}`} />;
+}
 
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('gouno-blog:theme', theme);
-  }, [theme]);
+function Public({ children }: { children: React.ReactNode }) {
+  return <PublicShell><React.Suspense fallback={<div className="public-container state-page">正在载入内容…</div>}>{children}</React.Suspense></PublicShell>;
+}
 
-  useEffect(() => {
-    setLogged(isLoggedIn());
-    setUser(getUserProfile());
-  }, []);
-
-  useEffect(() => {
-    if (!logged) {
-      setUnreadNotifications(0);
-      return;
-    }
-    let ignore = false;
-    const loadUnread = async () => {
-      try {
-        const response = await apiFetch('/api/me/notifications?pageSize=1');
-        const body = await response.json();
-        if (!ignore && response.ok) setUnreadNotifications(body.data?.unread || 0);
-      } catch {
-        // Notification status is non-critical for the global layout.
-      }
-    };
-    const handleChanged = () => void loadUnread();
-    void loadUnread();
-    window.addEventListener('community:notifications-changed', handleChanged);
-    return () => {
-      ignore = true;
-      window.removeEventListener('community:notifications-changed', handleChanged);
-    };
-  }, [logged]);
-
-  const handleLogout = () => {
-    logout();
-    setLogged(false);
-    setUser(null);
-  };
-
-  const handleSignIn = () => {
-    redirectToAuthorize('/admin');
-  };
-
-  const toggleTheme = () => {
-    setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
-  };
-
-  const nextLocale = locale === 'en' ? 'zh' : 'en';
-  const nextLocaleShortLabel = nextLocale === 'en' ? 'EN' : '中';
-  const nextLocaleLabel = nextLocale === 'en' ? 'English' : '中文';
-
-  return (
-    <div className="app-container">
-      <header className="navbar">
-        <div className="navbar-container">
-          <Link to="/" className="logo">
-            <span className="logo__mark">
-              <Terminal size={20} />
-            </span>
-            <span className="logo__text">{t('brand')}</span>
-          </Link>
-          <nav className="nav-links">
-            <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              {t('home')}
-            </NavLink>
-            <NavLink to="/admin" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              {t('adminPanel')}
-            </NavLink>
-            <NavLink to="/admin/agents" className={({ isActive }) => `ai-workspace-link ${isActive ? 'active' : ''}`}>
-              <Bot size={16} />
-              <span>AI</span>
-            </NavLink>
-            <NavLink to="/settings" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>
-              {t('settings')}
-            </NavLink>
-
-            <div className="nav-actions">
-              <button
-                className="icon-button theme-toggle"
-                type="button"
-                onClick={toggleTheme}
-                aria-label={theme === 'dark' ? t('themeLight') : t('themeDark')}
-                title={theme === 'dark' ? t('themeLight') : t('themeDark')}
-              >
-                {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-              </button>
-              <button
-                className="language-toggle"
-                type="button"
-                onClick={() => setLocale(nextLocale)}
-                aria-label={`${t('language')}: switch to ${nextLocaleLabel}`}
-                title={`${t('language')}: ${nextLocaleLabel}`}
-              >
-                <Globe2 size={16} />
-                <span>{nextLocaleShortLabel}</span>
-              </button>
-              {logged ? (
-                <div className="user-menu">
-                  <Link className="icon-button nav-community-link" to="/bookmarks" aria-label={t('bookmarks')} title={t('bookmarks')}>
-                    <Bookmark size={18} />
-                  </Link>
-                  <Link className="icon-button nav-community-link" to="/notifications" aria-label={t('notifications')} title={t('notifications')}>
-                    <Bell size={18} />
-                    {unreadNotifications > 0 ? <span className="notification-badge">{unreadNotifications > 99 ? '99+' : unreadNotifications}</span> : null}
-                  </Link>
-                  <span className="user-avatar">{(user?.name || user?.preferred_username || 'A').slice(0, 2).toUpperCase()}</span>
-                  <span className="user-greeting">
-                    {user?.name || user?.preferred_username || t('admin')}
-                  </span>
-                  <button className="icon-button" onClick={handleLogout} aria-label={t('signOut')} title={t('signOut')}>
-                    <LogOut />
-                  </button>
-                </div>
-              ) : (
-                <button className="btn btn-primary" onClick={handleSignIn}>
-                  <LogIn />
-                  {t('signIn')}
-                </button>
-              )}
-            </div>
-          </nav>
-        </div>
-      </header>
-
-      <main className="main-content">
-        {children}
-      </main>
-
-      <footer className="footer">
-        <p>&copy; {new Date().getFullYear()} Aben K.</p>
-        <div className="footer-links" aria-label={t('footerLinks')}>
-          <a href="https://github.com/rushairer" target="_blank" rel="noreferrer">
-            GitHub <ExternalLink size={14} />
-          </a>
-          <a href="/feed.xml" target="_blank" rel="noreferrer">
-            RSS <Rss size={14} />
-          </a>
-          <Link to="/settings">
-            Contact <Mail size={14} />
-          </Link>
-        </div>
-      </footer>
-    </div>
-  );
+function Admin({ children }: { children: React.ReactNode }) {
+  return <AdminShell><React.Suspense fallback={<div className="loading">正在载入工作区…</div>}>{children}</React.Suspense></AdminShell>;
 }
 
 export default function App() {
-  return (
-    <I18nProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/callback" element={<Callback />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/" element={<Layout><Home /></Layout>} />
-          <Route path="/posts/:slug" element={<Layout><PostDetail /></Layout>} />
-          <Route path="/admin" element={<Layout><Admin /></Layout>} />
-          <Route path="/admin/analytics" element={<Layout><Analytics /></Layout>} />
-          <Route path="/admin/media" element={<Layout><MediaLibrary /></Layout>} />
-          <Route
-            path="/admin/agents"
-            element={<Layout><React.Suspense fallback={<div className="loading">Loading AI Agents…</div>}><AgentConsole /></React.Suspense></Layout>}
-          />
-          <Route path="/settings" element={<Layout><Settings /></Layout>} />
-          <Route path="/notifications" element={<Layout><Notifications /></Layout>} />
-          <Route path="/bookmarks" element={<Layout><Bookmarks /></Layout>} />
-        </Routes>
-      </BrowserRouter>
-    </I18nProvider>
-  );
+  return <I18nProvider><BrowserRouter><Routes>
+    <Route path="/callback" element={<Callback />} />
+    <Route path="/login" element={<Login />} />
+    <Route path="/" element={<Public><Home /></Public>} />
+    <Route path="/articles" element={<Public><ArticleIndex /></Public>} />
+    <Route path="/articles/:slug" element={<Public><PostDetail /></Public>} />
+    <Route path="/posts/:slug" element={<LegacyPostRedirect />} />
+    <Route path="/categories" element={<Public><TaxonomyIndex type="categories" /></Public>} />
+    <Route path="/categories/:slug" element={<Public><ArticleIndex mode="category" /></Public>} />
+    <Route path="/tags" element={<Public><TaxonomyIndex type="tags" /></Public>} />
+    <Route path="/tags/:slug" element={<Public><ArticleIndex mode="tag" /></Public>} />
+    <Route path="/archive" element={<Public><Archive /></Public>} />
+    <Route path="/about" element={<Public><About /></Public>} />
+    <Route path="/search" element={<Public><ArticleIndex mode="search" /></Public>} />
+    <Route path="/account/bookmarks" element={<Public><Bookmarks /></Public>} />
+    <Route path="/account/notifications" element={<Public><Notifications /></Public>} />
+    <Route path="/account/settings" element={<Public><Settings /></Public>} />
+    <Route path="/bookmarks" element={<Navigate replace to="/account/bookmarks" />} />
+    <Route path="/notifications" element={<Navigate replace to="/account/notifications" />} />
+    <Route path="/settings" element={<Navigate replace to="/account/settings" />} />
+
+    <Route path="/admin" element={<Navigate replace to="/admin/dashboard" />} />
+    <Route path="/admin/dashboard" element={<Admin><Dashboard /></Admin>} />
+    <Route path="/admin/analytics" element={<Navigate replace to="/admin/dashboard" />} />
+    <Route path="/admin/posts" element={<Admin><AdminPosts /></Admin>} />
+    <Route path="/admin/posts/new" element={<Admin><PostEditor /></Admin>} />
+    <Route path="/admin/posts/:id/edit" element={<Admin><PostEditor /></Admin>} />
+    <Route path="/admin/categories" element={<Admin><AdminTaxonomy type="categories" /></Admin>} />
+    <Route path="/admin/tags" element={<Admin><AdminTaxonomy type="tags" /></Admin>} />
+    <Route path="/admin/comments" element={<Admin><AdminComments /></Admin>} />
+    <Route path="/admin/media" element={<Admin><MediaLibrary /></Admin>} />
+    <Route path="/admin/settings" element={<Admin><AdminSiteSettings /></Admin>} />
+    <Route path="/admin/users" element={<Admin><AdminUsers /></Admin>} />
+    <Route path="/admin/agents" element={<Admin><AgentConsole /></Admin>} />
+    <Route path="*" element={<Public><NotFound /></Public>} />
+  </Routes></BrowserRouter></I18nProvider>;
 }

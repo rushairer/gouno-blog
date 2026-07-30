@@ -21,16 +21,47 @@ export function PageHeader({
   );
 }
 
+export function AdminPage({
+  children,
+  className = '',
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return <div className={`admin-page ${className}`.trim()}>{children}</div>;
+}
+
+export function AdminPageHeader({
+  title,
+  description,
+  actions,
+}: {
+  title: string;
+  description?: React.ReactNode;
+  actions?: React.ReactNode;
+}) {
+  return (
+    <header className="admin-page-header">
+      <div className="admin-page-heading">
+        <h1>{title}</h1>
+        {description ? <p>{description}</p> : null}
+      </div>
+      {actions ? <div className="admin-page-actions">{actions}</div> : null}
+    </header>
+  );
+}
+
 export function Panel({
   children,
   className = '',
   as: Component = 'section',
+  ...props
 }: {
   children: React.ReactNode;
   className?: string;
   as?: React.ElementType;
-}) {
-  return <Component className={`panel ${className}`.trim()}>{children}</Component>;
+} & Record<string, unknown>) {
+  return <Component className={`panel ${className}`.trim()} {...props}>{children}</Component>;
 }
 
 export function Field({

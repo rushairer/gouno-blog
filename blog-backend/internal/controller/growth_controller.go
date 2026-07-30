@@ -166,6 +166,10 @@ func (ctrl *GrowthController) DeleteMedia(c *gin.Context) {
 	}
 	asset, err := ctrl.growth.DeleteMedia(c.Request.Context(), id)
 	if err != nil {
+		if errors.Is(err, service.ErrMediaInUse) {
+			c.JSON(http.StatusConflict, gouno.NewErrorResponse(http.StatusConflict, err.Error()))
+			return
+		}
 		writeServiceError(c, err)
 		return
 	}

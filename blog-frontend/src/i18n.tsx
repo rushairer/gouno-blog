@@ -6,7 +6,7 @@ const storageKey = 'gouno-blog:locale';
 
 const dictionaries = {
   en: {
-    brand: "Aben's DevBlog",
+    brand: 'Gouno Blog',
     home: 'Home',
     admin: 'Admin',
     adminPanel: 'Admin',
@@ -24,7 +24,7 @@ const dictionaries = {
     allTopics: 'All topics',
     topics: 'Topics',
     aboutTitle: 'About',
-    aboutCopy: "Hey, I'm Aben. I build backend systems, work with Go daily, and enjoy simplifying complex problems. This blog is where I share what I learn.",
+    aboutCopy: 'A place to record ideas, decisions, and lessons worth revisiting.',
     moreAbout: 'More about me',
     adminQuickActions: 'Admin quick actions',
     newPost: 'New post',
@@ -41,7 +41,7 @@ const dictionaries = {
     retry: 'Retry',
     noPosts: 'No posts found. Try another topic or search term.',
     readArticle: 'Read article',
-    author: 'Aben',
+    author: 'Site Author',
     error: 'Error',
     postNotFound: 'Post not found',
     failedLoadPosts: 'Failed to load posts',
@@ -250,7 +250,7 @@ const dictionaries = {
     restoreVersionConfirm: 'Restore this version? The current content will be saved as another version.',
   },
   zh: {
-    brand: 'Aben 技术札记',
+    brand: 'Gouno Blog',
     home: '首页',
     admin: '后台',
     adminPanel: '后台',
@@ -268,7 +268,7 @@ const dictionaries = {
     allTopics: '全部主题',
     topics: '主题',
     aboutTitle: '关于',
-    aboutCopy: '你好，我是 Aben。日常写 Go、做后端系统，也喜欢把复杂问题拆简单。这个博客记录我踩过的坑和真正有用的实践。',
+    aboutCopy: '这里用于记录值得长期保存的想法、选择与经验。',
     moreAbout: '了解更多',
     adminQuickActions: '后台快捷入口',
     newPost: '写新文章',
@@ -285,7 +285,7 @@ const dictionaries = {
     retry: '重试',
     noPosts: '没有找到文章。换个主题或关键词试试。',
     readArticle: '阅读全文',
-    author: 'Aben',
+    author: '站点作者',
     error: '出错了',
     postNotFound: '文章不存在',
     failedLoadPosts: '文章加载失败',

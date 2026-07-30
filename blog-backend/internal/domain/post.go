@@ -11,19 +11,40 @@ const (
 )
 
 type Post struct {
-	ID          int64      `json:"id"`
-	Title       string     `json:"title"`
-	Slug        string     `json:"slug"`
-	Summary     string     `json:"summary"`
-	Content     string     `json:"content"`
-	Tags        []string   `json:"tags"`
-	Status      PostStatus `json:"status"`
-	ViewsCount  int64      `json:"views_count"`
-	LikesCount  int64      `json:"likes_count"`
-	PublishedAt *time.Time `json:"published_at,omitempty"`
-	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	ID             int64      `json:"id"`
+	Title          string     `json:"title"`
+	Slug           string     `json:"slug"`
+	Summary        string     `json:"summary"`
+	Content        string     `json:"content"`
+	Tags           []string   `json:"tags"`
+	CategoryID     *int64     `json:"category_id,omitempty"`
+	CoverURL       string     `json:"cover_url,omitempty"`
+	CoverAlt       string     `json:"cover_alt,omitempty"`
+	SEOTitle       string     `json:"seo_title,omitempty"`
+	SEODescription string     `json:"seo_description,omitempty"`
+	Status         PostStatus `json:"status"`
+	ViewsCount     int64      `json:"views_count"`
+	LikesCount     int64      `json:"likes_count"`
+	PublishedAt    *time.Time `json:"published_at,omitempty"`
+	ScheduledAt    *time.Time `json:"scheduled_at,omitempty"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+}
+
+type Category struct {
+	ID          int64     `json:"id"`
+	Name        string    `json:"name"`
+	Slug        string    `json:"slug"`
+	Description string    `json:"description"`
+	SortOrder   int       `json:"sort_order"`
+	PostCount   int64     `json:"post_count"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type TagSummary struct {
+	Name      string `json:"name"`
+	PostCount int64  `json:"post_count"`
 }
 
 type Comment struct {
@@ -64,17 +85,22 @@ type CommunityState struct {
 }
 
 type PostVersion struct {
-	ID          int64      `json:"id"`
-	PostID      int64      `json:"post_id"`
-	Title       string     `json:"title"`
-	Slug        string     `json:"slug"`
-	Summary     string     `json:"summary"`
-	Content     string     `json:"content,omitempty"`
-	Tags        []string   `json:"tags"`
-	Status      PostStatus `json:"status"`
-	PublishedAt *time.Time `json:"published_at,omitempty"`
-	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
+	ID             int64      `json:"id"`
+	PostID         int64      `json:"post_id"`
+	Title          string     `json:"title"`
+	Slug           string     `json:"slug"`
+	Summary        string     `json:"summary"`
+	Content        string     `json:"content,omitempty"`
+	Tags           []string   `json:"tags"`
+	CategoryID     *int64     `json:"category_id,omitempty"`
+	CoverURL       string     `json:"cover_url,omitempty"`
+	CoverAlt       string     `json:"cover_alt,omitempty"`
+	SEOTitle       string     `json:"seo_title,omitempty"`
+	SEODescription string     `json:"seo_description,omitempty"`
+	Status         PostStatus `json:"status"`
+	PublishedAt    *time.Time `json:"published_at,omitempty"`
+	ScheduledAt    *time.Time `json:"scheduled_at,omitempty"`
+	CreatedAt      time.Time  `json:"created_at"`
 }
 
 type MediaAsset struct {
@@ -87,6 +113,7 @@ type MediaAsset struct {
 	AltText     string    `json:"alt_text"`
 	CreatedBy   *string   `json:"created_by,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
+	UsageCount  int64     `json:"usage_count"`
 }
 
 type AnalyticsSummary struct {

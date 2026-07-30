@@ -31,7 +31,7 @@ function setMeta(selector: string, attributes: Record<string, string>) {
 export function useArticleSEO(article: ArticleSEO | null, brand: string) {
   useEffect(() => {
     if (!article) return;
-    const canonicalURL = new URL(`/posts/${article.slug}`, window.location.origin).toString();
+    const canonicalURL = new URL(`/articles/${article.slug}`, window.location.origin).toString();
     const previousTitle = document.title;
     document.title = `${article.title} - ${brand}`;
 

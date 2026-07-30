@@ -20,12 +20,12 @@ func NewPostRepository(db *sql.DB) *PostRepository {
 
 func (r *PostRepository) Create(ctx context.Context, post *domain.Post) error {
 	query := `
-		INSERT INTO posts (title, slug, summary, content, tags, status, views_count, likes_count, published_at, scheduled_at, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+		INSERT INTO posts (title, slug, summary, content, tags, category_id, cover_url, cover_alt, seo_title, seo_description, status, views_count, likes_count, published_at, scheduled_at, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW(), NOW())
 		RETURNING id, created_at, updated_at
 	`
 	err := r.db.QueryRowContext(ctx, query,
-		post.Title, post.Slug, post.Summary, post.Content, pq.Array(post.Tags), post.Status, post.ViewsCount, post.LikesCount, post.PublishedAt, post.ScheduledAt,
+		post.Title, post.Slug, post.Summary, post.Content, pq.Array(post.Tags), post.CategoryID, post.CoverURL, post.CoverAlt, post.SEOTitle, post.SEODescription, post.Status, post.ViewsCount, post.LikesCount, post.PublishedAt, post.ScheduledAt,
 	).Scan(&post.ID, &post.CreatedAt, &post.UpdatedAt)
 	return err
 }
@@ -33,12 +33,14 @@ func (r *PostRepository) Create(ctx context.Context, post *domain.Post) error {
 func (r *PostRepository) Update(ctx context.Context, post *domain.Post) error {
 	query := `
 		UPDATE posts
-		SET title = $1, slug = $2, summary = $3, content = $4, tags = $5, status = $6, published_at = $7, scheduled_at = $8, updated_at = NOW()
-		WHERE id = $9
+		SET title = $1, slug = $2, summary = $3, content = $4, tags = $5, category_id = $6,
+		    cover_url = $7, cover_alt = $8, seo_title = $9, seo_description = $10,
+		    status = $11, published_at = $12, scheduled_at = $13, updated_at = NOW()
+		WHERE id = $14
 		RETURNING updated_at
 	`
 	err := r.db.QueryRowContext(ctx, query,
-		post.Title, post.Slug, post.Summary, post.Content, pq.Array(post.Tags), post.Status, post.PublishedAt, post.ScheduledAt, post.ID,
+		post.Title, post.Slug, post.Summary, post.Content, pq.Array(post.Tags), post.CategoryID, post.CoverURL, post.CoverAlt, post.SEOTitle, post.SEODescription, post.Status, post.PublishedAt, post.ScheduledAt, post.ID,
 	).Scan(&post.UpdatedAt)
 	return err
 }
@@ -58,13 +60,13 @@ func (r *PostRepository) Delete(ctx context.Context, id int64) error {
 
 func (r *PostRepository) GetByID(ctx context.Context, id int64) (*domain.Post, error) {
 	query := `
-		SELECT id, title, slug, summary, content, tags, status, views_count, likes_count, published_at, scheduled_at, created_at, updated_at
+		SELECT id, title, slug, summary, content, tags, category_id, COALESCE(cover_url, ''), COALESCE(cover_alt, ''), COALESCE(seo_title, ''), COALESCE(seo_description, ''), status, views_count, likes_count, published_at, scheduled_at, created_at, updated_at
 		FROM posts
 		WHERE id = $1
 	`
 	var post domain.Post
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt,
+		&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID, &post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -77,13 +79,13 @@ func (r *PostRepository) GetByID(ctx context.Context, id int64) (*domain.Post, e
 
 func (r *PostRepository) GetBySlug(ctx context.Context, slug string) (*domain.Post, error) {
 	query := `
-		SELECT id, title, slug, summary, content, tags, status, views_count, likes_count, published_at, scheduled_at, created_at, updated_at
+		SELECT id, title, slug, summary, content, tags, category_id, COALESCE(cover_url, ''), COALESCE(cover_alt, ''), COALESCE(seo_title, ''), COALESCE(seo_description, ''), status, views_count, likes_count, published_at, scheduled_at, created_at, updated_at
 		FROM posts
 		WHERE slug = $1
 	`
 	var post domain.Post
 	err := r.db.QueryRowContext(ctx, query, slug).Scan(
-		&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt,
+		&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID, &post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -135,7 +137,7 @@ func (r *PostRepository) List(ctx context.Context, tag, search string, limit, of
 	listArgs := append([]interface{}{}, args...)
 	listArgs = append(listArgs, limit, offset)
 	listQuery = fmt.Sprintf(`
-		SELECT id, title, slug, summary, content, tags, status, views_count, likes_count, published_at, scheduled_at, created_at, updated_at
+		SELECT id, title, slug, summary, content, tags, category_id, COALESCE(cover_url, ''), COALESCE(cover_alt, ''), COALESCE(seo_title, ''), COALESCE(seo_description, ''), status, views_count, likes_count, published_at, scheduled_at, created_at, updated_at
 		FROM posts
 		WHERE %s
 		ORDER BY published_at DESC, created_at DESC
@@ -152,7 +154,7 @@ func (r *PostRepository) List(ctx context.Context, tag, search string, limit, of
 	for rows.Next() {
 		var post domain.Post
 		err := rows.Scan(
-			&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt,
+			&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID, &post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt,
 		)
 		if err != nil {
 			return nil, 0, err
@@ -196,7 +198,7 @@ func (r *PostRepository) ListAdmin(ctx context.Context, limit, offset int) ([]*d
 	if err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM posts`).Scan(&total); err != nil {
 		return nil, 0, err
 	}
-	rows, err := r.db.QueryContext(ctx, `SELECT id, title, slug, summary, content, tags, status, views_count, likes_count, published_at, scheduled_at, created_at, updated_at FROM posts ORDER BY updated_at DESC LIMIT $1 OFFSET $2`, limit, offset)
+	rows, err := r.db.QueryContext(ctx, `SELECT id, title, slug, summary, content, tags, category_id, COALESCE(cover_url, ''), COALESCE(cover_alt, ''), COALESCE(seo_title, ''), COALESCE(seo_description, ''), status, views_count, likes_count, published_at, scheduled_at, created_at, updated_at FROM posts ORDER BY updated_at DESC LIMIT $1 OFFSET $2`, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -204,7 +206,7 @@ func (r *PostRepository) ListAdmin(ctx context.Context, limit, offset int) ([]*d
 	posts := make([]*domain.Post, 0)
 	for rows.Next() {
 		var post domain.Post
-		if err := rows.Scan(&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt); err != nil {
+		if err := rows.Scan(&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID, &post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt); err != nil {
 			return nil, 0, err
 		}
 		posts = append(posts, &post)

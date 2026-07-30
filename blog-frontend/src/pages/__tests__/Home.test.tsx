@@ -1,5 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { I18nProvider } from '../../i18n';
@@ -8,10 +7,6 @@ import Home from '../Home';
 const pageOnePosts = [
   { id: 1, title: 'Go SSO Notes', slug: 'go-sso-notes', summary: 'OIDC notes', tags: ['go'], created_at: '2026-01-01T00:00:00Z' },
   { id: 2, title: 'React UI', slug: 'react-ui', summary: 'UI notes', tags: ['react'], created_at: '2026-01-02T00:00:00Z' },
-];
-
-const pageTwoPosts = [
-  { id: 3, title: 'Cloud Ops', slug: 'cloud-ops', summary: 'Ops notes', tags: ['ops'], created_at: '2026-01-03T00:00:00Z' },
 ];
 
 function renderHome() {
@@ -29,31 +24,30 @@ describe('Home', () => {
     vi.unstubAllGlobals();
   });
 
-  it('loads paginated posts and appends more results', async () => {
+  it('renders an editorial homepage from real posts and links to canonical article routes', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = input.toString();
       if (url.includes('/api/tags')) {
         return Response.json({ data: ['go', 'react', 'ops'] });
       }
-      if (url.includes('page=2')) {
-        return Response.json({ data: { list: pageTwoPosts, total: 3, page: 2, pageSize: 2 } });
+      if (url.includes('/api/site')) {
+        return Response.json({ data: { site_title: 'Gouno Blog', author_name: '站点作者', author_bio: '欢迎来到我的博客。' } });
       }
       return Response.json({ data: { list: pageOnePosts, total: 3, page: 1, pageSize: 2 } });
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    const user = userEvent.setup();
     renderHome();
 
-    expect(await screen.findByText('Go SSO Notes')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Go SSO Notes' })).toHaveAttribute('href', '/posts/go-sso-notes');
-    await user.click(screen.getByRole('button', { name: /load more posts/i }));
-
-    expect(await screen.findByText('Cloud Ops')).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('page=2'));
+    expect(await screen.findByRole('heading', { name: /把复杂系统/ })).toBeInTheDocument();
+    expect((await screen.findAllByText('Go SSO Notes')).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: 'Go SSO Notes' })[0]).toHaveAttribute('href', '/articles/go-sso-notes');
+    expect(screen.getByRole('heading', { name: '精选文章' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '主题索引' })).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('pageSize=12'));
   });
 
-  it('filters loaded posts by search text and topic', async () => {
+  it('renders tag counts and the subscription paths without fake form submission', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: RequestInfo | URL) => {
@@ -61,19 +55,18 @@ describe('Home', () => {
         if (url.includes('/api/tags')) {
           return Response.json({ data: ['go', 'react'] });
         }
+        if (url.includes('/api/site')) {
+          return Response.json({ data: { email: 'hello@example.com', rss_url: '/feed.xml', author_name: '站点作者', author_bio: '欢迎来到我的博客。' } });
+        }
         return Response.json({ data: { list: pageOnePosts, total: 2, page: 1, pageSize: 2 } });
       }),
     );
 
-    const user = userEvent.setup();
     renderHome();
 
-    expect(await screen.findByText('Go SSO Notes')).toBeInTheDocument();
-    await user.type(screen.getByPlaceholderText(/search posts/i), 'react');
-
-    await waitFor(() => {
-      expect(screen.queryByText('Go SSO Notes')).not.toBeInTheDocument();
-      expect(screen.getByText('React UI')).toBeInTheDocument();
-    });
+    expect((await screen.findAllByText('Go SSO Notes')).length).toBeGreaterThan(0);
+    expect(screen.getByRole('link', { name: /RSS/ })).toHaveAttribute('href', '/feed.xml');
+    expect(screen.getByRole('link', { name: /Email/ })).toHaveAttribute('href', 'mailto:hello@example.com');
+    expect(screen.getAllByRole('link', { name: 'go' }).some((link) => link.getAttribute('href') === '/tags/go')).toBe(true);
   });
 });
