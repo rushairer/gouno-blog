@@ -14,13 +14,13 @@ import { AdminPage, AdminPageHeader, AdminPageState, ConfirmDialog, EmptyState, 
 import { useI18n } from '../i18n';
 import '../styles/agent-console.css';
 
-type ConsoleTab = 'agents' | 'providers' | 'runs' | 'approvals';
+type ConsoleTab = 'agents' | 'skills' | 'providers' | 'runs' | 'approvals';
 type DeleteTarget = { kind: 'agent'; value: Agent } | { kind: 'provider'; value: ProviderProfile } | null;
 
 const copy = {
   en: {
     title: 'AI Workspace', pageDescription: 'Configure providers, automate blog operations, and review every proposed change.',
-    agents: 'Agents', providers: 'Providers', runs: 'Runs', approvals: 'Approvals',
+    agents: 'Agents', skills: 'Skills', providers: 'Providers', runs: 'Runs', approvals: 'Approvals',
     createAgent: 'Create Agent', createProvider: 'Add Provider', editAgent: 'Edit Agent', editProvider: 'Edit Provider',
     agentName: 'Agent name', providerName: 'Profile name', providerType: 'Provider type', provider: 'Provider / model',
     chooseProvider: 'Choose a provider', descriptionLabel: 'Description',
@@ -41,13 +41,13 @@ const copy = {
     awaitingApproval: 'Awaiting approval', details: 'Details', toolCalls: 'Tool calls',
     noApprovals: 'No approval proposals in this view.', before: 'Before', after: 'Proposed change',
     approve: 'Approve and execute', reject: 'Reject', all: 'All', pending: 'Pending',
-    backAdmin: 'Blog admin', loading: 'Loading AI Agent workspace…', refresh: 'Refresh',
+    noSkills: 'No saved Skills yet. Skills are reusable governed Agent configurations.', backAdmin: 'Blog admin', loading: 'Loading AI Agent workspace…', refresh: 'Refresh',
     requestFailed: 'The request failed.', deleteAgentConfirm: 'Delete this Agent and disable future runs?',
     deleteProviderConfirm: 'Delete this Provider profile?', providerNeeded: 'Create a Provider profile before adding an Agent.',
   },
   zh: {
     title: 'AI 工作台', pageDescription: '配置模型供应商、自动运营博客，并审核每一项内容变更。',
-    agents: 'Agents', providers: 'Providers', runs: '运行记录', approvals: '审批箱',
+    agents: 'Agents', skills: 'Skills', providers: 'Providers', runs: '运行记录', approvals: '审批箱',
     createAgent: '创建 Agent', createProvider: '添加 Provider', editAgent: '编辑 Agent', editProvider: '编辑 Provider',
     agentName: 'Agent 名称', providerName: '配置名称', providerType: 'Provider 类型', provider: 'Provider / 模型',
     chooseProvider: '选择 Provider', descriptionLabel: '说明',
@@ -68,7 +68,7 @@ const copy = {
     awaitingApproval: '等待审批', details: '详情', toolCalls: '工具调用',
     noApprovals: '当前视图没有审批提案。', before: '变更前', after: '建议变更',
     approve: '批准并执行', reject: '拒绝', all: '全部', pending: '待审批',
-    backAdmin: '博客后台', loading: '正在加载 AI Agent 工作区…', refresh: '刷新',
+    noSkills: '还没有已保存的 Skill。Skill 是可复用且受治理的 Agent 配置。', backAdmin: '博客后台', loading: '正在加载 AI Agent 工作区…', refresh: '刷新',
     requestFailed: '请求失败。', deleteAgentConfirm: '删除此 Agent 并停止后续运行？',
     deleteProviderConfirm: '删除此 Provider 配置？', providerNeeded: '请先创建 Provider，再添加 Agent。',
   },
@@ -369,6 +369,7 @@ export default function AgentConsole() {
 
   const tabs = [
     ['agents', Bot, labels.agents],
+    ['skills', ListChecks, labels.skills],
     ['providers', KeyRound, labels.providers],
     ['runs', Clock3, labels.runs],
     ['approvals', ShieldCheck, labels.approvals],
@@ -393,6 +394,10 @@ export default function AgentConsole() {
             const latestRun = runs.find((run) => run.agent_id === agent.id);
             return <tr key={agent.id}><td><div className="agent-identity"><span><Bot /></span><div><strong>{agent.name}</strong><small>{agent.description}</small></div></div></td><td><span className={`agent-state agent-state--${agent.enabled ? 'active' : 'paused'}`}><i />{agent.enabled ? labels.active : labels.paused}</span></td><td><strong>{provider?.name || '—'}</strong><small className="mono">{provider?.model || '—'}</small></td><td><strong>{agent.trigger_type === 'cron' ? agent.cron_expression : labels.manual}</strong><small>{agent.timezone}</small></td><td><div className="agent-chip-list">{agent.capabilities.slice(0, 3).map((item) => <span key={item}>{formatCapability(item)}</span>)}{agent.capabilities.length > 3 ? <span>+{agent.capabilities.length - 3}</span> : null}</div></td><td>{latestRun ? <><span className={`status-pill status-pill--${latestRun.status}`}>{latestRun.status.replace('_', ' ')}</span><small>{formatDateTime(latestRun.created_at)}</small></> : <small>{labels.never}</small>}</td><td><strong>{agent.next_run_at ? formatDateTime(agent.next_run_at) : '—'}</strong></td><td><div className="agent-row-actions"><button type="button" title={labels.runNow} onClick={() => void runAgent(agent)} disabled={!agent.enabled}><Play /></button><button type="button" title={labels.edit} onClick={() => setEditingAgent(agent)}><Settings2 /></button><button type="button" title={agent.enabled ? labels.disable : labels.enable} onClick={() => void mutate(`/api/admin/agents/${agent.id}/${agent.enabled ? 'disable' : 'enable'}`).catch((reason: Error) => setError(reason.message))}>{agent.enabled ? <CirclePause /> : <Check />}</button><button type="button" title={labels.delete} onClick={() => setDeleteTarget({ kind: 'agent', value: agent })}><Trash2 /></button></div></td></tr>;
           })}</tbody></table></div>}
+        </Panel> : null}
+
+        {!editingAgent && !editingProvider && tab === 'skills' ? <Panel className="agent-table-panel">
+          {skills.length === 0 ? <EmptyState label={labels.noSkills} /> : <div className="table-scroll"><table className="content-table agent-table"><thead><tr><th>{labels.skills}</th><th>{labels.mode}</th><th>{labels.capabilities}</th><th>Version</th><th>{labels.created}</th></tr></thead><tbody>{skills.map((skill) => <tr key={skill.id}><td><strong>{skill.name}</strong><small>{skill.description}</small></td><td><span className={`risk-label risk-label--${skill.execution_mode === 'approval' ? 'propose' : 'read'}`}>{skill.execution_mode === 'approval' ? labels.approvalMode : labels.advisory}</span></td><td><div className="agent-chip-list">{skill.capabilities.slice(0, 4).map((item) => <span key={item}>{formatCapability(item)}</span>)}{skill.capabilities.length > 4 ? <span>+{skill.capabilities.length - 4}</span> : null}</div></td><td><strong>v{skill.version}</strong></td><td><small>{formatDateTime(skill.updated_at)}</small></td></tr>)}</tbody></table></div>}
         </Panel> : null}
 
         {!editingAgent && !editingProvider && tab === 'providers' ? <Panel className="agent-table-panel">
