@@ -95,6 +95,10 @@ describe('AgentConsole', () => {
         id: 14, run_id: 9, tool_name: 'content.list_stale_posts', risk_level: 'read', status: 'executed', arguments: {},
         result: { older_than_days: 180, list: [{ id: 6, title: 'Old article', slug: 'old-article', summary: 'Needs a review.', updated_at: '2025-01-01T00:00:00Z', views_count: 12, likes_count: 3 }] },
         created_at: '2026-07-30T00:00:00Z',
+      }, {
+        id: 15, run_id: 9, tool_name: 'content.list_orphan_posts', risk_level: 'read', status: 'executed', arguments: {},
+        result: { match_rule: 'no relative /articles/:slug or /posts/:slug link found in another published article', list: [{ id: 7, title: 'Orphan article', slug: 'orphan-article', summary: 'Needs internal links.', views_count: 7, likes_count: 1 }] },
+        created_at: '2026-07-30T00:00:00Z',
       }] } });
       return Response.json({ data: responseFor(url) });
     });
@@ -108,6 +112,7 @@ describe('AgentConsole', () => {
     expect(screen.getByRole('link', { name: 'Open article: Related article' })).toHaveAttribute('href', '/articles/related-article');
     expect(screen.getByRole('link', { name: 'Open article: Search result' })).toHaveAttribute('href', '/articles/search-result');
     expect(screen.getByRole('link', { name: 'Open article: Old article' })).toHaveAttribute('href', '/articles/old-article');
+    expect(screen.getByRole('link', { name: 'Open article: Orphan article' })).toHaveAttribute('href', '/articles/orphan-article');
   });
 
   it('redirects users without blog management access', async () => {
