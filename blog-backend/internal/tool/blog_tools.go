@@ -50,6 +50,11 @@ func NewBlogRegistry(posts *service.PostService, community *service.CommunitySer
 			Risk:       domain.ToolRiskRead, Execute: tools.checkLinks,
 		},
 		Definition{
+			Name: "content.audit_post", Description: "Run deterministic content-quality checks for a draft, scheduled, or published post.",
+			Parameters: schema(`{"id":{"type":"integer","minimum":1}}`, "id"),
+			Risk:       domain.ToolRiskRead, Execute: tools.auditPost,
+		},
+		Definition{
 			Name: "comments.list_pending", Description: "List pending or reported comments for moderation insight.",
 			Parameters: schema(`{"reported_only":{"type":"boolean"},"limit":{"type":"integer","minimum":1,"maximum":100}}`),
 			Risk:       domain.ToolRiskRead, Execute: tools.listPendingComments,
