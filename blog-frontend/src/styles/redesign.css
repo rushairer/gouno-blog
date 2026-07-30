@@ -30,6 +30,21 @@
   --font-size-control: 13px;
   --font-size-body: 14px;
   --success: #287a52;
+  --control-bg: var(--surface);
+  --control-bg-hover: color-mix(in srgb, var(--surface) 92%, var(--ink) 8%);
+  --control-border: var(--admin-line);
+  --control-placeholder: var(--text-3);
+  --action-primary-bg: var(--brand);
+  --action-primary-hover: var(--brand-hover);
+  --action-primary-fg: #fff;
+  --status-success-bg: #e8f4eb;
+  --status-success-fg: #1e6745;
+  --status-warning-bg: #f9efd9;
+  --status-warning-fg: #805b08;
+  --status-info-bg: #e8eef7;
+  --status-info-fg: #29548b;
+  --status-danger-bg: #f9e9e6;
+  --status-danger-fg: #9c3428;
 
   /* Compatibility aliases for pre-redesign components. */
   --bg-main: var(--paper);
@@ -65,6 +80,21 @@
   --admin-line: #383b36;
   --code: #101210;
   --success: #8bc7a3;
+  --control-bg: #1a1d19;
+  --control-bg-hover: #252a24;
+  --control-border: #454b43;
+  --control-placeholder: #9b9d94;
+  --action-primary-bg: #9bc9b0;
+  --action-primary-hover: #b7dcc5;
+  --action-primary-fg: #13251b;
+  --status-success-bg: #203a2b;
+  --status-success-fg: #a6d8ba;
+  --status-warning-bg: #42371d;
+  --status-warning-fg: #f0d58f;
+  --status-info-bg: #213346;
+  --status-info-fg: #adc8e8;
+  --status-danger-bg: #442522;
+  --status-danger-fg: #f0b6ad;
 }
 [data-theme="dark"] .public-header,
 [data-theme="dark"] .public-nav,
@@ -297,7 +327,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .admin-search { width: min(360px, 40vw); height: 36px; margin-left: auto; display: flex; align-items: center; gap: 8px; padding: 0 11px; border: 1px solid var(--admin-line); border-radius: 6px; background: white; }
 .admin-search > button { width: 24px; height: 30px; display: grid; place-items: center; border: 0; background: transparent; color: var(--text-3); cursor: pointer; }
 .admin-search svg { width: 16px; }
-.admin-search input { width: 100%; border: 0; outline: 0; font-size: 13px; }
+.admin-search input { width: 100%; border: 0; outline: 0; background: transparent; color: var(--ink); font-size: 13px; }
 .admin-search-toggle { display: none !important; }
 .admin-topbar-actions { display: flex; align-items: center; gap: 8px; }
 .admin-topbar-actions a, .admin-topbar-actions button { min-height: 34px; display: inline-flex; align-items: center; gap: 7px; padding: 0 10px; border: 1px solid var(--admin-line); border-radius: 6px; background: white; color: var(--text-2); font-size: 12px; text-decoration: none; white-space: nowrap; cursor: pointer; }
@@ -331,15 +361,15 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .admin-page .media-card .row-actions { margin-top: auto; }
 .admin-page .panel { border-color: var(--admin-line); border-radius: 8px; background: white; box-shadow: none; }
 .admin-page .btn, .editor-page .btn { min-height: var(--control-height); border-radius: 6px; font-size: var(--font-size-control); font-weight: 700; }
-.admin-page .btn-primary, .editor-page .btn-primary { border-color: var(--brand); background: var(--brand); }
-.admin-page .btn-primary:hover, .editor-page .btn-primary:hover { background: var(--brand-hover); }
+.admin-page .btn-primary, .editor-page .btn-primary { border-color: var(--action-primary-bg); background: var(--action-primary-bg); color: var(--action-primary-fg); }
+.admin-page .btn-primary:hover, .editor-page .btn-primary:hover { background: var(--action-primary-hover); }
 .admin-page .field { gap: 6px; color: var(--text-2); font-size: var(--font-size-label); font-weight: 600; }
 .admin-page .field + .field { margin-top: 0; }
 .admin-page .input-field {
   min-height: var(--control-height);
-  border-color: var(--admin-line);
+  border-color: var(--control-border);
   border-radius: 5px;
-  background: white;
+  background: var(--control-bg);
   color: var(--ink);
   font-size: var(--font-size-control);
   padding: 8px 10px;
@@ -380,7 +410,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .modal-actions { margin-top: 24px; display: flex; justify-content: flex-end; gap: 8px; }
 .modal-form { display: grid; gap: 14px; }
 .modal-form label { display: grid; gap: 6px; color: var(--text-2); font-size: 12px; }
-.modal-form input, .modal-form textarea, .modal-form select { width: 100%; min-height: 40px; border: 1px solid var(--admin-line); border-radius: 5px; padding: 8px 10px; background: white; }
+.modal-form input, .modal-form textarea, .modal-form select { width: 100%; min-height: 40px; border: 1px solid var(--control-border); border-radius: 5px; padding: 8px 10px; background: var(--control-bg); color: var(--ink); }
 
 /* Administration theme surfaces. These rules follow the component styles so
    they also override intentionally light default backgrounds. */
@@ -534,6 +564,34 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .settings-section h2 { margin-bottom: 20px; font: 600 19px var(--font-serif); }
 .settings-save { position: sticky; bottom: 16px; float: right; box-shadow: var(--shadow-float); }
 .user-admin-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 16px; }
+
+/* Shared administration primitives: all editable controls and actions consume
+   the same semantic tokens, including legacy pages that do not use Field yet. */
+.input-field,
+.admin-shell .modal-form :is(input, textarea, select),
+.admin-shell .settings-section :is(input, textarea, select),
+.admin-shell .editor-inspector :is(input, textarea, select),
+.admin-shell .admin-filter-bar select,
+.admin-shell .media-filter-bar select {
+  border-color: var(--control-border);
+  background: var(--control-bg);
+  color: var(--ink);
+}
+:is(input, textarea, select)::placeholder { color: var(--control-placeholder); opacity: 1; }
+:is(.input-field, .admin-shell .modal-form :is(input, textarea, select), .admin-shell .settings-section :is(input, textarea, select), .admin-shell .editor-inspector :is(input, textarea, select), .admin-shell .admin-filter-bar select, .admin-shell .media-filter-bar select):focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 22%, transparent);
+}
+.admin-shell select option { background: var(--control-bg); color: var(--ink); }
+.admin-shell .admin-search input { background: transparent; color: var(--ink); box-shadow: none; }
+.btn-primary { border-color: var(--action-primary-bg); background: var(--action-primary-bg); color: var(--action-primary-fg); }
+.btn-primary:hover:not(:disabled) { background: var(--action-primary-hover); }
+.btn-secondary { border-color: var(--control-border); background: var(--control-bg); color: var(--ink); }
+.btn-secondary:hover:not(:disabled) { border-color: var(--brand); background: var(--control-bg-hover); color: var(--brand); }
+.btn-danger { border-color: color-mix(in srgb, var(--danger) 42%, var(--control-border)); background: var(--status-danger-bg); color: var(--status-danger-fg); }
+.btn-danger:hover:not(:disabled) { background: color-mix(in srgb, var(--status-danger-bg) 82%, var(--danger) 18%); }
+.feedback--success { border-color: color-mix(in srgb, var(--success) 42%, var(--control-border)); background: var(--status-success-bg); color: var(--status-success-fg); }
+.feedback--error { border-color: color-mix(in srgb, var(--danger) 42%, var(--control-border)); background: var(--status-danger-bg); color: var(--status-danger-fg); }
 .user-admin-grid .panel { display: grid; grid-template-columns: 42px 1fr; gap: 16px; }
 .user-admin-grid .panel > svg { width: 26px; color: var(--brand); }
 .user-admin-grid h2 { margin-bottom: 10px; font: 600 20px var(--font-serif); }

@@ -70,7 +70,18 @@ func sameOrigin(ctx *gin.Context, origin string) bool {
 	if ctx.Request.TLS != nil || strings.EqualFold(ctx.GetHeader("X-Forwarded-Proto"), "https") {
 		scheme = "https"
 	}
-	return origin == scheme+"://"+strings.ToLower(ctx.Request.Host)
+	return origin == scheme+"://"+strings.ToLower(requestHost(ctx))
+}
+
+// requestHost prefers the public host supplied by the gateway. The backend is
+// normally addressed through the internal service name, while the browser's
+// Origin carries the external host and port. Comparing only Request.Host would
+// therefore reject safe writes such as the provider connection test.
+func requestHost(ctx *gin.Context) string {
+	if forwardedHost := strings.TrimSpace(ctx.GetHeader("X-Forwarded-Host")); forwardedHost != "" {
+		return strings.TrimSpace(strings.Split(forwardedHost, ",")[0])
+	}
+	return ctx.Request.Host
 }
 
 func unsafeMethod(method string) bool {

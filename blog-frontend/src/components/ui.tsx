@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { cloneElement, createContext, isValidElement, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type React from 'react';
 import { AlertTriangle, BookOpen, CheckCircle2, X } from 'lucide-react';
 
@@ -91,10 +91,13 @@ export function Field({
   children: React.ReactNode;
   className?: string;
 }) {
+  const control = isValidElement<{ className?: string }>(children)
+    ? cloneElement(children, { className: `input-field ${children.props.className || ''}`.trim() })
+    : children;
   return (
     <label className={`field ${className}`.trim()}>
       <span>{label}</span>
-      {children}
+      {control}
     </label>
   );
 }

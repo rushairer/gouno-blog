@@ -1,6 +1,6 @@
 .agent-console {
   --agent-accent: var(--brand);
-  --agent-accent-soft: rgba(22, 75, 55, .08);
+  --agent-accent-soft: var(--brand-soft);
   --agent-border: var(--admin-line);
 }
 
@@ -104,7 +104,7 @@
 
 .agent-table th {
   height: 52px;
-  color: #5a5668;
+  color: var(--text-3);
   font-size: 11px;
   letter-spacing: .04em;
   text-transform: uppercase;
@@ -186,15 +186,15 @@
 }
 
 .agent-state--active i {
-  background: #1ead63;
+  background: var(--success-color);
 }
 
 .agent-state--paused {
-  color: #8b6508;
+  color: var(--status-warning-fg);
 }
 
 .agent-state--paused i {
-  background: #e6a817;
+  background: var(--status-warning-fg);
 }
 
 .agent-chip-list {
@@ -328,15 +328,15 @@
 }
 
 .risk-label--read {
-  border-color: rgba(40, 122, 82, .23);
-  background: #eef8f1;
-  color: var(--success-color);
+  border-color: color-mix(in srgb, var(--success) 42%, var(--agent-border));
+  background: var(--status-success-bg);
+  color: var(--status-success-fg);
 }
 
 .risk-label--propose {
-  border-color: rgba(186, 128, 8, .25);
-  background: #fff8e1;
-  color: #805b08;
+  border-color: color-mix(in srgb, var(--warning) 42%, var(--agent-border));
+  background: var(--status-warning-bg);
+  color: var(--status-warning-fg);
 }
 
 .agent-split-view,
@@ -417,13 +417,13 @@
 
 .run-icon--succeeded,
 .run-icon--awaiting_approval {
-  background: #e8f7ee;
-  color: var(--success-color);
+  background: var(--status-success-bg);
+  color: var(--status-success-fg);
 }
 
 .run-icon--failed {
-  background: #fff0ed;
-  color: var(--danger-color);
+  background: var(--status-danger-bg);
+  color: var(--status-danger-fg);
 }
 
 .agent-detail-panel,
@@ -798,8 +798,8 @@
   overflow: auto;
   border: 1px solid var(--agent-border);
   border-radius: 7px;
-  background: #f8f8fb;
-  color: #292638;
+  background: var(--control-bg-hover);
+  color: var(--ink);
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 12px;
   line-height: 1.6;
@@ -858,38 +858,27 @@
 
 .status-pill--queued,
 .status-pill--running {
-  background: #edf4ff;
-  color: #20569b;
+  background: var(--status-info-bg);
+  color: var(--status-info-fg);
 }
 
 .agent-console .status-pill--awaiting_approval,
 .agent-console .status-pill--pending {
-  background: #fff6d9;
-  color: #7b5b08;
+  background: var(--status-warning-bg);
+  color: var(--status-warning-fg);
 }
 
 .status-pill--succeeded,
 .status-pill--executed {
-  background: #e8f7ee;
-  color: var(--success-color);
+  background: var(--status-success-bg);
+  color: var(--status-success-fg);
 }
 
 .status-pill--failed,
 .status-pill--rejected,
 .status-pill--cancelled {
-  background: #fff0ed;
-  color: var(--danger-color);
-}
-
-[data-theme="dark"] .agent-console {
-  --agent-accent: #8bc7a3;
-  --agent-accent-soft: rgba(139, 199, 163, .12);
-  --agent-border: var(--border-card);
-}
-
-[data-theme="dark"] .agent-json-preview {
-  background: #1d1d22;
-  color: #e7e5ed;
+  background: var(--status-danger-bg);
+  color: var(--status-danger-fg);
 }
 
 @media (max-width: 1050px) {

@@ -63,3 +63,24 @@ func TestCORSMiddlewareTreatsExplicitPortAsSameOrigin(t *testing.T) {
 		t.Fatalf("expected same-origin request with port to pass, got %d", response.Code)
 	}
 }
+
+func TestCORSMiddlewareUsesForwardedPublicHost(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.Use(corsMiddleware(nil))
+	router.POST("/api/admin/provider-profiles/1/test", func(c *gin.Context) { c.Status(http.StatusOK) })
+
+	req := httptest.NewRequest(http.MethodPost, "http://blog-backend:8082/api/admin/provider-profiles/1/test", nil)
+	req.Host = "blog-backend:8082"
+	req.Header.Set("Origin", "http://localhost:8080")
+	req.Header.Set("X-Forwarded-Host", "localhost:8080")
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, req)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected forwarded same-origin request to pass, got %d", response.Code)
+	}
+	if got := response.Header().Get("Access-Control-Allow-Origin"); got != "http://localhost:8080" {
+		t.Fatalf("allow-origin = %q", got)
+	}
+}
