@@ -58,7 +58,7 @@ describe('AgentConsole', () => {
 
   it('loads agents, providers, runs, approvals, tools, and presets in parallel', async () => {
     renderConsole();
-    expect(await screen.findByText('Weekly Operations')).toBeInTheDocument();
+    expect((await screen.findAllByText('Weekly Operations')).length).toBeGreaterThan(0);
     await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(12));
     expect(screen.getByRole('button', { name: 'Agents' })).toBeInTheDocument();
     expect(screen.getByText('gpt-5-mini')).toBeInTheDocument();
@@ -67,7 +67,7 @@ describe('AgentConsole', () => {
   it('opens the provider editor from the provider workspace', async () => {
     const user = userEvent.setup();
     renderConsole();
-    await screen.findByText('Weekly Operations');
+    expect((await screen.findAllByText('Weekly Operations')).length).toBeGreaterThan(0);
     await user.click(screen.getByRole('button', { name: 'Providers' }));
     expect(screen.getByText('OpenAI')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Add Provider' }));
@@ -110,7 +110,7 @@ describe('AgentConsole', () => {
       return Response.json({ data: responseFor(url) });
     });
     renderConsole();
-    await screen.findByText('Weekly Operations');
+    expect((await screen.findAllByText('Weekly Operations')).length).toBeGreaterThan(0);
     await user.click(screen.getByRole('button', { name: 'Runs' }));
     await user.click(screen.getByText('Weekly Operations'));
     expect(await screen.findByRole('region', { name: 'Content audit' })).toBeInTheDocument();

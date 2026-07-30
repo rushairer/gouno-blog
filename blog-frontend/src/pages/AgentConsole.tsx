@@ -374,6 +374,28 @@ export default function AgentConsole() {
     } catch (reason) { setError(reason instanceof Error ? reason.message : labels.requestFailed); }
   };
 
+  const importSkill = async () => {
+    const raw = window.prompt(locale === 'zh' ? '粘贴 Skill JSON' : 'Paste Skill JSON');
+    if (!raw) return;
+    await mutate('/api/admin/agent-skills/import', 'POST', JSON.parse(raw));
+  };
+
+  const exportSkill = async (skill: AgentSkill) => {
+    const response = await apiFetch(`/api/admin/agent-skills/${skill.id}/export`);
+    if (!response.ok) throw new Error(labels.requestFailed);
+    const blob = new Blob([await response.text()], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url; anchor.download = `skill-${skill.id}-v${skill.version}.json`; anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const saveAgentAsSkill = async (agent: Agent) => {
+    const name = window.prompt(locale === 'zh' ? '新 Skill 名称' : 'New Skill name', `${agent.name} Skill`);
+    if (!name) return;
+    await mutate(`/api/admin/agents/${agent.id}/save-as-skill`, 'POST', { name });
+  };
+
   const saveWorkflow = async (value: { id?: number; name: string; description: string; enabled: boolean; input_schema: Record<string, unknown>; steps: import('../agent').WorkflowStep[] }) => {
     await readData<Workflow>(await apiFetch(value.id ? `/api/admin/ai-workflows/${value.id}` : '/api/admin/ai-workflows', {
       method: value.id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value),
@@ -466,9 +488,11 @@ export default function AgentConsole() {
           })}</tbody></table></div>}
         </Panel> : null}
 
-        {!editingAgent && !editingProvider && !editingSkill && tab === 'skills' ? <Panel className="agent-table-panel">
+        {!editingAgent && !editingProvider && tab === 'agents' && agents.length > 0 ? <Panel><div className="panel-heading"><h3>{locale === 'zh' ? '保存为可复用 Skill' : 'Save as reusable Skill'}</h3><div className="agent-chip-list">{agents.map((agent) => <button type="button" key={agent.id} onClick={() => void saveAgentAsSkill(agent)}>{agent.name}</button>)}</div></div></Panel> : null}
+
+        {!editingAgent && !editingProvider && !editingSkill && tab === 'skills' ? <div className="section-stack"><div className="row-actions"><button className="btn btn-secondary" type="button" onClick={() => void importSkill()}>{locale === 'zh' ? '导入 JSON' : 'Import JSON'}</button>{skills.map((skill) => <button className="btn btn-secondary" type="button" key={skill.id} onClick={() => void exportSkill(skill)}>{locale === 'zh' ? '导出' : 'Export'} {skill.name} v{skill.version}</button>)}</div><Panel className="agent-table-panel">
           {skills.length === 0 ? <EmptyState label={labels.noSkills} /> : <div className="table-scroll"><table className="content-table agent-table"><thead><tr><th>{labels.skills}</th><th>{labels.mode}</th><th>{labels.capabilities}</th><th>Version</th><th>{labels.created}</th><th>{labels.actions}</th></tr></thead><tbody>{skills.map((skill) => <tr key={skill.id}><td><strong>{skill.name}</strong><small>{skill.description}</small></td><td><span className={`risk-label risk-label--${skill.execution_mode === 'approval' ? 'propose' : 'read'}`}>{skill.execution_mode === 'approval' ? labels.approvalMode : labels.advisory}</span></td><td><div className="agent-chip-list">{skill.capabilities.slice(0, 4).map((item) => <span key={item}>{formatCapability(item)}</span>)}{skill.capabilities.length > 4 ? <span>+{skill.capabilities.length - 4}</span> : null}</div></td><td><strong>v{skill.version}</strong></td><td><small>{formatDateTime(skill.updated_at)}</small></td><td><div className="agent-row-actions"><button type="button" title={labels.edit} onClick={() => setEditingSkill(skill)}><Settings2 /></button></div></td></tr>)}</tbody></table></div>}
-        </Panel> : null}
+        </Panel></div> : null}
 
         {!editingAgent && !editingProvider && tab === 'providers' ? <Panel className="agent-table-panel">
           {providers.length === 0 ? <EmptyState label={labels.noProviders} /> : <div className="table-scroll"><table className="content-table agent-table"><thead><tr><th>{labels.providerName}</th><th>{labels.providerType}</th><th>{labels.baseUrl}</th><th>{labels.model}</th><th>{labels.apiKey}</th><th>{labels.status}</th><th>{labels.actions}</th></tr></thead><tbody>{providers.map((provider) => <tr key={provider.id}><td><strong>{provider.name}</strong></td><td>{provider.provider_type}</td><td className="mono">{provider.base_url}</td><td className="mono">{provider.model}</td><td><span className="secret-mask">•••• {provider.api_key_last4}</span><small>{labels.keyStored}</small></td><td><span className={`agent-state agent-state--${provider.enabled ? 'active' : 'paused'}`}><i />{provider.enabled ? labels.active : labels.paused}</span></td><td><div className="agent-row-actions"><button type="button" title={labels.test} onClick={async () => { try { await mutate(`/api/admin/provider-profiles/${provider.id}/test`); setNotice(labels.connected); } catch (reason) { setError(reason instanceof Error ? reason.message : labels.requestFailed); } }}><RefreshCw /></button><button type="button" title={labels.edit} onClick={() => setEditingProvider(provider)}><Settings2 /></button><button type="button" title={labels.delete} onClick={() => setDeleteTarget({ kind: 'provider', value: provider })}><Trash2 /></button></div></td></tr>)}</tbody></table></div>}
