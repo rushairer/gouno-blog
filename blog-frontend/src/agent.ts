@@ -19,6 +19,35 @@ export interface ProviderProfile {
   updated_at: string;
 }
 
+export interface EmbeddingProfile {
+  id: number;
+  name: string;
+  base_url: string;
+  model: string;
+  dimensions: number;
+  api_key_last4?: string;
+  has_api_key: boolean;
+  enabled: boolean;
+  request_timeout_seconds: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AgentCitation {
+  citation_id: string;
+  post_id?: number;
+  title?: string;
+  slug?: string;
+  chunk_id?: number;
+  start_offset?: number;
+  end_offset?: number;
+  snippet?: string;
+  lexical_score?: number;
+  semantic_score?: number;
+  score?: number;
+  status: 'validated' | 'unsupported';
+}
+
 export interface Agent {
   id: number;
   name: string;
@@ -74,6 +103,7 @@ export interface AgentRun {
   started_at?: string;
   finished_at?: string;
   created_at: string;
+  citations?: AgentCitation[];
 }
 
 export interface AgentToolCall {

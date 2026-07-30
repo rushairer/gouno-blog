@@ -22,6 +22,8 @@ const provider = {
 
 function responseFor(url: string) {
   if (url === '/api/admin/provider-profiles') return [provider];
+  if (url === '/api/admin/embedding-profiles') return [];
+  if (url === '/api/admin/ai-index/status') return { queued: 0, failed: 0, chunks: 0 };
   if (url === '/api/admin/agents') return [{
     id: 1, name: 'Weekly Operations', description: 'Weekly report', system_prompt: 'Report',
     provider_profile_id: 1, enabled: true, trigger_type: 'manual', timezone: 'Asia/Shanghai',
@@ -54,7 +56,7 @@ describe('AgentConsole', () => {
   it('loads agents, providers, runs, approvals, tools, and presets in parallel', async () => {
     renderConsole();
     expect(await screen.findByText('Weekly Operations')).toBeInTheDocument();
-    await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(7));
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(9));
     expect(screen.getByRole('button', { name: 'Agents' })).toBeInTheDocument();
     expect(screen.getByText('gpt-5-mini')).toBeInTheDocument();
   });
@@ -76,6 +78,7 @@ describe('AgentConsole', () => {
       id: 9, agent_id: 1, trigger_type: 'manual', status: 'succeeded', output_summary: 'Audit complete.',
       provider: 'openai', model: 'gpt-5-mini', input_tokens: 20, output_tokens: 30,
       created_at: '2026-07-30T00:00:00Z',
+      citations: [{ citation_id: 'kb_123', post_id: 5, title: 'Search result', slug: 'search-result', snippet: 'Verified source.', status: 'validated' }],
     };
     vi.mocked(apiFetch).mockImplementation(async (input) => {
       const url = input.toString();
@@ -114,6 +117,8 @@ describe('AgentConsole', () => {
     expect(screen.getByRole('link', { name: 'Open article: Search result' })).toHaveAttribute('href', '/articles/search-result');
     expect(screen.getByRole('link', { name: 'Open article: Old article' })).toHaveAttribute('href', '/articles/old-article');
     expect(screen.getByRole('link', { name: 'Open article: Orphan article' })).toHaveAttribute('href', '/articles/orphan-article');
+    expect(screen.getByRole('region', { name: 'Citations' })).toBeInTheDocument();
+    expect(screen.getByText('Verified source.')).toBeInTheDocument();
   });
 
   it('redirects users without blog management access', async () => {

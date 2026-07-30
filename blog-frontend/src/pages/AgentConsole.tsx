@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Bot, Check, ChevronRight, CirclePause, Clock3, KeyRound, ListChecks, Play,
+  Bot, Check, ChevronRight, CirclePause, Clock3, DatabaseZap, KeyRound, ListChecks, Play,
   Plus, RefreshCw, Settings2, ShieldCheck, Trash2, X,
 } from 'lucide-react';
 import { apiFetch, canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
 import type {
-  Agent, AgentApproval, AgentPreset, AgentRun, AgentSkill, AgentToolCall, ProviderProfile, ToolDefinition,
+  Agent, AgentApproval, AgentPreset, AgentRun, AgentSkill, AgentToolCall, EmbeddingProfile, ProviderProfile, ToolDefinition,
 } from '../agent';
+import { EmbeddingForm } from '../components/agent/EmbeddingForm';
+import type { EmbeddingFormValue } from '../components/agent/EmbeddingForm';
 import { AgentForm } from '../components/agent/AgentForm';
 import { SkillForm } from '../components/agent/SkillForm';
 import type { SkillFormValue } from '../components/agent/SkillForm';
@@ -16,13 +18,13 @@ import { AdminPage, AdminPageHeader, AdminPageState, ConfirmDialog, EmptyState, 
 import { useI18n } from '../i18n';
 import '../styles/agent-console.css';
 
-type ConsoleTab = 'agents' | 'skills' | 'providers' | 'runs' | 'approvals';
-type DeleteTarget = { kind: 'agent'; value: Agent } | { kind: 'provider'; value: ProviderProfile } | null;
+type ConsoleTab = 'agents' | 'skills' | 'providers' | 'knowledge' | 'runs' | 'approvals';
+type DeleteTarget = { kind: 'agent'; value: Agent } | { kind: 'provider'; value: ProviderProfile } | { kind: 'embedding'; value: EmbeddingProfile } | null;
 
 const copy = {
   en: {
     title: 'AI Workspace', pageDescription: 'Configure providers, automate blog operations, and review every proposed change.',
-    agents: 'Agents', skills: 'Skills', providers: 'Providers', runs: 'Runs', approvals: 'Approvals',
+    agents: 'Agents', skills: 'Skills', providers: 'Providers', knowledge: 'Knowledge index', runs: 'Runs', approvals: 'Approvals',
     createAgent: 'Create Agent', createProvider: 'Add Provider', editAgent: 'Edit Agent', editProvider: 'Edit Provider',
     agentName: 'Agent name', providerName: 'Profile name', providerType: 'Provider type', provider: 'Provider / model',
     chooseProvider: 'Choose a provider', descriptionLabel: 'Description',
@@ -45,11 +47,11 @@ const copy = {
     approve: 'Approve and execute', reject: 'Reject', all: 'All', pending: 'Pending',
     noSkills: 'No saved Skills yet. Skills are reusable governed Agent configurations.', backAdmin: 'Blog admin', loading: 'Loading AI Agent workspace…', refresh: 'Refresh',
     requestFailed: 'The request failed.', deleteAgentConfirm: 'Delete this Agent and disable future runs?',
-    deleteProviderConfirm: 'Delete this Provider profile?', providerNeeded: 'Create a Provider profile before adding an Agent.',
+    deleteProviderConfirm: 'Delete this Provider profile?', deleteEmbeddingConfirm: 'Delete this embedding profile?', providerNeeded: 'Create a Provider profile before adding an Agent.',
   },
   zh: {
     title: 'AI 工作台', pageDescription: '配置模型供应商、自动运营博客，并审核每一项内容变更。',
-    agents: 'Agents', skills: 'Skills', providers: 'Providers', runs: '运行记录', approvals: '审批箱',
+    agents: 'Agents', skills: 'Skills', providers: 'Providers', knowledge: '知识索引', runs: '运行记录', approvals: '审批箱',
     createAgent: '创建 Agent', createProvider: '添加 Provider', editAgent: '编辑 Agent', editProvider: '编辑 Provider',
     agentName: 'Agent 名称', providerName: '配置名称', providerType: 'Provider 类型', provider: 'Provider / 模型',
     chooseProvider: '选择 Provider', descriptionLabel: '说明',
@@ -72,7 +74,7 @@ const copy = {
     approve: '批准并执行', reject: '拒绝', all: '全部', pending: '待审批',
     noSkills: '还没有已保存的 Skill。Skill 是可复用且受治理的 Agent 配置。', backAdmin: '博客后台', loading: '正在加载 AI Agent 工作区…', refresh: '刷新',
     requestFailed: '请求失败。', deleteAgentConfirm: '删除此 Agent 并停止后续运行？',
-    deleteProviderConfirm: '删除此 Provider 配置？', providerNeeded: '请先创建 Provider，再添加 Agent。',
+    deleteProviderConfirm: '删除此 Provider 配置？', deleteEmbeddingConfirm: '删除此嵌入配置？', providerNeeded: '请先创建 Provider，再添加 Agent。',
   },
 } as const;
 
@@ -215,11 +217,24 @@ function OrphanPostSuggestions({ value, locale }: { value: unknown; locale: 'en'
   </section>;
 }
 
+function RunCitations({ run, locale }: { run: AgentRun; locale: 'en' | 'zh' }) {
+  if (!run.citations?.length) return null;
+  return <section className="related-content-suggestions" aria-label={locale === 'zh' ? '引用依据' : 'Citations'}>
+    <h3>{locale === 'zh' ? '引用依据' : 'Citations'}</h3>
+    <ul>{run.citations.map((citation) => <li key={citation.citation_id}>
+      <div>{citation.status === 'validated' && citation.slug ? <a href={`/articles/${encodeURIComponent(citation.slug)}`}>{citation.title || citation.slug}</a> : <strong>{citation.citation_id}</strong>}{citation.snippet ? <p>{citation.snippet}</p> : null}</div>
+      <span className={`risk-label risk-label--${citation.status === 'validated' ? 'read' : 'propose'}`}>{citation.status}</span>
+    </li>)}</ul>
+  </section>;
+}
+
 export default function AgentConsole() {
   const { locale, formatDateTime } = useI18n();
   const labels = copy[locale];
   const [tab, setTab] = useState<ConsoleTab>('agents');
   const [providers, setProviders] = useState<ProviderProfile[]>([]);
+  const [embeddingProfiles, setEmbeddingProfiles] = useState<EmbeddingProfile[]>([]);
+  const [indexStatus, setIndexStatus] = useState<{ queued: number; failed: number; chunks: number }>({ queued: 0, failed: 0, chunks: 0 });
   const [agents, setAgents] = useState<Agent[]>([]);
   const [runs, setRuns] = useState<AgentRun[]>([]);
   const [approvals, setApprovals] = useState<AgentApproval[]>([]);
@@ -230,6 +245,7 @@ export default function AgentConsole() {
   const [selectedRun, setSelectedRun] = useState<{ run: AgentRun; tool_calls: AgentToolCall[] } | null>(null);
   const [editingAgent, setEditingAgent] = useState<Agent | 'new' | null>(null);
   const [editingProvider, setEditingProvider] = useState<ProviderProfile | 'new' | null>(null);
+  const [editingEmbedding, setEditingEmbedding] = useState<EmbeddingProfile | 'new' | null>(null);
   const [editingSkill, setEditingSkill] = useState<AgentSkill | 'new' | null>(null);
   const [approvalFilter, setApprovalFilter] = useState<'pending' | 'all'>('pending');
   const [loading, setLoading] = useState(true);
@@ -239,8 +255,10 @@ export default function AgentConsole() {
 
   const load = useCallback(async () => {
     const approvalStatus = approvalFilter;
-    const [providerData, agentData, runData, approvalData, toolData, presetData, skillData] = await Promise.all([
+    const [providerData, embeddingData, indexData, agentData, runData, approvalData, toolData, presetData, skillData] = await Promise.all([
       readData<ProviderProfile[]>(await apiFetch('/api/admin/provider-profiles')),
+      readData<EmbeddingProfile[]>(await apiFetch('/api/admin/embedding-profiles')),
+      readData<{ queued: number; failed: number; chunks: number }>(await apiFetch('/api/admin/ai-index/status')),
       readData<Agent[]>(await apiFetch('/api/admin/agents')),
       readData<{ list: AgentRun[] }>(await apiFetch('/api/admin/agent-runs?pageSize=100')),
       readData<{ list: AgentApproval[] }>(await apiFetch(`/api/admin/agent-approvals?status=${approvalStatus}&pageSize=100`)),
@@ -249,6 +267,8 @@ export default function AgentConsole() {
       readData<AgentSkill[]>(await apiFetch('/api/admin/agent-skills')),
     ]);
     setProviders(providerData);
+    setEmbeddingProfiles(embeddingData);
+    setIndexStatus(indexData);
     setAgents(agentData);
     setRuns(runData.list || []);
     setApprovals(approvalData.list || []);
@@ -297,6 +317,21 @@ export default function AgentConsole() {
       });
       await readData<ProviderProfile>(response);
       setEditingProvider(null);
+      await refresh();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : labels.requestFailed);
+    }
+  };
+
+  const saveEmbedding = async (value: EmbeddingFormValue) => {
+    setError('');
+    try {
+      await readData<EmbeddingProfile>(await apiFetch(value.id ? `/api/admin/embedding-profiles/${value.id}` : '/api/admin/embedding-profiles', {
+        method: value.id ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(value),
+      }));
+      setEditingEmbedding(null);
       await refresh();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : labels.requestFailed);
@@ -373,7 +408,8 @@ export default function AgentConsole() {
     if (!deleteTarget) return;
     try {
       if (deleteTarget.kind === 'agent') await mutate(`/api/admin/agents/${deleteTarget.value.id}`, 'DELETE');
-      else await mutate(`/api/admin/provider-profiles/${deleteTarget.value.id}`, 'DELETE');
+      else if (deleteTarget.kind === 'provider') await mutate(`/api/admin/provider-profiles/${deleteTarget.value.id}`, 'DELETE');
+      else await mutate(`/api/admin/embedding-profiles/${deleteTarget.value.id}`, 'DELETE');
       setDeleteTarget(null);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : labels.requestFailed);
@@ -384,6 +420,7 @@ export default function AgentConsole() {
     ['agents', Bot, labels.agents],
     ['skills', ListChecks, labels.skills],
     ['providers', KeyRound, labels.providers],
+    ['knowledge', DatabaseZap, labels.knowledge],
     ['runs', Clock3, labels.runs],
     ['approvals', ShieldCheck, labels.approvals],
   ] as const;
@@ -399,6 +436,7 @@ export default function AgentConsole() {
 
       <div className="agent-console__main">
         {editingProvider ? <ProviderForm key={editingProvider === 'new' ? 'new' : editingProvider.id} initial={editingProvider === 'new' ? undefined : editingProvider} labels={labels} onSave={saveProvider} onCancel={() => setEditingProvider(null)} /> : null}
+        {editingEmbedding ? <EmbeddingForm key={editingEmbedding === 'new' ? 'new' : editingEmbedding.id} initial={editingEmbedding === 'new' ? undefined : editingEmbedding} locale={locale} onSave={saveEmbedding} onCancel={() => setEditingEmbedding(null)} /> : null}
         {editingAgent ? <AgentForm key={editingAgent === 'new' ? 'new' : editingAgent.id} initial={editingAgent === 'new' ? undefined : editingAgent} providers={providers} tools={tools} presets={presets} skills={skills} labels={labels} onSave={saveAgent} onCancel={() => setEditingAgent(null)} /> : null}
         {editingSkill ? <SkillForm key={editingSkill === 'new' ? 'new' : editingSkill.id} initial={editingSkill === 'new' ? undefined : editingSkill} tools={tools} locale={locale} onSave={saveSkill} onCancel={() => setEditingSkill(null)} /> : null}
 
@@ -418,7 +456,13 @@ export default function AgentConsole() {
           {providers.length === 0 ? <EmptyState label={labels.noProviders} /> : <div className="table-scroll"><table className="content-table agent-table"><thead><tr><th>{labels.providerName}</th><th>{labels.providerType}</th><th>{labels.baseUrl}</th><th>{labels.model}</th><th>{labels.apiKey}</th><th>{labels.status}</th><th>{labels.actions}</th></tr></thead><tbody>{providers.map((provider) => <tr key={provider.id}><td><strong>{provider.name}</strong></td><td>{provider.provider_type}</td><td className="mono">{provider.base_url}</td><td className="mono">{provider.model}</td><td><span className="secret-mask">•••• {provider.api_key_last4}</span><small>{labels.keyStored}</small></td><td><span className={`agent-state agent-state--${provider.enabled ? 'active' : 'paused'}`}><i />{provider.enabled ? labels.active : labels.paused}</span></td><td><div className="agent-row-actions"><button type="button" title={labels.test} onClick={async () => { try { await mutate(`/api/admin/provider-profiles/${provider.id}/test`); setNotice(labels.connected); } catch (reason) { setError(reason instanceof Error ? reason.message : labels.requestFailed); } }}><RefreshCw /></button><button type="button" title={labels.edit} onClick={() => setEditingProvider(provider)}><Settings2 /></button><button type="button" title={labels.delete} onClick={() => setDeleteTarget({ kind: 'provider', value: provider })}><Trash2 /></button></div></td></tr>)}</tbody></table></div>}
         </Panel> : null}
 
+        {!editingAgent && !editingProvider && !editingEmbedding && tab === 'knowledge' ? <div className="section-stack">
+          <Panel><div className="panel-heading"><div><h2><DatabaseZap />{labels.knowledge}</h2><small>{locale === 'zh' ? '仅索引已发布文章；队列异步处理。' : 'Published content only; jobs run asynchronously.'}</small></div><div className="row-actions"><button className="btn btn-secondary" type="button" onClick={() => void mutate('/api/admin/ai-index/retry')}><RefreshCw />{locale === 'zh' ? '重试失败任务' : 'Retry failed'}</button><button className="btn btn-secondary" type="button" onClick={() => void mutate('/api/admin/ai-index/rebuild')}><RefreshCw />{locale === 'zh' ? '全量重建' : 'Rebuild all'}</button><button className="btn btn-primary" type="button" onClick={() => setEditingEmbedding('new')}><Plus />{locale === 'zh' ? '添加嵌入配置' : 'Add embedding profile'}</button></div></div><div className="agent-run-metrics"><span><small>{locale === 'zh' ? '分段' : 'Chunks'}</small><strong>{indexStatus.chunks}</strong></span><span><small>{locale === 'zh' ? '队列' : 'Queued'}</small><strong>{indexStatus.queued}</strong></span><span><small>{locale === 'zh' ? '失败' : 'Failed'}</small><strong>{indexStatus.failed}</strong></span></div></Panel>
+          <Panel className="agent-table-panel">{embeddingProfiles.length === 0 ? <EmptyState label={locale === 'zh' ? '还没有嵌入配置。' : 'No embedding profiles configured.'} /> : <div className="table-scroll"><table className="content-table agent-table"><thead><tr><th>{labels.providerName}</th><th>{labels.baseUrl}</th><th>{labels.model}</th><th>{locale === 'zh' ? '维度' : 'Dimensions'}</th><th>{labels.status}</th><th>{labels.actions}</th></tr></thead><tbody>{embeddingProfiles.map((profile) => <tr key={profile.id}><td><strong>{profile.name}</strong><small className="secret-mask">•••• {profile.api_key_last4}</small></td><td className="mono">{profile.base_url}</td><td className="mono">{profile.model}</td><td>{profile.dimensions}</td><td><span className={`agent-state agent-state--${profile.enabled ? 'active' : 'paused'}`}><i />{profile.enabled ? labels.active : labels.paused}</span></td><td><div className="agent-row-actions"><button type="button" title={labels.test} onClick={() => void mutate(`/api/admin/embedding-profiles/${profile.id}/test`).then(() => setNotice(labels.connected)).catch((reason: Error) => setError(reason.message))}><RefreshCw /></button><button type="button" title={labels.edit} onClick={() => setEditingEmbedding(profile)}><Settings2 /></button><button type="button" title={labels.delete} onClick={() => setDeleteTarget({ kind: 'embedding', value: profile })}><Trash2 /></button></div></td></tr>)}</tbody></table></div>}</Panel>
+        </div> : null}
+
         {!editingAgent && !editingProvider && tab === 'runs' ? <div className="agent-split-view"><Panel className="agent-run-list">{runs.length === 0 ? <EmptyState label={labels.noRuns} /> : runs.map((run) => <button className={selectedRun?.run.id === run.id ? 'active' : ''} key={run.id} type="button" onClick={() => void inspectRun(run)}><span className={`run-icon run-icon--${run.status}`}><Play /></span><span><strong>{agentMap.get(run.agent_id)?.name || `Agent #${run.agent_id}`}</strong><small>{formatDateTime(run.created_at)} · {run.provider}/{run.model}</small></span><span><b>{run.status.replace('_', ' ')}</b><ChevronRight /></span></button>)}</Panel><Panel className="agent-detail-panel">{selectedRun ? <div className="section-stack"><div className="panel-heading"><h2>{agentMap.get(selectedRun.run.agent_id)?.name}</h2><span className={`status-pill status-pill--${selectedRun.run.status}`}>{selectedRun.run.status.replace('_', ' ')}</span></div><section><h3>{labels.output}</h3><p className="agent-output">{selectedRun.run.output_summary || selectedRun.run.error_message || '—'}</p></section><div className="agent-run-metrics"><span><small>{labels.usage}</small><strong>{selectedRun.run.input_tokens + selectedRun.run.output_tokens} tokens</strong></span><span><small>{labels.toolCalls}</small><strong>{selectedRun.tool_calls.length}</strong></span><span><small>{labels.created}</small><strong>{formatDateTime(selectedRun.run.created_at)}</strong></span></div>{selectedRun.tool_calls.map((call) => <details className="tool-call-detail" key={call.id}><summary><ListChecks />{call.tool_name}<span className={`risk-label risk-label--${call.risk_level}`}>{call.risk_level}</span></summary>{call.tool_name === 'content.audit_post' ? <ContentAudit value={call.result} locale={locale} /> : null}{call.tool_name === 'content.find_internal_links' ? <InternalLinkSuggestions value={call.result} locale={locale} /> : null}{call.tool_name === 'content.find_related' ? <RelatedContentSuggestions value={call.result} locale={locale} /> : null}{call.tool_name === 'content.list_stale_posts' ? <StalePostSuggestions value={call.result} locale={locale} formatDateTime={formatDateTime} /> : null}{call.tool_name === 'content.list_orphan_posts' ? <OrphanPostSuggestions value={call.result} locale={locale} /> : null}<JsonPreview value={{ arguments: call.arguments, result: call.result, error: call.error_message }} /></details>)}</div> : <EmptyState label={labels.details} />}</Panel></div> : null}
+        {tab === 'runs' && selectedRun ? <Panel><RunCitations run={selectedRun.run} locale={locale} /></Panel> : null}
 
         {!editingAgent && !editingProvider && tab === 'approvals' ? <div className="agent-approval-workspace"><Panel className="agent-approval-list"><div className="agent-filter"><button className={approvalFilter === 'pending' ? 'active' : ''} type="button" onClick={() => setApprovalFilter('pending')}>{labels.pending}</button><button className={approvalFilter === 'all' ? 'active' : ''} type="button" onClick={() => setApprovalFilter('all')}>{labels.all}</button></div>{approvals.length === 0 ? <EmptyState label={labels.noApprovals} /> : approvals.map((approval) => <button className={selectedApproval?.id === approval.id ? 'active' : ''} key={approval.id} type="button" onClick={() => setSelectedApproval(approval)}><span><strong>{approval.action_type.replaceAll('_', ' ')}</strong><small>Run #{approval.run_id} · {formatDateTime(approval.created_at)}</small></span><span className={`status-pill status-pill--${approval.status}`}>{approval.status}</span></button>)}</Panel><Panel className="agent-approval-detail">{selectedApproval ? <div className="section-stack"><div className="panel-heading"><div><h2>{selectedApproval.action_type.replaceAll('_', ' ')}</h2><small>{selectedApproval.target_type} {selectedApproval.target_id ? `#${selectedApproval.target_id}` : ''}</small></div><span className={`status-pill status-pill--${selectedApproval.status}`}>{selectedApproval.status}</span></div>{selectedApproval.before_snapshot ? <section><h3>{labels.before}</h3><JsonPreview value={selectedApproval.before_snapshot} /></section> : null}<section><h3>{labels.after}</h3><JsonPreview value={selectedApproval.proposed_payload} /></section>{selectedApproval.status === 'pending' ? <div className="agent-approval-actions"><button className="btn btn-secondary" type="button" onClick={() => void review(selectedApproval, false)}><X />{labels.reject}</button><button className="btn btn-primary" type="button" onClick={() => void review(selectedApproval, true)}><ShieldCheck />{labels.approve}</button></div> : null}</div> : <EmptyState label={labels.details} />}</Panel></div> : null}
       </div>
