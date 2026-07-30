@@ -48,6 +48,58 @@ export interface AgentCitation {
   status: 'validated' | 'unsupported';
 }
 
+export interface WorkflowStep {
+  id: string;
+  type: 'tool' | 'model' | 'for_each' | 'approval_gate' | 'output';
+  name?: string;
+  tool_name?: string;
+  agent_id?: number;
+  agent_id_pointer?: string;
+  arguments?: Record<string, unknown>;
+  arguments_pointer?: string;
+  input_pointer?: string;
+  collection_pointer?: string;
+  max_items?: number;
+  steps?: WorkflowStep[];
+  output_pointer?: string;
+}
+
+export interface Workflow {
+  id: number;
+  name: string;
+  description: string;
+  enabled: boolean;
+  template_key?: string;
+  current_version: number;
+  version_id: number;
+  input_schema: Record<string, unknown>;
+  steps: WorkflowStep[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkflowRun {
+  id: number;
+  workflow_id: number;
+  workflow_version_id: number;
+  dry_run: boolean;
+  status: string;
+  input: Record<string, unknown>;
+  output?: unknown;
+  error_message?: string;
+  input_tokens: number;
+  output_tokens: number;
+  created_at: string;
+}
+
+export interface WorkflowMetric {
+  workflow_id: number;
+  name: string;
+  runs: number;
+  failures: number;
+  tokens: number;
+}
+
 export interface Agent {
   id: number;
   name: string;

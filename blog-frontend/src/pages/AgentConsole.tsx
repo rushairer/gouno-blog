@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Bot, Check, ChevronRight, CirclePause, Clock3, DatabaseZap, KeyRound, ListChecks, Play,
+  Bot, Check, ChevronRight, CirclePause, Clock3, DatabaseZap, GitBranch, KeyRound, ListChecks, Play,
   Plus, RefreshCw, Settings2, ShieldCheck, Trash2, X,
 } from 'lucide-react';
 import { apiFetch, canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
 import type {
-  Agent, AgentApproval, AgentPreset, AgentRun, AgentSkill, AgentToolCall, EmbeddingProfile, ProviderProfile, ToolDefinition,
+  Agent, AgentApproval, AgentPreset, AgentRun, AgentSkill, AgentToolCall, EmbeddingProfile, ProviderProfile, ToolDefinition, Workflow, WorkflowMetric, WorkflowRun,
 } from '../agent';
 import { EmbeddingForm } from '../components/agent/EmbeddingForm';
 import type { EmbeddingFormValue } from '../components/agent/EmbeddingForm';
@@ -14,17 +14,18 @@ import { SkillForm } from '../components/agent/SkillForm';
 import type { SkillFormValue } from '../components/agent/SkillForm';
 import { ProviderForm } from '../components/agent/ProviderForm';
 import type { ProviderFormValue } from '../components/agent/ProviderForm';
+import { WorkflowWorkspace } from '../components/agent/WorkflowWorkspace';
 import { AdminPage, AdminPageHeader, AdminPageState, ConfirmDialog, EmptyState, Feedback, Panel } from '../components/ui';
 import { useI18n } from '../i18n';
 import '../styles/agent-console.css';
 
-type ConsoleTab = 'agents' | 'skills' | 'providers' | 'knowledge' | 'runs' | 'approvals';
+type ConsoleTab = 'agents' | 'skills' | 'workflows' | 'providers' | 'knowledge' | 'runs' | 'approvals';
 type DeleteTarget = { kind: 'agent'; value: Agent } | { kind: 'provider'; value: ProviderProfile } | { kind: 'embedding'; value: EmbeddingProfile } | null;
 
 const copy = {
   en: {
     title: 'AI Workspace', pageDescription: 'Configure providers, automate blog operations, and review every proposed change.',
-    agents: 'Agents', skills: 'Skills', providers: 'Providers', knowledge: 'Knowledge index', runs: 'Runs', approvals: 'Approvals',
+    agents: 'Agents', skills: 'Skills', workflows: 'Workflows', providers: 'Providers', knowledge: 'Knowledge index', runs: 'Runs', approvals: 'Approvals',
     createAgent: 'Create Agent', createProvider: 'Add Provider', editAgent: 'Edit Agent', editProvider: 'Edit Provider',
     agentName: 'Agent name', providerName: 'Profile name', providerType: 'Provider type', provider: 'Provider / model',
     chooseProvider: 'Choose a provider', descriptionLabel: 'Description',
@@ -51,7 +52,7 @@ const copy = {
   },
   zh: {
     title: 'AI 工作台', pageDescription: '配置模型供应商、自动运营博客，并审核每一项内容变更。',
-    agents: 'Agents', skills: 'Skills', providers: 'Providers', knowledge: '知识索引', runs: '运行记录', approvals: '审批箱',
+    agents: 'Agents', skills: 'Skills', workflows: 'Workflows', providers: 'Providers', knowledge: '知识索引', runs: '运行记录', approvals: '审批箱',
     createAgent: '创建 Agent', createProvider: '添加 Provider', editAgent: '编辑 Agent', editProvider: '编辑 Provider',
     agentName: 'Agent 名称', providerName: '配置名称', providerType: 'Provider 类型', provider: 'Provider / 模型',
     chooseProvider: '选择 Provider', descriptionLabel: '说明',
@@ -241,6 +242,9 @@ export default function AgentConsole() {
   const [tools, setTools] = useState<ToolDefinition[]>([]);
   const [presets, setPresets] = useState<AgentPreset[]>([]);
   const [skills, setSkills] = useState<AgentSkill[]>([]);
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
+  const [workflowRuns, setWorkflowRuns] = useState<WorkflowRun[]>([]);
+  const [workflowMetrics, setWorkflowMetrics] = useState<WorkflowMetric[]>([]);
   const [selectedApproval, setSelectedApproval] = useState<AgentApproval | null>(null);
   const [selectedRun, setSelectedRun] = useState<{ run: AgentRun; tool_calls: AgentToolCall[] } | null>(null);
   const [editingAgent, setEditingAgent] = useState<Agent | 'new' | null>(null);
@@ -255,7 +259,7 @@ export default function AgentConsole() {
 
   const load = useCallback(async () => {
     const approvalStatus = approvalFilter;
-    const [providerData, embeddingData, indexData, agentData, runData, approvalData, toolData, presetData, skillData] = await Promise.all([
+    const [providerData, embeddingData, indexData, agentData, runData, approvalData, toolData, presetData, skillData, workflowData, workflowRunData, workflowMetricData] = await Promise.all([
       readData<ProviderProfile[]>(await apiFetch('/api/admin/provider-profiles')),
       readData<EmbeddingProfile[]>(await apiFetch('/api/admin/embedding-profiles')),
       readData<{ queued: number; failed: number; chunks: number }>(await apiFetch('/api/admin/ai-index/status')),
@@ -265,6 +269,9 @@ export default function AgentConsole() {
       readData<ToolDefinition[]>(await apiFetch('/api/admin/agent-tools')),
       readData<AgentPreset[]>(await apiFetch('/api/admin/agent-presets')),
       readData<AgentSkill[]>(await apiFetch('/api/admin/agent-skills')),
+      readData<Workflow[]>(await apiFetch('/api/admin/ai-workflows')),
+      readData<WorkflowRun[]>(await apiFetch('/api/admin/ai-workflow-runs')),
+      readData<{ workflows: WorkflowMetric[] }>(await apiFetch('/api/admin/ai-workflow-metrics')),
     ]);
     setProviders(providerData);
     setEmbeddingProfiles(embeddingData);
@@ -275,6 +282,9 @@ export default function AgentConsole() {
     setTools(toolData);
     setPresets(presetData);
     setSkills(skillData);
+    setWorkflows(workflowData);
+    setWorkflowRuns(workflowRunData);
+    setWorkflowMetrics(workflowMetricData.workflows || []);
     setSelectedApproval((current) => approvalData.list?.find((item) => item.id === current?.id) || approvalData.list?.[0] || null);
   }, [approvalFilter]);
 
@@ -364,6 +374,13 @@ export default function AgentConsole() {
     } catch (reason) { setError(reason instanceof Error ? reason.message : labels.requestFailed); }
   };
 
+  const saveWorkflow = async (value: { id?: number; name: string; description: string; enabled: boolean; input_schema: Record<string, unknown>; steps: import('../agent').WorkflowStep[] }) => {
+    await readData<Workflow>(await apiFetch(value.id ? `/api/admin/ai-workflows/${value.id}` : '/api/admin/ai-workflows', {
+      method: value.id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value),
+    }));
+    await refresh();
+  };
+
   const mutate = async (path: string, method = 'POST', body?: unknown) => {
     setError('');
     const response = await apiFetch(path, {
@@ -419,6 +436,7 @@ export default function AgentConsole() {
   const tabs = [
     ['agents', Bot, labels.agents],
     ['skills', ListChecks, labels.skills],
+    ['workflows', GitBranch, labels.workflows],
     ['providers', KeyRound, labels.providers],
     ['knowledge', DatabaseZap, labels.knowledge],
     ['runs', Clock3, labels.runs],
@@ -455,6 +473,8 @@ export default function AgentConsole() {
         {!editingAgent && !editingProvider && tab === 'providers' ? <Panel className="agent-table-panel">
           {providers.length === 0 ? <EmptyState label={labels.noProviders} /> : <div className="table-scroll"><table className="content-table agent-table"><thead><tr><th>{labels.providerName}</th><th>{labels.providerType}</th><th>{labels.baseUrl}</th><th>{labels.model}</th><th>{labels.apiKey}</th><th>{labels.status}</th><th>{labels.actions}</th></tr></thead><tbody>{providers.map((provider) => <tr key={provider.id}><td><strong>{provider.name}</strong></td><td>{provider.provider_type}</td><td className="mono">{provider.base_url}</td><td className="mono">{provider.model}</td><td><span className="secret-mask">•••• {provider.api_key_last4}</span><small>{labels.keyStored}</small></td><td><span className={`agent-state agent-state--${provider.enabled ? 'active' : 'paused'}`}><i />{provider.enabled ? labels.active : labels.paused}</span></td><td><div className="agent-row-actions"><button type="button" title={labels.test} onClick={async () => { try { await mutate(`/api/admin/provider-profiles/${provider.id}/test`); setNotice(labels.connected); } catch (reason) { setError(reason instanceof Error ? reason.message : labels.requestFailed); } }}><RefreshCw /></button><button type="button" title={labels.edit} onClick={() => setEditingProvider(provider)}><Settings2 /></button><button type="button" title={labels.delete} onClick={() => setDeleteTarget({ kind: 'provider', value: provider })}><Trash2 /></button></div></td></tr>)}</tbody></table></div>}
         </Panel> : null}
+
+        {!editingAgent && !editingProvider && !editingEmbedding && !editingSkill && tab === 'workflows' ? <WorkflowWorkspace workflows={workflows} runs={workflowRuns} metrics={workflowMetrics} locale={locale} onMutate={mutate} onSave={saveWorkflow} /> : null}
 
         {!editingAgent && !editingProvider && !editingEmbedding && tab === 'knowledge' ? <div className="section-stack">
           <Panel><div className="panel-heading"><div><h2><DatabaseZap />{labels.knowledge}</h2><small>{locale === 'zh' ? '仅索引已发布文章；队列异步处理。' : 'Published content only; jobs run asynchronously.'}</small></div><div className="row-actions"><button className="btn btn-secondary" type="button" onClick={() => void mutate('/api/admin/ai-index/retry')}><RefreshCw />{locale === 'zh' ? '重试失败任务' : 'Retry failed'}</button><button className="btn btn-secondary" type="button" onClick={() => void mutate('/api/admin/ai-index/rebuild')}><RefreshCw />{locale === 'zh' ? '全量重建' : 'Rebuild all'}</button><button className="btn btn-primary" type="button" onClick={() => setEditingEmbedding('new')}><Plus />{locale === 'zh' ? '添加嵌入配置' : 'Add embedding profile'}</button></div></div><div className="agent-run-metrics"><span><small>{locale === 'zh' ? '分段' : 'Chunks'}</small><strong>{indexStatus.chunks}</strong></span><span><small>{locale === 'zh' ? '队列' : 'Queued'}</small><strong>{indexStatus.queued}</strong></span><span><small>{locale === 'zh' ? '失败' : 'Failed'}</small><strong>{indexStatus.failed}</strong></span></div></Panel>

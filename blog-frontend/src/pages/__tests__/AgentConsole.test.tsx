@@ -38,6 +38,9 @@ function responseFor(url: string) {
   }];
   if (url === '/api/admin/agent-presets') return [];
   if (url === '/api/admin/agent-skills') return [];
+  if (url === '/api/admin/ai-workflows') return [];
+  if (url === '/api/admin/ai-workflow-runs') return [];
+  if (url === '/api/admin/ai-workflow-metrics') return { workflows: [] };
   throw new Error(`unexpected URL: ${url}`);
 }
 
@@ -56,7 +59,7 @@ describe('AgentConsole', () => {
   it('loads agents, providers, runs, approvals, tools, and presets in parallel', async () => {
     renderConsole();
     expect(await screen.findByText('Weekly Operations')).toBeInTheDocument();
-    await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(9));
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(12));
     expect(screen.getByRole('button', { name: 'Agents' })).toBeInTheDocument();
     expect(screen.getByText('gpt-5-mini')).toBeInTheDocument();
   });
