@@ -100,6 +100,57 @@ export interface WorkflowMetric {
   tokens: number;
 }
 
+export interface OperationalSuggestion {
+  id: number;
+  source_type: string;
+  source_key: string;
+  source_run_id?: number;
+  workflow_run_id?: number;
+  title: string;
+  description: string;
+  priority: 'low' | 'medium' | 'high';
+  evidence: Record<string, unknown>;
+  window_start?: string;
+  window_end?: string;
+  status: 'new' | 'ignored' | 'converted' | 'selected';
+  ignored_reason?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ContentCandidate {
+  id: number;
+  value: string;
+  rationale: string;
+  created_at: string;
+}
+
+export interface ContentCandidateSet {
+  id: number;
+  post_id: number;
+  source_run_id: number;
+  source_approval_id: number;
+  field_type: 'title' | 'summary' | 'cover_alt';
+  before_value: string;
+  status: 'pending' | 'selected' | 'expired';
+  selected_candidate_id?: number;
+  candidates: ContentCandidate[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OutcomeMetrics {
+  feedback: { target_type: string; label: string; count: number }[];
+  suggestions: number;
+  converted: number;
+  ignored: number;
+  candidate_sets: number;
+  selected_candidate_sets: number;
+  rule_metrics?: { key: string; label: string; count: number; tokens: number }[];
+  skill_metrics?: { key: string; label: string; count: number; tokens: number }[];
+  workflow_metrics?: { key: string; label: string; count: number; tokens: number }[];
+}
+
 export interface Agent {
   id: number;
   name: string;
