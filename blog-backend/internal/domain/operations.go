@@ -23,3 +23,34 @@ type OperationalSuggestion struct {
 	CreatedAt     time.Time       `json:"created_at"`
 	UpdatedAt     time.Time       `json:"updated_at"`
 }
+
+type ContentCandidate struct {
+	ID        int64     `json:"id"`
+	Value     string    `json:"value"`
+	Rationale string    `json:"rationale"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type ContentCandidateSet struct {
+	ID                  int64              `json:"id"`
+	PostID              int64              `json:"post_id"`
+	SourceRunID         int64              `json:"source_run_id"`
+	SourceApprovalID    int64              `json:"source_approval_id"`
+	FieldType           string             `json:"field_type"`
+	BeforeValue         string             `json:"before_value"`
+	Status              string             `json:"status"`
+	SelectedCandidateID *int64             `json:"selected_candidate_id,omitempty"`
+	Candidates          []ContentCandidate `json:"candidates"`
+	CreatedAt           time.Time          `json:"created_at"`
+	UpdatedAt           time.Time          `json:"updated_at"`
+}
+
+type AIFeedback struct {
+	ID         int64     `json:"id"`
+	TargetType string    `json:"target_type"`
+	TargetID   int64     `json:"target_id"`
+	Label      string    `json:"label"`
+	Note       string    `json:"note"`
+	CreatedBy  string    `json:"created_by"`
+	CreatedAt  time.Time `json:"created_at"`
+}

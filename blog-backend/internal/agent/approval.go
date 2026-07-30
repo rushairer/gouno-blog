@@ -113,11 +113,12 @@ func (s *ApprovalService) execute(ctx context.Context, approval *domain.AgentApp
 			return err
 		}
 		var payload struct {
-			Title   *string   `json:"title"`
-			Slug    *string   `json:"slug"`
-			Summary *string   `json:"summary"`
-			Content *string   `json:"content"`
-			Tags    *[]string `json:"tags"`
+			Title    *string   `json:"title"`
+			Slug     *string   `json:"slug"`
+			Summary  *string   `json:"summary"`
+			Content  *string   `json:"content"`
+			Tags     *[]string `json:"tags"`
+			CoverAlt *string   `json:"cover_alt"`
 		}
 		if err := json.Unmarshal(approval.ProposedPayload, &payload); err != nil {
 			return err
@@ -136,6 +137,9 @@ func (s *ApprovalService) execute(ctx context.Context, approval *domain.AgentApp
 		}
 		if payload.Tags != nil {
 			current.Tags = *payload.Tags
+		}
+		if payload.CoverAlt != nil {
+			current.CoverAlt = *payload.CoverAlt
 		}
 		return s.posts.UpdatePost(ctx, current)
 	case "reply_comment":
@@ -170,6 +174,8 @@ func (s *ApprovalService) execute(ctx context.Context, approval *domain.AgentApp
 		}
 		payload.SourceRunID = &approval.RunID
 		return s.repo.CreateOperationalSuggestion(ctx, &payload)
+	case "create_content_candidates":
+		return s.repo.CreateContentCandidateSet(ctx, approval)
 	default:
 		return fmt.Errorf("unsupported approval action %q", approval.ActionType)
 	}

@@ -24,6 +24,25 @@ func TestRegisterOperationalToolsAreReadOnly(t *testing.T) {
 	if !ok || risk != domain.ToolRiskPropose {
 		t.Fatalf("suggestion proposal risk=%q registered=%v", risk, ok)
 	}
+	risk, ok = registry.Risk("content.propose_candidates")
+	if !ok || risk != domain.ToolRiskPropose {
+		t.Fatalf("candidate proposal risk=%q registered=%v", risk, ok)
+	}
+}
+
+func TestFeedbackValidationRejectsInvalidTargetsAndLabels(t *testing.T) {
+	service := &Service{}
+	valid := &domain.AIFeedback{TargetType: "run", TargetID: 1, Label: "adopted", CreatedBy: "admin"}
+	if err := service.SaveFeedback(t.Context(), &domain.AIFeedback{
+		TargetType: "visitor", TargetID: valid.TargetID, Label: valid.Label, CreatedBy: valid.CreatedBy,
+	}); err == nil {
+		t.Fatal("visitor feedback target should be rejected")
+	}
+	if err := service.SaveFeedback(t.Context(), &domain.AIFeedback{
+		TargetType: valid.TargetType, TargetID: valid.TargetID, Label: "positive", CreatedBy: valid.CreatedBy,
+	}); err == nil {
+		t.Fatal("unknown feedback label should be rejected")
+	}
 }
 
 func TestDecodeRejectsUnknownOperationalArguments(t *testing.T) {

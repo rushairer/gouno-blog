@@ -525,6 +525,16 @@ func (r *AgentRepository) CreateToolCall(ctx context.Context, call *domain.Agent
 	).Scan(&call.ID, &call.CreatedAt)
 }
 
+func (r *AgentRepository) CreateToolCallTx(ctx context.Context, tx *sql.Tx, call *domain.AgentToolCall) error {
+	if len(call.Arguments) == 0 {
+		call.Arguments = json.RawMessage(`{}`)
+	}
+	return tx.QueryRowContext(ctx, `INSERT INTO ai_tool_calls
+		(run_id,provider_call_id,tool_name,risk_level,arguments,status,started_at,finished_at)
+		VALUES($1,$2,$3,$4,$5,$6,NOW(),NOW()) RETURNING id,created_at`,
+		call.RunID, call.ProviderCallID, call.ToolName, call.RiskLevel, call.Arguments, call.Status).Scan(&call.ID, &call.CreatedAt)
+}
+
 func (r *AgentRepository) FinishToolCall(ctx context.Context, id int64, status domain.ToolCallStatus, result json.RawMessage, errorMessage *string) error {
 	_, err := r.db.ExecContext(ctx, `UPDATE ai_tool_calls SET
 		status=$2, result=$3, error_message=$4, finished_at=NOW() WHERE id=$1`,
@@ -572,6 +582,60 @@ func (r *AgentRepository) CreateApproval(ctx context.Context, approval *domain.A
 		approval.RunID, approval.ToolCallID, approval.ActionType, approval.TargetType,
 		approval.TargetID, approval.ProposedPayload, nullableJSON(approval.BeforeSnapshot),
 	).Scan(&approval.ID, &approval.Status, &approval.ExpiresAt, &approval.CreatedAt)
+}
+
+func (r *AgentRepository) CreateApprovalTx(ctx context.Context, tx *sql.Tx, approval *domain.AgentApproval) error {
+	return tx.QueryRowContext(ctx, `INSERT INTO ai_approvals
+		(run_id,tool_call_id,action_type,target_type,target_id,proposed_payload,before_snapshot)
+		VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id,status,expires_at,created_at`,
+		approval.RunID, approval.ToolCallID, approval.ActionType, approval.TargetType, approval.TargetID,
+		approval.ProposedPayload, nullableJSON(approval.BeforeSnapshot)).
+		Scan(&approval.ID, &approval.Status, &approval.ExpiresAt, &approval.CreatedAt)
+}
+
+func (r *AgentRepository) CreateContentCandidateSet(ctx context.Context, approval *domain.AgentApproval) error {
+	var payload struct {
+		PostID     int64                     `json:"post_id"`
+		FieldType  string                    `json:"field_type"`
+		Candidates []domain.ContentCandidate `json:"candidates"`
+	}
+	if err := json.Unmarshal(approval.ProposedPayload, &payload); err != nil {
+		return err
+	}
+	var before domain.Post
+	if err := json.Unmarshal(approval.BeforeSnapshot, &before); err != nil {
+		return err
+	}
+	beforeValue := ""
+	switch payload.FieldType {
+	case "title":
+		beforeValue = before.Title
+	case "summary":
+		beforeValue = before.Summary
+	case "cover_alt":
+		beforeValue = before.CoverAlt
+	default:
+		return errors.New("unsupported candidate field")
+	}
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	var setID int64
+	if err = tx.QueryRowContext(ctx, `INSERT INTO ai_content_candidate_sets
+		(post_id,source_run_id,source_approval_id,field_type,before_value)
+		VALUES($1,$2,$3,$4,$5) RETURNING id`, payload.PostID, approval.RunID, approval.ID, payload.FieldType, beforeValue).Scan(&setID); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	for _, item := range payload.Candidates {
+		if _, err = tx.ExecContext(ctx, `INSERT INTO ai_content_candidates
+		(candidate_set_id,value,rationale)VALUES($1,$2,$3)`, setID, item.Value, item.Rationale); err != nil {
+			_ = tx.Rollback()
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 const approvalColumns = `ap.id, ap.run_id, ap.tool_call_id, ap.action_type, ap.target_type,

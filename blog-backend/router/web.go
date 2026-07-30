@@ -207,6 +207,10 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 				admin.POST("/admin/ai-suggestions/refresh", agentCtrl.RefreshSuggestions)
 				admin.POST("/admin/ai-suggestions/:id/ignore", agentCtrl.IgnoreSuggestion)
 				admin.POST("/admin/ai-suggestions/:id/convert", agentCtrl.ConvertSuggestion)
+				admin.GET("/admin/ai-candidates", agentCtrl.ListCandidateSets)
+				admin.POST("/admin/ai-candidates/:id/select", agentCtrl.SelectCandidate)
+				admin.POST("/admin/ai-feedback", agentCtrl.SaveFeedback)
+				admin.GET("/admin/ai-outcome-metrics", agentCtrl.OutcomeMetrics)
 			}
 		}
 	}

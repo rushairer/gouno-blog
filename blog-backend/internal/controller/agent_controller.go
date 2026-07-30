@@ -88,6 +88,59 @@ func (ctrl *AgentController) ConvertSuggestion(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }
 
+func (ctrl *AgentController) ListCandidateSets(c *gin.Context) {
+	items, err := ctrl.operations.ListCandidateSets(c.Request.Context())
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
+}
+
+func (ctrl *AgentController) SelectCandidate(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	var req struct {
+		CandidateID int64 `json:"candidate_id" binding:"required"`
+	}
+	if err := bindAgentJSON(c, &req); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+	if err := ctrl.operations.SelectCandidate(c.Request.Context(), id, req.CandidateID); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
+}
+
+func (ctrl *AgentController) SaveFeedback(c *gin.Context) {
+	var value domain.AIFeedback
+	if err := bindAgentJSON(c, &value); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+	if subject, exists := c.Get("account_id"); exists {
+		value.CreatedBy, _ = subject.(string)
+	}
+	if err := ctrl.operations.SaveFeedback(c.Request.Context(), &value); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, gouno.NewSuccessResponse(&value))
+}
+
+func (ctrl *AgentController) OutcomeMetrics(c *gin.Context) {
+	result, err := ctrl.operations.OutcomeMetrics(c.Request.Context())
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(result))
+}
+
 func (ctrl *AgentController) ListWorkflows(c *gin.Context) {
 	items, err := ctrl.workflows.List(c.Request.Context())
 	if err != nil {

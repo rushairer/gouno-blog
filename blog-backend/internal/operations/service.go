@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/repository"
+	"github.com/rushairer/blog-backend/internal/service"
 	"github.com/rushairer/blog-backend/internal/tool"
 	"go.uber.org/zap"
 )
@@ -22,6 +24,12 @@ type Service struct {
 	tools  *tool.Registry
 	logger *zap.Logger
 	wg     sync.WaitGroup
+	repo   *repository.AgentRepository
+	posts  *service.PostService
+}
+
+func (s *Service) ConfigureGovernance(repo *repository.AgentRepository, posts *service.PostService) {
+	s.repo, s.posts = repo, posts
 }
 
 func NewService(db *sql.DB, tools *tool.Registry, logger *zap.Logger) *Service {
@@ -40,6 +48,11 @@ func (s *Service) RegisterTools() error {
 			Risk:       domain.ToolRiskRead, Execute: s.listBrokenLinks,
 		},
 		tool.Definition{
+			Name: "content.propose_candidates", Description: "Propose title, summary, or cover-alt candidates for human selection.",
+			Parameters: json.RawMessage(`{"type":"object","additionalProperties":false,"required":["post_id","field_type","candidates"],"properties":{"post_id":{"type":"integer","minimum":1},"field_type":{"type":"string","enum":["title","summary","cover_alt"]},"candidates":{"type":"array","minItems":2,"maxItems":5,"items":{"type":"object","additionalProperties":false,"required":["value"],"properties":{"value":{"type":"string"},"rationale":{"type":"string"}}}}}}`),
+			Risk:       domain.ToolRiskPropose, Propose: s.proposeCandidates,
+		},
+		tool.Definition{
 			Name: "content.list_tag_bloat", Description: "Identify low-use and case-colliding tags from aggregate post metadata.",
 			Parameters: schema(`{"low_usage_threshold":{"type":"integer","minimum":1,"maximum":20},"limit":{"type":"integer","minimum":1,"maximum":100}}`),
 			Risk:       domain.ToolRiskRead, Execute: s.listTagBloat,
@@ -50,6 +63,34 @@ func (s *Service) RegisterTools() error {
 			Risk:       domain.ToolRiskPropose, Propose: s.proposeSuggestion,
 		},
 	)
+}
+
+func (s *Service) proposeCandidates(ctx context.Context, raw json.RawMessage) (*tool.Proposal, error) {
+	if s.posts == nil {
+		return nil, errors.New("candidate governance is not configured")
+	}
+	var args struct {
+		PostID     int64                     `json:"post_id"`
+		FieldType  string                    `json:"field_type"`
+		Candidates []domain.ContentCandidate `json:"candidates"`
+	}
+	if err := decode(raw, &args); err != nil {
+		return nil, err
+	}
+	if args.PostID <= 0 || (args.FieldType != "title" && args.FieldType != "summary" && args.FieldType != "cover_alt") || len(args.Candidates) < 2 || len(args.Candidates) > 5 {
+		return nil, tool.ErrInvalidArgument
+	}
+	for _, item := range args.Candidates {
+		if strings.TrimSpace(item.Value) == "" || len([]rune(item.Value)) > 500 {
+			return nil, tool.ErrInvalidArgument
+		}
+	}
+	post, err := s.posts.GetAdminPost(ctx, args.PostID)
+	if err != nil {
+		return nil, err
+	}
+	before, _ := json.Marshal(post)
+	return &tool.Proposal{ActionType: "create_content_candidates", TargetType: "post", TargetID: &args.PostID, Payload: raw, BeforeSnapshot: before}, nil
 }
 
 func (s *Service) proposeSuggestion(_ context.Context, raw json.RawMessage) (*tool.Proposal, error) {
@@ -419,4 +460,183 @@ func (s *Service) RefreshSuggestions(ctx context.Context) error {
 		}
 	}
 	return rows.Err()
+}
+
+func (s *Service) ListCandidateSets(ctx context.Context) ([]*domain.ContentCandidateSet, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT id,post_id,source_run_id,source_approval_id,field_type,
+		before_value,status,selected_candidate_id,created_at,updated_at FROM ai_content_candidate_sets
+		ORDER BY created_at DESC LIMIT 100`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := make([]*domain.ContentCandidateSet, 0)
+	for rows.Next() {
+		var item domain.ContentCandidateSet
+		if err := rows.Scan(&item.ID, &item.PostID, &item.SourceRunID, &item.SourceApprovalID, &item.FieldType,
+			&item.BeforeValue, &item.Status, &item.SelectedCandidateID, &item.CreatedAt, &item.UpdatedAt); err != nil {
+			return nil, err
+		}
+		candidateRows, err := s.db.QueryContext(ctx, `SELECT id,value,rationale,created_at FROM ai_content_candidates
+			WHERE candidate_set_id=$1 ORDER BY id`, item.ID)
+		if err != nil {
+			return nil, err
+		}
+		for candidateRows.Next() {
+			var candidate domain.ContentCandidate
+			if err := candidateRows.Scan(&candidate.ID, &candidate.Value, &candidate.Rationale, &candidate.CreatedAt); err != nil {
+				candidateRows.Close()
+				return nil, err
+			}
+			item.Candidates = append(item.Candidates, candidate)
+		}
+		if err := candidateRows.Close(); err != nil {
+			return nil, err
+		}
+		items = append(items, &item)
+	}
+	return items, rows.Err()
+}
+
+func (s *Service) SelectCandidate(ctx context.Context, setID, candidateID int64) error {
+	if s.repo == nil || s.posts == nil {
+		return errors.New("candidate governance is not configured")
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	var postID, runID int64
+	var fieldType, value string
+	err = tx.QueryRowContext(ctx, `SELECT cs.post_id,cs.source_run_id,cs.field_type,c.value
+		FROM ai_content_candidate_sets cs JOIN ai_content_candidates c ON c.candidate_set_id=cs.id
+		WHERE cs.id=$1 AND c.id=$2 AND cs.status='pending' FOR UPDATE OF cs`, setID, candidateID).
+		Scan(&postID, &runID, &fieldType, &value)
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	post, err := s.posts.GetAdminPost(ctx, postID)
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	payload := map[string]any{"id": postID}
+	payload[fieldType] = value
+	rawPayload, _ := json.Marshal(payload)
+	before, _ := json.Marshal(post)
+	call := &domain.AgentToolCall{RunID: runID, ToolName: "content.select_candidate", RiskLevel: domain.ToolRiskPropose,
+		Arguments: json.RawMessage(fmt.Sprintf(`{"candidate_set_id":%d,"candidate_id":%d}`, setID, candidateID)), Status: domain.ToolCallExecuted}
+	if err := s.repo.CreateToolCallTx(ctx, tx, call); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	approval := &domain.AgentApproval{RunID: runID, ToolCallID: call.ID, ActionType: "update_post", TargetType: "post",
+		TargetID: &postID, ProposedPayload: rawPayload, BeforeSnapshot: before}
+	if err := s.repo.CreateApprovalTx(ctx, tx, approval); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	if _, err = tx.ExecContext(ctx, `UPDATE ai_content_candidate_sets SET status='selected',
+		selected_candidate_id=$2,updated_at=NOW() WHERE id=$1`, setID, candidateID); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	return tx.Commit()
+}
+
+func (s *Service) SaveFeedback(ctx context.Context, value *domain.AIFeedback) error {
+	if value.TargetType != "run" && value.TargetType != "approval" && value.TargetType != "suggestion" {
+		return tool.ErrInvalidArgument
+	}
+	if value.Label != "adopted" && value.Label != "rejected" && value.Label != "invalid" {
+		return tool.ErrInvalidArgument
+	}
+	if value.TargetID <= 0 || strings.TrimSpace(value.CreatedBy) == "" || len(value.Note) > 2000 {
+		return tool.ErrInvalidArgument
+	}
+	return s.db.QueryRowContext(ctx, `INSERT INTO ai_feedback(target_type,target_id,label,note,created_by)
+		VALUES($1,$2,$3,$4,$5) ON CONFLICT(target_type,target_id,created_by)
+		DO UPDATE SET label=EXCLUDED.label,note=EXCLUDED.note,created_at=NOW()
+		RETURNING id,created_at`, value.TargetType, value.TargetID, value.Label, strings.TrimSpace(value.Note), value.CreatedBy).
+		Scan(&value.ID, &value.CreatedAt)
+}
+
+func (s *Service) OutcomeMetrics(ctx context.Context) (map[string]any, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT target_type,label,COUNT(*) FROM ai_feedback
+		GROUP BY target_type,label ORDER BY target_type,label`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	feedback := make([]map[string]any, 0)
+	for rows.Next() {
+		var target, label string
+		var count int64
+		if err := rows.Scan(&target, &label, &count); err != nil {
+			return nil, err
+		}
+		feedback = append(feedback, map[string]any{"target_type": target, "label": label, "count": count})
+	}
+	var suggestions, converted, ignored, candidates, selected int64
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*),COUNT(*) FILTER(WHERE status='converted'),
+		COUNT(*) FILTER(WHERE status='ignored') FROM ai_operational_suggestions`).Scan(&suggestions, &converted, &ignored); err != nil {
+		return nil, err
+	}
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*),COUNT(*) FILTER(WHERE status='selected')
+		FROM ai_content_candidate_sets`).Scan(&candidates, &selected); err != nil {
+		return nil, err
+	}
+	ruleMetrics, err := s.metricRows(ctx, `SELECT s.source_type,f.label,COUNT(*),0::bigint
+		FROM ai_feedback f JOIN ai_operational_suggestions s
+			ON f.target_type='suggestion' AND f.target_id=s.id
+		GROUP BY s.source_type,f.label ORDER BY s.source_type,f.label`)
+	if err != nil {
+		return nil, err
+	}
+	const runTargets = `WITH targets AS (
+		SELECT f.label, CASE
+			WHEN f.target_type='run' THEN f.target_id
+			WHEN f.target_type='approval' THEN ap.run_id END run_id
+		FROM ai_feedback f
+		LEFT JOIN ai_approvals ap ON f.target_type='approval' AND ap.id=f.target_id
+		WHERE f.target_type IN ('run','approval')
+	)`
+	skillMetrics, err := s.metricRows(ctx, runTargets+`
+		SELECT COALESCE(r.skill_version_id::text,'unversioned'),t.label,COUNT(*),
+			COALESCE(SUM(r.input_tokens+r.output_tokens),0)
+		FROM targets t JOIN ai_agent_runs r ON r.id=t.run_id
+		GROUP BY r.skill_version_id,t.label ORDER BY r.skill_version_id,t.label`)
+	if err != nil {
+		return nil, err
+	}
+	workflowMetrics, err := s.metricRows(ctx, runTargets+`
+		SELECT COALESCE(r.workflow_version_id::text,'unversioned'),t.label,COUNT(*),
+			COALESCE(SUM(r.input_tokens+r.output_tokens),0)
+		FROM targets t JOIN ai_agent_runs r ON r.id=t.run_id
+		GROUP BY r.workflow_version_id,t.label ORDER BY r.workflow_version_id,t.label`)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"feedback": feedback, "suggestions": suggestions, "converted": converted, "ignored": ignored,
+		"candidate_sets": candidates, "selected_candidate_sets": selected, "rule_metrics": ruleMetrics,
+		"skill_metrics": skillMetrics, "workflow_metrics": workflowMetrics}, rows.Err()
+}
+
+func (s *Service) metricRows(ctx context.Context, query string) ([]map[string]any, error) {
+	rows, err := s.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := make([]map[string]any, 0)
+	for rows.Next() {
+		var key, label string
+		var count, tokens int64
+		if err := rows.Scan(&key, &label, &count, &tokens); err != nil {
+			return nil, err
+		}
+		items = append(items, map[string]any{"key": key, "label": label, "count": count, "tokens": tokens})
+	}
+	return items, rows.Err()
 }

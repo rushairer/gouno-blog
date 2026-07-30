@@ -145,6 +145,7 @@ func startWebServer(cmd *cobra.Command, args []string) {
 		knowledgeSvc.Start(ctx)
 		toolRegistry := tool.NewBlogRegistry(postSvc, communitySvc, growthSvc, knowledgeSvc)
 		operationsSvc := operations.NewService(db, toolRegistry, logger)
+		operationsSvc.ConfigureGovernance(agentRepo, postSvc)
 		if err := operationsSvc.RegisterTools(); err != nil {
 			log.Fatalf("register AI operations tools: %v", err)
 		}
