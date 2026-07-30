@@ -84,6 +84,11 @@ func NewBlogRegistry(posts *service.PostService, community *service.CommunitySer
 			Parameters: schema(`{}`), Risk: domain.ToolRiskRead, Execute: tools.analyticsSummary,
 		},
 		Definition{
+			Name: "analytics.list_low_engagement_posts", Description: "List published posts with sufficient views but a low likes-to-views ratio.",
+			Parameters: schema(`{"min_views":{"type":"integer","minimum":1,"maximum":1000000000},"max_engagement_rate":{"type":"number","minimum":0,"maximum":1},"limit":{"type":"integer","minimum":1,"maximum":100}}`),
+			Risk:       domain.ToolRiskRead, Execute: tools.findLowEngagementPosts,
+		},
+		Definition{
 			Name: "content.propose_draft", Description: "Create a new blog draft proposal.",
 			Parameters: schema(`{"title":{"type":"string"},"slug":{"type":"string"},"summary":{"type":"string"},"content":{"type":"string"},"tags":{"type":"array","items":{"type":"string"}}}`, "title", "content"),
 			Risk:       domain.ToolRiskPropose, Propose: tools.proposeDraft,

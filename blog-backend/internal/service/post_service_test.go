@@ -119,6 +119,16 @@ func (r *fakePostRepo) ListOrphanedPublished(_ context.Context, limit int) ([]*d
 	return posts, nil
 }
 
+func (r *fakePostRepo) ListLowEngagementPublished(_ context.Context, minViews int64, maxEngagementRate float64, limit int) ([]*domain.Post, error) {
+	posts := make([]*domain.Post, 0, limit)
+	for _, post := range r.posts {
+		if post.Status == domain.PostStatusPublished && post.ViewsCount >= minViews && float64(post.LikesCount)/float64(post.ViewsCount) <= maxEngagementRate {
+			posts = append(posts, post)
+		}
+	}
+	return posts, nil
+}
+
 func (r *fakePostRepo) PublishScheduled(context.Context) (int64, error) { return 0, nil }
 
 func (r *fakePostRepo) ListTags(context.Context) ([]string, error) {
@@ -245,6 +255,13 @@ func TestListStalePublishedPostsValidatesDuration(t *testing.T) {
 	_, err := NewPostService(newFakePostRepo()).ListStalePublishedPosts(context.Background(), time.Hour, 1)
 	if err == nil {
 		t.Fatal("expected too-short stale duration to be rejected")
+	}
+}
+
+func TestListLowEngagementPublishedPostsValidatesRate(t *testing.T) {
+	_, err := NewPostService(newFakePostRepo()).ListLowEngagementPublishedPosts(context.Background(), 100, 1.01, 1)
+	if err == nil {
+		t.Fatal("expected invalid rate to be rejected")
 	}
 }
 

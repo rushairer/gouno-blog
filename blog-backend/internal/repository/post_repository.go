@@ -324,6 +324,31 @@ func (r *PostRepository) ListOrphanedPublished(ctx context.Context, limit int) (
 	return posts, rows.Err()
 }
 
+func (r *PostRepository) ListLowEngagementPublished(ctx context.Context, minViews int64, maxEngagementRate float64, limit int) ([]*domain.Post, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT id, title, slug, summary, content, tags, category_id,
+		COALESCE(cover_url, ''), COALESCE(cover_alt, ''), COALESCE(seo_title, ''), COALESCE(seo_description, ''),
+		status, views_count, likes_count, published_at, scheduled_at, created_at, updated_at
+		FROM posts
+		WHERE status = 'published' AND views_count >= $1
+		  AND COALESCE(likes_count::DOUBLE PRECISION / NULLIF(views_count, 0), 0) <= $2
+		ORDER BY views_count DESC, updated_at ASC LIMIT $3`, minViews, maxEngagementRate, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	posts := make([]*domain.Post, 0)
+	for rows.Next() {
+		var post domain.Post
+		if err := rows.Scan(&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID,
+			&post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount,
+			&post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt); err != nil {
+			return nil, err
+		}
+		posts = append(posts, &post)
+	}
+	return posts, rows.Err()
+}
+
 func (r *PostRepository) PublishScheduled(ctx context.Context) (int64, error) {
 	result, err := r.db.ExecContext(ctx, `UPDATE posts SET status = 'published', published_at = NOW(), scheduled_at = NULL, updated_at = NOW() WHERE status = 'scheduled' AND scheduled_at <= NOW()`)
 	if err != nil {

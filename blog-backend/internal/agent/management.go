@@ -295,7 +295,7 @@ func Presets() []Preset {
 			Description:  "汇总过去一周的内容、互动与增长表现，并给出下周行动建议。",
 			SystemPrompt: "生成一份每周博客运营报告。先读取文章、分析数据和待处理评论，再总结增长、下滑、风险与下周优先事项。引用具体数据，不创建内容提案。",
 			TriggerType:  domain.AgentTriggerCron, CronExpression: "0 9 * * 1", Timezone: "Asia/Shanghai",
-			Capabilities:  []string{"content.list_posts", "analytics.get_summary", "comments.list_pending"},
+			Capabilities:  []string{"content.list_posts", "analytics.get_summary", "analytics.list_low_engagement_posts", "comments.list_pending"},
 			ExecutionMode: domain.AgentModeAdvisory,
 		},
 		{

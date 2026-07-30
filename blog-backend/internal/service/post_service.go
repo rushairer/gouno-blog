@@ -31,6 +31,7 @@ type PostRepository interface {
 	SearchPublished(ctx context.Context, query string, limit int) ([]domain.PostSearchResult, error)
 	ListStalePublished(ctx context.Context, updatedBefore time.Time, limit int) ([]*domain.Post, error)
 	ListOrphanedPublished(ctx context.Context, limit int) ([]*domain.Post, error)
+	ListLowEngagementPublished(ctx context.Context, minViews int64, maxEngagementRate float64, limit int) ([]*domain.Post, error)
 	ListTags(ctx context.Context) ([]string, error)
 	PublishScheduled(ctx context.Context) (int64, error)
 	CreateComment(ctx context.Context, comment *domain.Comment) error
@@ -301,6 +302,22 @@ func (s *PostService) ListOrphanedPublishedPosts(ctx context.Context, limit int)
 		limit = 100
 	}
 	return s.repo.ListOrphanedPublished(ctx, limit)
+}
+
+func (s *PostService) ListLowEngagementPublishedPosts(ctx context.Context, minViews int64, maxEngagementRate float64, limit int) ([]*domain.Post, error) {
+	if minViews < 1 || minViews > 1000000000 {
+		return nil, errors.New("minimum views must be between 1 and 1000000000")
+	}
+	if maxEngagementRate < 0 || maxEngagementRate > 1 {
+		return nil, errors.New("maximum engagement rate must be between 0 and 1")
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	return s.repo.ListLowEngagementPublished(ctx, minViews, maxEngagementRate, limit)
 }
 
 func (s *PostService) PublishScheduled(ctx context.Context) (int64, error) {
