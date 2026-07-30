@@ -30,4 +30,21 @@ describe('OperationsWorkspace', () => {
     await user.click(screen.getByRole('button', { name: 'Select and create approval' }));
     expect(onMutate).toHaveBeenCalledWith('/api/admin/ai-candidates/8/select', 'POST', { candidate_id: 11 });
   });
+
+  it('uses the shared responsive field and metric layout contracts', () => {
+    const { container } = render(<OperationsWorkspace
+      locale="zh"
+      onMutate={vi.fn().mockResolvedValue(undefined)}
+      metrics={{ feedback: [], suggestions: 0, converted: 0, ignored: 0, candidate_sets: 0, selected_candidate_sets: 0 }}
+      suggestions={[]}
+      candidateSets={[]}
+    />);
+
+    expect(container.querySelector('.agent-run-metrics--operations')).toBeInTheDocument();
+    const form = container.querySelector('.feedback-form');
+    expect(form).toHaveClass('form-grid');
+    expect(form?.querySelectorAll('.field')).toHaveLength(4);
+    expect(form?.querySelectorAll('.input-field')).toHaveLength(4);
+    expect(form?.querySelector('.feedback-form__actions')).toContainElement(screen.getByRole('button', { name: '保存反馈' }));
+  });
 });

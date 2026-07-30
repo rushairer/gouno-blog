@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Check, ClipboardList, RefreshCw, ThumbsDown } from 'lucide-react';
 import type { ContentCandidateSet, OperationalSuggestion, OutcomeMetrics } from '../../agent';
-import { EmptyState, Panel } from '../ui';
+import { EmptyState, Field, Panel } from '../ui';
 
 type Mutate = (path: string, method?: string, body?: unknown) => Promise<void>;
 
@@ -34,7 +34,7 @@ export function OperationsWorkspace({ suggestions, candidateSets, metrics, local
         <div><h2><ClipboardList />{zh ? '运营闭环' : 'Operations loop'}</h2><small>{zh ? '所有建议和内容候选均需人工处理。' : 'Every suggestion and content candidate remains human-controlled.'}</small></div>
         <button className="btn btn-secondary" type="button" onClick={() => void onMutate('/api/admin/ai-suggestions/refresh')}><RefreshCw />{zh ? '刷新检测建议' : 'Refresh detected suggestions'}</button>
       </div>
-      <div className="agent-run-metrics">
+      <div className="agent-run-metrics agent-run-metrics--operations">
         <span><small>{zh ? '建议' : 'Suggestions'}</small><strong>{metrics.suggestions}</strong></span>
         <span><small>{zh ? '已转任务' : 'Converted'}</small><strong>{metrics.converted}</strong></span>
         <span><small>{zh ? '已选候选集' : 'Selected sets'}</small><strong>{metrics.selected_candidate_sets}/{metrics.candidate_sets}</strong></span>
@@ -63,13 +63,15 @@ export function OperationsWorkspace({ suggestions, candidateSets, metrics, local
 
     <Panel>
       <div className="panel-heading"><div><h3>{zh ? '结果反馈' : 'Outcome feedback'}</h3><small>{zh ? '反馈仅用于离线指标，不会自动修改 Prompt。' : 'Feedback powers offline metrics only and never rewrites prompts.'}</small></div></div>
-      <div className="form-grid">
-        <label><span>{zh ? '对象' : 'Target'}</span><select value={targetType} onChange={(event) => setTargetType(event.target.value as typeof targetType)}><option value="run">Run</option><option value="approval">Approval</option><option value="suggestion">Suggestion</option></select></label>
-        <label><span>ID</span><input type="number" min="1" value={targetID} onChange={(event) => setTargetID(event.target.value)} /></label>
-        <label><span>{zh ? '标签' : 'Label'}</span><select value={label} onChange={(event) => setLabel(event.target.value as typeof label)}><option value="adopted">adopted</option><option value="rejected">rejected</option><option value="invalid">invalid</option></select></label>
-        <label><span>{zh ? '备注' : 'Note'}</span><input value={note} maxLength={2000} onChange={(event) => setNote(event.target.value)} /></label>
+      <div className="form-grid feedback-form">
+        <Field label={zh ? '对象' : 'Target'}><select className="input-field" value={targetType} onChange={(event) => setTargetType(event.target.value as typeof targetType)}><option value="run">Run</option><option value="approval">Approval</option><option value="suggestion">Suggestion</option></select></Field>
+        <Field label="ID"><input className="input-field" type="number" min="1" value={targetID} onChange={(event) => setTargetID(event.target.value)} /></Field>
+        <Field label={zh ? '标签' : 'Label'}><select className="input-field" value={label} onChange={(event) => setLabel(event.target.value as typeof label)}><option value="adopted">adopted</option><option value="rejected">rejected</option><option value="invalid">invalid</option></select></Field>
+        <Field label={zh ? '备注' : 'Note'}><input className="input-field" value={note} maxLength={2000} onChange={(event) => setNote(event.target.value)} /></Field>
+        <div className="feedback-form__actions">
+          <button className="btn btn-primary" type="button" disabled={!targetID} onClick={() => void saveFeedback()}>{zh ? '保存反馈' : 'Save feedback'}</button>
+        </div>
       </div>
-      <button className="btn btn-primary" type="button" disabled={!targetID} onClick={() => void saveFeedback()}>{zh ? '保存反馈' : 'Save feedback'}</button>
     </Panel>
   </div>;
 }

@@ -17,7 +17,11 @@ vi.mock('../../lib/blog-api', () => ({
 }));
 
 describe('AdminShell navigation utilities', () => {
-  beforeEach(() => logoutMock.mockClear());
+  beforeEach(() => {
+    logoutMock.mockClear();
+    localStorage.clear();
+    delete document.documentElement.dataset.theme;
+  });
 
   it('uses configured site identity and exposes frontsite and logout actions', async () => {
     render(<MemoryRouter initialEntries={['/admin/dashboard']}><AdminShell><h1>Dashboard</h1></AdminShell></MemoryRouter>);
@@ -43,5 +47,22 @@ describe('AdminShell navigation utilities', () => {
     fireEvent.change(screen.getByRole('textbox', { name: '搜索文章' }), { target: { value: '系统 架构' } });
     fireEvent.click(screen.getByRole('button', { name: '提交文章搜索' }));
     expect(screen.getByLabelText('current location')).toHaveTextContent('/admin/posts?q=%E7%B3%BB%E7%BB%9F%20%E6%9E%B6%E6%9E%84');
+  });
+
+  it('restores and toggles the shared site theme from administration', () => {
+    localStorage.setItem('gouno-blog:theme', 'dark');
+    document.documentElement.dataset.theme = 'dark';
+
+    render(<MemoryRouter initialEntries={['/admin/dashboard']}><AdminShell><h1>Dashboard</h1></AdminShell></MemoryRouter>);
+
+    const toggle = screen.getByRole('button', { name: '切换后台主题' });
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    expect(localStorage.getItem('gouno-blog:theme')).toBe('dark');
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    expect(document.documentElement.dataset.theme).toBe('light');
+    expect(localStorage.getItem('gouno-blog:theme')).toBe('light');
   });
 });

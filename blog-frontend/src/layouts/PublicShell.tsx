@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Menu, Moon, Rss, Search, Sun, X } from 'lucide-react';
@@ -16,7 +16,7 @@ export default function PublicShell({ children }: { children: ReactNode }) {
     localStorage.getItem('gouno-blog:theme') === 'dark' ? 'dark' : 'light',
   );
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.documentElement.dataset.theme = theme;
     localStorage.setItem('gouno-blog:theme', theme);
   }, [theme]);
@@ -64,7 +64,13 @@ export default function PublicShell({ children }: { children: ReactNode }) {
               <input id="global-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索" />
               <button type="submit" aria-label="提交搜索"><Search /></button>
             </form>
-            <button className="bare-icon" type="button" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} aria-label="切换主题">
+            <button
+              className="bare-icon theme-toggle"
+              type="button"
+              onClick={() => setTheme((current) => current === 'light' ? 'dark' : 'light')}
+              aria-label="切换主题"
+              aria-pressed={theme === 'dark'}
+            >
               {theme === 'light' ? <Moon /> : <Sun />}
             </button>
             <button

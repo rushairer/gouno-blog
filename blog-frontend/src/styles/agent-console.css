@@ -12,6 +12,7 @@
   gap: 24px;
   border-bottom: 1px solid var(--agent-border);
   margin-bottom: 20px;
+  scrollbar-width: thin;
 }
 
 .agent-console__nav button {
@@ -27,6 +28,7 @@
   font-weight: 600;
   padding: 0;
   text-align: left;
+  white-space: nowrap;
 }
 
 .agent-console__nav button svg {
@@ -443,6 +445,10 @@
   border-block: 1px solid var(--agent-border);
 }
 
+.agent-run-metrics--operations {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .agent-run-metrics span {
   display: grid;
   gap: 5px;
@@ -451,6 +457,18 @@
 
 .agent-run-metrics small {
   color: var(--color-text-muted);
+}
+
+.feedback-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: end;
+  gap: 16px 12px;
+}
+
+.feedback-form__actions {
+  display: flex;
+  grid-column: 1 / -1;
 }
 
 .tool-call-detail {
@@ -886,6 +904,11 @@
   .agent-limit-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .agent-run-metrics--operations,
+  .feedback-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 760px) {
@@ -896,8 +919,8 @@
   }
 
   .agent-console__nav button {
-    min-width: 0;
-    flex: 0 1 auto;
+    min-width: max-content;
+    flex: 0 0 auto;
     gap: 5px;
     font-size: 12px;
   }
@@ -923,7 +946,8 @@
 
   .agent-limit-grid,
   .agent-run-metrics,
-  .content-audit__metrics {
+  .content-audit__metrics,
+  .feedback-form {
     grid-template-columns: 1fr;
   }
 

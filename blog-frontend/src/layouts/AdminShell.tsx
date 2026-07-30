@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { ExternalLink, LogOut, Menu, Search } from 'lucide-react';
+import { ExternalLink, LogOut, Menu, Moon, Search, Sun } from 'lucide-react';
 import { adminNavigation } from '../navigation';
 import { getUserProfile, logout } from '../auth';
 import { DEFAULT_SITE_SETTINGS } from '../config/site-defaults';
@@ -21,6 +21,14 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [search, setSearch] = useState(() => location.pathname === '/admin/posts' ? new URLSearchParams(location.search).get('q') || '' : '');
   const [siteName, setSiteName] = useState(DEFAULT_SITE_SETTINGS.site_title);
+  const [theme, setTheme] = useState<'light' | 'dark'>(() =>
+    localStorage.getItem('gouno-blog:theme') === 'dark' ? 'dark' : 'light',
+  );
+
+  useLayoutEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem('gouno-blog:theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     getSiteSettings().then((settings) => setSiteName(settings.site_title || DEFAULT_SITE_SETTINGS.site_title)).catch(() => {
@@ -73,6 +81,9 @@ export default function AdminShell({ children }: { children: ReactNode }) {
           <div className="admin-topbar-actions">
             <button className="admin-search-toggle" type="button" onClick={() => setMobileSearchOpen((current) => !current)} aria-label="打开文章搜索" aria-expanded={mobileSearchOpen}><Search /><span>搜索</span></button>
             <Link to="/" target="_blank" rel="noreferrer" aria-label="在新窗口查看前台站点"><ExternalLink /><span>查看站点</span></Link>
+            <button className="admin-theme-toggle" type="button" onClick={() => setTheme((current) => current === 'light' ? 'dark' : 'light')} aria-label="切换后台主题" aria-pressed={theme === 'dark'}>
+              {theme === 'light' ? <Moon /> : <Sun />}<span>{theme === 'light' ? '深色模式' : '浅色模式'}</span>
+            </button>
             <button type="button" onClick={logout} aria-label="退出登录"><LogOut /><span>退出登录</span></button>
           </div>
         </header>

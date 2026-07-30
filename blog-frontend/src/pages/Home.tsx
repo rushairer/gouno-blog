@@ -60,7 +60,7 @@ export default function Home() {
   return (
     <>
       <section className="home-hero public-container">
-        <div className="hero-copy">
+        <div className="home-hero-copy">
           <h1>把复杂系统，<br />写成可理解的路径。</h1>
           <p>关于工程架构、产品设计与 AI 实践的长期笔记。写清楚问题，也写清楚选择背后的理由。</p>
           {lead ? <Story post={lead} index={1} featured /> : null}
