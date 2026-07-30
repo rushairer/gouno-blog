@@ -87,6 +87,10 @@ describe('AgentConsole', () => {
         id: 12, run_id: 9, tool_name: 'content.find_internal_links', risk_level: 'read', status: 'executed', arguments: { id: 3 },
         result: { post_id: 3, suggestions: [{ post_id: 4, title: 'Related article', slug: 'related-article', summary: 'Useful context.', score: 5, match_hints: ['shared tag: go'] }] },
         created_at: '2026-07-30T00:00:00Z',
+      }, {
+        id: 13, run_id: 9, tool_name: 'content.find_related', risk_level: 'read', status: 'executed', arguments: { id: 3 },
+        result: { post_id: 3, suggestions: [{ post_id: 5, title: 'Search result', slug: 'search-result', snippet: 'A relevant <b>search</b> fragment.', score: 0.87, tags: ['go'] }] },
+        created_at: '2026-07-30T00:00:00Z',
       }] } });
       return Response.json({ data: responseFor(url) });
     });
@@ -98,6 +102,7 @@ describe('AgentConsole', () => {
     expect(screen.getByText('image alt missing')).toBeInTheDocument();
     expect(screen.getByText('242')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open article: Related article' })).toHaveAttribute('href', '/articles/related-article');
+    expect(screen.getByRole('link', { name: 'Open article: Search result' })).toHaveAttribute('href', '/articles/search-result');
   });
 
   it('redirects users without blog management access', async () => {
