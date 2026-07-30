@@ -14,24 +14,8 @@ import (
 	"github.com/rushairer/gouno"
 )
 
-func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.AuthOptions, jwksURL, redisDSN, visitorSecret, mediaDir string, agentCtrl *controller.AgentController) {
-	// Dynamic CORS Middleware
-	server.Use(func(ctx *gin.Context) {
-		origin := ctx.GetHeader("Origin")
-		if origin != "" {
-			ctx.Header("Access-Control-Allow-Origin", origin)
-		} else {
-			ctx.Header("Access-Control-Allow-Origin", "*")
-		}
-		ctx.Header("Access-Control-Allow-Credentials", "true")
-		ctx.Header("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
-		ctx.Header("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
-		if ctx.Request.Method == "OPTIONS" {
-			ctx.AbortWithStatus(http.StatusNoContent)
-			return
-		}
-		ctx.Next()
-	})
+func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.AuthOptions, jwksURL, redisDSN, visitorSecret, mediaDir string, corsAllowedOrigins []string, agentCtrl *controller.AgentController) {
+	server.Use(corsMiddleware(corsAllowedOrigins))
 
 	// Setup repository and service
 	repo := repository.NewPostRepository(db)

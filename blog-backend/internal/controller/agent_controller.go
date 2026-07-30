@@ -374,5 +374,9 @@ func writeAgentError(c *gin.Context, err error) {
 		errors.Is(err, agentservice.ErrApprovalExpired):
 		status = http.StatusConflict
 	}
-	c.JSON(status, gouno.NewErrorResponse(status, err.Error()))
+	message := err.Error()
+	if status >= http.StatusInternalServerError {
+		message = "internal server error"
+	}
+	c.JSON(status, gouno.NewErrorResponse(status, message))
 }

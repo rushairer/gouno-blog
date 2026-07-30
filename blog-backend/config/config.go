@@ -29,6 +29,7 @@ type WebServerConfig struct {
 	RequestTimeout     time.Duration `mapstructure:"request_timeout"`
 	RateLimitPerMinute int           `mapstructure:"rate_limit_per_minute"`
 	TrustedProxies     []string      `mapstructure:"trusted_proxies"`
+	CORSAllowedOrigins []string      `mapstructure:"cors_allowed_origins"`
 }
 
 type DatabaseConfigDriverName string

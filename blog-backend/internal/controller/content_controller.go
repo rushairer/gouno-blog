@@ -367,5 +367,5 @@ func writeContentError(c *gin.Context, err error) {
 		c.JSON(http.StatusConflict, gouno.NewErrorResponse(http.StatusConflict, "slug or name is already in use"))
 		return
 	}
-	c.JSON(http.StatusInternalServerError, gouno.NewErrorResponse(http.StatusInternalServerError, err.Error()))
+	c.JSON(http.StatusInternalServerError, gouno.NewErrorResponse(http.StatusInternalServerError, "internal server error"))
 }

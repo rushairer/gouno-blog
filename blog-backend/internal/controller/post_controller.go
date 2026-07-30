@@ -369,7 +369,7 @@ func writeServiceError(c *gin.Context, err error) {
 	case isValidationError(err):
 		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
 	default:
-		c.JSON(http.StatusInternalServerError, gouno.NewErrorResponse(http.StatusInternalServerError, err.Error()))
+		c.JSON(http.StatusInternalServerError, gouno.NewErrorResponse(http.StatusInternalServerError, "internal server error"))
 	}
 }
 

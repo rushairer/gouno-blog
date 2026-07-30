@@ -150,7 +150,7 @@ func startWebServer(cmd *cobra.Command, args []string) {
 			agentRepo, runner, globalConfig.AIAgentConfig.SchedulerInterval, logger,
 		).Start(ctx)
 	}
-	router.RegisterWebRouter(engine, db, authOptions, jwksURL, globalConfig.RedisConfig.DSN, visitorSecret, mediaDir, agentCtrl)
+	router.RegisterWebRouter(engine, db, authOptions, jwksURL, globalConfig.RedisConfig.DSN, visitorSecret, mediaDir, globalConfig.WebServerConfig.CORSAllowedOrigins, agentCtrl)
 
 	httpServer := &http.Server{
 		Addr:              fmt.Sprintf("%s:%s", globalConfig.WebServerConfig.Address, globalConfig.WebServerConfig.Port),

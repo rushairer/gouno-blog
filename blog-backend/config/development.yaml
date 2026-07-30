@@ -9,6 +9,7 @@ web_server:
     rate_limit_per_minute: 120
     trusted_proxies:
         - "127.0.0.1"
+    cors_allowed_origins: []
 database:
     default: postgres
     drivers:
