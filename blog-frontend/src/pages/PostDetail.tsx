@@ -9,18 +9,7 @@ import { useI18n } from '../i18n';
 import { useArticleSEO } from '../seo';
 import { MarkdownRenderer } from '../components/MarkdownRenderer';
 import { extractMarkdownTOC } from '../markdown';
-
-interface Post {
-  id: number;
-  title: string;
-  slug: string;
-  summary: string;
-  content: string;
-  tags: string[];
-  views_count?: number;
-  likes_count?: number;
-  created_at: string;
-}
+import type { Post } from '../types/blog';
 
 interface CommentItemProps {
   comment: CommunityComment;
