@@ -1553,3 +1553,24 @@ select option {
   color: #ffa657;
 }
 
+/* Admin Preview Banner */
+.admin-preview-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--radius-control, 6px);
+  color: #f59e0b;
+  font-size: 13px;
+}
+
+.admin-preview-banner__text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+

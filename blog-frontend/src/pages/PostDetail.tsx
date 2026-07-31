@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Bookmark, Calendar, Eye, Flag, Heart, List, MessageSquare, Reply, Send, User, X } from 'lucide-react';
-import { isLoggedIn, redirectToAuthorize } from '../auth';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, Bookmark, Calendar, Eye, Flag, Heart, List, MessageSquare, Reply, Send, ShieldAlert, User, X } from 'lucide-react';
+import { apiFetch, canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
 import type { CommunityComment } from '../community';
 import { optionalApiFetch, readResponse } from '../community';
 import { EmptyState, Feedback, Field, LoadingState, Modal, Panel } from '../components/ui';
@@ -56,8 +56,12 @@ function CommentItem({ comment, replies, onReply, onReport }: CommentItemProps) 
 
 export default function PostDetail() {
   const { slug } = useParams<{ slug: string }>();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const isPreviewParam = searchParams.get('preview') === 'true';
   const { t, formatDate } = useI18n();
   const [post, setPost] = useState<Post | null>(null);
+  const [isAdminPreview, setIsAdminPreview] = useState(false);
   const [relatedPosts, setRelatedPosts] = useState<Post[]>([]);
   const [comments, setComments] = useState<CommunityComment[]>([]);
   const [commentAuthor, setCommentAuthor] = useState('');
@@ -91,17 +95,48 @@ export default function PostDetail() {
     async function fetchPostAndComments() {
       try {
         setLoading(true);
+        setError(null);
+        let postData: Post | null = null;
+        let adminPreviewActive = false;
+
         const [postResp, communityResp, relatedResp] = await Promise.all([
           fetch(`/api/posts/${slug}`),
           optionalApiFetch(`/api/posts/${slug}/community`),
           fetch(`/api/posts/${slug}/related`),
         ]);
-        if (!postResp.ok) {
-          throw new Error(postResp.status === 404 ? t('postNotFound') : t('failedLoadPost'));
+
+        if (postResp.ok) {
+          const postBody = await postResp.json();
+          postData = postBody.data;
+        } else if (isPreviewParam || canManageBlog()) {
+          try {
+            let adminUrl = `/api/admin/posts/${slug}`;
+            if (!/^\d+$/.test(slug || '')) {
+              const listResp = await apiFetch(`/api/admin/posts?search=${encodeURIComponent(slug || '')}`);
+              if (listResp.ok) {
+                const listBody = await listResp.json();
+                const found = (listBody.data?.list || []).find((item: Post) => item.slug === slug);
+                if (found) adminUrl = `/api/admin/posts/${found.id}`;
+              }
+            }
+            const adminResp = await apiFetch(adminUrl);
+            if (adminResp.ok) {
+              const adminBody = await adminResp.json();
+              postData = adminBody.data;
+              adminPreviewActive = true;
+            }
+          } catch (adminErr) {
+            console.error('Admin preview fetch error:', adminErr);
+          }
         }
-        const postBody = await postResp.json();
-        const postData: Post = postBody.data;
+
+        if (!postData) {
+          throw new Error(!postResp.ok && postResp.status === 404 ? t('postNotFound') : t('failedLoadPost'));
+        }
+
         setPost(postData);
+        setIsAdminPreview(adminPreviewActive || (Boolean(postData.status && postData.status !== 'published') && canManageBlog()));
+
         const communityState = communityResp.ok ? await readResponse<{ liked: boolean; bookmarked: boolean; likes_count: number }>(communityResp) : null;
         setLikes(communityState?.likes_count ?? postData.likes_count ?? 0);
         setLiked(communityState?.liked || false);
@@ -133,7 +168,7 @@ export default function PostDetail() {
     if (slug) {
       fetchPostAndComments();
     }
-  }, [slug, t]);
+  }, [slug, isPreviewParam, t]);
 
   const articleSEO = useMemo(() => post ? {
     title: post.title,
@@ -244,6 +279,19 @@ export default function PostDetail() {
     <>
       <div className="reading-progress-bar" style={{ width: `${scrollProgress}%` }} />
       <div className="article-shell section-stack">
+        {isAdminPreview ? (
+          <div className="admin-preview-banner">
+            <div className="admin-preview-banner__text">
+              <ShieldAlert size={16} />
+              <span>管理员预览模式：当前正在预览未发布的文章（草稿/定时发布）。普通访客无法查看此页面。</span>
+            </div>
+            {post?.id ? (
+              <button className="btn btn-secondary btn--compact" type="button" onClick={() => navigate(`/admin/posts/${post.id}/edit`)}>
+                返回编辑器
+              </button>
+            ) : null}
+          </div>
+        ) : null}
         <Link to="/articles" className="text-link">
           <ArrowLeft size={16} />
           {t('backToFeed')}

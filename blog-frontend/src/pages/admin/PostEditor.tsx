@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Check, Eye, History, Save, Send } from 'lucide-react';
+import { ArrowLeft, Check, ExternalLink, History, Save, Send } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiFetch } from '../../auth';
 import { AdminPageState, ConfirmDialog, Feedback, Field, Input, Select, Textarea } from '../../components/ui';
@@ -95,6 +95,39 @@ export default function PostEditor() {
     if (dirty.current) setConfirmExit(true);
     else navigate('/admin/posts');
   };
+
+  const openFrontsitePreview = async () => {
+    let currentPost = post;
+    if (dirty.current || !currentPost.id) {
+      if (!currentPost.title.trim()) {
+        setError('请先填写文章标题。');
+        return;
+      }
+      setSaving(true);
+      setError('');
+      try {
+        const response = await apiFetch(currentPost.id ? `/api/posts/${currentPost.id}` : '/api/posts', {
+          method: currentPost.id ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...currentPost, status: currentPost.status || 'draft', tags: currentPost.tags.filter(Boolean) }),
+        });
+        currentPost = await readData<Post>(response);
+        setPost(currentPost);
+        dirty.current = false;
+        setSavedAt(new Date());
+        if (!post.id) navigate(`/admin/posts/${currentPost.id}/edit`, { replace: true });
+      } catch (reason) {
+        setError(reason instanceof Error ? reason.message : '保存失败，无法开启预览。');
+        setSaving(false);
+        return;
+      } finally {
+        setSaving(false);
+      }
+    }
+    const target = currentPost.slug || String(currentPost.id);
+    window.open(`/articles/${encodeURIComponent(target)}?preview=true`, '_blank');
+  };
+
   const primaryStatus: PostStatus = publishIntent === 'scheduled' ? 'scheduled' : 'published';
   const primaryLabel = publishIntent === 'scheduled' ? '安排发布' : post.status === 'published' ? '更新文章' : '发布';
   if (!allowed || loading) return <AdminPageState title={isNew ? '新建文章' : '编辑文章'} description="撰写、预览并管理文章发布状态。" label="正在打开编辑器…" />;
@@ -102,7 +135,7 @@ export default function PostEditor() {
     <header className="editor-commandbar">
       <button className="editor-back" type="button" onClick={leaveEditor}><ArrowLeft /> 返回文章列表</button>
       <div className="editor-save-state">{saving ? '正在保存…' : savedAt ? <><Check /> 已于 {savedAt.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })} 保存</> : dirty.current ? '有未保存的更改' : '所有更改已保存'}</div>
-      <div><button className="btn btn-secondary" type="button" onClick={() => setPreview(!preview)}><Eye /> {preview ? '继续编辑' : '预览'}</button><button className="btn btn-secondary" type="button" onClick={() => void persist('draft')} disabled={saving}><Save /> 保存草稿</button><button className="btn btn-primary" type="button" onClick={() => void persist(primaryStatus)} disabled={saving}><Send /> {primaryLabel}</button></div>
+      <div><button className="btn btn-secondary" type="button" onClick={() => void openFrontsitePreview()} disabled={saving}><ExternalLink /> 预览前台页面</button><button className="btn btn-secondary" type="button" onClick={() => void persist('draft')} disabled={saving}><Save /> 保存草稿</button><button className="btn btn-primary" type="button" onClick={() => void persist(primaryStatus)} disabled={saving}><Send /> {primaryLabel}</button></div>
     </header>
     {error ? <Feedback type="error">{error}</Feedback> : null}
     <div className="editor-workspace">
