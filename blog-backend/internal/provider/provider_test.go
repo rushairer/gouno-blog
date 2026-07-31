@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
@@ -82,6 +83,111 @@ func TestAnthropicGenerateParsesTextAndToolCall(t *testing.T) {
 	if result.Text != "Checking." || len(result.ToolCalls) != 1 ||
 		string(result.ToolCalls[0].Arguments) != `{"days":7}` {
 		t.Fatalf("result = %#v", result)
+	}
+}
+
+func TestAnthropicSanitizesToolNamesWithDots(t *testing.T) {
+	var requestBody []byte
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestBody, _ = io.ReadAll(r.Body)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"content":[
+				{"type":"tool_use","id":"tool_1","name":"content__list_posts","input":{"limit":5}}
+			],
+			"stop_reason":"tool_use",
+			"usage":{"input_tokens":10,"output_tokens":5}
+		}`))
+	}))
+	defer server.Close()
+
+	client, err := NewHTTPProvider("anthropic", server.URL, "secret", "claude-test", []string{"127.0.0.1"}, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := client.Generate(context.Background(), Request{
+		Messages: []Message{
+			{Role: "user", Content: "list posts"},
+			{Role: "assistant", ToolCalls: []ToolCall{{ID: "tool_0", Name: "content.audit_post", Arguments: json.RawMessage(`{"id":1}`)}}},
+		},
+		Tools: []ToolDefinition{{
+			Name: "content.list_posts", Description: "list", Parameters: json.RawMessage(`{}`),
+		}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	bodyStr := string(requestBody)
+	if !strings.Contains(bodyStr, `"name":"content__list_posts"`) {
+		t.Fatalf("expected sanitized tool definition name in request body, got: %s", bodyStr)
+	}
+	if !strings.Contains(bodyStr, `"name":"content__audit_post"`) {
+		t.Fatalf("expected sanitized assistant tool call name in request body, got: %s", bodyStr)
+	}
+	if len(result.ToolCalls) != 1 || result.ToolCalls[0].Name != "content.list_posts" {
+		t.Fatalf("expected restored tool name content.list_posts, got: %#v", result.ToolCalls)
+	}
+}
+
+func TestAnthropicMergesMultipleToolResultsIntoSingleUserMessage(t *testing.T) {
+	var requestPayload struct {
+		Messages []struct {
+			Role    string `json:"role"`
+			Content []struct {
+				Type       string `json:"type"`
+				ToolUseID  string `json:"tool_use_id"`
+				Text       string `json:"text"`
+				ID         string `json:"id"`
+				Name       string `json:"name"`
+			} `json:"content"`
+		} `json:"messages"`
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		_ = json.Unmarshal(body, &requestPayload)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"content":[{"type":"text","text":"All done."}],
+			"stop_reason":"end_turn",
+			"usage":{"input_tokens":15,"output_tokens":5}
+		}`))
+	}))
+	defer server.Close()
+
+	client, err := NewHTTPProvider("anthropic", server.URL, "secret", "claude-test", []string{"127.0.0.1"}, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Generate(context.Background(), Request{
+		Messages: []Message{
+			{Role: "user", Content: "Run audit"},
+			{Role: "assistant", ToolCalls: []ToolCall{
+				{ID: "call_01", Name: "content.audit_post", Arguments: json.RawMessage(`{}`)},
+				{ID: "call_02", Name: "content.search_knowledge", Arguments: json.RawMessage(`{}`)},
+			}},
+			{Role: "tool", ToolCallID: "call_01", Content: `{"audit":"ok"}`},
+			{Role: "tool", ToolCallID: "call_02", Content: `{"search":"ok"}`},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Should have 3 messages in total: user, assistant, user (containing both tool_result items)
+	if len(requestPayload.Messages) != 3 {
+		t.Fatalf("expected 3 messages, got %d: %#v", len(requestPayload.Messages), requestPayload.Messages)
+	}
+	if requestPayload.Messages[0].Role != "user" || requestPayload.Messages[1].Role != "assistant" || requestPayload.Messages[2].Role != "user" {
+		t.Fatalf("expected strictly alternating roles user->assistant->user, got: %#v", requestPayload.Messages)
+	}
+
+	toolResults := requestPayload.Messages[2].Content
+	if len(toolResults) != 2 {
+		t.Fatalf("expected 2 tool_result blocks in the user message following assistant tool_use, got: %#v", toolResults)
+	}
+	if toolResults[0].ToolUseID != "call_01" || toolResults[1].ToolUseID != "call_02" {
+		t.Fatalf("expected tool_result IDs call_01 and call_02, got: %#v", toolResults)
 	}
 }
 

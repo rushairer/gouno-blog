@@ -417,8 +417,70 @@
 
 .agent-output {
   color: var(--color-text-muted);
-  line-height: 1.75;
+  line-height: 1.6;
+  font-size: 13.5px;
+}
+
+.agent-output > pre {
   white-space: pre-wrap;
+  font-size: 12.5px;
+}
+
+.agent-output .article-content {
+  color: var(--color-text);
+  font-size: 13.5px;
+  line-height: 1.65;
+}
+
+.agent-output .article-content h1,
+.agent-output .article-content h2 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 14px 0 8px;
+  padding-left: 0;
+  border-left: 0;
+}
+
+.agent-output .article-content h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 12px 0 6px;
+  color: var(--color-text);
+}
+
+.agent-output .article-content h4,
+.agent-output .article-content h5,
+.agent-output .article-content h6 {
+  font-size: 13.5px;
+  font-weight: 600;
+  margin: 10px 0 4px;
+}
+
+.agent-output .article-content p,
+.agent-output .article-content li {
+  font-size: 13.5px;
+  margin-bottom: 0.6em;
+}
+
+.agent-output .article-content ul,
+.agent-output .article-content ol {
+  padding-left: 20px;
+  margin-bottom: 0.6em;
+}
+
+.agent-output .article-content table {
+  font-size: 12.5px;
+  margin: 10px 0;
+}
+
+.agent-output .article-content th,
+.agent-output .article-content td {
+  padding: 6px 10px;
+  font-size: 12.5px;
+}
+
+.agent-output .article-content code {
+  font-size: 12px;
 }
 
 .agent-run-metrics {
@@ -472,8 +534,28 @@
   width: 16px;
 }
 
-.tool-call-detail summary .risk-label {
+.tool-call-detail summary .tool-call-index {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: var(--agent-chip-bg, rgba(255, 255, 255, 0.06));
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.tool-call-meta {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tool-call-time {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono, monospace);
 }
 
 .content-audit {

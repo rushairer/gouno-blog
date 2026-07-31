@@ -3,16 +3,49 @@ package provider
 import (
 	"context"
 	"encoding/json"
+	"strings"
 )
 
+func toAnthropicToolName(name string) string {
+	return strings.ReplaceAll(name, ".", "__")
+}
+
+func fromAnthropicToolName(name string, nameMap map[string]string) string {
+	if original, ok := nameMap[name]; ok {
+		return original
+	}
+	return strings.ReplaceAll(name, "__", ".")
+}
+
 func (p *HTTPProvider) anthropicGenerate(ctx context.Context, req Request) (Result, error) {
-	messages := make([]any, 0, len(req.Messages))
+	nameMap := make(map[string]string, len(req.Tools))
+	if len(req.Tools) > 0 {
+		for _, tool := range req.Tools {
+			anthropicName := toAnthropicToolName(tool.Name)
+			nameMap[anthropicName] = tool.Name
+		}
+	}
+
+	type anthropicMsg struct {
+		Role    string
+		Content []any
+	}
+	formatted := make([]*anthropicMsg, 0, len(req.Messages))
 	for _, message := range req.Messages {
 		if message.Role == "tool" {
-			messages = append(messages, map[string]any{
-				"role":    "user",
-				"content": []any{map[string]any{"type": "tool_result", "tool_use_id": message.ToolCallID, "content": message.Content}},
-			})
+			toolResult := map[string]any{
+				"type":        "tool_result",
+				"tool_use_id": message.ToolCallID,
+				"content":     message.Content,
+			}
+			if len(formatted) > 0 && formatted[len(formatted)-1].Role == "user" {
+				formatted[len(formatted)-1].Content = append(formatted[len(formatted)-1].Content, toolResult)
+			} else {
+				formatted = append(formatted, &anthropicMsg{
+					Role:    "user",
+					Content: []any{toolResult},
+				})
+			}
 			continue
 		}
 		content := make([]any, 0, len(message.ToolCalls)+1)
@@ -24,13 +57,32 @@ func (p *HTTPProvider) anthropicGenerate(ctx context.Context, req Request) (Resu
 			if err := json.Unmarshal(call.Arguments, &input); err != nil {
 				return Result{}, err
 			}
-			content = append(content, map[string]any{"type": "tool_use", "id": call.ID, "name": call.Name, "input": input})
+			content = append(content, map[string]any{
+				"type": "tool_use", "id": call.ID, "name": toAnthropicToolName(call.Name), "input": input,
+			})
+		}
+		if len(content) == 0 {
+			continue
 		}
 		role := message.Role
 		if role != "assistant" {
 			role = "user"
 		}
-		messages = append(messages, map[string]any{"role": role, "content": content})
+		if len(formatted) > 0 && formatted[len(formatted)-1].Role == role {
+			formatted[len(formatted)-1].Content = append(formatted[len(formatted)-1].Content, content...)
+		} else {
+			formatted = append(formatted, &anthropicMsg{
+				Role:    role,
+				Content: content,
+			})
+		}
+	}
+	messages := make([]any, 0, len(formatted))
+	for _, m := range formatted {
+		messages = append(messages, map[string]any{
+			"role":    m.Role,
+			"content": m.Content,
+		})
 	}
 	body := map[string]any{
 		"model": p.model, "max_tokens": req.MaxTokens, "system": req.Instructions, "messages": messages,
@@ -46,7 +98,7 @@ func (p *HTTPProvider) anthropicGenerate(ctx context.Context, req Request) (Resu
 				return Result{}, err
 			}
 			tools = append(tools, map[string]any{
-				"name": tool.Name, "description": tool.Description, "input_schema": schema,
+				"name": toAnthropicToolName(tool.Name), "description": tool.Description, "input_schema": schema,
 			})
 		}
 		body["tools"] = tools
@@ -82,7 +134,9 @@ func (p *HTTPProvider) anthropicGenerate(ctx context.Context, req Request) (Resu
 		case "text":
 			result.Text += block.Text
 		case "tool_use":
-			result.ToolCalls = append(result.ToolCalls, ToolCall{ID: block.ID, Name: block.Name, Arguments: block.Input})
+			result.ToolCalls = append(result.ToolCalls, ToolCall{
+				ID: block.ID, Name: fromAnthropicToolName(block.Name, nameMap), Arguments: block.Input,
+			})
 		}
 	}
 	return result, nil

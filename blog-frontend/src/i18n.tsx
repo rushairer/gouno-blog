@@ -502,7 +502,7 @@ type I18nContextValue = {
   setLocale: (locale: Locale) => void;
   t: (key: TranslationKey, params?: Record<string, string | number>) => string;
   formatDate: (value: string, options?: Intl.DateTimeFormatOptions) => string;
-  formatDateTime: (value: string) => string;
+  formatDateTime: (value: string, options?: Intl.DateTimeFormatOptions) => string;
 };
 
 const I18nContext = createContext<I18nContextValue | null>(null);
@@ -533,13 +533,15 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     const formatDate = (value: string, options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' }) =>
       new Intl.DateTimeFormat(locale === 'zh' ? 'zh-CN' : 'en-US', options).format(new Date(value));
 
-    const formatDateTime = (value: string) =>
+    const formatDateTime = (value: string, options?: Intl.DateTimeFormatOptions) =>
       new Intl.DateTimeFormat(locale === 'zh' ? 'zh-CN' : 'en-US', {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
+        second: '2-digit',
+        ...options,
       }).format(new Date(value));
 
     return { locale, setLocale, t, formatDate, formatDateTime };
