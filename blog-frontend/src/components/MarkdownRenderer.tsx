@@ -6,6 +6,7 @@ import remarkGfm from 'remark-gfm';
 import { Check, Copy } from 'lucide-react';
 import { useI18n } from '../i18n';
 import { markdownHeadingID } from '../markdown';
+import { highlightCodeContent } from '../lib/syntax-highlighter';
 
 function textContent(value: ReactNode): string {
   if (typeof value === 'string' || typeof value === 'number') return String(value);
@@ -25,12 +26,14 @@ function CodeBlock({ children, className }: { children?: ReactNode; className?: 
     window.setTimeout(() => setCopied(false), 2000);
   };
 
+  const highlighted = useMemo(() => highlightCodeContent(code, className), [code, className]);
+
   return <div className="code-block-wrapper">
     <button type="button" className="code-copy-btn" onClick={() => void copy()} aria-label={t('copyCode')} title={t('copyCode')}>
       {copied ? <Check size={14} /> : <Copy size={14} />}
       <span>{copied ? t('copied') : t('copyCode')}</span>
     </button>
-    <pre><code className={className}>{code}</code></pre>
+    <pre><code className={className}>{highlighted}</code></pre>
   </div>;
 }
 

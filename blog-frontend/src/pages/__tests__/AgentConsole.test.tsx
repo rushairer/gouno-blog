@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -65,6 +65,35 @@ describe('AgentConsole', () => {
     await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(15));
     expect(screen.getByRole('tab', { name: 'Agents' })).toBeInTheDocument();
     expect(screen.getByText('gpt-5-mini')).toBeInTheDocument();
+  });
+
+  it('opens modal to save an agent as a reusable skill', async () => {
+    const user = userEvent.setup();
+    vi.mocked(apiFetch).mockImplementation(async (input, init) => {
+      const url = input.toString();
+      if (url === '/api/admin/agents/1/save-as-skill' && init?.method === 'POST') {
+        return Response.json({ data: { id: 10, name: 'Weekly Operations Skill' } });
+      }
+      return Response.json({ data: responseFor(url) });
+    });
+    renderConsole();
+    expect((await screen.findAllByText('Weekly Operations')).length).toBeGreaterThan(0);
+
+    const extractBtn = screen.getAllByRole('button', { name: 'Save as Skill' })[0];
+    await user.click(extractBtn);
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Save Agent as Reusable Skill' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Skill Name')).toHaveValue('Weekly Operations Skill');
+
+    await user.click(within(dialog).getByRole('button', { name: 'Save as Skill' }));
+    await waitFor(() => {
+      expect(apiFetch).toHaveBeenCalledWith('/api/admin/agents/1/save-as-skill', expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ name: 'Weekly Operations Skill' }),
+      }));
+    });
   });
 
   it('opens the provider editor from the provider workspace', async () => {

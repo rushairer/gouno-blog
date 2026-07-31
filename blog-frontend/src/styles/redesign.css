@@ -302,7 +302,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .modal > header .icon-button { flex: 0 0 34px; }
 .confirm-dialog, .modal-form { padding: 22px; }
 .confirm-dialog > p { color: var(--text-2); line-height: 1.7; }
-.modal-actions { margin-top: 24px; display: flex; justify-content: flex-end; gap: 8px; }
+.modal-actions { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--admin-line); display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
 .modal-form { display: grid; gap: 14px; }
 .modal-form label { display: grid; gap: 6px; color: var(--text-2); font-size: 12px; }
 .modal-form input, .modal-form textarea, .modal-form select { width: 100%; min-height: 40px; border: 1px solid var(--control-border); border-radius: var(--radius-control); padding: 8px 10px; background: var(--control-bg); color: var(--ink); }

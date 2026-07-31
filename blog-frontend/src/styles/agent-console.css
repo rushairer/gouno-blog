@@ -12,6 +12,9 @@
 
 .agent-console__main {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
 .workflow-list {
@@ -445,6 +448,7 @@
   gap: 16px 12px;
 }
 
+.feedback-form .form-actions,
 .feedback-form__actions {
   display: flex;
   grid-column: 1 / -1;
@@ -919,3 +923,201 @@
     text-align: left;
   }
 }
+
+/* Save as Reusable Skill Panel & Cards */
+.agent-console__main > .save-skill-panel {
+  min-height: auto;
+  padding: 20px 24px;
+}
+
+.save-skill-panel .panel-header {
+  margin-bottom: 20px;
+}
+
+.save-skill-panel .panel-header title,
+.save-skill-panel .panel-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-main);
+}
+
+.save-skill-panel .panel-header svg {
+  color: var(--agent-accent);
+}
+
+.agent-skill-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.agent-skill-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--agent-border);
+  border-radius: var(--radius-lg, 12px);
+  background: var(--bg-surface-elevated, var(--bg-2, rgba(255, 255, 255, 0.02)));
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.agent-skill-card:hover {
+  border-color: var(--agent-accent);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.agent-skill-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.agent-skill-card__identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.agent-skill-card__icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--agent-accent-soft);
+  color: var(--agent-accent);
+  flex-shrink: 0;
+}
+
+.agent-skill-card__icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.agent-skill-card__identity strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-main, #fff);
+  margin-bottom: 2px;
+}
+
+.agent-skill-card__desc {
+  font-size: 13px;
+  color: var(--color-text-muted, #999);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0;
+}
+
+.agent-skill-card .agent-chip-list {
+  max-width: 100%;
+}
+
+.agent-skill-card__footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 12px;
+  border-top: 1px solid var(--agent-border);
+}
+
+/* Save Skill Modal Dialog */
+.save-skill-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-top: 12px;
+}
+
+.save-skill-dialog__summary {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 10px;
+  background: var(--bg-surface-soft, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--agent-border);
+}
+
+.save-skill-dialog__agent-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.save-skill-dialog__agent-info .agent-icon-badge {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--agent-accent-soft);
+  color: var(--agent-accent);
+  flex-shrink: 0;
+}
+
+.save-skill-dialog__agent-info strong {
+  font-size: 15px;
+  display: block;
+  color: var(--color-text-main, #fff);
+}
+
+.save-skill-dialog__agent-info p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--color-text-muted, #aaa);
+}
+
+.save-skill-dialog__capabilities {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.save-skill-dialog__capabilities small {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-3, var(--color-text-muted));
+}
+
+.save-skill-dialog .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.save-skill-dialog label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-main);
+}
+
+.save-skill-dialog .form-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: var(--radius-control, 6px);
+  border: 1px solid var(--agent-border);
+  background: var(--bg-surface, rgba(0, 0, 0, 0.2));
+  color: var(--color-text-main, #fff);
+  font-size: 14px;
+}
+
+.save-skill-dialog .form-input:focus {
+  outline: none;
+  border-color: var(--agent-accent);
+  box-shadow: 0 0 0 2px var(--agent-accent-soft);
+}
+
+.save-skill-dialog .form-hint {
+  font-size: 12px;
+  color: var(--color-text-muted, #888);
+}
+

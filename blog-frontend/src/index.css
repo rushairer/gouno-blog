@@ -1516,3 +1516,40 @@ select option {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* Syntax Highlighting Tokens */
+.code-block-wrapper pre code {
+  color: var(--ui-on-code, #e2e8f0);
+}
+
+.token-comment {
+  color: #8b949e;
+  font-style: italic;
+}
+
+.token-keyword {
+  color: #ff7b72;
+  font-weight: 600;
+}
+
+.token-string {
+  color: #a5d6ff;
+}
+
+.token-boolean {
+  color: #79c0ff;
+}
+
+.token-number {
+  color: #79c0ff;
+}
+
+.token-function {
+  color: #d2a8ff;
+  font-weight: 500;
+}
+
+.token-type {
+  color: #ffa657;
+}
+

@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Check, ClipboardList, RefreshCw, ThumbsDown } from 'lucide-react';
+import { Check, ClipboardList, RefreshCw, Save, ThumbsDown } from 'lucide-react';
 import type { ContentCandidateSet, OperationalSuggestion, OutcomeMetrics } from '../../agent';
-import { EmptyState, Field, Panel, Select } from '../ui';
+import { Button, EmptyState, Field, FormActions, Panel, Select } from '../ui';
 
 type Mutate = (path: string, method?: string, body?: unknown) => Promise<void>;
 
@@ -63,15 +63,15 @@ export function OperationsWorkspace({ suggestions, candidateSets, metrics, local
 
     <Panel>
       <div className="panel-heading"><div><h3>{zh ? '结果反馈' : 'Outcome feedback'}</h3><small>{zh ? '反馈仅用于离线指标，不会自动修改 Prompt。' : 'Feedback powers offline metrics only and never rewrites prompts.'}</small></div></div>
-      <div className="form-grid feedback-form">
+      <form className="form-grid feedback-form" onSubmit={(e) => { e.preventDefault(); void saveFeedback(); }}>
         <Field label={zh ? '对象' : 'Target'}><Select value={targetType} onChange={(event) => setTargetType(event.target.value as typeof targetType)}><option value="run">Run</option><option value="approval">Approval</option><option value="suggestion">Suggestion</option></Select></Field>
         <Field label="ID"><input className="input-field" type="number" min="1" value={targetID} onChange={(event) => setTargetID(event.target.value)} /></Field>
         <Field label={zh ? '标签' : 'Label'}><Select value={label} onChange={(event) => setLabel(event.target.value as typeof label)}><option value="adopted">adopted</option><option value="rejected">rejected</option><option value="invalid">invalid</option></Select></Field>
         <Field label={zh ? '备注' : 'Note'}><input className="input-field" value={note} maxLength={2000} onChange={(event) => setNote(event.target.value)} /></Field>
-        <div className="feedback-form__actions">
-          <button className="btn btn-primary" type="button" disabled={!targetID} onClick={() => void saveFeedback()}>{zh ? '保存反馈' : 'Save feedback'}</button>
-        </div>
-      </div>
+        <FormActions className="feedback-form__actions">
+          <Button variant="primary" type="submit" disabled={!targetID}><Save />{zh ? '保存反馈' : 'Save feedback'}</Button>
+        </FormActions>
+      </form>
     </Panel>
   </div>;
 }

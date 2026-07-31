@@ -106,7 +106,7 @@ export default function PostEditor() {
     </header>
     {error ? <Feedback type="error">{error}</Feedback> : null}
     <div className="editor-workspace">
-      <aside className="editor-outline"><div><h2>文档大纲</h2><button type="button" onClick={() => setShowVersions(!showVersions)}><History /> 版本历史 ({versions.length})</button></div>{showVersions ? <div className="version-drawer">{versions.map((version) => <button key={version.id} type="button" onClick={() => setRestoreTarget(version)}><strong>{version.title}</strong><small>{new Date(version.created_at).toLocaleString('zh-CN')} · 点击恢复</small></button>)}</div> : <nav>{outline.length ? outline.map((item) => <span key={item.id} className={`level-${item.level}`}>{item.text}</span>) : <p>添加正文标题后，大纲会自动生成。</p>}</nav>}</aside>
+      <aside className="editor-outline"><div><h2>文档大纲</h2><button type="button" onClick={() => setShowVersions(!showVersions)}><History /> 版本历史 ({versions.length})</button></div>{showVersions ? <div className="version-drawer">{versions.map((version) => <button key={version.id} type="button" onClick={() => setRestoreTarget(version)}><strong>{version.title}</strong><small>{new Date(version.created_at).toLocaleString('zh-CN')} · 点击恢复</small></button>)}</div> : <nav>{outline.length ? outline.map((item) => <a key={item.id} href={`#${item.id}`} className={`level-${item.level}`} onClick={() => { if (!preview) setPreview(true); }}>{item.text}</a>) : <p>在正文中添加 Markdown 标题（如 # 或 ##）后，大纲会自动生成。</p>}</nav>}</aside>
       <main className="editor-canvas">
         <Field label="标题" required>
           <Textarea className="editor-title" rows={2} value={post.title} onChange={(event) => update('title', event.target.value)} placeholder="写一个清晰、具体的标题" required />
