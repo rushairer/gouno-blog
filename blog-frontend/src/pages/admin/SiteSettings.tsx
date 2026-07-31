@@ -64,7 +64,7 @@ export default function AdminSiteSettings() {
               <Field label="默认描述"><Textarea rows={4} value={value.default_seo_description} onChange={(event) => field('default_seo_description', event.target.value)} /></Field>
             </div>
           </WorkspacePanel>
-          <FormActions><Button variant="primary" type="submit" loading={saving}><Save /> {saving ? '正在保存…' : '保存设置'}</Button></FormActions>
+          <FormActions surface><Button variant="primary" type="submit" loading={saving}><Save /> {saving ? '正在保存…' : '保存设置'}</Button></FormActions>
         </div>
       </form>
     </AdminPage>

@@ -1,6 +1,6 @@
 .ui-control,
 .input-field,
-.admin-shell :is(input, textarea, select):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]) {
+.admin-shell :is(input, textarea, select):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not(.ui-control):not(.admin-search__input):not(.editor-title):not(.editor-body) {
   width: 100%;
   min-width: 0;
   min-height: var(--control-height);
@@ -22,19 +22,19 @@
 }
 
 textarea.ui-control,
-.admin-shell textarea {
+.admin-shell textarea:not(.editor-title):not(.editor-body) {
   resize: vertical;
 }
 
 .ui-control:hover:not(:disabled):not([readonly]),
-.admin-shell :is(input, textarea, select):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):hover:not(:disabled):not([readonly]) {
+.admin-shell :is(input, textarea, select):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not(.ui-control):not(.admin-search__input):not(.editor-title):not(.editor-body):hover:not(:disabled):not([readonly]) {
   border-color: var(--ui-border-hover);
   background: var(--ui-control-hover);
 }
 
 .ui-control:focus,
 .input-field:focus,
-.admin-shell :is(input, textarea, select):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):focus {
+.admin-shell :is(input, textarea, select):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not(.ui-control):not(.admin-search__input):not(.editor-title):not(.editor-body):focus {
   border-color: var(--ui-border-emphasis);
   background: var(--ui-control);
   box-shadow: 0 0 0 3px var(--ui-focus-ring);
@@ -48,7 +48,7 @@ textarea.ui-control,
 }
 
 .ui-control:disabled,
-.admin-shell :is(input, textarea, select):disabled {
+.admin-shell :is(input, textarea, select):not(.ui-control):not(.admin-search__input):disabled {
   background: var(--ui-disabled-surface);
   color: var(--ui-text-disabled);
   cursor: not-allowed;
@@ -56,14 +56,14 @@ textarea.ui-control,
 }
 
 .ui-control[readonly],
-.admin-shell :is(input, textarea)[readonly] {
+.admin-shell :is(input, textarea):not(.ui-control):not(.admin-search__input)[readonly] {
   background: var(--ui-readonly-surface);
   color: var(--ui-text-secondary);
   cursor: default;
 }
 
 .ui-control::placeholder,
-.admin-shell :is(input, textarea)::placeholder {
+.admin-shell :is(input, textarea):not(.ui-control):not(.admin-search__input)::placeholder {
   color: var(--ui-text-placeholder);
   opacity: 1;
 }
@@ -269,6 +269,18 @@ textarea.ui-control,
   border-top: 1px solid var(--ui-border);
 }
 
+.form-actions--surface {
+  border: 1px solid var(--ui-border);
+  border-radius: var(--radius-panel);
+  background: var(--ui-panel);
+  padding: 16px 24px;
+}
+
+.form-layout {
+  display: grid;
+  gap: 16px;
+}
+
 .panel,
 .workspace-panel {
   border: 1px solid var(--ui-border);
@@ -277,6 +289,22 @@ textarea.ui-control,
   color: var(--ui-text);
   padding: 24px;
   box-shadow: none;
+}
+
+.editor-panel {
+  width: 100%;
+  max-width: none;
+}
+
+.editor-panel__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.editor-panel__title > svg {
+  width: 18px;
+  height: 18px;
 }
 
 .panel-header,
@@ -340,7 +368,30 @@ textarea.ui-control,
 
 .search-field {
   position: relative;
+  min-height: var(--control-height-compact);
+  display: flex;
+  align-items: center;
   min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--radius-control);
+  background: var(--ui-control);
+  transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+}
+
+.search-field--regular {
+  min-height: var(--control-height);
+}
+
+.search-field:hover {
+  border-color: var(--ui-border-hover);
+  background: var(--ui-control-hover);
+}
+
+.search-field:focus-within {
+  border-color: var(--ui-border-emphasis);
+  background: var(--ui-control);
+  box-shadow: 0 0 0 3px var(--ui-focus-ring);
 }
 
 .search-field > svg {
@@ -356,13 +407,35 @@ textarea.ui-control,
 }
 
 .search-field .ui-control {
+  min-height: calc(var(--control-height-compact) - 2px);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   padding-left: 36px;
+}
+
+.search-field--regular .ui-control {
+  min-height: calc(var(--control-height) - 2px);
+}
+
+.search-field .ui-control:hover:not(:disabled):not([readonly]),
+.search-field .ui-control:focus {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .filter-bar__count {
   color: var(--ui-text-muted);
   font-size: var(--font-size-label);
   white-space: nowrap;
+}
+
+.content-stack {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
 }
 
 .form-grid {
@@ -372,6 +445,8 @@ textarea.ui-control,
 }
 
 .tabs {
+  display: block;
+  width: 100%;
   min-width: 0;
 }
 
@@ -417,8 +492,15 @@ textarea.ui-control,
 }
 
 .tab-panel {
+  width: 100%;
   min-width: 0;
   padding-top: 24px;
+}
+
+.tab-panel > .workspace-panel,
+.tab-panel > .agent-console__main,
+.agent-console__main > .workspace-panel {
+  width: 100%;
 }
 
 .section-nav {
@@ -451,7 +533,7 @@ textarea.ui-control,
 
 .settings-layout {
   display: grid;
-  grid-template-columns: 180px minmax(0, 760px);
+  grid-template-columns: 180px minmax(0, 1fr);
   gap: 32px;
   align-items: start;
 }
@@ -461,6 +543,10 @@ textarea.ui-control,
 .section-stack {
   display: grid;
   gap: 16px;
+}
+
+.settings-content {
+  min-width: 0;
 }
 
 .settings-section {
@@ -626,5 +712,9 @@ textarea.ui-control,
 
   .form-actions .btn {
     flex: 1;
+  }
+
+  .form-actions--surface {
+    padding: 16px;
   }
 }

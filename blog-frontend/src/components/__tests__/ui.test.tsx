@@ -4,7 +4,10 @@ import { useState } from 'react';
 import { describe, expect, it } from 'vitest';
 import {
   Button,
+  EditorPanel,
   Field,
+  FormActions,
+  FormLayout,
   Input,
   SectionNav,
   Select,
@@ -46,6 +49,21 @@ describe('shared UI primitives', () => {
     expect(button).toHaveClass('btn-primary');
     expect(button).toBeDisabled();
     expect(button).toHaveAttribute('aria-busy', 'true');
+  });
+
+  it('provides a shared editor panel, form layout, and surfaced action contract', () => {
+    render(
+      <EditorPanel title="创建项目" closeLabel="关闭编辑器" onClose={() => undefined}>
+        <FormLayout aria-label="项目表单">
+          <Field label="名称"><Input /></Field>
+          <FormActions surface><Button variant="primary">保存</Button></FormActions>
+        </FormLayout>
+      </EditorPanel>,
+    );
+    expect(screen.getByRole('heading', { name: '创建项目' }).closest('.editor-panel')).toBeInTheDocument();
+    expect(screen.getByRole('form', { name: '项目表单' })).toHaveClass('form-layout');
+    expect(screen.getByRole('button', { name: '关闭编辑器' })).toHaveClass('icon-button');
+    expect(screen.getByRole('button', { name: '保存' }).parentElement).toHaveClass('form-actions--surface');
   });
 
   it('provides ARIA-connected tabs and keyboard navigation', async () => {

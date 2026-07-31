@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type React from 'react';
 import { KeyRound, Laptop, Mail, Shield, User } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Feedback, Field, PageHeader, Panel } from '../components/ui';
+import { ActionGroup, ContentStack, Feedback, Field, PageHeader, Panel } from '../components/ui';
 import { getUserProfile, gossoClient, isLoggedIn, redirectToAuthorize } from '../auth';
 import type { MfaEnrollment, MfaStatus, PasskeyInfo, SessionInfo, UserProfile } from '../auth';
 import { useI18n } from '../i18n';
@@ -199,14 +199,15 @@ export default function Settings() {
       {success && <Feedback type="success">{success}</Feedback>}
 
       <Panel>
-        <div className="tabs">
-          {tabItems.map((tab) => (
-            <button key={tab.id} className={`btn ${activeTab === tab.id ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab(tab.id)} type="button">
-              {tab.icon}
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        <ContentStack>
+          <ActionGroup>
+            {tabItems.map((tab) => (
+              <button key={tab.id} className={`btn ${activeTab === tab.id ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setActiveTab(tab.id)} type="button">
+                {tab.icon}
+                {tab.label}
+              </button>
+            ))}
+          </ActionGroup>
 
         {activeTab === 'profile' && (
           <div className="section-stack">
@@ -334,25 +335,26 @@ export default function Settings() {
           </div>
         )}
 
-        {activeTab === 'sessions' && (
-          <div className="section-stack">
-            {sessions.map((session) => (
-              <div key={session.id} className="list-row">
-                <div>
-                  <strong>
-                    {session.user_agent || t('unknownDevice')} {session.id === currentSessionId ? `(${t('current')})` : ''}
-                  </strong>
-                  <p className="muted">
-                    {session.ip} · {formatDateTime(session.last_active_at)}
-                  </p>
+          {activeTab === 'sessions' && (
+            <div className="section-stack">
+              {sessions.map((session) => (
+                <div key={session.id} className="list-row">
+                  <div>
+                    <strong>
+                      {session.user_agent || t('unknownDevice')} {session.id === currentSessionId ? `(${t('current')})` : ''}
+                    </strong>
+                    <p className="muted">
+                      {session.ip} · {formatDateTime(session.last_active_at)}
+                    </p>
+                  </div>
+                  <button className="btn btn-danger" onClick={() => void revokeSession(session.id)} disabled={loading || session.id === currentSessionId} type="button">
+                    {t('revoke')}
+                  </button>
                 </div>
-                <button className="btn btn-danger" onClick={() => void revokeSession(session.id)} disabled={loading || session.id === currentSessionId} type="button">
-                  {t('revoke')}
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </ContentStack>
       </Panel>
     </div>
   );

@@ -94,6 +94,35 @@ export function WorkspacePanel({
   return <section className={classes('panel', 'workspace-panel', className)} {...props}>{children}</section>;
 }
 
+export function EditorPanel({
+  title,
+  description,
+  icon,
+  closeLabel,
+  onClose,
+  children,
+  className = '',
+}: {
+  title: React.ReactNode;
+  description?: React.ReactNode;
+  icon?: React.ReactNode;
+  closeLabel: string;
+  onClose: () => void;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <WorkspacePanel className={classes('editor-panel', className)}>
+      <PanelHeader
+        title={<span className="editor-panel__title">{icon}{title}</span>}
+        description={description}
+        actions={<IconButton type="button" label={closeLabel} onClick={onClose}><X /></IconButton>}
+      />
+      {children}
+    </WorkspacePanel>
+  );
+}
+
 export function PanelHeader({
   title,
   description,
@@ -121,8 +150,16 @@ export function ActionGroup({ children, className = '' }: React.HTMLAttributes<H
   return <div className={classes('action-group', className)}>{children}</div>;
 }
 
-export function FormActions({ children, className = '' }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={classes('form-actions', className)}>{children}</div>;
+export function FormActions({
+  children,
+  className = '',
+  surface = false,
+}: React.HTMLAttributes<HTMLDivElement> & { surface?: boolean }) {
+  return <div className={classes('form-actions', surface && 'form-actions--surface', className)}>{children}</div>;
+}
+
+export function FormLayout({ className = '', ...props }: React.FormHTMLAttributes<HTMLFormElement>) {
+  return <form className={classes('form-layout', className)} {...props} />;
 }
 
 type ControlSize = 'regular' | 'compact';
@@ -248,7 +285,7 @@ export function SearchField({
   ...props
 }: InputProps) {
   return (
-    <div className={classes('search-field', className)}>
+    <div className={classes('search-field', size === 'regular' && 'search-field--regular', className)}>
       <Search aria-hidden="true" />
       <Input type="search" size={size} {...props} />
     </div>
@@ -257,6 +294,10 @@ export function SearchField({
 
 export function FilterBar({ children, className = '' }: React.HTMLAttributes<HTMLDivElement>) {
   return <Panel className={classes('filter-bar', className)}>{children}</Panel>;
+}
+
+export function ContentStack({ children, className = '' }: React.HTMLAttributes<HTMLDivElement>) {
+  return <div className={classes('content-stack', className)}>{children}</div>;
 }
 
 export function FormGrid({

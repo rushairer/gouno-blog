@@ -236,11 +236,6 @@
   padding: 5px 8px;
 }
 
-.agent-editor-panel {
-  max-width: 980px;
-  margin: 24px auto;
-}
-
 .agent-limit-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -337,6 +332,10 @@
   border-right: 1px solid var(--agent-border);
   border-radius: 0;
   padding: 0;
+}
+
+.agent-master-panel > .state {
+  margin: var(--space-6);
 }
 
 .agent-run-list > button,
@@ -887,6 +886,10 @@
     max-height: 360px;
     border-right: 0;
     border-bottom: 1px solid var(--agent-border);
+  }
+
+  .agent-master-panel > .state {
+    margin: var(--space-4);
   }
 
   .agent-limit-grid,

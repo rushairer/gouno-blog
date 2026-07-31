@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Copy, ImagePlus, Trash2 } from 'lucide-react';
 import { apiFetch, canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
-import { AdminPage, AdminPageHeader, ConfirmDialog, copyText, EmptyState, Feedback, Field, LoadingState, Panel, SearchField, Select, useToast } from '../components/ui';
+import { AdminPage, AdminPageHeader, ConfirmDialog, ContentStack, copyText, EmptyState, Feedback, Field, LoadingState, Panel, SearchField, Select, useToast } from '../components/ui';
 import { useI18n } from '../i18n';
 
 interface MediaAsset {
@@ -103,20 +103,22 @@ export default function MediaLibrary() {
 
   return <AdminPage>
     <AdminPageHeader title={t('mediaLibrary')} description="上传、检索和复用内容中的图片资源。" actions={<span className="admin-page-count">{assets.length} 个资源</span>} />
-    {error ? <Feedback type="error">{error}{references.length ? <ul className="media-reference-list">{references.map((item) => <li key={item.post_id}><a href={`/admin/posts/${item.post_id}/edit`}>{item.post_title}</a></li>)}</ul> : null}</Feedback> : null}
-    <Panel className="admin-toolbar-panel">
-      <form className="media-upload-form" onSubmit={upload}>
-        <Field label={t('imageFile')}><input className="input-field" type="file" accept="image/jpeg,image/png,image/webp,image/gif" required onChange={(event) => setFile(event.target.files?.[0] || null)} /></Field>
-        <Field label={t('altText')}><input className="input-field" value={altText} onChange={(event) => setAltText(event.target.value)} /></Field>
-        <button className="btn btn-primary" type="submit" disabled={!file || uploading}><ImagePlus />{uploading ? t('uploading') : t('uploadImage')}</button>
-      </form>
-      <div className="media-filter-bar"><SearchField aria-label="搜索媒体" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索文件名或替代文本" /><Select size="compact" aria-label="媒体类型" value={type} onChange={(event) => setType(event.target.value)}><option value="">全部类型</option>{contentTypes.map((item) => <option key={item} value={item}>{item.replace('image/', '').toUpperCase()}</option>)}</Select><span>{visibleAssets.length} / {assets.length}</span></div>
-    </Panel>
-    {loading ? <LoadingState label={t('loadingResources')} /> : assets.length === 0 ? <EmptyState label={t('noMedia')} /> : visibleAssets.length === 0 ? <EmptyState label="没有符合条件的媒体资源。" /> : <div className="media-grid">{visibleAssets.map((asset) => <Panel className="media-card" key={asset.id}>
-      <img src={asset.url} alt={asset.alt_text || asset.filename} loading="lazy" />
-      <div><strong>{asset.filename}</strong><small>{Math.ceil(asset.size_bytes / 1024)} KB · {formatDateTime(asset.created_at)} · 引用 {asset.usage_count || 0}</small></div>
-      <div className="row-actions"><button className="btn btn-secondary" type="button" onClick={() => void copyText(`![${asset.alt_text || asset.filename}](${asset.url})`, notify, '媒体 Markdown 已复制。')}><Copy />{t('copyMarkdown')}</button><button className="btn btn-danger" type="button" onClick={() => { setDeleteTarget(asset); setReferences([]); setError(''); }}><Trash2 />{t('delete')}</button></div>
-    </Panel>)}</div>}
+    <ContentStack>
+      {error ? <Feedback type="error">{error}{references.length ? <ul className="media-reference-list">{references.map((item) => <li key={item.post_id}><a href={`/admin/posts/${item.post_id}/edit`}>{item.post_title}</a></li>)}</ul> : null}</Feedback> : null}
+      <Panel className="admin-toolbar-panel">
+        <form className="media-upload-form" onSubmit={upload}>
+          <Field label={t('imageFile')}><input className="input-field" type="file" accept="image/jpeg,image/png,image/webp,image/gif" required onChange={(event) => setFile(event.target.files?.[0] || null)} /></Field>
+          <Field label={t('altText')}><input className="input-field" value={altText} onChange={(event) => setAltText(event.target.value)} /></Field>
+          <button className="btn btn-primary" type="submit" disabled={!file || uploading}><ImagePlus />{uploading ? t('uploading') : t('uploadImage')}</button>
+        </form>
+        <div className="media-filter-bar"><SearchField aria-label="搜索媒体" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索文件名或替代文本" /><Select size="compact" aria-label="媒体类型" value={type} onChange={(event) => setType(event.target.value)}><option value="">全部类型</option>{contentTypes.map((item) => <option key={item} value={item}>{item.replace('image/', '').toUpperCase()}</option>)}</Select><span>{visibleAssets.length} / {assets.length}</span></div>
+      </Panel>
+      {loading ? <LoadingState label={t('loadingResources')} /> : assets.length === 0 ? <EmptyState label={t('noMedia')} /> : visibleAssets.length === 0 ? <EmptyState label="没有符合条件的媒体资源。" /> : <div className="media-grid">{visibleAssets.map((asset) => <Panel className="media-card" key={asset.id}>
+        <img src={asset.url} alt={asset.alt_text || asset.filename} loading="lazy" />
+        <div><strong>{asset.filename}</strong><small>{Math.ceil(asset.size_bytes / 1024)} KB · {formatDateTime(asset.created_at)} · 引用 {asset.usage_count || 0}</small></div>
+        <div className="row-actions"><button className="btn btn-secondary" type="button" onClick={() => void copyText(`![${asset.alt_text || asset.filename}](${asset.url})`, notify, '媒体 Markdown 已复制。')}><Copy />{t('copyMarkdown')}</button><button className="btn btn-danger" type="button" onClick={() => { setDeleteTarget(asset); setReferences([]); setError(''); }}><Trash2 />{t('delete')}</button></div>
+      </Panel>)}</div>}
+    </ContentStack>
     <ConfirmDialog open={deleteTarget !== null} title="删除媒体" description={t('deleteMediaConfirm')} confirmLabel="永久删除" danger onClose={() => { setDeleteTarget(null); setReferences([]); }} onConfirm={remove} />
   </AdminPage>;
 }

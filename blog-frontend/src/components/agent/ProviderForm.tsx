@@ -1,9 +1,9 @@
-import { KeyRound, Save, X } from 'lucide-react';
+import { KeyRound, Save } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import type { ProviderProfile, ProviderType } from '../../agent';
 import { emptyProvider } from '../../agent';
-import { Field, Panel, Select } from '../ui';
+import { Button, EditorPanel, Field, FormActions, FormGrid, FormLayout, Select } from '../ui';
 
 export interface ProviderFormValue {
   id?: number;
@@ -51,13 +51,9 @@ export function ProviderForm({
     }
   };
 
-  return <Panel className="agent-editor-panel">
-    <div className="panel-heading">
-      <h2><KeyRound />{initial ? labels.editProvider : labels.createProvider}</h2>
-      <button className="icon-button" type="button" onClick={onCancel} aria-label={labels.cancel}><X /></button>
-    </div>
-    <form className="form-stack" onSubmit={submit}>
-      <div className="split-grid">
+  return <EditorPanel title={initial ? labels.editProvider : labels.createProvider} icon={<KeyRound />} closeLabel={labels.cancel} onClose={onCancel}>
+    <FormLayout onSubmit={submit}>
+      <FormGrid columns={2}>
         <Field label={labels.providerName}><input className="input-field" required value={value.name} onChange={(event) => setValue((current) => ({ ...current, name: event.target.value }))} /></Field>
         <Field label={labels.providerType}><Select value={value.provider_type} onChange={(event) => {
           const providerType = event.target.value as ProviderType;
@@ -67,21 +63,21 @@ export function ProviderForm({
             base_url: providerType === 'openai' ? 'https://api.openai.com' : 'https://api.anthropic.com',
           }));
         }}><option value="openai">OpenAI / compatible</option><option value="anthropic">Anthropic native</option></Select></Field>
-      </div>
-      <div className="split-grid">
+      </FormGrid>
+      <FormGrid columns={2}>
         <Field label={labels.baseUrl}><input className="input-field mono" type="url" required value={value.base_url} onChange={(event) => setValue((current) => ({ ...current, base_url: event.target.value }))} /></Field>
         <Field label={labels.model}><input className="input-field mono" required placeholder={value.provider_type === 'openai' ? 'gpt-5-mini' : 'claude-sonnet-4-5'} value={value.model} onChange={(event) => setValue((current) => ({ ...current, model: event.target.value }))} /></Field>
-      </div>
+      </FormGrid>
       <Field label={`${labels.apiKey}${initial ? ` · ${labels.leaveBlank}` : ''}`}><input className="input-field mono" type="password" required={!initial} autoComplete="new-password" value={value.api_key} onChange={(event) => setValue((current) => ({ ...current, api_key: event.target.value }))} /></Field>
-      <div className="split-grid agent-limit-grid">
+      <FormGrid columns={2} className="agent-limit-grid">
         <Field label={labels.timeout}><input className="input-field" type="number" min="1" max="600" value={value.request_timeout_seconds} onChange={(event) => setValue((current) => ({ ...current, request_timeout_seconds: Number(event.target.value) }))} /></Field>
         <Field label={labels.maxOutput}><input className="input-field" type="number" min="1" max="100000" value={value.max_output_tokens} onChange={(event) => setValue((current) => ({ ...current, max_output_tokens: Number(event.target.value) }))} /></Field>
-      </div>
+      </FormGrid>
       <label className="checkbox-label"><input type="checkbox" checked={value.enabled} onChange={(event) => setValue((current) => ({ ...current, enabled: event.target.checked }))} />{labels.providerEnabled}</label>
-      <div className="row-actions">
-        <button className="btn btn-secondary" type="button" onClick={onCancel}>{labels.cancel}</button>
-        <button className="btn btn-primary" type="submit" disabled={saving}><Save />{saving ? labels.saving : labels.saveProvider}</button>
-      </div>
-    </form>
-  </Panel>;
+      <FormActions>
+        <Button variant="secondary" type="button" onClick={onCancel}>{labels.cancel}</Button>
+        <Button variant="primary" type="submit" loading={saving}><Save />{saving ? labels.saving : labels.saveProvider}</Button>
+      </FormActions>
+    </FormLayout>
+  </EditorPanel>;
 }

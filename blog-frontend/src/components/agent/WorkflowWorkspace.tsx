@@ -1,9 +1,9 @@
-import { CirclePause, GitCompareArrows, History, Play, Plus, RotateCcw, Save, TestTube2 } from 'lucide-react';
+import { CirclePause, GitBranch, GitCompareArrows, History, Play, Plus, RotateCcw, Save, TestTube2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { apiFetch } from '../../auth';
 import type { Workflow, WorkflowMetric, WorkflowRun, WorkflowStep } from '../../agent';
-import { Button, EmptyState, Field, Panel, PanelHeader, WorkspacePanel } from '../ui';
+import { Button, EditorPanel, EmptyState, Field, FormActions, FormLayout, PanelHeader, WorkspacePanel } from '../ui';
 
 async function readData<T>(response: Response): Promise<T> {
   const body = await response.json();
@@ -35,10 +35,12 @@ export function WorkflowWorkspace({ workflows, runs, metrics, locale, onMutate, 
     empty: '还没有 Workflow。', add: '创建 Workflow', run: '运行', dry: 'Dry-run', enable: '启用',
     disable: '停用', versions: '版本', rollback: '回滚', input: '运行输入 JSON', steps: '步骤 JSON',
     schema: '输入 Schema', save: '保存 Workflow', cancel: '取消', metrics: '运行 / 失败 / Token',
+    createTitle: '创建 Workflow', editTitle: '编辑 Workflow',
   } : {
     empty: 'No workflows yet.', add: 'Create Workflow', run: 'Run', dry: 'Dry-run', enable: 'Enable',
     disable: 'Disable', versions: 'Versions', rollback: 'Rollback', input: 'Run input JSON', steps: 'Steps JSON',
     schema: 'Input schema', save: 'Save Workflow', cancel: 'Cancel', metrics: 'Runs / failures / tokens',
+    createTitle: 'Create Workflow', editTitle: 'Edit Workflow',
   };
   const metricMap = useMemo(() => new Map(metrics.map((item) => [item.workflow_id, item])), [metrics]);
   const loadVersions = async (workflow: Workflow) => {
@@ -77,5 +79,5 @@ function WorkflowEditor({ initial, labels, onSave, onCancel }: {
     event.preventDefault();
     await onSave({ id: initial?.id, name, description, enabled: initial?.enabled || false, input_schema: JSON.parse(schema), steps: JSON.parse(steps) });
   };
-  return <Panel><form className="form-stack" onSubmit={submit}><Field label="Name"><input className="input-field" required value={name} onChange={(event) => setName(event.target.value)} /></Field><Field label="Description"><input className="input-field" value={description} onChange={(event) => setDescription(event.target.value)} /></Field><Field label={labels.schema}><textarea className="input-field mono" rows={6} value={schema} onChange={(event) => setSchema(event.target.value)} /></Field><Field label={labels.steps}><textarea className="input-field mono" rows={16} value={steps} onChange={(event) => setSteps(event.target.value)} /></Field><div className="row-actions"><button className="btn btn-secondary" type="button" onClick={onCancel}>{labels.cancel}</button><button className="btn btn-primary" type="submit"><Save />{labels.save}</button></div></form></Panel>;
+  return <EditorPanel title={initial ? labels.editTitle : labels.createTitle} icon={<GitBranch />} closeLabel={labels.cancel} onClose={onCancel}><FormLayout onSubmit={submit}><Field label="Name"><input className="input-field" required value={name} onChange={(event) => setName(event.target.value)} /></Field><Field label="Description"><input className="input-field" value={description} onChange={(event) => setDescription(event.target.value)} /></Field><Field label={labels.schema}><textarea className="input-field mono" rows={6} value={schema} onChange={(event) => setSchema(event.target.value)} /></Field><Field label={labels.steps}><textarea className="input-field mono" rows={16} value={steps} onChange={(event) => setSteps(event.target.value)} /></Field><FormActions><Button variant="secondary" type="button" onClick={onCancel}>{labels.cancel}</Button><Button variant="primary" type="submit"><Save />{labels.save}</Button></FormActions></FormLayout></EditorPanel>;
 }

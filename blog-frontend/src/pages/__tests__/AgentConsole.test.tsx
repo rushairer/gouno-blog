@@ -78,6 +78,25 @@ describe('AgentConsole', () => {
     expect(screen.getByLabelText('API Key')).toBeRequired();
   });
 
+  it('closes tab-scoped editors when switching workspaces', async () => {
+    const user = userEvent.setup();
+    renderConsole();
+    expect((await screen.findAllByText('Weekly Operations')).length).toBeGreaterThan(0);
+
+    await user.click(screen.getByRole('button', { name: 'Create Agent' }));
+    expect(screen.getByRole('heading', { name: 'Create Agent' })).toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: 'Skills' }));
+    expect(screen.queryByRole('heading', { name: 'Create Agent' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Skills' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'Workflows' }));
+    await user.click(screen.getByRole('button', { name: 'Create Workflow' }));
+    expect(screen.getByRole('heading', { name: 'Create Workflow' })).toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: 'Providers' }));
+    expect(screen.queryByRole('heading', { name: 'Create Workflow' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Providers' })).toBeInTheDocument();
+  });
+
   it('renders structured content-audit evidence in a run detail', async () => {
     const user = userEvent.setup();
     const run = {

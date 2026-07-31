@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { apiFetch } from '../../auth';
-import { AdminPage, AdminPageHeader, Checkbox, ConfirmDialog, EmptyState, Feedback, FilterBar, LoadingState, Panel, Select, useToast } from '../../components/ui';
+import { AdminPage, AdminPageHeader, Checkbox, ConfirmDialog, ContentStack, EmptyState, Feedback, FilterBar, LoadingState, Panel, Select, useToast } from '../../components/ui';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 
 interface Comment { id: number; post_id: number; author: string; content: string; status: string; is_visible: boolean; report_count?: number; created_at: string }
@@ -34,5 +34,43 @@ export default function AdminComments() {
     setComments((current) => current.filter((item) => item.id !== deleteTarget.id)); setDeleteTarget(null); notify('评论已删除。');
   };
   const setFilter = (key: string, value: string) => { const next = new URLSearchParams(params); if (value) next.set(key, value); else next.delete(key); setParams(next); };
-  return <AdminPage><AdminPageHeader title="评论" description="审核讨论、处理举报，并维护高质量的交流空间。" />{error ? <Feedback type="error">{error}</Feedback> : null}<FilterBar><Select size="compact" aria-label="评论状态" value={status} onChange={(event) => setFilter('status', event.target.value)}><option value="pending">待审核</option><option value="visible">已通过</option><option value="hidden">已隐藏</option><option value="all">全部</option></Select><label className="checkbox-field"><Checkbox checked={reported} onChange={(event) => setFilter('reported', event.target.checked ? 'true' : '')} /> 仅看被举报</label></FilterBar>{loading ? <LoadingState label="正在载入评论…" /> : comments.length === 0 ? <EmptyState label="当前队列已经处理完毕。" /> : <div className="moderation-list">{comments.map((comment) => <Panel key={comment.id}><div className="comment-avatar">{comment.author.slice(0, 1)}</div><div><div><strong>{comment.author}</strong><time>{new Date(comment.created_at).toLocaleString('zh-CN')}</time>{comment.report_count ? <span className="report-label">被举报 {comment.report_count} 次</span> : null}</div><p>{comment.content}</p><small>文章 #{comment.post_id}</small></div><div><button className="btn btn-secondary" onClick={() => void moderate(comment, 'visible')}>通过</button><button className="btn btn-secondary" onClick={() => void moderate(comment, 'hidden')}>隐藏</button><button className="btn btn-danger" onClick={() => setDeleteTarget(comment)}><Trash2 /> 删除</button></div></Panel>)}</div>}<ConfirmDialog open={deleteTarget !== null} title="删除评论" description="确认永久删除这条评论？此操作无法撤销。" confirmLabel="永久删除" danger onClose={() => setDeleteTarget(null)} onConfirm={remove} /></AdminPage>;
+  return (
+    <AdminPage>
+      <AdminPageHeader title="评论" description="审核讨论、处理举报，并维护高质量的交流空间。" />
+      <ContentStack>
+        {error ? <Feedback type="error">{error}</Feedback> : null}
+        <FilterBar>
+          <Select size="compact" aria-label="评论状态" value={status} onChange={(event) => setFilter('status', event.target.value)}>
+            <option value="pending">待审核</option>
+            <option value="visible">已通过</option>
+            <option value="hidden">已隐藏</option>
+            <option value="all">全部</option>
+          </Select>
+          <label className="checkbox-field">
+            <Checkbox checked={reported} onChange={(event) => setFilter('reported', event.target.checked ? 'true' : '')} /> 仅看被举报
+          </label>
+        </FilterBar>
+        {loading ? <LoadingState label="正在载入评论…" /> : comments.length === 0 ? <EmptyState label="当前队列已经处理完毕。" /> : (
+          <div className="moderation-list">
+            {comments.map((comment) => (
+              <Panel key={comment.id}>
+                <div className="comment-avatar">{comment.author.slice(0, 1)}</div>
+                <div>
+                  <div><strong>{comment.author}</strong><time>{new Date(comment.created_at).toLocaleString('zh-CN')}</time>{comment.report_count ? <span className="report-label">被举报 {comment.report_count} 次</span> : null}</div>
+                  <p>{comment.content}</p>
+                  <small>文章 #{comment.post_id}</small>
+                </div>
+                <div>
+                  <button className="btn btn-secondary" onClick={() => void moderate(comment, 'visible')}>通过</button>
+                  <button className="btn btn-secondary" onClick={() => void moderate(comment, 'hidden')}>隐藏</button>
+                  <button className="btn btn-danger" onClick={() => setDeleteTarget(comment)}><Trash2 /> 删除</button>
+                </div>
+              </Panel>
+            ))}
+          </div>
+        )}
+      </ContentStack>
+      <ConfirmDialog open={deleteTarget !== null} title="删除评论" description="确认永久删除这条评论？此操作无法撤销。" confirmLabel="永久删除" danger onClose={() => setDeleteTarget(null)} onConfirm={remove} />
+    </AdminPage>
+  );
 }

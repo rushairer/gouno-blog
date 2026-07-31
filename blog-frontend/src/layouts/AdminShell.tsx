@@ -18,7 +18,6 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const user = getUserProfile();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [search, setSearch] = useState(() => location.pathname === '/admin/posts' ? new URLSearchParams(location.search).get('q') || '' : '');
   const [siteName, setSiteName] = useState(DEFAULT_SITE_SETTINGS.site_title);
   const [theme, setTheme] = useState<'light' | 'dark'>(() =>
@@ -46,7 +45,6 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     event.preventDefault();
     const query = search.trim();
     navigate(query ? `/admin/posts?q=${encodeURIComponent(query)}` : '/admin/posts');
-    setMobileSearchOpen(false);
   };
 
   return (
@@ -74,12 +72,11 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         <header className="admin-topbar">
           <button className="bare-icon admin-menu" type="button" aria-label="切换后台导航" aria-expanded={mobileOpen} aria-controls="admin-sidebar" onClick={() => setMobileOpen(!mobileOpen)}><Menu /></button>
           <div className="breadcrumb"><Link to="/admin/dashboard">后台</Link><span>/</span><strong>{currentLabel(location.pathname)}</strong></div>
-          <form className={`admin-search ${mobileSearchOpen ? 'is-open' : ''}`} role="search" onSubmit={submitSearch}>
+          <form className="admin-search" role="search" onSubmit={submitSearch}>
             <button type="submit" aria-label="提交文章搜索"><Search /></button>
-            <input aria-label="搜索文章" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索文章标题、摘要或正文…" />
+            <input className="admin-search__input" aria-label="搜索文章" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索文章标题、摘要或正文…" />
           </form>
           <div className="admin-topbar-actions">
-            <button className="admin-search-toggle" type="button" onClick={() => setMobileSearchOpen((current) => !current)} aria-label="打开文章搜索" aria-expanded={mobileSearchOpen}><Search /><span>搜索</span></button>
             <Link to="/" target="_blank" rel="noreferrer" aria-label="在新窗口查看前台站点"><ExternalLink /><span>查看站点</span></Link>
             <button className="admin-theme-toggle" type="button" onClick={() => setTheme((current) => current === 'light' ? 'dark' : 'light')} aria-label="切换后台主题" aria-pressed={theme === 'dark'}>
               {theme === 'light' ? <Moon /> : <Sun />}<span>{theme === 'light' ? '深色模式' : '浅色模式'}</span>

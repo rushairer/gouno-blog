@@ -877,13 +877,6 @@ select option {
   flex-wrap: wrap;
 }
 
-.tabs {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 24px;
-}
-
 .mfa-enrollment {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);

@@ -1,8 +1,8 @@
-import { DatabaseZap, Save, X } from 'lucide-react';
+import { DatabaseZap, Save } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import type { EmbeddingProfile } from '../../agent';
-import { Field, Panel } from '../ui';
+import { Button, EditorPanel, Field, FormActions, FormGrid, FormLayout } from '../ui';
 
 export type EmbeddingFormValue = {
   id?: number;
@@ -44,15 +44,14 @@ export function EmbeddingForm({ initial, locale, onSave, onCancel }: {
     event.preventDefault(); setSaving(true);
     try { await onSave(value); } finally { setSaving(false); }
   };
-  return <Panel className="agent-editor-panel">
-    <div className="panel-heading"><h2><DatabaseZap />{labels.title}</h2><button className="icon-button" type="button" onClick={onCancel} aria-label={labels.cancel}><X /></button></div>
-    <form className="form-stack" onSubmit={submit}>
-      <div className="split-grid"><Field label={labels.name}><input className="input-field" required value={value.name} onChange={(event) => setValue((current) => ({ ...current, name: event.target.value }))} /></Field><Field label={labels.model}><input className="input-field mono" required value={value.model} onChange={(event) => setValue((current) => ({ ...current, model: event.target.value }))} /></Field></div>
+  return <EditorPanel title={labels.title} icon={<DatabaseZap />} closeLabel={labels.cancel} onClose={onCancel}>
+    <FormLayout onSubmit={submit}>
+      <FormGrid columns={2}><Field label={labels.name}><input className="input-field" required value={value.name} onChange={(event) => setValue((current) => ({ ...current, name: event.target.value }))} /></Field><Field label={labels.model}><input className="input-field mono" required value={value.model} onChange={(event) => setValue((current) => ({ ...current, model: event.target.value }))} /></Field></FormGrid>
       <Field label={labels.base}><input className="input-field mono" type="url" required value={value.base_url} onChange={(event) => setValue((current) => ({ ...current, base_url: event.target.value }))} /></Field>
       <Field label={`${labels.key}${initial ? ` · ${labels.keep}` : ''}`}><input className="input-field mono" type="password" required={!initial} autoComplete="new-password" value={value.api_key} onChange={(event) => setValue((current) => ({ ...current, api_key: event.target.value }))} /></Field>
-      <div className="split-grid"><Field label={labels.dimensions}><input className="input-field" type="number" min="64" max="4096" value={value.dimensions} onChange={(event) => setValue((current) => ({ ...current, dimensions: Number(event.target.value) }))} /></Field><Field label={labels.timeout}><input className="input-field" type="number" min="1" max="600" value={value.request_timeout_seconds} onChange={(event) => setValue((current) => ({ ...current, request_timeout_seconds: Number(event.target.value) }))} /></Field></div>
+      <FormGrid columns={2}><Field label={labels.dimensions}><input className="input-field" type="number" min="64" max="4096" value={value.dimensions} onChange={(event) => setValue((current) => ({ ...current, dimensions: Number(event.target.value) }))} /></Field><Field label={labels.timeout}><input className="input-field" type="number" min="1" max="600" value={value.request_timeout_seconds} onChange={(event) => setValue((current) => ({ ...current, request_timeout_seconds: Number(event.target.value) }))} /></Field></FormGrid>
       <label className="checkbox-label"><input type="checkbox" checked={value.enabled} onChange={(event) => setValue((current) => ({ ...current, enabled: event.target.checked }))} />{labels.enabled}</label>
-      <div className="row-actions"><button className="btn btn-secondary" type="button" onClick={onCancel}>{labels.cancel}</button><button className="btn btn-primary" type="submit" disabled={saving}><Save />{saving ? labels.saving : labels.save}</button></div>
-    </form>
-  </Panel>;
+      <FormActions><Button variant="secondary" type="button" onClick={onCancel}>{labels.cancel}</Button><Button variant="primary" type="submit" loading={saving}><Save />{saving ? labels.saving : labels.save}</Button></FormActions>
+    </FormLayout>
+  </EditorPanel>;
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowRight, Search, SlidersHorizontal } from 'lucide-react';
-import { EmptyState, LoadingState } from '../components/ui';
+import { ArrowRight, SlidersHorizontal } from 'lucide-react';
+import { EmptyState, LoadingState, SearchField } from '../components/ui';
 import { getCategoryPosts, getPosts, getTags } from '../lib/blog-api';
 import { markdownToPlainText } from '../markdown';
 import type { Post } from '../types/blog';
@@ -42,7 +42,8 @@ export default function ArticleIndex({ mode = 'articles' }: { mode?: 'articles' 
         <aside className="index-filters">
           <h2><SlidersHorizontal /> 筛选</h2>
           <form onSubmit={(event) => { event.preventDefault(); const data = new FormData(event.currentTarget); navigate(`/search?q=${encodeURIComponent(String(data.get('q') || ''))}`); }}>
-            <label htmlFor="article-search">关键词</label><div className="filter-search"><Search /><input id="article-search" name="q" defaultValue={q} /></div>
+            <label htmlFor="article-search">关键词</label>
+            <SearchField id="article-search" name="q" defaultValue={q} size="regular" aria-label="搜索文章" />
           </form>
           <h3>标签</h3>
           <div className="filter-tags"><Link className={!tag ? 'active' : ''} to="/articles">全部</Link>{tags.slice(0, 18).map((item) => <Link className={item === tag ? 'active' : ''} key={item} to={`/tags/${encodeURIComponent(item)}`}>{item}</Link>)}</div>
