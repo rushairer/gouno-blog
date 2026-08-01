@@ -46,35 +46,31 @@ func TestPresetsOnlyUseKnownExecutionModes(t *testing.T) {
 	}
 }
 
-func TestValidateAgentRejectsUnknownCapability(t *testing.T) {
-	service := NewManagementService(nil, nil, nil, []string{"content.list_posts"}, nil)
+func TestValidateAgentRequiresSkillVersion(t *testing.T) {
+	service := NewManagementService(nil, nil, nil, nil, nil)
 	value := &domain.Agent{
-		Name: "test", SystemPrompt: "test", ProviderProfileID: 1,
-		TriggerType: domain.AgentTriggerManual, ExecutionMode: domain.AgentModeAdvisory,
-		MaxSteps: 1, MaxInputTokens: 100, MaxOutputTokens: 100,
+		Name: "test", ProviderProfileID: 1, TriggerType: domain.AgentTriggerManual,
 		DailyRunLimit: 1, MonthlyTokenBudget: 1000,
-		Capabilities: []string{"content.delete_post"},
 	}
 	if err := service.validateAgent(value); err == nil {
-		t.Fatal("expected unknown capability to be rejected")
+		t.Fatal("expected missing Skill Version to be rejected")
 	}
 }
 
-func TestValidateAgentKeepsAdvisoryModeReadOnly(t *testing.T) {
-	service := NewManagementService(
-		nil, nil, nil,
-		[]string{"content.list_posts", "content.propose_update"},
-		[]string{"content.propose_update"},
-	)
-	value := &domain.Agent{
-		Name: "test", SystemPrompt: "test", ProviderProfileID: 1,
-		TriggerType: domain.AgentTriggerManual, ExecutionMode: domain.AgentModeAdvisory,
-		MaxSteps: 1, MaxInputTokens: 100, MaxOutputTokens: 100,
-		DailyRunLimit: 1, MonthlyTokenBudget: 1000,
-		Capabilities: []string{"content.propose_update"},
+func TestValidateOverridesOnlyAllowsTighterSkillLimits(t *testing.T) {
+	skill := &domain.AgentSkill{MaxSteps: 6, MaxInputTokens: 1200, MaxOutputTokens: 400}
+	lowerSteps, lowerInput, lowerOutput := 4, 1000, 300
+	if err := validateOverrides(&domain.Agent{
+		MaxStepsOverride: &lowerSteps, MaxInputTokensOverride: &lowerInput, MaxOutputTokensOverride: &lowerOutput,
+	}, skill); err != nil {
+		t.Fatalf("expected tighter overrides to be accepted: %v", err)
 	}
-	if err := service.validateAgent(value); err == nil {
-		t.Fatal("expected proposal capability to be rejected in advisory mode")
+	if err := validateOverrides(&domain.Agent{}, skill); err != nil {
+		t.Fatalf("expected inherited Skill limits to be accepted: %v", err)
+	}
+	higherSteps := 7
+	if err := validateOverrides(&domain.Agent{MaxStepsOverride: &higherSteps}, skill); err == nil {
+		t.Fatal("expected an override above the bound Skill limit to be rejected")
 	}
 }
 
@@ -83,7 +79,7 @@ func TestValidateSkillRejectsProposalCapabilityInAdvisoryMode(t *testing.T) {
 	err := service.validateSkill(&domain.AgentSkill{
 		Name: "safe", SystemPrompt: "review", Capabilities: []string{"content.propose_update"},
 		ExecutionMode: domain.AgentModeAdvisory, MaxSteps: 1, MaxInputTokens: 100, MaxOutputTokens: 100,
-		DailyRunLimit: 1, MonthlyTokenBudget: 1000,
+		DefaultDailyRunLimit: 1, DefaultMonthlyTokenBudget: 1000,
 	})
 	if err == nil {
 		t.Fatal("expected proposal capability to be rejected")

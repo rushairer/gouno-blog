@@ -172,7 +172,21 @@ func (s *ManagementService) TestProvider(ctx context.Context, id int64) (time.Du
 }
 
 func (s *ManagementService) ListAgents(ctx context.Context) ([]*domain.Agent, error) {
-	return s.repo.ListAgents(ctx)
+	items, err := s.repo.ListAgents(ctx)
+	if err != nil {
+		return nil, translateError(err)
+	}
+	for _, item := range items {
+		if item.SkillVersionID == nil {
+			return nil, fmt.Errorf("%w: Agent %d has no locked Skill version", ErrInvalid, item.ID)
+		}
+		skill, err := s.GetSkillVersion(ctx, *item.SkillVersionID)
+		if err != nil {
+			return nil, err
+		}
+		item.Skill = skill
+	}
+	return items, nil
 }
 
 func (s *ManagementService) ListSkills(ctx context.Context) ([]*domain.AgentSkill, error) {
@@ -197,11 +211,14 @@ func (s *ManagementService) SaveSkill(ctx context.Context, value *domain.AgentSk
 	if value.MaxOutputTokens == 0 {
 		value.MaxOutputTokens = 2000
 	}
-	if value.DailyRunLimit == 0 {
-		value.DailyRunLimit = 10
+	if value.DefaultDailyRunLimit == 0 {
+		value.DefaultDailyRunLimit = 10
 	}
-	if value.MonthlyTokenBudget == 0 {
-		value.MonthlyTokenBudget = 1000000
+	if value.DefaultMonthlyTokenBudget == 0 {
+		value.DefaultMonthlyTokenBudget = 1000000
+	}
+	if value.ContentPublishMode == "" {
+		value.ContentPublishMode = domain.ContentPublishApproval
 	}
 	if len(value.InputSchema) == 0 {
 		value.InputSchema = json.RawMessage(`{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false}`)
@@ -225,13 +242,10 @@ func (s *ManagementService) validateSkill(value *domain.AgentSkill) error {
 	if value.Name == "" || value.SystemPrompt == "" {
 		return fmt.Errorf("%w: name and system prompt are required", ErrInvalid)
 	}
-	agent := &domain.Agent{Capabilities: value.Capabilities, ExecutionMode: value.ExecutionMode,
-		MaxSteps: value.MaxSteps, MaxInputTokens: value.MaxInputTokens, MaxOutputTokens: value.MaxOutputTokens,
-		DailyRunLimit: value.DailyRunLimit, MonthlyTokenBudget: value.MonthlyTokenBudget}
-	if agent.ExecutionMode != domain.AgentModeAdvisory && agent.ExecutionMode != domain.AgentModeApproval {
+	if value.ExecutionMode != domain.AgentModeAdvisory && value.ExecutionMode != domain.AgentModeApproval {
 		return fmt.Errorf("%w: invalid execution mode", ErrInvalid)
 	}
-	if agent.MaxSteps < 1 || agent.MaxSteps > 20 || agent.MaxInputTokens < 1 || agent.MaxOutputTokens < 1 || agent.DailyRunLimit < 1 || agent.MonthlyTokenBudget < 1 {
+	if value.MaxSteps < 1 || value.MaxSteps > 20 || value.MaxInputTokens < 1 || value.MaxOutputTokens < 1 || value.DefaultDailyRunLimit < 1 || value.DefaultMonthlyTokenBudget < 1 {
 		return fmt.Errorf("%w: invalid run limits", ErrInvalid)
 	}
 	if len(value.InputSchema) > 32<<10 || !json.Valid(value.InputSchema) {
@@ -256,12 +270,15 @@ func (s *ManagementService) validateSkill(value *domain.AgentSkill) error {
 	if len(seenTriggers) == 0 {
 		return fmt.Errorf("%w: at least one skill trigger is required", ErrInvalid)
 	}
-	seen := make(map[string]struct{}, len(agent.Capabilities))
-	for _, capability := range agent.Capabilities {
+	if value.ContentPublishMode != domain.ContentPublishDraft && value.ContentPublishMode != domain.ContentPublishApproval && value.ContentPublishMode != domain.ContentPublishPublish {
+		return fmt.Errorf("%w: invalid content publication mode", ErrInvalid)
+	}
+	seen := make(map[string]struct{}, len(value.Capabilities))
+	for _, capability := range value.Capabilities {
 		if strings.TrimSpace(capability) == "" || !slices.Contains(s.allowedCapabilities, capability) {
 			return fmt.Errorf("%w: unknown capability %q", ErrInvalid, capability)
 		}
-		if agent.ExecutionMode == domain.AgentModeAdvisory && slices.Contains(s.proposalCapabilities, capability) {
+		if value.ExecutionMode == domain.AgentModeAdvisory && slices.Contains(s.proposalCapabilities, capability) {
 			return fmt.Errorf("%w: advisory skills cannot use proposal capability %q", ErrInvalid, capability)
 		}
 		if _, exists := seen[capability]; exists {
@@ -292,11 +309,16 @@ func (s *ManagementService) SaveAgentAsSkill(ctx context.Context, agentID int64,
 	if err != nil {
 		return nil, err
 	}
+	skillVersion, err := s.GetSkillVersion(ctx, *value.SkillVersionID)
+	if err != nil {
+		return nil, err
+	}
 	skill := &domain.AgentSkill{
-		Name: strings.TrimSpace(name), Description: value.Description, SystemPrompt: value.SystemPrompt,
-		Capabilities: slices.Clone(value.Capabilities), ExecutionMode: value.ExecutionMode,
-		MaxSteps: value.MaxSteps, MaxInputTokens: value.MaxInputTokens, MaxOutputTokens: value.MaxOutputTokens,
-		DailyRunLimit: value.DailyRunLimit, MonthlyTokenBudget: value.MonthlyTokenBudget,
+		Name: strings.TrimSpace(name), Description: value.Description, SystemPrompt: skillVersion.SystemPrompt,
+		Capabilities: slices.Clone(skillVersion.Capabilities), ExecutionMode: skillVersion.ExecutionMode,
+		ContentPublishMode: skillVersion.ContentPublishMode,
+		MaxSteps:           skillVersion.MaxSteps, MaxInputTokens: skillVersion.MaxInputTokens, MaxOutputTokens: skillVersion.MaxOutputTokens,
+		DefaultDailyRunLimit: value.DailyRunLimit, DefaultMonthlyTokenBudget: value.MonthlyTokenBudget,
 		AllowedTriggers: []domain.AgentTriggerType{domain.AgentTriggerManual, domain.AgentTriggerCron},
 		CreatedBy:       createdBy,
 	}
@@ -326,36 +348,31 @@ func (s *ManagementService) BootstrapStarterPack(ctx context.Context) (int, erro
 
 func (s *ManagementService) GetAgent(ctx context.Context, id int64) (*domain.Agent, error) {
 	value, err := s.repo.GetAgent(ctx, id)
-	return value, translateError(err)
+	if err != nil {
+		return value, translateError(err)
+	}
+	if value.SkillVersionID == nil {
+		return nil, fmt.Errorf("%w: Agent has no locked Skill version", ErrInvalid)
+	}
+	skill, err := s.GetSkillVersion(ctx, *value.SkillVersionID)
+	if err != nil {
+		return nil, err
+	}
+	value.Skill = skill
+	return value, nil
 }
 
 func (s *ManagementService) SaveAgent(ctx context.Context, value *domain.Agent) error {
 	value.Name = strings.TrimSpace(value.Name)
 	value.Description = strings.TrimSpace(value.Description)
-	value.SystemPrompt = strings.TrimSpace(value.SystemPrompt)
 	if value.Timezone == "" {
 		value.Timezone = "Asia/Shanghai"
-	}
-	if value.MaxSteps == 0 {
-		value.MaxSteps = 6
-	}
-	if value.MaxInputTokens == 0 {
-		value.MaxInputTokens = 16000
-	}
-	if value.MaxOutputTokens == 0 {
-		value.MaxOutputTokens = 2000
 	}
 	if value.DailyRunLimit == 0 {
 		value.DailyRunLimit = 10
 	}
 	if value.MonthlyTokenBudget == 0 {
 		value.MonthlyTokenBudget = 1000000
-	}
-	if value.ExecutionMode == "" {
-		value.ExecutionMode = domain.AgentModeAdvisory
-	}
-	if value.ContentPublishMode == "" {
-		value.ContentPublishMode = domain.ContentPublishApproval
 	}
 	if value.TriggerType == "" {
 		value.TriggerType = domain.AgentTriggerManual
@@ -374,18 +391,15 @@ func (s *ManagementService) SaveAgent(ctx context.Context, value *domain.Agent) 
 	if _, err := s.repo.GetProvider(ctx, value.ProviderProfileID); err != nil {
 		return translateError(err)
 	}
-	if value.SkillVersionID != nil {
-		skill, err := s.GetSkillVersion(ctx, *value.SkillVersionID)
-		if err != nil {
-			return err
-		}
-		if !slices.Contains(skill.AllowedTriggers, value.TriggerType) ||
-			skill.SystemPrompt != value.SystemPrompt || skill.ExecutionMode != value.ExecutionMode ||
-			!slices.Equal(skill.Capabilities, value.Capabilities) || skill.MaxSteps != value.MaxSteps ||
-			skill.MaxInputTokens != value.MaxInputTokens || skill.MaxOutputTokens != value.MaxOutputTokens ||
-			skill.DailyRunLimit != value.DailyRunLimit || skill.MonthlyTokenBudget != value.MonthlyTokenBudget {
-			return fmt.Errorf("%w: agent configuration does not match its locked skill version", ErrInvalid)
-		}
+	skill, err := s.GetSkillVersion(ctx, *value.SkillVersionID)
+	if err != nil {
+		return err
+	}
+	if !slices.Contains(skill.AllowedTriggers, value.TriggerType) {
+		return fmt.Errorf("%w: trigger is not allowed by the bound Skill version", ErrInvalid)
+	}
+	if err := validateOverrides(value, skill); err != nil {
+		return err
 	}
 	var saveErr error
 	if value.ID == 0 {
@@ -397,8 +411,8 @@ func (s *ManagementService) SaveAgent(ctx context.Context, value *domain.Agent) 
 }
 
 func (s *ManagementService) validateAgent(value *domain.Agent) error {
-	if value.Name == "" || value.SystemPrompt == "" || value.ProviderProfileID <= 0 {
-		return fmt.Errorf("%w: name, system prompt and provider are required", ErrInvalid)
+	if value.Name == "" || value.ProviderProfileID <= 0 || value.SkillVersionID == nil || *value.SkillVersionID <= 0 {
+		return fmt.Errorf("%w: name, Skill version and provider are required", ErrInvalid)
 	}
 	if value.TriggerType != domain.AgentTriggerManual && value.TriggerType != domain.AgentTriggerCron {
 		return fmt.Errorf("%w: invalid trigger type", ErrInvalid)
@@ -410,37 +424,26 @@ func (s *ManagementService) validateAgent(value *domain.Agent) error {
 		value.CronExpression = nil
 		value.NextRunAt = nil
 	}
-	if value.ExecutionMode != domain.AgentModeAdvisory && value.ExecutionMode != domain.AgentModeApproval {
-		return fmt.Errorf("%w: invalid execution mode", ErrInvalid)
-	}
-	if value.ContentPublishMode != domain.ContentPublishDraft && value.ContentPublishMode != domain.ContentPublishApproval && value.ContentPublishMode != domain.ContentPublishPublish {
-		return fmt.Errorf("%w: invalid content publication mode", ErrInvalid)
-	}
-	if value.MaxSteps < 1 || value.MaxSteps > 20 || value.MaxInputTokens < 1 ||
-		value.MaxOutputTokens < 1 || value.DailyRunLimit < 1 || value.MonthlyTokenBudget < 1 {
+	if value.DailyRunLimit < 1 || value.MonthlyTokenBudget < 1 {
 		return fmt.Errorf("%w: invalid run limits", ErrInvalid)
 	}
-	seen := make(map[string]struct{}, len(value.Capabilities))
-	for _, capability := range value.Capabilities {
-		if strings.TrimSpace(capability) == "" {
-			return fmt.Errorf("%w: empty capability", ErrInvalid)
-		}
-		if !slices.Contains(s.allowedCapabilities, capability) {
-			return fmt.Errorf("%w: unknown capability %q", ErrInvalid, capability)
-		}
-		if value.ExecutionMode == domain.AgentModeAdvisory && slices.Contains(s.proposalCapabilities, capability) {
-			return fmt.Errorf("%w: advisory agents cannot use proposal capability %q", ErrInvalid, capability)
-		}
-		if value.ExecutionMode == domain.AgentModeAdvisory && capability == "content.create_post" {
-			return fmt.Errorf("%w: advisory agents cannot create content", ErrInvalid)
-		}
-		if _, exists := seen[capability]; exists {
-			return fmt.Errorf("%w: duplicate capability", ErrInvalid)
-		}
-		seen[capability] = struct{}{}
+	return nil
+}
+
+func validateOverrides(agent *domain.Agent, skill *domain.AgentSkill) error {
+	checks := []struct {
+		value *int
+		limit int
+		name  string
+	}{
+		{agent.MaxStepsOverride, skill.MaxSteps, "max_steps_override"},
+		{agent.MaxInputTokensOverride, skill.MaxInputTokens, "max_input_tokens_override"},
+		{agent.MaxOutputTokensOverride, skill.MaxOutputTokens, "max_output_tokens_override"},
 	}
-	if value.ContentPublishMode != domain.ContentPublishApproval && !slices.Contains(value.Capabilities, "content.create_post") {
-		return fmt.Errorf("%w: content publication policy requires content.create_post", ErrInvalid)
+	for _, check := range checks {
+		if check.value != nil && (*check.value < 1 || *check.value > check.limit) {
+			return fmt.Errorf("%w: %s may only tighten the bound Skill limit", ErrInvalid, check.name)
+		}
 	}
 	return nil
 }

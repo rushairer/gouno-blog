@@ -83,6 +83,23 @@ func TestUpAppliesCurrentSchemaAndIsIdempotent(t *testing.T) {
 	if workflows != 4 {
 		t.Fatalf("expected 4 starter Workflows, got %d", workflows)
 	}
+	var duplicatedAgentBehavior bool
+	if err := db.QueryRowContext(ctx, `SELECT EXISTS (
+		SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='ai_agents'
+		AND column_name IN ('system_prompt','capabilities','execution_mode','content_publish_mode','max_steps','max_input_tokens','max_output_tokens')
+	)`).Scan(&duplicatedAgentBehavior); err != nil {
+		t.Fatal(err)
+	}
+	if duplicatedAgentBehavior {
+		t.Fatal("Agent behavior must be owned by Skill Versions, not ai_agents")
+	}
+	var unboundAgents int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_agents WHERE skill_version_id IS NULL`).Scan(&unboundAgents); err != nil {
+		t.Fatal(err)
+	}
+	if unboundAgents != 0 {
+		t.Fatalf("expected every Agent to bind a Skill Version, got %d unbound", unboundAgents)
+	}
 	for _, trigger := range []string{"posts_search_document_update", "ai_content_chunks_search_vector_update"} {
 		var exists bool
 		if err := db.QueryRowContext(ctx, `SELECT EXISTS (

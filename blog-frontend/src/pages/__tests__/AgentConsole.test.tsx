@@ -25,10 +25,9 @@ function responseFor(url: string) {
   if (url === '/api/admin/embedding-profiles') return [];
   if (url === '/api/admin/ai-index/status') return { queued: 0, failed: 0, chunks: 0 };
   if (url === '/api/admin/agents') return [{
-    id: 1, name: 'Weekly Operations', description: 'Weekly report', system_prompt: 'Report',
-    provider_profile_id: 1, enabled: true, trigger_type: 'manual', timezone: 'Asia/Shanghai',
-    capabilities: ['content.list_posts'], execution_mode: 'advisory', max_steps: 6,
-    max_input_tokens: 16000, max_output_tokens: 2000, daily_run_limit: 10,
+    id: 1, name: 'Weekly Operations', description: 'Weekly report', provider_profile_id: 1, skill_version_id: 1,
+    skill: { id: 1, name: 'Weekly Operations', description: 'Weekly report', system_prompt: 'Report', capabilities: ['content.list_posts'], execution_mode: 'advisory', content_publish_mode: 'approval', max_steps: 6, max_input_tokens: 16000, max_output_tokens: 2000, default_daily_run_limit: 10, default_monthly_token_budget: 1000000, version: 1, version_id: 1, input_schema: { type: 'object' }, allowed_triggers: ['manual'], created_at: '2026-07-30T00:00:00Z', updated_at: '2026-07-30T00:00:00Z' },
+    enabled: true, trigger_type: 'manual', timezone: 'Asia/Shanghai', daily_run_limit: 10,
     monthly_token_budget: 1000000, created_at: '2026-07-30T00:00:00Z', updated_at: '2026-07-30T00:00:00Z',
   }];
   if (url.startsWith('/api/admin/agent-runs')) return { list: [] };
@@ -36,7 +35,6 @@ function responseFor(url: string) {
   if (url === '/api/admin/agent-tools') return [{
     name: 'content.list_posts', description: 'List posts', parameters: {}, risk_level: 'read',
   }];
-  if (url === '/api/admin/agent-presets') return [];
   if (url === '/api/admin/agent-skills') return [];
   if (url === '/api/admin/ai-workflows') return [];
   if (url === '/api/admin/ai-workflow-runs') return [];
@@ -60,16 +58,16 @@ describe('AgentConsole', () => {
     vi.mocked(apiFetch).mockImplementation(async (input) => Response.json({ data: responseFor(input.toString()) }));
   });
 
-  it('loads agents, providers, runs, approvals, tools, and presets in parallel', async () => {
+  it('loads agents, providers, runs, approvals, and tools in parallel', async () => {
     renderConsole();
     expect(await screen.findByRole('heading', { name: 'Start with what you want to improve' })).toBeInTheDocument();
-    await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(16));
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(15));
     await userEvent.setup().click(screen.getByRole('tab', { name: 'Advanced settings' }));
     expect(screen.getAllByText('Weekly Operations').length).toBeGreaterThan(0);
     expect(screen.getByText('gpt-5-mini')).toBeInTheDocument();
   });
 
-  it('opens modal to save an agent as a reusable skill', async () => {
+  it('opens modal to copy an agent bound Skill Version', async () => {
     const user = userEvent.setup();
     vi.mocked(apiFetch).mockImplementation(async (input, init) => {
       const url = input.toString();
@@ -83,15 +81,15 @@ describe('AgentConsole', () => {
     await user.click(screen.getByRole('tab', { name: 'Advanced settings' }));
     expect(screen.getAllByText('Weekly Operations').length).toBeGreaterThan(0);
 
-    const extractBtn = screen.getAllByRole('button', { name: 'Save as Skill' })[0];
+    const extractBtn = screen.getAllByRole('button', { name: 'Copy as Skill' })[0];
     await user.click(extractBtn);
 
     const dialog = screen.getByRole('dialog');
     expect(dialog).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Save Agent as Reusable Skill' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Copy Bound Skill Version' })).toBeInTheDocument();
     expect(screen.getByLabelText('Skill Name')).toHaveValue('Weekly Operations Skill');
 
-    await user.click(within(dialog).getByRole('button', { name: 'Save as Skill' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Confirm copy' }));
     await waitFor(() => {
       expect(apiFetch).toHaveBeenCalledWith('/api/admin/agents/1/save-as-skill', expect.objectContaining({
         method: 'POST',
@@ -170,6 +168,7 @@ describe('AgentConsole', () => {
     renderConsole();
     await screen.findByRole('tab', { name: 'Results & records' });
     await user.click(screen.getByRole('tab', { name: 'Results & records' }));
+    await user.click(screen.getByRole('tab', { name: 'Agent runs' }));
     await user.click(screen.getByText('Weekly Operations'));
     expect(await screen.findByRole('heading', { name: 'Execution log for this run' })).toBeInTheDocument();
     expect(screen.getByText('Every step belongs to the selected run above. Expand a step to inspect its input, result, and errors.')).toBeInTheDocument();

@@ -79,8 +79,8 @@ const (
 	AgentModeApproval AgentExecutionMode = "approval"
 )
 
-// ContentPublishMode is an Agent-owned execution policy. A model may request
-// content.create_post, but it can never select or escalate this policy.
+// ContentPublishMode is a Skill-owned execution policy. A model may request
+// content.create_post, but neither the model nor an Agent can select or escalate it.
 type ContentPublishMode string
 
 const (
@@ -90,56 +90,54 @@ const (
 )
 
 type Agent struct {
-	ID                 int64              `json:"id"`
-	SystemKey          *string            `json:"system_key,omitempty"`
-	Name               string             `json:"name"`
-	Description        string             `json:"description"`
-	SystemPrompt       string             `json:"system_prompt"`
-	ProviderProfileID  int64              `json:"provider_profile_id"`
-	SkillVersionID     *int64             `json:"skill_version_id,omitempty"`
-	ProviderProfile    *ProviderProfile   `json:"provider_profile,omitempty"`
-	Enabled            bool               `json:"enabled"`
-	TriggerType        AgentTriggerType   `json:"trigger_type"`
-	CronExpression     *string            `json:"cron_expression,omitempty"`
-	Timezone           string             `json:"timezone"`
-	Capabilities       []string           `json:"capabilities"`
-	ExecutionMode      AgentExecutionMode `json:"execution_mode"`
-	ContentPublishMode ContentPublishMode `json:"content_publish_mode"`
-	MaxSteps           int                `json:"max_steps"`
-	MaxInputTokens     int                `json:"max_input_tokens"`
-	MaxOutputTokens    int                `json:"max_output_tokens"`
-	DailyRunLimit      int                `json:"daily_run_limit"`
-	MonthlyTokenBudget int64              `json:"monthly_token_budget"`
-	LastRunAt          *time.Time         `json:"last_run_at,omitempty"`
-	NextRunAt          *time.Time         `json:"next_run_at,omitempty"`
-	CreatedBy          *string            `json:"created_by,omitempty"`
-	CreatedAt          time.Time          `json:"created_at"`
-	UpdatedAt          time.Time          `json:"updated_at"`
+	ID                      int64            `json:"id"`
+	SystemKey               *string          `json:"system_key,omitempty"`
+	Name                    string           `json:"name"`
+	Description             string           `json:"description"`
+	ProviderProfileID       int64            `json:"provider_profile_id"`
+	SkillVersionID          *int64           `json:"skill_version_id,omitempty"`
+	Skill                   *AgentSkill      `json:"skill,omitempty"`
+	ProviderProfile         *ProviderProfile `json:"provider_profile,omitempty"`
+	Enabled                 bool             `json:"enabled"`
+	TriggerType             AgentTriggerType `json:"trigger_type"`
+	CronExpression          *string          `json:"cron_expression,omitempty"`
+	Timezone                string           `json:"timezone"`
+	MaxStepsOverride        *int             `json:"max_steps_override,omitempty"`
+	MaxInputTokensOverride  *int             `json:"max_input_tokens_override,omitempty"`
+	MaxOutputTokensOverride *int             `json:"max_output_tokens_override,omitempty"`
+	DailyRunLimit           int              `json:"daily_run_limit"`
+	MonthlyTokenBudget      int64            `json:"monthly_token_budget"`
+	LastRunAt               *time.Time       `json:"last_run_at,omitempty"`
+	NextRunAt               *time.Time       `json:"next_run_at,omitempty"`
+	CreatedBy               *string          `json:"created_by,omitempty"`
+	CreatedAt               time.Time        `json:"created_at"`
+	UpdatedAt               time.Time        `json:"updated_at"`
 }
 
 // AgentSkill is a versioned, non-executable template for safe Agent
 // configuration. It deliberately contains no provider credential or arbitrary
 // code: an Agent chooses its Provider and remains subject to normal approval.
 type AgentSkill struct {
-	ID                 int64              `json:"id"`
-	SystemKey          *string            `json:"system_key,omitempty"`
-	Name               string             `json:"name"`
-	Description        string             `json:"description"`
-	SystemPrompt       string             `json:"system_prompt"`
-	Capabilities       []string           `json:"capabilities"`
-	ExecutionMode      AgentExecutionMode `json:"execution_mode"`
-	MaxSteps           int                `json:"max_steps"`
-	MaxInputTokens     int                `json:"max_input_tokens"`
-	MaxOutputTokens    int                `json:"max_output_tokens"`
-	DailyRunLimit      int                `json:"daily_run_limit"`
-	MonthlyTokenBudget int64              `json:"monthly_token_budget"`
-	Version            int                `json:"version"`
-	VersionID          int64              `json:"version_id"`
-	InputSchema        json.RawMessage    `json:"input_schema"`
-	AllowedTriggers    []AgentTriggerType `json:"allowed_triggers"`
-	CreatedBy          *string            `json:"created_by,omitempty"`
-	CreatedAt          time.Time          `json:"created_at"`
-	UpdatedAt          time.Time          `json:"updated_at"`
+	ID                        int64              `json:"id"`
+	SystemKey                 *string            `json:"system_key,omitempty"`
+	Name                      string             `json:"name"`
+	Description               string             `json:"description"`
+	SystemPrompt              string             `json:"system_prompt"`
+	Capabilities              []string           `json:"capabilities"`
+	ExecutionMode             AgentExecutionMode `json:"execution_mode"`
+	ContentPublishMode        ContentPublishMode `json:"content_publish_mode"`
+	MaxSteps                  int                `json:"max_steps"`
+	MaxInputTokens            int                `json:"max_input_tokens"`
+	MaxOutputTokens           int                `json:"max_output_tokens"`
+	DefaultDailyRunLimit      int                `json:"default_daily_run_limit"`
+	DefaultMonthlyTokenBudget int64              `json:"default_monthly_token_budget"`
+	Version                   int                `json:"version"`
+	VersionID                 int64              `json:"version_id"`
+	InputSchema               json.RawMessage    `json:"input_schema"`
+	AllowedTriggers           []AgentTriggerType `json:"allowed_triggers"`
+	CreatedBy                 *string            `json:"created_by,omitempty"`
+	CreatedAt                 time.Time          `json:"created_at"`
+	UpdatedAt                 time.Time          `json:"updated_at"`
 }
 
 type AgentRunStatus string

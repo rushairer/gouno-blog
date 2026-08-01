@@ -194,19 +194,16 @@ export interface Agent {
   system_key?: string;
   name: string;
   description: string;
-  system_prompt: string;
   provider_profile_id: number;
-  skill_version_id?: number;
+  skill_version_id: number;
+  skill?: AgentSkill;
   enabled: boolean;
   trigger_type: TriggerType;
   cron_expression?: string;
   timezone: string;
-  capabilities: string[];
-  execution_mode: ExecutionMode;
-  content_publish_mode: ContentPublishMode;
-  max_steps: number;
-  max_input_tokens: number;
-  max_output_tokens: number;
+  max_steps_override?: number;
+  max_input_tokens_override?: number;
+  max_output_tokens_override?: number;
   daily_run_limit: number;
   monthly_token_budget: number;
   last_run_at?: string;
@@ -223,11 +220,12 @@ export interface AgentSkill {
   system_prompt: string;
   capabilities: string[];
   execution_mode: ExecutionMode;
+  content_publish_mode: ContentPublishMode;
   max_steps: number;
   max_input_tokens: number;
   max_output_tokens: number;
-  daily_run_limit: number;
-  monthly_token_budget: number;
+  default_daily_run_limit: number;
+  default_monthly_token_budget: number;
   version: number;
   version_id: number;
   input_schema: Record<string, unknown>;
@@ -320,17 +318,11 @@ export function emptyAgent(providerID = 0): Omit<Agent, 'id' | 'created_at' | 'u
   return {
     name: '',
     description: '',
-    system_prompt: '',
     provider_profile_id: providerID,
+    skill_version_id: 0,
     enabled: false,
     trigger_type: 'manual',
     timezone: 'Asia/Shanghai',
-    capabilities: [],
-    execution_mode: 'advisory',
-    content_publish_mode: 'approval',
-    max_steps: 6,
-    max_input_tokens: 16000,
-    max_output_tokens: 2000,
     daily_run_limit: 10,
     monthly_token_budget: 1000000,
   };

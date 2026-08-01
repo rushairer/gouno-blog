@@ -47,7 +47,7 @@ type workflowDraftRequest struct {
 // workflowPlannerPrompt is versioned alongside the executable workflow
 // contract. Product changes must update this prompt and the validator together;
 // the model never gets authority to create, enable, or run a workflow.
-const workflowPlannerPrompt = `You are workflow-planner/v1 for a blog administration product. Return only valid JSON with name, description, input_schema, and steps. Convert the user's goal into a small, safe workflow draft. Use only the supplied Agent IDs, and only model, approval_gate, and output steps. A model step must use one supplied Agent ID and an input_pointer beginning with /input. Include one approval_gate after any model step whose Agent execution_mode is approval. Finish with one output step whose output_pointer references a preceding step, for example /steps/analyze. Input schema must be a JSON Schema object with type object and additionalProperties false. Keep at most 5 steps. Do not create, enable, run, publish, or modify anything. Do not use Markdown or explanation.`
+const workflowPlannerPrompt = `You are workflow-planner/v1 for a blog administration product. Return only valid JSON with name, description, input_schema, and steps. Convert the user's goal into a small, safe workflow draft. Use only the supplied Agent IDs, and only model, approval_gate, and output steps. A model step must use one supplied Agent ID and an input_pointer beginning with /input. Include one approval_gate after any model step whose bound Skill Version execution_mode is approval. Finish with one output step whose output_pointer references a preceding step, for example /steps/analyze. Input schema must be a JSON Schema object with type object and additionalProperties false. Keep at most 5 steps. Do not create, enable, run, publish, or modify anything. Do not use Markdown or explanation.`
 
 // DraftWorkflow asks the default writing model to prepare a portable workflow
 // definition. It never persists the result; users review it in the editor.
@@ -86,7 +86,11 @@ func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
 	available := make([]map[string]any, 0, len(agents))
 	for _, agent := range agents {
 		if agent.Enabled && agent.SkillVersionID != nil {
-			available = append(available, map[string]any{"id": agent.ID, "name": agent.Name, "description": agent.Description, "execution_mode": agent.ExecutionMode, "capabilities": agent.Capabilities})
+			item := map[string]any{"id": agent.ID, "name": agent.Name, "description": agent.Description, "skill_version_id": agent.SkillVersionID}
+			if agent.Skill != nil {
+				item["execution_mode"] = agent.Skill.ExecutionMode
+			}
+			available = append(available, item)
 		}
 	}
 	if len(available) == 0 {

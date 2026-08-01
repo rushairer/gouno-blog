@@ -38,12 +38,15 @@ func TestDeleteProviderRevokesCredentialAfterAgentSoftDelete(t *testing.T) {
 		_, _ = db.ExecContext(ctx, `DELETE FROM ai_provider_profiles WHERE id=$1`, profile.ID)
 	}()
 
+	var skillVersionID int64
+	if err := db.QueryRowContext(ctx, `SELECT id FROM ai_skill_versions ORDER BY id LIMIT 1`).Scan(&skillVersionID); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := db.ExecContext(ctx, `INSERT INTO ai_agents
-		(name, description, system_prompt, provider_profile_id, enabled, trigger_type, timezone,
-		 capabilities, execution_mode, max_steps, max_input_tokens, max_output_tokens, daily_run_limit,
-		 monthly_token_budget, deleted_at)
-		VALUES ($1, '', 'test', $2, false, 'manual', 'Asia/Shanghai', '[]', 'advisory', 1, 128, 32, 1, 100, NOW())`,
-		name+"-agent", profile.ID); err != nil {
+		(name, description, provider_profile_id, skill_version_id, enabled, trigger_type, timezone,
+		 daily_run_limit, monthly_token_budget, deleted_at)
+		VALUES ($1, '', $2, $3, false, 'manual', 'Asia/Shanghai', 1, 100, NOW())`,
+		name+"-agent", profile.ID, skillVersionID); err != nil {
 		t.Fatal(err)
 	}
 	if err := repo.DeleteProvider(ctx, profile.ID); err != nil {

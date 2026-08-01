@@ -83,7 +83,18 @@ func (r *Runner) queue(ctx context.Context, agentID int64, trigger domain.AgentT
 	if !value.Enabled {
 		return nil, fmt.Errorf("%w: agent is disabled", ErrInvalid)
 	}
-	if len(input) > value.MaxInputTokens*4 {
+	if value.SkillVersionID == nil {
+		return nil, fmt.Errorf("%w: agent has no locked Skill version", ErrInvalid)
+	}
+	skill, err := r.management.GetSkillVersion(ctx, *value.SkillVersionID)
+	if err != nil {
+		return nil, err
+	}
+	if !slices.Contains(skill.AllowedTriggers, trigger) {
+		return nil, fmt.Errorf("%w: trigger is not allowed by the locked Skill version", ErrInvalid)
+	}
+	limits := effectiveLimits(value, skill)
+	if len(input) > limits.maxInputTokens*4 {
 		return nil, fmt.Errorf("%w: runtime input exceeds the agent input limit", ErrInvalid)
 	}
 	profile, err := r.management.GetProvider(ctx, value.ProviderProfileID)
@@ -193,6 +204,14 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 	if err != nil {
 		return err
 	}
+	if run.SkillVersionID == nil {
+		return fmt.Errorf("%w: run has no locked Skill version", ErrInvalid)
+	}
+	skill, err := r.management.GetSkillVersion(ctx, *run.SkillVersionID)
+	if err != nil {
+		return err
+	}
+	limits := effectiveLimits(value, skill)
 	client, err := r.management.ProviderClient(ctx, value.ProviderProfileID)
 	if err != nil {
 		return err
@@ -210,10 +229,10 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 	finalText := ""
 	citationLedger := make(map[string]domain.AgentCitation)
 	toolCallCounts := make(map[string]int)
-	for step := 0; step < value.MaxSteps; step++ {
+	for step := 0; step < limits.maxSteps; step++ {
 		if approximateInputBytes(
-			platformInstructions+"\n\nAgent instructions:\n"+value.SystemPrompt, messages,
-		) > value.MaxInputTokens*4 {
+			platformInstructions+"\n\nAgent instructions:\n"+skill.SystemPrompt, messages,
+		) > limits.maxInputTokens*4 {
 			return fmt.Errorf("%w: assembled model input exceeds the agent input limit", ErrInvalid)
 		}
 		usedTokens, err := r.repo.MonthlyTokenUsage(ctx, value.ID)
@@ -225,9 +244,9 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 			return ErrTokenBudget
 		}
 		requestID := fmt.Sprintf("run_%d_step_%d_%d", run.ID, step+1, time.Now().UnixNano())
-		instructions := platformInstructions + contentPublicationInstruction(value.ContentPublishMode) + "\n\nAgent instructions:\n" + value.SystemPrompt
-		tools := r.tools.Definitions(value.Capabilities)
-		if step == value.MaxSteps-1 {
+		instructions := platformInstructions + contentPublicationInstruction(skill.ContentPublishMode) + "\n\nAgent instructions:\n" + skill.SystemPrompt
+		tools := r.tools.Definitions(skill.Capabilities)
+		if step == limits.maxSteps-1 {
 			// Reserve the final model turn for synthesis. Without this, an Agent
 			// can spend every step discovering more material and be marked as a
 			// successful run with no useful operator-facing conclusion.
@@ -237,7 +256,7 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 		result, attempts, err := generateWithRetry(ctx, client, provider.Request{
 			Instructions: instructions,
 			Messages:     messages, Tools: tools,
-			MaxTokens: min(value.MaxOutputTokens, int(remainingTokens)),
+			MaxTokens: min(limits.maxOutputTokens, int(remainingTokens)),
 		})
 		if err != nil {
 			return err
@@ -276,7 +295,7 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 				RunID: run.ID, ProviderCallID: &callID, ToolName: requested.Name,
 				Arguments: requested.Arguments, Status: domain.ToolCallRequested,
 			}
-			risk, rawResult, proposal, invokeErr := r.invokeTool(ctx, value, requested.Name, requested.Arguments)
+			risk, rawResult, proposal, invokeErr := r.invokeTool(ctx, skill, requested.Name, requested.Arguments)
 			call.RiskLevel = risk
 			if call.RiskLevel == "" {
 				call.RiskLevel = domain.ToolRiskRead
@@ -335,6 +354,24 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 	return r.repo.FinishRun(ctx, run.ID, status, finalText, inputTokens, outputTokens, nil, nil)
 }
 
+type effectiveRunLimits struct {
+	maxSteps, maxInputTokens, maxOutputTokens int
+}
+
+func effectiveLimits(agent *domain.Agent, skill *domain.AgentSkill) effectiveRunLimits {
+	limits := effectiveRunLimits{skill.MaxSteps, skill.MaxInputTokens, skill.MaxOutputTokens}
+	if agent.MaxStepsOverride != nil {
+		limits.maxSteps = *agent.MaxStepsOverride
+	}
+	if agent.MaxInputTokensOverride != nil {
+		limits.maxInputTokens = *agent.MaxInputTokensOverride
+	}
+	if agent.MaxOutputTokensOverride != nil {
+		limits.maxOutputTokens = *agent.MaxOutputTokensOverride
+	}
+	return limits
+}
+
 func contentPublicationInstruction(mode domain.ContentPublishMode) string {
 	switch mode {
 	case domain.ContentPublishDraft:
@@ -354,11 +391,11 @@ type createPostArguments struct {
 	Tags    []string `json:"tags"`
 }
 
-func (r *Runner) invokeTool(ctx context.Context, agent *domain.Agent, name string, arguments json.RawMessage) (domain.ToolRiskLevel, json.RawMessage, *tool.Proposal, error) {
+func (r *Runner) invokeTool(ctx context.Context, skill *domain.AgentSkill, name string, arguments json.RawMessage) (domain.ToolRiskLevel, json.RawMessage, *tool.Proposal, error) {
 	if name != "content.create_post" {
-		return r.tools.Invoke(ctx, agent.Capabilities, name, arguments)
+		return r.tools.Invoke(ctx, skill.Capabilities, name, arguments)
 	}
-	if !slices.Contains(agent.Capabilities, name) || r.posts == nil {
+	if !slices.Contains(skill.Capabilities, name) || r.posts == nil {
 		return domain.ToolRiskWrite, nil, nil, tool.ErrUnauthorized
 	}
 	var payload createPostArguments
@@ -371,12 +408,12 @@ func (r *Runner) invokeTool(ctx context.Context, agent *domain.Agent, name strin
 	if len([]rune(payload.Title)) > 500 || len([]rune(payload.Slug)) > 500 || len([]rune(payload.Summary)) > 5000 || len([]rune(payload.Content)) > 200000 || len(payload.Tags) > 30 {
 		return domain.ToolRiskWrite, nil, nil, tool.ErrInvalidArgument
 	}
-	if agent.ContentPublishMode == domain.ContentPublishApproval {
+	if skill.ContentPublishMode == domain.ContentPublishApproval {
 		raw, _ := json.Marshal(payload)
 		return domain.ToolRiskWrite, json.RawMessage(`{"status":"awaiting_approval"}`), &tool.Proposal{ActionType: "create_draft", TargetType: "post", Payload: raw}, nil
 	}
 	status := domain.PostStatusDraft
-	if agent.ContentPublishMode == domain.ContentPublishPublish {
+	if skill.ContentPublishMode == domain.ContentPublishPublish {
 		status = domain.PostStatusPublished
 	}
 	post := &domain.Post{Title: payload.Title, Slug: payload.Slug, Summary: payload.Summary, Content: payload.Content, Tags: payload.Tags, Status: status}
