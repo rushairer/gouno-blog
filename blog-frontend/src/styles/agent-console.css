@@ -375,6 +375,16 @@
   white-space: nowrap;
 }
 
+.agent-table--tools td:first-child {
+  min-width: 360px;
+}
+
+.agent-table--tools td > small {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
 .agent-identity {
   display: flex;
   align-items: center;
@@ -487,6 +497,59 @@
   height: 16px;
 }
 
+.agent-row-actions__spinner {
+  animation: spin 0.8s linear infinite;
+}
+
+.agent-console__toasts {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 60;
+  display: grid;
+  gap: 10px;
+  width: min(380px, calc(100vw - 32px));
+}
+
+.agent-console__toast {
+  position: relative;
+  animation: agent-toast-in 160ms ease-out;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, .22);
+}
+
+.agent-console__toast .feedback {
+  padding-right: 46px;
+}
+
+.agent-console__toast > button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: currentColor;
+  cursor: pointer;
+}
+
+.agent-console__toast > button:hover {
+  background: rgba(255, 255, 255, .12);
+}
+
+.agent-console__toast > button svg {
+  width: 16px;
+  height: 16px;
+}
+
+@keyframes agent-toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .secret-mask {
   display: inline-flex;
   border: 1px solid var(--agent-border);
@@ -524,6 +587,17 @@
 .provider-defaults p { margin: 0; color: var(--color-text-muted); font-size: 12px; line-height: 1.5; }
 .provider-defaults label { display: grid; gap: 7px; color: var(--color-text-muted); font-size: 12px; font-weight: 700; line-height: 1.45; }
 .provider-defaults .select-control { width: 100%; }
+
+.knowledge-embedding-config {
+  min-height: 280px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--agent-border);
+}
+
+.knowledge-embedding-config .state {
+  min-height: 250px;
+}
 
 .workflow-planner {
   display: grid;
@@ -572,6 +646,21 @@
   color: var(--color-text-main);
   font-weight: 750;
   padding: 0 7px;
+}
+
+.agent-trigger-options {
+  gap: 0;
+  padding-block: 14px;
+}
+
+.agent-trigger-options > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+
+.agent-trigger-options .checkbox-field {
+  font-weight: 650;
 }
 
 .agent-capability-group {

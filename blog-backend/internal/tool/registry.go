@@ -17,6 +17,20 @@ var (
 	ErrInvalidArgument = errors.New("invalid tool arguments")
 )
 
+var emptyParametersSchema = json.RawMessage(`{"type":"object","additionalProperties":false}`)
+
+var catalogDescriptionsZH = map[string]string{
+	"rss.fetch": "从已配置白名单中的 RSS 或 Atom 源获取并标准化资讯条目。", "data.json_parse": "从模型输出中解析长度受限的 JSON 对象。", "content.create_post": "按 Agent 的受控发布策略创建并校验博客文章。",
+	"content.list_posts": "列出博客文章，包含草稿和定时发布文章。", "content.get_post": "按数字 ID 读取一篇博客文章。", "content.search_posts": "按标题、摘要或正文搜索已发布文章。", "content.list_tags": "列出博客中的全部标签。",
+	"content.check_links": "检查一篇文章中公开 HTTP(S) 链接的可用性。", "content.audit_post": "对草稿、定时或已发布文章执行确定性的内容质量检查。", "content.find_internal_links": "为文章推荐尚未引用的相关文章作为站内链接。",
+	"content.find_related": "搜索相关文章并返回按相关度排序的证据摘要。", "content.search_knowledge": "检索已建立索引的已发布内容并返回可验证引用。", "content.list_stale_posts": "列出超过指定天数未更新的已发布文章。",
+	"content.list_orphan_posts": "列出没有被其他文章站内链接引用的已发布文章。", "comments.list_pending": "列出待处理或被举报的评论，供审核分析使用。", "analytics.get_summary": "读取当前博客的数据分析摘要。",
+	"analytics.list_low_engagement_posts": "列出浏览量足够但互动率较低的已发布文章。", "content.propose_draft": "提交一篇新博客草稿的审批提案。", "content.propose_update": "提交对现有博客文章的修改审批提案。",
+	"content.propose_tags": "提交替换现有文章标签的审批提案。", "comments.propose_reply": "提交评论回复草稿的审批提案。", "content.propose_task": "提交编辑任务的审批提案。",
+	"content.propose_distribution_draft": "为文章提交社媒、邮件、FAQ 或图片 Brief 草稿；不会向外部服务发送内容。", "content.list_broken_links": "列出已发布文章中缓存的失效链接证据。",
+	"content.propose_candidates": "提交标题、摘要或封面 Alt 文案候选，供人工选择。", "content.list_tag_bloat": "识别低使用率或大小写重复的标签。", "operations.propose_suggestion": "提交带证据的站内运营建议审批提案。",
+}
+
 type Proposal struct {
 	ActionType     string          `json:"action_type"`
 	TargetType     string          `json:"target_type"`
@@ -41,23 +55,42 @@ type Registry struct {
 }
 
 type CatalogItem struct {
-	Name        string               `json:"name"`
-	Description string               `json:"description"`
-	Parameters  json.RawMessage      `json:"parameters"`
-	Output      json.RawMessage      `json:"output_schema,omitempty"`
-	Surfaces    []string             `json:"surfaces"`
-	Risk        domain.ToolRiskLevel `json:"risk_level"`
+	Name          string               `json:"name"`
+	Description   string               `json:"description"`
+	DescriptionZH string               `json:"description_zh,omitempty"`
+	Parameters    json.RawMessage      `json:"parameters"`
+	Output        json.RawMessage      `json:"output_schema,omitempty"`
+	Surfaces      []string             `json:"surfaces"`
+	Risk          domain.ToolRiskLevel `json:"risk_level"`
 }
 
 func New(definitions ...Definition) *Registry {
 	items := make(map[string]Definition, len(definitions))
 	for _, definition := range definitions {
-		if len(definition.Surfaces) == 0 {
-			definition.Surfaces = []string{"agent"}
-		}
+		definition = normalizeDefinition(definition)
 		items[definition.Name] = definition
 	}
 	return &Registry{definitions: items}
+}
+
+func normalizeDefinition(definition Definition) Definition {
+	if len(definition.Parameters) == 0 {
+		definition.Parameters = append(json.RawMessage(nil), emptyParametersSchema...)
+	}
+	if len(definition.Surfaces) == 0 {
+		definition.Surfaces = []string{"agent"}
+	}
+	return definition
+}
+
+func catalogSchema(value json.RawMessage, fallback json.RawMessage) json.RawMessage {
+	if json.Valid(value) {
+		return value
+	}
+	if len(fallback) == 0 {
+		return nil
+	}
+	return append(json.RawMessage(nil), fallback...)
 }
 
 func (r *Registry) Definitions(capabilities []string) []provider.ToolDefinition {
@@ -68,7 +101,8 @@ func (r *Registry) Definitions(capabilities []string) []provider.ToolDefinition 
 			continue
 		}
 		result = append(result, provider.ToolDefinition{
-			Name: definition.Name, Description: definition.Description, Parameters: definition.Parameters,
+			Name: definition.Name, Description: definition.Description,
+			Parameters: catalogSchema(definition.Parameters, emptyParametersSchema),
 		})
 	}
 	return result
@@ -113,9 +147,10 @@ func (r *Registry) Catalog() []CatalogItem {
 	result := make([]CatalogItem, 0, len(r.definitions))
 	for _, definition := range r.definitions {
 		result = append(result, CatalogItem{
-			Name: definition.Name, Description: definition.Description,
-			Parameters: definition.Parameters, Output: definition.Output,
-			Surfaces: definition.Surfaces, Risk: definition.Risk,
+			Name: definition.Name, Description: definition.Description, DescriptionZH: catalogDescriptionsZH[definition.Name],
+			Parameters: catalogSchema(definition.Parameters, emptyParametersSchema),
+			Output:     catalogSchema(definition.Output, nil),
+			Surfaces:   definition.Surfaces, Risk: definition.Risk,
 		})
 	}
 	slices.SortFunc(result, func(a, b CatalogItem) int {
@@ -174,8 +209,12 @@ func (r *Registry) Register(definitions ...Definition) error {
 		if _, exists := r.definitions[definition.Name]; exists {
 			return fmt.Errorf("%w: duplicate tool %q", ErrUnknownTool, definition.Name)
 		}
-		if len(definition.Surfaces) == 0 {
-			definition.Surfaces = []string{"agent"}
+		definition = normalizeDefinition(definition)
+		if !json.Valid(definition.Parameters) {
+			return fmt.Errorf("%w: invalid parameters schema for tool %q", ErrInvalidArgument, definition.Name)
+		}
+		if len(definition.Output) > 0 && !json.Valid(definition.Output) {
+			return fmt.Errorf("%w: invalid output schema for tool %q", ErrInvalidArgument, definition.Name)
 		}
 		r.definitions[definition.Name] = definition
 	}

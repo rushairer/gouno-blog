@@ -34,6 +34,7 @@ func TestUpAppliesCurrentSchemaAndIsIdempotent(t *testing.T) {
 		"ai_embedding_profiles", "ai_content_index_jobs", "ai_content_chunks",
 		"ai_retrieval_metrics", "ai_retrieval_eval_cases",
 		"ai_skill_versions",
+		"ai_workspace_bootstrap",
 		"ai_workflows", "ai_workflow_versions", "ai_workflow_runs", "ai_workflow_step_runs",
 		"ai_link_health_jobs", "ai_link_health_snapshots",
 		"ai_operational_suggestions",
@@ -68,6 +69,19 @@ func TestUpAppliesCurrentSchemaAndIsIdempotent(t *testing.T) {
 	}
 	if !providerSecretNullable {
 		t.Fatal("expected deleted provider credentials to be nullable for revocation")
+	}
+	var systemSkills, workflows int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_skills WHERE system_key IS NOT NULL`).Scan(&systemSkills); err != nil {
+		t.Fatal(err)
+	}
+	if systemSkills != 8 {
+		t.Fatalf("expected 8 system Skills, got %d", systemSkills)
+	}
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_workflows WHERE template_key IN ('daily_news','weekly_operations','stale_content_refresh','low_engagement')`).Scan(&workflows); err != nil {
+		t.Fatal(err)
+	}
+	if workflows != 4 {
+		t.Fatalf("expected 4 starter Workflows, got %d", workflows)
 	}
 	for _, trigger := range []string{"posts_search_document_update", "ai_content_chunks_search_vector_update"} {
 		var exists bool

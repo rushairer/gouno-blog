@@ -191,6 +191,7 @@ export interface OutcomeMetrics {
 
 export interface Agent {
   id: number;
+  system_key?: string;
   name: string;
   description: string;
   system_prompt: string;
@@ -216,6 +217,7 @@ export interface Agent {
 
 export interface AgentSkill {
   id: number;
+  system_key?: string;
   name: string;
   description: string;
   system_prompt: string;
@@ -282,6 +284,7 @@ export interface AgentApproval {
 export interface ToolDefinition {
   name: string;
   description: string;
+  description_zh?: string;
   parameters: Record<string, unknown>;
   output_schema?: Record<string, unknown>;
   surfaces: 'agent'[];

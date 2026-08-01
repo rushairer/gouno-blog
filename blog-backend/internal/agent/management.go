@@ -310,7 +310,18 @@ func (s *ManagementService) SaveAgentAsSkill(ctx context.Context, agentID int64,
 }
 
 func (s *ManagementService) DeleteSkill(ctx context.Context, id int64) error {
+	skill, err := s.GetSkill(ctx, id)
+	if err != nil {
+		return err
+	}
+	if skill.SystemKey != nil {
+		return fmt.Errorf("%w: system Skills cannot be deleted", ErrInvalid)
+	}
 	return translateError(s.repo.DeleteSkill(ctx, id))
+}
+
+func (s *ManagementService) BootstrapStarterPack(ctx context.Context) (int, error) {
+	return s.repo.BootstrapStarterPack(ctx)
 }
 
 func (s *ManagementService) GetAgent(ctx context.Context, id int64) (*domain.Agent, error) {
@@ -435,6 +446,13 @@ func (s *ManagementService) validateAgent(value *domain.Agent) error {
 }
 
 func (s *ManagementService) DeleteAgent(ctx context.Context, id int64) error {
+	value, err := s.GetAgent(ctx, id)
+	if err != nil {
+		return err
+	}
+	if value.SystemKey != nil {
+		return fmt.Errorf("%w: system Agents cannot be deleted", ErrInvalid)
+	}
 	return translateError(s.repo.DeleteAgent(ctx, id))
 }
 

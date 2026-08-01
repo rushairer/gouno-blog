@@ -623,11 +623,16 @@ func (ctrl *AgentController) saveProvider(c *gin.Context, id int64) {
 		writeAgentError(c, err)
 		return
 	}
+	created, err := ctrl.svc.BootstrapStarterPack(c.Request.Context())
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
 	status := http.StatusOK
 	if id == 0 {
 		status = http.StatusCreated
 	}
-	c.JSON(status, gouno.NewSuccessResponse(profile))
+	c.JSON(status, gouno.NewSuccessResponse(gin.H{"profile": profile, "starter_agents_created": created}))
 }
 
 func (ctrl *AgentController) DeleteProvider(c *gin.Context) {

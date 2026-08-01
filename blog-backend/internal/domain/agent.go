@@ -91,6 +91,7 @@ const (
 
 type Agent struct {
 	ID                 int64              `json:"id"`
+	SystemKey          *string            `json:"system_key,omitempty"`
 	Name               string             `json:"name"`
 	Description        string             `json:"description"`
 	SystemPrompt       string             `json:"system_prompt"`
@@ -121,6 +122,7 @@ type Agent struct {
 // code: an Agent chooses its Provider and remains subject to normal approval.
 type AgentSkill struct {
 	ID                 int64              `json:"id"`
+	SystemKey          *string            `json:"system_key,omitempty"`
 	Name               string             `json:"name"`
 	Description        string             `json:"description"`
 	SystemPrompt       string             `json:"system_prompt"`

@@ -1,15 +1,21 @@
 services:
   blog-client-seed:
+    image: gouno-blog-seed:local
+    pull_policy: build
     build:
       context: ./seed
       dockerfile: Dockerfile
 
   blog-backend:
+    image: gouno-blog-backend:local
+    pull_policy: build
     build:
       context: .
       dockerfile: blog-backend/Dockerfile
 
   blog-frontend:
+    image: gouno-blog-frontend:local
+    pull_policy: build
     build:
       context: ./blog-frontend
       dockerfile: Dockerfile

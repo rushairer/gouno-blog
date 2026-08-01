@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import type { Agent, AgentPreset, AgentSkill, ProviderProfile, ToolDefinition, TriggerType, ExecutionMode, ContentPublishMode } from '../../agent';
 import { emptyAgent } from '../../agent';
-import { Button, EditorPanel, Field, FormActions, FormGrid, FormLayout, Select } from '../ui';
+import { Button, Checkbox, EditorPanel, Field, FormActions, FormGrid, FormLayout, Select } from '../ui';
 
 type AgentFormValue = Omit<Agent, 'id' | 'created_at' | 'updated_at'> & { id?: number };
 
@@ -13,6 +13,7 @@ export function AgentForm({
   tools,
   presets,
   skills,
+  locale,
   labels,
   onSave,
   onCancel,
@@ -22,6 +23,7 @@ export function AgentForm({
   tools: ToolDefinition[];
   presets: AgentPreset[];
   skills: AgentSkill[];
+  locale: 'en' | 'zh';
   labels: Record<string, string>;
   onSave: (value: AgentFormValue) => Promise<void>;
   onCancel: () => void;
@@ -109,7 +111,7 @@ export function AgentForm({
       {value.trigger_type === 'cron' ? <FormGrid columns={2}><Field label={labels.cron}><input className="input-field mono" required placeholder="0 9 * * 1" value={value.cron_expression || ''} onChange={(event) => setValue((current) => ({ ...current, cron_expression: event.target.value }))} /></Field><Field label={labels.timezone}><input className="input-field mono" required value={value.timezone} onChange={(event) => setValue((current) => ({ ...current, timezone: event.target.value }))} /></Field></FormGrid> : null}
       <fieldset className="agent-capabilities">
         <legend>{labels.capabilities}</legend>
-        {groupedTools.map(([group, items]) => <div key={group} className="agent-capability-group"><strong>{group}</strong>{items.map((item) => <label key={item.name}><input type="checkbox" disabled={value.execution_mode === 'advisory' && item.risk_level !== 'read'} checked={value.capabilities.includes(item.name)} onChange={(event) => setValue((current) => ({ ...current, capabilities: event.target.checked ? [...current.capabilities, item.name] : current.capabilities.filter((name) => name !== item.name) }))} /><span><b>{item.name}</b><small>{item.description}</small></span><em className={`risk-label risk-label--${item.risk_level}`}>{item.risk_level}</em></label>)}</div>)}
+        {groupedTools.map(([group, items]) => <div key={group} className="agent-capability-group"><strong>{group}</strong>{items.map((item) => <label key={item.name}><Checkbox disabled={value.execution_mode === 'advisory' && item.risk_level !== 'read'} checked={value.capabilities.includes(item.name)} onChange={(event) => setValue((current) => ({ ...current, capabilities: event.target.checked ? [...current.capabilities, item.name] : current.capabilities.filter((name) => name !== item.name) }))} /><span><b>{item.name}</b><small>{locale === 'zh' ? item.description_zh || item.description : item.description}</small></span><em className={`risk-label risk-label--${item.risk_level}`}>{item.risk_level}</em></label>)}</div>)}
       </fieldset>
       <div className="agent-limit-grid">
         <Field label={labels.maxSteps}><input className="input-field" type="number" min="1" max="20" value={value.max_steps} onChange={(event) => setValue((current) => ({ ...current, max_steps: Number(event.target.value) }))} /></Field>

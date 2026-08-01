@@ -67,12 +67,14 @@ INSERT INTO ai_workflow_versions (workflow_id, version, input_schema, steps)
 SELECT b.id, b.current_version, t.input_schema, t.steps
 FROM bumped b JOIN templates t ON t.template_key=b.template_key;
 
+-- Some deployments already have the later starter-pack row named
+-- "AI 每日资讯" (template_key=daily_news) while this migration was left
+-- unrecorded. Do not repurpose that final template: a name conflict means the
+-- daily-news hand-off below has already happened and can be safely skipped.
 WITH workflow AS (
     INSERT INTO ai_workflows (name, description, enabled, cron_expression, timezone, next_run_at, template_key)
-    VALUES ('AI 每日资讯', '普通 Workflow 模板：每天 09:00 调度已配置的 AI 每日资讯 Agent。', FALSE, '0 9 * * *', 'Asia/Shanghai', NULL, 'ai_daily_news')
-    ON CONFLICT (template_key) DO UPDATE SET name=EXCLUDED.name, description=EXCLUDED.description,
-        enabled=FALSE, cron_expression=EXCLUDED.cron_expression, timezone=EXCLUDED.timezone,
-        next_run_at=NULL, current_version=ai_workflows.current_version+1, updated_at=NOW()
+    SELECT 'AI 每日资讯', '普通 Workflow 模板：每天 09:00 调度已配置的 AI 每日资讯 Agent。', FALSE, '0 9 * * *', 'Asia/Shanghai', NULL, 'ai_daily_news'
+    WHERE NOT EXISTS (SELECT 1 FROM ai_workflows WHERE name='AI 每日资讯' OR template_key='ai_daily_news')
     RETURNING id, current_version
 )
 INSERT INTO ai_workflow_versions (workflow_id, version, input_schema, steps)

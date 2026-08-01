@@ -80,6 +80,30 @@ func TestRegistryExposesOnlyAgentTools(t *testing.T) {
 	if len(items) != 2 || len(items[0].Surfaces) != 1 || items[0].Surfaces[0] != "agent" {
 		t.Fatalf("catalog did not expose Tool surfaces: %#v", items)
 	}
+	if _, err := json.Marshal(items); err != nil {
+		t.Fatalf("catalog must always be JSON serializable: %v", err)
+	}
+}
+
+func TestRegistryRejectsInvalidCatalogSchemas(t *testing.T) {
+	registry := New()
+	if err := registry.Register(Definition{Name: "invalid.parameters", Parameters: json.RawMessage(`{`)}); !errors.Is(err, ErrInvalidArgument) {
+		t.Fatalf("invalid parameters schema error = %v", err)
+	}
+	if err := registry.Register(Definition{Name: "invalid.output", Parameters: json.RawMessage(`{}`), Output: json.RawMessage(`{`)}); !errors.Is(err, ErrInvalidArgument) {
+		t.Fatalf("invalid output schema error = %v", err)
+	}
+}
+
+func TestCatalogRecoversFromInvalidStaticSchema(t *testing.T) {
+	registry := New(Definition{Name: "legacy.invalid", Parameters: json.RawMessage(`{`), Output: json.RawMessage(`{`)})
+	items := registry.Catalog()
+	if len(items) != 1 || !json.Valid(items[0].Parameters) || len(items[0].Output) != 0 {
+		t.Fatalf("catalog item = %#v", items)
+	}
+	if _, err := json.Marshal(items); err != nil {
+		t.Fatalf("recovered catalog must be JSON serializable: %v", err)
+	}
 }
 
 func TestBlogProposalToolsValidateArgumentsBeforeApproval(t *testing.T) {

@@ -30,6 +30,16 @@ func TestRegisterOperationalToolsAreReadOnly(t *testing.T) {
 	}
 }
 
+func TestProductionToolCatalogIsJSONSerializable(t *testing.T) {
+	registry := tool.NewBlogRegistry(nil, nil, nil)
+	if err := NewService(nil, registry, nil).RegisterTools(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := json.Marshal(registry.Catalog()); err != nil {
+		t.Fatalf("production Tool Catalog must be JSON serializable: %v", err)
+	}
+}
+
 func TestFeedbackValidationRejectsInvalidTargetsAndLabels(t *testing.T) {
 	service := &Service{}
 	valid := &domain.AIFeedback{TargetType: "run", TargetID: 1, Label: "adopted", CreatedBy: "admin"}
