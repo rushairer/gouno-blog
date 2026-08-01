@@ -176,6 +176,27 @@ func (s *ApprovalService) execute(ctx context.Context, approval *domain.AgentApp
 		return s.repo.CreateOperationalSuggestion(ctx, &payload)
 	case "create_content_candidates":
 		return s.repo.CreateContentCandidateSet(ctx, approval)
+	case "create_distribution_draft":
+		// The approved payload remains in ai_approvals as the audited, copyable
+		// draft. Do not add external delivery here: every connector requires its
+		// own credentials, idempotency controls, and a separate publish approval.
+		var payload struct {
+			PostID int64  `json:"post_id"`
+			Format string `json:"format"`
+			Body   string `json:"body"`
+		}
+		if err := json.Unmarshal(approval.ProposedPayload, &payload); err != nil {
+			return err
+		}
+		if payload.PostID <= 0 || strings.TrimSpace(payload.Body) == "" {
+			return errors.New("invalid distribution draft")
+		}
+		switch payload.Format {
+		case "social", "newsletter", "faq", "image_brief":
+			return nil
+		default:
+			return errors.New("invalid distribution draft format")
+		}
 	default:
 		return fmt.Errorf("unsupported approval action %q", approval.ActionType)
 	}

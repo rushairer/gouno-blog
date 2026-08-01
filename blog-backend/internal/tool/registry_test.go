@@ -85,3 +85,16 @@ func TestReplyProposalCapturesTargetAndNormalizedPayload(t *testing.T) {
 		t.Fatalf("proposal=%#v err=%v", proposal, err)
 	}
 }
+
+func TestDistributionDraftRejectsUnsafeOrMalformedInput(t *testing.T) {
+	registry := NewBlogRegistry(nil, nil, nil)
+	for _, arguments := range []string{
+		`{"post_id":1,"format":"publish","body":"Send this"}`,
+		`{"post_id":1,"format":"social","body":"","unexpected":true}`,
+	} {
+		_, _, proposal, err := registry.Invoke(context.Background(), []string{"content.propose_distribution_draft"}, "content.propose_distribution_draft", json.RawMessage(arguments))
+		if !errors.Is(err, ErrInvalidArgument) || proposal != nil {
+			t.Fatalf("arguments=%s proposal=%#v err=%v", arguments, proposal, err)
+		}
+	}
+}

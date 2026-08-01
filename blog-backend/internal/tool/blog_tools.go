@@ -124,6 +124,11 @@ func NewBlogRegistry(posts *service.PostService, community *service.CommunitySer
 			Parameters: schema(`{"title":{"type":"string"},"description":{"type":"string"},"priority":{"type":"string","enum":["low","medium","high"]}}`, "title", "description"),
 			Risk:       domain.ToolRiskPropose, Propose: tools.proposeTask,
 		},
+		Definition{
+			Name: "content.propose_distribution_draft", Description: "Create an approval-only social, newsletter, FAQ, or image brief from one post. It never sends content to an external service.",
+			Parameters: schema(`{"post_id":{"type":"integer","minimum":1},"format":{"type":"string","enum":["social","newsletter","faq","image_brief"]},"headline":{"type":"string","maxLength":500},"body":{"type":"string","maxLength":12000},"platform":{"type":"string","maxLength":100}}`, "post_id", "format", "body"),
+			Risk:       domain.ToolRiskPropose, Propose: tools.proposeDistributionDraft,
+		},
 	)
 }
 
@@ -311,6 +316,45 @@ func (t *BlogTools) proposeTask(_ context.Context, raw json.RawMessage) (*Propos
 	}
 	payload, _ := json.Marshal(args)
 	return &Proposal{ActionType: "create_editorial_task", TargetType: "task", Payload: payload}, nil
+}
+
+// proposeDistributionDraft deliberately stops at an approval record.  There is
+// no connector or delivery path behind this Tool: a reviewer can inspect and
+// copy an approved draft, while a future connector must introduce its own
+// OAuth, idempotency, and delivery approval boundary.
+func (t *BlogTools) proposeDistributionDraft(ctx context.Context, raw json.RawMessage) (*Proposal, error) {
+	var args struct {
+		PostID   int64  `json:"post_id"`
+		Format   string `json:"format"`
+		Headline string `json:"headline"`
+		Body     string `json:"body"`
+		Platform string `json:"platform"`
+	}
+	if err := decodeArguments(raw, &args); err != nil || args.PostID <= 0 {
+		return nil, ErrInvalidArgument
+	}
+	args.Format = strings.TrimSpace(args.Format)
+	args.Headline = strings.TrimSpace(args.Headline)
+	args.Body = strings.TrimSpace(args.Body)
+	args.Platform = strings.TrimSpace(args.Platform)
+	if args.Body == "" || len([]rune(args.Headline)) > 500 || len([]rune(args.Body)) > 12000 || len([]rune(args.Platform)) > 100 {
+		return nil, ErrInvalidArgument
+	}
+	switch args.Format {
+	case "social", "newsletter", "faq", "image_brief":
+	default:
+		return nil, ErrInvalidArgument
+	}
+	post, err := t.posts.GetAdminPost(ctx, args.PostID)
+	if err != nil {
+		return nil, err
+	}
+	payload, _ := json.Marshal(args)
+	before, _ := json.Marshal(post)
+	return &Proposal{
+		ActionType: "create_distribution_draft", TargetType: "post", TargetID: &args.PostID,
+		Payload: payload, BeforeSnapshot: before,
+	}, nil
 }
 
 func (t *BlogTools) proposeUpdate(ctx context.Context, raw json.RawMessage) (*Proposal, error) {

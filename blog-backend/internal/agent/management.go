@@ -474,6 +474,14 @@ func Presets() []Preset {
 			Capabilities:  []string{"content.get_post", "content.audit_post", "content.find_internal_links", "content.find_related", "content.search_posts", "content.propose_update"},
 			ExecutionMode: domain.AgentModeApproval,
 		},
+		{
+			ID: "content-repurposing", Name: "内容再利用草稿",
+			Description:  "将一篇文章改写为可人工审阅的社媒、邮件、FAQ 或图片创意 brief，不会投递或发布。",
+			SystemPrompt: "读取指定文章后，为请求的 social、newsletter、faq 或 image_brief 格式创建一份分发草稿提案。内容必须忠于原文；提案仅供人工审阅和复制，绝不声称已发布、已发送或已连接任何外部服务。",
+			TriggerType:  domain.AgentTriggerManual, Timezone: "Asia/Shanghai",
+			Capabilities:  []string{"content.get_post", "content.propose_distribution_draft"},
+			ExecutionMode: domain.AgentModeApproval,
+		},
 	}
 }
 
