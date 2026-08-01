@@ -25,7 +25,7 @@ import { useI18n } from '../i18n';
 import '../styles/agent-console.css';
 
 type ConsoleTab = 'agents' | 'skills' | 'workflows' | 'operations' | 'providers' | 'knowledge' | 'runs' | 'approvals';
-type DeleteTarget = { kind: 'agent'; value: Agent } | { kind: 'provider'; value: ProviderProfile } | { kind: 'embedding'; value: EmbeddingProfile } | null;
+type DeleteTarget = { kind: 'agent'; value: Agent } | { kind: 'provider'; value: ProviderProfile } | { kind: 'embedding'; value: EmbeddingProfile } | { kind: 'skill'; value: AgentSkill } | null;
 
 const copy = {
   en: {
@@ -53,7 +53,7 @@ const copy = {
     approve: 'Approve and execute', reject: 'Reject', all: 'All', pending: 'Pending',
     noSkills: 'No saved Skills yet. Skills are reusable governed Agent configurations.', backAdmin: 'Blog admin', loading: 'Loading AI Agent workspace…', refresh: 'Refresh',
     requestFailed: 'The request failed.', deleteAgentConfirm: 'Delete this Agent and disable future runs?',
-    deleteProviderConfirm: 'Delete this Provider profile?', deleteEmbeddingConfirm: 'Delete this embedding profile?', providerNeeded: 'Create a Provider profile before adding an Agent.',
+    deleteProviderConfirm: 'Delete this Provider profile?', deleteEmbeddingConfirm: 'Delete this embedding profile?', deleteSkillConfirm: 'Delete this Skill? Existing Agents keep their current configuration.', providerNeeded: 'Create a Provider profile before adding an Agent.',
   },
   zh: {
     title: 'AI 工作台', pageDescription: '配置模型供应商、自动运营博客，并审核每一项内容变更。',
@@ -80,7 +80,7 @@ const copy = {
     approve: '批准并执行', reject: '拒绝', all: '全部', pending: '待审批',
     noSkills: '还没有已保存的 Skill。Skill 是可复用且受治理的 Agent 配置。', backAdmin: '博客后台', loading: '正在加载 AI Agent 工作区…', refresh: '刷新',
     requestFailed: '请求失败。', deleteAgentConfirm: '删除此 Agent 并停止后续运行？',
-    deleteProviderConfirm: '删除此 Provider 配置？', deleteEmbeddingConfirm: '删除此嵌入配置？', providerNeeded: '请先创建 Provider，再添加 Agent。',
+    deleteProviderConfirm: '删除此 Provider 配置？', deleteEmbeddingConfirm: '删除此嵌入配置？', deleteSkillConfirm: '删除此 Skill？现有 Agent 会保留当前配置。', providerNeeded: '请先创建 Provider，再添加 Agent。',
   },
 } as const;
 
@@ -289,6 +289,16 @@ export default function AgentConsole() {
 
   const load = useCallback(async () => {
     const approvalStatus = approvalFilter;
+    // A historical workflow run must not prevent the rest of the console from
+    // loading. The backend records a failure for that run and the operator can
+    // still use every other workspace while the run list is unavailable.
+    const loadWorkflowRuns = async () => {
+      try {
+        return await readData<WorkflowRun[]>(await apiFetch('/api/admin/ai-workflow-runs'));
+      } catch {
+        return [] as WorkflowRun[];
+      }
+    };
     const [providerData, embeddingData, indexData, agentData, runData, approvalData, toolData, presetData, skillData, workflowData, workflowRunData, workflowMetricData, suggestionData, candidateData, mediaCandidateData, outcomeData] = await Promise.all([
       readData<ProviderProfile[]>(await apiFetch('/api/admin/provider-profiles')),
       readData<EmbeddingProfile[]>(await apiFetch('/api/admin/embedding-profiles')),
@@ -300,7 +310,7 @@ export default function AgentConsole() {
       readData<AgentPreset[]>(await apiFetch('/api/admin/agent-presets')),
       readData<AgentSkill[]>(await apiFetch('/api/admin/agent-skills')),
       readData<Workflow[]>(await apiFetch('/api/admin/ai-workflows')),
-      readData<WorkflowRun[]>(await apiFetch('/api/admin/ai-workflow-runs')),
+      loadWorkflowRuns(),
       readData<{ workflows: WorkflowMetric[] }>(await apiFetch('/api/admin/ai-workflow-metrics')),
       readData<OperationalSuggestion[]>(await apiFetch('/api/admin/ai-suggestions?status=all')),
       readData<ContentCandidateSet[]>(await apiFetch('/api/admin/ai-candidates')),
@@ -505,6 +515,7 @@ export default function AgentConsole() {
     try {
       if (deleteTarget.kind === 'agent') await mutate(`/api/admin/agents/${deleteTarget.value.id}`, 'DELETE');
       else if (deleteTarget.kind === 'provider') await mutate(`/api/admin/provider-profiles/${deleteTarget.value.id}`, 'DELETE');
+      else if (deleteTarget.kind === 'skill') await mutate(`/api/admin/agent-skills/${deleteTarget.value.id}`, 'DELETE');
       else await mutate(`/api/admin/embedding-profiles/${deleteTarget.value.id}`, 'DELETE');
       setDeleteTarget(null);
     } catch (reason) {
@@ -585,7 +596,7 @@ export default function AgentConsole() {
 
         {!editingAgent && !editingProvider && !editingSkill && tab === 'skills' ? <WorkspacePanel className="agent-table-panel">
           <PanelHeader title={labels.skills} description={locale === 'zh' ? '管理可复用能力定义与执行边界。' : 'Manage reusable capability definitions and execution boundaries.'} actions={<><Button variant="secondary" type="button" onClick={() => void importSkill()}>{locale === 'zh' ? '导入 JSON' : 'Import JSON'}</Button>{skills.map((skill) => <Button variant="ghost" size="compact" type="button" key={skill.id} onClick={() => void exportSkill(skill)}>{locale === 'zh' ? '导出' : 'Export'} {skill.name} v{skill.version}</Button>)}<Button variant="primary" type="button" onClick={() => setEditingSkill('new')}><Plus />{locale === 'zh' ? '创建 Skill' : 'Create Skill'}</Button></>} />
-          {skills.length === 0 ? <EmptyState label={labels.noSkills} /> : <div className="table-scroll"><table className="content-table agent-table"><thead><tr><th>{labels.skills}</th><th>{labels.mode}</th><th>{labels.capabilities}</th><th>Version</th><th>{labels.created}</th><th>{labels.actions}</th></tr></thead><tbody>{skills.map((skill) => <tr key={skill.id}><td><strong>{skill.name}</strong><small>{skill.description}</small></td><td><span className={`risk-label risk-label--${skill.execution_mode === 'approval' ? 'propose' : 'read'}`}>{skill.execution_mode === 'approval' ? labels.approvalMode : labels.advisory}</span></td><td><div className="agent-chip-list">{skill.capabilities.slice(0, 4).map((item) => <span key={item}>{formatCapability(item)}</span>)}{skill.capabilities.length > 4 ? <span>+{skill.capabilities.length - 4}</span> : null}</div></td><td><strong>v{skill.version}</strong></td><td><small>{formatDateTime(skill.updated_at)}</small></td><td><div className="agent-row-actions"><button type="button" title={labels.edit} onClick={() => setEditingSkill(skill)}><Settings2 /></button></div></td></tr>)}</tbody></table></div>}
+          {skills.length === 0 ? <EmptyState label={labels.noSkills} /> : <div className="table-scroll"><table className="content-table agent-table"><thead><tr><th>{labels.skills}</th><th>{labels.mode}</th><th>{labels.capabilities}</th><th>Version</th><th>{labels.created}</th><th>{labels.actions}</th></tr></thead><tbody>{skills.map((skill) => <tr key={skill.id}><td><strong>{skill.name}</strong><small>{skill.description}</small></td><td><span className={`risk-label risk-label--${skill.execution_mode === 'approval' ? 'propose' : 'read'}`}>{skill.execution_mode === 'approval' ? labels.approvalMode : labels.advisory}</span></td><td><div className="agent-chip-list">{skill.capabilities.slice(0, 4).map((item) => <span key={item}>{formatCapability(item)}</span>)}{skill.capabilities.length > 4 ? <span>+{skill.capabilities.length - 4}</span> : null}</div></td><td><strong>v{skill.version}</strong></td><td><small>{formatDateTime(skill.updated_at)}</small></td><td><div className="agent-row-actions"><button type="button" title={labels.edit} onClick={() => setEditingSkill(skill)}><Settings2 /></button><button type="button" title={labels.delete} onClick={() => setDeleteTarget({ kind: 'skill', value: skill })}><Trash2 /></button></div></td></tr>)}</tbody></table></div>}
         </WorkspacePanel> : null}
 
         {!editingAgent && !editingProvider && tab === 'providers' ? <WorkspacePanel className="agent-table-panel">
@@ -662,6 +673,6 @@ export default function AgentConsole() {
         </form>
       ) : null}
     </Modal>
-    <ConfirmDialog open={deleteTarget !== null} title={deleteTarget?.kind === 'agent' ? labels.deleteAgentConfirm : labels.deleteProviderConfirm} description={deleteTarget?.kind === 'agent' ? labels.deleteAgentConfirm : labels.deleteProviderConfirm} confirmLabel={labels.delete} danger onClose={() => setDeleteTarget(null)} onConfirm={deleteSelected} />
+    <ConfirmDialog open={deleteTarget !== null} title={deleteTarget?.kind === 'agent' ? labels.deleteAgentConfirm : deleteTarget?.kind === 'embedding' ? labels.deleteEmbeddingConfirm : deleteTarget?.kind === 'skill' ? labels.deleteSkillConfirm : labels.deleteProviderConfirm} description={deleteTarget?.kind === 'agent' ? labels.deleteAgentConfirm : deleteTarget?.kind === 'embedding' ? labels.deleteEmbeddingConfirm : deleteTarget?.kind === 'skill' ? labels.deleteSkillConfirm : labels.deleteProviderConfirm} confirmLabel={labels.delete} danger onClose={() => setDeleteTarget(null)} onConfirm={deleteSelected} />
   </AdminPage>;
 }

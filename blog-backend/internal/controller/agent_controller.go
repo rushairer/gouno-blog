@@ -154,11 +154,13 @@ func (ctrl *AgentController) GenerateMediaCandidate(c *gin.Context) {
 	}
 	creator, _ := c.Get("account_id")
 	creatorText, _ := creator.(string)
-	if err := ctrl.approvals.GenerateMediaCandidate(c.Request.Context(), id, creatorText); err != nil {
-		writeAgentError(c, err)
-		return
-	}
-	c.JSON(http.StatusCreated, gouno.NewSuccessResponse(nil))
+	// Image providers can take considerably longer than an HTTP request timeout.
+	// The approval service persists every state transition, so run generation in
+	// the worker context and let the UI observe generating/generated/failed.
+	go func() {
+		_ = ctrl.approvals.GenerateMediaCandidate(ctrl.workerCtx, id, creatorText)
+	}()
+	c.JSON(http.StatusAccepted, gouno.NewSuccessResponse(nil))
 }
 
 func (ctrl *AgentController) SelectCandidate(c *gin.Context) {
@@ -292,12 +294,15 @@ func (ctrl *AgentController) RollbackWorkflow(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }
 
-func (ctrl *AgentController) SetWorkflowEnabled(c *gin.Context) {
+func (ctrl *AgentController) EnableWorkflow(c *gin.Context) { ctrl.setWorkflowEnabled(c, true) }
+
+func (ctrl *AgentController) DisableWorkflow(c *gin.Context) { ctrl.setWorkflowEnabled(c, false) }
+
+func (ctrl *AgentController) setWorkflowEnabled(c *gin.Context, enabled bool) {
 	id, ok := agentID(c)
 	if !ok {
 		return
 	}
-	enabled := c.Param("action") == "enable"
 	if err := ctrl.workflows.SetEnabled(c.Request.Context(), id, enabled); err != nil {
 		writeAgentError(c, err)
 		return

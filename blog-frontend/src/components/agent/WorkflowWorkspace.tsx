@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { apiFetch } from '../../auth';
 import type { Workflow, WorkflowMetric, WorkflowRun, WorkflowStep } from '../../agent';
-import { Button, EditorPanel, EmptyState, Field, FormActions, FormLayout, PanelHeader, WorkspacePanel } from '../ui';
+import { Button, EditorPanel, EmptyState, Field, FormActions, FormLayout, Panel, PanelHeader, WorkspacePanel } from '../ui';
 
 async function readData<T>(response: Response): Promise<T> {
   const body = await response.json();
@@ -20,6 +20,19 @@ type WorkflowValue = {
   steps: WorkflowStep[];
 };
 
+function exampleInput(schema: Record<string, unknown>): Record<string, unknown> {
+  const properties = (schema.properties || {}) as Record<string, Record<string, unknown>>;
+  const required = Array.isArray(schema.required) ? schema.required.filter((item): item is string => typeof item === 'string') : [];
+  return Object.fromEntries(required.map((name) => {
+    const property = properties[name] || {};
+    if (property.type === 'object') return [name, {}];
+    if (property.type === 'array') return [name, []];
+    if (property.type === 'boolean') return [name, false];
+    if (property.type === 'string') return [name, ''];
+    return [name, 0];
+  }));
+}
+
 export function WorkflowWorkspace({ workflows, runs, metrics, locale, onMutate, onSave }: {
   workflows: Workflow[];
   runs: WorkflowRun[];
@@ -31,6 +44,7 @@ export function WorkflowWorkspace({ workflows, runs, metrics, locale, onMutate, 
   const [editing, setEditing] = useState<Workflow | 'new' | null>(null);
   const [inputByID, setInputByID] = useState<Record<number, string>>({});
   const [versions, setVersions] = useState<Record<number, Workflow[]>>({});
+  const [selectedWorkflowID, setSelectedWorkflowID] = useState<number | null>(null);
   const labels = locale === 'zh' ? {
     empty: '还没有 Workflow。', add: '创建 Workflow', run: '运行', dry: 'Dry-run', enable: '启用',
     disable: '停用', versions: '版本', rollback: '回滚', input: '运行输入 JSON', steps: '步骤 JSON',
@@ -43,6 +57,7 @@ export function WorkflowWorkspace({ workflows, runs, metrics, locale, onMutate, 
     createTitle: 'Create Workflow', editTitle: 'Edit Workflow',
   };
   const metricMap = useMemo(() => new Map(metrics.map((item) => [item.workflow_id, item])), [metrics]);
+  const selectedWorkflow = workflows.find((workflow) => workflow.id === selectedWorkflowID) || workflows[0] || null;
   const loadVersions = async (workflow: Workflow) => {
     const items = await readData<Workflow[]>(await apiFetch(`/api/admin/ai-workflows/${workflow.id}/versions`));
     setVersions((current) => ({ ...current, [workflow.id]: items }));
@@ -50,18 +65,33 @@ export function WorkflowWorkspace({ workflows, runs, metrics, locale, onMutate, 
   if (editing) return <WorkflowEditor initial={editing === 'new' ? undefined : editing} labels={labels} onCancel={() => setEditing(null)} onSave={async (value) => { await onSave(value); setEditing(null); }} />;
   return <WorkspacePanel className="workflow-workspace">
     <PanelHeader title={locale === 'zh' ? 'Workflows' : 'Workflows'} description={locale === 'zh' ? '编排可审计、可回滚的自动化运行流程。' : 'Orchestrate auditable, reversible automation runs.'} actions={<Button variant="primary" type="button" onClick={() => setEditing('new')}><Plus />{labels.add}</Button>} />
-    {workflows.length === 0 ? <EmptyState label={labels.empty} /> : <div className="workflow-list">{workflows.map((workflow) => {
-      const metric = metricMap.get(workflow.id);
-      const latestRun = runs.find((run) => run.workflow_id === workflow.id);
-      const inputText = inputByID[workflow.id] ?? JSON.stringify({ agent_id: 0 }, null, 2);
-      return <article className="workflow-card" key={workflow.id}><div className="panel-heading"><div><h2>{workflow.name}</h2><small>{workflow.description} · v{workflow.current_version}</small></div><div className="row-actions"><Button variant="secondary" type="button" onClick={() => setEditing(workflow)}><GitCompareArrows />Edit</Button><Button variant="secondary" type="button" onClick={() => void loadVersions(workflow)}><History />{labels.versions}</Button><Button variant="secondary" type="button" onClick={() => void onMutate(`/api/admin/ai-workflows/${workflow.id}/${workflow.enabled ? 'disable' : 'enable'}`)}>{workflow.enabled ? <CirclePause /> : <Play />}{workflow.enabled ? labels.disable : labels.enable}</Button></div></div>
-        <Field label={labels.input}><textarea className="input-field mono" rows={4} value={inputText} onChange={(event) => setInputByID((current) => ({ ...current, [workflow.id]: event.target.value }))} /></Field>
-        <div className="row-actions"><Button variant="secondary" type="button" onClick={() => void onMutate(`/api/admin/ai-workflows/${workflow.id}/dry-run`, 'POST', { input: JSON.parse(inputText) })}><TestTube2 />{labels.dry}</Button><Button variant="primary" disabled={!workflow.enabled} type="button" onClick={() => void onMutate(`/api/admin/ai-workflows/${workflow.id}/run`, 'POST', { input: JSON.parse(inputText) })}><Play />{labels.run}</Button></div>
-        <div className="agent-run-metrics"><span><small>{labels.metrics}</small><strong>{metric?.runs || 0} / {metric?.failures || 0} / {metric?.tokens || 0}</strong></span><span><small>Status</small><strong>{latestRun?.status || '—'}{latestRun?.dry_run ? ' · dry-run' : ''}</strong></span></div>
-        {versions[workflow.id]?.length ? <div className="agent-chip-list">{versions[workflow.id].map((version) => <button type="button" key={version.version_id} disabled={version.current_version === workflow.current_version} onClick={() => void onMutate(`/api/admin/ai-workflows/${workflow.id}/rollback`, 'POST', { version: version.current_version })}><RotateCcw />v{version.current_version}</button>)}</div> : null}
-        {latestRun?.output ? <pre className="agent-json-preview">{JSON.stringify(latestRun.output, null, 2)}</pre> : latestRun?.error_message ? <p>{latestRun.error_message}</p> : null}
-      </article>;
-    })}</div>}
+    {workflows.length === 0 || !selectedWorkflow ? <EmptyState label={labels.empty} /> : <div className="agent-split-view workflow-split-view">
+      <Panel className="agent-master-panel workflow-master-list">
+        {workflows.map((workflow) => {
+          const latestRun = runs.find((run) => run.workflow_id === workflow.id);
+          return <button className={workflow.id === selectedWorkflow.id ? 'active' : ''} key={workflow.id} type="button" onClick={() => setSelectedWorkflowID(workflow.id)}>
+            <span><strong>{workflow.name}</strong><small>{workflow.description}</small></span>
+            <span className={`status-pill status-pill--${latestRun?.status || (workflow.enabled ? 'succeeded' : 'pending')}`}>{workflow.enabled ? (locale === 'zh' ? '已启用' : 'Enabled') : (locale === 'zh' ? '已停用' : 'Disabled')}</span>
+          </button>;
+        })}
+      </Panel>
+      <Panel className="workflow-detail-panel">
+        {(() => {
+          const workflow = selectedWorkflow;
+          const metric = metricMap.get(workflow.id);
+          const latestRun = runs.find((run) => run.workflow_id === workflow.id);
+          const inputText = inputByID[workflow.id] ?? JSON.stringify(exampleInput(workflow.input_schema), null, 2);
+          return <div className="section-stack"><div className="panel-heading"><div><h2>{workflow.name}</h2><small>{workflow.description} · v{workflow.current_version}</small></div><span className={`status-pill status-pill--${workflow.enabled ? 'succeeded' : 'pending'}`}>{workflow.enabled ? (locale === 'zh' ? '已启用' : 'Enabled') : (locale === 'zh' ? '已停用' : 'Disabled')}</span></div>
+            <div className="row-actions workflow-detail-actions"><Button variant="secondary" type="button" onClick={() => setEditing(workflow)}><GitCompareArrows />Edit</Button><Button variant="secondary" type="button" onClick={() => void loadVersions(workflow)}><History />{labels.versions}</Button><Button variant="secondary" type="button" onClick={() => void onMutate(`/api/admin/ai-workflows/${workflow.id}/${workflow.enabled ? 'disable' : 'enable'}`)}>{workflow.enabled ? <CirclePause /> : <Play />}{workflow.enabled ? labels.disable : labels.enable}</Button></div>
+            <Field label={labels.input}><textarea className="input-field mono" rows={6} value={inputText} onChange={(event) => setInputByID((current) => ({ ...current, [workflow.id]: event.target.value }))} /></Field>
+            <div className="row-actions workflow-detail-actions"><Button variant="secondary" type="button" onClick={() => void onMutate(`/api/admin/ai-workflows/${workflow.id}/dry-run`, 'POST', { input: JSON.parse(inputText) })}><TestTube2 />{labels.dry}</Button><Button variant="primary" disabled={!workflow.enabled} type="button" onClick={() => void onMutate(`/api/admin/ai-workflows/${workflow.id}/run`, 'POST', { input: JSON.parse(inputText) })}><Play />{labels.run}</Button></div>
+            <div className="agent-run-metrics"><span><small>{labels.metrics}</small><strong>{metric?.runs || 0} / {metric?.failures || 0} / {metric?.tokens || 0}</strong></span><span><small>Status</small><strong>{latestRun?.status || '—'}{latestRun?.dry_run ? ' · dry-run' : ''}</strong></span></div>
+            {versions[workflow.id]?.length ? <div className="agent-chip-list">{versions[workflow.id].map((version) => <button type="button" key={version.version_id} disabled={version.current_version === workflow.current_version} onClick={() => void onMutate(`/api/admin/ai-workflows/${workflow.id}/rollback`, 'POST', { version: version.current_version })}><RotateCcw />v{version.current_version}</button>)}</div> : null}
+            {latestRun?.output ? <pre className="agent-json-preview">{JSON.stringify(latestRun.output, null, 2)}</pre> : latestRun?.error_message ? <p>{latestRun.error_message}</p> : null}
+          </div>;
+        })()}
+      </Panel>
+    </div>}
   </WorkspacePanel>;
 }
 

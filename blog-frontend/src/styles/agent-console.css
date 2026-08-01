@@ -17,21 +17,58 @@
   gap: 24px;
 }
 
-.workflow-list {
-  display: grid;
-  gap: 24px;
+.workflow-split-view {
+  grid-template-columns: minmax(280px, .78fr) minmax(0, 1.6fr);
 }
 
-.workflow-card {
-  display: grid;
-  gap: 16px;
-  padding-top: 24px;
-  border-top: 1px solid var(--agent-border);
+.workflow-master-list {
+  overflow: hidden;
+  border: 0;
+  border-right: 1px solid var(--agent-border);
+  border-radius: 0;
+  padding: 0;
 }
 
-.workflow-card:first-child {
-  padding-top: 0;
-  border-top: 0;
+.workflow-master-list > button {
+  display: flex;
+  width: 100%;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+  border: 0;
+  border-bottom: 1px solid var(--agent-border);
+  background: transparent;
+  color: var(--color-text-main);
+  cursor: pointer;
+  padding: 16px;
+  text-align: left;
+}
+
+.workflow-master-list > button:hover,
+.workflow-master-list > button.active {
+  background: var(--agent-accent-soft);
+}
+
+.workflow-master-list strong,
+.workflow-master-list small {
+  display: block;
+}
+
+.workflow-master-list small {
+  margin-top: 5px;
+  color: var(--color-text-muted);
+  line-height: 1.45;
+}
+
+.workflow-detail-panel {
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 20px;
+}
+
+.workflow-detail-actions {
+  flex-wrap: wrap;
 }
 
 .agent-console__main > .panel {
@@ -968,10 +1005,15 @@
   }
 
   .agent-run-list,
-  .agent-approval-list {
+  .agent-approval-list,
+  .workflow-master-list {
     max-height: 360px;
     border-right: 0;
     border-bottom: 1px solid var(--agent-border);
+  }
+
+  .workflow-detail-panel {
+    padding: 16px;
   }
 
   .agent-master-panel > .state {
@@ -1202,4 +1244,3 @@
   font-size: 12px;
   color: var(--color-text-muted, #888);
 }
-

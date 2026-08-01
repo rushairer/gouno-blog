@@ -155,6 +155,7 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 	hasApproval := false
 	finalText := ""
 	citationLedger := make(map[string]domain.AgentCitation)
+	toolCallCounts := make(map[string]int)
 	for step := 0; step < value.MaxSteps; step++ {
 		if approximateInputBytes(
 			platformInstructions+"\n\nAgent instructions:\n"+value.SystemPrompt, messages,
@@ -170,9 +171,18 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 			return ErrTokenBudget
 		}
 		requestID := fmt.Sprintf("run_%d_step_%d_%d", run.ID, step+1, time.Now().UnixNano())
+		instructions := platformInstructions + "\n\nAgent instructions:\n" + value.SystemPrompt
+		tools := r.tools.Definitions(value.Capabilities)
+		if step == value.MaxSteps-1 {
+			// Reserve the final model turn for synthesis. Without this, an Agent
+			// can spend every step discovering more material and be marked as a
+			// successful run with no useful operator-facing conclusion.
+			instructions += "\n\nThis is the final step. Do not call tools. Return a concise, evidence-based final summary using the information already collected."
+			tools = nil
+		}
 		result, err := client.Generate(ctx, provider.Request{
-			Instructions: platformInstructions + "\n\nAgent instructions:\n" + value.SystemPrompt,
-			Messages:     messages, Tools: r.tools.Definitions(value.Capabilities),
+			Instructions: instructions,
+			Messages:     messages, Tools: tools,
 			MaxTokens: min(value.MaxOutputTokens, int(remainingTokens)),
 		})
 		if err != nil {
@@ -195,6 +205,15 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 			break
 		}
 		for _, requested := range result.ToolCalls {
+			callKey := requested.Name + "\x00" + string(requested.Arguments)
+			toolCallCounts[callKey]++
+			if toolCallCounts[callKey] > 2 {
+				messages = append(messages, provider.Message{
+					Role: "tool", ToolCallID: requested.ID,
+					Content: `{"error":"this identical tool call has already been executed twice; provide a final evidence-based summary instead"}`,
+				})
+				continue
+			}
 			callID := requested.ID
 			call := &domain.AgentToolCall{
 				RunID: run.ID, ProviderCallID: &callID, ToolName: requested.Name,

@@ -30,7 +30,7 @@ func TestLiveConfiguredProvidersGenerateImage(t *testing.T) {
 	}
 	defer db.Close()
 
-	for _, name := range []string{"gemini-3.1-flash-image", "GPT-5.6-Luna"} {
+	for _, name := range []string{"Image Provider", "GPT-5.6-Luna"} {
 		t.Run(name, func(t *testing.T) {
 			var profile domain.ProviderProfile
 			if err := db.QueryRowContext(context.Background(), `SELECT id, name, provider_type, base_url, model, api_key_ciphertext, api_key_nonce, key_version, enabled, request_timeout_seconds FROM ai_provider_profiles WHERE name = $1 AND deleted_at IS NULL`, name).Scan(&profile.ID, &profile.Name, &profile.ProviderType, &profile.BaseURL, &profile.Model, &profile.APIKeyCiphertext, &profile.APIKeyNonce, &profile.KeyVersion, &profile.Enabled, &profile.RequestTimeoutSeconds); err != nil {

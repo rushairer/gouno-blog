@@ -5,10 +5,10 @@ import { Button, EmptyState, Field, FormActions, Panel, Select } from '../ui';
 
 type Mutate = (path: string, method?: string, body?: unknown) => Promise<void>;
 
-export function OperationsWorkspace({ suggestions, candidateSets, mediaCandidates, metrics, locale, onMutate }: {
+export function OperationsWorkspace({ suggestions, candidateSets, mediaCandidates = [], metrics, locale, onMutate }: {
   suggestions: OperationalSuggestion[];
   candidateSets: ContentCandidateSet[];
-  mediaCandidates: MediaCandidate[];
+  mediaCandidates?: MediaCandidate[];
   metrics: OutcomeMetrics;
   locale: 'en' | 'zh';
   onMutate: Mutate;

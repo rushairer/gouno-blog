@@ -51,7 +51,7 @@ func (s *Service) List(ctx context.Context) ([]*domain.Workflow, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT `+workflowColumns+`
 		FROM ai_workflows w JOIN ai_workflow_versions v
 		ON v.workflow_id=w.id AND v.version=w.current_version
-		WHERE w.deleted_at IS NULL ORDER BY w.created_at`)
+		WHERE w.deleted_at IS NULL ORDER BY w.created_at, w.id`)
 	if err != nil {
 		return nil, err
 	}
@@ -473,11 +473,15 @@ func (s *Service) ListRuns(ctx context.Context, workflowID int64) ([]*domain.Wor
 	items := make([]*domain.WorkflowRun, 0)
 	for rows.Next() {
 		var item domain.WorkflowRun
+		var output []byte
 		if err := rows.Scan(&item.ID, &item.WorkflowID, &item.WorkflowVersionID, &item.DryRun,
-			&item.Status, &item.Input, &item.Output, &item.ErrorCode, &item.ErrorMessage,
+			&item.Status, &item.Input, &output, &item.ErrorCode, &item.ErrorMessage,
 			&item.InputTokens, &item.OutputTokens, &item.TriggeredBy, &item.StartedAt,
 			&item.FinishedAt, &item.CreatedAt); err != nil {
 			return nil, err
+		}
+		if len(output) > 0 {
+			item.Output = json.RawMessage(output)
 		}
 		items = append(items, &item)
 	}
