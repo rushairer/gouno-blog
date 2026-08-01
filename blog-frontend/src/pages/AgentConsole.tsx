@@ -355,10 +355,11 @@ export default function AgentConsole() {
   const saveProvider = async (value: ProviderFormValue) => {
     setError('');
     try {
-      const response = await apiFetch(value.id ? `/api/admin/provider-profiles/${value.id}` : '/api/admin/provider-profiles', {
-        method: value.id ? 'PUT' : 'POST',
+      const { id, ...payload } = value;
+      const response = await apiFetch(id ? `/api/admin/provider-profiles/${id}` : '/api/admin/provider-profiles', {
+        method: id ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(value),
+        body: JSON.stringify(payload),
       });
       await readData<ProviderProfile>(response);
       setEditingProvider(null);
