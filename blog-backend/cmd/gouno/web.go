@@ -115,7 +115,9 @@ func startWebServer(cmd *cobra.Command, args []string) {
 		gin.Logger(),
 		middleware.RecoveryMiddleware(),
 		middleware.SecurityHeadersMiddleware(!globalConfig.WebServerConfig.Debug),
-		middleware.TimeoutMiddleware(globalConfig.WebServerConfig.RequestTimeout),
+		middleware.TimeoutMiddlewareWithOverrides(globalConfig.WebServerConfig.RequestTimeout, map[string]time.Duration{
+			"provider_test": 90 * time.Second,
+		}),
 		gounoMiddleware.RateLimitMiddleware(ctx, globalConfig.WebServerConfig.RateLimitPerMinute, time.Minute),
 	)
 	visitorSecret := os.Getenv("BLOG_VISITOR_SECRET")
