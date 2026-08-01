@@ -123,6 +123,19 @@ func (s *Service) Save(ctx context.Context, value *domain.Workflow) error {
 	return tx.Commit()
 }
 
+// ValidateDraft applies the exact validation used by Save without changing any
+// persistent state. AI workflow planning is intentionally suggestion-only.
+func (s *Service) ValidateDraft(value *domain.Workflow) error {
+	value.Name = strings.TrimSpace(value.Name)
+	if value.Name == "" || len(value.InputSchema) == 0 || !json.Valid(value.InputSchema) {
+		return fmt.Errorf("%w: name and input schema are required", ErrInvalid)
+	}
+	if len(value.InputSchema) > 32<<10 || len(value.Steps) == 0 {
+		return fmt.Errorf("%w: workflow is empty or too large", ErrInvalid)
+	}
+	return s.validateSteps(value.Steps, 0)
+}
+
 func (s *Service) validateSteps(steps []domain.WorkflowStep, depth int) error {
 	if depth > 3 || len(steps) > 50 {
 		return fmt.Errorf("%w: workflow nesting or step limit exceeded", ErrInvalid)

@@ -48,6 +48,13 @@ func (s *ManagementService) GetProvider(ctx context.Context, id int64) (*domain.
 	return value, translateError(err)
 }
 
+func (s *ManagementService) SetDefaultProvider(ctx context.Context, id int64, purpose string) error {
+	if purpose != "writing" && purpose != "image" {
+		return ErrInvalid
+	}
+	return translateError(s.repo.SetDefaultProvider(ctx, id, purpose))
+}
+
 func (s *ManagementService) SaveProvider(ctx context.Context, profile *domain.ProviderProfile, apiKey string) error {
 	profile.Name = strings.TrimSpace(profile.Name)
 	profile.BaseURL = strings.TrimRight(strings.TrimSpace(profile.BaseURL), "/")

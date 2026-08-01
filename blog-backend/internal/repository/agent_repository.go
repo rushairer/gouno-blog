@@ -24,7 +24,7 @@ func NewAgentRepository(db *sql.DB) *AgentRepository {
 }
 
 const providerColumns = `id, name, provider_type, base_url, model, api_key_ciphertext,
-	api_key_nonce, api_key_last4, key_version, enabled, request_timeout_seconds,
+	api_key_nonce, api_key_last4, key_version, enabled, is_default_writing, is_default_image, request_timeout_seconds,
 	max_output_tokens, created_at, updated_at`
 
 func scanProvider(scanner interface{ Scan(...any) error }) (*domain.ProviderProfile, error) {
@@ -32,7 +32,7 @@ func scanProvider(scanner interface{ Scan(...any) error }) (*domain.ProviderProf
 	err := scanner.Scan(
 		&profile.ID, &profile.Name, &profile.ProviderType, &profile.BaseURL, &profile.Model,
 		&profile.APIKeyCiphertext, &profile.APIKeyNonce, &profile.APIKeyLast4, &profile.KeyVersion,
-		&profile.Enabled, &profile.RequestTimeoutSeconds, &profile.MaxOutputTokens,
+		&profile.Enabled, &profile.IsDefaultWriting, &profile.IsDefaultImage, &profile.RequestTimeoutSeconds, &profile.MaxOutputTokens,
 		&profile.CreatedAt, &profile.UpdatedAt,
 	)
 	profile.HasAPIKey = len(profile.APIKeyCiphertext) > 0
@@ -99,6 +99,32 @@ func (r *AgentRepository) ListProviders(ctx context.Context) ([]*domain.Provider
 		result = append(result, profile)
 	}
 	return result, rows.Err()
+}
+
+func (r *AgentRepository) SetDefaultProvider(ctx context.Context, id int64, purpose string) error {
+	column := "is_default_writing"
+	if purpose == "image" {
+		column = "is_default_image"
+	}
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	if _, err = tx.ExecContext(ctx, `UPDATE ai_provider_profiles SET `+column+`=false, updated_at=NOW() WHERE deleted_at IS NULL AND `+column+`=true`); err == nil {
+		result, updateErr := tx.ExecContext(ctx, `UPDATE ai_provider_profiles SET `+column+`=true, updated_at=NOW() WHERE id=$1 AND enabled=true AND deleted_at IS NULL`, id)
+		err = updateErr
+		if err == nil {
+			affected, _ := result.RowsAffected()
+			if affected == 0 {
+				err = sql.ErrNoRows
+			}
+		}
+	}
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	return tx.Commit()
 }
 
 func (r *AgentRepository) DeleteProvider(ctx context.Context, id int64) error {

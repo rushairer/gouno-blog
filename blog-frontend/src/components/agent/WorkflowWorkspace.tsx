@@ -105,9 +105,39 @@ function WorkflowEditor({ initial, labels, onSave, onCancel }: {
   const [description, setDescription] = useState(initial?.description || '');
   const [schema, setSchema] = useState(JSON.stringify(initial?.input_schema || { type: 'object', additionalProperties: false }, null, 2));
   const [steps, setSteps] = useState(JSON.stringify(initial?.steps || [], null, 2));
+  const [goal, setGoal] = useState('');
+  const [planning, setPlanning] = useState(false);
+  const [plannerMessage, setPlannerMessage] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(Boolean(initial));
+  const generateDraft = async () => {
+    if (!goal.trim()) {
+      setPlannerMessage('先用一句话说明你希望自动化完成什么。');
+      return;
+    }
+    setPlanning(true);
+    setPlannerMessage('');
+    try {
+      const result = await readData<{ workflow: Workflow; provider: string; model: string }>(await apiFetch('/api/admin/ai-workflows/draft', { method: 'POST', body: JSON.stringify({ prompt: goal.trim() }) }));
+      setName(result.workflow.name);
+      setDescription(result.workflow.description);
+      setSchema(JSON.stringify(result.workflow.input_schema, null, 2));
+      setSteps(JSON.stringify(result.workflow.steps, null, 2));
+      setPlannerMessage(`已由 ${result.provider} · ${result.model} 生成未启用草案。请审阅后保存。`);
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : '';
+      setPlannerMessage(message.toLowerCase().includes('timeout') ? '默认写作模型响应超时。你可以稍后重试，或先手动填写下面的名称、说明和高级设置。' : (message || '无法生成 Workflow 草案。'));
+    } finally {
+      setPlanning(false);
+    }
+  };
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     await onSave({ id: initial?.id, name, description, enabled: initial?.enabled || false, input_schema: JSON.parse(schema), steps: JSON.parse(steps) });
   };
-  return <EditorPanel title={initial ? labels.editTitle : labels.createTitle} icon={<GitBranch />} closeLabel={labels.cancel} onClose={onCancel}><FormLayout onSubmit={submit}><Field label="Name"><input className="input-field" required value={name} onChange={(event) => setName(event.target.value)} /></Field><Field label="Description"><input className="input-field" value={description} onChange={(event) => setDescription(event.target.value)} /></Field><Field label={labels.schema}><textarea className="input-field mono" rows={6} value={schema} onChange={(event) => setSchema(event.target.value)} /></Field><Field label={labels.steps}><textarea className="input-field mono" rows={16} value={steps} onChange={(event) => setSteps(event.target.value)} /></Field><FormActions><Button variant="secondary" type="button" onClick={onCancel}>{labels.cancel}</Button><Button variant="primary" type="submit"><Save />{labels.save}</Button></FormActions></FormLayout></EditorPanel>;
+  return <EditorPanel title={initial ? labels.editTitle : labels.createTitle} icon={<GitBranch />} closeLabel={labels.cancel} onClose={onCancel}><FormLayout onSubmit={submit}>
+    {!initial ? <section className="workflow-planner"><div><h3>告诉 AI 你想持续完成什么</h3><p>例如：“每天检查最近发布文章的 SEO，并把需要人工确认的建议汇总出来”。AI 只生成未启用草案，不会运行或修改内容。</p></div><textarea className="input-field" rows={4} value={goal} onChange={(event) => setGoal(event.target.value)} placeholder="描述目标、频率、输入来源，以及哪些结果需要你确认…" /><FormActions><Button variant="secondary" type="button" disabled={planning} onClick={() => void generateDraft()}><GitBranch />{planning ? '正在生成草案…' : '用 AI 生成 Workflow 草案'}</Button></FormActions>{plannerMessage ? <p className="workflow-planner__message">{plannerMessage}</p> : null}</section> : null}
+    <Field label="名称" hint="面向日常运营的短名称，例如“发布前内容检查”。"><input className="input-field" required value={name} onChange={(event) => setName(event.target.value)} /></Field><Field label="作用说明" hint="说明此流程何时使用、会产出什么，以及人工确认边界。"><input className="input-field" value={description} onChange={(event) => setDescription(event.target.value)} /></Field>
+    <details className="workflow-advanced" open={showAdvanced} onToggle={(event) => setShowAdvanced(event.currentTarget.open)}><summary>高级设置：输入与步骤 <small>仅在需要精细控制时修改</small></summary><p>Workflow 由受版本锁定的 Agent 组成。常用步骤依次是：调用 Agent → 等待审批 → 输出结果。输入 Schema 定义运行时可以填写的字段；JSON Pointer（如 <code>/input/post_id</code>）用来把输入传给步骤。</p><Field label={labels.schema} hint="JSON Schema。示例：{&quot;type&quot;:&quot;object&quot;,&quot;properties&quot;:{&quot;post_id&quot;:{&quot;type&quot;:&quot;integer&quot;}},&quot;required&quot;:[&quot;post_id&quot;],&quot;additionalProperties&quot;:false}"><textarea className="input-field mono" rows={8} value={schema} onChange={(event) => setSchema(event.target.value)} /></Field><Field label={labels.steps} hint="允许 model、approval_gate、output；model 必须引用已保存 Skill 的 Agent。保存时服务端会校验所有步骤。"><textarea className="input-field mono" rows={16} value={steps} onChange={(event) => setSteps(event.target.value)} /></Field></details>
+    <FormActions><Button variant="secondary" type="button" onClick={onCancel}>{labels.cancel}</Button><Button variant="primary" type="submit"><Save />{labels.save}</Button></FormActions>
+  </FormLayout></EditorPanel>;
 }

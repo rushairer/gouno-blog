@@ -96,7 +96,7 @@ func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, 
 	}
 	var profileID int64
 	for _, item := range profiles {
-		if item.Name == "Image Provider" && item.Enabled {
+		if item.IsDefaultImage && item.Enabled {
 			profileID = item.ID
 			break
 		}

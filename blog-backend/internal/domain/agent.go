@@ -25,6 +25,8 @@ type ProviderProfile struct {
 	KeyVersion            int          `json:"-"`
 	HasAPIKey             bool         `json:"has_api_key"`
 	Enabled               bool         `json:"enabled"`
+	IsDefaultWriting      bool         `json:"is_default_writing"`
+	IsDefaultImage        bool         `json:"is_default_image"`
 	RequestTimeoutSeconds int          `json:"request_timeout_seconds"`
 	MaxOutputTokens       int          `json:"max_output_tokens"`
 	CreatedAt             time.Time    `json:"created_at"`

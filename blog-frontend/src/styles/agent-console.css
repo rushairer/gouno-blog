@@ -387,6 +387,59 @@
   padding: 5px 8px;
 }
 
+.provider-default,
+.provider-default-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--agent-accent);
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.provider-default-mark svg { width: 14px; height: 14px; }
+
+.provider-defaults {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) minmax(220px, 1fr);
+  align-items: start;
+  gap: 20px;
+  margin: 4px 0 22px;
+  padding: 16px 0 20px;
+  border-bottom: 1px solid var(--agent-border);
+}
+
+.provider-defaults h3 { margin: 0 0 5px; font-size: 14px; line-height: 1.45; }
+.provider-defaults p { margin: 0; color: var(--color-text-muted); font-size: 12px; line-height: 1.5; }
+.provider-defaults label { display: grid; gap: 7px; color: var(--color-text-muted); font-size: 12px; font-weight: 700; line-height: 1.45; }
+.provider-defaults .select-control { width: 100%; }
+
+.workflow-planner {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--agent-accent) 36%, var(--agent-border));
+  border-radius: var(--radius-panel);
+  background: color-mix(in srgb, var(--agent-accent) 8%, var(--bg-panel));
+}
+.workflow-planner h3 { margin: 0 0 4px; font-size: 16px; }
+.workflow-planner p, .workflow-advanced > p { margin: 0; color: var(--color-text-muted); font-size: 13px; line-height: 1.65; }
+.workflow-planner__message { color: var(--agent-accent) !important; font-weight: 700; }
+.workflow-advanced { display: grid; gap: 16px; padding: 16px 0 0; border-top: 1px solid var(--agent-border); }
+.workflow-advanced summary { cursor: pointer; color: var(--color-text-main); font-weight: 800; }
+.workflow-advanced summary small { margin-left: 8px; color: var(--color-text-muted); font-weight: 400; }
+
+/* Defaults are global settings; the table deliberately remains connection-only. */
+.agent-table .provider-default,
+.agent-table .provider-default-mark,
+.agent-table button[title="设为默认写作模型"],
+.agent-table button[title="设为默认图片生成模型"] { display: none; }
+
+@media (max-width: 900px) {
+  .provider-defaults { grid-template-columns: 1fr; gap: 14px; }
+}
+
 .agent-limit-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

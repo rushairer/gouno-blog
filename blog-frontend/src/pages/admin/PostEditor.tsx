@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Check, ExternalLink, History, Save, Send } from 'lucide-react';
+import { ArrowLeft, Check, ExternalLink, History, LoaderCircle, Save, Send, Sparkles } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiFetch } from '../../auth';
 import { AdminPageState, ConfirmDialog, Feedback, Field, Input, Select, Textarea } from '../../components/ui';
@@ -10,6 +10,7 @@ import { extractMarkdownTOC } from '../../markdown';
 import type { Category, Post, PostStatus } from '../../types/blog';
 
 interface PostVersion extends Post { post_id: number }
+type AssistTask = 'title' | 'summary' | 'slug';
 
 const emptyPost: Post = { id: 0, title: '', slug: '', summary: '', content: '', tags: [], status: 'draft', created_at: '' };
 
@@ -30,6 +31,10 @@ export default function PostEditor() {
   const [showVersions, setShowVersions] = useState(false);
   const [restoreTarget, setRestoreTarget] = useState<PostVersion | null>(null);
   const [confirmExit, setConfirmExit] = useState(false);
+  const [assistTask, setAssistTask] = useState<AssistTask | null>(null);
+  const [suggestionTask, setSuggestionTask] = useState<AssistTask | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [assistError, setAssistError] = useState('');
   const dirty = useRef(false);
 
   useEffect(() => {
@@ -96,6 +101,29 @@ export default function PostEditor() {
     else navigate('/admin/posts');
   };
 
+  const requestSuggestions = async (task: AssistTask) => {
+    if (!post.title.trim() && !post.content.trim()) {
+      setAssistError('先写下标题或正文，AI 才能理解这篇文章。');
+      return;
+    }
+    setAssistTask(task); setSuggestionTask(null); setSuggestions([]); setAssistError('');
+    try {
+      const response = await apiFetch('/api/admin/ai-draft-assist', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task, title: post.title, summary: post.summary, content: post.content }),
+      });
+      const result = await readData<{ suggestions: string[] }>(response);
+      setSuggestions(result.suggestions || []); setSuggestionTask(task);
+      if (!result.suggestions?.length) setAssistError('这次没有生成可用候选，请稍后重试。');
+    } catch (reason) { setAssistError(reason instanceof Error ? reason.message : '生成候选失败，请稍后重试。'); }
+    finally { setAssistTask(null); }
+  };
+
+  const applySuggestion = (task: AssistTask, value: string) => {
+    update(task, value);
+    setSuggestions([]); setSuggestionTask(null); setAssistError('');
+  };
+
   const openFrontsitePreview = async () => {
     let currentPost = post;
     if (dirty.current || !currentPost.id) {
@@ -143,9 +171,11 @@ export default function PostEditor() {
       <main className="editor-canvas">
         <Field label="标题" required>
           <Textarea className="editor-title" rows={2} value={post.title} onChange={(event) => update('title', event.target.value)} placeholder="写一个清晰、具体的标题" required />
+          <div className="editor-ai-inline"><button type="button" onClick={() => void requestSuggestions('title')} disabled={assistTask !== null}><Sparkles />{assistTask === 'title' ? <><LoaderCircle className="is-spinning" /> 正在想标题…</> : '生成标题候选'}</button>{suggestionTask === 'title' && suggestions.length > 0 ? <div className="editor-ai-candidates" aria-label="标题候选">{suggestions.map((item) => <button key={item} type="button" onClick={() => applySuggestion('title', item)}><span>{item}</span><b>应用</b></button>)}</div> : null}</div>
         </Field>
         <Field label="摘要">
           <Textarea className="editor-summary" rows={3} value={post.summary} onChange={(event) => update('summary', event.target.value)} maxLength={300} placeholder="用两三句话说明文章解决的问题" />
+          <div className="editor-ai-inline"><button type="button" onClick={() => void requestSuggestions('summary')} disabled={assistTask !== null}><Sparkles />{assistTask === 'summary' ? <><LoaderCircle className="is-spinning" /> 正在提炼摘要…</> : '根据正文生成摘要'}</button>{suggestionTask === 'summary' && suggestions.length > 0 ? <div className="editor-ai-candidates" aria-label="摘要候选">{suggestions.map((item) => <button key={item} type="button" onClick={() => applySuggestion('summary', item)}><span>{item}</span><b>应用</b></button>)}</div> : null}</div>
         </Field>
         <div className="editor-tabs"><button className={!preview ? 'active' : ''} type="button" onClick={() => setPreview(false)}>Markdown</button><button className={preview ? 'active' : ''} type="button" onClick={() => setPreview(true)}>预览</button></div>
         {preview ? <div className="editor-preview"><h1>{post.title || '无标题文章'}</h1><MarkdownRenderer content={post.content || '开始写作后，预览会出现在这里。'} /></div> : <textarea className="editor-body mono" value={post.content} onChange={(event) => update('content', event.target.value)} aria-label="文章正文 Markdown" placeholder={'## 从问题开始\n\n写下背景、约束、判断与实现…'} />}
@@ -154,9 +184,10 @@ export default function PostEditor() {
         <details open><summary>发布设置</summary><Field label="状态"><Select value={publishIntent} onChange={(event) => { setPublishIntent(event.target.value as PostStatus); dirty.current = true; }}><option value="draft">草稿</option><option value="published">立即发布</option><option value="scheduled">定时发布</option></Select></Field>{publishIntent === 'scheduled' ? <Field label="发布时间"><Input type="datetime-local" value={post.scheduled_at?.slice(0, 16) || ''} onChange={(event) => update('scheduled_at', event.target.value)} /></Field> : null}</details>
         <details open><summary>分类与标签</summary><Field label="分类"><Select value={post.category_id || ''} onChange={(event) => update('category_id', event.target.value ? Number(event.target.value) : null)}><option value="">未分类</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</Select></Field><Field label="标签" hint="使用逗号分隔，最多建议 10 个。"><Input value={post.tags.join(', ')} onChange={(event) => update('tags', event.target.value.split(',').map((tag) => tag.trim()))} placeholder="Go, OIDC, 安全" /></Field></details>
         <details open><summary>封面与摘要</summary><Field label="封面 URL"><Input value={post.cover_url || ''} onChange={(event) => update('cover_url', event.target.value)} placeholder="/media/cover.webp" /></Field><Field label="替代文本"><Input value={post.cover_alt || ''} onChange={(event) => update('cover_alt', event.target.value)} /></Field></details>
-        <details open><summary>SEO</summary><Field label="SEO 标题" hint={`${(post.seo_title || '').length}/60`}><Input value={post.seo_title || ''} maxLength={60} onChange={(event) => update('seo_title', event.target.value)} /></Field><Field label="SEO 描述" hint={`${(post.seo_description || '').length}/160`}><Textarea rows={4} value={post.seo_description || ''} maxLength={160} onChange={(event) => update('seo_description', event.target.value)} /></Field><Field label="Slug" required><Input className="mono" value={post.slug} onChange={(event) => update('slug', event.target.value)} required /></Field></details>
+        <details open><summary>SEO</summary><Field label="SEO 标题" hint={`${(post.seo_title || '').length}/60`}><Input value={post.seo_title || ''} maxLength={60} onChange={(event) => update('seo_title', event.target.value)} /></Field><Field label="SEO 描述" hint={`${(post.seo_description || '').length}/160`}><Textarea rows={4} value={post.seo_description || ''} maxLength={160} onChange={(event) => update('seo_description', event.target.value)} /></Field><Field label="Slug" required><Input className="mono" value={post.slug} onChange={(event) => update('slug', event.target.value)} required /><div className="editor-ai-inline"><button type="button" onClick={() => void requestSuggestions('slug')} disabled={assistTask !== null}><Sparkles />{assistTask === 'slug' ? <><LoaderCircle className="is-spinning" /> 正在生成 Slug…</> : '生成 Slug 候选'}</button>{suggestionTask === 'slug' && suggestions.length > 0 ? <div className="editor-ai-candidates" aria-label="Slug 候选">{suggestions.map((item) => <button key={item} type="button" onClick={() => applySuggestion('slug', item)}><span className="mono">{item}</span><b>应用</b></button>)}</div> : null}</div></Field></details>
       </aside>
     </div>
+    {assistError ? <Feedback type="error">{assistError}</Feedback> : null}
     <ConfirmDialog open={restoreTarget !== null} title="恢复历史版本" description={restoreTarget ? <>恢复 {new Date(restoreTarget.created_at).toLocaleString('zh-CN')} 的版本？当前内容会先保留为历史版本。</> : ''} confirmLabel="恢复版本" onClose={() => setRestoreTarget(null)} onConfirm={restoreVersion} />
     <ConfirmDialog open={confirmExit} title="放弃未保存的更改？" description="离开编辑器后，尚未保存的内容会丢失。" confirmLabel="放弃并离开" danger onClose={() => setConfirmExit(false)} onConfirm={() => navigate('/admin/posts')} />
   </div>;

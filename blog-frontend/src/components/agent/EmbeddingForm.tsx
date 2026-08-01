@@ -22,7 +22,7 @@ export function EmbeddingForm({ initial, locale, onSave, onCancel }: {
   onCancel: () => void;
 }) {
   const labels = locale === 'zh' ? {
-    title: initial ? '编辑嵌入配置' : '添加嵌入配置', name: '配置名称', base: 'OpenAI-compatible Base URL',
+    title: initial ? '编辑 Embedding 模型' : '添加 Embedding 模型', name: '配置名称', base: 'OpenAI-compatible Base URL',
     model: 'Embedding 模型', dimensions: '向量维度', key: 'API Key', keep: '留空则保留现有密钥',
     timeout: '请求超时（秒）', enabled: '启用此索引配置', cancel: '取消', save: '保存', saving: '保存中…',
   } : {

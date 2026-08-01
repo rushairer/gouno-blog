@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -15,6 +16,7 @@ import (
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/knowledge"
 	"github.com/rushairer/blog-backend/internal/operations"
+	"github.com/rushairer/blog-backend/internal/provider"
 	"github.com/rushairer/blog-backend/internal/tool"
 	workflowservice "github.com/rushairer/blog-backend/internal/workflow"
 	"github.com/rushairer/gouno"
@@ -29,6 +31,165 @@ type AgentController struct {
 	knowledge  *knowledge.Service
 	workflows  *workflowservice.Service
 	operations *operations.Service
+}
+
+type draftAssistRequest struct {
+	Task    string `json:"task" binding:"required"`
+	Title   string `json:"title"`
+	Summary string `json:"summary"`
+	Content string `json:"content"`
+}
+
+type workflowDraftRequest struct {
+	Prompt string `json:"prompt" binding:"required"`
+}
+
+// workflowPlannerPrompt is versioned alongside the executable workflow
+// contract. Product changes must update this prompt and the validator together;
+// the model never gets authority to create, enable, or run a workflow.
+const workflowPlannerPrompt = `You are workflow-planner/v1 for a blog administration product. Return only valid JSON with name, description, input_schema, and steps. Convert the user's goal into a small, safe workflow draft. Use only the supplied Agent IDs, and only model, approval_gate, and output steps. A model step must use one supplied Agent ID and an input_pointer beginning with /input. Include one approval_gate after any model step whose Agent execution_mode is approval. Finish with one output step whose output_pointer references a preceding step, for example /steps/analyze. Input schema must be a JSON Schema object with type object and additionalProperties false. Keep at most 5 steps. Do not create, enable, run, publish, or modify anything. Do not use Markdown or explanation.`
+
+// DraftWorkflow asks the default writing model to prepare a portable workflow
+// definition. It never persists the result; users review it in the editor.
+func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
+	var req workflowDraftRequest
+	if err := bindAgentJSON(c, &req); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+	req.Prompt = strings.TrimSpace(req.Prompt)
+	if req.Prompt == "" || len([]rune(req.Prompt)) > 4000 {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "workflow goal is required and must be at most 4000 characters"))
+		return
+	}
+	profiles, err := ctrl.svc.ListProviders(c.Request.Context())
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	var selected *domain.ProviderProfile
+	for _, profile := range profiles {
+		if profile.Enabled && profile.IsDefaultWriting {
+			selected = profile
+			break
+		}
+	}
+	if selected == nil {
+		c.JSON(http.StatusConflict, gouno.NewErrorResponse(http.StatusConflict, "an enabled default writing model is required"))
+		return
+	}
+	agents, err := ctrl.svc.ListAgents(c.Request.Context())
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	available := make([]map[string]any, 0, len(agents))
+	for _, agent := range agents {
+		if agent.Enabled && agent.SkillVersionID != nil {
+			available = append(available, map[string]any{"id": agent.ID, "name": agent.Name, "description": agent.Description, "execution_mode": agent.ExecutionMode, "capabilities": agent.Capabilities})
+		}
+	}
+	if len(available) == 0 {
+		c.JSON(http.StatusConflict, gouno.NewErrorResponse(http.StatusConflict, "create an enabled Agent with a saved Skill before planning a workflow"))
+		return
+	}
+	client, err := ctrl.svc.ProviderClient(c.Request.Context(), selected.ID)
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	payload, _ := json.Marshal(map[string]any{"goal": req.Prompt, "available_agents": available})
+	// A workflow plan is deliberately small (at most five steps); constraining
+	// output keeps the interactive creator responsive on slower providers.
+	result, err := client.Generate(c.Request.Context(), provider.Request{Instructions: workflowPlannerPrompt, Messages: []provider.Message{{Role: "user", Content: string(payload)}}, MaxTokens: min(selected.MaxOutputTokens, 800)})
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	text := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(result.Text), "```json"), "```"))
+	var draft domain.Workflow
+	if err := json.Unmarshal([]byte(text), &draft); err != nil {
+		c.JSON(http.StatusBadGateway, gouno.NewErrorResponse(http.StatusBadGateway, "AI returned an invalid workflow draft"))
+		return
+	}
+	draft.Enabled = false
+	if err := ctrl.workflows.ValidateDraft(&draft); err != nil {
+		c.JSON(http.StatusBadGateway, gouno.NewErrorResponse(http.StatusBadGateway, "AI returned an unsafe or unsupported workflow draft"))
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"workflow": draft, "provider": selected.Name, "model": selected.Model, "planner_version": "workflow-planner/v1"}))
+}
+
+// DraftAssist is deliberately suggestion-only: it never persists or publishes
+// content. The editor remains the place where an author reviews and applies a
+// candidate to their unsaved draft.
+func (ctrl *AgentController) DraftAssist(c *gin.Context) {
+	var req draftAssistRequest
+	if err := bindAgentJSON(c, &req); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+	req.Task = strings.TrimSpace(req.Task)
+	req.Title, req.Summary, req.Content = strings.TrimSpace(req.Title), strings.TrimSpace(req.Summary), strings.TrimSpace(req.Content)
+	if (req.Task != "title" && req.Task != "summary" && req.Task != "slug") || len([]rune(req.Content)) > 50000 || (req.Title == "" && req.Content == "") {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "task and article content are required"))
+		return
+	}
+	profiles, err := ctrl.svc.ListProviders(c.Request.Context())
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	var selected *domain.ProviderProfile
+	for _, profile := range profiles {
+		if profile.Enabled && profile.IsDefaultWriting {
+			selected = profile
+			break
+		}
+	}
+	if selected == nil {
+		c.JSON(http.StatusConflict, gouno.NewErrorResponse(http.StatusConflict, "an enabled default AI provider is required"))
+		return
+	}
+	client, err := ctrl.svc.ProviderClient(c.Request.Context(), selected.ID)
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	instruction := "You are an editorial assistant for a blog. Return only valid JSON in the form {\"suggestions\":[\"...\"]}. Produce exactly three concise candidates. Do not explain, use Markdown, or change the article."
+	if req.Task == "title" {
+		instruction += " Create specific Chinese article titles that accurately reflect the supplied draft."
+	} else if req.Task == "summary" {
+		instruction += " Create Chinese summaries, each at most 300 Chinese characters, that accurately reflect the supplied draft."
+	} else {
+		instruction += " Create lowercase URL slugs using ASCII letters, numbers, and hyphens only."
+	}
+	prompt, _ := json.Marshal(map[string]string{"title": req.Title, "summary": req.Summary, "content": req.Content})
+	result, err := client.Generate(c.Request.Context(), provider.Request{Instructions: instruction, Messages: []provider.Message{{Role: "user", Content: string(prompt)}}, MaxTokens: min(selected.MaxOutputTokens, 500)})
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	var output struct {
+		Suggestions []string `json:"suggestions"`
+	}
+	text := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(result.Text), "```json"), "```"))
+	if err := json.Unmarshal([]byte(text), &output); err != nil || len(output.Suggestions) == 0 {
+		c.JSON(http.StatusBadGateway, gouno.NewErrorResponse(http.StatusBadGateway, "AI returned an invalid suggestion response"))
+		return
+	}
+	seen, suggestions := map[string]bool{}, make([]string, 0, 3)
+	for _, suggestion := range output.Suggestions {
+		suggestion = strings.TrimSpace(suggestion)
+		if suggestion != "" && !seen[suggestion] {
+			seen[suggestion] = true
+			suggestions = append(suggestions, suggestion)
+			if len(suggestions) == 3 {
+				break
+			}
+		}
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"suggestions": suggestions, "provider": selected.Name, "model": selected.Model}))
 }
 
 func (ctrl *AgentController) SetWorkflowService(service *workflowservice.Service) {
@@ -387,6 +548,19 @@ func (ctrl *AgentController) ListProviders(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
+}
+
+func (ctrl *AgentController) SetDefaultProvider(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	purpose := c.Param("purpose")
+	if err := ctrl.svc.SetDefaultProvider(c.Request.Context(), id, purpose); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }
 
 func (ctrl *AgentController) CreateProvider(c *gin.Context) {
