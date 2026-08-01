@@ -5,8 +5,11 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"regexp"
 	"strings"
 )
+
+var imageDataURI = regexp.MustCompile(`data:(image/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)`)
 
 // GenerateImage uses Gemini's native interactions endpoint. Image work remains
 // separate from Agent text/tool turns, so it cannot bypass approval policies.
@@ -16,6 +19,9 @@ func (p *HTTPProvider) GenerateImage(ctx context.Context, req ImageRequest) (Ima
 	}
 	if p.name == "openai" {
 		return p.generateOpenAIImage(ctx, req)
+	}
+	if p.name == "anthropic" {
+		return p.generateAnthropicCompatibleImage(ctx, req)
 	}
 	if p.name != "gemini" {
 		return ImageResult{}, errors.New("provider does not support image generation")
@@ -53,6 +59,28 @@ func (p *HTTPProvider) GenerateImage(ctx context.Context, req ImageRequest) (Ima
 		return ImageResult{}, errors.New("Gemini returned an unsupported image type")
 	}
 	return ImageResult{Data: data, MIMEType: decoded.OutputImage.MIMEType}, nil
+}
+
+// generateAnthropicCompatibleImage supports gateways that return an image in a
+// text block as a Markdown data URI while accepting the Anthropic Messages API.
+func (p *HTTPProvider) generateAnthropicCompatibleImage(ctx context.Context, req ImageRequest) (ImageResult, error) {
+	result, err := p.anthropicGenerate(ctx, Request{
+		Instructions: "Generate the requested image. Return it only as a Markdown image whose URL is a base64 data URI; do not add prose.",
+		Messages:     []Message{{Role: "user", Content: req.Prompt}},
+		MaxTokens:    2000,
+	})
+	if err != nil {
+		return ImageResult{}, err
+	}
+	match := imageDataURI.FindStringSubmatch(result.Text)
+	if len(match) != 3 {
+		return ImageResult{}, errors.New("Anthropic-compatible response did not contain an image data URI")
+	}
+	data, err := base64.StdEncoding.DecodeString(match[2])
+	if err != nil || len(data) == 0 {
+		return ImageResult{}, errors.New("Anthropic-compatible response did not contain a valid image")
+	}
+	return ImageResult{Data: data, MIMEType: match[1]}, nil
 }
 
 // generateOpenAIImage asks an OpenAI Responses model to invoke its hosted

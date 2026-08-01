@@ -86,6 +86,28 @@ func TestAnthropicGenerateParsesTextAndToolCall(t *testing.T) {
 	}
 }
 
+func TestAnthropicCompatibleImageParsesMarkdownDataURI(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/messages" {
+			t.Fatalf("path = %s", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"content":[{"type":"text","text":"![image](data:image/jpeg;base64,/9j/4AAQ)"}]}`))
+	}))
+	defer server.Close()
+	client, err := NewHTTPProvider("anthropic", server.URL, "secret", "gemini-image", []string{"127.0.0.1"}, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	image, err := client.GenerateImage(context.Background(), ImageRequest{Prompt: "blue circle"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if image.MIMEType != "image/jpeg" || len(image.Data) != 6 {
+		t.Fatalf("image = %#v", image)
+	}
+}
+
 func TestAnthropicSanitizesToolNamesWithDots(t *testing.T) {
 	var requestBody []byte
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -134,11 +156,11 @@ func TestAnthropicMergesMultipleToolResultsIntoSingleUserMessage(t *testing.T) {
 		Messages []struct {
 			Role    string `json:"role"`
 			Content []struct {
-				Type       string `json:"type"`
-				ToolUseID  string `json:"tool_use_id"`
-				Text       string `json:"text"`
-				ID         string `json:"id"`
-				Name       string `json:"name"`
+				Type      string `json:"type"`
+				ToolUseID string `json:"tool_use_id"`
+				Text      string `json:"text"`
+				ID        string `json:"id"`
+				Name      string `json:"name"`
 			} `json:"content"`
 		} `json:"messages"`
 	}
