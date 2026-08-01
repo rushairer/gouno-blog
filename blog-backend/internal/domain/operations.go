@@ -24,6 +24,17 @@ type OperationalSuggestion struct {
 	UpdatedAt     time.Time       `json:"updated_at"`
 }
 
+type EditorialTask struct {
+	ID                 int64     `json:"id"`
+	Title              string    `json:"title"`
+	Description        string    `json:"description"`
+	Priority           string    `json:"priority"`
+	Status             string    `json:"status"`
+	SourceApprovalID   *int64    `json:"source_approval_id,omitempty"`
+	SourceSuggestionID *int64    `json:"source_suggestion_id,omitempty"`
+	CreatedAt          time.Time `json:"created_at"`
+}
+
 type ContentCandidate struct {
 	ID        int64     `json:"id"`
 	Value     string    `json:"value"`

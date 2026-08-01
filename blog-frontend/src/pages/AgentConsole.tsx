@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { apiFetch, canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
 import type {
-  Agent, AgentApproval, AgentRun, AgentSkill, AgentToolCall, ContentCandidateSet, EmbeddingProfile, MediaCandidate, OperationalSuggestion, OutcomeMetrics, ProviderProfile, ToolDefinition, Workflow, WorkflowMetric, WorkflowRun,
+  Agent, AgentApproval, AgentRun, AgentSkill, AgentToolCall, ContentCandidateSet, EditorialTask, EmbeddingProfile, MediaCandidate, OperationalSuggestion, ProviderProfile, ToolDefinition, Workflow, WorkflowMetric, WorkflowRun,
 } from '../agent';
 import { EmbeddingForm } from '../components/agent/EmbeddingForm';
 import type { EmbeddingFormValue } from '../components/agent/EmbeddingForm';
@@ -36,6 +36,10 @@ function initialConsoleTab(): ConsoleTab {
   return requested && ['overview', 'inbox', 'automation', 'records', 'advanced'].includes(requested)
     ? requested as ConsoleTab
     : 'overview';
+}
+
+function initialRecordType(): 'agent' | 'workflow' {
+  return new URLSearchParams(window.location.search).get('record') === 'agent' ? 'agent' : 'workflow';
 }
 
 const copy = {
@@ -366,11 +370,11 @@ export default function AgentConsole() {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [workflowRuns, setWorkflowRuns] = useState<WorkflowRun[]>([]);
   const [workflowMetrics, setWorkflowMetrics] = useState<WorkflowMetric[]>([]);
-  const [recordType, setRecordType] = useState<'agent' | 'workflow'>('workflow');
+  const [recordType, setRecordType] = useState<'agent' | 'workflow'>(initialRecordType);
   const [suggestions, setSuggestions] = useState<OperationalSuggestion[]>([]);
   const [candidateSets, setCandidateSets] = useState<ContentCandidateSet[]>([]);
   const [mediaCandidates, setMediaCandidates] = useState<MediaCandidate[]>([]);
-  const [outcomeMetrics, setOutcomeMetrics] = useState<OutcomeMetrics>({ feedback: [], suggestions: 0, converted: 0, ignored: 0, candidate_sets: 0, selected_candidate_sets: 0 });
+  const [editorialTasks, setEditorialTasks] = useState<EditorialTask[]>([]);
   const [selectedApproval, setSelectedApproval] = useState<AgentApproval | null>(null);
   const [selectedRun, setSelectedRun] = useState<{ run: AgentRun; tool_calls: AgentToolCall[] } | null>(null);
 
@@ -425,7 +429,7 @@ export default function AgentConsole() {
         return [] as WorkflowRun[];
       }
     };
-    const [providerData, embeddingData, indexData, agentData, runData, approvalData, toolData, skillData, workflowData, workflowRunData, workflowMetricData, suggestionData, candidateData, mediaCandidateData, outcomeData] = await Promise.all([
+    const [providerData, embeddingData, indexData, agentData, runData, approvalData, toolData, skillData, workflowData, workflowRunData, workflowMetricData, suggestionData, candidateData, mediaCandidateData, editorialTaskData] = await Promise.all([
       readData<ProviderProfile[]>(await apiFetch('/api/admin/provider-profiles')),
       readData<EmbeddingProfile[]>(await apiFetch('/api/admin/embedding-profiles')),
       readData<{ queued: number; failed: number; chunks: number }>(await apiFetch('/api/admin/ai-index/status')),
@@ -440,7 +444,7 @@ export default function AgentConsole() {
       readData<OperationalSuggestion[]>(await apiFetch('/api/admin/ai-suggestions?status=all')),
       readData<ContentCandidateSet[]>(await apiFetch('/api/admin/ai-candidates')),
       readData<MediaCandidate[]>(await apiFetch('/api/admin/ai-media-candidates')),
-      readData<OutcomeMetrics>(await apiFetch('/api/admin/ai-outcome-metrics')),
+      readData<EditorialTask[]>(await apiFetch('/api/admin/ai-editorial-tasks')),
     ]);
     setProviders(providerData);
     setEmbeddingProfiles(embeddingData);
@@ -456,7 +460,7 @@ export default function AgentConsole() {
     setSuggestions(suggestionData);
     setCandidateSets(candidateData);
     setMediaCandidates(mediaCandidateData);
-    setOutcomeMetrics(outcomeData);
+    setEditorialTasks(editorialTaskData);
     setSelectedApproval((current) => approvalData.list?.find((item) => item.id === current?.id) || approvalData.list?.[0] || null);
   }, [approvalFilter]);
 
@@ -714,8 +718,8 @@ export default function AgentConsole() {
         </WorkspacePanel> : null}
 
         {!editingAgent && !editingProvider && !editingEmbedding && !editingSkill && tab === 'automation' ? <WorkflowWorkspace workflows={workflows} runs={workflowRuns} metrics={workflowMetrics} agents={agents} locale={locale} onMutate={mutate} onRun={queueWorkflow} onRefresh={refresh} onSave={saveWorkflow} /> : null}
-        {!editingAgent && !editingProvider && !editingEmbedding && !editingSkill && tab === 'inbox' ? <><FriendlyApprovalQueue locale={locale} approvals={approvals} selected={selectedApproval} onSelect={setSelectedApproval} onReview={review} /><OperationsWorkspace suggestions={suggestions} candidateSets={candidateSets} mediaCandidates={mediaCandidates} metrics={outcomeMetrics} locale={locale} onMutate={mutate} /></> : null}
-        {!editingAgent && !editingProvider && tab === 'records' ? <div className="records-hub section-stack"><SubnavTabs label={locale === 'zh' ? '运行记录类型' : 'Run record type'} value={recordType} onValueChange={(value) => setRecordType(value as typeof recordType)} items={[{ value: 'workflow', label: locale === 'zh' ? 'Workflow 运行' : 'Workflow runs' }, { value: 'agent', label: locale === 'zh' ? 'Agent 运行' : 'Agent runs' }]} />{recordType === 'agent' ? <RecordsWorkspace locale={locale} runs={runs} agents={agents} selectedRun={selectedRun} onInspect={(run) => void inspectRun(run)} formatDateTime={formatDateTime} /> : <WorkflowRunRecords locale={locale} workflows={workflows} runs={workflowRuns} formatDateTime={formatDateTime} />}</div> : null}
+        {!editingAgent && !editingProvider && !editingEmbedding && !editingSkill && tab === 'inbox' ? <><FriendlyApprovalQueue locale={locale} approvals={approvals} selected={selectedApproval} onSelect={setSelectedApproval} onReview={review} /><OperationsWorkspace suggestions={suggestions} candidateSets={candidateSets} mediaCandidates={mediaCandidates} editorialTasks={editorialTasks} locale={locale} onMutate={mutate} /></> : null}
+        {!editingAgent && !editingProvider && tab === 'records' ? <div className="records-hub section-stack"><SubnavTabs label={locale === 'zh' ? '运行记录类型' : 'Run record type'} value={recordType} onValueChange={(value) => { const next = value as typeof recordType; setRecordType(next); const url = new URL(window.location.href); url.searchParams.set('record', next); window.history.replaceState(null, '', url); }} items={[{ value: 'workflow', label: locale === 'zh' ? 'Workflow 运行' : 'Workflow runs' }, { value: 'agent', label: locale === 'zh' ? 'Agent 运行' : 'Agent runs' }]} />{recordType === 'agent' ? <RecordsWorkspace locale={locale} runs={runs} agents={agents} selectedRun={selectedRun} onInspect={(run) => void inspectRun(run)} formatDateTime={formatDateTime} /> : <WorkflowRunRecords locale={locale} workflows={workflows} runs={workflowRuns} formatDateTime={formatDateTime} />}</div> : null}
 
         {!editingAgent && !editingProvider && !editingEmbedding && tab === 'advanced' && advancedSection === 'knowledge' ? <WorkspacePanel className="agent-table-panel knowledge-workspace">
           <PanelHeader title={<><DatabaseZap />{labels.knowledge}</>} description={locale === 'zh' ? '仅索引已发布文章；Embedding 模型负责把文章转换为可检索的知识库。' : 'Published content only; jobs run asynchronously.'} actions={<><Button variant="secondary" type="button" onClick={() => void mutate('/api/admin/ai-index/retry')}><RefreshCw />{locale === 'zh' ? '重试失败任务' : 'Retry failed'}</Button><Button variant="secondary" type="button" onClick={() => void mutate('/api/admin/ai-index/rebuild')}><RefreshCw />{locale === 'zh' ? '全量重建' : 'Rebuild all'}</Button><Button variant="primary" type="button" onClick={() => setEditingEmbedding('new')}><Plus />{locale === 'zh' ? '添加 Embedding 模型' : 'Add embedding profile'}</Button></>} />

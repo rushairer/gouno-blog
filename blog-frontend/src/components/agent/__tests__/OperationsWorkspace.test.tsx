@@ -10,7 +10,7 @@ describe('OperationsWorkspace', () => {
     render(<OperationsWorkspace
       locale="en"
       onMutate={onMutate}
-      metrics={{ feedback: [], suggestions: 1, converted: 0, ignored: 0, candidate_sets: 1, selected_candidate_sets: 0 }}
+      editorialTasks={[]}
       suggestions={[{
         id: 7, source_type: 'broken_links', source_key: 'post:4', title: 'Repair links',
         description: 'Two cached checks failed.', priority: 'high', evidence: { failures: 2 },
@@ -24,28 +24,29 @@ describe('OperationsWorkspace', () => {
       }]}
     />);
 
-    await user.click(screen.getByRole('button', { name: 'Make task' }));
+    await user.click(screen.getByRole('button', { name: 'Create editorial task' }));
     expect(onMutate).toHaveBeenCalledWith('/api/admin/ai-suggestions/7/convert');
 
     await user.click(screen.getByRole('button', { name: 'Choose and create approval' }));
     expect(onMutate).toHaveBeenCalledWith('/api/admin/ai-candidates/8/select', 'POST', { candidate_id: 11 });
   });
 
-  it('keeps feedback out of the primary queue while retaining the shared form contract', () => {
+  it('separates open editorial tasks from handled suggestions without a manual feedback form', async () => {
+    const user = userEvent.setup();
+    const onMutate = vi.fn().mockResolvedValue(undefined);
     const { container } = render(<OperationsWorkspace
       locale="zh"
-      onMutate={vi.fn().mockResolvedValue(undefined)}
-      metrics={{ feedback: [], suggestions: 0, converted: 0, ignored: 0, candidate_sets: 0, selected_candidate_sets: 0 }}
-      suggestions={[]}
+      onMutate={onMutate}
+      editorialTasks={[{ id: 4, title: '修复失效链接', description: '更新外部链接。', priority: 'high', status: 'open', source_suggestion_id: 7, created_at: '2026-07-30T00:00:00Z' }]}
+      suggestions={[{ id: 7, source_type: 'broken_links', source_key: 'post:4', title: '检查失效链接', description: '一条链接失效。', priority: 'high', evidence: {}, status: 'converted', created_at: '2026-07-30T00:00:00Z', updated_at: '2026-07-30T00:00:00Z' }]}
       candidateSets={[]}
     />);
 
     expect(container.querySelector('.operations-queue__counts')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '编辑任务' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '标记完成' }));
+    expect(onMutate).toHaveBeenCalledWith('/api/admin/ai-editorial-tasks/4/status', 'POST', { status: 'done' });
     expect(container.querySelector('.operations-history')).toBeInTheDocument();
-    const form = container.querySelector('.feedback-form');
-    expect(form).toHaveClass('form-grid');
-    expect(form?.querySelectorAll('.field')).toHaveLength(4);
-    expect(form?.querySelectorAll('.input-field')).toHaveLength(4);
-    expect(form?.querySelector('.feedback-form__actions')).toContainElement(screen.getByRole('button', { name: '保存反馈' }));
+    expect(container.querySelector('.feedback-form')).not.toBeInTheDocument();
   });
 });

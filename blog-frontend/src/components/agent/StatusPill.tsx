@@ -20,7 +20,6 @@ export function StatusPill({
 }) {
   return <span className={`status-pill status-pill--${status}`}>{label || statusLabel(status, locale)}</span>;
 }
-
 export function riskLabel(risk: string, locale: 'en' | 'zh') {
   const labels = locale === 'zh'
     ? { read: '只读', propose: '需审批', write: '写入' }

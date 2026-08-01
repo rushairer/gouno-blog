@@ -404,6 +404,49 @@ func (s *Service) ConvertSuggestion(ctx context.Context, id int64) error {
 	return tx.Commit()
 }
 
+func (s *Service) ListEditorialTasks(ctx context.Context, status string) ([]*domain.EditorialTask, error) {
+	if status != "" && status != "all" && status != "open" && status != "done" && status != "cancelled" {
+		return nil, tool.ErrInvalidArgument
+	}
+	rows, err := s.db.QueryContext(ctx, `SELECT id,title,description,priority,status,source_approval_id,source_suggestion_id,created_at
+		FROM ai_editorial_tasks WHERE ($1='' OR $1='all' OR status=$1)
+		ORDER BY CASE status WHEN 'open' THEN 1 WHEN 'done' THEN 2 ELSE 3 END, created_at DESC`, status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := make([]*domain.EditorialTask, 0)
+	for rows.Next() {
+		var item domain.EditorialTask
+		var approvalID, suggestionID sql.NullInt64
+		if err := rows.Scan(&item.ID, &item.Title, &item.Description, &item.Priority, &item.Status, &approvalID, &suggestionID, &item.CreatedAt); err != nil {
+			return nil, err
+		}
+		if approvalID.Valid {
+			item.SourceApprovalID = &approvalID.Int64
+		}
+		if suggestionID.Valid {
+			item.SourceSuggestionID = &suggestionID.Int64
+		}
+		items = append(items, &item)
+	}
+	return items, rows.Err()
+}
+
+func (s *Service) UpdateEditorialTaskStatus(ctx context.Context, id int64, status string) error {
+	if id <= 0 || (status != "done" && status != "cancelled") {
+		return tool.ErrInvalidArgument
+	}
+	result, err := s.db.ExecContext(ctx, `UPDATE ai_editorial_tasks SET status=$2 WHERE id=$1 AND status='open'`, id, status)
+	if err != nil {
+		return err
+	}
+	if count, _ := result.RowsAffected(); count == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
 func (s *Service) CreateSuggestion(ctx context.Context, value *domain.OperationalSuggestion) error {
 	rawKey := strings.Join([]string{value.SourceType, value.SourceKey, value.Title}, ":")
 	sum := sha256.Sum256([]byte(rawKey))

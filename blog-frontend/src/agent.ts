@@ -176,6 +176,17 @@ export interface MediaCandidate {
   created_at: string;
 }
 
+export interface EditorialTask {
+  id: number;
+  title: string;
+  description: string;
+  priority: 'low' | 'medium' | 'high';
+  status: 'open' | 'done' | 'cancelled';
+  source_approval_id?: number;
+  source_suggestion_id?: number;
+  created_at: string;
+}
+
 export interface OutcomeMetrics {
   feedback: { target_type: string; label: string; count: number }[];
   suggestions: number;

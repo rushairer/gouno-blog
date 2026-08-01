@@ -163,7 +163,7 @@ func (r *Runner) notifyRunFailure(ctx context.Context, runID int64, message stri
 		recipient = *agent.CreatedBy
 	}
 	_ = r.repo.CreateSystemNotification(ctx, recipient, "ai_run_failed",
-		"AI 自动化运行失败："+agent.Name, message, "/admin/agents", fmt.Sprintf("agent-run-%d", runID))
+		"Agent 运行失败："+agent.Name, message, "/admin/agents?tab=records&record=agent", fmt.Sprintf("agent-run-%d", runID))
 }
 
 const providerAttempts = 3

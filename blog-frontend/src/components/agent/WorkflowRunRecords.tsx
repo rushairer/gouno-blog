@@ -30,7 +30,10 @@ export function WorkflowRunRecords({ locale, workflows, runs, formatDateTime }: 
   formatDateTime: (value: string) => string;
 }) {
   const zh = locale === 'zh';
-  const [workflowID, setWorkflowID] = useState(0);
+  const [workflowID, setWorkflowID] = useState(() => {
+    const value = Number(new URLSearchParams(window.location.search).get('workflow'));
+    return workflows.some((workflow) => workflow.id === value) ? value : 0;
+  });
   const [selected, setSelected] = useState<{ run: WorkflowRun; steps: WorkflowStepRun[] } | null>(null);
   const [loadingID, setLoadingID] = useState<number | null>(null);
   const [error, setError] = useState('');

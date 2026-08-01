@@ -441,8 +441,8 @@ func (s *Service) Execute(ctx context.Context, runID int64) {
 		if queryErr := s.db.QueryRowContext(ctx, `SELECT COALESCE(r.triggered_by,w.created_by),w.name,w.id
 			FROM ai_workflow_runs r JOIN ai_workflows w ON w.id=r.workflow_id WHERE r.id=$1`, runID).
 			Scan(&recipient, &name, &workflowID); queryErr == nil && recipient != nil {
-			_ = s.agents.Notify(ctx, *recipient, "ai_workflow_failed", name+"运行失败", message,
-				"/admin/agents?tab=automation&workflow="+strconv.FormatInt(workflowID, 10), "workflow-run-"+strconv.FormatInt(runID, 10))
+			_ = s.agents.Notify(ctx, *recipient, "ai_workflow_failed", "Workflow 运行失败："+name, message,
+				"/admin/agents?tab=records&workflow="+strconv.FormatInt(workflowID, 10), "workflow-run-"+strconv.FormatInt(runID, 10))
 		}
 	}
 }

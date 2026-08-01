@@ -42,7 +42,7 @@ function responseFor(url: string) {
   if (url === '/api/admin/ai-suggestions?status=all') return [];
   if (url === '/api/admin/ai-candidates') return [];
   if (url === '/api/admin/ai-media-candidates') return [];
-  if (url === '/api/admin/ai-outcome-metrics') return { feedback: [], suggestions: 0, converted: 0, ignored: 0, candidate_sets: 0, selected_candidate_sets: 0 };
+  if (url === '/api/admin/ai-editorial-tasks') return [];
   throw new Error(`unexpected URL: ${url}`);
 }
 
