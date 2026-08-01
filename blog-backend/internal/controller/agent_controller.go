@@ -147,6 +147,20 @@ func (ctrl *AgentController) AttachMediaAsset(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }
 
+func (ctrl *AgentController) GenerateMediaCandidate(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	creator, _ := c.Get("account_id")
+	creatorText, _ := creator.(string)
+	if err := ctrl.approvals.GenerateMediaCandidate(c.Request.Context(), id, creatorText); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, gouno.NewSuccessResponse(nil))
+}
+
 func (ctrl *AgentController) SelectCandidate(c *gin.Context) {
 	id, ok := agentID(c)
 	if !ok {

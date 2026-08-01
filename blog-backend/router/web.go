@@ -211,6 +211,7 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 				admin.GET("/admin/ai-media-candidates", agentCtrl.ListMediaCandidates)
 				admin.POST("/admin/ai-media-candidates/:id/review", agentCtrl.ReviewMediaCandidate)
 				admin.POST("/admin/ai-media-candidates/:id/attach-media", agentCtrl.AttachMediaAsset)
+				admin.POST("/admin/ai-media-candidates/:id/generate", agentCtrl.GenerateMediaCandidate)
 				admin.POST("/admin/ai-candidates/:id/select", agentCtrl.SelectCandidate)
 				admin.POST("/admin/ai-feedback", agentCtrl.SaveFeedback)
 				admin.GET("/admin/ai-outcome-metrics", agentCtrl.OutcomeMetrics)

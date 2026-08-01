@@ -2,14 +2,18 @@ package agent
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/provider"
 	"github.com/rushairer/blog-backend/internal/repository"
 	"github.com/rushairer/blog-backend/internal/service"
 )
@@ -20,12 +24,15 @@ var (
 )
 
 type ApprovalService struct {
-	repo  *repository.AgentRepository
-	posts *service.PostService
+	repo       *repository.AgentRepository
+	posts      *service.PostService
+	management *ManagementService
+	growth     *service.GrowthService
+	mediaDir   string
 }
 
-func NewApprovalService(repo *repository.AgentRepository, posts *service.PostService) *ApprovalService {
-	return &ApprovalService{repo: repo, posts: posts}
+func NewApprovalService(repo *repository.AgentRepository, posts *service.PostService, management *ManagementService, growth *service.GrowthService, mediaDir string) *ApprovalService {
+	return &ApprovalService{repo: repo, posts: posts, management: management, growth: growth, mediaDir: mediaDir}
 }
 
 func (s *ApprovalService) List(ctx context.Context, status string, page, pageSize int) ([]*domain.AgentApproval, int, error) {
@@ -66,6 +73,73 @@ func (s *ApprovalService) AttachMediaAsset(ctx context.Context, candidateID, med
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrApprovalConflict
 		}
+		return err
+	}
+	return nil
+}
+
+func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, creator string) error {
+	if id <= 0 || s.management == nil || s.growth == nil || s.mediaDir == "" {
+		return ErrInvalid
+	}
+	candidate, err := s.repo.ClaimMediaGeneration(ctx, id)
+	if err != nil {
+		return ErrApprovalConflict
+	}
+	fail := func() error {
+		_ = s.repo.CompleteMediaGeneration(ctx, id, 0, true)
+		return errors.New("image generation failed")
+	}
+	profiles, err := s.management.ListProviders(ctx)
+	if err != nil {
+		return fail()
+	}
+	var profileID int64
+	for _, item := range profiles {
+		if item.Name == "Image Provider" && item.Enabled {
+			profileID = item.ID
+			break
+		}
+	}
+	if profileID == 0 {
+		return fail()
+	}
+	client, err := s.management.ProviderClient(ctx, profileID)
+	if err != nil {
+		return fail()
+	}
+	generator, ok := client.(provider.ImageGenerator)
+	if !ok {
+		return fail()
+	}
+	image, err := generator.GenerateImage(ctx, provider.ImageRequest{Prompt: candidate.Brief})
+	if err != nil || len(image.Data) == 0 || len(image.Data) > 10<<20 || (image.MIMEType != "image/jpeg" && image.MIMEType != "image/png" && image.MIMEType != "image/webp") {
+		return fail()
+	}
+	ext := map[string]string{"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}[image.MIMEType]
+	if err := os.MkdirAll(s.mediaDir, 0o755); err != nil {
+		return fail()
+	}
+	nameBytes := make([]byte, 16)
+	if _, err := rand.Read(nameBytes); err != nil {
+		return fail()
+	}
+	storageName := fmt.Sprintf("ai-%x%s", nameBytes, ext)
+	path := filepath.Join(s.mediaDir, storageName)
+	if err := os.WriteFile(path, image.Data, 0o644); err != nil {
+		return fail()
+	}
+	asset := &domain.MediaAsset{Filename: "ai-" + fmt.Sprint(candidate.ID) + ext, StorageName: storageName, URL: "/media/" + storageName, ContentType: image.MIMEType, SizeBytes: int64(len(image.Data)), AltText: candidate.AltText}
+	if creator != "" {
+		asset.CreatedBy = &creator
+	}
+	if err := s.growth.CreateMedia(ctx, asset); err != nil {
+		_ = os.Remove(path)
+		return fail()
+	}
+	if err := s.repo.CompleteMediaGeneration(ctx, id, asset.ID, false); err != nil {
+		_, _ = s.growth.DeleteMedia(ctx, asset.ID)
+		_ = os.Remove(path)
 		return err
 	}
 	return nil

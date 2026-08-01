@@ -806,6 +806,36 @@ func (r *AgentRepository) AttachMediaAsset(ctx context.Context, candidateID, med
 	return nil
 }
 
+// ClaimMediaGeneration atomically prevents duplicate administrator clicks from
+// issuing multiple billable image requests for the same reviewed brief.
+func (r *AgentRepository) ClaimMediaGeneration(ctx context.Context, id int64) (*domain.MediaCandidate, error) {
+	var item domain.MediaCandidate
+	err := r.db.QueryRowContext(ctx, `UPDATE ai_media_candidates SET generation_status='generating'
+		WHERE id=$1 AND generation_status='ready_to_generate'
+		RETURNING id,post_id,source_run_id,source_approval_id,headline,brief,platform,provider,model,input_tokens,output_tokens,media_asset_id,
+		generation_status,safety_status,copyright_status,alt_text,reviewed_by,review_note,reviewed_at,created_at`, id).Scan(
+		&item.ID, &item.PostID, &item.SourceRunID, &item.SourceApprovalID, &item.Headline, &item.Brief, &item.Platform,
+		&item.Provider, &item.Model, &item.InputTokens, &item.OutputTokens, &item.MediaAssetID, &item.GenerationStatus,
+		&item.SafetyStatus, &item.CopyrightStatus, &item.AltText, &item.ReviewedBy, &item.ReviewNote, &item.ReviewedAt, &item.CreatedAt)
+	return &item, err
+}
+
+func (r *AgentRepository) CompleteMediaGeneration(ctx context.Context, candidateID, mediaAssetID int64, failed bool) error {
+	status := "generated"
+	if failed {
+		status = "failed"
+	}
+	result, err := r.db.ExecContext(ctx, `UPDATE ai_media_candidates SET generation_status=$2, media_asset_id=CASE WHEN $3 > 0 THEN $3 ELSE media_asset_id END
+		WHERE id=$1 AND generation_status='generating'`, candidateID, status, mediaAssetID)
+	if err != nil {
+		return err
+	}
+	if affected, _ := result.RowsAffected(); affected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
 func (r *AgentRepository) ReviewMediaCandidate(ctx context.Context, id int64, action, reviewer, note string) error {
 	status, safety, copyright := "", "", ""
 	switch action {
