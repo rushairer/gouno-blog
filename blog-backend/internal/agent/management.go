@@ -43,6 +43,24 @@ func (s *ManagementService) ListProviders(ctx context.Context) ([]*domain.Provid
 	return s.repo.ListProviders(ctx)
 }
 
+// DefaultWritingClient is intentionally a narrow capability for dedicated
+// system jobs; it does not grant content mutation to normal Agents.
+func (s *ManagementService) DefaultWritingClient(ctx context.Context) (*domain.ProviderProfile, provider.Provider, error) {
+	profiles, err := s.ListProviders(ctx)
+	if err != nil { return nil, nil, err }
+	for _, profile := range profiles {
+		if profile.Enabled && profile.IsDefaultWriting {
+			client, err := s.ProviderClient(ctx, profile.ID)
+			return profile, client, err
+		}
+	}
+	return nil, nil, fmt.Errorf("%w: an enabled default writing Provider is required", ErrInvalid)
+}
+
+func (s *ManagementService) Notify(ctx context.Context, recipient, eventType, title, body, href, key string) error {
+	return s.repo.CreateSystemNotification(ctx, recipient, eventType, title, body, href, key)
+}
+
 func (s *ManagementService) GetProvider(ctx context.Context, id int64) (*domain.ProviderProfile, error) {
 	value, err := s.repo.GetProvider(ctx, id)
 	return value, translateError(err)

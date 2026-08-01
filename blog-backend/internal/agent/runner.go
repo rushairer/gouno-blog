@@ -127,7 +127,56 @@ func (r *Runner) executeAndFinish(ctx context.Context, runID int64, dryRun bool)
 		code := "agent_run_failed"
 		message := safeError(err)
 		_ = r.repo.FinishRun(ctx, runID, domain.AgentRunFailed, "", 0, 0, &code, &message)
+		r.notifyRunFailure(ctx, runID, message)
 	}
+}
+
+func (r *Runner) notifyRunFailure(ctx context.Context, runID int64, message string) {
+	run, err := r.repo.GetRun(ctx, runID)
+	if err != nil {
+		return
+	}
+	agent, err := r.management.GetAgent(ctx, run.AgentID)
+	if err != nil {
+		return
+	}
+	recipient := ""
+	if run.TriggeredBy != nil {
+		recipient = *run.TriggeredBy
+	} else if agent.CreatedBy != nil {
+		recipient = *agent.CreatedBy
+	}
+	_ = r.repo.CreateSystemNotification(ctx, recipient, "ai_run_failed",
+		"AI 自动化运行失败："+agent.Name, message, "/admin/agents", fmt.Sprintf("agent-run-%d", runID))
+}
+
+const providerAttempts = 3
+
+func generateWithRetry(ctx context.Context, client provider.Provider, request provider.Request) (provider.Result, int, error) {
+	var lastErr error
+	for attempt := 1; attempt <= providerAttempts; attempt++ {
+		result, err := client.Generate(ctx, request)
+		if err == nil {
+			return result, attempt, nil
+		}
+		lastErr = err
+		if attempt == providerAttempts || !retryableProviderError(err) {
+			break
+		}
+		delay := time.Duration(1<<(attempt-1)) * time.Second
+		select {
+		case <-ctx.Done():
+			return provider.Result{}, attempt, ctx.Err()
+		case <-time.After(delay):
+		}
+	}
+	return provider.Result{}, providerAttempts, fmt.Errorf("provider request failed after %d attempts: %w", providerAttempts, lastErr)
+}
+
+func retryableProviderError(err error) bool {
+	text := strings.ToLower(err.Error())
+	return strings.Contains(text, "timeout") || strings.Contains(text, "deadline exceeded") ||
+		strings.Contains(text, "returned 429") || strings.Contains(text, "returned 5")
 }
 
 func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
@@ -180,13 +229,16 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 			instructions += "\n\nThis is the final step. Do not call tools. Return a concise, evidence-based final summary using the information already collected."
 			tools = nil
 		}
-		result, err := client.Generate(ctx, provider.Request{
+		result, attempts, err := generateWithRetry(ctx, client, provider.Request{
 			Instructions: instructions,
 			Messages:     messages, Tools: tools,
 			MaxTokens: min(value.MaxOutputTokens, int(remainingTokens)),
 		})
 		if err != nil {
 			return err
+		}
+		if attempts > 1 {
+			finalText = fmt.Sprintf("Provider request recovered after %d attempts.", attempts)
 		}
 		inputTokens += result.InputTokens
 		outputTokens += result.OutputTokens

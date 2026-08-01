@@ -82,11 +82,14 @@ type Bookmark struct {
 type Notification struct {
 	ID        int64      `json:"id"`
 	Type      string     `json:"type"`
-	PostID    int64      `json:"post_id"`
+	PostID    *int64     `json:"post_id,omitempty"`
 	PostSlug  string     `json:"post_slug"`
 	PostTitle string     `json:"post_title"`
 	CommentID *int64     `json:"comment_id,omitempty"`
 	ActorName string     `json:"actor_name"`
+	Title     string     `json:"title,omitempty"`
+	Body      string     `json:"body,omitempty"`
+	Href      string     `json:"href,omitempty"`
 	ReadAt    *time.Time `json:"read_at,omitempty"`
 	CreatedAt time.Time  `json:"created_at"`
 }
@@ -146,6 +149,16 @@ type AnalyticsSummary struct {
 	ReportedItems   int64             `json:"reported_items"`
 	TopPosts        []*Post           `json:"top_posts"`
 	DailyEvents     []DailyEventCount `json:"daily_events"`
+	AIAlerts        []SystemAlert     `json:"ai_alerts"`
+}
+
+type SystemAlert struct {
+	ID        int64     `json:"id"`
+	Type      string    `json:"type"`
+	Title     string    `json:"title"`
+	Body      string    `json:"body"`
+	Href      string    `json:"href"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type DailyEventCount struct {

@@ -16,6 +16,7 @@ import (
 	"github.com/rushairer/blog-backend/config"
 	agentservice "github.com/rushairer/blog-backend/internal/agent"
 	"github.com/rushairer/blog-backend/internal/controller"
+	"github.com/rushairer/blog-backend/internal/dailynews"
 	"github.com/rushairer/blog-backend/internal/knowledge"
 	"github.com/rushairer/blog-backend/internal/operations"
 	"github.com/rushairer/blog-backend/internal/repository"
@@ -159,7 +160,15 @@ func startWebServer(cmd *cobra.Command, args []string) {
 		runner := agentservice.NewRunner(agentRepo, management, toolRegistry)
 		approvals := agentservice.NewApprovalService(agentRepo, postSvc, management, growthSvc, mediaDir)
 		agentCtrl = controller.NewAgentController(management, runner, approvals, toolRegistry, ctx, knowledgeSvc)
-		agentCtrl.SetWorkflowService(workflowservice.NewService(db, runner, management, toolRegistry))
+		dailyNewsRepo := dailynews.NewRepository(db)
+		if err := dailyNewsRepo.RecoverInterrupted(ctx); err != nil {
+			log.Printf("recover interrupted daily-news runs: %v", err)
+		}
+		dailyNewsSvc := dailynews.NewService(dailyNewsRepo, management, postSvc)
+		workflowSvc := workflowservice.NewService(db, runner, management, toolRegistry)
+		workflowSvc.SetDailyNewsExecutor(dailyNewsSvc)
+		workflowSvc.StartScheduler(ctx, globalConfig.AIAgentConfig.SchedulerInterval)
+		agentCtrl.SetWorkflowService(workflowSvc)
 		agentCtrl.SetOperationsService(operationsSvc)
 		agentservice.NewScheduler(
 			agentRepo, runner, globalConfig.AIAgentConfig.SchedulerInterval, logger,

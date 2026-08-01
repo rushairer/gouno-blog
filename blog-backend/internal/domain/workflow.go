@@ -26,6 +26,9 @@ type Workflow struct {
 	Name           string          `json:"name"`
 	Description    string          `json:"description"`
 	Enabled        bool            `json:"enabled"`
+	CronExpression *string         `json:"cron_expression,omitempty"`
+	Timezone       string          `json:"timezone"`
+	NextRunAt      *time.Time      `json:"next_run_at,omitempty"`
 	TemplateKey    *string         `json:"template_key,omitempty"`
 	CurrentVersion int             `json:"current_version"`
 	VersionID      int64           `json:"version_id"`
@@ -49,7 +52,22 @@ type WorkflowRun struct {
 	InputTokens       int64           `json:"input_tokens"`
 	OutputTokens      int64           `json:"output_tokens"`
 	TriggeredBy       *string         `json:"triggered_by,omitempty"`
+	ScheduleKey       *string         `json:"schedule_key,omitempty"`
 	StartedAt         *time.Time      `json:"started_at,omitempty"`
 	FinishedAt        *time.Time      `json:"finished_at,omitempty"`
 	CreatedAt         time.Time       `json:"created_at"`
+}
+
+type WorkflowStepRun struct {
+	ID            int64           `json:"id"`
+	WorkflowRunID int64           `json:"workflow_run_id"`
+	StepID        string          `json:"step_id"`
+	StepType      string          `json:"step_type"`
+	Iteration     *int            `json:"iteration,omitempty"`
+	Status        string          `json:"status"`
+	Input         json.RawMessage `json:"input,omitempty"`
+	Output        json.RawMessage `json:"output,omitempty"`
+	ErrorMessage  *string         `json:"error_message,omitempty"`
+	StartedAt     time.Time       `json:"started_at"`
+	FinishedAt    *time.Time      `json:"finished_at,omitempty"`
 }

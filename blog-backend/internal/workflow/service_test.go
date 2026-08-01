@@ -1,12 +1,20 @@
 package workflow
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/tool"
 )
+
+type dailyNewsExecutorStub struct{}
+
+func (dailyNewsExecutorStub) RunWorkflow(context.Context) (*domain.DailyNewsRun, error) {
+	return &domain.DailyNewsRun{}, nil
+}
 
 func TestResolvePointer(t *testing.T) {
 	document := map[string]any{"input": map[string]any{"items": []any{map[string]any{"id": float64(7)}}}}
@@ -44,5 +52,27 @@ func TestValidatePortableWorkflow(t *testing.T) {
 	}
 	if err := service.validateSteps(steps, 0); err != nil {
 		t.Fatalf("valid workflow rejected: %v", err)
+	}
+}
+
+func TestValidateRSSDailyPostAsOrdinaryWorkflowStep(t *testing.T) {
+	service := &Service{tools: tool.New(), dailyNews: dailyNewsExecutorStub{}}
+	steps := []domain.WorkflowStep{
+		{ID: "publish", Type: "rss_daily_post"},
+		{ID: "result", Type: "output", OutputPointer: "/steps/publish"},
+	}
+	if err := service.validateSteps(steps, 0); err != nil {
+		t.Fatalf("ordinary workflow rejected rss_daily_post: %v", err)
+	}
+}
+
+func TestScheduledNextUsesShanghaiTimezone(t *testing.T) {
+	from := time.Date(2026, 8, 1, 0, 30, 0, 0, time.UTC)
+	next, err := scheduledNext("0 9 * * *", "Asia/Shanghai", from)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if next.Location().String() != "Asia/Shanghai" || next.Hour() != 9 || next.Day() != 1 {
+		t.Fatalf("unexpected next run: %s (%s)", next, next.Location())
 	}
 }

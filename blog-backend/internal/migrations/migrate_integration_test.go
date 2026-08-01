@@ -39,6 +39,7 @@ func TestUpAppliesCurrentSchemaAndIsIdempotent(t *testing.T) {
 		"ai_operational_suggestions",
 		"ai_content_candidate_sets", "ai_content_candidates", "ai_media_candidates", "ai_feedback",
 		"ai_editorial_tasks", "ai_comment_reply_drafts",
+		"ai_daily_news_jobs", "ai_daily_news_runs", "ai_daily_news_sources",
 	} {
 		var exists bool
 		if err := db.QueryRowContext(ctx, `SELECT to_regclass($1) IS NOT NULL`, "public."+table).Scan(&exists); err != nil {

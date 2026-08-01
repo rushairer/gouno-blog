@@ -220,5 +220,22 @@ func (r *GrowthRepository) AnalyticsSummary(ctx context.Context) (*domain.Analyt
 		}
 		summary.DailyEvents = append(summary.DailyEvents, item)
 	}
-	return summary, eventRows.Err()
+	if err := eventRows.Err(); err != nil {
+		return nil, err
+	}
+	alertRows, err := r.db.QueryContext(ctx, `SELECT id, type, COALESCE(title,''), COALESCE(body,''), COALESCE(href,''), created_at
+		FROM notifications WHERE type LIKE 'ai_%' AND read_at IS NULL ORDER BY created_at DESC LIMIT 5`)
+	if err != nil {
+		return nil, err
+	}
+	defer alertRows.Close()
+	summary.AIAlerts = make([]domain.SystemAlert, 0)
+	for alertRows.Next() {
+		var alert domain.SystemAlert
+		if err := alertRows.Scan(&alert.ID, &alert.Type, &alert.Title, &alert.Body, &alert.Href, &alert.CreatedAt); err != nil {
+			return nil, err
+		}
+		summary.AIAlerts = append(summary.AIAlerts, alert)
+	}
+	return summary, alertRows.Err()
 }

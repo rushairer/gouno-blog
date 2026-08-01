@@ -400,6 +400,18 @@ func (ctrl *AgentController) UpdateWorkflow(c *gin.Context) {
 	ctrl.saveWorkflow(c, id)
 }
 
+func (ctrl *AgentController) DeleteWorkflow(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	if err := ctrl.workflows.Delete(c.Request.Context(), id); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
+}
+
 func (ctrl *AgentController) saveWorkflow(c *gin.Context, id int64) {
 	var value domain.Workflow
 	if err := bindAgentJSON(c, &value); err != nil {
@@ -464,7 +476,13 @@ func (ctrl *AgentController) setWorkflowEnabled(c *gin.Context, enabled bool) {
 	if !ok {
 		return
 	}
-	if err := ctrl.workflows.SetEnabled(c.Request.Context(), id, enabled); err != nil {
+	var subject *string
+	if raw, exists := c.Get("account_id"); exists {
+		if text, ok := raw.(string); ok && text != "" {
+			subject = &text
+		}
+	}
+	if err := ctrl.workflows.SetEnabled(c.Request.Context(), id, enabled, subject); err != nil {
 		writeAgentError(c, err)
 		return
 	}
@@ -499,13 +517,28 @@ func (ctrl *AgentController) queueWorkflow(c *gin.Context, dryRun bool) {
 		writeAgentError(c, err)
 		return
 	}
-	go ctrl.workflows.Execute(ctrl.workerCtx, run.ID)
+	if run.Status == "queued" {
+		go ctrl.workflows.Execute(ctrl.workerCtx, run.ID)
+	}
 	c.JSON(http.StatusAccepted, gouno.NewSuccessResponse(run))
 }
 
 func (ctrl *AgentController) ListWorkflowRuns(c *gin.Context) {
 	workflowID, _ := strconv.ParseInt(c.Query("workflow_id"), 10, 64)
 	items, err := ctrl.workflows.ListRuns(c.Request.Context(), workflowID)
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
+}
+
+func (ctrl *AgentController) WorkflowRunSteps(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	items, err := ctrl.workflows.RunSteps(c.Request.Context(), id)
 	if err != nil {
 		writeAgentError(c, err)
 		return

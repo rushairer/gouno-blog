@@ -15,6 +15,7 @@ import type { SkillFormValue } from '../components/agent/SkillForm';
 import { ProviderForm } from '../components/agent/ProviderForm';
 import type { ProviderFormValue } from '../components/agent/ProviderForm';
 import { WorkflowWorkspace } from '../components/agent/WorkflowWorkspace';
+import { WorkflowRunRecords } from '../components/agent/WorkflowRunRecords';
 import { OperationsWorkspace } from '../components/agent/OperationsWorkspace';
 import { MarkdownRenderer } from '../components/MarkdownRenderer';
 import {
@@ -27,6 +28,13 @@ import '../styles/agent-console.css';
 type ConsoleTab = 'overview' | 'inbox' | 'automation' | 'records' | 'advanced' | 'runs' | 'approvals';
 type AdvancedSection = 'agents' | 'skills' | 'knowledge' | 'providers';
 type DeleteTarget = { kind: 'agent'; value: Agent } | { kind: 'provider'; value: ProviderProfile } | { kind: 'embedding'; value: EmbeddingProfile } | { kind: 'skill'; value: AgentSkill } | null;
+
+function initialConsoleTab(): ConsoleTab {
+  const requested = new URLSearchParams(window.location.search).get('tab');
+  return requested && ['overview', 'inbox', 'automation', 'records', 'advanced'].includes(requested)
+    ? requested as ConsoleTab
+    : 'overview';
+}
 
 const copy = {
   en: {
@@ -318,7 +326,7 @@ function RecordEvidence({ run, locale, formatDateTime }: { run: { run: AgentRun;
 export default function AgentConsole() {
   const { locale, formatDateTime } = useI18n();
   const labels = copy[locale];
-  const [tab, setTab] = useState<ConsoleTab>('overview');
+  const [tab, setTab] = useState<ConsoleTab>(initialConsoleTab);
   const [advancedSection, setAdvancedSection] = useState<AdvancedSection>('agents');
   const [providers, setProviders] = useState<ProviderProfile[]>([]);
   const [embeddingProfiles, setEmbeddingProfiles] = useState<EmbeddingProfile[]>([]);
@@ -332,6 +340,7 @@ export default function AgentConsole() {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [workflowRuns, setWorkflowRuns] = useState<WorkflowRun[]>([]);
   const [workflowMetrics, setWorkflowMetrics] = useState<WorkflowMetric[]>([]);
+  const [recordType, setRecordType] = useState<'agent' | 'workflow'>('agent');
   const [suggestions, setSuggestions] = useState<OperationalSuggestion[]>([]);
   const [candidateSets, setCandidateSets] = useState<ContentCandidateSet[]>([]);
   const [mediaCandidates, setMediaCandidates] = useState<MediaCandidate[]>([]);
@@ -367,6 +376,9 @@ export default function AgentConsole() {
     setEditingEmbedding(null);
     setEditingSkill(null);
     setTab(nextTab);
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', nextTab);
+    window.history.replaceState(null, '', url);
   };
   const selectAdvanced = (section: AdvancedSection) => {
     setEditingAgent(null);
@@ -553,7 +565,7 @@ export default function AgentConsole() {
     }
   };
 
-  const saveWorkflow = async (value: { id?: number; name: string; description: string; enabled: boolean; input_schema: Record<string, unknown>; steps: import('../agent').WorkflowStep[] }) => {
+  const saveWorkflow = async (value: { id?: number; name: string; description: string; enabled: boolean; cron_expression?: string; timezone: string; input_schema: Record<string, unknown>; steps: import('../agent').WorkflowStep[] }) => {
     await readData<Workflow>(await apiFetch(value.id ? `/api/admin/ai-workflows/${value.id}` : '/api/admin/ai-workflows', {
       method: value.id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value),
     }));
@@ -569,6 +581,16 @@ export default function AgentConsole() {
     });
     await readData<unknown>(response);
     await refresh();
+  };
+
+  const queueWorkflow = async (workflowID: number, dryRun: boolean, input: Record<string, unknown>) => {
+    setError('');
+    const response = await apiFetch(`/api/admin/ai-workflows/${workflowID}/${dryRun ? 'dry-run' : 'run'}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ input }),
+    });
+    const result = await readData<WorkflowRun>(response);
+    await refresh();
+    return result;
   };
 
   const runAgent = async (agent: Agent) => {
@@ -694,9 +716,9 @@ export default function AgentConsole() {
           {providers.length === 0 ? <EmptyState label={labels.noProviders} /> : <div className="table-scroll"><table className="content-table agent-table"><thead><tr><th>{labels.providerName}</th><th>{labels.providerType}</th><th>{labels.baseUrl}</th><th>{labels.model}</th><th>{labels.apiKey}</th><th>{labels.status}</th><th>{labels.actions}</th></tr></thead><tbody>{providers.map((provider) => <tr key={provider.id}><td><strong>{provider.name}</strong>{provider.is_default_writing ? <small className="provider-default">默认写作模型</small> : null}{provider.is_default_image ? <small className="provider-default">默认图片模型</small> : null}</td><td>{provider.provider_type}</td><td className="mono">{provider.base_url}</td><td className="mono">{provider.model}</td><td><span className="secret-mask">•••• {provider.api_key_last4}</span><small>{labels.keyStored}</small></td><td><span className={`agent-state agent-state--${provider.enabled ? 'active' : 'paused'}`}><i />{provider.enabled ? labels.active : labels.paused}</span></td><td><div className="agent-row-actions">{!provider.is_default_writing ? <button type="button" title="设为默认写作模型" disabled={!provider.enabled} onClick={() => void mutate(`/api/admin/provider-profiles/${provider.id}/default/writing`, 'POST').then(() => setNotice('已设为默认写作模型')).catch((reason: Error) => setError(reason.message))}><Sparkles /></button> : <span className="provider-default-mark"><Check />写作</span>}{!provider.is_default_image ? <button type="button" title="设为默认图片生成模型" disabled={!provider.enabled} onClick={() => void mutate(`/api/admin/provider-profiles/${provider.id}/default/image`, 'POST').then(() => setNotice('已设为默认图片生成模型')).catch((reason: Error) => setError(reason.message))}><Sparkles /></button> : <span className="provider-default-mark"><Check />图片</span>}<button type="button" title={labels.test} onClick={async () => { try { await mutate(`/api/admin/provider-profiles/${provider.id}/test`); setNotice(labels.connected); } catch (reason) { setError(reason instanceof Error ? reason.message : labels.requestFailed); } }}><RefreshCw /></button><button type="button" title={labels.edit} onClick={() => setEditingProvider(provider)}><Settings2 /></button><button type="button" title={labels.delete} onClick={() => setDeleteTarget({ kind: 'provider', value: provider })}><Trash2 /></button></div></td></tr>)}</tbody></table></div>}
         </WorkspacePanel> : null}
 
-        {!editingAgent && !editingProvider && !editingEmbedding && !editingSkill && tab === 'automation' ? <WorkflowWorkspace workflows={workflows} runs={workflowRuns} metrics={workflowMetrics} locale={locale} onMutate={mutate} onSave={saveWorkflow} /> : null}
+        {!editingAgent && !editingProvider && !editingEmbedding && !editingSkill && tab === 'automation' ? <WorkflowWorkspace workflows={workflows} runs={workflowRuns} metrics={workflowMetrics} locale={locale} onMutate={mutate} onRun={queueWorkflow} onRefresh={refresh} onSave={saveWorkflow} /> : null}
         {!editingAgent && !editingProvider && !editingEmbedding && !editingSkill && tab === 'inbox' ? <><FriendlyApprovalQueue locale={locale} approvals={approvals} selected={selectedApproval} onSelect={setSelectedApproval} onReview={review} /><OperationsWorkspace suggestions={suggestions} candidateSets={candidateSets} mediaCandidates={mediaCandidates} metrics={outcomeMetrics} locale={locale} onMutate={mutate} /></> : null}
-        {!editingAgent && !editingProvider && tab === 'records' ? <RecordsWorkspace locale={locale} runs={runs} agents={agents} selectedRun={selectedRun} onInspect={(run) => void inspectRun(run)} formatDateTime={formatDateTime} /> : null}
+        {!editingAgent && !editingProvider && tab === 'records' ? <div className="records-hub section-stack"><div className="records-hub__switch" role="tablist" aria-label={locale === 'zh' ? '运行记录类型' : 'Run record type'}><button role="tab" aria-selected={recordType === 'agent'} className={recordType === 'agent' ? 'active' : ''} type="button" onClick={() => setRecordType('agent')}>{locale === 'zh' ? 'Agent 运行' : 'Agent runs'}</button><button role="tab" aria-selected={recordType === 'workflow'} className={recordType === 'workflow' ? 'active' : ''} type="button" onClick={() => setRecordType('workflow')}>{locale === 'zh' ? 'Workflow 运行' : 'Workflow runs'}</button></div>{recordType === 'agent' ? <RecordsWorkspace locale={locale} runs={runs} agents={agents} selectedRun={selectedRun} onInspect={(run) => void inspectRun(run)} formatDateTime={formatDateTime} /> : <WorkflowRunRecords locale={locale} workflows={workflows} runs={workflowRuns} formatDateTime={formatDateTime} />}</div> : null}
 
         {!editingAgent && !editingProvider && !editingEmbedding && tab === 'advanced' && advancedSection === 'knowledge' ? <div className="section-stack">
           <WorkspacePanel><PanelHeader title={<><DatabaseZap />{labels.knowledge}</>} description={locale === 'zh' ? '仅索引已发布文章；Embedding 模型负责把文章转换为可检索的知识库。' : 'Published content only; jobs run asynchronously.'} actions={<><Button variant="secondary" type="button" onClick={() => void mutate('/api/admin/ai-index/retry')}><RefreshCw />{locale === 'zh' ? '重试失败任务' : 'Retry failed'}</Button><Button variant="secondary" type="button" onClick={() => void mutate('/api/admin/ai-index/rebuild')}><RefreshCw />{locale === 'zh' ? '全量重建' : 'Rebuild all'}</Button><Button variant="primary" type="button" onClick={() => setEditingEmbedding('new')}><Plus />{locale === 'zh' ? '添加 Embedding 模型' : 'Add embedding profile'}</Button></>} /><div className="agent-run-metrics"><span><small>{locale === 'zh' ? '分段' : 'Chunks'}</small><strong>{indexStatus.chunks}</strong></span><span><small>{locale === 'zh' ? '队列' : 'Queued'}</small><strong>{indexStatus.queued}</strong></span><span><small>{locale === 'zh' ? '失败' : 'Failed'}</small><strong>{indexStatus.failed}</strong></span></div></WorkspacePanel>

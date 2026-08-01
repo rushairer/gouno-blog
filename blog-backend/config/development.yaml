@@ -6,7 +6,9 @@ web_server:
     read_header_timeout: 2s
     write_timeout: 2m
     request_timeout: 10s
-    rate_limit_per_minute: 120
+    # The administrator workspace loads its independent operational panels in
+    # parallel; keep local development comfortably above that burst.
+    rate_limit_per_minute: 600
     trusted_proxies:
         - "127.0.0.1"
     cors_allowed_origins: []

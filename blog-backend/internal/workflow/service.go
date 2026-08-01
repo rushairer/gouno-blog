@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/robfig/cron/v3"
 	agentservice "github.com/rushairer/blog-backend/internal/agent"
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/tool"
@@ -22,23 +23,32 @@ var (
 )
 
 type Service struct {
-	db     *sql.DB
-	runner *agentservice.Runner
-	agents *agentservice.ManagementService
-	tools  *tool.Registry
+	db        *sql.DB
+	runner    *agentservice.Runner
+	agents    *agentservice.ManagementService
+	tools     *tool.Registry
+	dailyNews interface {
+		RunWorkflow(context.Context) (*domain.DailyNewsRun, error)
+	}
 }
 
 func NewService(db *sql.DB, runner *agentservice.Runner, agents *agentservice.ManagementService, tools *tool.Registry) *Service {
 	return &Service{db: db, runner: runner, agents: agents, tools: tools}
 }
 
-const workflowColumns = `w.id, w.name, w.description, w.enabled, w.template_key,
+func (s *Service) SetDailyNewsExecutor(value interface {
+	RunWorkflow(context.Context) (*domain.DailyNewsRun, error)
+}) {
+	s.dailyNews = value
+}
+
+const workflowColumns = `w.id, w.name, w.description, w.enabled, w.cron_expression, w.timezone, w.next_run_at, w.template_key,
 	w.current_version, v.id, v.input_schema, v.steps, w.created_by, w.created_at, w.updated_at`
 
 func scanWorkflow(scanner interface{ Scan(...any) error }) (*domain.Workflow, error) {
 	var value domain.Workflow
 	var steps []byte
-	err := scanner.Scan(&value.ID, &value.Name, &value.Description, &value.Enabled, &value.TemplateKey,
+	err := scanner.Scan(&value.ID, &value.Name, &value.Description, &value.Enabled, &value.CronExpression, &value.Timezone, &value.NextRunAt, &value.TemplateKey,
 		&value.CurrentVersion, &value.VersionID, &value.InputSchema, &steps, &value.CreatedBy,
 		&value.CreatedAt, &value.UpdatedAt)
 	if err == nil {
@@ -80,6 +90,16 @@ func (s *Service) Get(ctx context.Context, id int64) (*domain.Workflow, error) {
 
 func (s *Service) Save(ctx context.Context, value *domain.Workflow) error {
 	value.Name, value.Description = strings.TrimSpace(value.Name), strings.TrimSpace(value.Description)
+	if value.Timezone == "" {
+		value.Timezone = "Asia/Shanghai"
+	}
+	if value.CronExpression != nil {
+		trimmed := strings.TrimSpace(*value.CronExpression)
+		value.CronExpression = &trimmed
+		if _, err := scheduledNext(trimmed, value.Timezone, time.Now()); err != nil {
+			return fmt.Errorf("%w: %v", ErrInvalid, err)
+		}
+	}
 	if value.Name == "" || len(value.InputSchema) == 0 || !json.Valid(value.InputSchema) {
 		return fmt.Errorf("%w: name and input schema are required", ErrInvalid)
 	}
@@ -99,15 +119,15 @@ func (s *Service) Save(ctx context.Context, value *domain.Workflow) error {
 	}
 	if value.ID == 0 {
 		err = tx.QueryRowContext(ctx, `INSERT INTO ai_workflows
-			(name, description, enabled, created_by) VALUES ($1,$2,$3,$4)
+			(name, description, enabled, cron_expression, timezone, next_run_at, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7)
 			RETURNING id, current_version, created_at, updated_at`, value.Name, value.Description,
-			value.Enabled, value.CreatedBy).Scan(&value.ID, &value.CurrentVersion, &value.CreatedAt, &value.UpdatedAt)
+			value.Enabled, value.CronExpression, value.Timezone, workflowNext(value), value.CreatedBy).Scan(&value.ID, &value.CurrentVersion, &value.CreatedAt, &value.UpdatedAt)
 	} else {
 		err = tx.QueryRowContext(ctx, `UPDATE ai_workflows SET name=$2, description=$3,
-			enabled=$4, current_version=current_version+1, updated_at=NOW()
+			enabled=$4, cron_expression=$5, timezone=$6, next_run_at=$7, current_version=current_version+1, updated_at=NOW()
 			WHERE id=$1 AND deleted_at IS NULL
 			RETURNING current_version, created_by, created_at, updated_at`, value.ID, value.Name,
-			value.Description, value.Enabled).Scan(&value.CurrentVersion, &value.CreatedBy,
+			value.Description, value.Enabled, value.CronExpression, value.Timezone, workflowNext(value)).Scan(&value.CurrentVersion, &value.CreatedBy,
 			&value.CreatedAt, &value.UpdatedAt)
 	}
 	if err == nil {
@@ -163,6 +183,10 @@ func (s *Service) validateSteps(steps []domain.WorkflowStep, depth int) error {
 			if err := s.validateSteps(step.Steps, depth+1); err != nil {
 				return err
 			}
+		case "rss_daily_post":
+			if s.dailyNews == nil {
+				return fmt.Errorf("%w: RSS publishing capability is unavailable", ErrInvalid)
+			}
 		case "approval_gate", "output":
 		default:
 			return fmt.Errorf("%w: unsupported step type %q", ErrInvalid, step.Type)
@@ -177,7 +201,7 @@ func (s *Service) validateSteps(steps []domain.WorkflowStep, depth int) error {
 }
 
 func (s *Service) Versions(ctx context.Context, id int64) ([]*domain.Workflow, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT w.id, w.name, w.description, w.enabled, w.template_key,
+	rows, err := s.db.QueryContext(ctx, `SELECT w.id, w.name, w.description, w.enabled, w.cron_expression, w.timezone, w.next_run_at, w.template_key,
 		v.version, v.id, v.input_schema, v.steps, v.created_by, w.created_at, v.created_at
 		FROM ai_workflows w JOIN ai_workflow_versions v ON v.workflow_id=w.id
 		WHERE w.id=$1 ORDER BY v.version DESC`, id)
@@ -209,9 +233,30 @@ func (s *Service) Rollback(ctx context.Context, id int64, version int) error {
 	return nil
 }
 
-func (s *Service) SetEnabled(ctx context.Context, id int64, enabled bool) error {
-	result, err := s.db.ExecContext(ctx, `UPDATE ai_workflows SET enabled=$2, updated_at=NOW()
-		WHERE id=$1 AND deleted_at IS NULL`, id, enabled)
+func (s *Service) SetEnabled(ctx context.Context, id int64, enabled bool, actor *string) error {
+	value, err := s.Get(ctx, id)
+	if err != nil {
+		return err
+	}
+	value.Enabled = enabled
+	result, err := s.db.ExecContext(ctx, `UPDATE ai_workflows SET enabled=$2, next_run_at=$3,
+		created_by=COALESCE(created_by,$4), updated_at=NOW() WHERE id=$1 AND deleted_at IS NULL`,
+		id, enabled, workflowNext(value), actor)
+	if err != nil {
+		return err
+	}
+	if n, _ := result.RowsAffected(); n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// Delete soft-deletes a workflow so its version and run audit trail remain
+// available to administrators while preventing all future scheduled runs.
+func (s *Service) Delete(ctx context.Context, id int64) error {
+	result, err := s.db.ExecContext(ctx, `UPDATE ai_workflows
+		SET enabled=FALSE, next_run_at=NULL, deleted_at=NOW(), updated_at=NOW()
+		WHERE id=$1 AND deleted_at IS NULL`, id)
 	if err != nil {
 		return err
 	}
@@ -222,6 +267,10 @@ func (s *Service) SetEnabled(ctx context.Context, id int64, enabled bool) error 
 }
 
 func (s *Service) Queue(ctx context.Context, id int64, dryRun bool, input json.RawMessage, triggeredBy *string) (*domain.WorkflowRun, error) {
+	return s.queue(ctx, id, dryRun, input, triggeredBy, true)
+}
+
+func (s *Service) queue(ctx context.Context, id int64, dryRun bool, input json.RawMessage, triggeredBy *string, retryFailed bool) (*domain.WorkflowRun, error) {
 	value, err := s.Get(ctx, id)
 	if err != nil {
 		return nil, err
@@ -237,11 +286,113 @@ func (s *Service) Queue(ctx context.Context, id int64, dryRun bool, input json.R
 	}
 	run := &domain.WorkflowRun{WorkflowID: id, WorkflowVersionID: value.VersionID,
 		DryRun: dryRun, Status: "queued", Input: input, TriggeredBy: triggeredBy}
+	if !dryRun && value.CronExpression != nil {
+		key := time.Now().In(workflowLocation(value.Timezone)).Format("2006-01-02")
+		run.ScheduleKey = &key
+	}
 	err = s.db.QueryRowContext(ctx, `INSERT INTO ai_workflow_runs
-		(workflow_id, workflow_version_id, dry_run, input, triggered_by)
-		VALUES ($1,$2,$3,$4,$5) RETURNING id, created_at`, run.WorkflowID, run.WorkflowVersionID,
-		run.DryRun, run.Input, run.TriggeredBy).Scan(&run.ID, &run.CreatedAt)
+		(workflow_id, workflow_version_id, dry_run, input, triggered_by, schedule_key)
+		VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, created_at`, run.WorkflowID, run.WorkflowVersionID,
+		run.DryRun, run.Input, run.TriggeredBy, run.ScheduleKey).Scan(&run.ID, &run.CreatedAt)
+	if err != nil && run.ScheduleKey != nil {
+		existingErr := s.db.QueryRowContext(ctx, `SELECT id,status,created_at FROM ai_workflow_runs
+			WHERE workflow_id=$1 AND schedule_key=$2`, id, *run.ScheduleKey).Scan(&run.ID, &run.Status, &run.CreatedAt)
+		if existingErr == nil {
+			if run.Status == "failed" && retryFailed {
+				err = s.db.QueryRowContext(ctx, `UPDATE ai_workflow_runs SET workflow_version_id=$2,
+					dry_run=FALSE,status='queued',input=$3,output=NULL,error_code=NULL,error_message=NULL,
+					input_tokens=0,output_tokens=0,triggered_by=$4,started_at=NULL,finished_at=NULL
+					WHERE id=$1 AND status='failed' RETURNING status,created_at`, run.ID, value.VersionID,
+					input, triggeredBy).Scan(&run.Status, &run.CreatedAt)
+				if errors.Is(err, sql.ErrNoRows) {
+					return s.queue(ctx, id, dryRun, input, triggeredBy, retryFailed)
+				}
+				return run, err
+			}
+			return run, nil
+		}
+	}
 	return run, err
+}
+
+func workflowLocation(name string) *time.Location {
+	loc, err := time.LoadLocation(name)
+	if err != nil {
+		return time.UTC
+	}
+	return loc
+}
+func scheduledNext(expression, timezone string, from time.Time) (time.Time, error) {
+	schedule, err := cron.ParseStandard(expression)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return schedule.Next(from.In(workflowLocation(timezone))), nil
+}
+func workflowNext(value *domain.Workflow) *time.Time {
+	if !value.Enabled || value.CronExpression == nil {
+		return nil
+	}
+	next, err := scheduledNext(*value.CronExpression, value.Timezone, time.Now())
+	if err != nil {
+		return nil
+	}
+	return &next
+}
+
+func (s *Service) StartScheduler(ctx context.Context, interval time.Duration) {
+	// A process restart invalidates every in-memory worker. Leaving those rows as
+	// running/queued would make the idempotency key return a run that can never
+	// finish, so preserve the audit and make it explicitly retryable.
+	_, _ = s.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status='failed',
+		error_code='worker_interrupted',
+		error_message='Workflow execution was interrupted by a service restart. Retry the run.',
+		finished_at=NOW()
+		WHERE status IN ('queued','running')`)
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		s.tick(ctx)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				s.tick(ctx)
+			}
+		}
+	}()
+}
+
+func (s *Service) tick(ctx context.Context) {
+	rows, err := s.db.QueryContext(ctx, `SELECT id FROM ai_workflows WHERE enabled=TRUE
+		AND cron_expression IS NOT NULL AND next_run_at<=NOW() AND deleted_at IS NULL
+		ORDER BY next_run_at LIMIT 20`)
+	if err != nil {
+		return
+	}
+	ids := []int64{}
+	for rows.Next() {
+		var id int64
+		if rows.Scan(&id) == nil {
+			ids = append(ids, id)
+		}
+	}
+	_ = rows.Close()
+	for _, id := range ids {
+		value, err := s.Get(ctx, id)
+		if err != nil {
+			continue
+		}
+		next := workflowNext(value)
+		if next != nil {
+			_, _ = s.db.ExecContext(ctx, `UPDATE ai_workflows SET next_run_at=$2,updated_at=NOW() WHERE id=$1`, id, next)
+		}
+		run, err := s.queue(ctx, id, false, json.RawMessage(`{}`), nil, false)
+		if err == nil && run.Status == "queued" {
+			go s.Execute(ctx, run.ID)
+		}
+	}
 }
 
 func (s *Service) Execute(ctx context.Context, runID int64) {
@@ -249,11 +400,21 @@ func (s *Service) Execute(ctx context.Context, runID int64) {
 		code, message := "workflow_failed", safeError(err)
 		_, _ = s.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status='failed',
 			error_code=$2, error_message=$3, finished_at=NOW() WHERE id=$1`, runID, code, message)
+		var recipient *string
+		var name string
+		var workflowID int64
+		if queryErr := s.db.QueryRowContext(ctx, `SELECT COALESCE(r.triggered_by,w.created_by),w.name,w.id
+			FROM ai_workflow_runs r JOIN ai_workflows w ON w.id=r.workflow_id WHERE r.id=$1`, runID).
+			Scan(&recipient, &name, &workflowID); queryErr == nil && recipient != nil {
+			_ = s.agents.Notify(ctx, *recipient, "ai_workflow_failed", name+"运行失败", message,
+				"/admin/agents?tab=automation&workflow="+strconv.FormatInt(workflowID, 10), "workflow-run-"+strconv.FormatInt(runID, 10))
+		}
 	}
 }
 
 func (s *Service) execute(ctx context.Context, runID int64) error {
 	var run domain.WorkflowRun
+	run.ID = runID
 	err := s.db.QueryRowContext(ctx, `UPDATE ai_workflow_runs SET status='running', started_at=NOW()
 		WHERE id=$1 AND status='queued'
 		RETURNING workflow_id, workflow_version_id, dry_run, input, triggered_by, created_at`,
@@ -355,6 +516,18 @@ func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, ste
 						awaiting = awaiting || agentRun.Status == domain.AgentRunAwaitingApproval
 					}
 				}
+			}
+		case "rss_daily_post":
+			stepInput = inputForStep(document, item, step.InputPointer)
+			if run.DryRun {
+				stepOutput = map[string]any{
+					"dry_run": true,
+					"would":   "fetch whitelisted RSS, generate with the default writing Provider, validate and publish",
+				}
+			} else if s.dailyNews == nil {
+				err = fmt.Errorf("%w: RSS publishing capability is unavailable", ErrInvalid)
+			} else {
+				stepOutput, err = s.dailyNews.RunWorkflow(ctx)
 			}
 		case "for_each":
 			var collection any
@@ -477,8 +650,8 @@ func safeError(err error) string {
 func (s *Service) ListRuns(ctx context.Context, workflowID int64) ([]*domain.WorkflowRun, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT id, workflow_id, workflow_version_id, dry_run,
 		status, input, output, error_code, error_message, input_tokens, output_tokens, triggered_by,
-		started_at, finished_at, created_at FROM ai_workflow_runs
-		WHERE ($1=0 OR workflow_id=$1) ORDER BY created_at DESC LIMIT 100`, workflowID)
+		schedule_key, started_at, finished_at, created_at FROM ai_workflow_runs
+		WHERE ($1=0 OR workflow_id=$1) ORDER BY COALESCE(started_at,created_at) DESC, id DESC LIMIT 100`, workflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -489,9 +662,44 @@ func (s *Service) ListRuns(ctx context.Context, workflowID int64) ([]*domain.Wor
 		var output []byte
 		if err := rows.Scan(&item.ID, &item.WorkflowID, &item.WorkflowVersionID, &item.DryRun,
 			&item.Status, &item.Input, &output, &item.ErrorCode, &item.ErrorMessage,
-			&item.InputTokens, &item.OutputTokens, &item.TriggeredBy, &item.StartedAt,
+			&item.InputTokens, &item.OutputTokens, &item.TriggeredBy, &item.ScheduleKey, &item.StartedAt,
 			&item.FinishedAt, &item.CreatedAt); err != nil {
 			return nil, err
+		}
+		if len(output) > 0 {
+			item.Output = json.RawMessage(output)
+		}
+		items = append(items, &item)
+	}
+	return items, rows.Err()
+}
+
+func (s *Service) RunSteps(ctx context.Context, runID int64) ([]*domain.WorkflowStepRun, error) {
+	var exists bool
+	if err := s.db.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM ai_workflow_runs WHERE id=$1)`, runID).Scan(&exists); err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, ErrNotFound
+	}
+	rows, err := s.db.QueryContext(ctx, `SELECT id,workflow_run_id,step_id,step_type,iteration,
+		status,input,output,error_message,started_at,finished_at FROM ai_workflow_step_runs
+		WHERE workflow_run_id=$1 ORDER BY started_at,id`, runID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := make([]*domain.WorkflowStepRun, 0)
+	for rows.Next() {
+		var item domain.WorkflowStepRun
+		var input, output []byte
+		if err := rows.Scan(&item.ID, &item.WorkflowRunID, &item.StepID, &item.StepType,
+			&item.Iteration, &item.Status, &input, &output, &item.ErrorMessage,
+			&item.StartedAt, &item.FinishedAt); err != nil {
+			return nil, err
+		}
+		if len(input) > 0 {
+			item.Input = json.RawMessage(input)
 		}
 		if len(output) > 0 {
 			item.Output = json.RawMessage(output)

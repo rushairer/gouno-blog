@@ -292,9 +292,9 @@ func (r *CommunityRepository) ListNotifications(ctx context.Context, subject str
 	if err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM notifications WHERE recipient_subject = $1 AND read_at IS NULL`, subject).Scan(&unread); err != nil {
 		return nil, 0, err
 	}
-	rows, err := r.db.QueryContext(ctx, `SELECT n.id, n.type, n.post_id, p.slug, p.title, n.comment_id,
-		n.actor_name, n.read_at, n.created_at
-		FROM notifications n JOIN posts p ON p.id = n.post_id
+	rows, err := r.db.QueryContext(ctx, `SELECT n.id, n.type, n.post_id, COALESCE(p.slug,''), COALESCE(p.title,''), n.comment_id,
+		n.actor_name, COALESCE(n.title,''), COALESCE(n.body,''), COALESCE(n.href,''), n.read_at, n.created_at
+		FROM notifications n LEFT JOIN posts p ON p.id = n.post_id
 		WHERE n.recipient_subject = $1 ORDER BY n.created_at DESC LIMIT $2 OFFSET $3`, subject, limit, offset)
 	if err != nil {
 		return nil, 0, err
@@ -304,7 +304,7 @@ func (r *CommunityRepository) ListNotifications(ctx context.Context, subject str
 	for rows.Next() {
 		var notification domain.Notification
 		if err := rows.Scan(&notification.ID, &notification.Type, &notification.PostID, &notification.PostSlug,
-			&notification.PostTitle, &notification.CommentID, &notification.ActorName,
+			&notification.PostTitle, &notification.CommentID, &notification.ActorName, &notification.Title, &notification.Body, &notification.Href,
 			&notification.ReadAt, &notification.CreatedAt); err != nil {
 			return nil, 0, err
 		}

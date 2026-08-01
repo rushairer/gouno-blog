@@ -16,11 +16,14 @@ export interface CommunityComment {
 export interface Notification {
   id: number;
   type: 'comment_reply';
-  post_id: number;
+  post_id?: number;
   post_slug: string;
   post_title: string;
   comment_id?: number;
   actor_name: string;
+  title?: string;
+  body?: string;
+  href?: string;
   read_at?: string;
   created_at: string;
 }

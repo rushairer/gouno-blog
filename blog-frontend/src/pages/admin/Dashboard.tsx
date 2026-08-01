@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Bookmark, Eye, FileText, MessageSquare, Plus } from 'lucide-react';
+import { AlertTriangle, Bookmark, Eye, FileText, MessageSquare, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../../auth';
 import { AdminPage, AdminPageHeader, AdminPageState, ContentStack, Feedback, Panel } from '../../components/ui';
@@ -10,6 +10,7 @@ interface Summary {
   total_bookmarks: number; total_comments: number; pending_comments: number; reported_items: number;
   top_posts: Array<{ id: number; title: string; slug: string; views_count: number; likes_count: number }>;
   daily_events: Array<{ date: string; count: number }>;
+  ai_alerts: Array<{ id: number; type: string; title: string; body: string; href: string; created_at: string }>;
 }
 
 export default function Dashboard() {
@@ -39,6 +40,7 @@ export default function Dashboard() {
           <Panel className="traffic-panel"><div className="panel-heading"><h2>30 天流量趋势</h2><span>页面事件</span></div><div className="admin-chart" role="img" aria-label="最近 30 天访问趋势">{summary.daily_events.map((item) => <div key={item.date} title={`${item.date}: ${item.count}`}><span style={{ height: `${Math.max(4, item.count / max * 100)}%` }} /><small>{item.date.slice(5)}</small></div>)}</div></Panel>
           <Panel className="status-panel"><div className="panel-heading"><h2>内容状态</h2></div><dl><div><dt>已发布</dt><dd>{summary.published_posts}</dd></div><div><dt>草稿与定时</dt><dd>{summary.total_posts - summary.published_posts}</dd></div><div><dt>待审核评论</dt><dd>{summary.pending_comments}</dd></div><div><dt>被举报内容</dt><dd>{summary.reported_items}</dd></div></dl><Link to="/admin/comments?status=pending">处理互动队列 →</Link></Panel>
         </div>
+        {summary.ai_alerts.length > 0 ? <Panel className="dashboard-ai-alerts"><div className="panel-heading"><div><h2><AlertTriangle /> AI 运营提醒</h2><small>自动化需要你关注的失败与异常。</small></div><Link to="/admin/agents">查看 AI 工作台</Link></div><div className="dashboard-ai-alert-list">{summary.ai_alerts.map((alert) => <Link key={alert.id} to={alert.href || '/admin/agents'}><strong>{alert.title}</strong><span>{alert.body}</span><small>{new Date(alert.created_at).toLocaleString('zh-CN')}</small></Link>)}</div></Panel> : null}
         <Panel className="dashboard-table"><div className="panel-heading"><h2>表现最佳文章</h2><Link to="/admin/posts">查看全部文章</Link></div><div className="table-scroll"><table><thead><tr><th>文章</th><th>阅读量</th><th>点赞</th><th>操作</th></tr></thead><tbody>{summary.top_posts.map((post, index) => <tr key={post.id}><td><span>{index + 1}</span>{post.title}</td><td>{post.views_count}</td><td>{post.likes_count}</td><td><Link to={`/admin/posts/${post.id}/edit`}>编辑</Link></td></tr>)}</tbody></table></div></Panel>
       </> : null}
     </ContentStack>

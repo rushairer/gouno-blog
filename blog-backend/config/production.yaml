@@ -6,7 +6,10 @@ web_server:
     read_header_timeout: 2s
     write_timeout: 2m
     request_timeout: 10s
-    rate_limit_per_minute: 120
+    # The AI workspace fans out into several authorized read requests and can
+    # legitimately retry transient Provider failures; keep operator bursts out
+    # of the global 429 path without removing rate limiting.
+    rate_limit_per_minute: 300
     trusted_proxies:
         - "172.16.0.0/12"
     # Same-origin requests need no CORS configuration. Add only explicit public origins here.

@@ -52,7 +52,7 @@ export interface AgentCitation {
 
 export interface WorkflowStep {
   id: string;
-  type: 'tool' | 'model' | 'for_each' | 'approval_gate' | 'output';
+  type: 'tool' | 'model' | 'for_each' | 'approval_gate' | 'output' | 'rss_daily_post';
   name?: string;
   tool_name?: string;
   agent_id?: number;
@@ -71,6 +71,9 @@ export interface Workflow {
   name: string;
   description: string;
   enabled: boolean;
+  cron_expression?: string;
+  timezone: string;
+  next_run_at?: string;
   template_key?: string;
   current_version: number;
   version_id: number;
@@ -88,10 +91,29 @@ export interface WorkflowRun {
   status: string;
   input: Record<string, unknown>;
   output?: unknown;
+  error_code?: string;
   error_message?: string;
   input_tokens: number;
   output_tokens: number;
+  triggered_by?: string;
+  schedule_key?: string;
+  started_at?: string;
+  finished_at?: string;
   created_at: string;
+}
+
+export interface WorkflowStepRun {
+  id: number;
+  workflow_run_id: number;
+  step_id: string;
+  step_type: string;
+  iteration?: number;
+  status: string;
+  input?: unknown;
+  output?: unknown;
+  error_message?: string;
+  started_at: string;
+  finished_at?: string;
 }
 
 export interface WorkflowMetric {
@@ -101,6 +123,10 @@ export interface WorkflowMetric {
   failures: number;
   tokens: number;
 }
+
+export interface DailyNewsSource { id: number; source_name: string; feed_url: string; original_url: string; title: string; fetched_at: string; }
+export interface DailyNewsRun { id: number; run_date: string; status: 'running' | 'succeeded' | 'failed'; trigger: string; source_count: number; post_id?: number; provider?: string; model?: string; retry_count: number; error_message?: string; started_at?: string; finished_at?: string; created_at: string; }
+export interface DailyNewsStatus { job: { enabled: boolean; cron_expression: string; timezone: string }; next_run_at?: string; latest_run?: DailyNewsRun; sources: DailyNewsSource[]; }
 
 export interface OperationalSuggestion {
   id: number;

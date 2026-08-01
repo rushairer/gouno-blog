@@ -445,6 +445,14 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .editor-canvas { display: flex; flex-direction: column; padding: 28px 36px; min-width: 0; background: var(--ui-panel); flex: 1; }
 .editor-canvas .field { margin-bottom: 18px; }
 .editor-title { width: 100%; min-height: 52px; padding: 10px 14px; resize: vertical; border: 1px solid var(--ui-border); border-radius: var(--radius-control); outline: 0; background: var(--ui-control); color: var(--ui-text); font: 600 22px/1.4 var(--font-ui); transition: border-color 120ms ease, box-shadow 120ms ease; }
+
+.dashboard-ai-alerts { margin-top: 18px; }
+.dashboard-ai-alerts .panel-heading h2 { display: inline-flex; align-items: center; gap: 8px; }
+.dashboard-ai-alerts .panel-heading h2 svg { color: var(--ui-warning); }
+.dashboard-ai-alert-list { display: grid; gap: 8px; margin-top: 14px; }
+.dashboard-ai-alert-list a { display: grid; gap: 3px; padding: 12px; border: 1px solid var(--ui-border); border-radius: var(--radius-control); color: inherit; text-decoration: none; background: var(--ui-control); }
+.dashboard-ai-alert-list a:hover { border-color: var(--ui-border-hover); background: var(--ui-control-hover); }
+.dashboard-ai-alert-list span, .dashboard-ai-alert-list small { color: var(--ui-text-secondary); }
 .editor-title:focus { border-color: var(--ui-border-emphasis); box-shadow: 0 0 0 3px var(--ui-focus-ring); }
 .editor-title::placeholder { color: var(--ui-text-placeholder); }
 .editor-ai-inline { display: grid; gap: 8px; margin-top: 8px; }
