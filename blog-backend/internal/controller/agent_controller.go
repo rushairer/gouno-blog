@@ -106,6 +106,28 @@ func (ctrl *AgentController) ListMediaCandidates(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
 }
 
+func (ctrl *AgentController) ReviewMediaCandidate(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	var req struct {
+		Action string `json:"action" binding:"required"`
+		Note   string `json:"note"`
+	}
+	if err := bindAgentJSON(c, &req); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+	reviewer, _ := c.Get("account_id")
+	reviewerText, _ := reviewer.(string)
+	if err := ctrl.approvals.ReviewMediaCandidate(c.Request.Context(), id, req.Action, reviewerText, req.Note); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
+}
+
 func (ctrl *AgentController) SelectCandidate(c *gin.Context) {
 	id, ok := agentID(c)
 	if !ok {

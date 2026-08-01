@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -42,6 +43,19 @@ func (s *ApprovalService) List(ctx context.Context, status string, page, pageSiz
 
 func (s *ApprovalService) ListMediaCandidates(ctx context.Context) ([]*domain.MediaCandidate, error) {
 	return s.repo.ListMediaCandidates(ctx)
+}
+
+func (s *ApprovalService) ReviewMediaCandidate(ctx context.Context, id int64, action, reviewer, note string) error {
+	if id <= 0 || (action != "ready" && action != "reject") || (action == "reject" && strings.TrimSpace(note) == "") {
+		return ErrInvalid
+	}
+	if err := s.repo.ReviewMediaCandidate(ctx, id, action, reviewer, strings.TrimSpace(note)); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrApprovalConflict
+		}
+		return err
+	}
+	return nil
 }
 
 func (s *ApprovalService) Reject(ctx context.Context, id int64, reviewer, note string) error {

@@ -772,7 +772,7 @@ func (r *AgentRepository) CreateMediaCandidate(ctx context.Context, approval *do
 
 func (r *AgentRepository) ListMediaCandidates(ctx context.Context) ([]*domain.MediaCandidate, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT id,post_id,source_run_id,source_approval_id,headline,brief,platform,provider,model,
-		generation_status,safety_status,copyright_status,alt_text,created_at
+		generation_status,safety_status,copyright_status,alt_text,reviewed_by,review_note,reviewed_at,created_at
 		FROM ai_media_candidates ORDER BY created_at DESC`)
 	if err != nil {
 		return nil, err
@@ -783,12 +783,35 @@ func (r *AgentRepository) ListMediaCandidates(ctx context.Context) ([]*domain.Me
 		var item domain.MediaCandidate
 		if err := rows.Scan(&item.ID, &item.PostID, &item.SourceRunID, &item.SourceApprovalID, &item.Headline,
 			&item.Brief, &item.Platform, &item.Provider, &item.Model, &item.GenerationStatus,
-			&item.SafetyStatus, &item.CopyrightStatus, &item.AltText, &item.CreatedAt); err != nil {
+			&item.SafetyStatus, &item.CopyrightStatus, &item.AltText, &item.ReviewedBy, &item.ReviewNote,
+			&item.ReviewedAt, &item.CreatedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, &item)
 	}
 	return items, rows.Err()
+}
+
+func (r *AgentRepository) ReviewMediaCandidate(ctx context.Context, id int64, action, reviewer, note string) error {
+	status, safety, copyright := "", "", ""
+	switch action {
+	case "ready":
+		status, safety, copyright = "ready_to_generate", "passed", "passed"
+	case "reject":
+		status, safety, copyright = "rejected", "flagged", "flagged"
+	default:
+		return errors.New("invalid media candidate review")
+	}
+	result, err := r.db.ExecContext(ctx, `UPDATE ai_media_candidates SET generation_status=$2,safety_status=$3,
+		copyright_status=$4,reviewed_by=$5,review_note=$6,reviewed_at=NOW()
+		WHERE id=$1 AND generation_status='brief_ready'`, id, status, safety, copyright, reviewer, note)
+	if err != nil {
+		return err
+	}
+	if affected, _ := result.RowsAffected(); affected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }
 
 func (r *AgentRepository) RecordUsage(ctx context.Context, event *domain.UsageEvent) error {

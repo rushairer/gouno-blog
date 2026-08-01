@@ -16,7 +16,7 @@ interface MediaAsset {
   usage_count?: number;
 }
 interface MediaReference { post_id: number; post_title: string; post_slug: string }
-interface MediaCandidate { id: number; post_id: number; source_run_id: number; headline: string; brief: string; platform?: string; provider: string; model: string; generation_status: string; safety_status: string; copyright_status: string; alt_text: string; created_at: string }
+interface MediaCandidate { id: number; post_id: number; source_run_id: number; headline: string; brief: string; platform?: string; provider: string; model: string; generation_status: string; safety_status: string; copyright_status: string; alt_text: string; review_note?: string; created_at: string }
 
 export default function MediaLibrary() {
   const { t, formatDateTime } = useI18n();
@@ -32,6 +32,8 @@ export default function MediaLibrary() {
   const [type, setType] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<MediaAsset | null>(null);
   const [references, setReferences] = useState<MediaReference[]>([]);
+  const [reviewNotes, setReviewNotes] = useState<Record<number, string>>({});
+  const [reviewing, setReviewing] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     const [response, candidateResponse] = await Promise.all([apiFetch('/api/admin/media'), apiFetch('/api/admin/ai-media-candidates')]);
@@ -99,6 +101,17 @@ export default function MediaLibrary() {
       }
     }
   };
+  const reviewCandidate = async (candidate: MediaCandidate, action: 'ready' | 'reject') => {
+    const note = reviewNotes[candidate.id] || '';
+    if (action === 'reject' && !note.trim()) { setError('拒绝候选时需要填写审核说明。'); return; }
+    setReviewing(candidate.id); setError('');
+    try {
+      const response = await apiFetch(`/api/admin/ai-media-candidates/${candidate.id}/review`, { method: 'POST', body: JSON.stringify({ action, note }) });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.message || t('requestFailed'));
+      await load(); notify(action === 'ready' ? '候选已通过安全与版权检查，允许进入生成流程。' : '候选已拒绝。');
+    } catch (err) { setError(err instanceof Error ? err.message : t('requestFailed')); } finally { setReviewing(null); }
+  };
   const visibleAssets = useMemo(() => assets.filter((asset) => {
     const matchesQuery = !query || `${asset.filename} ${asset.alt_text}`.toLowerCase().includes(query.toLowerCase());
     return matchesQuery && (!type || asset.content_type === type);
@@ -117,7 +130,7 @@ export default function MediaLibrary() {
         </form>
         <div className="media-filter-bar"><SearchField aria-label="搜索媒体" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索文件名或替代文本" /><Select size="compact" aria-label="媒体类型" value={type} onChange={(event) => setType(event.target.value)}><option value="">全部类型</option>{contentTypes.map((item) => <option key={item} value={item}>{item.replace('image/', '').toUpperCase()}</option>)}</Select><span>{visibleAssets.length} / {assets.length}</span></div>
       </Panel>
-      {candidates.length > 0 ? <Panel className="section-stack"><div className="panel-heading"><div><h2>AI 媒体候选</h2><p className="muted">已批准的图片 brief 会停留在这里，等待独立的生成与安全审核流程；尚未生成或发布任何媒体。</p></div><span className="admin-page-count">{candidates.length} 项</span></div><div className="table-wrap"><table><thead><tr><th>文章</th><th>Brief</th><th>模型</th><th>状态</th></tr></thead><tbody>{candidates.map((candidate) => <tr key={candidate.id}><td>#{candidate.post_id}</td><td><strong>{candidate.headline || '图片创意'}</strong><small>{candidate.brief}</small></td><td>{candidate.provider} / {candidate.model}</td><td><small>生成：{candidate.generation_status}<br />安全：{candidate.safety_status}<br />版权：{candidate.copyright_status}</small></td></tr>)}</tbody></table></div></Panel> : null}
+      {candidates.length > 0 ? <Panel className="section-stack"><div className="panel-heading"><div><h2>AI 媒体候选</h2><p className="muted">图片 brief 必须先由管理员完成安全与版权检查，才会进入后续生成流程；尚未生成或发布任何媒体。</p></div><span className="admin-page-count">{candidates.length} 项</span></div><div className="table-wrap"><table><thead><tr><th>文章</th><th>Brief</th><th>模型</th><th>状态</th><th>审核</th></tr></thead><tbody>{candidates.map((candidate) => <tr key={candidate.id}><td>#{candidate.post_id}</td><td><strong>{candidate.headline || '图片创意'}</strong><small>{candidate.brief}</small></td><td>{candidate.provider} / {candidate.model}</td><td><small>生成：{candidate.generation_status}<br />安全：{candidate.safety_status}<br />版权：{candidate.copyright_status}</small></td><td>{candidate.generation_status === 'brief_ready' ? <div className="section-stack"><input className="input-field" value={reviewNotes[candidate.id] || ''} onChange={(event) => setReviewNotes((current) => ({ ...current, [candidate.id]: event.target.value }))} placeholder="审核说明（拒绝时必填）" /><div className="row-actions"><button className="btn btn-primary" type="button" disabled={reviewing === candidate.id} onClick={() => void reviewCandidate(candidate, 'ready')}>通过检查</button><button className="btn btn-danger" type="button" disabled={reviewing === candidate.id} onClick={() => void reviewCandidate(candidate, 'reject')}>拒绝</button></div></div> : <small>{candidate.review_note || '已审核'}</small>}</td></tr>)}</tbody></table></div></Panel> : null}
       {loading ? <LoadingState label={t('loadingResources')} /> : assets.length === 0 ? <EmptyState label={t('noMedia')} /> : visibleAssets.length === 0 ? <EmptyState label="没有符合条件的媒体资源。" /> : <div className="media-grid">{visibleAssets.map((asset) => <Panel className="media-card" key={asset.id}>
         <img src={asset.url} alt={asset.alt_text || asset.filename} loading="lazy" />
         <div><strong>{asset.filename}</strong><small>{Math.ceil(asset.size_bytes / 1024)} KB · {formatDateTime(asset.created_at)} · 引用 {asset.usage_count || 0}</small></div>

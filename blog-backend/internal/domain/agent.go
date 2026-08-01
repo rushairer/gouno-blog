@@ -239,6 +239,9 @@ type MediaCandidate struct {
 	SafetyStatus     string       `json:"safety_status"`
 	CopyrightStatus  string       `json:"copyright_status"`
 	AltText          string       `json:"alt_text"`
+	ReviewedBy       *string      `json:"reviewed_by,omitempty"`
+	ReviewNote       string       `json:"review_note,omitempty"`
+	ReviewedAt       *time.Time   `json:"reviewed_at,omitempty"`
 	CreatedAt        time.Time    `json:"created_at"`
 }
 
