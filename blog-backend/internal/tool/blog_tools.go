@@ -126,7 +126,7 @@ func NewBlogRegistry(posts *service.PostService, community *service.CommunitySer
 		},
 		Definition{
 			Name: "content.propose_distribution_draft", Description: "Create an approval-only social, newsletter, FAQ, or image brief from one post. It never sends content to an external service.",
-			Parameters: schema(`{"post_id":{"type":"integer","minimum":1},"format":{"type":"string","enum":["social","newsletter","faq","image_brief"]},"headline":{"type":"string","maxLength":500},"body":{"type":"string","maxLength":12000},"platform":{"type":"string","maxLength":100}}`, "post_id", "format", "body"),
+			Parameters: schema(`{"post_id":{"type":"integer","minimum":1},"format":{"type":"string","enum":["social","newsletter","faq","image_brief"]},"headline":{"type":"string","maxLength":500},"body":{"type":"string","maxLength":12000},"platform":{"type":"string","maxLength":100},"alt_text":{"type":"string","maxLength":500}}`, "post_id", "format", "body"),
 			Risk:       domain.ToolRiskPropose, Propose: tools.proposeDistributionDraft,
 		},
 	)
@@ -329,6 +329,7 @@ func (t *BlogTools) proposeDistributionDraft(ctx context.Context, raw json.RawMe
 		Headline string `json:"headline"`
 		Body     string `json:"body"`
 		Platform string `json:"platform"`
+		AltText  string `json:"alt_text"`
 	}
 	if err := decodeArguments(raw, &args); err != nil || args.PostID <= 0 {
 		return nil, ErrInvalidArgument
@@ -337,7 +338,8 @@ func (t *BlogTools) proposeDistributionDraft(ctx context.Context, raw json.RawMe
 	args.Headline = strings.TrimSpace(args.Headline)
 	args.Body = strings.TrimSpace(args.Body)
 	args.Platform = strings.TrimSpace(args.Platform)
-	if args.Body == "" || len([]rune(args.Headline)) > 500 || len([]rune(args.Body)) > 12000 || len([]rune(args.Platform)) > 100 {
+	args.AltText = strings.TrimSpace(args.AltText)
+	if args.Body == "" || len([]rune(args.Headline)) > 500 || len([]rune(args.Body)) > 12000 || len([]rune(args.Platform)) > 100 || len([]rune(args.AltText)) > 500 {
 		return nil, ErrInvalidArgument
 	}
 	switch args.Format {

@@ -235,6 +235,8 @@ type MediaCandidate struct {
 	Platform         string       `json:"platform,omitempty"`
 	Provider         ProviderType `json:"provider"`
 	Model            string       `json:"model"`
+	InputTokens      int64        `json:"input_tokens"`
+	OutputTokens     int64        `json:"output_tokens"`
 	GenerationStatus string       `json:"generation_status"`
 	SafetyStatus     string       `json:"safety_status"`
 	CopyrightStatus  string       `json:"copyright_status"`

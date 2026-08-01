@@ -756,6 +756,7 @@ func (r *AgentRepository) CreateMediaCandidate(ctx context.Context, approval *do
 		Headline string `json:"headline"`
 		Body     string `json:"body"`
 		Platform string `json:"platform"`
+		AltText  string `json:"alt_text"`
 	}
 	if err := json.Unmarshal(approval.ProposedPayload, &payload); err != nil {
 		return err
@@ -764,14 +765,14 @@ func (r *AgentRepository) CreateMediaCandidate(ctx context.Context, approval *do
 		return errors.New("invalid media candidate")
 	}
 	_, err := r.db.ExecContext(ctx, `INSERT INTO ai_media_candidates
-		(post_id,source_run_id,source_approval_id,headline,brief,platform,provider,model)
-		SELECT $1,$2,$3,$4,$5,$6,ar.provider,ar.model FROM ai_agent_runs ar WHERE ar.id=$2`,
-		payload.PostID, approval.RunID, approval.ID, strings.TrimSpace(payload.Headline), strings.TrimSpace(payload.Body), strings.TrimSpace(payload.Platform))
+		(post_id,source_run_id,source_approval_id,headline,brief,platform,alt_text,provider,model,input_tokens,output_tokens)
+		SELECT $1,$2,$3,$4,$5,$6,$7,ar.provider,ar.model,ar.input_tokens,ar.output_tokens FROM ai_agent_runs ar WHERE ar.id=$2`,
+		payload.PostID, approval.RunID, approval.ID, strings.TrimSpace(payload.Headline), strings.TrimSpace(payload.Body), strings.TrimSpace(payload.Platform), strings.TrimSpace(payload.AltText))
 	return err
 }
 
 func (r *AgentRepository) ListMediaCandidates(ctx context.Context) ([]*domain.MediaCandidate, error) {
-	rows, err := r.db.QueryContext(ctx, `SELECT id,post_id,source_run_id,source_approval_id,headline,brief,platform,provider,model,
+	rows, err := r.db.QueryContext(ctx, `SELECT id,post_id,source_run_id,source_approval_id,headline,brief,platform,provider,model,input_tokens,output_tokens,
 		generation_status,safety_status,copyright_status,alt_text,reviewed_by,review_note,reviewed_at,created_at
 		FROM ai_media_candidates ORDER BY created_at DESC`)
 	if err != nil {
@@ -782,7 +783,7 @@ func (r *AgentRepository) ListMediaCandidates(ctx context.Context) ([]*domain.Me
 	for rows.Next() {
 		var item domain.MediaCandidate
 		if err := rows.Scan(&item.ID, &item.PostID, &item.SourceRunID, &item.SourceApprovalID, &item.Headline,
-			&item.Brief, &item.Platform, &item.Provider, &item.Model, &item.GenerationStatus,
+			&item.Brief, &item.Platform, &item.Provider, &item.Model, &item.InputTokens, &item.OutputTokens, &item.GenerationStatus,
 			&item.SafetyStatus, &item.CopyrightStatus, &item.AltText, &item.ReviewedBy, &item.ReviewNote,
 			&item.ReviewedAt, &item.CreatedAt); err != nil {
 			return nil, err
