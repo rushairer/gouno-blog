@@ -97,6 +97,15 @@ func (ctrl *AgentController) ListCandidateSets(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
 }
 
+func (ctrl *AgentController) ListMediaCandidates(c *gin.Context) {
+	items, err := ctrl.approvals.ListMediaCandidates(c.Request.Context())
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
+}
+
 func (ctrl *AgentController) SelectCandidate(c *gin.Context) {
 	id, ok := agentID(c)
 	if !ok {

@@ -749,6 +749,48 @@ func (r *AgentRepository) CreateReplyDraft(ctx context.Context, approvalID, comm
 	return err
 }
 
+func (r *AgentRepository) CreateMediaCandidate(ctx context.Context, approval *domain.AgentApproval) error {
+	var payload struct {
+		PostID   int64  `json:"post_id"`
+		Format   string `json:"format"`
+		Headline string `json:"headline"`
+		Body     string `json:"body"`
+		Platform string `json:"platform"`
+	}
+	if err := json.Unmarshal(approval.ProposedPayload, &payload); err != nil {
+		return err
+	}
+	if payload.PostID <= 0 || payload.Format != "image_brief" || strings.TrimSpace(payload.Body) == "" {
+		return errors.New("invalid media candidate")
+	}
+	_, err := r.db.ExecContext(ctx, `INSERT INTO ai_media_candidates
+		(post_id,source_run_id,source_approval_id,headline,brief,platform,provider,model)
+		SELECT $1,$2,$3,$4,$5,$6,ar.provider,ar.model FROM ai_agent_runs ar WHERE ar.id=$2`,
+		payload.PostID, approval.RunID, approval.ID, strings.TrimSpace(payload.Headline), strings.TrimSpace(payload.Body), strings.TrimSpace(payload.Platform))
+	return err
+}
+
+func (r *AgentRepository) ListMediaCandidates(ctx context.Context) ([]*domain.MediaCandidate, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT id,post_id,source_run_id,source_approval_id,headline,brief,platform,provider,model,
+		generation_status,safety_status,copyright_status,alt_text,created_at
+		FROM ai_media_candidates ORDER BY created_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := make([]*domain.MediaCandidate, 0)
+	for rows.Next() {
+		var item domain.MediaCandidate
+		if err := rows.Scan(&item.ID, &item.PostID, &item.SourceRunID, &item.SourceApprovalID, &item.Headline,
+			&item.Brief, &item.Platform, &item.Provider, &item.Model, &item.GenerationStatus,
+			&item.SafetyStatus, &item.CopyrightStatus, &item.AltText, &item.CreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, &item)
+	}
+	return items, rows.Err()
+}
+
 func (r *AgentRepository) RecordUsage(ctx context.Context, event *domain.UsageEvent) error {
 	return r.db.QueryRowContext(ctx, `INSERT INTO ai_usage_events
 		(run_id, request_id, provider, model, input_tokens, output_tokens, completed_at)

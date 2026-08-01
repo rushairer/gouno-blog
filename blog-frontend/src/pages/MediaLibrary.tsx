@@ -16,11 +16,13 @@ interface MediaAsset {
   usage_count?: number;
 }
 interface MediaReference { post_id: number; post_title: string; post_slug: string }
+interface MediaCandidate { id: number; post_id: number; source_run_id: number; headline: string; brief: string; platform?: string; provider: string; model: string; generation_status: string; safety_status: string; copyright_status: string; alt_text: string; created_at: string }
 
 export default function MediaLibrary() {
   const { t, formatDateTime } = useI18n();
   const { notify } = useToast();
   const [assets, setAssets] = useState<MediaAsset[]>([]);
+  const [candidates, setCandidates] = useState<MediaCandidate[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
@@ -32,10 +34,12 @@ export default function MediaLibrary() {
   const [references, setReferences] = useState<MediaReference[]>([]);
 
   const load = useCallback(async () => {
-    const response = await apiFetch('/api/admin/media');
-    const body = await response.json();
+    const [response, candidateResponse] = await Promise.all([apiFetch('/api/admin/media'), apiFetch('/api/admin/ai-media-candidates')]);
+    const [body, candidateBody] = await Promise.all([response.json(), candidateResponse.json()]);
     if (!response.ok) throw new Error(body.message || t('requestFailed'));
+    if (!candidateResponse.ok) throw new Error(candidateBody.message || t('requestFailed'));
     setAssets(body.data || []);
+    setCandidates(candidateBody.data || []);
   }, [t]);
 
   useEffect(() => {
@@ -113,6 +117,7 @@ export default function MediaLibrary() {
         </form>
         <div className="media-filter-bar"><SearchField aria-label="搜索媒体" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索文件名或替代文本" /><Select size="compact" aria-label="媒体类型" value={type} onChange={(event) => setType(event.target.value)}><option value="">全部类型</option>{contentTypes.map((item) => <option key={item} value={item}>{item.replace('image/', '').toUpperCase()}</option>)}</Select><span>{visibleAssets.length} / {assets.length}</span></div>
       </Panel>
+      {candidates.length > 0 ? <Panel className="section-stack"><div className="panel-heading"><div><h2>AI 媒体候选</h2><p className="muted">已批准的图片 brief 会停留在这里，等待独立的生成与安全审核流程；尚未生成或发布任何媒体。</p></div><span className="admin-page-count">{candidates.length} 项</span></div><div className="table-wrap"><table><thead><tr><th>文章</th><th>Brief</th><th>模型</th><th>状态</th></tr></thead><tbody>{candidates.map((candidate) => <tr key={candidate.id}><td>#{candidate.post_id}</td><td><strong>{candidate.headline || '图片创意'}</strong><small>{candidate.brief}</small></td><td>{candidate.provider} / {candidate.model}</td><td><small>生成：{candidate.generation_status}<br />安全：{candidate.safety_status}<br />版权：{candidate.copyright_status}</small></td></tr>)}</tbody></table></div></Panel> : null}
       {loading ? <LoadingState label={t('loadingResources')} /> : assets.length === 0 ? <EmptyState label={t('noMedia')} /> : visibleAssets.length === 0 ? <EmptyState label="没有符合条件的媒体资源。" /> : <div className="media-grid">{visibleAssets.map((asset) => <Panel className="media-card" key={asset.id}>
         <img src={asset.url} alt={asset.alt_text || asset.filename} loading="lazy" />
         <div><strong>{asset.filename}</strong><small>{Math.ceil(asset.size_bytes / 1024)} KB · {formatDateTime(asset.created_at)} · 引用 {asset.usage_count || 0}</small></div>

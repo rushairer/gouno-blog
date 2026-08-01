@@ -222,6 +222,26 @@ type AgentApproval struct {
 	CreatedAt       time.Time       `json:"created_at"`
 }
 
+// MediaCandidate is a governed hand-off from an approved image brief to a
+// future media generator. It deliberately has no delivery URL or credential:
+// generation and publication remain separate reviewed operations.
+type MediaCandidate struct {
+	ID               int64        `json:"id"`
+	PostID           int64        `json:"post_id"`
+	SourceRunID      int64        `json:"source_run_id"`
+	SourceApprovalID int64        `json:"source_approval_id"`
+	Headline         string       `json:"headline"`
+	Brief            string       `json:"brief"`
+	Platform         string       `json:"platform,omitempty"`
+	Provider         ProviderType `json:"provider"`
+	Model            string       `json:"model"`
+	GenerationStatus string       `json:"generation_status"`
+	SafetyStatus     string       `json:"safety_status"`
+	CopyrightStatus  string       `json:"copyright_status"`
+	AltText          string       `json:"alt_text"`
+	CreatedAt        time.Time    `json:"created_at"`
+}
+
 type UsageEvent struct {
 	ID           int64        `json:"id"`
 	RunID        int64        `json:"run_id"`

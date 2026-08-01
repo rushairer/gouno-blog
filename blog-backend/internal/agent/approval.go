@@ -40,6 +40,10 @@ func (s *ApprovalService) List(ctx context.Context, status string, page, pageSiz
 	return s.repo.ListApprovals(ctx, status, pageSize, (page-1)*pageSize)
 }
 
+func (s *ApprovalService) ListMediaCandidates(ctx context.Context) ([]*domain.MediaCandidate, error) {
+	return s.repo.ListMediaCandidates(ctx)
+}
+
 func (s *ApprovalService) Reject(ctx context.Context, id int64, reviewer, note string) error {
 	if err := s.repo.RejectApproval(ctx, id, reviewer, strings.TrimSpace(note)); err != nil {
 		return ErrApprovalConflict
@@ -193,6 +197,9 @@ func (s *ApprovalService) execute(ctx context.Context, approval *domain.AgentApp
 		}
 		switch payload.Format {
 		case "social", "newsletter", "faq", "image_brief":
+			if payload.Format == "image_brief" {
+				return s.repo.CreateMediaCandidate(ctx, approval)
+			}
 			return nil
 		default:
 			return errors.New("invalid distribution draft format")
