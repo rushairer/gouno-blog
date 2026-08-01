@@ -218,6 +218,11 @@ func (s *Service) SetEnabled(ctx context.Context, id int64, enabled bool, actor 
 	if err != nil {
 		return err
 	}
+	if enabled {
+		if err := s.validateRunnableSteps(ctx, value.Steps, map[string]any{"input": map[string]any{}, "steps": map[string]any{}}); err != nil {
+			return err
+		}
+	}
 	value.Enabled = enabled
 	result, err := s.db.ExecContext(ctx, `UPDATE ai_workflows SET enabled=$2, next_run_at=$3,
 		created_by=COALESCE(created_by,$4), updated_at=NOW() WHERE id=$1 AND deleted_at IS NULL`,
@@ -264,6 +269,13 @@ func (s *Service) queue(ctx context.Context, id int64, dryRun bool, input json.R
 	if len(input) > 64<<10 || !json.Valid(input) {
 		return nil, fmt.Errorf("%w: invalid input", ErrInvalid)
 	}
+	var inputValue any
+	if err := json.Unmarshal(input, &inputValue); err != nil {
+		return nil, fmt.Errorf("%w: invalid input", ErrInvalid)
+	}
+	if err := s.validateRunnableSteps(ctx, value.Steps, map[string]any{"input": inputValue, "steps": map[string]any{}}); err != nil {
+		return nil, err
+	}
 	run := &domain.WorkflowRun{WorkflowID: id, WorkflowVersionID: value.VersionID,
 		DryRun: dryRun, Status: "queued", Input: input, TriggeredBy: triggeredBy}
 	if scheduled && !dryRun && value.CronExpression != nil {
@@ -293,6 +305,41 @@ func (s *Service) queue(ctx context.Context, id int64, dryRun bool, input json.R
 		}
 	}
 	return run, err
+}
+
+// validateRunnableSteps rejects malformed or paused Agent bindings before a
+// workflow run is persisted. This keeps disabled starter templates harmless
+// until their linked Agent has been deliberately enabled.
+func (s *Service) validateRunnableSteps(ctx context.Context, steps []domain.WorkflowStep, document map[string]any) error {
+	for _, step := range steps {
+		switch step.Type {
+		case "model":
+			agentID := step.AgentID
+			if agentID <= 0 {
+				resolved, err := resolvePointer(document, step.AgentIDPointer)
+				if err != nil {
+					return fmt.Errorf("%w: model step %q has no bound Agent", ErrInvalid, step.ID)
+				}
+				value, ok := resolved.(float64)
+				if !ok || value <= 0 {
+					return fmt.Errorf("%w: model step %q has no bound Agent", ErrInvalid, step.ID)
+				}
+				agentID = int64(value)
+			}
+			agent, err := s.agents.GetAgent(ctx, agentID)
+			if err != nil {
+				return fmt.Errorf("%w: model step %q Agent is unavailable", ErrInvalid, step.ID)
+			}
+			if !agent.Enabled {
+				return fmt.Errorf("%w: linked Agent %q is disabled", ErrInvalid, agent.Name)
+			}
+		case "for_each":
+			if err := s.validateRunnableSteps(ctx, step.Steps, document); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func workflowLocation(name string) *time.Location {

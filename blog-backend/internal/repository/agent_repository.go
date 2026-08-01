@@ -152,6 +152,14 @@ func (r *AgentRepository) BootstrapStarterPack(ctx context.Context) (int, error)
 	if err := rows.Err(); err != nil {
 		return 0, err
 	}
+	if len(items) != 8 {
+		return 0, fmt.Errorf("starter pack is incomplete: expected 8 Skills, found %d", len(items))
+	}
+	scheduledWorkflows := map[string]bool{
+		"daily_news": true, "weekly_operations": true,
+		"stale_content_refresh": true, "low_engagement": true,
+	}
+	wiredWorkflows := make(map[string]bool, len(scheduledWorkflows))
 	for _, item := range items {
 		var agentID int64
 		err := tx.QueryRowContext(ctx, `INSERT INTO ai_agents
@@ -161,13 +169,24 @@ func (r *AgentRepository) BootstrapStarterPack(ctx context.Context) (int, error)
 		if err != nil {
 			return 0, err
 		}
-		if _, err = tx.ExecContext(ctx, `UPDATE ai_workflow_versions v SET steps=jsonb_set(steps, '{0,agent_id}', to_jsonb($2::BIGINT), TRUE)
-			FROM ai_workflows w WHERE w.id=v.workflow_id AND w.template_key=$1 AND v.version=w.current_version`, item.systemKey, agentID); err != nil {
-			return 0, err
+		result, updateErr := tx.ExecContext(ctx, `UPDATE ai_workflow_versions v SET steps=jsonb_set(steps, '{0,agent_id}', to_jsonb($2::BIGINT), TRUE)
+			FROM ai_workflows w WHERE w.id=v.workflow_id AND w.template_key=$1 AND v.version=w.current_version`, item.systemKey, agentID)
+		if updateErr != nil {
+			return 0, updateErr
+		}
+		if scheduledWorkflows[item.systemKey] {
+			affected, affectedErr := result.RowsAffected()
+			if affectedErr != nil {
+				return 0, affectedErr
+			}
+			if affected != 1 {
+				return 0, fmt.Errorf("starter workflow %q was not wired to its Agent", item.systemKey)
+			}
+			wiredWorkflows[item.systemKey] = true
 		}
 	}
-	if len(items) != 8 {
-		return 0, fmt.Errorf("starter pack is incomplete: expected 8 Skills, found %d", len(items))
+	if len(wiredWorkflows) != len(scheduledWorkflows) {
+		return 0, fmt.Errorf("starter workflow wiring is incomplete")
 	}
 	if err := tx.Commit(); err != nil {
 		return 0, err
