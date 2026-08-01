@@ -2,10 +2,27 @@ package tool
 
 import (
 	"context"
+	"errors"
+	"io"
 	"net/http"
 	"net/netip"
+	"strings"
 	"testing"
 )
+
+type scriptedLinkClient struct {
+	statuses map[string]int
+	errors   map[string]error
+	methods  []string
+}
+
+func (c *scriptedLinkClient) Do(request *http.Request) (*http.Response, error) {
+	c.methods = append(c.methods, request.Method)
+	if err := c.errors[request.Method]; err != nil {
+		return nil, err
+	}
+	return &http.Response{StatusCode: c.statuses[request.Method], Body: io.NopCloser(strings.NewReader(""))}, nil
+}
 
 func TestExtractPublicLinksKeepsUniqueHTTPLinks(t *testing.T) {
 	markdown := `[one](https://example.com/a) [duplicate](https://example.com/a)
@@ -36,5 +53,21 @@ func TestSafeLinkClientRejectsLoopbackBeforeConnecting(t *testing.T) {
 	}
 	if _, err := newSafeLinkClient().Do(request); err == nil {
 		t.Fatal("expected loopback link to be rejected")
+	}
+}
+
+func TestCheckPublicLinkFallsBackToGetWhenHeadIsRejected(t *testing.T) {
+	client := &scriptedLinkClient{statuses: map[string]int{http.MethodHead: http.StatusMethodNotAllowed, http.MethodGet: http.StatusOK}, errors: map[string]error{}}
+	result := checkPublicLink(context.Background(), client, "https://example.com/article")
+	if !result.OK || result.StatusCode != http.StatusOK || strings.Join(client.methods, ",") != "HEAD,GET" {
+		t.Fatalf("unexpected fallback result: %#v methods=%v", result, client.methods)
+	}
+}
+
+func TestCheckPublicLinkFallsBackToGetAfterHeadNetworkError(t *testing.T) {
+	client := &scriptedLinkClient{statuses: map[string]int{http.MethodGet: http.StatusOK}, errors: map[string]error{http.MethodHead: errors.New("head blocked")}}
+	result := checkPublicLink(context.Background(), client, "https://example.com/article")
+	if !result.OK || result.StatusCode != http.StatusOK || strings.Join(client.methods, ",") != "HEAD,GET" {
+		t.Fatalf("unexpected network fallback result: %#v methods=%v", result, client.methods)
 	}
 }

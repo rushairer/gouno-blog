@@ -1,6 +1,8 @@
 import { Check, ChevronDown, Image, Lightbulb, Play, RefreshCw, ThumbsDown, X } from 'lucide-react';
+import { useState } from 'react';
 import type { ContentCandidateSet, EditorialTask, MediaCandidate, OperationalSuggestion } from '../../agent';
 import { Button, EmptyState, Panel } from '../ui';
+import { StatusPill } from './StatusPill';
 
 type Mutate = (path: string, method?: string, body?: unknown) => Promise<void>;
 
@@ -19,6 +21,13 @@ function taskStatusLabel(status: EditorialTask['status'], zh: boolean) {
   return status === 'done' ? '已完成' : status === 'cancelled' ? '已取消' : '进行中';
 }
 
+function suggestionStatusLabel(status: string, zh: boolean) {
+  if (status === 'converted') return zh ? '已创建编辑任务' : 'Task created';
+  if (status === 'resolved') return zh ? '自动已解决' : 'Automatically resolved';
+  if (status === 'selected') return zh ? '已完成选择' : 'Selection completed';
+  return zh ? '已暂缓' : 'Deferred';
+}
+
 export function OperationsWorkspace({ suggestions, candidateSets, mediaCandidates = [], editorialTasks, locale, onMutate }: {
   suggestions: OperationalSuggestion[];
   candidateSets: ContentCandidateSet[];
@@ -35,6 +44,16 @@ export function OperationsWorkspace({ suggestions, candidateSets, mediaCandidate
   const openTasks = editorialTasks.filter((item) => item.status === 'open');
   const closedTasks = editorialTasks.filter((item) => item.status !== 'open');
   const total = actionableSuggestions.length + pendingSets.length + readyMedia.length;
+  const [refreshing, setRefreshing] = useState(false);
+
+  const refreshSuggestions = async () => {
+    setRefreshing(true);
+    try {
+      await onMutate('/api/admin/ai-suggestions/refresh');
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const ignoreSuggestion = (item: OperationalSuggestion) => {
     const reason = window.prompt(zh ? '为什么暂不处理？' : 'Why defer this suggestion?');
@@ -43,7 +62,7 @@ export function OperationsWorkspace({ suggestions, candidateSets, mediaCandidate
 
   return <div className="operations-queue section-stack">
     <Panel className="operations-queue__intro">
-      <div className="panel-heading"><div><h2><Lightbulb />{zh ? '运营建议' : 'Operational suggestions'}</h2><small>{zh ? 'AI 发现值得关注的问题；只有创建编辑任务或执行后续审批时，才会产生实际变更。' : 'AI highlights items worth attention. Changes only happen after creating an editorial task or approving a later action.'}</small></div><Button variant="secondary" type="button" onClick={() => void onMutate('/api/admin/ai-suggestions/refresh')}><RefreshCw />{zh ? '刷新建议' : 'Refresh suggestions'}</Button></div>
+      <div className="panel-heading"><div><h2><Lightbulb />{zh ? '运营建议' : 'Operational suggestions'}</h2><small>{zh ? 'AI 发现值得关注的问题；只有创建编辑任务或执行后续审批时，才会产生实际变更。刷新会使用最新检查结果，仍未解决的问题会继续保留。' : 'AI highlights items worth attention. Changes only happen after creating an editorial task or approving a later action. Refresh uses the latest checks; unresolved issues remain visible.'}</small></div><Button variant="secondary" type="button" loading={refreshing} disabled={refreshing} onClick={() => void refreshSuggestions()}><RefreshCw />{zh ? '刷新建议' : 'Refresh suggestions'}</Button></div>
       <div className="operations-queue__counts"><span><strong>{total}</strong>{zh ? ' 项待决定' : ' items to decide'}</span><span>{zh ? '创建编辑任务不会修改或发布内容。' : 'Creating an editorial task never changes or publishes content.'}</span></div>
     </Panel>
 
@@ -61,6 +80,6 @@ export function OperationsWorkspace({ suggestions, candidateSets, mediaCandidate
 
     <Panel className="editorial-task-panel"><div className="panel-heading"><div><h2>{zh ? '编辑任务' : 'Editorial tasks'}</h2><small>{zh ? '由运营建议或已批准的 Agent 操作创建；完成或取消只更新任务状态。' : 'Created from operational suggestions or approved Agent actions. Completing or cancelling only changes the task status.'}</small></div><strong>{zh ? `${openTasks.length} 项进行中` : `${openTasks.length} open`}</strong></div>{openTasks.length === 0 ? <EmptyState label={zh ? '没有进行中的编辑任务。' : 'There are no open editorial tasks.'} /> : <div className="editorial-task-list">{openTasks.map((task) => <article key={task.id}><div><span className={`risk-label risk-label--${task.priority === 'high' ? 'propose' : 'read'}`}>{priorityLabel(task.priority, zh)}</span><h3>{task.title}</h3><p>{task.description}</p></div><div className="editorial-task-list__actions"><Button variant="secondary" size="compact" type="button" onClick={() => void onMutate(`/api/admin/ai-editorial-tasks/${task.id}/status`, 'POST', { status: 'cancelled' })}><X />{zh ? '取消' : 'Cancel'}</Button><Button variant="primary" size="compact" type="button" onClick={() => void onMutate(`/api/admin/ai-editorial-tasks/${task.id}/status`, 'POST', { status: 'done' })}><Check />{zh ? '标记完成' : 'Mark complete'}</Button></div></article>)}</div>}</Panel>
 
-    {handledSuggestions.length > 0 || closedTasks.length > 0 ? <details className="operations-history"><summary>{zh ? '已处理记录' : 'Handled records'}<ChevronDown /></summary><div className="operations-history__body"><p>{zh ? '这里保留建议决策和已关闭任务的审计记录；不会自动改变 AI 指令。' : 'This retains an audit trail of suggestion decisions and closed tasks. It never changes AI instructions automatically.'}</p><ul>{handledSuggestions.map((item) => <li key={`suggestion-${item.id}`}><div><strong>{item.title}</strong>{item.ignored_reason ? <small>{zh ? `暂不处理：${item.ignored_reason}` : `Deferred: ${item.ignored_reason}`}</small> : <small>{zh ? '已创建编辑任务' : 'Editorial task created'}</small>}</div><span className={`status-pill status-pill--${item.status === 'converted' ? 'succeeded' : 'cancelled'}`}>{item.status === 'converted' ? (zh ? '已转任务' : 'Task created') : (zh ? '已暂缓' : 'Deferred')}</span></li>)}{closedTasks.map((task) => <li key={`task-${task.id}`}><div><strong>{task.title}</strong><small>{zh ? '编辑任务' : 'Editorial task'}</small></div><span className={`status-pill status-pill--${task.status === 'done' ? 'succeeded' : 'cancelled'}`}>{taskStatusLabel(task.status, zh)}</span></li>)}</ul></div></details> : null}
+    {handledSuggestions.length > 0 || closedTasks.length > 0 ? <details className="operations-history"><summary>{zh ? '已处理记录' : 'Handled records'}<ChevronDown /></summary><div className="operations-history__body"><p>{zh ? '这里保留建议决策和已关闭任务的审计记录；不会自动改变 AI 指令。' : 'This retains an audit trail of suggestion decisions and closed tasks. It never changes AI instructions automatically.'}</p><ul>{handledSuggestions.map((item) => <li key={`suggestion-${item.id}`}><div><strong>{item.title}</strong>{item.ignored_reason ? <small>{zh ? `暂不处理：${item.ignored_reason}` : `Deferred: ${item.ignored_reason}`}</small> : <small>{suggestionStatusLabel(item.status, zh)}</small>}</div><StatusPill status={item.status} locale={locale} /></li>)}{closedTasks.map((task) => <li key={`task-${task.id}`}><div><strong>{task.title}</strong><small>{zh ? '编辑任务' : 'Editorial task'}</small></div><span className={`status-pill status-pill--${task.status === 'done' ? 'succeeded' : 'cancelled'}`}>{taskStatusLabel(task.status, zh)}</span></li>)}</ul></div></details> : null}
   </div>;
 }

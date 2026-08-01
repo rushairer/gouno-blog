@@ -42,22 +42,7 @@ func (t *BlogTools) checkLinks(ctx context.Context, raw json.RawMessage) (any, e
 	links := extractPublicLinks(post.Content, maxCheckedLinks)
 	results := make([]linkCheckResult, 0, len(links))
 	for _, target := range links {
-		result := linkCheckResult{URL: target}
-		request, requestErr := http.NewRequestWithContext(ctx, http.MethodHead, target, nil)
-		if requestErr != nil {
-			result.Error = "invalid URL"
-			results = append(results, result)
-			continue
-		}
-		response, requestErr := t.linkClient.Do(request)
-		if requestErr != nil {
-			result.Error = safeLinkError(requestErr)
-			results = append(results, result)
-			continue
-		}
-		result.StatusCode = response.StatusCode
-		result.OK = response.StatusCode >= 200 && response.StatusCode < 400
-		_ = response.Body.Close()
+		result := checkPublicLink(ctx, t.linkClient, target)
 		results = append(results, result)
 	}
 	return map[string]any{
@@ -65,6 +50,46 @@ func (t *BlogTools) checkLinks(ctx context.Context, raw json.RawMessage) (any, e
 		"truncated": len(extractPublicLinks(post.Content, maxCheckedLinks+1)) > maxCheckedLinks,
 		"results":   results,
 	}, nil
+}
+
+func checkPublicLink(ctx context.Context, client linkHTTPClient, target string) linkCheckResult {
+	result := linkCheckResult{URL: target}
+	request, requestErr := http.NewRequestWithContext(ctx, http.MethodHead, target, nil)
+	if requestErr != nil {
+		result.Error = "invalid URL"
+		return result
+	}
+	response, requestErr := client.Do(request)
+	if requestErr == nil {
+		result.StatusCode = response.StatusCode
+		result.OK = response.StatusCode >= 200 && response.StatusCode < 400
+		_ = response.Body.Close()
+		if result.OK || (response.StatusCode != http.StatusForbidden && response.StatusCode != http.StatusMethodNotAllowed && response.StatusCode != http.StatusNotImplemented) {
+			return result
+		}
+		// Some publishers reject HEAD while serving the same URL normally.
+		// Continue with a bounded GET before reporting a broken source.
+	} else {
+		result.Error = safeLinkError(requestErr)
+	}
+
+	getRequest, getErr := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
+	if getErr != nil {
+		return result
+	}
+	getRequest.Header.Set("Range", "bytes=0-0")
+	getResponse, getErr := client.Do(getRequest)
+	if getErr != nil {
+		if result.Error == "" {
+			result.Error = safeLinkError(getErr)
+		}
+		return result
+	}
+	result.StatusCode = getResponse.StatusCode
+	result.OK = getResponse.StatusCode >= 200 && getResponse.StatusCode < 400
+	result.Error = ""
+	_ = getResponse.Body.Close()
+	return result
 }
 
 func extractPublicLinks(markdown string, limit int) []string {

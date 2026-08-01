@@ -46,6 +46,10 @@ function MarkdownHeading({ level, children }: { level: number; children?: ReactN
 
 export function MarkdownRenderer({ content }: { content: string }) {
   const components = useMemo<Components>(() => ({
+    a: ({ href, children }) => {
+      const external = typeof href === 'string' && /^https?:\/\//i.test(href);
+      return <a href={href} target={external ? '_blank' : undefined} rel={external ? 'noreferrer' : undefined}>{children}</a>;
+    },
     h1: ({ children }) => <MarkdownHeading level={1}>{children}</MarkdownHeading>,
     h2: ({ children }) => <MarkdownHeading level={2}>{children}</MarkdownHeading>,
     h3: ({ children }) => <MarkdownHeading level={3}>{children}</MarkdownHeading>,

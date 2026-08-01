@@ -49,4 +49,22 @@ describe('OperationsWorkspace', () => {
     expect(container.querySelector('.operations-history')).toBeInTheDocument();
     expect(container.querySelector('.feedback-form')).not.toBeInTheDocument();
   });
+
+  it('keeps automatically resolved suggestions out of the decision queue', () => {
+    render(<OperationsWorkspace
+      locale="zh"
+      onMutate={vi.fn().mockResolvedValue(undefined)}
+      editorialTasks={[]}
+      candidateSets={[]}
+      suggestions={[{
+        id: 12, source_type: 'broken_links', source_key: 'post:4', title: '旧的链接检查建议',
+        description: '最新检查已不再发现可处理的问题。', priority: 'high', evidence: {}, status: 'resolved',
+        created_at: '2026-08-01T00:00:00Z', updated_at: '2026-08-01T00:01:00Z',
+      }]}
+    />);
+
+    expect(screen.getByText('目前没有需要你决定的运营建议。')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '旧的链接检查建议' })).not.toBeInTheDocument();
+    expect(screen.getByText('自动已解决', { selector: '.status-pill--resolved' })).toBeInTheDocument();
+  });
 });

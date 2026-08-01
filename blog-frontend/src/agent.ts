@@ -134,7 +134,7 @@ export interface OperationalSuggestion {
   evidence: Record<string, unknown>;
   window_start?: string;
   window_end?: string;
-  status: 'new' | 'ignored' | 'converted' | 'selected';
+  status: 'new' | 'ignored' | 'converted' | 'selected' | 'resolved';
   ignored_reason?: string;
   created_at: string;
   updated_at: string;

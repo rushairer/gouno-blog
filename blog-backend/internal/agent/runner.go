@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"regexp"
 	"slices"
 	"strings"
@@ -228,6 +229,7 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 	hasApproval := false
 	finalText := ""
 	citationLedger := make(map[string]domain.AgentCitation)
+	sourceLinks := make([]rssSourceLink, 0)
 	toolCallCounts := make(map[string]int)
 	for step := 0; step < limits.maxSteps; step++ {
 		if approximateInputBytes(
@@ -285,6 +287,12 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 			if bindingErr != nil {
 				return fmt.Errorf("Tool %q configuration is invalid: %w", requested.Name, bindingErr)
 			}
+			if requested.Name == "content.create_post" && len(sourceLinks) > 0 {
+				effectiveArguments, bindingErr = appendRSSSourceLinks(effectiveArguments, sourceLinks)
+				if bindingErr != nil {
+					return fmt.Errorf("Tool %q arguments are invalid: %w", requested.Name, bindingErr)
+				}
+			}
 			callKey := requested.Name + "\x00" + string(effectiveArguments)
 			toolCallCounts[callKey]++
 			if toolCallCounts[callKey] > 2 {
@@ -332,6 +340,9 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 			}
 			if err := r.repo.FinishToolCall(ctx, call.ID, domain.ToolCallExecuted, rawResult, nil); err != nil {
 				return err
+			}
+			if requested.Name == "rss.fetch" {
+				sourceLinks = collectRSSSourceLinks(sourceLinks, rawResult)
 			}
 			collectCitations(rawResult, citationLedger)
 			if len(rawResult) > 100000 {
@@ -394,6 +405,75 @@ type createPostArguments struct {
 	Summary string   `json:"summary"`
 	Content string   `json:"content"`
 	Tags    []string `json:"tags"`
+}
+
+type rssSourceLink struct {
+	Title string
+	URL   string
+}
+
+// collectRSSSourceLinks keeps the original URLs returned by rss.fetch in the
+// run context. They are later rendered into the generated article so source
+// links do not depend on the model remembering to copy them.
+func collectRSSSourceLinks(existing []rssSourceLink, raw json.RawMessage) []rssSourceLink {
+	var result struct {
+		Items []struct {
+			Title string `json:"title"`
+			URL   string `json:"url"`
+		} `json:"items"`
+	}
+	if json.Unmarshal(raw, &result) != nil {
+		return existing
+	}
+	seen := make(map[string]struct{}, len(existing)+len(result.Items))
+	for _, item := range existing {
+		seen[item.URL] = struct{}{}
+	}
+	for _, item := range result.Items {
+		link := strings.TrimSpace(item.URL)
+		parsed, err := url.Parse(link)
+		if err != nil || parsed.Scheme != "https" || parsed.Hostname() == "" {
+			continue
+		}
+		if _, ok := seen[link]; ok {
+			continue
+		}
+		seen[link] = struct{}{}
+		existing = append(existing, rssSourceLink{Title: strings.TrimSpace(item.Title), URL: link})
+		if len(existing) >= 50 {
+			return existing
+		}
+	}
+	return existing
+}
+
+func appendRSSSourceLinks(arguments json.RawMessage, links []rssSourceLink) (json.RawMessage, error) {
+	var payload createPostArguments
+	decoder := json.NewDecoder(bytes.NewReader(arguments))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&payload); err != nil || decoder.Decode(&struct{}{}) != io.EOF {
+		return nil, tool.ErrInvalidArgument
+	}
+	content := strings.TrimSpace(payload.Content)
+	lines := make([]string, 0, len(links))
+	for _, link := range links {
+		if strings.Contains(content, link.URL) {
+			continue
+		}
+		title := strings.NewReplacer("[", "\\[", "]", "\\]", "\r", " ", "\n", " ").Replace(link.Title)
+		if title == "" {
+			title = "查看原文"
+		}
+		lines = append(lines, fmt.Sprintf("- [%s](<%s>)", title, link.URL))
+	}
+	if len(lines) == 0 {
+		return arguments, nil
+	}
+	payload.Content = content + "\n\n---\n\n## 原文链接\n" + strings.Join(lines, "\n")
+	if len([]rune(payload.Content)) > 200000 {
+		return nil, tool.ErrInvalidArgument
+	}
+	return json.Marshal(payload)
 }
 
 func (r *Runner) invokeTool(ctx context.Context, skill *domain.AgentSkill, name string, arguments json.RawMessage) (domain.ToolRiskLevel, json.RawMessage, *tool.Proposal, error) {

@@ -102,6 +102,7 @@
 .operations-history > summary svg { width: 16px; height: 16px; }
 
 .operations-queue__intro { min-height: auto !important; padding: 20px; }
+.operations-queue__intro .btn[aria-busy='true'] svg { animation: spin 0.8s linear infinite; }
 .operations-queue__counts { display: flex; align-items: baseline; gap: 16px; margin-top: 16px; color: var(--color-text-muted); font-size: 13px; }
 .operations-queue__counts strong { color: var(--color-text-main); font-size: 20px; }
 .operations-task-list { display: grid; gap: 12px; }
@@ -1359,7 +1360,10 @@
 }
 
 .status-pill--succeeded,
-.status-pill--executed {
+.status-pill--executed,
+.status-pill--converted,
+.status-pill--resolved,
+.status-pill--selected {
   background: var(--status-success-bg);
   color: var(--status-success-fg);
 }
@@ -1369,6 +1373,11 @@
 .status-pill--cancelled {
   background: var(--status-danger-bg);
   color: var(--status-danger-fg);
+}
+
+.agent-console .status-pill--ignored {
+  background: var(--status-warning-bg);
+  color: var(--status-warning-fg);
 }
 
 @media (max-width: 1050px) {

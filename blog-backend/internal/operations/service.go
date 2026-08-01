@@ -199,6 +199,18 @@ func (s *Service) saveLinkResults(ctx context.Context, postID int64, raw json.Ra
 			return err
 		}
 	}
+	// A fresh successful check is authoritative for this post. Close an old
+	// actionable suggestion only after the complete snapshot has been replaced;
+	// a later failing check can reopen the resolved item with new evidence.
+	if _, err = tx.ExecContext(ctx, `UPDATE ai_operational_suggestions
+		SET status='resolved', ignored_reason=NULL, updated_at=NOW()
+		WHERE source_type='broken_links' AND (source_key=$2 OR source_key='post:'||$2) AND status='new'
+		  AND NOT EXISTS (SELECT 1 FROM ai_link_health_snapshots
+			WHERE post_id=$1 AND ok=false
+			  AND (error_code IS NULL OR error_code NOT IN ('link_target_is_not_public','link_host_could_not_be_resolved')))`, postID, fmt.Sprint(postID)); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
 	return tx.Commit()
 }
 
@@ -228,7 +240,8 @@ func (s *Service) listBrokenLinks(ctx context.Context, raw json.RawMessage) (any
 	}
 	rows, err := s.db.QueryContext(ctx, `SELECT l.post_id,p.title,p.slug,l.url,l.status_code,
 		l.error_code,l.checked_at FROM ai_link_health_snapshots l JOIN posts p ON p.id=l.post_id
-		WHERE l.ok=false AND p.status='published' AND l.checked_at>=NOW()-make_interval(hours=>$1)
+		WHERE l.ok=false AND (l.error_code IS NULL OR l.error_code NOT IN ('link_target_is_not_public','link_host_could_not_be_resolved'))
+			AND p.status='published' AND l.checked_at>=NOW()-make_interval(hours=>$1)
 		ORDER BY l.checked_at DESC LIMIT $2`, args.MaxAgeHours, args.Limit)
 	if err != nil {
 		return nil, err
@@ -458,8 +471,11 @@ func (s *Service) CreateSuggestion(ctx context.Context, value *domain.Operationa
 		(source_type,source_key,source_run_id,workflow_run_id,title,description,priority,evidence,
 		 window_start,window_end,dedupe_key) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
 		ON CONFLICT(dedupe_key) DO UPDATE SET evidence=EXCLUDED.evidence,window_start=EXCLUDED.window_start,
-		window_end=EXCLUDED.window_end,priority=EXCLUDED.priority,updated_at=NOW()
-		WHERE ai_operational_suggestions.status='new'`, value.SourceType, value.SourceKey, value.SourceRunID,
+		window_end=EXCLUDED.window_end,priority=EXCLUDED.priority,
+		status=CASE WHEN ai_operational_suggestions.status='resolved' THEN 'new' ELSE ai_operational_suggestions.status END,
+		ignored_reason=CASE WHEN ai_operational_suggestions.status='resolved' THEN NULL ELSE ai_operational_suggestions.ignored_reason END,
+		updated_at=NOW()
+		WHERE ai_operational_suggestions.status IN ('new','resolved')`, value.SourceType, value.SourceKey, value.SourceRunID,
 		value.WorkflowRunID, value.Title, value.Description, value.Priority, value.Evidence, value.WindowStart,
 		value.WindowEnd, value.DedupeKey)
 	return err
@@ -468,7 +484,9 @@ func (s *Service) CreateSuggestion(ctx context.Context, value *domain.Operationa
 func (s *Service) RefreshSuggestions(ctx context.Context) error {
 	rows, err := s.db.QueryContext(ctx, `SELECT l.post_id,p.title,p.slug,COUNT(*),MAX(l.checked_at)
 		FROM ai_link_health_snapshots l JOIN posts p ON p.id=l.post_id
-		WHERE l.ok=false AND p.status='published' GROUP BY l.post_id,p.title,p.slug`)
+		WHERE l.ok=false
+		  AND (l.error_code IS NULL OR l.error_code NOT IN ('link_target_is_not_public','link_host_could_not_be_resolved'))
+		  AND p.status='published' GROUP BY l.post_id,p.title,p.slug`)
 	if err != nil {
 		return err
 	}
@@ -488,6 +506,29 @@ func (s *Service) RefreshSuggestions(ctx context.Context) error {
 			return err
 		}
 	}
+	if err := rows.Close(); err != nil {
+		return err
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	// Reconcile the complete snapshot, including posts that no longer have any
+	// failing rows. Without this pass, a successful refresh could leave an old
+	// broken-links suggestion in the actionable queue indefinitely.
+	if _, err := s.db.ExecContext(ctx, `UPDATE ai_operational_suggestions s
+		SET status='resolved', ignored_reason=NULL, updated_at=NOW()
+		WHERE s.source_type='broken_links' AND s.status='new'
+		  AND NOT EXISTS (
+			SELECT 1
+			FROM ai_link_health_snapshots l
+			JOIN posts p ON p.id=l.post_id
+			WHERE (s.source_key=l.post_id::text OR s.source_key='post:'||l.post_id::text)
+			  AND p.status='published'
+			  AND l.ok=false
+			  AND (l.error_code IS NULL OR l.error_code NOT IN ('link_target_is_not_public','link_host_could_not_be_resolved'))
+		  )`); err != nil {
+		return err
+	}
 	var totalTags, lowUse int64
 	if err := s.db.QueryRowContext(ctx, `WITH counts AS(SELECT tag,COUNT(*) n FROM posts,unnest(tags) tag
 		WHERE status='published' GROUP BY tag) SELECT COUNT(*),COUNT(*) FILTER(WHERE n<=1) FROM counts`).Scan(&totalTags, &lowUse); err != nil {
@@ -501,8 +542,12 @@ func (s *Service) RefreshSuggestions(ctx context.Context) error {
 			Priority: "medium", Evidence: evidence, WindowEnd: &now}); err != nil {
 			return err
 		}
+	} else if _, err := s.db.ExecContext(ctx, `UPDATE ai_operational_suggestions
+		SET status='resolved', ignored_reason=NULL, updated_at=NOW()
+		WHERE source_type='tag_bloat' AND source_key='site' AND status='new'`); err != nil {
+		return err
 	}
-	return rows.Err()
+	return nil
 }
 
 func (s *Service) ListCandidateSets(ctx context.Context) ([]*domain.ContentCandidateSet, error) {
