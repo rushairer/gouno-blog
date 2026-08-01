@@ -772,7 +772,7 @@ func (r *AgentRepository) CreateMediaCandidate(ctx context.Context, approval *do
 }
 
 func (r *AgentRepository) ListMediaCandidates(ctx context.Context) ([]*domain.MediaCandidate, error) {
-	rows, err := r.db.QueryContext(ctx, `SELECT id,post_id,source_run_id,source_approval_id,headline,brief,platform,provider,model,input_tokens,output_tokens,
+	rows, err := r.db.QueryContext(ctx, `SELECT id,post_id,source_run_id,source_approval_id,headline,brief,platform,provider,model,input_tokens,output_tokens,media_asset_id,
 		generation_status,safety_status,copyright_status,alt_text,reviewed_by,review_note,reviewed_at,created_at
 		FROM ai_media_candidates ORDER BY created_at DESC`)
 	if err != nil {
@@ -783,7 +783,7 @@ func (r *AgentRepository) ListMediaCandidates(ctx context.Context) ([]*domain.Me
 	for rows.Next() {
 		var item domain.MediaCandidate
 		if err := rows.Scan(&item.ID, &item.PostID, &item.SourceRunID, &item.SourceApprovalID, &item.Headline,
-			&item.Brief, &item.Platform, &item.Provider, &item.Model, &item.InputTokens, &item.OutputTokens, &item.GenerationStatus,
+			&item.Brief, &item.Platform, &item.Provider, &item.Model, &item.InputTokens, &item.OutputTokens, &item.MediaAssetID, &item.GenerationStatus,
 			&item.SafetyStatus, &item.CopyrightStatus, &item.AltText, &item.ReviewedBy, &item.ReviewNote,
 			&item.ReviewedAt, &item.CreatedAt); err != nil {
 			return nil, err
@@ -791,6 +791,19 @@ func (r *AgentRepository) ListMediaCandidates(ctx context.Context) ([]*domain.Me
 		items = append(items, &item)
 	}
 	return items, rows.Err()
+}
+
+func (r *AgentRepository) AttachMediaAsset(ctx context.Context, candidateID, mediaAssetID int64) error {
+	result, err := r.db.ExecContext(ctx, `UPDATE ai_media_candidates SET media_asset_id=$2,generation_status='generated'
+		WHERE id=$1 AND generation_status='ready_to_generate'
+		AND EXISTS (SELECT 1 FROM media_assets WHERE id=$2)`, candidateID, mediaAssetID)
+	if err != nil {
+		return err
+	}
+	if affected, _ := result.RowsAffected(); affected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }
 
 func (r *AgentRepository) ReviewMediaCandidate(ctx context.Context, id int64, action, reviewer, note string) error {

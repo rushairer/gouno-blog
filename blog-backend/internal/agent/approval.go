@@ -58,6 +58,19 @@ func (s *ApprovalService) ReviewMediaCandidate(ctx context.Context, id int64, ac
 	return nil
 }
 
+func (s *ApprovalService) AttachMediaAsset(ctx context.Context, candidateID, mediaAssetID int64) error {
+	if candidateID <= 0 || mediaAssetID <= 0 {
+		return ErrInvalid
+	}
+	if err := s.repo.AttachMediaAsset(ctx, candidateID, mediaAssetID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrApprovalConflict
+		}
+		return err
+	}
+	return nil
+}
+
 func (s *ApprovalService) Reject(ctx context.Context, id int64, reviewer, note string) error {
 	if err := s.repo.RejectApproval(ctx, id, reviewer, strings.TrimSpace(note)); err != nil {
 		return ErrApprovalConflict

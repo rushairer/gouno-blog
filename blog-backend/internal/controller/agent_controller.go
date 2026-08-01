@@ -128,6 +128,25 @@ func (ctrl *AgentController) ReviewMediaCandidate(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }
 
+func (ctrl *AgentController) AttachMediaAsset(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	var req struct {
+		MediaAssetID int64 `json:"media_asset_id" binding:"required"`
+	}
+	if err := bindAgentJSON(c, &req); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+	if err := ctrl.approvals.AttachMediaAsset(c.Request.Context(), id, req.MediaAssetID); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
+}
+
 func (ctrl *AgentController) SelectCandidate(c *gin.Context) {
 	id, ok := agentID(c)
 	if !ok {
