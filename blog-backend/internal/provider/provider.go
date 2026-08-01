@@ -5,6 +5,15 @@ import (
 	"encoding/json"
 )
 
+type ImageRequest struct{ Prompt, AspectRatio, ImageSize string }
+type ImageResult struct {
+	Data     []byte
+	MIMEType string
+}
+type ImageGenerator interface {
+	GenerateImage(context.Context, ImageRequest) (ImageResult, error)
+}
+
 type Message struct {
 	Role       string
 	Content    string

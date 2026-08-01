@@ -10,6 +10,7 @@ type ProviderType string
 const (
 	ProviderOpenAI    ProviderType = "openai"
 	ProviderAnthropic ProviderType = "anthropic"
+	ProviderGemini    ProviderType = "gemini"
 )
 
 type ProviderProfile struct {

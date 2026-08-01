@@ -89,7 +89,7 @@ func (s *ManagementService) validateProvider(ctx context.Context, profile *domai
 	if profile.Name == "" || profile.Model == "" {
 		return fmt.Errorf("%w: name and model are required", ErrInvalid)
 	}
-	if profile.ProviderType != domain.ProviderOpenAI && profile.ProviderType != domain.ProviderAnthropic {
+	if profile.ProviderType != domain.ProviderOpenAI && profile.ProviderType != domain.ProviderAnthropic && profile.ProviderType != domain.ProviderGemini {
 		return fmt.Errorf("%w: unsupported provider type", ErrInvalid)
 	}
 	if err := provider.ValidateUpstreamURL(ctx, profile.BaseURL, s.allowedHosts); err != nil {

@@ -22,7 +22,7 @@ type HTTPProvider struct {
 }
 
 func NewHTTPProvider(name, baseURL, key, model string, allowedHosts []string, timeout time.Duration) (*HTTPProvider, error) {
-	if name != "openai" && name != "anthropic" {
+	if name != "openai" && name != "anthropic" && name != "gemini" {
 		return nil, fmt.Errorf("unsupported provider %q", name)
 	}
 	if err := ValidateUpstreamURL(context.Background(), baseURL, allowedHosts); err != nil {
@@ -208,6 +208,8 @@ func (p *HTTPProvider) do(ctx context.Context, path string, body any) (*http.Res
 	req.Header.Set("Content-Type", "application/json")
 	if p.name == "openai" {
 		req.Header.Set("Authorization", "Bearer "+p.key)
+	} else if p.name == "gemini" {
+		req.Header.Set("x-goog-api-key", p.key)
 	} else {
 		req.Header.Set("x-api-key", p.key)
 		req.Header.Set("anthropic-version", "2023-06-01")

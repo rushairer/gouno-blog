@@ -1,4 +1,4 @@
-export type ProviderType = 'openai' | 'anthropic';
+export type ProviderType = 'openai' | 'anthropic' | 'gemini';
 export type TriggerType = 'manual' | 'cron';
 export type ExecutionMode = 'advisory' | 'approval';
 export type RunStatus = 'queued' | 'running' | 'awaiting_approval' | 'succeeded' | 'failed' | 'cancelled';

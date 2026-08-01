@@ -60,13 +60,13 @@ export function ProviderForm({
           setValue((current) => ({
             ...current,
             provider_type: providerType,
-            base_url: providerType === 'openai' ? 'https://api.openai.com' : 'https://api.anthropic.com',
+            base_url: providerType === 'openai' ? 'https://api.openai.com' : providerType === 'gemini' ? 'https://generativelanguage.googleapis.com' : 'https://api.anthropic.com',
           }));
-        }}><option value="openai">OpenAI / compatible</option><option value="anthropic">Anthropic native</option></Select></Field>
+        }}><option value="openai">OpenAI / compatible</option><option value="anthropic">Anthropic native</option><option value="gemini">Gemini native</option></Select></Field>
       </FormGrid>
       <FormGrid columns={2}>
         <Field label={labels.baseUrl}><input className="input-field mono" type="url" required value={value.base_url} onChange={(event) => setValue((current) => ({ ...current, base_url: event.target.value }))} /></Field>
-        <Field label={labels.model}><input className="input-field mono" required placeholder={value.provider_type === 'openai' ? 'gpt-5-mini' : 'claude-sonnet-4-5'} value={value.model} onChange={(event) => setValue((current) => ({ ...current, model: event.target.value }))} /></Field>
+        <Field label={labels.model}><input className="input-field mono" required placeholder={value.provider_type === 'openai' ? 'gpt-5-mini' : value.provider_type === 'gemini' ? 'gemini-3.1-flash-image' : 'claude-sonnet-4-5'} value={value.model} onChange={(event) => setValue((current) => ({ ...current, model: event.target.value }))} /></Field>
       </FormGrid>
       <Field label={`${labels.apiKey}${initial ? ` · ${labels.leaveBlank}` : ''}`}><input className="input-field mono" type="password" required={!initial} autoComplete="new-password" value={value.api_key} onChange={(event) => setValue((current) => ({ ...current, api_key: event.target.value }))} /></Field>
       <FormGrid columns={2} className="agent-limit-grid">
