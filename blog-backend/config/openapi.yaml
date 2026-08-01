@@ -923,14 +923,24 @@ paths:
         '200':
           description: Skill deleted
 
-  /admin/agent-presets:
-    get:
-      summary: List built-in AI Agent templates
+  /admin/agent-skills/{id}/copy:
+    post:
+      summary: Copy the current immutable Skill Version into a custom Skill
       security:
         - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ResourceID'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
       responses:
-        '200':
-          description: Weekly operations, content health, and comment insight templates
+        '201':
+          description: Custom Skill copy created
 
   /admin/agent-runs:
     get:
@@ -1172,15 +1182,15 @@ components:
           maximum: 100000
     AgentRequest:
       type: object
-      required: [name, system_prompt, provider_profile_id, capabilities]
+      required: [name, provider_profile_id, skill_version_id]
       properties:
         name:
           type: string
         description:
           type: string
-        system_prompt:
-          type: string
         provider_profile_id:
+          type: integer
+        skill_version_id:
           type: integer
         enabled:
           type: boolean
@@ -1193,24 +1203,19 @@ components:
         timezone:
           type: string
           example: Asia/Shanghai
-        capabilities:
-          type: array
-          uniqueItems: true
-          items:
-            type: string
-        execution_mode:
-          type: string
-          enum: [advisory, approval]
-        max_steps:
+        max_steps_override:
           type: integer
           minimum: 1
           maximum: 20
-        max_input_tokens:
+          nullable: true
+        max_input_tokens_override:
           type: integer
           minimum: 1
-        max_output_tokens:
+          nullable: true
+        max_output_tokens_override:
           type: integer
           minimum: 1
+          nullable: true
         daily_run_limit:
           type: integer
           minimum: 1
@@ -1233,6 +1238,10 @@ components:
           uniqueItems: true
           items:
             type: string
+        tool_bindings:
+          type: object
+          additionalProperties:
+            type: object
         execution_mode:
           type: string
           enum: [advisory, approval]
@@ -1246,10 +1255,13 @@ components:
         max_output_tokens:
           type: integer
           minimum: 1
-        daily_run_limit:
+        content_publish_mode:
+          type: string
+          enum: [draft, approval, publish]
+        default_daily_run_limit:
           type: integer
           minimum: 1
-        monthly_token_budget:
+        default_monthly_token_budget:
           type: integer
           format: int64
           minimum: 1

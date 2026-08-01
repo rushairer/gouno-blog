@@ -124,6 +124,7 @@ type AgentSkill struct {
 	Description               string             `json:"description"`
 	SystemPrompt              string             `json:"system_prompt"`
 	Capabilities              []string           `json:"capabilities"`
+	ToolBindings              json.RawMessage    `json:"tool_bindings"`
 	ExecutionMode             AgentExecutionMode `json:"execution_mode"`
 	ContentPublishMode        ContentPublishMode `json:"content_publish_mode"`
 	MaxSteps                  int                `json:"max_steps"`

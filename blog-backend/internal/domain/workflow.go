@@ -10,7 +10,6 @@ type WorkflowStep struct {
 	Type              string         `json:"type"`
 	Name              string         `json:"name,omitempty"`
 	AgentID           int64          `json:"agent_id,omitempty"`
-	AgentIDPointer    string         `json:"agent_id_pointer,omitempty"`
 	InputPointer      string         `json:"input_pointer,omitempty"`
 	CollectionPointer string         `json:"collection_pointer,omitempty"`
 	MaxItems          int            `json:"max_items,omitempty"`

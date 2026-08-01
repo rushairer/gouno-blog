@@ -19,8 +19,8 @@ import { WorkflowRunRecords } from '../components/agent/WorkflowRunRecords';
 import { OperationsWorkspace } from '../components/agent/OperationsWorkspace';
 import { MarkdownRenderer } from '../components/MarkdownRenderer';
 import {
-  AdminPage, AdminPageHeader, AdminPageState, Button, ConfirmDialog, EmptyState, Feedback, Modal, Panel, PanelHeader,
-  Select, Tab, TabList, TabPanel, Tabs, WorkspacePanel,
+  AdminPage, AdminPageHeader, AdminPageState, Button, ConfirmDialog, EmptyState, Feedback, Panel, PanelHeader,
+  Select, SubnavTabs, Tab, TabList, TabPanel, Tabs, WorkspacePanel,
 } from '../components/ui';
 import { useI18n } from '../i18n';
 import '../styles/agent-console.css';
@@ -368,9 +368,6 @@ export default function AgentConsole() {
   const [notice, setNotice] = useState('');
   const [testingConnections, setTestingConnections] = useState<string[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
-  const [savingSkillAgent, setSavingSkillAgent] = useState<Agent | null>(null);
-  const [skillNameInput, setSkillNameInput] = useState('');
-  const [savingSkillBusy, setSavingSkillBusy] = useState(false);
 
   const selectTab = (nextTab: ConsoleTab) => {
     setEditingAgent(null);
@@ -548,27 +545,14 @@ export default function AgentConsole() {
     URL.revokeObjectURL(url);
   };
 
-  const openSaveSkillModal = (agent: Agent) => {
-    setSavingSkillAgent(agent);
-    setSkillNameInput(`${agent.name} Skill`);
-  };
-
-  const handleSaveAgentAsSkill = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!savingSkillAgent || !skillNameInput.trim()) return;
-    setSavingSkillBusy(true);
+  const copySkill = async (skill: AgentSkill) => {
+    const name = window.prompt(locale === 'zh' ? '复制后的 Skill 名称' : 'Name for the copied Skill', `${skill.name} Copy`);
+    if (!name?.trim()) return;
     try {
-      await mutate(`/api/admin/agents/${savingSkillAgent.id}/save-as-skill`, 'POST', { name: skillNameInput.trim() });
-      setNotice(
-        locale === 'zh'
-          ? `已成功将 Agent "${savingSkillAgent.name}" 绑定的 Skill Version 复制为 Skill "${skillNameInput.trim()}"`
-          : `Successfully saved Agent "${savingSkillAgent.name}" as Skill "${skillNameInput.trim()}"`
-      );
-      setSavingSkillAgent(null);
+      await mutate(`/api/admin/agent-skills/${skill.id}/copy`, 'POST', { name: name.trim() });
+      setNotice(locale === 'zh' ? `已创建 Skill“${name.trim()}”的自定义副本。` : `Created custom Skill copy “${name.trim()}”.`);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : labels.requestFailed);
-    } finally {
-      setSavingSkillBusy(false);
     }
   };
 
@@ -676,7 +660,7 @@ export default function AgentConsole() {
       <TabPanel value={tab}>
         <div className="agent-console__main">
         {tab === 'overview' ? <WorkspaceOverview locale={locale} approvals={approvals} suggestions={suggestions} candidateSets={candidateSets} mediaCandidates={mediaCandidates} workflows={workflows} onNavigate={selectTab} /> : null}
-        {tab === 'advanced' ? <nav className="advanced-settings-nav" aria-label={labels.advanced}><button className={advancedSection === 'agents' ? 'active' : ''} type="button" onClick={() => selectAdvanced('agents')}><Bot />{labels.agents}</button><button className={advancedSection === 'skills' ? 'active' : ''} type="button" onClick={() => selectAdvanced('skills')}><ListChecks />{labels.skills}</button><button className={advancedSection === 'tools' ? 'active' : ''} type="button" onClick={() => selectAdvanced('tools')}><GitBranch />Tools</button><button className={advancedSection === 'knowledge' ? 'active' : ''} type="button" onClick={() => selectAdvanced('knowledge')}><DatabaseZap />{labels.knowledge}</button><button className={advancedSection === 'providers' ? 'active' : ''} type="button" onClick={() => selectAdvanced('providers')}><KeyRound />{labels.providers}</button></nav> : null}
+        {tab === 'advanced' ? <SubnavTabs label={labels.advanced} value={advancedSection} onValueChange={(value) => selectAdvanced(value as AdvancedSection)} items={[{ value: 'agents', label: labels.agents, icon: <Bot /> }, { value: 'skills', label: labels.skills, icon: <ListChecks /> }, { value: 'tools', label: 'Tools', icon: <GitBranch /> }, { value: 'knowledge', label: labels.knowledge, icon: <DatabaseZap /> }, { value: 'providers', label: labels.providers, icon: <KeyRound /> }]} /> : null}
         {tab === 'advanced' && advancedSection === 'providers' && editingProvider ? <ProviderForm key={editingProvider === 'new' ? 'new' : editingProvider.id} initial={editingProvider === 'new' ? undefined : editingProvider} labels={labels} onSave={saveProvider} onCancel={() => setEditingProvider(null)} /> : null}
         {tab === 'advanced' && advancedSection === 'knowledge' && editingEmbedding ? <EmbeddingForm key={editingEmbedding === 'new' ? 'new' : editingEmbedding.id} initial={editingEmbedding === 'new' ? undefined : editingEmbedding} locale={locale} onSave={saveEmbedding} onCancel={() => setEditingEmbedding(null)} /> : null}
         {tab === 'advanced' && advancedSection === 'agents' && editingAgent ? <AgentForm key={editingAgent === 'new' ? 'new' : editingAgent.id} initial={editingAgent === 'new' ? undefined : editingAgent} providers={providers} skills={skills} locale={locale} labels={labels} onSave={saveAgent} onCancel={() => setEditingAgent(null)} /> : null}
@@ -689,49 +673,13 @@ export default function AgentConsole() {
             const provider = providerMap.get(agent.provider_profile_id);
             const latestRun = runs.find((run) => run.agent_id === agent.id);
             const toolsForSkill = agent.skill?.capabilities || [];
-            return <tr key={agent.id}><td><div className="agent-identity"><span><Bot /></span><div><strong>{agent.name}</strong>{agent.system_key ? <small>{locale === 'zh' ? '默认能力' : 'Default capability'}</small> : null}<small>{agent.description}</small></div></div></td><td><span className={`agent-state agent-state--${agent.enabled ? 'active' : 'paused'}`}><i />{agent.enabled ? labels.active : labels.paused}</span></td><td><strong>{provider?.name || '—'}</strong><small className="mono">{provider?.model || '—'}</small></td><td><strong>{agent.trigger_type === 'cron' ? agent.cron_expression : labels.manual}</strong><small>{agent.timezone}</small></td><td><strong>{agent.skill?.name || '—'}</strong><small>v{agent.skill?.version || '—'} · {toolsForSkill.length} Tools</small></td><td>{latestRun ? <><span className={`status-pill status-pill--${latestRun.status}`}>{latestRun.status.replace('_', ' ')}</span><small>{formatDateTime(latestRun.created_at)}</small></> : <small>{labels.never}</small>}</td><td><strong>{agent.next_run_at ? formatDateTime(agent.next_run_at) : '—'}</strong></td><td><div className="agent-row-actions"><button type="button" title={locale === 'zh' ? '复制为自定义 Skill' : 'Copy as custom Skill'} onClick={() => openSaveSkillModal(agent)}><Sparkles /></button><button type="button" title={labels.runNow} onClick={() => void runAgent(agent)} disabled={!agent.enabled}><Play /></button><button type="button" title={labels.edit} onClick={() => setEditingAgent(agent)}><Settings2 /></button><button type="button" title={agent.enabled ? labels.disable : labels.enable} onClick={() => void mutate(`/api/admin/agents/${agent.id}/${agent.enabled ? 'disable' : 'enable'}`).catch((reason: Error) => setError(reason.message))}>{agent.enabled ? <CirclePause /> : <Check />}</button>{!agent.system_key ? <button type="button" title={labels.delete} onClick={() => setDeleteTarget({ kind: 'agent', value: agent })}><Trash2 /></button> : null}</div></td></tr>;
+            return <tr key={agent.id}><td><div className="agent-identity"><span><Bot /></span><div><strong>{agent.name}</strong>{agent.system_key ? <small>{locale === 'zh' ? '默认能力' : 'Default capability'}</small> : null}<small>{agent.description}</small></div></div></td><td><span className={`agent-state agent-state--${agent.enabled ? 'active' : 'paused'}`}><i />{agent.enabled ? labels.active : labels.paused}</span></td><td><strong>{provider?.name || '—'}</strong><small className="mono">{provider?.model || '—'}</small></td><td><strong>{agent.trigger_type === 'cron' ? agent.cron_expression : labels.manual}</strong><small>{agent.timezone}</small></td><td><strong>{agent.skill?.name || '—'}</strong><small>v{agent.skill?.version || '—'} · {toolsForSkill.length} Tools</small></td><td>{latestRun ? <><span className={`status-pill status-pill--${latestRun.status}`}>{latestRun.status.replace('_', ' ')}</span><small>{formatDateTime(latestRun.created_at)}</small></> : <small>{labels.never}</small>}</td><td><strong>{agent.next_run_at ? formatDateTime(agent.next_run_at) : '—'}</strong></td><td><div className="agent-row-actions"><button type="button" title={labels.runNow} onClick={() => void runAgent(agent)} disabled={!agent.enabled}><Play /></button><button type="button" title={labels.edit} onClick={() => setEditingAgent(agent)}><Settings2 /></button><button type="button" title={agent.enabled ? labels.disable : labels.enable} onClick={() => void mutate(`/api/admin/agents/${agent.id}/${agent.enabled ? 'disable' : 'enable'}`).catch((reason: Error) => setError(reason.message))}>{agent.enabled ? <CirclePause /> : <Check />}</button>{!agent.system_key ? <button type="button" title={labels.delete} onClick={() => setDeleteTarget({ kind: 'agent', value: agent })}><Trash2 /></button> : null}</div></td></tr>;
           })}</tbody></table></div>}
         </WorkspacePanel> : null}
 
-        {!editingAgent && !editingProvider && tab === 'advanced' && advancedSection === 'agents' && agents.length > 0 ? <Panel className="save-skill-panel">
-          <PanelHeader
-            title={<><Sparkles aria-hidden="true" /> {locale === 'zh' ? '保存为可复用 Skill' : 'Save as reusable Skill'}</>}
-            description={locale === 'zh' ? '基于 Agent 已绑定的不可变 Skill Version 创建一份自定义副本。' : 'Create a custom copy from the Agent’s bound immutable Skill Version.'}
-          />
-          <div className="agent-skill-grid">
-            {agents.map((agent) => (
-              <div key={agent.id} className="agent-skill-card">
-                <div className="agent-skill-card__header">
-                  <div className="agent-skill-card__identity">
-                    <span className="agent-skill-card__icon"><Bot /></span>
-                    <div>
-                      <strong>{agent.name}</strong>
-                      <span className={`agent-state agent-state--${agent.enabled ? 'active' : 'paused'}`}>
-                        <i />{agent.enabled ? labels.active : labels.paused}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                {agent.description ? <p className="agent-skill-card__desc">{agent.description}</p> : null}
-                <div className="agent-chip-list">
-                  {(agent.skill?.capabilities || []).slice(0, 3).map((item) => (
-                    <span key={item}>{formatCapability(item)}</span>
-                  ))}
-                  {(agent.skill?.capabilities || []).length > 3 ? <span>+{(agent.skill?.capabilities || []).length - 3}</span> : null}
-                </div>
-                <div className="agent-skill-card__footer">
-                  <Button variant="secondary" size="compact" type="button" onClick={() => openSaveSkillModal(agent)}>
-                    <Sparkles aria-hidden="true" /> {locale === 'zh' ? '复制为 Skill' : 'Copy as Skill'}
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Panel> : null}
-
         {!editingAgent && !editingProvider && !editingSkill && tab === 'advanced' && advancedSection === 'skills' ? <WorkspacePanel className="agent-table-panel">
           <PanelHeader title={labels.skills} description={locale === 'zh' ? '管理可复用能力定义与执行边界。' : 'Manage reusable capability definitions and execution boundaries.'} actions={<><Button variant="secondary" type="button" onClick={() => void importSkill()}>{locale === 'zh' ? '导入 JSON' : 'Import JSON'}</Button><Button variant="primary" type="button" onClick={() => setEditingSkill('new')}><Plus />{locale === 'zh' ? '创建 Skill' : 'Create Skill'}</Button></>} />
-          {skills.length === 0 ? <EmptyState label={labels.noSkills} /> : <div className="table-scroll"><table className="content-table agent-table"><thead><tr><th>{labels.skills}</th><th>{labels.mode}</th><th>{labels.capabilities}</th><th>Version</th><th>{labels.created}</th><th>{labels.actions}</th></tr></thead><tbody>{skills.map((skill) => <tr key={skill.id}><td><strong>{skill.name}</strong>{skill.system_key ? <small>{locale === 'zh' ? '系统 Skill' : 'System Skill'}</small> : null}<small>{skill.description}</small></td><td><span className={`risk-label risk-label--${skill.execution_mode === 'approval' ? 'propose' : 'read'}`}>{skill.execution_mode === 'approval' ? labels.approvalMode : labels.advisory}</span></td><td><div className="agent-chip-list">{skill.capabilities.slice(0, 4).map((item) => <span key={item}>{formatCapability(item)}</span>)}{skill.capabilities.length > 4 ? <span>+{skill.capabilities.length - 4}</span> : null}</div></td><td><strong>v{skill.version}</strong></td><td><small>{formatDateTime(skill.updated_at)}</small></td><td><div className="agent-row-actions"><button type="button" title={locale === 'zh' ? '导出 Skill' : 'Export Skill'} onClick={() => void exportSkill(skill).catch((reason: Error) => setError(reason.message))}><Download /></button><button type="button" title={labels.edit} onClick={() => setEditingSkill(skill)}><Settings2 /></button>{!skill.system_key ? <button type="button" title={labels.delete} onClick={() => setDeleteTarget({ kind: 'skill', value: skill })}><Trash2 /></button> : null}</div></td></tr>)}</tbody></table></div>}
+          {skills.length === 0 ? <EmptyState label={labels.noSkills} /> : <div className="table-scroll"><table className="content-table agent-table"><thead><tr><th>{labels.skills}</th><th>{labels.mode}</th><th>{labels.capabilities}</th><th>Version</th><th>{labels.created}</th><th>{labels.actions}</th></tr></thead><tbody>{skills.map((skill) => <tr key={skill.id}><td><strong>{skill.name}</strong>{skill.system_key ? <small>{locale === 'zh' ? '系统 Skill' : 'System Skill'}</small> : null}<small>{skill.description}</small></td><td><span className={`risk-label risk-label--${skill.execution_mode === 'approval' ? 'propose' : 'read'}`}>{skill.execution_mode === 'approval' ? labels.approvalMode : labels.advisory}</span></td><td><div className="agent-chip-list">{skill.capabilities.slice(0, 4).map((item) => <span key={item}>{formatCapability(item)}</span>)}{skill.capabilities.length > 4 ? <span>+{skill.capabilities.length - 4}</span> : null}</div></td><td><strong>v{skill.version}</strong></td><td><small>{formatDateTime(skill.updated_at)}</small></td><td><div className="agent-row-actions"><button type="button" title={locale === 'zh' ? '导出 Skill' : 'Export Skill'} onClick={() => void exportSkill(skill).catch((reason: Error) => setError(reason.message))}><Download /></button><button type="button" title={locale === 'zh' ? '复制 Skill' : 'Copy Skill'} onClick={() => void copySkill(skill)}><Sparkles /></button><button type="button" title={labels.edit} onClick={() => setEditingSkill(skill)}><Settings2 /></button>{!skill.system_key ? <button type="button" title={labels.delete} onClick={() => setDeleteTarget({ kind: 'skill', value: skill })}><Trash2 /></button> : null}</div></td></tr>)}</tbody></table></div>}
         </WorkspacePanel> : null}
 
         {!editingAgent && !editingProvider && tab === 'advanced' && advancedSection === 'providers' ? <WorkspacePanel className="agent-table-panel">
@@ -742,7 +690,7 @@ export default function AgentConsole() {
 
         {!editingAgent && !editingProvider && !editingEmbedding && !editingSkill && tab === 'automation' ? <WorkflowWorkspace workflows={workflows} runs={workflowRuns} metrics={workflowMetrics} agents={agents} locale={locale} onMutate={mutate} onRun={queueWorkflow} onRefresh={refresh} onSave={saveWorkflow} /> : null}
         {!editingAgent && !editingProvider && !editingEmbedding && !editingSkill && tab === 'inbox' ? <><FriendlyApprovalQueue locale={locale} approvals={approvals} selected={selectedApproval} onSelect={setSelectedApproval} onReview={review} /><OperationsWorkspace suggestions={suggestions} candidateSets={candidateSets} mediaCandidates={mediaCandidates} metrics={outcomeMetrics} locale={locale} onMutate={mutate} /></> : null}
-        {!editingAgent && !editingProvider && tab === 'records' ? <div className="records-hub section-stack"><div className="records-hub__switch" role="tablist" aria-label={locale === 'zh' ? '运行记录类型' : 'Run record type'}><button role="tab" aria-selected={recordType === 'workflow'} className={recordType === 'workflow' ? 'active' : ''} type="button" onClick={() => setRecordType('workflow')}>{locale === 'zh' ? 'Workflow 运行' : 'Workflow runs'}</button><button role="tab" aria-selected={recordType === 'agent'} className={recordType === 'agent' ? 'active' : ''} type="button" onClick={() => setRecordType('agent')}>{locale === 'zh' ? 'Agent 运行' : 'Agent runs'}</button></div>{recordType === 'agent' ? <RecordsWorkspace locale={locale} runs={runs} agents={agents} selectedRun={selectedRun} onInspect={(run) => void inspectRun(run)} formatDateTime={formatDateTime} /> : <WorkflowRunRecords locale={locale} workflows={workflows} runs={workflowRuns} formatDateTime={formatDateTime} />}</div> : null}
+        {!editingAgent && !editingProvider && tab === 'records' ? <div className="records-hub section-stack"><SubnavTabs label={locale === 'zh' ? '运行记录类型' : 'Run record type'} value={recordType} onValueChange={(value) => setRecordType(value as typeof recordType)} items={[{ value: 'workflow', label: locale === 'zh' ? 'Workflow 运行' : 'Workflow runs' }, { value: 'agent', label: locale === 'zh' ? 'Agent 运行' : 'Agent runs' }]} />{recordType === 'agent' ? <RecordsWorkspace locale={locale} runs={runs} agents={agents} selectedRun={selectedRun} onInspect={(run) => void inspectRun(run)} formatDateTime={formatDateTime} /> : <WorkflowRunRecords locale={locale} workflows={workflows} runs={workflowRuns} formatDateTime={formatDateTime} />}</div> : null}
 
         {!editingAgent && !editingProvider && !editingEmbedding && tab === 'advanced' && advancedSection === 'knowledge' ? <WorkspacePanel className="agent-table-panel knowledge-workspace">
           <PanelHeader title={<><DatabaseZap />{labels.knowledge}</>} description={locale === 'zh' ? '仅索引已发布文章；Embedding 模型负责把文章转换为可检索的知识库。' : 'Published content only; jobs run asynchronously.'} actions={<><Button variant="secondary" type="button" onClick={() => void mutate('/api/admin/ai-index/retry')}><RefreshCw />{locale === 'zh' ? '重试失败任务' : 'Retry failed'}</Button><Button variant="secondary" type="button" onClick={() => void mutate('/api/admin/ai-index/rebuild')}><RefreshCw />{locale === 'zh' ? '全量重建' : 'Rebuild all'}</Button><Button variant="primary" type="button" onClick={() => setEditingEmbedding('new')}><Plus />{locale === 'zh' ? '添加 Embedding 模型' : 'Add embedding profile'}</Button></>} />
@@ -759,60 +707,6 @@ export default function AgentConsole() {
         </div>
       </TabPanel>
     </Tabs>
-    <Modal
-      open={savingSkillAgent !== null}
-      title={locale === 'zh' ? '复制绑定的 Skill Version' : 'Copy Bound Skill Version'}
-      description={locale === 'zh' ? '创建绑定 Skill Version 的可编辑副本；模型连接、配额和调度不会被复制。' : 'Create an editable copy of the bound Skill Version. Provider, quota, and schedule are not copied.'}
-      onClose={() => !savingSkillBusy && setSavingSkillAgent(null)}
-    >
-      {savingSkillAgent ? (
-        <form className="save-skill-dialog" onSubmit={(e) => void handleSaveAgentAsSkill(e)}>
-          <div className="save-skill-dialog__summary">
-            <div className="save-skill-dialog__agent-info">
-              <span className="agent-icon-badge"><Bot /></span>
-              <div>
-                <strong>{savingSkillAgent.name}</strong>
-                <p>{savingSkillAgent.description || (locale === 'zh' ? '未提供描述' : 'No description provided')}</p>
-              </div>
-            </div>
-            <div className="save-skill-dialog__capabilities">
-              <small>{locale === 'zh' ? '复制的工具授权:' : 'Copied Tool authorization:'}</small>
-              <div className="agent-chip-list">
-                {(savingSkillAgent.skill?.capabilities || []).map((item) => (
-                  <span key={item}>{formatCapability(item)}</span>
-                ))}
-              </div>
-            </div>
-          </div>
-          <div className="form-group">
-            <label htmlFor="skill-name-input">{locale === 'zh' ? 'Skill 名称' : 'Skill Name'}</label>
-            <input
-              id="skill-name-input"
-              type="text"
-              className="form-input"
-              value={skillNameInput}
-              onChange={(e) => setSkillNameInput(e.target.value)}
-              placeholder={locale === 'zh' ? '输入 Skill 名称' : 'Enter skill name'}
-              required
-            />
-            <small className="form-hint">
-              {locale === 'zh'
-                ? '保存后，可在 Skill 列表中编辑，并由 Agent 显式绑定其 Version。'
-                : 'After saving, edit it in Skills and explicitly bind its Version from an Agent.'}
-            </small>
-          </div>
-          <div className="modal-actions">
-            <Button variant="secondary" type="button" disabled={savingSkillBusy} onClick={() => setSavingSkillAgent(null)}>
-              {locale === 'zh' ? '取消' : 'Cancel'}
-            </Button>
-            <Button variant="primary" type="submit" disabled={savingSkillBusy || !skillNameInput.trim()}>
-              <Sparkles aria-hidden="true" />
-              {savingSkillBusy ? (locale === 'zh' ? '正在保存…' : 'Saving...') : (locale === 'zh' ? '确认复制' : 'Confirm copy')}
-            </Button>
-          </div>
-        </form>
-      ) : null}
-    </Modal>
     <ConfirmDialog open={deleteTarget !== null} title={deleteTarget?.kind === 'agent' ? labels.deleteAgentConfirm : deleteTarget?.kind === 'embedding' ? labels.deleteEmbeddingConfirm : deleteTarget?.kind === 'skill' ? labels.deleteSkillConfirm : labels.deleteProviderConfirm} description={deleteTarget?.kind === 'agent' ? labels.deleteAgentConfirm : deleteTarget?.kind === 'embedding' ? labels.deleteEmbeddingConfirm : deleteTarget?.kind === 'skill' ? labels.deleteSkillConfirm : labels.deleteProviderConfirm} confirmLabel={labels.delete} danger onClose={() => setDeleteTarget(null)} onConfirm={deleteSelected} />
   </AdminPage>;
 }

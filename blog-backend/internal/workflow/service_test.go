@@ -28,15 +28,15 @@ func TestValidateStepsRejectsToolAndUnboundedLoop(t *testing.T) {
 	}
 }
 
-func TestValidatePortableWorkflow(t *testing.T) {
+func TestValidateWorkflowRequiresFixedAgent(t *testing.T) {
 	service := &Service{}
 	steps := []domain.WorkflowStep{
-		{ID: "model", Type: "model", AgentIDPointer: "/input/agent_id"},
+		{ID: "model", Type: "model"},
 		{ID: "approval", Type: "approval_gate"},
 		{ID: "result", Type: "output", OutputPointer: "/steps/model"},
 	}
-	if err := service.validateSteps(steps, 0); err != nil {
-		t.Fatalf("valid workflow rejected: %v", err)
+	if err := service.validateSteps(steps, 0); err == nil {
+		t.Fatal("workflow without a fixed Agent must be rejected")
 	}
 }
 

@@ -55,6 +55,25 @@ func TestRegistryRejectsInvalidJSON(t *testing.T) {
 	}
 }
 
+func TestMergeBindingArgumentsPinsConfiguredValues(t *testing.T) {
+	bindings := json.RawMessage(`{"rss.fetch":{"feeds":[{"name":"OpenAI","url":"https://openai.com/news/rss.xml"}],"max_items":10}}`)
+	merged, err := MergeBindingArguments(bindings, "rss.fetch", json.RawMessage(`{"feeds":[{"name":"untrusted","url":"https://example.test/feed"}],"max_items":50,"max_per_feed":3}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]any
+	if err := json.Unmarshal(merged, &got); err != nil {
+		t.Fatal(err)
+	}
+	if got["max_items"] != float64(10) || got["max_per_feed"] != float64(3) {
+		t.Fatalf("merged values = %#v", got)
+	}
+	feeds, ok := got["feeds"].([]any)
+	if !ok || feeds[0].(map[string]any)["name"] != "OpenAI" {
+		t.Fatalf("configured feeds must override model input: %#v", got)
+	}
+}
+
 func TestDailyNewsReadToolsValidateTheirBoundary(t *testing.T) {
 	registry := NewBlogRegistry(nil, nil, nil)
 	for name, arguments := range map[string]json.RawMessage{

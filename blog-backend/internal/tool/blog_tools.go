@@ -33,8 +33,9 @@ func NewBlogRegistry(posts *service.PostService, community *service.CommunitySer
 	return New(
 		Definition{
 			Name: "rss.fetch", Description: "Fetch and normalize entries from configured allowlisted RSS or Atom feeds.",
-			Parameters: schema(`{"feeds":{"type":"array","minItems":1,"maxItems":10,"items":{"type":"object","additionalProperties":false,"required":["name","url"],"properties":{"name":{"type":"string","maxLength":120},"url":{"type":"string","format":"uri"}}},"max_per_feed":{"type":"integer","minimum":1,"maximum":20},"max_items":{"type":"integer","minimum":1,"maximum":50}}`, "feeds"),
-			Output:     json.RawMessage(`{"type":"object","properties":{"items":{"type":"array"}}}`), Surfaces: []string{"agent"}, Risk: domain.ToolRiskRead,
+			Parameters:    schema(`{"feeds":{"type":"array","minItems":1,"maxItems":10,"items":{"type":"object","additionalProperties":false,"required":["name","url"],"properties":{"name":{"type":"string","maxLength":120},"url":{"type":"string","format":"uri"}}},"max_per_feed":{"type":"integer","minimum":1,"maximum":20},"max_items":{"type":"integer","minimum":1,"maximum":50}}`, "feeds"),
+			Configuration: schema(`{"feeds":{"type":"array","minItems":1,"maxItems":10,"items":{"type":"object","additionalProperties":false,"required":["name","url"],"properties":{"name":{"type":"string","maxLength":120},"url":{"type":"string","format":"uri"}}},"max_per_feed":{"type":"integer","minimum":1,"maximum":20},"max_items":{"type":"integer","minimum":1,"maximum":50}}`, "feeds"),
+			Output:        json.RawMessage(`{"type":"object","properties":{"items":{"type":"array"}}}`), Surfaces: []string{"agent"}, Risk: domain.ToolRiskRead,
 			Execute: fetchRSS,
 		},
 		Definition{

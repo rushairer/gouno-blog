@@ -156,6 +156,11 @@ func startWebServer(cmd *cobra.Command, args []string) {
 			agentRepo, secrets, globalConfig.AIAgentConfig.AllowedHosts,
 			toolRegistry.AgentNames(), toolRegistry.ProposalNames(),
 		)
+		if created, err := management.BootstrapStarterPack(ctx); err != nil {
+			log.Fatalf("reconcile AI workspace starter pack: %v", err)
+		} else if created > 0 {
+			logger.Info("Reconciled AI workspace starter Agents", zap.Int("created", created))
+		}
 		runner := agentservice.NewRunner(agentRepo, management, toolRegistry, postSvc)
 		approvals := agentservice.NewApprovalService(agentRepo, postSvc, management, growthSvc, mediaDir)
 		agentCtrl = controller.NewAgentController(management, runner, approvals, toolRegistry, ctx, knowledgeSvc)

@@ -40,14 +40,15 @@ type Proposal struct {
 }
 
 type Definition struct {
-	Name        string
-	Description string
-	Parameters  json.RawMessage
-	Output      json.RawMessage
-	Surfaces    []string
-	Risk        domain.ToolRiskLevel
-	Execute     func(context.Context, json.RawMessage) (any, error)
-	Propose     func(context.Context, json.RawMessage) (*Proposal, error)
+	Name          string
+	Description   string
+	Parameters    json.RawMessage
+	Configuration json.RawMessage
+	Output        json.RawMessage
+	Surfaces      []string
+	Risk          domain.ToolRiskLevel
+	Execute       func(context.Context, json.RawMessage) (any, error)
+	Propose       func(context.Context, json.RawMessage) (*Proposal, error)
 }
 
 type Registry struct {
@@ -55,13 +56,14 @@ type Registry struct {
 }
 
 type CatalogItem struct {
-	Name          string               `json:"name"`
-	Description   string               `json:"description"`
-	DescriptionZH string               `json:"description_zh,omitempty"`
-	Parameters    json.RawMessage      `json:"parameters"`
-	Output        json.RawMessage      `json:"output_schema,omitempty"`
-	Surfaces      []string             `json:"surfaces"`
-	Risk          domain.ToolRiskLevel `json:"risk_level"`
+	Name                string               `json:"name"`
+	Description         string               `json:"description"`
+	DescriptionZH       string               `json:"description_zh,omitempty"`
+	Parameters          json.RawMessage      `json:"parameters"`
+	ConfigurationSchema json.RawMessage      `json:"configuration_schema,omitempty"`
+	Output              json.RawMessage      `json:"output_schema,omitempty"`
+	Surfaces            []string             `json:"surfaces"`
+	Risk                domain.ToolRiskLevel `json:"risk_level"`
 }
 
 func New(definitions ...Definition) *Registry {
@@ -108,6 +110,34 @@ func (r *Registry) Definitions(capabilities []string) []provider.ToolDefinition 
 	return result
 }
 
+// MergeBindingArguments applies Skill-owned fixed Tool arguments. Model supplied
+// values can fill unconfigured fields but cannot override a configured value.
+func MergeBindingArguments(bindings json.RawMessage, name string, arguments json.RawMessage) (json.RawMessage, error) {
+	var configured map[string]json.RawMessage
+	if len(bindings) == 0 {
+		bindings = json.RawMessage(`{}`)
+	}
+	if err := json.Unmarshal(bindings, &configured); err != nil || configured == nil {
+		return nil, ErrInvalidArgument
+	}
+	var supplied map[string]json.RawMessage
+	if err := json.Unmarshal(arguments, &supplied); err != nil || supplied == nil {
+		return nil, ErrInvalidArgument
+	}
+	fixed, exists := configured[name]
+	if !exists {
+		return arguments, nil
+	}
+	var values map[string]json.RawMessage
+	if err := json.Unmarshal(fixed, &values); err != nil || values == nil {
+		return nil, ErrInvalidArgument
+	}
+	for key, value := range values {
+		supplied[key] = value
+	}
+	return json.Marshal(supplied)
+}
+
 func (r *Registry) Invoke(ctx context.Context, capabilities []string, name string, arguments json.RawMessage) (domain.ToolRiskLevel, json.RawMessage, *Proposal, error) {
 	if !slices.Contains(capabilities, name) {
 		return "", nil, nil, ErrUnauthorized
@@ -148,9 +178,10 @@ func (r *Registry) Catalog() []CatalogItem {
 	for _, definition := range r.definitions {
 		result = append(result, CatalogItem{
 			Name: definition.Name, Description: definition.Description, DescriptionZH: catalogDescriptionsZH[definition.Name],
-			Parameters: catalogSchema(definition.Parameters, emptyParametersSchema),
-			Output:     catalogSchema(definition.Output, nil),
-			Surfaces:   definition.Surfaces, Risk: definition.Risk,
+			Parameters:          catalogSchema(definition.Parameters, emptyParametersSchema),
+			ConfigurationSchema: catalogSchema(definition.Configuration, nil),
+			Output:              catalogSchema(definition.Output, nil),
+			Surfaces:            definition.Surfaces, Risk: definition.Risk,
 		})
 	}
 	slices.SortFunc(result, func(a, b CatalogItem) int {

@@ -281,7 +281,11 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 			break
 		}
 		for _, requested := range result.ToolCalls {
-			callKey := requested.Name + "\x00" + string(requested.Arguments)
+			effectiveArguments, bindingErr := tool.MergeBindingArguments(skill.ToolBindings, requested.Name, requested.Arguments)
+			if bindingErr != nil {
+				return fmt.Errorf("Tool %q configuration is invalid: %w", requested.Name, bindingErr)
+			}
+			callKey := requested.Name + "\x00" + string(effectiveArguments)
 			toolCallCounts[callKey]++
 			if toolCallCounts[callKey] > 2 {
 				messages = append(messages, provider.Message{
@@ -293,9 +297,9 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 			callID := requested.ID
 			call := &domain.AgentToolCall{
 				RunID: run.ID, ProviderCallID: &callID, ToolName: requested.Name,
-				Arguments: requested.Arguments, Status: domain.ToolCallRequested,
+				Arguments: effectiveArguments, Status: domain.ToolCallRequested,
 			}
-			risk, rawResult, proposal, invokeErr := r.invokeTool(ctx, skill, requested.Name, requested.Arguments)
+			risk, rawResult, proposal, invokeErr := r.invokeTool(ctx, skill, requested.Name, effectiveArguments)
 			call.RiskLevel = risk
 			if call.RiskLevel == "" {
 				call.RiskLevel = domain.ToolRiskRead
@@ -305,12 +309,13 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 			}
 			if invokeErr != nil {
 				message := safeError(invokeErr)
-				_ = r.repo.FinishToolCall(ctx, call.ID, domain.ToolCallRejected, nil, &message)
-				messages = append(messages, provider.Message{
-					Role: "tool", ToolCallID: requested.ID,
-					Content: `{"error":"tool call rejected by policy"}`,
-				})
-				continue
+				if err := r.repo.FinishToolCall(ctx, call.ID, domain.ToolCallRejected, nil, &message); err != nil {
+					return err
+				}
+				// A rejected Tool call means the configured operation could not be
+				// completed safely. Do not let the model turn that into a prose-only
+				// "success"; the parent Workflow must receive a failed Agent Run.
+				return fmt.Errorf("Tool %q was rejected: %w", requested.Name, invokeErr)
 			}
 			if proposal != nil {
 				if !dryRun {

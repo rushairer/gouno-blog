@@ -77,11 +77,41 @@ func TestUpAppliesCurrentSchemaAndIsIdempotent(t *testing.T) {
 	if systemSkills != 8 {
 		t.Fatalf("expected 8 system Skills, got %d", systemSkills)
 	}
+	var dailyNewsConfigured bool
+	if err := db.QueryRowContext(ctx, `SELECT EXISTS (
+		SELECT 1 FROM ai_skills s JOIN ai_skill_versions sv ON sv.skill_id=s.id AND sv.version=s.version
+		WHERE s.system_key='daily_news' AND sv.tool_bindings ? 'rss.fetch'
+	)`).Scan(&dailyNewsConfigured); err != nil {
+		t.Fatal(err)
+	}
+	if !dailyNewsConfigured {
+		t.Fatal("expected AI daily news Skill Version to pin rss.fetch configuration")
+	}
 	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_workflows WHERE template_key IN ('daily_news','weekly_operations','stale_content_refresh','low_engagement')`).Scan(&workflows); err != nil {
 		t.Fatal(err)
 	}
 	if workflows != 4 {
 		t.Fatalf("expected 4 starter Workflows, got %d", workflows)
+	}
+	var enabledStarterWorkflows int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_workflows
+		WHERE template_key IN ('daily_news','weekly_operations','stale_content_refresh','low_engagement')
+		AND enabled=TRUE`).Scan(&enabledStarterWorkflows); err != nil {
+		t.Fatal(err)
+	}
+	if enabledStarterWorkflows != 0 {
+		t.Fatal("starter Workflows must be disabled pending operator review")
+	}
+	var legacyWorkflowSteps bool
+	if err := db.QueryRowContext(ctx, `SELECT EXISTS (
+		SELECT 1 FROM ai_workflows w JOIN ai_workflow_versions v ON v.workflow_id=w.id AND v.version=w.current_version
+		WHERE w.template_key IN ('daily_news','weekly_operations','stale_content_refresh','low_engagement')
+		AND (v.steps::text LIKE '%agent_id_pointer%' OR v.steps @> '[{"type":"tool"}]'::jsonb)
+	)`).Scan(&legacyWorkflowSteps); err != nil {
+		t.Fatal(err)
+	}
+	if legacyWorkflowSteps {
+		t.Fatal("starter Workflows must only use fixed Agent and generic control-flow steps")
 	}
 	var duplicatedAgentBehavior bool
 	if err := db.QueryRowContext(ctx, `SELECT EXISTS (

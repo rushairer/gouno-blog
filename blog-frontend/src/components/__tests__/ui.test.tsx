@@ -11,6 +11,7 @@ import {
   Input,
   SectionNav,
   Select,
+  SubnavTabs,
   Tab,
   TabList,
   TabPanel,
@@ -87,6 +88,21 @@ describe('shared UI primitives', () => {
     await user.keyboard('{ArrowRight}');
     expect(screen.getByRole('tab', { name: '页签二' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tabpanel')).toHaveTextContent('内容二');
+  });
+
+  it('uses the same accessible navigation behavior for page-local subnavigation', async () => {
+    const user = userEvent.setup();
+    function Example() {
+      const [value, setValue] = useState('agents');
+      return <SubnavTabs label="高级设置" value={value} onValueChange={setValue} items={[{ value: 'agents', label: 'Agents' }, { value: 'skills', label: 'Skills' }]} />;
+    }
+    render(<Example />);
+    const agents = screen.getByRole('tab', { name: 'Agents' });
+    expect(agents).toHaveClass('subnav-tabs__tab');
+    expect(agents).toHaveAttribute('aria-selected', 'true');
+    agents.focus();
+    await user.keyboard('{ArrowRight}');
+    expect(screen.getByRole('tab', { name: 'Skills' })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('renders accessible section anchors with an active location', () => {

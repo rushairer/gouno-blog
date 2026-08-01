@@ -157,8 +157,8 @@ func (s *Service) validateSteps(steps []domain.WorkflowStep, depth int) error {
 		seen[step.ID] = true
 		switch step.Type {
 		case "model":
-			if step.AgentID <= 0 && step.AgentIDPointer == "" {
-				return fmt.Errorf("%w: model step must resolve an Agent", ErrInvalid)
+			if step.AgentID <= 0 {
+				return fmt.Errorf("%w: model step must bind an Agent", ErrInvalid)
 			}
 		case "for_each":
 			if step.CollectionPointer == "" || step.MaxItems < 1 || step.MaxItems > 100 {
@@ -171,7 +171,7 @@ func (s *Service) validateSteps(steps []domain.WorkflowStep, depth int) error {
 		default:
 			return fmt.Errorf("%w: unsupported step type %q", ErrInvalid, step.Type)
 		}
-		for _, pointer := range []string{step.AgentIDPointer, step.InputPointer, step.CollectionPointer, step.OutputPointer} {
+		for _, pointer := range []string{step.InputPointer, step.CollectionPointer, step.OutputPointer} {
 			if pointer != "" && !strings.HasPrefix(pointer, "/") {
 				return fmt.Errorf("%w: JSON pointers must start with /", ErrInvalid)
 			}
@@ -201,6 +201,20 @@ func (s *Service) Versions(ctx context.Context, id int64) ([]*domain.Workflow, e
 }
 
 func (s *Service) Rollback(ctx context.Context, id int64, version int) error {
+	var rawSteps []byte
+	if err := s.db.QueryRowContext(ctx, `SELECT steps FROM ai_workflow_versions WHERE workflow_id=$1 AND version=$2`, id, version).Scan(&rawSteps); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFound
+		}
+		return err
+	}
+	var steps []domain.WorkflowStep
+	if err := json.Unmarshal(rawSteps, &steps); err != nil {
+		return fmt.Errorf("%w: invalid historical workflow steps", ErrInvalid)
+	}
+	if err := s.validateSteps(steps, 0); err != nil {
+		return fmt.Errorf("%w: historical version cannot be reactivated", ErrInvalid)
+	}
 	result, err := s.db.ExecContext(ctx, `UPDATE ai_workflows SET current_version=$2,
 		updated_at=NOW() WHERE id=$1 AND deleted_at IS NULL
 		AND EXISTS (SELECT 1 FROM ai_workflow_versions WHERE workflow_id=$1 AND version=$2)`, id, version)
@@ -314,19 +328,7 @@ func (s *Service) validateRunnableSteps(ctx context.Context, steps []domain.Work
 	for _, step := range steps {
 		switch step.Type {
 		case "model":
-			agentID := step.AgentID
-			if agentID <= 0 {
-				resolved, err := resolvePointer(document, step.AgentIDPointer)
-				if err != nil {
-					return fmt.Errorf("%w: model step %q has no bound Agent", ErrInvalid, step.ID)
-				}
-				value, ok := resolved.(float64)
-				if !ok || value <= 0 {
-					return fmt.Errorf("%w: model step %q has no bound Agent", ErrInvalid, step.ID)
-				}
-				agentID = int64(value)
-			}
-			agent, err := s.agents.GetAgent(ctx, agentID)
+			agent, err := s.agents.GetAgent(ctx, step.AgentID)
 			if err != nil {
 				return fmt.Errorf("%w: model step %q Agent is unavailable", ErrInvalid, step.ID)
 			}
@@ -495,19 +497,9 @@ func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, ste
 		var err error
 		switch step.Type {
 		case "model":
-			agentID := step.AgentID
-			if agentID <= 0 {
-				var raw any
-				raw, err = resolvePointer(document, step.AgentIDPointer)
-				if value, ok := raw.(float64); ok {
-					agentID = int64(value)
-				} else if err == nil {
-					err = ErrInvalid
-				}
-			}
 			stepInput = inputForStep(document, item, step.InputPointer)
 			if err == nil {
-				agent, getErr := s.agents.GetAgent(ctx, agentID)
+				agent, getErr := s.agents.GetAgent(ctx, step.AgentID)
 				if getErr != nil {
 					err = getErr
 				} else if agent.SkillVersionID == nil {
@@ -516,7 +508,7 @@ func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, ste
 			}
 			if err == nil {
 				raw, _ := json.Marshal(stepInput)
-				agentRun, queueErr := s.runner.QueueWorkflow(ctx, agentID, run.TriggeredBy, raw, run.WorkflowVersionID)
+				agentRun, queueErr := s.runner.QueueWorkflow(ctx, step.AgentID, run.TriggeredBy, raw, run.WorkflowVersionID)
 				if queueErr != nil {
 					err = queueErr
 				} else {

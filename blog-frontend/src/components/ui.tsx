@@ -342,21 +342,22 @@ export function Tabs({
   );
 }
 
+function moveBetweenTabs(event: React.KeyboardEvent<HTMLDivElement>) {
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+  const tabs = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]:not(:disabled)'));
+  const currentIndex = tabs.indexOf(document.activeElement as HTMLButtonElement);
+  if (currentIndex < 0 || tabs.length === 0) return;
+  event.preventDefault();
+  const nextIndex = event.key === 'Home' ? 0
+    : event.key === 'End' ? tabs.length - 1
+      : event.key === 'ArrowRight' ? (currentIndex + 1) % tabs.length
+        : (currentIndex - 1 + tabs.length) % tabs.length;
+  tabs[nextIndex]?.focus();
+  tabs[nextIndex]?.click();
+}
+
 export function TabList({ children, label }: { children: React.ReactNode; label: string }) {
-  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-    const tabs = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]:not(:disabled)'));
-    const currentIndex = tabs.indexOf(document.activeElement as HTMLButtonElement);
-    if (currentIndex < 0 || tabs.length === 0) return;
-    event.preventDefault();
-    const nextIndex = event.key === 'Home' ? 0
-      : event.key === 'End' ? tabs.length - 1
-        : event.key === 'ArrowRight' ? (currentIndex + 1) % tabs.length
-          : (currentIndex - 1 + tabs.length) % tabs.length;
-    tabs[nextIndex]?.focus();
-    tabs[nextIndex]?.click();
-  };
-  return <div className="tab-list" role="tablist" aria-label={label} onKeyDown={onKeyDown}>{children}</div>;
+  return <div className="tab-list" role="tablist" aria-label={label} onKeyDown={moveBetweenTabs}>{children}</div>;
 }
 
 export function Tab({ value, children }: { value: string; children: React.ReactNode }) {
@@ -390,6 +391,50 @@ export function TabPanel({ value, children, className = '' }: { value: string; c
     <div className={classes('tab-panel', className)} id={`${tabs.id}-panel-${value}`} role="tabpanel" aria-labelledby={`${tabs.id}-tab-${value}`}>
       {children}
     </div>
+  );
+}
+
+export type SubnavTab = {
+  value: string;
+  label: React.ReactNode;
+  icon?: React.ReactNode;
+  disabled?: boolean;
+};
+
+export function SubnavTabs({
+  items,
+  value,
+  onValueChange,
+  label,
+}: {
+  items: SubnavTab[];
+  value: string;
+  onValueChange: (value: string) => void;
+  label: string;
+}) {
+  return (
+    <nav className="subnav-tabs" aria-label={label}>
+      <div role="tablist" onKeyDown={moveBetweenTabs}>
+        {items.map((item) => {
+          const active = item.value === value;
+          return (
+            <button
+              key={item.value}
+              className="subnav-tabs__tab"
+              role="tab"
+              type="button"
+              aria-selected={active}
+              tabIndex={active ? 0 : -1}
+              disabled={item.disabled}
+              onClick={() => onValueChange(item.value)}
+            >
+              {item.icon}
+              {item.label}
+            </button>
+          );
+        })}
+      </div>
+    </nav>
   );
 }
 

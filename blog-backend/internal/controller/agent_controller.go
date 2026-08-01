@@ -910,7 +910,7 @@ func (ctrl *AgentController) ImportSkill(c *gin.Context) {
 	c.JSON(http.StatusCreated, gouno.NewSuccessResponse(&item))
 }
 
-func (ctrl *AgentController) SaveAgentAsSkill(c *gin.Context) {
+func (ctrl *AgentController) CopySkill(c *gin.Context) {
 	id, ok := agentID(c)
 	if !ok {
 		return
@@ -930,7 +930,7 @@ func (ctrl *AgentController) SaveAgentAsSkill(c *gin.Context) {
 			subject = &text
 		}
 	}
-	item, err := ctrl.svc.SaveAgentAsSkill(c.Request.Context(), id, req.Name, subject)
+	item, err := ctrl.svc.CopySkill(c.Request.Context(), id, req.Name, subject)
 	if err != nil {
 		writeAgentError(c, err)
 		return
@@ -1102,10 +1102,6 @@ func (ctrl *AgentController) GetRun(c *gin.Context) {
 
 func (ctrl *AgentController) ToolCatalog(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(ctrl.tools.Catalog()))
-}
-
-func (ctrl *AgentController) Presets(c *gin.Context) {
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(agentservice.Presets()))
 }
 
 func (ctrl *AgentController) ListApprovals(c *gin.Context) {

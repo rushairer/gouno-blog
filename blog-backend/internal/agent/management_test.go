@@ -35,17 +35,6 @@ func TestNextRunRejectsInvalidCron(t *testing.T) {
 	}
 }
 
-func TestPresetsOnlyUseKnownExecutionModes(t *testing.T) {
-	for _, preset := range Presets() {
-		if preset.ID == "" || preset.Name == "" || preset.SystemPrompt == "" || len(preset.Capabilities) == 0 {
-			t.Fatalf("invalid preset: %#v", preset)
-		}
-		if preset.ExecutionMode != domain.AgentModeAdvisory && preset.ExecutionMode != domain.AgentModeApproval {
-			t.Fatalf("invalid execution mode: %s", preset.ExecutionMode)
-		}
-	}
-}
-
 func TestValidateAgentRequiresSkillVersion(t *testing.T) {
 	service := NewManagementService(nil, nil, nil, nil, nil)
 	value := &domain.Agent{

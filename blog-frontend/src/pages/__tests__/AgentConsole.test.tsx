@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -67,35 +67,33 @@ describe('AgentConsole', () => {
     expect(screen.getByText('gpt-5-mini')).toBeInTheDocument();
   });
 
-  it('opens modal to copy an agent bound Skill Version', async () => {
+  it('copies a Skill from the Skill list, not from an Agent', async () => {
     const user = userEvent.setup();
+    const prompt = vi.spyOn(window, 'prompt').mockReturnValue('Weekly Operations Copy');
     vi.mocked(apiFetch).mockImplementation(async (input, init) => {
       const url = input.toString();
-      if (url === '/api/admin/agents/1/save-as-skill' && init?.method === 'POST') {
-        return Response.json({ data: { id: 10, name: 'Weekly Operations Skill' } });
+      if (url === '/api/admin/agent-skills') {
+        return Response.json({ data: [{
+          ...responseFor('/api/admin/agents')[0].skill,
+          id: 1, version_id: 1, system_key: 'weekly_operations',
+        }] });
+      }
+      if (url === '/api/admin/agent-skills/1/copy' && init?.method === 'POST') {
+        return Response.json({ data: { id: 2, name: 'Weekly Operations Copy' } });
       }
       return Response.json({ data: responseFor(url) });
     });
     renderConsole();
     await screen.findByRole('tab', { name: 'Advanced settings' });
     await user.click(screen.getByRole('tab', { name: 'Advanced settings' }));
-    expect(screen.getAllByText('Weekly Operations').length).toBeGreaterThan(0);
-
-    const extractBtn = screen.getAllByRole('button', { name: 'Copy as Skill' })[0];
-    await user.click(extractBtn);
-
-    const dialog = screen.getByRole('dialog');
-    expect(dialog).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Copy Bound Skill Version' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Skill Name')).toHaveValue('Weekly Operations Skill');
-
-    await user.click(within(dialog).getByRole('button', { name: 'Confirm copy' }));
+    await user.click(screen.getByRole('tab', { name: 'Skills' }));
+    await user.click(screen.getByRole('button', { name: 'Copy Skill' }));
     await waitFor(() => {
-      expect(apiFetch).toHaveBeenCalledWith('/api/admin/agents/1/save-as-skill', expect.objectContaining({
-        method: 'POST',
-        body: JSON.stringify({ name: 'Weekly Operations Skill' }),
+      expect(apiFetch).toHaveBeenCalledWith('/api/admin/agent-skills/1/copy', expect.objectContaining({
+        method: 'POST', body: JSON.stringify({ name: 'Weekly Operations Copy' }),
       }));
     });
+    prompt.mockRestore();
   });
 
   it('opens the provider editor from the provider workspace', async () => {
@@ -103,7 +101,7 @@ describe('AgentConsole', () => {
     renderConsole();
     await screen.findByRole('tab', { name: 'Advanced settings' });
     await user.click(screen.getByRole('tab', { name: 'Advanced settings' }));
-    await user.click(screen.getByRole('button', { name: 'Providers' }));
+    await user.click(screen.getByRole('tab', { name: 'Providers' }));
     expect(screen.getByText('OpenAI')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Add Provider' }));
     expect(screen.getByRole('heading', { name: 'Add Provider' })).toBeInTheDocument();
@@ -118,7 +116,7 @@ describe('AgentConsole', () => {
 
     await user.click(screen.getByRole('button', { name: 'Create Agent' }));
     expect(screen.getByRole('heading', { name: 'Create Agent' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Skills' }));
+    await user.click(screen.getByRole('tab', { name: 'Skills' }));
     expect(screen.queryByRole('heading', { name: 'Create Agent' })).not.toBeInTheDocument();
     expect(screen.getByText('No saved Skills yet. Skills are reusable governed Agent configurations.')).toBeInTheDocument();
 
@@ -126,7 +124,7 @@ describe('AgentConsole', () => {
     await user.click(screen.getByRole('button', { name: 'Create Workflow' }));
     expect(screen.getByRole('heading', { name: 'Create Workflow' })).toBeInTheDocument();
     await user.click(screen.getByRole('tab', { name: 'Advanced settings' }));
-    await user.click(screen.getByRole('button', { name: 'Providers' }));
+    await user.click(screen.getByRole('tab', { name: 'Providers' }));
     expect(screen.queryByRole('heading', { name: 'Create Workflow' })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Providers' })).toBeInTheDocument();
   });

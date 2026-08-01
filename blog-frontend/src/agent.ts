@@ -56,7 +56,6 @@ export interface WorkflowStep {
   type: 'model' | 'for_each' | 'approval_gate' | 'output';
   name?: string;
   agent_id?: number;
-  agent_id_pointer?: string;
   input_pointer?: string;
   collection_pointer?: string;
   max_items?: number;
@@ -219,6 +218,7 @@ export interface AgentSkill {
   description: string;
   system_prompt: string;
   capabilities: string[];
+  tool_bindings: Record<string, Record<string, unknown>>;
   execution_mode: ExecutionMode;
   content_publish_mode: ContentPublishMode;
   max_steps: number;
@@ -285,20 +285,9 @@ export interface ToolDefinition {
   description_zh?: string;
   parameters: Record<string, unknown>;
   output_schema?: Record<string, unknown>;
+  configuration_schema?: Record<string, unknown>;
   surfaces: 'agent'[];
   risk_level: 'read' | 'propose' | 'write';
-}
-
-export interface AgentPreset {
-  id: string;
-  name: string;
-  description: string;
-  system_prompt: string;
-  trigger_type: TriggerType;
-  cron_expression: string;
-  timezone: string;
-  capabilities: string[];
-  execution_mode: ExecutionMode;
 }
 
 export const emptyProvider: Omit<ProviderProfile, 'id' | 'created_at' | 'updated_at' | 'has_api_key' | 'api_key_last4'> & { api_key: string } = {
