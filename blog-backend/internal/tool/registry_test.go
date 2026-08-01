@@ -55,6 +55,33 @@ func TestRegistryRejectsInvalidJSON(t *testing.T) {
 	}
 }
 
+func TestDailyNewsReadToolsValidateTheirBoundary(t *testing.T) {
+	registry := NewBlogRegistry(nil, nil, nil)
+	for name, arguments := range map[string]json.RawMessage{
+		"rss.fetch":       json.RawMessage(`{"feeds":[{"name":"untrusted","url":"http://example.test/feed"}]}`),
+		"data.json_parse": json.RawMessage(`{"text":"not JSON"}`),
+	} {
+		_, _, _, err := registry.Invoke(context.Background(), []string{name}, name, arguments)
+		if !errors.Is(err, ErrInvalidArgument) {
+			t.Fatalf("%s accepted unsafe input: %v", name, err)
+		}
+	}
+}
+
+func TestRegistryExposesOnlyAgentTools(t *testing.T) {
+	registry := New(
+		Definition{Name: "agent.only", Risk: domain.ToolRiskRead},
+		Definition{Name: "also.agent", Surfaces: []string{"agent"}, Risk: domain.ToolRiskRead},
+	)
+	if names := registry.AgentNames(); len(names) != 2 || names[0] != "agent.only" {
+		t.Fatalf("agent names = %v", names)
+	}
+	items := registry.Catalog()
+	if len(items) != 2 || len(items[0].Surfaces) != 1 || items[0].Surfaces[0] != "agent" {
+		t.Fatalf("catalog did not expose Tool surfaces: %#v", items)
+	}
+}
+
 func TestBlogProposalToolsValidateArgumentsBeforeApproval(t *testing.T) {
 	registry := NewBlogRegistry(nil, nil, nil)
 	tests := []struct {

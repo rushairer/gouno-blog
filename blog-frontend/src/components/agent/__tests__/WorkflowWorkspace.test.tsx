@@ -17,12 +17,11 @@ const workflow = {
   created_at: '2026-08-01T00:00:00Z',
   updated_at: '2026-08-01T00:00:00Z',
 };
-
 describe('WorkflowWorkspace', () => {
   it('confirms and soft-deletes a workflow', async () => {
     const user = userEvent.setup();
     const onMutate = vi.fn().mockResolvedValue(undefined);
-    render(<WorkflowWorkspace workflows={[workflow]} runs={[]} metrics={[]} locale="en" onMutate={onMutate} onRun={vi.fn()} onSave={vi.fn()} />);
+    render(<WorkflowWorkspace workflows={[workflow]} runs={[]} metrics={[]} agents={[]} locale="en" onMutate={onMutate} onRun={vi.fn()} onSave={vi.fn()} />);
 
     await user.click(screen.getByRole('button', { name: 'Delete' }));
     const dialog = screen.getByRole('dialog');
@@ -36,7 +35,7 @@ describe('WorkflowWorkspace', () => {
     const user = userEvent.setup();
     let complete!: (value: unknown) => void;
     const onRun = vi.fn().mockImplementation(() => new Promise<unknown>((resolve) => { complete = resolve; }));
-    render(<WorkflowWorkspace workflows={[workflow]} runs={[]} metrics={[]} locale="zh" onMutate={vi.fn()} onRun={onRun} onSave={vi.fn()} />);
+    render(<WorkflowWorkspace workflows={[workflow]} runs={[]} metrics={[]} agents={[]} locale="zh" onMutate={vi.fn()} onRun={onRun} onSave={vi.fn()} />);
 
     await user.click(screen.getByRole('button', { name: '运行' }));
     expect(screen.getByRole('button', { name: '运行中…' })).toBeDisabled();
@@ -53,7 +52,7 @@ describe('WorkflowWorkspace', () => {
   it('shows an actionable failure message and restores the run button', async () => {
     const user = userEvent.setup();
     const onRun = vi.fn().mockRejectedValue(new Error('Provider request timeout'));
-    render(<WorkflowWorkspace workflows={[workflow]} runs={[]} metrics={[]} locale="zh" onMutate={vi.fn()} onRun={onRun} onSave={vi.fn()} />);
+    render(<WorkflowWorkspace workflows={[workflow]} runs={[]} metrics={[]} agents={[]} locale="zh" onMutate={vi.fn()} onRun={onRun} onSave={vi.fn()} />);
 
     await user.click(screen.getByRole('button', { name: '运行' }));
 
@@ -68,7 +67,7 @@ describe('WorkflowWorkspace', () => {
       id: 22, workflow_id: 7, workflow_version_id: 11, dry_run: false, status: 'failed', input: {},
       input_tokens: 0, output_tokens: 0, error_message: 'RSS source validation failed', created_at: '2026-08-01T10:01:00Z',
     });
-    render(<WorkflowWorkspace workflows={[workflow]} runs={[]} metrics={[]} locale="zh" onMutate={vi.fn()} onRun={onRun} onSave={vi.fn()} />);
+    render(<WorkflowWorkspace workflows={[workflow]} runs={[]} metrics={[]} agents={[]} locale="zh" onMutate={vi.fn()} onRun={onRun} onSave={vi.fn()} />);
 
     await user.click(screen.getByRole('button', { name: '运行' }));
 
@@ -79,10 +78,19 @@ describe('WorkflowWorkspace', () => {
   it('does not let a successful dry-run hide a failed live run', () => {
     const failedRun = { id: 6, workflow_id: 7, workflow_version_id: 11, dry_run: false, status: 'failed', input: {}, input_tokens: 0, output_tokens: 0, error_message: 'Provider failed', created_at: '2026-08-01T09:00:00Z' };
     const dryRun = { ...failedRun, id: 19, dry_run: true, status: 'succeeded', error_message: undefined, created_at: '2026-08-01T10:00:00Z' };
-    render(<WorkflowWorkspace workflows={[workflow]} runs={[dryRun, failedRun]} metrics={[]} locale="zh" onMutate={vi.fn()} onRun={vi.fn()} onSave={vi.fn()} />);
+    render(<WorkflowWorkspace workflows={[workflow]} runs={[dryRun, failedRun]} metrics={[]} agents={[]} locale="zh" onMutate={vi.fn()} onRun={vi.fn()} onSave={vi.fn()} />);
 
     expect(screen.getByText('最近正式运行').nextElementSibling).toHaveTextContent('failed');
     expect(screen.getByText('最近试运行：succeeded')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '重试' })).toBeEnabled();
+  });
+
+  it('does not expose Tools in the workflow editor', async () => {
+	const user = userEvent.setup();
+    render(<WorkflowWorkspace workflows={[]} runs={[]} metrics={[]} agents={[]} locale="zh" onMutate={vi.fn()} onRun={vi.fn()} onSave={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: '创建 Workflow' }));
+    expect(screen.getByText(/Workflow 只编排已配置的 Agent 与控制流/)).toBeInTheDocument();
+    expect(screen.queryByText('rss.fetch')).not.toBeInTheDocument();
   });
 });

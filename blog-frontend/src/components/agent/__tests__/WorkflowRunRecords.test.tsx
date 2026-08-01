@@ -42,8 +42,8 @@ describe('WorkflowRunRecords', () => {
     vi.mocked(apiFetch).mockResolvedValue(Response.json({ data: [{
       id: 19,
       workflow_run_id: 6,
-      step_id: 'publish_daily_news',
-      step_type: 'rss_daily_post',
+      step_id: 'sources',
+      step_type: 'model',
       iteration: 0,
       status: 'failed',
       input: { max_items: 5 },
@@ -62,7 +62,7 @@ describe('WorkflowRunRecords', () => {
 
     await waitFor(() => expect(apiFetch).toHaveBeenCalledWith('/api/admin/ai-workflow-runs/6/steps'));
     expect(screen.getByText('Provider output did not match the required Markdown format.')).toBeInTheDocument();
-    expect(screen.getByText('publish_daily_news')).toBeInTheDocument();
+    expect(screen.getByText('sources')).toBeInTheDocument();
     expect(screen.getByText('Markdown validation failed')).toBeInTheDocument();
     expect(screen.getByText(/"max_items": 5/)).toBeInTheDocument();
     expect(screen.getByText(/"retry_count": 2/)).toBeInTheDocument();

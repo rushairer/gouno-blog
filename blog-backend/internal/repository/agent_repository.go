@@ -170,7 +170,7 @@ func (r *AgentRepository) DeleteProvider(ctx context.Context, id int64) error {
 }
 
 const agentColumns = `a.id, a.name, a.description, a.system_prompt, a.provider_profile_id,
-	a.skill_version_id, a.enabled, a.trigger_type, a.cron_expression, a.timezone, a.capabilities, a.execution_mode,
+	a.skill_version_id, a.enabled, a.trigger_type, a.cron_expression, a.timezone, a.capabilities, a.execution_mode, a.content_publish_mode,
 	a.max_steps, a.max_input_tokens, a.max_output_tokens, a.daily_run_limit,
 	a.monthly_token_budget, a.last_run_at, a.next_run_at, a.created_by, a.created_at, a.updated_at`
 
@@ -180,7 +180,7 @@ func scanAgent(scanner interface{ Scan(...any) error }) (*domain.Agent, error) {
 	err := scanner.Scan(
 		&agent.ID, &agent.Name, &agent.Description, &agent.SystemPrompt, &agent.ProviderProfileID,
 		&agent.SkillVersionID, &agent.Enabled, &agent.TriggerType, &agent.CronExpression, &agent.Timezone, &capabilities,
-		&agent.ExecutionMode, &agent.MaxSteps, &agent.MaxInputTokens, &agent.MaxOutputTokens,
+		&agent.ExecutionMode, &agent.ContentPublishMode, &agent.MaxSteps, &agent.MaxInputTokens, &agent.MaxOutputTokens,
 		&agent.DailyRunLimit, &agent.MonthlyTokenBudget, &agent.LastRunAt, &agent.NextRunAt,
 		&agent.CreatedBy, &agent.CreatedAt, &agent.UpdatedAt,
 	)
@@ -194,12 +194,12 @@ func (r *AgentRepository) CreateAgent(ctx context.Context, agent *domain.Agent) 
 	capabilities, _ := json.Marshal(agent.Capabilities)
 	return r.db.QueryRowContext(ctx, `INSERT INTO ai_agents
 		(name, description, system_prompt, provider_profile_id, skill_version_id, enabled, trigger_type,
-		 cron_expression, timezone, capabilities, execution_mode, max_steps, max_input_tokens,
+		 cron_expression, timezone, capabilities, execution_mode, content_publish_mode, max_steps, max_input_tokens,
 		 max_output_tokens, daily_run_limit, monthly_token_budget, next_run_at, created_by)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
 		RETURNING id, created_at, updated_at`,
 		agent.Name, agent.Description, agent.SystemPrompt, agent.ProviderProfileID, agent.SkillVersionID, agent.Enabled,
-		agent.TriggerType, agent.CronExpression, agent.Timezone, capabilities, agent.ExecutionMode,
+		agent.TriggerType, agent.CronExpression, agent.Timezone, capabilities, agent.ExecutionMode, agent.ContentPublishMode,
 		agent.MaxSteps, agent.MaxInputTokens, agent.MaxOutputTokens, agent.DailyRunLimit,
 		agent.MonthlyTokenBudget, agent.NextRunAt, agent.CreatedBy,
 	).Scan(&agent.ID, &agent.CreatedAt, &agent.UpdatedAt)
@@ -210,13 +210,13 @@ func (r *AgentRepository) UpdateAgent(ctx context.Context, agent *domain.Agent) 
 	return r.db.QueryRowContext(ctx, `UPDATE ai_agents SET
 		name=$2, description=$3, system_prompt=$4, provider_profile_id=$5,
 		skill_version_id=$6, enabled=$7, trigger_type=$8, cron_expression=$9, timezone=$10, capabilities=$11,
-		execution_mode=$12, max_steps=$13, max_input_tokens=$14, max_output_tokens=$15,
-		daily_run_limit=$16, monthly_token_budget=$17, next_run_at=$18, updated_at=NOW()
+		execution_mode=$12, content_publish_mode=$13, max_steps=$14, max_input_tokens=$15, max_output_tokens=$16,
+		daily_run_limit=$17, monthly_token_budget=$18, next_run_at=$19, updated_at=NOW()
 		WHERE id=$1 AND deleted_at IS NULL
 		RETURNING last_run_at, created_by, created_at, updated_at`,
 		agent.ID, agent.Name, agent.Description, agent.SystemPrompt, agent.ProviderProfileID,
 		agent.SkillVersionID, agent.Enabled, agent.TriggerType, agent.CronExpression, agent.Timezone, capabilities,
-		agent.ExecutionMode, agent.MaxSteps, agent.MaxInputTokens, agent.MaxOutputTokens,
+		agent.ExecutionMode, agent.ContentPublishMode, agent.MaxSteps, agent.MaxInputTokens, agent.MaxOutputTokens,
 		agent.DailyRunLimit, agent.MonthlyTokenBudget, agent.NextRunAt,
 	).Scan(&agent.LastRunAt, &agent.CreatedBy, &agent.CreatedAt, &agent.UpdatedAt)
 }

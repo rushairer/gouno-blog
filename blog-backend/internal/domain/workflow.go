@@ -6,19 +6,16 @@ import (
 )
 
 type WorkflowStep struct {
-	ID                string          `json:"id"`
-	Type              string          `json:"type"`
-	Name              string          `json:"name,omitempty"`
-	ToolName          string          `json:"tool_name,omitempty"`
-	AgentID           int64           `json:"agent_id,omitempty"`
-	AgentIDPointer    string          `json:"agent_id_pointer,omitempty"`
-	Arguments         json.RawMessage `json:"arguments,omitempty"`
-	ArgumentsPointer  string          `json:"arguments_pointer,omitempty"`
-	InputPointer      string          `json:"input_pointer,omitempty"`
-	CollectionPointer string          `json:"collection_pointer,omitempty"`
-	MaxItems          int             `json:"max_items,omitempty"`
-	Steps             []WorkflowStep  `json:"steps,omitempty"`
-	OutputPointer     string          `json:"output_pointer,omitempty"`
+	ID                string         `json:"id"`
+	Type              string         `json:"type"`
+	Name              string         `json:"name,omitempty"`
+	AgentID           int64          `json:"agent_id,omitempty"`
+	AgentIDPointer    string         `json:"agent_id_pointer,omitempty"`
+	InputPointer      string         `json:"input_pointer,omitempty"`
+	CollectionPointer string         `json:"collection_pointer,omitempty"`
+	MaxItems          int            `json:"max_items,omitempty"`
+	Steps             []WorkflowStep `json:"steps,omitempty"`
+	OutputPointer     string         `json:"output_pointer,omitempty"`
 }
 
 type Workflow struct {

@@ -1,6 +1,7 @@
 export type ProviderType = 'openai' | 'anthropic' | 'gemini';
 export type TriggerType = 'manual' | 'cron';
 export type ExecutionMode = 'advisory' | 'approval';
+export type ContentPublishMode = 'draft' | 'approval' | 'publish';
 export type RunStatus = 'queued' | 'running' | 'awaiting_approval' | 'succeeded' | 'failed' | 'cancelled';
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'expired' | 'executed' | 'failed';
 
@@ -52,13 +53,10 @@ export interface AgentCitation {
 
 export interface WorkflowStep {
   id: string;
-  type: 'tool' | 'model' | 'for_each' | 'approval_gate' | 'output' | 'rss_daily_post';
+  type: 'model' | 'for_each' | 'approval_gate' | 'output';
   name?: string;
-  tool_name?: string;
   agent_id?: number;
   agent_id_pointer?: string;
-  arguments?: Record<string, unknown>;
-  arguments_pointer?: string;
   input_pointer?: string;
   collection_pointer?: string;
   max_items?: number;
@@ -124,9 +122,6 @@ export interface WorkflowMetric {
   tokens: number;
 }
 
-export interface DailyNewsSource { id: number; source_name: string; feed_url: string; original_url: string; title: string; fetched_at: string; }
-export interface DailyNewsRun { id: number; run_date: string; status: 'running' | 'succeeded' | 'failed'; trigger: string; source_count: number; post_id?: number; provider?: string; model?: string; retry_count: number; error_message?: string; started_at?: string; finished_at?: string; created_at: string; }
-export interface DailyNewsStatus { job: { enabled: boolean; cron_expression: string; timezone: string }; next_run_at?: string; latest_run?: DailyNewsRun; sources: DailyNewsSource[]; }
 
 export interface OperationalSuggestion {
   id: number;
@@ -207,6 +202,7 @@ export interface Agent {
   timezone: string;
   capabilities: string[];
   execution_mode: ExecutionMode;
+  content_publish_mode: ContentPublishMode;
   max_steps: number;
   max_input_tokens: number;
   max_output_tokens: number;
@@ -287,6 +283,8 @@ export interface ToolDefinition {
   name: string;
   description: string;
   parameters: Record<string, unknown>;
+  output_schema?: Record<string, unknown>;
+  surfaces: 'agent'[];
   risk_level: 'read' | 'propose' | 'write';
 }
 
@@ -326,6 +324,7 @@ export function emptyAgent(providerID = 0): Omit<Agent, 'id' | 'created_at' | 'u
     timezone: 'Asia/Shanghai',
     capabilities: [],
     execution_mode: 'advisory',
+    content_publish_mode: 'approval',
     max_steps: 6,
     max_input_tokens: 16000,
     max_output_tokens: 2000,

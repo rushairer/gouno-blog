@@ -79,6 +79,16 @@ const (
 	AgentModeApproval AgentExecutionMode = "approval"
 )
 
+// ContentPublishMode is an Agent-owned execution policy. A model may request
+// content.create_post, but it can never select or escalate this policy.
+type ContentPublishMode string
+
+const (
+	ContentPublishDraft    ContentPublishMode = "draft"
+	ContentPublishApproval ContentPublishMode = "approval"
+	ContentPublishPublish  ContentPublishMode = "publish"
+)
+
 type Agent struct {
 	ID                 int64              `json:"id"`
 	Name               string             `json:"name"`
@@ -93,6 +103,7 @@ type Agent struct {
 	Timezone           string             `json:"timezone"`
 	Capabilities       []string           `json:"capabilities"`
 	ExecutionMode      AgentExecutionMode `json:"execution_mode"`
+	ContentPublishMode ContentPublishMode `json:"content_publish_mode"`
 	MaxSteps           int                `json:"max_steps"`
 	MaxInputTokens     int                `json:"max_input_tokens"`
 	MaxOutputTokens    int                `json:"max_output_tokens"`

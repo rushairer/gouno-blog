@@ -13,7 +13,6 @@ import (
 	"github.com/robfig/cron/v3"
 	agentservice "github.com/rushairer/blog-backend/internal/agent"
 	"github.com/rushairer/blog-backend/internal/domain"
-	"github.com/rushairer/blog-backend/internal/tool"
 )
 
 var (
@@ -23,23 +22,13 @@ var (
 )
 
 type Service struct {
-	db        *sql.DB
-	runner    *agentservice.Runner
-	agents    *agentservice.ManagementService
-	tools     *tool.Registry
-	dailyNews interface {
-		RunWorkflow(context.Context) (*domain.DailyNewsRun, error)
-	}
+	db     *sql.DB
+	runner *agentservice.Runner
+	agents *agentservice.ManagementService
 }
 
-func NewService(db *sql.DB, runner *agentservice.Runner, agents *agentservice.ManagementService, tools *tool.Registry) *Service {
-	return &Service{db: db, runner: runner, agents: agents, tools: tools}
-}
-
-func (s *Service) SetDailyNewsExecutor(value interface {
-	RunWorkflow(context.Context) (*domain.DailyNewsRun, error)
-}) {
-	s.dailyNews = value
+func NewService(db *sql.DB, runner *agentservice.Runner, agents *agentservice.ManagementService) *Service {
+	return &Service{db: db, runner: runner, agents: agents}
 }
 
 const workflowColumns = `w.id, w.name, w.description, w.enabled, w.cron_expression, w.timezone, w.next_run_at, w.template_key,
@@ -167,11 +156,6 @@ func (s *Service) validateSteps(steps []domain.WorkflowStep, depth int) error {
 		}
 		seen[step.ID] = true
 		switch step.Type {
-		case "tool":
-			risk, ok := s.tools.Risk(step.ToolName)
-			if !ok || risk != domain.ToolRiskRead {
-				return fmt.Errorf("%w: deterministic tool steps must use a registered read tool", ErrInvalid)
-			}
 		case "model":
 			if step.AgentID <= 0 && step.AgentIDPointer == "" {
 				return fmt.Errorf("%w: model step must resolve an Agent", ErrInvalid)
@@ -183,15 +167,11 @@ func (s *Service) validateSteps(steps []domain.WorkflowStep, depth int) error {
 			if err := s.validateSteps(step.Steps, depth+1); err != nil {
 				return err
 			}
-		case "rss_daily_post":
-			if s.dailyNews == nil {
-				return fmt.Errorf("%w: RSS publishing capability is unavailable", ErrInvalid)
-			}
 		case "approval_gate", "output":
 		default:
 			return fmt.Errorf("%w: unsupported step type %q", ErrInvalid, step.Type)
 		}
-		for _, pointer := range []string{step.AgentIDPointer, step.ArgumentsPointer, step.InputPointer, step.CollectionPointer, step.OutputPointer} {
+		for _, pointer := range []string{step.AgentIDPointer, step.InputPointer, step.CollectionPointer, step.OutputPointer} {
 			if pointer != "" && !strings.HasPrefix(pointer, "/") {
 				return fmt.Errorf("%w: JSON pointers must start with /", ErrInvalid)
 			}
@@ -267,10 +247,10 @@ func (s *Service) Delete(ctx context.Context, id int64) error {
 }
 
 func (s *Service) Queue(ctx context.Context, id int64, dryRun bool, input json.RawMessage, triggeredBy *string) (*domain.WorkflowRun, error) {
-	return s.queue(ctx, id, dryRun, input, triggeredBy, true)
+	return s.queue(ctx, id, dryRun, input, triggeredBy, true, false)
 }
 
-func (s *Service) queue(ctx context.Context, id int64, dryRun bool, input json.RawMessage, triggeredBy *string, retryFailed bool) (*domain.WorkflowRun, error) {
+func (s *Service) queue(ctx context.Context, id int64, dryRun bool, input json.RawMessage, triggeredBy *string, retryFailed, scheduled bool) (*domain.WorkflowRun, error) {
 	value, err := s.Get(ctx, id)
 	if err != nil {
 		return nil, err
@@ -286,7 +266,7 @@ func (s *Service) queue(ctx context.Context, id int64, dryRun bool, input json.R
 	}
 	run := &domain.WorkflowRun{WorkflowID: id, WorkflowVersionID: value.VersionID,
 		DryRun: dryRun, Status: "queued", Input: input, TriggeredBy: triggeredBy}
-	if !dryRun && value.CronExpression != nil {
+	if scheduled && !dryRun && value.CronExpression != nil {
 		key := time.Now().In(workflowLocation(value.Timezone)).Format("2006-01-02")
 		run.ScheduleKey = &key
 	}
@@ -305,7 +285,7 @@ func (s *Service) queue(ctx context.Context, id int64, dryRun bool, input json.R
 					WHERE id=$1 AND status='failed' RETURNING status,created_at`, run.ID, value.VersionID,
 					input, triggeredBy).Scan(&run.Status, &run.CreatedAt)
 				if errors.Is(err, sql.ErrNoRows) {
-					return s.queue(ctx, id, dryRun, input, triggeredBy, retryFailed)
+					return s.queue(ctx, id, dryRun, input, triggeredBy, retryFailed, scheduled)
 				}
 				return run, err
 			}
@@ -365,9 +345,12 @@ func (s *Service) StartScheduler(ctx context.Context, interval time.Duration) {
 }
 
 func (s *Service) tick(ctx context.Context) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id FROM ai_workflows WHERE enabled=TRUE
-		AND cron_expression IS NOT NULL AND next_run_at<=NOW() AND deleted_at IS NULL
-		ORDER BY next_run_at LIMIT 20`)
+	// Claim due rows before queueing. SKIP LOCKED keeps multiple web instances
+	// from returning the same queued run to two in-memory workers.
+	rows, err := s.db.QueryContext(ctx, `UPDATE ai_workflows SET next_run_at=NULL
+		WHERE id IN (SELECT id FROM ai_workflows WHERE enabled=TRUE AND cron_expression IS NOT NULL
+		AND next_run_at<=NOW() AND deleted_at IS NULL ORDER BY next_run_at LIMIT 20 FOR UPDATE SKIP LOCKED)
+		RETURNING id`)
 	if err != nil {
 		return
 	}
@@ -388,7 +371,7 @@ func (s *Service) tick(ctx context.Context) {
 		if next != nil {
 			_, _ = s.db.ExecContext(ctx, `UPDATE ai_workflows SET next_run_at=$2,updated_at=NOW() WHERE id=$1`, id, next)
 		}
-		run, err := s.queue(ctx, id, false, json.RawMessage(`{}`), nil, false)
+		run, err := s.queue(ctx, id, false, json.RawMessage(`{}`), nil, false, true)
 		if err == nil && run.Status == "queued" {
 			go s.Execute(ctx, run.ID)
 		}
@@ -398,8 +381,11 @@ func (s *Service) tick(ctx context.Context) {
 func (s *Service) Execute(ctx context.Context, runID int64) {
 	if err := s.execute(ctx, runID); err != nil {
 		code, message := "workflow_failed", safeError(err)
-		_, _ = s.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status='failed',
-			error_code=$2, error_message=$3, finished_at=NOW() WHERE id=$1`, runID, code, message)
+		result, _ := s.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status='failed',
+			error_code=$2, error_message=$3, finished_at=NOW() WHERE id=$1 AND status='running'`, runID, code, message)
+		if changed, _ := result.RowsAffected(); changed == 0 {
+			return
+		}
 		var recipient *string
 		var name string
 		var workflowID int64
@@ -461,22 +447,6 @@ func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, ste
 		var stepOutput any
 		var err error
 		switch step.Type {
-		case "tool":
-			stepInput = map[string]any{}
-			if len(step.Arguments) > 0 {
-				_ = json.Unmarshal(step.Arguments, &stepInput)
-			}
-			if step.ArgumentsPointer != "" {
-				stepInput, err = resolvePointer(document, step.ArgumentsPointer)
-			}
-			if err == nil {
-				raw, _ := json.Marshal(stepInput)
-				_, result, _, invokeErr := s.tools.Invoke(ctx, s.tools.Names(), step.ToolName, raw)
-				err = invokeErr
-				if err == nil {
-					err = json.Unmarshal(result, &stepOutput)
-				}
-			}
 		case "model":
 			agentID := step.AgentID
 			if agentID <= 0 {
@@ -513,21 +483,13 @@ func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, ste
 						stepOutput = agentRun
 						totalInput += agentRun.InputTokens
 						totalOutput += agentRun.OutputTokens
-						awaiting = awaiting || agentRun.Status == domain.AgentRunAwaitingApproval
+						if agentRun.Status == domain.AgentRunFailed || agentRun.Status == domain.AgentRunCancelled {
+							err = fmt.Errorf("%w: Agent run %d %s", ErrInvalid, agentRun.ID, agentRun.Status)
+						} else {
+							awaiting = awaiting || agentRun.Status == domain.AgentRunAwaitingApproval
+						}
 					}
 				}
-			}
-		case "rss_daily_post":
-			stepInput = inputForStep(document, item, step.InputPointer)
-			if run.DryRun {
-				stepOutput = map[string]any{
-					"dry_run": true,
-					"would":   "fetch whitelisted RSS, generate with the default writing Provider, validate and publish",
-				}
-			} else if s.dailyNews == nil {
-				err = fmt.Errorf("%w: RSS publishing capability is unavailable", ErrInvalid)
-			} else {
-				stepOutput, err = s.dailyNews.RunWorkflow(ctx)
 			}
 		case "for_each":
 			var collection any

@@ -2,8 +2,8 @@ import { CirclePause, GitBranch, GitCompareArrows, History, Play, Plus, RotateCc
 import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { apiFetch } from '../../auth';
-import type { Workflow, WorkflowMetric, WorkflowRun, WorkflowStep } from '../../agent';
-import { Button, ConfirmDialog, EditorPanel, EmptyState, Feedback, Field, FormActions, FormLayout, Panel, PanelHeader, WorkspacePanel } from '../ui';
+import type { Agent, Workflow, WorkflowMetric, WorkflowRun, WorkflowStep } from '../../agent';
+import { Button, ConfirmDialog, EditorPanel, EmptyState, Feedback, Field, FormActions, FormLayout, Panel, PanelHeader, Select, WorkspacePanel } from '../ui';
 
 async function readData<T>(response: Response): Promise<T> {
   const body = await response.json();
@@ -35,10 +35,11 @@ function exampleInput(schema: Record<string, unknown>): Record<string, unknown> 
   }));
 }
 
-export function WorkflowWorkspace({ workflows, runs, metrics, locale, onMutate, onRun, onRefresh, onSave }: {
+export function WorkflowWorkspace({ workflows, runs, metrics, agents, locale, onMutate, onRun, onRefresh, onSave }: {
   workflows: Workflow[];
   runs: WorkflowRun[];
   metrics: WorkflowMetric[];
+  agents: Agent[];
   locale: 'en' | 'zh';
   onMutate: (path: string, method?: string, body?: unknown) => Promise<void>;
   onRun: (workflowID: number, dryRun: boolean, input: Record<string, unknown>) => Promise<WorkflowRun>;
@@ -142,7 +143,7 @@ export function WorkflowWorkspace({ workflows, runs, metrics, locale, onMutate, 
       setRunningAction(null);
     }
   };
-  if (editing) return <WorkflowEditor initial={editing === 'new' ? undefined : editing} labels={labels} onCancel={() => setEditing(null)} onSave={async (value) => { await onSave(value); setEditing(null); }} />;
+  if (editing) return <WorkflowEditor initial={editing === 'new' ? undefined : editing} labels={labels} agents={agents} onCancel={() => setEditing(null)} onSave={async (value) => { await onSave(value); setEditing(null); }} />;
   return <WorkspacePanel className="workflow-workspace">
     <PanelHeader title={locale === 'zh' ? '自动化' : 'Automation'} description={locale === 'zh' ? '选择一项持续运营目标；每次执行都可追溯、可试运行、可回滚。' : 'Choose an ongoing goal. Every run is traceable, testable, and reversible.'} actions={<Button variant="primary" type="button" onClick={() => setEditing('new')}><Plus />{labels.add}</Button>} />
     {workflows.length === 0 || !selectedWorkflow ? <EmptyState label={labels.empty} /> : <div className="agent-split-view workflow-split-view">
@@ -171,13 +172,12 @@ export function WorkflowWorkspace({ workflows, runs, metrics, locale, onMutate, 
           const feedback = runFeedback?.workflowID === workflow.id ? runFeedback : null;
           return <div className="section-stack"><div className="panel-heading"><div><h2>{workflow.name}</h2><small>{workflow.description} · v{workflow.current_version}</small></div><span className={`status-pill status-pill--${workflow.enabled ? 'succeeded' : 'pending'}`}>{workflow.enabled ? (locale === 'zh' ? '已启用' : 'Enabled') : (locale === 'zh' ? '已停用' : 'Disabled')}</span></div>
             <div className="row-actions workflow-detail-actions"><Button variant="secondary" type="button" onClick={() => setEditing(workflow)}><GitCompareArrows />Edit</Button><Button variant="secondary" type="button" onClick={() => void loadVersions(workflow)}><History />{labels.versions}</Button><Button variant="secondary" type="button" onClick={() => void onMutate(`/api/admin/ai-workflows/${workflow.id}/${workflow.enabled ? 'disable' : 'enable'}`)}>{workflow.enabled ? <CirclePause /> : <Play />}{workflow.enabled ? labels.disable : labels.enable}</Button><Button variant="danger" type="button" onClick={() => setDeleteTarget(workflow)}><Trash2 />{locale === 'zh' ? '删除' : 'Delete'}</Button></div>
-            {hasRuntimeInput ? <Field label={labels.input}><textarea className="input-field mono" rows={6} value={inputText} onChange={(event) => setInputByID((current) => ({ ...current, [workflow.id]: event.target.value }))} /></Field> : <div className="workflow-runtime-input"><small>{labels.input}</small><strong>{locale === 'zh' ? '无需手动填写' : 'No manual input required'}</strong><p>{workflow.steps.some((step) => step.type === 'rss_daily_post') ? (locale === 'zh' ? `运行时自动使用：${workflow.timezone} 当日日期、受限 RSS 来源快照、固定标题与 Markdown 格式、默认写作 Provider。` : `Runtime values come from the ${workflow.timezone} date, allowlisted RSS snapshots, the fixed title/Markdown format and the default writing Provider.`) : (locale === 'zh' ? '此 Workflow 的运行值由步骤配置提供。' : 'Runtime values are supplied by the workflow steps.')}</p></div>}
+            {hasRuntimeInput ? <Field label={labels.input}><textarea className="input-field mono" rows={6} value={inputText} onChange={(event) => setInputByID((current) => ({ ...current, [workflow.id]: event.target.value }))} /></Field> : <div className="workflow-runtime-input"><small>{labels.input}</small><strong>{locale === 'zh' ? '无需手动填写' : 'No manual input required'}</strong><p>{locale === 'zh' ? '运行值由已配置的 Agent 提供。' : 'Runtime values come from configured Agents.'}</p></div>}
             <div className="row-actions workflow-detail-actions"><Button variant="secondary" loading={Boolean(activeRun)} type="button" onClick={() => void runWorkflow(workflow, true, runInput())}>{activeRun?.dryRun ? <span className="spinner workflow-button-spinner" aria-hidden="true" /> : <TestTube2 />}{activeRun?.dryRun ? (locale === 'zh' ? '试运行中…' : 'Dry-running…') : labels.dry}</Button><Button variant="primary" loading={Boolean(activeRun)} disabled={!workflow.enabled || latestRun?.status === 'running'} type="button" onClick={() => void runWorkflow(workflow, false, runInput())}>{activeRun && !activeRun.dryRun ? <span className="spinner workflow-button-spinner" aria-hidden="true" /> : <Play />}{activeRun && !activeRun.dryRun ? (locale === 'zh' ? '运行中…' : 'Running…') : (latestRun?.status === 'failed' ? labels.retry : labels.run)}</Button></div>
             {activeRun ? <div className="workflow-run-progress" role="status" aria-live="polite"><span className="spinner workflow-progress-spinner" aria-hidden="true" /><span><strong>{locale === 'zh' ? `${activeRun.dryRun ? '试运行' : 'Workflow'} 正在执行` : `${activeRun.dryRun ? 'Dry-run' : 'Workflow'} is running`}</strong><small>{locale === 'zh' ? '请勿重复点击；完成后会自动刷新状态和运行记录。' : 'Do not submit again. Status and run records refresh automatically when complete.'}</small></span></div> : null}
             {feedback ? <Feedback type={feedback.type}>{feedback.message}</Feedback> : null}
             <div className="agent-run-metrics"><span><small>{labels.schedule}</small><strong>{workflow.cron_expression || (locale === 'zh' ? '仅手动' : 'Manual only')}</strong><small>{workflow.cron_expression ? workflow.timezone : ''}</small></span><span><small>{labels.next}</small><strong>{workflow.next_run_at ? new Date(workflow.next_run_at).toLocaleString(locale === 'zh' ? 'zh-CN' : 'en-US') : '—'}</strong></span><span><small>{labels.metrics}</small><strong>{metric?.runs || 0} / {metric?.failures || 0} / {metric?.tokens || 0}</strong></span><span><small>{locale === 'zh' ? '最近正式运行' : 'Latest live run'}</small><strong>{latestRun?.status || '—'}</strong>{latestDryRun ? <small>{locale === 'zh' ? `最近试运行：${latestDryRun.status}` : `Latest dry-run: ${latestDryRun.status}`}</small> : null}</span></div>
-            <div className="workflow-step-summary">{workflow.steps.map((step, index) => <span key={step.id}><strong>{index + 1}. {step.name || step.id}</strong><small>{step.type === 'rss_daily_post' ? (locale === 'zh' ? '白名单 RSS → 默认写作模型（429/超时/5xx 最多 3 次）→ 校验固定 Markdown → 发布' : 'Allowlisted RSS → default writing model → validate Markdown → publish') : step.type}</small></span>)}</div>
-            {workflow.steps.some((step) => step.type === 'rss_daily_post') ? <p className="workflow-source-note">{locale === 'zh' ? '受限来源：OpenAI、Google AI、Microsoft AI 官方公告，以及 TechCrunch AI、MIT Technology Review AI。每条原文链接与抓取时间写入本次运行审计。' : 'Allowlisted sources: OpenAI, Google AI, Microsoft AI, TechCrunch AI and MIT Technology Review AI. Original URLs and fetch timestamps are audited per run.'}</p> : null}
+            <div className="workflow-step-summary">{workflow.steps.map((step, index) => <span key={step.id}><strong>{index + 1}. {step.name || step.id}</strong><small>{step.type}</small></span>)}</div>
             {latestRun?.output && typeof latestRun.output === 'object' && latestRun.output !== null && 'post_id' in latestRun.output ? <a className="btn btn-secondary" href={`/admin/posts/${String((latestRun.output as { post_id: number }).post_id)}/edit`}>{locale === 'zh' ? '查看已发布文章' : 'View published post'}</a> : null}
             {versions[workflow.id]?.length ? <div className="agent-chip-list">{versions[workflow.id].map((version) => <button type="button" key={version.version_id} disabled={version.current_version === workflow.current_version} onClick={() => void onMutate(`/api/admin/ai-workflows/${workflow.id}/rollback`, 'POST', { version: version.current_version })}><RotateCcw />v{version.current_version}</button>)}</div> : null}
             {latestRun?.output ? <pre className="agent-json-preview">{JSON.stringify(latestRun.output, null, 2)}</pre> : latestRun?.error_message ? <p>{latestRun.error_message}</p> : null}
@@ -189,9 +189,10 @@ export function WorkflowWorkspace({ workflows, runs, metrics, locale, onMutate, 
   </WorkspacePanel>;
 }
 
-function WorkflowEditor({ initial, labels, onSave, onCancel }: {
+function WorkflowEditor({ initial, labels, agents, onSave, onCancel }: {
   initial?: Workflow;
   labels: Record<string, string>;
+  agents: Agent[];
   onSave: (value: WorkflowValue) => Promise<void>;
   onCancel: () => void;
 }) {
@@ -205,6 +206,15 @@ function WorkflowEditor({ initial, labels, onSave, onCancel }: {
   const [planning, setPlanning] = useState(false);
   const [plannerMessage, setPlannerMessage] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(Boolean(initial));
+  const [boundAgentID, setBoundAgentID] = useState<number | ''>(() => initial?.steps.find((step) => step.type === 'model')?.agent_id || '');
+  const bindAgent = (id: number) => {
+    const current = JSON.parse(steps) as WorkflowStep[];
+    setSteps(JSON.stringify(current.map((step) => step.type === 'model' ? { ...step, agent_id: id, agent_id_pointer: undefined } : step), null, 2));
+    const currentSchema = JSON.parse(schema) as { required?: unknown };
+    if (Array.isArray(currentSchema.required)) currentSchema.required = currentSchema.required.filter((item) => item !== 'agent_id');
+    setSchema(JSON.stringify(currentSchema, null, 2));
+    setBoundAgentID(id);
+  };
   const generateDraft = async () => {
     if (!goal.trim()) {
       setPlannerMessage('先用一句话说明你希望自动化完成什么。');
@@ -234,7 +244,8 @@ function WorkflowEditor({ initial, labels, onSave, onCancel }: {
     {!initial ? <section className="workflow-planner"><div><h3>告诉 AI 你想持续完成什么</h3><p>例如：“每天检查最近发布文章的 SEO，并把需要人工确认的建议汇总出来”。AI 只生成未启用草案，不会运行或修改内容。</p></div><textarea className="input-field" rows={4} value={goal} onChange={(event) => setGoal(event.target.value)} placeholder="描述目标、频率、输入来源，以及哪些结果需要你确认…" /><FormActions><Button variant="secondary" type="button" disabled={planning} onClick={() => void generateDraft()}><GitBranch />{planning ? '正在生成草案…' : '用 AI 生成 Workflow 草案'}</Button></FormActions>{plannerMessage ? <p className="workflow-planner__message">{plannerMessage}</p> : null}</section> : null}
     <Field label="名称" hint="面向日常运营的短名称，例如“发布前内容检查”。"><input className="input-field" required value={name} onChange={(event) => setName(event.target.value)} /></Field><Field label="作用说明" hint="说明此流程何时使用、会产出什么，以及人工确认边界。"><input className="input-field" value={description} onChange={(event) => setDescription(event.target.value)} /></Field>
     <div className="form-grid workflow-schedule-grid"><Field label="Cron 执行计划" hint="留空表示仅手动运行；例如每天 09:00：0 9 * * *"><input className="input-field mono" value={cronExpression} onChange={(event) => setCronExpression(event.target.value)} placeholder="0 9 * * *" /></Field><Field label="时区" hint="使用 IANA 时区，例如 Asia/Shanghai"><input className="input-field mono" required value={timezone} onChange={(event) => setTimezone(event.target.value)} /></Field></div>
-    <details className="workflow-advanced" open={showAdvanced} onToggle={(event) => setShowAdvanced(event.currentTarget.open)}><summary>高级设置：输入与步骤 <small>仅在需要精细控制时修改</small></summary><p>Workflow 由可审计的步骤组成。普通内容变更仍需审批；只有显式使用 <code>rss_daily_post</code> 步骤的 Workflow 才能执行受限 RSS 日报发布。输入 Schema 定义运行时字段；JSON Pointer（如 <code>/input/post_id</code>）负责传值。</p><Field label={labels.schema} hint="JSON Schema。示例：{&quot;type&quot;:&quot;object&quot;,&quot;properties&quot;:{&quot;post_id&quot;:{&quot;type&quot;:&quot;integer&quot;}},&quot;required&quot;:[&quot;post_id&quot;],&quot;additionalProperties&quot;:false}"><textarea className="input-field mono" rows={8} value={schema} onChange={(event) => setSchema(event.target.value)} /></Field><Field label={labels.steps} hint="允许 tool、model、for_each、approval_gate、rss_daily_post、output；服务端会校验每个步骤。"><textarea className="input-field mono" rows={16} value={steps} onChange={(event) => setSteps(event.target.value)} /></Field></details>
+    <Field label="绑定 Agent" hint="定时 Workflow 必须绑定 Agent；Skill 和 Tool 授权在 Agent 内生效。"><Select value={boundAgentID} onChange={(event) => event.target.value && bindAgent(Number(event.target.value))}><option value="">在步骤 JSON 中传入 Agent</option>{agents.filter((agent) => agent.enabled).map((agent) => <option key={agent.id} value={agent.id}>{agent.name}</option>)}</Select></Field>
+    <details className="workflow-advanced" open={showAdvanced} onToggle={(event) => setShowAdvanced(event.currentTarget.open)}><summary>高级设置：输入与步骤 <small>仅在需要精细控制时修改</small></summary><p>Workflow 只编排已配置的 Agent 与控制流；Tool 由 Skill 和 Agent 授权调用。JSON Pointer（如 <code>/steps/writer</code>）负责传值。</p><Field label={labels.schema} hint="JSON Schema。示例：{&quot;type&quot;:&quot;object&quot;,&quot;properties&quot;:{&quot;post_id&quot;:{&quot;type&quot;:&quot;integer&quot;}},&quot;required&quot;:[&quot;post_id&quot;],&quot;additionalProperties&quot;:false}"><textarea className="input-field mono" rows={8} value={schema} onChange={(event) => setSchema(event.target.value)} /></Field><Field label={labels.steps} hint="允许 model、for_each、approval_gate、output；服务端会校验每个步骤。"><textarea className="input-field mono" rows={16} value={steps} onChange={(event) => setSteps(event.target.value)} /></Field></details>
     <FormActions><Button variant="secondary" type="button" onClick={onCancel}>{labels.cancel}</Button><Button variant="primary" type="submit"><Save />{labels.save}</Button></FormActions>
   </FormLayout></EditorPanel>;
 }

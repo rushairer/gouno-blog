@@ -1,7 +1,7 @@
 import { Bot, Save } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import type { Agent, AgentPreset, AgentSkill, ProviderProfile, ToolDefinition, TriggerType, ExecutionMode } from '../../agent';
+import type { Agent, AgentPreset, AgentSkill, ProviderProfile, ToolDefinition, TriggerType, ExecutionMode, ContentPublishMode } from '../../agent';
 import { emptyAgent } from '../../agent';
 import { Button, EditorPanel, Field, FormActions, FormGrid, FormLayout, Select } from '../ui';
 
@@ -100,11 +100,12 @@ export function AgentForm({
             ...current,
             execution_mode: executionMode,
             capabilities: executionMode === 'advisory'
-              ? current.capabilities.filter((name) => tools.find((item) => item.name === name)?.risk_level === 'read')
+              ? current.capabilities.filter((name) => name !== 'content.create_post' && tools.find((item) => item.name === name)?.risk_level === 'read')
               : current.capabilities,
           }));
         }}><option value="advisory">{labels.advisory}</option><option value="approval">{labels.approvalMode}</option></Select></Field>
       </FormGrid>
+      <Field label={labels.contentPublishMode} hint={labels.contentPublishHint}><Select value={value.content_publish_mode} onChange={(event) => setValue((current) => ({ ...current, content_publish_mode: event.target.value as ContentPublishMode }))}><option value="approval">{labels.contentPublishApproval}</option><option value="draft">{labels.contentPublishDraft}</option><option value="publish">{labels.contentPublishPublish}</option></Select></Field>
       {value.trigger_type === 'cron' ? <FormGrid columns={2}><Field label={labels.cron}><input className="input-field mono" required placeholder="0 9 * * 1" value={value.cron_expression || ''} onChange={(event) => setValue((current) => ({ ...current, cron_expression: event.target.value }))} /></Field><Field label={labels.timezone}><input className="input-field mono" required value={value.timezone} onChange={(event) => setValue((current) => ({ ...current, timezone: event.target.value }))} /></Field></FormGrid> : null}
       <fieldset className="agent-capabilities">
         <legend>{labels.capabilities}</legend>

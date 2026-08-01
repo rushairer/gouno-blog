@@ -32,6 +32,23 @@ func NewBlogRegistry(posts *service.PostService, community *service.CommunitySer
 	}
 	return New(
 		Definition{
+			Name: "rss.fetch", Description: "Fetch and normalize entries from configured allowlisted RSS or Atom feeds.",
+			Parameters: schema(`{"feeds":{"type":"array","minItems":1,"maxItems":10,"items":{"type":"object","additionalProperties":false,"required":["name","url"],"properties":{"name":{"type":"string","maxLength":120},"url":{"type":"string","format":"uri"}}},"max_per_feed":{"type":"integer","minimum":1,"maximum":20},"max_items":{"type":"integer","minimum":1,"maximum":50}}`, "feeds"),
+			Output:     json.RawMessage(`{"type":"object","properties":{"items":{"type":"array"}}}`), Surfaces: []string{"agent"}, Risk: domain.ToolRiskRead,
+			Execute: fetchRSS,
+		},
+		Definition{
+			Name: "data.json_parse", Description: "Parse a bounded JSON object from a model output.",
+			Parameters: schema(`{"text":{"type":"string","maxLength":50000}}`, "text"),
+			Output:     json.RawMessage(`{"type":"object"}`), Surfaces: []string{"agent"}, Risk: domain.ToolRiskRead,
+			Execute: parseJSON,
+		},
+		Definition{
+			Name: "content.create_post", Description: "Create a validated blog post under the Agent's configured publication policy.",
+			Parameters: schema(`{"title":{"type":"string","minLength":1,"maxLength":500},"slug":{"type":"string","maxLength":500},"summary":{"type":"string","maxLength":5000},"content":{"type":"string","minLength":1,"maxLength":200000},"tags":{"type":"array","maxItems":30,"items":{"type":"string","maxLength":100}}}`, "title", "content"),
+			Output:     json.RawMessage(`{"type":"object","properties":{"status":{"type":"string"},"post_id":{"type":"integer"},"approval_id":{"type":"integer"}}}`), Surfaces: []string{"agent"}, Risk: domain.ToolRiskWrite,
+		},
+		Definition{
 			Name: "content.list_posts", Description: "List blog posts, including drafts and scheduled posts.",
 			Parameters: schema(`{"page":{"type":"integer","minimum":1},"page_size":{"type":"integer","minimum":1,"maximum":100}}`),
 			Risk:       domain.ToolRiskRead, Execute: tools.listPosts,

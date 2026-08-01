@@ -47,7 +47,9 @@ func (s *ManagementService) ListProviders(ctx context.Context) ([]*domain.Provid
 // system jobs; it does not grant content mutation to normal Agents.
 func (s *ManagementService) DefaultWritingClient(ctx context.Context) (*domain.ProviderProfile, provider.Provider, error) {
 	profiles, err := s.ListProviders(ctx)
-	if err != nil { return nil, nil, err }
+	if err != nil {
+		return nil, nil, err
+	}
 	for _, profile := range profiles {
 		if profile.Enabled && profile.IsDefaultWriting {
 			client, err := s.ProviderClient(ctx, profile.ID)
@@ -341,6 +343,9 @@ func (s *ManagementService) SaveAgent(ctx context.Context, value *domain.Agent) 
 	if value.ExecutionMode == "" {
 		value.ExecutionMode = domain.AgentModeAdvisory
 	}
+	if value.ContentPublishMode == "" {
+		value.ContentPublishMode = domain.ContentPublishApproval
+	}
 	if value.TriggerType == "" {
 		value.TriggerType = domain.AgentTriggerManual
 	}
@@ -397,6 +402,9 @@ func (s *ManagementService) validateAgent(value *domain.Agent) error {
 	if value.ExecutionMode != domain.AgentModeAdvisory && value.ExecutionMode != domain.AgentModeApproval {
 		return fmt.Errorf("%w: invalid execution mode", ErrInvalid)
 	}
+	if value.ContentPublishMode != domain.ContentPublishDraft && value.ContentPublishMode != domain.ContentPublishApproval && value.ContentPublishMode != domain.ContentPublishPublish {
+		return fmt.Errorf("%w: invalid content publication mode", ErrInvalid)
+	}
 	if value.MaxSteps < 1 || value.MaxSteps > 20 || value.MaxInputTokens < 1 ||
 		value.MaxOutputTokens < 1 || value.DailyRunLimit < 1 || value.MonthlyTokenBudget < 1 {
 		return fmt.Errorf("%w: invalid run limits", ErrInvalid)
@@ -412,10 +420,16 @@ func (s *ManagementService) validateAgent(value *domain.Agent) error {
 		if value.ExecutionMode == domain.AgentModeAdvisory && slices.Contains(s.proposalCapabilities, capability) {
 			return fmt.Errorf("%w: advisory agents cannot use proposal capability %q", ErrInvalid, capability)
 		}
+		if value.ExecutionMode == domain.AgentModeAdvisory && capability == "content.create_post" {
+			return fmt.Errorf("%w: advisory agents cannot create content", ErrInvalid)
+		}
 		if _, exists := seen[capability]; exists {
 			return fmt.Errorf("%w: duplicate capability", ErrInvalid)
 		}
 		seen[capability] = struct{}{}
+	}
+	if value.ContentPublishMode != domain.ContentPublishApproval && !slices.Contains(value.Capabilities, "content.create_post") {
+		return fmt.Errorf("%w: content publication policy requires content.create_post", ErrInvalid)
 	}
 	return nil
 }

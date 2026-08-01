@@ -29,6 +29,8 @@ type Definition struct {
 	Name        string
 	Description string
 	Parameters  json.RawMessage
+	Output      json.RawMessage
+	Surfaces    []string
 	Risk        domain.ToolRiskLevel
 	Execute     func(context.Context, json.RawMessage) (any, error)
 	Propose     func(context.Context, json.RawMessage) (*Proposal, error)
@@ -42,12 +44,17 @@ type CatalogItem struct {
 	Name        string               `json:"name"`
 	Description string               `json:"description"`
 	Parameters  json.RawMessage      `json:"parameters"`
+	Output      json.RawMessage      `json:"output_schema,omitempty"`
+	Surfaces    []string             `json:"surfaces"`
 	Risk        domain.ToolRiskLevel `json:"risk_level"`
 }
 
 func New(definitions ...Definition) *Registry {
 	items := make(map[string]Definition, len(definitions))
 	for _, definition := range definitions {
+		if len(definition.Surfaces) == 0 {
+			definition.Surfaces = []string{"agent"}
+		}
 		items[definition.Name] = definition
 	}
 	return &Registry{definitions: items}
@@ -57,7 +64,7 @@ func (r *Registry) Definitions(capabilities []string) []provider.ToolDefinition 
 	result := make([]provider.ToolDefinition, 0, len(capabilities))
 	for _, name := range capabilities {
 		definition, ok := r.definitions[name]
-		if !ok {
+		if !ok || !slices.Contains(definition.Surfaces, "agent") {
 			continue
 		}
 		result = append(result, provider.ToolDefinition{
@@ -107,7 +114,8 @@ func (r *Registry) Catalog() []CatalogItem {
 	for _, definition := range r.definitions {
 		result = append(result, CatalogItem{
 			Name: definition.Name, Description: definition.Description,
-			Parameters: definition.Parameters, Risk: definition.Risk,
+			Parameters: definition.Parameters, Output: definition.Output,
+			Surfaces: definition.Surfaces, Risk: definition.Risk,
 		})
 	}
 	slices.SortFunc(result, func(a, b CatalogItem) int {
@@ -126,6 +134,17 @@ func (r *Registry) Names() []string {
 	result := make([]string, 0, len(r.definitions))
 	for name := range r.definitions {
 		result = append(result, name)
+	}
+	slices.Sort(result)
+	return result
+}
+
+func (r *Registry) AgentNames() []string {
+	result := make([]string, 0, len(r.definitions))
+	for name, definition := range r.definitions {
+		if slices.Contains(definition.Surfaces, "agent") {
+			result = append(result, name)
+		}
 	}
 	slices.Sort(result)
 	return result
@@ -154,6 +173,9 @@ func (r *Registry) Register(definitions ...Definition) error {
 		}
 		if _, exists := r.definitions[definition.Name]; exists {
 			return fmt.Errorf("%w: duplicate tool %q", ErrUnknownTool, definition.Name)
+		}
+		if len(definition.Surfaces) == 0 {
+			definition.Surfaces = []string{"agent"}
 		}
 		r.definitions[definition.Name] = definition
 	}
