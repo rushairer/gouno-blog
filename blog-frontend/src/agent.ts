@@ -139,6 +139,21 @@ export interface ContentCandidateSet {
   updated_at: string;
 }
 
+export interface MediaCandidate {
+  id: number;
+  post_id: number;
+  headline: string;
+  brief: string;
+  platform?: string;
+  alt_text: string;
+  generation_status: 'brief_ready' | 'ready_to_generate' | 'generating' | 'generated' | 'rejected' | 'failed';
+  safety_status: string;
+  copyright_status: string;
+  media_asset_id?: number;
+  reviewed_at?: string;
+  created_at: string;
+}
+
 export interface OutcomeMetrics {
   feedback: { target_type: string; label: string; count: number }[];
   suggestions: number;

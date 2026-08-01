@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { Check, ClipboardList, RefreshCw, Save, ThumbsDown } from 'lucide-react';
-import type { ContentCandidateSet, OperationalSuggestion, OutcomeMetrics } from '../../agent';
+import { Check, ClipboardList, Image, Play, RefreshCw, Save, ThumbsDown } from 'lucide-react';
+import type { ContentCandidateSet, MediaCandidate, OperationalSuggestion, OutcomeMetrics } from '../../agent';
 import { Button, EmptyState, Field, FormActions, Panel, Select } from '../ui';
 
 type Mutate = (path: string, method?: string, body?: unknown) => Promise<void>;
 
-export function OperationsWorkspace({ suggestions, candidateSets, metrics, locale, onMutate }: {
+export function OperationsWorkspace({ suggestions, candidateSets, mediaCandidates, metrics, locale, onMutate }: {
   suggestions: OperationalSuggestion[];
   candidateSets: ContentCandidateSet[];
+  mediaCandidates: MediaCandidate[];
   metrics: OutcomeMetrics;
   locale: 'en' | 'zh';
   onMutate: Mutate;
@@ -51,6 +52,13 @@ export function OperationsWorkspace({ suggestions, candidateSets, metrics, local
             <button className="btn btn-primary" type="button" onClick={() => void onMutate(`/api/admin/ai-suggestions/${item.id}/convert`)}><Check />{zh ? '转任务' : 'Convert'}</button>
           </> : null}<button className="btn btn-secondary" type="button" onClick={() => { setTargetType('suggestion'); setTargetID(String(item.id)); }}>{zh ? '反馈' : 'Feedback'}</button></div></td></tr>)}
         </tbody></table></div>}
+    </Panel>
+
+    <Panel className="agent-table-panel">
+      <div className="panel-heading"><div><h3><Image />{zh ? '媒体候选' : 'Media candidates'}</h3><small>{zh ? '通过安全与版权审核后，仍需管理员手动开始生成。' : 'Generation remains an explicit administrator action after review.'}</small></div></div>
+      {mediaCandidates.length === 0 ? <EmptyState label={zh ? '当前没有图片 brief。' : 'No image briefs yet.'} /> : <div className="table-scroll"><table className="content-table agent-table"><thead><tr><th>{zh ? '图片 brief' : 'Image brief'}</th><th>{zh ? '审核' : 'Review'}</th><th>{zh ? '生成状态' : 'Generation'}</th><th>{zh ? '操作' : 'Actions'}</th></tr></thead><tbody>
+        {mediaCandidates.map((item) => <tr key={item.id}><td><strong>{item.headline || `Post #${item.post_id}`}</strong><small>{item.brief}</small><small>{zh ? 'Alt：' : 'Alt: '}{item.alt_text || '—'}</small></td><td><span className={`status-pill status-pill--${item.safety_status}`}>{item.safety_status}</span><span className={`status-pill status-pill--${item.copyright_status}`}>{item.copyright_status}</span></td><td><span className={`status-pill status-pill--${item.generation_status}`}>{item.generation_status.replaceAll('_', ' ')}</span>{item.media_asset_id ? <small>Media #{item.media_asset_id}</small> : null}</td><td>{item.generation_status === 'ready_to_generate' ? <Button variant="primary" size="compact" type="button" onClick={() => void onMutate(`/api/admin/ai-media-candidates/${item.id}/generate`, 'POST')}><Play />{zh ? '生成图片' : 'Generate image'}</Button> : null}</td></tr>)}
+      </tbody></table></div>}
     </Panel>
 
     <Panel className="agent-table-panel">
