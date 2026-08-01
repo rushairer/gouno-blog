@@ -602,6 +602,12 @@ func (r *AgentRepository) CreateContentCandidateSet(ctx context.Context, approva
 	if err := json.Unmarshal(approval.ProposedPayload, &payload); err != nil {
 		return err
 	}
+	if payload.PostID <= 0 && approval.TargetID != nil {
+		payload.PostID = *approval.TargetID
+	}
+	if payload.PostID <= 0 || len(payload.Candidates) == 0 {
+		return errors.New("content candidate proposal requires a post and at least one candidate")
+	}
 	var before domain.Post
 	if err := json.Unmarshal(approval.BeforeSnapshot, &before); err != nil {
 		return err

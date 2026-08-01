@@ -24,14 +24,14 @@ describe('OperationsWorkspace', () => {
       }]}
     />);
 
-    await user.click(screen.getByRole('button', { name: 'Convert' }));
+    await user.click(screen.getByRole('button', { name: 'Make task' }));
     expect(onMutate).toHaveBeenCalledWith('/api/admin/ai-suggestions/7/convert');
 
-    await user.click(screen.getByRole('button', { name: 'Select and create approval' }));
+    await user.click(screen.getByRole('button', { name: 'Choose and create approval' }));
     expect(onMutate).toHaveBeenCalledWith('/api/admin/ai-candidates/8/select', 'POST', { candidate_id: 11 });
   });
 
-  it('uses the shared responsive field and metric layout contracts', () => {
+  it('keeps feedback out of the primary queue while retaining the shared form contract', () => {
     const { container } = render(<OperationsWorkspace
       locale="zh"
       onMutate={vi.fn().mockResolvedValue(undefined)}
@@ -40,7 +40,8 @@ describe('OperationsWorkspace', () => {
       candidateSets={[]}
     />);
 
-    expect(container.querySelector('.agent-run-metrics--operations')).toBeInTheDocument();
+    expect(container.querySelector('.operations-queue__counts')).toBeInTheDocument();
+    expect(container.querySelector('.operations-history')).toBeInTheDocument();
     const form = container.querySelector('.feedback-form');
     expect(form).toHaveClass('form-grid');
     expect(form?.querySelectorAll('.field')).toHaveLength(4);

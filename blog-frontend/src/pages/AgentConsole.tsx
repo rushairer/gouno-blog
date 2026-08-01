@@ -24,12 +24,14 @@ import {
 import { useI18n } from '../i18n';
 import '../styles/agent-console.css';
 
-type ConsoleTab = 'agents' | 'skills' | 'workflows' | 'operations' | 'providers' | 'knowledge' | 'runs' | 'approvals';
+type ConsoleTab = 'overview' | 'inbox' | 'automation' | 'records' | 'advanced' | 'runs' | 'approvals';
+type AdvancedSection = 'agents' | 'skills' | 'knowledge' | 'providers';
 type DeleteTarget = { kind: 'agent'; value: Agent } | { kind: 'provider'; value: ProviderProfile } | { kind: 'embedding'; value: EmbeddingProfile } | { kind: 'skill'; value: AgentSkill } | null;
 
 const copy = {
   en: {
-    title: 'AI Workspace', pageDescription: 'Configure providers, automate blog operations, and review every proposed change.',
+    title: 'AI Workspace', pageDescription: 'Let AI find opportunities, prepare work, and keep every change under your review.',
+    overview: 'Overview', inbox: 'To review', automation: 'Automation', records: 'Results & records', advanced: 'Advanced settings',
     agents: 'Agents', skills: 'Skills', workflows: 'Workflows', operations: 'Operations', providers: 'Providers', knowledge: 'Knowledge index', runs: 'Runs', approvals: 'Approvals',
     createAgent: 'Create Agent', createProvider: 'Add Provider', editAgent: 'Edit Agent', editProvider: 'Edit Provider',
     agentName: 'Agent name', providerName: 'Profile name', providerType: 'Provider type', provider: 'Provider / model',
@@ -56,7 +58,8 @@ const copy = {
     deleteProviderConfirm: 'Delete this Provider profile?', deleteEmbeddingConfirm: 'Delete this embedding profile?', deleteSkillConfirm: 'Delete this Skill? Existing Agents keep their current configuration.', providerNeeded: 'Create a Provider profile before adding an Agent.',
   },
   zh: {
-    title: 'AI 工作台', pageDescription: '配置模型供应商、自动运营博客，并审核每一项内容变更。',
+    title: 'AI 工作台', pageDescription: '让 AI 发现问题、准备工作；每一项变更始终由你审核决定。',
+    overview: '概览', inbox: '待我处理', automation: '自动化', records: '效果与记录', advanced: '高级设置',
     agents: 'Agents', skills: 'Skills', workflows: 'Workflows', operations: '运营闭环', providers: 'Providers', knowledge: '知识索引', runs: '运行记录', approvals: '审批箱',
     createAgent: '创建 Agent', createProvider: '添加 Provider', editAgent: '编辑 Agent', editProvider: '编辑 Provider',
     agentName: 'Agent 名称', providerName: '配置名称', providerType: 'Provider 类型', provider: 'Provider / 模型',
@@ -95,6 +98,9 @@ function formatCapability(value: string) {
 }
 
 function JsonPreview({ value }: { value: unknown }) {
+  if (value && typeof value === 'object' && !Array.isArray(value) && (value as { qa?: unknown }).qa === true && typeof (value as { field_type?: unknown }).field_type === 'string') {
+    return <div className="agent-json-preview agent-json-preview--explanation">这是创建候选的准备步骤，尚未包含具体内容修改。下一步会生成候选项，供你选择后再提交明确的变更审批。</div>;
+  }
   return <pre className="agent-json-preview">{JSON.stringify(value || {}, null, 2)}</pre>;
 }
 
@@ -234,10 +240,86 @@ function RunCitations({ run, locale }: { run: AgentRun; locale: 'en' | 'zh' }) {
   </section></Panel>;
 }
 
+function WorkspaceOverview({ locale, approvals, suggestions, candidateSets, mediaCandidates, workflows, onNavigate }: {
+  locale: 'en' | 'zh'; approvals: AgentApproval[]; suggestions: OperationalSuggestion[]; candidateSets: ContentCandidateSet[]; mediaCandidates: MediaCandidate[]; workflows: Workflow[]; onNavigate: (tab: ConsoleTab) => void;
+}) {
+  const zh = locale === 'zh';
+  const pendingApprovals = approvals.filter((item) => item.status === 'pending').length;
+  const newSuggestions = suggestions.filter((item) => item.status === 'new').length;
+  const pendingCandidates = candidateSets.filter((item) => item.status === 'pending').length;
+  const readyMedia = mediaCandidates.filter((item) => item.generation_status === 'ready_to_generate').length;
+  const enabledWorkflows = workflows.filter((item) => item.enabled).length;
+  const reviewCount = pendingApprovals + newSuggestions + pendingCandidates + readyMedia;
+  return <div className="workspace-overview section-stack">
+    <Panel className="workspace-overview__hero">
+      <div><h2>{zh ? '从一件想改善的事开始' : 'Start with what you want to improve'}</h2><p>{zh ? 'AI 会找出机会、准备建议；发布、修改和生成始终由你决定。' : 'AI finds opportunities and prepares proposals. You decide every publish, edit, and generation.'}</p></div>
+      <Button variant="primary" type="button" onClick={() => onNavigate('automation')}><GitBranch />{zh ? '查看自动化' : 'Explore automation'}</Button>
+    </Panel>
+    <section className="workspace-overview__summary" aria-label={zh ? '当前待办' : 'Current work'}>
+      <button type="button" onClick={() => onNavigate('inbox')}><ShieldCheck /><strong>{pendingApprovals}</strong><span>{zh ? '项等待审批' : 'awaiting approval'}</span></button>
+      <button type="button" onClick={() => onNavigate('inbox')}><Lightbulb /><strong>{newSuggestions + pendingCandidates}</strong><span>{zh ? '条内容建议待处理' : 'content suggestions to review'}</span></button>
+      <button type="button" onClick={() => onNavigate('inbox')}><Sparkles /><strong>{readyMedia}</strong><span>{zh ? '个图片任务可生成' : 'image tasks ready'}</span></button>
+    </section>
+    <div className="workspace-overview__columns">
+      <Panel>
+        <div className="panel-heading"><div><h3>{zh ? '下一步做什么？' : 'What should I do next?'}</h3><small>{zh ? '按影响与人工决策优先级排序。' : 'Sorted by impact and the decisions only you can make.'}</small></div></div>
+        <div className="workspace-overview__next"><strong>{reviewCount ? (zh ? `有 ${reviewCount} 项工作等你决定` : `${reviewCount} items need your decision`) : (zh ? '当前没有需要你处理的事项' : 'Nothing needs your decision right now')}</strong><p>{zh ? '先审阅 AI 准备好的建议；它不会自行修改博客内容。' : 'Review AI-prepared proposals first; it never changes blog content on its own.'}</p><Button variant="secondary" type="button" onClick={() => onNavigate('inbox')}><ShieldCheck />{zh ? '进入待我处理' : 'Open review queue'}</Button></div>
+      </Panel>
+      <Panel>
+        <div className="panel-heading"><div><h3>{zh ? '让 AI 持续帮忙' : 'Keep AI working for you'}</h3><small>{zh ? `已启用 ${enabledWorkflows} 个自动化流程。` : `${enabledWorkflows} automations are enabled.`}</small></div></div>
+        <ul className="workspace-overview__goals"><li><b>{zh ? '发布前检查' : 'Pre-publish checks'}</b><span>{zh ? '发现 SEO、链接和内容问题。' : 'Catch SEO, links, and content issues.'}</span></li><li><b>{zh ? '旧文更新' : 'Refresh older posts'}</b><span>{zh ? '发现需要维护的文章。' : 'Find posts that need maintenance.'}</span></li><li><b>{zh ? '运营周报' : 'Operations reporting'}</b><span>{zh ? '汇总值得关注的变化。' : 'Summarize changes worth attention.'}</span></li></ul>
+        <Button variant="secondary" type="button" onClick={() => onNavigate('automation')}><Play />{zh ? '配置自动化' : 'Configure automation'}</Button>
+      </Panel>
+    </div>
+  </div>;
+}
+
+function RecordsWorkspace({ locale, runs, agents, selectedRun, onInspect, formatDateTime }: {
+  locale: 'en' | 'zh'; runs: AgentRun[]; agents: Agent[]; selectedRun: { run: AgentRun; tool_calls: AgentToolCall[] } | null; onInspect: (run: AgentRun) => void; formatDateTime: (value: string) => string;
+}) {
+  const agentMap = new Map(agents.map((agent) => [agent.id, agent]));
+  const zh = locale === 'zh';
+  return <div className="agent-split-view"><Panel className="agent-master-panel agent-run-list">{runs.length === 0 ? <EmptyState label={zh ? '还没有 AI 工作记录。' : 'No AI work recorded yet.'} /> : runs.map((run) => <button className={selectedRun?.run.id === run.id ? 'active' : ''} key={run.id} type="button" onClick={() => onInspect(run)}><span className={`run-icon run-icon--${run.status}`}><Play /></span><span><strong>{agentMap.get(run.agent_id)?.name || `Agent #${run.agent_id}`}</strong><small>{formatDateTime(run.created_at)} · {run.provider}/{run.model}</small></span><span><b>{run.status.replace('_', ' ')}</b><ChevronRight /></span></button>)}</Panel><Panel className="agent-detail-panel">{selectedRun ? <div className="section-stack"><div className="panel-heading"><div><h2>{agentMap.get(selectedRun.run.agent_id)?.name}</h2><small>{zh ? '本次运行的结果、执行步骤与依据' : 'Results, execution steps, and evidence for this run'}</small></div><span className={`status-pill status-pill--${selectedRun.run.status}`}>{selectedRun.run.status.replace('_', ' ')}</span></div><section><h3>{zh ? 'AI 输出' : 'AI output'}</h3><div className="agent-output">{selectedRun.run.output_summary ? <MarkdownRenderer content={selectedRun.run.output_summary} /> : selectedRun.run.error_message ? <pre>{selectedRun.run.error_message}</pre> : '—'}</div></section><div className="agent-run-metrics"><span><small>{zh ? '用量' : 'Usage'}</small><strong>{selectedRun.run.input_tokens + selectedRun.run.output_tokens} tokens</strong></span><span><small>{zh ? '工具调用' : 'Tool calls'}</small><strong>{selectedRun.tool_calls.length}</strong></span><span><small>{zh ? '执行时间' : 'Created'}</small><strong>{formatDateTime(selectedRun.run.created_at)}</strong></span></div><RecordEvidence run={selectedRun} locale={locale} formatDateTime={formatDateTime} /></div> : <EmptyState label={zh ? '选择一条记录查看 AI 的工作过程。' : 'Select a record to inspect the AI work.'} />}</Panel></div>;
+}
+
+function ApprovalQueue({ locale, approvals, selected, onSelect, onReview }: {
+  locale: 'en' | 'zh'; approvals: AgentApproval[]; selected: AgentApproval | null; onSelect: (approval: AgentApproval) => void; onReview: (approval: AgentApproval, approved: boolean) => void;
+}) {
+  const zh = locale === 'zh';
+  return <Panel className="approval-queue"><div className="panel-heading"><div><h3>{zh ? '需要你决定的内容变更' : 'Changes that need your decision'}</h3><small>{zh ? 'AI 只能提出建议，不能自行应用。' : 'AI can propose changes, never apply them on its own.'}</small></div></div>{approvals.length === 0 ? <EmptyState label={zh ? '当前没有待审批变更。' : 'No changes awaiting approval.'} /> : <div className="agent-approval-workspace"><div className="agent-master-panel agent-approval-list">{approvals.map((approval) => <button className={selected?.id === approval.id ? 'active' : ''} key={approval.id} type="button" onClick={() => onSelect(approval)}><span><strong>{approval.action_type.replaceAll('_', ' ')}</strong><small>Run #{approval.run_id}</small></span><span className={`status-pill status-pill--${approval.status}`}>{approval.status}</span></button>)}</div><div className="agent-approval-detail">{selected ? <div className="section-stack"><section><h4>{zh ? '建议变更' : 'Proposed change'}</h4><JsonPreview value={selected.proposed_payload} /></section>{selected.status === 'pending' ? <div className="agent-approval-actions"><Button variant="secondary" type="button" onClick={() => onReview(selected, false)}><X />{zh ? '拒绝' : 'Reject'}</Button><Button variant="primary" type="button" onClick={() => onReview(selected, true)}><ShieldCheck />{zh ? '批准并执行' : 'Approve and execute'}</Button></div> : null}</div> : <EmptyState label={zh ? '选择一项查看变更内容。' : 'Select a change to review it.'} />}</div></div>}</Panel>;
+}
+
+// Kept temporarily as a stable fallback while the human-readable queue is
+// rolled out; the active inbox uses FriendlyApprovalQueue below.
+void ApprovalQueue;
+
+function approvalSummary(approval: AgentApproval, zh: boolean) {
+  const field = typeof approval.proposed_payload.field_type === 'string' ? approval.proposed_payload.field_type : '';
+  const fieldName = field === 'title' ? (zh ? '文章标题' : 'article title') : field === 'summary' ? (zh ? '文章摘要' : 'article summary') : field === 'cover_alt' ? (zh ? '封面替代文字' : 'cover alt text') : (zh ? '内容' : 'content');
+  const target = approval.target_id ? (zh ? `文章 #${approval.target_id}` : `post #${approval.target_id}`) : (zh ? '相关内容' : 'the related content');
+  if (approval.action_type === 'create_content_candidates') return { title: zh ? `为${target}准备${fieldName}候选` : `Prepare ${fieldName} alternatives for ${target}`, explanation: zh ? `AI 将创建可供你选择的${fieldName}建议。选择其中一项后，系统会再向你展示具体的内容修改审批。` : `AI will prepare ${fieldName} alternatives for you to choose from. Choosing one will create a separate approval with the exact content edit.` };
+  if (approval.action_type === 'create_media_candidate') return { title: zh ? `为${target}准备图片方案` : `Prepare an image brief for ${target}`, explanation: zh ? 'AI 将准备经过审核的图片说明；真正生成图片仍需要你之后再次点击确认。' : 'AI will prepare a reviewed image brief. Generating the actual image still requires a separate confirmation.' };
+  return { title: zh ? `对${target}应用内容建议` : `Apply a content proposal to ${target}`, explanation: zh ? '批准后，系统会应用下面展示的建议变更。' : 'Approving will apply the proposed change shown below.' };
+}
+
+function FriendlyApprovalQueue({ locale, approvals, selected, onSelect, onReview }: {
+  locale: 'en' | 'zh'; approvals: AgentApproval[]; selected: AgentApproval | null; onSelect: (approval: AgentApproval) => void; onReview: (approval: AgentApproval, approved: boolean) => void;
+}) {
+  const zh = locale === 'zh';
+  const selectedSummary = selected ? approvalSummary(selected, zh) : null;
+  return <Panel className="approval-queue"><div className="panel-heading"><div><h3>{zh ? '需要你决定的内容变更' : 'Changes that need your decision'}</h3><small>{zh ? '先读清楚影响，再决定是否批准。AI 不会绕过你的确认。' : 'Understand the impact first, then decide. AI never bypasses your confirmation.'}</small></div></div>{approvals.length === 0 ? <EmptyState label={zh ? '当前没有待审批变更。' : 'No changes awaiting approval.'} /> : <div className="agent-approval-workspace"><div className="agent-master-panel agent-approval-list">{approvals.map((approval) => { const summary = approvalSummary(approval, zh); return <button className={selected?.id === approval.id ? 'active' : ''} key={approval.id} type="button" onClick={() => onSelect(approval)}><span><strong>{summary.title}</strong><small>{zh ? `来自 AI 运行 #${approval.run_id}` : `From AI run #${approval.run_id}`}</small></span><span className={`status-pill status-pill--${approval.status}`}>{approval.status}</span></button>; })}</div><div className="agent-approval-detail">{selected && selectedSummary ? <div className="approval-decision section-stack"><div><span className="risk-label risk-label--propose">{zh ? '请你确认' : 'Your confirmation needed'}</span><h2>{selectedSummary.title}</h2><p>{selectedSummary.explanation}</p></div><div className="approval-decision__facts"><section><small>{zh ? '批准后会发生什么' : 'What happens if approved'}</small><strong>{selectedSummary.title}</strong></section><section><small>{zh ? '不会发生什么' : 'What will not happen'}</small><strong>{selected.action_type === 'create_content_candidates' ? (zh ? '不会直接修改或发布文章' : 'No article will be edited or published') : (zh ? '不会影响其他文章或设置' : 'No other post or settings are affected')}</strong></section></div>{selected.before_snapshot ? <div className="approval-decision__comparison"><section><small>{zh ? '变更前' : 'Before'}</small><JsonPreview value={selected.before_snapshot} /></section><section><small>{zh ? '建议的内容' : 'Proposed content'}</small><JsonPreview value={selected.proposed_payload} /></section></div> : null}<details className="approval-decision__technical"><summary>{zh ? '查看技术详情' : 'View technical details'}<ChevronRight /></summary><JsonPreview value={selected.proposed_payload} /></details>{selected.status === 'pending' ? <div className="agent-approval-actions"><Button variant="secondary" type="button" onClick={() => onReview(selected, false)}><X />{zh ? '拒绝此建议' : 'Reject proposal'}</Button><Button variant="primary" type="button" onClick={() => onReview(selected, true)}><ShieldCheck />{zh ? '批准并继续' : 'Approve and continue'}</Button></div> : null}</div> : <EmptyState label={zh ? '选择一项查看其影响。' : 'Select an item to understand its impact.'} />}</div></div>}</Panel>;
+}
+
+function RecordEvidence({ run, locale, formatDateTime }: { run: { run: AgentRun; tool_calls: AgentToolCall[] }; locale: 'en' | 'zh'; formatDateTime: (value: string) => string }) {
+  const zh = locale === 'zh';
+  return <section className="record-evidence" aria-label={zh ? '本次运行的执行日志' : 'Execution log for this run'}><div className="record-evidence__heading"><div><h3>{zh ? '本次运行的执行日志' : 'Execution log for this run'}</h3><small>{zh ? '每一步都属于上方当前选中的运行；展开可查看输入、结果与错误信息。' : 'Every step belongs to the selected run above. Expand a step to inspect its input, result, and errors.'}</small></div><strong>{zh ? `${run.tool_calls.length} 步` : `${run.tool_calls.length} steps`}</strong></div><div className="section-stack">{run.tool_calls.map((call, index) => <details className="tool-call-detail" key={call.id}><summary><span className="tool-call-index">#{index + 1}</span><ListChecks /><span className="tool-call-name">{call.tool_name}</span><div className="tool-call-meta">{call.created_at ? <small className="tool-call-time">{formatDateTime(call.created_at)}</small> : null}<span className={`risk-label risk-label--${call.risk_level}`}>{call.risk_level}</span></div></summary>{call.tool_name === 'content.audit_post' ? <ContentAudit value={call.result} locale={locale} /> : null}{call.tool_name === 'content.find_internal_links' ? <InternalLinkSuggestions value={call.result} locale={locale} /> : null}{call.tool_name === 'content.find_related' ? <RelatedContentSuggestions value={call.result} locale={locale} /> : null}{call.tool_name === 'content.list_stale_posts' ? <StalePostSuggestions value={call.result} locale={locale} formatDateTime={formatDateTime} /> : null}{call.tool_name === 'content.list_orphan_posts' ? <OrphanPostSuggestions value={call.result} locale={locale} /> : null}<JsonPreview value={{ arguments: call.arguments, result: call.result, error: call.error_message }} /></details>)}</div><RunCitations run={run.run} locale={locale} /></section>;
+}
+
 export default function AgentConsole() {
   const { locale, formatDateTime } = useI18n();
   const labels = copy[locale];
-  const [tab, setTab] = useState<ConsoleTab>('agents');
+  const [tab, setTab] = useState<ConsoleTab>('overview');
+  const [advancedSection, setAdvancedSection] = useState<AdvancedSection>('agents');
   const [providers, setProviders] = useState<ProviderProfile[]>([]);
   const [embeddingProfiles, setEmbeddingProfiles] = useState<EmbeddingProfile[]>([]);
   const [indexStatus, setIndexStatus] = useState<{ queued: number; failed: number; chunks: number }>({ queued: 0, failed: 0, chunks: 0 });
@@ -285,6 +367,14 @@ export default function AgentConsole() {
     setEditingEmbedding(null);
     setEditingSkill(null);
     setTab(nextTab);
+  };
+  const selectAdvanced = (section: AdvancedSection) => {
+    setEditingAgent(null);
+    setEditingProvider(null);
+    setEditingEmbedding(null);
+    setEditingSkill(null);
+    setAdvancedSection(section);
+    setTab('advanced');
   };
 
   const load = useCallback(async () => {
@@ -484,7 +574,7 @@ export default function AgentConsole() {
   const runAgent = async (agent: Agent) => {
     try {
       await mutate(`/api/admin/agents/${agent.id}/run`);
-      selectTab('runs');
+      selectTab('records');
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : labels.requestFailed);
     }
@@ -524,14 +614,11 @@ export default function AgentConsole() {
   };
 
   const tabs = [
-    ['agents', Bot, labels.agents],
-    ['skills', ListChecks, labels.skills],
-    ['workflows', GitBranch, labels.workflows],
-    ['operations', Lightbulb, labels.operations],
-    ['providers', KeyRound, labels.providers],
-    ['knowledge', DatabaseZap, labels.knowledge],
-    ['runs', Clock3, labels.runs],
-    ['approvals', ShieldCheck, labels.approvals],
+    ['overview', Sparkles, labels.overview],
+    ['inbox', ShieldCheck, labels.inbox],
+    ['automation', GitBranch, labels.automation],
+    ['records', Clock3, labels.records],
+    ['advanced', Settings2, labels.advanced],
   ] as const;
 
   return <AdminPage className="agent-console">
@@ -540,25 +627,27 @@ export default function AgentConsole() {
     {notice ? <Feedback type="success">{notice}</Feedback> : null}
     <Tabs value={tab} onValueChange={(value) => selectTab(value as ConsoleTab)} id="agent-workspace">
       <TabList label={labels.title}>
-        {tabs.map(([value, Icon, label]) => <Tab key={value} value={value}><Icon aria-hidden="true" /><span>{label}</span>{value === 'approvals' && pendingCount > 0 ? <b>{pendingCount}</b> : null}</Tab>)}
+        {tabs.map(([value, Icon, label]) => <Tab key={value} value={value}><Icon aria-hidden="true" /><span>{label}</span>{value === 'inbox' && pendingCount > 0 ? <b>{pendingCount}</b> : null}</Tab>)}
       </TabList>
       <TabPanel value={tab}>
         <div className="agent-console__main">
-        {tab === 'providers' && editingProvider ? <ProviderForm key={editingProvider === 'new' ? 'new' : editingProvider.id} initial={editingProvider === 'new' ? undefined : editingProvider} labels={labels} onSave={saveProvider} onCancel={() => setEditingProvider(null)} /> : null}
-        {tab === 'knowledge' && editingEmbedding ? <EmbeddingForm key={editingEmbedding === 'new' ? 'new' : editingEmbedding.id} initial={editingEmbedding === 'new' ? undefined : editingEmbedding} locale={locale} onSave={saveEmbedding} onCancel={() => setEditingEmbedding(null)} /> : null}
-        {tab === 'agents' && editingAgent ? <AgentForm key={editingAgent === 'new' ? 'new' : editingAgent.id} initial={editingAgent === 'new' ? undefined : editingAgent} providers={providers} tools={tools} presets={presets} skills={skills} labels={labels} onSave={saveAgent} onCancel={() => setEditingAgent(null)} /> : null}
-        {tab === 'skills' && editingSkill ? <SkillForm key={editingSkill === 'new' ? 'new' : editingSkill.id} initial={editingSkill === 'new' ? undefined : editingSkill} tools={tools} locale={locale} onSave={saveSkill} onCancel={() => setEditingSkill(null)} /> : null}
+        {tab === 'overview' ? <WorkspaceOverview locale={locale} approvals={approvals} suggestions={suggestions} candidateSets={candidateSets} mediaCandidates={mediaCandidates} workflows={workflows} onNavigate={selectTab} /> : null}
+        {tab === 'advanced' ? <nav className="advanced-settings-nav" aria-label={labels.advanced}><button className={advancedSection === 'agents' ? 'active' : ''} type="button" onClick={() => selectAdvanced('agents')}><Bot />{labels.agents}</button><button className={advancedSection === 'skills' ? 'active' : ''} type="button" onClick={() => selectAdvanced('skills')}><ListChecks />{labels.skills}</button><button className={advancedSection === 'knowledge' ? 'active' : ''} type="button" onClick={() => selectAdvanced('knowledge')}><DatabaseZap />{labels.knowledge}</button><button className={advancedSection === 'providers' ? 'active' : ''} type="button" onClick={() => selectAdvanced('providers')}><KeyRound />{labels.providers}</button></nav> : null}
+        {tab === 'advanced' && advancedSection === 'providers' && editingProvider ? <ProviderForm key={editingProvider === 'new' ? 'new' : editingProvider.id} initial={editingProvider === 'new' ? undefined : editingProvider} labels={labels} onSave={saveProvider} onCancel={() => setEditingProvider(null)} /> : null}
+        {tab === 'advanced' && advancedSection === 'knowledge' && editingEmbedding ? <EmbeddingForm key={editingEmbedding === 'new' ? 'new' : editingEmbedding.id} initial={editingEmbedding === 'new' ? undefined : editingEmbedding} locale={locale} onSave={saveEmbedding} onCancel={() => setEditingEmbedding(null)} /> : null}
+        {tab === 'advanced' && advancedSection === 'agents' && editingAgent ? <AgentForm key={editingAgent === 'new' ? 'new' : editingAgent.id} initial={editingAgent === 'new' ? undefined : editingAgent} providers={providers} tools={tools} presets={presets} skills={skills} labels={labels} onSave={saveAgent} onCancel={() => setEditingAgent(null)} /> : null}
+        {tab === 'advanced' && advancedSection === 'skills' && editingSkill ? <SkillForm key={editingSkill === 'new' ? 'new' : editingSkill.id} initial={editingSkill === 'new' ? undefined : editingSkill} tools={tools} locale={locale} onSave={saveSkill} onCancel={() => setEditingSkill(null)} /> : null}
 
-        {!editingAgent && !editingProvider && tab === 'agents' ? <WorkspacePanel className="agent-table-panel">
+        {!editingAgent && !editingProvider && tab === 'advanced' && advancedSection === 'agents' ? <WorkspacePanel className="agent-table-panel">
           <PanelHeader title={labels.agents} description={locale === 'zh' ? '配置自动化 Agent、运行计划和可用能力。' : 'Configure automated agents, schedules, and capabilities.'} actions={<Button variant="primary" onClick={() => providers.length > 0 ? setEditingAgent('new') : setError(labels.providerNeeded)}><Plus />{labels.createAgent}</Button>} />
-          {agents.length === 0 ? <div className="agent-empty-state"><Bot aria-hidden="true" /><h2>{locale === 'zh' ? '还没有 Agent' : 'No Agents yet'}</h2><p>{labels.noAgents}</p><button className="text-link" type="button" onClick={() => selectTab('providers')}><KeyRound />{locale === 'zh' ? '先配置 Provider' : 'Configure a Provider first'}<ChevronRight /></button></div> : <div className="table-scroll"><table className="content-table agent-table"><thead><tr><th>{labels.agents}</th><th>{labels.status}</th><th>{labels.provider}</th><th>{labels.schedule}</th><th>{labels.capabilities}</th><th>{labels.lastRun}</th><th>{labels.nextRun}</th><th>{labels.actions}</th></tr></thead><tbody>{agents.map((agent) => {
+          {agents.length === 0 ? <div className="agent-empty-state"><Bot aria-hidden="true" /><h2>{locale === 'zh' ? '还没有 Agent' : 'No Agents yet'}</h2><p>{labels.noAgents}</p><button className="text-link" type="button" onClick={() => selectAdvanced('providers')}><KeyRound />{locale === 'zh' ? '先配置 Provider' : 'Configure a Provider first'}<ChevronRight /></button></div> : <div className="table-scroll"><table className="content-table agent-table"><thead><tr><th>{labels.agents}</th><th>{labels.status}</th><th>{labels.provider}</th><th>{labels.schedule}</th><th>{labels.capabilities}</th><th>{labels.lastRun}</th><th>{labels.nextRun}</th><th>{labels.actions}</th></tr></thead><tbody>{agents.map((agent) => {
             const provider = providerMap.get(agent.provider_profile_id);
             const latestRun = runs.find((run) => run.agent_id === agent.id);
             return <tr key={agent.id}><td><div className="agent-identity"><span><Bot /></span><div><strong>{agent.name}</strong><small>{agent.description}</small></div></div></td><td><span className={`agent-state agent-state--${agent.enabled ? 'active' : 'paused'}`}><i />{agent.enabled ? labels.active : labels.paused}</span></td><td><strong>{provider?.name || '—'}</strong><small className="mono">{provider?.model || '—'}</small></td><td><strong>{agent.trigger_type === 'cron' ? agent.cron_expression : labels.manual}</strong><small>{agent.timezone}</small></td><td><div className="agent-chip-list">{agent.capabilities.slice(0, 3).map((item) => <span key={item}>{formatCapability(item)}</span>)}{agent.capabilities.length > 3 ? <span>+{agent.capabilities.length - 3}</span> : null}</div></td><td>{latestRun ? <><span className={`status-pill status-pill--${latestRun.status}`}>{latestRun.status.replace('_', ' ')}</span><small>{formatDateTime(latestRun.created_at)}</small></> : <small>{labels.never}</small>}</td><td><strong>{agent.next_run_at ? formatDateTime(agent.next_run_at) : '—'}</strong></td><td><div className="agent-row-actions"><button type="button" title={locale === 'zh' ? '保存为 Skill' : 'Save as Skill'} onClick={() => openSaveSkillModal(agent)}><Sparkles /></button><button type="button" title={labels.runNow} onClick={() => void runAgent(agent)} disabled={!agent.enabled}><Play /></button><button type="button" title={labels.edit} onClick={() => setEditingAgent(agent)}><Settings2 /></button><button type="button" title={agent.enabled ? labels.disable : labels.enable} onClick={() => void mutate(`/api/admin/agents/${agent.id}/${agent.enabled ? 'disable' : 'enable'}`).catch((reason: Error) => setError(reason.message))}>{agent.enabled ? <CirclePause /> : <Check />}</button><button type="button" title={labels.delete} onClick={() => setDeleteTarget({ kind: 'agent', value: agent })}><Trash2 /></button></div></td></tr>;
           })}</tbody></table></div>}
         </WorkspacePanel> : null}
 
-        {!editingAgent && !editingProvider && tab === 'agents' && agents.length > 0 ? <Panel className="save-skill-panel">
+        {!editingAgent && !editingProvider && tab === 'advanced' && advancedSection === 'agents' && agents.length > 0 ? <Panel className="save-skill-panel">
           <PanelHeader
             title={<><Sparkles aria-hidden="true" /> {locale === 'zh' ? '保存为可复用 Skill' : 'Save as reusable Skill'}</>}
             description={locale === 'zh' ? '将已有 Agent 的能力与系统提示词提炼保存为独立 Skill 模块，以便在 Workflow 工作流或其他 Agent 中组合复用。' : 'Extract capabilities and system prompts from existing agents into reusable skill modules for workflows or other agents.'}
@@ -594,20 +683,21 @@ export default function AgentConsole() {
           </div>
         </Panel> : null}
 
-        {!editingAgent && !editingProvider && !editingSkill && tab === 'skills' ? <WorkspacePanel className="agent-table-panel">
+        {!editingAgent && !editingProvider && !editingSkill && tab === 'advanced' && advancedSection === 'skills' ? <WorkspacePanel className="agent-table-panel">
           <PanelHeader title={labels.skills} description={locale === 'zh' ? '管理可复用能力定义与执行边界。' : 'Manage reusable capability definitions and execution boundaries.'} actions={<><Button variant="secondary" type="button" onClick={() => void importSkill()}>{locale === 'zh' ? '导入 JSON' : 'Import JSON'}</Button>{skills.map((skill) => <Button variant="ghost" size="compact" type="button" key={skill.id} onClick={() => void exportSkill(skill)}>{locale === 'zh' ? '导出' : 'Export'} {skill.name} v{skill.version}</Button>)}<Button variant="primary" type="button" onClick={() => setEditingSkill('new')}><Plus />{locale === 'zh' ? '创建 Skill' : 'Create Skill'}</Button></>} />
           {skills.length === 0 ? <EmptyState label={labels.noSkills} /> : <div className="table-scroll"><table className="content-table agent-table"><thead><tr><th>{labels.skills}</th><th>{labels.mode}</th><th>{labels.capabilities}</th><th>Version</th><th>{labels.created}</th><th>{labels.actions}</th></tr></thead><tbody>{skills.map((skill) => <tr key={skill.id}><td><strong>{skill.name}</strong><small>{skill.description}</small></td><td><span className={`risk-label risk-label--${skill.execution_mode === 'approval' ? 'propose' : 'read'}`}>{skill.execution_mode === 'approval' ? labels.approvalMode : labels.advisory}</span></td><td><div className="agent-chip-list">{skill.capabilities.slice(0, 4).map((item) => <span key={item}>{formatCapability(item)}</span>)}{skill.capabilities.length > 4 ? <span>+{skill.capabilities.length - 4}</span> : null}</div></td><td><strong>v{skill.version}</strong></td><td><small>{formatDateTime(skill.updated_at)}</small></td><td><div className="agent-row-actions"><button type="button" title={labels.edit} onClick={() => setEditingSkill(skill)}><Settings2 /></button><button type="button" title={labels.delete} onClick={() => setDeleteTarget({ kind: 'skill', value: skill })}><Trash2 /></button></div></td></tr>)}</tbody></table></div>}
         </WorkspacePanel> : null}
 
-        {!editingAgent && !editingProvider && tab === 'providers' ? <WorkspacePanel className="agent-table-panel">
+        {!editingAgent && !editingProvider && tab === 'advanced' && advancedSection === 'providers' ? <WorkspacePanel className="agent-table-panel">
           <PanelHeader title={labels.providers} description={locale === 'zh' ? '管理模型连接、凭据和默认模型。' : 'Manage model connections, credentials, and defaults.'} actions={<Button variant="primary" onClick={() => setEditingProvider('new')}><Plus />{labels.createProvider}</Button>} />
           {providers.length === 0 ? <EmptyState label={labels.noProviders} /> : <div className="table-scroll"><table className="content-table agent-table"><thead><tr><th>{labels.providerName}</th><th>{labels.providerType}</th><th>{labels.baseUrl}</th><th>{labels.model}</th><th>{labels.apiKey}</th><th>{labels.status}</th><th>{labels.actions}</th></tr></thead><tbody>{providers.map((provider) => <tr key={provider.id}><td><strong>{provider.name}</strong></td><td>{provider.provider_type}</td><td className="mono">{provider.base_url}</td><td className="mono">{provider.model}</td><td><span className="secret-mask">•••• {provider.api_key_last4}</span><small>{labels.keyStored}</small></td><td><span className={`agent-state agent-state--${provider.enabled ? 'active' : 'paused'}`}><i />{provider.enabled ? labels.active : labels.paused}</span></td><td><div className="agent-row-actions"><button type="button" title={labels.test} onClick={async () => { try { await mutate(`/api/admin/provider-profiles/${provider.id}/test`); setNotice(labels.connected); } catch (reason) { setError(reason instanceof Error ? reason.message : labels.requestFailed); } }}><RefreshCw /></button><button type="button" title={labels.edit} onClick={() => setEditingProvider(provider)}><Settings2 /></button><button type="button" title={labels.delete} onClick={() => setDeleteTarget({ kind: 'provider', value: provider })}><Trash2 /></button></div></td></tr>)}</tbody></table></div>}
         </WorkspacePanel> : null}
 
-        {!editingAgent && !editingProvider && !editingEmbedding && !editingSkill && tab === 'workflows' ? <WorkflowWorkspace workflows={workflows} runs={workflowRuns} metrics={workflowMetrics} locale={locale} onMutate={mutate} onSave={saveWorkflow} /> : null}
-        {!editingAgent && !editingProvider && !editingEmbedding && !editingSkill && tab === 'operations' ? <OperationsWorkspace suggestions={suggestions} candidateSets={candidateSets} mediaCandidates={mediaCandidates} metrics={outcomeMetrics} locale={locale} onMutate={mutate} /> : null}
+        {!editingAgent && !editingProvider && !editingEmbedding && !editingSkill && tab === 'automation' ? <WorkflowWorkspace workflows={workflows} runs={workflowRuns} metrics={workflowMetrics} locale={locale} onMutate={mutate} onSave={saveWorkflow} /> : null}
+        {!editingAgent && !editingProvider && !editingEmbedding && !editingSkill && tab === 'inbox' ? <><FriendlyApprovalQueue locale={locale} approvals={approvals} selected={selectedApproval} onSelect={setSelectedApproval} onReview={review} /><OperationsWorkspace suggestions={suggestions} candidateSets={candidateSets} mediaCandidates={mediaCandidates} metrics={outcomeMetrics} locale={locale} onMutate={mutate} /></> : null}
+        {!editingAgent && !editingProvider && tab === 'records' ? <RecordsWorkspace locale={locale} runs={runs} agents={agents} selectedRun={selectedRun} onInspect={(run) => void inspectRun(run)} formatDateTime={formatDateTime} /> : null}
 
-        {!editingAgent && !editingProvider && !editingEmbedding && tab === 'knowledge' ? <div className="section-stack">
+        {!editingAgent && !editingProvider && !editingEmbedding && tab === 'advanced' && advancedSection === 'knowledge' ? <div className="section-stack">
           <WorkspacePanel><PanelHeader title={<><DatabaseZap />{labels.knowledge}</>} description={locale === 'zh' ? '仅索引已发布文章；队列异步处理。' : 'Published content only; jobs run asynchronously.'} actions={<><Button variant="secondary" type="button" onClick={() => void mutate('/api/admin/ai-index/retry')}><RefreshCw />{locale === 'zh' ? '重试失败任务' : 'Retry failed'}</Button><Button variant="secondary" type="button" onClick={() => void mutate('/api/admin/ai-index/rebuild')}><RefreshCw />{locale === 'zh' ? '全量重建' : 'Rebuild all'}</Button><Button variant="primary" type="button" onClick={() => setEditingEmbedding('new')}><Plus />{locale === 'zh' ? '添加嵌入配置' : 'Add embedding profile'}</Button></>} /><div className="agent-run-metrics"><span><small>{locale === 'zh' ? '分段' : 'Chunks'}</small><strong>{indexStatus.chunks}</strong></span><span><small>{locale === 'zh' ? '队列' : 'Queued'}</small><strong>{indexStatus.queued}</strong></span><span><small>{locale === 'zh' ? '失败' : 'Failed'}</small><strong>{indexStatus.failed}</strong></span></div></WorkspacePanel>
           <Panel className="agent-table-panel">{embeddingProfiles.length === 0 ? <EmptyState label={locale === 'zh' ? '还没有嵌入配置。' : 'No embedding profiles configured.'} /> : <div className="table-scroll"><table className="content-table agent-table"><thead><tr><th>{labels.providerName}</th><th>{labels.baseUrl}</th><th>{labels.model}</th><th>{locale === 'zh' ? '维度' : 'Dimensions'}</th><th>{labels.status}</th><th>{labels.actions}</th></tr></thead><tbody>{embeddingProfiles.map((profile) => <tr key={profile.id}><td><strong>{profile.name}</strong><small className="secret-mask">•••• {profile.api_key_last4}</small></td><td className="mono">{profile.base_url}</td><td className="mono">{profile.model}</td><td>{profile.dimensions}</td><td><span className={`agent-state agent-state--${profile.enabled ? 'active' : 'paused'}`}><i />{profile.enabled ? labels.active : labels.paused}</span></td><td><div className="agent-row-actions"><button type="button" title={labels.test} onClick={() => void mutate(`/api/admin/embedding-profiles/${profile.id}/test`).then(() => setNotice(labels.connected)).catch((reason: Error) => setError(reason.message))}><RefreshCw /></button><button type="button" title={labels.edit} onClick={() => setEditingEmbedding(profile)}><Settings2 /></button><button type="button" title={labels.delete} onClick={() => setDeleteTarget({ kind: 'embedding', value: profile })}><Trash2 /></button></div></td></tr>)}</tbody></table></div>}</Panel>
         </div> : null}

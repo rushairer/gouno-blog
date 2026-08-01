@@ -64,7 +64,7 @@ export function WorkflowWorkspace({ workflows, runs, metrics, locale, onMutate, 
   };
   if (editing) return <WorkflowEditor initial={editing === 'new' ? undefined : editing} labels={labels} onCancel={() => setEditing(null)} onSave={async (value) => { await onSave(value); setEditing(null); }} />;
   return <WorkspacePanel className="workflow-workspace">
-    <PanelHeader title={locale === 'zh' ? 'Workflows' : 'Workflows'} description={locale === 'zh' ? '编排可审计、可回滚的自动化运行流程。' : 'Orchestrate auditable, reversible automation runs.'} actions={<Button variant="primary" type="button" onClick={() => setEditing('new')}><Plus />{labels.add}</Button>} />
+    <PanelHeader title={locale === 'zh' ? '自动化' : 'Automation'} description={locale === 'zh' ? '选择一项持续运营目标；每次执行都可追溯、可试运行、可回滚。' : 'Choose an ongoing goal. Every run is traceable, testable, and reversible.'} actions={<Button variant="primary" type="button" onClick={() => setEditing('new')}><Plus />{labels.add}</Button>} />
     {workflows.length === 0 || !selectedWorkflow ? <EmptyState label={labels.empty} /> : <div className="agent-split-view workflow-split-view">
       <Panel className="agent-master-panel workflow-master-list">
         {workflows.map((workflow) => {

@@ -62,9 +62,10 @@ describe('AgentConsole', () => {
 
   it('loads agents, providers, runs, approvals, tools, and presets in parallel', async () => {
     renderConsole();
-    expect((await screen.findAllByText('Weekly Operations')).length).toBeGreaterThan(0);
+    expect(await screen.findByRole('heading', { name: 'Start with what you want to improve' })).toBeInTheDocument();
     await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(16));
-    expect(screen.getByRole('tab', { name: 'Agents' })).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('tab', { name: 'Advanced settings' }));
+    expect(screen.getAllByText('Weekly Operations').length).toBeGreaterThan(0);
     expect(screen.getByText('gpt-5-mini')).toBeInTheDocument();
   });
 
@@ -78,7 +79,9 @@ describe('AgentConsole', () => {
       return Response.json({ data: responseFor(url) });
     });
     renderConsole();
-    expect((await screen.findAllByText('Weekly Operations')).length).toBeGreaterThan(0);
+    await screen.findByRole('tab', { name: 'Advanced settings' });
+    await user.click(screen.getByRole('tab', { name: 'Advanced settings' }));
+    expect(screen.getAllByText('Weekly Operations').length).toBeGreaterThan(0);
 
     const extractBtn = screen.getAllByRole('button', { name: 'Save as Skill' })[0];
     await user.click(extractBtn);
@@ -100,8 +103,9 @@ describe('AgentConsole', () => {
   it('opens the provider editor from the provider workspace', async () => {
     const user = userEvent.setup();
     renderConsole();
-    expect((await screen.findAllByText('Weekly Operations')).length).toBeGreaterThan(0);
-    await user.click(screen.getByRole('tab', { name: 'Providers' }));
+    await screen.findByRole('tab', { name: 'Advanced settings' });
+    await user.click(screen.getByRole('tab', { name: 'Advanced settings' }));
+    await user.click(screen.getByRole('button', { name: 'Providers' }));
     expect(screen.getByText('OpenAI')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Add Provider' }));
     expect(screen.getByRole('heading', { name: 'Add Provider' })).toBeInTheDocument();
@@ -111,18 +115,20 @@ describe('AgentConsole', () => {
   it('closes tab-scoped editors when switching workspaces', async () => {
     const user = userEvent.setup();
     renderConsole();
-    expect((await screen.findAllByText('Weekly Operations')).length).toBeGreaterThan(0);
+    await screen.findByRole('tab', { name: 'Advanced settings' });
+    await user.click(screen.getByRole('tab', { name: 'Advanced settings' }));
 
     await user.click(screen.getByRole('button', { name: 'Create Agent' }));
     expect(screen.getByRole('heading', { name: 'Create Agent' })).toBeInTheDocument();
-    await user.click(screen.getByRole('tab', { name: 'Skills' }));
+    await user.click(screen.getByRole('button', { name: 'Skills' }));
     expect(screen.queryByRole('heading', { name: 'Create Agent' })).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Skills' })).toBeInTheDocument();
+    expect(screen.getByText('No saved Skills yet. Skills are reusable governed Agent configurations.')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('tab', { name: 'Workflows' }));
+    await user.click(screen.getByRole('tab', { name: 'Automation' }));
     await user.click(screen.getByRole('button', { name: 'Create Workflow' }));
     expect(screen.getByRole('heading', { name: 'Create Workflow' })).toBeInTheDocument();
-    await user.click(screen.getByRole('tab', { name: 'Providers' }));
+    await user.click(screen.getByRole('tab', { name: 'Advanced settings' }));
+    await user.click(screen.getByRole('button', { name: 'Providers' }));
     expect(screen.queryByRole('heading', { name: 'Create Workflow' })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Providers' })).toBeInTheDocument();
   });
@@ -162,9 +168,11 @@ describe('AgentConsole', () => {
       return Response.json({ data: responseFor(url) });
     });
     renderConsole();
-    expect((await screen.findAllByText('Weekly Operations')).length).toBeGreaterThan(0);
-    await user.click(screen.getByRole('tab', { name: 'Runs' }));
+    await screen.findByRole('tab', { name: 'Results & records' });
+    await user.click(screen.getByRole('tab', { name: 'Results & records' }));
     await user.click(screen.getByText('Weekly Operations'));
+    expect(await screen.findByRole('heading', { name: 'Execution log for this run' })).toBeInTheDocument();
+    expect(screen.getByText('Every step belongs to the selected run above. Expand a step to inspect its input, result, and errors.')).toBeInTheDocument();
     expect(await screen.findByRole('region', { name: 'Content audit' })).toBeInTheDocument();
     expect(screen.getByText('image alt missing')).toBeInTheDocument();
     expect(screen.getByText('242')).toBeInTheDocument();

@@ -178,6 +178,12 @@ func (s *ApprovalService) Approve(ctx context.Context, id int64, reviewer, note 
 }
 
 func (s *ApprovalService) validateConflict(ctx context.Context, approval *domain.AgentApproval) error {
+	// Only approvals that write an existing post need optimistic-concurrency
+	// protection. Preparatory approvals (candidate sets and image briefs) do
+	// not mutate the post, and must remain usable after a separate edit.
+	if !approvalMutatesExistingPost(approval.ActionType) {
+		return nil
+	}
 	if approval.TargetType != "post" || approval.TargetID == nil || len(approval.BeforeSnapshot) == 0 {
 		return nil
 	}
@@ -190,6 +196,10 @@ func (s *ApprovalService) validateConflict(ctx context.Context, approval *domain
 		return ErrApprovalConflict
 	}
 	return nil
+}
+
+func approvalMutatesExistingPost(actionType string) bool {
+	return actionType == "update_post" || actionType == "update_tags"
 }
 
 func (s *ApprovalService) execute(ctx context.Context, approval *domain.AgentApproval) error {
@@ -280,7 +290,15 @@ func (s *ApprovalService) execute(ctx context.Context, approval *domain.AgentApp
 		payload.SourceRunID = &approval.RunID
 		return s.repo.CreateOperationalSuggestion(ctx, &payload)
 	case "create_content_candidates":
-		return s.repo.CreateContentCandidateSet(ctx, approval)
+		if err := s.repo.CreateContentCandidateSet(ctx, approval); err != nil {
+			return fmt.Errorf("%w: %v", ErrInvalid, err)
+		}
+		return nil
+	case "create_media_candidate":
+		if err := s.repo.CreateMediaCandidate(ctx, approval); err != nil {
+			return fmt.Errorf("%w: %v", ErrInvalid, err)
+		}
+		return nil
 	case "create_distribution_draft":
 		// The approved payload remains in ai_approvals as the audited, copyable
 		// draft. Do not add external delivery here: every connector requires its
@@ -299,7 +317,10 @@ func (s *ApprovalService) execute(ctx context.Context, approval *domain.AgentApp
 		switch payload.Format {
 		case "social", "newsletter", "faq", "image_brief":
 			if payload.Format == "image_brief" {
-				return s.repo.CreateMediaCandidate(ctx, approval)
+				if err := s.repo.CreateMediaCandidate(ctx, approval); err != nil {
+					return fmt.Errorf("%w: %v", ErrInvalid, err)
+				}
+				return nil
 			}
 			return nil
 		default:
