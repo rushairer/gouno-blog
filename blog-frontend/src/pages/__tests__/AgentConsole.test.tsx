@@ -67,6 +67,33 @@ describe('AgentConsole', () => {
     expect(screen.getByText('gpt-5-mini')).toBeInTheDocument();
   });
 
+  it('renders a governed content proposal as a readable preview with raw JSON retained for audit', async () => {
+    const user = userEvent.setup();
+    vi.mocked(apiFetch).mockImplementation(async (input) => {
+      const url = input.toString();
+      if (url.startsWith('/api/admin/agent-approvals')) return Response.json({ data: { list: [{
+        id: 4, run_id: 12, tool_call_id: 8, action_type: 'create_draft', target_type: 'post', status: 'pending',
+        proposed_payload: {
+          title: 'AI Daily Briefing', slug: 'ai-daily-briefing', summary: 'Today\'s verified AI news.',
+          tags: ['AI', 'Daily news'], content: '## Headlines\n\nA readable **Markdown** preview.',
+        }, expires_at: '2026-08-03T00:00:00Z', created_at: '2026-08-02T00:00:00Z',
+      }] } });
+      return Response.json({ data: responseFor(url) });
+    });
+    renderConsole();
+    await user.click(await screen.findByRole('tab', { name: /To review/ }));
+    expect(await screen.findByRole('region', { name: 'Content proposal preview' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'AI Daily Briefing' })).toBeInTheDocument();
+    expect(screen.getByText("Today's verified AI news.")).toBeInTheDocument();
+    expect(screen.getByText('Headlines')).toBeInTheDocument();
+    expect(screen.getByText('AI')).toBeInTheDocument();
+    expect(screen.getByText('Daily news')).toBeInTheDocument();
+    const technicalDetails = screen.getByText('View technical details').closest('details');
+    expect(technicalDetails).toBeInTheDocument();
+    await user.click(screen.getByText('View technical details'));
+    expect(technicalDetails).toHaveTextContent('"slug": "ai-daily-briefing"');
+  });
+
   it('copies a Skill from the Skill list, not from an Agent', async () => {
     const user = userEvent.setup();
     const prompt = vi.spyOn(window, 'prompt').mockReturnValue('Weekly Operations Copy');

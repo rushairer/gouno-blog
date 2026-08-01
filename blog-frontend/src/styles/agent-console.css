@@ -77,6 +77,20 @@
 .approval-decision__comparison section { min-width: 0; }
 .approval-decision__comparison .agent-json-preview { margin-top: 6px; }
 .agent-json-preview--explanation { color: var(--color-text-muted); font-family: inherit; line-height: 1.6; white-space: normal; }
+.proposal-preview { display: grid; gap: 14px; border: 1px solid var(--agent-border); border-radius: 8px; padding: 16px; background: var(--ui-panel); }
+.proposal-preview__header small { color: var(--color-text-muted); font-size: 12px; font-weight: 700; }
+.proposal-preview__header h3 { margin: 4px 0 0; font-size: 18px; line-height: 1.4; }
+.proposal-preview__summary { margin: 0; color: var(--color-text-muted); line-height: 1.65; }
+.proposal-preview__metadata { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 12px; margin: 0; }
+.proposal-preview__metadata div { min-width: 0; }
+.proposal-preview__metadata dt { color: var(--color-text-muted); font-size: 12px; }
+.proposal-preview__metadata dd { margin: 5px 0 0; overflow-wrap: anywhere; }
+.proposal-preview__tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.proposal-preview__tags span { border: 1px solid var(--agent-border); border-radius: 999px; padding: 3px 8px; color: var(--color-text-muted); font-size: 12px; }
+.proposal-preview__content { min-width: 0; border-top: 1px solid var(--agent-border); padding-top: 14px; }
+.proposal-preview__content > :first-child { margin-top: 0; }
+.proposal-preview__content > :last-child { margin-bottom: 0; }
+.proposal-preview__unchanged { margin: 0; color: var(--color-text-muted); }
 .approval-decision__technical summary,
 .operations-task details > summary,
 .operations-history > summary { display: flex; align-items: center; justify-content: space-between; color: var(--color-text-muted); cursor: pointer; font-size: 13px; font-weight: 700; list-style: none; }
@@ -673,6 +687,12 @@
   border-color: color-mix(in srgb, var(--warning) 42%, var(--agent-border));
   background: var(--status-warning-bg);
   color: var(--status-warning-fg);
+}
+
+.risk-label--write {
+  border-color: color-mix(in srgb, var(--danger) 42%, var(--agent-border));
+  background: var(--status-danger-bg);
+  color: var(--status-danger-fg);
 }
 
 .agent-split-view,
@@ -1364,7 +1384,8 @@
   .workspace-overview__hero .btn { justify-self: start; }
 
   .approval-decision__facts,
-  .approval-decision__comparison { grid-template-columns: 1fr; }
+  .approval-decision__comparison,
+  .proposal-preview__metadata { grid-template-columns: 1fr; }
 
   .operations-task { grid-template-columns: 34px minmax(0, 1fr); }
   .operations-task__actions { grid-column: 2; justify-content: flex-start; }

@@ -80,8 +80,8 @@ describe('WorkflowWorkspace', () => {
     const dryRun = { ...failedRun, id: 19, dry_run: true, status: 'succeeded', error_message: undefined, created_at: '2026-08-01T10:00:00Z' };
     render(<WorkflowWorkspace workflows={[workflow]} runs={[dryRun, failedRun]} metrics={[]} agents={[]} locale="zh" onMutate={vi.fn()} onRun={vi.fn()} onSave={vi.fn()} />);
 
-    expect(screen.getByText('最近正式运行').nextElementSibling).toHaveTextContent('failed');
-    expect(screen.getByText('最近试运行：succeeded')).toBeInTheDocument();
+    expect(screen.getByText('最近正式运行').nextElementSibling).toHaveTextContent('失败');
+    expect(screen.getByText('最近试运行：成功')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '重试' })).toBeEnabled();
   });
 
