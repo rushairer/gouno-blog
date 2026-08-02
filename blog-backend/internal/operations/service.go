@@ -45,24 +45,105 @@ func (s *Service) RegisterTools() error {
 		tool.Definition{
 			Name: "content.list_broken_links", Description: "List cached broken-link evidence for published posts.",
 			Parameters: schema(`{"max_age_hours":{"type":"integer","minimum":1,"maximum":720},"limit":{"type":"integer","minimum":1,"maximum":100}}`),
-			Risk:       domain.ToolRiskRead, Execute: s.listBrokenLinks,
+			Risk:       domain.ToolRiskRead, Scope: &tool.ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"post_id", "id"}}, Execute: s.listBrokenLinks,
 		},
 		tool.Definition{
 			Name: "content.propose_candidates", Description: "Propose title, summary, or cover-alt candidates for human selection.",
 			Parameters: json.RawMessage(`{"type":"object","additionalProperties":false,"required":["post_id","field_type","candidates"],"properties":{"post_id":{"type":"integer","minimum":1},"field_type":{"type":"string","enum":["title","summary","cover_alt"]},"candidates":{"type":"array","minItems":2,"maxItems":5,"items":{"type":"object","additionalProperties":false,"required":["value"],"properties":{"value":{"type":"string"},"rationale":{"type":"string"}}}}}}`),
-			Risk:       domain.ToolRiskPropose, Propose: s.proposeCandidates,
+			Risk:       domain.ToolRiskPropose, Scope: &tool.ScopeRule{ResourceType: "post", Argument: "post_id"}, Propose: s.proposeCandidates,
 		},
 		tool.Definition{
 			Name: "content.list_tag_bloat", Description: "Identify low-use and case-colliding tags from aggregate post metadata.",
 			Parameters: schema(`{"low_usage_threshold":{"type":"integer","minimum":1,"maximum":20},"limit":{"type":"integer","minimum":1,"maximum":100}}`),
-			Risk:       domain.ToolRiskRead, Execute: s.listTagBloat,
+			Risk:       domain.ToolRiskRead, Scope: &tool.ScopeRule{Discovery: true, OutputResourceType: "tag", OutputKeys: []string{"tag", "name"}}, Execute: s.listTagBloat,
 		},
 		tool.Definition{
 			Name: "operations.propose_suggestion", Description: "Propose an evidence-backed internal operations suggestion.",
 			Parameters: json.RawMessage(`{"type":"object","additionalProperties":false,"required":["source_type","source_key","title","description","priority","evidence"],"properties":{"source_type":{"type":"string"},"source_key":{"type":"string"},"title":{"type":"string"},"description":{"type":"string"},"priority":{"type":"string","enum":["low","medium","high"]},"evidence":{"type":"object"},"window_start":{"type":"string"},"window_end":{"type":"string"}}}`),
 			Risk:       domain.ToolRiskPropose, Propose: s.proposeSuggestion,
 		},
+		tool.Definition{Name: "media.get_asset", Description: "Read metadata for one media asset without returning file bytes.", Parameters: json.RawMessage(`{"type":"object","additionalProperties":false,"required":["id"],"properties":{"id":{"type":"integer","minimum":1}}}`), Risk: domain.ToolRiskRead, Scope: &tool.ScopeRule{ResourceType: "media_asset", Argument: "id"}, Execute: s.getMediaAsset},
+		tool.Definition{Name: "operations.get_suggestion", Description: "Read one internal operational suggestion and its evidence.", Parameters: json.RawMessage(`{"type":"object","additionalProperties":false,"required":["id"],"properties":{"id":{"type":"integer","minimum":1}}}`), Risk: domain.ToolRiskRead, Scope: &tool.ScopeRule{ResourceType: "operational_suggestion", Argument: "id"}, Execute: s.getSuggestion},
+		tool.Definition{Name: "comments.get_comment", Description: "Read one comment with private identity fields removed.", Parameters: json.RawMessage(`{"type":"object","additionalProperties":false,"required":["id"],"properties":{"id":{"type":"integer","minimum":1}}}`), Risk: domain.ToolRiskRead, Scope: &tool.ScopeRule{ResourceType: "comment", Argument: "id"}, Execute: s.getComment},
+		tool.Definition{Name: "content.list_categories", Description: "List blog categories and aggregate post counts.", Parameters: schema(`{}`), Risk: domain.ToolRiskRead, Scope: &tool.ScopeRule{Discovery: true, OutputResourceType: "category", OutputKeys: []string{"id"}}, Execute: s.listCategories},
 	)
+}
+
+func (s *Service) getMediaAsset(ctx context.Context, raw json.RawMessage) (any, error) {
+	var args struct {
+		ID int64 `json:"id"`
+	}
+	if err := decode(raw, &args); err != nil || args.ID <= 0 {
+		return nil, tool.ErrInvalidArgument
+	}
+	var item domain.MediaAsset
+	err := s.db.QueryRowContext(ctx, `SELECT id,filename,storage_name,url,content_type,size_bytes,alt_text,created_by,created_at FROM media_assets WHERE id=$1`, args.ID).Scan(&item.ID, &item.Filename, &item.StorageName, &item.URL, &item.ContentType, &item.SizeBytes, &item.AltText, &item.CreatedBy, &item.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	item.StorageName = ""
+	return &item, nil
+}
+
+func (s *Service) getSuggestion(ctx context.Context, raw json.RawMessage) (any, error) {
+	var args struct {
+		ID int64 `json:"id"`
+	}
+	if err := decode(raw, &args); err != nil || args.ID <= 0 {
+		return nil, tool.ErrInvalidArgument
+	}
+	items, err := s.ListSuggestions(ctx, "all", 200)
+	if err != nil {
+		return nil, err
+	}
+	for _, item := range items {
+		if item.ID == args.ID {
+			return item, nil
+		}
+	}
+	return nil, sql.ErrNoRows
+}
+
+func (s *Service) getComment(ctx context.Context, raw json.RawMessage) (any, error) {
+	var args struct {
+		ID int64 `json:"id"`
+	}
+	if err := decode(raw, &args); err != nil || args.ID <= 0 {
+		return nil, tool.ErrInvalidArgument
+	}
+	var id, postID, reportCount int64
+	var parentID *int64
+	var content, status string
+	var visible bool
+	var createdAt time.Time
+	err := s.db.QueryRowContext(ctx, `SELECT c.id,c.post_id,c.parent_id,c.content,c.status,c.is_visible,(SELECT COUNT(*) FROM comment_reports cr WHERE cr.comment_id=c.id),c.created_at FROM comments c WHERE c.id=$1`, args.ID).Scan(&id, &postID, &parentID, &content, &status, &visible, &reportCount, &createdAt)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"id": id, "post_id": postID, "parent_id": parentID, "content": content, "status": status, "is_visible": visible, "report_count": reportCount, "created_at": createdAt}, nil
+}
+
+func (s *Service) listCategories(ctx context.Context, raw json.RawMessage) (any, error) {
+	var args struct{}
+	if err := decode(raw, &args); err != nil {
+		return nil, err
+	}
+	rows, err := s.db.QueryContext(ctx, `SELECT c.id,c.name,c.slug,c.description,c.sort_order,COUNT(p.id) FROM categories c LEFT JOIN posts p ON p.category_id=c.id GROUP BY c.id ORDER BY c.sort_order,c.name`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := make([]map[string]any, 0)
+	for rows.Next() {
+		var id, count int64
+		var name, slug, description string
+		var order int
+		if err := rows.Scan(&id, &name, &slug, &description, &order, &count); err != nil {
+			return nil, err
+		}
+		items = append(items, map[string]any{"id": id, "name": name, "slug": slug, "description": description, "sort_order": order, "post_count": count})
+	}
+	return items, rows.Err()
 }
 
 func (s *Service) proposeCandidates(ctx context.Context, raw json.RawMessage) (*tool.Proposal, error) {

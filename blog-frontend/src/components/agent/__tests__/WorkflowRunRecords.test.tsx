@@ -39,7 +39,18 @@ const run = {
 
 describe('WorkflowRunRecords', () => {
   beforeEach(() => {
-    vi.mocked(apiFetch).mockResolvedValue(Response.json({ data: [{
+    vi.mocked(apiFetch).mockImplementation(async (url) => Response.json({ data: String(url).endsWith('/resources') ? [{
+      id: 20,
+      workflow_run_id: 6,
+      type: 'post',
+      key: '42',
+      source: 'manual',
+      access_level: 'target',
+      label: 'Structured AI inputs',
+      version_token: '2026-08-01T00:00:00Z',
+      snapshot: { status: 'published' },
+      created_at: '2026-08-01T01:00:00Z',
+    }] : [{
       id: 19,
       workflow_run_id: 6,
       step_id: 'sources',
@@ -61,11 +72,14 @@ describe('WorkflowRunRecords', () => {
     await user.click(screen.getByRole('button', { name: /AI 每日资讯/ }));
 
     await waitFor(() => expect(apiFetch).toHaveBeenCalledWith('/api/admin/ai-workflow-runs/6/steps'));
+    expect(apiFetch).toHaveBeenCalledWith('/api/admin/ai-workflow-runs/6/resources');
     expect(screen.getByText('Provider output did not match the required Markdown format.')).toBeInTheDocument();
     expect(screen.getByText('sources')).toBeInTheDocument();
     expect(screen.getByText('Markdown validation failed')).toBeInTheDocument();
     expect(screen.getByText(/"max_items": 5/)).toBeInTheDocument();
     expect(screen.getByText(/"retry_count": 2/)).toBeInTheDocument();
     expect(screen.getAllByText('2.0 s')).toHaveLength(2);
+    expect(screen.getByText('Structured AI inputs')).toBeInTheDocument();
+    expect(screen.getByText(/手选 · 目标/)).toBeInTheDocument();
   });
 });

@@ -569,7 +569,7 @@ func (r *AgentRepository) ListDueAgents(ctx context.Context, limit int) ([]*doma
 const runColumns = `r.id, r.agent_id, r.trigger_type, r.triggered_by, r.schedule_key, r.status,
 	r.input, r.output_summary, r.provider, r.model, r.input_tokens, r.output_tokens,
 	r.error_code, r.error_message, r.started_at, r.finished_at, r.created_at, r.citations,
-	r.skill_version_id, r.workflow_version_id`
+		r.skill_version_id, r.workflow_version_id, r.workflow_run_id`
 
 func scanRun(scanner interface{ Scan(...any) error }) (*domain.AgentRun, error) {
 	var run domain.AgentRun
@@ -578,7 +578,7 @@ func scanRun(scanner interface{ Scan(...any) error }) (*domain.AgentRun, error) 
 		&run.ID, &run.AgentID, &run.TriggerType, &run.TriggeredBy, &run.ScheduleKey, &run.Status,
 		&run.Input, &run.OutputSummary, &run.Provider, &run.Model, &run.InputTokens,
 		&run.OutputTokens, &run.ErrorCode, &run.ErrorMessage, &run.StartedAt, &run.FinishedAt,
-		&run.CreatedAt, &citations, &run.SkillVersionID, &run.WorkflowVersionID,
+		&run.CreatedAt, &citations, &run.SkillVersionID, &run.WorkflowVersionID, &run.WorkflowRunID,
 	)
 	if err == nil {
 		err = json.Unmarshal(citations, &run.Citations)
@@ -591,12 +591,40 @@ func (r *AgentRepository) CreateRun(ctx context.Context, run *domain.AgentRun) e
 		run.Input = json.RawMessage(`{}`)
 	}
 	return r.db.QueryRowContext(ctx, `INSERT INTO ai_agent_runs
-		(agent_id, trigger_type, triggered_by, schedule_key, status, input, provider, model, skill_version_id, workflow_version_id)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+		(agent_id, trigger_type, triggered_by, schedule_key, status, input, provider, model, skill_version_id, workflow_version_id, workflow_run_id)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
 		RETURNING id, created_at`,
 		run.AgentID, run.TriggerType, run.TriggeredBy, run.ScheduleKey, run.Status, run.Input,
-		run.Provider, run.Model, run.SkillVersionID, run.WorkflowVersionID,
+		run.Provider, run.Model, run.SkillVersionID, run.WorkflowVersionID, run.WorkflowRunID,
 	).Scan(&run.ID, &run.CreatedAt)
+}
+
+func (r *AgentRepository) WorkflowScopePolicy(ctx context.Context, workflowVersionID int64) (domain.WorkflowScopePolicy, error) {
+	var raw []byte
+	if err := r.db.QueryRowContext(ctx, `SELECT scope_policy FROM ai_workflow_versions WHERE id=$1`, workflowVersionID).Scan(&raw); err != nil {
+		return domain.WorkflowScopePolicy{}, err
+	}
+	var policy domain.WorkflowScopePolicy
+	err := json.Unmarshal(raw, &policy)
+	return policy, err
+}
+
+func (r *AgentRepository) WorkflowResourceAccess(ctx context.Context, workflowRunID int64, resourceType, key string) (string, bool, error) {
+	var access string
+	err := r.db.QueryRowContext(ctx, `SELECT access_level FROM ai_workflow_run_resources WHERE workflow_run_id=$1 AND resource_type=$2 AND resource_key=$3`, workflowRunID, resourceType, key).Scan(&access)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", false, nil
+	}
+	return access, err == nil, err
+}
+
+func (r *AgentRepository) AddDiscoveredWorkflowResource(ctx context.Context, workflowRunID int64, resourceType, key, label string, snapshot json.RawMessage) error {
+	if len(snapshot) == 0 {
+		snapshot = json.RawMessage(`{}`)
+	}
+	_, err := r.db.ExecContext(ctx, `INSERT INTO ai_workflow_run_resources(workflow_run_id,resource_type,resource_key,source,access_level,label,snapshot)
+		VALUES($1,$2,$3,'discovery','read',$4,$5) ON CONFLICT(workflow_run_id,resource_type,resource_key) DO NOTHING`, workflowRunID, resourceType, key, label, snapshot)
+	return err
 }
 
 func (r *AgentRepository) StartRun(ctx context.Context, id int64) error {

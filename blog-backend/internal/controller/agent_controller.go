@@ -578,6 +578,54 @@ func (ctrl *AgentController) WorkflowRunSteps(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
 }
 
+func (ctrl *AgentController) WorkflowRunResources(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	items, err := ctrl.workflows.ListResources(c.Request.Context(), id)
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
+}
+
+func (ctrl *AgentController) ListAIResources(c *gin.Context) {
+	resourceType := c.Param("type")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	filters := map[string]string{}
+	for key, values := range c.Request.URL.Query() {
+		if key == "q" || key == "key" || key == "page" || key == "page_size" || len(values) == 0 {
+			continue
+		}
+		filters[key] = values[0]
+	}
+	keys := c.QueryArray("key")
+	items, total, err := ctrl.workflows.ListCatalog(c.Request.Context(), resourceType, domain.ResourceQuery{Query: c.Query("q"), Page: page, PageSize: pageSize, Filters: filters, Keys: keys})
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	unavailable := make([]string, 0)
+	if len(keys) > 0 {
+		resolved := make(map[string]bool, len(items))
+		for _, item := range items {
+			resolved[item.Key] = true
+		}
+		seen := map[string]bool{}
+		for _, key := range keys {
+			key = strings.TrimSpace(key)
+			if key != "" && !seen[key] && !resolved[key] {
+				seen[key] = true
+				unavailable = append(unavailable, key)
+			}
+		}
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"list": items, "total": total, "page": page, "page_size": pageSize, "unavailable_keys": unavailable}))
+}
+
 func (ctrl *AgentController) WorkflowMetrics(c *gin.Context) {
 	result, err := ctrl.workflows.Metrics(c.Request.Context())
 	if err != nil {

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Sparkles, Trash2 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { apiFetch } from '../../auth';
 import { AdminPage, AdminPageHeader, Checkbox, ConfirmDialog, ContentStack, EmptyState, Feedback, FilterBar, LoadingState, Panel, Select, useToast } from '../../components/ui';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
+import { WorkflowLauncher } from '../../components/agent/WorkflowLauncher';
 
 interface Comment { id: number; post_id: number; author: string; content: string; status: string; is_visible: boolean; report_count?: number; created_at: string }
 
@@ -14,6 +15,7 @@ export default function AdminComments() {
   const status = params.get('status') || 'pending'; const reported = params.get('reported') === 'true';
   const [comments, setComments] = useState<Comment[]>([]); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Comment | null>(null);
+  const [selected, setSelected] = useState<number[]>([]); const [aiOpen, setAIOpen] = useState(false);
   const load = useCallback(() => {
     if (!allowed) return;
     setLoading(true);
@@ -50,10 +52,12 @@ export default function AdminComments() {
             <Checkbox checked={reported} onChange={(event) => setFilter('reported', event.target.checked ? 'true' : '')} /> 仅看被举报
           </label>
         </FilterBar>
+        {selected.length ? <div className="bulk-action-bar"><strong>已选择 {selected.length} 条评论</strong><button onClick={() => setAIOpen(true)}><Sparkles />交给 AI</button><button onClick={() => setSelected([])}>取消</button></div> : null}
         {loading ? <LoadingState label="正在载入评论…" /> : comments.length === 0 ? <EmptyState label="当前队列已经处理完毕。" /> : (
           <div className="moderation-list">
             {comments.map((comment) => (
               <Panel key={comment.id}>
+                <Checkbox aria-label={`选择评论 ${comment.id}`} checked={selected.includes(comment.id)} onChange={(event) => setSelected((current) => event.target.checked ? [...new Set([...current, comment.id])] : current.filter((id) => id !== comment.id))} />
                 <div className="comment-avatar">{comment.author.slice(0, 1)}</div>
                 <div>
                   <div><strong>{comment.author}</strong><time>{new Date(comment.created_at).toLocaleString('zh-CN')}</time>{comment.report_count ? <span className="report-label">被举报 {comment.report_count} 次</span> : null}</div>
@@ -71,6 +75,7 @@ export default function AdminComments() {
         )}
       </ContentStack>
       <ConfirmDialog open={deleteTarget !== null} title="删除评论" description="确认永久删除这条评论？此操作无法撤销。" confirmLabel="永久删除" danger onClose={() => setDeleteTarget(null)} onConfirm={remove} />
+      <WorkflowLauncher open={aiOpen} resourceType="comment" resourceKeys={selected} onClose={() => setAIOpen(false)} title="将所选评论交给 AI" />
     </AdminPage>
   );
 }

@@ -36,6 +36,7 @@ func TestUpAppliesCurrentSchemaAndIsIdempotent(t *testing.T) {
 		"ai_skill_versions",
 		"ai_workspace_bootstrap",
 		"ai_workflows", "ai_workflow_versions", "ai_workflow_runs", "ai_workflow_step_runs",
+		"ai_workflow_run_resources",
 		"ai_link_health_jobs", "ai_link_health_snapshots",
 		"ai_operational_suggestions",
 		"ai_content_candidate_sets", "ai_content_candidates", "ai_media_candidates", "ai_feedback",
@@ -92,6 +93,25 @@ func TestUpAppliesCurrentSchemaAndIsIdempotent(t *testing.T) {
 	}
 	if workflows != 4 {
 		t.Fatalf("expected 4 starter Workflows, got %d", workflows)
+	}
+	var resourceWorkflows int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_workflows WHERE template_key IN
+		('selected_pre_publish_review','selected_internal_linking','selected_distribution','selected_comment_replies',
+		 'selected_media_review','selected_operations_deep_dive','selected_taxonomy_review','selected_mixed_review',
+		 'scheduled_stale_resource_review')`).Scan(&resourceWorkflows); err != nil {
+		t.Fatal(err)
+	}
+	if resourceWorkflows != 9 {
+		t.Fatalf("expected 9 structured resource Workflows, got %d", resourceWorkflows)
+	}
+	var strictVersions int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_workflows w
+		JOIN ai_workflow_versions v ON v.workflow_id=w.id AND v.version=w.current_version
+		WHERE w.template_key LIKE 'selected_%' AND v.scope_policy->>'mode'='strict'`).Scan(&strictVersions); err != nil {
+		t.Fatal(err)
+	}
+	if strictVersions != 8 {
+		t.Fatalf("expected 8 strict selected-resource Workflow versions, got %d", strictVersions)
 	}
 	var enabledStarterWorkflows int
 	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_workflows

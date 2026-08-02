@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Gouno Blog API
   description: REST API for managing posts and comments in Gouno Blog.
-  version: 1.0.0
+  version: 1.1.0
 servers:
   - url: http://localhost:8080/api
     description: Nginx gateway local entry point
@@ -1136,6 +1136,110 @@ paths:
         '200':
           description: Updated site settings
 
+  /admin/ai-workflows:
+    get:
+      summary: List AI Workflows
+      security: [{BearerAuth: []}]
+      responses:
+        '200':
+          description: Current Workflow versions, including structured input and run scope.
+    post:
+      summary: Create an AI Workflow
+      description: Input schemas may use x-gouno-resource and x-gouno-widget annotations. Schemas are compiled and validated when saved.
+      security: [{BearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AIWorkflow'}
+      responses:
+        '201': {description: Workflow created}
+        '400': {description: Invalid JSON Schema, step graph, scope, or discovery Tool}
+  /admin/ai-workflows/{id}:
+    put:
+      summary: Create a new immutable Workflow version
+      security: [{BearerAuth: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AIWorkflow'}
+      responses:
+        '200': {description: Workflow version saved}
+        '400': {description: Invalid Workflow contract}
+  /admin/ai-workflows/{id}/run:
+    post:
+      summary: Queue a Workflow run
+      description: Backward compatible endpoint. The input value is validated against the locked Workflow JSON Schema; resource references become the strict run target scope.
+      security: [{BearerAuth: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AIWorkflowRunRequest'}
+      responses:
+        '202': {description: Run queued with a locked Workflow version and resource snapshot}
+        '400': {description: Input validation error; message includes the failing field path}
+  /admin/ai-workflows/{id}/dry-run:
+    post:
+      summary: Queue a Workflow dry-run
+      description: Uses the same structured input, scope, budget, and snapshot rules without executing approved writes.
+      security: [{BearerAuth: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AIWorkflowRunRequest'}
+      responses:
+        '202': {description: Dry-run queued}
+  /admin/ai-resources/{type}:
+    get:
+      summary: Search resources for Workflow input
+      description: Returns minimal labels and audit metadata, never article bodies, commenter identity, or media bytes. Type-specific filters are strictly validated.
+      security: [{BearerAuth: []}]
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema: {type: string, enum: [post, comment, media_asset, operational_suggestion, category, tag]}
+        - {name: q, in: query, schema: {type: string}}
+        - name: key
+          in: query
+          description: Repeat up to 100 times to resolve saved selections and identify deleted resources. The response includes unavailable_keys.
+          schema: {type: array, maxItems: 100, items: {type: string}}
+          style: form
+          explode: true
+        - {name: page, in: query, schema: {type: integer, minimum: 1, default: 1}}
+        - {name: page_size, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 20}}
+      responses:
+        '200':
+          description: Paginated resource options
+        '400': {description: Unsupported resource type or filter}
+  /admin/ai-workflow-runs/{id}/resources:
+    get:
+      summary: List the immutable resource snapshot for a Workflow run
+      description: Includes manual and query targets plus discovered read-only resources. Deleted resources remain represented by their minimal snapshot.
+      security: [{BearerAuth: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer}}
+      responses:
+        '200':
+          description: Resources actually available to the derived Agent runs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/AIWorkflowRunResource'}
+
 components:
   parameters:
     ResourceID:
@@ -1151,6 +1255,73 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    AIWorkflowScopePolicy:
+      type: object
+      required: [mode, discovery_tools]
+      properties:
+        mode: {type: string, enum: [strict, unscoped]}
+        discovery_tools:
+          type: array
+          description: Read-only discovery Tools already authorized by every bound Skill. They cannot grant write capability.
+          uniqueItems: true
+          items: {type: string}
+    AIWorkflowStep:
+      type: object
+      required: [id, type]
+      properties:
+        id: {type: string}
+        type: {type: string, enum: [resource_query, model, for_each, approval_gate, output]}
+        agent_id: {type: integer}
+        input_pointer: {type: string, description: JSON Pointer into the run document.}
+        include_context: {type: boolean, description: For a nested model, pass both the current item and root input.}
+        collection_pointer: {type: string}
+        max_items: {type: integer, minimum: 1, maximum: 100}
+        resource_type: {type: string, enum: [post, comment, media_asset, operational_suggestion, category, tag]}
+        filter: {type: object, additionalProperties: true}
+        steps:
+          type: array
+          items: {$ref: '#/components/schemas/AIWorkflowStep'}
+        output_pointer: {type: string}
+    AIWorkflow:
+      type: object
+      required: [name, input_schema, steps]
+      properties:
+        id: {type: integer}
+        name: {type: string}
+        description: {type: string}
+        enabled: {type: boolean}
+        cron_expression: {type: string, nullable: true}
+        timezone: {type: string, default: Asia/Shanghai}
+        input_schema:
+          type: object
+          description: JSON Schema 2020-12. Resource fields use x-gouno-resource and may use x-gouno-widget entity-multi-select.
+          additionalProperties: true
+        steps:
+          type: array
+          items: {$ref: '#/components/schemas/AIWorkflowStep'}
+        scope_policy: {$ref: '#/components/schemas/AIWorkflowScopePolicy'}
+    AIWorkflowRunRequest:
+      type: object
+      required: [input]
+      additionalProperties: false
+      properties:
+        input:
+          type: object
+          additionalProperties: true
+    AIWorkflowRunResource:
+      type: object
+      required: [workflow_run_id, type, key, source, access_level, label, version_token, snapshot]
+      properties:
+        id: {type: integer}
+        workflow_run_id: {type: integer}
+        type: {type: string, enum: [post, comment, media_asset, operational_suggestion, category, tag]}
+        key: {type: string}
+        source: {type: string, enum: [manual, query, discovery]}
+        access_level: {type: string, enum: [target, read]}
+        label: {type: string}
+        version_token: {type: string}
+        snapshot: {type: object, additionalProperties: true}
+        created_at: {type: string, format: date-time}
     ProviderProfileRequest:
       type: object
       required: [name, provider_type, base_url, model]

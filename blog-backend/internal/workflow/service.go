@@ -13,6 +13,7 @@ import (
 	"github.com/robfig/cron/v3"
 	agentservice "github.com/rushairer/blog-backend/internal/agent"
 	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/tool"
 )
 
 var (
@@ -22,26 +23,35 @@ var (
 )
 
 type Service struct {
-	db     *sql.DB
-	runner *agentservice.Runner
-	agents *agentservice.ManagementService
+	db      *sql.DB
+	runner  *agentservice.Runner
+	agents  *agentservice.ManagementService
+	tools   *tool.Registry
+	catalog *ResourceCatalog
 }
 
-func NewService(db *sql.DB, runner *agentservice.Runner, agents *agentservice.ManagementService) *Service {
-	return &Service{db: db, runner: runner, agents: agents}
+func NewService(db *sql.DB, runner *agentservice.Runner, agents *agentservice.ManagementService, registries ...*tool.Registry) *Service {
+	var registry *tool.Registry
+	if len(registries) > 0 {
+		registry = registries[0]
+	}
+	return &Service{db: db, runner: runner, agents: agents, tools: registry, catalog: NewResourceCatalog(db)}
 }
 
 const workflowColumns = `w.id, w.name, w.description, w.enabled, w.cron_expression, w.timezone, w.next_run_at, w.template_key,
-	w.current_version, v.id, v.input_schema, v.steps, w.created_by, w.created_at, w.updated_at`
+	w.current_version, v.id, v.input_schema, v.steps, v.scope_policy, w.created_by, w.created_at, w.updated_at`
 
 func scanWorkflow(scanner interface{ Scan(...any) error }) (*domain.Workflow, error) {
 	var value domain.Workflow
-	var steps []byte
+	var steps, scopePolicy []byte
 	err := scanner.Scan(&value.ID, &value.Name, &value.Description, &value.Enabled, &value.CronExpression, &value.Timezone, &value.NextRunAt, &value.TemplateKey,
-		&value.CurrentVersion, &value.VersionID, &value.InputSchema, &steps, &value.CreatedBy,
+		&value.CurrentVersion, &value.VersionID, &value.InputSchema, &steps, &scopePolicy, &value.CreatedBy,
 		&value.CreatedAt, &value.UpdatedAt)
 	if err == nil {
 		err = json.Unmarshal(steps, &value.Steps)
+	}
+	if err == nil {
+		err = json.Unmarshal(scopePolicy, &value.ScopePolicy)
 	}
 	return &value, err
 }
@@ -95,10 +105,23 @@ func (s *Service) Save(ctx context.Context, value *domain.Workflow) error {
 	if len(value.InputSchema) > 32<<10 || len(value.Steps) == 0 {
 		return fmt.Errorf("%w: workflow is empty or too large", ErrInvalid)
 	}
+	if err := validateInputSchema(value.InputSchema); err != nil {
+		return err
+	}
+	fields, _ := resourceFields(value.InputSchema)
+	var err error
+	value.ScopePolicy, err = normalizeScopePolicy(value.ScopePolicy, len(fields) > 0 || hasResourceQuery(value.Steps))
+	if err != nil {
+		return err
+	}
 	if err := s.validateSteps(value.Steps, 0); err != nil {
 		return err
 	}
+	if err := s.validateDiscoveryTools(ctx, value); err != nil {
+		return err
+	}
 	rawSteps, _ := json.Marshal(value.Steps)
+	rawScope, _ := json.Marshal(value.ScopePolicy)
 	if len(rawSteps) > 128<<10 {
 		return fmt.Errorf("%w: step definition exceeds 128 KiB", ErrInvalid)
 	}
@@ -121,9 +144,9 @@ func (s *Service) Save(ctx context.Context, value *domain.Workflow) error {
 	}
 	if err == nil {
 		err = tx.QueryRowContext(ctx, `INSERT INTO ai_workflow_versions
-			(workflow_id, version, input_schema, steps, created_by)
-			VALUES ($1,$2,$3,$4,$5) RETURNING id`, value.ID, value.CurrentVersion,
-			value.InputSchema, rawSteps, value.CreatedBy).Scan(&value.VersionID)
+			(workflow_id, version, input_schema, steps, scope_policy, created_by)
+			VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`, value.ID, value.CurrentVersion,
+			value.InputSchema, rawSteps, rawScope, value.CreatedBy).Scan(&value.VersionID)
 	}
 	if err != nil {
 		_ = tx.Rollback()
@@ -142,6 +165,15 @@ func (s *Service) ValidateDraft(value *domain.Workflow) error {
 	if len(value.InputSchema) > 32<<10 || len(value.Steps) == 0 {
 		return fmt.Errorf("%w: workflow is empty or too large", ErrInvalid)
 	}
+	if err := validateInputSchema(value.InputSchema); err != nil {
+		return err
+	}
+	fields, _ := resourceFields(value.InputSchema)
+	var err error
+	value.ScopePolicy, err = normalizeScopePolicy(value.ScopePolicy, len(fields) > 0 || hasResourceQuery(value.Steps))
+	if err != nil {
+		return err
+	}
 	return s.validateSteps(value.Steps, 0)
 }
 
@@ -150,17 +182,31 @@ func (s *Service) validateSteps(steps []domain.WorkflowStep, depth int) error {
 		return fmt.Errorf("%w: workflow nesting or step limit exceeded", ErrInvalid)
 	}
 	seen := map[string]bool{}
+	seenControl := false
 	for _, step := range steps {
 		if step.ID == "" || seen[step.ID] {
 			return fmt.Errorf("%w: step IDs must be unique and non-empty", ErrInvalid)
 		}
 		seen[step.ID] = true
 		switch step.Type {
+		case "resource_query":
+			if depth > 0 || seenControl || !supportedResourceTypes[step.ResourceType] || step.MaxItems < 1 || step.MaxItems > 100 {
+				return fmt.Errorf("%w: resource_query must be a bounded top-level prefix step", ErrInvalid)
+			}
+			filters, err := filtersFromRaw(step.Filter)
+			if err != nil {
+				return err
+			}
+			if err := validateResourceFilters(step.ResourceType, filters); err != nil {
+				return err
+			}
 		case "model":
+			seenControl = true
 			if step.AgentID <= 0 {
 				return fmt.Errorf("%w: model step must bind an Agent", ErrInvalid)
 			}
 		case "for_each":
+			seenControl = true
 			if step.CollectionPointer == "" || step.MaxItems < 1 || step.MaxItems > 100 {
 				return fmt.Errorf("%w: for_each requires a bounded collection", ErrInvalid)
 			}
@@ -168,6 +214,7 @@ func (s *Service) validateSteps(steps []domain.WorkflowStep, depth int) error {
 				return err
 			}
 		case "approval_gate", "output":
+			seenControl = true
 		default:
 			return fmt.Errorf("%w: unsupported step type %q", ErrInvalid, step.Type)
 		}
@@ -180,9 +227,63 @@ func (s *Service) validateSteps(steps []domain.WorkflowStep, depth int) error {
 	return nil
 }
 
+func hasResourceQuery(steps []domain.WorkflowStep) bool {
+	for _, step := range steps {
+		if step.Type == "resource_query" || hasResourceQuery(step.Steps) {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Service) validateDiscoveryTools(ctx context.Context, value *domain.Workflow) error {
+	if len(value.ScopePolicy.DiscoveryTools) == 0 {
+		return nil
+	}
+	allowed := map[string]bool{}
+	for _, agentID := range workflowAgentIDs(value.Steps) {
+		agent, err := s.agents.GetAgent(ctx, agentID)
+		if err != nil || agent.Skill == nil {
+			return fmt.Errorf("%w: cannot validate discovery tools for Agent", ErrInvalid)
+		}
+		for _, name := range agent.Skill.Capabilities {
+			allowed[name] = true
+		}
+	}
+	for _, name := range value.ScopePolicy.DiscoveryTools {
+		if !allowed[name] {
+			return fmt.Errorf("%w: discovery tool %q is not authorized by a bound Skill", ErrInvalid, name)
+		}
+		if s.tools != nil {
+			risk, ok := s.tools.Risk(name)
+			if !ok || risk != domain.ToolRiskRead {
+				return fmt.Errorf("%w: discovery tool %q must be read-only", ErrInvalid, name)
+			}
+		}
+	}
+	return nil
+}
+
+func workflowAgentIDs(steps []domain.WorkflowStep) []int64 {
+	seen := map[int64]bool{}
+	result := make([]int64, 0)
+	var walk func([]domain.WorkflowStep)
+	walk = func(items []domain.WorkflowStep) {
+		for _, step := range items {
+			if step.Type == "model" && step.AgentID > 0 && !seen[step.AgentID] {
+				seen[step.AgentID] = true
+				result = append(result, step.AgentID)
+			}
+			walk(step.Steps)
+		}
+	}
+	walk(steps)
+	return result
+}
+
 func (s *Service) Versions(ctx context.Context, id int64) ([]*domain.Workflow, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT w.id, w.name, w.description, w.enabled, w.cron_expression, w.timezone, w.next_run_at, w.template_key,
-		v.version, v.id, v.input_schema, v.steps, v.created_by, w.created_at, v.created_at
+		v.version, v.id, v.input_schema, v.steps, v.scope_policy, v.created_by, w.created_at, v.created_at
 		FROM ai_workflows w JOIN ai_workflow_versions v ON v.workflow_id=w.id
 		WHERE w.id=$1 ORDER BY v.version DESC`, id)
 	if err != nil {
@@ -287,6 +388,9 @@ func (s *Service) queue(ctx context.Context, id int64, dryRun bool, input json.R
 	if err := json.Unmarshal(input, &inputValue); err != nil {
 		return nil, fmt.Errorf("%w: invalid input", ErrInvalid)
 	}
+	if err := validateWorkflowInput(value.InputSchema, inputValue); err != nil {
+		return nil, err
+	}
 	if err := s.validateRunnableSteps(ctx, value.Steps, map[string]any{"input": inputValue, "steps": map[string]any{}}); err != nil {
 		return nil, err
 	}
@@ -313,9 +417,19 @@ func (s *Service) queue(ctx context.Context, id int64, dryRun bool, input json.R
 				if errors.Is(err, sql.ErrNoRows) {
 					return s.queue(ctx, id, dryRun, input, triggeredBy, retryFailed, scheduled)
 				}
+				if err == nil {
+					_, _ = s.db.ExecContext(ctx, `DELETE FROM ai_workflow_run_resources WHERE workflow_run_id=$1`, run.ID)
+					err = s.persistManualResources(ctx, run.ID, value.InputSchema, inputValue)
+				}
 				return run, err
 			}
 			return run, nil
+		}
+	}
+	if err == nil {
+		if resourceErr := s.persistManualResources(ctx, run.ID, value.InputSchema, inputValue); resourceErr != nil {
+			_, _ = s.db.ExecContext(ctx, `DELETE FROM ai_workflow_runs WHERE id=$1 AND status='queued'`, run.ID)
+			return nil, resourceErr
 		}
 	}
 	return run, err
@@ -471,7 +585,7 @@ func (s *Service) execute(ctx context.Context, runID int64) error {
 		return err
 	}
 	document := map[string]any{"input": input, "steps": map[string]any{}}
-	output, awaiting, inputTokens, outputTokens, err := s.executeSteps(ctx, &run, steps, document, nil)
+	output, awaiting, inputTokens, outputTokens, err := s.executeSteps(ctx, &run, steps, document, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -486,7 +600,7 @@ func (s *Service) execute(ctx context.Context, runID int64) error {
 	return err
 }
 
-func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, steps []domain.WorkflowStep, document map[string]any, item any) (any, bool, int64, int64, error) {
+func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, steps []domain.WorkflowStep, document map[string]any, item any, iteration *int) (any, bool, int64, int64, error) {
 	var output any
 	var totalInput, totalOutput int64
 	awaiting := false
@@ -496,8 +610,76 @@ func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, ste
 		var stepOutput any
 		var err error
 		switch step.Type {
+		case "resource_query":
+			if replay, found, replayErr := s.replayedResourceQuery(ctx, run.ID, step.ID); replayErr != nil {
+				err = replayErr
+				break
+			} else if found {
+				stepOutput = replay
+				if len(replay) == 0 {
+					document["steps"].(map[string]any)[step.ID] = stepOutput
+					return map[string]any{"status": "no_matching_resources", "resource_type": step.ResourceType}, awaiting, totalInput, totalOutput, nil
+				}
+				break
+			}
+			filters, filterErr := filtersFromRaw(step.Filter)
+			if filterErr != nil {
+				err = filterErr
+				break
+			}
+			items, _, queryErr := s.catalog.List(ctx, step.ResourceType, domain.ResourceQuery{Page: 1, PageSize: step.MaxItems, Filters: filters})
+			if queryErr != nil {
+				err = queryErr
+				break
+			}
+			existing := map[string]bool{}
+			rows, countErr := s.db.QueryContext(ctx, `SELECT resource_type,resource_key FROM ai_workflow_run_resources WHERE workflow_run_id=$1 AND access_level='target'`, run.ID)
+			if countErr != nil {
+				err = countErr
+				break
+			}
+			for rows.Next() {
+				var resourceType, resourceKey string
+				if scanErr := rows.Scan(&resourceType, &resourceKey); scanErr != nil {
+					err = scanErr
+					break
+				}
+				existing[resourceType+"\x00"+resourceKey] = true
+			}
+			_ = rows.Close()
+			if err != nil || rows.Err() != nil {
+				if err == nil {
+					err = rows.Err()
+				}
+				break
+			}
+			newCount := 0
+			for _, candidate := range items {
+				if !existing[candidate.Type+"\x00"+candidate.Key] {
+					newCount++
+				}
+			}
+			if len(existing)+newCount > maxRunResources {
+				err = fmt.Errorf("%w: workflow query exceeds 100 resources", ErrInvalid)
+				break
+			}
+			for index := range items {
+				if persistErr := s.persistResource(ctx, run.ID, &items[index], "query", "target"); persistErr != nil {
+					err = persistErr
+					break
+				}
+			}
+			if err != nil {
+				break
+			}
+			stepOutput = queryOutput(items)
+			if len(items) == 0 {
+				s.recordStep(ctx, run.ID, step, iteration, nil, stepOutput, started, nil)
+				document["steps"].(map[string]any)[step.ID] = stepOutput
+				return map[string]any{"status": "no_matching_resources", "resource_type": step.ResourceType}, awaiting, totalInput, totalOutput, nil
+			}
 		case "model":
-			stepInput = inputForStep(document, item, step.InputPointer)
+			stepInput = inputForStep(document, item, step.InputPointer, step.IncludeContext)
 			if err == nil {
 				agent, getErr := s.agents.GetAgent(ctx, step.AgentID)
 				if getErr != nil {
@@ -508,7 +690,7 @@ func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, ste
 			}
 			if err == nil {
 				raw, _ := json.Marshal(stepInput)
-				agentRun, queueErr := s.runner.QueueWorkflow(ctx, step.AgentID, run.TriggeredBy, raw, run.WorkflowVersionID)
+				agentRun, queueErr := s.runner.QueueWorkflow(ctx, step.AgentID, run.TriggeredBy, raw, run.WorkflowVersionID, run.ID)
 				if queueErr != nil {
 					err = queueErr
 				} else {
@@ -543,7 +725,8 @@ func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, ste
 					for index := 0; index < count; index++ {
 						childDocument := cloneDocument(document)
 						childDocument["item"] = items[index]
-						childOutput, childAwaiting, inTokens, outTokens, childErr := s.executeSteps(ctx, run, step.Steps, childDocument, items[index])
+						childIteration := index
+						childOutput, childAwaiting, inTokens, outTokens, childErr := s.executeSteps(ctx, run, step.Steps, childDocument, items[index], &childIteration)
 						if childErr != nil {
 							err = childErr
 							break
@@ -562,7 +745,7 @@ func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, ste
 			stepOutput, err = resolvePointer(document, step.OutputPointer)
 			output = stepOutput
 		}
-		s.recordStep(ctx, run.ID, step, stepInput, stepOutput, started, err)
+		s.recordStep(ctx, run.ID, step, iteration, stepInput, stepOutput, started, err)
 		if err != nil {
 			return nil, awaiting, totalInput, totalOutput, err
 		}
@@ -574,9 +757,12 @@ func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, ste
 	return output, awaiting, totalInput, totalOutput, nil
 }
 
-func inputForStep(document map[string]any, item any, pointer string) any {
+func inputForStep(document map[string]any, item any, pointer string, includeContext bool) any {
 	if pointer == "" {
 		if item != nil {
+			if includeContext {
+				return map[string]any{"item": item, "input": document["input"]}
+			}
 			return item
 		}
 		return document["input"]
@@ -586,6 +772,24 @@ func inputForStep(document map[string]any, item any, pointer string) any {
 		return map[string]any{"pointer_error": true}
 	}
 	return value
+}
+
+func (s *Service) replayedResourceQuery(ctx context.Context, runID int64, stepID string) ([]map[string]any, bool, error) {
+	var raw json.RawMessage
+	err := s.db.QueryRowContext(ctx, `SELECT output FROM ai_workflow_step_runs
+		WHERE workflow_run_id=$1 AND step_id=$2 AND iteration=-1 AND status='succeeded'
+		ORDER BY id DESC LIMIT 1`, runID, stepID).Scan(&raw)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	var output []map[string]any
+	if err := json.Unmarshal(raw, &output); err != nil {
+		return nil, false, err
+	}
+	return output, true, nil
 }
 
 func cloneDocument(document map[string]any) map[string]any {
@@ -623,18 +827,22 @@ func resolvePointer(document any, pointer string) (any, error) {
 	return current, nil
 }
 
-func (s *Service) recordStep(ctx context.Context, runID int64, step domain.WorkflowStep, input, output any, started time.Time, stepErr error) {
+func (s *Service) recordStep(ctx context.Context, runID int64, step domain.WorkflowStep, iteration *int, input, output any, started time.Time, stepErr error) {
 	rawInput, _ := json.Marshal(input)
 	rawOutput, _ := json.Marshal(output)
 	status, errorMessage := "succeeded", any(nil)
 	if stepErr != nil {
 		status, errorMessage = "failed", safeError(stepErr)
 	}
+	iterationValue := -1
+	if iteration != nil {
+		iterationValue = *iteration
+	}
 	_, _ = s.db.ExecContext(ctx, `INSERT INTO ai_workflow_step_runs
-		(workflow_run_id, step_id, step_type, status, input, output, error_message, started_at, finished_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())
+		(workflow_run_id, step_id, step_type, status, input, output, error_message, started_at, iteration, finished_at)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW())
 		ON CONFLICT (workflow_run_id, step_id, iteration) DO NOTHING`,
-		runID, step.ID, step.Type, status, rawInput, rawOutput, errorMessage, started)
+		runID, step.ID, step.Type, status, rawInput, rawOutput, errorMessage, started, iterationValue)
 }
 
 func safeError(err error) string {
@@ -683,7 +891,7 @@ func (s *Service) RunSteps(ctx context.Context, runID int64) ([]*domain.Workflow
 	if !exists {
 		return nil, ErrNotFound
 	}
-	rows, err := s.db.QueryContext(ctx, `SELECT id,workflow_run_id,step_id,step_type,iteration,
+	rows, err := s.db.QueryContext(ctx, `SELECT id,workflow_run_id,step_id,step_type,NULLIF(iteration,-1),
 		status,input,output,error_message,started_at,finished_at FROM ai_workflow_step_runs
 		WHERE workflow_run_id=$1 ORDER BY started_at,id`, runID)
 	if err != nil {

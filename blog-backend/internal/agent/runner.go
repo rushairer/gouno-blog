@@ -69,14 +69,18 @@ func (r *Runner) ListToolCalls(ctx context.Context, runID int64) ([]*domain.Agen
 }
 
 func (r *Runner) Queue(ctx context.Context, agentID int64, trigger domain.AgentTriggerType, triggeredBy *string, input json.RawMessage, scheduleKey *string) (*domain.AgentRun, error) {
-	return r.queue(ctx, agentID, trigger, triggeredBy, input, scheduleKey, nil)
+	return r.queue(ctx, agentID, trigger, triggeredBy, input, scheduleKey, nil, nil)
 }
 
-func (r *Runner) QueueWorkflow(ctx context.Context, agentID int64, triggeredBy *string, input json.RawMessage, workflowVersionID int64) (*domain.AgentRun, error) {
-	return r.queue(ctx, agentID, domain.AgentTriggerManual, triggeredBy, input, nil, &workflowVersionID)
+func (r *Runner) QueueWorkflow(ctx context.Context, agentID int64, triggeredBy *string, input json.RawMessage, workflowVersionID int64, workflowRunIDs ...int64) (*domain.AgentRun, error) {
+	var workflowRunID *int64
+	if len(workflowRunIDs) > 0 {
+		workflowRunID = &workflowRunIDs[0]
+	}
+	return r.queue(ctx, agentID, domain.AgentTriggerManual, triggeredBy, input, nil, &workflowVersionID, workflowRunID)
 }
 
-func (r *Runner) queue(ctx context.Context, agentID int64, trigger domain.AgentTriggerType, triggeredBy *string, input json.RawMessage, scheduleKey *string, workflowVersionID *int64) (*domain.AgentRun, error) {
+func (r *Runner) queue(ctx context.Context, agentID int64, trigger domain.AgentTriggerType, triggeredBy *string, input json.RawMessage, scheduleKey *string, workflowVersionID, workflowRunID *int64) (*domain.AgentRun, error) {
 	value, err := r.management.GetAgent(ctx, agentID)
 	if err != nil {
 		return nil, err
@@ -121,6 +125,7 @@ func (r *Runner) queue(ctx context.Context, agentID int64, trigger domain.AgentT
 		Status: domain.AgentRunQueued, Input: input, Provider: profile.ProviderType, Model: profile.Model,
 		SkillVersionID:    value.SkillVersionID,
 		WorkflowVersionID: workflowVersionID,
+		WorkflowRunID:     workflowRunID,
 	}
 	if err := r.repo.CreateRun(ctx, run); err != nil {
 		if repository.IsConstraintError(err) {
@@ -231,9 +236,22 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 	citationLedger := make(map[string]domain.AgentCitation)
 	sourceLinks := make([]rssSourceLink, 0)
 	toolCallCounts := make(map[string]int)
+	runScopeInstruction := ""
+	if run.WorkflowVersionID != nil {
+		policy, err := r.repo.WorkflowScopePolicy(ctx, *run.WorkflowVersionID)
+		if err != nil {
+			return err
+		}
+		if policy.Mode == "strict" {
+			runScopeInstruction = "\nThis Workflow run has a strict resource scope. Read and propose changes only for snapshotted target resources. Resources returned by authorized discovery tools are read-only and must never become modification targets."
+			if len(policy.DiscoveryTools) > 0 {
+				runScopeInstruction += " Authorized discovery tools: " + strings.Join(policy.DiscoveryTools, ", ") + "."
+			}
+		}
+	}
 	for step := 0; step < limits.maxSteps; step++ {
 		if approximateInputBytes(
-			platformInstructions+"\n\nAgent instructions:\n"+skill.SystemPrompt, messages,
+			platformInstructions+runScopeInstruction+"\n\nAgent instructions:\n"+skill.SystemPrompt, messages,
 		) > limits.maxInputTokens*4 {
 			return fmt.Errorf("%w: assembled model input exceeds the agent input limit", ErrInvalid)
 		}
@@ -246,7 +264,7 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 			return ErrTokenBudget
 		}
 		requestID := fmt.Sprintf("run_%d_step_%d_%d", run.ID, step+1, time.Now().UnixNano())
-		instructions := platformInstructions + contentPublicationInstruction(skill.ContentPublishMode) + "\n\nAgent instructions:\n" + skill.SystemPrompt
+		instructions := platformInstructions + contentPublicationInstruction(skill.ContentPublishMode) + runScopeInstruction + "\n\nAgent instructions:\n" + skill.SystemPrompt
 		tools := r.tools.Definitions(skill.Capabilities)
 		if step == limits.maxSteps-1 {
 			// Reserve the final model turn for synthesis. Without this, an Agent
@@ -307,7 +325,16 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 				RunID: run.ID, ProviderCallID: &callID, ToolName: requested.Name,
 				Arguments: effectiveArguments, Status: domain.ToolCallRequested,
 			}
-			risk, rawResult, proposal, invokeErr := r.invokeTool(ctx, skill, requested.Name, effectiveArguments)
+			risk, _ := r.tools.Risk(requested.Name)
+			var rawResult json.RawMessage
+			var proposal *tool.Proposal
+			invokeErr := r.authorizeScopedTool(ctx, run, requested.Name, effectiveArguments, risk)
+			if invokeErr == nil {
+				risk, rawResult, proposal, invokeErr = r.invokeTool(ctx, skill, requested.Name, effectiveArguments)
+			}
+			if invokeErr == nil {
+				rawResult, invokeErr = r.filterScopedDiscoveryResult(ctx, run, requested.Name, rawResult)
+			}
 			call.RiskLevel = risk
 			if call.RiskLevel == "" {
 				call.RiskLevel = domain.ToolRiskRead
@@ -324,6 +351,9 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 				// completed safely. Do not let the model turn that into a prose-only
 				// "success"; the parent Workflow must receive a failed Agent Run.
 				return fmt.Errorf("Tool %q was rejected: %w", requested.Name, invokeErr)
+			}
+			if err := r.recordDiscoveredResources(ctx, run, requested.Name, rawResult); err != nil {
+				return err
 			}
 			if proposal != nil {
 				if !dryRun {
@@ -474,6 +504,181 @@ func appendRSSSourceLinks(arguments json.RawMessage, links []rssSourceLink) (jso
 		return nil, tool.ErrInvalidArgument
 	}
 	return json.Marshal(payload)
+}
+
+func (r *Runner) authorizeScopedTool(ctx context.Context, run *domain.AgentRun, name string, arguments json.RawMessage, risk domain.ToolRiskLevel) error {
+	if run.WorkflowRunID == nil || run.WorkflowVersionID == nil {
+		return nil
+	}
+	policy, err := r.repo.WorkflowScopePolicy(ctx, *run.WorkflowVersionID)
+	if err != nil {
+		return err
+	}
+	if policy.Mode != "strict" {
+		return nil
+	}
+	rule, ok := r.tools.Scope(name)
+	if !ok || rule == nil {
+		return nil
+	}
+	if rule.ResourceType == "" || rule.Argument == "" {
+		return nil
+	}
+	var values map[string]any
+	if err := json.Unmarshal(arguments, &values); err != nil {
+		return tool.ErrInvalidArgument
+	}
+	raw, exists := values[rule.Argument]
+	if !exists {
+		return tool.ErrInvalidArgument
+	}
+	key := fmt.Sprint(raw)
+	if number, ok := raw.(float64); ok && number == float64(int64(number)) {
+		key = fmt.Sprintf("%d", int64(number))
+	}
+	access, exists, err := r.repo.WorkflowResourceAccess(ctx, *run.WorkflowRunID, rule.ResourceType, key)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return fmt.Errorf("%w: %s %s is outside this workflow run scope", tool.ErrUnauthorized, rule.ResourceType, key)
+	}
+	if risk == domain.ToolRiskPropose && access != "target" {
+		return fmt.Errorf("%w: discovered %s %s is read-only", tool.ErrUnauthorized, rule.ResourceType, key)
+	}
+	return nil
+}
+
+func (r *Runner) filterScopedDiscoveryResult(ctx context.Context, run *domain.AgentRun, name string, raw json.RawMessage) (json.RawMessage, error) {
+	if run.WorkflowRunID == nil || run.WorkflowVersionID == nil || len(raw) == 0 {
+		return raw, nil
+	}
+	policy, err := r.repo.WorkflowScopePolicy(ctx, *run.WorkflowVersionID)
+	if err != nil {
+		return nil, err
+	}
+	rule, ok := r.tools.Scope(name)
+	if policy.Mode != "strict" || !ok || rule == nil || !rule.Discovery || rule.OutputResourceType == "" || slices.Contains(policy.DiscoveryTools, name) {
+		return raw, nil
+	}
+	var value any
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return nil, err
+	}
+	var filter func(any) (any, bool, error)
+	filter = func(current any) (any, bool, error) {
+		switch typed := current.(type) {
+		case []any:
+			items := make([]any, 0, len(typed))
+			for _, entry := range typed {
+				filtered, keep, err := filter(entry)
+				if err != nil {
+					return nil, false, err
+				}
+				if keep {
+					items = append(items, filtered)
+				}
+			}
+			return items, true, nil
+		case map[string]any:
+			for _, field := range rule.OutputKeys {
+				rawKey, exists := typed[field]
+				if !exists {
+					continue
+				}
+				key := fmt.Sprint(rawKey)
+				if number, ok := rawKey.(float64); ok && number == float64(int64(number)) {
+					key = fmt.Sprintf("%d", int64(number))
+				}
+				_, exists, err := r.repo.WorkflowResourceAccess(ctx, *run.WorkflowRunID, rule.OutputResourceType, key)
+				return typed, exists, err
+			}
+			result := make(map[string]any, len(typed))
+			for key, entry := range typed {
+				filtered, keep, err := filter(entry)
+				if err != nil {
+					return nil, false, err
+				}
+				if keep {
+					result[key] = filtered
+				}
+			}
+			return result, true, nil
+		default:
+			return current, true, nil
+		}
+	}
+	filtered, _, err := filter(value)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(filtered)
+}
+
+func (r *Runner) recordDiscoveredResources(ctx context.Context, run *domain.AgentRun, name string, raw json.RawMessage) error {
+	if run.WorkflowRunID == nil || run.WorkflowVersionID == nil || len(raw) == 0 {
+		return nil
+	}
+	policy, err := r.repo.WorkflowScopePolicy(ctx, *run.WorkflowVersionID)
+	if err != nil {
+		return err
+	}
+	if policy.Mode != "strict" || !slices.Contains(policy.DiscoveryTools, name) {
+		return nil
+	}
+	rule, ok := r.tools.Scope(name)
+	if !ok || rule == nil || rule.OutputResourceType == "" {
+		return nil
+	}
+	var value any
+	if json.Unmarshal(raw, &value) != nil {
+		return nil
+	}
+	seen := map[string]bool{}
+	var walk func(any) error
+	walk = func(current any) error {
+		switch typed := current.(type) {
+		case []any:
+			for _, entry := range typed {
+				if err := walk(entry); err != nil {
+					return err
+				}
+			}
+		case map[string]any:
+			for _, field := range rule.OutputKeys {
+				rawKey, exists := typed[field]
+				if !exists {
+					continue
+				}
+				key := fmt.Sprint(rawKey)
+				if number, ok := rawKey.(float64); ok && number == float64(int64(number)) {
+					key = fmt.Sprintf("%d", int64(number))
+				}
+				if key == "" || seen[key] {
+					continue
+				}
+				seen[key] = true
+				label := key
+				for _, labelField := range []string{"title", "name", "label"} {
+					if text, ok := typed[labelField].(string); ok && strings.TrimSpace(text) != "" {
+						label = strings.TrimSpace(text)
+						break
+					}
+				}
+				snapshot, _ := json.Marshal(map[string]any{"label": label, "status": typed["status"], "slug": typed["slug"]})
+				if err := r.repo.AddDiscoveredWorkflowResource(ctx, *run.WorkflowRunID, rule.OutputResourceType, key, label, snapshot); err != nil {
+					return err
+				}
+			}
+			for _, entry := range typed {
+				if err := walk(entry); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
+	return walk(value)
 }
 
 func (r *Runner) invokeTool(ctx context.Context, skill *domain.AgentSkill, name string, arguments json.RawMessage) (domain.ToolRiskLevel, json.RawMessage, *tool.Proposal, error) {

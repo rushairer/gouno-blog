@@ -174,6 +174,7 @@ type AgentRun struct {
 	Citations         []AgentCitation  `json:"citations"`
 	SkillVersionID    *int64           `json:"skill_version_id,omitempty"`
 	WorkflowVersionID *int64           `json:"workflow_version_id,omitempty"`
+	WorkflowRunID     *int64           `json:"workflow_run_id,omitempty"`
 }
 
 type ToolRiskLevel string

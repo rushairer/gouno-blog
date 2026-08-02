@@ -208,6 +208,12 @@
 .workflow-run-error p {
   margin: 0;
 }
+.workflow-run-resources { display: grid; gap: 10px; }
+.workflow-run-resources > div:last-child { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.workflow-run-resources > div:last-child > span { display: grid; gap: 3px; min-width: 0; padding: 9px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg-muted); }
+.workflow-run-resources > div:last-child strong,
+.workflow-run-resources > div:last-child small { overflow-wrap: anywhere; }
+.workflow-run-resources > div:last-child small { color: var(--text-muted); }
 
 .workflow-log-block,
 .workflow-step-log > details {
@@ -1504,4 +1510,47 @@
   height: 22px;
   border-width: 2px;
   flex: 0 0 auto;
+}
+.workflow-input-form { display: grid; gap: 14px; }
+.workflow-resource-field { display: grid; gap: 8px; }
+.workflow-resource-selection { display: flex; flex-wrap: wrap; gap: 6px; min-height: 36px; align-items: center; }
+.workflow-resource-selection > span { display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg-muted); font-size: .82rem; }
+.workflow-resource-selection > span.unavailable { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, var(--surface)); }
+.workflow-resource-selection > span > small { color: var(--danger); font-weight: 700; }
+.workflow-resource-selection svg { width: 14px; height: 14px; }
+.workflow-resource-selection button { display: inline-grid; place-items: center; border: 0; background: transparent; padding: 0; color: var(--text-muted); }
+.workflow-resource-modal { width: min(760px, calc(100vw - 40px)); }
+.workflow-resource-picker { display: grid; gap: 14px; min-width: 0; padding: 0 22px 22px; }
+.workflow-resource-warning { margin: 0; color: var(--danger); font-size: .82rem; }
+.workflow-resource-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+.workflow-resource-filters label { display: grid; gap: 4px; min-width: 0; }
+.workflow-resource-filters label > span { color: var(--text-muted); font-size: .78rem; }
+.workflow-resource-options { display: grid; gap: 4px; max-height: 48vh; overflow: auto; }
+.workflow-resource-options > button { width: 100%; border: 1px solid var(--line); background: var(--surface); padding: 10px; text-align: left; border-radius: 6px; }
+.workflow-resource-options > button.selected { border-color: var(--brand); background: var(--brand-soft); }
+.workflow-resource-options > button > span { display: grid; grid-template-columns: 20px 1fr; gap: 2px 8px; align-items: center; }
+.workflow-resource-options small { grid-column: 2; color: var(--text-muted); overflow-wrap: anywhere; }
+.workflow-resource-pagination { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.workflow-resource-pagination button { width: 32px; height: 32px; display: inline-grid; place-items: center; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--text); }
+.workflow-resource-pagination button:disabled { opacity: .45; }
+.workflow-resource-pagination svg { width: 16px; height: 16px; }
+.workflow-advanced-input { margin-top: 4px; }
+.workflow-advanced-input summary { cursor: pointer; color: var(--text-muted); font-size: .84rem; }
+.workflow-advanced-input textarea { margin-top: 8px; width: 100%; }
+.workflow-scope-summary { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; padding: 10px 0; border-block: 1px solid var(--line); font-size: .84rem; }
+.workflow-scope-summary small { grid-column: 2; overflow-wrap: anywhere; }
+.workflow-launcher { display: grid; gap: 16px; min-width: min(720px, 82vw); }
+.workflow-launcher > label { display: grid; gap: 6px; font-weight: 600; }
+.workflow-launcher .feedback a { display: block; margin-top: 6px; }
+
+@media (max-width: 720px) {
+  .workflow-resource-modal { width: 100%; }
+  .workflow-resource-picker, .workflow-launcher { min-width: 0; width: 100%; }
+  .workflow-scope-summary { grid-template-columns: 1fr; }
+  .workflow-scope-summary small { grid-column: 1; }
+}
+
+@media (max-width: 540px) {
+  .workflow-resource-picker { padding-inline: 16px; }
+  .workflow-resource-filters { grid-template-columns: 1fr; }
 }

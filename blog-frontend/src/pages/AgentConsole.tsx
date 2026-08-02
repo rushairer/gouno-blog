@@ -585,7 +585,7 @@ export default function AgentConsole() {
     }
   };
 
-  const saveWorkflow = async (value: { id?: number; name: string; description: string; enabled: boolean; cron_expression?: string; timezone: string; input_schema: Record<string, unknown>; steps: import('../agent').WorkflowStep[] }) => {
+  const saveWorkflow = async (value: { id?: number; name: string; description: string; enabled: boolean; cron_expression?: string; timezone: string; input_schema: Record<string, unknown>; steps: import('../agent').WorkflowStep[]; scope_policy: import('../agent').WorkflowScopePolicy }) => {
     await readData<Workflow>(await apiFetch(value.id ? `/api/admin/ai-workflows/${value.id}` : '/api/admin/ai-workflows', {
       method: value.id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value),
     }));

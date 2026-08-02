@@ -29,6 +29,7 @@ var catalogDescriptionsZH = map[string]string{
 	"content.propose_tags": "提交替换现有文章标签的审批提案。", "comments.propose_reply": "提交评论回复草稿的审批提案。", "content.propose_task": "提交编辑任务的审批提案。",
 	"content.propose_distribution_draft": "为文章提交社媒、邮件、FAQ 或图片 Brief 草稿；不会向外部服务发送内容。", "content.list_broken_links": "列出已发布文章中缓存的失效链接证据。",
 	"content.propose_candidates": "提交标题、摘要或封面 Alt 文案候选，供人工选择。", "content.list_tag_bloat": "识别低使用率或大小写重复的标签。", "operations.propose_suggestion": "提交带证据的站内运营建议审批提案。",
+	"media.get_asset": "读取一个媒体资源的元数据，不返回文件内容。", "operations.get_suggestion": "读取一条运营建议及其证据。", "content.list_categories": "列出分类与文章数量。", "comments.get_comment": "读取一条评论并移除私有身份字段。",
 }
 
 type Proposal struct {
@@ -39,6 +40,14 @@ type Proposal struct {
 	BeforeSnapshot json.RawMessage `json:"before_snapshot,omitempty"`
 }
 
+type ScopeRule struct {
+	ResourceType       string   `json:"resource_type,omitempty"`
+	Argument           string   `json:"argument,omitempty"`
+	Discovery          bool     `json:"discovery,omitempty"`
+	OutputResourceType string   `json:"output_resource_type,omitempty"`
+	OutputKeys         []string `json:"output_keys,omitempty"`
+}
+
 type Definition struct {
 	Name          string
 	Description   string
@@ -47,6 +56,7 @@ type Definition struct {
 	Output        json.RawMessage
 	Surfaces      []string
 	Risk          domain.ToolRiskLevel
+	Scope         *ScopeRule
 	Execute       func(context.Context, json.RawMessage) (any, error)
 	Propose       func(context.Context, json.RawMessage) (*Proposal, error)
 }
@@ -64,6 +74,7 @@ type CatalogItem struct {
 	Output              json.RawMessage      `json:"output_schema,omitempty"`
 	Surfaces            []string             `json:"surfaces"`
 	Risk                domain.ToolRiskLevel `json:"risk_level"`
+	Scope               *ScopeRule           `json:"scope,omitempty"`
 }
 
 func New(definitions ...Definition) *Registry {
@@ -181,7 +192,7 @@ func (r *Registry) Catalog() []CatalogItem {
 			Parameters:          catalogSchema(definition.Parameters, emptyParametersSchema),
 			ConfigurationSchema: catalogSchema(definition.Configuration, nil),
 			Output:              catalogSchema(definition.Output, nil),
-			Surfaces:            definition.Surfaces, Risk: definition.Risk,
+			Surfaces:            definition.Surfaces, Risk: definition.Risk, Scope: definition.Scope,
 		})
 	}
 	slices.SortFunc(result, func(a, b CatalogItem) int {
@@ -230,6 +241,11 @@ func (r *Registry) ProposalNames() []string {
 func (r *Registry) Risk(name string) (domain.ToolRiskLevel, bool) {
 	item, ok := r.definitions[name]
 	return item.Risk, ok
+}
+
+func (r *Registry) Scope(name string) (*ScopeRule, bool) {
+	item, ok := r.definitions[name]
+	return item.Scope, ok
 }
 
 func (r *Registry) Register(definitions ...Definition) error {

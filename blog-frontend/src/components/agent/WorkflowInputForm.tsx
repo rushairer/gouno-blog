@@ -1,0 +1,170 @@
+import { ChevronLeft, ChevronRight, Database, Plus, Search, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { apiFetch } from '../../auth';
+import { Button, Checkbox, Field, Input, Modal, SearchField, Select } from '../ui';
+
+export interface ResourceOption {
+  type: string;
+  key: string;
+  label: string;
+  description?: string;
+  status?: string;
+  version_token: string;
+  metadata: Record<string, unknown>;
+}
+
+type SchemaProperty = {
+  type?: string;
+  title?: string;
+  description?: string;
+  enum?: Array<string | number>;
+  items?: { type?: string };
+  minItems?: number;
+  maxItems?: number;
+  ['x-gouno-resource']?: string;
+  ['x-gouno-widget']?: string;
+};
+
+type FilterOption = { value: string; zh: string; en: string };
+type ResourceFilter = { key: string; zh: string; en: string; type: 'text' | 'number' | 'select'; options?: FilterOption[]; placeholder?: string };
+
+const statusOptions = (values: string[]): FilterOption[] => values.map((value) => ({ value, zh: value, en: value }));
+const resourceFilters: Record<string, ResourceFilter[]> = {
+  post: [
+    { key: 'status', zh: '状态', en: 'Status', type: 'select', options: statusOptions(['draft', 'scheduled', 'published']) },
+    { key: 'tag', zh: '标签', en: 'Tag', type: 'text' },
+    { key: 'low_engagement', zh: '低互动', en: 'Low engagement', type: 'select', options: [{ value: 'true', zh: '仅低互动', en: 'Low only' }] },
+  ],
+  comment: [
+    { key: 'status', zh: '状态', en: 'Status', type: 'select', options: statusOptions(['pending', 'visible', 'hidden']) },
+    { key: 'post_id', zh: '文章 ID', en: 'Post ID', type: 'number' },
+    { key: 'reported', zh: '举报', en: 'Reported', type: 'select', options: [{ value: 'true', zh: '仅被举报', en: 'Reported only' }] },
+  ],
+  media_asset: [
+    { key: 'content_type', zh: '内容类型', en: 'Content type', type: 'text', placeholder: 'image/jpeg' },
+    { key: 'in_use', zh: '引用状态', en: 'Usage', type: 'select', options: [{ value: 'true', zh: '已引用', en: 'In use' }, { value: 'false', zh: '未引用', en: 'Unused' }] },
+  ],
+  operational_suggestion: [
+    { key: 'status', zh: '状态', en: 'Status', type: 'select', options: statusOptions(['new', 'selected', 'converted', 'ignored', 'resolved']) },
+    { key: 'priority', zh: '优先级', en: 'Priority', type: 'select', options: statusOptions(['low', 'medium', 'high']) },
+    { key: 'source_type', zh: '来源', en: 'Source', type: 'text' },
+  ],
+  category: [{ key: 'min_post_count', zh: '最少文章数', en: 'Minimum posts', type: 'number' }],
+  tag: [{ key: 'min_post_count', zh: '最少文章数', en: 'Minimum posts', type: 'number' }],
+};
+
+function ResourcePicker({ property, value, onChange, locale }: {
+  property: SchemaProperty;
+  value: unknown;
+  onChange: (value: unknown) => void;
+  locale: 'zh' | 'en';
+}) {
+  const resourceType = property['x-gouno-resource'] || '';
+  const multiple = property.type === 'array';
+  const selected = useMemo(() => multiple ? (Array.isArray(value) ? value : []) : (value === undefined || value === '' ? [] : [value]), [multiple, value]);
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [items, setItems] = useState<ResourceOption[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [selectedItems, setSelectedItems] = useState<Record<string, ResourceOption>>({});
+  const [unavailable, setUnavailable] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const selectedSignature = selected.map(String).join('\u0000');
+  useEffect(() => {
+    if (!open || !resourceType) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      setLoading(true);
+      const parameters = new URLSearchParams({ q: query, page: String(page), page_size: '20' });
+      Object.entries(filters).forEach(([key, entry]) => { if (entry !== '') parameters.set(key, entry); });
+      apiFetch(`/api/admin/ai-resources/${resourceType}?${parameters}`, { signal: controller.signal })
+        .then(async (response) => {
+          const body = await response.json();
+          if (!response.ok) throw new Error(body.message || 'Resource lookup failed');
+          setItems(body.data?.list || []);
+          setTotal(body.data?.total || 0);
+          setError('');
+        })
+        .catch((reason: Error) => { if (reason.name !== 'AbortError') setError(reason.message); })
+        .finally(() => setLoading(false));
+    }, 180);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [filters, open, page, query, resourceType]);
+  useEffect(() => {
+    if (!resourceType || selected.length === 0) { setUnavailable([]); return; }
+    const controller = new AbortController();
+    const parameters = new URLSearchParams();
+    selected.forEach((entry) => parameters.append('key', String(entry)));
+    apiFetch(`/api/admin/ai-resources/${resourceType}?${parameters}`, { signal: controller.signal }).then(async (response) => {
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.message || 'Resource lookup failed');
+      const resolved = (body.data?.list || []) as ResourceOption[];
+      setSelectedItems((current) => ({ ...current, ...Object.fromEntries(resolved.map((item) => [item.key, item])) }));
+      setUnavailable(body.data?.unavailable_keys || []);
+    }).catch((reason: Error) => { if (reason.name !== 'AbortError') setError(reason.message); });
+    return () => controller.abort();
+  }, [resourceType, selectedSignature]);
+  const convert = (key: string) => property.type === 'integer' || property.items?.type === 'integer' ? Number(key) : key;
+  const toggle = (key: string) => {
+    const converted = convert(key);
+    if (!multiple) { onChange(converted); setOpen(false); return; }
+    const exists = selected.some((entry) => String(entry) === key);
+    const next = exists ? selected.filter((entry) => String(entry) !== key) : [...selected, converted];
+    if (!exists && property.maxItems && next.length > property.maxItems) return;
+    if (!exists) {
+      const item = items.find((entry) => entry.key === key);
+      if (item) setSelectedItems((current) => ({ ...current, [key]: item }));
+    } else {
+      setUnavailable((current) => current.filter((entry) => entry !== key));
+    }
+    onChange(next);
+  };
+  return <div className="workflow-resource-field">
+    <div className="workflow-resource-selection">
+      {selected.length ? selected.map((entry) => { const key = String(entry); const invalid = unavailable.includes(key); return <span className={invalid ? 'unavailable' : ''} key={key}><Database />{selectedItems[key]?.label || items.find((item) => item.key === key)?.label || `${resourceType} #${key}`}{invalid ? <small>{locale === 'zh' ? '已失效' : 'Unavailable'}</small> : null}<button type="button" title={locale === 'zh' ? '移除' : 'Remove'} onClick={() => toggle(key)}><X /></button></span>; }) : <small>{locale === 'zh' ? '尚未选择资源' : 'No resources selected'}</small>}
+    </div>
+    {unavailable.length ? <p className="workflow-resource-warning">{locale === 'zh' ? `有 ${unavailable.length} 项资源已删除或不可用，请移除后再运行。` : `${unavailable.length} selected resources are unavailable. Remove them before running.`}</p> : null}
+    <Button variant="secondary" size="compact" type="button" onClick={() => setOpen(true)}><Plus />{locale === 'zh' ? '选择资源' : 'Select resources'}</Button>
+    <Modal className="workflow-resource-modal" open={open} title={locale === 'zh' ? '选择 Workflow 输入' : 'Select workflow input'} description={multiple ? `${locale === 'zh' ? '最多选择' : 'Select up to'} ${property.maxItems || 100}` : undefined} onClose={() => setOpen(false)}>
+      <div className="workflow-resource-picker">
+        <SearchField autoFocus value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder={locale === 'zh' ? '搜索资源' : 'Search resources'} />
+        {(resourceFilters[resourceType] || []).length ? <div className="workflow-resource-filters">{resourceFilters[resourceType].map((filter) => <label key={filter.key}><span>{locale === 'zh' ? filter.zh : filter.en}</span>{filter.type === 'select' ? <Select size="compact" value={filters[filter.key] || ''} onChange={(event) => { setFilters((current) => ({ ...current, [filter.key]: event.target.value })); setPage(1); }}><option value="">{locale === 'zh' ? '全部' : 'All'}</option>{filter.options?.map((option) => <option key={option.value} value={option.value}>{locale === 'zh' ? option.zh : option.en}</option>)}</Select> : <Input type={filter.type} min={filter.type === 'number' ? 0 : undefined} placeholder={filter.placeholder} value={filters[filter.key] || ''} onChange={(event) => { setFilters((current) => ({ ...current, [filter.key]: event.target.value })); setPage(1); }} />}</label>)}</div> : null}
+        {error ? <p className="feedback feedback--error">{error}</p> : null}
+        {loading ? <p className="muted">{locale === 'zh' ? '正在查询…' : 'Searching…'}</p> : <div className="workflow-resource-options">{items.map((item) => {
+          const checked = selected.some((entry) => String(entry) === item.key);
+          return <button type="button" className={checked ? 'selected' : ''} key={`${item.type}:${item.key}`} onClick={() => toggle(item.key)}><span>{multiple ? <Checkbox readOnly checked={checked} /> : <Search />}<strong>{item.label}</strong><small>{item.status}{item.description ? ` · ${item.description}` : ''}</small></span></button>;
+        })}</div>}
+        {total > 20 ? <div className="workflow-resource-pagination"><button type="button" title={locale === 'zh' ? '上一页' : 'Previous page'} disabled={page === 1} onClick={() => setPage((value) => Math.max(1, value - 1))}><ChevronLeft /></button><span>{page} / {Math.ceil(total / 20)}</span><button type="button" title={locale === 'zh' ? '下一页' : 'Next page'} disabled={page * 20 >= total} onClick={() => setPage((value) => value + 1)}><ChevronRight /></button></div> : null}
+        <div className="modal-actions"><Button variant="secondary" type="button" onClick={() => setOpen(false)}>{locale === 'zh' ? '完成' : 'Done'}</Button></div>
+      </div>
+    </Modal>
+  </div>;
+}
+
+export function WorkflowInputForm({ schema, value, onChange, locale = 'zh' }: {
+  schema: Record<string, unknown>;
+  value: Record<string, unknown>;
+  onChange: (value: Record<string, unknown>) => void;
+  locale?: 'zh' | 'en';
+}) {
+  const properties = (schema.properties || {}) as Record<string, SchemaProperty>;
+  const required = new Set(Array.isArray(schema.required) ? schema.required.filter((item): item is string => typeof item === 'string') : []);
+  const [raw, setRaw] = useState(() => JSON.stringify(value, null, 2));
+  const [rawError, setRawError] = useState('');
+  useEffect(() => { setRaw(JSON.stringify(value, null, 2)); setRawError(''); }, [value]);
+  const update = (name: string, next: unknown) => onChange({ ...value, [name]: next });
+  return <div className="workflow-input-form">
+    {Object.entries(properties).map(([name, property]) => {
+      const label = property.title || name.replaceAll('_', ' ');
+      if (property['x-gouno-resource']) return <Field key={name} label={label} hint={property.description} required={required.has(name)}><ResourcePicker property={property} value={value[name]} onChange={(next) => update(name, next)} locale={locale} /></Field>;
+      if (property.enum) return <Field key={name} label={label} hint={property.description} required={required.has(name)}><Select value={String(value[name] ?? '')} onChange={(event) => update(name, property.type === 'integer' ? Number(event.target.value) : event.target.value)}><option value="">{locale === 'zh' ? '请选择' : 'Select'}</option>{property.enum.map((option) => <option key={String(option)} value={String(option)}>{String(option)}</option>)}</Select></Field>;
+      if (property.type === 'boolean') return <label className="checkbox-field" key={name}><Checkbox checked={Boolean(value[name])} onChange={(event) => update(name, event.target.checked)} />{label}</label>;
+      if (property.type === 'array') return <Field key={name} label={label} hint={property.description}><Input value={Array.isArray(value[name]) ? (value[name] as unknown[]).join(', ') : ''} onChange={(event) => update(name, event.target.value.split(',').map((item) => item.trim()).filter(Boolean))} /></Field>;
+      return <Field key={name} label={label} hint={property.description} required={required.has(name)}><Input type={property.type === 'integer' || property.type === 'number' ? 'number' : 'text'} value={String(value[name] ?? '')} onChange={(event) => update(name, property.type === 'integer' || property.type === 'number' ? Number(event.target.value) : event.target.value)} /></Field>;
+    })}
+    <details className="workflow-advanced-input"><summary>{locale === 'zh' ? '高级：查看或编辑输入 JSON' : 'Advanced: view or edit input JSON'}</summary><textarea className="input-field mono" rows={7} value={raw} onChange={(event) => { setRaw(event.target.value); setRawError(''); }} onBlur={() => { try { const parsed = JSON.parse(raw); if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') throw new Error('object required'); onChange(parsed); setRawError(''); } catch { setRawError(locale === 'zh' ? '请输入有效的 JSON 对象。' : 'Enter a valid JSON object.'); } }} />{rawError ? <small className="feedback feedback--error">{rawError}</small> : null}</details>
+  </div>;
+}

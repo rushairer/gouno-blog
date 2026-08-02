@@ -560,12 +560,14 @@ export function Modal({
   description,
   children,
   onClose,
+  className,
 }: {
   open: boolean;
   title: string;
   description?: string;
   children: React.ReactNode;
   onClose: () => void;
+  className?: string;
 }) {
   const closeButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -582,7 +584,7 @@ export function Modal({
     <div className="modal-backdrop" role="presentation" onMouseDown={(event) => {
       if (event.target === event.currentTarget) onClose();
     }}>
-      <section className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby={description ? 'modal-description' : undefined}>
+      <section className={`modal${className ? ` ${className}` : ''}`} role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby={description ? 'modal-description' : undefined}>
         <header>
           <div><h2 id="modal-title">{title}</h2>{description ? <p id="modal-description">{description}</p> : null}</div>
           <IconButton ref={closeButton} label="关闭弹窗" type="button" onClick={onClose}><X /></IconButton>

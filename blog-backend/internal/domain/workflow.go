@@ -6,33 +6,73 @@ import (
 )
 
 type WorkflowStep struct {
-	ID                string         `json:"id"`
-	Type              string         `json:"type"`
-	Name              string         `json:"name,omitempty"`
-	AgentID           int64          `json:"agent_id,omitempty"`
-	InputPointer      string         `json:"input_pointer,omitempty"`
-	CollectionPointer string         `json:"collection_pointer,omitempty"`
-	MaxItems          int            `json:"max_items,omitempty"`
-	Steps             []WorkflowStep `json:"steps,omitempty"`
-	OutputPointer     string         `json:"output_pointer,omitempty"`
+	ID                string          `json:"id"`
+	Type              string          `json:"type"`
+	Name              string          `json:"name,omitempty"`
+	AgentID           int64           `json:"agent_id,omitempty"`
+	InputPointer      string          `json:"input_pointer,omitempty"`
+	IncludeContext    bool            `json:"include_context,omitempty"`
+	CollectionPointer string          `json:"collection_pointer,omitempty"`
+	MaxItems          int             `json:"max_items,omitempty"`
+	Steps             []WorkflowStep  `json:"steps,omitempty"`
+	OutputPointer     string          `json:"output_pointer,omitempty"`
+	ResourceType      string          `json:"resource_type,omitempty"`
+	Filter            json.RawMessage `json:"filter,omitempty"`
+}
+
+type WorkflowScopePolicy struct {
+	Mode           string   `json:"mode"`
+	DiscoveryTools []string `json:"discovery_tools"`
 }
 
 type Workflow struct {
-	ID             int64           `json:"id"`
-	Name           string          `json:"name"`
-	Description    string          `json:"description"`
-	Enabled        bool            `json:"enabled"`
-	CronExpression *string         `json:"cron_expression,omitempty"`
-	Timezone       string          `json:"timezone"`
-	NextRunAt      *time.Time      `json:"next_run_at,omitempty"`
-	TemplateKey    *string         `json:"template_key,omitempty"`
-	CurrentVersion int             `json:"current_version"`
-	VersionID      int64           `json:"version_id"`
-	InputSchema    json.RawMessage `json:"input_schema"`
-	Steps          []WorkflowStep  `json:"steps"`
-	CreatedBy      *string         `json:"created_by,omitempty"`
-	CreatedAt      time.Time       `json:"created_at"`
-	UpdatedAt      time.Time       `json:"updated_at"`
+	ID             int64               `json:"id"`
+	Name           string              `json:"name"`
+	Description    string              `json:"description"`
+	Enabled        bool                `json:"enabled"`
+	CronExpression *string             `json:"cron_expression,omitempty"`
+	Timezone       string              `json:"timezone"`
+	NextRunAt      *time.Time          `json:"next_run_at,omitempty"`
+	TemplateKey    *string             `json:"template_key,omitempty"`
+	CurrentVersion int                 `json:"current_version"`
+	VersionID      int64               `json:"version_id"`
+	InputSchema    json.RawMessage     `json:"input_schema"`
+	Steps          []WorkflowStep      `json:"steps"`
+	ScopePolicy    WorkflowScopePolicy `json:"scope_policy"`
+	CreatedBy      *string             `json:"created_by,omitempty"`
+	CreatedAt      time.Time           `json:"created_at"`
+	UpdatedAt      time.Time           `json:"updated_at"`
+}
+
+type WorkflowResource struct {
+	ID            int64           `json:"id"`
+	WorkflowRunID int64           `json:"workflow_run_id"`
+	ResourceType  string          `json:"type"`
+	ResourceKey   string          `json:"key"`
+	Source        string          `json:"source"`
+	AccessLevel   string          `json:"access_level"`
+	Label         string          `json:"label"`
+	VersionToken  string          `json:"version_token"`
+	Snapshot      json.RawMessage `json:"snapshot"`
+	CreatedAt     time.Time       `json:"created_at"`
+}
+
+type ResourceOption struct {
+	Type         string         `json:"type"`
+	Key          string         `json:"key"`
+	Label        string         `json:"label"`
+	Description  string         `json:"description,omitempty"`
+	Status       string         `json:"status,omitempty"`
+	VersionToken string         `json:"version_token"`
+	Metadata     map[string]any `json:"metadata"`
+}
+
+type ResourceQuery struct {
+	Query    string
+	Page     int
+	PageSize int
+	Filters  map[string]string
+	Keys     []string
 }
 
 type WorkflowRun struct {

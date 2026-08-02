@@ -5,6 +5,7 @@ import { apiFetch } from '../../auth';
 import type { Agent, Workflow, WorkflowMetric, WorkflowRun, WorkflowStep } from '../../agent';
 import { Button, ConfirmDialog, EditorPanel, EmptyState, Feedback, Field, FormActions, FormLayout, Panel, PanelHeader, Select, WorkspacePanel } from '../ui';
 import { StatusPill, statusLabel } from './StatusPill';
+import { WorkflowInputForm } from './WorkflowInputForm';
 
 async function readData<T>(response: Response): Promise<T> {
   const body = await response.json();
@@ -21,6 +22,7 @@ type WorkflowValue = {
   timezone: string;
   input_schema: Record<string, unknown>;
   steps: WorkflowStep[];
+  scope_policy: { mode: 'strict' | 'unscoped'; discovery_tools: string[] };
 };
 
 function exampleInput(schema: Record<string, unknown>): Record<string, unknown> {
@@ -48,7 +50,7 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, locale, on
   onSave: (value: WorkflowValue) => Promise<void>;
 }) {
   const [editing, setEditing] = useState<Workflow | 'new' | null>(null);
-  const [inputByID, setInputByID] = useState<Record<number, string>>({});
+  const [inputByID, setInputByID] = useState<Record<number, Record<string, unknown>>>({});
   const [versions, setVersions] = useState<Record<number, Workflow[]>>({});
   const [deleteTarget, setDeleteTarget] = useState<Workflow | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -60,7 +62,7 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, locale, on
   });
   const labels = locale === 'zh' ? {
     empty: '还没有 Workflow。', add: '创建 Workflow', run: '运行', dry: 'Dry-run', enable: '启用',
-    disable: '停用', versions: '版本', rollback: '回滚', input: '运行输入 JSON', steps: '步骤 JSON',
+    disable: '停用', versions: '版本', rollback: '回滚', input: '运行输入', steps: '步骤 JSON',
     schema: '输入 Schema', save: '保存 Workflow', cancel: '取消', metrics: '运行 / 失败 / Token',
     createTitle: '创建 Workflow', editTitle: '编辑 Workflow', schedule: '执行计划', next: '下次运行', retry: '重试',
   } : {
@@ -164,12 +166,12 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, locale, on
           // A successful dry-run must not hide the latest real publish result.
           const latestRun = runs.find((run) => run.workflow_id === workflow.id && !run.dry_run);
           const latestDryRun = runs.find((run) => run.workflow_id === workflow.id && run.dry_run);
-          const inputText = inputByID[workflow.id] ?? JSON.stringify(exampleInput(workflow.input_schema), null, 2);
+          const inputValue = inputByID[workflow.id] ?? exampleInput(workflow.input_schema);
           const inputProperties = workflow.input_schema.properties && typeof workflow.input_schema.properties === 'object'
             ? Object.keys(workflow.input_schema.properties as Record<string, unknown>)
             : [];
           const hasRuntimeInput = inputProperties.length > 0;
-          const runInput = () => hasRuntimeInput ? JSON.parse(inputText) : {};
+          const runInput = () => hasRuntimeInput ? inputValue : {};
           const activeRun = runningAction?.workflowID === workflow.id ? runningAction : null;
           const feedback = runFeedback?.workflowID === workflow.id ? runFeedback : null;
           const modelSteps = workflow.steps.filter((step) => step.type === 'model');
@@ -182,7 +184,8 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, locale, on
               : '';
           return <div className="section-stack"><div className="panel-heading"><div><h2>{workflow.name}</h2><small>{workflow.description} · v{workflow.current_version}</small></div><StatusPill status={workflow.enabled ? 'succeeded' : 'pending'} locale={locale} label={workflow.enabled ? (locale === 'zh' ? '已启用' : 'Enabled') : (locale === 'zh' ? '已停用' : 'Disabled')} /></div>
             <div className="row-actions workflow-detail-actions"><Button variant="secondary" type="button" onClick={() => setEditing(workflow)}><GitCompareArrows />Edit</Button><Button variant="secondary" type="button" onClick={() => void loadVersions(workflow)}><History />{labels.versions}</Button><Button variant="secondary" disabled={!workflow.enabled && Boolean(runBlockReason)} title={!workflow.enabled ? (runBlockReason || undefined) : undefined} type="button" onClick={() => void onMutate(`/api/admin/ai-workflows/${workflow.id}/${workflow.enabled ? 'disable' : 'enable'}`)}>{workflow.enabled ? <CirclePause /> : <Play />}{workflow.enabled ? labels.disable : labels.enable}</Button><Button variant="danger" type="button" onClick={() => setDeleteTarget(workflow)}><Trash2 />{locale === 'zh' ? '删除' : 'Delete'}</Button></div>
-            {hasRuntimeInput ? <Field label={labels.input}><textarea className="input-field mono" rows={6} value={inputText} onChange={(event) => setInputByID((current) => ({ ...current, [workflow.id]: event.target.value }))} /></Field> : <div className="workflow-runtime-input"><small>{labels.input}</small><strong>{locale === 'zh' ? '无需手动填写' : 'No manual input required'}</strong><p>{locale === 'zh' ? '运行值由已配置的 Agent 提供。' : 'Runtime values come from configured Agents.'}</p></div>}
+            {hasRuntimeInput ? <WorkflowInputForm schema={workflow.input_schema} value={inputValue} onChange={(next) => setInputByID((current) => ({ ...current, [workflow.id]: next }))} locale={locale} /> : <div className="workflow-runtime-input"><small>{labels.input}</small><strong>{locale === 'zh' ? '无需手动填写' : 'No manual input required'}</strong><p>{locale === 'zh' ? '此流程使用计划规则或 Agent 的受控只读工具获取运行上下文。' : 'This workflow obtains context from scheduled rules or governed read tools.'}</p></div>}
+            <div className="workflow-scope-summary"><strong>{locale === 'zh' ? '运行范围' : 'Run scope'}</strong><span>{workflow.scope_policy?.mode === 'strict' ? (locale === 'zh' ? '严格限制所选资源' : 'Strictly limited to selected resources') : (locale === 'zh' ? '兼容模式' : 'Compatibility mode')}</span>{workflow.scope_policy?.discovery_tools?.length ? <small>{locale === 'zh' ? '允许发现：' : 'Discovery: '}{workflow.scope_policy.discovery_tools.join(', ')}</small> : null}</div>
             {runBlockReason ? <Feedback type="error">{runBlockReason}</Feedback> : null}
             <div className="row-actions workflow-detail-actions"><Button variant="secondary" loading={Boolean(activeRun)} disabled={Boolean(runBlockReason)} title={runBlockReason || undefined} type="button" onClick={() => void runWorkflow(workflow, true, runInput())}>{activeRun?.dryRun ? <span className="spinner workflow-button-spinner" aria-hidden="true" /> : <TestTube2 />}{activeRun?.dryRun ? (locale === 'zh' ? '试运行中…' : 'Dry-running…') : labels.dry}</Button><Button variant="primary" loading={Boolean(activeRun)} disabled={!workflow.enabled || latestRun?.status === 'running' || Boolean(runBlockReason)} title={runBlockReason || undefined} type="button" onClick={() => void runWorkflow(workflow, false, runInput())}>{activeRun && !activeRun.dryRun ? <span className="spinner workflow-button-spinner" aria-hidden="true" /> : <Play />}{activeRun && !activeRun.dryRun ? (locale === 'zh' ? '运行中…' : 'Running…') : (latestRun?.status === 'failed' ? labels.retry : labels.run)}</Button></div>
             {activeRun ? <div className="workflow-run-progress" role="status" aria-live="polite"><span className="spinner workflow-progress-spinner" aria-hidden="true" /><span><strong>{locale === 'zh' ? `${activeRun.dryRun ? '试运行' : 'Workflow'} 正在执行` : `${activeRun.dryRun ? 'Dry-run' : 'Workflow'} is running`}</strong><small>{locale === 'zh' ? '请勿重复点击；完成后会自动刷新状态和运行记录。' : 'Do not submit again. Status and run records refresh automatically when complete.'}</small></span></div> : null}
@@ -213,6 +216,8 @@ function WorkflowEditor({ initial, labels, agents, onSave, onCancel }: {
   const [timezone, setTimezone] = useState(initial?.timezone || 'Asia/Shanghai');
   const [schema, setSchema] = useState(JSON.stringify(initial?.input_schema || { type: 'object', additionalProperties: false }, null, 2));
   const [steps, setSteps] = useState(JSON.stringify(initial?.steps || [], null, 2));
+  const [scopeMode, setScopeMode] = useState<'strict' | 'unscoped'>(initial?.scope_policy?.mode || 'unscoped');
+  const [discoveryTools, setDiscoveryTools] = useState((initial?.scope_policy?.discovery_tools || []).join(', '));
   const [goal, setGoal] = useState('');
   const [planning, setPlanning] = useState(false);
   const [plannerMessage, setPlannerMessage] = useState('');
@@ -249,14 +254,16 @@ function WorkflowEditor({ initial, labels, agents, onSave, onCancel }: {
   };
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    await onSave({ id: initial?.id, name, description, enabled: initial?.enabled || false, cron_expression: cronExpression.trim() || undefined, timezone, input_schema: JSON.parse(schema), steps: JSON.parse(steps) });
+    const parsedSchema = JSON.parse(schema) as { properties?: Record<string, Record<string, unknown>> };
+    const hasResources = Object.values(parsedSchema.properties || {}).some((property) => typeof property['x-gouno-resource'] === 'string');
+    await onSave({ id: initial?.id, name, description, enabled: initial?.enabled || false, cron_expression: cronExpression.trim() || undefined, timezone, input_schema: parsedSchema, steps: JSON.parse(steps), scope_policy: { mode: hasResources ? 'strict' : scopeMode, discovery_tools: discoveryTools.split(',').map((item) => item.trim()).filter(Boolean) } });
   };
   return <EditorPanel title={initial ? labels.editTitle : labels.createTitle} icon={<GitBranch />} closeLabel={labels.cancel} onClose={onCancel}><FormLayout onSubmit={submit}>
     {!initial ? <section className="workflow-planner"><div><h3>告诉 AI 你想持续完成什么</h3><p>例如：“每天检查最近发布文章的 SEO，并把需要人工确认的建议汇总出来”。AI 只生成未启用草案，不会运行或修改内容。</p></div><textarea className="input-field" rows={4} value={goal} onChange={(event) => setGoal(event.target.value)} placeholder="描述目标、频率、输入来源，以及哪些结果需要你确认…" /><FormActions><Button variant="secondary" type="button" disabled={planning} onClick={() => void generateDraft()}><GitBranch />{planning ? '正在生成草案…' : '用 AI 生成 Workflow 草案'}</Button></FormActions>{plannerMessage ? <p className="workflow-planner__message">{plannerMessage}</p> : null}</section> : null}
     <Field label="名称" hint="面向日常运营的短名称，例如“发布前内容检查”。"><input className="input-field" required value={name} onChange={(event) => setName(event.target.value)} /></Field><Field label="作用说明" hint="说明此流程何时使用、会产出什么，以及人工确认边界。"><input className="input-field" value={description} onChange={(event) => setDescription(event.target.value)} /></Field>
     <div className="form-grid workflow-schedule-grid"><Field label="Cron 执行计划" hint="留空表示仅手动运行；例如每天 09:00：0 9 * * *"><input className="input-field mono" value={cronExpression} onChange={(event) => setCronExpression(event.target.value)} placeholder="0 9 * * *" /></Field><Field label="时区" hint="使用 IANA 时区，例如 Asia/Shanghai"><input className="input-field mono" required value={timezone} onChange={(event) => setTimezone(event.target.value)} /></Field></div>
     <Field label="绑定 Agent" hint="每个 model 步骤必须固定绑定 Agent；Skill 和 Tool 授权在 Agent 内生效。"><Select required value={boundAgentID} onChange={(event) => event.target.value && bindAgent(Number(event.target.value))}><option value="" disabled>选择 Agent</option>{agents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name}{agent.enabled ? '' : '（已停用）'}</option>)}</Select></Field>
-    <details className="workflow-advanced" open={showAdvanced} onToggle={(event) => setShowAdvanced(event.currentTarget.open)}><summary>高级设置：输入与步骤 <small>仅在需要精细控制时修改</small></summary><p>Workflow 只编排已配置的 Agent 与控制流；Tool 由 Skill 和 Agent 授权调用。JSON Pointer（如 <code>/steps/writer</code>）负责传值。</p><Field label={labels.schema} hint="JSON Schema。示例：{&quot;type&quot;:&quot;object&quot;,&quot;properties&quot;:{&quot;post_id&quot;:{&quot;type&quot;:&quot;integer&quot;}},&quot;required&quot;:[&quot;post_id&quot;],&quot;additionalProperties&quot;:false}"><textarea className="input-field mono" rows={8} value={schema} onChange={(event) => setSchema(event.target.value)} /></Field><Field label={labels.steps} hint="允许 model、for_each、approval_gate、output；服务端会校验每个步骤。"><textarea className="input-field mono" rows={16} value={steps} onChange={(event) => setSteps(event.target.value)} /></Field></details>
+    <details className="workflow-advanced" open={showAdvanced} onToggle={(event) => setShowAdvanced(event.currentTarget.open)}><summary>高级设置：输入与步骤 <small>仅在需要精细控制时修改</small></summary><p>Workflow 只编排已配置的 Agent 与确定性资源查询；Tool 由 Skill 和 Agent 授权调用。JSON Pointer（如 <code>/steps/writer</code>）负责传值。</p><div className="form-grid"><Field label="运行范围"><Select value={scopeMode} onChange={(event) => setScopeMode(event.target.value as 'strict' | 'unscoped')}><option value="strict">严格限制</option><option value="unscoped">兼容模式</option></Select></Field><Field label="允许发现的只读 Tool" hint="逗号分隔；必须已被绑定 Skill 授权。"><input className="input-field mono" value={discoveryTools} onChange={(event) => setDiscoveryTools(event.target.value)} /></Field></div><Field label={labels.schema} hint="JSON Schema。资源字段使用 x-gouno-resource 和 x-gouno-widget 扩展。"><textarea className="input-field mono" rows={8} value={schema} onChange={(event) => setSchema(event.target.value)} /></Field><Field label={labels.steps} hint="允许 resource_query、model、for_each、approval_gate、output；服务端会校验每个步骤。"><textarea className="input-field mono" rows={16} value={steps} onChange={(event) => setSteps(event.target.value)} /></Field></details>
     <FormActions><Button variant="secondary" type="button" onClick={onCancel}>{labels.cancel}</Button><Button variant="primary" type="submit"><Save />{labels.save}</Button></FormActions>
   </FormLayout></EditorPanel>;
 }

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Copy, ImagePlus, Trash2 } from 'lucide-react';
+import { Copy, ImagePlus, Sparkles, Trash2 } from 'lucide-react';
 import { apiFetch, canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
-import { AdminPage, AdminPageHeader, ConfirmDialog, ContentStack, copyText, EmptyState, Feedback, Field, LoadingState, Panel, SearchField, Select, useToast } from '../components/ui';
+import { AdminPage, AdminPageHeader, Checkbox, ConfirmDialog, ContentStack, copyText, EmptyState, Feedback, Field, LoadingState, Panel, SearchField, Select, useToast } from '../components/ui';
+import { WorkflowLauncher } from '../components/agent/WorkflowLauncher';
 import { useI18n } from '../i18n';
 
 interface MediaAsset {
@@ -35,6 +36,7 @@ export default function MediaLibrary() {
   const [reviewNotes, setReviewNotes] = useState<Record<number, string>>({});
   const [reviewing, setReviewing] = useState<number | null>(null);
   const [assetSelections, setAssetSelections] = useState<Record<number, string>>({});
+  const [selectedAssets, setSelectedAssets] = useState<number[]>([]); const [aiOpen, setAIOpen] = useState(false);
 
   const load = useCallback(async () => {
     const [response, candidateResponse] = await Promise.all([apiFetch('/api/admin/media'), apiFetch('/api/admin/ai-media-candidates')]);
@@ -142,13 +144,16 @@ export default function MediaLibrary() {
         </form>
         <div className="media-filter-bar"><SearchField aria-label="搜索媒体" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索文件名或替代文本" /><Select size="compact" aria-label="媒体类型" value={type} onChange={(event) => setType(event.target.value)}><option value="">全部类型</option>{contentTypes.map((item) => <option key={item} value={item}>{item.replace('image/', '').toUpperCase()}</option>)}</Select><span>{visibleAssets.length} / {assets.length}</span></div>
       </Panel>
+      {selectedAssets.length ? <div className="bulk-action-bar"><strong>已选择 {selectedAssets.length} 个媒体</strong><button onClick={() => setAIOpen(true)}><Sparkles />交给 AI</button><button onClick={() => setSelectedAssets([])}>取消</button></div> : null}
       {candidates.length > 0 ? <Panel className="section-stack"><div className="panel-heading"><div><h2>AI 媒体候选</h2><p className="muted">图片 brief 必须先由管理员完成安全与版权检查，才会进入后续生成流程；尚未生成或发布任何媒体。</p></div><span className="admin-page-count">{candidates.length} 项</span></div><div className="table-wrap"><table><thead><tr><th>文章</th><th>Brief</th><th>模型与用量</th><th>状态</th><th>审核 / 结果</th></tr></thead><tbody>{candidates.map((candidate) => <tr key={candidate.id}><td>#{candidate.post_id}</td><td><strong>{candidate.headline || '图片创意'}</strong><small>{candidate.brief}</small>{candidate.alt_text ? <small>Alt：{candidate.alt_text}</small> : null}</td><td>{candidate.provider} / {candidate.model}<small>Token：输入 {candidate.input_tokens} · 输出 {candidate.output_tokens}</small></td><td><small>生成：{candidate.generation_status}<br />安全：{candidate.safety_status}<br />版权：{candidate.copyright_status}</small></td><td>{candidate.generation_status === 'brief_ready' ? <div className="section-stack"><input className="input-field" value={reviewNotes[candidate.id] || ''} onChange={(event) => setReviewNotes((current) => ({ ...current, [candidate.id]: event.target.value }))} placeholder="审核说明（拒绝时必填）" /><div className="row-actions"><button className="btn btn-primary" type="button" disabled={reviewing === candidate.id} onClick={() => void reviewCandidate(candidate, 'ready')}>通过检查</button><button className="btn btn-danger" type="button" disabled={reviewing === candidate.id} onClick={() => void reviewCandidate(candidate, 'reject')}>拒绝</button></div></div> : candidate.generation_status === 'ready_to_generate' ? <div className="section-stack"><Select size="compact" value={assetSelections[candidate.id] || ''} onChange={(event) => setAssetSelections((current) => ({ ...current, [candidate.id]: event.target.value }))}><option value="">关联已上传媒体…</option>{assets.map((asset) => <option key={asset.id} value={asset.id}>#{asset.id} {asset.filename}</option>)}</Select><button className="btn btn-primary" type="button" disabled={reviewing === candidate.id} onClick={() => void attachAsset(candidate)}>登记生成结果</button></div> : candidate.media_asset_id ? <a href={`/admin/media#asset-${candidate.media_asset_id}`}>媒体 #{candidate.media_asset_id}</a> : <small>{candidate.review_note || '已审核'}</small>}</td></tr>)}</tbody></table></div></Panel> : null}
       {loading ? <LoadingState label={t('loadingResources')} /> : assets.length === 0 ? <EmptyState label={t('noMedia')} /> : visibleAssets.length === 0 ? <EmptyState label="没有符合条件的媒体资源。" /> : <div className="media-grid">{visibleAssets.map((asset) => <Panel className="media-card" id={`asset-${asset.id}`} key={asset.id}>
+        <Checkbox aria-label={`选择媒体 ${asset.filename}`} checked={selectedAssets.includes(asset.id)} onChange={(event) => setSelectedAssets((current) => event.target.checked ? [...new Set([...current, asset.id])] : current.filter((id) => id !== asset.id))} />
         <img src={asset.url} alt={asset.alt_text || asset.filename} loading="lazy" />
         <div><strong>{asset.filename}</strong><small>{Math.ceil(asset.size_bytes / 1024)} KB · {formatDateTime(asset.created_at)} · 引用 {asset.usage_count || 0}</small></div>
         <div className="row-actions"><button className="btn btn-secondary" type="button" onClick={() => void copyText(`![${asset.alt_text || asset.filename}](${asset.url})`, notify, '媒体 Markdown 已复制。')}><Copy />{t('copyMarkdown')}</button><button className="btn btn-danger" type="button" onClick={() => { setDeleteTarget(asset); setReferences([]); setError(''); }}><Trash2 />{t('delete')}</button></div>
       </Panel>)}</div>}
     </ContentStack>
     <ConfirmDialog open={deleteTarget !== null} title="删除媒体" description={t('deleteMediaConfirm')} confirmLabel="永久删除" danger onClose={() => { setDeleteTarget(null); setReferences([]); }} onConfirm={remove} />
+    <WorkflowLauncher open={aiOpen} resourceType="media_asset" resourceKeys={selectedAssets} onClose={() => setAIOpen(false)} title="将所选媒体交给 AI" />
   </AdminPage>;
 }

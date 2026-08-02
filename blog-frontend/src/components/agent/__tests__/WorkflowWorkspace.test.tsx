@@ -90,7 +90,7 @@ describe('WorkflowWorkspace', () => {
     render(<WorkflowWorkspace workflows={[]} runs={[]} metrics={[]} agents={[]} locale="zh" onMutate={vi.fn()} onRun={vi.fn()} onSave={vi.fn()} />);
 
     await user.click(screen.getByRole('button', { name: '创建 Workflow' }));
-    expect(screen.getByText(/Workflow 只编排已配置的 Agent 与控制流/)).toBeInTheDocument();
+    expect(screen.getByText(/Workflow 只编排已配置的 Agent 与确定性资源查询/)).toBeInTheDocument();
     expect(screen.queryByText('rss.fetch')).not.toBeInTheDocument();
   });
 });

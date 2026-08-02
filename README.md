@@ -192,7 +192,7 @@ export BLOG_AGENT_PREVIOUS_MASTER_KEYS="1:<old-base64-key>"
 
 第三方公网 Provider 无需预先加入名单：只要域名解析结果全部为公网地址并使用 HTTPS，即可直接保存。Clash/Mihomo 等代理为域名返回的 `198.18.0.0/15` Fake-IP 也受支持，但直接填写该网段的 IP 仍不会被视为公网。`ai_agents.allowed_upstream_hosts` 用于显式授权自托管、局域网或本机 Provider；本地开发时，名单内的回环地址也可以使用 HTTP。链路本地、metadata、未指定和组播地址始终禁止，DNS 会在保存及每次建连时重新校验，上游重定向也会被拒绝。
 
-完整数据模型、工具权限和发布边界参见 [AI Agent 开发计划](./doc/ai-agent-development-plan.md)；管理 API 可在 Swagger 的 `/admin/provider-profiles`、`/admin/agents`、`/admin/agent-runs` 和 `/admin/agent-approvals` 下查看。
+结构化输入、运行范围、自动化路线和发布边界参见 [AI 工作台自动化设计](./doc/ai-workbench-automation-plan.md)；管理 API 可在 Swagger 的 `/admin/ai-workflows`、`/admin/ai-resources/{type}` 和 `/admin/ai-workflow-runs/{id}/resources` 下查看。
 
 ### 10. 多架构与 ARM64 支持
 

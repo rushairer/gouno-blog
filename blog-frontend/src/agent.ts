@@ -53,14 +53,22 @@ export interface AgentCitation {
 
 export interface WorkflowStep {
   id: string;
-  type: 'model' | 'for_each' | 'approval_gate' | 'output';
+  type: 'resource_query' | 'model' | 'for_each' | 'approval_gate' | 'output';
   name?: string;
   agent_id?: number;
   input_pointer?: string;
+  include_context?: boolean;
   collection_pointer?: string;
   max_items?: number;
   steps?: WorkflowStep[];
   output_pointer?: string;
+  resource_type?: 'post' | 'comment' | 'media_asset' | 'operational_suggestion' | 'category' | 'tag';
+  filter?: Record<string, unknown>;
+}
+
+export interface WorkflowScopePolicy {
+  mode: 'strict' | 'unscoped';
+  discovery_tools: string[];
 }
 
 export interface Workflow {
@@ -76,8 +84,22 @@ export interface Workflow {
   version_id: number;
   input_schema: Record<string, unknown>;
   steps: WorkflowStep[];
+  scope_policy?: WorkflowScopePolicy;
   created_at: string;
   updated_at: string;
+}
+
+export interface WorkflowResource {
+  id: number;
+  workflow_run_id: number;
+  type: string;
+  key: string;
+  source: 'manual' | 'query' | 'discovery';
+  access_level: 'target' | 'read';
+  label: string;
+  version_token: string;
+  snapshot: Record<string, unknown>;
+  created_at: string;
 }
 
 export interface WorkflowRun {

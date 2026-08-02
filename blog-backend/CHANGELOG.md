@@ -13,12 +13,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Added versioned Provider secret keyrings for online master-key rotation.
 - Added configurable AI Agents, Blog Tool capability controls, manual and Cron runs, usage budgets, run history, and approval-only content proposals.
 - Added the AI Agent management console and three built-in blog operations templates.
+- Added structured Workflow resource inputs for posts, comments, media, operational suggestions, categories, and tags, with resource-page launch shortcuts.
+- Added deterministic `resource_query` steps and immutable per-run resource snapshots for audit and retry reproducibility.
+
+### Changed
+
+- Workflow inputs are now compiled and validated with JSON Schema when saved and queued; resource Workflows default to strict run scope.
 
 ### Security
 
 - Allowed public HTTPS Provider upstreams by default while requiring explicit authorization for private hosts; DNS, resolved IPs, redirects, and forbidden network ranges remain fail-closed.
 - Recognized proxy-generated `198.18.0.0/15` Fake-IP results for domain-based Provider URLs without allowing literal benchmark-range URLs by default.
 - Required all Agent content changes to pass through conflict-aware human approval.
+- Restricted Workflow-derived Tool calls to snapshotted run resources; explicitly discovered resources are read-only and cannot become proposal targets.
 
 ## [1.0.1] - 2026-06-13
 
