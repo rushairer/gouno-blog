@@ -14,6 +14,7 @@ import (
 )
 
 const maxRunResources = 100
+const maxRunResourcesPerType = 50
 
 type ResourceCatalog struct{ db *sql.DB }
 

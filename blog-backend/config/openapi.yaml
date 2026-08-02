@@ -1300,7 +1300,8 @@ components:
         input_pointer: {type: string, description: JSON Pointer into the run document.}
         include_context: {type: boolean, description: For a nested model, pass both the current item and root input.}
         collection_pointer: {type: string}
-        max_items: {type: integer, minimum: 1, maximum: 100}
+                max_items: {type: integer, minimum: 1, maximum: 100}
+                max_concurrency: {type: integer, minimum: 0, maximum: 10, default: 0, description: for_each worker limit; 0 preserves sequential execution}
         continue_on_error: {type: boolean, description: for_each only; continue remaining items and return a partial-failure summary when an item fails.}
         resource_type: {type: string, enum: [post, comment, media_asset, operational_suggestion, category, tag]}
         filter: {type: object, additionalProperties: true}

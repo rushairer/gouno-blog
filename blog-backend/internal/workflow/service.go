@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/robfig/cron/v3"
@@ -230,6 +231,9 @@ func (s *Service) validateSteps(steps []domain.WorkflowStep, depth int) error {
 			seenControl = true
 			if step.CollectionPointer == "" || step.MaxItems < 1 || step.MaxItems > 100 {
 				return fmt.Errorf("%w: for_each requires a bounded collection", ErrInvalid)
+			}
+			if step.MaxConcurrency < 0 || step.MaxConcurrency > 10 {
+				return fmt.Errorf("%w: for_each max_concurrency must be between 0 and 10", ErrInvalid)
 			}
 			if err := s.validateSteps(step.Steps, depth+1); err != nil {
 				return err
@@ -854,13 +858,31 @@ func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, ste
 				break
 			}
 			newCount := 0
+			existingByType := map[string]int{}
+			for key := range existing {
+				parts := strings.SplitN(key, "\x00", 2)
+				if len(parts) == 2 {
+					existingByType[parts[0]]++
+				}
+			}
+			newByType := map[string]int{}
 			for _, candidate := range items {
 				if !existing[candidate.Type+"\x00"+candidate.Key] {
 					newCount++
+					newByType[candidate.Type]++
 				}
 			}
 			if len(existing)+newCount > maxRunResources {
 				err = fmt.Errorf("%w: workflow query exceeds 100 resources", ErrInvalid)
+				break
+			}
+			for resourceType, count := range newByType {
+				if existingByType[resourceType]+count > maxRunResourcesPerType {
+					err = fmt.Errorf("%w: workflow query exceeds %d %s resources", ErrInvalid, maxRunResourcesPerType, resourceType)
+					break
+				}
+			}
+			if err != nil {
 				break
 			}
 			for index := range items {
@@ -943,11 +965,47 @@ func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, ste
 					}
 					results := make([]any, 0, len(selected))
 					succeeded, failed := 0, 0
+					type iterationResult struct {
+						index     int
+						output    any
+						awaiting  bool
+						inTokens  int64
+						outTokens int64
+						err       error
+					}
+					resultsByIndex := make(map[int]iterationResult, len(selected))
+					resultCh := make(chan iterationResult, len(selected))
+					concurrency := step.MaxConcurrency
+					if concurrency < 1 {
+						concurrency = 1
+					}
+					jobs := make(chan int)
+					var workers sync.WaitGroup
+					for worker := 0; worker < concurrency && worker < len(selected); worker++ {
+						workers.Add(1)
+						go func() {
+							defer workers.Done()
+							for index := range jobs {
+								childDocument := cloneDocument(document)
+								childDocument["item"] = items[index]
+								childIteration := index
+								childOutput, childAwaiting, inTokens, outTokens, childErr := s.executeSteps(ctx, run, step.Steps, childDocument, items[index], &childIteration)
+								resultCh <- iterationResult{index: index, output: childOutput, awaiting: childAwaiting, inTokens: inTokens, outTokens: outTokens, err: childErr}
+							}
+						}()
+					}
 					for _, index := range selected {
-						childDocument := cloneDocument(document)
-						childDocument["item"] = items[index]
-						childIteration := index
-						childOutput, childAwaiting, inTokens, outTokens, childErr := s.executeSteps(ctx, run, step.Steps, childDocument, items[index], &childIteration)
+						jobs <- index
+					}
+					close(jobs)
+					workers.Wait()
+					close(resultCh)
+					for result := range resultCh {
+						resultsByIndex[result.index] = result
+					}
+					for _, index := range selected {
+						result := resultsByIndex[index]
+						childOutput, childAwaiting, inTokens, outTokens, childErr := result.output, result.awaiting, result.inTokens, result.outTokens, result.err
 						totalInput += inTokens
 						totalOutput += outTokens
 						awaiting = awaiting || childAwaiting

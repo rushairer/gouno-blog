@@ -14,6 +14,7 @@ type WorkflowStep struct {
 	IncludeContext    bool            `json:"include_context,omitempty"`
 	CollectionPointer string          `json:"collection_pointer,omitempty"`
 	MaxItems          int             `json:"max_items,omitempty"`
+	MaxConcurrency    int             `json:"max_concurrency,omitempty"`
 	ContinueOnError   bool            `json:"continue_on_error,omitempty"`
 	Steps             []WorkflowStep  `json:"steps,omitempty"`
 	OutputPointer     string          `json:"output_pointer,omitempty"`

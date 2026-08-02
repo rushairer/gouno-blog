@@ -89,6 +89,12 @@ func TestResourceQueryRulesAndFilters(t *testing.T) {
 	if err := validateResourceFilters("media_asset", map[string]string{"missing_alt": "true"}); err != nil {
 		t.Fatalf("missing Alt filter error = %v", err)
 	}
+	if err := service.validateSteps([]domain.WorkflowStep{{ID: "loop", Type: "for_each", CollectionPointer: "/input/items", MaxItems: 2, MaxConcurrency: 3}}, 0); err != nil {
+		t.Fatalf("valid for_each concurrency: %v", err)
+	}
+	if err := service.validateSteps([]domain.WorkflowStep{{ID: "loop", Type: "for_each", CollectionPointer: "/input/items", MaxItems: 2, MaxConcurrency: 11}}, 0); err == nil {
+		t.Fatal("for_each concurrency above 10 should be rejected")
+	}
 }
 
 func TestForEachModelCanIncludeRootInput(t *testing.T) {
