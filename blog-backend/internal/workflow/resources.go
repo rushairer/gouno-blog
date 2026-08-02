@@ -224,6 +224,7 @@ func (s *Service) persistManualResources(ctx context.Context, runID int64, schem
 	values, _ := input.(map[string]any)
 	count := 0
 	seen := map[string]bool{}
+	byType := map[string]int{}
 	for name, resourceType := range fields {
 		raw, exists := values[name]
 		if !exists {
@@ -245,8 +246,12 @@ func (s *Service) persistManualResources(ctx context.Context, runID int64, schem
 			}
 			seen[identity] = true
 			count++
+			byType[resourceType]++
 			if count > maxRunResources {
 				return fmt.Errorf("%w: workflow input exceeds 100 resources", ErrInvalid)
+			}
+			if byType[resourceType] > maxRunResourcesPerType {
+				return fmt.Errorf("%w: workflow input exceeds %d %s resources", ErrInvalid, maxRunResourcesPerType, resourceType)
 			}
 			item, err := s.catalog.Resolve(ctx, resourceType, key)
 			if err != nil {
