@@ -91,6 +91,9 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 	api := server.Group("/api")
 	api.Use(optionalAuth)
 	{
+		if agentCtrl != nil {
+			api.POST("/ai/webhooks/:event", agentCtrl.ReceiveWorkflowWebhook)
+		}
 		api.GET("/posts", ctrl.List)
 		api.GET("/posts/:slugOrID", ctrl.Get)
 		api.POST("/posts/:slugOrID/view", growthCtrl.TrackView)

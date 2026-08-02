@@ -2,11 +2,15 @@ package controller
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -569,6 +573,43 @@ func (ctrl *AgentController) EmitWorkflowEvent(c *gin.Context) {
 		}
 	}
 	queued, err := ctrl.workflows.EmitEvent(c.Request.Context(), req.EventKey, req.Event, req.Payload, subject)
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusAccepted, gouno.NewSuccessResponse(gin.H{"accepted": true, "queued": queued}))
+}
+
+// ReceiveWorkflowWebhook accepts only signed, bounded JSON and feeds it into
+// the same idempotent event path as internal domain events.
+func (ctrl *AgentController) ReceiveWorkflowWebhook(c *gin.Context) {
+	secret := strings.TrimSpace(os.Getenv("GOUNO_AI_WEBHOOK_SECRET"))
+	if secret == "" {
+		c.JSON(http.StatusServiceUnavailable, gouno.NewErrorResponse(http.StatusServiceUnavailable, "webhook connector is not configured"))
+		return
+	}
+	body, err := io.ReadAll(io.LimitReader(c.Request.Body, 1<<20+1))
+	if err != nil || len(body) == 0 || len(body) > 1<<20 || !json.Valid(body) {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "webhook payload must be valid JSON under 1 MiB"))
+		return
+	}
+	signature := strings.TrimSpace(strings.TrimPrefix(c.GetHeader("X-Gouno-Signature"), "sha256="))
+	digest := hmac.New(sha256.New, []byte(secret))
+	_, _ = digest.Write(body)
+	expected := hex.EncodeToString(digest.Sum(nil))
+	provided, decodeErr := hex.DecodeString(signature)
+	expectedBytes, _ := hex.DecodeString(expected)
+	if decodeErr != nil || !hmac.Equal(provided, expectedBytes) {
+		c.JSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "invalid webhook signature"))
+		return
+	}
+	eventType := strings.TrimSpace(c.Param("event"))
+	eventKey := strings.TrimSpace(c.GetHeader("Idempotency-Key"))
+	if eventKey == "" {
+		digest := sha256.Sum256(body)
+		eventKey = hex.EncodeToString(digest[:])
+	}
+	queued, err := ctrl.workflows.EmitEvent(c.Request.Context(), eventKey, eventType, body, nil)
 	if err != nil {
 		writeAgentError(c, err)
 		return

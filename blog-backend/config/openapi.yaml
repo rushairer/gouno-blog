@@ -1284,6 +1284,22 @@ paths:
       responses:
         '202': {description: Event accepted and matching Workflows queued}
         '400': {description: Invalid event or payload}
+  /ai/webhooks/{event}:
+    post:
+      summary: Receive a signed external event
+      description: Verifies HMAC SHA-256 using GOUNO_AI_WEBHOOK_SECRET, applies a 1 MiB body limit, then routes the event through the idempotent Workflow event path.
+      parameters:
+        - {name: event, in: path, required: true, schema: {type: string, maxLength: 80}}
+        - {name: X-Gouno-Signature, in: header, required: true, schema: {type: string}}
+        - {name: Idempotency-Key, in: header, required: false, schema: {type: string, maxLength: 180}}
+      requestBody:
+        required: true
+        content:
+          application/json: {schema: {type: object}}
+      responses:
+        '202': {description: Signed event accepted}
+        '401': {description: Invalid signature}
+        '503': {description: Webhook secret is not configured}
 
 components:
   parameters:

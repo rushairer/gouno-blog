@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Added opt-in per-resource partial-failure aggregation for `for_each` steps; legacy steps retain fail-fast behavior.
 - Added per-resource retry API and run-record action for failed `for_each` iterations, preserving the original input and dynamic-resource snapshot.
 - Added bounded `for_each` concurrency and per-resource-type query quotas; existing Workflows remain sequential unless concurrency is explicitly configured.
+- Added idempotent Workflow domain events, signed external webhook intake, database event triggers, and exponential replay backoff.
 
 ### Changed
 

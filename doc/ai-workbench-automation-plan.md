@@ -200,7 +200,7 @@ GET /api/admin/ai-workflow-runs/91/resources
 
 ### 第四阶段：外部连接器
 
-先提供只读 RSS、Webhook、Search Console 和 Sitemap。Newsletter 与社媒投递使用独立加密凭据和审批后 Outbox。入站 Webhook 校验签名、时间窗、nonce 和大小；出站请求使用允许列表、幂等键、限流、投递审计和撤销状态。不提供任意 HTTP、任意代码或模型生成插件。
+RSS 已通过白名单 HTTPS Tool 提供受限读取，站点 Sitemap 为现有只读公开源；Webhook 已提供 HMAC SHA-256 校验、1 MiB 限制和幂等键，仍需在部署环境配置 `GOUNO_AI_WEBHOOK_SECRET`。Search Console、Newsletter 与社媒投递需要独立 OAuth/服务凭据，尚未配置。投递类连接器仍需审批后 Outbox、允许列表、幂等键、限流、投递审计和撤销状态；不提供任意 HTTP、任意代码或模型生成插件。
 
 ## 验收基线
 
