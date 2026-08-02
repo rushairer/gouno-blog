@@ -265,6 +265,35 @@ func TestRetryFailedForEachIterationUsesOriginalInput(t *testing.T) {
 	}
 }
 
+func TestWorkflowEventIsIdempotentAndFiltered(t *testing.T) {
+	db := openWorkflowIntegrationDB(t)
+	t.Cleanup(func() { _ = db.Close() })
+	ctx := context.Background()
+	workflowID, versionID := createResourceQueryWorkflow(t, ctx, db, []map[string]any{{"id": "result", "type": "output", "output_pointer": "/input"}})
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(ctx, `DELETE FROM ai_workflow_events WHERE event_key='post.published:42'`)
+		cleanupResourceQueryFixture(t, ctx, db, workflowID, versionID, 0)
+	})
+	if _, err := db.ExecContext(ctx, `UPDATE ai_workflows SET event_triggers='[{"event":"post.published","filter":{"post_id":42}}]' WHERE id=$1`, workflowID); err != nil {
+		t.Fatal(err)
+	}
+	service := &Service{db: db, catalog: NewResourceCatalog(db)}
+	queued, err := service.EmitEvent(ctx, "post.published:42", "post.published", json.RawMessage(`{"post_id":42}`), nil)
+	if err != nil || queued != 1 {
+		t.Fatalf("event queue = %d, %v", queued, err)
+	}
+	if duplicate, err := service.EmitEvent(ctx, "post.published:42", "post.published", json.RawMessage(`{"post_id":42}`), nil); err != nil || duplicate != 0 {
+		t.Fatalf("duplicate event = %d, %v", duplicate, err)
+	}
+	var eventStatus string
+	if err := db.QueryRowContext(ctx, `SELECT status FROM ai_workflow_events WHERE event_key='post.published:42'`).Scan(&eventStatus); err != nil {
+		t.Fatal(err)
+	}
+	if eventStatus != "processed" {
+		t.Fatalf("event status = %q", eventStatus)
+	}
+}
+
 func TestEmptyResourceQueryDoesNotCreateAgentRun(t *testing.T) {
 	db := openWorkflowIntegrationDB(t)
 	t.Cleanup(func() { _ = db.Close() })

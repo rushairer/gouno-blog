@@ -40,14 +40,14 @@ func NewService(db *sql.DB, runner *agentservice.Runner, agents *agentservice.Ma
 }
 
 const workflowColumns = `w.id, w.name, w.description, w.enabled, w.cron_expression, w.timezone, w.next_run_at, w.template_key,
-	w.current_version, v.id, v.input_schema, v.steps, v.scope_policy, w.resource_query_preview, w.resource_query_preview_at,
+	w.current_version, v.id, v.input_schema, v.steps, v.scope_policy, w.event_triggers, w.resource_query_preview, w.resource_query_preview_at,
 	w.resource_query_last_count, w.resource_query_last_run_at, w.resource_query_empty_policy, w.created_by, w.created_at, w.updated_at`
 
 func scanWorkflow(scanner interface{ Scan(...any) error }) (*domain.Workflow, error) {
 	var value domain.Workflow
-	var steps, scopePolicy, queryPreview []byte
+	var steps, scopePolicy, eventTriggers, queryPreview []byte
 	err := scanner.Scan(&value.ID, &value.Name, &value.Description, &value.Enabled, &value.CronExpression, &value.Timezone, &value.NextRunAt, &value.TemplateKey,
-		&value.CurrentVersion, &value.VersionID, &value.InputSchema, &steps, &scopePolicy, &queryPreview, &value.ResourceQueryPreviewAt,
+		&value.CurrentVersion, &value.VersionID, &value.InputSchema, &steps, &scopePolicy, &eventTriggers, &queryPreview, &value.ResourceQueryPreviewAt,
 		&value.ResourceQueryLastCount, &value.ResourceQueryLastRunAt, &value.ResourceQueryEmptyPolicy, &value.CreatedBy,
 		&value.CreatedAt, &value.UpdatedAt)
 	if err == nil {
@@ -55,6 +55,9 @@ func scanWorkflow(scanner interface{ Scan(...any) error }) (*domain.Workflow, er
 	}
 	if err == nil {
 		err = json.Unmarshal(scopePolicy, &value.ScopePolicy)
+	}
+	if err == nil && len(eventTriggers) > 0 {
+		err = json.Unmarshal(eventTriggers, &value.EventTriggers)
 	}
 	if err == nil {
 		value.ResourceQueryPreview = json.RawMessage(queryPreview)
@@ -126,6 +129,9 @@ func (s *Service) Save(ctx context.Context, value *domain.Workflow) error {
 	if err := s.validateDiscoveryTools(ctx, value); err != nil {
 		return err
 	}
+	if err := validateEventTriggers(value.EventTriggers); err != nil {
+		return err
+	}
 	if value.ResourceQueryEmptyPolicy == "" {
 		value.ResourceQueryEmptyPolicy = "succeed"
 	}
@@ -139,6 +145,7 @@ func (s *Service) Save(ctx context.Context, value *domain.Workflow) error {
 	value.ResourceQueryPreview, value.ResourceQueryPreviewAt = preview, previewAt
 	rawSteps, _ := json.Marshal(value.Steps)
 	rawScope, _ := json.Marshal(value.ScopePolicy)
+	rawEvents, _ := json.Marshal(value.EventTriggers)
 	if len(rawSteps) > 128<<10 {
 		return fmt.Errorf("%w: step definition exceeds 128 KiB", ErrInvalid)
 	}
@@ -148,17 +155,17 @@ func (s *Service) Save(ctx context.Context, value *domain.Workflow) error {
 	}
 	if value.ID == 0 {
 		err = tx.QueryRowContext(ctx, `INSERT INTO ai_workflows
-			(name, description, enabled, cron_expression, timezone, next_run_at, resource_query_preview, resource_query_preview_at, resource_query_empty_policy, created_by)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+			(name, description, enabled, cron_expression, timezone, next_run_at, event_triggers, resource_query_preview, resource_query_preview_at, resource_query_empty_policy, created_by)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
 			RETURNING id, current_version, created_at, updated_at`, value.Name, value.Description,
-			value.Enabled, value.CronExpression, value.Timezone, workflowNext(value), value.ResourceQueryPreview, value.ResourceQueryPreviewAt, value.ResourceQueryEmptyPolicy, value.CreatedBy).Scan(&value.ID, &value.CurrentVersion, &value.CreatedAt, &value.UpdatedAt)
+			value.Enabled, value.CronExpression, value.Timezone, workflowNext(value), rawEvents, value.ResourceQueryPreview, value.ResourceQueryPreviewAt, value.ResourceQueryEmptyPolicy, value.CreatedBy).Scan(&value.ID, &value.CurrentVersion, &value.CreatedAt, &value.UpdatedAt)
 	} else {
 		err = tx.QueryRowContext(ctx, `UPDATE ai_workflows SET name=$2, description=$3,
-			enabled=$4, cron_expression=$5, timezone=$6, next_run_at=$7, resource_query_preview=$8, resource_query_preview_at=$9,
-			resource_query_empty_policy=$10, current_version=current_version+1, updated_at=NOW()
+			enabled=$4, cron_expression=$5, timezone=$6, next_run_at=$7, event_triggers=$8, resource_query_preview=$9, resource_query_preview_at=$10,
+			resource_query_empty_policy=$11, current_version=current_version+1, updated_at=NOW()
 			WHERE id=$1 AND deleted_at IS NULL
 			RETURNING current_version, created_by, created_at, updated_at`, value.ID, value.Name,
-			value.Description, value.Enabled, value.CronExpression, value.Timezone, workflowNext(value), value.ResourceQueryPreview, value.ResourceQueryPreviewAt, value.ResourceQueryEmptyPolicy).Scan(&value.CurrentVersion, &value.CreatedBy,
+			value.Description, value.Enabled, value.CronExpression, value.Timezone, workflowNext(value), rawEvents, value.ResourceQueryPreview, value.ResourceQueryPreviewAt, value.ResourceQueryEmptyPolicy).Scan(&value.CurrentVersion, &value.CreatedBy,
 			&value.CreatedAt, &value.UpdatedAt)
 	}
 	if err == nil {
@@ -172,6 +179,87 @@ func (s *Service) Save(ctx context.Context, value *domain.Workflow) error {
 		return err
 	}
 	return tx.Commit()
+}
+
+func validateEventTriggers(triggers []domain.WorkflowEventTrigger) error {
+	if len(triggers) > 20 {
+		return fmt.Errorf("%w: at most 20 event triggers are allowed", ErrInvalid)
+	}
+	for _, trigger := range triggers {
+		if strings.TrimSpace(trigger.Event) == "" || len(trigger.Event) > 80 || trigger.CooldownSeconds < 0 || trigger.CooldownSeconds > 86400 {
+			return fmt.Errorf("%w: invalid event trigger", ErrInvalid)
+		}
+		if trigger.DedupeField != "" && !strings.HasPrefix(trigger.DedupeField, "/") {
+			return fmt.Errorf("%w: event dedupe_field must be a JSON pointer", ErrInvalid)
+		}
+	}
+	return nil
+}
+
+// EmitEvent accepts a signed/internal domain event, deduplicates it, and queues
+// every enabled Workflow whose event trigger matches the payload.
+func (s *Service) EmitEvent(ctx context.Context, eventKey, eventType string, payload json.RawMessage, triggeredBy *string) (int, error) {
+	eventKey, eventType = strings.TrimSpace(eventKey), strings.TrimSpace(eventType)
+	if eventKey == "" || eventType == "" || len(eventKey) > 180 || len(eventType) > 80 || len(payload) == 0 || !json.Valid(payload) {
+		return 0, fmt.Errorf("%w: invalid workflow event", ErrInvalid)
+	}
+	var inserted bool
+	if err := s.db.QueryRowContext(ctx, `INSERT INTO ai_workflow_events(event_key,event_type,payload) VALUES($1,$2,$3)
+		ON CONFLICT (event_key) DO NOTHING RETURNING TRUE`, eventKey, eventType, payload).Scan(&inserted); errors.Is(err, sql.ErrNoRows) {
+		return 0, nil
+	} else if err != nil {
+		return 0, err
+	}
+	return s.processStoredEvent(ctx, eventKey, eventType, payload, triggeredBy)
+}
+
+func (s *Service) processStoredEvent(ctx context.Context, eventKey, eventType string, payload json.RawMessage, triggeredBy *string) (int, error) {
+	var input any
+	if err := json.Unmarshal(payload, &input); err != nil {
+		return 0, fmt.Errorf("%w: event payload must be an object", ErrInvalid)
+	}
+	workflows, err := s.List(ctx)
+	if err != nil {
+		return 0, err
+	}
+	queued := 0
+	for _, workflow := range workflows {
+		for _, trigger := range workflow.EventTriggers {
+			if trigger.Event != eventType || !eventFilterMatches(trigger.Filter, input) {
+				continue
+			}
+			if trigger.CooldownSeconds > 0 {
+				var recent bool
+				if err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM ai_workflow_runs WHERE workflow_id=$1 AND triggered_by=$2 AND created_at >= NOW()-make_interval(secs=>$3))`, workflow.ID, "event:"+eventKey, trigger.CooldownSeconds).Scan(&recent); err != nil {
+					return queued, err
+				}
+				if recent {
+					continue
+				}
+			}
+			run, queueErr := s.Queue(ctx, workflow.ID, false, payload, triggeredBy)
+			if queueErr != nil {
+				continue
+			}
+			if run.Status == "queued" {
+				go s.Execute(context.Background(), run.ID)
+			}
+			queued++
+			break
+		}
+	}
+	_, _ = s.db.ExecContext(ctx, `UPDATE ai_workflow_events SET status='processed',processed_at=NOW() WHERE event_key=$1`, eventKey)
+	return queued, nil
+}
+
+func eventFilterMatches(filter map[string]interface{}, payload any) bool {
+	for key, expected := range filter {
+		actual, err := resolvePointer(map[string]any{"payload": payload}, "/payload/"+strings.TrimPrefix(key, "/"))
+		if err != nil || fmt.Sprint(actual) != fmt.Sprint(expected) {
+			return false
+		}
+	}
+	return true
 }
 
 // ValidateDraft applies the exact validation used by Save without changing any
@@ -690,6 +778,7 @@ func (s *Service) StartScheduler(ctx context.Context, interval time.Duration) {
 }
 
 func (s *Service) tick(ctx context.Context) {
+	s.processPendingEvents(ctx)
 	// Claim due rows before queueing. SKIP LOCKED keeps multiple web instances
 	// from returning the same queued run to two in-memory workers.
 	rows, err := s.db.QueryContext(ctx, `UPDATE ai_workflows SET next_run_at=NULL
@@ -723,11 +812,30 @@ func (s *Service) tick(ctx context.Context) {
 	}
 }
 
+func (s *Service) processPendingEvents(ctx context.Context) {
+	rows, err := s.db.QueryContext(ctx, `SELECT event_key,event_type,payload FROM ai_workflow_events
+		WHERE status='accepted' ORDER BY id LIMIT 20`)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var key, eventType string
+		var payload []byte
+		if rows.Scan(&key, &eventType, &payload) == nil {
+			_, _ = s.processStoredEvent(ctx, key, eventType, payload, nil)
+		}
+	}
+}
+
 func (s *Service) Execute(ctx context.Context, runID int64) {
 	if err := s.execute(ctx, runID); err != nil {
 		code, message := "workflow_failed", safeError(err)
-		result, _ := s.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status='failed',
+		result, updateErr := s.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status='failed',
 			error_code=$2, error_message=$3, finished_at=NOW() WHERE id=$1 AND status='running'`, runID, code, message)
+		if updateErr != nil || result == nil {
+			return
+		}
 		if changed, _ := result.RowsAffected(); changed == 0 {
 			return
 		}

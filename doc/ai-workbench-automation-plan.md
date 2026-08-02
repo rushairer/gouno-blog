@@ -28,7 +28,7 @@ AI 工作台不再把 Workflow 输入理解为“由 Agent 提供的一段 JSON�
 | 资源页批量入口 | 已实现 | 排队时 | 评论回复草稿、媒体 Alt 检查 |
 | Cron + `resource_query` | 已实现 | 运行开始时一次性解析 | 陈旧文章、低互动内容 |
 | Agent 发现 Tool | 已实现 | Tool 调用成功后 | 为目标文章发现相关内链，只读扩展 |
-| 站内领域事件 | 第三阶段 | 事件入队时 | 评论被举报、媒体上传 |
+| 站内领域事件 | 已实现基础版 | 事件入队或数据库事件触发器消费时 | 评论被举报、媒体上传、文章发布 |
 | 外部连接器 | 第四阶段 | 连接器验签/抓取后 | RSS、Search Console、Sitemap |
 
 Agent 的模型输出不是 Workflow 的可信输入来源。模型可以在已授权范围内读取资源、分析并调用 Tool，但不能自行扩大目标集合或绕过审批。
@@ -196,7 +196,7 @@ GET /api/admin/ai-workflow-runs/91/resources
 
 ### 第三阶段：事件触发
 
-支持 `post.published`、`post.updated`、`comment.created`、`comment.reported`、`media.uploaded`、`suggestion.created` 和 `link_check.failed`。事件载荷转换为同一结构化输入与 Run Scope，并增加过滤、去重键、冷却时间、批处理窗口和失败重放。事件不能绕过 Skill、预算、Tool 白名单、范围或审批。
+已实现 `post.published`、`post.updated`、`comment.created`、`comment.reported`、`media.uploaded` 和 `suggestion.created` 的幂等事件表、精确字段过滤、冷却检查、事件入队 API 与数据库触发器；Scheduler 消费未处理事件。批处理窗口、失败重放和 `link_check.failed` 仍待补齐。事件不能绕过 Skill、预算、Tool 白名单、范围或审批。
 
 ### 第四阶段：外部连接器
 

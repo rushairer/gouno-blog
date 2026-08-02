@@ -1264,6 +1264,26 @@ paths:
         '202': {description: Retry run queued}
         '400': {description: Invalid request or iteration is not failed}
         '404': {description: Workflow run not found}
+  /admin/ai-workflow-events:
+    post:
+      summary: Ingest a domain event for matching Workflows
+      description: Idempotently accepts an event and queues enabled Workflows with matching event_triggers. The event payload is validated by each Workflow input schema.
+      security: [{BearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [event_key, event, payload]
+              properties:
+                event_key: {type: string, minLength: 1, maxLength: 180}
+                event: {type: string, minLength: 1, maxLength: 80}
+                payload: {type: object}
+      responses:
+        '202': {description: Event accepted and matching Workflows queued}
+        '400': {description: Invalid event or payload}
 
 components:
   parameters:
@@ -1300,8 +1320,8 @@ components:
         input_pointer: {type: string, description: JSON Pointer into the run document.}
         include_context: {type: boolean, description: For a nested model, pass both the current item and root input.}
         collection_pointer: {type: string}
-                max_items: {type: integer, minimum: 1, maximum: 100}
-                max_concurrency: {type: integer, minimum: 0, maximum: 10, default: 0, description: for_each worker limit; 0 preserves sequential execution}
+        max_items: {type: integer, minimum: 1, maximum: 100}
+        max_concurrency: {type: integer, minimum: 0, maximum: 10, default: 0, description: for_each worker limit; 0 preserves sequential execution}
         continue_on_error: {type: boolean, description: for_each only; continue remaining items and return a partial-failure summary when an item fails.}
         resource_type: {type: string, enum: [post, comment, media_asset, operational_suggestion, category, tag]}
         filter: {type: object, additionalProperties: true}
@@ -1318,6 +1338,17 @@ components:
         description: {type: string}
         enabled: {type: boolean}
         cron_expression: {type: string, nullable: true}
+        event_triggers:
+          type: array
+          description: Domain events that may queue this enabled Workflow after deterministic filter and cooldown checks.
+          items:
+            type: object
+            required: [event]
+            properties:
+              event: {type: string, maxLength: 80}
+              filter: {type: object, additionalProperties: true}
+              dedupe_field: {type: string, description: JSON Pointer used by an event producer when deriving an idempotency key.}
+              cooldown_seconds: {type: integer, minimum: 0, maximum: 86400}
         timezone: {type: string, default: Asia/Shanghai}
         input_schema:
           type: object

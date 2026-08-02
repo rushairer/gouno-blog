@@ -552,6 +552,30 @@ func (ctrl *AgentController) RetryWorkflowRun(c *gin.Context) {
 	c.JSON(http.StatusAccepted, gouno.NewSuccessResponse(run))
 }
 
+func (ctrl *AgentController) EmitWorkflowEvent(c *gin.Context) {
+	var req struct {
+		EventKey string          `json:"event_key" binding:"required"`
+		Event    string          `json:"event" binding:"required"`
+		Payload  json.RawMessage `json:"payload" binding:"required"`
+	}
+	if err := bindAgentJSON(c, &req); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+	var subject *string
+	if raw, exists := c.Get("account_id"); exists {
+		if text, ok := raw.(string); ok && text != "" {
+			subject = &text
+		}
+	}
+	queued, err := ctrl.workflows.EmitEvent(c.Request.Context(), req.EventKey, req.Event, req.Payload, subject)
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusAccepted, gouno.NewSuccessResponse(gin.H{"accepted": true, "queued": queued}))
+}
+
 func (ctrl *AgentController) queueWorkflow(c *gin.Context, dryRun bool) {
 	id, ok := agentID(c)
 	if !ok {

@@ -27,28 +27,36 @@ type WorkflowScopePolicy struct {
 	DiscoveryTools []string `json:"discovery_tools"`
 }
 
+type WorkflowEventTrigger struct {
+	Event           string                 `json:"event"`
+	Filter          map[string]interface{} `json:"filter,omitempty"`
+	DedupeField     string                 `json:"dedupe_field,omitempty"`
+	CooldownSeconds int                    `json:"cooldown_seconds,omitempty"`
+}
+
 type Workflow struct {
-	ID                       int64               `json:"id"`
-	Name                     string              `json:"name"`
-	Description              string              `json:"description"`
-	Enabled                  bool                `json:"enabled"`
-	CronExpression           *string             `json:"cron_expression,omitempty"`
-	Timezone                 string              `json:"timezone"`
-	NextRunAt                *time.Time          `json:"next_run_at,omitempty"`
-	TemplateKey              *string             `json:"template_key,omitempty"`
-	CurrentVersion           int                 `json:"current_version"`
-	VersionID                int64               `json:"version_id"`
-	InputSchema              json.RawMessage     `json:"input_schema"`
-	Steps                    []WorkflowStep      `json:"steps"`
-	ScopePolicy              WorkflowScopePolicy `json:"scope_policy"`
-	ResourceQueryPreview     json.RawMessage     `json:"resource_query_preview,omitempty"`
-	ResourceQueryPreviewAt   *time.Time          `json:"resource_query_preview_at,omitempty"`
-	ResourceQueryLastCount   *int                `json:"resource_query_last_count,omitempty"`
-	ResourceQueryLastRunAt   *time.Time          `json:"resource_query_last_run_at,omitempty"`
-	ResourceQueryEmptyPolicy string              `json:"resource_query_empty_policy"`
-	CreatedBy                *string             `json:"created_by,omitempty"`
-	CreatedAt                time.Time           `json:"created_at"`
-	UpdatedAt                time.Time           `json:"updated_at"`
+	ID                       int64                  `json:"id"`
+	Name                     string                 `json:"name"`
+	Description              string                 `json:"description"`
+	Enabled                  bool                   `json:"enabled"`
+	CronExpression           *string                `json:"cron_expression,omitempty"`
+	EventTriggers            []WorkflowEventTrigger `json:"event_triggers,omitempty"`
+	Timezone                 string                 `json:"timezone"`
+	NextRunAt                *time.Time             `json:"next_run_at,omitempty"`
+	TemplateKey              *string                `json:"template_key,omitempty"`
+	CurrentVersion           int                    `json:"current_version"`
+	VersionID                int64                  `json:"version_id"`
+	InputSchema              json.RawMessage        `json:"input_schema"`
+	Steps                    []WorkflowStep         `json:"steps"`
+	ScopePolicy              WorkflowScopePolicy    `json:"scope_policy"`
+	ResourceQueryPreview     json.RawMessage        `json:"resource_query_preview,omitempty"`
+	ResourceQueryPreviewAt   *time.Time             `json:"resource_query_preview_at,omitempty"`
+	ResourceQueryLastCount   *int                   `json:"resource_query_last_count,omitempty"`
+	ResourceQueryLastRunAt   *time.Time             `json:"resource_query_last_run_at,omitempty"`
+	ResourceQueryEmptyPolicy string                 `json:"resource_query_empty_policy"`
+	CreatedBy                *string                `json:"created_by,omitempty"`
+	CreatedAt                time.Time              `json:"created_at"`
+	UpdatedAt                time.Time              `json:"updated_at"`
 }
 
 type WorkflowResource struct {
