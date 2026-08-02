@@ -60,6 +60,7 @@ export interface WorkflowStep {
   include_context?: boolean;
   collection_pointer?: string;
   max_items?: number;
+  continue_on_error?: boolean;
   steps?: WorkflowStep[];
   output_pointer?: string;
   resource_type?: 'post' | 'comment' | 'media_asset' | 'operational_suggestion' | 'category' | 'tag';
@@ -85,6 +86,11 @@ export interface Workflow {
   input_schema: Record<string, unknown>;
   steps: WorkflowStep[];
   scope_policy?: WorkflowScopePolicy;
+  resource_query_preview?: Array<{ step_id: string; resource_type: string; estimated_count: number; max_items: number }>;
+  resource_query_preview_at?: string;
+  resource_query_last_count?: number;
+  resource_query_last_run_at?: string;
+  resource_query_empty_policy?: 'succeed' | 'fail';
   created_at: string;
   updated_at: string;
 }

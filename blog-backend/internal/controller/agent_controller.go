@@ -524,6 +524,34 @@ func (ctrl *AgentController) setWorkflowEnabled(c *gin.Context, enabled bool) {
 func (ctrl *AgentController) RunWorkflow(c *gin.Context)    { ctrl.queueWorkflow(c, false) }
 func (ctrl *AgentController) DryRunWorkflow(c *gin.Context) { ctrl.queueWorkflow(c, true) }
 
+func (ctrl *AgentController) RetryWorkflowRun(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	var req struct {
+		StepID     string `json:"step_id"`
+		Iterations []int  `json:"iterations"`
+	}
+	if err := bindAgentJSON(c, &req); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+	var subject *string
+	if raw, exists := c.Get("account_id"); exists {
+		if text, ok := raw.(string); ok && text != "" {
+			subject = &text
+		}
+	}
+	run, err := ctrl.workflows.RetryFailed(c.Request.Context(), id, req.StepID, req.Iterations, subject)
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	go ctrl.workflows.Execute(ctrl.workerCtx, run.ID)
+	c.JSON(http.StatusAccepted, gouno.NewSuccessResponse(run))
+}
+
 func (ctrl *AgentController) queueWorkflow(c *gin.Context, dryRun bool) {
 	id, ok := agentID(c)
 	if !ok {

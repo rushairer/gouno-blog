@@ -82,4 +82,20 @@ describe('WorkflowRunRecords', () => {
     expect(screen.getByText('Structured AI inputs')).toBeInTheDocument();
     expect(screen.getByText(/手选 · 目标/)).toBeInTheDocument();
   });
+
+  it('retries a failed resource iteration and refreshes records', async () => {
+    const user = userEvent.setup();
+    const onRefresh = vi.fn(async () => undefined);
+    render(<WorkflowRunRecords locale="zh" workflows={[workflow]} runs={[run]} formatDateTime={(value) => value} onRefresh={onRefresh} />);
+
+    await user.click(screen.getByRole('button', { name: /AI 每日资讯/ }));
+    await waitFor(() => expect(screen.getByRole('button', { name: '重试此资源' })).toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: '重试此资源' }));
+
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledWith('/api/admin/ai-workflow-runs/6/retry', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ step_id: 'sources', iterations: [0] }),
+    })));
+    expect(onRefresh).toHaveBeenCalledOnce();
+  });
 });

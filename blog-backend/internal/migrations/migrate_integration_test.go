@@ -71,6 +71,18 @@ func TestUpAppliesCurrentSchemaAndIsIdempotent(t *testing.T) {
 	if !providerSecretNullable {
 		t.Fatal("expected deleted provider credentials to be nullable for revocation")
 	}
+	for _, column := range []string{"retry_of_run_id", "retry_step_id", "retry_iterations"} {
+		var exists bool
+		if err := db.QueryRowContext(ctx, `SELECT EXISTS (
+			SELECT 1 FROM information_schema.columns
+			WHERE table_schema='public' AND table_name='ai_workflow_runs' AND column_name=$1
+		)`, column).Scan(&exists); err != nil {
+			t.Fatal(err)
+		}
+		if !exists {
+			t.Fatalf("expected ai_workflow_runs.%s to exist", column)
+		}
+	}
 	var systemSkills, workflows int
 	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_skills WHERE system_key IS NOT NULL`).Scan(&systemSkills); err != nil {
 		t.Fatal(err)
@@ -103,6 +115,26 @@ func TestUpAppliesCurrentSchemaAndIsIdempotent(t *testing.T) {
 	}
 	if resourceWorkflows != 9 {
 		t.Fatalf("expected 9 structured resource Workflows, got %d", resourceWorkflows)
+	}
+	var ruleWorkflows int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_workflows w
+		JOIN ai_workflow_versions v ON v.workflow_id=w.id AND v.version=w.current_version
+		WHERE w.template_key IN ('scheduled_post_publish_review','scheduled_reported_comment_review','scheduled_missing_alt_review')
+		AND w.enabled=FALSE AND v.scope_policy->>'mode'='strict'`).Scan(&ruleWorkflows); err != nil {
+		t.Fatal(err)
+	}
+	if ruleWorkflows != 3 {
+		t.Fatalf("expected 3 disabled rule-based Workflow starters, got %d", ruleWorkflows)
+	}
+	var partialBatchWorkflows int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_workflows w
+		JOIN ai_workflow_versions v ON v.workflow_id=w.id AND v.version=w.current_version
+		WHERE w.template_key IN ('scheduled_post_publish_review','scheduled_reported_comment_review','scheduled_missing_alt_review')
+		AND (v.steps->1->>'continue_on_error')::boolean=TRUE`).Scan(&partialBatchWorkflows); err != nil {
+		t.Fatal(err)
+	}
+	if partialBatchWorkflows != 3 {
+		t.Fatalf("expected 3 partial-failure batch Workflows, got %d", partialBatchWorkflows)
 	}
 	var strictVersions int
 	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_workflows w

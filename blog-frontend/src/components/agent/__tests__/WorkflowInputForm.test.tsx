@@ -44,8 +44,19 @@ describe('WorkflowInputForm', () => {
 
     await user.click(screen.getByRole('button', { name: '选择资源' }));
     await user.selectOptions(screen.getByLabelText('状态'), 'published');
+    await user.type(screen.getByLabelText('最近发布天数'), '2');
 
-    await waitFor(() => expect(apiFetch).toHaveBeenCalledWith(expect.stringContaining('status=published'), expect.anything()));
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledWith(expect.stringMatching(/status=published.*published_within_days=2|published_within_days=2.*status=published/), expect.anything()));
+  });
+
+  it('filters media with missing Alt text', async () => {
+    const user = userEvent.setup();
+    render(<WorkflowInputForm schema={{ type: 'object', properties: { media_ids: { title: '媒体', type: 'array', items: { type: 'integer' }, 'x-gouno-resource': 'media_asset' } } }} value={{ media_ids: [] }} onChange={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: '选择资源' }));
+    await user.selectOptions(screen.getByLabelText('Alt 文本'), 'true');
+
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledWith(expect.stringContaining('missing_alt=true'), expect.anything()));
   });
 
   it('marks saved resource references that are no longer available', async () => {

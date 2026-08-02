@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Added the AI Agent management console and three built-in blog operations templates.
 - Added structured Workflow resource inputs for posts, comments, media, operational suggestions, categories, and tags, with resource-page launch shortcuts.
 - Added deterministic `resource_query` steps and immutable per-run resource snapshots for audit and retry reproducibility.
+- Added persisted resource-query previews, last-match counts, and configurable empty-result handling.
+- Added disabled starter Workflows for post-publish review, reported-comment review, and missing-Alt media checks.
+- Added opt-in per-resource partial-failure aggregation for `for_each` steps; legacy steps retain fail-fast behavior.
+- Added per-resource retry API and run-record action for failed `for_each` iterations, preserving the original input and dynamic-resource snapshot.
 
 ### Changed
 

@@ -33,6 +33,7 @@ const resourceFilters: Record<string, ResourceFilter[]> = {
   post: [
     { key: 'status', zh: '状态', en: 'Status', type: 'select', options: statusOptions(['draft', 'scheduled', 'published']) },
     { key: 'tag', zh: '标签', en: 'Tag', type: 'text' },
+    { key: 'published_within_days', zh: '最近发布天数', en: 'Published within days', type: 'number' },
     { key: 'low_engagement', zh: '低互动', en: 'Low engagement', type: 'select', options: [{ value: 'true', zh: '仅低互动', en: 'Low only' }] },
   ],
   comment: [
@@ -43,6 +44,7 @@ const resourceFilters: Record<string, ResourceFilter[]> = {
   media_asset: [
     { key: 'content_type', zh: '内容类型', en: 'Content type', type: 'text', placeholder: 'image/jpeg' },
     { key: 'in_use', zh: '引用状态', en: 'Usage', type: 'select', options: [{ value: 'true', zh: '已引用', en: 'In use' }, { value: 'false', zh: '未引用', en: 'Unused' }] },
+    { key: 'missing_alt', zh: 'Alt 文本', en: 'Alt text', type: 'select', options: [{ value: 'true', zh: '仅缺失 Alt', en: 'Missing only' }] },
   ],
   operational_suggestion: [
     { key: 'status', zh: '状态', en: 'Status', type: 'select', options: statusOptions(['new', 'selected', 'converted', 'ignored', 'resolved']) },

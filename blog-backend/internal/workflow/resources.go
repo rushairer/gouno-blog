@@ -75,6 +75,7 @@ func (c *ResourceCatalog) List(ctx context.Context, resourceType string, query d
 	switch resourceType {
 	case "post":
 		older, _ := strconv.Atoi(query.Filters["updated_before_days"])
+		publishedWithin, _ := strconv.Atoi(query.Filters["published_within_days"])
 		minViews, _ := strconv.Atoi(query.Filters["min_views"])
 		lowEngagement := query.Filters["low_engagement"] == "true"
 		rows, err = c.db.QueryContext(ctx, `SELECT p.id::text,p.title,COALESCE(p.summary,''),p.status::text,p.updated_at::text,
@@ -84,10 +85,11 @@ func (c *ResourceCatalog) List(ctx context.Context, resourceType string, query d
 			AND ($2='' OR p.status::text=$2) AND ($3='' OR c.slug=$3)
 			AND ($4='' OR $4=ANY(p.tags)) AND ($5=0 OR p.updated_at < NOW()-($5||' days')::interval)
 			AND ($6=0 OR p.views_count >= $6)
-			AND ($7='' OR p.published_at >= $7::timestamptz) AND ($8='' OR p.published_at <= $8::timestamptz)
-			AND ($9='' OR p.updated_at >= $9::timestamptz) AND ($10='' OR p.updated_at <= $10::timestamptz)
-			AND (NOT $11 OR (p.views_count >= 100 AND p.likes_count * 100 < p.views_count))
-			ORDER BY p.updated_at DESC,p.id DESC LIMIT $12 OFFSET $13`, q, query.Filters["status"], query.Filters["category"], query.Filters["tag"], older, minViews,
+			AND ($7=0 OR p.published_at >= NOW()-($7||' days')::interval)
+			AND ($8='' OR p.published_at >= $8::timestamptz) AND ($9='' OR p.published_at <= $9::timestamptz)
+			AND ($10='' OR p.updated_at >= $10::timestamptz) AND ($11='' OR p.updated_at <= $11::timestamptz)
+			AND (NOT $12 OR (p.views_count >= 100 AND p.likes_count * 100 < p.views_count))
+			ORDER BY p.updated_at DESC,p.id DESC LIMIT $13 OFFSET $14`, q, query.Filters["status"], query.Filters["category"], query.Filters["tag"], older, minViews, publishedWithin,
 			query.Filters["published_after"], query.Filters["published_before"], query.Filters["updated_after"], query.Filters["updated_before"], lowEngagement, size, offset)
 	case "comment":
 		postID, _ := strconv.ParseInt(query.Filters["post_id"], 10, 64)
@@ -101,14 +103,16 @@ func (c *ResourceCatalog) List(ctx context.Context, resourceType string, query d
 			query.Filters["created_after"], query.Filters["created_before"], size, offset)
 	case "media_asset":
 		inUse := query.Filters["in_use"]
+		missingAlt := query.Filters["missing_alt"] == "true"
 		rows, err = c.db.QueryContext(ctx, `SELECT m.id::text,m.filename,m.alt_text,m.content_type,m.created_at::text,
 			jsonb_build_object('url',m.url,'size_bytes',m.size_bytes,'usage_count',(SELECT COUNT(*) FROM posts p WHERE p.content LIKE '%'||m.url||'%' OR p.cover_url=m.url)),COUNT(*) OVER()
 			FROM media_assets m WHERE ($1='' OR m.filename ILIKE '%'||$1||'%' OR m.alt_text ILIKE '%'||$1||'%')
 			AND ($2='' OR m.content_type=$2)
 			AND ($3='' OR m.created_at >= $3::timestamptz) AND ($4='' OR m.created_at <= $4::timestamptz)
 			AND ($5='' OR ($5='true') = EXISTS(SELECT 1 FROM posts p WHERE p.content LIKE '%'||m.url||'%' OR p.cover_url=m.url))
-			ORDER BY m.created_at DESC,m.id DESC LIMIT $6 OFFSET $7`, q, query.Filters["content_type"],
-			query.Filters["created_after"], query.Filters["created_before"], inUse, size, offset)
+			AND (NOT $6 OR BTRIM(COALESCE(m.alt_text,''))='')
+			ORDER BY m.created_at DESC,m.id DESC LIMIT $7 OFFSET $8`, q, query.Filters["content_type"],
+			query.Filters["created_after"], query.Filters["created_before"], inUse, missingAlt, size, offset)
 	case "operational_suggestion":
 		rows, err = c.db.QueryContext(ctx, `SELECT id::text,title,description,status,updated_at::text,
 			jsonb_build_object('priority',priority,'source_type',source_type),COUNT(*) OVER()
@@ -289,9 +293,9 @@ func filtersFromRaw(raw json.RawMessage) (map[string]string, error) {
 }
 
 var resourceFilterKeys = map[string]map[string]bool{
-	"post":                   {"status": true, "category": true, "tag": true, "updated_before_days": true, "min_views": true, "low_engagement": true, "published_after": true, "published_before": true, "updated_after": true, "updated_before": true},
+	"post":                   {"status": true, "category": true, "tag": true, "updated_before_days": true, "published_within_days": true, "min_views": true, "low_engagement": true, "published_after": true, "published_before": true, "updated_after": true, "updated_before": true},
 	"comment":                {"status": true, "reported": true, "post_id": true, "created_after": true, "created_before": true},
-	"media_asset":            {"content_type": true, "in_use": true, "created_after": true, "created_before": true},
+	"media_asset":            {"content_type": true, "in_use": true, "missing_alt": true, "created_after": true, "created_before": true},
 	"operational_suggestion": {"status": true, "priority": true, "source_type": true, "created_after": true, "created_before": true},
 	"category":               {"min_post_count": true},
 	"tag":                    {"min_post_count": true},
@@ -304,11 +308,11 @@ func validateResourceFilters(resourceType string, filters map[string]string) err
 			return fmt.Errorf("%w: unsupported %s filter %q", ErrInvalid, resourceType, key)
 		}
 		switch key {
-		case "updated_before_days", "min_views", "post_id", "min_post_count":
+		case "updated_before_days", "published_within_days", "min_views", "post_id", "min_post_count":
 			if number, err := strconv.Atoi(value); err != nil || number < 0 {
 				return fmt.Errorf("%w: filter %q must be a non-negative integer", ErrInvalid, key)
 			}
-		case "reported", "in_use", "low_engagement":
+		case "reported", "in_use", "missing_alt", "low_engagement":
 			if value != "true" && value != "false" {
 				return fmt.Errorf("%w: filter %q must be true or false", ErrInvalid, key)
 			}

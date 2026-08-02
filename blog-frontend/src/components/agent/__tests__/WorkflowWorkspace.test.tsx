@@ -93,4 +93,48 @@ describe('WorkflowWorkspace', () => {
     expect(screen.getByText(/Workflow 只编排已配置的 Agent 与确定性资源查询/)).toBeInTheDocument();
     expect(screen.queryByText('rss.fetch')).not.toBeInTheDocument();
   });
+
+  it('adds a visual resource query before model steps and saves its filters', async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const editable = { ...workflow, steps: [{ id: 'writer', type: 'model' as const, agent_id: 5 }, { id: 'result', type: 'output' as const, output_pointer: '/steps/writer' }] };
+    const agent = { id: 5, name: 'Editor', enabled: true };
+    render(<WorkflowWorkspace workflows={[editable]} runs={[]} metrics={[]} agents={[agent] as never[]} locale="zh" onMutate={vi.fn()} onRun={vi.fn()} onSave={onSave} />);
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    await user.click(screen.getByRole('button', { name: '添加动态资源筛选' }));
+    await user.selectOptions(screen.getByLabelText('状态'), 'published');
+    await user.clear(screen.getByLabelText('距今未更新天数'));
+    await user.type(screen.getByLabelText('距今未更新天数'), '180');
+    await user.selectOptions(screen.getByLabelText('空结果策略'), 'fail');
+    await user.click(screen.getByRole('button', { name: '保存 Workflow' }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const saved = onSave.mock.calls[0][0];
+    expect(saved.scope_policy.mode).toBe('strict');
+    expect(saved.resource_query_empty_policy).toBe('fail');
+    expect(saved.steps[0]).toMatchObject({ id: 'select_resources', type: 'resource_query', resource_type: 'post', max_items: 20, filter: { status: 'published', updated_before_days: 180 } });
+    expect(saved.steps[1]).toMatchObject({ id: 'writer', type: 'model', agent_id: 5 });
+  });
+
+  it('configures partial failures and preserves nested Agent bindings', async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const editable = { ...workflow, steps: [
+      { id: 'select', type: 'resource_query' as const, resource_type: 'post' as const, filter: {}, max_items: 3 },
+      { id: 'batch', type: 'for_each' as const, collection_pointer: '/steps/select', max_items: 3, steps: [{ id: 'writer', type: 'model' as const, agent_id: 5 }] },
+      { id: 'result', type: 'output' as const, output_pointer: '/steps/batch' },
+    ] };
+    const agent = { id: 5, name: 'Editor', enabled: true };
+    render(<WorkflowWorkspace workflows={[editable]} runs={[]} metrics={[]} agents={[agent] as never[]} locale="zh" onMutate={vi.fn()} onRun={vi.fn()} onSave={onSave} />);
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    expect(screen.getByLabelText('绑定 Agent')).toHaveValue('5');
+    await user.selectOptions(screen.getByLabelText('单项失败处理'), 'continue');
+    await user.click(screen.getByRole('button', { name: '保存 Workflow' }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const saved = onSave.mock.calls[0][0];
+    expect(saved.steps[1]).toMatchObject({ type: 'for_each', continue_on_error: true, steps: [{ type: 'model', agent_id: 5 }] });
+  });
 });

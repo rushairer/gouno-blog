@@ -39,19 +39,24 @@ func NewService(db *sql.DB, runner *agentservice.Runner, agents *agentservice.Ma
 }
 
 const workflowColumns = `w.id, w.name, w.description, w.enabled, w.cron_expression, w.timezone, w.next_run_at, w.template_key,
-	w.current_version, v.id, v.input_schema, v.steps, v.scope_policy, w.created_by, w.created_at, w.updated_at`
+	w.current_version, v.id, v.input_schema, v.steps, v.scope_policy, w.resource_query_preview, w.resource_query_preview_at,
+	w.resource_query_last_count, w.resource_query_last_run_at, w.resource_query_empty_policy, w.created_by, w.created_at, w.updated_at`
 
 func scanWorkflow(scanner interface{ Scan(...any) error }) (*domain.Workflow, error) {
 	var value domain.Workflow
-	var steps, scopePolicy []byte
+	var steps, scopePolicy, queryPreview []byte
 	err := scanner.Scan(&value.ID, &value.Name, &value.Description, &value.Enabled, &value.CronExpression, &value.Timezone, &value.NextRunAt, &value.TemplateKey,
-		&value.CurrentVersion, &value.VersionID, &value.InputSchema, &steps, &scopePolicy, &value.CreatedBy,
+		&value.CurrentVersion, &value.VersionID, &value.InputSchema, &steps, &scopePolicy, &queryPreview, &value.ResourceQueryPreviewAt,
+		&value.ResourceQueryLastCount, &value.ResourceQueryLastRunAt, &value.ResourceQueryEmptyPolicy, &value.CreatedBy,
 		&value.CreatedAt, &value.UpdatedAt)
 	if err == nil {
 		err = json.Unmarshal(steps, &value.Steps)
 	}
 	if err == nil {
 		err = json.Unmarshal(scopePolicy, &value.ScopePolicy)
+	}
+	if err == nil {
+		value.ResourceQueryPreview = json.RawMessage(queryPreview)
 	}
 	return &value, err
 }
@@ -120,6 +125,17 @@ func (s *Service) Save(ctx context.Context, value *domain.Workflow) error {
 	if err := s.validateDiscoveryTools(ctx, value); err != nil {
 		return err
 	}
+	if value.ResourceQueryEmptyPolicy == "" {
+		value.ResourceQueryEmptyPolicy = "succeed"
+	}
+	if value.ResourceQueryEmptyPolicy != "succeed" && value.ResourceQueryEmptyPolicy != "fail" {
+		return fmt.Errorf("%w: empty resource query policy must be succeed or fail", ErrInvalid)
+	}
+	preview, previewAt, err := s.previewResourceQueries(ctx, value.Steps)
+	if err != nil {
+		return err
+	}
+	value.ResourceQueryPreview, value.ResourceQueryPreviewAt = preview, previewAt
 	rawSteps, _ := json.Marshal(value.Steps)
 	rawScope, _ := json.Marshal(value.ScopePolicy)
 	if len(rawSteps) > 128<<10 {
@@ -131,15 +147,17 @@ func (s *Service) Save(ctx context.Context, value *domain.Workflow) error {
 	}
 	if value.ID == 0 {
 		err = tx.QueryRowContext(ctx, `INSERT INTO ai_workflows
-			(name, description, enabled, cron_expression, timezone, next_run_at, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7)
+			(name, description, enabled, cron_expression, timezone, next_run_at, resource_query_preview, resource_query_preview_at, resource_query_empty_policy, created_by)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
 			RETURNING id, current_version, created_at, updated_at`, value.Name, value.Description,
-			value.Enabled, value.CronExpression, value.Timezone, workflowNext(value), value.CreatedBy).Scan(&value.ID, &value.CurrentVersion, &value.CreatedAt, &value.UpdatedAt)
+			value.Enabled, value.CronExpression, value.Timezone, workflowNext(value), value.ResourceQueryPreview, value.ResourceQueryPreviewAt, value.ResourceQueryEmptyPolicy, value.CreatedBy).Scan(&value.ID, &value.CurrentVersion, &value.CreatedAt, &value.UpdatedAt)
 	} else {
 		err = tx.QueryRowContext(ctx, `UPDATE ai_workflows SET name=$2, description=$3,
-			enabled=$4, cron_expression=$5, timezone=$6, next_run_at=$7, current_version=current_version+1, updated_at=NOW()
+			enabled=$4, cron_expression=$5, timezone=$6, next_run_at=$7, resource_query_preview=$8, resource_query_preview_at=$9,
+			resource_query_empty_policy=$10, current_version=current_version+1, updated_at=NOW()
 			WHERE id=$1 AND deleted_at IS NULL
 			RETURNING current_version, created_by, created_at, updated_at`, value.ID, value.Name,
-			value.Description, value.Enabled, value.CronExpression, value.Timezone, workflowNext(value)).Scan(&value.CurrentVersion, &value.CreatedBy,
+			value.Description, value.Enabled, value.CronExpression, value.Timezone, workflowNext(value), value.ResourceQueryPreview, value.ResourceQueryPreviewAt, value.ResourceQueryEmptyPolicy).Scan(&value.CurrentVersion, &value.CreatedBy,
 			&value.CreatedAt, &value.UpdatedAt)
 	}
 	if err == nil {
@@ -186,6 +204,9 @@ func (s *Service) validateSteps(steps []domain.WorkflowStep, depth int) error {
 	for _, step := range steps {
 		if step.ID == "" || seen[step.ID] {
 			return fmt.Errorf("%w: step IDs must be unique and non-empty", ErrInvalid)
+		}
+		if step.ContinueOnError && step.Type != "for_each" {
+			return fmt.Errorf("%w: continue_on_error is only valid for for_each", ErrInvalid)
 		}
 		seen[step.ID] = true
 		switch step.Type {
@@ -234,6 +255,40 @@ func hasResourceQuery(steps []domain.WorkflowStep) bool {
 		}
 	}
 	return false
+}
+
+func (s *Service) previewResourceQueries(ctx context.Context, steps []domain.WorkflowStep) (json.RawMessage, *time.Time, error) {
+	type preview struct {
+		StepID         string            `json:"step_id"`
+		ResourceType   string            `json:"resource_type"`
+		Filter         map[string]string `json:"filter,omitempty"`
+		MaxItems       int               `json:"max_items"`
+		EstimatedCount int               `json:"estimated_count"`
+	}
+	items := make([]preview, 0)
+	for _, step := range steps {
+		if step.Type != "resource_query" {
+			continue
+		}
+		filters, err := filtersFromRaw(step.Filter)
+		if err != nil {
+			return nil, nil, err
+		}
+		_, total, err := s.catalog.List(ctx, step.ResourceType, domain.ResourceQuery{Page: 1, PageSize: 1, Filters: filters})
+		if err != nil {
+			return nil, nil, err
+		}
+		items = append(items, preview{StepID: step.ID, ResourceType: step.ResourceType, Filter: filters, MaxItems: step.MaxItems, EstimatedCount: total})
+	}
+	raw, err := json.Marshal(items)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(items) == 0 {
+		return raw, nil, nil
+	}
+	now := time.Now()
+	return raw, &now, nil
 }
 
 func (s *Service) validateDiscoveryTools(ctx context.Context, value *domain.Workflow) error {
@@ -370,6 +425,125 @@ func (s *Service) Queue(ctx context.Context, id int64, dryRun bool, input json.R
 	return s.queue(ctx, id, dryRun, input, triggeredBy, true, false)
 }
 
+// RetryFailed reruns only failed iterations from a partial for_each run. Query
+// step outputs and resource snapshots are copied so a retry cannot drift with
+// a changing dynamic collection.
+func (s *Service) RetryFailed(ctx context.Context, runID int64, childStepID string, iterations []int, triggeredBy *string) (*domain.WorkflowRun, error) {
+	if strings.TrimSpace(childStepID) == "" || len(iterations) == 0 || len(iterations) > maxRunResources {
+		return nil, fmt.Errorf("%w: retry requires one child step and 1-100 iterations", ErrInvalid)
+	}
+	unique := make([]int, 0, len(iterations))
+	seen := map[int]bool{}
+	for _, iteration := range iterations {
+		if iteration < 0 || seen[iteration] {
+			continue
+		}
+		seen[iteration] = true
+		unique = append(unique, iteration)
+	}
+	if len(unique) == 0 {
+		return nil, fmt.Errorf("%w: retry iterations are invalid", ErrInvalid)
+	}
+	var workflowID, versionID int64
+	var dryRun bool
+	var input json.RawMessage
+	var status string
+	if err := s.db.QueryRowContext(ctx, `SELECT workflow_id,workflow_version_id,dry_run,input,status FROM ai_workflow_runs WHERE id=$1`, runID).
+		Scan(&workflowID, &versionID, &dryRun, &input, &status); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	if status != "succeeded" {
+		return nil, fmt.Errorf("%w: only a completed partial run can be retried", ErrInvalid)
+	}
+	workflow, err := s.Get(ctx, workflowID)
+	if err != nil {
+		return nil, err
+	}
+	parentStepID := findForEachParent(workflow.Steps, childStepID)
+	if parentStepID == "" {
+		return nil, fmt.Errorf("%w: child step %q is not inside a for_each", ErrInvalid, childStepID)
+	}
+	failed := 0
+	for _, iteration := range unique {
+		var exists bool
+		if err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM ai_workflow_step_runs WHERE workflow_run_id=$1 AND step_id=$2 AND iteration=$3 AND status='failed')`, runID, childStepID, iteration).Scan(&exists); err != nil {
+			return nil, err
+		}
+		if exists {
+			failed++
+		}
+	}
+	if failed != len(unique) {
+		return nil, fmt.Errorf("%w: retry can target only failed resource iterations", ErrInvalid)
+	}
+	rawIterations, _ := json.Marshal(unique)
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback() }()
+	var retry domain.WorkflowRun
+	retry.WorkflowID, retry.WorkflowVersionID, retry.DryRun, retry.Status = workflowID, versionID, dryRun, "queued"
+	retry.Input, retry.TriggeredBy, retry.RetryOfRunID, retry.RetryStepID, retry.RetryIterations = input, triggeredBy, &runID, &parentStepID, unique
+	if err := tx.QueryRowContext(ctx, `INSERT INTO ai_workflow_runs(workflow_id,workflow_version_id,dry_run,input,triggered_by,retry_of_run_id,retry_step_id,retry_iterations)
+		VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id,created_at`, workflowID, versionID, dryRun, input, triggeredBy, runID, parentStepID, rawIterations).
+		Scan(&retry.ID, &retry.CreatedAt); err != nil {
+		return nil, err
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO ai_workflow_run_resources(workflow_run_id,resource_type,resource_key,source,access_level,label,version_token,snapshot)
+		SELECT $2,resource_type,resource_key,source,access_level,label,version_token,snapshot FROM ai_workflow_run_resources WHERE workflow_run_id=$1 AND source IN ('manual','query')`, runID, retry.ID); err != nil {
+		return nil, err
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO ai_workflow_step_runs(workflow_run_id,step_id,step_type,iteration,status,input,output,error_message,started_at,finished_at)
+		SELECT $2,step_id,step_type,iteration,status,input,output,error_message,started_at,finished_at FROM ai_workflow_step_runs
+		WHERE workflow_run_id=$1 AND step_type='resource_query' AND iteration=-1 AND status='succeeded'`, runID, retry.ID); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return &retry, nil
+}
+
+func findForEachParent(steps []domain.WorkflowStep, childID string) string {
+	for _, step := range steps {
+		if step.Type != "for_each" {
+			continue
+		}
+		if containsStepID(step.Steps, childID) {
+			return step.ID
+		}
+		if parent := findForEachParent(step.Steps, childID); parent != "" {
+			return parent
+		}
+	}
+	return ""
+}
+
+func containsStepID(steps []domain.WorkflowStep, id string) bool {
+	for _, step := range steps {
+		if step.ID == id {
+			return true
+		}
+	}
+	return false
+}
+
+func retryIterationSelected(run *domain.WorkflowRun, stepID string, index int) bool {
+	if run == nil || run.RetryStepID == nil || *run.RetryStepID != stepID || len(run.RetryIterations) == 0 {
+		return true
+	}
+	for _, allowed := range run.RetryIterations {
+		if allowed == index {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *Service) queue(ctx context.Context, id int64, dryRun bool, input json.RawMessage, triggeredBy *string, retryFailed, scheduled bool) (*domain.WorkflowRun, error) {
 	value, err := s.Get(ctx, id)
 	if err != nil {
@@ -418,7 +592,11 @@ func (s *Service) queue(ctx context.Context, id int64, dryRun bool, input json.R
 					return s.queue(ctx, id, dryRun, input, triggeredBy, retryFailed, scheduled)
 				}
 				if err == nil {
-					_, _ = s.db.ExecContext(ctx, `DELETE FROM ai_workflow_run_resources WHERE workflow_run_id=$1`, run.ID)
+					// Resource queries are resolved once per Workflow Run. Keep their
+					// target snapshot when retrying the same scheduled run so the
+					// replayed Step output and Run Scope remain identical. Discovery
+					// is read-only and may be recomputed on the next Agent attempt.
+					_, _ = s.db.ExecContext(ctx, `DELETE FROM ai_workflow_run_resources WHERE workflow_run_id=$1 AND source <> 'query'`, run.ID)
 					err = s.persistManualResources(ctx, run.ID, value.InputSchema, inputValue)
 				}
 				return run, err
@@ -563,13 +741,19 @@ func (s *Service) Execute(ctx context.Context, runID int64) {
 
 func (s *Service) execute(ctx context.Context, runID int64) error {
 	var run domain.WorkflowRun
+	var retryIterations []byte
 	run.ID = runID
 	err := s.db.QueryRowContext(ctx, `UPDATE ai_workflow_runs SET status='running', started_at=NOW()
 		WHERE id=$1 AND status='queued'
-		RETURNING workflow_id, workflow_version_id, dry_run, input, triggered_by, created_at`,
-		runID).Scan(&run.WorkflowID, &run.WorkflowVersionID, &run.DryRun, &run.Input, &run.TriggeredBy, &run.CreatedAt)
+		RETURNING workflow_id, workflow_version_id, dry_run, input, triggered_by, retry_of_run_id, retry_step_id, retry_iterations, created_at`,
+		runID).Scan(&run.WorkflowID, &run.WorkflowVersionID, &run.DryRun, &run.Input, &run.TriggeredBy, &run.RetryOfRunID, &run.RetryStepID, &retryIterations, &run.CreatedAt)
 	if err != nil {
 		return err
+	}
+	if len(retryIterations) > 0 {
+		if err := json.Unmarshal(retryIterations, &run.RetryIterations); err != nil {
+			return err
+		}
 	}
 	var stepsRaw []byte
 	if err := s.db.QueryRowContext(ctx, `SELECT steps FROM ai_workflow_versions WHERE id=$1`,
@@ -583,6 +767,13 @@ func (s *Service) execute(ctx context.Context, runID int64) error {
 	var input any
 	if err := json.Unmarshal(run.Input, &input); err != nil {
 		return err
+	}
+	if hasResourceQuery(steps) {
+		// Retries replay the query snapshot, so only reset the aggregate for a new run.
+		if _, err := s.db.ExecContext(ctx, `UPDATE ai_workflows SET resource_query_last_count=0,resource_query_last_run_at=NOW()
+			WHERE id=$1 AND NOT EXISTS (SELECT 1 FROM ai_workflow_run_resources WHERE workflow_run_id=$2 AND source='query')`, run.WorkflowID, run.ID); err != nil {
+			return err
+		}
 	}
 	document := map[string]any{"input": input, "steps": map[string]any{}}
 	output, awaiting, inputTokens, outputTokens, err := s.executeSteps(ctx, &run, steps, document, nil, nil)
@@ -617,6 +808,15 @@ func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, ste
 			} else if found {
 				stepOutput = replay
 				if len(replay) == 0 {
+					var emptyPolicy string
+					if policyErr := s.db.QueryRowContext(ctx, `SELECT resource_query_empty_policy FROM ai_workflows WHERE id=$1`, run.WorkflowID).Scan(&emptyPolicy); policyErr != nil {
+						err = policyErr
+						break
+					}
+					if emptyPolicy == "fail" {
+						err = fmt.Errorf("%w: resource query returned no matching resources", ErrInvalid)
+						break
+					}
 					document["steps"].(map[string]any)[step.ID] = stepOutput
 					return map[string]any{"status": "no_matching_resources", "resource_type": step.ResourceType}, awaiting, totalInput, totalOutput, nil
 				}
@@ -672,8 +872,22 @@ func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, ste
 			if err != nil {
 				break
 			}
+			if _, updateErr := s.db.ExecContext(ctx, `UPDATE ai_workflows SET resource_query_last_count=(SELECT COUNT(*) FROM ai_workflow_run_resources
+				WHERE workflow_run_id=$2 AND source='query' AND access_level='target'),resource_query_last_run_at=NOW() WHERE id=$1`, run.WorkflowID, run.ID); updateErr != nil {
+				err = updateErr
+				break
+			}
 			stepOutput = queryOutput(items)
 			if len(items) == 0 {
+				var emptyPolicy string
+				if policyErr := s.db.QueryRowContext(ctx, `SELECT resource_query_empty_policy FROM ai_workflows WHERE id=$1`, run.WorkflowID).Scan(&emptyPolicy); policyErr != nil {
+					err = policyErr
+					break
+				}
+				if emptyPolicy == "fail" {
+					err = fmt.Errorf("%w: resource query returned no matching resources", ErrInvalid)
+					break
+				}
 				s.recordStep(ctx, run.ID, step, iteration, nil, stepOutput, started, nil)
 				document["steps"].(map[string]any)[step.ID] = stepOutput
 				return map[string]any{"status": "no_matching_resources", "resource_type": step.ResourceType}, awaiting, totalInput, totalOutput, nil
@@ -721,22 +935,50 @@ func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, ste
 					err = fmt.Errorf("%w: for_each collection is not an array", ErrInvalid)
 				} else {
 					count := min(len(items), step.MaxItems)
-					results := make([]any, 0, count)
+					selected := make([]int, 0, count)
 					for index := 0; index < count; index++ {
+						if retryIterationSelected(run, step.ID, index) {
+							selected = append(selected, index)
+						}
+					}
+					results := make([]any, 0, len(selected))
+					succeeded, failed := 0, 0
+					for _, index := range selected {
 						childDocument := cloneDocument(document)
 						childDocument["item"] = items[index]
 						childIteration := index
 						childOutput, childAwaiting, inTokens, outTokens, childErr := s.executeSteps(ctx, run, step.Steps, childDocument, items[index], &childIteration)
-						if childErr != nil {
-							err = childErr
-							break
-						}
-						results = append(results, childOutput)
-						awaiting = awaiting || childAwaiting
 						totalInput += inTokens
 						totalOutput += outTokens
+						awaiting = awaiting || childAwaiting
+						if childErr != nil {
+							if !step.ContinueOnError {
+								err = childErr
+								break
+							}
+							failed++
+							results = append(results, map[string]any{"index": index, "status": "failed", "item": items[index], "error": safeError(childErr)})
+							continue
+						}
+						succeeded++
+						if step.ContinueOnError {
+							results = append(results, map[string]any{"index": index, "status": "succeeded", "item": items[index], "output": childOutput})
+						} else {
+							results = append(results, childOutput)
+						}
 					}
-					stepOutput = results
+					if step.ContinueOnError {
+						status := "succeeded"
+						if failed > 0 {
+							status = "partial_failure"
+						}
+						stepOutput = map[string]any{"status": status, "total": len(selected), "succeeded": succeeded, "failed": failed, "items": results}
+						if failed > 0 && succeeded == 0 {
+							err = fmt.Errorf("%w: all %d for_each items failed", ErrInvalid, failed)
+						}
+					} else {
+						stepOutput = results
+					}
 				}
 			}
 		case "approval_gate":
@@ -859,7 +1101,7 @@ func safeError(err error) string {
 func (s *Service) ListRuns(ctx context.Context, workflowID int64) ([]*domain.WorkflowRun, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT id, workflow_id, workflow_version_id, dry_run,
 		status, input, output, error_code, error_message, input_tokens, output_tokens, triggered_by,
-		schedule_key, started_at, finished_at, created_at FROM ai_workflow_runs
+		schedule_key, retry_of_run_id, retry_step_id, retry_iterations, started_at, finished_at, created_at FROM ai_workflow_runs
 		WHERE ($1=0 OR workflow_id=$1) ORDER BY COALESCE(started_at,created_at) DESC, id DESC LIMIT 100`, workflowID)
 	if err != nil {
 		return nil, err
@@ -868,15 +1110,18 @@ func (s *Service) ListRuns(ctx context.Context, workflowID int64) ([]*domain.Wor
 	items := make([]*domain.WorkflowRun, 0)
 	for rows.Next() {
 		var item domain.WorkflowRun
-		var output []byte
+		var output, retryIterations []byte
 		if err := rows.Scan(&item.ID, &item.WorkflowID, &item.WorkflowVersionID, &item.DryRun,
 			&item.Status, &item.Input, &output, &item.ErrorCode, &item.ErrorMessage,
-			&item.InputTokens, &item.OutputTokens, &item.TriggeredBy, &item.ScheduleKey, &item.StartedAt,
+			&item.InputTokens, &item.OutputTokens, &item.TriggeredBy, &item.ScheduleKey, &item.RetryOfRunID, &item.RetryStepID, &retryIterations, &item.StartedAt,
 			&item.FinishedAt, &item.CreatedAt); err != nil {
 			return nil, err
 		}
 		if len(output) > 0 {
 			item.Output = json.RawMessage(output)
+		}
+		if len(retryIterations) > 0 {
+			_ = json.Unmarshal(retryIterations, &item.RetryIterations)
 		}
 		items = append(items, &item)
 	}

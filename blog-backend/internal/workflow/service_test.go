@@ -69,6 +69,7 @@ func TestResourceQueryRulesAndFilters(t *testing.T) {
 		{{ID: "model", Type: "model", AgentID: 7}, {ID: "select", Type: "resource_query", ResourceType: "post", MaxItems: 20}},
 		{{ID: "select", Type: "resource_query", ResourceType: "post", MaxItems: 101}},
 		{{ID: "select", Type: "resource_query", ResourceType: "post", MaxItems: 20, Filter: json.RawMessage(`{"unknown":true}`)}},
+		{{ID: "model", Type: "model", AgentID: 7, ContinueOnError: true}},
 		{{ID: "loop", Type: "for_each", CollectionPointer: "/input/items", MaxItems: 2, Steps: []domain.WorkflowStep{{ID: "nested", Type: "resource_query", ResourceType: "post", MaxItems: 2}}}},
 	}
 	for index, steps := range invalid {
@@ -81,6 +82,12 @@ func TestResourceQueryRulesAndFilters(t *testing.T) {
 	}
 	if err := validateResourceFilters("media_asset", map[string]string{"created_after": "yesterday"}); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("invalid date filter error = %v", err)
+	}
+	if err := validateResourceFilters("post", map[string]string{"published_within_days": "2"}); err != nil {
+		t.Fatalf("relative publish filter error = %v", err)
+	}
+	if err := validateResourceFilters("media_asset", map[string]string{"missing_alt": "true"}); err != nil {
+		t.Fatalf("missing Alt filter error = %v", err)
 	}
 }
 

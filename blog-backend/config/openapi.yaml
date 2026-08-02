@@ -1217,6 +1217,9 @@ paths:
           explode: true
         - {name: page, in: query, schema: {type: integer, minimum: 1, default: 1}}
         - {name: page_size, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 20}}
+        - {name: published_within_days, in: query, description: Post only; match posts published within this many days., schema: {type: integer, minimum: 0}}
+        - {name: reported, in: query, description: Comment only; true matches comments with at least one report., schema: {type: boolean}}
+        - {name: missing_alt, in: query, description: Media only; true matches assets whose Alt text is blank., schema: {type: boolean}}
       responses:
         '200':
           description: Paginated resource options
@@ -1239,6 +1242,28 @@ paths:
                   data:
                     type: array
                     items: {$ref: '#/components/schemas/AIWorkflowRunResource'}
+  /admin/ai-workflow-runs/{id}/retry:
+    post:
+      summary: Retry failed Workflow resources
+      description: Queues a new run for selected failed for_each iterations, reusing the original input and resource-query snapshot.
+      security: [{BearerAuth: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer, minimum: 1}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [step_id, iterations]
+              properties:
+                step_id: {type: string, minLength: 1, maxLength: 80}
+                iterations: {type: array, minItems: 1, maxItems: 100, items: {type: integer, minimum: 0, maximum: 99}}
+      responses:
+        '202': {description: Retry run queued}
+        '400': {description: Invalid request or iteration is not failed}
+        '404': {description: Workflow run not found}
 
 components:
   parameters:
@@ -1276,6 +1301,7 @@ components:
         include_context: {type: boolean, description: For a nested model, pass both the current item and root input.}
         collection_pointer: {type: string}
         max_items: {type: integer, minimum: 1, maximum: 100}
+        continue_on_error: {type: boolean, description: for_each only; continue remaining items and return a partial-failure summary when an item fails.}
         resource_type: {type: string, enum: [post, comment, media_asset, operational_suggestion, category, tag]}
         filter: {type: object, additionalProperties: true}
         steps:
@@ -1300,6 +1326,19 @@ components:
           type: array
           items: {$ref: '#/components/schemas/AIWorkflowStep'}
         scope_policy: {$ref: '#/components/schemas/AIWorkflowScopePolicy'}
+        resource_query_preview:
+          type: array
+          readOnly: true
+          description: Resource-query filters and estimated totals captured when the Workflow was saved.
+          items: {type: object, additionalProperties: true}
+        resource_query_preview_at: {type: string, format: date-time, readOnly: true}
+        resource_query_last_count: {type: integer, minimum: 0, readOnly: true}
+        resource_query_last_run_at: {type: string, format: date-time, readOnly: true}
+        resource_query_empty_policy:
+          type: string
+          enum: [succeed, fail]
+          default: succeed
+          description: Empty queries never call an Agent; choose whether the Workflow succeeds with no_matching_resources or fails for operator attention.
     AIWorkflowRunRequest:
       type: object
       required: [input]
