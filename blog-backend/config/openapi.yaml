@@ -1365,6 +1365,7 @@ components:
               filter: {type: object, additionalProperties: true}
               dedupe_field: {type: string, description: JSON Pointer used by an event producer when deriving an idempotency key.}
               cooldown_seconds: {type: integer, minimum: 0, maximum: 86400}
+              batch_window_seconds: {type: integer, minimum: 0, maximum: 3600, description: Delay matching events before execution so nearby events can be processed in a stable window.}
         timezone: {type: string, default: Asia/Shanghai}
         input_schema:
           type: object

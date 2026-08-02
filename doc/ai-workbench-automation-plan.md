@@ -196,7 +196,7 @@ GET /api/admin/ai-workflow-runs/91/resources
 
 ### 第三阶段：事件触发
 
-已实现 `post.published`、`post.updated`、`comment.created`、`comment.reported`、`media.uploaded`、`suggestion.created` 和 `link_check.failed` 的幂等事件表、精确字段过滤、冷却检查、事件入队 API、数据库触发器以及带指数退避的失败重放；Scheduler 消费未处理事件。批处理窗口仍待补齐。事件不能绕过 Skill、预算、Tool 白名单、范围或审批。
+已实现 `post.published`、`post.updated`、`comment.created`、`comment.reported`、`media.uploaded`、`suggestion.created` 和 `link_check.failed` 的幂等事件表、精确字段过滤、冷却检查、事件入队 API、数据库触发器、批处理窗口以及带指数退避的失败重放；Scheduler 消费未处理事件。事件不能绕过 Skill、预算、Tool 白名单、范围或审批。
 
 ### 第四阶段：外部连接器
 

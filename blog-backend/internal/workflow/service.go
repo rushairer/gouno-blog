@@ -186,7 +186,7 @@ func validateEventTriggers(triggers []domain.WorkflowEventTrigger) error {
 		return fmt.Errorf("%w: at most 20 event triggers are allowed", ErrInvalid)
 	}
 	for _, trigger := range triggers {
-		if strings.TrimSpace(trigger.Event) == "" || len(trigger.Event) > 80 || trigger.CooldownSeconds < 0 || trigger.CooldownSeconds > 86400 {
+		if strings.TrimSpace(trigger.Event) == "" || len(trigger.Event) > 80 || trigger.CooldownSeconds < 0 || trigger.CooldownSeconds > 86400 || trigger.BatchWindowSeconds < 0 || trigger.BatchWindowSeconds > 3600 {
 			return fmt.Errorf("%w: invalid event trigger", ErrInvalid)
 		}
 		if trigger.DedupeField != "" && !strings.HasPrefix(trigger.DedupeField, "/") {
@@ -210,11 +210,39 @@ func (s *Service) EmitEvent(ctx context.Context, eventKey, eventType string, pay
 	} else if err != nil {
 		return 0, err
 	}
+	ready, err := s.prepareEventBatch(ctx, eventKey, eventType, payload)
+	if err != nil || !ready {
+		return 0, err
+	}
 	queued, err := s.processStoredEvent(ctx, eventKey, eventType, payload, triggeredBy)
 	if err != nil {
 		s.markEventFailure(ctx, eventKey, err)
 	}
 	return queued, err
+}
+
+func (s *Service) prepareEventBatch(ctx context.Context, eventKey, eventType string, payload json.RawMessage) (bool, error) {
+	var input any
+	if err := json.Unmarshal(payload, &input); err != nil {
+		return false, fmt.Errorf("%w: event payload must be an object", ErrInvalid)
+	}
+	workflows, err := s.List(ctx)
+	if err != nil {
+		return false, err
+	}
+	window := 0
+	for _, workflow := range workflows {
+		for _, trigger := range workflow.EventTriggers {
+			if trigger.Event == eventType && eventFilterMatches(trigger.Filter, input) && trigger.BatchWindowSeconds > window {
+				window = trigger.BatchWindowSeconds
+			}
+		}
+	}
+	if _, err := s.db.ExecContext(ctx, `UPDATE ai_workflow_events SET batch_prepared=TRUE,available_at=NOW()+make_interval(secs=>$2)
+		WHERE event_key=$1 AND status='accepted' AND batch_prepared=FALSE`, eventKey, window); err != nil {
+		return false, err
+	}
+	return window == 0, nil
 }
 
 func (s *Service) processStoredEvent(ctx context.Context, eventKey, eventType string, payload json.RawMessage, triggeredBy *string) (int, error) {
@@ -829,7 +857,7 @@ func (s *Service) tick(ctx context.Context) {
 }
 
 func (s *Service) processPendingEvents(ctx context.Context) {
-	rows, err := s.db.QueryContext(ctx, `SELECT event_key,event_type,payload FROM ai_workflow_events
+	rows, err := s.db.QueryContext(ctx, `SELECT event_key,event_type,payload,batch_prepared FROM ai_workflow_events
 		WHERE status='accepted' AND available_at<=NOW() ORDER BY id LIMIT 20`)
 	if err != nil {
 		return
@@ -838,7 +866,17 @@ func (s *Service) processPendingEvents(ctx context.Context) {
 	for rows.Next() {
 		var key, eventType string
 		var payload []byte
-		if rows.Scan(&key, &eventType, &payload) == nil {
+		var prepared bool
+		if rows.Scan(&key, &eventType, &payload, &prepared) == nil {
+			if !prepared {
+				ready, prepareErr := s.prepareEventBatch(ctx, key, eventType, payload)
+				if prepareErr != nil {
+					s.markEventFailure(ctx, key, prepareErr)
+				}
+				if prepareErr != nil || !ready {
+					continue
+				}
+			}
 			if _, eventErr := s.processStoredEvent(ctx, key, eventType, payload, nil); eventErr != nil {
 				s.markEventFailure(ctx, key, eventErr)
 			}

@@ -28,10 +28,11 @@ type WorkflowScopePolicy struct {
 }
 
 type WorkflowEventTrigger struct {
-	Event           string                 `json:"event"`
-	Filter          map[string]interface{} `json:"filter,omitempty"`
-	DedupeField     string                 `json:"dedupe_field,omitempty"`
-	CooldownSeconds int                    `json:"cooldown_seconds,omitempty"`
+	Event              string                 `json:"event"`
+	Filter             map[string]interface{} `json:"filter,omitempty"`
+	DedupeField        string                 `json:"dedupe_field,omitempty"`
+	CooldownSeconds    int                    `json:"cooldown_seconds,omitempty"`
+	BatchWindowSeconds int                    `json:"batch_window_seconds,omitempty"`
 }
 
 type Workflow struct {
