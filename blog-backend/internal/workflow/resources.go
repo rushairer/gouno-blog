@@ -77,7 +77,7 @@ func (c *ResourceCatalog) List(ctx context.Context, resourceType string, query d
 		older, _ := strconv.Atoi(query.Filters["updated_before_days"])
 		minViews, _ := strconv.Atoi(query.Filters["min_views"])
 		lowEngagement := query.Filters["low_engagement"] == "true"
-		rows, err = c.db.QueryContext(ctx, `SELECT p.id::text,p.title,p.summary,p.status::text,p.updated_at::text,
+		rows, err = c.db.QueryContext(ctx, `SELECT p.id::text,p.title,COALESCE(p.summary,''),p.status::text,p.updated_at::text,
 			jsonb_build_object('slug',p.slug,'tags',p.tags,'views_count',p.views_count,'likes_count',p.likes_count),COUNT(*) OVER()
 			FROM posts p LEFT JOIN categories c ON c.id=p.category_id
 			WHERE ($1='' OR p.title ILIKE '%'||$1||'%' OR p.summary ILIKE '%'||$1||'%')

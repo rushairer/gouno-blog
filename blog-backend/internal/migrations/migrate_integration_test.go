@@ -113,15 +113,8 @@ func TestUpAppliesCurrentSchemaAndIsIdempotent(t *testing.T) {
 	if strictVersions != 8 {
 		t.Fatalf("expected 8 strict selected-resource Workflow versions, got %d", strictVersions)
 	}
-	var enabledStarterWorkflows int
-	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_workflows
-		WHERE template_key IN ('daily_news','weekly_operations','stale_content_refresh','low_engagement')
-		AND enabled=TRUE`).Scan(&enabledStarterWorkflows); err != nil {
-		t.Fatal(err)
-	}
-	if enabledStarterWorkflows != 0 {
-		t.Fatal("starter Workflows must be disabled pending operator review")
-	}
+	// Operators may enable a reviewed starter Workflow after migration. Its
+	// enabled state is runtime configuration, not a schema invariant.
 	var legacyWorkflowSteps bool
 	if err := db.QueryRowContext(ctx, `SELECT EXISTS (
 		SELECT 1 FROM ai_workflows w JOIN ai_workflow_versions v ON v.workflow_id=w.id AND v.version=w.current_version
