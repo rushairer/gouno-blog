@@ -93,6 +93,17 @@ func TestUpAppliesCurrentSchemaAndIsIdempotent(t *testing.T) {
 	if !eventTriggers {
 		t.Fatal("expected ai_workflows.event_triggers to exist")
 	}
+	for _, column := range []string{"attempts", "available_at", "last_error"} {
+		var exists bool
+		if err := db.QueryRowContext(ctx, `SELECT EXISTS (
+			SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='ai_workflow_events' AND column_name=$1
+		)`, column).Scan(&exists); err != nil {
+			t.Fatal(err)
+		}
+		if !exists {
+			t.Fatalf("expected ai_workflow_events.%s to exist", column)
+		}
+	}
 	var systemSkills, workflows int
 	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_skills WHERE system_key IS NOT NULL`).Scan(&systemSkills); err != nil {
 		t.Fatal(err)

@@ -210,7 +210,11 @@ func (s *Service) EmitEvent(ctx context.Context, eventKey, eventType string, pay
 	} else if err != nil {
 		return 0, err
 	}
-	return s.processStoredEvent(ctx, eventKey, eventType, payload, triggeredBy)
+	queued, err := s.processStoredEvent(ctx, eventKey, eventType, payload, triggeredBy)
+	if err != nil {
+		s.markEventFailure(ctx, eventKey, err)
+	}
+	return queued, err
 }
 
 func (s *Service) processStoredEvent(ctx context.Context, eventKey, eventType string, payload json.RawMessage, triggeredBy *string) (int, error) {
@@ -223,11 +227,13 @@ func (s *Service) processStoredEvent(ctx context.Context, eventKey, eventType st
 		return 0, err
 	}
 	queued := 0
+	matched := 0
 	for _, workflow := range workflows {
 		for _, trigger := range workflow.EventTriggers {
 			if trigger.Event != eventType || !eventFilterMatches(trigger.Filter, input) {
 				continue
 			}
+			matched++
 			if trigger.CooldownSeconds > 0 {
 				var recent bool
 				if err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM ai_workflow_runs WHERE workflow_id=$1 AND triggered_by=$2 AND created_at >= NOW()-make_interval(secs=>$3))`, workflow.ID, "event:"+eventKey, trigger.CooldownSeconds).Scan(&recent); err != nil {
@@ -248,8 +254,18 @@ func (s *Service) processStoredEvent(ctx context.Context, eventKey, eventType st
 			break
 		}
 	}
+	if matched > 0 && queued == 0 {
+		return 0, fmt.Errorf("%w: no matching Workflow could be queued for event %s", ErrInvalid, eventType)
+	}
 	_, _ = s.db.ExecContext(ctx, `UPDATE ai_workflow_events SET status='processed',processed_at=NOW() WHERE event_key=$1`, eventKey)
 	return queued, nil
+}
+
+func (s *Service) markEventFailure(ctx context.Context, eventKey string, eventErr error) {
+	message := safeError(eventErr)
+	_, _ = s.db.ExecContext(ctx, `UPDATE ai_workflow_events
+		SET attempts=attempts+1,last_error=$2,available_at=NOW()+make_interval(secs=>LEAST(3600,POWER(2,attempts)))
+		WHERE event_key=$1 AND status='accepted'`, eventKey, message)
 }
 
 func eventFilterMatches(filter map[string]interface{}, payload any) bool {
@@ -814,7 +830,7 @@ func (s *Service) tick(ctx context.Context) {
 
 func (s *Service) processPendingEvents(ctx context.Context) {
 	rows, err := s.db.QueryContext(ctx, `SELECT event_key,event_type,payload FROM ai_workflow_events
-		WHERE status='accepted' ORDER BY id LIMIT 20`)
+		WHERE status='accepted' AND available_at<=NOW() ORDER BY id LIMIT 20`)
 	if err != nil {
 		return
 	}
@@ -823,7 +839,9 @@ func (s *Service) processPendingEvents(ctx context.Context) {
 		var key, eventType string
 		var payload []byte
 		if rows.Scan(&key, &eventType, &payload) == nil {
-			_, _ = s.processStoredEvent(ctx, key, eventType, payload, nil)
+			if _, eventErr := s.processStoredEvent(ctx, key, eventType, payload, nil); eventErr != nil {
+				s.markEventFailure(ctx, key, eventErr)
+			}
 		}
 	}
 }
