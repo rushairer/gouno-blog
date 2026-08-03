@@ -18,6 +18,19 @@ const workflow = {
   updated_at: '2026-08-01T00:00:00Z',
 };
 describe('WorkflowWorkspace', () => {
+  it('sorts workflows newest first and filters the master list', async () => {
+    const user = userEvent.setup();
+    const older = { ...workflow, id: 1, name: 'Older workflow', description: 'Legacy check.', created_at: '2026-07-01T00:00:00Z' };
+    const newer = { ...workflow, id: 2, name: 'Newest workflow', description: 'SEO review.', created_at: '2026-08-02T00:00:00Z' };
+    render(<WorkflowWorkspace workflows={[older, newer]} runs={[]} metrics={[]} agents={[]} locale="zh" onMutate={vi.fn()} onRun={vi.fn()} onSave={vi.fn()} />);
+
+    const list = screen.getByRole('searchbox', { name: '搜索 Workflow' }).closest('.workflow-list-toolbar')?.nextElementSibling;
+    expect(list?.textContent?.indexOf('Newest workflow')).toBeLessThan(list?.textContent?.indexOf('Older workflow'));
+    await user.type(screen.getByRole('searchbox', { name: '搜索 Workflow' }), 'SEO');
+    expect(screen.getByRole('button', { name: /Newest workflow/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Older workflow/ })).not.toBeInTheDocument();
+  });
+
   it('confirms and soft-deletes a workflow', async () => {
     const user = userEvent.setup();
     const onMutate = vi.fn().mockResolvedValue(undefined);

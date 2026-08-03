@@ -598,6 +598,9 @@
 .workflow-planner h3 { margin: 0 0 4px; font-size: 16px; }
 .workflow-planner p, .workflow-advanced > p { margin: 0; color: var(--color-text-muted); font-size: 13px; line-height: 1.65; }
 .workflow-planner__message { color: var(--agent-accent) !important; font-weight: 700; }
+.workflow-list-toolbar { display: flex; align-items: center; gap: 12px; margin: 16px 0; }
+.workflow-list-toolbar .search-field { flex: 1 1 320px; min-width: 0; }
+.workflow-list-toolbar > span { flex: 0 0 auto; color: var(--color-text-muted); font-size: 12px; white-space: nowrap; }
 .workflow-dependency-plan { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--agent-border); }
 .workflow-dependency-plan__items { display: flex; flex-wrap: wrap; gap: 8px; }
 .workflow-dependency-plan small { color: var(--color-text-muted); font-size: 12px; line-height: 1.5; }
@@ -630,6 +633,8 @@
 }
 
 @media (max-width: 540px) {
+  .workflow-list-toolbar { align-items: stretch; flex-direction: column; gap: 8px; }
+  .workflow-list-toolbar > span { white-space: normal; }
   .workflow-resource-query-heading { align-items: stretch; flex-direction: column; }
   .workflow-resource-query-heading > .btn { align-self: flex-end; }
   .workflow-resource-query-filters { grid-template-columns: 1fr; }

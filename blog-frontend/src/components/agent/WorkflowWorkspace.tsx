@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { apiFetch } from '../../auth';
 import type { Agent, ToolDefinition, Workflow, WorkflowMetric, WorkflowRun, WorkflowStep } from '../../agent';
-import { Button, Checkbox, ConfirmDialog, EditorPanel, EmptyState, Feedback, Field, FormActions, FormLayout, Input, Panel, PanelHeader, Select, WorkspacePanel } from '../ui';
+import { Button, Checkbox, ConfirmDialog, EditorPanel, EmptyState, Feedback, Field, FormActions, FormLayout, Input, Panel, PanelHeader, SearchField, Select, WorkspacePanel } from '../ui';
 import { StatusPill, statusLabel } from './StatusPill';
 import { WorkflowInputForm } from './WorkflowInputForm';
 
@@ -97,6 +97,7 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = []
     const value = Number(new URLSearchParams(window.location.search).get('workflow'));
     return Number.isInteger(value) && value > 0 ? value : null;
   });
+  const [workflowQuery, setWorkflowQuery] = useState('');
   const labels = locale === 'zh' ? {
     empty: '还没有 Workflow。', add: '创建 Workflow', run: '运行', dry: 'Dry-run', enable: '启用',
     disable: '停用', versions: '版本', rollback: '回滚', input: '运行输入', steps: '步骤 JSON',
@@ -110,7 +111,17 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = []
   };
   const metricMap = useMemo(() => new Map(metrics.map((item) => [item.workflow_id, item])), [metrics]);
   const agentMap = useMemo(() => new Map(agents.map((agent) => [agent.id, agent])), [agents]);
-  const selectedWorkflow = workflows.find((workflow) => workflow.id === selectedWorkflowID) || workflows[0] || null;
+  const sortedWorkflows = useMemo(() => [...workflows].sort((left, right) => {
+    const rightTime = Date.parse(right.created_at || '') || 0;
+    const leftTime = Date.parse(left.created_at || '') || 0;
+    return rightTime - leftTime || right.id - left.id;
+  }), [workflows]);
+  const visibleWorkflows = useMemo(() => {
+    const query = workflowQuery.trim().toLocaleLowerCase();
+    if (!query) return sortedWorkflows;
+    return sortedWorkflows.filter((workflow) => [workflow.name, workflow.description, workflow.template_key].some((value) => value?.toLocaleLowerCase().includes(query)));
+  }, [sortedWorkflows, workflowQuery]);
+  const selectedWorkflow = visibleWorkflows.find((workflow) => workflow.id === selectedWorkflowID) || visibleWorkflows[0] || null;
   const loadVersions = async (workflow: Workflow) => {
     const items = await readData<Workflow[]>(await apiFetch(`/api/admin/ai-workflows/${workflow.id}/versions`));
     setVersions((current) => ({ ...current, [workflow.id]: items }));
@@ -194,9 +205,10 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = []
   if (editing) return <WorkflowEditor initial={editing === 'new' ? undefined : editing} labels={labels} agents={agents} tools={tools} locale={locale} onConfigureSkill={onConfigureSkill} onConfigureAgent={onConfigureAgent} onCancel={() => setEditing(null)} onSave={async (value) => { await onSave(value); setEditing(null); }} />;
   return <WorkspacePanel className="workflow-workspace">
     <PanelHeader title={locale === 'zh' ? '自动化' : 'Automation'} description={locale === 'zh' ? '选择一项持续运营目标；每次执行都可追溯、可试运行、可回滚。' : 'Choose an ongoing goal. Every run is traceable, testable, and reversible.'} actions={<Button variant="primary" type="button" onClick={() => setEditing('new')}><Plus />{labels.add}</Button>} />
-    {workflows.length === 0 || !selectedWorkflow ? <EmptyState label={labels.empty} /> : <div className="agent-split-view workflow-split-view">
+    {workflows.length > 0 ? <div className="workflow-list-toolbar"><SearchField aria-label={locale === 'zh' ? '搜索 Workflow' : 'Search workflows'} value={workflowQuery} onChange={(event) => setWorkflowQuery(event.target.value)} placeholder={locale === 'zh' ? '按名称、说明或模板搜索' : 'Search by name, description, or template'} /><span>{locale === 'zh' ? `${visibleWorkflows.length} / ${workflows.length} 个 Workflow` : `${visibleWorkflows.length} of ${workflows.length} workflows`}</span></div> : null}
+    {workflows.length === 0 || !selectedWorkflow ? <EmptyState label={workflows.length > 0 ? (locale === 'zh' ? '没有匹配的 Workflow。' : 'No matching workflows.') : labels.empty} /> : <div className="agent-split-view workflow-split-view">
       <Panel className="agent-master-panel workflow-master-list">
-        {workflows.map((workflow) => {
+        {visibleWorkflows.map((workflow) => {
           return <button className={workflow.id === selectedWorkflow.id ? 'active' : ''} key={workflow.id} type="button" onClick={() => { setSelectedWorkflowID(workflow.id); const url = new URL(window.location.href); url.searchParams.set('workflow', String(workflow.id)); window.history.replaceState(null, '', url); }}>
             <span><strong>{workflow.name}</strong><small>{workflow.description}</small></span>
             <StatusPill status={workflow.enabled ? 'succeeded' : 'pending'} locale={locale} label={workflow.enabled ? (locale === 'zh' ? '已启用' : 'Enabled') : (locale === 'zh' ? '已停用' : 'Disabled')} />
