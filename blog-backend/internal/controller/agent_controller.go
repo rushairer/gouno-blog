@@ -851,6 +851,18 @@ func (ctrl *AgentController) RegenerateImageTask(c *gin.Context) {
 	ctrl.GenerateMediaCandidate(c)
 }
 
+func (ctrl *AgentController) CancelImageTask(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	if err := ctrl.approvals.CancelMediaGeneration(c.Request.Context(), id); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
+}
+
 func (ctrl *AgentController) SelectImageTask(c *gin.Context) {
 	id, ok := agentID(c)
 	if !ok {

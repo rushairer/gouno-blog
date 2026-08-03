@@ -92,6 +92,14 @@ func (s *ApprovalService) SelectMediaCandidate(ctx context.Context, id int64, pl
 	return nil
 }
 
+func (s *ApprovalService) CancelMediaGeneration(ctx context.Context, id int64) error {
+	if err := s.repo.CancelMediaGeneration(ctx, id); err != nil {
+		return err
+	}
+	s.appendCandidateEvent(ctx, id, "image_generation_cancelled", map[string]any{})
+	return nil
+}
+
 func (s *ApprovalService) ApplyMediaCandidate(ctx context.Context, id int64) (*domain.Post, error) {
 	candidate, err := s.repo.GetMediaCandidate(ctx, id)
 	if err != nil {
@@ -185,11 +193,13 @@ func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, 
 		return ErrApprovalConflict
 	}
 	s.appendCandidateEvent(ctx, id, "image_generation_started", map[string]any{"attempt": candidate.GenerationAttempt})
+	generationCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
 	fail := func(reason string) error {
 		_ = s.repo.RecordMediaGenerationError(ctx, id, "image_generation_failed", reason)
 		return errors.New(reason)
 	}
-	profiles, err := s.management.ListProviders(ctx)
+	profiles, err := s.management.ListProviders(generationCtx)
 	if err != nil {
 		return fail(err.Error())
 	}
@@ -203,7 +213,7 @@ func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, 
 	if profileID == 0 {
 		return fail("no enabled default image provider")
 	}
-	client, err := s.management.ProviderClient(ctx, profileID)
+	client, err := s.management.ProviderClient(generationCtx, profileID)
 	if err != nil {
 		return fail(err.Error())
 	}
@@ -211,8 +221,11 @@ func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, 
 	if !ok {
 		return fail("provider does not support image generation")
 	}
-	image, err := generator.GenerateImage(ctx, provider.ImageRequest{Prompt: candidate.Brief})
+	image, err := generator.GenerateImage(generationCtx, provider.ImageRequest{Prompt: candidate.Brief})
 	if err != nil || len(image.Data) == 0 || len(image.Data) > 10<<20 || (image.MIMEType != "image/jpeg" && image.MIMEType != "image/png" && image.MIMEType != "image/webp") {
+		if errors.Is(generationCtx.Err(), context.DeadlineExceeded) {
+			return fail("image generation timed out")
+		}
 		return fail("provider returned an invalid image")
 	}
 	ext := map[string]string{"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}[image.MIMEType]

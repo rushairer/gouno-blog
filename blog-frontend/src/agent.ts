@@ -230,7 +230,7 @@ export interface MediaCandidate {
   brief: string;
   platform?: string;
   alt_text: string;
-  generation_status: 'brief_ready' | 'ready_to_generate' | 'generating' | 'generated' | 'rejected' | 'failed';
+  generation_status: 'brief_ready' | 'ready_to_generate' | 'generating' | 'generated' | 'rejected' | 'failed' | 'cancelled';
   safety_status: string;
   copyright_status: string;
   media_asset_id?: number;
@@ -245,6 +245,9 @@ export interface MediaCandidate {
   error_code?: string;
   error_message?: string;
   generation_attempt?: number;
+  generation_started_at?: string;
+  generation_deadline_at?: string;
+  cancelled_at?: string;
 }
 
 export interface EditorialTask {
