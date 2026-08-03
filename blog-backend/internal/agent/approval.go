@@ -52,6 +52,9 @@ func (s *ApprovalService) List(ctx context.Context, status string, page, pageSiz
 func (s *ApprovalService) ListMediaCandidates(ctx context.Context) ([]*domain.MediaCandidate, error) {
 	return s.repo.ListMediaCandidates(ctx)
 }
+func (s *ApprovalService) ListMediaCandidatesByWorkflowRun(ctx context.Context, runID int64) ([]*domain.MediaCandidate, error) {
+	return s.repo.ListMediaCandidatesByWorkflowRun(ctx, runID)
+}
 
 func (s *ApprovalService) GetInteraction(ctx context.Context, id int64) (*domain.WorkflowInteractionTask, error) {
 	return s.repo.GetInteraction(ctx, id)

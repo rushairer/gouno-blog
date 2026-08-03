@@ -225,6 +225,14 @@ export interface MediaCandidate {
   media_asset_id?: number;
   reviewed_at?: string;
   created_at: string;
+  workflow_run_id?: number;
+  placement?: 'cover' | 'inline';
+  anchor?: string;
+  selected?: boolean;
+  applied_version_id?: number;
+  error_code?: string;
+  error_message?: string;
+  generation_attempt?: number;
 }
 
 export interface EditorialTask {

@@ -1007,6 +1007,20 @@ func (r *AgentRepository) GetMediaCandidate(ctx context.Context, id int64) (*dom
 	return nil, sql.ErrNoRows
 }
 
+func (r *AgentRepository) ListMediaCandidatesByWorkflowRun(ctx context.Context, runID int64) ([]*domain.MediaCandidate, error) {
+	items, err := r.ListMediaCandidates(ctx)
+	if err != nil {
+		return nil, err
+	}
+	filtered := make([]*domain.MediaCandidate, 0)
+	for _, item := range items {
+		if item.WorkflowRunID != nil && *item.WorkflowRunID == runID {
+			filtered = append(filtered, item)
+		}
+	}
+	return filtered, nil
+}
+
 func (r *AgentRepository) SelectMediaCandidate(ctx context.Context, id int64, placement, anchor string) error {
 	if placement == "" {
 		placement = "cover"
