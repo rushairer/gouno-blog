@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Added idempotent Workflow domain events, signed external webhook intake, database event triggers, and exponential replay backoff.
 - Added batch retry controls for failed Workflow resource iterations in run records.
 - Added sandbox-only connector profiles, encrypted credentials, mock OAuth completion, approval-gated Outbox delivery, idempotency, audit, retry state, and revocation.
+- Added per-connector sandbox rate limiting and retryable backoff audit states.
 
 ### Changed
 

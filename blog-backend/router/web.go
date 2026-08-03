@@ -221,6 +221,7 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 				admin.POST("/admin/ai-connector-outbox/:id/approve", agentCtrl.ApproveConnectorOutbox)
 				admin.POST("/admin/ai-connector-outbox/:id/revoke", agentCtrl.RevokeConnectorOutbox)
 				admin.POST("/admin/ai-connector-outbox/:id/deliver-mock", agentCtrl.DeliverConnectorOutboxMock)
+				admin.POST("/admin/ai-connector-outbox/:id/retry", agentCtrl.RetryConnectorOutbox)
 				admin.GET("/admin/ai-resources/:type", agentCtrl.ListAIResources)
 				admin.GET("/admin/ai-workflow-metrics", agentCtrl.WorkflowMetrics)
 				admin.GET("/admin/ai-suggestions", agentCtrl.ListSuggestions)

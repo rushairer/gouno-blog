@@ -153,6 +153,17 @@ func (ctrl *AgentController) DeliverConnectorOutboxMock(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"delivered": true, "transport": "mock"}))
 }
+func (ctrl *AgentController) RetryConnectorOutbox(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	if err := ctrl.connectors.Retry(c.Request.Context(), id); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"retried": true}))
+}
 
 type draftAssistRequest struct {
 	Task    string `json:"task" binding:"required"`

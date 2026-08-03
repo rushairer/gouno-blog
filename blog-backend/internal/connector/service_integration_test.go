@@ -35,7 +35,7 @@ func TestSandboxConnectorOutboxLifecycle(t *testing.T) {
 		t.Fatal(err)
 	}
 	svc := NewService(db, box)
-	profile := &Profile{Name: fmt.Sprintf("sandbox-connector-test-%d", time.Now().UnixNano()), Kind: "newsletter", Sandbox: true, Enabled: true, Config: json.RawMessage(`{"audience":"test"}`)}
+	profile := &Profile{Name: fmt.Sprintf("sandbox-connector-test-%d", time.Now().UnixNano()), Kind: "newsletter", Sandbox: true, Enabled: true, Config: json.RawMessage(`{"audience":"test","rate_limit_per_minute":1}`)}
 	if err := svc.SaveProfile(ctx, profile, "mock-token-1234"); err != nil {
 		t.Fatal(err)
 	}
@@ -87,5 +87,30 @@ func TestSandboxConnectorOutboxLifecycle(t *testing.T) {
 	}
 	if status != "delivered" || audits != 1 {
 		t.Fatalf("mock delivery = %q audits=%d", status, audits)
+	}
+	limited, err := svc.Queue(ctx, profile.ID, "sandbox-rate-limit-key", json.RawMessage(`{"subject":"second"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Approve(ctx, limited.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.DeliverMock(ctx, limited.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRowContext(ctx, `SELECT status FROM ai_connector_outbox WHERE id=$1`, limited.ID).Scan(&status); err != nil {
+		t.Fatal(err)
+	}
+	if status != "failed" {
+		t.Fatalf("rate-limited outbox status = %q", status)
+	}
+	if err := svc.Retry(ctx, limited.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRowContext(ctx, `SELECT status FROM ai_connector_outbox WHERE id=$1`, limited.ID).Scan(&status); err != nil {
+		t.Fatal(err)
+	}
+	if status != "approved" {
+		t.Fatalf("retried outbox status = %q", status)
 	}
 }

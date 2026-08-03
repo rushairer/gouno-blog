@@ -1336,6 +1336,12 @@ paths:
       security: [{BearerAuth: []}]
       parameters: [{name: id, in: path, required: true, schema: {type: integer}}]
       responses: {'200': {description: Mock delivery recorded without external request}}
+  /admin/ai-connector-outbox/{id}/retry:
+    post:
+      summary: Retry a failed sandbox delivery
+      security: [{BearerAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: integer}}]
+      responses: {'200': {description: Failed item returned to approved sandbox delivery state}}
 
 components:
   parameters:

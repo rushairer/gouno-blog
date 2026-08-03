@@ -200,7 +200,7 @@ GET /api/admin/ai-workflow-runs/91/resources
 
 ### 第四阶段：外部连接器
 
-RSS 已通过白名单 HTTPS Tool 提供受限读取，站点 Sitemap 为现有只读公开源；Webhook 已提供 HMAC SHA-256 校验、1 MiB 限制和幂等键，仍需在部署环境配置 `GOUNO_AI_WEBHOOK_SECRET`。已实现本地 Sandbox 连接器底座：凭据经现有密钥环加密、模拟 OAuth 回调、审批后 Outbox、幂等键、Mock 投递审计和撤销；Mock Transport 明确不含网络请求。Search Console、Newsletter 与社媒的真实适配仍需独立 OAuth/服务凭据和经确认的供应商配置；不提供任意 HTTP、任意代码或模型生成插件。
+RSS 已通过白名单 HTTPS Tool 提供受限读取，站点 Sitemap 为现有只读公开源；Webhook 已提供 HMAC SHA-256 校验、1 MiB 限制和幂等键，仍需在部署环境配置 `GOUNO_AI_WEBHOOK_SECRET`。已实现本地 Sandbox 连接器底座：凭据经现有密钥环加密、模拟 OAuth 回调、审批后 Outbox、幂等键、每连接器分钟限流、带退避的失败重试、Mock 投递审计和撤销；Mock Transport 明确不含网络请求。Search Console、Newsletter 与社媒的真实适配仍需独立 OAuth/服务凭据和经确认的供应商配置；不提供任意 HTTP、任意代码或模型生成插件。
 
 ## 验收基线
 

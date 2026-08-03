@@ -214,7 +214,8 @@ func (s *Service) DeliverMock(ctx context.Context, id int64) error {
 	defer tx.Rollback()
 	var item OutboxItem
 	var sandbox bool
-	if e = tx.QueryRowContext(ctx, `SELECT o.id,o.connector_profile_id,o.idempotency_key,o.payload,o.status,o.attempts,p.sandbox FROM ai_connector_outbox o JOIN ai_connector_profiles p ON p.id=o.connector_profile_id WHERE o.id=$1 FOR UPDATE`, id).Scan(&item.ID, &item.ConnectorProfileID, &item.IdempotencyKey, &item.Payload, &item.Status, &item.Attempts, &sandbox); e != nil {
+	var config []byte
+	if e = tx.QueryRowContext(ctx, `SELECT o.id,o.connector_profile_id,o.idempotency_key,o.payload,o.status,o.attempts,p.sandbox,p.config FROM ai_connector_outbox o JOIN ai_connector_profiles p ON p.id=o.connector_profile_id WHERE o.id=$1 FOR UPDATE`, id).Scan(&item.ID, &item.ConnectorProfileID, &item.IdempotencyKey, &item.Payload, &item.Status, &item.Attempts, &sandbox, &config); e != nil {
 		if errors.Is(e, sql.ErrNoRows) {
 			return ErrNotFound
 		}
@@ -224,6 +225,27 @@ func (s *Service) DeliverMock(ctx context.Context, id int64) error {
 		return ErrInvalid
 	}
 	item.Attempts++
+	limit := 10
+	var configValue map[string]any
+	_ = json.Unmarshal(config, &configValue)
+	if value, ok := configValue["rate_limit_per_minute"].(float64); ok && value >= 1 && value <= 120 {
+		limit = int(value)
+	}
+	var recent int
+	if e = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_connector_delivery_audits a JOIN ai_connector_outbox o ON o.id=a.outbox_id WHERE o.connector_profile_id=$1 AND a.created_at>=NOW()-INTERVAL '1 minute'`, item.ConnectorProfileID).Scan(&recent); e != nil {
+		return e
+	}
+	if recent >= limit {
+		message := "sandbox connector rate limit exceeded"
+		if _, e = tx.ExecContext(ctx, `UPDATE ai_connector_outbox SET status='failed',attempts=$2,error_message=$3,available_at=NOW()+make_interval(secs=>LEAST(3600,POWER(2,$4))) WHERE id=$1`, id, item.Attempts, message, float64(item.Attempts)); e != nil {
+			return e
+		}
+		_, e = tx.ExecContext(ctx, `INSERT INTO ai_connector_delivery_audits(outbox_id,attempt,status,request_summary,response_summary) VALUES($1,$2,'rate_limited',jsonb_build_object('transport','mock'),jsonb_build_object('retryable',TRUE,'external_request',FALSE))`, id, item.Attempts)
+		if e != nil {
+			return e
+		}
+		return tx.Commit()
+	}
 	if _, e = tx.ExecContext(ctx, `UPDATE ai_connector_outbox SET status='delivered',attempts=$2,delivered_at=NOW(),updated_at=NOW() WHERE id=$1`, id, item.Attempts); e != nil {
 		return e
 	}
@@ -232,4 +254,15 @@ func (s *Service) DeliverMock(ctx context.Context, id int64) error {
 		return e
 	}
 	return tx.Commit()
+}
+
+func (s *Service) Retry(ctx context.Context, id int64) error {
+	result, err := s.db.ExecContext(ctx, `UPDATE ai_connector_outbox SET status='approved',error_message=NULL,available_at=NOW(),updated_at=NOW() WHERE id=$1 AND status='failed'`, id)
+	if err != nil {
+		return err
+	}
+	if n, _ := result.RowsAffected(); n == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
