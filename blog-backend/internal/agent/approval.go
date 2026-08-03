@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -66,6 +67,63 @@ func (s *ApprovalService) CancelInteraction(ctx context.Context, id int64, token
 }
 func (s *ApprovalService) ListMediaCandidateEvents(ctx context.Context, id int64) ([]*domain.WorkflowRunEvent, error) {
 	return s.repo.ListMediaCandidateEvents(ctx, id)
+}
+
+func (s *ApprovalService) SelectMediaCandidate(ctx context.Context, id int64, placement, anchor string) error {
+	if placement != "cover" && placement != "inline" {
+		return errors.New("invalid image placement")
+	}
+	if placement == "inline" && strings.TrimSpace(anchor) == "" {
+		return errors.New("inline image requires an anchor")
+	}
+	return s.repo.SelectMediaCandidate(ctx, id, placement, strings.TrimSpace(anchor))
+}
+
+func (s *ApprovalService) ApplyMediaCandidate(ctx context.Context, id int64) (*domain.Post, error) {
+	candidate, err := s.repo.GetMediaCandidate(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if !candidate.Selected || candidate.MediaAssetID == nil || candidate.GenerationStatus != "generated" {
+		return nil, errors.New("image candidate is not ready to apply")
+	}
+	post, err := s.posts.GetByID(ctx, candidate.PostID)
+	if err != nil || post == nil {
+		return nil, service.ErrPostNotFound
+	}
+	if expected, parseErr := strconv.ParseInt(candidate.PostVersionToken, 10, 64); parseErr == nil && expected != post.UpdatedAt.Unix() {
+		return nil, fmt.Errorf("article version conflict")
+	}
+	assets, err := s.growth.ListMedia(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var asset *domain.MediaAsset
+	for _, item := range assets {
+		if item.ID == *candidate.MediaAssetID {
+			asset = item
+			break
+		}
+	}
+	if asset == nil {
+		return nil, errors.New("media asset not found")
+	}
+	if candidate.Placement == "inline" {
+		if candidate.Anchor == "" || !strings.Contains(post.Content, candidate.Anchor) {
+			return nil, fmt.Errorf("article anchor conflict")
+		}
+		post.Content = strings.Replace(post.Content, candidate.Anchor, candidate.Anchor+"\n\n!["+candidate.AltText+"]("+asset.URL+")", 1)
+	} else {
+		post.CoverURL, post.CoverAlt = asset.URL, candidate.AltText
+	}
+	if err := s.posts.UpdatePost(ctx, post); err != nil {
+		return nil, err
+	}
+	versions, _ := s.growth.ListVersions(ctx, post.ID)
+	if len(versions) > 0 {
+		_ = s.repo.MarkMediaCandidateApplied(ctx, id, versions[0].ID)
+	}
+	return post, nil
 }
 
 func (s *ApprovalService) ReviewMediaCandidate(ctx context.Context, id int64, action, reviewer, note string) error {

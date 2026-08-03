@@ -27,7 +27,7 @@ AI 工作台不再把 Workflow 输入理解为“由 Agent 提供的一段 JSON�
 - [x] 交互任务仓储：创建、按 Run 查询、resume token 原子解决、取消和过期拒绝。
 - [x] 管理 API：Run interactions、interaction detail、resolve、cancel。
 - [x] Workflow `human_interaction` 步骤暂停/恢复执行，并复用已完成步骤输出。
-- [ ] 图片候选选择、重生成进度和文章版本应用。
+- [x] 图片候选选择、封面/正文位置与锚点校验、文章版本令牌冲突阻断和新版本应用 API；图片预览向导仍待接入。
 - [x] 图片候选重生成入口、生成尝试计数及失败错误持久化；事件查询 API 已提供，生成/应用事件和资产应用仍待接入。
 - [x] Run 详情展示交互任务并支持确认/选择后恢复运行；待我处理的独立聚合入口和图片预览向导仍待接入。
 

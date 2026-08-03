@@ -59,6 +59,20 @@ func (s *PostService) CreatePost(ctx context.Context, post *domain.Post) error {
 	return s.repo.Create(ctx, post)
 }
 
+func (s *PostService) GetByID(ctx context.Context, id int64) (*domain.Post, error) {
+	if id <= 0 {
+		return nil, ErrPostNotFound
+	}
+	post, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if post == nil {
+		return nil, ErrPostNotFound
+	}
+	return post, nil
+}
+
 func (s *PostService) preparePost(ctx context.Context, post *domain.Post, current *domain.Post) error {
 	if post.Slug == "" {
 		post.Slug = generateSlug(post.Title)

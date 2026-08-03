@@ -966,7 +966,7 @@ func (r *AgentRepository) CreateMediaCandidate(ctx context.Context, approval *do
 	}
 	_, err := r.db.ExecContext(ctx, `INSERT INTO ai_media_candidates
 		(post_id,source_run_id,source_approval_id,workflow_run_id,headline,brief,platform,alt_text,provider,model,input_tokens,output_tokens,post_version_token)
-		SELECT $1,$2,$3,ar.workflow_run_id,$4,$5,$6,$7,ar.provider,ar.model,ar.input_tokens,ar.output_tokens,p.updated_at::text
+		SELECT $1,$2,$3,ar.workflow_run_id,$4,$5,$6,$7,ar.provider,ar.model,ar.input_tokens,ar.output_tokens,EXTRACT(EPOCH FROM p.updated_at)::bigint::text
 		FROM ai_agent_runs ar JOIN posts p ON p.id=$1 WHERE ar.id=$2`,
 		payload.PostID, approval.RunID, approval.ID, strings.TrimSpace(payload.Headline), strings.TrimSpace(payload.Body), strings.TrimSpace(payload.Platform), strings.TrimSpace(payload.AltText))
 	return err
@@ -974,7 +974,7 @@ func (r *AgentRepository) CreateMediaCandidate(ctx context.Context, approval *do
 
 func (r *AgentRepository) ListMediaCandidates(ctx context.Context) ([]*domain.MediaCandidate, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT id,post_id,source_run_id,source_approval_id,headline,brief,platform,provider,model,input_tokens,output_tokens,media_asset_id,
-		generation_status,safety_status,copyright_status,alt_text,reviewed_by,review_note,reviewed_at,created_at
+		generation_status,safety_status,copyright_status,alt_text,reviewed_by,review_note,reviewed_at,created_at,workflow_run_id,workflow_step_id,interaction_task_id,post_version_token,generation_attempt,selected_at,applied_version_id,error_code,error_message,placement,anchor,selected,applied_at
 		FROM ai_media_candidates ORDER BY created_at DESC`)
 	if err != nil {
 		return nil, err
@@ -986,12 +986,51 @@ func (r *AgentRepository) ListMediaCandidates(ctx context.Context) ([]*domain.Me
 		if err := rows.Scan(&item.ID, &item.PostID, &item.SourceRunID, &item.SourceApprovalID, &item.Headline,
 			&item.Brief, &item.Platform, &item.Provider, &item.Model, &item.InputTokens, &item.OutputTokens, &item.MediaAssetID, &item.GenerationStatus,
 			&item.SafetyStatus, &item.CopyrightStatus, &item.AltText, &item.ReviewedBy, &item.ReviewNote,
-			&item.ReviewedAt, &item.CreatedAt); err != nil {
+			&item.ReviewedAt, &item.CreatedAt, &item.WorkflowRunID, &item.WorkflowStepID, &item.InteractionTaskID, &item.PostVersionToken, &item.GenerationAttempt, &item.SelectedAt, &item.AppliedVersionID, &item.ErrorCode, &item.ErrorMessage, &item.Placement, &item.Anchor, &item.Selected, &item.AppliedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, &item)
 	}
 	return items, rows.Err()
+}
+
+func (r *AgentRepository) GetMediaCandidate(ctx context.Context, id int64) (*domain.MediaCandidate, error) {
+	rows, err := r.ListMediaCandidates(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, item := range rows {
+		if item.ID == id {
+			return item, nil
+		}
+	}
+	return nil, sql.ErrNoRows
+}
+
+func (r *AgentRepository) SelectMediaCandidate(ctx context.Context, id int64, placement, anchor string) error {
+	if placement == "" {
+		placement = "cover"
+	}
+	result, err := r.db.ExecContext(ctx, `UPDATE ai_media_candidates SET selected=TRUE,placement=$2,anchor=$3,selected_at=NOW()
+		WHERE id=$1 AND generation_status='generated' AND media_asset_id IS NOT NULL`, id, placement, anchor)
+	if err != nil {
+		return err
+	}
+	if n, _ := result.RowsAffected(); n == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+func (r *AgentRepository) MarkMediaCandidateApplied(ctx context.Context, id, versionID int64) error {
+	result, err := r.db.ExecContext(ctx, `UPDATE ai_media_candidates SET applied_version_id=$2,applied_at=NOW() WHERE id=$1 AND selected=TRUE AND generation_status='generated'`, id, versionID)
+	if err != nil {
+		return err
+	}
+	if n, _ := result.RowsAffected(); n == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }
 
 func (r *AgentRepository) AttachMediaAsset(ctx context.Context, candidateID, mediaAssetID int64) error {

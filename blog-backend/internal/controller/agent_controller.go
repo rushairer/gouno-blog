@@ -851,6 +851,39 @@ func (ctrl *AgentController) RegenerateImageTask(c *gin.Context) {
 	ctrl.GenerateMediaCandidate(c)
 }
 
+func (ctrl *AgentController) SelectImageTask(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	var req struct {
+		Placement string `json:"placement"`
+		Anchor    string `json:"anchor"`
+	}
+	if err := bindAgentJSON(c, &req); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+	if err := ctrl.approvals.SelectMediaCandidate(c.Request.Context(), id, req.Placement, req.Anchor); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
+}
+
+func (ctrl *AgentController) ApplyImageTask(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	post, err := ctrl.approvals.ApplyMediaCandidate(c.Request.Context(), id)
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(post))
+}
+
 func (ctrl *AgentController) ImageTaskEvents(c *gin.Context) {
 	id, ok := agentID(c)
 	if !ok {

@@ -271,6 +271,10 @@ type MediaCandidate struct {
 	AppliedVersionID  *int64       `json:"applied_version_id,omitempty"`
 	ErrorCode         string       `json:"error_code,omitempty"`
 	ErrorMessage      string       `json:"error_message,omitempty"`
+	Placement         string       `json:"placement"`
+	Anchor            string       `json:"anchor,omitempty"`
+	Selected          bool         `json:"selected"`
+	AppliedAt         *time.Time   `json:"applied_at,omitempty"`
 }
 
 type UsageEvent struct {
