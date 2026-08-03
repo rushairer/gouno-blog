@@ -604,6 +604,10 @@
 .workflow-dependency-plan { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--agent-border); }
 .workflow-dependency-plan__items { display: flex; flex-wrap: wrap; gap: 8px; }
 .workflow-dependency-plan small { color: var(--color-text-muted); font-size: 12px; line-height: 1.5; }
+.workflow-intent-summary { display: flex; flex-wrap: wrap; gap: 8px 16px; color: var(--color-text-muted); font-size: 12px; line-height: 1.5; }
+.workflow-intent-summary span { display: inline-flex; gap: 5px; align-items: baseline; }
+.workflow-intent-summary b { color: var(--color-text); font-weight: 700; }
+.workflow-planner__notice { color: var(--agent-accent) !important; }
 .workflow-schedule-grid {
   grid-template-columns: minmax(0, 3fr) minmax(16rem, 2fr);
   align-items: start;
