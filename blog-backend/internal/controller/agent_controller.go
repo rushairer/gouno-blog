@@ -847,6 +847,23 @@ func (ctrl *AgentController) GenerateMediaCandidate(c *gin.Context) {
 	c.JSON(http.StatusAccepted, gouno.NewSuccessResponse(nil))
 }
 
+func (ctrl *AgentController) RegenerateImageTask(c *gin.Context) {
+	ctrl.GenerateMediaCandidate(c)
+}
+
+func (ctrl *AgentController) ImageTaskEvents(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	items, err := ctrl.approvals.ListMediaCandidateEvents(c.Request.Context(), id)
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
+}
+
 func (ctrl *AgentController) SelectCandidate(c *gin.Context) {
 	id, ok := agentID(c)
 	if !ok {

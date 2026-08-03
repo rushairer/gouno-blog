@@ -64,6 +64,9 @@ func (s *ApprovalService) ResolveInteraction(ctx context.Context, id int64, toke
 func (s *ApprovalService) CancelInteraction(ctx context.Context, id int64, token, subject string) error {
 	return s.repo.CancelInteraction(ctx, id, token, subject)
 }
+func (s *ApprovalService) ListMediaCandidateEvents(ctx context.Context, id int64) ([]*domain.WorkflowRunEvent, error) {
+	return s.repo.ListMediaCandidateEvents(ctx, id)
+}
 
 func (s *ApprovalService) ReviewMediaCandidate(ctx context.Context, id int64, action, reviewer, note string) error {
 	if id <= 0 || (action != "ready" && action != "reject") || (action == "reject" && strings.TrimSpace(note) == "") {
@@ -99,13 +102,13 @@ func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, 
 	if err != nil {
 		return ErrApprovalConflict
 	}
-	fail := func() error {
-		_ = s.repo.CompleteMediaGeneration(ctx, id, 0, true)
-		return errors.New("image generation failed")
+	fail := func(reason string) error {
+		_ = s.repo.RecordMediaGenerationError(ctx, id, "image_generation_failed", reason)
+		return errors.New(reason)
 	}
 	profiles, err := s.management.ListProviders(ctx)
 	if err != nil {
-		return fail()
+		return fail(err.Error())
 	}
 	var profileID int64
 	for _, item := range profiles {
@@ -115,32 +118,32 @@ func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, 
 		}
 	}
 	if profileID == 0 {
-		return fail()
+		return fail("no enabled default image provider")
 	}
 	client, err := s.management.ProviderClient(ctx, profileID)
 	if err != nil {
-		return fail()
+		return fail(err.Error())
 	}
 	generator, ok := client.(provider.ImageGenerator)
 	if !ok {
-		return fail()
+		return fail("provider does not support image generation")
 	}
 	image, err := generator.GenerateImage(ctx, provider.ImageRequest{Prompt: candidate.Brief})
 	if err != nil || len(image.Data) == 0 || len(image.Data) > 10<<20 || (image.MIMEType != "image/jpeg" && image.MIMEType != "image/png" && image.MIMEType != "image/webp") {
-		return fail()
+		return fail("provider returned an invalid image")
 	}
 	ext := map[string]string{"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}[image.MIMEType]
 	if err := os.MkdirAll(s.mediaDir, 0o755); err != nil {
-		return fail()
+		return fail(err.Error())
 	}
 	nameBytes := make([]byte, 16)
 	if _, err := rand.Read(nameBytes); err != nil {
-		return fail()
+		return fail(err.Error())
 	}
 	storageName := fmt.Sprintf("ai-%x%s", nameBytes, ext)
 	path := filepath.Join(s.mediaDir, storageName)
 	if err := os.WriteFile(path, image.Data, 0o644); err != nil {
-		return fail()
+		return fail(err.Error())
 	}
 	asset := &domain.MediaAsset{Filename: "ai-" + fmt.Sprint(candidate.ID) + ext, StorageName: storageName, URL: "/media/" + storageName, ContentType: image.MIMEType, SizeBytes: int64(len(image.Data)), AltText: candidate.AltText}
 	if creator != "" {
@@ -148,7 +151,7 @@ func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, 
 	}
 	if err := s.growth.CreateMedia(ctx, asset); err != nil {
 		_ = os.Remove(path)
-		return fail()
+		return fail(err.Error())
 	}
 	if err := s.repo.CompleteMediaGeneration(ctx, id, asset.ID, false); err != nil {
 		_, _ = s.growth.DeleteMedia(ctx, asset.ID)

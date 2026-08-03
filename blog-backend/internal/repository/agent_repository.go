@@ -1010,7 +1010,7 @@ func (r *AgentRepository) AttachMediaAsset(ctx context.Context, candidateID, med
 // issuing multiple billable image requests for the same reviewed brief.
 func (r *AgentRepository) ClaimMediaGeneration(ctx context.Context, id int64) (*domain.MediaCandidate, error) {
 	var item domain.MediaCandidate
-	err := r.db.QueryRowContext(ctx, `UPDATE ai_media_candidates SET generation_status='generating'
+	err := r.db.QueryRowContext(ctx, `UPDATE ai_media_candidates SET generation_status='generating',generation_attempt=generation_attempt+1,error_code=NULL,error_message=NULL
 		WHERE id=$1 AND generation_status='ready_to_generate'
 		RETURNING id,post_id,source_run_id,source_approval_id,headline,brief,platform,provider,model,input_tokens,output_tokens,media_asset_id,
 		generation_status,safety_status,copyright_status,alt_text,reviewed_by,review_note,reviewed_at,created_at`, id).Scan(
@@ -1031,6 +1031,17 @@ func (r *AgentRepository) CompleteMediaGeneration(ctx context.Context, candidate
 		return err
 	}
 	if affected, _ := result.RowsAffected(); affected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+func (r *AgentRepository) RecordMediaGenerationError(ctx context.Context, candidateID int64, code, message string) error {
+	result, err := r.db.ExecContext(ctx, `UPDATE ai_media_candidates SET generation_status='failed',error_code=$2,error_message=$3 WHERE id=$1 AND generation_status='generating'`, candidateID, code, message)
+	if err != nil {
+		return err
+	}
+	if n, _ := result.RowsAffected(); n == 0 {
 		return sql.ErrNoRows
 	}
 	return nil
@@ -1147,6 +1158,17 @@ func (r *AgentRepository) ListWorkflowRunEvents(ctx context.Context, runID int64
 		items = append(items, &item)
 	}
 	return items, rows.Err()
+}
+
+func (r *AgentRepository) ListMediaCandidateEvents(ctx context.Context, candidateID int64) ([]*domain.WorkflowRunEvent, error) {
+	var runID sql.NullInt64
+	if err := r.db.QueryRowContext(ctx, `SELECT workflow_run_id FROM ai_media_candidates WHERE id=$1`, candidateID).Scan(&runID); err != nil {
+		return nil, err
+	}
+	if !runID.Valid {
+		return []*domain.WorkflowRunEvent{}, nil
+	}
+	return r.ListWorkflowRunEvents(ctx, runID.Int64)
 }
 
 func (r *AgentRepository) RecordUsage(ctx context.Context, event *domain.UsageEvent) error {
