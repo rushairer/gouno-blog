@@ -19,6 +19,16 @@ AI 工作台不再把 Workflow 输入理解为“由 Agent 提供的一段 JSON�
 - 严格范围集成测试：目标读取与提案允许、越界读取拒绝、发现资源仅可读取且未授权发现结果会被过滤。
 - 媒体、运营建议、分类和单条评论所需的只读 Tool；所有写操作继续进入现有审批链路。
 - 资源型 starter 修复迁移：在 Provider 晚于初始迁移配置时补齐 Skill Version、Agent 及分类/标签、混合复盘模板；不覆盖已配置的 Agent 或 Workflow。
+- 运行中心第一阶段：新增统一交互任务与运行事件持久化，媒体候选可关联 Workflow Run、步骤和交互任务，并提供 resolve/cancel 生命周期 API；图片生成与文章应用仍在后续阶段接入。
+
+## 运行中心实施进度
+
+- [x] `058_workflow_interactions_and_image_task_links`：交互任务、运行事件和媒体候选运行关联字段。
+- [x] 交互任务仓储：创建、按 Run 查询、resume token 原子解决、取消和过期拒绝。
+- [x] 管理 API：Run interactions、interaction detail、resolve、cancel。
+- [ ] Workflow `human_interaction` 步骤暂停/恢复执行。
+- [ ] 图片候选选择、重生成进度和文章版本应用。
+- [ ] 待我处理与 Run 详情前端统一入口。
 
 ## 输入来源
 

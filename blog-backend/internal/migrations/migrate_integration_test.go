@@ -39,6 +39,7 @@ func TestUpAppliesCurrentSchemaAndIsIdempotent(t *testing.T) {
 		"ai_workflow_run_resources",
 		"ai_workflow_events",
 		"ai_connector_profiles", "ai_connector_outbox", "ai_connector_delivery_audits",
+		"workflow_interaction_tasks", "workflow_run_events",
 		"ai_link_health_jobs", "ai_link_health_snapshots",
 		"ai_operational_suggestions",
 		"ai_content_candidate_sets", "ai_content_candidates", "ai_media_candidates", "ai_feedback",

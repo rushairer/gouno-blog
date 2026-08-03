@@ -52,6 +52,19 @@ func (s *ApprovalService) ListMediaCandidates(ctx context.Context) ([]*domain.Me
 	return s.repo.ListMediaCandidates(ctx)
 }
 
+func (s *ApprovalService) GetInteraction(ctx context.Context, id int64) (*domain.WorkflowInteractionTask, error) {
+	return s.repo.GetInteraction(ctx, id)
+}
+func (s *ApprovalService) ListInteractions(ctx context.Context, runID int64) ([]*domain.WorkflowInteractionTask, error) {
+	return s.repo.ListInteractions(ctx, runID)
+}
+func (s *ApprovalService) ResolveInteraction(ctx context.Context, id int64, token string, response json.RawMessage, subject string) (*domain.WorkflowInteractionTask, error) {
+	return s.repo.ResolveInteraction(ctx, id, token, response, subject)
+}
+func (s *ApprovalService) CancelInteraction(ctx context.Context, id int64, token, subject string) error {
+	return s.repo.CancelInteraction(ctx, id, token, subject)
+}
+
 func (s *ApprovalService) ReviewMediaCandidate(ctx context.Context, id int64, action, reviewer, note string) error {
 	if id <= 0 || (action != "ready" && action != "reject") || (action == "reject" && strings.TrimSpace(note) == "") {
 		return ErrInvalid

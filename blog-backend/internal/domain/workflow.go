@@ -126,3 +126,42 @@ type WorkflowStepRun struct {
 	StartedAt     time.Time       `json:"started_at"`
 	FinishedAt    *time.Time      `json:"finished_at,omitempty"`
 }
+
+type WorkflowInteractionStatus string
+
+const (
+	InteractionPending   WorkflowInteractionStatus = "pending"
+	InteractionResolved  WorkflowInteractionStatus = "resolved"
+	InteractionCancelled WorkflowInteractionStatus = "cancelled"
+	InteractionExpired   WorkflowInteractionStatus = "expired"
+)
+
+type WorkflowInteractionTask struct {
+	ID              int64                     `json:"id"`
+	WorkflowRunID   *int64                    `json:"workflow_run_id,omitempty"`
+	AgentRunID      *int64                    `json:"agent_run_id,omitempty"`
+	WorkflowStepID  string                    `json:"workflow_step_id,omitempty"`
+	InteractionType string                    `json:"interaction_type"`
+	Schema          json.RawMessage           `json:"schema"`
+	Payload         json.RawMessage           `json:"payload"`
+	Options         json.RawMessage           `json:"options"`
+	Status          WorkflowInteractionStatus `json:"status"`
+	ResumeToken     string                    `json:"-"`
+	Response        json.RawMessage           `json:"response,omitempty"`
+	ExpiresAt       *time.Time                `json:"expires_at,omitempty"`
+	ResolvedBy      *string                   `json:"resolved_by,omitempty"`
+	ResolvedAt      *time.Time                `json:"resolved_at,omitempty"`
+	CreatedAt       time.Time                 `json:"created_at"`
+	UpdatedAt       time.Time                 `json:"updated_at"`
+}
+
+type WorkflowRunEvent struct {
+	ID                int64           `json:"id"`
+	WorkflowRunID     *int64          `json:"workflow_run_id,omitempty"`
+	AgentRunID        *int64          `json:"agent_run_id,omitempty"`
+	WorkflowStepID    string          `json:"workflow_step_id,omitempty"`
+	InteractionTaskID *int64          `json:"interaction_task_id,omitempty"`
+	EventType         string          `json:"event_type"`
+	Payload           json.RawMessage `json:"payload"`
+	CreatedAt         time.Time       `json:"created_at"`
+}

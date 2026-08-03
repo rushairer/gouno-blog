@@ -1191,6 +1191,84 @@ func (ctrl *AgentController) WorkflowRunResources(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
 }
 
+func (ctrl *AgentController) WorkflowRunInteractions(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	items, err := ctrl.approvals.ListInteractions(c.Request.Context(), id)
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
+}
+
+func (ctrl *AgentController) GetInteraction(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	item, err := ctrl.approvals.GetInteraction(c.Request.Context(), id)
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(item))
+}
+
+func interactionSubject(c *gin.Context) string {
+	if raw, ok := c.Get("account_id"); ok {
+		if value, ok := raw.(string); ok {
+			return value
+		}
+	}
+	return "admin"
+}
+
+func (ctrl *AgentController) ResolveInteraction(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	var req struct {
+		ResumeToken string          `json:"resume_token"`
+		Response    json.RawMessage `json:"response"`
+	}
+	if err := bindAgentJSON(c, &req); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+	if len(req.Response) == 0 {
+		req.Response = json.RawMessage(`{}`)
+	}
+	item, err := ctrl.approvals.ResolveInteraction(c.Request.Context(), id, req.ResumeToken, req.Response, interactionSubject(c))
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(item))
+}
+
+func (ctrl *AgentController) CancelInteraction(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	var req struct {
+		ResumeToken string `json:"resume_token"`
+	}
+	if err := bindAgentJSON(c, &req); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+	if err := ctrl.approvals.CancelInteraction(c.Request.Context(), id, req.ResumeToken, interactionSubject(c)); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
+}
+
 func (ctrl *AgentController) ListAIResources(c *gin.Context) {
 	resourceType := c.Param("type")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
