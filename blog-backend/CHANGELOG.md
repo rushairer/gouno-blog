@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Added bounded `for_each` concurrency and per-resource-type query quotas; existing Workflows remain sequential unless concurrency is explicitly configured.
 - Added idempotent Workflow domain events, signed external webhook intake, database event triggers, and exponential replay backoff.
 - Added batch retry controls for failed Workflow resource iterations in run records.
+- Added sandbox-only connector profiles, encrypted credentials, mock OAuth completion, approval-gated Outbox delivery, idempotency, audit, retry state, and revocation.
 
 ### Changed
 

@@ -15,6 +15,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/rushairer/blog-backend/config"
 	agentservice "github.com/rushairer/blog-backend/internal/agent"
+	"github.com/rushairer/blog-backend/internal/connector"
 	"github.com/rushairer/blog-backend/internal/controller"
 	"github.com/rushairer/blog-backend/internal/knowledge"
 	"github.com/rushairer/blog-backend/internal/operations"
@@ -164,6 +165,7 @@ func startWebServer(cmd *cobra.Command, args []string) {
 		runner := agentservice.NewRunner(agentRepo, management, toolRegistry, postSvc)
 		approvals := agentservice.NewApprovalService(agentRepo, postSvc, management, growthSvc, mediaDir)
 		agentCtrl = controller.NewAgentController(management, runner, approvals, toolRegistry, ctx, knowledgeSvc)
+		agentCtrl.SetConnectorService(connector.NewService(db, secrets))
 		workflowSvc := workflowservice.NewService(db, runner, management, toolRegistry)
 		workflowSvc.StartScheduler(ctx, globalConfig.AIAgentConfig.SchedulerInterval)
 		agentCtrl.SetWorkflowService(workflowSvc)

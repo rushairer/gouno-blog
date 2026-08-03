@@ -17,6 +17,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	agentservice "github.com/rushairer/blog-backend/internal/agent"
+	"github.com/rushairer/blog-backend/internal/connector"
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/knowledge"
 	"github.com/rushairer/blog-backend/internal/operations"
@@ -35,6 +36,122 @@ type AgentController struct {
 	knowledge  *knowledge.Service
 	workflows  *workflowservice.Service
 	operations *operations.Service
+	connectors *connector.Service
+}
+
+func (ctrl *AgentController) SetConnectorService(value *connector.Service) { ctrl.connectors = value }
+
+func (ctrl *AgentController) ListConnectorProfiles(c *gin.Context) {
+	items, err := ctrl.connectors.ListProfiles(c.Request.Context())
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
+}
+
+func (ctrl *AgentController) SaveConnectorProfile(c *gin.Context) {
+	var req struct {
+		connector.Profile
+		Credential string `json:"credential"`
+	}
+	if err := bindAgentJSON(c, &req); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+	if err := ctrl.connectors.SaveProfile(c.Request.Context(), &req.Profile, req.Credential); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(req.Profile))
+}
+
+func (ctrl *AgentController) BeginConnectorOAuth(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	state, err := ctrl.connectors.BeginOAuth(c.Request.Context(), id)
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"state": state, "sandbox": true}))
+}
+
+func (ctrl *AgentController) CompleteConnectorOAuth(c *gin.Context) {
+	var req struct {
+		State string `json:"state"`
+		Code  string `json:"code"`
+	}
+	if err := bindAgentJSON(c, &req); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+	if err := ctrl.connectors.CompleteOAuthMock(c.Request.Context(), req.State, req.Code); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"connected": true, "sandbox": true}))
+}
+
+func (ctrl *AgentController) ListConnectorOutbox(c *gin.Context) {
+	items, err := ctrl.connectors.ListOutbox(c.Request.Context())
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
+}
+func (ctrl *AgentController) QueueConnectorOutbox(c *gin.Context) {
+	var req struct {
+		ProfileID int64           `json:"connector_profile_id"`
+		Key       string          `json:"idempotency_key"`
+		Payload   json.RawMessage `json:"payload"`
+	}
+	if err := bindAgentJSON(c, &req); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+	item, err := ctrl.connectors.Queue(c.Request.Context(), req.ProfileID, req.Key, req.Payload)
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusAccepted, gouno.NewSuccessResponse(item))
+}
+func (ctrl *AgentController) ApproveConnectorOutbox(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	if err := ctrl.connectors.Approve(c.Request.Context(), id); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"approved": true}))
+}
+func (ctrl *AgentController) RevokeConnectorOutbox(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	if err := ctrl.connectors.Revoke(c.Request.Context(), id); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"revoked": true}))
+}
+func (ctrl *AgentController) DeliverConnectorOutboxMock(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	if err := ctrl.connectors.DeliverMock(c.Request.Context(), id); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"delivered": true, "transport": "mock"}))
 }
 
 type draftAssistRequest struct {

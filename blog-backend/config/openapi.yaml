@@ -1300,6 +1300,42 @@ paths:
         '202': {description: Signed event accepted}
         '401': {description: Invalid signature}
         '503': {description: Webhook secret is not configured}
+  /admin/ai-connectors:
+    get:
+      summary: List sandbox connector profiles
+      security: [{BearerAuth: []}]
+      responses: {'200': {description: Connector profiles without plaintext credentials}}
+    post:
+      summary: Create or update a sandbox connector profile
+      security: [{BearerAuth: []}]
+      responses: {'200': {description: Encrypted sandbox profile saved}, '400': {description: Invalid connector profile}}
+  /admin/ai-connector-outbox:
+    get:
+      summary: List approval-gated sandbox deliveries
+      security: [{BearerAuth: []}]
+      responses: {'200': {description: Outbox records and delivery states}}
+    post:
+      summary: Queue a sandbox delivery
+      security: [{BearerAuth: []}]
+      responses: {'202': {description: Idempotent Outbox item awaiting approval}}
+  /admin/ai-connector-outbox/{id}/approve:
+    post:
+      summary: Approve a sandbox Outbox item
+      security: [{BearerAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: integer}}]
+      responses: {'200': {description: Item approved}}
+  /admin/ai-connector-outbox/{id}/revoke:
+    post:
+      summary: Revoke a pending sandbox Outbox item
+      security: [{BearerAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: integer}}]
+      responses: {'200': {description: Item revoked}}
+  /admin/ai-connector-outbox/{id}/deliver-mock:
+    post:
+      summary: Record a no-network mock delivery
+      security: [{BearerAuth: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: integer}}]
+      responses: {'200': {description: Mock delivery recorded without external request}}
 
 components:
   parameters:
