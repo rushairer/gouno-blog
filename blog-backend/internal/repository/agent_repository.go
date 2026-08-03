@@ -974,7 +974,7 @@ func (r *AgentRepository) CreateMediaCandidate(ctx context.Context, approval *do
 
 func (r *AgentRepository) ListMediaCandidates(ctx context.Context) ([]*domain.MediaCandidate, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT id,post_id,source_run_id,source_approval_id,headline,brief,platform,provider,model,input_tokens,output_tokens,media_asset_id,
-		generation_status,safety_status,copyright_status,alt_text,reviewed_by,review_note,reviewed_at,created_at,workflow_run_id,workflow_step_id,interaction_task_id,post_version_token,generation_attempt,selected_at,applied_version_id,error_code,error_message,placement,anchor,selected,applied_at
+		generation_status,safety_status,copyright_status,alt_text,reviewed_by,review_note,reviewed_at,created_at,workflow_run_id,COALESCE(workflow_step_id,''),interaction_task_id,COALESCE(post_version_token,''),generation_attempt,selected_at,applied_version_id,COALESCE(error_code,''),COALESCE(error_message,''),placement,COALESCE(anchor,''),selected,applied_at
 		FROM ai_media_candidates ORDER BY created_at DESC`)
 	if err != nil {
 		return nil, err
