@@ -103,7 +103,8 @@ func ParseIntent(prompt string) WorkflowIntent {
 	case strings.Contains(value, "图片") || strings.Contains(value, "配图") || strings.Contains(value, "封面") || strings.Contains(value, "illustration") || strings.Contains(value, "image") || strings.Contains(value, "cover"):
 		intent.Domain, intent.Action, intent.OutputType = "distribution", "image_brief", "image_brief"
 		intent.RequiresApproval = true
-		intent.RequiresImage = strings.Contains(value, "真实") || strings.Contains(value, "生成图片") || strings.Contains(value, "generate")
+		briefOnly := strings.Contains(value, "brief") || strings.Contains(value, "提示词") || strings.Contains(value, "prompt")
+		intent.RequiresImage = !briefOnly && (strings.Contains(value, "真实") || strings.Contains(value, "生成图片") || strings.Contains(value, "generate"))
 		if intent.RequiresImage {
 			intent.Domain, intent.Action, intent.OutputType = "media", "generate_image", "media_asset"
 		}

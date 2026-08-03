@@ -17,6 +17,10 @@ func TestParseIntentDistinguishesImageBriefFromSocial(t *testing.T) {
 	if social.Action != "social" || social.OutputType != "social_draft" {
 		t.Fatalf("unexpected social intent: %#v", social)
 	}
+	briefWithGenerationWord := ParseIntent("生成图片 Brief 和提示词")
+	if briefWithGenerationWord.Action != "image_brief" || briefWithGenerationWord.RequiresImage {
+		t.Fatalf("brief must not require image provider: %#v", briefWithGenerationWord)
+	}
 }
 
 func TestParseIntentAmbiguous(t *testing.T) {
