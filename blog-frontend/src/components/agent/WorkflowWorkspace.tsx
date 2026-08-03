@@ -1,9 +1,9 @@
-import { CirclePause, Database, GitBranch, GitCompareArrows, History, Play, Plus, RotateCcw, Save, TestTube2, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, CirclePause, Database, GitBranch, GitCompareArrows, History, Play, Plus, RotateCcw, Save, TestTube2, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { apiFetch } from '../../auth';
-import type { Agent, Workflow, WorkflowMetric, WorkflowRun, WorkflowStep } from '../../agent';
-import { Button, ConfirmDialog, EditorPanel, EmptyState, Feedback, Field, FormActions, FormLayout, Panel, PanelHeader, Select, WorkspacePanel } from '../ui';
+import type { Agent, ToolDefinition, Workflow, WorkflowMetric, WorkflowRun, WorkflowStep } from '../../agent';
+import { Button, Checkbox, ConfirmDialog, EditorPanel, EmptyState, Feedback, Field, FormActions, FormLayout, Input, Panel, PanelHeader, Select, WorkspacePanel } from '../ui';
 import { StatusPill, statusLabel } from './StatusPill';
 import { WorkflowInputForm } from './WorkflowInputForm';
 
@@ -56,11 +56,12 @@ function bindWorkflowAgent(steps: WorkflowStep[], agentID: number): WorkflowStep
   }));
 }
 
-export function WorkflowWorkspace({ workflows, runs, metrics, agents, locale, onMutate, onRun, onRefresh, onSave }: {
+export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = [], locale, onMutate, onRun, onRefresh, onSave }: {
   workflows: Workflow[];
   runs: WorkflowRun[];
   metrics: WorkflowMetric[];
   agents: Agent[];
+  tools?: ToolDefinition[];
   locale: 'en' | 'zh';
   onMutate: (path: string, method?: string, body?: unknown) => Promise<void>;
   onRun: (workflowID: number, dryRun: boolean, input: Record<string, unknown>) => Promise<WorkflowRun>;
@@ -165,7 +166,7 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, locale, on
       setRunningAction(null);
     }
   };
-  if (editing) return <WorkflowEditor initial={editing === 'new' ? undefined : editing} labels={labels} agents={agents} onCancel={() => setEditing(null)} onSave={async (value) => { await onSave(value); setEditing(null); }} />;
+  if (editing) return <WorkflowEditor initial={editing === 'new' ? undefined : editing} labels={labels} agents={agents} tools={tools} onCancel={() => setEditing(null)} onSave={async (value) => { await onSave(value); setEditing(null); }} />;
   return <WorkspacePanel className="workflow-workspace">
     <PanelHeader title={locale === 'zh' ? '自动化' : 'Automation'} description={locale === 'zh' ? '选择一项持续运营目标；每次执行都可追溯、可试运行、可回滚。' : 'Choose an ongoing goal. Every run is traceable, testable, and reversible.'} actions={<Button variant="primary" type="button" onClick={() => setEditing('new')}><Plus />{labels.add}</Button>} />
     {workflows.length === 0 || !selectedWorkflow ? <EmptyState label={labels.empty} /> : <div className="agent-split-view workflow-split-view">
@@ -305,10 +306,22 @@ function ResourceQueryBuilder({ step, onAdd, onChange, onRemove, savedPreview, l
   </section>;
 }
 
-function WorkflowEditor({ initial, labels, agents, onSave, onCancel }: {
+function SchemaFieldBuilder({ schemaJSON, onChange }: { schemaJSON: string; onChange: (value: string) => void }) {
+  const schema = parseJSON<{ type?: string; additionalProperties?: boolean; required?: string[]; properties?: Record<string, Record<string, unknown>> }>(schemaJSON);
+  if (!schema || schema.type !== 'object') return <Feedback type="error">输入 Schema JSON 无法解析。请在高级设置中修正。</Feedback>;
+  const properties = schema.properties || {};
+  const save = (next: typeof schema) => onChange(JSON.stringify({ ...next, type: 'object', additionalProperties: false }, null, 2));
+  const add = () => { let key = 'input'; let index = 2; while (properties[key]) key = `input_${index++}`; save({ ...schema, properties: { ...properties, [key]: { type: 'string', title: key } } }); };
+  return <section className="workflow-schema-builder"><div className="workflow-resource-query-heading"><div><strong>输入字段</strong><p>资源字段会自动显示为文章、评论或媒体等选择器。</p></div><Button variant="secondary" size="compact" type="button" onClick={add}><Plus />添加字段</Button></div>{Object.entries(properties).map(([key, property]) => { const resource = String(property['x-gouno-resource'] || ''); const isArray = property.type === 'array'; const set = (next: Record<string, unknown>) => save({ ...schema, properties: { ...properties, [key]: next } }); return <article className="workflow-schema-field" key={key}><div className="form-grid"><Field label="字段名"><input value={key} onChange={(event) => { const name = event.target.value.trim(); if (!name || name === key || properties[name]) return; const next = { ...properties, [name]: property }; delete next[key]; save({ ...schema, properties: next, required: (schema.required || []).map((item) => item === key ? name : item) }); }} /></Field><Field label="标题"><input value={String(property.title || '')} onChange={(event) => set({ ...property, title: event.target.value })} /></Field><Field label="类型"><Select value={isArray ? 'array' : String(property.type || 'string')} disabled={Boolean(resource)} onChange={(event) => set({ ...property, type: event.target.value, ...(event.target.value === 'array' ? { items: { type: 'string' } } : {}) })}><option value="string">字符串</option><option value="integer">整数</option><option value="number">数字</option><option value="boolean">布尔</option><option value="array">数组</option></Select></Field><Field label="资源类型"><Select value={resource} onChange={(event) => { const type = event.target.value; if (!type) { const next = { ...property }; delete next['x-gouno-resource']; delete next['x-gouno-widget']; set(next); return; } const keyType = type === 'tag' || type === 'category' ? 'string' : 'integer'; set({ ...property, type: isArray ? 'array' : keyType, ...(isArray ? { items: { type: keyType } } : {}), 'x-gouno-resource': type, 'x-gouno-widget': isArray ? 'entity-multi-select' : 'entity-select' }); }}><option value="">普通字段</option><option value="post">文章</option><option value="comment">评论</option><option value="media_asset">媒体</option><option value="operational_suggestion">运营建议</option><option value="category">分类</option><option value="tag">标签</option></Select></Field></div><div className="form-grid"><label className="checkbox-field"><input type="checkbox" checked={(schema.required || []).includes(key)} onChange={(event) => save({ ...schema, required: event.target.checked ? [...new Set([...(schema.required || []), key])] : (schema.required || []).filter((item) => item !== key) })} />必填</label>{(resource || isArray) ? <><Field label="最少数量"><input type="number" min="0" value={Number(property.minItems || 0)} onChange={(event) => set({ ...property, minItems: Number(event.target.value) || 0 })} /></Field><Field label="最多数量"><input type="number" min="1" value={Number(property.maxItems || 20)} onChange={(event) => set({ ...property, maxItems: Number(event.target.value) || 1 })} /></Field></> : null}<Button variant="ghost" size="compact" type="button" onClick={() => { const next = { ...properties }; delete next[key]; save({ ...schema, properties: next, required: (schema.required || []).filter((item) => item !== key) }); }}><Trash2 />删除</Button></div><Field label="说明"><input value={String(property.description || '')} onChange={(event) => set({ ...property, description: event.target.value })} /></Field></article>; })}</section>;
+}
+
+function parseJSON<T>(value: string): T | null { try { return JSON.parse(value) as T; } catch { return null; } }
+
+function WorkflowEditor({ initial, labels, agents, tools, onSave, onCancel }: {
   initial?: Workflow;
   labels: Record<string, string>;
   agents: Agent[];
+  tools: ToolDefinition[];
   onSave: (value: WorkflowValue) => Promise<void>;
   onCancel: () => void;
 }) {
@@ -320,11 +333,13 @@ function WorkflowEditor({ initial, labels, agents, onSave, onCancel }: {
   const [schema, setSchema] = useState(JSON.stringify(initial?.input_schema || { type: 'object', additionalProperties: false }, null, 2));
   const [steps, setSteps] = useState(JSON.stringify(initial?.steps || [], null, 2));
   const [scopeMode, setScopeMode] = useState<'strict' | 'unscoped'>(initial?.scope_policy?.mode || 'unscoped');
-  const [discoveryTools, setDiscoveryTools] = useState((initial?.scope_policy?.discovery_tools || []).join(', '));
+  const [discoveryTools, setDiscoveryTools] = useState<string[]>(initial?.scope_policy?.discovery_tools || []);
   const [goal, setGoal] = useState('');
   const [planning, setPlanning] = useState(false);
   const [plannerMessage, setPlannerMessage] = useState('');
-  const [showAdvanced, setShowAdvanced] = useState(Boolean(initial));
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [editorError, setEditorError] = useState('');
+  const [toolQuery, setToolQuery] = useState('');
   const [boundAgentID, setBoundAgentID] = useState<number | ''>(() => firstWorkflowAgentID(initial?.steps || []) || '');
   const parsedSteps = useMemo(() => {
     try {
@@ -338,6 +353,10 @@ function WorkflowEditor({ initial, labels, agents, onSave, onCancel }: {
   const resourceQueryStep = resourceQueryIndex >= 0 ? parsedSteps?.[resourceQueryIndex] : undefined;
   const forEachIndex = parsedSteps?.findIndex((step) => step.type === 'for_each') ?? -1;
   const forEachStep = forEachIndex >= 0 ? parsedSteps?.[forEachIndex] : undefined;
+  const selectedAgent = agents.find((agent) => agent.id === boundAgentID);
+  const allAuthorizedDiscoveryTools = tools.filter((tool) => tool.risk_level === 'read' && tool.scope?.discovery && Boolean(selectedAgent?.skill?.capabilities.includes(tool.name)));
+  const authorizedDiscoveryTools = allAuthorizedDiscoveryTools.filter((tool) => `${tool.name} ${tool.description} ${tool.description_zh || ''}`.toLowerCase().includes(toolQuery.trim().toLowerCase()));
+  const unavailableDiscoveryTools = discoveryTools.filter((name) => !allAuthorizedDiscoveryTools.some((tool) => tool.name === name));
   const updateResourceQuery = (next: WorkflowStep) => {
     if (!parsedSteps || resourceQueryIndex < 0) return;
     const nextSteps = [...parsedSteps];
@@ -371,6 +390,25 @@ function WorkflowEditor({ initial, labels, agents, onSave, onCancel }: {
     setSchema(JSON.stringify(currentSchema, null, 2));
     setBoundAgentID(id);
   };
+  const updateStep = (index: number, next: WorkflowStep) => {
+    if (!parsedSteps) return;
+    const value = [...parsedSteps]; value[index] = next; setSteps(JSON.stringify(value, null, 2));
+  };
+  const moveStep = (index: number, delta: number) => {
+    if (!parsedSteps || index + delta < 0 || index + delta >= parsedSteps.length) return;
+    const value = [...parsedSteps]; [value[index], value[index + delta]] = [value[index + delta], value[index]];
+    const queryIndex = value.findIndex((step) => step.type === 'resource_query');
+    const controlIndex = value.findIndex((step) => step.type === 'model' || step.type === 'for_each');
+    if (queryIndex >= 0 && controlIndex >= 0 && queryIndex > controlIndex) { const [query] = value.splice(queryIndex, 1); value.unshift(query); }
+    setSteps(JSON.stringify(value, null, 2));
+  };
+  const removeStep = (index: number) => { if (parsedSteps) setSteps(JSON.stringify(parsedSteps.filter((_, item) => item !== index), null, 2)); };
+  const addStep = (type: WorkflowStep['type']) => {
+    if (!parsedSteps) return;
+    const ids = new Set(parsedSteps.map((step) => step.id)); let id = type === 'resource_query' ? 'select_resources' : type; let index = 2; while (ids.has(id)) id = `${type}_${index++}`;
+    const step: WorkflowStep = type === 'resource_query' ? { id, type, resource_type: 'post', filter: {}, max_items: 20 } : type === 'model' ? { id, type, input_pointer: '/input', include_context: true, agent_id: boundAgentID || undefined } : type === 'for_each' ? { id, type, collection_pointer: '/steps/select_resources', max_items: 20, max_concurrency: 0, steps: [] } : type === 'approval_gate' ? { id, type, name: '人工审批', input_pointer: '/steps' } : { id, type, output_pointer: '/steps' };
+    const value = type === 'resource_query' ? [step, ...parsedSteps.filter((item) => item.type !== 'resource_query')] : [...parsedSteps, step]; setSteps(JSON.stringify(value, null, 2)); if (type === 'resource_query') setScopeMode('strict');
+  };
   const generateDraft = async () => {
     if (!goal.trim()) {
       setPlannerMessage('先用一句话说明你希望自动化完成什么。');
@@ -394,19 +432,25 @@ function WorkflowEditor({ initial, labels, agents, onSave, onCancel }: {
   };
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    const parsedSchema = JSON.parse(schema) as { properties?: Record<string, Record<string, unknown>> };
-    const hasResources = Object.values(parsedSchema.properties || {}).some((property) => typeof property['x-gouno-resource'] === 'string');
-    await onSave({ id: initial?.id, name, description, enabled: initial?.enabled || false, cron_expression: cronExpression.trim() || undefined, timezone, input_schema: parsedSchema, steps: JSON.parse(steps), scope_policy: { mode: hasResources ? 'strict' : scopeMode, discovery_tools: discoveryTools.split(',').map((item) => item.trim()).filter(Boolean) }, resource_query_empty_policy: emptyPolicy });
+    const parsedSchema = parseJSON<{ properties?: Record<string, Record<string, unknown>> }>(schema);
+    const safeSteps = parseJSON<WorkflowStep[]>(steps);
+    if (!parsedSchema || !safeSteps || !safeSteps.length) { setEditorError('输入 Schema 或步骤 JSON 无效，请在高级设置中修正。'); setShowAdvanced(true); return; }
+    if (safeSteps.some((step) => [step.input_pointer, step.collection_pointer, step.output_pointer].some((pointer) => pointer !== undefined && pointer !== '' && !String(pointer).startsWith('/')))) { setEditorError('所有 JSON Pointer 必须以 / 开头。'); return; }
+    const hasResources = Object.values(parsedSchema.properties || {}).some((property) => typeof property['x-gouno-resource'] === 'string') || safeSteps.some((step) => step.type === 'resource_query');
+    await onSave({ id: initial?.id, name, description, enabled: initial?.enabled || false, cron_expression: cronExpression.trim() || undefined, timezone, input_schema: parsedSchema, steps: safeSteps, scope_policy: { mode: hasResources ? 'strict' : scopeMode, discovery_tools: discoveryTools }, resource_query_empty_policy: emptyPolicy });
   };
   return <EditorPanel title={initial ? labels.editTitle : labels.createTitle} icon={<GitBranch />} closeLabel={labels.cancel} onClose={onCancel}><FormLayout onSubmit={submit}>
     {!initial ? <section className="workflow-planner"><div><h3>告诉 AI 你想持续完成什么</h3><p>例如：“每天检查最近发布文章的 SEO，并把需要人工确认的建议汇总出来”。AI 只生成未启用草案，不会运行或修改内容。</p></div><textarea className="input-field" rows={4} value={goal} onChange={(event) => setGoal(event.target.value)} placeholder="描述目标、频率、输入来源，以及哪些结果需要你确认…" /><FormActions><Button variant="secondary" type="button" disabled={planning} onClick={() => void generateDraft()}><GitBranch />{planning ? '正在生成草案…' : '用 AI 生成 Workflow 草案'}</Button></FormActions>{plannerMessage ? <p className="workflow-planner__message">{plannerMessage}</p> : null}</section> : null}
     <Field label="名称" hint="面向日常运营的短名称，例如“发布前内容检查”。"><input className="input-field" required value={name} onChange={(event) => setName(event.target.value)} /></Field><Field label="作用说明" hint="说明此流程何时使用、会产出什么，以及人工确认边界。"><input className="input-field" value={description} onChange={(event) => setDescription(event.target.value)} /></Field>
     <div className="form-grid workflow-schedule-grid"><Field label="Cron 执行计划" hint="留空表示仅手动运行；例如每天 09:00：0 9 * * *"><input className="input-field mono" value={cronExpression} onChange={(event) => setCronExpression(event.target.value)} placeholder="0 9 * * *" /></Field><Field label="时区" hint="使用 IANA 时区，例如 Asia/Shanghai"><input className="input-field mono" required value={timezone} onChange={(event) => setTimezone(event.target.value)} /></Field></div>
+    <SchemaFieldBuilder schemaJSON={schema} onChange={(value) => { setSchema(value); setEditorError(''); }} />
     {parsedSteps ? <ResourceQueryBuilder step={resourceQueryStep} onAdd={addResourceQuery} onChange={updateResourceQuery} onRemove={removeResourceQuery} savedPreview={initial?.resource_query_preview?.[0]?.estimated_count} lastCount={initial?.resource_query_last_count} /> : <Feedback type="error">步骤 JSON 无法解析。请先在高级设置中修正后再使用动态资源筛选。</Feedback>}
     {resourceQueryStep ? <Field label="空结果策略" hint="筛选为空时不调用 Agent；可选择成功短路或将运行标记为失败。"><Select value={emptyPolicy} onChange={(event) => setEmptyPolicy(event.target.value as 'succeed' | 'fail')}><option value="succeed">成功并记录“无匹配资源”</option><option value="fail">失败并提醒管理员</option></Select></Field> : null}
     {forEachStep ? <Field label="单项失败处理" hint="继续处理时会保留每项状态；至少一项成功则输出部分失败汇总，全部失败仍标记运行失败。"><Select value={forEachStep.continue_on_error ? 'continue' : 'stop'} onChange={(event) => updateForEachFailurePolicy(event.target.value === 'continue')}><option value="stop">立即停止整个运行</option><option value="continue">继续处理其余资源</option></Select></Field> : null}
-    <Field label="绑定 Agent" hint="每个 model 步骤必须固定绑定 Agent；Skill 和 Tool 授权在 Agent 内生效。"><Select required value={boundAgentID} onChange={(event) => event.target.value && bindAgent(Number(event.target.value))}><option value="" disabled>选择 Agent</option>{agents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name}{agent.enabled ? '' : '（已停用）'}</option>)}</Select></Field>
-    <details className="workflow-advanced" open={showAdvanced} onToggle={(event) => setShowAdvanced(event.currentTarget.open)}><summary>高级设置：输入与步骤 <small>仅在需要精细控制时修改</small></summary><p>Workflow 只编排已配置的 Agent 与确定性资源查询；Tool 由 Skill 和 Agent 授权调用。JSON Pointer（如 <code>/steps/writer</code>）负责传值。</p><div className="form-grid"><Field label="运行范围"><Select value={scopeMode} onChange={(event) => setScopeMode(event.target.value as 'strict' | 'unscoped')}><option value="strict">严格限制</option><option value="unscoped">兼容模式</option></Select></Field><Field label="允许发现的只读 Tool" hint="逗号分隔；必须已被绑定 Skill 授权。"><input className="input-field mono" value={discoveryTools} onChange={(event) => setDiscoveryTools(event.target.value)} /></Field></div><Field label={labels.schema} hint="JSON Schema。资源字段使用 x-gouno-resource 和 x-gouno-widget 扩展。"><textarea className="input-field mono" rows={8} value={schema} onChange={(event) => setSchema(event.target.value)} /></Field><Field label={labels.steps} hint="允许 resource_query、model、for_each、approval_gate、output；服务端会校验每个步骤。"><textarea className="input-field mono" rows={16} value={steps} onChange={(event) => setSteps(event.target.value)} /></Field></details>
+    {parsedSteps ? <section className="workflow-step-cards"><div className="workflow-resource-query-heading"><div><strong>步骤编排</strong><p>常用步骤可视化编辑；高级 JSON 保留复杂配置。</p></div><Select aria-label="新增步骤类型" defaultValue="model" onChange={(event) => addStep(event.target.value as WorkflowStep['type'])}><option value="model">添加模型步骤</option><option value="resource_query">添加动态资源筛选</option><option value="for_each">添加逐项处理</option><option value="approval_gate">添加审批节点</option><option value="output">添加输出节点</option></Select></div>{parsedSteps.map((step, index) => <article className="workflow-step-card" key={`${step.id}-${index}`}><header><strong>{index + 1}. {step.name || step.id}</strong><span className="risk-label risk-label--read">{step.type}</span><div className="agent-row-actions"><button type="button" title="上移" disabled={index === 0} onClick={() => moveStep(index, -1)}><ArrowUp /></button><button type="button" title="下移" disabled={index === parsedSteps.length - 1} onClick={() => moveStep(index, 1)}><ArrowDown /></button><button type="button" title="删除" onClick={() => removeStep(index)}><Trash2 /></button></div></header>{step.type === 'model' ? <div className="form-grid"><Field label="步骤名称"><input value={step.name || ''} onChange={(event) => updateStep(index, { ...step, name: event.target.value })} /></Field><Field label="输入 JSON Pointer"><input className="mono" value={step.input_pointer || ''} onChange={(event) => updateStep(index, { ...step, input_pointer: event.target.value })} /></Field><Field label="绑定 Agent"><Select value={step.agent_id || ''} onChange={(event) => updateStep(index, { ...step, agent_id: Number(event.target.value) || undefined })}><option value="">选择 Agent</option>{agents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name}{agent.enabled ? '' : '（已停用）'}</option>)}</Select></Field><label className="checkbox-field"><input type="checkbox" checked={step.include_context !== false} onChange={(event) => updateStep(index, { ...step, include_context: event.target.checked })} />包含受控上下文</label></div> : null}{step.type === 'for_each' ? <div className="form-grid"><Field label="集合 JSON Pointer"><input className="mono" value={step.collection_pointer || ''} onChange={(event) => updateStep(index, { ...step, collection_pointer: event.target.value })} /></Field><Field label="最多处理"><input type="number" min="1" max="100" value={step.max_items || 20} onChange={(event) => updateStep(index, { ...step, max_items: Math.max(1, Math.min(100, Number(event.target.value) || 1)) })} /></Field><Field label="最大并发"><input type="number" min="0" max="10" value={step.max_concurrency || 0} onChange={(event) => updateStep(index, { ...step, max_concurrency: Math.max(0, Math.min(10, Number(event.target.value) || 0)) })} /></Field><label className="checkbox-field"><input type="checkbox" checked={Boolean(step.continue_on_error)} onChange={(event) => updateStep(index, { ...step, continue_on_error: event.target.checked })} />单项失败后继续</label></div> : null}{step.type === 'for_each' ? <div className="workflow-nested-steps"><strong>嵌套模型步骤</strong>{(step.steps || []).map((nested, nestedIndex) => <div className="form-grid" key={nested.id || nestedIndex}><Field label="步骤名称"><input value={nested.name || ''} onChange={(event) => { const nestedSteps = [...(step.steps || [])]; nestedSteps[nestedIndex] = { ...nested, name: event.target.value }; updateStep(index, { ...step, steps: nestedSteps }); }} /></Field><Field label="绑定 Agent"><Select value={nested.agent_id || ''} onChange={(event) => { const nestedSteps = [...(step.steps || [])]; nestedSteps[nestedIndex] = { ...nested, agent_id: Number(event.target.value) || undefined }; updateStep(index, { ...step, steps: nestedSteps }); }}><option value="">选择 Agent</option>{agents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name}</option>)}</Select></Field><button type="button" title="删除嵌套步骤" onClick={() => updateStep(index, { ...step, steps: (step.steps || []).filter((_, item) => item !== nestedIndex) })}><Trash2 /></button></div>)}<Button variant="ghost" size="compact" type="button" onClick={() => updateStep(index, { ...step, steps: [...(step.steps || []), { id: `item_${(step.steps || []).length + 1}`, type: 'model', input_pointer: '/item', include_context: true, agent_id: boundAgentID || undefined }] })}><Plus />添加嵌套模型步骤</Button></div> : null}{step.type === 'approval_gate' ? <Field label="审批说明"><input value={step.name || ''} onChange={(event) => updateStep(index, { ...step, name: event.target.value })} /></Field> : null}{step.type === 'output' ? <Field label="输出 JSON Pointer"><input className="mono" value={step.output_pointer || ''} onChange={(event) => updateStep(index, { ...step, output_pointer: event.target.value })} /></Field> : null}</article>)}</section> : null}
+    <Field label="批量绑定 Agent" hint="将所有顶层模型步骤绑定到同一个 Agent；Skill 和 Tool 授权在 Agent 内生效。"><Select required value={boundAgentID} onChange={(event) => event.target.value && bindAgent(Number(event.target.value))}><option value="" disabled>选择 Agent</option>{agents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name}{agent.enabled ? '' : '（已停用）'}</option>)}</Select></Field>
+    <section className="workflow-discovery-picker"><div className="workflow-resource-query-heading"><div><strong>运行范围与只读发现 Tool</strong><p>只展示当前绑定 Skill 已授权、且允许发现的只读 Tool；发现结果默认不能成为修改目标。</p></div><Select aria-label="运行范围" value={scopeMode} onChange={(event) => setScopeMode(event.target.value as 'strict' | 'unscoped')}><option value="strict">严格限制</option><option value="unscoped">兼容模式</option></Select></div><Input size="compact" value={toolQuery} onChange={(event) => setToolQuery(event.target.value)} placeholder="搜索可用 Tool" aria-label="搜索可用 Tool" /><div className="workflow-tool-picker">{authorizedDiscoveryTools.map((tool) => <label key={tool.name}><Checkbox checked={discoveryTools.includes(tool.name)} onChange={() => setDiscoveryTools((current) => current.includes(tool.name) ? current.filter((item) => item !== tool.name) : [...current, tool.name])} /><span><strong>{tool.name}</strong><small>{tool.description_zh || tool.description} · 发现后只读</small></span></label>)}{unavailableDiscoveryTools.map((tool) => <label className="workflow-tool-picker__historical" key={tool}><Checkbox checked onChange={() => setDiscoveryTools((current) => current.filter((item) => item !== tool))} /><span><strong>{tool}</strong><small>历史配置；当前 Skill 未授权，保存前请移除或切换兼容模式</small></span></label>)}{!authorizedDiscoveryTools.length && !unavailableDiscoveryTools.length ? <p className="muted">当前绑定 Skill 没有已授权的只读发现 Tool。</p> : null}</div></section>
+    <details className="workflow-advanced" open={showAdvanced} onToggle={(event) => setShowAdvanced(event.currentTarget.open)}><summary>高级：查看或编辑输入与步骤 JSON <small>仅在需要精细控制或保留未来字段时修改</small></summary><p>结构化 UI 不支持的字段会保留在这里。手工编辑后必须是合法 JSON，并继续接受服务端校验。</p><Field label={labels.schema} hint="JSON Schema。资源字段使用 x-gouno-resource 和 x-gouno-widget 扩展。"><textarea className="input-field mono" rows={8} value={schema} onChange={(event) => setSchema(event.target.value)} /></Field><Field label={labels.steps} hint="允许 resource_query、model、for_each、approval_gate、output；服务端会校验每个步骤。"><textarea className="input-field mono" rows={16} value={steps} onChange={(event) => setSteps(event.target.value)} /></Field></details>{editorError ? <Feedback type="error">{editorError}</Feedback> : null}
     <FormActions><Button variant="secondary" type="button" onClick={onCancel}>{labels.cancel}</Button><Button variant="primary" type="submit"><Save />{labels.save}</Button></FormActions>
   </FormLayout></EditorPanel>;
 }

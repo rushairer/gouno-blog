@@ -1589,3 +1589,48 @@
   .connector-oauth-callback { grid-template-columns: 1fr; }
 }
 @media (max-width: 560px) { .connector-form-grid { grid-template-columns: 1fr; } }
+
+.workflow-schema-builder,
+.workflow-step-cards,
+.workflow-discovery-picker {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--agent-border);
+  border-radius: var(--radius-control);
+  background: var(--bg-muted);
+}
+.workflow-schema-field,
+.workflow-step-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--agent-border);
+  border-radius: var(--radius-control);
+  background: var(--bg-surface, #fff);
+}
+.workflow-step-card > header,
+.workflow-tool-picker > label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.workflow-step-card > header .agent-row-actions { margin-left: auto; }
+.workflow-tool-picker { display: grid; gap: 8px; }
+.workflow-tool-picker > label { align-items: flex-start; padding: 10px; border: 1px solid var(--agent-border); cursor: pointer; }
+.workflow-schema-builder input,
+.workflow-schema-builder textarea,
+.workflow-step-cards input,
+.workflow-discovery-picker input:not(.ui-checkbox) { width: 100%; min-width: 0; }
+.workflow-schema-builder input:not([type='checkbox']),
+.workflow-schema-builder textarea,
+.workflow-step-cards input,
+.workflow-discovery-picker input:not(.ui-checkbox) { border: 1px solid var(--admin-line); border-radius: var(--radius-control); background: var(--bg-surface, #fff); color: var(--color-text-main); padding: 9px 11px; }
+.workflow-tool-picker .ui-checkbox { flex: 0 0 auto; margin-top: 2px; }
+.workflow-tool-picker strong,
+.workflow-tool-picker small { display: block; }
+.workflow-tool-picker__historical { opacity: .72; }
+@media (max-width: 640px) {
+  .workflow-step-card > header { align-items: flex-start; flex-wrap: wrap; }
+  .workflow-step-card > header .agent-row-actions { margin-left: 0; }
+}

@@ -85,12 +85,12 @@ describe('WorkflowWorkspace', () => {
     expect(screen.getByRole('button', { name: '重试' })).toBeEnabled();
   });
 
-  it('does not expose Tools in the workflow editor', async () => {
+  it('keeps tool authorization in the structured scope editor', async () => {
 	const user = userEvent.setup();
     render(<WorkflowWorkspace workflows={[]} runs={[]} metrics={[]} agents={[]} locale="zh" onMutate={vi.fn()} onRun={vi.fn()} onSave={vi.fn()} />);
 
     await user.click(screen.getByRole('button', { name: '创建 Workflow' }));
-    expect(screen.getByText(/Workflow 只编排已配置的 Agent 与确定性资源查询/)).toBeInTheDocument();
+    expect(screen.getByText(/只展示当前绑定 Skill 已授权/)).toBeInTheDocument();
     expect(screen.queryByText('rss.fetch')).not.toBeInTheDocument();
   });
 
@@ -129,12 +129,39 @@ describe('WorkflowWorkspace', () => {
     render(<WorkflowWorkspace workflows={[editable]} runs={[]} metrics={[]} agents={[agent] as never[]} locale="zh" onMutate={vi.fn()} onRun={vi.fn()} onSave={onSave} />);
 
     await user.click(screen.getByRole('button', { name: 'Edit' }));
-    expect(screen.getByLabelText('绑定 Agent')).toHaveValue('5');
+    expect(screen.getByLabelText('批量绑定 Agent')).toHaveValue('5');
     await user.selectOptions(screen.getByLabelText('单项失败处理'), 'continue');
     await user.click(screen.getByRole('button', { name: '保存 Workflow' }));
 
     await waitFor(() => expect(onSave).toHaveBeenCalled());
     const saved = onSave.mock.calls[0][0];
     expect(saved.steps[1]).toMatchObject({ type: 'for_each', continue_on_error: true, steps: [{ type: 'model', agent_id: 5 }] });
+  });
+
+  it('shows only discovery tools authorized by the bound Agent skill', async () => {
+    const user = userEvent.setup();
+    const editable = { ...workflow, steps: [{ id: 'writer', type: 'model' as const, agent_id: 5 }, { id: 'result', type: 'output' as const, output_pointer: '/steps/writer' }] };
+    const agent = { id: 5, name: 'Editor', enabled: true, skill: { capabilities: ['content.find_related'] } };
+    render(<WorkflowWorkspace workflows={[editable]} runs={[]} metrics={[]} agents={[agent] as never[]} tools={[
+      { name: 'content.find_related', description: 'Find related content', risk_level: 'read', surfaces: ['agent'], parameters: {}, scope: { discovery: true } },
+      { name: 'content.propose_update', description: 'Propose update', risk_level: 'propose', surfaces: ['agent'], parameters: {}, scope: { discovery: true } },
+      { name: 'content.search_knowledge', description: 'Search knowledge', risk_level: 'read', surfaces: ['agent'], parameters: {}, scope: { discovery: true } },
+    ]} locale="zh" onMutate={vi.fn()} onRun={vi.fn()} onSave={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    expect(screen.getByText('content.find_related')).toBeInTheDocument();
+    expect(screen.queryByText('content.propose_update')).not.toBeInTheDocument();
+    expect(screen.queryByText('content.search_knowledge')).not.toBeInTheDocument();
+  });
+
+  it('builds a resource input field without JSON editing', async () => {
+    const user = userEvent.setup();
+    render(<WorkflowWorkspace workflows={[]} runs={[]} metrics={[]} agents={[]} locale="zh" onMutate={vi.fn()} onRun={vi.fn()} onSave={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: '创建 Workflow' }));
+    await user.click(screen.getByRole('button', { name: '添加字段' }));
+    const selects = screen.getAllByLabelText('资源类型');
+    await user.selectOptions(selects[0], 'post');
+    expect(screen.getByLabelText('最少数量')).toBeInTheDocument();
+    expect(screen.getByLabelText('最多数量')).toBeInTheDocument();
   });
 });

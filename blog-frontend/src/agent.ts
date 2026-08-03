@@ -60,6 +60,7 @@ export interface WorkflowStep {
   include_context?: boolean;
   collection_pointer?: string;
   max_items?: number;
+  max_concurrency?: number;
   continue_on_error?: boolean;
   steps?: WorkflowStep[];
   output_pointer?: string;
@@ -327,6 +328,13 @@ export interface ToolDefinition {
   configuration_schema?: Record<string, unknown>;
   surfaces: 'agent'[];
   risk_level: 'read' | 'propose' | 'write';
+  scope?: {
+    resource_type?: string;
+    argument?: string;
+    discovery?: boolean;
+    output_resource_type?: string;
+    output_keys?: string[];
+  };
 }
 
 export type ConnectorKind = 'search_console' | 'newsletter' | 'social' | 'webhook';
