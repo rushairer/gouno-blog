@@ -1573,4 +1573,15 @@ select option {
   gap: 8px;
 }
 
+.workflow-candidate-preview {
+  width: 96px;
+  height: 72px;
+  flex: 0 0 auto;
+  object-fit: cover;
+  border-radius: var(--radius-control, 6px);
+  border: 1px solid var(--border-color);
+}
 
+@media (max-width: 640px) {
+  .workflow-candidate-preview { width: 72px; height: 54px; }
+}

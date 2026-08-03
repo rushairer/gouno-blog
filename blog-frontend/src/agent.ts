@@ -234,6 +234,7 @@ export interface MediaCandidate {
   safety_status: string;
   copyright_status: string;
   media_asset_id?: number;
+  media_asset_url?: string;
   reviewed_at?: string;
   created_at: string;
   workflow_run_id?: number;

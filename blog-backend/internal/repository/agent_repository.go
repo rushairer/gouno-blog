@@ -973,7 +973,7 @@ func (r *AgentRepository) CreateMediaCandidate(ctx context.Context, approval *do
 }
 
 func (r *AgentRepository) ListMediaCandidates(ctx context.Context) ([]*domain.MediaCandidate, error) {
-	rows, err := r.db.QueryContext(ctx, `SELECT id,post_id,source_run_id,source_approval_id,headline,brief,platform,provider,model,input_tokens,output_tokens,media_asset_id,
+	rows, err := r.db.QueryContext(ctx, `SELECT id,post_id,source_run_id,source_approval_id,headline,brief,platform,provider,model,input_tokens,output_tokens,media_asset_id,COALESCE((SELECT url FROM media_assets WHERE id=ai_media_candidates.media_asset_id),''),
 		generation_status,safety_status,copyright_status,alt_text,reviewed_by,review_note,reviewed_at,created_at,workflow_run_id,COALESCE(workflow_step_id,''),interaction_task_id,COALESCE(post_version_token,''),generation_attempt,selected_at,applied_version_id,COALESCE(error_code,''),COALESCE(error_message,''),placement,COALESCE(anchor,''),selected,applied_at
 		FROM ai_media_candidates ORDER BY created_at DESC`)
 	if err != nil {
@@ -984,7 +984,7 @@ func (r *AgentRepository) ListMediaCandidates(ctx context.Context) ([]*domain.Me
 	for rows.Next() {
 		var item domain.MediaCandidate
 		if err := rows.Scan(&item.ID, &item.PostID, &item.SourceRunID, &item.SourceApprovalID, &item.Headline,
-			&item.Brief, &item.Platform, &item.Provider, &item.Model, &item.InputTokens, &item.OutputTokens, &item.MediaAssetID, &item.GenerationStatus,
+			&item.Brief, &item.Platform, &item.Provider, &item.Model, &item.InputTokens, &item.OutputTokens, &item.MediaAssetID, &item.MediaAssetURL, &item.GenerationStatus,
 			&item.SafetyStatus, &item.CopyrightStatus, &item.AltText, &item.ReviewedBy, &item.ReviewNote,
 			&item.ReviewedAt, &item.CreatedAt, &item.WorkflowRunID, &item.WorkflowStepID, &item.InteractionTaskID, &item.PostVersionToken, &item.GenerationAttempt, &item.SelectedAt, &item.AppliedVersionID, &item.ErrorCode, &item.ErrorMessage, &item.Placement, &item.Anchor, &item.Selected, &item.AppliedAt); err != nil {
 			return nil, err
@@ -1067,10 +1067,10 @@ func (r *AgentRepository) ClaimMediaGeneration(ctx context.Context, id int64) (*
 	err := r.db.QueryRowContext(ctx, `UPDATE ai_media_candidates SET generation_status='generating',generation_attempt=generation_attempt+1,error_code=NULL,error_message=NULL
 		WHERE id=$1 AND generation_status='ready_to_generate'
 		RETURNING id,post_id,source_run_id,source_approval_id,headline,brief,platform,provider,model,input_tokens,output_tokens,media_asset_id,
-		generation_status,safety_status,copyright_status,alt_text,reviewed_by,review_note,reviewed_at,created_at`, id).Scan(
+		generation_status,safety_status,copyright_status,alt_text,reviewed_by,review_note,reviewed_at,created_at,generation_attempt`, id).Scan(
 		&item.ID, &item.PostID, &item.SourceRunID, &item.SourceApprovalID, &item.Headline, &item.Brief, &item.Platform,
 		&item.Provider, &item.Model, &item.InputTokens, &item.OutputTokens, &item.MediaAssetID, &item.GenerationStatus,
-		&item.SafetyStatus, &item.CopyrightStatus, &item.AltText, &item.ReviewedBy, &item.ReviewNote, &item.ReviewedAt, &item.CreatedAt)
+		&item.SafetyStatus, &item.CopyrightStatus, &item.AltText, &item.ReviewedBy, &item.ReviewNote, &item.ReviewedAt, &item.CreatedAt, &item.GenerationAttempt)
 	return &item, err
 }
 

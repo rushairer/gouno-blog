@@ -85,7 +85,11 @@ func (s *ApprovalService) SelectMediaCandidate(ctx context.Context, id int64, pl
 	if placement == "inline" && strings.TrimSpace(anchor) == "" {
 		return errors.New("inline image requires an anchor")
 	}
-	return s.repo.SelectMediaCandidate(ctx, id, placement, strings.TrimSpace(anchor))
+	if err := s.repo.SelectMediaCandidate(ctx, id, placement, strings.TrimSpace(anchor)); err != nil {
+		return err
+	}
+	s.appendCandidateEvent(ctx, id, "candidate_selected", map[string]any{"placement": placement})
+	return nil
 }
 
 func (s *ApprovalService) ApplyMediaCandidate(ctx context.Context, id int64) (*domain.Post, error) {
@@ -132,7 +136,18 @@ func (s *ApprovalService) ApplyMediaCandidate(ctx context.Context, id int64) (*d
 	if len(versions) > 0 {
 		_ = s.repo.MarkMediaCandidateApplied(ctx, id, versions[0].ID)
 	}
+	s.appendCandidateEvent(ctx, id, "article_version_created", map[string]any{"post_id": post.ID, "placement": candidate.Placement})
 	return post, nil
+}
+
+func (s *ApprovalService) appendCandidateEvent(ctx context.Context, candidateID int64, eventType string, payload map[string]any) {
+	candidate, err := s.repo.GetMediaCandidate(ctx, candidateID)
+	if err != nil || candidate.WorkflowRunID == nil {
+		return
+	}
+	runID := *candidate.WorkflowRunID
+	raw, _ := json.Marshal(payload)
+	_ = s.repo.AppendWorkflowRunEvent(ctx, &domain.WorkflowRunEvent{WorkflowRunID: &runID, WorkflowStepID: candidate.WorkflowStepID, InteractionTaskID: candidate.InteractionTaskID, EventType: eventType, Payload: raw})
 }
 
 func (s *ApprovalService) ReviewMediaCandidate(ctx context.Context, id int64, action, reviewer, note string) error {
@@ -169,6 +184,7 @@ func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, 
 	if err != nil {
 		return ErrApprovalConflict
 	}
+	s.appendCandidateEvent(ctx, id, "image_generation_started", map[string]any{"attempt": candidate.GenerationAttempt})
 	fail := func(reason string) error {
 		_ = s.repo.RecordMediaGenerationError(ctx, id, "image_generation_failed", reason)
 		return errors.New(reason)
@@ -225,6 +241,7 @@ func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, 
 		_ = os.Remove(path)
 		return err
 	}
+	s.appendCandidateEvent(ctx, id, "image_generation_completed", map[string]any{"media_asset_id": asset.ID})
 	return nil
 }
 
