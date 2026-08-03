@@ -520,6 +520,35 @@ func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
 		c.JSON(http.StatusConflict, gouno.NewErrorResponse(http.StatusConflict, "create an enabled Agent with a saved Skill before planning a workflow"))
 		return
 	}
+	intent := workflowplan.ParseIntent(req.Prompt)
+	for _, agent := range agents {
+		if agent.ProviderProfile == nil {
+			for _, profile := range profiles {
+				if profile.ID == agent.ProviderProfileID {
+					agent.ProviderProfile = profile
+					break
+				}
+			}
+		}
+	}
+	match, template, matchedAgent := workflowplan.Match(intent, profiles, agents, nil, ctrl.tools.Catalog())
+	if template != nil {
+		draft := workflowplan.Compile(intent, template, matchedAgent)
+		draft.Enabled = false
+		warning := ""
+		if intent.Status == "ambiguous" {
+			warning = "无法确定需求意图；请补充资源类型和目标动作后再保存。"
+		} else if match.Status != "ready" {
+			warning = "Workflow 依赖尚未就绪；当前仅返回未启用草案。"
+		}
+		selectedAgents := []gin.H{}
+		if matchedAgent != nil {
+			selectedAgents = append(selectedAgents, gin.H{"id": matchedAgent.ID, "name": matchedAgent.Name, "status": "ready", "skill_name": matchedAgent.Skill.Name, "capabilities": matchedAgent.Skill.Capabilities})
+		}
+		readiness := gin.H{"status": match.Status, "message": "服务端模板和能力契约已生成；请完成依赖确认后 Dry-run。"}
+		c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"workflow": draft, "provider": selected.Name, "model": selected.Model, "planner_version": "workflow-planner/v4", "planner_warning": warning, "selected_agents": selectedAgents, "intent": intent, "template": gin.H{"status": "matched", "key": template.Key, "name": template.Name}, "match": match, "readiness": readiness}))
+		return
+	}
 	client, err := ctrl.svc.ProviderClient(c.Request.Context(), selected.ID)
 	if err != nil {
 		writeAgentError(c, err)
@@ -582,7 +611,7 @@ func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
 		}
 		selectedAgents = append(selectedAgents, selection)
 	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"workflow": draft, "provider": selected.Name, "model": selected.Model, "planner_version": "workflow-planner/v2", "planner_warning": warning, "selected_agents": selectedAgents, "readiness": gin.H{"status": "ready", "message": "Provider, Agent, and Skill bindings were verified for this draft."}}))
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"workflow": draft, "provider": selected.Name, "model": selected.Model, "planner_version": "workflow-planner/v4", "planner_warning": warning, "selected_agents": selectedAgents, "intent": intent, "template": gin.H{"status": "unsupported"}, "match": match, "readiness": gin.H{"status": "ready", "message": "Provider, Agent, and Skill bindings were verified for this draft."}}))
 }
 
 // DraftAssist is deliberately suggestion-only: it never persists or publishes
