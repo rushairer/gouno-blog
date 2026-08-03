@@ -17,7 +17,7 @@ interface MediaAsset {
   usage_count?: number;
 }
 interface MediaReference { post_id: number; post_title: string; post_slug: string }
-interface MediaCandidate { id: number; post_id: number; source_run_id: number; headline: string; brief: string; platform?: string; provider: string; model: string; input_tokens: number; output_tokens: number; generation_status: string; safety_status: string; copyright_status: string; alt_text: string; media_asset_id?: number; review_note?: string; created_at: string }
+interface MediaCandidate { id: number; post_id: number; source_run_id: number; workflow_run_id?: number; headline: string; brief: string; platform?: string; provider: string; model: string; input_tokens: number; output_tokens: number; generation_status: string; safety_status: string; copyright_status: string; alt_text: string; media_asset_id?: number; review_note?: string; created_at: string }
 
 export default function MediaLibrary() {
   const { t, formatDateTime } = useI18n();
@@ -44,7 +44,9 @@ export default function MediaLibrary() {
     if (!response.ok) throw new Error(body.message || t('requestFailed'));
     if (!candidateResponse.ok) throw new Error(candidateBody.message || t('requestFailed'));
     setAssets(body.data || []);
-    setCandidates(candidateBody.data || []);
+    // Workflow-owned candidates are rendered in Run details; this list keeps
+    // legacy rows visible during the compatibility window.
+    setCandidates((candidateBody.data || []).filter((item: MediaCandidate) => !item.workflow_run_id));
   }, [t]);
 
   useEffect(() => {

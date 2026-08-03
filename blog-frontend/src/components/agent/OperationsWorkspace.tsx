@@ -41,8 +41,11 @@ export function OperationsWorkspace({ suggestions, candidateSets, mediaCandidate
   const actionableSuggestions = suggestions.filter((item) => item.status === 'new');
   const handledSuggestions = suggestions.filter((item) => item.status !== 'new');
   const pendingSets = candidateSets.filter((item) => item.status === 'pending');
-  const pendingMedia = mediaCandidates.filter((item) => item.generation_status === 'brief_ready');
-  const readyMedia = mediaCandidates.filter((item) => item.generation_status === 'ready_to_generate');
+  // New image tasks are owned by their Workflow Run. Keep only legacy rows in
+  // this compatibility workspace so historical records remain inspectable.
+  const legacyMedia = mediaCandidates.filter((item) => !item.workflow_run_id);
+  const pendingMedia = legacyMedia.filter((item) => item.generation_status === 'brief_ready');
+  const readyMedia = legacyMedia.filter((item) => item.generation_status === 'ready_to_generate');
   const openTasks = editorialTasks.filter((item) => item.status === 'open');
   const closedTasks = editorialTasks.filter((item) => item.status !== 'open');
   const total = actionableSuggestions.length + pendingSets.length + pendingMedia.length + readyMedia.length;
