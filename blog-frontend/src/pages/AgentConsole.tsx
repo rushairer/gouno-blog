@@ -321,8 +321,10 @@ function approvalSummary(approval: AgentApproval, zh: boolean) {
   const field = typeof approval.proposed_payload.field_type === 'string' ? approval.proposed_payload.field_type : '';
   const fieldName = field === 'title' ? (zh ? '文章标题' : 'article title') : field === 'summary' ? (zh ? '文章摘要' : 'article summary') : field === 'cover_alt' ? (zh ? '封面替代文字' : 'cover alt text') : (zh ? '内容' : 'content');
   const target = approval.target_id ? (zh ? `文章 #${approval.target_id}` : `post #${approval.target_id}`) : (zh ? '相关内容' : 'the related content');
+  const isImageBrief = approval.action_type === 'create_media_candidate'
+    || (approval.action_type === 'create_distribution_draft' && approval.proposed_payload.format === 'image_brief');
   if (approval.action_type === 'create_content_candidates') return { title: zh ? `为${target}准备${fieldName}候选` : `Prepare ${fieldName} alternatives for ${target}`, explanation: zh ? `AI 将创建可供你选择的${fieldName}建议。选择其中一项后，系统会再向你展示具体的内容修改审批。` : `AI will prepare ${fieldName} alternatives for you to choose from. Choosing one will create a separate approval with the exact content edit.` };
-  if (approval.action_type === 'create_media_candidate') return { title: zh ? `为${target}准备图片方案` : `Prepare an image brief for ${target}`, explanation: zh ? 'AI 将准备经过审核的图片说明；真正生成图片仍需要你之后再次点击确认。' : 'AI will prepare a reviewed image brief. Generating the actual image still requires a separate confirmation.' };
+  if (isImageBrief) return { title: zh ? `为${target}准备图片方案` : `Prepare an image brief for ${target}`, explanation: zh ? 'AI 将准备经过审核的图片说明；批准后会创建图片任务，真正生成图片仍需要你之后再次点击确认。' : 'AI will prepare a reviewed image brief. Approval creates an image task; generating the actual image still requires a separate confirmation.' };
   return { title: zh ? `对${target}应用内容建议` : `Apply a content proposal to ${target}`, explanation: zh ? '批准后，系统会应用下面展示的建议变更。' : 'Approving will apply the proposed change shown below.' };
 }
 
