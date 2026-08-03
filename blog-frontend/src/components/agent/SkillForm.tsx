@@ -16,10 +16,10 @@ const defaults: SkillFormValue = {
   allowed_triggers: ['manual', 'cron'],
 };
 
-export function SkillForm({ initial, tools, locale, onSave, onCancel }: {
-  initial?: AgentSkill; tools: ToolDefinition[]; locale: 'en' | 'zh'; onSave: (value: SkillFormValue) => Promise<void>; onCancel: () => void;
+export function SkillForm({ initial, prefill, tools, locale, onSave, onCancel }: {
+  initial?: AgentSkill; prefill?: Partial<SkillFormValue>; tools: ToolDefinition[]; locale: 'en' | 'zh'; onSave: (value: SkillFormValue) => Promise<void>; onCancel: () => void;
 }) {
-  const [value, setValue] = useState<SkillFormValue>(() => initial ? { ...initial } : defaults);
+  const [value, setValue] = useState<SkillFormValue>(() => initial ? { ...initial } : { ...defaults, ...prefill, capabilities: prefill?.capabilities || defaults.capabilities, tool_bindings: prefill?.tool_bindings || defaults.tool_bindings, input_schema: prefill?.input_schema || defaults.input_schema, allowed_triggers: prefill?.allowed_triggers || defaults.allowed_triggers });
   const [saving, setSaving] = useState(false);
   const [schemaText, setSchemaText] = useState(() => JSON.stringify(initial?.input_schema || defaults.input_schema, null, 2));
   const [bindingsText, setBindingsText] = useState(() => JSON.stringify(initial?.tool_bindings || defaults.tool_bindings, null, 2));

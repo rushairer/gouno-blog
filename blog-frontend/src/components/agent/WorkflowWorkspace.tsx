@@ -29,7 +29,7 @@ type WorkflowValue = {
 type AutomationPlan = {
   workflow: Workflow;
   provider: { status: 'ready' | 'missing'; name?: string; model?: string; message?: string };
-  skill: { status: 'reuse' | 'draft' | 'missing'; name?: string; draft?: { name?: string } };
+  skill: { status: 'reuse' | 'draft' | 'missing'; name?: string; draft?: { name?: string; description?: string; system_prompt?: string; capabilities?: string[]; execution_mode?: 'advisory' | 'approval' } };
   agent: { status: 'reuse' | 'draft' | 'missing'; name?: string; draft?: { name?: string } };
   prerequisites: string[];
   warnings: string[];
@@ -65,7 +65,7 @@ function bindWorkflowAgent(steps: WorkflowStep[], agentID: number): WorkflowStep
   }));
 }
 
-export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = [], locale, onMutate, onRun, onRefresh, onSave }: {
+export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = [], locale, onMutate, onRun, onRefresh, onSave, onConfigureSkill }: {
   workflows: Workflow[];
   runs: WorkflowRun[];
   metrics: WorkflowMetric[];
@@ -76,6 +76,7 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = []
   onRun: (workflowID: number, dryRun: boolean, input: Record<string, unknown>) => Promise<WorkflowRun>;
   onRefresh?: () => Promise<void>;
   onSave: (value: WorkflowValue) => Promise<void>;
+  onConfigureSkill?: (draft?: { name?: string; description?: string; system_prompt?: string; capabilities?: string[]; execution_mode?: 'advisory' | 'approval' }) => void;
 }) {
   const [editing, setEditing] = useState<Workflow | 'new' | null>(null);
   const [inputByID, setInputByID] = useState<Record<number, Record<string, unknown>>>({});
@@ -175,7 +176,7 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = []
       setRunningAction(null);
     }
   };
-  if (editing) return <WorkflowEditor initial={editing === 'new' ? undefined : editing} labels={labels} agents={agents} tools={tools} onCancel={() => setEditing(null)} onSave={async (value) => { await onSave(value); setEditing(null); }} />;
+  if (editing) return <WorkflowEditor initial={editing === 'new' ? undefined : editing} labels={labels} agents={agents} tools={tools} onConfigureSkill={onConfigureSkill} onCancel={() => setEditing(null)} onSave={async (value) => { await onSave(value); setEditing(null); }} />;
   return <WorkspacePanel className="workflow-workspace">
     <PanelHeader title={locale === 'zh' ? '自动化' : 'Automation'} description={locale === 'zh' ? '选择一项持续运营目标；每次执行都可追溯、可试运行、可回滚。' : 'Choose an ongoing goal. Every run is traceable, testable, and reversible.'} actions={<Button variant="primary" type="button" onClick={() => setEditing('new')}><Plus />{labels.add}</Button>} />
     {workflows.length === 0 || !selectedWorkflow ? <EmptyState label={labels.empty} /> : <div className="agent-split-view workflow-split-view">
@@ -326,13 +327,14 @@ function SchemaFieldBuilder({ schemaJSON, onChange }: { schemaJSON: string; onCh
 
 function parseJSON<T>(value: string): T | null { try { return JSON.parse(value) as T; } catch { return null; } }
 
-function WorkflowEditor({ initial, labels, agents, tools, onSave, onCancel }: {
+function WorkflowEditor({ initial, labels, agents, tools, onSave, onCancel, onConfigureSkill }: {
   initial?: Workflow;
   labels: Record<string, string>;
   agents: Agent[];
   tools: ToolDefinition[];
   onSave: (value: WorkflowValue) => Promise<void>;
   onCancel: () => void;
+  onConfigureSkill?: (draft?: { name?: string; description?: string; system_prompt?: string; capabilities?: string[]; execution_mode?: 'advisory' | 'approval' }) => void;
 }) {
   const [name, setName] = useState(initial?.name || '');
   const [description, setDescription] = useState(initial?.description || '');
@@ -464,7 +466,7 @@ function WorkflowEditor({ initial, labels, agents, tools, onSave, onCancel }: {
     await onSave({ id: initial?.id, name, description, enabled: initial?.enabled || false, cron_expression: cronExpression.trim() || undefined, timezone, input_schema: parsedSchema, steps: safeSteps, scope_policy: { mode: hasResources ? 'strict' : scopeMode, discovery_tools: discoveryTools }, resource_query_empty_policy: emptyPolicy });
   };
   return <EditorPanel title={initial ? labels.editTitle : labels.createTitle} icon={<GitBranch />} closeLabel={labels.cancel} onClose={onCancel}><FormLayout onSubmit={submit}>
-    {!initial ? <section className="workflow-planner"><div><h3>告诉 AI 你想持续完成什么</h3><p>例如：“每天检查最近发布文章的 SEO，并把需要人工确认的建议汇总出来”。AI 只生成未启用草案，不会运行或修改内容。</p></div><textarea className="input-field" rows={4} value={goal} onChange={(event) => setGoal(event.target.value)} placeholder="描述目标、频率、输入来源，以及哪些结果需要你确认…" /><FormActions><Button variant="secondary" type="button" disabled={planning} onClick={() => void generateDraft()}><GitBranch />{planning ? '正在生成草案…' : '用 AI 生成 Workflow 草案'}</Button></FormActions>{plannerMessage ? <p className="workflow-planner__message">{plannerMessage}</p> : null}{automationPlan ? <div className="workflow-dependency-plan"><strong>依赖链预检</strong><div className="workflow-dependency-plan__items"><span className={`agent-state agent-state--${automationPlan.provider.status === 'ready' ? 'active' : 'paused'}`}><i />Provider：{automationPlan.provider.name || '未配置'}</span><span className={`agent-state agent-state--${automationPlan.skill.status === 'reuse' ? 'active' : 'paused'}`}><i />Skill：{automationPlan.skill.name || automationPlan.skill.draft?.name || '待确认'}</span><span className={`agent-state agent-state--${automationPlan.agent.status === 'reuse' ? 'active' : 'paused'}`}><i />Agent：{automationPlan.agent.name || automationPlan.agent.draft?.name || '待确认'}</span></div>{automationPlan.prerequisites.length > 0 ? <small>请先在 Agent 设置中完成前置配置；本草案不会自动创建或启用依赖。</small> : null}</div> : null}</section> : null}
+    {!initial ? <section className="workflow-planner"><div><h3>告诉 AI 你想持续完成什么</h3><p>例如：“每天检查最近发布文章的 SEO，并把需要人工确认的建议汇总出来”。AI 只生成未启用草案，不会运行或修改内容。</p></div><textarea className="input-field" rows={4} value={goal} onChange={(event) => setGoal(event.target.value)} placeholder="描述目标、频率、输入来源，以及哪些结果需要你确认…" /><FormActions><Button variant="secondary" type="button" disabled={planning} onClick={() => void generateDraft()}><GitBranch />{planning ? '正在生成草案…' : '用 AI 生成 Workflow 草案'}</Button></FormActions>{plannerMessage ? <p className="workflow-planner__message">{plannerMessage}</p> : null}{automationPlan ? <div className="workflow-dependency-plan"><strong>依赖链预检</strong><div className="workflow-dependency-plan__items"><span className={`agent-state agent-state--${automationPlan.provider.status === 'ready' ? 'active' : 'paused'}`}><i />Provider：{automationPlan.provider.name || '未配置'}</span><span className={`agent-state agent-state--${automationPlan.skill.status === 'reuse' ? 'active' : 'paused'}`}><i />Skill：{automationPlan.skill.name || automationPlan.skill.draft?.name || '待确认'}</span><span className={`agent-state agent-state--${automationPlan.agent.status === 'reuse' ? 'active' : 'paused'}`}><i />Agent：{automationPlan.agent.name || automationPlan.agent.draft?.name || '待确认'}</span></div>{automationPlan.skill.status === 'draft' && automationPlan.skill.draft && onConfigureSkill ? <Button variant="secondary" size="compact" type="button" onClick={() => onConfigureSkill(automationPlan.skill.draft)}>审阅并配置 Skill 草案</Button> : null}{automationPlan.prerequisites.length > 0 ? <small>请先在 Agent 设置中完成前置配置；本草案不会自动创建或启用依赖。</small> : null}</div> : null}</section> : null}
     <Field label="名称" hint="面向日常运营的短名称，例如“发布前内容检查”。"><input className="input-field" required value={name} onChange={(event) => setName(event.target.value)} /></Field><Field label="作用说明" hint="说明此流程何时使用、会产出什么，以及人工确认边界。"><input className="input-field" value={description} onChange={(event) => setDescription(event.target.value)} /></Field>
     <div className="form-grid workflow-schedule-grid"><Field label="Cron 执行计划" hint="留空表示仅手动运行；例如每天 09:00：0 9 * * *"><input className="input-field mono" value={cronExpression} onChange={(event) => setCronExpression(event.target.value)} placeholder="0 9 * * *" /></Field><Field label="时区" hint="使用 IANA 时区，例如 Asia/Shanghai"><input className="input-field mono" required value={timezone} onChange={(event) => setTimezone(event.target.value)} /></Field></div>
     <SchemaFieldBuilder schemaJSON={schema} onChange={(value) => { setSchema(value); setEditorError(''); }} />
