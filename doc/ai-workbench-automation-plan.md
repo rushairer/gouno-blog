@@ -26,7 +26,7 @@ AI 工作台不再把 Workflow 输入理解为“由 Agent 提供的一段 JSON�
 - [x] `058_workflow_interactions_and_image_task_links`：交互任务、运行事件和媒体候选运行关联字段。
 - [x] 交互任务仓储：创建、按 Run 查询、resume token 原子解决、取消和过期拒绝。
 - [x] 管理 API：Run interactions、interaction detail、resolve、cancel。
-- [ ] Workflow `human_interaction` 步骤暂停/恢复执行。
+- [x] Workflow `human_interaction` 步骤暂停/恢复执行，并复用已完成步骤输出。
 - [ ] 图片候选选择、重生成进度和文章版本应用。
 - [ ] 待我处理与 Run 详情前端统一入口。
 

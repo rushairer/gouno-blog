@@ -2,6 +2,7 @@ package workflow
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -1029,6 +1030,20 @@ func (s *Service) processPendingEvents(ctx context.Context) {
 	}
 }
 
+// Resume marks a user-paused run runnable again. Completed step outputs are
+// replayed by executeSteps, so resolving an interaction does not repeat work.
+func (s *Service) Resume(ctx context.Context, runID int64) error {
+	result, err := s.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status='queued',finished_at=NULL,error_code=NULL,error_message=NULL WHERE id=$1 AND status='waiting_for_user'`, runID)
+	if err != nil {
+		return err
+	}
+	if n, _ := result.RowsAffected(); n == 0 {
+		return sql.ErrNoRows
+	}
+	go s.Execute(context.Background(), runID)
+	return nil
+}
+
 func (s *Service) Execute(ctx context.Context, runID int64) {
 	if err := s.execute(ctx, runID); err != nil {
 		code, message := "workflow_failed", safeError(err)
@@ -1096,6 +1111,10 @@ func (s *Service) execute(ctx context.Context, runID int64) error {
 	status := "succeeded"
 	if awaiting {
 		status = "awaiting_approval"
+		var pending int
+		if queryErr := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM workflow_interaction_tasks WHERE workflow_run_id=$1 AND status='pending'`, runID).Scan(&pending); queryErr == nil && pending > 0 {
+			status = "waiting_for_user"
+		}
 	}
 	rawOutput, _ := json.Marshal(output)
 	_, err = s.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status=$2, output=$3,
@@ -1113,6 +1132,23 @@ func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, ste
 		stepInput := any(nil)
 		var stepOutput any
 		var err error
+		// Rebuild the document from completed step outputs after an interaction
+		// is resolved. This prevents duplicate model calls on resume.
+		if step.Type != "human_interaction" {
+			var previous []byte
+			if queryErr := s.db.QueryRowContext(ctx, `SELECT output FROM ai_workflow_step_runs WHERE workflow_run_id=$1 AND step_id=$2 AND status='succeeded' ORDER BY id DESC LIMIT 1`, run.ID, step.ID).Scan(&previous); queryErr == nil && len(previous) > 0 && json.Unmarshal(previous, &stepOutput) == nil {
+				document["steps"].(map[string]any)[step.ID] = stepOutput
+				output = stepOutput
+				continue
+			}
+		} else {
+			var response []byte
+			if queryErr := s.db.QueryRowContext(ctx, `SELECT response FROM workflow_interaction_tasks WHERE workflow_run_id=$1 AND workflow_step_id=$2 AND status='resolved' ORDER BY id DESC LIMIT 1`, run.ID, step.ID).Scan(&response); queryErr == nil && len(response) > 0 && json.Unmarshal(response, &stepOutput) == nil {
+				document["steps"].(map[string]any)[step.ID] = stepOutput
+				output = stepOutput
+				continue
+			}
+		}
 		switch step.Type {
 		case "resource_query":
 			if replay, found, replayErr := s.replayedResourceQuery(ctx, run.ID, step.ID); replayErr != nil {
@@ -1350,6 +1386,41 @@ func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, ste
 			}
 		case "approval_gate":
 			stepOutput = map[string]any{"awaiting_approval": awaiting}
+		case "human_interaction":
+			interactionType := step.InteractionType
+			if interactionType == "" {
+				interactionType = "approval"
+			}
+			if interactionType != "approval" && interactionType != "choice" && interactionType != "input" && interactionType != "preview_confirm" {
+				err = fmt.Errorf("%w: unsupported interaction type %s", ErrInvalid, interactionType)
+				break
+			}
+			schema := step.InteractionSchema
+			if len(schema) == 0 {
+				schema = json.RawMessage(`{"type":"object"}`)
+			}
+			payload := step.InteractionPayload
+			if len(payload) == 0 {
+				payload, _ = json.Marshal(stepInput)
+			}
+			options := step.InteractionOptions
+			if len(options) == 0 {
+				options = json.RawMessage(`[]`)
+			}
+			token := fmt.Sprintf("%x", sha256.Sum256([]byte(fmt.Sprintf("workflow:%d:%s:%d", run.ID, step.ID, time.Now().UnixNano()))))
+			var taskID int64
+			var expires any
+			if step.ExpiresInSeconds > 0 {
+				expires = time.Now().Add(time.Duration(step.ExpiresInSeconds) * time.Second)
+			}
+			err = s.db.QueryRowContext(ctx, `INSERT INTO workflow_interaction_tasks
+				(workflow_run_id,workflow_step_id,interaction_type,schema,payload,options,resume_token,expires_at)
+				VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`, run.ID, step.ID, interactionType, schema, payload, options, token, expires).Scan(&taskID)
+			if err == nil {
+				stepOutput = map[string]any{"status": "waiting_for_user", "interaction_task_id": taskID, "interaction_type": interactionType}
+				awaiting = true
+				_, _ = s.db.ExecContext(ctx, `INSERT INTO workflow_run_events(workflow_run_id,workflow_step_id,event_type,payload) VALUES($1,$2,'human_interaction_created',$3)`, run.ID, step.ID, stepOutput)
+			}
 		case "output":
 			stepOutput, err = resolvePointer(document, step.OutputPointer)
 			output = stepOutput
@@ -1359,6 +1430,9 @@ func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, ste
 			return nil, awaiting, totalInput, totalOutput, err
 		}
 		document["steps"].(map[string]any)[step.ID] = stepOutput
+		if step.Type == "human_interaction" {
+			return stepOutput, awaiting, totalInput, totalOutput, nil
+		}
 		if step.Type != "output" {
 			output = stepOutput
 		}

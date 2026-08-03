@@ -6,20 +6,25 @@ import (
 )
 
 type WorkflowStep struct {
-	ID                string          `json:"id"`
-	Type              string          `json:"type"`
-	Name              string          `json:"name,omitempty"`
-	AgentID           int64           `json:"agent_id,omitempty"`
-	InputPointer      string          `json:"input_pointer,omitempty"`
-	IncludeContext    bool            `json:"include_context,omitempty"`
-	CollectionPointer string          `json:"collection_pointer,omitempty"`
-	MaxItems          int             `json:"max_items,omitempty"`
-	MaxConcurrency    int             `json:"max_concurrency,omitempty"`
-	ContinueOnError   bool            `json:"continue_on_error,omitempty"`
-	Steps             []WorkflowStep  `json:"steps,omitempty"`
-	OutputPointer     string          `json:"output_pointer,omitempty"`
-	ResourceType      string          `json:"resource_type,omitempty"`
-	Filter            json.RawMessage `json:"filter,omitempty"`
+	ID                 string          `json:"id"`
+	Type               string          `json:"type"`
+	Name               string          `json:"name,omitempty"`
+	AgentID            int64           `json:"agent_id,omitempty"`
+	InputPointer       string          `json:"input_pointer,omitempty"`
+	IncludeContext     bool            `json:"include_context,omitempty"`
+	CollectionPointer  string          `json:"collection_pointer,omitempty"`
+	MaxItems           int             `json:"max_items,omitempty"`
+	MaxConcurrency     int             `json:"max_concurrency,omitempty"`
+	ContinueOnError    bool            `json:"continue_on_error,omitempty"`
+	Steps              []WorkflowStep  `json:"steps,omitempty"`
+	OutputPointer      string          `json:"output_pointer,omitempty"`
+	ResourceType       string          `json:"resource_type,omitempty"`
+	Filter             json.RawMessage `json:"filter,omitempty"`
+	InteractionType    string          `json:"interaction_type,omitempty"`
+	InteractionSchema  json.RawMessage `json:"interaction_schema,omitempty"`
+	InteractionPayload json.RawMessage `json:"interaction_payload,omitempty"`
+	InteractionOptions json.RawMessage `json:"interaction_options,omitempty"`
+	ExpiresInSeconds   int             `json:"expires_in_seconds,omitempty"`
 }
 
 type WorkflowScopePolicy struct {

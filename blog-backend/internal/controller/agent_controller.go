@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -1246,6 +1247,12 @@ func (ctrl *AgentController) ResolveInteraction(c *gin.Context) {
 	if err != nil {
 		writeAgentError(c, err)
 		return
+	}
+	if item.WorkflowRunID != nil {
+		if resumeErr := ctrl.workflows.Resume(c.Request.Context(), *item.WorkflowRunID); resumeErr != nil && !errors.Is(resumeErr, sql.ErrNoRows) {
+			writeAgentError(c, resumeErr)
+			return
+		}
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(item))
 }
