@@ -278,7 +278,14 @@ func buildAutomationPlan(prompt string, profiles []*domain.ProviderProfile, agen
 		plan.Agent = map[string]any{"status": "reuse", "id": reusableAgent.ID, "name": reusableAgent.Name, "provider_profile_id": reusableAgent.ProviderProfileID, "skill_version_id": reusableAgent.SkillVersionID}
 		plan.Workflow = fallbackWorkflowDraft(prompt, reusableAgent.ID, reusableAgent.Skill != nil && reusableAgent.Skill.ExecutionMode == domain.AgentModeApproval)
 	} else {
-		draft := map[string]any{"name": "内容审校 Agent", "description": prompt, "enabled": false, "provider_profile_id": 0, "skill_version_id": 0}
+		providerID, skillVersionID := int64(0), int64(0)
+		if provider != nil {
+			providerID = provider.ID
+		}
+		if reusableSkill != nil {
+			skillVersionID = reusableSkill.VersionID
+		}
+		draft := map[string]any{"name": "内容审校 Agent", "description": prompt, "enabled": false, "provider_profile_id": providerID, "skill_version_id": skillVersionID}
 		plan.Agent = map[string]any{"status": "draft", "draft": draft}
 		plan.Prerequisites = append(plan.Prerequisites, "确认 Provider 与 Skill 后保存 Agent 草案")
 		plan.Workflow = fallbackWorkflowDraft(prompt, 0, true)

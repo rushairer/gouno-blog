@@ -11,8 +11,8 @@ function optionalLimit(value: string): number | undefined {
   return value === '' ? undefined : Number(value);
 }
 
-export function AgentForm({ initial, providers, skills, locale, labels, onSave, onCancel }: {
-  initial?: Agent;
+export function AgentForm({ initial, prefill, providers, skills, locale, labels, onSave, onCancel }: {
+  initial?: Agent; prefill?: Partial<AgentFormValue>;
   providers: ProviderProfile[];
   skills: AgentSkill[];
   locale: 'en' | 'zh';
@@ -20,7 +20,7 @@ export function AgentForm({ initial, providers, skills, locale, labels, onSave, 
   onSave: (value: AgentFormValue) => Promise<void>;
   onCancel: () => void;
 }) {
-  const [value, setValue] = useState<AgentFormValue>(() => initial ? { ...initial } : emptyAgent(providers[0]?.id));
+  const [value, setValue] = useState<AgentFormValue>(() => initial ? { ...initial } : { ...emptyAgent(providers[0]?.id), ...prefill, enabled: false });
   const [saving, setSaving] = useState(false);
   const selectedSkill = useMemo(() => skills.find((skill) => skill.version_id === value.skill_version_id) || initial?.skill, [initial?.skill, skills, value.skill_version_id]);
   const applySkill = (versionID: number) => {

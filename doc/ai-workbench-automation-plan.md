@@ -220,3 +220,4 @@ RSS 已通过白名单 HTTPS Tool 提供受限读取，站点 Sitemap 为现有�
 - 依赖齐全时，才调用既有 `/api/admin/ai-workflows/draft` 请求模型生成细化步骤，并复用已验证的 Agent/Skill。
 - Provider、Skill 或 Agent 缺失时，接口返回未持久化、默认停用的 Skill/Agent/Workflow 草案和明确前置条件；不会调用模型、保存凭据、创建资源、启用 Agent 或运行 Workflow。
 - 下一步的持久化体验应复用现有 Provider、Skill、Agent 完整表单，预填草案后由管理员确认 Tool 权限、预算、Provider 和启用状态，不能由 Workflow 页面静默默认这些安全字段。
+- 已实现 Skill 草案预填和 Agent 草案预填入口；两个表单都强制新草案保持停用，保存前仍由服务端校验能力、Provider、Skill Version、预算和触发器。
