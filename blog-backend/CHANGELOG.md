@@ -24,10 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Added batch retry controls for failed Workflow resource iterations in run records.
 - Added sandbox-only connector profiles, encrypted credentials, mock OAuth completion, approval-gated Outbox delivery, idempotency, audit, retry state, and revocation.
 - Added per-connector sandbox rate limiting and retryable backoff audit states.
+- Added versioned Workflow Intent parsing, deterministic capability templates, dependency matching, and server-compiled standard Workflow drafts.
+- Added preflight checks for intent/template contracts, Tool authorization, approval paths, Provider purpose, and image-generation Provider readiness.
 
 ### Changed
 
 - Workflow inputs are now compiled and validated with JSON Schema when saved and queued; resource Workflows default to strict run scope.
+- Standard Workflow drafts are now compiled from server-owned templates; image Brief drafts carry `format=image_brief` and do not imply real image generation.
 
 ### Security
 

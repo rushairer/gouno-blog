@@ -215,7 +215,7 @@ RSS 已通过白名单 HTTPS Tool 提供受限读取，站点 Sitemap 为现有�
 
 ## Workflow 草案依赖预检
 
-规划器完善协议（`workflow-planner/v4`，逐步接入中）将自然语言先解析为版本化 `WorkflowIntent`，再由服务端能力目录、确定性模板和已授权 Agent/Skill/Provider 匹配，最后编译安全 starter Workflow。AI 不再拥有指定 Agent、Skill、Provider 或 Tool 的权限。
+规划器完善协议（`workflow-planner/v4`，后端基础层和标准场景已接入）将自然语言先解析为版本化 `WorkflowIntent`，再由服务端能力目录、确定性模板和已授权 Agent/Skill/Provider 匹配，最后编译安全 starter Workflow。AI 不再拥有指定 Agent、Skill、Provider 或 Tool 的权限。
 
 当前后端已提供 `internal/workflowplan` 基础层：图片、社媒、Newsletter、FAQ、评论回复、SEO 审校和媒体 Alt 场景均有固定模板；“配图 Brief”固定使用 `format=image_brief` 并把完整 `/input` 传给模型；“真实生成图片”单独要求默认图片 Provider，缺失时返回 `needs_configuration`，不会降级为 social。
 
@@ -228,4 +228,5 @@ RSS 已通过白名单 HTTPS Tool 提供受限读取，站点 Sitemap 为现有�
 - 下一步的持久化体验应复用现有 Provider、Skill、Agent 完整表单，预填草案后由管理员确认 Tool 权限、预算、Provider 和启用状态，不能由 Workflow 页面静默默认这些安全字段。
 - 已实现 Skill 草案预填和 Agent 草案预填入口；两个表单都强制新草案保持停用，保存前仍由服务端校验能力、Provider、Skill Version、预算和触发器。
 - 已实现 Workflow `/preflight` 无副作用检查；Dry-run 和正式运行在入队前复用服务端校验输入 Schema、Agent 状态和只读 discovery 权限，缺失依赖会阻止调用 Agent 并返回明确原因。
-- Planner 已升级为 `workflow-planner/v3`：图片/封面目标会生成可审批的图片 Brief，而不是虚构不支持的图片步骤；模型输出不合规时会进行一次契约纠正重试。
+- Planner 已升级为 `workflow-planner/v4`：标准场景直接使用服务端模板编译；图片/封面目标固定生成 `image_brief` 审批提案，不会降级为 social；未覆盖的高级目标仍保留一次契约纠正重试。
+- 已完成 Intent/模板键持久化和运行前契约检查：历史 Workflow 标记 legacy/skipped，新 Workflow 检查模板、Tool 授权、审批路径和图片 Provider。
