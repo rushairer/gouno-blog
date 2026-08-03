@@ -61,6 +61,17 @@ describe('WorkflowWorkspace', () => {
     expect(screen.getByRole('button', { name: '运行' })).toBeEnabled();
   });
 
+  it('stops a run when the server-side preflight finds a missing dependency', async () => {
+    const user = userEvent.setup();
+    const onRun = vi.fn();
+    render(<WorkflowWorkspace workflows={[workflow]} runs={[]} metrics={[]} agents={[]} locale="zh" onMutate={vi.fn()} onRun={onRun} onSave={vi.fn()} onPreflight={vi.fn().mockResolvedValue({ ready: false, checks: [{ key: 'agent_bindings', status: 'error', message: 'linked Agent "Reviewer" is disabled' }] })} />);
+
+    await user.click(screen.getByRole('button', { name: '运行' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('linked Agent "Reviewer" is disabled');
+    expect(onRun).not.toHaveBeenCalled();
+  });
+
   it('does not report success when the backend returns a failed run', async () => {
     const user = userEvent.setup();
     const onRun = vi.fn().mockResolvedValue({

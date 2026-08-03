@@ -65,7 +65,7 @@ function bindWorkflowAgent(steps: WorkflowStep[], agentID: number): WorkflowStep
   }));
 }
 
-export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = [], locale, onMutate, onRun, onRefresh, onSave, onConfigureSkill, onConfigureAgent }: {
+export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = [], locale, onMutate, onRun, onPreflight, onRefresh, onSave, onConfigureSkill, onConfigureAgent }: {
   workflows: Workflow[];
   runs: WorkflowRun[];
   metrics: WorkflowMetric[];
@@ -74,6 +74,7 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = []
   locale: 'en' | 'zh';
   onMutate: (path: string, method?: string, body?: unknown) => Promise<void>;
   onRun: (workflowID: number, dryRun: boolean, input: Record<string, unknown>) => Promise<WorkflowRun>;
+  onPreflight?: (workflowID: number, dryRun: boolean, input: Record<string, unknown>) => Promise<{ ready: boolean; checks: Array<{ key: string; status: string; message?: string }> }>;
   onRefresh?: () => Promise<void>;
   onSave: (value: WorkflowValue) => Promise<void>;
   onConfigureSkill?: (draft?: { name?: string; description?: string; system_prompt?: string; capabilities?: string[]; execution_mode?: 'advisory' | 'approval' }) => void;
@@ -135,6 +136,13 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = []
     setRunningAction({ workflowID: workflow.id, dryRun });
     setRunFeedback(null);
     try {
+      if (onPreflight) {
+        const preflight = await onPreflight(workflow.id, dryRun, input);
+        if (!preflight.ready) {
+          const failure = preflight.checks.find((check) => check.status === 'error');
+          throw new Error(failure?.message || (locale === 'zh' ? '运行前置检查未通过' : 'Run preflight failed'));
+        }
+      }
       const result = await onRun(workflow.id, dryRun, input);
       if (!result || typeof result !== 'object' || !('id' in result) || !('status' in result)) {
         throw new Error(locale === 'zh' ? '服务器未返回可核验的运行记录' : 'The server did not return a verifiable run record');

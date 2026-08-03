@@ -31,6 +31,60 @@ type Service struct {
 	catalog *ResourceCatalog
 }
 
+type PreflightCheck struct {
+	Key     string `json:"key"`
+	Status  string `json:"status"`
+	Message string `json:"message,omitempty"`
+}
+
+type PreflightResult struct {
+	Ready  bool             `json:"ready"`
+	Checks []PreflightCheck `json:"checks"`
+}
+
+// Preflight validates a prospective run without creating a run, consuming a
+// token, resolving dynamic resources, or invoking an Agent.
+func (s *Service) Preflight(ctx context.Context, id int64, input json.RawMessage, dryRun bool) (PreflightResult, error) {
+	value, err := s.Get(ctx, id)
+	if err != nil {
+		return PreflightResult{}, err
+	}
+	result := PreflightResult{Ready: true, Checks: []PreflightCheck{}}
+	add := func(key, status, message string) {
+		result.Checks = append(result.Checks, PreflightCheck{Key: key, Status: status, Message: message})
+		if status == "error" {
+			result.Ready = false
+		}
+	}
+	if !value.Enabled && !dryRun {
+		add("workflow_enabled", "error", "workflow is disabled")
+	} else {
+		add("workflow_enabled", "ok", "workflow state allows this run")
+	}
+	if len(input) == 0 {
+		input = json.RawMessage(`{}`)
+	}
+	var inputValue any
+	if len(input) > 64<<10 || !json.Valid(input) || json.Unmarshal(input, &inputValue) != nil {
+		add("input_json", "error", "input must be valid JSON under 64 KiB")
+	} else if err := validateWorkflowInput(value.InputSchema, inputValue); err != nil {
+		add("input_schema", "error", err.Error())
+	} else {
+		add("input_schema", "ok", "input matches the Workflow schema")
+	}
+	if err := s.validateRunnableSteps(ctx, value.Steps, map[string]any{"input": inputValue, "steps": map[string]any{}}); err != nil {
+		add("agent_bindings", "error", err.Error())
+	} else {
+		add("agent_bindings", "ok", "all bound Agents are available and enabled")
+	}
+	if err := s.validateDiscoveryTools(ctx, value); err != nil {
+		add("discovery_tools", "error", err.Error())
+	} else {
+		add("discovery_tools", "ok", "discovery permissions are authorized and read-only")
+	}
+	return result, nil
+}
+
 func NewService(db *sql.DB, runner *agentservice.Runner, agents *agentservice.ManagementService, registries ...*tool.Registry) *Service {
 	var registry *tool.Registry
 	if len(registries) > 0 {

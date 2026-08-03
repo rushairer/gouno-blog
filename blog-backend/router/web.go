@@ -208,6 +208,7 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 				admin.POST("/admin/ai-workflows/:id/disable", agentCtrl.DisableWorkflow)
 				admin.POST("/admin/ai-workflows/:id/run", agentCtrl.RunWorkflow)
 				admin.POST("/admin/ai-workflows/:id/dry-run", agentCtrl.DryRunWorkflow)
+				admin.POST("/admin/ai-workflows/:id/preflight", agentCtrl.PreflightWorkflow)
 				admin.GET("/admin/ai-workflow-runs", agentCtrl.ListWorkflowRuns)
 				admin.GET("/admin/ai-workflow-runs/:id/steps", agentCtrl.WorkflowRunSteps)
 				admin.GET("/admin/ai-workflow-runs/:id/resources", agentCtrl.WorkflowRunResources)

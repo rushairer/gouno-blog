@@ -907,6 +907,27 @@ func (ctrl *AgentController) setWorkflowEnabled(c *gin.Context, enabled bool) {
 func (ctrl *AgentController) RunWorkflow(c *gin.Context)    { ctrl.queueWorkflow(c, false) }
 func (ctrl *AgentController) DryRunWorkflow(c *gin.Context) { ctrl.queueWorkflow(c, true) }
 
+func (ctrl *AgentController) PreflightWorkflow(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	var req struct {
+		Input  json.RawMessage `json:"input"`
+		DryRun bool            `json:"dry_run"`
+	}
+	if err := bindAgentJSON(c, &req); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+	result, err := ctrl.workflows.Preflight(c.Request.Context(), id, req.Input, req.DryRun)
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(result))
+}
+
 func (ctrl *AgentController) RetryWorkflowRun(c *gin.Context) {
 	id, ok := agentID(c)
 	if !ok {
