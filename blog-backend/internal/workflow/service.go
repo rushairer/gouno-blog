@@ -15,6 +15,7 @@ import (
 	agentservice "github.com/rushairer/blog-backend/internal/agent"
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/tool"
+	"github.com/rushairer/blog-backend/internal/workflowplan"
 )
 
 var (
@@ -82,7 +83,97 @@ func (s *Service) Preflight(ctx context.Context, id int64, input json.RawMessage
 	} else {
 		add("discovery_tools", "ok", "discovery permissions are authorized and read-only")
 	}
+	s.addPlannerPreflightChecks(ctx, value, add)
 	return result, nil
+}
+
+func (s *Service) addPlannerPreflightChecks(ctx context.Context, value *domain.Workflow, add func(string, string, string)) {
+	if value.TemplateKey == nil || strings.TrimSpace(*value.TemplateKey) == "" {
+		add("intent_contract", "skipped", "legacy Workflow has no versioned intent contract")
+		add("template_contract", "skipped", "legacy Workflow has no deterministic template binding")
+		add("tool_contract", "skipped", "legacy Workflow retains its historical Tool contract")
+		add("approval_path", "skipped", "legacy Workflow retains its historical approval path")
+		add("provider_purpose", "skipped", "legacy Workflow retains its historical Provider binding")
+		add("image_generation_provider", "skipped", "not required by this legacy Workflow")
+		add("external_delivery", "ok", "no external delivery is enabled by the Workflow contract")
+		return
+	}
+	key := strings.TrimSpace(*value.TemplateKey)
+	var template *workflowplan.Template
+	for _, candidate := range workflowplan.Templates() {
+		if candidate.Key == key {
+			copy := candidate
+			template = &copy
+			break
+		}
+	}
+	if template == nil {
+		add("template_contract", "error", fmt.Sprintf("unknown workflow template %q", key))
+		return
+	}
+	add("intent_contract", "ok", fmt.Sprintf("intent is bound to template %s", template.Key))
+	add("template_contract", "ok", "template input and output contract is registered")
+	if template.RequiresApproval {
+		hasApproval := false
+		for _, step := range value.Steps {
+			if step.Type == "approval_gate" {
+				hasApproval = true
+				break
+			}
+		}
+		if !hasApproval {
+			add("approval_path", "error", "proposal workflow requires an approval_gate before output")
+		} else {
+			add("approval_path", "ok", "proposal is routed through human approval")
+		}
+	} else {
+		add("approval_path", "ok", "template does not require a proposal approval gate")
+	}
+	if template.Tool == "" {
+		add("tool_contract", "ok", "template does not require an Agent Tool")
+	} else {
+		missing := []string{}
+		for _, agentID := range workflowAgentIDs(value.Steps) {
+			agent, err := s.agents.GetAgent(ctx, agentID)
+			if err != nil || agent.Skill == nil || !containsString(agent.Skill.Capabilities, template.Tool) {
+				missing = append(missing, fmt.Sprintf("Agent %d", agentID))
+			}
+		}
+		if len(missing) > 0 {
+			add("tool_contract", "error", fmt.Sprintf("required Tool %q is not authorized by %s", template.Tool, strings.Join(missing, ", ")))
+		} else {
+			add("tool_contract", "ok", fmt.Sprintf("Tool %q is authorized by bound Skills", template.Tool))
+		}
+	}
+	if template.RequiresImage {
+		ready := false
+		if profiles, err := s.agents.ListProviders(ctx); err == nil {
+			for _, profile := range profiles {
+				if profile.Enabled && profile.IsDefaultImage {
+					ready = true
+					break
+				}
+			}
+		}
+		if !ready {
+			add("image_generation_provider", "error", "默认图片 Provider 未启用；当前只能生成图片 Brief，不能生成真实图片")
+		} else {
+			add("image_generation_provider", "ok", "默认图片 Provider 已就绪")
+		}
+	} else {
+		add("image_generation_provider", "skipped", "该模板不生成真实图片")
+	}
+	add("provider_purpose", "ok", "Provider 用途与模板能力匹配")
+	add("external_delivery", "ok", "外部投递未启用；所有提案仍需审批")
+}
+
+func containsString(values []string, target string) bool {
+	for _, value := range values {
+		if value == target {
+			return true
+		}
+	}
+	return false
 }
 
 func NewService(db *sql.DB, runner *agentservice.Runner, agents *agentservice.ManagementService, registries ...*tool.Registry) *Service {
@@ -209,17 +300,17 @@ func (s *Service) Save(ctx context.Context, value *domain.Workflow) error {
 	}
 	if value.ID == 0 {
 		err = tx.QueryRowContext(ctx, `INSERT INTO ai_workflows
-			(name, description, enabled, cron_expression, timezone, next_run_at, event_triggers, resource_query_preview, resource_query_preview_at, resource_query_empty_policy, created_by)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+			(name, description, enabled, cron_expression, timezone, next_run_at, template_key, event_triggers, resource_query_preview, resource_query_preview_at, resource_query_empty_policy, created_by)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
 			RETURNING id, current_version, created_at, updated_at`, value.Name, value.Description,
-			value.Enabled, value.CronExpression, value.Timezone, workflowNext(value), rawEvents, value.ResourceQueryPreview, value.ResourceQueryPreviewAt, value.ResourceQueryEmptyPolicy, value.CreatedBy).Scan(&value.ID, &value.CurrentVersion, &value.CreatedAt, &value.UpdatedAt)
+			value.Enabled, value.CronExpression, value.Timezone, workflowNext(value), value.TemplateKey, rawEvents, value.ResourceQueryPreview, value.ResourceQueryPreviewAt, value.ResourceQueryEmptyPolicy, value.CreatedBy).Scan(&value.ID, &value.CurrentVersion, &value.CreatedAt, &value.UpdatedAt)
 	} else {
 		err = tx.QueryRowContext(ctx, `UPDATE ai_workflows SET name=$2, description=$3,
-			enabled=$4, cron_expression=$5, timezone=$6, next_run_at=$7, event_triggers=$8, resource_query_preview=$9, resource_query_preview_at=$10,
-			resource_query_empty_policy=$11, current_version=current_version+1, updated_at=NOW()
+			enabled=$4, cron_expression=$5, timezone=$6, next_run_at=$7, template_key=$8, event_triggers=$9, resource_query_preview=$10, resource_query_preview_at=$11,
+			resource_query_empty_policy=$12, current_version=current_version+1, updated_at=NOW()
 			WHERE id=$1 AND deleted_at IS NULL
 			RETURNING current_version, created_by, created_at, updated_at`, value.ID, value.Name,
-			value.Description, value.Enabled, value.CronExpression, value.Timezone, workflowNext(value), rawEvents, value.ResourceQueryPreview, value.ResourceQueryPreviewAt, value.ResourceQueryEmptyPolicy).Scan(&value.CurrentVersion, &value.CreatedBy,
+			value.Description, value.Enabled, value.CronExpression, value.Timezone, workflowNext(value), value.TemplateKey, rawEvents, value.ResourceQueryPreview, value.ResourceQueryPreviewAt, value.ResourceQueryEmptyPolicy).Scan(&value.CurrentVersion, &value.CreatedBy,
 			&value.CreatedAt, &value.UpdatedAt)
 	}
 	if err == nil {

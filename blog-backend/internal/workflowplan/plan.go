@@ -219,7 +219,11 @@ func Compile(intent WorkflowIntent, template *Template, agent *domain.Agent) dom
 	if template != nil {
 		name, description = template.Name, fmt.Sprintf("%s：%s", template.Name, intent.Action)
 	}
-	return domain.Workflow{Name: name, Description: description, Timezone: "Asia/Shanghai", InputSchema: raw, Steps: steps, ScopePolicy: domain.WorkflowScopePolicy{Mode: "strict"}}
+	templateKey := ""
+	if template != nil {
+		templateKey = template.Key
+	}
+	return domain.Workflow{Name: name, Description: description, Timezone: "Asia/Shanghai", TemplateKey: &templateKey, InputSchema: raw, Steps: steps, ScopePolicy: domain.WorkflowScopePolicy{Mode: "strict"}}
 }
 
 func hasDefaultImageProvider(profiles []*domain.ProviderProfile) bool {

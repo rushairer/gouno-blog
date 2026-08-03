@@ -20,6 +20,7 @@ type WorkflowValue = {
   enabled: boolean;
   cron_expression?: string;
   timezone: string;
+  template_key?: string;
   input_schema: Record<string, unknown>;
   steps: WorkflowStep[];
   scope_policy: { mode: 'strict' | 'unscoped'; discovery_tools: string[] };
@@ -372,6 +373,7 @@ function WorkflowEditor({ initial, labels, agents, tools, locale, onSave, onCanc
   const [description, setDescription] = useState(initial?.description || '');
   const [cronExpression, setCronExpression] = useState(initial?.cron_expression || '');
   const [timezone, setTimezone] = useState(initial?.timezone || 'Asia/Shanghai');
+  const [templateKey, setTemplateKey] = useState(initial?.template_key || '');
   const [emptyPolicy, setEmptyPolicy] = useState<'succeed' | 'fail'>(initial?.resource_query_empty_policy || 'succeed');
   const [schema, setSchema] = useState(JSON.stringify(initial?.input_schema || { type: 'object', additionalProperties: false }, null, 2));
   const [steps, setSteps] = useState(JSON.stringify(initial?.steps || [], null, 2));
@@ -479,6 +481,7 @@ function WorkflowEditor({ initial, labels, agents, tools, locale, onSave, onCanc
       setSchema(JSON.stringify(result.workflow.input_schema, null, 2));
       setSteps(JSON.stringify(result.workflow.steps, null, 2));
       setBoundAgentID(firstWorkflowAgentID(result.workflow.steps) || '');
+      setTemplateKey(result.workflow.template_key || plan.template?.key || '');
       const binding = result.selected_agents?.map((agent) => `${agent.name}${agent.skill_name ? ` · ${agent.skill_name}` : ''}`).join('、');
       setPlannerMessage(result.planner_warning ? localizePlannerWarning(result.planner_warning, locale) : `${result.readiness?.message || '已验证依赖。'} 已复用 ${plan.agent.name || binding || '现有 Agent'}，并使用 ${binding || `${result.provider} · ${result.model}`} 生成未启用草案。请审阅后保存。`);
     } catch (reason) {
@@ -495,7 +498,7 @@ function WorkflowEditor({ initial, labels, agents, tools, locale, onSave, onCanc
     if (!parsedSchema || !safeSteps || !safeSteps.length) { setEditorError('输入 Schema 或步骤 JSON 无效，请在高级设置中修正。'); setShowAdvanced(true); return; }
     if (safeSteps.some((step) => [step.input_pointer, step.collection_pointer, step.output_pointer].some((pointer) => pointer !== undefined && pointer !== '' && !String(pointer).startsWith('/')))) { setEditorError('所有 JSON Pointer 必须以 / 开头。'); return; }
     const hasResources = Object.values(parsedSchema.properties || {}).some((property) => typeof property['x-gouno-resource'] === 'string') || safeSteps.some((step) => step.type === 'resource_query');
-    await onSave({ id: initial?.id, name, description, enabled: initial?.enabled || false, cron_expression: cronExpression.trim() || undefined, timezone, input_schema: parsedSchema, steps: safeSteps, scope_policy: { mode: hasResources ? 'strict' : scopeMode, discovery_tools: discoveryTools }, resource_query_empty_policy: emptyPolicy });
+    await onSave({ id: initial?.id, name, description, enabled: initial?.enabled || false, cron_expression: cronExpression.trim() || undefined, timezone, template_key: templateKey || undefined, input_schema: parsedSchema, steps: safeSteps, scope_policy: { mode: hasResources ? 'strict' : scopeMode, discovery_tools: discoveryTools }, resource_query_empty_policy: emptyPolicy });
   };
   return <EditorPanel title={initial ? labels.editTitle : labels.createTitle} icon={<GitBranch />} closeLabel={labels.cancel} onClose={onCancel}><FormLayout onSubmit={submit}>
     {!initial ? <section className="workflow-planner"><div><h3>告诉 AI 你想持续完成什么</h3><p>例如：“每天检查最近发布文章的 SEO，并把需要人工确认的建议汇总出来”。AI 只生成未启用草案，不会运行或修改内容。</p></div><textarea className="input-field" rows={4} value={goal} onChange={(event) => setGoal(event.target.value)} placeholder="描述目标、频率、输入来源，以及哪些结果需要你确认…" /><FormActions><Button variant="secondary" type="button" disabled={planning} onClick={() => void generateDraft()}><GitBranch />{planning ? '正在生成草案…' : '用 AI 生成 Workflow 草案'}</Button></FormActions>{plannerMessage ? <p className="workflow-planner__message">{plannerMessage}</p> : null}{automationPlan ? <div className="workflow-dependency-plan"><strong>依赖链预检</strong>{automationPlan.intent ? <div className="workflow-intent-summary"><span><b>需求意图</b>{automationPlan.intent.domain || '未识别'} / {automationPlan.intent.action || automationPlan.intent.ambiguity_reason || '待澄清'}</span><span><b>输出</b>{automationPlan.intent.output_type || '待识别'}</span></div> : null}{automationPlan.template ? <div className="workflow-intent-summary"><span><b>模板</b>{automationPlan.template.name || automationPlan.template.key || '未匹配'} · {automationPlan.template.status || 'unknown'}</span>{automationPlan.match?.status ? <span><b>能力检查</b>{automationPlan.match.status}</span> : null}</div> : null}<div className="workflow-dependency-plan__items"><span className={`agent-state agent-state--${automationPlan.provider.status === 'ready' ? 'active' : 'paused'}`}><i />Provider：{automationPlan.provider.name || '未配置'}</span><span className={`agent-state agent-state--${automationPlan.skill.status === 'reuse' ? 'active' : 'paused'}`}><i />Skill：{automationPlan.skill.name || automationPlan.skill.draft?.name || '待确认'}</span><span className={`agent-state agent-state--${automationPlan.agent.status === 'reuse' ? 'active' : 'paused'}`}><i />Agent：{automationPlan.agent.name || automationPlan.agent.draft?.name || '待确认'}</span></div>{automationPlan.intent?.output_type === 'image_brief' ? <small className="workflow-planner__notice">当前只生成图片 Brief 并进入审批；审批通过后仍需配置图片 Provider，才能生成真实图片。</small> : null}{automationPlan.match?.warnings?.map((warning) => <small className="workflow-planner__notice" key={warning}>{warning}</small>)}{automationPlan.skill.status === 'draft' && automationPlan.skill.draft && onConfigureSkill ? <Button variant="secondary" size="compact" type="button" onClick={() => onConfigureSkill(automationPlan.skill.draft)}>审阅并配置 Skill 草案</Button> : null}{automationPlan.prerequisites.length > 0 ? <small>请先在 Agent 设置中完成前置配置；本草案不会自动创建或启用依赖。</small> : null}</div> : null}</section> : null}
