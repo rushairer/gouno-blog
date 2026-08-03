@@ -2,7 +2,7 @@ export type ProviderType = 'openai' | 'anthropic' | 'gemini';
 export type TriggerType = 'manual' | 'cron';
 export type ExecutionMode = 'advisory' | 'approval';
 export type ContentPublishMode = 'draft' | 'approval' | 'publish';
-export type RunStatus = 'queued' | 'running' | 'awaiting_approval' | 'succeeded' | 'failed' | 'cancelled';
+export type RunStatus = 'queued' | 'running' | 'waiting_for_user' | 'awaiting_approval' | 'succeeded' | 'failed' | 'cancelled';
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'expired' | 'executed' | 'failed';
 
 export interface ProviderProfile {
@@ -53,7 +53,7 @@ export interface AgentCitation {
 
 export interface WorkflowStep {
   id: string;
-  type: 'resource_query' | 'model' | 'for_each' | 'approval_gate' | 'output';
+  type: 'resource_query' | 'model' | 'for_each' | 'approval_gate' | 'human_interaction' | 'output';
   name?: string;
   agent_id?: number;
   input_pointer?: string;
@@ -66,6 +66,28 @@ export interface WorkflowStep {
   output_pointer?: string;
   resource_type?: 'post' | 'comment' | 'media_asset' | 'operational_suggestion' | 'category' | 'tag';
   filter?: Record<string, unknown>;
+  interaction_type?: 'approval' | 'choice' | 'input' | 'preview_confirm';
+  interaction_schema?: Record<string, unknown>;
+  interaction_payload?: Record<string, unknown>;
+  interaction_options?: unknown[];
+  expires_in_seconds?: number;
+}
+
+export interface WorkflowInteractionTask {
+  id: number;
+  workflow_run_id?: number;
+  agent_run_id?: number;
+  workflow_step_id?: string;
+  interaction_type: 'approval' | 'choice' | 'input' | 'preview_confirm';
+  schema: Record<string, unknown>;
+  payload: Record<string, unknown>;
+  options: unknown[];
+  status: 'pending' | 'resolved' | 'cancelled' | 'expired';
+  resume_token?: string;
+  response?: unknown;
+  expires_at?: string;
+  resolved_at?: string;
+  created_at: string;
 }
 
 export interface WorkflowScopePolicy {

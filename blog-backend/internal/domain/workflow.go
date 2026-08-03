@@ -151,7 +151,7 @@ type WorkflowInteractionTask struct {
 	Payload         json.RawMessage           `json:"payload"`
 	Options         json.RawMessage           `json:"options"`
 	Status          WorkflowInteractionStatus `json:"status"`
-	ResumeToken     string                    `json:"-"`
+	ResumeToken     string                    `json:"resume_token,omitempty"`
 	Response        json.RawMessage           `json:"response,omitempty"`
 	ExpiresAt       *time.Time                `json:"expires_at,omitempty"`
 	ResolvedBy      *string                   `json:"resolved_by,omitempty"`
