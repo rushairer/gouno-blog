@@ -90,6 +90,17 @@ export interface WorkflowInteractionTask {
   created_at: string;
 }
 
+export interface WorkflowRunEvent {
+  id: number;
+  workflow_run_id?: number;
+  agent_run_id?: number;
+  workflow_step_id?: string;
+  interaction_task_id?: number;
+  event_type: string;
+  payload: Record<string, unknown>;
+  created_at: string;
+}
+
 export interface WorkflowScopePolicy {
   mode: 'strict' | 'unscoped';
   discovery_tools: string[];

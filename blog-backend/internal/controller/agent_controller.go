@@ -1268,6 +1268,19 @@ func (ctrl *AgentController) WorkflowRunMediaCandidates(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
 }
 
+func (ctrl *AgentController) WorkflowRunEvents(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	items, err := ctrl.approvals.ListWorkflowRunEvents(c.Request.Context(), id)
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
+}
+
 func (ctrl *AgentController) GetInteraction(c *gin.Context) {
 	id, ok := agentID(c)
 	if !ok {

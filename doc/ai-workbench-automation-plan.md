@@ -32,6 +32,7 @@ AI 工作台不再把 Workflow 输入理解为“由 Agent 提供的一段 JSON�
 - [x] Run 详情展示交互任务和媒体候选，支持选择、重生成、应用；待我处理的独立聚合入口和图片预览向导仍待接入。
 - [x] 待我处理提供全局 pending interaction 查询，并复用现有 Inbox 组件展示 approval/choice/input/preview_confirm。
 - [x] 新流程媒体候选从媒体库/运营建议隐藏，历史 legacy 候选保留兼容展示；新候选统一回到 Run 详情。
+- [x] Run 详情增加已持久化事件时间线，展示交互、生成失败和后续应用事件。
 
 ## 输入来源
 

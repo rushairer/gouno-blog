@@ -74,6 +74,9 @@ func (s *ApprovalService) CancelInteraction(ctx context.Context, id int64, token
 func (s *ApprovalService) ListMediaCandidateEvents(ctx context.Context, id int64) ([]*domain.WorkflowRunEvent, error) {
 	return s.repo.ListMediaCandidateEvents(ctx, id)
 }
+func (s *ApprovalService) ListWorkflowRunEvents(ctx context.Context, id int64) ([]*domain.WorkflowRunEvent, error) {
+	return s.repo.ListWorkflowRunEvents(ctx, id)
+}
 
 func (s *ApprovalService) SelectMediaCandidate(ctx context.Context, id int64, placement, anchor string) error {
 	if placement != "cover" && placement != "inline" {
