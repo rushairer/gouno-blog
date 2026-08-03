@@ -215,6 +215,7 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 				admin.GET("/admin/ai-workflow-runs/:id/interactions", agentCtrl.WorkflowRunInteractions)
 				admin.GET("/admin/ai-workflow-runs/:id/media-candidates", agentCtrl.WorkflowRunMediaCandidates)
 				admin.GET("/admin/ai-interactions/:id", agentCtrl.GetInteraction)
+				admin.GET("/admin/ai-interactions", agentCtrl.ListPendingInteractions)
 				admin.POST("/admin/ai-interactions/:id/resolve", agentCtrl.ResolveInteraction)
 				admin.POST("/admin/ai-interactions/:id/cancel", agentCtrl.CancelInteraction)
 				admin.POST("/admin/ai-workflow-runs/:id/retry", agentCtrl.RetryWorkflowRun)

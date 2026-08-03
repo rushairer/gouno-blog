@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { apiFetch, canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
 import type {
-  Agent, AgentApproval, AgentRun, AgentSkill, AgentToolCall, ContentCandidateSet, EditorialTask, EmbeddingProfile, MediaCandidate, OperationalSuggestion, ProviderProfile, ToolDefinition, Workflow, WorkflowMetric, WorkflowRun,
+  Agent, AgentApproval, AgentRun, AgentSkill, AgentToolCall, ContentCandidateSet, EditorialTask, EmbeddingProfile, MediaCandidate, OperationalSuggestion, ProviderProfile, ToolDefinition, Workflow, WorkflowInteractionTask, WorkflowMetric, WorkflowRun,
 } from '../agent';
 import { EmbeddingForm } from '../components/agent/EmbeddingForm';
 import type { EmbeddingFormValue } from '../components/agent/EmbeddingForm';
@@ -346,6 +346,15 @@ function FriendlyApprovalQueue({ locale, approvals, selected, onSelect, onReview
   </Panel>;
 }
 
+function InteractionInbox({ locale, tasks, onResolved }: { locale: 'en' | 'zh'; tasks: WorkflowInteractionTask[]; onResolved: () => Promise<void> }) {
+  const zh = locale === 'zh';
+  const resolve = async (task: WorkflowInteractionTask, response: unknown) => {
+    await readData<WorkflowInteractionTask>(await apiFetch(`/api/admin/ai-interactions/${task.id}/resolve`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ resume_token: task.resume_token, response }) }));
+    await onResolved();
+  };
+  return <Panel className="approval-queue"><div className="panel-heading"><div><h3>{zh ? '流程交互' : 'Workflow interactions'}</h3><small>{zh ? '图片选择、确认和输入都在这里处理，并回到原运行。' : 'Choices, confirmations, and inputs resume their source run.'}</small></div><strong>{tasks.length}</strong></div>{tasks.length === 0 ? <EmptyState label={zh ? '当前没有待处理的流程交互。' : 'No workflow interactions need attention.'} /> : <div className="agent-approval-list">{tasks.map((task) => <div className="workflow-interaction" key={task.id}><div><strong>{task.interaction_type === 'choice' ? (zh ? '选择项' : 'Choose an option') : task.interaction_type === 'preview_confirm' ? (zh ? '确认预览' : 'Confirm preview') : (zh ? '确认操作' : 'Confirm action')}</strong><small>{task.workflow_run_id ? `Run #${task.workflow_run_id}` : `Agent run #${task.agent_run_id}`}{task.workflow_step_id ? ` · ${task.workflow_step_id}` : ''}</small></div>{task.interaction_type === 'choice' && Array.isArray(task.options) ? task.options.map((option, index) => <button className="btn btn-secondary" type="button" key={index} onClick={() => void resolve(task, { option })}>{String(option)}</button>) : <button className="btn btn-primary" type="button" onClick={() => void resolve(task, { confirmed: true })}>{zh ? '确认并继续' : 'Confirm and continue'}</button>}</div>)}</div>}</Panel>;
+}
+
 function RecordEvidence({ run, locale, formatDateTime }: { run: { run: AgentRun; tool_calls: AgentToolCall[] }; locale: 'en' | 'zh'; formatDateTime: (value: string) => string }) {
   const zh = locale === 'zh';
   return <section className="record-evidence" aria-label={zh ? '本次运行的执行日志' : 'Execution log for this run'}>
@@ -377,6 +386,7 @@ export default function AgentConsole() {
   const [suggestions, setSuggestions] = useState<OperationalSuggestion[]>([]);
   const [candidateSets, setCandidateSets] = useState<ContentCandidateSet[]>([]);
   const [mediaCandidates, setMediaCandidates] = useState<MediaCandidate[]>([]);
+  const [interactions, setInteractions] = useState<WorkflowInteractionTask[]>([]);
   const [editorialTasks, setEditorialTasks] = useState<EditorialTask[]>([]);
   const [selectedApproval, setSelectedApproval] = useState<AgentApproval | null>(null);
   const [selectedRun, setSelectedRun] = useState<{ run: AgentRun; tool_calls: AgentToolCall[] } | null>(null);
@@ -468,6 +478,11 @@ export default function AgentConsole() {
     setEditorialTasks(editorialTaskData);
     setSelectedApproval((current) => approvalData.list?.find((item) => item.id === current?.id) || approvalData.list?.[0] || null);
   }, [approvalFilter]);
+
+  useEffect(() => {
+    if (tab !== 'inbox') return;
+    void apiFetch('/api/admin/ai-interactions').then((response) => response.ok ? readData<WorkflowInteractionTask[]>(response) : []).then(setInteractions).catch(() => setInteractions([]));
+  }, [tab]);
 
   useEffect(() => {
     if (!isLoggedIn() || !canManageBlog()) {
@@ -730,7 +745,7 @@ export default function AgentConsole() {
 
         {!editingAgent && !editingProvider && !editingEmbedding && !editingSkill && tab === 'automation' ? <WorkflowWorkspace workflows={workflows} runs={workflowRuns} metrics={workflowMetrics} agents={agents} tools={tools} locale={locale} onMutate={mutate} onRun={queueWorkflow} onPreflight={preflightWorkflow} onRefresh={refresh} onSave={saveWorkflow} onConfigureSkill={(draft) => { if (!draft) return; setSkillPrefill({ name: draft.name || '', description: draft.description || '', system_prompt: draft.system_prompt || '', capabilities: draft.capabilities || [], execution_mode: draft.execution_mode || 'approval', content_publish_mode: 'approval' }); setEditingSkill('new'); setAdvancedSection('skills'); setTab('advanced'); }} onConfigureAgent={(draft) => { if (!draft) return; const provider = providers.find((item) => item.enabled && item.is_default_writing) || providers.find((item) => item.enabled); setAgentPrefill({ name: draft.name || '', description: draft.description || '', provider_profile_id: draft.provider_profile_id || provider?.id || 0, skill_version_id: draft.skill_version_id || skills[0]?.version_id || 0, enabled: false, trigger_type: 'manual', timezone: 'Asia/Shanghai', daily_run_limit: 10, monthly_token_budget: 1000000 }); setEditingAgent('new'); setAdvancedSection('agents'); setTab('advanced'); }} /> : null}
         {!editingAgent && !editingProvider && !editingEmbedding && !editingSkill && tab === 'advanced' && advancedSection === 'connectors' ? <ConnectorWorkspace locale={locale} readData={readData} onRefresh={refresh} /> : null}
-        {!editingAgent && !editingProvider && !editingEmbedding && !editingSkill && tab === 'inbox' ? <><FriendlyApprovalQueue locale={locale} approvals={approvals} selected={selectedApproval} onSelect={setSelectedApproval} onReview={review} /><OperationsWorkspace suggestions={suggestions} candidateSets={candidateSets} mediaCandidates={mediaCandidates} editorialTasks={editorialTasks} locale={locale} onMutate={mutate} /></> : null}
+        {!editingAgent && !editingProvider && !editingEmbedding && !editingSkill && tab === 'inbox' ? <><InteractionInbox locale={locale} tasks={interactions} onResolved={refresh} /><FriendlyApprovalQueue locale={locale} approvals={approvals} selected={selectedApproval} onSelect={setSelectedApproval} onReview={review} /><OperationsWorkspace suggestions={suggestions} candidateSets={candidateSets} mediaCandidates={mediaCandidates} editorialTasks={editorialTasks} locale={locale} onMutate={mutate} /></> : null}
         {!editingAgent && !editingProvider && tab === 'records' ? <div className="records-hub section-stack"><SubnavTabs label={locale === 'zh' ? '运行记录类型' : 'Run record type'} value={recordType} onValueChange={(value) => { const next = value as typeof recordType; setRecordType(next); const url = new URL(window.location.href); url.searchParams.set('record', next); window.history.replaceState(null, '', url); }} items={[{ value: 'workflow', label: locale === 'zh' ? 'Workflow 运行' : 'Workflow runs' }, { value: 'agent', label: locale === 'zh' ? 'Agent 运行' : 'Agent runs' }]} />{recordType === 'agent' ? <RecordsWorkspace locale={locale} runs={runs} agents={agents} selectedRun={selectedRun} onInspect={(run) => void inspectRun(run)} formatDateTime={formatDateTime} /> : <WorkflowRunRecords locale={locale} workflows={workflows} runs={workflowRuns} formatDateTime={formatDateTime} onRefresh={refresh} />}</div> : null}
 
         {!editingAgent && !editingProvider && !editingEmbedding && tab === 'advanced' && advancedSection === 'knowledge' ? <WorkspacePanel className="agent-table-panel knowledge-workspace">

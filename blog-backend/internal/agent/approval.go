@@ -62,6 +62,9 @@ func (s *ApprovalService) GetInteraction(ctx context.Context, id int64) (*domain
 func (s *ApprovalService) ListInteractions(ctx context.Context, runID int64) ([]*domain.WorkflowInteractionTask, error) {
 	return s.repo.ListInteractions(ctx, runID)
 }
+func (s *ApprovalService) ListPendingInteractions(ctx context.Context) ([]*domain.WorkflowInteractionTask, error) {
+	return s.repo.ListPendingInteractions(ctx)
+}
 func (s *ApprovalService) ResolveInteraction(ctx context.Context, id int64, token string, response json.RawMessage, subject string) (*domain.WorkflowInteractionTask, error) {
 	return s.repo.ResolveInteraction(ctx, id, token, response, subject)
 }

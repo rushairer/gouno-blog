@@ -1281,6 +1281,15 @@ func (ctrl *AgentController) GetInteraction(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(item))
 }
 
+func (ctrl *AgentController) ListPendingInteractions(c *gin.Context) {
+	items, err := ctrl.approvals.ListPendingInteractions(c.Request.Context())
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
+}
+
 func interactionSubject(c *gin.Context) string {
 	if raw, ok := c.Get("account_id"); ok {
 		if value, ok := raw.(string); ok {

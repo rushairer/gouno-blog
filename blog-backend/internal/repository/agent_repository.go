@@ -1174,6 +1174,23 @@ func (r *AgentRepository) ListInteractions(ctx context.Context, workflowRunID in
 	return items, rows.Err()
 }
 
+func (r *AgentRepository) ListPendingInteractions(ctx context.Context) ([]*domain.WorkflowInteractionTask, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT `+interactionColumns()+` FROM workflow_interaction_tasks WHERE status='pending' AND (expires_at IS NULL OR expires_at>NOW()) ORDER BY created_at,id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := make([]*domain.WorkflowInteractionTask, 0)
+	for rows.Next() {
+		item, scanErr := scanInteraction(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
 func (r *AgentRepository) ResolveInteraction(ctx context.Context, id int64, token string, response json.RawMessage, subject string) (*domain.WorkflowInteractionTask, error) {
 	item, err := scanInteraction(r.db.QueryRowContext(ctx, `UPDATE workflow_interaction_tasks SET status='resolved',response=$3,resolved_by=$4,resolved_at=NOW(),updated_at=NOW()
 		WHERE id=$1 AND resume_token=$2 AND status='pending' AND (expires_at IS NULL OR expires_at>NOW()) RETURNING `+interactionColumns(), id, token, response, subject))
