@@ -179,7 +179,52 @@ type workflowDraftRequest struct {
 // workflowPlannerPrompt is versioned alongside the executable workflow
 // contract. Product changes must update this prompt and the validator together;
 // the model never gets authority to create, enable, or run a workflow.
-const workflowPlannerPrompt = `You are workflow-planner/v1 for a blog administration product. Return only valid JSON with name, description, input_schema, and steps. Convert the user's goal into a small, safe workflow draft. Use only the supplied Agent IDs, and only model, approval_gate, and output steps. A model step must use one supplied Agent ID and an input_pointer beginning with /input. Include one approval_gate after any model step whose bound Skill Version execution_mode is approval. Finish with one output step whose output_pointer references a preceding step, for example /steps/analyze. Input schema must be a JSON Schema object with type object and additionalProperties false. Keep at most 5 steps. Do not create, enable, run, publish, or modify anything. Do not use Markdown or explanation.`
+const workflowPlannerPrompt = `You are workflow-planner/v2 for a blog administration product. Return exactly one JSON object and nothing else: no Markdown, code fence, commentary, or prose. Its required keys are name, description, input_schema, and steps. Convert the user's goal into a small, safe workflow draft. Use only supplied Agent IDs and only model, approval_gate, and output steps. A model step must have a unique id, a supplied agent_id, and input_pointer beginning with /input. Include an approval_gate after a model step when its Agent execution_mode is approval. Finish with an output step whose output_pointer references a preceding step, for example /steps/analyze. input_schema must be a JSON Schema object with type object and additionalProperties false. When the goal requires choosing articles, use post_ids as an integer array resource field with x-gouno-resource post and x-gouno-widget entity-multi-select. Keep at most 5 steps. Do not create, enable, run, publish, or modify anything.`
+
+func extractWorkflowDraftJSON(value string) ([]byte, bool) {
+	value = strings.TrimSpace(value)
+	if json.Valid([]byte(value)) {
+		return []byte(value), true
+	}
+	start := strings.IndexByte(value, '{')
+	if start < 0 {
+		return nil, false
+	}
+	depth := 0
+	inString, escaped := false, false
+	for index := start; index < len(value); index++ {
+		char := value[index]
+		if inString {
+			if escaped { escaped = false; continue }
+			if char == '\\' { escaped = true } else if char == '"' { inString = false }
+			continue
+		}
+		switch char {
+		case '"': inString = true
+		case '{': depth++
+		case '}':
+			depth--
+			if depth == 0 {
+				candidate := []byte(value[start : index+1])
+				return candidate, json.Valid(candidate)
+			}
+		}
+	}
+	return nil, false
+}
+
+func fallbackWorkflowDraft(goal string, agentID int64, needsApproval bool) domain.Workflow {
+	steps := []domain.WorkflowStep{{ID: "analyze", Type: "model", AgentID: agentID, InputPointer: "/input", IncludeContext: true}}
+	if needsApproval {
+		steps = append(steps, domain.WorkflowStep{ID: "review", Type: "approval_gate", Name: "人工审批", InputPointer: "/steps/analyze"})
+	}
+	steps = append(steps, domain.WorkflowStep{ID: "result", Type: "output", OutputPointer: "/steps/analyze"})
+	return domain.Workflow{
+		Name: "AI 工作流草案", Description: goal, Timezone: "Asia/Shanghai",
+		InputSchema: json.RawMessage(`{"type":"object","additionalProperties":false,"required":["post_ids"],"properties":{"post_ids":{"type":"array","items":{"type":"integer"},"minItems":1,"maxItems":20,"x-gouno-resource":"post","x-gouno-widget":"entity-multi-select"}}}`),
+		Steps: steps, ScopePolicy: domain.WorkflowScopePolicy{Mode: "strict"},
+	}
+}
 
 // DraftWorkflow asks the default writing model to prepare a portable workflow
 // definition. It never persists the result; users review it in the editor.
@@ -216,6 +261,8 @@ func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
 		return
 	}
 	available := make([]map[string]any, 0, len(agents))
+	var fallbackAgentID int64
+	fallbackNeedsApproval := false
 	for _, agent := range agents {
 		if agent.Enabled && agent.SkillVersionID != nil {
 			item := map[string]any{"id": agent.ID, "name": agent.Name, "description": agent.Description, "skill_version_id": agent.SkillVersionID}
@@ -223,6 +270,10 @@ func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
 				item["execution_mode"] = agent.Skill.ExecutionMode
 			}
 			available = append(available, item)
+			if fallbackAgentID == 0 {
+				fallbackAgentID = agent.ID
+				fallbackNeedsApproval = agent.Skill != nil && agent.Skill.ExecutionMode == "approval"
+			}
 		}
 	}
 	if len(available) == 0 {
@@ -242,18 +293,21 @@ func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
 		writeAgentError(c, err)
 		return
 	}
-	text := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(result.Text), "```json"), "```"))
 	var draft domain.Workflow
-	if err := json.Unmarshal([]byte(text), &draft); err != nil {
-		c.JSON(http.StatusBadGateway, gouno.NewErrorResponse(http.StatusBadGateway, "AI returned an invalid workflow draft"))
-		return
-	}
+	warning := ""
+	draftJSON, validJSON := extractWorkflowDraftJSON(result.Text)
+	if !validJSON || json.Unmarshal(draftJSON, &draft) != nil { warning = "AI draft format was invalid; a safe editable starter draft was created instead." }
+	if warning != "" { draft = fallbackWorkflowDraft(req.Prompt, fallbackAgentID, fallbackNeedsApproval) }
 	draft.Enabled = false
 	if err := ctrl.workflows.ValidateDraft(&draft); err != nil {
-		c.JSON(http.StatusBadGateway, gouno.NewErrorResponse(http.StatusBadGateway, "AI returned an unsafe or unsupported workflow draft"))
-		return
+		warning = "AI draft did not meet workflow safety rules; a safe editable starter draft was created instead."
+		draft = fallbackWorkflowDraft(req.Prompt, fallbackAgentID, fallbackNeedsApproval)
+		if fallbackErr := ctrl.workflows.ValidateDraft(&draft); fallbackErr != nil {
+			writeAgentError(c, fallbackErr)
+			return
+		}
 	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"workflow": draft, "provider": selected.Name, "model": selected.Model, "planner_version": "workflow-planner/v1"}))
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"workflow": draft, "provider": selected.Name, "model": selected.Model, "planner_version": "workflow-planner/v2", "planner_warning": warning}))
 }
 
 // DraftAssist is deliberately suggestion-only: it never persists or publishes

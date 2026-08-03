@@ -417,12 +417,12 @@ function WorkflowEditor({ initial, labels, agents, tools, onSave, onCancel }: {
     setPlanning(true);
     setPlannerMessage('');
     try {
-      const result = await readData<{ workflow: Workflow; provider: string; model: string }>(await apiFetch('/api/admin/ai-workflows/draft', { method: 'POST', body: JSON.stringify({ prompt: goal.trim() }) }));
+      const result = await readData<{ workflow: Workflow; provider: string; model: string; planner_warning?: string }>(await apiFetch('/api/admin/ai-workflows/draft', { method: 'POST', body: JSON.stringify({ prompt: goal.trim() }) }));
       setName(result.workflow.name);
       setDescription(result.workflow.description);
       setSchema(JSON.stringify(result.workflow.input_schema, null, 2));
       setSteps(JSON.stringify(result.workflow.steps, null, 2));
-      setPlannerMessage(`已由 ${result.provider} · ${result.model} 生成未启用草案。请审阅后保存。`);
+      setPlannerMessage(result.planner_warning || `已由 ${result.provider} · ${result.model} 生成未启用草案。请审阅后保存。`);
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : '';
       setPlannerMessage(message.toLowerCase().includes('timeout') ? '默认写作模型响应超时。你可以稍后重试，或先手动填写下面的名称、说明和高级设置。' : (message || '无法生成 Workflow 草案。'));
