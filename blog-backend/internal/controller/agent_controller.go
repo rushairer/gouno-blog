@@ -332,7 +332,9 @@ func (ctrl *AgentController) DraftAutomationPlan(c *gin.Context) {
 // workflowPlannerPrompt is versioned alongside the executable workflow
 // contract. Product changes must update this prompt and the validator together;
 // the model never gets authority to create, enable, or run a workflow.
-const workflowPlannerPrompt = `You are workflow-planner/v2 for a blog administration product. Return exactly one JSON object and nothing else: no Markdown, code fence, commentary, or prose. Its required keys are name, description, input_schema, and steps. Convert the user's goal into a small, safe workflow draft. Use only supplied Agent IDs and only model, approval_gate, and output steps. A model step must have a unique id, a supplied agent_id, and input_pointer beginning with /input. Include an approval_gate after a model step when its Agent execution_mode is approval. Finish with an output step whose output_pointer references a preceding step, for example /steps/analyze. input_schema must be a JSON Schema object with type object and additionalProperties false. When the goal requires choosing articles, use post_ids as an integer array resource field with x-gouno-resource post and x-gouno-widget entity-multi-select. Keep at most 5 steps. Do not create, enable, run, publish, or modify anything.`
+const workflowPlannerPrompt = `You are workflow-planner/v3 for a blog administration product. Return exactly one JSON object and nothing else: no Markdown, code fence, commentary, or prose. Its required keys are name, description, input_schema, and steps. Convert the user's goal into a small, safe workflow draft. Use only supplied Agent IDs as JSON integers and only model, approval_gate, and output steps. A model step must have a unique id, type exactly "model", a supplied integer agent_id, and input_pointer beginning with /input. Include an approval_gate after a model step when its Agent execution_mode is approval. Finish with an output step whose output_pointer references a preceding step, for example /steps/analyze. input_schema must be a JSON Schema object with type object and additionalProperties false. When the goal requires choosing articles, use post_ids as an integer array resource field with x-gouno-resource post and x-gouno-widget entity-multi-select. For image, cover, illustration, or other unsupported generation requests, create a model step that produces an image brief/prompt for human review; do not invent image, tool, connector, HTTP, publish, or other step types. Keep at most 5 steps. Do not create, enable, run, publish, or modify anything.`
+
+const workflowPlannerCorrectionPrompt = `The previous response was not a valid Workflow draft. Return a corrected JSON object only. Keep exactly the allowed keys name, description, input_schema, and steps. Steps may only be model, approval_gate, and output; agent_id must be an integer from the supplied available_agents; never add image, tool, connector, HTTP, or publish steps. For image-related goals, make the model output an image brief/prompt for human approval. input_schema must be an object schema with additionalProperties false.`
 
 func extractWorkflowDraftJSON(value string) ([]byte, bool) {
 	value = strings.TrimSpace(value)
@@ -469,8 +471,19 @@ func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
 	}
 	var draft domain.Workflow
 	warning := ""
-	draftJSON, validJSON := extractWorkflowDraftJSON(result.Text)
-	if !validJSON || json.Unmarshal(draftJSON, &draft) != nil {
+	decodeDraft := func(text string) bool {
+		draftJSON, validJSON := extractWorkflowDraftJSON(text)
+		return validJSON && json.Unmarshal(draftJSON, &draft) == nil
+	}
+	validDraft := decodeDraft(result.Text)
+	if !validDraft {
+		correctionPayload, _ := json.Marshal(map[string]any{"goal": req.Prompt, "available_agents": available, "previous_response": result.Text})
+		correction, correctionErr := client.Generate(c.Request.Context(), provider.Request{Instructions: workflowPlannerCorrectionPrompt, Messages: []provider.Message{{Role: "user", Content: string(correctionPayload)}}, MaxTokens: min(selected.MaxOutputTokens, 800)})
+		if correctionErr == nil {
+			validDraft = decodeDraft(correction.Text)
+		}
+	}
+	if !validDraft {
 		warning = "AI draft format was invalid; a safe editable starter draft was created instead."
 	}
 	if warning != "" {

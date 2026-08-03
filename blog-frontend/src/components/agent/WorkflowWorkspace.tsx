@@ -57,6 +57,12 @@ function firstWorkflowAgentID(steps: WorkflowStep[]): number | undefined {
   return undefined;
 }
 
+function localizePlannerWarning(value: string, locale: 'en' | 'zh'): string {
+  if (locale === 'zh' && value.includes('AI draft format was invalid')) return 'AI 返回的草案格式不符合 Workflow 规范，已生成安全的可编辑草案。';
+  if (locale === 'zh' && value.includes('AI draft did not meet workflow safety rules')) return 'AI 返回的草案未通过安全校验，已生成安全的可编辑草案。';
+  return value;
+}
+
 function bindWorkflowAgent(steps: WorkflowStep[], agentID: number): WorkflowStep[] {
   return steps.map((step) => ({
     ...step,
@@ -185,7 +191,7 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = []
       setRunningAction(null);
     }
   };
-  if (editing) return <WorkflowEditor initial={editing === 'new' ? undefined : editing} labels={labels} agents={agents} tools={tools} onConfigureSkill={onConfigureSkill} onConfigureAgent={onConfigureAgent} onCancel={() => setEditing(null)} onSave={async (value) => { await onSave(value); setEditing(null); }} />;
+  if (editing) return <WorkflowEditor initial={editing === 'new' ? undefined : editing} labels={labels} agents={agents} tools={tools} locale={locale} onConfigureSkill={onConfigureSkill} onConfigureAgent={onConfigureAgent} onCancel={() => setEditing(null)} onSave={async (value) => { await onSave(value); setEditing(null); }} />;
   return <WorkspacePanel className="workflow-workspace">
     <PanelHeader title={locale === 'zh' ? '自动化' : 'Automation'} description={locale === 'zh' ? '选择一项持续运营目标；每次执行都可追溯、可试运行、可回滚。' : 'Choose an ongoing goal. Every run is traceable, testable, and reversible.'} actions={<Button variant="primary" type="button" onClick={() => setEditing('new')}><Plus />{labels.add}</Button>} />
     {workflows.length === 0 || !selectedWorkflow ? <EmptyState label={labels.empty} /> : <div className="agent-split-view workflow-split-view">
@@ -336,11 +342,12 @@ function SchemaFieldBuilder({ schemaJSON, onChange }: { schemaJSON: string; onCh
 
 function parseJSON<T>(value: string): T | null { try { return JSON.parse(value) as T; } catch { return null; } }
 
-function WorkflowEditor({ initial, labels, agents, tools, onSave, onCancel, onConfigureSkill, onConfigureAgent }: {
+function WorkflowEditor({ initial, labels, agents, tools, locale, onSave, onCancel, onConfigureSkill, onConfigureAgent }: {
   initial?: Workflow;
   labels: Record<string, string>;
   agents: Agent[];
   tools: ToolDefinition[];
+  locale: 'en' | 'zh';
   onSave: (value: WorkflowValue) => Promise<void>;
   onCancel: () => void;
   onConfigureSkill?: (draft?: { name?: string; description?: string; system_prompt?: string; capabilities?: string[]; execution_mode?: 'advisory' | 'approval' }) => void;
@@ -458,7 +465,7 @@ function WorkflowEditor({ initial, labels, agents, tools, onSave, onCancel, onCo
       setSteps(JSON.stringify(result.workflow.steps, null, 2));
       setBoundAgentID(firstWorkflowAgentID(result.workflow.steps) || '');
       const binding = result.selected_agents?.map((agent) => `${agent.name}${agent.skill_name ? ` · ${agent.skill_name}` : ''}`).join('、');
-      setPlannerMessage(result.planner_warning || `${result.readiness?.message || '已验证依赖。'} 已复用 ${plan.agent.name || binding || '现有 Agent'}，并使用 ${binding || `${result.provider} · ${result.model}`} 生成未启用草案。请审阅后保存。`);
+      setPlannerMessage(result.planner_warning ? localizePlannerWarning(result.planner_warning, locale) : `${result.readiness?.message || '已验证依赖。'} 已复用 ${plan.agent.name || binding || '现有 Agent'}，并使用 ${binding || `${result.provider} · ${result.model}`} 生成未启用草案。请审阅后保存。`);
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : '';
       setPlannerMessage(message.toLowerCase().includes('timeout') ? '默认写作模型响应超时。你可以稍后重试，或先手动填写下面的名称、说明和高级设置。' : (message || '无法生成 Workflow 草案。'));

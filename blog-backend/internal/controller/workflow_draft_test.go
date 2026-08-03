@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/rushairer/blog-backend/internal/domain"
@@ -24,6 +25,9 @@ func TestExtractWorkflowDraftJSON(t *testing.T) {
 				t.Fatalf("ok=%v, want %v", ok, test.ok)
 			}
 		})
+	}
+	if !strings.Contains(workflowPlannerPrompt, "image brief") || !strings.Contains(workflowPlannerCorrectionPrompt, "agent_id must be an integer") {
+		t.Fatal("planner prompts must constrain image goals and integer Agent IDs")
 	}
 }
 
