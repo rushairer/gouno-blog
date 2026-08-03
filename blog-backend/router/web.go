@@ -157,6 +157,7 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 			if agentCtrl != nil {
 				admin.POST("/admin/ai-draft-assist", agentCtrl.DraftAssist)
 				admin.POST("/admin/ai-workflows/draft", agentCtrl.DraftWorkflow)
+				admin.POST("/admin/ai-automation-plans/draft", agentCtrl.DraftAutomationPlan)
 				admin.GET("/admin/provider-profiles", agentCtrl.ListProviders)
 				admin.POST("/admin/provider-profiles", agentCtrl.CreateProvider)
 				admin.PUT("/admin/provider-profiles/:id", agentCtrl.UpdateProvider)

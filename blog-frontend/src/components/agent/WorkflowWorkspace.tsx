@@ -26,6 +26,15 @@ type WorkflowValue = {
   resource_query_empty_policy: 'succeed' | 'fail';
 };
 
+type AutomationPlan = {
+  workflow: Workflow;
+  provider: { status: 'ready' | 'missing'; name?: string; model?: string; message?: string };
+  skill: { status: 'reuse' | 'draft' | 'missing'; name?: string; draft?: { name?: string } };
+  agent: { status: 'reuse' | 'draft' | 'missing'; name?: string; draft?: { name?: string } };
+  prerequisites: string[];
+  warnings: string[];
+};
+
 function exampleInput(schema: Record<string, unknown>): Record<string, unknown> {
   const properties = (schema.properties || {}) as Record<string, Record<string, unknown>>;
   const required = Array.isArray(schema.required) ? schema.required.filter((item): item is string => typeof item === 'string') : [];
@@ -417,6 +426,17 @@ function WorkflowEditor({ initial, labels, agents, tools, onSave, onCancel }: {
     setPlanning(true);
     setPlannerMessage('');
     try {
+      const plan = await readData<AutomationPlan>(await apiFetch('/api/admin/ai-automation-plans/draft', { method: 'POST', body: JSON.stringify({ prompt: goal.trim() }) }));
+      if (plan.provider.status !== 'ready' || plan.agent.status !== 'reuse') {
+        setName(plan.workflow.name);
+        setDescription(plan.workflow.description);
+        setSchema(JSON.stringify(plan.workflow.input_schema, null, 2));
+        setSteps(JSON.stringify(plan.workflow.steps, null, 2));
+        setBoundAgentID('');
+        const missing = plan.prerequisites.join('；');
+        setPlannerMessage(`依赖尚未就绪：${missing}。已生成未启用的 Workflow 结构草案；请先在 Agent 管理页确认并创建 ${plan.skill.draft?.name || 'Skill'} 和 ${plan.agent.draft?.name || 'Agent'}，再绑定 Agent 后保存。`);
+        return;
+      }
       const result = await readData<{ workflow: Workflow; provider: string; model: string; planner_warning?: string; selected_agents?: Array<{ id: number; name: string; skill_name?: string }>; readiness?: { message?: string } }>(await apiFetch('/api/admin/ai-workflows/draft', { method: 'POST', body: JSON.stringify({ prompt: goal.trim() }) }));
       setName(result.workflow.name);
       setDescription(result.workflow.description);
@@ -424,7 +444,7 @@ function WorkflowEditor({ initial, labels, agents, tools, onSave, onCancel }: {
       setSteps(JSON.stringify(result.workflow.steps, null, 2));
       setBoundAgentID(firstWorkflowAgentID(result.workflow.steps) || '');
       const binding = result.selected_agents?.map((agent) => `${agent.name}${agent.skill_name ? ` · ${agent.skill_name}` : ''}`).join('、');
-      setPlannerMessage(result.planner_warning || `${result.readiness?.message || '已验证依赖。'} 已使用 ${binding || `${result.provider} · ${result.model}`} 生成未启用草案。请审阅后保存。`);
+      setPlannerMessage(result.planner_warning || `${result.readiness?.message || '已验证依赖。'} 已复用 ${plan.agent.name || binding || '现有 Agent'}，并使用 ${binding || `${result.provider} · ${result.model}`} 生成未启用草案。请审阅后保存。`);
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : '';
       setPlannerMessage(message.toLowerCase().includes('timeout') ? '默认写作模型响应超时。你可以稍后重试，或先手动填写下面的名称、说明和高级设置。' : (message || '无法生成 Workflow 草案。'));

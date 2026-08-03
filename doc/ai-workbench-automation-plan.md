@@ -212,3 +212,11 @@ RSS 已通过白名单 HTTPS Tool 提供受限读取，站点 Sitemap 为现有�
 - 桌面和移动端结构化表单、资源选择器、已选项和运行资源记录不重叠、不溢出。
 
 所有写入仍需人工审批；本设计不增加自动发布、删除、直接审核或绕过审批的路径。
+
+## Workflow 草案依赖预检
+
+“AI 生成 Workflow 草案”不会把 Workflow 当作孤立配置。创建页会先调用 `POST /api/admin/ai-automation-plans/draft`，以只读方式检查依赖链：默认写作 Provider、可复用 Skill、可复用且已启用的 Agent，以及最后的 Workflow 结构。
+
+- 依赖齐全时，才调用既有 `/api/admin/ai-workflows/draft` 请求模型生成细化步骤，并复用已验证的 Agent/Skill。
+- Provider、Skill 或 Agent 缺失时，接口返回未持久化、默认停用的 Skill/Agent/Workflow 草案和明确前置条件；不会调用模型、保存凭据、创建资源、启用 Agent 或运行 Workflow。
+- 下一步的持久化体验应复用现有 Provider、Skill、Agent 完整表单，预填草案后由管理员确认 Tool 权限、预算、Provider 和启用状态，不能由 Workflow 页面静默默认这些安全字段。

@@ -176,6 +176,110 @@ type workflowDraftRequest struct {
 	Prompt string `json:"prompt" binding:"required"`
 }
 
+type automationPlanRequest struct {
+	Prompt string `json:"prompt" binding:"required"`
+}
+
+// automationPlan is deliberately a suggestion-only contract. Draft assets
+// are returned to the editor and are never persisted or enabled by this API.
+type automationPlan struct {
+	Workflow      domain.Workflow `json:"workflow"`
+	Provider      map[string]any  `json:"provider"`
+	Skill         map[string]any  `json:"skill"`
+	Agent         map[string]any  `json:"agent"`
+	Prerequisites []string        `json:"prerequisites"`
+	Warnings      []string        `json:"warnings"`
+}
+
+func buildAutomationPlan(prompt string, profiles []*domain.ProviderProfile, agents []*domain.Agent, skills []*domain.AgentSkill) automationPlan {
+	plan := automationPlan{Prerequisites: []string{}, Warnings: []string{}}
+	var provider *domain.ProviderProfile
+	for _, item := range profiles {
+		if item.Enabled && item.IsDefaultWriting {
+			provider = item
+			break
+		}
+	}
+	if provider == nil {
+		plan.Provider = map[string]any{"status": "missing", "message": "需要一个已启用的默认写作 Provider", "draft": map[string]any{"enabled": false}}
+		plan.Prerequisites = append(plan.Prerequisites, "配置并启用默认写作 Provider")
+	} else {
+		plan.Provider = map[string]any{"status": "ready", "id": provider.ID, "name": provider.Name, "model": provider.Model}
+	}
+
+	var reusableSkill *domain.AgentSkill
+	for _, agent := range agents {
+		if agent.Enabled && agent.Skill != nil {
+			reusableSkill = agent.Skill
+			break
+		}
+	}
+	if reusableSkill != nil {
+		plan.Skill = map[string]any{"status": "reuse", "id": reusableSkill.ID, "name": reusableSkill.Name, "version_id": reusableSkill.VersionID, "capabilities": reusableSkill.Capabilities}
+	} else if len(skills) > 0 {
+		plan.Skill = map[string]any{"status": "reuse", "id": skills[0].ID, "name": skills[0].Name, "version_id": skills[0].VersionID, "capabilities": skills[0].Capabilities}
+	} else {
+		plan.Skill = map[string]any{"status": "draft", "draft": map[string]any{
+			"name": "内容审校助手", "description": prompt, "system_prompt": "在授权资源范围内执行内容分析，并为需要的变更生成审批提案。", "capabilities": []string{"content.audit_post", "content.check_links"}, "execution_mode": "approval", "enabled": false,
+		}}
+		plan.Prerequisites = append(plan.Prerequisites, "确认并保存一个 Skill 草案")
+	}
+
+	var reusableAgent *domain.Agent
+	for _, agent := range agents {
+		if agent.Enabled && agent.SkillVersionID != nil {
+			reusableAgent = agent
+			break
+		}
+	}
+	if reusableAgent != nil {
+		plan.Agent = map[string]any{"status": "reuse", "id": reusableAgent.ID, "name": reusableAgent.Name, "provider_profile_id": reusableAgent.ProviderProfileID, "skill_version_id": reusableAgent.SkillVersionID}
+		plan.Workflow = fallbackWorkflowDraft(prompt, reusableAgent.ID, reusableAgent.Skill != nil && reusableAgent.Skill.ExecutionMode == domain.AgentModeApproval)
+	} else {
+		draft := map[string]any{"name": "内容审校 Agent", "description": prompt, "enabled": false, "provider_profile_id": 0, "skill_version_id": 0}
+		plan.Agent = map[string]any{"status": "draft", "draft": draft}
+		plan.Prerequisites = append(plan.Prerequisites, "确认 Provider 与 Skill 后保存 Agent 草案")
+		plan.Workflow = fallbackWorkflowDraft(prompt, 0, true)
+		plan.Workflow.Steps[0].AgentID = 0
+	}
+	if provider == nil {
+		plan.Warnings = append(plan.Warnings, "Provider 未就绪，当前只生成未启用的本地草案，不会调用模型")
+	}
+	return plan
+}
+
+// DraftAutomationPlan resolves the dependency chain before AI generation.
+// It is read-only: no Provider, Skill, Agent, credential, or Workflow is saved.
+func (ctrl *AgentController) DraftAutomationPlan(c *gin.Context) {
+	var req automationPlanRequest
+	if err := bindAgentJSON(c, &req); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+	req.Prompt = strings.TrimSpace(req.Prompt)
+	if req.Prompt == "" || len([]rune(req.Prompt)) > 4000 {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "automation goal is required and must be at most 4000 characters"))
+		return
+	}
+	profiles, err := ctrl.svc.ListProviders(c.Request.Context())
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	agents, err := ctrl.svc.ListAgents(c.Request.Context())
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	skills, err := ctrl.svc.ListSkills(c.Request.Context())
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	plan := buildAutomationPlan(req.Prompt, profiles, agents, skills)
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(plan))
+}
+
 // workflowPlannerPrompt is versioned alongside the executable workflow
 // contract. Product changes must update this prompt and the validator together;
 // the model never gets authority to create, enable, or run a workflow.
@@ -195,13 +299,22 @@ func extractWorkflowDraftJSON(value string) ([]byte, bool) {
 	for index := start; index < len(value); index++ {
 		char := value[index]
 		if inString {
-			if escaped { escaped = false; continue }
-			if char == '\\' { escaped = true } else if char == '"' { inString = false }
+			if escaped {
+				escaped = false
+				continue
+			}
+			if char == '\\' {
+				escaped = true
+			} else if char == '"' {
+				inString = false
+			}
 			continue
 		}
 		switch char {
-		case '"': inString = true
-		case '{': depth++
+		case '"':
+			inString = true
+		case '{':
+			depth++
 		case '}':
 			depth--
 			if depth == 0 {
@@ -222,14 +335,16 @@ func fallbackWorkflowDraft(goal string, agentID int64, needsApproval bool) domai
 	return domain.Workflow{
 		Name: "AI 工作流草案", Description: goal, Timezone: "Asia/Shanghai",
 		InputSchema: json.RawMessage(`{"type":"object","additionalProperties":false,"required":["post_ids"],"properties":{"post_ids":{"type":"array","items":{"type":"integer"},"minItems":1,"maxItems":20,"x-gouno-resource":"post","x-gouno-widget":"entity-multi-select"}}}`),
-		Steps: steps, ScopePolicy: domain.WorkflowScopePolicy{Mode: "strict"},
+		Steps:       steps, ScopePolicy: domain.WorkflowScopePolicy{Mode: "strict"},
 	}
 }
 
 func workflowDraftAgentIDs(steps []domain.WorkflowStep) []int64 {
 	ids := []int64{}
 	for _, step := range steps {
-		if step.Type == "model" && step.AgentID > 0 { ids = append(ids, step.AgentID) }
+		if step.Type == "model" && step.AgentID > 0 {
+			ids = append(ids, step.AgentID)
+		}
 		ids = append(ids, workflowDraftAgentIDs(step.Steps)...)
 	}
 	return ids
@@ -306,8 +421,12 @@ func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
 	var draft domain.Workflow
 	warning := ""
 	draftJSON, validJSON := extractWorkflowDraftJSON(result.Text)
-	if !validJSON || json.Unmarshal(draftJSON, &draft) != nil { warning = "AI draft format was invalid; a safe editable starter draft was created instead." }
-	if warning != "" { draft = fallbackWorkflowDraft(req.Prompt, fallbackAgentID, fallbackNeedsApproval) }
+	if !validJSON || json.Unmarshal(draftJSON, &draft) != nil {
+		warning = "AI draft format was invalid; a safe editable starter draft was created instead."
+	}
+	if warning != "" {
+		draft = fallbackWorkflowDraft(req.Prompt, fallbackAgentID, fallbackNeedsApproval)
+	}
 	draft.Enabled = false
 	if err := ctrl.workflows.ValidateDraft(&draft); err != nil {
 		warning = "AI draft did not meet workflow safety rules; a safe editable starter draft was created instead."
@@ -318,13 +437,22 @@ func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
 		}
 	}
 	availableByID := make(map[int64]*domain.Agent, len(agents))
-	for _, agent := range agents { if agent.Enabled && agent.SkillVersionID != nil { availableByID[agent.ID] = agent } }
+	for _, agent := range agents {
+		if agent.Enabled && agent.SkillVersionID != nil {
+			availableByID[agent.ID] = agent
+		}
+	}
 	selectedAgents := []gin.H{}
 	for _, id := range workflowDraftAgentIDs(draft.Steps) {
 		agent, ok := availableByID[id]
-		if !ok { continue }
+		if !ok {
+			continue
+		}
 		selection := gin.H{"id": agent.ID, "name": agent.Name, "status": "ready"}
-		if agent.Skill != nil { selection["skill_name"] = agent.Skill.Name; selection["capabilities"] = agent.Skill.Capabilities }
+		if agent.Skill != nil {
+			selection["skill_name"] = agent.Skill.Name
+			selection["capabilities"] = agent.Skill.Capabilities
+		}
 		selectedAgents = append(selectedAgents, selection)
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"workflow": draft, "provider": selected.Name, "model": selected.Model, "planner_version": "workflow-planner/v2", "planner_warning": warning, "selected_agents": selectedAgents, "readiness": gin.H{"status": "ready", "message": "Provider, Agent, and Skill bindings were verified for this draft."}}))
