@@ -67,4 +67,16 @@ describe('OperationsWorkspace', () => {
     expect(screen.queryByRole('heading', { name: '旧的链接检查建议' })).not.toBeInTheDocument();
     expect(screen.getByText('自动已解决', { selector: '.status-pill--resolved' })).toBeInTheDocument();
   });
+
+  it('reviews an approved image brief before exposing image generation', async () => {
+    const user = userEvent.setup();
+    const onMutate = vi.fn().mockResolvedValue(undefined);
+    render(<OperationsWorkspace locale="zh" onMutate={onMutate} editorialTasks={[]} suggestions={[]} candidateSets={[]} mediaCandidates={[{
+      id: 31, post_id: 11, source_run_id: 25, source_approval_id: 40, headline: '封面', brief: '深色科技感构图', platform: '', provider: 'anthropic', model: 'image-model', input_tokens: 1, output_tokens: 1,
+      generation_status: 'brief_ready', safety_status: 'not_checked', copyright_status: 'not_checked', alt_text: '', created_at: '2026-08-03T00:00:00Z',
+    }]} />);
+    expect(screen.getByText('图片方案待审核')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '审核通过，进入生成' }));
+    expect(onMutate).toHaveBeenCalledWith('/api/admin/ai-media-candidates/31/review', 'POST', { action: 'ready' });
+  });
 });
