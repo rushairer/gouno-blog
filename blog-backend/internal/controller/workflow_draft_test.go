@@ -65,3 +65,14 @@ func TestBuildAutomationPlan(t *testing.T) {
 		}
 	})
 }
+
+func TestImageBriefWorkflowContract(t *testing.T) {
+	draft := fallbackWorkflowDraft("为文章生成封面和文中配图 Brief", 9, true)
+	if !strings.Contains(string(draft.InputSchema), `"image_brief"`) || draft.Steps[0].InputPointer != "/input" {
+		t.Fatalf("image brief fallback contract = %#v", draft)
+	}
+	plan := buildAutomationPlan("选择文章生成配图 Brief", nil, nil, nil)
+	if plan.Skill["status"] != "draft" || !strings.Contains(strings.Join(plan.Skill["draft"].(map[string]any)["capabilities"].([]string), ","), "content.propose_distribution_draft") {
+		t.Fatalf("image brief plan capabilities = %#v", plan.Skill)
+	}
+}

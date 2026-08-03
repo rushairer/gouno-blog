@@ -197,7 +197,10 @@ func automationPlanCapabilities(prompt string) []string {
 	if strings.Contains(value, "评论") || strings.Contains(value, "comment") {
 		return []string{"comments.get_comment", "comments.propose_reply"}
 	}
-	if strings.Contains(value, "媒体") || strings.Contains(value, "图片") || strings.Contains(value, "media") || strings.Contains(value, "alt") {
+	if strings.Contains(value, "图片") || strings.Contains(value, "配图") || strings.Contains(value, "封面") || strings.Contains(value, "illustration") || strings.Contains(value, "image") || strings.Contains(value, "cover") {
+		return []string{"content.get_post", "content.propose_distribution_draft"}
+	}
+	if strings.Contains(value, "媒体") || strings.Contains(value, "media") || strings.Contains(value, "alt") {
 		return []string{"media.get_asset"}
 	}
 	if strings.Contains(value, "分类") || strings.Contains(value, "标签") || strings.Contains(value, "taxonomy") || strings.Contains(value, "tag") {
@@ -332,7 +335,7 @@ func (ctrl *AgentController) DraftAutomationPlan(c *gin.Context) {
 // workflowPlannerPrompt is versioned alongside the executable workflow
 // contract. Product changes must update this prompt and the validator together;
 // the model never gets authority to create, enable, or run a workflow.
-const workflowPlannerPrompt = `You are workflow-planner/v3 for a blog administration product. Return exactly one JSON object and nothing else: no Markdown, code fence, commentary, or prose. Its required keys are name, description, input_schema, and steps. Convert the user's goal into a small, safe workflow draft. Use only supplied Agent IDs as JSON integers and only model, approval_gate, and output steps. A model step must have a unique id, type exactly "model", a supplied integer agent_id, and input_pointer beginning with /input. Include an approval_gate after a model step when its Agent execution_mode is approval. Finish with an output step whose output_pointer references a preceding step, for example /steps/analyze. input_schema must be a JSON Schema object with type object and additionalProperties false. When the goal requires choosing articles, use post_ids as an integer array resource field with x-gouno-resource post and x-gouno-widget entity-multi-select. For image, cover, illustration, or other unsupported generation requests, create a model step that produces an image brief/prompt for human review; do not invent image, tool, connector, HTTP, publish, or other step types. Keep at most 5 steps. Do not create, enable, run, publish, or modify anything.`
+const workflowPlannerPrompt = `You are workflow-planner/v3 for a blog administration product. Return exactly one JSON object and nothing else: no Markdown, code fence, commentary, or prose. Its required keys are name, description, input_schema, and steps. Convert the user's goal into a small, safe workflow draft. Use only supplied Agent IDs as JSON integers and only model, approval_gate, and output steps. A model step must have a unique id, type exactly "model", a supplied integer agent_id, and input_pointer beginning with /input. Include an approval_gate after a model step when its Agent execution_mode is approval. Finish with an output step whose output_pointer references a preceding step, for example /steps/analyze. input_schema must be a JSON Schema object with type object and additionalProperties false. When the goal requires choosing articles, use post_ids as an integer array resource field with x-gouno-resource post and x-gouno-widget entity-multi-select. For image, cover, illustration, or 配图 goals, add a required string format property with enum ["image_brief"], and pass the complete /input object to the model step so the Agent can see the requested format. The Agent must produce an image brief through the authorized distribution proposal Tool; do not invent image, tool, connector, HTTP, publish, or other step types. Keep at most 5 steps. Do not create, enable, run, publish, or modify anything.`
 
 const workflowPlannerCorrectionPrompt = `The previous response was not a valid Workflow draft. Return a corrected JSON object only. Keep exactly the allowed keys name, description, input_schema, and steps. Steps may only be model, approval_gate, and output; agent_id must be an integer from the supplied available_agents; never add image, tool, connector, HTTP, or publish steps. For image-related goals, make the model output an image brief/prompt for human approval. input_schema must be an object schema with additionalProperties false.`
 
@@ -378,6 +381,11 @@ func extractWorkflowDraftJSON(value string) ([]byte, bool) {
 }
 
 func fallbackWorkflowDraft(goal string, agentID int64, needsApproval bool) domain.Workflow {
+	isImageBrief := strings.Contains(strings.ToLower(goal), "图片") || strings.Contains(strings.ToLower(goal), "配图") || strings.Contains(strings.ToLower(goal), "封面") || strings.Contains(strings.ToLower(goal), "image") || strings.Contains(strings.ToLower(goal), "cover")
+	inputSchema := json.RawMessage(`{"type":"object","additionalProperties":false,"required":["post_ids"],"properties":{"post_ids":{"type":"array","items":{"type":"integer"},"minItems":1,"maxItems":20,"x-gouno-resource":"post","x-gouno-widget":"entity-multi-select"}}}`)
+	if isImageBrief {
+		inputSchema = json.RawMessage(`{"type":"object","additionalProperties":false,"required":["post_ids","format"],"properties":{"post_ids":{"type":"array","items":{"type":"integer"},"minItems":1,"maxItems":20,"x-gouno-resource":"post","x-gouno-widget":"entity-multi-select"},"format":{"type":"string","enum":["image_brief"],"default":"image_brief"}}}`)
+	}
 	steps := []domain.WorkflowStep{{ID: "analyze", Type: "model", AgentID: agentID, InputPointer: "/input", IncludeContext: true}}
 	if needsApproval {
 		steps = append(steps, domain.WorkflowStep{ID: "review", Type: "approval_gate", Name: "人工审批", InputPointer: "/steps/analyze"})
@@ -385,7 +393,7 @@ func fallbackWorkflowDraft(goal string, agentID int64, needsApproval bool) domai
 	steps = append(steps, domain.WorkflowStep{ID: "result", Type: "output", OutputPointer: "/steps/analyze"})
 	return domain.Workflow{
 		Name: "AI 工作流草案", Description: goal, Timezone: "Asia/Shanghai",
-		InputSchema: json.RawMessage(`{"type":"object","additionalProperties":false,"required":["post_ids"],"properties":{"post_ids":{"type":"array","items":{"type":"integer"},"minItems":1,"maxItems":20,"x-gouno-resource":"post","x-gouno-widget":"entity-multi-select"}}}`),
+		InputSchema: inputSchema,
 		Steps:       steps, ScopePolicy: domain.WorkflowScopePolicy{Mode: "strict"},
 	}
 }
@@ -399,6 +407,29 @@ func workflowDraftAgentIDs(steps []domain.WorkflowStep) []int64 {
 		ids = append(ids, workflowDraftAgentIDs(step.Steps)...)
 	}
 	return ids
+}
+
+func isImageBriefGoal(goal string) bool {
+	value := strings.ToLower(goal)
+	return strings.Contains(value, "图片") || strings.Contains(value, "配图") || strings.Contains(value, "封面") || strings.Contains(value, "illustration") || strings.Contains(value, "image") || strings.Contains(value, "cover")
+}
+
+func enforceImageBriefContract(goal string, draft *domain.Workflow) {
+	if !isImageBriefGoal(goal) {
+		return
+	}
+	contract := fallbackWorkflowDraft(goal, 0, false)
+	draft.InputSchema = contract.InputSchema
+	var normalize func([]domain.WorkflowStep)
+	normalize = func(steps []domain.WorkflowStep) {
+		for index := range steps {
+			if steps[index].Type == "model" {
+				steps[index].InputPointer = "/input"
+			}
+			normalize(steps[index].Steps)
+		}
+	}
+	normalize(draft.Steps)
 }
 
 // DraftWorkflow asks the default writing model to prepare a portable workflow
@@ -489,6 +520,7 @@ func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
 	if warning != "" {
 		draft = fallbackWorkflowDraft(req.Prompt, fallbackAgentID, fallbackNeedsApproval)
 	}
+	enforceImageBriefContract(req.Prompt, &draft)
 	draft.Enabled = false
 	if err := ctrl.workflows.ValidateDraft(&draft); err != nil {
 		warning = "AI draft did not meet workflow safety rules; a safe editable starter draft was created instead."
