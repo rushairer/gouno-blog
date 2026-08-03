@@ -1570,3 +1570,22 @@
   .workflow-resource-picker { padding-inline: 16px; }
   .workflow-resource-filters { grid-template-columns: 1fr; }
 }
+.connector-form-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: end;
+  margin-bottom: 1.25rem;
+}
+.connector-form-grid label,
+.connector-oauth-callback label { display: grid; gap: .35rem; font-size: .82rem; color: var(--muted-text, #657080); }
+.connector-form-grid input,
+.connector-form-grid textarea,
+.connector-form-grid select,
+.connector-oauth-callback input { width: 100%; min-width: 0; }
+.connector-oauth-callback { display: grid; grid-template-columns: 2fr 1fr auto; gap: 1rem; align-items: end; margin: 1rem 0; padding: 1rem; background: var(--surface-subtle, #f5f7fa); }
+@media (max-width: 900px) {
+  .connector-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .connector-oauth-callback { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) { .connector-form-grid { grid-template-columns: 1fr; } }

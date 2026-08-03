@@ -329,6 +329,34 @@ export interface ToolDefinition {
   risk_level: 'read' | 'propose' | 'write';
 }
 
+export type ConnectorKind = 'search_console' | 'newsletter' | 'social' | 'webhook';
+
+export interface ConnectorProfile {
+  id: number;
+  name: string;
+  kind: ConnectorKind;
+  sandbox: boolean;
+  enabled: boolean;
+  config: Record<string, unknown>;
+  credential_last4?: string;
+  has_credential: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConnectorOutboxItem {
+  id: number;
+  connector_profile_id: number;
+  idempotency_key: string;
+  payload: Record<string, unknown>;
+  status: 'awaiting_approval' | 'approved' | 'delivered' | 'failed' | 'revoked';
+  attempts: number;
+  error_message?: string;
+  delivered_at?: string;
+  revoked_at?: string;
+  created_at: string;
+}
+
 export const emptyProvider: Omit<ProviderProfile, 'id' | 'created_at' | 'updated_at' | 'has_api_key' | 'api_key_last4'> & { api_key: string } = {
   name: '',
   provider_type: 'openai',

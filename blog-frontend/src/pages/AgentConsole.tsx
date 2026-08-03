@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Bot, Check, ChevronRight, CirclePause, Clock3, DatabaseZap, GitBranch, KeyRound, Lightbulb, ListChecks, Play,
-  Download, Plus, RefreshCw, Settings2, ShieldCheck, Sparkles, Trash2, X,
+  Download, LockKeyhole, Plus, RefreshCw, Settings2, ShieldCheck, Sparkles, Trash2, X,
 } from 'lucide-react';
 import { apiFetch, canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
 import type {
@@ -17,6 +17,7 @@ import type { ProviderFormValue } from '../components/agent/ProviderForm';
 import { WorkflowWorkspace } from '../components/agent/WorkflowWorkspace';
 import { WorkflowRunRecords } from '../components/agent/WorkflowRunRecords';
 import { OperationsWorkspace } from '../components/agent/OperationsWorkspace';
+import { ConnectorWorkspace } from '../components/agent/ConnectorWorkspace';
 import { ProposalPreview } from '../components/agent/ProposalPreview';
 import { RiskPill, StatusPill } from '../components/agent/StatusPill';
 import { MarkdownRenderer } from '../components/MarkdownRenderer';
@@ -28,7 +29,7 @@ import { useI18n } from '../i18n';
 import '../styles/agent-console.css';
 
 type ConsoleTab = 'overview' | 'inbox' | 'automation' | 'records' | 'advanced' | 'runs' | 'approvals';
-type AdvancedSection = 'agents' | 'skills' | 'tools' | 'knowledge' | 'providers';
+type AdvancedSection = 'agents' | 'skills' | 'tools' | 'knowledge' | 'providers' | 'connectors';
 type DeleteTarget = { kind: 'agent'; value: Agent } | { kind: 'provider'; value: ProviderProfile } | { kind: 'embedding'; value: EmbeddingProfile } | { kind: 'skill'; value: AgentSkill } | null;
 
 function initialConsoleTab(): ConsoleTab {
@@ -689,7 +690,7 @@ export default function AgentConsole() {
       <TabPanel value={tab}>
         <div className="agent-console__main">
         {tab === 'overview' ? <WorkspaceOverview locale={locale} approvals={approvals} suggestions={suggestions} candidateSets={candidateSets} mediaCandidates={mediaCandidates} workflows={workflows} onNavigate={selectTab} /> : null}
-        {tab === 'advanced' ? <SubnavTabs label={labels.advanced} value={advancedSection} onValueChange={(value) => selectAdvanced(value as AdvancedSection)} items={[{ value: 'agents', label: labels.agents, icon: <Bot /> }, { value: 'skills', label: labels.skills, icon: <ListChecks /> }, { value: 'tools', label: 'Tools', icon: <GitBranch /> }, { value: 'knowledge', label: labels.knowledge, icon: <DatabaseZap /> }, { value: 'providers', label: labels.providers, icon: <KeyRound /> }]} /> : null}
+        {tab === 'advanced' ? <SubnavTabs label={labels.advanced} value={advancedSection} onValueChange={(value) => selectAdvanced(value as AdvancedSection)} items={[{ value: 'agents', label: labels.agents, icon: <Bot /> }, { value: 'skills', label: labels.skills, icon: <ListChecks /> }, { value: 'tools', label: 'Tools', icon: <GitBranch /> }, { value: 'knowledge', label: labels.knowledge, icon: <DatabaseZap /> }, { value: 'providers', label: labels.providers, icon: <KeyRound /> }, { value: 'connectors', label: locale === 'zh' ? 'Sandbox 连接器' : 'Sandbox connectors', icon: <LockKeyhole /> }]} /> : null}
         {tab === 'advanced' && advancedSection === 'providers' && editingProvider ? <ProviderForm key={editingProvider === 'new' ? 'new' : editingProvider.id} initial={editingProvider === 'new' ? undefined : editingProvider} labels={labels} onSave={saveProvider} onCancel={() => setEditingProvider(null)} /> : null}
         {tab === 'advanced' && advancedSection === 'knowledge' && editingEmbedding ? <EmbeddingForm key={editingEmbedding === 'new' ? 'new' : editingEmbedding.id} initial={editingEmbedding === 'new' ? undefined : editingEmbedding} locale={locale} onSave={saveEmbedding} onCancel={() => setEditingEmbedding(null)} /> : null}
         {tab === 'advanced' && advancedSection === 'agents' && editingAgent ? <AgentForm key={editingAgent === 'new' ? 'new' : editingAgent.id} initial={editingAgent === 'new' ? undefined : editingAgent} providers={providers} skills={skills} locale={locale} labels={labels} onSave={saveAgent} onCancel={() => setEditingAgent(null)} /> : null}
@@ -718,6 +719,7 @@ export default function AgentConsole() {
         </WorkspacePanel> : null}
 
         {!editingAgent && !editingProvider && !editingEmbedding && !editingSkill && tab === 'automation' ? <WorkflowWorkspace workflows={workflows} runs={workflowRuns} metrics={workflowMetrics} agents={agents} locale={locale} onMutate={mutate} onRun={queueWorkflow} onRefresh={refresh} onSave={saveWorkflow} /> : null}
+        {!editingAgent && !editingProvider && !editingEmbedding && !editingSkill && tab === 'advanced' && advancedSection === 'connectors' ? <ConnectorWorkspace locale={locale} readData={readData} onRefresh={refresh} /> : null}
         {!editingAgent && !editingProvider && !editingEmbedding && !editingSkill && tab === 'inbox' ? <><FriendlyApprovalQueue locale={locale} approvals={approvals} selected={selectedApproval} onSelect={setSelectedApproval} onReview={review} /><OperationsWorkspace suggestions={suggestions} candidateSets={candidateSets} mediaCandidates={mediaCandidates} editorialTasks={editorialTasks} locale={locale} onMutate={mutate} /></> : null}
         {!editingAgent && !editingProvider && tab === 'records' ? <div className="records-hub section-stack"><SubnavTabs label={locale === 'zh' ? '运行记录类型' : 'Run record type'} value={recordType} onValueChange={(value) => { const next = value as typeof recordType; setRecordType(next); const url = new URL(window.location.href); url.searchParams.set('record', next); window.history.replaceState(null, '', url); }} items={[{ value: 'workflow', label: locale === 'zh' ? 'Workflow 运行' : 'Workflow runs' }, { value: 'agent', label: locale === 'zh' ? 'Agent 运行' : 'Agent runs' }]} />{recordType === 'agent' ? <RecordsWorkspace locale={locale} runs={runs} agents={agents} selectedRun={selectedRun} onInspect={(run) => void inspectRun(run)} formatDateTime={formatDateTime} /> : <WorkflowRunRecords locale={locale} workflows={workflows} runs={workflowRuns} formatDateTime={formatDateTime} onRefresh={refresh} />}</div> : null}
 
