@@ -222,3 +222,4 @@ RSS 已通过白名单 HTTPS Tool 提供受限读取，站点 Sitemap 为现有�
 - 下一步的持久化体验应复用现有 Provider、Skill、Agent 完整表单，预填草案后由管理员确认 Tool 权限、预算、Provider 和启用状态，不能由 Workflow 页面静默默认这些安全字段。
 - 已实现 Skill 草案预填和 Agent 草案预填入口；两个表单都强制新草案保持停用，保存前仍由服务端校验能力、Provider、Skill Version、预算和触发器。
 - 已实现 Workflow `/preflight` 无副作用检查；Dry-run 和正式运行在入队前复用服务端校验输入 Schema、Agent 状态和只读 discovery 权限，缺失依赖会阻止调用 Agent 并返回明确原因。
+- Planner 已升级为 `workflow-planner/v3`：图片/封面目标会生成可审批的图片 Brief，而不是虚构不支持的图片步骤；模型输出不合规时会进行一次契约纠正重试。
