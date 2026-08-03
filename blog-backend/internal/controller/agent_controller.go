@@ -25,6 +25,7 @@ import (
 	"github.com/rushairer/blog-backend/internal/provider"
 	"github.com/rushairer/blog-backend/internal/tool"
 	workflowservice "github.com/rushairer/blog-backend/internal/workflow"
+	"github.com/rushairer/blog-backend/internal/workflowplan"
 	"github.com/rushairer/gouno"
 )
 
@@ -184,12 +185,15 @@ type automationPlanRequest struct {
 // automationPlan is deliberately a suggestion-only contract. Draft assets
 // are returned to the editor and are never persisted or enabled by this API.
 type automationPlan struct {
-	Workflow      domain.Workflow `json:"workflow"`
-	Provider      map[string]any  `json:"provider"`
-	Skill         map[string]any  `json:"skill"`
-	Agent         map[string]any  `json:"agent"`
-	Prerequisites []string        `json:"prerequisites"`
-	Warnings      []string        `json:"warnings"`
+	Workflow      domain.Workflow             `json:"workflow"`
+	Provider      map[string]any              `json:"provider"`
+	Skill         map[string]any              `json:"skill"`
+	Agent         map[string]any              `json:"agent"`
+	Prerequisites []string                    `json:"prerequisites"`
+	Warnings      []string                    `json:"warnings"`
+	Intent        workflowplan.WorkflowIntent `json:"intent"`
+	Template      map[string]any              `json:"template"`
+	Match         workflowplan.MatchResult    `json:"match"`
 }
 
 func automationPlanCapabilities(prompt string) []string {
@@ -329,6 +333,35 @@ func (ctrl *AgentController) DraftAutomationPlan(c *gin.Context) {
 		return
 	}
 	plan := buildAutomationPlan(req.Prompt, profiles, agents, skills)
+	intent := workflowplan.ParseIntent(req.Prompt)
+	// The registry is the authoritative source for capabilities. The planner
+	// only derives a proposal from it; it never grants a Skill new permissions.
+	for _, agent := range agents {
+		if agent.ProviderProfile == nil {
+			for _, profile := range profiles {
+				if profile.ID == agent.ProviderProfileID {
+					agent.ProviderProfile = profile
+					break
+				}
+			}
+		}
+	}
+	match, template, selectedAgent := workflowplan.Match(intent, profiles, agents, skills, ctrl.tools.Catalog())
+	plan.Intent, plan.Match = intent, match
+	plan.Template = map[string]any{"status": "unsupported"}
+	if template != nil {
+		plan.Template = map[string]any{"status": "matched", "key": template.Key, "name": template.Name}
+		plan.Workflow = workflowplan.Compile(intent, template, selectedAgent)
+		if match.Status != "ready" {
+			plan.Workflow.Enabled = false
+		}
+	}
+	if intent.Status == "ambiguous" {
+		plan.Template = map[string]any{"status": "ambiguous"}
+		plan.Prerequisites = append(plan.Prerequisites, "补充明确的资源类型和操作目标")
+	}
+	plan.Warnings = append(plan.Warnings, match.Warnings...)
+	plan.Prerequisites = append(plan.Prerequisites, match.Missing...)
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(plan))
 }
 

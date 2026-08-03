@@ -215,6 +215,12 @@ RSS 已通过白名单 HTTPS Tool 提供受限读取，站点 Sitemap 为现有�
 
 ## Workflow 草案依赖预检
 
+规划器完善协议（`workflow-planner/v4`，逐步接入中）将自然语言先解析为版本化 `WorkflowIntent`，再由服务端能力目录、确定性模板和已授权 Agent/Skill/Provider 匹配，最后编译安全 starter Workflow。AI 不再拥有指定 Agent、Skill、Provider 或 Tool 的权限。
+
+当前后端已提供 `internal/workflowplan` 基础层：图片、社媒、Newsletter、FAQ、评论回复、SEO 审校和媒体 Alt 场景均有固定模板；“配图 Brief”固定使用 `format=image_brief` 并把完整 `/input` 传给模型；“真实生成图片”单独要求默认图片 Provider，缺失时返回 `needs_configuration`，不会降级为 social。
+
+`DraftAutomationPlan` 在保留旧字段的同时返回 `intent`、`template` 和 `match`（`ready | needs_configuration | unsupported | ambiguous`），这些结果只作为未持久化草案和前置提示，仍需管理员在结构化编辑器中审阅、保存和 Dry-run。
+
 “AI 生成 Workflow 草案”不会把 Workflow 当作孤立配置。创建页会先调用 `POST /api/admin/ai-automation-plans/draft`，以只读方式检查依赖链：默认写作 Provider、可复用 Skill、可复用且已启用的 Agent，以及最后的 Workflow 结构。
 
 - 依赖齐全时，才调用既有 `/api/admin/ai-workflows/draft` 请求模型生成细化步骤，并复用已验证的 Agent/Skill。
