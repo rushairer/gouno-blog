@@ -1594,20 +1594,23 @@
 .workflow-step-cards,
 .workflow-discovery-picker {
   display: grid;
-  gap: 12px;
-  padding: 16px;
-  border: 1px solid var(--agent-border);
-  border-radius: var(--radius-control);
-  background: var(--bg-muted);
-}
-.workflow-schema-field,
-.workflow-step-card {
-  display: grid;
   gap: 10px;
   padding: 14px;
   border: 1px solid var(--agent-border);
   border-radius: var(--radius-control);
-  background: var(--bg-surface, #fff);
+  background: var(--ui-panel);
+}
+.workflow-schema-field,
+.workflow-step-card {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--agent-border);
+  border-radius: var(--radius-control);
+  background: var(--ui-control);
+}
+.workflow-step-card:not(:has(.form-grid, .field, .workflow-nested-steps)) {
+  display: none;
 }
 .workflow-step-card > header,
 .workflow-tool-picker > label {
@@ -1625,7 +1628,7 @@
 .workflow-schema-builder input:not([type='checkbox']),
 .workflow-schema-builder textarea,
 .workflow-step-cards input,
-.workflow-discovery-picker input:not(.ui-checkbox) { border: 1px solid var(--admin-line); border-radius: var(--radius-control); background: var(--bg-surface, #fff); color: var(--color-text-main); padding: 9px 11px; }
+.workflow-discovery-picker input:not(.ui-checkbox) { border: 1px solid var(--admin-line); border-radius: var(--radius-control); background: var(--ui-control); color: var(--color-text-main); padding: 9px 11px; }
 .workflow-tool-picker .ui-checkbox { flex: 0 0 auto; margin-top: 2px; }
 .workflow-tool-picker strong,
 .workflow-tool-picker small { display: block; }
