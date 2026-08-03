@@ -51,4 +51,13 @@ func TestBuildAutomationPlan(t *testing.T) {
 			t.Fatalf("unsafe missing-dependency plan: %#v", plan)
 		}
 	})
+
+	t.Run("matches the agent capability to the requested automation", func(t *testing.T) {
+		commentSkill := &domain.AgentSkill{ID: 5, VersionID: 6, Name: "Comments", Capabilities: []string{"comments.get_comment", "comments.propose_reply"}, ExecutionMode: domain.AgentModeApproval}
+		commentAgent := &domain.Agent{ID: 7, Name: "Commenter", Enabled: true, ProviderProfileID: provider.ID, SkillVersionID: &commentSkill.VersionID, Skill: commentSkill}
+		plan := buildAutomationPlan("为评论生成回复草案", []*domain.ProviderProfile{provider}, []*domain.Agent{agent, commentAgent}, []*domain.AgentSkill{skill, commentSkill})
+		if plan.Agent["id"] != commentAgent.ID || plan.Skill["id"] != commentSkill.ID {
+			t.Fatalf("expected comment dependency match: %#v", plan)
+		}
+	})
 }

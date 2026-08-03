@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -191,8 +192,33 @@ type automationPlan struct {
 	Warnings      []string        `json:"warnings"`
 }
 
+func automationPlanCapabilities(prompt string) []string {
+	value := strings.ToLower(prompt)
+	if strings.Contains(value, "评论") || strings.Contains(value, "comment") {
+		return []string{"comments.get_comment", "comments.propose_reply"}
+	}
+	if strings.Contains(value, "媒体") || strings.Contains(value, "图片") || strings.Contains(value, "media") || strings.Contains(value, "alt") {
+		return []string{"media.get_asset"}
+	}
+	if strings.Contains(value, "分类") || strings.Contains(value, "标签") || strings.Contains(value, "taxonomy") || strings.Contains(value, "tag") {
+		return []string{"content.list_categories", "content.list_tags"}
+	}
+	return []string{"content.audit_post", "content.check_links"}
+}
+
+func automationPlanScore(capabilities, wanted []string) int {
+	score := 0
+	for _, capability := range capabilities {
+		if slices.Contains(wanted, capability) {
+			score++
+		}
+	}
+	return score
+}
+
 func buildAutomationPlan(prompt string, profiles []*domain.ProviderProfile, agents []*domain.Agent, skills []*domain.AgentSkill) automationPlan {
 	plan := automationPlan{Prerequisites: []string{}, Warnings: []string{}}
+	wantedCapabilities := automationPlanCapabilities(prompt)
 	var provider *domain.ProviderProfile
 	for _, item := range profiles {
 		if item.Enabled && item.IsDefaultWriting {
@@ -208,28 +234,44 @@ func buildAutomationPlan(prompt string, profiles []*domain.ProviderProfile, agen
 	}
 
 	var reusableSkill *domain.AgentSkill
+	bestSkillScore := -1
 	for _, agent := range agents {
-		if agent.Enabled && agent.Skill != nil {
+		score := 0
+		if agent.Skill != nil {
+			score = automationPlanScore(agent.Skill.Capabilities, wantedCapabilities)
+		}
+		if agent.Enabled && agent.Skill != nil && score > bestSkillScore {
 			reusableSkill = agent.Skill
-			break
+			bestSkillScore = score
 		}
 	}
 	if reusableSkill != nil {
 		plan.Skill = map[string]any{"status": "reuse", "id": reusableSkill.ID, "name": reusableSkill.Name, "version_id": reusableSkill.VersionID, "capabilities": reusableSkill.Capabilities}
 	} else if len(skills) > 0 {
-		plan.Skill = map[string]any{"status": "reuse", "id": skills[0].ID, "name": skills[0].Name, "version_id": skills[0].VersionID, "capabilities": skills[0].Capabilities}
+		for _, skill := range skills {
+			score := automationPlanScore(skill.Capabilities, wantedCapabilities)
+			if score > bestSkillScore {
+				reusableSkill, bestSkillScore = skill, score
+			}
+		}
+		plan.Skill = map[string]any{"status": "reuse", "id": reusableSkill.ID, "name": reusableSkill.Name, "version_id": reusableSkill.VersionID, "capabilities": reusableSkill.Capabilities}
 	} else {
 		plan.Skill = map[string]any{"status": "draft", "draft": map[string]any{
-			"name": "内容审校助手", "description": prompt, "system_prompt": "在授权资源范围内执行内容分析，并为需要的变更生成审批提案。", "capabilities": []string{"content.audit_post", "content.check_links"}, "execution_mode": "approval", "enabled": false,
+			"name": "内容审校助手", "description": prompt, "system_prompt": "在授权资源范围内执行内容分析，并为需要的变更生成审批提案。", "capabilities": wantedCapabilities, "execution_mode": "approval", "enabled": false,
 		}}
 		plan.Prerequisites = append(plan.Prerequisites, "确认并保存一个 Skill 草案")
 	}
 
 	var reusableAgent *domain.Agent
+	bestAgentScore := -1
 	for _, agent := range agents {
-		if agent.Enabled && agent.SkillVersionID != nil {
+		score := 0
+		if agent.Skill != nil {
+			score = automationPlanScore(agent.Skill.Capabilities, wantedCapabilities)
+		}
+		if agent.Enabled && agent.SkillVersionID != nil && agent.Skill != nil && score > bestAgentScore {
 			reusableAgent = agent
-			break
+			bestAgentScore = score
 		}
 	}
 	if reusableAgent != nil {
