@@ -226,6 +226,15 @@ func fallbackWorkflowDraft(goal string, agentID int64, needsApproval bool) domai
 	}
 }
 
+func workflowDraftAgentIDs(steps []domain.WorkflowStep) []int64 {
+	ids := []int64{}
+	for _, step := range steps {
+		if step.Type == "model" && step.AgentID > 0 { ids = append(ids, step.AgentID) }
+		ids = append(ids, workflowDraftAgentIDs(step.Steps)...)
+	}
+	return ids
+}
+
 // DraftWorkflow asks the default writing model to prepare a portable workflow
 // definition. It never persists the result; users review it in the editor.
 func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
@@ -268,6 +277,7 @@ func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
 			item := map[string]any{"id": agent.ID, "name": agent.Name, "description": agent.Description, "skill_version_id": agent.SkillVersionID}
 			if agent.Skill != nil {
 				item["execution_mode"] = agent.Skill.ExecutionMode
+				item["capabilities"] = agent.Skill.Capabilities
 			}
 			available = append(available, item)
 			if fallbackAgentID == 0 {
@@ -307,7 +317,17 @@ func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
 			return
 		}
 	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"workflow": draft, "provider": selected.Name, "model": selected.Model, "planner_version": "workflow-planner/v2", "planner_warning": warning}))
+	availableByID := make(map[int64]*domain.Agent, len(agents))
+	for _, agent := range agents { if agent.Enabled && agent.SkillVersionID != nil { availableByID[agent.ID] = agent } }
+	selectedAgents := []gin.H{}
+	for _, id := range workflowDraftAgentIDs(draft.Steps) {
+		agent, ok := availableByID[id]
+		if !ok { continue }
+		selection := gin.H{"id": agent.ID, "name": agent.Name, "status": "ready"}
+		if agent.Skill != nil { selection["skill_name"] = agent.Skill.Name; selection["capabilities"] = agent.Skill.Capabilities }
+		selectedAgents = append(selectedAgents, selection)
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"workflow": draft, "provider": selected.Name, "model": selected.Model, "planner_version": "workflow-planner/v2", "planner_warning": warning, "selected_agents": selectedAgents, "readiness": gin.H{"status": "ready", "message": "Provider, Agent, and Skill bindings were verified for this draft."}}))
 }
 
 // DraftAssist is deliberately suggestion-only: it never persists or publishes
