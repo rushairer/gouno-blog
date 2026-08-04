@@ -1586,6 +1586,9 @@ select option {
 .workflow-candidate-fields .input-field { min-width: 220px; }
 .workflow-candidate-heading { flex-wrap: wrap; }
 .workflow-candidate-batch-actions { margin-left: auto; }
+.workflow-fixed-input { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 10px; border: 1px solid var(--ui-border); border-radius: var(--radius-control); background: var(--ui-control); }
+.workflow-fixed-input strong { color: var(--ui-text); font: 600 var(--font-size-control)/1.4 var(--font-ui); }
+.workflow-fixed-input small { color: var(--ui-text-secondary); font-size: var(--font-size-label); }
 
 .workflow-article-preview {
   display: block;
