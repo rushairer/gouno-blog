@@ -1126,9 +1126,16 @@ func (r *AgentRepository) RecordMediaGenerationError(ctx context.Context, candid
 	}
 	var runID sql.NullInt64
 	if err := r.db.QueryRowContext(ctx, `SELECT workflow_run_id FROM ai_media_candidates WHERE id=$1`, candidateID).Scan(&runID); err == nil && runID.Valid {
-		_, _ = r.db.ExecContext(ctx, `INSERT INTO workflow_run_events(workflow_run_id,event_type,payload) VALUES($1,'image_generation_failed',jsonb_build_object('candidate_id',$2,'error_code',$3,'error_message',$4))`, runID.Int64, candidateID, code, message)
+		_, _ = r.db.ExecContext(ctx, `INSERT INTO workflow_run_events(workflow_run_id,event_type,payload) VALUES($1,$2,jsonb_build_object('candidate_id',$3,'error_code',$4,'error_message',$5))`, runID.Int64, generationFailureEvent(code), candidateID, code, message)
 	}
 	return nil
+}
+
+func generationFailureEvent(code string) string {
+	if code == "image_generation_timeout" {
+		return "image_generation_timed_out"
+	}
+	return "image_generation_failed"
 }
 
 func (r *AgentRepository) CancelMediaGeneration(ctx context.Context, candidateID int64) error {
