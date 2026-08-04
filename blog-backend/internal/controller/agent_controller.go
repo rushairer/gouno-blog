@@ -883,6 +883,45 @@ func (ctrl *AgentController) SelectImageTask(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }
 
+func (ctrl *AgentController) SelectWorkflowImageTasks(c *gin.Context) {
+	runID, ok := agentID(c)
+	if !ok {
+		return
+	}
+	var req struct {
+		Selections []domain.MediaCandidateSelection `json:"selections" binding:"required"`
+	}
+	if err := bindAgentJSON(c, &req); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+	if err := ctrl.approvals.SelectMediaCandidates(c.Request.Context(), runID, req.Selections); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
+}
+
+func (ctrl *AgentController) ApplyWorkflowImageTasks(c *gin.Context) {
+	runID, ok := agentID(c)
+	if !ok {
+		return
+	}
+	var req struct {
+		CandidateIDs []int64 `json:"candidate_ids" binding:"required"`
+	}
+	if err := bindAgentJSON(c, &req); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+	post, err := ctrl.approvals.ApplyMediaCandidates(c.Request.Context(), runID, req.CandidateIDs)
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(post))
+}
+
 func (ctrl *AgentController) ApplyImageTask(c *gin.Context) {
 	id, ok := agentID(c)
 	if !ok {

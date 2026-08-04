@@ -214,6 +214,8 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 				admin.GET("/admin/ai-workflow-runs/:id/resources", agentCtrl.WorkflowRunResources)
 				admin.GET("/admin/ai-workflow-runs/:id/interactions", agentCtrl.WorkflowRunInteractions)
 				admin.GET("/admin/ai-workflow-runs/:id/media-candidates", agentCtrl.WorkflowRunMediaCandidates)
+				admin.POST("/admin/ai-workflow-runs/:id/media-candidates/select", agentCtrl.SelectWorkflowImageTasks)
+				admin.POST("/admin/ai-workflow-runs/:id/media-candidates/apply", agentCtrl.ApplyWorkflowImageTasks)
 				admin.GET("/admin/ai-workflow-runs/:id/events", agentCtrl.WorkflowRunEvents)
 				admin.GET("/admin/ai-interactions/:id", agentCtrl.GetInteraction)
 				admin.GET("/admin/ai-interactions", agentCtrl.ListPendingInteractions)

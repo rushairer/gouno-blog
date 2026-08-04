@@ -1581,6 +1581,9 @@ select option {
   border-radius: var(--radius-control, 6px);
   border: 1px solid var(--border-color);
 }
+.workflow-candidate-choice { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.workflow-candidate-fields { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.workflow-candidate-fields .input-field { min-width: 220px; }
 
 .workflow-article-preview {
   display: block;

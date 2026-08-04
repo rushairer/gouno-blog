@@ -1036,6 +1036,32 @@ func (r *AgentRepository) SelectMediaCandidate(ctx context.Context, id int64, pl
 	return nil
 }
 
+// SelectMediaCandidates applies a single, validated selection set. The
+// transaction prevents a partial multi-image selection when one candidate is
+// stale or already consumed.
+func (r *AgentRepository) SelectMediaCandidates(ctx context.Context, selections []domain.MediaCandidateSelection) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	for _, selection := range selections {
+		placement := selection.Placement
+		if placement == "" {
+			placement = "cover"
+		}
+		result, execErr := tx.ExecContext(ctx, `UPDATE ai_media_candidates SET selected=TRUE,placement=$2,anchor=$3,selected_at=NOW()
+			WHERE id=$1 AND generation_status='generated' AND media_asset_id IS NOT NULL`, selection.ID, placement, strings.TrimSpace(selection.Anchor))
+		if execErr != nil {
+			return execErr
+		}
+		if affected, _ := result.RowsAffected(); affected == 0 {
+			return sql.ErrNoRows
+		}
+	}
+	return tx.Commit()
+}
+
 func (r *AgentRepository) MarkMediaCandidateApplied(ctx context.Context, id, versionID int64) error {
 	result, err := r.db.ExecContext(ctx, `UPDATE ai_media_candidates SET applied_version_id=$2,applied_at=NOW() WHERE id=$1 AND selected=TRUE AND generation_status='generated'`, id, versionID)
 	if err != nil {

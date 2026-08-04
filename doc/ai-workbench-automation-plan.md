@@ -27,7 +27,7 @@ AI 工作台不再把 Workflow 输入理解为“由 Agent 提供的一段 JSON�
 - [x] 交互任务仓储：创建、按 Run 查询、resume token 原子解决、取消和过期拒绝。
 - [x] 管理 API：Run interactions、interaction detail、resolve、cancel。
 - [x] Workflow `human_interaction` 步骤暂停/恢复执行，并复用已完成步骤输出。
-- [x] 图片候选选择、封面/正文位置与锚点校验、文章版本令牌冲突阻断和新版本应用 API；图片预览向导仍待接入。
+- [x] 图片候选选择、封面/正文位置与锚点校验、文章版本令牌冲突阻断和新版本应用 API；支持同一 Run 批量选择并一次应用多个候选。
 - [x] 图片候选重生成入口、生成尝试计数及失败错误持久化；事件查询 API 已提供，生成/应用事件和资产应用仍待接入。
 - [x] Run 详情展示交互任务和媒体候选，支持选择、重生成、应用；待我处理的独立聚合入口和图片预览向导仍待接入。
 - [x] 待我处理提供全局 pending interaction 查询，并复用现有 Inbox 组件展示 approval/choice/input/preview_confirm。
@@ -38,7 +38,13 @@ AI 工作台不再把 Workflow 输入理解为“由 Agent 提供的一段 JSON�
 - [x] 图片任务持久化开始/截止/取消状态，失败或取消可重试；Run 详情在生成时轮询刷新。
 - [x] 封面与正文插图支持无副作用文章预览；版本或锚点不匹配时禁用应用并提示重新预览。
 - [x] 文章应用确认、版本 token 冲突和正文锚点冲突均写入来源 Run 时间线。
-- [x] Run 详情显示封面或正文插图的拟议文章预览，不只显示预览状态。
+- [x] Run 详情显示封面或正文插图的拟议文章预览，不只显示预览状态；支持候选勾选、位置/锚点编辑、批量预览和批量应用。
+
+### 多候选编排
+
+- [x] `POST /api/admin/ai-workflow-runs/:id/media-candidates/select` 按 Run 校验候选归属、状态、位置和正文锚点，并以事务写入选择集。
+- [x] `POST /api/admin/ai-workflow-runs/:id/media-candidates/apply` 合并同一文章的封面与多张正文插图，执行版本令牌/锚点/媒体资产校验后只创建一个文章版本。
+- [x] Run 详情提供批量选择、批量预览和批量确认应用；版本冲突或重复封面会阻断整批操作。
 
 ## 输入来源
 

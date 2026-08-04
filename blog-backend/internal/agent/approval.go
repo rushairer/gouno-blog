@@ -92,6 +92,48 @@ func (s *ApprovalService) SelectMediaCandidate(ctx context.Context, id int64, pl
 	return nil
 }
 
+func (s *ApprovalService) SelectMediaCandidates(ctx context.Context, runID int64, selections []domain.MediaCandidateSelection) error {
+	if runID <= 0 || len(selections) == 0 {
+		return errors.New("at least one image candidate is required")
+	}
+	available, err := s.repo.ListMediaCandidatesByWorkflowRun(ctx, runID)
+	if err != nil {
+		return err
+	}
+	byID := make(map[int64]*domain.MediaCandidate, len(available))
+	for _, candidate := range available {
+		byID[candidate.ID] = candidate
+	}
+	seen := make(map[int64]bool, len(selections))
+	for i := range selections {
+		selection := &selections[i]
+		if seen[selection.ID] {
+			return errors.New("duplicate image candidate")
+		}
+		seen[selection.ID] = true
+		candidate, ok := byID[selection.ID]
+		if !ok || candidate.GenerationStatus != "generated" || candidate.MediaAssetID == nil {
+			return errors.New("image candidate is not ready or does not belong to this run")
+		}
+		if selection.Placement == "" {
+			selection.Placement = "cover"
+		}
+		if selection.Placement != "cover" && selection.Placement != "inline" {
+			return errors.New("invalid image placement")
+		}
+		if selection.Placement == "inline" && strings.TrimSpace(selection.Anchor) == "" {
+			return errors.New("inline image requires an anchor")
+		}
+	}
+	if err := s.repo.SelectMediaCandidates(ctx, selections); err != nil {
+		return err
+	}
+	for _, selection := range selections {
+		s.appendCandidateEvent(ctx, selection.ID, "candidate_selected", map[string]any{"placement": selection.Placement, "batch": true})
+	}
+	return nil
+}
+
 func (s *ApprovalService) CancelMediaGeneration(ctx context.Context, id int64) error {
 	if err := s.repo.CancelMediaGeneration(ctx, id); err != nil {
 		return err
@@ -148,6 +190,101 @@ func (s *ApprovalService) ApplyMediaCandidate(ctx context.Context, id int64) (*d
 		_ = s.repo.MarkMediaCandidateApplied(ctx, id, versions[0].ID)
 	}
 	s.appendCandidateEvent(ctx, id, "article_version_created", map[string]any{"post_id": post.ID, "placement": candidate.Placement})
+	return post, nil
+}
+
+// ApplyMediaCandidates merges all selected images for one run into a single
+// post update. This preserves the article's version history and makes a
+// multi-image workflow atomic from the editor's point of view.
+func (s *ApprovalService) ApplyMediaCandidates(ctx context.Context, runID int64, ids []int64) (*domain.Post, error) {
+	if runID <= 0 || len(ids) == 0 {
+		return nil, errors.New("at least one selected image is required")
+	}
+	candidates, err := s.repo.ListMediaCandidatesByWorkflowRun(ctx, runID)
+	if err != nil {
+		return nil, err
+	}
+	byID := make(map[int64]*domain.MediaCandidate, len(candidates))
+	for _, candidate := range candidates {
+		byID[candidate.ID] = candidate
+	}
+	seen := make(map[int64]bool, len(ids))
+	var postID int64
+	var cover *domain.MediaCandidate
+	for _, id := range ids {
+		if seen[id] {
+			return nil, errors.New("duplicate image candidate")
+		}
+		seen[id] = true
+		candidate, ok := byID[id]
+		if !ok || !candidate.Selected || candidate.MediaAssetID == nil || candidate.GenerationStatus != "generated" {
+			return nil, errors.New("image candidate is not selected, ready, or owned by this run")
+		}
+		if postID == 0 {
+			postID = candidate.PostID
+		} else if postID != candidate.PostID {
+			return nil, errors.New("image candidates must target the same article")
+		}
+		if candidate.Placement == "cover" {
+			if cover != nil {
+				return nil, errors.New("only one cover image may be applied")
+			}
+			cover = candidate
+		}
+		if candidate.Placement == "inline" && strings.TrimSpace(candidate.Anchor) == "" {
+			return nil, errors.New("inline image requires an anchor")
+		}
+	}
+	post, err := s.posts.GetByID(ctx, postID)
+	if err != nil || post == nil {
+		return nil, service.ErrPostNotFound
+	}
+	for _, id := range ids {
+		candidate := byID[id]
+		if expected, parseErr := strconv.ParseInt(candidate.PostVersionToken, 10, 64); parseErr == nil && expected != post.UpdatedAt.Unix() {
+			s.appendCandidateEvent(ctx, id, "article_apply_conflict", map[string]any{"reason": "version_token", "batch": true})
+			return nil, fmt.Errorf("article version conflict")
+		}
+	}
+	assets, err := s.growth.ListMedia(ctx)
+	if err != nil {
+		return nil, err
+	}
+	assetByID := make(map[int64]*domain.MediaAsset, len(assets))
+	for _, asset := range assets {
+		assetByID[asset.ID] = asset
+	}
+	for _, id := range ids {
+		candidate := byID[id]
+		asset := assetByID[*candidate.MediaAssetID]
+		if asset == nil {
+			return nil, errors.New("media asset not found")
+		}
+		if candidate.Placement == "inline" {
+			if !strings.Contains(post.Content, candidate.Anchor) {
+				s.appendCandidateEvent(ctx, id, "article_apply_conflict", map[string]any{"reason": "anchor", "batch": true})
+				return nil, fmt.Errorf("article anchor conflict")
+			}
+			post.Content = strings.Replace(post.Content, candidate.Anchor, candidate.Anchor+"\n\n!["+candidate.AltText+"]("+asset.URL+")", 1)
+		} else {
+			post.CoverURL, post.CoverAlt = asset.URL, candidate.AltText
+		}
+	}
+	if err := s.posts.UpdatePost(ctx, post); err != nil {
+		return nil, err
+	}
+	versions, _ := s.growth.ListVersions(ctx, post.ID)
+	var versionID int64
+	if len(versions) > 0 {
+		versionID = versions[0].ID
+	}
+	for _, id := range ids {
+		if versionID > 0 {
+			_ = s.repo.MarkMediaCandidateApplied(ctx, id, versionID)
+		}
+		s.appendCandidateEvent(ctx, id, "article_apply_confirmed", map[string]any{"post_id": post.ID, "batch": true})
+		s.appendCandidateEvent(ctx, id, "article_version_created", map[string]any{"post_id": post.ID, "batch": true})
+	}
 	return post, nil
 }
 

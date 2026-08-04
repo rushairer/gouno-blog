@@ -281,6 +281,15 @@ type MediaCandidate struct {
 	CancelledAt          *time.Time   `json:"cancelled_at,omitempty"`
 }
 
+// MediaCandidateSelection is the user-authored placement for one generated
+// image in a workflow run. It is intentionally separate from MediaCandidate
+// so a run can validate and apply several candidates as one article version.
+type MediaCandidateSelection struct {
+	ID        int64  `json:"id"`
+	Placement string `json:"placement"`
+	Anchor    string `json:"anchor,omitempty"`
+}
+
 type UsageEvent struct {
 	ID           int64        `json:"id"`
 	RunID        int64        `json:"run_id"`
