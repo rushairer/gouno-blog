@@ -1584,6 +1584,8 @@ select option {
 .workflow-candidate-choice { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .workflow-candidate-fields { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .workflow-candidate-fields .input-field { min-width: 220px; }
+.workflow-candidate-heading { flex-wrap: wrap; }
+.workflow-candidate-batch-actions { margin-left: auto; }
 
 .workflow-article-preview {
   display: block;
@@ -1597,4 +1599,5 @@ select option {
 
 @media (max-width: 640px) {
   .workflow-candidate-preview { width: 72px; height: 54px; }
+  .workflow-candidate-batch-actions { width: 100%; margin-left: 0; justify-content: flex-start; }
 }
