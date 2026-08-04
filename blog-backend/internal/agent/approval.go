@@ -326,7 +326,18 @@ func (s *ApprovalService) PreviewMediaCandidate(ctx context.Context, id int64) (
 		versionMatches = expected == post.UpdatedAt.Unix()
 	}
 	anchorMatches := candidate.Placement != "inline" || (candidate.Anchor != "" && strings.Contains(post.Content, candidate.Anchor))
-	preview := map[string]any{"post_id": post.ID, "title": post.Title, "placement": candidate.Placement, "image_url": asset.URL, "alt_text": candidate.AltText, "version_matches": versionMatches, "anchor_matches": anchorMatches, "cover_url": post.CoverURL, "content": post.Content}
+	applied := candidate.AppliedVersionID != nil
+	if applied {
+		// Applying the candidate creates a new article version and therefore
+		// changes UpdatedAt. That expected change must not make the completed
+		// application look like a stale preview.
+		if candidate.Placement == "inline" {
+			versionMatches = strings.Contains(post.Content, asset.URL)
+		} else {
+			versionMatches = post.CoverURL == asset.URL
+		}
+	}
+	preview := map[string]any{"post_id": post.ID, "title": post.Title, "placement": candidate.Placement, "image_url": asset.URL, "alt_text": candidate.AltText, "version_matches": versionMatches, "anchor_matches": anchorMatches, "applied": applied, "cover_url": post.CoverURL, "content": post.Content}
 	if candidate.Placement == "inline" && anchorMatches {
 		preview["content"] = strings.Replace(post.Content, candidate.Anchor, candidate.Anchor+"\n\n!["+candidate.AltText+"]("+asset.URL+")", 1)
 	}

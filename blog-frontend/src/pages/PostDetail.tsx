@@ -289,6 +289,13 @@ export default function PostDetail() {
         <div className="article-layout">
           <Panel as="article" className="article">
             <header>
+              {post.cover_url ? (
+                <img
+                  className="article-cover"
+                  src={post.cover_url}
+                  alt={post.cover_alt || post.title}
+                />
+              ) : null}
               <h1>{post.title}</h1>
               <div className="inline-meta">
                 <span>

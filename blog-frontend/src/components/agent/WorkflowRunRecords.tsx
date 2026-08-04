@@ -11,6 +11,7 @@ import type {
   WorkflowStepRun,
 } from "../../agent";
 import { EmptyState, Panel, Select } from "../ui";
+import { MarkdownRenderer } from "../MarkdownRenderer";
 import { StatusPill } from "./StatusPill";
 
 async function readData<T>(response: Response): Promise<T> {
@@ -95,6 +96,7 @@ export function WorkflowRunRecords({
         image_url: string;
         version_matches: boolean;
         anchor_matches: boolean;
+        applied?: boolean;
         cover_url?: string;
         content?: string;
       }
@@ -388,6 +390,7 @@ export function WorkflowRunRecords({
         image_url: string;
         version_matches: boolean;
         anchor_matches: boolean;
+        applied?: boolean;
         cover_url?: string;
         content?: string;
       }>(await apiFetch(`/api/admin/ai-image-tasks/${candidate.id}/preview`));
@@ -978,7 +981,11 @@ export function WorkflowRunRecords({
                         {imagePreviews[candidate.id] ? (
                           <details className="workflow-log-block">
                             <summary>
-                              {imagePreviews[candidate.id].version_matches &&
+                              {imagePreviews[candidate.id].applied
+                                ? zh
+                                  ? "图片已应用到文章"
+                                  : "Image applied to article"
+                                : imagePreviews[candidate.id].version_matches &&
                               imagePreviews[candidate.id].anchor_matches
                                 ? zh
                                   ? "文章预览已就绪"
@@ -997,9 +1004,9 @@ export function WorkflowRunRecords({
                               />
                             ) : null}
                             {imagePreviews[candidate.id].content ? (
-                              <pre className="agent-json-preview">
-                                {imagePreviews[candidate.id].content}
-                              </pre>
+                              <MarkdownRenderer
+                                content={imagePreviews[candidate.id].content || ""}
+                              />
                             ) : null}
                           </details>
                         ) : null}

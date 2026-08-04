@@ -11,6 +11,8 @@ const post = {
   slug: 'markdown-post',
   summary: 'Summary',
   content: '## Section\nThis has **bold** text and `code`.\n\n![Architecture diagram](/media/diagram.jpg)\n\n- first\n- second',
+  cover_url: '/media/cover.jpg',
+  cover_alt: 'Cover image',
   tags: ['go'],
   created_at: '2026-01-01T00:00:00Z',
 };
@@ -55,6 +57,7 @@ describe('PostDetail', () => {
     expect(screen.getByText('bold')).toBeInTheDocument();
     expect(screen.getByText('code')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Architecture diagram' })).toHaveAttribute('src', '/media/diagram.jpg');
+    expect(screen.getByRole('img', { name: 'Cover image' })).toHaveAttribute('src', '/media/cover.jpg');
     expect(await screen.findByText('Great')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Related Go Post/ })).toHaveAttribute('href', '/articles/related-go-post');
     expect(document.title).toBe('Markdown Post - Gouno Blog');

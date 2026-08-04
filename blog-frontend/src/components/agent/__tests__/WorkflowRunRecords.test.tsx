@@ -122,7 +122,7 @@ describe('WorkflowRunRecords', () => {
       if (String(url).endsWith('/interactions')) return Response.json({ data: [] });
       if (String(url).endsWith('/media-candidates')) return Response.json({ data: [candidate(1, 'cover'), candidate(2, 'inline')] });
       if (String(url).endsWith('/events')) return Response.json({ data: [] });
-      if (String(url).includes('/preview')) return Response.json({ data: { placement: 'cover', image_url: '/media/1.png', version_matches: true, anchor_matches: true, cover_url: '/media/1.png', content: 'Body' } });
+      if (String(url).includes('/preview')) return Response.json({ data: { placement: 'cover', image_url: '/media/1.png', version_matches: true, anchor_matches: true, cover_url: '/media/1.png', content: '## Preview heading\n\n**Body**' } });
       return Response.json({ data: {} });
     });
     render(<WorkflowRunRecords locale="zh" workflows={[workflow]} runs={[run]} formatDateTime={(value) => value} />);
@@ -135,6 +135,8 @@ describe('WorkflowRunRecords', () => {
     await waitFor(() => expect(apiFetch).toHaveBeenCalledWith('/api/admin/ai-workflow-runs/6/media-candidates/select', expect.objectContaining({ method: 'POST' })));
     await user.click(screen.getByRole('button', { name: '批量预览' }));
     await waitFor(() => expect(apiFetch).toHaveBeenCalledWith('/api/admin/ai-image-tasks/1/preview'));
+    expect((await screen.findAllByRole('heading', { name: 'Preview heading' }))).toHaveLength(2);
+    expect(screen.getAllByText('Body')).toHaveLength(2);
   });
 
   it('keeps an ungenerated image brief actionable inside its source run', async () => {
