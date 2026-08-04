@@ -148,6 +148,48 @@ func (s *ApprovalService) ApplyMediaCandidate(ctx context.Context, id int64) (*d
 	return post, nil
 }
 
+func (s *ApprovalService) PreviewMediaCandidate(ctx context.Context, id int64) (map[string]any, error) {
+	candidate, err := s.repo.GetMediaCandidate(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if candidate.MediaAssetID == nil || candidate.GenerationStatus != "generated" {
+		return nil, errors.New("image candidate is not ready to preview")
+	}
+	post, err := s.posts.GetByID(ctx, candidate.PostID)
+	if err != nil {
+		return nil, err
+	}
+	assets, err := s.growth.ListMedia(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var asset *domain.MediaAsset
+	for _, item := range assets {
+		if item.ID == *candidate.MediaAssetID {
+			asset = item
+			break
+		}
+	}
+	if asset == nil {
+		return nil, errors.New("media asset not found")
+	}
+	versionMatches := true
+	if expected, parseErr := strconv.ParseInt(candidate.PostVersionToken, 10, 64); parseErr == nil {
+		versionMatches = expected == post.UpdatedAt.Unix()
+	}
+	anchorMatches := candidate.Placement != "inline" || (candidate.Anchor != "" && strings.Contains(post.Content, candidate.Anchor))
+	preview := map[string]any{"post_id": post.ID, "title": post.Title, "placement": candidate.Placement, "image_url": asset.URL, "alt_text": candidate.AltText, "version_matches": versionMatches, "anchor_matches": anchorMatches, "cover_url": post.CoverURL, "content": post.Content}
+	if candidate.Placement == "inline" && anchorMatches {
+		preview["content"] = strings.Replace(post.Content, candidate.Anchor, candidate.Anchor+"\n\n!["+candidate.AltText+"]("+asset.URL+")", 1)
+	}
+	if candidate.Placement == "cover" {
+		preview["cover_url"] = asset.URL
+		preview["cover_alt"] = candidate.AltText
+	}
+	return preview, nil
+}
+
 func (s *ApprovalService) appendCandidateEvent(ctx context.Context, candidateID int64, eventType string, payload map[string]any) {
 	candidate, err := s.repo.GetMediaCandidate(ctx, candidateID)
 	if err != nil || candidate.WorkflowRunID == nil {

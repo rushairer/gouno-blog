@@ -248,6 +248,7 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 				admin.POST("/admin/ai-image-tasks/:id/cancel", agentCtrl.CancelImageTask)
 				admin.POST("/admin/ai-image-tasks/:id/select", agentCtrl.SelectImageTask)
 				admin.POST("/admin/ai-image-tasks/:id/apply", agentCtrl.ApplyImageTask)
+				admin.GET("/admin/ai-image-tasks/:id/preview", agentCtrl.PreviewImageTask)
 				admin.GET("/admin/ai-image-tasks/:id/events", agentCtrl.ImageTaskEvents)
 				admin.POST("/admin/ai-candidates/:id/select", agentCtrl.SelectCandidate)
 				admin.POST("/admin/ai-feedback", agentCtrl.SaveFeedback)

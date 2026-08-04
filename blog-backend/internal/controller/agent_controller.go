@@ -896,6 +896,19 @@ func (ctrl *AgentController) ApplyImageTask(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(post))
 }
 
+func (ctrl *AgentController) PreviewImageTask(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	preview, err := ctrl.approvals.PreviewMediaCandidate(c.Request.Context(), id)
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(preview))
+}
+
 func (ctrl *AgentController) ImageTaskEvents(c *gin.Context) {
 	id, ok := agentID(c)
 	if !ok {
