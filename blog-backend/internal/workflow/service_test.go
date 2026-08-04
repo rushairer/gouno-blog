@@ -7,8 +7,19 @@ import (
 	"testing"
 	"time"
 
+	"github.com/lib/pq"
 	"github.com/rushairer/blog-backend/internal/domain"
 )
+
+func TestWorkflowSaveErrorMapsConstraintViolationToConflict(t *testing.T) {
+	err := workflowSaveError(&pq.Error{Code: "23505", Constraint: "idx_ai_workflows_active_name"})
+	if !errors.Is(err, ErrConflict) {
+		t.Fatalf("workflowSaveError() = %v, want ErrConflict", err)
+	}
+	if !strings.Contains(err.Error(), "active Workflow") {
+		t.Fatalf("workflowSaveError() = %v, want actionable message", err)
+	}
+}
 
 func TestResolvePointer(t *testing.T) {
 	document := map[string]any{"input": map[string]any{"items": []any{map[string]any{"id": float64(7)}}}}

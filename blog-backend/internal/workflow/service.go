@@ -15,6 +15,7 @@ import (
 	"github.com/robfig/cron/v3"
 	agentservice "github.com/rushairer/blog-backend/internal/agent"
 	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/repository"
 	"github.com/rushairer/blog-backend/internal/tool"
 	"github.com/rushairer/blog-backend/internal/workflowplan"
 )
@@ -322,9 +323,16 @@ func (s *Service) Save(ctx context.Context, value *domain.Workflow) error {
 	}
 	if err != nil {
 		_ = tx.Rollback()
-		return err
+		return workflowSaveError(err)
 	}
 	return tx.Commit()
+}
+
+func workflowSaveError(err error) error {
+	if repository.IsConstraintError(err) {
+		return fmt.Errorf("%w: an active Workflow already uses this name or template", ErrConflict)
+	}
+	return err
 }
 
 func validateEventTriggers(triggers []domain.WorkflowEventTrigger) error {
