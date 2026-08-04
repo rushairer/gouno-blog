@@ -113,6 +113,7 @@ func (s *ApprovalService) ApplyMediaCandidate(ctx context.Context, id int64) (*d
 		return nil, service.ErrPostNotFound
 	}
 	if expected, parseErr := strconv.ParseInt(candidate.PostVersionToken, 10, 64); parseErr == nil && expected != post.UpdatedAt.Unix() {
+		s.appendCandidateEvent(ctx, id, "article_apply_conflict", map[string]any{"reason": "version_token"})
 		return nil, fmt.Errorf("article version conflict")
 	}
 	assets, err := s.growth.ListMedia(ctx)
@@ -131,12 +132,14 @@ func (s *ApprovalService) ApplyMediaCandidate(ctx context.Context, id int64) (*d
 	}
 	if candidate.Placement == "inline" {
 		if candidate.Anchor == "" || !strings.Contains(post.Content, candidate.Anchor) {
+			s.appendCandidateEvent(ctx, id, "article_apply_conflict", map[string]any{"reason": "anchor"})
 			return nil, fmt.Errorf("article anchor conflict")
 		}
 		post.Content = strings.Replace(post.Content, candidate.Anchor, candidate.Anchor+"\n\n!["+candidate.AltText+"]("+asset.URL+")", 1)
 	} else {
 		post.CoverURL, post.CoverAlt = asset.URL, candidate.AltText
 	}
+	s.appendCandidateEvent(ctx, id, "article_apply_confirmed", map[string]any{"post_id": post.ID, "placement": candidate.Placement})
 	if err := s.posts.UpdatePost(ctx, post); err != nil {
 		return nil, err
 	}
