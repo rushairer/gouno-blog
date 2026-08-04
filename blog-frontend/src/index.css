@@ -1582,6 +1582,16 @@ select option {
   border: 1px solid var(--border-color);
 }
 
+.workflow-article-preview {
+  display: block;
+  width: min(100%, 480px);
+  max-height: 260px;
+  margin-top: 10px;
+  object-fit: cover;
+  border-radius: var(--radius-control, 6px);
+  border: 1px solid var(--border-color);
+}
+
 @media (max-width: 640px) {
   .workflow-candidate-preview { width: 72px; height: 54px; }
 }
