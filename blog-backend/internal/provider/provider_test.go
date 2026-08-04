@@ -108,6 +108,25 @@ func TestAnthropicCompatibleImageParsesMarkdownDataURI(t *testing.T) {
 	}
 }
 
+func TestAnthropicCompatibleImageParsesNativeImageBlock(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"content":[{"type":"image","source":{"type":"base64","media_type":"image/png","data":"iVBORw0KGgo="}}]}`))
+	}))
+	defer server.Close()
+	client, err := NewHTTPProvider("anthropic", server.URL, "secret", "gemini-image", []string{"127.0.0.1"}, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	image, err := client.GenerateImage(context.Background(), ImageRequest{Prompt: "blue circle"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if image.MIMEType != "image/png" || len(image.Data) != 8 {
+		t.Fatalf("image = %#v", image)
+	}
+}
+
 func TestAnthropicSanitizesToolNamesWithDots(t *testing.T) {
 	var requestBody []byte
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -110,11 +110,16 @@ func (p *HTTPProvider) anthropicGenerate(ctx context.Context, req Request) (Resu
 	defer resp.Body.Close()
 	var decoded struct {
 		Content []struct {
-			Type  string          `json:"type"`
-			Text  string          `json:"text"`
-			ID    string          `json:"id"`
-			Name  string          `json:"name"`
-			Input json.RawMessage `json:"input"`
+			Type   string          `json:"type"`
+			Text   string          `json:"text"`
+			ID     string          `json:"id"`
+			Name   string          `json:"name"`
+			Input  json.RawMessage `json:"input"`
+			Source struct {
+				Type      string `json:"type"`
+				MediaType string `json:"media_type"`
+				Data      string `json:"data"`
+			} `json:"source"`
 		} `json:"content"`
 		StopReason string `json:"stop_reason"`
 		Usage      struct {
@@ -137,6 +142,13 @@ func (p *HTTPProvider) anthropicGenerate(ctx context.Context, req Request) (Resu
 			result.ToolCalls = append(result.ToolCalls, ToolCall{
 				ID: block.ID, Name: fromAnthropicToolName(block.Name, nameMap), Arguments: block.Input,
 			})
+		case "image":
+			// Anthropic-compatible image models return an image content block,
+			// whereas some gateways return a Markdown data URI. Normalize the
+			// standard block to the latter form so GenerateImage handles both.
+			if block.Source.Type == "base64" && block.Source.Data != "" {
+				result.Text += "data:" + block.Source.MediaType + ";base64," + block.Source.Data
+			}
 		}
 	}
 	return result, nil

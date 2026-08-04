@@ -423,6 +423,9 @@ func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, 
 		if errors.Is(generationCtx.Err(), context.DeadlineExceeded) {
 			return fail("image_generation_timeout", "image generation timed out")
 		}
+		if err != nil {
+			return fail("image_generation_failed", "image provider response: "+safeError(err))
+		}
 		return fail("image_generation_failed", "provider returned an invalid image")
 	}
 	ext := map[string]string{"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}[image.MIMEType]
