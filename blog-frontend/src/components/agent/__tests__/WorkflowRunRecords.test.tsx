@@ -116,7 +116,7 @@ describe('WorkflowRunRecords', () => {
   it('supports selecting and applying multiple image candidates in one run', async () => {
     const user = userEvent.setup();
     const candidate = (id: number, placement: string) => ({ id, post_id: 42, generation_status: 'generated', selected: false, placement, anchor: placement === 'inline' ? '## Details' : '', media_asset_url: `/media/${id}.png`, headline: `Candidate ${id}`, alt_text: `Alt ${id}` });
-    vi.mocked(apiFetch).mockImplementation(async (url, options) => {
+    vi.mocked(apiFetch).mockImplementation(async (url) => {
       if (String(url).endsWith('/steps')) return Response.json({ data: [] });
       if (String(url).endsWith('/resources')) return Response.json({ data: [] });
       if (String(url).endsWith('/interactions')) return Response.json({ data: [] });
@@ -153,5 +153,31 @@ describe('WorkflowRunRecords', () => {
     await waitFor(() => expect(apiFetch).toHaveBeenCalledWith('/api/admin/ai-image-tasks/9/regenerate', expect.objectContaining({
       method: 'POST', body: JSON.stringify({ instruction: '横版，不要人物' }),
     })));
+  });
+
+  it('keeps image generation visibly active while polling its source run', async () => {
+    const user = userEvent.setup();
+    vi.mocked(apiFetch).mockImplementation(async (url) => {
+      if (String(url).endsWith('/steps') || String(url).endsWith('/resources') || String(url).endsWith('/interactions') || String(url).endsWith('/events')) return Response.json({ data: [] });
+      if (String(url).endsWith('/media-candidates')) return Response.json({ data: [{
+        id: 12,
+        post_id: 42,
+        generation_status: 'generating',
+        selected: false,
+        placement: 'cover',
+        headline: 'Cover direction',
+        alt_text: 'Cover image',
+        generation_started_at: new Date(Date.now() - 5000).toISOString(),
+        generation_deadline_at: new Date(Date.now() + 15 * 60_000).toISOString(),
+      }] });
+      return Response.json({ data: {} });
+    });
+    render(<WorkflowRunRecords locale="zh" workflows={[workflow]} runs={[run]} formatDateTime={(value) => value} />);
+
+    await user.click(screen.getByRole('button', { name: /AI 每日资讯/ }));
+
+    expect(await screen.findByText('正在生成图片...')).toBeInTheDocument();
+    expect(screen.getByText(/已等待/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '取消生成' })).toBeInTheDocument();
   });
 });

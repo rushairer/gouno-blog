@@ -70,7 +70,7 @@ export function ProviderForm({
       </FormGrid>
       <Field label={`${labels.apiKey}${initial ? ` · ${labels.leaveBlank}` : ''}`}><input className="input-field mono" type="password" required={!initial} autoComplete="new-password" value={value.api_key} onChange={(event) => setValue((current) => ({ ...current, api_key: event.target.value }))} /></Field>
       <FormGrid columns={2} className="agent-limit-grid">
-        <Field label={labels.timeout}><input className="input-field" type="number" min="1" max="600" value={value.request_timeout_seconds} onChange={(event) => setValue((current) => ({ ...current, request_timeout_seconds: Number(event.target.value) }))} /></Field>
+        <Field label={labels.timeout} hint="图片生成模型建议设为 900 秒；最长 1800 秒。"><input className="input-field" type="number" min="1" max="1800" value={value.request_timeout_seconds} onChange={(event) => setValue((current) => ({ ...current, request_timeout_seconds: Number(event.target.value) }))} /></Field>
         <Field label={labels.maxOutput}><input className="input-field" type="number" min="1" max="100000" value={value.max_output_tokens} onChange={(event) => setValue((current) => ({ ...current, max_output_tokens: Number(event.target.value) }))} /></Field>
       </FormGrid>
       <label className="checkbox-label"><input type="checkbox" checked={value.enabled} onChange={(event) => setValue((current) => ({ ...current, enabled: event.target.checked }))} />{labels.providerEnabled}</label>

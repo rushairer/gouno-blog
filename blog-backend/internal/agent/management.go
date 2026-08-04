@@ -122,7 +122,7 @@ func (s *ManagementService) validateProvider(ctx context.Context, profile *domai
 	if err := provider.ValidateUpstreamURL(ctx, profile.BaseURL, s.allowedHosts); err != nil {
 		return fmt.Errorf("%w: %v", ErrInvalid, err)
 	}
-	if profile.RequestTimeoutSeconds < 1 || profile.RequestTimeoutSeconds > 600 ||
+	if profile.RequestTimeoutSeconds < 1 || profile.RequestTimeoutSeconds > 1800 ||
 		profile.MaxOutputTokens < 1 || profile.MaxOutputTokens > 100000 {
 		return fmt.Errorf("%w: provider limits are outside allowed ranges", ErrInvalid)
 	}

@@ -1102,7 +1102,7 @@ func (r *AgentRepository) AttachMediaAsset(ctx context.Context, candidateID, med
 // issuing multiple billable image requests for the same reviewed brief.
 func (r *AgentRepository) ClaimMediaGeneration(ctx context.Context, id int64) (*domain.MediaCandidate, error) {
 	var item domain.MediaCandidate
-	err := r.db.QueryRowContext(ctx, `UPDATE ai_media_candidates SET generation_status='generating',generation_attempt=generation_attempt+1,error_code=NULL,error_message=NULL,generation_started_at=NOW(),generation_deadline_at=NOW()+INTERVAL '2 minutes',cancelled_at=NULL
+	err := r.db.QueryRowContext(ctx, `UPDATE ai_media_candidates SET generation_status='generating',generation_attempt=generation_attempt+1,error_code=NULL,error_message=NULL,generation_started_at=NOW(),generation_deadline_at=NOW()+INTERVAL '15 minutes',cancelled_at=NULL
 		WHERE id=$1 AND generation_status IN ('brief_ready','ready_to_generate','failed','cancelled')
 		RETURNING id,post_id,source_run_id,source_approval_id,headline,brief,platform,provider,model,input_tokens,output_tokens,media_asset_id,
 		generation_status,safety_status,copyright_status,alt_text,reviewed_by,review_note,reviewed_at,created_at,generation_attempt,regeneration_instruction`, id).Scan(

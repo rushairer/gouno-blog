@@ -64,6 +64,17 @@ func TestUpAppliesCurrentSchemaAndIsIdempotent(t *testing.T) {
 	if !providerSoftDelete {
 		t.Fatal("expected ai_provider_profiles.deleted_at to exist")
 	}
+	var providerTimeoutExtended bool
+	if err := db.QueryRowContext(ctx, `SELECT EXISTS (
+		SELECT 1 FROM pg_constraint
+		WHERE conname='ai_provider_timeout_check'
+		AND pg_get_constraintdef(oid) LIKE '%1800%'
+	)`).Scan(&providerTimeoutExtended); err != nil {
+		t.Fatal(err)
+	}
+	if !providerTimeoutExtended {
+		t.Fatal("expected ai_provider_profiles timeout to allow 1800 seconds")
+	}
 	var providerSecretNullable bool
 	if err := db.QueryRowContext(ctx, `SELECT bool_and(is_nullable = 'YES')
 		FROM information_schema.columns

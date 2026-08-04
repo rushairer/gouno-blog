@@ -386,7 +386,9 @@ func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, 
 		s.appendCandidateEvent(ctx, id, "regeneration_requested", map[string]any{"attempt": candidate.GenerationAttempt})
 	}
 	s.appendCandidateEvent(ctx, id, "image_generation_started", map[string]any{"attempt": candidate.GenerationAttempt})
-	generationCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	// Image inference can legitimately take several minutes. The profile owns
+	// the HTTP timeout; this deadline is the persisted task-level upper bound.
+	generationCtx, cancel := context.WithTimeout(ctx, 15*time.Minute)
 	defer cancel()
 	fail := func(code, reason string) error {
 		_ = s.repo.RecordMediaGenerationError(ctx, id, code, reason)
