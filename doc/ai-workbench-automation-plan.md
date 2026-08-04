@@ -45,6 +45,7 @@ AI 工作台不再把 Workflow 输入理解为“由 Agent 提供的一段 JSON�
 - [x] `POST /api/admin/ai-workflow-runs/:id/media-candidates/select` 按 Run 校验候选归属、状态、位置和正文锚点，并以事务写入选择集。
 - [x] `POST /api/admin/ai-workflow-runs/:id/media-candidates/apply` 合并同一文章的封面与多张正文插图，执行版本令牌/锚点/媒体资产校验后只创建一个文章版本。
 - [x] Run 详情提供批量选择、批量预览和批量确认应用；版本冲突或重复封面会阻断整批操作。
+- [x] 后端覆盖候选归属、重复候选、正文锚点和位置校验；前端覆盖多候选勾选、批量选择和预览交互。
 
 ## 输入来源
 

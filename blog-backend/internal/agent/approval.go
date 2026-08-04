@@ -100,6 +100,19 @@ func (s *ApprovalService) SelectMediaCandidates(ctx context.Context, runID int64
 	if err != nil {
 		return err
 	}
+	if err := validateMediaCandidateSelections(available, selections); err != nil {
+		return err
+	}
+	if err := s.repo.SelectMediaCandidates(ctx, selections); err != nil {
+		return err
+	}
+	for _, selection := range selections {
+		s.appendCandidateEvent(ctx, selection.ID, "candidate_selected", map[string]any{"placement": selection.Placement, "batch": true})
+	}
+	return nil
+}
+
+func validateMediaCandidateSelections(available []*domain.MediaCandidate, selections []domain.MediaCandidateSelection) error {
 	byID := make(map[int64]*domain.MediaCandidate, len(available))
 	for _, candidate := range available {
 		byID[candidate.ID] = candidate
@@ -124,12 +137,6 @@ func (s *ApprovalService) SelectMediaCandidates(ctx context.Context, runID int64
 		if selection.Placement == "inline" && strings.TrimSpace(selection.Anchor) == "" {
 			return errors.New("inline image requires an anchor")
 		}
-	}
-	if err := s.repo.SelectMediaCandidates(ctx, selections); err != nil {
-		return err
-	}
-	for _, selection := range selections {
-		s.appendCandidateEvent(ctx, selection.ID, "candidate_selected", map[string]any{"placement": selection.Placement, "batch": true})
 	}
 	return nil
 }
