@@ -67,6 +67,17 @@ func TestWorkflowInputSchemaValidation(t *testing.T) {
 	}
 }
 
+func TestWorkflowInputSchemaDefaultMustMatchProperty(t *testing.T) {
+	valid := json.RawMessage(`{"type":"object","properties":{"format":{"type":"string","enum":["image_brief"],"default":"image_brief"}}}`)
+	if err := validateInputSchema(valid); err != nil {
+		t.Fatalf("valid schema default: %v", err)
+	}
+	invalid := json.RawMessage(`{"type":"object","properties":{"format":{"type":"string","enum":["image_brief"],"default":"social"}}}`)
+	if err := validateInputSchema(invalid); err == nil {
+		t.Fatal("default outside enum should be rejected")
+	}
+}
+
 func TestResourceQueryRulesAndFilters(t *testing.T) {
 	service := &Service{}
 	valid := []domain.WorkflowStep{

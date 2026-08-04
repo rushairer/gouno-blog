@@ -257,6 +257,6 @@ RSS 已通过白名单 HTTPS Tool 提供受限读取，站点 Sitemap 为现有�
 - Provider、Skill 或 Agent 缺失时，接口返回未持久化、默认停用的 Skill/Agent/Workflow 草案和明确前置条件；不会调用模型、保存凭据、创建资源、启用 Agent 或运行 Workflow。
 - 下一步的持久化体验应复用现有 Provider、Skill、Agent 完整表单，预填草案后由管理员确认 Tool 权限、预算、Provider 和启用状态，不能由 Workflow 页面静默默认这些安全字段。
 - 已实现 Skill 草案预填和 Agent 草案预填入口；两个表单都强制新草案保持停用，保存前仍由服务端校验能力、Provider、Skill Version、预算和触发器。
-- 已实现 Workflow `/preflight` 无副作用检查；Dry-run 和正式运行在入队前复用服务端校验输入 Schema、Agent 状态和只读 discovery 权限，缺失依赖会阻止调用 Agent 并返回明确原因。
+- 已实现 Workflow `/preflight` 无副作用检查；Dry-run 和正式运行在入队前复用服务端校验输入 Schema、Agent 状态和只读 discovery 权限，缺失依赖会阻止调用 Agent 并返回明确原因。运行表单只会根据 JSON Schema 明确声明的 `default` 补充未填写值，`enum` 只定义可选范围；可视化 Schema 字段编辑器与高级 JSON 共享同一配置，可编辑并保留 `enum` 和 `default`，服务端会拒绝不符合字段 Schema 的默认值。
 - Planner 已升级为 `workflow-planner/v4`：标准场景直接使用服务端模板编译；图片/封面目标固定生成 `image_brief` 审批提案，不会降级为 social；未覆盖的高级目标仍保留一次契约纠正重试。
 - 已完成 Intent/模板键持久化和运行前契约检查：历史 Workflow 标记 legacy/skipped，新 Workflow 检查模板、Tool 授权、审批路径和图片 Provider。

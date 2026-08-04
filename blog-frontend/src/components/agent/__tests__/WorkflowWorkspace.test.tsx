@@ -188,4 +188,30 @@ describe('WorkflowWorkspace', () => {
     expect(screen.getByLabelText('最少数量')).toBeInTheDocument();
     expect(screen.getByLabelText('最多数量')).toBeInTheDocument();
   });
+
+  it('keeps enum and default constraints synchronized when saving a visual schema field', async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const imageBrief = {
+      ...workflow,
+      steps: [{ id: 'writer', type: 'model' as const, agent_id: 5, input_pointer: '/input' }, { id: 'result', type: 'output' as const, output_pointer: '/steps/writer' }],
+      input_schema: {
+        type: 'object', additionalProperties: false, required: ['post_ids', 'format'], properties: {
+          format: { type: 'string', enum: ['image_brief'], default: 'image_brief' },
+          post_ids: { type: 'array', items: { type: 'integer' }, minItems: 1, maxItems: 20, 'x-gouno-resource': 'post', 'x-gouno-widget': 'entity-multi-select' },
+        },
+      },
+    };
+    render(<WorkflowWorkspace workflows={[imageBrief]} runs={[]} metrics={[]} agents={[{ id: 5, name: 'Image brief agent', enabled: true }] as never[]} locale="zh" onMutate={vi.fn()} onRun={vi.fn()} onSave={onSave} />);
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    expect(screen.getByLabelText('枚举值')).toHaveValue('image_brief');
+    expect(screen.getByLabelText('默认值')).toHaveValue('image_brief');
+    await user.click(screen.getByRole('button', { name: '保存 Workflow' }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(onSave.mock.calls[0][0].input_schema.properties.format).toMatchObject({
+      type: 'string', enum: ['image_brief'], default: 'image_brief',
+    });
+  });
 });

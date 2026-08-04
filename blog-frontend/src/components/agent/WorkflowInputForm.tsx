@@ -18,6 +18,7 @@ type SchemaProperty = {
   title?: string;
   description?: string;
   enum?: Array<string | number>;
+  default?: unknown;
   items?: { type?: string };
   minItems?: number;
   maxItems?: number;
@@ -159,8 +160,8 @@ export function WorkflowInputForm({ schema, value, onChange, locale = 'zh' }: {
   useEffect(() => { setRaw(JSON.stringify(value, null, 2)); setRawError(''); }, [value]);
   useEffect(() => {
     const fixedValues = Object.fromEntries(Object.entries(properties)
-      .filter(([name, property]) => property.enum?.length === 1 && value[name] === undefined)
-      .map(([name, property]) => [name, property.enum![0]]));
+      .filter(([name, property]) => property.default !== undefined && value[name] === undefined)
+      .map(([name, property]) => [name, property.default]));
     if (Object.keys(fixedValues).length > 0) onChange({ ...value, ...fixedValues });
   }, [onChange, properties, value]);
   const update = (name: string, next: unknown) => onChange({ ...value, [name]: next });
@@ -168,7 +169,7 @@ export function WorkflowInputForm({ schema, value, onChange, locale = 'zh' }: {
     {Object.entries(properties).map(([name, property]) => {
       const label = property.title || name.replaceAll('_', ' ');
       if (property['x-gouno-resource']) return <Field key={name} label={label} hint={property.description} required={required.has(name)}><ResourcePicker property={property} value={value[name]} onChange={(next) => update(name, next)} locale={locale} /></Field>;
-      if (property.enum?.length === 1) return <Field key={name} label={label} hint={property.description} required={required.has(name)}><div className="workflow-fixed-input"><strong>{String(value[name] ?? property.enum[0])}</strong><small>{locale === 'zh' ? '固定模板参数' : 'Fixed template parameter'}</small></div></Field>;
+      if (property.enum?.length === 1 && property.default === property.enum[0]) return <Field key={name} label={label} hint={property.description} required={required.has(name)}><div className="workflow-fixed-input"><strong>{String(value[name] ?? property.default)}</strong><small>{locale === 'zh' ? '固定模板参数' : 'Fixed template parameter'}</small></div></Field>;
       if (property.enum) return <Field key={name} label={label} hint={property.description} required={required.has(name)}><Select value={String(value[name] ?? '')} onChange={(event) => update(name, property.type === 'integer' ? Number(event.target.value) : event.target.value)}><option value="">{locale === 'zh' ? '请选择' : 'Select'}</option>{property.enum.map((option) => <option key={String(option)} value={String(option)}>{String(option)}</option>)}</Select></Field>;
       if (property.type === 'boolean') return <label className="checkbox-field" key={name}><Checkbox checked={Boolean(value[name])} onChange={(event) => update(name, event.target.checked)} />{label}</label>;
       if (property.type === 'array') return <Field key={name} label={label} hint={property.description}><Input value={Array.isArray(value[name]) ? (value[name] as unknown[]).join(', ') : ''} onChange={(event) => update(name, event.target.value.split(',').map((item) => item.trim()).filter(Boolean))} /></Field>;

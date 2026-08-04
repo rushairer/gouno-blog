@@ -31,6 +31,21 @@ func validateInputSchema(raw json.RawMessage) error {
 	properties, _ := value["properties"].(map[string]any)
 	for name, rawProperty := range properties {
 		property, _ := rawProperty.(map[string]any)
+		if defaultValue, hasDefault := property["default"]; hasDefault {
+			propertyRaw, err := json.Marshal(property)
+			if err != nil {
+				return fmt.Errorf("%w: input field %q has an invalid default", ErrInvalid, name)
+			}
+			propertyCompiler := jsonschema.NewCompiler()
+			propertyCompiler.Draft = jsonschema.Draft2020
+			if err := propertyCompiler.AddResource("workflow-input-property.json", bytes.NewReader(propertyRaw)); err != nil {
+				return fmt.Errorf("%w: input field %q has an invalid default schema", ErrInvalid, name)
+			}
+			propertySchema, err := propertyCompiler.Compile("workflow-input-property.json")
+			if err != nil || propertySchema.Validate(defaultValue) != nil {
+				return fmt.Errorf("%w: input field %q default does not match its schema", ErrInvalid, name)
+			}
+		}
 		resourceType, _ := property["x-gouno-resource"].(string)
 		if resourceType == "" {
 			continue

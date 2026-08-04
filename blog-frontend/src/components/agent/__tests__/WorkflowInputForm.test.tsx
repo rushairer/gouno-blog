@@ -72,9 +72,9 @@ describe('WorkflowInputForm', () => {
     expect(screen.getByText('有 1 项资源已删除或不可用，请移除后再运行。')).toBeInTheDocument();
   });
 
-  it('supplies and renders a single enum as a fixed template parameter', async () => {
+  it('supplies and renders an explicit schema default as a fixed template parameter', async () => {
     const onChange = vi.fn();
-    render(<WorkflowInputForm schema={{ type: 'object', required: ['format'], properties: { format: { title: '输出类型', type: 'string', enum: ['image_brief'] } } }} value={{}} onChange={onChange} />);
+    render(<WorkflowInputForm schema={{ type: 'object', required: ['format'], properties: { format: { title: '输出类型', type: 'string', enum: ['image_brief'], default: 'image_brief' } } }} value={{}} onChange={onChange} />);
 
     await waitFor(() => expect(onChange).toHaveBeenCalledWith({ format: 'image_brief' }));
     expect(screen.getByText('image_brief')).toBeInTheDocument();
