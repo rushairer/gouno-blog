@@ -279,6 +279,7 @@ type MediaCandidate struct {
 	GenerationStartedAt  *time.Time   `json:"generation_started_at,omitempty"`
 	GenerationDeadlineAt *time.Time   `json:"generation_deadline_at,omitempty"`
 	CancelledAt          *time.Time   `json:"cancelled_at,omitempty"`
+	RegenerationInstruction string    `json:"regeneration_instruction,omitempty"`
 }
 
 // MediaCandidateSelection is the user-authored placement for one generated

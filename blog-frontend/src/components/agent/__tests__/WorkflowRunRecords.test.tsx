@@ -136,4 +136,22 @@ describe('WorkflowRunRecords', () => {
     await user.click(screen.getByRole('button', { name: '批量预览' }));
     await waitFor(() => expect(apiFetch).toHaveBeenCalledWith('/api/admin/ai-image-tasks/1/preview'));
   });
+
+  it('keeps an ungenerated image brief actionable inside its source run', async () => {
+    const user = userEvent.setup();
+    vi.mocked(apiFetch).mockImplementation(async (url) => {
+      if (String(url).endsWith('/steps') || String(url).endsWith('/resources') || String(url).endsWith('/interactions') || String(url).endsWith('/events')) return Response.json({ data: [] });
+      if (String(url).endsWith('/media-candidates')) return Response.json({ data: [{ id: 9, post_id: 42, generation_status: 'brief_ready', selected: false, placement: 'cover', headline: 'Cover direction', alt_text: 'Cover image' }] });
+      return Response.json({ data: {} });
+    });
+    render(<WorkflowRunRecords locale="zh" workflows={[workflow]} runs={[run]} formatDateTime={(value) => value} />);
+
+    await user.click(screen.getByRole('button', { name: /AI 每日资讯/ }));
+    await user.type(await screen.findByRole('textbox', { name: '图片要求 9' }), '横版，不要人物');
+    await user.click(screen.getByRole('button', { name: '开始生成候选图片' }));
+
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledWith('/api/admin/ai-image-tasks/9/regenerate', expect.objectContaining({
+      method: 'POST', body: JSON.stringify({ instruction: '横版，不要人物' }),
+    })));
+  });
 });

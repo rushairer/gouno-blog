@@ -414,7 +414,11 @@ func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, 
 	if !ok {
 		return fail("image_generation_failed", "provider does not support image generation")
 	}
-	image, err := generator.GenerateImage(generationCtx, provider.ImageRequest{Prompt: candidate.Brief})
+	prompt := candidate.Brief
+	if candidate.RegenerationInstruction != "" {
+		prompt += "\n\nAdditional editor requirements for this generation:\n" + candidate.RegenerationInstruction
+	}
+	image, err := generator.GenerateImage(generationCtx, provider.ImageRequest{Prompt: prompt})
 	if err != nil || len(image.Data) == 0 || len(image.Data) > 10<<20 || (image.MIMEType != "image/jpeg" && image.MIMEType != "image/png" && image.MIMEType != "image/webp") {
 		if errors.Is(generationCtx.Err(), context.DeadlineExceeded) {
 			return fail("image_generation_timeout", "image generation timed out")
@@ -451,6 +455,23 @@ func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, 
 	return nil
 }
 
+func (s *ApprovalService) SetMediaGenerationInstruction(ctx context.Context, id int64, instruction string) error {
+	instruction = strings.TrimSpace(instruction)
+	if id <= 0 || len([]rune(instruction)) > 2000 {
+		return ErrInvalid
+	}
+	if err := s.repo.SetMediaGenerationInstruction(ctx, id, instruction); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrApprovalConflict
+		}
+		return err
+	}
+	if instruction != "" {
+		s.appendCandidateEvent(ctx, id, "regeneration_requested", map[string]any{"instruction": instruction})
+	}
+	return nil
+}
+
 func (s *ApprovalService) Reject(ctx context.Context, id int64, reviewer, note string) error {
 	if err := s.repo.RejectApproval(ctx, id, reviewer, strings.TrimSpace(note)); err != nil {
 		return ErrApprovalConflict
@@ -481,6 +502,41 @@ func (s *ApprovalService) Approve(ctx context.Context, id int64, reviewer, note 
 		return err
 	}
 	return s.repo.CompleteApproval(ctx, id, domain.ApprovalExecuted, "")
+}
+
+// StartImageGenerationForApprovedBrief bridges the approved image brief to the
+// run-owned image task. It intentionally runs after approval is committed so a
+// retry can never create a second candidate or bypass the existing approval.
+func (s *ApprovalService) StartImageGenerationForApprovedBrief(ctx context.Context, approvalID int64, creator string) error {
+	approval, err := s.repo.GetApproval(ctx, approvalID)
+	if err != nil {
+		return translateError(err)
+	}
+	if approval.Status != domain.ApprovalExecuted || !isImageBriefApproval(approval) {
+		return nil
+	}
+	candidates, err := s.repo.ListMediaCandidates(ctx)
+	if err != nil {
+		return err
+	}
+	for _, candidate := range candidates {
+		if candidate.SourceApprovalID != approval.ID {
+			continue
+		}
+		s.appendCandidateEvent(ctx, candidate.ID, "image_candidates_created", map[string]any{"candidate_id": candidate.ID, "post_id": candidate.PostID})
+		return s.GenerateMediaCandidate(ctx, candidate.ID, creator)
+	}
+	return ErrApprovalConflict
+}
+
+func isImageBriefApproval(approval *domain.AgentApproval) bool {
+	if approval == nil || (approval.ActionType != "create_media_candidate" && approval.ActionType != "create_distribution_draft") {
+		return false
+	}
+	var payload struct {
+		Format string `json:"format"`
+	}
+	return json.Unmarshal(approval.ProposedPayload, &payload) == nil && payload.Format == "image_brief"
 }
 
 func (s *ApprovalService) validateConflict(ctx context.Context, approval *domain.AgentApproval) error {

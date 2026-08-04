@@ -836,6 +836,19 @@ func (ctrl *AgentController) GenerateMediaCandidate(c *gin.Context) {
 	if !ok {
 		return
 	}
+	var req struct {
+		Instruction string `json:"instruction"`
+	}
+	if c.Request.ContentLength > 0 {
+		if err := bindAgentJSON(c, &req); err != nil {
+			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+			return
+		}
+		if err := ctrl.approvals.SetMediaGenerationInstruction(c.Request.Context(), id, req.Instruction); err != nil {
+			writeAgentError(c, err)
+			return
+		}
+	}
 	creator, _ := c.Get("account_id")
 	creatorText, _ := creator.(string)
 	// Image providers can take considerably longer than an HTTP request timeout.
@@ -2056,6 +2069,12 @@ func (ctrl *AgentController) reviewApproval(c *gin.Context, approve bool) {
 	var err error
 	if approve {
 		err = ctrl.approvals.Approve(c.Request.Context(), id, reviewerText, req.Note)
+		if err == nil {
+			// The image brief has already passed the governed approval. Continue the
+			// run-owned generation asynchronously; progress is persisted and shown
+			// in the originating Workflow Run rather than the media library.
+			go func() { _ = ctrl.approvals.StartImageGenerationForApprovedBrief(ctrl.workerCtx, id, reviewerText) }()
+		}
 	} else {
 		err = ctrl.approvals.Reject(c.Request.Context(), id, reviewerText, req.Note)
 	}

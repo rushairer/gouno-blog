@@ -248,6 +248,7 @@ export interface MediaCandidate {
   generation_started_at?: string;
   generation_deadline_at?: string;
   cancelled_at?: string;
+  regeneration_instruction?: string;
 }
 
 export interface EditorialTask {
@@ -335,6 +336,7 @@ export interface AgentRun {
   finished_at?: string;
   created_at: string;
   citations?: AgentCitation[];
+  workflow_run_id?: number;
 }
 
 export interface AgentToolCall {

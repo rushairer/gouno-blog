@@ -676,6 +676,18 @@ export default function AgentConsole() {
   const review = async (approval: AgentApproval, approved: boolean) => {
     try {
       await mutate(`/api/admin/agent-approvals/${approval.id}/${approved ? 'approve' : 'reject'}`, 'POST', { note: '' });
+      const sourceRun = runs.find((run) => run.id === approval.run_id);
+      if (approved && sourceRun?.workflow_run_id) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('tab', 'records');
+        url.searchParams.set('record', 'workflow');
+        url.searchParams.set('run', String(sourceRun.workflow_run_id));
+        window.history.replaceState(null, '', url);
+        setRecordType('workflow');
+        setTab('records');
+        setNotice(locale === 'zh' ? '已批准。图片正在本次 Workflow 运行中生成，完成后可在此选择、预览和应用。' : 'Approved. Images are generating in this Workflow Run; choose, preview, and apply them here when ready.');
+        return;
+      }
       setNotice(approved ? labels.approve : labels.reject);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : labels.requestFailed);

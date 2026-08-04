@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/rushairer/blog-backend/internal/domain"
@@ -51,5 +52,21 @@ func TestValidateMediaCandidateSelections(t *testing.T) {
 				t.Fatalf("error = %v, want %q", err, test.want)
 			}
 		})
+	}
+}
+
+func TestIsImageBriefApproval(t *testing.T) {
+	imageBrief := &domain.AgentApproval{ActionType: "create_distribution_draft", ProposedPayload: json.RawMessage(`{"format":"image_brief"}`)}
+	if !isImageBriefApproval(imageBrief) {
+		t.Fatal("image brief approval should start the run-owned generation")
+	}
+	for _, approval := range []*domain.AgentApproval{
+		{ActionType: "create_distribution_draft", ProposedPayload: json.RawMessage(`{"format":"social"}`)},
+		{ActionType: "update_post", ProposedPayload: json.RawMessage(`{"format":"image_brief"}`)},
+		{ActionType: "create_distribution_draft", ProposedPayload: json.RawMessage(`invalid`)},
+	} {
+		if isImageBriefApproval(approval) {
+			t.Fatalf("non-image approval %#v should not start generation", approval)
+		}
 	}
 }
