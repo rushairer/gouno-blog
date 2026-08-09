@@ -33,3 +33,19 @@ func TestBindAgentJSONRunsStructValidation(t *testing.T) {
 		t.Fatal("expected required fields to be validated")
 	}
 }
+
+func TestBindWorkflowJSONRejectsOversizedBody(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	request := httptest.NewRequest("POST", "/", strings.NewReader(`{"prompt":"`+strings.Repeat("x", maxWorkflowJSONBody)+`"}`))
+	recorder := httptest.NewRecorder()
+	context, _ := gin.CreateTestContext(recorder)
+	context.Request = request
+
+	var value workflowDraftRequest
+	if bindWorkflowJSON(context, &value) {
+		t.Fatal("expected oversized workflow request to be rejected")
+	}
+	if recorder.Code != 413 {
+		t.Fatalf("status = %d, want 413", recorder.Code)
+	}
+}

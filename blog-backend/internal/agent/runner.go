@@ -519,9 +519,15 @@ func (r *Runner) authorizeScopedTool(ctx context.Context, run *domain.AgentRun, 
 	}
 	rule, ok := r.tools.Scope(name)
 	if !ok || rule == nil {
+		if risk != domain.ToolRiskRead {
+			return fmt.Errorf("%w: %s has no resource scope in a strict workflow run", tool.ErrUnauthorized, name)
+		}
 		return nil
 	}
 	if rule.ResourceType == "" || rule.Argument == "" {
+		if risk != domain.ToolRiskRead {
+			return fmt.Errorf("%w: %s cannot modify resources without a scoped target", tool.ErrUnauthorized, name)
+		}
 		return nil
 	}
 	var values map[string]any

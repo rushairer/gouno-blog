@@ -42,6 +42,8 @@ type AgentController struct {
 	connectors *connector.Service
 }
 
+const maxWorkflowJSONBody = 256 << 10
+
 func (ctrl *AgentController) SetConnectorService(value *connector.Service) { ctrl.connectors = value }
 
 func (ctrl *AgentController) ListConnectorProfiles(c *gin.Context) {
@@ -309,8 +311,7 @@ func buildAutomationPlan(prompt string, profiles []*domain.ProviderProfile, agen
 // It is read-only: no Provider, Skill, Agent, credential, or Workflow is saved.
 func (ctrl *AgentController) DraftAutomationPlan(c *gin.Context) {
 	var req automationPlanRequest
-	if err := bindAgentJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+	if !bindWorkflowJSON(c, &req) {
 		return
 	}
 	req.Prompt = strings.TrimSpace(req.Prompt)
@@ -470,8 +471,7 @@ func enforceImageBriefContract(goal string, draft *domain.Workflow) {
 // definition. It never persists the result; users review it in the editor.
 func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
 	var req workflowDraftRequest
-	if err := bindAgentJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+	if !bindWorkflowJSON(c, &req) {
 		return
 	}
 	req.Prompt = strings.TrimSpace(req.Prompt)
@@ -1064,8 +1064,7 @@ func (ctrl *AgentController) DeleteWorkflow(c *gin.Context) {
 
 func (ctrl *AgentController) saveWorkflow(c *gin.Context, id int64) {
 	var value domain.Workflow
-	if err := bindAgentJSON(c, &value); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+	if !bindWorkflowJSON(c, &value) {
 		return
 	}
 	value.ID = id
@@ -1151,8 +1150,7 @@ func (ctrl *AgentController) PreflightWorkflow(c *gin.Context) {
 		Input  json.RawMessage `json:"input"`
 		DryRun bool            `json:"dry_run"`
 	}
-	if err := bindAgentJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+	if !bindWorkflowJSON(c, &req) {
 		return
 	}
 	result, err := ctrl.workflows.Preflight(c.Request.Context(), id, req.Input, req.DryRun)
@@ -1261,8 +1259,7 @@ func (ctrl *AgentController) queueWorkflow(c *gin.Context, dryRun bool) {
 		Input json.RawMessage `json:"input"`
 	}
 	if c.Request.ContentLength > 0 {
-		if err := bindAgentJSON(c, &req); err != nil {
-			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		if !bindWorkflowJSON(c, &req) {
 			return
 		}
 	}
@@ -2095,6 +2092,22 @@ func bindAgentJSON(c *gin.Context, value any) error {
 		return fmt.Errorf("request body must contain one JSON object")
 	}
 	return binding.Validator.ValidateStruct(value)
+}
+
+// bindWorkflowJSON keeps the Workflow authoring and execution surfaces bounded
+// before JSON decoding allocates request-controlled data structures.
+func bindWorkflowJSON(c *gin.Context, value any) bool {
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxWorkflowJSONBody)
+	if err := bindAgentJSON(c, value); err != nil {
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			c.JSON(http.StatusRequestEntityTooLarge, gouno.NewErrorResponse(http.StatusRequestEntityTooLarge, "workflow request body exceeds 256 KiB"))
+		} else {
+			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		}
+		return false
+	}
+	return true
 }
 
 func agentID(c *gin.Context) (int64, bool) {
