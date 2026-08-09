@@ -153,7 +153,7 @@ export function WorkflowInputForm({ schema, value, onChange, locale = 'zh' }: {
   onChange: (value: Record<string, unknown>) => void;
   locale?: 'zh' | 'en';
 }) {
-  const properties = (schema.properties || {}) as Record<string, SchemaProperty>;
+  const properties = useMemo(() => (schema.properties || {}) as Record<string, SchemaProperty>, [schema]);
   const required = new Set(Array.isArray(schema.required) ? schema.required.filter((item): item is string => typeof item === 'string') : []);
   const [raw, setRaw] = useState(() => JSON.stringify(value, null, 2));
   const [rawError, setRawError] = useState('');

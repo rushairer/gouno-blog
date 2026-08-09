@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Check, KeyRound, LockKeyhole, Play, RotateCcw, ShieldOff, Trash2 } from 'lucide-react';
 import type { ConnectorKind, ConnectorOutboxItem, ConnectorProfile } from '../../agent';
 import { apiFetch } from '../../auth';
@@ -33,12 +33,12 @@ export function ConnectorWorkspace({ locale, readData, onRefresh }: { locale: Lo
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
-  const load = async () => {
+  const load = useCallback(async () => {
     const [profileResponse, outboxResponse] = await Promise.all([apiFetch('/api/admin/ai-connectors'), apiFetch('/api/admin/ai-connector-outbox')]);
     setProfiles(await readData<ConnectorProfile[]>(profileResponse));
     setOutbox(await readData<ConnectorOutboxItem[]>(outboxResponse));
-  };
-  useEffect(() => { void load().catch((reason: Error) => setError(reason.message)); }, []);
+  }, [readData]);
+  useEffect(() => { void load().catch((reason: Error) => setError(reason.message)); }, [load]);
 
   const action = async (path: string, body?: unknown) => {
     setError('');
