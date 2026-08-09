@@ -952,14 +952,12 @@ func workflowNext(value *domain.Workflow) *time.Time {
 }
 
 func (s *Service) StartScheduler(ctx context.Context, interval time.Duration) {
-	// A process restart invalidates every in-memory worker. Leaving those rows as
-	// running/queued would make the idempotency key return a run that can never
-	// finish, so preserve the audit and make it explicitly retryable.
-	_, _ = s.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status='failed',
-		error_code='worker_interrupted',
-		error_message='Workflow execution was interrupted by a service restart. Retry the run.',
-		finished_at=NOW()
-		WHERE status IN ('queued','running')`)
+	// Execution state is persisted. Requeue interrupted work on startup; completed
+	// step rows are replayed, so a recovered run does not repeat successful steps.
+	_, _ = s.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status='queued',
+		error_code=NULL,error_message=NULL,started_at=NULL,finished_at=NULL
+		WHERE status='running'`)
+	s.recoverQueuedRuns(ctx)
 	go func() {
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
@@ -973,6 +971,20 @@ func (s *Service) StartScheduler(ctx context.Context, interval time.Duration) {
 			}
 		}
 	}()
+}
+
+func (s *Service) recoverQueuedRuns(ctx context.Context) {
+	rows, err := s.db.QueryContext(ctx, `SELECT id FROM ai_workflow_runs WHERE status='queued' ORDER BY created_at LIMIT 20`)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id int64
+		if rows.Scan(&id) == nil {
+			go s.Execute(ctx, id)
+		}
+	}
 }
 
 func (s *Service) tick(ctx context.Context) {
