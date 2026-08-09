@@ -1,5 +1,5 @@
 import { ChevronRight, GitBranch, LoaderCircle } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiFetch } from "../../auth";
 import type {
   MediaCandidate,
@@ -112,7 +112,7 @@ export function WorkflowRunRecords({
     ? runs.filter((run) => run.workflow_id === workflowID)
     : runs;
 
-  const inspect = async (run: WorkflowRun) => {
+  const inspect = useCallback(async (run: WorkflowRun) => {
     setLoadingID(run.id);
     setError("");
     try {
@@ -171,7 +171,7 @@ export function WorkflowRunRecords({
     } finally {
       setLoadingID(null);
     }
-  };
+  }, [zh]);
 
   const resolveInteraction = async (
     task: WorkflowInteractionTask,
@@ -406,6 +406,7 @@ export function WorkflowRunRecords({
     }
   };
 
+  const generatingSignature = selected?.candidates.map((candidate) => candidate.generation_status).join(",") || "";
   useEffect(() => {
     if (
       !selected ||
@@ -425,12 +426,7 @@ export function WorkflowRunRecords({
       window.clearInterval(refreshTimer);
       window.clearInterval(clockTimer);
     };
-  }, [
-    selected?.run.id,
-    selected?.candidates
-      .map((candidate) => candidate.generation_status)
-      .join(","),
-  ]);
+  }, [generatingSignature, inspect, selected]);
 
   const retryStep = async (step: WorkflowStepRun) => {
     if (!selected || step.iteration === undefined) return;
@@ -506,7 +502,7 @@ export function WorkflowRunRecords({
     if (!requested) return;
     inspectedFromURL.current = true;
     void inspect(requested);
-  }, [runs]);
+  }, [inspect, runs]);
 
   return (
     <div className="workflow-records section-stack">

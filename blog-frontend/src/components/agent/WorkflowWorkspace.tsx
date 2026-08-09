@@ -332,7 +332,7 @@ function ResourceQueryBuilder({ step, onAdd, onChange, onRemove, savedPreview, l
         .catch((reason: Error) => { if (reason.name !== 'AbortError') { setPreview(null); setPreviewError(reason.message); } });
     }, 180);
     return () => { window.clearTimeout(timer); controller.abort(); };
-  }, [filterSignature, resourceType, step]);
+  }, [filterSignature, filters, resourceType, step]);
   if (!step) return <section className="workflow-resource-query-builder"><div><strong><Database />动态资源筛选</strong><p>每次计划运行开始时固定目标集合；后续重试会复用同一快照。</p></div><Button variant="secondary" type="button" onClick={onAdd}><Plus />添加动态资源筛选</Button></section>;
   const updateFilter = (key: string, value: string, type: ResourceQueryFilter['type']) => {
     const next = { ...filters } as Record<string, unknown>;

@@ -109,7 +109,7 @@ function ResourcePicker({ property, value, onChange, locale }: {
       setUnavailable(body.data?.unavailable_keys || []);
     }).catch((reason: Error) => { if (reason.name !== 'AbortError') setError(reason.message); });
     return () => controller.abort();
-  }, [resourceType, selectedSignature]);
+  }, [resourceType, selected, selectedSignature]);
   const convert = (key: string) => property.type === 'integer' || property.items?.type === 'integer' ? Number(key) : key;
   const toggle = (key: string) => {
     const converted = convert(key);
