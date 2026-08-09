@@ -1519,38 +1519,38 @@ select option {
 
 /* Syntax Highlighting Tokens */
 .code-block-wrapper pre code {
-  color: var(--ui-on-code, #e2e8f0);
+  color: var(--ui-on-code);
 }
 
 .token-comment {
-  color: #8b949e;
+  color: var(--ui-code-comment);
   font-style: italic;
 }
 
 .token-keyword {
-  color: #ff7b72;
+  color: var(--ui-code-keyword);
   font-weight: 600;
 }
 
 .token-string {
-  color: #a5d6ff;
+  color: var(--ui-code-string);
 }
 
 .token-boolean {
-  color: #79c0ff;
+  color: var(--ui-code-number);
 }
 
 .token-number {
-  color: #79c0ff;
+  color: var(--ui-code-number);
 }
 
 .token-function {
-  color: #d2a8ff;
+  color: var(--ui-code-function);
   font-weight: 500;
 }
 
 .token-type {
-  color: #ffa657;
+  color: var(--ui-code-type);
 }
 
 /* Admin Preview Banner */
@@ -1560,10 +1560,10 @@ select option {
   justify-content: space-between;
   gap: 12px;
   padding: 10px 16px;
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  background: var(--ui-warning-alpha-soft);
+  border: 1px solid var(--ui-warning-alpha-border);
   border-radius: var(--radius-control, 6px);
-  color: #f59e0b;
+  color: var(--ui-warning);
   font-size: 13px;
 }
 

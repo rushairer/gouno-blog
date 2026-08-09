@@ -43,6 +43,14 @@
   --ui-code-control: rgba(255, 255, 255, 0.12);
   --ui-code-control-border: rgba(255, 255, 255, 0.2);
   --ui-on-code: #f1f5f9;
+  --ui-code-comment: #8b949e;
+  --ui-code-keyword: #ff7b72;
+  --ui-code-string: #a5d6ff;
+  --ui-code-number: #79c0ff;
+  --ui-code-function: #d2a8ff;
+  --ui-code-type: #ffa657;
+  --ui-warning-alpha-soft: color-mix(in srgb, var(--ui-warning) 12%, transparent);
+  --ui-warning-alpha-border: color-mix(in srgb, var(--ui-warning) 30%, transparent);
 
   --space-1: 4px;
   --space-2: 8px;
