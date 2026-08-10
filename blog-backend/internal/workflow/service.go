@@ -990,6 +990,9 @@ func (s *Service) recoverQueuedRuns(ctx context.Context) {
 
 func (s *Service) tick(ctx context.Context) {
 	s.processPendingEvents(ctx)
+	// Startup recovery is deliberately bounded. Keep draining any larger backlog
+	// on subsequent scheduler ticks instead of leaving runs queued indefinitely.
+	s.recoverQueuedRuns(ctx)
 	// Claim due rows before queueing. SKIP LOCKED keeps multiple web instances
 	// from returning the same queued run to two in-memory workers.
 	rows, err := s.db.QueryContext(ctx, `UPDATE ai_workflows SET next_run_at=NULL
