@@ -110,6 +110,14 @@ async function readData<T>(response: Response): Promise<T> {
   return body.data as T;
 }
 
+// Tool definitions are code-published and cannot change during a browser session.
+// Reusing the request avoids refetching the same catalog after every mutation.
+let toolCatalogRequest: Promise<ToolDefinition[]> | null = null;
+function loadToolCatalog(): Promise<ToolDefinition[]> {
+  if (!toolCatalogRequest) toolCatalogRequest = apiFetch('/api/admin/agent-tools').then(readData<ToolDefinition[]>);
+  return toolCatalogRequest;
+}
+
 function formatCapability(value: string) {
   return value.replace('.', ' / ').replaceAll('_', ' ');
 }
@@ -451,7 +459,7 @@ export default function AgentConsole() {
       readData<Agent[]>(await apiFetch('/api/admin/agents')),
       readData<{ list: AgentRun[] }>(await apiFetch('/api/admin/agent-runs?pageSize=100')),
       readData<{ list: AgentApproval[] }>(await apiFetch(`/api/admin/agent-approvals?status=${approvalStatus}&pageSize=100`)),
-      readData<ToolDefinition[]>(await apiFetch('/api/admin/agent-tools')),
+      loadToolCatalog(),
       readData<AgentSkill[]>(await apiFetch('/api/admin/agent-skills')),
       readData<Workflow[]>(await apiFetch('/api/admin/ai-workflows')),
       loadWorkflowRuns(),
