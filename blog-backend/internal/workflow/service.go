@@ -27,11 +27,12 @@ var (
 )
 
 type Service struct {
-	db      *sql.DB
-	runner  *agentservice.Runner
-	agents  *agentservice.ManagementService
-	tools   *tool.Registry
-	catalog *ResourceCatalog
+	db        *sql.DB
+	runner    *agentservice.Runner
+	agents    *agentservice.ManagementService
+	tools     *tool.Registry
+	catalog   *ResourceCatalog
+	workerSem chan struct{}
 }
 
 type PreflightCheck struct {
@@ -183,7 +184,7 @@ func NewService(db *sql.DB, runner *agentservice.Runner, agents *agentservice.Ma
 	if len(registries) > 0 {
 		registry = registries[0]
 	}
-	return &Service{db: db, runner: runner, agents: agents, tools: registry, catalog: NewResourceCatalog(db)}
+	return &Service{db: db, runner: runner, agents: agents, tools: registry, catalog: NewResourceCatalog(db), workerSem: make(chan struct{}, 4)}
 }
 
 const workflowColumns = `w.id, w.name, w.description, w.enabled, w.cron_expression, w.timezone, w.next_run_at, w.template_key,
@@ -1065,6 +1066,14 @@ func (s *Service) Resume(ctx context.Context, runID int64) error {
 }
 
 func (s *Service) Execute(ctx context.Context, runID int64) {
+	if s.workerSem != nil {
+		select {
+		case s.workerSem <- struct{}{}:
+			defer func() { <-s.workerSem }()
+		case <-ctx.Done():
+			return
+		}
+	}
 	if err := s.execute(ctx, runID); err != nil {
 		code, message := "workflow_failed", safeError(err)
 		result, updateErr := s.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status='failed',
