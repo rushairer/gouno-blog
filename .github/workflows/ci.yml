@@ -31,8 +31,13 @@ jobs:
           go-version-file: blog-backend/go.mod
           cache-dependency-path: blog-backend/go.sum
 
-      - name: Test
-        run: go test ./...
+      - name: Test with coverage
+        run: go test -coverprofile=coverage.out ./...
+
+      - name: Enforce coverage floor
+        run: |
+          coverage=$(go tool cover -func=coverage.out | awk '/^total:/ { gsub("%", "", $3); print $3 }')
+          awk -v coverage="$coverage" 'BEGIN { if (coverage < 15) { printf "backend coverage %.1f%% is below the 15%% floor\n", coverage; exit 1 } }'
 
   frontend:
     name: Frontend quality
