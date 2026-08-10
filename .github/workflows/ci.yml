@@ -58,6 +58,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: UI contract checks
+        run: npm run lint:ui
+
       - name: Unit tests
         run: npm run test:run
 
