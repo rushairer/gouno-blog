@@ -4,7 +4,8 @@ import type { FormEvent } from 'react';
 import { apiFetch } from '../../auth';
 import type { Agent, ToolDefinition, Workflow, WorkflowMetric, WorkflowRun, WorkflowStep } from '../../agent';
 import { Button, Checkbox, ConfirmDialog, EditorPanel, EmptyState, Feedback, Field, FormActions, FormLayout, Input, Panel, PanelHeader, SearchField, Select, WorkspacePanel } from '../ui';
-import { StatusPill, statusLabel } from './StatusPill';
+import { StatusPill } from './StatusPill';
+import { statusLabel } from './labels';
 import { WorkflowInputForm } from './WorkflowInputForm';
 
 async function readData<T>(response: Response): Promise<T> {
@@ -312,7 +313,7 @@ function ResourceQueryBuilder({ step, onAdd, onChange, onRemove, savedPreview, l
   lastCount?: number;
 }) {
   const resourceType = step?.resource_type || 'post';
-  const filters = step?.filter || {};
+  const filters = useMemo(() => step?.filter || {}, [step?.filter]);
   const [preview, setPreview] = useState<number | null>(null);
   const [previewError, setPreviewError] = useState('');
   const filterSignature = JSON.stringify(filters);
