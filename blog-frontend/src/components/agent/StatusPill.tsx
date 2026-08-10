@@ -1,5 +1,4 @@
 import { riskLabel, statusLabel } from './labels';
-export { riskLabel, statusLabel } from './labels';
 
 export function StatusPill({
   status,
