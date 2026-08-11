@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Added an S3-compatible media storage backend for uploads and AI-generated images, selected through environment configuration.
 - Added a read-only Google Search Console connector with encrypted OAuth refresh credentials and aggregate metrics queries.
 - Added database-backed OpenAI and Anthropic Provider Profile management with encrypted API keys.
 - Added versioned Provider secret keyrings for online master-key rotation.

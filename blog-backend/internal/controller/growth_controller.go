@@ -9,13 +9,12 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/media"
 	"github.com/rushairer/blog-backend/internal/service"
 	"github.com/rushairer/gouno"
 )
@@ -33,11 +32,11 @@ type GrowthController struct {
 	growth    *service.GrowthService
 	posts     *service.PostService
 	community *service.CommunityService
-	mediaDir  string
+	media     media.Store
 }
 
-func NewGrowthController(growth *service.GrowthService, posts *service.PostService, community *service.CommunityService, mediaDir string) *GrowthController {
-	return &GrowthController{growth: growth, posts: posts, community: community, mediaDir: mediaDir}
+func NewGrowthController(growth *service.GrowthService, posts *service.PostService, community *service.CommunityService, store media.Store) *GrowthController {
+	return &GrowthController{growth: growth, posts: posts, community: community, media: store}
 }
 
 func (ctrl *GrowthController) RelatedPosts(c *gin.Context) {
@@ -133,17 +132,18 @@ func (ctrl *GrowthController) UploadMedia(c *gin.Context) {
 		writeServiceError(c, err)
 		return
 	}
-	if err := os.MkdirAll(ctrl.mediaDir, 0o755); err != nil {
+	source, err := header.Open()
+	if err != nil {
 		writeServiceError(c, err)
 		return
 	}
-	target := filepath.Join(ctrl.mediaDir, storageName)
-	if err := c.SaveUploadedFile(header, target); err != nil {
+	defer source.Close()
+	if err := ctrl.media.Put(c.Request.Context(), storageName, source, contentType); err != nil {
 		writeServiceError(c, err)
 		return
 	}
 	asset := &domain.MediaAsset{
-		Filename: header.Filename, StorageName: storageName, URL: "/media/" + storageName,
+		Filename: header.Filename, StorageName: storageName, URL: ctrl.media.URL(storageName),
 		ContentType: contentType, SizeBytes: header.Size, AltText: strings.TrimSpace(c.PostForm("alt_text")),
 	}
 	if subject, exists := c.Get("account_id"); exists {
@@ -152,7 +152,7 @@ func (ctrl *GrowthController) UploadMedia(c *gin.Context) {
 		}
 	}
 	if err := ctrl.growth.CreateMedia(c.Request.Context(), asset); err != nil {
-		_ = os.Remove(target)
+		_ = ctrl.media.Delete(c.Request.Context(), storageName)
 		writeServiceError(c, err)
 		return
 	}
@@ -173,9 +173,7 @@ func (ctrl *GrowthController) DeleteMedia(c *gin.Context) {
 		writeServiceError(c, err)
 		return
 	}
-	if err := os.Remove(filepath.Join(ctrl.mediaDir, asset.StorageName)); err != nil && !errors.Is(err, os.ErrNotExist) {
-		log.Printf("could not remove media file %q: %v", asset.StorageName, err)
-	}
+	_ = ctrl.media.Delete(c.Request.Context(), asset.StorageName)
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }
 

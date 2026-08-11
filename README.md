@@ -154,7 +154,7 @@ export SSO_CLIENT_ID=blog-spa
 - 后台提供内容数据看板，汇总文章、浏览、点赞、收藏、评论、审核和举报数据。
 - 媒体库支持 JPEG、PNG、WebP、GIF（单文件最大 10 MB），上传后可直接复制 Markdown；容器内文件通过 `blog_media` 卷持久化。
 - 文章每次内容变更都会自动保留数据库快照，后台最多展示最近 50 个版本并支持恢复。恢复前的当前版本也会被保留。
-- 可用 `BLOG_MEDIA_DIR` 修改媒体存储目录；当前默认使用本地文件系统，后续可在不改变 API 的情况下替换为对象存储。
+- 媒体默认存储在本地文件系统，可用 `BLOG_MEDIA_DIR` 修改目录；也可设 `BLOG_MEDIA_STORAGE=s3` 切换到 S3 兼容对象存储。S3 模式要求 `BLOG_MEDIA_S3_BUCKET`、`BLOG_MEDIA_S3_REGION`、`BLOG_MEDIA_S3_PUBLIC_BASE_URL`，可选 `BLOG_MEDIA_S3_ENDPOINT`（MinIO 等）和 `BLOG_MEDIA_S3_PREFIX`；凭据使用标准 AWS 环境变量或运行时角色。对象 URL 必须由受控的公开 CDN 或 Bucket 域名提供。
 
 ### 9. AI Agent 博客运营
 

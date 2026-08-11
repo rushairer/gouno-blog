@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rushairer/blog-backend/internal/media"
 	"github.com/rushairer/blog-backend/middleware"
 )
 
@@ -17,7 +18,7 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 	}()
 	RegisterWebRouter(engine, nil, middleware.AuthOptions{
 		Issuer: "http://issuer.test", Audience: "blog-spa", ClientID: "blog-spa",
-	}, "http://127.0.0.1:1/jwks", "", "test-secret", t.TempDir(), nil, nil)
+	}, "http://127.0.0.1:1/jwks", "", "test-secret", t.TempDir(), media.NewLocal(t.TempDir()), nil, nil)
 
 	foundUpdate := false
 	foundLike := false

@@ -8,13 +8,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/controller"
+	"github.com/rushairer/blog-backend/internal/media"
 	"github.com/rushairer/blog-backend/internal/repository"
 	"github.com/rushairer/blog-backend/internal/service"
 	"github.com/rushairer/blog-backend/middleware"
 	"github.com/rushairer/gouno"
 )
 
-func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.AuthOptions, jwksURL, redisDSN, visitorSecret, mediaDir string, corsAllowedOrigins []string, agentCtrl *controller.AgentController) {
+func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.AuthOptions, jwksURL, redisDSN, visitorSecret, mediaDir string, store media.Store, corsAllowedOrigins []string, agentCtrl *controller.AgentController) {
 	server.Use(corsMiddleware(corsAllowedOrigins))
 
 	// Setup repository and service
@@ -32,15 +33,16 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 	}
 	communityCtrl := controller.NewCommunityController(communitySvc, interactionLimiter, visitorSecret)
 	growthSvc := service.NewGrowthService(repository.NewGrowthRepository(db))
-	growthCtrl := controller.NewGrowthController(growthSvc, svc, communitySvc, mediaDir)
-	if err := os.MkdirAll(mediaDir, 0o755); err == nil {
+	growthCtrl := controller.NewGrowthController(growthSvc, svc, communitySvc, store)
+	if _, local := store.LocalPath(".probe"); local && os.MkdirAll(mediaDir, 0o755) == nil {
 		serveMedia := func(ctx *gin.Context) {
 			filename := ctx.Param("filename")
 			if filename == "" || filename != filepath.Base(filename) || filename == "." {
 				ctx.Status(http.StatusNotFound)
 				return
 			}
-			ctx.File(filepath.Join(mediaDir, filename))
+			path, _ := store.LocalPath(filename)
+			ctx.File(path)
 		}
 		server.GET("/media/:filename", serveMedia)
 		server.HEAD("/media/:filename", serveMedia)

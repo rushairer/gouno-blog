@@ -18,6 +18,7 @@ import (
 	"github.com/rushairer/blog-backend/internal/connector"
 	"github.com/rushairer/blog-backend/internal/controller"
 	"github.com/rushairer/blog-backend/internal/knowledge"
+	"github.com/rushairer/blog-backend/internal/media"
 	"github.com/rushairer/blog-backend/internal/operations"
 	"github.com/rushairer/blog-backend/internal/repository"
 	"github.com/rushairer/blog-backend/internal/secretbox"
@@ -132,6 +133,10 @@ func startWebServer(cmd *cobra.Command, args []string) {
 	if mediaDir == "" {
 		mediaDir = "./data/media"
 	}
+	mediaStore, err := media.FromEnvironment(ctx, mediaDir)
+	if err != nil {
+		log.Fatalf("configure media storage: %v", err)
+	}
 	var agentCtrl *controller.AgentController
 	if globalConfig.AIAgentConfig.Enabled {
 		secrets, err := secretbox.NewKeyring(
@@ -166,7 +171,7 @@ func startWebServer(cmd *cobra.Command, args []string) {
 			logger.Info("Reconciled AI workspace starter Agents", zap.Int("created", created))
 		}
 		runner := agentservice.NewRunner(agentRepo, management, toolRegistry, postSvc)
-		approvals := agentservice.NewApprovalService(agentRepo, postSvc, management, growthSvc, mediaDir)
+		approvals := agentservice.NewApprovalService(agentRepo, postSvc, management, growthSvc, mediaStore)
 		agentCtrl = controller.NewAgentController(management, runner, approvals, toolRegistry, ctx, knowledgeSvc)
 		agentCtrl.SetConnectorService(connector.NewService(db, secrets))
 		workflowSvc := workflowservice.NewService(db, runner, management, toolRegistry)
@@ -177,7 +182,7 @@ func startWebServer(cmd *cobra.Command, args []string) {
 			agentRepo, runner, globalConfig.AIAgentConfig.SchedulerInterval, logger,
 		).Start(ctx)
 	}
-	router.RegisterWebRouter(engine, db, authOptions, jwksURL, globalConfig.RedisConfig.DSN, visitorSecret, mediaDir, globalConfig.WebServerConfig.CORSAllowedOrigins, agentCtrl)
+	router.RegisterWebRouter(engine, db, authOptions, jwksURL, globalConfig.RedisConfig.DSN, visitorSecret, mediaDir, mediaStore, globalConfig.WebServerConfig.CORSAllowedOrigins, agentCtrl)
 
 	httpServer := &http.Server{
 		Addr:              fmt.Sprintf("%s:%s", globalConfig.WebServerConfig.Address, globalConfig.WebServerConfig.Port),
