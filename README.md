@@ -178,7 +178,7 @@ docker compose up -d
 
 默认部署采用同源 API，不开放跨域访问。若前端确实部署在不同的受信任 Origin，请在后端运行配置的 `web_server.cors_allowed_origins` 中逐项列出完整 Origin（例如 `https://console.example.com`）；不要使用通配符。未列入名单的跨源写请求会被拒绝。
 
-生产镜像不再内置 Blog 数据库 DSN。启动后端必须提供 `GOUNO_DATABASE_DRIVERS_POSTGRES_DSN`；Compose 为本地开发临时生成该值。部署时应至少设置独立的 `BLOG_POSTGRES_PASSWORD`、`GOUNO_DATABASE_DRIVERS_POSTGRES_DSN`、`BLOG_VISITOR_SECRET` 和 Agent 主密钥，推荐使用平台的 Secret 管理能力，而不是提交 `.env` 文件。
+生产镜像不再内置 Blog 数据库 DSN。启动后端必须提供 `GOUNO_DATABASE_DRIVERS_POSTGRES_DSN`；Compose 为本地开发临时生成该值。部署时应至少设置独立的 `BLOG_POSTGRES_PASSWORD`、`GOUNO_DATABASE_DRIVERS_POSTGRES_DSN`、`BLOG_VISITOR_SECRET`、至少 32 字符的 `GOUNO_AI_WEBHOOK_SECRET` 和 Agent 主密钥，推荐使用平台的 Secret 管理能力，而不是提交 `.env` 文件。生产环境启用 AI Agent 而未配置有效 Webhook 密钥时会拒绝启动。
 
 `BLOG_AGENT_MASTER_KEY` 解码后必须恰好为 32 字节。生产配置默认关闭 Agent，且启用时缺少有效主密钥会拒绝启动。主密钥轮换时，提升 `BLOG_AGENT_MASTER_KEY_VERSION`，并暂时通过 `BLOG_AGENT_PREVIOUS_MASTER_KEYS` 保留旧版本：
 

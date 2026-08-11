@@ -43,6 +43,11 @@ type AgentController struct {
 }
 
 const maxWorkflowJSONBody = 256 << 10
+const minWebhookSecretLength = 32
+
+func ValidWebhookSecret(value string) bool {
+	return len(strings.TrimSpace(value)) >= minWebhookSecretLength
+}
 
 func (ctrl *AgentController) SetConnectorService(value *connector.Service) { ctrl.connectors = value }
 
@@ -1254,7 +1259,7 @@ func (ctrl *AgentController) EmitWorkflowEvent(c *gin.Context) {
 // the same idempotent event path as internal domain events.
 func (ctrl *AgentController) ReceiveWorkflowWebhook(c *gin.Context) {
 	secret := strings.TrimSpace(os.Getenv("GOUNO_AI_WEBHOOK_SECRET"))
-	if secret == "" {
+	if !ValidWebhookSecret(secret) {
 		c.JSON(http.StatusServiceUnavailable, gouno.NewErrorResponse(http.StatusServiceUnavailable, "webhook connector is not configured"))
 		return
 	}
@@ -1276,7 +1281,7 @@ func (ctrl *AgentController) ReceiveWorkflowWebhook(c *gin.Context) {
 	eventType := strings.TrimSpace(c.Param("event"))
 	eventKey := strings.TrimSpace(c.GetHeader("Idempotency-Key"))
 	if eventKey == "" {
-		digest := sha256.Sum256(body)
+		digest := sha256.Sum256(append([]byte(eventType+":"), body...))
 		eventKey = hex.EncodeToString(digest[:])
 	}
 	queued, err := ctrl.workflows.EmitEvent(c.Request.Context(), eventKey, eventType, body, nil)

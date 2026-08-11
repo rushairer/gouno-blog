@@ -125,6 +125,9 @@ func startWebServer(cmd *cobra.Command, args []string) {
 	if env == "production" && visitorSecret == "" {
 		log.Fatal("BLOG_VISITOR_SECRET is required in production")
 	}
+	if env == "production" && globalConfig.AIAgentConfig.Enabled && !controller.ValidWebhookSecret(os.Getenv("GOUNO_AI_WEBHOOK_SECRET")) {
+		log.Fatal("GOUNO_AI_WEBHOOK_SECRET must be at least 32 characters in production when AI Agents are enabled")
+	}
 	mediaDir := os.Getenv("BLOG_MEDIA_DIR")
 	if mediaDir == "" {
 		mediaDir = "./data/media"
