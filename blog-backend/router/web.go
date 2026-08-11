@@ -227,6 +227,7 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 				admin.POST("/admin/ai-connectors", agentCtrl.SaveConnectorProfile)
 				admin.POST("/admin/ai-connectors/:id/oauth/start", agentCtrl.BeginConnectorOAuth)
 				admin.POST("/admin/ai-connectors/oauth/callback", agentCtrl.CompleteConnectorOAuth)
+				admin.POST("/admin/ai-connectors/:id/search-console/summary", agentCtrl.SearchConsoleSummary)
 				admin.GET("/admin/ai-connector-outbox", agentCtrl.ListConnectorOutbox)
 				admin.POST("/admin/ai-connector-outbox", agentCtrl.QueueConnectorOutbox)
 				admin.POST("/admin/ai-connector-outbox/:id/approve", agentCtrl.ApproveConnectorOutbox)

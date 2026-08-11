@@ -76,6 +76,15 @@ func (ctrl *AgentController) BeginConnectorOAuth(c *gin.Context) {
 	if !ok {
 		return
 	}
+	if c.Query("provider") == "search_console" {
+		state, authorizationURL, err := ctrl.connectors.BeginSearchConsoleOAuth(c.Request.Context(), id)
+		if err != nil {
+			writeAgentError(c, err)
+			return
+		}
+		c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"state": state, "sandbox": false, "authorization_url": authorizationURL}))
+		return
+	}
 	state, err := ctrl.connectors.BeginOAuth(c.Request.Context(), id)
 	if err != nil {
 		writeAgentError(c, err)
@@ -86,18 +95,46 @@ func (ctrl *AgentController) BeginConnectorOAuth(c *gin.Context) {
 
 func (ctrl *AgentController) CompleteConnectorOAuth(c *gin.Context) {
 	var req struct {
-		State string `json:"state"`
-		Code  string `json:"code"`
+		State    string `json:"state"`
+		Code     string `json:"code"`
+		Provider string `json:"provider"`
 	}
 	if err := bindAgentJSON(c, &req); err != nil {
 		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
 		return
 	}
-	if err := ctrl.connectors.CompleteOAuthMock(c.Request.Context(), req.State, req.Code); err != nil {
+	var err error
+	if req.Provider == "search_console" {
+		err = ctrl.connectors.CompleteSearchConsoleOAuth(c.Request.Context(), req.State, req.Code)
+	} else {
+		err = ctrl.connectors.CompleteOAuthMock(c.Request.Context(), req.State, req.Code)
+	}
+	if err != nil {
 		writeAgentError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"connected": true, "sandbox": true}))
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"connected": true, "sandbox": req.Provider != "search_console"}))
+}
+
+func (ctrl *AgentController) SearchConsoleSummary(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	var req struct {
+		StartDate string `json:"start_date"`
+		EndDate   string `json:"end_date"`
+	}
+	if err := bindAgentJSON(c, &req); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+	data, err := ctrl.connectors.SearchConsoleSummary(c.Request.Context(), id, req.StartDate, req.EndDate)
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(json.RawMessage(data)))
 }
 
 func (ctrl *AgentController) ListConnectorOutbox(c *gin.Context) {

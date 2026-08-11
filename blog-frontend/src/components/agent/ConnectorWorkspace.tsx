@@ -24,14 +24,27 @@ export function ConnectorWorkspace({ locale, readData, onRefresh }: { locale: Lo
   const [outbox, setOutbox] = useState<ConnectorOutboxItem[]>([]);
   const [name, setName] = useState('');
   const [kind, setKind] = useState<ConnectorKind>('newsletter');
+  const [sandbox, setSandbox] = useState(true);
+  const [config, setConfig] = useState('{"rate_limit_per_minute":10}');
   const [credential, setCredential] = useState('');
   const [state, setState] = useState('');
+  const [oauthProvider, setOAuthProvider] = useState<'mock' | 'search_console'>('mock');
   const [code, setCode] = useState('mock-code');
   const [selectedProfile, setSelectedProfile] = useState<number | ''>('');
   const [key, setKey] = useState('');
   const [payload, setPayload] = useState('{"source":"ai-workbench","message":"sandbox preview"}');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search);
+    const returnedState = query.get('state'); const returnedCode = query.get('code');
+    if (returnedState && returnedCode) {
+      setState(returnedState); setCode(returnedCode); setOAuthProvider('search_console');
+      query.delete('state'); query.delete('code');
+      window.history.replaceState({}, '', `${window.location.pathname}${query.size ? `?${query}` : ''}`);
+    }
+  }, []);
 
   const load = useCallback(async () => {
     const [profileResponse, outboxResponse] = await Promise.all([apiFetch('/api/admin/ai-connectors'), apiFetch('/api/admin/ai-connector-outbox')]);
@@ -51,19 +64,23 @@ export function ConnectorWorkspace({ locale, readData, onRefresh }: { locale: Lo
 
   const saveProfile = async () => {
     try {
-      await action('/api/admin/ai-connectors', { name, kind, sandbox: true, enabled: true, config: { rate_limit_per_minute: 10 }, credential });
+      await action('/api/admin/ai-connectors', { name, kind, sandbox, enabled: true, config: JSON.parse(config), credential });
       setName(''); setCredential('');
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Request failed'); }
   };
   const startOAuth = async (id: number) => {
     try {
-      const response = await apiFetch(`/api/admin/ai-connectors/${id}/oauth/start`, { method: 'POST' });
-      const result = await readData<{ state: string }>(response);
-      setState(result.state); setMessage(zh ? '已生成一次性 Mock OAuth 状态。' : 'One-time mock OAuth state generated.');
+      const profile = profiles.find((item) => item.id === id);
+      const real = profile?.kind === 'search_console' && !profile.sandbox;
+      const response = await apiFetch(`/api/admin/ai-connectors/${id}/oauth/start${real ? '?provider=search_console' : ''}`, { method: 'POST' });
+      const result = await readData<{ state: string; authorization_url?: string }>(response);
+      setState(result.state); setOAuthProvider(real ? 'search_console' : 'mock');
+      if (real && result.authorization_url) window.location.assign(result.authorization_url);
+      else setMessage(zh ? '已生成一次性 Mock OAuth 状态。' : 'One-time mock OAuth state generated.');
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Request failed'); }
   };
   const completeOAuth = async () => {
-    try { await action('/api/admin/ai-connectors/oauth/callback', { state, code }); setState(''); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Request failed'); }
+    try { await action('/api/admin/ai-connectors/oauth/callback', { state, code, provider: oauthProvider === 'search_console' ? 'search_console' : '' }); setState(''); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Request failed'); }
   };
   const queue = async () => {
     try { await action('/api/admin/ai-connector-outbox', { connector_profile_id: Number(selectedProfile), idempotency_key: key, payload: JSON.parse(payload) }); setKey(''); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Payload must be valid JSON'); }
@@ -71,10 +88,10 @@ export function ConnectorWorkspace({ locale, readData, onRefresh }: { locale: Lo
 
   return <div className="connector-workspace section-stack">
     <Panel>
-      <PanelHeader title={<><LockKeyhole />{zh ? 'Sandbox 连接器底座' : 'Sandbox connector foundation'}</>} description={zh ? '所有凭据加密保存；OAuth、Outbox 和投递均为本地 Mock，绝不会发出真实网络请求。' : 'Credentials are encrypted; OAuth, Outbox, and delivery are local mocks with no network requests.'} />
+      <PanelHeader title={<><LockKeyhole />{zh ? '受控连接器' : 'Controlled connectors'}</>} description={zh ? 'Search Console 支持只读 Google OAuth；其余连接器仍为本地 Sandbox Mock。' : 'Search Console supports read-only Google OAuth; all other connectors remain local Sandbox mocks.'} />
       {error ? <Feedback type="error">{error}</Feedback> : null}{message ? <Feedback type="success">{message}</Feedback> : null}
-      <div className="connector-form-grid"><label>{zh ? '名称' : 'Name'}<input value={name} onChange={(event) => setName(event.target.value)} placeholder="newsletter sandbox" /></label><label>{zh ? '类型' : 'Kind'}<Select value={kind} onChange={(event) => setKind(event.target.value as ConnectorKind)}>{kinds.map((item) => <option key={item.value} value={item.value}>{zh ? item.zh : item.en}</option>)}</Select></label><label>{zh ? '凭据（可选，模拟加密存储）' : 'Credential (optional, encrypted mock)'}<input type="password" value={credential} onChange={(event) => setCredential(event.target.value)} /></label><Button variant="primary" type="button" disabled={!name.trim()} onClick={() => void saveProfile()}><KeyRound />{zh ? '保存 Sandbox Profile' : 'Save Sandbox profile'}</Button></div>
-      {profiles.length === 0 ? <EmptyState label={zh ? '还没有 Sandbox Profile。' : 'No Sandbox profiles yet.'} /> : <div className="table-scroll"><table className="content-table agent-table"><thead><tr><th>{zh ? 'Profile' : 'Profile'}</th><th>{zh ? '凭据' : 'Credential'}</th><th>{zh ? 'OAuth Mock' : 'Mock OAuth'}</th></tr></thead><tbody>{profiles.map((profile) => <tr key={profile.id}><td><strong>{profile.name}</strong><small>{profile.kind} · sandbox</small></td><td>{profile.has_credential ? `•••• ${profile.credential_last4 || ''}` : (zh ? '未连接' : 'Not connected')}</td><td><Button variant="secondary" size="compact" type="button" onClick={() => void startOAuth(profile.id)}><KeyRound />{zh ? '开始 Mock OAuth' : 'Start mock OAuth'}</Button></td></tr>)}</tbody></table></div>}
+      <div className="connector-form-grid"><label>{zh ? '名称' : 'Name'}<input value={name} onChange={(event) => setName(event.target.value)} placeholder="search-console" /></label><label>{zh ? '类型' : 'Kind'}<Select value={kind} onChange={(event) => { const next = event.target.value as ConnectorKind; setKind(next); if (next !== 'search_console') setSandbox(true); }}>{kinds.map((item) => <option key={item.value} value={item.value}>{zh ? item.zh : item.en}</option>)}</Select></label>{kind === 'search_console' ? <label className="checkbox-label"><input type="checkbox" checked={sandbox} onChange={(event) => setSandbox(event.target.checked)} />{zh ? 'Sandbox（取消以启用只读 Google OAuth）' : 'Sandbox (uncheck for read-only Google OAuth)'}</label> : null}<label>{zh ? '配置 JSON' : 'Config JSON'}<textarea value={config} onChange={(event) => setConfig(event.target.value)} rows={2} placeholder='{"client_id":"...","redirect_uri":"https://...","site_url":"sc-domain:example.com"}' /></label><label>{sandbox ? (zh ? '凭据（Sandbox 可选）' : 'Credential (optional for Sandbox)') : (zh ? 'Google OAuth Client Secret（加密保存）' : 'Google OAuth client secret (encrypted)')}<input type="password" value={credential} onChange={(event) => setCredential(event.target.value)} /></label><Button variant="primary" type="button" disabled={!name.trim() || (!sandbox && !credential.trim())} onClick={() => void saveProfile()}><KeyRound />{zh ? '保存 Profile' : 'Save profile'}</Button></div>
+      {profiles.length === 0 ? <EmptyState label={zh ? '还没有连接器 Profile。' : 'No connector profiles yet.'} /> : <div className="table-scroll"><table className="content-table agent-table"><thead><tr><th>{zh ? 'Profile' : 'Profile'}</th><th>{zh ? '凭据' : 'Credential'}</th><th>OAuth</th></tr></thead><tbody>{profiles.map((profile) => <tr key={profile.id}><td><strong>{profile.name}</strong><small>{profile.kind} · {profile.sandbox ? 'sandbox' : 'read-only Google'}</small></td><td>{profile.has_credential ? `•••• ${profile.credential_last4 || ''}` : (zh ? '未连接' : 'Not connected')}</td><td><Button variant="secondary" size="compact" type="button" onClick={() => void startOAuth(profile.id)}><KeyRound />{profile.kind === 'search_console' && !profile.sandbox ? (zh ? '连接 Google' : 'Connect Google') : (zh ? '开始 Mock OAuth' : 'Start mock OAuth')}</Button></td></tr>)}</tbody></table></div>}
       {state ? <div className="connector-oauth-callback"><label>State<input value={state} readOnly /></label><label>Mock code<input value={code} onChange={(event) => setCode(event.target.value)} /></label><Button variant="primary" type="button" onClick={() => void completeOAuth()}><Check />{zh ? '完成 Mock 回调' : 'Complete mock callback'}</Button></div> : null}
     </Panel>
     <Panel>

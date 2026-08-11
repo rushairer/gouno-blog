@@ -7,6 +7,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -45,22 +49,61 @@ type OutboxItem struct {
 }
 
 type Service struct {
-	db      *sql.DB
-	secrets *secretbox.Box
+	db             *sql.DB
+	secrets        *secretbox.Box
+	httpClient     *http.Client
+	oauthAuthorize string
+	oauthToken     string
+	searchConsole  string
 }
 
 func NewService(db *sql.DB, secrets *secretbox.Box) *Service {
-	return &Service{db: db, secrets: secrets}
+	return &Service{db: db, secrets: secrets, httpClient: &http.Client{Timeout: 15 * time.Second}, oauthAuthorize: "https://accounts.google.com/o/oauth2/v2/auth", oauthToken: "https://oauth2.googleapis.com/token", searchConsole: "https://searchconsole.googleapis.com/webmasters/v3/sites/"}
 }
 
 func validKind(kind string) bool {
 	return kind == "search_console" || kind == "newsletter" || kind == "social" || kind == "webhook"
 }
 
+type searchConsoleConfig struct {
+	ClientID    string `json:"client_id"`
+	RedirectURI string `json:"redirect_uri"`
+	SiteURL     string `json:"site_url"`
+}
+
+func parseSearchConsoleConfig(raw json.RawMessage) (searchConsoleConfig, error) {
+	var config searchConsoleConfig
+	if err := json.Unmarshal(raw, &config); err != nil {
+		return config, ErrInvalid
+	}
+	config.ClientID = strings.TrimSpace(config.ClientID)
+	config.RedirectURI, config.SiteURL = strings.TrimSpace(config.RedirectURI), strings.TrimSpace(config.SiteURL)
+	redirect, err := url.Parse(config.RedirectURI)
+	if err != nil || redirect.Scheme != "https" || redirect.Host == "" || config.ClientID == "" || config.SiteURL == "" {
+		return config, ErrInvalid
+	}
+	return config, nil
+}
+
+func isPermittedProfile(value *Profile) bool {
+	if value.Sandbox {
+		return true
+	}
+	return value.Kind == "search_console"
+}
+
 func (s *Service) SaveProfile(ctx context.Context, value *Profile, credential string) error {
 	value.Name, value.Kind = strings.TrimSpace(value.Name), strings.TrimSpace(value.Kind)
-	if value.Name == "" || !validKind(value.Kind) || !json.Valid(value.Config) || !value.Sandbox {
+	if value.Name == "" || !validKind(value.Kind) || !json.Valid(value.Config) || !isPermittedProfile(value) {
 		return ErrInvalid
+	}
+	if value.Kind == "search_console" && !value.Sandbox {
+		if _, err := parseSearchConsoleConfig(value.Config); err != nil {
+			return err
+		}
+		if strings.TrimSpace(credential) == "" && value.ID == 0 {
+			return ErrInvalid
+		}
 	}
 	var ciphertext, nonce []byte
 	last4, version := "", 0
@@ -74,14 +117,14 @@ func (s *Service) SaveProfile(ctx context.Context, value *Profile, credential st
 	}
 	if value.ID == 0 {
 		if err := s.db.QueryRowContext(ctx, `INSERT INTO ai_connector_profiles(name,kind,sandbox,enabled,config,credential_ciphertext,credential_nonce,credential_last4,key_version)
-			VALUES($1,$2,TRUE,$3,$4,$5,$6,$7,$8) RETURNING id,created_at,updated_at`, value.Name, value.Kind, value.Enabled, value.Config, ciphertext, nonce, last4, version).Scan(&value.ID, &value.CreatedAt, &value.UpdatedAt); err != nil {
+			VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id,created_at,updated_at`, value.Name, value.Kind, value.Sandbox, value.Enabled, value.Config, ciphertext, nonce, last4, version).Scan(&value.ID, &value.CreatedAt, &value.UpdatedAt); err != nil {
 			return err
 		}
 	} else {
-		query := `UPDATE ai_connector_profiles SET name=$2,kind=$3,enabled=$4,config=$5,updated_at=NOW()`
-		args := []any{value.ID, value.Name, value.Kind, value.Enabled, value.Config}
+		query := `UPDATE ai_connector_profiles SET name=$2,kind=$3,sandbox=$4,enabled=$5,config=$6,updated_at=NOW()`
+		args := []any{value.ID, value.Name, value.Kind, value.Sandbox, value.Enabled, value.Config}
 		if credential != "" {
-			query += `,credential_ciphertext=$6,credential_nonce=$7,credential_last4=$8,key_version=$9`
+			query += `,credential_ciphertext=$7,credential_nonce=$8,credential_last4=$9,key_version=$10`
 			args = append(args, ciphertext, nonce, last4, version)
 		}
 		query += ` WHERE id=$1 RETURNING created_at,updated_at`
@@ -119,7 +162,7 @@ func (s *Service) BeginOAuth(ctx context.Context, profileID int64) (string, erro
 		return "", err
 	}
 	state := hex.EncodeToString(stateBytes)
-	result, err := s.db.ExecContext(ctx, `UPDATE ai_connector_profiles SET oauth_state=$2,oauth_state_expires_at=NOW()+INTERVAL '10 minutes',updated_at=NOW() WHERE id=$1 AND sandbox=TRUE`, profileID, state)
+	result, err := s.db.ExecContext(ctx, `UPDATE ai_connector_profiles SET oauth_state=$2,oauth_state_expires_at=NOW()+INTERVAL '10 minutes',updated_at=NOW() WHERE id=$1`, profileID, state)
 	if err != nil {
 		return "", err
 	}
@@ -127,6 +170,33 @@ func (s *Service) BeginOAuth(ctx context.Context, profileID int64) (string, erro
 		return "", ErrNotFound
 	}
 	return state, nil
+}
+
+// BeginSearchConsoleOAuth creates a Google authorization URL for the only
+// non-sandbox connector. The profile config supplies its registered OAuth
+// client and callback; the Google endpoints remain fixed in code.
+func (s *Service) BeginSearchConsoleOAuth(ctx context.Context, profileID int64) (string, string, error) {
+	var raw json.RawMessage
+	var kind string
+	if err := s.db.QueryRowContext(ctx, `SELECT kind,config FROM ai_connector_profiles WHERE id=$1 AND sandbox=FALSE AND enabled=TRUE`, profileID).Scan(&kind, &raw); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", "", ErrNotFound
+		}
+		return "", "", err
+	}
+	if kind != "search_console" {
+		return "", "", ErrInvalid
+	}
+	config, err := parseSearchConsoleConfig(raw)
+	if err != nil {
+		return "", "", err
+	}
+	state, err := s.BeginOAuth(ctx, profileID)
+	if err != nil {
+		return "", "", err
+	}
+	query := url.Values{"client_id": {config.ClientID}, "redirect_uri": {config.RedirectURI}, "response_type": {"code"}, "scope": {"https://www.googleapis.com/auth/webmasters.readonly"}, "access_type": {"offline"}, "prompt": {"consent"}, "state": {state}}
+	return state, s.oauthAuthorize + "?" + query.Encode(), nil
 }
 
 func (s *Service) CompleteOAuthMock(ctx context.Context, state, code string) error {
@@ -145,6 +215,146 @@ func (s *Service) CompleteOAuthMock(ctx context.Context, state, code string) err
 		return ErrNotFound
 	}
 	return nil
+}
+
+// CompleteSearchConsoleOAuth exchanges a short-lived authorization code for
+// encrypted refresh-token material. Only Google OAuth endpoints are used.
+func (s *Service) CompleteSearchConsoleOAuth(ctx context.Context, state, code string) error {
+	if strings.TrimSpace(state) == "" || strings.TrimSpace(code) == "" {
+		return ErrInvalid
+	}
+	var raw json.RawMessage
+	var ciphertext, nonce []byte
+	var keyVersion int
+	if err := s.db.QueryRowContext(ctx, `SELECT config,credential_ciphertext,credential_nonce,key_version FROM ai_connector_profiles WHERE oauth_state=$1 AND oauth_state_expires_at>NOW() AND kind='search_console' AND sandbox=FALSE`, state).Scan(&raw, &ciphertext, &nonce, &keyVersion); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFound
+		}
+		return err
+	}
+	config, err := parseSearchConsoleConfig(raw)
+	if err != nil {
+		return err
+	}
+	clientSecret, err := s.secrets.Decrypt(ciphertext, nonce, keyVersion)
+	if err != nil || strings.TrimSpace(clientSecret) == "" {
+		return ErrInvalid
+	}
+	form := url.Values{"code": {code}, "client_id": {config.ClientID}, "client_secret": {clientSecret}, "redirect_uri": {config.RedirectURI}, "grant_type": {"authorization_code"}}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.oauthToken, strings.NewReader(form.Encode()))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	response, err := s.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("exchange Search Console authorization code: %w", err)
+	}
+	defer response.Body.Close()
+	body, readErr := io.ReadAll(io.LimitReader(response.Body, 64<<10))
+	if readErr != nil {
+		return readErr
+	}
+	var token struct {
+		RefreshToken string `json:"refresh_token"`
+		AccessToken  string `json:"access_token"`
+		TokenType    string `json:"token_type"`
+		ExpiresIn    int64  `json:"expires_in"`
+	}
+	if response.StatusCode != http.StatusOK || json.Unmarshal(body, &token) != nil || strings.TrimSpace(token.RefreshToken) == "" {
+		return ErrInvalid
+	}
+	credential, _ := json.Marshal(map[string]any{"refresh_token": token.RefreshToken, "client_secret": clientSecret})
+	ciphertext, nonce, err = s.secrets.Encrypt(string(credential))
+	if err != nil {
+		return err
+	}
+	result, err := s.db.ExecContext(ctx, `UPDATE ai_connector_profiles SET credential_ciphertext=$2,credential_nonce=$3,credential_last4=$4,key_version=$5,oauth_state=NULL,oauth_state_expires_at=NULL,updated_at=NOW() WHERE oauth_state=$1 AND oauth_state_expires_at>NOW() AND kind='search_console' AND sandbox=FALSE`, state, ciphertext, nonce, secretbox.Last4(token.RefreshToken), s.secrets.KeyVersion())
+	if err != nil {
+		return err
+	}
+	if n, _ := result.RowsAffected(); n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// SearchConsoleSummary reads aggregate click/impression data for the site in
+// the profile. It is intentionally read-only and uses a refreshed access token
+// only for this request; no token is returned to an API client.
+func (s *Service) SearchConsoleSummary(ctx context.Context, profileID int64, startDate, endDate string) (json.RawMessage, error) {
+	if _, err := time.Parse("2006-01-02", startDate); err != nil {
+		return nil, ErrInvalid
+	}
+	if _, err := time.Parse("2006-01-02", endDate); err != nil {
+		return nil, ErrInvalid
+	}
+	var raw json.RawMessage
+	var ciphertext, nonce []byte
+	var keyVersion int
+	if err := s.db.QueryRowContext(ctx, `SELECT config,credential_ciphertext,credential_nonce,key_version FROM ai_connector_profiles WHERE id=$1 AND kind='search_console' AND sandbox=FALSE AND enabled=TRUE`, profileID).Scan(&raw, &ciphertext, &nonce, &keyVersion); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	config, err := parseSearchConsoleConfig(raw)
+	if err != nil {
+		return nil, err
+	}
+	plain, err := s.secrets.Decrypt(ciphertext, nonce, keyVersion)
+	if err != nil {
+		return nil, ErrInvalid
+	}
+	var saved struct {
+		RefreshToken string `json:"refresh_token"`
+		ClientSecret string `json:"client_secret"`
+	}
+	if json.Unmarshal([]byte(plain), &saved) != nil || strings.TrimSpace(saved.RefreshToken) == "" || strings.TrimSpace(saved.ClientSecret) == "" {
+		return nil, ErrInvalid
+	}
+	form := url.Values{"client_id": {config.ClientID}, "client_secret": {saved.ClientSecret}, "refresh_token": {saved.RefreshToken}, "grant_type": {"refresh_token"}}
+	tokenRequest, err := http.NewRequestWithContext(ctx, http.MethodPost, s.oauthToken, strings.NewReader(form.Encode()))
+	if err != nil {
+		return nil, err
+	}
+	tokenRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	tokenResponse, err := s.httpClient.Do(tokenRequest)
+	if err != nil {
+		return nil, fmt.Errorf("refresh Search Console token: %w", err)
+	}
+	defer tokenResponse.Body.Close()
+	tokenBody, err := io.ReadAll(io.LimitReader(tokenResponse.Body, 64<<10))
+	if err != nil {
+		return nil, err
+	}
+	var refreshed struct {
+		AccessToken string `json:"access_token"`
+	}
+	if tokenResponse.StatusCode != http.StatusOK || json.Unmarshal(tokenBody, &refreshed) != nil || strings.TrimSpace(refreshed.AccessToken) == "" {
+		return nil, ErrInvalid
+	}
+	endpoint := s.searchConsole + url.PathEscape(config.SiteURL) + "/searchAnalytics/query"
+	payload, _ := json.Marshal(map[string]any{"startDate": startDate, "endDate": endDate, "rowLimit": 1})
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(string(payload)))
+	if err != nil {
+		return nil, err
+	}
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Authorization", "Bearer "+refreshed.AccessToken)
+	response, err := s.httpClient.Do(request)
+	if err != nil {
+		return nil, fmt.Errorf("query Search Console: %w", err)
+	}
+	defer response.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(response.Body, 256<<10))
+	if err != nil {
+		return nil, err
+	}
+	if response.StatusCode != http.StatusOK || !json.Valid(body) {
+		return nil, ErrInvalid
+	}
+	return json.RawMessage(body), nil
 }
 
 func (s *Service) Queue(ctx context.Context, profileID int64, key string, payload json.RawMessage) (*OutboxItem, error) {
