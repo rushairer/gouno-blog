@@ -71,7 +71,7 @@ services:
     container_name: sso-blog-gosso-admin-seed
     environment:
       - GOSSO_ADMIN_ENV=development
-      - PG_DSN=host=db user=postgres password=password dbname=gosso port=5432 sslmode=disable
+      - PG_DSN=host=db user=postgres password=${BLOG_POSTGRES_PASSWORD:-password} dbname=gosso port=5432 sslmode=disable
       - ADMIN_USERNAME=admin
       - ADMIN_PASSWORD=admin123
       - ADMIN_DISPLAY_NAME=System Admin
@@ -86,7 +86,7 @@ services:
     image: ghcr.io/rushairer/gouno-blog-seed:${GOUNO_BLOG_SEED_IMAGE_TAG:-main@sha256:c960349b0cdf20dab95948789be963e9edc3740dfdd859d97fd32cdeb43404e9}
     container_name: sso-blog-client-seed
     environment:
-      - PG_DSN=host=db user=postgres password=password dbname=gosso port=5432 sslmode=disable
+      - PG_DSN=host=db user=postgres password=${BLOG_POSTGRES_PASSWORD:-password} dbname=gosso port=5432 sslmode=disable
       - BLOG_OAUTH_ACCOUNT_ID=00000000-0000-0000-0000-000000000001
       - BLOG_OAUTH_CLIENT_ID=blog-spa
       - BLOG_OAUTH_CLIENT_NAME=Personal Blog SPA
