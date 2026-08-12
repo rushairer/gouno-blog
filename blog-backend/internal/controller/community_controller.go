@@ -22,16 +22,17 @@ import (
 )
 
 type CommunityController struct {
-	svc           *service.CommunityService
-	limiter       service.RateLimiter
-	visitorSecret []byte
+	svc             *service.CommunityService
+	limiter         service.RateLimiter
+	fallbackLimiter service.RateLimiter
+	visitorSecret   []byte
 }
 
 func NewCommunityController(svc *service.CommunityService, limiter service.RateLimiter, visitorSecret string) *CommunityController {
 	if visitorSecret == "" {
 		visitorSecret = "gouno-blog-development-visitor-secret"
 	}
-	return &CommunityController{svc: svc, limiter: limiter, visitorSecret: []byte(visitorSecret)}
+	return &CommunityController{svc: svc, limiter: limiter, fallbackLimiter: service.NewMemoryRateLimiter(), visitorSecret: []byte(visitorSecret)}
 }
 
 func (ctrl *CommunityController) actor(c *gin.Context) service.Actor {
@@ -84,14 +85,19 @@ func (ctrl *CommunityController) sign(value string) string {
 }
 
 func (ctrl *CommunityController) allow(c *gin.Context, operation string, actor service.Actor, limit int, window time.Duration) bool {
-	if ctrl.limiter == nil {
-		return true
-	}
 	key := operation + ":" + actor.Key + ":" + c.ClientIP()
-	allowed, err := ctrl.limiter.Allow(c.Request.Context(), key, limit, window)
+	limiter := ctrl.limiter
+	if limiter == nil {
+		limiter = ctrl.fallbackLimiter
+	}
+	allowed, err := limiter.Allow(c.Request.Context(), key, limit, window)
 	if err != nil {
-		log.Printf("community rate limiter unavailable; allowing request: %v", err)
-		return true
+		log.Printf("community primary rate limiter unavailable; using in-process fallback: %v", err)
+		allowed, err = ctrl.fallbackLimiter.Allow(c.Request.Context(), key, limit, window)
+		if err != nil {
+			c.JSON(http.StatusServiceUnavailable, gouno.NewErrorResponse(http.StatusServiceUnavailable, "interaction rate limiter unavailable"))
+			return false
+		}
 	}
 	if !allowed {
 		c.JSON(http.StatusTooManyRequests, gouno.NewErrorResponse(http.StatusTooManyRequests, "too many requests; please try again later"))
