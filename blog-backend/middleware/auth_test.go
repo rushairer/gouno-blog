@@ -196,3 +196,14 @@ func TestJWTVerifier_SingleflightAndCooldown(t *testing.T) {
 		t.Errorf("expected request count to remain 1 due to cooldown, got %d", countAfter)
 	}
 }
+
+func TestJWTVerifierRejectsNonSuccessJWKSResponse(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer server.Close()
+	verifier := &JWTVerifier{jwksURL: server.URL, keys: make(map[string]*rsa.PublicKey)}
+	if err := verifier.refreshKeys(); err == nil {
+		t.Fatal("expected non-success JWKS response to fail")
+	}
+}

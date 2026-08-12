@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math/big"
 	"net/http"
 	"strings"
@@ -175,9 +176,19 @@ func (v *JWTVerifier) refreshKeys() error {
 			return nil, err
 		}
 		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("jwks endpoint returned status %d", resp.StatusCode)
+		}
 
+		body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20+1))
+		if err != nil {
+			return nil, err
+		}
+		if len(body) > 1<<20 {
+			return nil, fmt.Errorf("jwks response exceeds 1 MiB")
+		}
 		var jwks JWKS
-		if err := json.NewDecoder(resp.Body).Decode(&jwks); err != nil {
+		if err := json.Unmarshal(body, &jwks); err != nil {
 			return nil, err
 		}
 
