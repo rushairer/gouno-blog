@@ -13,6 +13,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@gosso/client": "git+https://github.com/rushairer/gosso-client.git#38810d8",
     "lucide-react": "^1.21.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.7",
