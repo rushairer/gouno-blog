@@ -321,6 +321,19 @@ var allowedSettingKeys = map[string]bool{
 	"email": true, "github_url": true, "rss_url": true, "default_seo_title": true, "default_seo_description": true,
 }
 
+const maxSiteSettingLength = 4_096
+
+func validSiteURL(value string, allowPath bool) bool {
+	parsed, err := url.Parse(value)
+	if err != nil || parsed.User != nil || parsed.Fragment != "" {
+		return false
+	}
+	if allowPath && strings.HasPrefix(value, "/") {
+		return !strings.HasPrefix(value, "//") && !strings.Contains(value, "\\") && parsed.Host == ""
+	}
+	return (parsed.Scheme == "https" || parsed.Scheme == "http") && parsed.Host != ""
+}
+
 func (ctrl *ContentController) UpdateSiteSettings(c *gin.Context) {
 	var requested map[string]string
 	if err := c.ShouldBindJSON(&requested); err != nil {
@@ -330,6 +343,10 @@ func (ctrl *ContentController) UpdateSiteSettings(c *gin.Context) {
 	clean := make(map[string]string, len(requested))
 	for key, value := range requested {
 		if allowedSettingKeys[key] {
+			if len([]rune(value)) > maxSiteSettingLength {
+				c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "site setting value is too long"))
+				return
+			}
 			clean[key] = strings.TrimSpace(value)
 		}
 	}
@@ -340,10 +357,14 @@ func (ctrl *ContentController) UpdateSiteSettings(c *gin.Context) {
 	if rss, exists := clean["rss_url"]; exists {
 		if rss == "" {
 			clean["rss_url"] = "/feed.xml"
-		} else if parsed, err := url.ParseRequestURI(rss); err != nil || (!strings.HasPrefix(rss, "/") && parsed.Scheme != "http" && parsed.Scheme != "https") {
+		} else if !validSiteURL(rss, true) {
 			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "rss_url must be a site path or an http(s) URL"))
 			return
 		}
+	}
+	if githubURL, exists := clean["github_url"]; exists && githubURL != "" && !validSiteURL(githubURL, false) {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "github_url must be an http(s) URL"))
+		return
 	}
 	raw, _ := json.Marshal(clean)
 	var saved []byte
