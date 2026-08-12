@@ -1,74 +1,34 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-function accessTokenWithClaims(claims: Record<string, unknown>): string {
-  const encode = (value: Record<string, unknown>) =>
-    btoa(JSON.stringify(value)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  return `${encode({ alg: 'none', typ: 'JWT' })}.${encode(claims)}.signature`;
-}
+describe('blog cookie session', () => {
+  beforeEach(() => { vi.resetModules(); localStorage.clear(); sessionStorage.clear(); document.cookie = 'blog_csrf_token=; path=/; max-age=0'; });
 
-describe('blog auth session', () => {
-  beforeEach(() => {
-    vi.resetModules();
-    localStorage.clear();
-  });
-
-  it('uses the gouno-blog storage prefix and migrates legacy keys', async () => {
-    localStorage.setItem('access_token', 'legacy-access');
-
+  it('keeps only PKCE state in session storage', async () => {
     const { authSession } = await import('../auth');
-
-    expect(authSession.storageKeys.accessToken).toBe('gouno-blog:access_token');
-    expect(localStorage.getItem(authSession.storageKeys.accessToken)).toBe('legacy-access');
+    expect(authSession.getAccessToken()).toBeNull();
+    expect(authSession.getRefreshToken()).toBeNull();
+    expect(Object.values(authSession.storageKeys)).toEqual(expect.arrayContaining(['gouno-blog:pkce_verifier', 'gouno-blog:auth_state']));
   });
 
-  it('allows blog management when the stored profile has the admin role', async () => {
-    const { authSession, canManageBlog } = await import('../auth');
-
-    localStorage.setItem(authSession.storageKeys.userProfile, JSON.stringify({ sub: '1', roles: ['admin'] }));
-
-    expect(canManageBlog()).toBe(true);
-  });
-
-  it('allows blog management when the access token carries the admin role', async () => {
-    const { authSession, canManageBlog } = await import('../auth');
-
-    localStorage.setItem(authSession.storageKeys.accessToken, accessTokenWithClaims({ roles: ['admin'] }));
-
-    expect(canManageBlog()).toBe(true);
-  });
-
-  it('does not treat ordinary Gosso users as blog managers', async () => {
-    const { authSession, canManageBlog } = await import('../auth');
-
-    localStorage.setItem(authSession.storageKeys.accessToken, accessTokenWithClaims({ roles: ['user'] }));
-    localStorage.setItem(authSession.storageKeys.userProfile, JSON.stringify({ sub: '1', roles: ['user'] }));
-
-    expect(canManageBlog()).toBe(false);
-  });
-
-  it('refreshes OAuth tokens through the OAuth token endpoint and retries the request', async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(Response.json({ access_token: 'fresh-access', refresh_token: 'fresh-refresh', expires_in: 900 }))
-      .mockResolvedValueOnce(Response.json({ data: { list: [] } }));
+  it('adds the CSRF token to unsafe blog API requests without an Authorization header', async () => {
+    document.cookie = 'blog_csrf_token=csrf-value; path=/';
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ data: {} }));
     vi.stubGlobal('fetch', fetchMock);
-    const { apiFetch, authSession } = await import('../auth');
-    localStorage.setItem(authSession.storageKeys.accessToken, 'expired-access');
-    localStorage.setItem(authSession.storageKeys.refreshToken, 'old-refresh');
-    localStorage.setItem(authSession.storageKeys.tokenIssuedAt, String(Date.now() - 901_000));
-    localStorage.setItem(authSession.storageKeys.tokenExpiresIn, '900');
+    const { apiFetch } = await import('../auth');
+    await apiFetch('/api/admin/posts', { method: 'POST', body: '{}' });
+    const headers = new Headers(fetchMock.mock.calls[0][1]?.headers);
+    expect(headers.get('X-CSRF-Token')).toBe('csrf-value');
+    expect(headers.get('Authorization')).toBeNull();
+  });
 
-    const response = await apiFetch('/api/admin/posts');
-
-    expect(response.ok).toBe(true);
-    expect(fetchMock).toHaveBeenNthCalledWith(1, 'http://localhost:8080/oauth2/token', expect.objectContaining({
-      method: 'POST',
-      body: expect.stringContaining('grant_type=refresh_token'),
-    }));
-    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/admin/posts', expect.objectContaining({
-      headers: expect.objectContaining({ get: expect.any(Function) }),
-    }));
-    const requestHeaders = fetchMock.mock.calls[1][1]?.headers as Headers;
-    expect(requestHeaders.get('Authorization')).toBe('Bearer fresh-access');
-    expect(localStorage.getItem(authSession.storageKeys.refreshToken)).toBe('fresh-refresh');
+  it('derives management access from the cookie-authenticated server session', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(Response.json({ sub: '1', name: 'Admin' }))
+      .mockResolvedValueOnce(Response.json({ data: { sub: '1', roles: ['admin'], scope: 'openid profile' } }));
+    vi.stubGlobal('fetch', fetchMock);
+    const { fetchUserProfile, canManageBlog, isLoggedIn } = await import('../auth');
+    await fetchUserProfile();
+    expect(isLoggedIn()).toBe(true);
+    expect(canManageBlog()).toBe(true);
   });
 });

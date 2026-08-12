@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/rushairer/blog-backend/internal/controller"
 	"github.com/rushairer/blog-backend/internal/media"
 	"github.com/rushairer/blog-backend/internal/repository"
@@ -117,6 +118,13 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 		me := api.Group("/me")
 		me.Use(userAuth)
 		{
+			me.GET("/session", func(c *gin.Context) {
+				claims, _ := c.Get("claims")
+				values, _ := claims.(jwt.MapClaims)
+				c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{
+					"sub": values["sub"], "roles": values["roles"], "scope": values["scope"],
+				}))
+			})
 			me.GET("/bookmarks", communityCtrl.ListBookmarks)
 			me.PUT("/bookmarks/:postID", func(c *gin.Context) { communityCtrl.SetBookmark(c, true) })
 			me.DELETE("/bookmarks/:postID", func(c *gin.Context) { communityCtrl.SetBookmark(c, false) })
