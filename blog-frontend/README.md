@@ -33,6 +33,12 @@ VITE_GOSSO_CLIENT_ID=blog-spa
 
 The redirect URI is derived from the current browser origin as `${window.location.origin}/callback`.
 
+## Authentication and SDK
+
+The frontend consumes the repository-pinned `@gosso/client` SDK in Cookie session mode. Access and refresh tokens remain HttpOnly and are never persisted in browser-readable storage. The SDK stores only short-lived PKCE state and the minimal server-provided UI profile in `sessionStorage`, sends the Blog CSRF token for unsafe same-origin API calls, and refreshes the Cookie session once after an application API returns `401`.
+
+Do not replace this integration with a hand-written token or refresh implementation. Update the SDK commit in `package.json` and `package-lock.json` together after a tested `@gosso/client` main-branch change.
+
 ## Available Scripts
 
 ```bash
@@ -56,7 +62,7 @@ npm run preview   # preview built assets
 
 The test suite uses React Testing Library and Vitest. Current coverage focuses on:
 
-- auth storage and admin role detection
+- Cookie-session auth, CSRF propagation, and admin role detection
 - login/MFA behavior
 - feed pagination and client-side search
 - article markdown rendering and comment posting

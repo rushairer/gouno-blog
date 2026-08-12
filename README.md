@@ -72,9 +72,9 @@ chmod 600 keys/private.pem
 - Redirect URI：`http://localhost:8080/callback`
 - Scopes：`openid profile email`
 
-GOSSO Admin 使用独立 OAuth client 和 Redirect URI：`http://localhost:8080/identity-admin/callback`。`identity-admin` 与 `blog` 不共享前端 localStorage token，也不共享业务 session；它们各自通过授权码 + PKCE 获取自己的应用 token。
+GOSSO Admin 使用独立 OAuth client 和 Redirect URI：`http://localhost:8080/identity-admin/callback`。Blog 前端通过 `@gosso/client` 使用 HttpOnly Cookie 会话；访问与刷新 Token 不会写入浏览器可读存储。它仍使用授权码 + PKCE，并只在 `sessionStorage` 中临时保存 PKCE 状态和最小化的界面授权信息。
 
-无感切换依赖统一网关下的 GOSSO 中心登录态：用户登录 `identity-admin` 后访问 `/admin`，blog 会发起 `/oauth2/authorize`。如果 GOSSO cookie 中的中心会话仍有效，GOSSO 会直接回调 `/callback` 给 blog 签发 `blog-spa` token，用户无需再次输入账号密码。
+无感切换依赖统一网关下的 GOSSO 中心登录态：用户登录 `identity-admin` 后访问 `/admin`，blog 会发起 `/oauth2/authorize`。如果 GOSSO cookie 中的中心会话仍有效，GOSSO 会直接回调 `/callback` 并建立 Blog Cookie 会话，用户无需再次输入账号密码。
 
 后端管理接口仍由 blog 后端执行权限校验；当前默认要求 Access Token 中包含 `roles: ["admin"]`。
 
@@ -121,8 +121,8 @@ docker compose -f docker-compose.yml -f docker-compose.source.yml up -d --build
 - 使用本地默认管理员账户登录：
   - 用户名：`admin`
   - 密码：`admin123`
-- 登录成功后，如果 token 中包含 blog 管理所需角色，即可在博客后台发布和管理文章。
-- 已登录 GOSSO 身份管理控制台后再次访问博客后台，会通过同一身份中心会话静默完成 blog 授权码流程；如果 blog 本地 token 被清空但 GOSSO 会话仍有效，也会自动恢复 blog 登录态。
+- 登录成功后，如果服务端会话包含 blog 管理所需角色，即可在博客后台发布和管理文章。
+- 已登录 GOSSO 身份管理控制台后再次访问博客后台，会通过同一身份中心会话静默完成 blog 授权码流程；若 Blog 会话过期，SDK 会通过受保护的 Cookie 刷新流程恢复会话。
 
 ### 5. 使用外部身份服务
 
