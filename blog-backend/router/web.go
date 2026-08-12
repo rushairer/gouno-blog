@@ -37,7 +37,7 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 	communityCtrl := controller.NewCommunityController(communitySvc, interactionLimiter, visitorSecret)
 	growthSvc := service.NewGrowthService(repository.NewGrowthRepository(db))
 	growthCtrl := controller.NewGrowthController(growthSvc, svc, communitySvc, store)
-	if _, local := store.LocalPath(".probe"); local && os.MkdirAll(mediaDir, 0o755) == nil {
+	if _, local := store.LocalPath(".probe"); local && os.MkdirAll(mediaDir, 0o750) == nil {
 		serveMedia := func(ctx *gin.Context) {
 			filename := ctx.Param("filename")
 			if filename == "" || filename != filepath.Base(filename) || filename == "." {

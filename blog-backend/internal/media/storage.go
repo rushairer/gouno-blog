@@ -38,7 +38,7 @@ func (s *localStore) Put(_ context.Context, key string, body io.Reader, _ string
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(s.dir, 0o755); err != nil {
+	if err := os.MkdirAll(s.dir, 0o750); err != nil {
 		return err
 	}
 	tmp, err := os.CreateTemp(s.dir, ".upload-*")
@@ -50,7 +50,7 @@ func (s *localStore) Put(_ context.Context, key string, body io.Reader, _ string
 		tmp.Close()
 		return err
 	}
-	if err = tmp.Chmod(0o644); err != nil {
+	if err = tmp.Chmod(0o640); err != nil {
 		tmp.Close()
 		return err
 	}
