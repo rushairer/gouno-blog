@@ -29,7 +29,14 @@ export interface Notification {
 }
 
 export async function optionalApiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  return isLoggedIn() ? apiFetch(input.toString(), init) : fetch(input, init);
+  if (isLoggedIn()) return apiFetch(input.toString(), init);
+  const headers = new Headers(init?.headers);
+  const unsafe = !['GET', 'HEAD', 'OPTIONS'].includes((init?.method || 'GET').toUpperCase());
+  if (unsafe && !headers.has('X-CSRF-Token')) {
+    const token = document.cookie.split(';').map((value) => value.trim()).find((value) => value.startsWith('blog_csrf_token='))?.slice('blog_csrf_token='.length);
+    if (token) headers.set('X-CSRF-Token', decodeURIComponent(token));
+  }
+  return fetch(input, { ...init, headers, credentials: 'same-origin' });
 }
 
 export async function readResponse<T>(response: Response): Promise<T> {

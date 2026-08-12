@@ -21,6 +21,16 @@ describe('blog cookie session', () => {
     expect(headers.get('Authorization')).toBeNull();
   });
 
+  it('protects anonymous community writes with the same CSRF-aware API helper', async () => {
+    document.cookie = 'blog_csrf_token=csrf-value; path=/';
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ data: {} }));
+    vi.stubGlobal('fetch', fetchMock);
+    const { optionalApiFetch } = await import('../community');
+    await optionalApiFetch('/api/posts/example/comments', { method: 'POST', body: '{}' });
+    const headers = new Headers(fetchMock.mock.calls[0][1]?.headers);
+    expect(headers.get('X-CSRF-Token')).toBe('csrf-value');
+  });
+
   it('derives management access from the cookie-authenticated server session', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(Response.json({ sub: '1', name: 'Admin' }))

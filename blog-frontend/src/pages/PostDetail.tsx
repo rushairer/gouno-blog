@@ -139,7 +139,7 @@ export default function PostDetail() {
 
         if (!alreadyViewed) {
           sessionStorage.setItem(viewKey, '1');
-          fetch(`/api/posts/${postData.id}/view`, { method: 'POST' }).catch((e) => console.error(e));
+          optionalApiFetch(`/api/posts/${postData.id}/view`, { method: 'POST' }).catch((e) => console.error(e));
         }
 
         const commentsResp = await fetch(`/api/posts/${postData.id}/comments`);
