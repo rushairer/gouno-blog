@@ -1,6 +1,7 @@
 package operations
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 
@@ -43,12 +44,12 @@ func TestProductionToolCatalogIsJSONSerializable(t *testing.T) {
 func TestFeedbackValidationRejectsInvalidTargetsAndLabels(t *testing.T) {
 	service := &Service{}
 	valid := &domain.AIFeedback{TargetType: "run", TargetID: 1, Label: "adopted", CreatedBy: "admin"}
-	if err := service.SaveFeedback(t.Context(), &domain.AIFeedback{
+	if err := service.SaveFeedback(context.Background(), &domain.AIFeedback{
 		TargetType: "visitor", TargetID: valid.TargetID, Label: valid.Label, CreatedBy: valid.CreatedBy,
 	}); err == nil {
 		t.Fatal("visitor feedback target should be rejected")
 	}
-	if err := service.SaveFeedback(t.Context(), &domain.AIFeedback{
+	if err := service.SaveFeedback(context.Background(), &domain.AIFeedback{
 		TargetType: valid.TargetType, TargetID: valid.TargetID, Label: "positive", CreatedBy: valid.CreatedBy,
 	}); err == nil {
 		t.Fatal("unknown feedback label should be rejected")
@@ -69,13 +70,13 @@ func TestDecodeRejectsUnknownOperationalArguments(t *testing.T) {
 
 func TestSuggestionProposalRequiresEvidence(t *testing.T) {
 	service := &Service{}
-	if _, err := service.proposeSuggestion(t.Context(), json.RawMessage(`{
+	if _, err := service.proposeSuggestion(context.Background(), json.RawMessage(`{
 		"source_type":"stale","source_key":"post:1","title":"Refresh","description":"Old",
 		"priority":"medium","evidence":{"updated_at":"2025-01-01"}
 	}`)); err != nil {
 		t.Fatalf("valid suggestion rejected: %v", err)
 	}
-	if _, err := service.proposeSuggestion(t.Context(), json.RawMessage(`{
+	if _, err := service.proposeSuggestion(context.Background(), json.RawMessage(`{
 		"source_type":"stale","source_key":"post:1","title":"Refresh","description":"Old",
 		"priority":"medium"
 	}`)); err == nil {
