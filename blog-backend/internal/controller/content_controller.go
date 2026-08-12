@@ -60,12 +60,7 @@ func (ctrl *ContentController) ListCategories(c *gin.Context) {
 func (ctrl *ContentController) ListCategoryPosts(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 10
-	}
+	page, pageSize = normalizedPagination(page, pageSize, 10)
 	var categoryID int64
 	if err := ctrl.db.QueryRowContext(c, `SELECT id FROM categories WHERE slug = $1`, c.Param("slug")).Scan(&categoryID); err != nil {
 		if err == sql.ErrNoRows {

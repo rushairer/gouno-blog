@@ -739,6 +739,9 @@ func (ctrl *AgentController) SetOperationsService(service *operations.Service) {
 
 func (ctrl *AgentController) ListSuggestions(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "100"))
+	if limit < 1 || limit > maxPageSize {
+		limit = maxPageSize
+	}
 	items, err := ctrl.operations.ListSuggestions(c.Request.Context(), c.DefaultQuery("status", "new"), limit)
 	if err != nil {
 		writeAgentError(c, err)
@@ -1481,6 +1484,7 @@ func (ctrl *AgentController) ListAIResources(c *gin.Context) {
 	resourceType := c.Param("type")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	page, pageSize = normalizedPagination(page, pageSize, 20)
 	filters := map[string]string{}
 	for key, values := range c.Request.URL.Query() {
 		if key == "q" || key == "key" || key == "page" || key == "page_size" || len(values) == 0 {
@@ -2034,6 +2038,7 @@ func (ctrl *AgentController) ListRuns(c *gin.Context) {
 	agentIDValue, _ := strconv.ParseInt(c.Query("agent_id"), 10, 64)
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "50"))
+	page, pageSize = normalizedPagination(page, pageSize, 50)
 	items, total, err := ctrl.runner.ListRuns(c.Request.Context(), agentIDValue, page, pageSize)
 	if err != nil {
 		writeAgentError(c, err)
@@ -2069,6 +2074,7 @@ func (ctrl *AgentController) ToolCatalog(c *gin.Context) {
 func (ctrl *AgentController) ListApprovals(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "50"))
+	page, pageSize = normalizedPagination(page, pageSize, 50)
 	items, total, err := ctrl.approvals.List(c.Request.Context(), c.DefaultQuery("status", "pending"), page, pageSize)
 	if err != nil {
 		writeAgentError(c, err)

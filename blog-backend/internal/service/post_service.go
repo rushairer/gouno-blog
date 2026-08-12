@@ -258,7 +258,7 @@ func (s *PostService) ListPosts(ctx context.Context, tag, search string, page, p
 	if page <= 0 {
 		page = 1
 	}
-	if pageSize <= 0 {
+	if pageSize <= 0 || pageSize > 100 {
 		pageSize = 10
 	}
 	offset := (page - 1) * pageSize

@@ -252,6 +252,7 @@ func (ctrl *CommunityController) ListBookmarks(c *gin.Context) {
 func (ctrl *CommunityController) ListNotifications(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "30"))
+	page, pageSize = normalizedPagination(page, pageSize, 30)
 	items, unread, err := ctrl.svc.ListNotifications(c.Request.Context(), subject(c), page, pageSize)
 	if err != nil {
 		writeCommunityError(c, err)
@@ -284,6 +285,7 @@ func (ctrl *CommunityController) ReadAllNotifications(c *gin.Context) {
 func (ctrl *CommunityController) ListAdminComments(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "50"))
+	page, pageSize = normalizedPagination(page, pageSize, 50)
 	reported, _ := strconv.ParseBool(c.DefaultQuery("reported", "false"))
 	items, total, err := ctrl.svc.ListAdminComments(c.Request.Context(), c.DefaultQuery("status", "pending"), reported, page, pageSize)
 	if err != nil {
