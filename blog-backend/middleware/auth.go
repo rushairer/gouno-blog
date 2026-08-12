@@ -113,12 +113,12 @@ func setIdentity(ctx *gin.Context, claims jwt.MapClaims) {
 // Missing credentials remain anonymous; malformed or invalid credentials are rejected.
 func OptionalAuth(verifier *JWTVerifier, options AuthOptions) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		if ctx.GetHeader("Authorization") == "" {
-			ctx.Next()
-			return
-		}
 		tokenStr, ok := requestToken(ctx)
 		if !ok {
+			if ctx.GetHeader("Authorization") == "" {
+				ctx.Next()
+				return
+			}
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "invalid authorization format"))
 			return
 		}

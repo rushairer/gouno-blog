@@ -37,6 +37,15 @@ func setupAuthTestRouter(t *testing.T, roles []string) (*gin.Engine, string) {
 	}), func(ctx *gin.Context) {
 		ctx.Status(http.StatusNoContent)
 	})
+	router.GET("/optional", OptionalAuth(verifier, AuthOptions{
+		Issuer: "test-issuer", Audience: "test-audience", ClientID: "test-client-id",
+	}), func(ctx *gin.Context) {
+		if subject, _ := ctx.Get("account_id"); subject == "user-1" {
+			ctx.Status(http.StatusNoContent)
+			return
+		}
+		ctx.Status(http.StatusUnauthorized)
+	})
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
 		"sub":       "user-1",
@@ -98,6 +107,17 @@ func TestAuthMiddlewareAcceptsHostCookieSession(t *testing.T) {
 	router, token := setupAuthTestRouter(t, []string{"admin"})
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/admin", nil)
+	req.AddCookie(&http.Cookie{Name: "__Host-access_token", Value: token})
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want 204; body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestOptionalAuthAttachesIdentityFromHostCookieSession(t *testing.T) {
+	router, token := setupAuthTestRouter(t, []string{"admin"})
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/optional", nil)
 	req.AddCookie(&http.Cookie{Name: "__Host-access_token", Value: token})
 	router.ServeHTTP(rec, req)
 	if rec.Code != http.StatusNoContent {
