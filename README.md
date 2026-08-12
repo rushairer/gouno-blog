@@ -82,6 +82,8 @@ GOSSO Admin 使用独立 OAuth client 和 Redirect URI：`http://localhost:8080/
 docker compose up -d
 ```
 
+该开发编排将所有宿主机端口绑定到 `127.0.0.1`，避免将开发账号、数据库、Redis 或 Mailpit 意外暴露到局域网。如需通过其他主机访问，请在部署环境中显式覆盖端口映射并配置生产凭据。
+
 启动后，容器运行状态如下：
 * `sso-blog-gateway` (Nginx, 监听端口 `8080`)
 * `sso-blog-frontend` (前端 SPA)
