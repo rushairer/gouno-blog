@@ -114,6 +114,8 @@ docker compose -f docker-compose.yml -f docker-compose.source.yml up -d --build
 
 `blog-client-seed` 与 `gosso-admin-seed` 一样是一次性初始化容器；默认使用 `ghcr.io/rushairer/gouno-blog-seed` 镜像，本地 source override 会从根目录 `seed/` 构建该镜像。
 
+后端会在数据库可用后才通过 `/healthz` 就绪检查；前端会等待该检查成功，避免容器刚启动时将请求转发到尚未完成数据库初始化的 API。
+
 ### 4. 访问测试
 - 打开浏览器访问门户：[http://localhost:8080/](http://localhost:8080/)
 - 访问博客后台管理（触发 SSO 登录流）：[http://localhost:8080/admin](http://localhost:8080/admin)

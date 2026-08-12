@@ -147,7 +147,8 @@ services:
     image: ghcr.io/rushairer/gouno-blog-frontend:${GOUNO_BLOG_FRONTEND_IMAGE_TAG:-main@sha256:a7410283061da6c52f2e88bbbd176651d8d00875b2cb7d730d4c9d8705d84175}
     container_name: sso-blog-frontend
     depends_on:
-      - blog-backend
+      blog-backend:
+        condition: service_healthy
 
   gosso-admin-frontend:
     image: ghcr.io/rushairer/gosso-admin-frontend-identity-admin:${GOSSO_ADMIN_FRONTEND_IMAGE_TAG:-main@sha256:20e0c4d3355bfca36ffa4c7196d4a301f480084b98e0c61d2a03c3ba09361c6c}
