@@ -86,6 +86,10 @@ func NewS3(ctx context.Context, bucket, region, endpoint, publicBase, prefix str
 	if bucket == "" || region == "" || strings.TrimSpace(publicBase) == "" {
 		return nil, fmt.Errorf("BLOG_MEDIA_S3_BUCKET, BLOG_MEDIA_S3_REGION and BLOG_MEDIA_S3_PUBLIC_BASE_URL are required for S3 media storage")
 	}
+	publicURL, err := validatedPublicBase(publicBase)
+	if err != nil {
+		return nil, err
+	}
 	cfg, err := awsconfig.LoadDefaultConfig(ctx, awsconfig.WithRegion(region))
 	if err != nil {
 		return nil, err
@@ -96,7 +100,15 @@ func NewS3(ctx context.Context, bucket, region, endpoint, publicBase, prefix str
 			o.UsePathStyle = true
 		}
 	})
-	return &s3Store{client: client, bucket: bucket, prefix: strings.Trim(strings.TrimSpace(prefix), "/"), publicBase: strings.TrimRight(strings.TrimSpace(publicBase), "/")}, nil
+	return &s3Store{client: client, bucket: bucket, prefix: strings.Trim(strings.TrimSpace(prefix), "/"), publicBase: publicURL}, nil
+}
+
+func validatedPublicBase(value string) (string, error) {
+	parsed, err := url.Parse(strings.TrimSpace(value))
+	if err != nil || parsed.Host == "" || parsed.User != nil || (parsed.Scheme != "https" && parsed.Scheme != "http") || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return "", fmt.Errorf("BLOG_MEDIA_S3_PUBLIC_BASE_URL must be an absolute HTTP(S) origin or path prefix")
+	}
+	return strings.TrimRight(parsed.String(), "/"), nil
 }
 func (s *s3Store) objectKey(key string) string {
 	if s.prefix == "" {
