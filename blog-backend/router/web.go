@@ -20,6 +20,13 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 	server.Use(corsMiddleware(corsAllowedOrigins))
 	server.Use(requestBodyLimitMiddleware())
 	server.Use(blogCSRFMiddleware(!gin.IsDebugging()))
+	server.GET("/healthz", func(ctx *gin.Context) {
+		if db == nil || db.PingContext(ctx.Request.Context()) != nil {
+			ctx.Status(http.StatusServiceUnavailable)
+			return
+		}
+		ctx.Status(http.StatusNoContent)
+	})
 
 	// Setup repository and service
 	repo := repository.NewPostRepository(db)

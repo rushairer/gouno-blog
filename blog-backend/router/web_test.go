@@ -1,6 +1,8 @@
 package router
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -25,6 +27,7 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 	foundRelated := false
 	foundAnalytics := false
 	foundMedia := false
+	foundHealth := false
 	for _, route := range engine.Routes() {
 		if route.Method == "PUT" && route.Path == "/api/posts/:slugOrID" {
 			foundUpdate = true
@@ -41,8 +44,16 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 		if route.Method == "GET" && route.Path == "/media/:filename" {
 			foundMedia = true
 		}
+		if route.Method == "GET" && route.Path == "/healthz" {
+			foundHealth = true
+		}
 	}
-	if !foundUpdate || !foundLike || !foundRelated || !foundAnalytics || !foundMedia {
-		t.Fatalf("expected growth routes, update=%v like=%v related=%v analytics=%v media=%v", foundUpdate, foundLike, foundRelated, foundAnalytics, foundMedia)
+	if !foundUpdate || !foundLike || !foundRelated || !foundAnalytics || !foundMedia || !foundHealth {
+		t.Fatalf("expected growth routes, update=%v like=%v related=%v analytics=%v media=%v health=%v", foundUpdate, foundLike, foundRelated, foundAnalytics, foundMedia, foundHealth)
+	}
+	response := httptest.NewRecorder()
+	engine.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/healthz", nil))
+	if response.Code != http.StatusServiceUnavailable {
+		t.Fatalf("health status=%d, want %d when database is unavailable", response.Code, http.StatusServiceUnavailable)
 	}
 }
