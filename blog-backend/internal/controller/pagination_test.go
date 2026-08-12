@@ -11,4 +11,8 @@ func TestNormalizedPaginationBoundsPageAndPageSize(t *testing.T) {
 	if page != 3 || size != 100 {
 		t.Fatalf("page=%d size=%d, want 3 and 100", page, size)
 	}
+	page, _ = normalizedPagination(maxPage+1, 20, 20)
+	if page != 1 {
+		t.Fatalf("oversized page=%d, want 1", page)
+	}
 }

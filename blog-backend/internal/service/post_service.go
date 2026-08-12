@@ -255,7 +255,7 @@ func (s *PostService) IncrementLikes(ctx context.Context, id int64) error {
 }
 
 func (s *PostService) ListPosts(ctx context.Context, tag, search string, page, pageSize int) ([]*domain.Post, int, error) {
-	if page <= 0 {
+	if page <= 0 || page > 10_000 {
 		page = 1
 	}
 	if pageSize <= 0 || pageSize > 100 {
@@ -266,7 +266,7 @@ func (s *PostService) ListPosts(ctx context.Context, tag, search string, page, p
 }
 
 func (s *PostService) ListAdminPosts(ctx context.Context, filter domain.AdminPostFilter, page, pageSize int) ([]*domain.Post, int, error) {
-	if page <= 0 {
+	if page <= 0 || page > 10_000 {
 		page = 1
 	}
 	if pageSize <= 0 {
