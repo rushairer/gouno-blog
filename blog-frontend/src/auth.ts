@@ -101,6 +101,14 @@ function currentPath() {
   return `${window.location.pathname}${window.location.search}${window.location.hash}`;
 }
 
+function csrfToken(): string | null {
+  for (const raw of document.cookie.split(';')) {
+    const [name, ...parts] = raw.trim().split('=');
+    if (name === 'blog_csrf_token') return decodeURIComponent(parts.join('='));
+  }
+  return null;
+}
+
 /**
  * Refresh tokens issued by the OAuth authorization-code flow must be exchanged
  * through the OAuth token endpoint. The generic session refresh endpoint drops
@@ -146,6 +154,10 @@ function tokenHasExpired() {
 async function authorizeRequest(input: RequestInfo | URL, options: RequestInit, token: string) {
   const headers = new Headers(options.headers || {});
   if (!headers.has('Authorization')) headers.set('Authorization', `Bearer ${token}`);
+	if (!['GET', 'HEAD', 'OPTIONS'].includes((options.method || 'GET').toUpperCase()) && !headers.has('X-CSRF-Token')) {
+		const csrf = csrfToken();
+		if (csrf) headers.set('X-CSRF-Token', csrf);
+	}
   return fetch(input, { ...options, headers });
 }
 

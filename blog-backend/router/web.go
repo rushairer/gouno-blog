@@ -17,6 +17,7 @@ import (
 
 func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.AuthOptions, jwksURL, redisDSN, visitorSecret, mediaDir string, store media.Store, corsAllowedOrigins []string, agentCtrl *controller.AgentController) {
 	server.Use(corsMiddleware(corsAllowedOrigins))
+	server.Use(blogCSRFMiddleware(!gin.IsDebugging()))
 
 	// Setup repository and service
 	repo := repository.NewPostRepository(db)

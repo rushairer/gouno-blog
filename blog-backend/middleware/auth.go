@@ -57,6 +57,19 @@ func bearerToken(ctx *gin.Context) (string, bool) {
 	return parts[1], true
 }
 
+// requestToken accepts an explicit Bearer token first, then the HttpOnly
+// browser-session cookie issued by Gosso. The cookie path is deliberately a
+// fallback so API clients retain standard OAuth behaviour.
+func requestToken(ctx *gin.Context) (string, bool) {
+	if token, ok := bearerToken(ctx); ok {
+		return token, true
+	}
+	if token, err := ctx.Cookie("__Host-access_token"); err == nil && token != "" {
+		return token, true
+	}
+	return "", false
+}
+
 func (v *JWTVerifier) VerifyToken(tokenStr string, options AuthOptions) (jwt.MapClaims, error) {
 	parserOptions := make([]jwt.ParserOption, 0, 2)
 	if options.Issuer != "" {
@@ -104,7 +117,7 @@ func OptionalAuth(verifier *JWTVerifier, options AuthOptions) gin.HandlerFunc {
 			ctx.Next()
 			return
 		}
-		tokenStr, ok := bearerToken(ctx)
+		tokenStr, ok := requestToken(ctx)
 		if !ok {
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "invalid authorization format"))
 			return
@@ -248,7 +261,7 @@ func AuthMiddlewareWithOptions(verifier *JWTVerifier, options AuthOptions) gin.H
 	}
 
 	return func(ctx *gin.Context) {
-		tokenStr, ok := bearerToken(ctx)
+		tokenStr, ok := requestToken(ctx)
 		if !ok {
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "missing authorization header"))
 			return

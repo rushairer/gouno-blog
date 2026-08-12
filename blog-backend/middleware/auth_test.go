@@ -94,6 +94,17 @@ func TestAuthMiddlewareWithRequiredRoleAllowsRequest(t *testing.T) {
 	}
 }
 
+func TestAuthMiddlewareAcceptsHostCookieSession(t *testing.T) {
+	router, token := setupAuthTestRouter(t, []string{"admin"})
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/admin", nil)
+	req.AddCookie(&http.Cookie{Name: "__Host-access_token", Value: token})
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want 204; body=%s", rec.Code, rec.Body.String())
+	}
+}
+
 func TestJWTVerifier_SingleflightAndCooldown(t *testing.T) {
 	requestCount := 0
 	var mu sync.Mutex
