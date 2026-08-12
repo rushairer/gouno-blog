@@ -115,6 +115,16 @@ jobs:
       - name: Docker Compose config validation
         run: docker compose config
 
+      - name: Enforce immutable default images
+        run: |
+          docker compose config | awk '
+            /image:/ && $2 !~ /@sha256:[a-f0-9]{64}$/ {
+              print "image is not pinned by digest: " $2
+              invalid = 1
+            }
+            END { exit invalid }
+          '
+
       - name: Source override Compose config validation
         run: docker compose -f docker-compose.yml -f docker-compose.source.yml config
 
