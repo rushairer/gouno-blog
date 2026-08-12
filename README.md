@@ -93,7 +93,7 @@ docker compose up -d
 * `sso-blog-redis` (Redis 缓存在线 Session)
 * `sso-blog-mailpit` (本地邮件测试)
 
-镜像 tag 可按需 pin 到不可变版本：
+项目依赖的 PostgreSQL、Redis、Mailpit 与 Nginx 镜像已经固定到已验证的不可变摘要。自建服务镜像 tag 也应 pin 到不可变版本：
 
 ```bash
 export GOUNO_BLOG_BACKEND_IMAGE_TAG=sha-...
