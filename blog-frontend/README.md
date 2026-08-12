@@ -37,7 +37,7 @@ The redirect URI is derived from the current browser origin as `${window.locatio
 
 The frontend consumes the repository-pinned `@gosso/client` SDK in Cookie session mode. Access and refresh tokens remain HttpOnly and are never persisted in browser-readable storage. The SDK stores only short-lived PKCE state and the minimal server-provided UI profile in `sessionStorage`, sends the Blog CSRF token for unsafe same-origin API calls, and refreshes the Cookie session once after an application API returns `401`.
 
-Do not replace this integration with a hand-written token or refresh implementation. Update the SDK commit in `package.json` and `package-lock.json` together after a tested `@gosso/client` main-branch change.
+Do not replace this integration with a hand-written token or refresh implementation. Upgrade the npm SemVer dependency in `package.json`, regenerate `package-lock.json`, and run the verification commands after a tested `@gosso/client` release.
 
 ## Available Scripts
 
