@@ -8,7 +8,7 @@ const { logoutMock } = vi.hoisted(() => ({ logoutMock: vi.fn() }));
 
 vi.mock('../../auth', () => ({
   getUserProfile: () => ({ name: 'Content Admin', email: 'admin@example.com' }),
-  gossoAdminURL: '/identity-admin/',
+  gossoAdminURL: '/identity-admin',
   logout: logoutMock,
 }));
 
@@ -34,7 +34,7 @@ describe('AdminShell navigation utilities', () => {
 
   it('points the identity management action at the gateway route', () => {
     render(<MemoryRouter><AdminUsers /></MemoryRouter>);
-    expect(screen.getByRole('link', { name: /打开 GOSSO 管理端/ })).toHaveAttribute('href', '/identity-admin/');
+    expect(screen.getByRole('link', { name: /打开 GOSSO 管理端/ })).toHaveAttribute('href', '/identity-admin');
     expect(screen.getByText('Content Admin')).toBeInTheDocument();
   });
 

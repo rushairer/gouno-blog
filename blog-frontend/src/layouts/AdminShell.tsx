@@ -20,6 +20,8 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [search, setSearch] = useState(() => location.pathname === '/admin/posts' ? new URLSearchParams(location.search).get('q') || '' : '');
   const [siteName, setSiteName] = useState(DEFAULT_SITE_SETTINGS.site_title);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState('');
   const [theme, setTheme] = useState<'light' | 'dark'>(() =>
     localStorage.getItem('gouno-blog:theme') === 'dark' ? 'dark' : 'light',
   );
@@ -45,6 +47,17 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     event.preventDefault();
     const query = search.trim();
     navigate(query ? `/admin/posts?q=${encodeURIComponent(query)}` : '/admin/posts');
+  };
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    setLogoutError('');
+    try {
+      await logout();
+    } catch (reason) {
+      setLogoutError(reason instanceof Error ? reason.message : '退出登录失败，请重试。');
+      setLoggingOut(false);
+    }
   };
 
   return (
@@ -81,9 +94,10 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             <button className="admin-theme-toggle" type="button" onClick={() => setTheme((current) => current === 'light' ? 'dark' : 'light')} aria-label="切换后台主题" aria-pressed={theme === 'dark'}>
               {theme === 'light' ? <Moon /> : <Sun />}<span>{theme === 'light' ? '深色模式' : '浅色模式'}</span>
             </button>
-            <button type="button" onClick={logout} aria-label="退出登录"><LogOut /><span>退出登录</span></button>
+            <button type="button" onClick={() => void handleLogout()} disabled={loggingOut} aria-label="退出登录"><LogOut /><span>{loggingOut ? '正在退出…' : '退出登录'}</span></button>
           </div>
         </header>
+        {logoutError ? <p className="admin-logout-error" role="alert">{logoutError}</p> : null}
         <main className="admin-content">{children}</main>
       </div>
       {mobileOpen ? <button className="admin-nav-scrim" type="button" onClick={() => setMobileOpen(false)} aria-label="关闭后台导航" /> : null}

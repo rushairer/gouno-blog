@@ -1,5 +1,5 @@
-import React from 'react';
-import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom';
+import React, { useCallback, useEffect, useState } from 'react';
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import { I18nProvider } from './i18n';
 import { ToastProvider } from './components/ui';
 import PublicShell from './layouts/PublicShell';
@@ -13,6 +13,7 @@ import About from './pages/About';
 import NotFound from './pages/NotFound';
 import Callback from './pages/Callback';
 import Login from './pages/Login';
+import { canManageBlog, isLoggedIn, redirectToAuthorize } from './auth';
 const Settings = React.lazy(() => import('./pages/Settings'));
 const Notifications = React.lazy(() => import('./pages/Notifications'));
 const Bookmarks = React.lazy(() => import('./pages/Bookmarks'));
@@ -36,6 +37,31 @@ function Public({ children }: { children: React.ReactNode }) {
 }
 
 function Admin({ children }: { children: React.ReactNode }) {
+  const location = useLocation();
+  const allowed = isLoggedIn() && canManageBlog();
+  const [redirectError, setRedirectError] = useState('');
+  const returnTo = `${location.pathname}${location.search}${location.hash}`;
+
+  const startAuthorization = useCallback(async () => {
+    setRedirectError('');
+    try {
+      await redirectToAuthorize(returnTo);
+    } catch {
+      setRedirectError('无法打开登录页，请检查网络后重试。');
+    }
+  }, [returnTo]);
+
+  useEffect(() => {
+    if (!allowed) void startAuthorization();
+  }, [allowed, startAuthorization]);
+
+  if (!allowed) {
+    return <div className="public-container state-page" role="status">
+      <h1>需要登录</h1>
+      <p>{redirectError || '正在前往安全登录页…'}</p>
+      {redirectError ? <button className="btn btn-primary" type="button" onClick={() => void startAuthorization()}>重新登录</button> : null}
+    </div>;
+  }
   return <AdminShell><React.Suspense fallback={<div className="loading">正在载入工作区…</div>}>{children}</React.Suspense></AdminShell>;
 }
 

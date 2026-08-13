@@ -41,6 +41,20 @@ describe('blog cookie session', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
+  it('uses only the GOSSO CSRF cookie when revoking a cookie session', async () => {
+    document.cookie = 'blog_csrf_token=blog-token; path=/';
+    document.cookie = '__Host-csrf_token=gosso-token; path=/; Secure';
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ message: 'CSRF token mismatch' }), { status: 403 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const { logout } = await import('../auth');
+
+    await expect(logout()).rejects.toThrow('退出登录失败');
+
+    expect(fetchMock).toHaveBeenCalledWith('https://blog.example.test/api/v1/auth/logout', expect.objectContaining({
+      method: 'POST', credentials: 'same-origin', headers: { 'X-CSRF-Token': 'gosso-token' },
+    }));
+  });
+
   it('protects anonymous community writes with the same CSRF-aware API helper', async () => {
     document.cookie = 'blog_csrf_token=csrf-value; path=/';
     const fetchMock = vi.fn().mockResolvedValue(Response.json({ data: {} }));
