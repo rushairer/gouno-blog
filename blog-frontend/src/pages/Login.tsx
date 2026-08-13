@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { KeyRound } from 'lucide-react';
 import { Feedback, Field, Panel } from '../components/ui';
-import { loginWithPasskey, loginWithPassword, redirectToAuthorize, verifyMfa } from '../auth';
+import { loginWithPasskey, loginWithPassword, redirectToAuthorize, useCookieSession, verifyMfa } from '../auth';
 import { useI18n } from '../i18n';
 
 export default function Login() {
   const { t } = useI18n();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -24,7 +25,18 @@ export default function Login() {
     window.location.href = redirectUri.startsWith('/') ? `${window.location.origin}${redirectUri}` : redirectUri;
   };
 
+  const loginErrorMessage = (err: unknown, fallback: string) => {
+    if (err instanceof Error && err.message === 'Failed to fetch user profile') {
+      return t('failedLoadProfile');
+    }
+    return err instanceof Error ? err.message : fallback;
+  };
+
   const continueAfterLogin = async () => {
+    if (!useCookieSession) {
+      navigate('/admin');
+      return;
+    }
     if (hasAuthorizeRedirect) {
       doRedirect();
       return;
@@ -52,7 +64,7 @@ export default function Login() {
       await continueAfterLogin();
     } catch (err: unknown) {
       console.error(err);
-      setError(err instanceof Error ? err.message : t('networkError'));
+      setError(loginErrorMessage(err, t('networkError')));
     } finally {
       setLoading(false);
     }
@@ -73,7 +85,7 @@ export default function Login() {
       await continueAfterLogin();
     } catch (err: unknown) {
       console.error(err);
-      setError(err instanceof Error ? err.message : t('mfaFailed'));
+      setError(loginErrorMessage(err, t('mfaFailed')));
     } finally {
       setLoading(false);
     }
@@ -88,7 +100,7 @@ export default function Login() {
       await continueAfterLogin();
     } catch (err: unknown) {
       console.error(err);
-      setError(err instanceof Error ? err.message : t('passkeyFailed'));
+      setError(loginErrorMessage(err, t('passkeyFailed')));
     } finally {
       setPasskeyLoading(false);
     }

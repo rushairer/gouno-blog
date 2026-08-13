@@ -15,6 +15,10 @@ export type {
 const gossoIssuer = import.meta.env.VITE_GOSSO_ISSUER || window.location.origin;
 const gossoClientID = import.meta.env.VITE_GOSSO_CLIENT_ID || 'blog-spa';
 export const gossoAdminURL = import.meta.env.VITE_GOSSO_ADMIN_URL || '/identity-admin/';
+// `__Host-` cookies are intentionally accepted only over HTTPS. Use the
+// SDK's bearer-token flow for the local HTTP gateway so a successful login
+// does not immediately lose its browser session.
+export const useCookieSession = window.location.protocol === 'https:';
 
 export const gossoClient = createGossoClient({
   issuer: gossoIssuer,
@@ -24,9 +28,11 @@ export const gossoClient = createGossoClient({
   postLoginDefaultPath: '/admin',
   loginPath: '/login',
   storagePrefix: 'gouno-blog',
-  sessionMode: 'cookie',
-  sessionProfileEndpoint: '/api/me/session',
-  csrfCookieName: 'blog_csrf_token',
+  ...(useCookieSession ? {
+    sessionMode: 'cookie' as const,
+    sessionProfileEndpoint: '/api/me/session',
+    csrfCookieName: 'blog_csrf_token',
+  } : {}),
 });
 
 export const authSession = {

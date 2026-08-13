@@ -821,6 +821,10 @@ select option {
   padding: 30px;
 }
 
+.auth-card > .feedback {
+  margin-bottom: 16px;
+}
+
 .auth-card__header {
   margin-bottom: 28px;
   text-align: center;

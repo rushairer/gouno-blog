@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+// @vitest-environment-options {"url":"https://blog.example.test/"}
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('blog cookie session', () => {

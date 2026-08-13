@@ -104,9 +104,10 @@ func startWebServer(cmd *cobra.Command, args []string) {
 		jwksURL = "http://localhost:8088/.well-known/jwks.json"
 	}
 	authOptions := middleware.AuthOptions{
-		Issuer:   os.Getenv("SSO_TOKEN_ISSUER"),
-		Audience: os.Getenv("SSO_TOKEN_AUDIENCE"),
-		ClientID: os.Getenv("SSO_CLIENT_ID"),
+		Issuer:              os.Getenv("SSO_TOKEN_ISSUER"),
+		Audience:            os.Getenv("SSO_TOKEN_AUDIENCE"),
+		ClientID:            os.Getenv("SSO_CLIENT_ID"),
+		AllowUnscopedTokens: os.Getenv("SSO_ALLOW_UNSCOPED_TOKENS") == "true",
 	}
 
 	engine := gin.New()

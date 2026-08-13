@@ -114,6 +114,46 @@ func TestAuthMiddlewareAcceptsHostCookieSession(t *testing.T) {
 	}
 }
 
+func TestAuthMiddlewareAllowsUnscopedTokenOnlyWhenEnabled(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	verifier := &JWTVerifier{keys: map[string]*rsa.PublicKey{"test-key": &privateKey.PublicKey}}
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
+		"sub": "user-1", "roles": []string{"admin"}, "iss": "test-issuer", "exp": time.Now().Add(time.Hour).Unix(),
+	})
+	token.Header["kid"] = "test-key"
+	tokenString, err := token.SignedString(privateKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, test := range []struct {
+		name  string
+		allow bool
+		want  int
+	}{
+		{name: "strict by default", want: http.StatusUnauthorized},
+		{name: "development opt-in", allow: true, want: http.StatusNoContent},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			router := gin.New()
+			router.GET("/admin", AuthMiddlewareWithOptions(verifier, AuthOptions{
+				RequiredRole: "admin", Issuer: "test-issuer", Audience: "test-audience", ClientID: "test-client-id", AllowUnscopedTokens: test.allow,
+			}), func(ctx *gin.Context) { ctx.Status(http.StatusNoContent) })
+			rec := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, "/admin", nil)
+			req.Header.Set("Authorization", "Bearer "+tokenString)
+			router.ServeHTTP(rec, req)
+			if rec.Code != test.want {
+				t.Fatalf("status = %d, want %d; body=%s", rec.Code, test.want, rec.Body.String())
+			}
+		})
+	}
+}
+
 func TestOptionalAuthAttachesIdentityFromHostCookieSession(t *testing.T) {
 	router, token := setupAuthTestRouter(t, []string{"admin"})
 	rec := httptest.NewRecorder()

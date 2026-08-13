@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+// @vitest-environment-options {"url":"https://blog.example.test/"}
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -11,6 +13,7 @@ vi.mock('../../auth', () => ({
   loginWithPasskey: vi.fn(),
   redirectToAuthorize: vi.fn(),
   verifyMfa: vi.fn(),
+  useCookieSession: true,
 }));
 
 function renderLogin(initialEntry = '/login') {
@@ -57,5 +60,17 @@ describe('Login', () => {
 
     expect(await screen.findByPlaceholderText(/6-digit code/i)).toBeInTheDocument();
     expect(redirectToAuthorize).not.toHaveBeenCalled();
+  });
+
+  it('localizes the SDK profile-load error', async () => {
+    vi.mocked(loginWithPassword).mockRejectedValue(new Error('Failed to fetch user profile'));
+    const user = userEvent.setup();
+    renderLogin();
+
+    await user.type(screen.getByPlaceholderText(/enter your username/i), 'admin');
+    await user.type(screen.getByPlaceholderText(/enter your password/i), 'admin123');
+    await user.click(screen.getByRole('button', { name: /^sso sign in$/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Unable to load your user profile. Please try again.');
   });
 });
