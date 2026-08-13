@@ -55,6 +55,9 @@ func (s *ApprovalService) ListMediaCandidates(ctx context.Context) ([]*domain.Me
 func (s *ApprovalService) ListMediaCandidatesByWorkflowRun(ctx context.Context, runID int64) ([]*domain.MediaCandidate, error) {
 	return s.repo.ListMediaCandidatesByWorkflowRun(ctx, runID)
 }
+func (s *ApprovalService) GetMediaCandidate(ctx context.Context, id int64) (*domain.MediaCandidate, error) {
+	return s.repo.GetMediaCandidate(ctx, id)
+}
 
 func (s *ApprovalService) GetInteraction(ctx context.Context, id int64) (*domain.WorkflowInteractionTask, error) {
 	return s.repo.GetInteraction(ctx, id)
@@ -489,6 +492,10 @@ func (s *ApprovalService) Reject(ctx context.Context, id int64, reviewer, note s
 		return ErrApprovalConflict
 	}
 	return nil
+}
+
+func (s *ApprovalService) ReconcileApprovalRun(ctx context.Context, approvalID int64) (*domain.AgentRun, error) {
+	return s.repo.ReconcileApprovalRun(ctx, approvalID)
 }
 
 func (s *ApprovalService) Approve(ctx context.Context, id int64, reviewer, note string) error {

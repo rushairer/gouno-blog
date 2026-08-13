@@ -113,6 +113,20 @@ describe('WorkflowRunRecords', () => {
     expect(onRefresh).toHaveBeenCalledOnce();
   });
 
+  it('lets an administrator delete a terminal record and refreshes the list', async () => {
+    const user = userEvent.setup();
+    const onRefresh = vi.fn(async () => undefined);
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(<WorkflowRunRecords locale="zh" workflows={[workflow]} runs={[run]} formatDateTime={(value) => value} onRefresh={onRefresh} />);
+
+    await user.click(screen.getByRole('button', { name: /AI 每日资讯/ }));
+    await user.click(await screen.findByRole('button', { name: '删除记录' }));
+
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledWith('/api/admin/ai-workflow-runs/6', { method: 'DELETE' }));
+    expect(onRefresh).toHaveBeenCalledOnce();
+    confirm.mockRestore();
+  });
+
   it('supports selecting and applying multiple image candidates in one run', async () => {
     const user = userEvent.setup();
     const candidate = (id: number, placement: string) => ({ id, post_id: 42, generation_status: 'generated', selected: false, placement, anchor: placement === 'inline' ? '## Details' : '', media_asset_url: `/media/${id}.png`, headline: `Candidate ${id}`, alt_text: `Alt ${id}` });

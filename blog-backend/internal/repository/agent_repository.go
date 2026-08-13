@@ -924,6 +924,76 @@ func (r *AgentRepository) RejectApproval(ctx context.Context, id int64, reviewer
 	return nil
 }
 
+// ReconcileApprovalRun closes the parent Agent run after a reviewer has dealt
+// with every proposal. A run with a rejected/expired proposal is cancelled;
+// otherwise all executed proposals make it successful. This keeps the run
+// history truthful instead of leaving completed work at awaiting_approval.
+func (r *AgentRepository) ReconcileApprovalRun(ctx context.Context, approvalID int64) (*domain.AgentRun, error) {
+	var runID int64
+	if err := r.db.QueryRowContext(ctx, `SELECT run_id FROM ai_approvals WHERE id=$1`, approvalID).Scan(&runID); err != nil {
+		return nil, err
+	}
+	var pending, unsuccessful int
+	if err := r.db.QueryRowContext(ctx, `SELECT
+		COUNT(*) FILTER (WHERE status IN ('pending','approved')),
+		COUNT(*) FILTER (WHERE status IN ('rejected','expired','failed'))
+		FROM ai_approvals WHERE run_id=$1`, runID).Scan(&pending, &unsuccessful); err != nil {
+		return nil, err
+	}
+	if pending == 0 {
+		status := domain.AgentRunSucceeded
+		if unsuccessful > 0 {
+			status = domain.AgentRunCancelled
+		}
+		if _, err := r.db.ExecContext(ctx, `UPDATE ai_agent_runs SET status=$2,finished_at=NOW()
+			WHERE id=$1 AND status='awaiting_approval'`, runID, status); err != nil {
+			return nil, err
+		}
+	} else if unsuccessful > 0 {
+		// A rejected proposal cancels the run as a whole. Close any sibling
+		// proposals too so the UI never advertises decisions that can no longer
+		// be executed safely.
+		if _, err := r.db.ExecContext(ctx, `UPDATE ai_approvals SET status='rejected',review_note='cancelled because another proposal in this run was rejected',reviewed_at=NOW()
+			WHERE run_id=$1 AND status IN ('pending','approved')`, runID); err != nil {
+			return nil, err
+		}
+		if _, err := r.db.ExecContext(ctx, `UPDATE ai_agent_runs SET status='cancelled',finished_at=NOW()
+			WHERE id=$1 AND status='awaiting_approval'`, runID); err != nil {
+			return nil, err
+		}
+	}
+	return r.GetRun(ctx, runID)
+}
+
+// DeleteRun permanently removes a terminal run and its dependent audit rows.
+// It deliberately refuses active work and leaves any resulting post/media
+// assets intact; only the generated candidate records are removed.
+func (r *AgentRepository) DeleteRun(ctx context.Context, runID int64) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	var status domain.AgentRunStatus
+	if err := tx.QueryRowContext(ctx, `SELECT status FROM ai_agent_runs WHERE id=$1 FOR UPDATE`, runID).Scan(&status); err != nil {
+		return err
+	}
+	if status != domain.AgentRunSucceeded && status != domain.AgentRunFailed && status != domain.AgentRunCancelled {
+		return errors.New("only completed Agent runs can be deleted")
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM ai_media_candidates WHERE source_run_id=$1`, runID); err != nil {
+		return err
+	}
+	result, err := tx.ExecContext(ctx, `DELETE FROM ai_agent_runs WHERE id=$1`, runID)
+	if err != nil {
+		return err
+	}
+	if changed, _ := result.RowsAffected(); changed == 0 {
+		return sql.ErrNoRows
+	}
+	return tx.Commit()
+}
+
 func (r *AgentRepository) CreateEditorialTask(ctx context.Context, approvalID int64, title, description, priority string) error {
 	_, err := r.db.ExecContext(ctx, `INSERT INTO ai_editorial_tasks
 		(title, description, priority, source_approval_id) VALUES ($1,$2,$3,$4)`,

@@ -1,4 +1,4 @@
-import { ChevronRight, GitBranch, LoaderCircle } from "lucide-react";
+import { ChevronRight, GitBranch, LoaderCircle, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiFetch } from "../../auth";
 import type {
@@ -88,6 +88,7 @@ export function WorkflowRunRecords({
     Record<number, string>
   >({});
   const [batchBusy, setBatchBusy] = useState("");
+  const [deleting, setDeleting] = useState(false);
   const [imagePreviews, setImagePreviews] = useState<
     Record<
       number,
@@ -111,6 +112,17 @@ export function WorkflowRunRecords({
   const filtered = workflowID
     ? runs.filter((run) => run.workflow_id === workflowID)
     : runs;
+
+  // The detail panel owns its expanded logs, while the parent owns the fresh
+  // run list. Merge the latest run envelope after any action so its status and
+  // timing never lag behind the user-visible operation that just completed.
+  useEffect(() => {
+    if (!selected) return;
+    const latest = runs.find((run) => run.id === selected.run.id);
+    if (latest && latest !== selected.run) {
+      setSelected((current) => (current ? { ...current, run: latest } : null));
+    }
+  }, [runs, selected]);
 
   const inspect = useCallback(async (run: WorkflowRun) => {
     setLoadingID(run.id);
@@ -210,6 +222,7 @@ export function WorkflowRunRecords({
         }),
       );
       if (selected) await inspect(selected.run);
+      if (onRefresh) await onRefresh();
       if (onRefresh) await onRefresh();
     } catch (reason) {
       setError(
@@ -371,6 +384,7 @@ export function WorkflowRunRecords({
         }),
       );
       if (selected) await inspect(selected.run);
+      if (onRefresh) await onRefresh();
     } catch (reason) {
       setError(
         reason instanceof Error
@@ -493,6 +507,22 @@ export function WorkflowRunRecords({
     }
   };
 
+  const deleteRun = async () => {
+    if (!selected || !["succeeded", "failed", "cancelled"].includes(selected.run.status)) return;
+    if (!window.confirm(zh ? "删除这条终态运行记录及其附属日志？文章和媒体文件不会被删除。" : "Delete this completed run and its attached logs? Posts and media files are kept.")) return;
+    setDeleting(true);
+    setError("");
+    try {
+      await readData<unknown>(await apiFetch(`/api/admin/ai-workflow-runs/${selected.run.id}`, { method: "DELETE" }));
+      setSelected(null);
+      if (onRefresh) await onRefresh();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : zh ? "删除运行记录失败。" : "Could not delete run record.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   useEffect(() => {
     if (inspectedFromURL.current) return;
     const requestedID = Number(
@@ -593,7 +623,9 @@ export function WorkflowRunRecords({
                     {selected.run.workflow_version_id}
                   </small>
                 </div>
-                <StatusPill status={selected.run.status} locale={locale} />
+                <div className="row-actions"><StatusPill status={selected.run.status} locale={locale} />
+                  {["succeeded", "failed", "cancelled"].includes(selected.run.status) ? <button className="btn btn-secondary" type="button" disabled={deleting} onClick={() => void deleteRun()}><Trash2 />{deleting ? (zh ? "清理中…" : "Deleting…") : (zh ? "删除记录" : "Delete record")}</button> : null}
+                </div>
               </div>
               <div className="agent-run-metrics">
                 <span>

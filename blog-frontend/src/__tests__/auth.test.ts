@@ -23,6 +23,24 @@ describe('blog cookie session', () => {
     expect(headers.get('Authorization')).toBeNull();
   });
 
+  it('refreshes an expired cookie session once, then retries the protected request', async () => {
+    document.cookie = 'blog_csrf_token=csrf-value; path=/';
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ message: 'invalid or expired token' }), { status: 401 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ expires_in: 900 }), { status: 200 }))
+      .mockResolvedValueOnce(Response.json({ data: { list: [] } }));
+    vi.stubGlobal('fetch', fetchMock);
+    const { apiFetch } = await import('../auth');
+
+    const response = await apiFetch('/api/admin/posts');
+
+    expect(response.ok).toBe(true);
+    expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://blog.example.test/api/v1/auth/refresh', expect.objectContaining({
+      method: 'POST', credentials: 'same-origin', headers: expect.objectContaining({ 'X-Gosso-Cookie-Session': '1', 'X-CSRF-Token': 'csrf-value' }),
+    }));
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
   it('protects anonymous community writes with the same CSRF-aware API helper', async () => {
     document.cookie = 'blog_csrf_token=csrf-value; path=/';
     const fetchMock = vi.fn().mockResolvedValue(Response.json({ data: {} }));

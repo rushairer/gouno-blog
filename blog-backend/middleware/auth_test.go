@@ -46,6 +46,15 @@ func setupAuthTestRouter(t *testing.T, roles []string) (*gin.Engine, string) {
 		}
 		ctx.Status(http.StatusUnauthorized)
 	})
+	router.GET("/optional-anonymous", OptionalAuth(verifier, AuthOptions{
+		Issuer: "test-issuer", Audience: "test-audience", ClientID: "test-client-id",
+	}), func(ctx *gin.Context) {
+		if _, authenticated := ctx.Get("account_id"); authenticated {
+			ctx.Status(http.StatusInternalServerError)
+			return
+		}
+		ctx.Status(http.StatusNoContent)
+	})
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
 		"sub":       "user-1",
@@ -151,6 +160,17 @@ func TestOptionalAuthAttachesIdentityFromHostCookieSession(t *testing.T) {
 	router.ServeHTTP(rec, req)
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("status = %d, want 204; body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestOptionalAuthIgnoresExpiredHostCookieForPublicRoutes(t *testing.T) {
+	router, _ := setupAuthTestRouter(t, []string{"admin"})
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/optional-anonymous", nil)
+	req.AddCookie(&http.Cookie{Name: "__Host-access_token", Value: "expired-or-invalid"})
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want 204 for anonymous public request; body=%s", rec.Code, rec.Body.String())
 	}
 }
 

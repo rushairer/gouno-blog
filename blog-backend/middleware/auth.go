@@ -110,21 +110,33 @@ func setIdentity(ctx *gin.Context, claims jwt.MapClaims) {
 	ctx.Set("claims", claims)
 }
 
-// OptionalAuth attaches verified identity when a bearer token is present.
-// Missing credentials remain anonymous; malformed or invalid credentials are rejected.
+// OptionalAuth attaches verified identity when credentials are valid. Missing
+// credentials remain anonymous. An explicit Bearer token is an API client's
+// assertion and is therefore rejected when malformed or invalid. In contrast,
+// an expired browser-session cookie must not turn a public resource into a 401:
+// protected browser calls receive a 401 from AuthMiddleware and the SDK refreshes
+// the cookie session there, while public content remains readable anonymously.
 func OptionalAuth(verifier *JWTVerifier, options AuthOptions) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		tokenStr, ok := requestToken(ctx)
-		if !ok {
-			if ctx.GetHeader("Authorization") == "" {
+		tokenStr, hasBearer := bearerToken(ctx)
+		if !hasBearer {
+			var err error
+			tokenStr, err = ctx.Cookie("__Host-access_token")
+			if err != nil || tokenStr == "" {
 				ctx.Next()
 				return
 			}
+		}
+		if tokenStr == "" {
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "invalid authorization format"))
 			return
 		}
 		claims, err := verifier.VerifyToken(tokenStr, options)
 		if err != nil {
+			if !hasBearer {
+				ctx.Next()
+				return
+			}
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, err.Error()))
 			return
 		}

@@ -854,7 +854,16 @@ func (ctrl *AgentController) ReviewMediaCandidate(c *gin.Context) {
 		writeAgentError(c, err)
 		return
 	}
+	ctrl.reconcileCandidateWorkflow(c, id)
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
+}
+
+func (ctrl *AgentController) reconcileCandidateWorkflow(c *gin.Context, candidateID int64) {
+	candidate, err := ctrl.approvals.GetMediaCandidate(c.Request.Context(), candidateID)
+	if err != nil || candidate.WorkflowRunID == nil {
+		return
+	}
+	_ = ctrl.workflows.ReconcileMediaRun(c.Request.Context(), *candidate.WorkflowRunID)
 }
 
 func (ctrl *AgentController) AttachMediaAsset(c *gin.Context) {
@@ -918,6 +927,7 @@ func (ctrl *AgentController) CancelImageTask(c *gin.Context) {
 		writeAgentError(c, err)
 		return
 	}
+	ctrl.reconcileCandidateWorkflow(c, id)
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }
 
@@ -938,6 +948,7 @@ func (ctrl *AgentController) SelectImageTask(c *gin.Context) {
 		writeAgentError(c, err)
 		return
 	}
+	ctrl.reconcileCandidateWorkflow(c, id)
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }
 
@@ -954,6 +965,10 @@ func (ctrl *AgentController) SelectWorkflowImageTasks(c *gin.Context) {
 		return
 	}
 	if err := ctrl.approvals.SelectMediaCandidates(c.Request.Context(), runID, req.Selections); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	if err := ctrl.workflows.ReconcileMediaRun(c.Request.Context(), runID); err != nil {
 		writeAgentError(c, err)
 		return
 	}
@@ -977,6 +992,10 @@ func (ctrl *AgentController) ApplyWorkflowImageTasks(c *gin.Context) {
 		writeAgentError(c, err)
 		return
 	}
+	if err := ctrl.workflows.ReconcileMediaRun(c.Request.Context(), runID); err != nil {
+		writeAgentError(c, err)
+		return
+	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(post))
 }
 
@@ -990,6 +1009,7 @@ func (ctrl *AgentController) ApplyImageTask(c *gin.Context) {
 		writeAgentError(c, err)
 		return
 	}
+	ctrl.reconcileCandidateWorkflow(c, id)
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(post))
 }
 
@@ -1234,6 +1254,18 @@ func (ctrl *AgentController) RetryWorkflowRun(c *gin.Context) {
 	c.JSON(http.StatusAccepted, gouno.NewSuccessResponse(run))
 }
 
+func (ctrl *AgentController) DeleteWorkflowRun(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	if err := ctrl.workflows.DeleteRun(c.Request.Context(), id); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
+}
+
 func (ctrl *AgentController) EmitWorkflowEvent(c *gin.Context) {
 	var req struct {
 		EventKey string          `json:"event_key" binding:"required"`
@@ -1473,9 +1505,20 @@ func (ctrl *AgentController) CancelInteraction(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
 		return
 	}
+	item, err := ctrl.approvals.GetInteraction(c.Request.Context(), id)
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
 	if err := ctrl.approvals.CancelInteraction(c.Request.Context(), id, req.ResumeToken, interactionSubject(c)); err != nil {
 		writeAgentError(c, err)
 		return
+	}
+	if item.WorkflowRunID != nil {
+		if err := ctrl.workflows.Cancel(c.Request.Context(), *item.WorkflowRunID); err != nil && !errors.Is(err, sql.ErrNoRows) {
+			writeAgentError(c, err)
+			return
+		}
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }
@@ -2049,6 +2092,18 @@ func (ctrl *AgentController) ListRuns(c *gin.Context) {
 	}))
 }
 
+func (ctrl *AgentController) DeleteRun(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	if err := ctrl.runner.DeleteRun(c.Request.Context(), id); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
+}
+
 func (ctrl *AgentController) GetRun(c *gin.Context) {
 	id, ok := agentID(c)
 	if !ok {
@@ -2126,6 +2181,18 @@ func (ctrl *AgentController) reviewApproval(c *gin.Context, approve bool) {
 	if err != nil {
 		writeAgentError(c, err)
 		return
+	}
+	run, reconcileErr := ctrl.approvals.ReconcileApprovalRun(c.Request.Context(), id)
+	if reconcileErr != nil {
+		writeAgentError(c, reconcileErr)
+		return
+	}
+	if run.WorkflowRunID != nil && run.Status != domain.AgentRunAwaitingApproval {
+		if approve && run.Status == domain.AgentRunSucceeded {
+			_ = ctrl.workflows.ResumeAfterApproval(c.Request.Context(), *run.WorkflowRunID)
+		} else if run.Status == domain.AgentRunCancelled {
+			_ = ctrl.workflows.Cancel(c.Request.Context(), *run.WorkflowRunID)
+		}
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }

@@ -11,28 +11,28 @@ async function readData<T>(response: Response | Promise<Response>): Promise<T> {
 export function getPosts(params: URLSearchParams, admin = false) {
   const path = admin ? '/api/admin/posts' : '/api/posts';
   const query = params.toString();
-  return readData<PaginatedPosts>(admin ? apiFetch(`${path}${query ? `?${query}` : ''}`) : fetch(`${path}${query ? `?${query}` : ''}`));
+  return readData<PaginatedPosts>(apiFetch(`${path}${query ? `?${query}` : ''}`));
 }
 
 export function getPost(slugOrID: string) {
-  return readData<Post>(fetch(`/api/posts/${encodeURIComponent(slugOrID)}`));
+  return readData<Post>(apiFetch(`/api/posts/${encodeURIComponent(slugOrID)}`));
 }
 
 export function getCategories() {
-  return readData<Category[]>(fetch('/api/categories'));
+  return readData<Category[]>(apiFetch('/api/categories'));
 }
 
 export function getCategoryPosts(slug: string, params: URLSearchParams) {
   const query = params.toString();
-  return readData<PaginatedPosts>(fetch(`/api/categories/${encodeURIComponent(slug)}/posts${query ? `?${query}` : ''}`));
+  return readData<PaginatedPosts>(apiFetch(`/api/categories/${encodeURIComponent(slug)}/posts${query ? `?${query}` : ''}`));
 }
 
 export function getTags() {
-  return readData<string[]>(fetch('/api/tags'));
+  return readData<string[]>(apiFetch('/api/tags'));
 }
 
 export function getSiteSettings() {
-  return readData<SiteSettings>(fetch('/api/site'));
+  return readData<SiteSettings>(apiFetch('/api/site'));
 }
 
 export { readData };

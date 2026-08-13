@@ -64,6 +64,10 @@ func (r *Runner) GetRun(ctx context.Context, id int64) (*domain.AgentRun, error)
 	return run, translateError(err)
 }
 
+func (r *Runner) DeleteRun(ctx context.Context, id int64) error {
+	return translateError(r.repo.DeleteRun(ctx, id))
+}
+
 func (r *Runner) ListToolCalls(ctx context.Context, runID int64) ([]*domain.AgentToolCall, error) {
 	return r.repo.ListToolCalls(ctx, runID)
 }

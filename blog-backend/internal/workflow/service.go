@@ -1068,6 +1068,100 @@ func (s *Service) Resume(ctx context.Context, runID int64) error {
 	return nil
 }
 
+// ResumeAfterApproval continues a paused Workflow once its Agent proposals
+// have all been decided. Human-interaction runs use Resume instead; media
+// candidates remain awaiting user action until they are applied or cancelled.
+func (s *Service) ResumeAfterApproval(ctx context.Context, runID int64) error {
+	result, err := s.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status='queued',finished_at=NULL,error_code=NULL,error_message=NULL
+		WHERE id=$1 AND status='awaiting_approval'
+		AND NOT EXISTS (SELECT 1 FROM ai_media_candidates WHERE workflow_run_id=$1)`, runID)
+	if err != nil {
+		return err
+	}
+	if changed, _ := result.RowsAffected(); changed == 0 {
+		return sql.ErrNoRows
+	}
+	go s.Execute(context.Background(), runID)
+	return nil
+}
+
+// ReconcileMediaRun reflects the persisted image-task lifecycle in its source
+// Workflow. It is called after every user-visible image operation.
+func (s *Service) ReconcileMediaRun(ctx context.Context, runID int64) error {
+	var total, pending, applied, failed, cancelled int
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*),
+		COUNT(*) FILTER (WHERE applied_version_id IS NULL AND generation_status NOT IN ('rejected','failed','cancelled')),
+		COUNT(*) FILTER (WHERE applied_version_id IS NOT NULL),
+		COUNT(*) FILTER (WHERE generation_status IN ('failed','rejected')),
+		COUNT(*) FILTER (WHERE generation_status='cancelled')
+		FROM ai_media_candidates WHERE workflow_run_id=$1`, runID).Scan(&total, &pending, &applied, &failed, &cancelled); err != nil {
+		return err
+	}
+	if total == 0 {
+		return nil
+	}
+	status := "awaiting_approval"
+	finished := false
+	if pending == 0 && applied == total {
+		status, finished = "succeeded", true
+	} else if pending == 0 && failed+cancelled == total {
+		status, finished = "cancelled", true
+	}
+	result, err := s.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status=$2,finished_at=CASE WHEN $3 THEN NOW() ELSE NULL END
+		WHERE id=$1 AND status NOT IN ('failed','cancelled','succeeded')`, runID, status, finished)
+	if err != nil {
+		return err
+	}
+	if changed, _ := result.RowsAffected(); changed == 0 {
+		var exists bool
+		if err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM ai_workflow_runs WHERE id=$1)`, runID).Scan(&exists); err != nil || !exists {
+			return ErrNotFound
+		}
+	}
+	return nil
+}
+
+func (s *Service) Cancel(ctx context.Context, runID int64) error {
+	result, err := s.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status='cancelled',finished_at=NOW(),error_code='cancelled',error_message='cancelled by administrator'
+		WHERE id=$1 AND status IN ('queued','running','awaiting_approval','waiting_for_user')`, runID)
+	if err != nil {
+		return err
+	}
+	if changed, _ := result.RowsAffected(); changed == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+func (s *Service) DeleteRun(ctx context.Context, runID int64) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	var status string
+	if err := tx.QueryRowContext(ctx, `SELECT status FROM ai_workflow_runs WHERE id=$1 FOR UPDATE`, runID).Scan(&status); err != nil {
+		return err
+	}
+	if status != "succeeded" && status != "failed" && status != "cancelled" {
+		return fmt.Errorf("%w: only completed Workflow runs can be deleted", ErrInvalid)
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM ai_media_candidates WHERE workflow_run_id=$1 OR source_run_id IN (SELECT id FROM ai_agent_runs WHERE workflow_run_id=$1)`, runID); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM ai_agent_runs WHERE workflow_run_id=$1`, runID); err != nil {
+		return err
+	}
+	result, err := tx.ExecContext(ctx, `DELETE FROM ai_workflow_runs WHERE id=$1`, runID)
+	if err != nil {
+		return err
+	}
+	if changed, _ := result.RowsAffected(); changed == 0 {
+		return ErrNotFound
+	}
+	return tx.Commit()
+}
+
 func (s *Service) Execute(ctx context.Context, runID int64) {
 	if s.workerSem != nil {
 		select {
