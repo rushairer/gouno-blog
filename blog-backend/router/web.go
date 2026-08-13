@@ -19,7 +19,7 @@ import (
 func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.AuthOptions, jwksURL, redisDSN, visitorSecret, mediaDir string, store media.Store, corsAllowedOrigins []string, agentCtrl *controller.AgentController) {
 	server.Use(corsMiddleware(corsAllowedOrigins))
 	server.Use(requestBodyLimitMiddleware())
-	server.Use(blogCSRFMiddleware(!gin.IsDebugging()))
+	server.Use(blogCSRFMiddleware(true))
 	server.GET("/healthz", func(ctx *gin.Context) {
 		if db == nil || db.PingContext(ctx.Request.Context()) != nil {
 			ctx.Status(http.StatusServiceUnavailable)

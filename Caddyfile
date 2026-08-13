@@ -1,0 +1,106 @@
+{
+	auto_https off
+}
+
+https://localhost:8443 {
+	tls /etc/caddy/certs/localhost.pem /etc/caddy/certs/localhost-key.pem
+	header {
+		-Server
+		-X-Powered-By
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		X-Frame-Options SAMEORIGIN
+	}
+
+	@gosso_oidc path /.well-known/* /oauth2/* /oidc/*
+	handle @gosso_oidc {
+		reverse_proxy gosso:8080 {
+			header_up Host localhost:8443
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {http.request.remote.host}
+		}
+	}
+
+	handle /api/v1/* {
+		reverse_proxy gosso:8080 {
+			header_up Host localhost:8443
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {http.request.remote.host}
+		}
+	}
+
+	# The SDK probes the GOSSO browser session here before the OAuth code flow.
+	# Keep it on the identity provider so the blog API never accepts a
+	# password-login token without the configured OAuth audience.
+	@session_probe path /api/me/session
+	handle @session_probe {
+		rewrite * /api/v1/auth/session
+		reverse_proxy gosso:8080 {
+			header_up Host localhost:8443
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {http.request.remote.host}
+		}
+	}
+
+	@readiness path /readiness
+	handle @readiness {
+		header Cache-Control "no-store"
+		reverse_proxy gosso:8080 {
+			header_up Host localhost:8443
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {http.request.remote.host}
+		}
+	}
+
+	handle /api/* {
+		reverse_proxy blog-backend:8082 {
+			header_up Host localhost:8443
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {http.request.remote.host}
+		}
+	}
+
+	@public_documents path /feed.xml /rss /sitemap.xml
+	handle @public_documents {
+		reverse_proxy blog-backend:8082 {
+			header_up Host localhost:8443
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {http.request.remote.host}
+		}
+	}
+
+	handle /media/* {
+		reverse_proxy blog-backend:8082 {
+			header_up Host localhost:8443
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {http.request.remote.host}
+		}
+	}
+
+	handle /swagger* {
+		reverse_proxy blog-backend:8082 {
+			header_up Host localhost:8443
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {http.request.remote.host}
+		}
+	}
+
+	@identity_admin_root path /identity-admin
+	redir @identity_admin_root /identity-admin/ permanent
+
+	handle /identity-admin/* {
+		reverse_proxy gosso-admin-frontend:8083 {
+			header_up Host localhost:8443
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {http.request.remote.host}
+		}
+	}
+
+	handle {
+		reverse_proxy blog-frontend:8081 {
+			header_up Host localhost:8443
+			header_up X-Forwarded-Proto https
+			header_up X-Real-IP {http.request.remote.host}
+		}
+	}
+}

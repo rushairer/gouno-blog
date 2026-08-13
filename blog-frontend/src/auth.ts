@@ -14,25 +14,20 @@ export type {
 
 const gossoIssuer = import.meta.env.VITE_GOSSO_ISSUER || window.location.origin;
 const gossoClientID = import.meta.env.VITE_GOSSO_CLIENT_ID || 'blog-spa';
+const gossoScope = import.meta.env.VITE_GOSSO_SCOPE || 'openid profile email admin';
 export const gossoAdminURL = import.meta.env.VITE_GOSSO_ADMIN_URL || '/identity-admin/';
-// `__Host-` cookies are intentionally accepted only over HTTPS. Use the
-// SDK's bearer-token flow for the local HTTP gateway so a successful login
-// does not immediately lose its browser session.
-export const useCookieSession = window.location.protocol === 'https:';
 
 export const gossoClient = createGossoClient({
   issuer: gossoIssuer,
   clientId: gossoClientID,
   redirectUri: `${window.location.origin}/callback`,
-  scope: 'openid profile email',
+  scope: gossoScope,
   postLoginDefaultPath: '/admin',
   loginPath: '/login',
   storagePrefix: 'gouno-blog',
-  ...(useCookieSession ? {
-    sessionMode: 'cookie' as const,
-    sessionProfileEndpoint: '/api/me/session',
-    csrfCookieName: 'blog_csrf_token',
-  } : {}),
+  sessionMode: 'cookie',
+  sessionProfileEndpoint: '/api/me/session',
+  csrfCookieName: 'blog_csrf_token',
 });
 
 export const authSession = {
@@ -64,7 +59,10 @@ export const apiFetch = gossoClient.apiFetch;
 
 export function canManageBlog(): boolean {
   const snapshot: SessionSnapshot = authSession.getSnapshot();
-  return Boolean(snapshot.profile?.roles?.includes('admin'));
+  // GOSSO's cookie-session userinfo response can omit roles after the OAuth
+  // code exchange, while retaining the granted scopes. The backend remains
+  // the authorization boundary and verifies the admin role from the JWT.
+  return Boolean(snapshot.profile?.roles?.includes('admin') || snapshot.profile?.scope?.split(/\s+/).includes('admin'));
 }
 
 export function isAdmin(): boolean {

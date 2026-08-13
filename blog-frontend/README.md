@@ -16,7 +16,7 @@ Start the Vite dev server:
 npm run dev
 ```
 
-The full local product is normally accessed through the root Docker Compose gateway at `http://localhost:8080`, which proxies:
+The full local product is normally accessed through the root Docker Compose Caddy gateway at `https://localhost:8443`. Run `./scripts/setup-local-tls.sh` from the repository root before starting Compose. The gateway proxies:
 
 - `/` to this frontend
 - `/api/` to `blog-backend`
@@ -27,7 +27,7 @@ The full local product is normally accessed through the root Docker Compose gate
 The app works behind the gateway without extra frontend configuration. Override these only when connecting to a different GOSSO issuer or OAuth client:
 
 ```bash
-VITE_GOSSO_ISSUER=http://localhost:8080
+VITE_GOSSO_ISSUER=https://localhost:8443
 VITE_GOSSO_CLIENT_ID=blog-spa
 ```
 

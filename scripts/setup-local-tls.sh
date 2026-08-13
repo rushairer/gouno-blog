@@ -1,0 +1,22 @@
+#!/usr/bin/env sh
+# Generate the localhost certificate consumed by the Docker Caddy gateway.
+set -eu
+
+if ! command -v mkcert >/dev/null 2>&1; then
+	printf '%s\n' 'mkcert is required. Install it first (for example: brew install mkcert), then rerun this script.' >&2
+	exit 1
+fi
+
+repository_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+cert_dir="$repository_root/certs"
+cert_file="$cert_dir/localhost.pem"
+key_file="$cert_dir/localhost-key.pem"
+
+mkdir -p "$cert_dir"
+chmod 700 "$cert_dir"
+mkcert -install
+mkcert -cert-file "$cert_file" -key-file "$key_file" localhost 127.0.0.1 ::1
+chmod 644 "$cert_file"
+chmod 600 "$key_file"
+
+printf '%s\n' "Generated $cert_file and $key_file"

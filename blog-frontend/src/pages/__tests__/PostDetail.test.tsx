@@ -62,7 +62,7 @@ describe('PostDetail', () => {
     expect(screen.getByRole('link', { name: /Related Go Post/ })).toHaveAttribute('href', '/articles/related-go-post');
     expect(document.title).toBe('Markdown Post - Gouno Blog');
     expect(document.head.querySelector('meta[name="description"]')).toHaveAttribute('content', 'Summary');
-    expect(document.head.querySelector('link[rel="canonical"]')).toHaveAttribute('href', 'http://localhost:8080/articles/markdown-post');
+    expect(document.head.querySelector('link[rel="canonical"]')).toHaveAttribute('href', 'https://localhost:8443/articles/markdown-post');
     expect(document.head.querySelector('script[data-blog-seo="article"]')?.textContent).toContain('"BlogPosting"');
     expect(fetchMock).toHaveBeenCalledWith('/api/posts/markdown-post');
     expect(fetchMock).toHaveBeenCalledWith('/api/posts/7/comments');

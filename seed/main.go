@@ -11,6 +11,7 @@ import (
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/redis/go-redis/v9"
 )
 
 func parseJSONList(envVal string, fallback []string) (string, error) {
@@ -53,10 +54,27 @@ func envOrDefault(name, fallback string) string {
 	return value
 }
 
+func invalidateConsentCache(ctx context.Context, redisDSN, accountID, clientID string) error {
+	options, err := redis.ParseURL(redisDSN)
+	if err != nil {
+		return fmt.Errorf("parse Redis DSN: %w", err)
+	}
+	client := redis.NewClient(options)
+	defer client.Close()
+	if err := client.Del(ctx, fmt.Sprintf("consent:%s|%s", accountID, clientID)).Err(); err != nil {
+		return fmt.Errorf("delete consent cache: %w", err)
+	}
+	return nil
+}
+
 func main() {
 	dsn := os.Getenv("PG_DSN")
 	if dsn == "" {
 		log.Fatal("PG_DSN environment variable is required")
+	}
+	redisDSN := os.Getenv("REDIS_DSN")
+	if redisDSN == "" {
+		log.Fatal("REDIS_DSN environment variable is required")
 	}
 
 	accountID := envOrDefault("BLOG_OAUTH_ACCOUNT_ID", "00000000-0000-0000-0000-000000000001")
@@ -64,7 +82,7 @@ func main() {
 	clientName := envOrDefault("BLOG_OAUTH_CLIENT_NAME", "Personal Blog SPA")
 	clientDescription := envOrDefault("BLOG_OAUTH_CLIENT_DESCRIPTION", "OAuth2 Client for React Blog Frontend")
 
-	redirectURIsJSON, err := parseJSONList(os.Getenv("BLOG_OAUTH_REDIRECT_URIS"), []string{"http://localhost:8080/callback"})
+	redirectURIsJSON, err := parseJSONList(os.Getenv("BLOG_OAUTH_REDIRECT_URIS"), []string{"https://localhost:8443/callback"})
 	if err != nil {
 		log.Fatalf("Failed to parse BLOG_OAUTH_REDIRECT_URIS: %v", err)
 	}
@@ -149,8 +167,8 @@ func main() {
 	if clientCount == 0 {
 		log.Printf("Seeding OAuth2 client %q...\n", clientID)
 		_, err = db.ExecContext(ctx,
-			`INSERT INTO oauth2_clients (account_id, client_id, name, description, redirect_uris, grant_types, scopes, is_confidential)
-			 VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, false)`,
+			`INSERT INTO oauth2_clients (account_id, client_id, name, description, redirect_uris, grant_types, scopes, is_confidential, metadata)
+			 VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, false, '{"capability":"admin"}'::jsonb)`,
 			accountID, clientID, clientName, clientDescription, redirectURIsJSON, grantTypesJSON, scopesJSON,
 		)
 		if err != nil {
@@ -167,7 +185,8 @@ func main() {
 			     redirect_uris = $4::jsonb,
 			     grant_types = $5::jsonb,
 			     scopes = $6::jsonb,
-			     is_confidential = false
+			     is_confidential = false,
+			     metadata = '{"capability":"admin"}'::jsonb
 			 WHERE client_id = $7`,
 			accountID, clientName, clientDescription, redirectURIsJSON, grantTypesJSON, scopesJSON, clientID,
 		)
@@ -175,6 +194,27 @@ func main() {
 			log.Fatalf("Failed to update OAuth2 client policy: %v", err)
 		}
 		log.Printf("OAuth2 client %q policy updated.\n", clientID)
+	}
+
+	// This seed owns the local first-party blog client. Keep the development
+	// administrator's stored consent in sync with the client policy so adding a
+	// required first-party scope (for example, admin) takes effect for an
+	// existing Docker volume. Production clients must obtain consent through the
+	// normal OAuth authorization flow instead.
+	_, err = db.ExecContext(ctx,
+		`INSERT INTO oauth2_consents (account_id, client_id, scopes, granted_at)
+		 SELECT $1, id, $2::jsonb, NOW()
+		 FROM oauth2_clients
+		 WHERE client_id = $3
+		 ON CONFLICT (account_id, client_id) WHERE deleted_at IS NULL
+		 DO UPDATE SET scopes = EXCLUDED.scopes, granted_at = EXCLUDED.granted_at, deleted_at = NULL`,
+		accountID, scopesJSON, clientID,
+	)
+	if err != nil {
+		log.Fatalf("Failed to seed OAuth2 consent: %v", err)
+	}
+	if err := invalidateConsentCache(ctx, redisDSN, accountID, clientID); err != nil {
+		log.Fatalf("Failed to invalidate OAuth2 consent cache: %v", err)
 	}
 
 	log.Printf("Database seeding completed successfully. Blog OAuth client: %s.", clientID)

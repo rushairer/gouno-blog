@@ -145,7 +145,7 @@ func getBaseURL(c *gin.Context) string {
 		host = c.Request.Host
 	}
 	if host == "" {
-		host = "localhost:8080"
+		host = "localhost:8443"
 	}
 	return fmt.Sprintf("%s://%s", scheme, host)
 }

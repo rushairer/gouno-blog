@@ -18,7 +18,7 @@ Gouno Blog 是一个构建于 GoUno 与 GOSSO 的开源、自托管博客运营�
 
 系统采用“业务应用轻依赖身份提供商”的架构。`gouno-blog` 不包含 GOSSO 或 GOSSO Admin 源码，也不把它们作为 Git 子模块；本地完整集群通过已发布 Docker 镜像接入，业务代码只通过 OIDC/OAuth2 和 JWKS 与身份服务交互。
 
-* **Nginx Gateway (`localhost:8080`)**：统一网关入口。
+* **Caddy HTTPS Gateway (`https://localhost:8443`)**：统一网关入口。
   - `/` -> **blog-frontend** (React SPA 门户)
   - `/api/` -> **blog-backend** (GoUno 博客后端)
   - `/swagger/` -> **Swagger UI & OpenAPI Spec** (API 接口文档)
@@ -38,7 +38,7 @@ Gouno Blog 是一个构建于 GoUno 与 GOSSO 的开源、自托管博客运营�
 ├── retrospective.md           # 前后端 SSO 集成开发指南与最佳实践
 ├── docker-compose.yml         # 镜像化本地集群编排配置
 ├── docker-compose.source.yml  # 本地源码构建 override
-├── nginx-gateway.conf         # Nginx 反向代理配置
+├── Caddyfile                  # Caddy HTTPS 反向代理配置
 ├── init.sql                   # 数据库初始化脚本
 ├── seed/                      # 博客 OAuth client 一次性初始化镜像
 ├── keys/                      # 本地 GOSSO RSA 私钥目录（不提交）
@@ -64,15 +64,25 @@ test -f keys/private.pem || openssl genpkey -algorithm RSA -out keys/private.pem
 chmod 600 keys/private.pem
 ```
 
-### 3. 启动本地完整业务集群
+### 3. 初始化本地 HTTPS 证书
+
+本地网关只提供 HTTPS。先安装 [mkcert](https://github.com/FiloSottile/mkcert)（macOS 可使用 `brew install mkcert`），再生成并信任 `localhost` 证书：
+
+```bash
+./scripts/setup-local-tls.sh
+```
+
+该脚本生成的证书和私钥保存在 `certs/`，不会提交到 Git。需要覆盖默认路径时，将 `LOCAL_TLS_CERT_FILE` 和 `LOCAL_TLS_KEY_FILE` 写入本地 `.env`；可从 `.env.example` 开始。
+
+### 4. 启动本地完整业务集群
 
 默认 compose 会启动 blog、GOSSO、GOSSO Admin、PostgreSQL、Redis、Mailpit 和统一网关，并自动注册博客前端 OAuth client：
 
 - Client ID：`blog-spa`
-- Redirect URI：`http://localhost:8080/callback`
+- Redirect URI：`https://localhost:8443/callback`
 - Scopes：`openid profile email`
 
-GOSSO Admin 使用独立 OAuth client 和 Redirect URI：`http://localhost:8080/identity-admin/callback`。Blog 前端通过 `@gosso/client` 使用 HttpOnly Cookie 会话；访问与刷新 Token 不会写入浏览器可读存储。它仍使用授权码 + PKCE，并只在 `sessionStorage` 中临时保存 PKCE 状态和最小化的界面授权信息。
+GOSSO Admin 使用独立 OAuth client 和 Redirect URI：`https://localhost:8443/identity-admin/callback`。Blog 前端通过 `@gosso/client` 使用 `__Host-*` HttpOnly Cookie 会话；访问与刷新 Token 不会写入浏览器可读存储。它仍使用授权码 + PKCE，并只在 `sessionStorage` 中临时保存 PKCE 状态和最小化的界面授权信息。
 
 无感切换依赖统一网关下的 GOSSO 中心登录态：用户登录 `identity-admin` 后访问 `/admin`，blog 会发起 `/oauth2/authorize`。如果 GOSSO cookie 中的中心会话仍有效，GOSSO 会直接回调 `/callback` 并建立 Blog Cookie 会话，用户无需再次输入账号密码。
 
@@ -85,7 +95,7 @@ docker compose up -d
 该开发编排将所有宿主机端口绑定到 `127.0.0.1`，避免将开发账号、数据库、Redis 或 Mailpit 意外暴露到局域网。如需通过其他主机访问，请在部署环境中显式覆盖端口映射并配置生产凭据。
 
 启动后，容器运行状态如下：
-* `sso-blog-gateway` (Nginx, 监听端口 `8080`)
+* `sso-blog-gateway` (Caddy HTTPS, 监听端口 `8443`)
 * `sso-blog-frontend` (前端 SPA)
 * `sso-blog-backend` (后端 API, 监听端口 `8082`)
 * `sso-blog-gosso` (GOSSO 身份服务)
@@ -116,19 +126,19 @@ docker compose -f docker-compose.yml -f docker-compose.source.yml up -d --build
 
 后端会在数据库可用后才通过 `/healthz` 就绪检查；前端会等待该检查成功，避免容器刚启动时将请求转发到尚未完成数据库初始化的 API。
 
-### 4. 访问测试
-- 打开浏览器访问门户：[http://localhost:8080/](http://localhost:8080/)
-- 访问博客后台管理（触发 SSO 登录流）：[http://localhost:8080/admin](http://localhost:8080/admin)
-- 访问 AI Agent 控制台：[http://localhost:8080/admin/agents](http://localhost:8080/admin/agents)
-- 访问 GOSSO 身份管理控制台：[http://localhost:8080/identity-admin](http://localhost:8080/identity-admin)
-- 访问 API Swagger 文档：[http://localhost:8080/swagger](http://localhost:8080/swagger)
+### 5. 访问测试
+- 打开浏览器访问门户：[https://localhost:8443/](https://localhost:8443/)
+- 访问博客后台管理（触发 SSO 登录流）：[https://localhost:8443/admin](https://localhost:8443/admin)
+- 访问 AI Agent 控制台：[https://localhost:8443/admin/agents](https://localhost:8443/admin/agents)
+- 访问 GOSSO 身份管理控制台：[https://localhost:8443/identity-admin](https://localhost:8443/identity-admin)
+- 访问 API Swagger 文档：[https://localhost:8443/swagger](https://localhost:8443/swagger)
 - 使用本地默认管理员账户登录：
   - 用户名：`admin`
   - 密码：`admin123`
 - 登录成功后，如果服务端会话包含 blog 管理所需角色，即可在博客后台发布和管理文章。
 - 已登录 GOSSO 身份管理控制台后再次访问博客后台，会通过同一身份中心会话静默完成 blog 授权码流程；若 Blog 会话过期，SDK 会通过受保护的 Cookie 刷新流程恢复会话。
 
-### 5. 使用外部身份服务
+### 6. 使用外部身份服务
 
 如需让 `gouno-blog` 连接外部 OIDC/GOSSO，而不是本地 compose 内的 `gosso`，可以覆盖以下配置，并按需停用本地身份相关服务：
 
@@ -139,13 +149,13 @@ export SSO_TOKEN_ISSUER=http://localhost:8088
 export SSO_CLIENT_ID=blog-spa
 ```
 
-### 6. 多语言与国际化 (i18n)
+### 7. 多语言与国际化 (i18n)
 
 博客前端已支持中英文（zh/en）国际化：
 - **首选语言自适应**：系统默认会根据浏览器语言自动加载对应的语言界面（中文或英文）。
 - **语言手动切换**：在设置界面或首页侧边栏，你可以自由在“English”和“简体中文”之间切换，并且切换记录会被保存在浏览器的本地存储（Local Storage）中，以便在下一次访问时继续生效。
 
-### 7. 社区互动
+### 8. 社区互动
 
 - 匿名评论默认进入审核队列；通过 GOSSO 登录的读者使用账号展示名并可直接参与讨论。
 - 评论支持两级回复、举报与跨文章统一审核；登录用户会收到评论回复的站内通知。

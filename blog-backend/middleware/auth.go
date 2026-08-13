@@ -40,11 +40,10 @@ type JWTVerifier struct {
 }
 
 type AuthOptions struct {
-	RequiredRole        string
-	Issuer              string
-	Audience            string
-	ClientID            string
-	AllowUnscopedTokens bool
+	RequiredRole string
+	Issuer       string
+	Audience     string
+	ClientID     string
 }
 
 func bearerToken(ctx *gin.Context) (string, bool) {
@@ -77,9 +76,7 @@ func (v *JWTVerifier) VerifyToken(tokenStr string, options AuthOptions) (jwt.Map
 	if options.Issuer != "" {
 		parserOptions = append(parserOptions, jwt.WithIssuer(options.Issuer))
 	}
-	// Password-login tokens do not carry an OAuth audience. They are accepted
-	// only when explicitly enabled for the local HTTP development gateway.
-	if options.Audience != "" && !options.AllowUnscopedTokens {
+	if options.Audience != "" {
 		parserOptions = append(parserOptions, jwt.WithAudience(options.Audience))
 	}
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {

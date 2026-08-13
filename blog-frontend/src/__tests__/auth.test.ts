@@ -43,4 +43,15 @@ describe('blog cookie session', () => {
     expect(isLoggedIn()).toBe(true);
     expect(canManageBlog()).toBe(true);
   });
+
+  it('derives management access from the granted admin scope when userinfo omits roles', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(Response.json({ sub: '1', name: 'Admin', scope: 'openid profile admin' }))
+      .mockResolvedValueOnce(Response.json({ data: { sub: '1' } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { fetchUserProfile, canManageBlog } = await import('../auth');
+    await fetchUserProfile();
+    expect(canManageBlog()).toBe(true);
+  });
 });

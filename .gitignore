@@ -9,5 +9,6 @@ logs/
 # Local databases & configurations
 db_data/
 *.pem
+certs/
 keys/
 .env

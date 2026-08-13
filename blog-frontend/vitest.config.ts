@@ -7,7 +7,7 @@ export default defineConfig({
     environment: 'jsdom',
     environmentOptions: {
       jsdom: {
-        url: 'http://localhost:8080/',
+        url: 'https://localhost:8443/',
       },
     },
     setupFiles: './src/test/setup.ts',

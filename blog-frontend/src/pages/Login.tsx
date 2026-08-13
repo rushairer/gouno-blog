@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { KeyRound } from 'lucide-react';
 import { Feedback, Field, Panel } from '../components/ui';
-import { loginWithPasskey, loginWithPassword, redirectToAuthorize, useCookieSession, verifyMfa } from '../auth';
+import { loginWithPasskey, loginWithPassword, redirectToAuthorize, verifyMfa } from '../auth';
 import { useI18n } from '../i18n';
 
 export default function Login() {
   const { t } = useI18n();
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -33,10 +32,6 @@ export default function Login() {
   };
 
   const continueAfterLogin = async () => {
-    if (!useCookieSession) {
-      navigate('/admin');
-      return;
-    }
     if (hasAuthorizeRedirect) {
       doRedirect();
       return;

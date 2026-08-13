@@ -13,7 +13,6 @@ vi.mock('../../auth', () => ({
   loginWithPasskey: vi.fn(),
   redirectToAuthorize: vi.fn(),
   verifyMfa: vi.fn(),
-  useCookieSession: true,
 }));
 
 function renderLogin(initialEntry = '/login') {

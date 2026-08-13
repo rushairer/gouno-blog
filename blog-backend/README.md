@@ -123,7 +123,7 @@ web_server:
 The project provides a simple `/test/alive` route example to check if the service is alive.
 
 ```bash
-curl http://localhost:8080/test/alive
+curl -k https://localhost:8443/test/alive
 # Expected output: pong
 ```
 
@@ -266,7 +266,7 @@ web_server:
 项目提供了一个简单的 `/test/alive` 路由示例，用于检查服务是否存活。
 
 ```bash
-curl http://localhost:8080/test/alive
+curl -k https://localhost:8443/test/alive
 # Expected output: pong
 ```
 

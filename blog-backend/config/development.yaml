@@ -10,7 +10,7 @@ web_server:
     # parallel; keep local development comfortably above that burst.
     rate_limit_per_minute: 600
     trusted_proxies:
-        - "127.0.0.1"
+        - "172.21.0.0/16"
     cors_allowed_origins: []
 database:
     default: postgres
