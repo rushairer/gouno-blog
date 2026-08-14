@@ -69,29 +69,12 @@ export function isAdmin(): boolean {
   return canManageBlog();
 }
 
-function readCookie(name: string): string | undefined {
-  const prefix = `${name}=`;
-  const item = document.cookie.split(';').map((value) => value.trim()).find((value) => value.startsWith(prefix));
-  return item ? decodeURIComponent(item.slice(prefix.length)) : undefined;
-}
-
-// The blog and GOSSO intentionally have separate CSRF cookies on the shared
-// HTTPS origin. @gosso/client 0.2.x accepts the first matching cookie and
-// redirects even if logout was rejected, which can leave the SSO session live.
-// Pin this request to GOSSO's __Host cookie and redirect only after revocation.
 export async function logout() {
-  const csrf = readCookie('__Host-csrf_token') || readCookie('csrf_token');
-  const response = await fetch(`${gossoIssuer}/api/v1/auth/logout`, {
-    method: 'POST',
-    headers: csrf ? { 'X-CSRF-Token': csrf } : {},
-    credentials: 'same-origin',
-    keepalive: true,
-  });
-  if (!response.ok) {
+  try {
+    await gossoClient.logout('/');
+  } catch {
     throw new Error('退出登录失败，请重试。');
   }
-  gossoClient.clear();
-  window.location.assign('/');
 }
 
 export async function loginWithPassword(username: string, password: string): Promise<LoginResult> {

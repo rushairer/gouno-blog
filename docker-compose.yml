@@ -44,6 +44,7 @@ services:
       - GOUNO_WEB_SERVER_PORT=8080
       # Cookie-session endpoints must remain Secure even in local HTTPS mode.
       - GOUNO_WEB_SERVER_DEBUG=false
+      - GOUNO_WEB_SERVER_CSRF_COOKIE_SECURE=true
       - GOUNO_DATABASE_DEFAULT=postgres
       - GOUNO_DATABASE_DRIVERS_POSTGRES_DSN=host=db user=postgres password=${BLOG_POSTGRES_PASSWORD:-password} dbname=gosso port=5432 sslmode=disable TimeZone=Asia/Shanghai search_path=public
       - GOUNO_REDIS_DSN=redis://redis:6379/0

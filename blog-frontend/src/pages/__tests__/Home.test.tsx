@@ -44,7 +44,10 @@ describe('Home', () => {
     expect(screen.getAllByRole('link', { name: 'Go SSO Notes' })[0]).toHaveAttribute('href', '/articles/go-sso-notes');
     expect(screen.getByRole('heading', { name: '精选文章' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '主题索引' })).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('pageSize=12'));
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('pageSize=12'),
+      expect.objectContaining({ credentials: 'same-origin' }),
+    );
   });
 
   it('renders tag counts and the subscription paths without fake form submission', async () => {

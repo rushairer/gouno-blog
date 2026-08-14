@@ -3,7 +3,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('blog cookie session', () => {
-  beforeEach(() => { vi.resetModules(); localStorage.clear(); sessionStorage.clear(); document.cookie = 'blog_csrf_token=; path=/; max-age=0'; });
+  beforeEach(() => {
+    vi.resetModules();
+    localStorage.clear();
+    sessionStorage.clear();
+    document.cookie = 'blog_csrf_token=; path=/; max-age=0';
+    document.cookie = '__Host-csrf_token=; path=/; max-age=0; Secure';
+  });
 
   it('keeps only PKCE state in session storage', async () => {
     const { authSession } = await import('../auth');
@@ -24,7 +30,8 @@ describe('blog cookie session', () => {
   });
 
   it('refreshes an expired cookie session once, then retries the protected request', async () => {
-    document.cookie = 'blog_csrf_token=csrf-value; path=/';
+    document.cookie = 'blog_csrf_token=blog-csrf; path=/';
+    document.cookie = '__Host-csrf_token=gosso-csrf; path=/; Secure';
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ message: 'invalid or expired token' }), { status: 401 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ expires_in: 900 }), { status: 200 }))
@@ -36,9 +43,32 @@ describe('blog cookie session', () => {
 
     expect(response.ok).toBe(true);
     expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://blog.example.test/api/v1/auth/refresh', expect.objectContaining({
-      method: 'POST', credentials: 'same-origin', headers: expect.objectContaining({ 'X-Gosso-Cookie-Session': '1', 'X-CSRF-Token': 'csrf-value' }),
+      method: 'POST', credentials: 'same-origin', headers: { 'X-Gosso-Cookie-Session': '1', 'X-CSRF-Token': 'gosso-csrf' },
     }));
     expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('renews a missing GOSSO CSRF cookie before refreshing a long-idle session', async () => {
+    document.cookie = 'blog_csrf_token=blog-csrf; path=/';
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockImplementationOnce(async () => {
+        document.cookie = '__Host-csrf_token=renewed-gosso-csrf; path=/; Secure';
+        return new Response(null, { status: 401 });
+      })
+      .mockResolvedValueOnce(Response.json({ data: { expires_in: 900 } }))
+      .mockResolvedValueOnce(Response.json({ data: { list: [] } }));
+    vi.stubGlobal('fetch', fetchMock);
+    const { apiFetch } = await import('../auth');
+
+    const response = await apiFetch('/api/admin/posts');
+
+    expect(response.ok).toBe(true);
+    expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://blog.example.test/api/v1/auth/session', { credentials: 'same-origin' });
+    expect(fetchMock).toHaveBeenNthCalledWith(3, 'https://blog.example.test/api/v1/auth/refresh', expect.objectContaining({
+      headers: { 'X-Gosso-Cookie-Session': '1', 'X-CSRF-Token': 'renewed-gosso-csrf' },
+    }));
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
   it('uses only the GOSSO CSRF cookie when revoking a cookie session', async () => {
