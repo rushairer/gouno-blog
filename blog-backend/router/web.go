@@ -14,6 +14,7 @@ import (
 	"github.com/rushairer/blog-backend/internal/service"
 	"github.com/rushairer/blog-backend/middleware"
 	"github.com/rushairer/gouno"
+	auth "github.com/rushairer/gouno/auth"
 )
 
 func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.AuthOptions, jwksURL, redisDSN, visitorSecret, mediaDir string, store media.Store, corsAllowedOrigins []string, agentCtrl *controller.AgentController) {
@@ -64,7 +65,7 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 	server.GET("/sitemap.xml", feedCtrl.GetSitemap)
 
 	// Setup JWT verifier
-	verifier := middleware.NewJWTVerifier(jwksURL)
+	verifier := auth.NewVerifier(jwksURL)
 	authOptions.RequiredRole = "admin"
 	adminAuth := middleware.AuthMiddlewareWithOptions(verifier, authOptions)
 	userAuthOptions := authOptions
