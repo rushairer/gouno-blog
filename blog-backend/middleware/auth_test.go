@@ -8,13 +8,35 @@ import (
 	"math/big"
 	"net/http"
 	"net/http/httptest"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	auth "github.com/rushairer/gouno/auth"
 )
+
+func serveJWKS(t *testing.T, key *rsa.PublicKey) *httptest.Server {
+	t.Helper()
+	jwks := auth.JWKS{Keys: []auth.JWK{{
+		Kty: "RSA",
+		Use: "sig",
+		Alg: "RS256",
+		Kid: "test-key",
+		N:   base64.RawURLEncoding.EncodeToString(key.N.Bytes()),
+		E:   base64.RawURLEncoding.EncodeToString(big.NewInt(int64(key.E)).Bytes()),
+	}}}
+	body, err := json.Marshal(jwks)
+	if err != nil {
+		t.Fatalf("marshal jwks: %v", err)
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(body)
+	}))
+	t.Cleanup(server.Close)
+	return server
+}
 
 func setupAuthTestRouter(t *testing.T, roles []string) (*gin.Engine, string) {
 	t.Helper()
@@ -24,9 +46,7 @@ func setupAuthTestRouter(t *testing.T, roles []string) (*gin.Engine, string) {
 	if err != nil {
 		t.Fatalf("GenerateKey: %v", err)
 	}
-	verifier := &JWTVerifier{
-		keys: map[string]*rsa.PublicKey{"test-key": &privateKey.PublicKey},
-	}
+	verifier := auth.NewVerifier(serveJWKS(t, &privateKey.PublicKey).URL)
 
 	router := gin.New()
 	router.GET("/admin", AuthMiddlewareWithOptions(verifier, AuthOptions{
@@ -129,7 +149,7 @@ func TestAuthMiddlewareRejectsTokenWithoutConfiguredAudience(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	verifier := &JWTVerifier{keys: map[string]*rsa.PublicKey{"test-key": &privateKey.PublicKey}}
+	verifier := auth.NewVerifier(serveJWKS(t, &privateKey.PublicKey).URL)
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
 		"sub": "user-1", "roles": []string{"admin"}, "iss": "test-issuer", "exp": time.Now().Add(time.Hour).Unix(),
 	})
@@ -171,88 +191,5 @@ func TestOptionalAuthIgnoresExpiredHostCookieForPublicRoutes(t *testing.T) {
 	router.ServeHTTP(rec, req)
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("status = %d, want 204 for anonymous public request; body=%s", rec.Code, rec.Body.String())
-	}
-}
-
-func TestJWTVerifier_SingleflightAndCooldown(t *testing.T) {
-	requestCount := 0
-	var mu sync.Mutex
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatalf("GenerateKey: %v", err)
-	}
-
-	// Mock JWKS server
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		mu.Lock()
-		requestCount++
-		mu.Unlock()
-
-		nBytes := privateKey.N.Bytes()
-		eBytes := big.NewInt(int64(privateKey.E)).Bytes()
-		jwks := JWKS{
-			Keys: []JWK{
-				{
-					Kty: "RSA",
-					Use: "sig",
-					Alg: "RS256",
-					Kid: "test-key",
-					N:   base64.RawURLEncoding.EncodeToString(nBytes),
-					E:   base64.RawURLEncoding.EncodeToString(eBytes),
-				},
-			},
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(jwks)
-	}))
-	defer server.Close()
-
-	verifier := &JWTVerifier{
-		jwksURL: server.URL,
-		keys:    make(map[string]*rsa.PublicKey),
-	}
-
-	// Trigger concurrent key refreshes
-	var wg sync.WaitGroup
-	for i := 0; i < 5; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			_ = verifier.refreshKeys()
-		}()
-	}
-	wg.Wait()
-
-	mu.Lock()
-	countBefore := requestCount
-	mu.Unlock()
-
-	if countBefore != 1 {
-		t.Errorf("expected exactly 1 HTTP request due to singleflight, got %d", countBefore)
-	}
-
-	// A sequential request immediately after should be ignored due to cooldown
-	err = verifier.refreshKeys()
-	if err != nil {
-		t.Fatalf("refreshKeys: %v", err)
-	}
-
-	mu.Lock()
-	countAfter := requestCount
-	mu.Unlock()
-
-	if countAfter != 1 {
-		t.Errorf("expected request count to remain 1 due to cooldown, got %d", countAfter)
-	}
-}
-
-func TestJWTVerifierRejectsNonSuccessJWKSResponse(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusServiceUnavailable)
-	}))
-	defer server.Close()
-	verifier := &JWTVerifier{jwksURL: server.URL, keys: make(map[string]*rsa.PublicKey)}
-	if err := verifier.refreshKeys(); err == nil {
-		t.Fatal("expected non-success JWKS response to fail")
 	}
 }

@@ -120,6 +120,8 @@ github.com/rogpeppe/go-internal v1.10.0 h1:TMyTOH3F/DB16zRVcYyreMH6GnZZrwQVAoYjR
 github.com/rogpeppe/go-internal v1.10.0/go.mod h1:UQnix2H7Ngw/k4C5ijL5+65zddjncjaFoBhdsK/akog=
 github.com/rushairer/gouno v1.0.2 h1:o3hqY2y8+HhkDcBzLFIz7oTnZAjEEZwsJCU2G9AuKJw=
 github.com/rushairer/gouno v1.0.2/go.mod h1:uRfJbIFLTG4aVFnH6zlvrifgF7U9HHALtj+A6egvewM=
+github.com/rushairer/gouno v1.0.3 h1:FhWKo9lG6ljZovj6b2EBy0U1Ifs6ZZgkFsq+FO/YXak=
+github.com/rushairer/gouno v1.0.3/go.mod h1:Q5K6DlyWBx3lmJdxj8v/QYkygdA645vjzxkVZyLGOP4=
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
 github.com/sagikazarmark/locafero v0.7.0 h1:5MqpDsTGNDhY8sGp0Aowyf0qKsPrhewaLSsFaodPcyo=
 github.com/sagikazarmark/locafero v0.7.0/go.mod h1:2za3Cg5rMaTMoG/2Ulr9AwtFaIppKXTRYnozin4aB5k=

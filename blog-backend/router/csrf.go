@@ -1,22 +1,26 @@
 package router
 
 import (
-	"crypto/rand"
-	"crypto/subtle"
-	"encoding/hex"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/gouno"
+	gounoMiddleware "github.com/rushairer/gouno/middleware"
 )
 
 const blogCSRFCookie = "blog_csrf_token"
 
+const blogCSRFMaxAge = 24 * time.Hour
+
 func blogCSRFMiddleware(secure bool) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		if ctx.Request.Method == http.MethodGet || ctx.Request.Method == http.MethodHead || ctx.Request.Method == http.MethodOptions {
-			ensureBlogCSRFCookie(ctx, secure)
+			if err := gounoMiddleware.EnsureCSRFCookie(ctx, blogCSRFCookie, secure, blogCSRFMaxAge); err != nil {
+				ctx.AbortWithStatus(http.StatusInternalServerError)
+				return
+			}
 			ctx.Next()
 			return
 		}
@@ -27,22 +31,14 @@ func blogCSRFMiddleware(secure bool) gin.HandlerFunc {
 		}
 		cookie, err := ctx.Cookie(blogCSRFCookie)
 		header := ctx.GetHeader("X-CSRF-Token")
-		if err != nil || cookie == "" || header == "" || subtle.ConstantTimeCompare([]byte(cookie), []byte(header)) != 1 {
+		if err != nil || !gounoMiddleware.CSRFMatches(cookie, header) {
 			ctx.AbortWithStatusJSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, "CSRF token mismatch"))
 			return
 		}
+		// Rotate the token after successful validation to prevent fixation.
+		if token, genErr := gounoMiddleware.GenerateCSRFToken(); genErr == nil {
+			gounoMiddleware.SetCSRFCookie(ctx, blogCSRFCookie, token, secure, blogCSRFMaxAge)
+		}
 		ctx.Next()
 	}
-}
-
-func ensureBlogCSRFCookie(ctx *gin.Context, secure bool) {
-	if value, _ := ctx.Cookie(blogCSRFCookie); value != "" {
-		return
-	}
-	bytes := make([]byte, 32)
-	if _, err := rand.Read(bytes); err != nil {
-		ctx.AbortWithStatus(http.StatusInternalServerError)
-		return
-	}
-	http.SetCookie(ctx.Writer, &http.Cookie{Name: blogCSRFCookie, Value: hex.EncodeToString(bytes), Path: "/", MaxAge: 24 * 60 * 60, HttpOnly: false, Secure: secure, SameSite: http.SameSiteLaxMode})
 }
