@@ -1,4 +1,7 @@
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import type { ReactNode } from 'react';
+import i18n from 'i18next';
+import { I18nextProvider, initReactI18next, useTranslation } from 'react-i18next';
 
 export type Locale = 'en' | 'zh';
 
@@ -499,33 +502,40 @@ const dictionaries = {
 
 type TranslationKey = keyof typeof dictionaries.en;
 
-type I18nContextValue = {
-  locale: Locale;
-  setLocale: (locale: Locale) => void;
-  t: (key: TranslationKey, params?: Record<string, string | number>) => string;
-  formatDate: (value: string, options?: Intl.DateTimeFormatOptions) => string;
-  formatDateTime: (value: string, options?: Intl.DateTimeFormatOptions) => string;
-};
-
-const I18nContext = createContext<I18nContextValue | null>(null);
-
 function getInitialLocale(): Locale {
   const stored = localStorage.getItem(storageKey);
   if (stored === 'en' || stored === 'zh') return stored;
   return navigator.language.toLowerCase().startsWith('zh') ? 'zh' : 'en';
 }
 
-export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(() => getInitialLocale());
+void i18n.use(initReactI18next).init({
+  resources: {
+    en: { translation: { ...dictionaries.en } },
+    zh: { translation: { ...dictionaries.zh } },
+  },
+  lng: getInitialLocale(),
+  fallbackLng: 'en',
+  supportedLngs: ['en', 'zh'],
+  interpolation: { escapeValue: false },
+});
 
-  const value = useMemo<I18nContextValue>(() => {
+export function I18nProvider({ children }: { children: ReactNode }) {
+  return <I18nextProvider i18n={i18n}>{children}</I18nextProvider>;
+}
+
+// oxlint-disable-next-line react/only-export-components
+export function useI18n() {
+  const { t: translate } = useTranslation();
+  const locale: Locale = i18n.resolvedLanguage === 'zh' ? 'zh' : 'en';
+
+  return useMemo(() => {
     const setLocale = (next: Locale) => {
       localStorage.setItem(storageKey, next);
-      setLocaleState(next);
+      void i18n.changeLanguage(next);
     };
 
     const t = (key: TranslationKey, params: Record<string, string | number> = {}) => {
-      const template: string = dictionaries[locale][key] || dictionaries.en[key] || key;
+      const template: string = translate(key) || key;
       return Object.entries(params).reduce<string>(
         (text, [name, replacement]) => text.replaceAll(`{${name}}`, String(replacement)),
         template,
@@ -547,16 +557,5 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
       }).format(new Date(value));
 
     return { locale, setLocale, t, formatDate, formatDateTime };
-  }, [locale]);
-
-  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
-}
-
-// oxlint-disable-next-line react/only-export-components
-export function useI18n() {
-  const value = useContext(I18nContext);
-  if (!value) {
-    throw new Error('useI18n must be used inside I18nProvider');
-  }
-  return value;
+  }, [translate, locale]);
 }

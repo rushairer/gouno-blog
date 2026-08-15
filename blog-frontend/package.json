@@ -14,10 +14,12 @@
   },
   "dependencies": {
     "@gosso/client": "https://github.com/rushairer/gosso-client/releases/download/v0.3.0/gosso-client-0.3.0.tgz",
+    "i18next": "^26.3.6",
     "lucide-react": "^1.21.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "react-i18next": "^17.0.11",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.18.2",
     "rehype-highlight": "^7.0.2",
