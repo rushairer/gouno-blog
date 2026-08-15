@@ -23,3 +23,15 @@
 1. 已发布 `@gosso/client@0.3.0`，未覆盖 `v0.2.1` 工件。
 2. 已在 Admin 和 Blog 的干净 `npm ci` 环境中安装该精确版本并运行认证契约、类型、测试和构建。
 3. 两个消费者锁文件现已固定该工件；后续可发布 Admin/Blog 镜像。GOSSO 与 Blog 后端仅在接口契约变化时发布。
+
+## 整改落实（第二轮）
+
+在首次审计基础上，关闭残留重复并清理遗留代码，各阶段独立提交并推送对应仓库 `main`：
+
+- **Admin passkey 去重（关闭 AUD-002 残留）**：`PasskeysPanel` 的注册/列表/删除改走 `@gosso/client` 的 `registerPasskey`/`listPasskeys`/`deletePasskey`，删除自研 `utils/webauthn.ts` 及测试。（gosso-admin `1ab8efb`）
+- **抽取共享 Go 包**：新增 `github.com/rushairer/gouno@v1.0.3`，提供 `auth`（JWKS 拉取 + RS256 校验）与 `middleware`（CSRF 原语、SecurityHeaders）；blog-backend 与 gosso 改为复用，仅保留各自策略（Bearer/cookie 提取、角色校验、skip 路径、CSP nonce 等）。（gouno `v1.0.3`、blog-backend `cca48a9`、gosso `c956643`）
+- **清理死代码**：移除 blog-backend 的 gouno 生成器模板、render/verify 脚本、`.gitkeep` 占位与 goconvey target，`test` 改为 `go test ./...`；移除未引用资产 `public/icons.svg`。（blog-backend `b1b646f`、`7331798`）
+- **统一前端方案**：blog 前端 i18n 改用 `i18next` + `react-i18next`（与 gosso-admin 一致）；手写正则高亮器替换为 `rehype-highlight`。（`e9f3411`、`02acf82`）
+- **P3 清理**：gosso-admin 改用 `qrcode.react`（与 blog 一致）；移除 `readResponse` 别名，统一为 `readData`。（gosso-admin `febc1a0`、`e290a12`）
+
+各仓库已在本地通过类型检查、单测（Go 单元测试 / Vitest）与构建验证。
