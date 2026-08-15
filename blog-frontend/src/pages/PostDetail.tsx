@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Bookmark, Calendar, Eye, Flag, Heart, List, MessageSquare, Reply, Send, ShieldAlert, User, X } from 'lucide-react';
 import { apiFetch, canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
 import type { CommunityComment } from '../community';
-import { optionalApiFetch, readResponse } from '../community';
+import { optionalApiFetch, readData } from '../community';
 import { publicApiFetch } from '../lib/api-client';
 import { EmptyState, Feedback, Field, LoadingState, Modal, Panel } from '../components/ui';
 import { useI18n } from '../i18n';
@@ -127,12 +127,12 @@ export default function PostDetail() {
         setPost(postData);
         setIsAdminPreview(adminPreviewActive || (Boolean(postData.status && postData.status !== 'published') && canManageBlog()));
 
-        const communityState = communityResp.ok ? await readResponse<{ liked: boolean; bookmarked: boolean; likes_count: number }>(communityResp) : null;
+        const communityState = communityResp.ok ? await readData<{ liked: boolean; bookmarked: boolean; likes_count: number }>(communityResp) : null;
         setLikes(communityState?.likes_count ?? postData.likes_count ?? 0);
         setLiked(communityState?.liked || false);
         setBookmarked(communityState?.bookmarked || false);
         if (relatedResp.ok) {
-          setRelatedPosts((await readResponse<Post[] | null>(relatedResp)) || []);
+          setRelatedPosts((await readData<Post[] | null>(relatedResp)) || []);
         }
         const viewKey = `gouno-blog:viewed:${postData.id}`;
         const alreadyViewed = sessionStorage.getItem(viewKey) === '1';
@@ -145,7 +145,7 @@ export default function PostDetail() {
 
         const commentsResp = await publicApiFetch(`/api/posts/${postData.id}/comments`);
         if (commentsResp.ok) {
-          setComments((await readResponse<CommunityComment[] | null>(commentsResp)) || []);
+          setComments((await readData<CommunityComment[] | null>(commentsResp)) || []);
         }
       } catch (err: unknown) {
         console.error(err);
@@ -173,7 +173,7 @@ export default function PostDetail() {
     if (!post) return;
     const nextLiked = !liked;
     try {
-      const state = await readResponse<{ liked: boolean; likes_count: number }>(await optionalApiFetch(`/api/posts/${post.id}/like`, { method: nextLiked ? 'PUT' : 'DELETE' }));
+      const state = await readData<{ liked: boolean; likes_count: number }>(await optionalApiFetch(`/api/posts/${post.id}/like`, { method: nextLiked ? 'PUT' : 'DELETE' }));
       setLiked(state.liked);
       setLikes(state.likes_count);
     } catch (err: unknown) {
@@ -208,7 +208,7 @@ export default function PostDetail() {
         throw new Error(t('failedPostComment'));
       }
 
-      const created = await readResponse<CommunityComment>(response);
+      const created = await readData<CommunityComment>(response);
       setCommentContent('');
       setCommentAuthor('');
       setReplyingTo(null);
