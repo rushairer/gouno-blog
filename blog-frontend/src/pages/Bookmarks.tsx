@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Bookmark, Eye, Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { apiFetch, isLoggedIn, redirectToAuthorize } from '../auth';
-import { readResponse } from '../community';
+import { readData } from '../community';
 import { EmptyState, Feedback, LoadingState, PageHeader, Panel } from '../components/ui';
 import { useI18n } from '../i18n';
 
@@ -31,7 +31,7 @@ export default function Bookmarks() {
       return;
     }
     try {
-      setItems((await readResponse<BookmarkItem[] | null>(await apiFetch('/api/me/bookmarks'))) || []);
+      setItems((await readData<BookmarkItem[] | null>(await apiFetch('/api/me/bookmarks'))) || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('requestFailed'));
     } finally {

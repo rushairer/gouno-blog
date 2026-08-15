@@ -1,4 +1,4 @@
-export { optionalApiFetch, readData as readResponse } from './lib/api-client';
+export { optionalApiFetch, readData } from './lib/api-client';
 
 export interface CommunityComment {
   id: number;

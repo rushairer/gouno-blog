@@ -3,7 +3,7 @@ import { Bell, CheckCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { apiFetch, isLoggedIn, redirectToAuthorize } from '../auth';
 import type { Notification } from '../community';
-import { readResponse } from '../community';
+import { readData } from '../community';
 import { EmptyState, Feedback, LoadingState, PageHeader, Panel } from '../components/ui';
 import { useI18n } from '../i18n';
 
@@ -19,7 +19,7 @@ export default function Notifications() {
       return;
     }
     try {
-      const data = await readResponse<{ list: Notification[] }>(await apiFetch('/api/me/notifications'));
+      const data = await readData<{ list: Notification[] }>(await apiFetch('/api/me/notifications'));
       setItems(data?.list || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('requestFailed'));
