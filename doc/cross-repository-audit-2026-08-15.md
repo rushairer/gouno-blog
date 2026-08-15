@@ -7,7 +7,7 @@
 | ID | 级别 | 证据 | 处置与责任仓库 |
 | --- | --- | --- | --- |
 | AUD-001 | P0（已缓解） | 发布地址 `v0.2.1` 的包缺少 cookie-session API，但 Blog 当前安装内容依赖该 API。 | `gosso-client@0.3.0` 已发布为独立不可变工件；Blog 与 Admin 均已在干净安装环境中锁定并验证该版本。不得覆盖旧发布工件。 |
-| AUD-002 | P1 | Admin 的 `authSession.ts` 重复实现 PKCE、刷新锁、CSRF、Passkey 与会话状态。 | Admin 改为配置 `@gosso/client`；待 `v0.3.0` 发布后，其依赖锁定该不可变工件并删除原实现。 |
+| AUD-002 | P1（已缓解） | Admin 的 `authSession.ts` 重复实现 PKCE、刷新锁、CSRF、Passkey 与会话状态。 | Admin 已改为配置 `@gosso/client@0.3.0`，原实现已删除；两个消费者 CI 均验证锁文件中的 release URL、版本和完整性校验。 |
 | AUD-003 | P1 | Blog 在 SDK 之外散落 `fetch`、CSRF cookie 解析和 envelope 解析。 | 统一到 `src/lib/api-client.ts`；认证请求仍由 SDK 负责，匿名社区请求复用同一 CSRF/credentials 规则。 |
 | AUD-004 | P2 | `hero.png`、`react.svg`、`vite.svg` 与空的 `App.css` 无引用。 | 已从 Blog 前端移除；构建、UI 合约检查和测试覆盖确认无引用。 |
 | AUD-005 | P2 | GOSSO 的 `/api/*`、Blog 的 `/posts/:slug` 与若干数据库字段存在兼容实现。 | 保留。删除前需在 CHANGELOG 标明最后支持版本、向消费者发出弃用通知，并以生产路由/数据使用量为零作为删除条件。 |
