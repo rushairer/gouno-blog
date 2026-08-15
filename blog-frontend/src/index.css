@@ -1521,39 +1521,58 @@ select option {
   }
 }
 
-/* Syntax Highlighting Tokens */
+/* Syntax Highlighting Tokens (rehype-highlight / highlight.js) */
 .code-block-wrapper pre code {
   color: var(--ui-on-code);
 }
 
-.token-comment {
+.hljs-comment,
+.hljs-quote {
   color: var(--ui-code-comment);
   font-style: italic;
 }
 
-.token-keyword {
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-meta,
+.hljs-doctag {
   color: var(--ui-code-keyword);
   font-weight: 600;
 }
 
-.token-string {
+.hljs-string,
+.hljs-regexp,
+.hljs-addition,
+.hljs-attribute {
   color: var(--ui-code-string);
 }
 
-.token-boolean {
+.hljs-number,
+.hljs-literal,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-link,
+.hljs-deletion {
   color: var(--ui-code-number);
 }
 
-.token-number {
-  color: var(--ui-code-number);
-}
-
-.token-function {
+.hljs-title,
+.hljs-title.function_,
+.hljs-section,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class {
   color: var(--ui-code-function);
   font-weight: 500;
 }
 
-.token-type {
+.hljs-type,
+.hljs-built_in,
+.hljs-title.class_,
+.hljs-class .hljs-title,
+.hljs-params,
+.hljs-variable,
+.hljs-template-variable {
   color: var(--ui-code-type);
 }
 
