@@ -5,7 +5,7 @@ import { apiFetch } from '../../auth';
 import { AdminPageState, ConfirmDialog, Feedback, Field, Input, Select, Textarea } from '../../components/ui';
 import { MarkdownRenderer } from '../../components/MarkdownRenderer';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
-import { readData } from '../../lib/blog-api';
+import { getCategories, readData } from '../../lib/blog-api';
 import { extractMarkdownTOC } from '../../markdown';
 import type { Category, Post, PostStatus } from '../../types/blog';
 
@@ -40,7 +40,7 @@ export default function PostEditor() {
   useEffect(() => {
     if (!allowed) return;
     const requests: Promise<unknown>[] = [
-      fetch('/api/categories').then((response) => response.ok ? response.json().then((body) => body.data || []) : []).then(setCategories),
+      getCategories().then(setCategories),
     ];
     if (id) {
       requests.push(readData<Post>(apiFetch(`/api/admin/posts/${id}`)).then((value) => {

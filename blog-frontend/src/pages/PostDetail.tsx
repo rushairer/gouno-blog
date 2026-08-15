@@ -4,6 +4,7 @@ import { ArrowLeft, Bookmark, Calendar, Eye, Flag, Heart, List, MessageSquare, R
 import { apiFetch, canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
 import type { CommunityComment } from '../community';
 import { optionalApiFetch, readResponse } from '../community';
+import { publicApiFetch } from '../lib/api-client';
 import { EmptyState, Feedback, Field, LoadingState, Modal, Panel } from '../components/ui';
 import { useI18n } from '../i18n';
 import { useArticleSEO } from '../seo';
@@ -89,9 +90,9 @@ export default function PostDetail() {
         let adminPreviewActive = false;
 
         const [postResp, communityResp, relatedResp] = await Promise.all([
-          fetch(`/api/posts/${slug}`),
+          publicApiFetch(`/api/posts/${slug}`),
           optionalApiFetch(`/api/posts/${slug}/community`),
-          fetch(`/api/posts/${slug}/related`),
+          publicApiFetch(`/api/posts/${slug}/related`),
         ]);
 
         if (postResp.ok) {
@@ -142,7 +143,7 @@ export default function PostDetail() {
           optionalApiFetch(`/api/posts/${postData.id}/view`, { method: 'POST' }).catch((e) => console.error(e));
         }
 
-        const commentsResp = await fetch(`/api/posts/${postData.id}/comments`);
+        const commentsResp = await publicApiFetch(`/api/posts/${postData.id}/comments`);
         if (commentsResp.ok) {
           setComments((await readResponse<CommunityComment[] | null>(commentsResp)) || []);
         }
