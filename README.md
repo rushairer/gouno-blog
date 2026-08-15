@@ -105,7 +105,7 @@ docker compose up -d
 * `sso-blog-redis` (Redis 缓存在线 Session)
 * `sso-blog-mailpit` (本地邮件测试)
 
-自建服务镜像（`ghcr.io/rushairer/*`）默认使用浮动的 `main` 标签：各仓库推送到 `main` 后，镜像会以 `main`、`sha-<commit>` 标签发布，发布 `v*` 时再追加版本标签。本地开发执行 `docker compose pull`（或 `docker compose up -d --pull always`）即可拿到最新镜像，无需手改摘要。第三方基础镜像（PostgreSQL、Redis、Mailpit、Caddy）仍固定不可变摘要以保证可复现。
+自建服务镜像（`ghcr.io/rushairer/*`）默认使用浮动的 `main` 标签，并设置了 `pull_policy: always`：各仓库推送到 `main` 后，镜像会以 `main`、`sha-<commit>` 标签发布，发布 `v*` 时再追加版本标签。本地开发只需 `docker compose up -d` 即会拉取最新 `main` 镜像，无需手改摘要或额外 `pull`。第三方基础镜像（PostgreSQL、Redis、Mailpit、Caddy）仍固定不可变摘要以保证可复现。
 
 生产部署应固定到不可变摘要，以 `vX.Y.Z@sha256:<digest>` 覆盖对应变量：
 

@@ -36,6 +36,7 @@ services:
 
   gosso:
     image: ghcr.io/rushairer/gosso:${GOSSO_IMAGE_TAG:-main}
+    pull_policy: always
     container_name: sso-blog-gosso
     command: ["web", "-e", "development"]
     environment:
@@ -71,6 +72,7 @@ services:
 
   gosso-admin-seed:
     image: ghcr.io/rushairer/gosso-admin-seed:${GOSSO_ADMIN_SEED_IMAGE_TAG:-main}
+    pull_policy: always
     container_name: sso-blog-gosso-admin-seed
     environment:
       - GOSSO_ADMIN_ENV=development
@@ -87,6 +89,7 @@ services:
 
   blog-client-seed:
     image: ghcr.io/rushairer/gouno-blog-seed:${GOUNO_BLOG_SEED_IMAGE_TAG:-main}
+    pull_policy: always
     container_name: sso-blog-client-seed
     environment:
       - PG_DSN=host=db user=postgres password=${BLOG_POSTGRES_PASSWORD:-password} dbname=gosso port=5432 sslmode=disable
@@ -104,6 +107,7 @@ services:
 
   blog-backend:
     image: ghcr.io/rushairer/gouno-blog-backend:${GOUNO_BLOG_BACKEND_IMAGE_TAG:-main}
+    pull_policy: always
     container_name: sso-blog-backend
     environment:
       - POSTGRES_HOST=db
@@ -149,6 +153,7 @@ services:
 
   blog-frontend:
     image: ghcr.io/rushairer/gouno-blog-frontend:${GOUNO_BLOG_FRONTEND_IMAGE_TAG:-main}
+    pull_policy: always
     container_name: sso-blog-frontend
     depends_on:
       blog-backend:
@@ -156,6 +161,7 @@ services:
 
   gosso-admin-frontend:
     image: ghcr.io/rushairer/gosso-admin-frontend-identity-admin:${GOSSO_ADMIN_FRONTEND_IMAGE_TAG:-main}
+    pull_policy: always
     container_name: sso-blog-gosso-admin-frontend
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8083/ >/dev/null || exit 1"]
