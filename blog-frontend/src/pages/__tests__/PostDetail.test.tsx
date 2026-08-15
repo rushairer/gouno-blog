@@ -64,8 +64,8 @@ describe('PostDetail', () => {
     expect(document.head.querySelector('meta[name="description"]')).toHaveAttribute('content', 'Summary');
     expect(document.head.querySelector('link[rel="canonical"]')).toHaveAttribute('href', 'https://localhost:8443/articles/markdown-post');
     expect(document.head.querySelector('script[data-blog-seo="article"]')?.textContent).toContain('"BlogPosting"');
-    expect(fetchMock).toHaveBeenCalledWith('/api/posts/markdown-post');
-    expect(fetchMock).toHaveBeenCalledWith('/api/posts/7/comments');
+    expect(fetchMock).toHaveBeenCalledWith('/api/posts/markdown-post', expect.objectContaining({ credentials: 'same-origin' }));
+    expect(fetchMock).toHaveBeenCalledWith('/api/posts/7/comments', expect.objectContaining({ credentials: 'same-origin' }));
   });
 
   it('posts a comment and shows the pending review notice', async () => {

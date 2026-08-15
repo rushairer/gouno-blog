@@ -1,12 +1,6 @@
 import { apiFetch } from '../auth';
+import { readData } from './api-client';
 import type { Category, PaginatedPosts, Post, SiteSettings } from '../types/blog';
-
-async function readData<T>(response: Response | Promise<Response>): Promise<T> {
-  const resolved = await response;
-  const body = await resolved.json();
-  if (!resolved.ok) throw new Error(body.message || '请求失败，请稍后重试。');
-  return body.data as T;
-}
 
 export function getPosts(params: URLSearchParams, admin = false) {
   const path = admin ? '/api/admin/posts' : '/api/posts';
