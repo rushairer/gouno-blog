@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { apiFetch } from '../../../auth';
@@ -18,8 +18,8 @@ describe('AdminTaxonomy', () => {
     vi.mocked(apiFetch).mockResolvedValue(Response.json({ data: [] }));
   });
 
-  it('uses the shared responsive field contract for category creation', async () => {
-    const { container } = render(
+  it('opens category creation in the shared right-side drawer', async () => {
+    render(
       <MemoryRouter>
         <ToastProvider>
           <AdminTaxonomy type="categories" />
@@ -28,11 +28,12 @@ describe('AdminTaxonomy', () => {
     );
 
     expect(await screen.findByText('还没有分类。创建第一个分类来组织长期主题。')).toBeInTheDocument();
-    const form = container.querySelector('.taxonomy-form');
+    expect(screen.queryByRole('dialog', { name: '新建分类' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '新建分类' }));
+    const form = screen.getByRole('dialog', { name: '新建分类' }).querySelector('.drawer-form');
     expect(form?.querySelectorAll('.field')).toHaveLength(4);
     expect(form?.querySelectorAll('.input-field')).toHaveLength(4);
-    expect(form?.querySelector('.taxonomy-form__description')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '新建分类' })).toHaveClass('taxonomy-form__action');
+    expect(screen.getByRole('button', { name: '创建分类' })).toHaveClass('btn-primary');
   });
 
   it('keeps tag names in a dedicated left-aligned content region with shared action buttons', async () => {
