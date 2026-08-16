@@ -164,10 +164,6 @@ func (s *ApprovalService) ApplyMediaCandidate(ctx context.Context, id int64) (*d
 	if err != nil || post == nil {
 		return nil, service.ErrPostNotFound
 	}
-	if expected, parseErr := strconv.ParseInt(candidate.PostVersionToken, 10, 64); parseErr == nil && expected != post.UpdatedAt.Unix() {
-		s.appendCandidateEvent(ctx, id, "article_apply_conflict", map[string]any{"reason": "version_token"})
-		return nil, fmt.Errorf("article version conflict")
-	}
 	assets, err := s.growth.ListMedia(ctx)
 	if err != nil {
 		return nil, err
@@ -187,7 +183,9 @@ func (s *ApprovalService) ApplyMediaCandidate(ctx context.Context, id int64) (*d
 			s.appendCandidateEvent(ctx, id, "article_apply_conflict", map[string]any{"reason": "anchor"})
 			return nil, fmt.Errorf("article anchor conflict")
 		}
-		post.Content = strings.Replace(post.Content, candidate.Anchor, candidate.Anchor+"\n\n!["+candidate.AltText+"]("+asset.URL+")", 1)
+		if !strings.Contains(post.Content, asset.URL) {
+			post.Content = strings.Replace(post.Content, candidate.Anchor, candidate.Anchor+"\n\n!["+candidate.AltText+"]("+asset.URL+")", 1)
+		}
 	} else {
 		post.CoverURL, post.CoverAlt = asset.URL, candidate.AltText
 	}
@@ -199,6 +197,7 @@ func (s *ApprovalService) ApplyMediaCandidate(ctx context.Context, id int64) (*d
 	if len(versions) > 0 {
 		_ = s.repo.MarkMediaCandidateApplied(ctx, id, versions[0].ID)
 	}
+	_ = s.repo.SyncPostVersionToken(ctx, post.ID, strconv.FormatInt(post.UpdatedAt.Unix(), 10))
 	s.appendCandidateEvent(ctx, id, "article_version_created", map[string]any{"post_id": post.ID, "placement": candidate.Placement})
 	return post, nil
 }
@@ -249,13 +248,6 @@ func (s *ApprovalService) ApplyMediaCandidates(ctx context.Context, runID int64,
 	if err != nil || post == nil {
 		return nil, service.ErrPostNotFound
 	}
-	for _, id := range ids {
-		candidate := byID[id]
-		if expected, parseErr := strconv.ParseInt(candidate.PostVersionToken, 10, 64); parseErr == nil && expected != post.UpdatedAt.Unix() {
-			s.appendCandidateEvent(ctx, id, "article_apply_conflict", map[string]any{"reason": "version_token", "batch": true})
-			return nil, fmt.Errorf("article version conflict")
-		}
-	}
 	assets, err := s.growth.ListMedia(ctx)
 	if err != nil {
 		return nil, err
@@ -275,7 +267,9 @@ func (s *ApprovalService) ApplyMediaCandidates(ctx context.Context, runID int64,
 				s.appendCandidateEvent(ctx, id, "article_apply_conflict", map[string]any{"reason": "anchor", "batch": true})
 				return nil, fmt.Errorf("article anchor conflict")
 			}
-			post.Content = strings.Replace(post.Content, candidate.Anchor, candidate.Anchor+"\n\n!["+candidate.AltText+"]("+asset.URL+")", 1)
+			if !strings.Contains(post.Content, asset.URL) {
+				post.Content = strings.Replace(post.Content, candidate.Anchor, candidate.Anchor+"\n\n!["+candidate.AltText+"]("+asset.URL+")", 1)
+			}
 		} else {
 			post.CoverURL, post.CoverAlt = asset.URL, candidate.AltText
 		}
@@ -295,6 +289,7 @@ func (s *ApprovalService) ApplyMediaCandidates(ctx context.Context, runID int64,
 		s.appendCandidateEvent(ctx, id, "article_apply_confirmed", map[string]any{"post_id": post.ID, "batch": true})
 		s.appendCandidateEvent(ctx, id, "article_version_created", map[string]any{"post_id": post.ID, "batch": true})
 	}
+	_ = s.repo.SyncPostVersionToken(ctx, post.ID, strconv.FormatInt(post.UpdatedAt.Unix(), 10))
 	return post, nil
 }
 
@@ -324,12 +319,9 @@ func (s *ApprovalService) PreviewMediaCandidate(ctx context.Context, id int64) (
 	if asset == nil {
 		return nil, errors.New("media asset not found")
 	}
-	versionMatches := true
-	if expected, parseErr := strconv.ParseInt(candidate.PostVersionToken, 10, 64); parseErr == nil {
-		versionMatches = expected == post.UpdatedAt.Unix()
-	}
 	anchorMatches := candidate.Placement != "inline" || (candidate.Anchor != "" && strings.Contains(post.Content, candidate.Anchor))
 	applied := candidate.AppliedVersionID != nil
+	versionMatches := true
 	if applied {
 		// Applying the candidate creates a new article version and therefore
 		// changes UpdatedAt. That expected change must not make the completed
@@ -339,9 +331,15 @@ func (s *ApprovalService) PreviewMediaCandidate(ctx context.Context, id int64) (
 		} else {
 			versionMatches = post.CoverURL == asset.URL
 		}
+	} else {
+		if candidate.Placement == "inline" {
+			versionMatches = anchorMatches
+		} else {
+			versionMatches = true
+		}
 	}
 	preview := map[string]any{"post_id": post.ID, "title": post.Title, "placement": candidate.Placement, "image_url": asset.URL, "alt_text": candidate.AltText, "version_matches": versionMatches, "anchor_matches": anchorMatches, "applied": applied, "cover_url": post.CoverURL, "content": post.Content}
-	if candidate.Placement == "inline" && anchorMatches {
+	if candidate.Placement == "inline" && anchorMatches && !applied && !strings.Contains(post.Content, asset.URL) {
 		preview["content"] = strings.Replace(post.Content, candidate.Anchor, candidate.Anchor+"\n\n!["+candidate.AltText+"]("+asset.URL+")", 1)
 	}
 	if candidate.Placement == "cover" {

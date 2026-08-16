@@ -1133,7 +1133,9 @@ func (r *AgentRepository) CreateMediaCandidateFromRun(ctx context.Context, runID
 		(post_id,source_run_id,source_approval_id,workflow_run_id,headline,brief,platform,alt_text,provider,model,input_tokens,output_tokens,post_version_token)
 		SELECT $2,$1,NULL,ar.workflow_run_id,$3,$4,$5,$6,ar.provider,ar.model,ar.input_tokens,ar.output_tokens,FLOOR(EXTRACT(EPOCH FROM p.updated_at))::bigint::text
 		FROM ai_agent_runs ar JOIN posts p ON p.id=$2 WHERE ar.id=$1
-		ON CONFLICT (source_run_id) WHERE source_approval_id IS NULL DO UPDATE SET source_run_id=EXCLUDED.source_run_id
+		ON CONFLICT (source_run_id, headline) WHERE source_approval_id IS NULL DO UPDATE SET
+			brief=EXCLUDED.brief,platform=EXCLUDED.platform,alt_text=EXCLUDED.alt_text,
+			input_tokens=EXCLUDED.input_tokens,output_tokens=EXCLUDED.output_tokens,post_version_token=EXCLUDED.post_version_token
 		RETURNING id,workflow_run_id`, runID, postID, strings.TrimSpace(headline), strings.TrimSpace(brief), strings.TrimSpace(platform), strings.TrimSpace(altText)).Scan(&candidateID, &workflowRunID)
 	if err != nil {
 		return 0, nil, err
@@ -1256,6 +1258,12 @@ func (r *AgentRepository) MarkMediaCandidateApplied(ctx context.Context, id, ver
 		return sql.ErrNoRows
 	}
 	return nil
+}
+
+func (r *AgentRepository) SyncPostVersionToken(ctx context.Context, postID int64, token string) error {
+	_, err := r.db.ExecContext(ctx, `UPDATE ai_media_candidates SET post_version_token=$2
+		WHERE post_id=$1 AND applied_version_id IS NULL`, postID, token)
+	return err
 }
 
 func (r *AgentRepository) AttachMediaAsset(ctx context.Context, candidateID, mediaAssetID int64) error {
