@@ -1,4 +1,4 @@
-import { ChevronRight, GitBranch, LoaderCircle, Trash2 } from "lucide-react";
+import { ArrowLeft, Eye, LoaderCircle, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiFetch } from "../../auth";
 import type {
@@ -10,9 +10,10 @@ import type {
   WorkflowRunEvent,
   WorkflowStepRun,
 } from "../../agent";
-import { EmptyState, Modal, Panel, Select } from "../ui";
+import { Button, EmptyState, FilterBar, Modal, PanelHeader, Select, WorkspacePanel } from "../ui";
 import { MarkdownRenderer } from "../MarkdownRenderer";
 import { StatusPill } from "./StatusPill";
+import { WorkflowRunOutput } from "./WorkflowRunOutput";
 
 async function readData<T>(response: Response): Promise<T> {
   const body = await response.json();
@@ -155,15 +156,29 @@ export function WorkflowRunRecords({
     Record<number, ArticleImagePreview>
   >({});
   const [previewDialogCandidateID, setPreviewDialogCandidateID] = useState<number | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [generationNow, setGenerationNow] = useState(() => Date.now());
   const inspectedFromURL = useRef(false);
   const names = useMemo(
     () => new Map(workflows.map((item) => [item.id, item.name])),
     [workflows],
   );
-  const filtered = workflowID
-    ? runs.filter((run) => run.workflow_id === workflowID)
-    : runs;
+  const filtered = useMemo(() => {
+    let result = newestFirst(runs);
+    if (workflowID > 0) {
+      result = result.filter((run) => run.workflow_id === workflowID);
+    }
+    if (statusFilter !== "all") {
+      if (statusFilter === "running") {
+        result = result.filter((run) => ["queued", "running"].includes(run.status));
+      } else if (statusFilter === "awaiting") {
+        result = result.filter((run) => ["awaiting_approval", "waiting_for_user"].includes(run.status));
+      } else {
+        result = result.filter((run) => run.status === statusFilter);
+      }
+    }
+    return result;
+  }, [runs, statusFilter, workflowID]);
 
   // The detail panel owns its expanded logs, while the parent owns the fresh
   // run list. Merge the latest run envelope after any action so its status and
@@ -179,6 +194,9 @@ export function WorkflowRunRecords({
   const inspect = useCallback(async (run: WorkflowRun) => {
     setLoadingID(run.id);
     setError("");
+    const url = new URL(window.location.href);
+    url.searchParams.set("run", String(run.id));
+    window.history.replaceState(null, "", url);
     try {
       const [steps, resources, interactions, candidates, events] =
         await Promise.all([
@@ -520,14 +538,17 @@ export function WorkflowRunRecords({
     setError("");
     try {
       await readData<WorkflowRun>(
-        await apiFetch(`/api/admin/ai-workflow-runs/${selected.run.id}/retry`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            step_id: step.step_id,
-            iterations: [step.iteration],
-          }),
-        }),
+        await apiFetch(
+          `/api/admin/ai-workflow-runs/${selected.run.id}/retry`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              step_id: step.step_id,
+              iterations: [step.iteration],
+            }),
+          },
+        ),
       );
       if (onRefresh) await onRefresh();
     } catch (reason) {
@@ -535,8 +556,8 @@ export function WorkflowRunRecords({
         reason instanceof Error
           ? reason.message
           : zh
-            ? "重试失败。"
-            : "Retry failed.",
+            ? "重试步骤失败。"
+            : "Could not retry step.",
       );
     } finally {
       setRetrying("");
@@ -578,20 +599,29 @@ export function WorkflowRunRecords({
     }
   };
 
-  const deleteRun = async () => {
-    if (!selected || !["succeeded", "failed", "cancelled"].includes(selected.run.status)) return;
-    if (!window.confirm(zh ? "删除这条终态运行记录及其附属日志？文章和媒体文件不会被删除。" : "Delete this completed run and its attached logs? Posts and media files are kept.")) return;
+  const deleteRunByID = async (run: WorkflowRun) => {
+    if (!["succeeded", "failed", "cancelled"].includes(run.status)) return;
+    if (!window.confirm(zh ? `删除运行记录 Run #${run.id} 及其附属日志？文章和媒体文件不会被删除。` : `Delete run #${run.id} and its attached logs? Posts and media files are kept.`)) return;
     setDeleting(true);
     setError("");
     try {
-      await readData<unknown>(await apiFetch(`/api/admin/ai-workflow-runs/${selected.run.id}`, { method: "DELETE" }));
-      setSelected(null);
+      await readData<unknown>(await apiFetch(`/api/admin/ai-workflow-runs/${run.id}`, { method: "DELETE" }));
+      if (selected?.run.id === run.id) {
+        setSelected(null);
+        const url = new URL(window.location.href);
+        url.searchParams.delete("run");
+        window.history.replaceState(null, "", url);
+      }
       if (onRefresh) await onRefresh();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : zh ? "删除运行记录失败。" : "Could not delete run record.");
     } finally {
       setDeleting(false);
     }
+  };
+
+  const deleteRun = async () => {
+    if (selected) await deleteRunByID(selected.run);
   };
 
   useEffect(() => {
@@ -607,97 +637,40 @@ export function WorkflowRunRecords({
 
   return (
     <div className="workflow-records section-stack">
-      <div className="workflow-records__filter">
-        <label>
-          {zh ? "筛选 Workflow" : "Filter Workflow"}
-          <Select
-            value={workflowID}
-            onChange={(event) => {
-              setWorkflowID(Number(event.target.value));
-              setSelected(null);
-            }}
-          >
-            <option value={0}>{zh ? "全部 Workflow" : "All Workflows"}</option>
-            {workflows.map((workflow) => (
-              <option key={workflow.id} value={workflow.id}>
-                {workflow.name}
-              </option>
-            ))}
-          </Select>
-        </label>
-      </div>
       {error ? <p className="workflow-records__error">{error}</p> : null}
-      <div className="agent-split-view">
-        <Panel className="agent-master-panel agent-run-list">
-          {filtered.length === 0 ? (
-            <EmptyState
-              label={
-                zh
-                  ? "还没有 Workflow 运行记录。"
-                  : "No Workflow runs recorded yet."
-              }
-            />
-          ) : (
-            filtered.map((run) => (
-              <button
-                className={selected?.run.id === run.id ? "active" : ""}
-                key={run.id}
-                type="button"
-                onClick={() => void inspect(run)}
-              >
-                <span className={`run-icon run-icon--${run.status}`}>
-                  <GitBranch />
-                </span>
-                <span>
-                  <strong>
-                    {names.get(run.workflow_id) ||
-                      `Workflow #${run.workflow_id}`}
-                  </strong>
-                  <small>
-                    {formatDateTime(run.started_at || run.created_at)} ·{" "}
-                    {run.dry_run
-                      ? zh
-                        ? "试运行"
-                        : "Dry-run"
-                      : run.schedule_key
-                        ? zh
-                          ? `计划 ${run.schedule_key}`
-                          : `Scheduled ${run.schedule_key}`
-                        : zh
-                          ? "手动运行"
-                          : "Manual"}
-                  </small>
-                </span>
-                <span>
-                  {loadingID === run.id ? (
-                    <b>{zh ? "载入中" : "Loading"}</b>
-                  ) : (
-                    <StatusPill status={run.status} locale={locale} />
-                  )}
-                  <ChevronRight />
-                </span>
-              </button>
-            ))
-          )}
-        </Panel>
-        <Panel className="agent-detail-panel">
-          {selected ? (
+      {selected ? (
+        <div className="workflow-run-detail-view section-stack">
+          <div className="workflow-detail-nav">
+            <Button
+              variant="ghost"
+              size="compact"
+              type="button"
+              onClick={() => {
+                setSelected(null);
+                const url = new URL(window.location.href);
+                url.searchParams.delete("run");
+                window.history.replaceState(null, "", url);
+              }}
+            >
+              <ArrowLeft />{zh ? "返回运行记录列表" : "Back to run records"}
+            </Button>
+          </div>
+          <WorkspacePanel className="agent-detail-panel">
             <div className="section-stack">
-              <div className="panel-heading">
-                <div>
-                  <h2>
-                    {names.get(selected.run.workflow_id) ||
-                      `Workflow #${selected.run.workflow_id}`}
-                  </h2>
-                  <small>
-                    Run #{selected.run.id} · Workflow v
-                    {selected.run.workflow_version_id}
-                  </small>
-                </div>
-                <div className="row-actions"><StatusPill status={selected.run.status} locale={locale} />
-                  {["succeeded", "failed", "cancelled"].includes(selected.run.status) ? <button className="btn btn-secondary" type="button" disabled={deleting} onClick={() => void deleteRun()}><Trash2 />{deleting ? (zh ? "清理中…" : "Deleting…") : (zh ? "删除记录" : "Delete record")}</button> : null}
-                </div>
-              </div>
+              <PanelHeader
+                title={names.get(selected.run.workflow_id) || `Workflow #${selected.run.workflow_id}`}
+                description={`Run #${selected.run.id} · Workflow v${selected.run.workflow_version_id}`}
+                actions={
+                  <div className="row-actions">
+                    <StatusPill status={selected.run.status} locale={locale} />
+                    {["succeeded", "failed", "cancelled"].includes(selected.run.status) ? (
+                      <Button variant="secondary" type="button" disabled={deleting} onClick={() => void deleteRun()}>
+                        <Trash2 />{deleting ? (zh ? "清理中…" : "Deleting…") : (zh ? "删除记录" : "Delete record")}
+                      </Button>
+                    ) : null}
+                  </div>
+                }
+              />
               <div className="agent-run-metrics">
                 <span>
                   <small>{zh ? "开始时间" : "Started"}</small>
@@ -1006,14 +979,15 @@ export function WorkflowRunRecords({
                               }
                             >
                               <option value="cover">
-                                {zh ? "封面" : "Cover"}
+                                {zh ? "文章封面" : "Cover image"}
                               </option>
                               <option value="inline">
-                                {zh ? "正文插图" : "Inline"}
+                                {zh ? "正文插图" : "Inline image"}
                               </option>
                             </Select>
                             {(candidatePlacement[candidate.id] ||
-                              candidate.placement) === "inline" ? (
+                              candidate.placement ||
+                              "cover") === "inline" ? (
                               <input
                                 className="input-field"
                                 value={
@@ -1022,7 +996,9 @@ export function WorkflowRunRecords({
                                   ""
                                 }
                                 placeholder={
-                                  zh ? "正文锚点文本" : "Article anchor"
+                                  zh
+                                    ? "锚点文字（小标题或关键句）"
+                                    : "Anchor text in markdown"
                                 }
                                 onChange={(event) =>
                                   setCandidateAnchor((current) => ({
@@ -1034,29 +1010,17 @@ export function WorkflowRunRecords({
                             ) : null}
                           </div>
                         ) : null}
-                        {[
-                          "brief_ready",
-                          "failed",
-                          "ready_to_generate",
-                          "cancelled",
-                        ].includes(candidate.generation_status) ? (
+                        <p>{candidate.brief || candidate.headline}</p>
+                        {candidate.generation_status !== "generated" ? (
                           <textarea
-                            aria-label={
-                              zh
-                                ? `图片要求 ${candidate.id}`
-                                : `Image instructions ${candidate.id}`
-                            }
                             className="input-field"
                             rows={2}
-                            value={
-                              generationInstructions[candidate.id] ??
-                              candidate.regeneration_instruction ??
-                              ""
-                            }
+                            aria-label={zh ? `图片要求 ${candidate.id}` : `Image requirement ${candidate.id}`}
+                            value={generationInstructions[candidate.id] || ""}
                             placeholder={
                               zh
-                                ? "可选：告诉 AI 如何调整下一轮图片，例如“横版、保留留白、不要人物”。"
-                                : "Optional: describe how the next image should change."
+                                ? "补充具体生成要求（如色调、构图、风格）…"
+                                : "Add visual instructions (style, composition)…"
                             }
                             onChange={(event) =>
                               setGenerationInstructions((current) => ({
@@ -1068,13 +1032,13 @@ export function WorkflowRunRecords({
                         ) : null}
                         {candidate.generation_status === "generating" ? (
                           <div
-                            className="workflow-generation-status"
+                            className="workflow-generating-status"
                             role="status"
                           >
-                            <LoaderCircle aria-hidden="true" />
+                            <LoaderCircle className="spinner" />
                             <span>
                               <strong>
-                                {zh ? "正在生成图片..." : "Generating image..."}
+                                {zh ? "正在生成图片…" : "Generating image…"}
                               </strong>
                               <small>
                                 {zh
@@ -1255,10 +1219,7 @@ export function WorkflowRunRecords({
                 <JsonLog value={selected.run.input} />
               </details>
               {selected.run.output !== undefined ? (
-                <details className="workflow-log-block">
-                  <summary>{zh ? "最终输出" : "Final output"}</summary>
-                  <JsonLog value={selected.run.output} />
-                </details>
+                <WorkflowRunOutput output={selected.run.output} locale={locale} />
               ) : null}
               <section className="workflow-details-list workflow-step-log">
                 <div className="panel-heading">
@@ -1377,17 +1338,142 @@ export function WorkflowRunRecords({
                 )}
               </section>
             </div>
-          ) : (
+          </WorkspacePanel>
+        </div>
+      ) : (
+        <div className="workflow-runs-list-view section-stack">
+          <FilterBar>
+            <Select
+              size="compact"
+              aria-label={zh ? "筛选 Workflow" : "Filter Workflow"}
+              value={workflowID}
+              onChange={(event) => {
+                setWorkflowID(Number(event.target.value));
+                setSelected(null);
+              }}
+            >
+              <option value={0}>{zh ? "全部 Workflow" : "All Workflows"}</option>
+              {workflows.map((workflow) => (
+                <option key={workflow.id} value={workflow.id}>
+                  {workflow.name}
+                </option>
+              ))}
+            </Select>
+            <Select
+              size="compact"
+              aria-label={zh ? "筛选状态" : "Filter Status"}
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+            >
+              <option value="all">{zh ? "全部状态" : "All Status"}</option>
+              <option value="succeeded">{zh ? "成功" : "Succeeded"}</option>
+              <option value="failed">{zh ? "失败" : "Failed"}</option>
+              <option value="running">{zh ? "执行中" : "Running / Queued"}</option>
+              <option value="awaiting">{zh ? "等待处理 / 审批" : "Awaiting user / approval"}</option>
+            </Select>
+            <span className="filter-bar__count">
+              {filtered.length} {zh ? "条记录" : "runs"}
+            </span>
+            {(workflowID !== 0 || statusFilter !== "all") ? (
+              <Button
+                variant="ghost"
+                size="compact"
+                type="button"
+                onClick={() => {
+                  setWorkflowID(0);
+                  setStatusFilter("all");
+                }}
+              >
+                <X /> {zh ? "清除" : "Clear"}
+              </Button>
+            ) : null}
+          </FilterBar>
+          {filtered.length === 0 ? (
             <EmptyState
               label={
                 zh
-                  ? "选择一条 Workflow 运行记录查看步骤日志。"
-                  : "Select a Workflow run to inspect its step logs."
+                  ? "还没有 Workflow 运行记录。"
+                  : "No Workflow runs recorded yet."
               }
             />
+          ) : (
+            <WorkspacePanel className="agent-table-panel">
+              <div className="table-scroll">
+                <table className="content-table agent-table workflow-runs-table">
+                  <thead>
+                    <tr>
+                      <th>{zh ? "Workflow 任务" : "Workflow Task"}</th>
+                      <th>{zh ? "类型" : "Type"}</th>
+                      <th>{zh ? "状态" : "Status"}</th>
+                      <th>{zh ? "执行时间" : "Execution Time"}</th>
+                      <th>{zh ? "耗时" : "Duration"}</th>
+                      <th>{zh ? "操作" : "Actions"}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((run) => (
+                      <tr key={run.id}>
+                        <td>
+                          <button
+                            type="button"
+                            className="workflow-name-button"
+                            onClick={() => void inspect(run)}
+                          >
+                            <strong>
+                              {names.get(run.workflow_id) || `Workflow #${run.workflow_id}`}
+                            </strong>
+                            <small>Run #{run.id} · v{run.workflow_version_id}</small>
+                          </button>
+                        </td>
+                        <td>
+                          <strong>
+                            {run.dry_run
+                              ? (zh ? "试运行" : "Dry-run")
+                              : run.schedule_key
+                                ? (zh ? `计划 ${run.schedule_key}` : `Scheduled ${run.schedule_key}`)
+                                : (zh ? "手动运行" : "Manual")}
+                          </strong>
+                        </td>
+                        <td>
+                          <StatusPill status={run.status} locale={locale} />
+                        </td>
+                        <td>
+                          <span>{formatDateTime(run.started_at || run.created_at)}</span>
+                        </td>
+                        <td>
+                          <small>{duration(run.started_at, run.finished_at)}</small>
+                        </td>
+                        <td>
+                          <div className="agent-row-actions">
+                            <button
+                              type="button"
+                              title={zh ? "查看详情" : "Inspect"}
+                              disabled={loadingID === run.id}
+                              onClick={() => void inspect(run)}
+                            >
+                              <Eye />
+                            </button>
+                            {["succeeded", "failed", "cancelled"].includes(run.status) ? (
+                              <button
+                                type="button"
+                                title={zh ? "删除记录" : "Delete record"}
+                                disabled={deleting}
+                                onClick={() => void deleteRunByID(run)}
+                              >
+                                <Trash2 />
+                              </button>
+                            ) : null}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </WorkspacePanel>
           )}
-        </Panel>
-      </div>
+        </div>
+      )}
       {previewDialogCandidate && previewDialogPreview ? (
         <ArticlePreviewDialog
           candidate={previewDialogCandidate}

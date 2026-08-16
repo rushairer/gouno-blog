@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Bot, Check, ChevronRight, CirclePause, Clock3, DatabaseZap, GitBranch, KeyRound, Lightbulb, ListChecks, Play,
+  ArrowLeft, Bot, Check, ChevronRight, CirclePause, Clock3, DatabaseZap, Eye, GitBranch, KeyRound, Lightbulb, ListChecks, Play,
   Download, LockKeyhole, Plus, RefreshCw, Settings2, ShieldCheck, Sparkles, Trash2, Upload, X,
 } from 'lucide-react';
 import { apiFetch, canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
@@ -129,6 +129,17 @@ function JsonPreview({ value }: { value: unknown }) {
     return <div className="agent-json-preview agent-json-preview--explanation">这是创建候选的准备步骤，尚未包含具体内容修改。下一步会生成候选项，供你选择后再提交明确的变更审批。</div>;
   }
   return <pre className="agent-json-preview">{JSON.stringify(value || {}, null, 2)}</pre>;
+}
+
+function toolResultSummary(value: unknown): string | null {
+  if (typeof value === 'string' && value.trim()) return value.trim();
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const result = value as Record<string, unknown>;
+  for (const key of ['output_summary', 'summary', 'message']) {
+    const candidate = result[key];
+    if (typeof candidate === 'string' && candidate.trim()) return candidate.trim();
+  }
+  return null;
 }
 
 type AuditCheck = { code?: string; severity?: string; message?: string };
@@ -301,19 +312,118 @@ function WorkspaceOverview({ locale, approvals, suggestions, candidateSets, medi
   </div>;
 }
 
-function RecordsWorkspace({ locale, runs, agents, selectedRun, onInspect, onDelete, formatDateTime }: {
-  locale: 'en' | 'zh'; runs: AgentRun[]; agents: Agent[]; selectedRun: { run: AgentRun; tool_calls: AgentToolCall[] } | null; onInspect: (run: AgentRun) => void; onDelete: (run: AgentRun) => void; formatDateTime: (value: string) => string;
+function RecordsWorkspace({ locale, runs, agents, selectedRun, onInspect, onClearInspect, onDelete, formatDateTime }: {
+  locale: 'en' | 'zh'; runs: AgentRun[]; agents: Agent[]; selectedRun: { run: AgentRun; tool_calls: AgentToolCall[] } | null; onInspect: (run: AgentRun) => void; onClearInspect: () => void; onDelete: (run: AgentRun) => void; formatDateTime: (value: string) => string;
 }) {
   const agentMap = new Map(agents.map((agent) => [agent.id, agent]));
   const zh = locale === 'zh';
-  return <div className="agent-split-view">
-    <Panel className="agent-master-panel agent-run-list">
-      {runs.length === 0 ? <EmptyState label={zh ? '还没有 AI 工作记录。' : 'No AI work recorded yet.'} /> : runs.map((run) => <button className={selectedRun?.run.id === run.id ? 'active' : ''} key={run.id} type="button" onClick={() => onInspect(run)}><span className={`run-icon run-icon--${run.status}`}><Play /></span><span><strong>{agentMap.get(run.agent_id)?.name || `Agent #${run.agent_id}`}</strong><small>{formatDateTime(run.created_at)} · {run.provider}/{run.model}</small></span><span><StatusPill status={run.status} locale={locale} /><ChevronRight /></span></button>)}
-    </Panel>
-    <Panel className="agent-detail-panel">
-      {selectedRun ? <div className="section-stack"><div className="panel-heading"><div><h2>{agentMap.get(selectedRun.run.agent_id)?.name}</h2><small>{zh ? '本次运行的结果、执行步骤与依据' : 'Results, execution steps, and evidence for this run'}</small></div><div className="row-actions"><StatusPill status={selectedRun.run.status} locale={locale} />{['succeeded', 'failed', 'cancelled'].includes(selectedRun.run.status) ? <Button variant="secondary" type="button" onClick={() => onDelete(selectedRun.run)}><Trash2 />{zh ? '删除记录' : 'Delete record'}</Button> : null}</div></div><section><h3>{zh ? 'AI 输出' : 'AI output'}</h3><div className="agent-output">{selectedRun.run.output_summary ? <MarkdownRenderer content={selectedRun.run.output_summary} /> : selectedRun.run.error_message ? <pre>{selectedRun.run.error_message}</pre> : '—'}</div></section><div className="agent-run-metrics"><span><small>{zh ? '用量' : 'Usage'}</small><strong>{selectedRun.run.input_tokens + selectedRun.run.output_tokens} tokens</strong></span><span><small>{zh ? '工具调用' : 'Tool calls'}</small><strong>{selectedRun.tool_calls.length}</strong></span><span><small>{zh ? '执行时间' : 'Created'}</small><strong>{formatDateTime(selectedRun.run.created_at)}</strong></span></div><RecordEvidence run={selectedRun} locale={locale} formatDateTime={formatDateTime} /></div> : <EmptyState label={zh ? '选择一条记录查看 AI 的工作过程。' : 'Select a record to inspect the AI work.'} />}
-    </Panel>
-  </div>;
+  if (selectedRun) {
+    return (
+      <div className="agent-run-detail-view section-stack">
+        <div className="workflow-detail-nav">
+          <Button variant="ghost" size="compact" type="button" onClick={onClearInspect}>
+            <ArrowLeft />{zh ? '返回 Agent 运行列表' : 'Back to Agent runs'}
+          </Button>
+        </div>
+        <WorkspacePanel className="agent-detail-panel">
+          <div className="section-stack">
+            <PanelHeader
+              title={agentMap.get(selectedRun.run.agent_id)?.name || `Agent #${selectedRun.run.agent_id}`}
+              description={zh ? '本次运行的结果、执行步骤与依据' : 'Results, execution steps, and evidence for this run'}
+              actions={
+                <div className="row-actions">
+                  <StatusPill status={selectedRun.run.status} locale={locale} />
+                  {['succeeded', 'failed', 'cancelled'].includes(selectedRun.run.status) ? (
+                    <Button variant="secondary" type="button" onClick={() => onDelete(selectedRun.run)}>
+                      <Trash2 />{zh ? '删除记录' : 'Delete record'}
+                    </Button>
+                  ) : null}
+                </div>
+              }
+            />
+            <section>
+              <h3>{zh ? 'AI 输出' : 'AI output'}</h3>
+              <div className="agent-output">
+                {selectedRun.run.output_summary ? <MarkdownRenderer content={selectedRun.run.output_summary} /> : selectedRun.run.error_message ? <pre>{selectedRun.run.error_message}</pre> : '—'}
+              </div>
+            </section>
+            <div className="agent-run-metrics">
+              <span><small>{zh ? '用量' : 'Usage'}</small><strong>{selectedRun.run.input_tokens + selectedRun.run.output_tokens} tokens</strong></span>
+              <span><small>{zh ? '工具调用' : 'Tool calls'}</small><strong>{selectedRun.tool_calls.length}</strong></span>
+              <span><small>{zh ? '执行时间' : 'Created'}</small><strong>{formatDateTime(selectedRun.run.created_at)}</strong></span>
+            </div>
+            <RecordEvidence run={selectedRun} locale={locale} formatDateTime={formatDateTime} />
+          </div>
+        </WorkspacePanel>
+      </div>
+    );
+  }
+
+  return (
+    <div className="agent-runs-list-view section-stack">
+      {runs.length === 0 ? (
+        <EmptyState label={zh ? '还没有 AI 工作记录。' : 'No AI work recorded yet.'} />
+      ) : (
+        <WorkspacePanel className="agent-table-panel">
+          <div className="table-scroll">
+            <table className="content-table agent-table agent-runs-table">
+              <thead>
+                <tr>
+                  <th>Agent</th>
+                  <th>{zh ? '模型' : 'Model'}</th>
+                  <th>{zh ? '状态' : 'Status'}</th>
+                  <th>{zh ? '用量' : 'Usage'}</th>
+                  <th>{zh ? '触发方式' : 'Trigger'}</th>
+                  <th>{zh ? '执行时间' : 'Created'}</th>
+                  <th>{zh ? '操作' : 'Actions'}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {runs.map((run) => (
+                  <tr key={run.id}>
+                    <td>
+                      <button type="button" className="workflow-name-button" onClick={() => onInspect(run)}>
+                        <strong>{agentMap.get(run.agent_id)?.name || `Agent #${run.agent_id}`}</strong>
+                        <small>Run #{run.id}</small>
+                      </button>
+                    </td>
+                    <td>
+                      <strong>{run.provider}</strong>
+                      <small className="mono">{run.model}</small>
+                    </td>
+                    <td>
+                      <StatusPill status={run.status} locale={locale} />
+                    </td>
+                    <td>
+                      <strong>{run.input_tokens + run.output_tokens} tokens</strong>
+                    </td>
+                    <td>
+                      <small>{run.trigger_type === 'cron' ? (zh ? '计划触发' : 'Cron') : (zh ? '手动触发' : 'Manual')}</small>
+                    </td>
+                    <td>
+                      <small>{formatDateTime(run.created_at)}</small>
+                    </td>
+                    <td>
+                      <div className="agent-row-actions">
+                        <button type="button" title={zh ? '查看详情' : 'Inspect'} onClick={() => onInspect(run)}>
+                          <Eye />
+                        </button>
+                        {['succeeded', 'failed', 'cancelled'].includes(run.status) ? (
+                          <button type="button" title={zh ? '删除记录' : 'Delete record'} onClick={() => onDelete(run)}>
+                            <Trash2 />
+                          </button>
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </WorkspacePanel>
+      )}
+    </div>
+  );
 }
 
 function approvalSummary(approval: AgentApproval, zh: boolean) {
@@ -360,10 +470,14 @@ function RecordEvidence({ run, locale, formatDateTime }: { run: { run: AgentRun;
   const zh = locale === 'zh';
   return <section className="record-evidence" aria-label={zh ? '本次运行的执行日志' : 'Execution log for this run'}>
     <div className="record-evidence__heading"><div><h3>{zh ? '本次运行的执行日志' : 'Execution log for this run'}</h3><small>{zh ? '每一步都属于上方当前选中的运行；展开可查看输入、结果与错误信息。' : 'Every step belongs to the selected run above. Expand a step to inspect its input, result, and errors.'}</small></div><strong>{zh ? `${run.tool_calls.length} 步` : `${run.tool_calls.length} steps`}</strong></div>
-    <div className="section-stack">{run.tool_calls.map((call, index) => <details className="tool-call-detail" key={call.id}>
+    <div className="section-stack">{run.tool_calls.map((call, index) => {
+      const summary = toolResultSummary(call.result);
+      const hasStructuredResult = ['content.audit_post', 'content.find_internal_links', 'content.find_related', 'content.list_stale_posts', 'content.list_orphan_posts'].includes(call.tool_name);
+      return <details className="tool-call-detail" key={call.id}>
       <summary><span className="tool-call-index">#{index + 1}</span><ListChecks /><span className="tool-call-name">{call.tool_name}</span><div className="tool-call-meta">{call.created_at ? <small className="tool-call-time">{formatDateTime(call.created_at)}</small> : null}<RiskPill risk={call.risk_level} locale={locale} /></div></summary>
-      {call.tool_name === 'content.audit_post' ? <ContentAudit value={call.result} locale={locale} /> : null}{call.tool_name === 'content.find_internal_links' ? <InternalLinkSuggestions value={call.result} locale={locale} /> : null}{call.tool_name === 'content.find_related' ? <RelatedContentSuggestions value={call.result} locale={locale} /> : null}{call.tool_name === 'content.list_stale_posts' ? <StalePostSuggestions value={call.result} locale={locale} formatDateTime={formatDateTime} /> : null}{call.tool_name === 'content.list_orphan_posts' ? <OrphanPostSuggestions value={call.result} locale={locale} /> : null}<JsonPreview value={{ arguments: call.arguments, result: call.result, error: call.error_message }} />
-    </details>)}</div><RunCitations run={run.run} locale={locale} />
+      {call.tool_name === 'content.audit_post' ? <ContentAudit value={call.result} locale={locale} /> : null}{call.tool_name === 'content.find_internal_links' ? <InternalLinkSuggestions value={call.result} locale={locale} /> : null}{call.tool_name === 'content.find_related' ? <RelatedContentSuggestions value={call.result} locale={locale} /> : null}{call.tool_name === 'content.list_stale_posts' ? <StalePostSuggestions value={call.result} locale={locale} formatDateTime={formatDateTime} /> : null}{call.tool_name === 'content.list_orphan_posts' ? <OrphanPostSuggestions value={call.result} locale={locale} /> : null}{summary && !hasStructuredResult ? <section className="tool-call-result-summary"><h4>{zh ? '返回结果' : 'Result'}</h4><MarkdownRenderer content={summary} /></section> : null}{!hasStructuredResult && !summary && call.error_message ? <section className="workflow-run-error"><h4>{zh ? '执行失败' : 'Execution failed'}</h4><p>{call.error_message}</p></section> : null}<details className="tool-call-technical"><summary>{zh ? '查看技术详情' : 'View technical details'}</summary><JsonPreview value={{ arguments: call.arguments, result: call.result, error: call.error_message }} /></details>
+    </details>;
+    })}</div><RunCitations run={run.run} locale={locale} />
   </section>;
 }
 
@@ -403,6 +517,7 @@ export default function AgentConsole() {
   const [testingConnections, setTestingConnections] = useState<string[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const providerFileInputRef = useRef<HTMLInputElement>(null);
+  const skillFileInputRef = useRef<HTMLInputElement>(null);
 
   const selectTab = (nextTab: ConsoleTab) => {
     setEditingAgent(null);
@@ -609,10 +724,34 @@ export default function AgentConsole() {
     }
   };
 
-  const importSkill = async () => {
-    const raw = window.prompt(locale === 'zh' ? '粘贴 Skill JSON' : 'Paste Skill JSON');
-    if (!raw) return;
-    await mutate('/api/admin/agent-skills/import', 'POST', JSON.parse(raw));
+  const handleImportSkill = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    event.target.value = '';
+    try {
+      const text = await file.text();
+      let payload: unknown;
+      try {
+        payload = JSON.parse(text);
+      } catch {
+        setError(labels.invalidJsonFile);
+        return;
+      }
+      const response = await apiFetch('/api/admin/agent-skills/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await readData<AgentSkill>(response);
+      await refresh();
+      setNotice(
+        locale === 'zh'
+          ? `已成功导入 Skill“${data.name || file.name}”。`
+          : `Successfully imported Skill “${data.name || file.name}”.`
+      );
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : labels.requestFailed);
+    }
   };
 
   const exportSkill = async (skill: AgentSkill) => {
@@ -787,7 +926,18 @@ export default function AgentConsole() {
         </WorkspacePanel> : null}
 
         {!editingAgent && !editingProvider && !editingSkill && tab === 'advanced' && advancedSection === 'skills' ? <WorkspacePanel className="agent-table-panel">
-          <PanelHeader title={labels.skills} description={locale === 'zh' ? '管理可复用能力定义与执行边界。' : 'Manage reusable capability definitions and execution boundaries.'} actions={<><Button variant="secondary" type="button" onClick={() => void importSkill()}>{locale === 'zh' ? '导入 JSON' : 'Import JSON'}</Button><Button variant="primary" type="button" onClick={() => setEditingSkill('new')}><Plus />{locale === 'zh' ? '创建 Skill' : 'Create Skill'}</Button></>} />
+          <input
+            ref={skillFileInputRef}
+            type="file"
+            accept=".json,application/json"
+            style={{ display: 'none' }}
+            onChange={(event) => void handleImportSkill(event)}
+          />
+          <PanelHeader
+            title={labels.skills}
+            description={locale === 'zh' ? '管理可复用能力定义与执行边界。' : 'Manage reusable capability definitions and execution boundaries.'}
+            actions={<><Button variant="secondary" type="button" onClick={() => skillFileInputRef.current?.click()}><Upload />{locale === 'zh' ? '导入 Skill' : 'Import Skill'}</Button><Button variant="primary" type="button" onClick={() => setEditingSkill('new')}><Plus />{locale === 'zh' ? '创建 Skill' : 'Create Skill'}</Button></>}
+          />
           {skills.length === 0 ? <EmptyState label={labels.noSkills} /> : <div className="table-scroll"><table className="content-table agent-table"><thead><tr><th>{labels.skills}</th><th>{labels.mode}</th><th>{labels.capabilities}</th><th>Version</th><th>{labels.created}</th><th>{labels.actions}</th></tr></thead><tbody>{skills.map((skill) => <tr key={skill.id}><td><strong>{skill.name}</strong>{skill.system_key ? <small>{locale === 'zh' ? '系统 Skill' : 'System Skill'}</small> : null}<small>{skill.description}</small></td><td><span className={`risk-label risk-label--${skill.execution_mode === 'approval' ? 'propose' : 'read'}`}>{skill.execution_mode === 'approval' ? labels.approvalMode : labels.advisory}</span></td><td><div className="agent-chip-list">{skill.capabilities.slice(0, 4).map((item) => <span key={item}>{formatCapability(item)}</span>)}{skill.capabilities.length > 4 ? <span>+{skill.capabilities.length - 4}</span> : null}</div></td><td><strong>v{skill.version}</strong></td><td><small>{formatDateTime(skill.updated_at)}</small></td><td><div className="agent-row-actions"><button type="button" title={locale === 'zh' ? '导出 Skill' : 'Export Skill'} onClick={() => void exportSkill(skill).catch((reason: Error) => setError(reason.message))}><Download /></button><button type="button" title={locale === 'zh' ? '复制 Skill' : 'Copy Skill'} onClick={() => void copySkill(skill)}><Sparkles /></button><button type="button" title={labels.edit} onClick={() => setEditingSkill(skill)}><Settings2 /></button>{!skill.system_key ? <button type="button" title={labels.delete} onClick={() => setDeleteTarget({ kind: 'skill', value: skill })}><Trash2 /></button> : null}</div></td></tr>)}</tbody></table></div>}
         </WorkspacePanel> : null}
 
@@ -811,7 +961,7 @@ export default function AgentConsole() {
         {!editingAgent && !editingProvider && !editingEmbedding && !editingSkill && tab === 'automation' ? <WorkflowWorkspace workflows={workflows} runs={workflowRuns} metrics={workflowMetrics} agents={agents} tools={tools} locale={locale} onMutate={mutate} onRun={queueWorkflow} onPreflight={preflightWorkflow} onRefresh={refresh} onSave={saveWorkflow} onConfigureSkill={(draft) => { if (!draft) return; setSkillPrefill({ name: draft.name || '', description: draft.description || '', system_prompt: draft.system_prompt || '', capabilities: draft.capabilities || [], execution_mode: draft.execution_mode || 'approval', content_publish_mode: 'approval' }); setEditingSkill('new'); setAdvancedSection('skills'); setTab('advanced'); }} onConfigureAgent={(draft) => { if (!draft) return; const provider = providers.find((item) => item.enabled && item.is_default_writing) || providers.find((item) => item.enabled); setAgentPrefill({ name: draft.name || '', description: draft.description || '', provider_profile_id: draft.provider_profile_id || provider?.id || 0, skill_version_id: draft.skill_version_id || skills[0]?.version_id || 0, enabled: false, trigger_type: 'manual', timezone: 'Asia/Shanghai', daily_run_limit: 10, monthly_token_budget: 1000000 }); setEditingAgent('new'); setAdvancedSection('agents'); setTab('advanced'); }} /> : null}
         {!editingAgent && !editingProvider && !editingEmbedding && !editingSkill && tab === 'advanced' && advancedSection === 'connectors' ? <ConnectorWorkspace locale={locale} readData={readData} onRefresh={refresh} /> : null}
         {!editingAgent && !editingProvider && !editingEmbedding && !editingSkill && tab === 'inbox' ? <><InteractionInbox locale={locale} tasks={interactions} onResolved={refresh} /><FriendlyApprovalQueue locale={locale} approvals={approvals} selected={selectedApproval} onSelect={setSelectedApproval} onReview={review} /><OperationsWorkspace suggestions={suggestions} candidateSets={candidateSets} mediaCandidates={mediaCandidates} editorialTasks={editorialTasks} locale={locale} onMutate={mutate} /></> : null}
-        {!editingAgent && !editingProvider && tab === 'records' ? <div className="records-hub section-stack"><SubnavTabs label={locale === 'zh' ? '运行中心类型' : 'Run center type'} value={recordType} onValueChange={(value) => { const next = value as typeof recordType; setRecordType(next); const url = new URL(window.location.href); url.searchParams.set('record', next); window.history.replaceState(null, '', url); }} items={[{ value: 'workflow', label: locale === 'zh' ? 'Workflow 任务' : 'Workflow tasks' }, { value: 'agent', label: locale === 'zh' ? 'Agent 运行' : 'Agent runs' }]} />{recordType === 'agent' ? <RecordsWorkspace locale={locale} runs={runs} agents={agents} selectedRun={selectedRun} onInspect={(run) => void inspectRun(run)} onDelete={(run) => void deleteAgentRun(run)} formatDateTime={formatDateTime} /> : <WorkflowRunRecords locale={locale} workflows={workflows} runs={workflowRuns} formatDateTime={formatDateTime} onRefresh={refresh} />}</div> : null}
+        {!editingAgent && !editingProvider && tab === 'records' ? <div className="records-hub section-stack"><SubnavTabs label={locale === 'zh' ? '运行中心类型' : 'Run center type'} value={recordType} onValueChange={(value) => { const next = value as typeof recordType; setRecordType(next); const url = new URL(window.location.href); url.searchParams.set('record', next); window.history.replaceState(null, '', url); }} items={[{ value: 'workflow', label: locale === 'zh' ? 'Workflow 任务' : 'Workflow tasks' }, { value: 'agent', label: locale === 'zh' ? 'Agent 运行' : 'Agent runs' }]} />{recordType === 'agent' ? <RecordsWorkspace locale={locale} runs={runs} agents={agents} selectedRun={selectedRun} onInspect={(run) => void inspectRun(run)} onClearInspect={() => setSelectedRun(null)} onDelete={(run) => void deleteAgentRun(run)} formatDateTime={formatDateTime} /> : <WorkflowRunRecords locale={locale} workflows={workflows} runs={workflowRuns} formatDateTime={formatDateTime} onRefresh={refresh} />}</div> : null}
 
         {!editingAgent && !editingProvider && !editingEmbedding && tab === 'advanced' && advancedSection === 'knowledge' ? <WorkspacePanel className="agent-table-panel knowledge-workspace">
           <PanelHeader title={<><DatabaseZap />{labels.knowledge}</>} description={locale === 'zh' ? '仅索引已发布文章；Embedding 模型负责把文章转换为可检索的知识库。' : 'Published content only; jobs run asynchronously.'} actions={<><Button variant="secondary" type="button" onClick={() => void mutate('/api/admin/ai-index/retry')}><RefreshCw />{locale === 'zh' ? '重试失败任务' : 'Retry failed'}</Button><Button variant="secondary" type="button" onClick={() => void mutate('/api/admin/ai-index/rebuild')}><RefreshCw />{locale === 'zh' ? '全量重建' : 'Rebuild all'}</Button><Button variant="primary" type="button" onClick={() => setEditingEmbedding('new')}><Plus />{locale === 'zh' ? '添加 Embedding 模型' : 'Add embedding profile'}</Button></>} />

@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { WorkflowWorkspace } from '../WorkflowWorkspace';
 
 const workflow = {
@@ -18,17 +18,43 @@ const workflow = {
   updated_at: '2026-08-01T00:00:00Z',
 };
 describe('WorkflowWorkspace', () => {
-  it('sorts workflows newest first and filters the master list', async () => {
+  beforeEach(() => {
+    window.history.replaceState(null, '', '/');
+  });
+  it('sorts workflows by enabled first then newest timestamp, and filters the list', async () => {
     const user = userEvent.setup();
-    const older = { ...workflow, id: 1, name: 'Older workflow', description: 'Legacy check.', created_at: '2026-07-01T00:00:00Z' };
-    const newer = { ...workflow, id: 2, name: 'Newest workflow', description: 'SEO review.', created_at: '2026-08-02T00:00:00Z' };
-    render(<WorkflowWorkspace workflows={[older, newer]} runs={[]} metrics={[]} agents={[]} locale="zh" onMutate={vi.fn()} onRun={vi.fn()} onSave={vi.fn()} />);
+    const olderEnabled = { ...workflow, id: 1, name: 'Older enabled', enabled: true, created_at: '2026-07-01T00:00:00Z', updated_at: '2026-07-01T00:00:00Z' };
+    const newerEnabled = { ...workflow, id: 2, name: 'Newer enabled', enabled: true, created_at: '2026-08-02T00:00:00Z', updated_at: '2026-08-02T00:00:00Z' };
+    const disabledWorkflow = { ...workflow, id: 3, name: 'Disabled workflow', enabled: false, created_at: '2026-08-05T00:00:00Z', updated_at: '2026-08-05T00:00:00Z' };
 
-    const list = screen.getByRole('searchbox', { name: '搜索 Workflow' }).closest('.workflow-list-toolbar')?.nextElementSibling;
-    expect(list?.textContent?.indexOf('Newest workflow')).toBeLessThan(list?.textContent?.indexOf('Older workflow'));
-    await user.type(screen.getByRole('searchbox', { name: '搜索 Workflow' }), 'SEO');
-    expect(screen.getByRole('button', { name: /Newest workflow/ })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Older workflow/ })).not.toBeInTheDocument();
+    render(<WorkflowWorkspace workflows={[olderEnabled, disabledWorkflow, newerEnabled]} runs={[]} metrics={[]} agents={[]} locale="zh" onMutate={vi.fn()} onRun={vi.fn()} onSave={vi.fn()} />);
+
+    const list = screen.getByRole('table');
+    // Enabled workflows come before disabled workflow despite disabled having a newer timestamp
+    expect(list.textContent?.indexOf('Newer enabled')).toBeLessThan(list.textContent?.indexOf('Older enabled'));
+    expect(list.textContent?.indexOf('Older enabled')).toBeLessThan(list.textContent?.indexOf('Disabled workflow'));
+
+    // Test search filter
+    await user.type(screen.getByRole('searchbox', { name: '搜索 Workflow' }), 'Newer');
+    expect(screen.getByRole('button', { name: /Newer enabled/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Older enabled/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Disabled workflow/ })).not.toBeInTheDocument();
+  });
+
+  it('filters by status chips', async () => {
+    const user = userEvent.setup();
+    const active = { ...workflow, id: 1, name: 'Active workflow', enabled: true };
+    const paused = { ...workflow, id: 2, name: 'Paused workflow', enabled: false };
+
+    render(<WorkflowWorkspace workflows={[active, paused]} runs={[]} metrics={[]} agents={[]} locale="zh" onMutate={vi.fn()} onRun={vi.fn()} onSave={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: /已启用/ }));
+    expect(screen.getByRole('button', { name: /Active workflow/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Paused workflow/ })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /已停用/ }));
+    expect(screen.queryByRole('button', { name: /Active workflow/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Paused workflow/ })).toBeInTheDocument();
   });
 
   it('confirms and soft-deletes a workflow', async () => {
@@ -44,11 +70,15 @@ describe('WorkflowWorkspace', () => {
     await waitFor(() => expect(onMutate).toHaveBeenCalledWith('/api/admin/ai-workflows/7', 'DELETE'));
   });
 
-  it('shows progress immediately and success feedback after a run completes', async () => {
+  it('navigates to detail view, shows progress immediately and success feedback after a run completes', async () => {
     const user = userEvent.setup();
     let complete!: (value: unknown) => void;
     const onRun = vi.fn().mockImplementation(() => new Promise<unknown>((resolve) => { complete = resolve; }));
     render(<WorkflowWorkspace workflows={[workflow]} runs={[]} metrics={[]} agents={[]} locale="zh" onMutate={vi.fn()} onRun={onRun} onSave={vi.fn()} />);
+
+    // Click workflow name to enter detail view
+    await user.click(screen.getByRole('button', { name: /Daily digest/ }));
+    expect(screen.getByRole('button', { name: '返回工作流列表' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '运行' }));
     expect(screen.getByRole('button', { name: '运行中…' })).toBeDisabled();
@@ -58,8 +88,13 @@ describe('WorkflowWorkspace', () => {
 
     complete({ id: 21, workflow_id: 7, workflow_version_id: 11, dry_run: false, status: 'succeeded', input: {}, input_tokens: 0, output_tokens: 0, created_at: '2026-08-01T10:00:00Z' });
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('今日已有成功运行 Run #21，本次未重复执行'));
+    expect(screen.getByRole('link', { name: '查看运行中心' })).toHaveAttribute('href', '/admin/agents?tab=records&record=workflow&workflow=7&run=21');
     expect(screen.getByRole('button', { name: '运行' })).toBeEnabled();
     expect(onRun).toHaveBeenCalledWith(7, false, {});
+
+    // Can navigate back to list view
+    await user.click(screen.getByRole('button', { name: '返回工作流列表' }));
+    expect(screen.getByRole('searchbox', { name: '搜索 Workflow' })).toBeInTheDocument();
   });
 
   it('shows an actionable failure message and restores the run button', async () => {
@@ -67,6 +102,7 @@ describe('WorkflowWorkspace', () => {
     const onRun = vi.fn().mockRejectedValue(new Error('Provider request timeout'));
     render(<WorkflowWorkspace workflows={[workflow]} runs={[]} metrics={[]} agents={[]} locale="zh" onMutate={vi.fn()} onRun={onRun} onSave={vi.fn()} />);
 
+    await user.click(screen.getByRole('button', { name: /Daily digest/ }));
     await user.click(screen.getByRole('button', { name: '运行' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('运行失败：Provider request timeout');
@@ -79,6 +115,7 @@ describe('WorkflowWorkspace', () => {
     const onRun = vi.fn();
     render(<WorkflowWorkspace workflows={[workflow]} runs={[]} metrics={[]} agents={[]} locale="zh" onMutate={vi.fn()} onRun={onRun} onSave={vi.fn()} onPreflight={vi.fn().mockResolvedValue({ ready: false, checks: [{ key: 'agent_bindings', status: 'error', message: 'linked Agent "Reviewer" is disabled' }] })} />);
 
+    await user.click(screen.getByRole('button', { name: /Daily digest/ }));
     await user.click(screen.getByRole('button', { name: '运行' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('linked Agent "Reviewer" is disabled');
@@ -93,9 +130,11 @@ describe('WorkflowWorkspace', () => {
     });
     render(<WorkflowWorkspace workflows={[workflow]} runs={[]} metrics={[]} agents={[]} locale="zh" onMutate={vi.fn()} onRun={onRun} onSave={vi.fn()} />);
 
+    await user.click(screen.getByRole('button', { name: /Daily digest/ }));
     await user.click(screen.getByRole('button', { name: '运行' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('运行失败：RSS source validation failed');
+    expect(screen.getByRole('link', { name: '查看运行中心' })).toHaveAttribute('href', '/admin/agents?tab=records&record=workflow&workflow=7&run=22');
     expect(screen.queryByText(/运行成功/)).not.toBeInTheDocument();
   });
 
@@ -107,6 +146,7 @@ describe('WorkflowWorkspace', () => {
     });
     render(<WorkflowWorkspace workflows={[workflow]} runs={[]} metrics={[]} agents={[]} locale="zh" onMutate={vi.fn()} onRun={onRun} onSave={vi.fn()} />);
 
+    await user.click(screen.getByRole('button', { name: /Daily digest/ }));
     await user.click(screen.getByRole('button', { name: '运行' }));
 
     const link = await screen.findByRole('link', { name: '继续生成、选择和应用图片' });
@@ -114,18 +154,20 @@ describe('WorkflowWorkspace', () => {
     expect(link).toHaveAttribute('href', '/admin/agents?tab=records&record=workflow&workflow=7&run=31');
   });
 
-  it('does not let a successful dry-run hide a failed live run', () => {
+  it('does not let a successful dry-run hide a failed live run in detail view', async () => {
+    const user = userEvent.setup();
     const failedRun = { id: 6, workflow_id: 7, workflow_version_id: 11, dry_run: false, status: 'failed', input: {}, input_tokens: 0, output_tokens: 0, error_message: 'Provider failed', created_at: '2026-08-01T09:00:00Z' };
     const dryRun = { ...failedRun, id: 19, dry_run: true, status: 'succeeded', error_message: undefined, created_at: '2026-08-01T10:00:00Z' };
     render(<WorkflowWorkspace workflows={[workflow]} runs={[dryRun, failedRun]} metrics={[]} agents={[]} locale="zh" onMutate={vi.fn()} onRun={vi.fn()} onSave={vi.fn()} />);
 
+    await user.click(screen.getByRole('button', { name: /Daily digest/ }));
     expect(screen.getByText('最近正式运行').nextElementSibling).toHaveTextContent('失败');
     expect(screen.getByText('最近试运行：成功')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '重试' })).toBeEnabled();
   });
 
   it('keeps tool authorization in the structured scope editor', async () => {
-	const user = userEvent.setup();
+    const user = userEvent.setup();
     render(<WorkflowWorkspace workflows={[]} runs={[]} metrics={[]} agents={[]} locale="zh" onMutate={vi.fn()} onRun={vi.fn()} onSave={vi.fn()} />);
 
     await user.click(screen.getByRole('button', { name: '创建 Workflow' }));
@@ -140,7 +182,7 @@ describe('WorkflowWorkspace', () => {
     const agent = { id: 5, name: 'Editor', enabled: true };
     render(<WorkflowWorkspace workflows={[editable]} runs={[]} metrics={[]} agents={[agent] as never[]} locale="zh" onMutate={vi.fn()} onRun={vi.fn()} onSave={onSave} />);
 
-    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    await user.click(screen.getByRole('button', { name: '编辑' }));
     await user.click(screen.getByRole('button', { name: '添加动态资源筛选' }));
     await user.selectOptions(screen.getByLabelText('状态'), 'published');
     await user.clear(screen.getByLabelText('距今未更新天数'));
@@ -167,7 +209,7 @@ describe('WorkflowWorkspace', () => {
     const agent = { id: 5, name: 'Editor', enabled: true };
     render(<WorkflowWorkspace workflows={[editable]} runs={[]} metrics={[]} agents={[agent] as never[]} locale="zh" onMutate={vi.fn()} onRun={vi.fn()} onSave={onSave} />);
 
-    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    await user.click(screen.getByRole('button', { name: '编辑' }));
     expect(screen.getByLabelText('批量绑定 Agent')).toHaveValue('5');
     await user.selectOptions(screen.getByLabelText('单项失败处理'), 'continue');
     await user.click(screen.getByRole('button', { name: '保存 Workflow' }));
@@ -187,7 +229,7 @@ describe('WorkflowWorkspace', () => {
       { name: 'content.search_knowledge', description: 'Search knowledge', risk_level: 'read', surfaces: ['agent'], parameters: {}, scope: { discovery: true } },
     ]} locale="zh" onMutate={vi.fn()} onRun={vi.fn()} onSave={vi.fn()} />);
 
-    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    await user.click(screen.getByRole('button', { name: '编辑' }));
     expect(screen.getByText('content.find_related')).toBeInTheDocument();
     expect(screen.queryByText('content.propose_update')).not.toBeInTheDocument();
     expect(screen.queryByText('content.search_knowledge')).not.toBeInTheDocument();
@@ -219,7 +261,7 @@ describe('WorkflowWorkspace', () => {
     };
     render(<WorkflowWorkspace workflows={[imageBrief]} runs={[]} metrics={[]} agents={[{ id: 5, name: 'Image brief agent', enabled: true }] as never[]} locale="zh" onMutate={vi.fn()} onRun={vi.fn()} onSave={onSave} />);
 
-    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    await user.click(screen.getByRole('button', { name: '编辑' }));
     expect(screen.getByLabelText('枚举值')).toHaveValue('image_brief');
     expect(screen.getByLabelText('默认值')).toHaveValue('image_brief');
     await user.click(screen.getByRole('button', { name: '保存 Workflow' }));

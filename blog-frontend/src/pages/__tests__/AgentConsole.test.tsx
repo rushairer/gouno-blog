@@ -213,6 +213,10 @@ describe('AgentConsole', () => {
         id: 15, run_id: 9, tool_name: 'content.list_orphan_posts', risk_level: 'read', status: 'executed', arguments: {},
         result: { match_rule: 'no relative /articles/:slug or /posts/:slug link found in another published article', list: [{ id: 7, title: 'Orphan article', slug: 'orphan-article', summary: 'Needs internal links.', views_count: 7, likes_count: 1 }] },
         created_at: '2026-07-30T00:00:00Z',
+      }, {
+        id: 16, run_id: 9, tool_name: 'content.taxonomy_review', risk_level: 'read', status: 'executed', arguments: {},
+        result: { output_summary: '## 分类建议\n\n- 合并重复标签，保留更具体的名称。', input_tokens: 24 },
+        created_at: '2026-07-30T00:00:00Z',
       }] } });
       return Response.json({ data: responseFor(url) });
     });
@@ -232,6 +236,9 @@ describe('AgentConsole', () => {
     expect(screen.getByRole('link', { name: 'Open article: Orphan article' })).toHaveAttribute('href', '/articles/orphan-article');
     expect(screen.getByRole('region', { name: 'Citations' })).toBeInTheDocument();
     expect(screen.getByText('Verified source.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '分类建议' })).toBeInTheDocument();
+    expect(screen.getAllByText('View technical details').length).toBeGreaterThan(0);
+    expect(document.querySelectorAll('.tool-call-technical[open]')).toHaveLength(0);
   });
 
   it('redirects users without blog management access', async () => {
