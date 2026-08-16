@@ -85,6 +85,53 @@ var templates = []Template{
 
 func Templates() []Template { return append([]Template(nil), templates...) }
 
+// persistedTemplates are the stable keys used by migration/bootstrap starter
+// Workflows. They are ordinary versioned Workflows, but Preflight still needs
+// their capability and approval contract so a seeded row cannot bypass the
+// same checks as a planner-created Workflow.
+var persistedTemplates = []Template{
+	{Key: "daily_news", Name: "AI 每日资讯", Tool: "rss.fetch"},
+	{Key: "weekly_operations", Name: "周度运营复盘", Tool: "analytics.get_summary"},
+	{Key: "stale_content_refresh", Name: "陈旧内容更新", Tool: "content.list_stale_posts", RequiresApproval: true},
+	{Key: "low_engagement", Name: "低互动文章分析", Tool: "analytics.list_low_engagement_posts"},
+	{Key: "selected_pre_publish_review", Name: "批量发布前审校", Tool: "content.audit_post", RequiresApproval: true},
+	{Key: "selected_internal_linking", Name: "站内链接优化（手选）", Tool: "content.find_internal_links", RequiresApproval: true},
+	{Key: "selected_distribution", Name: "内容再分发（手选）", Tool: "content.propose_distribution_draft", RequiresApproval: true},
+	{Key: "selected_comment_replies", Name: "评论回复草稿（手选）", Tool: "comments.propose_reply", RequiresApproval: true},
+	{Key: "selected_media_review", Name: "媒体无障碍检查", Tool: "media.get_asset"},
+	{Key: "selected_operations_deep_dive", Name: "运营建议深挖", Tool: "operations.get_suggestion", RequiresApproval: true},
+	{Key: "selected_taxonomy_review", Name: "分类与标签整理", Tool: "content.list_categories"},
+	{Key: "selected_mixed_review", Name: "混合内容复盘", Tool: "operations.get_suggestion", RequiresApproval: true},
+	{Key: "scheduled_stale_resource_review", Name: "陈旧文章规则审查", Tool: "content.list_stale_posts", RequiresApproval: true},
+	{Key: "scheduled_post_publish_review", Name: "发布后内容复盘", Tool: "content.audit_post", RequiresApproval: true},
+	{Key: "scheduled_reported_comment_review", Name: "被举报评论复盘", Tool: "comments.propose_reply", RequiresApproval: true},
+	{Key: "scheduled_missing_alt_review", Name: "缺失 Alt 媒体检查", Tool: "media.get_asset"},
+}
+
+// TemplateByKey resolves both interactive planner templates and persisted
+// starter templates. Keeping this lookup in one package prevents migrations,
+// bootstrap and runtime preflight from silently drifting apart again.
+func TemplateByKey(key string) (*Template, bool) {
+	key = strings.TrimSpace(key)
+	for _, group := range [][]Template{templates, persistedTemplates} {
+		for index := range group {
+			if group[index].Key == key {
+				value := group[index]
+				return &value, true
+			}
+		}
+	}
+	return nil, false
+}
+
+func PersistedTemplateKeys() []string {
+	keys := make([]string, 0, len(persistedTemplates))
+	for _, template := range persistedTemplates {
+		keys = append(keys, template.Key)
+	}
+	return keys
+}
+
 func ParseIntent(prompt string) WorkflowIntent {
 	value := strings.ToLower(strings.TrimSpace(prompt))
 	intent := WorkflowIntent{Version: ProtocolVersion, Status: "ambiguous", ResourceSource: "manual", RuntimeMode: "manual", InputFields: []string{}}

@@ -69,3 +69,24 @@ func TestMatchRealImageNeedsImageProvider(t *testing.T) {
 		t.Fatalf("expected image provider requirement: %#v", match)
 	}
 }
+
+func TestPersistedStarterTemplatesAreRegistered(t *testing.T) {
+	want := []string{
+		"daily_news", "weekly_operations", "stale_content_refresh", "low_engagement",
+		"selected_pre_publish_review", "selected_internal_linking", "selected_distribution",
+		"selected_comment_replies", "selected_media_review", "selected_operations_deep_dive",
+		"selected_taxonomy_review", "selected_mixed_review", "scheduled_stale_resource_review",
+		"scheduled_post_publish_review", "scheduled_reported_comment_review", "scheduled_missing_alt_review",
+	}
+	if got := PersistedTemplateKeys(); len(got) != len(want) {
+		t.Fatalf("persisted template count = %d, want %d: %v", len(got), len(want), got)
+	}
+	for _, key := range want {
+		if template, ok := TemplateByKey(key); !ok || template.Key != key {
+			t.Fatalf("starter template %q is not registered", key)
+		}
+	}
+	if _, ok := TemplateByKey("not_seeded"); ok {
+		t.Fatal("unknown template must not be accepted")
+	}
+}

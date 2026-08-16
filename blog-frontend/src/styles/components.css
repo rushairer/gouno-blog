@@ -180,6 +180,7 @@ textarea.ui-control,
   height: 16px;
   flex: 0 0 16px;
   stroke-width: 2;
+  color: currentColor;
 }
 
 .btn-primary {
@@ -632,7 +633,7 @@ textarea.ui-control,
   text-align: center;
 }
 
-.state svg {
+.state > svg {
   width: 40px;
   height: 40px;
   color: var(--ui-text-muted);
@@ -640,6 +641,14 @@ textarea.ui-control,
 
 .state--loading {
   border: 0;
+}
+
+.state__actions {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
 }
 
 .spinner {
