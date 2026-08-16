@@ -10,15 +10,10 @@ import (
 	"github.com/rushairer/blog-backend/internal/domain"
 )
 
-type providerStarterAgent struct {
-	name string
-	id   int64
-}
-
 type providerStarterWorkflow struct {
-	key, name, description, cron, agentKey, agentName string
-	inputSchema, scopePolicy                          json.RawMessage
-	steps                                             func(int64) []domain.WorkflowStep
+	key, name, description, cron, agentKey string
+	inputSchema, scopePolicy               json.RawMessage
+	steps                                  func(int64) []domain.WorkflowStep
 }
 
 func modelResultSteps(agentID int64, approval bool) []domain.WorkflowStep {
@@ -68,10 +63,10 @@ func providerStarterWorkflows() []providerStarterWorkflow {
 		{key: "selected_internal_linking", name: "站内链接优化（手选）", description: "为手选文章发现相关内链，只允许修改原目标。", agentKey: "internal_linking", inputSchema: posts, scopePolicy: strictKnowledge, steps: func(id int64) []domain.WorkflowStep { return batchSteps("/input/post_ids", 20, id, true) }},
 		{key: "selected_distribution", name: "内容再分发（手选）", description: "为手选文章生成社媒、Newsletter、FAQ 或图片 Brief。", agentKey: "content_distribution", inputSchema: distribution, scopePolicy: strict, steps: func(id int64) []domain.WorkflowStep { return batchSteps("/input/post_ids", 20, id, true) }},
 		{key: "selected_comment_replies", name: "评论回复草稿（手选）", description: "为手选评论逐条创建待审批回复草稿。", agentKey: "comment_reply_draft", inputSchema: comments, scopePolicy: strict, steps: func(id int64) []domain.WorkflowStep { return batchSteps("/input/comment_ids", 20, id, true) }},
-		{key: "selected_media_review", name: "媒体无障碍检查", description: "检查手选媒体的 Alt 文本与复用质量。", agentName: "媒体无障碍检查", inputSchema: media, scopePolicy: strict, steps: func(id int64) []domain.WorkflowStep { return batchSteps("/input/media_ids", 30, id, false) }},
-		{key: "selected_operations_deep_dive", name: "运营建议深挖", description: "补充手选运营建议的证据和优先级。", agentName: "运营建议深挖", inputSchema: suggestions, scopePolicy: strict, steps: func(id int64) []domain.WorkflowStep { return batchSteps("/input/suggestion_ids", 20, id, true) }},
-		{key: "selected_taxonomy_review", name: "分类与标签整理", description: "联合分析手选分类与标签的结构质量。", agentName: "分类与标签整理", inputSchema: taxonomy, scopePolicy: strict, steps: func(id int64) []domain.WorkflowStep { return modelResultSteps(id, false) }},
-		{key: "selected_mixed_review", name: "混合内容复盘", description: "联合复盘手选文章、评论和运营建议。", agentName: "混合内容复盘", inputSchema: mixed, scopePolicy: strict, steps: func(id int64) []domain.WorkflowStep { return modelResultSteps(id, true) }},
+		{key: "selected_media_review", name: "媒体无障碍检查", description: "检查手选媒体的 Alt 文本与复用质量。", agentKey: "media_alt_review", inputSchema: media, scopePolicy: strict, steps: func(id int64) []domain.WorkflowStep { return batchSteps("/input/media_ids", 30, id, false) }},
+		{key: "selected_operations_deep_dive", name: "运营建议深挖", description: "补充手选运营建议的证据和优先级。", agentKey: "operations_deep_dive", inputSchema: suggestions, scopePolicy: strict, steps: func(id int64) []domain.WorkflowStep { return batchSteps("/input/suggestion_ids", 20, id, true) }},
+		{key: "selected_taxonomy_review", name: "分类与标签整理", description: "联合分析手选分类与标签的结构质量。", agentKey: "taxonomy_review", inputSchema: taxonomy, scopePolicy: strict, steps: func(id int64) []domain.WorkflowStep { return modelResultSteps(id, false) }},
+		{key: "selected_mixed_review", name: "混合内容复盘", description: "联合复盘手选文章、评论和运营建议。", agentKey: "mixed_content_review", inputSchema: mixed, scopePolicy: strict, steps: func(id int64) []domain.WorkflowStep { return modelResultSteps(id, true) }},
 		{key: "scheduled_stale_resource_review", name: "陈旧文章规则审查", description: "每周固定一批超过 180 天未更新的文章，再逐篇提出更新建议。", cron: "0 9 * * 2", agentKey: "stale_content_refresh", inputSchema: noInput, scopePolicy: strictKnowledge, steps: func(id int64) []domain.WorkflowStep {
 			return queryBatchSteps("post", json.RawMessage(`{"status":"published","updated_before_days":180}`), 20, id, true)
 		}},
@@ -81,7 +76,7 @@ func providerStarterWorkflows() []providerStarterWorkflow {
 		{key: "scheduled_reported_comment_review", name: "被举报评论复盘", description: "每天汇总被举报评论并生成待审批的回复或处理建议。", cron: "30 10 * * *", agentKey: "comment_reply_draft", inputSchema: noInput, scopePolicy: strict, steps: func(id int64) []domain.WorkflowStep {
 			return queryBatchSteps("comment", json.RawMessage(`{"reported":true}`), 30, id, true)
 		}},
-		{key: "scheduled_missing_alt_review", name: "缺失 Alt 媒体检查", description: "每周检查缺失 Alt 文本的媒体并生成无障碍改进建议。", cron: "0 11 * * 3", agentName: "媒体无障碍检查", inputSchema: noInput, scopePolicy: strict, steps: func(id int64) []domain.WorkflowStep {
+		{key: "scheduled_missing_alt_review", name: "缺失 Alt 媒体检查", description: "每周检查缺失 Alt 文本的媒体并生成无障碍改进建议。", cron: "0 11 * * 3", agentKey: "media_alt_review", inputSchema: noInput, scopePolicy: strict, steps: func(id int64) []domain.WorkflowStep {
 			return queryBatchSteps("media_asset", json.RawMessage(`{"missing_alt":true}`), 30, id, false)
 		}},
 	}
@@ -106,42 +101,12 @@ func stepsHaveFixedAgents(steps []domain.WorkflowStep) bool {
 	return found
 }
 
-func reconcileProviderDependentStarters(ctx context.Context, tx *sql.Tx, providerID int64, systemAgents map[string]int64) (int, error) {
-	resourceNames := []string{"媒体无障碍检查", "分类与标签整理", "运营建议深挖", "混合内容复盘"}
-	agentIDs := make(map[string]int64, len(resourceNames))
+func reconcileProviderDependentStarters(ctx context.Context, tx *sql.Tx, systemAgents map[string]int64) (int, error) {
 	created := 0
-	for _, name := range resourceNames {
-		var id int64
-		err := tx.QueryRowContext(ctx, `INSERT INTO ai_agents
-			(name,description,provider_profile_id,skill_version_id,enabled,trigger_type,timezone,daily_run_limit,monthly_token_budget)
-			SELECT s.name,s.description,$2,sv.id,FALSE,'manual','Asia/Shanghai',s.default_daily_run_limit,s.default_monthly_token_budget
-			FROM ai_skills s JOIN ai_skill_versions sv ON sv.skill_id=s.id AND sv.version=s.version
-			WHERE s.name=$1 AND s.deleted_at IS NULL
-			ON CONFLICT(name) DO NOTHING RETURNING id`, name, providerID).Scan(&id)
-		if errors.Is(err, sql.ErrNoRows) {
-			err = tx.QueryRowContext(ctx, `SELECT id FROM ai_agents WHERE name=$1 AND deleted_at IS NULL`, name).Scan(&id)
-			if errors.Is(err, sql.ErrNoRows) {
-				err = tx.QueryRowContext(ctx, `UPDATE ai_agents a SET deleted_at=NULL,provider_profile_id=$2,
-					skill_version_id=sv.id,updated_at=NOW()
-					FROM ai_skills s JOIN ai_skill_versions sv ON sv.skill_id=s.id AND sv.version=s.version
-					WHERE a.name=$1 AND s.name=$1 RETURNING a.id`, name, providerID).Scan(&id)
-			}
-		} else if err == nil {
-			created++
-		}
-		if err != nil {
-			return created, fmt.Errorf("reconcile starter Agent %q: %w", name, err)
-		}
-		agentIDs[name] = id
-	}
-
 	for _, definition := range providerStarterWorkflows() {
 		agentID := systemAgents[definition.agentKey]
-		if definition.agentName != "" {
-			agentID = agentIDs[definition.agentName]
-		}
 		if agentID <= 0 {
-			return created, fmt.Errorf("starter Workflow %q has no Agent binding", definition.key)
+			return created, fmt.Errorf("starter Workflow %q has no system Agent binding for %q", definition.key, definition.agentKey)
 		}
 		steps := definition.steps(agentID)
 		stepsJSON, _ := json.Marshal(steps)

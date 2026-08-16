@@ -68,6 +68,8 @@
 
 .approval-decision > div:first-child > h2 { margin: 8px 0 0; font-size: 22px; }
 .approval-decision > div:first-child > p { max-width: 720px; margin: 8px 0 0; color: var(--color-text-muted); line-height: 1.65; }
+.approval-decision__failure { display: grid; gap: 5px; border: 1px solid var(--status-danger-fg); border-radius: 8px; padding: 13px 14px; background: var(--status-danger-bg); color: var(--status-danger-fg); }
+.approval-decision__failure span { overflow-wrap: anywhere; font-size: 13px; line-height: 1.55; }
 .approval-decision__facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .approval-decision__facts section { display: grid; gap: 6px; border: 1px solid var(--agent-border); border-radius: 8px; padding: 14px; }
 .approval-decision__facts small,

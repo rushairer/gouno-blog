@@ -503,7 +503,10 @@ func (s *ApprovalService) Approve(ctx context.Context, id int64, reviewer, note 
 	if err != nil {
 		return translateError(err)
 	}
-	if approval.Status != domain.ApprovalPending {
+	// An execution failure must remain visible for audit, but it must not make
+	// the proposal unreachable. Retrying reclaims the same approval and never
+	// creates a second proposal.
+	if approval.Status != domain.ApprovalPending && approval.Status != domain.ApprovalFailed {
 		return ErrApprovalConflict
 	}
 	if time.Now().After(approval.ExpiresAt) {
