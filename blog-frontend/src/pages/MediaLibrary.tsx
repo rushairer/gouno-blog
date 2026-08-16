@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Copy, ImagePlus, Trash2 } from 'lucide-react';
+import { Copy, ImagePlus, Trash2, X } from 'lucide-react';
 import { apiFetch, canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
-import { AdminPage, AdminPageHeader, BulkActionBar, Button, Checkbox, ConfirmDialog, ContentStack, copyText, Drawer, EmptyState, Feedback, Field, Input, LoadingState, Panel, SearchField, Select, useToast } from '../components/ui';
+import { AdminPage, AdminPageHeader, BulkActionBar, Button, Checkbox, ConfirmDialog, ContentStack, copyText, Drawer, EmptyState, Feedback, Field, FilterBar, Input, LoadingState, Panel, SearchField, Select, useToast } from '../components/ui';
 import { WorkflowLauncher } from '../components/agent/WorkflowLauncher';
 import { useI18n } from '../i18n';
 
@@ -136,9 +136,15 @@ export default function MediaLibrary() {
     <AdminPageHeader title={t('mediaLibrary')} description="上传、检索和复用内容中的图片资源。" actions={<><Button variant="primary" type="button" onClick={() => setUploadDrawerOpen(true)}><ImagePlus />上传图片</Button><span className="admin-page-count">{assets.length} 个资源</span></>} />
     <ContentStack>
       {error ? <Feedback type="error">{error}{references.length ? <ul className="media-reference-list">{references.map((item) => <li key={item.post_id}><a href={`/admin/posts/${item.post_id}/edit`}>{item.post_title}</a></li>)}</ul> : null}</Feedback> : null}
-      <Panel className="admin-toolbar-panel">
-        <div className="media-filter-bar media-filter-bar--standalone"><SearchField aria-label="搜索媒体" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索文件名或替代文本" /><Select size="compact" aria-label="媒体类型" value={type} onChange={(event) => setType(event.target.value)}><option value="">全部类型</option>{contentTypes.map((item) => <option key={item} value={item}>{item.replace('image/', '').toUpperCase()}</option>)}</Select><span>{visibleAssets.length} / {assets.length}</span></div>
-      </Panel>
+      <FilterBar>
+        <SearchField aria-label="搜索媒体" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索文件名或替代文本" />
+        <Select size="compact" aria-label="媒体类型" value={type} onChange={(event) => setType(event.target.value)}>
+          <option value="">全部类型</option>
+          {contentTypes.map((item) => <option key={item} value={item}>{item.replace('image/', '').toUpperCase()}</option>)}
+        </Select>
+        <span className="filter-bar__count">{visibleAssets.length} / {assets.length}</span>
+        {(query || type) ? <Button className="filter-bar__actions" variant="ghost" size="compact" type="button" onClick={() => { setQuery(''); setType(''); }}><X /> 清除</Button> : null}
+      </FilterBar>
       {selectedAssets.length ? <BulkActionBar selectionLabel={`已选择 ${selectedAssets.length} 个媒体`} onAIAssist={() => setAIOpen(true)} onCancel={() => setSelectedAssets([])}>
         <Button variant="danger" size="compact" type="button" onClick={() => { setDeleteTarget({ kind: 'batch' }); setReferences([]); setError(''); }}><Trash2 />删除</Button>
       </BulkActionBar> : null}
