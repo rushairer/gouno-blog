@@ -818,7 +818,7 @@ func nullableJSON(value json.RawMessage) any {
 func (r *AgentRepository) ListToolCalls(ctx context.Context, runID int64) ([]*domain.AgentToolCall, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT id, run_id, provider_call_id, tool_name, risk_level,
 		arguments, result, status, error_message, started_at, finished_at, created_at
-		FROM ai_tool_calls WHERE run_id=$1 ORDER BY created_at`, runID)
+		FROM ai_tool_calls WHERE run_id=$1 ORDER BY created_at DESC, id DESC`, runID)
 	if err != nil {
 		return nil, err
 	}
@@ -1116,7 +1116,7 @@ func (r *AgentRepository) CreateMediaCandidate(ctx context.Context, approval *do
 	}
 	_, err := r.db.ExecContext(ctx, `INSERT INTO ai_media_candidates
 		(post_id,source_run_id,source_approval_id,workflow_run_id,headline,brief,platform,alt_text,provider,model,input_tokens,output_tokens,post_version_token)
-		SELECT $1,$2,$3,ar.workflow_run_id,$4,$5,$6,$7,ar.provider,ar.model,ar.input_tokens,ar.output_tokens,EXTRACT(EPOCH FROM p.updated_at)::bigint::text
+		SELECT $1,$2,$3,ar.workflow_run_id,$4,$5,$6,$7,ar.provider,ar.model,ar.input_tokens,ar.output_tokens,FLOOR(EXTRACT(EPOCH FROM p.updated_at))::bigint::text
 		FROM ai_agent_runs ar JOIN posts p ON p.id=$1 WHERE ar.id=$2`,
 		payload.PostID, approval.RunID, approval.ID, strings.TrimSpace(payload.Headline), strings.TrimSpace(payload.Body), strings.TrimSpace(payload.Platform), strings.TrimSpace(payload.AltText))
 	return err
@@ -1365,7 +1365,7 @@ func (r *AgentRepository) GetInteraction(ctx context.Context, id int64) (*domain
 }
 
 func (r *AgentRepository) ListInteractions(ctx context.Context, workflowRunID int64) ([]*domain.WorkflowInteractionTask, error) {
-	rows, err := r.db.QueryContext(ctx, `SELECT `+interactionColumns()+` FROM workflow_interaction_tasks WHERE workflow_run_id=$1 ORDER BY created_at,id`, workflowRunID)
+	rows, err := r.db.QueryContext(ctx, `SELECT `+interactionColumns()+` FROM workflow_interaction_tasks WHERE workflow_run_id=$1 ORDER BY created_at DESC,id DESC`, workflowRunID)
 	if err != nil {
 		return nil, err
 	}
@@ -1382,7 +1382,7 @@ func (r *AgentRepository) ListInteractions(ctx context.Context, workflowRunID in
 }
 
 func (r *AgentRepository) ListPendingInteractions(ctx context.Context) ([]*domain.WorkflowInteractionTask, error) {
-	rows, err := r.db.QueryContext(ctx, `SELECT `+interactionColumns()+` FROM workflow_interaction_tasks WHERE status='pending' AND (expires_at IS NULL OR expires_at>NOW()) ORDER BY created_at,id`)
+	rows, err := r.db.QueryContext(ctx, `SELECT `+interactionColumns()+` FROM workflow_interaction_tasks WHERE status='pending' AND (expires_at IS NULL OR expires_at>NOW()) ORDER BY created_at DESC,id DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -1426,7 +1426,7 @@ func (r *AgentRepository) AppendWorkflowRunEvent(ctx context.Context, event *dom
 }
 
 func (r *AgentRepository) ListWorkflowRunEvents(ctx context.Context, runID int64) ([]*domain.WorkflowRunEvent, error) {
-	rows, err := r.db.QueryContext(ctx, `SELECT id,workflow_run_id,agent_run_id,workflow_step_id,interaction_task_id,event_type,payload,created_at FROM workflow_run_events WHERE workflow_run_id=$1 ORDER BY created_at,id`, runID)
+	rows, err := r.db.QueryContext(ctx, `SELECT id,workflow_run_id,agent_run_id,workflow_step_id,interaction_task_id,event_type,payload,created_at FROM workflow_run_events WHERE workflow_run_id=$1 ORDER BY created_at DESC,id DESC`, runID)
 	if err != nil {
 		return nil, err
 	}

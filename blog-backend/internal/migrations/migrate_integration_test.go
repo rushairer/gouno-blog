@@ -200,11 +200,11 @@ func TestUpAppliesCurrentSchemaAndIsIdempotent(t *testing.T) {
 	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_workflows WHERE template_key IN
 		('selected_pre_publish_review','selected_internal_linking','selected_distribution','selected_comment_replies',
 		 'selected_media_review','selected_operations_deep_dive','selected_taxonomy_review','selected_mixed_review',
-		 'scheduled_stale_resource_review')`).Scan(&resourceWorkflows); err != nil {
+		 'selected_article_image_generation','scheduled_stale_resource_review')`).Scan(&resourceWorkflows); err != nil {
 		t.Fatal(err)
 	}
-	if resourceWorkflows != 9 {
-		t.Fatalf("expected 9 structured resource Workflows, got %d", resourceWorkflows)
+	if resourceWorkflows != 10 {
+		t.Fatalf("expected 10 structured resource Workflows, got %d", resourceWorkflows)
 	}
 	var ruleWorkflows int
 	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_workflows w

@@ -97,6 +97,7 @@ var persistedTemplates = []Template{
 	{Key: "selected_pre_publish_review", Name: "批量发布前审校", Tool: "content.audit_post", RequiresApproval: true},
 	{Key: "selected_internal_linking", Name: "站内链接优化（手选）", Tool: "content.find_internal_links", RequiresApproval: true},
 	{Key: "selected_distribution", Name: "内容再分发（手选）", Tool: "content.propose_distribution_draft", RequiresApproval: true},
+	{Key: "selected_article_image_generation", Name: "生成封面/文配图（手选）", Tool: "content.propose_distribution_draft", RequiresApproval: true, RequiresImage: true, InputFormat: "image_brief"},
 	{Key: "selected_comment_replies", Name: "评论回复草稿（手选）", Tool: "comments.propose_reply", RequiresApproval: true},
 	{Key: "selected_media_review", Name: "媒体无障碍检查", Tool: "media.get_asset"},
 	{Key: "selected_operations_deep_dive", Name: "运营建议深挖", Tool: "operations.get_suggestion", RequiresApproval: true},

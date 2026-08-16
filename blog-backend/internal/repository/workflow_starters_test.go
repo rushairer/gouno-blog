@@ -1,11 +1,14 @@
 package repository
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestProviderStarterDefinitionsAreCompleteAndRunnable(t *testing.T) {
 	definitions := providerStarterWorkflows()
-	if len(definitions) != 12 {
-		t.Fatalf("provider-dependent starter count = %d, want 12", len(definitions))
+	if len(definitions) != 13 {
+		t.Fatalf("provider-dependent starter count = %d, want 13", len(definitions))
 	}
 	seen := map[string]bool{}
 	for _, definition := range definitions {
@@ -20,6 +23,26 @@ func TestProviderStarterDefinitionsAreCompleteAndRunnable(t *testing.T) {
 			t.Fatalf("starter %q is missing its version contract", definition.key)
 		}
 	}
+}
+
+func TestArticleImageGenerationStarterIsApprovalGatedImageBrief(t *testing.T) {
+	for _, definition := range providerStarterWorkflows() {
+		if definition.key != "selected_article_image_generation" {
+			continue
+		}
+		if definition.agentKey != "content_distribution" {
+			t.Fatalf("image generation starter must use the governed distribution Agent, got %q", definition.agentKey)
+		}
+		if !strings.Contains(string(definition.inputSchema), `"image_brief"`) {
+			t.Fatal("image generation starter must constrain input to image_brief")
+		}
+		steps := definition.steps(42)
+		if len(steps) != 3 || steps[1].Type != "approval_gate" {
+			t.Fatal("image generation starter must wait for approval before creating a media candidate")
+		}
+		return
+	}
+	t.Fatal("image generation starter is missing")
 }
 
 func TestStepsHaveFixedAgentsRejectsNestedMissingBinding(t *testing.T) {

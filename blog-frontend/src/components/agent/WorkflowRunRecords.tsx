@@ -10,7 +10,7 @@ import type {
   WorkflowRunEvent,
   WorkflowStepRun,
 } from "../../agent";
-import { EmptyState, Panel, Select } from "../ui";
+import { EmptyState, Modal, Panel, Select } from "../ui";
 import { MarkdownRenderer } from "../MarkdownRenderer";
 import { StatusPill } from "./StatusPill";
 
@@ -37,10 +37,72 @@ function elapsed(start?: string, now = Date.now()): string {
   return `${Math.floor(seconds / 60)} 分 ${seconds % 60} 秒`;
 }
 
+function newestFirst<T extends { id: number; created_at: string }>(items: T[]): T[] {
+  return [...items].sort((left, right) => {
+    const rightTime = Date.parse(right.created_at) || 0;
+    const leftTime = Date.parse(left.created_at) || 0;
+    return rightTime - leftTime || right.id - left.id;
+  });
+}
+
+type ArticleImagePreview = {
+  placement: string;
+  image_url: string;
+  version_matches: boolean;
+  anchor_matches: boolean;
+  applied?: boolean;
+  cover_url?: string;
+  content?: string;
+};
+
 function JsonLog({ value }: { value: unknown }) {
   if (value === undefined || value === null) return <span>—</span>;
   return (
     <pre className="agent-json-preview">{JSON.stringify(value, null, 2)}</pre>
+  );
+}
+
+function ArticlePreviewDialog({
+  candidate,
+  preview,
+  zh,
+  onClose,
+}: {
+  candidate: MediaCandidate;
+  preview: ArticleImagePreview;
+  zh: boolean;
+  onClose: () => void;
+}) {
+  const isCurrent = preview.version_matches && preview.anchor_matches;
+  return (
+    <Modal
+      className="workflow-preview-modal"
+      open
+      title={zh ? "文章预览" : "Article preview"}
+      description={
+        isCurrent
+          ? zh
+            ? "这是应用图片后的文章效果；确认应用前不会修改文章。"
+            : "This shows the article after applying the image; the article is unchanged until confirmation."
+          : zh
+            ? "文章在生成此预览后已更新，候选图不能再安全应用。"
+            : "The article changed after this preview was generated, so this candidate can no longer be applied safely."
+      }
+      onClose={onClose}
+    >
+      <div className="workflow-preview-modal__body">
+        <article className="workflow-article-preview-surface">
+          {preview.placement === "cover" && preview.cover_url ? (
+            <img
+              className="workflow-article-preview"
+              src={preview.cover_url}
+              alt={candidate.alt_text || candidate.headline}
+            />
+          ) : null}
+          {preview.content ? <MarkdownRenderer content={preview.content} /> : null}
+        </article>
+      </div>
+    </Modal>
   );
 }
 
@@ -90,19 +152,9 @@ export function WorkflowRunRecords({
   const [batchBusy, setBatchBusy] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [imagePreviews, setImagePreviews] = useState<
-    Record<
-      number,
-      {
-        placement: string;
-        image_url: string;
-        version_matches: boolean;
-        anchor_matches: boolean;
-        applied?: boolean;
-        cover_url?: string;
-        content?: string;
-      }
-    >
+    Record<number, ArticleImagePreview>
   >({});
+  const [previewDialogCandidateID, setPreviewDialogCandidateID] = useState<number | null>(null);
   const [generationNow, setGenerationNow] = useState(() => Date.now());
   const inspectedFromURL = useRef(false);
   const names = useMemo(
@@ -235,6 +287,21 @@ export function WorkflowRunRecords({
     }
   };
 
+  const selectionForCandidate = (candidate: MediaCandidate) => ({
+    placement:
+      candidatePlacement[candidate.id] || candidate.placement || "cover",
+    anchor: candidateAnchor[candidate.id] ?? candidate.anchor ?? "",
+  });
+  const hasUnsavedCandidateSelection = (candidate: MediaCandidate) => {
+    const selection = selectionForCandidate(candidate);
+    return selection.placement !== (candidate.placement || "cover") ||
+      selection.anchor.trim() !== (candidate.anchor || "").trim();
+  };
+  const hasValidCandidateSelection = (candidate: MediaCandidate) => {
+    const selection = selectionForCandidate(candidate);
+    return selection.placement !== "inline" || selection.anchor.trim() !== "";
+  };
+
   const candidateAction = async (
     candidate: MediaCandidate,
     action: "select" | "apply" | "regenerate",
@@ -249,10 +316,7 @@ export function WorkflowRunRecords({
             : `/api/admin/ai-image-tasks/${candidate.id}/regenerate`;
       const body =
         action === "select"
-          ? {
-              placement: candidate.placement || "cover",
-              anchor: candidate.anchor || "",
-            }
+          ? selectionForCandidate(candidate)
           : action === "regenerate"
             ? {
                 instruction: generationInstructions[candidate.id]?.trim() || "",
@@ -396,7 +460,7 @@ export function WorkflowRunRecords({
     }
   };
 
-  const previewCandidate = async (candidate: MediaCandidate) => {
+  const previewCandidate = async (candidate: MediaCandidate, openDialog = false) => {
     setError("");
     try {
       const preview = await readData<{
@@ -409,6 +473,7 @@ export function WorkflowRunRecords({
         content?: string;
       }>(await apiFetch(`/api/admin/ai-image-tasks/${candidate.id}/preview`));
       setImagePreviews((current) => ({ ...current, [candidate.id]: preview }));
+      if (openDialog) setPreviewDialogCandidateID(candidate.id);
     } catch (reason) {
       setError(
         reason instanceof Error
@@ -421,6 +486,12 @@ export function WorkflowRunRecords({
   };
 
   const generatingSignature = selected?.candidates.map((candidate) => candidate.generation_status).join(",") || "";
+  const previewDialogCandidate = selected?.candidates.find(
+    (candidate) => candidate.id === previewDialogCandidateID,
+  );
+  const previewDialogPreview = previewDialogCandidate
+    ? imagePreviews[previewDialogCandidate.id]
+    : undefined;
   useEffect(() => {
     if (
       !selected ||
@@ -688,7 +759,13 @@ export function WorkflowRunRecords({
                     }
                   />
                 ) : (
-                  <div>
+                  <div
+                    className={
+                      selected.resources.length === 1
+                        ? "workflow-run-resources__list workflow-run-resources__list--single"
+                        : "workflow-run-resources__list"
+                    }
+                  >
                     {selected.resources.map((resource) => (
                       <span key={resource.id}>
                         <strong>
@@ -723,7 +800,7 @@ export function WorkflowRunRecords({
                 )}
               </section>
               {selected.interactions.length > 0 ? (
-                <section className="workflow-interactions">
+                <section className="workflow-interactions workflow-candidates">
                   <div className="panel-heading">
                     <div>
                       <h3>{zh ? "需要你处理" : "Needs your input"}</h3>
@@ -868,8 +945,12 @@ export function WorkflowRunRecords({
                       </button>
                     </div>
                   </div>
-                  {selected.candidates.map((candidate) => (
-                    <div className="workflow-interaction" key={candidate.id}>
+                  <div className="workflow-candidate-list">
+                    {selected.candidates.map((candidate) => (
+                    <div
+                      className={`workflow-candidate-card${candidate.media_asset_url ? "" : " workflow-candidate-card--no-preview"}`}
+                      key={candidate.id}
+                    >
                       {candidate.media_asset_url ? (
                         <img
                           className="workflow-candidate-preview"
@@ -877,7 +958,7 @@ export function WorkflowRunRecords({
                           alt={candidate.alt_text || candidate.headline}
                         />
                       ) : null}
-                      <div>
+                      <div className="workflow-candidate-card__content">
                         <label className="workflow-candidate-choice">
                           <input
                             type="checkbox"
@@ -1007,46 +1088,63 @@ export function WorkflowRunRecords({
                           <small>{candidate.error_message}</small>
                         ) : null}
                         {imagePreviews[candidate.id] ? (
-                          <details className="workflow-log-block">
-                            <summary>
+                          <div className="workflow-preview-state" role="status">
+                            <strong>
                               {imagePreviews[candidate.id].applied
                                 ? zh
                                   ? "图片已应用到文章"
                                   : "Image applied to article"
                                 : imagePreviews[candidate.id].version_matches &&
-                              imagePreviews[candidate.id].anchor_matches
-                                ? zh
-                                  ? "文章预览已就绪"
-                                  : "Article preview ready"
-                                : zh
-                                  ? "文章已变更，请重新选择或生成预览"
-                                  : "Article changed; regenerate the preview"}
-                            </summary>
-                            {imagePreviews[candidate.id].placement ===
-                              "cover" &&
-                            imagePreviews[candidate.id].cover_url ? (
-                              <img
-                                className="workflow-article-preview"
-                                src={imagePreviews[candidate.id].cover_url}
-                                alt={candidate.alt_text || candidate.headline}
-                              />
+                                  imagePreviews[candidate.id].anchor_matches
+                                  ? zh
+                                    ? "文章预览已就绪"
+                                    : "Article preview ready"
+                                  : zh
+                                    ? "候选图与当前文章不一致"
+                                    : "Image candidate does not match the current article"}
+                            </strong>
+                            {!imagePreviews[candidate.id].version_matches ||
+                            !imagePreviews[candidate.id].anchor_matches ? (
+                              <small>
+                                {zh
+                                  ? "文章已在生成候选图后更新，不能直接应用旧候选图。"
+                                  : "The article changed after this candidate was generated, so it cannot be applied directly."}
+                              </small>
                             ) : null}
-                            {imagePreviews[candidate.id].content ? (
-                              <MarkdownRenderer
-                                content={imagePreviews[candidate.id].content || ""}
-                              />
-                            ) : null}
-                          </details>
+                          </div>
+                        ) : null}
+                        {candidate.generation_status === "generated" &&
+                        hasUnsavedCandidateSelection(candidate) ? (
+                          <small className="workflow-candidate-selection-pending">
+                            {zh
+                              ? "位置设置尚未保存；保存后才能预览或应用。"
+                              : "Placement changes are unsaved; save before previewing or applying."}
+                          </small>
                         ) : null}
                       </div>
-                      <div className="row-actions">
+                      <div className="row-actions workflow-candidate-card__actions">
                         {candidate.generation_status === "generated" ? (
                           <button
                             className="btn btn-secondary"
                             type="button"
-                            onClick={() => void previewCandidate(candidate)}
+                            disabled={hasUnsavedCandidateSelection(candidate)}
+                            onClick={() => void previewCandidate(candidate, true)}
                           >
                             {zh ? "预览文章" : "Preview article"}
+                          </button>
+                        ) : null}
+                        {candidate.generation_status === "generated" &&
+                        candidate.selected &&
+                        hasUnsavedCandidateSelection(candidate) ? (
+                          <button
+                            className="btn btn-secondary"
+                            type="button"
+                            disabled={!hasValidCandidateSelection(candidate)}
+                            onClick={() =>
+                              void candidateAction(candidate, "select")
+                            }
+                          >
+                            {zh ? "保存位置" : "Save placement"}
                           </button>
                         ) : null}
                         {candidate.generation_status === "generated" &&
@@ -1064,19 +1162,22 @@ export function WorkflowRunRecords({
                         {candidate.generation_status === "generated" &&
                         candidate.selected &&
                         !candidate.applied_version_id ? (
-                          <button
-                            className="btn btn-primary"
-                            type="button"
-                            disabled={
-                              !imagePreviews[candidate.id]?.version_matches ||
-                              !imagePreviews[candidate.id]?.anchor_matches
-                            }
-                            onClick={() =>
-                              void candidateAction(candidate, "apply")
-                            }
-                          >
-                            {zh ? "确认应用" : "Apply to article"}
-                          </button>
+                          <>
+                            <button
+                              className="btn btn-primary"
+                              type="button"
+                              disabled={
+                                hasUnsavedCandidateSelection(candidate) ||
+                                !imagePreviews[candidate.id]?.version_matches ||
+                                !imagePreviews[candidate.id]?.anchor_matches
+                              }
+                              onClick={() =>
+                                void candidateAction(candidate, "apply")
+                              }
+                            >
+                              {zh ? "确认应用" : "Apply to article"}
+                            </button>
+                          </>
                         ) : null}
                         {candidate.generation_status === "brief_ready" ? (
                           <button
@@ -1117,11 +1218,12 @@ export function WorkflowRunRecords({
                         ) : null}
                       </div>
                     </div>
-                  ))}
+                    ))}
+                  </div>
                 </section>
               ) : null}
               {selected.events.length > 0 ? (
-                <section className="workflow-step-log">
+                <section className="workflow-details-list workflow-event-timeline">
                   <div className="panel-heading">
                     <div>
                       <h3>{zh ? "运行时间线" : "Run timeline"}</h3>
@@ -1132,10 +1234,12 @@ export function WorkflowRunRecords({
                       </small>
                     </div>
                   </div>
-                  {selected.events.map((event) => (
-                    <details key={event.id}>
+                  {newestFirst(selected.events).map((event) => (
+                    <details className="workflow-details-card" key={event.id}>
                       <summary>
-                        <span>{formatDateTime(event.created_at)}</span>
+                        <time dateTime={event.created_at}>
+                          {formatDateTime(event.created_at)}
+                        </time>
                         <strong>{event.event_type.replaceAll("_", " ")}</strong>
                         {event.workflow_step_id ? (
                           <small>{event.workflow_step_id}</small>
@@ -1156,7 +1260,7 @@ export function WorkflowRunRecords({
                   <JsonLog value={selected.run.output} />
                 </details>
               ) : null}
-              <section className="workflow-step-log">
+              <section className="workflow-details-list workflow-step-log">
                 <div className="panel-heading">
                   <div>
                     <h3>{zh ? "步骤日志" : "Step logs"}</h3>
@@ -1204,7 +1308,11 @@ export function WorkflowRunRecords({
                   />
                 ) : (
                   selected.steps.map((step, index) => (
-                    <details key={step.id} open={step.status === "failed"}>
+                    <details
+                      className="workflow-details-card"
+                      key={step.id}
+                      open={step.status === "failed"}
+                    >
                       <summary>
                         <span>{index + 1}</span>
                         <div>
@@ -1280,6 +1388,14 @@ export function WorkflowRunRecords({
           )}
         </Panel>
       </div>
+      {previewDialogCandidate && previewDialogPreview ? (
+        <ArticlePreviewDialog
+          candidate={previewDialogCandidate}
+          preview={previewDialogPreview}
+          zh={zh}
+          onClose={() => setPreviewDialogCandidateID(null)}
+        />
+      ) : null}
     </div>
   );
 }
