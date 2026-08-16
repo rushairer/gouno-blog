@@ -1597,13 +1597,38 @@ select option {
 }
 
 .workflow-candidate-preview {
-  width: 96px;
-  height: 72px;
+  width: 128px;
+  height: 96px;
   flex: 0 0 auto;
   object-fit: cover;
   border-radius: var(--radius-control, 6px);
   border: 1px solid var(--border-color);
 }
+.workflow-candidates { display: grid; gap: 16px; }
+.workflow-candidate-heading { gap: 16px; }
+.workflow-candidate-list { display: grid; gap: 12px; }
+.workflow-candidate-card {
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr) minmax(180px, 240px);
+  align-items: start;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--radius-panel);
+  background: var(--ui-control);
+}
+.workflow-candidate-card--no-preview { grid-template-columns: minmax(0, 1fr) minmax(180px, 240px); }
+.workflow-candidate-card__content { display: grid; gap: 6px; min-width: 0; }
+.workflow-candidate-card__content > small { color: var(--ui-text-secondary); }
+.workflow-candidate-card__actions {
+  align-self: center;
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  justify-content: stretch;
+  gap: 8px;
+}
+.workflow-candidate-card__actions .btn { width: 100%; }
 .workflow-candidate-choice { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .workflow-candidate-fields { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .workflow-candidate-fields .input-field { min-width: 220px; }
@@ -1620,13 +1645,47 @@ select option {
 
 .workflow-article-preview {
   display: block;
-  width: min(100%, 480px);
-  max-height: 260px;
-  margin-top: 10px;
+  width: 100%;
+  max-height: min(56vh, 680px);
+  margin: 0 0 20px;
   object-fit: cover;
   border-radius: var(--radius-control, 6px);
   border: 1px solid var(--border-color);
 }
+.workflow-preview-state { display: grid; gap: 4px; margin-top: 6px; color: var(--ui-text-secondary); }
+.workflow-preview-state strong { color: var(--ui-text); }
+.workflow-preview-state small { color: var(--ui-text-secondary); line-height: 1.45; }
+.workflow-candidate-selection-pending { color: var(--ui-warning); line-height: 1.45; }
+.modal.workflow-preview-modal {
+  width: calc(100vw - clamp(32px, 5vw, 112px));
+  max-width: none;
+  height: calc(100vh - 32px);
+  max-height: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.workflow-preview-modal > header { flex: 0 0 auto; padding-inline: clamp(22px, 3vw, 42px); }
+.workflow-preview-modal__body {
+  display: grid;
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 20px;
+  overflow: auto;
+  padding: clamp(24px, 3vw, 48px);
+  background: var(--ui-panel);
+}
+.workflow-article-preview-surface {
+  width: min(100%, 1120px);
+  min-width: 0;
+  margin-inline: auto;
+  padding: clamp(24px, 4vw, 56px);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--radius-panel);
+  background: var(--ui-elevated);
+}
+.workflow-article-preview-surface > :first-child { margin-top: 0; }
+.workflow-article-preview-surface > :last-child { margin-bottom: 0; }
 
 @keyframes workflow-generation-spin {
   to { transform: rotate(360deg); }
@@ -1637,6 +1696,13 @@ select option {
 }
 
 @media (max-width: 640px) {
-  .workflow-candidate-preview { width: 72px; height: 54px; }
+  .workflow-candidate-preview { width: 96px; height: 72px; }
   .workflow-candidate-batch-actions { width: 100%; margin-left: 0; justify-content: flex-start; }
+  .workflow-candidate-card,
+  .workflow-candidate-card--no-preview { grid-template-columns: 1fr; gap: 12px; padding: 12px; }
+  .workflow-candidate-card__actions { width: 100%; min-width: 0; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+  .workflow-preview-modal { width: calc(100vw - 16px); height: calc(100vh - 16px); }
+  .workflow-preview-modal > header { padding-inline: 16px; }
+  .workflow-preview-modal__body { gap: 14px; padding: 14px; }
+  .workflow-article-preview-surface { padding: 16px; }
 }
