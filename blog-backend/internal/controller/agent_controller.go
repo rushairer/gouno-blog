@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"bytes"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -1585,6 +1586,198 @@ type providerRequest struct {
 	Enabled               bool                `json:"enabled"`
 	RequestTimeoutSeconds int                 `json:"request_timeout_seconds"`
 	MaxOutputTokens       int                 `json:"max_output_tokens"`
+}
+
+type providerExportItem struct {
+	Name                  string              `json:"name"`
+	ProviderType          domain.ProviderType `json:"provider_type"`
+	BaseURL               string              `json:"base_url"`
+	Model                 string              `json:"model"`
+	Enabled               bool                `json:"enabled"`
+	IsDefaultWriting      bool                `json:"is_default_writing,omitempty"`
+	IsDefaultImage        bool                `json:"is_default_image,omitempty"`
+	RequestTimeoutSeconds int                 `json:"request_timeout_seconds"`
+	MaxOutputTokens       int                 `json:"max_output_tokens"`
+}
+
+type providerImportItem struct {
+	Name                  string              `json:"name"`
+	ProviderType          domain.ProviderType `json:"provider_type"`
+	BaseURL               string              `json:"base_url"`
+	Model                 string              `json:"model"`
+	APIKey                string              `json:"api_key,omitempty"`
+	Enabled               *bool               `json:"enabled,omitempty"`
+	IsDefaultWriting      bool                `json:"is_default_writing,omitempty"`
+	IsDefaultImage        bool                `json:"is_default_image,omitempty"`
+	RequestTimeoutSeconds int                 `json:"request_timeout_seconds,omitempty"`
+	MaxOutputTokens       int                 `json:"max_output_tokens,omitempty"`
+}
+
+func parseProviderImportPayload(raw []byte) ([]providerImportItem, error) {
+	trimmed := bytes.TrimSpace(raw)
+	if len(trimmed) == 0 {
+		return nil, fmt.Errorf("empty import payload")
+	}
+	if trimmed[0] == '[' {
+		var list []providerImportItem
+		if err := json.Unmarshal(trimmed, &list); err != nil {
+			return nil, err
+		}
+		return list, nil
+	}
+	var wrapper struct {
+		Data      json.RawMessage      `json:"data"`
+		Providers []providerImportItem `json:"providers"`
+		Items     []providerImportItem `json:"items"`
+	}
+	if err := json.Unmarshal(trimmed, &wrapper); err == nil {
+		if len(wrapper.Providers) > 0 {
+			return wrapper.Providers, nil
+		}
+		if len(wrapper.Items) > 0 {
+			return wrapper.Items, nil
+		}
+		if len(wrapper.Data) > 0 {
+			return parseProviderImportPayload(wrapper.Data)
+		}
+	}
+	var single providerImportItem
+	if err := json.Unmarshal(trimmed, &single); err == nil && (single.Model != "" || single.Name != "") {
+		return []providerImportItem{single}, nil
+	}
+	return nil, fmt.Errorf("invalid provider import format")
+}
+
+func resolveUniqueProviderName(baseName string, existingNames map[string]bool) string {
+	candidate := strings.TrimSpace(baseName)
+	if candidate == "" {
+		candidate = "Imported Provider"
+	}
+	lower := strings.ToLower(candidate)
+	if !existingNames[lower] {
+		existingNames[lower] = true
+		return candidate
+	}
+	counter := 1
+	for {
+		next := fmt.Sprintf("%s (%d)", candidate, counter)
+		nextLower := strings.ToLower(next)
+		if !existingNames[nextLower] {
+			existingNames[nextLower] = true
+			return next
+		}
+		counter++
+	}
+}
+
+func (ctrl *AgentController) ExportProviders(c *gin.Context) {
+	items, err := ctrl.svc.ListProviders(c.Request.Context())
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	exportList := make([]providerExportItem, 0, len(items))
+	for _, item := range items {
+		exportList = append(exportList, providerExportItem{
+			Name:                  item.Name,
+			ProviderType:          item.ProviderType,
+			BaseURL:               item.BaseURL,
+			Model:                 item.Model,
+			Enabled:               item.Enabled,
+			IsDefaultWriting:      item.IsDefaultWriting,
+			IsDefaultImage:        item.IsDefaultImage,
+			RequestTimeoutSeconds: item.RequestTimeoutSeconds,
+			MaxOutputTokens:       item.MaxOutputTokens,
+		})
+	}
+	c.Header("Content-Disposition", `attachment; filename="model-connections.json"`)
+	c.JSON(http.StatusOK, exportList)
+}
+
+func (ctrl *AgentController) ImportProviders(c *gin.Context) {
+	raw, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "failed to read request body"))
+		return
+	}
+	items, err := parseProviderImportPayload(raw)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+	if len(items) == 0 {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "no provider configurations found to import"))
+		return
+	}
+
+	existingProviders, err := ctrl.svc.ListProviders(c.Request.Context())
+	if err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	existingNames := make(map[string]bool, len(existingProviders)+len(items))
+	for _, p := range existingProviders {
+		existingNames[strings.ToLower(strings.TrimSpace(p.Name))] = true
+	}
+
+	importedProfiles := make([]*domain.ProviderProfile, 0, len(items))
+	for _, item := range items {
+		pType := item.ProviderType
+		if pType == "" {
+			pType = domain.ProviderOpenAI
+		}
+		baseURL := item.BaseURL
+		if baseURL == "" {
+			switch pType {
+			case domain.ProviderAnthropic:
+				baseURL = "https://api.anthropic.com"
+			case domain.ProviderGemini:
+				baseURL = "https://generativelanguage.googleapis.com"
+			default:
+				baseURL = "https://api.openai.com"
+			}
+		}
+		name := resolveUniqueProviderName(item.Name, existingNames)
+		timeout := item.RequestTimeoutSeconds
+		if timeout <= 0 {
+			timeout = 60
+		}
+		maxTokens := item.MaxOutputTokens
+		if maxTokens <= 0 {
+			maxTokens = 2000
+		}
+		enabled := true
+		if item.Enabled != nil {
+			enabled = *item.Enabled
+		} else if item.APIKey == "" {
+			enabled = false
+		}
+		apiKey := item.APIKey
+		if apiKey == "" {
+			apiKey = "placeholder-key-please-update"
+		}
+
+		profile := &domain.ProviderProfile{
+			Name:                  name,
+			ProviderType:          pType,
+			BaseURL:               baseURL,
+			Model:                 strings.TrimSpace(item.Model),
+			Enabled:               enabled,
+			RequestTimeoutSeconds: timeout,
+			MaxOutputTokens:       maxTokens,
+		}
+		if err := ctrl.svc.SaveProvider(c.Request.Context(), profile, apiKey); err != nil {
+			writeAgentError(c, err)
+			return
+		}
+		importedProfiles = append(importedProfiles, profile)
+	}
+
+	_, _ = ctrl.svc.BootstrapStarterPack(c.Request.Context())
+	c.JSON(http.StatusCreated, gouno.NewSuccessResponse(gin.H{
+		"imported_count": len(importedProfiles),
+		"profiles":       importedProfiles,
+	}))
 }
 
 func (ctrl *AgentController) ListProviders(c *gin.Context) {

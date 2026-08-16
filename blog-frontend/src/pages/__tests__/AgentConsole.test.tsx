@@ -123,13 +123,15 @@ describe('AgentConsole', () => {
     prompt.mockRestore();
   });
 
-  it('opens the provider editor from the provider workspace', async () => {
+  it('opens the provider editor from the provider workspace and renders export/import buttons', async () => {
     const user = userEvent.setup();
     renderConsole();
     await screen.findByRole('tab', { name: 'Advanced settings' });
     await user.click(screen.getByRole('tab', { name: 'Advanced settings' }));
     await user.click(screen.getByRole('tab', { name: 'Providers' }));
     expect(screen.getByText('OpenAI')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Export' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Import' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Add Provider' }));
     expect(screen.getByRole('heading', { name: 'Add Provider' })).toBeInTheDocument();
     expect(screen.getByLabelText('API Key')).toBeRequired();

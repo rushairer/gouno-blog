@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Bot, Check, ChevronRight, CirclePause, Clock3, DatabaseZap, GitBranch, KeyRound, Lightbulb, ListChecks, Play,
-  Download, LockKeyhole, Plus, RefreshCw, Settings2, ShieldCheck, Sparkles, Trash2, X,
+  Download, LockKeyhole, Plus, RefreshCw, Settings2, ShieldCheck, Sparkles, Trash2, Upload, X,
 } from 'lucide-react';
 import { apiFetch, canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
 import type {
@@ -72,6 +72,7 @@ const copy = {
     noSkills: 'No saved Skills yet. Skills are reusable governed Agent configurations.', backAdmin: 'Blog admin', loading: 'Loading AI Agent workspace…', refresh: 'Refresh',
     requestFailed: 'The request failed.', deleteAgentConfirm: 'Delete this Agent and disable future runs?',
     deleteProviderConfirm: 'Delete this Provider profile?', deleteEmbeddingConfirm: 'Delete this embedding profile?', deleteSkillConfirm: 'Delete this Skill? Existing Agents keep their current configuration.', providerNeeded: 'Create a Provider profile before adding an Agent.',
+    exportProviders: 'Export', importProviders: 'Import', invalidJsonFile: 'Invalid JSON configuration file.',
   },
   zh: {
     title: 'AI 工作台', pageDescription: '让 AI 发现问题、准备工作；每一项变更始终由你审核决定。',
@@ -101,6 +102,7 @@ const copy = {
     noSkills: '还没有已保存的 Skill。Skill 是可复用且受治理的 Agent 配置。', backAdmin: '博客后台', loading: '正在加载 AI Agent 工作区…', refresh: '刷新',
     requestFailed: '请求失败。', deleteAgentConfirm: '删除此 Agent 并停止后续运行？',
     deleteProviderConfirm: '删除此 Provider 配置？', deleteEmbeddingConfirm: '删除此嵌入配置？', deleteSkillConfirm: '删除此 Skill？现有 Agent 会保留当前配置。', providerNeeded: '请先创建 Provider，再添加 Agent。',
+    exportProviders: '导出', importProviders: '导入', invalidJsonFile: '无效的 JSON 配置文件。',
   },
 } as const;
 
@@ -420,6 +422,7 @@ export default function AgentConsole() {
   const [notice, setNotice] = useState('');
   const [testingConnections, setTestingConnections] = useState<string[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
+  const providerFileInputRef = useRef<HTMLInputElement>(null);
 
   const selectTab = (nextTab: ConsoleTab) => {
     setEditingAgent(null);
@@ -584,6 +587,48 @@ export default function AgentConsole() {
       setEditingSkill(null);
       await refresh();
     } catch (reason) { setError(reason instanceof Error ? reason.message : labels.requestFailed); }
+  };
+
+  const exportProviders = async () => {
+    const response = await apiFetch('/api/admin/provider-profiles/export');
+    if (!response.ok) throw new Error(labels.requestFailed);
+    const blob = new Blob([await response.text()], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `model-connections-${new Date().toISOString().slice(0, 10)}.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportProviders = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    event.target.value = '';
+    try {
+      const text = await file.text();
+      let payload: unknown;
+      try {
+        payload = JSON.parse(text);
+      } catch {
+        setError(labels.invalidJsonFile);
+        return;
+      }
+      const response = await apiFetch('/api/admin/provider-profiles/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await readData<{ imported_count: number }>(response);
+      await refresh();
+      setNotice(
+        locale === 'zh'
+          ? `已成功导入 ${data.imported_count} 个模型连接。`
+          : `Successfully imported ${data.imported_count} model connection${data.imported_count > 1 ? 's' : ''}.`
+      );
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : labels.requestFailed);
+    }
   };
 
   const importSkill = async () => {
@@ -769,7 +814,18 @@ export default function AgentConsole() {
         </WorkspacePanel> : null}
 
         {!editingAgent && !editingProvider && tab === 'advanced' && advancedSection === 'providers' ? <WorkspacePanel className="agent-table-panel">
-          <PanelHeader title={labels.providers} description={locale === 'zh' ? '管理模型连接，并分别指定写作与图片生成的默认模型。' : 'Manage model connections and defaults.'} actions={<Button variant="primary" onClick={() => setEditingProvider('new')}><Plus />{locale === 'zh' ? '添加模型连接' : labels.createProvider}</Button>} />
+          <input
+            ref={providerFileInputRef}
+            type="file"
+            accept=".json,application/json"
+            style={{ display: 'none' }}
+            onChange={(event) => void handleImportProviders(event)}
+          />
+          <PanelHeader
+            title={labels.providers}
+            description={locale === 'zh' ? '管理模型连接，并分别指定写作与图片生成的默认模型。' : 'Manage model connections and defaults.'}
+            actions={<><Button variant="secondary" type="button" onClick={() => void exportProviders().catch((reason: Error) => setError(reason.message))}><Download />{labels.exportProviders}</Button><Button variant="secondary" type="button" onClick={() => providerFileInputRef.current?.click()}><Upload />{labels.importProviders}</Button><Button variant="primary" onClick={() => setEditingProvider('new')}><Plus />{locale === 'zh' ? '添加模型连接' : labels.createProvider}</Button></>}
+          />
           {providers.length > 0 ? <section className="provider-defaults"><div className="provider-defaults__intro"><h3>默认用途</h3><p>决定编辑器与图片生成使用的模型。</p></div><label>写作辅助<Select value={providers.find((item) => item.is_default_writing)?.id || ''} onChange={(event) => { if (event.target.value) void mutate(`/api/admin/provider-profiles/${event.target.value}/default/writing`, 'POST').then(() => setNotice('默认写作模型已更新')).catch((reason: Error) => setError(reason.message)); }}><option value="">请选择模型</option>{providers.filter((item) => item.enabled).map((item) => <option key={item.id} value={item.id}>{item.name} · {item.model}</option>)}</Select></label><label>图片生成<Select value={providers.find((item) => item.is_default_image)?.id || ''} onChange={(event) => { if (event.target.value) void mutate(`/api/admin/provider-profiles/${event.target.value}/default/image`, 'POST').then(() => setNotice('默认图片模型已更新')).catch((reason: Error) => setError(reason.message)); }}><option value="">请选择模型</option>{providers.filter((item) => item.enabled).map((item) => <option key={item.id} value={item.id}>{item.name} · {item.model}</option>)}</Select></label></section> : null}
           {providers.length === 0 ? <EmptyState label={labels.noProviders} /> : <div className="table-scroll"><table className="content-table agent-table"><thead><tr><th>{labels.providerName}</th><th>{labels.providerType}</th><th>{labels.baseUrl}</th><th>{labels.model}</th><th>{labels.apiKey}</th><th>{labels.status}</th><th>{labels.actions}</th></tr></thead><tbody>{providers.map((provider) => <tr key={provider.id}><td><strong>{provider.name}</strong>{provider.is_default_writing ? <small className="provider-default">默认写作模型</small> : null}{provider.is_default_image ? <small className="provider-default">默认图片模型</small> : null}</td><td>{provider.provider_type}</td><td className="mono">{provider.base_url}</td><td className="mono">{provider.model}</td><td><span className="secret-mask">•••• {provider.api_key_last4}</span><small>{labels.keyStored}</small></td><td><span className={`agent-state agent-state--${provider.enabled ? 'active' : 'paused'}`}><i />{provider.enabled ? labels.active : labels.paused}</span></td><td><div className="agent-row-actions">{!provider.is_default_writing ? <button type="button" title="设为默认写作模型" disabled={!provider.enabled} onClick={() => void mutate(`/api/admin/provider-profiles/${provider.id}/default/writing`, 'POST').then(() => setNotice('已设为默认写作模型')).catch((reason: Error) => setError(reason.message))}><Sparkles /></button> : <span className="provider-default-mark"><Check />写作</span>}{!provider.is_default_image ? <button type="button" title="设为默认图片生成模型" disabled={!provider.enabled} onClick={() => void mutate(`/api/admin/provider-profiles/${provider.id}/default/image`, 'POST').then(() => setNotice('已设为默认图片生成模型')).catch((reason: Error) => setError(reason.message))}><Sparkles /></button> : <span className="provider-default-mark"><Check />图片</span>}<button type="button" title={testingConnections.includes(`provider:${provider.id}`) ? (locale === 'zh' ? '正在测试连接' : 'Testing connection') : labels.test} aria-busy={testingConnections.includes(`provider:${provider.id}`)} disabled={testingConnections.includes(`provider:${provider.id}`)} onClick={() => void testConnection('provider', provider.id, provider.name)}><RefreshCw className={testingConnections.includes(`provider:${provider.id}`) ? 'agent-row-actions__spinner' : undefined} /></button><button type="button" title={labels.edit} onClick={() => setEditingProvider(provider)}><Settings2 /></button><button type="button" title={labels.delete} onClick={() => setDeleteTarget({ kind: 'provider', value: provider })}><Trash2 /></button></div></td></tr>)}</tbody></table></div>}
         </WorkspacePanel> : null}

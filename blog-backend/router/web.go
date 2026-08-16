@@ -179,6 +179,8 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 				admin.POST("/admin/ai-workflows/draft", agentCtrl.DraftWorkflow)
 				admin.POST("/admin/ai-automation-plans/draft", agentCtrl.DraftAutomationPlan)
 				admin.GET("/admin/provider-profiles", agentCtrl.ListProviders)
+				admin.GET("/admin/provider-profiles/export", agentCtrl.ExportProviders)
+				admin.POST("/admin/provider-profiles/import", agentCtrl.ImportProviders)
 				admin.POST("/admin/provider-profiles", agentCtrl.CreateProvider)
 				admin.PUT("/admin/provider-profiles/:id", agentCtrl.UpdateProvider)
 				admin.DELETE("/admin/provider-profiles/:id", agentCtrl.DeleteProvider)
