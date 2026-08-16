@@ -94,7 +94,7 @@ func (r *AgentRepository) UpdateProvider(ctx context.Context, profile *domain.Pr
 	return row.Scan(&profile.CreatedAt, &profile.UpdatedAt)
 }
 
-const starterPackVersion = 2
+const starterPackVersion = 3
 
 func sameJSON(left, right []byte) bool {
 	var leftValue, rightValue any
@@ -160,6 +160,7 @@ func (r *AgentRepository) BootstrapStarterPack(ctx context.Context) (int, error)
 	}
 	workflowApproval := map[string]bool{"stale_content_refresh": true}
 	workflowAgents := make(map[string]int64, 4)
+	systemAgents := make(map[string]int64, len(items))
 	created := 0
 	for _, item := range items {
 		var agentID int64
@@ -170,12 +171,18 @@ func (r *AgentRepository) BootstrapStarterPack(ctx context.Context) (int, error)
 			RETURNING id`, item.systemKey, item.name, item.description, providerID, item.skillVersionID, item.dailyLimit, item.monthlyBudget).Scan(&agentID)
 		if errors.Is(err, sql.ErrNoRows) {
 			err = tx.QueryRowContext(ctx, `SELECT id FROM ai_agents WHERE system_key=$1 AND deleted_at IS NULL`, item.systemKey).Scan(&agentID)
+			if errors.Is(err, sql.ErrNoRows) {
+				err = tx.QueryRowContext(ctx, `UPDATE ai_agents
+					SET deleted_at=NULL, provider_profile_id=$2, skill_version_id=$3, updated_at=NOW()
+					WHERE system_key=$1 RETURNING id`, item.systemKey, providerID, item.skillVersionID).Scan(&agentID)
+			}
 		} else if err == nil {
 			created++
 		}
 		if err != nil {
 			return 0, err
 		}
+		systemAgents[item.systemKey] = agentID
 		if _, ok := workflowApproval[item.systemKey]; ok {
 			workflowAgents[item.systemKey] = agentID
 		} else if item.systemKey == "daily_news" || item.systemKey == "weekly_operations" || item.systemKey == "low_engagement" {
@@ -184,6 +191,32 @@ func (r *AgentRepository) BootstrapStarterPack(ctx context.Context) (int, error)
 	}
 	if len(workflowAgents) != 4 {
 		return 0, fmt.Errorf("starter workflow Agent bindings are incomplete")
+	}
+	starterWorkflowMeta := map[string]struct {
+		name           string
+		description    string
+		cronExpression string
+	}{
+		"daily_news": {
+			name:           "AI 每日资讯",
+			description:    "每天 09:00 调度 AI 每日资讯 Agent。",
+			cronExpression: "0 9 * * *",
+		},
+		"weekly_operations": {
+			name:           "周度运营复盘",
+			description:    "每周调度周度运营复盘 Agent。",
+			cronExpression: "0 9 * * 1",
+		},
+		"stale_content_refresh": {
+			name:           "陈旧内容更新",
+			description:    "定期调度陈旧内容更新 Agent。",
+			cronExpression: "0 9 * * 2",
+		},
+		"low_engagement": {
+			name:           "低互动文章分析",
+			description:    "定期调度低互动文章分析 Agent。",
+			cronExpression: "0 9 * * 3",
+		},
 	}
 	for key, agentID := range workflowAgents {
 		steps, _ := json.Marshal([]map[string]any{{"id": "agent", "type": "model", "agent_id": agentID}})
@@ -198,7 +231,41 @@ func (r *AgentRepository) BootstrapStarterPack(ctx context.Context) (int, error)
 		err = tx.QueryRowContext(ctx, `SELECT w.id, w.current_version, v.steps
 			FROM ai_workflows w JOIN ai_workflow_versions v ON v.workflow_id=w.id AND v.version=w.current_version
 			WHERE w.template_key=$1 AND w.deleted_at IS NULL FOR UPDATE`, key).Scan(&workflowID, &currentVersion, &currentSteps)
-		if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			meta, ok := starterWorkflowMeta[key]
+			if !ok {
+				return 0, fmt.Errorf("starter workflow %q definition is missing", key)
+			}
+			err = tx.QueryRowContext(ctx, `SELECT id, current_version FROM ai_workflows WHERE template_key=$1 FOR UPDATE`, key).Scan(&workflowID, &currentVersion)
+			if errors.Is(err, sql.ErrNoRows) {
+				currentVersion = 1
+				err = tx.QueryRowContext(ctx, `INSERT INTO ai_workflows
+					(name, description, enabled, template_key, cron_expression, timezone, current_version)
+					VALUES ($1, $2, FALSE, $3, $4, 'Asia/Shanghai', $5)
+					RETURNING id`, meta.name, meta.description, key, meta.cronExpression, currentVersion).Scan(&workflowID)
+				if err != nil {
+					return 0, fmt.Errorf("create starter workflow %q: %w", key, err)
+				}
+				if _, err = tx.ExecContext(ctx, `INSERT INTO ai_workflow_versions
+					(workflow_id, version, input_schema, steps) VALUES ($1, $2, $3, $4)`, workflowID, currentVersion,
+					json.RawMessage(`{"type":"object","additionalProperties":false}`), steps); err != nil {
+					return 0, fmt.Errorf("create starter workflow %q version: %w", key, err)
+				}
+				continue
+			} else if err != nil {
+				return 0, err
+			}
+			if err = tx.QueryRowContext(ctx, `UPDATE ai_workflows SET deleted_at=NULL, enabled=FALSE, next_run_at=NULL,
+				current_version=current_version+1, updated_at=NOW() WHERE id=$1 RETURNING current_version`, workflowID).Scan(&currentVersion); err != nil {
+				return 0, err
+			}
+			if _, err = tx.ExecContext(ctx, `INSERT INTO ai_workflow_versions
+				(workflow_id, version, input_schema, steps) VALUES ($1, $2, $3, $4)`, workflowID, currentVersion,
+				json.RawMessage(`{"type":"object","additionalProperties":false}`), steps); err != nil {
+				return 0, err
+			}
+			continue
+		} else if err != nil {
 			return 0, fmt.Errorf("starter workflow %q is unavailable: %w", key, err)
 		}
 		if sameJSON(currentSteps, steps) {
@@ -214,6 +281,11 @@ func (r *AgentRepository) BootstrapStarterPack(ctx context.Context) (int, error)
 			return 0, err
 		}
 	}
+	additionalCreated, err := reconcileProviderDependentStarters(ctx, tx, providerID, systemAgents)
+	if err != nil {
+		return 0, err
+	}
+	created += additionalCreated
 	if _, err = tx.ExecContext(ctx, `UPDATE ai_workspace_bootstrap SET version=$1, provider_profile_id=$2, completed_at=NOW() WHERE singleton=TRUE`, starterPackVersion, providerID); err != nil {
 		return 0, err
 	}

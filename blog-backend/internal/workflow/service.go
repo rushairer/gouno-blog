@@ -102,15 +102,8 @@ func (s *Service) addPlannerPreflightChecks(ctx context.Context, value *domain.W
 		return
 	}
 	key := strings.TrimSpace(*value.TemplateKey)
-	var template *workflowplan.Template
-	for _, candidate := range workflowplan.Templates() {
-		if candidate.Key == key {
-			copy := candidate
-			template = &copy
-			break
-		}
-	}
-	if template == nil {
+	template, ok := workflowplan.TemplateByKey(key)
+	if !ok {
 		add("template_contract", "error", fmt.Sprintf("unknown workflow template %q", key))
 		return
 	}

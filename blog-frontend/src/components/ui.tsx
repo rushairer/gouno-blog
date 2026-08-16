@@ -476,11 +476,12 @@ export function LoadingState({ label }: { label: string }) {
   );
 }
 
-export function EmptyState({ label }: { label: string }) {
+export function EmptyState({ label, action }: { label: string; action?: React.ReactNode }) {
   return (
     <div className="state">
       <BookOpen aria-hidden="true" />
       <p>{label}</p>
+      {action ? <div className="state__actions">{action}</div> : null}
     </div>
   );
 }

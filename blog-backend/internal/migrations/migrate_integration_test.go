@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	_ "github.com/lib/pq"
+	"github.com/rushairer/blog-backend/internal/repository"
 )
 
 func TestUpAppliesCurrentSchemaAndIsIdempotent(t *testing.T) {
@@ -26,6 +27,21 @@ func TestUpAppliesCurrentSchemaAndIsIdempotent(t *testing.T) {
 	}
 	if err := Up(ctx, db); err != nil {
 		t.Fatalf("second migration run must be idempotent: %v", err)
+	}
+	// A real fresh install runs migrations before an administrator can save a
+	// Provider. Reproduce that order, then verify the second-stage bootstrap
+	// completes every Provider-dependent Agent and Workflow binding.
+	if _, err := db.ExecContext(ctx, `INSERT INTO ai_provider_profiles
+		(name,provider_type,base_url,model,api_key_ciphertext,api_key_nonce,api_key_last4,key_version,
+		 enabled,is_default_writing,request_timeout_seconds,max_output_tokens)
+		VALUES('fresh-install-writing','openai','https://provider.example.test','test-model',
+		 '\\x01','\\x02','test',1,TRUE,TRUE,60,1024)
+		ON CONFLICT(name) WHERE deleted_at IS NULL
+		DO UPDATE SET enabled=TRUE,is_default_writing=TRUE,deleted_at=NULL`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repository.NewAgentRepository(db).BootstrapStarterPack(ctx); err != nil {
+		t.Fatalf("fresh-install starter bootstrap: %v", err)
 	}
 	for _, table := range []string{
 		"post_reactions", "bookmarks", "comment_reports", "notifications", "post_versions",
@@ -148,6 +164,13 @@ func TestUpAppliesCurrentSchemaAndIsIdempotent(t *testing.T) {
 	}
 	if workflows != 4 {
 		t.Fatalf("expected 4 starter Workflows, got %d", workflows)
+	}
+	var starterAgents int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_agents WHERE deleted_at IS NULL`).Scan(&starterAgents); err != nil {
+		t.Fatal(err)
+	}
+	if starterAgents != 12 {
+		t.Fatalf("expected 12 starter Agents after Provider bootstrap, got %d", starterAgents)
 	}
 	var resourceWorkflows int
 	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_workflows WHERE template_key IN
