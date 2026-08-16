@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { describe, expect, it } from 'vitest';
 import {
   Button,
+  BulkActionBar,
   EditorPanel,
   Field,
   FormActions,
@@ -50,6 +51,31 @@ describe('shared UI primitives', () => {
     expect(button).toHaveClass('btn-primary');
     expect(button).toBeDisabled();
     expect(button).toHaveAttribute('aria-busy', 'true');
+  });
+
+  it('keeps batch actions in one accessible toolbar with shared AI and cancel controls', async () => {
+    const user = userEvent.setup();
+    let assisted = false;
+    let cancelled = false;
+    render(
+      <BulkActionBar
+        selectionLabel="已选择 2 篇文章"
+        onAIAssist={() => { assisted = true; }}
+        onCancel={() => { cancelled = true; }}
+      >
+        <Button variant="danger" size="compact">删除</Button>
+      </BulkActionBar>,
+    );
+
+    const toolbar = screen.getByRole('toolbar', { name: '批量操作' });
+    expect(toolbar).toHaveTextContent('已选择 2 篇文章');
+    expect(screen.getByRole('button', { name: '交给 AI' })).toHaveClass('bulk-action-bar__ai');
+    expect(screen.getByRole('button', { name: '删除' })).toHaveClass('btn-danger');
+
+    await user.click(screen.getByRole('button', { name: '交给 AI' }));
+    await user.click(screen.getByRole('button', { name: '取消' }));
+    expect(assisted).toBe(true);
+    expect(cancelled).toBe(true);
   });
 
   it('provides a shared editor panel, form layout, and surfaced action contract', () => {

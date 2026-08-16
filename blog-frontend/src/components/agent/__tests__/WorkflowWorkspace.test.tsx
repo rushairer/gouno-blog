@@ -70,7 +70,7 @@ describe('WorkflowWorkspace', () => {
     await user.click(screen.getByRole('button', { name: '运行' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('运行失败：Provider request timeout');
-    expect(screen.getByRole('alert')).toHaveTextContent('效果与记录 → Workflow 运行');
+    expect(screen.getByRole('alert')).toHaveTextContent('运行中心 → Workflow 任务');
     expect(screen.getByRole('button', { name: '运行' })).toBeEnabled();
   });
 
@@ -97,6 +97,21 @@ describe('WorkflowWorkspace', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('运行失败：RSS source validation failed');
     expect(screen.queryByText(/运行成功/)).not.toBeInTheDocument();
+  });
+
+  it('links a run-owned image task directly to its continuation workspace without approval', async () => {
+    const user = userEvent.setup();
+    const onRun = vi.fn().mockResolvedValue({
+      id: 31, workflow_id: 7, workflow_version_id: 11, dry_run: false, status: 'waiting_for_user', input: {},
+      input_tokens: 100, output_tokens: 80, created_at: '2026-08-01T10:02:00Z',
+    });
+    render(<WorkflowWorkspace workflows={[workflow]} runs={[]} metrics={[]} agents={[]} locale="zh" onMutate={vi.fn()} onRun={onRun} onSave={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: '运行' }));
+
+    const link = await screen.findByRole('link', { name: '继续生成、选择和应用图片' });
+    expect(screen.getByRole('status')).toHaveTextContent('无需前往“待我处理”审批');
+    expect(link).toHaveAttribute('href', '/admin/agents?tab=records&record=workflow&workflow=7&run=31');
   });
 
   it('does not let a successful dry-run hide a failed live run', () => {

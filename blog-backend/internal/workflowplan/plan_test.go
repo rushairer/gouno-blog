@@ -23,6 +23,13 @@ func TestParseIntentDistinguishesImageBriefFromSocial(t *testing.T) {
 	}
 }
 
+func TestParseIntentTreatsOrdinaryImageGoalAsInternalGeneration(t *testing.T) {
+	intent := ParseIntent("为文章生成封面和正文配图")
+	if intent.Status != "ready" || intent.Action != "generate_image" || !intent.RequiresImage || intent.RequiresApproval {
+		t.Fatalf("unexpected image generation intent: %#v", intent)
+	}
+}
+
 func TestParseIntentAmbiguous(t *testing.T) {
 	intent := ParseIntent("帮我自动处理一下")
 	if intent.Status != "ambiguous" || intent.AmbiguityReason == "" {
@@ -64,9 +71,29 @@ func TestCompileImageBriefContract(t *testing.T) {
 
 func TestMatchRealImageNeedsImageProvider(t *testing.T) {
 	intent := ParseIntent("为文章真实生成图片")
-	match, template, _ := Match(intent, nil, nil, nil, nil)
+	match, template, _ := Match(intent, nil, nil, nil, []tool.CatalogItem{{Name: "media.create_image_task"}})
 	if match.Status != "needs_configuration" || template == nil || !strings.Contains(strings.Join(match.Missing, ","), "图片 Provider") {
 		t.Fatalf("expected image provider requirement: %#v", match)
+	}
+}
+
+func TestCompileImageGenerationHasNoRedundantApproval(t *testing.T) {
+	provider := &domain.ProviderProfile{ID: 1, Enabled: true, IsDefaultWriting: true, IsDefaultImage: true}
+	skill := &domain.AgentSkill{VersionID: 2, Capabilities: []string{"media.create_image_task"}, ExecutionMode: domain.AgentModeApproval}
+	agent := &domain.Agent{ID: 3, Enabled: true, SkillVersionID: &skill.VersionID, Skill: skill, ProviderProfile: provider, ProviderProfileID: provider.ID}
+	intent := ParseIntent("为文章生成封面")
+	match, template, selected := Match(intent, []*domain.ProviderProfile{provider}, []*domain.Agent{agent}, []*domain.AgentSkill{skill}, []tool.CatalogItem{{Name: "media.create_image_task"}})
+	if match.Status != "ready" || selected != agent || template == nil {
+		t.Fatalf("expected ready image generation match: %#v", match)
+	}
+	draft := Compile(intent, template, selected)
+	for _, step := range draft.Steps {
+		if step.Type == "approval_gate" {
+			t.Fatalf("internal image task must not add approval gate: %#v", draft.Steps)
+		}
+	}
+	if !strings.Contains(string(draft.InputSchema), "image_brief") {
+		t.Fatalf("missing image task input contract: %s", draft.InputSchema)
 	}
 }
 

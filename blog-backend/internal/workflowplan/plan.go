@@ -74,7 +74,7 @@ type Plan struct {
 
 var templates = []Template{
 	{Key: "article_image_brief", Name: "文章配图 Brief", Domain: "distribution", Action: "image_brief", ResourceTypes: []string{"post"}, OutputType: "image_brief", Tool: "content.propose_distribution_draft", RequiresApproval: true, InputFormat: "image_brief"},
-	{Key: "article_image_generation", Name: "文章真实配图", Domain: "media", Action: "generate_image", ResourceTypes: []string{"post"}, OutputType: "media_asset", RequiresApproval: true, RequiresImage: true},
+	{Key: "article_image_generation", Name: "生成封面/文配图", Domain: "media", Action: "generate_image", ResourceTypes: []string{"post"}, OutputType: "media_asset", Tool: "media.create_image_task", RequiresImage: true, InputFormat: "image_brief"},
 	{Key: "content_distribution_social", Name: "社交分发草稿", Domain: "distribution", Action: "social", ResourceTypes: []string{"post"}, OutputType: "social_draft", Tool: "content.propose_distribution_draft", RequiresApproval: true, InputFormat: "social"},
 	{Key: "content_distribution_newsletter", Name: "Newsletter 草稿", Domain: "distribution", Action: "newsletter", ResourceTypes: []string{"post"}, OutputType: "newsletter_draft", Tool: "content.propose_distribution_draft", RequiresApproval: true, InputFormat: "newsletter"},
 	{Key: "content_distribution_faq", Name: "FAQ 草稿", Domain: "distribution", Action: "faq", ResourceTypes: []string{"post"}, OutputType: "faq_draft", Tool: "content.propose_distribution_draft", RequiresApproval: true, InputFormat: "faq"},
@@ -97,7 +97,7 @@ var persistedTemplates = []Template{
 	{Key: "selected_pre_publish_review", Name: "批量发布前审校", Tool: "content.audit_post", RequiresApproval: true},
 	{Key: "selected_internal_linking", Name: "站内链接优化（手选）", Tool: "content.find_internal_links", RequiresApproval: true},
 	{Key: "selected_distribution", Name: "内容再分发（手选）", Tool: "content.propose_distribution_draft", RequiresApproval: true},
-	{Key: "selected_article_image_generation", Name: "生成封面/文配图（手选）", Tool: "content.propose_distribution_draft", RequiresApproval: true, RequiresImage: true, InputFormat: "image_brief"},
+	{Key: "selected_article_image_generation", Name: "生成封面/文配图（手选）", Tool: "media.create_image_task", RequiresImage: true, InputFormat: "image_brief"},
 	{Key: "selected_comment_replies", Name: "评论回复草稿（手选）", Tool: "comments.propose_reply", RequiresApproval: true},
 	{Key: "selected_media_review", Name: "媒体无障碍检查", Tool: "media.get_asset"},
 	{Key: "selected_operations_deep_dive", Name: "运营建议深挖", Tool: "operations.get_suggestion", RequiresApproval: true},
@@ -150,9 +150,9 @@ func ParseIntent(prompt string) WorkflowIntent {
 		intent.ResourceTypes, intent.InputFields, intent.Domain, intent.Action, intent.OutputType = []string{"media_asset"}, []string{"media_ids"}, "media", "alt_review", "review"
 	case strings.Contains(value, "图片") || strings.Contains(value, "配图") || strings.Contains(value, "封面") || strings.Contains(value, "illustration") || strings.Contains(value, "image") || strings.Contains(value, "cover"):
 		intent.Domain, intent.Action, intent.OutputType = "distribution", "image_brief", "image_brief"
-		intent.RequiresApproval = true
 		briefOnly := strings.Contains(value, "brief") || strings.Contains(value, "提示词") || strings.Contains(value, "prompt")
-		intent.RequiresImage = !briefOnly && (strings.Contains(value, "真实") || strings.Contains(value, "生成图片") || strings.Contains(value, "generate"))
+		intent.RequiresApproval = briefOnly
+		intent.RequiresImage = !briefOnly
 		if intent.RequiresImage {
 			intent.Domain, intent.Action, intent.OutputType = "media", "generate_image", "media_asset"
 		}
@@ -208,9 +208,7 @@ func Match(intent WorkflowIntent, profiles []*domain.ProviderProfile, agents []*
 		}
 	}
 	if matched.RequiresImage && !hasDefaultImageProvider(profiles) {
-		result.Warnings = append(result.Warnings, "未配置默认图片 Provider，只能生成图片 Brief，不能生成真实图片")
-	}
-	if matched.RequiresImage {
+		result.Warnings = append(result.Warnings, "未配置默认图片 Provider，不能生成真实图片")
 		result.Status = "needs_configuration"
 		result.Missing = append(result.Missing, "启用默认图片 Provider")
 		return result, matched, nil
@@ -244,7 +242,13 @@ func Compile(intent WorkflowIntent, template *Template, agent *domain.Agent) dom
 	agentID := int64(0)
 	if agent != nil {
 		agentID = agent.ID
-		needsApproval = agent.Skill != nil && agent.Skill.ExecutionMode == domain.AgentModeApproval
+		// The template defines whether this concrete operation produces an
+		// approval proposal. An approval-mode Agent may also perform a bounded
+		// internal task or a read-only analysis without creating a redundant
+		// approval gate; content-changing templates remain explicitly governed.
+		if template == nil {
+			needsApproval = agent.Skill != nil && agent.Skill.ExecutionMode == domain.AgentModeApproval
+		}
 	}
 	properties := map[string]any{"post_ids": map[string]any{"type": "array", "items": map[string]any{"type": "integer"}, "minItems": 1, "maxItems": 20, "x-gouno-resource": "post", "x-gouno-widget": "entity-multi-select"}}
 	required := []string{"post_ids"}

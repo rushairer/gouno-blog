@@ -542,7 +542,7 @@ func (s *ApprovalService) StartImageGenerationForApprovedBrief(ctx context.Conte
 		return err
 	}
 	for _, candidate := range candidates {
-		if candidate.SourceApprovalID != approval.ID {
+		if candidate.SourceApprovalID == nil || *candidate.SourceApprovalID != approval.ID {
 			continue
 		}
 		s.appendCandidateEvent(ctx, candidate.ID, "image_candidates_created", map[string]any{"candidate_id": candidate.ID, "post_id": candidate.PostID})

@@ -1,6 +1,6 @@
 import { cloneElement, createContext, forwardRef, isValidElement, useCallback, useContext, useEffect, useId, useRef, useState } from 'react';
 import type React from 'react';
-import { AlertTriangle, BookOpen, CheckCircle2, ChevronDown, Search, X } from 'lucide-react';
+import { AlertTriangle, BookOpen, CheckCircle2, ChevronDown, Search, Sparkles, X } from 'lucide-react';
 
 function classes(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(' ');
@@ -298,6 +298,33 @@ export function FilterBar({ children, className = '' }: React.HTMLAttributes<HTM
 
 export function ContentStack({ children, className = '' }: React.HTMLAttributes<HTMLDivElement>) {
   return <div className={classes('content-stack', className)}>{children}</div>;
+}
+
+export function BulkActionBar({
+  selectionLabel,
+  onAIAssist,
+  onCancel,
+  children,
+  aiLabel = '交给 AI',
+  cancelLabel = '取消',
+  className = '',
+}: {
+  selectionLabel: React.ReactNode;
+  onAIAssist: () => void;
+  onCancel: () => void;
+  children?: React.ReactNode;
+  aiLabel?: string;
+  cancelLabel?: string;
+  className?: string;
+}) {
+  return <div className={classes('bulk-action-bar', className)} role="toolbar" aria-label="批量操作">
+    <strong className="bulk-action-bar__summary">{selectionLabel}</strong>
+    <div className="bulk-action-bar__actions">
+      <Button className="bulk-action-bar__ai" variant="secondary" size="compact" type="button" onClick={onAIAssist}><Sparkles />{aiLabel}</Button>
+      {children}
+      <Button variant="ghost" size="compact" type="button" onClick={onCancel}>{cancelLabel}</Button>
+    </div>
+  </div>;
 }
 
 export function FormGrid({

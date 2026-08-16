@@ -1,7 +1,7 @@
-import { Check, ChevronDown, Image, Lightbulb, Play, RefreshCw, Sparkles, ThumbsDown, X } from 'lucide-react';
+import { Check, ChevronDown, Image, Lightbulb, Play, RefreshCw, ThumbsDown, X } from 'lucide-react';
 import { useState } from 'react';
 import type { ContentCandidateSet, EditorialTask, MediaCandidate, OperationalSuggestion } from '../../agent';
-import { Button, Checkbox, EmptyState, Panel } from '../ui';
+import { BulkActionBar, Button, Checkbox, EmptyState, Panel } from '../ui';
 import { StatusPill } from './StatusPill';
 import { WorkflowLauncher } from './WorkflowLauncher';
 
@@ -72,7 +72,7 @@ export function OperationsWorkspace({ suggestions, candidateSets, mediaCandidate
       <div className="operations-queue__counts"><span><strong>{total}</strong>{zh ? ' 项待决定' : ' items to decide'}</span><span>{zh ? '创建编辑任务不会修改或发布内容。' : 'Creating an editorial task never changes or publishes content.'}</span></div>
     </Panel>
 
-    {selectedSuggestions.length ? <div className="bulk-action-bar"><strong>{zh ? `已选择 ${selectedSuggestions.length} 条建议` : `${selectedSuggestions.length} suggestions selected`}</strong><button onClick={() => setAIOpen(true)}><Sparkles />{zh ? '交给 AI' : 'Send to AI'}</button><button onClick={() => setSelectedSuggestions([])}>{zh ? '取消' : 'Cancel'}</button></div> : null}
+    {selectedSuggestions.length ? <BulkActionBar selectionLabel={zh ? `已选择 ${selectedSuggestions.length} 条建议` : `${selectedSuggestions.length} suggestions selected`} onAIAssist={() => setAIOpen(true)} onCancel={() => setSelectedSuggestions([])} aiLabel={zh ? '交给 AI' : 'Send to AI'} cancelLabel={zh ? '取消' : 'Cancel'} /> : null}
 
     {total === 0 ? <EmptyState label={zh ? '目前没有需要你决定的运营建议。' : 'There are no operational suggestions requiring a decision.'} /> : <div className="operations-task-list">
       {actionableSuggestions.map((item) => <article className="operations-task" key={`suggestion-${item.id}`}>

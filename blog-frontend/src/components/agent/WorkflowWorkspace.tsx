@@ -98,7 +98,7 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = []
   const [deleteTarget, setDeleteTarget] = useState<Workflow | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [runningAction, setRunningAction] = useState<{ workflowID: number; dryRun: boolean } | null>(null);
-  const [runFeedback, setRunFeedback] = useState<{ workflowID: number; type: 'success' | 'error'; message: string } | null>(null);
+  const [runFeedback, setRunFeedback] = useState<{ workflowID: number; type: 'success' | 'error'; message: string; runID?: number } | null>(null);
   const [selectedWorkflowID, setSelectedWorkflowID] = useState<number | null>(() => {
     const value = Number(new URLSearchParams(window.location.search).get('workflow'));
     return Number.isInteger(value) && value > 0 ? value : null;
@@ -185,12 +185,23 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = []
           : `Run #${finalRun.id} completed and is awaiting approval; no content change was applied automatically.` });
         return;
       }
+      if (finalRun.status === 'waiting_for_user') {
+        setRunFeedback({
+          workflowID: workflow.id,
+          type: 'success',
+          runID: finalRun.id,
+          message: locale === 'zh'
+            ? `Run #${finalRun.id} 已准备好图片任务，无需前往“待我处理”审批。`
+            : `Run #${finalRun.id} prepared the image task without an approval detour.`,
+        });
+        return;
+      }
       if (finalRun.status !== 'succeeded') {
         throw new Error(`${locale === 'zh' ? '未知运行状态' : 'Unknown run status'}: ${finalRun.status}`);
       }
       setRunFeedback({ workflowID: workflow.id, type: 'success', message: locale === 'zh'
         ? (wasAlreadySucceeded && !dryRun
-          ? `今日已有成功运行 Run #${finalRun.id}，本次未重复执行。可到“效果与记录 → Workflow 运行”核对日志。`
+          ? `今日已有成功运行 Run #${finalRun.id}，本次未重复执行。可到“运行中心 → Workflow 任务”核对日志。`
           : `${dryRun ? '试运行' : '运行'}成功（Run #${finalRun.id}）。状态和运行记录已刷新。`)
         : (wasAlreadySucceeded && !dryRun
           ? `Run #${finalRun.id} already succeeded today; no duplicate run was created.`
@@ -201,8 +212,8 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = []
         workflowID: workflow.id,
         type: 'error',
         message: locale === 'zh'
-          ? `${dryRun ? '试运行' : '运行'}失败：${detail}。请修正后重试，步骤日志可在“效果与记录 → Workflow 运行”查看。`
-          : `${dryRun ? 'Dry-run' : 'Run'} failed: ${detail}. Fix the issue and retry; step logs are available under “Records → Workflow runs”.`,
+          ? `${dryRun ? '试运行' : '运行'}失败：${detail}。请修正后重试，步骤日志可在“运行中心 → Workflow 任务”查看。`
+          : `${dryRun ? 'Dry-run' : 'Run'} failed: ${detail}. Fix the issue and retry; step logs are available under “Run center → Workflow tasks”.`,
       });
     } finally {
       setRunningAction(null);
@@ -251,7 +262,7 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = []
             {runBlockReason ? <Feedback type="error">{runBlockReason}</Feedback> : null}
             <div className="row-actions workflow-detail-actions"><Button variant="secondary" loading={Boolean(activeRun)} disabled={Boolean(runBlockReason)} title={runBlockReason || undefined} type="button" onClick={() => void runWorkflow(workflow, true, runInput())}>{activeRun?.dryRun ? <span className="spinner workflow-button-spinner" aria-hidden="true" /> : <TestTube2 />}{activeRun?.dryRun ? (locale === 'zh' ? '试运行中…' : 'Dry-running…') : labels.dry}</Button><Button variant="primary" loading={Boolean(activeRun)} disabled={!workflow.enabled || latestRun?.status === 'running' || Boolean(runBlockReason)} title={runBlockReason || undefined} type="button" onClick={() => void runWorkflow(workflow, false, runInput())}>{activeRun && !activeRun.dryRun ? <span className="spinner workflow-button-spinner" aria-hidden="true" /> : <Play />}{activeRun && !activeRun.dryRun ? (locale === 'zh' ? '运行中…' : 'Running…') : (latestRun?.status === 'failed' ? labels.retry : labels.run)}</Button></div>
             {activeRun ? <div className="workflow-run-progress" role="status" aria-live="polite"><span className="spinner workflow-progress-spinner" aria-hidden="true" /><span><strong>{locale === 'zh' ? `${activeRun.dryRun ? '试运行' : 'Workflow'} 正在执行` : `${activeRun.dryRun ? 'Dry-run' : 'Workflow'} is running`}</strong><small>{locale === 'zh' ? '请勿重复点击；完成后会自动刷新状态和运行记录。' : 'Do not submit again. Status and run records refresh automatically when complete.'}</small></span></div> : null}
-            {feedback ? <Feedback type={feedback.type}>{feedback.message}</Feedback> : null}
+            {feedback ? <Feedback type={feedback.type}><div className="workflow-run-feedback"><span>{feedback.message}</span>{feedback.runID ? <a className="btn btn-secondary" href={`/admin/agents?tab=records&record=workflow&workflow=${workflow.id}&run=${feedback.runID}`}>{locale === 'zh' ? '继续生成、选择和应用图片' : 'Continue generating, selecting, and applying images'}</a> : null}</div></Feedback> : null}
             <div className="agent-run-metrics"><span><small>{labels.schedule}</small><strong>{workflow.cron_expression || (locale === 'zh' ? '仅手动' : 'Manual only')}</strong><small>{workflow.cron_expression ? workflow.timezone : ''}</small></span><span><small>{labels.next}</small><strong>{workflow.next_run_at ? new Date(workflow.next_run_at).toLocaleString(locale === 'zh' ? 'zh-CN' : 'en-US') : '—'}</strong></span><span><small>{labels.metrics}</small><strong>{metric?.runs || 0} / {metric?.failures || 0} / {metric?.tokens || 0}</strong></span><span><small>{locale === 'zh' ? '最近正式运行' : 'Latest live run'}</small><strong>{latestRun ? statusLabel(latestRun.status, locale) : '—'}</strong>{latestDryRun ? <small>{locale === 'zh' ? `最近试运行：${statusLabel(latestDryRun.status, locale)}` : `Latest dry-run: ${statusLabel(latestDryRun.status, locale)}`}</small> : null}</span></div>
             <div className="workflow-step-summary">{workflow.steps.map((step, index) => <span key={step.id}><strong>{index + 1}. {step.name || step.id}</strong><small>{step.type}</small></span>)}</div>
             {latestRun?.output && typeof latestRun.output === 'object' && latestRun.output !== null && 'post_id' in latestRun.output ? <a className="btn btn-secondary" href={`/admin/posts/${String((latestRun.output as { post_id: number }).post_id)}/edit`}>{locale === 'zh' ? '查看已发布文章' : 'View published post'}</a> : null}
