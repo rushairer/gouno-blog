@@ -28,6 +28,7 @@ var catalogDescriptionsZH = map[string]string{
 	"analytics.list_low_engagement_posts": "列出浏览量足够但互动率较低的已发布文章。", "content.propose_draft": "提交一篇新博客草稿的审批提案。", "content.propose_update": "提交对现有博客文章的修改审批提案。",
 	"content.propose_tags": "提交替换现有文章标签的审批提案。", "comments.propose_reply": "提交评论回复草稿的审批提案。", "content.propose_task": "提交编辑任务的审批提案。",
 	"content.propose_distribution_draft": "为文章提交社媒、邮件、FAQ 或图片 Brief 草稿；不会向外部服务发送内容。", "content.list_broken_links": "列出已发布文章中缓存的失效链接证据。",
+	"media.create_image_task":    "为已授权文章创建站内图片生成任务；不会修改或发布文章。",
 	"content.propose_candidates": "提交标题、摘要或封面 Alt 文案候选，供人工选择。", "content.list_tag_bloat": "识别低使用率或大小写重复的标签。", "operations.propose_suggestion": "提交带证据的站内运营建议审批提案。",
 	"media.get_asset": "读取一个媒体资源的元数据，不返回文件内容。", "operations.get_suggestion": "读取一条运营建议及其证据。", "content.list_categories": "列出分类与文章数量。", "comments.get_comment": "读取一条评论并移除私有身份字段。",
 }

@@ -25,7 +25,7 @@ func TestProviderStarterDefinitionsAreCompleteAndRunnable(t *testing.T) {
 	}
 }
 
-func TestArticleImageGenerationStarterIsApprovalGatedImageBrief(t *testing.T) {
+func TestArticleImageGenerationStarterCreatesInternalImageTaskWithoutApproval(t *testing.T) {
 	for _, definition := range providerStarterWorkflows() {
 		if definition.key != "selected_article_image_generation" {
 			continue
@@ -37,8 +37,8 @@ func TestArticleImageGenerationStarterIsApprovalGatedImageBrief(t *testing.T) {
 			t.Fatal("image generation starter must constrain input to image_brief")
 		}
 		steps := definition.steps(42)
-		if len(steps) != 3 || steps[1].Type != "approval_gate" {
-			t.Fatal("image generation starter must wait for approval before creating a media candidate")
+		if len(steps) != 2 || steps[0].Type != "for_each" || steps[1].Type != "output" {
+			t.Fatal("image generation starter must create an internal image task without an approval gate")
 		}
 		return
 	}

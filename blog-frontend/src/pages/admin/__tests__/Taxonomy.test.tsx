@@ -34,4 +34,22 @@ describe('AdminTaxonomy', () => {
     expect(form?.querySelector('.taxonomy-form__description')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '新建分类' })).toHaveClass('taxonomy-form__action');
   });
+
+  it('keeps tag names in a dedicated left-aligned content region with shared action buttons', async () => {
+    vi.mocked(apiFetch).mockResolvedValue(Response.json({ data: [{ name: 'OpenAI', post_count: 3 }] }));
+
+    const { container } = render(
+      <MemoryRouter>
+        <ToastProvider>
+          <AdminTaxonomy type="tags" />
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('OpenAI');
+    expect(container.querySelector('.tag-admin-card__content')).toHaveTextContent('OpenAI');
+    expect(screen.getByRole('button', { name: '重命名' })).toHaveClass('btn');
+    expect(screen.getByRole('button', { name: '合并' })).toHaveClass('btn');
+    expect(screen.getByRole('button', { name: '删除' })).toHaveClass('btn-danger');
+  });
 });

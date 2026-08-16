@@ -68,11 +68,13 @@ export function WorkflowLauncher({ open, resourceType, resourceKeys, onClose, ti
     } catch (reason) { setFeedback({ type: 'error', text: reason instanceof Error ? reason.message : 'Workflow 运行失败。' }); }
     finally { setBusy(false); }
   };
-  return <Modal open={open} title={title} description={`已选择 ${resourceKeys.length} 项资源；Workflow 默认只能访问这些目标。`} onClose={onClose}>
+  return <Modal className="workflow-launcher-modal" open={open} title={title} description={`已选择 ${resourceKeys.length} 项资源；Workflow 默认只能访问这些目标。`} onClose={onClose}>
     <div className="workflow-launcher">
-      {workflows.length ? <><label>Workflow<Select value={workflowID} onChange={(event) => choose(Number(event.target.value))}>{workflows.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select></label>{workflow ? <WorkflowInputForm schema={workflow.input_schema} value={input} onChange={setInput} /> : null}</> : <p className="muted">没有已启用且支持此类资源输入的 Workflow。请先在 AI 工作台创建或启用一个兼容流程。</p>}
-      {feedback ? <Feedback type={feedback.type}>{feedback.text}{feedback.type === 'success' && workflow ? <a href={`/admin/agents?tab=records&workflow=${workflow.id}`}>查看运行记录</a> : null}</Feedback> : null}
-      <div className="modal-actions"><Button variant="secondary" type="button" onClick={onClose}>关闭</Button><Button variant="primary" type="button" loading={busy} disabled={!workflow} onClick={() => void run()}>{busy ? <Sparkles /> : <Play />}运行</Button></div>
+      <div className="workflow-launcher__body">
+        {workflows.length ? <><label className="workflow-launcher__workflow-field">Workflow<Select value={workflowID} onChange={(event) => choose(Number(event.target.value))}>{workflows.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select></label>{workflow ? <WorkflowInputForm schema={workflow.input_schema} value={input} onChange={setInput} /> : null}</> : <p className="muted">没有已启用且支持此类资源输入的 Workflow。请先在 AI 工作台创建或启用一个兼容流程。</p>}
+        {feedback ? <Feedback type={feedback.type}>{feedback.text}{feedback.type === 'success' && workflow ? <a href={`/admin/agents?tab=records&record=workflow&workflow=${workflow.id}`}>打开运行中心</a> : null}</Feedback> : null}
+      </div>
+      <div className="workflow-launcher__footer modal-actions"><Button variant="secondary" type="button" onClick={onClose}>关闭</Button><Button variant="primary" type="button" loading={busy} disabled={!workflow} onClick={() => void run()}>{busy ? <Sparkles /> : <Play />}运行</Button></div>
     </div>
   </Modal>;
 }

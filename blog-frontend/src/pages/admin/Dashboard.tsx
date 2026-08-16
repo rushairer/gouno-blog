@@ -24,7 +24,7 @@ function alertPresentation(alert: Summary['ai_alerts'][number]) {
     destination,
     icon: workflow ? <GitBranch aria-hidden="true" /> : <Bot aria-hidden="true" />,
     label: workflow ? 'Workflow 执行失败' : 'Agent 执行失败',
-    action: '查看运行记录',
+    action: '打开运行中心',
   };
 }
 

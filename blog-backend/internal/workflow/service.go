@@ -1093,7 +1093,7 @@ func (s *Service) ReconcileMediaRun(ctx context.Context, runID int64) error {
 	if total == 0 {
 		return nil
 	}
-	status := "awaiting_approval"
+	status := "waiting_for_user"
 	finished := false
 	if pending == 0 && applied == total {
 		status, finished = "succeeded", true
@@ -1232,6 +1232,11 @@ func (s *Service) execute(ctx context.Context, runID int64) error {
 		status = "awaiting_approval"
 		var pending int
 		if queryErr := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM workflow_interaction_tasks WHERE workflow_run_id=$1 AND status='pending'`, runID).Scan(&pending); queryErr == nil && pending > 0 {
+			status = "waiting_for_user"
+		}
+	} else {
+		var pendingMedia int
+		if queryErr := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_media_candidates WHERE workflow_run_id=$1 AND applied_version_id IS NULL AND generation_status NOT IN ('rejected','failed','cancelled')`, runID).Scan(&pendingMedia); queryErr == nil && pendingMedia > 0 {
 			status = "waiting_for_user"
 		}
 	}

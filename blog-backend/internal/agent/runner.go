@@ -334,7 +334,7 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 			var proposal *tool.Proposal
 			invokeErr := r.authorizeScopedTool(ctx, run, requested.Name, effectiveArguments, risk)
 			if invokeErr == nil {
-				risk, rawResult, proposal, invokeErr = r.invokeTool(ctx, skill, requested.Name, effectiveArguments)
+				risk, rawResult, proposal, invokeErr = r.invokeTool(ctx, run, skill, requested.Name, effectiveArguments)
 			}
 			if invokeErr == nil {
 				rawResult, invokeErr = r.filterScopedDiscoveryResult(ctx, run, requested.Name, rawResult)
@@ -691,7 +691,10 @@ func (r *Runner) recordDiscoveredResources(ctx context.Context, run *domain.Agen
 	return walk(value)
 }
 
-func (r *Runner) invokeTool(ctx context.Context, skill *domain.AgentSkill, name string, arguments json.RawMessage) (domain.ToolRiskLevel, json.RawMessage, *tool.Proposal, error) {
+func (r *Runner) invokeTool(ctx context.Context, run *domain.AgentRun, skill *domain.AgentSkill, name string, arguments json.RawMessage) (domain.ToolRiskLevel, json.RawMessage, *tool.Proposal, error) {
+	if name == "media.create_image_task" {
+		return r.createImageTask(ctx, run, skill, arguments)
+	}
 	if name != "content.create_post" {
 		return r.tools.Invoke(ctx, skill.Capabilities, name, arguments)
 	}
@@ -721,6 +724,42 @@ func (r *Runner) invokeTool(ctx context.Context, skill *domain.AgentSkill, name 
 		return domain.ToolRiskWrite, nil, nil, err
 	}
 	raw, _ := json.Marshal(map[string]any{"status": status, "post_id": post.ID})
+	return domain.ToolRiskWrite, raw, nil, nil
+}
+
+func (r *Runner) createImageTask(ctx context.Context, run *domain.AgentRun, skill *domain.AgentSkill, arguments json.RawMessage) (domain.ToolRiskLevel, json.RawMessage, *tool.Proposal, error) {
+	if run == nil || !slices.Contains(skill.Capabilities, "media.create_image_task") {
+		return domain.ToolRiskWrite, nil, nil, tool.ErrUnauthorized
+	}
+	var payload struct {
+		PostID   int64  `json:"post_id"`
+		Format   string `json:"format"`
+		Headline string `json:"headline"`
+		Body     string `json:"body"`
+		Platform string `json:"platform"`
+		AltText  string `json:"alt_text"`
+	}
+	decoder := json.NewDecoder(bytes.NewReader(arguments))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&payload); err != nil || decoder.Decode(&struct{}{}) != io.EOF {
+		return domain.ToolRiskWrite, nil, nil, tool.ErrInvalidArgument
+	}
+	payload.Headline = strings.TrimSpace(payload.Headline)
+	payload.Body = strings.TrimSpace(payload.Body)
+	payload.Platform = strings.TrimSpace(payload.Platform)
+	payload.AltText = strings.TrimSpace(payload.AltText)
+	if payload.PostID <= 0 || payload.Format != "image_brief" || payload.Body == "" || len([]rune(payload.Headline)) > 500 || len([]rune(payload.Body)) > 12000 || len([]rune(payload.Platform)) > 100 || len([]rune(payload.AltText)) > 500 {
+		return domain.ToolRiskWrite, nil, nil, tool.ErrInvalidArgument
+	}
+	candidateID, workflowRunID, err := r.repo.CreateMediaCandidateFromRun(ctx, run.ID, payload.PostID, payload.Headline, payload.Body, payload.Platform, payload.AltText)
+	if err != nil {
+		return domain.ToolRiskWrite, nil, nil, err
+	}
+	result := map[string]any{"status": "brief_ready", "candidate_id": candidateID}
+	if workflowRunID != nil {
+		result["workflow_run_id"] = *workflowRunID
+	}
+	raw, _ := json.Marshal(result)
 	return domain.ToolRiskWrite, raw, nil, nil
 }
 

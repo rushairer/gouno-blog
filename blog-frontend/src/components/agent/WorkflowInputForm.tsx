@@ -56,11 +56,12 @@ const resourceFilters: Record<string, ResourceFilter[]> = {
   tag: [{ key: 'min_post_count', zh: '最少文章数', en: 'Minimum posts', type: 'number' }],
 };
 
-function ResourcePicker({ property, value, onChange, locale }: {
+function ResourcePicker({ property, value, onChange, locale, className }: {
   property: SchemaProperty;
   value: unknown;
   onChange: (value: unknown) => void;
   locale: 'zh' | 'en';
+  className?: string;
 }) {
   const resourceType = property['x-gouno-resource'] || '';
   const multiple = property.type === 'array';
@@ -125,9 +126,21 @@ function ResourcePicker({ property, value, onChange, locale }: {
     }
     onChange(next);
   };
-  return <div className="workflow-resource-field">
+  return <div className={`workflow-resource-field ${className || ''}`.trim()}>
     <div className="workflow-resource-selection">
-      {selected.length ? selected.map((entry) => { const key = String(entry); const invalid = unavailable.includes(key); return <span className={invalid ? 'unavailable' : ''} key={key}><Database />{selectedItems[key]?.label || items.find((item) => item.key === key)?.label || `${resourceType} #${key}`}{invalid ? <small>{locale === 'zh' ? '已失效' : 'Unavailable'}</small> : null}<button type="button" title={locale === 'zh' ? '移除' : 'Remove'} onClick={() => toggle(key)}><X /></button></span>; }) : <small>{locale === 'zh' ? '尚未选择资源' : 'No resources selected'}</small>}
+      {selected.length ? selected.map((entry) => {
+        const key = String(entry);
+        const invalid = unavailable.includes(key);
+        const label = selectedItems[key]?.label || items.find((item) => item.key === key)?.label || `${resourceType} #${key}`;
+        return <span className={invalid ? 'unavailable' : ''} key={key}>
+          <Database />
+          <span className="workflow-resource-copy">
+            <span className="workflow-resource-label" title={label}>{label}</span>
+            {invalid ? <small>{locale === 'zh' ? '已失效' : 'Unavailable'}</small> : null}
+          </span>
+          <button type="button" title={locale === 'zh' ? '移除' : 'Remove'} aria-label={`${locale === 'zh' ? '移除' : 'Remove'} ${label}`} onClick={() => toggle(key)}><X /></button>
+        </span>;
+      }) : <small>{locale === 'zh' ? '尚未选择资源' : 'No resources selected'}</small>}
     </div>
     {unavailable.length ? <p className="workflow-resource-warning">{locale === 'zh' ? `有 ${unavailable.length} 项资源已删除或不可用，请移除后再运行。` : `${unavailable.length} selected resources are unavailable. Remove them before running.`}</p> : null}
     <Button variant="secondary" size="compact" type="button" onClick={() => setOpen(true)}><Plus />{locale === 'zh' ? '选择资源' : 'Select resources'}</Button>

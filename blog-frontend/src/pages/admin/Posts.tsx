@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Copy, Edit2, Eye, Plus, Sparkles, Trash2, X } from 'lucide-react';
+import { Copy, Edit2, Eye, Plus, Trash2, X } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { apiFetch } from '../../auth';
 import {
   AdminPage,
   AdminPageHeader,
+  BulkActionBar,
   Button,
   ConfirmDialog,
   ContentStack,
@@ -141,7 +142,11 @@ export default function AdminPosts() {
           <span className="filter-bar__count">{total} 篇</span>
           {(q || status || category || tag) ? <Button className="filter-bar__actions" variant="ghost" size="compact" type="button" onClick={clearFilters}><X /> 清除</Button> : null}
         </FilterBar>
-        {selected.length ? <div className="bulk-action-bar"><strong>已选择 {selected.length} 篇</strong><button onClick={() => setAIOpen(true)}><Sparkles />交给 AI</button><button onClick={() => void batch('publish').catch((reason: Error) => setError(reason.message))}>发布</button><button onClick={() => void batch('draft').catch((reason: Error) => setError(reason.message))}>转为草稿</button><button className="danger-action" onClick={() => setDeleteTarget({ kind: 'batch' })}>删除</button><button onClick={() => setSelected([])}>取消</button></div> : null}
+        {selected.length ? <BulkActionBar selectionLabel={`已选择 ${selected.length} 篇`} onAIAssist={() => setAIOpen(true)} onCancel={() => setSelected([])}>
+          <Button variant="secondary" size="compact" type="button" onClick={() => void batch('publish').catch((reason: Error) => setError(reason.message))}>发布</Button>
+          <Button variant="secondary" size="compact" type="button" onClick={() => void batch('draft').catch((reason: Error) => setError(reason.message))}>转为草稿</Button>
+          <Button variant="danger" size="compact" type="button" onClick={() => setDeleteTarget({ kind: 'batch' })}><Trash2 />删除</Button>
+        </BulkActionBar> : null}
         {loading ? <LoadingState label="正在载入文章…" /> : !error && posts.length === 0 ? (
           <EmptyState
             label={hasFilters ? '没有符合当前筛选条件的文章。' : '还没有发布过文章。'}

@@ -295,18 +295,68 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .toast--error > svg { color: var(--danger); }
 .toast button { width: 28px; height: 28px; display: grid; place-items: center; border: 0; background: transparent; color: var(--text-3); cursor: pointer; }
 .toast button svg { width: 15px; }
-.modal-backdrop { position: fixed; z-index: 250; inset: 0; display: grid; place-items: center; padding: 20px; background: var(--ui-overlay); }
-.modal { width: min(560px, 100%); max-height: min(760px, calc(100vh - 40px)); overflow-y: auto; border: 1px solid var(--admin-line); border-radius: var(--radius-overlay); background: var(--ui-elevated); box-shadow: var(--shadow-float); }
-.modal > header { display: flex; justify-content: space-between; gap: 20px; padding: 20px 22px; border-bottom: 1px solid var(--admin-line); }
+.modal-backdrop { position: fixed; z-index: 250; inset: 0; display: grid; place-items: center; padding: 24px; background: var(--ui-overlay); }
+.modal { width: min(680px, calc(100vw - 48px)); max-height: min(780px, calc(100vh - 48px)); display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--admin-line); border-radius: var(--radius-overlay); background: var(--ui-elevated); box-shadow: var(--shadow-float); }
+.modal > header { flex: 0 0 auto; display: flex; justify-content: space-between; gap: 20px; padding: 24px 26px; border-bottom: 1px solid var(--admin-line); }
 .modal > header h2 { font: 600 22px/1.3 var(--font-serif); }
 .modal > header p { margin-top: 6px; color: var(--text-2); font-size: 13px; line-height: 1.6; }
 .modal > header .icon-button { flex: 0 0 34px; }
-.confirm-dialog, .modal-form { padding: 22px; }
+.confirm-dialog, .modal-form { min-height: 0; padding: 24px 26px; overflow-y: auto; }
 .confirm-dialog > p { color: var(--text-2); line-height: 1.7; }
 .modal-actions { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--admin-line); display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
-.modal-form { display: grid; gap: 14px; }
-.modal-form label { display: grid; gap: 6px; color: var(--text-2); font-size: 12px; }
-.modal-form input, .modal-form textarea, .modal-form select { width: 100%; min-height: 40px; border: 1px solid var(--control-border); border-radius: var(--radius-control); padding: 8px 10px; background: var(--control-bg); color: var(--ink); }
+.modal-form { display: grid; gap: 18px; }
+.modal-form label { display: grid; gap: 7px; color: var(--text-2); font-size: var(--font-size-label); font-weight: 600; }
+.modal-form input, .modal-form textarea, .modal-form select { width: 100%; min-height: var(--control-height); border: 1px solid var(--control-border); border-radius: var(--radius-control); padding: 8px 12px; background: var(--control-bg); color: var(--ink); font: inherit; }
+
+/* Shared Workflow launcher controls. These are global because Workflows can
+   start from every resource page, not only the AI workbench route. */
+.modal.workflow-launcher-modal { width: min(1040px, calc(100vw - 64px)); max-height: min(820px, calc(100vh - 48px)); }
+.workflow-launcher-modal > header { padding: 28px 32px; }
+.workflow-launcher { width: 100%; min-width: 0; min-height: 0; display: flex; flex: 1 1 auto; flex-direction: column; overflow: hidden; }
+.workflow-launcher__body { min-width: 0; min-height: 0; display: grid; gap: 22px; padding: 28px 32px; overflow-y: auto; overscroll-behavior: contain; }
+.workflow-launcher__workflow-field { min-width: 0; display: grid; gap: 8px; color: var(--text-2); font-size: var(--font-size-label); font-weight: 600; }
+.workflow-launcher__workflow-field select { width: 100%; min-width: 0; }
+.workflow-input-form { display: grid; gap: 20px; }
+.workflow-input-form > .field { gap: 8px; }
+.workflow-resource-field.input-field { min-height: 0; display: grid; gap: 14px; padding: 16px; border-color: var(--control-border); background: var(--control-bg); }
+.workflow-resource-selection { min-width: 0; display: grid; gap: 8px; }
+.workflow-resource-selection > span { min-width: 0; width: 100%; display: grid; grid-template-columns: 18px minmax(0, 1fr) 28px; align-items: center; gap: 10px; padding: 10px 10px 10px 12px; border: 1px solid var(--admin-line); border-radius: var(--radius-control); background: var(--ui-elevated); }
+.workflow-resource-selection > span.unavailable { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, var(--surface)); }
+.workflow-resource-copy { min-width: 0; display: grid; gap: 3px; }
+.workflow-resource-label { min-width: 0; overflow-wrap: anywhere; line-height: 1.45; }
+.workflow-resource-copy > small { color: var(--danger); font-weight: 700; }
+.workflow-resource-selection svg { width: 16px; height: 16px; }
+.workflow-resource-selection > span > svg { color: var(--text-muted); }
+.workflow-resource-selection button { width: 28px; height: 28px; display: inline-grid; place-items: center; border: 0; border-radius: var(--radius-control); background: transparent; padding: 0; color: var(--text-muted); cursor: pointer; transition: color .15s, background-color .15s; }
+.workflow-resource-selection button:hover { background: var(--ui-control-hover); color: var(--text); }
+.workflow-resource-selection button svg { width: 15px; height: 15px; }
+.workflow-resource-field > .btn { justify-self: start; }
+.workflow-resource-warning { margin: 0; color: var(--danger); font-size: .82rem; }
+.workflow-fixed-input { min-height: var(--control-height); display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 8px 12px; border: 1px solid var(--control-border); border-radius: var(--radius-control); background: var(--control-bg); }
+.workflow-fixed-input strong { color: var(--text); font: 600 var(--font-size-control)/1.4 var(--font-ui); }
+.workflow-fixed-input small { color: var(--text-muted); font-size: var(--font-size-label); }
+.workflow-advanced-input { padding-top: 16px; border-top: 1px solid var(--admin-line); }
+.workflow-advanced-input summary { cursor: pointer; color: var(--text-2); font-weight: 600; }
+.workflow-advanced-input textarea { width: 100%; margin-top: 12px; }
+.workflow-launcher__footer { flex: 0 0 auto; margin: 0; padding: 18px 32px; background: var(--ui-elevated); }
+.workflow-launcher .feedback a { display: block; margin-top: 6px; }
+.modal.workflow-resource-modal { width: min(880px, calc(100vw - 64px)); }
+.workflow-resource-picker { min-height: 0; display: grid; gap: 18px; padding: 28px 30px; overflow-y: auto; }
+
+@media (max-width: 720px) {
+  .modal.workflow-resource-modal, .modal.workflow-launcher-modal { width: 100%; max-height: calc(100vh - 24px); }
+  .workflow-resource-picker { padding: 20px; }
+  .workflow-launcher-modal > header { padding: 20px; }
+  .workflow-launcher__body { padding: 20px; }
+  .workflow-launcher__footer { padding: 14px 20px; }
+}
+@media (max-width: 540px) {
+  .workflow-resource-picker { padding: 16px; }
+  .workflow-launcher-modal > header { padding: 18px 16px; }
+  .workflow-launcher__body { padding: 18px 16px; }
+  .workflow-launcher__footer { padding: 12px 16px; }
+  .workflow-launcher__footer .btn { flex: 1 1 0; }
+}
 
 /* Administration theme surfaces. These rules follow the component styles so
    they also override intentionally light default backgrounds. */
@@ -384,9 +434,24 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .public-empty-actions a { min-height: 38px; display: inline-flex; align-items: center; padding: 0 14px; border: 1px solid var(--line); border-radius: var(--radius-control); color: var(--ink); text-decoration: none; }
 .admin-pagination { margin-top: 20px; }
 .admin-page .posts-table-panel { padding: 0; overflow: hidden; }
-.bulk-action-bar { position: sticky; z-index: 30; top: 76px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; padding: 10px 14px; border: 1px solid var(--brand); border-radius: var(--radius-panel); background: var(--ui-elevated); box-shadow: var(--shadow-float); font-size: 12px; }
-.bulk-action-bar strong { margin-right: auto; }
-.bulk-action-bar button { min-height: 32px; border: 1px solid var(--admin-line); border-radius: var(--radius-control); background: var(--ui-control); padding: 0 10px; cursor: pointer; }
+.bulk-action-bar { position: sticky; z-index: 30; top: 76px; margin-bottom: 12px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 16px; padding: 12px 16px; border: 1px solid var(--brand); border-radius: var(--radius-panel); background: var(--ui-elevated); box-shadow: var(--shadow-float); }
+.bulk-action-bar__summary { min-width: 0; font-size: var(--font-size-control); line-height: 1.4; }
+.bulk-action-bar__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.bulk-action-bar__ai { border-color: color-mix(in srgb, var(--brand) 62%, var(--admin-line)); background: var(--brand-soft); color: var(--brand); }
+.bulk-action-bar__ai:hover:not(:disabled) { border-color: var(--brand); background: color-mix(in srgb, var(--brand-soft) 78%, var(--brand)); color: var(--brand); }
+.bulk-action-bar__actions .btn svg { width: 16px; height: 16px; }
+@media (max-width: 720px) {
+  .modal-backdrop { align-items: end; padding: 12px; }
+  .modal { width: 100%; max-height: calc(100vh - 24px); border-radius: var(--radius-panel) var(--radius-panel) 0 0; }
+  .modal > header, .confirm-dialog, .modal-form { padding-inline: 18px; }
+  .modal > header { padding-block: 18px; }
+  .bulk-action-bar { grid-template-columns: 1fr; gap: 12px; padding: 12px; }
+  .bulk-action-bar__actions { justify-content: flex-start; }
+}
+@media (max-width: 480px) {
+  .bulk-action-bar__actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bulk-action-bar__actions .btn { width: 100%; }
+}
 .admin-table td strong, .admin-table td small { display: block; }
 .admin-table td small { margin-top: 4px; color: var(--text-3); font-size: 11px; }
 .status-badge { display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 4px; font-size: 11px; }
@@ -507,13 +572,15 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .taxonomy-form { display: grid; grid-template-columns: minmax(140px, .9fr) minmax(150px, 1fr) minmax(240px, 2fr) minmax(90px, .45fr) auto; gap: 16px 12px; align-items: end; }
 .taxonomy-form__action { white-space: nowrap; }
 .admin-page .taxonomy-table { padding: 0; }
-.tag-admin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-.tag-admin-grid .panel { display: flex; justify-content: space-between; align-items: center; }
-.tag-admin-grid .panel > div:first-child { display: grid; gap: 6px; }
-.tag-admin-grid span { color: var(--text-3); font-size: 11px; }
-.tag-admin-grid .panel > div:last-child { display: flex; gap: 3px; }
-.tag-admin-grid button { min-height: 30px; display: flex; align-items: center; gap: 5px; border: 0; background: transparent; color: var(--text-2); font-size: 11px; cursor: pointer; }
-.tag-admin-grid svg { width: 14px; }
+.tag-admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 16px; }
+.tag-admin-card { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 14px 16px; min-height: 0; padding: 20px 22px; }
+.tag-admin-card__checkbox { margin-top: 5px; }
+.tag-admin-card__content { display: grid; min-width: 0; gap: 6px; text-align: left; }
+.tag-admin-card__content strong { overflow-wrap: anywhere; font-size: 18px; line-height: 1.35; }
+.tag-admin-card__content span { color: var(--text-3); font-size: 12px; line-height: 1.4; }
+.tag-admin-card__actions { display: flex; grid-column: 2; flex-wrap: wrap; justify-content: flex-start; gap: 8px; padding-top: 14px; border-top: 1px solid var(--admin-line); }
+.tag-admin-card__actions .btn { min-height: 32px; white-space: nowrap; }
+.tag-admin-card__actions .btn svg { width: 14px; height: 14px; }
 .user-admin-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 16px; }
 .user-admin-grid .panel { display: grid; grid-template-columns: 42px 1fr; gap: 16px; }
 .user-admin-grid .panel > svg { width: 26px; color: var(--brand); }
@@ -583,7 +650,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
   .editor-save-state { display: none; }
   .editor-workspace { grid-template-columns: 1fr; }
   .editor-inspector { position: static; height: auto; border-top: 1px solid var(--admin-line); border-left: 0; }
-  .taxonomy-form, .tag-admin-grid { grid-template-columns: 1fr 1fr; }
+  .taxonomy-form { grid-template-columns: 1fr 1fr; }
   .settings-layout { grid-template-columns: 1fr; }
   .settings-layout > nav { position: static; display: flex; overflow-x: auto; }
   .admin-page .media-upload-form { grid-template-columns: 1fr 1fr; }
@@ -623,9 +690,11 @@ button, a { -webkit-tap-highlight-color: transparent; }
   .admin-page .media-upload-form .btn { grid-column: auto; width: 100%; justify-content: center; }
   .media-filter-bar { grid-template-columns: 1fr; }
   .media-filter-bar > span { grid-column: auto; }
-  .admin-metrics, .dashboard-grid, .user-admin-grid, .taxonomy-form, .tag-admin-grid { grid-template-columns: 1fr; }
+  .admin-metrics, .dashboard-grid, .user-admin-grid, .taxonomy-form { grid-template-columns: 1fr; }
   .taxonomy-form__description, .taxonomy-form__action { grid-column: auto; }
   .taxonomy-form__action { width: 100%; justify-self: stretch; }
+  .tag-admin-card { gap: 12px; padding: 18px; }
+  .tag-admin-card__checkbox { margin-top: 4px; }
   .admin-filter-bar { align-items: stretch; flex-direction: column; }
   .admin-filter-bar > span { margin-left: 0; }
   .editor-commandbar { grid-template-columns: 1fr; }

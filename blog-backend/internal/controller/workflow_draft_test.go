@@ -26,7 +26,7 @@ func TestExtractWorkflowDraftJSON(t *testing.T) {
 			}
 		})
 	}
-	if !strings.Contains(workflowPlannerPrompt, "image brief") || !strings.Contains(workflowPlannerCorrectionPrompt, "agent_id must be an integer") {
+	if !strings.Contains(workflowPlannerPrompt, "media.create_image_task") || !strings.Contains(workflowPlannerCorrectionPrompt, "agent_id must be an integer") {
 		t.Fatal("planner prompts must constrain image goals and integer Agent IDs")
 	}
 }
@@ -74,5 +74,17 @@ func TestImageBriefWorkflowContract(t *testing.T) {
 	plan := buildAutomationPlan("选择文章生成配图 Brief", nil, nil, nil)
 	if plan.Skill["status"] != "draft" || !strings.Contains(strings.Join(plan.Skill["draft"].(map[string]any)["capabilities"].([]string), ","), "content.propose_distribution_draft") {
 		t.Fatalf("image brief plan capabilities = %#v", plan.Skill)
+	}
+}
+
+func TestImageGenerationPlanUsesInternalTaskWithoutApproval(t *testing.T) {
+	provider := &domain.ProviderProfile{ID: 1, Name: "Writing", Model: "test", Enabled: true, IsDefaultWriting: true, IsDefaultImage: true}
+	skill := &domain.AgentSkill{ID: 2, VersionID: 3, Name: "Distribution", Capabilities: []string{"content.get_post", "content.propose_distribution_draft", "media.create_image_task"}, ExecutionMode: domain.AgentModeApproval}
+	agent := &domain.Agent{ID: 4, Name: "Distribution", Enabled: true, ProviderProfileID: provider.ID, ProviderProfile: provider, SkillVersionID: &skill.VersionID, Skill: skill}
+
+	plan := buildAutomationPlan("为文章生成封面和正文配图", []*domain.ProviderProfile{provider}, []*domain.Agent{agent}, []*domain.AgentSkill{skill})
+	capabilities := plan.Skill["capabilities"].([]string)
+	if !strings.Contains(strings.Join(capabilities, ","), "media.create_image_task") {
+		t.Fatalf("image generation capabilities = %#v", capabilities)
 	}
 }

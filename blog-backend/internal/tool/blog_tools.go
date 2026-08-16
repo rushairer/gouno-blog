@@ -147,6 +147,12 @@ func NewBlogRegistry(posts *service.PostService, community *service.CommunitySer
 			Parameters: schema(`{"post_id":{"type":"integer","minimum":1},"format":{"type":"string","enum":["social","newsletter","faq","image_brief"]},"headline":{"type":"string","maxLength":500},"body":{"type":"string","maxLength":12000},"platform":{"type":"string","maxLength":100},"alt_text":{"type":"string","maxLength":500}}`, "post_id", "format", "body"),
 			Risk:       domain.ToolRiskPropose, Scope: &ScopeRule{ResourceType: "post", Argument: "post_id"}, Propose: tools.proposeDistributionDraft,
 		},
+		Definition{
+			Name: "media.create_image_task", Description: "Create an internal image-generation task for one selected post. It does not modify or publish the post.",
+			Parameters: schema(`{"post_id":{"type":"integer","minimum":1},"format":{"type":"string","enum":["image_brief"]},"headline":{"type":"string","maxLength":500},"body":{"type":"string","maxLength":12000},"platform":{"type":"string","maxLength":100},"alt_text":{"type":"string","maxLength":500}}`, "post_id", "format", "body"),
+			Output:     json.RawMessage(`{"type":"object","properties":{"status":{"type":"string"},"candidate_id":{"type":"integer"},"workflow_run_id":{"type":"integer"}}}`),
+			Surfaces:   []string{"agent"}, Risk: domain.ToolRiskWrite, Scope: &ScopeRule{ResourceType: "post", Argument: "post_id"},
+		},
 	)
 }
 

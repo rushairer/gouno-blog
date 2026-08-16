@@ -717,6 +717,10 @@ func (r *AgentRepository) FinishRun(ctx context.Context, id int64, status domain
 		status=$2, output_summary=$3, input_tokens=$4, output_tokens=$5,
 		error_code=$6, error_message=$7, finished_at=NOW()
 		WHERE id=$1`, id, status, summary, inputTokens, outputTokens, errorCode, errorMessage)
+	if err != nil {
+		return err
+	}
+	_, err = r.db.ExecContext(ctx, `UPDATE ai_media_candidates SET input_tokens=$2,output_tokens=$3 WHERE source_run_id=$1`, id, inputTokens, outputTokens)
 	return err
 }
 
@@ -1120,6 +1124,25 @@ func (r *AgentRepository) CreateMediaCandidate(ctx context.Context, approval *do
 		FROM ai_agent_runs ar JOIN posts p ON p.id=$1 WHERE ar.id=$2`,
 		payload.PostID, approval.RunID, approval.ID, strings.TrimSpace(payload.Headline), strings.TrimSpace(payload.Body), strings.TrimSpace(payload.Platform), strings.TrimSpace(payload.AltText))
 	return err
+}
+
+func (r *AgentRepository) CreateMediaCandidateFromRun(ctx context.Context, runID, postID int64, headline, brief, platform, altText string) (int64, *int64, error) {
+	var candidateID int64
+	var workflowRunID sql.NullInt64
+	err := r.db.QueryRowContext(ctx, `INSERT INTO ai_media_candidates
+		(post_id,source_run_id,source_approval_id,workflow_run_id,headline,brief,platform,alt_text,provider,model,input_tokens,output_tokens,post_version_token)
+		SELECT $2,$1,NULL,ar.workflow_run_id,$3,$4,$5,$6,ar.provider,ar.model,ar.input_tokens,ar.output_tokens,FLOOR(EXTRACT(EPOCH FROM p.updated_at))::bigint::text
+		FROM ai_agent_runs ar JOIN posts p ON p.id=$2 WHERE ar.id=$1
+		ON CONFLICT (source_run_id) WHERE source_approval_id IS NULL DO UPDATE SET source_run_id=EXCLUDED.source_run_id
+		RETURNING id,workflow_run_id`, runID, postID, strings.TrimSpace(headline), strings.TrimSpace(brief), strings.TrimSpace(platform), strings.TrimSpace(altText)).Scan(&candidateID, &workflowRunID)
+	if err != nil {
+		return 0, nil, err
+	}
+	if workflowRunID.Valid {
+		value := workflowRunID.Int64
+		return candidateID, &value, nil
+	}
+	return candidateID, nil, nil
 }
 
 func (r *AgentRepository) ListMediaCandidates(ctx context.Context) ([]*domain.MediaCandidate, error) {

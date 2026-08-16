@@ -1414,6 +1414,7 @@
 }
 
 .agent-console .status-pill--awaiting_approval,
+.agent-console .status-pill--waiting_for_user,
 .agent-console .status-pill--pending {
   background: var(--status-warning-bg);
   color: var(--status-warning-fg);
@@ -1559,23 +1560,24 @@
   color: var(--ui-text-secondary);
 }
 
+.workflow-run-feedback {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.workflow-run-feedback .btn {
+  flex: 0 0 auto;
+  color: var(--ui-text-primary);
+}
+
 .workflow-progress-spinner {
   width: 22px;
   height: 22px;
   border-width: 2px;
   flex: 0 0 auto;
 }
-.workflow-input-form { display: grid; gap: 14px; }
-.workflow-resource-field { display: grid; gap: 8px; }
-.workflow-resource-selection { display: flex; flex-wrap: wrap; gap: 6px; min-height: 36px; align-items: center; }
-.workflow-resource-selection > span { display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg-muted); font-size: .82rem; }
-.workflow-resource-selection > span.unavailable { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, var(--surface)); }
-.workflow-resource-selection > span > small { color: var(--danger); font-weight: 700; }
-.workflow-resource-selection svg { width: 14px; height: 14px; }
-.workflow-resource-selection button { display: inline-grid; place-items: center; border: 0; background: transparent; padding: 0; color: var(--text-muted); }
-.workflow-resource-modal { width: min(760px, calc(100vw - 40px)); }
-.workflow-resource-picker { display: grid; gap: 14px; min-width: 0; padding: 0 22px 22px; }
-.workflow-resource-warning { margin: 0; color: var(--danger); font-size: .82rem; }
 .workflow-resource-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
 .workflow-resource-filters label { display: grid; gap: 4px; min-width: 0; }
 .workflow-resource-filters label > span { color: var(--text-muted); font-size: .78rem; }
@@ -1588,24 +1590,22 @@
 .workflow-resource-pagination button { width: 32px; height: 32px; display: inline-grid; place-items: center; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--text); }
 .workflow-resource-pagination button:disabled { opacity: .45; }
 .workflow-resource-pagination svg { width: 16px; height: 16px; }
-.workflow-advanced-input { margin-top: 4px; }
-.workflow-advanced-input summary { cursor: pointer; color: var(--text-muted); font-size: .84rem; }
-.workflow-advanced-input textarea { margin-top: 8px; width: 100%; }
 .workflow-scope-summary { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; padding: 10px 0; border-block: 1px solid var(--line); font-size: .84rem; }
 .workflow-scope-summary small { grid-column: 2; overflow-wrap: anywhere; }
-.workflow-launcher { display: grid; gap: 16px; min-width: min(720px, 82vw); }
-.workflow-launcher > label { display: grid; gap: 6px; font-weight: 600; }
-.workflow-launcher .feedback a { display: block; margin-top: 6px; }
+.modal.workflow-preview-modal { width: min(1180px, calc(100vw - 64px)); max-height: min(860px, calc(100vh - 48px)); }
+.workflow-preview-modal__body { min-height: 0; padding: 28px 32px 32px; overflow: auto; }
+.workflow-article-preview-surface { width: min(100%, 860px); margin: 0 auto; padding: clamp(24px, 5vw, 64px); border: 1px solid var(--admin-line); border-radius: var(--radius-panel); background: var(--ui-panel); }
 
 @media (max-width: 720px) {
-  .workflow-resource-modal { width: 100%; }
-  .workflow-resource-picker, .workflow-launcher { min-width: 0; width: 100%; }
+  .modal.workflow-preview-modal { width: 100%; max-height: calc(100vh - 24px); }
+  .workflow-preview-modal__body { padding: 20px; }
   .workflow-scope-summary { grid-template-columns: 1fr; }
   .workflow-scope-summary small { grid-column: 1; }
+  .workflow-run-feedback { align-items: stretch; flex-direction: column; }
 }
 
 @media (max-width: 540px) {
-  .workflow-resource-picker { padding-inline: 16px; }
+  .workflow-preview-modal__body { padding: 16px; }
   .workflow-resource-filters { grid-template-columns: 1fr; }
 }
 .connector-form-grid {

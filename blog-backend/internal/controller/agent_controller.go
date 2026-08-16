@@ -248,7 +248,10 @@ func automationPlanCapabilities(prompt string) []string {
 		return []string{"comments.get_comment", "comments.propose_reply"}
 	}
 	if strings.Contains(value, "图片") || strings.Contains(value, "配图") || strings.Contains(value, "封面") || strings.Contains(value, "illustration") || strings.Contains(value, "image") || strings.Contains(value, "cover") {
-		return []string{"content.get_post", "content.propose_distribution_draft"}
+		if isExplicitImageBriefGoal(value) {
+			return []string{"content.get_post", "content.propose_distribution_draft"}
+		}
+		return []string{"content.get_post", "media.create_image_task"}
 	}
 	if strings.Contains(value, "媒体") || strings.Contains(value, "media") || strings.Contains(value, "alt") {
 		return []string{"media.get_asset"}
@@ -413,9 +416,9 @@ func (ctrl *AgentController) DraftAutomationPlan(c *gin.Context) {
 // workflowPlannerPrompt is versioned alongside the executable workflow
 // contract. Product changes must update this prompt and the validator together;
 // the model never gets authority to create, enable, or run a workflow.
-const workflowPlannerPrompt = `You are workflow-planner/v4 for a blog administration product. Return exactly one JSON object and nothing else: no Markdown, code fence, commentary, or prose. Its required keys are name, description, input_schema, and steps. Convert the user's goal into a small, safe workflow draft. Use only supplied Agent IDs as JSON integers and only model, approval_gate, and output steps. A model step must have a unique id, type exactly "model", a supplied integer agent_id, and input_pointer beginning with /input. Include an approval_gate after a model step when its Agent execution_mode is approval. Finish with an output step whose output_pointer references a preceding step, for example /steps/analyze. input_schema must be a JSON Schema object with type object and additionalProperties false. When the goal requires choosing articles, use post_ids as an integer array resource field with x-gouno-resource post and x-gouno-widget entity-multi-select. For image, cover, illustration, or 配图 goals, add a required string format property with enum ["image_brief"], and pass the complete /input object to the model step so the Agent can see the requested format. The Agent must produce an image brief through the authorized distribution proposal Tool; do not invent image, tool, connector, HTTP, publish, or other step types. Keep at most 5 steps. Do not create, enable, run, publish, or modify anything.`
+const workflowPlannerPrompt = `You are workflow-planner/v5 for a blog administration product. Return exactly one JSON object and nothing else: no Markdown, code fence, commentary, or prose. Its required keys are name, description, input_schema, and steps. Convert the user's goal into a small, safe workflow draft. Use only supplied Agent IDs as JSON integers and only model, approval_gate, and output steps. A model step must have a unique id, type exactly "model", a supplied integer agent_id, and input_pointer beginning with /input. Include an approval_gate only when the concrete operation creates a content-change proposal. A bounded internal image task created through media.create_image_task does not modify or publish an article and must not add a redundant approval_gate; selecting and applying the generated image remains a separate explicit user action. Finish with an output step whose output_pointer references a preceding step, for example /steps/analyze. input_schema must be a JSON Schema object with type object and additionalProperties false. When the goal requires choosing articles, use post_ids as an integer array resource field with x-gouno-resource post and x-gouno-widget entity-multi-select. For image, cover, illustration, or 配图 goals, add a required string format property with enum ["image_brief"], and pass the complete /input object to the model step so the Agent can see the requested format. Do not invent image, tool, connector, HTTP, publish, or other step types. Keep at most 5 steps. Do not create, enable, run, publish, or modify anything.`
 
-const workflowPlannerCorrectionPrompt = `The previous response was not a valid Workflow draft. Return a corrected JSON object only. Keep exactly the allowed keys name, description, input_schema, and steps. Steps may only be model, approval_gate, and output; agent_id must be an integer from the supplied available_agents; never add image, tool, connector, HTTP, or publish steps. For image-related goals, make the model output an image brief/prompt for human approval. input_schema must be an object schema with additionalProperties false.`
+const workflowPlannerCorrectionPrompt = `The previous response was not a valid Workflow draft. Return a corrected JSON object only. Keep exactly the allowed keys name, description, input_schema, and steps. Steps may only be model, approval_gate, and output; agent_id must be an integer from the supplied available_agents; never add image, tool, connector, HTTP, or publish steps. For image-related goals, use the Agent's authorized media.create_image_task capability and do not add approval_gate; image selection and application remain explicit user actions. input_schema must be an object schema with additionalProperties false.`
 
 func extractWorkflowDraftJSON(value string) ([]byte, bool) {
 	value = strings.TrimSpace(value)
@@ -490,6 +493,11 @@ func workflowDraftAgentIDs(steps []domain.WorkflowStep) []int64 {
 func isImageBriefGoal(goal string) bool {
 	value := strings.ToLower(goal)
 	return strings.Contains(value, "图片") || strings.Contains(value, "配图") || strings.Contains(value, "封面") || strings.Contains(value, "illustration") || strings.Contains(value, "image") || strings.Contains(value, "cover")
+}
+
+func isExplicitImageBriefGoal(goal string) bool {
+	value := strings.ToLower(goal)
+	return isImageBriefGoal(value) && (strings.Contains(value, "brief") || strings.Contains(value, "提示词") || strings.Contains(value, "prompt"))
 }
 
 func enforceImageBriefContract(goal string, draft *domain.Workflow) {
@@ -590,7 +598,7 @@ func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
 			selectedAgents = append(selectedAgents, gin.H{"id": matchedAgent.ID, "name": matchedAgent.Name, "status": "ready", "skill_name": matchedAgent.Skill.Name, "capabilities": matchedAgent.Skill.Capabilities})
 		}
 		readiness := gin.H{"status": match.Status, "message": "服务端模板和能力契约已生成；请完成依赖确认后 Dry-run。"}
-		c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"workflow": draft, "provider": selected.Name, "model": selected.Model, "planner_version": "workflow-planner/v4", "planner_warning": warning, "selected_agents": selectedAgents, "intent": intent, "template": gin.H{"status": "matched", "key": template.Key, "name": template.Name}, "match": match, "readiness": readiness}))
+		c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"workflow": draft, "provider": selected.Name, "model": selected.Model, "planner_version": "workflow-planner/v5", "planner_warning": warning, "selected_agents": selectedAgents, "intent": intent, "template": gin.H{"status": "matched", "key": template.Key, "name": template.Name}, "match": match, "readiness": readiness}))
 		return
 	}
 	client, err := ctrl.svc.ProviderClient(c.Request.Context(), selected.ID)
@@ -655,7 +663,7 @@ func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
 		}
 		selectedAgents = append(selectedAgents, selection)
 	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"workflow": draft, "provider": selected.Name, "model": selected.Model, "planner_version": "workflow-planner/v4", "planner_warning": warning, "selected_agents": selectedAgents, "intent": intent, "template": gin.H{"status": "unsupported"}, "match": match, "readiness": gin.H{"status": "ready", "message": "Provider, Agent, and Skill bindings were verified for this draft."}}))
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"workflow": draft, "provider": selected.Name, "model": selected.Model, "planner_version": "workflow-planner/v5", "planner_warning": warning, "selected_agents": selectedAgents, "intent": intent, "template": gin.H{"status": "unsupported"}, "match": match, "readiness": gin.H{"status": "ready", "message": "Provider, Agent, and Skill bindings were verified for this draft."}}))
 }
 
 // DraftAssist is deliberately suggestion-only: it never persists or publishes

@@ -217,8 +217,8 @@ describe('AgentConsole', () => {
       return Response.json({ data: responseFor(url) });
     });
     renderConsole();
-    await screen.findByRole('tab', { name: 'Results & records' });
-    await user.click(screen.getByRole('tab', { name: 'Results & records' }));
+    await screen.findByRole('tab', { name: 'Run center' });
+    await user.click(screen.getByRole('tab', { name: 'Run center' }));
     await user.click(screen.getByRole('tab', { name: 'Agent runs' }));
     await user.click(screen.getByText('Weekly Operations'));
     expect(await screen.findByRole('heading', { name: 'Execution log for this run' })).toBeInTheDocument();
