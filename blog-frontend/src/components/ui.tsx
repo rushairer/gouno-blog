@@ -623,6 +623,49 @@ export function Modal({
   );
 }
 
+export function Drawer({
+  open,
+  title,
+  description,
+  children,
+  onClose,
+  className,
+}: {
+  open: boolean;
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+  onClose: () => void;
+  className?: string;
+}) {
+  const closeButton = useRef<HTMLButtonElement>(null);
+  const titleID = useId();
+  const descriptionID = useId();
+  useEffect(() => {
+    if (!open) return;
+    closeButton.current?.focus();
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', keydown);
+    return () => window.removeEventListener('keydown', keydown);
+  }, [onClose, open]);
+  if (!open) return null;
+  return (
+    <div className="drawer-backdrop" role="presentation" onMouseDown={(event) => {
+      if (event.target === event.currentTarget) onClose();
+    }}>
+      <section className={classes('drawer', className)} role="dialog" aria-modal="true" aria-labelledby={titleID} aria-describedby={description ? descriptionID : undefined}>
+        <header>
+          <div><h2 id={titleID}>{title}</h2>{description ? <p id={descriptionID}>{description}</p> : null}</div>
+          <IconButton ref={closeButton} label="关闭面板" type="button" onClick={onClose}><X /></IconButton>
+        </header>
+        {children}
+      </section>
+    </div>
+  );
+}
+
 export function ConfirmDialog({
   open,
   title,

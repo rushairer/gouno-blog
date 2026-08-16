@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Edit3, Merge, Plus, Save, Trash2 } from 'lucide-react';
 import { apiFetch } from '../../auth';
-import { AdminPage, AdminPageHeader, BulkActionBar, Button, Checkbox, ConfirmDialog, ContentStack, EmptyState, Feedback, Field, Input, LoadingState, Modal, Panel, useToast } from '../../components/ui';
+import { AdminPage, AdminPageHeader, BulkActionBar, Button, Checkbox, ConfirmDialog, ContentStack, Drawer, EmptyState, Feedback, Field, Input, LoadingState, Modal, Panel, useToast } from '../../components/ui';
 import { WorkflowLauncher } from '../../components/agent/WorkflowLauncher';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 import { readData } from '../../lib/blog-api';
@@ -18,6 +18,7 @@ export default function AdminTaxonomy({ type }: { type: 'categories' | 'tags' })
   const [tags, setTags] = useState<TagSummary[]>([]);
   const [loading, setLoading] = useState(true); const [error, setError] = useState('');
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [creatingCategory, setCreatingCategory] = useState(false);
   const [tagEdit, setTagEdit] = useState<TagEdit>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const [selected, setSelected] = useState<Array<number | string>>([]); const [aiOpen, setAIOpen] = useState(false);
@@ -44,7 +45,7 @@ export default function AdminTaxonomy({ type }: { type: 'categories' | 'tags' })
     event.preventDefault(); const form = event.currentTarget; const data = Object.fromEntries(new FormData(form));
     try {
       await send('/api/admin/categories', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...data, sort_order: Number(data.sort_order || 0) }) }, '分类创建失败。');
-      form.reset(); notify('分类已创建。'); await load();
+      form.reset(); setCreatingCategory(false); notify('分类已创建。'); await load();
     } catch (reason) { setError(reason instanceof Error ? reason.message : '创建失败'); }
   };
 
@@ -100,19 +101,12 @@ export default function AdminTaxonomy({ type }: { type: 'categories' | 'tags' })
 
   return (
     <AdminPage>
-      <AdminPageHeader title={type === 'categories' ? '分类' : '标签'} description={type === 'categories' ? '建立长期稳定的内容脉络。' : '整理文章中的具体技术与概念信号。'} />
+      <AdminPageHeader title={type === 'categories' ? '分类' : '标签'} description={type === 'categories' ? '建立长期稳定的内容脉络。' : '整理文章中的具体技术与概念信号。'} actions={type === 'categories' ? <Button variant="primary" type="button" onClick={() => setCreatingCategory(true)}><Plus />新建分类</Button> : undefined} />
       <ContentStack>
         {error ? <Feedback type="error">{error}</Feedback> : null}
         {selected.length ? <BulkActionBar selectionLabel={`已选择 ${selected.length} 个${type === 'categories' ? '分类' : '标签'}`} onAIAssist={() => setAIOpen(true)} onCancel={() => setSelected([])}>
           <Button variant="danger" size="compact" type="button" onClick={() => setDeleteTarget({ kind: 'batch' })}><Trash2 />删除</Button>
         </BulkActionBar> : null}
-        {type === 'categories' ? <Panel><form className="taxonomy-form" onSubmit={createCategory}>
-          <Field label="名称" required><Input name="name" required /></Field>
-          <Field label="Slug" required><Input name="slug" className="mono" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" required /></Field>
-          <Field className="taxonomy-form__description" label="描述"><Input name="description" /></Field>
-          <Field label="排序"><Input name="sort_order" type="number" defaultValue="0" /></Field>
-          <Button variant="primary" className="taxonomy-form__action" type="submit"><Plus /> 新建分类</Button>
-        </form></Panel> : null}
         {loading ? <LoadingState label="正在整理内容结构…" /> : type === 'categories' ? categories.length === 0 ? <EmptyState label="还没有分类。创建第一个分类来组织长期主题。" /> : <Panel className="taxonomy-table"><div className="table-scroll"><table className="admin-table"><thead><tr><th>选择</th><th>名称</th><th>Slug</th><th>文章</th><th>排序</th><th>操作</th></tr></thead><tbody>{categories.map((item) => <tr key={item.id}><td><Checkbox aria-label={`选择分类 ${item.name}`} checked={selected.includes(item.id)} onChange={(event) => setSelected((current) => event.target.checked ? [...new Set([...current, item.id])] : current.filter((key) => key !== item.id))} /></td><td><strong>{item.name}</strong><small>{item.description}</small></td><td className="mono">{item.slug}</td><td>{item.post_count || 0}</td><td>{item.sort_order || 0}</td><td><div className="table-actions"><button title="编辑分类" onClick={() => setEditingCategory(item)}><Edit3 /></button><button className="danger-action" title="删除分类" onClick={() => setDeleteTarget({ kind: 'category', item })}><Trash2 /></button></div></td></tr>)}</tbody></table></div></Panel> : tags.length === 0 ? <EmptyState label="文章添加标签后会自动在这里汇总。" /> : <div className="tag-admin-grid">{tags.map((tag) => <Panel className="tag-admin-card" key={tag.name}>
           <Checkbox className="tag-admin-card__checkbox" aria-label={`选择标签 ${tag.name}`} checked={selected.includes(tag.name)} onChange={(event) => setSelected((current) => event.target.checked ? [...new Set([...current, tag.name])] : current.filter((key) => key !== tag.name))} />
           <div className="tag-admin-card__content"><strong>{tag.name}</strong><span>{tag.post_count} 篇文章</span></div>
@@ -123,9 +117,18 @@ export default function AdminTaxonomy({ type }: { type: 'categories' | 'tags' })
           </div>
         </Panel>)}</div>}
       </ContentStack>
-      <Modal open={editingCategory !== null} title="编辑分类" description="更新名称、URL 标识、描述与排序。" onClose={() => setEditingCategory(null)}>
-        {editingCategory ? <form className="modal-form" onSubmit={saveCategory}><label>名称<input name="name" defaultValue={editingCategory.name} required /></label><label>Slug<input name="slug" className="mono" defaultValue={editingCategory.slug} pattern="[a-z0-9]+(?:-[a-z0-9]+)*" required /></label><label>描述<textarea name="description" rows={3} defaultValue={editingCategory.description} /></label><label>排序<input name="sort_order" type="number" defaultValue={editingCategory.sort_order || 0} /></label><div className="modal-actions"><button className="btn btn-secondary" type="button" onClick={() => setEditingCategory(null)}>取消</button><button className="btn btn-primary"><Save /> 保存分类</button></div></form> : null}
-      </Modal>
+      <Drawer open={creatingCategory} title="新建分类" description="创建一个可长期复用的内容主题。" onClose={() => setCreatingCategory(false)}>
+        <form className="drawer-form" onSubmit={createCategory}>
+          <Field label="名称" required><Input name="name" required autoFocus /></Field>
+          <Field label="Slug" required hint="仅限小写字母、数字与连字符。"><Input name="slug" className="mono" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" required /></Field>
+          <Field label="描述"><Input name="description" /></Field>
+          <Field label="排序" hint="数值越小，显示越靠前。"><Input name="sort_order" type="number" defaultValue="0" /></Field>
+          <div className="drawer-actions"><Button variant="secondary" type="button" onClick={() => setCreatingCategory(false)}>取消</Button><Button variant="primary"><Plus />创建分类</Button></div>
+        </form>
+      </Drawer>
+      <Drawer open={editingCategory !== null} title="编辑分类" description="更新名称、URL 标识、描述与排序。" onClose={() => setEditingCategory(null)}>
+        {editingCategory ? <form className="drawer-form" onSubmit={saveCategory}><Field label="名称" required><Input name="name" defaultValue={editingCategory.name} required autoFocus /></Field><Field label="Slug" required hint="仅限小写字母、数字与连字符。"><Input name="slug" className="mono" defaultValue={editingCategory.slug} pattern="[a-z0-9]+(?:-[a-z0-9]+)*" required /></Field><Field label="描述"><textarea name="description" rows={3} defaultValue={editingCategory.description} /></Field><Field label="排序" hint="数值越小，显示越靠前。"><Input name="sort_order" type="number" defaultValue={editingCategory.sort_order || 0} /></Field><div className="drawer-actions"><Button variant="secondary" type="button" onClick={() => setEditingCategory(null)}>取消</Button><Button variant="primary"><Save />保存分类</Button></div></form> : null}
+      </Drawer>
       <Modal open={tagEdit !== null} title={tagEdit?.mode === 'merge' ? '合并标签' : '重命名标签'} description={tagEdit?.mode === 'merge' ? `将“${tagEdit?.tag.name}”合并至目标标签。` : `为“${tagEdit?.tag.name}”输入新名称。`} onClose={() => setTagEdit(null)}>
         <form className="modal-form" onSubmit={saveTag}><label>{tagEdit?.mode === 'merge' ? '目标标签' : '新标签名称'}<input name="value" required autoFocus /></label><div className="modal-actions"><button className="btn btn-secondary" type="button" onClick={() => setTagEdit(null)}>取消</button><button className="btn btn-primary">{tagEdit?.mode === 'merge' ? <Merge /> : <Save />}{tagEdit?.mode === 'merge' ? '合并标签' : '保存名称'}</button></div></form>
       </Modal>
