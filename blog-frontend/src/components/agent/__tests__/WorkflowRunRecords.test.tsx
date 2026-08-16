@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { apiFetch } from '../../../auth';
@@ -39,6 +39,7 @@ const run = {
 
 describe('WorkflowRunRecords', () => {
   beforeEach(() => {
+    window.history.replaceState(null, '', '/');
     vi.mocked(apiFetch).mockImplementation(async (url) => Response.json({ data: String(url).endsWith('/resources') ? [{
       id: 20,
       workflow_run_id: 6,
@@ -108,6 +109,30 @@ describe('WorkflowRunRecords', () => {
     expect(labels).toEqual(['newest event', 'older event']);
   });
 
+  it('renders an AI output summary as readable Markdown and keeps raw data collapsible', async () => {
+    const user = userEvent.setup();
+    const completedRun = {
+      ...run,
+      status: 'succeeded',
+      output: {
+        output_summary: '## 分类与标签建议\n\n- 将 **AI** 拆分为更具体的主题标签\n- 保留现有分类，后续再补充描述',
+        input_tokens: 942,
+        output_tokens: 2039,
+      },
+    };
+    render(<WorkflowRunRecords locale="zh" workflows={[workflow]} runs={[completedRun]} formatDateTime={(value) => value} />);
+
+    await user.click(screen.getByRole('button', { name: /AI 每日资讯/ }));
+
+    expect(await screen.findByRole('heading', { name: '运行结论' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '分类与标签建议' })).toBeInTheDocument();
+    const summary = document.querySelector('.workflow-run-output__summary');
+    expect(summary).toBeInTheDocument();
+    expect(within(summary as HTMLElement).getByText(/将.*拆分为更具体/)).toBeInTheDocument();
+    expect(screen.getByText('查看原始运行数据')).toBeInTheDocument();
+    expect(document.querySelector('.workflow-run-output__raw')).not.toHaveAttribute('open');
+  });
+
   it('retries a failed resource iteration and refreshes records', async () => {
     const user = userEvent.setup();
     const onRefresh = vi.fn(async () => undefined);
@@ -166,7 +191,7 @@ describe('WorkflowRunRecords', () => {
     });
     render(<WorkflowRunRecords locale="zh" workflows={[workflow]} runs={[run]} formatDateTime={(value) => value} />);
     await user.click(screen.getByRole('button', { name: /AI 每日资讯/ }));
-    await waitFor(() => expect(screen.getByText('Candidate 1')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getAllByText('Candidate 1')[0]).toBeInTheDocument());
     expect(document.querySelector('.workflow-candidate-card')).toBeInTheDocument();
     const boxes = screen.getAllByRole('checkbox');
     await user.click(boxes[0]);
@@ -231,8 +256,8 @@ describe('WorkflowRunRecords', () => {
     render(<WorkflowRunRecords locale="zh" workflows={[workflow]} runs={[run]} formatDateTime={(value) => value} />);
 
     await user.click(screen.getByRole('button', { name: /AI 每日资讯/ }));
-    await user.selectOptions(screen.getAllByRole('combobox')[1], 'inline');
-    await user.type(screen.getByPlaceholderText('正文锚点文本'), 'Google 动态');
+    await user.selectOptions(screen.getByRole('combobox'), 'inline');
+    await user.type(screen.getByPlaceholderText('锚点文字（小标题或关键句）'), 'Google 动态');
 
     expect(screen.getByText('位置设置尚未保存；保存后才能预览或应用。')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '预览文章' })).toBeDisabled();
@@ -267,7 +292,7 @@ describe('WorkflowRunRecords', () => {
 
     await user.click(screen.getByRole('button', { name: /AI 每日资讯/ }));
 
-    expect(await screen.findByText('正在生成图片...')).toBeInTheDocument();
+    expect(await screen.findByText(/正在生成图片/)).toBeInTheDocument();
     expect(screen.getByText(/已等待/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '取消生成' })).toBeInTheDocument();
   });

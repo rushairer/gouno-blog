@@ -1,12 +1,13 @@
-import { ArrowDown, ArrowUp, CirclePause, Database, GitBranch, GitCompareArrows, History, Play, Plus, RotateCcw, Save, TestTube2, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowUp, ChevronRight, CirclePause, Database, GitBranch, GitCompareArrows, History, Play, Plus, RotateCcw, Save, TestTube2, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { apiFetch } from '../../auth';
 import type { Agent, ToolDefinition, Workflow, WorkflowMetric, WorkflowRun, WorkflowStep } from '../../agent';
-import { Button, Checkbox, ConfirmDialog, EditorPanel, EmptyState, Feedback, Field, FormActions, FormLayout, Input, Panel, PanelHeader, SearchField, Select, WorkspacePanel } from '../ui';
+import { Button, Checkbox, ConfirmDialog, EditorPanel, EmptyState, Feedback, Field, FormActions, FormLayout, Input, PanelHeader, SearchField, Select, WorkspacePanel } from '../ui';
 import { StatusPill } from './StatusPill';
 import { statusLabel } from './labels';
 import { WorkflowInputForm } from './WorkflowInputForm';
+import { WorkflowRunOutput } from './WorkflowRunOutput';
 
 async function readData<T>(response: Response): Promise<T> {
   const body = await response.json();
@@ -77,6 +78,11 @@ function bindWorkflowAgent(steps: WorkflowStep[], agentID: number): WorkflowStep
   }));
 }
 
+function runFeedbackActionLabel(action: 'viewRun' | 'continueImage', locale: 'en' | 'zh'): string {
+  if (action === 'continueImage') return locale === 'zh' ? '继续生成、选择和应用图片' : 'Continue generating, selecting, and applying images';
+  return locale === 'zh' ? '查看运行中心' : 'Open run center';
+}
+
 export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = [], locale, onMutate, onRun, onPreflight, onRefresh, onSave, onConfigureSkill, onConfigureAgent }: {
   workflows: Workflow[];
   runs: WorkflowRun[];
@@ -98,36 +104,48 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = []
   const [deleteTarget, setDeleteTarget] = useState<Workflow | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [runningAction, setRunningAction] = useState<{ workflowID: number; dryRun: boolean } | null>(null);
-  const [runFeedback, setRunFeedback] = useState<{ workflowID: number; type: 'success' | 'error'; message: string; runID?: number } | null>(null);
+  const [runFeedback, setRunFeedback] = useState<{ workflowID: number; type: 'success' | 'error'; message: string; runID?: number; action?: 'viewRun' | 'continueImage' } | null>(null);
   const [selectedWorkflowID, setSelectedWorkflowID] = useState<number | null>(() => {
     const value = Number(new URLSearchParams(window.location.search).get('workflow'));
     return Number.isInteger(value) && value > 0 ? value : null;
   });
   const [workflowQuery, setWorkflowQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'enabled' | 'disabled'>('all');
   const labels = locale === 'zh' ? {
     empty: '还没有 Workflow。', add: '创建 Workflow', run: '运行', dry: 'Dry-run', enable: '启用',
     disable: '停用', versions: '版本', rollback: '回滚', input: '运行输入', steps: '步骤 JSON',
     schema: '输入 Schema', save: '保存 Workflow', cancel: '取消', metrics: '运行 / 失败 / Token',
     createTitle: '创建 Workflow', editTitle: '编辑 Workflow', schedule: '执行计划', next: '下次运行', retry: '重试',
+    status: '状态', never: '从未运行',
   } : {
     empty: 'No workflows yet.', add: 'Create Workflow', run: 'Run', dry: 'Dry-run', enable: 'Enable',
     disable: 'Disable', versions: 'Versions', rollback: 'Rollback', input: 'Run input JSON', steps: 'Steps JSON',
     schema: 'Input schema', save: 'Save Workflow', cancel: 'Cancel', metrics: 'Runs / failures / tokens',
     createTitle: 'Create Workflow', editTitle: 'Edit Workflow', schedule: 'Schedule', next: 'Next run', retry: 'Retry',
+    status: 'Status', never: 'Never',
   };
   const metricMap = useMemo(() => new Map(metrics.map((item) => [item.workflow_id, item])), [metrics]);
   const agentMap = useMemo(() => new Map(agents.map((agent) => [agent.id, agent])), [agents]);
   const sortedWorkflows = useMemo(() => [...workflows].sort((left, right) => {
-    const rightTime = Date.parse(right.created_at || '') || 0;
-    const leftTime = Date.parse(left.created_at || '') || 0;
+    if (Boolean(left.enabled) !== Boolean(right.enabled)) {
+      return left.enabled ? -1 : 1;
+    }
+    const rightTime = Date.parse(right.updated_at || right.created_at || '') || 0;
+    const leftTime = Date.parse(left.updated_at || left.created_at || '') || 0;
     return rightTime - leftTime || right.id - left.id;
   }), [workflows]);
   const visibleWorkflows = useMemo(() => {
+    let list = sortedWorkflows;
+    if (statusFilter === 'enabled') {
+      list = list.filter((item) => item.enabled);
+    } else if (statusFilter === 'disabled') {
+      list = list.filter((item) => !item.enabled);
+    }
     const query = workflowQuery.trim().toLocaleLowerCase();
-    if (!query) return sortedWorkflows;
-    return sortedWorkflows.filter((workflow) => [workflow.name, workflow.description, workflow.template_key].some((value) => value?.toLocaleLowerCase().includes(query)));
-  }, [sortedWorkflows, workflowQuery]);
-  const selectedWorkflow = visibleWorkflows.find((workflow) => workflow.id === selectedWorkflowID) || visibleWorkflows[0] || null;
+    if (!query) return list;
+    return list.filter((workflow) => [workflow.name, workflow.description, workflow.template_key].some((value) => value?.toLocaleLowerCase().includes(query)));
+  }, [sortedWorkflows, statusFilter, workflowQuery]);
+  const selectedWorkflow = selectedWorkflowID ? workflows.find((workflow) => workflow.id === selectedWorkflowID) || null : null;
   const loadVersions = async (workflow: Workflow) => {
     const items = await readData<Workflow[]>(await apiFetch(`/api/admin/ai-workflows/${workflow.id}/versions`));
     setVersions((current) => ({ ...current, [workflow.id]: items }));
@@ -137,10 +155,12 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = []
     setDeleting(true);
     try {
       await onMutate(`/api/admin/ai-workflows/${deleteTarget.id}`, 'DELETE');
-      setSelectedWorkflowID(null);
-      const url = new URL(window.location.href);
-      url.searchParams.delete('workflow');
-      window.history.replaceState(null, '', url);
+      if (selectedWorkflowID === deleteTarget.id) {
+        setSelectedWorkflowID(null);
+        const url = new URL(window.location.href);
+        url.searchParams.delete('workflow');
+        window.history.replaceState(null, '', url);
+      }
       setDeleteTarget(null);
     } finally {
       setDeleting(false);
@@ -158,6 +178,7 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = []
   const runWorkflow = async (workflow: Workflow, dryRun: boolean, input: Record<string, unknown>) => {
     setRunningAction({ workflowID: workflow.id, dryRun });
     setRunFeedback(null);
+    let runID: number | undefined;
     try {
       if (onPreflight) {
         const preflight = await onPreflight(workflow.id, dryRun, input);
@@ -171,6 +192,7 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = []
         throw new Error(locale === 'zh' ? '服务器未返回可核验的运行记录' : 'The server did not return a verifiable run record');
       }
       const accepted = result as WorkflowRun;
+      runID = accepted.id;
       const wasAlreadySucceeded = accepted.status === 'succeeded';
       const finalRun = ['queued', 'running'].includes(accepted.status)
         ? await waitForRun(workflow.id, accepted.id)
@@ -180,7 +202,7 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = []
         throw new Error(finalRun.error_message || `${locale === 'zh' ? '运行失败' : 'Run failed'} (Run #${finalRun.id})`);
       }
       if (finalRun.status === 'awaiting_approval') {
-        setRunFeedback({ workflowID: workflow.id, type: 'success', message: locale === 'zh'
+        setRunFeedback({ workflowID: workflow.id, type: 'success', runID: finalRun.id, action: 'viewRun', message: locale === 'zh'
           ? `Run #${finalRun.id} 已执行并等待审批，没有自动应用内容变更。`
           : `Run #${finalRun.id} completed and is awaiting approval; no content change was applied automatically.` });
         return;
@@ -190,6 +212,7 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = []
           workflowID: workflow.id,
           type: 'success',
           runID: finalRun.id,
+          action: 'continueImage',
           message: locale === 'zh'
             ? `Run #${finalRun.id} 已准备好图片任务，无需前往“待我处理”审批。`
             : `Run #${finalRun.id} prepared the image task without an approval detour.`,
@@ -199,7 +222,7 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = []
       if (finalRun.status !== 'succeeded') {
         throw new Error(`${locale === 'zh' ? '未知运行状态' : 'Unknown run status'}: ${finalRun.status}`);
       }
-      setRunFeedback({ workflowID: workflow.id, type: 'success', message: locale === 'zh'
+      setRunFeedback({ workflowID: workflow.id, type: 'success', runID: finalRun.id, action: 'viewRun', message: locale === 'zh'
         ? (wasAlreadySucceeded && !dryRun
           ? `今日已有成功运行 Run #${finalRun.id}，本次未重复执行。可到“运行中心 → Workflow 任务”核对日志。`
           : `${dryRun ? '试运行' : '运行'}成功（Run #${finalRun.id}）。状态和运行记录已刷新。`)
@@ -211,6 +234,8 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = []
       setRunFeedback({
         workflowID: workflow.id,
         type: 'error',
+        runID,
+        action: runID ? 'viewRun' : undefined,
         message: locale === 'zh'
           ? `${dryRun ? '试运行' : '运行'}失败：${detail}。请修正后重试，步骤日志可在“运行中心 → Workflow 任务”查看。`
           : `${dryRun ? 'Dry-run' : 'Run'} failed: ${detail}. Fix the issue and retry; step logs are available under “Run center → Workflow tasks”.`,
@@ -220,23 +245,20 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = []
     }
   };
   if (editing) return <WorkflowEditor initial={editing === 'new' ? undefined : editing} labels={labels} agents={agents} tools={tools} locale={locale} onConfigureSkill={onConfigureSkill} onConfigureAgent={onConfigureAgent} onCancel={() => setEditing(null)} onSave={async (value) => { await onSave(value); setEditing(null); }} />;
+
+  const formatTime = (value?: string) => value ? new Date(value).toLocaleString(locale === 'zh' ? 'zh-CN' : 'en-US') : '—';
+
   return <WorkspacePanel className="workflow-workspace">
-    <PanelHeader title={locale === 'zh' ? '自动化' : 'Automation'} description={locale === 'zh' ? '选择一项持续运营目标；每次执行都可追溯、可试运行、可回滚。' : 'Choose an ongoing goal. Every run is traceable, testable, and reversible.'} actions={<Button variant="primary" type="button" onClick={() => setEditing('new')}><Plus />{labels.add}</Button>} />
-    {workflows.length > 0 ? <div className="workflow-list-toolbar"><SearchField aria-label={locale === 'zh' ? '搜索 Workflow' : 'Search workflows'} value={workflowQuery} onChange={(event) => setWorkflowQuery(event.target.value)} placeholder={locale === 'zh' ? '按名称、说明或模板搜索' : 'Search by name, description, or template'} /><span>{locale === 'zh' ? `${visibleWorkflows.length} / ${workflows.length} 个 Workflow` : `${visibleWorkflows.length} of ${workflows.length} workflows`}</span></div> : null}
-    {workflows.length === 0 || !selectedWorkflow ? <EmptyState label={workflows.length > 0 ? (locale === 'zh' ? '没有匹配的 Workflow。' : 'No matching workflows.') : labels.empty} /> : <div className="agent-split-view workflow-split-view">
-      <Panel className="agent-master-panel workflow-master-list">
-        {visibleWorkflows.map((workflow) => {
-          return <button className={workflow.id === selectedWorkflow.id ? 'active' : ''} key={workflow.id} type="button" onClick={() => { setSelectedWorkflowID(workflow.id); const url = new URL(window.location.href); url.searchParams.set('workflow', String(workflow.id)); window.history.replaceState(null, '', url); }}>
-            <span><strong>{workflow.name}</strong><small>{workflow.description}</small></span>
-            <StatusPill status={workflow.enabled ? 'succeeded' : 'pending'} locale={locale} label={workflow.enabled ? (locale === 'zh' ? '已启用' : 'Enabled') : (locale === 'zh' ? '已停用' : 'Disabled')} />
-          </button>;
-        })}
-      </Panel>
-      <Panel className="workflow-detail-panel">
+    {selectedWorkflow ? (
+      <div className="workflow-detail-view section-stack">
+        <div className="workflow-detail-nav">
+          <Button variant="ghost" size="compact" type="button" onClick={() => { setSelectedWorkflowID(null); const url = new URL(window.location.href); url.searchParams.delete('workflow'); window.history.replaceState(null, '', url); }}>
+            <ArrowLeft />{locale === 'zh' ? '返回工作流列表' : 'Back to workflows'}
+          </Button>
+        </div>
         {(() => {
           const workflow = selectedWorkflow;
           const metric = metricMap.get(workflow.id);
-          // A successful dry-run must not hide the latest real publish result.
           const latestRun = runs.find((run) => run.workflow_id === workflow.id && !run.dry_run);
           const latestDryRun = runs.find((run) => run.workflow_id === workflow.id && run.dry_run);
           const inputValue = inputByID[workflow.id] ?? exampleInput(workflow.input_schema);
@@ -255,23 +277,155 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = []
             : unavailableAgent
               ? (locale === 'zh' ? `关联 Agent“${unavailableAgent.name}”未启用，请先在 Agent 页面启用它。` : `Linked Agent “${unavailableAgent.name}” is disabled. Enable it first.`)
               : '';
-          return <div className="section-stack"><div className="panel-heading"><div><h2>{workflow.name}</h2><small>{workflow.description} · v{workflow.current_version}</small></div><StatusPill status={workflow.enabled ? 'succeeded' : 'pending'} locale={locale} label={workflow.enabled ? (locale === 'zh' ? '已启用' : 'Enabled') : (locale === 'zh' ? '已停用' : 'Disabled')} /></div>
-            <div className="row-actions workflow-detail-actions"><Button variant="secondary" type="button" onClick={() => setEditing(workflow)}><GitCompareArrows />Edit</Button><Button variant="secondary" type="button" onClick={() => void loadVersions(workflow)}><History />{labels.versions}</Button><Button variant="secondary" disabled={!workflow.enabled && Boolean(runBlockReason)} title={!workflow.enabled ? (runBlockReason || undefined) : undefined} type="button" onClick={() => void onMutate(`/api/admin/ai-workflows/${workflow.id}/${workflow.enabled ? 'disable' : 'enable'}`)}>{workflow.enabled ? <CirclePause /> : <Play />}{workflow.enabled ? labels.disable : labels.enable}</Button><Button variant="danger" type="button" onClick={() => setDeleteTarget(workflow)}><Trash2 />{locale === 'zh' ? '删除' : 'Delete'}</Button></div>
+          return <div className="section-stack">
+            <PanelHeader
+              title={workflow.name}
+              description={`${workflow.description} · v${workflow.current_version}`}
+              actions={
+                <div className="row-actions">
+                  <StatusPill status={workflow.enabled ? 'succeeded' : 'pending'} locale={locale} label={workflow.enabled ? (locale === 'zh' ? '已启用' : 'Enabled') : (locale === 'zh' ? '已停用' : 'Disabled')} />
+                  <Button variant="secondary" type="button" onClick={() => setEditing(workflow)}><GitCompareArrows />{locale === 'zh' ? '编辑' : 'Edit'}</Button>
+                  <Button variant="secondary" type="button" onClick={() => void loadVersions(workflow)}><History />{labels.versions}</Button>
+                  <Button variant="secondary" disabled={!workflow.enabled && Boolean(runBlockReason)} title={!workflow.enabled ? (runBlockReason || undefined) : undefined} type="button" onClick={() => void onMutate(`/api/admin/ai-workflows/${workflow.id}/${workflow.enabled ? 'disable' : 'enable'}`)}>{workflow.enabled ? <CirclePause /> : <Play />}{workflow.enabled ? labels.disable : labels.enable}</Button>
+                  <Button variant="danger" type="button" onClick={() => setDeleteTarget(workflow)}><Trash2 />{locale === 'zh' ? '删除' : 'Delete'}</Button>
+                </div>
+              }
+            />
             {hasRuntimeInput ? <WorkflowInputForm schema={workflow.input_schema} value={inputValue} onChange={(next) => setInputByID((current) => ({ ...current, [workflow.id]: next }))} locale={locale} /> : <div className="workflow-runtime-input"><small>{labels.input}</small><strong>{locale === 'zh' ? '无需手动填写' : 'No manual input required'}</strong><p>{locale === 'zh' ? '此流程使用计划规则或 Agent 的受控只读工具获取运行上下文。' : 'This workflow obtains context from scheduled rules or governed read tools.'}</p></div>}
             <div className="workflow-scope-summary"><strong>{locale === 'zh' ? '运行范围' : 'Run scope'}</strong><span>{workflow.scope_policy?.mode === 'strict' ? (locale === 'zh' ? '严格限制所选资源' : 'Strictly limited to selected resources') : (locale === 'zh' ? '兼容模式' : 'Compatibility mode')}</span>{workflow.scope_policy?.discovery_tools?.length ? <small>{locale === 'zh' ? '允许发现：' : 'Discovery: '}{workflow.scope_policy.discovery_tools.join(', ')}</small> : null}</div>
             {runBlockReason ? <Feedback type="error">{runBlockReason}</Feedback> : null}
-            <div className="row-actions workflow-detail-actions"><Button variant="secondary" loading={Boolean(activeRun)} disabled={Boolean(runBlockReason)} title={runBlockReason || undefined} type="button" onClick={() => void runWorkflow(workflow, true, runInput())}>{activeRun?.dryRun ? <span className="spinner workflow-button-spinner" aria-hidden="true" /> : <TestTube2 />}{activeRun?.dryRun ? (locale === 'zh' ? '试运行中…' : 'Dry-running…') : labels.dry}</Button><Button variant="primary" loading={Boolean(activeRun)} disabled={!workflow.enabled || latestRun?.status === 'running' || Boolean(runBlockReason)} title={runBlockReason || undefined} type="button" onClick={() => void runWorkflow(workflow, false, runInput())}>{activeRun && !activeRun.dryRun ? <span className="spinner workflow-button-spinner" aria-hidden="true" /> : <Play />}{activeRun && !activeRun.dryRun ? (locale === 'zh' ? '运行中…' : 'Running…') : (latestRun?.status === 'failed' ? labels.retry : labels.run)}</Button></div>
+            <div className="row-actions workflow-detail-actions">
+              <Button variant="secondary" loading={Boolean(activeRun)} disabled={Boolean(runBlockReason)} title={runBlockReason || undefined} type="button" onClick={() => void runWorkflow(workflow, true, runInput())}>{activeRun?.dryRun ? <span className="spinner workflow-button-spinner" aria-hidden="true" /> : <TestTube2 />}{activeRun?.dryRun ? (locale === 'zh' ? '试运行中…' : 'Dry-running…') : labels.dry}</Button>
+              <Button variant="primary" loading={Boolean(activeRun)} disabled={!workflow.enabled || latestRun?.status === 'running' || Boolean(runBlockReason)} title={runBlockReason || undefined} type="button" onClick={() => void runWorkflow(workflow, false, runInput())}>{activeRun && !activeRun.dryRun ? <span className="spinner workflow-button-spinner" aria-hidden="true" /> : <Play />}{activeRun && !activeRun.dryRun ? (locale === 'zh' ? '运行中…' : 'Running…') : (latestRun?.status === 'failed' ? labels.retry : labels.run)}</Button>
+            </div>
             {activeRun ? <div className="workflow-run-progress" role="status" aria-live="polite"><span className="spinner workflow-progress-spinner" aria-hidden="true" /><span><strong>{locale === 'zh' ? `${activeRun.dryRun ? '试运行' : 'Workflow'} 正在执行` : `${activeRun.dryRun ? 'Dry-run' : 'Workflow'} is running`}</strong><small>{locale === 'zh' ? '请勿重复点击；完成后会自动刷新状态和运行记录。' : 'Do not submit again. Status and run records refresh automatically when complete.'}</small></span></div> : null}
-            {feedback ? <Feedback type={feedback.type}><div className="workflow-run-feedback"><span>{feedback.message}</span>{feedback.runID ? <a className="btn btn-secondary" href={`/admin/agents?tab=records&record=workflow&workflow=${workflow.id}&run=${feedback.runID}`}>{locale === 'zh' ? '继续生成、选择和应用图片' : 'Continue generating, selecting, and applying images'}</a> : null}</div></Feedback> : null}
-            <div className="agent-run-metrics"><span><small>{labels.schedule}</small><strong>{workflow.cron_expression || (locale === 'zh' ? '仅手动' : 'Manual only')}</strong><small>{workflow.cron_expression ? workflow.timezone : ''}</small></span><span><small>{labels.next}</small><strong>{workflow.next_run_at ? new Date(workflow.next_run_at).toLocaleString(locale === 'zh' ? 'zh-CN' : 'en-US') : '—'}</strong></span><span><small>{labels.metrics}</small><strong>{metric?.runs || 0} / {metric?.failures || 0} / {metric?.tokens || 0}</strong></span><span><small>{locale === 'zh' ? '最近正式运行' : 'Latest live run'}</small><strong>{latestRun ? statusLabel(latestRun.status, locale) : '—'}</strong>{latestDryRun ? <small>{locale === 'zh' ? `最近试运行：${statusLabel(latestDryRun.status, locale)}` : `Latest dry-run: ${statusLabel(latestDryRun.status, locale)}`}</small> : null}</span></div>
+            {feedback ? <Feedback type={feedback.type}><div className="workflow-run-feedback"><span>{feedback.message}</span>{feedback.runID ? <a className="btn btn-secondary" href={`/admin/agents?tab=records&record=workflow&workflow=${workflow.id}&run=${feedback.runID}`}>{runFeedbackActionLabel(feedback.action || 'viewRun', locale)}</a> : null}</div></Feedback> : null}
+            <div className="agent-run-metrics"><span><small>{labels.schedule}</small><strong>{workflow.cron_expression || (locale === 'zh' ? '仅手动' : 'Manual only')}</strong><small>{workflow.cron_expression ? workflow.timezone : ''}</small></span><span><small>{labels.next}</small><strong>{formatTime(workflow.next_run_at)}</strong></span><span><small>{labels.metrics}</small><strong>{metric?.runs || 0} / {metric?.failures || 0} / {metric?.tokens || 0}</strong></span><span><small>{locale === 'zh' ? '最近正式运行' : 'Latest live run'}</small><strong>{latestRun ? statusLabel(latestRun.status, locale) : '—'}</strong>{latestDryRun ? <small>{locale === 'zh' ? `最近试运行：${statusLabel(latestDryRun.status, locale)}` : `Latest dry-run: ${statusLabel(latestDryRun.status, locale)}`}</small> : null}</span></div>
             <div className="workflow-step-summary">{workflow.steps.map((step, index) => <span key={step.id}><strong>{index + 1}. {step.name || step.id}</strong><small>{step.type}</small></span>)}</div>
             {latestRun?.output && typeof latestRun.output === 'object' && latestRun.output !== null && 'post_id' in latestRun.output ? <a className="btn btn-secondary" href={`/admin/posts/${String((latestRun.output as { post_id: number }).post_id)}/edit`}>{locale === 'zh' ? '查看已发布文章' : 'View published post'}</a> : null}
             {versions[workflow.id]?.length ? <div className="agent-chip-list">{versions[workflow.id].map((version) => <button type="button" key={version.version_id} disabled={version.current_version === workflow.current_version} onClick={() => void onMutate(`/api/admin/ai-workflows/${workflow.id}/rollback`, 'POST', { version: version.current_version })}><RotateCcw />v{version.current_version}</button>)}</div> : null}
-            {latestRun?.output ? <pre className="agent-json-preview">{JSON.stringify(latestRun.output, null, 2)}</pre> : latestRun?.error_message ? <p>{latestRun.error_message}</p> : null}
+            {latestRun?.output ? <WorkflowRunOutput output={latestRun.output} locale={locale} showRaw={false} /> : latestRun?.error_message ? <p>{latestRun.error_message}</p> : null}
           </div>;
         })()}
-      </Panel>
-    </div>}
+      </div>
+    ) : (
+      <div className="workflow-list-view section-stack">
+        <PanelHeader title={locale === 'zh' ? '自动化' : 'Automation'} description={locale === 'zh' ? '选择一项持续运营目标；每次执行都可追溯、可试运行、可回滚。' : 'Choose an ongoing goal. Every run is traceable, testable, and reversible.'} actions={<Button variant="primary" type="button" onClick={() => setEditing('new')}><Plus />{labels.add}</Button>} />
+        {workflows.length > 0 ? (
+          <div className="workflow-list-toolbar">
+            <SearchField aria-label={locale === 'zh' ? '搜索 Workflow' : 'Search workflows'} value={workflowQuery} onChange={(event) => setWorkflowQuery(event.target.value)} placeholder={locale === 'zh' ? '按名称、说明或模板搜索' : 'Search by name, description, or template'} />
+            <div className="workflow-filter-chips">
+              <button type="button" className={`workflow-chip ${statusFilter === 'all' ? 'active' : ''}`} onClick={() => setStatusFilter('all')}>{locale === 'zh' ? '全部' : 'All'} ({workflows.length})</button>
+              <button type="button" className={`workflow-chip ${statusFilter === 'enabled' ? 'active' : ''}`} onClick={() => setStatusFilter('enabled')}>{locale === 'zh' ? '已启用' : 'Enabled'} ({workflows.filter((w) => w.enabled).length})</button>
+              <button type="button" className={`workflow-chip ${statusFilter === 'disabled' ? 'active' : ''}`} onClick={() => setStatusFilter('disabled')}>{locale === 'zh' ? '已停用' : 'Disabled'} ({workflows.filter((w) => !w.enabled).length})</button>
+            </div>
+            <span>{locale === 'zh' ? `${visibleWorkflows.length} / ${workflows.length} 个 Workflow` : `${visibleWorkflows.length} of ${workflows.length} workflows`}</span>
+          </div>
+        ) : null}
+        {workflows.length === 0 || visibleWorkflows.length === 0 ? (
+          <EmptyState label={workflows.length > 0 ? (locale === 'zh' ? '没有匹配的 Workflow。' : 'No matching workflows.') : labels.empty} />
+        ) : (
+          <div className="table-scroll">
+            <table className="content-table agent-table workflow-table">
+              <thead>
+                <tr>
+                  <th>{locale === 'zh' ? 'Workflow' : 'Workflow'}</th>
+                  <th>{labels.status}</th>
+                  <th>{labels.schedule}</th>
+                  <th>{locale === 'zh' ? '最近运行' : 'Latest Run'}</th>
+                  <th>{locale === 'zh' ? '运行指标' : 'Metrics'}</th>
+                  <th>{locale === 'zh' ? '操作' : 'Actions'}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleWorkflows.map((workflow) => {
+                  const metric = metricMap.get(workflow.id);
+                  const latestRun = runs.find((run) => run.workflow_id === workflow.id && !run.dry_run);
+                  const modelSteps = workflow.steps.filter((step) => step.type === 'model');
+                  const unboundStep = modelSteps.find((step) => !step.agent_id);
+                  const unavailableAgent = modelSteps.map((step) => step.agent_id ? agentMap.get(step.agent_id) : undefined).find((agent) => !agent || !agent.enabled);
+                  const runBlockReason = unboundStep
+                    ? (locale === 'zh' ? '未绑定 Agent' : 'No Agent bound')
+                    : unavailableAgent
+                      ? (locale === 'zh' ? `关联 Agent“${unavailableAgent.name}”已停用` : `Agent “${unavailableAgent.name}” disabled`)
+                      : '';
+                  return (
+                    <tr key={workflow.id} className={workflow.enabled ? 'workflow-row--enabled' : 'workflow-row--disabled'}>
+                      <td>
+                        <button
+                          type="button"
+                          className="workflow-name-button"
+                          onClick={() => {
+                            setSelectedWorkflowID(workflow.id);
+                            const url = new URL(window.location.href);
+                            url.searchParams.set('workflow', String(workflow.id));
+                            window.history.replaceState(null, '', url);
+                          }}
+                        >
+                          <strong>{workflow.name}</strong>
+                          <small>{workflow.description}</small>
+                        </button>
+                      </td>
+                      <td>
+                        <StatusPill status={workflow.enabled ? 'succeeded' : 'pending'} locale={locale} label={workflow.enabled ? (locale === 'zh' ? '已启用' : 'Enabled') : (locale === 'zh' ? '已停用' : 'Disabled')} />
+                      </td>
+                      <td>
+                        <strong>{workflow.cron_expression || (locale === 'zh' ? '仅手动' : 'Manual')}</strong>
+                        <small>{workflow.cron_expression ? workflow.timezone : (locale === 'zh' ? '按需触发' : 'On-demand')}</small>
+                      </td>
+                      <td>
+                        {latestRun ? (
+                          <>
+                            <StatusPill status={latestRun.status} locale={locale} />
+                            <small>{formatTime(latestRun.created_at)}</small>
+                          </>
+                        ) : (
+                          <small className="muted">{labels.never}</small>
+                        )}
+                      </td>
+                      <td>
+                        <strong>{metric?.runs || 0} {locale === 'zh' ? '次运行' : 'runs'}</strong>
+                        <small>{metric?.failures || 0} {locale === 'zh' ? '次失败' : 'failures'} · {metric?.tokens || 0} tokens</small>
+                      </td>
+                      <td>
+                        <div className="agent-row-actions">
+                          <button
+                            type="button"
+                            title={locale === 'zh' ? '进入详情 / 运行' : 'Inspect / Run'}
+                            onClick={() => {
+                              setSelectedWorkflowID(workflow.id);
+                              const url = new URL(window.location.href);
+                              url.searchParams.set('workflow', String(workflow.id));
+                              window.history.replaceState(null, '', url);
+                            }}
+                          >
+                            <ChevronRight />
+                          </button>
+                          <button type="button" title={locale === 'zh' ? '编辑' : 'Edit'} onClick={() => setEditing(workflow)}>
+                            <GitCompareArrows />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={!workflow.enabled && Boolean(runBlockReason)}
+                            title={!workflow.enabled && runBlockReason ? runBlockReason : (workflow.enabled ? labels.disable : labels.enable)}
+                            onClick={() => void onMutate(`/api/admin/ai-workflows/${workflow.id}/${workflow.enabled ? 'disable' : 'enable'}`)}
+                          >
+                            {workflow.enabled ? <CirclePause /> : <Play />}
+                          </button>
+                          <button type="button" title={locale === 'zh' ? '删除' : 'Delete'} onClick={() => setDeleteTarget(workflow)}>
+                            <Trash2 />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    )}
     <ConfirmDialog open={deleteTarget !== null} title={locale === 'zh' ? '删除 Workflow？' : 'Delete workflow?'} description={deleteTarget ? (locale === 'zh' ? `删除“${deleteTarget.name}”后将停止后续运行。历史版本和运行审计会保留。` : `Deleting “${deleteTarget.name}” stops future runs. Version history and run audits are retained.`) : ''} confirmLabel={locale === 'zh' ? '删除 Workflow' : 'Delete workflow'} danger busy={deleting} onClose={() => setDeleteTarget(null)} onConfirm={deleteWorkflow} />
   </WorkspacePanel>;
 }

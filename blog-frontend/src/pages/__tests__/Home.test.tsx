@@ -86,8 +86,8 @@ describe('Home', () => {
 
     renderHome();
 
-    const img = await screen.findByAltText('Cover One');
-    expect(img).toBeInTheDocument();
-    expect(img).toHaveAttribute('src', '/media/cover1.jpg');
+    const imgs = await screen.findAllByAltText('Cover One');
+    expect(imgs[0]).toBeInTheDocument();
+    expect(imgs[0]).toHaveAttribute('src', '/media/cover1.jpg');
   });
 });
