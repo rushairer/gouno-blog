@@ -578,26 +578,10 @@ textarea.ui-control,
   color: var(--ui-brand);
 }
 
-.settings-layout {
-  display: grid;
-  grid-template-columns: 180px minmax(0, 1fr);
-  gap: 32px;
-  align-items: start;
-}
-
-.settings-content,
 .workspace-stack,
 .section-stack {
   display: grid;
   gap: 16px;
-}
-
-.settings-content {
-  min-width: 0;
-}
-
-.settings-section {
-  scroll-margin-top: 96px;
 }
 
 .feedback {
@@ -713,11 +697,6 @@ textarea.ui-control,
 }
 
 @media (max-width: 1024px) {
-  .settings-layout {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
   .section-nav {
     position: static;
     display: flex;
