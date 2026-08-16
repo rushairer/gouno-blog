@@ -9,7 +9,7 @@ func TestProviderStarterDefinitionsAreCompleteAndRunnable(t *testing.T) {
 	}
 	seen := map[string]bool{}
 	for _, definition := range definitions {
-		if definition.key == "" || seen[definition.key] {
+		if definition.key == "" || definition.agentKey == "" || seen[definition.key] {
 			t.Fatalf("invalid or duplicate starter key %q", definition.key)
 		}
 		seen[definition.key] = true

@@ -94,7 +94,7 @@ func (r *AgentRepository) UpdateProvider(ctx context.Context, profile *domain.Pr
 	return row.Scan(&profile.CreatedAt, &profile.UpdatedAt)
 }
 
-const starterPackVersion = 3
+const starterPackVersion = 4
 
 func sameJSON(left, right []byte) bool {
 	var leftValue, rightValue any
@@ -141,7 +141,7 @@ func (r *AgentRepository) BootstrapStarterPack(ctx context.Context) (int, error)
 		dailyLimit                    int
 		monthlyBudget, skillVersionID int64
 	}
-	items := make([]starterSkill, 0, 8)
+	items := make([]starterSkill, 0, 12)
 	for rows.Next() {
 		var item starterSkill
 		if err := rows.Scan(&item.systemKey, &item.name, &item.description, &item.dailyLimit, &item.monthlyBudget, &item.skillVersionID); err != nil {
@@ -155,8 +155,8 @@ func (r *AgentRepository) BootstrapStarterPack(ctx context.Context) (int, error)
 	if err := rows.Err(); err != nil {
 		return 0, err
 	}
-	if len(items) != 8 {
-		return 0, fmt.Errorf("starter pack is incomplete: expected 8 Skills, found %d", len(items))
+	if len(items) == 0 {
+		return 0, fmt.Errorf("starter pack is incomplete: no system Skills found")
 	}
 	workflowApproval := map[string]bool{"stale_content_refresh": true}
 	workflowAgents := make(map[string]int64, 4)
@@ -281,7 +281,7 @@ func (r *AgentRepository) BootstrapStarterPack(ctx context.Context) (int, error)
 			return 0, err
 		}
 	}
-	additionalCreated, err := reconcileProviderDependentStarters(ctx, tx, providerID, systemAgents)
+	additionalCreated, err := reconcileProviderDependentStarters(ctx, tx, systemAgents)
 	if err != nil {
 		return 0, err
 	}
@@ -938,10 +938,18 @@ func (r *AgentRepository) ListApprovals(ctx context.Context, status string, limi
 	countQuery := `SELECT COUNT(*) FROM ai_approvals ap`
 	countArgs := []any{}
 	if status != "" && status != "all" {
-		where = " WHERE ap.status=$3"
-		args = append(args, status)
-		countQuery += " WHERE ap.status=$1"
-		countArgs = append(countArgs, status)
+		// The pending endpoint represents actionable work. Failed executions
+		// remain actionable so an operator can see the error and retry the same
+		// governed proposal instead of losing it from the inbox.
+		if status == string(domain.ApprovalPending) {
+			where = " WHERE ap.status IN ('pending','failed')"
+			countQuery += " WHERE ap.status IN ('pending','failed')"
+		} else {
+			where = " WHERE ap.status=$3"
+			args = append(args, status)
+			countQuery += " WHERE ap.status=$1"
+			countArgs = append(countArgs, status)
+		}
 	}
 	var total int
 	if err := r.db.QueryRowContext(ctx, countQuery, countArgs...).Scan(&total); err != nil {
@@ -967,7 +975,7 @@ func (r *AgentRepository) ListApprovals(ctx context.Context, status string, limi
 func (r *AgentRepository) ClaimApproval(ctx context.Context, id int64, reviewer, note string) error {
 	result, err := r.db.ExecContext(ctx, `UPDATE ai_approvals SET
 		status='approved', reviewed_by=$2, review_note=$3, reviewed_at=NOW()
-		WHERE id=$1 AND status='pending' AND expires_at > NOW()`, id, reviewer, note)
+		WHERE id=$1 AND status IN ('pending','failed') AND expires_at > NOW()`, id, reviewer, note)
 	if err != nil {
 		return err
 	}
@@ -986,7 +994,7 @@ func (r *AgentRepository) CompleteApproval(ctx context.Context, id int64, status
 func (r *AgentRepository) RejectApproval(ctx context.Context, id int64, reviewer, note string) error {
 	result, err := r.db.ExecContext(ctx, `UPDATE ai_approvals SET
 		status='rejected', reviewed_by=$2, review_note=$3, reviewed_at=NOW()
-		WHERE id=$1 AND status='pending'`, id, reviewer, note)
+		WHERE id=$1 AND status IN ('pending','failed')`, id, reviewer, note)
 	if err != nil {
 		return err
 	}

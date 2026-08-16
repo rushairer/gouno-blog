@@ -94,6 +94,30 @@ describe('AgentConsole', () => {
     expect(technicalDetails).toHaveTextContent('"slug": "ai-daily-briefing"');
   });
 
+  it('keeps a failed approval actionable and retries the same proposal', async () => {
+    const user = userEvent.setup();
+    const failedApproval = {
+      id: 1, run_id: 3, tool_call_id: 3, action_type: 'create_draft', target_type: 'post', status: 'failed',
+      review_note: 'column reference "event_key" is ambiguous',
+      proposed_payload: { title: 'AI Daily News', slug: 'ai-daily-news', content: '# AI Daily News' },
+      expires_at: '2026-08-20T00:00:00Z', created_at: '2026-08-16T00:00:00Z',
+    };
+    vi.mocked(apiFetch).mockImplementation(async (input, init) => {
+      const url = input.toString();
+      if (url.startsWith('/api/admin/agent-approvals')) {
+        if (url === '/api/admin/agent-approvals/1/approve' && init?.method === 'POST') return Response.json({ data: null });
+        return Response.json({ data: { list: [failedApproval] } });
+      }
+      return Response.json({ data: responseFor(url) });
+    });
+
+    renderConsole();
+    await user.click(await screen.findByRole('tab', { name: /To review/ }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('column reference "event_key" is ambiguous');
+    await user.click(screen.getByRole('button', { name: 'Retry approval and execution' }));
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledWith('/api/admin/agent-approvals/1/approve', expect.objectContaining({ method: 'POST' })));
+  });
+
   it('copies a Skill from the Skill list, not from an Agent', async () => {
     const user = userEvent.setup();
     const prompt = vi.spyOn(window, 'prompt').mockReturnValue('Weekly Operations Copy');

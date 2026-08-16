@@ -28,6 +28,22 @@ func TestUpAppliesCurrentSchemaAndIsIdempotent(t *testing.T) {
 	if err := Up(ctx, db); err != nil {
 		t.Fatalf("second migration run must be idempotent: %v", err)
 	}
+	// Domain writes exercise the actual trigger body. Merely asserting that a
+	// trigger exists would not catch ambiguous PL/pgSQL variable/column names.
+	var triggerProbePostID int64
+	if err := db.QueryRowContext(ctx, `INSERT INTO posts(title,slug,summary,content,status)
+		VALUES('Migration trigger probe','migration-trigger-probe-' || md5(random()::text || clock_timestamp()::text),'','probe','draft')
+		RETURNING id`).Scan(&triggerProbePostID); err != nil {
+		t.Fatalf("post domain-event trigger must accept inserts: %v", err)
+	}
+	var triggerProbeEvents int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_workflow_events
+		WHERE payload->>'post_id'=$1::text`, triggerProbePostID).Scan(&triggerProbeEvents); err != nil {
+		t.Fatal(err)
+	}
+	if triggerProbeEvents != 1 {
+		t.Fatalf("expected one post domain event, got %d", triggerProbeEvents)
+	}
 	// A real fresh install runs migrations before an administrator can save a
 	// Provider. Reproduce that order, then verify the second-stage bootstrap
 	// completes every Provider-dependent Agent and Workflow binding.
@@ -146,8 +162,16 @@ func TestUpAppliesCurrentSchemaAndIsIdempotent(t *testing.T) {
 	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_skills WHERE system_key IS NOT NULL`).Scan(&systemSkills); err != nil {
 		t.Fatal(err)
 	}
-	if systemSkills != 8 {
-		t.Fatalf("expected 8 system Skills, got %d", systemSkills)
+	if systemSkills != 12 {
+		t.Fatalf("expected 12 system Skills, got %d", systemSkills)
+	}
+	var resourceSystemSkills int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_skills WHERE system_key IN
+		('media_alt_review','taxonomy_review','operations_deep_dive','mixed_content_review')`).Scan(&resourceSystemSkills); err != nil {
+		t.Fatal(err)
+	}
+	if resourceSystemSkills != 4 {
+		t.Fatalf("expected four protected resource starter Skills, got %d", resourceSystemSkills)
 	}
 	var dailyNewsConfigured bool
 	if err := db.QueryRowContext(ctx, `SELECT EXISTS (
