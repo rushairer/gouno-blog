@@ -13,15 +13,22 @@ function Story({ post, index, featured = false }: { post: Post; index: number; f
   return (
     <article className={`editorial-story ${featured ? 'editorial-story--featured' : ''}`}>
       <span className="story-index">{String(index).padStart(2, '0')}</span>
-      <div>
-        <Link to={`/articles/${post.slug}`}><h3>{post.title}</h3></Link>
-        <p>{markdownToPlainText(post.summary)}</p>
-        <div className="story-meta">
-          <time>{new Date(post.published_at || post.created_at).toLocaleDateString('zh-CN')}</time>
-          <span>{readTime(post)} 分钟阅读</span>
-          {post.tags.slice(0, 2).map((tag) => <Link key={tag} to={`/tags/${encodeURIComponent(tag)}`}>{tag}</Link>)}
+      <div className="story-body">
+        {post.cover_url ? (
+          <Link className="story-cover-link" to={`/articles/${post.slug}`} tabIndex={-1} aria-hidden="true">
+            <img className="story-cover" src={post.cover_url} alt={post.cover_alt || post.title} loading="lazy" />
+          </Link>
+        ) : null}
+        <div>
+          <Link to={`/articles/${post.slug}`}><h3>{post.title}</h3></Link>
+          <p>{markdownToPlainText(post.summary)}</p>
+          <div className="story-meta">
+            <time>{new Date(post.published_at || post.created_at).toLocaleDateString('zh-CN')}</time>
+            <span>{readTime(post)} 分钟阅读</span>
+            {post.tags.slice(0, 2).map((tag) => <Link key={tag} to={`/tags/${encodeURIComponent(tag)}`}>{tag}</Link>)}
+          </div>
+          <Link className="text-action" to={`/articles/${post.slug}`}>阅读文章 <ArrowRight /></Link>
         </div>
-        <Link className="text-action" to={`/articles/${post.slug}`}>阅读文章 <ArrowRight /></Link>
       </div>
     </article>
   );
@@ -90,7 +97,14 @@ export default function Home() {
             <div className="latest-table" role="list">
               {posts.slice(0, 8).map((post) => (
                 <article key={post.id} role="listitem">
-                  <div><Link to={`/articles/${post.slug}`}><h3>{post.title}</h3></Link><p>{markdownToPlainText(post.summary)}</p></div>
+                  <div className="latest-table-main">
+                    {post.cover_url ? (
+                      <Link className="latest-table-cover-link" to={`/articles/${post.slug}`} tabIndex={-1} aria-hidden="true">
+                        <img className="latest-table-cover" src={post.cover_url} alt={post.cover_alt || post.title} loading="lazy" />
+                      </Link>
+                    ) : null}
+                    <div><Link to={`/articles/${post.slug}`}><h3>{post.title}</h3></Link><p>{markdownToPlainText(post.summary)}</p></div>
+                  </div>
                   <time>{new Date(post.published_at || post.created_at).toLocaleDateString('zh-CN')}</time>
                   <span>{readTime(post)} 分钟</span>
                   <div>{post.tags.slice(0, 3).map((tag) => <Link key={tag} to={`/tags/${encodeURIComponent(tag)}`}>{tag}</Link>)}</div>

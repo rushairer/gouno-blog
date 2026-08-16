@@ -50,9 +50,18 @@ export default function ArticleIndex({ mode = 'articles' }: { mode?: 'articles' 
         </aside>
         <section className="article-results" aria-live="polite">
           {loading ? <LoadingState label="正在载入文章…" /> : error ? <p className="feedback feedback--error">{error}</p> : posts.length === 0 ? <div className="public-empty-actions"><EmptyState label="没有找到符合条件的文章。" /><div><Link to="/articles">浏览全部文章</Link><Link to="/archive">浏览归档</Link></div></div> : posts.map((post, index) => (
-            <article className="article-index-row" key={post.id}>
+            <article className={`article-index-row ${post.cover_url ? 'article-index-row--has-cover' : ''}`} key={post.id}>
               <span>{String((page - 1) * 10 + index + 1).padStart(2, '0')}</span>
-              <div><Link to={`/articles/${post.slug}`}><h2>{post.title}</h2></Link><p>{markdownToPlainText(post.summary)}</p><div>{post.tags.map((item) => <Link key={item} to={`/tags/${encodeURIComponent(item)}`}>{item}</Link>)}</div></div>
+              <div>
+                <Link to={`/articles/${post.slug}`}><h2>{post.title}</h2></Link>
+                <p>{markdownToPlainText(post.summary)}</p>
+                <div>{post.tags.map((item) => <Link key={item} to={`/tags/${encodeURIComponent(item)}`}>{item}</Link>)}</div>
+              </div>
+              {post.cover_url ? (
+                <Link className="article-index-cover-link" to={`/articles/${post.slug}`} tabIndex={-1} aria-hidden="true">
+                  <img className="article-index-cover" src={post.cover_url} alt={post.cover_alt || post.title} loading="lazy" />
+                </Link>
+              ) : null}
               <div><time>{new Date(post.published_at || post.created_at).toLocaleDateString('zh-CN')}</time><span>{Math.max(3, Math.ceil((post.content?.length || 0) / 500))} 分钟</span><Link to={`/articles/${post.slug}`} aria-label={`阅读 ${post.title}`}><ArrowRight /></Link></div>
             </article>
           ))}

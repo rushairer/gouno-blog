@@ -72,4 +72,22 @@ describe('Home', () => {
     expect(screen.getByRole('link', { name: /Email/ })).toHaveAttribute('href', 'mailto:hello@example.com');
     expect(screen.getAllByRole('link', { name: 'go' }).some((link) => link.getAttribute('href') === '/tags/go')).toBe(true);
   });
+
+  it('renders cover images when post has cover_url', async () => {
+    const postsWithCover = [
+      { id: 1, title: 'Cover Post', slug: 'cover-post', summary: 'With cover', cover_url: '/media/cover1.jpg', cover_alt: 'Cover One', tags: ['go'], created_at: '2026-01-01T00:00:00Z' },
+    ];
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = input.toString();
+      if (url.includes('/api/tags')) return Response.json({ data: ['go'] });
+      if (url.includes('/api/site')) return Response.json({ data: { site_title: 'Gouno Blog', author_name: 'Author' } });
+      return Response.json({ data: { list: postsWithCover, total: 1, page: 1, pageSize: 12 } });
+    }));
+
+    renderHome();
+
+    const img = await screen.findByAltText('Cover One');
+    expect(img).toBeInTheDocument();
+    expect(img).toHaveAttribute('src', '/media/cover1.jpg');
+  });
 });
