@@ -17,11 +17,22 @@ import (
 )
 
 type HTTPProvider struct {
-	name, baseURL, key, model string
-	client                    *http.Client
+	name, baseURL, key, model, protocolMode, streamMode string
+	client                                *http.Client
 }
 
+func (p *HTTPProvider) ProtocolMode() string { return p.protocolMode }
+func (p *HTTPProvider) StreamMode() string   { return p.streamMode }
+
 func NewHTTPProvider(name, baseURL, key, model string, allowedHosts []string, timeout time.Duration) (*HTTPProvider, error) {
+	return NewHTTPProviderWithConfig(name, baseURL, key, model, "", "auto", allowedHosts, timeout)
+}
+
+func NewHTTPProviderWithMode(name, baseURL, key, model, protocolMode string, allowedHosts []string, timeout time.Duration) (*HTTPProvider, error) {
+	return NewHTTPProviderWithConfig(name, baseURL, key, model, protocolMode, "auto", allowedHosts, timeout)
+}
+
+func NewHTTPProviderWithConfig(name, baseURL, key, model, protocolMode, streamMode string, allowedHosts []string, timeout time.Duration) (*HTTPProvider, error) {
 	if name != "openai" && name != "anthropic" && name != "gemini" {
 		return nil, fmt.Errorf("unsupported provider %q", name)
 	}
@@ -31,8 +42,12 @@ func NewHTTPProvider(name, baseURL, key, model string, allowedHosts []string, ti
 	if key == "" || model == "" {
 		return nil, fmt.Errorf("%s: API key and model are required", name)
 	}
+	if streamMode == "" {
+		streamMode = "auto"
+	}
 	return &HTTPProvider{
 		name: name, baseURL: strings.TrimRight(baseURL, "/"), key: key, model: model,
+		protocolMode: protocolMode, streamMode: streamMode,
 		client: &http.Client{
 			Timeout:   timeout,
 			Transport: safeTransport(allowedHosts, timeout),
@@ -201,7 +216,21 @@ func (p *HTTPProvider) do(ctx context.Context, path string, body any) (*http.Res
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.baseURL+path, bytes.NewReader(raw))
+	baseURL := strings.TrimRight(p.baseURL, "/")
+	if strings.HasSuffix(baseURL, "/v1beta") && strings.HasPrefix(path, "/v1beta/") {
+		baseURL = strings.TrimSuffix(baseURL, "/v1beta")
+	} else if strings.HasSuffix(baseURL, "/v1") && (strings.HasPrefix(path, "/v1/") || strings.HasPrefix(path, "/v1beta/")) {
+		baseURL = strings.TrimSuffix(baseURL, "/v1")
+	}
+	targetURL := baseURL + path
+	if p.name == "gemini" && !strings.Contains(targetURL, "key=") {
+		if strings.Contains(targetURL, "?") {
+			targetURL += "&key=" + url.QueryEscape(p.key)
+		} else {
+			targetURL += "?key=" + url.QueryEscape(p.key)
+		}
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, targetURL, bytes.NewReader(raw))
 	if err != nil {
 		return nil, err
 	}
@@ -210,6 +239,7 @@ func (p *HTTPProvider) do(ctx context.Context, path string, body any) (*http.Res
 		req.Header.Set("Authorization", "Bearer "+p.key)
 	} else if p.name == "gemini" {
 		req.Header.Set("x-goog-api-key", p.key)
+		req.Header.Set("Authorization", "Bearer "+p.key)
 	} else {
 		req.Header.Set("x-api-key", p.key)
 		req.Header.Set("anthropic-version", "2023-06-01")

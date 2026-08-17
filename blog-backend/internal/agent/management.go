@@ -149,8 +149,8 @@ func (s *ManagementService) ProviderClient(ctx context.Context, id int64) (provi
 	if err != nil {
 		return nil, err
 	}
-	return provider.NewHTTPProvider(
-		string(profile.ProviderType), profile.BaseURL, key, profile.Model, s.allowedHosts,
+	return provider.NewHTTPProviderWithConfig(
+		string(profile.ProviderType), profile.BaseURL, key, profile.Model, profile.ProtocolMode, profile.StreamMode, s.allowedHosts,
 		time.Duration(profile.RequestTimeoutSeconds)*time.Second,
 	)
 }
@@ -166,7 +166,13 @@ func (s *ManagementService) TestProvider(ctx context.Context, id int64) (time.Du
 		MaxTokens: 8,
 	})
 	if err != nil {
-		return time.Since(start), errors.New("provider connection test failed")
+		// If text generation failed (e.g. image-only model like Imagen/DALL-E), test image generation
+		if imgGen, ok := client.(provider.ImageGenerator); ok {
+			if _, imgErr := imgGen.GenerateImage(ctx, provider.ImageRequest{Prompt: "health check"}); imgErr == nil {
+				return time.Since(start), nil
+			}
+		}
+		return time.Since(start), fmt.Errorf("provider connection test failed: %w", err)
 	}
 	return time.Since(start), nil
 }

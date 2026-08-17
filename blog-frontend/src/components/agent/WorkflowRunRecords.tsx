@@ -1035,7 +1035,7 @@ export function WorkflowRunRecords({
                             className="workflow-generating-status"
                             role="status"
                           >
-                            <LoaderCircle className="spinner" />
+                            <LoaderCircle />
                             <span>
                               <strong>
                                 {zh ? "正在生成图片…" : "Generating image…"}

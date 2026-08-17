@@ -1473,6 +1473,10 @@ components:
           description: Required on create; omit on update to retain the encrypted key.
         enabled:
           type: boolean
+        protocol_mode:
+          type: string
+        stream_mode:
+          type: string
         request_timeout_seconds:
           type: integer
           minimum: 1
