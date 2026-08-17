@@ -1592,6 +1592,8 @@ type providerRequest struct {
 	Model                 string              `json:"model" binding:"required"`
 	APIKey                string              `json:"api_key"`
 	Enabled               bool                `json:"enabled"`
+	ProtocolMode          string              `json:"protocol_mode"`
+	StreamMode            string              `json:"stream_mode"`
 	RequestTimeoutSeconds int                 `json:"request_timeout_seconds"`
 	MaxOutputTokens       int                 `json:"max_output_tokens"`
 }
@@ -1604,6 +1606,8 @@ type providerExportItem struct {
 	Enabled               bool                `json:"enabled"`
 	IsDefaultWriting      bool                `json:"is_default_writing,omitempty"`
 	IsDefaultImage        bool                `json:"is_default_image,omitempty"`
+	ProtocolMode          string              `json:"protocol_mode,omitempty"`
+	StreamMode            string              `json:"stream_mode,omitempty"`
 	RequestTimeoutSeconds int                 `json:"request_timeout_seconds"`
 	MaxOutputTokens       int                 `json:"max_output_tokens"`
 }
@@ -1617,6 +1621,8 @@ type providerImportItem struct {
 	Enabled               *bool               `json:"enabled,omitempty"`
 	IsDefaultWriting      bool                `json:"is_default_writing,omitempty"`
 	IsDefaultImage        bool                `json:"is_default_image,omitempty"`
+	ProtocolMode          string              `json:"protocol_mode,omitempty"`
+	StreamMode            string              `json:"stream_mode,omitempty"`
 	RequestTimeoutSeconds int                 `json:"request_timeout_seconds,omitempty"`
 	MaxOutputTokens       int                 `json:"max_output_tokens,omitempty"`
 }
@@ -1694,6 +1700,8 @@ func (ctrl *AgentController) ExportProviders(c *gin.Context) {
 			Enabled:               item.Enabled,
 			IsDefaultWriting:      item.IsDefaultWriting,
 			IsDefaultImage:        item.IsDefaultImage,
+			ProtocolMode:          item.ProtocolMode,
+			StreamMode:            item.StreamMode,
 			RequestTimeoutSeconds: item.RequestTimeoutSeconds,
 			MaxOutputTokens:       item.MaxOutputTokens,
 		})
@@ -1771,6 +1779,8 @@ func (ctrl *AgentController) ImportProviders(c *gin.Context) {
 			BaseURL:               baseURL,
 			Model:                 strings.TrimSpace(item.Model),
 			Enabled:               enabled,
+			ProtocolMode:          strings.TrimSpace(item.ProtocolMode),
+			StreamMode:            strings.TrimSpace(item.StreamMode),
 			RequestTimeoutSeconds: timeout,
 			MaxOutputTokens:       maxTokens,
 		}
@@ -1830,8 +1840,9 @@ func (ctrl *AgentController) saveProvider(c *gin.Context, id int64) {
 	}
 	profile := &domain.ProviderProfile{
 		ID: id, Name: req.Name, ProviderType: req.ProviderType, BaseURL: req.BaseURL,
-		Model: req.Model, Enabled: req.Enabled, RequestTimeoutSeconds: req.RequestTimeoutSeconds,
-		MaxOutputTokens: req.MaxOutputTokens,
+		Model: req.Model, Enabled: req.Enabled, ProtocolMode: strings.TrimSpace(req.ProtocolMode),
+		StreamMode: strings.TrimSpace(req.StreamMode),
+		RequestTimeoutSeconds: req.RequestTimeoutSeconds, MaxOutputTokens: req.MaxOutputTokens,
 	}
 	if err := ctrl.svc.SaveProvider(c.Request.Context(), profile, req.APIKey); err != nil {
 		writeAgentError(c, err)

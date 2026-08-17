@@ -1634,11 +1634,39 @@ select option {
 .workflow-candidate-fields .input-field { min-width: 220px; }
 .workflow-candidate-heading { flex-wrap: wrap; }
 .workflow-candidate-batch-actions { margin-left: auto; }
-.workflow-generation-status { display: flex; align-items: center; gap: 10px; margin-top: 10px; color: var(--ui-text-secondary); }
-.workflow-generation-status > svg { flex: 0 0 auto; color: var(--ui-brand); animation: workflow-generation-spin 1s linear infinite; }
-.workflow-generation-status span { display: grid; gap: 2px; min-width: 0; }
-.workflow-generation-status strong { color: var(--ui-text); font: 600 var(--font-size-control)/1.35 var(--font-ui); }
-.workflow-generation-status small { color: var(--ui-text-secondary); }
+.workflow-generation-status,
+.workflow-generating-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  color: var(--ui-text-secondary);
+}
+.workflow-generation-status > svg,
+.workflow-generating-status > svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  color: var(--ui-brand);
+  animation: workflow-generation-spin 1s linear infinite;
+}
+.workflow-generation-status span,
+.workflow-generating-status span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.workflow-generation-status strong,
+.workflow-generating-status strong {
+  color: var(--ui-text);
+  font: 600 var(--font-size-control)/1.35 var(--font-ui);
+}
+.workflow-generation-status small,
+.workflow-generating-status small {
+  color: var(--ui-text-secondary);
+}
 .workflow-fixed-input { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 10px; border: 1px solid var(--ui-border); border-radius: var(--radius-control); background: var(--ui-control); }
 .workflow-fixed-input strong { color: var(--ui-text); font: 600 var(--font-size-control)/1.4 var(--font-ui); }
 .workflow-fixed-input small { color: var(--ui-text-secondary); font-size: var(--font-size-label); }

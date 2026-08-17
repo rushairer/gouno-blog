@@ -27,6 +27,8 @@ type ProviderProfile struct {
 	Enabled               bool         `json:"enabled"`
 	IsDefaultWriting      bool         `json:"is_default_writing"`
 	IsDefaultImage        bool         `json:"is_default_image"`
+	ProtocolMode          string       `json:"protocol_mode"`
+	StreamMode            string       `json:"stream_mode"`
 	RequestTimeoutSeconds int          `json:"request_timeout_seconds"`
 	MaxOutputTokens       int          `json:"max_output_tokens"`
 	CreatedAt             time.Time    `json:"created_at"`

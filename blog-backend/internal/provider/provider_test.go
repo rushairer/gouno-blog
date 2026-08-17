@@ -54,6 +54,56 @@ func TestOpenAIGenerateParsesToolCallWithoutLeakingKey(t *testing.T) {
 	}
 }
 
+func TestOpenAIGenerateParsesChatCompletions(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v1/responses" {
+			http.NotFound(w, r)
+			return
+		}
+		if r.URL.Path != "/v1/chat/completions" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"choices":[{
+				"message":{
+					"role":"assistant",
+					"content":"OK",
+					"tool_calls":[{"id":"call_123","type":"function","function":{"name":"content.list_posts","arguments":"{\"limit\":5}"}}]
+				},
+				"finish_reason":"tool_calls"
+			}],
+			"usage":{"prompt_tokens":10,"completion_tokens":5}
+		}`))
+	}))
+	defer server.Close()
+	client, err := NewHTTPProvider("openai", server.URL, "top-secret", "gpt-test", []string{"127.0.0.1"}, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := client.Generate(context.Background(), Request{
+		Instructions: "test",
+		Messages:     []Message{{Role: "user", Content: "list posts"}},
+		Tools: []ToolDefinition{{
+			Name: "content.list_posts", Description: "list",
+			Parameters: json.RawMessage(`{"type":"object","properties":{"limit":{"type":"integer"}}}`),
+		}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Text != "OK" {
+		t.Fatalf("text = %q", result.Text)
+	}
+	if len(result.ToolCalls) != 1 || result.ToolCalls[0].Name != "content.list_posts" ||
+		string(result.ToolCalls[0].Arguments) != `{"limit":5}` {
+		t.Fatalf("tool calls = %#v", result.ToolCalls)
+	}
+	if result.InputTokens != 10 || result.OutputTokens != 5 {
+		t.Fatalf("usage = %d/%d", result.InputTokens, result.OutputTokens)
+	}
+}
+
 func TestAnthropicGenerateParsesTextAndToolCall(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("x-api-key") != "secret" {
@@ -83,6 +133,143 @@ func TestAnthropicGenerateParsesTextAndToolCall(t *testing.T) {
 	if result.Text != "Checking." || len(result.ToolCalls) != 1 ||
 		string(result.ToolCalls[0].Arguments) != `{"days":7}` {
 		t.Fatalf("result = %#v", result)
+	}
+}
+
+func TestGeminiGenerateParsesTextAndToolCall(t *testing.T) {
+	var requestPayload struct {
+		Contents []struct {
+			Role  string `json:"role"`
+			Parts []struct {
+				Text string `json:"text"`
+			} `json:"parts"`
+		} `json:"contents"`
+		SystemInstruction struct {
+			Parts []struct {
+				Text string `json:"text"`
+			} `json:"parts"`
+		} `json:"systemInstruction"`
+		Tools []struct {
+			FunctionDeclarations []struct {
+				Name        string `json:"name"`
+				Description string `json:"description"`
+			} `json:"functionDeclarations"`
+		} `json:"tools"`
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1beta/models/gemini-1.5-pro:generateContent" {
+			t.Fatalf("path = %s", r.URL.Path)
+		}
+		if r.Header.Get("x-goog-api-key") != "secret" {
+			t.Fatalf("missing or invalid key header: %s", r.Header.Get("x-goog-api-key"))
+		}
+		body, _ := io.ReadAll(r.Body)
+		_ = json.Unmarshal(body, &requestPayload)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"candidates": [{
+				"content": {
+					"role": "model",
+					"parts": [
+						{"text": "Analyzing..."},
+						{"functionCall": {"name": "content__list_posts", "args": {"limit": 5}}}
+					]
+				},
+				"finishReason": "STOP"
+			}],
+			"usageMetadata": {
+				"promptTokenCount": 12,
+				"candidatesTokenCount": 8
+			}
+		}`))
+	}))
+	defer server.Close()
+
+	client, err := NewHTTPProvider("gemini", server.URL, "secret", "gemini-1.5-pro", []string{"127.0.0.1"}, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := client.Generate(context.Background(), Request{
+		Instructions: "System rule",
+		Messages:     []Message{{Role: "user", Content: "fetch posts"}},
+		Tools: []ToolDefinition{{
+			Name:        "content.list_posts",
+			Description: "list posts",
+			Parameters:  json.RawMessage(`{"type":"object"}`),
+		}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var args map[string]int
+	if len(result.ToolCalls) > 0 {
+		_ = json.Unmarshal(result.ToolCalls[0].Arguments, &args)
+	}
+	if result.Text != "Analyzing..." || len(result.ToolCalls) != 1 || result.ToolCalls[0].Name != "content.list_posts" ||
+		args["limit"] != 5 || result.InputTokens != 12 || result.OutputTokens != 8 {
+		t.Fatalf("unexpected result: %#v", result)
+	}
+	if len(requestPayload.Tools) != 1 || len(requestPayload.Tools[0].FunctionDeclarations) != 1 ||
+		requestPayload.Tools[0].FunctionDeclarations[0].Name != "content__list_posts" {
+		t.Fatalf("expected sanitized tool name in request: %#v", requestPayload.Tools)
+	}
+}
+
+func TestGeminiImageParsesInlineData(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1beta/models/gemini-2.0-flash:generateContent" {
+			t.Fatalf("path = %s", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"candidates": [{
+				"content": {
+					"parts": [
+						{"inlineData": {"mimeType": "image/png", "data": "iVBORw0KGgo="}}
+					]
+				}
+			}]
+		}`))
+	}))
+	defer server.Close()
+
+	client, err := NewHTTPProvider("gemini", server.URL, "secret", "gemini-2.0-flash", []string{"127.0.0.1"}, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	image, err := client.GenerateImage(context.Background(), ImageRequest{Prompt: "draw sunset"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if image.MIMEType != "image/png" || len(image.Data) != 8 {
+		t.Fatalf("image = %#v", image)
+	}
+}
+
+func TestGeminiImageParsesImagenPredict(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1beta/models/imagen-3.0-generate-002:predict" {
+			t.Fatalf("path = %s", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"predictions": [
+				{"bytesBase64Encoded": "/9j/4AAQ", "mimeType": "image/jpeg"}
+			]
+		}`))
+	}))
+	defer server.Close()
+
+	client, err := NewHTTPProvider("gemini", server.URL, "secret", "imagen-3.0-generate-002", []string{"127.0.0.1"}, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	image, err := client.GenerateImage(context.Background(), ImageRequest{Prompt: "draw flower"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if image.MIMEType != "image/jpeg" || len(image.Data) != 6 {
+		t.Fatalf("image = %#v", image)
 	}
 }
 
@@ -121,6 +308,95 @@ func TestAnthropicCompatibleImageParsesNativeImageBlock(t *testing.T) {
 	image, err := client.GenerateImage(context.Background(), ImageRequest{Prompt: "blue circle"})
 	if err != nil {
 		t.Fatal(err)
+	}
+	if image.MIMEType != "image/png" || len(image.Data) != 8 {
+		t.Fatalf("image = %#v", image)
+	}
+}
+
+func TestOpenAIImageParsesImageGenerationCall(t *testing.T) {
+	var requestPayload struct {
+		Model      string `json:"model"`
+		Input      []struct {
+			Role    string `json:"role"`
+			Content []struct {
+				Type string `json:"type"`
+				Text string `json:"text"`
+			} `json:"content"`
+		} `json:"input"`
+		Tools      []map[string]any `json:"tools"`
+		ToolChoice map[string]any   `json:"tool_choice"`
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/responses" {
+			t.Fatalf("path = %s", r.URL.Path)
+		}
+		body, _ := io.ReadAll(r.Body)
+		_ = json.Unmarshal(body, &requestPayload)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"output":[{"type":"image_generation_call","result":"iVBORw0KGgo="}]}`))
+	}))
+	defer server.Close()
+
+	client, err := NewHTTPProvider("openai", server.URL, "secret", "gpt-5.6-image", []string{"127.0.0.1"}, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	image, err := client.GenerateImage(context.Background(), ImageRequest{Prompt: "a red cat"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(requestPayload.Input) != 1 || requestPayload.Input[0].Role != "user" ||
+		len(requestPayload.Input[0].Content) != 1 || requestPayload.Input[0].Content[0].Text != "a red cat" {
+		t.Fatalf("expected input list with user message, got: %#v", requestPayload.Input)
+	}
+	if image.MIMEType != "image/png" || len(image.Data) != 8 {
+		t.Fatalf("image = %#v", image)
+	}
+}
+
+func TestOpenAIImageParsesDataURIAndOutputText(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"output_text":"![rendered](data:image/jpeg;base64,/9j/4AAQ)"}`))
+	}))
+	defer server.Close()
+
+	client, err := NewHTTPProvider("openai", server.URL, "secret", "gpt-5.6-image", []string{"127.0.0.1"}, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	image, err := client.GenerateImage(context.Background(), ImageRequest{Prompt: "sunset"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if image.MIMEType != "image/jpeg" || len(image.Data) != 6 {
+		t.Fatalf("image = %#v", image)
+	}
+}
+
+func TestOpenAIImageParsesSSEStream(t *testing.T) {
+	var requestPayload struct {
+		Stream bool `json:"stream"`
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		_ = json.Unmarshal(body, &requestPayload)
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte("data: {\"type\":\"response.output_item.added\",\"item\":{\"type\":\"image_generation_call\",\"result\":\"iVBORw0KGgo=\"}}\n\ndata: {\"type\":\"response.completed\"}\n\ndata: [DONE]\n\n"))
+	}))
+	defer server.Close()
+
+	client, err := NewHTTPProvider("openai", server.URL, "secret", "gpt-5.6-image", []string{"127.0.0.1"}, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	image, err := client.GenerateImage(context.Background(), ImageRequest{Prompt: "sse sunset"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !requestPayload.Stream {
+		t.Fatalf("expected stream=true in request, got: %v", requestPayload.Stream)
 	}
 	if image.MIMEType != "image/png" || len(image.Data) != 8 {
 		t.Fatalf("image = %#v", image)

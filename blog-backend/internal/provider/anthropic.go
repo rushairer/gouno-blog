@@ -2,7 +2,9 @@ package provider
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"strings"
 )
 
@@ -152,4 +154,24 @@ func (p *HTTPProvider) anthropicGenerate(ctx context.Context, req Request) (Resu
 		}
 	}
 	return result, nil
+}
+
+func (p *HTTPProvider) anthropicGenerateImage(ctx context.Context, req ImageRequest) (ImageResult, error) {
+	result, err := p.anthropicGenerate(ctx, Request{
+		Instructions: "Generate the requested image. Return it only as a Markdown image whose URL is a base64 data URI; do not add prose.",
+		Messages:     []Message{{Role: "user", Content: req.Prompt}},
+		MaxTokens:    2000,
+	})
+	if err != nil {
+		return ImageResult{}, err
+	}
+	match := imageDataURI.FindStringSubmatch(result.Text)
+	if len(match) != 3 {
+		return ImageResult{}, errors.New("Anthropic-compatible response did not contain an image data URI")
+	}
+	data, err := base64.StdEncoding.DecodeString(match[2])
+	if err != nil || len(data) == 0 {
+		return ImageResult{}, errors.New("Anthropic-compatible response did not contain a valid image")
+	}
+	return ImageResult{Data: data, MIMEType: match[1]}, nil
 }

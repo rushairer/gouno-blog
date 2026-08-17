@@ -40,7 +40,7 @@ func (r *AgentRepository) CreateSystemNotification(ctx context.Context, recipien
 }
 
 const providerColumns = `id, name, provider_type, base_url, model, api_key_ciphertext,
-	api_key_nonce, api_key_last4, key_version, enabled, is_default_writing, is_default_image, request_timeout_seconds,
+	api_key_nonce, api_key_last4, key_version, enabled, is_default_writing, is_default_image, protocol_mode, stream_mode, request_timeout_seconds,
 	max_output_tokens, created_at, updated_at`
 
 func scanProvider(scanner interface{ Scan(...any) error }) (*domain.ProviderProfile, error) {
@@ -48,7 +48,7 @@ func scanProvider(scanner interface{ Scan(...any) error }) (*domain.ProviderProf
 	err := scanner.Scan(
 		&profile.ID, &profile.Name, &profile.ProviderType, &profile.BaseURL, &profile.Model,
 		&profile.APIKeyCiphertext, &profile.APIKeyNonce, &profile.APIKeyLast4, &profile.KeyVersion,
-		&profile.Enabled, &profile.IsDefaultWriting, &profile.IsDefaultImage, &profile.RequestTimeoutSeconds, &profile.MaxOutputTokens,
+		&profile.Enabled, &profile.IsDefaultWriting, &profile.IsDefaultImage, &profile.ProtocolMode, &profile.StreamMode, &profile.RequestTimeoutSeconds, &profile.MaxOutputTokens,
 		&profile.CreatedAt, &profile.UpdatedAt,
 	)
 	profile.HasAPIKey = len(profile.APIKeyCiphertext) > 0
@@ -56,36 +56,42 @@ func scanProvider(scanner interface{ Scan(...any) error }) (*domain.ProviderProf
 }
 
 func (r *AgentRepository) CreateProvider(ctx context.Context, profile *domain.ProviderProfile) error {
+	if profile.StreamMode == "" {
+		profile.StreamMode = "auto"
+	}
 	return r.db.QueryRowContext(ctx, `INSERT INTO ai_provider_profiles
 		(name, provider_type, base_url, model, api_key_ciphertext, api_key_nonce, api_key_last4,
-		 key_version, enabled, request_timeout_seconds, max_output_tokens)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+		 key_version, enabled, protocol_mode, stream_mode, request_timeout_seconds, max_output_tokens)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
 		RETURNING id, created_at, updated_at`,
 		profile.Name, profile.ProviderType, profile.BaseURL, profile.Model, profile.APIKeyCiphertext,
 		profile.APIKeyNonce, profile.APIKeyLast4, profile.KeyVersion, profile.Enabled,
-		profile.RequestTimeoutSeconds, profile.MaxOutputTokens,
+		profile.ProtocolMode, profile.StreamMode, profile.RequestTimeoutSeconds, profile.MaxOutputTokens,
 	).Scan(&profile.ID, &profile.CreatedAt, &profile.UpdatedAt)
 }
 
 func (r *AgentRepository) UpdateProvider(ctx context.Context, profile *domain.ProviderProfile, replaceSecret bool) error {
+	if profile.StreamMode == "" {
+		profile.StreamMode = "auto"
+	}
 	var row *sql.Row
 	if replaceSecret {
 		row = r.db.QueryRowContext(ctx, `UPDATE ai_provider_profiles SET
 			name=$2, provider_type=$3, base_url=$4, model=$5, api_key_ciphertext=$6,
 			api_key_nonce=$7, api_key_last4=$8, key_version=$9, enabled=$10,
-			request_timeout_seconds=$11, max_output_tokens=$12, updated_at=NOW()
+			protocol_mode=$11, stream_mode=$12, request_timeout_seconds=$13, max_output_tokens=$14, updated_at=NOW()
 			WHERE id=$1 AND deleted_at IS NULL RETURNING created_at, updated_at`,
 			profile.ID, profile.Name, profile.ProviderType, profile.BaseURL, profile.Model,
 			profile.APIKeyCiphertext, profile.APIKeyNonce, profile.APIKeyLast4, profile.KeyVersion,
-			profile.Enabled, profile.RequestTimeoutSeconds, profile.MaxOutputTokens)
+			profile.Enabled, profile.ProtocolMode, profile.StreamMode, profile.RequestTimeoutSeconds, profile.MaxOutputTokens)
 	} else {
 		row = r.db.QueryRowContext(ctx, `UPDATE ai_provider_profiles SET
 			name=$2, provider_type=$3, base_url=$4, model=$5, enabled=$6,
-			request_timeout_seconds=$7, max_output_tokens=$8, updated_at=NOW()
+			protocol_mode=$7, stream_mode=$8, request_timeout_seconds=$9, max_output_tokens=$10, updated_at=NOW()
 			WHERE id=$1 AND deleted_at IS NULL
 			RETURNING api_key_ciphertext, api_key_nonce, api_key_last4, key_version, created_at, updated_at`,
 			profile.ID, profile.Name, profile.ProviderType, profile.BaseURL, profile.Model,
-			profile.Enabled, profile.RequestTimeoutSeconds, profile.MaxOutputTokens)
+			profile.Enabled, profile.ProtocolMode, profile.StreamMode, profile.RequestTimeoutSeconds, profile.MaxOutputTokens)
 		return row.Scan(
 			&profile.APIKeyCiphertext, &profile.APIKeyNonce, &profile.APIKeyLast4,
 			&profile.KeyVersion, &profile.CreatedAt, &profile.UpdatedAt,

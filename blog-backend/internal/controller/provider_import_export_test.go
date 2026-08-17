@@ -53,7 +53,7 @@ func TestResolveUniqueProviderName(t *testing.T) {
 func TestParseProviderImportPayload(t *testing.T) {
 	// Array format
 	rawArray := []byte(`[
-		{"name": "OpenAI 1", "provider_type": "openai", "base_url": "https://api.openai.com", "model": "gpt-4o"},
+		{"name": "OpenAI 1", "provider_type": "openai", "base_url": "https://api.openai.com", "model": "gpt-4o", "protocol_mode": "chat_completions"},
 		{"name": "Claude 1", "provider_type": "anthropic", "base_url": "https://api.anthropic.com", "model": "claude-3-5-sonnet"}
 	]`)
 	items, err := parseProviderImportPayload(rawArray)
@@ -63,21 +63,21 @@ func TestParseProviderImportPayload(t *testing.T) {
 	if len(items) != 2 {
 		t.Fatalf("expected 2 items, got %d", len(items))
 	}
-	if items[0].Name != "OpenAI 1" || items[0].Model != "gpt-4o" {
+	if items[0].Name != "OpenAI 1" || items[0].Model != "gpt-4o" || items[0].ProtocolMode != "chat_completions" {
 		t.Fatalf("unexpected item 0: %+v", items[0])
 	}
 
 	// Wrapper with "providers"
 	rawWrapper := []byte(`{
 		"providers": [
-			{"name": "Gemini 1", "provider_type": "gemini", "base_url": "https://generativelanguage.googleapis.com", "model": "gemini-1.5-pro"}
+			{"name": "Gemini 1", "provider_type": "gemini", "base_url": "https://generativelanguage.googleapis.com", "model": "gemini-1.5-pro", "protocol_mode": "generate_content"}
 		]
 	}`)
 	items, err = parseProviderImportPayload(rawWrapper)
 	if err != nil {
 		t.Fatalf("failed to parse wrapper: %v", err)
 	}
-	if len(items) != 1 || items[0].Name != "Gemini 1" {
+	if len(items) != 1 || items[0].Name != "Gemini 1" || items[0].ProtocolMode != "generate_content" {
 		t.Fatalf("unexpected items: %+v", items)
 	}
 
@@ -122,10 +122,12 @@ func TestProviderExportItemStructure(t *testing.T) {
 		Enabled:               true,
 		IsDefaultWriting:      true,
 		IsDefaultImage:        false,
+		ProtocolMode:          "chat_completions",
+		StreamMode:            "always",
 		RequestTimeoutSeconds: 60,
 		MaxOutputTokens:       2000,
 	}
-	if item.Name != "Test" || item.ProviderType != domain.ProviderOpenAI {
+	if item.Name != "Test" || item.ProviderType != domain.ProviderOpenAI || item.ProtocolMode != "chat_completions" || item.StreamMode != "always" {
 		t.Fatalf("unexpected export item: %+v", item)
 	}
 }

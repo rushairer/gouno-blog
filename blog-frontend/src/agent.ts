@@ -16,6 +16,8 @@ export interface ProviderProfile {
   enabled: boolean;
   is_default_writing: boolean;
   is_default_image: boolean;
+  protocol_mode?: string;
+  stream_mode?: string;
   request_timeout_seconds: number;
   max_output_tokens: number;
   created_at: string;
@@ -421,6 +423,8 @@ export const emptyProvider: Omit<ProviderProfile, 'id' | 'created_at' | 'updated
   enabled: true,
   is_default_writing: false,
   is_default_image: false,
+  protocol_mode: 'chat_completions',
+  stream_mode: 'auto',
   request_timeout_seconds: 60,
   max_output_tokens: 2000,
 };
