@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { GitBranch, Mail, Rss } from 'lucide-react';
+import { GitBranch, Mail, Rss, ShieldAlert } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { MarkdownRenderer } from '../components/MarkdownRenderer';
 import { authorInitials, DEFAULT_SITE_SETTINGS } from '../config/site-defaults';
@@ -98,10 +98,31 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
     );
   }
 
+  const draftBanner = page.status === 'draft' ? (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '10px 16px',
+        marginBottom: '24px',
+        borderRadius: 'var(--radius-control)',
+        background: 'var(--brand-soft)',
+        color: 'var(--brand)',
+        fontSize: '13px',
+        fontWeight: 500,
+      }}
+    >
+      <ShieldAlert size={16} />
+      <span><strong>管理员预览模式</strong> · 该单页当前为草稿状态，仅对管理员可见。</span>
+    </div>
+  ) : null;
+
   // 1. About Template
   if (page.template === 'about') {
     return (
       <div className="public-container about-page">
+        {draftBanner}
         <header>
           <div className="about-mark">{authorInitials(site.author_name)}</div>
           <div>
@@ -139,14 +160,32 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
   if (page.template === 'blank') {
     return (
       <div className="public-container custom-page custom-page--blank">
+        {draftBanner}
         <MarkdownRenderer content={page.content} />
       </div>
     );
   }
 
-  // 3. Links Template or Default Standard Template
+  // 3. Links Template
+  if (page.template === 'links') {
+    return (
+      <div className="public-container custom-page links-page">
+        {draftBanner}
+        <header className="article-header" style={{ marginBottom: '28px' }}>
+          <h1 className="article-title">{page.title}</h1>
+          {page.summary ? <p className="lead">{page.summary}</p> : null}
+        </header>
+        <div className="article-content">
+          <MarkdownRenderer content={page.content} />
+        </div>
+      </div>
+    );
+  }
+
+  // 4. Default Standard Template
   return (
     <div className="public-container custom-page">
+      {draftBanner}
       <div className="article-layout">
         <article className="article-main">
           <header className="article-header">
