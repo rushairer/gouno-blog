@@ -31,6 +31,7 @@ var catalogDescriptionsZH = map[string]string{
 	"media.create_image_task":    "为已授权文章创建站内图片生成任务；不会修改或发布文章。",
 	"content.propose_candidates": "提交标题、摘要或封面 Alt 文案候选，供人工选择。", "content.list_tag_bloat": "识别低使用率或大小写重复的标签。", "operations.propose_suggestion": "提交带证据的站内运营建议审批提案。",
 	"media.get_asset": "读取一个媒体资源的元数据，不返回文件内容。", "operations.get_suggestion": "读取一条运营建议及其证据。", "content.list_categories": "列出分类与文章数量。", "comments.get_comment": "读取一条评论并移除私有身份字段。",
+	"content.list_pages": "列出单页列表，包含草稿和已发布单页。", "content.get_page": "按数字 ID 读取一个单页的详细信息。", "content.audit_page": "对草稿或已发布单页执行确定性的内容质量检查。", "content.check_page_links": "检查一个单页中公开 HTTP(S) 链接的可用性。", "content.propose_page_draft": "提交一个新单页草稿的审批提案。", "content.propose_page_update": "提交对现有单页的修改审批提案。",
 }
 
 type Proposal struct {

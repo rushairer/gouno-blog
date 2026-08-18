@@ -17,17 +17,18 @@ type BlogTools struct {
 	posts      *service.PostService
 	community  *service.CommunityService
 	growth     *service.GrowthService
+	pages      *service.PageService
 	linkClient linkHTTPClient
 	knowledge  *knowledge.Service
 }
 
-func NewBlogRegistry(posts *service.PostService, community *service.CommunityService, growth *service.GrowthService, knowledgeServices ...*knowledge.Service) *Registry {
+func NewBlogRegistry(posts *service.PostService, community *service.CommunityService, growth *service.GrowthService, pages *service.PageService, knowledgeServices ...*knowledge.Service) *Registry {
 	var knowledgeService *knowledge.Service
 	if len(knowledgeServices) > 0 {
 		knowledgeService = knowledgeServices[0]
 	}
 	tools := &BlogTools{
-		posts: posts, community: community, growth: growth,
+		posts: posts, community: community, growth: growth, pages: pages,
 		linkClient: newSafeLinkClient(), knowledge: knowledgeService,
 	}
 	return New(
@@ -67,6 +68,36 @@ func NewBlogRegistry(posts *service.PostService, community *service.CommunitySer
 		Definition{
 			Name: "content.list_tags", Description: "List all blog tags.",
 			Parameters: schema(`{}`), Risk: domain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "tag", OutputKeys: []string{"name"}}, Execute: tools.listTags,
+		},
+		Definition{
+			Name: "content.list_pages", Description: "List custom pages, including drafts and navigation pages.",
+			Parameters: schema(`{"page":{"type":"integer","minimum":1},"page_size":{"type":"integer","minimum":1,"maximum":100}}`),
+			Risk:       domain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "page", OutputKeys: []string{"id"}}, Execute: tools.listPages,
+		},
+		Definition{
+			Name: "content.get_page", Description: "Read one custom page by numeric ID.",
+			Parameters: schema(`{"id":{"type":"integer","minimum":1}}`, "id"),
+			Risk:       domain.ToolRiskRead, Scope: &ScopeRule{ResourceType: "page", Argument: "id"}, Execute: tools.getPage,
+		},
+		Definition{
+			Name: "content.audit_page", Description: "Run deterministic content-quality checks for a draft or published custom page.",
+			Parameters: schema(`{"id":{"type":"integer","minimum":1}}`, "id"),
+			Risk:       domain.ToolRiskRead, Scope: &ScopeRule{ResourceType: "page", Argument: "id"}, Execute: tools.auditPage,
+		},
+		Definition{
+			Name: "content.check_page_links", Description: "Check public HTTP(S) links found in one custom page.",
+			Parameters: schema(`{"id":{"type":"integer","minimum":1}}`, "id"),
+			Risk:       domain.ToolRiskRead, Scope: &ScopeRule{ResourceType: "page", Argument: "id"}, Execute: tools.checkPageLinks,
+		},
+		Definition{
+			Name: "content.propose_page_draft", Description: "Create a new custom page draft proposal.",
+			Parameters: schema(`{"title":{"type":"string"},"slug":{"type":"string"},"summary":{"type":"string"},"content":{"type":"string"},"template":{"type":"string"},"show_in_nav":{"type":"boolean"},"allow_comments":{"type":"boolean"},"sort_order":{"type":"integer"},"seo_title":{"type":"string"},"seo_description":{"type":"string"}}`, "title", "slug"),
+			Risk:       domain.ToolRiskPropose, Propose: tools.proposePageDraft,
+		},
+		Definition{
+			Name: "content.propose_page_update", Description: "Propose changes to an existing custom page.",
+			Parameters: schema(`{"id":{"type":"integer","minimum":1},"title":{"type":"string"},"slug":{"type":"string"},"summary":{"type":"string"},"content":{"type":"string"},"template":{"type":"string"},"status":{"type":"string","enum":["draft","published"]},"show_in_nav":{"type":"boolean"},"allow_comments":{"type":"boolean"},"sort_order":{"type":"integer"},"seo_title":{"type":"string"},"seo_description":{"type":"string"}}`, "id"),
+			Risk:       domain.ToolRiskPropose, Scope: &ScopeRule{ResourceType: "page", Argument: "id"}, Propose: tools.proposePageUpdate,
 		},
 		Definition{
 			Name: "content.check_links", Description: "Check public HTTP(S) links found in one post.",
@@ -435,3 +466,133 @@ func (t *BlogTools) proposeTags(ctx context.Context, raw json.RawMessage) (*Prop
 		Payload: payload, BeforeSnapshot: before,
 	}, nil
 }
+
+func (t *BlogTools) listPages(ctx context.Context, raw json.RawMessage) (any, error) {
+	if t.pages == nil {
+		return map[string]any{"list": []any{}, "total": 0}, nil
+	}
+	var args struct {
+		Page     int `json:"page"`
+		PageSize int `json:"page_size"`
+	}
+	if err := decodeArguments(raw, &args); err != nil {
+		return nil, err
+	}
+	if args.Page <= 0 {
+		args.Page = 1
+	}
+	if args.PageSize <= 0 {
+		args.PageSize = 50
+	}
+	if args.PageSize > 100 {
+		return nil, ErrInvalidArgument
+	}
+	pages, total, err := t.pages.ListAdminPages(ctx, domain.AdminPageFilter{}, args.Page, args.PageSize)
+	return map[string]any{"list": compactPages(pages), "total": total}, err
+}
+
+func compactPages(pages []*domain.Page) []map[string]any {
+	result := make([]map[string]any, 0, len(pages))
+	for _, page := range pages {
+		result = append(result, map[string]any{
+			"id": page.ID, "title": page.Title, "slug": page.Slug, "summary": page.Summary,
+			"template": page.Template, "status": page.Status, "show_in_nav": page.ShowInNav,
+			"allow_comments": page.AllowComments, "sort_order": page.SortOrder,
+			"seo_title": page.SEOTitle, "seo_description": page.SEODescription,
+			"created_at": page.CreatedAt, "updated_at": page.UpdatedAt,
+		})
+	}
+	return result
+}
+
+func (t *BlogTools) getPage(ctx context.Context, raw json.RawMessage) (any, error) {
+	if t.pages == nil {
+		return nil, ErrInvalidArgument
+	}
+	var args struct {
+		ID int64 `json:"id"`
+	}
+	if err := decodeArguments(raw, &args); err != nil || args.ID <= 0 {
+		return nil, ErrInvalidArgument
+	}
+	page, err := t.pages.GetPage(ctx, args.ID)
+	if err != nil {
+		return nil, err
+	}
+	if len([]rune(page.Content)) > 50000 {
+		page.Content = string([]rune(page.Content)[:50000])
+	}
+	return page, nil
+}
+
+func (t *BlogTools) proposePageDraft(_ context.Context, raw json.RawMessage) (*Proposal, error) {
+	var args struct {
+		Title          string `json:"title"`
+		Slug           string `json:"slug"`
+		Summary        string `json:"summary"`
+		Content        string `json:"content"`
+		Template       string `json:"template"`
+		ShowInNav      bool   `json:"show_in_nav"`
+		AllowComments  bool   `json:"allow_comments"`
+		SortOrder      int    `json:"sort_order"`
+		SEOTitle       string `json:"seo_title"`
+		SEODescription string `json:"seo_description"`
+	}
+	if err := decodeArguments(raw, &args); err != nil ||
+		strings.TrimSpace(args.Title) == "" || strings.TrimSpace(args.Slug) == "" {
+		return nil, ErrInvalidArgument
+	}
+	payload, _ := json.Marshal(args)
+	return &Proposal{ActionType: "create_page_draft", TargetType: "page", Payload: payload}, nil
+}
+
+func (t *BlogTools) proposePageUpdate(ctx context.Context, raw json.RawMessage) (*Proposal, error) {
+	if t.pages == nil {
+		return nil, ErrInvalidArgument
+	}
+	var args struct {
+		ID             int64   `json:"id"`
+		Title          *string `json:"title"`
+		Slug           *string `json:"slug"`
+		Summary        *string `json:"summary"`
+		Content        *string `json:"content"`
+		Template       *string `json:"template"`
+		Status         *string `json:"status"`
+		ShowInNav      *bool   `json:"show_in_nav"`
+		AllowComments  *bool   `json:"allow_comments"`
+		SortOrder      *int    `json:"sort_order"`
+		SEOTitle       *string `json:"seo_title"`
+		SEODescription *string `json:"seo_description"`
+	}
+	if err := decodeArguments(raw, &args); err != nil || args.ID <= 0 {
+		return nil, ErrInvalidArgument
+	}
+	if args.Title == nil && args.Slug == nil && args.Summary == nil && args.Content == nil &&
+		args.Template == nil && args.Status == nil && args.ShowInNav == nil && args.AllowComments == nil &&
+		args.SortOrder == nil && args.SEOTitle == nil && args.SEODescription == nil {
+		return nil, ErrInvalidArgument
+	}
+	page, err := t.pages.GetPage(ctx, args.ID)
+	if err != nil {
+		return nil, err
+	}
+	clean, _ := json.Marshal(struct {
+		Title          *string `json:"title,omitempty"`
+		Slug           *string `json:"slug,omitempty"`
+		Summary        *string `json:"summary,omitempty"`
+		Content        *string `json:"content,omitempty"`
+		Template       *string `json:"template,omitempty"`
+		Status         *string `json:"status,omitempty"`
+		ShowInNav      *bool   `json:"show_in_nav,omitempty"`
+		AllowComments  *bool   `json:"allow_comments,omitempty"`
+		SortOrder      *int    `json:"sort_order,omitempty"`
+		SEOTitle       *string `json:"seo_title,omitempty"`
+		SEODescription *string `json:"seo_description,omitempty"`
+	}{args.Title, args.Slug, args.Summary, args.Content, args.Template, args.Status, args.ShowInNav, args.AllowComments, args.SortOrder, args.SEOTitle, args.SEODescription})
+	before, _ := json.Marshal(page)
+	return &Proposal{
+		ActionType: "update_page", TargetType: "page", TargetID: &args.ID,
+		Payload: clean, BeforeSnapshot: before,
+	}, nil
+}
+

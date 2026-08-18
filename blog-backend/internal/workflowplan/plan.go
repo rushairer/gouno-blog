@@ -80,6 +80,7 @@ var templates = []Template{
 	{Key: "content_distribution_faq", Name: "FAQ 草稿", Domain: "distribution", Action: "faq", ResourceTypes: []string{"post"}, OutputType: "faq_draft", Tool: "content.propose_distribution_draft", RequiresApproval: true, InputFormat: "faq"},
 	{Key: "comment_reply", Name: "评论回复草稿", Domain: "comments", Action: "reply", ResourceTypes: []string{"comment"}, OutputType: "comment_reply", Tool: "comments.propose_reply", RequiresApproval: true},
 	{Key: "post_seo_review", Name: "文章 SEO 审校", Domain: "content", Action: "seo_review", ResourceTypes: []string{"post"}, OutputType: "review", Tool: "content.audit_post"},
+	{Key: "page_review", Name: "单页内容与SEO审校", Domain: "content", Action: "page_review", ResourceTypes: []string{"page"}, OutputType: "review", Tool: "content.audit_page"},
 	{Key: "media_alt_review", Name: "媒体无障碍检查", Domain: "media", Action: "alt_review", ResourceTypes: []string{"media_asset"}, OutputType: "review", Tool: "media.get_asset"},
 }
 
@@ -100,11 +101,13 @@ var persistedTemplates = []Template{
 	{Key: "selected_article_image_generation", Name: "生成封面/文配图（手选）", Tool: "media.create_image_task", RequiresImage: true, InputFormat: "image_brief"},
 	{Key: "selected_comment_replies", Name: "评论回复草稿（手选）", Tool: "comments.propose_reply", RequiresApproval: true},
 	{Key: "selected_media_review", Name: "媒体无障碍检查", Tool: "media.get_asset"},
+	{Key: "selected_page_review", Name: "单页审校与优化（手选）", Tool: "content.audit_page", RequiresApproval: true},
 	{Key: "selected_operations_deep_dive", Name: "运营建议深挖", Tool: "operations.get_suggestion", RequiresApproval: true},
 	{Key: "selected_taxonomy_review", Name: "分类与标签整理", Tool: "content.list_categories"},
 	{Key: "selected_mixed_review", Name: "混合内容复盘", Tool: "operations.get_suggestion", RequiresApproval: true},
 	{Key: "scheduled_stale_resource_review", Name: "陈旧文章规则审查", Tool: "content.list_stale_posts", RequiresApproval: true},
 	{Key: "scheduled_post_publish_review", Name: "发布后内容复盘", Tool: "content.audit_post", RequiresApproval: true},
+	{Key: "scheduled_page_review", Name: "定期单页健康审查", Tool: "content.audit_page", RequiresApproval: true},
 	{Key: "scheduled_reported_comment_review", Name: "被举报评论复盘", Tool: "comments.propose_reply", RequiresApproval: true},
 	{Key: "scheduled_missing_alt_review", Name: "缺失 Alt 媒体检查", Tool: "media.get_asset"},
 }
@@ -162,6 +165,8 @@ func ParseIntent(prompt string) WorkflowIntent {
 		intent.Domain, intent.Action, intent.OutputType = "distribution", "faq", "faq_draft"
 	case strings.Contains(value, "社媒") || strings.Contains(value, "社交") || strings.Contains(value, "social"):
 		intent.Domain, intent.Action, intent.OutputType = "distribution", "social", "social_draft"
+	case strings.Contains(value, "单页") || strings.Contains(value, "独立页") || strings.Contains(value, "custom page") || strings.Contains(value, "page"):
+		intent.ResourceTypes, intent.InputFields, intent.Domain, intent.Action, intent.OutputType = []string{"page"}, []string{"page_ids"}, "content", "page_review", "review"
 	case strings.Contains(value, "seo") || strings.Contains(value, "审校") || strings.Contains(value, "检查"):
 		intent.Domain, intent.Action, intent.OutputType = "content", "seo_review", "review"
 	default:
@@ -255,6 +260,9 @@ func Compile(intent WorkflowIntent, template *Template, agent *domain.Agent) dom
 	if intent.Action == "reply" {
 		properties = map[string]any{"comment_ids": map[string]any{"type": "array", "items": map[string]any{"type": "integer"}, "minItems": 1, "maxItems": 20, "x-gouno-resource": "comment", "x-gouno-widget": "entity-multi-select"}}
 		required = []string{"comment_ids"}
+	} else if contains(intent.ResourceTypes, "page") {
+		properties = map[string]any{"page_ids": map[string]any{"type": "array", "items": map[string]any{"type": "integer"}, "minItems": 1, "maxItems": 20, "x-gouno-resource": "page", "x-gouno-widget": "entity-multi-select"}}
+		required = []string{"page_ids"}
 	}
 	if template != nil && template.InputFormat != "" {
 		properties["format"] = map[string]any{"type": "string", "enum": []string{template.InputFormat}, "default": template.InputFormat}

@@ -27,13 +27,22 @@ var (
 type ApprovalService struct {
 	repo       *repository.AgentRepository
 	posts      *service.PostService
+	pages      *service.PageService
 	management *ManagementService
 	growth     *service.GrowthService
 	media      media.Store
 }
 
-func NewApprovalService(repo *repository.AgentRepository, posts *service.PostService, management *ManagementService, growth *service.GrowthService, store media.Store) *ApprovalService {
-	return &ApprovalService{repo: repo, posts: posts, management: management, growth: growth, media: store}
+func NewApprovalService(repo *repository.AgentRepository, posts *service.PostService, management *ManagementService, growth *service.GrowthService, store media.Store, pages ...*service.PageService) *ApprovalService {
+	var pageSvc *service.PageService
+	if len(pages) > 0 {
+		pageSvc = pages[0]
+	}
+	return &ApprovalService{repo: repo, posts: posts, pages: pageSvc, management: management, growth: growth, media: store}
+}
+
+func (s *ApprovalService) SetPageService(pages *service.PageService) {
+	s.pages = pages
 }
 
 func (s *ApprovalService) List(ctx context.Context, status string, page, pageSize int) ([]*domain.AgentApproval, int, error) {
@@ -560,9 +569,23 @@ func isImageBriefApproval(approval *domain.AgentApproval) bool {
 }
 
 func (s *ApprovalService) validateConflict(ctx context.Context, approval *domain.AgentApproval) error {
-	// Only approvals that write an existing post need optimistic-concurrency
+	// Only approvals that write an existing post or page need optimistic-concurrency
 	// protection. Preparatory approvals (candidate sets and image briefs) do
 	// not mutate the post, and must remain usable after a separate edit.
+	if approval.ActionType == "update_page" {
+		if s.pages == nil || approval.TargetType != "page" || approval.TargetID == nil || len(approval.BeforeSnapshot) == 0 {
+			return nil
+		}
+		var before domain.Page
+		if err := json.Unmarshal(approval.BeforeSnapshot, &before); err != nil {
+			return ErrApprovalConflict
+		}
+		current, err := s.pages.GetPage(ctx, *approval.TargetID)
+		if err != nil || !current.UpdatedAt.Equal(before.UpdatedAt) {
+			return ErrApprovalConflict
+		}
+		return nil
+	}
 	if !approvalMutatesExistingPost(approval.ActionType) {
 		return nil
 	}
@@ -639,6 +662,96 @@ func (s *ApprovalService) execute(ctx context.Context, approval *domain.AgentApp
 			current.CoverAlt = *payload.CoverAlt
 		}
 		return s.posts.UpdatePost(ctx, current)
+	case "create_page_draft":
+		if s.pages == nil {
+			return errors.New("page service is unavailable")
+		}
+		var payload struct {
+			Title          string `json:"title"`
+			Slug           string `json:"slug"`
+			Summary        string `json:"summary"`
+			Content        string `json:"content"`
+			Template       string `json:"template"`
+			ShowInNav      bool   `json:"show_in_nav"`
+			AllowComments  bool   `json:"allow_comments"`
+			SortOrder      int    `json:"sort_order"`
+			SEOTitle       string `json:"seo_title"`
+			SEODescription string `json:"seo_description"`
+		}
+		if err := json.Unmarshal(approval.ProposedPayload, &payload); err != nil {
+			return err
+		}
+		template := payload.Template
+		if template == "" {
+			template = "default"
+		}
+		return s.pages.CreatePage(ctx, &domain.Page{
+			Title: payload.Title, Slug: payload.Slug, Summary: payload.Summary,
+			Content: payload.Content, Template: template, Status: domain.PageStatusDraft,
+			ShowInNav: payload.ShowInNav, AllowComments: payload.AllowComments,
+			SortOrder: payload.SortOrder, SEOTitle: payload.SEOTitle, SEODescription: payload.SEODescription,
+		})
+	case "update_page":
+		if s.pages == nil {
+			return errors.New("page service is unavailable")
+		}
+		if approval.TargetID == nil {
+			return errors.New("page target is required")
+		}
+		current, err := s.pages.GetPage(ctx, *approval.TargetID)
+		if err != nil {
+			return err
+		}
+		var payload struct {
+			Title          *string `json:"title"`
+			Slug           *string `json:"slug"`
+			Summary        *string `json:"summary"`
+			Content        *string `json:"content"`
+			Template       *string `json:"template"`
+			Status         *string `json:"status"`
+			ShowInNav      *bool   `json:"show_in_nav"`
+			AllowComments  *bool   `json:"allow_comments"`
+			SortOrder      *int    `json:"sort_order"`
+			SEOTitle       *string `json:"seo_title"`
+			SEODescription *string `json:"seo_description"`
+		}
+		if err := json.Unmarshal(approval.ProposedPayload, &payload); err != nil {
+			return err
+		}
+		if payload.Title != nil {
+			current.Title = *payload.Title
+		}
+		if payload.Slug != nil {
+			current.Slug = *payload.Slug
+		}
+		if payload.Summary != nil {
+			current.Summary = *payload.Summary
+		}
+		if payload.Content != nil {
+			current.Content = *payload.Content
+		}
+		if payload.Template != nil {
+			current.Template = *payload.Template
+		}
+		if payload.Status != nil {
+			current.Status = domain.PageStatus(*payload.Status)
+		}
+		if payload.ShowInNav != nil {
+			current.ShowInNav = *payload.ShowInNav
+		}
+		if payload.AllowComments != nil {
+			current.AllowComments = *payload.AllowComments
+		}
+		if payload.SortOrder != nil {
+			current.SortOrder = *payload.SortOrder
+		}
+		if payload.SEOTitle != nil {
+			current.SEOTitle = *payload.SEOTitle
+		}
+		if payload.SEODescription != nil {
+			current.SEODescription = *payload.SEODescription
+		}
+		return s.pages.UpdatePage(ctx, current)
 	case "reply_comment":
 		var payload struct {
 			CommentID int64  `json:"comment_id"`

@@ -66,7 +66,7 @@ export interface WorkflowStep {
   continue_on_error?: boolean;
   steps?: WorkflowStep[];
   output_pointer?: string;
-  resource_type?: 'post' | 'comment' | 'media_asset' | 'operational_suggestion' | 'category' | 'tag';
+  resource_type?: 'post' | 'comment' | 'media_asset' | 'operational_suggestion' | 'category' | 'tag' | 'page';
   filter?: Record<string, unknown>;
   interaction_type?: 'approval' | 'choice' | 'input' | 'preview_confirm';
   interaction_schema?: Record<string, unknown>;

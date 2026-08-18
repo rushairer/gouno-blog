@@ -75,7 +75,7 @@ func TestMergeBindingArgumentsPinsConfiguredValues(t *testing.T) {
 }
 
 func TestDailyNewsReadToolsValidateTheirBoundary(t *testing.T) {
-	registry := NewBlogRegistry(nil, nil, nil)
+	registry := NewBlogRegistry(nil, nil, nil, nil)
 	for name, arguments := range map[string]json.RawMessage{
 		"rss.fetch":       json.RawMessage(`{"feeds":[{"name":"untrusted","url":"http://example.test/feed"}]}`),
 		"data.json_parse": json.RawMessage(`{"text":"not JSON"}`),
@@ -126,7 +126,7 @@ func TestCatalogRecoversFromInvalidStaticSchema(t *testing.T) {
 }
 
 func TestBlogProposalToolsValidateArgumentsBeforeApproval(t *testing.T) {
-	registry := NewBlogRegistry(nil, nil, nil)
+	registry := NewBlogRegistry(nil, nil, nil, nil)
 	tests := []struct {
 		name string
 		args string
@@ -146,7 +146,7 @@ func TestBlogProposalToolsValidateArgumentsBeforeApproval(t *testing.T) {
 }
 
 func TestReplyProposalCapturesTargetAndNormalizedPayload(t *testing.T) {
-	registry := NewBlogRegistry(nil, nil, nil)
+	registry := NewBlogRegistry(nil, nil, nil, nil)
 	_, _, proposal, err := registry.Invoke(
 		context.Background(), []string{"comments.propose_reply"},
 		"comments.propose_reply", json.RawMessage(`{"comment_id":42,"content":"Thanks"}`),
@@ -157,7 +157,7 @@ func TestReplyProposalCapturesTargetAndNormalizedPayload(t *testing.T) {
 }
 
 func TestDistributionDraftRejectsUnsafeOrMalformedInput(t *testing.T) {
-	registry := NewBlogRegistry(nil, nil, nil)
+	registry := NewBlogRegistry(nil, nil, nil, nil)
 	for _, arguments := range []string{
 		`{"post_id":1,"format":"publish","body":"Send this"}`,
 		`{"post_id":1,"format":"social","body":"","unexpected":true}`,

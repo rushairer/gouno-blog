@@ -32,7 +32,7 @@ func TestRegisterOperationalToolsAreReadOnly(t *testing.T) {
 }
 
 func TestProductionToolCatalogIsJSONSerializable(t *testing.T) {
-	registry := tool.NewBlogRegistry(nil, nil, nil)
+	registry := tool.NewBlogRegistry(nil, nil, nil, nil)
 	if err := NewService(nil, registry, nil).RegisterTools(); err != nil {
 		t.Fatal(err)
 	}

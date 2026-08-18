@@ -102,9 +102,9 @@ func TestPersistedStarterTemplatesAreRegistered(t *testing.T) {
 		"daily_news", "weekly_operations", "stale_content_refresh", "low_engagement",
 		"selected_pre_publish_review", "selected_internal_linking", "selected_distribution",
 		"selected_article_image_generation",
-		"selected_comment_replies", "selected_media_review", "selected_operations_deep_dive",
+		"selected_comment_replies", "selected_media_review", "selected_page_review", "selected_operations_deep_dive",
 		"selected_taxonomy_review", "selected_mixed_review", "scheduled_stale_resource_review",
-		"scheduled_post_publish_review", "scheduled_reported_comment_review", "scheduled_missing_alt_review",
+		"scheduled_post_publish_review", "scheduled_page_review", "scheduled_reported_comment_review", "scheduled_missing_alt_review",
 	}
 	if got := PersistedTemplateKeys(); len(got) != len(want) {
 		t.Fatalf("persisted template count = %d, want %d: %v", len(got), len(want), got)
@@ -118,3 +118,19 @@ func TestPersistedStarterTemplatesAreRegistered(t *testing.T) {
 		t.Fatal("unknown template must not be accepted")
 	}
 }
+
+func TestParseIntentAndCompileForPage(t *testing.T) {
+	intent := ParseIntent("帮我审校关于我们单页并优化 SEO")
+	if intent.Status != "ready" || intent.Action != "page_review" || len(intent.ResourceTypes) != 1 || intent.ResourceTypes[0] != "page" {
+		t.Fatalf("unexpected page intent: %#v", intent)
+	}
+	template, ok := TemplateByKey("page_review")
+	if !ok || template == nil {
+		t.Fatal("page_review template not found")
+	}
+	draft := Compile(intent, template, nil)
+	if !strings.Contains(string(draft.InputSchema), "page_ids") || !strings.Contains(string(draft.InputSchema), `"x-gouno-resource":"page"`) {
+		t.Fatalf("invalid page compiled schema: %s", draft.InputSchema)
+	}
+}
+

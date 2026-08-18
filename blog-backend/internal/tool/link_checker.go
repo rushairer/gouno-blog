@@ -52,6 +52,33 @@ func (t *BlogTools) checkLinks(ctx context.Context, raw json.RawMessage) (any, e
 	}, nil
 }
 
+func (t *BlogTools) checkPageLinks(ctx context.Context, raw json.RawMessage) (any, error) {
+	if t.pages == nil {
+		return nil, ErrInvalidArgument
+	}
+	var args struct {
+		ID int64 `json:"id"`
+	}
+	if err := decodeArguments(raw, &args); err != nil || args.ID <= 0 {
+		return nil, ErrInvalidArgument
+	}
+	page, err := t.pages.GetPage(ctx, args.ID)
+	if err != nil {
+		return nil, err
+	}
+	links := extractPublicLinks(page.Content, maxCheckedLinks)
+	results := make([]linkCheckResult, 0, len(links))
+	for _, target := range links {
+		result := checkPublicLink(ctx, t.linkClient, target)
+		results = append(results, result)
+	}
+	return map[string]any{
+		"page_id": args.ID, "checked": len(results),
+		"truncated": len(extractPublicLinks(page.Content, maxCheckedLinks+1)) > maxCheckedLinks,
+		"results":   results,
+	}, nil
+}
+
 func checkPublicLink(ctx context.Context, client linkHTTPClient, target string) linkCheckResult {
 	result := linkCheckResult{URL: target}
 	request, requestErr := http.NewRequestWithContext(ctx, http.MethodHead, target, nil)
