@@ -10,6 +10,7 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   rss_url: '/feed.xml',
   default_seo_title: 'Gouno Blog',
   default_seo_description: '记录、思考与分享。',
+  footer_text: 'Built with care, code, and curiosity.',
 };
 
 export function authorInitials(name: string) {

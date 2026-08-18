@@ -76,6 +76,7 @@ export default function AdminSiteSettings() {
               <FormLayout onSubmit={save}>
                 <Field label="站点名称" required><Input required value={value.site_title} onChange={(event) => field('site_title', event.target.value)} /></Field>
                 <Field label="站点描述"><Textarea rows={3} value={value.site_description} onChange={(event) => field('site_description', event.target.value)} /></Field>
+                <Field label="页脚文本"><Input value={value.footer_text || ''} onChange={(event) => field('footer_text', event.target.value)} placeholder="Built with care, code, and curiosity." /></Field>
                 <Field label="作者名称"><Input value={value.author_name} onChange={(event) => field('author_name', event.target.value)} /></Field>
                 <Field label="作者简介"><Textarea rows={4} value={value.author_bio} onChange={(event) => field('author_bio', event.target.value)} /></Field>
                 <FormActions>

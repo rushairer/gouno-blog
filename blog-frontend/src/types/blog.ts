@@ -48,6 +48,7 @@ export interface SiteSettings {
   rss_url: string;
   default_seo_title: string;
   default_seo_description: string;
+  footer_text?: string;
 }
 
 export type PageTemplate = 'default' | 'about' | 'links' | 'blank' | 'timeline' | 'projects' | 'focus' | 'faq';
