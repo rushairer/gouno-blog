@@ -49,7 +49,17 @@ export default function ArticleIndex({ mode = 'articles' }: { mode?: 'articles' 
           <div className="filter-tags"><Link className={!tag ? 'active' : ''} to="/articles">全部</Link>{tags.slice(0, 18).map((item) => <Link className={item === tag ? 'active' : ''} key={item} to={`/tags/${encodeURIComponent(item)}`}>{item}</Link>)}</div>
         </aside>
         <section className="article-results" aria-live="polite">
-          {loading ? <LoadingState label="正在载入文章…" /> : error ? <p className="feedback feedback--error">{error}</p> : posts.length === 0 ? <div className="public-empty-actions"><EmptyState label="没有找到符合条件的文章。" /><div><Link to="/articles">浏览全部文章</Link><Link to="/archive">浏览归档</Link></div></div> : posts.map((post, index) => (
+          {loading ? <LoadingState label="正在载入文章…" /> : error ? <p className="feedback feedback--error">{error}</p> : posts.length === 0 ? (
+            <EmptyState
+              label="没有找到符合条件的文章。"
+              action={
+                <>
+                  <Link className="btn btn-secondary" to="/articles">浏览全部文章</Link>
+                  <Link className="btn btn-secondary" to="/archive">浏览归档</Link>
+                </>
+              }
+            />
+          ) : posts.map((post, index) => (
             <article className={`article-index-row ${post.cover_url ? 'article-index-row--has-cover' : ''}`} key={post.id}>
               <span>{String((page - 1) * 10 + index + 1).padStart(2, '0')}</span>
               <div>
