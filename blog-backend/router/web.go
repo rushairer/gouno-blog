@@ -141,10 +141,13 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 			})
 			me.GET("/bookmarks", communityCtrl.ListBookmarks)
 			me.PUT("/bookmarks/:postID", func(c *gin.Context) { communityCtrl.SetBookmark(c, true) })
-			me.DELETE("/bookmarks/:postID", func(c *gin.Context) { communityCtrl.SetBookmark(c, false) })
 			me.GET("/notifications", communityCtrl.ListNotifications)
 			me.PUT("/notifications/read-all", communityCtrl.ReadAllNotifications)
 			me.PUT("/notifications/:id/read", communityCtrl.ReadNotification)
+			me.DELETE("/notifications/:id", communityCtrl.DeleteNotification)
+			me.POST("/notifications/batch-delete", communityCtrl.BatchDeleteNotifications)
+			me.DELETE("/notifications", communityCtrl.ClearNotifications)
+			me.DELETE("/notifications/clear-all", communityCtrl.ClearNotifications)
 		}
 
 		// Protected Blog Routes (Admin Only)

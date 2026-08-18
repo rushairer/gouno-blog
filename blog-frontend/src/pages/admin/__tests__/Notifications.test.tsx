@@ -98,4 +98,36 @@ describe('Admin Notifications Page', () => {
       expect(apiFetch).toHaveBeenCalledWith('/api/me/notifications/1/read', { method: 'PUT' });
     });
   });
+
+  it('deletes a single notification via confirmation modal', async () => {
+    const user = userEvent.setup();
+    renderNotifications();
+
+    const deleteBtns = await screen.findAllByRole('button', { name: '删除' });
+    await user.click(deleteBtns[0]);
+
+    expect(await screen.findByText('删除通知')).toBeInTheDocument();
+    const confirmBtn = screen.getByRole('button', { name: '确认删除' });
+    await user.click(confirmBtn);
+
+    await waitFor(() => {
+      expect(apiFetch).toHaveBeenCalledWith('/api/me/notifications/1', { method: 'DELETE' });
+    });
+  });
+
+  it('clears all read notifications via header action', async () => {
+    const user = userEvent.setup();
+    renderNotifications();
+
+    const clearReadBtn = await screen.findByRole('button', { name: /清空已读/ });
+    await user.click(clearReadBtn);
+
+    expect(await screen.findByText('清空已读通知')).toBeInTheDocument();
+    const confirmBtn = screen.getByRole('button', { name: '确认清空' });
+    await user.click(confirmBtn);
+
+    await waitFor(() => {
+      expect(apiFetch).toHaveBeenCalledWith('/api/me/notifications?only_read=true', { method: 'DELETE' });
+    });
+  });
 });

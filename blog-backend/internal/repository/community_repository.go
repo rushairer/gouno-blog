@@ -328,3 +328,35 @@ func (r *CommunityRepository) ReadAllNotifications(ctx context.Context, subject 
 	_, err := r.db.ExecContext(ctx, `UPDATE notifications SET read_at = COALESCE(read_at, NOW()) WHERE recipient_subject = $1`, subject)
 	return err
 }
+
+func (r *CommunityRepository) DeleteNotification(ctx context.Context, subject string, id int64) error {
+	result, err := r.db.ExecContext(ctx, `DELETE FROM notifications WHERE id = $1 AND recipient_subject = $2`, id, subject)
+	if err != nil {
+		return err
+	}
+	if rows, _ := result.RowsAffected(); rows == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+func (r *CommunityRepository) DeleteNotifications(ctx context.Context, subject string, ids []int64) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	_, err := r.db.ExecContext(ctx, `DELETE FROM notifications WHERE recipient_subject = $1 AND id = ANY($2)`, subject, ids)
+	return err
+}
+
+func (r *CommunityRepository) ClearNotifications(ctx context.Context, subject string, onlyRead bool) (int64, error) {
+	query := `DELETE FROM notifications WHERE recipient_subject = $1`
+	if onlyRead {
+		query += ` AND read_at IS NOT NULL`
+	}
+	res, err := r.db.ExecContext(ctx, query, subject)
+	if err != nil {
+		return 0, err
+	}
+	rows, _ := res.RowsAffected()
+	return rows, nil
+}

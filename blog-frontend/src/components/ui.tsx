@@ -310,7 +310,7 @@ export function BulkActionBar({
   className = '',
 }: {
   selectionLabel: React.ReactNode;
-  onAIAssist: () => void;
+  onAIAssist?: () => void;
   onCancel: () => void;
   children?: React.ReactNode;
   aiLabel?: string;
@@ -320,7 +320,7 @@ export function BulkActionBar({
   return <div className={classes('bulk-action-bar', className)} role="toolbar" aria-label="批量操作">
     <strong className="bulk-action-bar__summary">{selectionLabel}</strong>
     <div className="bulk-action-bar__actions">
-      <Button className="bulk-action-bar__ai" variant="secondary" size="compact" type="button" onClick={onAIAssist}><Sparkles />{aiLabel}</Button>
+      {onAIAssist ? <Button className="bulk-action-bar__ai" variant="secondary" size="compact" type="button" onClick={onAIAssist}><Sparkles />{aiLabel}</Button> : null}
       {children}
       <Button variant="ghost" size="compact" type="button" onClick={onCancel}>{cancelLabel}</Button>
     </div>

@@ -282,6 +282,46 @@ func (ctrl *CommunityController) ReadAllNotifications(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }
 
+func (ctrl *CommunityController) DeleteNotification(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "invalid notification id"))
+		return
+	}
+	if err := ctrl.svc.DeleteNotification(c.Request.Context(), subject(c), id); err != nil {
+		writeCommunityError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
+}
+
+type batchDeleteNotificationsRequest struct {
+	IDs []int64 `json:"ids" binding:"required"`
+}
+
+func (ctrl *CommunityController) BatchDeleteNotifications(c *gin.Context) {
+	var req batchDeleteNotificationsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+	if err := ctrl.svc.DeleteNotifications(c.Request.Context(), subject(c), req.IDs); err != nil {
+		writeCommunityError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
+}
+
+func (ctrl *CommunityController) ClearNotifications(c *gin.Context) {
+	onlyRead, _ := strconv.ParseBool(c.DefaultQuery("only_read", "false"))
+	count, err := ctrl.svc.ClearNotifications(c.Request.Context(), subject(c), onlyRead)
+	if err != nil {
+		writeCommunityError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"deleted_count": count}))
+}
+
 func (ctrl *CommunityController) ListAdminComments(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "50"))

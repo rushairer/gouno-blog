@@ -32,6 +32,9 @@ type CommunityRepository interface {
 	ListNotifications(context.Context, string, int, int) ([]*domain.Notification, int, error)
 	ReadNotification(context.Context, string, int64) error
 	ReadAllNotifications(context.Context, string) error
+	DeleteNotification(context.Context, string, int64) error
+	DeleteNotifications(context.Context, string, []int64) error
+	ClearNotifications(context.Context, string, bool) (int64, error)
 }
 
 type CommunityService struct {
@@ -172,6 +175,27 @@ func (s *CommunityService) ReadNotification(ctx context.Context, subject string,
 
 func (s *CommunityService) ReadAllNotifications(ctx context.Context, subject string) error {
 	return s.repo.ReadAllNotifications(ctx, subject)
+}
+
+func (s *CommunityService) DeleteNotification(ctx context.Context, subject string, id int64) error {
+	if subject == "" {
+		return errors.New("authenticated subject is required")
+	}
+	return s.repo.DeleteNotification(ctx, subject, id)
+}
+
+func (s *CommunityService) DeleteNotifications(ctx context.Context, subject string, ids []int64) error {
+	if subject == "" {
+		return errors.New("authenticated subject is required")
+	}
+	return s.repo.DeleteNotifications(ctx, subject, ids)
+}
+
+func (s *CommunityService) ClearNotifications(ctx context.Context, subject string, onlyRead bool) (int64, error) {
+	if subject == "" {
+		return 0, errors.New("authenticated subject is required")
+	}
+	return s.repo.ClearNotifications(ctx, subject, onlyRead)
 }
 
 func parsePositiveID(value string) (int64, error) {

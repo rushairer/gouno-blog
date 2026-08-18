@@ -66,6 +66,9 @@ func (r *fakeCommunityRepo) ListNotifications(_ context.Context, subject string,
 }
 func (*fakeCommunityRepo) ReadNotification(context.Context, string, int64) error { return nil }
 func (*fakeCommunityRepo) ReadAllNotifications(context.Context, string) error    { return nil }
+func (*fakeCommunityRepo) DeleteNotification(context.Context, string, int64) error { return nil }
+func (*fakeCommunityRepo) DeleteNotifications(context.Context, string, []int64) error { return nil }
+func (*fakeCommunityRepo) ClearNotifications(context.Context, string, bool) (int64, error) { return 0, nil }
 
 type fakePostLookup struct {
 	post        *domain.Post
