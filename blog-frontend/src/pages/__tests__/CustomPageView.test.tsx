@@ -37,6 +37,7 @@ describe('CustomPageView', () => {
 
     await waitFor(() => {
       expect(screen.getByText('关于我')).toBeInTheDocument();
+      expect(screen.getByText('关于本站与作者的思考')).toBeInTheDocument();
       expect(screen.getByText('个人简介')).toBeInTheDocument();
       expect(document.querySelector('meta[name="description"]')?.getAttribute('content')).toBe('关于本站与作者的思考');
     });
