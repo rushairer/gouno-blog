@@ -183,7 +183,75 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
     );
   }
 
-  // 4. Default Standard Template
+  // 4. Timeline Template
+  if (page.template === 'timeline') {
+    return (
+      <div className="public-container custom-page timeline-page">
+        {draftBanner}
+        <header className="page-hero">
+          <p className="page-hero-eyebrow">TIMELINE / ROADMAP</p>
+          <h1 className="page-hero-title">{page.title}</h1>
+          {page.summary ? <p className="page-hero-summary">{page.summary}</p> : null}
+        </header>
+        <div className="timeline-content">
+          <MarkdownRenderer content={page.content} />
+        </div>
+      </div>
+    );
+  }
+
+  // 5. Projects Template
+  if (page.template === 'projects') {
+    return (
+      <div className="public-container custom-page projects-page">
+        {draftBanner}
+        <header className="page-hero">
+          <p className="page-hero-eyebrow">PORTFOLIO / SHOWCASE</p>
+          <h1 className="page-hero-title">{page.title}</h1>
+          {page.summary ? <p className="page-hero-summary">{page.summary}</p> : null}
+        </header>
+        <div className="projects-content">
+          <MarkdownRenderer content={page.content} />
+        </div>
+      </div>
+    );
+  }
+
+  // 6. Focus Template
+  if (page.template === 'focus') {
+    return (
+      <div className="public-container custom-page focus-page">
+        {draftBanner}
+        <header className="focus-header">
+          <div className="focus-indicator">ESSAY & FOCUS</div>
+          <h1 className="focus-title">{page.title}</h1>
+          {page.summary ? <p className="focus-summary">{page.summary}</p> : null}
+        </header>
+        <div className="focus-content">
+          <MarkdownRenderer content={page.content} />
+        </div>
+      </div>
+    );
+  }
+
+  // 7. FAQ Template
+  if (page.template === 'faq') {
+    return (
+      <div className="public-container custom-page faq-page">
+        {draftBanner}
+        <header className="page-hero">
+          <p className="page-hero-eyebrow">FAQ / GUIDES</p>
+          <h1 className="page-hero-title">{page.title}</h1>
+          {page.summary ? <p className="page-hero-summary">{page.summary}</p> : null}
+        </header>
+        <div className="faq-content">
+          <MarkdownRenderer content={page.content} />
+        </div>
+      </div>
+    );
+  }
+
+  // 8. Default Standard Template
   return (
     <div className="public-container custom-page">
       {draftBanner}

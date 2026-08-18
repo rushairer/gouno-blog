@@ -12,10 +12,14 @@ const (
 type PageTemplate string
 
 const (
-	PageTemplateDefault PageTemplate = "default"
-	PageTemplateAbout   PageTemplate = "about"
-	PageTemplateLinks   PageTemplate = "links"
-	PageTemplateBlank   PageTemplate = "blank"
+	PageTemplateDefault  PageTemplate = "default"
+	PageTemplateAbout    PageTemplate = "about"
+	PageTemplateLinks    PageTemplate = "links"
+	PageTemplateBlank    PageTemplate = "blank"
+	PageTemplateTimeline PageTemplate = "timeline"
+	PageTemplateProjects PageTemplate = "projects"
+	PageTemplateFocus    PageTemplate = "focus"
+	PageTemplateFAQ      PageTemplate = "faq"
 )
 
 type Page struct {
