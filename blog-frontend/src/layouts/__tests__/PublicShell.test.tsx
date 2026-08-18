@@ -35,4 +35,18 @@ describe('PublicShell theme', () => {
     expect(document.documentElement.dataset.theme).toBe('light');
     expect(localStorage.getItem('gouno-blog:theme')).toBe('light');
   });
+
+  it('renders configured or fallback footer meta text', async () => {
+    const currentYear = new Date().getFullYear();
+    const { container } = render(
+      <MemoryRouter>
+        <PublicShell><h1>Public content</h1></PublicShell>
+      </MemoryRouter>
+    );
+
+    const footer = container.querySelector('.footer-meta');
+    expect(footer).toBeInTheDocument();
+    // Initially renders default fallback or configured settings
+    expect(footer?.textContent).toContain(`© ${currentYear}`);
+  });
 });

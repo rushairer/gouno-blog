@@ -133,7 +133,20 @@ export default function PublicShell({ children }: { children: ReactNode }) {
             {site?.github_url ? <a href={site.github_url} target="_blank" rel="noreferrer">GitHub</a> : null}
           </div>
         </div>
-        <div className="footer-meta">© {new Date().getFullYear()} {site?.site_title || DEFAULT_SITE_SETTINGS.site_title}. Built with care, code, and curiosity.</div>
+        <div className="footer-meta">
+          {(() => {
+            const metaText = site?.footer_text !== undefined ? site.footer_text : DEFAULT_SITE_SETTINGS.footer_text;
+            const siteTitle = site?.site_title || DEFAULT_SITE_SETTINGS.site_title;
+            const currentYear = new Date().getFullYear();
+            if (!metaText) {
+              return `© ${currentYear} ${siteTitle}`;
+            }
+            if (metaText.startsWith('©')) {
+              return metaText.replace('{year}', String(currentYear));
+            }
+            return `© ${currentYear} ${siteTitle}. ${metaText}`;
+          })()}
+        </div>
       </footer>
     </div>
   );
