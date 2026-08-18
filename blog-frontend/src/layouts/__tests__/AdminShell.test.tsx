@@ -10,6 +10,7 @@ vi.mock('../../auth', () => ({
   getUserProfile: () => ({ name: 'Content Admin', email: 'admin@example.com' }),
   gossoAdminURL: '/identity-admin',
   logout: logoutMock,
+  apiFetch: () => Promise.resolve({ ok: true, json: () => Promise.resolve({ data: { list: [] } }) }),
 }));
 
 vi.mock('../../lib/blog-api', () => ({
@@ -28,6 +29,7 @@ describe('AdminShell navigation utilities', () => {
 
     expect(await screen.findByRole('link', { name: 'Configured Site' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '在新窗口查看前台站点' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: '查看通知中心' })).toHaveAttribute('href', '/admin/notifications');
     fireEvent.click(screen.getByRole('button', { name: '退出登录' }));
     expect(logoutMock).toHaveBeenCalledOnce();
   });

@@ -161,6 +161,27 @@ func (s *ApprovalService) CancelMediaGeneration(ctx context.Context, id int64) e
 	return nil
 }
 
+func (s *ApprovalService) RejectMediaCandidate(ctx context.Context, id int64) error {
+	if err := s.repo.RejectMediaCandidate(ctx, id, "rejected by administrator"); err != nil {
+		return err
+	}
+	s.appendCandidateEvent(ctx, id, "image_candidate_rejected", map[string]any{})
+	return nil
+}
+
+func (s *ApprovalService) RejectMediaCandidates(ctx context.Context, runID int64, ids []int64) error {
+	if len(ids) == 0 {
+		return errors.New("at least one candidate id is required")
+	}
+	if err := s.repo.RejectMediaCandidates(ctx, ids); err != nil {
+		return err
+	}
+	for _, id := range ids {
+		s.appendCandidateEvent(ctx, id, "image_candidate_rejected", map[string]any{"workflow_run_id": runID})
+	}
+	return nil
+}
+
 func (s *ApprovalService) ApplyMediaCandidate(ctx context.Context, id int64) (*domain.Post, error) {
 	candidate, err := s.repo.GetMediaCandidate(ctx, id)
 	if err != nil {

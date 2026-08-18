@@ -296,4 +296,49 @@ describe('WorkflowRunRecords', () => {
     expect(screen.getByText(/已等待/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '取消生成' })).toBeInTheDocument();
   });
+
+  it('lets an administrator cancel an active workflow run', async () => {
+    const user = userEvent.setup();
+    const onRefresh = vi.fn(async () => undefined);
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const waitingRun = { ...run, id: 99, status: 'waiting_for_user' };
+    render(<WorkflowRunRecords locale="zh" workflows={[workflow]} runs={[waitingRun]} formatDateTime={(value) => value} onRefresh={onRefresh} />);
+
+    await user.click(screen.getByRole('button', { name: /AI 每日资讯/ }));
+    await user.click(await screen.findByRole('button', { name: '放弃/终止运行' }));
+
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledWith('/api/admin/ai-workflow-runs/99/cancel', { method: 'POST' }));
+    expect(onRefresh).toHaveBeenCalled();
+    confirm.mockRestore();
+  });
+
+  it('supports rejecting an individual image candidate and batch rejecting candidates', async () => {
+    const user = userEvent.setup();
+    const onRefresh = vi.fn(async () => undefined);
+    const candidate = (id: number) => ({ id, post_id: 42, generation_status: 'generated', selected: false, placement: 'cover', media_asset_url: `/media/${id}.png`, headline: `Candidate ${id}`, alt_text: `Alt ${id}` });
+    vi.mocked(apiFetch).mockImplementation(async (url) => {
+      if (String(url).endsWith('/steps') || String(url).endsWith('/resources') || String(url).endsWith('/interactions') || String(url).endsWith('/events')) return Response.json({ data: [] });
+      if (String(url).endsWith('/media-candidates')) return Response.json({ data: [candidate(1), candidate(2)] });
+      return Response.json({ data: {} });
+    });
+    const waitingRun = { ...run, id: 100, status: 'waiting_for_user' };
+    render(<WorkflowRunRecords locale="zh" workflows={[workflow]} runs={[waitingRun]} formatDateTime={(value) => value} onRefresh={onRefresh} />);
+
+    await user.click(screen.getByRole('button', { name: /AI 每日资讯/ }));
+    await waitFor(() => expect(screen.getAllByText('Candidate 1')[0]).toBeInTheDocument());
+
+    const rejectButtons = screen.getAllByRole('button', { name: '放弃候选' });
+    await user.click(rejectButtons[0]);
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledWith('/api/admin/ai-image-tasks/1/reject', expect.objectContaining({ method: 'POST' })));
+
+    const boxes = screen.getAllByRole('checkbox');
+    await user.click(boxes[0]);
+    await user.click(boxes[1]);
+    await user.click(screen.getByRole('button', { name: '批量放弃' }));
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledWith('/api/admin/ai-workflow-runs/100/media-candidates/reject', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ candidate_ids: [1, 2] }),
+    })));
+  });
 });
+

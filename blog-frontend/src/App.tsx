@@ -15,7 +15,6 @@ import Callback from './pages/Callback';
 import Login from './pages/Login';
 import { canManageBlog, isLoggedIn, redirectToAuthorize } from './auth';
 const Settings = React.lazy(() => import('./pages/Settings'));
-const Notifications = React.lazy(() => import('./pages/Notifications'));
 const Bookmarks = React.lazy(() => import('./pages/Bookmarks'));
 const Dashboard = React.lazy(() => import('./pages/admin/Dashboard'));
 const AdminPosts = React.lazy(() => import('./pages/admin/Posts'));
@@ -28,6 +27,7 @@ const AdminSiteSettings = React.lazy(() => import('./pages/admin/SiteSettings'))
 const AdminUsers = React.lazy(() => import('./pages/admin/Users'));
 const MediaLibrary = React.lazy(() => import('./pages/MediaLibrary'));
 const AgentConsole = React.lazy(() => import('./pages/AgentConsole'));
+const AdminNotifications = React.lazy(() => import('./pages/admin/Notifications'));
 import CustomPageView from './pages/CustomPageView';
 
 function LegacyPostRedirect() {
@@ -84,10 +84,10 @@ export default function App() {
     <Route path="/about" element={<Public><About /></Public>} />
     <Route path="/search" element={<Public><ArticleIndex mode="search" /></Public>} />
     <Route path="/account/bookmarks" element={<Public><Bookmarks /></Public>} />
-    <Route path="/account/notifications" element={<Public><Notifications /></Public>} />
+    <Route path="/account/notifications" element={<Navigate replace to="/admin/notifications" />} />
     <Route path="/account/settings" element={<Public><Settings /></Public>} />
     <Route path="/bookmarks" element={<Navigate replace to="/account/bookmarks" />} />
-    <Route path="/notifications" element={<Navigate replace to="/account/notifications" />} />
+    <Route path="/notifications" element={<Navigate replace to="/admin/notifications" />} />
     <Route path="/settings" element={<Navigate replace to="/account/settings" />} />
 
     <Route path="/admin" element={<Navigate replace to="/admin/dashboard" />} />
@@ -102,6 +102,7 @@ export default function App() {
     <Route path="/admin/categories" element={<Admin><AdminTaxonomy type="categories" /></Admin>} />
     <Route path="/admin/tags" element={<Admin><AdminTaxonomy type="tags" /></Admin>} />
     <Route path="/admin/comments" element={<Admin><AdminComments /></Admin>} />
+    <Route path="/admin/notifications" element={<Admin><AdminNotifications /></Admin>} />
     <Route path="/admin/media" element={<Admin><MediaLibrary /></Admin>} />
     <Route path="/admin/settings" element={<Admin><AdminSiteSettings /></Admin>} />
     <Route path="/admin/users" element={<Admin><AdminUsers /></Admin>} />

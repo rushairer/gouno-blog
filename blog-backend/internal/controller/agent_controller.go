@@ -1169,6 +1169,42 @@ func (ctrl *AgentController) ApplyWorkflowImageTasks(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(post))
 }
 
+func (ctrl *AgentController) RejectWorkflowImageTasks(c *gin.Context) {
+	runID, ok := agentID(c)
+	if !ok {
+		return
+	}
+	var req struct {
+		CandidateIDs []int64 `json:"candidate_ids" binding:"required"`
+	}
+	if err := bindAgentJSON(c, &req); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+	if err := ctrl.approvals.RejectMediaCandidates(c.Request.Context(), runID, req.CandidateIDs); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	if err := ctrl.workflows.ReconcileMediaRun(c.Request.Context(), runID); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
+}
+
+func (ctrl *AgentController) RejectImageTask(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	if err := ctrl.approvals.RejectMediaCandidate(c.Request.Context(), id); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	ctrl.reconcileCandidateWorkflow(c, id)
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
+}
+
 func (ctrl *AgentController) ApplyImageTask(c *gin.Context) {
 	id, ok := agentID(c)
 	if !ok {
@@ -1430,6 +1466,18 @@ func (ctrl *AgentController) DeleteWorkflowRun(c *gin.Context) {
 		return
 	}
 	if err := ctrl.workflows.DeleteRun(c.Request.Context(), id); err != nil {
+		writeAgentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
+}
+
+func (ctrl *AgentController) CancelWorkflowRun(c *gin.Context) {
+	id, ok := agentID(c)
+	if !ok {
+		return
+	}
+	if err := ctrl.workflows.Cancel(c.Request.Context(), id); err != nil {
 		writeAgentError(c, err)
 		return
 	}

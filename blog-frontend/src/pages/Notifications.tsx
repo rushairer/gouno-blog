@@ -67,7 +67,7 @@ export default function Notifications() {
             >
               <Bell size={18} />
               <span>
-                <strong>{item.title || t('replyNotification', { name: item.actor_name })}</strong>
+                <strong>{item.title || t('replyNotification', { name: item.actor_name || '' })}</strong>
                 {item.body ? <p>{item.body}</p> : null}
                 <small>{item.post_title} · {formatDateTime(item.created_at)}</small>
               </span>
