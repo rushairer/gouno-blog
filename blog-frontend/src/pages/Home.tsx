@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, GitBranch, Mail, Rss } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { EmptyState, LoadingState } from '../components/ui';
+import { EmptyState, LoadingState, SectionHeading } from '../components/ui';
 import { authorInitials, DEFAULT_SITE_SETTINGS } from '../config/site-defaults';
 import { getPosts, getSiteSettings, getTags } from '../lib/blog-api';
 import { markdownToPlainText } from '../markdown';
@@ -83,7 +83,7 @@ export default function Home() {
         {!error && posts.length === 0 ? <EmptyState label="这里还没有文章。完成第一篇写作后，它会成为首页主角。" /> : null}
         {posts.length > 1 ? (
           <section className="home-section">
-            <header className="section-heading"><h2>精选文章</h2><Link to="/articles">查看全部 <ArrowRight /></Link></header>
+            <SectionHeading title="精选文章" action={<Link to="/articles">查看全部 <ArrowRight /></Link>} />
             <div className="featured-layout">
               <Story post={posts[1]} index={2} featured />
               <div>{posts.slice(2, 4).map((post, index) => <Story key={post.id} post={post} index={index + 3} />)}</div>
@@ -93,7 +93,7 @@ export default function Home() {
 
         {posts.length > 0 ? (
           <section className="home-section">
-            <header className="section-heading"><h2>最新文章</h2></header>
+            <SectionHeading title="最新文章" />
             <div className="latest-table" role="list">
               {posts.slice(0, 8).map((post) => (
                 <article key={post.id} role="listitem">
@@ -115,7 +115,7 @@ export default function Home() {
         ) : null}
 
         <section className="home-section topic-index">
-          <header className="section-heading"><h2>主题索引</h2></header>
+          <SectionHeading title="主题索引" />
           <div className="topic-columns">
             <div><h3>长期关注</h3>{['工程架构', '产品设计', '人工智能', '开发者体验'].map((name, index) => <Link key={name} to={`/search?q=${encodeURIComponent(name)}`}><span>{name}</span><strong>{String(index + 1).padStart(2, '0')}</strong></Link>)}</div>
             <div><h3>热门标签</h3><div className="tag-cloud">{tagCounts.slice(0, 16).map(({ tag, count }) => <Link key={tag} to={`/tags/${encodeURIComponent(tag)}`}>{tag}<sup>{count}</sup></Link>)}</div></div>

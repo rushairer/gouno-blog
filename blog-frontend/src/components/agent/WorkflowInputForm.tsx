@@ -1,7 +1,7 @@
-import { ChevronLeft, ChevronRight, Database, Plus, Search, X } from 'lucide-react';
+import { Database, Plus, Search, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../auth';
-import { Button, Checkbox, Field, Input, Modal, SearchField, Select } from '../ui';
+import { Button, Checkbox, Field, Input, Modal, Pagination, SearchField, Select } from '../ui';
 
 export interface ResourceOption {
   type: string;
@@ -153,7 +153,15 @@ function ResourcePicker({ property, value, onChange, locale, className }: {
           const checked = selected.some((entry) => String(entry) === item.key);
           return <button type="button" className={checked ? 'selected' : ''} key={`${item.type}:${item.key}`} onClick={() => toggle(item.key)}><span>{multiple ? <Checkbox readOnly checked={checked} /> : <Search />}<strong>{item.label}</strong><small>{item.status}{item.description ? ` · ${item.description}` : ''}</small></span></button>;
         })}</div>}
-        {total > 20 ? <div className="workflow-resource-pagination"><button type="button" title={locale === 'zh' ? '上一页' : 'Previous page'} disabled={page === 1} onClick={() => setPage((value) => Math.max(1, value - 1))}><ChevronLeft /></button><span>{page} / {Math.ceil(total / 20)}</span><button type="button" title={locale === 'zh' ? '下一页' : 'Next page'} disabled={page * 20 >= total} onClick={() => setPage((value) => value + 1)}><ChevronRight /></button></div> : null}
+        {total > 20 ? (
+          <Pagination
+            mode="compact"
+            page={page}
+            pages={Math.ceil(total / 20)}
+            onChange={(nextPage) => setPage(nextPage)}
+            label={locale === 'zh' ? '资源分页' : 'Resource pagination'}
+          />
+        ) : null}
         <div className="modal-actions"><Button variant="secondary" type="button" onClick={() => setOpen(false)}>{locale === 'zh' ? '完成' : 'Done'}</Button></div>
       </div>
     </Modal>

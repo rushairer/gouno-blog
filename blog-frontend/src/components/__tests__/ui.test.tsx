@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it } from 'vitest';
 import {
+  Badge,
   Button,
   BulkActionBar,
   EditorPanel,
@@ -10,8 +11,11 @@ import {
   FormActions,
   FormLayout,
   Input,
+  Pagination,
+  SectionHeading,
   SectionNav,
   Select,
+  StatusBadge,
   SubnavTabs,
   Tab,
   TabList,
@@ -136,5 +140,41 @@ describe('shared UI primitives', () => {
     expect(screen.getByRole('navigation', { name: '设置分区' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '基础信息' })).toHaveAttribute('aria-current', 'location');
     expect(screen.getByRole('link', { name: 'SEO' })).toHaveAttribute('href', '#seo');
+  });
+
+  it('renders Badge and StatusBadge with appropriate tone and semantic status classes', () => {
+    const { rerender } = render(<Badge tone="brand">架构</Badge>);
+    expect(screen.getByText('架构')).toHaveClass('badge', 'badge--brand');
+
+    rerender(<StatusBadge status="published" />);
+    expect(screen.getByText('已发布')).toHaveClass('status-badge', 'status-badge--published');
+
+    rerender(<StatusBadge status="draft" />);
+    expect(screen.getByText('草稿')).toHaveClass('status-badge', 'status-badge--draft');
+  });
+
+  it('renders Pagination in numbers and compact mode with accessible ARIA labels', async () => {
+    const user = userEvent.setup();
+    let selectedPage = 1;
+    const { rerender } = render(
+      <Pagination page={1} pages={3} label="文章分页" onChange={(p) => { selectedPage = p; }} />,
+    );
+    const nav = screen.getByRole('navigation', { name: '文章分页' });
+    expect(nav).toHaveClass('pagination');
+    const page2Button = screen.getByRole('button', { name: '2' });
+    await user.click(page2Button);
+    expect(selectedPage).toBe(2);
+
+    rerender(
+      <Pagination mode="compact" page={2} pages={5} label="资源分页" onChange={(p) => { selectedPage = p; }} />,
+    );
+    expect(screen.getByRole('navigation', { name: '资源分页' })).toHaveClass('pagination-compact');
+    expect(screen.getByText('2 / 5')).toBeInTheDocument();
+  });
+
+  it('renders SectionHeading with title and optional action link', () => {
+    render(<SectionHeading title="最新文章" action={<a href="/all">查看全部</a>} />);
+    expect(screen.getByRole('heading', { name: '最新文章' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '查看全部' })).toHaveAttribute('href', '/all');
   });
 });
