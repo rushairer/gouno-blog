@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import {
   AdminPage,
   AdminPageHeader,
+  BulkActionBar,
   Button,
   ConfirmDialog,
   ContentStack,
@@ -22,7 +23,9 @@ import {
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 import { deletePage, getAdminPages } from '../../lib/blog-api';
 import type { CustomPage } from '../../types/blog';
+import { WorkflowLauncher } from '../../components/agent/WorkflowLauncher';
 
+type DeleteTarget = { kind: 'page'; page: CustomPage } | { kind: 'batch' } | null;
 const pageSize = 20;
 
 export default function AdminPages() {
@@ -33,8 +36,10 @@ export default function AdminPages() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [deleteTarget, setDeleteTarget] = useState<CustomPage | null>(null);
+  const [selected, setSelected] = useState<number[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const [deleting, setDeleting] = useState(false);
+  const [aiOpen, setAIOpen] = useState(false);
 
   const q = params.get('q') || '';
   const status = params.get('status') || '';
@@ -50,6 +55,7 @@ export default function AdminPages() {
         if (ignore) return;
         setPages(result.list || []);
         setTotal(result.total || 0);
+        setSelected([]);
         setError('');
       })
       .catch((reason: Error) => {
@@ -80,10 +86,18 @@ export default function AdminPages() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await deletePage(deleteTarget.id);
-      setPages((current) => current.filter((item) => item.id !== deleteTarget.id));
-      setTotal((current) => Math.max(0, current - 1));
-      notify('单页已删除。');
+      if (deleteTarget.kind === 'page') {
+        await deletePage(deleteTarget.page.id);
+        setPages((current) => current.filter((item) => item.id !== deleteTarget.page.id));
+        setTotal((current) => Math.max(0, current - 1));
+        notify('单页已删除。');
+      } else {
+        await Promise.all(selected.map((id) => deletePage(id)));
+        setPages((current) => current.filter((item) => !selected.includes(item.id)));
+        setTotal((current) => Math.max(0, current - selected.length));
+        setSelected([]);
+        notify('所选单页已删除。');
+      }
       setDeleteTarget(null);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : '删除失败，请稍后重试。');
@@ -151,6 +165,23 @@ export default function AdminPages() {
           ) : null}
         </FilterBar>
 
+        {selected.length ? (
+          <BulkActionBar
+            selectionLabel={`已选择 ${selected.length} 页`}
+            onAIAssist={() => setAIOpen(true)}
+            onCancel={() => setSelected([])}
+          >
+            <Button
+              variant="danger"
+              size="compact"
+              type="button"
+              onClick={() => setDeleteTarget({ kind: 'batch' })}
+            >
+              <Trash2 />删除
+            </Button>
+          </BulkActionBar>
+        ) : null}
+
         {loading ? (
           <LoadingState label="正在载入单页…" />
         ) : !error && pages.length === 0 ? (
@@ -174,6 +205,16 @@ export default function AdminPages() {
               <table className="admin-table">
                 <thead>
                   <tr>
+                    <th>
+                      <input
+                        aria-label="选择当前页全部单页"
+                        type="checkbox"
+                        checked={pages.length > 0 && pages.every((p) => selected.includes(p.id))}
+                        onChange={(event) =>
+                          setSelected(event.target.checked ? pages.map((p) => p.id) : [])
+                        }
+                      />
+                    </th>
                     <th>单页</th>
                     <th>访问路径</th>
                     <th>模板</th>
@@ -186,6 +227,20 @@ export default function AdminPages() {
                 <tbody>
                   {pages.map((p) => (
                     <tr key={p.id}>
+                      <td>
+                        <input
+                          aria-label={`选择 ${p.title}`}
+                          type="checkbox"
+                          checked={selected.includes(p.id)}
+                          onChange={(event) =>
+                            setSelected((current) =>
+                              event.target.checked
+                                ? [...new Set([...current, p.id])]
+                                : current.filter((id) => id !== p.id)
+                            )
+                          }
+                        />
+                      </td>
                       <td>
                         <strong>{p.title}</strong>
                         <small>{p.summary || '无摘要'}</small>
@@ -232,7 +287,7 @@ export default function AdminPages() {
                             type="button"
                             className="danger-action"
                             title="删除"
-                            onClick={() => setDeleteTarget(p)}
+                            onClick={() => setDeleteTarget({ kind: 'page', page: p })}
                           >
                             <Trash2 />
                           </button>
@@ -259,12 +314,12 @@ export default function AdminPages() {
 
       <ConfirmDialog
         open={deleteTarget !== null}
-        title="删除单页"
+        title={deleteTarget?.kind === 'page' ? '删除单页' : '批量删除单页'}
         description={
-          deleteTarget ? (
-            <>确认永久删除《{deleteTarget.title}》（/{deleteTarget.slug}）？此操作无法撤销。</>
+          deleteTarget?.kind === 'page' ? (
+            <>确认永久删除《{deleteTarget.page.title}》（/{deleteTarget.page.slug}）？此操作无法撤销。</>
           ) : (
-            ''
+            <>确认永久删除选中的 {selected.length} 个单页？此操作无法撤销。</>
           )
         }
         confirmLabel="永久删除"
@@ -272,6 +327,13 @@ export default function AdminPages() {
         busy={deleting}
         onClose={() => setDeleteTarget(null)}
         onConfirm={performDelete}
+      />
+      <WorkflowLauncher
+        open={aiOpen}
+        resourceType="page"
+        resourceKeys={selected}
+        onClose={() => setAIOpen(false)}
+        title="将所选单页交给 AI"
       />
     </AdminPage>
   );

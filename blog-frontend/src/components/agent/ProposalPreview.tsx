@@ -11,7 +11,7 @@ function textList(value: unknown): string[] {
 }
 
 function isContentProposal(actionType: string, payload: ProposalPayload) {
-  return (actionType === 'create_draft' || actionType === 'update_post') && Boolean(text(payload.title) || text(payload.summary) || text(payload.content) || text(payload.slug) || textList(payload.tags).length);
+  return (actionType === 'create_draft' || actionType === 'update_post' || actionType === 'create_page_draft' || actionType === 'update_page') && Boolean(text(payload.title) || text(payload.summary) || text(payload.content) || text(payload.slug) || textList(payload.tags).length);
 }
 
 export function ProposalPreview({
@@ -31,13 +31,14 @@ export function ProposalPreview({
   const content = text(payload.content);
   const slug = text(payload.slug);
   const tags = textList(payload.tags);
-  const isDraft = actionType === 'create_draft';
+  const isDraft = actionType === 'create_draft' || actionType === 'create_page_draft';
+  const isPage = actionType === 'create_page_draft' || actionType === 'update_page';
 
   return (
     <section className="proposal-preview" aria-label={zh ? '内容提案预览' : 'Content proposal preview'}>
       <header className="proposal-preview__header">
         <div>
-          <small>{isDraft ? (zh ? '新建草稿' : 'New draft') : (zh ? '文章更新' : 'Post update')}</small>
+          <small>{isDraft ? (isPage ? (zh ? '新建单页草稿' : 'New page draft') : (zh ? '新建草稿' : 'New draft')) : (isPage ? (zh ? '单页更新' : 'Page update') : (zh ? '文章更新' : 'Post update'))}</small>
           <h3>{title || (zh ? '未修改标题' : 'Title unchanged')}</h3>
         </div>
       </header>

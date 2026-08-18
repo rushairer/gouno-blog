@@ -447,9 +447,10 @@ function RecordsWorkspace({ locale, runs, agents, selectedRun, onInspect, onClea
 }
 
 function approvalSummary(approval: AgentApproval, zh: boolean) {
+  const isPage = approval.target_type === 'page' || approval.action_type === 'create_page_draft' || approval.action_type === 'update_page';
   const field = typeof approval.proposed_payload.field_type === 'string' ? approval.proposed_payload.field_type : '';
-  const fieldName = field === 'title' ? (zh ? '文章标题' : 'article title') : field === 'summary' ? (zh ? '文章摘要' : 'article summary') : field === 'cover_alt' ? (zh ? '封面替代文字' : 'cover alt text') : (zh ? '内容' : 'content');
-  const target = approval.target_id ? (zh ? `文章 #${approval.target_id}` : `post #${approval.target_id}`) : (zh ? '相关内容' : 'the related content');
+  const fieldName = field === 'title' ? (isPage ? (zh ? '单页标题' : 'page title') : (zh ? '文章标题' : 'article title')) : field === 'summary' ? (isPage ? (zh ? '单页摘要' : 'page summary') : (zh ? '文章摘要' : 'article summary')) : field === 'cover_alt' ? (zh ? '封面替代文字' : 'cover alt text') : (zh ? '内容' : 'content');
+  const target = approval.target_id ? (isPage ? (zh ? `单页 #${approval.target_id}` : `page #${approval.target_id}`) : (zh ? `文章 #${approval.target_id}` : `post #${approval.target_id}`)) : (isPage ? (zh ? '单页' : 'the page') : (zh ? '相关内容' : 'the related content'));
   const isImageBrief = approval.action_type === 'create_media_candidate'
     || (approval.action_type === 'create_distribution_draft' && approval.proposed_payload.format === 'image_brief');
   if (approval.action_type === 'create_content_candidates') return { title: zh ? `为${target}准备${fieldName}候选` : `Prepare ${fieldName} alternatives for ${target}`, explanation: zh ? `AI 将创建可供你选择的${fieldName}建议。选择其中一项后，系统会再向你展示具体的内容修改审批。` : `AI will prepare ${fieldName} alternatives for you to choose from. Choosing one will create a separate approval with the exact content edit.` };

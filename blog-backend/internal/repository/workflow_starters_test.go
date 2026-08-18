@@ -7,8 +7,8 @@ import (
 
 func TestProviderStarterDefinitionsAreCompleteAndRunnable(t *testing.T) {
 	definitions := providerStarterWorkflows()
-	if len(definitions) != 13 {
-		t.Fatalf("provider-dependent starter count = %d, want 13", len(definitions))
+	if len(definitions) != 15 {
+		t.Fatalf("provider-dependent starter count = %d, want 15", len(definitions))
 	}
 	seen := map[string]bool{}
 	for _, definition := range definitions {

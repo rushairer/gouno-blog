@@ -32,7 +32,7 @@ function initialInput(workflow: Workflow, type: string, keys: Array<number | str
 
 export function WorkflowLauncher({ open, resourceType, resourceKeys, onClose, title = '交给 AI' }: {
   open: boolean;
-  resourceType: 'post' | 'comment' | 'media_asset' | 'operational_suggestion' | 'category' | 'tag';
+  resourceType: 'post' | 'comment' | 'media_asset' | 'operational_suggestion' | 'category' | 'tag' | 'page';
   resourceKeys: Array<number | string>;
   onClose: () => void;
   title?: string;

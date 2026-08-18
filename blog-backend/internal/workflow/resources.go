@@ -134,6 +134,20 @@ func (c *ResourceCatalog) List(ctx context.Context, resourceType string, query d
 			jsonb_build_object('post_count',COUNT(*)),COUNT(*) OVER() FROM posts p CROSS JOIN LATERAL unnest(p.tags) tag
 			WHERE ($1='' OR tag ILIKE '%'||$1||'%') GROUP BY tag HAVING ($2=0 OR COUNT(*)>=$2)
 			ORDER BY COUNT(*) DESC,tag LIMIT $3 OFFSET $4`, q, minPosts, size, offset)
+	case "page":
+		older, _ := strconv.Atoi(query.Filters["updated_before_days"])
+		nav := query.Filters["show_in_nav"]
+		rows, err = c.db.QueryContext(ctx, `SELECT p.id::text,p.title,COALESCE(p.summary,''),p.status::text,p.updated_at::text,
+			jsonb_build_object('slug',p.slug,'template',p.template,'show_in_nav',p.show_in_nav,'allow_comments',p.allow_comments,'sort_order',p.sort_order,'seo_title',p.seo_title,'seo_description',p.seo_description),COUNT(*) OVER()
+			FROM pages p
+			WHERE ($1='' OR p.title ILIKE '%'||$1||'%' OR p.summary ILIKE '%'||$1||'%' OR p.slug ILIKE '%'||$1||'%')
+			AND ($2='' OR p.status::text=$2) AND ($3='' OR p.template=$3)
+			AND ($4='' OR ($4='true' AND p.show_in_nav) OR ($4='false' AND NOT p.show_in_nav))
+			AND ($5=0 OR p.updated_at < NOW()-($5||' days')::interval)
+			AND ($6='' OR p.updated_at >= $6::timestamptz) AND ($7='' OR p.updated_at <= $7::timestamptz)
+			AND ($8='' OR p.created_at >= $8::timestamptz) AND ($9='' OR p.created_at <= $9::timestamptz)
+			ORDER BY p.updated_at DESC,p.id DESC LIMIT $10 OFFSET $11`, q, query.Filters["status"], query.Filters["template"], nav, older,
+			query.Filters["updated_after"], query.Filters["updated_before"], query.Filters["created_after"], query.Filters["created_before"], size, offset)
 	}
 	if err != nil {
 		return nil, 0, err
@@ -182,6 +196,8 @@ func (c *ResourceCatalog) Resolve(ctx context.Context, resourceType, key string)
 		err = c.db.QueryRowContext(ctx, `SELECT name,description,'category',updated_at::text,jsonb_build_object('slug',slug) FROM categories WHERE id::text=$1`, key).Scan(&label, &description, &status, &version, &metadata)
 	case "tag":
 		err = c.db.QueryRowContext(ctx, `SELECT tag,COUNT(*)::text,'tag',MAX(updated_at)::text,jsonb_build_object('post_count',COUNT(*)) FROM posts CROSS JOIN LATERAL unnest(tags) tag WHERE tag=$1 GROUP BY tag`, key).Scan(&label, &description, &status, &version, &metadata)
+	case "page":
+		err = c.db.QueryRowContext(ctx, `SELECT title,summary,status::text,updated_at::text,jsonb_build_object('slug',slug,'template',template,'show_in_nav',show_in_nav,'allow_comments',allow_comments,'sort_order',sort_order,'seo_title',seo_title,'seo_description',seo_description) FROM pages WHERE id::text=$1`, key).Scan(&label, &description, &status, &version, &metadata)
 	}
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -305,6 +321,7 @@ var resourceFilterKeys = map[string]map[string]bool{
 	"operational_suggestion": {"status": true, "priority": true, "source_type": true, "created_after": true, "created_before": true},
 	"category":               {"min_post_count": true},
 	"tag":                    {"min_post_count": true},
+	"page":                   {"status": true, "template": true, "show_in_nav": true, "updated_before_days": true, "updated_after": true, "updated_before": true, "created_after": true, "created_before": true},
 }
 
 func validateResourceFilters(resourceType string, filters map[string]string) error {
@@ -318,7 +335,7 @@ func validateResourceFilters(resourceType string, filters map[string]string) err
 			if number, err := strconv.Atoi(value); err != nil || number < 0 {
 				return fmt.Errorf("%w: filter %q must be a non-negative integer", ErrInvalid, key)
 			}
-		case "reported", "in_use", "missing_alt", "low_engagement":
+		case "reported", "in_use", "missing_alt", "low_engagement", "show_in_nav":
 			if value != "true" && value != "false" {
 				return fmt.Errorf("%w: filter %q must be true or false", ErrInvalid, key)
 			}

@@ -1207,7 +1207,7 @@ paths:
         - name: type
           in: path
           required: true
-          schema: {type: string, enum: [post, comment, media_asset, operational_suggestion, category, tag]}
+          schema: {type: string, enum: [post, comment, media_asset, operational_suggestion, category, tag, page]}
         - {name: q, in: query, schema: {type: string}}
         - name: key
           in: query
@@ -1381,7 +1381,7 @@ components:
         max_items: {type: integer, minimum: 1, maximum: 100}
         max_concurrency: {type: integer, minimum: 0, maximum: 10, default: 0, description: for_each worker limit; 0 preserves sequential execution}
         continue_on_error: {type: boolean, description: for_each only; continue remaining items and return a partial-failure summary when an item fails.}
-        resource_type: {type: string, enum: [post, comment, media_asset, operational_suggestion, category, tag]}
+        resource_type: {type: string, enum: [post, comment, media_asset, operational_suggestion, category, tag, page]}
         filter: {type: object, additionalProperties: true}
         steps:
           type: array
@@ -1444,7 +1444,7 @@ components:
       properties:
         id: {type: integer}
         workflow_run_id: {type: integer}
-        type: {type: string, enum: [post, comment, media_asset, operational_suggestion, category, tag]}
+        type: {type: string, enum: [post, comment, media_asset, operational_suggestion, category, tag, page]}
         key: {type: string}
         source: {type: string, enum: [manual, query, discovery]}
         access_level: {type: string, enum: [target, read]}

@@ -150,11 +150,13 @@ func startWebServer(cmd *cobra.Command, args []string) {
 		agentRepo := repository.NewAgentRepository(db)
 		postRepo := repository.NewPostRepository(db)
 		postSvc := service.NewPostService(postRepo)
+		pageRepo := repository.NewPageRepository(db)
+		pageSvc := service.NewPageService(pageRepo)
 		communitySvc := service.NewCommunityService(repository.NewCommunityRepository(db), postRepo)
 		growthSvc := service.NewGrowthService(repository.NewGrowthRepository(db))
 		knowledgeSvc := knowledge.NewService(db, secrets, globalConfig.AIAgentConfig.AllowedHosts, logger)
 		knowledgeSvc.Start(ctx)
-		toolRegistry := tool.NewBlogRegistry(postSvc, communitySvc, growthSvc, knowledgeSvc)
+		toolRegistry := tool.NewBlogRegistry(postSvc, communitySvc, growthSvc, pageSvc, knowledgeSvc)
 		operationsSvc := operations.NewService(db, toolRegistry, logger)
 		operationsSvc.ConfigureGovernance(agentRepo, postSvc)
 		if err := operationsSvc.RegisterTools(); err != nil {
@@ -171,7 +173,7 @@ func startWebServer(cmd *cobra.Command, args []string) {
 			logger.Info("Reconciled AI workspace starter Agents", zap.Int("created", created))
 		}
 		runner := agentservice.NewRunner(agentRepo, management, toolRegistry, postSvc)
-		approvals := agentservice.NewApprovalService(agentRepo, postSvc, management, growthSvc, mediaStore)
+		approvals := agentservice.NewApprovalService(agentRepo, postSvc, management, growthSvc, mediaStore, pageSvc)
 		agentCtrl = controller.NewAgentController(management, runner, approvals, toolRegistry, ctx, knowledgeSvc)
 		agentCtrl.SetConnectorService(connector.NewService(db, secrets))
 		workflowSvc := workflowservice.NewService(db, runner, management, toolRegistry)

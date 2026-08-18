@@ -13,6 +13,7 @@ import (
 var supportedResourceTypes = map[string]bool{
 	"post": true, "comment": true, "media_asset": true,
 	"operational_suggestion": true, "category": true, "tag": true,
+	"page": true,
 }
 
 func validateInputSchema(raw json.RawMessage) error {
