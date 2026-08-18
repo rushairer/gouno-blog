@@ -308,6 +308,10 @@ export default function PageEditor() {
                 <option value="default">默认标准排版 (Default)</option>
                 <option value="about">关于页专用模板 (About)</option>
                 <option value="links">友情链接模板 (Links)</option>
+                <option value="timeline">时间轴与历程 (Timeline)</option>
+                <option value="projects">项目与作品集 (Projects)</option>
+                <option value="focus">极简专注阅读 (Focus)</option>
+                <option value="faq">问答与指南 (FAQ)</option>
                 <option value="blank">全宽纯净模板 (Blank)</option>
               </Select>
             </Field>

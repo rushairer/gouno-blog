@@ -50,7 +50,7 @@ export interface SiteSettings {
   default_seo_description: string;
 }
 
-export type PageTemplate = 'default' | 'about' | 'links' | 'blank';
+export type PageTemplate = 'default' | 'about' | 'links' | 'blank' | 'timeline' | 'projects' | 'focus' | 'faq';
 
 export interface CustomPage {
   id: number;
