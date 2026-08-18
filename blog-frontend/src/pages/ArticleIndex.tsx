@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowRight, SlidersHorizontal } from 'lucide-react';
-import { EmptyState, LoadingState, SearchField } from '../components/ui';
+import { EmptyState, LoadingState, Pagination, SearchField } from '../components/ui';
 import { getCategoryPosts, getPosts, getTags } from '../lib/blog-api';
 import { markdownToPlainText } from '../markdown';
 import type { Post } from '../types/blog';
@@ -65,9 +65,19 @@ export default function ArticleIndex({ mode = 'articles' }: { mode?: 'articles' 
               <div><time>{new Date(post.published_at || post.created_at).toLocaleDateString('zh-CN')}</time><span>{Math.max(3, Math.ceil((post.content?.length || 0) / 500))} 分钟</span><Link to={`/articles/${post.slug}`} aria-label={`阅读 ${post.title}`}><ArrowRight /></Link></div>
             </article>
           ))}
-          {!loading && total > 10 ? <nav className="pagination" aria-label="文章分页">
-            {Array.from({ length: pages }, (_, index) => index + 1).map((item) => <button className={item === page ? 'active' : ''} key={item} onClick={() => { const next = new URLSearchParams(params); next.set('page', String(item)); setParams(next); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>{item}</button>)}
-          </nav> : null}
+          {!loading && total > 10 ? (
+            <Pagination
+              page={page}
+              pages={pages}
+              label="文章分页"
+              onChange={(nextPage) => {
+                const next = new URLSearchParams(params);
+                next.set('page', String(nextPage));
+                setParams(next);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            />
+          ) : null}
         </section>
       </div>
       <span className="sr-only">{location.pathname}</span>

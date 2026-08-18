@@ -14,9 +14,11 @@ import {
   ErrorState,
   FilterBar,
   LoadingState,
+  Pagination,
   Panel,
   SearchField,
   Select,
+  StatusBadge,
   useToast,
 } from '../../components/ui';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
@@ -158,8 +160,16 @@ export default function AdminPosts() {
               )
             }
           />
-        ) : posts.length ? <Panel className="posts-table-panel"><div className="table-scroll"><table className="admin-table"><thead><tr><th><input aria-label="选择当前页全部文章" type="checkbox" checked={posts.length > 0 && posts.every((post) => selected.includes(post.id))} onChange={(event) => setSelected(event.target.checked ? posts.map((post) => post.id) : [])} /></th><th>文章</th><th>状态</th><th>更新时间</th><th>阅读</th><th>操作</th></tr></thead><tbody>{posts.map((post) => <tr key={post.id}><td><input aria-label={`选择 ${post.title}`} type="checkbox" checked={selected.includes(post.id)} onChange={(event) => setSelected((current) => event.target.checked ? [...new Set([...current, post.id])] : current.filter((id) => id !== post.id))} /></td><td><strong>{post.title}</strong><small>/{post.slug}</small></td><td><span className={`status-badge status-badge--${post.status}`}>{post.status === 'published' ? '已发布' : post.status === 'scheduled' ? '定时发布' : '草稿'}</span></td><td>{new Date(post.updated_at || post.created_at).toLocaleDateString('zh-CN')}</td><td>{post.views_count || 0}</td><td><div className="table-actions">{post.status === 'published' ? <Link to={`/articles/${post.slug}`} target="_blank" title="查看"><Eye /></Link> : null}<button title="复制链接" onClick={() => void copyText(`${location.origin}/articles/${post.slug}`, notify, '文章链接已复制。')}><Copy /></button><Link to={`/admin/posts/${post.id}/edit`} title="编辑"><Edit2 /></Link><button className="danger-action" title="删除" onClick={() => setDeleteTarget({ kind: 'post', post })}><Trash2 /></button></div></td></tr>)}</tbody></table></div></Panel> : null}
-        {!loading && total > pageSize ? <nav className="pagination admin-pagination" aria-label="文章分页">{Array.from({ length: pages }, (_, index) => index + 1).map((item) => <button className={item === page ? 'active' : ''} key={item} type="button" onClick={() => setFilter('page', String(item))}>{item}</button>)}</nav> : null}
+        ) : posts.length ? <Panel className="posts-table-panel"><div className="table-scroll"><table className="admin-table"><thead><tr><th><input aria-label="选择当前页全部文章" type="checkbox" checked={posts.length > 0 && posts.every((post) => selected.includes(post.id))} onChange={(event) => setSelected(event.target.checked ? posts.map((post) => post.id) : [])} /></th><th>文章</th><th>状态</th><th>更新时间</th><th>阅读</th><th>操作</th></tr></thead><tbody>{posts.map((post) => <tr key={post.id}><td><input aria-label={`选择 ${post.title}`} type="checkbox" checked={selected.includes(post.id)} onChange={(event) => setSelected((current) => event.target.checked ? [...new Set([...current, post.id])] : current.filter((id) => id !== post.id))} /></td><td><strong>{post.title}</strong><small>/{post.slug}</small></td><td><StatusBadge status={post.status} /></td><td>{new Date(post.updated_at || post.created_at).toLocaleDateString('zh-CN')}</td><td>{post.views_count || 0}</td><td><div className="table-actions">{post.status === 'published' ? <Link to={`/articles/${post.slug}`} target="_blank" title="查看"><Eye /></Link> : null}<button title="复制链接" onClick={() => void copyText(`${location.origin}/articles/${post.slug}`, notify, '文章链接已复制。')}><Copy /></button><Link to={`/admin/posts/${post.id}/edit`} title="编辑"><Edit2 /></Link><button className="danger-action" title="删除" onClick={() => setDeleteTarget({ kind: 'post', post })}><Trash2 /></button></div></td></tr>)}</tbody></table></div></Panel> : null}
+        {!loading && total > pageSize ? (
+          <Pagination
+            className="admin-pagination"
+            page={page}
+            pages={pages}
+            label="文章分页"
+            onChange={(nextPage) => setFilter('page', String(nextPage))}
+          />
+        ) : null}
       </ContentStack>
       <ConfirmDialog
         open={deleteTarget !== null}

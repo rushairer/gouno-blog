@@ -3,7 +3,7 @@ import { Bookmark, Eye, Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { apiFetch, isLoggedIn, redirectToAuthorize } from '../auth';
 import { readData } from '../community';
-import { EmptyState, Feedback, LoadingState, PageHeader, Panel } from '../components/ui';
+import { Badge, EmptyState, Feedback, LoadingState, PageHeader, Panel } from '../components/ui';
 import { useI18n } from '../i18n';
 
 interface BookmarkItem {
@@ -61,7 +61,7 @@ export default function Bookmarks() {
                 <button className="icon-button" type="button" title={t('removeBookmark')} onClick={() => void remove(post.id)}><Bookmark fill="currentColor" /></button>
               </div>
               <p className="muted">{post.summary}</p>
-              <div className="chip-row">{post.tags.map((tag) => <span className="badge" key={tag}>{tag}</span>)}</div>
+              <div className="chip-row">{post.tags.map((tag) => <Badge key={tag}>{tag}</Badge>)}</div>
               <div className="inline-meta"><span>{formatDate(created_at)}</span><span><Eye size={14} />{post.views_count}</span><span><Heart size={14} />{post.likes_count}</span></div>
             </Panel>
           ))}

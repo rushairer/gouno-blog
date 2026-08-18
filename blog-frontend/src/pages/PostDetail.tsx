@@ -5,7 +5,7 @@ import { apiFetch, canManageBlog, isLoggedIn, redirectToAuthorize } from '../aut
 import type { CommunityComment } from '../community';
 import { optionalApiFetch, readData } from '../community';
 import { publicApiFetch } from '../lib/api-client';
-import { EmptyState, Feedback, Field, LoadingState, Modal, Panel } from '../components/ui';
+import { Badge, EmptyState, Feedback, Field, LoadingState, Modal, Panel } from '../components/ui';
 import { useI18n } from '../i18n';
 import { useArticleSEO } from '../seo';
 import { MarkdownRenderer } from '../components/MarkdownRenderer';
@@ -318,9 +318,9 @@ export default function PostDetail() {
               </div>
               <div className="chip-row" style={{ marginTop: '16px' }}>
                 {post.tags.map((tag) => (
-                  <span key={tag} className="badge">
+                  <Badge key={tag}>
                     #{tag}
-                  </span>
+                  </Badge>
                 ))}
               </div>
             </header>

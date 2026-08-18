@@ -1,6 +1,6 @@
 import { cloneElement, createContext, forwardRef, isValidElement, useCallback, useContext, useEffect, useId, useRef, useState } from 'react';
 import type React from 'react';
-import { AlertTriangle, BookOpen, CheckCircle2, ChevronDown, Search, Sparkles, X } from 'lucide-react';
+import { AlertTriangle, BookOpen, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Search, Sparkles, X } from 'lucide-react';
 
 function classes(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(' ');
@@ -697,5 +697,120 @@ export function ConfirmDialog({
         </div>
       </div>
     </Modal>
+  );
+}
+
+export function SectionHeading({
+  title,
+  action,
+  className = '',
+}: {
+  title: React.ReactNode;
+  action?: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <header className={classes('section-heading', className)}>
+      <h2>{title}</h2>
+      {action}
+    </header>
+  );
+}
+
+export type BadgeTone = 'brand' | 'success' | 'warning' | 'danger' | 'neutral';
+
+export function Badge({
+  children,
+  tone = 'neutral',
+  className = '',
+}: {
+  children: React.ReactNode;
+  tone?: BadgeTone;
+  className?: string;
+}) {
+  return (
+    <span className={classes('badge', tone !== 'neutral' && `badge--${tone}`, className)}>
+      {children}
+    </span>
+  );
+}
+
+export type PostStatus = 'published' | 'draft' | 'scheduled' | 'hidden';
+
+export function StatusBadge({
+  status,
+  className = '',
+  label,
+}: {
+  status: PostStatus | string;
+  className?: string;
+  label?: React.ReactNode;
+}) {
+  const defaultLabels: Record<string, string> = {
+    published: '已发布',
+    draft: '草稿',
+    scheduled: '定时发布',
+    hidden: '已隐藏',
+  };
+  return (
+    <span className={classes('status-badge', `status-badge--${status}`, className)}>
+      {label || defaultLabels[status] || status}
+    </span>
+  );
+}
+
+export function Pagination({
+  page,
+  pages,
+  onChange,
+  label = '分页导航',
+  className = '',
+  mode = 'numbers',
+}: {
+  page: number;
+  pages: number;
+  onChange: (page: number) => void;
+  label?: string;
+  className?: string;
+  mode?: 'numbers' | 'compact';
+}) {
+  if (pages <= 1) return null;
+  if (mode === 'compact') {
+    return (
+      <nav className={classes('pagination-compact', className)} aria-label={label}>
+        <button
+          type="button"
+          disabled={page <= 1}
+          aria-label="上一页"
+          onClick={() => onChange(Math.max(1, page - 1))}
+        >
+          <ChevronLeft aria-hidden="true" />
+        </button>
+        <span aria-live="polite">{page} / {pages}</span>
+        <button
+          type="button"
+          disabled={page >= pages}
+          aria-label="下一页"
+          onClick={() => onChange(Math.min(pages, page + 1))}
+        >
+          <ChevronRight aria-hidden="true" />
+        </button>
+      </nav>
+    );
+  }
+  return (
+    <nav className={classes('pagination', className)} aria-label={label}>
+      {Array.from({ length: pages }, (_, index) => index + 1).map((item) => (
+        <button
+          key={item}
+          type="button"
+          className={item === page ? 'active' : ''}
+          aria-current={item === page ? 'page' : undefined}
+          onClick={() => onChange(item)}
+        >
+          {item}
+        </button>
+      ))}
+    </nav>
   );
 }
