@@ -1,21 +1,44 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Bell, Bot, Check, CheckCheck, ChevronRight, GitBranch, MessageSquare } from 'lucide-react';
+import { Bell, Bot, Check, CheckCheck, ChevronRight, GitBranch, MessageSquare, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../../auth';
 import type { Notification } from '../../community';
 import { readData } from '../../community';
-import { AdminPage, AdminPageHeader, Button, ContentStack, EmptyState, Feedback, FilterBar, LoadingState, Select, useToast } from '../../components/ui';
+import {
+  AdminPage,
+  AdminPageHeader,
+  BulkActionBar,
+  Button,
+  Checkbox,
+  ConfirmDialog,
+  ContentStack,
+  EmptyState,
+  Feedback,
+  FilterBar,
+  LoadingState,
+  Select,
+  useToast,
+} from '../../components/ui';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
+
+type DeleteAction =
+  | { kind: 'single'; id: number; title: string }
+  | { kind: 'batch'; ids: number[] }
+  | { kind: 'clear_read' }
+  | { kind: 'clear_all' }
+  | null;
 
 export default function AdminNotifications() {
   const allowed = useAdminGuard('/admin/notifications');
   const { notify } = useToast();
   const [items, setItems] = useState<Notification[]>([]);
+  const [selected, setSelected] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'unread' | 'read'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'ai' | 'comment'>('all');
-  const [clearing, setClearing] = useState(false);
+  const [deleteAction, setDeleteAction] = useState<DeleteAction>(null);
+  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!allowed) return;
@@ -40,7 +63,7 @@ export default function AdminNotifications() {
     try {
       await apiFetch(`/api/me/notifications/${item.id}/read`, { method: 'PUT' });
       const now = new Date().toISOString();
-      setItems((current) => current.map((n) => n.id === item.id ? { ...n, read_at: now } : n));
+      setItems((current) => current.map((n) => (n.id === item.id ? { ...n, read_at: now } : n)));
       window.dispatchEvent(new CustomEvent('community:notifications-changed'));
     } catch (err) {
       setError(err instanceof Error ? err.message : '标记已读失败');
@@ -48,7 +71,7 @@ export default function AdminNotifications() {
   };
 
   const markAllRead = async () => {
-    setClearing(true);
+    setBusy(true);
     try {
       await apiFetch('/api/me/notifications/read-all', { method: 'PUT' });
       const now = new Date().toISOString();
@@ -58,7 +81,76 @@ export default function AdminNotifications() {
     } catch (err) {
       setError(err instanceof Error ? err.message : '全部已读失败');
     } finally {
-      setClearing(false);
+      setBusy(false);
+    }
+  };
+
+  const markSelectedRead = async () => {
+    if (selected.length === 0) return;
+    setBusy(true);
+    try {
+      const toRead = items.filter((n) => selected.includes(n.id) && !n.read_at);
+      await Promise.all(
+        toRead.map((n) => apiFetch(`/api/me/notifications/${n.id}/read`, { method: 'PUT' }))
+      );
+      const now = new Date().toISOString();
+      setItems((current) =>
+        current.map((n) => (selected.includes(n.id) ? { ...n, read_at: n.read_at || now } : n))
+      );
+      setSelected([]);
+      window.dispatchEvent(new CustomEvent('community:notifications-changed'));
+      notify(`已将选中的 ${selected.length} 条通知标为已读。`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '批量标记已读失败');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const executeDelete = async () => {
+    if (!deleteAction) return;
+    setBusy(true);
+    setError('');
+
+    try {
+      if (deleteAction.kind === 'single') {
+        const resp = await apiFetch(`/api/me/notifications/${deleteAction.id}`, { method: 'DELETE' });
+        if (!resp.ok) throw new Error('删除通知失败');
+        setItems((current) => current.filter((n) => n.id !== deleteAction.id));
+        setSelected((current) => current.filter((id) => id !== deleteAction.id));
+        notify('通知已删除。');
+      } else if (deleteAction.kind === 'batch') {
+        const resp = await apiFetch('/api/me/notifications/batch-delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids: deleteAction.ids }),
+        });
+        if (!resp.ok) throw new Error('批量删除通知失败');
+        const idsSet = new Set(deleteAction.ids);
+        setItems((current) => current.filter((n) => !idsSet.has(n.id)));
+        setSelected([]);
+        notify(`已删除选中的 ${deleteAction.ids.length} 条通知。`);
+      } else if (deleteAction.kind === 'clear_read') {
+        const resp = await apiFetch('/api/me/notifications?only_read=true', { method: 'DELETE' });
+        if (!resp.ok) throw new Error('清空已读通知失败');
+        setItems((current) => current.filter((n) => !n.read_at));
+        setSelected((current) =>
+          current.filter((id) => items.find((n) => n.id === id && !n.read_at))
+        );
+        notify('已清空所有已读通知。');
+      } else if (deleteAction.kind === 'clear_all') {
+        const resp = await apiFetch('/api/me/notifications', { method: 'DELETE' });
+        if (!resp.ok) throw new Error('清空全部通知失败');
+        setItems([]);
+        setSelected([]);
+        notify('已清空全部通知。');
+      }
+      window.dispatchEvent(new CustomEvent('community:notifications-changed'));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '操作失败，请重试');
+    } finally {
+      setBusy(false);
+      setDeleteAction(null);
     }
   };
 
@@ -76,6 +168,20 @@ export default function AdminNotifications() {
   }, [items, statusFilter, typeFilter]);
 
   const unreadCount = useMemo(() => items.filter((n) => !n.read_at).length, [items]);
+  const readCount = items.length - unreadCount;
+
+  const toggleSelectAllFiltered = (checked: boolean) => {
+    if (checked) {
+      const filteredIds = filtered.map((n) => n.id);
+      setSelected((prev) => Array.from(new Set([...prev, ...filteredIds])));
+    } else {
+      const filteredIdsSet = new Set(filtered.map((n) => n.id));
+      setSelected((prev) => prev.filter((id) => !filteredIdsSet.has(id)));
+    }
+  };
+
+  const allFilteredSelected =
+    filtered.length > 0 && filtered.every((n) => selected.includes(n.id));
 
   const resolvePresentation = (item: Notification) => {
     const isAI = item.type?.startsWith('ai_');
@@ -119,22 +225,62 @@ export default function AdminNotifications() {
     return { destination, icon, tag, tagClass, iconClass };
   };
 
+  const confirmTitle =
+    deleteAction?.kind === 'single'
+      ? '删除通知'
+      : deleteAction?.kind === 'batch'
+      ? `批量删除 ${deleteAction.ids.length} 条通知`
+      : deleteAction?.kind === 'clear_read'
+      ? '清空已读通知'
+      : '清空全部通知';
+
+  const confirmDescription =
+    deleteAction?.kind === 'single'
+      ? `确定要删除此条通知（${deleteAction.title}）吗？删除后无法恢复。`
+      : deleteAction?.kind === 'batch'
+      ? `确定要永久删除已选中的 ${deleteAction.ids.length} 条通知吗？此操作无法撤销。`
+      : deleteAction?.kind === 'clear_read'
+      ? `确定要清空所有已读通知（共 ${readCount} 条）吗？未读通知将继续保留。`
+      : '确定要清空所有通知记录吗？包括未读和已读通知，此操作无法撤销。';
+
   return (
     <AdminPage>
       <AdminPageHeader
         title="通知中心"
-        description="查看系统告警、AI 自动化异常与站点互动通知。"
+        description="查看系统告警、AI 自动化异常与站点互动通知，并支持批量管理与清理。"
         actions={
-          unreadCount > 0 ? (
-            <Button
-              variant="secondary"
-              type="button"
-              disabled={clearing}
-              onClick={() => void markAllRead()}
-            >
-              <CheckCheck /> {clearing ? '处理中…' : '全部标为已读'}
-            </Button>
-          ) : undefined
+          <div className="admin-page-actions-group" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {unreadCount > 0 ? (
+              <Button
+                variant="secondary"
+                type="button"
+                disabled={busy}
+                onClick={() => void markAllRead()}
+              >
+                <CheckCheck /> 全部标为已读
+              </Button>
+            ) : null}
+            {readCount > 0 ? (
+              <Button
+                variant="secondary"
+                type="button"
+                disabled={busy}
+                onClick={() => setDeleteAction({ kind: 'clear_read' })}
+              >
+                <Trash2 /> 清空已读
+              </Button>
+            ) : null}
+            {items.length > 0 ? (
+              <Button
+                variant="danger"
+                type="button"
+                disabled={busy}
+                onClick={() => setDeleteAction({ kind: 'clear_all' })}
+              >
+                <Trash2 /> 清空全部
+              </Button>
+            ) : null}
+          </div>
         }
       />
       <ContentStack>
@@ -149,7 +295,7 @@ export default function AdminNotifications() {
           >
             <option value="all">全部状态 ({items.length})</option>
             <option value="unread">未读通知 ({unreadCount})</option>
-            <option value="read">已读通知 ({items.length - unreadCount})</option>
+            <option value="read">已读通知 ({readCount})</option>
           </Select>
 
           <Select
@@ -162,7 +308,43 @@ export default function AdminNotifications() {
             <option value="ai">AI 运营告警</option>
             <option value="comment">互动与评论</option>
           </Select>
+
+          {filtered.length > 0 ? (
+            <label className="checkbox-field" style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
+              <Checkbox
+                checked={allFilteredSelected}
+                onChange={(e) => toggleSelectAllFiltered(e.target.checked)}
+              />
+              全选当前列表
+            </label>
+          ) : null}
         </FilterBar>
+
+        {selected.length > 0 ? (
+          <BulkActionBar
+            selectionLabel={`已选择 ${selected.length} 条通知`}
+            onCancel={() => setSelected([])}
+          >
+            <Button
+              variant="secondary"
+              size="compact"
+              type="button"
+              disabled={busy}
+              onClick={() => void markSelectedRead()}
+            >
+              <Check /> 标为已读
+            </Button>
+            <Button
+              variant="danger"
+              size="compact"
+              type="button"
+              disabled={busy}
+              onClick={() => setDeleteAction({ kind: 'batch', ids: [...selected] })}
+            >
+              <Trash2 /> 批量删除
+            </Button>
+          </BulkActionBar>
+        ) : null}
 
         {loading ? (
           <LoadingState label="正在载入通知…" />
@@ -173,12 +355,26 @@ export default function AdminNotifications() {
             {filtered.map((item) => {
               const { destination, icon, tag, tagClass, iconClass } = resolvePresentation(item);
               const isUnread = !item.read_at;
+              const isChecked = selected.includes(item.id);
+              const displayTitle = item.title || (item.actor_name ? `${item.actor_name} 互动消息` : '系统提醒');
 
               return (
                 <div
                   key={item.id}
                   className={`admin-notification-card ${isUnread ? 'admin-notification-card--unread' : ''}`}
                 >
+                  <div className="admin-notification-select">
+                    <Checkbox
+                      aria-label={`选择通知 ${item.id}`}
+                      checked={isChecked}
+                      onChange={(e) => {
+                        setSelected((prev) =>
+                          e.target.checked ? [...prev, item.id] : prev.filter((id) => id !== item.id)
+                        );
+                      }}
+                    />
+                  </div>
+
                   <div className={`admin-notification-icon ${iconClass}`}>
                     {icon}
                   </div>
@@ -186,7 +382,7 @@ export default function AdminNotifications() {
                   <div className="admin-notification-main">
                     <div className="admin-notification-header">
                       <strong className="admin-notification-title">
-                        {item.title || (item.actor_name ? `${item.actor_name} 互动消息` : '系统提醒')}
+                        {displayTitle}
                       </strong>
                       <span className={`admin-notification-tag ${tagClass}`}>
                         {tag}
@@ -228,6 +424,15 @@ export default function AdminNotifications() {
                         前往处理 <ChevronRight size={14} />
                       </Link>
                     ) : null}
+
+                    <button
+                      className="btn btn-danger btn-sm"
+                      type="button"
+                      onClick={() => setDeleteAction({ kind: 'single', id: item.id, title: displayTitle })}
+                      title="删除此通知"
+                    >
+                      <Trash2 size={14} /> 删除
+                    </button>
                   </div>
                 </div>
               );
@@ -235,6 +440,16 @@ export default function AdminNotifications() {
           </div>
         )}
       </ContentStack>
+
+      <ConfirmDialog
+        open={deleteAction !== null}
+        title={confirmTitle}
+        description={confirmDescription}
+        confirmLabel={deleteAction?.kind === 'clear_all' || deleteAction?.kind === 'clear_read' ? '确认清空' : '确认删除'}
+        danger
+        onClose={() => setDeleteAction(null)}
+        onConfirm={executeDelete}
+      />
     </AdminPage>
   );
 }
