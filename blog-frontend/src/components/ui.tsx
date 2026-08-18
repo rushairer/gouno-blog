@@ -738,14 +738,15 @@ export function Badge({
 export type PostStatus = 'published' | 'draft' | 'scheduled' | 'hidden';
 
 export function StatusBadge({
-  status,
+  status = 'draft',
   className = '',
   label,
 }: {
-  status: PostStatus | string;
+  status?: PostStatus | string;
   className?: string;
   label?: React.ReactNode;
 }) {
+  const normalizedStatus = status || 'draft';
   const defaultLabels: Record<string, string> = {
     published: '已发布',
     draft: '草稿',
@@ -753,8 +754,8 @@ export function StatusBadge({
     hidden: '已隐藏',
   };
   return (
-    <span className={classes('status-badge', `status-badge--${status}`, className)}>
-      {label || defaultLabels[status] || status}
+    <span className={classes('status-badge', `status-badge--${normalizedStatus}`, className)}>
+      {label || defaultLabels[normalizedStatus] || normalizedStatus}
     </span>
   );
 }
