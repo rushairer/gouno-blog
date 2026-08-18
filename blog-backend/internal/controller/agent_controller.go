@@ -253,6 +253,12 @@ func automationPlanCapabilities(prompt string) []string {
 		}
 		return []string{"content.get_post", "media.create_image_task"}
 	}
+	if strings.Contains(value, "单页") || strings.Contains(value, "独立页") || strings.Contains(value, "custom page") || strings.Contains(value, "page") {
+		if strings.Contains(value, "生成") || strings.Contains(value, "正文") || strings.Contains(value, "改写") || strings.Contains(value, "重写") || strings.Contains(value, "更新") || strings.Contains(value, "write") || strings.Contains(value, "update") || strings.Contains(value, "rewrite") || strings.Contains(value, "generate") {
+			return []string{"content.get_page", "content.propose_page_update"}
+		}
+		return []string{"content.get_page", "content.audit_page"}
+	}
 	if strings.Contains(value, "媒体") || strings.Contains(value, "media") || strings.Contains(value, "alt") {
 		return []string{"media.get_asset"}
 	}
@@ -312,8 +318,29 @@ func buildAutomationPlan(prompt string, profiles []*domain.ProviderProfile, agen
 		}
 		plan.Skill = map[string]any{"status": "reuse", "id": reusableSkill.ID, "name": reusableSkill.Name, "version_id": reusableSkill.VersionID, "capabilities": reusableSkill.Capabilities}
 	} else {
+		skillName := "内容审校助手"
+		systemPrompt := "在授权资源范围内执行内容分析，并为需要的变更生成审批提案。"
+		val := strings.ToLower(prompt)
+		if strings.Contains(val, "单页") || strings.Contains(val, "page") {
+			if strings.Contains(val, "生成") || strings.Contains(val, "正文") || strings.Contains(val, "改写") || strings.Contains(val, "重写") || strings.Contains(val, "更新") {
+				skillName = "单页写作与更新助手"
+				systemPrompt = "分析指定单页的内容与用户提示词要求，生成高质量正文并提交修改提案。"
+			} else {
+				skillName = "单页审校与SEO助手"
+				systemPrompt = "审校单页的内容质量与 SEO 配置，发现问题并提交修改建议。"
+			}
+		} else if strings.Contains(val, "图片") || strings.Contains(val, "配图") || strings.Contains(val, "封面") {
+			skillName = "文章视觉与配图助手"
+			systemPrompt = "阅读文章正文并生成符合主题的封面与文中配图任务。"
+		} else if strings.Contains(val, "评论") || strings.Contains(val, "comment") {
+			skillName = "评论回复与互动助手"
+			systemPrompt = "分析访客评论内容并拟定得体、专业的回复草案供人工审核。"
+		} else if strings.Contains(val, "社媒") || strings.Contains(val, "社交") || strings.Contains(val, "newsletter") || strings.Contains(val, "邮件") {
+			skillName = "多渠道内容分发助手"
+			systemPrompt = "将长文章提炼为适合社交媒体与邮件通讯的精简分发草案。"
+		}
 		plan.Skill = map[string]any{"status": "draft", "draft": map[string]any{
-			"name": "内容审校助手", "description": prompt, "system_prompt": "在授权资源范围内执行内容分析，并为需要的变更生成审批提案。", "capabilities": wantedCapabilities, "execution_mode": "approval", "enabled": false,
+			"name": skillName, "description": prompt, "system_prompt": systemPrompt, "capabilities": wantedCapabilities, "execution_mode": "approval", "enabled": false,
 		}}
 		plan.Prerequisites = append(plan.Prerequisites, "确认并保存一个 Skill 草案")
 	}
@@ -341,7 +368,11 @@ func buildAutomationPlan(prompt string, profiles []*domain.ProviderProfile, agen
 		if reusableSkill != nil {
 			skillVersionID = reusableSkill.VersionID
 		}
-		draft := map[string]any{"name": "内容审校 Agent", "description": prompt, "enabled": false, "provider_profile_id": providerID, "skill_version_id": skillVersionID}
+		agentName := "内容审校 Agent"
+		if draftSkill, ok := plan.Skill["draft"].(map[string]any); ok && draftSkill["name"] != nil {
+			agentName = fmt.Sprintf("%s Agent", strings.TrimSuffix(draftSkill["name"].(string), "助手"))
+		}
+		draft := map[string]any{"name": agentName, "description": prompt, "enabled": false, "provider_profile_id": providerID, "skill_version_id": skillVersionID}
 		plan.Agent = map[string]any{"status": "draft", "draft": draft}
 		plan.Prerequisites = append(plan.Prerequisites, "确认 Provider 与 Skill 后保存 Agent 草案")
 		plan.Workflow = fallbackWorkflowDraft(prompt, 0, true)
@@ -416,9 +447,71 @@ func (ctrl *AgentController) DraftAutomationPlan(c *gin.Context) {
 // workflowPlannerPrompt is versioned alongside the executable workflow
 // contract. Product changes must update this prompt and the validator together;
 // the model never gets authority to create, enable, or run a workflow.
-const workflowPlannerPrompt = `You are workflow-planner/v5 for a blog administration product. Return exactly one JSON object and nothing else: no Markdown, code fence, commentary, or prose. Its required keys are name, description, input_schema, and steps. Convert the user's goal into a small, safe workflow draft. Use only supplied Agent IDs as JSON integers and only model, approval_gate, and output steps. A model step must have a unique id, type exactly "model", a supplied integer agent_id, and input_pointer beginning with /input. Include an approval_gate only when the concrete operation creates a content-change proposal. A bounded internal image task created through media.create_image_task does not modify or publish an article and must not add a redundant approval_gate; selecting and applying the generated image remains a separate explicit user action. Finish with an output step whose output_pointer references a preceding step, for example /steps/analyze. input_schema must be a JSON Schema object with type object and additionalProperties false. When the goal requires choosing articles, use post_ids as an integer array resource field with x-gouno-resource post and x-gouno-widget entity-multi-select. For image, cover, illustration, or 配图 goals, add a required string format property with enum ["image_brief"], and pass the complete /input object to the model step so the Agent can see the requested format. Do not invent image, tool, connector, HTTP, publish, or other step types. Keep at most 5 steps. Do not create, enable, run, publish, or modify anything.`
+const workflowPlannerPrompt = `You are workflow-planner/v6 for a blog administration product. Return exactly one JSON object and nothing else: no Markdown, code fence, commentary, or prose.
+Your goal is to convert the user's goal into a small, safe, and executable workflow draft.
+Required top-level JSON keys: name, description, input_schema, steps. Optional key: cron_expression.
 
-const workflowPlannerCorrectionPrompt = `The previous response was not a valid Workflow draft. Return a corrected JSON object only. Keep exactly the allowed keys name, description, input_schema, and steps. Steps may only be model, approval_gate, and output; agent_id must be an integer from the supplied available_agents; never add image, tool, connector, HTTP, or publish steps. For image-related goals, use the Agent's authorized media.create_image_task capability and do not add approval_gate; image selection and application remain explicit user actions. input_schema must be an object schema with additionalProperties false.`
+Allowed step types:
+1. "resource_query": {"id": "select_resources", "type": "resource_query", "resource_type": "post"|"page"|"comment"|"media_asset", "filter": {}, "max_items": 20} (top-level only, before model/for_each).
+2. "for_each": {"id": "process_items", "type": "for_each", "collection_pointer": "/steps/select_resources", "max_items": 20, "max_concurrency": 0, "continue_on_error": true, "steps": [{"id": "item_model", "type": "model", "agent_id": <id>, "input_pointer": "/item", "include_context": true}]}
+3. "model": {"id": "analyze", "type": "model", "agent_id": <id>, "input_pointer": "/input"|"/item"|"/steps/<prev_step_id>", "include_context": true}
+4. "approval_gate": {"id": "review", "type": "approval_gate", "name": "人工审批", "input_pointer": "/steps/<prev_step_id>"}
+   Include approval_gate only when the concrete operation creates a content-change proposal and the user did not ask for direct execution or no approval.
+   A bounded internal image task created through media.create_image_task does not modify or publish an article and must not add a redundant approval_gate; selecting and applying the generated image remains a separate explicit user action.
+5. "output": {"id": "result", "type": "output", "output_pointer": "/steps/<prev_step_id>"}
+
+Agent Selection & Input Schema Rules:
+- agent_id in model steps MUST be an integer chosen from the supplied available_agents.
+- input_schema must be a JSON Schema object with "type": "object" and "additionalProperties": false.
+- When the goal requires choosing articles, use post_ids as an integer array resource field with x-gouno-resource post and x-gouno-widget entity-multi-select.
+- When the goal requires choosing custom pages, use page_ids as an integer array resource field with x-gouno-resource page and x-gouno-widget entity-multi-select.
+- When the goal requires choosing comments, use comment_ids with x-gouno-resource comment and x-gouno-widget entity-multi-select.
+- When the goal requires custom text instructions or user prompt, add a string property named prompt.
+- For image, cover, illustration, or 配图 goals, add a required string format property with enum ["image_brief"], and pass the complete /input object to the model step.
+- All JSON Pointer values must start with a leading slash '/'.
+- Keep at most 5 top-level steps. Do not invent image, tool, connector, HTTP, publish, or other step types. Do not create, enable, run, publish, or modify anything.`
+
+const workflowPlannerCorrectionPrompt = `The previous response was not a valid Workflow draft. Return a corrected JSON object only. Keep exactly the allowed keys name, description, input_schema, and steps. Steps may only be resource_query, for_each, model, approval_gate, and output; agent_id must be an integer from the supplied available_agents; never add image, tool, connector, HTTP, or publish steps. For image-related goals, use the Agent's authorized media.create_image_task capability and do not add approval_gate; image selection and application remain explicit user actions. Use post_ids for posts, page_ids for pages, and prompt for text instructions when required. input_schema must be an object schema with additionalProperties false.`
+
+func isCustomOrCompositeGoal(goal string) bool {
+	value := strings.ToLower(goal)
+	return strings.Contains(value, "提示词") ||
+		strings.Contains(value, "prompt") ||
+		strings.Contains(value, "输入") ||
+		strings.Contains(value, "指令") ||
+		strings.Contains(value, "要求") ||
+		strings.Contains(value, "每天") ||
+		strings.Contains(value, "每周") ||
+		strings.Contains(value, "定时") ||
+		strings.Contains(value, "cron") ||
+		strings.Contains(value, "循环") ||
+		strings.Contains(value, "逐篇") ||
+		strings.Contains(value, "逐个") ||
+		strings.Contains(value, "批量") ||
+		strings.Contains(value, "先") ||
+		strings.Contains(value, "然后") ||
+		strings.Contains(value, "再由") ||
+		strings.Contains(value, "不需要审核") ||
+		strings.Contains(value, "无需审核") ||
+		strings.Contains(value, "不需要审批") ||
+		strings.Contains(value, "无需审批") ||
+		strings.Contains(value, "直接运行")
+}
+
+func normalizeDraftAgentIDs(steps []domain.WorkflowStep, fallbackID int64) []domain.WorkflowStep {
+	normalized := make([]domain.WorkflowStep, len(steps))
+	for i, step := range steps {
+		s := step
+		if s.Type == "model" && s.AgentID <= 0 {
+			s.AgentID = fallbackID
+		}
+		if len(s.Steps) > 0 {
+			s.Steps = normalizeDraftAgentIDs(s.Steps, fallbackID)
+		}
+		normalized[i] = s
+	}
+	return normalized
+}
 
 func extractWorkflowDraftJSON(value string) ([]byte, bool) {
 	value = strings.TrimSpace(value)
@@ -462,11 +555,53 @@ func extractWorkflowDraftJSON(value string) ([]byte, bool) {
 }
 
 func fallbackWorkflowDraft(goal string, agentID int64, needsApproval bool) domain.Workflow {
-	isImageBrief := strings.Contains(strings.ToLower(goal), "图片") || strings.Contains(strings.ToLower(goal), "配图") || strings.Contains(strings.ToLower(goal), "封面") || strings.Contains(strings.ToLower(goal), "image") || strings.Contains(strings.ToLower(goal), "cover")
-	inputSchema := json.RawMessage(`{"type":"object","additionalProperties":false,"required":["post_ids"],"properties":{"post_ids":{"type":"array","items":{"type":"integer"},"minItems":1,"maxItems":20,"x-gouno-resource":"post","x-gouno-widget":"entity-multi-select"}}}`)
-	if isImageBrief {
-		inputSchema = json.RawMessage(`{"type":"object","additionalProperties":false,"required":["post_ids","format"],"properties":{"post_ids":{"type":"array","items":{"type":"integer"},"minItems":1,"maxItems":20,"x-gouno-resource":"post","x-gouno-widget":"entity-multi-select"},"format":{"type":"string","enum":["image_brief"],"default":"image_brief"}}}`)
+	value := strings.ToLower(goal)
+	isImageBrief := strings.Contains(value, "图片") || strings.Contains(value, "配图") || strings.Contains(value, "封面") || strings.Contains(value, "image") || strings.Contains(value, "cover")
+	isPage := strings.Contains(value, "单页") || strings.Contains(value, "独立页") || strings.Contains(value, "page")
+	hasPrompt := strings.Contains(value, "提示词") || strings.Contains(value, "prompt") || strings.Contains(value, "输入") || strings.Contains(value, "指令") || strings.Contains(value, "要求")
+
+	resourceKey := "post_ids"
+	resourceType := "post"
+	if isPage {
+		resourceKey = "page_ids"
+		resourceType = "page"
 	}
+
+	properties := map[string]any{
+		resourceKey: map[string]any{
+			"type":             "array",
+			"items":            map[string]any{"type": "integer"},
+			"minItems":         1,
+			"maxItems":         20,
+			"x-gouno-resource": resourceType,
+			"x-gouno-widget":   "entity-multi-select",
+		},
+	}
+	required := []string{resourceKey}
+
+	if isImageBrief {
+		properties["format"] = map[string]any{
+			"type":    "string",
+			"enum":    []string{"image_brief"},
+			"default": "image_brief",
+		}
+		required = append(required, "format")
+	}
+	if hasPrompt {
+		properties["prompt"] = map[string]any{
+			"type":        "string",
+			"title":       "修改要求/提示词",
+			"description": "输入针对该单页/内容的具体生成要求或提示词",
+		}
+		required = append(required, "prompt")
+	}
+	schemaRaw, _ := json.Marshal(map[string]any{
+		"type":                 "object",
+		"additionalProperties": false,
+		"required":             required,
+		"properties":           properties,
+	})
+
 	steps := []domain.WorkflowStep{{ID: "analyze", Type: "model", AgentID: agentID, InputPointer: "/input", IncludeContext: true}}
 	if needsApproval {
 		steps = append(steps, domain.WorkflowStep{ID: "review", Type: "approval_gate", Name: "人工审批", InputPointer: "/steps/analyze"})
@@ -474,7 +609,7 @@ func fallbackWorkflowDraft(goal string, agentID int64, needsApproval bool) domai
 	steps = append(steps, domain.WorkflowStep{ID: "result", Type: "output", OutputPointer: "/steps/analyze"})
 	return domain.Workflow{
 		Name: "AI 工作流草案", Description: goal, Timezone: "Asia/Shanghai",
-		InputSchema: inputSchema,
+		InputSchema: schemaRaw,
 		Steps:       steps, ScopePolicy: domain.WorkflowScopePolicy{Mode: "strict"},
 	}
 }
@@ -584,7 +719,7 @@ func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
 		}
 	}
 	match, template, matchedAgent := workflowplan.Match(intent, profiles, agents, nil, ctrl.tools.Catalog())
-	if template != nil {
+	if template != nil && !isCustomOrCompositeGoal(req.Prompt) {
 		draft := workflowplan.Compile(intent, template, matchedAgent)
 		draft.Enabled = false
 		warning := ""
@@ -598,7 +733,7 @@ func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
 			selectedAgents = append(selectedAgents, gin.H{"id": matchedAgent.ID, "name": matchedAgent.Name, "status": "ready", "skill_name": matchedAgent.Skill.Name, "capabilities": matchedAgent.Skill.Capabilities})
 		}
 		readiness := gin.H{"status": match.Status, "message": "服务端模板和能力契约已生成；请完成依赖确认后 Dry-run。"}
-		c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"workflow": draft, "provider": selected.Name, "model": selected.Model, "planner_version": "workflow-planner/v5", "planner_warning": warning, "selected_agents": selectedAgents, "intent": intent, "template": gin.H{"status": "matched", "key": template.Key, "name": template.Name}, "match": match, "readiness": readiness}))
+		c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"workflow": draft, "provider": selected.Name, "model": selected.Model, "planner_version": "workflow-planner/v6", "planner_warning": warning, "selected_agents": selectedAgents, "intent": intent, "template": gin.H{"status": "matched", "key": template.Key, "name": template.Name}, "match": match, "readiness": readiness}))
 		return
 	}
 	client, err := ctrl.svc.ProviderClient(c.Request.Context(), selected.ID)
@@ -606,10 +741,16 @@ func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
 		writeAgentError(c, err)
 		return
 	}
-	payload, _ := json.Marshal(map[string]any{"goal": req.Prompt, "available_agents": available})
-	// A workflow plan is deliberately small (at most five steps); constraining
-	// output keeps the interactive creator responsive on slower providers.
-	result, err := client.Generate(c.Request.Context(), provider.Request{Instructions: workflowPlannerPrompt, Messages: []provider.Message{{Role: "user", Content: string(payload)}}, MaxTokens: min(selected.MaxOutputTokens, 800)})
+	payload, _ := json.Marshal(map[string]any{
+		"goal":             req.Prompt,
+		"available_agents": available,
+		"available_tools":  ctrl.tools.Catalog(),
+	})
+	maxTokens := selected.MaxOutputTokens
+	if maxTokens < 3000 {
+		maxTokens = 3000
+	}
+	result, err := client.Generate(c.Request.Context(), provider.Request{Instructions: workflowPlannerPrompt, Messages: []provider.Message{{Role: "user", Content: string(payload)}}, MaxTokens: maxTokens})
 	if err != nil {
 		writeAgentError(c, err)
 		return
@@ -623,16 +764,19 @@ func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
 	validDraft := decodeDraft(result.Text)
 	if !validDraft {
 		correctionPayload, _ := json.Marshal(map[string]any{"goal": req.Prompt, "available_agents": available, "previous_response": result.Text})
-		correction, correctionErr := client.Generate(c.Request.Context(), provider.Request{Instructions: workflowPlannerCorrectionPrompt, Messages: []provider.Message{{Role: "user", Content: string(correctionPayload)}}, MaxTokens: min(selected.MaxOutputTokens, 800)})
+		correction, correctionErr := client.Generate(c.Request.Context(), provider.Request{Instructions: workflowPlannerCorrectionPrompt, Messages: []provider.Message{{Role: "user", Content: string(correctionPayload)}}, MaxTokens: maxTokens})
 		if correctionErr == nil {
 			validDraft = decodeDraft(correction.Text)
 		}
 	}
-	if !validDraft {
+	if validDraft {
+		draft.Steps = normalizeDraftAgentIDs(draft.Steps, fallbackAgentID)
+		if len(draft.InputSchema) == 0 {
+			draft.InputSchema = json.RawMessage(`{"type":"object","additionalProperties":false}`)
+		}
+	} else {
 		warning = "AI draft format was invalid; a safe editable starter draft was created instead."
-	}
-	if warning != "" {
-		draft = fallbackWorkflowDraft(req.Prompt, fallbackAgentID, fallbackNeedsApproval)
+		draft = fallbackWorkflowDraft(req.Prompt, fallbackAgentID, true)
 	}
 	enforceImageBriefContract(req.Prompt, &draft)
 	draft.Enabled = false
@@ -663,7 +807,24 @@ func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
 		}
 		selectedAgents = append(selectedAgents, selection)
 	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"workflow": draft, "provider": selected.Name, "model": selected.Model, "planner_version": "workflow-planner/v5", "planner_warning": warning, "selected_agents": selectedAgents, "intent": intent, "template": gin.H{"status": "unsupported"}, "match": match, "readiness": gin.H{"status": "ready", "message": "Provider, Agent, and Skill bindings were verified for this draft."}}))
+	templateStatus := "unsupported"
+	templateKey, templateName := "", ""
+	if template != nil {
+		templateStatus = "matched"
+		templateKey, templateName = template.Key, template.Name
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{
+		"workflow":         draft,
+		"provider":         selected.Name,
+		"model":            selected.Model,
+		"planner_version":  "workflow-planner/v6",
+		"planner_warning":  warning,
+		"selected_agents":  selectedAgents,
+		"intent":           intent,
+		"template":         gin.H{"status": templateStatus, "key": templateKey, "name": templateName},
+		"match":            match,
+		"readiness":        gin.H{"status": "ready", "message": "Provider, Agent, and Skill bindings were verified for this draft."},
+	}))
 }
 
 // DraftAssist is deliberately suggestion-only: it never persists or publishes

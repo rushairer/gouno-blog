@@ -134,3 +134,39 @@ func TestParseIntentAndCompileForPage(t *testing.T) {
 	}
 }
 
+func TestParseIntentAndCompileForPageUpdateWithPrompt(t *testing.T) {
+	prompt := "给“单页”做一个Workflow。不需要审核，直接运行后，到运行中心，然后等我输入一段提示词后，给“单页”生成新正文，可以重复生成。等我确认后保持单页。"
+	intent := ParseIntent(prompt)
+	if intent.Status != "ready" || intent.Action != "page_update" || len(intent.ResourceTypes) != 1 || intent.ResourceTypes[0] != "page" {
+		t.Fatalf("unexpected page update intent: %#v", intent)
+	}
+	if !contains(intent.InputFields, "prompt") || !contains(intent.InputFields, "page_ids") {
+		t.Fatalf("intent must include prompt and page_ids: %#v", intent.InputFields)
+	}
+	if intent.RequiresApproval {
+		t.Fatalf("intent should recognize no approval: %#v", intent)
+	}
+	template, ok := TemplateByKey("page_update")
+	if !ok || template == nil {
+		t.Fatal("page_update template not found")
+	}
+	if template.Tool != "content.propose_page_update" {
+		t.Fatalf("unexpected tool: %s", template.Tool)
+	}
+	draft := Compile(intent, template, nil)
+	if !strings.Contains(string(draft.InputSchema), "page_ids") || !strings.Contains(string(draft.InputSchema), "prompt") {
+		t.Fatalf("compiled schema must include page_ids and prompt: %s", draft.InputSchema)
+	}
+	hasApproval := false
+	for _, step := range draft.Steps {
+		if step.Type == "approval_gate" {
+			hasApproval = true
+			break
+		}
+	}
+	if !hasApproval {
+		t.Fatalf("page_update draft must include approval_gate for proposal confirmation: %#v", draft.Steps)
+	}
+}
+
+

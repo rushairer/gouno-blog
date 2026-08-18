@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowLeft, ArrowUp, ChevronRight, CirclePause, Database, GitBranch, GitCompareArrows, History, Play, Plus, RotateCcw, Save, TestTube2, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowUp, ChevronRight, CirclePause, Database, Edit2, GitBranch, History, Play, Plus, RotateCcw, Save, TestTube2, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { apiFetch } from '../../auth';
@@ -7,7 +7,6 @@ import { Button, Checkbox, ConfirmDialog, EditorPanel, EmptyState, Feedback, Fie
 import { StatusPill } from './StatusPill';
 import { statusLabel } from './labels';
 import { WorkflowInputForm } from './WorkflowInputForm';
-import { WorkflowRunOutput } from './WorkflowRunOutput';
 
 async function readData<T>(response: Response): Promise<T> {
   const body = await response.json();
@@ -284,7 +283,8 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = []
               actions={
                 <div className="row-actions">
                   <StatusPill status={workflow.enabled ? 'succeeded' : 'pending'} locale={locale} label={workflow.enabled ? (locale === 'zh' ? '已启用' : 'Enabled') : (locale === 'zh' ? '已停用' : 'Disabled')} />
-                  <Button variant="secondary" type="button" onClick={() => setEditing(workflow)}><GitCompareArrows />{locale === 'zh' ? '编辑' : 'Edit'}</Button>
+                  <a className="btn btn-secondary" href={`/admin/agents?tab=records&record=workflow&workflow=${workflow.id}`}>{locale === 'zh' ? '运行记录' : 'Run records'}</a>
+                  <Button variant="secondary" type="button" onClick={() => setEditing(workflow)}><Edit2 />{locale === 'zh' ? '编辑' : 'Edit'}</Button>
                   <Button variant="secondary" type="button" onClick={() => void loadVersions(workflow)}><History />{labels.versions}</Button>
                   <Button variant="secondary" disabled={!workflow.enabled && Boolean(runBlockReason)} title={!workflow.enabled ? (runBlockReason || undefined) : undefined} type="button" onClick={() => void onMutate(`/api/admin/ai-workflows/${workflow.id}/${workflow.enabled ? 'disable' : 'enable'}`)}>{workflow.enabled ? <CirclePause /> : <Play />}{workflow.enabled ? labels.disable : labels.enable}</Button>
                   <Button variant="danger" type="button" onClick={() => setDeleteTarget(workflow)}><Trash2 />{locale === 'zh' ? '删除' : 'Delete'}</Button>
@@ -313,9 +313,7 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = []
                 </div>
               ))}
             </div>
-            {latestRun?.output && typeof latestRun.output === 'object' && latestRun.output !== null && 'post_id' in latestRun.output ? <a className="btn btn-secondary" href={`/admin/posts/${String((latestRun.output as { post_id: number }).post_id)}/edit`}>{locale === 'zh' ? '查看已发布文章' : 'View published post'}</a> : null}
             {versions[workflow.id]?.length ? <div className="agent-chip-list">{versions[workflow.id].map((version) => <button type="button" key={version.version_id} disabled={version.current_version === workflow.current_version} onClick={() => void onMutate(`/api/admin/ai-workflows/${workflow.id}/rollback`, 'POST', { version: version.current_version })}><RotateCcw />v{version.current_version}</button>)}</div> : null}
-            {latestRun?.output ? <WorkflowRunOutput output={latestRun.output} locale={locale} showRaw={false} /> : latestRun?.error_message ? <p>{latestRun.error_message}</p> : null}
           </div>;
         })()}
       </div>
@@ -413,7 +411,7 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = []
                             <ChevronRight />
                           </button>
                           <button type="button" title={locale === 'zh' ? '编辑' : 'Edit'} onClick={() => setEditing(workflow)}>
-                            <GitCompareArrows />
+                            <Edit2 />
                           </button>
                           <button
                             type="button"
@@ -587,7 +585,7 @@ function WorkflowEditor({ initial, labels, agents, tools, locale, onSave, onCanc
   const [discoveryTools, setDiscoveryTools] = useState<string[]>(initial?.scope_policy?.discovery_tools || []);
   const [goal, setGoal] = useState('');
   const [planning, setPlanning] = useState(false);
-  const [plannerMessage, setPlannerMessage] = useState('');
+  const [plannerMessage, setPlannerMessage] = useState<{ type: 'error' | 'success' | 'info'; text: string } | null>(null);
   const [automationPlan, setAutomationPlan] = useState<AutomationPlan | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [editorError, setEditorError] = useState('');
@@ -663,13 +661,15 @@ function WorkflowEditor({ initial, labels, agents, tools, locale, onSave, onCanc
   };
   const generateDraft = async () => {
     if (!goal.trim()) {
-      setPlannerMessage('先用一句话说明你希望自动化完成什么。');
+      setPlannerMessage({ type: 'info', text: '先用一句话说明你希望自动化完成什么。' });
       return;
     }
     setPlanning(true);
-    setPlannerMessage('');
+    setPlannerMessage(null);
+    let planData: AutomationPlan | null = null;
     try {
       const plan = await readData<AutomationPlan>(await apiFetch('/api/admin/ai-automation-plans/draft', { method: 'POST', body: JSON.stringify({ prompt: goal.trim() }) }));
+      planData = plan;
       setAutomationPlan(plan);
       if (plan.provider.status !== 'ready' || plan.agent.status !== 'reuse' || plan.match?.status !== 'ready') {
         setName(plan.workflow.name);
@@ -678,7 +678,10 @@ function WorkflowEditor({ initial, labels, agents, tools, locale, onSave, onCanc
         setSteps(JSON.stringify(plan.workflow.steps, null, 2));
         setBoundAgentID('');
         const missing = plan.prerequisites.join('；');
-        setPlannerMessage(`依赖尚未就绪：${missing || plan.match?.status || '需要配置'}。已生成未启用的 Workflow 结构草案；请先完成依赖确认和能力检查后再保存。`);
+        setPlannerMessage({
+          type: 'info',
+          text: `依赖尚未就绪：${missing || plan.match?.status || '需要配置'}。已生成未启用的 Workflow 结构草案；请先完成依赖确认和能力检查后再保存。`,
+        });
         return;
       }
       const result = await readData<{ workflow: Workflow; provider: string; model: string; planner_warning?: string; selected_agents?: Array<{ id: number; name: string; skill_name?: string }>; readiness?: { message?: string } }>(await apiFetch('/api/admin/ai-workflows/draft', { method: 'POST', body: JSON.stringify({ prompt: goal.trim() }) }));
@@ -689,10 +692,33 @@ function WorkflowEditor({ initial, labels, agents, tools, locale, onSave, onCanc
       setBoundAgentID(firstWorkflowAgentID(result.workflow.steps) || '');
       setTemplateKey(result.workflow.template_key || plan.template?.key || '');
       const binding = result.selected_agents?.map((agent) => `${agent.name}${agent.skill_name ? ` · ${agent.skill_name}` : ''}`).join('、');
-      setPlannerMessage(result.planner_warning ? localizePlannerWarning(result.planner_warning, locale) : `${result.readiness?.message || '已验证依赖。'} 已复用 ${plan.agent.name || binding || '现有 Agent'}，并使用 ${binding || `${result.provider} · ${result.model}`} 生成未启用草案。请审阅后保存。`);
+      setPlannerMessage({
+        type: 'success',
+        text: result.planner_warning ? localizePlannerWarning(result.planner_warning, locale) : `${result.readiness?.message || '已验证依赖。'} 已复用 ${plan.agent.name || binding || '现有 Agent'}，并使用 ${binding || `${result.provider} · ${result.model}`} 生成未启用草案。请审阅后保存。`,
+      });
     } catch (reason) {
-      const message = reason instanceof Error ? reason.message : '';
-      setPlannerMessage(message.toLowerCase().includes('timeout') ? '默认写作模型响应超时。你可以稍后重试，或先手动填写下面的名称、说明和高级设置。' : (message || '无法生成 Workflow 草案。'));
+      if (planData?.workflow) {
+        setName(planData.workflow.name);
+        setDescription(planData.workflow.description);
+        setSchema(JSON.stringify(planData.workflow.input_schema, null, 2));
+        setSteps(JSON.stringify(planData.workflow.steps, null, 2));
+        setBoundAgentID(firstWorkflowAgentID(planData.workflow.steps) || '');
+        setTemplateKey(planData.workflow.template_key || planData.template?.key || '');
+        const message = reason instanceof Error ? reason.message : '';
+        const isTimeout = message.toLowerCase().includes('timeout');
+        setPlannerMessage({
+          type: 'info',
+          text: isTimeout
+            ? `已成功生成并填充「${planData.workflow.name}」标准工作流草案（大模型联网响应超时，已自动无缝切换为确定性模板兜底）。`
+            : `已根据意图为你生成「${planData.workflow.name}」工作流草案，请审阅后保存。`,
+        });
+      } else {
+        const message = reason instanceof Error ? reason.message : '';
+        setPlannerMessage({
+          type: 'error',
+          text: message || '无法生成 Workflow 草案。',
+        });
+      }
     } finally {
       setPlanning(false);
     }
@@ -707,7 +733,7 @@ function WorkflowEditor({ initial, labels, agents, tools, locale, onSave, onCanc
     await onSave({ id: initial?.id, name, description, enabled: initial?.enabled || false, cron_expression: cronExpression.trim() || undefined, timezone, template_key: templateKey || undefined, input_schema: parsedSchema, steps: safeSteps, scope_policy: { mode: hasResources ? 'strict' : scopeMode, discovery_tools: discoveryTools }, resource_query_empty_policy: emptyPolicy });
   };
   return <EditorPanel title={initial ? labels.editTitle : labels.createTitle} icon={<GitBranch />} closeLabel={labels.cancel} onClose={onCancel}><FormLayout onSubmit={submit}>
-    {!initial ? <section className="workflow-planner"><div><h3>告诉 AI 你想持续完成什么</h3><p>例如：“每天检查最近发布文章的 SEO，并把需要人工确认的建议汇总出来”。AI 只生成未启用草案，不会运行或修改内容。</p></div><textarea className="input-field" rows={4} value={goal} onChange={(event) => setGoal(event.target.value)} placeholder="描述目标、频率、输入来源，以及哪些结果需要你确认…" /><FormActions><Button variant="secondary" type="button" disabled={planning} onClick={() => void generateDraft()}><GitBranch />{planning ? '正在生成草案…' : '用 AI 生成 Workflow 草案'}</Button></FormActions>{plannerMessage ? <p className="workflow-planner__message">{plannerMessage}</p> : null}{automationPlan ? <div className="workflow-dependency-plan"><strong>依赖链预检</strong>{automationPlan.intent ? <div className="workflow-intent-summary"><span><b>需求意图</b>{automationPlan.intent.domain || '未识别'} / {automationPlan.intent.action || automationPlan.intent.ambiguity_reason || '待澄清'}</span><span><b>输出</b>{automationPlan.intent.output_type || '待识别'}</span></div> : null}{automationPlan.template ? <div className="workflow-intent-summary"><span><b>模板</b>{automationPlan.template.name || automationPlan.template.key || '未匹配'} · {automationPlan.template.status || 'unknown'}</span>{automationPlan.match?.status ? <span><b>能力检查</b>{automationPlan.match.status}</span> : null}</div> : null}<div className="workflow-dependency-plan__items"><span className={`agent-state agent-state--${automationPlan.provider.status === 'ready' ? 'active' : 'paused'}`}><i />Provider：{automationPlan.provider.name || '未配置'}</span><span className={`agent-state agent-state--${automationPlan.skill.status === 'reuse' ? 'active' : 'paused'}`}><i />Skill：{automationPlan.skill.name || automationPlan.skill.draft?.name || '待确认'}</span><span className={`agent-state agent-state--${automationPlan.agent.status === 'reuse' ? 'active' : 'paused'}`}><i />Agent：{automationPlan.agent.name || automationPlan.agent.draft?.name || '待确认'}</span></div>{automationPlan.intent?.output_type === 'image_brief' ? <small className="workflow-planner__notice">当前只生成图片 Brief 并进入审批；审批通过后仍需配置图片 Provider，才能生成真实图片。</small> : null}{automationPlan.match?.warnings?.map((warning) => <small className="workflow-planner__notice" key={warning}>{warning}</small>)}{automationPlan.skill.status === 'draft' && automationPlan.skill.draft && onConfigureSkill ? <Button variant="secondary" size="compact" type="button" onClick={() => onConfigureSkill(automationPlan.skill.draft)}>审阅并配置 Skill 草案</Button> : null}{automationPlan.prerequisites.length > 0 ? <small>请先在 Agent 设置中完成前置配置；本草案不会自动创建或启用依赖。</small> : null}</div> : null}</section> : null}
+    {!initial ? <section className="workflow-planner"><div><h3>告诉 AI 你想持续完成什么</h3><p>例如：“每天检查最近发布文章的 SEO，并把需要人工确认的建议汇总出来”。AI 只生成未启用草案，不会运行或修改内容。</p></div><textarea className="input-field" rows={4} value={goal} onChange={(event) => setGoal(event.target.value)} placeholder="描述目标、频率、输入来源，以及哪些结果需要你确认…" /><FormActions><Button variant="secondary" type="button" disabled={planning} onClick={() => void generateDraft()}><GitBranch />{planning ? '正在生成草案…' : '用 AI 生成 Workflow 草案'}</Button></FormActions>{plannerMessage ? <div className={`workflow-planner__message workflow-planner__message--${plannerMessage.type}`} role={plannerMessage.type === 'error' ? 'alert' : 'status'}><span>{plannerMessage.text}</span></div> : null}{automationPlan ? <div className="workflow-dependency-plan"><strong>依赖链预检</strong>{automationPlan.intent ? <div className="workflow-intent-summary"><span><b>需求意图</b>{automationPlan.intent.domain || '未识别'} / {automationPlan.intent.action || automationPlan.intent.ambiguity_reason || '待澄清'}</span><span><b>输出</b>{automationPlan.intent.output_type || '待识别'}</span></div> : null}{automationPlan.template ? <div className="workflow-intent-summary"><span><b>模板</b>{automationPlan.template.name || automationPlan.template.key || '未匹配'} · {automationPlan.template.status || 'unknown'}</span>{automationPlan.match?.status ? <span><b>能力检查</b>{automationPlan.match.status}</span> : null}</div> : null}<div className="workflow-dependency-plan__items"><span className={`agent-state agent-state--${automationPlan.provider.status === 'ready' ? 'active' : 'paused'}`}><i />Provider：{automationPlan.provider.name || '未配置'}</span><span className={`agent-state agent-state--${automationPlan.skill.status === 'reuse' ? 'active' : 'paused'}`}><i />Skill：{automationPlan.skill.name || automationPlan.skill.draft?.name || '待确认'}</span><span className={`agent-state agent-state--${automationPlan.agent.status === 'reuse' ? 'active' : 'paused'}`}><i />Agent：{automationPlan.agent.name || automationPlan.agent.draft?.name || '待确认'}</span></div>{automationPlan.intent?.output_type === 'image_brief' ? <small className="workflow-planner__notice">当前只生成图片 Brief 并进入审批；审批通过后仍需配置图片 Provider，才能生成真实图片。</small> : null}{automationPlan.match?.warnings?.map((warning) => <small className="workflow-planner__notice" key={warning}>{warning}</small>)}{automationPlan.skill.status === 'draft' && automationPlan.skill.draft && onConfigureSkill ? <Button variant="secondary" size="compact" type="button" onClick={() => onConfigureSkill(automationPlan.skill.draft)}>审阅并配置 Skill 草案</Button> : null}{automationPlan.prerequisites.length > 0 ? <small>请先在 Agent 设置中完成前置配置；本草案不会自动创建或启用依赖。</small> : null}</div> : null}</section> : null}
     {!initial && automationPlan?.agent.status === 'draft' && automationPlan.agent.draft && onConfigureAgent ? <section className="workflow-planner__action"><small>Agent 尚未就绪。确认 Skill 后，可将 Agent 草案预填到现有 Agent 表单；默认保持停用。</small><Button variant="secondary" size="compact" type="button" onClick={() => onConfigureAgent(automationPlan.agent.draft)}>审阅并配置 Agent 草案</Button></section> : null}
     <Field label="名称" hint="面向日常运营的短名称，例如“发布前内容检查”。"><input className="input-field" required value={name} onChange={(event) => setName(event.target.value)} /></Field><Field label="作用说明" hint="说明此流程何时使用、会产出什么，以及人工确认边界。"><input className="input-field" value={description} onChange={(event) => setDescription(event.target.value)} /></Field>
     <div className="form-grid workflow-schedule-grid"><Field label="Cron 执行计划" hint="留空表示仅手动运行；例如每天 09:00：0 9 * * *"><input className="input-field mono" value={cronExpression} onChange={(event) => setCronExpression(event.target.value)} placeholder="0 9 * * *" /></Field><Field label="时区" hint="使用 IANA 时区，例如 Asia/Shanghai"><input className="input-field mono" required value={timezone} onChange={(event) => setTimezone(event.target.value)} /></Field></div>

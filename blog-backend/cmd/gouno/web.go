@@ -118,7 +118,12 @@ func startWebServer(cmd *cobra.Command, args []string) {
 		middleware.RecoveryMiddleware(),
 		middleware.SecurityHeadersMiddleware(!globalConfig.WebServerConfig.Debug),
 		middleware.TimeoutMiddlewareWithOverrides(globalConfig.WebServerConfig.RequestTimeout, map[string]time.Duration{
-			"provider_test": 90 * time.Second,
+			"provider_test":                        90 * time.Second,
+			"/api/admin/ai-workflows/draft":        90 * time.Second,
+			"/api/admin/ai-automation-plans/draft": 90 * time.Second,
+			"/api/admin/ai-draft-assist":           90 * time.Second,
+			"/api/admin/ai-index/evaluate":         120 * time.Second,
+			"/api/admin/ai-index/rebuild":          120 * time.Second,
 		}),
 		gounoMiddleware.RateLimitMiddleware(ctx, globalConfig.WebServerConfig.RateLimitPerMinute, time.Minute),
 	)

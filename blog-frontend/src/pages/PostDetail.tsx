@@ -287,7 +287,7 @@ export default function PostDetail() {
           {t('backToFeed')}
         </Link>
 
-        <div className="article-layout">
+        <div className={`article-layout ${toc.length === 0 ? 'article-layout--no-toc' : ''}`}>
           <Panel as="article" className="article">
             <header>
               {post.cover_url ? (

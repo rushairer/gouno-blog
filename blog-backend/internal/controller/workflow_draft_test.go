@@ -88,3 +88,42 @@ func TestImageGenerationPlanUsesInternalTaskWithoutApproval(t *testing.T) {
 		t.Fatalf("image generation capabilities = %#v", capabilities)
 	}
 }
+
+func TestPageDraftWorkflowContract(t *testing.T) {
+	prompt := "给“单页”做一个Workflow。不需要审核，直接运行后，到运行中心，然后等我输入一段提示词后，给“单页”生成新正文，可以重复生成。等我确认后保持单页。"
+	draft := fallbackWorkflowDraft(prompt, 15, false)
+	if !strings.Contains(string(draft.InputSchema), `"page_ids"`) || !strings.Contains(string(draft.InputSchema), `"prompt"`) {
+		t.Fatalf("page fallback draft must contain page_ids and prompt: %s", draft.InputSchema)
+	}
+	plan := buildAutomationPlan(prompt, nil, nil, nil)
+	capabilities := plan.Skill["draft"].(map[string]any)["capabilities"].([]string)
+	if !strings.Contains(strings.Join(capabilities, ","), "content.propose_page_update") {
+		t.Fatalf("expected propose_page_update capability for page generation plan: %#v", capabilities)
+	}
+}
+
+func TestCustomGoalDetectionAndAgentNormalization(t *testing.T) {
+	if !isCustomOrCompositeGoal("每天自动筛选文章并生成摘要") {
+		t.Fatal("expected daily goal to be composite")
+	}
+	if !isCustomOrCompositeGoal("等我输入一段提示词后生成单页") {
+		t.Fatal("expected prompt input goal to be custom")
+	}
+	if isCustomOrCompositeGoal("生成文章配图 Brief") {
+		t.Fatal("standard brief goal must not be composite")
+	}
+
+	steps := []domain.WorkflowStep{
+		{ID: "select", Type: "resource_query", ResourceType: "post"},
+		{ID: "batch", Type: "for_each", CollectionPointer: "/steps/select", Steps: []domain.WorkflowStep{
+			{ID: "inner", Type: "model", AgentID: 0},
+		}},
+		{ID: "top_model", Type: "model", AgentID: 0},
+	}
+	normalized := normalizeDraftAgentIDs(steps, 42)
+	if normalized[1].Steps[0].AgentID != 42 || normalized[2].AgentID != 42 {
+		t.Fatalf("agent IDs not normalized: %#v", normalized)
+	}
+}
+
+

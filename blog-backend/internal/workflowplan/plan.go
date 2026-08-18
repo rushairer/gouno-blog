@@ -80,7 +80,9 @@ var templates = []Template{
 	{Key: "content_distribution_faq", Name: "FAQ 草稿", Domain: "distribution", Action: "faq", ResourceTypes: []string{"post"}, OutputType: "faq_draft", Tool: "content.propose_distribution_draft", RequiresApproval: true, InputFormat: "faq"},
 	{Key: "comment_reply", Name: "评论回复草稿", Domain: "comments", Action: "reply", ResourceTypes: []string{"comment"}, OutputType: "comment_reply", Tool: "comments.propose_reply", RequiresApproval: true},
 	{Key: "post_seo_review", Name: "文章 SEO 审校", Domain: "content", Action: "seo_review", ResourceTypes: []string{"post"}, OutputType: "review", Tool: "content.audit_post"},
+	{Key: "post_update", Name: "文章正文改写与更新", Domain: "content", Action: "post_update", ResourceTypes: []string{"post"}, OutputType: "post_draft", Tool: "content.propose_update", RequiresApproval: true},
 	{Key: "page_review", Name: "单页内容与SEO审校", Domain: "content", Action: "page_review", ResourceTypes: []string{"page"}, OutputType: "review", Tool: "content.audit_page"},
+	{Key: "page_update", Name: "单页正文改写与更新", Domain: "content", Action: "page_update", ResourceTypes: []string{"page"}, OutputType: "page_draft", Tool: "content.propose_page_update", RequiresApproval: true},
 	{Key: "media_alt_review", Name: "媒体无障碍检查", Domain: "media", Action: "alt_review", ResourceTypes: []string{"media_asset"}, OutputType: "review", Tool: "media.get_asset"},
 }
 
@@ -143,6 +145,10 @@ func ParseIntent(prompt string) WorkflowIntent {
 		intent.AmbiguityReason = "目标为空"
 		return intent
 	}
+	hasPromptInput := strings.Contains(value, "提示词") || strings.Contains(value, "prompt") || strings.Contains(value, "输入") || strings.Contains(value, "指令") || strings.Contains(value, "instruction") || strings.Contains(value, "要求")
+	isNoApproval := strings.Contains(value, "不需要审核") || strings.Contains(value, "无需审核") || strings.Contains(value, "不需要审批") || strings.Contains(value, "无需审批") || strings.Contains(value, "直接运行") || strings.Contains(value, "no approval")
+	isRewriteGoal := strings.Contains(value, "生成") || strings.Contains(value, "正文") || strings.Contains(value, "改写") || strings.Contains(value, "重写") || strings.Contains(value, "更新") || strings.Contains(value, "write") || strings.Contains(value, "update") || strings.Contains(value, "rewrite") || strings.Contains(value, "generate")
+
 	intent.ResourceTypes = []string{"post"}
 	intent.InputFields = []string{"post_ids"}
 	intent.Domain = "content"
@@ -154,7 +160,7 @@ func ParseIntent(prompt string) WorkflowIntent {
 	case strings.Contains(value, "图片") || strings.Contains(value, "配图") || strings.Contains(value, "封面") || strings.Contains(value, "illustration") || strings.Contains(value, "image") || strings.Contains(value, "cover"):
 		intent.Domain, intent.Action, intent.OutputType = "distribution", "image_brief", "image_brief"
 		briefOnly := strings.Contains(value, "brief") || strings.Contains(value, "提示词") || strings.Contains(value, "prompt")
-		intent.RequiresApproval = briefOnly
+		intent.RequiresApproval = briefOnly && !isNoApproval
 		intent.RequiresImage = !briefOnly
 		if intent.RequiresImage {
 			intent.Domain, intent.Action, intent.OutputType = "media", "generate_image", "media_asset"
@@ -166,12 +172,25 @@ func ParseIntent(prompt string) WorkflowIntent {
 	case strings.Contains(value, "社媒") || strings.Contains(value, "社交") || strings.Contains(value, "social"):
 		intent.Domain, intent.Action, intent.OutputType = "distribution", "social", "social_draft"
 	case strings.Contains(value, "单页") || strings.Contains(value, "独立页") || strings.Contains(value, "custom page") || strings.Contains(value, "page"):
-		intent.ResourceTypes, intent.InputFields, intent.Domain, intent.Action, intent.OutputType = []string{"page"}, []string{"page_ids"}, "content", "page_review", "review"
+		intent.ResourceTypes, intent.InputFields, intent.Domain = []string{"page"}, []string{"page_ids"}, "content"
+		if isRewriteGoal {
+			intent.Action, intent.OutputType = "page_update", "page_draft"
+		} else {
+			intent.Action, intent.OutputType = "page_review", "review"
+		}
 	case strings.Contains(value, "seo") || strings.Contains(value, "审校") || strings.Contains(value, "检查"):
 		intent.Domain, intent.Action, intent.OutputType = "content", "seo_review", "review"
+	case isRewriteGoal:
+		intent.Domain, intent.Action, intent.OutputType = "content", "post_update", "post_draft"
 	default:
 		intent.AmbiguityReason = "无法从目标确定资源类型和动作"
 		return intent
+	}
+	if hasPromptInput && !contains(intent.InputFields, "prompt") {
+		intent.InputFields = append(intent.InputFields, "prompt")
+	}
+	if isNoApproval {
+		intent.RequiresApproval = false
 	}
 	intent.Status = "ready"
 	return intent
@@ -247,11 +266,7 @@ func Compile(intent WorkflowIntent, template *Template, agent *domain.Agent) dom
 	agentID := int64(0)
 	if agent != nil {
 		agentID = agent.ID
-		// The template defines whether this concrete operation produces an
-		// approval proposal. An approval-mode Agent may also perform a bounded
-		// internal task or a read-only analysis without creating a redundant
-		// approval gate; content-changing templates remain explicitly governed.
-		if template == nil {
+		if template == nil && intent.RequiresApproval {
 			needsApproval = agent.Skill != nil && agent.Skill.ExecutionMode == domain.AgentModeApproval
 		}
 	}
@@ -263,6 +278,14 @@ func Compile(intent WorkflowIntent, template *Template, agent *domain.Agent) dom
 	} else if contains(intent.ResourceTypes, "page") {
 		properties = map[string]any{"page_ids": map[string]any{"type": "array", "items": map[string]any{"type": "integer"}, "minItems": 1, "maxItems": 20, "x-gouno-resource": "page", "x-gouno-widget": "entity-multi-select"}}
 		required = []string{"page_ids"}
+	}
+	if contains(intent.InputFields, "prompt") {
+		properties["prompt"] = map[string]any{
+			"type":        "string",
+			"title":       "修改要求/提示词",
+			"description": "输入针对该单页/内容的具体生成要求或提示词",
+		}
+		required = append(required, "prompt")
 	}
 	if template != nil && template.InputFormat != "" {
 		properties["format"] = map[string]any{"type": "string", "enum": []string{template.InputFormat}, "default": template.InputFormat}

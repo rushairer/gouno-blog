@@ -1130,6 +1130,14 @@ select option {
   align-items: start;
 }
 
+.article-layout--no-toc,
+.article-layout:not(:has(.toc-sidebar)):not(:has(.article-sidebar)) {
+  display: block;
+  max-width: 840px;
+  width: 100%;
+  margin-inline: auto;
+}
+
 .toc-sidebar {
   position: sticky;
   top: 90px;
