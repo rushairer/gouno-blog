@@ -187,7 +187,7 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
   return (
     <div className="public-container custom-page">
       {draftBanner}
-      <div className="article-layout">
+      <div className={`article-layout ${toc.length === 0 ? 'article-layout--no-toc' : ''}`}>
         <article className="article-main">
           <header className="article-header">
             <h1 className="article-title">{page.title}</h1>
