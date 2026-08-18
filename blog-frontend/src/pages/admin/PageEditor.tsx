@@ -269,7 +269,6 @@ export default function PageEditor() {
 
           {preview ? (
             <div className="editor-preview">
-              <h1>{page.title || '无标题单页'}</h1>
               <MarkdownRenderer content={page.content || '开始写作后，预览会出现在这里。'} />
             </div>
           ) : (

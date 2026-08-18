@@ -124,15 +124,14 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
       <div className="public-container about-page">
         {draftBanner}
         <header>
-          <div className="about-mark">{authorInitials(site.author_name)}</div>
+          <div className="about-mark">{authorInitials(site.author_name || site.site_title)}</div>
           <div>
-            <p>ABOUT / {site.site_title.toUpperCase()}</p>
-            <h1>{page.title === '关于' ? <>关于这个站点，<br />以及持续写作的理由。</> : page.title}</h1>
+            <p>{(page.slug || 'about').toUpperCase()} / {(site.site_title || DEFAULT_SITE_SETTINGS.site_title).toUpperCase()}</p>
+            <h1>{page.title}</h1>
           </div>
         </header>
         <div className="about-grid">
           <main>
-            {page.summary ? <p className="about-lead">{page.summary}</p> : null}
             <MarkdownRenderer content={page.content} />
           </main>
           <aside>
@@ -173,7 +172,6 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
         {draftBanner}
         <header className="article-header" style={{ marginBottom: '28px' }}>
           <h1 className="article-title">{page.title}</h1>
-          {page.summary ? <p className="lead">{page.summary}</p> : null}
         </header>
         <div className="article-content">
           <MarkdownRenderer content={page.content} />
@@ -190,7 +188,6 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
         <article className="article-main">
           <header className="article-header">
             <h1 className="article-title">{page.title}</h1>
-            {page.summary ? <p className="lead">{page.summary}</p> : null}
           </header>
           <div className="article-content">
             <MarkdownRenderer content={page.content} />
