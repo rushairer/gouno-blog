@@ -1,4 +1,4 @@
-import { ArrowLeft, Eye, LoaderCircle, Trash2, X } from "lucide-react";
+import { ArrowLeft, Ban, Eye, LoaderCircle, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiFetch } from "../../auth";
 import type {
@@ -151,6 +151,7 @@ export function WorkflowRunRecords({
     Record<number, string>
   >({});
   const [batchBusy, setBatchBusy] = useState("");
+  const [cancelling, setCancelling] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [imagePreviews, setImagePreviews] = useState<
     Record<number, ArticleImagePreview>
@@ -322,7 +323,7 @@ export function WorkflowRunRecords({
 
   const candidateAction = async (
     candidate: MediaCandidate,
-    action: "select" | "apply" | "regenerate",
+    action: "select" | "apply" | "regenerate" | "reject",
   ) => {
     setError("");
     try {
@@ -331,7 +332,9 @@ export function WorkflowRunRecords({
           ? `/api/admin/ai-image-tasks/${candidate.id}/select`
           : action === "apply"
             ? `/api/admin/ai-image-tasks/${candidate.id}/apply`
-            : `/api/admin/ai-image-tasks/${candidate.id}/regenerate`;
+            : action === "reject"
+              ? `/api/admin/ai-image-tasks/${candidate.id}/reject`
+              : `/api/admin/ai-image-tasks/${candidate.id}/regenerate`;
       const body =
         action === "select"
           ? selectionForCandidate(candidate)
@@ -451,6 +454,40 @@ export function WorkflowRunRecords({
           : zh
             ? "批量应用失败。"
             : "Could not apply image candidates.",
+      );
+    } finally {
+      setBatchBusy("");
+    }
+  };
+
+  const batchReject = async () => {
+    if (!selected || selectedCandidates.length === 0) return;
+    setBatchBusy("reject");
+    setError("");
+    try {
+      await readData<unknown>(
+        await apiFetch(
+          `/api/admin/ai-workflow-runs/${selected.run.id}/media-candidates/reject`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              candidate_ids: selectedCandidates.map(
+                (candidate) => candidate.id,
+              ),
+            }),
+          },
+        ),
+      );
+      await inspect(selected.run);
+      if (onRefresh) await onRefresh();
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : zh
+            ? "批量放弃失败。"
+            : "Could not reject image candidates.",
       );
     } finally {
       setBatchBusy("");
@@ -599,6 +636,38 @@ export function WorkflowRunRecords({
     }
   };
 
+  const cancelRunByID = async (run: WorkflowRun) => {
+    if (!["queued", "running", "awaiting_approval", "waiting_for_user"].includes(run.status)) return;
+    if (!window.confirm(zh ? `确定放弃/终止运行 Run #${run.id} 吗？` : `Cancel run #${run.id}?`)) return;
+    setCancelling(true);
+    setError("");
+    try {
+      await readData<unknown>(
+        await apiFetch(`/api/admin/ai-workflow-runs/${run.id}/cancel`, {
+          method: "POST",
+        }),
+      );
+      if (selected?.run.id === run.id) {
+        await inspect(run);
+      }
+      if (onRefresh) await onRefresh();
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : zh
+            ? "放弃运行失败。"
+            : "Could not cancel run.",
+      );
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const cancelRun = async () => {
+    if (selected) await cancelRunByID(selected.run);
+  };
+
   const deleteRunByID = async (run: WorkflowRun) => {
     if (!["succeeded", "failed", "cancelled"].includes(run.status)) return;
     if (!window.confirm(zh ? `删除运行记录 Run #${run.id} 及其附属日志？文章和媒体文件不会被删除。` : `Delete run #${run.id} and its attached logs? Posts and media files are kept.`)) return;
@@ -663,6 +732,16 @@ export function WorkflowRunRecords({
                 actions={
                   <div className="row-actions">
                     <StatusPill status={selected.run.status} locale={locale} />
+                    {["queued", "running", "awaiting_approval", "waiting_for_user"].includes(selected.run.status) ? (
+                      <Button
+                        variant="secondary"
+                        type="button"
+                        disabled={cancelling}
+                        onClick={() => void cancelRun()}
+                      >
+                        <Ban />{cancelling ? (zh ? "放弃中…" : "Cancelling…") : (zh ? "放弃/终止运行" : "Cancel run")}
+                      </Button>
+                    ) : null}
                     {["succeeded", "failed", "cancelled"].includes(selected.run.status) ? (
                       <Button variant="secondary" type="button" disabled={deleting} onClick={() => void deleteRun()}>
                         <Trash2 />{deleting ? (zh ? "清理中…" : "Deleting…") : (zh ? "删除记录" : "Delete record")}
@@ -892,6 +971,22 @@ export function WorkflowRunRecords({
                           : zh
                             ? "批量预览"
                             : "Preview selected"}
+                      </button>
+                      <button
+                        className="btn btn-secondary"
+                        type="button"
+                        disabled={
+                          batchBusy !== "" || selectedCandidates.length === 0
+                        }
+                        onClick={() => void batchReject()}
+                      >
+                        {batchBusy === "reject"
+                          ? zh
+                            ? "放弃中…"
+                            : "Rejecting…"
+                          : zh
+                            ? "批量放弃"
+                            : "Reject selected"}
                       </button>
                       <button
                         className="btn btn-primary"
@@ -1143,18 +1238,41 @@ export function WorkflowRunRecords({
                             </button>
                           </>
                         ) : null}
-                        {candidate.generation_status === "brief_ready" ? (
+                        {candidate.generation_status === "generated" &&
+                        !candidate.applied_version_id ? (
                           <button
-                            className="btn btn-primary"
+                            className="btn btn-secondary"
                             type="button"
                             onClick={() =>
-                              void candidateAction(candidate, "regenerate")
+                              void candidateAction(candidate, "reject")
                             }
                           >
-                            {zh
-                              ? "开始生成候选图片"
-                              : "Generate image candidates"}
+                            {zh ? "放弃候选" : "Reject"}
                           </button>
+                        ) : null}
+                        {candidate.generation_status === "brief_ready" ? (
+                          <>
+                            <button
+                              className="btn btn-primary"
+                              type="button"
+                              onClick={() =>
+                                void candidateAction(candidate, "regenerate")
+                              }
+                            >
+                              {zh
+                                ? "开始生成候选图片"
+                                : "Generate image candidates"}
+                            </button>
+                            <button
+                              className="btn btn-secondary"
+                              type="button"
+                              onClick={() =>
+                                void candidateAction(candidate, "reject")
+                              }
+                            >
+                              {zh ? "放弃候选" : "Reject"}
+                            </button>
+                          </>
                         ) : null}
                         {candidate.generation_status === "failed" ||
                         candidate.generation_status === "ready_to_generate" ||
@@ -1453,6 +1571,16 @@ export function WorkflowRunRecords({
                             >
                               <Eye />
                             </button>
+                            {["queued", "running", "awaiting_approval", "waiting_for_user"].includes(run.status) ? (
+                              <button
+                                type="button"
+                                title={zh ? "放弃/终止运行" : "Cancel run"}
+                                disabled={cancelling}
+                                onClick={() => void cancelRunByID(run)}
+                              >
+                                <Ban />
+                              </button>
+                            ) : null}
                             {["succeeded", "failed", "cancelled"].includes(run.status) ? (
                               <button
                                 type="button"

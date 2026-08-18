@@ -1095,9 +1095,9 @@ func (s *Service) ReconcileMediaRun(ctx context.Context, runID int64) error {
 	}
 	status := "waiting_for_user"
 	finished := false
-	if pending == 0 && applied == total {
+	if pending == 0 && applied > 0 {
 		status, finished = "succeeded", true
-	} else if pending == 0 && failed+cancelled == total {
+	} else if pending == 0 {
 		status, finished = "cancelled", true
 	}
 	result, err := s.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status=$2,finished_at=CASE WHEN $3 THEN NOW() ELSE NULL END
@@ -1115,7 +1115,12 @@ func (s *Service) ReconcileMediaRun(ctx context.Context, runID int64) error {
 }
 
 func (s *Service) Cancel(ctx context.Context, runID int64) error {
-	result, err := s.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status='cancelled',finished_at=NOW(),error_code='cancelled',error_message='cancelled by administrator'
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	result, err := tx.ExecContext(ctx, `UPDATE ai_workflow_runs SET status='cancelled',finished_at=NOW(),error_code='cancelled',error_message='cancelled by administrator'
 		WHERE id=$1 AND status IN ('queued','running','awaiting_approval','waiting_for_user')`, runID)
 	if err != nil {
 		return err
@@ -1123,7 +1128,15 @@ func (s *Service) Cancel(ctx context.Context, runID int64) error {
 	if changed, _ := result.RowsAffected(); changed == 0 {
 		return sql.ErrNoRows
 	}
-	return nil
+	if _, err := tx.ExecContext(ctx, `UPDATE workflow_interaction_tasks SET status='cancelled',updated_at=NOW()
+		WHERE workflow_run_id=$1 AND status='pending'`, runID); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE ai_media_candidates SET generation_status='cancelled',cancelled_at=NOW(),error_code='cancelled',error_message='workflow cancelled by administrator'
+		WHERE workflow_run_id=$1 AND generation_status IN ('brief_ready','ready_to_generate','generating','generated') AND applied_version_id IS NULL`, runID); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func (s *Service) DeleteRun(ctx context.Context, runID int64) error {

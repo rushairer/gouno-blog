@@ -15,12 +15,12 @@ export interface CommunityComment {
 
 export interface Notification {
   id: number;
-  type: 'comment_reply';
+  type: string;
   post_id?: number;
-  post_slug: string;
-  post_title: string;
+  post_slug?: string;
+  post_title?: string;
   comment_id?: number;
-  actor_name: string;
+  actor_name?: string;
   title?: string;
   body?: string;
   href?: string;

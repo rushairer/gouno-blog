@@ -1371,6 +1371,44 @@ func (r *AgentRepository) ReviewMediaCandidate(ctx context.Context, id int64, ac
 	return nil
 }
 
+func (r *AgentRepository) RejectMediaCandidate(ctx context.Context, id int64, reason string) error {
+	if reason == "" {
+		reason = "rejected by administrator"
+	}
+	result, err := r.db.ExecContext(ctx, `UPDATE ai_media_candidates SET generation_status='rejected',selected=FALSE,reviewed_at=NOW(),review_note=$2
+		WHERE id=$1 AND applied_version_id IS NULL AND generation_status NOT IN ('failed','cancelled','rejected')`, id, reason)
+	if err != nil {
+		return err
+	}
+	if n, _ := result.RowsAffected(); n == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+func (r *AgentRepository) RejectMediaCandidates(ctx context.Context, ids []int64) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	for _, id := range ids {
+		result, execErr := tx.ExecContext(ctx, `UPDATE ai_media_candidates SET generation_status='rejected',selected=FALSE,reviewed_at=NOW(),review_note='rejected by administrator'
+			WHERE id=$1 AND applied_version_id IS NULL AND generation_status NOT IN ('failed','cancelled','rejected')`, id)
+		if execErr != nil {
+			return execErr
+		}
+		if n, _ := result.RowsAffected(); n == 0 {
+			return sql.ErrNoRows
+		}
+	}
+	return tx.Commit()
+}
+
+
 func interactionColumns() string {
 	return `id,workflow_run_id,agent_run_id,workflow_step_id,interaction_type,schema,payload,options,status,resume_token,response,expires_at,resolved_by,resolved_at,created_at,updated_at`
 }

@@ -1,9 +1,9 @@
 import { useEffect, useLayoutEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { ExternalLink, LogOut, Menu, Moon, Search, Sun } from 'lucide-react';
+import { Bell, ExternalLink, LogOut, Menu, Moon, Search, Sun } from 'lucide-react';
 import { adminNavigation } from '../navigation';
-import { getUserProfile, logout } from '../auth';
+import { apiFetch, getUserProfile, logout } from '../auth';
 import { DEFAULT_SITE_SETTINGS } from '../config/site-defaults';
 import { getSiteSettings } from '../lib/blog-api';
 
@@ -22,6 +22,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const [siteName, setSiteName] = useState(DEFAULT_SITE_SETTINGS.site_title);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState('');
+  const [unreadCount, setUnreadCount] = useState(0);
   const [theme, setTheme] = useState<'light' | 'dark'>(() =>
     localStorage.getItem('gouno-blog:theme') === 'dark' ? 'dark' : 'light',
   );
@@ -35,6 +36,27 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     getSiteSettings().then((settings) => setSiteName(settings.site_title || DEFAULT_SITE_SETTINGS.site_title)).catch(() => {
       // Keep the administration shell available when public site settings fail.
     });
+  }, []);
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const resp = await apiFetch('/api/me/notifications');
+        if (resp.ok) {
+          const body = await resp.json();
+          const list = (body.data?.list || []) as Array<{ read_at?: string }>;
+          setUnreadCount(list.filter((item) => !item.read_at).length);
+        }
+      } catch {
+        // Keep shell resilient
+      }
+    };
+    void fetchUnread();
+    const handleChanged = () => { void fetchUnread(); };
+    window.addEventListener('community:notifications-changed', handleChanged);
+    return () => {
+      window.removeEventListener('community:notifications-changed', handleChanged);
+    };
   }, []);
 
   useEffect(() => {
@@ -91,6 +113,13 @@ export default function AdminShell({ children }: { children: ReactNode }) {
           </form>
           <div className="admin-topbar-actions">
             <Link to="/" target="_blank" rel="noreferrer" aria-label="在新窗口查看前台站点"><ExternalLink /><span>查看站点</span></Link>
+            <Link to="/admin/notifications" className="admin-topbar-notifications" aria-label="查看通知中心">
+              <span className="admin-topbar-notifications__icon">
+                <Bell />
+                {unreadCount > 0 ? <span className="admin-topbar-notifications__badge">{unreadCount > 99 ? '99+' : unreadCount}</span> : null}
+              </span>
+              <span>通知</span>
+            </Link>
             <button className="admin-theme-toggle" type="button" onClick={() => setTheme((current) => current === 'light' ? 'dark' : 'light')} aria-label="切换后台主题" aria-pressed={theme === 'dark'}>
               {theme === 'light' ? <Moon /> : <Sun />}<span>{theme === 'light' ? '深色模式' : '浅色模式'}</span>
             </button>
