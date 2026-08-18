@@ -9,7 +9,8 @@
     "lint": "oxlint",
     "lint:ui": "node scripts/check-ui-contracts.mjs",
     "test": "vitest",
-    "test:run": "vitest run",
+    "test:run": "tsc -b && vitest run",
+    "check": "tsc -b && oxlint && vitest run",
     "preview": "vite preview"
   },
   "dependencies": {

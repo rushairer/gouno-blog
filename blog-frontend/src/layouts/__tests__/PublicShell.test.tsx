@@ -10,6 +10,7 @@ vi.mock('../../lib/blog-api', () => ({
     site_description: 'A configured description.',
     rss_url: '/feed.xml',
   }),
+  getNavPages: () => Promise.resolve([]),
 }));
 
 describe('PublicShell theme', () => {

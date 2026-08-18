@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import {
   BarChart3,
   Bot,
+  FileCode,
   FileText,
   FolderTree,
   Image,
@@ -30,6 +31,7 @@ export const adminNavigation: Array<{ label: string; items: AdminNavItem[] }> = 
     items: [
       { label: '数据概览', path: '/admin/dashboard', icon: <BarChart3 /> },
       { label: '文章', path: '/admin/posts', icon: <FileText /> },
+      { label: '单页', path: '/admin/pages', icon: <FileCode /> },
       { label: '分类', path: '/admin/categories', icon: <FolderTree /> },
       { label: '标签', path: '/admin/tags', icon: <Tags /> },
       { label: '媒体库', path: '/admin/media', icon: <Image /> },
