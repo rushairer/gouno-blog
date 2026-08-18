@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Check, ExternalLink, LoaderCircle, Save, Send } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowLeft, Check, ExternalLink, Save, Send } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { AdminPageState, Button, ConfirmDialog, Feedback, Field, Input, Select, Textarea } from '../../components/ui';
+import { AdminPageState, ConfirmDialog, Feedback, Field, Input, Select, Textarea } from '../../components/ui';
 import { MarkdownRenderer } from '../../components/MarkdownRenderer';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 import { createPage, getAdminPage, updatePage } from '../../lib/blog-api';
+import { extractMarkdownTOC } from '../../markdown';
 import type { CustomPage, PageTemplate, PostStatus } from '../../types/blog';
 
 const emptyPage: CustomPage = {
@@ -60,194 +61,277 @@ export default function PageEditor() {
     return () => window.removeEventListener('beforeunload', beforeUnload);
   }, []);
 
-  const updateField = <K extends keyof CustomPage>(key: K, value: CustomPage[K]) => {
+  const update = <K extends keyof CustomPage>(key: K, value: CustomPage[K]) => {
+    setPage((current) => ({ ...current, [key]: value }));
     dirty.current = true;
-    setPage((prev) => ({ ...prev, [key]: value }));
+    setSavedAt(null);
   };
 
-  const handleSave = async (targetStatus?: PostStatus) => {
-    if (!page.title.trim()) {
-      setError('请输入页面标题');
-      return;
-    }
-    if (!page.slug.trim()) {
-      setError('请输入访问路径 (Slug)');
-      return;
-    }
-
-    setSaving(true);
-    setError('');
-
-    const payload: Partial<CustomPage> = {
-      title: page.title.trim(),
-      slug: page.slug.trim().toLowerCase(),
-      summary: page.summary || '',
-      content: page.content || '',
-      template: page.template || 'default',
-      status: targetStatus || page.status || 'draft',
-      allow_comments: Boolean(page.allow_comments),
-      show_in_nav: Boolean(page.show_in_nav),
-      sort_order: Number(page.sort_order) || 0,
-      seo_title: page.seo_title || '',
-      seo_description: page.seo_description || '',
-    };
-
-    try {
-      let result: CustomPage;
-      if (isNew) {
-        result = await createPage(payload);
-        dirty.current = false;
-        navigate(`/admin/pages/${result.id}/edit`, { replace: true });
-      } else {
-        result = await updatePage(page.id, payload);
-        dirty.current = false;
+  const persist = useCallback(
+    async (status: PostStatus, automatic = false) => {
+      if (!page.title.trim()) {
+        if (!automatic) setError('请先填写单页标题。');
+        return;
       }
-      setPage(result);
-      setSavedAt(new Date());
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : '保存失败，请检查输入或路径冲突。');
-    } finally {
-      setSaving(false);
-    }
+      if (!page.slug.trim()) {
+        if (!automatic) setError('请填写单页访问路径 (Slug)。');
+        return;
+      }
+
+      setSaving(true);
+      setError('');
+
+      const payload: Partial<CustomPage> = {
+        title: page.title.trim(),
+        slug: page.slug.trim().toLowerCase(),
+        summary: page.summary || '',
+        content: page.content || '',
+        template: page.template || 'default',
+        status,
+        allow_comments: Boolean(page.allow_comments),
+        show_in_nav: Boolean(page.show_in_nav),
+        sort_order: Number(page.sort_order) || 0,
+        seo_title: page.seo_title || '',
+        seo_description: page.seo_description || '',
+      };
+
+      try {
+        let result: CustomPage;
+        if (page.id) {
+          result = await updatePage(page.id, payload);
+        } else {
+          result = await createPage(payload);
+        }
+        setPage(result);
+        dirty.current = false;
+        setSavedAt(new Date());
+        if (!page.id) {
+          navigate(`/admin/pages/${result.id}/edit`, { replace: true });
+        }
+      } catch (reason) {
+        setError(reason instanceof Error ? reason.message : '保存失败，请稍后重试。');
+      } finally {
+        setSaving(false);
+      }
+    },
+    [navigate, page]
+  );
+
+  const outline = useMemo(() => extractMarkdownTOC(page.content), [page.content]);
+
+  const leaveEditor = () => {
+    if (dirty.current) setConfirmExit(true);
+    else navigate('/admin/pages');
   };
 
-  if (!allowed) return null;
-  if (loading) return <AdminPageState title="编辑单页" label="正在载入页面详情…" />;
+  const openFrontsitePreview = async () => {
+    let currentPage = page;
+    if (dirty.current || !currentPage.id) {
+      if (!currentPage.title.trim() || !currentPage.slug.trim()) {
+        setError('请先填写单页标题与路径。');
+        return;
+      }
+      setSaving(true);
+      setError('');
+      try {
+        const payload: Partial<CustomPage> = {
+          title: currentPage.title.trim(),
+          slug: currentPage.slug.trim().toLowerCase(),
+          summary: currentPage.summary || '',
+          content: currentPage.content || '',
+          template: currentPage.template || 'default',
+          status: currentPage.status || 'draft',
+          allow_comments: Boolean(currentPage.allow_comments),
+          show_in_nav: Boolean(currentPage.show_in_nav),
+          sort_order: Number(currentPage.sort_order) || 0,
+          seo_title: currentPage.seo_title || '',
+          seo_description: currentPage.seo_description || '',
+        };
+        const result = currentPage.id
+          ? await updatePage(currentPage.id, payload)
+          : await createPage(payload);
+        currentPage = result;
+        setPage(result);
+        dirty.current = false;
+        setSavedAt(new Date());
+        if (!page.id) {
+          navigate(`/admin/pages/${result.id}/edit`, { replace: true });
+        }
+      } catch (reason) {
+        setError(reason instanceof Error ? reason.message : '保存失败，无法开启预览。');
+        setSaving(false);
+        return;
+      } finally {
+        setSaving(false);
+      }
+    }
+    window.open(`/${currentPage.slug}`, '_blank');
+  };
+
+  if (!allowed || loading) {
+    return (
+      <AdminPageState
+        title={isNew ? '新建单页' : '编辑单页'}
+        description="撰写并管理独立单页展示结构与配置。"
+        label="正在打开编辑器…"
+      />
+    );
+  }
 
   return (
-    <div className="editor-layout">
-      <header className="editor-header">
-        <div className="editor-header__primary">
-          <button
-            type="button"
-            className="bare-icon"
-            onClick={() => {
-              if (dirty.current) setConfirmExit(true);
-              else navigate('/admin/pages');
-            }}
-            aria-label="返回单页列表"
-          >
-            <ArrowLeft />
-          </button>
-          <div>
-            <h1>{isNew ? '新建单页' : `编辑：${page.title || '无标题'}`}</h1>
-            <span className="editor-status">
-              {saving ? (
-                <span className="saving-indicator">
-                  <LoaderCircle className="spin" /> 正在保存…
-                </span>
-              ) : savedAt ? (
-                <span className="saved-indicator">
-                  <Check /> 已于 {savedAt.toLocaleTimeString()} 保存
-                </span>
-              ) : (
-                '未保存修改'
-              )}
-            </span>
-          </div>
+    <div className="editor-page">
+      <header className="editor-commandbar">
+        <button className="editor-back" type="button" onClick={leaveEditor}>
+          <ArrowLeft /> 返回单页列表
+        </button>
+        <div className="editor-save-state">
+          {saving ? (
+            '正在保存…'
+          ) : savedAt ? (
+            <>
+              <Check /> 已于{' '}
+              {savedAt.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}{' '}
+              保存
+            </>
+          ) : dirty.current ? (
+            '有未保存的更改'
+          ) : (
+            '所有更改已保存'
+          )}
         </div>
-
-        <div className="editor-header__actions">
-          {!isNew && page.slug ? (
-            <a
-              href={`/${page.slug}`}
-              target="_blank"
-              rel="noreferrer"
-              className="btn btn-secondary"
-            >
-              <ExternalLink /> 查看前台
-            </a>
-          ) : null}
-          <Button
-            variant={preview ? 'primary' : 'secondary'}
+        <div>
+          <button
+            className="btn btn-secondary"
             type="button"
-            onClick={() => setPreview(!preview)}
-          >
-            {preview ? '返回编辑' : '预览排版'}
-          </Button>
-          <Button
-            variant="secondary"
-            type="button"
+            onClick={() => void openFrontsitePreview()}
             disabled={saving}
-            onClick={() => void handleSave('draft')}
+          >
+            <ExternalLink /> 预览前台页面
+          </button>
+          <button
+            className="btn btn-secondary"
+            type="button"
+            onClick={() => void persist('draft')}
+            disabled={saving}
           >
             <Save /> 保存草稿
-          </Button>
-          <Button
-            variant="primary"
+          </button>
+          <button
+            className="btn btn-primary"
             type="button"
+            onClick={() => void persist('published')}
             disabled={saving}
-            onClick={() => void handleSave('published')}
           >
-            <Send /> {page.status === 'published' ? '更新并发布' : '直接发布'}
-          </Button>
+            <Send /> {page.status === 'published' ? '更新单页' : '发布'}
+          </button>
         </div>
       </header>
 
       {error ? <Feedback type="error">{error}</Feedback> : null}
 
-      <div className="editor-main">
-        <div className="editor-body">
+      <div className="editor-workspace">
+        <aside className="editor-outline">
+          <div>
+            <h2>页面大纲</h2>
+          </div>
+          <nav>
+            {outline.length ? (
+              outline.map((item) => (
+                <a
+                  key={item.id}
+                  href={`#${item.id}`}
+                  className={`level-${item.level}`}
+                  onClick={() => {
+                    if (!preview) setPreview(true);
+                  }}
+                >
+                  {item.text}
+                </a>
+              ))
+            ) : (
+              <p>在正文中添加 Markdown 标题（如 # 或 ##）后，大纲会自动生成。</p>
+            )}
+          </nav>
+        </aside>
+
+        <main className="editor-canvas">
+          <Field label="标题" required>
+            <Textarea
+              className="editor-title"
+              rows={2}
+              value={page.title}
+              onChange={(event) => update('title', event.target.value)}
+              placeholder="写一个清晰、具体的单页标题"
+              required
+            />
+          </Field>
+
+          <Field label="摘要 / 描述">
+            <Textarea
+              className="editor-summary"
+              rows={2}
+              value={page.summary}
+              onChange={(event) => update('summary', event.target.value)}
+              maxLength={300}
+              placeholder="用一两句话说明单页内容"
+            />
+          </Field>
+
+          <div className="editor-tabs">
+            <button
+              className={!preview ? 'active' : ''}
+              type="button"
+              onClick={() => setPreview(false)}
+            >
+              Markdown
+            </button>
+            <button
+              className={preview ? 'active' : ''}
+              type="button"
+              onClick={() => setPreview(true)}
+            >
+              预览
+            </button>
+          </div>
+
           {preview ? (
-            <div className="editor-preview-container public-article">
-              <h1>{page.title || '页面标题'}</h1>
-              {page.summary ? <p className="lead">{page.summary}</p> : null}
-              <MarkdownRenderer content={page.content || '_暂无主体内容_'} />
+            <div className="editor-preview">
+              <h1>{page.title || '无标题单页'}</h1>
+              <MarkdownRenderer content={page.content || '开始写作后，预览会出现在这里。'} />
             </div>
           ) : (
-            <div className="editor-form">
-              <Field label="页面标题" required>
-                <Input
-                  value={page.title}
-                  placeholder="例如：关于本站、友情链接、隐私政策"
-                  onChange={(e) => updateField('title', e.target.value)}
-                />
-              </Field>
-
-              <Field
-                label="访问路径 (Slug)"
-                required
-                hint="访问路径将为 https://yoursite.com/<slug>。仅限英文小写、数字和短横线。"
-              >
-                <div className="input-group">
-                  <span className="input-prefix">/</span>
-                  <Input
-                    value={page.slug}
-                    placeholder="about"
-                    onChange={(e) => updateField('slug', e.target.value)}
-                  />
-                </div>
-              </Field>
-
-              <Field label="页面摘要 / 副标题" hint="简要介绍该页面的主旨">
-                <Textarea
-                  rows={2}
-                  value={page.summary}
-                  placeholder="例如：关于这个站点，以及持续写作的理由。"
-                  onChange={(e) => updateField('summary', e.target.value)}
-                />
-              </Field>
-
-              <Field label="页面正文 (Markdown)" hint="支持 GitHub Flavored Markdown 语法">
-                <Textarea
-                  rows={16}
-                  value={page.content}
-                  placeholder="在此输入页面 Markdown 内容..."
-                  onChange={(e) => updateField('content', e.target.value)}
-                />
-              </Field>
-            </div>
+            <textarea
+              className="editor-body mono"
+              value={page.content}
+              onChange={(event) => update('content', event.target.value)}
+              aria-label="单页正文 Markdown"
+              placeholder={'## 页面正文\n\n在此输入 Markdown 内容…'}
+            />
           )}
-        </div>
+        </main>
 
-        <aside className="editor-sidebar">
-          <div className="editor-sidebar-panel">
-            <h3>页面配置</h3>
+        <aside className="editor-inspector">
+          <details open>
+            <summary>发布设置</summary>
+            <Field label="状态">
+              <Select
+                value={page.status || 'draft'}
+                onChange={(event) => {
+                  update('status', event.target.value as PostStatus);
+                }}
+              >
+                <option value="draft">草稿</option>
+                <option value="published">立即发布</option>
+              </Select>
+            </Field>
+          </details>
 
+          <details open>
+            <summary>页面配置</summary>
             <Field label="显示模板" hint="选择页面的预设布局结构">
               <Select
                 value={page.template || 'default'}
-                onChange={(e) => updateField('template', e.target.value as PageTemplate)}
+                onChange={(event) => update('template', event.target.value as PageTemplate)}
               >
                 <option value="default">默认标准排版 (Default)</option>
                 <option value="about">关于页专用模板 (About)</option>
@@ -255,80 +339,95 @@ export default function PageEditor() {
                 <option value="blank">全宽纯净模板 (Blank)</option>
               </Select>
             </Field>
-
             <Field label="主导航栏联动">
-              <label className="checkbox-label">
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  color: 'var(--text-2)',
+                }}
+              >
                 <input
                   type="checkbox"
                   checked={page.show_in_nav}
-                  onChange={(e) => updateField('show_in_nav', e.target.checked)}
+                  onChange={(event) => update('show_in_nav', event.target.checked)}
                 />
                 <span>显示在顶部主导航栏</span>
               </label>
             </Field>
-
             {page.show_in_nav ? (
               <Field label="导航排序权重" hint="数字越小越靠前，如 10, 20">
                 <Input
                   type="number"
                   value={page.sort_order}
-                  onChange={(e) => updateField('sort_order', Number(e.target.value) || 0)}
+                  onChange={(event) => update('sort_order', Number(event.target.value) || 0)}
                 />
               </Field>
             ) : null}
-
             <Field label="评论互动">
-              <label className="checkbox-label">
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  color: 'var(--text-2)',
+                }}
+              >
                 <input
                   type="checkbox"
                   checked={page.allow_comments}
-                  onChange={(e) => updateField('allow_comments', e.target.checked)}
+                  onChange={(event) => update('allow_comments', event.target.checked)}
                 />
-                <span>允许读者在本页下方发表评论</span>
+                <span>允许读者在下方发表评论</span>
               </label>
             </Field>
+          </details>
 
-            <Field label="发布状态">
-              <Select
-                value={page.status || 'draft'}
-                onChange={(e) => updateField('status', e.target.value as PostStatus)}
-              >
-                <option value="draft">草稿 (仅管理员可预览)</option>
-                <option value="published">已发布 (公开可见)</option>
-              </Select>
+          <details open>
+            <summary>路径与 SEO</summary>
+            <Field label="访问路径 (Slug)" required hint="访问路径为 /<slug>">
+              <Input
+                className="mono"
+                value={page.slug}
+                onChange={(event) => update('slug', event.target.value)}
+                placeholder="about"
+                required
+              />
             </Field>
-          </div>
-
-          <div className="editor-sidebar-panel">
-            <h3>SEO 与元数据</h3>
-
-            <Field label="自定义 SEO 标题">
+            <Field label="SEO 标题" hint={`${(page.seo_title || '').length}/60`}>
               <Input
                 value={page.seo_title || ''}
-                placeholder="留空时默认使用页面标题"
-                onChange={(e) => updateField('seo_title', e.target.value)}
+                maxLength={60}
+                onChange={(event) => update('seo_title', event.target.value)}
+                placeholder="留空时默认使用标题"
               />
             </Field>
-
-            <Field label="自定义 SEO 描述">
+            <Field label="SEO 描述" hint={`${(page.seo_description || '').length}/160`}>
               <Textarea
-                rows={3}
+                rows={4}
                 value={page.seo_description || ''}
-                placeholder="留空时默认使用页面摘要"
-                onChange={(e) => updateField('seo_description', e.target.value)}
+                maxLength={160}
+                onChange={(event) => update('seo_description', event.target.value)}
+                placeholder="留空时默认使用摘要"
               />
             </Field>
-          </div>
+          </details>
         </aside>
       </div>
 
       <ConfirmDialog
         open={confirmExit}
-        title="有未保存的修改"
-        description="离开后未保存的内容将会丢失，确定要离开吗？"
-        confirmLabel="确认离开"
-        onConfirm={() => navigate('/admin/pages')}
+        title="放弃未保存的更改？"
+        description="离开编辑器后，尚未保存的内容会丢失。"
+        confirmLabel="放弃并离开"
+        danger
         onClose={() => setConfirmExit(false)}
+        onConfirm={() => navigate('/admin/pages')}
       />
     </div>
   );
