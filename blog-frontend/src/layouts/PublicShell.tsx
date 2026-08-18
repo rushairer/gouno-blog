@@ -1,17 +1,18 @@
-import { useEffect, useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Menu, Moon, Rss, Search, Sun, X } from 'lucide-react';
 import { DEFAULT_SITE_SETTINGS } from '../config/site-defaults';
 import { publicNavigation } from '../navigation';
-import { getSiteSettings } from '../lib/blog-api';
-import type { SiteSettings } from '../types/blog';
+import { getNavPages, getSiteSettings } from '../lib/blog-api';
+import type { CustomPage, SiteSettings } from '../types/blog';
 
 export default function PublicShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [site, setSite] = useState<SiteSettings | null>(null);
+  const [navPages, setNavPages] = useState<CustomPage[]>([]);
   const [theme, setTheme] = useState<'light' | 'dark'>(() =>
     localStorage.getItem('gouno-blog:theme') === 'dark' ? 'dark' : 'light',
   );
@@ -25,7 +26,34 @@ export default function PublicShell({ children }: { children: ReactNode }) {
     getSiteSettings().then(setSite).catch(() => {
       // Static brand defaults keep the public site usable during API outages.
     });
+    getNavPages().then(setNavPages).catch(() => {
+      // Graceful fallback to static nav
+    });
   }, []);
+
+  const navItems = useMemo(() => {
+    if (navPages.length === 0) {
+      return publicNavigation;
+    }
+    const defaultItems = [
+      { label: '文章', path: '/articles' },
+      { label: '分类', path: '/categories' },
+      { label: '归档', path: '/archive' },
+    ];
+    const customItems = navPages.map((p) => ({
+      label: p.title,
+      path: `/${p.slug}`,
+    }));
+    const seen = new Set<string>();
+    const merged: Array<{ label: string; path: string }> = [];
+    for (const item of [...defaultItems, ...customItems]) {
+      if (!seen.has(item.path)) {
+        seen.add(item.path);
+        merged.push(item);
+      }
+    }
+    return merged;
+  }, [navPages]);
 
   return (
     <div className="public-shell">
@@ -33,7 +61,7 @@ export default function PublicShell({ children }: { children: ReactNode }) {
         <div className="public-header__inner">
           <Link className="wordmark" to="/" aria-label={`${site?.site_title || DEFAULT_SITE_SETTINGS.site_title} 首页`}>{site?.site_title || DEFAULT_SITE_SETTINGS.site_title}</Link>
           <nav id="public-navigation" className={`public-nav ${open ? 'is-open' : ''}`} aria-label="主导航">
-            {publicNavigation.map((item) => (
+            {navItems.map((item) => (
               <NavLink key={item.path} to={item.path} onClick={() => setOpen(false)}>{item.label}</NavLink>
             ))}
             <form className="mobile-public-search" role="search" onSubmit={(event) => {
@@ -94,7 +122,12 @@ export default function PublicShell({ children }: { children: ReactNode }) {
             <p>{site?.site_description || DEFAULT_SITE_SETTINGS.site_description}</p>
           </div>
           <div className="footer-nav">
-            <Link to="/articles">文章</Link><Link to="/archive">归档</Link><Link to="/about">关于</Link>
+            <Link to="/articles">文章</Link><Link to="/archive">归档</Link>
+            {navPages.length > 0 ? (
+              navPages.map((p) => <Link key={p.id} to={`/${p.slug}`}>{p.title}</Link>)
+            ) : (
+              <Link to="/about">关于</Link>
+            )}
             <Link to="/admin"><LayoutDashboard /> 管理后台</Link>
             <a href={site?.rss_url || '/feed.xml'}><Rss /> RSS</a>
             {site?.github_url ? <a href={site.github_url} target="_blank" rel="noreferrer">GitHub</a> : null}

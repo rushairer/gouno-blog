@@ -127,6 +127,34 @@ func (ctrl *FeedController) GetSitemap(c *gin.Context) {
 		})
 	}
 
+	if ctrl.db != nil {
+		if rows, err := ctrl.db.QueryContext(c.Request.Context(), `SELECT slug, updated_at FROM pages WHERE status = 'published' ORDER BY sort_order ASC, id ASC`); err == nil && rows != nil {
+			defer rows.Close()
+			for rows.Next() {
+				var pSlug string
+				var pUpdated time.Time
+				if err := rows.Scan(&pSlug, &pUpdated); err == nil {
+					pLoc := fmt.Sprintf("%s/%s", baseURL, pSlug)
+					found := false
+					for _, u := range urls {
+						if u.Loc == pLoc {
+							found = true
+							break
+						}
+					}
+					if !found {
+						urls = append(urls, SitemapURL{
+							Loc:        pLoc,
+							LastMod:    pUpdated.Format("2006-01-02"),
+							ChangeFreq: "monthly",
+							Priority:   "0.7",
+						})
+					}
+				}
+			}
+		}
+	}
+
 	sitemap := SitemapURLSet{
 		URLs: urls,
 	}

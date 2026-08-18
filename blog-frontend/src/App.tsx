@@ -20,12 +20,15 @@ const Bookmarks = React.lazy(() => import('./pages/Bookmarks'));
 const Dashboard = React.lazy(() => import('./pages/admin/Dashboard'));
 const AdminPosts = React.lazy(() => import('./pages/admin/Posts'));
 const PostEditor = React.lazy(() => import('./pages/admin/PostEditor'));
+const AdminPages = React.lazy(() => import('./pages/admin/Pages'));
+const PageEditor = React.lazy(() => import('./pages/admin/PageEditor'));
 const AdminComments = React.lazy(() => import('./pages/admin/Comments'));
 const AdminTaxonomy = React.lazy(() => import('./pages/admin/Taxonomy'));
 const AdminSiteSettings = React.lazy(() => import('./pages/admin/SiteSettings'));
 const AdminUsers = React.lazy(() => import('./pages/admin/Users'));
 const MediaLibrary = React.lazy(() => import('./pages/MediaLibrary'));
 const AgentConsole = React.lazy(() => import('./pages/AgentConsole'));
+import CustomPageView from './pages/CustomPageView';
 
 function LegacyPostRedirect() {
   const { slug } = useParams();
@@ -93,6 +96,9 @@ export default function App() {
     <Route path="/admin/posts" element={<Admin><AdminPosts /></Admin>} />
     <Route path="/admin/posts/new" element={<Admin><PostEditor /></Admin>} />
     <Route path="/admin/posts/:id/edit" element={<Admin><PostEditor /></Admin>} />
+    <Route path="/admin/pages" element={<Admin><AdminPages /></Admin>} />
+    <Route path="/admin/pages/new" element={<Admin><PageEditor /></Admin>} />
+    <Route path="/admin/pages/:id/edit" element={<Admin><PageEditor /></Admin>} />
     <Route path="/admin/categories" element={<Admin><AdminTaxonomy type="categories" /></Admin>} />
     <Route path="/admin/tags" element={<Admin><AdminTaxonomy type="tags" /></Admin>} />
     <Route path="/admin/comments" element={<Admin><AdminComments /></Admin>} />
@@ -100,6 +106,7 @@ export default function App() {
     <Route path="/admin/settings" element={<Admin><AdminSiteSettings /></Admin>} />
     <Route path="/admin/users" element={<Admin><AdminUsers /></Admin>} />
     <Route path="/admin/agents" element={<Admin><AgentConsole /></Admin>} />
+    <Route path="/:slug" element={<Public><CustomPageView /></Public>} />
     <Route path="*" element={<Public><NotFound /></Public>} />
   </Routes></BrowserRouter></ToastProvider></I18nProvider>;
 }

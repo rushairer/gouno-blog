@@ -50,3 +50,29 @@ export interface SiteSettings {
   default_seo_description: string;
 }
 
+export type PageTemplate = 'default' | 'about' | 'links' | 'blank';
+
+export interface CustomPage {
+  id: number;
+  title: string;
+  slug: string;
+  content: string;
+  summary: string;
+  template: PageTemplate;
+  status: PostStatus;
+  allow_comments: boolean;
+  show_in_nav: boolean;
+  sort_order: number;
+  seo_title?: string;
+  seo_description?: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface PaginatedPages {
+  list: CustomPage[];
+  total: number;
+  page?: number;
+  page_size?: number;
+}
+
