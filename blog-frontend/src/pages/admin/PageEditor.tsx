@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Check, ExternalLink, Save, Send } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AdminPageState, ConfirmDialog, Feedback, Field, Input, Select, Textarea } from '../../components/ui';
 import { MarkdownRenderer } from '../../components/MarkdownRenderer';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 import { createPage, getAdminPage, updatePage } from '../../lib/blog-api';
-import { extractMarkdownTOC } from '../../markdown';
 import type { CustomPage, PageTemplate, PostStatus } from '../../types/blog';
 
 const emptyPage: CustomPage = {
@@ -88,7 +87,7 @@ export default function PageEditor() {
         content: page.content || '',
         template: page.template || 'default',
         status,
-        allow_comments: Boolean(page.allow_comments),
+        allow_comments: false,
         show_in_nav: Boolean(page.show_in_nav),
         sort_order: Number(page.sort_order) || 0,
         seo_title: page.seo_title || '',
@@ -117,8 +116,6 @@ export default function PageEditor() {
     [navigate, page]
   );
 
-  const outline = useMemo(() => extractMarkdownTOC(page.content), [page.content]);
-
   const leaveEditor = () => {
     if (dirty.current) setConfirmExit(true);
     else navigate('/admin/pages');
@@ -141,7 +138,7 @@ export default function PageEditor() {
           content: currentPage.content || '',
           template: currentPage.template || 'default',
           status: currentPage.status || 'draft',
-          allow_comments: Boolean(currentPage.allow_comments),
+          allow_comments: false,
           show_in_nav: Boolean(currentPage.show_in_nav),
           sort_order: Number(currentPage.sort_order) || 0,
           seo_title: currentPage.seo_title || '',
@@ -229,31 +226,7 @@ export default function PageEditor() {
 
       {error ? <Feedback type="error">{error}</Feedback> : null}
 
-      <div className="editor-workspace">
-        <aside className="editor-outline">
-          <div>
-            <h2>页面大纲</h2>
-          </div>
-          <nav>
-            {outline.length ? (
-              outline.map((item) => (
-                <a
-                  key={item.id}
-                  href={`#${item.id}`}
-                  className={`level-${item.level}`}
-                  onClick={() => {
-                    if (!preview) setPreview(true);
-                  }}
-                >
-                  {item.text}
-                </a>
-              ))
-            ) : (
-              <p>在正文中添加 Markdown 标题（如 # 或 ##）后，大纲会自动生成。</p>
-            )}
-          </nav>
-        </aside>
-
+      <div className="editor-workspace" style={{ gridTemplateColumns: 'minmax(480px, 1fr) 280px' }}>
         <main className="editor-canvas">
           <Field label="标题" required>
             <Textarea
@@ -367,25 +340,6 @@ export default function PageEditor() {
                 />
               </Field>
             ) : null}
-            <Field label="评论互动">
-              <label
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  color: 'var(--text-2)',
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={page.allow_comments}
-                  onChange={(event) => update('allow_comments', event.target.checked)}
-                />
-                <span>允许读者在下方发表评论</span>
-              </label>
-            </Field>
           </details>
 
           <details open>
