@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { GitBranch, Mail, Rss, ShieldAlert } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { MarkdownRenderer } from '../components/MarkdownRenderer';
-import { authorInitials, DEFAULT_SITE_SETTINGS } from '../config/site-defaults';
+import { DEFAULT_SITE_SETTINGS } from '../config/site-defaults';
 import { getPageBySlug, getSiteSettings } from '../lib/blog-api';
 import { extractMarkdownTOC } from '../markdown';
 import type { CustomPage, SiteSettings } from '../types/blog';
@@ -120,14 +120,17 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
 
   // 1. About Template
   if (page.template === 'about') {
+    const markText = page.title.length > 4 ? page.title.slice(0, 4) : page.title;
+    const markFontSize = markText.length > 2 ? '22px' : '34px';
+
     return (
       <div className="public-container about-page">
         {draftBanner}
         <header>
-          <div className="about-mark">{authorInitials(site.author_name || site.site_title)}</div>
+          <div className="about-mark" style={{ fontSize: markFontSize }}>{markText}</div>
           <div>
             <p>{(page.slug || 'about').toUpperCase()} / {(site.site_title || DEFAULT_SITE_SETTINGS.site_title).toUpperCase()}</p>
-            <h1>{page.title}</h1>
+            <h1>{page.summary || page.title}</h1>
           </div>
         </header>
         <div className="about-grid">
