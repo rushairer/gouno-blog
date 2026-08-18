@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Edit2, ExternalLink, Plus, Trash2 } from 'lucide-react';
+import { Copy, Edit2, Eye, Plus, Trash2, X } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   AdminPage,
@@ -7,6 +7,7 @@ import {
   Button,
   ConfirmDialog,
   ContentStack,
+  copyText,
   EmptyState,
   ErrorState,
   FilterBar,
@@ -71,6 +72,10 @@ export default function AdminPages() {
     setParams(next, { replace: key === 'q' });
   };
 
+  const hasFilters = Boolean(q || status);
+  const clearFilters = () => setParams({});
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
   const performDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
@@ -78,10 +83,10 @@ export default function AdminPages() {
       await deletePage(deleteTarget.id);
       setPages((current) => current.filter((item) => item.id !== deleteTarget.id));
       setTotal((current) => Math.max(0, current - 1));
-      notify('页面已删除。');
+      notify('单页已删除。');
       setDeleteTarget(null);
     } catch (err: unknown) {
-      notify(err instanceof Error ? err.message : '删除失败，请稍后重试。', 'error');
+      setError(err instanceof Error ? err.message : '删除失败，请稍后重试。');
     } finally {
       setDeleting(false);
     }
@@ -90,77 +95,86 @@ export default function AdminPages() {
   return (
     <AdminPage>
       <AdminPageHeader
-        title="单页管理"
-        description="创建与维护关于我们、友情链接、隐私政策等独立单页。"
+        title="单页"
+        description="管理关于我、友情链接、隐私政策等独立单页。"
         actions={
-          <Link to="/admin/pages/new">
-            <Button variant="primary">
-              <Plus /> 新建页面
-            </Button>
+          <Link className="btn btn-primary" to="/admin/pages/new">
+            <Plus /> 新建单页
           </Link>
         }
       />
 
-      <FilterBar>
-        <SearchField
-          value={q}
-          placeholder="搜索页面标题或路径..."
-          onChange={(e) => setFilter('q', e.target.value)}
-        />
-        <Select
-          value={status}
-          onChange={(e) => setFilter('status', e.target.value)}
-          aria-label="按发布状态筛选"
-        >
-          <option value="">全部状态</option>
-          <option value="published">已发布</option>
-          <option value="draft">草稿</option>
-        </Select>
-      </FilterBar>
+      <ContentStack>
+        {error ? (
+          <ErrorState
+            label={error}
+            action={
+              <button
+                className="btn btn-secondary"
+                type="button"
+                onClick={() => window.location.reload()}
+              >
+                重新载入
+              </button>
+            }
+          />
+        ) : null}
 
-      {error ? (
-        <ErrorState
-          label={error}
-          action={
+        <FilterBar>
+          <SearchField
+            aria-label="搜索单页"
+            value={q}
+            onChange={(event) => setFilter('q', event.target.value)}
+            placeholder="搜索标题、摘要或路径"
+          />
+          <Select
+            size="compact"
+            aria-label="单页状态"
+            value={status}
+            onChange={(event) => setFilter('status', event.target.value)}
+          >
+            <option value="">全部状态</option>
+            <option value="published">已发布</option>
+            <option value="draft">草稿</option>
+          </Select>
+          <span className="filter-bar__count">{total} 页</span>
+          {hasFilters ? (
             <Button
-              variant="secondary"
-              onClick={() => {
-                setLoading(true);
-                getAdminPages({ page, pageSize, q, status })
-                  .then((result) => {
-                    setPages(result.list || []);
-                    setTotal(result.total || 0);
-                    setError('');
-                  })
-                  .catch((r: Error) => setError(r.message))
-                  .finally(() => setLoading(false));
-              }}
+              className="filter-bar__actions"
+              variant="ghost"
+              size="compact"
+              type="button"
+              onClick={clearFilters}
             >
-              重试
+              <X /> 清除
             </Button>
-          }
-        />
-      ) : loading ? (
-        <LoadingState label="正在载入页面列表…" />
-      ) : pages.length === 0 ? (
-        <EmptyState
-          label={q || status ? '没有找到符合条件的页面。' : '还没有创建任何单页，点击右上角新建。'}
-          action={
-            <Link to="/admin/pages/new">
-              <Button variant="primary">
-                <Plus /> 新建页面
-              </Button>
-            </Link>
-          }
-        />
-      ) : (
-        <ContentStack>
-          <Panel>
-            <div className="table-responsive">
+          ) : null}
+        </FilterBar>
+
+        {loading ? (
+          <LoadingState label="正在载入单页…" />
+        ) : !error && pages.length === 0 ? (
+          <EmptyState
+            label={hasFilters ? '没有符合当前筛选条件的单页。' : '还没有创建过独立单页。'}
+            action={
+              hasFilters ? (
+                <button className="btn btn-secondary" type="button" onClick={clearFilters}>
+                  清除筛选
+                </button>
+              ) : (
+                <Link className="btn btn-primary" to="/admin/pages/new">
+                  <Plus /> 新建单页
+                </Link>
+              )
+            }
+          />
+        ) : pages.length ? (
+          <Panel className="posts-table-panel">
+            <div className="table-scroll">
               <table className="admin-table">
                 <thead>
                   <tr>
-                    <th>标题</th>
+                    <th>单页</th>
                     <th>访问路径</th>
                     <th>模板</th>
                     <th>导航展示</th>
@@ -174,7 +188,7 @@ export default function AdminPages() {
                     <tr key={p.id}>
                       <td>
                         <strong>{p.title}</strong>
-                        {p.summary ? <p className="text-muted text-sm">{p.summary}</p> : null}
+                        <small>{p.summary || '无摘要'}</small>
                       </td>
                       <td>
                         <code>{`/${p.slug}`}</code>
@@ -184,7 +198,7 @@ export default function AdminPages() {
                       </td>
                       <td>
                         {p.show_in_nav ? (
-                          <span className="badge badge-success">{`顶部导航 (权重:${p.sort_order})`}</span>
+                          <span className="badge badge-success">{`主导航 (权重:${p.sort_order})`}</span>
                         ) : (
                           <span className="text-muted text-sm">隐藏</span>
                         )}
@@ -192,34 +206,32 @@ export default function AdminPages() {
                       <td>
                         <StatusBadge status={p.status || 'draft'} />
                       </td>
-                      <td className="text-muted text-sm">
-                        {p.updated_at ? new Date(p.updated_at).toLocaleDateString() : '-'}
+                      <td>
+                        {new Date(p.updated_at || p.created_at).toLocaleDateString('zh-CN')}
                       </td>
                       <td>
-                        <div className="actions">
-                          <a
-                            href={`/${p.slug}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="btn btn-icon btn-sm"
-                            title="预览页面"
-                            aria-label={`预览 ${p.title}`}
+                        <div className="table-actions">
+                          {p.status === 'published' ? (
+                            <Link to={`/${p.slug}`} target="_blank" title="查看">
+                              <Eye />
+                            </Link>
+                          ) : null}
+                          <button
+                            type="button"
+                            title="复制链接"
+                            onClick={() =>
+                              void copyText(`${location.origin}/${p.slug}`, notify, '单页链接已复制。')
+                            }
                           >
-                            <ExternalLink />
-                          </a>
-                          <Link
-                            to={`/admin/pages/${p.id}/edit`}
-                            className="btn btn-icon btn-sm"
-                            title="编辑页面"
-                            aria-label={`编辑 ${p.title}`}
-                          >
+                            <Copy />
+                          </button>
+                          <Link to={`/admin/pages/${p.id}/edit`} title="编辑">
                             <Edit2 />
                           </Link>
                           <button
                             type="button"
-                            className="btn btn-icon btn-sm text-danger"
-                            title="删除页面"
-                            aria-label={`删除 ${p.title}`}
+                            className="danger-action"
+                            title="删除"
                             onClick={() => setDeleteTarget(p)}
                           >
                             <Trash2 />
@@ -232,29 +244,35 @@ export default function AdminPages() {
               </table>
             </div>
           </Panel>
+        ) : null}
 
-          {total > pageSize ? (
-            <Pagination
-              page={page}
-              pages={Math.ceil(total / pageSize)}
-              onChange={(next) => setFilter('page', String(next))}
-            />
-          ) : null}
-        </ContentStack>
-      )}
+        {!loading && total > pageSize ? (
+          <Pagination
+            className="admin-pagination"
+            page={page}
+            pages={totalPages}
+            label="单页分页"
+            onChange={(nextPage) => setFilter('page', String(nextPage))}
+          />
+        ) : null}
+      </ContentStack>
 
-      {deleteTarget ? (
-        <ConfirmDialog
-          open={Boolean(deleteTarget)}
-          title="确认删除页面？"
-          description={`删除后，访问路径 /${deleteTarget.slug} 将无法打开。此操作不可逆。`}
-          confirmLabel="确认删除"
-          danger
-          busy={deleting}
-          onConfirm={performDelete}
-          onClose={() => setDeleteTarget(null)}
-        />
-      ) : null}
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="删除单页"
+        description={
+          deleteTarget ? (
+            <>确认永久删除《{deleteTarget.title}》（/{deleteTarget.slug}）？此操作无法撤销。</>
+          ) : (
+            ''
+          )
+        }
+        confirmLabel="永久删除"
+        danger
+        busy={deleting}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={performDelete}
+      />
     </AdminPage>
   );
 }
