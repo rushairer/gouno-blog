@@ -46,7 +46,7 @@ func TestSitemapContainsPublicIndexRoutes(t *testing.T) {
 
 func setupFeedRouter(svc *fakeBlogService) http.Handler {
 	router := setupControllerRouter(svc)
-	feed := NewFeedController(svc, nil)
+	feed := NewFeedController(svc, nil, nil)
 	router.GET("/feed.xml", feed.GetRSS)
 	router.GET("/sitemap.xml", feed.GetSitemap)
 	return router
