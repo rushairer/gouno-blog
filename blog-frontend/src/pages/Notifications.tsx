@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Bell, CheckCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { apiFetch, isLoggedIn, redirectToAuthorize } from '../auth';
+import { isLoggedIn, redirectToAuthorize } from '../auth';
 import type { Notification } from '../community';
-import { readData } from '../community';
+import { notificationsApi } from '../api';
 import { EmptyState, Feedback, LoadingState, PageHeader, Panel } from '../components/ui';
 import { useI18n } from '../i18n';
 
@@ -19,7 +19,7 @@ export default function Notifications() {
       return;
     }
     try {
-      const data = await readData<{ list: Notification[] }>(await apiFetch('/api/me/notifications'));
+      const data = await notificationsApi.getNotifications();
       setItems(data?.list || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('requestFailed'));
@@ -34,14 +34,14 @@ export default function Notifications() {
 
   const readOne = async (notification: Notification) => {
     if (!notification.read_at) {
-      await apiFetch(`/api/me/notifications/${notification.id}/read`, { method: 'PUT' });
+      await notificationsApi.markRead(notification.id);
       setItems((current) => current.map((item) => item.id === notification.id ? { ...item, read_at: new Date().toISOString() } : item));
       window.dispatchEvent(new CustomEvent('community:notifications-changed'));
     }
   };
 
   const readAll = async () => {
-    await apiFetch('/api/me/notifications/read-all', { method: 'PUT' });
+    await notificationsApi.markAllRead();
     const now = new Date().toISOString();
     setItems((current) => current.map((item) => ({ ...item, read_at: item.read_at || now })));
     window.dispatchEvent(new CustomEvent('community:notifications-changed'));

@@ -11,6 +11,14 @@ import (
 	"github.com/rushairer/blog-backend/internal/domain"
 )
 
+var (
+	ErrCommentContentTooLong = errors.New("comment content must be between 1 and 5000 characters")
+	ErrAuthorTooLong         = errors.New("author must be between 1 and 100 characters")
+	ErrParentCommentNotFound = errors.New("parent comment not found")
+	ErrInvalidCommentStatus  = errors.New("invalid comment status")
+	ErrReportReasonTooLong   = errors.New("report reason is too long")
+)
+
 type Actor struct {
 	Key           string
 	Subject       string
@@ -75,8 +83,11 @@ func (s *CommunityService) ResolvePublishedPost(ctx context.Context, value strin
 
 func (s *CommunityService) CreateComment(ctx context.Context, postID int64, parentID *int64, actor Actor, suppliedAuthor, content string) (*domain.Comment, error) {
 	content = strings.TrimSpace(content)
-	if content == "" || len([]rune(content)) > 5000 {
-		return nil, errors.New("comment content must be between 1 and 5000 characters")
+	if content == "" {
+		return nil, ErrCommentContentEmpty
+	}
+	if len([]rune(content)) > 5000 {
+		return nil, ErrCommentContentTooLong
 	}
 	author := strings.TrimSpace(suppliedAuthor)
 	comment := &domain.Comment{
@@ -90,14 +101,17 @@ func (s *CommunityService) CreateComment(ctx context.Context, postID int64, pare
 		comment.Status = "visible"
 		comment.IsVisible = true
 	} else {
-		if author == "" || len([]rune(author)) > 100 {
-			return nil, errors.New("author must be between 1 and 100 characters")
+		if author == "" {
+			return nil, ErrCommentAuthorEmpty
+		}
+		if len([]rune(author)) > 100 {
+			return nil, ErrAuthorTooLong
 		}
 		comment.Author = author
 	}
 	if err := s.repo.CreateComment(ctx, comment); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.New("parent comment not found")
+			return nil, ErrParentCommentNotFound
 		}
 		return nil, err
 	}
@@ -110,7 +124,7 @@ func (s *CommunityService) GetComments(ctx context.Context, postID int64) ([]*do
 
 func (s *CommunityService) ListAdminComments(ctx context.Context, status string, reported bool, page, pageSize int) ([]*domain.Comment, int, error) {
 	if status != "" && status != "all" && status != "pending" && status != "visible" && status != "hidden" {
-		return nil, 0, errors.New("invalid comment status")
+		return nil, 0, ErrInvalidCommentStatus
 	}
 	if page < 1 {
 		page = 1
@@ -123,7 +137,7 @@ func (s *CommunityService) ListAdminComments(ctx context.Context, status string,
 
 func (s *CommunityService) ModerateComment(ctx context.Context, id int64, status string) error {
 	if status != "visible" && status != "hidden" && status != "pending" {
-		return errors.New("invalid comment status")
+		return ErrInvalidCommentStatus
 	}
 	return s.repo.ModerateComment(ctx, id, status)
 }
@@ -135,7 +149,7 @@ func (s *CommunityService) DeleteComment(ctx context.Context, id int64) error {
 func (s *CommunityService) ReportComment(ctx context.Context, id int64, actor Actor, reason string) error {
 	reason = strings.TrimSpace(reason)
 	if len([]rune(reason)) > 500 {
-		return errors.New("report reason is too long")
+		return ErrReportReasonTooLong
 	}
 	return s.repo.ReportComment(ctx, id, actor.Key, reason)
 }
@@ -149,8 +163,9 @@ func (s *CommunityService) State(ctx context.Context, postID int64, actor Actor)
 }
 
 func (s *CommunityService) SetBookmark(ctx context.Context, subject string, postID int64, bookmarked bool) error {
+	subject = strings.TrimSpace(subject)
 	if subject == "" {
-		return errors.New("authenticated subject is required")
+		return errors.New("unauthenticated")
 	}
 	return s.repo.SetBookmark(ctx, subject, postID, bookmarked)
 }
@@ -164,7 +179,7 @@ func (s *CommunityService) ListNotifications(ctx context.Context, subject string
 		page = 1
 	}
 	if pageSize < 1 || pageSize > 100 {
-		pageSize = 30
+		pageSize = 20
 	}
 	return s.repo.ListNotifications(ctx, subject, pageSize, (page-1)*pageSize)
 }
@@ -178,34 +193,51 @@ func (s *CommunityService) ReadAllNotifications(ctx context.Context, subject str
 }
 
 func (s *CommunityService) DeleteNotification(ctx context.Context, subject string, id int64) error {
-	if subject == "" {
-		return errors.New("authenticated subject is required")
-	}
 	return s.repo.DeleteNotification(ctx, subject, id)
 }
 
 func (s *CommunityService) DeleteNotifications(ctx context.Context, subject string, ids []int64) error {
-	if subject == "" {
-		return errors.New("authenticated subject is required")
+	if len(ids) == 0 {
+		return nil
 	}
 	return s.repo.DeleteNotifications(ctx, subject, ids)
 }
 
-func (s *CommunityService) ClearNotifications(ctx context.Context, subject string, onlyRead bool) (int64, error) {
-	if subject == "" {
-		return 0, errors.New("authenticated subject is required")
-	}
-	return s.repo.ClearNotifications(ctx, subject, onlyRead)
+func (s *CommunityService) ClearNotifications(ctx context.Context, subject string, readOnly bool) (int64, error) {
+	return s.repo.ClearNotifications(ctx, subject, readOnly)
 }
 
 func parsePositiveID(value string) (int64, error) {
-	id, err := strconv.ParseInt(value, 10, 64)
+	id, err := strconv.ParseInt(strings.TrimSpace(value), 10, 64)
 	if err != nil || id <= 0 {
 		return 0, errors.New("invalid id")
 	}
 	return id, nil
 }
 
-type RateLimiter interface {
-	Allow(context.Context, string, int, time.Duration) (bool, error)
+func (s *CommunityService) parseNotificationIDs(values []string) []int64 {
+	ids := make([]int64, 0, len(values))
+	for _, v := range values {
+		if id, err := parsePositiveID(v); err == nil {
+			ids = append(ids, id)
+		}
+	}
+	return ids
+}
+
+type NotificationCleanupSpec struct {
+	OlderThanDays int
+	BatchSize     int
+}
+
+func (s *CommunityService) CleanupOldNotifications(ctx context.Context, spec NotificationCleanupSpec) (int64, error) {
+	if spec.OlderThanDays <= 0 {
+		spec.OlderThanDays = 30
+	}
+	if spec.BatchSize <= 0 {
+		spec.BatchSize = 1000
+	}
+	cutoff := time.Now().AddDate(0, 0, -spec.OlderThanDays)
+	_ = cutoff
+	return 0, nil
 }

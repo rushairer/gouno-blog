@@ -366,7 +366,7 @@ func writeServiceError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, service.ErrPostNotFound):
 		c.JSON(http.StatusNotFound, gouno.NewErrorResponse(http.StatusNotFound, err.Error()))
-	case errors.Is(err, service.ErrSlugInUse):
+	case errors.Is(err, service.ErrSlugInUse), errors.Is(err, service.ErrMediaInUse):
 		c.JSON(http.StatusConflict, gouno.NewErrorResponse(http.StatusConflict, err.Error()))
 	case errors.Is(err, service.ErrPostTitleEmpty),
 		errors.Is(err, service.ErrPostContentEmpty),
@@ -376,7 +376,10 @@ func writeServiceError(c *gin.Context, err error) {
 		errors.Is(err, service.ErrInvalidPostSlug),
 		errors.Is(err, service.ErrInvalidCommentID),
 		errors.Is(err, service.ErrCommentAuthorEmpty),
-		errors.Is(err, service.ErrCommentContentEmpty):
+		errors.Is(err, service.ErrCommentContentEmpty),
+		errors.Is(err, service.ErrInvalidVersion),
+		errors.Is(err, service.ErrInvalidMediaPayload),
+		errors.Is(err, service.ErrInvalidMediaID):
 		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
 	default:
 		c.JSON(http.StatusInternalServerError, gouno.NewErrorResponse(http.StatusInternalServerError, "internal server error"))

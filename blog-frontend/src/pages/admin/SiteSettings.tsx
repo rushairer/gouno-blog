@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import { FileText, Mail, Save, Search } from 'lucide-react';
-import { apiFetch } from '../../auth';
+import { siteApi } from '../../api';
 import { AdminPage, AdminPageHeader, AdminPageState, Button, Feedback, Field, FormActions, FormLayout, Input, PanelHeader, Tab, TabList, TabPanel, Tabs, Textarea, WorkspacePanel } from '../../components/ui';
 import { DEFAULT_SITE_SETTINGS } from '../../config/site-defaults';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
-import { readData } from '../../lib/blog-api';
 import type { SiteSettings } from '../../types/blog';
 
 type SettingsTab = 'basic' | 'social' | 'seo';
@@ -20,7 +19,7 @@ export default function AdminSiteSettings() {
 
   useEffect(() => {
     if (!allowed) return;
-    readData<SiteSettings>(apiFetch('/api/admin/settings'))
+    siteApi.getAdminSettings()
       .then((data) => setValue({ ...DEFAULT_SITE_SETTINGS, ...data }))
       .catch((reason: Error) => setError(reason.message))
       .finally(() => setLoading(false));
@@ -39,15 +38,8 @@ export default function AdminSiteSettings() {
     setNotice('');
     setError('');
     try {
-      setValue(
-        await readData<SiteSettings>(
-          apiFetch('/api/admin/settings', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...value, rss_url: rss || '/feed.xml' }),
-          })
-        )
-      );
+      const updated = await siteApi.updateAdminSettings({ ...value, rss_url: rss || '/feed.xml' });
+      setValue(updated);
       setNotice('站点设置已保存。');
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : '保存失败');

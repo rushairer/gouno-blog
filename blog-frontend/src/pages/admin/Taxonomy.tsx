@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Edit2, Merge, Plus, Save, Trash2 } from 'lucide-react';
-import { apiFetch } from '../../auth';
+import { siteApi } from '../../api';
+import type { TagSummary } from '../../api';
 import { AdminPage, AdminPageHeader, BulkActionBar, Button, Checkbox, ConfirmDialog, ContentStack, Drawer, EmptyState, Feedback, Field, Input, LoadingState, Modal, Panel, useToast } from '../../components/ui';
 import { WorkflowLauncher } from '../../components/agent/WorkflowLauncher';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
-import { readData } from '../../lib/blog-api';
 import type { Category } from '../../types/blog';
 
-interface TagSummary { name: string; post_count: number }
 type TagEdit = { tag: TagSummary; mode: 'rename' | 'merge' } | null;
 type DeleteTarget = { kind: 'category'; item: Category } | { kind: 'tag'; item: TagSummary } | { kind: 'batch' } | null;
 
@@ -27,24 +26,22 @@ export default function AdminTaxonomy({ type }: { type: 'categories' | 'tags' })
     if (!allowed) return;
     setLoading(true);
     try {
-      if (type === 'categories') setCategories(await readData<Category[]>(apiFetch('/api/admin/categories')));
-      else setTags(await readData<TagSummary[]>(apiFetch('/api/admin/tags')));
+      if (type === 'categories') setCategories(await siteApi.getAdminCategories());
+      else setTags(await siteApi.getAdminTags());
       setError('');
     } catch (reason) { setError(reason instanceof Error ? reason.message : '载入失败'); } finally { setLoading(false); }
   }, [allowed, type]);
   useEffect(() => { void load(); }, [load]);
 
-  const send = async (path: string, options: RequestInit, fallback: string) => {
-    const response = await apiFetch(path, options);
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.message || fallback);
-    return body.data;
-  };
-
   const createCategory = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault(); const form = event.currentTarget; const data = Object.fromEntries(new FormData(form));
     try {
-      await send('/api/admin/categories', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...data, sort_order: Number(data.sort_order || 0) }) }, '分类创建失败。');
+      await siteApi.createCategory({
+        name: String(data.name || ''),
+        slug: String(data.slug || ''),
+        description: data.description ? String(data.description) : undefined,
+        sort_order: Number(data.sort_order || 0),
+      });
       form.reset(); setCreatingCategory(false); notify('分类已创建。'); await load();
     } catch (reason) { setError(reason instanceof Error ? reason.message : '创建失败'); }
   };
@@ -53,7 +50,12 @@ export default function AdminTaxonomy({ type }: { type: 'categories' | 'tags' })
     event.preventDefault(); if (!editingCategory) return;
     const data = Object.fromEntries(new FormData(event.currentTarget));
     try {
-      await send(`/api/admin/categories/${editingCategory.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...data, sort_order: Number(data.sort_order || 0) }) }, '分类更新失败。');
+      await siteApi.updateCategory(editingCategory.id, {
+        name: String(data.name || ''),
+        slug: String(data.slug || ''),
+        description: data.description ? String(data.description) : undefined,
+        sort_order: Number(data.sort_order || 0),
+      });
       setEditingCategory(null); notify('分类已更新。'); await load();
     } catch (reason) { setError(reason instanceof Error ? reason.message : '分类更新失败。'); }
   };
@@ -64,9 +66,9 @@ export default function AdminTaxonomy({ type }: { type: 'categories' | 'tags' })
     if (!value || value === tagEdit.tag.name) return;
     try {
       if (tagEdit.mode === 'rename') {
-        await send(`/api/admin/tags/${encodeURIComponent(tagEdit.tag.name)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: value }) }, '标签重命名失败。');
+        await siteApi.renameTag(tagEdit.tag.name, value);
       } else {
-        await send('/api/admin/tags/merge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source: tagEdit.tag.name, target: value }) }, '标签合并失败。');
+        await siteApi.mergeTags(tagEdit.tag.name, value);
       }
       notify(tagEdit.mode === 'rename' ? '标签已重命名。' : '标签已合并。'); setTagEdit(null); await load();
     } catch (reason) { setError(reason instanceof Error ? reason.message : '标签操作失败。'); }
@@ -77,8 +79,8 @@ export default function AdminTaxonomy({ type }: { type: 'categories' | 'tags' })
     try {
       if (deleteTarget.kind === 'batch') {
         const results = await Promise.allSettled(selected.map(async (key) => {
-          const path = type === 'categories' ? `/api/admin/categories/${key}` : `/api/admin/tags/${encodeURIComponent(String(key))}`;
-          await send(path, { method: 'DELETE' }, type === 'categories' ? '分类删除失败。' : '标签删除失败。');
+          if (type === 'categories') await siteApi.deleteCategory(key);
+          else await siteApi.deleteTag(String(key));
           return key;
         }));
         const removed = results.flatMap((result) => result.status === 'fulfilled' ? [result.value] : []);
@@ -92,8 +94,8 @@ export default function AdminTaxonomy({ type }: { type: 'categories' | 'tags' })
         } else notify(`已删除 ${removed.length} 个${type === 'categories' ? '分类' : '标签'}。`);
         return;
       }
-      if (deleteTarget.kind === 'category') await send(`/api/admin/categories/${deleteTarget.item.id}`, { method: 'DELETE' }, '分类删除失败。');
-      else await send(`/api/admin/tags/${encodeURIComponent(deleteTarget.item.name)}`, { method: 'DELETE' }, '标签删除失败。');
+      if (deleteTarget.kind === 'category') await siteApi.deleteCategory(deleteTarget.item.id);
+      else await siteApi.deleteTag(deleteTarget.item.name);
       notify(deleteTarget.kind === 'category' ? '分类已删除，相关文章已移至未分类。' : '标签已从文章中移除。');
       setDeleteTarget(null); await load();
     } catch (reason) { setError(reason instanceof Error ? reason.message : '删除失败。'); }

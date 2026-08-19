@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { BarChart3, Eye, FileText, Heart, MessageSquare } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { apiFetch, canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
+import { canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
+import { analyticsApi } from '../api';
 import { Feedback, LoadingState, PageHeader, Panel } from '../components/ui';
 import { useI18n } from '../i18n';
 
@@ -28,11 +29,9 @@ export default function Analytics() {
       void redirectToAuthorize('/admin/analytics');
       return;
     }
-    apiFetch('/api/admin/analytics')
-      .then(async (response) => {
-        const body = await response.json();
-        if (!response.ok) throw new Error(body.message || t('requestFailed'));
-        setSummary(body.data);
+    analyticsApi.getSummary()
+      .then((data) => {
+        setSummary(data as unknown as Summary);
       })
       .catch((err: Error) => setError(err.message));
   }, [t]);

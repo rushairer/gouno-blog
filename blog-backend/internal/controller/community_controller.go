@@ -402,23 +402,17 @@ func writeCommunityError(c *gin.Context, err error) {
 		c.JSON(http.StatusNotFound, gouno.NewErrorResponse(http.StatusNotFound, err.Error()))
 	case errors.Is(err, repository.ErrDuplicateInteraction):
 		c.JSON(http.StatusConflict, gouno.NewErrorResponse(http.StatusConflict, "interaction already recorded"))
-	case isCommunityValidationError(err):
+	case errors.Is(err, service.ErrCommentContentEmpty),
+		errors.Is(err, service.ErrCommentContentTooLong),
+		errors.Is(err, service.ErrCommentAuthorEmpty),
+		errors.Is(err, service.ErrAuthorTooLong),
+		errors.Is(err, service.ErrParentCommentNotFound),
+		errors.Is(err, service.ErrInvalidCommentStatus),
+		errors.Is(err, service.ErrReportReasonTooLong),
+		errors.Is(err, repository.ErrParentCommentMismatch),
+		errors.Is(err, repository.ErrCommentDepthExceeded):
 		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
 	default:
 		c.JSON(http.StatusInternalServerError, gouno.NewErrorResponse(http.StatusInternalServerError, "internal server error"))
 	}
-}
-
-func isCommunityValidationError(err error) bool {
-	if err == nil {
-		return false
-	}
-	message := err.Error()
-	return strings.Contains(message, "must be") ||
-		strings.Contains(message, "invalid ") ||
-		strings.Contains(message, "belongs to another post") ||
-		strings.Contains(message, "at most two levels") ||
-		strings.Contains(message, "is too long") ||
-		strings.Contains(message, "is required") ||
-		strings.Contains(message, "not found")
 }
