@@ -330,7 +330,7 @@ func TestCommentValidation(t *testing.T) {
 	svc := NewPostService(newFakePostRepo())
 
 	err := svc.CreateComment(context.Background(), &domain.Comment{PostID: 1, Author: "", Content: "Body"})
-	if err == nil || err.Error() != "comment author cannot be empty" {
+	if !errors.Is(err, ErrCommentAuthorEmpty) {
 		t.Fatalf("CreateComment error = %v, want author validation", err)
 	}
 

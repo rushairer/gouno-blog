@@ -262,7 +262,7 @@ func TestCreateCommentReturnsBadRequestForInvalidBody(t *testing.T) {
 
 func TestCreatePostValidationErrorReturnsBadRequest(t *testing.T) {
 	svc := newFakeBlogService()
-	svc.createErr = errors.New("post title cannot be empty")
+	svc.createErr = service.ErrPostTitleEmpty
 	router := setupControllerRouter(svc)
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/posts", bytes.NewBufferString(`{"title":" ","content":"Body"}`))
