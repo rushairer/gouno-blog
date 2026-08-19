@@ -3,8 +3,10 @@ import {
   ArrowLeft, Bot, Check, ChevronRight, CirclePause, Clock3, Copy, DatabaseZap, Edit2, Eye, GitBranch, KeyRound, Lightbulb, ListChecks, Play,
   Download, LockKeyhole, Plus, RefreshCw, Settings2, ShieldCheck, Sparkles, Trash2, Upload, X,
 } from 'lucide-react';
-import { apiFetch, canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
-import { agentApi } from '../api';
+import { canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
+import { agentApi } from '../api/agent';
+import { operationsApi } from '../api/operations';
+import { workflowApi } from '../api/workflows';
 import type {
   Agent, AgentApproval, AgentRun, AgentSkill, AgentToolCall, ContentCandidateSet, EditorialTask, EmbeddingProfile, MediaCandidate, OperationalSuggestion, ProviderProfile, ToolDefinition, Workflow, WorkflowInteractionTask, WorkflowMetric, WorkflowRun,
 } from '../agent';
@@ -126,12 +128,6 @@ const copy = {
     streamModeNever: '强制关闭 (Stream: false)',
   },
 } as const;
-
-async function readData<T>(response: Response): Promise<T> {
-  const body = await response.json();
-  if (!response.ok) throw new Error(body.message || copy.en.requestFailed);
-  return body.data as T;
-}
 
 // Tool definitions are code-published and cannot change during a browser session.
 // Reusing the request avoids refetching the same catalog after every mutation.
@@ -482,7 +478,7 @@ function InteractionInbox({ locale, tasks, onResolved }: { locale: 'en' | 'zh'; 
   if (tasks.length === 0) return null;
   const zh = locale === 'zh';
   const resolve = async (task: WorkflowInteractionTask, response: unknown) => {
-    await readData<WorkflowInteractionTask>(await apiFetch(`/api/admin/ai-interactions/${task.id}/resolve`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ resume_token: task.resume_token, response }) }));
+    await workflowApi.resolveInteraction(task, response);
     await onResolved();
   };
   return <Panel className="approval-queue"><div className="panel-heading"><div><h3>{zh ? '流程交互' : 'Workflow interactions'}</h3><small>{zh ? '图片选择、确认和输入都在这里处理，并回到原运行。' : 'Choices, confirmations, and inputs resume their source run.'}</small></div><strong>{tasks.length}</strong></div><div className="agent-approval-list">{tasks.map((task) => <div className="workflow-interaction" key={task.id}><div><strong>{task.interaction_type === 'choice' ? (zh ? '选择项' : 'Choose an option') : task.interaction_type === 'preview_confirm' ? (zh ? '确认预览' : 'Confirm preview') : (zh ? '确认操作' : 'Confirm action')}</strong><small>{task.workflow_run_id ? `Run #${task.workflow_run_id}` : `Agent run #${task.agent_run_id}`}{task.workflow_step_id ? ` · ${task.workflow_step_id}` : ''}</small></div>{task.interaction_type === 'choice' && Array.isArray(task.options) ? task.options.map((option, index) => <button className="btn btn-secondary" type="button" key={index} onClick={() => void resolve(task, { option })}>{String(option)}</button>) : <button className="btn btn-primary" type="button" onClick={() => void resolve(task, { confirmed: true })}>{zh ? '确认并继续' : 'Confirm and continue'}</button>}</div>)}</div></Panel>;
@@ -566,7 +562,7 @@ export default function AgentConsole() {
     // still use every other workspace while the run list is unavailable.
     const loadWorkflowRuns = async () => {
       try {
-        return await agentApi.getWorkflowRuns();
+        return await workflowApi.getRuns();
       } catch {
         return [] as WorkflowRun[];
       }
@@ -580,13 +576,13 @@ export default function AgentConsole() {
       agentApi.getAgentApprovals('pending', 100),
       loadToolCatalog(),
       agentApi.getAgentSkills(),
-      agentApi.getWorkflows(),
+      workflowApi.getWorkflows(),
       loadWorkflowRuns(),
-      agentApi.getWorkflowMetrics(),
-      agentApi.getSuggestions('all'),
-      agentApi.getCandidates(),
-      agentApi.getMediaCandidates(),
-      agentApi.getEditorialTasks(),
+      workflowApi.getMetrics(),
+      operationsApi.getSuggestions('all'),
+      operationsApi.getCandidates(),
+      operationsApi.getMediaCandidates(),
+      operationsApi.getEditorialTasks(),
     ]);
     setProviders(providerData);
     setEmbeddingProfiles(embeddingData);
@@ -648,13 +644,7 @@ export default function AgentConsole() {
   const saveProvider = async (value: ProviderFormValue) => {
     setError('');
     try {
-      const { id, ...payload } = value;
-      const response = await apiFetch(id ? `/api/admin/provider-profiles/${id}` : '/api/admin/provider-profiles', {
-        method: id ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const result = await readData<{ profile: ProviderProfile; starter_agents_created: number }>(response);
+      const result = await agentApi.saveProviderProfileWithSetup(value);
       setEditingProvider(null);
       await refresh();
 	  if (result.starter_agents_created > 0) setNotice(locale === 'zh' ? `已初始化 ${result.starter_agents_created} 个默认 Agent，全部保持停用，等待你审核启用。` : `Initialized ${result.starter_agents_created} default Agents. They remain disabled until reviewed.`);
@@ -666,11 +656,7 @@ export default function AgentConsole() {
   const saveEmbedding = async (value: EmbeddingFormValue) => {
     setError('');
     try {
-      await readData<EmbeddingProfile>(await apiFetch(value.id ? `/api/admin/embedding-profiles/${value.id}` : '/api/admin/embedding-profiles', {
-        method: value.id ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(value),
-      }));
+      await agentApi.saveEmbeddingProfile(value);
       setEditingEmbedding(null);
       await refresh();
     } catch (reason) {
@@ -681,12 +667,7 @@ export default function AgentConsole() {
   const saveAgent = async (value: Omit<Agent, 'id' | 'created_at' | 'updated_at'> & { id?: number }) => {
     setError('');
     try {
-      const response = await apiFetch(value.id ? `/api/admin/agents/${value.id}` : '/api/admin/agents', {
-        method: value.id ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(value),
-      });
-      await readData<Agent>(response);
+      await agentApi.saveAgent(value);
       setEditingAgent(null);
       await refresh();
     } catch (reason) {
@@ -697,17 +678,14 @@ export default function AgentConsole() {
   const saveSkill = async (value: SkillFormValue) => {
     setError('');
     try {
-      const response = await apiFetch(value.id ? `/api/admin/agent-skills/${value.id}` : '/api/admin/agent-skills', { method: value.id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) });
-      await readData<AgentSkill>(response);
+      await agentApi.saveAgentSkill(value);
       setEditingSkill(null);
       await refresh();
     } catch (reason) { setError(reason instanceof Error ? reason.message : labels.requestFailed); }
   };
 
   const exportProviders = async () => {
-    const response = await apiFetch('/api/admin/provider-profiles/export');
-    if (!response.ok) throw new Error(labels.requestFailed);
-    const blob = new Blob([await response.text()], { type: 'application/json' });
+    const blob = await agentApi.exportProviders();
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
@@ -729,12 +707,7 @@ export default function AgentConsole() {
         setError(labels.invalidJsonFile);
         return;
       }
-      const response = await apiFetch('/api/admin/provider-profiles/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = await readData<{ imported_count: number }>(response);
+      const data = await agentApi.importProviders(payload);
       await refresh();
       setNotice(
         locale === 'zh'
@@ -759,12 +732,7 @@ export default function AgentConsole() {
         setError(labels.invalidJsonFile);
         return;
       }
-      const response = await apiFetch('/api/admin/agent-skills/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = await readData<AgentSkill>(response);
+      const data = await agentApi.importSkill(payload);
       await refresh();
       setNotice(
         locale === 'zh'
@@ -777,9 +745,7 @@ export default function AgentConsole() {
   };
 
   const exportSkill = async (skill: AgentSkill) => {
-    const response = await apiFetch(`/api/admin/agent-skills/${skill.id}/export`);
-    if (!response.ok) throw new Error(labels.requestFailed);
-    const blob = new Blob([await response.text()], { type: 'application/json' });
+    const blob = await agentApi.exportSkill(skill.id);
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url; anchor.download = `skill-${skill.id}-v${skill.version}.json`; anchor.click();
@@ -790,7 +756,7 @@ export default function AgentConsole() {
     const name = window.prompt(locale === 'zh' ? '复制后的 Skill 名称' : 'Name for the copied Skill', `${skill.name} Copy`);
     if (!name?.trim()) return;
     try {
-      await mutate(`/api/admin/agent-skills/${skill.id}/copy`, 'POST', { name: name.trim() });
+      await mutate(() => agentApi.copySkill(skill.id, name.trim()));
       setNotice(locale === 'zh' ? `已创建 Skill“${name.trim()}”的自定义副本。` : `Created custom Skill copy “${name.trim()}”.`);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : labels.requestFailed);
@@ -798,42 +764,30 @@ export default function AgentConsole() {
   };
 
   const saveWorkflow = async (value: { id?: number; name: string; description: string; enabled: boolean; cron_expression?: string; timezone: string; input_schema: Record<string, unknown>; steps: import('../agent').WorkflowStep[]; scope_policy: import('../agent').WorkflowScopePolicy }) => {
-    await readData<Workflow>(await apiFetch(value.id ? `/api/admin/ai-workflows/${value.id}` : '/api/admin/ai-workflows', {
-      method: value.id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value),
-    }));
+    await workflowApi.save(value);
     await refresh();
   };
 
-  const mutate = async (path: string, method = 'POST', body?: unknown) => {
+  const mutate = async (operation: () => Promise<unknown>) => {
     setError('');
-    const response = await apiFetch(path, {
-      method,
-      headers: body ? { 'Content-Type': 'application/json' } : undefined,
-      body: body ? JSON.stringify(body) : undefined,
-    });
-    await readData<unknown>(response);
+    await operation();
     await refresh();
   };
 
   const queueWorkflow = async (workflowID: number, dryRun: boolean, input: Record<string, unknown>) => {
     setError('');
-    const response = await apiFetch(`/api/admin/ai-workflows/${workflowID}/${dryRun ? 'dry-run' : 'run'}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ input }),
-    });
-    const result = await readData<WorkflowRun>(response);
+    const result = await workflowApi.run(workflowID, input, dryRun);
     await refresh();
     return result;
   };
 
   const preflightWorkflow = async (workflowID: number, dryRun: boolean, input: Record<string, unknown>) => {
-    return readData<{ ready: boolean; checks: Array<{ key: string; status: string; message?: string }> }>(await apiFetch(`/api/admin/ai-workflows/${workflowID}/preflight`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ input, dry_run: dryRun }),
-    }));
+    return workflowApi.preflight(workflowID, input, dryRun);
   };
 
   const runAgent = async (agent: Agent) => {
     try {
-      await mutate(`/api/admin/agents/${agent.id}/run`);
+      await mutate(() => agentApi.runAgent(agent.id));
       selectTab('records');
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : labels.requestFailed);
@@ -846,8 +800,7 @@ export default function AgentConsole() {
     setError('');
     setNotice('');
     try {
-      const path = kind === 'provider' ? `/api/admin/provider-profiles/${id}/test` : `/api/admin/embedding-profiles/${id}/test`;
-      await readData<unknown>(await apiFetch(path, { method: 'POST' }));
+      await (kind === 'provider' ? agentApi.testProvider(id) : agentApi.testEmbedding(id));
       setNotice(locale === 'zh' ? `${name}：连接成功` : `${name}: connection succeeded`);
     } catch (reason) {
       setError(locale === 'zh' ? `${name}：${reason instanceof Error ? reason.message : labels.requestFailed}` : `${name}: ${reason instanceof Error ? reason.message : labels.requestFailed}`);
@@ -858,7 +811,7 @@ export default function AgentConsole() {
 
   const inspectRun = async (run: AgentRun) => {
     try {
-      const detail = await readData<{ run: AgentRun; tool_calls: AgentToolCall[] }>(await apiFetch(`/api/admin/agent-runs/${run.id}`));
+      const detail = await agentApi.getAgentRunDetail(String(run.id));
       setSelectedRun(detail);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : labels.requestFailed);
@@ -867,7 +820,7 @@ export default function AgentConsole() {
 
   const review = async (approval: AgentApproval, approved: boolean) => {
     try {
-      await mutate(`/api/admin/agent-approvals/${approval.id}/${approved ? 'approve' : 'reject'}`, 'POST', { note: '' });
+      await mutate(() => agentApi.reviewApproval(approval.id, approved));
       const sourceRun = runs.find((run) => run.id === approval.run_id);
       if (approved && sourceRun?.workflow_run_id) {
         const url = new URL(window.location.href);
@@ -889,7 +842,7 @@ export default function AgentConsole() {
   const deleteAgentRun = async (run: AgentRun) => {
     if (!window.confirm(locale === 'zh' ? '删除这条终态 Agent 运行记录及其附属日志？文章和媒体文件不会被删除。' : 'Delete this completed Agent run and its attached logs? Posts and media files are kept.')) return;
     try {
-      await mutate(`/api/admin/agent-runs/${run.id}`, 'DELETE');
+      await mutate(() => agentApi.deleteAgentRun(String(run.id)));
       setSelectedRun(null);
       setNotice(locale === 'zh' ? '运行记录已清理。' : 'Run record deleted.');
     } catch (reason) {
@@ -902,10 +855,10 @@ export default function AgentConsole() {
   const deleteSelected = async () => {
     if (!deleteTarget) return;
     try {
-      if (deleteTarget.kind === 'agent') await mutate(`/api/admin/agents/${deleteTarget.value.id}`, 'DELETE');
-      else if (deleteTarget.kind === 'provider') await mutate(`/api/admin/provider-profiles/${deleteTarget.value.id}`, 'DELETE');
-      else if (deleteTarget.kind === 'skill') await mutate(`/api/admin/agent-skills/${deleteTarget.value.id}`, 'DELETE');
-      else await mutate(`/api/admin/embedding-profiles/${deleteTarget.value.id}`, 'DELETE');
+      if (deleteTarget.kind === 'agent') await mutate(() => agentApi.deleteAgent(deleteTarget.value.id));
+      else if (deleteTarget.kind === 'provider') await mutate(() => agentApi.deleteProviderProfile(deleteTarget.value.id));
+      else if (deleteTarget.kind === 'skill') await mutate(() => agentApi.deleteAgentSkill(deleteTarget.value.id));
+      else await mutate(() => agentApi.deleteEmbeddingProfile(deleteTarget.value.id));
       setDeleteTarget(null);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : labels.requestFailed);
@@ -943,7 +896,7 @@ export default function AgentConsole() {
             const provider = providerMap.get(agent.provider_profile_id);
             const latestRun = runs.find((run) => run.agent_id === agent.id);
             const toolsForSkill = agent.skill?.capabilities || [];
-            return <tr key={agent.id}><td><div className="agent-identity"><span><Bot /></span><div><strong>{agent.name}</strong>{agent.system_key ? <small>{locale === 'zh' ? '默认能力' : 'Default capability'}</small> : null}<small>{agent.description}</small></div></div></td><td><span className={`agent-state agent-state--${agent.enabled ? 'active' : 'paused'}`}><i />{agent.enabled ? labels.active : labels.paused}</span></td><td><strong>{provider?.name || '—'}</strong><small className="mono">{provider?.model || '—'}</small></td><td><strong>{agent.trigger_type === 'cron' ? agent.cron_expression : labels.manual}</strong><small>{agent.timezone}</small></td><td><strong>{agent.skill?.name || '—'}</strong><small>v{agent.skill?.version || '—'} · {toolsForSkill.length} Tools</small></td><td>{latestRun ? <><StatusPill status={latestRun.status} locale={locale} /><small>{formatDateTime(latestRun.created_at)}</small></> : <small>{labels.never}</small>}</td><td><strong>{agent.next_run_at ? formatDateTime(agent.next_run_at) : '—'}</strong></td><td><div className="agent-row-actions"><button type="button" title={labels.runNow} onClick={() => void runAgent(agent)} disabled={!agent.enabled}><Play /></button><button type="button" title={labels.edit} onClick={() => setEditingAgent(agent)}><Edit2 /></button><button type="button" title={agent.enabled ? labels.disable : labels.enable} onClick={() => void mutate(`/api/admin/agents/${agent.id}/${agent.enabled ? 'disable' : 'enable'}`).catch((reason: Error) => setError(reason.message))}>{agent.enabled ? <CirclePause /> : <Play />}</button>{!agent.system_key ? <button type="button" title={labels.delete} onClick={() => setDeleteTarget({ kind: 'agent', value: agent })}><Trash2 /></button> : null}</div></td></tr>;
+            return <tr key={agent.id}><td><div className="agent-identity"><span><Bot /></span><div><strong>{agent.name}</strong>{agent.system_key ? <small>{locale === 'zh' ? '默认能力' : 'Default capability'}</small> : null}<small>{agent.description}</small></div></div></td><td><span className={`agent-state agent-state--${agent.enabled ? 'active' : 'paused'}`}><i />{agent.enabled ? labels.active : labels.paused}</span></td><td><strong>{provider?.name || '—'}</strong><small className="mono">{provider?.model || '—'}</small></td><td><strong>{agent.trigger_type === 'cron' ? agent.cron_expression : labels.manual}</strong><small>{agent.timezone}</small></td><td><strong>{agent.skill?.name || '—'}</strong><small>v{agent.skill?.version || '—'} · {toolsForSkill.length} Tools</small></td><td>{latestRun ? <><StatusPill status={latestRun.status} locale={locale} /><small>{formatDateTime(latestRun.created_at)}</small></> : <small>{labels.never}</small>}</td><td><strong>{agent.next_run_at ? formatDateTime(agent.next_run_at) : '—'}</strong></td><td><div className="agent-row-actions"><button type="button" title={labels.runNow} onClick={() => void runAgent(agent)} disabled={!agent.enabled}><Play /></button><button type="button" title={labels.edit} onClick={() => setEditingAgent(agent)}><Edit2 /></button><button type="button" title={agent.enabled ? labels.disable : labels.enable} onClick={() => void mutate(() => agentApi.setAgentEnabled(agent.id, !agent.enabled)).catch((reason: Error) => setError(reason.message))}>{agent.enabled ? <CirclePause /> : <Play />}</button>{!agent.system_key ? <button type="button" title={labels.delete} onClick={() => setDeleteTarget({ kind: 'agent', value: agent })}><Trash2 /></button> : null}</div></td></tr>;
           })}</tbody></table></div>}
         </WorkspacePanel> : null}
 
@@ -976,17 +929,17 @@ export default function AgentConsole() {
             description={locale === 'zh' ? '管理模型连接，并分别指定写作与图片生成的默认模型。' : 'Manage model connections and defaults.'}
             actions={<><Button variant="secondary" type="button" onClick={() => void exportProviders().catch((reason: Error) => setError(reason.message))}><Download />{labels.exportProviders}</Button><Button variant="secondary" type="button" onClick={() => providerFileInputRef.current?.click()}><Upload />{labels.importProviders}</Button><Button variant="primary" onClick={() => setEditingProvider('new')}><Plus />{locale === 'zh' ? '添加模型连接' : labels.createProvider}</Button></>}
           />
-          {providers.length > 0 ? <section className="provider-defaults"><div className="provider-defaults__intro"><h3>默认用途</h3><p>决定编辑器与图片生成使用的模型。</p></div><label>写作辅助<Select value={providers.find((item) => item.is_default_writing)?.id || ''} onChange={(event) => { if (event.target.value) void mutate(`/api/admin/provider-profiles/${event.target.value}/default/writing`, 'POST').then(() => setNotice('默认写作模型已更新')).catch((reason: Error) => setError(reason.message)); }}><option value="">请选择模型</option>{providers.filter((item) => item.enabled).map((item) => <option key={item.id} value={item.id}>{item.name} · {item.model}</option>)}</Select></label><label>图片生成<Select value={providers.find((item) => item.is_default_image)?.id || ''} onChange={(event) => { if (event.target.value) void mutate(`/api/admin/provider-profiles/${event.target.value}/default/image`, 'POST').then(() => setNotice('默认图片模型已更新')).catch((reason: Error) => setError(reason.message)); }}><option value="">请选择模型</option>{providers.filter((item) => item.enabled).map((item) => <option key={item.id} value={item.id}>{item.name} · {item.model}</option>)}</Select></label></section> : null}
-          {providers.length === 0 ? <EmptyState label={labels.noProviders} /> : <div className="table-scroll"><table className="content-table agent-table"><thead><tr><th>{labels.providerName}</th><th>{labels.providerType}</th><th>{labels.baseUrl}</th><th>{labels.model}</th><th>{labels.apiKey}</th><th>{labels.status}</th><th>{labels.actions}</th></tr></thead><tbody>{providers.map((provider) => <tr key={provider.id}><td><strong>{provider.name}</strong>{provider.is_default_writing ? <small className="provider-default">默认写作模型</small> : null}{provider.is_default_image ? <small className="provider-default">默认图片模型</small> : null}</td><td>{provider.provider_type}</td><td className="mono">{provider.base_url}</td><td className="mono">{provider.model}</td><td><span className="secret-mask">•••• {provider.api_key_last4}</span><small>{labels.keyStored}</small></td><td><span className={`agent-state agent-state--${provider.enabled ? 'active' : 'paused'}`}><i />{provider.enabled ? labels.active : labels.paused}</span></td><td><div className="agent-row-actions">{!provider.is_default_writing ? <button type="button" title="设为默认写作模型" disabled={!provider.enabled} onClick={() => void mutate(`/api/admin/provider-profiles/${provider.id}/default/writing`, 'POST').then(() => setNotice('已设为默认写作模型')).catch((reason: Error) => setError(reason.message))}><Sparkles /></button> : <span className="provider-default-mark"><Check />写作</span>}{!provider.is_default_image ? <button type="button" title="设为默认图片生成模型" disabled={!provider.enabled} onClick={() => void mutate(`/api/admin/provider-profiles/${provider.id}/default/image`, 'POST').then(() => setNotice('已设为默认图片生成模型')).catch((reason: Error) => setError(reason.message))}><Sparkles /></button> : <span className="provider-default-mark"><Check />图片</span>}<button type="button" title={testingConnections.includes(`provider:${provider.id}`) ? (locale === 'zh' ? '正在测试连接' : 'Testing connection') : labels.test} aria-busy={testingConnections.includes(`provider:${provider.id}`)} disabled={testingConnections.includes(`provider:${provider.id}`)} onClick={() => void testConnection('provider', provider.id, provider.name)}><RefreshCw className={testingConnections.includes(`provider:${provider.id}`) ? 'agent-row-actions__spinner' : undefined} /></button><button type="button" title={labels.edit} onClick={() => setEditingProvider(provider)}><Edit2 /></button><button type="button" title={labels.delete} onClick={() => setDeleteTarget({ kind: 'provider', value: provider })}><Trash2 /></button></div></td></tr>)}</tbody></table></div>}
+          {providers.length > 0 ? <section className="provider-defaults"><div className="provider-defaults__intro"><h3>默认用途</h3><p>决定编辑器与图片生成使用的模型。</p></div><label>写作辅助<Select value={providers.find((item) => item.is_default_writing)?.id || ''} onChange={(event) => { if (event.target.value) void mutate(() => agentApi.setDefaultProvider(Number(event.target.value), 'writing')).then(() => setNotice('默认写作模型已更新')).catch((reason: Error) => setError(reason.message)); }}><option value="">请选择模型</option>{providers.filter((item) => item.enabled).map((item) => <option key={item.id} value={item.id}>{item.name} · {item.model}</option>)}</Select></label><label>图片生成<Select value={providers.find((item) => item.is_default_image)?.id || ''} onChange={(event) => { if (event.target.value) void mutate(() => agentApi.setDefaultProvider(Number(event.target.value), 'image')).then(() => setNotice('默认图片模型已更新')).catch((reason: Error) => setError(reason.message)); }}><option value="">请选择模型</option>{providers.filter((item) => item.enabled).map((item) => <option key={item.id} value={item.id}>{item.name} · {item.model}</option>)}</Select></label></section> : null}
+          {providers.length === 0 ? <EmptyState label={labels.noProviders} /> : <div className="table-scroll"><table className="content-table agent-table"><thead><tr><th>{labels.providerName}</th><th>{labels.providerType}</th><th>{labels.baseUrl}</th><th>{labels.model}</th><th>{labels.apiKey}</th><th>{labels.status}</th><th>{labels.actions}</th></tr></thead><tbody>{providers.map((provider) => <tr key={provider.id}><td><strong>{provider.name}</strong>{provider.is_default_writing ? <small className="provider-default">默认写作模型</small> : null}{provider.is_default_image ? <small className="provider-default">默认图片模型</small> : null}</td><td>{provider.provider_type}</td><td className="mono">{provider.base_url}</td><td className="mono">{provider.model}</td><td><span className="secret-mask">•••• {provider.api_key_last4}</span><small>{labels.keyStored}</small></td><td><span className={`agent-state agent-state--${provider.enabled ? 'active' : 'paused'}`}><i />{provider.enabled ? labels.active : labels.paused}</span></td><td><div className="agent-row-actions">{!provider.is_default_writing ? <button type="button" title="设为默认写作模型" disabled={!provider.enabled} onClick={() => void mutate(() => agentApi.setDefaultProvider(provider.id, 'writing')).then(() => setNotice('已设为默认写作模型')).catch((reason: Error) => setError(reason.message))}><Sparkles /></button> : <span className="provider-default-mark"><Check />写作</span>}{!provider.is_default_image ? <button type="button" title="设为默认图片生成模型" disabled={!provider.enabled} onClick={() => void mutate(() => agentApi.setDefaultProvider(provider.id, 'image')).then(() => setNotice('已设为默认图片生成模型')).catch((reason: Error) => setError(reason.message))}><Sparkles /></button> : <span className="provider-default-mark"><Check />图片</span>}<button type="button" title={testingConnections.includes(`provider:${provider.id}`) ? (locale === 'zh' ? '正在测试连接' : 'Testing connection') : labels.test} aria-busy={testingConnections.includes(`provider:${provider.id}`)} disabled={testingConnections.includes(`provider:${provider.id}`)} onClick={() => void testConnection('provider', provider.id, provider.name)}><RefreshCw className={testingConnections.includes(`provider:${provider.id}`) ? 'agent-row-actions__spinner' : undefined} /></button><button type="button" title={labels.edit} onClick={() => setEditingProvider(provider)}><Edit2 /></button><button type="button" title={labels.delete} onClick={() => setDeleteTarget({ kind: 'provider', value: provider })}><Trash2 /></button></div></td></tr>)}</tbody></table></div>}
         </WorkspacePanel> : null}
 
-        {!editingAgent && !editingProvider && !editingEmbedding && !editingSkill && tab === 'automation' ? <WorkflowWorkspace workflows={workflows} runs={workflowRuns} metrics={workflowMetrics} agents={agents} tools={tools} locale={locale} onMutate={mutate} onRun={queueWorkflow} onPreflight={preflightWorkflow} onRefresh={refresh} onSave={saveWorkflow} onConfigureSkill={(draft) => { if (!draft) return; setSkillPrefill({ name: draft.name || '', description: draft.description || '', system_prompt: draft.system_prompt || '', capabilities: draft.capabilities || [], execution_mode: draft.execution_mode || 'approval', content_publish_mode: 'approval' }); setEditingSkill('new'); setAdvancedSection('skills'); setTab('advanced'); }} onConfigureAgent={(draft) => { if (!draft) return; const provider = providers.find((item) => item.enabled && item.is_default_writing) || providers.find((item) => item.enabled); setAgentPrefill({ name: draft.name || '', description: draft.description || '', provider_profile_id: draft.provider_profile_id || provider?.id || 0, skill_version_id: draft.skill_version_id || skills[0]?.version_id || 0, enabled: false, trigger_type: 'manual', timezone: 'Asia/Shanghai', daily_run_limit: 10, monthly_token_budget: 1000000 }); setEditingAgent('new'); setAdvancedSection('agents'); setTab('advanced'); }} /> : null}
-        {!editingAgent && !editingProvider && !editingEmbedding && !editingSkill && tab === 'advanced' && advancedSection === 'connectors' ? <ConnectorWorkspace locale={locale} readData={readData} onRefresh={refresh} /> : null}
-        {!editingAgent && !editingProvider && !editingEmbedding && !editingSkill && tab === 'inbox' ? <><InteractionInbox locale={locale} tasks={interactions} onResolved={refresh} /><FriendlyApprovalQueue locale={locale} approvals={approvals} selected={selectedApproval} onSelect={setSelectedApproval} onReview={review} /><OperationsWorkspace suggestions={suggestions} candidateSets={candidateSets} mediaCandidates={mediaCandidates} editorialTasks={editorialTasks} locale={locale} onMutate={mutate} /></> : null}
+        {!editingAgent && !editingProvider && !editingEmbedding && !editingSkill && tab === 'automation' ? <WorkflowWorkspace workflows={workflows} runs={workflowRuns} metrics={workflowMetrics} agents={agents} tools={tools} locale={locale} onRun={queueWorkflow} onPreflight={preflightWorkflow} onRefresh={refresh} onSave={saveWorkflow} onConfigureSkill={(draft) => { if (!draft) return; setSkillPrefill({ name: draft.name || '', description: draft.description || '', system_prompt: draft.system_prompt || '', capabilities: draft.capabilities || [], execution_mode: draft.execution_mode || 'approval', content_publish_mode: 'approval' }); setEditingSkill('new'); setAdvancedSection('skills'); setTab('advanced'); }} onConfigureAgent={(draft) => { if (!draft) return; const provider = providers.find((item) => item.enabled && item.is_default_writing) || providers.find((item) => item.enabled); setAgentPrefill({ name: draft.name || '', description: draft.description || '', provider_profile_id: draft.provider_profile_id || provider?.id || 0, skill_version_id: draft.skill_version_id || skills[0]?.version_id || 0, enabled: false, trigger_type: 'manual', timezone: 'Asia/Shanghai', daily_run_limit: 10, monthly_token_budget: 1000000 }); setEditingAgent('new'); setAdvancedSection('agents'); setTab('advanced'); }} /> : null}
+        {!editingAgent && !editingProvider && !editingEmbedding && !editingSkill && tab === 'advanced' && advancedSection === 'connectors' ? <ConnectorWorkspace locale={locale} onRefresh={refresh} /> : null}
+        {!editingAgent && !editingProvider && !editingEmbedding && !editingSkill && tab === 'inbox' ? <><InteractionInbox locale={locale} tasks={interactions} onResolved={refresh} /><FriendlyApprovalQueue locale={locale} approvals={approvals} selected={selectedApproval} onSelect={setSelectedApproval} onReview={review} /><OperationsWorkspace suggestions={suggestions} candidateSets={candidateSets} mediaCandidates={mediaCandidates} editorialTasks={editorialTasks} locale={locale} onRefresh={refresh} /></> : null}
         {!editingAgent && !editingProvider && tab === 'records' ? <div className="records-hub section-stack"><SubnavTabs label={locale === 'zh' ? '运行中心类型' : 'Run center type'} value={recordType} onValueChange={(value) => { const next = value as typeof recordType; setRecordType(next); const url = new URL(window.location.href); url.searchParams.set('record', next); window.history.replaceState(null, '', url); }} items={[{ value: 'workflow', label: locale === 'zh' ? 'Workflow 任务' : 'Workflow tasks' }, { value: 'agent', label: locale === 'zh' ? 'Agent 运行' : 'Agent runs' }]} />{recordType === 'agent' ? <RecordsWorkspace locale={locale} runs={runs} agents={agents} selectedRun={selectedRun} onInspect={(run) => void inspectRun(run)} onClearInspect={() => setSelectedRun(null)} onDelete={(run) => void deleteAgentRun(run)} formatDateTime={formatDateTime} /> : <WorkflowRunRecords locale={locale} workflows={workflows} runs={workflowRuns} formatDateTime={formatDateTime} onRefresh={refresh} />}</div> : null}
 
         {!editingAgent && !editingProvider && !editingEmbedding && tab === 'advanced' && advancedSection === 'knowledge' ? <WorkspacePanel className="agent-table-panel knowledge-workspace">
-          <PanelHeader title={<><DatabaseZap />{labels.knowledge}</>} description={locale === 'zh' ? '仅索引已发布文章；Embedding 模型负责把文章转换为可检索的知识库。' : 'Published content only; jobs run asynchronously.'} actions={<><Button variant="secondary" type="button" onClick={() => void mutate('/api/admin/ai-index/retry')}><RefreshCw />{locale === 'zh' ? '重试失败任务' : 'Retry failed'}</Button><Button variant="secondary" type="button" onClick={() => void mutate('/api/admin/ai-index/rebuild')}><RefreshCw />{locale === 'zh' ? '全量重建' : 'Rebuild all'}</Button><Button variant="primary" type="button" onClick={() => setEditingEmbedding('new')}><Plus />{locale === 'zh' ? '添加 Embedding 模型' : 'Add embedding profile'}</Button></>} />
+          <PanelHeader title={<><DatabaseZap />{labels.knowledge}</>} description={locale === 'zh' ? '仅索引已发布文章；Embedding 模型负责把文章转换为可检索的知识库。' : 'Published content only; jobs run asynchronously.'} actions={<><Button variant="secondary" type="button" onClick={() => void mutate(() => agentApi.retryIndex())}><RefreshCw />{locale === 'zh' ? '重试失败任务' : 'Retry failed'}</Button><Button variant="secondary" type="button" onClick={() => void mutate(() => agentApi.rebuildIndex())}><RefreshCw />{locale === 'zh' ? '全量重建' : 'Rebuild all'}</Button><Button variant="primary" type="button" onClick={() => setEditingEmbedding('new')}><Plus />{locale === 'zh' ? '添加 Embedding 模型' : 'Add embedding profile'}</Button></>} />
           <div className="agent-run-metrics"><span><small>{locale === 'zh' ? '分段' : 'Chunks'}</small><strong>{indexStatus.chunks}</strong></span><span><small>{locale === 'zh' ? '队列' : 'Queued'}</small><strong>{indexStatus.queued}</strong></span><span><small>{locale === 'zh' ? '失败' : 'Failed'}</small><strong>{indexStatus.failed}</strong></span></div>
           <section className="knowledge-embedding-config">
             {embeddingProfiles.length === 0 ? <EmptyState label={locale === 'zh' ? '还没有嵌入配置。' : 'No embedding profiles configured.'} /> : <div className="table-scroll"><table className="content-table agent-table"><thead><tr><th>{labels.providerName}</th><th>{labels.baseUrl}</th><th>{labels.model}</th><th>{locale === 'zh' ? '维度' : 'Dimensions'}</th><th>{labels.status}</th><th>{labels.actions}</th></tr></thead><tbody>{embeddingProfiles.map((profile) => <tr key={profile.id}><td><strong>{profile.name}</strong><small className="secret-mask">•••• {profile.api_key_last4}</small></td><td className="mono">{profile.base_url}</td><td className="mono">{profile.model}</td><td>{profile.dimensions}</td><td><span className={`agent-state agent-state--${profile.enabled ? 'active' : 'paused'}`}><i />{profile.enabled ? labels.active : labels.paused}</span></td><td><div className="agent-row-actions"><button type="button" title={testingConnections.includes(`embedding:${profile.id}`) ? (locale === 'zh' ? '正在测试连接' : 'Testing connection') : labels.test} aria-busy={testingConnections.includes(`embedding:${profile.id}`)} disabled={testingConnections.includes(`embedding:${profile.id}`)} onClick={() => void testConnection('embedding', profile.id, profile.name)}><RefreshCw className={testingConnections.includes(`embedding:${profile.id}`) ? 'agent-row-actions__spinner' : undefined} /></button><button type="button" title={labels.edit} onClick={() => setEditingEmbedding(profile)}><Settings2 /></button><button type="button" title={labels.delete} onClick={() => setDeleteTarget({ kind: 'embedding', value: profile })}><Trash2 /></button></div></td></tr>)}</tbody></table></div>}

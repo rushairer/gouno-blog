@@ -21,7 +21,7 @@ import {
   useToast,
 } from '../../components/ui';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
-import { deletePage, getAdminPages } from '../../lib/blog-api';
+import { pagesApi } from '../../api/pages';
 import type { CustomPage } from '../../types/blog';
 import { WorkflowLauncher } from '../../components/agent/WorkflowLauncher';
 
@@ -50,7 +50,7 @@ export default function AdminPages() {
     let ignore = false;
     setLoading(true);
 
-    getAdminPages({ page, pageSize, q, status })
+    pagesApi.getAdminPages({ page, pageSize, q, status })
       .then((result) => {
         if (ignore) return;
         setPages(result.list || []);
@@ -87,12 +87,12 @@ export default function AdminPages() {
     setDeleting(true);
     try {
       if (deleteTarget.kind === 'page') {
-        await deletePage(deleteTarget.page.id);
+        await pagesApi.deletePage(deleteTarget.page.id);
         setPages((current) => current.filter((item) => item.id !== deleteTarget.page.id));
         setTotal((current) => Math.max(0, current - 1));
         notify('单页已删除。');
       } else {
-        await Promise.all(selected.map((id) => deletePage(id)));
+        await Promise.all(selected.map((id) => pagesApi.deletePage(id)));
         setPages((current) => current.filter((item) => !selected.includes(item.id)));
         setTotal((current) => Math.max(0, current - selected.length));
         setSelected([]);

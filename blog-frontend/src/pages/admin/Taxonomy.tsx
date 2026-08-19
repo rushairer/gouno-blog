@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Edit2, Merge, Plus, Save, Trash2 } from 'lucide-react';
-import { siteApi } from '../../api';
-import type { TagSummary } from '../../api';
+import { siteApi } from '../../api/site';
+import type { TagSummary } from '../../api/site';
 import { AdminPage, AdminPageHeader, BulkActionBar, Button, Checkbox, ConfirmDialog, ContentStack, Drawer, EmptyState, Feedback, Field, Input, LoadingState, Modal, Panel, useToast } from '../../components/ui';
 import { WorkflowLauncher } from '../../components/agent/WorkflowLauncher';
 import { useAdminGuard } from '../../hooks/useAdminGuard';

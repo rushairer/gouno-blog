@@ -12,10 +12,10 @@ describe('blog cookie session', () => {
   });
 
   it('keeps only PKCE state in session storage', async () => {
-    const { authSession } = await import('../auth');
-    expect(authSession.getAccessToken()).toBeNull();
-    expect(authSession.getRefreshToken()).toBeNull();
-    expect(Object.values(authSession.storageKeys)).toEqual(expect.arrayContaining(['gouno-blog:pkce_verifier', 'gouno-blog:auth_state']));
+    const { gossoClient } = await import('../auth');
+    expect(gossoClient.getAccessToken()).toBeNull();
+    expect(gossoClient.getRefreshToken()).toBeNull();
+    expect(Object.values(gossoClient.storageKeys)).toEqual(expect.arrayContaining(['gouno-blog:pkce_verifier', 'gouno-blog:auth_state']));
   });
 
   it('adds the CSRF token to unsafe blog API requests without an Authorization header', async () => {
@@ -89,7 +89,7 @@ describe('blog cookie session', () => {
     document.cookie = 'blog_csrf_token=csrf-value; path=/';
     const fetchMock = vi.fn().mockResolvedValue(Response.json({ data: {} }));
     vi.stubGlobal('fetch', fetchMock);
-    const { optionalApiFetch } = await import('../community');
+    const { optionalApiFetch } = await import('../api/client');
     await optionalApiFetch('/api/posts/example/comments', { method: 'POST', body: '{}' });
     const headers = new Headers(fetchMock.mock.calls[0][1]?.headers);
     expect(headers.get('X-CSRF-Token')).toBe('csrf-value');
@@ -100,8 +100,8 @@ describe('blog cookie session', () => {
       .mockResolvedValueOnce(Response.json({ sub: '1', name: 'Admin' }))
       .mockResolvedValueOnce(Response.json({ data: { sub: '1', roles: ['admin'], scope: 'openid profile' } }));
     vi.stubGlobal('fetch', fetchMock);
-    const { fetchUserProfile, canManageBlog, isLoggedIn } = await import('../auth');
-    await fetchUserProfile();
+    const { gossoClient, canManageBlog, isLoggedIn } = await import('../auth');
+    await gossoClient.fetchUserProfile();
     expect(isLoggedIn()).toBe(true);
     expect(canManageBlog()).toBe(true);
   });
@@ -112,8 +112,8 @@ describe('blog cookie session', () => {
       .mockResolvedValueOnce(Response.json({ data: { sub: '1' } }));
     vi.stubGlobal('fetch', fetchMock);
 
-    const { fetchUserProfile, canManageBlog } = await import('../auth');
-    await fetchUserProfile();
+    const { gossoClient, canManageBlog } = await import('../auth');
+    await gossoClient.fetchUserProfile();
     expect(canManageBlog()).toBe(true);
   });
 });

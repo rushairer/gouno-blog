@@ -3,7 +3,8 @@ import { ArrowRight, GitBranch, Mail, Rss } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { EmptyState, LoadingState, SectionHeading } from '../components/ui';
 import { authorInitials, DEFAULT_SITE_SETTINGS } from '../config/site-defaults';
-import { getPosts, getSiteSettings, getTags } from '../lib/blog-api';
+import { postsApi } from '../api/posts';
+import { siteApi } from '../api/site';
 import { markdownToPlainText } from '../markdown';
 import type { Post, SiteSettings } from '../types/blog';
 
@@ -43,9 +44,9 @@ export default function Home() {
 
   useEffect(() => {
     Promise.all([
-      getPosts(new URLSearchParams({ page: '1', pageSize: '12' })),
-      getTags(),
-      getSiteSettings().catch(() => DEFAULT_SITE_SETTINGS),
+      postsApi.getPosts(new URLSearchParams({ page: '1', pageSize: '12' })),
+      siteApi.getTags(),
+      siteApi.getSiteSettings().catch(() => DEFAULT_SITE_SETTINGS),
     ])
       .then(([postData, tagData, siteData]) => {
         setPosts(postData.list || []);

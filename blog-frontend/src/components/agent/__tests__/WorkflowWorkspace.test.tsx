@@ -3,6 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { WorkflowWorkspace } from '../WorkflowWorkspace';
 
+const { apiFetch } = vi.hoisted(() => ({ apiFetch: vi.fn() }));
+vi.mock('../../../auth', () => ({ apiFetch }));
+
 const workflow = {
   id: 7,
   name: 'Daily digest',
@@ -19,6 +22,7 @@ const workflow = {
 };
 describe('WorkflowWorkspace', () => {
   beforeEach(() => {
+    apiFetch.mockReset().mockResolvedValue(Response.json({ data: {} }));
     window.history.replaceState(null, '', '/');
   });
   it('sorts workflows by enabled first then newest timestamp, and filters the list', async () => {
@@ -67,7 +71,7 @@ describe('WorkflowWorkspace', () => {
     expect(within(dialog).getByText('Deleting “Daily digest” stops future runs. Version history and run audits are retained.')).toBeInTheDocument();
 
     await user.click(within(dialog).getByRole('button', { name: 'Delete workflow' }));
-    await waitFor(() => expect(onMutate).toHaveBeenCalledWith('/api/admin/ai-workflows/7', 'DELETE'));
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledWith('/api/admin/ai-workflows/7', { method: 'DELETE' }));
   });
 
   it('navigates to detail view, shows progress immediately and success feedback after a run completes', async () => {

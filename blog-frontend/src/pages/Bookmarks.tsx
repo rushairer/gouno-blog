@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Bookmark, Eye, Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { isLoggedIn, redirectToAuthorize } from '../auth';
-import { bookmarksApi } from '../api';
+import { bookmarksApi } from '../api/bookmarks';
 import { Badge, EmptyState, Feedback, LoadingState, PageHeader, Panel } from '../components/ui';
 import { useI18n } from '../i18n';
 

@@ -1,5 +1,4 @@
-import { apiFetch } from '../auth';
-import { readData } from './client';
+import { authenticatedApiFetch as apiFetch, readData } from './client';
 import type { CustomPage, PaginatedPages } from '../types/blog';
 
 export const pagesApi = {

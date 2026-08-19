@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { BarChart3, Eye, FileText, Heart, MessageSquare } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
-import { analyticsApi } from '../api';
+import { analyticsApi } from '../api/analytics';
 import { Feedback, LoadingState, PageHeader, Panel } from '../components/ui';
 import { useI18n } from '../i18n';
 

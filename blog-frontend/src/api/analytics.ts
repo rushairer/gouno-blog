@@ -1,5 +1,4 @@
-import { apiFetch } from '../auth';
-import { readData } from './client';
+import { authenticatedApiFetch as apiFetch, optionalApiFetch, readData } from './client';
 
 export interface AnalyticsSummary {
   bookmarks: number;
@@ -14,7 +13,7 @@ export const analyticsApi = {
 
   async recordView(slugOrID: string | number): Promise<void> {
     return readData<void>(
-      apiFetch(`/api/posts/${encodeURIComponent(String(slugOrID))}/view`, {
+      optionalApiFetch(`/api/posts/${encodeURIComponent(String(slugOrID))}/view`, {
         method: 'POST',
       })
     );

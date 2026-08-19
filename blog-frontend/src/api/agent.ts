@@ -1,22 +1,14 @@
-import { apiFetch } from '../auth';
-import { readData } from './client';
+import { authenticatedApiFetch as apiFetch, readData } from './client';
 import type {
   Agent,
   AgentApproval,
   AgentRun,
   AgentSkill,
   AgentToolCall,
-  ContentCandidateSet,
-  EditorialTask,
   EmbeddingProfile,
-  MediaCandidate,
-  OperationalSuggestion,
   ProviderProfile,
   ToolDefinition,
-  Workflow,
   WorkflowInteractionTask,
-  WorkflowMetric,
-  WorkflowRun,
 } from '../agent';
 
 export const agentApi = {
@@ -40,10 +32,6 @@ export const agentApi = {
     );
   },
 
-  async getWorkflowRuns(): Promise<WorkflowRun[]> {
-    return readData<WorkflowRun[]>(apiFetch('/api/admin/ai-workflow-runs'));
-  },
-
   async getProviderProfiles(): Promise<ProviderProfile[]> {
     return readData<ProviderProfile[]>(apiFetch('/api/admin/provider-profiles'));
   },
@@ -54,6 +42,14 @@ export const agentApi = {
         method: profile.id ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(profile),
+      })
+    );
+  },
+
+  async saveProviderProfileWithSetup(profile: Partial<ProviderProfile>): Promise<{ profile: ProviderProfile; starter_agents_created: number }> {
+    return readData<{ profile: ProviderProfile; starter_agents_created: number }>(
+      apiFetch(profile.id ? `/api/admin/provider-profiles/${profile.id}` : '/api/admin/provider-profiles', {
+        method: profile.id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(profile),
       })
     );
   },
@@ -120,62 +116,6 @@ export const agentApi = {
     );
   },
 
-  async getWorkflows(): Promise<Workflow[]> {
-    return readData<Workflow[]>(apiFetch('/api/admin/ai-workflows'));
-  },
-
-  async saveWorkflow(workflow: Partial<Workflow>): Promise<Workflow> {
-    return readData<Workflow>(
-      apiFetch(workflow.id ? `/api/admin/ai-workflows/${workflow.id}` : '/api/admin/ai-workflows', {
-        method: workflow.id ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(workflow),
-      })
-    );
-  },
-
-  async runWorkflow(workflowId: string, dryRun = false): Promise<WorkflowRun> {
-    return readData<WorkflowRun>(
-      apiFetch(`/api/admin/ai-workflows/${workflowId}/${dryRun ? 'dry-run' : 'run'}`, {
-        method: 'POST',
-      })
-    );
-  },
-
-  async preflightWorkflow(
-    workflowId: string,
-    inputs: Record<string, unknown>
-  ): Promise<{ ready: boolean; checks: Array<{ key: string; status: string; message?: string }> }> {
-    return readData<{ ready: boolean; checks: Array<{ key: string; status: string; message?: string }> }>(
-      apiFetch(`/api/admin/ai-workflows/${workflowId}/preflight`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(inputs),
-      })
-    );
-  },
-
-  async getWorkflowMetrics(): Promise<WorkflowMetric[]> {
-    const data = await readData<{ workflows: WorkflowMetric[] }>(apiFetch('/api/admin/ai-workflow-metrics'));
-    return data.workflows || [];
-  },
-
-  async getSuggestions(status = 'all'): Promise<OperationalSuggestion[]> {
-    return readData<OperationalSuggestion[]>(apiFetch(`/api/admin/ai-suggestions?status=${encodeURIComponent(status)}`));
-  },
-
-  async getCandidates(): Promise<ContentCandidateSet[]> {
-    return readData<ContentCandidateSet[]>(apiFetch('/api/admin/ai-candidates'));
-  },
-
-  async getMediaCandidates(): Promise<MediaCandidate[]> {
-    return readData<MediaCandidate[]>(apiFetch('/api/admin/ai-media-candidates'));
-  },
-
-  async getEditorialTasks(): Promise<EditorialTask[]> {
-    return readData<EditorialTask[]>(apiFetch('/api/admin/ai-editorial-tasks'));
-  },
-
   async getDraftAssist(payload: { task: string; title: string; summary: string; content: string }): Promise<string[]> {
     const data = await readData<{ suggestions: string[] }>(
       apiFetch('/api/admin/ai-draft-assist', {
@@ -185,5 +125,40 @@ export const agentApi = {
       })
     );
     return data.suggestions || [];
+  },
+
+  copySkill: (id: number, name: string) => readData<void>(apiFetch(`/api/admin/agent-skills/${id}/copy`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }),
+  })),
+  runAgent: (id: number) => readData<void>(apiFetch(`/api/admin/agents/${id}/run`, { method: 'POST' })),
+  setAgentEnabled: (id: number, enabled: boolean) => readData<void>(apiFetch(`/api/admin/agents/${id}/${enabled ? 'enable' : 'disable'}`, { method: 'POST' })),
+  reviewApproval: (id: number, approved: boolean) => readData<void>(apiFetch(`/api/admin/agent-approvals/${id}/${approved ? 'approve' : 'reject'}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ note: '' }),
+  })),
+  deleteAgentRun: (id: string) => readData<void>(apiFetch(`/api/admin/agent-runs/${id}`, { method: 'DELETE' })),
+  deleteAgent: (id: number) => readData<void>(apiFetch(`/api/admin/agents/${id}`, { method: 'DELETE' })),
+  deleteProviderProfile: (id: number) => readData<void>(apiFetch(`/api/admin/provider-profiles/${id}`, { method: 'DELETE' })),
+  deleteEmbeddingProfile: (id: number) => readData<void>(apiFetch(`/api/admin/embedding-profiles/${id}`, { method: 'DELETE' })),
+  deleteAgentSkill: (id: number) => readData<void>(apiFetch(`/api/admin/agent-skills/${id}`, { method: 'DELETE' })),
+  setDefaultProvider: (id: number, purpose: 'writing' | 'image') => readData<void>(apiFetch(`/api/admin/provider-profiles/${id}/default/${purpose}`, { method: 'POST' })),
+  testProvider: (id: number) => readData<void>(apiFetch(`/api/admin/provider-profiles/${id}/test`, { method: 'POST' })),
+  testEmbedding: (id: number) => readData<void>(apiFetch(`/api/admin/embedding-profiles/${id}/test`, { method: 'POST' })),
+  retryIndex: () => readData<void>(apiFetch('/api/admin/ai-index/retry', { method: 'POST' })),
+  rebuildIndex: () => readData<void>(apiFetch('/api/admin/ai-index/rebuild', { method: 'POST' })),
+  exportProviders: async () => {
+    const response = await apiFetch('/api/admin/provider-profiles/export');
+    if (!response.ok) await readData<void>(response);
+    return response.blob();
+  },
+  importProviders: (payload: unknown) => readData<{ imported_count: number }>(apiFetch('/api/admin/provider-profiles/import', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+  })),
+  importSkill: (payload: unknown) => readData<AgentSkill>(apiFetch('/api/admin/agent-skills/import', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+  })),
+  exportSkill: async (id: number) => {
+    const response = await apiFetch(`/api/admin/agent-skills/${id}/export`);
+    if (!response.ok) await readData<void>(response);
+    return response.blob();
   },
 };

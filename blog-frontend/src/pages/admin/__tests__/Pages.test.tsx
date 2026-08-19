@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import AdminPages from '../Pages';
 import { ToastProvider } from '../../../components/ui';
-import * as blogApi from '../../../lib/blog-api';
+import { pagesApi } from '../../../api/pages';
 import * as auth from '../../../auth';
 import type { PaginatedPages } from '../../../types/blog';
 
@@ -49,7 +49,7 @@ describe('AdminPages', () => {
       total: 2,
     };
 
-    vi.spyOn(blogApi, 'getAdminPages').mockResolvedValue(mockData);
+    vi.spyOn(pagesApi, 'getAdminPages').mockResolvedValue(mockData);
 
     render(
       <ToastProvider>

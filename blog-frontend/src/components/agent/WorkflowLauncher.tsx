@@ -1,15 +1,9 @@
 import { Play, Sparkles } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { apiFetch } from '../../auth';
-import type { Workflow, WorkflowRun } from '../../agent';
+import { workflowApi } from '../../api/workflows';
+import type { Workflow } from '../../agent';
 import { Button, Feedback, Modal, Select } from '../ui';
 import { WorkflowInputForm } from './WorkflowInputForm';
-
-async function readData<T>(response: Response): Promise<T> {
-  const body = await response.json();
-  if (!response.ok) throw new Error(body.message || 'Request failed');
-  return body.data as T;
-}
 
 function resourceField(workflow: Workflow, type: string): string | undefined {
   const properties = (workflow.input_schema.properties || {}) as Record<string, Record<string, unknown>>;
@@ -44,7 +38,7 @@ export function WorkflowLauncher({ open, resourceType, resourceKeys, onClose, ti
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   useEffect(() => {
     if (!open) return;
-    apiFetch('/api/admin/ai-workflows').then((response) => readData<Workflow[]>(response)).then((items) => {
+    workflowApi.getWorkflows().then((items) => {
       const compatible = items.filter((item) => item.enabled && resourceField(item, resourceType));
       setWorkflows(compatible);
       const first = compatible[0];
@@ -63,7 +57,7 @@ export function WorkflowLauncher({ open, resourceType, resourceKeys, onClose, ti
     if (!workflow) return;
     setBusy(true); setFeedback(null);
     try {
-      const result = await readData<WorkflowRun>(await apiFetch(`/api/admin/ai-workflows/${workflow.id}/run`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ input }) }));
+      const result = await workflowApi.run(workflow.id, input);
       setFeedback({ type: 'success', text: `Workflow 已提交（Run #${result.id}）。范围已固定为本次选择的 ${resourceKeys.length} 项资源。` });
     } catch (reason) { setFeedback({ type: 'error', text: reason instanceof Error ? reason.message : 'Workflow 运行失败。' }); }
     finally { setBusy(false); }

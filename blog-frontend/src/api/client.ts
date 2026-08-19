@@ -1,36 +1,31 @@
-import { apiFetch } from '../auth';
+import { parseJsonEnvelope, readCookie } from '@gosso/client';
+import { apiFetch as sdkApiFetch, isLoggedIn } from '../auth';
+
+function isUnsafe(method?: string): boolean {
+  return !['GET', 'HEAD', 'OPTIONS'].includes((method || 'GET').toUpperCase());
+}
+
+export function authenticatedApiFetch(input: string, init?: RequestInit): Promise<Response> {
+  return init ? sdkApiFetch(input, init) : sdkApiFetch(input);
+}
+
+export function publicApiFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
+  const headers = new Headers(init.headers);
+  if (isUnsafe(init.method) && !headers.has('X-CSRF-Token')) {
+    const token = readCookie('blog_csrf_token');
+    if (token) headers.set('X-CSRF-Token', token);
+  }
+  return fetch(input, { ...init, headers, credentials: 'same-origin' });
+}
+
+/** Authentication is optional; transport and HTTP failures are never swallowed. */
+export function optionalApiFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
+  return isLoggedIn()
+    ? authenticatedApiFetch(input.toString(), init)
+    : publicApiFetch(input, init);
+}
 
 export async function readData<T>(responsePromise: Promise<Response> | Response): Promise<T> {
   const response = await responsePromise;
-  const contentType = response.headers.get('content-type') || '';
-  if (!response.ok) {
-    let message = `Request failed: ${response.status} ${response.statusText}`;
-    if (contentType.includes('application/json')) {
-      const body = (await response.json().catch(() => null)) as {
-        error?: { message?: string };
-        message?: string;
-      } | null;
-      message = body?.error?.message || body?.message || message;
-    } else {
-      const text = await response.text().catch(() => '');
-      if (text) message = text.slice(0, 120);
-    }
-    throw new Error(message);
-  }
-  if (!contentType.includes('application/json')) {
-    return (await response.text()) as unknown as T;
-  }
-  const body = (await response.json()) as { data?: T } | T;
-  if (body && typeof body === 'object' && 'data' in body) {
-    return (body as { data: T }).data;
-  }
-  return body as T;
-}
-
-export async function optionalApiFetch(input: string, init?: RequestInit): Promise<Response | null> {
-  try {
-    return await apiFetch(input, init);
-  } catch {
-    return null;
-  }
+  return parseJsonEnvelope<T>(response, '请求失败，请稍后重试。');
 }

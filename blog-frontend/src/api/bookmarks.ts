@@ -1,5 +1,4 @@
-import { apiFetch } from '../auth';
-import { readData } from './client';
+import { authenticatedApiFetch as apiFetch, optionalApiFetch, readData } from './client';
 
 export interface BookmarkItem {
   id: number;
@@ -27,6 +26,14 @@ export const bookmarksApi = {
     return readData<void>(
       apiFetch(`/api/me/bookmarks/${postID}`, {
         method: 'DELETE',
+      })
+    );
+  },
+
+  async setBookmark(postID: number | string, bookmarked: boolean): Promise<void> {
+    return readData<void>(
+      optionalApiFetch(`/api/me/bookmarks/${postID}`, {
+        method: bookmarked ? 'PUT' : 'DELETE',
       })
     );
   },

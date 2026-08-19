@@ -3,7 +3,8 @@ import { GitBranch, Mail, Rss, ShieldAlert } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { MarkdownRenderer } from '../components/MarkdownRenderer';
 import { DEFAULT_SITE_SETTINGS } from '../config/site-defaults';
-import { getPageBySlug, getSiteSettings } from '../lib/blog-api';
+import { pagesApi } from '../api/pages';
+import { siteApi } from '../api/site';
 import { extractMarkdownTOC } from '../markdown';
 import type { CustomPage, SiteSettings } from '../types/blog';
 import NotFound from './NotFound';
@@ -18,7 +19,7 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    getSiteSettings()
+    siteApi.getSiteSettings()
       .then((settings) => setSite({ ...DEFAULT_SITE_SETTINGS, ...settings }))
       .catch(() => {});
   }, []);
@@ -34,7 +35,7 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
     setLoading(true);
     setNotFound(false);
 
-    getPageBySlug(slug)
+    pagesApi.getPageBySlug(slug)
       .then((data) => {
         if (ignore) return;
         setPage(data);

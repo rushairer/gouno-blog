@@ -1,17 +1,8 @@
 import { Database, Plus, Search, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { apiFetch } from '../../auth';
+import { workflowApi } from '../../api/workflows';
+import type { ResourceOption } from '../../api/workflows';
 import { Button, Checkbox, Field, Input, Modal, Pagination, SearchField, Select } from '../ui';
-
-export interface ResourceOption {
-  type: string;
-  key: string;
-  label: string;
-  description?: string;
-  status?: string;
-  version_token: string;
-  metadata: Record<string, unknown>;
-}
 
 type SchemaProperty = {
   type?: string;
@@ -84,12 +75,10 @@ function ResourcePicker({ property, value, onChange, locale, className }: {
       setLoading(true);
       const parameters = new URLSearchParams({ q: query, page: String(page), page_size: '20' });
       Object.entries(filters).forEach(([key, entry]) => { if (entry !== '') parameters.set(key, entry); });
-      apiFetch(`/api/admin/ai-resources/${resourceType}?${parameters}`, { signal: controller.signal })
-        .then(async (response) => {
-          const body = await response.json();
-          if (!response.ok) throw new Error(body.message || 'Resource lookup failed');
-          setItems(body.data?.list || []);
-          setTotal(body.data?.total || 0);
+      workflowApi.getResources(resourceType, parameters, controller.signal)
+        .then((data) => {
+          setItems(data.list || []);
+          setTotal(data.total || 0);
           setError('');
         })
         .catch((reason: Error) => { if (reason.name !== 'AbortError') setError(reason.message); })
@@ -102,12 +91,10 @@ function ResourcePicker({ property, value, onChange, locale, className }: {
     const controller = new AbortController();
     const parameters = new URLSearchParams();
     selected.forEach((entry) => parameters.append('key', String(entry)));
-    apiFetch(`/api/admin/ai-resources/${resourceType}?${parameters}`, { signal: controller.signal }).then(async (response) => {
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.message || 'Resource lookup failed');
-      const resolved = (body.data?.list || []) as ResourceOption[];
+    workflowApi.getResources(resourceType, parameters, controller.signal).then((data) => {
+      const resolved = data.list || [];
       setSelectedItems((current) => ({ ...current, ...Object.fromEntries(resolved.map((item) => [item.key, item])) }));
-      setUnavailable(body.data?.unavailable_keys || []);
+      setUnavailable(data.unavailable_keys || []);
     }).catch((reason: Error) => { if (reason.name !== 'AbortError') setError(reason.message); });
     return () => controller.abort();
   }, [resourceType, selected, selectedSignature]);

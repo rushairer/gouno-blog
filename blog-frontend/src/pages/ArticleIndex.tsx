@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowRight, SlidersHorizontal } from 'lucide-react';
 import { EmptyState, LoadingState, Pagination, SearchField } from '../components/ui';
-import { getCategoryPosts, getPosts, getTags } from '../lib/blog-api';
+import { postsApi } from '../api/posts';
+import { siteApi } from '../api/site';
 import { markdownToPlainText } from '../markdown';
 import type { Post } from '../types/blog';
 
@@ -27,7 +28,7 @@ export default function ArticleIndex({ mode = 'articles' }: { mode?: 'articles' 
     if (q) query.set('search', q);
     if (tag) query.set('tag', tag);
     if (category) query.set('category', category);
-    Promise.all([category ? getCategoryPosts(category, query) : getPosts(query), getTags()])
+    Promise.all([category ? postsApi.getCategoryPosts(category, query) : postsApi.getPosts(query), siteApi.getTags()])
       .then(([result, nextTags]) => { setPosts(result.list || []); setTotal(result.total || 0); setTags(nextTags || []); setError(''); })
       .catch((reason: Error) => setError(reason.message))
       .finally(() => setLoading(false));

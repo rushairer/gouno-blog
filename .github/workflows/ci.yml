@@ -92,15 +92,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Verify shared GOSSO client release
+      - name: Verify shared GOSSO client main commit
         run: |
           node --input-type=module <<'EOF'
           import { readFile } from 'node:fs/promises';
+          const manifest = JSON.parse(await readFile('./package.json', 'utf8'));
           const lock = JSON.parse(await readFile('./package-lock.json', 'utf8'));
           const client = lock.packages['node_modules/@gosso/client'];
-          const expected = 'https://github.com/rushairer/gosso-client/releases/download/v0.3.0/gosso-client-0.3.0.tgz';
-          if (!client || client.version !== '0.3.0' || client.resolved !== expected || !client.integrity) {
-            throw new Error('blog-frontend must use the verified @gosso/client@0.3.0 release asset');
+          const source = manifest.dependencies?.['@gosso/client'];
+          const pinnedCommit = /^git\+ssh:\/\/git@github\.com\/rushairer\/gosso-client\.git#[0-9a-f]{40}$/;
+          if (source !== 'github:rushairer/gosso-client#main' || !client || !pinnedCommit.test(client.resolved || '')) {
+            throw new Error('blog-frontend must track @gosso/client#main with a commit-pinned lockfile');
           }
           EOF
 

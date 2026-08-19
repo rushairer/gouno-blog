@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Bookmark, Calendar, Eye, Flag, Heart, List, MessageSquare, Reply, Send, ShieldAlert, User, X } from 'lucide-react';
-import { apiFetch, canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
-import { postsApi } from '../api';
-import type { CommunityComment } from '../community';
-import { optionalApiFetch, readData } from '../community';
-import { publicApiFetch } from '../lib/api-client';
+import { canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
+import { analyticsApi } from '../api/analytics';
+import { bookmarksApi } from '../api/bookmarks';
+import { commentsApi } from '../api/comments';
+import type { CommunityComment } from '../api/comments';
+import { postsApi } from '../api/posts';
 import { Badge, EmptyState, Feedback, Field, LoadingState, Modal, Panel } from '../components/ui';
 import { useI18n } from '../i18n';
 import { useArticleSEO } from '../seo';
@@ -84,67 +85,58 @@ export default function PostDetail() {
 
   useEffect(() => {
     async function fetchPostAndComments() {
+      if (!slug) return;
       try {
         setLoading(true);
         setError(null);
         let postData: Post | null = null;
         let adminPreviewActive = false;
 
-        const [postResp, communityResp, relatedResp] = await Promise.all([
-          publicApiFetch(`/api/posts/${slug}`),
-          optionalApiFetch(`/api/posts/${slug}/community`),
-          publicApiFetch(`/api/posts/${slug}/related`),
+        const [postResult, communityResult, relatedResult] = await Promise.allSettled([
+          postsApi.getPost(slug),
+          postsApi.getCommunityState(slug),
+          postsApi.getRelatedPosts(slug),
         ]);
 
-        if (postResp.ok) {
-          const postBody = await postResp.json();
-          postData = postBody.data;
+        if (postResult.status === 'fulfilled') {
+          postData = postResult.value;
         } else if (isPreviewParam || canManageBlog()) {
           try {
-            let adminUrl = `/api/admin/posts/${slug}`;
+            let adminID: string | number = slug;
             if (!/^\d+$/.test(slug || '')) {
               const listData = await postsApi.getPosts({ search: slug || '' }, true).catch(() => null);
               const found = listData?.list?.find((item: Post) => item.slug === slug);
-              if (found) adminUrl = `/api/admin/posts/${found.id}`;
+              if (found) adminID = found.id;
             }
-            const adminResp = await apiFetch(adminUrl);
-            if (adminResp.ok) {
-              const adminBody = await adminResp.json();
-              postData = adminBody.data;
-              adminPreviewActive = true;
-            }
+            postData = await postsApi.getAdminPost(adminID);
+            adminPreviewActive = true;
           } catch (adminErr) {
             console.error('Admin preview fetch error:', adminErr);
           }
         }
 
         if (!postData) {
-          throw new Error(!postResp.ok && postResp.status === 404 ? t('postNotFound') : t('failedLoadPost'));
+          throw new Error(t('postNotFound'));
         }
 
         setPost(postData);
         setIsAdminPreview(adminPreviewActive || (Boolean(postData.status && postData.status !== 'published') && canManageBlog()));
 
-        const communityState = communityResp.ok ? await readData<{ liked: boolean; bookmarked: boolean; likes_count: number }>(communityResp) : null;
+        const communityState = communityResult.status === 'fulfilled' ? communityResult.value : null;
         setLikes(communityState?.likes_count ?? postData.likes_count ?? 0);
         setLiked(communityState?.liked || false);
         setBookmarked(communityState?.bookmarked || false);
-        if (relatedResp.ok) {
-          setRelatedPosts((await readData<Post[] | null>(relatedResp)) || []);
-        }
+        setRelatedPosts(relatedResult.status === 'fulfilled' ? relatedResult.value : []);
         const viewKey = `gouno-blog:viewed:${postData.id}`;
         const alreadyViewed = sessionStorage.getItem(viewKey) === '1';
         setViews((postData.views_count || 0) + (alreadyViewed ? 0 : 1));
 
         if (!alreadyViewed) {
           sessionStorage.setItem(viewKey, '1');
-          optionalApiFetch(`/api/posts/${postData.id}/view`, { method: 'POST' }).catch((e) => console.error(e));
+          analyticsApi.recordView(postData.id).catch((e) => console.error(e));
         }
 
-        const commentsResp = await publicApiFetch(`/api/posts/${postData.id}/comments`);
-        if (commentsResp.ok) {
-          setComments((await readData<CommunityComment[] | null>(commentsResp)) || []);
-        }
+        setComments(await commentsApi.getPostComments(postData.id));
       } catch (err: unknown) {
         console.error(err);
         setError(err instanceof Error ? err.message : t('failedFetch'));
@@ -171,7 +163,7 @@ export default function PostDetail() {
     if (!post) return;
     const nextLiked = !liked;
     try {
-      const state = await readData<{ liked: boolean; likes_count: number }>(await optionalApiFetch(`/api/posts/${post.id}/like`, { method: nextLiked ? 'PUT' : 'DELETE' }));
+      const state = await commentsApi.setLike(post.id, nextLiked);
       setLiked(state.liked);
       setLikes(state.likes_count);
     } catch (err: unknown) {
@@ -186,8 +178,8 @@ export default function PostDetail() {
       return;
     }
     const nextBookmarked = !bookmarked;
-    const response = await optionalApiFetch(`/api/me/bookmarks/${post.id}`, { method: nextBookmarked ? 'PUT' : 'DELETE' });
-    if (response.ok) setBookmarked(nextBookmarked);
+    await bookmarksApi.setBookmark(post.id, nextBookmarked);
+    setBookmarked(nextBookmarked);
   };
 
   const handleAddComment = async (event: React.FormEvent) => {
@@ -196,17 +188,11 @@ export default function PostDetail() {
 
     setCommentLoading(true);
     try {
-      const response = await optionalApiFetch(`/api/posts/${post.id}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ author: commentAuthor, content: commentContent, parent_id: replyingTo?.id }),
+      const created = await commentsApi.postComment(post.id, {
+        author: commentAuthor,
+        content: commentContent,
+        parent_id: replyingTo?.id,
       });
-
-      if (!response.ok) {
-        throw new Error(t('failedPostComment'));
-      }
-
-      const created = await readData<CommunityComment>(response);
       setCommentContent('');
       setCommentAuthor('');
       setReplyingTo(null);
@@ -226,12 +212,8 @@ export default function PostDetail() {
   const handleReport = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!reportingComment) return;
-    const response = await optionalApiFetch(`/api/comments/${reportingComment.id}/report`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reason: reportReason.trim() }),
-    });
-    setCommentNotice(response.status === 409 ? t('alreadyReported') : response.ok ? t('reportSubmitted') : t('requestFailed'));
+    const result = await commentsApi.reportComment(reportingComment.id, reportReason.trim());
+    setCommentNotice(result === 'already-reported' ? t('alreadyReported') : t('reportSubmitted'));
     setReportingComment(null);
     setReportReason('');
   };

@@ -8,13 +8,14 @@ const { logoutMock } = vi.hoisted(() => ({ logoutMock: vi.fn() }));
 
 vi.mock('../../auth', () => ({
   getUserProfile: () => ({ name: 'Content Admin', email: 'admin@example.com' }),
+  gossoClient: { getUserProfile: () => ({ name: 'Content Admin', email: 'admin@example.com' }) },
   gossoAdminURL: '/identity-admin',
   logout: logoutMock,
   apiFetch: () => Promise.resolve({ ok: true, json: () => Promise.resolve({ data: { list: [] } }) }),
 }));
 
-vi.mock('../../lib/blog-api', () => ({
-  getSiteSettings: () => Promise.resolve({ site_title: 'Configured Site' }),
+vi.mock('../../api/site', () => ({
+  siteApi: { getSiteSettings: () => Promise.resolve({ site_title: 'Configured Site' }) },
 }));
 
 describe('AdminShell navigation utilities', () => {

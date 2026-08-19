@@ -1,7 +1,9 @@
-import { apiFetch } from '../auth';
-import { readData } from './client';
+import { authenticatedApiFetch as apiFetch, optionalApiFetch, publicApiFetch, readData } from './client';
 import type { Comment } from '../types/blog';
-import type { CommunityComment } from '../community';
+
+export interface CommunityComment extends Comment {
+  author_type: 'anonymous' | 'user';
+}
 
 export interface PostCommentPayload {
   author?: string;
@@ -10,8 +12,8 @@ export interface PostCommentPayload {
 }
 
 export const commentsApi = {
-  async getPostComments(slugOrID: string | number): Promise<Comment[]> {
-    return readData<Comment[]>(apiFetch(`/api/posts/${encodeURIComponent(String(slugOrID))}/comments`));
+  async getPostComments(slugOrID: string | number): Promise<CommunityComment[]> {
+    return readData<CommunityComment[]>(publicApiFetch(`/api/posts/${encodeURIComponent(String(slugOrID))}/comments`));
   },
 
   async getAllPostComments(postID: number | string): Promise<Comment[]> {
@@ -35,9 +37,9 @@ export const commentsApi = {
     return [];
   },
 
-  async postComment(slugOrID: string | number, payload: PostCommentPayload): Promise<Comment> {
-    return readData<Comment>(
-      apiFetch(`/api/posts/${encodeURIComponent(String(slugOrID))}/comments`, {
+  async postComment(slugOrID: string | number, payload: PostCommentPayload): Promise<CommunityComment> {
+    return readData<CommunityComment>(
+      optionalApiFetch(`/api/posts/${encodeURIComponent(String(slugOrID))}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -73,22 +75,21 @@ export const commentsApi = {
     );
   },
 
-  async reportComment(commentID: number | string, reason: string): Promise<void> {
-    return readData<void>(
-      apiFetch(`/api/comments/${commentID}/report`, {
+  async reportComment(commentID: number | string, reason: string): Promise<'submitted' | 'already-reported'> {
+    const response = await optionalApiFetch(`/api/comments/${commentID}/report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason }),
-      })
-    );
+    });
+    if (response.status === 409) return 'already-reported';
+    await readData<void>(response);
+    return 'submitted';
   },
 
   async setLike(slugOrID: string | number, liked: boolean): Promise<{ liked: boolean; likes_count: number }> {
     return readData<{ liked: boolean; likes_count: number }>(
-      apiFetch(`/api/posts/${encodeURIComponent(String(slugOrID))}/like`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ liked }),
+      optionalApiFetch(`/api/posts/${encodeURIComponent(String(slugOrID))}/like`, {
+        method: liked ? 'PUT' : 'DELETE',
       })
     );
   },

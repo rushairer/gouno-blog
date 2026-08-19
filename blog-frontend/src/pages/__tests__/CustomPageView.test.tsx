@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import CustomPageView from '../CustomPageView';
-import * as blogApi from '../../lib/blog-api';
+import { pagesApi } from '../../api/pages';
 import type { CustomPage } from '../../types/blog';
 
 describe('CustomPageView', () => {
@@ -25,7 +25,7 @@ describe('CustomPageView', () => {
       created_at: new Date().toISOString(),
     };
 
-    vi.spyOn(blogApi, 'getPageBySlug').mockResolvedValue(mockPage);
+    vi.spyOn(pagesApi, 'getPageBySlug').mockResolvedValue(mockPage);
 
     render(
       <MemoryRouter initialEntries={['/about']}>
@@ -58,7 +58,7 @@ describe('CustomPageView', () => {
       created_at: new Date().toISOString(),
     };
 
-    vi.spyOn(blogApi, 'getPageBySlug').mockResolvedValue(mockPage);
+    vi.spyOn(pagesApi, 'getPageBySlug').mockResolvedValue(mockPage);
 
     render(
       <MemoryRouter initialEntries={['/links']}>
@@ -90,7 +90,7 @@ describe('CustomPageView', () => {
       created_at: new Date().toISOString(),
     };
 
-    vi.spyOn(blogApi, 'getPageBySlug').mockResolvedValue(mockPage);
+    vi.spyOn(pagesApi, 'getPageBySlug').mockResolvedValue(mockPage);
 
     render(
       <MemoryRouter initialEntries={['/changelog']}>
@@ -122,7 +122,7 @@ describe('CustomPageView', () => {
       created_at: new Date().toISOString(),
     };
 
-    vi.spyOn(blogApi, 'getPageBySlug').mockResolvedValue(mockPageProjects);
+    vi.spyOn(pagesApi, 'getPageBySlug').mockResolvedValue(mockPageProjects);
 
     render(
       <MemoryRouter initialEntries={['/projects']}>
@@ -139,4 +139,3 @@ describe('CustomPageView', () => {
     });
   });
 });
-

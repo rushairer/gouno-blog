@@ -1,5 +1,4 @@
 import { createGossoClient } from '@gosso/client';
-import type { LoginResult, SessionSnapshot, TokenResponse } from '@gosso/client';
 
 export type {
   LoginResult,
@@ -30,35 +29,12 @@ export const gossoClient = createGossoClient({
   csrfCookieName: 'blog_csrf_token',
 });
 
-export const authSession = {
-  storageKeys: gossoClient.storageKeys,
-  getAccessToken: gossoClient.getAccessToken,
-  getRefreshToken: gossoClient.getRefreshToken,
-  getUserProfile: gossoClient.getUserProfile,
-  getSnapshot: gossoClient.getSnapshot,
-  isLoggedIn: gossoClient.isLoggedIn,
-  saveTokenSet: gossoClient.saveTokenSet,
-  clear: gossoClient.clear,
-  logout,
-  getPostLoginRedirect(defaultPath = '/admin'): string {
-    return sessionStorage.getItem(gossoClient.storageKeys.postLoginRedirect) || defaultPath;
-  },
-  clearPostLoginRedirect() {
-    sessionStorage.removeItem(gossoClient.storageKeys.postLoginRedirect);
-  },
-};
-
 export const redirectToAuthorize = gossoClient.redirectToAuthorize;
-export const exchangeCodeForToken = gossoClient.exchangeCodeForToken;
-export const handleRedirectCallback = gossoClient.handleRedirectCallback;
-export const fetchUserProfile = gossoClient.fetchUserProfile;
-export const getAccessToken = gossoClient.getAccessToken;
-export const getUserProfile = gossoClient.getUserProfile;
 export const isLoggedIn = gossoClient.isLoggedIn;
 export const apiFetch = gossoClient.apiFetch;
 
 export function canManageBlog(): boolean {
-  const snapshot: SessionSnapshot = authSession.getSnapshot();
+  const snapshot = gossoClient.getSnapshot();
   // GOSSO's cookie-session userinfo response can omit roles after the OAuth
   // code exchange, while retaining the granted scopes. The backend remains
   // the authorization boundary and verifies the admin role from the JWT.
@@ -75,16 +51,4 @@ export async function logout() {
   } catch {
     throw new Error('退出登录失败，请重试。');
   }
-}
-
-export async function loginWithPassword(username: string, password: string): Promise<LoginResult> {
-  return gossoClient.loginWithPassword(username, password);
-}
-
-export async function verifyMfa(mfaToken: string, code: string): Promise<TokenResponse> {
-  return gossoClient.verifyMfa(mfaToken, code);
-}
-
-export async function loginWithPasskey(): Promise<TokenResponse> {
-  return gossoClient.loginWithPasskey();
 }

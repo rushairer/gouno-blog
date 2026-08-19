@@ -1,5 +1,7 @@
 # Blog 关联仓库审计记录（2026-08-15）
 
+> **历史快照（已失效）**：本文保留用于提交与决策追溯，其中版本、文件路径和处置状态不再代表当前实现。当前身份与请求所有权以 [`auth-client-boundary.md`](./auth-client-boundary.md) 和实际代码为准。
+
 范围为 `gouno-blog`、`gosso`、`gosso-admin` 与 `gosso-client`，聚焦浏览器认证、API 请求、网关信任边界、发布依赖和已确认无引用资源。
 
 ## 已确认问题与处置

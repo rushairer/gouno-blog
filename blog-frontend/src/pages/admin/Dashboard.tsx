@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, Bookmark, Bot, CheckCheck, ChevronRight, Eye, FileText, GitBranch, MessageSquare, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { analyticsApi, notificationsApi } from '../../api';
+import { analyticsApi } from '../../api/analytics';
+import { notificationsApi } from '../../api/notifications';
 import { AdminPage, AdminPageHeader, AdminPageState, ContentStack, Feedback, Panel } from '../../components/ui';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 

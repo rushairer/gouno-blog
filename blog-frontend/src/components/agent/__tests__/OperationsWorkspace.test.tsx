@@ -1,15 +1,21 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { OperationsWorkspace } from '../OperationsWorkspace';
 
+const { apiFetch } = vi.hoisted(() => ({ apiFetch: vi.fn() }));
+vi.mock('../../../auth', () => ({ apiFetch }));
+
 describe('OperationsWorkspace', () => {
+  beforeEach(() => {
+    apiFetch.mockReset().mockImplementation(() => Promise.resolve(Response.json({ data: {} })));
+  });
   it('converts evidence-backed suggestions and selects candidates through governed APIs', async () => {
     const user = userEvent.setup();
     const onMutate = vi.fn().mockResolvedValue(undefined);
     render(<OperationsWorkspace
       locale="en"
-      onMutate={onMutate}
+      onRefresh={onMutate}
       editorialTasks={[]}
       suggestions={[{
         id: 7, source_type: 'broken_links', source_key: 'post:4', title: 'Repair links',
@@ -25,10 +31,10 @@ describe('OperationsWorkspace', () => {
     />);
 
     await user.click(screen.getByRole('button', { name: 'Create editorial task' }));
-    expect(onMutate).toHaveBeenCalledWith('/api/admin/ai-suggestions/7/convert');
+    expect(apiFetch).toHaveBeenCalledWith('/api/admin/ai-suggestions/7/convert', { method: 'POST' });
 
     await user.click(screen.getByRole('button', { name: 'Choose and create approval' }));
-    expect(onMutate).toHaveBeenCalledWith('/api/admin/ai-candidates/8/select', 'POST', { candidate_id: 11 });
+    expect(apiFetch).toHaveBeenCalledWith('/api/admin/ai-candidates/8/select', expect.objectContaining({ method: 'POST', body: JSON.stringify({ candidate_id: 11 }) }));
   });
 
   it('separates open editorial tasks from handled suggestions without a manual feedback form', async () => {
@@ -36,7 +42,7 @@ describe('OperationsWorkspace', () => {
     const onMutate = vi.fn().mockResolvedValue(undefined);
     const { container } = render(<OperationsWorkspace
       locale="zh"
-      onMutate={onMutate}
+      onRefresh={onMutate}
       editorialTasks={[{ id: 4, title: '修复失效链接', description: '更新外部链接。', priority: 'high', status: 'open', source_suggestion_id: 7, created_at: '2026-07-30T00:00:00Z' }]}
       suggestions={[{ id: 7, source_type: 'broken_links', source_key: 'post:4', title: '检查失效链接', description: '一条链接失效。', priority: 'high', evidence: {}, status: 'converted', created_at: '2026-07-30T00:00:00Z', updated_at: '2026-07-30T00:00:00Z' }]}
       candidateSets={[]}
@@ -45,7 +51,7 @@ describe('OperationsWorkspace', () => {
     expect(container.querySelector('.operations-queue__counts')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '编辑任务' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '标记完成' }));
-    expect(onMutate).toHaveBeenCalledWith('/api/admin/ai-editorial-tasks/4/status', 'POST', { status: 'done' });
+    expect(apiFetch).toHaveBeenCalledWith('/api/admin/ai-editorial-tasks/4/status', expect.objectContaining({ method: 'POST', body: JSON.stringify({ status: 'done' }) }));
     expect(container.querySelector('.operations-history')).toBeInTheDocument();
     expect(container.querySelector('.feedback-form')).not.toBeInTheDocument();
   });
@@ -53,7 +59,7 @@ describe('OperationsWorkspace', () => {
   it('keeps automatically resolved suggestions out of the decision queue', () => {
     render(<OperationsWorkspace
       locale="zh"
-      onMutate={vi.fn().mockResolvedValue(undefined)}
+      onRefresh={vi.fn().mockResolvedValue(undefined)}
       editorialTasks={[]}
       candidateSets={[]}
       suggestions={[{
@@ -71,12 +77,12 @@ describe('OperationsWorkspace', () => {
   it('reviews an approved image brief before exposing image generation', async () => {
     const user = userEvent.setup();
     const onMutate = vi.fn().mockResolvedValue(undefined);
-    render(<OperationsWorkspace locale="zh" onMutate={onMutate} editorialTasks={[]} suggestions={[]} candidateSets={[]} mediaCandidates={[{
+    render(<OperationsWorkspace locale="zh" onRefresh={onMutate} editorialTasks={[]} suggestions={[]} candidateSets={[]} mediaCandidates={[{
       id: 31, post_id: 11, source_run_id: 25, source_approval_id: 40, headline: '封面', brief: '深色科技感构图', platform: '', provider: 'anthropic', model: 'image-model', input_tokens: 1, output_tokens: 1,
       generation_status: 'brief_ready', safety_status: 'not_checked', copyright_status: 'not_checked', alt_text: '', created_at: '2026-08-03T00:00:00Z',
     }]} />);
     expect(screen.getByText('图片方案待审核')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '审核通过，进入生成' }));
-    expect(onMutate).toHaveBeenCalledWith('/api/admin/ai-media-candidates/31/review', 'POST', { action: 'ready' });
+    expect(apiFetch).toHaveBeenCalledWith('/api/admin/ai-media-candidates/31/review', expect.objectContaining({ method: 'POST', body: JSON.stringify({ action: 'ready' }) }));
   });
 });

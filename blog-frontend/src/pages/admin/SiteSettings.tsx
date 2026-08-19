@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { FileText, Mail, Save, Search } from 'lucide-react';
-import { siteApi } from '../../api';
+import { siteApi } from '../../api/site';
 import { AdminPage, AdminPageHeader, AdminPageState, Button, Feedback, Field, FormActions, FormLayout, Input, PanelHeader, Tab, TabList, TabPanel, Tabs, Textarea, WorkspacePanel } from '../../components/ui';
 import { DEFAULT_SITE_SETTINGS } from '../../config/site-defaults';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
@@ -113,4 +113,3 @@ export default function AdminSiteSettings() {
     </AdminPage>
   );
 }
-

@@ -718,14 +718,14 @@ td .agent-chip-list {
   margin-top: 4px;
 }
 .workflow-planner__message--error {
-  border: 1px solid var(--ui-danger, #ef4444);
-  background: var(--ui-danger-soft, rgba(239, 68, 68, 0.15));
-  color: var(--ui-danger, #f87171);
+  border: 1px solid var(--ui-danger);
+  background: var(--ui-danger-soft);
+  color: var(--ui-danger);
 }
 .workflow-planner__message--success {
-  border: 1px solid var(--ui-success, #22c55e);
-  background: var(--ui-success-soft, rgba(34, 197, 94, 0.15));
-  color: var(--ui-success, #4ade80);
+  border: 1px solid var(--ui-success);
+  background: var(--ui-success-soft);
+  color: var(--ui-success);
 }
 .workflow-planner__message--info {
   border: 1px solid color-mix(in srgb, var(--agent-accent) 45%, var(--agent-border));
@@ -1093,7 +1093,7 @@ td .agent-chip-list {
   padding: 4px 10px;
   border: 1px solid var(--agent-border);
   border-radius: 6px;
-  background: var(--ui-control-bg, rgba(255, 255, 255, 0.04));
+  background: var(--ui-control-bg);
   font-size: 0.84rem;
   line-height: 1.4;
 }
@@ -1104,7 +1104,7 @@ td .agent-chip-list {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: var(--ui-control-bg, rgba(255, 255, 255, 0.06));
+  background: var(--ui-control-bg);
   border: 1px solid var(--agent-border);
   color: var(--color-text-muted);
   font-size: 11px;
@@ -1124,7 +1124,7 @@ td .agent-chip-list {
   display: inline-block;
   padding: 2px 7px;
   border-radius: 4px;
-  background: var(--ui-control-hover, rgba(255, 255, 255, 0.08));
+  background: var(--ui-control-hover);
   border: 1px solid var(--agent-border);
   color: var(--color-text-muted);
   font-size: 0.75rem;
