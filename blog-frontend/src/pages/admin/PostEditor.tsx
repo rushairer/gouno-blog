@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Check, ExternalLink, History, LoaderCircle, Save, Send, Sparkles } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { apiFetch } from '../../auth';
+import { postsApi, siteApi, agentApi } from '../../api';
 import { AdminPageState, ConfirmDialog, Feedback, Field, Input, Select, Textarea } from '../../components/ui';
 import { MarkdownRenderer } from '../../components/MarkdownRenderer';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
-import { getCategories, readData } from '../../lib/blog-api';
 import { extractMarkdownTOC } from '../../markdown';
 import type { Category, Post, PostStatus } from '../../types/blog';
 
@@ -40,14 +39,14 @@ export default function PostEditor() {
   useEffect(() => {
     if (!allowed) return;
     const requests: Promise<unknown>[] = [
-      getCategories().then(setCategories),
+      siteApi.getCategories().then(setCategories),
     ];
     if (id) {
-      requests.push(readData<Post>(apiFetch(`/api/admin/posts/${id}`)).then((value) => {
+      requests.push(postsApi.getPost(id).then((value) => {
         setPost(value);
         setPublishIntent(value.status || 'draft');
       }));
-      requests.push(readData<PostVersion[]>(apiFetch(`/api/admin/posts/${id}/versions`)).then(setVersions));
+      requests.push(postsApi.getVersions(id).then((v) => setVersions(v as PostVersion[])));
     }
     Promise.all(requests).catch((reason: Error) => setError(reason.message)).finally(() => setLoading(false));
   }, [allowed, id]);
@@ -68,12 +67,10 @@ export default function PostEditor() {
     if (status === 'scheduled' && !post.scheduled_at) { setError('定时发布需要选择发布时间。'); return; }
     setSaving(true); setError('');
     try {
-      const response = await apiFetch(post.id ? `/api/posts/${post.id}` : '/api/posts', {
-        method: post.id ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...post, status, tags: post.tags.filter(Boolean) }),
-      });
-      const saved = await readData<Post>(response);
+      const payload = { ...post, status, tags: post.tags.filter(Boolean) };
+      const saved = post.id
+        ? await postsApi.updatePost(post.id, payload)
+        : await postsApi.createPost(payload);
       setPost(saved); dirty.current = false; setSavedAt(new Date());
       if (!automatic) setPublishIntent(saved.status || 'draft');
       if (!post.id) navigate(`/admin/posts/${saved.id}/edit`, { replace: true });
@@ -92,7 +89,7 @@ export default function PostEditor() {
   const restoreVersion = async () => {
     if (!post.id || !restoreTarget) return;
     try {
-      const restored = await readData<Post>(apiFetch(`/api/admin/posts/${post.id}/versions/${restoreTarget.id}/restore`, { method: 'POST' }));
+      const restored = await postsApi.restoreVersion(post.id, restoreTarget.id);
       setPost(restored); setPublishIntent(restored.status || 'draft'); dirty.current = false; setSavedAt(new Date()); setShowVersions(false); setRestoreTarget(null);
     } catch (reason) { setError(reason instanceof Error ? reason.message : '版本恢复失败'); }
   };
@@ -108,13 +105,14 @@ export default function PostEditor() {
     }
     setAssistTask(task); setSuggestionTask(null); setSuggestions([]); setAssistError('');
     try {
-      const response = await apiFetch('/api/admin/ai-draft-assist', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ task, title: post.title, summary: post.summary, content: post.content }),
+      const list = await agentApi.getDraftAssist({
+        task,
+        title: post.title,
+        summary: post.summary,
+        content: post.content,
       });
-      const result = await readData<{ suggestions: string[] }>(response);
-      setSuggestions(result.suggestions || []); setSuggestionTask(task);
-      if (!result.suggestions?.length) setAssistError('这次没有生成可用候选，请稍后重试。');
+      setSuggestions(list || []); setSuggestionTask(task);
+      if (!list?.length) setAssistError('这次没有生成可用候选，请稍后重试。');
     } catch (reason) { setAssistError(reason instanceof Error ? reason.message : '生成候选失败，请稍后重试。'); }
     finally { setAssistTask(null); }
   };
@@ -134,12 +132,10 @@ export default function PostEditor() {
       setSaving(true);
       setError('');
       try {
-        const response = await apiFetch(currentPost.id ? `/api/posts/${currentPost.id}` : '/api/posts', {
-          method: currentPost.id ? 'PUT' : 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...currentPost, status: currentPost.status || 'draft', tags: currentPost.tags.filter(Boolean) }),
-        });
-        currentPost = await readData<Post>(response);
+        const payload = { ...currentPost, status: currentPost.status || 'draft', tags: currentPost.tags.filter(Boolean) };
+        currentPost = currentPost.id
+          ? await postsApi.updatePost(currentPost.id, payload)
+          : await postsApi.createPost(payload);
         setPost(currentPost);
         dirty.current = false;
         setSavedAt(new Date());

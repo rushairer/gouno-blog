@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Bookmark, Calendar, Eye, Flag, Heart, List, MessageSquare, Reply, Send, ShieldAlert, User, X } from 'lucide-react';
 import { apiFetch, canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
+import { postsApi } from '../api';
 import type { CommunityComment } from '../community';
 import { optionalApiFetch, readData } from '../community';
 import { publicApiFetch } from '../lib/api-client';
@@ -102,12 +103,9 @@ export default function PostDetail() {
           try {
             let adminUrl = `/api/admin/posts/${slug}`;
             if (!/^\d+$/.test(slug || '')) {
-              const listResp = await apiFetch(`/api/admin/posts?search=${encodeURIComponent(slug || '')}`);
-              if (listResp.ok) {
-                const listBody = await listResp.json();
-                const found = (listBody.data?.list || []).find((item: Post) => item.slug === slug);
-                if (found) adminUrl = `/api/admin/posts/${found.id}`;
-              }
+              const listData = await postsApi.getPosts({ search: slug || '' }, true).catch(() => null);
+              const found = listData?.list?.find((item: Post) => item.slug === slug);
+              if (found) adminUrl = `/api/admin/posts/${found.id}`;
             }
             const adminResp = await apiFetch(adminUrl);
             if (adminResp.ok) {

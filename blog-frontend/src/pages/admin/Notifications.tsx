@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Bell, Bot, Check, CheckCheck, ChevronRight, GitBranch, MessageSquare, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { apiFetch } from '../../auth';
+import { notificationsApi } from '../../api';
 import type { Notification } from '../../community';
-import { readData } from '../../community';
 import {
   AdminPage,
   AdminPageHeader,
@@ -44,7 +43,7 @@ export default function AdminNotifications() {
     if (!allowed) return;
     setLoading(true);
     try {
-      const data = await readData<{ list: Notification[] }>(await apiFetch('/api/me/notifications'));
+      const data = await notificationsApi.getNotifications();
       setItems(data?.list || []);
       setError('');
     } catch (err) {
@@ -61,7 +60,7 @@ export default function AdminNotifications() {
   const markOneRead = async (item: Notification) => {
     if (item.read_at) return;
     try {
-      await apiFetch(`/api/me/notifications/${item.id}/read`, { method: 'PUT' });
+      await notificationsApi.markRead(item.id);
       const now = new Date().toISOString();
       setItems((current) => current.map((n) => (n.id === item.id ? { ...n, read_at: now } : n)));
       window.dispatchEvent(new CustomEvent('community:notifications-changed'));
@@ -73,7 +72,7 @@ export default function AdminNotifications() {
   const markAllRead = async () => {
     setBusy(true);
     try {
-      await apiFetch('/api/me/notifications/read-all', { method: 'PUT' });
+      await notificationsApi.markAllRead();
       const now = new Date().toISOString();
       setItems((current) => current.map((n) => ({ ...n, read_at: n.read_at || now })));
       window.dispatchEvent(new CustomEvent('community:notifications-changed'));
@@ -90,9 +89,7 @@ export default function AdminNotifications() {
     setBusy(true);
     try {
       const toRead = items.filter((n) => selected.includes(n.id) && !n.read_at);
-      await Promise.all(
-        toRead.map((n) => apiFetch(`/api/me/notifications/${n.id}/read`, { method: 'PUT' }))
-      );
+      await Promise.all(toRead.map((n) => notificationsApi.markRead(n.id)));
       const now = new Date().toISOString();
       setItems((current) =>
         current.map((n) => (selected.includes(n.id) ? { ...n, read_at: n.read_at || now } : n))
@@ -114,33 +111,25 @@ export default function AdminNotifications() {
 
     try {
       if (deleteAction.kind === 'single') {
-        const resp = await apiFetch(`/api/me/notifications/${deleteAction.id}`, { method: 'DELETE' });
-        if (!resp.ok) throw new Error('删除通知失败');
+        await notificationsApi.deleteNotification(deleteAction.id);
         setItems((current) => current.filter((n) => n.id !== deleteAction.id));
         setSelected((current) => current.filter((id) => id !== deleteAction.id));
         notify('通知已删除。');
       } else if (deleteAction.kind === 'batch') {
-        const resp = await apiFetch('/api/me/notifications/batch-delete', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ids: deleteAction.ids }),
-        });
-        if (!resp.ok) throw new Error('批量删除通知失败');
+        await notificationsApi.deleteNotifications(deleteAction.ids);
         const idsSet = new Set(deleteAction.ids);
         setItems((current) => current.filter((n) => !idsSet.has(n.id)));
         setSelected([]);
         notify(`已删除选中的 ${deleteAction.ids.length} 条通知。`);
       } else if (deleteAction.kind === 'clear_read') {
-        const resp = await apiFetch('/api/me/notifications?only_read=true', { method: 'DELETE' });
-        if (!resp.ok) throw new Error('清空已读通知失败');
+        await notificationsApi.clearNotifications(true);
         setItems((current) => current.filter((n) => !n.read_at));
         setSelected((current) =>
           current.filter((id) => items.find((n) => n.id === id && !n.read_at))
         );
         notify('已清空所有已读通知。');
       } else if (deleteAction.kind === 'clear_all') {
-        const resp = await apiFetch('/api/me/notifications', { method: 'DELETE' });
-        if (!resp.ok) throw new Error('清空全部通知失败');
+        await notificationsApi.clearNotifications(false);
         setItems([]);
         setSelected([]);
         notify('已清空全部通知。');

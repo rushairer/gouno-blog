@@ -7,3 +7,4 @@ export * from './analytics';
 export * from './site';
 export * from './notifications';
 export * from './bookmarks';
+export * from './agent';

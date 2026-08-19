@@ -25,13 +25,14 @@ export const commentsApi = {
     if (params?.page) search.set('page', String(params.page));
     if (params?.pageSize) search.set('pageSize', String(params.pageSize));
     const query = search.toString();
-    const result = await readData<CommunityComment[] | { list: CommunityComment[] }>(
+    const result = await readData<unknown>(
       apiFetch(`/api/admin/comments${query ? `?${query}` : ''}`)
     );
-    if (result && typeof result === 'object' && 'list' in result) {
-      return result.list || [];
+    if (Array.isArray(result)) return result as CommunityComment[];
+    if (result && typeof result === 'object' && 'list' in result && Array.isArray((result as { list: unknown }).list)) {
+      return (result as { list: CommunityComment[] }).list;
     }
-    return (result as CommunityComment[]) || [];
+    return [];
   },
 
   async postComment(slugOrID: string | number, payload: PostCommentPayload): Promise<Comment> {

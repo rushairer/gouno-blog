@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Copy, Edit2, Eye, Plus, Trash2, X } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { apiFetch } from '../../auth';
+import { postsApi, siteApi } from '../../api';
+import type { TagSummary } from '../../api';
 import {
   AdminPage,
   AdminPageHeader,
@@ -22,11 +23,9 @@ import {
   useToast,
 } from '../../components/ui';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
-import { getCategories, getPosts, readData } from '../../lib/blog-api';
 import type { Category, Post } from '../../types/blog';
 import { WorkflowLauncher } from '../../components/agent/WorkflowLauncher';
 
-interface TagSummary { name: string; post_count: number }
 type DeleteTarget = { kind: 'post'; post: Post } | { kind: 'batch' } | null;
 const pageSize = 20;
 
@@ -60,9 +59,9 @@ export default function AdminPosts() {
     if (category) query.set('category', category);
     if (tag) query.set('tag', tag);
     Promise.all([
-      getPosts(query, true),
-      getCategories(),
-      readData<TagSummary[]>(apiFetch('/api/admin/tags')),
+      postsApi.getPosts(query, true),
+      siteApi.getCategories(),
+      siteApi.getAdminTags(),
     ]).then(([result, categoryItems, tagItems]) => {
       if (ignore) return;
       setPosts(result.list || []);
@@ -92,8 +91,7 @@ export default function AdminPosts() {
     setDeleting(true);
     try {
       if (deleteTarget.kind === 'post') {
-        const response = await apiFetch(`/api/posts/${deleteTarget.post.id}`, { method: 'DELETE' });
-        if (!response.ok) throw new Error('删除失败，请稍后重试。');
+        await postsApi.deletePost(deleteTarget.post.id);
         setPosts((current) => current.filter((item) => item.id !== deleteTarget.post.id));
         setTotal((current) => Math.max(0, current - 1));
         notify('文章已删除。');
@@ -110,21 +108,19 @@ export default function AdminPosts() {
 
   const batch = async (action: 'publish' | 'draft' | 'delete') => {
     if (selected.length === 0) return;
-    const response = await apiFetch('/api/admin/posts/batch', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids: selected, action }),
-    });
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.message || '批量操作失败，请稍后重试。');
-    if (action === 'delete') {
-      setPosts((current) => current.filter((post) => !selected.includes(post.id)));
-      setTotal((current) => Math.max(0, current - selected.length));
-    } else {
-      setPosts((current) => current.map((post) => selected.includes(post.id) ? { ...post, status: action === 'publish' ? 'published' : 'draft' } : post));
+    try {
+      await postsApi.batchAction(selected, action);
+      if (action === 'delete') {
+        setPosts((current) => current.filter((post) => !selected.includes(post.id)));
+        setTotal((current) => Math.max(0, current - selected.length));
+      } else {
+        setPosts((current) => current.map((post) => selected.includes(post.id) ? { ...post, status: action === 'publish' ? 'published' : 'draft' } : post));
+      }
+      notify(action === 'publish' ? '所选文章已发布。' : action === 'draft' ? '所选文章已转为草稿。' : '所选文章已删除。');
+      setSelected([]);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : '批量操作失败，请稍后重试。');
     }
-    notify(action === 'publish' ? '所选文章已发布。' : action === 'draft' ? '所选文章已转为草稿。' : '所选文章已删除。');
-    setSelected([]);
   };
 
   const hasFilters = Boolean(q || status || category || tag);

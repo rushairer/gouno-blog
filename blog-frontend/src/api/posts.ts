@@ -81,4 +81,14 @@ export const postsApi = {
     }
     return readData<PaginatedPosts>(apiFetch(`/api/categories/${encodeURIComponent(slug)}/posts${query ? `?${query}` : ''}`));
   },
+
+  async batchAction(ids: (number | string)[], action: 'publish' | 'draft' | 'delete'): Promise<void> {
+    return readData<void>(
+      apiFetch('/api/admin/posts/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, action }),
+      })
+    );
+  },
 };

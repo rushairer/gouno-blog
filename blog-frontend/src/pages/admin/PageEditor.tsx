@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { AdminPageState, ConfirmDialog, Feedback, Field, Input, Select, Textarea } from '../../components/ui';
 import { MarkdownRenderer } from '../../components/MarkdownRenderer';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
-import { createPage, getAdminPage, updatePage } from '../../lib/blog-api';
+import { pagesApi } from '../../api';
 import type { CustomPage, PageTemplate, PostStatus } from '../../types/blog';
 
 const emptyPage: CustomPage = {
@@ -42,7 +42,7 @@ export default function PageEditor() {
     if (!allowed) return;
     if (!isNew && id) {
       setLoading(true);
-      getAdminPage(id)
+      pagesApi.getAdminPage(id)
         .then((data) => {
           setPage(data);
           setError('');
@@ -97,9 +97,9 @@ export default function PageEditor() {
       try {
         let result: CustomPage;
         if (page.id) {
-          result = await updatePage(page.id, payload);
+          result = await pagesApi.updatePage(page.id, payload);
         } else {
-          result = await createPage(payload);
+          result = await pagesApi.createPage(payload);
         }
         setPage(result);
         dirty.current = false;
@@ -145,8 +145,8 @@ export default function PageEditor() {
           seo_description: currentPage.seo_description || '',
         };
         const result = currentPage.id
-          ? await updatePage(currentPage.id, payload)
-          : await createPage(payload);
+          ? await pagesApi.updatePage(currentPage.id, payload)
+          : await pagesApi.createPage(payload);
         currentPage = result;
         setPage(result);
         dirty.current = false;
