@@ -368,26 +368,17 @@ func writeServiceError(c *gin.Context, err error) {
 		c.JSON(http.StatusNotFound, gouno.NewErrorResponse(http.StatusNotFound, err.Error()))
 	case errors.Is(err, service.ErrSlugInUse):
 		c.JSON(http.StatusConflict, gouno.NewErrorResponse(http.StatusConflict, err.Error()))
-	case isValidationError(err):
+	case errors.Is(err, service.ErrPostTitleEmpty),
+		errors.Is(err, service.ErrPostContentEmpty),
+		errors.Is(err, service.ErrInvalidPostStatus),
+		errors.Is(err, service.ErrScheduledPast),
+		errors.Is(err, service.ErrInvalidPostID),
+		errors.Is(err, service.ErrInvalidPostSlug),
+		errors.Is(err, service.ErrInvalidCommentID),
+		errors.Is(err, service.ErrCommentAuthorEmpty),
+		errors.Is(err, service.ErrCommentContentEmpty):
 		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
 	default:
 		c.JSON(http.StatusInternalServerError, gouno.NewErrorResponse(http.StatusInternalServerError, "internal server error"))
 	}
-}
-
-func isValidationError(err error) bool {
-	if err == nil {
-		return false
-	}
-	msg := err.Error()
-	return msg == "post title cannot be empty" ||
-		msg == "post content cannot be empty" ||
-		msg == "invalid post status" ||
-		msg == "scheduled_at must be in the future" ||
-		msg == "invalid post ID" ||
-		msg == "invalid post id" ||
-		msg == "invalid post slug" ||
-		msg == "invalid comment id" ||
-		msg == "comment author cannot be empty" ||
-		msg == "comment content cannot be empty"
 }

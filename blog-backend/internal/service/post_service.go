@@ -14,8 +14,17 @@ import (
 )
 
 var (
-	ErrPostNotFound = errors.New("post not found")
-	ErrSlugInUse    = errors.New("slug is already in use")
+	ErrPostNotFound        = errors.New("post not found")
+	ErrSlugInUse           = errors.New("slug is already in use")
+	ErrPostTitleEmpty      = errors.New("post title cannot be empty")
+	ErrPostContentEmpty    = errors.New("post content cannot be empty")
+	ErrInvalidPostStatus   = errors.New("invalid post status")
+	ErrScheduledPast       = errors.New("scheduled_at must be in the future")
+	ErrInvalidPostID       = errors.New("invalid post ID")
+	ErrInvalidPostSlug     = errors.New("invalid post slug")
+	ErrInvalidCommentID    = errors.New("invalid comment id")
+	ErrCommentAuthorEmpty  = errors.New("comment author cannot be empty")
+	ErrCommentContentEmpty = errors.New("comment content cannot be empty")
 )
 
 type PostRepository interface {
@@ -51,7 +60,7 @@ func NewPostService(repo PostRepository) *PostService {
 
 func (s *PostService) CreatePost(ctx context.Context, post *domain.Post) error {
 	if strings.TrimSpace(post.Title) == "" {
-		return errors.New("post title cannot be empty")
+		return ErrPostTitleEmpty
 	}
 	if err := s.preparePost(ctx, post, nil); err != nil {
 		return err
@@ -110,10 +119,10 @@ func (s *PostService) preparePost(ctx context.Context, post *domain.Post, curren
 		}
 	}
 	if post.Status != domain.PostStatusDraft && post.Status != domain.PostStatusScheduled && post.Status != domain.PostStatusPublished {
-		return errors.New("invalid post status")
+		return ErrInvalidPostStatus
 	}
 	if post.Status != domain.PostStatusDraft && strings.TrimSpace(post.Content) == "" {
-		return errors.New("post content cannot be empty")
+		return ErrPostContentEmpty
 	}
 
 	shanghai, _ := time.LoadLocation("Asia/Shanghai")
@@ -124,7 +133,7 @@ func (s *PostService) preparePost(ctx context.Context, post *domain.Post, curren
 		post.PublishedAt = nil
 	case domain.PostStatusScheduled:
 		if post.ScheduledAt == nil || !post.ScheduledAt.In(shanghai).After(now) {
-			return errors.New("scheduled_at must be in the future")
+			return ErrScheduledPast
 		}
 		post.PublishedAt = nil
 	case domain.PostStatusPublished:
@@ -141,10 +150,10 @@ func (s *PostService) preparePost(ctx context.Context, post *domain.Post, curren
 
 func (s *PostService) UpdatePost(ctx context.Context, post *domain.Post) error {
 	if post.ID <= 0 {
-		return errors.New("invalid post ID")
+		return ErrInvalidPostID
 	}
 	if strings.TrimSpace(post.Title) == "" {
-		return errors.New("post title cannot be empty")
+		return ErrPostTitleEmpty
 	}
 	existing, err := s.repo.GetByID(ctx, post.ID)
 	if err != nil {
@@ -168,7 +177,7 @@ func (s *PostService) UpdatePost(ctx context.Context, post *domain.Post) error {
 
 func (s *PostService) DeletePost(ctx context.Context, id int64) error {
 	if id <= 0 {
-		return errors.New("invalid post ID")
+		return ErrInvalidPostID
 	}
 	if err := s.repo.Delete(ctx, id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -344,13 +353,13 @@ func (s *PostService) ListTags(ctx context.Context) ([]string, error) {
 
 func (s *PostService) CreateComment(ctx context.Context, comment *domain.Comment) error {
 	if comment.PostID <= 0 {
-		return errors.New("invalid post ID")
+		return ErrInvalidPostID
 	}
 	if comment.Author == "" {
-		return errors.New("comment author cannot be empty")
+		return ErrCommentAuthorEmpty
 	}
 	if comment.Content == "" {
-		return errors.New("comment content cannot be empty")
+		return ErrCommentContentEmpty
 	}
 	return s.repo.CreateComment(ctx, comment)
 }
@@ -365,7 +374,7 @@ func (s *PostService) GetAllComments(ctx context.Context, postID int64) ([]*doma
 
 func (s *PostService) SetCommentVisibility(ctx context.Context, id int64, isVisible bool) error {
 	if id <= 0 {
-		return errors.New("invalid comment id")
+		return ErrInvalidCommentID
 	}
 	if err := s.repo.SetCommentVisibility(ctx, id, isVisible); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -378,7 +387,7 @@ func (s *PostService) SetCommentVisibility(ctx context.Context, id int64, isVisi
 
 func (s *PostService) DeleteComment(ctx context.Context, id int64) error {
 	if id <= 0 {
-		return errors.New("invalid comment id")
+		return ErrInvalidCommentID
 	}
 	if err := s.repo.DeleteComment(ctx, id); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
