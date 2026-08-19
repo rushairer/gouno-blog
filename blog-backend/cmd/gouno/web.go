@@ -68,6 +68,7 @@ func startWebServer(cmd *cobra.Command, args []string) {
 
 	loggerLevel := zap.NewAtomicLevelAt(zapcore.Level(globalConfig.LogConfig.Level))
 	logger := utility.NewLogger(loggerLevel)
+	repository.SetLogger(logger)
 
 	logger.Sugar().Info("starting web server...")
 
@@ -179,12 +180,20 @@ func startWebServer(cmd *cobra.Command, args []string) {
 		}
 		runner := agentservice.NewRunner(agentRepo, management, toolRegistry, postSvc)
 		approvals := agentservice.NewApprovalService(agentRepo, postSvc, management, growthSvc, mediaStore, pageSvc)
-		agentCtrl = controller.NewAgentController(management, runner, approvals, toolRegistry, ctx, knowledgeSvc)
-		agentCtrl.SetConnectorService(connector.NewService(db, secrets))
 		workflowSvc := workflowservice.NewService(db, runner, management, toolRegistry)
 		workflowSvc.StartScheduler(ctx, globalConfig.AIAgentConfig.SchedulerInterval)
-		agentCtrl.SetWorkflowService(workflowSvc)
-		agentCtrl.SetOperationsService(operationsSvc)
+		connectorSvc := connector.NewService(db, secrets)
+		agentCtrl = controller.NewAgentControllerWithOptions(controller.AgentControllerOptions{
+			Management: management,
+			Runner:     runner,
+			Approvals:  approvals,
+			Tools:      toolRegistry,
+			WorkerCtx:  ctx,
+			Knowledge:  knowledgeSvc,
+			Workflows:  workflowSvc,
+			Operations: operationsSvc,
+			Connectors: connectorSvc,
+		})
 		agentservice.NewScheduler(
 			agentRepo, runner, globalConfig.AIAgentConfig.SchedulerInterval, logger,
 		).Start(ctx)

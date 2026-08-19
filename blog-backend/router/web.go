@@ -36,8 +36,10 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 	pageRepo := repository.NewPageRepository(db)
 	pageSvc := service.NewPageService(pageRepo)
 	pageCtrl := controller.NewPageController(pageSvc)
-	contentCtrl := controller.NewContentController(db)
-	feedCtrl := controller.NewFeedController(svc, db)
+	catRepo := repository.NewCategoryRepository(db)
+	catSvc := service.NewCategoryService(catRepo)
+	contentCtrl := controller.NewContentController(catSvc)
+	feedCtrl := controller.NewFeedController(svc, pageSvc, catSvc)
 	communitySvc := service.NewCommunityService(repository.NewCommunityRepository(db), repo)
 	var interactionLimiter service.RateLimiter
 	if redisDSN != "" {

@@ -1,8 +1,6 @@
 package controller
 
 import (
-	"database/sql"
-	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"net/http"
@@ -11,15 +9,17 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rushairer/blog-backend/internal/service"
 )
 
 type FeedController struct {
-	svc BlogService
-	db  *sql.DB
+	svc     BlogService
+	pageSvc *service.PageService
+	catSvc  service.CategoryService
 }
 
-func NewFeedController(svc BlogService, db *sql.DB) *FeedController {
-	return &FeedController{svc: svc, db: db}
+func NewFeedController(svc BlogService, pageSvc *service.PageService, catSvc service.CategoryService) *FeedController {
+	return &FeedController{svc: svc, pageSvc: pageSvc, catSvc: catSvc}
 }
 
 // RSS 2.0 Structs
@@ -127,29 +127,24 @@ func (ctrl *FeedController) GetSitemap(c *gin.Context) {
 		})
 	}
 
-	if ctrl.db != nil {
-		if rows, err := ctrl.db.QueryContext(c.Request.Context(), `SELECT slug, updated_at FROM pages WHERE status = 'published' ORDER BY sort_order ASC, id ASC`); err == nil && rows != nil {
-			defer rows.Close()
-			for rows.Next() {
-				var pSlug string
-				var pUpdated time.Time
-				if err := rows.Scan(&pSlug, &pUpdated); err == nil {
-					pLoc := fmt.Sprintf("%s/%s", baseURL, pSlug)
-					found := false
-					for _, u := range urls {
-						if u.Loc == pLoc {
-							found = true
-							break
-						}
+	if ctrl.pageSvc != nil {
+		if pages, err := ctrl.pageSvc.ListPublishedPages(c.Request.Context()); err == nil && pages != nil {
+			for _, page := range pages {
+				pLoc := fmt.Sprintf("%s/%s", baseURL, page.Slug)
+				found := false
+				for _, u := range urls {
+					if u.Loc == pLoc {
+						found = true
+						break
 					}
-					if !found {
-						urls = append(urls, SitemapURL{
-							Loc:        pLoc,
-							LastMod:    pUpdated.Format("2006-01-02"),
-							ChangeFreq: "monthly",
-							Priority:   "0.7",
-						})
-					}
+				}
+				if !found {
+					urls = append(urls, SitemapURL{
+						Loc:        pLoc,
+						LastMod:    page.UpdatedAt.Format("2006-01-02"),
+						ChangeFreq: "monthly",
+						Priority:   "0.7",
+					})
 				}
 			}
 		}
@@ -181,15 +176,11 @@ func getBaseURL(c *gin.Context) string {
 func (ctrl *FeedController) siteIdentity(c *gin.Context) (string, string) {
 	title := "Gouno Blog"
 	description := "记录、思考与分享。"
-	if ctrl.db == nil {
+	if ctrl.catSvc == nil {
 		return title, description
 	}
-	var raw []byte
-	if err := ctrl.db.QueryRowContext(c.Request.Context(), `SELECT settings FROM site_settings WHERE id=1`).Scan(&raw); err != nil {
-		return title, description
-	}
-	var settings map[string]string
-	if err := json.Unmarshal(raw, &settings); err != nil {
+	settings, err := ctrl.catSvc.GetSiteSettings(c.Request.Context())
+	if err != nil || settings == nil {
 		return title, description
 	}
 	if value := strings.TrimSpace(settings["site_title"]); value != "" {
