@@ -1,6 +1,19 @@
-import { apiFetch } from '../auth';
-import { readData } from './client';
-import type { Notification } from '../community';
+import { authenticatedApiFetch as apiFetch, readData } from './client';
+
+export interface Notification {
+  id: number;
+  type: string;
+  post_id?: number;
+  post_slug?: string;
+  post_title?: string;
+  comment_id?: number;
+  actor_name?: string;
+  title?: string;
+  body?: string;
+  href?: string;
+  read_at?: string;
+  created_at: string;
+}
 
 export const notificationsApi = {
   async getNotifications(params?: { page?: number; pageSize?: number }): Promise<{ list: Notification[]; total: number }> {

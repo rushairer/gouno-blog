@@ -1,6 +1,8 @@
 import { ArrowLeft, Ban, Eye, LoaderCircle, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { apiFetch } from "../../auth";
+import { operationsApi } from "../../api/operations";
+import type { ArticleImagePreview } from "../../api/operations";
+import { workflowApi } from "../../api/workflows";
 import type {
   MediaCandidate,
   Workflow,
@@ -14,12 +16,6 @@ import { Button, EmptyState, FilterBar, Modal, PanelHeader, Select, WorkspacePan
 import { MarkdownRenderer } from "../MarkdownRenderer";
 import { StatusPill } from "./StatusPill";
 import { WorkflowRunOutput } from "./WorkflowRunOutput";
-
-async function readData<T>(response: Response): Promise<T> {
-  const body = await response.json();
-  if (!response.ok) throw new Error(body.message || "Request failed");
-  return body.data as T;
-}
 
 function duration(start?: string, finish?: string): string {
   if (!start || !finish) return "—";
@@ -45,16 +41,6 @@ function newestFirst<T extends { id: number; created_at: string }>(items: T[]): 
     return rightTime - leftTime || right.id - left.id;
   });
 }
-
-type ArticleImagePreview = {
-  placement: string;
-  image_url: string;
-  version_matches: boolean;
-  anchor_matches: boolean;
-  applied?: boolean;
-  cover_url?: string;
-  content?: string;
-};
 
 function JsonLog({ value }: { value: unknown }) {
   if (value === undefined || value === null) return <span>—</span>;
@@ -201,25 +187,11 @@ export function WorkflowRunRecords({
     try {
       const [steps, resources, interactions, candidates, events] =
         await Promise.all([
-          readData<WorkflowStepRun[]>(
-            await apiFetch(`/api/admin/ai-workflow-runs/${run.id}/steps`),
-          ),
-          readData<WorkflowResource[]>(
-            await apiFetch(`/api/admin/ai-workflow-runs/${run.id}/resources`),
-          ),
-          readData<WorkflowInteractionTask[]>(
-            await apiFetch(
-              `/api/admin/ai-workflow-runs/${run.id}/interactions`,
-            ),
-          ),
-          readData<MediaCandidate[]>(
-            await apiFetch(
-              `/api/admin/ai-workflow-runs/${run.id}/media-candidates`,
-            ),
-          ),
-          readData<WorkflowRunEvent[]>(
-            await apiFetch(`/api/admin/ai-workflow-runs/${run.id}/events`),
-          ),
+          workflowApi.getRunSteps(run.id),
+          workflowApi.getRunResources(run.id),
+          workflowApi.getRunInteractions(run.id),
+          workflowApi.getRunMediaCandidates(run.id),
+          workflowApi.getRunEvents(run.id),
         ]);
       setSelected({
         run,
@@ -262,13 +234,7 @@ export function WorkflowRunRecords({
   ) => {
     setError("");
     try {
-      await readData<WorkflowInteractionTask>(
-        await apiFetch(`/api/admin/ai-interactions/${task.id}/resolve`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ resume_token: task.resume_token, response }),
-        }),
-      );
+      await workflowApi.resolveInteraction(task, response);
       if (selected) await inspect(selected.run);
       if (onRefresh) await onRefresh();
     } catch (reason) {
@@ -285,13 +251,7 @@ export function WorkflowRunRecords({
   const cancelInteraction = async (task: WorkflowInteractionTask) => {
     setError("");
     try {
-      await readData<unknown>(
-        await apiFetch(`/api/admin/ai-interactions/${task.id}/cancel`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ resume_token: task.resume_token }),
-        }),
-      );
+      await workflowApi.cancelInteraction(task);
       if (selected) await inspect(selected.run);
       if (onRefresh) await onRefresh();
       if (onRefresh) await onRefresh();
@@ -327,14 +287,6 @@ export function WorkflowRunRecords({
   ) => {
     setError("");
     try {
-      const path =
-        action === "select"
-          ? `/api/admin/ai-image-tasks/${candidate.id}/select`
-          : action === "apply"
-            ? `/api/admin/ai-image-tasks/${candidate.id}/apply`
-            : action === "reject"
-              ? `/api/admin/ai-image-tasks/${candidate.id}/reject`
-              : `/api/admin/ai-image-tasks/${candidate.id}/regenerate`;
       const body =
         action === "select"
           ? selectionForCandidate(candidate)
@@ -343,13 +295,7 @@ export function WorkflowRunRecords({
                 instruction: generationInstructions[candidate.id]?.trim() || "",
               }
             : undefined;
-      await readData<unknown>(
-        await apiFetch(path, {
-          method: "POST",
-          headers: body ? { "Content-Type": "application/json" } : undefined,
-          body: body ? JSON.stringify(body) : undefined,
-        }),
-      );
+      await operationsApi.imageTaskAction(candidate.id, action, body);
       if (selected) await inspect(selected.run);
       if (onRefresh) await onRefresh();
     } catch (reason) {
@@ -380,16 +326,7 @@ export function WorkflowRunRecords({
           candidatePlacement[candidate.id] || candidate.placement || "cover",
         anchor: candidateAnchor[candidate.id] ?? candidate.anchor ?? "",
       }));
-      await readData<unknown>(
-        await apiFetch(
-          `/api/admin/ai-workflow-runs/${selected.run.id}/media-candidates/select`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ selections }),
-          },
-        ),
-      );
+      await operationsApi.batchMediaAction(selected.run.id, "select", { selections });
       await inspect(selected.run);
       if (onRefresh) await onRefresh();
     } catch (reason) {
@@ -431,20 +368,9 @@ export function WorkflowRunRecords({
     setBatchBusy("apply");
     setError("");
     try {
-      await readData<unknown>(
-        await apiFetch(
-          `/api/admin/ai-workflow-runs/${selected.run.id}/media-candidates/apply`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              candidate_ids: selectedCandidates.map(
-                (candidate) => candidate.id,
-              ),
-            }),
-          },
-        ),
-      );
+      await operationsApi.batchMediaAction(selected.run.id, "apply", {
+        candidate_ids: selectedCandidates.map((candidate) => candidate.id),
+      });
       await inspect(selected.run);
       if (onRefresh) await onRefresh();
     } catch (reason) {
@@ -465,20 +391,9 @@ export function WorkflowRunRecords({
     setBatchBusy("reject");
     setError("");
     try {
-      await readData<unknown>(
-        await apiFetch(
-          `/api/admin/ai-workflow-runs/${selected.run.id}/media-candidates/reject`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              candidate_ids: selectedCandidates.map(
-                (candidate) => candidate.id,
-              ),
-            }),
-          },
-        ),
-      );
+      await operationsApi.batchMediaAction(selected.run.id, "reject", {
+        candidate_ids: selectedCandidates.map((candidate) => candidate.id),
+      });
       await inspect(selected.run);
       if (onRefresh) await onRefresh();
     } catch (reason) {
@@ -497,11 +412,7 @@ export function WorkflowRunRecords({
   const cancelGeneration = async (candidate: MediaCandidate) => {
     setError("");
     try {
-      await readData<unknown>(
-        await apiFetch(`/api/admin/ai-image-tasks/${candidate.id}/cancel`, {
-          method: "POST",
-        }),
-      );
+      await operationsApi.cancelImageTask(candidate.id);
       if (selected) await inspect(selected.run);
       if (onRefresh) await onRefresh();
     } catch (reason) {
@@ -518,15 +429,7 @@ export function WorkflowRunRecords({
   const previewCandidate = async (candidate: MediaCandidate, openDialog = false) => {
     setError("");
     try {
-      const preview = await readData<{
-        placement: string;
-        image_url: string;
-        version_matches: boolean;
-        anchor_matches: boolean;
-        applied?: boolean;
-        cover_url?: string;
-        content?: string;
-      }>(await apiFetch(`/api/admin/ai-image-tasks/${candidate.id}/preview`));
+      const preview = await operationsApi.previewImageTask(candidate.id);
       setImagePreviews((current) => ({ ...current, [candidate.id]: preview }));
       if (openDialog) setPreviewDialogCandidateID(candidate.id);
     } catch (reason) {
@@ -574,19 +477,7 @@ export function WorkflowRunRecords({
     setRetrying(key);
     setError("");
     try {
-      await readData<WorkflowRun>(
-        await apiFetch(
-          `/api/admin/ai-workflow-runs/${selected.run.id}/retry`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              step_id: step.step_id,
-              iterations: [step.iteration],
-            }),
-          },
-        ),
-      );
+      await workflowApi.retryRun(selected.run.id, { step_id: step.step_id, iterations: [step.iteration] });
       if (onRefresh) await onRefresh();
     } catch (reason) {
       setError(
@@ -615,13 +506,7 @@ export function WorkflowRunRecords({
     setRetrying(`${stepID}:all`);
     setError("");
     try {
-      await readData<WorkflowRun>(
-        await apiFetch(`/api/admin/ai-workflow-runs/${selected.run.id}/retry`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ step_id: stepID, iterations }),
-        }),
-      );
+      await workflowApi.retryRun(selected.run.id, { step_id: stepID, iterations });
       if (onRefresh) await onRefresh();
     } catch (reason) {
       setError(
@@ -642,11 +527,7 @@ export function WorkflowRunRecords({
     setCancelling(true);
     setError("");
     try {
-      await readData<unknown>(
-        await apiFetch(`/api/admin/ai-workflow-runs/${run.id}/cancel`, {
-          method: "POST",
-        }),
-      );
+      await workflowApi.cancelRun(run.id);
       if (selected?.run.id === run.id) {
         await inspect(run);
       }
@@ -674,7 +555,7 @@ export function WorkflowRunRecords({
     setDeleting(true);
     setError("");
     try {
-      await readData<unknown>(await apiFetch(`/api/admin/ai-workflow-runs/${run.id}`, { method: "DELETE" }));
+      await workflowApi.deleteRun(run.id);
       if (selected?.run.id === run.id) {
         setSelected(null);
         const url = new URL(window.location.href);

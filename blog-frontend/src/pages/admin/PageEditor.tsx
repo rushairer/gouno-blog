@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { AdminPageState, ConfirmDialog, Feedback, Field, Input, Select, Textarea } from '../../components/ui';
 import { MarkdownRenderer } from '../../components/MarkdownRenderer';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
-import { pagesApi } from '../../api';
+import { pagesApi } from '../../api/pages';
 import type { CustomPage, PageTemplate, PostStatus } from '../../types/blog';
 
 const emptyPage: CustomPage = {

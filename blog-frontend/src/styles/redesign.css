@@ -165,7 +165,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .about-grid aside svg { width: 16px; height: 16px; color: var(--brand); }
 /* 404 Not Found Page */
 .not-found-page { min-height: 70vh; padding: 72px 0 96px; display: flex; align-items: center; justify-content: center; }
-.not-found-card { position: relative; width: min(680px, 100%); margin: 0 auto; text-align: center; display: flex; flex-direction: column; align-items: center; padding: 48px 36px; border: 1px solid var(--line); border-radius: calc(var(--radius-control) * 2); background: var(--surface); box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04); }
+.not-found-card { position: relative; width: min(680px, 100%); margin: 0 auto; text-align: center; display: flex; flex-direction: column; align-items: center; padding: 48px 36px; border: 1px solid var(--line); border-radius: calc(var(--radius-control) * 2); background: var(--surface); box-shadow: var(--ui-shadow-float); }
 .not-found-badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border: 1px solid color-mix(in srgb, var(--brand) 30%, var(--line)); border-radius: 999px; background: var(--brand-soft); color: var(--brand); font: 600 13px/1 var(--font-mono); margin-bottom: 24px; }
 .not-found-badge .not-found-code { font-weight: 700; }
 .not-found-badge__dot { opacity: 0.6; }
@@ -328,7 +328,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .admin-topbar-actions .admin-theme-toggle:hover, .admin-topbar-actions .admin-theme-toggle[aria-pressed="true"] { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
 .admin-topbar-actions svg { width: 15px; }
 .admin-topbar-notifications__icon { position: relative; display: inline-flex; align-items: center; }
-.admin-topbar-notifications__badge { position: absolute; top: -5px; right: -7px; min-width: 15px; height: 15px; padding: 0 3.5px; border-radius: 999px; background: var(--ui-danger, #dc2626); color: #fff; font: 700 9px/15px var(--font-mono); text-align: center; box-shadow: 0 0 0 1.5px var(--ui-panel); }
+.admin-topbar-notifications__badge { position: absolute; top: -5px; right: -7px; min-width: 15px; height: 15px; padding: 0 3.5px; border-radius: 999px; background: var(--ui-danger); color: var(--ui-on-danger); font: 700 9px/15px var(--font-mono); text-align: center; box-shadow: 0 0 0 1.5px var(--ui-panel); }
 .dashboard-ai-alerts__actions { display: flex; align-items: center; gap: 12px; }
 .dashboard-ai-alerts__actions .btn-sm { min-height: 28px; padding: 0 10px; font-size: 12px; font-weight: 500; display: inline-flex; align-items: center; gap: 5px; }
 .dashboard-ai-alerts__actions .btn-sm svg { width: 14px; height: 14px; }
@@ -639,17 +639,17 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .admin-notification-list { display: grid; gap: 12px; }
 .admin-notification-card { position: relative; display: grid; grid-template-columns: 24px 40px minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 16px 20px; border: 1px solid var(--admin-line); border-radius: var(--radius-control); background: var(--ui-panel); transition: all 0.15s ease; }
 .admin-notification-card--unread { border-left: 3px solid var(--brand); background: color-mix(in srgb, var(--ui-panel) 97%, var(--brand) 3%); }
-.admin-notification-card:hover { border-color: var(--brand); box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04); }
+.admin-notification-card:hover { border-color: var(--brand); box-shadow: var(--ui-shadow-float); }
 .admin-notification-select { display: flex; align-items: center; justify-content: center; }
 .admin-notification-icon { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; background: var(--ui-control); color: var(--text-2); }
-.admin-notification-icon--ai { background: var(--ui-danger-soft, rgba(239, 68, 68, 0.12)); color: var(--ui-danger, #ef4444); }
+.admin-notification-icon--ai { background: var(--ui-danger-soft); color: var(--ui-danger); }
 .admin-notification-icon--comment { background: var(--brand-soft); color: var(--brand); }
 .admin-notification-icon svg { width: 18px; height: 18px; }
 .admin-notification-main { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .admin-notification-header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .admin-notification-title { font-size: 14px; font-weight: 600; color: var(--ink); }
 .admin-notification-tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font: 500 11px/1.3 var(--font-mono); background: var(--ui-control); color: var(--text-3); border: 1px solid var(--admin-line); }
-.admin-notification-tag--ai { background: var(--ui-danger-soft, rgba(239, 68, 68, 0.1)); color: var(--ui-danger, #ef4444); border-color: transparent; }
+.admin-notification-tag--ai { background: var(--ui-danger-soft); color: var(--ui-danger); border-color: transparent; }
 .admin-notification-tag--comment { background: var(--brand-soft); color: var(--brand); border-color: transparent; }
 .admin-notification-time { margin-left: auto; color: var(--text-3); font: 12px/1 var(--font-mono); white-space: nowrap; }
 .admin-notification-body { margin: 0; color: var(--text-2); font-size: 13px; line-height: 1.5; word-break: break-word; }

@@ -4,13 +4,15 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PublicShell from '../PublicShell';
 
-vi.mock('../../lib/blog-api', () => ({
-  getSiteSettings: () => Promise.resolve({
+vi.mock('../../api/site', () => ({
+  siteApi: { getSiteSettings: () => Promise.resolve({
     site_title: 'Configured Site',
     site_description: 'A configured description.',
     rss_url: '/feed.xml',
-  }),
-  getNavPages: () => Promise.resolve([]),
+  }) },
+}));
+vi.mock('../../api/pages', () => ({
+  pagesApi: { getNavPages: () => Promise.resolve([]) },
 }));
 
 describe('PublicShell theme', () => {

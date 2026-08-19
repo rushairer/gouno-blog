@@ -4,15 +4,17 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { loginWithPassword, redirectToAuthorize } from '../../auth';
+import { gossoClient, redirectToAuthorize } from '../../auth';
 import { I18nProvider } from '../../i18n';
 import Login from '../Login';
 
 vi.mock('../../auth', () => ({
-  loginWithPassword: vi.fn(),
-  loginWithPasskey: vi.fn(),
+  gossoClient: {
+    loginWithPassword: vi.fn(),
+    loginWithPasskey: vi.fn(),
+    verifyMfa: vi.fn(),
+  },
   redirectToAuthorize: vi.fn(),
-  verifyMfa: vi.fn(),
 }));
 
 function renderLogin(initialEntry = '/login') {
@@ -30,7 +32,7 @@ function renderLogin(initialEntry = '/login') {
 describe('Login', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(loginWithPassword).mockResolvedValue({});
+    vi.mocked(gossoClient.loginWithPassword).mockResolvedValue({});
     vi.mocked(redirectToAuthorize).mockResolvedValue(undefined);
   });
 
@@ -43,13 +45,13 @@ describe('Login', () => {
     await user.click(screen.getByRole('button', { name: /^sso sign in$/i }));
 
     await waitFor(() => {
-      expect(loginWithPassword).toHaveBeenCalledWith('admin', 'admin123');
+      expect(gossoClient.loginWithPassword).toHaveBeenCalledWith('admin', 'admin123');
       expect(redirectToAuthorize).toHaveBeenCalledWith('/admin');
     });
   });
 
   it('shows the MFA step without starting authorize when MFA is required', async () => {
-    vi.mocked(loginWithPassword).mockResolvedValue({ requires_mfa: true, mfa_token: 'mfa-token' });
+    vi.mocked(gossoClient.loginWithPassword).mockResolvedValue({ requires_mfa: true, mfa_token: 'mfa-token' });
     const user = userEvent.setup();
     renderLogin();
 
@@ -62,7 +64,7 @@ describe('Login', () => {
   });
 
   it('localizes the SDK profile-load error', async () => {
-    vi.mocked(loginWithPassword).mockRejectedValue(new Error('Failed to fetch user profile'));
+    vi.mocked(gossoClient.loginWithPassword).mockRejectedValue(new Error('Failed to fetch user profile'));
     const user = userEvent.setup();
     renderLogin();
 

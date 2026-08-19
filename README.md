@@ -16,6 +16,8 @@ Gouno Blog 是一个构建于 GoUno 与 GOSSO 的开源、自托管博客运营�
 
 ## 🏗️ 架构设计
 
+跨仓库的身份 SDK、Blog transport、Admin service 与 React 页面职责见 [`doc/auth-client-boundary.md`](doc/auth-client-boundary.md)。该文档是长期边界；带日期的审计报告仅作为历史快照。
+
 系统采用“业务应用轻依赖身份提供商”的架构。`gouno-blog` 不包含 GOSSO 或 GOSSO Admin 源码，也不把它们作为 Git 子模块；本地完整集群通过已发布 Docker 镜像接入，业务代码只通过 OIDC/OAuth2 和 JWKS 与身份服务交互。
 
 * **Caddy HTTPS Gateway (`https://localhost:8443`)**：统一网关入口。

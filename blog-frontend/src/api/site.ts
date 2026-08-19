@@ -1,5 +1,4 @@
-import { apiFetch } from '../auth';
-import { readData } from './client';
+import { authenticatedApiFetch as apiFetch, readData } from './client';
 import type { Category, SiteSettings } from '../types/blog';
 
 export interface TagSummary {

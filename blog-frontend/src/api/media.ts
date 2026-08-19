@@ -1,5 +1,4 @@
-import { apiFetch } from '../auth';
-import { readData } from './client';
+import { authenticatedApiFetch as apiFetch, readData } from './client';
 
 export interface MediaItem {
   id: number;

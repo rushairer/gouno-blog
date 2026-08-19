@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { LoadingState, Panel } from '../components/ui';
-import { handleRedirectCallback } from '../auth';
+import { gossoClient } from '../auth';
 import { useI18n } from '../i18n';
 
 export default function Callback() {
@@ -21,7 +21,7 @@ export default function Callback() {
 
     async function handleCallback() {
       try {
-        const { redirectTo } = await handleRedirectCallback(code!, state!);
+        const { redirectTo } = await gossoClient.handleRedirectCallback(code!, state!);
         navigate(redirectTo);
       } catch (err: unknown) {
         console.error(err);

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { KeyRound } from 'lucide-react';
 import { Feedback, Field, Panel } from '../components/ui';
-import { loginWithPasskey, loginWithPassword, redirectToAuthorize, verifyMfa } from '../auth';
+import { gossoClient, redirectToAuthorize } from '../auth';
 import { useI18n } from '../i18n';
 
 export default function Login() {
@@ -50,7 +50,7 @@ export default function Login() {
     setError(null);
 
     try {
-      const result = await loginWithPassword(username, password);
+      const result = await gossoClient.loginWithPassword(username, password);
       if (result.requires_mfa) {
         setMfaToken(String(result.mfa_token || ''));
         setMfaCode('');
@@ -76,7 +76,7 @@ export default function Login() {
     setError(null);
 
     try {
-      await verifyMfa(mfaToken, mfaCode.trim());
+      await gossoClient.verifyMfa(mfaToken, mfaCode.trim());
       await continueAfterLogin();
     } catch (err: unknown) {
       console.error(err);
@@ -91,7 +91,7 @@ export default function Login() {
     setError(null);
 
     try {
-      await loginWithPasskey();
+      await gossoClient.loginWithPasskey();
       await continueAfterLogin();
     } catch (err: unknown) {
       console.error(err);

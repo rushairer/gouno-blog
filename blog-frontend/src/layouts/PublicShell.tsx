@@ -3,8 +3,9 @@ import type { ReactNode } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Menu, Moon, Rss, Search, Sun, X } from 'lucide-react';
 import { DEFAULT_SITE_SETTINGS } from '../config/site-defaults';
-import { publicNavigation } from '../navigation';
-import { getNavPages, getSiteSettings } from '../lib/blog-api';
+import { pagesApi } from '../api/pages';
+import { siteApi } from '../api/site';
+import { publicNavigation } from '../utils/navigation';
 import type { CustomPage, SiteSettings } from '../types/blog';
 
 export default function PublicShell({ children }: { children: ReactNode }) {
@@ -23,10 +24,10 @@ export default function PublicShell({ children }: { children: ReactNode }) {
   }, [theme]);
 
   useEffect(() => {
-    getSiteSettings().then(setSite).catch(() => {
+    siteApi.getSiteSettings().then(setSite).catch(() => {
       // Static brand defaults keep the public site usable during API outages.
     });
-    getNavPages().then(setNavPages).catch(() => {
+    pagesApi.getNavPages().then(setNavPages).catch(() => {
       // Graceful fallback to static nav
     });
   }, []);

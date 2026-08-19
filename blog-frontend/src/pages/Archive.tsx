@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { EmptyState, LoadingState } from '../components/ui';
-import { getPosts } from '../lib/blog-api';
+import { postsApi } from '../api/posts';
 import type { Post } from '../types/blog';
 
 export default function Archive() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  useEffect(() => { getPosts(new URLSearchParams({ page: '1', pageSize: '100' })).then((data) => setPosts(data.list || [])).finally(() => setLoading(false)); }, []);
+  useEffect(() => { postsApi.getPosts(new URLSearchParams({ page: '1', pageSize: '100' })).then((data) => setPosts(data.list || [])).finally(() => setLoading(false)); }, []);
   const groups = useMemo(() => posts.reduce<Record<string, Post[]>>((all, post) => {
     const date = new Date(post.published_at || post.created_at);
     const key = `${date.getFullYear()} 年 ${date.getMonth() + 1} 月`;

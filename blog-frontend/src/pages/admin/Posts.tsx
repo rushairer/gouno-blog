@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Copy, Edit2, Eye, Plus, Trash2, X } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { postsApi, siteApi } from '../../api';
-import type { TagSummary } from '../../api';
+import { postsApi } from '../../api/posts';
+import { siteApi } from '../../api/site';
+import type { TagSummary } from '../../api/site';
 import {
   AdminPage,
   AdminPageHeader,

@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { EmptyState, LoadingState } from '../components/ui';
-import { getCategories, getPosts, getTags } from '../lib/blog-api';
+import { postsApi } from '../api/posts';
+import { siteApi } from '../api/site';
 import type { Category, Post } from '../types/blog';
 
 export default function TaxonomyIndex({ type }: { type: 'categories' | 'tags' }) {
@@ -11,8 +12,8 @@ export default function TaxonomyIndex({ type }: { type: 'categories' | 'tags' })
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-    const taxonomy = type === 'categories' ? getCategories().catch(() => []) : getTags();
-    Promise.all([taxonomy, getPosts(new URLSearchParams({ page: '1', pageSize: '100' }))])
+    const taxonomy = type === 'categories' ? siteApi.getCategories().catch(() => []) : siteApi.getTags();
+    Promise.all([taxonomy, postsApi.getPosts(new URLSearchParams({ page: '1', pageSize: '100' }))])
       .then(([data, postData]) => {
         if (type === 'categories') setCategories(data as Category[]);
         else setTags(data as string[]);

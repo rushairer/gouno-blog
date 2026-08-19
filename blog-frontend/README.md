@@ -35,9 +35,11 @@ The redirect URI is derived from the current browser origin as `${window.locatio
 
 ## Authentication and SDK
 
-The frontend consumes the repository-pinned `@gosso/client` SDK in Cookie session mode. Access and refresh tokens remain HttpOnly and are never persisted in browser-readable storage. The SDK stores only short-lived PKCE state and the minimal server-provided UI profile in `sessionStorage`, sends the Blog CSRF token for unsafe same-origin API calls, and refreshes the Cookie session once after an application API returns `401`.
+The frontend consumes the commit-pinned `@gosso/client#main` SDK in Cookie session mode during rapid development. Access and refresh tokens remain HttpOnly and are never persisted in browser-readable storage. The SDK stores only short-lived PKCE state and the minimal server-provided UI profile in `sessionStorage`, sends the identity CSRF token where required, and refreshes the Cookie session once after an application API returns `401`.
 
-Do not replace this integration with a hand-written token or refresh implementation. Upgrade the npm SemVer dependency in `package.json`, regenerate `package-lock.json`, and run the verification commands after a tested `@gosso/client` release.
+`src/api/client.ts` is the only Blog transport. Authenticated requests delegate to the SDK; anonymous Blog requests own only same-origin credentials and `blog_csrf_token`. Pages and components call domain APIs and do not parse envelopes or construct protocol requests. Do not replace this integration with hand-written identity, refresh, CSRF, WebAuthn, or account-self-service logic.
+
+The manifest intentionally tracks `github:rushairer/gosso-client#main`; the committed lockfile pins its exact 40-character commit and CI installs with `npm ci`. Production artifacts still require immutable versions and image digests. See [`../doc/auth-client-boundary.md`](../doc/auth-client-boundary.md).
 
 ## Available Scripts
 

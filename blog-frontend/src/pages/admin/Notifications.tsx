@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Bell, Bot, Check, CheckCheck, ChevronRight, GitBranch, MessageSquare, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { notificationsApi } from '../../api';
-import type { Notification } from '../../community';
+import { notificationsApi } from '../../api/notifications';
+import type { Notification } from '../../api/notifications';
 import {
   AdminPage,
   AdminPageHeader,

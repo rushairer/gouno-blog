@@ -3,7 +3,7 @@ import type React from 'react';
 import { KeyRound, Laptop, Mail, Shield, User } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { ActionGroup, ContentStack, Feedback, Field, PageHeader, Panel } from '../components/ui';
-import { getUserProfile, gossoClient, isLoggedIn, redirectToAuthorize } from '../auth';
+import { gossoClient, isLoggedIn, redirectToAuthorize } from '../auth';
 import type { MfaEnrollment, MfaStatus, PasskeyInfo, SessionInfo, UserProfile } from '../auth';
 import { useI18n } from '../i18n';
 
@@ -12,7 +12,7 @@ type SettingsTab = 'profile' | 'security' | 'passkeys' | 'sessions';
 export default function Settings() {
   const { t, formatDateTime } = useI18n();
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
-  const [profile, setProfile] = useState<UserProfile | null>(() => getUserProfile());
+  const [profile, setProfile] = useState<UserProfile | null>(() => gossoClient.getUserProfile());
   const [displayName, setDisplayName] = useState(profile?.name || '');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');

@@ -1,5 +1,4 @@
-import { apiFetch } from '../auth';
-import { readData } from './client';
+import { authenticatedApiFetch as apiFetch, optionalApiFetch, publicApiFetch, readData } from './client';
 import type { PaginatedPosts, Post, PostVersion } from '../types/blog';
 
 export interface PostPayload {
@@ -31,7 +30,21 @@ export const postsApi = {
   },
 
   async getPost(slugOrID: string | number): Promise<Post> {
-    return readData<Post>(apiFetch(`/api/posts/${encodeURIComponent(String(slugOrID))}`));
+    return readData<Post>(publicApiFetch(`/api/posts/${encodeURIComponent(String(slugOrID))}`));
+  },
+
+  async getAdminPost(id: number | string): Promise<Post> {
+    return readData<Post>(apiFetch(`/api/admin/posts/${id}`));
+  },
+
+  async getRelatedPosts(slugOrID: string | number): Promise<Post[]> {
+    return (await readData<Post[] | null>(publicApiFetch(`/api/posts/${encodeURIComponent(String(slugOrID))}/related`))) || [];
+  },
+
+  async getCommunityState(slugOrID: string | number): Promise<{ liked: boolean; bookmarked: boolean; likes_count: number }> {
+    return readData<{ liked: boolean; bookmarked: boolean; likes_count: number }>(
+      optionalApiFetch(`/api/posts/${encodeURIComponent(String(slugOrID))}/community`)
+    );
   },
 
   async createPost(payload: PostPayload): Promise<Post> {

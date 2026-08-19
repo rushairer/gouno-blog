@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Bell, CheckCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { isLoggedIn, redirectToAuthorize } from '../auth';
-import type { Notification } from '../community';
-import { notificationsApi } from '../api';
+import { notificationsApi } from '../api/notifications';
+import type { Notification } from '../api/notifications';
 import { EmptyState, Feedback, LoadingState, PageHeader, Panel } from '../components/ui';
 import { useI18n } from '../i18n';
 

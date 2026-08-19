@@ -2,10 +2,11 @@ import { useEffect, useLayoutEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Bell, ExternalLink, LogOut, Menu, Moon, Search, Sun } from 'lucide-react';
-import { adminNavigation } from '../navigation';
-import { apiFetch, getUserProfile, logout } from '../auth';
+import { notificationsApi } from '../api/notifications';
+import { gossoClient, logout } from '../auth';
 import { DEFAULT_SITE_SETTINGS } from '../config/site-defaults';
-import { getSiteSettings } from '../lib/blog-api';
+import { siteApi } from '../api/site';
+import { adminNavigation } from '../utils/navigation';
 
 function currentLabel(pathname: string) {
   if (pathname === '/admin/posts/new') return '新建文章';
@@ -16,7 +17,7 @@ function currentLabel(pathname: string) {
 export default function AdminShell({ children }: { children: ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const user = getUserProfile();
+  const user = gossoClient.getUserProfile();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [search, setSearch] = useState(() => location.pathname === '/admin/posts' ? new URLSearchParams(location.search).get('q') || '' : '');
   const [siteName, setSiteName] = useState(DEFAULT_SITE_SETTINGS.site_title);
@@ -33,7 +34,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   }, [theme]);
 
   useEffect(() => {
-    getSiteSettings().then((settings) => setSiteName(settings.site_title || DEFAULT_SITE_SETTINGS.site_title)).catch(() => {
+    siteApi.getSiteSettings().then((settings) => setSiteName(settings.site_title || DEFAULT_SITE_SETTINGS.site_title)).catch(() => {
       // Keep the administration shell available when public site settings fail.
     });
   }, []);
@@ -41,12 +42,8 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     const fetchUnread = async () => {
       try {
-        const resp = await apiFetch('/api/me/notifications');
-        if (resp.ok) {
-          const body = await resp.json();
-          const list = (body.data?.list || []) as Array<{ read_at?: string }>;
-          setUnreadCount(list.filter((item) => !item.read_at).length);
-        }
+        const { list } = await notificationsApi.getNotifications({ pageSize: 100 });
+        setUnreadCount(list.filter((item) => !item.read_at).length);
       } catch {
         // Keep shell resilient
       }

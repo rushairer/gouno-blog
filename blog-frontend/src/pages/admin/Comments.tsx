@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
-import { commentsApi } from '../../api';
+import { commentsApi } from '../../api/comments';
 import { AdminPage, AdminPageHeader, BulkActionBar, Button, Checkbox, ConfirmDialog, ContentStack, EmptyState, Feedback, FilterBar, LoadingState, Panel, Select, useToast } from '../../components/ui';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 import { WorkflowLauncher } from '../../components/agent/WorkflowLauncher';

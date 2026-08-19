@@ -1,18 +1,13 @@
 import { ArrowDown, ArrowLeft, ArrowUp, ChevronRight, CirclePause, Database, Edit2, GitBranch, History, Play, Plus, RotateCcw, Save, TestTube2, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import { apiFetch } from '../../auth';
+import { workflowApi } from '../../api/workflows';
+import type { AutomationPlan } from '../../api/workflows';
 import type { Agent, ToolDefinition, Workflow, WorkflowMetric, WorkflowRun, WorkflowStep } from '../../agent';
 import { Button, Checkbox, ConfirmDialog, EditorPanel, EmptyState, Feedback, Field, FormActions, FormLayout, Input, PanelHeader, SearchField, Select, WorkspacePanel } from '../ui';
 import { StatusPill } from './StatusPill';
 import { statusLabel } from './labels';
 import { WorkflowInputForm } from './WorkflowInputForm';
-
-async function readData<T>(response: Response): Promise<T> {
-  const body = await response.json();
-  if (!response.ok) throw new Error(body.message || 'Request failed');
-  return body.data as T;
-}
 
 type WorkflowValue = {
   id?: number;
@@ -26,18 +21,6 @@ type WorkflowValue = {
   steps: WorkflowStep[];
   scope_policy: { mode: 'strict' | 'unscoped'; discovery_tools: string[] };
   resource_query_empty_policy: 'succeed' | 'fail';
-};
-
-type AutomationPlan = {
-  workflow: Workflow;
-  provider: { status: 'ready' | 'missing'; name?: string; model?: string; message?: string };
-  skill: { status: 'reuse' | 'draft' | 'missing'; name?: string; draft?: { name?: string; description?: string; system_prompt?: string; capabilities?: string[]; execution_mode?: 'advisory' | 'approval' } };
-  agent: { status: 'reuse' | 'draft' | 'missing'; name?: string; draft?: { name?: string; description?: string; provider_profile_id?: number; skill_version_id?: number } };
-  prerequisites: string[];
-  warnings: string[];
-  intent?: { status?: string; resource_types?: string[]; domain?: string; action?: string; output_type?: string; requires_image_generation?: boolean; ambiguity_reason?: string };
-  template?: { status?: string; key?: string; name?: string };
-  match?: { status?: string; matches?: string[]; missing?: string[]; warnings?: string[]; suggested_templates?: string[] };
 };
 
 function exampleInput(schema: Record<string, unknown>): Record<string, unknown> {
@@ -82,14 +65,13 @@ function runFeedbackActionLabel(action: 'viewRun' | 'continueImage', locale: 'en
   return locale === 'zh' ? '查看运行中心' : 'Open run center';
 }
 
-export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = [], locale, onMutate, onRun, onPreflight, onRefresh, onSave, onConfigureSkill, onConfigureAgent }: {
+export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = [], locale, onRun, onPreflight, onRefresh, onSave, onConfigureSkill, onConfigureAgent }: {
   workflows: Workflow[];
   runs: WorkflowRun[];
   metrics: WorkflowMetric[];
   agents: Agent[];
   tools?: ToolDefinition[];
   locale: 'en' | 'zh';
-  onMutate: (path: string, method?: string, body?: unknown) => Promise<void>;
   onRun: (workflowID: number, dryRun: boolean, input: Record<string, unknown>) => Promise<WorkflowRun>;
   onPreflight?: (workflowID: number, dryRun: boolean, input: Record<string, unknown>) => Promise<{ ready: boolean; checks: Array<{ key: string; status: string; message?: string }> }>;
   onRefresh?: () => Promise<void>;
@@ -146,14 +128,15 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = []
   }, [sortedWorkflows, statusFilter, workflowQuery]);
   const selectedWorkflow = selectedWorkflowID ? workflows.find((workflow) => workflow.id === selectedWorkflowID) || null : null;
   const loadVersions = async (workflow: Workflow) => {
-    const items = await readData<Workflow[]>(await apiFetch(`/api/admin/ai-workflows/${workflow.id}/versions`));
+    const items = await workflowApi.getVersions(workflow.id);
     setVersions((current) => ({ ...current, [workflow.id]: items }));
   };
   const deleteWorkflow = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await onMutate(`/api/admin/ai-workflows/${deleteTarget.id}`, 'DELETE');
+      await workflowApi.remove(deleteTarget.id);
+      if (onRefresh) await onRefresh();
       if (selectedWorkflowID === deleteTarget.id) {
         setSelectedWorkflowID(null);
         const url = new URL(window.location.href);
@@ -168,7 +151,7 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = []
   const waitForRun = async (workflowID: number, runID: number): Promise<WorkflowRun> => {
     for (let attempt = 0; attempt < 300; attempt += 1) {
       await new Promise((resolve) => window.setTimeout(resolve, 1000));
-      const items = await readData<WorkflowRun[]>(await apiFetch(`/api/admin/ai-workflow-runs?workflow_id=${workflowID}`));
+      const items = await workflowApi.getRuns(workflowID);
       const current = items.find((item) => item.id === runID);
       if (current && !['queued', 'running'].includes(current.status)) return current;
     }
@@ -286,7 +269,7 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = []
                   <a className="btn btn-secondary" href={`/admin/agents?tab=records&record=workflow&workflow=${workflow.id}`}>{locale === 'zh' ? '运行记录' : 'Run records'}</a>
                   <Button variant="secondary" type="button" onClick={() => setEditing(workflow)}><Edit2 />{locale === 'zh' ? '编辑' : 'Edit'}</Button>
                   <Button variant="secondary" type="button" onClick={() => void loadVersions(workflow)}><History />{labels.versions}</Button>
-                  <Button variant="secondary" disabled={!workflow.enabled && Boolean(runBlockReason)} title={!workflow.enabled ? (runBlockReason || undefined) : undefined} type="button" onClick={() => void onMutate(`/api/admin/ai-workflows/${workflow.id}/${workflow.enabled ? 'disable' : 'enable'}`)}>{workflow.enabled ? <CirclePause /> : <Play />}{workflow.enabled ? labels.disable : labels.enable}</Button>
+                  <Button variant="secondary" disabled={!workflow.enabled && Boolean(runBlockReason)} title={!workflow.enabled ? (runBlockReason || undefined) : undefined} type="button" onClick={() => void workflowApi.setEnabled(workflow.id, !workflow.enabled).then(() => onRefresh?.())}>{workflow.enabled ? <CirclePause /> : <Play />}{workflow.enabled ? labels.disable : labels.enable}</Button>
                   <Button variant="danger" type="button" onClick={() => setDeleteTarget(workflow)}><Trash2 />{locale === 'zh' ? '删除' : 'Delete'}</Button>
                 </div>
               }
@@ -313,7 +296,7 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = []
                 </div>
               ))}
             </div>
-            {versions[workflow.id]?.length ? <div className="agent-chip-list">{versions[workflow.id].map((version) => <button type="button" key={version.version_id} disabled={version.current_version === workflow.current_version} onClick={() => void onMutate(`/api/admin/ai-workflows/${workflow.id}/rollback`, 'POST', { version: version.current_version })}><RotateCcw />v{version.current_version}</button>)}</div> : null}
+            {versions[workflow.id]?.length ? <div className="agent-chip-list">{versions[workflow.id].map((version) => <button type="button" key={version.version_id} disabled={version.current_version === workflow.current_version} onClick={() => void workflowApi.rollback(workflow.id, version.current_version || 0).then(() => onRefresh?.())}><RotateCcw />v{version.current_version}</button>)}</div> : null}
           </div>;
         })()}
       </div>
@@ -417,7 +400,7 @@ export function WorkflowWorkspace({ workflows, runs, metrics, agents, tools = []
                             type="button"
                             disabled={!workflow.enabled && Boolean(runBlockReason)}
                             title={!workflow.enabled && runBlockReason ? runBlockReason : (workflow.enabled ? labels.disable : labels.enable)}
-                            onClick={() => void onMutate(`/api/admin/ai-workflows/${workflow.id}/${workflow.enabled ? 'disable' : 'enable'}`)}
+                            onClick={() => void workflowApi.setEnabled(workflow.id, !workflow.enabled).then(() => onRefresh?.())}
                           >
                             {workflow.enabled ? <CirclePause /> : <Play />}
                           </button>
@@ -507,11 +490,9 @@ function ResourceQueryBuilder({ step, onAdd, onChange, onRemove, savedPreview, l
     const timer = window.setTimeout(() => {
       const parameters = new URLSearchParams({ page: '1', page_size: '1' });
       Object.entries(filters).forEach(([key, value]) => { if (value !== '' && value !== undefined && value !== null) parameters.set(key, String(value)); });
-      apiFetch(`/api/admin/ai-resources/${resourceType}?${parameters}`, { signal: controller.signal })
-        .then(async (response) => {
-          const body = await response.json();
-          if (!response.ok) throw new Error(body.message || 'Resource preview failed');
-          setPreview(Number(body.data?.total || 0));
+      workflowApi.getResources(resourceType, parameters, controller.signal)
+        .then((data) => {
+          setPreview(Number(data.total || 0));
           setPreviewError('');
         })
         .catch((reason: Error) => { if (reason.name !== 'AbortError') { setPreview(null); setPreviewError(reason.message); } });
@@ -668,7 +649,7 @@ function WorkflowEditor({ initial, labels, agents, tools, locale, onSave, onCanc
     setPlannerMessage(null);
     let planData: AutomationPlan | null = null;
     try {
-      const plan = await readData<AutomationPlan>(await apiFetch('/api/admin/ai-automation-plans/draft', { method: 'POST', body: JSON.stringify({ prompt: goal.trim() }) }));
+      const plan = await workflowApi.draftAutomationPlan(goal.trim());
       planData = plan;
       setAutomationPlan(plan);
       if (plan.provider.status !== 'ready' || plan.agent.status !== 'reuse' || plan.match?.status !== 'ready') {
@@ -684,7 +665,7 @@ function WorkflowEditor({ initial, labels, agents, tools, locale, onSave, onCanc
         });
         return;
       }
-      const result = await readData<{ workflow: Workflow; provider: string; model: string; planner_warning?: string; selected_agents?: Array<{ id: number; name: string; skill_name?: string }>; readiness?: { message?: string } }>(await apiFetch('/api/admin/ai-workflows/draft', { method: 'POST', body: JSON.stringify({ prompt: goal.trim() }) }));
+      const result = await workflowApi.draftWorkflow(goal.trim());
       setName(result.workflow.name);
       setDescription(result.workflow.description);
       setSchema(JSON.stringify(result.workflow.input_schema, null, 2));
