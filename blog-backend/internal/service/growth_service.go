@@ -22,7 +22,12 @@ type GrowthStore interface {
 	AnalyticsSummary(context.Context) (*domain.AnalyticsSummary, error)
 }
 
-var ErrMediaInUse = errors.New("media asset is referenced by published or draft posts")
+var (
+	ErrMediaInUse          = errors.New("media asset is referenced by published or draft posts")
+	ErrInvalidVersion      = errors.New("invalid version")
+	ErrInvalidMediaPayload = errors.New("invalid media asset")
+	ErrInvalidMediaID      = errors.New("invalid media id")
+)
 
 type GrowthService struct{ store GrowthStore }
 
@@ -40,14 +45,14 @@ func (s *GrowthService) RelatedPosts(ctx context.Context, post *domain.Post) ([]
 
 func (s *GrowthService) ListVersions(ctx context.Context, postID int64) ([]*domain.PostVersion, error) {
 	if postID <= 0 {
-		return nil, errors.New("invalid post id")
+		return nil, ErrInvalidPostID
 	}
 	return s.store.ListVersions(ctx, postID)
 }
 
 func (s *GrowthService) RestoreVersion(ctx context.Context, postID, versionID int64) (*domain.Post, error) {
 	if postID <= 0 || versionID <= 0 {
-		return nil, errors.New("invalid version")
+		return nil, ErrInvalidVersion
 	}
 	post, err := s.store.RestoreVersion(ctx, postID, versionID)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -58,7 +63,7 @@ func (s *GrowthService) RestoreVersion(ctx context.Context, postID, versionID in
 
 func (s *GrowthService) CreateMedia(ctx context.Context, asset *domain.MediaAsset) error {
 	if asset == nil || strings.TrimSpace(asset.Filename) == "" || strings.TrimSpace(asset.StorageName) == "" {
-		return errors.New("invalid media asset")
+		return ErrInvalidMediaPayload
 	}
 	return s.store.CreateMedia(ctx, asset)
 }
@@ -69,7 +74,7 @@ func (s *GrowthService) ListMedia(ctx context.Context) ([]*domain.MediaAsset, er
 
 func (s *GrowthService) DeleteMedia(ctx context.Context, id int64) (*domain.MediaAsset, error) {
 	if id <= 0 {
-		return nil, errors.New("invalid media id")
+		return nil, ErrInvalidMediaID
 	}
 	references, err := s.store.CountMediaReferences(ctx, id)
 	if err != nil {
@@ -87,14 +92,14 @@ func (s *GrowthService) DeleteMedia(ctx context.Context, id int64) (*domain.Medi
 
 func (s *GrowthService) ListMediaReferences(ctx context.Context, id int64) ([]*domain.MediaReference, error) {
 	if id <= 0 {
-		return nil, errors.New("invalid media id")
+		return nil, ErrInvalidMediaID
 	}
 	return s.store.ListMediaReferences(ctx, id)
 }
 
 func (s *GrowthService) RecordView(ctx context.Context, postID int64, actorKey string) error {
 	if postID <= 0 {
-		return errors.New("invalid post id")
+		return ErrInvalidPostID
 	}
 	return s.store.RecordEvent(ctx, postID, "view", actorKey)
 }

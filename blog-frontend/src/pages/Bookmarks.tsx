@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Bookmark, Eye, Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { apiFetch, isLoggedIn, redirectToAuthorize } from '../auth';
-import { readData } from '../community';
+import { isLoggedIn, redirectToAuthorize } from '../auth';
+import { bookmarksApi } from '../api';
 import { Badge, EmptyState, Feedback, LoadingState, PageHeader, Panel } from '../components/ui';
 import { useI18n } from '../i18n';
 
@@ -31,7 +31,8 @@ export default function Bookmarks() {
       return;
     }
     try {
-      setItems((await readData<BookmarkItem[] | null>(await apiFetch('/api/me/bookmarks'))) || []);
+      const data = await bookmarksApi.getBookmarks();
+      setItems((data as unknown as BookmarkItem[]) || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('requestFailed'));
     } finally {
@@ -44,8 +45,12 @@ export default function Bookmarks() {
   }, [load]);
 
   const remove = async (postID: number) => {
-    const response = await apiFetch(`/api/me/bookmarks/${postID}`, { method: 'DELETE' });
-    if (response.ok) setItems((current) => current.filter((item) => item.post.id !== postID));
+    try {
+      await bookmarksApi.removeBookmark(postID);
+      setItems((current) => current.filter((item) => item.post.id !== postID));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('requestFailed'));
+    }
   };
 
   return (

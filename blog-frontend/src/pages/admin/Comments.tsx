@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
-import { apiFetch } from '../../auth';
+import { commentsApi } from '../../api';
 import { AdminPage, AdminPageHeader, BulkActionBar, Button, Checkbox, ConfirmDialog, ContentStack, EmptyState, Feedback, FilterBar, LoadingState, Panel, Select, useToast } from '../../components/ui';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 import { WorkflowLauncher } from '../../components/agent/WorkflowLauncher';
@@ -25,22 +25,29 @@ export default function AdminComments() {
   const load = useCallback(() => {
     if (!allowed) return;
     setLoading(true);
-    apiFetch(`/api/admin/comments?status=${status}&reported=${reported}`).then(async (response) => { const body = await response.json(); if (!response.ok) throw new Error(body.message); setComments(body.data?.list || []); setError(''); }).catch((reason: Error) => setError(reason.message)).finally(() => setLoading(false));
+    commentsApi.getAdminComments({ status, reported })
+      .then((items) => {
+        setComments(items as unknown as Comment[]);
+        setError('');
+      })
+      .catch((reason: Error) => setError(reason.message))
+      .finally(() => setLoading(false));
   }, [allowed, reported, status]);
   useEffect(load, [load]);
   const moderate = async (comment: Comment, next: 'visible' | 'hidden') => {
-    const response = await apiFetch(`/api/admin/comments/${comment.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: next }) });
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok) { setError(body.message || '评论处理失败。'); return; }
-    setComments((current) => current.filter((item) => item.id !== comment.id)); notify(next === 'visible' ? '评论已通过。' : '评论已隐藏。');
+    try {
+      await commentsApi.moderateComment(comment.id, next);
+      setComments((current) => current.filter((item) => item.id !== comment.id));
+      notify(next === 'visible' ? '评论已通过。' : '评论已隐藏。');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '评论处理失败。');
+    }
   };
   const remove = async () => {
     if (!deleteTarget) return;
     const ids = isBatchDeleteTarget(deleteTarget) ? selected : [deleteTarget.id];
     const results = await Promise.allSettled(ids.map(async (id) => {
-      const response = await apiFetch(`/api/comments/${id}`, { method: 'DELETE' });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.message || '评论删除失败。');
+      await commentsApi.deleteComment(id);
       return id;
     }));
     const removed = results.flatMap((result) => result.status === 'fulfilled' ? [result.value] : []);

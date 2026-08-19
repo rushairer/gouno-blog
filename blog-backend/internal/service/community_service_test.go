@@ -113,8 +113,8 @@ func TestCommunityCreateCommentUsesAuthenticatedIdentityAndIsVisible(t *testing.
 func TestCommunityCreateAnonymousCommentRequiresNameAndIsPending(t *testing.T) {
 	repo := &fakeCommunityRepo{}
 	svc := newCommunityServiceForTest(repo)
-	if _, err := svc.CreateComment(context.Background(), 1, nil, Actor{Key: "anon:a"}, "", "Hello"); err == nil {
-		t.Fatal("expected missing anonymous author to fail")
+	if _, err := svc.CreateComment(context.Background(), 1, nil, Actor{Key: "anon:a"}, "", "Hello"); !errors.Is(err, ErrCommentAuthorEmpty) {
+		t.Fatalf("expected ErrCommentAuthorEmpty, got %v", err)
 	}
 	comment, err := svc.CreateComment(context.Background(), 1, nil, Actor{Key: "anon:a"}, "Guest", "Hello")
 	if err != nil {
@@ -128,8 +128,8 @@ func TestCommunityCreateAnonymousCommentRequiresNameAndIsPending(t *testing.T) {
 func TestCommunityRejectsInvalidModerationStateAndDuplicateReport(t *testing.T) {
 	repo := &fakeCommunityRepo{reportErr: repository.ErrDuplicateInteraction}
 	svc := newCommunityServiceForTest(repo)
-	if err := svc.ModerateComment(context.Background(), 3, "deleted"); err == nil {
-		t.Fatal("expected invalid moderation state to fail")
+	if err := svc.ModerateComment(context.Background(), 3, "deleted"); !errors.Is(err, ErrInvalidCommentStatus) {
+		t.Fatalf("expected ErrInvalidCommentStatus, got %v", err)
 	}
 	err := svc.ReportComment(context.Background(), 3, Actor{Key: "anon:a"}, "spam")
 	if !errors.Is(err, repository.ErrDuplicateInteraction) {

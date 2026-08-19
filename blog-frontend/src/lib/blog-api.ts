@@ -1,77 +1,56 @@
-import { apiFetch } from '../auth';
-import { readData } from './api-client';
+import { postsApi, pagesApi, siteApi, readData } from '../api';
 import type { Category, CustomPage, PaginatedPages, PaginatedPosts, Post, SiteSettings } from '../types/blog';
 
-export function getPosts(params: URLSearchParams, admin = false) {
-  const path = admin ? '/api/admin/posts' : '/api/posts';
-  const query = params.toString();
-  return readData<PaginatedPosts>(apiFetch(`${path}${query ? `?${query}` : ''}`));
+export function getPosts(params: URLSearchParams, admin = false): Promise<PaginatedPosts> {
+  return postsApi.getPosts(params, admin);
 }
 
-export function getPost(slugOrID: string) {
-  return readData<Post>(apiFetch(`/api/posts/${encodeURIComponent(slugOrID)}`));
+export function getPost(slugOrID: string): Promise<Post> {
+  return postsApi.getPost(slugOrID);
 }
 
-export function getCategories() {
-  return readData<Category[]>(apiFetch('/api/categories'));
+export function getCategories(): Promise<Category[]> {
+  return siteApi.getCategories();
 }
 
-export function getCategoryPosts(slug: string, params: URLSearchParams) {
-  const query = params.toString();
-  return readData<PaginatedPosts>(apiFetch(`/api/categories/${encodeURIComponent(slug)}/posts${query ? `?${query}` : ''}`));
+export function getCategoryPosts(slug: string, params: URLSearchParams): Promise<PaginatedPosts> {
+  return postsApi.getCategoryPosts(slug, params);
 }
 
-export function getTags() {
-  return readData<string[]>(apiFetch('/api/tags'));
+export function getTags(): Promise<string[]> {
+  return siteApi.getTags();
 }
 
-export function getSiteSettings() {
-  return readData<SiteSettings>(apiFetch('/api/site'));
+export function getSiteSettings(): Promise<SiteSettings> {
+  return siteApi.getSiteSettings();
 }
 
-export function getPageBySlug(slug: string) {
-  return readData<CustomPage>(apiFetch(`/api/pages/${encodeURIComponent(slug)}`));
+export function getPageBySlug(slug: string): Promise<CustomPage> {
+  return pagesApi.getPageBySlug(slug);
 }
 
-export function getNavPages() {
-  return readData<CustomPage[]>(apiFetch('/api/pages/nav'));
+export function getNavPages(): Promise<CustomPage[]> {
+  return pagesApi.getNavPages();
 }
 
-export function getAdminPages(params?: { page?: number; pageSize?: number; q?: string; status?: string }) {
-  const search = new URLSearchParams();
-  if (params?.page) search.set('page', String(params.page));
-  if (params?.pageSize) search.set('pageSize', String(params.pageSize));
-  if (params?.q) search.set('q', params.q);
-  if (params?.status) search.set('status', params.status);
-  const query = search.toString();
-  return readData<PaginatedPages>(apiFetch(`/api/admin/pages${query ? `?${query}` : ''}`));
+export function getAdminPages(params?: { page?: number; pageSize?: number; q?: string; status?: string }): Promise<PaginatedPages> {
+  return pagesApi.getAdminPages(params);
 }
 
-export function getAdminPage(id: number | string) {
-  return readData<CustomPage>(apiFetch(`/api/admin/pages/${id}`));
+export function getAdminPage(id: number | string): Promise<CustomPage> {
+  return pagesApi.getAdminPage(id);
 }
 
-export function createPage(page: Partial<CustomPage>) {
-  return readData<CustomPage>(apiFetch('/api/admin/pages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(page),
-  }));
+export function createPage(page: Partial<CustomPage>): Promise<CustomPage> {
+  return pagesApi.createPage(page);
 }
 
-export function updatePage(id: number | string, page: Partial<CustomPage>) {
-  return readData<CustomPage>(apiFetch(`/api/admin/pages/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(page),
-  }));
+export function updatePage(id: number | string, page: Partial<CustomPage>): Promise<CustomPage> {
+  return pagesApi.updatePage(id, page);
 }
 
-export function deletePage(id: number | string) {
-  return readData<void>(apiFetch(`/api/admin/pages/${id}`, {
-    method: 'DELETE',
-  }));
+export function deletePage(id: number | string): Promise<void> {
+  return pagesApi.deletePage(id);
 }
 
 export { readData };
-

@@ -31,6 +31,32 @@ export interface Post {
   updated_at?: string;
 }
 
+export interface PostVersion {
+  id: number;
+  post_id: number;
+  title: string;
+  slug: string;
+  summary: string;
+  content: string;
+  tags: string[];
+  status: PostStatus;
+  scheduled_at?: string;
+  created_at: string;
+}
+
+export interface Comment {
+  id: number;
+  post_id: number;
+  parent_id?: number;
+  author: string;
+  author_type?: 'anonymous' | 'user';
+  content: string;
+  status: 'pending' | 'visible' | 'hidden' | string;
+  is_visible: boolean;
+  report_count?: number;
+  created_at: string;
+}
+
 export interface PaginatedPosts {
   list: Post[];
   total: number;
@@ -76,4 +102,3 @@ export interface PaginatedPages {
   page?: number;
   page_size?: number;
 }
-

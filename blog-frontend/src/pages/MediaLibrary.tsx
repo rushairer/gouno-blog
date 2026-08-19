@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Copy, ImagePlus, Trash2, X } from 'lucide-react';
-import { apiFetch, canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
+import { canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
+import { mediaApi } from '../api';
 import { AdminPage, AdminPageHeader, BulkActionBar, Button, Checkbox, ConfirmDialog, ContentStack, copyText, Drawer, EmptyState, Feedback, Field, FilterBar, Input, LoadingState, Panel, SearchField, Select, useToast } from '../components/ui';
 import { WorkflowLauncher } from '../components/agent/WorkflowLauncher';
 import { useI18n } from '../i18n';
@@ -41,11 +42,9 @@ export default function MediaLibrary() {
   const [selectedAssets, setSelectedAssets] = useState<number[]>([]); const [aiOpen, setAIOpen] = useState(false);
 
   const load = useCallback(async () => {
-    const response = await apiFetch('/api/admin/media');
-    const body = await response.json();
-    if (!response.ok) throw new Error(body.message || t('requestFailed'));
-    setAssets(body.data || []);
-  }, [t]);
+    const data = await mediaApi.listMedia();
+    setAssets(data as MediaAsset[]);
+  }, []);
 
   useEffect(() => {
     if (!isLoggedIn() || !canManageBlog()) {
@@ -66,10 +65,8 @@ export default function MediaLibrary() {
     data.append('file', file);
     data.append('alt_text', altText);
     try {
-      const response = await apiFetch('/api/admin/media', { method: 'POST', body: data });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.message || t('requestFailed'));
-      setAssets((current) => [body.data, ...current]);
+      const uploaded = await mediaApi.uploadMedia(data);
+      setAssets((current) => [uploaded as MediaAsset, ...current]);
       setFile(null);
       setAltText('');
       form.reset();
@@ -86,9 +83,7 @@ export default function MediaLibrary() {
     if (!deleteTarget) return;
     if (isBatchDeleteTarget(deleteTarget)) {
       const results = await Promise.allSettled(selectedAssets.map(async (id) => {
-        const response = await apiFetch(`/api/admin/media/${id}`, { method: 'DELETE' });
-        const body = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(body.message || '媒体删除失败。');
+        await mediaApi.deleteMedia(id);
         return id;
       }));
       const removed = results.flatMap((result) => result.status === 'fulfilled' ? [result.value] : []);
@@ -105,25 +100,21 @@ export default function MediaLibrary() {
       notify(`已删除 ${removed.length} 个媒体。`);
       return;
     }
-    const response = await apiFetch(`/api/admin/media/${deleteTarget.id}`, { method: 'DELETE' });
-    if (response.ok) {
+    try {
+      await mediaApi.deleteMedia(deleteTarget.id);
       setAssets((current) => current.filter((item) => item.id !== deleteTarget.id));
-      setDeleteTarget(null); setReferences([]); notify('媒体已删除。');
-    } else {
-      const body = await response.json();
-      if (response.status === 409) {
-        try {
-          const refsResponse = await apiFetch(`/api/admin/media/${deleteTarget.id}/references`);
-          const refsBody = await refsResponse.json();
-          setReferences(refsBody.data || []);
-        } catch {
-          setReferences([]);
-        }
-        setError('该媒体仍被文章引用，移除引用后才能删除。');
-        setDeleteTarget(null);
-      } else {
-        setError(body.message || t('requestFailed'));
+      setDeleteTarget(null);
+      setReferences([]);
+      notify('媒体已删除。');
+    } catch (err) {
+      try {
+        const refs = await mediaApi.getMediaReferences(deleteTarget.id);
+        setReferences(refs);
+      } catch {
+        setReferences([]);
       }
+      setError('该媒体仍被文章引用，移除引用后才能删除。');
+      setDeleteTarget(null);
     }
   };
   const visibleAssets = useMemo(() => assets.filter((asset) => {

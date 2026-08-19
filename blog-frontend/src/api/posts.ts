@@ -1,0 +1,84 @@
+import { apiFetch } from '../auth';
+import { readData } from './client';
+import type { PaginatedPosts, Post, PostVersion } from '../types/blog';
+
+export interface PostPayload {
+  title: string;
+  slug?: string;
+  summary?: string;
+  content: string;
+  tags?: string[];
+  status?: 'draft' | 'scheduled' | 'published';
+  scheduled_at?: string;
+}
+
+export const postsApi = {
+  async getPosts(params?: URLSearchParams | Record<string, string | number>, admin = false): Promise<PaginatedPosts> {
+    const path = admin ? '/api/admin/posts' : '/api/posts';
+    let query = '';
+    if (params) {
+      if (params instanceof URLSearchParams) {
+        query = params.toString();
+      } else {
+        const search = new URLSearchParams();
+        Object.entries(params).forEach(([k, v]) => {
+          if (v !== undefined && v !== '') search.set(k, String(v));
+        });
+        query = search.toString();
+      }
+    }
+    return readData<PaginatedPosts>(apiFetch(`${path}${query ? `?${query}` : ''}`));
+  },
+
+  async getPost(slugOrID: string | number): Promise<Post> {
+    return readData<Post>(apiFetch(`/api/posts/${encodeURIComponent(String(slugOrID))}`));
+  },
+
+  async createPost(payload: PostPayload): Promise<Post> {
+    return readData<Post>(
+      apiFetch('/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+    );
+  },
+
+  async updatePost(id: number | string, payload: PostPayload): Promise<Post> {
+    return readData<Post>(
+      apiFetch(`/api/posts/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+    );
+  },
+
+  async deletePost(id: number | string): Promise<void> {
+    return readData<void>(
+      apiFetch(`/api/posts/${id}`, {
+        method: 'DELETE',
+      })
+    );
+  },
+
+  async getVersions(postID: number | string): Promise<PostVersion[]> {
+    return readData<PostVersion[]>(apiFetch(`/api/admin/posts/${postID}/versions`));
+  },
+
+  async restoreVersion(postID: number | string, versionID: number | string): Promise<Post> {
+    return readData<Post>(
+      apiFetch(`/api/admin/posts/${postID}/versions/${versionID}/restore`, {
+        method: 'POST',
+      })
+    );
+  },
+
+  async getCategoryPosts(slug: string, params?: URLSearchParams | Record<string, string | number>): Promise<PaginatedPosts> {
+    let query = '';
+    if (params) {
+      query = params instanceof URLSearchParams ? params.toString() : new URLSearchParams(params as Record<string, string>).toString();
+    }
+    return readData<PaginatedPosts>(apiFetch(`/api/categories/${encodeURIComponent(slug)}/posts${query ? `?${query}` : ''}`));
+  },
+};

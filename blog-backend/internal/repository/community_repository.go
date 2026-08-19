@@ -10,7 +10,11 @@ import (
 	"github.com/rushairer/blog-backend/internal/domain"
 )
 
-var ErrDuplicateInteraction = errors.New("duplicate interaction")
+var (
+	ErrDuplicateInteraction  = errors.New("duplicate interaction")
+	ErrParentCommentMismatch = errors.New("parent comment belongs to another post")
+	ErrCommentDepthExceeded  = errors.New("comments support at most two levels")
+)
 
 type CommunityRepository struct {
 	db *sql.DB
@@ -50,10 +54,10 @@ func (r *CommunityRepository) CreateComment(ctx context.Context, comment *domain
 			return err
 		}
 		if parentPostID != comment.PostID {
-			return fmt.Errorf("parent comment belongs to another post")
+			return ErrParentCommentMismatch
 		}
 		if parentParentID != nil {
-			return fmt.Errorf("comments support at most two levels")
+			return ErrCommentDepthExceeded
 		}
 		if err := tx.QueryRowContext(ctx, `
 			INSERT INTO comments (post_id, parent_id, author, author_subject, author_type, content, status, is_visible, created_at)
