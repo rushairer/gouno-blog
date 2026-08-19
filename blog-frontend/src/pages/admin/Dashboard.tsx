@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, Bookmark, Bot, CheckCheck, ChevronRight, Eye, FileText, GitBranch, MessageSquare, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { apiFetch } from '../../auth';
+import { analyticsApi, notificationsApi } from '../../api';
 import { AdminPage, AdminPageHeader, AdminPageState, ContentStack, Feedback, Panel } from '../../components/ui';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 
@@ -36,15 +36,15 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!allowed) return;
-    apiFetch('/api/admin/analytics').then(async (response) => {
-      const body = await response.json(); if (!response.ok) throw new Error(body.message || '无法载入统计数据'); setSummary(body.data);
-    }).catch((reason: Error) => setError(reason.message));
+    analyticsApi.getSummary()
+      .then((data) => setSummary(data as unknown as Summary))
+      .catch((reason: Error) => setError(reason.message));
   }, [allowed]);
 
   const dismissAllAlerts = async () => {
     setClearingAlerts(true);
     try {
-      await apiFetch('/api/me/notifications/read-all', { method: 'PUT' });
+      await notificationsApi.markAllRead();
       setSummary((prev) => prev ? { ...prev, ai_alerts: [] } : null);
       window.dispatchEvent(new CustomEvent('community:notifications-changed'));
     } catch (reason) {

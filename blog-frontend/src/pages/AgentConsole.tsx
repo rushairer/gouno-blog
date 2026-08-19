@@ -4,6 +4,7 @@ import {
   Download, LockKeyhole, Plus, RefreshCw, Settings2, ShieldCheck, Sparkles, Trash2, Upload, X,
 } from 'lucide-react';
 import { apiFetch, canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
+import { agentApi } from '../api';
 import type {
   Agent, AgentApproval, AgentRun, AgentSkill, AgentToolCall, ContentCandidateSet, EditorialTask, EmbeddingProfile, MediaCandidate, OperationalSuggestion, ProviderProfile, ToolDefinition, Workflow, WorkflowInteractionTask, WorkflowMetric, WorkflowRun,
 } from '../agent';
@@ -136,7 +137,7 @@ async function readData<T>(response: Response): Promise<T> {
 // Reusing the request avoids refetching the same catalog after every mutation.
 let toolCatalogRequest: Promise<ToolDefinition[]> | null = null;
 function loadToolCatalog(): Promise<ToolDefinition[]> {
-  if (!toolCatalogRequest) toolCatalogRequest = apiFetch('/api/admin/agent-tools').then(readData<ToolDefinition[]>);
+  if (!toolCatalogRequest) toolCatalogRequest = agentApi.getToolCatalog();
   return toolCatalogRequest;
 }
 
@@ -565,49 +566,49 @@ export default function AgentConsole() {
     // still use every other workspace while the run list is unavailable.
     const loadWorkflowRuns = async () => {
       try {
-        return await readData<WorkflowRun[]>(await apiFetch('/api/admin/ai-workflow-runs'));
+        return await agentApi.getWorkflowRuns();
       } catch {
         return [] as WorkflowRun[];
       }
     };
     const [providerData, embeddingData, indexData, agentData, runData, approvalData, toolData, skillData, workflowData, workflowRunData, workflowMetricData, suggestionData, candidateData, mediaCandidateData, editorialTaskData] = await Promise.all([
-      readData<ProviderProfile[]>(await apiFetch('/api/admin/provider-profiles')),
-      readData<EmbeddingProfile[]>(await apiFetch('/api/admin/embedding-profiles')),
-      readData<{ queued: number; failed: number; chunks: number }>(await apiFetch('/api/admin/ai-index/status')),
-      readData<Agent[]>(await apiFetch('/api/admin/agents')),
-      readData<{ list: AgentRun[] }>(await apiFetch('/api/admin/agent-runs?pageSize=100')),
-      readData<{ list: AgentApproval[] }>(await apiFetch('/api/admin/agent-approvals?status=pending&pageSize=100')),
+      agentApi.getProviderProfiles(),
+      agentApi.getEmbeddingProfiles(),
+      agentApi.getIndexStatus(),
+      agentApi.getAgents(),
+      agentApi.getAgentRuns(100),
+      agentApi.getAgentApprovals('pending', 100),
       loadToolCatalog(),
-      readData<AgentSkill[]>(await apiFetch('/api/admin/agent-skills')),
-      readData<Workflow[]>(await apiFetch('/api/admin/ai-workflows')),
+      agentApi.getAgentSkills(),
+      agentApi.getWorkflows(),
       loadWorkflowRuns(),
-      readData<{ workflows: WorkflowMetric[] }>(await apiFetch('/api/admin/ai-workflow-metrics')),
-      readData<OperationalSuggestion[]>(await apiFetch('/api/admin/ai-suggestions?status=all')),
-      readData<ContentCandidateSet[]>(await apiFetch('/api/admin/ai-candidates')),
-      readData<MediaCandidate[]>(await apiFetch('/api/admin/ai-media-candidates')),
-      readData<EditorialTask[]>(await apiFetch('/api/admin/ai-editorial-tasks')),
+      agentApi.getWorkflowMetrics(),
+      agentApi.getSuggestions('all'),
+      agentApi.getCandidates(),
+      agentApi.getMediaCandidates(),
+      agentApi.getEditorialTasks(),
     ]);
     setProviders(providerData);
     setEmbeddingProfiles(embeddingData);
     setIndexStatus(indexData);
     setAgents(agentData);
-    setRuns(runData.list || []);
-    setApprovals(approvalData.list || []);
+    setRuns(runData || []);
+    setApprovals(approvalData || []);
     setTools(toolData);
     setSkills(skillData);
     setWorkflows(workflowData);
     setWorkflowRuns(workflowRunData);
-    setWorkflowMetrics(workflowMetricData.workflows || []);
+    setWorkflowMetrics(workflowMetricData || []);
     setSuggestions(suggestionData);
     setCandidateSets(candidateData);
     setMediaCandidates(mediaCandidateData);
     setEditorialTasks(editorialTaskData);
-    setSelectedApproval((current) => approvalData.list?.find((item) => item.id === current?.id) || approvalData.list?.[0] || null);
+    setSelectedApproval((current) => approvalData?.find((item) => item.id === current?.id) || approvalData?.[0] || null);
   }, []);
 
   useEffect(() => {
     if (tab !== 'inbox') return;
-    void apiFetch('/api/admin/ai-interactions').then((response) => response.ok ? readData<WorkflowInteractionTask[]>(response) : []).then(setInteractions).catch(() => setInteractions([]));
+    void agentApi.getInteractions().then(setInteractions).catch(() => setInteractions([]));
   }, [tab]);
 
   useEffect(() => {

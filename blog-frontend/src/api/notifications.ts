@@ -45,10 +45,10 @@ export const notificationsApi = {
     );
   },
 
-  async clearNotifications(readOnly = false): Promise<{ deleted: number }> {
-    const query = readOnly ? '?read_only=true' : '';
-    return readData<{ deleted: number }>(
-      apiFetch(`/api/me/notifications/clear${query}`, {
+  async clearNotifications(onlyRead = false): Promise<{ deleted_count?: number }> {
+    const query = onlyRead ? '?only_read=true' : '';
+    return readData<{ deleted_count?: number }>(
+      apiFetch(`/api/me/notifications${query}`, {
         method: 'DELETE',
       })
     );
