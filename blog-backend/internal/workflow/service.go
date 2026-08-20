@@ -1115,57 +1115,51 @@ func (s *Service) ReconcileMediaRun(ctx context.Context, runID int64) error {
 }
 
 func (s *Service) Cancel(ctx context.Context, runID int64) error {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback() }()
-	result, err := tx.ExecContext(ctx, `UPDATE ai_workflow_runs SET status='cancelled',finished_at=NOW(),error_code='cancelled',error_message='cancelled by administrator'
-		WHERE id=$1 AND status IN ('queued','running','awaiting_approval','waiting_for_user')`, runID)
-	if err != nil {
-		return err
-	}
-	if changed, _ := result.RowsAffected(); changed == 0 {
-		return sql.ErrNoRows
-	}
-	if _, err := tx.ExecContext(ctx, `UPDATE workflow_interaction_tasks SET status='cancelled',updated_at=NOW()
-		WHERE workflow_run_id=$1 AND status='pending'`, runID); err != nil {
-		return err
-	}
-	if _, err := tx.ExecContext(ctx, `UPDATE ai_media_candidates SET generation_status='cancelled',cancelled_at=NOW(),error_code='cancelled',error_message='workflow cancelled by administrator'
-		WHERE workflow_run_id=$1 AND generation_status IN ('brief_ready','ready_to_generate','generating','generated') AND applied_version_id IS NULL`, runID); err != nil {
-		return err
-	}
-	return tx.Commit()
+	return repository.RunInTransaction(ctx, s.db, func(tx *sql.Tx) error {
+		result, err := tx.ExecContext(ctx, `UPDATE ai_workflow_runs SET status='cancelled',finished_at=NOW(),error_code='cancelled',error_message='cancelled by administrator'
+			WHERE id=$1 AND status IN ('queued','running','awaiting_approval','waiting_for_user')`, runID)
+		if err != nil {
+			return err
+		}
+		if changed, _ := result.RowsAffected(); changed == 0 {
+			return sql.ErrNoRows
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE workflow_interaction_tasks SET status='cancelled',updated_at=NOW()
+			WHERE workflow_run_id=$1 AND status='pending'`, runID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE ai_media_candidates SET generation_status='cancelled',cancelled_at=NOW(),error_code='cancelled',error_message='workflow cancelled by administrator'
+			WHERE workflow_run_id=$1 AND generation_status IN ('brief_ready','ready_to_generate','generating','generated') AND applied_version_id IS NULL`, runID); err != nil {
+			return err
+		}
+		return nil
+	})
 }
 
 func (s *Service) DeleteRun(ctx context.Context, runID int64) error {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback() }()
-	var status string
-	if err := tx.QueryRowContext(ctx, `SELECT status FROM ai_workflow_runs WHERE id=$1 FOR UPDATE`, runID).Scan(&status); err != nil {
-		return err
-	}
-	if status != "succeeded" && status != "failed" && status != "cancelled" {
-		return fmt.Errorf("%w: only completed Workflow runs can be deleted", ErrInvalid)
-	}
-	if _, err := tx.ExecContext(ctx, `DELETE FROM ai_media_candidates WHERE workflow_run_id=$1 OR source_run_id IN (SELECT id FROM ai_agent_runs WHERE workflow_run_id=$1)`, runID); err != nil {
-		return err
-	}
-	if _, err := tx.ExecContext(ctx, `DELETE FROM ai_agent_runs WHERE workflow_run_id=$1`, runID); err != nil {
-		return err
-	}
-	result, err := tx.ExecContext(ctx, `DELETE FROM ai_workflow_runs WHERE id=$1`, runID)
-	if err != nil {
-		return err
-	}
-	if changed, _ := result.RowsAffected(); changed == 0 {
-		return ErrNotFound
-	}
-	return tx.Commit()
+	return repository.RunInTransaction(ctx, s.db, func(tx *sql.Tx) error {
+		var status string
+		if err := tx.QueryRowContext(ctx, `SELECT status FROM ai_workflow_runs WHERE id=$1 FOR UPDATE`, runID).Scan(&status); err != nil {
+			return err
+		}
+		if status != "succeeded" && status != "failed" && status != "cancelled" {
+			return fmt.Errorf("%w: only completed Workflow runs can be deleted", ErrInvalid)
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM ai_media_candidates WHERE workflow_run_id=$1 OR source_run_id IN (SELECT id FROM ai_agent_runs WHERE workflow_run_id=$1)`, runID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `DELETE FROM ai_agent_runs WHERE workflow_run_id=$1`, runID); err != nil {
+			return err
+		}
+		result, err := tx.ExecContext(ctx, `DELETE FROM ai_workflow_runs WHERE id=$1`, runID)
+		if err != nil {
+			return err
+		}
+		if changed, _ := result.RowsAffected(); changed == 0 {
+			return sql.ErrNoRows
+		}
+		return nil
+	})
 }
 
 func (s *Service) Execute(ctx context.Context, runID int64) {

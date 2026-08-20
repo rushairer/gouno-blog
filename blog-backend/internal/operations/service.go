@@ -258,41 +258,36 @@ func (s *Service) saveLinkResults(ctx context.Context, postID int64, raw json.Ra
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	if _, err = tx.ExecContext(ctx, `DELETE FROM ai_link_health_snapshots WHERE post_id=$1`, postID); err != nil {
-		_ = tx.Rollback()
-		return err
-	}
-	for _, result := range payload.Results {
-		sum := sha256.Sum256([]byte(result.URL))
-		errorCode := any(nil)
-		if result.Error != "" {
-			errorCode = strings.ReplaceAll(result.Error, " ", "_")
-		}
-		_, err = tx.ExecContext(ctx, `INSERT INTO ai_link_health_snapshots
-			(post_id,url,url_hash,status_code,ok,error_code) VALUES ($1,$2,$3,$4,$5,$6)`,
-			postID, result.URL, hex.EncodeToString(sum[:]), nullableStatus(result.StatusCode), result.OK, errorCode)
-		if err != nil {
-			_ = tx.Rollback()
+	return repository.RunInTransaction(ctx, s.db, func(tx *sql.Tx) error {
+		if _, err := tx.ExecContext(ctx, `DELETE FROM ai_link_health_snapshots WHERE post_id=$1`, postID); err != nil {
 			return err
 		}
-	}
-	// A fresh successful check is authoritative for this post. Close an old
-	// actionable suggestion only after the complete snapshot has been replaced;
-	// a later failing check can reopen the resolved item with new evidence.
-	if _, err = tx.ExecContext(ctx, `UPDATE ai_operational_suggestions
-		SET status='resolved', ignored_reason=NULL, updated_at=NOW()
-		WHERE source_type='broken_links' AND (source_key=$2 OR source_key='post:'||$2) AND status='new'
-		  AND NOT EXISTS (SELECT 1 FROM ai_link_health_snapshots
-			WHERE post_id=$1 AND ok=false
-			  AND (error_code IS NULL OR error_code NOT IN ('link_target_is_not_public','link_host_could_not_be_resolved')))`, postID, fmt.Sprint(postID)); err != nil {
-		_ = tx.Rollback()
-		return err
-	}
-	return tx.Commit()
+		for _, result := range payload.Results {
+			sum := sha256.Sum256([]byte(result.URL))
+			errorCode := any(nil)
+			if result.Error != "" {
+				errorCode = strings.ReplaceAll(result.Error, " ", "_")
+			}
+			_, err := tx.ExecContext(ctx, `INSERT INTO ai_link_health_snapshots
+				(post_id,url,url_hash,status_code,ok,error_code) VALUES ($1,$2,$3,$4,$5,$6)`,
+				postID, result.URL, hex.EncodeToString(sum[:]), nullableStatus(result.StatusCode), result.OK, errorCode)
+			if err != nil {
+				return err
+			}
+		}
+		// A fresh successful check is authoritative for this post. Close an old
+		// actionable suggestion only after the complete snapshot has been replaced;
+		// a later failing check can reopen the resolved item with new evidence.
+		if _, err := tx.ExecContext(ctx, `UPDATE ai_operational_suggestions
+			SET status='resolved', ignored_reason=NULL, updated_at=NOW()
+			WHERE source_type='broken_links' AND (source_key=$2 OR source_key='post:'||$2) AND status='new'
+			  AND NOT EXISTS (SELECT 1 FROM ai_link_health_snapshots
+				WHERE post_id=$1 AND ok=false
+				  AND (error_code IS NULL OR error_code NOT IN ('link_target_is_not_public','link_host_could_not_be_resolved')))`, postID, fmt.Sprint(postID)); err != nil {
+			return err
+		}
+		return nil
+	})
 }
 
 func nullableStatus(value int) any {
@@ -476,26 +471,21 @@ func (s *Service) IgnoreSuggestion(ctx context.Context, id int64, reason string)
 }
 
 func (s *Service) ConvertSuggestion(ctx context.Context, id int64) error {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	var title, description, priority string
-	if err = tx.QueryRowContext(ctx, `SELECT title,description,priority FROM ai_operational_suggestions
-		WHERE id=$1 AND status='new' FOR UPDATE`, id).Scan(&title, &description, &priority); err != nil {
-		_ = tx.Rollback()
-		return err
-	}
-	if _, err = tx.ExecContext(ctx, `INSERT INTO ai_editorial_tasks
-		(title,description,priority,source_suggestion_id) VALUES($1,$2,$3,$4)`, title, description, priority, id); err != nil {
-		_ = tx.Rollback()
-		return err
-	}
-	if _, err = tx.ExecContext(ctx, `UPDATE ai_operational_suggestions SET status='converted',updated_at=NOW() WHERE id=$1`, id); err != nil {
-		_ = tx.Rollback()
-		return err
-	}
-	return tx.Commit()
+	return repository.RunInTransaction(ctx, s.db, func(tx *sql.Tx) error {
+		var title, description, priority string
+		if err := tx.QueryRowContext(ctx, `SELECT title,description,priority FROM ai_operational_suggestions
+			WHERE id=$1 AND status='new' FOR UPDATE`, id).Scan(&title, &description, &priority); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `INSERT INTO ai_editorial_tasks
+			(title,description,priority,source_suggestion_id) VALUES($1,$2,$3,$4)`, title, description, priority, id); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE ai_operational_suggestions SET status='converted',updated_at=NOW() WHERE id=$1`, id); err != nil {
+			return err
+		}
+		return nil
+	})
 }
 
 func (s *Service) ListEditorialTasks(ctx context.Context, status string) ([]*domain.EditorialTask, error) {
