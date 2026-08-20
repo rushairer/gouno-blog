@@ -1,12 +1,6 @@
 package controller
 
 import (
-	"crypto/hmac"
-	"crypto/rand"
-	"crypto/sha256"
-	"encoding/base64"
-	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -16,20 +10,31 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/rushairer/blog-backend/internal/service"
 	"github.com/rushairer/gouno"
+	"go.uber.org/zap"
 )
 
 type CommunityController struct {
 	svc             *service.CommunityService
 	limiter         service.RateLimiter
 	fallbackLimiter service.RateLimiter
-	visitorSecret   []byte
+	visitorTokens   *service.VisitorTokenManager
+	logger          *zap.Logger
 }
 
-func NewCommunityController(svc *service.CommunityService, limiter service.RateLimiter, visitorSecret string) *CommunityController {
-	if visitorSecret == "" {
-		visitorSecret = "gouno-blog-development-visitor-secret"
+func NewCommunityController(svc *service.CommunityService, limiter service.RateLimiter, visitorSecret string, loggers ...*zap.Logger) *CommunityController {
+	var l *zap.Logger
+	if len(loggers) > 0 && loggers[0] != nil {
+		l = loggers[0]
+	} else {
+		l = zap.L()
 	}
-	return &CommunityController{svc: svc, limiter: limiter, fallbackLimiter: service.NewMemoryRateLimiter(), visitorSecret: []byte(visitorSecret)}
+	return &CommunityController{
+		svc:             svc,
+		limiter:         limiter,
+		fallbackLimiter: service.NewMemoryRateLimiter(),
+		visitorTokens:   service.NewVisitorTokenManager(visitorSecret),
+		logger:          l,
+	}
 }
 
 func (ctrl *CommunityController) actor(c *gin.Context) service.Actor {
@@ -56,29 +61,17 @@ func (ctrl *CommunityController) actor(c *gin.Context) service.Actor {
 
 func (ctrl *CommunityController) visitorID(c *gin.Context) string {
 	if cookie, err := c.Cookie("blog_visitor"); err == nil {
-		parts := strings.SplitN(cookie, ".", 2)
-		if len(parts) == 2 && hmac.Equal([]byte(parts[1]), []byte(ctrl.sign(parts[0]))) {
-			return parts[0]
+		if id, valid := ctrl.visitorTokens.Verify(cookie); valid {
+			return id
 		}
 	}
-	buf := make([]byte, 18)
-	if _, err := rand.Read(buf); err != nil {
-		sum := sha256.Sum256([]byte(fmt.Sprintf("%d-%s", time.Now().UnixNano(), c.ClientIP())))
-		buf = sum[:18]
-	}
-	id := base64.RawURLEncoding.EncodeToString(buf)
+	id := ctrl.visitorTokens.GenerateVisitorID(c.ClientIP())
 	http.SetCookie(c.Writer, &http.Cookie{
-		Name: "blog_visitor", Value: id + "." + ctrl.sign(id), Path: "/",
+		Name: "blog_visitor", Value: id + "." + ctrl.visitorTokens.Sign(id), Path: "/",
 		MaxAge: 365 * 24 * 60 * 60, HttpOnly: true, SameSite: http.SameSiteLaxMode,
 		Secure: c.Request.TLS != nil || c.GetHeader("X-Forwarded-Proto") == "https",
 	})
 	return id
-}
-
-func (ctrl *CommunityController) sign(value string) string {
-	mac := hmac.New(sha256.New, ctrl.visitorSecret)
-	_, _ = mac.Write([]byte(value))
-	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
 }
 
 func (ctrl *CommunityController) allow(c *gin.Context, operation string, actor service.Actor, limit int, window time.Duration) bool {
@@ -89,7 +82,7 @@ func (ctrl *CommunityController) allow(c *gin.Context, operation string, actor s
 	}
 	allowed, err := limiter.Allow(c.Request.Context(), key, limit, window)
 	if err != nil {
-		log.Printf("community primary rate limiter unavailable; using in-process fallback: %v", err)
+		ctrl.logger.Warn("community primary rate limiter unavailable; using in-process fallback", zap.Error(err))
 		allowed, err = ctrl.fallbackLimiter.Allow(c.Request.Context(), key, limit, window)
 		if err != nil {
 			c.JSON(http.StatusServiceUnavailable, gouno.NewErrorResponse(http.StatusServiceUnavailable, "interaction rate limiter unavailable"))
