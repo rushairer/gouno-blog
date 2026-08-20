@@ -117,5 +117,19 @@ func WriteDomainError(c *gin.Context, err error) {
 	if status >= http.StatusInternalServerError {
 		message = "internal server error"
 	}
-	c.JSON(status, gouno.NewErrorResponse(status, message))
+	baseResp := gouno.NewErrorResponse(status, message)
+	resp := gin.H{
+		"code":    baseResp.Code,
+		"message": baseResp.Message,
+	}
+	if reqID, ok := c.Get("request_id"); ok {
+		resp["request_id"] = reqID
+	}
+	c.JSON(status, resp)
 }
+
+// WriteServiceError is an alias for WriteDomainError for consistent service error dispatch.
+func WriteServiceError(c *gin.Context, err error) {
+	WriteDomainError(c, err)
+}
+

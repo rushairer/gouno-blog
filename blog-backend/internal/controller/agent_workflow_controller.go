@@ -204,17 +204,17 @@ func (ctrl *AgentController) DraftAutomationPlan(c *gin.Context) {
 	}
 	profiles, err := ctrl.svc.ListProviders(c.Request.Context())
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	agents, err := ctrl.svc.ListAgents(c.Request.Context())
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	skills, err := ctrl.svc.ListSkills(c.Request.Context())
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	plan := buildAutomationPlan(req.Prompt, profiles, agents, skills)
@@ -466,7 +466,7 @@ func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
 	}
 	profiles, err := ctrl.svc.ListProviders(c.Request.Context())
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	var selected *domain.ProviderProfile
@@ -482,7 +482,7 @@ func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
 	}
 	agents, err := ctrl.svc.ListAgents(c.Request.Context())
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	available := make([]map[string]any, 0, len(agents))
@@ -537,7 +537,7 @@ func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
 	}
 	client, err := ctrl.svc.ProviderClient(c.Request.Context(), selected.ID)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	payload, _ := json.Marshal(map[string]any{
@@ -551,7 +551,7 @@ func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
 	}
 	result, err := client.Generate(c.Request.Context(), provider.Request{Instructions: workflowPlannerPrompt, Messages: []provider.Message{{Role: "user", Content: string(payload)}}, MaxTokens: maxTokens})
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	var draft domain.Workflow
@@ -583,7 +583,7 @@ func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
 		warning = "AI draft did not meet workflow safety rules; a safe editable starter draft was created instead."
 		draft = fallbackWorkflowDraft(req.Prompt, fallbackAgentID, fallbackNeedsApproval)
 		if fallbackErr := ctrl.workflows.ValidateDraft(&draft); fallbackErr != nil {
-			writeAgentError(c, fallbackErr)
+			WriteDomainError(c, fallbackErr)
 			return
 		}
 	}
@@ -640,7 +640,7 @@ func (ctrl *AgentController) DraftAssist(c *gin.Context) {
 	}
 	profiles, err := ctrl.svc.ListProviders(c.Request.Context())
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	var selected *domain.ProviderProfile
@@ -656,7 +656,7 @@ func (ctrl *AgentController) DraftAssist(c *gin.Context) {
 	}
 	client, err := ctrl.svc.ProviderClient(c.Request.Context(), selected.ID)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	instruction := "You are an editorial assistant for a blog. Return only valid JSON in the form {\"suggestions\":[\"...\"]}. Produce exactly three concise candidates. Do not explain, use Markdown, or change the article."
@@ -670,7 +670,7 @@ func (ctrl *AgentController) DraftAssist(c *gin.Context) {
 	prompt, _ := json.Marshal(map[string]string{"title": req.Title, "summary": req.Summary, "content": req.Content})
 	result, err := client.Generate(c.Request.Context(), provider.Request{Instructions: instruction, Messages: []provider.Message{{Role: "user", Content: string(prompt)}}, MaxTokens: min(selected.MaxOutputTokens, 500)})
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	var output struct {
@@ -702,20 +702,20 @@ func (ctrl *AgentController) SetWorkflowService(service *workflowservice.Service
 func (ctrl *AgentController) ListWorkflows(c *gin.Context) {
 	items, err := ctrl.workflows.List(c.Request.Context())
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
 }
 
 func (ctrl *AgentController) GetWorkflow(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	item, err := ctrl.workflows.Get(c.Request.Context(), id)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(item))
@@ -724,7 +724,7 @@ func (ctrl *AgentController) GetWorkflow(c *gin.Context) {
 func (ctrl *AgentController) CreateWorkflow(c *gin.Context) { ctrl.saveWorkflow(c, 0) }
 
 func (ctrl *AgentController) UpdateWorkflow(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
@@ -732,12 +732,12 @@ func (ctrl *AgentController) UpdateWorkflow(c *gin.Context) {
 }
 
 func (ctrl *AgentController) DeleteWorkflow(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	if err := ctrl.workflows.Delete(c.Request.Context(), id); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
@@ -755,7 +755,7 @@ func (ctrl *AgentController) saveWorkflow(c *gin.Context, id int64) {
 		}
 	}
 	if err := ctrl.workflows.Save(c.Request.Context(), &value); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	status := http.StatusOK
@@ -766,20 +766,20 @@ func (ctrl *AgentController) saveWorkflow(c *gin.Context, id int64) {
 }
 
 func (ctrl *AgentController) ListWorkflowVersions(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	items, err := ctrl.workflows.Versions(c.Request.Context(), id)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
 }
 
 func (ctrl *AgentController) RollbackWorkflow(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
@@ -791,7 +791,7 @@ func (ctrl *AgentController) RollbackWorkflow(c *gin.Context) {
 		return
 	}
 	if err := ctrl.workflows.Rollback(c.Request.Context(), id, req.Version); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
@@ -802,7 +802,7 @@ func (ctrl *AgentController) EnableWorkflow(c *gin.Context) { ctrl.setWorkflowEn
 func (ctrl *AgentController) DisableWorkflow(c *gin.Context) { ctrl.setWorkflowEnabled(c, false) }
 
 func (ctrl *AgentController) setWorkflowEnabled(c *gin.Context, enabled bool) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
@@ -813,7 +813,7 @@ func (ctrl *AgentController) setWorkflowEnabled(c *gin.Context, enabled bool) {
 		}
 	}
 	if err := ctrl.workflows.SetEnabled(c.Request.Context(), id, enabled, subject); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"enabled": enabled}))
@@ -823,7 +823,7 @@ func (ctrl *AgentController) RunWorkflow(c *gin.Context)    { ctrl.queueWorkflow
 func (ctrl *AgentController) DryRunWorkflow(c *gin.Context) { ctrl.queueWorkflow(c, true) }
 
 func (ctrl *AgentController) PreflightWorkflow(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
@@ -836,14 +836,14 @@ func (ctrl *AgentController) PreflightWorkflow(c *gin.Context) {
 	}
 	result, err := ctrl.workflows.Preflight(c.Request.Context(), id, req.Input, req.DryRun)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(result))
 }
 
 func (ctrl *AgentController) RetryWorkflowRun(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
@@ -863,7 +863,7 @@ func (ctrl *AgentController) RetryWorkflowRun(c *gin.Context) {
 	}
 	run, err := ctrl.workflows.RetryFailed(c.Request.Context(), id, req.StepID, req.Iterations, subject)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	go ctrl.workflows.Execute(ctrl.workerCtx, run.ID)
@@ -871,24 +871,24 @@ func (ctrl *AgentController) RetryWorkflowRun(c *gin.Context) {
 }
 
 func (ctrl *AgentController) DeleteWorkflowRun(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	if err := ctrl.workflows.DeleteRun(c.Request.Context(), id); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }
 
 func (ctrl *AgentController) CancelWorkflowRun(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	if err := ctrl.workflows.Cancel(c.Request.Context(), id); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
@@ -912,7 +912,7 @@ func (ctrl *AgentController) EmitWorkflowEvent(c *gin.Context) {
 	}
 	queued, err := ctrl.workflows.EmitEvent(c.Request.Context(), req.EventKey, req.Event, req.Payload, subject)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusAccepted, gouno.NewSuccessResponse(gin.H{"accepted": true, "queued": queued}))
@@ -947,14 +947,14 @@ func (ctrl *AgentController) ReceiveWorkflowWebhook(c *gin.Context) {
 	}
 	queued, err := ctrl.workflows.EmitEvent(c.Request.Context(), eventKey, eventType, body, nil)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusAccepted, gouno.NewSuccessResponse(gin.H{"accepted": true, "queued": queued}))
 }
 
 func (ctrl *AgentController) queueWorkflow(c *gin.Context, dryRun bool) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
@@ -974,7 +974,7 @@ func (ctrl *AgentController) queueWorkflow(c *gin.Context, dryRun bool) {
 	}
 	run, err := ctrl.workflows.Queue(c.Request.Context(), id, dryRun, req.Input, subject)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	if run.Status == "queued" {
@@ -987,85 +987,85 @@ func (ctrl *AgentController) ListWorkflowRuns(c *gin.Context) {
 	workflowID, _ := strconv.ParseInt(c.Query("workflow_id"), 10, 64)
 	items, err := ctrl.workflows.ListRuns(c.Request.Context(), workflowID)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
 }
 
 func (ctrl *AgentController) WorkflowRunSteps(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	items, err := ctrl.workflows.RunSteps(c.Request.Context(), id)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
 }
 
 func (ctrl *AgentController) WorkflowRunResources(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	items, err := ctrl.workflows.ListResources(c.Request.Context(), id)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
 }
 
 func (ctrl *AgentController) WorkflowRunInteractions(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	items, err := ctrl.approvals.ListInteractions(c.Request.Context(), id)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
 }
 
 func (ctrl *AgentController) WorkflowRunMediaCandidates(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	items, err := ctrl.approvals.ListMediaCandidatesByWorkflowRun(c.Request.Context(), id)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
 }
 
 func (ctrl *AgentController) WorkflowRunEvents(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	items, err := ctrl.approvals.ListWorkflowRunEvents(c.Request.Context(), id)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
 }
 
 func (ctrl *AgentController) GetInteraction(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	item, err := ctrl.approvals.GetInteraction(c.Request.Context(), id)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(item))
@@ -1074,7 +1074,7 @@ func (ctrl *AgentController) GetInteraction(c *gin.Context) {
 func (ctrl *AgentController) ListPendingInteractions(c *gin.Context) {
 	items, err := ctrl.approvals.ListPendingInteractions(c.Request.Context())
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
@@ -1090,7 +1090,7 @@ func interactionSubject(c *gin.Context) string {
 }
 
 func (ctrl *AgentController) ResolveInteraction(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
@@ -1107,12 +1107,12 @@ func (ctrl *AgentController) ResolveInteraction(c *gin.Context) {
 	}
 	item, err := ctrl.approvals.ResolveInteraction(c.Request.Context(), id, req.ResumeToken, req.Response, interactionSubject(c))
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	if item.WorkflowRunID != nil {
 		if resumeErr := ctrl.workflows.Resume(c.Request.Context(), *item.WorkflowRunID); resumeErr != nil && !errors.Is(resumeErr, sql.ErrNoRows) {
-			writeAgentError(c, resumeErr)
+			WriteDomainError(c, resumeErr)
 			return
 		}
 	}
@@ -1120,7 +1120,7 @@ func (ctrl *AgentController) ResolveInteraction(c *gin.Context) {
 }
 
 func (ctrl *AgentController) CancelInteraction(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
@@ -1133,16 +1133,16 @@ func (ctrl *AgentController) CancelInteraction(c *gin.Context) {
 	}
 	item, err := ctrl.approvals.GetInteraction(c.Request.Context(), id)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	if err := ctrl.approvals.CancelInteraction(c.Request.Context(), id, req.ResumeToken, interactionSubject(c)); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	if item.WorkflowRunID != nil {
 		if err := ctrl.workflows.Cancel(c.Request.Context(), *item.WorkflowRunID); err != nil && !errors.Is(err, sql.ErrNoRows) {
-			writeAgentError(c, err)
+			WriteDomainError(c, err)
 			return
 		}
 	}
@@ -1164,7 +1164,7 @@ func (ctrl *AgentController) ListAIResources(c *gin.Context) {
 	keys := c.QueryArray("key")
 	items, total, err := ctrl.workflows.ListCatalog(c.Request.Context(), resourceType, domain.ResourceQuery{Query: c.Query("q"), Page: page, PageSize: pageSize, Filters: filters, Keys: keys})
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	unavailable := make([]string, 0)
@@ -1188,7 +1188,7 @@ func (ctrl *AgentController) ListAIResources(c *gin.Context) {
 func (ctrl *AgentController) WorkflowMetrics(c *gin.Context) {
 	result, err := ctrl.workflows.Metrics(c.Request.Context())
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(result))

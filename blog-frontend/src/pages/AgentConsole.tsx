@@ -35,98 +35,127 @@ function initialRecordType(): 'agent' | 'workflow' {
   return new URLSearchParams(window.location.search).get('record') === 'agent' ? 'agent' : 'workflow';
 }
 
-const copy = {
-  en: {
-    title: 'AI Workspace', pageDescription: 'Let AI find opportunities, prepare work, and keep every change under your review.',
-    overview: 'Overview', inbox: 'To review', automation: 'Automation', records: 'Run center', advanced: 'Advanced settings',
-    agents: 'Agents', skills: 'Skills', workflows: 'Workflows', operations: 'Operations', providers: 'Providers', knowledge: 'Knowledge index', runs: 'Runs', approvals: 'Approvals',
-    createAgent: 'Create Agent', createProvider: 'Add Provider', editAgent: 'Edit Agent', editProvider: 'Edit Provider',
-    agentName: 'Agent name', providerName: 'Profile name', providerType: 'Provider type', provider: 'Provider / model',
-    chooseProvider: 'Choose a provider', descriptionLabel: 'Description',
-    instructions: 'Agent instructions', trigger: 'Trigger', manual: 'Manual', mode: 'Execution mode',
-    advisory: 'Advisory only', approvalMode: 'Create approval proposals', cron: 'Cron expression',
-    timezone: 'Timezone', capabilities: 'Skill / Version', maxSteps: 'Maximum steps',
-    dailyRuns: 'Daily run limit', maxInput: 'Max input tokens', maxOutput: 'Max output tokens', monthlyBudget: 'Monthly token budget',
-    contentPublishMode: 'Content publication', contentPublishHint: 'Applied only when the Agent is authorized to create posts.', contentPublishApproval: 'Approval before draft', contentPublishDraft: 'Create draft', contentPublishPublish: 'Publish automatically',
-    enableAgent: 'Enable this Agent', saveAgent: 'Save Agent', saving: 'Saving…', cancel: 'Cancel',
-    startPreset: 'Start from a preset', startSkill: 'Apply a Skill', blankAgent: 'Blank Agent', status: 'Status', schedule: 'Schedule',
-    lastRun: 'Last run', nextRun: 'Next run', actions: 'Actions', active: 'Active', paused: 'Paused',
-    never: 'Never', runNow: 'Run now', edit: 'Edit', disable: 'Disable', enable: 'Enable',
-    delete: 'Delete', noAgents: 'No Agents yet. Add a Provider, then create your first Agent.',
-    baseUrl: 'Base URL', model: 'Model', apiKey: 'API Key', leaveBlank: 'leave blank to keep the existing key',
-    timeout: 'Request timeout (seconds)', providerEnabled: 'Provider is available to Agents',
-    saveProvider: 'Save Provider', test: 'Test connection', connected: 'Connection succeeded',
-    keyStored: 'Encrypted key', noProviders: 'No Provider profiles configured.',
-    output: 'Output', usage: 'Usage', created: 'Created', noRuns: 'No Agent runs yet.',
-    awaitingApproval: 'Awaiting approval', details: 'Details', toolCalls: 'Tool calls',
-    noApprovals: 'No approval proposals in this view.', before: 'Before', after: 'Proposed change',
-    approve: 'Approve and execute', reject: 'Reject', all: 'All', pending: 'Pending',
-    noSkills: 'No saved Skills yet. Skills are reusable governed Agent configurations.', backAdmin: 'Blog admin', loading: 'Loading AI Agent workspace…', refresh: 'Refresh',
-    requestFailed: 'The request failed.', deleteAgentConfirm: 'Delete this Agent and disable future runs?',
-    deleteProviderConfirm: 'Delete this Provider profile?', deleteEmbeddingConfirm: 'Delete this embedding profile?', deleteSkillConfirm: 'Delete this Skill? Existing Agents keep their current configuration.', providerNeeded: 'Create a Provider profile before adding an Agent.',
-    exportProviders: 'Export', importProviders: 'Import', invalidJsonFile: 'Invalid JSON configuration file.',
-    protocolMode: 'Interface mode',
-    protocolModeChatCompletions: 'Chat Completions (/v1/chat/completions · standard)',
-    protocolModeResponses: 'Responses API (/v1/responses · OpenAI native)',
-    protocolModeGenerateContent: 'GenerateContent (Gemini native multimodal / image)',
-    protocolModePredict: 'Predict (Imagen 3 dedicated)',
-    protocolModeMessages: 'Messages (/v1/messages · standard)',
-    streamMode: 'Stream transmission',
-    streamModeAuto: 'Auto adaptive (Recommended)',
-    streamModeAlways: 'Always enabled (Stream: true)',
-    streamModeNever: 'Always disabled (Stream: false)',
-  },
-  zh: {
-    title: 'AI 工作台', pageDescription: '让 AI 发现问题、准备工作；每一项变更始终由你审核决定。',
-    overview: '概览', inbox: '待我处理', automation: '自动化', records: '运行中心', advanced: '高级设置',
-    agents: 'Agents', skills: 'Skills', workflows: 'Workflows', operations: '运营闭环', providers: '模型连接', knowledge: '知识库', runs: '运行记录', approvals: '审批箱',
-    createAgent: '创建 Agent', createProvider: '添加 Provider', editAgent: '编辑 Agent', editProvider: '编辑 Provider',
-    agentName: 'Agent 名称', providerName: '配置名称', providerType: 'Provider 类型', provider: 'Provider / 模型',
-    chooseProvider: '选择 Provider', descriptionLabel: '说明',
-    instructions: 'Agent 指令', trigger: '触发方式', manual: '手动执行', mode: '执行模式',
-    advisory: '仅分析建议', approvalMode: '生成审批提案', cron: 'Cron 表达式',
-    timezone: '时区', capabilities: 'Skill / Version', maxSteps: '最大执行步数',
-    dailyRuns: '每日运行上限', maxInput: '最大输入 Token', maxOutput: '最大输出 Token', monthlyBudget: '每月 Token 预算',
-    contentPublishMode: '内容发布策略', contentPublishHint: '仅在 Agent 被授权创建文章时生效，模型不能自行变更此策略。', contentPublishApproval: '审批后创建草稿', contentPublishDraft: '直接创建草稿', contentPublishPublish: '显式自动发布',
-    enableAgent: '启用此 Agent', saveAgent: '保存 Agent', saving: '保存中…', cancel: '取消',
-    startPreset: '使用预置模板', startSkill: '应用 Skill', blankAgent: '空白 Agent', status: '状态', schedule: '执行周期',
-    lastRun: '上次运行', nextRun: '下次运行', actions: '操作', active: '运行中', paused: '已暂停',
-    never: '从未', runNow: '立即运行', edit: '编辑', disable: '停用', enable: '启用',
-    delete: '删除', noAgents: '还没有 Agent。先添加 Provider，再创建第一个 Agent。',
-    baseUrl: 'Base URL', model: '模型', apiKey: 'API Key', leaveBlank: '留空则保留现有密钥',
-    timeout: '请求超时（秒）', providerEnabled: '允许 Agent 使用此 Provider',
-    saveProvider: '保存 Provider', test: '测试连接', connected: '连接成功',
-    keyStored: '密钥已加密', noProviders: '还没有 Provider 配置。',
-    output: '输出', usage: '用量', created: '创建时间', noRuns: '还没有 Agent 运行记录。',
-    awaitingApproval: '等待审批', details: '详情', toolCalls: '工具调用',
-    noApprovals: '当前视图没有审批提案。', before: '变更前', after: '建议变更',
-    approve: '批准并执行', reject: '拒绝', all: '全部', pending: '待审批',
-    noSkills: '还没有已保存的 Skill。Skill 是可复用且受治理的 Agent 配置。', backAdmin: '博客后台', loading: '正在加载 AI Agent 工作区…', refresh: '刷新',
-    requestFailed: '请求失败。', deleteAgentConfirm: '删除此 Agent 并停止后续运行？',
-    deleteProviderConfirm: '删除此 Provider 配置？', deleteEmbeddingConfirm: '删除此嵌入配置？', deleteSkillConfirm: '删除此 Skill？现有 Agent 会保留当前配置。', providerNeeded: '请先创建 Provider，再添加 Agent。',
-    exportProviders: '导出', importProviders: '导入', invalidJsonFile: '无效的 JSON 配置文件。',
-    protocolMode: '接口协议模式',
-    protocolModeChatCompletions: 'Chat Completions (/v1/chat/completions · 通用标准)',
-    protocolModeResponses: 'Responses API (/v1/responses · OpenAI 原生)',
-    protocolModeGenerateContent: 'GenerateContent (Gemini 原生多模态出图)',
-    protocolModePredict: 'Predict (Imagen 3 专属)',
-    protocolModeMessages: 'Messages (/v1/messages · 标准)',
-    streamMode: '流式传输 (Stream)',
-    streamModeAuto: '自动自适应 (推荐)',
-    streamModeAlways: '强制开启 (Stream: true)',
-    streamModeNever: '强制关闭 (Stream: false)',
-  },
-} as const;
-
-let toolCatalogRequest: Promise<ToolDefinition[]> | null = null;
-function loadToolCatalog(): Promise<ToolDefinition[]> {
-  if (!toolCatalogRequest) toolCatalogRequest = agentApi.getToolCatalog();
-  return toolCatalogRequest;
+function getAgentLabels(t: (key: any) => string): Record<string, string> {
+  return {
+    title: t('agent.title'),
+    pageDescription: t('agent.pageDescription'),
+    overview: t('agent.overview'),
+    inbox: t('agent.inbox'),
+    automation: t('agent.automation'),
+    records: t('agent.records'),
+    advanced: t('agent.advanced'),
+    agents: t('agent.agents'),
+    skills: t('agent.skills'),
+    workflows: t('agent.workflows'),
+    operations: t('agent.operations'),
+    providers: t('agent.providers'),
+    knowledge: t('agent.knowledge'),
+    runs: t('agent.runs'),
+    approvals: t('agent.approvals'),
+    createAgent: t('agent.createAgent'),
+    createProvider: t('agent.createProvider'),
+    editAgent: t('agent.editAgent'),
+    editProvider: t('agent.editProvider'),
+    agentName: t('agent.agentName'),
+    providerName: t('agent.providerName'),
+    providerType: t('agent.providerType'),
+    provider: t('agent.provider'),
+    chooseProvider: t('agent.chooseProvider'),
+    descriptionLabel: t('agent.descriptionLabel'),
+    instructions: t('agent.instructions'),
+    trigger: t('agent.trigger'),
+    manual: t('agent.manual'),
+    mode: t('agent.mode'),
+    advisory: t('agent.advisory'),
+    approvalMode: t('agent.approvalMode'),
+    cron: t('agent.cron'),
+    timezone: t('agent.timezone'),
+    capabilities: t('agent.capabilities'),
+    maxSteps: t('agent.maxSteps'),
+    dailyRuns: t('agent.dailyRuns'),
+    maxInput: t('agent.maxInput'),
+    maxOutput: t('agent.maxOutput'),
+    monthlyBudget: t('agent.monthlyBudget'),
+    contentPublishMode: t('agent.contentPublishMode'),
+    contentPublishHint: t('agent.contentPublishHint'),
+    contentPublishApproval: t('agent.contentPublishApproval'),
+    contentPublishDraft: t('agent.contentPublishDraft'),
+    contentPublishPublish: t('agent.contentPublishPublish'),
+    enableAgent: t('agent.enableAgent'),
+    saveAgent: t('agent.saveAgent'),
+    saving: t('agent.saving'),
+    cancel: t('agent.cancel'),
+    startPreset: t('agent.startPreset'),
+    startSkill: t('agent.startSkill'),
+    blankAgent: t('agent.blankAgent'),
+    status: t('agent.status'),
+    schedule: t('agent.schedule'),
+    lastRun: t('agent.lastRun'),
+    nextRun: t('agent.nextRun'),
+    actions: t('agent.actions'),
+    active: t('agent.active'),
+    paused: t('agent.paused'),
+    never: t('agent.never'),
+    runNow: t('agent.runNow'),
+    edit: t('agent.edit'),
+    disable: t('agent.disable'),
+    enable: t('agent.enable'),
+    delete: t('agent.delete'),
+    noAgents: t('agent.noAgents'),
+    baseUrl: t('agent.baseUrl'),
+    model: t('agent.model'),
+    apiKey: t('agent.apiKey'),
+    leaveBlank: t('agent.leaveBlank'),
+    timeout: t('agent.timeout'),
+    providerEnabled: t('agent.providerEnabled'),
+    saveProvider: t('agent.saveProvider'),
+    test: t('agent.test'),
+    connected: t('agent.connected'),
+    keyStored: t('agent.keyStored'),
+    noProviders: t('agent.noProviders'),
+    output: t('agent.output'),
+    usage: t('agent.usage'),
+    created: t('agent.created'),
+    noRuns: t('agent.noRuns'),
+    awaitingApproval: t('agent.awaitingApproval'),
+    details: t('agent.details'),
+    toolCalls: t('agent.toolCalls'),
+    noApprovals: t('agent.noApprovals'),
+    before: t('agent.before'),
+    after: t('agent.after'),
+    approve: t('agent.approve'),
+    reject: t('agent.reject'),
+    all: t('agent.all'),
+    pending: t('agent.pending'),
+    noSkills: t('agent.noSkills'),
+    backAdmin: t('agent.backAdmin'),
+    loading: t('agent.loading'),
+    refresh: t('agent.refresh'),
+    requestFailed: t('agent.requestFailed'),
+    deleteAgentConfirm: t('agent.deleteAgentConfirm'),
+    deleteProviderConfirm: t('agent.deleteProviderConfirm'),
+    deleteEmbeddingConfirm: t('agent.deleteEmbeddingConfirm'),
+    deleteSkillConfirm: t('agent.deleteSkillConfirm'),
+    providerNeeded: t('agent.providerNeeded'),
+    exportProviders: t('agent.exportProviders'),
+    importProviders: t('agent.importProviders'),
+    invalidJsonFile: t('agent.invalidJsonFile'),
+    protocolMode: t('agent.protocolMode'),
+    protocolModeChatCompletions: t('agent.protocolModeChatCompletions'),
+    protocolModeResponses: t('agent.protocolModeResponses'),
+    protocolModeGenerateContent: t('agent.protocolModeGenerateContent'),
+    protocolModePredict: t('agent.protocolModePredict'),
+    protocolModeMessages: t('agent.protocolModeMessages'),
+    streamMode: t('agent.streamMode'),
+    streamModeAuto: t('agent.streamModeAuto'),
+    streamModeAlways: t('agent.streamModeAlways'),
+    streamModeNever: t('agent.streamModeNever'),
+  };
 }
 
 export default function AgentConsole() {
-  const { locale, formatDateTime } = useI18n();
-  const labels = copy[locale];
+  const { locale, formatDateTime, t } = useI18n();
+  const labels = getAgentLabels(t);
   const [tab, setTab] = useState<ConsoleTab>(initialConsoleTab);
   const [advancedSection, setAdvancedSection] = useState<AdvancedSection>('agents');
   const [providers, setProviders] = useState<ProviderProfile[]>([]);
@@ -199,7 +228,7 @@ export default function AgentConsole() {
       agentApi.getAgents(),
       agentApi.getAgentRuns(100),
       agentApi.getAgentApprovals('pending', 100),
-      loadToolCatalog(),
+      agentApi.getToolCatalog(),
       agentApi.getAgentSkills(),
       workflowApi.getWorkflows(),
       loadWorkflowRuns(),
@@ -261,7 +290,7 @@ export default function AgentConsole() {
     try {
       await load();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : labels.requestFailed);
+      setError(reason instanceof Error ? reason.message : t('agent.requestFailed'));
     }
   };
 
@@ -281,7 +310,7 @@ export default function AgentConsole() {
         setNotice(locale === 'zh' ? `已初始化 ${result.starter_agents_created} 个默认 Agent，全部保持停用，等待你审核启用。` : `Initialized ${result.starter_agents_created} default Agents. They remain disabled until reviewed.`);
       }
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : labels.requestFailed);
+      setError(reason instanceof Error ? reason.message : t('agent.requestFailed'));
     }
   };
 
@@ -292,7 +321,7 @@ export default function AgentConsole() {
       setEditingEmbedding(null);
       await refresh();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : labels.requestFailed);
+      setError(reason instanceof Error ? reason.message : t('agent.requestFailed'));
     }
   };
 
@@ -303,7 +332,7 @@ export default function AgentConsole() {
       setEditingAgent(null);
       await refresh();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : labels.requestFailed);
+      setError(reason instanceof Error ? reason.message : t('agent.requestFailed'));
     }
   };
 
@@ -314,7 +343,7 @@ export default function AgentConsole() {
       setEditingSkill(null);
       await refresh();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : labels.requestFailed);
+      setError(reason instanceof Error ? reason.message : t('agent.requestFailed'));
     }
   };
 
@@ -338,14 +367,14 @@ export default function AgentConsole() {
       try {
         payload = JSON.parse(text);
       } catch {
-        setError(labels.invalidJsonFile);
+        setError(t('agent.invalidJsonFile'));
         return;
       }
       const data = await agentApi.importProviders(payload);
       await refresh();
       setNotice(locale === 'zh' ? `已成功导入 ${data.imported_count} 个模型连接。` : `Successfully imported ${data.imported_count} model connections.`);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : labels.requestFailed);
+      setError(reason instanceof Error ? reason.message : t('agent.requestFailed'));
     }
   };
 
@@ -359,14 +388,14 @@ export default function AgentConsole() {
       try {
         payload = JSON.parse(text);
       } catch {
-        setError(labels.invalidJsonFile);
+        setError(t('agent.invalidJsonFile'));
         return;
       }
       const data = await agentApi.importSkill(payload);
       await refresh();
       setNotice(locale === 'zh' ? `已成功导入 Skill“${data.name || file.name}”。` : `Successfully imported Skill “${data.name || file.name}”.`);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : labels.requestFailed);
+      setError(reason instanceof Error ? reason.message : t('agent.requestFailed'));
     }
   };
 
@@ -387,7 +416,7 @@ export default function AgentConsole() {
       await mutate(() => agentApi.copySkill(skill.id, name.trim()));
       setNotice(locale === 'zh' ? `已创建 Skill“${name.trim()}”的自定义副本。` : `Created custom Skill copy “${name.trim()}”.`);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : labels.requestFailed);
+      setError(reason instanceof Error ? reason.message : t('agent.requestFailed'));
     }
   };
 
@@ -416,7 +445,7 @@ export default function AgentConsole() {
       await mutate(() => agentApi.runAgent(agent.id));
       selectTab('records');
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : labels.requestFailed);
+      setError(reason instanceof Error ? reason.message : t('agent.requestFailed'));
     }
   };
 
@@ -429,7 +458,7 @@ export default function AgentConsole() {
       await (kind === 'provider' ? agentApi.testProvider(id) : agentApi.testEmbedding(id));
       setNotice(locale === 'zh' ? `${name}：连接成功` : `${name}: connection succeeded`);
     } catch (reason) {
-      setError(locale === 'zh' ? `${name}：${reason instanceof Error ? reason.message : labels.requestFailed}` : `${name}: ${reason instanceof Error ? reason.message : labels.requestFailed}`);
+      setError(locale === 'zh' ? `${name}：${reason instanceof Error ? reason.message : t('agent.requestFailed')}` : `${name}: ${reason instanceof Error ? reason.message : t('agent.requestFailed')}`);
     } finally {
       setTestingConnections((current) => current.filter((item) => item !== key));
     }
@@ -440,7 +469,7 @@ export default function AgentConsole() {
       const detail = await agentApi.getAgentRunDetail(String(run.id));
       setSelectedRun(detail);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : labels.requestFailed);
+      setError(reason instanceof Error ? reason.message : t('agent.requestFailed'));
     }
   };
 
@@ -459,9 +488,9 @@ export default function AgentConsole() {
         setNotice(locale === 'zh' ? '已批准。图片正在本次 Workflow 运行中生成，完成后可在此选择、预览和应用。' : 'Approved. Images are generating in this Workflow Run; choose, preview, and apply them here when ready.');
         return;
       }
-      setNotice(approved ? labels.approve : labels.reject);
+      setNotice(approved ? t('agent.approve') : t('agent.reject'));
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : labels.requestFailed);
+      setError(reason instanceof Error ? reason.message : t('agent.requestFailed'));
     }
   };
 
@@ -472,7 +501,7 @@ export default function AgentConsole() {
       setSelectedRun(null);
       setNotice(locale === 'zh' ? '运行记录已清理。' : 'Run record deleted.');
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : labels.requestFailed);
+      setError(reason instanceof Error ? reason.message : t('agent.requestFailed'));
     }
   };
 
@@ -485,28 +514,28 @@ export default function AgentConsole() {
       else await mutate(() => agentApi.deleteEmbeddingProfile(deleteTarget.value.id));
       setDeleteTarget(null);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : labels.requestFailed);
+      setError(reason instanceof Error ? reason.message : t('agent.requestFailed'));
     }
   };
 
-  if (loading) return <AdminPageState title={labels.title} description={labels.pageDescription} label={labels.loading} />;
+  if (loading) return <AdminPageState title={t('agent.title')} description={t('agent.pageDescription')} label={t('agent.loading')} />;
 
   const tabs = [
-    ['overview', Sparkles, labels.overview],
-    ['inbox', ShieldCheck, labels.inbox],
-    ['automation', GitBranch, labels.automation],
-    ['records', Clock3, labels.records],
-    ['advanced', Settings2, labels.advanced],
+    ['overview', Sparkles, t('agent.overview')],
+    ['inbox', ShieldCheck, t('agent.inbox')],
+    ['automation', GitBranch, t('agent.automation')],
+    ['records', Clock3, t('agent.records')],
+    ['advanced', Settings2, t('agent.advanced')],
   ] as const;
 
   return (
     <AdminPage className="agent-console">
       <AdminPageHeader
-        title={labels.title}
-        description={labels.pageDescription}
+        title={t('agent.title')}
+        description={t('agent.pageDescription')}
         actions={
           <Button variant="secondary" type="button" onClick={() => void refresh()}>
-            <RefreshCw />{labels.refresh}
+            <RefreshCw />{t('agent.refresh')}
           </Button>
         }
       />
@@ -541,7 +570,7 @@ export default function AgentConsole() {
         </div>
       ) : null}
       <Tabs value={tab} onValueChange={(value) => selectTab(value as ConsoleTab)} id="agent-workspace">
-        <TabList label={labels.title}>
+        <TabList label={t('agent.title')}>
           {tabs.map(([value, Icon, label]) => (
             <Tab key={value} value={value}>
               <Icon aria-hidden="true" />
@@ -730,23 +759,23 @@ export default function AgentConsole() {
         open={deleteTarget !== null}
         title={
           deleteTarget?.kind === 'agent'
-            ? labels.deleteAgentConfirm
+            ? t('agent.deleteAgentConfirm')
             : deleteTarget?.kind === 'embedding'
-            ? labels.deleteEmbeddingConfirm
+            ? t('agent.deleteEmbeddingConfirm')
             : deleteTarget?.kind === 'skill'
-            ? labels.deleteSkillConfirm
-            : labels.deleteProviderConfirm
+            ? t('agent.deleteSkillConfirm')
+            : t('agent.deleteProviderConfirm')
         }
         description={
           deleteTarget?.kind === 'agent'
-            ? labels.deleteAgentConfirm
+            ? t('agent.deleteAgentConfirm')
             : deleteTarget?.kind === 'embedding'
-            ? labels.deleteEmbeddingConfirm
+            ? t('agent.deleteEmbeddingConfirm')
             : deleteTarget?.kind === 'skill'
-            ? labels.deleteSkillConfirm
-            : labels.deleteProviderConfirm
+            ? t('agent.deleteSkillConfirm')
+            : t('agent.deleteProviderConfirm')
         }
-        confirmLabel={labels.delete}
+        confirmLabel={t('agent.delete')}
         danger
         onClose={() => setDeleteTarget(null)}
         onConfirm={deleteSelected}

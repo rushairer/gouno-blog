@@ -47,12 +47,12 @@ func NewGrowthController(growth *service.GrowthService, posts *service.PostServi
 func (ctrl *GrowthController) RelatedPosts(c *gin.Context) {
 	post, err := ctrl.community.ResolvePublishedPost(c.Request.Context(), c.Param("slugOrID"))
 	if err != nil {
-		writeCommunityError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	posts, err := ctrl.growth.RelatedPosts(c.Request.Context(), post)
 	if err != nil {
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(posts))
@@ -61,11 +61,11 @@ func (ctrl *GrowthController) RelatedPosts(c *gin.Context) {
 func (ctrl *GrowthController) TrackView(c *gin.Context) {
 	post, err := ctrl.community.ResolvePublishedPost(c.Request.Context(), c.Param("slugOrID"))
 	if err != nil {
-		writeCommunityError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	if err := ctrl.posts.IncrementViews(c.Request.Context(), post.ID); err != nil {
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	identity := c.ClientIP()
@@ -82,30 +82,30 @@ func (ctrl *GrowthController) TrackView(c *gin.Context) {
 }
 
 func (ctrl *GrowthController) ListVersions(c *gin.Context) {
-	postID, ok := positiveID(c, "id")
+	postID, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	versions, err := ctrl.growth.ListVersions(c.Request.Context(), postID)
 	if err != nil {
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(versions))
 }
 
 func (ctrl *GrowthController) RestoreVersion(c *gin.Context) {
-	postID, ok := positiveID(c, "id")
+	postID, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
-	versionID, ok := positiveID(c, "versionID")
+	versionID, ok := ParamPositiveID(c, "versionID")
 	if !ok {
 		return
 	}
 	post, err := ctrl.growth.RestoreVersion(c.Request.Context(), postID, versionID)
 	if err != nil {
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(post))
@@ -114,7 +114,7 @@ func (ctrl *GrowthController) RestoreVersion(c *gin.Context) {
 func (ctrl *GrowthController) ListMedia(c *gin.Context) {
 	assets, err := ctrl.growth.ListMedia(c.Request.Context())
 	if err != nil {
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(assets))
@@ -134,17 +134,17 @@ func (ctrl *GrowthController) UploadMedia(c *gin.Context) {
 	}
 	storageName, err := randomMediaName(extension)
 	if err != nil {
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	source, err := header.Open()
 	if err != nil {
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	defer source.Close()
 	if err := ctrl.media.Put(c.Request.Context(), storageName, source, contentType); err != nil {
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	asset := &domain.MediaAsset{
@@ -158,14 +158,14 @@ func (ctrl *GrowthController) UploadMedia(c *gin.Context) {
 	}
 	if err := ctrl.growth.CreateMedia(c.Request.Context(), asset); err != nil {
 		_ = ctrl.media.Delete(c.Request.Context(), storageName)
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusCreated, gouno.NewSuccessResponse(asset))
 }
 
 func (ctrl *GrowthController) DeleteMedia(c *gin.Context) {
-	id, ok := positiveID(c, "id")
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
@@ -175,7 +175,7 @@ func (ctrl *GrowthController) DeleteMedia(c *gin.Context) {
 			c.JSON(http.StatusConflict, gouno.NewErrorResponse(http.StatusConflict, err.Error()))
 			return
 		}
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	_ = ctrl.media.Delete(c.Request.Context(), asset.StorageName)
@@ -183,13 +183,13 @@ func (ctrl *GrowthController) DeleteMedia(c *gin.Context) {
 }
 
 func (ctrl *GrowthController) MediaReferences(c *gin.Context) {
-	id, ok := positiveID(c, "id")
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	items, err := ctrl.growth.ListMediaReferences(c.Request.Context(), id)
 	if err != nil {
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
@@ -198,14 +198,10 @@ func (ctrl *GrowthController) MediaReferences(c *gin.Context) {
 func (ctrl *GrowthController) Analytics(c *gin.Context) {
 	summary, err := ctrl.growth.AnalyticsSummary(c.Request.Context())
 	if err != nil {
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(summary))
-}
-
-func positiveID(c *gin.Context, name string) (int64, bool) {
-	return ParamPositiveID(c, name)
 }
 
 func validateMedia(header *multipart.FileHeader) (string, string, error) {
