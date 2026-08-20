@@ -5,7 +5,7 @@ import { EmptyState, LoadingState, SectionHeading } from '../components/ui';
 import { authorInitials, DEFAULT_SITE_SETTINGS } from '../config/site-defaults';
 import { postsApi } from '../api/posts';
 import { siteApi } from '../api/site';
-import { markdownToPlainText } from '../markdown';
+import { markdownToPlainText } from '../utils/markdown';
 import type { Post, SiteSettings } from '../types/blog';
 
 const readTime = (post: Post) => Math.max(3, Math.ceil((post.content?.length || post.summary.length) / 500));

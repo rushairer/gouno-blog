@@ -439,3 +439,36 @@ func (r *PostRepository) DeleteComment(ctx context.Context, id int64) error {
 	}
 	return err
 }
+
+func (r *PostRepository) Batch(ctx context.Context, ids []int64, action string) (int64, error) {
+	var (
+		result sql.Result
+		err    error
+	)
+	switch action {
+	case "publish":
+		var invalidCount int
+		err = r.db.QueryRowContext(ctx, `
+			SELECT COUNT(*) FROM posts
+			WHERE id=ANY($1) AND (btrim(title) = '' OR btrim(content) = '')`,
+			pq.Array(ids)).Scan(&invalidCount)
+		if err != nil {
+			return 0, err
+		}
+		if invalidCount > 0 {
+			return 0, fmt.Errorf("posts must have a title and content before publishing")
+		}
+		result, err = r.db.ExecContext(ctx, `UPDATE posts SET status='published', published_at=COALESCE(published_at, NOW()), scheduled_at=NULL, updated_at=NOW() WHERE id=ANY($1)`, pq.Array(ids))
+	case "draft":
+		result, err = r.db.ExecContext(ctx, `UPDATE posts SET status='draft', published_at=NULL, scheduled_at=NULL, updated_at=NOW() WHERE id=ANY($1)`, pq.Array(ids))
+	case "delete":
+		result, err = r.db.ExecContext(ctx, `DELETE FROM posts WHERE id=ANY($1)`, pq.Array(ids))
+	default:
+		return 0, fmt.Errorf("action must be publish, draft, or delete")
+	}
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+

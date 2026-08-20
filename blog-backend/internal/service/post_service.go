@@ -25,6 +25,8 @@ var (
 	ErrInvalidCommentID    = errors.New("invalid comment id")
 	ErrCommentAuthorEmpty  = errors.New("comment author cannot be empty")
 	ErrCommentContentEmpty = errors.New("comment content cannot be empty")
+	ErrBatchInvalidIDs     = errors.New("between 1 and 100 post ids are required")
+	ErrBatchInvalidAction  = errors.New("action must be publish, draft, or delete")
 )
 
 type PostRepository interface {
@@ -48,6 +50,7 @@ type PostRepository interface {
 	GetAllCommentsByPostID(ctx context.Context, postID int64) ([]*domain.Comment, error)
 	SetCommentVisibility(ctx context.Context, id int64, isVisible bool) error
 	DeleteComment(ctx context.Context, id int64) error
+	Batch(ctx context.Context, ids []int64, action string) (int64, error)
 }
 
 type PostService struct {
@@ -211,6 +214,18 @@ func (s *PostService) GetAdminPost(ctx context.Context, id int64) (*domain.Post,
 		return nil, ErrPostNotFound
 	}
 	return post, nil
+}
+
+func (s *PostService) BatchPosts(ctx context.Context, ids []int64, action string) (int64, error) {
+	if len(ids) == 0 || len(ids) > 100 {
+		return 0, ErrBatchInvalidIDs
+	}
+	switch action {
+	case "publish", "draft", "delete":
+	default:
+		return 0, ErrBatchInvalidAction
+	}
+	return s.repo.Batch(ctx, ids, action)
 }
 
 func (s *PostService) GetPostBySlug(ctx context.Context, slug string) (*domain.Post, error) {

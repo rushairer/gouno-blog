@@ -52,6 +52,17 @@ func (s *fakeBlogService) GetPost(_ context.Context, id int64) (*domain.Post, er
 	return s.posts[id], nil
 }
 
+func (s *fakeBlogService) GetAdminPost(_ context.Context, id int64) (*domain.Post, error) {
+	if p, ok := s.posts[id]; ok {
+		return p, nil
+	}
+	return nil, service.ErrPostNotFound
+}
+
+func (s *fakeBlogService) BatchPosts(_ context.Context, ids []int64, action string) (int64, error) {
+	return int64(len(ids)), nil
+}
+
 func (s *fakeBlogService) GetPostBySlug(_ context.Context, slug string) (*domain.Post, error) {
 	return s.postsBySlug[slug], nil
 }
@@ -136,6 +147,8 @@ func setupControllerRouter(svc *fakeBlogService) *gin.Engine {
 	router.PUT("/api/comments/:id/visibility", ctrl.UpdateCommentVisibility)
 	router.POST("/api/posts", ctrl.Create)
 	router.GET("/api/admin/posts", ctrl.ListAdmin)
+	router.GET("/api/admin/posts/:id", ctrl.GetAdmin)
+	router.POST("/api/admin/posts/batch", ctrl.Batch)
 	return router
 }
 
@@ -274,3 +287,29 @@ func TestCreatePostValidationErrorReturnsBadRequest(t *testing.T) {
 		t.Fatalf("status = %d, want 400; body=%s", rec.Code, rec.Body.String())
 	}
 }
+
+func TestGetAdminPost(t *testing.T) {
+	svc := newFakeBlogService()
+	router := setupControllerRouter(svc)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/admin/posts/1", nil)
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestBatchPosts(t *testing.T) {
+	svc := newFakeBlogService()
+	router := setupControllerRouter(svc)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/posts/batch", bytes.NewBufferString(`{"ids":[1],"action":"publish"}`))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+}
+

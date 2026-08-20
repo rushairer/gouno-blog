@@ -17,7 +17,7 @@ export const bookmarksApi = {
   async addBookmark(postID: number | string): Promise<void> {
     return readData<void>(
       apiFetch(`/api/me/bookmarks/${postID}`, {
-        method: 'POST',
+        method: 'PUT',
       })
     );
   },

@@ -5,7 +5,7 @@ import { MarkdownRenderer } from '../components/MarkdownRenderer';
 import { DEFAULT_SITE_SETTINGS } from '../config/site-defaults';
 import { pagesApi } from '../api/pages';
 import { siteApi } from '../api/site';
-import { extractMarkdownTOC } from '../markdown';
+import { extractMarkdownTOC } from '../utils/markdown';
 import type { CustomPage, SiteSettings } from '../types/blog';
 import NotFound from './NotFound';
 

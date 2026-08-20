@@ -7,7 +7,7 @@ import { siteApi } from '../../api/site';
 import { AdminPageState, Button, ConfirmDialog, Feedback, Field, Input, Select, Textarea } from '../../components/ui';
 import { MarkdownRenderer } from '../../components/MarkdownRenderer';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
-import { extractMarkdownTOC } from '../../markdown';
+import { extractMarkdownTOC } from '../../utils/markdown';
 import type { Category, Post, PostStatus } from '../../types/blog';
 
 interface PostVersion extends Post { post_id: number }

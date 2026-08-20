@@ -6,7 +6,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import { Check, Copy } from 'lucide-react';
 import { useI18n } from '../i18n';
-import { markdownHeadingID } from '../markdown';
+import { markdownHeadingID } from '../utils/markdown';
 
 function textContent(value: ReactNode): string {
   if (typeof value === 'string' || typeof value === 'number') return String(value);

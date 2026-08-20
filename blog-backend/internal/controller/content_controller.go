@@ -48,44 +48,6 @@ func (ctrl *ContentController) ListCategoryPosts(c *gin.Context) {
 	WritePaginated(c, posts, total, page, pageSize)
 }
 
-func (ctrl *ContentController) GetAdminPost(c *gin.Context) {
-	id, ok := ParamPositiveID(c, "id")
-	if !ok {
-		return
-	}
-	post, err := ctrl.svc.GetAdminPost(c.Request.Context(), id)
-	if err != nil {
-		if errors.Is(err, service.ErrPostNotFound) {
-			c.JSON(http.StatusNotFound, gouno.NewErrorResponse(http.StatusNotFound, "post not found"))
-			return
-		}
-		writeContentError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(post))
-}
-
-func (ctrl *ContentController) BatchPosts(c *gin.Context) {
-	var req struct {
-		IDs    []int64 `json:"ids"`
-		Action string  `json:"action"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "between 1 and 100 post ids are required"))
-		return
-	}
-	affected, err := ctrl.svc.BatchPosts(c.Request.Context(), req.IDs, req.Action)
-	if err != nil {
-		if errors.Is(err, service.ErrBatchInvalidIDs) || errors.Is(err, service.ErrBatchInvalidAction) {
-			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
-			return
-		}
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
-		return
-	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"affected": affected}))
-}
-
 func (ctrl *ContentController) CreateCategory(c *gin.Context) {
 	var req service.CategoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
