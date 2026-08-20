@@ -9,9 +9,9 @@ import type { CommunityComment } from '../api/comments';
 import { postsApi } from '../api/posts';
 import { Badge, EmptyState, Feedback, Field, LoadingState, Modal, Panel } from '../components/ui';
 import { useI18n } from '../i18n';
-import { useArticleSEO } from '../seo';
+import { useArticleSEO } from '../utils/seo';
 import { MarkdownRenderer } from '../components/MarkdownRenderer';
-import { extractMarkdownTOC } from '../markdown';
+import { extractMarkdownTOC } from '../utils/markdown';
 import type { Post } from '../types/blog';
 
 interface CommentItemProps {

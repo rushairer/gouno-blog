@@ -4,7 +4,7 @@ import { ArrowRight, SlidersHorizontal } from 'lucide-react';
 import { EmptyState, LoadingState, Pagination, SearchField } from '../components/ui';
 import { postsApi } from '../api/posts';
 import { siteApi } from '../api/site';
-import { markdownToPlainText } from '../markdown';
+import { markdownToPlainText } from '../utils/markdown';
 import type { Post } from '../types/blog';
 
 export default function ArticleIndex({ mode = 'articles' }: { mode?: 'articles' | 'search' | 'tag' | 'category' }) {

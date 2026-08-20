@@ -16,6 +16,8 @@ type BlogService interface {
 	UpdatePost(ctx context.Context, post *domain.Post) error
 	DeletePost(ctx context.Context, id int64) error
 	GetPost(ctx context.Context, id int64) (*domain.Post, error)
+	GetAdminPost(ctx context.Context, id int64) (*domain.Post, error)
+	BatchPosts(ctx context.Context, ids []int64, action string) (int64, error)
 	GetPostBySlug(ctx context.Context, slug string) (*domain.Post, error)
 	ResolvePostID(ctx context.Context, slugOrID string) (int64, error)
 	IncrementViews(ctx context.Context, id int64) error
@@ -140,6 +142,36 @@ func (ctrl *PostController) ListAdmin(c *gin.Context) {
 		return
 	}
 	WritePaginated(c, posts, total, page, pageSize)
+}
+
+func (ctrl *PostController) GetAdmin(c *gin.Context) {
+	id, ok := ParamPositiveID(c, "id")
+	if !ok {
+		return
+	}
+	post, err := ctrl.svc.GetAdminPost(c.Request.Context(), id)
+	if err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(post))
+}
+
+func (ctrl *PostController) Batch(c *gin.Context) {
+	var req struct {
+		IDs    []int64 `json:"ids"`
+		Action string  `json:"action"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "between 1 and 100 post ids are required"))
+		return
+	}
+	affected, err := ctrl.svc.BatchPosts(c.Request.Context(), req.IDs, req.Action)
+	if err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"affected": affected}))
 }
 
 func (ctrl *PostController) Delete(c *gin.Context) {

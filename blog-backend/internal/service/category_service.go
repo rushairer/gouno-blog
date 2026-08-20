@@ -22,8 +22,6 @@ var (
 	ErrSiteTitleEmpty       = errors.New("site title cannot be empty")
 	ErrInvalidRSSURL        = errors.New("rss_url must be a site path or an http(s) URL")
 	ErrInvalidGithubURL     = errors.New("github_url must be an http(s) URL")
-	ErrBatchInvalidIDs      = errors.New("between 1 and 100 post ids are required")
-	ErrBatchInvalidAction   = errors.New("action must be publish, draft, or delete")
 )
 
 var categorySlugPattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
@@ -57,9 +55,6 @@ type CategoryService interface {
 
 	GetSiteSettings(ctx context.Context) (map[string]string, error)
 	UpdateSiteSettings(ctx context.Context, requested map[string]string) (map[string]string, error)
-
-	GetAdminPost(ctx context.Context, id int64) (*domain.Post, error)
-	BatchPosts(ctx context.Context, ids []int64, action string) (int64, error)
 }
 
 type categoryService struct {
@@ -195,19 +190,3 @@ func (s *categoryService) UpdateSiteSettings(ctx context.Context, requested map[
 	return s.repo.UpdateSiteSettings(ctx, clean)
 }
 
-func (s *categoryService) GetAdminPost(ctx context.Context, id int64) (*domain.Post, error) {
-	if id <= 0 {
-		return nil, ErrPostNotFound
-	}
-	return s.repo.GetAdminPost(ctx, id)
-}
-
-func (s *categoryService) BatchPosts(ctx context.Context, ids []int64, action string) (int64, error) {
-	if len(ids) == 0 || len(ids) > 100 {
-		return 0, ErrBatchInvalidIDs
-	}
-	if action != "publish" && action != "draft" && action != "delete" {
-		return 0, ErrBatchInvalidAction
-	}
-	return s.repo.BatchPosts(ctx, ids, action)
-}

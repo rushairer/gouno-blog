@@ -170,6 +170,10 @@ func (r *fakePostRepo) DeleteComment(context.Context, int64) error {
 	return nil
 }
 
+func (r *fakePostRepo) Batch(_ context.Context, ids []int64, _ string) (int64, error) {
+	return int64(len(ids)), nil
+}
+
 func TestCreatePostNormalizesSlugAndSummary(t *testing.T) {
 	repo := newFakePostRepo()
 	svc := NewPostService(repo)
@@ -379,3 +383,18 @@ func TestCommentsDefaultToModeratedVisibility(t *testing.T) {
 		t.Fatalf("public comments length after approval = %d, want 2", len(publicComments))
 	}
 }
+
+func TestBatchPostsValidation(t *testing.T) {
+	svc := NewPostService(newFakePostRepo())
+	if _, err := svc.BatchPosts(context.Background(), nil, "publish"); !errors.Is(err, ErrBatchInvalidIDs) {
+		t.Fatalf("BatchPosts(nil) err = %v, want ErrBatchInvalidIDs", err)
+	}
+	if _, err := svc.BatchPosts(context.Background(), []int64{1}, "invalid"); !errors.Is(err, ErrBatchInvalidAction) {
+		t.Fatalf("BatchPosts(invalid) err = %v, want ErrBatchInvalidAction", err)
+	}
+	affected, err := svc.BatchPosts(context.Background(), []int64{1, 2}, "publish")
+	if err != nil || affected != 2 {
+		t.Fatalf("BatchPosts(valid) = (%d, %v), want (2, nil)", affected, err)
+	}
+}
+

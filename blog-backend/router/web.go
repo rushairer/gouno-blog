@@ -215,8 +215,8 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 		{
 			admin.POST("/posts", ctrl.Create)
 			admin.GET("/admin/posts", ctrl.ListAdmin)
-			admin.GET("/admin/posts/:id", contentCtrl.GetAdminPost)
-			admin.POST("/admin/posts/batch", contentCtrl.BatchPosts)
+			admin.GET("/admin/posts/:id", ctrl.GetAdmin)
+			admin.POST("/admin/posts/batch", ctrl.Batch)
 			admin.PUT("/posts/:slugOrID", ctrl.Update)
 			admin.DELETE("/posts/:slugOrID", ctrl.Delete)
 			admin.GET("/admin/pages", pageCtrl.ListAdmin)
