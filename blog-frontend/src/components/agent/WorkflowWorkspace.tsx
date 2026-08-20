@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { workflowApi } from '../../api/workflows';
 import type { AutomationPlan } from '../../api/workflows';
-import type { Agent, ToolDefinition, Workflow, WorkflowMetric, WorkflowRun, WorkflowStep } from '../../agent';
+import type { Agent, ToolDefinition, Workflow, WorkflowMetric, WorkflowRun, WorkflowStep } from '../../types/agent';
 import { Button, Checkbox, ConfirmDialog, EditorPanel, EmptyState, Feedback, Field, FormActions, FormLayout, Input, PanelHeader, SearchField, Select, WorkspacePanel } from '../ui';
 import { StatusPill } from './StatusPill';
 import { statusLabel } from './labels';

@@ -1,5 +1,5 @@
 import { ArrowLeft, Eye, ListChecks, Trash2 } from 'lucide-react';
-import type { Agent, AgentRun, AgentToolCall } from '../../agent';
+import type { Agent, AgentRun, AgentToolCall } from '../../types/agent';
 import { RiskPill, StatusPill } from './StatusPill';
 import { MarkdownRenderer } from '../MarkdownRenderer';
 import { Button, EmptyState, Panel, PanelHeader, WorkspacePanel } from '../ui';

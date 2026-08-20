@@ -34,14 +34,11 @@ type GrowthController struct {
 	logger    *zap.Logger
 }
 
-func NewGrowthController(growth *service.GrowthService, posts *service.PostService, community *service.CommunityService, store media.Store, loggers ...*zap.Logger) *GrowthController {
-	var l *zap.Logger
-	if len(loggers) > 0 && loggers[0] != nil {
-		l = loggers[0]
-	} else {
-		l = zap.L()
+func NewGrowthController(growth *service.GrowthService, posts *service.PostService, community *service.CommunityService, store media.Store, logger *zap.Logger) *GrowthController {
+	if logger == nil {
+		logger = zap.L()
 	}
-	return &GrowthController{growth: growth, posts: posts, community: community, media: store, logger: l}
+	return &GrowthController{growth: growth, posts: posts, community: community, media: store, logger: logger}
 }
 
 func (ctrl *GrowthController) RelatedPosts(c *gin.Context) {

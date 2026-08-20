@@ -172,11 +172,7 @@ func containsString(values []string, target string) bool {
 	return false
 }
 
-func NewService(db *sql.DB, runner *agentservice.Runner, agents *agentservice.ManagementService, registries ...*tool.Registry) *Service {
-	var registry *tool.Registry
-	if len(registries) > 0 {
-		registry = registries[0]
-	}
+func NewService(db *sql.DB, runner *agentservice.Runner, agents *agentservice.ManagementService, registry *tool.Registry) *Service {
 	return &Service{db: db, runner: runner, agents: agents, tools: registry, catalog: NewResourceCatalog(db), workerSem: make(chan struct{}, 4)}
 }
 

@@ -1,5 +1,5 @@
 import { ChevronRight, ShieldCheck, X } from 'lucide-react';
-import type { AgentApproval, ContentCandidateSet, EditorialTask, MediaCandidate, OperationalSuggestion, WorkflowInteractionTask } from '../../agent';
+import type { AgentApproval, ContentCandidateSet, EditorialTask, MediaCandidate, OperationalSuggestion, WorkflowInteractionTask } from '../../types/agent';
 import { workflowApi } from '../../api/workflows';
 import { ProposalPreview } from './ProposalPreview';
 import { StatusPill } from './StatusPill';

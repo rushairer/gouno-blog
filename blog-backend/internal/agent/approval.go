@@ -33,12 +33,8 @@ type ApprovalService struct {
 	media      media.Store
 }
 
-func NewApprovalService(repo *repository.AgentRepository, posts *service.PostService, management *ManagementService, growth *service.GrowthService, store media.Store, pages ...*service.PageService) *ApprovalService {
-	var pageSvc *service.PageService
-	if len(pages) > 0 {
-		pageSvc = pages[0]
-	}
-	return &ApprovalService{repo: repo, posts: posts, pages: pageSvc, management: management, growth: growth, media: store}
+func NewApprovalService(repo *repository.AgentRepository, posts *service.PostService, management *ManagementService, growth *service.GrowthService, store media.Store, pages *service.PageService) *ApprovalService {
+	return &ApprovalService{repo: repo, posts: posts, pages: pages, management: management, growth: growth, media: store}
 }
 
 func (s *ApprovalService) SetPageService(pages *service.PageService) {

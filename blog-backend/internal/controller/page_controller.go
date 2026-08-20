@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -94,9 +93,7 @@ func (ctrl *PageController) GetNavPages(c *gin.Context) {
 }
 
 func (ctrl *PageController) ListAdmin(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "50"))
-	page, pageSize = normalizedPagination(page, pageSize, 50)
+	page, pageSize := ExtractPagination(c, 50)
 
 	filter := domain.AdminPageFilter{
 		Query:  c.Query("q"),
@@ -105,7 +102,7 @@ func (ctrl *PageController) ListAdmin(c *gin.Context) {
 
 	pages, total, err := ctrl.svc.ListAdminPages(c.Request.Context(), filter, page, pageSize)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gouno.NewErrorResponse(http.StatusInternalServerError, "failed to list pages"))
+		WriteDomainError(c, err)
 		return
 	}
 	WritePaginated(c, pages, total, page, pageSize)

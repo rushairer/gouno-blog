@@ -1,7 +1,7 @@
 import { DatabaseZap, Save } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import type { EmbeddingProfile } from '../../agent';
+import type { EmbeddingProfile } from '../../types/agent';
 import { Button, EditorPanel, Field, FormActions, FormGrid, FormLayout } from '../ui';
 
 export type EmbeddingFormValue = {

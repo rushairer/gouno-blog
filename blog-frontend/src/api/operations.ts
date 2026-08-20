@@ -1,4 +1,4 @@
-import type { ContentCandidateSet, EditorialTask, MediaCandidate, OperationalSuggestion } from '../agent';
+import type { ContentCandidateSet, EditorialTask, MediaCandidate, OperationalSuggestion } from '../types/agent';
 import { authenticatedApiFetch as apiFetch, readData } from './client';
 
 export interface ArticleImagePreview {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Check, KeyRound, LockKeyhole, Play, RotateCcw, ShieldOff, Trash2 } from 'lucide-react';
-import type { ConnectorKind, ConnectorOutboxItem, ConnectorProfile } from '../../agent';
+import type { ConnectorKind, ConnectorOutboxItem, ConnectorProfile } from '../../types/agent';
 import { connectorApi } from '../../api/connectors';
 import { Button, EmptyState, Feedback, Panel, PanelHeader, Select } from '../ui';
 

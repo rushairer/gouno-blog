@@ -1,6 +1,6 @@
 import { Check, ChevronDown, Image, Lightbulb, Play, RefreshCw, ThumbsDown, X } from 'lucide-react';
 import { useState } from 'react';
-import type { ContentCandidateSet, EditorialTask, MediaCandidate, OperationalSuggestion } from '../../agent';
+import type { ContentCandidateSet, EditorialTask, MediaCandidate, OperationalSuggestion } from '../../types/agent';
 import { operationsApi } from '../../api/operations';
 import { BulkActionBar, Button, Checkbox, EmptyState, Panel } from '../ui';
 import { StatusPill } from './StatusPill';

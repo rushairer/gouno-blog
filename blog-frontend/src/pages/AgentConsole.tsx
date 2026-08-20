@@ -60,7 +60,7 @@ export default function AgentConsole() {
   const [interactions, setInteractions] = useState<WorkflowInteractionTask[]>([]);
   const [editorialTasks, setEditorialTasks] = useState<EditorialTask[]>([]);
   const [selectedApproval, setSelectedApproval] = useState<AgentApproval | null>(null);
-  const [selectedRun, setSelectedRun] = useState<{ run: AgentRun; tool_calls: import('../agent').AgentToolCall[] } | null>(null);
+  const [selectedRun, setSelectedRun] = useState<{ run: AgentRun; tool_calls: import('../types/agent').AgentToolCall[] } | null>(null);
   const [editingAgent, setEditingAgent] = useState<Agent | 'new' | null>(null);
   const [editingProvider, setEditingProvider] = useState<ProviderProfile | 'new' | null>(null);
   const [editingEmbedding, setEditingEmbedding] = useState<EmbeddingProfile | 'new' | null>(null);
@@ -307,7 +307,7 @@ export default function AgentConsole() {
   const saveWorkflow = async (value: {
     id?: number; name: string; description: string; enabled: boolean;
     cron_expression?: string; timezone: string; input_schema: Record<string, unknown>;
-    steps: import('../agent').WorkflowStep[]; scope_policy: import('../agent').WorkflowScopePolicy;
+    steps: import('../types/agent').WorkflowStep[]; scope_policy: import('../types/agent').WorkflowScopePolicy;
   }) => {
     await workflowApi.save(value);
     await refresh();

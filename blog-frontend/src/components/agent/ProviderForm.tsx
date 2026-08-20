@@ -1,8 +1,8 @@
 import { KeyRound, Save } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import type { ProviderProfile, ProviderType } from '../../agent';
-import { emptyProvider } from '../../agent';
+import type { ProviderProfile, ProviderType } from '../../types/agent';
+import { emptyProvider } from '../../types/agent';
 import { Button, EditorPanel, Field, FormActions, FormGrid, FormLayout, Select } from '../ui';
 
 export interface ProviderFormValue {

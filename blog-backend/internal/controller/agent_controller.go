@@ -656,9 +656,7 @@ func (ctrl *AgentController) RunAgent(c *gin.Context) {
 
 func (ctrl *AgentController) ListRuns(c *gin.Context) {
 	agentIDValue, _ := strconv.ParseInt(c.Query("agent_id"), 10, 64)
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "50"))
-	page, pageSize = normalizedPagination(page, pageSize, 50)
+	page, pageSize := ExtractPagination(c, 50)
 	items, total, err := ctrl.runner.ListRuns(c.Request.Context(), agentIDValue, page, pageSize)
 	if err != nil {
 		WriteDomainError(c, err)
@@ -702,9 +700,7 @@ func (ctrl *AgentController) ToolCatalog(c *gin.Context) {
 }
 
 func (ctrl *AgentController) ListApprovals(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "50"))
-	page, pageSize = normalizedPagination(page, pageSize, 50)
+	page, pageSize := ExtractPagination(c, 50)
 	items, total, err := ctrl.approvals.List(c.Request.Context(), c.DefaultQuery("status", "pending"), page, pageSize)
 	if err != nil {
 		WriteDomainError(c, err)
