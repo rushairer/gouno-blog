@@ -9,7 +9,7 @@ import type {
   ProviderProfile,
   ToolDefinition,
   WorkflowInteractionTask,
-} from '../agent';
+} from '../types/agent';
 
 export const agentApi = {
   async getToolCatalog(): Promise<ToolDefinition[]> {

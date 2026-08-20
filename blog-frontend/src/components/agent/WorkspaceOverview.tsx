@@ -1,5 +1,5 @@
 import { GitBranch, Lightbulb, Play, ShieldCheck, Sparkles } from 'lucide-react';
-import type { AgentApproval, ContentCandidateSet, MediaCandidate, OperationalSuggestion, Workflow } from '../../agent';
+import type { AgentApproval, ContentCandidateSet, MediaCandidate, OperationalSuggestion, Workflow } from '../../types/agent';
 import { Button, Panel } from '../ui';
 
 export type ConsoleTab = 'overview' | 'inbox' | 'automation' | 'records' | 'advanced';

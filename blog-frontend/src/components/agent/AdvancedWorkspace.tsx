@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import type {
   Agent, AgentRun, AgentSkill, EmbeddingProfile, ProviderProfile, ToolDefinition,
-} from '../../agent';
+} from '../../types/agent';
 import { AgentForm } from './AgentForm';
 import { SkillForm } from './SkillForm';
 import type { SkillFormValue } from './SkillForm';

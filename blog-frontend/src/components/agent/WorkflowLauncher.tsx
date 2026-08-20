@@ -1,7 +1,7 @@
 import { Play, Sparkles } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { workflowApi } from '../../api/workflows';
-import type { Workflow } from '../../agent';
+import type { Workflow } from '../../types/agent';
 import { Button, Feedback, Modal, Select } from '../ui';
 import { WorkflowInputForm } from './WorkflowInputForm';
 

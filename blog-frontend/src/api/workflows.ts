@@ -7,7 +7,7 @@ import type {
   WorkflowRun,
   WorkflowRunEvent,
   WorkflowStepRun,
-} from '../agent';
+} from '../types/agent';
 import { authenticatedApiFetch as apiFetch, readData } from './client';
 
 export interface ResourceOption {

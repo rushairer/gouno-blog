@@ -3,7 +3,6 @@ package controller
 import (
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/service"
@@ -32,9 +31,7 @@ func (ctrl *ContentController) ListCategories(c *gin.Context) {
 }
 
 func (ctrl *ContentController) ListCategoryPosts(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
-	page, pageSize = normalizedPagination(page, pageSize, 10)
+	page, pageSize := ExtractPagination(c, 10)
 
 	posts, total, err := ctrl.svc.ListCategoryPosts(c.Request.Context(), c.Param("slug"), page, pageSize)
 	if err != nil {

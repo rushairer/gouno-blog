@@ -21,19 +21,16 @@ type CommunityController struct {
 	logger          *zap.Logger
 }
 
-func NewCommunityController(svc *service.CommunityService, limiter service.RateLimiter, visitorSecret string, loggers ...*zap.Logger) *CommunityController {
-	var l *zap.Logger
-	if len(loggers) > 0 && loggers[0] != nil {
-		l = loggers[0]
-	} else {
-		l = zap.L()
+func NewCommunityController(svc *service.CommunityService, limiter service.RateLimiter, visitorSecret string, logger *zap.Logger) *CommunityController {
+	if logger == nil {
+		logger = zap.L()
 	}
 	return &CommunityController{
 		svc:             svc,
 		limiter:         limiter,
 		fallbackLimiter: service.NewMemoryRateLimiter(),
 		visitorTokens:   service.NewVisitorTokenManager(visitorSecret),
-		logger:          l,
+		logger:          logger,
 	}
 }
 
@@ -317,9 +314,7 @@ func (ctrl *CommunityController) ClearNotifications(c *gin.Context) {
 }
 
 func (ctrl *CommunityController) ListAdminComments(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "50"))
-	page, pageSize = normalizedPagination(page, pageSize, 50)
+	page, pageSize := ExtractPagination(c, 50)
 	reported, _ := strconv.ParseBool(c.DefaultQuery("reported", "false"))
 	items, total, err := ctrl.svc.ListAdminComments(c.Request.Context(), c.DefaultQuery("status", "pending"), reported, page, pageSize)
 	if err != nil {

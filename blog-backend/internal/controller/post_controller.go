@@ -127,9 +127,7 @@ func (ctrl *PostController) Update(c *gin.Context) {
 }
 
 func (ctrl *PostController) ListAdmin(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "50"))
-	page, pageSize = normalizedPagination(page, pageSize, 50)
+	page, pageSize := ExtractPagination(c, 50)
 	filter := domain.AdminPostFilter{
 		Query:    c.Query("q"),
 		Status:   domain.PostStatus(c.Query("status")),
@@ -231,9 +229,7 @@ func (ctrl *PostController) List(c *gin.Context) {
 	if search == "" {
 		search = c.Query("q")
 	}
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
-	page, pageSize = normalizedPagination(page, pageSize, 10)
+	page, pageSize := ExtractPagination(c, 10)
 
 	posts, total, err := ctrl.svc.ListPosts(c.Request.Context(), tag, search, page, pageSize)
 	if err != nil {

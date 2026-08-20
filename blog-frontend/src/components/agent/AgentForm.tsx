@@ -1,8 +1,8 @@
 import { Bot, Save } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import type { Agent, AgentSkill, ProviderProfile, TriggerType } from '../../agent';
-import { emptyAgent } from '../../agent';
+import type { Agent, AgentSkill, ProviderProfile, TriggerType } from '../../types/agent';
+import { emptyAgent } from '../../types/agent';
 import { Button, EditorPanel, Field, FormActions, FormGrid, FormLayout, Select } from '../ui';
 
 type AgentFormValue = Omit<Agent, 'id' | 'created_at' | 'updated_at' | 'skill'> & { id?: number };

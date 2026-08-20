@@ -1,7 +1,7 @@
 import { ListChecks, Save } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import type { AgentSkill, ContentPublishMode, ExecutionMode, ToolDefinition } from '../../agent';
+import type { AgentSkill, ContentPublishMode, ExecutionMode, ToolDefinition } from '../../types/agent';
 import { Button, Checkbox, EditorPanel, Field, FormActions, FormGrid, FormLayout, Select } from '../ui';
 import { RiskPill } from './StatusPill';
 

@@ -1,4 +1,4 @@
-import type { ConnectorOutboxItem, ConnectorProfile } from '../agent';
+import type { ConnectorOutboxItem, ConnectorProfile } from '../types/agent';
 import { authenticatedApiFetch as apiFetch, readData } from './client';
 
 export const connectorApi = {
