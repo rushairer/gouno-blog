@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
-	"log"
 	"mime/multipart"
 	"net/http"
 	"strings"
@@ -15,6 +14,7 @@ import (
 	"github.com/rushairer/blog-backend/internal/media"
 	"github.com/rushairer/blog-backend/internal/service"
 	"github.com/rushairer/gouno"
+	"go.uber.org/zap"
 )
 
 const maxMediaSize = 10 << 20
@@ -31,10 +31,17 @@ type GrowthController struct {
 	posts     *service.PostService
 	community *service.CommunityService
 	media     media.Store
+	logger    *zap.Logger
 }
 
-func NewGrowthController(growth *service.GrowthService, posts *service.PostService, community *service.CommunityService, store media.Store) *GrowthController {
-	return &GrowthController{growth: growth, posts: posts, community: community, media: store}
+func NewGrowthController(growth *service.GrowthService, posts *service.PostService, community *service.CommunityService, store media.Store, loggers ...*zap.Logger) *GrowthController {
+	var l *zap.Logger
+	if len(loggers) > 0 && loggers[0] != nil {
+		l = loggers[0]
+	} else {
+		l = zap.L()
+	}
+	return &GrowthController{growth: growth, posts: posts, community: community, media: store, logger: l}
 }
 
 func (ctrl *GrowthController) RelatedPosts(c *gin.Context) {
@@ -69,7 +76,7 @@ func (ctrl *GrowthController) TrackView(c *gin.Context) {
 	}
 	sum := sha256.Sum256([]byte(identity))
 	if err := ctrl.growth.RecordView(c.Request.Context(), post.ID, hex.EncodeToString(sum[:])); err != nil {
-		log.Printf("could not record analytics event: %v", err)
+		ctrl.logger.Warn("could not record analytics event", zap.Error(err), zap.Int64("post_id", post.ID))
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }

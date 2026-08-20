@@ -15,6 +15,7 @@ import (
 	"github.com/rushairer/blog-backend/middleware"
 	"github.com/rushairer/gouno"
 	auth "github.com/rushairer/gouno/auth"
+	"go.uber.org/zap"
 )
 
 type WebRouterOptions struct {
@@ -32,6 +33,7 @@ type WebRouterOptions struct {
 	CommunitySvc       *service.CommunityService
 	GrowthSvc          *service.GrowthService
 	AgentCtrl          *controller.AgentController
+	Logger             *zap.Logger
 }
 
 func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.AuthOptions, jwksURL, redisDSN, visitorSecret, mediaDir string, store media.Store, corsAllowedOrigins []string, agentCtrl *controller.AgentController) {
@@ -91,13 +93,13 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 			interactionLimiter = limiter
 		}
 	}
-	communityCtrl := controller.NewCommunityController(communitySvc, interactionLimiter, opts.VisitorSecret)
+	communityCtrl := controller.NewCommunityController(communitySvc, interactionLimiter, opts.VisitorSecret, opts.Logger)
 
 	growthSvc := opts.GrowthSvc
 	if growthSvc == nil {
 		growthSvc = service.NewGrowthService(repository.NewGrowthRepository(opts.DB))
 	}
-	growthCtrl := controller.NewGrowthController(growthSvc, postSvc, communitySvc, opts.MediaStore)
+	growthCtrl := controller.NewGrowthController(growthSvc, postSvc, communitySvc, opts.MediaStore, opts.Logger)
 
 	if opts.MediaStore != nil {
 		if _, local := opts.MediaStore.LocalPath(".probe"); local && os.MkdirAll(opts.MediaDir, 0o750) == nil {

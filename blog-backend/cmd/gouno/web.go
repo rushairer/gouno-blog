@@ -220,6 +220,7 @@ func startWebServer(cmd *cobra.Command, args []string) {
 		CommunitySvc:       communitySvc,
 		GrowthSvc:          growthSvc,
 		AgentCtrl:          agentCtrl,
+		Logger:             logger,
 	})
 
 	httpServer := &http.Server{

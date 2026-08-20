@@ -4,6 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"crypto/hmac"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -25,6 +30,42 @@ type Actor struct {
 	DisplayName   string
 	Authenticated bool
 }
+
+// VisitorTokenManager encapsulates signing and verification of anonymous visitor identifiers.
+type VisitorTokenManager struct {
+	secret []byte
+}
+
+func NewVisitorTokenManager(secret string) *VisitorTokenManager {
+	if secret == "" {
+		secret = "gouno-blog-development-visitor-secret"
+	}
+	return &VisitorTokenManager{secret: []byte(secret)}
+}
+
+func (m *VisitorTokenManager) Verify(cookieValue string) (string, bool) {
+	parts := strings.SplitN(cookieValue, ".", 2)
+	if len(parts) == 2 && hmac.Equal([]byte(parts[1]), []byte(m.Sign(parts[0]))) {
+		return parts[0], true
+	}
+	return "", false
+}
+
+func (m *VisitorTokenManager) Sign(value string) string {
+	mac := hmac.New(sha256.New, m.secret)
+	_, _ = mac.Write([]byte(value))
+	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+}
+
+func (m *VisitorTokenManager) GenerateVisitorID(clientIP string) string {
+	buf := make([]byte, 18)
+	if _, err := rand.Read(buf); err != nil {
+		sum := sha256.Sum256([]byte(fmt.Sprintf("%d-%s", time.Now().UnixNano(), clientIP)))
+		buf = sum[:18]
+	}
+	return base64.RawURLEncoding.EncodeToString(buf)
+}
+
 
 type CommunityRepository interface {
 	CreateComment(context.Context, *domain.Comment) error
