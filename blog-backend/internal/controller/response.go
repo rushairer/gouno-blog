@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"sync/atomic"
 
 	"github.com/gin-gonic/gin"
 	agentservice "github.com/rushairer/blog-backend/internal/agent"
@@ -14,7 +15,27 @@ import (
 	"github.com/rushairer/blog-backend/internal/service"
 	workflowservice "github.com/rushairer/blog-backend/internal/workflow"
 	"github.com/rushairer/gouno"
+	"go.uber.org/zap"
 )
+
+var globalLogger atomic.Pointer[zap.Logger]
+
+// SetResponseLogger sets the global logger used by response helpers.
+func SetResponseLogger(logger *zap.Logger) {
+	globalLogger.Store(logger)
+}
+
+func getLogger(c *gin.Context) *zap.Logger {
+	if raw, ok := c.Get("logger"); ok {
+		if l, ok := raw.(*zap.Logger); ok && l != nil {
+			return l
+		}
+	}
+	if l := globalLogger.Load(); l != nil {
+		return l
+	}
+	return zap.L()
+}
 
 // ParamInt64 parses an integer parameter from the route context.
 func ParamInt64(c *gin.Context, name string) (int64, bool) {
@@ -22,6 +43,7 @@ func ParamInt64(c *gin.Context, name string) (int64, bool) {
 	id, err := strconv.ParseInt(value, 10, 64)
 	if err != nil || id <= 0 {
 		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, fmt.Sprintf("invalid %s", name)))
+		c.Abort()
 		return 0, false
 	}
 	return id, true
@@ -48,6 +70,7 @@ func WritePaginated(c *gin.Context, list any, total int, page, pageSize int) {
 }
 
 // WriteDomainError maps known domain and repository errors to standard HTTP status codes.
+// It logs 5xx internal server errors at Error level with full context, and 4xx client errors at Warn level.
 func WriteDomainError(c *gin.Context, err error) {
 	status := http.StatusInternalServerError
 	switch {
@@ -113,19 +136,43 @@ func WriteDomainError(c *gin.Context, err error) {
 		status = http.StatusBadRequest
 	}
 
+	logger := getLogger(c)
+	reqID, _ := c.Get("request_id")
+	reqIDStr := ""
+	if s, ok := reqID.(string); ok {
+		reqIDStr = s
+	}
+
 	message := err.Error()
 	if status >= http.StatusInternalServerError {
+		if logger != nil {
+			logger.Error("unhandled internal server error",
+				zap.Error(err),
+				zap.String("path", c.Request.URL.Path),
+				zap.String("method", c.Request.Method),
+				zap.String("request_id", reqIDStr),
+			)
+		}
 		message = "internal server error"
+	} else if logger != nil {
+		logger.Warn("domain request rejected",
+			zap.Error(err),
+			zap.Int("status", status),
+			zap.String("path", c.Request.URL.Path),
+			zap.String("request_id", reqIDStr),
+		)
 	}
+
 	baseResp := gouno.NewErrorResponse(status, message)
 	resp := gin.H{
 		"code":    baseResp.Code,
 		"message": baseResp.Message,
 	}
-	if reqID, ok := c.Get("request_id"); ok {
-		resp["request_id"] = reqID
+	if reqIDStr != "" {
+		resp["request_id"] = reqIDStr
 	}
 	c.JSON(status, resp)
+	c.Abort()
 }
 
 // WriteServiceError is an alias for WriteDomainError for consistent service error dispatch.
