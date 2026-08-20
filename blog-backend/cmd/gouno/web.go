@@ -143,6 +143,19 @@ func startWebServer(cmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Fatalf("configure media storage: %v", err)
 	}
+	postRepo := repository.NewPostRepository(db)
+	postSvc := service.NewPostService(postRepo)
+	pageRepo := repository.NewPageRepository(db)
+	pageSvc := service.NewPageService(pageRepo)
+	catRepo := repository.NewCategoryRepository(db)
+	catSvc := service.NewCategoryService(catRepo)
+	communityRepo := repository.NewCommunityRepository(db)
+	communitySvc := service.NewCommunityService(communityRepo, postRepo)
+	growthRepo := repository.NewGrowthRepository(db)
+	growthSvc := service.NewGrowthService(growthRepo)
+
+	service.StartScheduledPublisher(ctx, postSvc, logger)
+
 	var agentCtrl *controller.AgentController
 	if globalConfig.AIAgentConfig.Enabled {
 		secrets, err := secretbox.NewKeyring(
@@ -154,12 +167,6 @@ func startWebServer(cmd *cobra.Command, args []string) {
 			log.Fatalf("configure AI Agent secret encryption: %v", err)
 		}
 		agentRepo := repository.NewAgentRepository(db)
-		postRepo := repository.NewPostRepository(db)
-		postSvc := service.NewPostService(postRepo)
-		pageRepo := repository.NewPageRepository(db)
-		pageSvc := service.NewPageService(pageRepo)
-		communitySvc := service.NewCommunityService(repository.NewCommunityRepository(db), postRepo)
-		growthSvc := service.NewGrowthService(repository.NewGrowthRepository(db))
 		knowledgeSvc := knowledge.NewService(db, secrets, globalConfig.AIAgentConfig.AllowedHosts, logger)
 		knowledgeSvc.Start(ctx)
 		toolRegistry := tool.NewBlogRegistry(postSvc, communitySvc, growthSvc, pageSvc, knowledgeSvc)
@@ -198,7 +205,22 @@ func startWebServer(cmd *cobra.Command, args []string) {
 			agentRepo, runner, globalConfig.AIAgentConfig.SchedulerInterval, logger,
 		).Start(ctx)
 	}
-	router.RegisterWebRouter(engine, db, authOptions, jwksURL, globalConfig.RedisConfig.DSN, visitorSecret, mediaDir, mediaStore, globalConfig.WebServerConfig.CORSAllowedOrigins, agentCtrl)
+	router.RegisterWebRouterWithOptions(engine, router.WebRouterOptions{
+		DB:                 db,
+		AuthOptions:        authOptions,
+		JWKSURL:            jwksURL,
+		RedisDSN:           globalConfig.RedisConfig.DSN,
+		VisitorSecret:      visitorSecret,
+		MediaDir:           mediaDir,
+		MediaStore:         mediaStore,
+		CORSAllowedOrigins: globalConfig.WebServerConfig.CORSAllowedOrigins,
+		PostSvc:            postSvc,
+		PageSvc:            pageSvc,
+		CategorySvc:        catSvc,
+		CommunitySvc:       communitySvc,
+		GrowthSvc:          growthSvc,
+		AgentCtrl:          agentCtrl,
+	})
 
 	httpServer := &http.Server{
 		Addr:              fmt.Sprintf("%s:%s", globalConfig.WebServerConfig.Address, globalConfig.WebServerConfig.Port),

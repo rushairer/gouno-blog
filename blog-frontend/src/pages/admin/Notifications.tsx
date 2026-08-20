@@ -8,6 +8,7 @@ import {
   AdminPageHeader,
   BulkActionBar,
   Button,
+  buttonClassName,
   Checkbox,
   ConfirmDialog,
   ContentStack,
@@ -394,19 +395,20 @@ export default function AdminNotifications() {
 
                   <div className="admin-notification-actions">
                     {isUnread ? (
-                      <button
-                        className="btn btn-secondary btn-sm"
+                      <Button
+                        variant="secondary"
+                        size="compact"
                         type="button"
                         onClick={() => void markOneRead(item)}
                         title="标为已读"
                       >
                         <Check size={14} /> 标为已读
-                      </button>
+                      </Button>
                     ) : null}
 
                     {destination ? (
                       <Link
-                        className="btn btn-secondary btn-sm"
+                        className={buttonClassName({ variant: 'secondary', size: 'compact' })}
                         to={destination}
                         onClick={() => void markOneRead(item)}
                       >
@@ -414,14 +416,15 @@ export default function AdminNotifications() {
                       </Link>
                     ) : null}
 
-                    <button
-                      className="btn btn-danger btn-sm"
+                    <Button
+                      variant="danger"
+                      size="compact"
                       type="button"
                       onClick={() => setDeleteAction({ kind: 'single', id: item.id, title: displayTitle })}
                       title="删除此通知"
                     >
                       <Trash2 size={14} /> 删除
-                    </button>
+                    </Button>
                   </div>
                 </div>
               );

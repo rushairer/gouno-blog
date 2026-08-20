@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Check, ExternalLink, Save, Send } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { AdminPageState, ConfirmDialog, Feedback, Field, Input, Select, Textarea } from '../../components/ui';
+import { AdminPageState, Button, ConfirmDialog, Feedback, Field, Input, Select, Textarea } from '../../components/ui';
 import { MarkdownRenderer } from '../../components/MarkdownRenderer';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 import { pagesApi } from '../../api/pages';
@@ -197,30 +197,30 @@ export default function PageEditor() {
           )}
         </div>
         <div>
-          <button
-            className="btn btn-secondary"
+          <Button
+            variant="secondary"
             type="button"
             onClick={() => void openFrontsitePreview()}
             disabled={saving}
           >
             <ExternalLink /> 预览前台页面
-          </button>
-          <button
-            className="btn btn-secondary"
+          </Button>
+          <Button
+            variant="secondary"
             type="button"
             onClick={() => void persist('draft')}
             disabled={saving}
           >
             <Save /> 保存草稿
-          </button>
-          <button
-            className="btn btn-primary"
+          </Button>
+          <Button
+            variant="primary"
             type="button"
             onClick={() => void persist('published')}
             disabled={saving}
           >
             <Send /> {page.status === 'published' ? '更新单页' : '发布'}
-          </button>
+          </Button>
         </div>
       </header>
 
