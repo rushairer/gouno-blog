@@ -667,9 +667,7 @@ func (ctrl *AgentController) ListRuns(c *gin.Context) {
 		writeAgentError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{
-		"list": items, "total": total, "page": page, "pageSize": pageSize,
-	}))
+	WritePaginated(c, items, total, page, pageSize)
 }
 
 func (ctrl *AgentController) DeleteRun(c *gin.Context) {
@@ -715,9 +713,7 @@ func (ctrl *AgentController) ListApprovals(c *gin.Context) {
 		writeAgentError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{
-		"list": items, "total": total, "page": page, "pageSize": pageSize,
-	}))
+	WritePaginated(c, items, total, page, pageSize)
 }
 
 type approvalReviewRequest struct {
@@ -801,41 +797,9 @@ func bindWorkflowJSON(c *gin.Context, value any) bool {
 }
 
 func agentID(c *gin.Context) (int64, bool) {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil || id <= 0 {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "invalid id"))
-		return 0, false
-	}
-	return id, true
+	return ParamPositiveID(c, "id")
 }
 
 func writeAgentError(c *gin.Context, err error) {
-	status := http.StatusInternalServerError
-	switch {
-	case errors.Is(err, workflowservice.ErrInvalid):
-		status = http.StatusBadRequest
-	case errors.Is(err, workflowservice.ErrNotFound):
-		status = http.StatusNotFound
-	case errors.Is(err, workflowservice.ErrConflict):
-		status = http.StatusConflict
-	case errors.Is(err, knowledge.ErrInvalid):
-		status = http.StatusBadRequest
-	case errors.Is(err, knowledge.ErrNotFound):
-		status = http.StatusNotFound
-	case errors.Is(err, agentservice.ErrInvalid):
-		status = http.StatusBadRequest
-	case errors.Is(err, agentservice.ErrNotFound):
-		status = http.StatusNotFound
-	case errors.Is(err, agentservice.ErrConflict), errors.Is(err, agentservice.ErrProviderInUse):
-		status = http.StatusConflict
-	case errors.Is(err, agentservice.ErrAlreadyRunning), errors.Is(err, agentservice.ErrRunLimit),
-		errors.Is(err, agentservice.ErrTokenBudget), errors.Is(err, agentservice.ErrApprovalConflict),
-		errors.Is(err, agentservice.ErrApprovalExpired):
-		status = http.StatusConflict
-	}
-	message := err.Error()
-	if status >= http.StatusInternalServerError {
-		message = "internal server error"
-	}
-	c.JSON(status, gouno.NewErrorResponse(status, message))
+	WriteDomainError(c, err)
 }

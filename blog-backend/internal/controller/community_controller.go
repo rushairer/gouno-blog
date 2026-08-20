@@ -4,9 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
-	"database/sql"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -16,7 +14,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/rushairer/blog-backend/internal/repository"
 	"github.com/rushairer/blog-backend/internal/service"
 	"github.com/rushairer/gouno"
 )
@@ -258,13 +255,18 @@ func (ctrl *CommunityController) ListNotifications(c *gin.Context) {
 		writeCommunityError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"list": items, "unread": unread, "page": page, "pageSize": pageSize}))
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{
+		"list":      items,
+		"unread":    unread,
+		"page":      page,
+		"page_size": pageSize,
+		"pageSize":  pageSize,
+	}))
 }
 
 func (ctrl *CommunityController) ReadNotification(c *gin.Context) {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil || id <= 0 {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "invalid notification id"))
+	id, ok := ParamPositiveID(c, "id")
+	if !ok {
 		return
 	}
 	if err := ctrl.svc.ReadNotification(c.Request.Context(), subject(c), id); err != nil {
@@ -283,9 +285,8 @@ func (ctrl *CommunityController) ReadAllNotifications(c *gin.Context) {
 }
 
 func (ctrl *CommunityController) DeleteNotification(c *gin.Context) {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil || id <= 0 {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "invalid notification id"))
+	id, ok := ParamPositiveID(c, "id")
+	if !ok {
 		return
 	}
 	if err := ctrl.svc.DeleteNotification(c.Request.Context(), subject(c), id); err != nil {
@@ -332,7 +333,7 @@ func (ctrl *CommunityController) ListAdminComments(c *gin.Context) {
 		writeCommunityError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"list": items, "total": total, "page": page, "pageSize": pageSize}))
+	WritePaginated(c, items, total, page, pageSize)
 }
 
 type moderateCommentRequest struct {
@@ -344,9 +345,8 @@ type legacyVisibilityRequest struct {
 }
 
 func (ctrl *CommunityController) ModerateComment(c *gin.Context) {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil || id <= 0 {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "invalid comment id"))
+	id, ok := ParamPositiveID(c, "id")
+	if !ok {
 		return
 	}
 	var req moderateCommentRequest
@@ -362,9 +362,8 @@ func (ctrl *CommunityController) ModerateComment(c *gin.Context) {
 }
 
 func (ctrl *CommunityController) LegacyVisibility(c *gin.Context) {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil || id <= 0 {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "invalid comment id"))
+	id, ok := ParamPositiveID(c, "id")
+	if !ok {
 		return
 	}
 	var req legacyVisibilityRequest
@@ -384,9 +383,8 @@ func (ctrl *CommunityController) LegacyVisibility(c *gin.Context) {
 }
 
 func (ctrl *CommunityController) DeleteComment(c *gin.Context) {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil || id <= 0 {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "invalid comment id"))
+	id, ok := ParamPositiveID(c, "id")
+	if !ok {
 		return
 	}
 	if err := ctrl.svc.DeleteComment(c.Request.Context(), id); err != nil {
@@ -397,22 +395,5 @@ func (ctrl *CommunityController) DeleteComment(c *gin.Context) {
 }
 
 func writeCommunityError(c *gin.Context, err error) {
-	switch {
-	case errors.Is(err, service.ErrPostNotFound), errors.Is(err, sql.ErrNoRows):
-		c.JSON(http.StatusNotFound, gouno.NewErrorResponse(http.StatusNotFound, err.Error()))
-	case errors.Is(err, repository.ErrDuplicateInteraction):
-		c.JSON(http.StatusConflict, gouno.NewErrorResponse(http.StatusConflict, "interaction already recorded"))
-	case errors.Is(err, service.ErrCommentContentEmpty),
-		errors.Is(err, service.ErrCommentContentTooLong),
-		errors.Is(err, service.ErrCommentAuthorEmpty),
-		errors.Is(err, service.ErrAuthorTooLong),
-		errors.Is(err, service.ErrParentCommentNotFound),
-		errors.Is(err, service.ErrInvalidCommentStatus),
-		errors.Is(err, service.ErrReportReasonTooLong),
-		errors.Is(err, repository.ErrParentCommentMismatch),
-		errors.Is(err, repository.ErrCommentDepthExceeded):
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
-	default:
-		c.JSON(http.StatusInternalServerError, gouno.NewErrorResponse(http.StatusInternalServerError, "internal server error"))
-	}
+	WriteDomainError(c, err)
 }

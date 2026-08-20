@@ -45,13 +45,12 @@ func (ctrl *ContentController) ListCategoryPosts(c *gin.Context) {
 		writeContentError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"list": posts, "total": total, "page": page, "pageSize": pageSize}))
+	WritePaginated(c, posts, total, page, pageSize)
 }
 
 func (ctrl *ContentController) GetAdminPost(c *gin.Context) {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "invalid post id"))
+	id, ok := ParamPositiveID(c, "id")
+	if !ok {
 		return
 	}
 	post, err := ctrl.svc.GetAdminPost(c.Request.Context(), id)
@@ -106,9 +105,8 @@ func (ctrl *ContentController) CreateCategory(c *gin.Context) {
 }
 
 func (ctrl *ContentController) UpdateCategory(c *gin.Context) {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "invalid category id"))
+	id, ok := ParamPositiveID(c, "id")
+	if !ok {
 		return
 	}
 	var req service.CategoryRequest
@@ -116,7 +114,7 @@ func (ctrl *ContentController) UpdateCategory(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "name and a valid lowercase slug are required"))
 		return
 	}
-	err = ctrl.svc.UpdateCategory(c.Request.Context(), id, &req)
+	err := ctrl.svc.UpdateCategory(c.Request.Context(), id, &req)
 	if err != nil {
 		if errors.Is(err, service.ErrCategoryNotFound) {
 			c.JSON(http.StatusNotFound, gouno.NewErrorResponse(http.StatusNotFound, "category not found"))
@@ -133,12 +131,11 @@ func (ctrl *ContentController) UpdateCategory(c *gin.Context) {
 }
 
 func (ctrl *ContentController) DeleteCategory(c *gin.Context) {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "invalid category id"))
+	id, ok := ParamPositiveID(c, "id")
+	if !ok {
 		return
 	}
-	err = ctrl.svc.DeleteCategory(c.Request.Context(), id)
+	err := ctrl.svc.DeleteCategory(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, service.ErrCategoryNotFound) {
 			c.JSON(http.StatusNotFound, gouno.NewErrorResponse(http.StatusNotFound, "category not found"))
@@ -246,5 +243,5 @@ func writeContentError(c *gin.Context, err error) {
 		c.JSON(http.StatusConflict, gouno.NewErrorResponse(http.StatusConflict, "slug or name is already in use"))
 		return
 	}
-	c.JSON(http.StatusInternalServerError, gouno.NewErrorResponse(http.StatusInternalServerError, "internal server error"))
+	WriteDomainError(c, err)
 }

@@ -110,23 +110,12 @@ func (ctrl *PageController) ListAdmin(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gouno.NewErrorResponse(http.StatusInternalServerError, "failed to list pages"))
 		return
 	}
-	if pages == nil {
-		pages = []*domain.Page{}
-	}
-
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{
-		"list":      pages,
-		"total":     total,
-		"page":      page,
-		"page_size": pageSize,
-	}))
+	WritePaginated(c, pages, total, page, pageSize)
 }
 
 func (ctrl *PageController) GetAdmin(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "invalid page id"))
+	id, ok := ParamPositiveID(c, "id")
+	if !ok {
 		return
 	}
 
@@ -178,10 +167,8 @@ func (ctrl *PageController) Create(c *gin.Context) {
 }
 
 func (ctrl *PageController) Update(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "invalid page id"))
+	id, ok := ParamPositiveID(c, "id")
+	if !ok {
 		return
 	}
 
@@ -224,10 +211,8 @@ func (ctrl *PageController) Update(c *gin.Context) {
 }
 
 func (ctrl *PageController) Delete(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "invalid page id"))
+	id, ok := ParamPositiveID(c, "id")
+	if !ok {
 		return
 	}
 
@@ -248,6 +233,6 @@ func writePageServiceError(c *gin.Context, err error) {
 	case errors.Is(err, service.ErrReservedSlug), errors.Is(err, service.ErrInvalidSlug), errors.Is(err, service.ErrPageTitleEmpty):
 		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
 	default:
-		c.JSON(http.StatusInternalServerError, gouno.NewErrorResponse(http.StatusInternalServerError, "internal server error"))
+		WriteDomainError(c, err)
 	}
 }
