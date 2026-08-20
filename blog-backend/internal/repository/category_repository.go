@@ -17,21 +17,40 @@ var (
 	ErrDuplicateSlug    = errors.New("slug or name is already in use")
 )
 
-type CategoryRepository interface {
+// CategoryReader provides read operations for categories.
+type CategoryReader interface {
 	ListCategories(ctx context.Context) ([]domain.Category, error)
 	GetCategoryBySlug(ctx context.Context, slug string) (*domain.Category, error)
 	ListCategoryPosts(ctx context.Context, categoryID int64, page, pageSize int) ([]domain.Post, int, error)
+}
+
+// CategoryWriter provides write operations for categories.
+type CategoryWriter interface {
 	CreateCategory(ctx context.Context, category *domain.Category) error
 	UpdateCategory(ctx context.Context, category *domain.Category) error
 	DeleteCategory(ctx context.Context, id int64) error
+}
 
+// TagRepository handles tag management operations.
+type TagRepository interface {
 	ListAdminTags(ctx context.Context) ([]domain.TagSummary, error)
 	RenameTag(ctx context.Context, oldName, newName string) error
 	DeleteTag(ctx context.Context, name string) error
 	MergeTags(ctx context.Context, source, target string) error
+}
 
+// SettingRepository handles key-value site settings persistence.
+type SettingRepository interface {
 	GetSiteSettings(ctx context.Context) (map[string]string, error)
 	UpdateSiteSettings(ctx context.Context, settings map[string]string) (map[string]string, error)
+}
+
+// CategoryRepository composites category, tag, and setting persistence operations.
+type CategoryRepository interface {
+	CategoryReader
+	CategoryWriter
+	TagRepository
+	SettingRepository
 }
 
 type categoryRepository struct {
@@ -39,6 +58,14 @@ type categoryRepository struct {
 }
 
 func NewCategoryRepository(db *sql.DB) CategoryRepository {
+	return &categoryRepository{db: db}
+}
+
+func NewTagRepository(db *sql.DB) TagRepository {
+	return &categoryRepository{db: db}
+}
+
+func NewSettingRepository(db *sql.DB) SettingRepository {
 	return &categoryRepository{db: db}
 }
 

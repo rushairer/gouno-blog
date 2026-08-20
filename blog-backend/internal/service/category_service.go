@@ -41,6 +41,21 @@ type CategoryRequest struct {
 	SortOrder   int    `json:"sort_order"`
 }
 
+// TagService handles tag management business logic.
+type TagService interface {
+	ListAdminTags(ctx context.Context) ([]domain.TagSummary, error)
+	RenameTag(ctx context.Context, oldName, newName string) error
+	DeleteTag(ctx context.Context, name string) error
+	MergeTags(ctx context.Context, source, target string) error
+}
+
+// SettingService handles site settings management business logic.
+type SettingService interface {
+	GetSiteSettings(ctx context.Context) (map[string]string, error)
+	UpdateSiteSettings(ctx context.Context, requested map[string]string) (map[string]string, error)
+}
+
+// CategoryService handles category, tag, and setting business operations.
 type CategoryService interface {
 	ListCategories(ctx context.Context) ([]domain.Category, error)
 	ListCategoryPosts(ctx context.Context, slug string, page, pageSize int) ([]domain.Post, int, error)
@@ -48,13 +63,8 @@ type CategoryService interface {
 	UpdateCategory(ctx context.Context, id int64, req *CategoryRequest) error
 	DeleteCategory(ctx context.Context, id int64) error
 
-	ListAdminTags(ctx context.Context) ([]domain.TagSummary, error)
-	RenameTag(ctx context.Context, oldName, newName string) error
-	DeleteTag(ctx context.Context, name string) error
-	MergeTags(ctx context.Context, source, target string) error
-
-	GetSiteSettings(ctx context.Context) (map[string]string, error)
-	UpdateSiteSettings(ctx context.Context, requested map[string]string) (map[string]string, error)
+	TagService
+	SettingService
 }
 
 type categoryService struct {
