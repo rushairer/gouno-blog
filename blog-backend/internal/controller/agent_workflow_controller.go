@@ -7,11 +7,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -36,160 +34,6 @@ type workflowDraftRequest struct {
 
 type automationPlanRequest struct {
 	Prompt string `json:"prompt" binding:"required"`
-}
-
-type automationPlan struct {
-	Workflow      domain.Workflow             `json:"workflow"`
-	Provider      map[string]any              `json:"provider"`
-	Skill         map[string]any              `json:"skill"`
-	Agent         map[string]any              `json:"agent"`
-	Prerequisites []string                    `json:"prerequisites"`
-	Warnings      []string                    `json:"warnings"`
-	Intent        workflowplan.WorkflowIntent `json:"intent"`
-	Template      map[string]any              `json:"template"`
-	Match         workflowplan.MatchResult    `json:"match"`
-}
-
-func automationPlanCapabilities(prompt string) []string {
-	value := strings.ToLower(prompt)
-	if strings.Contains(value, "评论") || strings.Contains(value, "comment") {
-		return []string{"comments.get_comment", "comments.propose_reply"}
-	}
-	if strings.Contains(value, "图片") || strings.Contains(value, "配图") || strings.Contains(value, "封面") || strings.Contains(value, "illustration") || strings.Contains(value, "image") || strings.Contains(value, "cover") {
-		if isExplicitImageBriefGoal(value) {
-			return []string{"content.get_post", "content.propose_distribution_draft"}
-		}
-		return []string{"content.get_post", "media.create_image_task"}
-	}
-	if strings.Contains(value, "单页") || strings.Contains(value, "独立页") || strings.Contains(value, "custom page") || strings.Contains(value, "page") {
-		if strings.Contains(value, "生成") || strings.Contains(value, "正文") || strings.Contains(value, "改写") || strings.Contains(value, "重写") || strings.Contains(value, "更新") || strings.Contains(value, "write") || strings.Contains(value, "update") || strings.Contains(value, "rewrite") || strings.Contains(value, "generate") {
-			return []string{"content.get_page", "content.propose_page_update"}
-		}
-		return []string{"content.get_page", "content.audit_page"}
-	}
-	if strings.Contains(value, "媒体") || strings.Contains(value, "media") || strings.Contains(value, "alt") {
-		return []string{"media.get_asset"}
-	}
-	if strings.Contains(value, "分类") || strings.Contains(value, "标签") || strings.Contains(value, "taxonomy") || strings.Contains(value, "tag") {
-		return []string{"content.list_categories", "content.list_tags"}
-	}
-	return []string{"content.audit_post", "content.check_links"}
-}
-
-func automationPlanScore(capabilities, wanted []string) int {
-	score := 0
-	for _, capability := range capabilities {
-		if slices.Contains(wanted, capability) {
-			score++
-		}
-	}
-	return score
-}
-
-func buildAutomationPlan(prompt string, profiles []*domain.ProviderProfile, agents []*domain.Agent, skills []*domain.AgentSkill) automationPlan {
-	plan := automationPlan{Prerequisites: []string{}, Warnings: []string{}}
-	wantedCapabilities := automationPlanCapabilities(prompt)
-	var provider *domain.ProviderProfile
-	for _, item := range profiles {
-		if item.Enabled && item.IsDefaultWriting {
-			provider = item
-			break
-		}
-	}
-	if provider == nil {
-		plan.Provider = map[string]any{"status": "missing", "message": "需要一个已启用的默认写作 Provider", "draft": map[string]any{"enabled": false}}
-		plan.Prerequisites = append(plan.Prerequisites, "配置并启用默认写作 Provider")
-	} else {
-		plan.Provider = map[string]any{"status": "ready", "id": provider.ID, "name": provider.Name, "model": provider.Model}
-	}
-
-	var reusableSkill *domain.AgentSkill
-	bestSkillScore := -1
-	for _, agent := range agents {
-		score := 0
-		if agent.Skill != nil {
-			score = automationPlanScore(agent.Skill.Capabilities, wantedCapabilities)
-		}
-		if agent.Enabled && agent.Skill != nil && score > bestSkillScore {
-			reusableSkill = agent.Skill
-			bestSkillScore = score
-		}
-	}
-	if reusableSkill != nil {
-		plan.Skill = map[string]any{"status": "reuse", "id": reusableSkill.ID, "name": reusableSkill.Name, "version_id": reusableSkill.VersionID, "capabilities": reusableSkill.Capabilities}
-	} else if len(skills) > 0 {
-		for _, skill := range skills {
-			score := automationPlanScore(skill.Capabilities, wantedCapabilities)
-			if score > bestSkillScore {
-				reusableSkill, bestSkillScore = skill, score
-			}
-		}
-		plan.Skill = map[string]any{"status": "reuse", "id": reusableSkill.ID, "name": reusableSkill.Name, "version_id": reusableSkill.VersionID, "capabilities": reusableSkill.Capabilities}
-	} else {
-		skillName := "内容审校助手"
-		systemPrompt := "在授权资源范围内执行内容分析，并为需要的变更生成审批提案。"
-		val := strings.ToLower(prompt)
-		if strings.Contains(val, "单页") || strings.Contains(val, "page") {
-			if strings.Contains(val, "生成") || strings.Contains(val, "正文") || strings.Contains(val, "改写") || strings.Contains(val, "重写") || strings.Contains(val, "更新") {
-				skillName = "单页写作与更新助手"
-				systemPrompt = "分析指定单页的内容与用户提示词要求，生成高质量正文并提交修改提案。"
-			} else {
-				skillName = "单页审校与SEO助手"
-				systemPrompt = "审校单页的内容质量与 SEO 配置，发现问题并提交修改建议。"
-			}
-		} else if strings.Contains(val, "图片") || strings.Contains(val, "配图") || strings.Contains(val, "封面") {
-			skillName = "文章视觉与配图助手"
-			systemPrompt = "阅读文章正文并生成符合主题的封面与文中配图任务。"
-		} else if strings.Contains(val, "评论") || strings.Contains(val, "comment") {
-			skillName = "评论回复与互动助手"
-			systemPrompt = "分析访客评论内容并拟定得体、专业的回复草案供人工审核。"
-		} else if strings.Contains(val, "社媒") || strings.Contains(val, "社交") || strings.Contains(val, "newsletter") || strings.Contains(val, "邮件") {
-			skillName = "多渠道内容分发助手"
-			systemPrompt = "将长文章提炼为适合社交媒体与邮件通讯的精简分发草案。"
-		}
-		plan.Skill = map[string]any{"status": "draft", "draft": map[string]any{
-			"name": skillName, "description": prompt, "system_prompt": systemPrompt, "capabilities": wantedCapabilities, "execution_mode": "approval", "enabled": false,
-		}}
-		plan.Prerequisites = append(plan.Prerequisites, "确认并保存一个 Skill 草案")
-	}
-
-	var reusableAgent *domain.Agent
-	bestAgentScore := -1
-	for _, agent := range agents {
-		score := 0
-		if agent.Skill != nil {
-			score = automationPlanScore(agent.Skill.Capabilities, wantedCapabilities)
-		}
-		if agent.Enabled && agent.SkillVersionID != nil && agent.Skill != nil && score > bestAgentScore {
-			reusableAgent = agent
-			bestAgentScore = score
-		}
-	}
-	if reusableAgent != nil {
-		plan.Agent = map[string]any{"status": "reuse", "id": reusableAgent.ID, "name": reusableAgent.Name, "provider_profile_id": reusableAgent.ProviderProfileID, "skill_version_id": reusableAgent.SkillVersionID}
-		plan.Workflow = fallbackWorkflowDraft(prompt, reusableAgent.ID, reusableAgent.Skill != nil && reusableAgent.Skill.ExecutionMode == domain.AgentModeApproval)
-	} else {
-		providerID, skillVersionID := int64(0), int64(0)
-		if provider != nil {
-			providerID = provider.ID
-		}
-		if reusableSkill != nil {
-			skillVersionID = reusableSkill.VersionID
-		}
-		agentName := "内容审校 Agent"
-		if draftSkill, ok := plan.Skill["draft"].(map[string]any); ok && draftSkill["name"] != nil {
-			agentName = fmt.Sprintf("%s Agent", strings.TrimSuffix(draftSkill["name"].(string), "助手"))
-		}
-		draft := map[string]any{"name": agentName, "description": prompt, "enabled": false, "provider_profile_id": providerID, "skill_version_id": skillVersionID}
-		plan.Agent = map[string]any{"status": "draft", "draft": draft}
-		plan.Prerequisites = append(plan.Prerequisites, "确认 Provider 与 Skill 后保存 Agent 草案")
-		plan.Workflow = fallbackWorkflowDraft(prompt, 0, true)
-		plan.Workflow.Steps[0].AgentID = 0
-	}
-	if provider == nil {
-		plan.Warnings = append(plan.Warnings, "Provider 未就绪，当前只生成未启用的本地草案，不会调用模型")
-	}
-	return plan
 }
 
 func (ctrl *AgentController) DraftAutomationPlan(c *gin.Context) {
@@ -217,7 +61,7 @@ func (ctrl *AgentController) DraftAutomationPlan(c *gin.Context) {
 		WriteDomainError(c, err)
 		return
 	}
-	plan := buildAutomationPlan(req.Prompt, profiles, agents, skills)
+	plan := workflowplan.BuildAutomationPlan(req.Prompt, profiles, agents, skills)
 	intent := workflowplan.ParseIntent(req.Prompt)
 	for _, agent := range agents {
 		if agent.ProviderProfile == nil {
@@ -297,161 +141,6 @@ func isCustomOrCompositeGoal(goal string) bool {
 		strings.Contains(value, "不需要审批") ||
 		strings.Contains(value, "无需审批") ||
 		strings.Contains(value, "直接运行")
-}
-
-func normalizeDraftAgentIDs(steps []domain.WorkflowStep, fallbackID int64) []domain.WorkflowStep {
-	normalized := make([]domain.WorkflowStep, len(steps))
-	for i, step := range steps {
-		s := step
-		if s.Type == "model" && s.AgentID <= 0 {
-			s.AgentID = fallbackID
-		}
-		if len(s.Steps) > 0 {
-			s.Steps = normalizeDraftAgentIDs(s.Steps, fallbackID)
-		}
-		normalized[i] = s
-	}
-	return normalized
-}
-
-func extractWorkflowDraftJSON(value string) ([]byte, bool) {
-	value = strings.TrimSpace(value)
-	if json.Valid([]byte(value)) {
-		return []byte(value), true
-	}
-	start := strings.IndexByte(value, '{')
-	if start < 0 {
-		return nil, false
-	}
-	depth := 0
-	inString, escaped := false, false
-	for index := start; index < len(value); index++ {
-		char := value[index]
-		if inString {
-			if escaped {
-				escaped = false
-				continue
-			}
-			if char == '\\' {
-				escaped = true
-			} else if char == '"' {
-				inString = false
-			}
-			continue
-		}
-		switch char {
-		case '"':
-			inString = true
-		case '{':
-			depth++
-		case '}':
-			depth--
-			if depth == 0 {
-				candidate := []byte(value[start : index+1])
-				return candidate, json.Valid(candidate)
-			}
-		}
-	}
-	return nil, false
-}
-
-func fallbackWorkflowDraft(goal string, agentID int64, needsApproval bool) domain.Workflow {
-	value := strings.ToLower(goal)
-	isImageBrief := strings.Contains(value, "图片") || strings.Contains(value, "配图") || strings.Contains(value, "封面") || strings.Contains(value, "image") || strings.Contains(value, "cover")
-	isPage := strings.Contains(value, "单页") || strings.Contains(value, "独立页") || strings.Contains(value, "page")
-	hasPrompt := strings.Contains(value, "提示词") || strings.Contains(value, "prompt") || strings.Contains(value, "输入") || strings.Contains(value, "指令") || strings.Contains(value, "要求")
-
-	resourceKey := "post_ids"
-	resourceType := "post"
-	if isPage {
-		resourceKey = "page_ids"
-		resourceType = "page"
-	}
-
-	properties := map[string]any{
-		resourceKey: map[string]any{
-			"type":             "array",
-			"items":            map[string]any{"type": "integer"},
-			"minItems":         1,
-			"maxItems":         20,
-			"x-gouno-resource": resourceType,
-			"x-gouno-widget":   "entity-multi-select",
-		},
-	}
-	required := []string{resourceKey}
-
-	if isImageBrief {
-		properties["format"] = map[string]any{
-			"type":    "string",
-			"enum":    []string{"image_brief"},
-			"default": "image_brief",
-		}
-		required = append(required, "format")
-	}
-	if hasPrompt {
-		properties["prompt"] = map[string]any{
-			"type":        "string",
-			"title":       "修改要求/提示词",
-			"description": "输入针对该单页/内容的具体生成要求或提示词",
-		}
-		required = append(required, "prompt")
-	}
-	schemaRaw, _ := json.Marshal(map[string]any{
-		"type":                 "object",
-		"additionalProperties": false,
-		"required":             required,
-		"properties":           properties,
-	})
-
-	steps := []domain.WorkflowStep{{ID: "analyze", Type: "model", AgentID: agentID, InputPointer: "/input", IncludeContext: true}}
-	if needsApproval {
-		steps = append(steps, domain.WorkflowStep{ID: "review", Type: "approval_gate", Name: "人工审批", InputPointer: "/steps/analyze"})
-	}
-	steps = append(steps, domain.WorkflowStep{ID: "result", Type: "output", OutputPointer: "/steps/analyze"})
-	return domain.Workflow{
-		Name: "AI 工作流草案", Description: goal, Timezone: "Asia/Shanghai",
-		InputSchema: schemaRaw,
-		Steps:       steps, ScopePolicy: domain.WorkflowScopePolicy{Mode: "strict"},
-	}
-}
-
-func workflowDraftAgentIDs(steps []domain.WorkflowStep) []int64 {
-	ids := []int64{}
-	for _, step := range steps {
-		if step.Type == "model" && step.AgentID > 0 {
-			ids = append(ids, step.AgentID)
-		}
-		ids = append(ids, workflowDraftAgentIDs(step.Steps)...)
-	}
-	return ids
-}
-
-func isImageBriefGoal(goal string) bool {
-	value := strings.ToLower(goal)
-	return strings.Contains(value, "图片") || strings.Contains(value, "配图") || strings.Contains(value, "封面") || strings.Contains(value, "illustration") || strings.Contains(value, "image") || strings.Contains(value, "cover")
-}
-
-func isExplicitImageBriefGoal(goal string) bool {
-	value := strings.ToLower(goal)
-	return isImageBriefGoal(value) && (strings.Contains(value, "brief") || strings.Contains(value, "提示词") || strings.Contains(value, "prompt"))
-}
-
-func enforceImageBriefContract(goal string, draft *domain.Workflow) {
-	if !isImageBriefGoal(goal) {
-		return
-	}
-	contract := fallbackWorkflowDraft(goal, 0, false)
-	draft.InputSchema = contract.InputSchema
-	var normalize func([]domain.WorkflowStep)
-	normalize = func(steps []domain.WorkflowStep) {
-		for index := range steps {
-			if steps[index].Type == "model" {
-				steps[index].InputPointer = "/input"
-			}
-			normalize(steps[index].Steps)
-		}
-	}
-	normalize(draft.Steps)
 }
 
 func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
@@ -549,7 +238,7 @@ func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
 	if maxTokens < 3000 {
 		maxTokens = 3000
 	}
-	result, err := client.Generate(c.Request.Context(), provider.Request{Instructions: workflowPlannerPrompt, Messages: []provider.Message{{Role: "user", Content: string(payload)}}, MaxTokens: maxTokens})
+	result, err := client.Generate(c.Request.Context(), provider.Request{Instructions: workflowplan.WorkflowPlannerPrompt, Messages: []provider.Message{{Role: "user", Content: string(payload)}}, MaxTokens: maxTokens})
 	if err != nil {
 		WriteDomainError(c, err)
 		return
@@ -557,31 +246,31 @@ func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
 	var draft domain.Workflow
 	warning := ""
 	decodeDraft := func(text string) bool {
-		draftJSON, validJSON := extractWorkflowDraftJSON(text)
+		draftJSON, validJSON := workflowplan.ExtractWorkflowDraftJSON(text)
 		return validJSON && json.Unmarshal(draftJSON, &draft) == nil
 	}
 	validDraft := decodeDraft(result.Text)
 	if !validDraft {
 		correctionPayload, _ := json.Marshal(map[string]any{"goal": req.Prompt, "available_agents": available, "previous_response": result.Text})
-		correction, correctionErr := client.Generate(c.Request.Context(), provider.Request{Instructions: workflowPlannerCorrectionPrompt, Messages: []provider.Message{{Role: "user", Content: string(correctionPayload)}}, MaxTokens: maxTokens})
+		correction, correctionErr := client.Generate(c.Request.Context(), provider.Request{Instructions: workflowplan.WorkflowPlannerCorrectionPrompt, Messages: []provider.Message{{Role: "user", Content: string(correctionPayload)}}, MaxTokens: maxTokens})
 		if correctionErr == nil {
 			validDraft = decodeDraft(correction.Text)
 		}
 	}
 	if validDraft {
-		draft.Steps = normalizeDraftAgentIDs(draft.Steps, fallbackAgentID)
+		draft.Steps = workflowplan.NormalizeDraftAgentIDs(draft.Steps, fallbackAgentID)
 		if len(draft.InputSchema) == 0 {
 			draft.InputSchema = json.RawMessage(`{"type":"object","additionalProperties":false}`)
 		}
 	} else {
 		warning = "AI draft format was invalid; a safe editable starter draft was created instead."
-		draft = fallbackWorkflowDraft(req.Prompt, fallbackAgentID, true)
+		draft = workflowplan.FallbackWorkflowDraft(req.Prompt, fallbackAgentID, true)
 	}
-	enforceImageBriefContract(req.Prompt, &draft)
+	workflowplan.EnforceImageBriefContract(req.Prompt, &draft)
 	draft.Enabled = false
 	if err := ctrl.workflows.ValidateDraft(&draft); err != nil {
 		warning = "AI draft did not meet workflow safety rules; a safe editable starter draft was created instead."
-		draft = fallbackWorkflowDraft(req.Prompt, fallbackAgentID, fallbackNeedsApproval)
+		draft = workflowplan.FallbackWorkflowDraft(req.Prompt, fallbackAgentID, fallbackNeedsApproval)
 		if fallbackErr := ctrl.workflows.ValidateDraft(&draft); fallbackErr != nil {
 			WriteDomainError(c, fallbackErr)
 			return
@@ -594,7 +283,7 @@ func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
 		}
 	}
 	selectedAgents := []gin.H{}
-	for _, id := range workflowDraftAgentIDs(draft.Steps) {
+	for _, id := range workflowplan.WorkflowDraftAgentIDs(draft.Steps) {
 		agent, ok := availableByID[id]
 		if !ok {
 			continue

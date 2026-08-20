@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/workflowplan"
 )
 
 func TestExtractWorkflowDraftJSON(t *testing.T) {
@@ -20,13 +21,13 @@ func TestExtractWorkflowDraftJSON(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, ok := extractWorkflowDraftJSON(test.input)
+			_, ok := workflowplan.ExtractWorkflowDraftJSON(test.input)
 			if ok != test.ok {
 				t.Fatalf("ok=%v, want %v", ok, test.ok)
 			}
 		})
 	}
-	if !strings.Contains(workflowPlannerPrompt, "media.create_image_task") || !strings.Contains(workflowPlannerCorrectionPrompt, "agent_id must be an integer") {
+	if !strings.Contains(workflowplan.WorkflowPlannerPrompt, "media.create_image_task") || !strings.Contains(workflowplan.WorkflowPlannerCorrectionPrompt, "agent_id must be an integer") {
 		t.Fatal("planner prompts must constrain image goals and integer Agent IDs")
 	}
 }
@@ -37,7 +38,7 @@ func TestBuildAutomationPlan(t *testing.T) {
 	agent := &domain.Agent{ID: 4, Name: "Reviewer", Enabled: true, ProviderProfileID: provider.ID, SkillVersionID: &skill.VersionID, Skill: skill}
 
 	t.Run("reuses ready dependency chain", func(t *testing.T) {
-		plan := buildAutomationPlan("review posts", []*domain.ProviderProfile{provider}, []*domain.Agent{agent}, []*domain.AgentSkill{skill})
+		plan := workflowplan.BuildAutomationPlan("review posts", []*domain.ProviderProfile{provider}, []*domain.Agent{agent}, []*domain.AgentSkill{skill})
 		if plan.Provider["status"] != "ready" || plan.Skill["status"] != "reuse" || plan.Agent["status"] != "reuse" {
 			t.Fatalf("unexpected statuses: %#v", plan)
 		}
@@ -47,7 +48,7 @@ func TestBuildAutomationPlan(t *testing.T) {
 	})
 
 	t.Run("returns unpersisted drafts when dependencies are missing", func(t *testing.T) {
-		plan := buildAutomationPlan("review posts", nil, nil, nil)
+		plan := workflowplan.BuildAutomationPlan("review posts", nil, nil, nil)
 		if plan.Provider["status"] != "missing" || plan.Skill["status"] != "draft" || plan.Agent["status"] != "draft" {
 			t.Fatalf("unexpected statuses: %#v", plan)
 		}
@@ -59,7 +60,7 @@ func TestBuildAutomationPlan(t *testing.T) {
 	t.Run("matches the agent capability to the requested automation", func(t *testing.T) {
 		commentSkill := &domain.AgentSkill{ID: 5, VersionID: 6, Name: "Comments", Capabilities: []string{"comments.get_comment", "comments.propose_reply"}, ExecutionMode: domain.AgentModeApproval}
 		commentAgent := &domain.Agent{ID: 7, Name: "Commenter", Enabled: true, ProviderProfileID: provider.ID, SkillVersionID: &commentSkill.VersionID, Skill: commentSkill}
-		plan := buildAutomationPlan("为评论生成回复草案", []*domain.ProviderProfile{provider}, []*domain.Agent{agent, commentAgent}, []*domain.AgentSkill{skill, commentSkill})
+		plan := workflowplan.BuildAutomationPlan("为评论生成回复草案", []*domain.ProviderProfile{provider}, []*domain.Agent{agent, commentAgent}, []*domain.AgentSkill{skill, commentSkill})
 		if plan.Agent["id"] != commentAgent.ID || plan.Skill["id"] != commentSkill.ID {
 			t.Fatalf("expected comment dependency match: %#v", plan)
 		}
@@ -67,11 +68,11 @@ func TestBuildAutomationPlan(t *testing.T) {
 }
 
 func TestImageBriefWorkflowContract(t *testing.T) {
-	draft := fallbackWorkflowDraft("为文章生成封面和文中配图 Brief", 9, true)
+	draft := workflowplan.FallbackWorkflowDraft("为文章生成封面和文中配图 Brief", 9, true)
 	if !strings.Contains(string(draft.InputSchema), `"image_brief"`) || draft.Steps[0].InputPointer != "/input" {
 		t.Fatalf("image brief fallback contract = %#v", draft)
 	}
-	plan := buildAutomationPlan("选择文章生成配图 Brief", nil, nil, nil)
+	plan := workflowplan.BuildAutomationPlan("选择文章生成配图 Brief", nil, nil, nil)
 	if plan.Skill["status"] != "draft" || !strings.Contains(strings.Join(plan.Skill["draft"].(map[string]any)["capabilities"].([]string), ","), "content.propose_distribution_draft") {
 		t.Fatalf("image brief plan capabilities = %#v", plan.Skill)
 	}
@@ -82,7 +83,7 @@ func TestImageGenerationPlanUsesInternalTaskWithoutApproval(t *testing.T) {
 	skill := &domain.AgentSkill{ID: 2, VersionID: 3, Name: "Distribution", Capabilities: []string{"content.get_post", "content.propose_distribution_draft", "media.create_image_task"}, ExecutionMode: domain.AgentModeApproval}
 	agent := &domain.Agent{ID: 4, Name: "Distribution", Enabled: true, ProviderProfileID: provider.ID, ProviderProfile: provider, SkillVersionID: &skill.VersionID, Skill: skill}
 
-	plan := buildAutomationPlan("为文章生成封面和正文配图", []*domain.ProviderProfile{provider}, []*domain.Agent{agent}, []*domain.AgentSkill{skill})
+	plan := workflowplan.BuildAutomationPlan("为文章生成封面和正文配图", []*domain.ProviderProfile{provider}, []*domain.Agent{agent}, []*domain.AgentSkill{skill})
 	capabilities := plan.Skill["capabilities"].([]string)
 	if !strings.Contains(strings.Join(capabilities, ","), "media.create_image_task") {
 		t.Fatalf("image generation capabilities = %#v", capabilities)
@@ -91,11 +92,11 @@ func TestImageGenerationPlanUsesInternalTaskWithoutApproval(t *testing.T) {
 
 func TestPageDraftWorkflowContract(t *testing.T) {
 	prompt := "给“单页”做一个Workflow。不需要审核，直接运行后，到运行中心，然后等我输入一段提示词后，给“单页”生成新正文，可以重复生成。等我确认后保持单页。"
-	draft := fallbackWorkflowDraft(prompt, 15, false)
+	draft := workflowplan.FallbackWorkflowDraft(prompt, 15, false)
 	if !strings.Contains(string(draft.InputSchema), `"page_ids"`) || !strings.Contains(string(draft.InputSchema), `"prompt"`) {
 		t.Fatalf("page fallback draft must contain page_ids and prompt: %s", draft.InputSchema)
 	}
-	plan := buildAutomationPlan(prompt, nil, nil, nil)
+	plan := workflowplan.BuildAutomationPlan(prompt, nil, nil, nil)
 	capabilities := plan.Skill["draft"].(map[string]any)["capabilities"].([]string)
 	if !strings.Contains(strings.Join(capabilities, ","), "content.propose_page_update") {
 		t.Fatalf("expected propose_page_update capability for page generation plan: %#v", capabilities)
@@ -120,7 +121,7 @@ func TestCustomGoalDetectionAndAgentNormalization(t *testing.T) {
 		}},
 		{ID: "top_model", Type: "model", AgentID: 0},
 	}
-	normalized := normalizeDraftAgentIDs(steps, 42)
+	normalized := workflowplan.NormalizeDraftAgentIDs(steps, 42)
 	if normalized[1].Steps[0].AgentID != 42 || normalized[2].AgentID != 42 {
 		t.Fatalf("agent IDs not normalized: %#v", normalized)
 	}
