@@ -51,6 +51,9 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 }
 
 func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
+	if opts.Logger != nil {
+		controller.SetResponseLogger(opts.Logger)
+	}
 	server.Use(corsMiddleware(opts.CORSAllowedOrigins))
 	server.Use(requestBodyLimitMiddleware())
 	server.Use(blogCSRFMiddleware(true))
