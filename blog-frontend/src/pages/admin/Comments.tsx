@@ -93,10 +93,10 @@ export default function AdminComments() {
                   <p>{comment.content}</p>
                   <small>文章 #{comment.post_id}</small>
                 </div>
-                <div>
-                  <button className="btn btn-secondary" onClick={() => void moderate(comment, 'visible')}>通过</button>
-                  <button className="btn btn-secondary" onClick={() => void moderate(comment, 'hidden')}>隐藏</button>
-                  <button className="btn btn-danger" onClick={() => setDeleteTarget(comment)}><Trash2 /> 删除</button>
+                <div className="table-actions">
+                  <Button variant="secondary" size="compact" type="button" onClick={() => void moderate(comment, 'visible')}>通过</Button>
+                  <Button variant="secondary" size="compact" type="button" onClick={() => void moderate(comment, 'hidden')}>隐藏</Button>
+                  <Button variant="danger" size="compact" type="button" onClick={() => setDeleteTarget(comment)}><Trash2 /> 删除</Button>
                 </div>
               </Panel>
             ))}

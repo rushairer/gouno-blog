@@ -3,7 +3,7 @@ import { AlertTriangle, Bookmark, Bot, CheckCheck, ChevronRight, Eye, FileText, 
 import { Link } from 'react-router-dom';
 import { analyticsApi } from '../../api/analytics';
 import { notificationsApi } from '../../api/notifications';
-import { AdminPage, AdminPageHeader, AdminPageState, ContentStack, Feedback, Panel } from '../../components/ui';
+import { AdminPage, AdminPageHeader, AdminPageState, Button, buttonClassName, ContentStack, Feedback, Panel } from '../../components/ui';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 
 interface Summary {
@@ -58,7 +58,7 @@ export default function Dashboard() {
   if (!allowed || (!summary && !error)) return <AdminPageState title="数据概览" description="了解站点整体运营情况，掌握内容表现与用户互动。" label="正在进入内容工作台…" />;
   const max = Math.max(1, ...(summary?.daily_events || []).map((item) => item.count));
   return <AdminPage>
-    <AdminPageHeader title="数据概览" description="了解站点整体运营情况，掌握内容表现与用户互动。" actions={<Link className="btn btn-primary" to="/admin/posts/new"><Plus /> 新建文章</Link>} />
+    <AdminPageHeader title="数据概览" description="了解站点整体运营情况，掌握内容表现与用户互动。" actions={<Link className={buttonClassName({ variant: 'primary' })} to="/admin/posts/new"><Plus /> 新建文章</Link>} />
     <ContentStack>
       {error ? <Feedback type="error">{error}</Feedback> : null}
       {summary ? <>
@@ -72,7 +72,7 @@ export default function Dashboard() {
           <Panel className="traffic-panel"><div className="panel-heading"><h2>30 天流量趋势</h2><span>页面事件</span></div><div className="admin-chart" role="img" aria-label="最近 30 天访问趋势">{summary.daily_events.map((item) => <div key={item.date} title={`${item.date}: ${item.count}`}><span style={{ height: `${Math.max(4, item.count / max * 100)}%` }} /><small>{item.date.slice(5)}</small></div>)}</div></Panel>
           <Panel className="status-panel"><div className="panel-heading"><h2>内容状态</h2></div><dl><div><dt>已发布</dt><dd>{summary.published_posts}</dd></div><div><dt>草稿与定时</dt><dd>{summary.total_posts - summary.published_posts}</dd></div><div><dt>待审核评论</dt><dd>{summary.pending_comments}</dd></div><div><dt>被举报内容</dt><dd>{summary.reported_items}</dd></div></dl><Link to="/admin/comments?status=pending">处理互动队列 →</Link></Panel>
         </div>
-        {summary.ai_alerts.length > 0 ? <Panel className="dashboard-ai-alerts"><div className="panel-heading"><div><h2><AlertTriangle /> AI 运营提醒</h2><small>需要你处理的自动化异常，点击可直接查看执行记录。</small></div><div className="dashboard-ai-alerts__actions"><button type="button" className="btn btn-secondary btn-sm" disabled={clearingAlerts} onClick={() => void dismissAllAlerts()}><CheckCheck />{clearingAlerts ? '正在清除…' : '全部已读'}</button><Link to="/admin/agents?tab=records">查看全部记录</Link></div></div><div className="dashboard-ai-alert-list">{summary.ai_alerts.map((alert) => { const presentation = alertPresentation(alert); return <Link className="dashboard-ai-alert" key={alert.id} to={presentation.destination}><span className="dashboard-ai-alert__icon" aria-hidden="true">{presentation.icon}</span><span className="dashboard-ai-alert__content"><strong>{presentation.label}<em>{alert.title.replace(/^(?:AI 自动化|Workflow|Agent)\s*运行失败：?\s*/, '').trim()}</em></strong><span>{alert.body ? `失败原因：${alert.body}` : '运行未完成，请打开记录查看失败步骤。'}</span><small>{new Date(alert.created_at).toLocaleString('zh-CN')}</small></span><span className="dashboard-ai-alert__action">{presentation.action}<ChevronRight aria-hidden="true" /></span></Link>; })}</div></Panel> : null}
+        {summary.ai_alerts.length > 0 ? <Panel className="dashboard-ai-alerts"><div className="panel-heading"><div><h2><AlertTriangle /> AI 运营提醒</h2><small>需要你处理的自动化异常，点击可直接查看执行记录。</small></div><div className="dashboard-ai-alerts__actions"><Button variant="secondary" size="compact" type="button" disabled={clearingAlerts} onClick={() => void dismissAllAlerts()}><CheckCheck />{clearingAlerts ? '正在清除…' : '全部已读'}</Button><Link to="/admin/agents?tab=records">查看全部记录</Link></div></div><div className="dashboard-ai-alert-list">{summary.ai_alerts.map((alert) => { const presentation = alertPresentation(alert); return <Link className="dashboard-ai-alert" key={alert.id} to={presentation.destination}><span className="dashboard-ai-alert__icon" aria-hidden="true">{presentation.icon}</span><span className="dashboard-ai-alert__content"><strong>{presentation.label}<em>{alert.title.replace(/^(?:AI 自动化|Workflow|Agent)\s*运行失败：?\s*/, '').trim()}</em></strong><span>{alert.body ? `失败原因：${alert.body}` : '运行未完成，请打开记录查看失败步骤。'}</span><small>{new Date(alert.created_at).toLocaleString('zh-CN')}</small></span><span className="dashboard-ai-alert__action">{presentation.action}<ChevronRight aria-hidden="true" /></span></Link>; })}</div></Panel> : null}
         <Panel className="dashboard-table"><div className="panel-heading"><h2>表现最佳文章</h2><Link to="/admin/posts">查看全部文章</Link></div><div className="table-scroll"><table><thead><tr><th>文章</th><th>阅读量</th><th>点赞</th><th>操作</th></tr></thead><tbody>{summary.top_posts.map((post, index) => <tr key={post.id}><td><span>{index + 1}</span>{post.title}</td><td>{post.views_count}</td><td>{post.likes_count}</td><td><Link to={`/admin/posts/${post.id}/edit`}>编辑</Link></td></tr>)}</tbody></table></div></Panel>
       </> : null}
     </ContentStack>

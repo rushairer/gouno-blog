@@ -17,52 +17,107 @@ import (
 	auth "github.com/rushairer/gouno/auth"
 )
 
+type WebRouterOptions struct {
+	DB                 *sql.DB
+	AuthOptions        middleware.AuthOptions
+	JWKSURL            string
+	RedisDSN           string
+	VisitorSecret      string
+	MediaDir           string
+	MediaStore         media.Store
+	CORSAllowedOrigins []string
+	PostSvc            *service.PostService
+	PageSvc            *service.PageService
+	CategorySvc        service.CategoryService
+	CommunitySvc       *service.CommunityService
+	GrowthSvc          *service.GrowthService
+	AgentCtrl          *controller.AgentController
+}
+
 func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.AuthOptions, jwksURL, redisDSN, visitorSecret, mediaDir string, store media.Store, corsAllowedOrigins []string, agentCtrl *controller.AgentController) {
-	server.Use(corsMiddleware(corsAllowedOrigins))
+	RegisterWebRouterWithOptions(server, WebRouterOptions{
+		DB:                 db,
+		AuthOptions:        authOptions,
+		JWKSURL:            jwksURL,
+		RedisDSN:           redisDSN,
+		VisitorSecret:      visitorSecret,
+		MediaDir:           mediaDir,
+		MediaStore:         store,
+		CORSAllowedOrigins: corsAllowedOrigins,
+		AgentCtrl:          agentCtrl,
+	})
+}
+
+func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
+	server.Use(corsMiddleware(opts.CORSAllowedOrigins))
 	server.Use(requestBodyLimitMiddleware())
 	server.Use(blogCSRFMiddleware(true))
 	server.GET("/healthz", func(ctx *gin.Context) {
-		if db == nil || db.PingContext(ctx.Request.Context()) != nil {
+		if opts.DB == nil || opts.DB.PingContext(ctx.Request.Context()) != nil {
 			ctx.Status(http.StatusServiceUnavailable)
 			return
 		}
 		ctx.Status(http.StatusNoContent)
 	})
 
-	// Setup repository and service
-	repo := repository.NewPostRepository(db)
-	svc := service.NewPostService(repo)
-	ctrl := controller.NewPostController(svc)
-	pageRepo := repository.NewPageRepository(db)
-	pageSvc := service.NewPageService(pageRepo)
+	// Setup repository and service if not provided
+	postSvc := opts.PostSvc
+	if postSvc == nil {
+		postSvc = service.NewPostService(repository.NewPostRepository(opts.DB))
+	}
+	ctrl := controller.NewPostController(postSvc)
+
+	pageSvc := opts.PageSvc
+	if pageSvc == nil {
+		pageSvc = service.NewPageService(repository.NewPageRepository(opts.DB))
+	}
 	pageCtrl := controller.NewPageController(pageSvc)
-	catRepo := repository.NewCategoryRepository(db)
-	catSvc := service.NewCategoryService(catRepo)
+
+	catSvc := opts.CategorySvc
+	if catSvc == nil {
+		catSvc = service.NewCategoryService(repository.NewCategoryRepository(opts.DB))
+	}
 	contentCtrl := controller.NewContentController(catSvc)
-	feedCtrl := controller.NewFeedController(svc, pageSvc, catSvc)
-	communitySvc := service.NewCommunityService(repository.NewCommunityRepository(db), repo)
+
+	feedCtrl := controller.NewFeedController(postSvc, pageSvc, catSvc)
+
+	communitySvc := opts.CommunitySvc
+	if communitySvc == nil {
+		communitySvc = service.NewCommunityService(repository.NewCommunityRepository(opts.DB), repository.NewPostRepository(opts.DB))
+	}
 	var interactionLimiter service.RateLimiter
-	if redisDSN != "" {
-		if limiter, err := service.NewRedisRateLimiter(redisDSN); err == nil {
+	if opts.RedisDSN != "" {
+		if limiter, err := service.NewRedisRateLimiter(opts.RedisDSN); err == nil {
 			interactionLimiter = limiter
 		}
 	}
-	communityCtrl := controller.NewCommunityController(communitySvc, interactionLimiter, visitorSecret)
-	growthSvc := service.NewGrowthService(repository.NewGrowthRepository(db))
-	growthCtrl := controller.NewGrowthController(growthSvc, svc, communitySvc, store)
-	if _, local := store.LocalPath(".probe"); local && os.MkdirAll(mediaDir, 0o750) == nil {
-		serveMedia := func(ctx *gin.Context) {
-			filename := ctx.Param("filename")
-			if filename == "" || filename != filepath.Base(filename) || filename == "." {
-				ctx.Status(http.StatusNotFound)
-				return
-			}
-			path, _ := store.LocalPath(filename)
-			ctx.File(path)
-		}
-		server.GET("/media/:filename", serveMedia)
-		server.HEAD("/media/:filename", serveMedia)
+	communityCtrl := controller.NewCommunityController(communitySvc, interactionLimiter, opts.VisitorSecret)
+
+	growthSvc := opts.GrowthSvc
+	if growthSvc == nil {
+		growthSvc = service.NewGrowthService(repository.NewGrowthRepository(opts.DB))
 	}
+	growthCtrl := controller.NewGrowthController(growthSvc, postSvc, communitySvc, opts.MediaStore)
+
+	if opts.MediaStore != nil {
+		if _, local := opts.MediaStore.LocalPath(".probe"); local && os.MkdirAll(opts.MediaDir, 0o750) == nil {
+			serveMedia := func(ctx *gin.Context) {
+				filename := ctx.Param("filename")
+				if filename == "" || filename != filepath.Base(filename) || filename == "." {
+					ctx.Status(http.StatusNotFound)
+					return
+				}
+				path, _ := opts.MediaStore.LocalPath(filename)
+				ctx.File(path)
+			}
+			server.GET("/media/:filename", serveMedia)
+			server.HEAD("/media/:filename", serveMedia)
+		}
+	}
+
+	authOptions := opts.AuthOptions
+	jwksURL := opts.JWKSURL
+	agentCtrl := opts.AgentCtrl
 
 	// RSS & Sitemap Routes
 	server.GET("/feed.xml", feedCtrl.GetRSS)

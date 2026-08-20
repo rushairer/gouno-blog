@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { agentApi } from '../../api/agent';
 import { postsApi } from '../../api/posts';
 import { siteApi } from '../../api/site';
-import { AdminPageState, ConfirmDialog, Feedback, Field, Input, Select, Textarea } from '../../components/ui';
+import { AdminPageState, Button, ConfirmDialog, Feedback, Field, Input, Select, Textarea } from '../../components/ui';
 import { MarkdownRenderer } from '../../components/MarkdownRenderer';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 import { extractMarkdownTOC } from '../../markdown';
@@ -161,7 +161,11 @@ export default function PostEditor() {
     <header className="editor-commandbar">
       <button className="editor-back" type="button" onClick={leaveEditor}><ArrowLeft /> 返回文章列表</button>
       <div className="editor-save-state">{saving ? '正在保存…' : savedAt ? <><Check /> 已于 {savedAt.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })} 保存</> : dirty.current ? '有未保存的更改' : '所有更改已保存'}</div>
-      <div><button className="btn btn-secondary" type="button" onClick={() => void openFrontsitePreview()} disabled={saving}><ExternalLink /> 预览前台页面</button><button className="btn btn-secondary" type="button" onClick={() => void persist('draft')} disabled={saving}><Save /> 保存草稿</button><button className="btn btn-primary" type="button" onClick={() => void persist(primaryStatus)} disabled={saving}><Send /> {primaryLabel}</button></div>
+      <div>
+        <Button variant="secondary" type="button" onClick={() => void openFrontsitePreview()} disabled={saving}><ExternalLink /> 预览前台页面</Button>
+        <Button variant="secondary" type="button" onClick={() => void persist('draft')} disabled={saving}><Save /> 保存草稿</Button>
+        <Button variant="primary" type="button" onClick={() => void persist(primaryStatus)} disabled={saving}><Send /> {primaryLabel}</Button>
+      </div>
     </header>
     {error ? <Feedback type="error">{error}</Feedback> : null}
     <div className="editor-workspace">
