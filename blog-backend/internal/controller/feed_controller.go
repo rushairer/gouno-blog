@@ -61,7 +61,7 @@ type SitemapURL struct {
 func (ctrl *FeedController) GetRSS(c *gin.Context) {
 	posts, _, err := ctrl.svc.ListPosts(c.Request.Context(), "", "", 1, 50)
 	if err != nil {
-		c.String(http.StatusInternalServerError, "Error generating RSS feed")
+		WriteDomainError(c, err)
 		return
 	}
 
@@ -103,7 +103,7 @@ func (ctrl *FeedController) GetRSS(c *gin.Context) {
 func (ctrl *FeedController) GetSitemap(c *gin.Context) {
 	posts, _, err := ctrl.svc.ListPosts(c.Request.Context(), "", "", 1, 500)
 	if err != nil {
-		c.String(http.StatusInternalServerError, "Error generating Sitemap")
+		WriteDomainError(c, err)
 		return
 	}
 

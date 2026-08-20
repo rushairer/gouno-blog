@@ -21,6 +21,7 @@ import (
 
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/provider"
+	"github.com/rushairer/blog-backend/internal/repository"
 	"github.com/rushairer/blog-backend/internal/secretbox"
 	"go.uber.org/zap"
 )
@@ -345,27 +346,24 @@ func (s *Service) indexPost(ctx context.Context, postID int64, action, version s
 		if err != nil {
 			return err
 		}
-		tx, err := s.db.BeginTx(ctx, nil)
-		if err != nil {
-			return err
-		}
-		if _, err = tx.ExecContext(ctx, `DELETE FROM ai_content_chunks
-			WHERE post_id=$1 AND embedding_profile_id=$2`, postID, profile.ID); err != nil {
-			_ = tx.Rollback()
-			return err
-		}
-		for i, part := range parts {
-			_, err = tx.ExecContext(ctx, `INSERT INTO ai_content_chunks
-				(post_id, embedding_profile_id, version_key, chunk_index, heading, content,
-				 start_offset, end_offset, embedding)
-				VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::vector)`, postID, profile.ID, version,
-				part.Index, part.Heading, part.Content, part.Start, part.End, vectorLiteral(vectors[i]))
-			if err != nil {
-				_ = tx.Rollback()
+		err = repository.RunInTransaction(ctx, s.db, func(tx *sql.Tx) error {
+			if _, err := tx.ExecContext(ctx, `DELETE FROM ai_content_chunks
+				WHERE post_id=$1 AND embedding_profile_id=$2`, postID, profile.ID); err != nil {
 				return err
 			}
-		}
-		if err := tx.Commit(); err != nil {
+			for i, part := range parts {
+				_, err := tx.ExecContext(ctx, `INSERT INTO ai_content_chunks
+					(post_id, embedding_profile_id, version_key, chunk_index, heading, content,
+					 start_offset, end_offset, embedding)
+					VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::vector)`, postID, profile.ID, version,
+					part.Index, part.Heading, part.Content, part.Start, part.End, vectorLiteral(vectors[i]))
+				if err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+		if err != nil {
 			return err
 		}
 	}
@@ -511,31 +509,26 @@ func (s *Service) ReplaceEvaluationCases(ctx context.Context, cases []Evaluation
 	if len(cases) == 0 || len(cases) > 100 {
 		return fmt.Errorf("%w: evaluation requires 1 to 100 cases", ErrInvalid)
 	}
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	if _, err = tx.ExecContext(ctx, `UPDATE ai_retrieval_eval_cases SET enabled=false, updated_at=NOW()`); err != nil {
-		_ = tx.Rollback()
-		return err
-	}
-	for _, item := range cases {
-		item.Name, item.Query = strings.TrimSpace(item.Name), strings.TrimSpace(item.Query)
-		if item.Name == "" || item.Query == "" || len(item.ExpectedPostIDs) == 0 {
-			_ = tx.Rollback()
-			return fmt.Errorf("%w: evaluation case is incomplete", ErrInvalid)
-		}
-		raw, _ := json.Marshal(item.ExpectedPostIDs)
-		if _, err = tx.ExecContext(ctx, `INSERT INTO ai_retrieval_eval_cases
-			(name, query, expected_post_ids, enabled) VALUES ($1,$2,$3,true)
-			ON CONFLICT (name) DO UPDATE SET query=EXCLUDED.query,
-			expected_post_ids=EXCLUDED.expected_post_ids, enabled=true, updated_at=NOW()`,
-			item.Name, item.Query, raw); err != nil {
-			_ = tx.Rollback()
+	return repository.RunInTransaction(ctx, s.db, func(tx *sql.Tx) error {
+		if _, err := tx.ExecContext(ctx, `UPDATE ai_retrieval_eval_cases SET enabled=false, updated_at=NOW()`); err != nil {
 			return err
 		}
-	}
-	return tx.Commit()
+		for _, item := range cases {
+			item.Name, item.Query = strings.TrimSpace(item.Name), strings.TrimSpace(item.Query)
+			if item.Name == "" || item.Query == "" || len(item.ExpectedPostIDs) == 0 {
+				return fmt.Errorf("%w: evaluation case is incomplete", ErrInvalid)
+			}
+			raw, _ := json.Marshal(item.ExpectedPostIDs)
+			if _, err := tx.ExecContext(ctx, `INSERT INTO ai_retrieval_eval_cases
+				(name, query, expected_post_ids, enabled) VALUES ($1,$2,$3,true)
+				ON CONFLICT (name) DO UPDATE SET query=EXCLUDED.query,
+				expected_post_ids=EXCLUDED.expected_post_ids, enabled=true, updated_at=NOW()`,
+				item.Name, item.Query, raw); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 func (s *Service) Evaluate(ctx context.Context) (map[string]any, error) {

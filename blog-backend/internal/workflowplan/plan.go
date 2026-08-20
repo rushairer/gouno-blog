@@ -1,12 +1,22 @@
 package workflowplan
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/provider"
 	"github.com/rushairer/blog-backend/internal/tool"
+)
+
+var (
+	ErrDefaultModelRequired   = errors.New("an enabled default writing model is required")
+	ErrAgentSkillRequired     = errors.New("create an enabled Agent with a saved Skill before planning a workflow")
+	ErrGoalRequired           = errors.New("workflow goal is required and must be at most 4000 characters")
+	ErrAutomationGoalRequired = errors.New("automation goal is required and must be at most 4000 characters")
 )
 
 const ProtocolVersion = "workflow-intent/v1"
@@ -682,4 +692,262 @@ Agent Selection & Input Schema Rules:
 - Keep at most 5 top-level steps. Do not invent image, tool, connector, HTTP, publish, or other step types. Do not create, enable, run, publish, or modify anything.`
 
 const WorkflowPlannerCorrectionPrompt = `The previous response was not a valid Workflow draft. Return a corrected JSON object only. Keep exactly the allowed keys name, description, input_schema, and steps. Steps may only be resource_query, for_each, model, approval_gate, and output; agent_id must be an integer from the supplied available_agents; never add image, tool, connector, HTTP, or publish steps. For image-related goals, use the Agent's authorized media.create_image_task capability and do not add approval_gate; image selection and application remain explicit user actions. Use post_ids for posts, page_ids for pages, and prompt for text instructions when required. input_schema must be an object schema with additionalProperties false.`
+
+func IsCustomOrCompositeGoal(goal string) bool {
+	value := strings.ToLower(goal)
+	return strings.Contains(value, "提示词") ||
+		strings.Contains(value, "prompt") ||
+		strings.Contains(value, "输入") ||
+		strings.Contains(value, "指令") ||
+		strings.Contains(value, "要求") ||
+		strings.Contains(value, "每天") ||
+		strings.Contains(value, "每周") ||
+		strings.Contains(value, "定时") ||
+		strings.Contains(value, "cron") ||
+		strings.Contains(value, "循环") ||
+		strings.Contains(value, "逐篇") ||
+		strings.Contains(value, "逐个") ||
+		strings.Contains(value, "批量") ||
+		strings.Contains(value, "先") ||
+		strings.Contains(value, "然后") ||
+		strings.Contains(value, "再由") ||
+		strings.Contains(value, "不需要审核") ||
+		strings.Contains(value, "无需审核") ||
+		strings.Contains(value, "不需要审批") ||
+		strings.Contains(value, "无需审批") ||
+		strings.Contains(value, "直接运行")
+}
+
+func PlanAutomation(prompt string, profiles []*domain.ProviderProfile, agents []*domain.Agent, skills []*domain.AgentSkill, toolsCatalog []tool.CatalogItem) (*AutomationPlan, error) {
+	prompt = strings.TrimSpace(prompt)
+	if prompt == "" || len([]rune(prompt)) > 4000 {
+		return nil, ErrAutomationGoalRequired
+	}
+	plan := BuildAutomationPlan(prompt, profiles, agents, skills)
+	intent := ParseIntent(prompt)
+	for _, agent := range agents {
+		if agent.ProviderProfile == nil {
+			for _, profile := range profiles {
+				if profile.ID == agent.ProviderProfileID {
+					agent.ProviderProfile = profile
+					break
+				}
+			}
+		}
+	}
+	match, template, selectedAgent := Match(intent, profiles, agents, skills, toolsCatalog)
+	plan.Intent, plan.Match = intent, match
+	plan.Template = map[string]any{"status": "unsupported"}
+	if template != nil {
+		plan.Template = map[string]any{"status": "matched", "key": template.Key, "name": template.Name}
+		plan.Workflow = Compile(intent, template, selectedAgent)
+		if match.Status != "ready" {
+			plan.Workflow.Enabled = false
+		}
+	}
+	if intent.Status == "ambiguous" {
+		plan.Template = map[string]any{"status": "ambiguous"}
+		plan.Prerequisites = append(plan.Prerequisites, "补充明确的资源类型和操作目标")
+	}
+	plan.Warnings = append(plan.Warnings, match.Warnings...)
+	plan.Prerequisites = append(plan.Prerequisites, match.Missing...)
+	return &plan, nil
+}
+
+type WorkflowDraftResult struct {
+	Workflow       domain.Workflow  `json:"workflow"`
+	Provider       string           `json:"provider"`
+	Model          string           `json:"model"`
+	PlannerVersion string           `json:"planner_version"`
+	PlannerWarning string           `json:"planner_warning"`
+	SelectedAgents []map[string]any `json:"selected_agents"`
+	Intent         WorkflowIntent   `json:"intent"`
+	Template       map[string]any   `json:"template"`
+	Match          MatchResult      `json:"match"`
+	Readiness      map[string]any   `json:"readiness"`
+}
+
+func PlanWorkflow(
+	ctx context.Context,
+	prompt string,
+	profiles []*domain.ProviderProfile,
+	agents []*domain.Agent,
+	toolsCatalog []tool.CatalogItem,
+	validateDraft func(*domain.Workflow) error,
+	clientProvider func(ctx context.Context, providerID int64) (provider.Provider, error),
+) (*WorkflowDraftResult, error) {
+	prompt = strings.TrimSpace(prompt)
+	if prompt == "" || len([]rune(prompt)) > 4000 {
+		return nil, ErrGoalRequired
+	}
+	var selected *domain.ProviderProfile
+	for _, profile := range profiles {
+		if profile.Enabled && profile.IsDefaultWriting {
+			selected = profile
+			break
+		}
+	}
+	if selected == nil {
+		return nil, ErrDefaultModelRequired
+	}
+	available := make([]map[string]any, 0, len(agents))
+	var fallbackAgentID int64
+	fallbackNeedsApproval := false
+	for _, agent := range agents {
+		if agent.Enabled && agent.SkillVersionID != nil {
+			item := map[string]any{"id": agent.ID, "name": agent.Name, "description": agent.Description, "skill_version_id": agent.SkillVersionID}
+			if agent.Skill != nil {
+				item["execution_mode"] = agent.Skill.ExecutionMode
+				item["capabilities"] = agent.Skill.Capabilities
+			}
+			available = append(available, item)
+			if fallbackAgentID == 0 {
+				fallbackAgentID = agent.ID
+				fallbackNeedsApproval = agent.Skill != nil && agent.Skill.ExecutionMode == "approval"
+			}
+		}
+	}
+	if len(available) == 0 {
+		return nil, ErrAgentSkillRequired
+	}
+	intent := ParseIntent(prompt)
+	for _, agent := range agents {
+		if agent.ProviderProfile == nil {
+			for _, profile := range profiles {
+				if profile.ID == agent.ProviderProfileID {
+					agent.ProviderProfile = profile
+					break
+				}
+			}
+		}
+	}
+	match, template, matchedAgent := Match(intent, profiles, agents, nil, toolsCatalog)
+	if template != nil && !IsCustomOrCompositeGoal(prompt) {
+		draft := Compile(intent, template, matchedAgent)
+		draft.Enabled = false
+		warning := ""
+		if intent.Status == "ambiguous" {
+			warning = "无法确定需求意图；请补充资源类型和目标动作后再保存。"
+		} else if match.Status != "ready" {
+			warning = "Workflow 依赖尚未就绪；当前仅返回未启用草案。"
+		}
+		selectedAgents := []map[string]any{}
+		if matchedAgent != nil {
+			selectedAgents = append(selectedAgents, map[string]any{
+				"id":           matchedAgent.ID,
+				"name":         matchedAgent.Name,
+				"status":       "ready",
+				"skill_name":   matchedAgent.Skill.Name,
+				"capabilities": matchedAgent.Skill.Capabilities,
+			})
+		}
+		return &WorkflowDraftResult{
+			Workflow:       draft,
+			Provider:       selected.Name,
+			Model:          selected.Model,
+			PlannerVersion: "workflow-planner/v6",
+			PlannerWarning: warning,
+			SelectedAgents: selectedAgents,
+			Intent:         intent,
+			Template:       map[string]any{"status": "matched", "key": template.Key, "name": template.Name},
+			Match:          match,
+			Readiness:      map[string]any{"status": match.Status, "message": "服务端模板和能力契约已生成；请完成依赖确认后 Dry-run。"},
+		}, nil
+	}
+
+	client, err := clientProvider(ctx, selected.ID)
+	if err != nil {
+		return nil, err
+	}
+	payload, _ := json.Marshal(map[string]any{
+		"goal":             prompt,
+		"available_agents": available,
+		"available_tools":  toolsCatalog,
+	})
+	maxTokens := selected.MaxOutputTokens
+	if maxTokens < 3000 {
+		maxTokens = 3000
+	}
+	result, err := client.Generate(ctx, provider.Request{
+		Instructions: WorkflowPlannerPrompt,
+		Messages:     []provider.Message{{Role: "user", Content: string(payload)}},
+		MaxTokens:    maxTokens,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var draft domain.Workflow
+	warning := ""
+	decodeDraft := func(text string) bool {
+		draftJSON, validJSON := ExtractWorkflowDraftJSON(text)
+		return validJSON && json.Unmarshal(draftJSON, &draft) == nil
+	}
+	validDraft := decodeDraft(result.Text)
+	if !validDraft {
+		correctionPayload, _ := json.Marshal(map[string]any{"goal": prompt, "available_agents": available, "previous_response": result.Text})
+		correction, correctionErr := client.Generate(ctx, provider.Request{
+			Instructions: WorkflowPlannerCorrectionPrompt,
+			Messages:     []provider.Message{{Role: "user", Content: string(correctionPayload)}},
+			MaxTokens:    maxTokens,
+		})
+		if correctionErr == nil {
+			validDraft = decodeDraft(correction.Text)
+		}
+	}
+	if validDraft {
+		draft.Steps = NormalizeDraftAgentIDs(draft.Steps, fallbackAgentID)
+		if len(draft.InputSchema) == 0 {
+			draft.InputSchema = json.RawMessage(`{"type":"object","additionalProperties":false}`)
+		}
+	} else {
+		warning = "AI draft format was invalid; a safe editable starter draft was created instead."
+		draft = FallbackWorkflowDraft(prompt, fallbackAgentID, true)
+	}
+	EnforceImageBriefContract(prompt, &draft)
+	draft.Enabled = false
+	if err := validateDraft(&draft); err != nil {
+		warning = "AI draft did not meet workflow safety rules; a safe editable starter draft was created instead."
+		draft = FallbackWorkflowDraft(prompt, fallbackAgentID, fallbackNeedsApproval)
+		if fallbackErr := validateDraft(&draft); fallbackErr != nil {
+			return nil, fallbackErr
+		}
+	}
+	availableByID := make(map[int64]*domain.Agent, len(agents))
+	for _, agent := range agents {
+		if agent.Enabled && agent.SkillVersionID != nil {
+			availableByID[agent.ID] = agent
+		}
+	}
+	selectedAgents := []map[string]any{}
+	for _, id := range WorkflowDraftAgentIDs(draft.Steps) {
+		agent, ok := availableByID[id]
+		if !ok {
+			continue
+		}
+		selection := map[string]any{"id": agent.ID, "name": agent.Name, "status": "ready"}
+		if agent.Skill != nil {
+			selection["skill_name"] = agent.Skill.Name
+			selection["capabilities"] = agent.Skill.Capabilities
+		}
+		selectedAgents = append(selectedAgents, selection)
+	}
+	templateStatus := "unsupported"
+	templateKey, templateName := "", ""
+	if template != nil {
+		templateStatus = "matched"
+		templateKey, templateName = template.Key, template.Name
+	}
+	return &WorkflowDraftResult{
+		Workflow:       draft,
+		Provider:       selected.Name,
+		Model:          selected.Model,
+		PlannerVersion: "workflow-planner/v6",
+		PlannerWarning: warning,
+		SelectedAgents: selectedAgents,
+		Intent:         intent,
+		Template:       map[string]any{"status": templateStatus, "key": templateKey, "name": templateName},
+		Match:          match,
+		Readiness:      map[string]any{"status": "ready", "message": "Provider, Agent, and Skill bindings were verified for this draft."},
+	}, nil
+}
 

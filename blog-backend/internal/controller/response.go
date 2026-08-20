@@ -14,6 +14,7 @@ import (
 	"github.com/rushairer/blog-backend/internal/repository"
 	"github.com/rushairer/blog-backend/internal/service"
 	workflowservice "github.com/rushairer/blog-backend/internal/workflow"
+	"github.com/rushairer/blog-backend/internal/workflowplan"
 	"github.com/rushairer/gouno"
 	"go.uber.org/zap"
 )
@@ -95,7 +96,9 @@ func WriteDomainError(c *gin.Context, err error) {
 		errors.Is(err, agentservice.ErrRunLimit),
 		errors.Is(err, agentservice.ErrTokenBudget),
 		errors.Is(err, agentservice.ErrApprovalConflict),
-		errors.Is(err, agentservice.ErrApprovalExpired):
+		errors.Is(err, agentservice.ErrApprovalExpired),
+		errors.Is(err, workflowplan.ErrDefaultModelRequired),
+		errors.Is(err, workflowplan.ErrAgentSkillRequired):
 		status = http.StatusConflict
 
 	case errors.Is(err, service.ErrPostTitleEmpty),
@@ -132,7 +135,9 @@ func WriteDomainError(c *gin.Context, err error) {
 		errors.Is(err, repository.ErrCommentDepthExceeded),
 		errors.Is(err, workflowservice.ErrInvalid),
 		errors.Is(err, knowledge.ErrInvalid),
-		errors.Is(err, agentservice.ErrInvalid):
+		errors.Is(err, agentservice.ErrInvalid),
+		errors.Is(err, workflowplan.ErrGoalRequired),
+		errors.Is(err, workflowplan.ErrAutomationGoalRequired):
 		status = http.StatusBadRequest
 	}
 
