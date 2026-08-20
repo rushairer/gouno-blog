@@ -54,7 +54,7 @@ type AgentControllerOptions struct {
 	Connectors *connector.Service
 }
 
-func NewAgentControllerWithOptions(opts AgentControllerOptions) *AgentController {
+func NewAgentController(opts AgentControllerOptions) *AgentController {
 	return &AgentController{
 		svc:        opts.Management,
 		runner:     opts.Runner,
@@ -68,12 +68,9 @@ func NewAgentControllerWithOptions(opts AgentControllerOptions) *AgentController
 	}
 }
 
-func NewAgentController(svc *agentservice.ManagementService, runner *agentservice.Runner, approvals *agentservice.ApprovalService, tools *tool.Registry, workerCtx context.Context, knowledgeServices ...*knowledge.Service) *AgentController {
-	var knowledgeService *knowledge.Service
-	if len(knowledgeServices) > 0 {
-		knowledgeService = knowledgeServices[0]
-	}
-	return &AgentController{svc: svc, runner: runner, approvals: approvals, tools: tools, workerCtx: workerCtx, knowledge: knowledgeService}
+// NewAgentControllerWithOptions is an alias for NewAgentController.
+func NewAgentControllerWithOptions(opts AgentControllerOptions) *AgentController {
+	return NewAgentController(opts)
 }
 
 type providerRequest struct {

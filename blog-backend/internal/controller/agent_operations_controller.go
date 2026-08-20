@@ -6,13 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/domain"
-	"github.com/rushairer/blog-backend/internal/operations"
 	"github.com/rushairer/gouno"
 )
-
-func (ctrl *AgentController) SetOperationsService(service *operations.Service) {
-	ctrl.operations = service
-}
 
 func (ctrl *AgentController) ListSuggestions(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "100"))
