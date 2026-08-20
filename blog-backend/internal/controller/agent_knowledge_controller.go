@@ -22,7 +22,7 @@ type embeddingProfileRequest struct {
 func (ctrl *AgentController) ListEmbeddingProfiles(c *gin.Context) {
 	items, err := ctrl.knowledge.ListProfiles(c.Request.Context())
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
@@ -31,7 +31,7 @@ func (ctrl *AgentController) ListEmbeddingProfiles(c *gin.Context) {
 func (ctrl *AgentController) CreateEmbeddingProfile(c *gin.Context) { ctrl.saveEmbeddingProfile(c, 0) }
 
 func (ctrl *AgentController) UpdateEmbeddingProfile(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
@@ -48,7 +48,7 @@ func (ctrl *AgentController) saveEmbeddingProfile(c *gin.Context, id int64) {
 		Model: req.Model, Dimensions: req.Dimensions, Enabled: req.Enabled,
 		RequestTimeoutSeconds: req.RequestTimeoutSeconds}
 	if err := ctrl.knowledge.SaveProfile(c.Request.Context(), value, req.APIKey); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	status := http.StatusOK
@@ -59,25 +59,25 @@ func (ctrl *AgentController) saveEmbeddingProfile(c *gin.Context, id int64) {
 }
 
 func (ctrl *AgentController) DeleteEmbeddingProfile(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	if err := ctrl.knowledge.DeleteProfile(c.Request.Context(), id); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }
 
 func (ctrl *AgentController) TestEmbeddingProfile(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	duration, err := ctrl.knowledge.TestProfile(c.Request.Context(), id)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"ok": true, "latency_ms": duration.Milliseconds()}))
@@ -86,7 +86,7 @@ func (ctrl *AgentController) TestEmbeddingProfile(c *gin.Context) {
 func (ctrl *AgentController) IndexStatus(c *gin.Context) {
 	value, err := ctrl.knowledge.Status(c.Request.Context())
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(value))
@@ -94,7 +94,7 @@ func (ctrl *AgentController) IndexStatus(c *gin.Context) {
 
 func (ctrl *AgentController) RebuildIndex(c *gin.Context) {
 	if err := ctrl.knowledge.Rebuild(c.Request.Context()); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusAccepted, gouno.NewSuccessResponse(nil))
@@ -102,7 +102,7 @@ func (ctrl *AgentController) RebuildIndex(c *gin.Context) {
 
 func (ctrl *AgentController) RetryIndex(c *gin.Context) {
 	if err := ctrl.knowledge.RetryFailed(c.Request.Context()); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusAccepted, gouno.NewSuccessResponse(nil))
@@ -117,7 +117,7 @@ func (ctrl *AgentController) ReplaceIndexEvaluation(c *gin.Context) {
 		return
 	}
 	if err := ctrl.knowledge.ReplaceEvaluationCases(c.Request.Context(), req.Cases); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
@@ -126,7 +126,7 @@ func (ctrl *AgentController) ReplaceIndexEvaluation(c *gin.Context) {
 func (ctrl *AgentController) EvaluateIndex(c *gin.Context) {
 	result, err := ctrl.knowledge.Evaluate(c.Request.Context())
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(result))

@@ -78,7 +78,7 @@ func (ctrl *PostController) Create(c *gin.Context) {
 	}
 
 	if err := ctrl.svc.CreatePost(c.Request.Context(), post); err != nil {
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 
@@ -119,7 +119,7 @@ func (ctrl *PostController) Update(c *gin.Context) {
 	}
 
 	if err := ctrl.svc.UpdatePost(c.Request.Context(), post); err != nil {
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 
@@ -138,7 +138,7 @@ func (ctrl *PostController) ListAdmin(c *gin.Context) {
 	}
 	posts, total, err := ctrl.svc.ListAdminPosts(c.Request.Context(), filter, page, pageSize)
 	if err != nil {
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	WritePaginated(c, posts, total, page, pageSize)
@@ -151,7 +151,7 @@ func (ctrl *PostController) GetAdmin(c *gin.Context) {
 	}
 	post, err := ctrl.svc.GetAdminPost(c.Request.Context(), id)
 	if err != nil {
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(post))
@@ -168,7 +168,7 @@ func (ctrl *PostController) Batch(c *gin.Context) {
 	}
 	affected, err := ctrl.svc.BatchPosts(c.Request.Context(), req.IDs, req.Action)
 	if err != nil {
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"affected": affected}))
@@ -186,7 +186,7 @@ func (ctrl *PostController) Delete(c *gin.Context) {
 	}
 
 	if err := ctrl.svc.DeletePost(c.Request.Context(), id); err != nil {
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 
@@ -202,7 +202,7 @@ func (ctrl *PostController) Get(c *gin.Context) {
 	if err == nil {
 		post, err = ctrl.svc.GetPost(c.Request.Context(), id)
 		if err != nil {
-			writeServiceError(c, err)
+			WriteDomainError(c, err)
 			return
 		}
 		if post != nil {
@@ -214,7 +214,7 @@ func (ctrl *PostController) Get(c *gin.Context) {
 	post, err = ctrl.svc.GetPostBySlug(c.Request.Context(), slugOrID)
 
 	if err != nil {
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	if post == nil {
@@ -237,7 +237,7 @@ func (ctrl *PostController) List(c *gin.Context) {
 
 	posts, total, err := ctrl.svc.ListPosts(c.Request.Context(), tag, search, page, pageSize)
 	if err != nil {
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 
@@ -247,11 +247,11 @@ func (ctrl *PostController) List(c *gin.Context) {
 func (ctrl *PostController) IncrementViews(c *gin.Context) {
 	postID, err := ctrl.svc.ResolvePostID(c.Request.Context(), c.Param("slugOrID"))
 	if err != nil {
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	if err := ctrl.svc.IncrementViews(c.Request.Context(), postID); err != nil {
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
@@ -260,11 +260,11 @@ func (ctrl *PostController) IncrementViews(c *gin.Context) {
 func (ctrl *PostController) IncrementLikes(c *gin.Context) {
 	postID, err := ctrl.svc.ResolvePostID(c.Request.Context(), c.Param("slugOrID"))
 	if err != nil {
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	if err := ctrl.svc.IncrementLikes(c.Request.Context(), postID); err != nil {
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
@@ -273,7 +273,7 @@ func (ctrl *PostController) IncrementLikes(c *gin.Context) {
 func (ctrl *PostController) ListTags(c *gin.Context) {
 	tags, err := ctrl.svc.ListTags(c.Request.Context())
 	if err != nil {
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(tags))
@@ -292,7 +292,7 @@ type UpdateCommentVisibilityRequest struct {
 func (ctrl *PostController) CreateComment(c *gin.Context) {
 	postID, err := ctrl.svc.ResolvePostID(c.Request.Context(), c.Param("slugOrID"))
 	if err != nil {
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 
@@ -310,7 +310,7 @@ func (ctrl *PostController) CreateComment(c *gin.Context) {
 	}
 
 	if err := ctrl.svc.CreateComment(c.Request.Context(), comment); err != nil {
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 
@@ -320,13 +320,13 @@ func (ctrl *PostController) CreateComment(c *gin.Context) {
 func (ctrl *PostController) GetComments(c *gin.Context) {
 	postID, err := ctrl.svc.ResolvePostID(c.Request.Context(), c.Param("slugOrID"))
 	if err != nil {
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 
 	comments, err := ctrl.svc.GetComments(c.Request.Context(), postID)
 	if err != nil {
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 
@@ -336,13 +336,13 @@ func (ctrl *PostController) GetComments(c *gin.Context) {
 func (ctrl *PostController) GetAllComments(c *gin.Context) {
 	postID, err := ctrl.svc.ResolvePostID(c.Request.Context(), c.Param("slugOrID"))
 	if err != nil {
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 
 	comments, err := ctrl.svc.GetAllComments(c.Request.Context(), postID)
 	if err != nil {
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 
@@ -362,7 +362,7 @@ func (ctrl *PostController) UpdateCommentVisibility(c *gin.Context) {
 	}
 
 	if err := ctrl.svc.SetCommentVisibility(c.Request.Context(), id, req.IsVisible); err != nil {
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 
@@ -376,13 +376,10 @@ func (ctrl *PostController) DeleteComment(c *gin.Context) {
 	}
 
 	if err := ctrl.svc.DeleteComment(c.Request.Context(), id); err != nil {
-		writeServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }
 
-func writeServiceError(c *gin.Context, err error) {
-	WriteDomainError(c, err)
-}

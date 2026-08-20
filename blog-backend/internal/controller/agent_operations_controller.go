@@ -21,7 +21,7 @@ func (ctrl *AgentController) ListSuggestions(c *gin.Context) {
 	}
 	items, err := ctrl.operations.ListSuggestions(c.Request.Context(), c.DefaultQuery("status", "new"), limit)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
@@ -29,14 +29,14 @@ func (ctrl *AgentController) ListSuggestions(c *gin.Context) {
 
 func (ctrl *AgentController) RefreshSuggestions(c *gin.Context) {
 	if err := ctrl.operations.RefreshSuggestions(c.Request.Context()); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusAccepted, gouno.NewSuccessResponse(nil))
 }
 
 func (ctrl *AgentController) IgnoreSuggestion(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
@@ -48,19 +48,19 @@ func (ctrl *AgentController) IgnoreSuggestion(c *gin.Context) {
 		return
 	}
 	if err := ctrl.operations.IgnoreSuggestion(c.Request.Context(), id, req.Reason); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }
 
 func (ctrl *AgentController) ConvertSuggestion(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	if err := ctrl.operations.ConvertSuggestion(c.Request.Context(), id); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
@@ -69,14 +69,14 @@ func (ctrl *AgentController) ConvertSuggestion(c *gin.Context) {
 func (ctrl *AgentController) ListEditorialTasks(c *gin.Context) {
 	items, err := ctrl.operations.ListEditorialTasks(c.Request.Context(), c.Query("status"))
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
 }
 
 func (ctrl *AgentController) UpdateEditorialTaskStatus(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
@@ -88,7 +88,7 @@ func (ctrl *AgentController) UpdateEditorialTaskStatus(c *gin.Context) {
 		return
 	}
 	if err := ctrl.operations.UpdateEditorialTaskStatus(c.Request.Context(), id, req.Status); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
@@ -97,7 +97,7 @@ func (ctrl *AgentController) UpdateEditorialTaskStatus(c *gin.Context) {
 func (ctrl *AgentController) ListCandidateSets(c *gin.Context) {
 	items, err := ctrl.operations.ListCandidateSets(c.Request.Context())
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
@@ -106,14 +106,14 @@ func (ctrl *AgentController) ListCandidateSets(c *gin.Context) {
 func (ctrl *AgentController) ListMediaCandidates(c *gin.Context) {
 	items, err := ctrl.approvals.ListMediaCandidates(c.Request.Context())
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
 }
 
 func (ctrl *AgentController) ReviewMediaCandidate(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
@@ -128,7 +128,7 @@ func (ctrl *AgentController) ReviewMediaCandidate(c *gin.Context) {
 	reviewer, _ := c.Get("account_id")
 	reviewerText, _ := reviewer.(string)
 	if err := ctrl.approvals.ReviewMediaCandidate(c.Request.Context(), id, req.Action, reviewerText, req.Note); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	ctrl.reconcileCandidateWorkflow(c, id)
@@ -144,7 +144,7 @@ func (ctrl *AgentController) reconcileCandidateWorkflow(c *gin.Context, candidat
 }
 
 func (ctrl *AgentController) AttachMediaAsset(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
@@ -156,14 +156,14 @@ func (ctrl *AgentController) AttachMediaAsset(c *gin.Context) {
 		return
 	}
 	if err := ctrl.approvals.AttachMediaAsset(c.Request.Context(), id, req.MediaAssetID); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }
 
 func (ctrl *AgentController) GenerateMediaCandidate(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
@@ -176,7 +176,7 @@ func (ctrl *AgentController) GenerateMediaCandidate(c *gin.Context) {
 			return
 		}
 		if err := ctrl.approvals.SetMediaGenerationInstruction(c.Request.Context(), id, req.Instruction); err != nil {
-			writeAgentError(c, err)
+			WriteDomainError(c, err)
 			return
 		}
 	}
@@ -193,12 +193,12 @@ func (ctrl *AgentController) RegenerateImageTask(c *gin.Context) {
 }
 
 func (ctrl *AgentController) CancelImageTask(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	if err := ctrl.approvals.CancelMediaGeneration(c.Request.Context(), id); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	ctrl.reconcileCandidateWorkflow(c, id)
@@ -206,7 +206,7 @@ func (ctrl *AgentController) CancelImageTask(c *gin.Context) {
 }
 
 func (ctrl *AgentController) SelectImageTask(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
@@ -219,7 +219,7 @@ func (ctrl *AgentController) SelectImageTask(c *gin.Context) {
 		return
 	}
 	if err := ctrl.approvals.SelectMediaCandidate(c.Request.Context(), id, req.Placement, req.Anchor); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	ctrl.reconcileCandidateWorkflow(c, id)
@@ -227,7 +227,7 @@ func (ctrl *AgentController) SelectImageTask(c *gin.Context) {
 }
 
 func (ctrl *AgentController) SelectWorkflowImageTasks(c *gin.Context) {
-	runID, ok := agentID(c)
+	runID, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
@@ -239,18 +239,18 @@ func (ctrl *AgentController) SelectWorkflowImageTasks(c *gin.Context) {
 		return
 	}
 	if err := ctrl.approvals.SelectMediaCandidates(c.Request.Context(), runID, req.Selections); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	if err := ctrl.workflows.ReconcileMediaRun(c.Request.Context(), runID); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }
 
 func (ctrl *AgentController) ApplyWorkflowImageTasks(c *gin.Context) {
-	runID, ok := agentID(c)
+	runID, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
@@ -263,18 +263,18 @@ func (ctrl *AgentController) ApplyWorkflowImageTasks(c *gin.Context) {
 	}
 	post, err := ctrl.approvals.ApplyMediaCandidates(c.Request.Context(), runID, req.CandidateIDs)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	if err := ctrl.workflows.ReconcileMediaRun(c.Request.Context(), runID); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(post))
 }
 
 func (ctrl *AgentController) RejectWorkflowImageTasks(c *gin.Context) {
-	runID, ok := agentID(c)
+	runID, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
@@ -286,23 +286,23 @@ func (ctrl *AgentController) RejectWorkflowImageTasks(c *gin.Context) {
 		return
 	}
 	if err := ctrl.approvals.RejectMediaCandidates(c.Request.Context(), runID, req.CandidateIDs); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	if err := ctrl.workflows.ReconcileMediaRun(c.Request.Context(), runID); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }
 
 func (ctrl *AgentController) RejectImageTask(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	if err := ctrl.approvals.RejectMediaCandidate(c.Request.Context(), id); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	ctrl.reconcileCandidateWorkflow(c, id)
@@ -310,13 +310,13 @@ func (ctrl *AgentController) RejectImageTask(c *gin.Context) {
 }
 
 func (ctrl *AgentController) ApplyImageTask(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	post, err := ctrl.approvals.ApplyMediaCandidate(c.Request.Context(), id)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	ctrl.reconcileCandidateWorkflow(c, id)
@@ -324,33 +324,33 @@ func (ctrl *AgentController) ApplyImageTask(c *gin.Context) {
 }
 
 func (ctrl *AgentController) PreviewImageTask(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	preview, err := ctrl.approvals.PreviewMediaCandidate(c.Request.Context(), id)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(preview))
 }
 
 func (ctrl *AgentController) ImageTaskEvents(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	items, err := ctrl.approvals.ListMediaCandidateEvents(c.Request.Context(), id)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
 }
 
 func (ctrl *AgentController) SelectCandidate(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
@@ -362,7 +362,7 @@ func (ctrl *AgentController) SelectCandidate(c *gin.Context) {
 		return
 	}
 	if err := ctrl.operations.SelectCandidate(c.Request.Context(), id, req.CandidateID); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
@@ -378,7 +378,7 @@ func (ctrl *AgentController) SaveFeedback(c *gin.Context) {
 		value.CreatedBy, _ = subject.(string)
 	}
 	if err := ctrl.operations.SaveFeedback(c.Request.Context(), &value); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusCreated, gouno.NewSuccessResponse(&value))
@@ -387,7 +387,7 @@ func (ctrl *AgentController) SaveFeedback(c *gin.Context) {
 func (ctrl *AgentController) OutcomeMetrics(c *gin.Context) {
 	result, err := ctrl.operations.OutcomeMetrics(c.Request.Context())
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(result))

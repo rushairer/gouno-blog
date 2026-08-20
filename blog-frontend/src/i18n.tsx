@@ -7,7 +7,13 @@ import en from './i18n/locales/en.json';
 
 export type { Locale };
 
-export type TranslationKey = keyof typeof en;
+type NestedKeyOf<ObjectType extends object> = {
+  [Key in keyof ObjectType & (string | number)]: ObjectType[Key] extends object
+    ? `${Key}` | `${Key}.${NestedKeyOf<ObjectType[Key]>}`
+    : `${Key}`;
+}[keyof ObjectType & (string | number)];
+
+export type TranslationKey = NestedKeyOf<typeof en>;
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   return <I18nextProvider i18n={i18n}>{children}</I18nextProvider>;

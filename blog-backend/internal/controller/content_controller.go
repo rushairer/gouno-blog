@@ -25,7 +25,7 @@ func validSiteURL(value string, allowPath bool) bool {
 func (ctrl *ContentController) ListCategories(c *gin.Context) {
 	items, err := ctrl.svc.ListCategories(c.Request.Context())
 	if err != nil {
-		writeContentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
@@ -42,7 +42,7 @@ func (ctrl *ContentController) ListCategoryPosts(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gouno.NewErrorResponse(http.StatusNotFound, "category not found"))
 			return
 		}
-		writeContentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	WritePaginated(c, posts, total, page, pageSize)
@@ -60,7 +60,7 @@ func (ctrl *ContentController) CreateCategory(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
 			return
 		}
-		writeContentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusCreated, gouno.NewSuccessResponse(item))
@@ -86,7 +86,7 @@ func (ctrl *ContentController) UpdateCategory(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
 			return
 		}
-		writeContentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
@@ -107,7 +107,7 @@ func (ctrl *ContentController) DeleteCategory(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
 			return
 		}
-		writeContentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
@@ -116,7 +116,7 @@ func (ctrl *ContentController) DeleteCategory(c *gin.Context) {
 func (ctrl *ContentController) ListAdminTags(c *gin.Context) {
 	items, err := ctrl.svc.ListAdminTags(c.Request.Context())
 	if err != nil {
-		writeContentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
@@ -136,7 +136,7 @@ func (ctrl *ContentController) RenameTag(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "new tag name is required"))
 			return
 		}
-		writeContentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
@@ -145,7 +145,7 @@ func (ctrl *ContentController) RenameTag(c *gin.Context) {
 func (ctrl *ContentController) DeleteTag(c *gin.Context) {
 	err := ctrl.svc.DeleteTag(c.Request.Context(), c.Param("name"))
 	if err != nil {
-		writeContentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
@@ -162,7 +162,7 @@ func (ctrl *ContentController) MergeTags(c *gin.Context) {
 	}
 	err := ctrl.svc.MergeTags(c.Request.Context(), req.Source, req.Target)
 	if err != nil {
-		writeContentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
@@ -171,7 +171,7 @@ func (ctrl *ContentController) MergeTags(c *gin.Context) {
 func (ctrl *ContentController) GetSiteSettings(c *gin.Context) {
 	settings, err := ctrl.svc.GetSiteSettings(c.Request.Context())
 	if err != nil {
-		writeContentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(settings))
@@ -193,17 +193,10 @@ func (ctrl *ContentController) UpdateSiteSettings(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
 			return
 		default:
-			writeContentError(c, err)
+			WriteDomainError(c, err)
 			return
 		}
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(settings))
 }
 
-func writeContentError(c *gin.Context, err error) {
-	if errors.Is(err, service.ErrCategorySlugInUse) {
-		c.JSON(http.StatusConflict, gouno.NewErrorResponse(http.StatusConflict, "slug or name is already in use"))
-		return
-	}
-	WriteDomainError(c, err)
-}

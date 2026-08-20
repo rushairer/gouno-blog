@@ -14,7 +14,7 @@ func (ctrl *AgentController) SetConnectorService(value *connector.Service) { ctr
 func (ctrl *AgentController) ListConnectorProfiles(c *gin.Context) {
 	items, err := ctrl.connectors.ListProfiles(c.Request.Context())
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
@@ -30,21 +30,21 @@ func (ctrl *AgentController) SaveConnectorProfile(c *gin.Context) {
 		return
 	}
 	if err := ctrl.connectors.SaveProfile(c.Request.Context(), &req.Profile, req.Credential); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(req.Profile))
 }
 
 func (ctrl *AgentController) BeginConnectorOAuth(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	if c.Query("provider") == "search_console" {
 		state, authorizationURL, err := ctrl.connectors.BeginSearchConsoleOAuth(c.Request.Context(), id)
 		if err != nil {
-			writeAgentError(c, err)
+			WriteDomainError(c, err)
 			return
 		}
 		c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"state": state, "sandbox": false, "authorization_url": authorizationURL}))
@@ -52,7 +52,7 @@ func (ctrl *AgentController) BeginConnectorOAuth(c *gin.Context) {
 	}
 	state, err := ctrl.connectors.BeginOAuth(c.Request.Context(), id)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"state": state, "sandbox": true}))
@@ -75,14 +75,14 @@ func (ctrl *AgentController) CompleteConnectorOAuth(c *gin.Context) {
 		err = ctrl.connectors.CompleteOAuthMock(c.Request.Context(), req.State, req.Code)
 	}
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"connected": true, "sandbox": req.Provider != "search_console"}))
 }
 
 func (ctrl *AgentController) SearchConsoleSummary(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
@@ -96,7 +96,7 @@ func (ctrl *AgentController) SearchConsoleSummary(c *gin.Context) {
 	}
 	data, err := ctrl.connectors.SearchConsoleSummary(c.Request.Context(), id, req.StartDate, req.EndDate)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(json.RawMessage(data)))
@@ -105,7 +105,7 @@ func (ctrl *AgentController) SearchConsoleSummary(c *gin.Context) {
 func (ctrl *AgentController) ListConnectorOutbox(c *gin.Context) {
 	items, err := ctrl.connectors.ListOutbox(c.Request.Context())
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
@@ -123,55 +123,55 @@ func (ctrl *AgentController) QueueConnectorOutbox(c *gin.Context) {
 	}
 	item, err := ctrl.connectors.Queue(c.Request.Context(), req.ProfileID, req.Key, req.Payload)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusAccepted, gouno.NewSuccessResponse(item))
 }
 
 func (ctrl *AgentController) ApproveConnectorOutbox(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	if err := ctrl.connectors.Approve(c.Request.Context(), id); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"approved": true}))
 }
 
 func (ctrl *AgentController) RevokeConnectorOutbox(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	if err := ctrl.connectors.Revoke(c.Request.Context(), id); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"revoked": true}))
 }
 
 func (ctrl *AgentController) DeliverConnectorOutboxMock(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	if err := ctrl.connectors.DeliverMock(c.Request.Context(), id); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"delivered": true, "transport": "mock"}))
 }
 
 func (ctrl *AgentController) RetryConnectorOutbox(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	if err := ctrl.connectors.Retry(c.Request.Context(), id); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"retried": true}))

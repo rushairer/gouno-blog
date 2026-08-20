@@ -178,7 +178,7 @@ func resolveUniqueProviderName(baseName string, existingNames map[string]bool) s
 func (ctrl *AgentController) ExportProviders(c *gin.Context) {
 	items, err := ctrl.svc.ListProviders(c.Request.Context())
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	exportList := make([]providerExportItem, 0, len(items))
@@ -219,7 +219,7 @@ func (ctrl *AgentController) ImportProviders(c *gin.Context) {
 
 	existingProviders, err := ctrl.svc.ListProviders(c.Request.Context())
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	existingNames := make(map[string]bool, len(existingProviders)+len(items))
@@ -276,7 +276,7 @@ func (ctrl *AgentController) ImportProviders(c *gin.Context) {
 			MaxOutputTokens:       maxTokens,
 		}
 		if err := ctrl.svc.SaveProvider(c.Request.Context(), profile, apiKey); err != nil {
-			writeAgentError(c, err)
+			WriteDomainError(c, err)
 			return
 		}
 		importedProfiles = append(importedProfiles, profile)
@@ -292,20 +292,20 @@ func (ctrl *AgentController) ImportProviders(c *gin.Context) {
 func (ctrl *AgentController) ListProviders(c *gin.Context) {
 	items, err := ctrl.svc.ListProviders(c.Request.Context())
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
 }
 
 func (ctrl *AgentController) SetDefaultProvider(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	purpose := c.Param("purpose")
 	if err := ctrl.svc.SetDefaultProvider(c.Request.Context(), id, purpose); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
@@ -316,7 +316,7 @@ func (ctrl *AgentController) CreateProvider(c *gin.Context) {
 }
 
 func (ctrl *AgentController) UpdateProvider(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
@@ -336,12 +336,12 @@ func (ctrl *AgentController) saveProvider(c *gin.Context, id int64) {
 		RequestTimeoutSeconds: req.RequestTimeoutSeconds, MaxOutputTokens: req.MaxOutputTokens,
 	}
 	if err := ctrl.svc.SaveProvider(c.Request.Context(), profile, req.APIKey); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	created, err := ctrl.svc.BootstrapStarterPack(c.Request.Context())
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	status := http.StatusOK
@@ -352,25 +352,25 @@ func (ctrl *AgentController) saveProvider(c *gin.Context, id int64) {
 }
 
 func (ctrl *AgentController) DeleteProvider(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	if err := ctrl.svc.DeleteProvider(c.Request.Context(), id); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }
 
 func (ctrl *AgentController) TestProvider(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	duration, err := ctrl.svc.TestProvider(c.Request.Context(), id)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"ok": true, "latency_ms": duration.Milliseconds()}))
@@ -379,7 +379,7 @@ func (ctrl *AgentController) TestProvider(c *gin.Context) {
 func (ctrl *AgentController) ListAgents(c *gin.Context) {
 	items, err := ctrl.svc.ListAgents(c.Request.Context())
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
@@ -388,20 +388,20 @@ func (ctrl *AgentController) ListAgents(c *gin.Context) {
 func (ctrl *AgentController) ListSkills(c *gin.Context) {
 	items, err := ctrl.svc.ListSkills(c.Request.Context())
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
 }
 
 func (ctrl *AgentController) GetSkill(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	item, err := ctrl.svc.GetSkill(c.Request.Context(), id)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(item))
@@ -410,7 +410,7 @@ func (ctrl *AgentController) GetSkill(c *gin.Context) {
 func (ctrl *AgentController) CreateSkill(c *gin.Context) { ctrl.saveSkill(c, 0) }
 
 func (ctrl *AgentController) UpdateSkill(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
@@ -432,7 +432,7 @@ func (ctrl *AgentController) saveSkill(c *gin.Context, id int64) {
 		}
 	}
 	if err := ctrl.svc.SaveSkill(c.Request.Context(), &value); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	status := http.StatusOK
@@ -443,38 +443,38 @@ func (ctrl *AgentController) saveSkill(c *gin.Context, id int64) {
 }
 
 func (ctrl *AgentController) DeleteSkill(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	if err := ctrl.svc.DeleteSkill(c.Request.Context(), id); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }
 
 func (ctrl *AgentController) ListSkillVersions(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	items, err := ctrl.svc.ListSkillVersions(c.Request.Context(), id)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
 }
 
 func (ctrl *AgentController) ExportSkill(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	item, err := ctrl.svc.GetSkill(c.Request.Context(), id)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="skill-%d-v%d.json"`, item.ID, item.Version))
@@ -493,14 +493,14 @@ func (ctrl *AgentController) ImportSkill(c *gin.Context) {
 		}
 	}
 	if err := ctrl.svc.ImportSkill(c.Request.Context(), &item); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusCreated, gouno.NewSuccessResponse(&item))
 }
 
 func (ctrl *AgentController) CopySkill(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
@@ -521,20 +521,20 @@ func (ctrl *AgentController) CopySkill(c *gin.Context) {
 	}
 	item, err := ctrl.svc.CopySkill(c.Request.Context(), id, req.Name, subject)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusCreated, gouno.NewSuccessResponse(item))
 }
 
 func (ctrl *AgentController) GetAgent(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	item, err := ctrl.svc.GetAgent(c.Request.Context(), id)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(item))
@@ -545,7 +545,7 @@ func (ctrl *AgentController) CreateAgent(c *gin.Context) {
 }
 
 func (ctrl *AgentController) UpdateAgent(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
@@ -567,7 +567,7 @@ func (ctrl *AgentController) saveAgent(c *gin.Context, id int64) {
 		}
 	}
 	if err := ctrl.svc.SaveAgent(c.Request.Context(), &value); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	status := http.StatusOK
@@ -578,25 +578,25 @@ func (ctrl *AgentController) saveAgent(c *gin.Context, id int64) {
 }
 
 func (ctrl *AgentController) DeleteAgent(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	if err := ctrl.svc.DeleteAgent(c.Request.Context(), id); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }
 
 func (ctrl *AgentController) SetAgentEnabled(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	enabled := c.Param("action") == "enable"
 	if err := ctrl.svc.SetAgentEnabled(c.Request.Context(), id, enabled); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"enabled": enabled}))
@@ -611,19 +611,19 @@ func (ctrl *AgentController) DisableAgent(c *gin.Context) {
 }
 
 func (ctrl *AgentController) setEnabled(c *gin.Context, enabled bool) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	if err := ctrl.svc.SetAgentEnabled(c.Request.Context(), id, enabled); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"enabled": enabled}))
 }
 
 func (ctrl *AgentController) RunAgent(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
@@ -650,7 +650,7 @@ func (ctrl *AgentController) RunAgent(c *gin.Context) {
 	}
 	run, err := ctrl.runner.Queue(c.Request.Context(), id, domain.AgentTriggerManual, subject, input, nil)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	go ctrl.runner.Execute(ctrl.workerCtx, run.ID)
@@ -664,37 +664,37 @@ func (ctrl *AgentController) ListRuns(c *gin.Context) {
 	page, pageSize = normalizedPagination(page, pageSize, 50)
 	items, total, err := ctrl.runner.ListRuns(c.Request.Context(), agentIDValue, page, pageSize)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	WritePaginated(c, items, total, page, pageSize)
 }
 
 func (ctrl *AgentController) DeleteRun(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	if err := ctrl.runner.DeleteRun(c.Request.Context(), id); err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }
 
 func (ctrl *AgentController) GetRun(c *gin.Context) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	run, err := ctrl.runner.GetRun(c.Request.Context(), id)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	calls, err := ctrl.runner.ListToolCalls(c.Request.Context(), id)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"run": run, "tool_calls": calls}))
@@ -710,7 +710,7 @@ func (ctrl *AgentController) ListApprovals(c *gin.Context) {
 	page, pageSize = normalizedPagination(page, pageSize, 50)
 	items, total, err := ctrl.approvals.List(c.Request.Context(), c.DefaultQuery("status", "pending"), page, pageSize)
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	WritePaginated(c, items, total, page, pageSize)
@@ -729,7 +729,7 @@ func (ctrl *AgentController) Reject(c *gin.Context) {
 }
 
 func (ctrl *AgentController) reviewApproval(c *gin.Context, approve bool) {
-	id, ok := agentID(c)
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
@@ -752,12 +752,12 @@ func (ctrl *AgentController) reviewApproval(c *gin.Context, approve bool) {
 		err = ctrl.approvals.Reject(c.Request.Context(), id, reviewerText, req.Note)
 	}
 	if err != nil {
-		writeAgentError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	run, reconcileErr := ctrl.approvals.ReconcileApprovalRun(c.Request.Context(), id)
 	if reconcileErr != nil {
-		writeAgentError(c, reconcileErr)
+		WriteDomainError(c, reconcileErr)
 		return
 	}
 	if run.WorkflowRunID != nil && run.Status != domain.AgentRunAwaitingApproval {
@@ -796,10 +796,3 @@ func bindWorkflowJSON(c *gin.Context, value any) bool {
 	return true
 }
 
-func agentID(c *gin.Context) (int64, bool) {
-	return ParamPositiveID(c, "id")
-}
-
-func writeAgentError(c *gin.Context, err error) {
-	WriteDomainError(c, err)
-}

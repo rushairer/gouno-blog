@@ -2,14 +2,12 @@ package controller
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/rushairer/blog-backend/internal/domain"
-	"github.com/rushairer/blog-backend/internal/service"
 	"github.com/rushairer/gouno"
 )
 
@@ -159,7 +157,7 @@ func (ctrl *PageController) Create(c *gin.Context) {
 	}
 
 	if err := ctrl.svc.CreatePage(c.Request.Context(), page); err != nil {
-		writePageServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 
@@ -203,7 +201,7 @@ func (ctrl *PageController) Update(c *gin.Context) {
 	}
 
 	if err := ctrl.svc.UpdatePage(c.Request.Context(), page); err != nil {
-		writePageServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 
@@ -217,22 +215,10 @@ func (ctrl *PageController) Delete(c *gin.Context) {
 	}
 
 	if err := ctrl.svc.DeletePage(c.Request.Context(), id); err != nil {
-		writePageServiceError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }
 
-func writePageServiceError(c *gin.Context, err error) {
-	switch {
-	case errors.Is(err, service.ErrPageNotFound):
-		c.JSON(http.StatusNotFound, gouno.NewErrorResponse(http.StatusNotFound, err.Error()))
-	case errors.Is(err, service.ErrDuplicateSlug):
-		c.JSON(http.StatusConflict, gouno.NewErrorResponse(http.StatusConflict, err.Error()))
-	case errors.Is(err, service.ErrReservedSlug), errors.Is(err, service.ErrInvalidSlug), errors.Is(err, service.ErrPageTitleEmpty):
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
-	default:
-		WriteDomainError(c, err)
-	}
-}

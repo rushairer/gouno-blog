@@ -108,7 +108,7 @@ func (ctrl *CommunityController) CreateComment(c *gin.Context) {
 	}
 	post, err := ctrl.svc.ResolvePublishedPost(c.Request.Context(), c.Param("slugOrID"))
 	if err != nil {
-		writeCommunityError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	var req createCommunityCommentRequest
@@ -118,7 +118,7 @@ func (ctrl *CommunityController) CreateComment(c *gin.Context) {
 	}
 	comment, err := ctrl.svc.CreateComment(c.Request.Context(), post.ID, req.ParentID, actor, req.Author, req.Content)
 	if err != nil {
-		writeCommunityError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusCreated, gouno.NewSuccessResponse(comment))
@@ -127,12 +127,12 @@ func (ctrl *CommunityController) CreateComment(c *gin.Context) {
 func (ctrl *CommunityController) GetComments(c *gin.Context) {
 	post, err := ctrl.svc.ResolvePublishedPost(c.Request.Context(), c.Param("slugOrID"))
 	if err != nil {
-		writeCommunityError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	comments, err := ctrl.svc.GetComments(c.Request.Context(), post.ID)
 	if err != nil {
-		writeCommunityError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(comments))
@@ -141,12 +141,12 @@ func (ctrl *CommunityController) GetComments(c *gin.Context) {
 func (ctrl *CommunityController) State(c *gin.Context) {
 	post, err := ctrl.svc.ResolvePublishedPost(c.Request.Context(), c.Param("slugOrID"))
 	if err != nil {
-		writeCommunityError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	state, err := ctrl.svc.State(c.Request.Context(), post.ID, ctrl.actor(c))
 	if err != nil {
-		writeCommunityError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(state))
@@ -159,12 +159,12 @@ func (ctrl *CommunityController) Like(c *gin.Context) {
 	}
 	post, err := ctrl.svc.ResolvePublishedPost(c.Request.Context(), c.Param("slugOrID"))
 	if err != nil {
-		writeCommunityError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	state, err := ctrl.svc.SetLike(c.Request.Context(), post.ID, actor, true)
 	if err != nil {
-		writeCommunityError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(state))
@@ -174,12 +174,12 @@ func (ctrl *CommunityController) Unlike(c *gin.Context) {
 	actor := ctrl.actor(c)
 	post, err := ctrl.svc.ResolvePublishedPost(c.Request.Context(), c.Param("slugOrID"))
 	if err != nil {
-		writeCommunityError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	state, err := ctrl.svc.SetLike(c.Request.Context(), post.ID, actor, false)
 	if err != nil {
-		writeCommunityError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(state))
@@ -205,7 +205,7 @@ func (ctrl *CommunityController) ReportComment(c *gin.Context) {
 		return
 	}
 	if err := ctrl.svc.ReportComment(c.Request.Context(), id, actor, req.Reason); err != nil {
-		writeCommunityError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusCreated, gouno.NewSuccessResponse(nil))
@@ -220,11 +220,11 @@ func subject(c *gin.Context) string {
 func (ctrl *CommunityController) SetBookmark(c *gin.Context, bookmarked bool) {
 	post, err := ctrl.svc.ResolvePublishedPost(c.Request.Context(), c.Param("postID"))
 	if err != nil {
-		writeCommunityError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	if err := ctrl.svc.SetBookmark(c.Request.Context(), subject(c), post.ID, bookmarked); err != nil {
-		writeCommunityError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"bookmarked": bookmarked}))
@@ -233,7 +233,7 @@ func (ctrl *CommunityController) SetBookmark(c *gin.Context, bookmarked bool) {
 func (ctrl *CommunityController) ListBookmarks(c *gin.Context) {
 	items, err := ctrl.svc.ListBookmarks(c.Request.Context(), subject(c))
 	if err != nil {
-		writeCommunityError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
@@ -245,7 +245,7 @@ func (ctrl *CommunityController) ListNotifications(c *gin.Context) {
 	page, pageSize = normalizedPagination(page, pageSize, 30)
 	items, unread, err := ctrl.svc.ListNotifications(c.Request.Context(), subject(c), page, pageSize)
 	if err != nil {
-		writeCommunityError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{
@@ -263,7 +263,7 @@ func (ctrl *CommunityController) ReadNotification(c *gin.Context) {
 		return
 	}
 	if err := ctrl.svc.ReadNotification(c.Request.Context(), subject(c), id); err != nil {
-		writeCommunityError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
@@ -271,7 +271,7 @@ func (ctrl *CommunityController) ReadNotification(c *gin.Context) {
 
 func (ctrl *CommunityController) ReadAllNotifications(c *gin.Context) {
 	if err := ctrl.svc.ReadAllNotifications(c.Request.Context(), subject(c)); err != nil {
-		writeCommunityError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
@@ -283,7 +283,7 @@ func (ctrl *CommunityController) DeleteNotification(c *gin.Context) {
 		return
 	}
 	if err := ctrl.svc.DeleteNotification(c.Request.Context(), subject(c), id); err != nil {
-		writeCommunityError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
@@ -300,7 +300,7 @@ func (ctrl *CommunityController) BatchDeleteNotifications(c *gin.Context) {
 		return
 	}
 	if err := ctrl.svc.DeleteNotifications(c.Request.Context(), subject(c), req.IDs); err != nil {
-		writeCommunityError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
@@ -310,7 +310,7 @@ func (ctrl *CommunityController) ClearNotifications(c *gin.Context) {
 	onlyRead, _ := strconv.ParseBool(c.DefaultQuery("only_read", "false"))
 	count, err := ctrl.svc.ClearNotifications(c.Request.Context(), subject(c), onlyRead)
 	if err != nil {
-		writeCommunityError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"deleted_count": count}))
@@ -323,7 +323,7 @@ func (ctrl *CommunityController) ListAdminComments(c *gin.Context) {
 	reported, _ := strconv.ParseBool(c.DefaultQuery("reported", "false"))
 	items, total, err := ctrl.svc.ListAdminComments(c.Request.Context(), c.DefaultQuery("status", "pending"), reported, page, pageSize)
 	if err != nil {
-		writeCommunityError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	WritePaginated(c, items, total, page, pageSize)
@@ -348,7 +348,7 @@ func (ctrl *CommunityController) ModerateComment(c *gin.Context) {
 		return
 	}
 	if err := ctrl.svc.ModerateComment(c.Request.Context(), id, req.Status); err != nil {
-		writeCommunityError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
@@ -369,7 +369,7 @@ func (ctrl *CommunityController) LegacyVisibility(c *gin.Context) {
 		status = "visible"
 	}
 	if err := ctrl.svc.ModerateComment(c.Request.Context(), id, status); err != nil {
-		writeCommunityError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
@@ -381,12 +381,9 @@ func (ctrl *CommunityController) DeleteComment(c *gin.Context) {
 		return
 	}
 	if err := ctrl.svc.DeleteComment(c.Request.Context(), id); err != nil {
-		writeCommunityError(c, err)
+		WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }
 
-func writeCommunityError(c *gin.Context, err error) {
-	WriteDomainError(c, err)
-}
