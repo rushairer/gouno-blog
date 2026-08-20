@@ -5,11 +5,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"log"
 	"mime/multipart"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -200,12 +198,7 @@ func (ctrl *GrowthController) Analytics(c *gin.Context) {
 }
 
 func positiveID(c *gin.Context, name string) (int64, bool) {
-	id, err := strconv.ParseInt(c.Param(name), 10, 64)
-	if err != nil || id <= 0 {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, fmt.Sprintf("invalid %s", name)))
-		return 0, false
-	}
-	return id, true
+	return ParamPositiveID(c, name)
 }
 
 func validateMedia(header *multipart.FileHeader) (string, string, error) {

@@ -2,14 +2,12 @@ package controller
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/domain"
-	"github.com/rushairer/blog-backend/internal/service"
 	"github.com/rushairer/gouno"
 )
 
@@ -141,7 +139,7 @@ func (ctrl *PostController) ListAdmin(c *gin.Context) {
 		writeServiceError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"list": posts, "total": total, "page": page, "pageSize": pageSize}))
+	WritePaginated(c, posts, total, page, pageSize)
 }
 
 func (ctrl *PostController) Delete(c *gin.Context) {
@@ -211,12 +209,7 @@ func (ctrl *PostController) List(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{
-		"list":     posts,
-		"total":    total,
-		"page":     page,
-		"pageSize": pageSize,
-	}))
+	WritePaginated(c, posts, total, page, pageSize)
 }
 
 func (ctrl *PostController) IncrementViews(c *gin.Context) {
@@ -325,10 +318,8 @@ func (ctrl *PostController) GetAllComments(c *gin.Context) {
 }
 
 func (ctrl *PostController) UpdateCommentVisibility(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "invalid comment id"))
+	id, ok := ParamPositiveID(c, "id")
+	if !ok {
 		return
 	}
 
@@ -347,10 +338,8 @@ func (ctrl *PostController) UpdateCommentVisibility(c *gin.Context) {
 }
 
 func (ctrl *PostController) DeleteComment(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "invalid comment id"))
+	id, ok := ParamPositiveID(c, "id")
+	if !ok {
 		return
 	}
 
@@ -363,25 +352,5 @@ func (ctrl *PostController) DeleteComment(c *gin.Context) {
 }
 
 func writeServiceError(c *gin.Context, err error) {
-	switch {
-	case errors.Is(err, service.ErrPostNotFound):
-		c.JSON(http.StatusNotFound, gouno.NewErrorResponse(http.StatusNotFound, err.Error()))
-	case errors.Is(err, service.ErrSlugInUse), errors.Is(err, service.ErrMediaInUse):
-		c.JSON(http.StatusConflict, gouno.NewErrorResponse(http.StatusConflict, err.Error()))
-	case errors.Is(err, service.ErrPostTitleEmpty),
-		errors.Is(err, service.ErrPostContentEmpty),
-		errors.Is(err, service.ErrInvalidPostStatus),
-		errors.Is(err, service.ErrScheduledPast),
-		errors.Is(err, service.ErrInvalidPostID),
-		errors.Is(err, service.ErrInvalidPostSlug),
-		errors.Is(err, service.ErrInvalidCommentID),
-		errors.Is(err, service.ErrCommentAuthorEmpty),
-		errors.Is(err, service.ErrCommentContentEmpty),
-		errors.Is(err, service.ErrInvalidVersion),
-		errors.Is(err, service.ErrInvalidMediaPayload),
-		errors.Is(err, service.ErrInvalidMediaID):
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
-	default:
-		c.JSON(http.StatusInternalServerError, gouno.NewErrorResponse(http.StatusInternalServerError, "internal server error"))
-	}
+	WriteDomainError(c, err)
 }
