@@ -1,4 +1,4 @@
-import { Plus, Sparkles, Trash2 } from 'lucide-react';
+import { Plus, Rss, Sparkles, Trash2 } from 'lucide-react';
 import { Button, Field } from '../../ui';
 
 export interface RssFeedItem {
@@ -60,11 +60,12 @@ export function RssFetchConfig({
   };
 
   return (
-    <div className="rss-config-card">
-      <div className="rss-config-card__header">
+    <div className="tool-config-card">
+      <div className="tool-config-card__header">
+        <div className="tool-config-card__icon"><Rss size={18} /></div>
         <div>
           <h4>{isZh ? 'RSS 订阅源设置 (rss.fetch)' : 'RSS Feeds Configuration (rss.fetch)'}</h4>
-          <p className="rss-config-card__hint">
+          <p className="tool-config-card__hint">
             {isZh
               ? '配置此 Skill 允许抓取资讯的受信 RSS / Atom 白名单源；执行时大模型只能从这些源中读取内容。'
               : 'Configure trusted RSS/Atom feeds for this Skill. The model will strictly fetch information from these sources.'}
@@ -72,7 +73,7 @@ export function RssFetchConfig({
         </div>
       </div>
 
-      <div className="rss-config-card__presets">
+      <div className="tool-config-card__presets">
         <span className="rss-config-card__presets-label">
           <Sparkles size={14} />
           {isZh ? '常用预设：' : 'Presets:'}
