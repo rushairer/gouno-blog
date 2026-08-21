@@ -111,6 +111,13 @@ func TestExtractDraftSuggestions(t *testing.T) {
 	if len(res5) != 1 || res5[0] != r5 {
 		t.Fatalf("extractDraftSuggestions(r5) = %v, want 1 item", res5)
 	}
+
+	// Case 6: Truncated JSON array with multiple items
+	r6 := "{\n  \"suggestions\": [\n    \"摘要候选一内容...\",\n    \"摘要候选二内容...\",\n"
+	res6 := extractDraftSuggestions(r6)
+	if len(res6) != 2 || res6[0] != "摘要候选一内容..." || res6[1] != "摘要候选二内容..." {
+		t.Fatalf("extractDraftSuggestions(r6) = %v, want 2 separate items", res6)
+	}
 }
 
 

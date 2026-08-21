@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -144,13 +145,15 @@ func (ctrl *AgentController) DraftAssist(c *gin.Context) {
 		WriteDomainError(c, err)
 		return
 	}
-	maxTokens := min(selected.MaxOutputTokens, 500)
+	maxTokens := 600
 	instruction := "You are an editorial assistant for a blog. Return only valid JSON in the form {\"suggestions\":[\"...\"]}."
 	if req.Task == "title" {
 		instruction += " Produce exactly three concise candidates. Do not explain, use Markdown, or change the article. Create specific Chinese article titles that accurately reflect the supplied draft."
 	} else if req.Task == "summary" {
+		maxTokens = 1500
 		instruction += " Produce exactly three concise candidates. Do not explain, use Markdown, or change the article. Create Chinese summaries, each at most 300 Chinese characters, that accurately reflect the supplied draft."
 	} else if req.Task == "slug" {
+		maxTokens = 400
 		instruction += " Produce exactly three concise candidates. Do not explain, use Markdown, or change the article. Create lowercase URL slugs using ASCII letters, numbers, and hyphens only."
 	} else if req.Task == "content" {
 		maxTokens = selected.MaxOutputTokens
@@ -302,16 +305,31 @@ func extractDraftSuggestions(raw string) []string {
 		}
 	}
 
-	// 3. Try manual array extraction from "[ ... ]"
+	// 3. Try regex extracting individual quoted strings in array "[ ... ]" or after "suggestions"
 	if start := strings.Index(text, `[`); start != -1 {
-		if end := strings.LastIndex(text, `]`); end > start {
-			var innerArr []string
-			if json.Unmarshal([]byte(text[start:end+1]), &innerArr) == nil {
-				res := filterUniqueSuggestions(innerArr)
-				if len(res) > 0 {
-					return res
+		arrayContent := text[start+1:]
+		if end := strings.LastIndex(arrayContent, `]`); end != -1 {
+			arrayContent = arrayContent[:end]
+		}
+		re := regexp.MustCompile(`"((?:\\.|[^"\\])*)"`)
+		matches := re.FindAllStringSubmatch(arrayContent, -1)
+		var innerArr []string
+		for _, m := range matches {
+			if len(m) > 1 {
+				val := m[1]
+				val = strings.ReplaceAll(val, `\n`, "\n")
+				val = strings.ReplaceAll(val, `\"`, `"`)
+				val = strings.ReplaceAll(val, `\t`, "\t")
+				val = strings.ReplaceAll(val, `\\`, `\`)
+				val = strings.TrimSpace(val)
+				if val != "" && val != "suggestions" && val != "candidates" && val != "title" && val != "summary" {
+					innerArr = append(innerArr, val)
 				}
 			}
+		}
+		res := filterUniqueSuggestions(innerArr)
+		if len(res) > 0 {
+			return res
 		}
 	}
 
@@ -338,10 +356,30 @@ func extractDraftSuggestions(raw string) []string {
 		return res
 	}
 
-	// 5. Fallback: single cleaned text
-	cleaned := cleanDraftAssistContent(text)
-	if cleaned != "" {
-		return []string{cleaned}
+	// 5. Fallback: Split by `","` if multiple strings exist
+	if strings.Contains(text, `","`) {
+		parts := strings.Split(text, `","`)
+		var items []string
+		for _, p := range parts {
+			p = strings.TrimLeft(p, `{"[ \t\r\n"`)
+			p = strings.TrimRight(p, `"}] \t\r\n,`)
+			p = strings.TrimSpace(p)
+			if p != "" {
+				items = append(items, p)
+			}
+		}
+		res := filterUniqueSuggestions(items)
+		if len(res) > 0 {
+			return res
+		}
+	}
+
+	// 6. Fallback: single cleaned text if not a JSON array structure
+	if !strings.Contains(text, `"suggestions"`) && !strings.HasPrefix(text, "{") && !strings.HasPrefix(text, "[") {
+		cleaned := cleanDraftAssistContent(text)
+		if cleaned != "" {
+			return []string{cleaned}
+		}
 	}
 
 	return nil
