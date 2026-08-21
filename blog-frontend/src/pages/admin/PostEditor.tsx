@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Check, ExternalLink, History, LoaderCircle, Save, Send, Sparkles } from 'lucide-react';
+import { ArrowLeft, Check, ExternalLink, History, Image as ImageIcon, LoaderCircle, Save, Send, Sparkles } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { agentApi } from '../../api/agent';
 import { postsApi } from '../../api/posts';
@@ -45,6 +45,11 @@ export default function PostEditor() {
   const [contentPrompt, setContentPrompt] = useState('');
   const [aiContentLoading, setAiContentLoading] = useState(false);
   const [generatedContent, setGeneratedContent] = useState<string | null>(null);
+  const [showAiImage, setShowAiImage] = useState(false);
+  const [imagePrompt, setImagePrompt] = useState('');
+  const [imageAlt, setImageAlt] = useState('');
+  const [aiImageLoading, setAiImageLoading] = useState(false);
+  const [generatedImage, setGeneratedImage] = useState<{ url: string; alt: string } | null>(null);
   const dirty = useRef(false);
 
   useEffect(() => {
@@ -503,6 +508,72 @@ export default function PostEditor() {
     setShowAiWriting(false);
   };
 
+  const handleGenerateAiImage = async (presetPrompt?: string) => {
+    const effectivePrompt = (presetPrompt !== undefined ? presetPrompt : imagePrompt).trim();
+    if (!effectivePrompt && !post.title.trim() && !post.content.trim()) {
+      const msg = '请输入生图提示词或先填写文章标题。';
+      setAssistError(msg);
+      notify(msg, 'error');
+      return;
+    }
+    setAiImageLoading(true);
+    setAssistError('');
+    try {
+      notify('AI 正在绘制插图中（通常需 15~40 秒），请稍候…', 'success');
+      const finalPrompt = effectivePrompt || `Modern artistic illustration representing: ${post.title}`;
+      const finalAlt = imageAlt.trim() || post.title || '文章插图';
+      const res = await agentApi.generateCoverImage({
+        prompt: finalPrompt,
+        alt_text: finalAlt,
+      });
+      if (res?.url) {
+        setGeneratedImage({ url: res.url, alt: finalAlt });
+        notify('🎨 插图已成功生成，支持复制 Markdown 或直接插入正文！', 'success');
+      } else {
+        const msg = 'AI 未能成功生成图片，请稍后重试。';
+        setAssistError(msg);
+        notify(msg, 'error');
+      }
+    } catch (reason) {
+      const msg = reason instanceof Error ? reason.message : 'AI 生图失败，请稍后重试。';
+      setAssistError(msg);
+      notify(msg, 'error');
+    } finally {
+      setAiImageLoading(false);
+    }
+  };
+
+  const copyImageMarkdown = () => {
+    if (!generatedImage) return;
+    const md = `![${generatedImage.alt || '文章插图'}](${generatedImage.url})`;
+    void navigator.clipboard.writeText(md);
+    notify('Markdown 图片代码已复制到剪贴板！', 'success');
+  };
+
+  const insertImageToContent = () => {
+    if (!generatedImage) return;
+    const md = `\n\n![${generatedImage.alt || '文章插图'}](${generatedImage.url})\n\n`;
+    setPost((current) => ({
+      ...current,
+      content: current.content ? `${current.content.trimEnd()}${md}` : `![${generatedImage.alt || '文章插图'}](${generatedImage.url})\n\n`,
+    }));
+    dirty.current = true;
+    setSavedAt(null);
+    notify('已成功将插图插入到正文末尾！', 'success');
+  };
+
+  const setGeneratedImageAsCover = () => {
+    if (!generatedImage) return;
+    setPost((current) => ({
+      ...current,
+      cover_url: generatedImage.url,
+      cover_alt: generatedImage.alt || current.cover_alt,
+    }));
+    dirty.current = true;
+    setSavedAt(null);
+    notify('已成功将该图片设为文章封面！', 'success');
+  };
+
   const openFrontsitePreview = async () => {
     let currentPost = post;
     if (dirty.current || !currentPost.id) {
@@ -567,13 +638,22 @@ export default function PostEditor() {
             <button className={!preview ? 'active' : ''} type="button" onClick={() => setPreview(false)}>Markdown</button>
             <button className={preview ? 'active' : ''} type="button" onClick={() => setPreview(true)}>预览</button>
           </div>
-          <button
-            className={`editor-ai-tool-btn ${showAiWriting ? 'active' : ''}`}
-            type="button"
-            onClick={() => { setShowAiWriting(!showAiWriting); setAssistError(''); }}
-          >
-            <Sparkles /> {showAiWriting ? '收起 AI 写作助手' : 'AI 写作与润色助手'}
-          </button>
+          <div className="editor-ai-tools-group">
+            <button
+              className={`editor-ai-tool-btn ${showAiWriting ? 'active' : ''}`}
+              type="button"
+              onClick={() => { setShowAiWriting(!showAiWriting); setShowAiImage(false); setAssistError(''); }}
+            >
+              <Sparkles /> {showAiWriting ? '收起 AI 写作' : 'AI 写作与润色'}
+            </button>
+            <button
+              className={`editor-ai-tool-btn ${showAiImage ? 'active' : ''}`}
+              type="button"
+              onClick={() => { setShowAiImage(!showAiImage); setShowAiWriting(false); setAssistError(''); }}
+            >
+              <ImageIcon /> {showAiImage ? '收起 AI 插图' : 'AI 文生图插画'}
+            </button>
+          </div>
         </div>
         {showAiWriting ? (
           <div className="editor-ai-writing-panel">
@@ -638,6 +718,86 @@ export default function PostEditor() {
                 </div>
                 <div className="editor-ai-result-preview">
                   <MarkdownRenderer content={generatedContent} />
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+        {showAiImage ? (
+          <div className="editor-ai-image-panel">
+            <div className="editor-ai-panel-header">
+              <div className="editor-ai-presets">
+                <button type="button" onClick={() => void handleGenerateAiImage('A sleek modern architectural diagram illustration showing system components, clean lines, isometric view, tech palette')} disabled={aiImageLoading}>
+                  📊 架构图解风
+                </button>
+                <button type="button" onClick={() => void handleGenerateAiImage('A modern minimal editorial vector illustration about technology and human intelligence, clean flat design, subtle gradients')} disabled={aiImageLoading}>
+                  🖼️ 科技插画风
+                </button>
+                <button type="button" onClick={() => void handleGenerateAiImage('Cinematic concept art, hyper-detailed futuristic scene, volumetric lighting, 8k wallpaper quality')} disabled={aiImageLoading}>
+                  🎬 电影概念风
+                </button>
+                <button type="button" onClick={() => void handleGenerateAiImage('Cute 3D isometric clay render illustration, soft studio lighting, playful tech scene')} disabled={aiImageLoading}>
+                  🎨 3D 立体风
+                </button>
+              </div>
+            </div>
+            <div className="editor-ai-prompt-box">
+              <Input
+                placeholder="输入生图提示词（支持中文或英文，例如：微服务架构调用拓扑图，蓝紫霓虹光效…）"
+                value={imagePrompt}
+                onChange={(e) => setImagePrompt(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    void handleGenerateAiImage();
+                  }
+                }}
+                disabled={aiImageLoading}
+              />
+              <Input
+                style={{ maxWidth: 160 }}
+                placeholder="图片描述 (Alt)"
+                value={imageAlt}
+                onChange={(e) => setImageAlt(e.target.value)}
+                disabled={aiImageLoading}
+              />
+              <Button
+                variant="primary"
+                type="button"
+                onClick={() => void handleGenerateAiImage()}
+                disabled={aiImageLoading || (!imagePrompt.trim() && !post.title.trim())}
+              >
+                {aiImageLoading ? <><LoaderCircle className="is-spinning" /> 正在绘制…</> : '🎨 开始生图'}
+              </Button>
+            </div>
+            {assistError ? (
+              <div style={{ color: 'var(--danger, #ef4444)', fontSize: 12, padding: '4px 8px', background: 'rgba(239, 68, 68, 0.08)', borderRadius: 4 }}>
+                {assistError}
+              </div>
+            ) : null}
+            {generatedImage ? (
+              <div className="editor-ai-image-result">
+                <div className="editor-ai-image-preview">
+                  <img src={generatedImage.url} alt={generatedImage.alt || 'AI 生成插图'} />
+                </div>
+                <div className="editor-ai-image-info">
+                  <div className="editor-ai-image-code">
+                    {`![${generatedImage.alt || '文章插图'}](${generatedImage.url})`}
+                  </div>
+                  <div className="editor-ai-image-actions">
+                    <Button variant="primary" type="button" onClick={copyImageMarkdown}>
+                      📋 复制 Markdown
+                    </Button>
+                    <Button variant="secondary" type="button" onClick={insertImageToContent}>
+                      ➕ 插入到正文末尾
+                    </Button>
+                    <Button variant="secondary" type="button" onClick={setGeneratedImageAsCover}>
+                      🖼️ 设为文章封面
+                    </Button>
+                    <Button variant="secondary" type="button" onClick={() => setGeneratedImage(null)}>
+                      放弃
+                    </Button>
+                  </div>
                 </div>
               </div>
             ) : null}
