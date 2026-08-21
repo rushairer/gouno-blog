@@ -43,7 +43,7 @@ export const adminNavigation: Array<{ label: string; items: AdminNavItem[] }> = 
     items: [
       { label: '评论', path: '/admin/comments', icon: <MessageSquare /> },
       { label: '通知中心', path: '/admin/notifications', icon: <Bell /> },
-      { label: 'AI 运营', path: '/admin/agents', icon: <Bot /> },
+      { label: 'AI 运营', path: '/admin/ai-ops', icon: <Bot /> },
     ],
   },
   {

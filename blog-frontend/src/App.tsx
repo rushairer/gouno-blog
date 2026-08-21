@@ -106,7 +106,7 @@ export default function App() {
     <Route path="/admin/media" element={<Admin><MediaLibrary /></Admin>} />
     <Route path="/admin/settings" element={<Admin><AdminSiteSettings /></Admin>} />
     <Route path="/admin/users" element={<Admin><AdminUsers /></Admin>} />
-    <Route path="/admin/agents" element={<Admin><AgentConsole /></Admin>} />
+    <Route path="/admin/ai-ops" element={<Admin><AgentConsole /></Admin>} />
     <Route path="/:slug" element={<Public><CustomPageView /></Public>} />
     <Route path="*" element={<Public><NotFound /></Public>} />
   </Routes></BrowserRouter></ToastProvider></I18nProvider>;

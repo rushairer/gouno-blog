@@ -31,7 +31,7 @@ const mockNotifications = [
     type: 'ai_workflow_failed',
     title: 'Workflow 运行失败：AI 每日资讯',
     body: 'invalid workflow: Agent run 11 failed',
-    href: '/admin/agents?tab=records&workflow=4',
+    href: '/admin/ai-ops?tab=records&workflow=4',
     read_at: null,
     created_at: '2026-08-18T09:38:34Z',
   },

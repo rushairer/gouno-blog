@@ -243,7 +243,7 @@
   "restore": "Restore",
   "restoreVersionConfirm": "Restore this version? The current content will be saved as another version.",
   "agent": {
-    "title": "AI Workspace",
+    "title": "AI Operations",
     "pageDescription": "Let AI find opportunities, prepare work, and keep every change under your review.",
     "overview": "Overview",
     "inbox": "To review",

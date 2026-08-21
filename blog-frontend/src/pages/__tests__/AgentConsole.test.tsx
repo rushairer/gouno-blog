@@ -244,6 +244,6 @@ describe('AgentConsole', () => {
   it('redirects users without blog management access', async () => {
     vi.mocked(canManageBlog).mockReturnValue(false);
     renderConsole();
-    await waitFor(() => expect(redirectToAuthorize).toHaveBeenCalledWith('/admin/agents'));
+    await waitFor(() => expect(redirectToAuthorize).toHaveBeenCalledWith('/admin/ai-ops'));
   });
 });
