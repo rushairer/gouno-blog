@@ -735,7 +735,7 @@ export default function PostEditor() {
                 <div className="editor-ai-candidates" aria-label="Prompt 候选">
                   {suggestions.map((item) => (
                     <div key={item} className="editor-prompt-candidate">
-                      <span style={{ fontSize: 12, lineHeight: 1.5 }}>{item}</span>
+                      <div className="editor-prompt-text">{item}</div>
                       <div className="editor-prompt-candidate-actions">
                         <Button
                           variant="primary"
