@@ -2,11 +2,11 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { apiFetch, canManageBlog, isLoggedIn, redirectToAuthorize } from '../../auth';
-import { I18nProvider } from '../../i18n';
-import AgentConsole from '../AgentConsole';
+import { apiFetch, canManageBlog, isLoggedIn, redirectToAuthorize } from '../../../auth';
+import { I18nProvider } from '../../../i18n';
+import AIOperations from '../AIOperations';
 
-vi.mock('../../auth', () => ({
+vi.mock('../../../auth', () => ({
   apiFetch: vi.fn(),
   canManageBlog: vi.fn(),
   isLoggedIn: vi.fn(),
@@ -47,10 +47,10 @@ function responseFor(url: string) {
 }
 
 function renderConsole() {
-  return render(<I18nProvider><MemoryRouter><AgentConsole /></MemoryRouter></I18nProvider>);
+  return render(<I18nProvider><MemoryRouter><AIOperations /></MemoryRouter></I18nProvider>);
 }
 
-describe('AgentConsole', () => {
+describe('AIOperations', () => {
   beforeEach(() => {
     localStorage.setItem('gouno-blog:locale', 'en');
     vi.mocked(isLoggedIn).mockReturnValue(true);

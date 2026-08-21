@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Copy, ImagePlus, Trash2, X } from 'lucide-react';
-import { canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
-import { mediaApi } from '../api/media';
-import { AdminPage, AdminPageHeader, BulkActionBar, Button, Checkbox, ConfirmDialog, ContentStack, copyText, Drawer, EmptyState, Feedback, Field, FilterBar, Input, LoadingState, Panel, SearchField, Select, useToast } from '../components/ui';
-import { WorkflowLauncher } from '../components/agent/WorkflowLauncher';
-import { useI18n } from '../i18n';
+import { canManageBlog, isLoggedIn, redirectToAuthorize } from '../../auth';
+import { mediaApi } from '../../api/media';
+import { AdminPage, AdminPageHeader, BulkActionBar, Button, Checkbox, ConfirmDialog, ContentStack, copyText, Drawer, EmptyState, Feedback, Field, FilterBar, Input, LoadingState, Panel, SearchField, Select, useToast } from '../../components/ui';
+import { WorkflowLauncher } from '../../components/agent/WorkflowLauncher';
+import { useI18n } from '../../i18n';
 
 interface MediaAsset {
   id: number;
