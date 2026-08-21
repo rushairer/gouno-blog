@@ -523,7 +523,19 @@ func (s *ApprovalService) GenerateDirectImage(ctx context.Context, prompt, altTe
 	if !ok {
 		return nil, errors.New("provider does not support image generation")
 	}
-	image, err := generator.GenerateImage(generationCtx, provider.ImageRequest{Prompt: prompt})
+	cleanPrompt := prompt
+	if idx := strings.Index(cleanPrompt, "[中文说明"); idx != -1 {
+		englishPart := strings.TrimSpace(cleanPrompt[:idx])
+		if englishPart != "" {
+			cleanPrompt = englishPart
+		}
+	} else if idx := strings.Index(cleanPrompt, "(中文说明"); idx != -1 {
+		englishPart := strings.TrimSpace(cleanPrompt[:idx])
+		if englishPart != "" {
+			cleanPrompt = englishPart
+		}
+	}
+	image, err := generator.GenerateImage(generationCtx, provider.ImageRequest{Prompt: cleanPrompt})
 	if err != nil || len(image.Data) == 0 || len(image.Data) > 10<<20 || (image.MIMEType != "image/jpeg" && image.MIMEType != "image/png" && image.MIMEType != "image/webp") {
 		if errors.Is(generationCtx.Err(), context.DeadlineExceeded) {
 			return nil, errors.New("image generation timed out")
