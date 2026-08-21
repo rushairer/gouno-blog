@@ -150,7 +150,57 @@ export default function PageEditor() {
     else navigate('/admin/pages');
   };
 
-  const requestSuggestions = async (task: 'title' | 'summary' | 'slug' | 'seo') => {
+  const requestSeo = async () => {
+    if (!page.title.trim() && !page.content.trim()) {
+      notify('请先填写标题或正文，以便 AI 分析生成 SEO。', 'error');
+      return;
+    }
+    setAssistTask('seo');
+    try {
+      const res = await agentApi.getDraftAssist({
+        task: 'seo',
+        title: page.title,
+        summary: page.summary,
+        content: page.content,
+      });
+      let seoTitle = '';
+      let seoDesc = '';
+      let seoSlug = '';
+      if (res.metadata) {
+        seoTitle = res.metadata.seo_title || '';
+        seoDesc = res.metadata.seo_description || '';
+        seoSlug = res.metadata.slug || '';
+      } else if (res.suggestions?.length) {
+        try {
+          const parsed = JSON.parse(res.suggestions[0]);
+          seoTitle = parsed.seo_title || '';
+          seoDesc = parsed.seo_description || '';
+          seoSlug = parsed.slug || '';
+        } catch {
+          // parse failed
+        }
+      }
+      if (seoTitle || seoDesc || seoSlug) {
+        setPage((current) => ({
+          ...current,
+          seo_title: seoTitle || current.seo_title,
+          seo_description: seoDesc || current.seo_description,
+          slug: seoSlug || current.slug,
+        }));
+        dirty.current = true;
+        setSavedAt(null);
+        notify('SEO 标题、描述与 Slug 已自动生成！', 'success');
+      } else {
+        notify('未能生成有效的 SEO 配置，请稍后重试。', 'error');
+      }
+    } catch (reason) {
+      notify(reason instanceof Error ? reason.message : '生成 SEO 配置失败', 'error');
+    } finally {
+      setAssistTask(null);
+    }
+  };
+
+  const requestSuggestions = async (task: 'title' | 'summary' | 'slug') => {
     if (!page.title.trim() && !page.content.trim()) {
       notify('请先填写标题或正文，以便 AI 分析生成。', 'error');
       return;
@@ -164,35 +214,10 @@ export default function PageEditor() {
         summary: page.summary,
         content: page.content,
       });
-      if (task === 'seo') {
-        const title = res.metadata?.seo_title || res.suggestions[0];
-        const desc = res.metadata?.seo_description || res.suggestions[1] || page.summary;
-        if (title || desc) {
-          setPage((current) => ({
-            ...current,
-            seo_title: title || current.seo_title,
-            seo_description: desc || current.seo_description,
-          }));
-          dirty.current = true;
-          setSavedAt(null);
-          notify('🎯 已自动提炼并填入 SEO 标题与描述！', 'success');
-        } else {
-          notify('未能生成 SEO 信息，请稍后重试。', 'error');
-        }
-      } else if (task === 'slug') {
-        const slug = res.metadata?.slug || res.suggestions[0];
-        if (slug) {
-          update('slug', slug.trim().toLowerCase().replace(/\s+/g, '-'));
-          notify('已生成 URL Slug 标识。', 'success');
-        } else {
-          notify('未能生成 Slug，请稍后重试。', 'error');
-        }
-      } else {
-        setSuggestionTask(task);
-        setSuggestions(res.suggestions || []);
-        if (!res.suggestions || res.suggestions.length === 0) {
-          notify('AI 未能生成建议，请稍后重试。', 'error');
-        }
+      setSuggestionTask(task);
+      setSuggestions(res.suggestions || []);
+      if (!res.suggestions || res.suggestions.length === 0) {
+        notify('AI 未能生成建议，请稍后重试。', 'error');
       }
     } catch (reason) {
       notify(reason instanceof Error ? reason.message : 'AI 生成失败', 'error');
@@ -201,7 +226,7 @@ export default function PageEditor() {
     }
   };
 
-  const applySuggestion = (task: 'title' | 'summary', value: string) => {
+  const applySuggestion = (task: 'title' | 'summary' | 'slug', value: string) => {
     update(task, value);
     setSuggestionTask(null);
     setSuggestions([]);
@@ -814,6 +839,11 @@ export default function PageEditor() {
 
           <details open>
             <summary>路径与 SEO</summary>
+            <div className="editor-ai-inline" style={{ marginBottom: 12 }}>
+              <button type="button" onClick={() => void requestSeo()} disabled={assistTask !== null}>
+                <Sparkles />{assistTask === 'seo' ? <><LoaderCircle className="is-spinning" /> 正在优化 SEO…</> : '🎯 智能生成整套 SEO 配置'}
+              </button>
+            </div>
             <Field label="访问路径 (Slug)" required hint="访问路径为 /<slug>">
               <Input
                 className="mono"
@@ -825,8 +855,18 @@ export default function PageEditor() {
               <div className="editor-ai-inline">
                 <button type="button" onClick={() => void requestSuggestions('slug')} disabled={assistTask !== null}>
                   <Sparkles />
-                  {assistTask === 'slug' ? <><LoaderCircle className="is-spinning" /> 正在分析生成…</> : '智能生成 Slug 标识'}
+                  {assistTask === 'slug' ? <><LoaderCircle className="is-spinning" /> 正在生成 Slug…</> : '生成 Slug 候选'}
                 </button>
+                {suggestionTask === 'slug' && suggestions.length > 0 ? (
+                  <div className="editor-ai-candidates" aria-label="Slug 候选">
+                    {suggestions.map((item) => (
+                      <button key={item} type="button" onClick={() => applySuggestion('slug', item)}>
+                        <span className="mono">{item}</span>
+                        <b>应用</b>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             </Field>
             <Field label="SEO 标题" hint={`${(page.seo_title || '').length}/60`}>
@@ -846,12 +886,6 @@ export default function PageEditor() {
                 placeholder="留空时默认使用摘要"
               />
             </Field>
-            <div className="editor-ai-inline">
-              <button type="button" onClick={() => void requestSuggestions('seo')} disabled={assistTask !== null}>
-                <Sparkles />
-                {assistTask === 'seo' ? <><LoaderCircle className="is-spinning" /> 正在智能提炼…</> : '🎯 AI 提炼 SEO 标题与描述'}
-              </button>
-            </div>
           </details>
         </aside>
       </div>

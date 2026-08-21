@@ -942,19 +942,13 @@ export default function PostEditor() {
           </Field>
         </details>
         <details open>
-          <summary>SEO</summary>
+          <summary>路径与 SEO</summary>
           <div className="editor-ai-inline" style={{ marginBottom: 12 }}>
             <button type="button" onClick={() => void requestSeo()} disabled={assistTask !== null}>
-              <Sparkles />{assistTask === 'seo' ? <><LoaderCircle className="is-spinning" /> 正在优化 SEO…</> : '智能生成整套 SEO 配置'}
+              <Sparkles />{assistTask === 'seo' ? <><LoaderCircle className="is-spinning" /> 正在优化 SEO…</> : '🎯 智能生成整套 SEO 配置'}
             </button>
           </div>
-          <Field label="SEO 标题" hint={`${(post.seo_title || '').length}/60`}>
-            <Input value={post.seo_title || ''} maxLength={60} onChange={(event) => update('seo_title', event.target.value)} />
-          </Field>
-          <Field label="SEO 描述" hint={`${(post.seo_description || '').length}/160`}>
-            <Textarea rows={4} value={post.seo_description || ''} maxLength={160} onChange={(event) => update('seo_description', event.target.value)} />
-          </Field>
-          <Field label="Slug" required>
+          <Field label="访问路径 (Slug)" required hint="访问路径为 /articles/<slug>">
             <Input className="mono" value={post.slug} onChange={(event) => update('slug', event.target.value)} required />
             <div className="editor-ai-inline">
               <button type="button" onClick={() => void requestSuggestions('slug')} disabled={assistTask !== null}>
@@ -971,6 +965,12 @@ export default function PostEditor() {
                 </div>
               ) : null}
             </div>
+          </Field>
+          <Field label="SEO 标题" hint={`${(post.seo_title || '').length}/60`}>
+            <Input value={post.seo_title || ''} maxLength={60} onChange={(event) => update('seo_title', event.target.value)} placeholder="留空时默认使用标题" />
+          </Field>
+          <Field label="SEO 描述" hint={`${(post.seo_description || '').length}/160`}>
+            <Textarea rows={4} value={post.seo_description || ''} maxLength={160} onChange={(event) => update('seo_description', event.target.value)} placeholder="留空时默认使用摘要" />
           </Field>
         </details>
       </aside>
