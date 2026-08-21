@@ -151,6 +151,28 @@ func TestExtractStructuredMetadata(t *testing.T) {
 	if meta.CoverAlt != "一个程序员在思考的插画" {
 		t.Errorf("cover_alt = %q, want expected", meta.CoverAlt)
 	}
+
+	// Case 2: DeepSeek-R1 / Reasoning model output with <think> tag
+	rawWithThink := "<think>\nThinking about the SEO metadata for this article...\nFocus on keywords and brevity.\n</think>\n```json\n{\n  \"seo_title\": \"现代云原生架构实战\",\n  \"seo_description\": \"全面解析微服务与云原生架构的最佳落地实践。\",\n  \"slug\": \"cloud-native-architecture-guide\"\n}\n```"
+	meta2 := extractStructuredMetadata(rawWithThink)
+	if meta2 == nil || meta2.SeoTitle != "现代云原生架构实战" || meta2.Slug != "cloud-native-architecture-guide" {
+		t.Fatalf("extractStructuredMetadata with think tags failed: %v", meta2)
+	}
+
+	// Case 3: Truncated JSON without closing braces
+	rawTruncated := "{\n  \"seo_title\": \"前端工程化演进之路\",\n  \"seo_description\": \"从构建工具到全栈架构的演进分析\",\n  \"slug\": \"frontend-engineering-evolution\""
+	meta3 := extractStructuredMetadata(rawTruncated)
+	if meta3 == nil || meta3.SeoTitle != "前端工程化演进之路" || meta3.Slug != "frontend-engineering-evolution" {
+		t.Fatalf("extractStructuredMetadata with truncated JSON failed: %v", meta3)
+	}
+
+	// Case 4: CamelCase JSON output
+	rawCamel := `{"seoTitle": "Go语言高并发编程", "seoDescription": "深入浅出Go协程与Channel原理", "slug": "go-concurrency-guide"}`
+	meta4 := extractStructuredMetadata(rawCamel)
+	if meta4 == nil || meta4.SeoTitle != "Go语言高并发编程" || meta4.SeoDescription != "深入浅出Go协程与Channel原理" {
+		t.Fatalf("extractStructuredMetadata with camelCase JSON failed: %v", meta4)
+	}
 }
+
 
 
