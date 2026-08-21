@@ -123,6 +123,7 @@ func startWebServer(cmd *cobra.Command, args []string) {
 			"/api/admin/ai-workflows/draft":        90 * time.Second,
 			"/api/admin/ai-automation-plans/draft": 90 * time.Second,
 			"/api/admin/ai-draft-assist":           90 * time.Second,
+			"/api/admin/ai-generate-cover":         300 * time.Second,
 			"/api/admin/ai-index/evaluate":         120 * time.Second,
 			"/api/admin/ai-index/rebuild":          120 * time.Second,
 		}),
