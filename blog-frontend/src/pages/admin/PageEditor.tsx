@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Check, ExternalLink, Save, Send } from 'lucide-react';
+import { ArrowLeft, Check, ExternalLink, Image as ImageIcon, LoaderCircle, Save, Send, Sparkles } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AdminPageState, Button, ConfirmDialog, Feedback, Field, Input, Select, Textarea, useToast } from '../../components/ui';
 import { MarkdownRenderer } from '../../components/MarkdownRenderer';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 import { pagesApi } from '../../api/pages';
+import { agentApi } from '../../api/agent';
 import type { CustomPage, PageTemplate, PostStatus } from '../../types/blog';
 
 const emptyPage: CustomPage = {
@@ -38,6 +39,22 @@ export default function PageEditor() {
   const [preview, setPreview] = useState(false);
   const [confirmExit, setConfirmExit] = useState(false);
   const dirty = useRef(false);
+
+  // AI Assist States
+  const [assistTask, setAssistTask] = useState<string | null>(null);
+  const [suggestionTask, setSuggestionTask] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showAiWriting, setShowAiWriting] = useState(false);
+  const [showAiImage, setShowAiImage] = useState(false);
+  const [contentPrompt, setContentPrompt] = useState('');
+  const [imagePrompt, setImagePrompt] = useState('');
+  const [imageAlt, setImageAlt] = useState('');
+  const [aiContentLoading, setAiContentLoading] = useState(false);
+  const [aiImageLoading, setAiImageLoading] = useState(false);
+  const [generatedContent, setGeneratedContent] = useState<string | null>(null);
+  const [generatedImage, setGeneratedImage] = useState<{ url: string; alt: string } | null>(null);
+  const [assistError, setAssistError] = useState('');
+  const [metaLoading, setMetaLoading] = useState(false);
 
   useEffect(() => {
     if (!allowed) return;
@@ -131,6 +148,236 @@ export default function PageEditor() {
   const leaveEditor = () => {
     if (dirty.current) setConfirmExit(true);
     else navigate('/admin/pages');
+  };
+
+  const requestSuggestions = async (task: 'title' | 'summary' | 'slug' | 'seo') => {
+    if (!page.title.trim() && !page.content.trim()) {
+      notify('请先填写标题或正文，以便 AI 分析生成。', 'error');
+      return;
+    }
+    setAssistTask(task);
+    setAssistError('');
+    try {
+      const res = await agentApi.getDraftAssist({
+        task,
+        title: page.title,
+        summary: page.summary,
+        content: page.content,
+      });
+      if (task === 'seo') {
+        const title = res.metadata?.seo_title || res.suggestions[0];
+        const desc = res.metadata?.seo_description || res.suggestions[1] || page.summary;
+        if (title || desc) {
+          setPage((current) => ({
+            ...current,
+            seo_title: title || current.seo_title,
+            seo_description: desc || current.seo_description,
+          }));
+          dirty.current = true;
+          setSavedAt(null);
+          notify('🎯 已自动提炼并填入 SEO 标题与描述！', 'success');
+        } else {
+          notify('未能生成 SEO 信息，请稍后重试。', 'error');
+        }
+      } else if (task === 'slug') {
+        const slug = res.metadata?.slug || res.suggestions[0];
+        if (slug) {
+          update('slug', slug.trim().toLowerCase().replace(/\s+/g, '-'));
+          notify('已生成 URL Slug 标识。', 'success');
+        } else {
+          notify('未能生成 Slug，请稍后重试。', 'error');
+        }
+      } else {
+        setSuggestionTask(task);
+        setSuggestions(res.suggestions || []);
+        if (!res.suggestions || res.suggestions.length === 0) {
+          notify('AI 未能生成建议，请稍后重试。', 'error');
+        }
+      }
+    } catch (reason) {
+      notify(reason instanceof Error ? reason.message : 'AI 生成失败', 'error');
+    } finally {
+      setAssistTask(null);
+    }
+  };
+
+  const applySuggestion = (task: 'title' | 'summary', value: string) => {
+    update(task, value);
+    setSuggestionTask(null);
+    setSuggestions([]);
+  };
+
+  const autoFillAllMetadata = async () => {
+    if (!page.title.trim() && !page.content.trim()) {
+      notify('请先填写标题或正文，AI 才能提炼全套元数据。', 'error');
+      return;
+    }
+    setMetaLoading(true);
+    try {
+      const res = await agentApi.getDraftAssist({
+        task: 'metadata_all',
+        title: page.title,
+        summary: page.summary,
+        content: page.content,
+      });
+      let meta = res.metadata;
+      if (!meta && res.suggestions?.length) {
+        try {
+          meta = JSON.parse(res.suggestions[0]);
+        } catch {
+          // ignore
+        }
+      }
+      if (meta) {
+        setPage((current) => ({
+          ...current,
+          summary: meta?.summary || current.summary,
+          slug: meta?.slug || current.slug,
+          seo_title: meta?.seo_title || current.seo_title,
+          seo_description: meta?.seo_description || current.seo_description,
+        }));
+        dirty.current = true;
+        setSavedAt(null);
+        notify('⚡ 全套单页元数据已成功自动补全！', 'success');
+      } else {
+        notify('未能生成完整元数据，请稍后重试。', 'error');
+      }
+    } catch (reason) {
+      notify(reason instanceof Error ? reason.message : '一键补全元数据失败', 'error');
+    } finally {
+      setMetaLoading(false);
+    }
+  };
+
+  const sanitizeAiMarkdown = (raw: string): string => {
+    let text = raw.trim();
+    if (text.startsWith('{') || text.startsWith('```json')) {
+      try {
+        const trimmed = text.replace(/^```json\s*/i, '').replace(/\s*```$/, '');
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed?.suggestions) && parsed.suggestions[0]) {
+          text = String(parsed.suggestions[0]);
+        } else if (parsed?.content) {
+          text = String(parsed.content);
+        }
+      } catch {
+        const match = text.match(/"suggestions"\s*:\s*\[\s*"([\s\S]*)"\s*\]/);
+        if (match && match[1]) {
+          text = match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\t/g, '\t');
+        }
+      }
+    }
+    if (text.startsWith('```markdown') && text.endsWith('```')) {
+      text = text.slice(11, -3).trim();
+    } else if (text.startsWith('```md') && text.endsWith('```')) {
+      text = text.slice(5, -3).trim();
+    } else if (text.startsWith('```') && text.endsWith('```')) {
+      text = text.slice(3, -3).trim();
+    }
+    return text.trim();
+  };
+
+  const handleGenerateContent = async (promptText?: string) => {
+    const effectivePrompt = (promptText !== undefined ? promptText : contentPrompt).trim();
+    if (!effectivePrompt && !page.title.trim() && !page.content.trim()) {
+      const msg = '请先填写单页标题、正文或输入提示词。';
+      setAssistError(msg);
+      notify(msg, 'error');
+      return;
+    }
+    setAiContentLoading(true);
+    setAssistError('');
+    setGeneratedContent(null);
+    try {
+      const res = await agentApi.getDraftAssist({
+        task: 'content',
+        title: page.title,
+        summary: page.summary,
+        content: page.content,
+        prompt: effectivePrompt,
+      });
+      if (res.suggestions?.length && res.suggestions[0].trim()) {
+        setGeneratedContent(sanitizeAiMarkdown(res.suggestions[0]));
+        notify('单页正文已生成完毕，请在下方预览并确认。', 'success');
+      } else {
+        const msg = 'AI 未能生成正文，请稍后重试或调整提示词。';
+        setAssistError(msg);
+        notify(msg, 'error');
+      }
+    } catch (reason) {
+      const msg = reason instanceof Error ? reason.message : 'AI 生成正文失败，请稍后重试。';
+      setAssistError(msg);
+      notify(msg, 'error');
+    } finally {
+      setAiContentLoading(false);
+    }
+  };
+
+  const applyGeneratedContent = (mode: 'replace' | 'append') => {
+    if (!generatedContent) return;
+    if (mode === 'replace') {
+      update('content', generatedContent);
+      notify('已替换单页正文。', 'success');
+    } else {
+      update('content', page.content ? `${page.content.trim()}\n\n${generatedContent}` : generatedContent);
+      notify('已将生成内容追加到文末。', 'success');
+    }
+    setGeneratedContent(null);
+    setShowAiWriting(false);
+  };
+
+  const handleGenerateAiImage = async (presetPrompt?: string) => {
+    const effectivePrompt = (presetPrompt !== undefined ? presetPrompt : imagePrompt).trim();
+    if (!effectivePrompt && !page.title.trim() && !page.content.trim()) {
+      const msg = '请输入生图提示词或先填写单页标题。';
+      setAssistError(msg);
+      notify(msg, 'error');
+      return;
+    }
+    setAiImageLoading(true);
+    setAssistError('');
+    try {
+      notify('AI 正在绘制插图中（通常需 15~40 秒），请稍候…', 'success');
+      const finalPrompt = effectivePrompt || `Modern clean editorial illustration for webpage: ${page.title}`;
+      const finalAlt = imageAlt.trim() || page.title || '单页插图';
+      const res = await agentApi.generateImage({
+        prompt: finalPrompt,
+        alt_text: finalAlt,
+      });
+      if (res?.url) {
+        setGeneratedImage({ url: res.url, alt: finalAlt });
+        notify('🎨 插图已成功生成，支持复制 Markdown 或直接插入正文！', 'success');
+      } else {
+        const msg = 'AI 未能成功生成图片，请稍后重试。';
+        setAssistError(msg);
+        notify(msg, 'error');
+      }
+    } catch (reason) {
+      const msg = reason instanceof Error ? reason.message : 'AI 生图失败，请稍后重试。';
+      setAssistError(msg);
+      notify(msg, 'error');
+    } finally {
+      setAiImageLoading(false);
+    }
+  };
+
+  const copyImageMarkdown = () => {
+    if (!generatedImage) return;
+    const md = `![${generatedImage.alt || '单页插图'}](${generatedImage.url})`;
+    void navigator.clipboard.writeText(md);
+    notify('Markdown 图片代码已复制到剪贴板！', 'success');
+  };
+
+  const insertImageToContent = () => {
+    if (!generatedImage) return;
+    const md = `\n\n![${generatedImage.alt || '单页插图'}](${generatedImage.url})\n\n`;
+    setPage((current) => ({
+      ...current,
+      content: current.content ? `${current.content.trimEnd()}${md}` : `![${generatedImage.alt || '单页插图'}](${generatedImage.url})\n\n`,
+    }));
+    dirty.current = true;
+    setSavedAt(null);
+    notify('已成功将插图插入到单页正文末尾！', 'success');
   };
 
   const openFrontsitePreview = async () => {
@@ -249,6 +496,22 @@ export default function PageEditor() {
               placeholder="写一个清晰、具体的单页标题"
               required
             />
+            <div className="editor-ai-inline">
+              <button type="button" onClick={() => void requestSuggestions('title')} disabled={assistTask !== null}>
+                <Sparkles />
+                {assistTask === 'title' ? <><LoaderCircle className="is-spinning" /> 正在想标题…</> : '生成标题候选'}
+              </button>
+              {suggestionTask === 'title' && suggestions.length > 0 ? (
+                <div className="editor-ai-candidates" aria-label="标题候选">
+                  {suggestions.map((item) => (
+                    <button key={item} type="button" onClick={() => applySuggestion('title', item)}>
+                      <span>{item}</span>
+                      <b>应用</b>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
           </Field>
 
           <Field label="摘要 / 描述">
@@ -260,24 +523,205 @@ export default function PageEditor() {
               maxLength={300}
               placeholder="用一两句话说明单页内容"
             />
+            <div className="editor-ai-inline">
+              <button type="button" onClick={() => void requestSuggestions('summary')} disabled={assistTask !== null}>
+                <Sparkles />
+                {assistTask === 'summary' ? <><LoaderCircle className="is-spinning" /> 正在提炼摘要…</> : '根据正文生成摘要'}
+              </button>
+              {suggestionTask === 'summary' && suggestions.length > 0 ? (
+                <div className="editor-ai-candidates" aria-label="摘要候选">
+                  {suggestions.map((item) => (
+                    <button key={item} type="button" onClick={() => applySuggestion('summary', item)}>
+                      <span>{item}</span>
+                      <b>应用</b>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
           </Field>
 
           <div className="editor-tabs">
-            <button
-              className={!preview ? 'active' : ''}
-              type="button"
-              onClick={() => setPreview(false)}
-            >
-              Markdown
-            </button>
-            <button
-              className={preview ? 'active' : ''}
-              type="button"
-              onClick={() => setPreview(true)}
-            >
-              预览
-            </button>
+            <div className="tab-buttons">
+              <button
+                className={!preview ? 'active' : ''}
+                type="button"
+                onClick={() => setPreview(false)}
+              >
+                Markdown
+              </button>
+              <button
+                className={preview ? 'active' : ''}
+                type="button"
+                onClick={() => setPreview(true)}
+              >
+                预览
+              </button>
+            </div>
+            <div className="editor-ai-tools-group">
+              <button
+                className={`editor-ai-tool-btn ${showAiWriting ? 'active' : ''}`}
+                type="button"
+                onClick={() => { setShowAiWriting(!showAiWriting); setShowAiImage(false); setAssistError(''); }}
+              >
+                <Sparkles /> {showAiWriting ? '收起 AI 写作' : 'AI 写作与润色'}
+              </button>
+              <button
+                className={`editor-ai-tool-btn ${showAiImage ? 'active' : ''}`}
+                type="button"
+                onClick={() => { setShowAiImage(!showAiImage); setShowAiWriting(false); setAssistError(''); }}
+              >
+                <ImageIcon /> {showAiImage ? '收起 AI 插图' : 'AI 文生图插画'}
+              </button>
+            </div>
           </div>
+
+          {showAiWriting ? (
+            <div className="editor-ai-writing-panel">
+              <div className="editor-ai-panel-header">
+                <div className="editor-ai-presets">
+                  <button type="button" onClick={() => void handleGenerateContent('基于单页标题和摘要，撰写结构严谨、排版精美且适合独立单页展示的 Markdown 完整初稿，包含引言、分章节介绍和关键信息汇总。')} disabled={aiContentLoading}>
+                    📄 一键起草单页初稿
+                  </button>
+                  <button type="button" onClick={() => void handleGenerateContent('保持页面原意，优化段落连贯性、语言流畅度与排版格式，提升可读性。')} disabled={aiContentLoading || !page.content.trim()}>
+                    ✨ 润色与排版
+                  </button>
+                  <button type="button" onClick={() => void handleGenerateContent('对现有单页正文进行扩充与深化，补充背景说明、服务介绍、常见细节或案例示例。')} disabled={aiContentLoading || !page.content.trim()}>
+                    ➕ 扩充内容细节
+                  </button>
+                  <button type="button" onClick={() => void handleGenerateContent('在保留核心信息的前提下，精简冗余表述，使单页表达更加凝练直观。')} disabled={aiContentLoading || !page.content.trim()}>
+                    📝 精简提炼
+                  </button>
+                </div>
+              </div>
+              <div className="editor-ai-prompt-box">
+                <Input
+                  placeholder="输入自定义写作或修改提示词（例如：撰写一份现代关于页，包含个人经历、技术栈与联系方式…）"
+                  value={contentPrompt}
+                  onChange={(e) => setContentPrompt(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      void handleGenerateContent();
+                    }
+                  }}
+                  disabled={aiContentLoading}
+                />
+                <Button
+                  variant="primary"
+                  type="button"
+                  onClick={() => void handleGenerateContent()}
+                  disabled={aiContentLoading || (!contentPrompt.trim() && !page.title.trim() && !page.content.trim())}
+                >
+                  {aiContentLoading ? <><LoaderCircle className="is-spinning" /> 正在生成…</> : '生成 / 执行'}
+                </Button>
+              </div>
+              {assistError ? (
+                <div style={{ color: 'var(--danger, #ef4444)', fontSize: 12, padding: '4px 8px', background: 'rgba(239, 68, 68, 0.08)', borderRadius: 4 }}>
+                  {assistError}
+                </div>
+              ) : null}
+              {generatedContent ? (
+                <div className="editor-ai-result-box">
+                  <div className="editor-ai-result-header">
+                    <strong><Sparkles /> 生成结果预览</strong>
+                    <div className="editor-ai-result-actions">
+                      <Button variant="primary" type="button" onClick={() => applyGeneratedContent('replace')}>
+                        替换全文
+                      </Button>
+                      <Button variant="secondary" type="button" onClick={() => applyGeneratedContent('append')}>
+                        追加到末尾
+                      </Button>
+                      <Button variant="secondary" type="button" onClick={() => setGeneratedContent(null)}>
+                        放弃
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="editor-ai-result-preview">
+                    <MarkdownRenderer content={generatedContent} />
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {showAiImage ? (
+            <div className="editor-ai-image-panel">
+              <div className="editor-ai-panel-header">
+                <div className="editor-ai-presets">
+                  <button type="button" onClick={() => void handleGenerateAiImage('A sleek modern architectural diagram illustration showing system components, clean lines, isometric view, tech palette')} disabled={aiImageLoading}>
+                    📊 架构图解风
+                  </button>
+                  <button type="button" onClick={() => void handleGenerateAiImage('A modern minimal editorial vector illustration for a clean web page, subtle gradients, flat design')} disabled={aiImageLoading}>
+                    🖼️ 科技插画风
+                  </button>
+                  <button type="button" onClick={() => void handleGenerateAiImage('Cinematic concept art, hyper-detailed futuristic scene, volumetric lighting, 8k wallpaper quality')} disabled={aiImageLoading}>
+                    🎬 电影概念风
+                  </button>
+                  <button type="button" onClick={() => void handleGenerateAiImage('Cute 3D isometric clay render illustration, soft studio lighting, playful scene')} disabled={aiImageLoading}>
+                    🎨 3D 立体风
+                  </button>
+                </div>
+              </div>
+              <div className="editor-ai-prompt-box">
+                <Input
+                  placeholder="输入生图提示词（支持中文或英文，例如：现代极简关于页插画，蓝白渐变色调…）"
+                  value={imagePrompt}
+                  onChange={(e) => setImagePrompt(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      void handleGenerateAiImage();
+                    }
+                  }}
+                  disabled={aiImageLoading}
+                />
+                <Input
+                  style={{ maxWidth: 160 }}
+                  placeholder="图片描述 (Alt)"
+                  value={imageAlt}
+                  onChange={(e) => setImageAlt(e.target.value)}
+                  disabled={aiImageLoading}
+                />
+                <Button
+                  variant="primary"
+                  type="button"
+                  onClick={() => void handleGenerateAiImage()}
+                  disabled={aiImageLoading || (!imagePrompt.trim() && !page.title.trim())}
+                >
+                  {aiImageLoading ? <><LoaderCircle className="is-spinning" /> 正在绘制…</> : '🎨 开始生图'}
+                </Button>
+              </div>
+              {assistError ? (
+                <div style={{ color: 'var(--danger, #ef4444)', fontSize: 12, padding: '4px 8px', background: 'rgba(239, 68, 68, 0.08)', borderRadius: 4 }}>
+                  {assistError}
+                </div>
+              ) : null}
+              {generatedImage ? (
+                <div className="editor-ai-image-result">
+                  <div className="editor-ai-image-preview">
+                    <img src={generatedImage.url} alt={generatedImage.alt || 'AI 生成插图'} />
+                  </div>
+                  <div className="editor-ai-image-info">
+                    <div className="editor-ai-image-code">
+                      {`![${generatedImage.alt || '单页插图'}](${generatedImage.url})`}
+                    </div>
+                    <div className="editor-ai-image-actions">
+                      <Button variant="primary" type="button" onClick={copyImageMarkdown}>
+                        📋 复制 Markdown
+                      </Button>
+                      <Button variant="secondary" type="button" onClick={insertImageToContent}>
+                        ➕ 插入到正文末尾
+                      </Button>
+                      <Button variant="secondary" type="button" onClick={() => setGeneratedImage(null)}>
+                        放弃
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
 
           {preview ? (
             <div className="editor-preview">
@@ -295,6 +739,17 @@ export default function PageEditor() {
         </main>
 
         <aside className="editor-inspector">
+          <div className="editor-inspector-ai-banner">
+            <Button
+              variant="primary"
+              type="button"
+              onClick={() => void autoFillAllMetadata()}
+              disabled={metaLoading || (!page.title.trim() && !page.content.trim())}
+            >
+              {metaLoading ? <><LoaderCircle className="is-spinning" /> 正在智能分析全文…</> : <><Sparkles /> ⚡ AI 一键补全元数据</>}
+            </Button>
+          </div>
+
           <details open>
             <summary>发布设置</summary>
             <Field label="状态">
@@ -367,6 +822,12 @@ export default function PageEditor() {
                 placeholder="about"
                 required
               />
+              <div className="editor-ai-inline">
+                <button type="button" onClick={() => void requestSuggestions('slug')} disabled={assistTask !== null}>
+                  <Sparkles />
+                  {assistTask === 'slug' ? <><LoaderCircle className="is-spinning" /> 正在分析生成…</> : '智能生成 Slug 标识'}
+                </button>
+              </div>
             </Field>
             <Field label="SEO 标题" hint={`${(page.seo_title || '').length}/60`}>
               <Input
@@ -385,6 +846,12 @@ export default function PageEditor() {
                 placeholder="留空时默认使用摘要"
               />
             </Field>
+            <div className="editor-ai-inline">
+              <button type="button" onClick={() => void requestSuggestions('seo')} disabled={assistTask !== null}>
+                <Sparkles />
+                {assistTask === 'seo' ? <><LoaderCircle className="is-spinning" /> 正在智能提炼…</> : '🎯 AI 提炼 SEO 标题与描述'}
+              </button>
+            </div>
           </details>
         </aside>
       </div>
