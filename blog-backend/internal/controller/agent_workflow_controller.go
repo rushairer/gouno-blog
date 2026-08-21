@@ -183,8 +183,8 @@ func (ctrl *AgentController) DraftAssist(c *gin.Context) {
 		maxTokens = 300
 		instruction = "You are a blog editor. Given the candidate categories list in the request, select the single most appropriate category name for this draft. Return only valid JSON in the form: {\"suggestions\":[\"category_name\"]}."
 	} else if req.Task == "cover_prompt" {
-		maxTokens = 900
-		instruction = "You are an AI art director. Generate 2 distinct, highly detailed text-to-image prompts in English (with Chinese summary) for generating an eye-catching, modern, artistic blog cover image suitable for DALL-E or Midjourney. Return only valid JSON in the form: {\"suggestions\":[\"English prompt... (中文说明)\", \"...\"]}."
+		maxTokens = 2500
+		instruction = "You are an AI art director. Generate 3 distinct, highly creative, and detailed text-to-image prompts in English (each followed by a concise Chinese summary in brackets: [中文说明: ...]) for generating an eye-catching, modern blog cover image suitable for Midjourney or DALL-E 3. Provide 3 different visual directions (e.g. 1. Futuristic Surreal Tech, 2. Minimalist Conceptual Graphic, 3. Cinematic 3D Scene). Return only valid JSON: {\"suggestions\":[\"Prompt 1... [中文说明: ...]\", \"Prompt 2... [中文说明: ...]\", \"Prompt 3... [中文说明: ...]\"]}."
 	} else if req.Task == "metadata_all" {
 		maxTokens = 2500
 		instruction = "You are a senior blog managing editor. Analyze the draft and generate all publishing metadata in a single valid JSON object with format:\n{\"summary\":\"...\",\"tags\":[\"...\"],\"slug\":\"...\",\"seo_title\":\"...\",\"seo_description\":\"...\",\"category\":\"...\",\"cover_alt\":\"...\"}.\nEnsure summary is ~150-250 Chinese chars, tags has 3-5 keywords, slug is ASCII lowercase words with hyphens, seo_title is <=60 chars, seo_description is <=160 chars, category matches the best choice from candidate categories (if supplied), and cover_alt describes the cover scene."
