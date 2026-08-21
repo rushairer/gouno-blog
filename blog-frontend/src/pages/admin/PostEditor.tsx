@@ -11,7 +11,7 @@ import { extractMarkdownTOC } from '../../utils/markdown';
 import type { Category, Post, PostStatus } from '../../types/blog';
 
 interface PostVersion extends Post { post_id: number }
-type AssistTask = 'title' | 'summary' | 'slug' | 'content';
+type AssistTask = 'title' | 'summary' | 'slug' | 'content' | 'tags' | 'seo' | 'alt' | 'category' | 'cover_prompt' | 'metadata_all';
 
 const emptyPost: Post = { id: 0, title: '', slug: '', summary: '', content: '', tags: [], status: 'draft', created_at: '' };
 
@@ -37,6 +37,9 @@ export default function PostEditor() {
   const [suggestionTask, setSuggestionTask] = useState<AssistTask | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [assistError, setAssistError] = useState('');
+  const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
+  const [categorySuggestion, setCategorySuggestion] = useState<string | null>(null);
+  const [metaLoading, setMetaLoading] = useState(false);
   const [showAiWriting, setShowAiWriting] = useState(false);
   const [contentPrompt, setContentPrompt] = useState('');
   const [aiContentLoading, setAiContentLoading] = useState(false);
@@ -140,14 +143,15 @@ export default function PostEditor() {
     }
     setAssistTask(task); setSuggestionTask(null); setSuggestions([]); setAssistError('');
     try {
-      const list = await agentApi.getDraftAssist({
+      const res = await agentApi.getDraftAssist({
         task,
         title: post.title,
         summary: post.summary,
         content: post.content,
+        categories: categories.map((c) => c.name),
       });
       const cleanList: string[] = [];
-      (list || []).forEach((item) => {
+      (res.suggestions || []).forEach((item) => {
         if (item.includes('","')) {
           item.split('","').forEach((sub) => {
             const clean = sub.replace(/^[{"[\s]+|[}"\]\s,]+$/g, '').trim();
@@ -172,8 +176,230 @@ export default function PostEditor() {
   };
 
   const applySuggestion = (task: AssistTask, value: string) => {
-    update(task, value);
+    if (task === 'alt') {
+      update('cover_alt', value);
+      notify('已应用封面替代文本。', 'success');
+    } else {
+      update(task as keyof Post, value);
+    }
     setSuggestions([]); setSuggestionTask(null); setAssistError('');
+  };
+
+  const requestTags = async () => {
+    if (!post.title.trim() && !post.content.trim()) {
+      notify('先写下标题或正文，AI 才能提炼标签。', 'error');
+      return;
+    }
+    setAssistTask('tags');
+    try {
+      const res = await agentApi.getDraftAssist({
+        task: 'tags',
+        title: post.title,
+        summary: post.summary,
+        content: post.content,
+      });
+      const cleanList: string[] = [];
+      (res.suggestions || []).forEach((item) => {
+        if (item.includes('","')) {
+          item.split('","').forEach((sub) => {
+            const clean = sub.replace(/^[{"[\s]+|[}"\]\s,]+$/g, '').trim();
+            if (clean) cleanList.push(clean);
+          });
+        } else {
+          const clean = item.replace(/^[{"[\s]+|[}"\]\s,]+$/g, '').trim();
+          if (clean) cleanList.push(clean);
+        }
+      });
+      setTagSuggestions(cleanList);
+      if (cleanList.length) {
+        notify(`已提炼出 ${cleanList.length} 个推荐标签。`, 'success');
+      } else {
+        notify('未能提炼出有效标签，请稍后重试。', 'error');
+      }
+    } catch (reason) {
+      notify(reason instanceof Error ? reason.message : '提炼标签失败', 'error');
+    } finally {
+      setAssistTask(null);
+    }
+  };
+
+  const addTag = (tag: string) => {
+    const trimmed = tag.trim();
+    if (!trimmed) return;
+    if (!post.tags.includes(trimmed)) {
+      const nextTags = [...post.tags, trimmed];
+      update('tags', nextTags);
+      notify(`已添加标签：${trimmed}`, 'success');
+    }
+  };
+
+  const addAllTags = () => {
+    const nextTags = [...post.tags];
+    let addedCount = 0;
+    tagSuggestions.forEach((tag) => {
+      const trimmed = tag.trim();
+      if (trimmed && !nextTags.includes(trimmed)) {
+        nextTags.push(trimmed);
+        addedCount++;
+      }
+    });
+    if (addedCount > 0) {
+      update('tags', nextTags);
+      notify(`已添加 ${addedCount} 个推荐标签。`, 'success');
+    }
+  };
+
+  const requestCategory = async () => {
+    if (!post.title.trim() && !post.content.trim()) {
+      notify('先写下标题或正文，AI 才能分析分类。', 'error');
+      return;
+    }
+    if (!categories.length) {
+      notify('当前站点尚未创建任何分类。', 'error');
+      return;
+    }
+    setAssistTask('category');
+    try {
+      const res = await agentApi.getDraftAssist({
+        task: 'category',
+        title: post.title,
+        summary: post.summary,
+        content: post.content,
+        categories: categories.map((c) => c.name),
+      });
+      if (res.suggestions?.length) {
+        const catName = res.suggestions[0].trim();
+        setCategorySuggestion(catName);
+        notify(`推荐归属分类：${catName}`, 'success');
+      } else {
+        notify('未能匹配到合适分类。', 'error');
+      }
+    } catch (reason) {
+      notify(reason instanceof Error ? reason.message : '分析分类失败', 'error');
+    } finally {
+      setAssistTask(null);
+    }
+  };
+
+  const applyCategory = (categoryName: string) => {
+    const matched = categories.find((c) => c.name.toLowerCase() === categoryName.toLowerCase());
+    if (matched) {
+      update('category_id', matched.id);
+      notify(`已选择分类：${matched.name}`, 'success');
+      setCategorySuggestion(null);
+    } else {
+      notify(`未找到名为 "${categoryName}" 的分类`, 'error');
+    }
+  };
+
+  const requestSeo = async () => {
+    if (!post.title.trim() && !post.content.trim()) {
+      notify('先写下标题或正文，AI 才能优化 SEO。', 'error');
+      return;
+    }
+    setAssistTask('seo');
+    try {
+      const res = await agentApi.getDraftAssist({
+        task: 'seo',
+        title: post.title,
+        summary: post.summary,
+        content: post.content,
+      });
+      let seoTitle = '';
+      let seoDesc = '';
+      let seoSlug = '';
+      if (res.metadata) {
+        seoTitle = res.metadata.seo_title || '';
+        seoDesc = res.metadata.seo_description || '';
+        seoSlug = res.metadata.slug || '';
+      } else if (res.suggestions?.length) {
+        try {
+          const parsed = JSON.parse(res.suggestions[0]);
+          seoTitle = parsed.seo_title || '';
+          seoDesc = parsed.seo_description || '';
+          seoSlug = parsed.slug || '';
+        } catch {
+          // parse failed
+        }
+      }
+      if (seoTitle || seoDesc || seoSlug) {
+        setPost((current) => ({
+          ...current,
+          seo_title: seoTitle || current.seo_title,
+          seo_description: seoDesc || current.seo_description,
+          slug: seoSlug || current.slug,
+        }));
+        dirty.current = true;
+        setSavedAt(null);
+        notify('SEO 标题、描述与 Slug 已自动生成！', 'success');
+      } else {
+        notify('未能生成有效的 SEO 配置，请稍后重试。', 'error');
+      }
+    } catch (reason) {
+      notify(reason instanceof Error ? reason.message : '生成 SEO 配置失败', 'error');
+    } finally {
+      setAssistTask(null);
+    }
+  };
+
+  const autoFillAllMetadata = async () => {
+    if (!post.title.trim() && !post.content.trim()) {
+      notify('请先填写标题或正文，AI 才能提炼全套元数据。', 'error');
+      return;
+    }
+    setMetaLoading(true);
+    try {
+      const res = await agentApi.getDraftAssist({
+        task: 'metadata_all',
+        title: post.title,
+        summary: post.summary,
+        content: post.content,
+        categories: categories.map((c) => c.name),
+      });
+      let meta = res.metadata;
+      if (!meta && res.suggestions?.length) {
+        try {
+          meta = JSON.parse(res.suggestions[0]);
+        } catch {
+          // ignore
+        }
+      }
+      if (meta) {
+        setPost((current) => {
+          let catId = current.category_id;
+          if (meta?.category) {
+            const found = categories.find((c) => c.name.toLowerCase() === meta?.category?.toLowerCase());
+            if (found) catId = found.id;
+          }
+          const nextTags = [...current.tags];
+          if (Array.isArray(meta?.tags)) {
+            meta.tags.forEach((t) => {
+              const clean = String(t).trim();
+              if (clean && !nextTags.includes(clean)) nextTags.push(clean);
+            });
+          }
+          return {
+            ...current,
+            summary: meta?.summary || current.summary,
+            slug: meta?.slug || current.slug,
+            seo_title: meta?.seo_title || current.seo_title,
+            seo_description: meta?.seo_description || current.seo_description,
+            cover_alt: meta?.cover_alt || current.cover_alt,
+            category_id: catId,
+            tags: nextTags,
+          };
+        });
+        dirty.current = true;
+        setSavedAt(null);
+        notify('⚡ 全套元数据已成功自动补全！', 'success');
+      } else {
+        notify('未能生成完整元数据，请稍后重试。', 'error');
+      }
+    } catch (reason) {
+      notify(reason instanceof Error ? reason.message : '一键补全元数据失败', 'error');
+    } finally {
+      setMetaLoading(false);
+    }
   };
 
   const sanitizeAiMarkdown = (raw: string): string => {
@@ -216,15 +442,15 @@ export default function PostEditor() {
     setAssistError('');
     setGeneratedContent(null);
     try {
-      const list = await agentApi.getDraftAssist({
+      const res = await agentApi.getDraftAssist({
         task: 'content',
         title: post.title,
         summary: post.summary,
         content: post.content,
         prompt: effectivePrompt,
       });
-      if (list?.length && list[0].trim()) {
-        setGeneratedContent(sanitizeAiMarkdown(list[0]));
+      if (res.suggestions?.length && res.suggestions[0].trim()) {
+        setGeneratedContent(sanitizeAiMarkdown(res.suggestions[0]));
         notify('正文已生成完毕，请在下方预览并确认。', 'success');
       } else {
         const msg = 'AI 未能生成正文，请稍后重试或调整提示词。';
@@ -396,10 +622,161 @@ export default function PostEditor() {
         {preview ? <div className="editor-preview"><MarkdownRenderer content={post.content || '开始写作后，预览会出现在这里。'} /></div> : <textarea className="editor-body mono" value={post.content} onChange={(event) => update('content', event.target.value)} aria-label="文章正文 Markdown" placeholder={'## 从问题开始\n\n写下背景、约束、判断与实现…'} />}
       </main>
       <aside className="editor-inspector">
-        <details open><summary>发布设置</summary><Field label="状态"><Select value={publishIntent} onChange={(event) => { setPublishIntent(event.target.value as PostStatus); dirty.current = true; }}><option value="draft">草稿</option><option value="published">立即发布</option><option value="scheduled">定时发布</option></Select></Field>{publishIntent === 'scheduled' ? <Field label="发布时间"><Input type="datetime-local" value={post.scheduled_at?.slice(0, 16) || ''} onChange={(event) => update('scheduled_at', event.target.value)} /></Field> : null}</details>
-        <details open><summary>分类与标签</summary><Field label="分类"><Select value={post.category_id || ''} onChange={(event) => update('category_id', event.target.value ? Number(event.target.value) : null)}><option value="">未分类</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</Select></Field><Field label="标签" hint="使用逗号分隔，最多建议 10 个。"><Input value={post.tags.join(', ')} onChange={(event) => update('tags', event.target.value.split(',').map((tag) => tag.trim()))} placeholder="Go, OIDC, 安全" /></Field></details>
-        <details open><summary>封面与摘要</summary><Field label="封面 URL"><Input value={post.cover_url || ''} onChange={(event) => update('cover_url', event.target.value)} placeholder="/media/cover.webp" /></Field><Field label="替代文本"><Input value={post.cover_alt || ''} onChange={(event) => update('cover_alt', event.target.value)} /></Field></details>
-        <details open><summary>SEO</summary><Field label="SEO 标题" hint={`${(post.seo_title || '').length}/60`}><Input value={post.seo_title || ''} maxLength={60} onChange={(event) => update('seo_title', event.target.value)} /></Field><Field label="SEO 描述" hint={`${(post.seo_description || '').length}/160`}><Textarea rows={4} value={post.seo_description || ''} maxLength={160} onChange={(event) => update('seo_description', event.target.value)} /></Field><Field label="Slug" required><Input className="mono" value={post.slug} onChange={(event) => update('slug', event.target.value)} required /><div className="editor-ai-inline"><button type="button" onClick={() => void requestSuggestions('slug')} disabled={assistTask !== null}><Sparkles />{assistTask === 'slug' ? <><LoaderCircle className="is-spinning" /> 正在生成 Slug…</> : '生成 Slug 候选'}</button>{suggestionTask === 'slug' && suggestions.length > 0 ? <div className="editor-ai-candidates" aria-label="Slug 候选">{suggestions.map((item) => <button key={item} type="button" onClick={() => applySuggestion('slug', item)}><span className="mono">{item}</span><b>应用</b></button>)}</div> : null}</div></Field></details>
+        <div className="editor-inspector-ai-banner">
+          <Button
+            variant="primary"
+            type="button"
+            onClick={() => void autoFillAllMetadata()}
+            disabled={metaLoading || (!post.title.trim() && !post.content.trim())}
+          >
+            {metaLoading ? <><LoaderCircle className="is-spinning" /> 正在智能分析全文…</> : <><Sparkles /> ⚡ AI 一键补全元数据</>}
+          </Button>
+        </div>
+        <details open>
+          <summary>发布设置</summary>
+          <Field label="状态">
+            <Select value={publishIntent} onChange={(event) => { setPublishIntent(event.target.value as PostStatus); dirty.current = true; }}>
+              <option value="draft">草稿</option>
+              <option value="published">立即发布</option>
+              <option value="scheduled">定时发布</option>
+            </Select>
+          </Field>
+          {publishIntent === 'scheduled' ? (
+            <Field label="发布时间">
+              <Input type="datetime-local" value={post.scheduled_at?.slice(0, 16) || ''} onChange={(event) => update('scheduled_at', event.target.value)} />
+            </Field>
+          ) : null}
+        </details>
+        <details open>
+          <summary>分类与标签</summary>
+          <Field label="分类">
+            <Select value={post.category_id || ''} onChange={(event) => update('category_id', event.target.value ? Number(event.target.value) : null)}>
+              <option value="">未分类</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>{category.name}</option>
+              ))}
+            </Select>
+            {categorySuggestion ? (
+              <button type="button" className="category-ai-badge" onClick={() => applyCategory(categorySuggestion)}>
+                <Sparkles /> 推荐: {categorySuggestion} (点击应用)
+              </button>
+            ) : (
+              <div className="editor-ai-inline">
+                <button type="button" onClick={() => void requestCategory()} disabled={assistTask !== null || !categories.length}>
+                  <Sparkles />{assistTask === 'category' ? <><LoaderCircle className="is-spinning" /> 分析分类…</> : '推荐最佳分类'}
+                </button>
+              </div>
+            )}
+          </Field>
+          <Field label="标签" hint="使用逗号分隔，最多建议 10 个。">
+            <Input value={post.tags.join(', ')} onChange={(event) => update('tags', event.target.value.split(',').map((tag) => tag.trim()).filter(Boolean))} placeholder="Go, OIDC, 安全" />
+            <div className="editor-ai-inline">
+              <button type="button" onClick={() => void requestTags()} disabled={assistTask !== null}>
+                <Sparkles />{assistTask === 'tags' ? <><LoaderCircle className="is-spinning" /> 正在提炼标签…</> : '提取推荐标签'}
+              </button>
+            </div>
+            {tagSuggestions.length > 0 ? (
+              <div className="editor-tag-pills">
+                <span style={{ fontSize: 11, color: 'var(--text-3)', width: '100%' }}>点击标签添加：</span>
+                {tagSuggestions.map((tag) => {
+                  const isAdded = post.tags.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      className={`editor-tag-pill ${isAdded ? 'is-added' : ''}`}
+                      onClick={() => !isAdded && addTag(tag)}
+                      title={isAdded ? '已添加' : '点击添加此标签'}
+                    >
+                      {isAdded ? '✓' : '+'} {tag}
+                    </button>
+                  );
+                })}
+                <button type="button" className="editor-tag-pill-all" onClick={addAllTags}>
+                  + 添加全部
+                </button>
+              </div>
+            ) : null}
+          </Field>
+        </details>
+        <details open>
+          <summary>封面与摘要</summary>
+          <Field label="封面 URL">
+            <Input value={post.cover_url || ''} onChange={(event) => update('cover_url', event.target.value)} placeholder="/media/cover.webp" />
+            <div className="editor-ai-inline">
+              <button type="button" onClick={() => void requestSuggestions('cover_prompt')} disabled={assistTask !== null}>
+                <Sparkles />{assistTask === 'cover_prompt' ? <><LoaderCircle className="is-spinning" /> 生成生图提示词…</> : '生成生图 Prompt'}
+              </button>
+              {suggestionTask === 'cover_prompt' && suggestions.length > 0 ? (
+                <div className="editor-ai-candidates" aria-label="Prompt 候选">
+                  {suggestions.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => {
+                        void navigator.clipboard.writeText(item);
+                        notify('生图提示词已复制到剪贴板！', 'success');
+                      }}
+                    >
+                      <span style={{ fontSize: 12 }}>{item}</span>
+                      <b>复制</b>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          </Field>
+          <Field label="替代文本">
+            <Input value={post.cover_alt || ''} onChange={(event) => update('cover_alt', event.target.value)} placeholder="描述封面图场景与主题" />
+            <div className="editor-ai-inline">
+              <button type="button" onClick={() => void requestSuggestions('alt')} disabled={assistTask !== null}>
+                <Sparkles />{assistTask === 'alt' ? <><LoaderCircle className="is-spinning" /> 正在生成 Alt…</> : '生成 Alt 描述'}
+              </button>
+              {suggestionTask === 'alt' && suggestions.length > 0 ? (
+                <div className="editor-ai-candidates" aria-label="Alt 候选">
+                  {suggestions.map((item) => (
+                    <button key={item} type="button" onClick={() => applySuggestion('alt', item)}>
+                      <span>{item}</span>
+                      <b>应用</b>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          </Field>
+        </details>
+        <details open>
+          <summary>SEO</summary>
+          <div className="editor-ai-inline" style={{ marginBottom: 12 }}>
+            <button type="button" onClick={() => void requestSeo()} disabled={assistTask !== null}>
+              <Sparkles />{assistTask === 'seo' ? <><LoaderCircle className="is-spinning" /> 正在优化 SEO…</> : '智能生成整套 SEO 配置'}
+            </button>
+          </div>
+          <Field label="SEO 标题" hint={`${(post.seo_title || '').length}/60`}>
+            <Input value={post.seo_title || ''} maxLength={60} onChange={(event) => update('seo_title', event.target.value)} />
+          </Field>
+          <Field label="SEO 描述" hint={`${(post.seo_description || '').length}/160`}>
+            <Textarea rows={4} value={post.seo_description || ''} maxLength={160} onChange={(event) => update('seo_description', event.target.value)} />
+          </Field>
+          <Field label="Slug" required>
+            <Input className="mono" value={post.slug} onChange={(event) => update('slug', event.target.value)} required />
+            <div className="editor-ai-inline">
+              <button type="button" onClick={() => void requestSuggestions('slug')} disabled={assistTask !== null}>
+                <Sparkles />{assistTask === 'slug' ? <><LoaderCircle className="is-spinning" /> 正在生成 Slug…</> : '生成 Slug 候选'}
+              </button>
+              {suggestionTask === 'slug' && suggestions.length > 0 ? (
+                <div className="editor-ai-candidates" aria-label="Slug 候选">
+                  {suggestions.map((item) => (
+                    <button key={item} type="button" onClick={() => applySuggestion('slug', item)}>
+                      <span className="mono">{item}</span>
+                      <b>应用</b>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          </Field>
+        </details>
       </aside>
     </div>
     <ConfirmDialog open={restoreTarget !== null} title="恢复历史版本" description={restoreTarget ? <>恢复 {new Date(restoreTarget.created_at).toLocaleString('zh-CN')} 的版本？当前内容会先保留为历史版本。</> : ''} confirmLabel="恢复版本" onClose={() => setRestoreTarget(null)} onConfirm={restoreVersion} />

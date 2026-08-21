@@ -118,6 +118,39 @@ func TestExtractDraftSuggestions(t *testing.T) {
 	if len(res6) != 2 || res6[0] != "摘要候选一内容..." || res6[1] != "摘要候选二内容..." {
 		t.Fatalf("extractDraftSuggestions(r6) = %v, want 2 separate items", res6)
 	}
+
+	// Case 7: 5 tags in JSON array
+	r7 := `{"suggestions": ["AI", "Go", "架构", "全栈", "思考"]}`
+	res7 := extractDraftSuggestions(r7)
+	if len(res7) != 5 || res7[4] != "思考" {
+		t.Fatalf("extractDraftSuggestions(r7) = %v, want 5 tags", res7)
+	}
+}
+
+func TestExtractStructuredMetadata(t *testing.T) {
+	raw := "```json\n{\n  \"summary\": \"这是一篇关于AI与人类思考的文章\",\n  \"tags\": [\"AI\", \"思考\", \"成长\"],\n  \"slug\": \"ai-and-human-thinking\",\n  \"seo_title\": \"AI时代的人类思考 | 思考与实践\",\n  \"seo_description\": \"深度探讨AI时代如何保持独立思考能力与批判性思维。\",\n  \"category\": \"技术思考\",\n  \"cover_alt\": \"一个程序员在思考的插画\"\n}\n```"
+	meta := extractStructuredMetadata(raw)
+	if meta == nil {
+		t.Fatalf("extractStructuredMetadata returned nil")
+	}
+	if meta.Summary != "这是一篇关于AI与人类思考的文章" {
+		t.Errorf("summary = %q, want expected", meta.Summary)
+	}
+	if len(meta.Tags) != 3 || meta.Tags[0] != "AI" {
+		t.Errorf("tags = %v, want 3 items", meta.Tags)
+	}
+	if meta.Slug != "ai-and-human-thinking" {
+		t.Errorf("slug = %q, want ai-and-human-thinking", meta.Slug)
+	}
+	if meta.SeoTitle != "AI时代的人类思考 | 思考与实践" {
+		t.Errorf("seo_title = %q, want expected", meta.SeoTitle)
+	}
+	if meta.Category != "技术思考" {
+		t.Errorf("category = %q, want 技术思考", meta.Category)
+	}
+	if meta.CoverAlt != "一个程序员在思考的插画" {
+		t.Errorf("cover_alt = %q, want expected", meta.CoverAlt)
+	}
 }
 
 

@@ -11,7 +11,48 @@ import type {
   WorkflowInteractionTask,
 } from '../types/agent';
 
+export interface DraftMetadataResult {
+  summary?: string;
+  tags?: string[];
+  slug?: string;
+  seo_title?: string;
+  seo_description?: string;
+  category?: string;
+  cover_alt?: string;
+}
+
+export interface DraftAssistPayload {
+  task: 'title' | 'summary' | 'slug' | 'content' | 'tags' | 'seo' | 'alt' | 'category' | 'cover_prompt' | 'metadata_all' | string;
+  title?: string;
+  summary?: string;
+  content?: string;
+  prompt?: string;
+  categories?: string[];
+}
+
+export interface DraftAssistResponse {
+  suggestions: string[];
+  metadata?: DraftMetadataResult;
+  provider?: string;
+  model?: string;
+}
+
 export const agentApi = {
+  async getDraftAssist(payload: DraftAssistPayload): Promise<DraftAssistResponse> {
+    const data = await readData<{ suggestions: string[]; metadata?: DraftMetadataResult; provider?: string; model?: string }>(
+      apiFetch('/api/admin/ai-draft-assist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+    );
+    return {
+      suggestions: data.suggestions || [],
+      metadata: data.metadata,
+      provider: data.provider,
+      model: data.model,
+    };
+  },
   async getToolCatalog(): Promise<ToolDefinition[]> {
     return readData<ToolDefinition[]>(apiFetch('/api/admin/agent-tools'));
   },
@@ -116,16 +157,6 @@ export const agentApi = {
     );
   },
 
-  async getDraftAssist(payload: { task: string; title: string; summary: string; content: string; prompt?: string }): Promise<string[]> {
-    const data = await readData<{ suggestions: string[] }>(
-      apiFetch('/api/admin/ai-draft-assist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-    );
-    return data.suggestions || [];
-  },
 
   copySkill: (id: number, name: string) => readData<void>(apiFetch(`/api/admin/agent-skills/${id}/copy`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }),

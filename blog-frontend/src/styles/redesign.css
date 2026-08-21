@@ -713,6 +713,95 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .editor-inspector summary { padding: 16px 0 12px; font-size: 13px; font-weight: 600; color: var(--ui-text); cursor: pointer; }
 .editor-inspector .field { margin-bottom: 14px; }
 
+/* Inspector AI Tools */
+.editor-inspector-ai-banner {
+  margin: 14px 16px;
+  padding: 12px;
+  border-radius: var(--radius-control);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--ui-brand) 12%, transparent), color-mix(in srgb, var(--ui-panel) 90%, transparent));
+  border: 1px solid color-mix(in srgb, var(--ui-brand) 30%, transparent);
+  display: grid;
+  gap: 8px;
+}
+.editor-inspector-ai-banner button {
+  width: 100%;
+  justify-content: center;
+  font-weight: 600;
+  gap: 6px;
+}
+
+.category-ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--ui-brand) 10%, transparent);
+  color: var(--ui-brand);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--ui-brand) 20%, transparent);
+  transition: all 120ms ease;
+}
+.category-ai-badge:hover {
+  background: var(--ui-brand);
+  color: #fff;
+}
+.category-ai-badge svg { width: 12px; height: 12px; }
+
+.editor-tag-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: var(--radius-control);
+  background: var(--ui-control);
+  border: 1px solid var(--ui-border);
+}
+.editor-tag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 12px;
+  background: var(--ui-panel);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+.editor-tag-pill:hover:not(.is-added) {
+  border-color: var(--ui-brand);
+  color: var(--ui-brand);
+  background: color-mix(in srgb, var(--ui-brand) 8%, transparent);
+}
+.editor-tag-pill.is-added {
+  opacity: 0.5;
+  cursor: default;
+  text-decoration: line-through;
+}
+.editor-tag-pill-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: var(--ui-brand);
+  border: 1px solid var(--ui-brand);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+.editor-tag-pill-all:hover {
+  filter: brightness(1.1);
+}
+
 /* Admin supporting pages */
 .moderation-list { display: grid; gap: 10px; }
 .moderation-list .panel { display: grid; grid-template-columns: 38px 1fr auto; gap: 14px; align-items: start; }
