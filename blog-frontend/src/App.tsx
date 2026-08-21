@@ -7,7 +7,8 @@ import AdminShell from './layouts/AdminShell';
 import Home from './pages/Home';
 import ArticleIndex from './pages/ArticleIndex';
 import PostDetail from './pages/PostDetail';
-import TaxonomyIndex from './pages/TaxonomyIndex';
+import Categories from './pages/Categories';
+import Tags from './pages/Tags';
 import Archive from './pages/Archive';
 import About from './pages/About';
 import NotFound from './pages/NotFound';
@@ -22,7 +23,8 @@ const PostEditor = React.lazy(() => import('./pages/admin/PostEditor'));
 const AdminPages = React.lazy(() => import('./pages/admin/Pages'));
 const PageEditor = React.lazy(() => import('./pages/admin/PageEditor'));
 const AdminComments = React.lazy(() => import('./pages/admin/Comments'));
-const AdminTaxonomy = React.lazy(() => import('./pages/admin/Taxonomy'));
+const AdminCategories = React.lazy(() => import('./pages/admin/Categories'));
+const AdminTags = React.lazy(() => import('./pages/admin/Tags'));
 const AdminSiteSettings = React.lazy(() => import('./pages/admin/SiteSettings'));
 const AdminUsers = React.lazy(() => import('./pages/admin/Users'));
 const MediaLibrary = React.lazy(() => import('./pages/admin/MediaLibrary'));
@@ -76,9 +78,9 @@ export default function App() {
     <Route path="/articles" element={<Public><ArticleIndex /></Public>} />
     <Route path="/articles/:slug" element={<Public><PostDetail /></Public>} />
     <Route path="/posts/:slug" element={<LegacyPostRedirect />} />
-    <Route path="/categories" element={<Public><TaxonomyIndex type="categories" /></Public>} />
+    <Route path="/categories" element={<Public><Categories /></Public>} />
     <Route path="/categories/:slug" element={<Public><ArticleIndex mode="category" /></Public>} />
-    <Route path="/tags" element={<Public><TaxonomyIndex type="tags" /></Public>} />
+    <Route path="/tags" element={<Public><Tags /></Public>} />
     <Route path="/tags/:slug" element={<Public><ArticleIndex mode="tag" /></Public>} />
     <Route path="/archive" element={<Public><Archive /></Public>} />
     <Route path="/about" element={<Public><About /></Public>} />
@@ -99,8 +101,8 @@ export default function App() {
     <Route path="/admin/pages" element={<Admin><AdminPages /></Admin>} />
     <Route path="/admin/pages/new" element={<Admin><PageEditor /></Admin>} />
     <Route path="/admin/pages/:id/edit" element={<Admin><PageEditor /></Admin>} />
-    <Route path="/admin/categories" element={<Admin><AdminTaxonomy type="categories" /></Admin>} />
-    <Route path="/admin/tags" element={<Admin><AdminTaxonomy type="tags" /></Admin>} />
+    <Route path="/admin/categories" element={<Admin><AdminCategories /></Admin>} />
+    <Route path="/admin/tags" element={<Admin><AdminTags /></Admin>} />
     <Route path="/admin/comments" element={<Admin><AdminComments /></Admin>} />
     <Route path="/admin/notifications" element={<Admin><AdminNotifications /></Admin>} />
     <Route path="/admin/media" element={<Admin><MediaLibrary /></Admin>} />
