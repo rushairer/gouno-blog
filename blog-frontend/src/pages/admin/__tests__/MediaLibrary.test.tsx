@@ -28,6 +28,20 @@ describe('MediaLibrary', () => {
     expect(within(drawer).getByRole('button', { name: 'Upload image' })).toBeDisabled();
   });
 
+  it('opens AI text-to-image drawer with style presets and prompt inputs', async () => {
+    render(<ToastProvider><MediaLibrary /></ToastProvider>);
+
+    await screen.findByText('No images uploaded yet.');
+    expect(screen.queryByRole('dialog', { name: 'AI 文生图' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'AI 文生图' }));
+
+    expect(screen.getByRole('dialog', { name: 'AI 文生图' })).toBeInTheDocument();
+    const drawer = screen.getByRole('dialog', { name: 'AI 文生图' });
+    expect(within(drawer).getByText('📊 架构图解')).toBeInTheDocument();
+    expect(within(drawer).getByText('🖼️ 科技插画')).toBeInTheDocument();
+    expect(within(drawer).getByRole('button', { name: '开始生图并入库' })).toBeDisabled();
+  });
+
   it('renders standard FilterBar with search and type filter, supporting clearing filters', async () => {
     const mockAssets = [
       { id: 1, filename: 'banner.png', url: '/banner.png', content_type: 'image/png', size_bytes: 1024, alt_text: 'Header Banner', created_at: '2026-08-16T12:00:00Z', usage_count: 1 },

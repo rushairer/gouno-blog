@@ -18,7 +18,7 @@ describe('Admin Categories', () => {
     vi.mocked(apiFetch).mockResolvedValue(Response.json({ data: [] }));
   });
 
-  it('opens category creation in the right-side drawer', async () => {
+  it('opens category creation in the right-side drawer with AI Slug assistant', async () => {
     render(
       <MemoryRouter>
         <ToastProvider>
@@ -32,7 +32,7 @@ describe('Admin Categories', () => {
     fireEvent.click(screen.getByRole('button', { name: '新建分类' }));
     const form = screen.getByRole('dialog', { name: '新建分类' }).querySelector('.drawer-form');
     expect(form?.querySelectorAll('.field')).toHaveLength(4);
-    expect(form?.querySelectorAll('.input-field')).toHaveLength(4);
+    expect(screen.getByRole('button', { name: '智能生成 Slug 候选' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '创建分类' })).toHaveClass('btn-primary');
   });
 });
