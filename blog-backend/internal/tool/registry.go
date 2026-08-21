@@ -51,16 +51,17 @@ type ScopeRule struct {
 }
 
 type Definition struct {
-	Name          string
-	Description   string
-	Parameters    json.RawMessage
-	Configuration json.RawMessage
-	Output        json.RawMessage
-	Surfaces      []string
-	Risk          domain.ToolRiskLevel
-	Scope         *ScopeRule
-	Execute       func(context.Context, json.RawMessage) (any, error)
-	Propose       func(context.Context, json.RawMessage) (*Proposal, error)
+	Name           string
+	Description    string
+	Parameters     json.RawMessage
+	Configuration  json.RawMessage
+	DefaultBinding json.RawMessage
+	Output         json.RawMessage
+	Surfaces       []string
+	Risk           domain.ToolRiskLevel
+	Scope          *ScopeRule
+	Execute        func(context.Context, json.RawMessage) (any, error)
+	Propose        func(context.Context, json.RawMessage) (*Proposal, error)
 }
 
 type Registry struct {
@@ -73,6 +74,7 @@ type CatalogItem struct {
 	DescriptionZH       string               `json:"description_zh,omitempty"`
 	Parameters          json.RawMessage      `json:"parameters"`
 	ConfigurationSchema json.RawMessage      `json:"configuration_schema,omitempty"`
+	DefaultBinding      json.RawMessage      `json:"default_binding,omitempty"`
 	Output              json.RawMessage      `json:"output_schema,omitempty"`
 	Surfaces            []string             `json:"surfaces"`
 	Risk                domain.ToolRiskLevel `json:"risk_level"`
@@ -193,6 +195,7 @@ func (r *Registry) Catalog() []CatalogItem {
 			Name: definition.Name, Description: definition.Description, DescriptionZH: catalogDescriptionsZH[definition.Name],
 			Parameters:          catalogSchema(definition.Parameters, emptyParametersSchema),
 			ConfigurationSchema: catalogSchema(definition.Configuration, nil),
+			DefaultBinding:      catalogSchema(definition.DefaultBinding, nil),
 			Output:              catalogSchema(definition.Output, nil),
 			Surfaces:            definition.Surfaces, Risk: definition.Risk, Scope: definition.Scope,
 		})

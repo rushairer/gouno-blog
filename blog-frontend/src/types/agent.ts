@@ -375,6 +375,7 @@ export interface ToolDefinition {
   parameters: Record<string, unknown>;
   output_schema?: Record<string, unknown>;
   configuration_schema?: Record<string, unknown>;
+  default_binding?: Record<string, unknown>;
   surfaces: 'agent'[];
   risk_level: 'read' | 'propose' | 'write';
   scope?: {
