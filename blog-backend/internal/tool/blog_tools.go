@@ -34,10 +34,11 @@ func NewBlogRegistry(posts *service.PostService, community *service.CommunitySer
 	return New(
 		Definition{
 			Name: "rss.fetch", Description: "Fetch and normalize entries from configured allowlisted RSS or Atom feeds.",
-			Parameters:    schema(`{"feeds":{"type":"array","minItems":1,"maxItems":10,"items":{"type":"object","additionalProperties":false,"required":["name","url"],"properties":{"name":{"type":"string","maxLength":120},"url":{"type":"string","format":"uri"}}},"max_per_feed":{"type":"integer","minimum":1,"maximum":20},"max_items":{"type":"integer","minimum":1,"maximum":50}}`, "feeds"),
-			Configuration: schema(`{"feeds":{"type":"array","minItems":1,"maxItems":10,"items":{"type":"object","additionalProperties":false,"required":["name","url"],"properties":{"name":{"type":"string","maxLength":120},"url":{"type":"string","format":"uri"}}},"max_per_feed":{"type":"integer","minimum":1,"maximum":20},"max_items":{"type":"integer","minimum":1,"maximum":50}}`, "feeds"),
-			Output:        json.RawMessage(`{"type":"object","properties":{"items":{"type":"array"}}}`), Surfaces: []string{"agent"}, Risk: domain.ToolRiskRead,
-			Execute: fetchRSS,
+			Parameters:     schema(`{"feeds":{"type":"array","minItems":1,"maxItems":10,"items":{"type":"object","additionalProperties":false,"required":["name","url"],"properties":{"name":{"type":"string","maxLength":120},"url":{"type":"string","format":"uri"}}},"max_per_feed":{"type":"integer","minimum":1,"maximum":20},"max_items":{"type":"integer","minimum":1,"maximum":50}}`, "feeds"),
+			Configuration:  schema(`{"feeds":{"type":"array","minItems":1,"maxItems":10,"items":{"type":"object","additionalProperties":false,"required":["name","url"],"properties":{"name":{"type":"string","maxLength":120},"url":{"type":"string","format":"uri"}}},"max_per_feed":{"type":"integer","minimum":1,"maximum":20},"max_items":{"type":"integer","minimum":1,"maximum":50}}`, "feeds"),
+			DefaultBinding: json.RawMessage(`{"feeds":[{"name":"OpenAI News","url":"https://openai.com/news/rss.xml"},{"name":"Google Blog","url":"https://blog.google/rss/"},{"name":"TechCrunch AI","url":"https://techcrunch.com/category/artificial-intelligence/feed/"}],"max_per_feed":8,"max_items":20}`),
+			Output:         json.RawMessage(`{"type":"object","properties":{"items":{"type":"array"}}}`), Surfaces: []string{"agent"}, Risk: domain.ToolRiskRead,
+			Execute:        fetchRSS,
 		},
 		Definition{
 			Name: "data.json_parse", Description: "Parse a bounded JSON object from a model output.",
@@ -121,13 +122,17 @@ func NewBlogRegistry(posts *service.PostService, community *service.CommunitySer
 		},
 		Definition{
 			Name: "content.search_knowledge", Description: "Search indexed published content and return validated citation evidence.",
-			Parameters: schema(`{"query":{"type":"string","minLength":1},"limit":{"type":"integer","minimum":1,"maximum":20}}`, "query"),
-			Risk:       domain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"post_id"}}, Execute: tools.searchKnowledge,
+			Parameters:     schema(`{"query":{"type":"string","minLength":1},"limit":{"type":"integer","minimum":1,"maximum":20}}`, "query"),
+			Configuration:  schema(`{"limit":{"type":"integer","minimum":1,"maximum":20}}`),
+			DefaultBinding: json.RawMessage(`{"limit":8}`),
+			Risk:           domain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"post_id"}}, Execute: tools.searchKnowledge,
 		},
 		Definition{
 			Name: "content.list_stale_posts", Description: "List published posts that have not been updated for a chosen number of days.",
-			Parameters: schema(`{"older_than_days":{"type":"integer","minimum":1,"maximum":3650},"limit":{"type":"integer","minimum":1,"maximum":100}}`),
-			Risk:       domain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"id", "post_id"}}, Execute: tools.findStalePosts,
+			Parameters:     schema(`{"older_than_days":{"type":"integer","minimum":1,"maximum":3650},"limit":{"type":"integer","minimum":1,"maximum":100}}`),
+			Configuration:  schema(`{"older_than_days":{"type":"integer","minimum":1,"maximum":3650},"limit":{"type":"integer","minimum":1,"maximum":100}}`),
+			DefaultBinding: json.RawMessage(`{"older_than_days":180,"limit":20}`),
+			Risk:           domain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"id", "post_id"}}, Execute: tools.findStalePosts,
 		},
 		Definition{
 			Name: "content.list_orphan_posts", Description: "List published posts with no detected relative internal links from another published post.",
@@ -145,8 +150,10 @@ func NewBlogRegistry(posts *service.PostService, community *service.CommunitySer
 		},
 		Definition{
 			Name: "analytics.list_low_engagement_posts", Description: "List published posts with sufficient views but a low likes-to-views ratio.",
-			Parameters: schema(`{"min_views":{"type":"integer","minimum":1,"maximum":1000000000},"max_engagement_rate":{"type":"number","minimum":0,"maximum":1},"limit":{"type":"integer","minimum":1,"maximum":100}}`),
-			Risk:       domain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"id", "post_id"}}, Execute: tools.findLowEngagementPosts,
+			Parameters:     schema(`{"min_views":{"type":"integer","minimum":1,"maximum":1000000000},"max_engagement_rate":{"type":"number","minimum":0,"maximum":1},"limit":{"type":"integer","minimum":1,"maximum":100}}`),
+			Configuration:  schema(`{"min_views":{"type":"integer","minimum":1,"maximum":1000000000},"max_engagement_rate":{"type":"number","minimum":0,"maximum":1},"limit":{"type":"integer","minimum":1,"maximum":100}}`),
+			DefaultBinding: json.RawMessage(`{"min_views":100,"max_engagement_rate":0.02,"limit":20}`),
+			Risk:           domain.ToolRiskRead, Scope: &ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"id", "post_id"}}, Execute: tools.findLowEngagementPosts,
 		},
 		Definition{
 			Name: "content.propose_draft", Description: "Create a new blog draft proposal.",
@@ -175,8 +182,10 @@ func NewBlogRegistry(posts *service.PostService, community *service.CommunitySer
 		},
 		Definition{
 			Name: "content.propose_distribution_draft", Description: "Create an approval-only social, newsletter, FAQ, or image brief from one post. It never sends content to an external service.",
-			Parameters: schema(`{"post_id":{"type":"integer","minimum":1},"format":{"type":"string","enum":["social","newsletter","faq","image_brief"]},"headline":{"type":"string","maxLength":500},"body":{"type":"string","maxLength":12000},"platform":{"type":"string","maxLength":100},"alt_text":{"type":"string","maxLength":500}}`, "post_id", "format", "body"),
-			Risk:       domain.ToolRiskPropose, Scope: &ScopeRule{ResourceType: "post", Argument: "post_id"}, Propose: tools.proposeDistributionDraft,
+			Parameters:     schema(`{"post_id":{"type":"integer","minimum":1},"format":{"type":"string","enum":["social","newsletter","faq","image_brief"]},"headline":{"type":"string","maxLength":500},"body":{"type":"string","maxLength":12000},"platform":{"type":"string","maxLength":100},"alt_text":{"type":"string","maxLength":500}}`, "post_id", "format", "body"),
+			Configuration:  schema(`{"format":{"type":"string","enum":["social","newsletter","faq","image_brief"]},"platform":{"type":"string","maxLength":100}}`),
+			DefaultBinding: json.RawMessage(`{"format":"social","platform":"Twitter"}`),
+			Risk:           domain.ToolRiskPropose, Scope: &ScopeRule{ResourceType: "post", Argument: "post_id"}, Propose: tools.proposeDistributionDraft,
 		},
 		Definition{
 			Name: "media.create_image_task", Description: "Create an internal image-generation task for one selected post. It does not modify or publish the post.",

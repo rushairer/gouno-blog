@@ -1969,3 +1969,232 @@ td .agent-chip-list {
 .workflow-table td {
   vertical-align: middle;
 }
+
+/* Tool Bindings Editor & RSS Fetch Config */
+.tool-bindings-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-block: 6px 12px;
+  border: 1px solid var(--agent-border);
+  border-radius: 8px;
+  padding: 16px;
+  background: var(--color-surface, var(--bg-panel));
+}
+
+.tool-bindings-editor__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--agent-border);
+}
+
+.tool-bindings-editor__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-main);
+  font-size: 14px;
+}
+
+.tool-bindings-editor__mode-switch {
+  display: flex;
+  gap: 6px;
+}
+
+.tool-bindings-editor__generic-hint {
+  padding: 12px;
+  background: var(--bg-muted);
+  border-radius: 6px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.rss-config-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.rss-config-card__header h4 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text-main);
+}
+
+.rss-config-card__hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.rss-config-card__presets {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-muted);
+  border-radius: 6px;
+}
+
+.rss-config-card__presets-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.rss-config-card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.rss-config-chip {
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--agent-border);
+  background: var(--color-surface, var(--bg-panel));
+  color: var(--color-text-main);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rss-config-chip:hover:not(:disabled) {
+  border-color: var(--agent-accent);
+  color: var(--agent-accent);
+}
+
+.rss-config-chip--added {
+  opacity: 0.5;
+  cursor: default;
+  background: var(--bg-muted);
+}
+
+.rss-config-table {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rss-config-table__head {
+  display: grid;
+  grid-template-columns: minmax(130px, 1fr) minmax(200px, 2fr) 40px;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  padding: 0 4px;
+}
+
+.rss-config-table__row {
+  display: grid;
+  grid-template-columns: minmax(130px, 1fr) minmax(200px, 2fr) 40px;
+  gap: 8px;
+  align-items: center;
+}
+
+.rss-config-card__footer {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.rss-config-limits {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--agent-border);
+}
+
+.form-error-inline {
+  color: var(--status-danger-fg, #ef4444);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.tool-config-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--agent-border);
+  border-radius: 8px;
+  background: var(--bg-panel, var(--color-surface));
+}
+
+.tool-config-card__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.tool-config-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: var(--bg-muted);
+  color: var(--agent-accent);
+  flex-shrink: 0;
+}
+
+.tool-config-card__header h4 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text-main);
+}
+
+.tool-config-card__hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.tool-config-card__presets {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-muted);
+  border-radius: 6px;
+}
+
+.tool-config-card__presets-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.tool-config-card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tool-config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--agent-border);
+}
+
+
