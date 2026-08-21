@@ -554,7 +554,7 @@ func (s *ApprovalService) GenerateDirectImage(ctx context.Context, prompt, altTe
 	if err := s.media.Put(ctx, storageName, bytes.NewReader(image.Data), image.MIMEType); err != nil {
 		return nil, err
 	}
-	asset := &domain.MediaAsset{Filename: "cover-" + storageName, StorageName: storageName, URL: s.media.URL(storageName), ContentType: image.MIMEType, SizeBytes: int64(len(image.Data)), AltText: altText}
+	asset := &domain.MediaAsset{Filename: "ai-" + storageName, StorageName: storageName, URL: s.media.URL(storageName), ContentType: image.MIMEType, SizeBytes: int64(len(image.Data)), AltText: altText}
 	if creator != "" {
 		asset.CreatedBy = &creator
 	}

@@ -412,7 +412,7 @@ export default function PostEditor() {
     setGeneratingCoverPrompt(promptText);
     try {
       notify('正在根据提示词生成封面图，请稍候…', 'success');
-      const res = await agentApi.generateCoverImage({
+      const res = await agentApi.generateImage({
         prompt: promptText,
         alt_text: post.cover_alt || post.title || '文章封面',
       });
@@ -522,7 +522,7 @@ export default function PostEditor() {
       notify('AI 正在绘制插图中（通常需 15~40 秒），请稍候…', 'success');
       const finalPrompt = effectivePrompt || `Modern artistic illustration representing: ${post.title}`;
       const finalAlt = imageAlt.trim() || post.title || '文章插图';
-      const res = await agentApi.generateCoverImage({
+      const res = await agentApi.generateImage({
         prompt: finalPrompt,
         alt_text: finalAlt,
       });

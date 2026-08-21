@@ -389,7 +389,7 @@ func (ctrl *AgentController) OutcomeMetrics(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(result))
 }
 
-func (ctrl *AgentController) GenerateCoverImage(c *gin.Context) {
+func (ctrl *AgentController) GenerateImage(c *gin.Context) {
 	var req struct {
 		Prompt  string `json:"prompt" binding:"required"`
 		AltText string `json:"alt_text"`
