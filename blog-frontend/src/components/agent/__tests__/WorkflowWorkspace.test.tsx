@@ -92,7 +92,7 @@ describe('WorkflowWorkspace', () => {
 
     complete({ id: 21, workflow_id: 7, workflow_version_id: 11, dry_run: false, status: 'succeeded', input: {}, input_tokens: 0, output_tokens: 0, created_at: '2026-08-01T10:00:00Z' });
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('今日已有成功运行 Run #21，本次未重复执行'));
-    expect(screen.getByRole('link', { name: '查看运行中心' })).toHaveAttribute('href', '/admin/agents?tab=records&record=workflow&workflow=7&run=21');
+    expect(screen.getByRole('link', { name: '查看运行中心' })).toHaveAttribute('href', '/admin/ai-ops?tab=records&record=workflow&workflow=7&run=21');
     expect(screen.getByRole('button', { name: '运行' })).toBeEnabled();
     expect(onRun).toHaveBeenCalledWith(7, false, {});
 
@@ -138,7 +138,7 @@ describe('WorkflowWorkspace', () => {
     await user.click(screen.getByRole('button', { name: '运行' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('运行失败：RSS source validation failed');
-    expect(screen.getByRole('link', { name: '查看运行中心' })).toHaveAttribute('href', '/admin/agents?tab=records&record=workflow&workflow=7&run=22');
+    expect(screen.getByRole('link', { name: '查看运行中心' })).toHaveAttribute('href', '/admin/ai-ops?tab=records&record=workflow&workflow=7&run=22');
     expect(screen.queryByText(/运行成功/)).not.toBeInTheDocument();
   });
 
@@ -155,7 +155,7 @@ describe('WorkflowWorkspace', () => {
 
     const link = await screen.findByRole('link', { name: '继续生成、选择和应用图片' });
     expect(screen.getByRole('status')).toHaveTextContent('无需前往“待我处理”审批');
-    expect(link).toHaveAttribute('href', '/admin/agents?tab=records&record=workflow&workflow=7&run=31');
+    expect(link).toHaveAttribute('href', '/admin/ai-ops?tab=records&record=workflow&workflow=7&run=31');
   });
 
   it('does not let a successful dry-run hide a failed live run in detail view', async () => {

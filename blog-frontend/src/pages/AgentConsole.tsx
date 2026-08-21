@@ -148,7 +148,7 @@ export default function AgentConsole() {
   useEffect(() => {
     if (!isLoggedIn() || !canManageBlog()) {
       setLoading(false);
-      void redirectToAuthorize('/admin/agents');
+      void redirectToAuthorize('/admin/ai-ops');
       return;
     }
     let ignore = false;

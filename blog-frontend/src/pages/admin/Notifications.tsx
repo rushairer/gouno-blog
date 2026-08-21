@@ -180,9 +180,9 @@ export default function AdminNotifications() {
     let destination = item.href || '';
     if (!destination) {
       if (isWorkflow) {
-        destination = '/admin/agents?tab=records';
+        destination = '/admin/ai-ops?tab=records';
       } else if (isAI) {
-        destination = '/admin/agents?tab=records&record=agent';
+        destination = '/admin/ai-ops?tab=records&record=agent';
       } else if (item.post_slug) {
         destination = `/posts/${item.post_slug}${item.comment_id ? `#comment-${item.comment_id}` : ''}`;
       } else {
