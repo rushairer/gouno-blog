@@ -26,13 +26,7 @@ export const siteApi = {
   },
 
   async updateSiteSettings(settings: Record<string, string>): Promise<SiteSettings> {
-    return readData<SiteSettings>(
-      apiFetch('/api/admin/site', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings),
-      })
-    );
+    return this.updateAdminSettings(settings);
   },
 
   async getCategories(): Promise<Category[]> {

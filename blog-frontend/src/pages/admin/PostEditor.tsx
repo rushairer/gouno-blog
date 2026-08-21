@@ -44,7 +44,7 @@ export default function PostEditor() {
       siteApi.getCategories().then(setCategories),
     ];
     if (id) {
-      requests.push(postsApi.getPost(id).then((value) => {
+      requests.push(postsApi.getAdminPost(id).then((value) => {
         setPost(value);
         setPublishIntent(value.status || 'draft');
       }));
