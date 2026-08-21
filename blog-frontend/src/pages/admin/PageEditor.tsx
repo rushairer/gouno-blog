@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Check, ExternalLink, Save, Send } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { AdminPageState, Button, ConfirmDialog, Feedback, Field, Input, Select, Textarea } from '../../components/ui';
+import { AdminPageState, Button, ConfirmDialog, Feedback, Field, Input, Select, Textarea, useToast } from '../../components/ui';
 import { MarkdownRenderer } from '../../components/MarkdownRenderer';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 import { pagesApi } from '../../api/pages';
@@ -28,6 +28,7 @@ export default function PageEditor() {
   const isNew = !id;
   const allowed = useAdminGuard(isNew ? '/admin/pages/new' : `/admin/pages/${id}/edit`);
   const navigate = useNavigate();
+  const { notify } = useToast();
 
   const [page, setPage] = useState<CustomPage>(emptyPage);
   const [loading, setLoading] = useState(!isNew);
@@ -47,10 +48,14 @@ export default function PageEditor() {
           setPage(data);
           setError('');
         })
-        .catch((reason: Error) => setError(reason.message))
+        .catch((reason: Error) => {
+          const msg = reason.message;
+          setError(msg);
+          notify(msg, 'error');
+        })
         .finally(() => setLoading(false));
     }
-  }, [allowed, id, isNew]);
+  }, [allowed, id, isNew, notify]);
 
   useEffect(() => {
     const beforeUnload = (event: BeforeUnloadEvent) => {
@@ -69,11 +74,13 @@ export default function PageEditor() {
   const persist = useCallback(
     async (status: PostStatus, automatic = false) => {
       if (!page.title.trim()) {
-        if (!automatic) setError('请先填写单页标题。');
+        const msg = '请先填写单页标题。';
+        if (!automatic) { setError(msg); notify(msg, 'error'); }
         return;
       }
       if (!page.slug.trim()) {
-        if (!automatic) setError('请填写单页访问路径 (Slug)。');
+        const msg = '请填写单页访问路径 (Slug)。';
+        if (!automatic) { setError(msg); notify(msg, 'error'); }
         return;
       }
 
@@ -104,16 +111,21 @@ export default function PageEditor() {
         setPage(result);
         dirty.current = false;
         setSavedAt(new Date());
+        if (!automatic) {
+          notify(status === 'published' ? '单页已成功发布！' : '单页草稿已保存。', 'success');
+        }
         if (!page.id) {
           navigate(`/admin/pages/${result.id}/edit`, { replace: true });
         }
       } catch (reason) {
-        setError(reason instanceof Error ? reason.message : '保存失败，请稍后重试。');
+        const msg = reason instanceof Error ? reason.message : '保存失败，请稍后重试。';
+        setError(msg);
+        notify(msg, 'error');
       } finally {
         setSaving(false);
       }
     },
-    [navigate, page]
+    [navigate, notify, page]
   );
 
   const leaveEditor = () => {

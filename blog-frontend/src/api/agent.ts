@@ -116,7 +116,7 @@ export const agentApi = {
     );
   },
 
-  async getDraftAssist(payload: { task: string; title: string; summary: string; content: string }): Promise<string[]> {
+  async getDraftAssist(payload: { task: string; title: string; summary: string; content: string; prompt?: string }): Promise<string[]> {
     const data = await readData<{ suggestions: string[] }>(
       apiFetch('/api/admin/ai-draft-assist', {
         method: 'POST',

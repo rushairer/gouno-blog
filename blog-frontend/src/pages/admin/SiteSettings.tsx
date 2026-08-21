@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { FileText, Mail, Save, Search } from 'lucide-react';
 import { siteApi } from '../../api/site';
-import { AdminPage, AdminPageHeader, AdminPageState, Button, Feedback, Field, FormActions, FormLayout, Input, PanelHeader, Tab, TabList, TabPanel, Tabs, Textarea, WorkspacePanel } from '../../components/ui';
+import { AdminPage, AdminPageHeader, AdminPageState, Button, Feedback, Field, FormActions, FormLayout, Input, PanelHeader, Tab, TabList, TabPanel, Tabs, Textarea, useToast, WorkspacePanel } from '../../components/ui';
 import { DEFAULT_SITE_SETTINGS } from '../../config/site-defaults';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 import type { SiteSettings } from '../../types/blog';
@@ -10,6 +10,7 @@ type SettingsTab = 'basic' | 'social' | 'seo';
 
 export default function AdminSiteSettings() {
   const allowed = useAdminGuard('/admin/settings');
+  const { notify } = useToast();
   const [activeTab, setActiveTab] = useState<SettingsTab>('basic');
   const [value, setValue] = useState(DEFAULT_SITE_SETTINGS);
   const [loading, setLoading] = useState(true);
@@ -21,9 +22,13 @@ export default function AdminSiteSettings() {
     if (!allowed) return;
     siteApi.getAdminSettings()
       .then((data) => setValue({ ...DEFAULT_SITE_SETTINGS, ...data }))
-      .catch((reason: Error) => setError(reason.message))
+      .catch((reason: Error) => {
+        const msg = reason.message;
+        setError(msg);
+        notify(msg, 'error');
+      })
       .finally(() => setLoading(false));
-  }, [allowed]);
+  }, [allowed, notify]);
 
   const field = (key: keyof SiteSettings, next: string) => setValue((current) => ({ ...current, [key]: next }));
 
@@ -31,7 +36,9 @@ export default function AdminSiteSettings() {
     event.preventDefault();
     const rss = value.rss_url.trim();
     if (rss && !rss.startsWith('/') && !/^https?:\/\//i.test(rss)) {
-      setError('RSS 地址必须是以 / 开头的站内路径，或完整的 http(s) URL。');
+      const msg = 'RSS 地址必须是以 / 开头的站内路径，或完整的 http(s) URL。';
+      setError(msg);
+      notify(msg, 'error');
       return;
     }
     setSaving(true);
@@ -41,8 +48,11 @@ export default function AdminSiteSettings() {
       const updated = await siteApi.updateAdminSettings({ ...value, rss_url: rss || '/feed.xml' });
       setValue(updated);
       setNotice('站点设置已保存。');
+      notify('站点设置已成功保存。', 'success');
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : '保存失败');
+      const msg = reason instanceof Error ? reason.message : '保存失败';
+      setError(msg);
+      notify(msg, 'error');
     } finally {
       setSaving(false);
     }

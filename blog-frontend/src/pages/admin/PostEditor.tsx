@@ -4,14 +4,14 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { agentApi } from '../../api/agent';
 import { postsApi } from '../../api/posts';
 import { siteApi } from '../../api/site';
-import { AdminPageState, Button, ConfirmDialog, Feedback, Field, Input, Select, Textarea } from '../../components/ui';
+import { AdminPageState, Button, ConfirmDialog, Feedback, Field, Input, Select, Textarea, useToast } from '../../components/ui';
 import { MarkdownRenderer } from '../../components/MarkdownRenderer';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 import { extractMarkdownTOC } from '../../utils/markdown';
 import type { Category, Post, PostStatus } from '../../types/blog';
 
 interface PostVersion extends Post { post_id: number }
-type AssistTask = 'title' | 'summary' | 'slug';
+type AssistTask = 'title' | 'summary' | 'slug' | 'content';
 
 const emptyPost: Post = { id: 0, title: '', slug: '', summary: '', content: '', tags: [], status: 'draft', created_at: '' };
 
@@ -20,6 +20,7 @@ export default function PostEditor() {
   const isNew = !id;
   const allowed = useAdminGuard(isNew ? '/admin/posts/new' : `/admin/posts/${id}/edit`);
   const navigate = useNavigate();
+  const { notify } = useToast();
   const [post, setPost] = useState<Post>(emptyPost);
   const [publishIntent, setPublishIntent] = useState<PostStatus>('draft');
   const [categories, setCategories] = useState<Category[]>([]);
@@ -36,6 +37,10 @@ export default function PostEditor() {
   const [suggestionTask, setSuggestionTask] = useState<AssistTask | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [assistError, setAssistError] = useState('');
+  const [showAiWriting, setShowAiWriting] = useState(false);
+  const [contentPrompt, setContentPrompt] = useState('');
+  const [aiContentLoading, setAiContentLoading] = useState(false);
+  const [generatedContent, setGeneratedContent] = useState<string | null>(null);
   const dirty = useRef(false);
 
   useEffect(() => {
@@ -50,8 +55,12 @@ export default function PostEditor() {
       }));
       requests.push(postsApi.getVersions(id).then((v) => setVersions(v as PostVersion[])));
     }
-    Promise.all(requests).catch((reason: Error) => setError(reason.message)).finally(() => setLoading(false));
-  }, [allowed, id]);
+    Promise.all(requests).catch((reason: Error) => {
+      const msg = reason.message;
+      setError(msg);
+      notify(msg, 'error');
+    }).finally(() => setLoading(false));
+  }, [allowed, id, notify]);
 
   useEffect(() => {
     const beforeUnload = (event: BeforeUnloadEvent) => { if (dirty.current) event.preventDefault(); };
@@ -64,9 +73,21 @@ export default function PostEditor() {
   };
 
   const persist = useCallback(async (status: PostStatus, automatic = false) => {
-    if (!post.title.trim()) { if (!automatic) setError('请先填写文章标题。'); return; }
-    if (status !== 'draft' && !post.content.trim()) { setError('发布前需要填写正文。'); return; }
-    if (status === 'scheduled' && !post.scheduled_at) { setError('定时发布需要选择发布时间。'); return; }
+    if (!post.title.trim()) {
+      const msg = '请先填写文章标题。';
+      if (!automatic) { setError(msg); notify(msg, 'error'); }
+      return;
+    }
+    if (status !== 'draft' && !post.content.trim()) {
+      const msg = '发布前需要填写正文。';
+      setError(msg); notify(msg, 'error');
+      return;
+    }
+    if (status === 'scheduled' && !post.scheduled_at) {
+      const msg = '定时发布需要选择发布时间。';
+      setError(msg); notify(msg, 'error');
+      return;
+    }
     setSaving(true); setError('');
     try {
       const payload = { ...post, status, tags: post.tags.filter(Boolean) };
@@ -74,12 +95,17 @@ export default function PostEditor() {
         ? await postsApi.updatePost(post.id, payload)
         : await postsApi.createPost(payload);
       setPost(saved); dirty.current = false; setSavedAt(new Date());
-      if (!automatic) setPublishIntent(saved.status || 'draft');
+      if (!automatic) {
+        setPublishIntent(saved.status || 'draft');
+        notify(status === 'published' ? '文章已成功发布！' : status === 'scheduled' ? '文章已成功安排发布！' : '草稿已保存。', 'success');
+      }
       if (!post.id) navigate(`/admin/posts/${saved.id}/edit`, { replace: true });
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : '保存失败，请稍后重试。');
+      const msg = reason instanceof Error ? reason.message : '保存失败，请稍后重试。';
+      setError(msg);
+      notify(msg, 'error');
     } finally { setSaving(false); }
-  }, [navigate, post]);
+  }, [navigate, notify, post]);
 
   useEffect(() => {
     if (!dirty.current || !post.id || !post.title.trim() || post.status !== 'draft') return;
@@ -93,7 +119,12 @@ export default function PostEditor() {
     try {
       const restored = await postsApi.restoreVersion(post.id, restoreTarget.id);
       setPost(restored); setPublishIntent(restored.status || 'draft'); dirty.current = false; setSavedAt(new Date()); setShowVersions(false); setRestoreTarget(null);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : '版本恢复失败'); }
+      notify('已成功恢复历史版本。', 'success');
+    } catch (reason) {
+      const msg = reason instanceof Error ? reason.message : '版本恢复失败';
+      setError(msg);
+      notify(msg, 'error');
+    }
   };
   const leaveEditor = () => {
     if (dirty.current) setConfirmExit(true);
@@ -102,7 +133,9 @@ export default function PostEditor() {
 
   const requestSuggestions = async (task: AssistTask) => {
     if (!post.title.trim() && !post.content.trim()) {
-      setAssistError('先写下标题或正文，AI 才能理解这篇文章。');
+      const msg = '先写下标题或正文，AI 才能理解这篇文章。';
+      setAssistError(msg);
+      notify(msg, 'error');
       return;
     }
     setAssistTask(task); setSuggestionTask(null); setSuggestions([]); setAssistError('');
@@ -114,9 +147,16 @@ export default function PostEditor() {
         content: post.content,
       });
       setSuggestions(list || []); setSuggestionTask(task);
-      if (!list?.length) setAssistError('这次没有生成可用候选，请稍后重试。');
-    } catch (reason) { setAssistError(reason instanceof Error ? reason.message : '生成候选失败，请稍后重试。'); }
-    finally { setAssistTask(null); }
+      if (!list?.length) {
+        const msg = '这次没有生成可用候选，请稍后重试。';
+        setAssistError(msg);
+        notify(msg, 'error');
+      }
+    } catch (reason) {
+      const msg = reason instanceof Error ? reason.message : '生成候选失败，请稍后重试。';
+      setAssistError(msg);
+      notify(msg, 'error');
+    } finally { setAssistTask(null); }
   };
 
   const applySuggestion = (task: AssistTask, value: string) => {
@@ -124,11 +164,90 @@ export default function PostEditor() {
     setSuggestions([]); setSuggestionTask(null); setAssistError('');
   };
 
+  const sanitizeAiMarkdown = (raw: string): string => {
+    let text = raw.trim();
+    if (text.startsWith('{') || text.startsWith('```json')) {
+      try {
+        const trimmed = text.replace(/^```json\s*/i, '').replace(/\s*```$/, '');
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed?.suggestions) && parsed.suggestions[0]) {
+          text = String(parsed.suggestions[0]);
+        } else if (parsed?.content) {
+          text = String(parsed.content);
+        }
+      } catch {
+        const match = text.match(/"suggestions"\s*:\s*\[\s*"([\s\S]*)"\s*\]/);
+        if (match && match[1]) {
+          text = match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\t/g, '\t');
+        }
+      }
+    }
+    if (text.startsWith('```markdown') && text.endsWith('```')) {
+      text = text.slice(11, -3).trim();
+    } else if (text.startsWith('```md') && text.endsWith('```')) {
+      text = text.slice(5, -3).trim();
+    } else if (text.startsWith('```') && text.endsWith('```')) {
+      text = text.slice(3, -3).trim();
+    }
+    return text.trim();
+  };
+
+  const handleGenerateContent = async (promptText?: string) => {
+    const effectivePrompt = (promptText !== undefined ? promptText : contentPrompt).trim();
+    if (!effectivePrompt && !post.title.trim() && !post.content.trim()) {
+      const msg = '请先填写文章标题、正文或输入提示词。';
+      setAssistError(msg);
+      notify(msg, 'error');
+      return;
+    }
+    setAiContentLoading(true);
+    setAssistError('');
+    setGeneratedContent(null);
+    try {
+      const list = await agentApi.getDraftAssist({
+        task: 'content',
+        title: post.title,
+        summary: post.summary,
+        content: post.content,
+        prompt: effectivePrompt,
+      });
+      if (list?.length && list[0].trim()) {
+        setGeneratedContent(sanitizeAiMarkdown(list[0]));
+        notify('正文已生成完毕，请在下方预览并确认。', 'success');
+      } else {
+        const msg = 'AI 未能生成正文，请稍后重试或调整提示词。';
+        setAssistError(msg);
+        notify(msg, 'error');
+      }
+    } catch (reason) {
+      const msg = reason instanceof Error ? reason.message : 'AI 生成正文失败，请稍后重试。';
+      setAssistError(msg);
+      notify(msg, 'error');
+    } finally {
+      setAiContentLoading(false);
+    }
+  };
+
+  const applyGeneratedContent = (mode: 'replace' | 'append') => {
+    if (!generatedContent) return;
+    if (mode === 'replace') {
+      update('content', generatedContent);
+      notify('已替换文章正文。', 'success');
+    } else {
+      update('content', post.content ? `${post.content.trim()}\n\n${generatedContent}` : generatedContent);
+      notify('已将生成内容追加到文末。', 'success');
+    }
+    setGeneratedContent(null);
+    setShowAiWriting(false);
+  };
+
   const openFrontsitePreview = async () => {
     let currentPost = post;
     if (dirty.current || !currentPost.id) {
       if (!currentPost.title.trim()) {
-        setError('请先填写文章标题。');
+        const msg = '请先填写文章标题。';
+        setError(msg);
+        notify(msg, 'error');
         return;
       }
       setSaving(true);
@@ -143,7 +262,9 @@ export default function PostEditor() {
         setSavedAt(new Date());
         if (!post.id) navigate(`/admin/posts/${currentPost.id}/edit`, { replace: true });
       } catch (reason) {
-        setError(reason instanceof Error ? reason.message : '保存失败，无法开启预览。');
+        const msg = reason instanceof Error ? reason.message : '保存失败，无法开启预览。';
+        setError(msg);
+        notify(msg, 'error');
         setSaving(false);
         return;
       } finally {
@@ -179,7 +300,87 @@ export default function PostEditor() {
           <Textarea className="editor-summary" rows={3} value={post.summary} onChange={(event) => update('summary', event.target.value)} maxLength={300} placeholder="用两三句话说明文章解决的问题" />
           <div className="editor-ai-inline"><button type="button" onClick={() => void requestSuggestions('summary')} disabled={assistTask !== null}><Sparkles />{assistTask === 'summary' ? <><LoaderCircle className="is-spinning" /> 正在提炼摘要…</> : '根据正文生成摘要'}</button>{suggestionTask === 'summary' && suggestions.length > 0 ? <div className="editor-ai-candidates" aria-label="摘要候选">{suggestions.map((item) => <button key={item} type="button" onClick={() => applySuggestion('summary', item)}><span>{item}</span><b>应用</b></button>)}</div> : null}</div>
         </Field>
-        <div className="editor-tabs"><button className={!preview ? 'active' : ''} type="button" onClick={() => setPreview(false)}>Markdown</button><button className={preview ? 'active' : ''} type="button" onClick={() => setPreview(true)}>预览</button></div>
+        <div className="editor-tabs">
+          <div className="tab-buttons">
+            <button className={!preview ? 'active' : ''} type="button" onClick={() => setPreview(false)}>Markdown</button>
+            <button className={preview ? 'active' : ''} type="button" onClick={() => setPreview(true)}>预览</button>
+          </div>
+          <button
+            className={`editor-ai-tool-btn ${showAiWriting ? 'active' : ''}`}
+            type="button"
+            onClick={() => { setShowAiWriting(!showAiWriting); setAssistError(''); }}
+          >
+            <Sparkles /> {showAiWriting ? '收起 AI 写作助手' : 'AI 写作与润色助手'}
+          </button>
+        </div>
+        {showAiWriting ? (
+          <div className="editor-ai-writing-panel">
+            <div className="editor-ai-panel-header">
+              <div className="editor-ai-presets">
+                <button type="button" onClick={() => void handleGenerateContent('基于文章标题和摘要，撰写结构严谨、内容丰富的 Markdown 完整文章初稿，包含引言、分章节深入论述和总结。')} disabled={aiContentLoading}>
+                  ✍️ 一键起草初稿
+                </button>
+                <button type="button" onClick={() => void handleGenerateContent('保持文章原意与核心论点，优化段落连贯性、语言流畅度与错别字，并完善 Markdown 排版格式。')} disabled={aiContentLoading || !post.content.trim()}>
+                  ✨ 润色与排版
+                </button>
+                <button type="button" onClick={() => void handleGenerateContent('对现有正文进行扩写与深化，补充背景说明、技术细节、论据案例或实践经验，使文章更具深度。')} disabled={aiContentLoading || !post.content.trim()}>
+                  ➕ 扩充内容细节
+                </button>
+                <button type="button" onClick={() => void handleGenerateContent('在保留核心论点与关键信息的前提下，精简冗余表述，提炼要点，使语言更加精炼有力。')} disabled={aiContentLoading || !post.content.trim()}>
+                  📝 精简提炼
+                </button>
+              </div>
+            </div>
+            <div className="editor-ai-prompt-box">
+              <Input
+                placeholder="输入自定义写作或修改提示词（例如：按“背景-方案-实操”三部分撰写，增加代码示例…）"
+                value={contentPrompt}
+                onChange={(e) => setContentPrompt(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    void handleGenerateContent();
+                  }
+                }}
+                disabled={aiContentLoading}
+              />
+              <Button
+                variant="primary"
+                type="button"
+                onClick={() => void handleGenerateContent()}
+                disabled={aiContentLoading || (!contentPrompt.trim() && !post.title.trim() && !post.content.trim())}
+              >
+                {aiContentLoading ? <><LoaderCircle className="is-spinning" /> 正在生成…</> : '生成 / 执行'}
+              </Button>
+            </div>
+            {assistError ? (
+              <div style={{ color: 'var(--danger, #ef4444)', fontSize: 12, padding: '4px 8px', background: 'rgba(239, 68, 68, 0.08)', borderRadius: 4 }}>
+                {assistError}
+              </div>
+            ) : null}
+            {generatedContent ? (
+              <div className="editor-ai-result-box">
+                <div className="editor-ai-result-header">
+                  <strong><Sparkles /> 生成结果预览</strong>
+                  <div className="editor-ai-result-actions">
+                    <Button variant="primary" type="button" onClick={() => applyGeneratedContent('replace')}>
+                      替换全文
+                    </Button>
+                    <Button variant="secondary" type="button" onClick={() => applyGeneratedContent('append')}>
+                      追加到末尾
+                    </Button>
+                    <Button variant="secondary" type="button" onClick={() => setGeneratedContent(null)}>
+                      放弃
+                    </Button>
+                  </div>
+                </div>
+                <div className="editor-ai-result-preview">
+                  <MarkdownRenderer content={generatedContent} />
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         {preview ? <div className="editor-preview"><MarkdownRenderer content={post.content || '开始写作后，预览会出现在这里。'} /></div> : <textarea className="editor-body mono" value={post.content} onChange={(event) => update('content', event.target.value)} aria-label="文章正文 Markdown" placeholder={'## 从问题开始\n\n写下背景、约束、判断与实现…'} />}
       </main>
       <aside className="editor-inspector">
@@ -189,7 +390,6 @@ export default function PostEditor() {
         <details open><summary>SEO</summary><Field label="SEO 标题" hint={`${(post.seo_title || '').length}/60`}><Input value={post.seo_title || ''} maxLength={60} onChange={(event) => update('seo_title', event.target.value)} /></Field><Field label="SEO 描述" hint={`${(post.seo_description || '').length}/160`}><Textarea rows={4} value={post.seo_description || ''} maxLength={160} onChange={(event) => update('seo_description', event.target.value)} /></Field><Field label="Slug" required><Input className="mono" value={post.slug} onChange={(event) => update('slug', event.target.value)} required /><div className="editor-ai-inline"><button type="button" onClick={() => void requestSuggestions('slug')} disabled={assistTask !== null}><Sparkles />{assistTask === 'slug' ? <><LoaderCircle className="is-spinning" /> 正在生成 Slug…</> : '生成 Slug 候选'}</button>{suggestionTask === 'slug' && suggestions.length > 0 ? <div className="editor-ai-candidates" aria-label="Slug 候选">{suggestions.map((item) => <button key={item} type="button" onClick={() => applySuggestion('slug', item)}><span className="mono">{item}</span><b>应用</b></button>)}</div> : null}</div></Field></details>
       </aside>
     </div>
-    {assistError ? <Feedback type="error">{assistError}</Feedback> : null}
     <ConfirmDialog open={restoreTarget !== null} title="恢复历史版本" description={restoreTarget ? <>恢复 {new Date(restoreTarget.created_at).toLocaleString('zh-CN')} 的版本？当前内容会先保留为历史版本。</> : ''} confirmLabel="恢复版本" onClose={() => setRestoreTarget(null)} onConfirm={restoreVersion} />
     <ConfirmDialog open={confirmExit} title="放弃未保存的更改？" description="离开编辑器后，尚未保存的内容会丢失。" confirmLabel="放弃并离开" danger onClose={() => setConfirmExit(false)} onConfirm={() => navigate('/admin/posts')} />
   </div>;
