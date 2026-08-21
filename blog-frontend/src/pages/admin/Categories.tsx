@@ -1,12 +1,27 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Edit2, Plus, Save, Trash2 } from 'lucide-react';
+import { Edit2, LoaderCircle, Plus, Save, Sparkles, Trash2 } from 'lucide-react';
 import { siteApi } from '../../api/site';
+import { agentApi } from '../../api/agent';
 import { AdminPage, AdminPageHeader, BulkActionBar, Button, Checkbox, ConfirmDialog, ContentStack, Drawer, EmptyState, Feedback, Field, Input, LoadingState, Panel, useToast } from '../../components/ui';
 import { WorkflowLauncher } from '../../components/agent/WorkflowLauncher';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 import type { Category } from '../../types/blog';
 
 type DeleteTarget = { kind: 'category'; item: Category } | { kind: 'batch' } | null;
+
+interface CategoryFormState {
+  name: string;
+  slug: string;
+  description: string;
+  sort_order: number;
+}
+
+const emptyCategoryForm: CategoryFormState = {
+  name: '',
+  slug: '',
+  description: '',
+  sort_order: 0,
+};
 
 export default function Categories() {
   const allowed = useAdminGuard('/admin/categories');
@@ -16,9 +31,16 @@ export default function Categories() {
   const [error, setError] = useState('');
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [creatingCategory, setCreatingCategory] = useState(false);
+  const [createForm, setCreateForm] = useState<CategoryFormState>(emptyCategoryForm);
+  const [editForm, setEditForm] = useState<CategoryFormState>(emptyCategoryForm);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const [selected, setSelected] = useState<number[]>([]);
   const [aiOpen, setAIOpen] = useState(false);
+
+  // AI Slug states
+  const [slugLoading, setSlugLoading] = useState(false);
+  const [slugCandidates, setSlugCandidates] = useState<string[]>([]);
+  const [activeSlugMode, setActiveSlugMode] = useState<'create' | 'edit' | null>(null);
 
   const load = useCallback(async () => {
     if (!allowed) return;
@@ -37,20 +59,80 @@ export default function Categories() {
     void load();
   }, [load]);
 
+  const openCreateDrawer = () => {
+    setCreateForm(emptyCategoryForm);
+    setSlugCandidates([]);
+    setActiveSlugMode(null);
+    setCreatingCategory(true);
+  };
+
+  const openEditDrawer = (item: Category) => {
+    setEditingCategory(item);
+    setEditForm({
+      name: item.name,
+      slug: item.slug,
+      description: item.description || '',
+      sort_order: item.sort_order || 0,
+    });
+    setSlugCandidates([]);
+    setActiveSlugMode(null);
+  };
+
+  const requestCategorySlug = async (mode: 'create' | 'edit') => {
+    const currentForm = mode === 'create' ? createForm : editForm;
+    if (!currentForm.name.trim()) {
+      notify('请先填写分类名称，AI 才能分析生成 Slug 标识。', 'error');
+      return;
+    }
+    setSlugLoading(true);
+    setActiveSlugMode(mode);
+    try {
+      const res = await agentApi.getDraftAssist({
+        task: 'slug',
+        title: currentForm.name,
+        summary: currentForm.description,
+      });
+      const list = res.suggestions || [];
+      if (res.metadata?.slug && !list.includes(res.metadata.slug)) {
+        list.unshift(res.metadata.slug);
+      }
+      setSlugCandidates(list);
+      if (list.length === 0) {
+        notify('未能生成 Slug 候选，请手动填写。', 'error');
+      } else {
+        notify('已生成 Slug 标识候选，点击即可一键应用。', 'success');
+      }
+    } catch (reason) {
+      notify(reason instanceof Error ? reason.message : '生成 Slug 失败', 'error');
+    } finally {
+      setSlugLoading(false);
+    }
+  };
+
+  const applySlug = (mode: 'create' | 'edit', slugValue: string) => {
+    const clean = slugValue.trim().toLowerCase().replace(/\s+/g, '-');
+    if (mode === 'create') {
+      setCreateForm((prev) => ({ ...prev, slug: clean }));
+    } else {
+      setEditForm((prev) => ({ ...prev, slug: clean }));
+    }
+    setSlugCandidates([]);
+    setActiveSlugMode(null);
+    notify(`已应用 Slug 标识：“${clean}”`, 'success');
+  };
+
   const createCategory = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const form = event.currentTarget;
-    const data = Object.fromEntries(new FormData(form));
     try {
       await siteApi.createCategory({
-        name: String(data.name || ''),
-        slug: String(data.slug || ''),
-        description: data.description ? String(data.description) : undefined,
-        sort_order: Number(data.sort_order || 0),
+        name: createForm.name.trim(),
+        slug: createForm.slug.trim().toLowerCase(),
+        description: createForm.description.trim() || undefined,
+        sort_order: Number(createForm.sort_order) || 0,
       });
-      form.reset();
       setCreatingCategory(false);
-      notify('分类已创建。');
+      setCreateForm(emptyCategoryForm);
+      notify('分类已创建。', 'success');
       await load();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : '创建失败');
@@ -60,16 +142,15 @@ export default function Categories() {
   const saveCategory = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!editingCategory) return;
-    const data = Object.fromEntries(new FormData(event.currentTarget));
     try {
       await siteApi.updateCategory(editingCategory.id, {
-        name: String(data.name || ''),
-        slug: String(data.slug || ''),
-        description: data.description ? String(data.description) : undefined,
-        sort_order: Number(data.sort_order || 0),
+        name: editForm.name.trim(),
+        slug: editForm.slug.trim().toLowerCase(),
+        description: editForm.description.trim() || undefined,
+        sort_order: Number(editForm.sort_order) || 0,
       });
       setEditingCategory(null);
-      notify('分类已更新。');
+      notify('分类已更新。', 'success');
       await load();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : '分类更新失败。');
@@ -114,7 +195,7 @@ export default function Categories() {
         title="分类"
         description="建立长期稳定的内容脉络与主题结构。"
         actions={
-          <Button variant="primary" type="button" onClick={() => setCreatingCategory(true)}>
+          <Button variant="primary" type="button" onClick={openCreateDrawer}>
             <Plus />新建分类
           </Button>
         }
@@ -175,7 +256,7 @@ export default function Categories() {
                       <td>{item.sort_order || 0}</td>
                       <td>
                         <div className="table-actions">
-                          <button title="编辑分类" onClick={() => setEditingCategory(item)}>
+                          <button title="编辑分类" onClick={() => openEditDrawer(item)}>
                             <Edit2 />
                           </button>
                           <button
@@ -195,26 +276,133 @@ export default function Categories() {
           </Panel>
         )}
       </ContentStack>
+
+      {/* 新建分类 Drawer */}
       <Drawer open={creatingCategory} title="新建分类" description="创建一个可长期复用的内容主题。" onClose={() => setCreatingCategory(false)}>
         <form className="drawer-form" onSubmit={createCategory}>
-          <Field label="名称" required><Input name="name" required autoFocus /></Field>
-          <Field label="Slug" required hint="仅限小写字母、数字与连字符。"><Input name="slug" className="mono" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" required /></Field>
-          <Field label="描述"><Input name="description" /></Field>
-          <Field label="排序" hint="数值越小，显示越靠前。"><Input name="sort_order" type="number" defaultValue="0" /></Field>
-          <div className="drawer-actions"><Button variant="secondary" type="button" onClick={() => setCreatingCategory(false)}>取消</Button><Button variant="primary"><Plus />创建分类</Button></div>
+          <Field label="名称" required>
+            <Input
+              name="name"
+              value={createForm.name}
+              onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+              placeholder="例如：系统架构 / 前端技术"
+              required
+              autoFocus
+            />
+          </Field>
+          <Field label="Slug" required hint="URL 唯一访问标识，仅限小写字母、数字与连字符。">
+            <Input
+              name="slug"
+              className="mono"
+              value={createForm.slug}
+              onChange={(e) => setCreateForm({ ...createForm, slug: e.target.value })}
+              pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+              placeholder="architecture"
+              required
+            />
+            <div className="editor-ai-inline">
+              <button type="button" onClick={() => void requestCategorySlug('create')} disabled={slugLoading}>
+                <Sparkles />
+                {slugLoading && activeSlugMode === 'create' ? <><LoaderCircle className="is-spinning" /> 正在生成 Slug…</> : '智能生成 Slug 候选'}
+              </button>
+              {activeSlugMode === 'create' && slugCandidates.length > 0 ? (
+                <div className="editor-ai-candidates" aria-label="Slug 候选">
+                  {slugCandidates.map((item) => (
+                    <button key={item} type="button" onClick={() => applySlug('create', item)}>
+                      <span className="mono">{item}</span>
+                      <b>应用</b>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          </Field>
+          <Field label="描述">
+            <Input
+              name="description"
+              value={createForm.description}
+              onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
+              placeholder="简要概括该分类涵盖的文章主题"
+            />
+          </Field>
+          <Field label="排序" hint="数值越小，显示越靠前。">
+            <Input
+              name="sort_order"
+              type="number"
+              value={createForm.sort_order}
+              onChange={(e) => setCreateForm({ ...createForm, sort_order: Number(e.target.value) || 0 })}
+            />
+          </Field>
+          <div className="drawer-actions">
+            <Button variant="secondary" type="button" onClick={() => setCreatingCategory(false)}>取消</Button>
+            <Button variant="primary"><Plus />创建分类</Button>
+          </div>
         </form>
       </Drawer>
+
+      {/* 编辑分类 Drawer */}
       <Drawer open={editingCategory !== null} title="编辑分类" description="更新名称、URL 标识、描述与排序。" onClose={() => setEditingCategory(null)}>
         {editingCategory ? (
           <form className="drawer-form" onSubmit={saveCategory}>
-            <Field label="名称" required><Input name="name" defaultValue={editingCategory.name} required autoFocus /></Field>
-            <Field label="Slug" required hint="仅限小写字母、数字与连字符。"><Input name="slug" className="mono" defaultValue={editingCategory.slug} pattern="[a-z0-9]+(?:-[a-z0-9]+)*" required /></Field>
-            <Field label="描述"><textarea name="description" rows={3} defaultValue={editingCategory.description} /></Field>
-            <Field label="排序" hint="数值越小，显示越靠前。"><Input name="sort_order" type="number" defaultValue={editingCategory.sort_order || 0} /></Field>
-            <div className="drawer-actions"><Button variant="secondary" type="button" onClick={() => setEditingCategory(null)}>取消</Button><Button variant="primary"><Save />保存分类</Button></div>
+            <Field label="名称" required>
+              <Input
+                name="name"
+                value={editForm.name}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                required
+                autoFocus
+              />
+            </Field>
+            <Field label="Slug" required hint="URL 唯一访问标识，仅限小写字母、数字与连字符。">
+              <Input
+                name="slug"
+                className="mono"
+                value={editForm.slug}
+                onChange={(e) => setEditForm({ ...editForm, slug: e.target.value })}
+                pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+                required
+              />
+              <div className="editor-ai-inline">
+                <button type="button" onClick={() => void requestCategorySlug('edit')} disabled={slugLoading}>
+                  <Sparkles />
+                  {slugLoading && activeSlugMode === 'edit' ? <><LoaderCircle className="is-spinning" /> 正在生成 Slug…</> : '智能生成 Slug 候选'}
+                </button>
+                {activeSlugMode === 'edit' && slugCandidates.length > 0 ? (
+                  <div className="editor-ai-candidates" aria-label="Slug 候选">
+                    {slugCandidates.map((item) => (
+                      <button key={item} type="button" onClick={() => applySlug('edit', item)}>
+                        <span className="mono">{item}</span>
+                        <b>应用</b>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </Field>
+            <Field label="描述">
+              <textarea
+                name="description"
+                rows={3}
+                value={editForm.description}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+              />
+            </Field>
+            <Field label="排序" hint="数值越小，显示越靠前。">
+              <Input
+                name="sort_order"
+                type="number"
+                value={editForm.sort_order}
+                onChange={(e) => setEditForm({ ...editForm, sort_order: Number(e.target.value) || 0 })}
+              />
+            </Field>
+            <div className="drawer-actions">
+              <Button variant="secondary" type="button" onClick={() => setEditingCategory(null)}>取消</Button>
+              <Button variant="primary"><Save />保存分类</Button>
+            </div>
           </form>
         ) : null}
       </Drawer>
+
       <ConfirmDialog
         open={deleteTarget !== null}
         title={deleteTarget?.kind === 'batch' ? '批量删除分类' : '删除分类'}
