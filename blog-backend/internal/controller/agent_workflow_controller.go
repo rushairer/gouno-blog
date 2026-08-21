@@ -160,33 +160,33 @@ func (ctrl *AgentController) DraftAssist(c *gin.Context) {
 		WriteDomainError(c, err)
 		return
 	}
-	maxTokens := 600
+	maxTokens := 1000
 	instruction := "You are an editorial assistant for a blog. Return only valid JSON in the form {\"suggestions\":[\"...\"]}."
 	if req.Task == "title" {
 		instruction += " Produce exactly three concise candidates. Do not explain, use Markdown, or change the article. Create specific Chinese article titles that accurately reflect the supplied draft."
 	} else if req.Task == "summary" {
-		maxTokens = 1500
+		maxTokens = 2000
 		instruction += " Produce exactly three concise candidates. Do not explain, use Markdown, or change the article. Create Chinese summaries, each at most 300 Chinese characters, that accurately reflect the supplied draft."
 	} else if req.Task == "slug" {
-		maxTokens = 400
+		maxTokens = 800
 		instruction += " Produce exactly three concise candidates. Do not explain, use Markdown, or change the article. Create lowercase URL slugs using ASCII letters, numbers, and hyphens only."
 	} else if req.Task == "tags" {
-		maxTokens = 400
+		maxTokens = 800
 		instruction += " Produce 3 to 5 highly relevant, concise Chinese topic tags (1-4 words each) reflecting the core themes of this draft. Return only valid JSON: {\"suggestions\":[\"tag1\", \"tag2\", \"tag3\"]}. Do not explain."
 	} else if req.Task == "seo" {
-		maxTokens = 800
+		maxTokens = 2000
 		instruction = "You are an SEO specialist. Analyze the draft and produce optimal SEO metadata. Return only valid JSON in the form: {\"seo_title\": \"...\", \"seo_description\": \"...\", \"slug\": \"...\"}. Ensure seo_title is under 60 characters with core keywords, seo_description is under 160 characters engaging search snippet, and slug is lowercase ASCII words with hyphens."
 	} else if req.Task == "alt" {
-		maxTokens = 500
+		maxTokens = 800
 		instruction += " Produce 3 concise, descriptive Chinese image alt texts (accessibility scene descriptions) suitable for the cover image of this article. Return only valid JSON: {\"suggestions\":[\"alt 1\", \"alt 2\", \"alt 3\"]}. Do not explain."
 	} else if req.Task == "category" {
-		maxTokens = 300
+		maxTokens = 500
 		instruction = "You are a blog editor. Given the candidate categories list in the request, select the single most appropriate category name for this draft. Return only valid JSON in the form: {\"suggestions\":[\"category_name\"]}."
 	} else if req.Task == "cover_prompt" {
 		maxTokens = 2500
 		instruction = "You are an AI art director. Generate 3 distinct, highly creative, and detailed text-to-image prompts in English (each followed by a concise Chinese summary in brackets: [中文说明: ...]) for generating an eye-catching, modern blog cover image suitable for Midjourney or DALL-E 3. Provide 3 different visual directions (e.g. 1. Futuristic Surreal Tech, 2. Minimalist Conceptual Graphic, 3. Cinematic 3D Scene). Return only valid JSON: {\"suggestions\":[\"Prompt 1... [中文说明: ...]\", \"Prompt 2... [中文说明: ...]\", \"Prompt 3... [中文说明: ...]\"]}."
 	} else if req.Task == "metadata_all" {
-		maxTokens = 2500
+		maxTokens = 3000
 		instruction = "You are a senior blog managing editor. Analyze the draft and generate all publishing metadata in a single valid JSON object with format:\n{\"summary\":\"...\",\"tags\":[\"...\"],\"slug\":\"...\",\"seo_title\":\"...\",\"seo_description\":\"...\",\"category\":\"...\",\"cover_alt\":\"...\"}.\nEnsure summary is ~150-250 Chinese chars, tags has 3-5 keywords, slug is ASCII lowercase words with hyphens, seo_title is <=60 chars, seo_description is <=160 chars, category matches the best choice from candidate categories (if supplied), and cover_alt describes the cover scene."
 	} else if req.Task == "content" {
 		maxTokens = selected.MaxOutputTokens
@@ -195,7 +195,15 @@ func (ctrl *AgentController) DraftAssist(c *gin.Context) {
 		}
 		instruction = "You are a professional blog writer and editor. Generate a complete, comprehensive, well-structured Chinese blog article in Markdown format based on the supplied context and user prompt. Ensure the article is fully written and completed with an introduction, detailed body sections, and a solid conclusion. Output the raw Markdown content directly without JSON wrapping, without markdown code fence wrappers, and without conversational preamble."
 	}
-	payloadMap := map[string]any{"title": req.Title, "summary": req.Summary, "content": req.Content}
+
+	contentToSend := req.Content
+	if req.Task != "content" {
+		runes := []rune(contentToSend)
+		if len(runes) > 4000 {
+			contentToSend = string(runes[:4000]) + "\n\n...(余下文章内容已省略)..."
+		}
+	}
+	payloadMap := map[string]any{"title": req.Title, "summary": req.Summary, "content": contentToSend}
 	if req.Prompt != "" {
 		payloadMap["prompt"] = req.Prompt
 	}
@@ -241,8 +249,14 @@ func (ctrl *AgentController) DraftAssist(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"suggestions": suggestions, "provider": selected.Name, "model": selected.Model}))
 }
 
+var thinkRegex = regexp.MustCompile(`(?is)<(think|thought)>.*?</(think|thought)>`)
+
+func stripThinkTags(raw string) string {
+	return thinkRegex.ReplaceAllString(raw, "")
+}
+
 func cleanDraftAssistContent(raw string) string {
-	text := strings.TrimSpace(raw)
+	text := strings.TrimSpace(stripThinkTags(raw))
 	if strings.HasPrefix(text, "{") || strings.HasPrefix(text, "```json") {
 		trimmed := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(text, "```json"), "```"))
 		var jsonOutput struct {
@@ -305,7 +319,7 @@ func cleanDraftAssistContent(raw string) string {
 }
 
 func extractStructuredMetadata(raw string) *DraftMetadataResult {
-	text := strings.TrimSpace(raw)
+	text := strings.TrimSpace(stripThinkTags(raw))
 	if text == "" {
 		return nil
 	}
@@ -320,26 +334,143 @@ func extractStructuredMetadata(raw string) *DraftMetadataResult {
 			trimmed = strings.TrimSpace(sub)
 		}
 	}
-	var res DraftMetadataResult
-	if err := json.Unmarshal([]byte(trimmed), &res); err == nil {
-		if res.Summary != "" || len(res.Tags) > 0 || res.Slug != "" || res.SeoTitle != "" || res.SeoDescription != "" || res.Category != "" || res.CoverAlt != "" {
-			return &res
+
+	// 1. Try multi-tag unmarshaling (supports snake_case and camelCase simultaneously)
+	var multi struct {
+		Summary        string   `json:"summary"`
+		Tags           []string `json:"tags"`
+		Slug           string   `json:"slug"`
+		SlugName       string   `json:"slug_name"`
+		SeoTitle       string   `json:"seo_title"`
+		SeoTitleCamel  string   `json:"seoTitle"`
+		SeoDesc        string   `json:"seo_description"`
+		SeoDescCamel   string   `json:"seoDescription"`
+		Category       string   `json:"category"`
+		CoverAlt       string   `json:"cover_alt"`
+		CoverAltCamel  string   `json:"coverAlt"`
+	}
+	if err := json.Unmarshal([]byte(trimmed), &multi); err == nil {
+		st := multi.SeoTitle
+		if st == "" {
+			st = multi.SeoTitleCamel
+		}
+		sd := multi.SeoDesc
+		if sd == "" {
+			sd = multi.SeoDescCamel
+		}
+		sl := multi.Slug
+		if sl == "" {
+			sl = multi.SlugName
+		}
+		ca := multi.CoverAlt
+		if ca == "" {
+			ca = multi.CoverAltCamel
+		}
+		if multi.Summary != "" || len(multi.Tags) > 0 || sl != "" || st != "" || sd != "" || multi.Category != "" || ca != "" {
+			return &DraftMetadataResult{
+				Summary:        multi.Summary,
+				Tags:           multi.Tags,
+				Slug:           sl,
+				SeoTitle:       st,
+				SeoDescription: sd,
+				Category:       multi.Category,
+				CoverAlt:       ca,
+			}
 		}
 	}
+
+	// 2. Substring between outermost braces {...}
 	if start := strings.Index(text, "{"); start != -1 {
 		if end := strings.LastIndex(text, "}"); end > start {
-			if err := json.Unmarshal([]byte(text[start:end+1]), &res); err == nil {
-				if res.Summary != "" || len(res.Tags) > 0 || res.Slug != "" || res.SeoTitle != "" || res.SeoDescription != "" || res.Category != "" || res.CoverAlt != "" {
-					return &res
+			jsonSub := text[start : end+1]
+			if err := json.Unmarshal([]byte(jsonSub), &multi); err == nil {
+				st := multi.SeoTitle
+				if st == "" {
+					st = multi.SeoTitleCamel
+				}
+				sd := multi.SeoDesc
+				if sd == "" {
+					sd = multi.SeoDescCamel
+				}
+				sl := multi.Slug
+				if sl == "" {
+					sl = multi.SlugName
+				}
+				ca := multi.CoverAlt
+				if ca == "" {
+					ca = multi.CoverAltCamel
+				}
+				if multi.Summary != "" || len(multi.Tags) > 0 || sl != "" || st != "" || sd != "" || multi.Category != "" || ca != "" {
+					return &DraftMetadataResult{
+						Summary:        multi.Summary,
+						Tags:           multi.Tags,
+						Slug:           sl,
+						SeoTitle:       st,
+						SeoDescription: sd,
+						Category:       multi.Category,
+						CoverAlt:       ca,
+					}
 				}
 			}
 		}
 	}
+
+	// 4. Robust Regex extraction for truncated or imperfect LLM outputs
+	extractField := func(keys ...string) string {
+		for _, k := range keys {
+			re := regexp.MustCompile(`(?i)"` + regexp.QuoteMeta(k) + `"\s*:\s*"((?:\\.|[^"\\])*)"`)
+			if m := re.FindStringSubmatch(text); len(m) > 1 {
+				val := m[1]
+				val = strings.ReplaceAll(val, `\n`, "\n")
+				val = strings.ReplaceAll(val, `\"`, `"`)
+				val = strings.ReplaceAll(val, `\t`, "\t")
+				val = strings.ReplaceAll(val, `\\`, `\`)
+				val = strings.TrimSpace(val)
+				if val != "" {
+					return val
+				}
+			}
+		}
+		return ""
+	}
+
+	seoTitle := extractField("seo_title", "seoTitle", "title")
+	seoDescription := extractField("seo_description", "seoDescription", "description", "summary")
+	slug := extractField("slug", "slug_name", "url_slug")
+	summary := extractField("summary", "abstract")
+	category := extractField("category", "category_name")
+	coverAlt := extractField("cover_alt", "coverAlt", "alt")
+
+	// Extract tags array via regex
+	var tags []string
+	tagRe := regexp.MustCompile(`(?i)"tags"\s*:\s*\[([^\]]*)\]`)
+	if tagMatch := tagRe.FindStringSubmatch(text); len(tagMatch) > 1 {
+		inner := tagMatch[1]
+		itemRe := regexp.MustCompile(`"((?:\\.|[^"\\])*)"`)
+		for _, im := range itemRe.FindAllStringSubmatch(inner, -1) {
+			if len(im) > 1 && strings.TrimSpace(im[1]) != "" {
+				tags = append(tags, strings.TrimSpace(im[1]))
+			}
+		}
+	}
+
+	if seoTitle != "" || seoDescription != "" || slug != "" || summary != "" || len(tags) > 0 || category != "" || coverAlt != "" {
+		return &DraftMetadataResult{
+			Summary:        summary,
+			Tags:           tags,
+			Slug:           slug,
+			SeoTitle:       seoTitle,
+			SeoDescription: seoDescription,
+			Category:       category,
+			CoverAlt:       coverAlt,
+		}
+	}
+
 	return nil
 }
 
 func extractDraftSuggestions(raw string) []string {
-	text := strings.TrimSpace(raw)
+	text := strings.TrimSpace(stripThinkTags(raw))
 	if text == "" {
 		return nil
 	}
