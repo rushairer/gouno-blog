@@ -2004,42 +2004,18 @@ td .agent-chip-list {
   gap: 6px;
 }
 
+.tool-bindings-editor__visual {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .tool-bindings-editor__generic-hint {
   padding: 12px;
   background: var(--bg-muted);
   border-radius: 6px;
   color: var(--color-text-muted);
   font-size: 13px;
-}
-
-.rss-config-card {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.rss-config-card__header h4 {
-  margin: 0 0 4px;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--color-text-main);
-}
-
-.rss-config-card__hint {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.rss-config-card__presets {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 8px 12px;
-  background: var(--bg-muted);
-  border-radius: 6px;
 }
 
 .rss-config-card__presets-label {
