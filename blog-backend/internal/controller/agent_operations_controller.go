@@ -3,6 +3,7 @@ package controller
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/domain"
@@ -386,4 +387,32 @@ func (ctrl *AgentController) OutcomeMetrics(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(result))
+}
+
+func (ctrl *AgentController) GenerateCoverImage(c *gin.Context) {
+	var req struct {
+		Prompt  string `json:"prompt" binding:"required"`
+		AltText string `json:"alt_text"`
+	}
+	if err := bindAgentJSON(c, &req); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+	prompt := strings.TrimSpace(req.Prompt)
+	if prompt == "" {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "prompt is required"))
+		return
+	}
+	creator, _ := c.Get("account_id")
+	creatorText, _ := creator.(string)
+	asset, err := ctrl.approvals.GenerateDirectImage(c.Request.Context(), prompt, req.AltText, creatorText)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{
+		"url":      asset.URL,
+		"asset_id": asset.ID,
+		"alt_text": asset.AltText,
+	}))
 }

@@ -802,6 +802,25 @@ button, a { -webkit-tap-highlight-color: transparent; }
   filter: brightness(1.1);
 }
 
+.editor-prompt-candidate {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border-radius: var(--radius-control);
+  background: var(--ui-panel);
+  border: 1px solid var(--ui-border);
+}
+.editor-prompt-candidate-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.editor-prompt-candidate-actions button {
+  min-height: 28px !important;
+  padding: 0 10px !important;
+  font-size: 11px !important;
+}
+
 /* Admin supporting pages */
 .moderation-list { display: grid; gap: 10px; }
 .moderation-list .panel { display: grid; grid-template-columns: 38px 1fr auto; gap: 14px; align-items: start; }

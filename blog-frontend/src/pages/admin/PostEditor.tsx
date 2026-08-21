@@ -40,6 +40,7 @@ export default function PostEditor() {
   const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
   const [categorySuggestion, setCategorySuggestion] = useState<string | null>(null);
   const [metaLoading, setMetaLoading] = useState(false);
+  const [generatingCoverPrompt, setGeneratingCoverPrompt] = useState<string | null>(null);
   const [showAiWriting, setShowAiWriting] = useState(false);
   const [contentPrompt, setContentPrompt] = useState('');
   const [aiContentLoading, setAiContentLoading] = useState(false);
@@ -402,6 +403,29 @@ export default function PostEditor() {
     }
   };
 
+  const handleGenerateCover = async (promptText: string) => {
+    setGeneratingCoverPrompt(promptText);
+    try {
+      notify('正在根据提示词生成封面图，请稍候…', 'success');
+      const res = await agentApi.generateCoverImage({
+        prompt: promptText,
+        alt_text: post.cover_alt || post.title || '文章封面',
+      });
+      if (res?.url) {
+        update('cover_url', res.url);
+        notify('🎨 封面图已成功生成并填入！', 'success');
+      } else {
+        notify('未能成功生成封面图。', 'error');
+      }
+    } catch (reason) {
+      const msg = reason instanceof Error ? reason.message : '生图失败';
+      void navigator.clipboard.writeText(promptText);
+      notify(`${msg}（提示词已自动复制到剪贴板）`, 'error');
+    } finally {
+      setGeneratingCoverPrompt(null);
+    }
+  };
+
   const sanitizeAiMarkdown = (raw: string): string => {
     let text = raw.trim();
     if (text.startsWith('{') || text.startsWith('```json')) {
@@ -710,17 +734,29 @@ export default function PostEditor() {
               {suggestionTask === 'cover_prompt' && suggestions.length > 0 ? (
                 <div className="editor-ai-candidates" aria-label="Prompt 候选">
                   {suggestions.map((item) => (
-                    <button
-                      key={item}
-                      type="button"
-                      onClick={() => {
-                        void navigator.clipboard.writeText(item);
-                        notify('生图提示词已复制到剪贴板！', 'success');
-                      }}
-                    >
-                      <span style={{ fontSize: 12 }}>{item}</span>
-                      <b>复制</b>
-                    </button>
+                    <div key={item} className="editor-prompt-candidate">
+                      <span style={{ fontSize: 12, lineHeight: 1.5 }}>{item}</span>
+                      <div className="editor-prompt-candidate-actions">
+                        <Button
+                          variant="primary"
+                          type="button"
+                          disabled={generatingCoverPrompt !== null}
+                          onClick={() => void handleGenerateCover(item)}
+                        >
+                          {generatingCoverPrompt === item ? <><LoaderCircle className="is-spinning" /> 正在生图…</> : <>🎨 生图</>}
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          type="button"
+                          onClick={() => {
+                            void navigator.clipboard.writeText(item);
+                            notify('生图提示词已复制到剪贴板！', 'success');
+                          }}
+                        >
+                          📋 复制
+                        </Button>
+                      </div>
+                    </div>
                   ))}
                 </div>
               ) : null}
