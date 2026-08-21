@@ -21,7 +21,13 @@ export const postsApi = {
       } else {
         const search = new URLSearchParams();
         Object.entries(params).forEach(([k, v]) => {
-          if (v !== undefined && v !== '') search.set(k, String(v));
+          if (v !== undefined && v !== '') {
+            if (admin && k === 'search' && !params.q) {
+              search.set('q', String(v));
+            } else {
+              search.set(k, String(v));
+            }
+          }
         });
         query = search.toString();
       }
@@ -33,8 +39,8 @@ export const postsApi = {
     return readData<Post>(publicApiFetch(`/api/posts/${encodeURIComponent(String(slugOrID))}`));
   },
 
-  async getAdminPost(id: number | string): Promise<Post> {
-    return readData<Post>(apiFetch(`/api/admin/posts/${id}`));
+  async getAdminPost(slugOrID: number | string): Promise<Post> {
+    return readData<Post>(apiFetch(`/api/admin/posts/${encodeURIComponent(String(slugOrID))}`));
   },
 
   async getRelatedPosts(slugOrID: string | number): Promise<Post[]> {

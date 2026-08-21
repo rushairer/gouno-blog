@@ -199,7 +199,7 @@ func (r *PostRepository) ListAdmin(ctx context.Context, filter domain.AdminPostF
 	where := make([]string, 0, 4)
 	if filter.Query != "" {
 		args = append(args, "%"+filter.Query+"%")
-		where = append(where, fmt.Sprintf("(p.title ILIKE $%d OR p.summary ILIKE $%d OR p.content ILIKE $%d)", len(args), len(args), len(args)))
+		where = append(where, fmt.Sprintf("(p.title ILIKE $%d OR p.slug ILIKE $%d OR p.summary ILIKE $%d OR p.content ILIKE $%d)", len(args), len(args), len(args), len(args)))
 	}
 	if filter.Status != "" {
 		args = append(args, filter.Status)

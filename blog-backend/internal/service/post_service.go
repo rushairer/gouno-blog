@@ -216,6 +216,21 @@ func (s *PostService) GetAdminPost(ctx context.Context, id int64) (*domain.Post,
 	return post, nil
 }
 
+func (s *PostService) GetAdminPostBySlug(ctx context.Context, slug string) (*domain.Post, error) {
+	slug = strings.TrimSpace(slug)
+	if slug == "" {
+		return nil, ErrInvalidPostSlug
+	}
+	post, err := s.repo.GetBySlug(ctx, slug)
+	if err != nil {
+		return nil, err
+	}
+	if post == nil {
+		return nil, ErrPostNotFound
+	}
+	return post, nil
+}
+
 func (s *PostService) BatchPosts(ctx context.Context, ids []int64, action string) (int64, error) {
 	if len(ids) == 0 || len(ids) > 100 {
 		return 0, ErrBatchInvalidIDs

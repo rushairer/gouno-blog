@@ -59,6 +59,13 @@ func (s *fakeBlogService) GetAdminPost(_ context.Context, id int64) (*domain.Pos
 	return nil, service.ErrPostNotFound
 }
 
+func (s *fakeBlogService) GetAdminPostBySlug(_ context.Context, slug string) (*domain.Post, error) {
+	if p, ok := s.postsBySlug[slug]; ok {
+		return p, nil
+	}
+	return nil, service.ErrPostNotFound
+}
+
 func (s *fakeBlogService) BatchPosts(_ context.Context, ids []int64, action string) (int64, error) {
 	return int64(len(ids)), nil
 }

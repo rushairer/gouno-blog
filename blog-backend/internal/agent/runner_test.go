@@ -34,7 +34,7 @@ func TestCollectRSSSourceLinksDeduplicatesAndRejectsUnsafeURLs(t *testing.T) {
 }
 
 func TestAppendRSSSourceLinksKeepsExistingLinksAndAddsOriginalSection(t *testing.T) {
-	arguments := json.RawMessage(`{"title":"AI news","content":"Already covered: https://openai.com/news/example","tags":[]}`)
+	arguments := json.RawMessage(`{"title":"AI news","content":"News summary without any links","tags":[]}`)
 	updated, err := appendRSSSourceLinks(arguments, []rssSourceLink{
 		{Title: "OpenAI", URL: "https://openai.com/news/example"},
 		{Title: "Google Blog", URL: "https://blog.google/example"},
@@ -46,10 +46,25 @@ func TestAppendRSSSourceLinksKeepsExistingLinksAndAddsOriginalSection(t *testing
 	if err := json.Unmarshal(updated, &payload); err != nil {
 		t.Fatal(err)
 	}
-	if strings.Count(payload.Content, "https://openai.com/news/example") != 1 {
-		t.Fatalf("existing source URL was duplicated: %s", payload.Content)
-	}
 	if !strings.Contains(payload.Content, "## 原文链接") || !strings.Contains(payload.Content, "[Google Blog](<https://blog.google/example>)") {
 		t.Fatalf("source section is missing: %s", payload.Content)
+	}
+}
+
+func TestAppendRSSSourceLinksDoesNotAppendWhenContentAlreadyHasInlineLinks(t *testing.T) {
+	arguments := json.RawMessage(`{"title":"AI news","content":"Already covered: [OpenAI](https://openai.com/news/example)","tags":[]}`)
+	updated, err := appendRSSSourceLinks(arguments, []rssSourceLink{
+		{Title: "OpenAI", URL: "https://openai.com/news/example"},
+		{Title: "Google Blog", URL: "https://blog.google/example"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var payload createPostArguments
+	if err := json.Unmarshal(updated, &payload); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(payload.Content, "## 原文链接") {
+		t.Fatalf("should not append source links when content already has inline links: %s", payload.Content)
 	}
 }

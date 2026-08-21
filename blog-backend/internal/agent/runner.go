@@ -489,11 +489,22 @@ func appendRSSSourceLinks(arguments json.RawMessage, links []rssSourceLink) (jso
 		return nil, tool.ErrInvalidArgument
 	}
 	content := strings.TrimSpace(payload.Content)
-	lines := make([]string, 0, len(links))
+
+	// If the content already references at least one RSS link, the model has actively curated
+	// and embedded sources inline. Do not append unselected/unused RSS feed items.
+	hasEmbeddedLink := false
 	for _, link := range links {
 		if strings.Contains(content, link.URL) {
-			continue
+			hasEmbeddedLink = true
+			break
 		}
+	}
+	if hasEmbeddedLink {
+		return arguments, nil
+	}
+
+	lines := make([]string, 0, len(links))
+	for _, link := range links {
 		title := strings.NewReplacer("[", "\\[", "]", "\\]", "\r", " ", "\n", " ").Replace(link.Title)
 		if title == "" {
 			title = "查看原文"

@@ -2,12 +2,16 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/service"
 	"github.com/rushairer/gouno"
 )
 
@@ -17,6 +21,7 @@ type BlogService interface {
 	DeletePost(ctx context.Context, id int64) error
 	GetPost(ctx context.Context, id int64) (*domain.Post, error)
 	GetAdminPost(ctx context.Context, id int64) (*domain.Post, error)
+	GetAdminPostBySlug(ctx context.Context, slug string) (*domain.Post, error)
 	BatchPosts(ctx context.Context, ids []int64, action string) (int64, error)
 	GetPostBySlug(ctx context.Context, slug string) (*domain.Post, error)
 	ResolvePostID(ctx context.Context, slugOrID string) (int64, error)
@@ -143,11 +148,17 @@ func (ctrl *PostController) ListAdmin(c *gin.Context) {
 }
 
 func (ctrl *PostController) GetAdmin(c *gin.Context) {
-	id, ok := ParamPositiveID(c, "id")
-	if !ok {
+	param := c.Param("id")
+	if id, err := strconv.ParseInt(param, 10, 64); err == nil && id > 0 {
+		post, err := ctrl.svc.GetAdminPost(c.Request.Context(), id)
+		if err != nil {
+			WriteDomainError(c, err)
+			return
+		}
+		c.JSON(http.StatusOK, gouno.NewSuccessResponse(post))
 		return
 	}
-	post, err := ctrl.svc.GetAdminPost(c.Request.Context(), id)
+	post, err := ctrl.svc.GetAdminPostBySlug(c.Request.Context(), param)
 	if err != nil {
 		WriteDomainError(c, err)
 		return
@@ -191,15 +202,45 @@ func (ctrl *PostController) Delete(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }
 
+func isAdminPostRequest(c *gin.Context) bool {
+	if rawClaims, exists := c.Get("claims"); exists {
+		if claims, ok := rawClaims.(jwt.MapClaims); ok {
+			if roles, ok := claims["roles"].([]interface{}); ok {
+				for _, r := range roles {
+					if roleStr, ok := r.(string); ok && roleStr == "admin" {
+						return true
+					}
+				}
+			}
+			if roleStr, ok := claims["role"].(string); ok && roleStr == "admin" {
+				return true
+			}
+			if scopeStr, ok := claims["scope"].(string); ok {
+				for _, s := range strings.Fields(scopeStr) {
+					if s == "admin" {
+						return true
+					}
+				}
+			}
+		}
+	}
+	return false
+}
+
 func (ctrl *PostController) Get(c *gin.Context) {
 	slugOrID := c.Param("slugOrID")
+	admin := isAdminPostRequest(c)
 
 	// Try ID first
 	id, err := strconv.ParseInt(slugOrID, 10, 64)
 	var post *domain.Post
-	if err == nil {
-		post, err = ctrl.svc.GetPost(c.Request.Context(), id)
-		if err != nil {
+	if err == nil && id > 0 {
+		if admin {
+			post, err = ctrl.svc.GetAdminPost(c.Request.Context(), id)
+		} else {
+			post, err = ctrl.svc.GetPost(c.Request.Context(), id)
+		}
+		if err != nil && !errors.Is(err, service.ErrPostNotFound) {
 			WriteDomainError(c, err)
 			return
 		}
@@ -208,10 +249,15 @@ func (ctrl *PostController) Get(c *gin.Context) {
 			return
 		}
 	}
-	// Prefer an existing numeric ID, then fall back to a numeric slug.
-	post, err = ctrl.svc.GetPostBySlug(c.Request.Context(), slugOrID)
 
-	if err != nil {
+	// Prefer an existing numeric ID, then fall back to a numeric slug.
+	if admin {
+		post, err = ctrl.svc.GetAdminPostBySlug(c.Request.Context(), slugOrID)
+	} else {
+		post, err = ctrl.svc.GetPostBySlug(c.Request.Context(), slugOrID)
+	}
+
+	if err != nil && !errors.Is(err, service.ErrPostNotFound) {
 		WriteDomainError(c, err)
 		return
 	}
