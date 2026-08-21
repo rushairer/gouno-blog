@@ -251,6 +251,7 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 			admin.PUT("/admin/settings", contentCtrl.UpdateSiteSettings)
 			if agentCtrl != nil {
 				admin.POST("/admin/ai-draft-assist", agentCtrl.DraftAssist)
+				admin.POST("/admin/ai-generate-cover", agentCtrl.GenerateCoverImage)
 				admin.POST("/admin/ai-workflows/draft", agentCtrl.DraftWorkflow)
 				admin.POST("/admin/ai-automation-plans/draft", agentCtrl.DraftAutomationPlan)
 				admin.GET("/admin/provider-profiles", agentCtrl.ListProviders)

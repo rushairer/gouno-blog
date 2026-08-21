@@ -494,6 +494,65 @@ func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, 
 	return nil
 }
 
+func (s *ApprovalService) GenerateDirectImage(ctx context.Context, prompt, altText, creator string) (*domain.MediaAsset, error) {
+	if s.management == nil || s.growth == nil || s.media == nil {
+		return nil, ErrInvalid
+	}
+	generationCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	defer cancel()
+
+	profiles, err := s.management.ListProviders(generationCtx)
+	if err != nil {
+		return nil, err
+	}
+	var profileID int64
+	for _, item := range profiles {
+		if item.IsDefaultImage && item.Enabled {
+			profileID = item.ID
+			break
+		}
+	}
+	if profileID == 0 {
+		return nil, errors.New("no enabled default image provider")
+	}
+	client, err := s.management.ProviderClient(generationCtx, profileID)
+	if err != nil {
+		return nil, err
+	}
+	generator, ok := client.(provider.ImageGenerator)
+	if !ok {
+		return nil, errors.New("provider does not support image generation")
+	}
+	image, err := generator.GenerateImage(generationCtx, provider.ImageRequest{Prompt: prompt})
+	if err != nil || len(image.Data) == 0 || len(image.Data) > 10<<20 || (image.MIMEType != "image/jpeg" && image.MIMEType != "image/png" && image.MIMEType != "image/webp") {
+		if errors.Is(generationCtx.Err(), context.DeadlineExceeded) {
+			return nil, errors.New("image generation timed out")
+		}
+		if err != nil {
+			return nil, errors.New("image provider response: " + safeError(err))
+		}
+		return nil, errors.New("provider returned an invalid image")
+	}
+	ext := map[string]string{"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}[image.MIMEType]
+	nameBytes := make([]byte, 16)
+	if _, err := rand.Read(nameBytes); err != nil {
+		return nil, err
+	}
+	storageName := fmt.Sprintf("ai-%x%s", nameBytes, ext)
+	if err := s.media.Put(ctx, storageName, bytes.NewReader(image.Data), image.MIMEType); err != nil {
+		return nil, err
+	}
+	asset := &domain.MediaAsset{Filename: "cover-" + storageName, StorageName: storageName, URL: s.media.URL(storageName), ContentType: image.MIMEType, SizeBytes: int64(len(image.Data)), AltText: altText}
+	if creator != "" {
+		asset.CreatedBy = &creator
+	}
+	if err := s.growth.CreateMedia(ctx, asset); err != nil {
+		_ = s.media.Delete(ctx, storageName)
+		return nil, err
+	}
+	return asset, nil
+}
+
 func (s *ApprovalService) SetMediaGenerationInstruction(ctx context.Context, id int64, instruction string) error {
 	instruction = strings.TrimSpace(instruction)
 	if id <= 0 || len([]rune(instruction)) > 2000 {

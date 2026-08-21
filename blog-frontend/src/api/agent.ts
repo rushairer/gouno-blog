@@ -53,6 +53,15 @@ export const agentApi = {
       model: data.model,
     };
   },
+  async generateCoverImage(payload: { prompt: string; alt_text?: string }): Promise<{ url: string; asset_id?: number; alt_text?: string }> {
+    return readData<{ url: string; asset_id?: number; alt_text?: string }>(
+      apiFetch('/api/admin/ai-generate-cover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+    );
+  },
   async getToolCatalog(): Promise<ToolDefinition[]> {
     return readData<ToolDefinition[]>(apiFetch('/api/admin/agent-tools'));
   },
