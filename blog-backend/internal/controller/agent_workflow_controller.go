@@ -26,6 +26,7 @@ type draftAssistRequest struct {
 	Title   string `json:"title"`
 	Summary string `json:"summary"`
 	Content string `json:"content"`
+	Prompt  string `json:"prompt"`
 }
 
 type workflowDraftRequest struct {
@@ -116,9 +117,10 @@ func (ctrl *AgentController) DraftAssist(c *gin.Context) {
 		return
 	}
 	req.Task = strings.TrimSpace(req.Task)
-	req.Title, req.Summary, req.Content = strings.TrimSpace(req.Title), strings.TrimSpace(req.Summary), strings.TrimSpace(req.Content)
-	if (req.Task != "title" && req.Task != "summary" && req.Task != "slug") || len([]rune(req.Content)) > 50000 || (req.Title == "" && req.Content == "") {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "task and article content are required"))
+	req.Title, req.Summary, req.Content, req.Prompt = strings.TrimSpace(req.Title), strings.TrimSpace(req.Summary), strings.TrimSpace(req.Content), strings.TrimSpace(req.Prompt)
+	validTasks := map[string]bool{"title": true, "summary": true, "slug": true, "content": true}
+	if !validTasks[req.Task] || len([]rune(req.Content)) > 50000 || (req.Title == "" && req.Content == "" && req.Prompt == "") {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "task and article context or prompt are required"))
 		return
 	}
 	profiles, err := ctrl.svc.ListProviders(c.Request.Context())
@@ -142,40 +144,223 @@ func (ctrl *AgentController) DraftAssist(c *gin.Context) {
 		WriteDomainError(c, err)
 		return
 	}
-	instruction := "You are an editorial assistant for a blog. Return only valid JSON in the form {\"suggestions\":[\"...\"]}. Produce exactly three concise candidates. Do not explain, use Markdown, or change the article."
+	maxTokens := min(selected.MaxOutputTokens, 500)
+	instruction := "You are an editorial assistant for a blog. Return only valid JSON in the form {\"suggestions\":[\"...\"]}."
 	if req.Task == "title" {
-		instruction += " Create specific Chinese article titles that accurately reflect the supplied draft."
+		instruction += " Produce exactly three concise candidates. Do not explain, use Markdown, or change the article. Create specific Chinese article titles that accurately reflect the supplied draft."
 	} else if req.Task == "summary" {
-		instruction += " Create Chinese summaries, each at most 300 Chinese characters, that accurately reflect the supplied draft."
-	} else {
-		instruction += " Create lowercase URL slugs using ASCII letters, numbers, and hyphens only."
+		instruction += " Produce exactly three concise candidates. Do not explain, use Markdown, or change the article. Create Chinese summaries, each at most 300 Chinese characters, that accurately reflect the supplied draft."
+	} else if req.Task == "slug" {
+		instruction += " Produce exactly three concise candidates. Do not explain, use Markdown, or change the article. Create lowercase URL slugs using ASCII letters, numbers, and hyphens only."
+	} else if req.Task == "content" {
+		maxTokens = selected.MaxOutputTokens
+		if maxTokens < 6000 {
+			maxTokens = 6000
+		}
+		instruction = "You are a professional blog writer and editor. Generate a complete, comprehensive, well-structured Chinese blog article in Markdown format based on the supplied context and user prompt. Ensure the article is fully written and completed with an introduction, detailed body sections, and a solid conclusion. Output the raw Markdown content directly without JSON wrapping, without markdown code fence wrappers, and without conversational preamble."
 	}
-	prompt, _ := json.Marshal(map[string]string{"title": req.Title, "summary": req.Summary, "content": req.Content})
-	result, err := client.Generate(c.Request.Context(), provider.Request{Instructions: instruction, Messages: []provider.Message{{Role: "user", Content: string(prompt)}}, MaxTokens: min(selected.MaxOutputTokens, 500)})
+	payloadMap := map[string]string{"title": req.Title, "summary": req.Summary, "content": req.Content}
+	if req.Prompt != "" {
+		payloadMap["prompt"] = req.Prompt
+	}
+	prompt, _ := json.Marshal(payloadMap)
+	result, err := client.Generate(c.Request.Context(), provider.Request{Instructions: instruction, Messages: []provider.Message{{Role: "user", Content: string(prompt)}}, MaxTokens: maxTokens})
 	if err != nil {
 		WriteDomainError(c, err)
 		return
 	}
-	var output struct {
-		Suggestions []string `json:"suggestions"`
+
+	if req.Task == "content" {
+		cleaned := cleanDraftAssistContent(result.Text)
+		if cleaned == "" {
+			c.JSON(http.StatusBadGateway, gouno.NewErrorResponse(http.StatusBadGateway, "AI returned an empty content response"))
+			return
+		}
+		c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"suggestions": []string{cleaned}, "provider": selected.Name, "model": selected.Model}))
+		return
 	}
-	text := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(result.Text), "```json"), "```"))
-	if err := json.Unmarshal([]byte(text), &output); err != nil || len(output.Suggestions) == 0 {
+
+	suggestions := extractDraftSuggestions(result.Text)
+	if len(suggestions) == 0 {
 		c.JSON(http.StatusBadGateway, gouno.NewErrorResponse(http.StatusBadGateway, "AI returned an invalid suggestion response"))
 		return
 	}
-	seen, suggestions := map[string]bool{}, make([]string, 0, 3)
-	for _, suggestion := range output.Suggestions {
-		suggestion = strings.TrimSpace(suggestion)
-		if suggestion != "" && !seen[suggestion] {
-			seen[suggestion] = true
-			suggestions = append(suggestions, suggestion)
-			if len(suggestions) == 3 {
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"suggestions": suggestions, "provider": selected.Name, "model": selected.Model}))
+}
+
+func cleanDraftAssistContent(raw string) string {
+	text := strings.TrimSpace(raw)
+	if strings.HasPrefix(text, "{") || strings.HasPrefix(text, "```json") {
+		trimmed := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(text, "```json"), "```"))
+		var jsonOutput struct {
+			Suggestions []string `json:"suggestions"`
+			Content     string   `json:"content"`
+		}
+		if err := json.Unmarshal([]byte(trimmed), &jsonOutput); err == nil {
+			if len(jsonOutput.Suggestions) > 0 && strings.TrimSpace(jsonOutput.Suggestions[0]) != "" {
+				text = jsonOutput.Suggestions[0]
+			} else if strings.TrimSpace(jsonOutput.Content) != "" {
+				text = jsonOutput.Content
+			}
+		} else {
+			if idx := strings.Index(text, `"suggestions"`); idx != -1 {
+				sub := text[idx:]
+				if firstBracket := strings.Index(sub, `[`); firstBracket != -1 {
+					sub = sub[firstBracket+1:]
+					if firstQuote := strings.Index(sub, `"`); firstQuote != -1 {
+						valStart := firstQuote + 1
+						if lastQuote := strings.LastIndex(sub, `"`); lastQuote > valStart {
+							candidate := sub[valStart:lastQuote]
+							candidate = strings.ReplaceAll(candidate, `\n`, "\n")
+							candidate = strings.ReplaceAll(candidate, `\"`, `"`)
+							candidate = strings.ReplaceAll(candidate, `\t`, "\t")
+							candidate = strings.ReplaceAll(candidate, `\\`, `\`)
+							text = candidate
+						}
+					}
+				}
+			} else if idx := strings.Index(text, `"content"`); idx != -1 {
+				sub := text[idx:]
+				if firstQuote := strings.Index(sub, `":`); firstQuote != -1 {
+					sub = sub[firstQuote+2:]
+					if q1 := strings.Index(sub, `"`); q1 != -1 {
+						valStart := q1 + 1
+						if q2 := strings.LastIndex(sub, `"`); q2 > valStart {
+							candidate := sub[valStart:q2]
+							candidate = strings.ReplaceAll(candidate, `\n`, "\n")
+							candidate = strings.ReplaceAll(candidate, `\"`, `"`)
+							candidate = strings.ReplaceAll(candidate, `\t`, "\t")
+							candidate = strings.ReplaceAll(candidate, `\\`, `\`)
+							text = candidate
+						}
+					}
+				}
+			}
+		}
+	}
+
+	text = strings.TrimSpace(text)
+	if strings.HasPrefix(text, "```markdown") && strings.HasSuffix(text, "```") {
+		text = strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(text, "```markdown"), "```"))
+	} else if strings.HasPrefix(text, "```md") && strings.HasSuffix(text, "```") {
+		text = strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(text, "```md"), "```"))
+	} else if strings.HasPrefix(text, "```") && strings.HasSuffix(text, "```") {
+		text = strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(text, "```"), "```"))
+	}
+
+	return strings.TrimSpace(text)
+}
+
+func extractDraftSuggestions(raw string) []string {
+	text := strings.TrimSpace(raw)
+	if text == "" {
+		return nil
+	}
+
+	trimmed := text
+	if idx := strings.Index(trimmed, "```"); idx != -1 {
+		endIdx := strings.LastIndex(trimmed, "```")
+		if endIdx > idx {
+			sub := trimmed[idx+3 : endIdx]
+			if strings.HasPrefix(strings.ToLower(sub), "json") {
+				sub = sub[4:]
+			}
+			trimmed = strings.TrimSpace(sub)
+		}
+	}
+
+	// 1. Try standard JSON struct
+	var obj struct {
+		Suggestions []string `json:"suggestions"`
+		Candidates  []string `json:"candidates"`
+		Summary     string   `json:"summary"`
+		Title       string   `json:"title"`
+	}
+	if err := json.Unmarshal([]byte(trimmed), &obj); err == nil {
+		list := obj.Suggestions
+		if len(list) == 0 {
+			list = obj.Candidates
+		}
+		if len(list) == 0 && obj.Summary != "" {
+			list = []string{obj.Summary}
+		}
+		if len(list) == 0 && obj.Title != "" {
+			list = []string{obj.Title}
+		}
+		res := filterUniqueSuggestions(list)
+		if len(res) > 0 {
+			return res
+		}
+	}
+
+	// 2. Try JSON array of strings
+	var arr []string
+	if err := json.Unmarshal([]byte(trimmed), &arr); err == nil {
+		res := filterUniqueSuggestions(arr)
+		if len(res) > 0 {
+			return res
+		}
+	}
+
+	// 3. Try manual array extraction from "[ ... ]"
+	if start := strings.Index(text, `[`); start != -1 {
+		if end := strings.LastIndex(text, `]`); end > start {
+			var innerArr []string
+			if json.Unmarshal([]byte(text[start:end+1]), &innerArr) == nil {
+				res := filterUniqueSuggestions(innerArr)
+				if len(res) > 0 {
+					return res
+				}
+			}
+		}
+	}
+
+	// 4. Try parsing line by line (e.g. "1. xxx", "- xxx", "• xxx")
+	lines := strings.Split(text, "\n")
+	var candidates []string
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "```") || strings.HasPrefix(line, "{") || strings.HasPrefix(line, "}") || strings.HasPrefix(line, "[") || strings.HasPrefix(line, "]") {
+			continue
+		}
+		if strings.HasPrefix(line, `"suggestions"`) || strings.HasPrefix(line, `"title"`) || strings.HasPrefix(line, `"summary"`) {
+			continue
+		}
+		line = strings.TrimLeft(line, "-*•0123456789.、 \t\"'")
+		line = strings.TrimRight(line, "\"' \t,")
+		line = strings.TrimSpace(line)
+		if line != "" {
+			candidates = append(candidates, line)
+		}
+	}
+	res := filterUniqueSuggestions(candidates)
+	if len(res) > 0 {
+		return res
+	}
+
+	// 5. Fallback: single cleaned text
+	cleaned := cleanDraftAssistContent(text)
+	if cleaned != "" {
+		return []string{cleaned}
+	}
+
+	return nil
+}
+
+func filterUniqueSuggestions(items []string) []string {
+	seen := map[string]bool{}
+	res := make([]string, 0, min(len(items), 3))
+	for _, item := range items {
+		item = strings.TrimSpace(item)
+		if item != "" && !seen[item] {
+			seen[item] = true
+			res = append(res, item)
+			if len(res) == 3 {
 				break
 			}
 		}
 	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"suggestions": suggestions, "provider": selected.Name, "model": selected.Model}))
+	return res
 }
 
 func (ctrl *AgentController) SetWorkflowService(service *workflowservice.Service) {
