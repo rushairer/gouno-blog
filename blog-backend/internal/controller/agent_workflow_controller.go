@@ -23,11 +23,22 @@ import (
 )
 
 type draftAssistRequest struct {
-	Task    string `json:"task" binding:"required"`
-	Title   string `json:"title"`
-	Summary string `json:"summary"`
-	Content string `json:"content"`
-	Prompt  string `json:"prompt"`
+	Task       string   `json:"task" binding:"required"`
+	Title      string   `json:"title"`
+	Summary    string   `json:"summary"`
+	Content    string   `json:"content"`
+	Prompt     string   `json:"prompt"`
+	Categories []string `json:"categories"`
+}
+
+type DraftMetadataResult struct {
+	Summary        string   `json:"summary,omitempty"`
+	Tags           []string `json:"tags,omitempty"`
+	Slug           string   `json:"slug,omitempty"`
+	SeoTitle       string   `json:"seo_title,omitempty"`
+	SeoDescription string   `json:"seo_description,omitempty"`
+	Category       string   `json:"category,omitempty"`
+	CoverAlt       string   `json:"cover_alt,omitempty"`
 }
 
 type workflowDraftRequest struct {
@@ -119,7 +130,11 @@ func (ctrl *AgentController) DraftAssist(c *gin.Context) {
 	}
 	req.Task = strings.TrimSpace(req.Task)
 	req.Title, req.Summary, req.Content, req.Prompt = strings.TrimSpace(req.Title), strings.TrimSpace(req.Summary), strings.TrimSpace(req.Content), strings.TrimSpace(req.Prompt)
-	validTasks := map[string]bool{"title": true, "summary": true, "slug": true, "content": true}
+	validTasks := map[string]bool{
+		"title": true, "summary": true, "slug": true, "content": true,
+		"tags": true, "seo": true, "alt": true, "category": true,
+		"cover_prompt": true, "metadata_all": true,
+	}
 	if !validTasks[req.Task] || len([]rune(req.Content)) > 50000 || (req.Title == "" && req.Content == "" && req.Prompt == "") {
 		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "task and article context or prompt are required"))
 		return
@@ -155,6 +170,24 @@ func (ctrl *AgentController) DraftAssist(c *gin.Context) {
 	} else if req.Task == "slug" {
 		maxTokens = 400
 		instruction += " Produce exactly three concise candidates. Do not explain, use Markdown, or change the article. Create lowercase URL slugs using ASCII letters, numbers, and hyphens only."
+	} else if req.Task == "tags" {
+		maxTokens = 400
+		instruction += " Produce 3 to 5 highly relevant, concise Chinese topic tags (1-4 words each) reflecting the core themes of this draft. Return only valid JSON: {\"suggestions\":[\"tag1\", \"tag2\", \"tag3\"]}. Do not explain."
+	} else if req.Task == "seo" {
+		maxTokens = 800
+		instruction = "You are an SEO specialist. Analyze the draft and produce optimal SEO metadata. Return only valid JSON in the form: {\"seo_title\": \"...\", \"seo_description\": \"...\", \"slug\": \"...\"}. Ensure seo_title is under 60 characters with core keywords, seo_description is under 160 characters engaging search snippet, and slug is lowercase ASCII words with hyphens."
+	} else if req.Task == "alt" {
+		maxTokens = 500
+		instruction += " Produce 3 concise, descriptive Chinese image alt texts (accessibility scene descriptions) suitable for the cover image of this article. Return only valid JSON: {\"suggestions\":[\"alt 1\", \"alt 2\", \"alt 3\"]}. Do not explain."
+	} else if req.Task == "category" {
+		maxTokens = 300
+		instruction = "You are a blog editor. Given the candidate categories list in the request, select the single most appropriate category name for this draft. Return only valid JSON in the form: {\"suggestions\":[\"category_name\"]}."
+	} else if req.Task == "cover_prompt" {
+		maxTokens = 900
+		instruction = "You are an AI art director. Generate 2 distinct, highly detailed text-to-image prompts in English (with Chinese summary) for generating an eye-catching, modern, artistic blog cover image suitable for DALL-E or Midjourney. Return only valid JSON in the form: {\"suggestions\":[\"English prompt... (中文说明)\", \"...\"]}."
+	} else if req.Task == "metadata_all" {
+		maxTokens = 2500
+		instruction = "You are a senior blog managing editor. Analyze the draft and generate all publishing metadata in a single valid JSON object with format:\n{\"summary\":\"...\",\"tags\":[\"...\"],\"slug\":\"...\",\"seo_title\":\"...\",\"seo_description\":\"...\",\"category\":\"...\",\"cover_alt\":\"...\"}.\nEnsure summary is ~150-250 Chinese chars, tags has 3-5 keywords, slug is ASCII lowercase words with hyphens, seo_title is <=60 chars, seo_description is <=160 chars, category matches the best choice from candidate categories (if supplied), and cover_alt describes the cover scene."
 	} else if req.Task == "content" {
 		maxTokens = selected.MaxOutputTokens
 		if maxTokens < 6000 {
@@ -162,9 +195,12 @@ func (ctrl *AgentController) DraftAssist(c *gin.Context) {
 		}
 		instruction = "You are a professional blog writer and editor. Generate a complete, comprehensive, well-structured Chinese blog article in Markdown format based on the supplied context and user prompt. Ensure the article is fully written and completed with an introduction, detailed body sections, and a solid conclusion. Output the raw Markdown content directly without JSON wrapping, without markdown code fence wrappers, and without conversational preamble."
 	}
-	payloadMap := map[string]string{"title": req.Title, "summary": req.Summary, "content": req.Content}
+	payloadMap := map[string]any{"title": req.Title, "summary": req.Summary, "content": req.Content}
 	if req.Prompt != "" {
 		payloadMap["prompt"] = req.Prompt
+	}
+	if len(req.Categories) > 0 {
+		payloadMap["categories"] = req.Categories
 	}
 	prompt, _ := json.Marshal(payloadMap)
 	result, err := client.Generate(c.Request.Context(), provider.Request{Instructions: instruction, Messages: []provider.Message{{Role: "user", Content: string(prompt)}}, MaxTokens: maxTokens})
@@ -181,6 +217,20 @@ func (ctrl *AgentController) DraftAssist(c *gin.Context) {
 		}
 		c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"suggestions": []string{cleaned}, "provider": selected.Name, "model": selected.Model}))
 		return
+	}
+
+	if req.Task == "metadata_all" || req.Task == "seo" {
+		metadata := extractStructuredMetadata(result.Text)
+		if metadata != nil {
+			metaBytes, _ := json.Marshal(metadata)
+			c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{
+				"suggestions": []string{string(metaBytes)},
+				"metadata":    metadata,
+				"provider":    selected.Name,
+				"model":       selected.Model,
+			}))
+			return
+		}
 	}
 
 	suggestions := extractDraftSuggestions(result.Text)
@@ -252,6 +302,40 @@ func cleanDraftAssistContent(raw string) string {
 	}
 
 	return strings.TrimSpace(text)
+}
+
+func extractStructuredMetadata(raw string) *DraftMetadataResult {
+	text := strings.TrimSpace(raw)
+	if text == "" {
+		return nil
+	}
+	trimmed := text
+	if idx := strings.Index(trimmed, "```"); idx != -1 {
+		endIdx := strings.LastIndex(trimmed, "```")
+		if endIdx > idx {
+			sub := trimmed[idx+3 : endIdx]
+			if strings.HasPrefix(strings.ToLower(sub), "json") {
+				sub = sub[4:]
+			}
+			trimmed = strings.TrimSpace(sub)
+		}
+	}
+	var res DraftMetadataResult
+	if err := json.Unmarshal([]byte(trimmed), &res); err == nil {
+		if res.Summary != "" || len(res.Tags) > 0 || res.Slug != "" || res.SeoTitle != "" || res.SeoDescription != "" || res.Category != "" || res.CoverAlt != "" {
+			return &res
+		}
+	}
+	if start := strings.Index(text, "{"); start != -1 {
+		if end := strings.LastIndex(text, "}"); end > start {
+			if err := json.Unmarshal([]byte(text[start:end+1]), &res); err == nil {
+				if res.Summary != "" || len(res.Tags) > 0 || res.Slug != "" || res.SeoTitle != "" || res.SeoDescription != "" || res.Category != "" || res.CoverAlt != "" {
+					return &res
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func extractDraftSuggestions(raw string) []string {
@@ -387,13 +471,13 @@ func extractDraftSuggestions(raw string) []string {
 
 func filterUniqueSuggestions(items []string) []string {
 	seen := map[string]bool{}
-	res := make([]string, 0, min(len(items), 3))
+	res := make([]string, 0, min(len(items), 5))
 	for _, item := range items {
 		item = strings.TrimSpace(item)
 		if item != "" && !seen[item] {
 			seen[item] = true
 			res = append(res, item)
-			if len(res) == 3 {
+			if len(res) == 5 {
 				break
 			}
 		}
