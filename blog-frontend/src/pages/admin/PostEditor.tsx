@@ -146,8 +146,20 @@ export default function PostEditor() {
         summary: post.summary,
         content: post.content,
       });
-      setSuggestions(list || []); setSuggestionTask(task);
-      if (!list?.length) {
+      const cleanList: string[] = [];
+      (list || []).forEach((item) => {
+        if (item.includes('","')) {
+          item.split('","').forEach((sub) => {
+            const clean = sub.replace(/^[{"[\s]+|[}"\]\s,]+$/g, '').trim();
+            if (clean) cleanList.push(clean);
+          });
+        } else {
+          const clean = item.replace(/^[{"[\s]+|[}"\]\s,]+$/g, '').trim();
+          if (clean) cleanList.push(clean);
+        }
+      });
+      setSuggestions(cleanList); setSuggestionTask(task);
+      if (!cleanList.length) {
         const msg = '这次没有生成可用候选，请稍后重试。';
         setAssistError(msg);
         notify(msg, 'error');
