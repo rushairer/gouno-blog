@@ -25,8 +25,8 @@ const AdminComments = React.lazy(() => import('./pages/admin/Comments'));
 const AdminTaxonomy = React.lazy(() => import('./pages/admin/Taxonomy'));
 const AdminSiteSettings = React.lazy(() => import('./pages/admin/SiteSettings'));
 const AdminUsers = React.lazy(() => import('./pages/admin/Users'));
-const MediaLibrary = React.lazy(() => import('./pages/MediaLibrary'));
-const AgentConsole = React.lazy(() => import('./pages/AgentConsole'));
+const MediaLibrary = React.lazy(() => import('./pages/admin/MediaLibrary'));
+const AIOperations = React.lazy(() => import('./pages/admin/AIOperations'));
 const AdminNotifications = React.lazy(() => import('./pages/admin/Notifications'));
 import CustomPageView from './pages/CustomPageView';
 
@@ -106,7 +106,7 @@ export default function App() {
     <Route path="/admin/media" element={<Admin><MediaLibrary /></Admin>} />
     <Route path="/admin/settings" element={<Admin><AdminSiteSettings /></Admin>} />
     <Route path="/admin/users" element={<Admin><AdminUsers /></Admin>} />
-    <Route path="/admin/ai-ops" element={<Admin><AgentConsole /></Admin>} />
+    <Route path="/admin/ai-ops" element={<Admin><AIOperations /></Admin>} />
     <Route path="/:slug" element={<Public><CustomPageView /></Public>} />
     <Route path="*" element={<Public><NotFound /></Public>} />
   </Routes></BrowserRouter></ToastProvider></I18nProvider>;

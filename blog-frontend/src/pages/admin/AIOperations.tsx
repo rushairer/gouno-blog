@@ -1,28 +1,28 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Clock3, GitBranch, RefreshCw, Settings2, ShieldCheck, Sparkles, X } from 'lucide-react';
-import { canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
-import { agentApi } from '../api/agent';
-import { operationsApi } from '../api/operations';
-import { workflowApi } from '../api/workflows';
+import { canManageBlog, isLoggedIn, redirectToAuthorize } from '../../auth';
+import { agentApi } from '../../api/agent';
+import { operationsApi } from '../../api/operations';
+import { workflowApi } from '../../api/workflows';
 import type {
   Agent, AgentApproval, AgentRun, AgentSkill, ContentCandidateSet, EditorialTask,
   EmbeddingProfile, MediaCandidate, OperationalSuggestion, ProviderProfile,
   ToolDefinition, Workflow, WorkflowInteractionTask, WorkflowMetric, WorkflowRun,
-} from '../types/agent';
-import type { SkillFormValue } from '../components/agent/SkillForm';
-import type { ProviderFormValue } from '../components/agent/ProviderForm';
-import type { EmbeddingFormValue } from '../components/agent/EmbeddingForm';
-import { WorkspaceOverview } from '../components/agent/WorkspaceOverview';
-import type { ConsoleTab } from '../components/agent/WorkspaceOverview';
-import { InboxWorkspace } from '../components/agent/InboxWorkspace';
-import { AdvancedWorkspace } from '../components/agent/AdvancedWorkspace';
-import type { AdvancedSection, DeleteTarget } from '../components/agent/AdvancedWorkspace';
-import { RecordsWorkspace } from '../components/agent/AgentRunRecords';
-import { WorkflowWorkspace } from '../components/agent/WorkflowWorkspace';
-import { WorkflowRunRecords } from '../components/agent/WorkflowRunRecords';
-import { AdminPage, AdminPageHeader, AdminPageState, Button, ConfirmDialog, Feedback, SubnavTabs, Tab, TabList, TabPanel, Tabs } from '../components/ui';
-import { useI18n } from '../i18n';
-import '../styles/agent-console.css';
+} from '../../types/agent';
+import type { SkillFormValue } from '../../components/agent/SkillForm';
+import type { ProviderFormValue } from '../../components/agent/ProviderForm';
+import type { EmbeddingFormValue } from '../../components/agent/EmbeddingForm';
+import { WorkspaceOverview } from '../../components/agent/WorkspaceOverview';
+import type { ConsoleTab } from '../../components/agent/WorkspaceOverview';
+import { InboxWorkspace } from '../../components/agent/InboxWorkspace';
+import { AdvancedWorkspace } from '../../components/agent/AdvancedWorkspace';
+import type { AdvancedSection, DeleteTarget } from '../../components/agent/AdvancedWorkspace';
+import { RecordsWorkspace } from '../../components/agent/AgentRunRecords';
+import { WorkflowWorkspace } from '../../components/agent/WorkflowWorkspace';
+import { WorkflowRunRecords } from '../../components/agent/WorkflowRunRecords';
+import { AdminPage, AdminPageHeader, AdminPageState, Button, ConfirmDialog, Feedback, SubnavTabs, Tab, TabList, TabPanel, Tabs } from '../../components/ui';
+import { useI18n } from '../../i18n';
+import '../../styles/agent-console.css';
 
 function initialConsoleTab(): ConsoleTab {
   const requested = new URLSearchParams(window.location.search).get('tab');
@@ -60,7 +60,7 @@ export default function AgentConsole() {
   const [interactions, setInteractions] = useState<WorkflowInteractionTask[]>([]);
   const [editorialTasks, setEditorialTasks] = useState<EditorialTask[]>([]);
   const [selectedApproval, setSelectedApproval] = useState<AgentApproval | null>(null);
-  const [selectedRun, setSelectedRun] = useState<{ run: AgentRun; tool_calls: import('../types/agent').AgentToolCall[] } | null>(null);
+  const [selectedRun, setSelectedRun] = useState<{ run: AgentRun; tool_calls: import('../../types/agent').AgentToolCall[] } | null>(null);
   const [editingAgent, setEditingAgent] = useState<Agent | 'new' | null>(null);
   const [editingProvider, setEditingProvider] = useState<ProviderProfile | 'new' | null>(null);
   const [editingEmbedding, setEditingEmbedding] = useState<EmbeddingProfile | 'new' | null>(null);
@@ -307,7 +307,7 @@ export default function AgentConsole() {
   const saveWorkflow = async (value: {
     id?: number; name: string; description: string; enabled: boolean;
     cron_expression?: string; timezone: string; input_schema: Record<string, unknown>;
-    steps: import('../types/agent').WorkflowStep[]; scope_policy: import('../types/agent').WorkflowScopePolicy;
+    steps: import('../../types/agent').WorkflowStep[]; scope_policy: import('../../types/agent').WorkflowScopePolicy;
   }) => {
     await workflowApi.save(value);
     await refresh();

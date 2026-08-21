@@ -1,9 +1,9 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ToastProvider } from '../../components/ui';
+import { ToastProvider } from '../../../components/ui';
 import MediaLibrary from '../MediaLibrary';
 
-vi.mock('../../auth', () => ({
+vi.mock('../../../auth', () => ({
   apiFetch: vi.fn().mockResolvedValue(Response.json({ data: [] })),
   canManageBlog: () => true,
   isLoggedIn: () => true,
@@ -33,7 +33,7 @@ describe('MediaLibrary', () => {
       { id: 1, filename: 'banner.png', url: '/banner.png', content_type: 'image/png', size_bytes: 1024, alt_text: 'Header Banner', created_at: '2026-08-16T12:00:00Z', usage_count: 1 },
       { id: 2, filename: 'avatar.jpeg', url: '/avatar.jpeg', content_type: 'image/jpeg', size_bytes: 2048, alt_text: 'User Avatar', created_at: '2026-08-16T12:00:00Z', usage_count: 0 },
     ];
-    vi.mocked((await import('../../auth')).apiFetch).mockResolvedValueOnce(Response.json({ data: mockAssets }));
+    vi.mocked((await import('../../../auth')).apiFetch).mockResolvedValueOnce(Response.json({ data: mockAssets }));
 
     render(<ToastProvider><MediaLibrary /></ToastProvider>);
 
