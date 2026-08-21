@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Bookmark, Calendar, Eye, Flag, Heart, List, MessageSquare, Reply, Send, ShieldAlert, User, X } from 'lucide-react';
+import { ArrowLeft, Bookmark, Calendar, Eye, Flag, Heart, List, MessageSquare, RefreshCw, Reply, Send, ShieldAlert, User, X } from 'lucide-react';
 import { canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
 import { analyticsApi } from '../api/analytics';
 import { bookmarksApi } from '../api/bookmarks';
@@ -13,6 +13,7 @@ import { useArticleSEO } from '../utils/seo';
 import { MarkdownRenderer } from '../components/MarkdownRenderer';
 import { extractMarkdownTOC } from '../utils/markdown';
 import type { Post } from '../types/blog';
+import NotFound from './NotFound';
 
 interface CommentItemProps {
   comment: CommunityComment;
@@ -102,16 +103,23 @@ export default function PostDetail() {
           postData = postResult.value;
         } else if (isPreviewParam || canManageBlog()) {
           try {
-            let adminID: string | number = slug;
-            if (!/^\d+$/.test(slug || '')) {
-              const listData = await postsApi.getPosts({ search: slug || '' }, true).catch(() => null);
-              const found = listData?.list?.find((item: Post) => item.slug === slug);
-              if (found) adminID = found.id;
-            }
-            postData = await postsApi.getAdminPost(adminID);
+            postData = await postsApi.getAdminPost(slug);
             adminPreviewActive = true;
-          } catch (adminErr) {
-            console.error('Admin preview fetch error:', adminErr);
+          } catch {
+            try {
+              let adminID: string | number = slug;
+              if (!/^\d+$/.test(slug || '')) {
+                const listData = await postsApi.getPosts({ q: slug || '', search: slug || '' }, true).catch(() => null);
+                const found = listData?.list?.find((item: Post) => item.slug === slug);
+                if (found) adminID = found.id;
+              }
+              if (/^\d+$/.test(String(adminID))) {
+                postData = await postsApi.getAdminPost(adminID);
+                adminPreviewActive = true;
+              }
+            } catch (adminErr) {
+              console.error('Admin preview fetch error:', adminErr);
+            }
           }
         }
 
@@ -131,12 +139,17 @@ export default function PostDetail() {
         const alreadyViewed = sessionStorage.getItem(viewKey) === '1';
         setViews((postData.views_count || 0) + (alreadyViewed ? 0 : 1));
 
-        if (!alreadyViewed) {
+        if (!alreadyViewed && postData.status === 'published') {
           sessionStorage.setItem(viewKey, '1');
           analyticsApi.recordView(postData.id).catch((e) => console.error(e));
         }
 
-        setComments(await commentsApi.getPostComments(postData.id));
+        try {
+          const postComments = await commentsApi.getPostComments(postData.id);
+          setComments(postComments || []);
+        } catch {
+          setComments([]);
+        }
       } catch (err: unknown) {
         console.error(err);
         setError(err instanceof Error ? err.message : t('failedFetch'));
@@ -223,15 +236,40 @@ export default function PostDetail() {
   }
 
   if (error || !post) {
+    const is404 = !post || error === t('postNotFound') || Boolean(error?.toLowerCase().includes('not found')) || Boolean(error?.toLowerCase().includes('404'));
+    if (is404) {
+      return <NotFound />;
+    }
     return (
-      <Panel className="section-stack article-shell">
-        <h2>{t('error')}</h2>
-        <p className="muted">{error || t('postNotFound')}</p>
-        <Link to="/" className="btn btn-primary">
-          <ArrowLeft />
-          {t('backToFeed')}
-        </Link>
-      </Panel>
+      <div className="public-container" style={{ padding: '60px 0', maxWidth: '640px', margin: '0 auto' }}>
+        <div className="not-found-card" style={{ textAlign: 'center' }}>
+          <div className="not-found-badge">
+            <span className="not-found-code">ERROR</span>
+            <span className="not-found-badge__dot">/</span>
+            <span className="not-found-badge__label">{t('error')}</span>
+          </div>
+          <h1 className="not-found-title" style={{ fontSize: '1.5rem', margin: '16px 0 8px' }}>
+            {t('failedFetch')}
+          </h1>
+          <p className="not-found-subtitle" style={{ marginBottom: '24px' }}>
+            {error}
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => window.location.reload()}
+            >
+              <RefreshCw size={15} />
+              {t('retry')}
+            </button>
+            <Link to="/articles" className="btn btn-secondary">
+              <ArrowLeft size={15} />
+              {t('backToFeed')}
+            </Link>
+          </div>
+        </div>
+      </div>
     );
   }
 

@@ -136,4 +136,51 @@ describe('PostDetail', () => {
       expect(JSON.parse(request?.[1]?.body as string)).toMatchObject({ parent_id: 1, author: 'Grace', content: 'A reply' });
     });
   });
+
+  it('allows previewing a draft post by slug when preview=true', async () => {
+    const draftPost = {
+      ...post,
+      id: 6,
+      slug: 'daily-ai-news-2026-08-21-380',
+      title: '每日AI资讯：2026年8月21日',
+      status: 'draft',
+    };
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = input.toString();
+      // Public endpoint returns 404 for draft
+      if (url === '/api/posts/daily-ai-news-2026-08-21-380') {
+        return new Response(null, { status: 404 });
+      }
+      // Admin endpoint returns the draft post
+      if (url === '/api/admin/posts/daily-ai-news-2026-08-21-380') {
+        return Response.json({ data: draftPost });
+      }
+      if (url === '/api/posts/6/comments') {
+        return Response.json({ data: [] });
+      }
+      if (url === '/api/posts/daily-ai-news-2026-08-21-380/related') {
+        return Response.json({ data: [] });
+      }
+      return new Response(null, { status: 404 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <I18nProvider>
+        <MemoryRouter initialEntries={['/posts/daily-ai-news-2026-08-21-380?preview=true']}>
+          <Routes>
+            <Route path="/posts/:slug" element={<PostDetail />} />
+          </Routes>
+        </MemoryRouter>
+      </I18nProvider>,
+    );
+
+    // Header and content render properly
+    expect(await screen.findByRole('heading', { name: '每日AI资讯：2026年8月21日' })).toBeInTheDocument();
+    // Admin preview banner is visible
+    expect(screen.getByText(/管理员预览模式/)).toBeInTheDocument();
+    // Verify admin endpoint was called
+    expect(fetchMock).toHaveBeenCalledWith('/api/admin/posts/daily-ai-news-2026-08-21-380', expect.objectContaining({ credentials: 'same-origin' }));
+  });
 });

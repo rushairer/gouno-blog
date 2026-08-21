@@ -266,11 +266,14 @@ export default function AdminPages() {
                       </td>
                       <td>
                         <div className="table-actions">
-                          {p.status === 'published' ? (
-                            <Link to={`/${p.slug}`} target="_blank" title="查看">
-                              <Eye />
-                            </Link>
-                          ) : null}
+                          <Link
+                            to={`/${p.slug}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            title={p.status === 'published' ? '查看' : '预览'}
+                          >
+                            <Eye />
+                          </Link>
                           <button
                             type="button"
                             title="复制链接"
