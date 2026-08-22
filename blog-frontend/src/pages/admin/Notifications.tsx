@@ -178,13 +178,18 @@ export default function AdminNotifications() {
     const isWorkflow = item.type === 'ai_workflow_failed';
 
     let destination = item.href || '';
-    if (!destination) {
+    if (destination) {
+      destination = destination
+        .replace(/^\/admin\/agents(\?|$)/, '/admin/ai-ops$1')
+        .replace(/^\/admin\/analytics(\?|$)/, '/admin/dashboard$1')
+        .replace(/^\/posts\//, '/articles/');
+    } else {
       if (isWorkflow) {
         destination = '/admin/ai-ops?tab=records';
       } else if (isAI) {
         destination = '/admin/ai-ops?tab=records&record=agent';
       } else if (item.post_slug) {
-        destination = `/posts/${item.post_slug}${item.comment_id ? `#comment-${item.comment_id}` : ''}`;
+        destination = `/articles/${item.post_slug}${item.comment_id ? `#comment-${item.comment_id}` : ''}`;
       } else {
         destination = '/admin/comments';
       }
