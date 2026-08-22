@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Bookmark, Calendar, Eye, Flag, Heart, List, MessageSquare, RefreshCw, Reply, Send, ShieldAlert, User, X } from 'lucide-react';
-import { canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
+import { ArrowLeft, Calendar, Eye, Flag, Heart, List, MessageSquare, RefreshCw, Reply, Send, ShieldAlert, User, X } from 'lucide-react';
+import { canManageBlog, isLoggedIn } from '../auth';
 import { analyticsApi } from '../api/analytics';
-import { bookmarksApi } from '../api/bookmarks';
 import { commentsApi } from '../api/comments';
 import type { CommunityComment } from '../api/comments';
 import { postsApi } from '../api/posts';
@@ -69,7 +68,6 @@ export default function PostDetail() {
 
   const [likes, setLikes] = useState(0);
   const [liked, setLiked] = useState(false);
-  const [bookmarked, setBookmarked] = useState(false);
   const [views, setViews] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
 
@@ -133,7 +131,6 @@ export default function PostDetail() {
         const communityState = communityResult.status === 'fulfilled' ? communityResult.value : null;
         setLikes(communityState?.likes_count ?? postData.likes_count ?? 0);
         setLiked(communityState?.liked || false);
-        setBookmarked(communityState?.bookmarked || false);
         setRelatedPosts(relatedResult.status === 'fulfilled' ? relatedResult.value : []);
         const viewKey = `gouno-blog:viewed:${postData.id}`;
         const alreadyViewed = sessionStorage.getItem(viewKey) === '1';
@@ -182,17 +179,6 @@ export default function PostDetail() {
     } catch (err: unknown) {
       console.error(err);
     }
-  };
-
-  const handleBookmark = async () => {
-    if (!post) return;
-    if (!isLoggedIn()) {
-      await redirectToAuthorize(`/posts/${post.slug}`);
-      return;
-    }
-    const nextBookmarked = !bookmarked;
-    await bookmarksApi.setBookmark(post.id, nextBookmarked);
-    setBookmarked(nextBookmarked);
   };
 
   const handleAddComment = async (event: React.FormEvent) => {
@@ -353,10 +339,6 @@ export default function PostDetail() {
               >
                 <Heart size={20} fill={liked ? 'currentColor' : 'none'} />
                 <span>{likes} {t('likes')}</span>
-              </button>
-              <button type="button" className={`like-button ${bookmarked ? 'liked' : ''}`} onClick={() => void handleBookmark()}>
-                <Bookmark size={20} fill={bookmarked ? 'currentColor' : 'none'} />
-                <span>{bookmarked ? t('bookmarked') : t('bookmark')}</span>
               </button>
             </div>
           </Panel>

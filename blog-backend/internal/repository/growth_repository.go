@@ -182,11 +182,10 @@ func (r *GrowthRepository) AnalyticsSummary(ctx context.Context) (*domain.Analyt
 		return nil, err
 	}
 	if err := r.db.QueryRowContext(ctx, `SELECT
-		(SELECT COUNT(*) FROM bookmarks),
 		(SELECT COUNT(*) FROM comments),
 		(SELECT COUNT(*) FROM comments WHERE status = 'pending'),
 		(SELECT COUNT(DISTINCT comment_id) FROM comment_reports)`).
-		Scan(&summary.TotalBookmarks, &summary.TotalComments, &summary.PendingComments, &summary.ReportedItems); err != nil {
+		Scan(&summary.TotalComments, &summary.PendingComments, &summary.ReportedItems); err != nil {
 		return nil, err
 	}
 	rows, err := r.db.QueryContext(ctx, `SELECT `+growthPostColumns+` FROM posts p

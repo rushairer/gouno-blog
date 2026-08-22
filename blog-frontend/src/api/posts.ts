@@ -47,8 +47,8 @@ export const postsApi = {
     return (await readData<Post[] | null>(publicApiFetch(`/api/posts/${encodeURIComponent(String(slugOrID))}/related`))) || [];
   },
 
-  async getCommunityState(slugOrID: string | number): Promise<{ liked: boolean; bookmarked: boolean; likes_count: number }> {
-    return readData<{ liked: boolean; bookmarked: boolean; likes_count: number }>(
+  async getCommunityState(slugOrID: string | number): Promise<{ liked: boolean; likes_count: number }> {
+    return readData<{ liked: boolean; likes_count: number }>(
       optionalApiFetch(`/api/posts/${encodeURIComponent(String(slugOrID))}/community`)
     );
   },

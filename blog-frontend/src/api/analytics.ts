@@ -1,7 +1,6 @@
 import { authenticatedApiFetch as apiFetch, optionalApiFetch, readData } from './client';
 
 export interface AnalyticsSummary {
-  bookmarks: number;
   pending_comments: number;
   reported_comments: number;
 }

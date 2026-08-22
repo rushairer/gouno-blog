@@ -70,21 +70,6 @@ func TestCommunityRepositoryInteractionOwnershipAndUniqueness(t *testing.T) {
 		t.Fatalf("concurrent like was not idempotent: %#v", state)
 	}
 
-	if err := repo.SetBookmark(ctx, "reader", postID, true); err != nil {
-		t.Fatal(err)
-	}
-	readerBookmarks, err := repo.ListBookmarks(ctx, "reader")
-	if err != nil {
-		t.Fatal(err)
-	}
-	otherBookmarks, err := repo.ListBookmarks(ctx, "other")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(readerBookmarks) != 1 || len(otherBookmarks) != 0 {
-		t.Fatalf("bookmarks leaked across subjects: reader=%d other=%d", len(readerBookmarks), len(otherBookmarks))
-	}
-
 	parentSubject := "parent-user"
 	parent := &domain.Comment{
 		PostID: postID, Author: "Parent", AuthorSubject: &parentSubject, AuthorType: "user",

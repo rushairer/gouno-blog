@@ -60,7 +60,7 @@ func TestUpAppliesCurrentSchemaAndIsIdempotent(t *testing.T) {
 		t.Fatalf("fresh-install starter bootstrap: %v", err)
 	}
 	for _, table := range []string{
-		"post_reactions", "bookmarks", "comment_reports", "notifications", "post_versions",
+		"post_reactions", "comment_reports", "notifications", "post_versions",
 		"media_assets", "analytics_events", "ai_provider_profiles", "ai_agents",
 		"ai_agent_runs", "ai_tool_calls", "ai_approvals", "ai_usage_events",
 		"ai_embedding_profiles", "ai_content_index_jobs", "ai_content_chunks",

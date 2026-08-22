@@ -17,7 +17,6 @@ type fakeCommunityRepo struct {
 	moderateID    int64
 	moderateState string
 	likes         map[string]bool
-	bookmarks     map[string]bool
 	notifications map[string][]*domain.Notification
 }
 
@@ -48,18 +47,8 @@ func (r *fakeCommunityRepo) SetLike(_ context.Context, postID int64, actor strin
 	r.likes[actor] = liked
 	return &domain.CommunityState{Liked: liked, LikesCount: 1}, nil
 }
-func (r *fakeCommunityRepo) CommunityState(_ context.Context, _ int64, actor, subject string) (*domain.CommunityState, error) {
-	return &domain.CommunityState{Liked: r.likes[actor], Bookmarked: r.bookmarks[subject]}, nil
-}
-func (r *fakeCommunityRepo) SetBookmark(_ context.Context, subject string, postID int64, bookmarked bool) error {
-	if r.bookmarks == nil {
-		r.bookmarks = map[string]bool{}
-	}
-	r.bookmarks[subject] = bookmarked
-	return nil
-}
-func (*fakeCommunityRepo) ListBookmarks(context.Context, string) ([]*domain.Bookmark, error) {
-	return nil, nil
+func (r *fakeCommunityRepo) CommunityState(_ context.Context, _ int64, actor, _ string) (*domain.CommunityState, error) {
+	return &domain.CommunityState{Liked: r.likes[actor]}, nil
 }
 func (r *fakeCommunityRepo) ListNotifications(_ context.Context, subject string, _, _ int) ([]*domain.Notification, int, error) {
 	return r.notifications[subject], len(r.notifications[subject]), nil
@@ -134,13 +123,6 @@ func TestCommunityRejectsInvalidModerationStateAndDuplicateReport(t *testing.T) 
 	err := svc.ReportComment(context.Background(), 3, Actor{Key: "anon:a"}, "spam")
 	if !errors.Is(err, repository.ErrDuplicateInteraction) {
 		t.Fatalf("expected duplicate report error, got %v", err)
-	}
-}
-
-func TestCommunityBookmarkRequiresAuthenticatedSubject(t *testing.T) {
-	svc := newCommunityServiceForTest(&fakeCommunityRepo{})
-	if err := svc.SetBookmark(context.Background(), "", 1, true); err == nil {
-		t.Fatal("expected empty subject to fail")
 	}
 }
 

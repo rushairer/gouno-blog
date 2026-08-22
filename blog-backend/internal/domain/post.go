@@ -74,11 +74,6 @@ type Comment struct {
 	CreatedAt     time.Time `json:"created_at"`
 }
 
-type Bookmark struct {
-	Post      *Post     `json:"post"`
-	CreatedAt time.Time `json:"created_at"`
-}
-
 type Notification struct {
 	ID        int64      `json:"id"`
 	Type      string     `json:"type"`
@@ -96,7 +91,6 @@ type Notification struct {
 
 type CommunityState struct {
 	Liked      bool  `json:"liked"`
-	Bookmarked bool  `json:"bookmarked"`
 	LikesCount int64 `json:"likes_count"`
 }
 
@@ -143,7 +137,6 @@ type AnalyticsSummary struct {
 	PublishedPosts  int64             `json:"published_posts"`
 	TotalViews      int64             `json:"total_views"`
 	TotalLikes      int64             `json:"total_likes"`
-	TotalBookmarks  int64             `json:"total_bookmarks"`
 	TotalComments   int64             `json:"total_comments"`
 	PendingComments int64             `json:"pending_comments"`
 	ReportedItems   int64             `json:"reported_items"`
