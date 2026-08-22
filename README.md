@@ -6,7 +6,7 @@ Gouno Blog 是一个构建于 GoUno 与 GOSSO 的开源、自托管博客运营�
 
 ## ✨ AI Agent 核心能力
 
-- **原生运营工作流**：在 `/admin/agents` 集中管理 Provider、Agent、Cron 任务和运行历史，无需依赖外部自动化平台。
+- **原生运营工作流**：在 `/admin/ai-ops` 集中管理 Provider、Agent、Workflow、Cron 任务和运行历史，无需依赖外部自动化平台。
 - **受控执行**：支持 OpenAI 兼容与 Anthropic Provider、模型与预算边界、工具白名单、上游访问策略及限流。
 - **人工在环**：涉及内容写入的动作先生成提案，由具备权限的管理员审核、批准或拒绝。
 - **可审计可追溯**：持久化 Agent Run、工具调用、Token 用量、审批决定与操作人，便于复盘与治理。
@@ -27,8 +27,8 @@ Gouno Blog 是一个构建于 GoUno 与 GOSSO 的开源、自托管博客运营�
   - `/identity-admin/` -> **gosso-admin-frontend** (GOSSO 身份管理控制台)
   - `/api/v1/`、`/oauth2/`、`/oidc/`、`/.well-known/` -> **gosso**
 * **GOSSO / OIDC Provider**：负责登录、授权码流程、Token 签发、MFA、Passkey 等身份能力；本地默认使用 `ghcr.io/rushairer/gosso` 镜像。
-* **blog-backend**：博客 API 后端，使用 `gouno` Web 框架开发，向身份服务拉取 JWKS 公钥并校验登录凭证与用户权限；内置受控 AI Agent Runner、Cron Scheduler、Blog Tools 与人工审批。
-* **blog-frontend**：基于 React 构建的单页面应用（SPA），提供门户展示、`/admin` 博客管理控制台和 `/admin/agents` AI Agent 控制台。
+* **blog-backend**：博客 API 后端，使用 `gouno` Web 框架开发，向身份服务拉取 JWKS 公钥并校验登录凭证与用户权限；内置受控 AI Agent Runner、Workflow 引擎、Cron Scheduler、Blog Tools 与人工审批。
+* **blog-frontend**：基于 React 构建的单页面应用（SPA），提供门户展示、`/admin` 博客管理控制台和 `/admin/ai-ops` AI 运营控制台。
 
 ---
 
@@ -133,7 +133,7 @@ docker compose -f docker-compose.yml -f docker-compose.source.yml up -d --build
 ### 5. 访问测试
 - 打开浏览器访问门户：[https://localhost:8443/](https://localhost:8443/)
 - 访问博客后台管理（触发 SSO 登录流）：[https://localhost:8443/admin](https://localhost:8443/admin)
-- 访问 AI Agent 控制台：[https://localhost:8443/admin/agents](https://localhost:8443/admin/agents)
+- 访问 AI 运营控制台：[https://localhost:8443/admin/ai-ops](https://localhost:8443/admin/ai-ops)
 - 访问 GOSSO 身份管理控制台：[https://localhost:8443/identity-admin](https://localhost:8443/identity-admin)
 - 访问 API Swagger 文档：[https://localhost:8443/swagger](https://localhost:8443/swagger)
 - 使用本地默认管理员账户登录：
