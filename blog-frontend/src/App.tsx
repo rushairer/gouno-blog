@@ -16,7 +16,6 @@ import Callback from './pages/Callback';
 import Login from './pages/Login';
 import { canManageBlog, isLoggedIn, redirectToAuthorize } from './auth';
 const Settings = React.lazy(() => import('./pages/Settings'));
-const Bookmarks = React.lazy(() => import('./pages/Bookmarks'));
 const Dashboard = React.lazy(() => import('./pages/admin/Dashboard'));
 const AdminPosts = React.lazy(() => import('./pages/admin/Posts'));
 const PostEditor = React.lazy(() => import('./pages/admin/PostEditor'));
@@ -79,10 +78,8 @@ export default function App() {
     <Route path="/archive" element={<Public><Archive /></Public>} />
     <Route path="/about" element={<Public><About /></Public>} />
     <Route path="/search" element={<Public><ArticleIndex mode="search" /></Public>} />
-    <Route path="/account/bookmarks" element={<Public><Bookmarks /></Public>} />
     <Route path="/account/notifications" element={<Navigate replace to="/admin/notifications" />} />
     <Route path="/account/settings" element={<Public><Settings /></Public>} />
-    <Route path="/bookmarks" element={<Navigate replace to="/account/bookmarks" />} />
     <Route path="/notifications" element={<Navigate replace to="/admin/notifications" />} />
     <Route path="/settings" element={<Navigate replace to="/account/settings" />} />
 

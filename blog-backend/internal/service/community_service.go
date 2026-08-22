@@ -76,8 +76,6 @@ type CommunityRepository interface {
 	ReportComment(context.Context, int64, string, string) error
 	SetLike(context.Context, int64, string, bool) (*domain.CommunityState, error)
 	CommunityState(context.Context, int64, string, string) (*domain.CommunityState, error)
-	SetBookmark(context.Context, string, int64, bool) error
-	ListBookmarks(context.Context, string) ([]*domain.Bookmark, error)
 	ListNotifications(context.Context, string, int, int) ([]*domain.Notification, int, error)
 	ReadNotification(context.Context, string, int64) error
 	ReadAllNotifications(context.Context, string) error
@@ -201,18 +199,6 @@ func (s *CommunityService) SetLike(ctx context.Context, postID int64, actor Acto
 
 func (s *CommunityService) State(ctx context.Context, postID int64, actor Actor) (*domain.CommunityState, error) {
 	return s.repo.CommunityState(ctx, postID, actor.Key, actor.Subject)
-}
-
-func (s *CommunityService) SetBookmark(ctx context.Context, subject string, postID int64, bookmarked bool) error {
-	subject = strings.TrimSpace(subject)
-	if subject == "" {
-		return errors.New("unauthenticated")
-	}
-	return s.repo.SetBookmark(ctx, subject, postID, bookmarked)
-}
-
-func (s *CommunityService) ListBookmarks(ctx context.Context, subject string) ([]*domain.Bookmark, error) {
-	return s.repo.ListBookmarks(ctx, subject)
 }
 
 func (s *CommunityService) ListNotifications(ctx context.Context, subject string, page, pageSize int) ([]*domain.Notification, int, error) {

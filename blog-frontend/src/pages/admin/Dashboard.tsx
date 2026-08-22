@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, Bookmark, Bot, CheckCheck, ChevronRight, Eye, FileText, GitBranch, MessageSquare, Plus } from 'lucide-react';
+import { AlertTriangle, Bot, CheckCheck, ChevronRight, Eye, FileText, GitBranch, Heart, MessageSquare, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { analyticsApi } from '../../api/analytics';
 import { notificationsApi } from '../../api/notifications';
@@ -8,7 +8,7 @@ import { useAdminGuard } from '../../hooks/useAdminGuard';
 
 interface Summary {
   total_posts: number; published_posts: number; total_views: number; total_likes: number;
-  total_bookmarks: number; total_comments: number; pending_comments: number; reported_items: number;
+  total_comments: number; pending_comments: number; reported_items: number;
   top_posts: Array<{ id: number; title: string; slug: string; views_count: number; likes_count: number }>;
   daily_events: Array<{ date: string; count: number }>;
   ai_alerts: Array<{ id: number; type: string; title: string; body: string; href: string; created_at: string }>;
@@ -63,8 +63,8 @@ export default function Dashboard() {
         <div className="admin-metrics">
           <Panel as={Link} to="/admin/posts"><FileText /><span>文章</span><strong>{summary.total_posts}</strong><small>已发布 {summary.published_posts}</small></Panel>
           <Panel as={Link} to="/admin/posts?status=published"><Eye /><span>总阅读</span><strong>{summary.total_views.toLocaleString()}</strong><small>查看已发布文章</small></Panel>
+          <Panel as={Link} to="/admin/posts"><Heart /><span>总点赞</span><strong>{summary.total_likes.toLocaleString()}</strong><small>查看内容互动</small></Panel>
           <Panel as={Link} to="/admin/comments?status=pending"><MessageSquare /><span>评论</span><strong>{summary.total_comments}</strong><small>待审核 {summary.pending_comments}</small></Panel>
-          <Panel as={Link} to="/admin/posts"><Bookmark /><span>收藏</span><strong>{summary.total_bookmarks}</strong><small>查看内容表现</small></Panel>
         </div>
         <div className="dashboard-grid">
           <Panel className="traffic-panel"><div className="panel-heading"><h2>30 天流量趋势</h2><span>页面事件</span></div><div className="admin-chart" role="img" aria-label="最近 30 天访问趋势">{summary.daily_events.map((item) => <div key={item.date} title={`${item.date}: ${item.count}`}><span style={{ height: `${Math.max(4, item.count / max * 100)}%` }} /><small>{item.date.slice(5)}</small></div>)}</div></Panel>

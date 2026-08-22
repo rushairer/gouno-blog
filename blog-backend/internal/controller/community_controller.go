@@ -214,28 +214,6 @@ func subject(c *gin.Context) string {
 	return sub
 }
 
-func (ctrl *CommunityController) SetBookmark(c *gin.Context, bookmarked bool) {
-	post, err := ctrl.svc.ResolvePublishedPost(c.Request.Context(), c.Param("postID"))
-	if err != nil {
-		WriteDomainError(c, err)
-		return
-	}
-	if err := ctrl.svc.SetBookmark(c.Request.Context(), subject(c), post.ID, bookmarked); err != nil {
-		WriteDomainError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"bookmarked": bookmarked}))
-}
-
-func (ctrl *CommunityController) ListBookmarks(c *gin.Context) {
-	items, err := ctrl.svc.ListBookmarks(c.Request.Context(), subject(c))
-	if err != nil {
-		WriteDomainError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
-}
-
 func (ctrl *CommunityController) ListNotifications(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "30"))

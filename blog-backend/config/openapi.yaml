@@ -395,7 +395,7 @@ paths:
             type: string
       responses:
         '200':
-          description: Like, bookmark, and current like count
+          description: Like and current like count
 
   /posts/{slugOrID}/like:
     put:
@@ -448,45 +448,6 @@ paths:
           description: This visitor already reported the comment
         '429':
           description: Interaction rate limit exceeded
-
-  /me/bookmarks:
-    get:
-      summary: List the signed-in user's bookmarks
-      security:
-        - BearerAuth: []
-      responses:
-        '200':
-          description: Bookmarked published articles
-        '401':
-          description: Unauthorized
-
-  /me/bookmarks/{postID}:
-    put:
-      summary: Bookmark an article
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: postID
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Article bookmarked
-    delete:
-      summary: Remove an article bookmark
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: postID
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Bookmark removed
 
   /me/notifications:
     get:

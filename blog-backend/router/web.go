@@ -201,8 +201,6 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 					"sub": values["sub"], "roles": values["roles"], "scope": values["scope"],
 				}))
 			})
-			me.GET("/bookmarks", communityCtrl.ListBookmarks)
-			me.PUT("/bookmarks/:postID", func(c *gin.Context) { communityCtrl.SetBookmark(c, true) })
 			me.GET("/notifications", communityCtrl.ListNotifications)
 			me.PUT("/notifications/read-all", communityCtrl.ReadAllNotifications)
 			me.PUT("/notifications/:id/read", communityCtrl.ReadNotification)

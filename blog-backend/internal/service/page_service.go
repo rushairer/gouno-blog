@@ -33,7 +33,6 @@ var reservedSlugs = map[string]bool{
 	"login":         true,
 	"callback":      true,
 	"account":       true,
-	"bookmarks":     true,
 	"notifications": true,
 	"settings":      true,
 	"media":         true,

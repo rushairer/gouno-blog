@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/lib/pq"
 	"github.com/rushairer/blog-backend/internal/domain"
 )
 
@@ -242,53 +241,14 @@ func (r *CommunityRepository) SetLike(ctx context.Context, postID int64, actorKe
 	return state, nil
 }
 
-func (r *CommunityRepository) CommunityState(ctx context.Context, postID int64, actorKey, subject string) (*domain.CommunityState, error) {
+func (r *CommunityRepository) CommunityState(ctx context.Context, postID int64, actorKey, _ string) (*domain.CommunityState, error) {
 	state := &domain.CommunityState{}
 	if err := r.db.QueryRowContext(ctx, `SELECT likes_count,
 		EXISTS(SELECT 1 FROM post_reactions WHERE post_id = p.id AND actor_key = $2)
 		FROM posts p WHERE p.id = $1`, postID, actorKey).Scan(&state.LikesCount, &state.Liked); err != nil {
 		return nil, err
 	}
-	if subject != "" {
-		if err := r.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM bookmarks WHERE post_id = $1 AND subject = $2)`, postID, subject).Scan(&state.Bookmarked); err != nil {
-			return nil, err
-		}
-	}
 	return state, nil
-}
-
-func (r *CommunityRepository) SetBookmark(ctx context.Context, subject string, postID int64, bookmarked bool) error {
-	if bookmarked {
-		_, err := r.db.ExecContext(ctx, `INSERT INTO bookmarks (subject, post_id)
-			SELECT $1, id FROM posts WHERE id = $2 AND status = 'published' ON CONFLICT DO NOTHING`, subject, postID)
-		return err
-	}
-	_, err := r.db.ExecContext(ctx, `DELETE FROM bookmarks WHERE subject = $1 AND post_id = $2`, subject, postID)
-	return err
-}
-
-func (r *CommunityRepository) ListBookmarks(ctx context.Context, subject string) ([]*domain.Bookmark, error) {
-	rows, err := r.db.QueryContext(ctx, `SELECT p.id, p.title, p.slug, p.summary, p.content, p.tags, p.status,
-		p.views_count, p.likes_count, p.published_at, p.scheduled_at, p.created_at, p.updated_at, b.created_at
-		FROM bookmarks b JOIN posts p ON p.id = b.post_id
-		WHERE b.subject = $1 AND p.status = 'published' ORDER BY b.created_at DESC`, subject)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	bookmarks := make([]*domain.Bookmark, 0)
-	for rows.Next() {
-		var post domain.Post
-		var bookmark domain.Bookmark
-		if err := rows.Scan(&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags),
-			&post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt,
-			&post.CreatedAt, &post.UpdatedAt, &bookmark.CreatedAt); err != nil {
-			return nil, err
-		}
-		bookmark.Post = &post
-		bookmarks = append(bookmarks, &bookmark)
-	}
-	return bookmarks, rows.Err()
 }
 
 func (r *CommunityRepository) ListNotifications(ctx context.Context, subject string, limit, offset int) ([]*domain.Notification, int, error) {

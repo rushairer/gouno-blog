@@ -19,7 +19,6 @@ const mockSummary = {
   published_posts: 8,
   total_views: 1200,
   total_likes: 35,
-  total_bookmarks: 12,
   total_comments: 5,
   pending_comments: 1,
   reported_items: 0,
