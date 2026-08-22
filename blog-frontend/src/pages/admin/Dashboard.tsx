@@ -16,17 +16,14 @@ interface Summary {
 
 function alertPresentation(alert: Summary['ai_alerts'][number]) {
   const workflow = alert.type === 'ai_workflow_failed';
-  const href = new URL(alert.href || '/admin/ai-ops', window.location.origin);
-  const workflowID = href.searchParams.get('workflow');
-  const runID = href.searchParams.get('run');
-  const destination = workflow
-    ? `/admin/ai-ops?tab=records&record=workflow${workflowID ? `&workflow=${workflowID}` : ''}${runID ? `&run=${runID}` : ''}`
-    : `/admin/ai-ops?tab=records&record=agent${runID ? `&run=${runID}` : ''}`;
+  const destination =
+    alert.href ||
+    (workflow ? '/admin/ai-ops?tab=records&record=workflow' : '/admin/ai-ops?tab=records&record=agent');
   return {
     destination,
     icon: workflow ? <GitBranch aria-hidden="true" /> : <Bot aria-hidden="true" />,
     label: workflow ? 'Workflow 执行失败' : 'Agent 执行失败',
-    action: runID ? '查看失败详情' : '打开运行中心',
+    action: destination.includes('run=') ? '查看失败详情' : '打开运行中心',
   };
 }
 

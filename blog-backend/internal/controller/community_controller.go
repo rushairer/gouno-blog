@@ -328,10 +328,6 @@ type moderateCommentRequest struct {
 	Status string `json:"status" binding:"required"`
 }
 
-type legacyVisibilityRequest struct {
-	IsVisible bool `json:"is_visible"`
-}
-
 func (ctrl *CommunityController) ModerateComment(c *gin.Context) {
 	id, ok := ParamPositiveID(c, "id")
 	if !ok {
@@ -343,27 +339,6 @@ func (ctrl *CommunityController) ModerateComment(c *gin.Context) {
 		return
 	}
 	if err := ctrl.svc.ModerateComment(c.Request.Context(), id, req.Status); err != nil {
-		WriteDomainError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
-}
-
-func (ctrl *CommunityController) LegacyVisibility(c *gin.Context) {
-	id, ok := ParamPositiveID(c, "id")
-	if !ok {
-		return
-	}
-	var req legacyVisibilityRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
-		return
-	}
-	status := "hidden"
-	if req.IsVisible {
-		status = "visible"
-	}
-	if err := ctrl.svc.ModerateComment(c.Request.Context(), id, status); err != nil {
 		WriteDomainError(c, err)
 		return
 	}
