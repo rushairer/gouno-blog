@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Clock3, GitBranch, RefreshCw, Settings2, ShieldCheck, Sparkles, X } from 'lucide-react';
 import { canManageBlog, isLoggedIn, redirectToAuthorize } from '../../auth';
 import { agentApi } from '../../api/agent';
@@ -72,6 +72,23 @@ export default function AgentConsole() {
   const [notice, setNotice] = useState('');
   const [testingConnections, setTestingConnections] = useState<string[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
+  const inspectedAgentRunFromURL = useRef(false);
+
+  useEffect(() => {
+    if (tab !== 'records' || recordType !== 'agent' || inspectedAgentRunFromURL.current) return;
+    const requestedID = Number(new URLSearchParams(window.location.search).get('run'));
+    if (!requestedID) return;
+    const requested = runs.find((r) => r.id === requestedID);
+    if (!requested) {
+      if (runs.length > 0) {
+        inspectedAgentRunFromURL.current = true;
+        agentApi.getAgentRunDetail(String(requestedID)).then(setSelectedRun).catch(() => {});
+      }
+      return;
+    }
+    inspectedAgentRunFromURL.current = true;
+    void inspectRun(requested);
+  }, [tab, recordType, runs]);
 
   const selectTab = (nextTab: ConsoleTab) => {
     setEditingAgent(null);

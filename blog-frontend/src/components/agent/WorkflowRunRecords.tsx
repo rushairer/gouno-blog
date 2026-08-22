@@ -45,7 +45,7 @@ export function WorkflowRunRecords({
     const value = Number(
       new URLSearchParams(window.location.search).get('workflow'),
     );
-    return workflows.some((workflow) => workflow.id === value) ? value : 0;
+    return value || 0;
   });
   const [selected, setSelected] = useState<WorkflowRunDetailData | null>(null);
   const [loadingID, setLoadingID] = useState<number | null>(null);
@@ -499,8 +499,18 @@ export function WorkflowRunRecords({
     const requestedID = Number(
       new URLSearchParams(window.location.search).get('run'),
     );
+    if (!requestedID) return;
     const requested = runs.find((run) => run.id === requestedID);
-    if (!requested) return;
+    if (!requested) {
+      if (runs.length > 0) {
+        inspectedFromURL.current = true;
+        workflowApi.getRuns().then((allRuns) => {
+          const found = allRuns.find((r) => r.id === requestedID);
+          if (found) void inspect(found);
+        }).catch(() => {});
+      }
+      return;
+    }
     inspectedFromURL.current = true;
     void inspect(requested);
   }, [inspect, runs]);
