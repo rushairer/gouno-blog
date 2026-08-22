@@ -47,16 +47,6 @@ export const commentsApi = {
     );
   },
 
-  async toggleCommentVisibility(commentID: number | string, isVisible: boolean): Promise<void> {
-    return readData<void>(
-      apiFetch(`/api/comments/${commentID}/visibility`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_visible: isVisible }),
-      })
-    );
-  },
-
   async moderateComment(commentID: number | string, status: 'visible' | 'hidden' | 'pending'): Promise<void> {
     return readData<void>(
       apiFetch(`/api/admin/comments/${commentID}`, {

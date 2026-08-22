@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { I18nProvider } from './i18n';
 import { ToastProvider } from './components/ui';
 import PublicShell from './layouts/PublicShell';
@@ -31,11 +31,6 @@ const MediaLibrary = React.lazy(() => import('./pages/admin/MediaLibrary'));
 const AIOperations = React.lazy(() => import('./pages/admin/AIOperations'));
 const AdminNotifications = React.lazy(() => import('./pages/admin/Notifications'));
 import CustomPageView from './pages/CustomPageView';
-
-function LegacyPostRedirect() {
-  const { slug } = useParams();
-  return <Navigate replace to={`/articles/${slug || ''}`} />;
-}
 
 function Public({ children }: { children: React.ReactNode }) {
   return <PublicShell><React.Suspense fallback={<div className="public-container state-page">正在载入内容…</div>}>{children}</React.Suspense></PublicShell>;
@@ -77,7 +72,6 @@ export default function App() {
     <Route path="/" element={<Public><Home /></Public>} />
     <Route path="/articles" element={<Public><ArticleIndex /></Public>} />
     <Route path="/articles/:slug" element={<Public><PostDetail /></Public>} />
-    <Route path="/posts/:slug" element={<LegacyPostRedirect />} />
     <Route path="/categories" element={<Public><Categories /></Public>} />
     <Route path="/categories/:slug" element={<Public><ArticleIndex mode="category" /></Public>} />
     <Route path="/tags" element={<Public><Tags /></Public>} />
@@ -94,7 +88,6 @@ export default function App() {
 
     <Route path="/admin" element={<Navigate replace to="/admin/dashboard" />} />
     <Route path="/admin/dashboard" element={<Admin><Dashboard /></Admin>} />
-    <Route path="/admin/analytics" element={<Navigate replace to="/admin/dashboard" />} />
     <Route path="/admin/posts" element={<Admin><AdminPosts /></Admin>} />
     <Route path="/admin/posts/new" element={<Admin><PostEditor /></Admin>} />
     <Route path="/admin/posts/:id/edit" element={<Admin><PostEditor /></Admin>} />

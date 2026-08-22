@@ -230,7 +230,6 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 			admin.GET("/posts/:slugOrID/comments/all", ctrl.GetAllComments)
 			admin.GET("/admin/comments", communityCtrl.ListAdminComments)
 			admin.PUT("/admin/comments/:id", communityCtrl.ModerateComment)
-			admin.PUT("/comments/:id/visibility", communityCtrl.LegacyVisibility)
 			admin.DELETE("/comments/:id", communityCtrl.DeleteComment)
 			admin.GET("/admin/posts/:id/versions", growthCtrl.ListVersions)
 			admin.POST("/admin/posts/:id/versions/:versionID/restore", growthCtrl.RestoreVersion)
