@@ -1184,7 +1184,7 @@ func (s *Service) Execute(ctx context.Context, runID int64) {
 			FROM ai_workflow_runs r JOIN ai_workflows w ON w.id=r.workflow_id WHERE r.id=$1`, runID).
 			Scan(&recipient, &name, &workflowID); queryErr == nil && recipient != nil {
 			_ = s.agents.Notify(ctx, *recipient, "ai_workflow_failed", "Workflow 运行失败："+name, message,
-				"/admin/ai-ops?tab=records&workflow="+strconv.FormatInt(workflowID, 10), "workflow-run-"+strconv.FormatInt(runID, 10))
+				"/admin/ai-ops?tab=records&record=workflow&workflow="+strconv.FormatInt(workflowID, 10)+"&run="+strconv.FormatInt(runID, 10), "workflow-run-"+strconv.FormatInt(runID, 10))
 		}
 	}
 }
