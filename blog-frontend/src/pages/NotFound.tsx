@@ -1,11 +1,13 @@
 import { BookOpen, FileText, FolderTree, Home, Search } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useI18n } from '../i18n';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 export default function NotFound() {
   const navigate = useNavigate();
   const { locale } = useI18n();
   const isZh = locale === 'zh';
+  usePageTitle(isZh ? '404 页面未找到' : '404 Not Found');
 
   const handleSearch = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { EmptyState, LoadingState } from '../components/ui';
 import { postsApi } from '../api/posts';
+import { usePageTitle } from '../hooks/usePageTitle';
 import type { Post } from '../types/blog';
 
 export default function Archive() {
+  usePageTitle('归档');
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => { postsApi.getPosts(new URLSearchParams({ page: '1', pageSize: '100' })).then((data) => setPosts(data.list || [])).finally(() => setLoading(false)); }, []);

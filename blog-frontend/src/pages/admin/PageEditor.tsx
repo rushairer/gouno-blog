@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { AdminPageState, Button, ConfirmDialog, Feedback, Field, Input, Select, Textarea, useToast } from '../../components/ui';
 import { MarkdownRenderer } from '../../components/MarkdownRenderer';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
+import { usePageTitle } from '../../hooks/usePageTitle';
 import { pagesApi } from '../../api/pages';
 import { agentApi } from '../../api/agent';
 import type { CustomPage, PageTemplate, PostStatus } from '../../types/blog';
@@ -32,6 +33,8 @@ export default function PageEditor() {
   const { notify } = useToast();
 
   const [page, setPage] = useState<CustomPage>(emptyPage);
+  const editorTitle = isNew ? (page.title ? `新建单页: ${page.title}` : '新建单页') : (page.title ? `编辑: ${page.title}` : '编辑单页');
+  usePageTitle(editorTitle, { admin: true });
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<Date | null>(null);

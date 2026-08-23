@@ -3,9 +3,11 @@ import { ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { EmptyState, LoadingState } from '../components/ui';
 import { siteApi } from '../api/site';
+import { usePageTitle } from '../hooks/usePageTitle';
 import type { Category } from '../types/blog';
 
 export default function Categories() {
+  usePageTitle('分类');
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
