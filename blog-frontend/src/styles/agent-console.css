@@ -657,8 +657,7 @@ td .agent-chip-list {
   padding: 5px 8px;
 }
 
-.provider-default,
-.provider-default-mark {
+.provider-default {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -666,9 +665,12 @@ td .agent-chip-list {
   font-size: 11px;
   font-weight: 700;
   margin-top: 4px;
+  margin-right: 6px;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  padding: 1px 6px;
+  border-radius: 4px;
 }
-
-.provider-default-mark svg { width: 14px; height: 14px; }
 
 .provider-defaults {
   display: grid;
@@ -759,11 +761,7 @@ td .agent-chip-list {
 .workflow-advanced summary { cursor: pointer; color: var(--color-text-main); font-weight: 800; }
 .workflow-advanced summary small { margin-left: 8px; color: var(--color-text-muted); font-weight: 400; }
 
-/* Defaults are global settings; the table deliberately remains connection-only. */
-.agent-table .provider-default,
-.agent-table .provider-default-mark,
-.agent-table button[title="设为默认写作模型"],
-.agent-table button[title="设为默认图片生成模型"] { display: none; }
+/* Defaults are configured via the top provider-defaults card. */
 
 @media (max-width: 900px) {
   .provider-defaults { grid-template-columns: 1fr; gap: 14px; }
