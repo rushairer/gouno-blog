@@ -348,7 +348,31 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .admin-page .media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
 .admin-page .media-card { gap: 12px; padding: 16px; }
 .admin-page .media-card img { border-radius: 6px; }
-.admin-page .media-card .row-actions { margin-top: auto; }
+.admin-page .media-card .row-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: auto;
+  width: 100%;
+}
+.admin-page .media-card .row-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 8px;
+  font-size: 13px;
+  min-height: 34px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+.admin-page .media-card .row-actions .btn svg {
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+}
 .admin-page .panel { border-color: var(--admin-line); border-radius: var(--radius-panel); background: var(--ui-panel); box-shadow: none; }
 .admin-page .btn, .editor-page .btn { min-height: var(--control-height); border-radius: var(--radius-control); font-size: var(--font-size-control); font-weight: 700; }
 .admin-page .btn-primary, .editor-page .btn-primary { border-color: var(--action-primary-bg); background: var(--action-primary-bg); color: var(--action-primary-fg); }
