@@ -6,11 +6,13 @@ import {
   Badge,
   Button,
   BulkActionBar,
+  Drawer,
   EditorPanel,
   Field,
   FormActions,
   FormLayout,
   Input,
+  Modal,
   Pagination,
   SectionHeading,
   SectionNav,
@@ -176,5 +178,62 @@ describe('shared UI primitives', () => {
     render(<SectionHeading title="最新文章" action={<a href="/all">查看全部</a>} />);
     expect(screen.getByRole('heading', { name: '最新文章' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '查看全部' })).toHaveAttribute('href', '/all');
+  });
+
+  it('keeps focus in input inside Drawer during typing across re-renders', async () => {
+    const user = userEvent.setup();
+    function DrawerFormTest() {
+      const [open, setOpen] = useState(true);
+      const [text, setText] = useState('');
+      return (
+        <Drawer open={open} title="新建分类" onClose={() => setOpen(false)}>
+          <input
+            aria-label="分类名称"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            autoFocus
+          />
+        </Drawer>
+      );
+    }
+    render(<DrawerFormTest />);
+    const input = screen.getByRole('textbox', { name: '分类名称' });
+    expect(document.activeElement).toBe(input);
+    await user.type(input, '架构设计');
+    expect(input).toHaveValue('架构设计');
+    expect(document.activeElement).toBe(input);
+  });
+
+  it('keeps focus in input inside Modal during typing and closes on Escape', async () => {
+    const user = userEvent.setup();
+    let closed = false;
+    function ModalFormTest() {
+      const [open, setOpen] = useState(true);
+      const [text, setText] = useState('');
+      return (
+        <Modal
+          open={open}
+          title="重命名标签"
+          onClose={() => {
+            closed = true;
+            setOpen(false);
+          }}
+        >
+          <input
+            aria-label="标签名称"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+          />
+        </Modal>
+      );
+    }
+    render(<ModalFormTest />);
+    const input = screen.getByRole('textbox', { name: '标签名称' });
+    await user.click(input);
+    await user.type(input, 'React19');
+    expect(input).toHaveValue('React19');
+    expect(document.activeElement).toBe(input);
+    await user.keyboard('{Escape}');
+    expect(closed).toBe(true);
   });
 });
