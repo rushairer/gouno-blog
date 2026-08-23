@@ -28,6 +28,10 @@ export function ActionGroup({ children, className = '' }: React.HTMLAttributes<H
   return <div className={classes('action-group', className)}>{children}</div>;
 }
 
+export function TableContainer({ children, className = '' }: React.HTMLAttributes<HTMLDivElement>) {
+  return <div className={classes('table-scroll', className)}>{children}</div>;
+}
+
 export function PanelHeader({
   title,
   description,

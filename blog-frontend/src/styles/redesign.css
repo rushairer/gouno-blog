@@ -410,8 +410,11 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .toast { pointer-events: auto; min-height: 48px; display: grid; grid-template-columns: 20px 1fr 28px; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--ui-border); border-left: 4px solid var(--ui-brand); border-radius: var(--radius-control); background: var(--ui-panel); box-shadow: var(--shadow-float); color: var(--ui-text); font-size: 13px; font-weight: 500; animation: toast-slide-down 0.22s cubic-bezier(0.16, 1, 0.3, 1); }
 @keyframes toast-slide-down { from { opacity: 0; transform: translateY(-12px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
 .toast--error { border-left-color: var(--ui-danger); }
+.toast--warning { border-left-color: var(--ui-warning); }
+.toast--info { border-left-color: var(--ui-brand); }
 .toast > svg { width: 18px; height: 18px; color: var(--ui-brand); flex-shrink: 0; }
 .toast--error > svg { color: var(--ui-danger); }
+.toast--warning > svg { color: var(--ui-warning); }
 .toast button { width: 28px; height: 28px; display: grid; place-items: center; border: 0; background: transparent; color: var(--ui-text-secondary); cursor: pointer; border-radius: 4px; transition: all 120ms ease; }
 .toast button:hover { background: var(--ui-control); color: var(--ui-text); }
 .toast button svg { width: 15px; height: 15px; }

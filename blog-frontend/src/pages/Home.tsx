@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ArrowRight, GitBranch, Mail, Rss } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { EmptyState, LoadingState, SectionHeading } from '../components/ui';
+import { EmptyState, Feedback, LoadingState, SectionHeading } from '../components/ui';
 import { authorInitials, DEFAULT_SITE_SETTINGS } from '../config/site-defaults';
 import { postsApi } from '../api/posts';
 import { siteApi } from '../api/site';
@@ -87,7 +87,7 @@ export default function Home() {
       </section>
 
       <div className="public-container">
-        {error ? <p className="feedback feedback--error">{error}</p> : null}
+        {error ? <Feedback type="error">{error}</Feedback> : null}
         {!error && posts.length === 0 ? <EmptyState label="这里还没有文章。完成第一篇写作后，它会成为首页主角。" /> : null}
         {posts.length > 1 ? (
           <section className="home-section">

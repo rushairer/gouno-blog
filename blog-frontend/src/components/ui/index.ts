@@ -6,4 +6,6 @@ export * from './Layout';
 export * from './Modal';
 export * from './Tabs';
 export * from './Feedback';
+export * from './Toast';
 export * from './Pagination';
+export * from './StatusIndicator';

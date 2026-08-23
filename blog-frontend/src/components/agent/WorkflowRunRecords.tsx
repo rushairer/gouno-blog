@@ -10,7 +10,7 @@ import type {
   WorkflowRun,
   WorkflowStepRun,
 } from '../../types/agent';
-import { Button, EmptyState, FilterBar, Select, WorkspacePanel } from '../ui';
+import { Button, EmptyState, Feedback, FilterBar, Select, WorkspacePanel } from '../ui';
 import { ArticlePreviewModal } from './ArticlePreviewModal';
 import { StatusPill } from './StatusPill';
 import { WorkflowRunDetail } from './WorkflowRunDetail';
@@ -517,7 +517,7 @@ export function WorkflowRunRecords({
 
   return (
     <div className="workflow-records section-stack">
-      {error ? <p className="workflow-records__error">{error}</p> : null}
+      {error ? <Feedback type="error">{error}</Feedback> : null}
       {selected ? (
         <WorkflowRunDetail
           selected={selected}

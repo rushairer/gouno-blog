@@ -23,6 +23,8 @@ import {
   TabList,
   TabPanel,
   Tabs,
+  ToastProvider,
+  useToast,
 } from '../ui';
 
 describe('shared UI primitives', () => {
@@ -172,6 +174,28 @@ describe('shared UI primitives', () => {
     );
     expect(screen.getByRole('navigation', { name: '资源分页' })).toHaveClass('pagination-compact');
     expect(screen.getByText('2 / 5')).toBeInTheDocument();
+  });
+
+  it('renders, dismisses, and semantically classifies shared toasts', async () => {
+    const user = userEvent.setup();
+    function ToastExample() {
+      const { notify } = useToast();
+      return <>
+        <button type="button" onClick={() => notify('已保存')}>成功</button>
+        <button type="button" onClick={() => notify('需要确认', 'warning', { duration: 0 })}>警告</button>
+      </>;
+    }
+    render(<ToastProvider><ToastExample /></ToastProvider>);
+
+    await user.click(screen.getByRole('button', { name: '成功' }));
+    await user.click(screen.getByRole('button', { name: '警告' }));
+    expect(screen.getByRole('status')).toHaveTextContent('已保存');
+    expect(screen.getByRole('alert')).toHaveTextContent('需要确认');
+    expect(screen.getByRole('alert')).toHaveClass('toast--warning');
+
+    await user.click(screen.getAllByRole('button', { name: '关闭提示' })[0]);
+    expect(screen.queryByText('已保存')).not.toBeInTheDocument();
+    expect(screen.getByText('需要确认')).toBeInTheDocument();
   });
 
   it('renders SectionHeading with title and optional action link', () => {
