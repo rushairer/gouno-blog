@@ -233,6 +233,7 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 			admin.POST("/admin/posts/:id/versions/:versionID/restore", growthCtrl.RestoreVersion)
 			admin.GET("/admin/media", growthCtrl.ListMedia)
 			admin.POST("/admin/media", growthCtrl.UploadMedia)
+			admin.PUT("/admin/media/:id", growthCtrl.UpdateMedia)
 			admin.GET("/admin/media/:id/references", growthCtrl.MediaReferences)
 			admin.DELETE("/admin/media/:id", growthCtrl.DeleteMedia)
 			admin.GET("/admin/analytics", growthCtrl.Analytics)

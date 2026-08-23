@@ -67,6 +67,10 @@ func TestGrowthRepositoryContentLifecycle(t *testing.T) {
 	if !found {
 		t.Fatal("created media was not listed")
 	}
+	updatedAsset, err := repo.UpdateMediaAltText(ctx, asset.ID, "Updated alt text")
+	if err != nil || updatedAsset.AltText != "Updated alt text" {
+		t.Fatalf("update alt text failed: asset=%#v err=%v", updatedAsset, err)
+	}
 	if _, err := repo.DeleteMedia(ctx, asset.ID); err != nil {
 		t.Fatal(err)
 	}

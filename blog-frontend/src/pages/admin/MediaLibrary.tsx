@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Copy, ImagePlus, LoaderCircle, Sparkles, Trash2, X } from 'lucide-react';
+import { Copy, ImagePlus, Link2, LoaderCircle, Pencil, Sparkles, Trash2, X } from 'lucide-react';
 import { canManageBlog, isLoggedIn, redirectToAuthorize } from '../../auth';
 import { mediaApi } from '../../api/media';
 import { agentApi } from '../../api/agent';
@@ -26,6 +26,19 @@ function isBatchDeleteTarget(target: DeleteTarget): target is BatchDeleteTarget 
   return Boolean(target && 'kind' in target && target.kind === 'batch');
 }
 
+export function getRelativeMediaUrl(rawUrl: string): string {
+  if (!rawUrl) return '';
+  try {
+    if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
+      const parsed = new URL(rawUrl);
+      return parsed.pathname + parsed.search + parsed.hash;
+    }
+  } catch {
+    // fallback
+  }
+  return rawUrl;
+}
+
 export default function MediaLibrary() {
   const { t, formatDateTime } = useI18n();
   const { notify } = useToast();
@@ -42,6 +55,12 @@ export default function MediaLibrary() {
   const [references, setReferences] = useState<MediaReference[]>([]);
   const [selectedAssets, setSelectedAssets] = useState<number[]>([]);
   const [aiOpen, setAIOpen] = useState(false);
+
+  // Edit Alt Text states
+  const [editingAsset, setEditingAsset] = useState<MediaAsset | null>(null);
+  const [editAltText, setEditAltText] = useState('');
+  const [savingAltText, setSavingAltText] = useState(false);
+  const [editAltError, setEditAltError] = useState('');
 
   // AI Text-to-Image states
   const [aiDrawerOpen, setAiDrawerOpen] = useState(false);
@@ -86,6 +105,31 @@ export default function MediaLibrary() {
       setError(err instanceof Error ? err.message : t('requestFailed'));
     } finally {
       setUploading(false);
+    }
+  };
+
+  const openEditAltDrawer = (asset: MediaAsset) => {
+    setEditingAsset(asset);
+    setEditAltText(asset.alt_text || '');
+    setEditAltError('');
+  };
+
+  const handleSaveAltText = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editingAsset) return;
+    setSavingAltText(true);
+    setEditAltError('');
+    try {
+      const updated = await mediaApi.updateMedia(editingAsset.id, { alt_text: editAltText.trim() });
+      setAssets((current) =>
+        current.map((item) => (item.id === updated.id ? { ...item, alt_text: updated.alt_text } : item))
+      );
+      setEditingAsset(null);
+      notify(t('altTextUpdated'), 'success');
+    } catch (err) {
+      setEditAltError(err instanceof Error ? err.message : t('requestFailed'));
+    } finally {
+      setSavingAltText(false);
     }
   };
 
@@ -260,12 +304,41 @@ export default function MediaLibrary() {
                 <div>
                   <strong>{asset.filename}</strong>
                   <small>{Math.ceil(asset.size_bytes / 1024)} KB · {formatDateTime(asset.created_at)} · 引用 {asset.usage_count || 0}</small>
+                  <small className="media-card__alt" title={asset.alt_text ? `${t('altText')}: ${asset.alt_text}` : undefined}>
+                    {t('altText')}: {asset.alt_text || <span style={{ opacity: 0.6 }}>{t('notSet')}</span>}
+                  </small>
                 </div>
                 <div className="row-actions">
-                  <button className="btn btn-secondary" type="button" onClick={() => void copyText(`![${asset.alt_text || asset.filename}](${asset.url})`, notify, '媒体 Markdown 已复制。')}>
+                  <button
+                    className="btn btn-secondary"
+                    type="button"
+                    title={t('copyRelativeUrl')}
+                    onClick={() => void copyText(getRelativeMediaUrl(asset.url), notify, t('relativeUrlCopied'))}
+                  >
+                    <Link2 />{t('copyRelativeUrl')}
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    type="button"
+                    title={t('copyMarkdown')}
+                    onClick={() => void copyText(`![${asset.alt_text || asset.filename}](${asset.url})`, notify, '媒体 Markdown 已复制。')}
+                  >
                     <Copy />{t('copyMarkdown')}
                   </button>
-                  <button className="btn btn-danger" type="button" onClick={() => { setDeleteTarget(asset); setReferences([]); setError(''); }}>
+                  <button
+                    className="btn btn-secondary"
+                    type="button"
+                    title={t('editAltText')}
+                    onClick={() => openEditAltDrawer(asset)}
+                  >
+                    <Pencil />{t('editAltText')}
+                  </button>
+                  <button
+                    className="btn btn-danger"
+                    type="button"
+                    title={t('delete')}
+                    onClick={() => { setDeleteTarget(asset); setReferences([]); setError(''); }}
+                  >
                     <Trash2 />{t('delete')}
                   </button>
                 </div>
@@ -376,6 +449,48 @@ export default function MediaLibrary() {
             </Button>
           </div>
         </div>
+      </Drawer>
+
+      {/* 编辑替代文本 Drawer */}
+      <Drawer
+        open={editingAsset !== null}
+        title={t('editAltText')}
+        description="修改图片的替代文本（Alt Text），便于内容复用与无障碍阅读。"
+        onClose={() => !savingAltText && setEditingAsset(null)}
+      >
+        {editingAsset ? (
+          <form className="drawer-form media-edit-drawer" onSubmit={handleSaveAltText}>
+            <div className="editor-ai-image-preview" style={{ marginBottom: 12 }}>
+              <img
+                src={editingAsset.url}
+                alt={editingAsset.alt_text || editingAsset.filename}
+                style={{ maxHeight: 200, objectFit: 'contain', width: '100%', borderRadius: 8, background: 'var(--bg-muted)' }}
+              />
+            </div>
+            <p className="upload-file-summary">
+              已选择：<strong>{editingAsset.filename}</strong> · {Math.ceil(editingAsset.size_bytes / 1024)} KB · 引用 {editingAsset.usage_count || 0} 次
+            </p>
+            <Field label={t('altText')} hint="简洁说明图片内容；在 Markdown 插入时将默认作为图片说明。">
+              <Input
+                value={editAltText}
+                onChange={(event) => setEditAltText(event.target.value)}
+                placeholder="例如：系统架构图解"
+                autoFocus
+              />
+            </Field>
+            {editAltError ? (
+              <Feedback type="error">{editAltError}</Feedback>
+            ) : null}
+            <div className="drawer-actions">
+              <Button variant="secondary" type="button" disabled={savingAltText} onClick={() => setEditingAsset(null)}>
+                {t('cancel')}
+              </Button>
+              <Button variant="primary" loading={savingAltText} type="submit">
+                <Pencil />{savingAltText ? t('saving') : t('saveChanges')}
+              </Button>
+            </div>
+          </form>
+        ) : null}
       </Drawer>
 
       <ConfirmDialog

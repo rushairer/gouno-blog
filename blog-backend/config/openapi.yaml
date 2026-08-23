@@ -613,6 +613,33 @@ paths:
           description: Unsupported image type or file larger than 10 MB
 
   /admin/media/{id}:
+    put:
+      summary: Update a media asset metadata (e.g. alt text)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                alt_text:
+                  type: string
+                  description: Alternative text for accessibility and Markdown insertion
+      responses:
+        '200':
+          description: Media updated
+        '400':
+          description: Invalid request body or parameter
+        '404':
+          description: Media asset not found
     delete:
       summary: Delete a media asset and its local file
       security:

@@ -70,4 +70,79 @@ describe('MediaLibrary', () => {
     expect(screen.getByText('avatar.jpeg')).toBeInTheDocument();
     expect(screen.getByText('2 / 2')).toBeInTheDocument();
   });
+
+  it('correctly parses relative media url via getRelativeMediaUrl', async () => {
+    const { getRelativeMediaUrl } = await import('../MediaLibrary');
+    expect(getRelativeMediaUrl('https://example.com/media/photo.png')).toBe('/media/photo.png');
+    expect(getRelativeMediaUrl('http://localhost:8080/media/upload.jpg?query=1#hash')).toBe('/media/upload.jpg?query=1#hash');
+    expect(getRelativeMediaUrl('/media/direct.webp')).toBe('/media/direct.webp');
+    expect(getRelativeMediaUrl('')).toBe('');
+  });
+
+  it('supports copying relative link to clipboard', async () => {
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: writeTextMock,
+      },
+    });
+
+    const mockAssets = [
+      { id: 1, filename: 'banner.png', url: 'https://cdn.domain.com/media/banner.png', content_type: 'image/png', size_bytes: 1024, alt_text: 'Header Banner', created_at: '2026-08-16T12:00:00Z', usage_count: 1 },
+    ];
+    vi.mocked((await import('../../../auth')).apiFetch).mockResolvedValueOnce(Response.json({ data: mockAssets }));
+
+    render(<ToastProvider><MediaLibrary /></ToastProvider>);
+    expect(await screen.findByText('banner.png')).toBeInTheDocument();
+
+    const copyRelBtn = screen.getByRole('button', { name: /Copy Relative URL|复制相对链接/i });
+    expect(copyRelBtn).toBeInTheDocument();
+    fireEvent.click(copyRelBtn);
+
+    expect(writeTextMock).toHaveBeenCalledWith('/media/banner.png');
+  });
+
+  it('opens edit alt text drawer and updates asset alt text successfully', async () => {
+    const mockAssets = [
+      { id: 1, filename: 'banner.png', url: '/media/banner.png', content_type: 'image/png', size_bytes: 1024, alt_text: 'Old Alt', created_at: '2026-08-16T12:00:00Z', usage_count: 1 },
+    ];
+    const mockUpdated = {
+      id: 1,
+      filename: 'banner.png',
+      url: '/media/banner.png',
+      content_type: 'image/png',
+      size_bytes: 1024,
+      alt_text: 'New Alt Description',
+      created_at: '2026-08-16T12:00:00Z',
+      usage_count: 1,
+    };
+
+    const apiFetchMock = vi.mocked((await import('../../../auth')).apiFetch);
+    apiFetchMock
+      .mockResolvedValueOnce(Response.json({ data: mockAssets }))
+      .mockResolvedValueOnce(Response.json({ data: mockUpdated }));
+
+    render(<ToastProvider><MediaLibrary /></ToastProvider>);
+    expect(await screen.findByText('banner.png')).toBeInTheDocument();
+    expect(screen.getByText(/Old Alt/)).toBeInTheDocument();
+
+    const editBtn = screen.getByRole('button', { name: /Edit Alt Text|编辑替代文本/i });
+    fireEvent.click(editBtn);
+
+    expect(screen.getByRole('dialog', { name: /Edit Alt Text|编辑替代文本/i })).toBeInTheDocument();
+    const editDrawer = screen.getByRole('dialog', { name: /Edit Alt Text|编辑替代文本/i });
+
+    const altInput = within(editDrawer).getByRole('textbox', { name: /Alternative text|替代文本/i });
+    expect(altInput).toHaveValue('Old Alt');
+    fireEvent.change(altInput, { target: { value: 'New Alt Description' } });
+
+    const saveBtn = within(editDrawer).getByRole('button', { name: /Save changes|保存修改/i });
+    fireEvent.click(saveBtn);
+
+    expect(await screen.findByText(/New Alt Description/)).toBeInTheDocument();
+    expect(apiFetchMock).toHaveBeenCalledWith('/api/admin/media/1', expect.objectContaining({
+      method: 'PUT',
+      body: JSON.stringify({ alt_text: 'New Alt Description' }),
+    }));
+  });
 });

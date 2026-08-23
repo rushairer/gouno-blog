@@ -33,6 +33,16 @@ export const mediaApi = {
     );
   },
 
+  async updateMedia(id: number | string, data: { alt_text: string }): Promise<MediaItem> {
+    return readData<MediaItem>(
+      apiFetch(`/api/admin/media/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+    );
+  },
+
   async deleteMedia(id: number | string): Promise<void> {
     return readData<void>(
       apiFetch(`/api/admin/media/${id}`, {

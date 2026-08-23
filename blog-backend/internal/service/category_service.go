@@ -29,7 +29,8 @@ var categorySlugPattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 var allowedSettingKeys = map[string]bool{
 	"site_title": true, "site_description": true, "author_name": true, "author_bio": true,
 	"email": true, "github_url": true, "rss_url": true, "default_seo_title": true, "default_seo_description": true,
-	"footer_text": true,
+	"footer_text": true, "hero_title": true, "hero_description": true, "hero_image_url": true,
+	"hero_image_caption": true,
 }
 
 const maxSiteSettingLength = 4_096

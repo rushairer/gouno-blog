@@ -75,6 +75,10 @@ export interface SiteSettings {
   default_seo_title: string;
   default_seo_description: string;
   footer_text?: string;
+  hero_title?: string;
+  hero_description?: string;
+  hero_image_url?: string;
+  hero_image_caption?: string;
 }
 
 export type PageTemplate = 'default' | 'about' | 'links' | 'blank' | 'timeline' | 'projects' | 'focus' | 'faq';
