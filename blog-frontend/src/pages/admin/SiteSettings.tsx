@@ -132,7 +132,7 @@ export default function AdminSiteSettings() {
                     rows={3}
                     value={value.hero_title ?? ''}
                     onChange={(event) => field('hero_title', event.target.value)}
-                    placeholder={'把复杂系统，\n写成可理解的路径。'}
+                    placeholder={'记录探索与思考，\n沉淀见解与价值。'}
                   />
                 </Field>
                 <Field label="Hero 副标题描述" hint="对网站主题、关注领域的补充说明。">
@@ -140,7 +140,7 @@ export default function AdminSiteSettings() {
                     rows={3}
                     value={value.hero_description ?? ''}
                     onChange={(event) => field('hero_description', event.target.value)}
-                    placeholder="关于工程架构、产品设计与 AI 实践的长期笔记。写清楚问题，也写清楚选择背后的理由。"
+                    placeholder="专注于长期记录、深度思考与知识沉淀。写下探索的过程，也分享有价值的见解。"
                   />
                 </Field>
                 <Field label="右侧插图 URL" hint="可直接输入图片地址，或点击下方按钮上传新图片。">
@@ -187,11 +187,11 @@ export default function AdminSiteSettings() {
                     </div>
                   ) : null}
                 </Field>
-                <Field label="右侧插图底部标注" hint="显示在插图右下角的排版小字，例如 SYSTEMS / PEOPLE / DECISIONS。">
+                <Field label="右侧插图底部标注" hint="显示在插图右下角的排版小字，例如 EXPLORE / THINK / SHARE。">
                   <Input
                     value={value.hero_image_caption ?? ''}
                     onChange={(event) => field('hero_image_caption', event.target.value)}
-                    placeholder="SYSTEMS / PEOPLE / DECISIONS"
+                    placeholder="EXPLORE / THINK / SHARE"
                   />
                 </Field>
                 <FormActions>

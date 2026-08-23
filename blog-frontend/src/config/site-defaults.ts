@@ -11,10 +11,10 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   default_seo_title: 'Gouno Blog',
   default_seo_description: '记录、思考与分享。',
   footer_text: 'Built with care, code, and curiosity.',
-  hero_title: '把复杂系统，\n写成可理解的路径。',
-  hero_description: '关于工程架构、产品设计与 AI 实践的长期笔记。写清楚问题，也写清楚选择背后的理由。',
+  hero_title: '记录探索与思考，\n沉淀见解与价值。',
+  hero_description: '专注于长期记录、深度思考与知识沉淀。写下探索的过程，也分享有价值的见解。',
   hero_image_url: '/editorial-system-map.png',
-  hero_image_caption: 'SYSTEMS / PEOPLE / DECISIONS',
+  hero_image_caption: 'EXPLORE / THINK / SHARE',
 };
 
 export function authorInitials(name: string) {
