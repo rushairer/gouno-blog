@@ -7,12 +7,13 @@ import { DEFAULT_SITE_SETTINGS } from '../../config/site-defaults';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 import type { SiteSettings } from '../../types/blog';
 
-type SettingsTab = 'basic' | 'hero' | 'social' | 'seo';
+type SettingsTab = 'basic' | 'appearance' | 'hero' | 'social' | 'seo';
 
 export default function AdminSiteSettings() {
   const allowed = useAdminGuard('/admin/settings');
   const { notify } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const faviconInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<SettingsTab>('basic');
   const [value, setValue] = useState(DEFAULT_SITE_SETTINGS);
   const [loading, setLoading] = useState(true);
@@ -51,6 +52,25 @@ export default function AdminSiteSettings() {
     } finally {
       setUploadingImage(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleFaviconUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await mediaApi.uploadMedia(form);
+      field('favicon_url', res.url);
+      notify('站点图标已上传成功。', 'success');
+    } catch (reason) {
+      const msg = reason instanceof Error ? reason.message : '图标上传失败';
+      notify(msg, 'error');
+    } finally {
+      setUploadingImage(false);
+      if (faviconInputRef.current) faviconInputRef.current.value = '';
     }
   };
 
@@ -101,6 +121,7 @@ export default function AdminSiteSettings() {
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as SettingsTab)} id="site-settings">
         <TabList label="站点设置">
           <Tab value="basic"><FileText aria-hidden="true" /><span>基础信息</span></Tab>
+          <Tab value="appearance"><ImageIcon aria-hidden="true" /><span>网站图标</span></Tab>
           <Tab value="hero"><ImageIcon aria-hidden="true" /><span>首页 Hero</span></Tab>
           <Tab value="social"><Mail aria-hidden="true" /><span>公开联系方式</span></Tab>
           <Tab value="seo"><Search aria-hidden="true" /><span>SEO</span></Tab>
@@ -201,6 +222,26 @@ export default function AdminSiteSettings() {
                   <Button variant="secondary" type="button" onClick={resetHeroDefaults}>
                     <RotateCcw /> 恢复默认文案
                   </Button>
+                </FormActions>
+              </FormLayout>
+            </WorkspacePanel>
+          ) : null}
+          {activeTab === 'appearance' ? (
+            <WorkspacePanel>
+              <PanelHeader title="网站图标" description="设置浏览器标签页中显示的 Favicon。" />
+              <FormLayout onSubmit={save}>
+                <Field label="Favicon 地址" hint="支持站内路径（如 /media/icon.png）或完整 http(s) URL；建议使用正方形 PNG、WebP 或 SVG。">
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <Input style={{ flex: 1 }} value={value.favicon_url ?? ''} onChange={(event) => field('favicon_url', event.target.value)} placeholder="/favicon.svg" />
+                    <input ref={faviconInputRef} type="file" accept="image/png,image/webp,image/gif,image/jpeg" style={{ display: 'none' }} onChange={handleFaviconUpload} />
+                    <Button variant="secondary" type="button" loading={uploadingImage} onClick={() => faviconInputRef.current?.click()}>
+                      <Upload /> 上传图标
+                    </Button>
+                  </div>
+                  {value.favicon_url ? <img src={value.favicon_url} alt="Favicon 预览" width={32} height={32} style={{ display: 'block', marginTop: '12px', objectFit: 'contain' }} /> : null}
+                </Field>
+                <FormActions>
+                  <Button variant="primary" type="submit" loading={saving}><Save /> {saving ? '正在保存…' : '保存设置'}</Button>
                 </FormActions>
               </FormLayout>
             </WorkspacePanel>

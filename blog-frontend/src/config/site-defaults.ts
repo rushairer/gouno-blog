@@ -15,6 +15,7 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   hero_description: '专注于长期记录、深度思考与知识沉淀。写下探索的过程，也分享有价值的见解。',
   hero_image_url: '/editorial-system-map.png',
   hero_image_caption: 'EXPLORE / THINK / SHARE',
+  favicon_url: '/favicon.svg',
 };
 
 export function authorInitials(name: string) {

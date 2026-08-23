@@ -22,6 +22,7 @@ var (
 	ErrSiteTitleEmpty       = errors.New("site title cannot be empty")
 	ErrInvalidRSSURL        = errors.New("rss_url must be a site path or an http(s) URL")
 	ErrInvalidGithubURL     = errors.New("github_url must be an http(s) URL")
+	ErrInvalidFaviconURL    = errors.New("favicon_url must be a site path or an http(s) URL")
 )
 
 var categorySlugPattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
@@ -31,6 +32,7 @@ var allowedSettingKeys = map[string]bool{
 	"email": true, "github_url": true, "rss_url": true, "default_seo_title": true, "default_seo_description": true,
 	"footer_text": true, "hero_title": true, "hero_description": true, "hero_image_url": true,
 	"hero_image_caption": true,
+	"favicon_url":        true,
 }
 
 const maxSiteSettingLength = 4_096
@@ -202,6 +204,9 @@ func (s *categoryService) UpdateSiteSettings(ctx context.Context, requested map[
 	}
 	if githubURL, exists := clean["github_url"]; exists && githubURL != "" && !validSiteURL(githubURL, false) {
 		return nil, ErrInvalidGithubURL
+	}
+	if faviconURL, exists := clean["favicon_url"]; exists && faviconURL != "" && !validSiteURL(faviconURL, true) {
+		return nil, ErrInvalidFaviconURL
 	}
 	return s.repo.UpdateSiteSettings(ctx, clean)
 }
