@@ -96,7 +96,7 @@ type Agent struct {
 	SystemKey               *string          `json:"system_key,omitempty"`
 	Name                    string           `json:"name"`
 	Description             string           `json:"description"`
-	ProviderProfileID       int64            `json:"provider_profile_id"`
+	ProviderProfileID       *int64           `json:"provider_profile_id,omitempty"`
 	SkillVersionID          *int64           `json:"skill_version_id,omitempty"`
 	Skill                   *AgentSkill      `json:"skill,omitempty"`
 	ProviderProfile         *ProviderProfile `json:"provider_profile,omitempty"`

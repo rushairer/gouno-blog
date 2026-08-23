@@ -71,6 +71,8 @@ export function AgentForm({ initial, prefill, providers, skills, locale, labels,
 
   const limitHint = locale === 'zh' ? '留空继承 Skill；只能调低。' : 'Leave blank to inherit the Skill; overrides may only lower the limit.';
 
+  const defaultWritingProvider = useMemo(() => providers.find((p) => p.enabled && p.is_default_writing), [providers]);
+
   return (
     <EditorPanel title={initial ? labels.editAgent : labels.createAgent} icon={<Bot />} closeLabel={labels.cancel} onClose={onCancel}>
       <FormLayout onSubmit={submit}>
@@ -83,18 +85,31 @@ export function AgentForm({ initial, prefill, providers, skills, locale, labels,
               onChange={(event) => setValue((current) => ({ ...current, name: event.target.value }))}
             />
           </Field>
-          <Field label={labels.provider}>
+          <Field
+            label={labels.provider}
+            hint={locale === 'zh' ? '默认跟随全局文本模型，切换主力模型时自动生效。' : 'Inherits global text model by default.'}
+          >
             <Select
-              required
               value={value.provider_profile_id || ''}
-              onChange={(event) => setValue((current) => ({ ...current, provider_profile_id: Number(event.target.value) }))}
+              onChange={(event) =>
+                setValue((current) => ({
+                  ...current,
+                  provider_profile_id: event.target.value ? Number(event.target.value) : undefined,
+                }))
+              }
             >
-              <option value="" disabled>{labels.chooseProvider}</option>
-              {providers.map((provider) => (
-                <option key={provider.id} value={provider.id}>
-                  {provider.name} · {provider.model}
-                </option>
-              ))}
+              <option value="">
+                {locale === 'zh'
+                  ? `跟随系统默认${defaultWritingProvider ? ` (当前: ${defaultWritingProvider.name} · ${defaultWritingProvider.model})` : ''}`
+                  : `Inherit system default${defaultWritingProvider ? ` (Current: ${defaultWritingProvider.name} · ${defaultWritingProvider.model})` : ''}`}
+              </option>
+              {providers
+                .filter((provider) => provider.enabled)
+                .map((provider) => (
+                  <option key={provider.id} value={provider.id}>
+                    {provider.name} · {provider.model}
+                  </option>
+                ))}
             </Select>
           </Field>
         </FormGrid>

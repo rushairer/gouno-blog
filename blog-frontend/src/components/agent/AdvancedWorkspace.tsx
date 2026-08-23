@@ -275,7 +275,9 @@ export function AdvancedWorkspace({
                 </thead>
                 <tbody>
                   {agents.map((agent) => {
-                    const provider = providerMap.get(agent.provider_profile_id);
+                    const defaultWritingProvider = providers.find((p) => p.enabled && p.is_default_writing);
+                    const provider = agent.provider_profile_id ? providerMap.get(agent.provider_profile_id) : defaultWritingProvider;
+                    const isInherited = !agent.provider_profile_id;
                     const latestRun = runs.find((run) => run.agent_id === agent.id);
                     const toolsForSkill = agent.skill?.capabilities || [];
                     return (
@@ -298,8 +300,16 @@ export function AdvancedWorkspace({
                           </span>
                         </td>
                         <td>
-                          <strong>{provider?.name || '—'}</strong>
-                          <small className="mono">{provider?.model || '—'}</small>
+                          <div className="provider-identity">
+                            <strong>{provider?.name || (locale === 'zh' ? '跟随系统默认' : 'Inherit Default')}</strong>
+                            {isInherited ? (
+                              <span className="status-pill status-pill--published">
+                                {locale === 'zh' ? '跟随系统' : 'Inherit system'}
+                              </span>
+                            ) : (
+                              <small className="mono">{provider?.model || '—'}</small>
+                            )}
+                          </div>
                         </td>
                         <td>
                           <strong>{agent.trigger_type === 'cron' ? agent.cron_expression : labels.manual}</strong>
@@ -573,13 +583,23 @@ export function AdvancedWorkspace({
                   {providers.map((provider) => (
                     <tr key={provider.id}>
                       <td>
-                        <strong>{provider.name}</strong>
-                        {provider.is_default_writing ? (
-                          <small className="provider-default">{locale === 'zh' ? '默认文本模型' : 'Default Text Model'}</small>
-                        ) : null}
-                        {provider.is_default_image ? (
-                          <small className="provider-default">{locale === 'zh' ? '默认图片模型' : 'Default Image Model'}</small>
-                        ) : null}
+                        <div className="provider-identity">
+                          <strong>{provider.name}</strong>
+                          {(provider.is_default_writing || provider.is_default_image) && (
+                            <div className="provider-tags">
+                              {provider.is_default_writing ? (
+                                <span className="status-pill status-pill--published">
+                                  {locale === 'zh' ? '默认文本模型' : 'Default Text Model'}
+                                </span>
+                              ) : null}
+                              {provider.is_default_image ? (
+                                <span className="status-pill status-pill--published">
+                                  {locale === 'zh' ? '默认图片模型' : 'Default Image Model'}
+                                </span>
+                              ) : null}
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td>{provider.provider_type}</td>
                       <td className="mono">{provider.base_url}</td>

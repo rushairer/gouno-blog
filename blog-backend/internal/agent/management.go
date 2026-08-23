@@ -132,9 +132,40 @@ func (s *ManagementService) validateProvider(ctx context.Context, profile *domai
 func (s *ManagementService) DeleteProvider(ctx context.Context, id int64) error {
 	err := s.repo.DeleteProvider(ctx, id)
 	if errors.Is(err, repository.ErrResourceInUse) || repository.IsConstraintError(err) {
+		msg := err.Error()
+		if idx := strings.Index(msg, ": "); idx != -1 {
+			return fmt.Errorf("%w: %s", ErrProviderInUse, msg[idx+2:])
+		}
 		return ErrProviderInUse
 	}
 	return translateError(err)
+}
+
+func (s *ManagementService) ResolveAgentProvider(ctx context.Context, agent *domain.Agent) (*domain.ProviderProfile, error) {
+	if agent.ProviderProfileID != nil && *agent.ProviderProfileID > 0 {
+		return s.GetProvider(ctx, *agent.ProviderProfileID)
+	}
+	profile, _, err := s.DefaultWritingClient(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("%w: agent requires an active default text model or explicit provider", ErrInvalid)
+	}
+	return profile, nil
+}
+
+func (s *ManagementService) AgentProviderClient(ctx context.Context, agent *domain.Agent) (*domain.ProviderProfile, provider.Provider, error) {
+	if agent.ProviderProfileID != nil && *agent.ProviderProfileID > 0 {
+		profile, err := s.GetProvider(ctx, *agent.ProviderProfileID)
+		if err != nil {
+			return nil, nil, err
+		}
+		client, err := s.ProviderClient(ctx, *agent.ProviderProfileID)
+		return profile, client, err
+	}
+	profile, client, err := s.DefaultWritingClient(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("%w: agent requires an active default text model or explicit provider", ErrInvalid)
+	}
+	return profile, client, nil
 }
 
 func (s *ManagementService) ProviderClient(ctx context.Context, id int64) (provider.Provider, error) {
@@ -415,8 +446,12 @@ func (s *ManagementService) SaveAgent(ctx context.Context, value *domain.Agent) 
 		return err
 	}
 	value.NextRunAt = nextRun
-	if _, err := s.repo.GetProvider(ctx, value.ProviderProfileID); err != nil {
-		return translateError(err)
+	if value.ProviderProfileID != nil && *value.ProviderProfileID > 0 {
+		if _, err := s.repo.GetProvider(ctx, *value.ProviderProfileID); err != nil {
+			return translateError(err)
+		}
+	} else {
+		value.ProviderProfileID = nil
 	}
 	skill, err := s.GetSkillVersion(ctx, *value.SkillVersionID)
 	if err != nil {
@@ -438,8 +473,11 @@ func (s *ManagementService) SaveAgent(ctx context.Context, value *domain.Agent) 
 }
 
 func (s *ManagementService) validateAgent(value *domain.Agent) error {
-	if value.Name == "" || value.ProviderProfileID <= 0 || value.SkillVersionID == nil || *value.SkillVersionID <= 0 {
-		return fmt.Errorf("%w: name, Skill version and provider are required", ErrInvalid)
+	if value.Name == "" || value.SkillVersionID == nil || *value.SkillVersionID <= 0 {
+		return fmt.Errorf("%w: name and Skill version are required", ErrInvalid)
+	}
+	if value.ProviderProfileID != nil && *value.ProviderProfileID <= 0 {
+		value.ProviderProfileID = nil
 	}
 	if value.TriggerType != domain.AgentTriggerManual && value.TriggerType != domain.AgentTriggerCron {
 		return fmt.Errorf("%w: invalid trigger type", ErrInvalid)
