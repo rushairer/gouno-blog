@@ -90,4 +90,32 @@ describe('Home', () => {
     expect(imgs[0]).toBeInTheDocument();
     expect(imgs[0]).toHaveAttribute('src', '/media/cover1.jpg');
   });
+
+  it('renders custom hero title, description, and image when configured in site settings', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = input.toString();
+      if (url.includes('/api/tags')) return Response.json({ data: [] });
+      if (url.includes('/api/site')) {
+        return Response.json({
+          data: {
+            site_title: 'Custom Blog',
+            hero_title: '探索未知的技术边界',
+            hero_description: '这是一份关于云原生与分布式系统的实践指南。',
+            hero_image_url: '/custom-hero.webp',
+            hero_image_caption: 'CLOUD / DISTRIBUTED',
+          },
+        });
+      }
+      return Response.json({ data: { list: [], total: 0, page: 1, pageSize: 12 } });
+    }));
+
+    renderHome();
+
+    expect(await screen.findByRole('heading', { name: '探索未知的技术边界' })).toBeInTheDocument();
+    expect(screen.getByText('这是一份关于云原生与分布式系统的实践指南。')).toBeInTheDocument();
+    const heroImg = screen.getByAltText('CLOUD / DISTRIBUTED');
+    expect(heroImg).toBeInTheDocument();
+    expect(heroImg).toHaveAttribute('src', '/custom-hero.webp');
+    expect(screen.getByText('CLOUD / DISTRIBUTED')).toBeInTheDocument();
+  });
 });

@@ -69,14 +69,16 @@ export default function Home() {
     <>
       <section className="home-hero public-container">
         <div className="home-hero-copy">
-          <h1>把复杂系统，<br />写成可理解的路径。</h1>
-          <p>关于工程架构、产品设计与 AI 实践的长期笔记。写清楚问题，也写清楚选择背后的理由。</p>
+          <h1 style={{ whiteSpace: 'pre-line' }}>{site.hero_title || DEFAULT_SITE_SETTINGS.hero_title}</h1>
+          <p>{site.hero_description ?? DEFAULT_SITE_SETTINGS.hero_description}</p>
           {lead ? <Story post={lead} index={1} featured /> : null}
         </div>
-        <figure className="system-art">
-          <img src="/editorial-system-map.png" alt="由模块、关系与路径组成的抽象系统图" />
-          <span className="art-caption">SYSTEMS / PEOPLE / DECISIONS</span>
-        </figure>
+        {site.hero_image_url ? (
+          <figure className="system-art">
+            <img src={site.hero_image_url} alt={site.hero_image_caption || '由模块、关系与路径组成的抽象系统图'} />
+            {site.hero_image_caption ? <span className="art-caption">{site.hero_image_caption}</span> : null}
+          </figure>
+        ) : null}
       </section>
 
       <div className="public-container">

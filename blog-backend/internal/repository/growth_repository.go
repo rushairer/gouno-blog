@@ -166,6 +166,22 @@ func (r *GrowthRepository) DeleteMedia(ctx context.Context, id int64) (*domain.M
 	return &asset, err
 }
 
+func (r *GrowthRepository) UpdateMediaAltText(ctx context.Context, id int64, altText string) (*domain.MediaAsset, error) {
+	var asset domain.MediaAsset
+	err := r.db.QueryRowContext(ctx, `UPDATE media_assets
+		SET alt_text = $1
+		WHERE id = $2
+		RETURNING id, filename, storage_name, url, content_type, size_bytes, alt_text, created_by, created_at,
+		(SELECT COUNT(*) FROM posts p WHERE p.content LIKE '%' || media_assets.url || '%' OR p.cover_url = media_assets.url)`,
+		altText, id).
+		Scan(&asset.ID, &asset.Filename, &asset.StorageName, &asset.URL, &asset.ContentType,
+			&asset.SizeBytes, &asset.AltText, &asset.CreatedBy, &asset.CreatedAt, &asset.UsageCount)
+	if err != nil {
+		return nil, err
+	}
+	return &asset, nil
+}
+
 func (r *GrowthRepository) RecordEvent(ctx context.Context, postID int64, eventType, actorKey string) error {
 	_, err := r.db.ExecContext(ctx, `INSERT INTO analytics_events (post_id, event_type, actor_key)
 		VALUES ($1, $2, $3)`, postID, eventType, actorKey)

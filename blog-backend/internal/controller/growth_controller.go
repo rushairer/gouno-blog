@@ -161,6 +161,28 @@ func (ctrl *GrowthController) UploadMedia(c *gin.Context) {
 	c.JSON(http.StatusCreated, gouno.NewSuccessResponse(asset))
 }
 
+type UpdateMediaRequest struct {
+	AltText string `json:"alt_text"`
+}
+
+func (ctrl *GrowthController) UpdateMedia(c *gin.Context) {
+	id, ok := ParamPositiveID(c, "id")
+	if !ok {
+		return
+	}
+	var req UpdateMediaRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "invalid request body"))
+		return
+	}
+	asset, err := ctrl.growth.UpdateMedia(c.Request.Context(), id, req.AltText)
+	if err != nil {
+		WriteDomainError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(asset))
+}
+
 func (ctrl *GrowthController) DeleteMedia(c *gin.Context) {
 	id, ok := ParamPositiveID(c, "id")
 	if !ok {
