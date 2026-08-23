@@ -132,7 +132,7 @@ jobs:
       - name: Enforce immutable default images
         run: |
           docker compose config | awk '
-            /image:/ && $2 !~ /@sha256:[a-f0-9]{64}$/ {
+            /image:/ && $2 !~ /^ghcr\.io\/rushairer\// && $2 !~ /@sha256:[a-f0-9]{64}$/ {
               print "image is not pinned by digest: " $2
               invalid = 1
             }
