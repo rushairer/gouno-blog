@@ -2096,7 +2096,7 @@ td .agent-chip-list {
 }
 
 .form-error-inline {
-  color: var(--status-danger-fg, #ef4444);
+  color: var(--status-danger-fg);
   font-size: 12px;
   margin-top: 4px;
 }

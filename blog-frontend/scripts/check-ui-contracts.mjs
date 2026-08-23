@@ -26,7 +26,7 @@ for (const path of files) {
       if (/!important/.test(line)) failures.push(`${name}:${index + 1} !important is not allowed`);
     });
   }
-  if (name.endsWith('.tsx') && name !== 'components/ui.tsx' && /<select\b/.test(source)) {
+  if (name.endsWith('.tsx') && name !== 'components/ui.tsx' && name !== 'components/ui/Form.tsx' && /<select\b/.test(source)) {
     failures.push(`${name}: native select must use the shared Select component`);
   }
   if (name.endsWith('.css') && name !== 'styles/components.css') {
