@@ -74,6 +74,7 @@ func NewAgentControllerWithOptions(opts AgentControllerOptions) *AgentController
 }
 
 type providerRequest struct {
+	ID                    int64               `json:"id,omitempty"`
 	Name                  string              `json:"name" binding:"required"`
 	ProviderType          domain.ProviderType `json:"provider_type" binding:"required"`
 	BaseURL               string              `json:"base_url" binding:"required"`
@@ -84,6 +85,12 @@ type providerRequest struct {
 	StreamMode            string              `json:"stream_mode"`
 	RequestTimeoutSeconds int                 `json:"request_timeout_seconds"`
 	MaxOutputTokens       int                 `json:"max_output_tokens"`
+	APIKeyLast4           string              `json:"api_key_last4,omitempty"`
+	HasAPIKey             bool                `json:"has_api_key,omitempty"`
+	IsDefaultWriting      bool                `json:"is_default_writing,omitempty"`
+	IsDefaultImage        bool                `json:"is_default_image,omitempty"`
+	CreatedAt             string              `json:"created_at,omitempty"`
+	UpdatedAt             string              `json:"updated_at,omitempty"`
 }
 
 type providerExportItem struct {
@@ -296,8 +303,9 @@ func (ctrl *AgentController) ListProviders(c *gin.Context) {
 }
 
 func (ctrl *AgentController) SetDefaultProvider(c *gin.Context) {
-	id, ok := ParamPositiveID(c, "id")
-	if !ok {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id < 0 {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "invalid provider id"))
 		return
 	}
 	purpose := c.Param("purpose")

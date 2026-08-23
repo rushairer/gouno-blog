@@ -8,6 +8,34 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func TestBindAgentJSONAcceptsProviderWithID(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	request := httptest.NewRequest("POST", "/", strings.NewReader(`{
+		"id": 1,
+		"name": "DeepSeek",
+		"provider_type": "anthropic",
+		"base_url": "https://ai.apigg.com",
+		"model": "deepseek-v4-flash",
+		"api_key": "",
+		"enabled": true,
+		"protocol_mode": "",
+		"stream_mode": "auto",
+		"request_timeout_seconds": 300,
+		"max_output_tokens": 2000
+	}`))
+	request.Header.Set("Content-Type", "application/json")
+	context, _ := gin.CreateTestContext(httptest.NewRecorder())
+	context.Request = request
+
+	var value providerRequest
+	if err := bindAgentJSON(context, &value); err != nil {
+		t.Fatalf("expected provider with ID and options to bind successfully, got: %v", err)
+	}
+	if value.ID != 1 || value.Name != "DeepSeek" {
+		t.Fatalf("unexpected bound values: %+v", value)
+	}
+}
+
 func TestBindAgentJSONRejectsUnknownFields(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	request := httptest.NewRequest("POST", "/", strings.NewReader(`{"name":"provider","unknown":true}`))
