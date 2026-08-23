@@ -6,6 +6,7 @@ import { authorInitials, DEFAULT_SITE_SETTINGS } from '../config/site-defaults';
 import { postsApi } from '../api/posts';
 import { siteApi } from '../api/site';
 import { markdownToPlainText } from '../utils/markdown';
+import { usePageTitle } from '../hooks/usePageTitle';
 import type { Post, SiteSettings } from '../types/blog';
 
 const readTime = (post: Post) => Math.max(3, Math.ceil((post.content?.length || post.summary.length) / 500));
@@ -41,6 +42,11 @@ export default function Home() {
   const [site, setSite] = useState<SiteSettings>(DEFAULT_SITE_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  usePageTitle('', {
+    brand: site.site_title,
+    subtitle: site.site_description || site.default_seo_description,
+  });
 
   useEffect(() => {
     Promise.all([

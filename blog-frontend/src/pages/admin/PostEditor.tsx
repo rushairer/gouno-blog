@@ -7,6 +7,7 @@ import { siteApi } from '../../api/site';
 import { AdminPageState, Button, ConfirmDialog, Feedback, Field, Input, Select, Textarea, useToast } from '../../components/ui';
 import { MarkdownRenderer } from '../../components/MarkdownRenderer';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
+import { usePageTitle } from '../../hooks/usePageTitle';
 import { extractMarkdownTOC } from '../../utils/markdown';
 import type { Category, Post, PostStatus } from '../../types/blog';
 
@@ -22,6 +23,9 @@ export default function PostEditor() {
   const navigate = useNavigate();
   const { notify } = useToast();
   const [post, setPost] = useState<Post>(emptyPost);
+
+  const editorTitle = isNew ? (post.title ? `新建文章: ${post.title}` : '新建文章') : (post.title ? `编辑: ${post.title}` : '编辑文章');
+  usePageTitle(editorTitle, { admin: true });
   const [publishIntent, setPublishIntent] = useState<PostStatus>('draft');
   const [categories, setCategories] = useState<Category[]>([]);
   const [versions, setVersions] = useState<PostVersion[]>([]);

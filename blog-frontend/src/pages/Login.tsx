@@ -4,9 +4,11 @@ import { KeyRound } from 'lucide-react';
 import { Feedback, Field, Panel } from '../components/ui';
 import { gossoClient, redirectToAuthorize } from '../auth';
 import { useI18n } from '../i18n';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 export default function Login() {
   const { t } = useI18n();
+  usePageTitle(t('signIn'), { brand: 'GOSSO' });
   const [searchParams] = useSearchParams();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');

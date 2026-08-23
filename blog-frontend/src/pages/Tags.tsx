@@ -3,9 +3,11 @@ import { Link } from 'react-router-dom';
 import { EmptyState, LoadingState } from '../components/ui';
 import { postsApi } from '../api/posts';
 import { siteApi } from '../api/site';
+import { usePageTitle } from '../hooks/usePageTitle';
 import type { Post } from '../types/blog';
 
 export default function Tags() {
+  usePageTitle('标签');
   const [tags, setTags] = useState<string[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);

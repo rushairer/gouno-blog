@@ -6,11 +6,13 @@ import { ActionGroup, ContentStack, Feedback, Field, PageHeader, Panel } from '.
 import { gossoClient, isLoggedIn, redirectToAuthorize } from '../auth';
 import type { MfaEnrollment, MfaStatus, PasskeyInfo, SessionInfo, UserProfile } from '../auth';
 import { useI18n } from '../i18n';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 type SettingsTab = 'profile' | 'security' | 'passkeys' | 'sessions';
 
 export default function Settings() {
   const { t, formatDateTime } = useI18n();
+  usePageTitle(t('accountSettings'));
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
   const [profile, setProfile] = useState<UserProfile | null>(() => gossoClient.getUserProfile());
   const [displayName, setDisplayName] = useState(profile?.name || '');

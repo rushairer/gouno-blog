@@ -5,6 +5,7 @@ import { EmptyState, LoadingState, Pagination, SearchField } from '../components
 import { postsApi } from '../api/posts';
 import { siteApi } from '../api/site';
 import { markdownToPlainText } from '../utils/markdown';
+import { usePageTitle } from '../hooks/usePageTitle';
 import type { Post } from '../types/blog';
 
 export default function ArticleIndex({ mode = 'articles' }: { mode?: 'articles' | 'search' | 'tag' | 'category' }) {
@@ -22,6 +23,9 @@ export default function ArticleIndex({ mode = 'articles' }: { mode?: 'articles' 
   const tag = mode === 'tag' ? routeParams.slug || '' : params.get('tag') || '';
   const category = mode === 'category' ? routeParams.slug || '' : params.get('category') || '';
 
+  const title = mode === 'search' ? (q ? `“${q}”的搜索结果` : '搜索文章') : mode === 'tag' ? `标签：${tag}` : mode === 'category' ? `分类：${category}` : '全部文章';
+  usePageTitle(title);
+
   useEffect(() => {
     setLoading(true);
     const query = new URLSearchParams({ page: String(page), pageSize: '10' });
@@ -34,7 +38,6 @@ export default function ArticleIndex({ mode = 'articles' }: { mode?: 'articles' 
       .finally(() => setLoading(false));
   }, [page, q, tag, category]);
 
-  const title = mode === 'search' ? q ? `“${q}”的搜索结果` : '搜索文章' : mode === 'tag' ? `标签：${tag}` : mode === 'category' ? `分类：${category}` : '全部文章';
   const pages = Math.max(1, Math.ceil(total / 10));
   return (
     <div className="public-container index-page">

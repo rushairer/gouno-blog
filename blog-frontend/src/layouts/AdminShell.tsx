@@ -11,7 +11,9 @@ import { adminNavigation } from '../utils/navigation';
 function currentLabel(pathname: string) {
   if (pathname === '/admin/posts/new') return '新建文章';
   if (/^\/admin\/posts\/[^/]+\/edit$/.test(pathname)) return '编辑文章';
-  return adminNavigation.flatMap((group) => group.items).find((item) => pathname.startsWith(item.path))?.label || '后台';
+  if (pathname === '/admin/pages/new') return '新建单页';
+  if (/^\/admin\/pages\/[^/]+\/edit$/.test(pathname)) return '编辑单页';
+  return adminNavigation.flatMap((group) => group.items).find((item) => pathname.startsWith(item.path))?.label || '管理后台';
 }
 
 export default function AdminShell({ children }: { children: ReactNode }) {
@@ -38,6 +40,12 @@ export default function AdminShell({ children }: { children: ReactNode }) {
       // Keep the administration shell available when public site settings fail.
     });
   }, []);
+
+  useEffect(() => {
+    const label = currentLabel(location.pathname);
+    const prefix = unreadCount > 0 ? `(${unreadCount}) ` : '';
+    document.title = `${prefix}${label} - ${siteName} 后台`;
+  }, [location.pathname, siteName, unreadCount]);
 
   useEffect(() => {
     const fetchUnread = async () => {
