@@ -3,6 +3,9 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/rushairer/blog-backend/internal/domain"
 )
@@ -120,30 +123,49 @@ func (r *AgentRepository) SetDefaultProvider(ctx context.Context, id int64, purp
 }
 
 func (r *AgentRepository) DeleteProvider(ctx context.Context, id int64) error {
-	result, err := r.db.ExecContext(ctx, `UPDATE ai_provider_profiles p
+	var profile domain.ProviderProfile
+	err := r.db.QueryRowContext(ctx, `SELECT id, name, is_default_writing, is_default_image FROM ai_provider_profiles WHERE id=$1 AND deleted_at IS NULL`, id).
+		Scan(&profile.ID, &profile.Name, &profile.IsDefaultWriting, &profile.IsDefaultImage)
+	if errors.Is(err, sql.ErrNoRows) {
+		return sql.ErrNoRows
+	}
+	if err != nil {
+		return err
+	}
+
+	if profile.IsDefaultWriting {
+		return fmt.Errorf("%w: 当前仍被设为默认文本模型，请先在上方「默认用途」中修改或取消选择", ErrResourceInUse)
+	}
+	if profile.IsDefaultImage {
+		return fmt.Errorf("%w: 当前仍被设为默认图片模型，请先在上方「默认用途」中修改或取消选择", ErrResourceInUse)
+	}
+
+	rows, err := r.db.QueryContext(ctx, `SELECT name FROM ai_agents WHERE provider_profile_id=$1 AND deleted_at IS NULL ORDER BY id LIMIT 5`, id)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	var referencingAgents []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err == nil {
+			referencingAgents = append(referencingAgents, name)
+		}
+	}
+	if len(referencingAgents) > 0 {
+		return fmt.Errorf("%w: 正被以下 Agent 引用：%s 等。请先在「Agent 列表」中将这些 Agent 切换到其他模型或删除", ErrResourceInUse, strings.Join(referencingAgents, "、"))
+	}
+
+	result, err := r.db.ExecContext(ctx, `UPDATE ai_provider_profiles
 		SET enabled=false, is_default_writing=false, is_default_image=false,
 			api_key_ciphertext=NULL, api_key_nonce=NULL,
 			api_key_last4='', key_version=0, deleted_at=NOW(), updated_at=NOW()
-		WHERE p.id=$1 AND p.deleted_at IS NULL
-		AND p.is_default_writing=false
-		AND p.is_default_image=false
-		AND NOT EXISTS (
-			SELECT 1 FROM ai_agents a
-			WHERE a.provider_profile_id=p.id AND a.deleted_at IS NULL
-		)`, id)
+		WHERE id=$1 AND deleted_at IS NULL`, id)
 	if err != nil {
 		return err
 	}
 	if affected, _ := result.RowsAffected(); affected == 0 {
-		var exists bool
-		if err := r.db.QueryRowContext(ctx, `SELECT EXISTS (
-			SELECT 1 FROM ai_provider_profiles WHERE id=$1 AND deleted_at IS NULL
-		)`, id).Scan(&exists); err != nil {
-			return err
-		}
-		if exists {
-			return ErrResourceInUse
-		}
 		return sql.ErrNoRows
 	}
 	return nil

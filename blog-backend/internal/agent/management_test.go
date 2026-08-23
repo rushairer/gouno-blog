@@ -37,12 +37,28 @@ func TestNextRunRejectsInvalidCron(t *testing.T) {
 
 func TestValidateAgentRequiresSkillVersion(t *testing.T) {
 	service := NewManagementService(nil, nil, nil, nil, nil)
+	pID := int64(1)
 	value := &domain.Agent{
-		Name: "test", ProviderProfileID: 1, TriggerType: domain.AgentTriggerManual,
+		Name: "test", ProviderProfileID: &pID, TriggerType: domain.AgentTriggerManual,
 		DailyRunLimit: 1, MonthlyTokenBudget: 1000,
 	}
 	if err := service.validateAgent(value); err == nil {
 		t.Fatal("expected missing Skill Version to be rejected")
+	}
+}
+
+func TestValidateAgentAllowsNilProvider(t *testing.T) {
+	service := NewManagementService(nil, nil, nil, nil, nil)
+	vID := int64(1)
+	value := &domain.Agent{
+		Name: "test", SkillVersionID: &vID, TriggerType: domain.AgentTriggerManual,
+		DailyRunLimit: 1, MonthlyTokenBudget: 1000,
+	}
+	if err := service.validateAgent(value); err != nil {
+		t.Fatalf("expected nil provider to be valid (inheriting default), got error: %v", err)
+	}
+	if value.ProviderProfileID != nil {
+		t.Fatalf("expected ProviderProfileID to remain nil")
 	}
 }
 

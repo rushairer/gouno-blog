@@ -249,7 +249,8 @@ func Match(intent WorkflowIntent, profiles []*domain.ProviderProfile, agents []*
 	}
 	var selected *domain.Agent
 	for _, agent := range agents {
-		if !agent.Enabled || agent.Skill == nil || agent.SkillVersionID == nil || agent.ProviderProfile == nil || !agent.ProviderProfile.Enabled || !hasWritingProvider(profiles, agent.ProviderProfileID) {
+		profile := resolveAgentProfile(agent, profiles)
+		if !agent.Enabled || agent.Skill == nil || agent.SkillVersionID == nil || profile == nil || !profile.Enabled {
 			continue
 		}
 		if matched.Tool != "" && !contains(agent.Skill.Capabilities, matched.Tool) {
@@ -328,6 +329,26 @@ func hasDefaultImageProvider(profiles []*domain.ProviderProfile) bool {
 	}
 	return false
 }
+func resolveAgentProfile(agent *domain.Agent, profiles []*domain.ProviderProfile) *domain.ProviderProfile {
+	if agent.ProviderProfile != nil && agent.ProviderProfile.Enabled {
+		return agent.ProviderProfile
+	}
+	if agent.ProviderProfileID != nil && *agent.ProviderProfileID > 0 {
+		for _, p := range profiles {
+			if p.ID == *agent.ProviderProfileID && p.Enabled {
+				return p
+			}
+		}
+		return nil
+	}
+	for _, p := range profiles {
+		if p.Enabled && p.IsDefaultWriting {
+			return p
+		}
+	}
+	return nil
+}
+
 func hasWritingProvider(profiles []*domain.ProviderProfile, id int64) bool {
 	for _, p := range profiles {
 		if p.ID == id && p.Enabled {
@@ -727,12 +748,7 @@ func PlanAutomation(prompt string, profiles []*domain.ProviderProfile, agents []
 	intent := ParseIntent(prompt)
 	for _, agent := range agents {
 		if agent.ProviderProfile == nil {
-			for _, profile := range profiles {
-				if profile.ID == agent.ProviderProfileID {
-					agent.ProviderProfile = profile
-					break
-				}
-			}
+			agent.ProviderProfile = resolveAgentProfile(agent, profiles)
 		}
 	}
 	match, template, selectedAgent := Match(intent, profiles, agents, skills, toolsCatalog)
@@ -813,12 +829,7 @@ func PlanWorkflow(
 	intent := ParseIntent(prompt)
 	for _, agent := range agents {
 		if agent.ProviderProfile == nil {
-			for _, profile := range profiles {
-				if profile.ID == agent.ProviderProfileID {
-					agent.ProviderProfile = profile
-					break
-				}
-			}
+			agent.ProviderProfile = resolveAgentProfile(agent, profiles)
 		}
 	}
 	match, template, matchedAgent := Match(intent, profiles, agents, nil, toolsCatalog)

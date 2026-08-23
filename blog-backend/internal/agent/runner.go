@@ -106,7 +106,7 @@ func (r *Runner) queue(ctx context.Context, agentID int64, trigger domain.AgentT
 	if len(input) > limits.maxInputTokens*4 {
 		return nil, fmt.Errorf("%w: runtime input exceeds the agent input limit", ErrInvalid)
 	}
-	profile, err := r.management.GetProvider(ctx, value.ProviderProfileID)
+	profile, err := r.management.ResolveAgentProvider(ctx, value)
 	if err != nil {
 		return nil, err
 	}
@@ -222,7 +222,7 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 		return err
 	}
 	limits := effectiveLimits(value, skill)
-	client, err := r.management.ProviderClient(ctx, value.ProviderProfileID)
+	_, client, err := r.management.AgentProviderClient(ctx, value)
 	if err != nil {
 		return err
 	}

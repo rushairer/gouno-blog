@@ -35,7 +35,7 @@ func TestExtractWorkflowDraftJSON(t *testing.T) {
 func TestBuildAutomationPlan(t *testing.T) {
 	provider := &domain.ProviderProfile{ID: 1, Name: "Writing", Model: "test", Enabled: true, IsDefaultWriting: true}
 	skill := &domain.AgentSkill{ID: 2, VersionID: 3, Name: "Review", Capabilities: []string{"content.audit_post"}, ExecutionMode: domain.AgentModeApproval}
-	agent := &domain.Agent{ID: 4, Name: "Reviewer", Enabled: true, ProviderProfileID: provider.ID, SkillVersionID: &skill.VersionID, Skill: skill}
+	agent := &domain.Agent{ID: 4, Name: "Reviewer", Enabled: true, ProviderProfileID: &provider.ID, SkillVersionID: &skill.VersionID, Skill: skill}
 
 	t.Run("reuses ready dependency chain", func(t *testing.T) {
 		plan := workflowplan.BuildAutomationPlan("review posts", []*domain.ProviderProfile{provider}, []*domain.Agent{agent}, []*domain.AgentSkill{skill})
@@ -59,7 +59,7 @@ func TestBuildAutomationPlan(t *testing.T) {
 
 	t.Run("matches the agent capability to the requested automation", func(t *testing.T) {
 		commentSkill := &domain.AgentSkill{ID: 5, VersionID: 6, Name: "Comments", Capabilities: []string{"comments.get_comment", "comments.propose_reply"}, ExecutionMode: domain.AgentModeApproval}
-		commentAgent := &domain.Agent{ID: 7, Name: "Commenter", Enabled: true, ProviderProfileID: provider.ID, SkillVersionID: &commentSkill.VersionID, Skill: commentSkill}
+		commentAgent := &domain.Agent{ID: 7, Name: "Commenter", Enabled: true, ProviderProfileID: &provider.ID, SkillVersionID: &commentSkill.VersionID, Skill: commentSkill}
 		plan := workflowplan.BuildAutomationPlan("为评论生成回复草案", []*domain.ProviderProfile{provider}, []*domain.Agent{agent, commentAgent}, []*domain.AgentSkill{skill, commentSkill})
 		if plan.Agent["id"] != commentAgent.ID || plan.Skill["id"] != commentSkill.ID {
 			t.Fatalf("expected comment dependency match: %#v", plan)
@@ -81,7 +81,7 @@ func TestImageBriefWorkflowContract(t *testing.T) {
 func TestImageGenerationPlanUsesInternalTaskWithoutApproval(t *testing.T) {
 	provider := &domain.ProviderProfile{ID: 1, Name: "Writing", Model: "test", Enabled: true, IsDefaultWriting: true, IsDefaultImage: true}
 	skill := &domain.AgentSkill{ID: 2, VersionID: 3, Name: "Distribution", Capabilities: []string{"content.get_post", "content.propose_distribution_draft", "media.create_image_task"}, ExecutionMode: domain.AgentModeApproval}
-	agent := &domain.Agent{ID: 4, Name: "Distribution", Enabled: true, ProviderProfileID: provider.ID, ProviderProfile: provider, SkillVersionID: &skill.VersionID, Skill: skill}
+	agent := &domain.Agent{ID: 4, Name: "Distribution", Enabled: true, ProviderProfileID: &provider.ID, ProviderProfile: provider, SkillVersionID: &skill.VersionID, Skill: skill}
 
 	plan := workflowplan.BuildAutomationPlan("为文章生成封面和正文配图", []*domain.ProviderProfile{provider}, []*domain.Agent{agent}, []*domain.AgentSkill{skill})
 	capabilities := plan.Skill["capabilities"].([]string)

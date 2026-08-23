@@ -94,15 +94,15 @@ func (r *AgentRepository) BootstrapStarterPack(ctx context.Context) (int, error)
 		var agentID int64
 		err := tx.QueryRowContext(ctx, `INSERT INTO ai_agents
 			(system_key,name,description,provider_profile_id,skill_version_id,enabled,trigger_type,timezone,daily_run_limit,monthly_token_budget)
-			VALUES ($1,$2,$3,$4,$5,FALSE,'manual','Asia/Shanghai',$6,$7)
+			VALUES ($1,$2,$3,NULL,$4,FALSE,'manual','Asia/Shanghai',$5,$6)
 			ON CONFLICT (system_key) WHERE system_key IS NOT NULL DO NOTHING
-			RETURNING id`, item.systemKey, item.name, item.description, providerID, item.skillVersionID, item.dailyLimit, item.monthlyBudget).Scan(&agentID)
+			RETURNING id`, item.systemKey, item.name, item.description, item.skillVersionID, item.dailyLimit, item.monthlyBudget).Scan(&agentID)
 		if errors.Is(err, sql.ErrNoRows) {
 			err = tx.QueryRowContext(ctx, `SELECT id FROM ai_agents WHERE system_key=$1 AND deleted_at IS NULL`, item.systemKey).Scan(&agentID)
 			if errors.Is(err, sql.ErrNoRows) {
 				err = tx.QueryRowContext(ctx, `UPDATE ai_agents
-					SET deleted_at=NULL, provider_profile_id=$2, skill_version_id=$3, updated_at=NOW()
-					WHERE system_key=$1 RETURNING id`, item.systemKey, providerID, item.skillVersionID).Scan(&agentID)
+					SET deleted_at=NULL, skill_version_id=$2, updated_at=NOW()
+					WHERE system_key=$1 RETURNING id`, item.systemKey, item.skillVersionID).Scan(&agentID)
 			}
 		} else if err == nil {
 			created++

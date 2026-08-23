@@ -416,15 +416,8 @@ export default function AgentConsole() {
       setDeleteTarget(null);
     } catch (reason) {
       const msg = reason instanceof Error ? reason.message : t('agent.requestFailed');
-      if (msg.includes('provider profile is in use')) {
-        setError(
-          locale === 'zh'
-            ? '该模型连接正在被 Agent 引用或已被设为默认模型，请先在 Agent 列表取消关联或清除默认用途后再删除。'
-            : 'Provider profile is in use by agents or configured as a default model. Please reassign or clear before deleting.'
-        );
-      } else {
-        setError(msg);
-      }
+      const cleanMsg = msg.replace(/^provider profile is in use:\s*/i, '');
+      setError(cleanMsg);
     }
   };
 

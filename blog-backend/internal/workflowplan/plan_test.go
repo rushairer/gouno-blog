@@ -40,14 +40,15 @@ func TestParseIntentAmbiguous(t *testing.T) {
 func TestMatchRequiresAuthorizedToolAndProvider(t *testing.T) {
 	provider := &domain.ProviderProfile{ID: 1, Enabled: true, IsDefaultWriting: true}
 	skill := &domain.AgentSkill{VersionID: 2, Capabilities: []string{"content.propose_distribution_draft"}, ExecutionMode: domain.AgentModeApproval}
-	agent := &domain.Agent{ID: 3, Enabled: true, SkillVersionID: &skill.VersionID, Skill: skill, ProviderProfile: provider, ProviderProfileID: 1}
+	pID := int64(1)
+	agent := &domain.Agent{ID: 3, Enabled: true, SkillVersionID: &skill.VersionID, Skill: skill, ProviderProfile: provider, ProviderProfileID: &pID}
 	intent := ParseIntent("生成配图 Brief")
 	match, template, selected := Match(intent, []*domain.ProviderProfile{provider}, []*domain.Agent{agent}, []*domain.AgentSkill{skill}, []tool.CatalogItem{{Name: "content.propose_distribution_draft"}})
 	if match.Status != "ready" || template == nil || selected != agent {
 		t.Fatalf("expected ready match: %#v", match)
 	}
 	badSkill := &domain.AgentSkill{VersionID: 4, Capabilities: []string{"content.audit_post"}}
-	badAgent := &domain.Agent{ID: 5, Enabled: true, SkillVersionID: &badSkill.VersionID, Skill: badSkill, ProviderProfile: provider, ProviderProfileID: 1}
+	badAgent := &domain.Agent{ID: 5, Enabled: true, SkillVersionID: &badSkill.VersionID, Skill: badSkill, ProviderProfile: provider, ProviderProfileID: &pID}
 	missing, _, _ := Match(intent, []*domain.ProviderProfile{provider}, []*domain.Agent{badAgent}, nil, []tool.CatalogItem{{Name: "content.propose_distribution_draft"}})
 	if missing.Status != "needs_configuration" || !strings.Contains(strings.Join(missing.Missing, ","), "Tool") {
 		t.Fatalf("expected missing tool: %#v", missing)
@@ -80,7 +81,7 @@ func TestMatchRealImageNeedsImageProvider(t *testing.T) {
 func TestCompileImageGenerationHasNoRedundantApproval(t *testing.T) {
 	provider := &domain.ProviderProfile{ID: 1, Enabled: true, IsDefaultWriting: true, IsDefaultImage: true}
 	skill := &domain.AgentSkill{VersionID: 2, Capabilities: []string{"media.create_image_task"}, ExecutionMode: domain.AgentModeApproval}
-	agent := &domain.Agent{ID: 3, Enabled: true, SkillVersionID: &skill.VersionID, Skill: skill, ProviderProfile: provider, ProviderProfileID: provider.ID}
+	agent := &domain.Agent{ID: 3, Enabled: true, SkillVersionID: &skill.VersionID, Skill: skill, ProviderProfile: provider, ProviderProfileID: &provider.ID}
 	intent := ParseIntent("为文章生成封面")
 	match, template, selected := Match(intent, []*domain.ProviderProfile{provider}, []*domain.Agent{agent}, []*domain.AgentSkill{skill}, []tool.CatalogItem{{Name: "media.create_image_task"}})
 	if match.Status != "ready" || selected != agent || template == nil {

@@ -281,7 +281,7 @@ export interface Agent {
   system_key?: string;
   name: string;
   description: string;
-  provider_profile_id: number;
+  provider_profile_id?: number | null;
   skill_version_id: number;
   skill?: AgentSkill;
   enabled: boolean;
@@ -430,7 +430,7 @@ export const emptyProvider: Omit<ProviderProfile, 'id' | 'created_at' | 'updated
   max_output_tokens: 2000,
 };
 
-export function emptyAgent(providerID = 0): Omit<Agent, 'id' | 'created_at' | 'updated_at'> {
+export function emptyAgent(providerID?: number): Omit<Agent, 'id' | 'created_at' | 'updated_at'> {
   return {
     name: '',
     description: '',
