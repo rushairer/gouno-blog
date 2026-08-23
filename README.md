@@ -26,7 +26,7 @@ Gouno Blog 是一个构建于 GoUno 与 GOSSO 的开源、自托管博客运营�
   - `/swagger/` -> **Swagger UI & OpenAPI Spec** (API 接口文档)
   - `/identity-admin/` -> **gosso-admin-frontend** (GOSSO 身份管理控制台)
   - `/api/v1/`、`/oauth2/`、`/oidc/`、`/.well-known/` -> **gosso**
-* **GOSSO / OIDC Provider**：负责登录、授权码流程、Token 签发、MFA、Passkey 等身份能力；本地默认使用 `ghcr.io/rushairer/gosso` 镜像。
+* **GOSSO / OIDC Provider**：负责登录、授权码流程、Token 签发、MFA、Passkey 等身份能力；唯一登录 UI 由 `/identity-admin/login` 下的 GOSSO 托管前端提供，业务前端不实现凭据表单。本地默认使用 `ghcr.io/rushairer/gosso` 镜像。
 * **blog-backend**：博客 API 后端，使用 `gouno` Web 框架开发，向身份服务拉取 JWKS 公钥并校验登录凭证与用户权限；内置受控 AI Agent Runner、Workflow 引擎、Cron Scheduler、Blog Tools 与人工审批。
 * **blog-frontend**：基于 React 构建的单页面应用（SPA），提供门户展示、`/admin` 博客管理控制台和 `/admin/ai-ops` AI 运营控制台。
 
@@ -84,7 +84,7 @@ chmod 600 keys/private.pem
 - Redirect URI：`https://localhost:8443/callback`
 - Scopes：`openid profile email`
 
-GOSSO Admin 使用独立 OAuth client 和 Redirect URI：`https://localhost:8443/identity-admin/callback`。Blog 前端通过 `@gosso/client` 使用 `__Host-*` HttpOnly Cookie 会话；访问与刷新 Token 不会写入浏览器可读存储。它仍使用授权码 + PKCE，并只在 `sessionStorage` 中临时保存 PKCE 状态和最小化的界面授权信息。
+GOSSO Admin 使用独立 OAuth client 和 Redirect URI：`https://localhost:8443/identity-admin/callback`。GOSSO 的 `login_url` 指向 `https://localhost:8443/identity-admin/login`；旧 `/login` 仅保留重定向。Blog 前端通过 `@gosso/client` 使用 `__Host-*` HttpOnly Cookie 会话；访问与刷新 Token 不会写入浏览器可读存储。它仍使用授权码 + PKCE，并只在 `sessionStorage` 中临时保存 PKCE 状态和最小化的界面授权信息。
 
 无感切换依赖统一网关下的 GOSSO 中心登录态：用户登录 `identity-admin` 后访问 `/admin`，blog 会发起 `/oauth2/authorize`。如果 GOSSO cookie 中的中心会话仍有效，GOSSO 会直接回调 `/callback` 并建立 Blog Cookie 会话，用户无需再次输入账号密码。
 
