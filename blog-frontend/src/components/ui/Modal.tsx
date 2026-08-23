@@ -20,21 +20,33 @@ export function Modal({
   className?: string;
 }) {
   const closeButton = useRef<HTMLButtonElement>(null);
+  const containerRef = useRef<HTMLElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   useEffect(() => {
     if (!open) return;
-    closeButton.current?.focus();
+    const frame = requestAnimationFrame(() => {
+      if (!containerRef.current?.contains(document.activeElement)) {
+        closeButton.current?.focus();
+      }
+    });
     const keydown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') onCloseRef.current();
     };
     window.addEventListener('keydown', keydown);
-    return () => window.removeEventListener('keydown', keydown);
-  }, [onClose, open]);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('keydown', keydown);
+    };
+  }, [open]);
+
   if (!open) return null;
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={(event) => {
       if (event.target === event.currentTarget) onClose();
     }}>
-      <section className={`modal${className ? ` ${className}` : ''}`} role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby={description ? 'modal-description' : undefined}>
+      <section ref={containerRef} className={`modal${className ? ` ${className}` : ''}`} role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby={description ? 'modal-description' : undefined}>
         <header>
           <div><h2 id="modal-title">{title}</h2>{description ? <p id="modal-description">{description}</p> : null}</div>
           <IconButton ref={closeButton} label="关闭弹窗" type="button" onClick={onClose}><X /></IconButton>
@@ -61,23 +73,35 @@ export function Drawer({
   className?: string;
 }) {
   const closeButton = useRef<HTMLButtonElement>(null);
+  const containerRef = useRef<HTMLElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   const titleID = useId();
   const descriptionID = useId();
+
   useEffect(() => {
     if (!open) return;
-    closeButton.current?.focus();
+    const frame = requestAnimationFrame(() => {
+      if (!containerRef.current?.contains(document.activeElement)) {
+        closeButton.current?.focus();
+      }
+    });
     const keydown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') onCloseRef.current();
     };
     window.addEventListener('keydown', keydown);
-    return () => window.removeEventListener('keydown', keydown);
-  }, [onClose, open]);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('keydown', keydown);
+    };
+  }, [open]);
+
   if (!open) return null;
   return (
     <div className="drawer-backdrop" role="presentation" onMouseDown={(event) => {
       if (event.target === event.currentTarget) onClose();
     }}>
-      <section className={classes('drawer', className)} role="dialog" aria-modal="true" aria-labelledby={titleID} aria-describedby={description ? descriptionID : undefined}>
+      <section ref={containerRef} className={classes('drawer', className)} role="dialog" aria-modal="true" aria-labelledby={titleID} aria-describedby={description ? descriptionID : undefined}>
         <header>
           <div><h2 id={titleID}>{title}</h2>{description ? <p id={descriptionID}>{description}</p> : null}</div>
           <IconButton ref={closeButton} label="关闭面板" type="button" onClick={onClose}><X /></IconButton>
