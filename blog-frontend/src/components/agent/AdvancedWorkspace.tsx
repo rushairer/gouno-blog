@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import {
-  Bot, Check, ChevronRight, CirclePause, Copy, DatabaseZap, Download, Edit2, GitBranch, KeyRound, ListChecks,
-  LockKeyhole, Play, Plus, RefreshCw, Settings2, Sparkles, Trash2, Upload,
+  Bot, ChevronRight, CirclePause, Copy, DatabaseZap, Download, Edit2, GitBranch, KeyRound, ListChecks,
+  LockKeyhole, Play, Plus, RefreshCw, Settings2, Trash2, Upload,
 } from 'lucide-react';
 import type {
   Agent, AgentRun, AgentSkill, EmbeddingProfile, ProviderProfile, ToolDefinition,
@@ -595,44 +595,6 @@ export function AdvancedWorkspace({
                       </td>
                       <td>
                         <div className="agent-row-actions">
-                          {!provider.is_default_writing ? (
-                            <button
-                              type="button"
-                              title={locale === 'zh' ? '设为默认文本模型' : 'Set as default text model'}
-                              disabled={!provider.enabled}
-                              onClick={() => void onSetDefaultProvider(provider.id, 'writing')}
-                            >
-                              <Sparkles />
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              className="provider-default-mark"
-                              title={locale === 'zh' ? '点击取消默认文本模型' : 'Click to clear default text model'}
-                              onClick={() => void onSetDefaultProvider(0, 'writing')}
-                            >
-                              <Check />{locale === 'zh' ? '文本' : 'Text'}
-                            </button>
-                          )}
-                          {!provider.is_default_image ? (
-                            <button
-                              type="button"
-                              title={locale === 'zh' ? '设为默认图片生成模型' : 'Set as default image model'}
-                              disabled={!provider.enabled}
-                              onClick={() => void onSetDefaultProvider(provider.id, 'image')}
-                            >
-                              <Sparkles />
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              className="provider-default-mark"
-                              title={locale === 'zh' ? '点击取消默认图片模型' : 'Click to clear default image model'}
-                              onClick={() => void onSetDefaultProvider(0, 'image')}
-                            >
-                              <Check />{locale === 'zh' ? '图片' : 'Image'}
-                            </button>
-                          )}
                           <button
                             type="button"
                             title={
