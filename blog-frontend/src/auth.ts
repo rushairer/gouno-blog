@@ -22,7 +22,7 @@ export const gossoClient = createGossoClient({
   redirectUri: `${window.location.origin}/callback`,
   scope: gossoScope,
   postLoginDefaultPath: '/admin',
-  loginPath: '/login',
+  loginPath: `${gossoAdminURL.replace(/\/$/, '')}/login`,
   storagePrefix: 'gouno-blog',
   sessionMode: 'cookie',
   sessionProfileEndpoint: '/api/me/session',

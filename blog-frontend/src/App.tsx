@@ -13,7 +13,7 @@ import Archive from './pages/Archive';
 import About from './pages/About';
 import NotFound from './pages/NotFound';
 import Callback from './pages/Callback';
-import Login from './pages/Login';
+import HostedLoginRedirect from './pages/HostedLoginRedirect';
 import { canManageBlog, isLoggedIn, redirectToAuthorize } from './auth';
 import { useSiteMetadata } from './hooks/useSiteMetadata';
 const Settings = React.lazy(() => import('./pages/Settings'));
@@ -69,7 +69,7 @@ export default function App() {
   useSiteMetadata();
   return <I18nProvider><ToastProvider><BrowserRouter><Routes>
     <Route path="/callback" element={<Callback />} />
-    <Route path="/login" element={<Login />} />
+    <Route path="/login" element={<HostedLoginRedirect />} />
     <Route path="/" element={<Public><Home /></Public>} />
     <Route path="/articles" element={<Public><ArticleIndex /></Public>} />
     <Route path="/articles/:slug" element={<Public><PostDetail /></Public>} />
