@@ -415,7 +415,16 @@ export default function AgentConsole() {
       else await mutate(() => agentApi.deleteEmbeddingProfile(deleteTarget.value.id));
       setDeleteTarget(null);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : t('agent.requestFailed'));
+      const msg = reason instanceof Error ? reason.message : t('agent.requestFailed');
+      if (msg.includes('provider profile is in use')) {
+        setError(
+          locale === 'zh'
+            ? '该模型连接正在被 Agent 引用或已被设为默认模型，请先在 Agent 列表取消关联或清除默认用途后再删除。'
+            : 'Provider profile is in use by agents or configured as a default model. Please reassign or clear before deleting.'
+        );
+      } else {
+        setError(msg);
+      }
     }
   };
 
@@ -636,7 +645,17 @@ export default function AgentConsole() {
                 }
                 onSetDefaultProvider={(id, usage) =>
                   mutate(() => agentApi.setDefaultProvider(id, usage))
-                    .then(() => setNotice(usage === 'writing' ? '默认写作模型已更新' : '默认图片模型已更新'))
+                    .then(() =>
+                      setNotice(
+                        id === 0
+                          ? (locale === 'zh'
+                            ? (usage === 'writing' ? '已取消默认文本模型。' : '已取消默认图片模型。')
+                            : (usage === 'writing' ? 'Cleared default text model.' : 'Cleared default image model.'))
+                          : (locale === 'zh'
+                            ? (usage === 'writing' ? '默认文本模型已更新。' : '默认图片模型已更新。')
+                            : (usage === 'writing' ? 'Default text model updated.' : 'Default image model updated.'))
+                      )
+                    )
                     .catch((reason: Error) => setError(reason.message))
                 }
                 onTestConnection={testConnection}

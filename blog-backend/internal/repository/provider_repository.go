@@ -100,28 +100,33 @@ func (r *AgentRepository) SetDefaultProvider(ctx context.Context, id int64, purp
 	if err != nil {
 		return err
 	}
-	if _, err = tx.ExecContext(ctx, `UPDATE ai_provider_profiles SET `+column+`=false, updated_at=NOW() WHERE deleted_at IS NULL AND `+column+`=true`); err == nil {
-		result, updateErr := tx.ExecContext(ctx, `UPDATE ai_provider_profiles SET `+column+`=true, updated_at=NOW() WHERE id=$1 AND enabled=true AND deleted_at IS NULL`, id)
-		err = updateErr
-		if err == nil {
-			affected, _ := result.RowsAffected()
-			if affected == 0 {
-				err = sql.ErrNoRows
-			}
-		}
-	}
-	if err != nil {
+	if _, err = tx.ExecContext(ctx, `UPDATE ai_provider_profiles SET `+column+`=false, updated_at=NOW() WHERE deleted_at IS NULL AND `+column+`=true`); err != nil {
 		_ = tx.Rollback()
 		return err
+	}
+	if id > 0 {
+		result, updateErr := tx.ExecContext(ctx, `UPDATE ai_provider_profiles SET `+column+`=true, updated_at=NOW() WHERE id=$1 AND enabled=true AND deleted_at IS NULL`, id)
+		if updateErr != nil {
+			_ = tx.Rollback()
+			return updateErr
+		}
+		affected, _ := result.RowsAffected()
+		if affected == 0 {
+			_ = tx.Rollback()
+			return sql.ErrNoRows
+		}
 	}
 	return tx.Commit()
 }
 
 func (r *AgentRepository) DeleteProvider(ctx context.Context, id int64) error {
 	result, err := r.db.ExecContext(ctx, `UPDATE ai_provider_profiles p
-		SET enabled=false, api_key_ciphertext=NULL, api_key_nonce=NULL,
+		SET enabled=false, is_default_writing=false, is_default_image=false,
+			api_key_ciphertext=NULL, api_key_nonce=NULL,
 			api_key_last4='', key_version=0, deleted_at=NOW(), updated_at=NOW()
 		WHERE p.id=$1 AND p.deleted_at IS NULL
+		AND p.is_default_writing=false
+		AND p.is_default_image=false
 		AND NOT EXISTS (
 			SELECT 1 FROM ai_agents a
 			WHERE a.provider_profile_id=p.id AND a.deleted_at IS NULL

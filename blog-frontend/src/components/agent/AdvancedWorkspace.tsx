@@ -490,7 +490,7 @@ export function AdvancedWorkspace({
             title={labels.providers}
             description={
               locale === 'zh'
-                ? '管理模型连接，并分别指定写作与图片生成的默认模型。'
+                ? '管理模型连接，并分别指定文本模型与图片生成的默认模型。'
                 : 'Manage model connections and defaults.'
             }
             actions={
@@ -510,18 +510,19 @@ export function AdvancedWorkspace({
           {providers.length > 0 ? (
             <section className="provider-defaults">
               <div className="provider-defaults__intro">
-                <h3>默认用途</h3>
-                <p>决定编辑器与图片生成使用的模型。</p>
+                <h3>{locale === 'zh' ? '默认用途' : 'Default Purposes'}</h3>
+                <p>{locale === 'zh' ? '决定编辑器、运营分析与图片生成使用的模型。' : 'Determines models used for editing, analysis, and image generation.'}</p>
               </div>
               <label>
-                写作辅助
+                {locale === 'zh' ? '文本模型' : 'Text Model'}
                 <Select
                   value={providers.find((item) => item.is_default_writing)?.id || ''}
                   onChange={(event) => {
-                    if (event.target.value) void onSetDefaultProvider(Number(event.target.value), 'writing');
+                    const id = event.target.value ? Number(event.target.value) : 0;
+                    void onSetDefaultProvider(id, 'writing');
                   }}
                 >
-                  <option value="">请选择模型</option>
+                  <option value="">{locale === 'zh' ? '未设置 (取消选择)' : 'Not set (Clear default)'}</option>
                   {providers
                     .filter((item) => item.enabled)
                     .map((item) => (
@@ -532,14 +533,15 @@ export function AdvancedWorkspace({
                 </Select>
               </label>
               <label>
-                图片生成
+                {locale === 'zh' ? '图片生成' : 'Image Generation'}
                 <Select
                   value={providers.find((item) => item.is_default_image)?.id || ''}
                   onChange={(event) => {
-                    if (event.target.value) void onSetDefaultProvider(Number(event.target.value), 'image');
+                    const id = event.target.value ? Number(event.target.value) : 0;
+                    void onSetDefaultProvider(id, 'image');
                   }}
                 >
-                  <option value="">请选择模型</option>
+                  <option value="">{locale === 'zh' ? '未设置 (取消选择)' : 'Not set (Clear default)'}</option>
                   {providers
                     .filter((item) => item.enabled)
                     .map((item) => (
@@ -573,10 +575,10 @@ export function AdvancedWorkspace({
                       <td>
                         <strong>{provider.name}</strong>
                         {provider.is_default_writing ? (
-                          <small className="provider-default">默认写作模型</small>
+                          <small className="provider-default">{locale === 'zh' ? '默认文本模型' : 'Default Text Model'}</small>
                         ) : null}
                         {provider.is_default_image ? (
-                          <small className="provider-default">默认图片模型</small>
+                          <small className="provider-default">{locale === 'zh' ? '默认图片模型' : 'Default Image Model'}</small>
                         ) : null}
                       </td>
                       <td>{provider.provider_type}</td>
@@ -596,30 +598,40 @@ export function AdvancedWorkspace({
                           {!provider.is_default_writing ? (
                             <button
                               type="button"
-                              title="设为默认写作模型"
+                              title={locale === 'zh' ? '设为默认文本模型' : 'Set as default text model'}
                               disabled={!provider.enabled}
                               onClick={() => void onSetDefaultProvider(provider.id, 'writing')}
                             >
                               <Sparkles />
                             </button>
                           ) : (
-                            <span className="provider-default-mark">
-                              <Check />写作
-                            </span>
+                            <button
+                              type="button"
+                              className="provider-default-mark"
+                              title={locale === 'zh' ? '点击取消默认文本模型' : 'Click to clear default text model'}
+                              onClick={() => void onSetDefaultProvider(0, 'writing')}
+                            >
+                              <Check />{locale === 'zh' ? '文本' : 'Text'}
+                            </button>
                           )}
                           {!provider.is_default_image ? (
                             <button
                               type="button"
-                              title="设为默认图片生成模型"
+                              title={locale === 'zh' ? '设为默认图片生成模型' : 'Set as default image model'}
                               disabled={!provider.enabled}
                               onClick={() => void onSetDefaultProvider(provider.id, 'image')}
                             >
                               <Sparkles />
                             </button>
                           ) : (
-                            <span className="provider-default-mark">
-                              <Check />图片
-                            </span>
+                            <button
+                              type="button"
+                              className="provider-default-mark"
+                              title={locale === 'zh' ? '点击取消默认图片模型' : 'Click to clear default image model'}
+                              onClick={() => void onSetDefaultProvider(0, 'image')}
+                            >
+                              <Check />{locale === 'zh' ? '图片' : 'Image'}
+                            </button>
                           )}
                           <button
                             type="button"
