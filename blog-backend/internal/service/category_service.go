@@ -44,6 +44,7 @@ type CategoryRequest struct {
 
 // TagService handles tag management business logic.
 type TagService interface {
+	ListPublishedTagSummaries(ctx context.Context) ([]domain.TagSummary, error)
 	ListAdminTags(ctx context.Context) ([]domain.TagSummary, error)
 	RenameTag(ctx context.Context, oldName, newName string) error
 	DeleteTag(ctx context.Context, name string) error
@@ -134,6 +135,10 @@ func (s *categoryService) ListAdminTags(ctx context.Context) ([]domain.TagSummar
 	return s.repo.ListAdminTags(ctx)
 }
 
+func (s *categoryService) ListPublishedTagSummaries(ctx context.Context) ([]domain.TagSummary, error) {
+	return s.repo.ListPublishedTagSummaries(ctx)
+}
+
 func (s *categoryService) RenameTag(ctx context.Context, oldName, newName string) error {
 	trimmed := strings.TrimSpace(newName)
 	if trimmed == "" || strings.TrimSpace(oldName) == "" {
@@ -200,4 +205,3 @@ func (s *categoryService) UpdateSiteSettings(ctx context.Context, requested map[
 	}
 	return s.repo.UpdateSiteSettings(ctx, clean)
 }
-

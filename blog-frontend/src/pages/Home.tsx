@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowRight, GitBranch, Mail, Rss } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { EmptyState, LoadingState, SectionHeading } from '../components/ui';
@@ -7,7 +7,8 @@ import { postsApi } from '../api/posts';
 import { siteApi } from '../api/site';
 import { markdownToPlainText } from '../utils/markdown';
 import { usePageTitle } from '../hooks/usePageTitle';
-import type { Post, SiteSettings } from '../types/blog';
+import type { Category, Post, SiteSettings } from '../types/blog';
+import type { TagSummary } from '../api/site';
 
 const readTime = (post: Post) => Math.max(3, Math.ceil((post.content?.length || post.summary.length) / 500));
 
@@ -38,7 +39,8 @@ function Story({ post, index, featured = false }: { post: Post; index: number; f
 
 export default function Home() {
   const [posts, setPosts] = useState<Post[]>([]);
-  const [tags, setTags] = useState<string[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [tagSummaries, setTagSummaries] = useState<TagSummary[]>([]);
   const [site, setSite] = useState<SiteSettings>(DEFAULT_SITE_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -51,22 +53,19 @@ export default function Home() {
   useEffect(() => {
     Promise.all([
       postsApi.getPosts(new URLSearchParams({ page: '1', pageSize: '12' })),
-      siteApi.getTags(),
+      siteApi.getCategories().catch(() => []),
+      siteApi.getPublishedTagSummaries().catch(() => []),
       siteApi.getSiteSettings().catch(() => DEFAULT_SITE_SETTINGS),
     ])
-      .then(([postData, tagData, siteData]) => {
+      .then(([postData, categoryData, tagData, siteData]) => {
         setPosts(postData.list || []);
-        setTags(tagData || []);
+        setCategories(categoryData || []);
+        setTagSummaries(tagData || []);
         setSite({ ...DEFAULT_SITE_SETTINGS, ...siteData });
       })
       .catch((reason: Error) => setError(reason.message))
       .finally(() => setLoading(false));
   }, []);
-
-  const tagCounts = useMemo(() => tags.map((tag) => ({
-    tag,
-    count: posts.filter((post) => post.tags.includes(tag)).length,
-  })).sort((a, b) => b.count - a.count), [posts, tags]);
 
   if (loading) return <div className="public-container state-page"><LoadingState label="正在整理文章…" /></div>;
 
@@ -123,13 +122,30 @@ export default function Home() {
           </section>
         ) : null}
 
-        <section className="home-section topic-index">
-          <SectionHeading title="主题索引" />
-          <div className="topic-columns">
-            <div><h3>长期关注</h3>{['工程架构', '产品设计', '人工智能', '开发者体验'].map((name, index) => <Link key={name} to={`/search?q=${encodeURIComponent(name)}`}><span>{name}</span><strong>{String(index + 1).padStart(2, '0')}</strong></Link>)}</div>
-            <div><h3>热门标签</h3><div className="tag-cloud">{tagCounts.slice(0, 16).map(({ tag, count }) => <Link key={tag} to={`/tags/${encodeURIComponent(tag)}`}>{tag}<sup>{count}</sup></Link>)}</div></div>
-          </div>
-        </section>
+        {categories.length || tagSummaries.length ? (
+          <section className="home-section topic-index">
+            <SectionHeading title="主题索引" />
+            <div className="topic-columns">
+              {categories.length ? (
+                <div>
+                  <h3>核心分类</h3>
+                  {categories.map((category, index) => (
+                    <Link key={category.id} to={`/categories/${encodeURIComponent(category.slug)}`}>
+                      <span>{category.name}</span>
+                      <strong>{String(index + 1).padStart(2, '0')} · {category.post_count || 0} 篇</strong>
+                    </Link>
+                  ))}
+                </div>
+              ) : null}
+              {tagSummaries.length ? (
+                <div>
+                  <h3>热门标签</h3>
+                  <div className="tag-cloud">{tagSummaries.slice(0, 16).map(({ name, post_count }) => <Link key={name} to={`/tags/${encodeURIComponent(name)}`}>{name}<sup>{post_count}</sup></Link>)}</div>
+                </div>
+              ) : null}
+            </div>
+          </section>
+        ) : null}
 
         <section className="author-section">
           <div className="author-monogram">{authorInitials(site.author_name)}</div>
