@@ -39,7 +39,7 @@ describe('Home', () => {
 
     renderHome();
 
-    expect(await screen.findByRole('heading', { name: /把复杂系统/ })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /记录探索与思考/ })).toBeInTheDocument();
     expect((await screen.findAllByText('Go SSO Notes')).length).toBeGreaterThan(0);
     expect(screen.getAllByRole('link', { name: 'Go SSO Notes' })[0]).toHaveAttribute('href', '/articles/go-sso-notes');
     expect(screen.getByRole('heading', { name: '精选文章' })).toBeInTheDocument();
