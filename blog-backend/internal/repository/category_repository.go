@@ -33,6 +33,7 @@ type CategoryWriter interface {
 
 // TagRepository handles tag management operations.
 type TagRepository interface {
+	ListPublishedTagSummaries(ctx context.Context) ([]domain.TagSummary, error)
 	ListAdminTags(ctx context.Context) ([]domain.TagSummary, error)
 	RenameTag(ctx context.Context, oldName, newName string) error
 	DeleteTag(ctx context.Context, name string) error
@@ -178,6 +179,29 @@ func (r *categoryRepository) DeleteCategory(ctx context.Context, id int64) error
 	return nil
 }
 
+func (r *categoryRepository) ListPublishedTagSummaries(ctx context.Context) ([]domain.TagSummary, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT tag, COUNT(*)
+		FROM posts, unnest(tags) tag
+		WHERE status = 'published'
+		GROUP BY tag
+		ORDER BY COUNT(*) DESC, tag`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make([]domain.TagSummary, 0)
+	for rows.Next() {
+		var item domain.TagSummary
+		if err := rows.Scan(&item.Name, &item.PostCount); err != nil {
+			return nil, err
+		}
+		result = append(result, item)
+	}
+	return result, rows.Err()
+}
+
 func (r *categoryRepository) ListAdminTags(ctx context.Context) ([]domain.TagSummary, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT tag, COUNT(*) FROM posts, unnest(tags) tag GROUP BY tag ORDER BY COUNT(*) DESC, tag`)
 	if err != nil {
@@ -245,4 +269,3 @@ func (r *categoryRepository) UpdateSiteSettings(ctx context.Context, settings ma
 	_ = json.Unmarshal(saved, &res)
 	return res, nil
 }
-

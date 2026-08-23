@@ -69,6 +69,10 @@ export const siteApi = {
     return readData<string[]>(apiFetch('/api/tags'));
   },
 
+  async getPublishedTagSummaries(): Promise<TagSummary[]> {
+    return readData<TagSummary[]>(apiFetch('/api/tags/summary'));
+  },
+
   async getAdminTags(): Promise<TagSummary[]> {
     return readData<TagSummary[]>(apiFetch('/api/admin/tags'));
   },

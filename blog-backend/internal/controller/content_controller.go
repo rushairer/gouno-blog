@@ -30,6 +30,15 @@ func (ctrl *ContentController) ListCategories(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
 }
 
+func (ctrl *ContentController) ListPublishedTagSummaries(c *gin.Context) {
+	items, err := ctrl.svc.ListPublishedTagSummaries(c.Request.Context())
+	if err != nil {
+		WriteDomainError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
+}
+
 func (ctrl *ContentController) ListCategoryPosts(c *gin.Context) {
 	page, pageSize := ExtractPagination(c, 10)
 
@@ -196,4 +205,3 @@ func (ctrl *ContentController) UpdateSiteSettings(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(settings))
 }
-

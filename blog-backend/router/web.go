@@ -181,6 +181,7 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 		api.PUT("/posts/:slugOrID/like", communityCtrl.Like)
 		api.DELETE("/posts/:slugOrID/like", communityCtrl.Unlike)
 		api.GET("/tags", ctrl.ListTags)
+		api.GET("/tags/summary", contentCtrl.ListPublishedTagSummaries)
 		api.GET("/categories", contentCtrl.ListCategories)
 		api.GET("/categories/:slug/posts", contentCtrl.ListCategoryPosts)
 		api.GET("/pages/nav", pageCtrl.GetNavPages)

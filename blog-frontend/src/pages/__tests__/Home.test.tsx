@@ -27,8 +27,14 @@ describe('Home', () => {
   it('renders an editorial homepage from real posts and links to canonical article routes', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = input.toString();
+      if (url.includes('/api/tags/summary')) {
+        return Response.json({ data: [{ name: 'go', post_count: 8 }, { name: 'react', post_count: 3 }] });
+      }
       if (url.includes('/api/tags')) {
         return Response.json({ data: ['go', 'react', 'ops'] });
+      }
+      if (url.includes('/api/categories')) {
+        return Response.json({ data: [{ id: 1, name: '工程架构', slug: 'architecture', post_count: 4 }] });
       }
       if (url.includes('/api/site')) {
         return Response.json({ data: { site_title: 'Gouno Blog', author_name: '站点作者', author_bio: '欢迎来到我的博客。' } });
@@ -44,17 +50,21 @@ describe('Home', () => {
     expect(screen.getAllByRole('link', { name: 'Go SSO Notes' })[0]).toHaveAttribute('href', '/articles/go-sso-notes');
     expect(screen.getByRole('heading', { name: '精选文章' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '主题索引' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /工程架构/ })).toHaveAttribute('href', '/categories/architecture');
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining('pageSize=12'),
       expect.objectContaining({ credentials: 'same-origin' }),
     );
   });
 
-  it('renders tag counts and the subscription paths without fake form submission', async () => {
+  it('renders server-provided tag counts and the subscription paths without fake form submission', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: RequestInfo | URL) => {
         const url = input.toString();
+        if (url.includes('/api/tags/summary')) {
+          return Response.json({ data: [{ name: 'go', post_count: 12 }, { name: 'react', post_count: 5 }] });
+        }
         if (url.includes('/api/tags')) {
           return Response.json({ data: ['go', 'react'] });
         }
@@ -71,6 +81,7 @@ describe('Home', () => {
     expect(screen.getByRole('link', { name: /RSS/ })).toHaveAttribute('href', '/feed.xml');
     expect(screen.getByRole('link', { name: /Email/ })).toHaveAttribute('href', 'mailto:hello@example.com');
     expect(screen.getAllByRole('link', { name: 'go' }).some((link) => link.getAttribute('href') === '/tags/go')).toBe(true);
+    expect(screen.getByText('12')).toBeInTheDocument();
   });
 
   it('renders cover images when post has cover_url', async () => {
