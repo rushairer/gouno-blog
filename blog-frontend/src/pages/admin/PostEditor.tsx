@@ -6,6 +6,7 @@ import { postsApi } from '../../api/posts';
 import { siteApi } from '../../api/site';
 import { AdminPageState, Button, ConfirmDialog, Feedback, Field, Input, Select, Textarea, useToast } from '../../components/ui';
 import { MarkdownRenderer } from '../../components/MarkdownRenderer';
+import { AiImageGenerationPanel, AiWritingPanel, ContentEditorFrame, EditorCommandBar } from '../../components/editor/ContentEditorFrame';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { extractMarkdownTOC } from '../../utils/markdown';
@@ -615,8 +616,8 @@ export default function PostEditor() {
   const primaryStatus: PostStatus = publishIntent === 'scheduled' ? 'scheduled' : 'published';
   const primaryLabel = publishIntent === 'scheduled' ? '安排发布' : post.status === 'published' ? '更新文章' : '发布';
   if (!allowed || loading) return <AdminPageState title={isNew ? '新建文章' : '编辑文章'} description="撰写、预览并管理文章发布状态。" label="正在打开编辑器…" />;
-  return <div className="editor-page">
-    <header className="editor-commandbar">
+  return <ContentEditorFrame>
+    <EditorCommandBar>
       <button className="editor-back" type="button" onClick={leaveEditor}><ArrowLeft /> 返回文章列表</button>
       <div className="editor-save-state">{saving ? '正在保存…' : savedAt ? <><Check /> 已于 {savedAt.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })} 保存</> : dirty.current ? '有未保存的更改' : '所有更改已保存'}</div>
       <div>
@@ -624,7 +625,7 @@ export default function PostEditor() {
         <Button variant="secondary" type="button" onClick={() => void persist('draft')} disabled={saving}><Save /> 保存草稿</Button>
         <Button variant="primary" type="button" onClick={() => void persist(primaryStatus)} disabled={saving}><Send /> {primaryLabel}</Button>
       </div>
-    </header>
+    </EditorCommandBar>
     {error ? <Feedback type="error">{error}</Feedback> : null}
     <div className="editor-workspace">
       <aside className="editor-outline"><div><h2>文档大纲</h2><button type="button" onClick={() => setShowVersions(!showVersions)}><History /> 版本历史 ({versions.length})</button></div>{showVersions ? <div className="version-drawer">{versions.map((version) => <button key={version.id} type="button" onClick={() => setRestoreTarget(version)}><strong>{version.title}</strong><small>{new Date(version.created_at).toLocaleString('zh-CN')} · 点击恢复</small></button>)}</div> : <nav>{outline.length ? outline.map((item) => <a key={item.id} href={`#${item.id}`} className={`level-${item.level}`} onClick={() => { if (!preview) setPreview(true); }}>{item.text}</a>) : <p>在正文中添加 Markdown 标题（如 # 或 ##）后，大纲会自动生成。</p>}</nav>}</aside>
@@ -660,7 +661,7 @@ export default function PostEditor() {
           </div>
         </div>
         {showAiWriting ? (
-          <div className="editor-ai-writing-panel">
+          <AiWritingPanel>
             <div className="editor-ai-panel-header">
               <div className="editor-ai-presets">
                 <button type="button" onClick={() => void handleGenerateContent('基于文章标题和摘要，撰写结构严谨、内容丰富的 Markdown 完整文章初稿，包含引言、分章节深入论述和总结。')} disabled={aiContentLoading}>
@@ -725,10 +726,10 @@ export default function PostEditor() {
                 </div>
               </div>
             ) : null}
-          </div>
+          </AiWritingPanel>
         ) : null}
         {showAiImage ? (
-          <div className="editor-ai-image-panel">
+          <AiImageGenerationPanel>
             <div className="editor-ai-panel-header">
               <div className="editor-ai-presets">
                 <button type="button" onClick={() => void handleGenerateAiImage('A sleek modern architectural diagram illustration showing system components, clean lines, isometric view, tech palette')} disabled={aiImageLoading}>
@@ -805,7 +806,7 @@ export default function PostEditor() {
                 </div>
               </div>
             ) : null}
-          </div>
+          </AiImageGenerationPanel>
         ) : null}
         {preview ? <div className="editor-preview"><MarkdownRenderer content={post.content || '开始写作后，预览会出现在这里。'} /></div> : <textarea className="editor-body mono" value={post.content} onChange={(event) => update('content', event.target.value)} aria-label="文章正文 Markdown" placeholder={'## 从问题开始\n\n写下背景、约束、判断与实现…'} />}
       </main>
@@ -981,5 +982,5 @@ export default function PostEditor() {
     </div>
     <ConfirmDialog open={restoreTarget !== null} title="恢复历史版本" description={restoreTarget ? <>恢复 {new Date(restoreTarget.created_at).toLocaleString('zh-CN')} 的版本？当前内容会先保留为历史版本。</> : ''} confirmLabel="恢复版本" onClose={() => setRestoreTarget(null)} onConfirm={restoreVersion} />
     <ConfirmDialog open={confirmExit} title="放弃未保存的更改？" description="离开编辑器后，尚未保存的内容会丢失。" confirmLabel="放弃并离开" danger onClose={() => setConfirmExit(false)} onConfirm={() => navigate('/admin/posts')} />
-  </div>;
+  </ContentEditorFrame>;
 }

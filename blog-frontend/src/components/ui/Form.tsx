@@ -15,6 +15,16 @@ export function FormLayout({ className = '', ...props }: React.FormHTMLAttribute
   return <form className={classes('form-layout', className)} {...props} />;
 }
 
+export function OverlayForm({
+  children,
+  actions,
+  className = '',
+  actionClassName = 'drawer-actions',
+  ...props
+}: React.FormHTMLAttributes<HTMLFormElement> & { actions: React.ReactNode; actionClassName?: string }) {
+  return <FormLayout className={classes('drawer-form', className)} {...props}>{children}<FormActions className={actionClassName}>{actions}</FormActions></FormLayout>;
+}
+
 export function FormGrid({
   children,
   columns = 2,
@@ -56,6 +66,14 @@ export const Checkbox = forwardRef<HTMLInputElement, Omit<React.InputHTMLAttribu
     return <input ref={ref} className={classes('ui-checkbox', className)} type="checkbox" {...props} />;
   },
 );
+
+export function CheckboxField({
+  children,
+  className = '',
+  ...props
+}: Omit<React.LabelHTMLAttributes<HTMLLabelElement>, 'children'> & { children: React.ReactNode }) {
+  return <label className={classes('checkbox-field', className)} {...props}>{children}</label>;
+}
 
 export function Field({
   label,

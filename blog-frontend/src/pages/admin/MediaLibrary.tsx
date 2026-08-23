@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Copy, ImagePlus, Link2, LoaderCircle, Pencil, Sparkles, Trash2, X } from 'lucide-react';
+import { Copy, ImagePlus, Link2, Pencil, Sparkles, Trash2, X } from 'lucide-react';
 import { canManageBlog, isLoggedIn, redirectToAuthorize } from '../../auth';
 import { mediaApi } from '../../api/media';
 import { agentApi } from '../../api/agent';
-import { AdminPage, AdminPageHeader, BulkActionBar, Button, Checkbox, ConfirmDialog, ContentStack, copyText, Drawer, EmptyState, Feedback, Field, FilterBar, Input, LoadingState, Panel, SearchField, Select, Textarea, useToast } from '../../components/ui';
+import { AdminPage, AdminPageHeader, BulkActionBar, Button, Checkbox, ConfirmDialog, ContentStack, copyText, Drawer, EmptyState, Feedback, FilterBar, LoadingState, Panel, SearchField, Select, useToast } from '../../components/ui';
 import { WorkflowLauncher } from '../../components/agent/WorkflowLauncher';
+import { MediaAltTextForm, MediaImageGenerationForm, MediaUploadForm } from '../../components/media/MediaDrawerForms';
 import { useI18n } from '../../i18n';
 
 interface MediaAsset {
@@ -350,105 +351,12 @@ export default function MediaLibrary() {
 
       {/* 上传图片 Drawer */}
       <Drawer open={uploadDrawerOpen} title="上传图片" description="选择图片并补充替代文本，便于内容复用与无障碍阅读。" onClose={() => !uploading && setUploadDrawerOpen(false)}>
-        <form className="drawer-form media-upload-drawer" onSubmit={upload}>
-          <Field label={t('imageFile')} required hint="支持 JPEG、PNG、WebP 与 GIF。">
-            <input className="input-field" type="file" accept="image/jpeg,image/png,image/webp,image/gif" required onChange={(event) => setFile(event.target.files?.[0] || null)} />
-          </Field>
-          {file ? <p className="upload-file-summary">已选择：<strong>{file.name}</strong> · {Math.ceil(file.size / 1024)} KB</p> : null}
-          <Field label={t('altText')} hint="简洁说明图片内容；留空时会使用文件名。">
-            <Input value={altText} onChange={(event) => setAltText(event.target.value)} />
-          </Field>
-          <div className="drawer-actions">
-            <Button variant="secondary" type="button" disabled={uploading} onClick={() => setUploadDrawerOpen(false)}>取消</Button>
-            <Button variant="primary" disabled={!file} loading={uploading}>
-              <ImagePlus />{uploading ? t('uploading') : t('uploadImage')}
-            </Button>
-          </div>
-        </form>
+        <MediaUploadForm file={file} altText={altText} uploading={uploading} labels={{ imageFile: t('imageFile'), altText: t('altText'), cancel: t('cancel'), uploadImage: t('uploadImage'), uploading: t('uploading') }} onFileChange={setFile} onAltTextChange={setAltText} onCancel={() => setUploadDrawerOpen(false)} onSubmit={upload} />
       </Drawer>
 
       {/* AI 文生图 Drawer */}
       <Drawer open={aiDrawerOpen} title="AI 文生图" description="输入创意描述，让 AI 一键绘制高质量插画并直接存入媒体库。" onClose={() => !aiGenerating && setAiDrawerOpen(false)}>
-        <div className="drawer-form">
-          <Field label="风格预设" hint="点击预设快速填入专业提示词风格">
-            <div className="editor-ai-presets" style={{ marginTop: 4 }}>
-              <button type="button" onClick={() => setAiPrompt('A sleek modern architectural diagram illustration showing system components, clean lines, isometric view, tech palette')} disabled={aiGenerating}>
-                📊 架构图解
-              </button>
-              <button type="button" onClick={() => setAiPrompt('A modern minimal editorial vector illustration for a clean web page, subtle gradients, flat design')} disabled={aiGenerating}>
-                🖼️ 科技插画
-              </button>
-              <button type="button" onClick={() => setAiPrompt('Cinematic concept art, hyper-detailed futuristic scene, volumetric lighting, 8k wallpaper quality')} disabled={aiGenerating}>
-                🎬 电影概念
-              </button>
-              <button type="button" onClick={() => setAiPrompt('Cute 3D isometric clay render illustration, soft studio lighting, playful scene')} disabled={aiGenerating}>
-                🎨 3D 立体
-              </button>
-              <button type="button" onClick={() => setAiPrompt('Breathtaking atmospheric nature landscape, morning golden hour mist, tranquil mountain reflections, award-winning photography')} disabled={aiGenerating}>
-                🌄 自然风光
-              </button>
-              <button type="button" onClick={() => setAiPrompt('Ultra-minimalist modern abstract geometry, soft pastel tones, clean negative space, fine art')} disabled={aiGenerating}>
-                🏙️ 极简抽象
-              </button>
-            </div>
-          </Field>
-
-          <Field label="生图提示词 (Prompt)" required hint="支持中文或英文描述画面主体、风格、构图与光影。">
-            <Textarea
-              rows={4}
-              value={aiPrompt}
-              onChange={(e) => setAiPrompt(e.target.value)}
-              placeholder="例如：科技感云原生架构插画，具有微服务节点、流动的发光数据连线，深蓝与青绿色渐变…"
-              disabled={aiGenerating}
-              required
-            />
-          </Field>
-
-          <Field label="替代文本 (Alt Text)" hint="留空时将自动命名为 AI 媒体插图">
-            <Input
-              value={aiAlt}
-              onChange={(e) => setAiAlt(e.target.value)}
-              placeholder="例如：云原生架构图解"
-              disabled={aiGenerating}
-            />
-          </Field>
-
-          {aiError ? (
-            <div style={{ color: 'var(--danger, #ef4444)', fontSize: 12, padding: '6px 10px', background: 'rgba(239, 68, 68, 0.08)', borderRadius: 4 }}>
-              {aiError}
-            </div>
-          ) : null}
-
-          {aiGenerated ? (
-            <div className="editor-ai-image-result" style={{ marginTop: 8 }}>
-              <div className="editor-ai-image-preview">
-                <img src={aiGenerated.url} alt={aiGenerated.alt} />
-              </div>
-              <div className="editor-ai-image-info">
-                <div className="editor-ai-image-code">
-                  {`![${aiGenerated.alt}](${aiGenerated.url})`}
-                </div>
-                <div className="editor-ai-image-actions">
-                  <Button variant="primary" type="button" onClick={() => void copyText(`![${aiGenerated.alt}](${aiGenerated.url})`, notify, 'Markdown 已复制！')}>
-                    <Copy /> 复制 Markdown
-                  </Button>
-                  <Button variant="secondary" type="button" onClick={() => { setAiGenerated(null); setAiPrompt(''); }}>
-                    ➕ 生成下一张
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ) : null}
-
-          <div className="drawer-actions" style={{ marginTop: 12 }}>
-            <Button variant="secondary" type="button" disabled={aiGenerating} onClick={() => setAiDrawerOpen(false)}>
-              {aiGenerated ? '完成' : '取消'}
-            </Button>
-            <Button variant="primary" type="button" disabled={aiGenerating || !aiPrompt.trim()} onClick={() => void handleGenerateAiImage()}>
-              {aiGenerating ? <><LoaderCircle className="is-spinning" /> 正在绘制入库中…</> : <><Sparkles /> 开始生图并入库</>}
-            </Button>
-          </div>
-        </div>
+        <MediaImageGenerationForm prompt={aiPrompt} alt={aiAlt} error={aiError} generated={aiGenerated} generating={aiGenerating} onPromptChange={setAiPrompt} onAltChange={setAiAlt} onGenerate={() => void handleGenerateAiImage()} onCancel={() => setAiDrawerOpen(false)} onCopy={(value) => void copyText(value, notify, 'Markdown 已复制！')} onReset={() => { setAiGenerated(null); setAiPrompt(''); }} />
       </Drawer>
 
       {/* 编辑替代文本 Drawer */}
@@ -458,39 +366,7 @@ export default function MediaLibrary() {
         description="修改图片的替代文本（Alt Text），便于内容复用与无障碍阅读。"
         onClose={() => !savingAltText && setEditingAsset(null)}
       >
-        {editingAsset ? (
-          <form className="drawer-form media-edit-drawer" onSubmit={handleSaveAltText}>
-            <div className="editor-ai-image-preview" style={{ marginBottom: 12 }}>
-              <img
-                src={editingAsset.url}
-                alt={editingAsset.alt_text || editingAsset.filename}
-                style={{ maxHeight: 200, objectFit: 'contain', width: '100%', borderRadius: 8, background: 'var(--bg-muted)' }}
-              />
-            </div>
-            <p className="upload-file-summary">
-              已选择：<strong>{editingAsset.filename}</strong> · {Math.ceil(editingAsset.size_bytes / 1024)} KB · 引用 {editingAsset.usage_count || 0} 次
-            </p>
-            <Field label={t('altText')} hint="简洁说明图片内容；在 Markdown 插入时将默认作为图片说明。">
-              <Input
-                value={editAltText}
-                onChange={(event) => setEditAltText(event.target.value)}
-                placeholder="例如：系统架构图解"
-                autoFocus
-              />
-            </Field>
-            {editAltError ? (
-              <Feedback type="error">{editAltError}</Feedback>
-            ) : null}
-            <div className="drawer-actions">
-              <Button variant="secondary" type="button" disabled={savingAltText} onClick={() => setEditingAsset(null)}>
-                {t('cancel')}
-              </Button>
-              <Button variant="primary" loading={savingAltText} type="submit">
-                <Pencil />{savingAltText ? t('saving') : t('saveChanges')}
-              </Button>
-            </div>
-          </form>
-        ) : null}
+        {editingAsset ? <MediaAltTextForm asset={editingAsset} value={editAltText} error={editAltError} saving={savingAltText} labels={{ altText: t('altText'), cancel: t('cancel'), saveChanges: t('saveChanges'), saving: t('saving') }} onChange={setEditAltText} onCancel={() => setEditingAsset(null)} onSubmit={handleSaveAltText} /> : null}
       </Drawer>
 
       <ConfirmDialog

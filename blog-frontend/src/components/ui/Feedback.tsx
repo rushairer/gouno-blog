@@ -1,6 +1,5 @@
-import { createContext, useCallback, useContext, useRef, useState } from 'react';
 import type React from 'react';
-import { AlertTriangle, BookOpen, CheckCircle2, X } from 'lucide-react';
+import { AlertTriangle, BookOpen } from 'lucide-react';
 import { classes } from './classes';
 
 export function Feedback({ type, children }: { type: 'error' | 'success'; children: React.ReactNode }) {
@@ -36,43 +35,7 @@ export function ErrorState({ label, action }: { label: string; action?: React.Re
   );
 }
 
-export type ToastType = 'success' | 'error';
-export interface ToastMessage { id: number; message: string; type: ToastType }
-export interface ToastContextValue { notify: (message: string, type?: ToastType) => void }
-const ToastContext = createContext<ToastContextValue | null>(null);
-
-export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  const nextID = useRef(0);
-  const notify = useCallback((message: string, type: ToastType = 'success') => {
-    const id = ++nextID.current;
-    setToasts((current) => [...current, { id, message, type }]);
-    window.setTimeout(() => setToasts((current) => current.filter((toast) => toast.id !== id)), 3600);
-  }, []);
-
-  return (
-    <ToastContext.Provider value={{ notify }}>
-      {children}
-      <div className="toast-region" aria-live="polite" aria-relevant="additions">
-        {toasts.map((toast) => (
-          <div className={`toast toast--${toast.type}`} key={toast.id} role={toast.type === 'error' ? 'alert' : 'status'}>
-            {toast.type === 'success' ? <CheckCircle2 aria-hidden="true" /> : <AlertTriangle aria-hidden="true" />}
-            <span>{toast.message}</span>
-            <button type="button" aria-label="关闭提示" onClick={() => setToasts((current) => current.filter((item) => item.id !== toast.id))}><X /></button>
-          </div>
-        ))}
-      </div>
-    </ToastContext.Provider>
-  );
-}
-
-export function useToast() {
-  const value = useContext(ToastContext);
-  if (!value) throw new Error('useToast must be used inside ToastProvider');
-  return value;
-}
-
-export async function copyText(value: string, notify: ToastContextValue['notify'], successMessage = '已复制到剪贴板。') {
+export async function copyText(value: string, notify: (message: string, tone?: 'success' | 'error') => void, successMessage = '已复制到剪贴板。') {
   try {
     await navigator.clipboard.writeText(value);
     notify(successMessage);

@@ -205,6 +205,7 @@ export function ToolBindingsEditor({
         <div className="tool-bindings-editor__json">
           <Field
             label={isZh ? '原始 JSON 绑定配置' : 'Raw JSON Bindings'}
+            error={jsonError || undefined}
             hint={
               isZh
                 ? '配置会随 Skill Version 固化，大模型调用时会自动注入且不能越权覆盖。'
@@ -218,7 +219,6 @@ export function ToolBindingsEditor({
               onChange={(e) => handleJsonChange(e.target.value)}
             />
           </Field>
-          {jsonError ? <div className="form-error-inline">{jsonError}</div> : null}
         </div>
       )}
     </div>

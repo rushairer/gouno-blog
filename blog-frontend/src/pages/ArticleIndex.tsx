@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowRight, SlidersHorizontal } from 'lucide-react';
-import { EmptyState, LoadingState, Pagination, SearchField } from '../components/ui';
+import { EmptyState, Feedback, LoadingState, Pagination, SearchField } from '../components/ui';
 import { postsApi } from '../api/posts';
 import { siteApi } from '../api/site';
 import { markdownToPlainText } from '../utils/markdown';
@@ -53,7 +53,7 @@ export default function ArticleIndex({ mode = 'articles' }: { mode?: 'articles' 
           <div className="filter-tags"><Link className={!tag ? 'active' : ''} to="/articles">全部</Link>{tags.slice(0, 18).map((item) => <Link className={item === tag ? 'active' : ''} key={item} to={`/tags/${encodeURIComponent(item)}`}>{item}</Link>)}</div>
         </aside>
         <section className="article-results" aria-live="polite">
-          {loading ? <LoadingState label="正在载入文章…" /> : error ? <p className="feedback feedback--error">{error}</p> : posts.length === 0 ? (
+          {loading ? <LoadingState label="正在载入文章…" /> : error ? <Feedback type="error">{error}</Feedback> : posts.length === 0 ? (
             <EmptyState
               label="没有找到符合条件的文章。"
               action={

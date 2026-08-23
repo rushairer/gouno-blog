@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Check, ExternalLink, Image as ImageIcon, LoaderCircle, Save, Send, Sparkles } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { AdminPageState, Button, ConfirmDialog, Feedback, Field, Input, Select, Textarea, useToast } from '../../components/ui';
+import { AdminPageState, Button, Checkbox, CheckboxField, ConfirmDialog, Feedback, Field, Input, Select, Textarea, useToast } from '../../components/ui';
 import { MarkdownRenderer } from '../../components/MarkdownRenderer';
+import { AiImageGenerationPanel, AiWritingPanel, ContentEditorFrame, EditorCommandBar } from '../../components/editor/ContentEditorFrame';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { pagesApi } from '../../api/pages';
@@ -463,8 +464,8 @@ export default function PageEditor() {
   }
 
   return (
-    <div className="editor-page">
-      <header className="editor-commandbar">
+    <ContentEditorFrame>
+      <EditorCommandBar>
         <button className="editor-back" type="button" onClick={leaveEditor}>
           <ArrowLeft /> 返回单页列表
         </button>
@@ -509,7 +510,7 @@ export default function PageEditor() {
             <Send /> {page.status === 'published' ? '更新单页' : '发布'}
           </Button>
         </div>
-      </header>
+      </EditorCommandBar>
 
       {error ? <Feedback type="error">{error}</Feedback> : null}
 
@@ -605,7 +606,7 @@ export default function PageEditor() {
           </div>
 
           {showAiWriting ? (
-            <div className="editor-ai-writing-panel">
+            <AiWritingPanel>
               <div className="editor-ai-panel-header">
                 <div className="editor-ai-presets">
                   <button type="button" onClick={() => void handleGenerateContent('基于单页标题和摘要，撰写结构严谨、排版精美且适合独立单页展示的 Markdown 完整初稿，包含引言、分章节介绍和关键信息汇总。')} disabled={aiContentLoading}>
@@ -670,11 +671,11 @@ export default function PageEditor() {
                   </div>
                 </div>
               ) : null}
-            </div>
+            </AiWritingPanel>
           ) : null}
 
           {showAiImage ? (
-            <div className="editor-ai-image-panel">
+            <AiImageGenerationPanel>
               <div className="editor-ai-panel-header">
                 <div className="editor-ai-presets">
                   <button type="button" onClick={() => void handleGenerateAiImage('A sleek modern architectural diagram illustration showing system components, clean lines, isometric view, tech palette')} disabled={aiImageLoading}>
@@ -748,7 +749,7 @@ export default function PageEditor() {
                   </div>
                 </div>
               ) : null}
-            </div>
+            </AiImageGenerationPanel>
           ) : null}
 
           {preview ? (
@@ -811,7 +812,7 @@ export default function PageEditor() {
               </Select>
             </Field>
             <Field label="主导航栏联动">
-              <label
+              <CheckboxField
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -821,13 +822,12 @@ export default function PageEditor() {
                   color: 'var(--text-2)',
                 }}
               >
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={page.show_in_nav}
                   onChange={(event) => update('show_in_nav', event.target.checked)}
                 />
                 <span>显示在顶部主导航栏</span>
-              </label>
+              </CheckboxField>
             </Field>
             {page.show_in_nav ? (
               <Field label="导航排序权重" hint="数字越小越靠前，如 10, 20">
@@ -902,6 +902,6 @@ export default function PageEditor() {
         onClose={() => setConfirmExit(false)}
         onConfirm={() => navigate('/admin/pages')}
       />
-    </div>
+    </ContentEditorFrame>
   );
 }

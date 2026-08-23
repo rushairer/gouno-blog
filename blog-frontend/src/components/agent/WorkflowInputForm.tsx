@@ -2,7 +2,7 @@ import { Database, Plus, Search, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { workflowApi } from '../../api/workflows';
 import type { ResourceOption } from '../../api/workflows';
-import { Button, Checkbox, Field, Input, Modal, Pagination, SearchField, Select } from '../ui';
+import { Button, Checkbox, Feedback, Field, Input, Modal, Pagination, SearchField, Select } from '../ui';
 
 type SchemaProperty = {
   type?: string;
@@ -135,7 +135,7 @@ function ResourcePicker({ property, value, onChange, locale, className }: {
       <div className="workflow-resource-picker">
         <SearchField autoFocus value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder={locale === 'zh' ? '搜索资源' : 'Search resources'} />
         {(resourceFilters[resourceType] || []).length ? <div className="workflow-resource-filters">{resourceFilters[resourceType].map((filter) => <label key={filter.key}><span>{locale === 'zh' ? filter.zh : filter.en}</span>{filter.type === 'select' ? <Select size="compact" value={filters[filter.key] || ''} onChange={(event) => { setFilters((current) => ({ ...current, [filter.key]: event.target.value })); setPage(1); }}><option value="">{locale === 'zh' ? '全部' : 'All'}</option>{filter.options?.map((option) => <option key={option.value} value={option.value}>{locale === 'zh' ? option.zh : option.en}</option>)}</Select> : <Input type={filter.type} min={filter.type === 'number' ? 0 : undefined} placeholder={filter.placeholder} value={filters[filter.key] || ''} onChange={(event) => { setFilters((current) => ({ ...current, [filter.key]: event.target.value })); setPage(1); }} />}</label>)}</div> : null}
-        {error ? <p className="feedback feedback--error">{error}</p> : null}
+        {error ? <Feedback type="error">{error}</Feedback> : null}
         {loading ? <p className="muted">{locale === 'zh' ? '正在查询…' : 'Searching…'}</p> : <div className="workflow-resource-options">{items.map((item) => {
           const checked = selected.some((entry) => String(entry) === item.key);
           return <button type="button" className={checked ? 'selected' : ''} key={`${item.type}:${item.key}`} onClick={() => toggle(item.key)}><span>{multiple ? <Checkbox readOnly checked={checked} /> : <Search />}<strong>{item.label}</strong><small>{item.status}{item.description ? ` · ${item.description}` : ''}</small></span></button>;
@@ -183,6 +183,6 @@ export function WorkflowInputForm({ schema, value, onChange, locale = 'zh' }: {
       if (property.type === 'array') return <Field key={name} label={label} hint={property.description}><Input value={Array.isArray(value[name]) ? (value[name] as unknown[]).join(', ') : ''} onChange={(event) => update(name, event.target.value.split(',').map((item) => item.trim()).filter(Boolean))} /></Field>;
       return <Field key={name} label={label} hint={property.description} required={required.has(name)}><Input type={property.type === 'integer' || property.type === 'number' ? 'number' : 'text'} value={String(value[name] ?? '')} onChange={(event) => update(name, property.type === 'integer' || property.type === 'number' ? Number(event.target.value) : event.target.value)} /></Field>;
     })}
-    <details className="workflow-advanced-input"><summary>{locale === 'zh' ? '高级：查看或编辑输入 JSON' : 'Advanced: view or edit input JSON'}</summary><textarea className="input-field mono" rows={7} value={raw} onChange={(event) => { setRaw(event.target.value); setRawError(''); }} onBlur={() => { try { const parsed = JSON.parse(raw); if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') throw new Error('object required'); onChange(parsed); setRawError(''); } catch { setRawError(locale === 'zh' ? '请输入有效的 JSON 对象。' : 'Enter a valid JSON object.'); } }} />{rawError ? <small className="feedback feedback--error">{rawError}</small> : null}</details>
+    <details className="workflow-advanced-input"><summary>{locale === 'zh' ? '高级：查看或编辑输入 JSON' : 'Advanced: view or edit input JSON'}</summary><textarea className="input-field mono" rows={7} value={raw} onChange={(event) => { setRaw(event.target.value); setRawError(''); }} onBlur={() => { try { const parsed = JSON.parse(raw); if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') throw new Error('object required'); onChange(parsed); setRawError(''); } catch { setRawError(locale === 'zh' ? '请输入有效的 JSON 对象。' : 'Enter a valid JSON object.'); } }} />{rawError ? <Feedback type="error">{rawError}</Feedback> : null}</details>
   </div>;
 }

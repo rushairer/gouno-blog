@@ -1,4 +1,5 @@
 import { riskLabel, statusLabel } from './labels';
+import { RiskBadge, StatusIndicator } from '../ui';
 
 export function StatusPill({
   status,
@@ -9,9 +10,9 @@ export function StatusPill({
   locale: 'en' | 'zh';
   label?: string;
 }) {
-  return <span className={`status-pill status-pill--${status}`}>{label || statusLabel(status, locale)}</span>;
+  return <StatusIndicator status={status} label={label || statusLabel(status, locale)} />;
 }
 
 export function RiskPill({ risk, locale, label }: { risk: string; locale: 'en' | 'zh'; label?: string }) {
-  return <span className={`risk-label risk-label--${risk}`}>{label || riskLabel(risk, locale)}</span>;
+  return <RiskBadge level={risk} label={label || riskLabel(risk, locale)} />;
 }
