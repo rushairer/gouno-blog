@@ -195,7 +195,8 @@ func (ctrl *ContentController) UpdateSiteSettings(c *gin.Context) {
 		case errors.Is(err, service.ErrSettingValueTooLong),
 			errors.Is(err, service.ErrSiteTitleEmpty),
 			errors.Is(err, service.ErrInvalidRSSURL),
-			errors.Is(err, service.ErrInvalidGithubURL):
+			errors.Is(err, service.ErrInvalidGithubURL),
+			errors.Is(err, service.ErrInvalidFaviconURL):
 			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
 			return
 		default:

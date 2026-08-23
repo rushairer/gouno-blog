@@ -79,6 +79,7 @@ export interface SiteSettings {
   hero_description?: string;
   hero_image_url?: string;
   hero_image_caption?: string;
+  favicon_url?: string;
 }
 
 export type PageTemplate = 'default' | 'about' | 'links' | 'blank' | 'timeline' | 'projects' | 'focus' | 'faq';

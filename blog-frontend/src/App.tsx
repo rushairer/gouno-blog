@@ -15,6 +15,7 @@ import NotFound from './pages/NotFound';
 import Callback from './pages/Callback';
 import Login from './pages/Login';
 import { canManageBlog, isLoggedIn, redirectToAuthorize } from './auth';
+import { useSiteMetadata } from './hooks/useSiteMetadata';
 const Settings = React.lazy(() => import('./pages/Settings'));
 const Dashboard = React.lazy(() => import('./pages/admin/Dashboard'));
 const AdminPosts = React.lazy(() => import('./pages/admin/Posts'));
@@ -65,6 +66,7 @@ function Admin({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  useSiteMetadata();
   return <I18nProvider><ToastProvider><BrowserRouter><Routes>
     <Route path="/callback" element={<Callback />} />
     <Route path="/login" element={<Login />} />
