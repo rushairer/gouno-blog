@@ -5,6 +5,8 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-08-24
+
 ### Added
 - Add AI provider, agent, workflow, connector, media, search, and custom-page capabilities accumulated since 1.0.0.
 - Add a production deployment contract based on immutable image digests and required secrets.
@@ -28,3 +30,7 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 - Initial integrated Blog, Gosso, Admin, database, cache, and gateway distribution.
+
+[Unreleased]: https://github.com/rushairer/gouno-blog/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/rushairer/gouno-blog/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/rushairer/gouno-blog/releases/tag/v1.0.0
