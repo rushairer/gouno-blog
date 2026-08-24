@@ -4,7 +4,7 @@ web_server:
     idle_timeout: 60s
     read_timeout: 5s
     read_header_timeout: 2s
-    write_timeout: 2m
+    write_timeout: 6m
     request_timeout: 10s
     # The AI workspace fans out into several authorized read requests and can
     # legitimately retry transient Provider failures; keep operator bursts out

@@ -9,11 +9,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func TestTimeoutMiddlewareWithOverridesExtendsProviderTestsOnly(t *testing.T) {
+func TestTimeoutMiddlewareWithOverridesUsesRouteTemplate(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	router.Use(TimeoutMiddlewareWithOverrides(10*time.Millisecond, map[string]time.Duration{
-		"provider_test": 100 * time.Millisecond,
+		"/api/admin/provider-profiles/:id/test": 100 * time.Millisecond,
 	}))
 	handler := func(ctx *gin.Context) {
 		time.Sleep(30 * time.Millisecond)
