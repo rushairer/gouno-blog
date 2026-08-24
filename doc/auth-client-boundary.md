@@ -30,10 +30,17 @@ GOSSO Admin 的管理员账号、OAuth client、审计和系统状态属于管�
 
 ## 依赖与发布
 
-快速开发阶段，Blog 与 Admin 的 manifest 使用 `github:rushairer/gosso-client#main`，提交的 lockfile 必须解析为同一个完整 40 位 commit SHA，CI 必须使用 `npm ci`。更新 SDK 后先验证并推送 `gosso-client/main`，再更新消费者 lockfile。
+公开发布只接受 npm registry 中的精确 SemVer（当前目标为
+`@gosso/client@0.4.0`）及 lockfile integrity，不接受 Git branch、Git SSH URL
+或浮动版本。消费者依赖更新必须晚于 SDK 稳定版发布，并在无 SSH 凭据的
+干净目录中通过 `npm ci`。
 
-`#main` 不用于生产制品的可复现发布。生产镜像和正式版本仍应固定 SemVer、镜像 tag 与 digest；SDK 的 breaking change 必须按 SemVer 提供迁移说明或兼容层。
+当前整改分支在 npm trusted publisher 尚未配置完成前暂时保留旧 Git 依赖；
+这是明确的发布阻断项，不是长期依赖策略。生产镜像同时必须固定 version 与
+digest；SDK 的 breaking change 必须按 SemVer 提供迁移说明。
 
 ## 兼容策略
 
-本轮没有修改 HTTP 路由、响应 wire format、数据库 schema、环境变量或部署拓扑。新增 SDK 方法和 `ApiError` 为向后兼容能力；“缺少 Web Crypto 时失败”是有意的安全收紧。Blog 内部旧 import path 不属于发布 API，仓库内调用方迁移后直接删除。
+各仓库独立使用 SemVer，并通过兼容性矩阵记录可组合版本。SDK 0.4 默认
+Cookie Session、callback 判别联合与 token 仅内存保存属于已记录的迁移项；
+Blog 内部 import path 不属于发布 API。

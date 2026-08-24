@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { LoadingState, Panel } from '../components/ui';
-import { gossoClient } from '../auth';
-import { useI18n } from '../i18n';
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { LoadingState, Panel } from "../components/ui";
+import { gossoClient } from "../auth";
+import { useI18n } from "../i18n";
 
 export default function Callback() {
   const { t } = useI18n();
@@ -11,21 +11,24 @@ export default function Callback() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const code = searchParams.get('code');
-    const state = searchParams.get('state');
+    const code = searchParams.get("code");
+    const state = searchParams.get("state");
 
     if (!code || !state) {
-      setError(t('invalidCallback'));
+      setError(t("invalidCallback"));
       return;
     }
 
     async function handleCallback() {
       try {
-        const { redirectTo } = await gossoClient.handleRedirectCallback(code!, state!);
+        const { redirectTo } = await gossoClient.handleRedirectCallback(
+          code!,
+          state!,
+        );
         navigate(redirectTo);
       } catch (err: unknown) {
         console.error(err);
-        setError(err instanceof Error ? err.message : t('authFailed'));
+        setError(err instanceof Error ? err.message : t("authFailed"));
       }
     }
 
@@ -36,10 +39,10 @@ export default function Callback() {
     return (
       <div className="auth-page">
         <Panel className="auth-card section-stack">
-          <h2>{t('authError')}</h2>
+          <h2>{t("authError")}</h2>
           <p className="muted">{error}</p>
           <a href="/" className="btn btn-primary">
-            {t('goHome')}
+            {t("goHome")}
           </a>
         </Panel>
       </div>
@@ -49,7 +52,7 @@ export default function Callback() {
   return (
     <div className="auth-page">
       <Panel className="auth-card">
-        <LoadingState label={t('completingSignin')} />
+        <LoadingState label={t("completingSignin")} />
       </Panel>
     </div>
   );

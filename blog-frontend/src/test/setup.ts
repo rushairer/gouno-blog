@@ -1,6 +1,6 @@
-import '@testing-library/jest-dom/vitest';
-import { cleanup } from '@testing-library/react';
-import { afterEach, vi } from 'vitest';
+import "@testing-library/jest-dom/vitest";
+import { cleanup } from "@testing-library/react";
+import { afterEach, vi } from "vitest";
 
 afterEach(() => {
   cleanup();
@@ -8,7 +8,7 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-Object.defineProperty(window, 'matchMedia', {
+Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: (query: string) => ({
     matches: false,
@@ -42,11 +42,11 @@ const localStorageMock = (() => {
   };
 })();
 
-Object.defineProperty(globalThis, 'localStorage', {
+Object.defineProperty(globalThis, "localStorage", {
   configurable: true,
   value: localStorageMock,
 });
-Object.defineProperty(window, 'localStorage', {
+Object.defineProperty(window, "localStorage", {
   configurable: true,
   value: localStorageMock,
 });

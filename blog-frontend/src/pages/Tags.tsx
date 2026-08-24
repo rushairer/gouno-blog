@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { EmptyState, LoadingState } from '../components/ui';
-import { postsApi } from '../api/posts';
-import { siteApi } from '../api/site';
-import { usePageTitle } from '../hooks/usePageTitle';
-import type { Post } from '../types/blog';
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { EmptyState, LoadingState } from "../components/ui";
+import { postsApi } from "../api/posts";
+import { siteApi } from "../api/site";
+import { usePageTitle } from "../hooks/usePageTitle";
+import type { Post } from "../types/blog";
 
 export default function Tags() {
-  usePageTitle('标签');
+  usePageTitle("标签");
   const [tags, setTags] = useState<string[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -15,7 +15,7 @@ export default function Tags() {
   useEffect(() => {
     Promise.all([
       siteApi.getTags().catch(() => []),
-      postsApi.getPosts(new URLSearchParams({ page: '1', pageSize: '100' })),
+      postsApi.getPosts(new URLSearchParams({ page: "1", pageSize: "100" })),
     ])
       .then(([tagData, postData]) => {
         setTags(tagData as string[]);
@@ -30,7 +30,7 @@ export default function Tags() {
         tag,
         count: posts.filter((post) => post.tags.includes(tag)).length,
       })),
-    [posts, tags]
+    [posts, tags],
   );
 
   return (
@@ -49,7 +49,7 @@ export default function Tags() {
               .sort((a, b) => b.count - a.count)
               .map(({ tag, count }, index) => (
                 <Link key={tag} to={`/tags/${encodeURIComponent(tag)}`}>
-                  <span>{String(index + 1).padStart(2, '0')}</span>
+                  <span>{String(index + 1).padStart(2, "0")}</span>
                   <strong>{tag}</strong>
                   <small>{count} 篇</small>
                 </Link>

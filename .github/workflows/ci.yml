@@ -43,7 +43,7 @@ jobs:
         run: go vet ./...
 
       - name: Check known Go vulnerabilities
-        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.6.0 ./...
 
   seed:
     name: Seed quality
@@ -69,7 +69,7 @@ jobs:
         run: go vet ./...
 
       - name: Check known Go vulnerabilities
-        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.6.0 ./...
 
   frontend:
     name: Frontend quality
@@ -106,17 +106,11 @@ jobs:
           }
           EOF
 
-      - name: Lint
-        run: npm run lint
-
       - name: UI contract checks
         run: npm run lint:ui
 
-      - name: Unit tests
-        run: npm run test:run
-
-      - name: Build
-        run: npm run build
+      - name: Format, lint, typecheck, coverage and build
+        run: npm run check && npm run build
 
   compose:
     name: Compose config

@@ -1,7 +1,9 @@
 :root {
   color-scheme: light;
 
-  --font-ui: Inter, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
+  --font-ui:
+    Inter, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", system-ui,
+    sans-serif;
   --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
   --font-serif: var(--font-ui);
   --font-sans: var(--font-ui);
@@ -49,8 +51,16 @@
   --ui-code-number: #79c0ff;
   --ui-code-function: #d2a8ff;
   --ui-code-type: #ffa657;
-  --ui-warning-alpha-soft: color-mix(in srgb, var(--ui-warning) 12%, transparent);
-  --ui-warning-alpha-border: color-mix(in srgb, var(--ui-warning) 30%, transparent);
+  --ui-warning-alpha-soft: color-mix(
+    in srgb,
+    var(--ui-warning) 12%,
+    transparent
+  );
+  --ui-warning-alpha-border: color-mix(
+    in srgb,
+    var(--ui-warning) 30%,
+    transparent
+  );
 
   --space-1: 4px;
   --space-2: 8px;

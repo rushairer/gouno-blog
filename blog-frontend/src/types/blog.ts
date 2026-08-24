@@ -1,4 +1,4 @@
-export type PostStatus = 'draft' | 'scheduled' | 'published';
+export type PostStatus = "draft" | "scheduled" | "published";
 
 export interface Category {
   id: number;
@@ -49,9 +49,9 @@ export interface Comment {
   post_id: number;
   parent_id?: number;
   author: string;
-  author_type?: 'anonymous' | 'user';
+  author_type?: "anonymous" | "user";
   content: string;
-  status: 'pending' | 'visible' | 'hidden' | string;
+  status: "pending" | "visible" | "hidden" | string;
   is_visible: boolean;
   report_count?: number;
   created_at: string;
@@ -82,7 +82,15 @@ export interface SiteSettings {
   favicon_url?: string;
 }
 
-export type PageTemplate = 'default' | 'about' | 'links' | 'blank' | 'timeline' | 'projects' | 'focus' | 'faq';
+export type PageTemplate =
+  | "default"
+  | "about"
+  | "links"
+  | "blank"
+  | "timeline"
+  | "projects"
+  | "focus"
+  | "faq";
 
 export interface CustomPage {
   id: number;

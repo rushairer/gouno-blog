@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
 
 * {
   box-sizing: border-box;
@@ -9,7 +9,12 @@ body {
   min-height: 100vh;
   background: var(--bg-main);
   color: var(--color-text-main);
-  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
   overflow-x: hidden;
 }
 
@@ -101,7 +106,8 @@ h4 {
   border-radius: 4px;
   background: var(--ui-text);
   color: var(--ui-panel);
-  box-shadow: inset 0 -8px 14px color-mix(in srgb, var(--ui-panel) 8%, transparent);
+  box-shadow: inset 0 -8px 14px
+    color-mix(in srgb, var(--ui-panel) 8%, transparent);
 }
 
 .nav-links,
@@ -990,12 +996,29 @@ select option {
   font-size: 14px;
 }
 
-.save-state--saved { color: var(--success); }
-.save-state--error { color: var(--danger); }
-.status-pill--draft { background: var(--surface-muted); }
-.status-pill--scheduled { background: var(--ui-warning-soft); color: var(--ui-warning); }
-.status-pill--published { background: var(--ui-success-soft); color: var(--ui-success); }
-.content-table small { display: flex; align-items: center; gap: 4px; margin-top: 5px; }
+.save-state--saved {
+  color: var(--success);
+}
+.save-state--error {
+  color: var(--danger);
+}
+.status-pill--draft {
+  background: var(--surface-muted);
+}
+.status-pill--scheduled {
+  background: var(--ui-warning-soft);
+  color: var(--ui-warning);
+}
+.status-pill--published {
+  background: var(--ui-success-soft);
+  color: var(--ui-success);
+}
+.content-table small {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 5px;
+}
 
 @media (max-width: 820px) {
   .navbar-container,
@@ -1165,9 +1188,16 @@ select option {
   color: var(--color-primary);
 }
 
-.toc-item--level-1 { font-weight: 700; }
-.toc-item--level-2 { padding-left: 12px; }
-.toc-item--level-3 { padding-left: 24px; font-size: 13px; }
+.toc-item--level-1 {
+  font-weight: 700;
+}
+.toc-item--level-2 {
+  padding-left: 12px;
+}
+.toc-item--level-3 {
+  padding-left: 24px;
+  font-size: 13px;
+}
 
 /* Article Actions & Like Button */
 .article-actions {
@@ -1374,7 +1404,9 @@ select option {
   padding: 18px;
   color: var(--color-text-main);
   text-decoration: none;
-  transition: border-color 0.2s ease, transform 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease;
 }
 
 .related-post-card:hover {
@@ -1429,7 +1461,11 @@ select option {
 .bar-chart__item > div {
   min-height: 4px;
   border-radius: 6px 6px 2px 2px;
-  background: linear-gradient(180deg, var(--color-primary), var(--color-secondary));
+  background: linear-gradient(
+    180deg,
+    var(--color-primary),
+    var(--color-secondary)
+  );
 }
 
 .bar-chart__item small {
@@ -1612,9 +1648,17 @@ select option {
   border-radius: var(--radius-control, 6px);
   border: 1px solid var(--border-color);
 }
-.workflow-candidates { display: grid; gap: 16px; }
-.workflow-candidate-heading { gap: 16px; }
-.workflow-candidate-list { display: grid; gap: 12px; }
+.workflow-candidates {
+  display: grid;
+  gap: 16px;
+}
+.workflow-candidate-heading {
+  gap: 16px;
+}
+.workflow-candidate-list {
+  display: grid;
+  gap: 12px;
+}
 .workflow-candidate-card {
   display: grid;
   grid-template-columns: 128px minmax(0, 1fr) minmax(180px, 240px);
@@ -1625,9 +1669,17 @@ select option {
   border-radius: var(--radius-panel);
   background: var(--ui-control);
 }
-.workflow-candidate-card--no-preview { grid-template-columns: minmax(0, 1fr) minmax(180px, 240px); }
-.workflow-candidate-card__content { display: grid; gap: 6px; min-width: 0; }
-.workflow-candidate-card__content > small { color: var(--ui-text-secondary); }
+.workflow-candidate-card--no-preview {
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 240px);
+}
+.workflow-candidate-card__content {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.workflow-candidate-card__content > small {
+  color: var(--ui-text-secondary);
+}
 .workflow-candidate-card__actions {
   align-self: center;
   width: 100%;
@@ -1636,12 +1688,30 @@ select option {
   justify-content: stretch;
   gap: 8px;
 }
-.workflow-candidate-card__actions .btn { width: 100%; }
-.workflow-candidate-choice { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.workflow-candidate-fields { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-.workflow-candidate-fields .input-field { min-width: 220px; }
-.workflow-candidate-heading { flex-wrap: wrap; }
-.workflow-candidate-batch-actions { margin-left: auto; }
+.workflow-candidate-card__actions .btn {
+  width: 100%;
+}
+.workflow-candidate-choice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.workflow-candidate-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.workflow-candidate-fields .input-field {
+  min-width: 220px;
+}
+.workflow-candidate-heading {
+  flex-wrap: wrap;
+}
+.workflow-candidate-batch-actions {
+  margin-left: auto;
+}
 .workflow-generation-status,
 .workflow-generating-status {
   display: flex;
@@ -1675,9 +1745,24 @@ select option {
 .workflow-generating-status small {
   color: var(--ui-text-secondary);
 }
-.workflow-fixed-input { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 10px; border: 1px solid var(--ui-border); border-radius: var(--radius-control); background: var(--ui-control); }
-.workflow-fixed-input strong { color: var(--ui-text); font: 600 var(--font-size-control)/1.4 var(--font-ui); }
-.workflow-fixed-input small { color: var(--ui-text-secondary); font-size: var(--font-size-label); }
+.workflow-fixed-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--radius-control);
+  background: var(--ui-control);
+}
+.workflow-fixed-input strong {
+  color: var(--ui-text);
+  font: 600 var(--font-size-control)/1.4 var(--font-ui);
+}
+.workflow-fixed-input small {
+  color: var(--ui-text-secondary);
+  font-size: var(--font-size-label);
+}
 
 .workflow-article-preview {
   display: block;
@@ -1688,10 +1773,23 @@ select option {
   border-radius: var(--radius-control, 6px);
   border: 1px solid var(--border-color);
 }
-.workflow-preview-state { display: grid; gap: 4px; margin-top: 6px; color: var(--ui-text-secondary); }
-.workflow-preview-state strong { color: var(--ui-text); }
-.workflow-preview-state small { color: var(--ui-text-secondary); line-height: 1.45; }
-.workflow-candidate-selection-pending { color: var(--ui-warning); line-height: 1.45; }
+.workflow-preview-state {
+  display: grid;
+  gap: 4px;
+  margin-top: 6px;
+  color: var(--ui-text-secondary);
+}
+.workflow-preview-state strong {
+  color: var(--ui-text);
+}
+.workflow-preview-state small {
+  color: var(--ui-text-secondary);
+  line-height: 1.45;
+}
+.workflow-candidate-selection-pending {
+  color: var(--ui-warning);
+  line-height: 1.45;
+}
 .modal.workflow-preview-modal {
   width: calc(100vw - clamp(32px, 5vw, 112px));
   max-width: none;
@@ -1701,7 +1799,10 @@ select option {
   flex-direction: column;
   overflow: hidden;
 }
-.workflow-preview-modal > header { flex: 0 0 auto; padding-inline: clamp(22px, 3vw, 42px); }
+.workflow-preview-modal > header {
+  flex: 0 0 auto;
+  padding-inline: clamp(22px, 3vw, 42px);
+}
 .workflow-preview-modal__body {
   display: grid;
   flex: 1 1 auto;
@@ -1720,25 +1821,58 @@ select option {
   border-radius: var(--radius-panel);
   background: var(--ui-elevated);
 }
-.workflow-article-preview-surface > :first-child { margin-top: 0; }
-.workflow-article-preview-surface > :last-child { margin-bottom: 0; }
+.workflow-article-preview-surface > :first-child {
+  margin-top: 0;
+}
+.workflow-article-preview-surface > :last-child {
+  margin-bottom: 0;
+}
 
 @keyframes workflow-generation-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .workflow-generation-status > svg { animation: none; }
+  .workflow-generation-status > svg {
+    animation: none;
+  }
 }
 
 @media (max-width: 640px) {
-  .workflow-candidate-preview { width: 96px; height: 72px; }
-  .workflow-candidate-batch-actions { width: 100%; margin-left: 0; justify-content: flex-start; }
+  .workflow-candidate-preview {
+    width: 96px;
+    height: 72px;
+  }
+  .workflow-candidate-batch-actions {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+  }
   .workflow-candidate-card,
-  .workflow-candidate-card--no-preview { grid-template-columns: 1fr; gap: 12px; padding: 12px; }
-  .workflow-candidate-card__actions { width: 100%; min-width: 0; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
-  .workflow-preview-modal { width: calc(100vw - 16px); height: calc(100vh - 16px); }
-  .workflow-preview-modal > header { padding-inline: 16px; }
-  .workflow-preview-modal__body { gap: 14px; padding: 14px; }
-  .workflow-article-preview-surface { padding: 16px; }
+  .workflow-candidate-card--no-preview {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 12px;
+  }
+  .workflow-candidate-card__actions {
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
+  .workflow-preview-modal {
+    width: calc(100vw - 16px);
+    height: calc(100vh - 16px);
+  }
+  .workflow-preview-modal > header {
+    padding-inline: 16px;
+  }
+  .workflow-preview-modal__body {
+    gap: 14px;
+    padding: 14px;
+  }
+  .workflow-article-preview-surface {
+    padding: 16px;
+  }
 }

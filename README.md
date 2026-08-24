@@ -229,3 +229,13 @@ export BLOG_AGENT_PREVIOUS_MASTER_KEYS="1:<old-base64-key>"
 1. 同源网关的路由配置要点。
 2. 后端服务如何动态读取 JWKS 校验 Access Token 以及实现 RBAC。
 3. 前端 SPA 对 Base64Url JWT 的健壮解码方案与防无限重定向实践。
+
+## 开发与生产部署边界
+
+根目录 `docker-compose.yml` 仅用于本地开发，其中的固定凭据和浮动
+`main` 镜像不得用于生产。生产部署使用 `docker-compose.production.yml`，
+所有应用与第三方镜像都必须以 `version@sha256:digest` 提供，所有密码、
+签名密钥、TOTP key、pepper、数据库 DSN 和 Agent key 都必须显式设置。
+
+公开发布和安全报告分别遵循 [RELEASE_CHECKLIST.md](./RELEASE_CHECKLIST.md)
+与 [SECURITY.md](./SECURITY.md)。完整仓库采用 [MIT License](./LICENSE)。

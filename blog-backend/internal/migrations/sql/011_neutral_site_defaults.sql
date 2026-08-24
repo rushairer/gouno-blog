@@ -21,7 +21,7 @@ SET settings = settings
     ELSE '{}'::jsonb
   END
   || CASE
-    WHEN settings ->> 'email' = 'aben.k.dev@gmail.com' THEN '{"email":""}'::jsonb
+    WHEN md5(settings ->> 'email') = '0c8816ae5fe96b42802228af0319fb83' THEN '{"email":""}'::jsonb
     ELSE '{}'::jsonb
   END
   || CASE

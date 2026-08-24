@@ -1,11 +1,14 @@
-import { LoaderCircle } from 'lucide-react';
-import type { ArticleImagePreview } from '../../api/operations';
-import type { MediaCandidate } from '../../types/agent';
-import { Select } from '../ui';
+import { LoaderCircle } from "lucide-react";
+import type { ArticleImagePreview } from "../../api/operations";
+import type { MediaCandidate } from "../../types/agent";
+import { Select } from "../ui";
 
 function elapsed(start?: string, now = Date.now()): string {
-  if (!start) return '-';
-  const seconds = Math.max(0, Math.floor((now - new Date(start).getTime()) / 1000));
+  if (!start) return "-";
+  const seconds = Math.max(
+    0,
+    Math.floor((now - new Date(start).getTime()) / 1000),
+  );
   if (seconds < 60) return `${seconds}s`;
   return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
 }
@@ -15,13 +18,21 @@ export interface WorkflowMediaCandidatesProps {
   zh: boolean;
   formatDateTime: (value: string) => string;
   candidateSelections: Record<number, boolean>;
-  setCandidateSelections: React.Dispatch<React.SetStateAction<Record<number, boolean>>>;
+  setCandidateSelections: React.Dispatch<
+    React.SetStateAction<Record<number, boolean>>
+  >;
   candidatePlacement: Record<number, string>;
-  setCandidatePlacement: React.Dispatch<React.SetStateAction<Record<number, string>>>;
+  setCandidatePlacement: React.Dispatch<
+    React.SetStateAction<Record<number, string>>
+  >;
   candidateAnchor: Record<number, string>;
-  setCandidateAnchor: React.Dispatch<React.SetStateAction<Record<number, string>>>;
+  setCandidateAnchor: React.Dispatch<
+    React.SetStateAction<Record<number, string>>
+  >;
   generationInstructions: Record<number, string>;
-  setGenerationInstructions: React.Dispatch<React.SetStateAction<Record<number, string>>>;
+  setGenerationInstructions: React.Dispatch<
+    React.SetStateAction<Record<number, string>>
+  >;
   imagePreviews: Record<number, ArticleImagePreview>;
   batchBusy: string;
   generationNow: number;
@@ -29,9 +40,15 @@ export interface WorkflowMediaCandidatesProps {
   onBatchPreview: () => Promise<void>;
   onBatchReject: () => Promise<void>;
   onBatchApply: () => Promise<void>;
-  onCandidateAction: (candidate: MediaCandidate, action: 'select' | 'apply' | 'regenerate' | 'reject') => Promise<void>;
+  onCandidateAction: (
+    candidate: MediaCandidate,
+    action: "select" | "apply" | "regenerate" | "reject",
+  ) => Promise<void>;
   onCancelGeneration: (candidate: MediaCandidate) => Promise<void>;
-  onPreviewCandidate: (candidate: MediaCandidate, openDialog?: boolean) => Promise<void>;
+  onPreviewCandidate: (
+    candidate: MediaCandidate,
+    openDialog?: boolean,
+  ) => Promise<void>;
 }
 
 export function WorkflowMediaCandidates({
@@ -58,110 +75,113 @@ export function WorkflowMediaCandidates({
   onPreviewCandidate,
 }: WorkflowMediaCandidatesProps) {
   const selectedCandidates = candidates.filter(
-    (candidate) => candidateSelections[candidate.id] && candidate.generation_status === 'generated'
+    (candidate) =>
+      candidateSelections[candidate.id] &&
+      candidate.generation_status === "generated",
   );
 
   const selectionForCandidate = (candidate: MediaCandidate) => ({
-    placement: candidatePlacement[candidate.id] || candidate.placement || 'cover',
-    anchor: candidateAnchor[candidate.id] ?? candidate.anchor ?? '',
+    placement:
+      candidatePlacement[candidate.id] || candidate.placement || "cover",
+    anchor: candidateAnchor[candidate.id] ?? candidate.anchor ?? "",
   });
 
   const hasUnsavedCandidateSelection = (candidate: MediaCandidate) => {
     const selection = selectionForCandidate(candidate);
     return (
-      selection.placement !== (candidate.placement || 'cover') ||
-      selection.anchor.trim() !== (candidate.anchor || '').trim()
+      selection.placement !== (candidate.placement || "cover") ||
+      selection.anchor.trim() !== (candidate.anchor || "").trim()
     );
   };
 
   const hasValidCandidateSelection = (candidate: MediaCandidate) => {
     const selection = selectionForCandidate(candidate);
-    return selection.placement !== 'inline' || selection.anchor.trim() !== '';
+    return selection.placement !== "inline" || selection.anchor.trim() !== "";
   };
 
   return (
     <section className="workflow-interactions">
       <div className="panel-heading workflow-candidate-heading">
         <div>
-          <h3>{zh ? '图片候选' : 'Image candidates'}</h3>
+          <h3>{zh ? "图片候选" : "Image candidates"}</h3>
           <small>
             {zh
-              ? '图片会在本次运行中生成；可同时选择封面和正文插图，批量应用只创建一个文章新版本。'
-              : 'Images are generated in this run. Select a cover and inline images together; batch apply creates one article version.'}
+              ? "图片会在本次运行中生成；可同时选择封面和正文插图，批量应用只创建一个文章新版本。"
+              : "Images are generated in this run. Select a cover and inline images together; batch apply creates one article version."}
           </small>
         </div>
         <div className="row-actions workflow-candidate-batch-actions">
           <button
             className="btn btn-secondary"
             type="button"
-            disabled={batchBusy !== '' || selectedCandidates.length === 0}
+            disabled={batchBusy !== "" || selectedCandidates.length === 0}
             onClick={() => void onBatchSelect()}
           >
-            {batchBusy === 'select'
+            {batchBusy === "select"
               ? zh
-                ? '选择中…'
-                : 'Selecting…'
+                ? "选择中…"
+                : "Selecting…"
               : zh
-                ? '批量选择'
-                : 'Select selected'}
+                ? "批量选择"
+                : "Select selected"}
           </button>
           <button
             className="btn btn-secondary"
             type="button"
-            disabled={batchBusy !== '' || selectedCandidates.length === 0}
+            disabled={batchBusy !== "" || selectedCandidates.length === 0}
             onClick={() => void onBatchPreview()}
           >
-            {batchBusy === 'preview'
+            {batchBusy === "preview"
               ? zh
-                ? '预览中…'
-                : 'Previewing…'
+                ? "预览中…"
+                : "Previewing…"
               : zh
-                ? '批量预览'
-                : 'Preview selected'}
+                ? "批量预览"
+                : "Preview selected"}
           </button>
           <button
             className="btn btn-secondary"
             type="button"
-            disabled={batchBusy !== '' || selectedCandidates.length === 0}
+            disabled={batchBusy !== "" || selectedCandidates.length === 0}
             onClick={() => void onBatchReject()}
           >
-            {batchBusy === 'reject'
+            {batchBusy === "reject"
               ? zh
-                ? '放弃中…'
-                : 'Rejecting…'
+                ? "放弃中…"
+                : "Rejecting…"
               : zh
-                ? '批量放弃'
-                : 'Reject selected'}
+                ? "批量放弃"
+                : "Reject selected"}
           </button>
           <button
             className="btn btn-primary"
             type="button"
             disabled={
-              batchBusy !== '' ||
+              batchBusy !== "" ||
               selectedCandidates.length === 0 ||
               selectedCandidates.some(
                 (candidate) =>
                   !candidate.selected ||
                   !imagePreviews[candidate.id]?.version_matches ||
-                  !imagePreviews[candidate.id]?.anchor_matches
+                  !imagePreviews[candidate.id]?.anchor_matches,
               )
             }
             onClick={() => void onBatchApply()}
           >
-            {batchBusy === 'apply'
+            {batchBusy === "apply"
               ? zh
-                ? '应用中…'
-                : 'Applying…'
+                ? "应用中…"
+                : "Applying…"
               : zh
-                ? '批量确认应用'
-                : 'Apply selected'}
+                ? "批量确认应用"
+                : "Apply selected"}
           </button>
         </div>
       </div>
       <div className="workflow-candidate-list">
         {candidates.map((candidate) => (
           <div
-            className={`workflow-candidate-card${candidate.media_asset_url ? '' : ' workflow-candidate-card--no-preview'}`}
+            className={`workflow-candidate-card${candidate.media_asset_url ? "" : " workflow-candidate-card--no-preview"}`}
             key={candidate.id}
           >
             {candidate.media_asset_url ? (
@@ -177,7 +197,7 @@ export function WorkflowMediaCandidates({
                   type="checkbox"
                   checked={Boolean(candidateSelections[candidate.id])}
                   disabled={
-                    candidate.generation_status !== 'generated' ||
+                    candidate.generation_status !== "generated" ||
                     Boolean(candidate.applied_version_id)
                   }
                   onChange={(event) =>
@@ -192,24 +212,24 @@ export function WorkflowMediaCandidates({
                 </strong>
               </label>
               <small>
-                {candidate.generation_status} ·{' '}
+                {candidate.generation_status} ·{" "}
                 {candidate.selected
                   ? zh
-                    ? '已选择'
-                    : 'selected'
+                    ? "已选择"
+                    : "selected"
                   : zh
-                    ? '未选择'
-                    : 'not selected'}{' '}
-                · {candidate.placement || 'cover'}
+                    ? "未选择"
+                    : "not selected"}{" "}
+                · {candidate.placement || "cover"}
               </small>
-              {candidate.generation_status === 'generated' ? (
+              {candidate.generation_status === "generated" ? (
                 <div className="workflow-candidate-fields">
                   <Select
                     size="compact"
                     value={
                       candidatePlacement[candidate.id] ||
                       candidate.placement ||
-                      'cover'
+                      "cover"
                     }
                     onChange={(event) =>
                       setCandidatePlacement((current) => ({
@@ -219,26 +239,24 @@ export function WorkflowMediaCandidates({
                     }
                   >
                     <option value="cover">
-                      {zh ? '文章封面' : 'Cover image'}
+                      {zh ? "文章封面" : "Cover image"}
                     </option>
                     <option value="inline">
-                      {zh ? '正文插图' : 'Inline image'}
+                      {zh ? "正文插图" : "Inline image"}
                     </option>
                   </Select>
                   {(candidatePlacement[candidate.id] ||
                     candidate.placement ||
-                    'cover') === 'inline' ? (
+                    "cover") === "inline" ? (
                     <input
                       className="input-field"
                       value={
-                        candidateAnchor[candidate.id] ??
-                        candidate.anchor ??
-                        ''
+                        candidateAnchor[candidate.id] ?? candidate.anchor ?? ""
                       }
                       placeholder={
                         zh
-                          ? '锚点文字（小标题或关键句）'
-                          : 'Anchor text in markdown'
+                          ? "锚点文字（小标题或关键句）"
+                          : "Anchor text in markdown"
                       }
                       onChange={(event) =>
                         setCandidateAnchor((current) => ({
@@ -251,16 +269,20 @@ export function WorkflowMediaCandidates({
                 </div>
               ) : null}
               <p>{candidate.brief || candidate.headline}</p>
-              {candidate.generation_status !== 'generated' ? (
+              {candidate.generation_status !== "generated" ? (
                 <textarea
                   className="input-field"
                   rows={2}
-                  aria-label={zh ? `图片要求 ${candidate.id}` : `Image requirement ${candidate.id}`}
-                  value={generationInstructions[candidate.id] || ''}
+                  aria-label={
+                    zh
+                      ? `图片要求 ${candidate.id}`
+                      : `Image requirement ${candidate.id}`
+                  }
+                  value={generationInstructions[candidate.id] || ""}
                   placeholder={
                     zh
-                      ? '补充具体生成要求（如色调、构图、风格）…'
-                      : 'Add visual instructions (style, composition)…'
+                      ? "补充具体生成要求（如色调、构图、风格）…"
+                      : "Add visual instructions (style, composition)…"
                   }
                   onChange={(event) =>
                     setGenerationInstructions((current) => ({
@@ -270,20 +292,17 @@ export function WorkflowMediaCandidates({
                   }
                 />
               ) : null}
-              {candidate.generation_status === 'generating' ? (
-                <div
-                  className="workflow-generating-status"
-                  role="status"
-                >
+              {candidate.generation_status === "generating" ? (
+                <div className="workflow-generating-status" role="status">
                   <LoaderCircle />
                   <span>
                     <strong>
-                      {zh ? '正在生成图片…' : 'Generating image…'}
+                      {zh ? "正在生成图片…" : "Generating image…"}
                     </strong>
                     <small>
                       {zh
-                        ? `已等待 ${elapsed(candidate.generation_started_at, generationNow)}；最长等待至 ${candidate.generation_deadline_at ? formatDateTime(candidate.generation_deadline_at) : '-'}`
-                        : `Waiting ${elapsed(candidate.generation_started_at, generationNow)}; deadline ${candidate.generation_deadline_at ? formatDateTime(candidate.generation_deadline_at) : '-'}.`}
+                        ? `已等待 ${elapsed(candidate.generation_started_at, generationNow)}；最长等待至 ${candidate.generation_deadline_at ? formatDateTime(candidate.generation_deadline_at) : "-"}`
+                        : `Waiting ${elapsed(candidate.generation_started_at, generationNow)}; deadline ${candidate.generation_deadline_at ? formatDateTime(candidate.generation_deadline_at) : "-"}.`}
                     </small>
                   </span>
                 </div>
@@ -296,74 +315,70 @@ export function WorkflowMediaCandidates({
                   <strong>
                     {imagePreviews[candidate.id].applied
                       ? zh
-                        ? '图片已应用到文章'
-                        : 'Image applied to article'
+                        ? "图片已应用到文章"
+                        : "Image applied to article"
                       : imagePreviews[candidate.id].version_matches &&
-                        imagePreviews[candidate.id].anchor_matches
+                          imagePreviews[candidate.id].anchor_matches
                         ? zh
-                          ? '文章预览已就绪'
-                          : 'Article preview ready'
+                          ? "文章预览已就绪"
+                          : "Article preview ready"
                         : zh
-                          ? '候选图与当前文章不一致'
-                          : 'Image candidate does not match the current article'}
+                          ? "候选图与当前文章不一致"
+                          : "Image candidate does not match the current article"}
                   </strong>
                   {!imagePreviews[candidate.id].version_matches ||
                   !imagePreviews[candidate.id].anchor_matches ? (
                     <small>
                       {zh
-                        ? '文章已在生成候选图后更新，不能直接应用旧候选图。'
-                        : 'The article changed after this candidate was generated, so it cannot be applied directly.'}
+                        ? "文章已在生成候选图后更新，不能直接应用旧候选图。"
+                        : "The article changed after this candidate was generated, so it cannot be applied directly."}
                     </small>
                   ) : null}
                 </div>
               ) : null}
-              {candidate.generation_status === 'generated' &&
+              {candidate.generation_status === "generated" &&
               hasUnsavedCandidateSelection(candidate) ? (
                 <small className="workflow-candidate-selection-pending">
                   {zh
-                    ? '位置设置尚未保存；保存后才能预览或应用。'
-                    : 'Placement changes are unsaved; save before previewing or applying.'}
+                    ? "位置设置尚未保存；保存后才能预览或应用。"
+                    : "Placement changes are unsaved; save before previewing or applying."}
                 </small>
               ) : null}
             </div>
             <div className="row-actions workflow-candidate-card__actions">
-              {candidate.generation_status === 'generated' ? (
+              {candidate.generation_status === "generated" ? (
                 <button
                   className="btn btn-secondary"
                   type="button"
                   disabled={hasUnsavedCandidateSelection(candidate)}
                   onClick={() => void onPreviewCandidate(candidate, true)}
                 >
-                  {zh ? '预览文章' : 'Preview article'}
+                  {zh ? "预览文章" : "Preview article"}
                 </button>
               ) : null}
-              {candidate.generation_status === 'generated' &&
+              {candidate.generation_status === "generated" &&
               candidate.selected &&
               hasUnsavedCandidateSelection(candidate) ? (
                 <button
                   className="btn btn-secondary"
                   type="button"
                   disabled={!hasValidCandidateSelection(candidate)}
-                  onClick={() =>
-                    void onCandidateAction(candidate, 'select')
-                  }
+                  onClick={() => void onCandidateAction(candidate, "select")}
                 >
-                  {zh ? '保存位置' : 'Save placement'}
+                  {zh ? "保存位置" : "Save placement"}
                 </button>
               ) : null}
-              {candidate.generation_status === 'generated' &&
+              {candidate.generation_status === "generated" &&
               !candidate.selected ? (
                 <button
                   className="btn btn-secondary"
                   type="button"
-                  onClick={() =>
-                    void onCandidateAction(candidate, 'select')
-                  }
+                  onClick={() => void onCandidateAction(candidate, "select")}
                 >
-                  {zh ? '选择' : 'Select'}
+                  {zh ? "选择" : "Select"}
                 </button>
               ) : null}
-              {candidate.generation_status === 'generated' &&
+              {candidate.generation_status === "generated" &&
               candidate.selected &&
               !candidate.applied_version_id ? (
                 <>
@@ -375,72 +390,64 @@ export function WorkflowMediaCandidates({
                       !imagePreviews[candidate.id]?.version_matches ||
                       !imagePreviews[candidate.id]?.anchor_matches
                     }
-                    onClick={() =>
-                      void onCandidateAction(candidate, 'apply')
-                    }
+                    onClick={() => void onCandidateAction(candidate, "apply")}
                   >
-                    {zh ? '确认应用' : 'Apply to article'}
+                    {zh ? "确认应用" : "Apply to article"}
                   </button>
                 </>
               ) : null}
-              {candidate.generation_status === 'generated' &&
+              {candidate.generation_status === "generated" &&
               !candidate.applied_version_id ? (
                 <button
                   className="btn btn-secondary"
                   type="button"
-                  onClick={() =>
-                    void onCandidateAction(candidate, 'reject')
-                  }
+                  onClick={() => void onCandidateAction(candidate, "reject")}
                 >
-                  {zh ? '放弃候选' : 'Reject'}
+                  {zh ? "放弃候选" : "Reject"}
                 </button>
               ) : null}
-              {candidate.generation_status === 'brief_ready' ? (
+              {candidate.generation_status === "brief_ready" ? (
                 <>
                   <button
                     className="btn btn-primary"
                     type="button"
                     onClick={() =>
-                      void onCandidateAction(candidate, 'regenerate')
+                      void onCandidateAction(candidate, "regenerate")
                     }
                   >
-                    {zh
-                      ? '开始生成候选图片'
-                      : 'Generate image candidates'}
+                    {zh ? "开始生成候选图片" : "Generate image candidates"}
                   </button>
                   <button
                     className="btn btn-secondary"
                     type="button"
-                    onClick={() =>
-                      void onCandidateAction(candidate, 'reject')
-                    }
+                    onClick={() => void onCandidateAction(candidate, "reject")}
                   >
-                    {zh ? '放弃候选' : 'Reject'}
+                    {zh ? "放弃候选" : "Reject"}
                   </button>
                 </>
               ) : null}
-              {candidate.generation_status === 'failed' ||
-              candidate.generation_status === 'ready_to_generate' ||
-              candidate.generation_status === 'cancelled' ? (
+              {candidate.generation_status === "failed" ||
+              candidate.generation_status === "ready_to_generate" ||
+              candidate.generation_status === "cancelled" ? (
                 <button
                   className="btn btn-secondary"
                   type="button"
                   onClick={() =>
-                    void onCandidateAction(candidate, 'regenerate')
+                    void onCandidateAction(candidate, "regenerate")
                   }
                 >
                   {zh
-                    ? '按这些要求重新生成'
-                    : 'Regenerate with these instructions'}
+                    ? "按这些要求重新生成"
+                    : "Regenerate with these instructions"}
                 </button>
               ) : null}
-              {candidate.generation_status === 'generating' ? (
+              {candidate.generation_status === "generating" ? (
                 <button
                   className="btn btn-secondary"
                   type="button"
                   onClick={() => void onCancelGeneration(candidate)}
                 >
-                  {zh ? '取消生成' : 'Cancel generation'}
+                  {zh ? "取消生成" : "Cancel generation"}
                 </button>
               ) : null}
             </div>

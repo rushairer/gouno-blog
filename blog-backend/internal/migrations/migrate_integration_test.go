@@ -4,11 +4,25 @@ import (
 	"context"
 	"database/sql"
 	"os"
+	"strings"
 	"testing"
 
 	_ "github.com/lib/pq"
 	"github.com/rushairer/blog-backend/internal/repository"
 )
+
+func TestNeutralDefaultsMigrationDoesNotExposePersonalEmail(t *testing.T) {
+	body, err := migrationFiles.ReadFile("sql/011_neutral_site_defaults.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(body), "@gmail.com") {
+		t.Fatal("neutral-default migration must not contain a personal email address")
+	}
+	if !strings.Contains(string(body), "0c8816ae5fe96b42802228af0319fb83") {
+		t.Fatal("neutral-default migration must retain the reviewed legacy-value cleanup")
+	}
+}
 
 func TestUpAppliesCurrentSchemaAndIsIdempotent(t *testing.T) {
 	dsn := os.Getenv("BLOG_TEST_POSTGRES_DSN")
