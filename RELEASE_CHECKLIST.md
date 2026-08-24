@@ -1,6 +1,7 @@
 # Release Checklist
 
 - [ ] Root CHANGELOG, version tag, image tags, and compatibility matrix agree.
+- [ ] `doc/release-manifest-v1.1.0.md` contains no blocked or missing application digest.
 - [ ] Backend, seed, frontend, dependency, and vulnerability gates pass.
 - [ ] Production Compose rejects missing secrets and image digests.
 - [ ] Cookie, CSRF, CORS, callback, authorization, and security-header tests pass.
