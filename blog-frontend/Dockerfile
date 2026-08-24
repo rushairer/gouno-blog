@@ -16,8 +16,16 @@ RUN npm run build
 # Runtime stage
 FROM nginx:stable-alpine@sha256:0d3b80406a13a767339fbe2f41406d6c7da727ab89cf8fae399e81f780f814d1
 
-COPY --from=builder /app/dist /usr/share/nginx/html
+RUN mkdir -p /etc/nginx/snippets \
+    && chown -R nginx:nginx /var/cache/nginx /var/log/nginx /etc/nginx/conf.d \
+    && touch /var/run/nginx.pid \
+    && chown nginx:nginx /var/run/nginx.pid
+
+COPY --from=builder --chown=nginx:nginx /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY security-headers.conf /etc/nginx/snippets/security-headers.conf
+
+USER nginx
 
 EXPOSE 8081
 

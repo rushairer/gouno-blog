@@ -43,7 +43,7 @@ jobs:
         run: go vet ./...
 
       - name: Check known Go vulnerabilities
-        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.6.0 ./...
 
   seed:
     name: Seed quality
@@ -69,7 +69,7 @@ jobs:
         run: go vet ./...
 
       - name: Check known Go vulnerabilities
-        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.6.0 ./...
 
   frontend:
     name: Frontend quality
@@ -92,7 +92,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Verify shared GOSSO client main commit
+      - name: Verify shared GOSSO client registry release
         run: |
           node --input-type=module <<'EOF'
           import { readFile } from 'node:fs/promises';
@@ -100,23 +100,19 @@ jobs:
           const lock = JSON.parse(await readFile('./package-lock.json', 'utf8'));
           const client = lock.packages['node_modules/@gosso/client'];
           const source = manifest.dependencies?.['@gosso/client'];
-          const pinnedCommit = /^git\+ssh:\/\/git@github\.com\/rushairer\/gosso-client\.git#[0-9a-f]{40}$/;
-          if (source !== 'github:rushairer/gosso-client#main' || !client || !pinnedCommit.test(client.resolved || '')) {
-            throw new Error('blog-frontend must track @gosso/client#main with a commit-pinned lockfile');
+          const exactVersion = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
+          const registryTarball = /^https:\/\/registry\.npmjs\.org\/@gosso\/client\/-\/client-[0-9A-Za-z.-]+\.tgz$/;
+          if (!exactVersion.test(source || '') || !client || client.version !== source ||
+              !registryTarball.test(client.resolved || '') || !client.integrity) {
+            throw new Error('blog-frontend must use an exact @gosso/client registry version with lockfile integrity');
           }
           EOF
-
-      - name: Lint
-        run: npm run lint
 
       - name: UI contract checks
         run: npm run lint:ui
 
-      - name: Unit tests
-        run: npm run test:run
-
-      - name: Build
-        run: npm run build
+      - name: Format, lint, typecheck, coverage and build
+        run: npm run check && npm run build
 
   compose:
     name: Compose config

@@ -1,17 +1,17 @@
-import { useEffect, useMemo, useState } from 'react';
-import { GitBranch, Mail, Rss, ShieldAlert } from 'lucide-react';
-import { useParams } from 'react-router-dom';
-import { MarkdownRenderer } from '../components/MarkdownRenderer';
-import { DEFAULT_SITE_SETTINGS } from '../config/site-defaults';
-import { pagesApi } from '../api/pages';
-import { siteApi } from '../api/site';
-import { extractMarkdownTOC } from '../utils/markdown';
-import type { CustomPage, SiteSettings } from '../types/blog';
-import NotFound from './NotFound';
+import { useEffect, useMemo, useState } from "react";
+import { GitBranch, Mail, Rss, ShieldAlert } from "lucide-react";
+import { useParams } from "react-router-dom";
+import { MarkdownRenderer } from "../components/MarkdownRenderer";
+import { DEFAULT_SITE_SETTINGS } from "../config/site-defaults";
+import { pagesApi } from "../api/pages";
+import { siteApi } from "../api/site";
+import { extractMarkdownTOC } from "../utils/markdown";
+import type { CustomPage, SiteSettings } from "../types/blog";
+import NotFound from "./NotFound";
 
 export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
   const { slug: routeSlug } = useParams();
-  const slug = fixedSlug || routeSlug || '';
+  const slug = fixedSlug || routeSlug || "";
 
   const [page, setPage] = useState<CustomPage | null>(null);
   const [site, setSite] = useState<SiteSettings>(DEFAULT_SITE_SETTINGS);
@@ -19,7 +19,8 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    siteApi.getSiteSettings()
+    siteApi
+      .getSiteSettings()
       .then((settings) => setSite({ ...DEFAULT_SITE_SETTINGS, ...settings }))
       .catch(() => {});
   }, []);
@@ -35,7 +36,8 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
     setLoading(true);
     setNotFound(false);
 
-    pagesApi.getPageBySlug(slug)
+    pagesApi
+      .getPageBySlug(slug)
       .then((data) => {
         if (ignore) return;
         setPage(data);
@@ -43,15 +45,16 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
       .catch(() => {
         if (!ignore) {
           // If fixedSlug is 'about' and not yet in backend DB (or network down), fallback to site-defaults
-          if (slug === 'about') {
+          if (slug === "about") {
             setPage({
               id: 0,
-              title: '关于',
-              slug: 'about',
-              summary: '关于这个站点，以及持续写作的理由。',
-              content: '这里用于记录值得长期保存的问题、过程与结论。比起只给答案，更重视交代上下文、约束和选择的理由。',
-              template: 'about',
-              status: 'published',
+              title: "关于",
+              slug: "about",
+              summary: "关于这个站点，以及持续写作的理由。",
+              content:
+                "这里用于记录值得长期保存的问题、过程与结论。比起只给答案，更重视交代上下文、约束和选择的理由。",
+              template: "about",
+              status: "published",
               allow_comments: false,
               show_in_nav: true,
               sort_order: 10,
@@ -79,15 +82,21 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
 
       let metaDesc = document.querySelector('meta[name="description"]');
       if (!metaDesc) {
-        metaDesc = document.createElement('meta');
-        metaDesc.setAttribute('name', 'description');
+        metaDesc = document.createElement("meta");
+        metaDesc.setAttribute("name", "description");
         document.head.appendChild(metaDesc);
       }
-      metaDesc.setAttribute('content', page.seo_description || page.summary || site.site_description || '');
+      metaDesc.setAttribute(
+        "content",
+        page.seo_description || page.summary || site.site_description || "",
+      );
     }
   }, [page, site]);
 
-  const toc = useMemo(() => (page?.content ? extractMarkdownTOC(page.content) : []), [page?.content]);
+  const toc = useMemo(
+    () => (page?.content ? extractMarkdownTOC(page.content) : []),
+    [page?.content],
+  );
 
   if (notFound) return <NotFound />;
 
@@ -99,38 +108,50 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
     );
   }
 
-  const draftBanner = page.status === 'draft' ? (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: '10px 16px',
-        marginBottom: '24px',
-        borderRadius: 'var(--radius-control)',
-        background: 'var(--brand-soft)',
-        color: 'var(--brand)',
-        fontSize: '13px',
-        fontWeight: 500,
-      }}
-    >
-      <ShieldAlert size={16} />
-      <span><strong>管理员预览模式</strong> · 该单页当前为草稿状态，仅对管理员可见。</span>
-    </div>
-  ) : null;
+  const draftBanner =
+    page.status === "draft" ? (
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          padding: "10px 16px",
+          marginBottom: "24px",
+          borderRadius: "var(--radius-control)",
+          background: "var(--brand-soft)",
+          color: "var(--brand)",
+          fontSize: "13px",
+          fontWeight: 500,
+        }}
+      >
+        <ShieldAlert size={16} />
+        <span>
+          <strong>管理员预览模式</strong> ·
+          该单页当前为草稿状态，仅对管理员可见。
+        </span>
+      </div>
+    ) : null;
 
   // 1. About Template
-  if (page.template === 'about') {
-    const markText = page.title.length > 4 ? page.title.slice(0, 4) : page.title;
-    const markFontSize = markText.length > 2 ? '22px' : '34px';
+  if (page.template === "about") {
+    const markText =
+      page.title.length > 4 ? page.title.slice(0, 4) : page.title;
+    const markFontSize = markText.length > 2 ? "22px" : "34px";
 
     return (
       <div className="public-container about-page">
         {draftBanner}
         <header>
-          <div className="about-mark" style={{ fontSize: markFontSize }}>{markText}</div>
+          <div className="about-mark" style={{ fontSize: markFontSize }}>
+            {markText}
+          </div>
           <div>
-            <p>{(page.slug || 'about').toUpperCase()} / {(site.site_title || DEFAULT_SITE_SETTINGS.site_title).toUpperCase()}</p>
+            <p>
+              {(page.slug || "about").toUpperCase()} /{" "}
+              {(
+                site.site_title || DEFAULT_SITE_SETTINGS.site_title
+              ).toUpperCase()}
+            </p>
             <h1>{page.summary || page.title}</h1>
           </div>
         </header>
@@ -150,7 +171,7 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
                 <Mail /> Email
               </a>
             ) : null}
-            <a href={site.rss_url || '/feed.xml'}>
+            <a href={site.rss_url || "/feed.xml"}>
               <Rss /> RSS
             </a>
           </aside>
@@ -160,7 +181,7 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
   }
 
   // 2. Blank Template (Full width clean container)
-  if (page.template === 'blank') {
+  if (page.template === "blank") {
     return (
       <div className="public-container custom-page custom-page--blank">
         {draftBanner}
@@ -170,11 +191,11 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
   }
 
   // 3. Links Template
-  if (page.template === 'links') {
+  if (page.template === "links") {
     return (
       <div className="public-container custom-page links-page">
         {draftBanner}
-        <header className="article-header" style={{ marginBottom: '28px' }}>
+        <header className="article-header" style={{ marginBottom: "28px" }}>
           <h1 className="article-title">{page.title}</h1>
         </header>
         <div className="article-content">
@@ -185,14 +206,16 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
   }
 
   // 4. Timeline Template
-  if (page.template === 'timeline') {
+  if (page.template === "timeline") {
     return (
       <div className="public-container custom-page timeline-page">
         {draftBanner}
         <header className="page-hero">
           <p className="page-hero-eyebrow">TIMELINE / ROADMAP</p>
           <h1 className="page-hero-title">{page.title}</h1>
-          {page.summary ? <p className="page-hero-summary">{page.summary}</p> : null}
+          {page.summary ? (
+            <p className="page-hero-summary">{page.summary}</p>
+          ) : null}
         </header>
         <div className="timeline-content">
           <MarkdownRenderer content={page.content} />
@@ -202,14 +225,16 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
   }
 
   // 5. Projects Template
-  if (page.template === 'projects') {
+  if (page.template === "projects") {
     return (
       <div className="public-container custom-page projects-page">
         {draftBanner}
         <header className="page-hero">
           <p className="page-hero-eyebrow">PORTFOLIO / SHOWCASE</p>
           <h1 className="page-hero-title">{page.title}</h1>
-          {page.summary ? <p className="page-hero-summary">{page.summary}</p> : null}
+          {page.summary ? (
+            <p className="page-hero-summary">{page.summary}</p>
+          ) : null}
         </header>
         <div className="projects-content">
           <MarkdownRenderer content={page.content} />
@@ -219,14 +244,16 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
   }
 
   // 6. Focus Template
-  if (page.template === 'focus') {
+  if (page.template === "focus") {
     return (
       <div className="public-container custom-page focus-page">
         {draftBanner}
         <header className="focus-header">
           <div className="focus-indicator">ESSAY & FOCUS</div>
           <h1 className="focus-title">{page.title}</h1>
-          {page.summary ? <p className="focus-summary">{page.summary}</p> : null}
+          {page.summary ? (
+            <p className="focus-summary">{page.summary}</p>
+          ) : null}
         </header>
         <div className="focus-content">
           <MarkdownRenderer content={page.content} />
@@ -236,14 +263,16 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
   }
 
   // 7. FAQ Template
-  if (page.template === 'faq') {
+  if (page.template === "faq") {
     return (
       <div className="public-container custom-page faq-page">
         {draftBanner}
         <header className="page-hero">
           <p className="page-hero-eyebrow">FAQ / GUIDES</p>
           <h1 className="page-hero-title">{page.title}</h1>
-          {page.summary ? <p className="page-hero-summary">{page.summary}</p> : null}
+          {page.summary ? (
+            <p className="page-hero-summary">{page.summary}</p>
+          ) : null}
         </header>
         <div className="faq-content">
           <MarkdownRenderer content={page.content} />
@@ -256,7 +285,9 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
   return (
     <div className="public-container custom-page">
       {draftBanner}
-      <div className={`article-layout ${toc.length === 0 ? 'article-layout--no-toc' : ''}`}>
+      <div
+        className={`article-layout ${toc.length === 0 ? "article-layout--no-toc" : ""}`}
+      >
         <article className="article-main">
           <header className="article-header">
             <h1 className="article-title">{page.title}</h1>

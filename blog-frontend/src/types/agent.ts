@@ -1,9 +1,22 @@
-export type ProviderType = 'openai' | 'anthropic' | 'gemini';
-export type TriggerType = 'manual' | 'cron';
-export type ExecutionMode = 'advisory' | 'approval';
-export type ContentPublishMode = 'draft' | 'approval' | 'publish';
-export type RunStatus = 'queued' | 'running' | 'waiting_for_user' | 'awaiting_approval' | 'succeeded' | 'failed' | 'cancelled';
-export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'expired' | 'executed' | 'failed';
+export type ProviderType = "openai" | "anthropic" | "gemini";
+export type TriggerType = "manual" | "cron";
+export type ExecutionMode = "advisory" | "approval";
+export type ContentPublishMode = "draft" | "approval" | "publish";
+export type RunStatus =
+  | "queued"
+  | "running"
+  | "waiting_for_user"
+  | "awaiting_approval"
+  | "succeeded"
+  | "failed"
+  | "cancelled";
+export type ApprovalStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "expired"
+  | "executed"
+  | "failed";
 
 export interface ProviderProfile {
   id: number;
@@ -50,12 +63,18 @@ export interface AgentCitation {
   lexical_score?: number;
   semantic_score?: number;
   score?: number;
-  status: 'validated' | 'unsupported';
+  status: "validated" | "unsupported";
 }
 
 export interface WorkflowStep {
   id: string;
-  type: 'resource_query' | 'model' | 'for_each' | 'approval_gate' | 'human_interaction' | 'output';
+  type:
+    | "resource_query"
+    | "model"
+    | "for_each"
+    | "approval_gate"
+    | "human_interaction"
+    | "output";
   name?: string;
   agent_id?: number;
   input_pointer?: string;
@@ -66,9 +85,16 @@ export interface WorkflowStep {
   continue_on_error?: boolean;
   steps?: WorkflowStep[];
   output_pointer?: string;
-  resource_type?: 'post' | 'comment' | 'media_asset' | 'operational_suggestion' | 'category' | 'tag' | 'page';
+  resource_type?:
+    | "post"
+    | "comment"
+    | "media_asset"
+    | "operational_suggestion"
+    | "category"
+    | "tag"
+    | "page";
   filter?: Record<string, unknown>;
-  interaction_type?: 'approval' | 'choice' | 'input' | 'preview_confirm';
+  interaction_type?: "approval" | "choice" | "input" | "preview_confirm";
   interaction_schema?: Record<string, unknown>;
   interaction_payload?: Record<string, unknown>;
   interaction_options?: unknown[];
@@ -80,11 +106,11 @@ export interface WorkflowInteractionTask {
   workflow_run_id?: number;
   agent_run_id?: number;
   workflow_step_id?: string;
-  interaction_type: 'approval' | 'choice' | 'input' | 'preview_confirm';
+  interaction_type: "approval" | "choice" | "input" | "preview_confirm";
   schema: Record<string, unknown>;
   payload: Record<string, unknown>;
   options: unknown[];
-  status: 'pending' | 'resolved' | 'cancelled' | 'expired';
+  status: "pending" | "resolved" | "cancelled" | "expired";
   resume_token?: string;
   response?: unknown;
   expires_at?: string;
@@ -104,7 +130,7 @@ export interface WorkflowRunEvent {
 }
 
 export interface WorkflowScopePolicy {
-  mode: 'strict' | 'unscoped';
+  mode: "strict" | "unscoped";
   discovery_tools: string[];
 }
 
@@ -122,11 +148,16 @@ export interface Workflow {
   input_schema: Record<string, unknown>;
   steps: WorkflowStep[];
   scope_policy?: WorkflowScopePolicy;
-  resource_query_preview?: Array<{ step_id: string; resource_type: string; estimated_count: number; max_items: number }>;
+  resource_query_preview?: Array<{
+    step_id: string;
+    resource_type: string;
+    estimated_count: number;
+    max_items: number;
+  }>;
   resource_query_preview_at?: string;
   resource_query_last_count?: number;
   resource_query_last_run_at?: string;
-  resource_query_empty_policy?: 'succeed' | 'fail';
+  resource_query_empty_policy?: "succeed" | "fail";
   created_at: string;
   updated_at: string;
 }
@@ -136,8 +167,8 @@ export interface WorkflowResource {
   workflow_run_id: number;
   type: string;
   key: string;
-  source: 'manual' | 'query' | 'discovery';
-  access_level: 'target' | 'read';
+  source: "manual" | "query" | "discovery";
+  access_level: "target" | "read";
   label: string;
   version_token: string;
   snapshot: Record<string, unknown>;
@@ -185,7 +216,6 @@ export interface WorkflowMetric {
   tokens: number;
 }
 
-
 export interface OperationalSuggestion {
   id: number;
   source_type: string;
@@ -194,11 +224,11 @@ export interface OperationalSuggestion {
   workflow_run_id?: number;
   title: string;
   description: string;
-  priority: 'low' | 'medium' | 'high';
+  priority: "low" | "medium" | "high";
   evidence: Record<string, unknown>;
   window_start?: string;
   window_end?: string;
-  status: 'new' | 'ignored' | 'converted' | 'selected' | 'resolved';
+  status: "new" | "ignored" | "converted" | "selected" | "resolved";
   ignored_reason?: string;
   created_at: string;
   updated_at: string;
@@ -216,9 +246,9 @@ export interface ContentCandidateSet {
   post_id: number;
   source_run_id: number;
   source_approval_id: number;
-  field_type: 'title' | 'summary' | 'cover_alt';
+  field_type: "title" | "summary" | "cover_alt";
   before_value: string;
-  status: 'pending' | 'selected' | 'expired';
+  status: "pending" | "selected" | "expired";
   selected_candidate_id?: number;
   candidates: ContentCandidate[];
   created_at: string;
@@ -232,7 +262,14 @@ export interface MediaCandidate {
   brief: string;
   platform?: string;
   alt_text: string;
-  generation_status: 'brief_ready' | 'ready_to_generate' | 'generating' | 'generated' | 'rejected' | 'failed' | 'cancelled';
+  generation_status:
+    | "brief_ready"
+    | "ready_to_generate"
+    | "generating"
+    | "generated"
+    | "rejected"
+    | "failed"
+    | "cancelled";
   safety_status: string;
   copyright_status: string;
   media_asset_id?: number;
@@ -240,7 +277,7 @@ export interface MediaCandidate {
   reviewed_at?: string;
   created_at: string;
   workflow_run_id?: number;
-  placement?: 'cover' | 'inline';
+  placement?: "cover" | "inline";
   anchor?: string;
   selected?: boolean;
   applied_version_id?: number;
@@ -257,8 +294,8 @@ export interface EditorialTask {
   id: number;
   title: string;
   description: string;
-  priority: 'low' | 'medium' | 'high';
-  status: 'open' | 'done' | 'cancelled';
+  priority: "low" | "medium" | "high";
+  status: "open" | "done" | "cancelled";
   source_approval_id?: number;
   source_suggestion_id?: number;
   created_at: string;
@@ -271,9 +308,24 @@ export interface OutcomeMetrics {
   ignored: number;
   candidate_sets: number;
   selected_candidate_sets: number;
-  rule_metrics?: { key: string; label: string; count: number; tokens: number }[];
-  skill_metrics?: { key: string; label: string; count: number; tokens: number }[];
-  workflow_metrics?: { key: string; label: string; count: number; tokens: number }[];
+  rule_metrics?: {
+    key: string;
+    label: string;
+    count: number;
+    tokens: number;
+  }[];
+  skill_metrics?: {
+    key: string;
+    label: string;
+    count: number;
+    tokens: number;
+  }[];
+  workflow_metrics?: {
+    key: string;
+    label: string;
+    count: number;
+    tokens: number;
+  }[];
 }
 
 export interface Agent {
@@ -345,10 +397,10 @@ export interface AgentToolCall {
   id: number;
   run_id: number;
   tool_name: string;
-  risk_level: 'read' | 'propose' | 'write';
+  risk_level: "read" | "propose" | "write";
   arguments: Record<string, unknown>;
   result?: unknown;
-  status: 'requested' | 'executed' | 'rejected' | 'failed';
+  status: "requested" | "executed" | "rejected" | "failed";
   error_message?: string;
   created_at: string;
 }
@@ -376,8 +428,8 @@ export interface ToolDefinition {
   output_schema?: Record<string, unknown>;
   configuration_schema?: Record<string, unknown>;
   default_binding?: Record<string, unknown>;
-  surfaces: 'agent'[];
-  risk_level: 'read' | 'propose' | 'write';
+  surfaces: "agent"[];
+  risk_level: "read" | "propose" | "write";
   scope?: {
     resource_type?: string;
     argument?: string;
@@ -387,7 +439,11 @@ export interface ToolDefinition {
   };
 }
 
-export type ConnectorKind = 'search_console' | 'newsletter' | 'social' | 'webhook';
+export type ConnectorKind =
+  | "search_console"
+  | "newsletter"
+  | "social"
+  | "webhook";
 
 export interface ConnectorProfile {
   id: number;
@@ -407,7 +463,7 @@ export interface ConnectorOutboxItem {
   connector_profile_id: number;
   idempotency_key: string;
   payload: Record<string, unknown>;
-  status: 'awaiting_approval' | 'approved' | 'delivered' | 'failed' | 'revoked';
+  status: "awaiting_approval" | "approved" | "delivered" | "failed" | "revoked";
   attempts: number;
   error_message?: string;
   delivered_at?: string;
@@ -415,30 +471,35 @@ export interface ConnectorOutboxItem {
   created_at: string;
 }
 
-export const emptyProvider: Omit<ProviderProfile, 'id' | 'created_at' | 'updated_at' | 'has_api_key' | 'api_key_last4'> & { api_key: string } = {
-  name: '',
-  provider_type: 'openai',
-  base_url: 'https://api.openai.com',
-  model: '',
-  api_key: '',
+export const emptyProvider: Omit<
+  ProviderProfile,
+  "id" | "created_at" | "updated_at" | "has_api_key" | "api_key_last4"
+> & { api_key: string } = {
+  name: "",
+  provider_type: "openai",
+  base_url: "https://api.openai.com",
+  model: "",
+  api_key: "",
   enabled: true,
   is_default_writing: false,
   is_default_image: false,
-  protocol_mode: 'chat_completions',
-  stream_mode: 'auto',
+  protocol_mode: "chat_completions",
+  stream_mode: "auto",
   request_timeout_seconds: 60,
   max_output_tokens: 2000,
 };
 
-export function emptyAgent(providerID?: number): Omit<Agent, 'id' | 'created_at' | 'updated_at'> {
+export function emptyAgent(
+  providerID?: number,
+): Omit<Agent, "id" | "created_at" | "updated_at"> {
   return {
-    name: '',
-    description: '',
+    name: "",
+    description: "",
     provider_profile_id: providerID,
     skill_version_id: 0,
     enabled: false,
-    trigger_type: 'manual',
-    timezone: 'Asia/Shanghai',
+    trigger_type: "manual",
+    timezone: "Asia/Shanghai",
     daily_run_limit: 10,
     monthly_token_budget: 1000000,
   };
