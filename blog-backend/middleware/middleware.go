@@ -17,17 +17,17 @@ func TimeoutMiddleware(requestTimeout time.Duration) gin.HandlerFunc {
 	return TimeoutMiddlewareWithOverrides(requestTimeout, nil)
 }
 
-// TimeoutMiddlewareWithOverrides keeps public routes on the short default
-// deadline while allowing explicitly listed, admin-only upstream diagnostics
-// to use their own bounded window.
+// TimeoutMiddlewareWithOverrides applies route-specific deadlines using Gin
+// route templates (for example, /api/items/:id), falling back to the request
+// path when no matched template is available.
 func TimeoutMiddlewareWithOverrides(requestTimeout time.Duration, overrides map[string]time.Duration) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		deadline := requestTimeout
-		if value, ok := overrides[ctx.Request.URL.Path]; ok && value > 0 {
-			deadline = value
+		route := ctx.FullPath()
+		if route == "" {
+			route = ctx.Request.URL.Path
 		}
-		if value, ok := overrides["provider_test"]; ok && value > 0 &&
-			strings.HasPrefix(ctx.Request.URL.Path, "/api/admin/provider-profiles/") && strings.HasSuffix(ctx.Request.URL.Path, "/test") {
+		if value, ok := overrides[route]; ok && value > 0 {
 			deadline = value
 		}
 		timeout.New(timeout.WithTimeout(deadline), timeout.WithResponse(func(ctx *gin.Context) {

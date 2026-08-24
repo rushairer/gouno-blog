@@ -4,7 +4,7 @@ web_server:
     idle_timeout: 60s
     read_timeout: 5s
     read_header_timeout: 2s
-    write_timeout: 30s
+    write_timeout: 6m
     request_timeout: 10s
     rate_limit_per_minute: 120
     trusted_proxies:

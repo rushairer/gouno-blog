@@ -39,6 +39,11 @@ var webCmd = &cobra.Command{
 	Run: startWebServer,
 }
 
+const (
+	aiTextRequestTimeout  = 120 * time.Second
+	aiImageRequestTimeout = 300 * time.Second
+)
+
 func init() {
 	webCmd.Flags().StringP("config_path", "c", "./config", "config file path")
 	webCmd.Flags().StringP("address", "a", "0.0.0.0", "address to listen on")
@@ -119,13 +124,13 @@ func startWebServer(cmd *cobra.Command, args []string) {
 		middleware.RecoveryMiddleware(),
 		middleware.SecurityHeadersMiddleware(!globalConfig.WebServerConfig.Debug),
 		middleware.TimeoutMiddlewareWithOverrides(globalConfig.WebServerConfig.RequestTimeout, map[string]time.Duration{
-			"provider_test":                        90 * time.Second,
-			"/api/admin/ai-workflows/draft":        90 * time.Second,
-			"/api/admin/ai-automation-plans/draft": 90 * time.Second,
-			"/api/admin/ai-draft-assist":           90 * time.Second,
-			"/api/admin/ai-generate-image":         300 * time.Second,
-			"/api/admin/ai-index/evaluate":         120 * time.Second,
-			"/api/admin/ai-index/rebuild":          120 * time.Second,
+			"/api/admin/provider-profiles/:id/test": aiTextRequestTimeout,
+			"/api/admin/ai-workflows/draft":         aiTextRequestTimeout,
+			"/api/admin/ai-automation-plans/draft":  aiTextRequestTimeout,
+			"/api/admin/ai-draft-assist":            aiTextRequestTimeout,
+			"/api/admin/ai-generate-image":          aiImageRequestTimeout,
+			"/api/admin/ai-index/evaluate":          aiTextRequestTimeout,
+			"/api/admin/ai-index/rebuild":           aiTextRequestTimeout,
 		}),
 		gounoMiddleware.RateLimitMiddleware(ctx, globalConfig.WebServerConfig.RateLimitPerMinute, time.Minute),
 	)
