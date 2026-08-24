@@ -10,11 +10,11 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 - Add a production deployment contract based on immutable image digests and required secrets.
 
 ### Changed
-- Prepare the backend and browser consumers for `gouno` 1.2 and
-  `@gosso/client` 0.4; the dependency switch remains gated on their stable
-  releases.
-- Keep HttpOnly Cookie Session explicit until the browser SDK 0.4 dependency
-  becomes available from the registry.
+- Validate the backend with `gouno` 1.2.0-rc.1 and the browser consumers with
+  registry-published `@gosso/client` 0.4.0-rc.2; stable Blog publication remains
+  gated on their corresponding stable releases.
+- Use the SDK's default HttpOnly Cookie Session behavior and retain explicit
+  origin and CSRF policy at each application boundary.
 - Upgrade `gin-contrib/timeout` to 1.2.1 to remove a race in timeout handling.
 
 ### Security
