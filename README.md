@@ -40,9 +40,12 @@ Gouno Blog 是一个构建于 GoUno 与 GOSSO 的开源、自托管博客运营�
 ├── retrospective.md           # 前后端 SSO 集成开发指南与最佳实践
 ├── docker-compose.yml         # 镜像化本地集群编排配置
 ├── docker-compose.source.yml  # 本地源码构建 override
+├── docker-compose.production.yml # 生产部署编排配置
 ├── Caddyfile                  # Caddy HTTPS 反向代理配置
+├── doc/                       # 架构边界、AI 工作台和发布记录
 ├── init.sql                   # 数据库初始化脚本
 ├── seed/                      # 博客 OAuth client 一次性初始化镜像
+├── scripts/                   # 本地 TLS 等辅助脚本
 ├── keys/                      # 本地 GOSSO RSA 私钥目录（不提交）
 ├── blog-backend/              # 博客后端微服务 (GoUno)
 └── blog-frontend/             # 博客前端门户 (React)
@@ -110,15 +113,15 @@ docker compose up -d
 
 自建服务镜像（`ghcr.io/rushairer/*`）默认使用浮动的 `main` 标签，并设置了 `pull_policy: always`：各仓库推送到 `main` 后，镜像会以 `main`、`sha-<commit>` 标签发布，发布 `v*` 时再追加版本标签。本地开发只需 `docker compose up -d` 即会拉取最新 `main` 镜像，无需手改摘要或额外 `pull`。第三方基础镜像（PostgreSQL、Redis、Mailpit、Caddy）仍固定不可变摘要以保证可复现。
 
-生产部署应固定到不可变摘要，以 `vX.Y.Z@sha256:<digest>` 覆盖对应变量：
+生产编排使用完整的不可变镜像引用；以 `vX.Y.Z@sha256:<digest>` 覆盖对应变量：
 
 ```bash
-export GOUNO_BLOG_BACKEND_IMAGE_TAG=v1.0.0@sha256:...
-export GOUNO_BLOG_FRONTEND_IMAGE_TAG=v1.0.0@sha256:...
-export GOUNO_BLOG_SEED_IMAGE_TAG=v1.0.0@sha256:...
-export GOSSO_IMAGE_TAG=v1.2.0@sha256:...
-export GOSSO_ADMIN_FRONTEND_IMAGE_TAG=v0.2.0@sha256:...
-export GOSSO_ADMIN_SEED_IMAGE_TAG=v0.2.0@sha256:...
+export GOUNO_BLOG_BACKEND_IMAGE=ghcr.io/rushairer/gouno-blog-backend:vX.Y.Z@sha256:...
+export GOUNO_BLOG_FRONTEND_IMAGE=ghcr.io/rushairer/gouno-blog-frontend:vX.Y.Z@sha256:...
+export GOUNO_BLOG_SEED_IMAGE=ghcr.io/rushairer/gouno-blog-seed:vX.Y.Z@sha256:...
+export GOSSO_IMAGE=ghcr.io/rushairer/gosso:vX.Y.Z@sha256:...
+export GOSSO_ADMIN_FRONTEND_IMAGE=ghcr.io/rushairer/gosso-admin-frontend-identity-admin:vX.Y.Z@sha256:...
+export GOSSO_ADMIN_SEED_IMAGE=ghcr.io/rushairer/gosso-admin-seed:vX.Y.Z@sha256:...
 ```
 
 如果需要从当前 checkout 构建 blog 前后端源码，使用 source override：
@@ -167,7 +170,7 @@ export SSO_CLIENT_ID=blog-spa
 - 点赞按登录用户或签名访客标识去重并支持取消；登录用户还可以跨设备收藏文章。
 - 评论、点赞和举报使用 Redis 限流。生产环境必须设置高强度随机值 `BLOG_VISITOR_SECRET`，用于签名匿名访客 Cookie。
 
-### 8. 内容增长工具
+### 9. 内容增长工具
 
 - 文章详情页自动生成 description、Open Graph、canonical 与 BlogPosting 结构化数据，并按标签展示相关阅读。
 - 后台提供内容数据看板，汇总文章、浏览、点赞、收藏、评论、审核和举报数据。
@@ -175,7 +178,7 @@ export SSO_CLIENT_ID=blog-spa
 - 文章每次内容变更都会自动保留数据库快照，后台最多展示最近 50 个版本并支持恢复。恢复前的当前版本也会被保留。
 - 媒体默认存储在本地文件系统，可用 `BLOG_MEDIA_DIR` 修改目录；也可设 `BLOG_MEDIA_STORAGE=s3` 切换到 S3 兼容对象存储。S3 模式要求 `BLOG_MEDIA_S3_BUCKET`、`BLOG_MEDIA_S3_REGION`、`BLOG_MEDIA_S3_PUBLIC_BASE_URL`，可选 `BLOG_MEDIA_S3_ENDPOINT`（MinIO 等）和 `BLOG_MEDIA_S3_PREFIX`；凭据使用标准 AWS 环境变量或运行时角色。对象 URL 必须由受控的公开 CDN 或 Bucket 域名提供。
 
-### 9. AI Agent 博客运营
+### 10. AI Agent 博客运营
 
 后台将 Provider Profile 和 Agent 作为数据库资源管理，无需修改 YAML 即可配置：
 
@@ -186,6 +189,12 @@ export SSO_CLIENT_ID=blog-spa
 - 内容再利用：Agent 可为社媒、newsletter、FAQ 和图片创意生成审批草稿；首版仅供审阅和复制，不保存第三方凭据、不连接外部平台、更不会自动投递。
 - 媒体候选：图片 brief 审批与生成全流程已接入 AI 工作流中心（Run 详情），支持模型调用生成、真实图片预览、重新生成、多图位置编排（封面 / 正文插图锚点）及版本审计应用；媒体库专注于媒体资源的管理与引用。
 - 模板：内置“每周运营报告”“内容健康巡检”“评论洞察与回复草稿”三个可复制模板。
+
+### AI 请求与 Workflow 执行超时
+
+普通 API 使用 `web_server.request_timeout` （默认 10 秒）。需在 HTTP 请求内等待模型结果的 Provider 测试、文本生成、Workflow 草案和索引操作使用 120 秒；直接生图使用 300 秒。后端 `write_timeout` 配置为 6 分钟，以覆盖最长的同步请求。如果部署在反向代理或网关之后，它的上游超时也必须不小于 300 秒。
+
+`/api/admin/ai-workflows/:id/run`、`dry-run` 与重试接口仅创建保存的队列 Run 并返回 `202 Accepted`；实际执行由后台 Worker 进行。Cron 和事件触发也由服务启动时初始化的 Scheduler 入队，因此不受这些同步 HTTP 超时的限制。
 
 本地 Compose 默认启用模块，并使用仅供开发的固定主密钥。生产部署应生成独立密钥并显式启用：
 
@@ -213,11 +222,9 @@ export BLOG_AGENT_PREVIOUS_MASTER_KEYS="1:<old-base64-key>"
 
 结构化输入、运行范围、自动化路线和发布边界参见 [AI 工作台自动化设计](./doc/ai-workbench-automation-plan.md)；管理 API 可在 Swagger 的 `/admin/ai-workflows`、`/admin/ai-resources/{type}` 和 `/admin/ai-workflow-runs/{id}/resources` 下查看。
 
-### 10. 多架构与 ARM64 支持
+### 11. 多架构与 ARM64 支持
 
-为了支持在不同处理器架构（包括 Apple Silicon M1/M2/M3 等 ARM 设备）下流畅开发：
-- **Docker Compose 配置**：在 `docker-compose.yml` 中，各服务的 platform 已经被明确配置，以防止在 ARM 架构设备上启动时产生不兼容的警告信息。
-- **CI 多平台构建**：GitHub Actions 工作流已支持利用 Docker Buildx 自动并行构建 `linux/amd64` 和 `linux/arm64` 的多平台 Docker 镜像并推送至 GHCR。
+发布工作流使用 Docker Buildx 构建 `linux/amd64` 和 `linux/arm64` 多平台镜像并推送至 GHCR。本地 Compose 不强制 `platform`，由 Docker 选择当前主机架构的镜像。
 
 ---
 

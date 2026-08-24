@@ -5,6 +5,10 @@ validation and the digests that must be filled after each application image is
 published. A missing digest is a release blocker; `main`, `latest`, and branch
 tags are not substitutes.
 
+> **Historical release record:** this is the v1.1.0 candidate snapshot, not a
+> current deployment inventory. Use `docker-compose.production.yml` together
+> with the release being deployed to determine the required image references.
+
 ## Validated release candidates
 
 | Component | Version | Source commit | Evidence |
