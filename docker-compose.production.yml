@@ -1,0 +1,132 @@
+name: gouno-blog-production
+
+x-hardened: &hardened
+  restart: unless-stopped
+  read_only: true
+  security_opt: [no-new-privileges:true]
+  cap_drop: [ALL]
+
+services:
+  db:
+    image: ${POSTGRES_IMAGE:?set POSTGRES_IMAGE to version@sha256:digest}
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB}
+    volumes: [db_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    security_opt: [no-new-privileges:true]
+
+  redis:
+    image: ${REDIS_IMAGE:?set REDIS_IMAGE to version@sha256:digest}
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD}
+    command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$${REDIS_PASSWORD}\""]
+    volumes: [redis_data:/data]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    security_opt: [no-new-privileges:true]
+
+  gosso:
+    <<: *hardened
+    image: ${GOSSO_IMAGE:?set GOSSO_IMAGE to version@sha256:digest}
+    tmpfs: [/tmp]
+    environment:
+      GOUNO_ENV: production
+      GOUNO_DATABASE_DRIVERS_POSTGRES_DSN: ${GOSSO_DATABASE_DSN:?set GOSSO_DATABASE_DSN}
+      GOUNO_REDIS_DSN: ${GOSSO_REDIS_DSN:?set GOSSO_REDIS_DSN}
+      GOUNO_AUTH_ISSUER: ${PUBLIC_ORIGIN:?set PUBLIC_ORIGIN}
+      GOUNO_AUTH_PRIVATE_KEY_PATH: /run/secrets/gosso_signing_key
+      GOUNO_AUTH_TOTP_ENCRYPTION_KEY: ${GOSSO_TOTP_KEY:?set a unique 64-character hex key}
+      GOUNO_AUTH_VERIFY_HASH_PEPPER: ${GOSSO_VERIFY_PEPPER:?set GOSSO_VERIFY_PEPPER}
+      GOUNO_CORS_ALLOWED_ORIGINS: ${GOSSO_CORS_ALLOWED_ORIGINS:?set an exact JSON origin list}
+      GOUNO_WEB_SERVER_TRUSTED_PROXIES: ${GOSSO_TRUSTED_PROXIES:?set an exact JSON CIDR list}
+    secrets: [gosso_signing_key]
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_healthy}
+
+  gosso-admin-seed:
+    <<: *hardened
+    image: ${GOSSO_ADMIN_SEED_IMAGE:?set GOSSO_ADMIN_SEED_IMAGE to version@sha256:digest}
+    restart: 'no'
+    tmpfs: [/tmp]
+    environment:
+      GOSSO_ADMIN_ENV: production
+      PG_DSN: ${GOSSO_DATABASE_DSN:?set GOSSO_DATABASE_DSN}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:?set ADMIN_USERNAME}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD}
+      OAUTH2_CLIENT_REDIRECT_URIS: ${PUBLIC_ORIGIN}/identity-admin/callback
+    depends_on:
+      db: {condition: service_healthy}
+
+  blog-seed:
+    <<: *hardened
+    image: ${GOUNO_BLOG_SEED_IMAGE:?set GOUNO_BLOG_SEED_IMAGE to version@sha256:digest}
+    restart: 'no'
+    tmpfs: [/tmp]
+    environment:
+      PG_DSN: ${GOSSO_DATABASE_DSN:?set GOSSO_DATABASE_DSN}
+      BLOG_OAUTH_REDIRECT_URIS: ${PUBLIC_ORIGIN}/callback
+    depends_on:
+      gosso-admin-seed: {condition: service_completed_successfully}
+
+  blog-backend:
+    <<: *hardened
+    image: ${GOUNO_BLOG_BACKEND_IMAGE:?set GOUNO_BLOG_BACKEND_IMAGE to version@sha256:digest}
+    tmpfs: [/tmp]
+    environment:
+      GOUNO_DATABASE_DRIVERS_POSTGRES_DSN: ${BLOG_DATABASE_DSN:?set BLOG_DATABASE_DSN}
+      GOUNO_REDIS_DSN: ${BLOG_REDIS_DSN:?set BLOG_REDIS_DSN}
+      SSO_JWKS_URL: http://gosso:8080/.well-known/jwks.json
+      SSO_TOKEN_ISSUER: ${PUBLIC_ORIGIN:?set PUBLIC_ORIGIN}
+      SSO_TOKEN_AUDIENCE: ${SSO_CLIENT_ID:?set SSO_CLIENT_ID}
+      SSO_CLIENT_ID: ${SSO_CLIENT_ID}
+      BLOG_VISITOR_SECRET: ${BLOG_VISITOR_SECRET:?set BLOG_VISITOR_SECRET}
+      BLOG_MEDIA_DIR: /app/data/media
+      BLOG_AGENT_MASTER_KEY: ${BLOG_AGENT_MASTER_KEY:?set a 32-byte base64 key}
+      GOUNO_AI_WEBHOOK_SECRET: ${GOUNO_AI_WEBHOOK_SECRET:?set GOUNO_AI_WEBHOOK_SECRET}
+    volumes: [blog_media:/app/data/media]
+    depends_on:
+      db: {condition: service_healthy}
+      gosso: {condition: service_started}
+      blog-seed: {condition: service_completed_successfully}
+
+  blog-frontend:
+    <<: *hardened
+    image: ${GOUNO_BLOG_FRONTEND_IMAGE:?set GOUNO_BLOG_FRONTEND_IMAGE to version@sha256:digest}
+    tmpfs: [/tmp, /var/cache/nginx, /var/run]
+
+  gosso-admin-frontend:
+    <<: *hardened
+    image: ${GOSSO_ADMIN_FRONTEND_IMAGE:?set GOSSO_ADMIN_FRONTEND_IMAGE to version@sha256:digest}
+    tmpfs: [/tmp, /var/cache/nginx, /var/run]
+
+  gateway:
+    <<: *hardened
+    image: ${CADDY_IMAGE:?set CADDY_IMAGE to version@sha256:digest}
+    ports: ['127.0.0.1:${HTTPS_PORT:-8443}:8443']
+    tmpfs: [/tmp, /config, /data]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${TLS_CERT_FILE:?set TLS_CERT_FILE}:/etc/caddy/certs/localhost.pem:ro
+      - ${TLS_KEY_FILE:?set TLS_KEY_FILE}:/etc/caddy/certs/localhost-key.pem:ro
+    depends_on: [blog-frontend, blog-backend, gosso, gosso-admin-frontend]
+
+secrets:
+  gosso_signing_key:
+    file: ${GOSSO_SIGNING_KEY_FILE:?set GOSSO_SIGNING_KEY_FILE}
+
+volumes:
+  db_data:
+  redis_data:
+  blog_media:

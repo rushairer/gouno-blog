@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { canManageBlog, isLoggedIn, redirectToAuthorize } from '../auth';
+import { useEffect, useState } from "react";
+import { canManageBlog, isLoggedIn, redirectToAuthorize } from "../auth";
 
 export function useAdminGuard(returnTo: string) {
   const [allowed] = useState(() => isLoggedIn() && canManageBlog());
@@ -8,4 +8,3 @@ export function useAdminGuard(returnTo: string) {
   }, [allowed, returnTo]);
   return allowed;
 }
-

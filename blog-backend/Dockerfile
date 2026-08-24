@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.26.5-alpine@sha256:0178a641fbb4858c5f1b48e34bdaabe0350a330a1b1149aabd498d0699ff5fb2 AS builder
+FROM golang:1.26.6-alpine AS builder
 
 RUN apk add --no-cache ca-certificates tzdata
 
@@ -21,11 +21,17 @@ FROM alpine:3.19@sha256:6baf43584bcb78f2e5847d1de515f23499913ac9f12bdf834811a314
 
 RUN apk add --no-cache ca-certificates tzdata
 
+RUN addgroup -S blog && adduser -S blog -G blog \
+    && mkdir -p /app/data/media \
+    && chown -R blog:blog /app
+
 WORKDIR /app
 
 # Copy the compiled binary and configuration files
-COPY --from=builder /build/blog /app/blog
-COPY --from=builder /workspace/blog-backend/config /app/config
+COPY --from=builder --chown=blog:blog /build/blog /app/blog
+COPY --from=builder --chown=blog:blog /workspace/blog-backend/config /app/config
+
+USER blog
 
 EXPOSE 8082
 
