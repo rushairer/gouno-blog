@@ -102,7 +102,8 @@ docker compose up -d
 * `sso-blog-backend` (后端 API, 监听端口 `8082`)
 * `sso-blog-gosso` (GOSSO 身份服务)
 * `sso-blog-gosso-admin-frontend` (GOSSO Admin 身份管理控制台)
-* `sso-blog-gosso-admin-seed` / `sso-blog-client-seed` (一次性初始化任务)
+* `sso-blog-gosso-admin-seed` / `sso-blog-client-seed` (一次性数据初始化任务)
+* `gouno-blog-blog-media-init-1`（一次性命名卷属主初始化任务；仅具备 `CHOWN` capability）
 * `sso-blog-db` (PostgreSQL 15 数据库)
 * `sso-blog-redis` (Redis 缓存在线 Session)
 * `sso-blog-mailpit` (本地邮件测试)
@@ -126,7 +127,7 @@ export GOSSO_ADMIN_SEED_IMAGE_TAG=v0.2.0@sha256:...
 docker compose -f docker-compose.yml -f docker-compose.source.yml up -d --build
 ```
 
-`blog-client-seed` 与 `gosso-admin-seed` 一样是一次性初始化容器；默认使用 `ghcr.io/rushairer/gouno-blog-seed` 镜像，本地 source override 会从根目录 `seed/` 构建该镜像。
+`blog-client-seed` 与 `gosso-admin-seed` 一样是一次性数据初始化容器；默认使用 `ghcr.io/rushairer/gouno-blog-seed` 镜像，本地 source override 会从根目录 `seed/` 构建该镜像。`blog-media-init` 会在后端启动前，以唯一的 `CHOWN` capability 将命名卷调整为固定的 `10001:10001`，随后退出；常驻后端仍以该非 root UID/GID 运行。
 
 后端会在数据库可用后才通过 `/healthz` 就绪检查；前端会等待该检查成功，避免容器刚启动时将请求转发到尚未完成数据库初始化的 API。
 

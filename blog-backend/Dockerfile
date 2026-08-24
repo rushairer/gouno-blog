@@ -21,7 +21,7 @@ FROM alpine:3.19@sha256:6baf43584bcb78f2e5847d1de515f23499913ac9f12bdf834811a314
 
 RUN apk add --no-cache ca-certificates tzdata
 
-RUN addgroup -S blog && adduser -S blog -G blog \
+RUN addgroup -S -g 10001 blog && adduser -S -D -H -u 10001 -G blog blog \
     && mkdir -p /app/data/media \
     && chown -R blog:blog /app
 
