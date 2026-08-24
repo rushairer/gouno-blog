@@ -80,6 +80,18 @@ services:
     depends_on:
       gosso-admin-seed: {condition: service_completed_successfully}
 
+  blog-media-init:
+    image: ${GOUNO_BLOG_BACKEND_IMAGE:?set GOUNO_BLOG_BACKEND_IMAGE to version@sha256:digest}
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["chown -R 10001:10001 /app/data/media"]
+    read_only: true
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    cap_add: [CHOWN]
+    restart: "no"
+    volumes: [blog_media:/app/data/media]
+
   blog-backend:
     <<: *hardened
     image: ${GOUNO_BLOG_BACKEND_IMAGE:?set GOUNO_BLOG_BACKEND_IMAGE to version@sha256:digest}
@@ -100,6 +112,7 @@ services:
       db: {condition: service_healthy}
       gosso: {condition: service_started}
       blog-seed: {condition: service_completed_successfully}
+      blog-media-init: {condition: service_completed_successfully}
 
   blog-frontend:
     <<: *hardened

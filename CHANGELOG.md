@@ -16,6 +16,11 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
   origin and CSRF policy at each application boundary.
 - Upgrade `gin-contrib/timeout` to 1.2.1 to remove a race in timeout handling.
 
+### Fixed
+- Initialize the persistent media volume with the backend's fixed non-root
+  UID/GID before startup so uploads remain writable after a hardened-image
+  upgrade without changing host-directory permissions.
+
 ### Security
 - Add root licensing and disclosure policy, neutralize personal defaults, harden containers and browser response headers, and publish signed images with SBOM and provenance.
 
