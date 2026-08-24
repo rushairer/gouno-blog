@@ -1,25 +1,25 @@
 export function normalizedMarkdownText(text: string): string {
   return text
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    .replace(/[\\`*_~]/g, '')
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/[\\`*_~]/g, "")
     .trim();
 }
 
 export function markdownHeadingID(text: string): string {
   const slug = normalizedMarkdownText(text)
     .toLowerCase()
-    .replace(/[^\w\u4e00-\u9fa5]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-  return `heading-${slug || 'section'}`;
+    .replace(/[^\w\u4e00-\u9fa5]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return `heading-${slug || "section"}`;
 }
 
 export function markdownToPlainText(content: string): string {
   return normalizedMarkdownText(content)
-    .replace(/^#{1,6}\s+/gm, '')
-    .replace(/^\s*[-+*]\s+/gm, '')
-    .replace(/^\s*\d+\.\s+/gm, '')
-    .replace(/\s+/g, ' ')
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/^\s*[-+*]\s+/gm, "")
+    .replace(/^\s*\d+\.\s+/gm, "")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
@@ -32,7 +32,7 @@ export interface MarkdownTOCItem {
 export function extractMarkdownTOC(content: string): MarkdownTOCItem[] {
   const toc: MarkdownTOCItem[] = [];
   let inFence = false;
-  for (const line of content.replace(/\r\n/g, '\n').split('\n')) {
+  for (const line of content.replace(/\r\n/g, "\n").split("\n")) {
     if (/^\s*```/.test(line)) {
       inFence = !inFence;
       continue;

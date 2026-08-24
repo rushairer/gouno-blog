@@ -1,36 +1,69 @@
-import { useRef } from 'react';
+import { useRef } from "react";
 import {
-  Bot, ChevronRight, CirclePause, Copy, DatabaseZap, Download, Edit2, GitBranch, KeyRound, ListChecks,
-  LockKeyhole, Play, Plus, RefreshCw, Settings2, Trash2, Upload,
-} from 'lucide-react';
+  Bot,
+  ChevronRight,
+  CirclePause,
+  Copy,
+  DatabaseZap,
+  Download,
+  Edit2,
+  GitBranch,
+  KeyRound,
+  ListChecks,
+  LockKeyhole,
+  Play,
+  Plus,
+  RefreshCw,
+  Settings2,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import type {
-  Agent, AgentRun, AgentSkill, EmbeddingProfile, ProviderProfile, ToolDefinition,
-} from '../../types/agent';
-import { AgentForm } from './AgentForm';
-import { SkillForm } from './SkillForm';
-import type { SkillFormValue } from './SkillForm';
-import { ProviderForm } from './ProviderForm';
-import type { ProviderFormValue } from './ProviderForm';
-import { EmbeddingForm } from './EmbeddingForm';
-import type { EmbeddingFormValue } from './EmbeddingForm';
-import { ConnectorWorkspace } from './ConnectorWorkspace';
-import { RiskPill, StatusPill } from './StatusPill';
-import { Button, EmptyState, PanelHeader, Select, SubnavTabs, WorkspacePanel } from '../ui';
+  Agent,
+  AgentRun,
+  AgentSkill,
+  EmbeddingProfile,
+  ProviderProfile,
+  ToolDefinition,
+} from "../../types/agent";
+import { AgentForm } from "./AgentForm";
+import { SkillForm } from "./SkillForm";
+import type { SkillFormValue } from "./SkillForm";
+import { ProviderForm } from "./ProviderForm";
+import type { ProviderFormValue } from "./ProviderForm";
+import { EmbeddingForm } from "./EmbeddingForm";
+import type { EmbeddingFormValue } from "./EmbeddingForm";
+import { ConnectorWorkspace } from "./ConnectorWorkspace";
+import { RiskPill, StatusPill } from "./StatusPill";
+import {
+  Button,
+  EmptyState,
+  PanelHeader,
+  Select,
+  SubnavTabs,
+  WorkspacePanel,
+} from "../ui";
 
-export type AdvancedSection = 'agents' | 'skills' | 'tools' | 'knowledge' | 'providers' | 'connectors';
+export type AdvancedSection =
+  | "agents"
+  | "skills"
+  | "tools"
+  | "knowledge"
+  | "providers"
+  | "connectors";
 export type DeleteTarget =
-  | { kind: 'agent'; value: Agent }
-  | { kind: 'provider'; value: ProviderProfile }
-  | { kind: 'embedding'; value: EmbeddingProfile }
-  | { kind: 'skill'; value: AgentSkill }
+  | { kind: "agent"; value: Agent }
+  | { kind: "provider"; value: ProviderProfile }
+  | { kind: "embedding"; value: EmbeddingProfile }
+  | { kind: "skill"; value: AgentSkill }
   | null;
 
 function formatCapability(value: string) {
-  return value.replace('.', ' / ').replaceAll('_', ' ');
+  return value.replace(".", " / ").replaceAll("_", " ");
 }
 
 interface AdvancedWorkspaceProps {
-  locale: 'en' | 'zh';
+  locale: "en" | "zh";
   labels: Record<string, string>;
   advancedSection: AdvancedSection;
   onSelectSection: (section: AdvancedSection) => void;
@@ -43,26 +76,35 @@ interface AdvancedWorkspaceProps {
   runs: AgentRun[];
   indexStatus: { queued: number; failed: number; chunks: number };
   // Form editing states
-  editingAgent: Agent | 'new' | null;
-  editingProvider: ProviderProfile | 'new' | null;
-  editingEmbedding: EmbeddingProfile | 'new' | null;
-  editingSkill: AgentSkill | 'new' | null;
-  agentPrefill?: Partial<Omit<Agent, 'id' | 'created_at' | 'updated_at'>>;
+  editingAgent: Agent | "new" | null;
+  editingProvider: ProviderProfile | "new" | null;
+  editingEmbedding: EmbeddingProfile | "new" | null;
+  editingSkill: AgentSkill | "new" | null;
+  agentPrefill?: Partial<Omit<Agent, "id" | "created_at" | "updated_at">>;
   skillPrefill?: Partial<SkillFormValue>;
   testingConnections: string[];
   // Actions
-  onEditAgent: (agent: Agent | 'new' | null) => void;
-  onEditProvider: (provider: ProviderProfile | 'new' | null) => void;
-  onEditEmbedding: (embedding: EmbeddingProfile | 'new' | null) => void;
-  onEditSkill: (skill: AgentSkill | 'new' | null) => void;
-  onSaveAgent: (value: Omit<Agent, 'id' | 'created_at' | 'updated_at'> & { id?: number }) => Promise<void>;
+  onEditAgent: (agent: Agent | "new" | null) => void;
+  onEditProvider: (provider: ProviderProfile | "new" | null) => void;
+  onEditEmbedding: (embedding: EmbeddingProfile | "new" | null) => void;
+  onEditSkill: (skill: AgentSkill | "new" | null) => void;
+  onSaveAgent: (
+    value: Omit<Agent, "id" | "created_at" | "updated_at"> & { id?: number },
+  ) => Promise<void>;
   onSaveProvider: (value: ProviderFormValue) => Promise<void>;
   onSaveEmbedding: (value: EmbeddingFormValue) => Promise<void>;
   onSaveSkill: (value: SkillFormValue) => Promise<void>;
   onRunAgent: (agent: Agent) => Promise<void>;
   onToggleAgentEnabled: (agent: Agent) => Promise<void>;
-  onSetDefaultProvider: (id: number, usage: 'writing' | 'image') => Promise<void>;
-  onTestConnection: (kind: 'provider' | 'embedding', id: number, name: string) => Promise<void>;
+  onSetDefaultProvider: (
+    id: number,
+    usage: "writing" | "image",
+  ) => Promise<void>;
+  onTestConnection: (
+    kind: "provider" | "embedding",
+    id: number,
+    name: string,
+  ) => Promise<void>;
   onExportProviders: () => Promise<void>;
   onImportProviders: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
   onExportSkill: (skill: AgentSkill) => Promise<void>;
@@ -130,40 +172,48 @@ export function AdvancedWorkspace({
         value={advancedSection}
         onValueChange={(value) => onSelectSection(value as AdvancedSection)}
         items={[
-          { value: 'agents', label: labels.agents, icon: <Bot /> },
-          { value: 'skills', label: labels.skills, icon: <ListChecks /> },
-          { value: 'tools', label: 'Tools', icon: <GitBranch /> },
-          { value: 'knowledge', label: labels.knowledge, icon: <DatabaseZap /> },
-          { value: 'providers', label: labels.providers, icon: <KeyRound /> },
-          { value: 'connectors', label: locale === 'zh' ? 'Sandbox 连接器' : 'Sandbox connectors', icon: <LockKeyhole /> },
+          { value: "agents", label: labels.agents, icon: <Bot /> },
+          { value: "skills", label: labels.skills, icon: <ListChecks /> },
+          { value: "tools", label: "Tools", icon: <GitBranch /> },
+          {
+            value: "knowledge",
+            label: labels.knowledge,
+            icon: <DatabaseZap />,
+          },
+          { value: "providers", label: labels.providers, icon: <KeyRound /> },
+          {
+            value: "connectors",
+            label: locale === "zh" ? "Sandbox 连接器" : "Sandbox connectors",
+            icon: <LockKeyhole />,
+          },
         ]}
       />
 
-      {advancedSection === 'providers' && editingProvider ? (
+      {advancedSection === "providers" && editingProvider ? (
         <ProviderForm
-          key={editingProvider === 'new' ? 'new' : editingProvider.id}
-          initial={editingProvider === 'new' ? undefined : editingProvider}
+          key={editingProvider === "new" ? "new" : editingProvider.id}
+          initial={editingProvider === "new" ? undefined : editingProvider}
           labels={labels}
           onSave={onSaveProvider}
           onCancel={() => onEditProvider(null)}
         />
       ) : null}
 
-      {advancedSection === 'knowledge' && editingEmbedding ? (
+      {advancedSection === "knowledge" && editingEmbedding ? (
         <EmbeddingForm
-          key={editingEmbedding === 'new' ? 'new' : editingEmbedding.id}
-          initial={editingEmbedding === 'new' ? undefined : editingEmbedding}
+          key={editingEmbedding === "new" ? "new" : editingEmbedding.id}
+          initial={editingEmbedding === "new" ? undefined : editingEmbedding}
           locale={locale}
           onSave={onSaveEmbedding}
           onCancel={() => onEditEmbedding(null)}
         />
       ) : null}
 
-      {advancedSection === 'agents' && editingAgent ? (
+      {advancedSection === "agents" && editingAgent ? (
         <AgentForm
-          key={editingAgent === 'new' ? 'new' : editingAgent.id}
-          initial={editingAgent === 'new' ? undefined : editingAgent}
-          prefill={editingAgent === 'new' ? agentPrefill : undefined}
+          key={editingAgent === "new" ? "new" : editingAgent.id}
+          initial={editingAgent === "new" ? undefined : editingAgent}
+          prefill={editingAgent === "new" ? agentPrefill : undefined}
           providers={providers}
           skills={skills}
           locale={locale}
@@ -173,11 +223,11 @@ export function AdvancedWorkspace({
         />
       ) : null}
 
-      {advancedSection === 'skills' && editingSkill ? (
+      {advancedSection === "skills" && editingSkill ? (
         <SkillForm
-          key={editingSkill === 'new' ? 'new' : editingSkill.id}
-          initial={editingSkill === 'new' ? undefined : editingSkill}
-          prefill={editingSkill === 'new' ? skillPrefill : undefined}
+          key={editingSkill === "new" ? "new" : editingSkill.id}
+          initial={editingSkill === "new" ? undefined : editingSkill}
+          prefill={editingSkill === "new" ? skillPrefill : undefined}
           tools={tools}
           locale={locale}
           onSave={onSaveSkill}
@@ -185,26 +235,26 @@ export function AdvancedWorkspace({
         />
       ) : null}
 
-      {!editingAgent && !editingProvider && advancedSection === 'tools' ? (
+      {!editingAgent && !editingProvider && advancedSection === "tools" ? (
         <WorkspacePanel className="agent-table-panel">
           <PanelHeader
             title="Tools"
             description={
-              locale === 'zh'
-                ? '由代码发布的受控能力目录，供 Skill 和 Agent 授权、审计与测试；Workflow 不直接调用 Tool。'
-                : 'Code-published governed capabilities for Skill and Agent authorization, audit, and testing. Workflows do not invoke Tools directly.'
+              locale === "zh"
+                ? "由代码发布的受控能力目录，供 Skill 和 Agent 授权、审计与测试；Workflow 不直接调用 Tool。"
+                : "Code-published governed capabilities for Skill and Agent authorization, audit, and testing. Workflows do not invoke Tools directly."
             }
           />
           {tools.length === 0 ? (
-            <EmptyState label={locale === 'zh' ? '暂无 Tool' : 'No Tools'} />
+            <EmptyState label={locale === "zh" ? "暂无 Tool" : "No Tools"} />
           ) : (
             <div className="table-scroll">
               <table className="content-table agent-table agent-table--tools">
                 <thead>
                   <tr>
                     <th>Tool</th>
-                    <th>{locale === 'zh' ? '范围' : 'Surface'}</th>
-                    <th>{locale === 'zh' ? '风险' : 'Risk'}</th>
+                    <th>{locale === "zh" ? "范围" : "Surface"}</th>
+                    <th>{locale === "zh" ? "风险" : "Risk"}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -212,9 +262,13 @@ export function AdvancedWorkspace({
                     <tr key={tool.name}>
                       <td>
                         <strong>{tool.name}</strong>
-                        <small>{locale === 'zh' ? tool.description_zh || tool.description : tool.description}</small>
+                        <small>
+                          {locale === "zh"
+                            ? tool.description_zh || tool.description
+                            : tool.description}
+                        </small>
                       </td>
-                      <td>{tool.surfaces?.join(', ') || 'agent'}</td>
+                      <td>{tool.surfaces?.join(", ") || "agent"}</td>
                       <td>
                         <RiskPill risk={tool.risk_level} locale={locale} />
                       </td>
@@ -227,35 +281,52 @@ export function AdvancedWorkspace({
         </WorkspacePanel>
       ) : null}
 
-      {!editingAgent && !editingProvider && advancedSection === 'agents' ? (
+      {!editingAgent && !editingProvider && advancedSection === "agents" ? (
         <WorkspacePanel className="agent-table-panel">
           <PanelHeader
             title={labels.agents}
             description={
-              locale === 'zh'
-                ? '将 Skill Version 部署到模型连接，并配置运行配额、计划与启停。'
-                : 'Deploy a Skill Version to a model connection, then configure scheduling, quotas, and state.'
+              locale === "zh"
+                ? "将 Skill Version 部署到模型连接，并配置运行配额、计划与启停。"
+                : "Deploy a Skill Version to a model connection, then configure scheduling, quotas, and state."
             }
             actions={
               <Button
                 variant="primary"
-                onClick={() => (providers.length > 0 ? onEditAgent('new') : onError(labels.providerNeeded))}
+                onClick={() =>
+                  providers.length > 0
+                    ? onEditAgent("new")
+                    : onError(labels.providerNeeded)
+                }
               >
-                <Plus />{labels.createAgent}
+                <Plus />
+                {labels.createAgent}
               </Button>
             }
           />
           {agents.length === 0 ? (
             <div className="agent-empty-state">
               <Bot aria-hidden="true" />
-              <h2>{locale === 'zh' ? '先添加模型连接' : 'Add a model connection first'}</h2>
+              <h2>
+                {locale === "zh"
+                  ? "先添加模型连接"
+                  : "Add a model connection first"}
+              </h2>
               <p>
-                {locale === 'zh'
-                  ? '保存首个可用模型连接后，系统会自动创建 8 个停用的默认 Agent，供你审核后启用。'
-                  : 'Saving the first usable model connection creates eight disabled default Agents for review.'}
+                {locale === "zh"
+                  ? "保存首个可用模型连接后，系统会自动创建 8 个停用的默认 Agent，供你审核后启用。"
+                  : "Saving the first usable model connection creates eight disabled default Agents for review."}
               </p>
-              <button className="text-link" type="button" onClick={() => onSelectSection('providers')}>
-                <KeyRound />{locale === 'zh' ? '配置模型连接' : 'Configure a model connection'}<ChevronRight />
+              <button
+                className="text-link"
+                type="button"
+                onClick={() => onSelectSection("providers")}
+              >
+                <KeyRound />
+                {locale === "zh"
+                  ? "配置模型连接"
+                  : "Configure a model connection"}
+                <ChevronRight />
               </button>
             </div>
           ) : (
@@ -275,62 +346,102 @@ export function AdvancedWorkspace({
                 </thead>
                 <tbody>
                   {agents.map((agent) => {
-                    const defaultWritingProvider = providers.find((p) => p.enabled && p.is_default_writing);
-                    const provider = agent.provider_profile_id ? providerMap.get(agent.provider_profile_id) : defaultWritingProvider;
+                    const defaultWritingProvider = providers.find(
+                      (p) => p.enabled && p.is_default_writing,
+                    );
+                    const provider = agent.provider_profile_id
+                      ? providerMap.get(agent.provider_profile_id)
+                      : defaultWritingProvider;
                     const isInherited = !agent.provider_profile_id;
-                    const latestRun = runs.find((run) => run.agent_id === agent.id);
+                    const latestRun = runs.find(
+                      (run) => run.agent_id === agent.id,
+                    );
                     const toolsForSkill = agent.skill?.capabilities || [];
                     return (
                       <tr key={agent.id}>
                         <td>
                           <div className="agent-identity">
-                            <span><Bot /></span>
+                            <span>
+                              <Bot />
+                            </span>
                             <div>
                               <strong>{agent.name}</strong>
                               {agent.system_key ? (
-                                <small>{locale === 'zh' ? '默认能力' : 'Default capability'}</small>
+                                <small>
+                                  {locale === "zh"
+                                    ? "默认能力"
+                                    : "Default capability"}
+                                </small>
                               ) : null}
                               <small>{agent.description}</small>
                             </div>
                           </div>
                         </td>
                         <td>
-                          <span className={`agent-state agent-state--${agent.enabled ? 'active' : 'paused'}`}>
-                            <i />{agent.enabled ? labels.active : labels.paused}
+                          <span
+                            className={`agent-state agent-state--${agent.enabled ? "active" : "paused"}`}
+                          >
+                            <i />
+                            {agent.enabled ? labels.active : labels.paused}
                           </span>
                         </td>
                         <td>
                           <div className="provider-identity">
-                            <strong>{provider?.name || (locale === 'zh' ? '跟随系统默认' : 'Inherit Default')}</strong>
+                            <strong>
+                              {provider?.name ||
+                                (locale === "zh"
+                                  ? "跟随系统默认"
+                                  : "Inherit Default")}
+                            </strong>
                             {isInherited ? (
                               <span className="status-pill status-pill--published">
-                                {locale === 'zh' ? '跟随系统' : 'Inherit system'}
+                                {locale === "zh"
+                                  ? "跟随系统"
+                                  : "Inherit system"}
                               </span>
                             ) : (
-                              <small className="mono">{provider?.model || '—'}</small>
+                              <small className="mono">
+                                {provider?.model || "—"}
+                              </small>
                             )}
                           </div>
                         </td>
                         <td>
-                          <strong>{agent.trigger_type === 'cron' ? agent.cron_expression : labels.manual}</strong>
+                          <strong>
+                            {agent.trigger_type === "cron"
+                              ? agent.cron_expression
+                              : labels.manual}
+                          </strong>
                           <small>{agent.timezone}</small>
                         </td>
                         <td>
-                          <strong>{agent.skill?.name || '—'}</strong>
-                          <small>v{agent.skill?.version || '—'} · {toolsForSkill.length} Tools</small>
+                          <strong>{agent.skill?.name || "—"}</strong>
+                          <small>
+                            v{agent.skill?.version || "—"} ·{" "}
+                            {toolsForSkill.length} Tools
+                          </small>
                         </td>
                         <td>
                           {latestRun ? (
                             <>
-                              <StatusPill status={latestRun.status} locale={locale} />
-                              <small>{formatDateTime(latestRun.created_at)}</small>
+                              <StatusPill
+                                status={latestRun.status}
+                                locale={locale}
+                              />
+                              <small>
+                                {formatDateTime(latestRun.created_at)}
+                              </small>
                             </>
                           ) : (
                             <small>{labels.never}</small>
                           )}
                         </td>
                         <td>
-                          <strong>{agent.next_run_at ? formatDateTime(agent.next_run_at) : '—'}</strong>
+                          <strong>
+                            {agent.next_run_at
+                              ? formatDateTime(agent.next_run_at)
+                              : "—"}
+                          </strong>
                         </td>
                         <td>
                           <div className="agent-row-actions">
@@ -342,12 +453,18 @@ export function AdvancedWorkspace({
                             >
                               <Play />
                             </button>
-                            <button type="button" title={labels.edit} onClick={() => onEditAgent(agent)}>
+                            <button
+                              type="button"
+                              title={labels.edit}
+                              onClick={() => onEditAgent(agent)}
+                            >
                               <Edit2 />
                             </button>
                             <button
                               type="button"
-                              title={agent.enabled ? labels.disable : labels.enable}
+                              title={
+                                agent.enabled ? labels.disable : labels.enable
+                              }
                               onClick={() => void onToggleAgentEnabled(agent)}
                             >
                               {agent.enabled ? <CirclePause /> : <Play />}
@@ -356,7 +473,12 @@ export function AdvancedWorkspace({
                               <button
                                 type="button"
                                 title={labels.delete}
-                                onClick={() => onDeleteTarget({ kind: 'agent', value: agent })}
+                                onClick={() =>
+                                  onDeleteTarget({
+                                    kind: "agent",
+                                    value: agent,
+                                  })
+                                }
                               >
                                 <Trash2 />
                               </button>
@@ -373,29 +495,42 @@ export function AdvancedWorkspace({
         </WorkspacePanel>
       ) : null}
 
-      {!editingAgent && !editingProvider && !editingSkill && advancedSection === 'skills' ? (
+      {!editingAgent &&
+      !editingProvider &&
+      !editingSkill &&
+      advancedSection === "skills" ? (
         <WorkspacePanel className="agent-table-panel">
           <input
             ref={skillFileInputRef}
             type="file"
             accept=".json,application/json"
-            style={{ display: 'none' }}
+            style={{ display: "none" }}
             onChange={(event) => void onImportSkill(event)}
           />
           <PanelHeader
             title={labels.skills}
             description={
-              locale === 'zh'
-                ? '管理可复用能力定义与执行边界。'
-                : 'Manage reusable capability definitions and execution boundaries.'
+              locale === "zh"
+                ? "管理可复用能力定义与执行边界。"
+                : "Manage reusable capability definitions and execution boundaries."
             }
             actions={
               <>
-                <Button variant="secondary" type="button" onClick={() => skillFileInputRef.current?.click()}>
-                  <Upload />{locale === 'zh' ? '导入 Skill' : 'Import Skill'}
+                <Button
+                  variant="secondary"
+                  type="button"
+                  onClick={() => skillFileInputRef.current?.click()}
+                >
+                  <Upload />
+                  {locale === "zh" ? "导入 Skill" : "Import Skill"}
                 </Button>
-                <Button variant="primary" type="button" onClick={() => onEditSkill('new')}>
-                  <Plus />{locale === 'zh' ? '创建 Skill' : 'Create Skill'}
+                <Button
+                  variant="primary"
+                  type="button"
+                  onClick={() => onEditSkill("new")}
+                >
+                  <Plus />
+                  {locale === "zh" ? "创建 Skill" : "Create Skill"}
                 </Button>
               </>
             }
@@ -421,17 +556,23 @@ export function AdvancedWorkspace({
                       <td>
                         <strong>{skill.name}</strong>
                         {skill.system_key ? (
-                          <small>{locale === 'zh' ? '系统 Skill' : 'System Skill'}</small>
+                          <small>
+                            {locale === "zh" ? "系统 Skill" : "System Skill"}
+                          </small>
                         ) : null}
                         <small>{skill.description}</small>
                       </td>
                       <td>
                         <span
                           className={`risk-label risk-label--${
-                            skill.execution_mode === 'approval' ? 'propose' : 'read'
+                            skill.execution_mode === "approval"
+                              ? "propose"
+                              : "read"
                           }`}
                         >
-                          {skill.execution_mode === 'approval' ? labels.approvalMode : labels.advisory}
+                          {skill.execution_mode === "approval"
+                            ? labels.approvalMode
+                            : labels.advisory}
                         </span>
                       </td>
                       <td>
@@ -439,7 +580,9 @@ export function AdvancedWorkspace({
                           {skill.capabilities.slice(0, 4).map((item) => (
                             <span key={item}>{formatCapability(item)}</span>
                           ))}
-                          {skill.capabilities.length > 4 ? <span>+{skill.capabilities.length - 4}</span> : null}
+                          {skill.capabilities.length > 4 ? (
+                            <span>+{skill.capabilities.length - 4}</span>
+                          ) : null}
                         </div>
                       </td>
                       <td>
@@ -452,26 +595,36 @@ export function AdvancedWorkspace({
                         <div className="agent-row-actions">
                           <button
                             type="button"
-                            title={locale === 'zh' ? '导出 Skill' : 'Export Skill'}
+                            title={
+                              locale === "zh" ? "导出 Skill" : "Export Skill"
+                            }
                             onClick={() => void onExportSkill(skill)}
                           >
                             <Download />
                           </button>
                           <button
                             type="button"
-                            title={locale === 'zh' ? '复制 Skill' : 'Copy Skill'}
+                            title={
+                              locale === "zh" ? "复制 Skill" : "Copy Skill"
+                            }
                             onClick={() => void onCopySkill(skill)}
                           >
                             <Copy />
                           </button>
-                          <button type="button" title={labels.edit} onClick={() => onEditSkill(skill)}>
+                          <button
+                            type="button"
+                            title={labels.edit}
+                            onClick={() => onEditSkill(skill)}
+                          >
                             <Edit2 />
                           </button>
                           {!skill.system_key ? (
                             <button
                               type="button"
                               title={labels.delete}
-                              onClick={() => onDeleteTarget({ kind: 'skill', value: skill })}
+                              onClick={() =>
+                                onDeleteTarget({ kind: "skill", value: skill })
+                              }
                             >
                               <Trash2 />
                             </button>
@@ -487,32 +640,43 @@ export function AdvancedWorkspace({
         </WorkspacePanel>
       ) : null}
 
-      {!editingAgent && !editingProvider && advancedSection === 'providers' ? (
+      {!editingAgent && !editingProvider && advancedSection === "providers" ? (
         <WorkspacePanel className="agent-table-panel">
           <input
             ref={providerFileInputRef}
             type="file"
             accept=".json,application/json"
-            style={{ display: 'none' }}
+            style={{ display: "none" }}
             onChange={(event) => void onImportProviders(event)}
           />
           <PanelHeader
             title={labels.providers}
             description={
-              locale === 'zh'
-                ? '管理模型连接，并分别指定文本模型与图片生成的默认模型。'
-                : 'Manage model connections and defaults.'
+              locale === "zh"
+                ? "管理模型连接，并分别指定文本模型与图片生成的默认模型。"
+                : "Manage model connections and defaults."
             }
             actions={
               <>
-                <Button variant="secondary" type="button" onClick={() => void onExportProviders()}>
-                  <Download />{labels.exportProviders}
+                <Button
+                  variant="secondary"
+                  type="button"
+                  onClick={() => void onExportProviders()}
+                >
+                  <Download />
+                  {labels.exportProviders}
                 </Button>
-                <Button variant="secondary" type="button" onClick={() => providerFileInputRef.current?.click()}>
-                  <Upload />{labels.importProviders}
+                <Button
+                  variant="secondary"
+                  type="button"
+                  onClick={() => providerFileInputRef.current?.click()}
+                >
+                  <Upload />
+                  {labels.importProviders}
                 </Button>
-                <Button variant="primary" onClick={() => onEditProvider('new')}>
-                  <Plus />{locale === 'zh' ? '添加模型连接' : labels.createProvider}
+                <Button variant="primary" onClick={() => onEditProvider("new")}>
+                  <Plus />
+                  {locale === "zh" ? "添加模型连接" : labels.createProvider}
                 </Button>
               </>
             }
@@ -520,19 +684,31 @@ export function AdvancedWorkspace({
           {providers.length > 0 ? (
             <section className="provider-defaults">
               <div className="provider-defaults__intro">
-                <h3>{locale === 'zh' ? '默认用途' : 'Default Purposes'}</h3>
-                <p>{locale === 'zh' ? '决定编辑器、运营分析与图片生成使用的模型。' : 'Determines models used for editing, analysis, and image generation.'}</p>
+                <h3>{locale === "zh" ? "默认用途" : "Default Purposes"}</h3>
+                <p>
+                  {locale === "zh"
+                    ? "决定编辑器、运营分析与图片生成使用的模型。"
+                    : "Determines models used for editing, analysis, and image generation."}
+                </p>
               </div>
               <label>
-                {locale === 'zh' ? '文本模型' : 'Text Model'}
+                {locale === "zh" ? "文本模型" : "Text Model"}
                 <Select
-                  value={providers.find((item) => item.is_default_writing)?.id || ''}
+                  value={
+                    providers.find((item) => item.is_default_writing)?.id || ""
+                  }
                   onChange={(event) => {
-                    const id = event.target.value ? Number(event.target.value) : 0;
-                    void onSetDefaultProvider(id, 'writing');
+                    const id = event.target.value
+                      ? Number(event.target.value)
+                      : 0;
+                    void onSetDefaultProvider(id, "writing");
                   }}
                 >
-                  <option value="">{locale === 'zh' ? '未设置 (取消选择)' : 'Not set (Clear default)'}</option>
+                  <option value="">
+                    {locale === "zh"
+                      ? "未设置 (取消选择)"
+                      : "Not set (Clear default)"}
+                  </option>
                   {providers
                     .filter((item) => item.enabled)
                     .map((item) => (
@@ -543,15 +719,23 @@ export function AdvancedWorkspace({
                 </Select>
               </label>
               <label>
-                {locale === 'zh' ? '图片生成' : 'Image Generation'}
+                {locale === "zh" ? "图片生成" : "Image Generation"}
                 <Select
-                  value={providers.find((item) => item.is_default_image)?.id || ''}
+                  value={
+                    providers.find((item) => item.is_default_image)?.id || ""
+                  }
                   onChange={(event) => {
-                    const id = event.target.value ? Number(event.target.value) : 0;
-                    void onSetDefaultProvider(id, 'image');
+                    const id = event.target.value
+                      ? Number(event.target.value)
+                      : 0;
+                    void onSetDefaultProvider(id, "image");
                   }}
                 >
-                  <option value="">{locale === 'zh' ? '未设置 (取消选择)' : 'Not set (Clear default)'}</option>
+                  <option value="">
+                    {locale === "zh"
+                      ? "未设置 (取消选择)"
+                      : "Not set (Clear default)"}
+                  </option>
                   {providers
                     .filter((item) => item.enabled)
                     .map((item) => (
@@ -585,16 +769,21 @@ export function AdvancedWorkspace({
                       <td>
                         <div className="provider-identity">
                           <strong>{provider.name}</strong>
-                          {(provider.is_default_writing || provider.is_default_image) && (
+                          {(provider.is_default_writing ||
+                            provider.is_default_image) && (
                             <div className="provider-tags">
                               {provider.is_default_writing ? (
                                 <span className="status-pill status-pill--published">
-                                  {locale === 'zh' ? '默认文本模型' : 'Default Text Model'}
+                                  {locale === "zh"
+                                    ? "默认文本模型"
+                                    : "Default Text Model"}
                                 </span>
                               ) : null}
                               {provider.is_default_image ? (
                                 <span className="status-pill status-pill--published">
-                                  {locale === 'zh' ? '默认图片模型' : 'Default Image Model'}
+                                  {locale === "zh"
+                                    ? "默认图片模型"
+                                    : "Default Image Model"}
                                 </span>
                               ) : null}
                             </div>
@@ -605,12 +794,17 @@ export function AdvancedWorkspace({
                       <td className="mono">{provider.base_url}</td>
                       <td className="mono">{provider.model}</td>
                       <td>
-                        <span className="secret-mask">•••• {provider.api_key_last4}</span>
+                        <span className="secret-mask">
+                          •••• {provider.api_key_last4}
+                        </span>
                         <small>{labels.keyStored}</small>
                       </td>
                       <td>
-                        <span className={`agent-state agent-state--${provider.enabled ? 'active' : 'paused'}`}>
-                          <i />{provider.enabled ? labels.active : labels.paused}
+                        <span
+                          className={`agent-state agent-state--${provider.enabled ? "active" : "paused"}`}
+                        >
+                          <i />
+                          {provider.enabled ? labels.active : labels.paused}
                         </span>
                       </td>
                       <td>
@@ -618,31 +812,54 @@ export function AdvancedWorkspace({
                           <button
                             type="button"
                             title={
-                              testingConnections.includes(`provider:${provider.id}`)
-                                ? locale === 'zh'
-                                  ? '正在测试连接'
-                                  : 'Testing connection'
+                              testingConnections.includes(
+                                `provider:${provider.id}`,
+                              )
+                                ? locale === "zh"
+                                  ? "正在测试连接"
+                                  : "Testing connection"
                                 : labels.test
                             }
-                            aria-busy={testingConnections.includes(`provider:${provider.id}`)}
-                            disabled={testingConnections.includes(`provider:${provider.id}`)}
-                            onClick={() => void onTestConnection('provider', provider.id, provider.name)}
+                            aria-busy={testingConnections.includes(
+                              `provider:${provider.id}`,
+                            )}
+                            disabled={testingConnections.includes(
+                              `provider:${provider.id}`,
+                            )}
+                            onClick={() =>
+                              void onTestConnection(
+                                "provider",
+                                provider.id,
+                                provider.name,
+                              )
+                            }
                           >
                             <RefreshCw
                               className={
-                                testingConnections.includes(`provider:${provider.id}`)
-                                  ? 'agent-row-actions__spinner'
+                                testingConnections.includes(
+                                  `provider:${provider.id}`,
+                                )
+                                  ? "agent-row-actions__spinner"
                                   : undefined
                               }
                             />
                           </button>
-                          <button type="button" title={labels.edit} onClick={() => onEditProvider(provider)}>
+                          <button
+                            type="button"
+                            title={labels.edit}
+                            onClick={() => onEditProvider(provider)}
+                          >
                             <Edit2 />
                           </button>
                           <button
                             type="button"
                             title={labels.delete}
-                            onClick={() => onDeleteTarget({ kind: 'provider', value: provider })}
+                            onClick={() =>
+                              onDeleteTarget({
+                                kind: "provider",
+                                value: provider,
+                              })
+                            }
                           >
                             <Trash2 />
                           </button>
@@ -657,54 +874,84 @@ export function AdvancedWorkspace({
         </WorkspacePanel>
       ) : null}
 
-      {!editingAgent && !editingProvider && !editingEmbedding && advancedSection === 'connectors' ? (
+      {!editingAgent &&
+      !editingProvider &&
+      !editingEmbedding &&
+      advancedSection === "connectors" ? (
         <ConnectorWorkspace locale={locale} onRefresh={onRefresh} />
       ) : null}
 
-      {!editingAgent && !editingProvider && !editingEmbedding && advancedSection === 'knowledge' ? (
+      {!editingAgent &&
+      !editingProvider &&
+      !editingEmbedding &&
+      advancedSection === "knowledge" ? (
         <WorkspacePanel className="agent-table-panel knowledge-workspace">
           <PanelHeader
             title={
               <>
-                <DatabaseZap />{labels.knowledge}
+                <DatabaseZap />
+                {labels.knowledge}
               </>
             }
             description={
-              locale === 'zh'
-                ? '仅索引已发布文章；Embedding 模型负责把文章转换为可检索的知识库。'
-                : 'Published content only; jobs run asynchronously.'
+              locale === "zh"
+                ? "仅索引已发布文章；Embedding 模型负责把文章转换为可检索的知识库。"
+                : "Published content only; jobs run asynchronously."
             }
             actions={
               <>
-                <Button variant="secondary" type="button" onClick={() => void onRetryIndex()}>
-                  <RefreshCw />{locale === 'zh' ? '重试失败任务' : 'Retry failed'}
+                <Button
+                  variant="secondary"
+                  type="button"
+                  onClick={() => void onRetryIndex()}
+                >
+                  <RefreshCw />
+                  {locale === "zh" ? "重试失败任务" : "Retry failed"}
                 </Button>
-                <Button variant="secondary" type="button" onClick={() => void onRebuildIndex()}>
-                  <RefreshCw />{locale === 'zh' ? '全量重建' : 'Rebuild all'}
+                <Button
+                  variant="secondary"
+                  type="button"
+                  onClick={() => void onRebuildIndex()}
+                >
+                  <RefreshCw />
+                  {locale === "zh" ? "全量重建" : "Rebuild all"}
                 </Button>
-                <Button variant="primary" type="button" onClick={() => onEditEmbedding('new')}>
-                  <Plus />{locale === 'zh' ? '添加 Embedding 模型' : 'Add embedding profile'}
+                <Button
+                  variant="primary"
+                  type="button"
+                  onClick={() => onEditEmbedding("new")}
+                >
+                  <Plus />
+                  {locale === "zh"
+                    ? "添加 Embedding 模型"
+                    : "Add embedding profile"}
                 </Button>
               </>
             }
           />
           <div className="agent-run-metrics">
             <span>
-              <small>{locale === 'zh' ? '分段' : 'Chunks'}</small>
+              <small>{locale === "zh" ? "分段" : "Chunks"}</small>
               <strong>{indexStatus.chunks}</strong>
             </span>
             <span>
-              <small>{locale === 'zh' ? '队列' : 'Queued'}</small>
+              <small>{locale === "zh" ? "队列" : "Queued"}</small>
               <strong>{indexStatus.queued}</strong>
             </span>
             <span>
-              <small>{locale === 'zh' ? '失败' : 'Failed'}</small>
+              <small>{locale === "zh" ? "失败" : "Failed"}</small>
               <strong>{indexStatus.failed}</strong>
             </span>
           </div>
           <section className="knowledge-embedding-config">
             {embeddingProfiles.length === 0 ? (
-              <EmptyState label={locale === 'zh' ? '还没有嵌入配置。' : 'No embedding profiles configured.'} />
+              <EmptyState
+                label={
+                  locale === "zh"
+                    ? "还没有嵌入配置。"
+                    : "No embedding profiles configured."
+                }
+              />
             ) : (
               <div className="table-scroll">
                 <table className="content-table agent-table">
@@ -713,7 +960,7 @@ export function AdvancedWorkspace({
                       <th>{labels.providerName}</th>
                       <th>{labels.baseUrl}</th>
                       <th>{labels.model}</th>
-                      <th>{locale === 'zh' ? '维度' : 'Dimensions'}</th>
+                      <th>{locale === "zh" ? "维度" : "Dimensions"}</th>
                       <th>{labels.status}</th>
                       <th>{labels.actions}</th>
                     </tr>
@@ -723,14 +970,19 @@ export function AdvancedWorkspace({
                       <tr key={profile.id}>
                         <td>
                           <strong>{profile.name}</strong>
-                          <small className="secret-mask">•••• {profile.api_key_last4}</small>
+                          <small className="secret-mask">
+                            •••• {profile.api_key_last4}
+                          </small>
                         </td>
                         <td className="mono">{profile.base_url}</td>
                         <td className="mono">{profile.model}</td>
                         <td>{profile.dimensions}</td>
                         <td>
-                          <span className={`agent-state agent-state--${profile.enabled ? 'active' : 'paused'}`}>
-                            <i />{profile.enabled ? labels.active : labels.paused}
+                          <span
+                            className={`agent-state agent-state--${profile.enabled ? "active" : "paused"}`}
+                          >
+                            <i />
+                            {profile.enabled ? labels.active : labels.paused}
                           </span>
                         </td>
                         <td>
@@ -738,31 +990,54 @@ export function AdvancedWorkspace({
                             <button
                               type="button"
                               title={
-                                testingConnections.includes(`embedding:${profile.id}`)
-                                  ? locale === 'zh'
-                                    ? '正在测试连接'
-                                    : 'Testing connection'
+                                testingConnections.includes(
+                                  `embedding:${profile.id}`,
+                                )
+                                  ? locale === "zh"
+                                    ? "正在测试连接"
+                                    : "Testing connection"
                                   : labels.test
                               }
-                              aria-busy={testingConnections.includes(`embedding:${profile.id}`)}
-                              disabled={testingConnections.includes(`embedding:${profile.id}`)}
-                              onClick={() => void onTestConnection('embedding', profile.id, profile.name)}
+                              aria-busy={testingConnections.includes(
+                                `embedding:${profile.id}`,
+                              )}
+                              disabled={testingConnections.includes(
+                                `embedding:${profile.id}`,
+                              )}
+                              onClick={() =>
+                                void onTestConnection(
+                                  "embedding",
+                                  profile.id,
+                                  profile.name,
+                                )
+                              }
                             >
                               <RefreshCw
                                 className={
-                                  testingConnections.includes(`embedding:${profile.id}`)
-                                    ? 'agent-row-actions__spinner'
+                                  testingConnections.includes(
+                                    `embedding:${profile.id}`,
+                                  )
+                                    ? "agent-row-actions__spinner"
                                     : undefined
                                 }
                               />
                             </button>
-                            <button type="button" title={labels.edit} onClick={() => onEditEmbedding(profile)}>
+                            <button
+                              type="button"
+                              title={labels.edit}
+                              onClick={() => onEditEmbedding(profile)}
+                            >
                               <Settings2 />
                             </button>
                             <button
                               type="button"
                               title={labels.delete}
-                              onClick={() => onDeleteTarget({ kind: 'embedding', value: profile })}
+                              onClick={() =>
+                                onDeleteTarget({
+                                  kind: "embedding",
+                                  value: profile,
+                                })
+                              }
                             >
                               <Trash2 />
                             </button>

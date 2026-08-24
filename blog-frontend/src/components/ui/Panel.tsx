@@ -1,35 +1,52 @@
-import type React from 'react';
-import { X } from 'lucide-react';
-import { classes } from './classes';
-import { IconButton } from './Button';
+import type React from "react";
+import { X } from "lucide-react";
+import { classes } from "./classes";
+import { IconButton } from "./Button";
 
 export function Panel({
   children,
-  className = '',
-  as: Component = 'section',
+  className = "",
+  as: Component = "section",
   ...props
 }: {
   children: React.ReactNode;
   className?: string;
   as?: React.ElementType;
 } & Record<string, unknown>) {
-  return <Component className={`panel ${className}`.trim()} {...props}>{children}</Component>;
+  return (
+    <Component className={`panel ${className}`.trim()} {...props}>
+      {children}
+    </Component>
+  );
 }
 
 export function WorkspacePanel({
   children,
-  className = '',
+  className = "",
   ...props
 }: React.HTMLAttributes<HTMLElement>) {
-  return <section className={classes('panel', 'workspace-panel', className)} {...props}>{children}</section>;
+  return (
+    <section
+      className={classes("panel", "workspace-panel", className)}
+      {...props}
+    >
+      {children}
+    </section>
+  );
 }
 
-export function ActionGroup({ children, className = '' }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={classes('action-group', className)}>{children}</div>;
+export function ActionGroup({
+  children,
+  className = "",
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return <div className={classes("action-group", className)}>{children}</div>;
 }
 
-export function TableContainer({ children, className = '' }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={classes('table-scroll', className)}>{children}</div>;
+export function TableContainer({
+  children,
+  className = "",
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return <div className={classes("table-scroll", className)}>{children}</div>;
 }
 
 export function PanelHeader({
@@ -43,7 +60,7 @@ export function PanelHeader({
   actions?: React.ReactNode;
   headingLevel?: 2 | 3;
 }) {
-  const Heading = `h${headingLevel}` as 'h2' | 'h3';
+  const Heading = `h${headingLevel}` as "h2" | "h3";
   return (
     <header className="panel-header">
       <div className="panel-header__copy">
@@ -62,7 +79,7 @@ export function EditorPanel({
   closeLabel,
   onClose,
   children,
-  className = '',
+  className = "",
 }: {
   title: React.ReactNode;
   description?: React.ReactNode;
@@ -73,11 +90,20 @@ export function EditorPanel({
   className?: string;
 }) {
   return (
-    <WorkspacePanel className={classes('editor-panel', className)}>
+    <WorkspacePanel className={classes("editor-panel", className)}>
       <PanelHeader
-        title={<span className="editor-panel__title">{icon}{title}</span>}
+        title={
+          <span className="editor-panel__title">
+            {icon}
+            {title}
+          </span>
+        }
         description={description}
-        actions={<IconButton type="button" label={closeLabel} onClick={onClose}><X /></IconButton>}
+        actions={
+          <IconButton type="button" label={closeLabel} onClick={onClose}>
+            <X />
+          </IconButton>
+        }
       />
       {children}
     </WorkspacePanel>

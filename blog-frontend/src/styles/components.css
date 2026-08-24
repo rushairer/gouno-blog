@@ -1,6 +1,11 @@
 .ui-control,
 .input-field,
-.admin-shell :is(input, textarea, select):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not(.ui-control):not(.admin-search__input):not(.editor-title):not(.editor-body) {
+.admin-shell
+  :is(input, textarea, select):not([type="checkbox"]):not([type="radio"]):not(
+    [type="file"]
+  ):not([type="range"]):not(.ui-control):not(.admin-search__input):not(
+    .editor-title
+  ):not(.editor-body) {
   width: 100%;
   min-width: 0;
   min-height: var(--control-height);
@@ -13,7 +18,10 @@
   font-weight: 400;
   line-height: 1.4;
   padding: 8px 12px;
-  transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease,
+    box-shadow 120ms ease;
 }
 
 .ui-control--compact {
@@ -27,14 +35,24 @@ textarea.ui-control,
 }
 
 .ui-control:hover:not(:disabled):not([readonly]),
-.admin-shell :is(input, textarea, select):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not(.ui-control):not(.admin-search__input):not(.editor-title):not(.editor-body):hover:not(:disabled):not([readonly]) {
+.admin-shell
+  :is(input, textarea, select):not([type="checkbox"]):not([type="radio"]):not(
+    [type="file"]
+  ):not([type="range"]):not(.ui-control):not(.admin-search__input):not(
+    .editor-title
+  ):not(.editor-body):hover:not(:disabled):not([readonly]) {
   border-color: var(--ui-border-hover);
   background: var(--ui-control-hover);
 }
 
 .ui-control:focus,
 .input-field:focus,
-.admin-shell :is(input, textarea, select):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not(.ui-control):not(.admin-search__input):not(.editor-title):not(.editor-body):focus {
+.admin-shell
+  :is(input, textarea, select):not([type="checkbox"]):not([type="radio"]):not(
+    [type="file"]
+  ):not([type="range"]):not(.ui-control):not(.admin-search__input):not(
+    .editor-title
+  ):not(.editor-body):focus {
   border-color: var(--ui-border-emphasis);
   background: var(--ui-control);
   box-shadow: 0 0 0 3px var(--ui-focus-ring);
@@ -48,7 +66,10 @@ textarea.ui-control,
 }
 
 .ui-control:disabled,
-.admin-shell :is(input, textarea, select):not(.ui-control):not(.admin-search__input):disabled {
+.admin-shell
+  :is(input, textarea, select):not(.ui-control):not(
+    .admin-search__input
+  ):disabled {
   background: var(--ui-disabled-surface);
   color: var(--ui-text-disabled);
   cursor: not-allowed;
@@ -56,14 +77,16 @@ textarea.ui-control,
 }
 
 .ui-control[readonly],
-.admin-shell :is(input, textarea):not(.ui-control):not(.admin-search__input)[readonly] {
+.admin-shell
+  :is(input, textarea):not(.ui-control):not(.admin-search__input)[readonly] {
   background: var(--ui-readonly-surface);
   color: var(--ui-text-secondary);
   cursor: default;
 }
 
 .ui-control::placeholder,
-.admin-shell :is(input, textarea):not(.ui-control):not(.admin-search__input)::placeholder {
+.admin-shell
+  :is(input, textarea):not(.ui-control):not(.admin-search__input)::placeholder {
   color: var(--ui-text-placeholder);
   opacity: 1;
 }
@@ -166,7 +189,10 @@ textarea.ui-control,
   text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
-  transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease,
+    color 120ms ease;
 }
 
 .btn--compact {
@@ -362,7 +388,9 @@ textarea.ui-control,
 
 .filter-bar {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) repeat(3, minmax(130px, auto)) auto auto;
+  grid-template-columns:
+    minmax(260px, 1fr) repeat(3, minmax(130px, auto))
+    auto auto;
   gap: 8px;
   align-items: center;
   padding: 12px;
@@ -378,7 +406,10 @@ textarea.ui-control,
   border: 1px solid var(--ui-border);
   border-radius: var(--radius-control);
   background: var(--ui-control);
-  transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease,
+    box-shadow 120ms ease;
 }
 
 .search-field--regular {
@@ -743,7 +774,10 @@ textarea.ui-control,
   font-size: var(--font-size-control);
   font-weight: 500;
   cursor: pointer;
-  transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease,
+    color 120ms ease;
 }
 
 .pagination button:hover:not(.active):not(:disabled) {

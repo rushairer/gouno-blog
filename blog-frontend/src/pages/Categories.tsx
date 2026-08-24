@@ -1,18 +1,19 @@
-import { useEffect, useState } from 'react';
-import { ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { EmptyState, LoadingState } from '../components/ui';
-import { siteApi } from '../api/site';
-import { usePageTitle } from '../hooks/usePageTitle';
-import type { Category } from '../types/blog';
+import { useEffect, useState } from "react";
+import { ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
+import { EmptyState, LoadingState } from "../components/ui";
+import { siteApi } from "../api/site";
+import { usePageTitle } from "../hooks/usePageTitle";
+import type { Category } from "../types/blog";
 
 export default function Categories() {
-  usePageTitle('分类');
+  usePageTitle("分类");
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    siteApi.getCategories()
+    siteApi
+      .getCategories()
       .then(setCategories)
       .catch(() => setCategories([]))
       .finally(() => setLoading(false));
@@ -32,10 +33,14 @@ export default function Categories() {
           <div className="category-grid">
             {categories.map((item, index) => (
               <Link to={`/categories/${item.slug}`} key={item.id}>
-                <span>{String(index + 1).padStart(2, '0')}</span>
+                <span>{String(index + 1).padStart(2, "0")}</span>
                 <h2>{item.name}</h2>
-                <p>{item.description || '查看这个主题下的全部文章与实践记录。'}</p>
-                <div>{item.post_count || 0} 篇文章 <ArrowRight /></div>
+                <p>
+                  {item.description || "查看这个主题下的全部文章与实践记录。"}
+                </p>
+                <div>
+                  {item.post_count || 0} 篇文章 <ArrowRight />
+                </div>
               </Link>
             ))}
           </div>

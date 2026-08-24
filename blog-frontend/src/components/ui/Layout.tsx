@@ -1,7 +1,7 @@
-import type React from 'react';
-import { classes } from './classes';
-import { Panel } from './Panel';
-import { LoadingState } from './Feedback';
+import type React from "react";
+import { classes } from "./classes";
+import { Panel } from "./Panel";
+import { LoadingState } from "./Feedback";
 
 export function PageHeader({
   title,
@@ -25,7 +25,7 @@ export function PageHeader({
 
 export function AdminPage({
   children,
-  className = '',
+  className = "",
 }: {
   children: React.ReactNode;
   className?: string;
@@ -70,25 +70,31 @@ export function AdminPageState({
   );
 }
 
-export function FilterBar({ children, className = '' }: React.HTMLAttributes<HTMLDivElement>) {
-  return <Panel className={classes('filter-bar', className)}>{children}</Panel>;
+export function FilterBar({
+  children,
+  className = "",
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return <Panel className={classes("filter-bar", className)}>{children}</Panel>;
 }
 
-export function ContentStack({ children, className = '' }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={classes('content-stack', className)}>{children}</div>;
+export function ContentStack({
+  children,
+  className = "",
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return <div className={classes("content-stack", className)}>{children}</div>;
 }
 
 export function SectionHeading({
   title,
   action,
-  className = '',
+  className = "",
 }: {
   title: React.ReactNode;
   action?: React.ReactNode;
   className?: string;
 }) {
   return (
-    <header className={classes('section-heading', className)}>
+    <header className={classes("section-heading", className)}>
       <h2>{title}</h2>
       {action}
     </header>
