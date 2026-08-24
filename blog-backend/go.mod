@@ -14,7 +14,7 @@ require (
 	github.com/lib/pq v1.12.3
 	github.com/redis/go-redis/v9 v9.12.1
 	github.com/robfig/cron/v3 v3.0.1
-	github.com/rushairer/gouno v1.2.0-rc.1
+	github.com/rushairer/gouno v1.2.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1

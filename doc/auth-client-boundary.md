@@ -31,13 +31,13 @@ GOSSO Admin 的管理员账号、OAuth client、审计和系统状态属于管�
 ## 依赖与发布
 
 公开发布只接受 npm registry 中的精确 SemVer（当前验证版本为
-`@gosso/client@0.4.0-rc.2`，稳定目标为 `0.4.0`）及 lockfile integrity，不接受 Git branch、Git SSH URL
+`@gosso/client@0.4.0`）及 lockfile integrity，不接受 Git branch、Git SSH URL
 或浮动版本。消费者依赖更新必须晚于 SDK 稳定版发布，并在无 SSH 凭据的
 干净目录中通过 `npm ci`。
 
-当前整改分支使用 trusted publisher 发布的 RC 验证跨仓契约；稳定 Blog
-发布前必须提升到 SDK 稳定版本。生产镜像同时必须固定 version 与
-digest；SDK 的 breaking change 必须按 SemVer 提供迁移说明。
+当前整改分支使用 trusted publisher 发布的稳定 SDK 验证跨仓契约。
+生产镜像同时必须固定 version 与 digest；SDK 的 breaking change 必须按
+SemVer 提供迁移说明。
 
 ## 兼容策略
 

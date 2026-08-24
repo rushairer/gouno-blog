@@ -40,8 +40,8 @@ The frontend uses `@gosso/client` in Cookie session mode. Access and refresh tok
 `src/api/client.ts` is the only Blog transport. Authenticated requests delegate to the SDK; anonymous Blog requests own only same-origin credentials and `blog_csrf_token`. Pages and components call domain APIs and do not parse envelopes or construct protocol requests. Do not replace this integration with hand-written identity, refresh, CSRF, WebAuthn, or account-self-service logic.
 
 Public releases require an exact npm SemVer and registry integrity. This branch
-uses trusted-publisher release candidate `@gosso/client@0.4.0-rc.2` for
-integration validation; the stable Blog release must promote it to 0.4.0. See
+uses trusted-publisher stable release `@gosso/client@0.4.0` for
+integration validation. See
 [`../doc/auth-client-boundary.md`](../doc/auth-client-boundary.md).
 
 ## Available Scripts

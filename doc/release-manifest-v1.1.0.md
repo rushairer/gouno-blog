@@ -9,8 +9,8 @@ tags are not substitutes.
 
 | Component | Version | Source commit | Evidence |
 |---|---|---|---|
-| `github.com/rushairer/gouno` | `v1.2.0-rc.1` | `90dce4f60f74b686fa383b5024d16481124afe0a` | GitHub prerelease and Go module proxy |
-| `@gosso/client` | `0.4.0-rc.2` | `7d826dcad8815671ae7c197b3a96c8479e9823ea` | npm `next`, registry integrity, and SLSA provenance |
+| `github.com/rushairer/gouno` | `v1.2.0` | `96b58e8593f96f04698e8bce262783a453023e25` | GitHub release and Go module proxy |
+| `@gosso/client` | `0.4.0` | `a2b6b7ef912c59a33c6f16beb9940b0ef7a6e6da` | npm `latest`, registry integrity, and SLSA provenance |
 
 ## Third-party production images
 
