@@ -25,6 +25,7 @@ services:
       GOUNO_AUTH_ISSUER: https://localhost:18443
       GOUNO_AUTH_PASSWORD_RESET_BASE_URL: https://localhost:18443/identity-admin/reset-password
       GOUNO_AUTH_WEBAUTHN_RP_ORIGIN: https://localhost:18443
+      GOUNO_CORS_ALLOWED_ORIGINS: https://localhost:18443,https://app.example.com
 
   gosso-admin-seed:
     image: gouno-release-audit-admin-seed:local
