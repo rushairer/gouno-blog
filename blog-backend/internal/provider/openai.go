@@ -73,7 +73,11 @@ func (p *HTTPProvider) openAIChatCompletions(ctx context.Context, req Request) (
 			})
 		}
 		body["tools"] = tools
-		body["tool_choice"] = "auto"
+		if req.ToolChoice != "" {
+			body["tool_choice"] = map[string]any{"type": "function", "function": map[string]any{"name": req.ToolChoice}}
+		} else {
+			body["tool_choice"] = "auto"
+		}
 	}
 	if p.streamMode == "always" {
 		body["stream"] = true
@@ -236,7 +240,11 @@ func (p *HTTPProvider) openAIResponses(ctx context.Context, req Request) (Result
 			})
 		}
 		body["tools"] = tools
-		body["tool_choice"] = "auto"
+		if req.ToolChoice != "" {
+			body["tool_choice"] = map[string]any{"type": "function", "name": req.ToolChoice}
+		} else {
+			body["tool_choice"] = "auto"
+		}
 	}
 	if p.streamMode == "always" {
 		body["stream"] = true

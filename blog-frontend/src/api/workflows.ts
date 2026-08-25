@@ -178,4 +178,22 @@ export const workflowApi = {
         body: JSON.stringify({ prompt }),
       }),
     ),
+  draftAgentSkills: (prompt: string) =>
+    readData<{
+      drafts: Array<{
+        name: string;
+        description: string;
+        system_prompt: string;
+        capabilities: string[];
+        input_schema: Record<string, unknown>;
+      }>;
+      provider: string;
+      model: string;
+    }>(
+      apiFetch("/api/admin/ai-workflows/agent-drafts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      }),
+    ),
 };

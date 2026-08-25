@@ -6,8 +6,75 @@ import (
 	"testing"
 
 	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/provider"
 	"github.com/rushairer/blog-backend/internal/tool"
 )
+
+func TestWorkflowDraftTextPrefersStructuredToolArguments(t *testing.T) {
+	result := provider.Result{
+		Text:      `not JSON`,
+		ToolCalls: []provider.ToolCall{{Name: workflowDraftToolName, Arguments: json.RawMessage(`{"intent":{},"workflow":{}}`)}},
+	}
+	if got := workflowDraftText(result); got != `{"intent":{},"workflow":{}}` {
+		t.Fatalf("workflowDraftText() = %q", got)
+	}
+	if got := workflowDraftText(provider.Result{Text: `{"intent":{},"workflow":{}}`}); got == "" {
+		t.Fatal("text fallback should support compatible gateways")
+	}
+}
+
+func TestPlannerMaxTokensIsBounded(t *testing.T) {
+	for _, test := range []struct {
+		name  string
+		value *domain.ProviderProfile
+		want  int
+	}{
+		{"default", nil, 1200},
+		{"configured", &domain.ProviderProfile{MaxOutputTokens: 900}, 900},
+		{"capped", &domain.ProviderProfile{MaxOutputTokens: 5000}, 1600},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if got := plannerMaxTokens(test.value); got != test.want {
+				t.Fatalf("plannerMaxTokens() = %d, want %d", got, test.want)
+			}
+		})
+	}
+}
+
+func TestNormalizePlannerEnvelopeKeepsApprovalWorkflowButRemovesInvalidIntentReferences(t *testing.T) {
+	envelope := plannerEnvelope{
+		Intent: WorkflowIntent{Operations: []IntentOperation{
+			{StepID: "write"},
+			{StepID: "review"},
+			{StepID: "cover", DependsOn: []string{"review", "write"}},
+		}},
+		Workflow: domain.Workflow{Steps: []domain.WorkflowStep{
+			{ID: "write", Type: "model"},
+			{ID: "review", Type: "approval_gate"},
+			{ID: "cover", Type: "model"},
+		}, InputSchema: json.RawMessage(`{"type":"object","properties":{"topic":{"type":"string","x-gouno-resource":"none","x-gouno-widget":"entity-select"}}}`)},
+	}
+	if !normalizePlannerEnvelope(&envelope) {
+		t.Fatal("expected invalid intent references to be normalized")
+	}
+	if len(envelope.Intent.Operations) != 2 || envelope.Intent.Operations[1].StepID != "cover" {
+		t.Fatalf("operations = %#v", envelope.Intent.Operations)
+	}
+	if got := envelope.Intent.Operations[1].DependsOn; len(got) != 1 || got[0] != "write" {
+		t.Fatalf("cover dependencies = %#v", got)
+	}
+	if envelope.Workflow.Steps[1].Type != "approval_gate" {
+		t.Fatal("normalization must not remove the workflow approval gate")
+	}
+	var schema map[string]any
+	if err := json.Unmarshal(envelope.Workflow.InputSchema, &schema); err != nil {
+		t.Fatal(err)
+	}
+	topic := schema["properties"].(map[string]any)["topic"].(map[string]any)
+	if _, ok := topic["x-gouno-resource"]; ok {
+		t.Fatalf("regular input retained resource sentinel: %#v", topic)
+	}
+}
 
 func TestTypedPlannerEnvelopeValidatesSemanticsWithoutPromptKeywords(t *testing.T) {
 	provider := &domain.ProviderProfile{ID: 1, Enabled: true, IsDefaultWriting: true}
@@ -18,7 +85,7 @@ func TestTypedPlannerEnvelopeValidatesSemanticsWithoutPromptKeywords(t *testing.
 	cron := "0 4 * * *"
 	envelope := plannerEnvelope{
 		Intent: WorkflowIntent{
-			Version: PlannerProtocolVersion, Status: "ready", RequiresApproval: true,
+			Version: PlannerProtocolVersion, Status: "ready", RequiresApproval: true, RequiresImage: true,
 			Trigger: IntentTrigger{Type: "cron", CronExpression: cron, Timezone: "Asia/Shanghai"},
 			Inputs:  []IntentInput{},
 			Operations: []IntentOperation{
@@ -49,6 +116,11 @@ func TestTypedPlannerEnvelopeValidatesSemanticsWithoutPromptKeywords(t *testing.
 	joined := strings.Join(errors, "; ")
 	if !strings.Contains(joined, "must not appear in input_schema") || !strings.Contains(joined, "lacks capability") {
 		t.Fatalf("semantic contract did not catch generated-input or Agent errors: %v", errors)
+	}
+	envelope.Intent.Operations[1].RequiredCapabilities = []string{"content.propose_draft"}
+	errors = validatePlannerEnvelope(&envelope, []*domain.Agent{writer, image}, catalog)
+	if !strings.Contains(strings.Join(errors, "; "), "image generation intent requires") {
+		t.Fatalf("image intent without an image task operation was accepted: %v", errors)
 	}
 }
 func TestPersistedStarterTemplatesAreRegistered(t *testing.T) {

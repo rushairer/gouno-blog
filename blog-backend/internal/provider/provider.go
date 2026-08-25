@@ -45,7 +45,10 @@ type Request struct {
 	Instructions string
 	Messages     []Message
 	Tools        []ToolDefinition
-	MaxTokens    int
+	// ToolChoice forces one named tool when a caller needs a structured result.
+	// Empty keeps the provider's automatic tool-selection behaviour.
+	ToolChoice string
+	MaxTokens  int
 }
 
 type Result struct {

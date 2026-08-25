@@ -102,6 +102,11 @@ func (p *HTTPProvider) geminiGenerate(ctx context.Context, req Request) (Result,
 		body["tools"] = []map[string]any{
 			{"functionDeclarations": declarations},
 		}
+		if req.ToolChoice != "" {
+			body["toolConfig"] = map[string]any{"functionCallingConfig": map[string]any{
+				"mode": "ANY", "allowedFunctionNames": []string{toGeminiToolName(req.ToolChoice)},
+			}}
+		}
 	}
 
 	if req.MaxTokens > 0 {

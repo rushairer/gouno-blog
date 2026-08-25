@@ -104,8 +104,24 @@ func (p *HTTPProvider) anthropicGenerate(ctx context.Context, req Request) (Resu
 			})
 		}
 		body["tools"] = tools
+		if req.ToolChoice != "" {
+			body["tool_choice"] = map[string]any{"type": "tool", "name": toAnthropicToolName(req.ToolChoice)}
+		}
 	}
 	resp, err := p.do(ctx, "/v1/messages", body)
+	// Some Anthropic-compatible gateways enable thinking by default and reject a
+	// forced tool choice in that mode. First disable thinking while retaining the
+	// forced schema. If the gateway does not support that control, fall back to
+	// automatic tool selection as a final compatibility path.
+	if err != nil && req.ToolChoice != "" && strings.Contains(strings.ToLower(err.Error()), "does not support this tool_choice") {
+		body["thinking"] = map[string]any{"type": "disabled"}
+		resp, err = p.do(ctx, "/v1/messages", body)
+		if err != nil {
+			delete(body, "thinking")
+			delete(body, "tool_choice")
+			resp, err = p.do(ctx, "/v1/messages", body)
+		}
+	}
 	if err != nil {
 		return Result{}, err
 	}
