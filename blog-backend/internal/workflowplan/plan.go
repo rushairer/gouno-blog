@@ -203,6 +203,40 @@ Agent Selection & Input Schema Rules:
 
 const WorkflowPlannerCorrectionPrompt = `The previous response violated the typed workflow contract. Return one corrected JSON object with exactly the top-level keys intent and workflow. Preserve the user's complete goal. Fix every supplied validation_error. intent.trigger and workflow.cron_expression must agree; only intent.inputs with source user may appear in input_schema; generated resources must flow from prior step outputs; every model step needs an intent.operations entry; every required capability must be registered and authorized by that step's integer agent_id; approval_gate is a real pause before dependent work. Steps may only be resource_query, for_each, model, approval_gate, and output. Never invent tools, step types, credentials, publishing, or external delivery.`
 
+const workflowDraftToolName = "submit_workflow_draft"
+
+var workflowDraftToolSchema = json.RawMessage(`{"type":"object","additionalProperties":false,"required":["intent","workflow"],"properties":{"intent":{"type":"object"},"workflow":{"type":"object"}}}`)
+
+func workflowDraftTool() provider.ToolDefinition {
+	return provider.ToolDefinition{
+		Name:        workflowDraftToolName,
+		Description: "Submit the complete typed workflow draft exactly once. Arguments must be the final object with intent and workflow.",
+		Parameters:  workflowDraftToolSchema,
+	}
+}
+
+func workflowDraftText(result provider.Result) string {
+	for _, call := range result.ToolCalls {
+		if call.Name == workflowDraftToolName && len(call.Arguments) > 0 {
+			return string(call.Arguments)
+		}
+	}
+	// Preserve compatibility with gateways that ignore forced function calling.
+	return result.Text
+}
+
+func plannerMaxTokens(profile *domain.ProviderProfile) int {
+	const defaultBudget = 1200
+	const maximumBudget = 1600
+	if profile == nil || profile.MaxOutputTokens <= 0 {
+		return defaultBudget
+	}
+	if profile.MaxOutputTokens > maximumBudget {
+		return maximumBudget
+	}
+	return profile.MaxOutputTokens
+}
+
 type WorkflowDraftResult struct {
 	Workflow       domain.Workflow  `json:"workflow"`
 	Provider       string           `json:"provider"`
@@ -240,6 +274,81 @@ func resolveAgentProfile(agent *domain.Agent, profiles []*domain.ProviderProfile
 		}
 	}
 	return nil
+}
+
+// normalizePlannerEnvelope removes metadata that cannot be represented by the
+// typed intent contract. Workflow approval gates remain untouched: they are
+// real runtime dependencies, but intent.operations intentionally describes
+// model operations only.
+func normalizePlannerEnvelope(envelope *plannerEnvelope) bool {
+	modelSteps := map[string]bool{}
+	var collectModels func([]domain.WorkflowStep)
+	collectModels = func(steps []domain.WorkflowStep) {
+		for _, step := range steps {
+			if step.Type == "model" {
+				modelSteps[step.ID] = true
+			}
+			collectModels(step.Steps)
+		}
+	}
+	collectModels(envelope.Workflow.Steps)
+
+	changed := false
+	operations := make([]IntentOperation, 0, len(envelope.Intent.Operations))
+	for _, operation := range envelope.Intent.Operations {
+		if !modelSteps[operation.StepID] {
+			changed = true
+			continue
+		}
+		dependencies := make([]string, 0, len(operation.DependsOn))
+		for _, dependency := range operation.DependsOn {
+			if modelSteps[dependency] {
+				dependencies = append(dependencies, dependency)
+			} else {
+				changed = true
+			}
+		}
+		operation.DependsOn = dependencies
+		operations = append(operations, operation)
+	}
+	envelope.Intent.Operations = operations
+	if normalizeInputSchema(envelope.Workflow.InputSchema, &envelope.Workflow.InputSchema) {
+		changed = true
+	}
+	return changed
+}
+
+// "none" means a regular scalar input to the planner, not a resource type in
+// the Workflow JSON Schema. The UI only needs x-gouno-resource for real
+// resource pickers, so remove this common model-generated sentinel.
+func normalizeInputSchema(raw json.RawMessage, destination *json.RawMessage) bool {
+	var schema map[string]any
+	if json.Unmarshal(raw, &schema) != nil {
+		return false
+	}
+	properties, ok := schema["properties"].(map[string]any)
+	if !ok {
+		return false
+	}
+	changed := false
+	for _, rawProperty := range properties {
+		property, ok := rawProperty.(map[string]any)
+		if !ok || property["x-gouno-resource"] != "none" {
+			continue
+		}
+		delete(property, "x-gouno-resource")
+		delete(property, "x-gouno-widget")
+		changed = true
+	}
+	if !changed {
+		return false
+	}
+	normalized, err := json.Marshal(schema)
+	if err != nil {
+		return false
+	}
+	*destination = normalized
+	return true
 }
 
 func validatePlannerEnvelope(envelope *plannerEnvelope, agents []*domain.Agent, catalog []tool.CatalogItem) []string {
@@ -312,6 +421,7 @@ func validatePlannerEnvelope(envelope *plannerEnvelope, agents []*domain.Agent, 
 	}
 	collectModels(envelope.Workflow.Steps)
 	operations := map[string]bool{}
+	hasImageTaskOperation := false
 	for _, operation := range envelope.Intent.Operations {
 		step, ok := modelSteps[operation.StepID]
 		if !ok {
@@ -325,6 +435,9 @@ func validatePlannerEnvelope(envelope *plannerEnvelope, agents []*domain.Agent, 
 			continue
 		}
 		for _, capability := range operation.RequiredCapabilities {
+			if capability == "media.create_image_task" {
+				hasImageTaskOperation = true
+			}
 			if !registeredTools[capability] {
 				errors = append(errors, fmt.Sprintf("operation %q requires unregistered capability %q", operation.StepID, capability))
 			} else if !contains(agent.Skill.Capabilities, capability) {
@@ -336,6 +449,9 @@ func validatePlannerEnvelope(envelope *plannerEnvelope, agents []*domain.Agent, 
 				errors = append(errors, fmt.Sprintf("operation %q depends on unknown model step %q", operation.StepID, dependency))
 			}
 		}
+	}
+	if envelope.Intent.RequiresImage && !hasImageTaskOperation {
+		errors = append(errors, "image generation intent requires a model operation with media.create_image_task")
 	}
 	for stepID := range modelSteps {
 		if !operations[stepID] {
@@ -394,6 +510,23 @@ func PlanWorkflow(
 	if len(available) == 0 {
 		return nil, ErrAgentSkillRequired
 	}
+	// The model only needs tools that one of the selectable Agents can actually
+	// use. Sending unrelated tools and schemas increases latency and encourages
+	// invalid capability selections.
+	availableCapabilities := map[string]bool{}
+	for _, agent := range agents {
+		if agent.Enabled && agent.SkillVersionID != nil && agent.Skill != nil {
+			for _, capability := range agent.Skill.Capabilities {
+				availableCapabilities[capability] = true
+			}
+		}
+	}
+	relevantTools := make([]tool.CatalogItem, 0, len(toolsCatalog))
+	for _, item := range toolsCatalog {
+		if availableCapabilities[item.Name] {
+			relevantTools = append(relevantTools, item)
+		}
+	}
 	for _, agent := range agents {
 		if agent.ProviderProfile == nil {
 			agent.ProviderProfile = resolveAgentProfile(agent, profiles)
@@ -406,15 +539,14 @@ func PlanWorkflow(
 	payload, _ := json.Marshal(map[string]any{
 		"goal":             prompt,
 		"available_agents": available,
-		"available_tools":  toolsCatalog,
+		"available_tools":  relevantTools,
 	})
-	maxTokens := selected.MaxOutputTokens
-	if maxTokens < 3000 {
-		maxTokens = 3000
-	}
+	maxTokens := plannerMaxTokens(selected)
 	result, err := client.Generate(ctx, provider.Request{
 		Instructions: WorkflowPlannerPrompt,
 		Messages:     []provider.Message{{Role: "user", Content: string(payload)}},
+		Tools:        []provider.ToolDefinition{workflowDraftTool()},
+		ToolChoice:   workflowDraftToolName,
 		MaxTokens:    maxTokens,
 	})
 	if err != nil {
@@ -427,19 +559,24 @@ func PlanWorkflow(
 		if !validJSON || json.Unmarshal(draftJSON, &envelope) != nil {
 			return []string{"response must be valid JSON with top-level intent and workflow"}, false
 		}
+		if normalizePlannerEnvelope(&envelope) {
+			warning = "The planner's operation metadata was normalized; approval gates remain in the generated workflow."
+		}
 		validationErrors := validatePlannerEnvelope(&envelope, agents, toolsCatalog)
 		return validationErrors, len(validationErrors) == 0
 	}
-	validationErrors, validDraft := decodeDraft(result.Text)
+	validationErrors, validDraft := decodeDraft(workflowDraftText(result))
 	if !validDraft {
-		correctionPayload, _ := json.Marshal(map[string]any{"goal": prompt, "available_agents": available, "available_tools": toolsCatalog, "validation_errors": validationErrors, "previous_response": result.Text})
+		correctionPayload, _ := json.Marshal(map[string]any{"goal": prompt, "available_agents": available, "available_tools": relevantTools, "validation_errors": validationErrors, "previous_response": workflowDraftText(result)})
 		correction, correctionErr := client.Generate(ctx, provider.Request{
 			Instructions: WorkflowPlannerCorrectionPrompt,
 			Messages:     []provider.Message{{Role: "user", Content: string(correctionPayload)}},
+			Tools:        []provider.ToolDefinition{workflowDraftTool()},
+			ToolChoice:   workflowDraftToolName,
 			MaxTokens:    maxTokens,
 		})
 		if correctionErr == nil {
-			validationErrors, validDraft = decodeDraft(correction.Text)
+			validationErrors, validDraft = decodeDraft(workflowDraftText(correction))
 		}
 	}
 	if !validDraft {

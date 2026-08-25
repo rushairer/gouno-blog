@@ -1093,6 +1093,26 @@ td .agent-chip-list {
   background: color-mix(in srgb, var(--agent-accent) 15%, var(--bg-muted));
   color: var(--agent-accent);
 }
+.workflow-planner__agent-drafts {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+.workflow-planner__agent-draft {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--agent-border);
+  border-radius: var(--radius-control, 8px);
+  background: var(--bg-panel);
+}
+.workflow-planner__agent-draft small {
+  color: var(--agent-accent);
+  overflow-wrap: anywhere;
+}
+.workflow-planner__agent-draft .button {
+  justify-self: start;
+}
 .workflow-list-toolbar {
   display: flex;
   align-items: center;

@@ -316,8 +316,8 @@ func TestAnthropicCompatibleImageParsesNativeImageBlock(t *testing.T) {
 
 func TestOpenAIImageParsesImageGenerationCall(t *testing.T) {
 	var requestPayload struct {
-		Model      string `json:"model"`
-		Input      []struct {
+		Model string `json:"model"`
+		Input []struct {
 			Role    string `json:"role"`
 			Content []struct {
 				Type string `json:"type"`
@@ -579,5 +579,46 @@ func TestUpstreamErrorBodyIsBounded(t *testing.T) {
 	_, err := client.Generate(context.Background(), Request{Messages: []Message{{Role: "user", Content: "x"}}})
 	if err == nil || len(err.Error()) > 2200 {
 		t.Fatalf("unexpected error length: %v", err)
+	}
+}
+
+func TestAnthropicThinkingFallbackRemovesForcedToolChoice(t *testing.T) {
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
+		if requests == 1 {
+			if _, ok := body["tool_choice"]; !ok {
+				t.Fatal("first request should force the structured tool")
+			}
+			http.Error(w, `{"error":{"message":"Thinking mode does not support this tool_choice"}}`, http.StatusBadRequest)
+			return
+		}
+		if _, ok := body["tool_choice"]; !ok {
+			t.Fatal("second request should retain forced tool_choice")
+		}
+		thinking, ok := body["thinking"].(map[string]any)
+		if !ok || thinking["type"] != "disabled" {
+			t.Fatalf("second request should disable thinking, got %#v", body["thinking"])
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"content":[{"type":"tool_use","id":"call_1","name":"submit_workflow_draft","input":{"intent":{},"workflow":{}}}]}`))
+	}))
+	defer server.Close()
+
+	client, err := NewHTTPProvider("anthropic", server.URL, "secret", "model", []string{"127.0.0.1"}, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := client.Generate(context.Background(), Request{
+		Messages:   []Message{{Role: "user", Content: "draft"}},
+		Tools:      []ToolDefinition{{Name: "submit_workflow_draft", Parameters: json.RawMessage(`{"type":"object"}`)}},
+		ToolChoice: "submit_workflow_draft",
+	})
+	if err != nil || requests != 2 || len(result.ToolCalls) != 1 {
+		t.Fatalf("result=%#v requests=%d err=%v", result, requests, err)
 	}
 }

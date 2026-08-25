@@ -45,6 +45,90 @@ type workflowDraftRequest struct {
 	Prompt string `json:"prompt" binding:"required"`
 }
 
+type workflowAgentSkillDraft struct {
+	Name         string          `json:"name"`
+	Description  string          `json:"description"`
+	SystemPrompt string          `json:"system_prompt"`
+	Capabilities []string        `json:"capabilities"`
+	InputSchema  json.RawMessage `json:"input_schema"`
+}
+
+func (ctrl *AgentController) DraftWorkflowAgents(c *gin.Context) {
+	var req workflowDraftRequest
+	if !bindWorkflowJSON(c, &req) {
+		return
+	}
+	req.Prompt = strings.TrimSpace(req.Prompt)
+	if req.Prompt == "" || len([]rune(req.Prompt)) > 4000 {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "workflow goal is required and must be at most 4000 characters"))
+		return
+	}
+	profile, client, err := ctrl.svc.DefaultWritingClient(c.Request.Context())
+	if err != nil {
+		WriteDomainError(c, err)
+		return
+	}
+	toolNames := make([]string, 0, len(ctrl.tools.Catalog()))
+	allowed := map[string]bool{}
+	for _, item := range ctrl.tools.Catalog() {
+		toolNames = append(toolNames, item.Name)
+		allowed[item.Name] = true
+	}
+	payload, _ := json.Marshal(map[string]any{"goal": req.Prompt, "registered_capabilities": toolNames})
+	const toolName = "submit_agent_skill_drafts"
+	schema := json.RawMessage(`{"type":"object","additionalProperties":false,"required":["drafts"],"properties":{"drafts":{"type":"array","minItems":1,"maxItems":3,"items":{"type":"object","additionalProperties":false,"required":["name","description","system_prompt","capabilities"],"properties":{"name":{"type":"string"},"description":{"type":"string"},"system_prompt":{"type":"string"},"capabilities":{"type":"array","items":{"type":"string"}},"input_schema":{"type":"object"}}}}}}`)
+	result, err := client.Generate(c.Request.Context(), provider.Request{
+		Instructions: "Design the smallest reusable Agent Skills missing for this workflow goal. Return 1-3 neutral, narrowly scoped Skill drafts. Use only registered capabilities. Never include credentials, arbitrary HTTP, direct publishing, deletion, or permission changes. Prefer proposal capabilities and human approval for content changes. Call the submission tool exactly once.",
+		Messages:     []provider.Message{{Role: "user", Content: string(payload)}},
+		Tools:        []provider.ToolDefinition{{Name: toolName, Description: "Submit reviewable Agent Skill drafts", Parameters: schema}},
+		ToolChoice:   toolName, MaxTokens: 1600,
+	})
+	if err != nil {
+		WriteDomainError(c, err)
+		return
+	}
+	raw := result.Text
+	for _, call := range result.ToolCalls {
+		if call.Name == toolName {
+			raw = string(call.Arguments)
+			break
+		}
+	}
+	jsonBytes, ok := workflowplan.ExtractWorkflowDraftJSON(raw)
+	var envelope struct {
+		Drafts []workflowAgentSkillDraft `json:"drafts"`
+	}
+	if !ok || json.Unmarshal(jsonBytes, &envelope) != nil || len(envelope.Drafts) == 0 {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "AI did not produce valid Agent Skill drafts"))
+		return
+	}
+	clean := make([]workflowAgentSkillDraft, 0, len(envelope.Drafts))
+	for _, draft := range envelope.Drafts {
+		draft.Name, draft.Description, draft.SystemPrompt = strings.TrimSpace(draft.Name), strings.TrimSpace(draft.Description), strings.TrimSpace(draft.SystemPrompt)
+		caps := []string{}
+		seen := map[string]bool{}
+		for _, capability := range draft.Capabilities {
+			if allowed[capability] && !seen[capability] {
+				seen[capability] = true
+				caps = append(caps, capability)
+			}
+		}
+		if draft.Name == "" || draft.SystemPrompt == "" || len(caps) == 0 {
+			continue
+		}
+		draft.Capabilities = caps
+		if len(draft.InputSchema) == 0 {
+			draft.InputSchema = json.RawMessage(`{"type":"object","additionalProperties":true}`)
+		}
+		clean = append(clean, draft)
+	}
+	if len(clean) == 0 {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "AI drafts did not use registered capabilities"))
+		return
+	}
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"drafts": clean, "provider": profile.Name, "model": profile.Model}))
+}
+
 func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
 	var req workflowDraftRequest
 	if !bindWorkflowJSON(c, &req) {
