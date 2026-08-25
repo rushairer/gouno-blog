@@ -137,7 +137,7 @@ func WriteDomainError(c *gin.Context, err error) {
 		errors.Is(err, knowledge.ErrInvalid),
 		errors.Is(err, agentservice.ErrInvalid),
 		errors.Is(err, workflowplan.ErrGoalRequired),
-		errors.Is(err, workflowplan.ErrAutomationGoalRequired):
+		errors.Is(err, workflowplan.ErrPlannerContract):
 		status = http.StatusBadRequest
 	}
 
@@ -184,4 +184,3 @@ func WriteDomainError(c *gin.Context, err error) {
 func WriteServiceError(c *gin.Context, err error) {
 	WriteDomainError(c, err)
 }
-

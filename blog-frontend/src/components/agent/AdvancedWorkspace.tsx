@@ -80,8 +80,6 @@ interface AdvancedWorkspaceProps {
   editingProvider: ProviderProfile | "new" | null;
   editingEmbedding: EmbeddingProfile | "new" | null;
   editingSkill: AgentSkill | "new" | null;
-  agentPrefill?: Partial<Omit<Agent, "id" | "created_at" | "updated_at">>;
-  skillPrefill?: Partial<SkillFormValue>;
   testingConnections: string[];
   // Actions
   onEditAgent: (agent: Agent | "new" | null) => void;
@@ -134,8 +132,6 @@ export function AdvancedWorkspace({
   editingProvider,
   editingEmbedding,
   editingSkill,
-  agentPrefill,
-  skillPrefill,
   testingConnections,
   onEditAgent,
   onEditProvider,
@@ -213,7 +209,6 @@ export function AdvancedWorkspace({
         <AgentForm
           key={editingAgent === "new" ? "new" : editingAgent.id}
           initial={editingAgent === "new" ? undefined : editingAgent}
-          prefill={editingAgent === "new" ? agentPrefill : undefined}
           providers={providers}
           skills={skills}
           locale={locale}
@@ -227,7 +222,6 @@ export function AdvancedWorkspace({
         <SkillForm
           key={editingSkill === "new" ? "new" : editingSkill.id}
           initial={editingSkill === "new" ? undefined : editingSkill}
-          prefill={editingSkill === "new" ? skillPrefill : undefined}
           tools={tools}
           locale={locale}
           onSave={onSaveSkill}

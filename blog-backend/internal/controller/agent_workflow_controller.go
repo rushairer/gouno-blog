@@ -45,47 +45,6 @@ type workflowDraftRequest struct {
 	Prompt string `json:"prompt" binding:"required"`
 }
 
-type automationPlanRequest struct {
-	Prompt string `json:"prompt" binding:"required"`
-}
-
-func (ctrl *AgentController) DraftAutomationPlan(c *gin.Context) {
-	var req automationPlanRequest
-	if !bindWorkflowJSON(c, &req) {
-		return
-	}
-	req.Prompt = strings.TrimSpace(req.Prompt)
-	if req.Prompt == "" || len([]rune(req.Prompt)) > 4000 {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "automation goal is required and must be at most 4000 characters"))
-		return
-	}
-	profiles, err := ctrl.svc.ListProviders(c.Request.Context())
-	if err != nil {
-		WriteDomainError(c, err)
-		return
-	}
-	agents, err := ctrl.svc.ListAgents(c.Request.Context())
-	if err != nil {
-		WriteDomainError(c, err)
-		return
-	}
-	skills, err := ctrl.svc.ListSkills(c.Request.Context())
-	if err != nil {
-		WriteDomainError(c, err)
-		return
-	}
-	plan, err := workflowplan.PlanAutomation(req.Prompt, profiles, agents, skills, ctrl.tools.Catalog())
-	if err != nil {
-		WriteDomainError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(plan))
-}
-
-func isCustomOrCompositeGoal(goal string) bool {
-	return workflowplan.IsCustomOrCompositeGoal(goal)
-}
-
 func (ctrl *AgentController) DraftWorkflow(c *gin.Context) {
 	var req workflowDraftRequest
 	if !bindWorkflowJSON(c, &req) {
@@ -337,17 +296,17 @@ func extractStructuredMetadata(raw string) *DraftMetadataResult {
 
 	// 1. Try multi-tag unmarshaling (supports snake_case and camelCase simultaneously)
 	var multi struct {
-		Summary        string   `json:"summary"`
-		Tags           []string `json:"tags"`
-		Slug           string   `json:"slug"`
-		SlugName       string   `json:"slug_name"`
-		SeoTitle       string   `json:"seo_title"`
-		SeoTitleCamel  string   `json:"seoTitle"`
-		SeoDesc        string   `json:"seo_description"`
-		SeoDescCamel   string   `json:"seoDescription"`
-		Category       string   `json:"category"`
-		CoverAlt       string   `json:"cover_alt"`
-		CoverAltCamel  string   `json:"coverAlt"`
+		Summary       string   `json:"summary"`
+		Tags          []string `json:"tags"`
+		Slug          string   `json:"slug"`
+		SlugName      string   `json:"slug_name"`
+		SeoTitle      string   `json:"seo_title"`
+		SeoTitleCamel string   `json:"seoTitle"`
+		SeoDesc       string   `json:"seo_description"`
+		SeoDescCamel  string   `json:"seoDescription"`
+		Category      string   `json:"category"`
+		CoverAlt      string   `json:"cover_alt"`
+		CoverAltCamel string   `json:"coverAlt"`
 	}
 	if err := json.Unmarshal([]byte(trimmed), &multi); err == nil {
 		st := multi.SeoTitle

@@ -252,7 +252,6 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 				admin.POST("/admin/ai-draft-assist", agentCtrl.DraftAssist)
 				admin.POST("/admin/ai-generate-image", agentCtrl.GenerateImage)
 				admin.POST("/admin/ai-workflows/draft", agentCtrl.DraftWorkflow)
-				admin.POST("/admin/ai-automation-plans/draft", agentCtrl.DraftAutomationPlan)
 				admin.GET("/admin/provider-profiles", agentCtrl.ListProviders)
 				admin.GET("/admin/provider-profiles/export", agentCtrl.ExportProviders)
 				admin.POST("/admin/provider-profiles/import", agentCtrl.ImportProviders)

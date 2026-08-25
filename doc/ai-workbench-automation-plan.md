@@ -245,20 +245,10 @@ RSS 已通过白名单 HTTPS Tool 提供受限读取，站点 Sitemap 为现有�
 
 所有写入仍需人工审批；本设计不增加自动发布、删除、直接审核或绕过审批的路径。
 
-## Workflow 草案依赖预检
+## Workflow 草案规划
 
-规划器完善协议（`workflow-planner/v6`）将自然语言先解析为版本化 `WorkflowIntent`，再由服务端能力目录、确定性模板和已授权 Agent/Skill/Provider 匹配，最后编译安全 starter Workflow。AI 不再拥有指定 Agent、Skill、Provider 或 Tool 的权限。
+创建页只调用 `POST /api/admin/ai-workflows/draft`。规划器使用 `workflow-intent/v2` 将完整自然语言需求生成为类型化意图和 Workflow，并校验 Cron、用户输入、步骤数据流、Agent 能力、已注册 Tool 与人工审批边界；不再通过关键字匹配固定模板，也不再创建 Skill 或 Agent 草案。
 
-当前后端已提供 `internal/workflowplan` 基础层：图片、社媒、Newsletter、FAQ、评论回复、SEO 审校和媒体 Alt 场景均有固定模板；“配图 Brief”固定使用 `format=image_brief` 并把完整 `/input` 传给模型；“真实生成图片”使用受授权的 `media.create_image_task` 并单独要求默认图片 Provider。缺失依赖时返回 `needs_configuration`；生成结果仍需管理员在 Run 中选择和应用，不会降级为 social。
-
-`DraftAutomationPlan` 在保留旧字段的同时返回 `intent`、`template` 和 `match`（`ready | needs_configuration | unsupported | ambiguous`），这些结果只作为未持久化草案和前置提示，仍需管理员在结构化编辑器中审阅、保存和 Dry-run。
-
-“AI 生成 Workflow 草案”不会把 Workflow 当作孤立配置。创建页会先调用 `POST /api/admin/ai-automation-plans/draft`，以只读方式检查依赖链：默认写作 Provider、可复用 Skill、可复用且已启用的 Agent，以及最后的 Workflow 结构。
-
-- 依赖齐全时，才调用既有 `/api/admin/ai-workflows/draft` 请求模型生成细化步骤，并复用已验证的 Agent/Skill。
-- Provider、Skill 或 Agent 缺失时，接口返回未持久化、默认停用的 Skill/Agent/Workflow 草案和明确前置条件；不会调用模型、保存凭据、创建资源、启用 Agent 或运行 Workflow。
-- 下一步的持久化体验应复用现有 Provider、Skill、Agent 完整表单，预填草案后由管理员确认 Tool 权限、预算、Provider 和启用状态，不能由 Workflow 页面静默默认这些安全字段。
-- 已实现 Skill 草案预填和 Agent 草案预填入口；两个表单都强制新草案保持停用，保存前仍由服务端校验能力、Provider、Skill Version、预算和触发器。
-- 已实现 Workflow `/preflight` 无副作用检查；Dry-run 和正式运行在入队前复用服务端校验输入 Schema、Agent 状态和只读 discovery 权限，缺失依赖会阻止调用 Agent 并返回明确原因。运行表单只会根据 JSON Schema 明确声明的 `default` 补充未填写值，`enum` 只定义可选范围；可视化 Schema 字段编辑器与高级 JSON 共享同一配置，可编辑并保留 `enum` 和 `default`，服务端会拒绝不符合字段 Schema 的默认值。
-- Planner 已升级为 `workflow-planner/v6`：标准场景直接使用服务端模板编译；图片 Brief 生成审批提案，显式的生图目标则使用受授权的图片任务，不会降级为 social；未覆盖的高级目标仍保留一次契约纠正重试。
-- 已完成 Intent/模板键持久化和运行前契约检查：历史 Workflow 标记 legacy/skipped，新 Workflow 检查模板、Tool 授权、审批路径和图片 Provider。
+- Workflow 草案默认停用，管理员审阅、保存并 Dry-run 后才能运行。
+- 已保存的 starter Workflow 仍保留其最小运行前检查契约，以保证历史数据可安全执行；它们不是新的创建路径。
+- Workflow `/preflight` 无副作用检查；Dry-run 和正式运行在入队前复用服务端校验输入 Schema、Agent 状态和只读 discovery 权限。

@@ -160,6 +160,17 @@ func (r *AgentRepository) CompleteApproval(ctx context.Context, id int64, status
 	return err
 }
 
+func (r *AgentRepository) SetApprovalTarget(ctx context.Context, id, targetID int64) error {
+	result, err := r.db.ExecContext(ctx, `UPDATE ai_approvals SET target_id=$2 WHERE id=$1 AND target_id IS NULL`, id, targetID)
+	if err != nil {
+		return err
+	}
+	if affected, _ := result.RowsAffected(); affected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
 func (r *AgentRepository) RejectApproval(ctx context.Context, id int64, reviewer, note string) error {
 	result, err := r.db.ExecContext(ctx, `UPDATE ai_approvals SET
 		status='rejected', reviewed_by=$2, review_note=$3, reviewed_at=NOW()
@@ -231,4 +242,3 @@ func (r *AgentRepository) CreateOperationalSuggestion(ctx context.Context, value
 		value.WorkflowRunID, value.Title, value.Description, value.Priority, value.Evidence, value.WindowStart, value.WindowEnd, sum)
 	return err
 }
-

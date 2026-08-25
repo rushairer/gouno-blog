@@ -1,6 +1,7 @@
 package workflowplan
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -8,96 +9,48 @@ import (
 	"github.com/rushairer/blog-backend/internal/tool"
 )
 
-func TestParseIntentDistinguishesImageBriefFromSocial(t *testing.T) {
-	brief := ParseIntent("为文章生成封面和文中配图 Brief")
-	if brief.Status != "ready" || brief.Action != "image_brief" || brief.OutputType != "image_brief" || brief.RequiresImage {
-		t.Fatalf("unexpected image brief intent: %#v", brief)
-	}
-	social := ParseIntent("把文章生成社媒分发草稿")
-	if social.Action != "social" || social.OutputType != "social_draft" {
-		t.Fatalf("unexpected social intent: %#v", social)
-	}
-	briefWithGenerationWord := ParseIntent("生成图片 Brief 和提示词")
-	if briefWithGenerationWord.Action != "image_brief" || briefWithGenerationWord.RequiresImage {
-		t.Fatalf("brief must not require image provider: %#v", briefWithGenerationWord)
-	}
-}
-
-func TestParseIntentTreatsOrdinaryImageGoalAsInternalGeneration(t *testing.T) {
-	intent := ParseIntent("为文章生成封面和正文配图")
-	if intent.Status != "ready" || intent.Action != "generate_image" || !intent.RequiresImage || intent.RequiresApproval {
-		t.Fatalf("unexpected image generation intent: %#v", intent)
-	}
-}
-
-func TestParseIntentAmbiguous(t *testing.T) {
-	intent := ParseIntent("帮我自动处理一下")
-	if intent.Status != "ambiguous" || intent.AmbiguityReason == "" {
-		t.Fatalf("expected ambiguity: %#v", intent)
-	}
-}
-
-func TestMatchRequiresAuthorizedToolAndProvider(t *testing.T) {
+func TestTypedPlannerEnvelopeValidatesSemanticsWithoutPromptKeywords(t *testing.T) {
 	provider := &domain.ProviderProfile{ID: 1, Enabled: true, IsDefaultWriting: true}
-	skill := &domain.AgentSkill{VersionID: 2, Capabilities: []string{"content.propose_distribution_draft"}, ExecutionMode: domain.AgentModeApproval}
-	pID := int64(1)
-	agent := &domain.Agent{ID: 3, Enabled: true, SkillVersionID: &skill.VersionID, Skill: skill, ProviderProfile: provider, ProviderProfileID: &pID}
-	intent := ParseIntent("生成配图 Brief")
-	match, template, selected := Match(intent, []*domain.ProviderProfile{provider}, []*domain.Agent{agent}, []*domain.AgentSkill{skill}, []tool.CatalogItem{{Name: "content.propose_distribution_draft"}})
-	if match.Status != "ready" || template == nil || selected != agent {
-		t.Fatalf("expected ready match: %#v", match)
+	writerSkill := &domain.AgentSkill{VersionID: 2, Capabilities: []string{"content.propose_draft"}, ExecutionMode: domain.AgentModeApproval}
+	imageSkill := &domain.AgentSkill{VersionID: 3, Capabilities: []string{"media.create_image_task"}, ExecutionMode: domain.AgentModeApproval}
+	writer := &domain.Agent{ID: 10, Enabled: true, SkillVersionID: &writerSkill.VersionID, Skill: writerSkill, ProviderProfile: provider}
+	image := &domain.Agent{ID: 11, Enabled: true, SkillVersionID: &imageSkill.VersionID, Skill: imageSkill, ProviderProfile: provider}
+	cron := "0 4 * * *"
+	envelope := plannerEnvelope{
+		Intent: WorkflowIntent{
+			Version: PlannerProtocolVersion, Status: "ready", RequiresApproval: true,
+			Trigger: IntentTrigger{Type: "cron", CronExpression: cron, Timezone: "Asia/Shanghai"},
+			Inputs:  []IntentInput{},
+			Operations: []IntentOperation{
+				{StepID: "write", ResourceMode: "create", RequiredCapabilities: []string{"content.propose_draft"}},
+				{StepID: "cover", ResourceMode: "existing", RequiredCapabilities: []string{"media.create_image_task"}, DependsOn: []string{"write"}},
+			},
+		},
+		Workflow: domain.Workflow{
+			CronExpression: &cron, Timezone: "Asia/Shanghai",
+			InputSchema: json.RawMessage(`{"type":"object","additionalProperties":false}`),
+			Steps: []domain.WorkflowStep{
+				{ID: "write", Type: "model", AgentID: 10, InputPointer: "/input"},
+				{ID: "review", Type: "approval_gate", InputPointer: "/steps/write"},
+				{ID: "cover", Type: "model", AgentID: 11, InputPointer: "/steps/write"},
+				{ID: "result", Type: "output", OutputPointer: "/steps/cover"},
+			},
+		},
 	}
-	badSkill := &domain.AgentSkill{VersionID: 4, Capabilities: []string{"content.audit_post"}}
-	badAgent := &domain.Agent{ID: 5, Enabled: true, SkillVersionID: &badSkill.VersionID, Skill: badSkill, ProviderProfile: provider, ProviderProfileID: &pID}
-	missing, _, _ := Match(intent, []*domain.ProviderProfile{provider}, []*domain.Agent{badAgent}, nil, []tool.CatalogItem{{Name: "content.propose_distribution_draft"}})
-	if missing.Status != "needs_configuration" || !strings.Contains(strings.Join(missing.Missing, ","), "Tool") {
-		t.Fatalf("expected missing tool: %#v", missing)
+	catalog := []tool.CatalogItem{{Name: "content.propose_draft"}, {Name: "media.create_image_task"}}
+	if errors := validatePlannerEnvelope(&envelope, []*domain.Agent{writer, image}, catalog); len(errors) != 0 {
+		t.Fatalf("valid typed plan was rejected: %v", errors)
+	}
+
+	envelope.Intent.Inputs = []IntentInput{{Name: "post_ids", Source: "generated", Type: "post"}}
+	envelope.Workflow.InputSchema = json.RawMessage(`{"type":"object","additionalProperties":false,"properties":{"post_ids":{"type":"array"}}}`)
+	envelope.Workflow.Steps[2].AgentID = 10
+	errors := validatePlannerEnvelope(&envelope, []*domain.Agent{writer, image}, catalog)
+	joined := strings.Join(errors, "; ")
+	if !strings.Contains(joined, "must not appear in input_schema") || !strings.Contains(joined, "lacks capability") {
+		t.Fatalf("semantic contract did not catch generated-input or Agent errors: %v", errors)
 	}
 }
-
-func TestCompileImageBriefContract(t *testing.T) {
-	intent := ParseIntent("为文章生成图片 Brief")
-	var template *Template
-	for _, candidate := range templates {
-		if candidate.Key == "article_image_brief" {
-			template = &candidate
-			break
-		}
-	}
-	draft := Compile(intent, template, nil)
-	if !strings.Contains(string(draft.InputSchema), "image_brief") || draft.Steps[0].InputPointer != "/input" {
-		t.Fatalf("invalid compiled contract: %#v", draft)
-	}
-}
-
-func TestMatchRealImageNeedsImageProvider(t *testing.T) {
-	intent := ParseIntent("为文章真实生成图片")
-	match, template, _ := Match(intent, nil, nil, nil, []tool.CatalogItem{{Name: "media.create_image_task"}})
-	if match.Status != "needs_configuration" || template == nil || !strings.Contains(strings.Join(match.Missing, ","), "图片 Provider") {
-		t.Fatalf("expected image provider requirement: %#v", match)
-	}
-}
-
-func TestCompileImageGenerationHasNoRedundantApproval(t *testing.T) {
-	provider := &domain.ProviderProfile{ID: 1, Enabled: true, IsDefaultWriting: true, IsDefaultImage: true}
-	skill := &domain.AgentSkill{VersionID: 2, Capabilities: []string{"media.create_image_task"}, ExecutionMode: domain.AgentModeApproval}
-	agent := &domain.Agent{ID: 3, Enabled: true, SkillVersionID: &skill.VersionID, Skill: skill, ProviderProfile: provider, ProviderProfileID: &provider.ID}
-	intent := ParseIntent("为文章生成封面")
-	match, template, selected := Match(intent, []*domain.ProviderProfile{provider}, []*domain.Agent{agent}, []*domain.AgentSkill{skill}, []tool.CatalogItem{{Name: "media.create_image_task"}})
-	if match.Status != "ready" || selected != agent || template == nil {
-		t.Fatalf("expected ready image generation match: %#v", match)
-	}
-	draft := Compile(intent, template, selected)
-	for _, step := range draft.Steps {
-		if step.Type == "approval_gate" {
-			t.Fatalf("internal image task must not add approval gate: %#v", draft.Steps)
-		}
-	}
-	if !strings.Contains(string(draft.InputSchema), "image_brief") {
-		t.Fatalf("missing image task input contract: %s", draft.InputSchema)
-	}
-}
-
 func TestPersistedStarterTemplatesAreRegistered(t *testing.T) {
 	want := []string{
 		"daily_news", "weekly_operations", "stale_content_refresh", "low_engagement",
@@ -119,55 +72,3 @@ func TestPersistedStarterTemplatesAreRegistered(t *testing.T) {
 		t.Fatal("unknown template must not be accepted")
 	}
 }
-
-func TestParseIntentAndCompileForPage(t *testing.T) {
-	intent := ParseIntent("帮我审校关于我们单页并优化 SEO")
-	if intent.Status != "ready" || intent.Action != "page_review" || len(intent.ResourceTypes) != 1 || intent.ResourceTypes[0] != "page" {
-		t.Fatalf("unexpected page intent: %#v", intent)
-	}
-	template, ok := TemplateByKey("page_review")
-	if !ok || template == nil {
-		t.Fatal("page_review template not found")
-	}
-	draft := Compile(intent, template, nil)
-	if !strings.Contains(string(draft.InputSchema), "page_ids") || !strings.Contains(string(draft.InputSchema), `"x-gouno-resource":"page"`) {
-		t.Fatalf("invalid page compiled schema: %s", draft.InputSchema)
-	}
-}
-
-func TestParseIntentAndCompileForPageUpdateWithPrompt(t *testing.T) {
-	prompt := "给“单页”做一个Workflow。不需要审核，直接运行后，到运行中心，然后等我输入一段提示词后，给“单页”生成新正文，可以重复生成。等我确认后保持单页。"
-	intent := ParseIntent(prompt)
-	if intent.Status != "ready" || intent.Action != "page_update" || len(intent.ResourceTypes) != 1 || intent.ResourceTypes[0] != "page" {
-		t.Fatalf("unexpected page update intent: %#v", intent)
-	}
-	if !contains(intent.InputFields, "prompt") || !contains(intent.InputFields, "page_ids") {
-		t.Fatalf("intent must include prompt and page_ids: %#v", intent.InputFields)
-	}
-	if intent.RequiresApproval {
-		t.Fatalf("intent should recognize no approval: %#v", intent)
-	}
-	template, ok := TemplateByKey("page_update")
-	if !ok || template == nil {
-		t.Fatal("page_update template not found")
-	}
-	if template.Tool != "content.propose_page_update" {
-		t.Fatalf("unexpected tool: %s", template.Tool)
-	}
-	draft := Compile(intent, template, nil)
-	if !strings.Contains(string(draft.InputSchema), "page_ids") || !strings.Contains(string(draft.InputSchema), "prompt") {
-		t.Fatalf("compiled schema must include page_ids and prompt: %s", draft.InputSchema)
-	}
-	hasApproval := false
-	for _, step := range draft.Steps {
-		if step.Type == "approval_gate" {
-			hasApproval = true
-			break
-		}
-	}
-	if !hasApproval {
-		t.Fatalf("page_update draft must include approval_gate for proposal confirmation: %#v", draft.Steps)
-	}
-}
-
-
