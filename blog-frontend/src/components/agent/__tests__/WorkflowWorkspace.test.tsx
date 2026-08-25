@@ -643,6 +643,93 @@ describe("WorkflowWorkspace", () => {
     expect(screen.getByLabelText("最多数量")).toBeInTheDocument();
   });
 
+  it("applies the generated cron schedule and preserves multi-Agent bindings", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const generatedWorkflow = {
+      ...workflow,
+      id: 0,
+      name: "每日 Golang 技术文章",
+      enabled: false,
+      cron_expression: "0 4 * * *",
+      input_schema: { type: "object", additionalProperties: false },
+      steps: [
+        { id: "write", type: "model" as const, agent_id: 5 },
+        { id: "cover", type: "model" as const, agent_id: 6 },
+        {
+          id: "result",
+          type: "output" as const,
+          output_pointer: "/steps/cover",
+        },
+      ],
+    };
+    apiFetch.mockImplementation((url: string) => {
+      if (url === "/api/admin/ai-workflows/draft")
+        return Promise.resolve(
+          Response.json({
+            data: {
+              workflow: generatedWorkflow,
+              provider: "Writer",
+              model: "writer-model",
+              selected_agents: [
+                { id: 5, name: "Writer Agent" },
+                { id: 6, name: "Image Agent" },
+              ],
+              readiness: { message: "ready" },
+            },
+          }),
+        );
+      return Promise.resolve(Response.json({ data: {} }));
+    });
+
+    render(
+      <WorkflowWorkspace
+        workflows={[]}
+        runs={[]}
+        metrics={[]}
+        agents={
+          [
+            { id: 5, name: "Writer Agent", enabled: true },
+            { id: 6, name: "Image Agent", enabled: true },
+          ] as never[]
+        }
+        locale="zh"
+        onMutate={vi.fn()}
+        onRun={vi.fn()}
+        onSave={onSave}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "创建 Workflow" }));
+    await user.type(
+      screen.getByPlaceholderText(/描述目标、频率/),
+      "每天凌晨4点生成 Golang 文章和封面",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "用 AI 生成 Workflow 草案" }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Cron 执行计划")).toHaveValue("0 4 * * *"),
+    );
+    expect(apiFetch).not.toHaveBeenCalledWith(
+      "/api/admin/ai-automation-plans/draft",
+      expect.anything(),
+    );
+    expect(screen.getByLabelText("批量绑定 Agent")).toHaveValue("");
+    await user.click(screen.getByRole("button", { name: "保存 Workflow" }));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(onSave.mock.calls[0][0]).toMatchObject({
+      cron_expression: "0 4 * * *",
+      timezone: "Asia/Shanghai",
+      steps: [
+        { id: "write", agent_id: 5 },
+        { id: "cover", agent_id: 6 },
+        { id: "result" },
+      ],
+    });
+  });
+
   it("keeps enum and default constraints synchronized when saving a visual schema field", async () => {
     const user = userEvent.setup();
     const onSave = vi.fn().mockResolvedValue(undefined);

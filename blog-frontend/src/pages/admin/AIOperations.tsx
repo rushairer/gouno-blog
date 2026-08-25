@@ -126,12 +126,6 @@ export default function AgentConsole() {
   const [editingSkill, setEditingSkill] = useState<AgentSkill | "new" | null>(
     null,
   );
-  const [skillPrefill, setSkillPrefill] = useState<
-    Partial<SkillFormValue> | undefined
-  >();
-  const [agentPrefill, setAgentPrefill] = useState<
-    Partial<Omit<Agent, "id" | "created_at" | "updated_at">> | undefined
-  >();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -730,43 +724,6 @@ export default function AgentConsole() {
                 onPreflight={preflightWorkflow}
                 onRefresh={refresh}
                 onSave={saveWorkflow}
-                onConfigureSkill={(draft) => {
-                  if (!draft) return;
-                  setSkillPrefill({
-                    name: draft.name || "",
-                    description: draft.description || "",
-                    system_prompt: draft.system_prompt || "",
-                    capabilities: draft.capabilities || [],
-                    execution_mode: draft.execution_mode || "approval",
-                    content_publish_mode: "approval",
-                  });
-                  setEditingSkill("new");
-                  setAdvancedSection("skills");
-                  setTab("advanced");
-                }}
-                onConfigureAgent={(draft) => {
-                  if (!draft) return;
-                  const provider =
-                    providers.find(
-                      (item) => item.enabled && item.is_default_writing,
-                    ) || providers.find((item) => item.enabled);
-                  setAgentPrefill({
-                    name: draft.name || "",
-                    description: draft.description || "",
-                    provider_profile_id:
-                      draft.provider_profile_id || provider?.id || 0,
-                    skill_version_id:
-                      draft.skill_version_id || skills[0]?.version_id || 0,
-                    enabled: false,
-                    trigger_type: "manual",
-                    timezone: "Asia/Shanghai",
-                    daily_run_limit: 10,
-                    monthly_token_budget: 1000000,
-                  });
-                  setEditingAgent("new");
-                  setAdvancedSection("agents");
-                  setTab("advanced");
-                }}
               />
             ) : null}
 
@@ -851,8 +808,6 @@ export default function AgentConsole() {
                 editingProvider={editingProvider}
                 editingEmbedding={editingEmbedding}
                 editingSkill={editingSkill}
-                agentPrefill={agentPrefill}
-                skillPrefill={skillPrefill}
                 testingConnections={testingConnections}
                 onEditAgent={setEditingAgent}
                 onEditProvider={setEditingProvider}

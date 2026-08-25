@@ -49,31 +49,19 @@ const defaults: SkillFormValue = {
 
 export function SkillForm({
   initial,
-  prefill,
   tools,
   locale,
   onSave,
   onCancel,
 }: {
   initial?: AgentSkill;
-  prefill?: Partial<SkillFormValue>;
   tools: ToolDefinition[];
   locale: "en" | "zh";
   onSave: (value: SkillFormValue) => Promise<void>;
   onCancel: () => void;
 }) {
   const [value, setValue] = useState<SkillFormValue>(() =>
-    initial
-      ? { ...initial }
-      : {
-          ...defaults,
-          ...prefill,
-          capabilities: prefill?.capabilities || defaults.capabilities,
-          tool_bindings: prefill?.tool_bindings || defaults.tool_bindings,
-          input_schema: prefill?.input_schema || defaults.input_schema,
-          allowed_triggers:
-            prefill?.allowed_triggers || defaults.allowed_triggers,
-        },
+    initial ? { ...initial } : { ...defaults },
   );
   const [saving, setSaving] = useState(false);
   const [schemaText, setSchemaText] = useState(() =>

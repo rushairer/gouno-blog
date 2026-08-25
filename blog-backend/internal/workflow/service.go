@@ -1264,6 +1264,12 @@ func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, ste
 		if step.Type != "human_interaction" {
 			var previous []byte
 			if queryErr := s.db.QueryRowContext(ctx, `SELECT output FROM ai_workflow_step_runs WHERE workflow_run_id=$1 AND step_id=$2 AND status='succeeded' ORDER BY id DESC LIMIT 1`, run.ID, step.ID).Scan(&previous); queryErr == nil && len(previous) > 0 && json.Unmarshal(previous, &stepOutput) == nil {
+				if step.Type == "model" {
+					stepOutput, err = s.enrichApprovedModelOutput(ctx, run.ID, stepOutput)
+					if err != nil {
+						return nil, awaiting, totalInput, totalOutput, err
+					}
+				}
 				document["steps"].(map[string]any)[step.ID] = stepOutput
 				output = stepOutput
 				continue
@@ -1560,11 +1566,62 @@ func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, ste
 		if step.Type == "human_interaction" {
 			return stepOutput, awaiting, totalInput, totalOutput, nil
 		}
+		if step.Type == "approval_gate" && awaiting {
+			return stepOutput, awaiting, totalInput, totalOutput, nil
+		}
 		if step.Type != "output" {
 			output = stepOutput
 		}
 	}
 	return output, awaiting, totalInput, totalOutput, nil
+}
+
+// enrichApprovedModelOutput turns an approved proposal into a typed downstream
+// resource artifact. This keeps generated resources inside the workflow data
+// flow instead of asking the operator to re-select them as top-level inputs.
+func (s *Service) enrichApprovedModelOutput(ctx context.Context, workflowRunID int64, output any) (any, error) {
+	value, ok := output.(map[string]any)
+	if !ok {
+		return output, nil
+	}
+	rawRunID, ok := value["id"].(float64)
+	if !ok || rawRunID <= 0 {
+		return output, nil
+	}
+	rows, err := s.db.QueryContext(ctx, `SELECT target_type,target_id FROM ai_approvals
+		WHERE run_id=$1 AND status='executed' AND target_id IS NOT NULL ORDER BY id`, int64(rawRunID))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	resources := []map[string]any{}
+	for rows.Next() {
+		var resourceType string
+		var targetID int64
+		if err := rows.Scan(&resourceType, &targetID); err != nil {
+			return nil, err
+		}
+		item, err := s.catalog.Resolve(ctx, resourceType, strconv.FormatInt(targetID, 10))
+		if err != nil {
+			return nil, err
+		}
+		if err := s.persistResource(ctx, workflowRunID, item, "query", "target"); err != nil {
+			return nil, err
+		}
+		resources = append(resources, map[string]any{"type": resourceType, "id": targetID, "label": item.Label})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(resources) > 0 {
+		copy := make(map[string]any, len(value)+1)
+		for key, item := range value {
+			copy[key] = item
+		}
+		copy["approved_resources"] = resources
+		return copy, nil
+	}
+	return output, nil
 }
 
 func inputForStep(document map[string]any, item any, pointer string, includeContext bool) any {

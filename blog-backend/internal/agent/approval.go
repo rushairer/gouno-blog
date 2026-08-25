@@ -708,10 +708,14 @@ func (s *ApprovalService) execute(ctx context.Context, approval *domain.AgentApp
 		if err := json.Unmarshal(approval.ProposedPayload, &payload); err != nil {
 			return err
 		}
-		return s.posts.CreatePost(ctx, &domain.Post{
+		post := &domain.Post{
 			Title: payload.Title, Slug: payload.Slug, Summary: payload.Summary,
 			Content: payload.Content, Tags: payload.Tags, Status: domain.PostStatusDraft,
-		})
+		}
+		if err := s.posts.CreatePost(ctx, post); err != nil {
+			return err
+		}
+		return s.repo.SetApprovalTarget(ctx, approval.ID, post.ID)
 	case "update_post", "update_tags":
 		if approval.TargetID == nil {
 			return errors.New("post target is required")

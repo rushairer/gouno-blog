@@ -19,7 +19,6 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { workflowApi } from "../../api/workflows";
-import type { AutomationPlan } from "../../api/workflows";
 import type {
   Agent,
   ToolDefinition,
@@ -85,13 +84,16 @@ function exampleInput(
   );
 }
 
-function firstWorkflowAgentID(steps: WorkflowStep[]): number | undefined {
-  for (const step of steps) {
-    if (step.type === "model" && step.agent_id) return step.agent_id;
-    const nested = firstWorkflowAgentID(step.steps || []);
-    if (nested) return nested;
-  }
-  return undefined;
+function uniformWorkflowAgentID(steps: WorkflowStep[]): number | undefined {
+  const ids = new Set<number>();
+  const collect = (items: WorkflowStep[]) => {
+    for (const step of items) {
+      if (step.type === "model" && step.agent_id) ids.add(step.agent_id);
+      if (step.steps?.length) collect(step.steps);
+    }
+  };
+  collect(steps);
+  return ids.size === 1 ? ids.values().next().value : undefined;
 }
 
 function localizePlannerWarning(value: string, locale: "en" | "zh"): string {
@@ -138,8 +140,6 @@ export function WorkflowWorkspace({
   onPreflight,
   onRefresh,
   onSave,
-  onConfigureSkill,
-  onConfigureAgent,
 }: {
   workflows: Workflow[];
   runs: WorkflowRun[];
@@ -162,19 +162,6 @@ export function WorkflowWorkspace({
   }>;
   onRefresh?: () => Promise<void>;
   onSave: (value: WorkflowValue) => Promise<void>;
-  onConfigureSkill?: (draft?: {
-    name?: string;
-    description?: string;
-    system_prompt?: string;
-    capabilities?: string[];
-    execution_mode?: "advisory" | "approval";
-  }) => void;
-  onConfigureAgent?: (draft?: {
-    name?: string;
-    description?: string;
-    provider_profile_id?: number;
-    skill_version_id?: number;
-  }) => void;
 }) {
   const [editing, setEditing] = useState<Workflow | "new" | null>(null);
   const [inputByID, setInputByID] = useState<
@@ -453,8 +440,6 @@ export function WorkflowWorkspace({
         agents={agents}
         tools={tools}
         locale={locale}
-        onConfigureSkill={onConfigureSkill}
-        onConfigureAgent={onConfigureAgent}
         onCancel={() => setEditing(null)}
         onSave={async (value) => {
           await onSave(value);
@@ -1773,8 +1758,6 @@ function WorkflowEditor({
   locale,
   onSave,
   onCancel,
-  onConfigureSkill,
-  onConfigureAgent,
 }: {
   initial?: Workflow;
   labels: Record<string, string>;
@@ -1783,19 +1766,6 @@ function WorkflowEditor({
   locale: "en" | "zh";
   onSave: (value: WorkflowValue) => Promise<void>;
   onCancel: () => void;
-  onConfigureSkill?: (draft?: {
-    name?: string;
-    description?: string;
-    system_prompt?: string;
-    capabilities?: string[];
-    execution_mode?: "advisory" | "approval";
-  }) => void;
-  onConfigureAgent?: (draft?: {
-    name?: string;
-    description?: string;
-    provider_profile_id?: number;
-    skill_version_id?: number;
-  }) => void;
 }) {
   const [name, setName] = useState(initial?.name || "");
   const [description, setDescription] = useState(initial?.description || "");
@@ -1831,14 +1801,11 @@ function WorkflowEditor({
     type: "error" | "success" | "info";
     text: string;
   } | null>(null);
-  const [automationPlan, setAutomationPlan] = useState<AutomationPlan | null>(
-    null,
-  );
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [editorError, setEditorError] = useState("");
   const [toolQuery, setToolQuery] = useState("");
   const [boundAgentID, setBoundAgentID] = useState<number | "">(
-    () => firstWorkflowAgentID(initial?.steps || []) || "",
+    () => uniformWorkflowAgentID(initial?.steps || []) || "",
   );
   const parsedSteps = useMemo(() => {
     try {
@@ -2018,35 +1985,18 @@ function WorkflowEditor({
     }
     setPlanning(true);
     setPlannerMessage(null);
-    let planData: AutomationPlan | null = null;
     try {
-      const plan = await workflowApi.draftAutomationPlan(goal.trim());
-      planData = plan;
-      setAutomationPlan(plan);
-      if (
-        plan.provider.status !== "ready" ||
-        plan.agent.status !== "reuse" ||
-        plan.match?.status !== "ready"
-      ) {
-        setName(plan.workflow.name);
-        setDescription(plan.workflow.description);
-        setSchema(JSON.stringify(plan.workflow.input_schema, null, 2));
-        setSteps(JSON.stringify(plan.workflow.steps, null, 2));
-        setBoundAgentID("");
-        const missing = plan.prerequisites.join("；");
-        setPlannerMessage({
-          type: "info",
-          text: `依赖尚未就绪：${missing || plan.match?.status || "需要配置"}。已生成未启用的 Workflow 结构草案；请先完成依赖确认和能力检查后再保存。`,
-        });
-        return;
-      }
       const result = await workflowApi.draftWorkflow(goal.trim());
       setName(result.workflow.name);
       setDescription(result.workflow.description);
+      setCronExpression(result.workflow.cron_expression || "");
+      setTimezone(result.workflow.timezone || "Asia/Shanghai");
       setSchema(JSON.stringify(result.workflow.input_schema, null, 2));
       setSteps(JSON.stringify(result.workflow.steps, null, 2));
-      setBoundAgentID(firstWorkflowAgentID(result.workflow.steps) || "");
-      setTemplateKey(result.workflow.template_key || plan.template?.key || "");
+      setBoundAgentID(
+        uniformWorkflowAgentID(result.workflow.steps || []) || "",
+      );
+      setTemplateKey(result.workflow.template_key || "");
       const binding = result.selected_agents
         ?.map(
           (agent) =>
@@ -2057,33 +2007,16 @@ function WorkflowEditor({
         type: "success",
         text: result.planner_warning
           ? localizePlannerWarning(result.planner_warning, locale)
-          : `${result.readiness?.message || "已验证依赖。"} 已复用 ${plan.agent.name || binding || "现有 Agent"}，并使用 ${binding || `${result.provider} · ${result.model}`} 生成未启用草案。请审阅后保存。`,
+          : `${result.readiness?.message || "结构化意图、能力与数据流已通过校验。"} 已使用 ${binding || `${result.provider} · ${result.model}`} 生成未启用草案。请审阅后保存。`,
       });
     } catch (reason) {
-      if (planData?.workflow) {
-        setName(planData.workflow.name);
-        setDescription(planData.workflow.description);
-        setSchema(JSON.stringify(planData.workflow.input_schema, null, 2));
-        setSteps(JSON.stringify(planData.workflow.steps, null, 2));
-        setBoundAgentID(firstWorkflowAgentID(planData.workflow.steps) || "");
-        setTemplateKey(
-          planData.workflow.template_key || planData.template?.key || "",
-        );
-        const message = reason instanceof Error ? reason.message : "";
-        const isTimeout = message.toLowerCase().includes("timeout");
-        setPlannerMessage({
-          type: "info",
-          text: isTimeout
-            ? `已成功生成并填充「${planData.workflow.name}」标准工作流草案（大模型联网响应超时，已自动无缝切换为确定性模板兜底）。`
-            : `已根据意图为你生成「${planData.workflow.name}」工作流草案，请审阅后保存。`,
-        });
-      } else {
-        const message = reason instanceof Error ? reason.message : "";
-        setPlannerMessage({
-          type: "error",
-          text: message || "无法生成 Workflow 草案。",
-        });
-      }
+      const message = reason instanceof Error ? reason.message : "";
+      setPlannerMessage({
+        type: "error",
+        text:
+          message ||
+          "规划结果未通过结构化意图、能力或数据流校验；未生成猜测性草案。",
+      });
     } finally {
       setPlanning(false);
     }
@@ -2177,117 +2110,6 @@ function WorkflowEditor({
                 <span>{plannerMessage.text}</span>
               </div>
             ) : null}
-            {automationPlan ? (
-              <div className="workflow-dependency-plan">
-                <strong>依赖链预检</strong>
-                {automationPlan.intent ? (
-                  <div className="workflow-intent-summary">
-                    <span>
-                      <b>需求意图</b>
-                      {automationPlan.intent.domain || "未识别"} /{" "}
-                      {automationPlan.intent.action ||
-                        automationPlan.intent.ambiguity_reason ||
-                        "待澄清"}
-                    </span>
-                    <span>
-                      <b>输出</b>
-                      {automationPlan.intent.output_type || "待识别"}
-                    </span>
-                  </div>
-                ) : null}
-                {automationPlan.template ? (
-                  <div className="workflow-intent-summary">
-                    <span>
-                      <b>模板</b>
-                      {automationPlan.template.name ||
-                        automationPlan.template.key ||
-                        "未匹配"}{" "}
-                      · {automationPlan.template.status || "unknown"}
-                    </span>
-                    {automationPlan.match?.status ? (
-                      <span>
-                        <b>能力检查</b>
-                        {automationPlan.match.status}
-                      </span>
-                    ) : null}
-                  </div>
-                ) : null}
-                <div className="workflow-dependency-plan__items">
-                  <span
-                    className={`agent-state agent-state--${automationPlan.provider.status === "ready" ? "active" : "paused"}`}
-                  >
-                    <i />
-                    Provider：{automationPlan.provider.name || "未配置"}
-                  </span>
-                  <span
-                    className={`agent-state agent-state--${automationPlan.skill.status === "reuse" ? "active" : "paused"}`}
-                  >
-                    <i />
-                    Skill：
-                    {automationPlan.skill.name ||
-                      automationPlan.skill.draft?.name ||
-                      "待确认"}
-                  </span>
-                  <span
-                    className={`agent-state agent-state--${automationPlan.agent.status === "reuse" ? "active" : "paused"}`}
-                  >
-                    <i />
-                    Agent：
-                    {automationPlan.agent.name ||
-                      automationPlan.agent.draft?.name ||
-                      "待确认"}
-                  </span>
-                </div>
-                {automationPlan.intent?.output_type === "image_brief" ? (
-                  <small className="workflow-planner__notice">
-                    当前只生成图片 Brief 并进入审批；审批通过后仍需配置图片
-                    Provider，才能生成真实图片。
-                  </small>
-                ) : null}
-                {automationPlan.match?.warnings?.map((warning) => (
-                  <small className="workflow-planner__notice" key={warning}>
-                    {warning}
-                  </small>
-                ))}
-                {automationPlan.skill.status === "draft" &&
-                automationPlan.skill.draft &&
-                onConfigureSkill ? (
-                  <Button
-                    variant="secondary"
-                    size="compact"
-                    type="button"
-                    onClick={() => onConfigureSkill(automationPlan.skill.draft)}
-                  >
-                    审阅并配置 Skill 草案
-                  </Button>
-                ) : null}
-                {automationPlan.prerequisites.length > 0 ? (
-                  <small>
-                    请先在 Agent
-                    设置中完成前置配置；本草案不会自动创建或启用依赖。
-                  </small>
-                ) : null}
-              </div>
-            ) : null}
-          </section>
-        ) : null}
-        {!initial &&
-        automationPlan?.agent.status === "draft" &&
-        automationPlan.agent.draft &&
-        onConfigureAgent ? (
-          <section className="workflow-planner__action">
-            <small>
-              Agent 尚未就绪。确认 Skill 后，可将 Agent 草案预填到现有 Agent
-              表单；默认保持停用。
-            </small>
-            <Button
-              variant="secondary"
-              size="compact"
-              type="button"
-              onClick={() => onConfigureAgent(automationPlan.agent.draft)}
-            >
-              审阅并配置 Agent 草案
-            </Button>
           </section>
         ) : null}
         <Field label="名称" hint="面向日常运营的短名称，例如“发布前内容检查”。">
@@ -2679,10 +2501,9 @@ function WorkflowEditor({
         ) : null}
         <Field
           label="批量绑定 Agent"
-          hint="将所有顶层模型步骤绑定到同一个 Agent；Skill 和 Tool 授权在 Agent 内生效。"
+          hint="可选：将所有模型步骤改绑到同一个 Agent。多 Agent 草案默认留空，请在各步骤查看各自绑定。"
         >
           <Select
-            required
             value={boundAgentID}
             onChange={(event) =>
               event.target.value && bindAgent(Number(event.target.value))

@@ -126,7 +126,6 @@ func startWebServer(cmd *cobra.Command, args []string) {
 		middleware.TimeoutMiddlewareWithOverrides(globalConfig.WebServerConfig.RequestTimeout, map[string]time.Duration{
 			"/api/admin/provider-profiles/:id/test": aiTextRequestTimeout,
 			"/api/admin/ai-workflows/draft":         aiTextRequestTimeout,
-			"/api/admin/ai-automation-plans/draft":  aiTextRequestTimeout,
 			"/api/admin/ai-draft-assist":            aiTextRequestTimeout,
 			"/api/admin/ai-generate-image":          aiImageRequestTimeout,
 			"/api/admin/ai-index/evaluate":          aiTextRequestTimeout,

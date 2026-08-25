@@ -29,7 +29,6 @@ function optionalLimit(value: string): number | undefined {
 
 export function AgentForm({
   initial,
-  prefill,
   providers,
   skills,
   locale,
@@ -38,7 +37,6 @@ export function AgentForm({
   onCancel,
 }: {
   initial?: Agent;
-  prefill?: Partial<AgentFormValue>;
   providers: ProviderProfile[];
   skills: AgentSkill[];
   locale: "en" | "zh";
@@ -47,9 +45,7 @@ export function AgentForm({
   onCancel: () => void;
 }) {
   const [value, setValue] = useState<AgentFormValue>(() =>
-    initial
-      ? { ...initial }
-      : { ...emptyAgent(providers[0]?.id), ...prefill, enabled: false },
+    initial ? { ...initial } : emptyAgent(providers[0]?.id),
   );
   const [saving, setSaving] = useState(false);
 

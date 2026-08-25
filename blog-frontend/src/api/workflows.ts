@@ -26,56 +26,6 @@ export interface ResourcePage {
   unavailable_keys?: string[];
 }
 
-export interface AutomationPlan {
-  workflow: Workflow;
-  provider: {
-    status: "ready" | "missing";
-    name?: string;
-    model?: string;
-    message?: string;
-  };
-  skill: {
-    status: "reuse" | "draft" | "missing";
-    name?: string;
-    draft?: {
-      name?: string;
-      description?: string;
-      system_prompt?: string;
-      capabilities?: string[];
-      execution_mode?: "advisory" | "approval";
-    };
-  };
-  agent: {
-    status: "reuse" | "draft" | "missing";
-    name?: string;
-    draft?: {
-      name?: string;
-      description?: string;
-      provider_profile_id?: number;
-      skill_version_id?: number;
-    };
-  };
-  prerequisites: string[];
-  warnings: string[];
-  intent?: {
-    status?: string;
-    resource_types?: string[];
-    domain?: string;
-    action?: string;
-    output_type?: string;
-    requires_image_generation?: boolean;
-    ambiguity_reason?: string;
-  };
-  template?: { status?: string; key?: string; name?: string };
-  match?: {
-    status?: string;
-    matches?: string[];
-    missing?: string[];
-    warnings?: string[];
-    suggested_templates?: string[];
-  };
-}
-
 export const workflowApi = {
   getWorkflows: () => readData<Workflow[]>(apiFetch("/api/admin/ai-workflows")),
   getVersions: (id: number) =>
@@ -208,14 +158,6 @@ export const workflowApi = {
         `/api/admin/ai-resources/${encodeURIComponent(type)}?${parameters}`,
         { signal },
       ),
-    ),
-  draftAutomationPlan: (prompt: string) =>
-    readData<AutomationPlan>(
-      apiFetch("/api/admin/ai-automation-plans/draft", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-      }),
     ),
   draftWorkflow: (prompt: string) =>
     readData<{
