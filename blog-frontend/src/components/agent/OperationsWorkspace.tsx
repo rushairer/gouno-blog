@@ -194,7 +194,14 @@ export function OperationsWorkspace({
       ) : (
         <div className="operations-task-list">
           {actionableSuggestions.map((item) => (
-            <article className="operations-task" key={`suggestion-${item.id}`}>
+            <article
+              className={`operations-task operations-task--selectable ${
+                selectedSuggestions.includes(item.id)
+                  ? "operations-task--selected"
+                  : ""
+              }`}
+              key={`suggestion-${item.id}`}
+            >
               <Checkbox
                 aria-label={`${zh ? "选择建议" : "Select suggestion"} ${item.title}`}
                 checked={selectedSuggestions.includes(item.id)}
