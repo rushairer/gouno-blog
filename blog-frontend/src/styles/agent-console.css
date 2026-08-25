@@ -305,6 +305,18 @@
   background: var(--ui-panel);
   padding: 16px;
 }
+.operations-task--selectable,
+.operations-task:has(.ui-checkbox) {
+  grid-template-columns: auto 34px minmax(0, 1fr) auto;
+}
+.operations-task--selectable .ui-checkbox,
+.operations-task:has(.ui-checkbox) .ui-checkbox {
+  margin-top: 9px;
+}
+.operations-task--selected {
+  border-color: var(--agent-accent);
+  background: color-mix(in srgb, var(--agent-accent) 6%, var(--ui-panel));
+}
 .operations-task__icon {
   display: grid;
   width: 34px;
@@ -2159,8 +2171,17 @@ td .agent-chip-list {
   .operations-task {
     grid-template-columns: 34px minmax(0, 1fr);
   }
+  .operations-task--selectable,
+  .operations-task:has(.ui-checkbox) {
+    grid-template-columns: auto 34px minmax(0, 1fr);
+  }
   .operations-task__actions {
     grid-column: 2;
+    justify-content: flex-start;
+  }
+  .operations-task--selectable .operations-task__actions,
+  .operations-task:has(.ui-checkbox) .operations-task__actions {
+    grid-column: 3;
     justify-content: flex-start;
   }
   .editorial-task-list > article,
