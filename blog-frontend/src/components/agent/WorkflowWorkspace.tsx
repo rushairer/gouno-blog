@@ -1799,7 +1799,9 @@ function WorkflowEditor({
   const [goal, setGoal] = useState("");
   const [planning, setPlanning] = useState(false);
   const [draftingAgents, setDraftingAgents] = useState(false);
-  const [agentDrafts, setAgentDrafts] = useState<Awaited<ReturnType<typeof workflowApi.draftAgentSkills>>["drafts"]>([]);
+  const [agentDrafts, setAgentDrafts] = useState<
+    Awaited<ReturnType<typeof workflowApi.draftAgentSkills>>["drafts"]
+  >([]);
   const [savingAgentDraft, setSavingAgentDraft] = useState<string | null>(null);
   const [plannerMessage, setPlannerMessage] = useState<{
     type: "error" | "success" | "info";
@@ -2027,16 +2029,28 @@ function WorkflowEditor({
   };
   const generateAgentDrafts = async () => {
     if (!goal.trim()) {
-      setPlannerMessage({ type: "info", text: "先描述 Workflow 目标，再生成所需的 Agent/Skill 草案。" });
+      setPlannerMessage({
+        type: "info",
+        text: "先描述 Workflow 目标，再生成所需的 Agent/Skill 草案。",
+      });
       return;
     }
     setDraftingAgents(true);
     try {
       const result = await workflowApi.draftAgentSkills(goal.trim());
       setAgentDrafts(result.drafts);
-      setPlannerMessage({ type: "info", text: `AI 生成了 ${result.drafts.length} 个待审阅 Skill 草案；确认后只会创建停用的手动 Agent。` });
+      setPlannerMessage({
+        type: "info",
+        text: `AI 生成了 ${result.drafts.length} 个待审阅 Skill 草案；确认后只会创建停用的手动 Agent。`,
+      });
     } catch (reason) {
-      setPlannerMessage({ type: "error", text: reason instanceof Error ? reason.message : "Agent/Skill 草案生成失败。" });
+      setPlannerMessage({
+        type: "error",
+        text:
+          reason instanceof Error
+            ? reason.message
+            : "Agent/Skill 草案生成失败。",
+      });
     } finally {
       setDraftingAgents(false);
     }
@@ -2057,7 +2071,10 @@ function WorkflowEditor({
         max_output_tokens: 4000,
         default_daily_run_limit: 10,
         default_monthly_token_budget: 300000,
-        input_schema: draft.input_schema || { type: "object", additionalProperties: true },
+        input_schema: draft.input_schema || {
+          type: "object",
+          additionalProperties: true,
+        },
         allowed_triggers: ["manual", "cron"],
       });
       await agentApi.saveAgent({
@@ -2070,10 +2087,21 @@ function WorkflowEditor({
         daily_run_limit: skill.default_daily_run_limit,
         monthly_token_budget: skill.default_monthly_token_budget,
       });
-      setAgentDrafts((current) => current.filter((item) => item.name !== draft.name));
-      setPlannerMessage({ type: "success", text: `已创建停用的“${draft.name}” Agent/Skill。请到高级设置审阅并启用，然后重新生成 Workflow。` });
+      setAgentDrafts((current) =>
+        current.filter((item) => item.name !== draft.name),
+      );
+      setPlannerMessage({
+        type: "success",
+        text: `已创建停用的“${draft.name}” Agent/Skill。请到高级设置审阅并启用，然后重新生成 Workflow。`,
+      });
     } catch (reason) {
-      setPlannerMessage({ type: "error", text: reason instanceof Error ? reason.message : "保存 Agent/Skill 草案失败。" });
+      setPlannerMessage({
+        type: "error",
+        text:
+          reason instanceof Error
+            ? reason.message
+            : "保存 Agent/Skill 草案失败。",
+      });
     } finally {
       setSavingAgentDraft(null);
     }
@@ -2165,7 +2193,9 @@ function WorkflowEditor({
                 onClick={() => void generateAgentDrafts()}
               >
                 <Plus />
-                {draftingAgents ? "正在生成 Agent 草案…" : "没有合适 Agent？生成草案"}
+                {draftingAgents
+                  ? "正在生成 Agent 草案…"
+                  : "没有合适 Agent？生成草案"}
               </Button>
             </FormActions>
             {plannerMessage ? (
@@ -2179,7 +2209,10 @@ function WorkflowEditor({
             {agentDrafts.length ? (
               <div className="workflow-planner__agent-drafts">
                 {agentDrafts.map((draft) => (
-                  <article key={draft.name} className="workflow-planner__agent-draft">
+                  <article
+                    key={draft.name}
+                    className="workflow-planner__agent-draft"
+                  >
                     <strong>{draft.name}</strong>
                     <p>{draft.description}</p>
                     <small>{draft.capabilities.join(" · ")}</small>
@@ -2190,7 +2223,9 @@ function WorkflowEditor({
                       onClick={() => void materializeAgentDraft(draft)}
                     >
                       <Save />
-                      {savingAgentDraft === draft.name ? "正在创建…" : "确认创建停用 Agent"}
+                      {savingAgentDraft === draft.name
+                        ? "正在创建…"
+                        : "确认创建停用 Agent"}
                     </Button>
                   </article>
                 ))}
