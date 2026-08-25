@@ -247,7 +247,7 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 			return err
 		}
 		if policy.Mode == "strict" {
-			runScopeInstruction = "\nThis Workflow run has a strict resource scope. Read and propose changes only for snapshotted target resources. Resources returned by authorized discovery tools are read-only and must never become modification targets."
+			runScopeInstruction = "\nThis Workflow run has a strict resource scope. Read and propose changes only for snapshotted target resources. Resources returned by authorized discovery tools are read-only and must never become modification targets. New resources may be created only through a tool explicitly authorized for creation."
 			if len(policy.DiscoveryTools) > 0 {
 				runScopeInstruction += " Authorized discovery tools: " + strings.Join(policy.DiscoveryTools, ", ") + "."
 			}
@@ -536,6 +536,12 @@ func (r *Runner) authorizeScopedTool(ctx context.Context, run *domain.AgentRun, 
 	if !ok || rule == nil {
 		if risk != domain.ToolRiskRead {
 			return fmt.Errorf("%w: %s has no resource scope in a strict workflow run", tool.ErrUnauthorized, name)
+		}
+		return nil
+	}
+	if rule.AllowsCreate {
+		if risk != domain.ToolRiskPropose {
+			return fmt.Errorf("%w: %s cannot create resources at this risk level", tool.ErrUnauthorized, name)
 		}
 		return nil
 	}

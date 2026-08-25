@@ -43,8 +43,12 @@ type Proposal struct {
 }
 
 type ScopeRule struct {
-	ResourceType       string   `json:"resource_type,omitempty"`
-	Argument           string   `json:"argument,omitempty"`
+	ResourceType string `json:"resource_type,omitempty"`
+	Argument     string `json:"argument,omitempty"`
+	// AllowsCreate explicitly permits a proposal to create a new resource in a
+	// strict workflow run. Creation has no existing resource key to snapshot,
+	// so it must never be inferred from a missing ResourceType/Argument.
+	AllowsCreate       bool     `json:"allows_create,omitempty"`
 	Discovery          bool     `json:"discovery,omitempty"`
 	OutputResourceType string   `json:"output_resource_type,omitempty"`
 	OutputKeys         []string `json:"output_keys,omitempty"`

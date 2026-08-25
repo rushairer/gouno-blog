@@ -93,7 +93,7 @@ func NewBlogRegistry(posts *service.PostService, community *service.CommunitySer
 		Definition{
 			Name: "content.propose_page_draft", Description: "Create a new custom page draft proposal.",
 			Parameters: schema(`{"title":{"type":"string"},"slug":{"type":"string"},"summary":{"type":"string"},"content":{"type":"string"},"template":{"type":"string"},"show_in_nav":{"type":"boolean"},"allow_comments":{"type":"boolean"},"sort_order":{"type":"integer"},"seo_title":{"type":"string"},"seo_description":{"type":"string"}}`, "title", "slug"),
-			Risk:       domain.ToolRiskPropose, Propose: tools.proposePageDraft,
+			Risk:       domain.ToolRiskPropose, Scope: &ScopeRule{AllowsCreate: true}, Propose: tools.proposePageDraft,
 		},
 		Definition{
 			Name: "content.propose_page_update", Description: "Propose changes to an existing custom page.",
@@ -158,7 +158,7 @@ func NewBlogRegistry(posts *service.PostService, community *service.CommunitySer
 		Definition{
 			Name: "content.propose_draft", Description: "Create a new blog draft proposal.",
 			Parameters: schema(`{"title":{"type":"string"},"slug":{"type":"string"},"summary":{"type":"string"},"content":{"type":"string"},"tags":{"type":"array","items":{"type":"string"}}}`, "title", "content"),
-			Risk:       domain.ToolRiskPropose, Propose: tools.proposeDraft,
+			Risk:       domain.ToolRiskPropose, Scope: &ScopeRule{AllowsCreate: true}, Propose: tools.proposeDraft,
 		},
 		Definition{
 			Name: "content.propose_update", Description: "Propose changes to an existing blog post.",
@@ -178,7 +178,7 @@ func NewBlogRegistry(posts *service.PostService, community *service.CommunitySer
 		Definition{
 			Name: "content.propose_task", Description: "Create an editorial task proposal.",
 			Parameters: schema(`{"title":{"type":"string"},"description":{"type":"string"},"priority":{"type":"string","enum":["low","medium","high"]}}`, "title", "description"),
-			Risk:       domain.ToolRiskPropose, Propose: tools.proposeTask,
+			Risk:       domain.ToolRiskPropose, Scope: &ScopeRule{AllowsCreate: true}, Propose: tools.proposeTask,
 		},
 		Definition{
 			Name: "content.propose_distribution_draft", Description: "Create an approval-only social, newsletter, FAQ, or image brief from one post. It never sends content to an external service.",
@@ -195,6 +195,7 @@ func NewBlogRegistry(posts *service.PostService, community *service.CommunitySer
 		},
 	)
 }
+
 
 func schema(properties string, required ...string) json.RawMessage {
 	value := `{"type":"object","additionalProperties":false,"properties":` + properties
@@ -604,4 +605,3 @@ func (t *BlogTools) proposePageUpdate(ctx context.Context, raw json.RawMessage) 
 		Payload: clean, BeforeSnapshot: before,
 	}, nil
 }
-
