@@ -3422,6 +3422,17 @@ a {
   color: var(--ui-brand);
   background: var(--ui-panel);
 }
+.editor-ai-presets button.editor-ai-ideate-btn {
+  background: color-mix(in srgb, var(--ui-brand) 12%, transparent);
+  border-color: color-mix(in srgb, var(--ui-brand) 40%, transparent);
+  color: var(--ui-brand);
+  font-weight: 600;
+}
+.editor-ai-presets button.editor-ai-ideate-btn:hover:not(:disabled) {
+  background: var(--ui-brand);
+  border-color: var(--ui-brand);
+  color: #fff;
+}
 .editor-ai-presets button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
