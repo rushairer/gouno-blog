@@ -74,7 +74,7 @@ describe("Home", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    renderHome();
+    const { container } = renderHome();
 
     expect(
       await screen.findByRole("heading", { name: /记录探索与思考/ }),
@@ -88,6 +88,9 @@ describe("Home", () => {
     expect(
       screen.getByRole("heading", { name: "精选文章" }),
     ).toBeInTheDocument();
+    expect(container.querySelector(".featured-layout")).toHaveClass(
+      "featured-layout--1",
+    );
     expect(
       screen.getByRole("heading", { name: "主题索引" }),
     ).toBeInTheDocument();
@@ -187,6 +190,81 @@ describe("Home", () => {
     const imgs = await screen.findAllByAltText("Cover One");
     expect(imgs[0]).toBeInTheDocument();
     expect(imgs[0]).toHaveAttribute("src", "/media/cover1.jpg");
+  });
+
+  it("uses a balanced two-column layout for three total posts", async () => {
+    const threePosts = [
+      ...pageOnePosts,
+      {
+        id: 3,
+        title: "No Cover Post",
+        slug: "no-cover-post",
+        summary: "No cover",
+        tags: [],
+        created_at: "2026-01-03T00:00:00Z",
+      },
+    ];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = input.toString();
+        if (url.includes("/api/tags")) return Response.json({ data: [] });
+        if (url.includes("/api/site")) return Response.json({ data: {} });
+        return Response.json({
+          data: { list: threePosts, total: 3, page: 1, pageSize: 12 },
+        });
+      }),
+    );
+
+    const { container } = renderHome();
+
+    await screen.findAllByRole("heading", { name: "No Cover Post" });
+    const featuredLayout = container.querySelector(".featured-layout");
+    expect(featuredLayout).toHaveClass("featured-layout--2");
+    expect(
+      featuredLayout?.querySelectorAll(":scope > .editorial-story"),
+    ).toHaveLength(2);
+    expect(featuredLayout?.querySelector("img")).toBeNull();
+  });
+
+  it("shows up to four featured posts in a balanced two-column layout", async () => {
+    const posts = Array.from({ length: 5 }, (_, index) => ({
+      id: index + 1,
+      title: `Post ${index + 1}`,
+      slug: `post-${index + 1}`,
+      summary: `Summary ${index + 1}`,
+      tags: [],
+      created_at: "2026-01-01T00:00:00Z",
+      ...(index === 2
+        ? { cover_url: "/media/featured.jpg", cover_alt: "Featured cover" }
+        : {}),
+    }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = input.toString();
+        if (url.includes("/api/tags")) return Response.json({ data: [] });
+        if (url.includes("/api/site")) return Response.json({ data: {} });
+        return Response.json({
+          data: { list: posts, total: 5, page: 1, pageSize: 12 },
+        });
+      }),
+    );
+
+    const { container } = renderHome();
+
+    await screen.findAllByAltText("Featured cover");
+    const featuredLayout = container.querySelector(".featured-layout");
+    expect(featuredLayout).toHaveClass("featured-layout--4");
+    expect(featuredLayout?.querySelectorAll(".editorial-story")).toHaveLength(
+      4,
+    );
+    expect(
+      featuredLayout?.querySelectorAll(".featured-layout__column"),
+    ).toHaveLength(1);
+    expect(
+      featuredLayout?.querySelector(".featured-layout__secondary"),
+    ).toBeInTheDocument();
   });
 
   it("renders custom hero title, description, and image when configured in site settings", async () => {
