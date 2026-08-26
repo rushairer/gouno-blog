@@ -33,6 +33,7 @@ type AgentController struct {
 	workflows  *workflowservice.Service
 	operations *operations.Service
 	connectors *connector.Service
+	generation *agentservice.GenerationService
 }
 
 const maxWorkflowJSONBody = 256 << 10
@@ -52,6 +53,7 @@ type AgentControllerOptions struct {
 	Workflows  *workflowservice.Service
 	Operations *operations.Service
 	Connectors *connector.Service
+	Generation *agentservice.GenerationService
 }
 
 func NewAgentController(opts AgentControllerOptions) *AgentController {
@@ -65,6 +67,7 @@ func NewAgentController(opts AgentControllerOptions) *AgentController {
 		workflows:  opts.Workflows,
 		operations: opts.Operations,
 		connectors: opts.Connectors,
+		generation: opts.Generation,
 	}
 }
 
@@ -355,7 +358,6 @@ func (ctrl *AgentController) saveProvider(c *gin.Context, id int64) {
 	}
 	c.JSON(status, gouno.NewSuccessResponse(gin.H{"profile": profile, "starter_agents_created": created}))
 }
-
 func (ctrl *AgentController) DeleteProvider(c *gin.Context) {
 	id, ok := ParamPositiveID(c, "id")
 	if !ok {
@@ -796,4 +798,3 @@ func bindWorkflowJSON(c *gin.Context, value any) bool {
 	}
 	return true
 }
-

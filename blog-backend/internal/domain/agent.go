@@ -283,6 +283,25 @@ type MediaCandidate struct {
 	RegenerationInstruction string       `json:"regeneration_instruction,omitempty"`
 }
 
+// GenerationAudit captures minimal, non-sensitive execution evidence for AI
+// generation initiated outside an Agent Run as well as governed media tasks.
+type GenerationAudit struct {
+	ID               int64
+	Source           string
+	Operation        string
+	TemplateVersion  int
+	Provider         string
+	Model            string
+	InputTokens      int64
+	OutputTokens     int64
+	Status           string
+	ErrorCode        string
+	AgentRunID       *int64
+	WorkflowRunID    *int64
+	MediaCandidateID *int64
+	MediaAssetID     *int64
+}
+
 // MediaCandidateSelection is the user-authored placement for one generated
 // image in a workflow run. It is intentionally separate from MediaCandidate
 // so a run can validate and apply several candidates as one article version.

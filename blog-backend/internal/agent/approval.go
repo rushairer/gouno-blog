@@ -1,9 +1,7 @@
 package agent
 
 import (
-	"bytes"
 	"context"
-	"crypto/rand"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -14,7 +12,6 @@ import (
 
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/media"
-	"github.com/rushairer/blog-backend/internal/provider"
 	"github.com/rushairer/blog-backend/internal/repository"
 	"github.com/rushairer/blog-backend/internal/service"
 )
@@ -31,10 +28,15 @@ type ApprovalService struct {
 	management *ManagementService
 	growth     *service.GrowthService
 	media      media.Store
+	generation *GenerationService
 }
 
 func NewApprovalService(repo *repository.AgentRepository, posts *service.PostService, management *ManagementService, growth *service.GrowthService, store media.Store, pages *service.PageService) *ApprovalService {
-	return &ApprovalService{repo: repo, posts: posts, pages: pages, management: management, growth: growth, media: store}
+	return &ApprovalService{repo: repo, posts: posts, pages: pages, management: management, growth: growth, media: store, generation: NewGenerationService(repo, management, growth, store)}
+}
+
+func (s *ApprovalService) SetGenerationService(generation *GenerationService) {
+	s.generation = generation
 }
 
 func (s *ApprovalService) SetPageService(pages *service.PageService) {
@@ -413,7 +415,7 @@ func (s *ApprovalService) AttachMediaAsset(ctx context.Context, candidateID, med
 }
 
 func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, creator string) error {
-	if id <= 0 || s.management == nil || s.growth == nil || s.media == nil {
+	if id <= 0 || s.generation == nil {
 		return ErrInvalid
 	}
 	candidate, err := s.repo.ClaimMediaGeneration(ctx, id)
@@ -424,70 +426,27 @@ func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, 
 		s.appendCandidateEvent(ctx, id, "regeneration_requested", map[string]any{"attempt": candidate.GenerationAttempt})
 	}
 	s.appendCandidateEvent(ctx, id, "image_generation_started", map[string]any{"attempt": candidate.GenerationAttempt})
-	// Image inference can legitimately take several minutes. The profile owns
-	// the HTTP timeout; this deadline is the persisted task-level upper bound.
-	generationCtx, cancel := context.WithTimeout(ctx, 15*time.Minute)
-	defer cancel()
 	fail := func(code, reason string) error {
 		_ = s.repo.RecordMediaGenerationError(ctx, id, code, reason)
 		return errors.New(reason)
-	}
-	profiles, err := s.management.ListProviders(generationCtx)
-	if err != nil {
-		return fail("image_generation_failed", err.Error())
-	}
-	var profileID int64
-	for _, item := range profiles {
-		if item.IsDefaultImage && item.Enabled {
-			profileID = item.ID
-			break
-		}
-	}
-	if profileID == 0 {
-		return fail("image_generation_failed", "no enabled default image provider")
-	}
-	client, err := s.management.ProviderClient(generationCtx, profileID)
-	if err != nil {
-		return fail("image_generation_failed", err.Error())
-	}
-	generator, ok := client.(provider.ImageGenerator)
-	if !ok {
-		return fail("image_generation_failed", "provider does not support image generation")
 	}
 	prompt := candidate.Brief
 	if candidate.RegenerationInstruction != "" {
 		prompt += "\n\nAdditional editor requirements for this generation:\n" + candidate.RegenerationInstruction
 	}
-	image, err := generator.GenerateImage(generationCtx, provider.ImageRequest{Prompt: prompt})
-	if err != nil || len(image.Data) == 0 || len(image.Data) > 10<<20 || (image.MIMEType != "image/jpeg" && image.MIMEType != "image/png" && image.MIMEType != "image/webp") {
-		if errors.Is(generationCtx.Err(), context.DeadlineExceeded) {
-			return fail("image_generation_timeout", "image generation timed out")
+	asset, err := s.generation.GenerateImage(ctx, ImageGenerationRequest{Prompt: prompt, AltText: candidate.AltText, Creator: creator,
+		Source: "agent_candidate", Operation: "media.generate_candidate", Deadline: 15 * time.Minute,
+		AgentRunID: &candidate.SourceRunID, WorkflowRunID: candidate.WorkflowRunID, MediaCandidateID: &candidate.ID, Filename: "ai-" + strconv.FormatInt(candidate.ID, 10) + "%s"})
+	if err != nil {
+		code := "image_generation_failed"
+		if strings.Contains(err.Error(), "timed out") {
+			code = "image_generation_timeout"
 		}
-		if err != nil {
-			return fail("image_generation_failed", "image provider response: "+safeError(err))
-		}
-		return fail("image_generation_failed", "provider returned an invalid image")
-	}
-	ext := map[string]string{"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}[image.MIMEType]
-	nameBytes := make([]byte, 16)
-	if _, err := rand.Read(nameBytes); err != nil {
-		return fail("image_generation_failed", err.Error())
-	}
-	storageName := fmt.Sprintf("ai-%x%s", nameBytes, ext)
-	if err := s.media.Put(ctx, storageName, bytes.NewReader(image.Data), image.MIMEType); err != nil {
-		return fail("image_generation_failed", err.Error())
-	}
-	asset := &domain.MediaAsset{Filename: "ai-" + fmt.Sprint(candidate.ID) + ext, StorageName: storageName, URL: s.media.URL(storageName), ContentType: image.MIMEType, SizeBytes: int64(len(image.Data)), AltText: candidate.AltText}
-	if creator != "" {
-		asset.CreatedBy = &creator
-	}
-	if err := s.growth.CreateMedia(ctx, asset); err != nil {
-		_ = s.media.Delete(ctx, storageName)
-		return fail("image_generation_failed", err.Error())
+		return fail(code, err.Error())
 	}
 	if err := s.repo.CompleteMediaGeneration(ctx, id, asset.ID, false); err != nil {
 		_, _ = s.growth.DeleteMedia(ctx, asset.ID)
-		_ = s.media.Delete(ctx, storageName)
+		_ = s.media.Delete(ctx, asset.StorageName)
 		return err
 	}
 	s.appendCandidateEvent(ctx, id, "image_generation_completed", map[string]any{"media_asset_id": asset.ID})
@@ -495,74 +454,10 @@ func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, 
 }
 
 func (s *ApprovalService) GenerateDirectImage(ctx context.Context, prompt, altText, creator string) (*domain.MediaAsset, error) {
-	if s.management == nil || s.growth == nil || s.media == nil {
+	if s.generation == nil {
 		return nil, ErrInvalid
 	}
-	generationCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
-	defer cancel()
-
-	profiles, err := s.management.ListProviders(generationCtx)
-	if err != nil {
-		return nil, err
-	}
-	var profileID int64
-	for _, item := range profiles {
-		if item.IsDefaultImage && item.Enabled {
-			profileID = item.ID
-			break
-		}
-	}
-	if profileID == 0 {
-		return nil, errors.New("no enabled default image provider")
-	}
-	client, err := s.management.ProviderClient(generationCtx, profileID)
-	if err != nil {
-		return nil, err
-	}
-	generator, ok := client.(provider.ImageGenerator)
-	if !ok {
-		return nil, errors.New("provider does not support image generation")
-	}
-	cleanPrompt := prompt
-	if idx := strings.Index(cleanPrompt, "[中文说明"); idx != -1 {
-		englishPart := strings.TrimSpace(cleanPrompt[:idx])
-		if englishPart != "" {
-			cleanPrompt = englishPart
-		}
-	} else if idx := strings.Index(cleanPrompt, "(中文说明"); idx != -1 {
-		englishPart := strings.TrimSpace(cleanPrompt[:idx])
-		if englishPart != "" {
-			cleanPrompt = englishPart
-		}
-	}
-	image, err := generator.GenerateImage(generationCtx, provider.ImageRequest{Prompt: cleanPrompt})
-	if err != nil || len(image.Data) == 0 || len(image.Data) > 10<<20 || (image.MIMEType != "image/jpeg" && image.MIMEType != "image/png" && image.MIMEType != "image/webp") {
-		if errors.Is(generationCtx.Err(), context.DeadlineExceeded) {
-			return nil, errors.New("image generation timed out")
-		}
-		if err != nil {
-			return nil, errors.New("image provider response: " + safeError(err))
-		}
-		return nil, errors.New("provider returned an invalid image")
-	}
-	ext := map[string]string{"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}[image.MIMEType]
-	nameBytes := make([]byte, 16)
-	if _, err := rand.Read(nameBytes); err != nil {
-		return nil, err
-	}
-	storageName := fmt.Sprintf("ai-%x%s", nameBytes, ext)
-	if err := s.media.Put(ctx, storageName, bytes.NewReader(image.Data), image.MIMEType); err != nil {
-		return nil, err
-	}
-	asset := &domain.MediaAsset{Filename: "ai-" + storageName, StorageName: storageName, URL: s.media.URL(storageName), ContentType: image.MIMEType, SizeBytes: int64(len(image.Data)), AltText: altText}
-	if creator != "" {
-		asset.CreatedBy = &creator
-	}
-	if err := s.growth.CreateMedia(ctx, asset); err != nil {
-		_ = s.media.Delete(ctx, storageName)
-		return nil, err
-	}
-	return asset, nil
+	return s.generation.GenerateImage(ctx, ImageGenerationRequest{Prompt: prompt, AltText: altText, Creator: creator, Source: "editor", Operation: "editor.image", Deadline: 5 * time.Minute})
 }
 
 func (s *ApprovalService) SetMediaGenerationInstruction(ctx context.Context, id int64, instruction string) error {
