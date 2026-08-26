@@ -191,7 +191,9 @@ func startWebServer(cmd *cobra.Command, args []string) {
 			logger.Info("Reconciled AI workspace starter Agents", zap.Int("created", created))
 		}
 		runner := agentservice.NewRunner(agentRepo, management, toolRegistry, postSvc)
+		generation := agentservice.NewGenerationService(agentRepo, management, growthSvc, mediaStore)
 		approvals := agentservice.NewApprovalService(agentRepo, postSvc, management, growthSvc, mediaStore, pageSvc)
+		approvals.SetGenerationService(generation)
 		workflowSvc := workflowservice.NewService(db, runner, management, toolRegistry)
 		workflowSvc.StartScheduler(ctx, globalConfig.AIAgentConfig.SchedulerInterval)
 		connectorSvc := connector.NewService(db, secrets)
@@ -205,6 +207,7 @@ func startWebServer(cmd *cobra.Command, args []string) {
 			Workflows:  workflowSvc,
 			Operations: operationsSvc,
 			Connectors: connectorSvc,
+			Generation: generation,
 		})
 		agentservice.NewScheduler(
 			agentRepo, runner, globalConfig.AIAgentConfig.SchedulerInterval, logger,

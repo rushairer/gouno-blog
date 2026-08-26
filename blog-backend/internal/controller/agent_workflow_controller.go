@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	agentservice "github.com/rushairer/blog-backend/internal/agent"
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/provider"
 	workflowservice "github.com/rushairer/blog-backend/internal/workflow"
@@ -182,114 +183,45 @@ func (ctrl *AgentController) DraftAssist(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "task and article context or prompt are required"))
 		return
 	}
-	profiles, err := ctrl.svc.ListProviders(c.Request.Context())
+	if ctrl.generation == nil {
+		c.JSON(http.StatusServiceUnavailable, gouno.NewErrorResponse(http.StatusServiceUnavailable, "AI generation service is unavailable"))
+		return
+	}
+	generated, err := ctrl.generation.GenerateEditorText(c.Request.Context(), agentservice.EditorTextRequest{
+		Task: req.Task, Title: req.Title, Summary: req.Summary, Content: req.Content, Prompt: req.Prompt, Categories: req.Categories,
+	})
 	if err != nil {
+		// Preserve the historical editor contract for a missing writing default.
+		if strings.Contains(err.Error(), "default writing Provider is required") {
+			c.JSON(http.StatusConflict, gouno.NewErrorResponse(http.StatusConflict, "an enabled default AI provider is required"))
+			return
+		}
 		WriteDomainError(c, err)
 		return
 	}
-	var selected *domain.ProviderProfile
-	for _, profile := range profiles {
-		if profile.Enabled && profile.IsDefaultWriting {
-			selected = profile
-			break
-		}
-	}
-	if selected == nil {
-		c.JSON(http.StatusConflict, gouno.NewErrorResponse(http.StatusConflict, "an enabled default AI provider is required"))
-		return
-	}
-	client, err := ctrl.svc.ProviderClient(c.Request.Context(), selected.ID)
-	if err != nil {
-		WriteDomainError(c, err)
-		return
-	}
-	maxTokens := 1000
-	instruction := "You are an editorial assistant for a blog. Return only valid JSON in the form {\"suggestions\":[\"...\"]}."
-	if req.Task == "title" {
-		instruction += " Produce exactly three concise candidates. Do not explain, use Markdown, or change the article. Create specific Chinese article titles that accurately reflect the supplied draft."
-	} else if req.Task == "summary" {
-		maxTokens = 2000
-		instruction += " Produce exactly three concise candidates. Do not explain, use Markdown, or change the article. Create Chinese summaries, each at most 300 Chinese characters, that accurately reflect the supplied draft."
-	} else if req.Task == "slug" {
-		maxTokens = 800
-		instruction += " Produce exactly three concise candidates. Do not explain, use Markdown, or change the article. Create lowercase URL slugs using ASCII letters, numbers, and hyphens only."
-	} else if req.Task == "tags" {
-		maxTokens = 800
-		instruction += " Produce 3 to 5 highly relevant, concise Chinese topic tags (1-4 words each) reflecting the core themes of this draft. Return only valid JSON: {\"suggestions\":[\"tag1\", \"tag2\", \"tag3\"]}. Do not explain."
-	} else if req.Task == "seo" {
-		maxTokens = 2000
-		instruction = "You are an SEO specialist. Analyze the draft and produce optimal SEO metadata. Return only valid JSON in the form: {\"seo_title\": \"...\", \"seo_description\": \"...\", \"slug\": \"...\"}. Ensure seo_title is under 60 characters with core keywords, seo_description is under 160 characters engaging search snippet, and slug is lowercase ASCII words with hyphens."
-	} else if req.Task == "alt" {
-		maxTokens = 800
-		instruction += " Produce 3 concise, descriptive Chinese image alt texts (accessibility scene descriptions) suitable for the cover image of this article. Return only valid JSON: {\"suggestions\":[\"alt 1\", \"alt 2\", \"alt 3\"]}. Do not explain."
-	} else if req.Task == "category" {
-		maxTokens = 500
-		instruction = "You are a blog editor. Given the candidate categories list in the request, select the single most appropriate category name for this draft. Return only valid JSON in the form: {\"suggestions\":[\"category_name\"]}."
-	} else if req.Task == "cover_prompt" {
-		maxTokens = 2500
-		instruction = "You are an AI art director. Generate 3 distinct, highly creative, and detailed text-to-image prompts in English (each followed by a concise Chinese summary in brackets: [中文说明: ...]) for generating an eye-catching, modern blog cover image suitable for Midjourney or DALL-E 3. Provide 3 different visual directions (e.g. 1. Futuristic Surreal Tech, 2. Minimalist Conceptual Graphic, 3. Cinematic 3D Scene). Return only valid JSON: {\"suggestions\":[\"Prompt 1... [中文说明: ...]\", \"Prompt 2... [中文说明: ...]\", \"Prompt 3... [中文说明: ...]\"]}."
-	} else if req.Task == "metadata_all" {
-		maxTokens = 3000
-		instruction = "You are a senior blog managing editor. Analyze the draft and generate all publishing metadata in a single valid JSON object with format:\n{\"summary\":\"...\",\"tags\":[\"...\"],\"slug\":\"...\",\"seo_title\":\"...\",\"seo_description\":\"...\",\"category\":\"...\",\"cover_alt\":\"...\"}.\nEnsure summary is ~150-250 Chinese chars, tags has 3-5 keywords, slug is ASCII lowercase words with hyphens, seo_title is <=60 chars, seo_description is <=160 chars, category matches the best choice from candidate categories (if supplied), and cover_alt describes the cover scene."
-	} else if req.Task == "content" {
-		maxTokens = selected.MaxOutputTokens
-		if maxTokens < 6000 {
-			maxTokens = 6000
-		}
-		instruction = "You are a professional blog writer and editor. Generate a complete, comprehensive, well-structured Chinese blog article in Markdown format based on the supplied context and user prompt. Ensure the article is fully written and completed with an introduction, detailed body sections, and a solid conclusion. Output the raw Markdown content directly without JSON wrapping, without markdown code fence wrappers, and without conversational preamble."
-	}
-
-	contentToSend := req.Content
-	if req.Task != "content" {
-		runes := []rune(contentToSend)
-		if len(runes) > 4000 {
-			contentToSend = string(runes[:4000]) + "\n\n...(余下文章内容已省略)..."
-		}
-	}
-	payloadMap := map[string]any{"title": req.Title, "summary": req.Summary, "content": contentToSend}
-	if req.Prompt != "" {
-		payloadMap["prompt"] = req.Prompt
-	}
-	if len(req.Categories) > 0 {
-		payloadMap["categories"] = req.Categories
-	}
-	prompt, _ := json.Marshal(payloadMap)
-	result, err := client.Generate(c.Request.Context(), provider.Request{Instructions: instruction, Messages: []provider.Message{{Role: "user", Content: string(prompt)}}, MaxTokens: maxTokens})
-	if err != nil {
-		WriteDomainError(c, err)
-		return
-	}
-
 	if req.Task == "content" {
-		cleaned := cleanDraftAssistContent(result.Text)
+		cleaned := cleanDraftAssistContent(generated.Text)
 		if cleaned == "" {
 			c.JSON(http.StatusBadGateway, gouno.NewErrorResponse(http.StatusBadGateway, "AI returned an empty content response"))
 			return
 		}
-		c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"suggestions": []string{cleaned}, "provider": selected.Name, "model": selected.Model}))
+		c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"suggestions": []string{cleaned}, "provider": generated.Provider, "model": generated.Model}))
 		return
 	}
-
 	if req.Task == "metadata_all" || req.Task == "seo" {
-		metadata := extractStructuredMetadata(result.Text)
+		metadata := extractStructuredMetadata(generated.Text)
 		if metadata != nil {
 			metaBytes, _ := json.Marshal(metadata)
-			c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{
-				"suggestions": []string{string(metaBytes)},
-				"metadata":    metadata,
-				"provider":    selected.Name,
-				"model":       selected.Model,
-			}))
+			c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"suggestions": []string{string(metaBytes)}, "metadata": metadata, "provider": generated.Provider, "model": generated.Model}))
 			return
 		}
 	}
-
-	suggestions := extractDraftSuggestions(result.Text)
+	suggestions := extractDraftSuggestions(generated.Text)
 	if len(suggestions) == 0 {
 		c.JSON(http.StatusBadGateway, gouno.NewErrorResponse(http.StatusBadGateway, "AI returned an invalid suggestion response"))
 		return
 	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"suggestions": suggestions, "provider": selected.Name, "model": selected.Model}))
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"suggestions": suggestions, "provider": generated.Provider, "model": generated.Model}))
 }
 
 var thinkRegex = regexp.MustCompile(`(?is)<(think|thought)>.*?</(think|thought)>`)
