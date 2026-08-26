@@ -224,7 +224,7 @@ func (r *PostRepository) ListAdmin(ctx context.Context, filter domain.AdminPostF
 	}
 	args = append(args, limit, offset)
 	listQuery := fmt.Sprintf(`SELECT p.id, p.title, p.slug, p.summary, p.content, p.tags, p.category_id, COALESCE(p.cover_url, ''), COALESCE(p.cover_alt, ''), COALESCE(p.seo_title, ''), COALESCE(p.seo_description, ''), p.status, p.views_count, p.likes_count, p.published_at, p.scheduled_at, p.created_at, p.updated_at
-		FROM posts p LEFT JOIN categories c ON c.id = p.category_id%s ORDER BY p.updated_at DESC LIMIT $%d OFFSET $%d`, whereSQL, len(args)-1, len(args))
+		FROM posts p LEFT JOIN categories c ON c.id = p.category_id%s ORDER BY COALESCE(p.published_at, p.created_at) DESC, p.id DESC LIMIT $%d OFFSET $%d`, whereSQL, len(args)-1, len(args))
 	rows, err := r.db.QueryContext(ctx, listQuery, args...)
 	if err != nil {
 		return nil, 0, err
