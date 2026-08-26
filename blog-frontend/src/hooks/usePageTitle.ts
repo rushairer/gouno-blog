@@ -1,5 +1,9 @@
 import { useEffect } from "react";
-import { DEFAULT_SITE_SETTINGS } from "../config/site-defaults";
+import {
+  DEFAULT_SITE_SETTINGS,
+  getCachedSiteSettings,
+  SITE_SETTINGS_UPDATED_EVENT,
+} from "../config/site-defaults";
 import { siteApi } from "../api/site";
 
 interface TitleOptions {
@@ -9,7 +13,15 @@ interface TitleOptions {
   restoreOnUnmount?: boolean;
 }
 
-let cachedBrand = DEFAULT_SITE_SETTINGS.site_title;
+let cachedBrand =
+  getCachedSiteSettings()?.site_title || DEFAULT_SITE_SETTINGS.site_title;
+
+if (typeof window !== "undefined") {
+  window.addEventListener(SITE_SETTINGS_UPDATED_EVENT, (e: Event) => {
+    const detail = (e as CustomEvent).detail;
+    if (detail?.site_title) cachedBrand = detail.site_title;
+  });
+}
 
 siteApi
   .getSiteSettings()

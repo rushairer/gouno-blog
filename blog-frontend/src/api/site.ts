@@ -1,4 +1,5 @@
 import { authenticatedApiFetch as apiFetch, readData } from "./client";
+import { setCachedSiteSettings } from "../config/site-defaults";
 import type { Category, SiteSettings } from "../types/blog";
 
 export interface TagSummary {
@@ -8,23 +9,29 @@ export interface TagSummary {
 
 export const siteApi = {
   async getSiteSettings(): Promise<SiteSettings> {
-    return readData<SiteSettings>(apiFetch("/api/site"));
+    const data = await readData<SiteSettings>(apiFetch("/api/site"));
+    if (data && typeof data === "object") setCachedSiteSettings(data);
+    return data;
   },
 
   async getAdminSettings(): Promise<SiteSettings> {
-    return readData<SiteSettings>(apiFetch("/api/admin/settings"));
+    const data = await readData<SiteSettings>(apiFetch("/api/admin/settings"));
+    if (data && typeof data === "object") setCachedSiteSettings(data);
+    return data;
   },
 
   async updateAdminSettings(
     settings: Record<string, string>,
   ): Promise<SiteSettings> {
-    return readData<SiteSettings>(
+    const data = await readData<SiteSettings>(
       apiFetch("/api/admin/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(settings),
       }),
     );
+    if (data && typeof data === "object") setCachedSiteSettings(data);
+    return data;
   },
 
   async updateSiteSettings(

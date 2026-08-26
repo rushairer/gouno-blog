@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { GitBranch, Mail, Rss, ShieldAlert } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { MarkdownRenderer } from "../components/MarkdownRenderer";
-import { DEFAULT_SITE_SETTINGS } from "../config/site-defaults";
+import { DEFAULT_SITE_SETTINGS, getCachedSiteSettings } from "../config/site-defaults";
 import { pagesApi } from "../api/pages";
 import { siteApi } from "../api/site";
 import { extractMarkdownTOC } from "../utils/markdown";
@@ -14,7 +14,9 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
   const slug = fixedSlug || routeSlug || "";
 
   const [page, setPage] = useState<CustomPage | null>(null);
-  const [site, setSite] = useState<SiteSettings>(DEFAULT_SITE_SETTINGS);
+  const [site, setSite] = useState<SiteSettings>(
+    () => getCachedSiteSettings() || DEFAULT_SITE_SETTINGS,
+  );
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -103,7 +105,10 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
   if (loading || !page) {
     return (
       <div className="public-container state-page">
-        <p className="loading-indicator">正在载入页面…</p>
+        <div className="state-card">
+          <span className="spinner" aria-hidden="true" />
+          <p>正在载入页面…</p>
+        </div>
       </div>
     );
   }

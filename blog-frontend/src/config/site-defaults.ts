@@ -19,6 +19,31 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   favicon_url: "/favicon.svg",
 };
 
+export const SITE_SETTINGS_STORAGE_KEY = "gouno-blog:site-settings";
+export const SITE_SETTINGS_UPDATED_EVENT = "gouno-blog:site-settings-updated";
+
+export function getCachedSiteSettings(): SiteSettings | null {
+  try {
+    const raw = localStorage.getItem(SITE_SETTINGS_STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as SiteSettings;
+  } catch {
+    return null;
+  }
+}
+
+export function setCachedSiteSettings(settings: Partial<SiteSettings>): void {
+  try {
+    const merged = { ...DEFAULT_SITE_SETTINGS, ...(getCachedSiteSettings() || {}), ...settings };
+    localStorage.setItem(SITE_SETTINGS_STORAGE_KEY, JSON.stringify(merged));
+    window.dispatchEvent(
+      new CustomEvent(SITE_SETTINGS_UPDATED_EVENT, { detail: merged }),
+    );
+  } catch {
+    // Ignore storage errors in restricted browser contexts
+  }
+}
+
 export function authorInitials(name: string) {
   const words = name.trim().split(/\s+/).filter(Boolean);
   if (words.length > 1)

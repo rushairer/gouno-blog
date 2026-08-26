@@ -7,7 +7,11 @@ import {
   LoadingState,
   SectionHeading,
 } from "../components/ui";
-import { authorInitials, DEFAULT_SITE_SETTINGS } from "../config/site-defaults";
+import {
+  authorInitials,
+  DEFAULT_SITE_SETTINGS,
+  getCachedSiteSettings,
+} from "../config/site-defaults";
 import { postsApi } from "../api/posts";
 import { siteApi } from "../api/site";
 import { markdownToPlainText } from "../utils/markdown";
@@ -79,7 +83,9 @@ export default function Home() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [tagSummaries, setTagSummaries] = useState<TagSummary[]>([]);
-  const [site, setSite] = useState<SiteSettings>(DEFAULT_SITE_SETTINGS);
+  const [site, setSite] = useState<SiteSettings>(
+    () => getCachedSiteSettings() || DEFAULT_SITE_SETTINGS,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
