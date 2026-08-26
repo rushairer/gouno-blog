@@ -113,6 +113,7 @@ export default function Home() {
     );
 
   const lead = posts[0];
+  const featuredPosts = posts.slice(1, 5);
   return (
     <>
       <section className="home-hero public-container">
@@ -145,7 +146,7 @@ export default function Home() {
         {!error && posts.length === 0 ? (
           <EmptyState label="这里还没有文章。完成第一篇写作后，它会成为首页主角。" />
         ) : null}
-        {posts.length > 1 ? (
+        {featuredPosts.length ? (
           <section className="home-section">
             <SectionHeading
               title="精选文章"
@@ -155,13 +156,41 @@ export default function Home() {
                 </Link>
               }
             />
-            <div className="featured-layout">
-              <Story post={posts[1]} index={2} featured />
-              <div>
-                {posts.slice(2, 4).map((post, index) => (
-                  <Story key={post.id} post={post} index={index + 3} />
-                ))}
-              </div>
+            <div
+              className={`featured-layout featured-layout--${featuredPosts.length}`}
+            >
+              {featuredPosts.length < 3 ? (
+                featuredPosts.map((post, index) => (
+                  <Story
+                    key={post.id}
+                    post={post}
+                    index={index + 2}
+                    featured={featuredPosts.length === 1}
+                  />
+                ))
+              ) : featuredPosts.length === 3 ? (
+                <>
+                  <Story post={featuredPosts[0]} index={2} featured />
+                  <div className="featured-layout__secondary">
+                    {featuredPosts.slice(1).map((post, index) => (
+                      <Story key={post.id} post={post} index={index + 3} />
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="featured-layout__column">
+                    {featuredPosts.slice(0, 2).map((post, index) => (
+                      <Story key={post.id} post={post} index={index + 2} />
+                    ))}
+                  </div>
+                  <div className="featured-layout__secondary">
+                    {featuredPosts.slice(2).map((post, index) => (
+                      <Story key={post.id} post={post} index={index + 4} />
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </section>
         ) : null}
