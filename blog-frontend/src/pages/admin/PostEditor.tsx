@@ -111,6 +111,8 @@ export default function PostEditor() {
   const [showAiImage, setShowAiImage] = useState(false);
   const [imagePrompt, setImagePrompt] = useState("");
   const [imageAlt, setImageAlt] = useState("");
+  const [imagePromptCandidates, setImagePromptCandidates] = useState<string[]>([]);
+  const [aiIdeateLoading, setAiIdeateLoading] = useState(false);
   const [aiImageLoading, setAiImageLoading] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<{
     url: string;
@@ -658,6 +660,51 @@ export default function PostEditor() {
     setShowAiWriting(false);
   };
 
+  const handleIdeateImagePrompts = async () => {
+    if (!post.title.trim() && !post.content.trim()) {
+      const msg = "请先填写文章标题或正文，AI 才能理解内容并构思插画。";
+      setAssistError(msg);
+      notify(msg, "error");
+      return;
+    }
+    setAiIdeateLoading(true);
+    setAssistError("");
+    try {
+      notify("AI 正在深度阅读文章并构思插画方案，请稍候…", "success");
+      const res = await agentApi.getDraftAssist({
+        task: "cover_prompt",
+        title: post.title,
+        summary: post.summary,
+        content: post.content,
+      });
+      const cleanList: string[] = [];
+      (res.suggestions || []).forEach((item) => {
+        if (item.includes('","')) {
+          item.split('","').forEach((sub) => {
+            const clean = sub.replace(/^[{"[\s]+|[}"\]\s,]+$/g, "").trim();
+            if (clean) cleanList.push(clean);
+          });
+        } else {
+          const clean = item.replace(/^[{"[\s]+|[}"\]\s,]+$/g, "").trim();
+          if (clean) cleanList.push(clean);
+        }
+      });
+      setImagePromptCandidates(cleanList);
+      if (cleanList.length) {
+        notify(`已结合文章构思出 ${cleanList.length} 组插画方案！`, "success");
+      } else {
+        notify("未能生成插画构思，请稍后重试。", "error");
+      }
+    } catch (reason) {
+      const msg =
+        reason instanceof Error ? reason.message : "插画构思失败，请稍后重试。";
+      setAssistError(msg);
+      notify(msg, "error");
+    } finally {
+      setAiIdeateLoading(false);
+    }
+  };
+
   const handleGenerateAiImage = async (presetPrompt?: string) => {
     const effectivePrompt = (
       presetPrompt !== undefined ? presetPrompt : imagePrompt
@@ -675,7 +722,15 @@ export default function PostEditor() {
       const finalPrompt =
         effectivePrompt ||
         `Modern artistic illustration representing: ${post.title}`;
-      const finalAlt = imageAlt.trim() || post.title || "文章插图";
+      let finalAlt = imageAlt.trim();
+      if (!finalAlt) {
+        const match = finalPrompt.match(/\[中文说明:\s*([^\]]+)\]/);
+        if (match && match[1]) {
+          finalAlt = match[1].trim();
+        } else {
+          finalAlt = post.title || "文章插图";
+        }
+      }
       const res = await agentApi.generateImage({
         prompt: finalPrompt,
         alt_text: finalAlt,
@@ -1157,9 +1212,25 @@ export default function PostEditor() {
                 <div className="editor-ai-presets">
                   <button
                     type="button"
+                    className="editor-ai-ideate-btn"
+                    onClick={() => void handleIdeateImagePrompts()}
+                    disabled={aiIdeateLoading || aiImageLoading}
+                  >
+                    {aiIdeateLoading ? (
+                      <>
+                        <LoaderCircle className="is-spinning" /> 正在构思画面…
+                      </>
+                    ) : (
+                      "✨ 结合文章智能构思画面"
+                    )}
+                  </button>
+                  <button
+                    type="button"
                     onClick={() =>
                       void handleGenerateAiImage(
-                        "A sleek modern architectural diagram illustration showing system components, clean lines, isometric view, tech palette",
+                        post.title
+                          ? `A sleek modern architectural diagram illustration showing system components for ${post.title}, clean lines, isometric view, tech palette`
+                          : "A sleek modern architectural diagram illustration showing system components, clean lines, isometric view, tech palette",
                       )
                     }
                     disabled={aiImageLoading}
@@ -1170,7 +1241,9 @@ export default function PostEditor() {
                     type="button"
                     onClick={() =>
                       void handleGenerateAiImage(
-                        "A modern minimal editorial vector illustration about technology and human intelligence, clean flat design, subtle gradients",
+                        post.title
+                          ? `A modern minimal editorial vector illustration about ${post.title}, clean flat design, subtle gradients`
+                          : "A modern minimal editorial vector illustration about technology and human intelligence, clean flat design, subtle gradients",
                       )
                     }
                     disabled={aiImageLoading}
@@ -1181,7 +1254,9 @@ export default function PostEditor() {
                     type="button"
                     onClick={() =>
                       void handleGenerateAiImage(
-                        "Cinematic concept art, hyper-detailed futuristic scene, volumetric lighting, 8k wallpaper quality",
+                        post.title
+                          ? `Cinematic concept art for ${post.title}, hyper-detailed futuristic scene, volumetric lighting, 8k wallpaper quality`
+                          : "Cinematic concept art, hyper-detailed futuristic scene, volumetric lighting, 8k wallpaper quality",
                       )
                     }
                     disabled={aiImageLoading}
@@ -1192,18 +1267,33 @@ export default function PostEditor() {
                     type="button"
                     onClick={() =>
                       void handleGenerateAiImage(
-                        "Cute 3D isometric clay render illustration, soft studio lighting, playful tech scene",
+                        post.title
+                          ? `Cute 3D isometric clay render illustration representing ${post.title}, soft studio lighting, playful tech scene`
+                          : "Cute 3D isometric clay render illustration, soft studio lighting, playful tech scene",
                       )
                     }
                     disabled={aiImageLoading}
                   >
                     🎨 3D 立体风
                   </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void handleGenerateAiImage(
+                        post.title
+                          ? `Cute and simple 2D cartoon flat illustration representing ${post.title}, clean line art, playful vibrant colors, minimal modern aesthetic`
+                          : "Cute and simple 2D cartoon flat illustration, clean line art, playful vibrant colors, minimal modern aesthetic",
+                      )
+                    }
+                    disabled={aiImageLoading}
+                  >
+                    🧸 简单卡通风
+                  </button>
                 </div>
               </div>
               <div className="editor-ai-prompt-box">
                 <Input
-                  placeholder="输入生图提示词（支持中文或英文，例如：微服务架构调用拓扑图，蓝紫霓虹光效…）"
+                  placeholder="输入生图提示词（或点击上方“智能构思画面”，也可直接描述场景）"
                   value={imagePrompt}
                   onChange={(e) => setImagePrompt(e.target.value)}
                   onKeyDown={(e) => {
@@ -1239,6 +1329,65 @@ export default function PostEditor() {
                   )}
                 </Button>
               </div>
+              {imagePromptCandidates.length > 0 ? (
+                <div
+                  className="editor-ai-candidates"
+                  aria-label="画面构思候选"
+                  style={{ marginTop: 8 }}
+                >
+                  {imagePromptCandidates.map((item) => {
+                    const match = item.match(/\[中文说明:\s*([^\]]+)\]/);
+                    const chDesc = match && match[1] ? match[1].trim() : "";
+                    const promptText = item
+                      .replace(/\[中文说明:\s*[^\]]+\]/g, "")
+                      .trim();
+                    return (
+                      <div key={item} className="editor-prompt-candidate">
+                        {chDesc ? (
+                          <div
+                            style={{
+                              fontWeight: 600,
+                              fontSize: 12,
+                              color: "var(--ui-brand)",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                          >
+                            <Sparkles size={13} /> {chDesc}
+                          </div>
+                        ) : null}
+                        <div className="editor-prompt-text">{promptText}</div>
+                        <div className="editor-prompt-candidate-actions">
+                          <Button
+                            variant="secondary"
+                            type="button"
+                            onClick={() => {
+                              if (chDesc) setImageAlt(chDesc);
+                              setImagePrompt(promptText);
+                              notify("已填入生图提示词！", "success");
+                            }}
+                          >
+                            ✍️ 填入提示词
+                          </Button>
+                          <Button
+                            variant="primary"
+                            type="button"
+                            disabled={aiImageLoading}
+                            onClick={() => {
+                              if (chDesc) setImageAlt(chDesc);
+                              setImagePrompt(promptText);
+                              void handleGenerateAiImage(promptText);
+                            }}
+                          >
+                            🎨 一键生图
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
               {assistError ? (
                 <div
                   style={{

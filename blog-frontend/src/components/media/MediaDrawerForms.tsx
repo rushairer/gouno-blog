@@ -190,6 +190,10 @@ const presets = [
     "Cute 3D isometric clay render illustration, soft studio lighting, playful scene",
   ],
   [
+    "🧸 简单卡通",
+    "Cute and simple 2D cartoon flat illustration, clean line art, playful vibrant colors, minimal modern aesthetic",
+  ],
+  [
     "🌄 自然风光",
     "Breathtaking atmospheric nature landscape, morning golden hour mist, tranquil mountain reflections, award-winning photography",
   ],
