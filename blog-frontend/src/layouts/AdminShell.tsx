@@ -12,7 +12,12 @@ import {
 } from "lucide-react";
 import { notificationsApi } from "../api/notifications";
 import { gossoClient, logout } from "../auth";
-import { DEFAULT_SITE_SETTINGS } from "../config/site-defaults";
+import {
+  DEFAULT_SITE_SETTINGS,
+  getCachedSiteSettings,
+  SITE_SETTINGS_STORAGE_KEY,
+  SITE_SETTINGS_UPDATED_EVENT,
+} from "../config/site-defaults";
 import { siteApi } from "../api/site";
 import { adminNavigation } from "../utils/navigation";
 
@@ -38,7 +43,10 @@ export default function AdminShell({ children }: { children: ReactNode }) {
       ? new URLSearchParams(location.search).get("q") || ""
       : "",
   );
-  const [siteName, setSiteName] = useState(DEFAULT_SITE_SETTINGS.site_title);
+  const [siteName, setSiteName] = useState(
+    () =>
+      getCachedSiteSettings()?.site_title || DEFAULT_SITE_SETTINGS.site_title,
+  );
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
@@ -60,6 +68,27 @@ export default function AdminShell({ children }: { children: ReactNode }) {
       .catch(() => {
         // Keep the administration shell available when public site settings fail.
       });
+
+    const handleUpdate = (event: Event) => {
+      const fresh =
+        (event as CustomEvent).detail || getCachedSiteSettings();
+      if (fresh?.site_title) setSiteName(fresh.site_title);
+    };
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === SITE_SETTINGS_STORAGE_KEY && event.newValue) {
+        try {
+          const fresh = JSON.parse(event.newValue);
+          if (fresh?.site_title) setSiteName(fresh.site_title);
+        } catch {}
+      }
+    };
+
+    window.addEventListener(SITE_SETTINGS_UPDATED_EVENT, handleUpdate);
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener(SITE_SETTINGS_UPDATED_EVENT, handleUpdate);
+      window.removeEventListener("storage", handleStorage);
+    };
   }, []);
 
   useEffect(() => {

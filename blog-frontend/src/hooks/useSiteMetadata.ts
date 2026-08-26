@@ -1,6 +1,11 @@
 import { useEffect } from "react";
 import { siteApi } from "../api/site";
-import { DEFAULT_SITE_SETTINGS } from "../config/site-defaults";
+import {
+  DEFAULT_SITE_SETTINGS,
+  getCachedSiteSettings,
+  SITE_SETTINGS_STORAGE_KEY,
+  SITE_SETTINGS_UPDATED_EVENT,
+} from "../config/site-defaults";
 import type { SiteSettings } from "../types/blog";
 
 function faviconType(url: string) {
@@ -13,7 +18,7 @@ function faviconType(url: string) {
   return "";
 }
 
-export function applySiteMetadata(settings: SiteSettings) {
+export function applySiteMetadata(settings: Partial<SiteSettings>) {
   const favicon = settings.favicon_url || DEFAULT_SITE_SETTINGS.favicon_url;
   const faviconLink =
     document.head.querySelector<HTMLLinkElement>("#site-favicon") ||
@@ -35,22 +40,49 @@ export function applySiteMetadata(settings: SiteSettings) {
   if (descriptionMeta && description) descriptionMeta.content = description;
 
   // Route-level title hooks take precedence. This only replaces the static HTML fallback.
-  if (document.title === DEFAULT_SITE_SETTINGS.site_title) {
+  const currentTitle = document.title;
+  const defaultTitle = DEFAULT_SITE_SETTINGS.site_title;
+  if (!currentTitle || currentTitle === defaultTitle || currentTitle === "Gouno Blog") {
     document.title =
       settings.default_seo_title ||
       settings.site_title ||
-      DEFAULT_SITE_SETTINGS.site_title;
+      defaultTitle;
   }
 }
 
 export function useSiteMetadata() {
   useEffect(() => {
-    applySiteMetadata(DEFAULT_SITE_SETTINGS);
+    // 1. Synchronously apply cached settings on mount to prevent any flash
+    const initial = getCachedSiteSettings() || DEFAULT_SITE_SETTINGS;
+    applySiteMetadata(initial);
+
+    // 2. Revalidate in background
     siteApi
       .getSiteSettings()
       .then(applySiteMetadata)
       .catch(() => {
         // The static defaults keep the initial document metadata usable during API outages.
       });
+
+    // 3. Listen to local and cross-tab settings updates
+    const handleUpdate = (event: Event) => {
+      const fresh =
+        (event as CustomEvent<SiteSettings>).detail || getCachedSiteSettings();
+      if (fresh) applySiteMetadata(fresh);
+    };
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === SITE_SETTINGS_STORAGE_KEY && event.newValue) {
+        try {
+          applySiteMetadata(JSON.parse(event.newValue));
+        } catch {}
+      }
+    };
+
+    window.addEventListener(SITE_SETTINGS_UPDATED_EVENT, handleUpdate);
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener(SITE_SETTINGS_UPDATED_EVENT, handleUpdate);
+      window.removeEventListener("storage", handleStorage);
+    };
   }, []);
 }

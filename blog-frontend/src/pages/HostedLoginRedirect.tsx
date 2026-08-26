@@ -12,8 +12,11 @@ export default function HostedLoginRedirect() {
 
   return (
     <div className="public-container state-page" role="status">
-      <h1>正在前往安全登录页</h1>
-      <p>登录由 GOSSO 身份提供方统一处理…</p>
+      <div className="state-card">
+        <span className="spinner" aria-hidden="true" />
+        <h1>正在前往安全登录页</h1>
+        <p>登录由 GOSSO 身份提供方统一处理…</p>
+      </div>
     </div>
   );
 }

@@ -47,7 +47,12 @@ function Public({ children }: { children: React.ReactNode }) {
     <PublicShell>
       <React.Suspense
         fallback={
-          <div className="public-container state-page">正在载入内容…</div>
+          <div className="public-container state-page">
+            <div className="state-card">
+              <span className="spinner" aria-hidden="true" />
+              <p>正在载入内容…</p>
+            </div>
+          </div>
         }
       >
         {children}
@@ -77,19 +82,24 @@ function Admin({ children }: { children: React.ReactNode }) {
 
   if (!allowed) {
     return (
-      <div className="public-container state-page" role="status">
-        <h1>需要登录</h1>
-        <p>{redirectError || "正在前往安全登录页…"}</p>
-        {redirectError ? (
-          <button
-            className="btn btn-primary"
-            type="button"
-            onClick={() => void startAuthorization()}
-          >
-            重新登录
-          </button>
-        ) : null}
-      </div>
+      <PublicShell>
+        <div className="public-container state-page" role="status">
+          <div className="state-card">
+            <span className="spinner" aria-hidden="true" />
+            <h1>需要登录</h1>
+            <p>{redirectError || "正在前往安全登录页…"}</p>
+            {redirectError ? (
+              <button
+                className="btn btn-primary"
+                type="button"
+                onClick={() => void startAuthorization()}
+              >
+                重新登录
+              </button>
+            ) : null}
+          </div>
+        </div>
+      </PublicShell>
     );
   }
   return (
@@ -109,7 +119,14 @@ export default function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/callback" element={<Callback />} />
-            <Route path="/login" element={<HostedLoginRedirect />} />
+            <Route
+              path="/login"
+              element={
+                <Public>
+                  <HostedLoginRedirect />
+                </Public>
+              }
+            />
             <Route
               path="/"
               element={
