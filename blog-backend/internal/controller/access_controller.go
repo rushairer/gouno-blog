@@ -46,9 +46,10 @@ func (ctrl *AccessController) ListAudits(c *gin.Context) {
 }
 
 type membershipRequest struct {
-	Status string   `json:"status"`
-	Roles  []string `json:"roles"`
-	Reason string   `json:"reason"`
+	DisplayName *string  `json:"display_name,omitempty"`
+	Status      string   `json:"status"`
+	Roles       []string `json:"roles"`
+	Reason      string   `json:"reason"`
 }
 
 func (ctrl *AccessController) UpdateMember(c *gin.Context) {
@@ -73,7 +74,7 @@ func (ctrl *AccessController) UpdateMember(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "invalid authentication"))
 		return
 	}
-	if err = ctrl.service.SetMember(c.Request.Context(), actor, principalID, req.Status, req.Roles, req.Reason, c.GetHeader("X-Request-ID"), c.ClientIP()); err != nil {
+	if err = ctrl.service.SetMember(c.Request.Context(), actor, principalID, req.DisplayName, req.Status, req.Roles, req.Reason, c.GetHeader("X-Request-ID"), c.ClientIP()); err != nil {
 		status := http.StatusBadRequest
 		if err == access.ErrForbidden || err == access.ErrOwnerOnly || err == access.ErrSelfEscalation || err == access.ErrLastOwner {
 			status = http.StatusForbidden

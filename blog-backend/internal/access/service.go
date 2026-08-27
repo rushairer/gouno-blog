@@ -138,6 +138,9 @@ func (s *Service) Resolve(ctx context.Context, claims jwt.MapClaims) (Snapshot, 
 	if display == "" {
 		display = stringClaim(claims, "preferred_username")
 	}
+	if display == "" {
+		display = stringClaim(claims, "username")
+	}
 	email, avatar := stringClaim(claims, "email"), stringClaim(claims, "picture")
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -146,7 +149,11 @@ func (s *Service) Resolve(ctx context.Context, claims jwt.MapClaims) (Snapshot, 
 	defer tx.Rollback()
 	var p Principal
 	err = tx.QueryRowContext(ctx, `INSERT INTO blog_principals (issuer, subject, display_name, email, avatar_url)
-VALUES ($1,$2,$3,$4,$5) ON CONFLICT (issuer,subject) DO UPDATE SET display_name=EXCLUDED.display_name, email=EXCLUDED.email, avatar_url=EXCLUDED.avatar_url, last_seen_at=NOW()
+VALUES ($1,$2,$3,$4,$5) ON CONFLICT (issuer,subject) DO UPDATE SET
+  display_name=CASE WHEN EXCLUDED.display_name != '' THEN EXCLUDED.display_name ELSE blog_principals.display_name END,
+  email=CASE WHEN EXCLUDED.email != '' THEN EXCLUDED.email ELSE blog_principals.email END,
+  avatar_url=CASE WHEN EXCLUDED.avatar_url != '' THEN EXCLUDED.avatar_url ELSE blog_principals.avatar_url END,
+  last_seen_at=NOW()
 RETURNING id, issuer, subject, display_name, email`, issuer, subject, display, email, avatar).Scan(&p.ID, &p.Issuer, &p.Subject, &p.DisplayName, &p.Email)
 	if err != nil {
 		return Snapshot{}, err
@@ -222,7 +229,7 @@ func (s *Service) ListMembers(ctx context.Context) ([]Member, error) {
 	return result, rows.Err()
 }
 
-func (s *Service) SetMember(ctx context.Context, actor Snapshot, principalID int64, status string, roles []string, reason, requestID, sourceIP string) error {
+func (s *Service) SetMember(ctx context.Context, actor Snapshot, principalID int64, displayName *string, status string, roles []string, reason, requestID, sourceIP string) error {
 	if !s.Has(actor, PermissionManageMembers) {
 		return ErrForbidden
 	}
@@ -248,6 +255,13 @@ func (s *Service) SetMember(ctx context.Context, actor Snapshot, principalID int
 		return err
 	}
 	defer tx.Rollback()
+
+	if displayName != nil {
+		if _, err = tx.ExecContext(ctx, `UPDATE blog_principals SET display_name=$2 WHERE id=$1`, principalID, strings.TrimSpace(*displayName)); err != nil {
+			return err
+		}
+	}
+
 	var previousRoles []string
 	var previousStatus string
 	var membershipID int64
