@@ -111,7 +111,9 @@ export default function PostEditor() {
   const [showAiImage, setShowAiImage] = useState(false);
   const [imagePrompt, setImagePrompt] = useState("");
   const [imageAlt, setImageAlt] = useState("");
-  const [imagePromptCandidates, setImagePromptCandidates] = useState<string[]>([]);
+  const [imagePromptCandidates, setImagePromptCandidates] = useState<string[]>(
+    [],
+  );
   const [aiIdeateLoading, setAiIdeateLoading] = useState(false);
   const [aiImageLoading, setAiImageLoading] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<{

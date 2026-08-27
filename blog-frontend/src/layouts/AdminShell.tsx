@@ -70,8 +70,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
       });
 
     const handleUpdate = (event: Event) => {
-      const fresh =
-        (event as CustomEvent).detail || getCachedSiteSettings();
+      const fresh = (event as CustomEvent).detail || getCachedSiteSettings();
       if (fresh?.site_title) setSiteName(fresh.site_title);
     };
     const handleStorage = (event: StorageEvent) => {

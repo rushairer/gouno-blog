@@ -2,7 +2,12 @@ import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Menu, Moon, Rss, Search, Sun, X } from "lucide-react";
-import { DEFAULT_SITE_SETTINGS, getCachedSiteSettings, SITE_SETTINGS_STORAGE_KEY, SITE_SETTINGS_UPDATED_EVENT } from "../config/site-defaults";
+import {
+  DEFAULT_SITE_SETTINGS,
+  getCachedSiteSettings,
+  SITE_SETTINGS_STORAGE_KEY,
+  SITE_SETTINGS_UPDATED_EVENT,
+} from "../config/site-defaults";
 import { pagesApi } from "../api/pages";
 import { siteApi } from "../api/site";
 import { publicNavigation } from "../utils/navigation";
@@ -12,7 +17,9 @@ export default function PublicShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [site, setSite] = useState<SiteSettings | null>(() => getCachedSiteSettings());
+  const [site, setSite] = useState<SiteSettings | null>(() =>
+    getCachedSiteSettings(),
+  );
   const [navPages, setNavPages] = useState<CustomPage[]>([]);
   const [theme, setTheme] = useState<"light" | "dark">(() =>
     localStorage.getItem("gouno-blog:theme") === "dark" ? "dark" : "light",
