@@ -107,8 +107,9 @@ export function defineAbility(): AbilityChecker {
           if (!resource) return true; // general capability
           const creatorId = resource.created_by_principal_id;
           return (
-            creatorId == null ||
-            (currentPrincipalId != null && creatorId === currentPrincipalId)
+            creatorId != null &&
+            currentPrincipalId != null &&
+            creatorId === currentPrincipalId
           );
         }
         return false;
@@ -132,8 +133,9 @@ export function defineAbility(): AbilityChecker {
           if (!resource) return true;
           const creatorId = resource.created_by_principal_id;
           return (
-            creatorId == null ||
-            (currentPrincipalId != null && creatorId === currentPrincipalId)
+            creatorId != null &&
+            currentPrincipalId != null &&
+            creatorId === currentPrincipalId
           );
         }
         return false;
@@ -149,8 +151,9 @@ export function defineAbility(): AbilityChecker {
           if (!resource) return true;
           const creatorId = resource.created_by_principal_id;
           return (
-            creatorId == null ||
-            (currentPrincipalId != null && creatorId === currentPrincipalId)
+            creatorId != null &&
+            currentPrincipalId != null &&
+            creatorId === currentPrincipalId
           );
         }
         return false;

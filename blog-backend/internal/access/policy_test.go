@@ -28,6 +28,7 @@ func TestPostPolicy(t *testing.T) {
 	otherID := int64(999)
 	myPost := &domain.Post{ID: 1, Title: "My Post", CreatedByPrincipalID: &authorID}
 	otherPost := &domain.Post{ID: 2, Title: "Other Post", CreatedByPrincipalID: &otherID}
+	unownedPost := &domain.Post{ID: 3, Title: "Legacy Post", CreatedByPrincipalID: nil}
 
 	policy := access.PostPolicy{}
 
@@ -51,8 +52,14 @@ func TestPostPolicy(t *testing.T) {
 	if allowed, _ := policy.CanView(authorActor, otherPost); allowed {
 		t.Fatal("author should NOT be allowed to view other's post")
 	}
+	if allowed, _ := policy.CanView(authorActor, unownedPost); allowed {
+		t.Fatal("author should NOT be allowed to view unowned/legacy post")
+	}
 	if allowed, _ := policy.CanView(managerActor, otherPost); !allowed {
 		t.Fatal("manager should be allowed to view any post")
+	}
+	if allowed, _ := policy.CanView(managerActor, unownedPost); !allowed {
+		t.Fatal("manager should be allowed to view unowned post")
 	}
 	if allowed, _ := policy.CanView(moderatorActor, myPost); allowed {
 		t.Fatal("moderator should NOT be allowed to view post in admin")
@@ -65,8 +72,14 @@ func TestPostPolicy(t *testing.T) {
 	if allowed, _ := policy.CanEdit(authorActor, otherPost); allowed {
 		t.Fatal("author should NOT be allowed to edit other's post")
 	}
+	if allowed, _ := policy.CanEdit(authorActor, unownedPost); allowed {
+		t.Fatal("author should NOT be allowed to edit unowned/legacy post")
+	}
 	if allowed, _ := policy.CanEdit(managerActor, otherPost); !allowed {
 		t.Fatal("manager should be allowed to edit any post")
+	}
+	if allowed, _ := policy.CanEdit(managerActor, unownedPost); !allowed {
+		t.Fatal("manager should be allowed to edit unowned post")
 	}
 
 	// CanDelete check
@@ -94,6 +107,7 @@ func TestMediaPolicy(t *testing.T) {
 	otherID := int64(999)
 	myMedia := &domain.MediaAsset{ID: 10, Filename: "mine.png", CreatedByPrincipalID: &authorID}
 	otherMedia := &domain.MediaAsset{ID: 20, Filename: "other.png", CreatedByPrincipalID: &otherID}
+	unownedMedia := &domain.MediaAsset{ID: 30, Filename: "unowned.png", CreatedByPrincipalID: nil}
 
 	policy := access.MediaPolicy{}
 
@@ -123,11 +137,15 @@ func TestMediaPolicy(t *testing.T) {
 	if allowed, _ := policy.CanDelete(authorActor, otherMedia, 0); allowed {
 		t.Fatal("author should NOT be allowed to delete other's media")
 	}
-	// 4. Manager deleting other's media with 0 references
+	// 4. Unowned media with 0 references by author
+	if allowed, _ := policy.CanDelete(authorActor, unownedMedia, 0); allowed {
+		t.Fatal("author should NOT be allowed to delete unowned media")
+	}
+	// 5. Manager deleting other's media with 0 references
 	if allowed, _ := policy.CanDelete(managerActor, otherMedia, 0); !allowed {
 		t.Fatal("manager should be allowed to delete unreferenced media")
 	}
-	// 5. Manager deleting media with > 0 references
+	// 6. Manager deleting media with > 0 references
 	if allowed, _ := policy.CanDelete(managerActor, otherMedia, 1); allowed {
 		t.Fatal("manager should NOT be allowed to delete referenced media")
 	}
