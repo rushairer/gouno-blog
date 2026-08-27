@@ -4217,20 +4217,27 @@ a {
   position: relative;
   display: flex;
   align-items: center;
+  width: 100%;
 }
 .stepup-mfa-input-wrap svg {
   position: absolute;
+  z-index: 1;
+  top: 50%;
   left: 12px;
   width: 16px;
   height: 16px;
+  transform: translateY(-50%);
   color: var(--text-3);
   pointer-events: none;
 }
+.modal-form
+  .stepup-mfa-input-wrap
+  input:not([type="checkbox"]):not([type="radio"]),
 .stepup-mfa-input-wrap input {
-  padding-left: 36px;
-  font-size: 16px;
+  padding-left: 38px;
+  font-size: 15px;
   font-family: var(--font-mono, monospace);
-  letter-spacing: 2px;
+  letter-spacing: 1px;
 }
 .stepup-mfa-hint {
   color: var(--text-3);
