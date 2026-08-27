@@ -10,7 +10,9 @@ import {
   X,
 } from "lucide-react";
 import { mediaApi } from "../../api/media";
+import type { MediaItem, MediaReference } from "../../api/media";
 import { agentApi } from "../../api/agent";
+import { useAbility } from "../../abilities";
 import {
   AdminPage,
   AdminPageHeader,
@@ -38,23 +40,8 @@ import {
 } from "../../components/media/MediaDrawerForms";
 import { useI18n } from "../../i18n";
 
-interface MediaAsset {
-  id: number;
-  filename: string;
-  url: string;
-  content_type: string;
-  size_bytes: number;
-  alt_text: string;
-  created_at: string;
-  usage_count?: number;
-}
-interface MediaReference {
-  post_id: number;
-  post_title: string;
-  post_slug: string;
-}
 type BatchDeleteTarget = { kind: "batch" };
-type DeleteTarget = MediaAsset | BatchDeleteTarget | null;
+type DeleteTarget = MediaItem | BatchDeleteTarget | null;
 
 function isBatchDeleteTarget(
   target: DeleteTarget,
@@ -78,7 +65,8 @@ export function getRelativeMediaUrl(rawUrl: string): string {
 export default function MediaLibrary() {
   const { t, formatDateTime } = useI18n();
   const { notify } = useToast();
-  const [assets, setAssets] = useState<MediaAsset[]>([]);
+  const { can } = useAbility();
+  const [assets, setAssets] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadDrawerOpen, setUploadDrawerOpen] = useState(false);
@@ -93,7 +81,7 @@ export default function MediaLibrary() {
   const [aiOpen, setAIOpen] = useState(false);
 
   // Edit Alt Text states
-  const [editingAsset, setEditingAsset] = useState<MediaAsset | null>(null);
+  const [editingAsset, setEditingAsset] = useState<MediaItem | null>(null);
   const [editAltText, setEditAltText] = useState("");
   const [savingAltText, setSavingAltText] = useState(false);
   const [editAltError, setEditAltError] = useState("");
@@ -111,7 +99,7 @@ export default function MediaLibrary() {
 
   const load = useCallback(async () => {
     const data = await mediaApi.listMedia();
-    setAssets(data as MediaAsset[]);
+    setAssets(data);
   }, []);
 
   useEffect(() => {
@@ -131,7 +119,7 @@ export default function MediaLibrary() {
     data.append("alt_text", altText);
     try {
       const uploaded = await mediaApi.uploadMedia(data);
-      setAssets((current) => [uploaded as MediaAsset, ...current]);
+      setAssets((current) => [uploaded, ...current]);
       setFile(null);
       setAltText("");
       form.reset();
@@ -144,7 +132,7 @@ export default function MediaLibrary() {
     }
   };
 
-  const openEditAltDrawer = (asset: MediaAsset) => {
+  const openEditAltDrawer = (asset: MediaItem) => {
     setEditingAsset(asset);
     setEditAltText(asset.alt_text || "");
     setEditAltError("");
@@ -295,32 +283,40 @@ export default function MediaLibrary() {
   return (
     <AdminPage>
       <AdminPageHeader
-        title={t("mediaLibrary")}
-        description="上传、检索和复用内容中的图片资源，支持 AI 直接文生图并入库。"
+        title={can("batch", "media") ? "媒体库" : "我的媒体库"}
+        description={
+          can("batch", "media")
+            ? "上传、检索和复用全站内容中的图片资源，支持 AI 直接文生图入库。"
+            : "上传、检索和管理由您上传的图片资源，支持 AI 直接文生图入库。"
+        }
         actions={
           <>
-            <Button
-              variant="secondary"
-              type="button"
-              onClick={() => {
-                setAiDrawerOpen(true);
-                setAiGenerated(null);
-                setAiPrompt("");
-                setAiAlt("");
-                setAiError("");
-              }}
-            >
-              <Sparkles />
-              AI 文生图
-            </Button>
-            <Button
-              variant="primary"
-              type="button"
-              onClick={() => setUploadDrawerOpen(true)}
-            >
-              <ImagePlus />
-              上传图片
-            </Button>
+            {can("create", "media") ? (
+              <>
+                <Button
+                  variant="secondary"
+                  type="button"
+                  onClick={() => {
+                    setAiDrawerOpen(true);
+                    setAiGenerated(null);
+                    setAiPrompt("");
+                    setAiAlt("");
+                    setAiError("");
+                  }}
+                >
+                  <Sparkles />
+                  AI 文生图
+                </Button>
+                <Button
+                  variant="primary"
+                  type="button"
+                  onClick={() => setUploadDrawerOpen(true)}
+                >
+                  <ImagePlus />
+                  上传图片
+                </Button>
+              </>
+            ) : null}
             <span className="admin-page-count">{assets.length} 个资源</span>
           </>
         }
@@ -380,7 +376,7 @@ export default function MediaLibrary() {
             </Button>
           ) : null}
         </FilterBar>
-        {selectedAssets.length ? (
+        {can("batch", "media") && selectedAssets.length ? (
           <BulkActionBar
             selectionLabel={`已选择 ${selectedAssets.length} 个媒体`}
             onAIAssist={() => setAIOpen(true)}
@@ -415,17 +411,19 @@ export default function MediaLibrary() {
                 id={`asset-${asset.id}`}
                 key={asset.id}
               >
-                <Checkbox
-                  aria-label={`选择媒体 ${asset.filename}`}
-                  checked={selectedAssets.includes(asset.id)}
-                  onChange={(event) =>
-                    setSelectedAssets((current) =>
-                      event.target.checked
-                        ? [...new Set([...current, asset.id])]
-                        : current.filter((id) => id !== asset.id),
-                    )
-                  }
-                />
+                {can("batch", "media") ? (
+                  <Checkbox
+                    aria-label={`选择媒体 ${asset.filename}`}
+                    checked={selectedAssets.includes(asset.id)}
+                    onChange={(event) =>
+                      setSelectedAssets((current) =>
+                        event.target.checked
+                          ? [...new Set([...current, asset.id])]
+                          : current.filter((id) => id !== asset.id),
+                      )
+                    }
+                  />
+                ) : null}
                 <img
                   src={asset.url}
                   alt={asset.alt_text || asset.filename}
@@ -483,28 +481,32 @@ export default function MediaLibrary() {
                     <Copy />
                     {t("copyMarkdown")}
                   </button>
-                  <button
-                    className="btn btn-secondary"
-                    type="button"
-                    title={t("editAltText")}
-                    onClick={() => openEditAltDrawer(asset)}
-                  >
-                    <Pencil />
-                    {t("editAltText")}
-                  </button>
-                  <button
-                    className="btn btn-danger"
-                    type="button"
-                    title={t("delete")}
-                    onClick={() => {
-                      setDeleteTarget(asset);
-                      setReferences([]);
-                      setError("");
-                    }}
-                  >
-                    <Trash2 />
-                    {t("delete")}
-                  </button>
+                  {can("edit", "media", asset) ? (
+                    <button
+                      className="btn btn-secondary"
+                      type="button"
+                      title={t("editAltText")}
+                      onClick={() => openEditAltDrawer(asset)}
+                    >
+                      <Pencil />
+                      {t("editAltText")}
+                    </button>
+                  ) : null}
+                  {can("delete", "media", asset) ? (
+                    <button
+                      className="btn btn-danger"
+                      type="button"
+                      title={t("delete")}
+                      onClick={() => {
+                        setDeleteTarget(asset);
+                        setReferences([]);
+                        setError("");
+                      }}
+                    >
+                      <Trash2 />
+                      {t("delete")}
+                    </button>
+                  ) : null}
                 </div>
               </Panel>
             ))}

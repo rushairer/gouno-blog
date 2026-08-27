@@ -7,6 +7,9 @@ vi.mock("../../../auth", () => ({
   apiFetch: vi.fn().mockResolvedValue(Response.json({ data: [] })),
   canManageBlog: () => true,
   isLoggedIn: () => true,
+  hasBlogPermission: () => true,
+  hasAnyBlogPermission: () => true,
+  getCachedBlogSession: () => null,
   redirectToAuthorize: vi.fn(),
 }));
 

@@ -24,7 +24,7 @@ import {
   useToast,
 } from "../../components/ui";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
-import { hasBlogPermission } from "../../auth";
+import { useAbility } from "../../abilities";
 import type { Category, Post } from "../../types/blog";
 import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
 
@@ -33,7 +33,7 @@ const pageSize = 20;
 
 export default function AdminPosts() {
   const allowed = useAdminGuard("/admin/posts");
-  const canManage = hasBlogPermission("content.manage");
+  const { can } = useAbility();
   const { notify } = useToast();
   const [params, setParams] = useSearchParams();
   const [posts, setPosts] = useState<Post[]>([]);
@@ -164,16 +164,18 @@ export default function AdminPosts() {
   return (
     <AdminPage>
       <AdminPageHeader
-        title={canManage ? "文章" : "我的文章"}
+        title={can("batch", "post") ? "文章" : "我的文章"}
         description={
-          canManage
+          can("batch", "post")
             ? "管理全站草稿、定时内容与已发布文章。"
             : "管理由您创建的草稿、定时内容与已发布文章。"
         }
         actions={
-          <Link className="btn btn-primary" to="/admin/posts/new">
-            <Plus /> 新建文章
-          </Link>
+          can("create", "post") ? (
+            <Link className="btn btn-primary" to="/admin/posts/new">
+              <Plus /> 新建文章
+            </Link>
+          ) : null
         }
       />
       <ContentStack>
@@ -248,7 +250,7 @@ export default function AdminPosts() {
             </Button>
           ) : null}
         </FilterBar>
-        {canManage && selected.length ? (
+        {can("batch", "post") && selected.length ? (
           <BulkActionBar
             selectionLabel={`已选择 ${selected.length} 篇`}
             onAIAssist={() => setAIOpen(true)}
@@ -305,11 +307,11 @@ export default function AdminPosts() {
                 >
                   清除筛选
                 </button>
-              ) : (
+              ) : can("create", "post") ? (
                 <Link className="btn btn-primary" to="/admin/posts/new">
                   <Plus /> 新建文章
                 </Link>
-              )
+              ) : null
             }
           />
         ) : posts.length ? (
@@ -318,7 +320,7 @@ export default function AdminPosts() {
               <table className="admin-table">
                 <thead>
                   <tr>
-                    {canManage ? (
+                    {can("batch", "post") ? (
                       <th>
                         <input
                           aria-label="选择当前页全部文章"
@@ -347,7 +349,7 @@ export default function AdminPosts() {
                 <tbody>
                   {posts.map((post) => (
                     <tr key={post.id}>
-                      {canManage ? (
+                      {can("batch", "post") ? (
                         <td>
                           <input
                             aria-label={`选择 ${post.title}`}
@@ -404,13 +406,15 @@ export default function AdminPosts() {
                           >
                             <Copy />
                           </button>
-                          <Link
-                            to={`/admin/posts/${post.id}/edit`}
-                            title="编辑"
-                          >
-                            <Edit2 />
-                          </Link>
-                          {canManage ? (
+                          {can("edit", "post", post) ? (
+                            <Link
+                              to={`/admin/posts/${post.id}/edit`}
+                              title="编辑"
+                            >
+                              <Edit2 />
+                            </Link>
+                          ) : null}
+                          {can("delete", "post", post) ? (
                             <button
                               className="danger-action"
                               title="删除"

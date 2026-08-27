@@ -14,8 +14,9 @@ type GrowthStore interface {
 	ListVersions(context.Context, int64) ([]*domain.PostVersion, error)
 	RestoreVersion(context.Context, int64, int64) (*domain.Post, error)
 	CreateMedia(context.Context, *domain.MediaAsset) error
-	ListMedia(context.Context) ([]*domain.MediaAsset, error)
-	UpdateMediaAltText(context.Context, int64, string) (*domain.MediaAsset, error)
+	GetMedia(context.Context, int64) (*domain.MediaAsset, error)
+	ListMedia(context.Context, domain.MediaFilter) ([]*domain.MediaAsset, error)
+	UpdateMediaAltText(context.Context, int64, string, *int64) (*domain.MediaAsset, error)
 	DeleteMedia(context.Context, int64) (*domain.MediaAsset, error)
 	CountMediaReferences(context.Context, int64) (int64, error)
 	ListMediaReferences(context.Context, int64) ([]*domain.MediaReference, error)
@@ -69,15 +70,26 @@ func (s *GrowthService) CreateMedia(ctx context.Context, asset *domain.MediaAsse
 	return s.store.CreateMedia(ctx, asset)
 }
 
-func (s *GrowthService) ListMedia(ctx context.Context) ([]*domain.MediaAsset, error) {
-	return s.store.ListMedia(ctx)
-}
-
-func (s *GrowthService) UpdateMedia(ctx context.Context, id int64, altText string) (*domain.MediaAsset, error) {
+func (s *GrowthService) GetMedia(ctx context.Context, id int64) (*domain.MediaAsset, error) {
 	if id <= 0 {
 		return nil, ErrInvalidMediaID
 	}
-	asset, err := s.store.UpdateMediaAltText(ctx, id, strings.TrimSpace(altText))
+	asset, err := s.store.GetMedia(ctx, id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrPostNotFound
+	}
+	return asset, err
+}
+
+func (s *GrowthService) ListMedia(ctx context.Context, filter domain.MediaFilter) ([]*domain.MediaAsset, error) {
+	return s.store.ListMedia(ctx, filter)
+}
+
+func (s *GrowthService) UpdateMedia(ctx context.Context, id int64, altText string, updatedByPrincipalID *int64) (*domain.MediaAsset, error) {
+	if id <= 0 {
+		return nil, ErrInvalidMediaID
+	}
+	asset, err := s.store.UpdateMediaAltText(ctx, id, strings.TrimSpace(altText), updatedByPrincipalID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrPostNotFound
 	}
@@ -100,6 +112,13 @@ func (s *GrowthService) DeleteMedia(ctx context.Context, id int64) (*domain.Medi
 		return nil, ErrPostNotFound
 	}
 	return asset, err
+}
+
+func (s *GrowthService) CountMediaReferences(ctx context.Context, id int64) (int64, error) {
+	if id <= 0 {
+		return 0, ErrInvalidMediaID
+	}
+	return s.store.CountMediaReferences(ctx, id)
 }
 
 func (s *GrowthService) ListMediaReferences(ctx context.Context, id int64) ([]*domain.MediaReference, error) {

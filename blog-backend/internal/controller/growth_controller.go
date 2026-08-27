@@ -2,7 +2,6 @@ package controller
 
 import (
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"mime/multipart"
@@ -29,11 +28,13 @@ var allowedMediaTypes = map[string]string{
 }
 
 type GrowthController struct {
-	growth    *service.GrowthService
-	posts     *service.PostService
-	community *service.CommunityService
-	media     media.Store
-	logger    *zap.Logger
+	growth      *service.GrowthService
+	posts       *service.PostService
+	community   *service.CommunityService
+	media       media.Store
+	logger      *zap.Logger
+	postPolicy  access.PostPolicy
+	mediaPolicy access.MediaPolicy
 }
 
 func NewGrowthController(growth *service.GrowthService, posts *service.PostService, community *service.CommunityService, store media.Store, logger *zap.Logger) *GrowthController {
@@ -58,39 +59,25 @@ func (ctrl *GrowthController) RelatedPosts(c *gin.Context) {
 }
 
 func (ctrl *GrowthController) TrackView(c *gin.Context) {
-	post, err := ctrl.community.ResolvePublishedPost(c.Request.Context(), c.Param("slugOrID"))
-	if err != nil {
-		WriteDomainError(c, err)
+	id, ok := ParamPositiveID(c, "id")
+	if !ok {
 		return
 	}
-	if err := ctrl.posts.IncrementViews(c.Request.Context(), post.ID); err != nil {
+	actor := c.ClientIP() + "|" + c.GetHeader("User-Agent")
+	if err := ctrl.growth.RecordView(c.Request.Context(), id, actor); err != nil {
 		WriteDomainError(c, err)
 		return
-	}
-	identity := c.ClientIP()
-	if value, exists := c.Get("account_id"); exists {
-		if subject, ok := value.(string); ok && subject != "" {
-			identity = "user:" + subject
-		}
-	}
-	sum := sha256.Sum256([]byte(identity))
-	if err := ctrl.growth.RecordView(c.Request.Context(), post.ID, hex.EncodeToString(sum[:])); err != nil {
-		ctrl.logger.Warn("could not record analytics event", zap.Error(err), zap.Int64("post_id", post.ID))
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }
 
 func (ctrl *GrowthController) ListVersions(c *gin.Context) {
-	postID, ok := ParamPositiveID(c, "id")
+	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	if snapshot, hasAccess := middleware.CurrentBlogAccess(c); hasAccess {
-		if snapshot.MembershipStatus != "active" {
-			c.JSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, "forbidden"))
-			return
-		}
-		post, err := ctrl.posts.GetAdminPost(c.Request.Context(), postID)
+		post, err := ctrl.posts.GetAdminPost(c.Request.Context(), id)
 		if err != nil {
 			WriteDomainError(c, err)
 			return
@@ -99,19 +86,12 @@ func (ctrl *GrowthController) ListVersions(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gouno.NewErrorResponse(http.StatusNotFound, "post not found"))
 			return
 		}
-		hasManage := false
-		for _, p := range snapshot.Permissions {
-			if p == access.PermissionManageContent || p == access.PermissionManageSite {
-				hasManage = true
-				break
-			}
-		}
-		if !hasManage && post.CreatedByPrincipalID != nil && *post.CreatedByPrincipalID != snapshot.Principal.ID {
-			c.JSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, "forbidden"))
+		if allowed, reason := ctrl.postPolicy.CanView(&snapshot, post); !allowed {
+			c.JSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, reason))
 			return
 		}
 	}
-	versions, err := ctrl.growth.ListVersions(c.Request.Context(), postID)
+	versions, err := ctrl.growth.ListVersions(c.Request.Context(), id)
 	if err != nil {
 		WriteDomainError(c, err)
 		return
@@ -129,10 +109,6 @@ func (ctrl *GrowthController) RestoreVersion(c *gin.Context) {
 		return
 	}
 	if snapshot, hasAccess := middleware.CurrentBlogAccess(c); hasAccess {
-		if snapshot.MembershipStatus != "active" {
-			c.JSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, "forbidden"))
-			return
-		}
 		post, err := ctrl.posts.GetAdminPost(c.Request.Context(), postID)
 		if err != nil {
 			WriteDomainError(c, err)
@@ -142,15 +118,8 @@ func (ctrl *GrowthController) RestoreVersion(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gouno.NewErrorResponse(http.StatusNotFound, "post not found"))
 			return
 		}
-		hasManage := false
-		for _, p := range snapshot.Permissions {
-			if p == access.PermissionManageContent || p == access.PermissionManageSite {
-				hasManage = true
-				break
-			}
-		}
-		if !hasManage && post.CreatedByPrincipalID != nil && *post.CreatedByPrincipalID != snapshot.Principal.ID {
-			c.JSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, "forbidden"))
+		if allowed, reason := ctrl.postPolicy.CanRestoreVersion(&snapshot, post); !allowed {
+			c.JSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, reason))
 			return
 		}
 	}
@@ -163,7 +132,11 @@ func (ctrl *GrowthController) RestoreVersion(c *gin.Context) {
 }
 
 func (ctrl *GrowthController) ListMedia(c *gin.Context) {
-	assets, err := ctrl.growth.ListMedia(c.Request.Context())
+	filter := domain.MediaFilter{}
+	if snapshot, ok := middleware.CurrentBlogAccess(c); ok {
+		ctrl.mediaPolicy.ScopeMedia(&snapshot, &filter)
+	}
+	assets, err := ctrl.growth.ListMedia(c.Request.Context(), filter)
 	if err != nil {
 		WriteDomainError(c, err)
 		return
@@ -172,6 +145,13 @@ func (ctrl *GrowthController) ListMedia(c *gin.Context) {
 }
 
 func (ctrl *GrowthController) UploadMedia(c *gin.Context) {
+	if snapshot, ok := middleware.CurrentBlogAccess(c); ok {
+		if allowed, reason := ctrl.mediaPolicy.CanUpload(&snapshot); !allowed {
+			c.JSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, reason))
+			return
+		}
+	}
+
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxMediaSize+(1<<20))
 	header, err := c.FormFile("file")
 	if err != nil {
@@ -207,6 +187,10 @@ func (ctrl *GrowthController) UploadMedia(c *gin.Context) {
 			asset.CreatedBy = &value
 		}
 	}
+	if snapshot, ok := middleware.CurrentBlogAccess(c); ok && snapshot.Principal.ID > 0 {
+		asset.CreatedByPrincipalID = &snapshot.Principal.ID
+		asset.UpdatedByPrincipalID = &snapshot.Principal.ID
+	}
 	if err := ctrl.growth.CreateMedia(c.Request.Context(), asset); err != nil {
 		_ = ctrl.media.Delete(c.Request.Context(), storageName)
 		WriteDomainError(c, err)
@@ -229,7 +213,22 @@ func (ctrl *GrowthController) UpdateMedia(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "invalid request body"))
 		return
 	}
-	asset, err := ctrl.growth.UpdateMedia(c.Request.Context(), id, req.AltText)
+	var updatedBy *int64
+	if snapshot, ok := middleware.CurrentBlogAccess(c); ok {
+		asset, err := ctrl.growth.GetMedia(c.Request.Context(), id)
+		if err != nil {
+			WriteDomainError(c, err)
+			return
+		}
+		if allowed, reason := ctrl.mediaPolicy.CanUpdate(&snapshot, asset); !allowed {
+			c.JSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, reason))
+			return
+		}
+		if snapshot.Principal.ID > 0 {
+			updatedBy = &snapshot.Principal.ID
+		}
+	}
+	asset, err := ctrl.growth.UpdateMedia(c.Request.Context(), id, req.AltText, updatedBy)
 	if err != nil {
 		WriteDomainError(c, err)
 		return
@@ -241,6 +240,26 @@ func (ctrl *GrowthController) DeleteMedia(c *gin.Context) {
 	id, ok := ParamPositiveID(c, "id")
 	if !ok {
 		return
+	}
+	refCount, err := ctrl.growth.CountMediaReferences(c.Request.Context(), id)
+	if err != nil {
+		WriteDomainError(c, err)
+		return
+	}
+	if snapshot, ok := middleware.CurrentBlogAccess(c); ok {
+		asset, err := ctrl.growth.GetMedia(c.Request.Context(), id)
+		if err != nil {
+			WriteDomainError(c, err)
+			return
+		}
+		if allowed, reason := ctrl.mediaPolicy.CanDelete(&snapshot, asset, refCount); !allowed {
+			if refCount > 0 {
+				c.JSON(http.StatusConflict, gouno.NewErrorResponse(http.StatusConflict, reason))
+			} else {
+				c.JSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, reason))
+			}
+			return
+		}
 	}
 	asset, err := ctrl.growth.DeleteMedia(c.Request.Context(), id)
 	if err != nil {

@@ -54,6 +54,32 @@ type Snapshot struct {
 	AuthorizationVersion int64     `json:"authorization_version"`
 }
 
+func (s *Snapshot) HasPermission(permission string) bool {
+	if s == nil || s.MembershipStatus != "active" {
+		return false
+	}
+	return has(s.Permissions, permission)
+}
+
+func (s *Snapshot) HasAnyPermission(permissions ...string) bool {
+	if s == nil || s.MembershipStatus != "active" {
+		return false
+	}
+	for _, p := range permissions {
+		if has(s.Permissions, p) {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Snapshot) HasRole(role string) bool {
+	if s == nil || s.MembershipStatus != "active" {
+		return false
+	}
+	return has(s.Roles, role)
+}
+
 type Member struct{ Snapshot }
 
 type Audit struct {

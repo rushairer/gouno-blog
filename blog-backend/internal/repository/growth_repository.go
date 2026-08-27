@@ -103,17 +103,39 @@ func (r *GrowthRepository) RestoreVersion(ctx context.Context, postID, versionID
 
 func (r *GrowthRepository) CreateMedia(ctx context.Context, asset *domain.MediaAsset) error {
 	return r.db.QueryRowContext(ctx, `INSERT INTO media_assets
-		(filename, storage_name, url, content_type, size_bytes, alt_text, created_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		(filename, storage_name, url, content_type, size_bytes, alt_text, created_by, created_by_principal_id, updated_by_principal_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id, created_at`, asset.Filename, asset.StorageName, asset.URL, asset.ContentType,
-		asset.SizeBytes, asset.AltText, asset.CreatedBy).Scan(&asset.ID, &asset.CreatedAt)
+		asset.SizeBytes, asset.AltText, asset.CreatedBy, asset.CreatedByPrincipalID, asset.UpdatedByPrincipalID).Scan(&asset.ID, &asset.CreatedAt)
 }
 
-func (r *GrowthRepository) ListMedia(ctx context.Context) ([]*domain.MediaAsset, error) {
-	rows, err := r.db.QueryContext(ctx, `SELECT m.id, m.filename, m.storage_name, m.url, m.content_type,
-		m.size_bytes, m.alt_text, m.created_by, m.created_at,
+func (r *GrowthRepository) GetMedia(ctx context.Context, id int64) (*domain.MediaAsset, error) {
+	var asset domain.MediaAsset
+	err := r.db.QueryRowContext(ctx, `SELECT m.id, m.filename, m.storage_name, m.url, m.content_type,
+		m.size_bytes, m.alt_text, m.created_by, m.created_by_principal_id, m.updated_by_principal_id, m.created_at,
 		(SELECT COUNT(*) FROM posts p WHERE p.content LIKE '%' || m.url || '%' OR p.cover_url = m.url)
-		FROM media_assets m ORDER BY m.created_at DESC`)
+		FROM media_assets m WHERE m.id = $1`, id).
+		Scan(&asset.ID, &asset.Filename, &asset.StorageName, &asset.URL, &asset.ContentType,
+			&asset.SizeBytes, &asset.AltText, &asset.CreatedBy, &asset.CreatedByPrincipalID, &asset.UpdatedByPrincipalID, &asset.CreatedAt, &asset.UsageCount)
+	if err != nil {
+		return nil, err
+	}
+	return &asset, nil
+}
+
+func (r *GrowthRepository) ListMedia(ctx context.Context, filter domain.MediaFilter) ([]*domain.MediaAsset, error) {
+	query := `SELECT m.id, m.filename, m.storage_name, m.url, m.content_type,
+		m.size_bytes, m.alt_text, m.created_by, m.created_by_principal_id, m.updated_by_principal_id, m.created_at,
+		(SELECT COUNT(*) FROM posts p WHERE p.content LIKE '%' || m.url || '%' OR p.cover_url = m.url)
+		FROM media_assets m`
+	args := []interface{}{}
+	if filter.CreatedByPrincipalID != nil {
+		query += ` WHERE m.created_by_principal_id = $1`
+		args = append(args, *filter.CreatedByPrincipalID)
+	}
+	query += ` ORDER BY m.created_at DESC`
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +144,7 @@ func (r *GrowthRepository) ListMedia(ctx context.Context) ([]*domain.MediaAsset,
 	for rows.Next() {
 		var asset domain.MediaAsset
 		if err := rows.Scan(&asset.ID, &asset.Filename, &asset.StorageName, &asset.URL, &asset.ContentType,
-			&asset.SizeBytes, &asset.AltText, &asset.CreatedBy, &asset.CreatedAt, &asset.UsageCount); err != nil {
+			&asset.SizeBytes, &asset.AltText, &asset.CreatedBy, &asset.CreatedByPrincipalID, &asset.UpdatedByPrincipalID, &asset.CreatedAt, &asset.UsageCount); err != nil {
 			return nil, err
 		}
 		assets = append(assets, &asset)
@@ -161,22 +183,22 @@ func (r *GrowthRepository) ListMediaReferences(ctx context.Context, id int64) ([
 func (r *GrowthRepository) DeleteMedia(ctx context.Context, id int64) (*domain.MediaAsset, error) {
 	var asset domain.MediaAsset
 	err := r.db.QueryRowContext(ctx, `DELETE FROM media_assets WHERE id = $1
-		RETURNING id, filename, storage_name, url, content_type, size_bytes, alt_text, created_by, created_at`, id).
+		RETURNING id, filename, storage_name, url, content_type, size_bytes, alt_text, created_by, created_by_principal_id, updated_by_principal_id, created_at`, id).
 		Scan(&asset.ID, &asset.Filename, &asset.StorageName, &asset.URL, &asset.ContentType,
-			&asset.SizeBytes, &asset.AltText, &asset.CreatedBy, &asset.CreatedAt)
+			&asset.SizeBytes, &asset.AltText, &asset.CreatedBy, &asset.CreatedByPrincipalID, &asset.UpdatedByPrincipalID, &asset.CreatedAt)
 	return &asset, err
 }
 
-func (r *GrowthRepository) UpdateMediaAltText(ctx context.Context, id int64, altText string) (*domain.MediaAsset, error) {
+func (r *GrowthRepository) UpdateMediaAltText(ctx context.Context, id int64, altText string, updatedByPrincipalID *int64) (*domain.MediaAsset, error) {
 	var asset domain.MediaAsset
 	err := r.db.QueryRowContext(ctx, `UPDATE media_assets
-		SET alt_text = $1
+		SET alt_text = $1, updated_by_principal_id = COALESCE($3, updated_by_principal_id)
 		WHERE id = $2
-		RETURNING id, filename, storage_name, url, content_type, size_bytes, alt_text, created_by, created_at,
+		RETURNING id, filename, storage_name, url, content_type, size_bytes, alt_text, created_by, created_by_principal_id, updated_by_principal_id, created_at,
 		(SELECT COUNT(*) FROM posts p WHERE p.content LIKE '%' || media_assets.url || '%' OR p.cover_url = media_assets.url)`,
-		altText, id).
+		altText, id, updatedByPrincipalID).
 		Scan(&asset.ID, &asset.Filename, &asset.StorageName, &asset.URL, &asset.ContentType,
-			&asset.SizeBytes, &asset.AltText, &asset.CreatedBy, &asset.CreatedAt, &asset.UsageCount)
+			&asset.SizeBytes, &asset.AltText, &asset.CreatedBy, &asset.CreatedByPrincipalID, &asset.UpdatedByPrincipalID, &asset.CreatedAt, &asset.UsageCount)
 	if err != nil {
 		return nil, err
 	}

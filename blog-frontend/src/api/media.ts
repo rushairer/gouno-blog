@@ -8,7 +8,11 @@ export interface MediaItem {
   content_type: string;
   size_bytes: number;
   alt_text: string;
+  created_by?: string;
+  created_by_principal_id?: number | null;
+  updated_by_principal_id?: number | null;
   created_at: string;
+  usage_count?: number;
   references_count?: number;
 }
 

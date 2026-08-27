@@ -117,16 +117,22 @@ type PostVersion struct {
 }
 
 type MediaAsset struct {
-	ID          int64     `json:"id"`
-	Filename    string    `json:"filename"`
-	StorageName string    `json:"-"`
-	URL         string    `json:"url"`
-	ContentType string    `json:"content_type"`
-	SizeBytes   int64     `json:"size_bytes"`
-	AltText     string    `json:"alt_text"`
-	CreatedBy   *string   `json:"created_by,omitempty"`
-	CreatedAt   time.Time `json:"created_at"`
-	UsageCount  int64     `json:"usage_count"`
+	ID                   int64     `json:"id"`
+	Filename             string    `json:"filename"`
+	StorageName          string    `json:"-"`
+	URL                  string    `json:"url"`
+	ContentType          string    `json:"content_type"`
+	SizeBytes            int64     `json:"size_bytes"`
+	AltText              string    `json:"alt_text"`
+	CreatedBy            *string   `json:"created_by,omitempty"`
+	CreatedByPrincipalID *int64    `json:"created_by_principal_id,omitempty"`
+	UpdatedByPrincipalID *int64    `json:"updated_by_principal_id,omitempty"`
+	CreatedAt            time.Time `json:"created_at"`
+	UsageCount           int64     `json:"usage_count"`
+}
+
+type MediaFilter struct {
+	CreatedByPrincipalID *int64
 }
 
 type MediaReference struct {

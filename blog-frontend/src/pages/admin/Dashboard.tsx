@@ -25,7 +25,7 @@ import {
   Panel,
 } from "../../components/ui";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
-import { hasBlogPermission, getCachedBlogSession } from "../../auth";
+import { useAbility } from "../../abilities";
 
 interface Summary {
   total_posts: number;
@@ -75,6 +75,7 @@ function alertPresentation(alert: Summary["ai_alerts"][number]) {
 
 export default function Dashboard() {
   const allowed = useAdminGuard("/admin/dashboard");
+  const { can } = useAbility();
   const [summary, setSummary] = useState<Summary | null>(null);
   const [error, setError] = useState("");
   const [clearingAlerts, setClearingAlerts] = useState(false);
@@ -112,12 +113,6 @@ export default function Dashboard() {
     1,
     ...(summary?.daily_events || []).map((item) => item.count),
   );
-  const session = getCachedBlogSession();
-  const currentPrincipalId = session?.principal?.id;
-  const canManageContent = hasBlogPermission("content.manage");
-  const canAuthorContent = hasBlogPermission("content.author");
-  const canAccessPosts = canManageContent || canAuthorContent;
-  const canModerate = hasBlogPermission("community.moderate");
 
   return (
     <AdminPage>
@@ -125,14 +120,14 @@ export default function Dashboard() {
         title="数据概览"
         description="了解站点整体运营情况，掌握内容表现与用户互动。"
         actions={
-          canAccessPosts ? (
+          can("create", "post") ? (
             <Link
               className={buttonClassName({ variant: "primary" })}
               to="/admin/posts/new"
             >
               <Plus /> 新建文章
             </Link>
-          ) : canModerate ? (
+          ) : can("moderate", "comment") ? (
             <Link
               className={buttonClassName({ variant: "primary" })}
               to="/admin/comments?status=pending"
@@ -147,7 +142,7 @@ export default function Dashboard() {
         {summary ? (
           <>
             <div className="admin-metrics">
-              {canAccessPosts ? (
+              {can("view", "post") ? (
                 <Panel as={Link} to="/admin/posts">
                   <FileText />
                   <span>文章</span>
@@ -162,7 +157,7 @@ export default function Dashboard() {
                   <small>已发布 {summary.published_posts}</small>
                 </Panel>
               )}
-              {canAccessPosts ? (
+              {can("view", "post") ? (
                 <Panel as={Link} to="/admin/posts?status=published">
                   <Eye />
                   <span>总阅读</span>
@@ -177,7 +172,7 @@ export default function Dashboard() {
                   <small>全站累计阅读</small>
                 </Panel>
               )}
-              {canAccessPosts ? (
+              {can("view", "post") ? (
                 <Panel as={Link} to="/admin/posts">
                   <Heart />
                   <span>总点赞</span>
@@ -192,7 +187,7 @@ export default function Dashboard() {
                   <small>全站累计点赞</small>
                 </Panel>
               )}
-              {canModerate ? (
+              {can("moderate", "comment") ? (
                 <Panel as={Link} to="/admin/comments?status=pending">
                   <MessageSquare />
                   <span>评论</span>
@@ -221,42 +216,46 @@ export default function Dashboard() {
                 >
                   {summary.daily_events.map((item) => (
                     <div key={item.date} title={`${item.date}: ${item.count}`}>
-                      <span
+                      <div
+                        className="admin-chart-bar"
                         style={{
-                          height: `${Math.max(4, (item.count / max) * 100)}%`,
+                          height: `${Math.max(
+                            8,
+                            Math.round((item.count / max) * 100),
+                          )}%`,
                         }}
                       />
-                      <small>{item.date.slice(5)}</small>
+                      <span>{item.date.slice(5)}</span>
                     </div>
                   ))}
                 </div>
               </Panel>
-              <Panel className="status-panel">
+              <Panel className="top-posts-panel">
                 <div className="panel-heading">
-                  <h2>内容状态</h2>
+                  <h2>内容指标</h2>
+                  <span>累计统计</span>
                 </div>
-                <dl>
+                <div className="admin-status-grid">
                   <div>
-                    <dt>已发布</dt>
-                    <dd>{summary.published_posts}</dd>
+                    <span>待审核评论</span>
+                    <strong>{summary.pending_comments}</strong>
                   </div>
                   <div>
-                    <dt>草稿与定时</dt>
-                    <dd>{summary.total_posts - summary.published_posts}</dd>
+                    <span>被举报内容</span>
+                    <strong>{summary.reported_items}</strong>
                   </div>
                   <div>
-                    <dt>待审核评论</dt>
-                    <dd>{summary.pending_comments}</dd>
+                    <span>总文章数</span>
+                    <strong>{summary.total_posts}</strong>
                   </div>
                   <div>
-                    <dt>被举报内容</dt>
-                    <dd>{summary.reported_items}</dd>
+                    <span>已发布文章</span>
+                    <strong>{summary.published_posts}</strong>
                   </div>
-                </dl>
-                <Link to="/admin/comments?status=pending">处理互动队列 →</Link>
+                </div>
               </Panel>
             </div>
-            {summary.ai_alerts.length > 0 ? (
+            {summary.ai_alerts?.length ? (
               <Panel className="dashboard-ai-alerts">
                 <div className="panel-heading">
                   <div>
@@ -330,7 +329,7 @@ export default function Dashboard() {
             <Panel className="dashboard-table">
               <div className="panel-heading">
                 <h2>表现最佳文章</h2>
-                {canAccessPosts ? (
+                {can("view", "post") ? (
                   <Link to="/admin/posts">查看全部文章</Link>
                 ) : null}
               </div>
@@ -346,12 +345,7 @@ export default function Dashboard() {
                   </thead>
                   <tbody>
                     {summary.top_posts.map((post, index) => {
-                      const canEdit =
-                        canManageContent ||
-                        (canAuthorContent &&
-                          post.created_by_principal_id != null &&
-                          currentPrincipalId != null &&
-                          post.created_by_principal_id === currentPrincipalId);
+                      const canEdit = can("edit", "post", post);
                       return (
                         <tr key={post.id}>
                           <td>
