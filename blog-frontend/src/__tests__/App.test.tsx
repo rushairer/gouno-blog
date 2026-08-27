@@ -35,7 +35,7 @@ describe("admin route access", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole("heading", { name: "无后台访问权限" }),
+        screen.getByRole("heading", { name: /无后台访问权限|No Admin Access/ }),
       ).toBeInTheDocument();
     });
     expect(screen.queryByLabelText("后台导航")).not.toBeInTheDocument();

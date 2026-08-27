@@ -1,7 +1,6 @@
 import { useEffect, useId, useRef } from "react";
 import type React from "react";
 import { X } from "lucide-react";
-import { classes } from "./classes";
 import { Button, IconButton } from "./Button";
 
 function useOverlayDialog(
@@ -72,21 +71,23 @@ export function Modal({
   onClose: () => void;
   className?: string;
 }) {
-  const closeButton = useRef<HTMLButtonElement>(null);
-  const containerRef = useRef<HTMLElement>(null);
   const titleID = useId();
   const descriptionID = useId();
+  const containerRef = useRef<HTMLElement | null>(null);
+  const closeButton = useRef<HTMLButtonElement | null>(null);
+
   useOverlayDialog(open, onClose, containerRef, closeButton);
 
   if (!open) return null;
+
   return (
-    <div
-      className="modal-backdrop"
-      role="presentation"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
+    <div className="modal-backdrop">
+      <div
+        className="modal-scrim"
+        role="presentation"
+        aria-hidden="true"
+        onClick={onClose}
+      />
       <section
         ref={containerRef}
         className={`modal${className ? ` ${className}` : ""}`}
@@ -130,24 +131,26 @@ export function Drawer({
   onClose: () => void;
   className?: string;
 }) {
-  const closeButton = useRef<HTMLButtonElement>(null);
-  const containerRef = useRef<HTMLElement>(null);
   const titleID = useId();
   const descriptionID = useId();
+  const containerRef = useRef<HTMLElement | null>(null);
+  const closeButton = useRef<HTMLButtonElement | null>(null);
+
   useOverlayDialog(open, onClose, containerRef, closeButton);
 
   if (!open) return null;
+
   return (
-    <div
-      className="drawer-backdrop"
-      role="presentation"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
+    <div className="modal-backdrop">
+      <div
+        className="modal-scrim"
+        role="presentation"
+        aria-hidden="true"
+        onClick={onClose}
+      />
       <section
         ref={containerRef}
-        className={classes("drawer", className)}
+        className={`drawer${className ? ` ${className}` : ""}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleID}

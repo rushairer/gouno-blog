@@ -38,6 +38,7 @@ import { useI18n } from "../i18n";
 import { useArticleSEO } from "../utils/seo";
 import { MarkdownRenderer } from "../components/MarkdownRenderer";
 import { extractMarkdownTOC } from "../utils/markdown";
+import { SESSION_KEYS } from "../constants";
 import type { Post } from "../types/blog";
 import NotFound from "./NotFound";
 
@@ -207,7 +208,7 @@ export default function PostDetail() {
         setRelatedPosts(
           relatedResult.status === "fulfilled" ? relatedResult.value : [],
         );
-        const viewKey = `gouno-blog:viewed:${postData.id}`;
+        const viewKey = `${SESSION_KEYS.POST_VIEWED_PREFIX}${postData.id}`;
         const alreadyViewed = sessionStorage.getItem(viewKey) === "1";
         setViews((postData.views_count || 0) + (alreadyViewed ? 0 : 1));
 

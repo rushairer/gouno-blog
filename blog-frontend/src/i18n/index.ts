@@ -3,9 +3,11 @@ import { initReactI18next } from "react-i18next";
 import en from "./locales/en.json";
 import zh from "./locales/zh.json";
 
+import { STORAGE_KEYS } from "../constants";
+
 export type Locale = "en" | "zh";
 
-export const storageKey = "gouno-blog:locale";
+export const storageKey = STORAGE_KEYS.LOCALE;
 
 export function getInitialLocale(): Locale {
   const stored =

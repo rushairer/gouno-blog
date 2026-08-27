@@ -80,6 +80,8 @@ export interface BlogSessionData {
   authorization_version: number;
 }
 
+import { MembershipStatus, RoleType } from "./constants";
+
 let cachedBlogSession: BlogSessionData | null = null;
 
 export function getCachedBlogSession(): BlogSessionData | null {
@@ -87,13 +89,19 @@ export function getCachedBlogSession(): BlogSessionData | null {
 }
 
 export function hasBlogPermission(permission: string): boolean {
-  if (!cachedBlogSession || cachedBlogSession.membership_status !== "active")
+  if (
+    !cachedBlogSession ||
+    cachedBlogSession.membership_status !== MembershipStatus.ACTIVE
+  )
     return false;
   return cachedBlogSession.permissions?.includes(permission) ?? false;
 }
 
 export function hasAnyBlogPermission(permissions: string[]): boolean {
-  if (!cachedBlogSession || cachedBlogSession.membership_status !== "active")
+  if (
+    !cachedBlogSession ||
+    cachedBlogSession.membership_status !== MembershipStatus.ACTIVE
+  )
     return false;
   return permissions.some((p) => cachedBlogSession?.permissions?.includes(p));
 }
@@ -101,15 +109,15 @@ export function hasAnyBlogPermission(permissions: string[]): boolean {
 export function getBlogRoleLabel(role?: string): string {
   const target = role || cachedBlogSession?.roles?.[0];
   switch (target) {
-    case "owner":
+    case RoleType.OWNER:
       return "所有者";
-    case "admin":
+    case RoleType.ADMIN:
       return "管理员";
-    case "editor":
+    case RoleType.EDITOR:
       return "编辑";
-    case "author":
+    case RoleType.AUTHOR:
       return "作者";
-    case "moderator":
+    case RoleType.REVIEWER:
       return "审核员";
     default:
       return "成员";
@@ -141,7 +149,7 @@ export async function getManagementAccess(): Promise<ManagementAccess> {
     cachedBlogSession = session;
 
     const isActive = session.membership_status
-      ? session.membership_status === "active"
+      ? session.membership_status === MembershipStatus.ACTIVE
       : true;
 
     if (
@@ -160,7 +168,7 @@ export async function getManagementAccess(): Promise<ManagementAccess> {
 /** Non-authoritative display hint for public-page affordances. */
 export function hasCachedAdminRole(): boolean {
   if (cachedBlogSession?.roles?.length) {
-    return cachedBlogSession.membership_status === "active";
+    return cachedBlogSession.membership_status === MembershipStatus.ACTIVE;
   }
   return Boolean(gossoClient.getSnapshot().profile?.roles?.includes("admin"));
 }

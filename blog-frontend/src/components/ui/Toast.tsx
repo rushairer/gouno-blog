@@ -34,6 +34,8 @@ const toastIcons: Record<ToastTone, React.ReactNode> = {
   warning: <AlertTriangle aria-hidden="true" />,
 };
 
+import { TIMEOUTS_MS } from "../../constants";
+
 export function Toast({
   toast,
   onDismiss,
@@ -45,7 +47,7 @@ export function Toast({
     if (toast.duration === 0) return;
     const timeout = window.setTimeout(
       () => onDismiss(toast.id),
-      toast.duration ?? 3600,
+      toast.duration ?? TIMEOUTS_MS.TOAST_DEFAULT,
     );
     return () => window.clearTimeout(timeout);
   }, [onDismiss, toast.duration, toast.id]);

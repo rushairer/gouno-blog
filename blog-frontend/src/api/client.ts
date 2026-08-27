@@ -36,7 +36,8 @@ export function optionalApiFetch(
 
 export async function readData<T>(
   responsePromise: Promise<Response> | Response,
+  fallbackMessage = "Request failed, please try again later.",
 ): Promise<T> {
   const response = await responsePromise;
-  return parseJsonEnvelope<T>(response, "请求失败，请稍后重试。");
+  return parseJsonEnvelope<T>(response, fallbackMessage);
 }

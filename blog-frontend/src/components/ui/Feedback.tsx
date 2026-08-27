@@ -63,14 +63,18 @@ export function ErrorState({
 export async function copyText(
   value: string,
   notify: (message: string, tone?: "success" | "error") => void,
-  successMessage = "已复制到剪贴板。",
+  successMessage?: string,
+  errorMessage?: string,
 ) {
   try {
     await navigator.clipboard.writeText(value);
-    notify(successMessage);
+    notify(successMessage || "Copied to clipboard.");
     return true;
   } catch {
-    notify("复制失败，请检查浏览器剪贴板权限。", "error");
+    notify(
+      errorMessage || "Copy failed. Please check clipboard permissions.",
+      "error",
+    );
     return false;
   }
 }

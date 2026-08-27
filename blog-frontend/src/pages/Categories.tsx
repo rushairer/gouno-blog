@@ -4,10 +4,12 @@ import { Link } from "react-router-dom";
 import { EmptyState, LoadingState } from "../components/ui";
 import { siteApi } from "../api/site";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { useI18n } from "../i18n";
 import type { Category } from "../types/blog";
 
 export default function Categories() {
-  usePageTitle("分类");
+  const { t } = useI18n();
+  usePageTitle(t("categoriesPage.title"));
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -22,13 +24,13 @@ export default function Categories() {
   return (
     <div className="public-container simple-page taxonomy-page">
       <header>
-        <p>CATEGORIES / FIELDS</p>
-        <h1>分类</h1>
-        <span>围绕长期问题建立内容脉络。</span>
+        <p>{t("categoriesPage.categoryMeta")}</p>
+        <h1>{t("categoriesPage.title")}</h1>
+        <span>{t("categoriesPage.subtitle")}</span>
       </header>
       <div className="simple-page__body">
         {loading ? (
-          <LoadingState label="正在整理分类索引…" />
+          <LoadingState label={t("categoriesPage.loading")} />
         ) : categories.length ? (
           <div className="category-grid">
             {categories.map((item, index) => (
@@ -36,16 +38,19 @@ export default function Categories() {
                 <span>{String(index + 1).padStart(2, "0")}</span>
                 <h2>{item.name}</h2>
                 <p>
-                  {item.description || "查看这个主题下的全部文章与实践记录。"}
+                  {item.description || t("categoriesPage.defaultDescription")}
                 </p>
                 <div>
-                  {item.post_count || 0} 篇文章 <ArrowRight />
+                  {t("categoriesPage.postCount", {
+                    count: item.post_count || 0,
+                  })}{" "}
+                  <ArrowRight />
                 </div>
               </Link>
             ))}
           </div>
         ) : (
-          <EmptyState label="分类模型已经就绪，创建第一个分类后会在这里出现。" />
+          <EmptyState label={t("categoriesPage.empty")} />
         )}
       </div>
     </div>
