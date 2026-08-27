@@ -123,12 +123,12 @@ func AuthMiddlewareWithOptions(verifier *auth.Verifier, options AuthOptions) gin
 		if options.RequiredRole != "" {
 			rolesRaw, exists := claims["roles"]
 			if !exists {
-				ctx.AbortWithStatusJSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, "forbidden: missing roles claim"))
+				ctx.AbortWithStatusJSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, "forbidden"))
 				return
 			}
 			rolesArr, ok := rolesRaw.([]interface{})
 			if !ok {
-				ctx.AbortWithStatusJSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, "forbidden: invalid roles format"))
+				ctx.AbortWithStatusJSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, "forbidden"))
 				return
 			}
 			hasRole := false
@@ -139,7 +139,7 @@ func AuthMiddlewareWithOptions(verifier *auth.Verifier, options AuthOptions) gin
 				}
 			}
 			if !hasRole {
-				ctx.AbortWithStatusJSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, "forbidden: insufficient permissions"))
+				ctx.AbortWithStatusJSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, "forbidden"))
 				return
 			}
 		}

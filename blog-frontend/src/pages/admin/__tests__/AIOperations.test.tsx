@@ -543,11 +543,14 @@ describe("AIOperations", () => {
     ).toHaveLength(0);
   });
 
-  it("redirects users without blog management access", async () => {
+  it("leaves authorization to the route-level admin boundary", async () => {
     vi.mocked(canManageBlog).mockReturnValue(false);
     renderConsole();
     await waitFor(() =>
-      expect(redirectToAuthorize).toHaveBeenCalledWith("/admin/ai-ops"),
+      expect(
+        screen.getByRole("heading", { name: "AI Operations" }),
+      ).toBeInTheDocument(),
     );
+    expect(redirectToAuthorize).not.toHaveBeenCalled();
   });
 });

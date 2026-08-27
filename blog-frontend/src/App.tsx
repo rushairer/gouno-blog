@@ -20,7 +20,7 @@ import About from "./pages/About";
 import NotFound from "./pages/NotFound";
 import Callback from "./pages/Callback";
 import HostedLoginRedirect from "./pages/HostedLoginRedirect";
-import { canManageBlog, isLoggedIn, redirectToAuthorize } from "./auth";
+import { getManagementAccess, logout, redirectToAuthorize } from "./auth";
 import { useSiteMetadata } from "./hooks/useSiteMetadata";
 const Settings = React.lazy(() => import("./pages/Settings"));
 const Dashboard = React.lazy(() => import("./pages/admin/Dashboard"));
@@ -39,6 +39,9 @@ const MediaLibrary = React.lazy(() => import("./pages/admin/MediaLibrary"));
 const AIOperations = React.lazy(() => import("./pages/admin/AIOperations"));
 const AdminNotifications = React.lazy(
   () => import("./pages/admin/Notifications"),
+);
+const AccountNotifications = React.lazy(
+  () => import("./pages/AccountNotifications"),
 );
 import CustomPageView from "./pages/CustomPageView";
 
@@ -61,10 +64,50 @@ function Public({ children }: { children: React.ReactNode }) {
   );
 }
 
+function AdminAccessDenied() {
+  const [logoutError, setLogoutError] = useState("");
+
+  const switchAccount = async () => {
+    setLogoutError("");
+    try {
+      await logout();
+    } catch {
+      setLogoutError("退出登录失败，请稍后重试。");
+    }
+  };
+
+  return (
+    <PublicShell>
+      <div className="public-container state-page" role="alert">
+        <div className="state-card">
+          <h1>无后台访问权限</h1>
+          <p>当前账户没有博客后台所需的管理员角色。</p>
+          <div className="state__actions">
+            <a className="btn btn-primary" href="/">
+              返回站点
+            </a>
+            <button
+              className="btn btn-secondary"
+              type="button"
+              onClick={() => void switchAccount()}
+            >
+              退出并切换账户
+            </button>
+          </div>
+          {logoutError ? <p className="form-error">{logoutError}</p> : null}
+        </div>
+      </div>
+    </PublicShell>
+  );
+}
+
 function Admin({ children }: { children: React.ReactNode }) {
   const location = useLocation();
-  const allowed = isLoggedIn() && canManageBlog();
+  const [access, setAccess] = useState<
+    "checking" | "admin" | "denied" | "anonymous" | "error"
+  >("checking");
   const [redirectError, setRedirectError] = useState("");
+  const [retryCount, setRetryCount] = useState(0);
   const returnTo = `${location.pathname}${location.search}${location.hash}`;
 
   const startAuthorization = useCallback(async () => {
@@ -77,17 +120,32 @@ function Admin({ children }: { children: React.ReactNode }) {
   }, [returnTo]);
 
   useEffect(() => {
-    if (!allowed) void startAuthorization();
-  }, [allowed, startAuthorization]);
+    let active = true;
+    setAccess("checking");
+    void getManagementAccess().then((nextAccess) => {
+      if (active) setAccess(nextAccess);
+    });
+    return () => {
+      active = false;
+    };
+  }, [retryCount, returnTo]);
 
-  if (!allowed) {
+  useEffect(() => {
+    if (access === "anonymous") void startAuthorization();
+  }, [access, startAuthorization]);
+
+  if (access === "checking" || access === "anonymous") {
     return (
       <PublicShell>
         <div className="public-container state-page" role="status">
           <div className="state-card">
             <span className="spinner" aria-hidden="true" />
-            <h1>需要登录</h1>
-            <p>{redirectError || "正在前往安全登录页…"}</p>
+            <h1>{access === "checking" ? "正在验证权限" : "需要登录"}</h1>
+            <p>
+              {access === "checking"
+                ? "正在确认后台访问权限…"
+                : redirectError || "正在前往安全登录页…"}
+            </p>
             {redirectError ? (
               <button
                 className="btn btn-primary"
@@ -102,6 +160,29 @@ function Admin({ children }: { children: React.ReactNode }) {
       </PublicShell>
     );
   }
+
+  if (access === "denied") return <AdminAccessDenied />;
+
+  if (access === "error") {
+    return (
+      <PublicShell>
+        <div className="public-container state-page" role="alert">
+          <div className="state-card">
+            <h1>无法验证后台权限</h1>
+            <p>请检查网络后重试。为保护后台内容，暂时不会打开管理工作区。</p>
+            <button
+              className="btn btn-primary"
+              type="button"
+              onClick={() => setRetryCount((current) => current + 1)}
+            >
+              重试
+            </button>
+          </div>
+        </div>
+      </PublicShell>
+    );
+  }
+
   return (
     <AdminShell>
       <React.Suspense fallback={<div className="loading">正在载入工作区…</div>}>
@@ -209,7 +290,11 @@ export default function App() {
             />
             <Route
               path="/account/notifications"
-              element={<Navigate replace to="/admin/notifications" />}
+              element={
+                <Public>
+                  <AccountNotifications />
+                </Public>
+              }
             />
             <Route
               path="/account/settings"
@@ -221,7 +306,7 @@ export default function App() {
             />
             <Route
               path="/notifications"
-              element={<Navigate replace to="/admin/notifications" />}
+              element={<Navigate replace to="/account/notifications" />}
             />
             <Route
               path="/settings"

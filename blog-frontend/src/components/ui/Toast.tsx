@@ -95,7 +95,16 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const notify = useCallback<ToastContextValue["notify"]>(
     (message, tone = "success", options = {}) => {
       const id = ++nextID.current;
-      setToasts((current) => [...current, { id, message, tone, ...options }]);
+      setToasts((current) => {
+        if (
+          current.some(
+            (toast) => toast.message === message && toast.tone === tone,
+          )
+        ) {
+          return current;
+        }
+        return [...current, { id, message, tone, ...options }];
+      });
     },
     [],
   );

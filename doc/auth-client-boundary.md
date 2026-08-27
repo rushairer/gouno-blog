@@ -28,6 +28,12 @@ GOSSO Admin 的管理员账号、OAuth client、审计和系统状态属于管�
 
 页面只拥有展示、表单校验、交互和本地化状态。协议地址、请求体、Cookie、Token、CSRF、envelope 与认证错误分类不属于页面职责。
 
+`/admin/*` 由应用根部的单一访问门禁控制：它通过 Blog 的
+`/api/me/session` 读取后端已验证的 JWT `roles`，仅 `admin` 角色可以渲染
+后台框架。OAuth 请求 scope 和页面自身的 profile 缓存均不得作为授权依据。
+前端门禁只避免暴露工作区；所有管理 API 仍必须由后端角色中间件拒绝未授权
+请求。
+
 ## 依赖与发布
 
 公开发布只接受 npm registry 中的精确 SemVer（当前验证版本为
