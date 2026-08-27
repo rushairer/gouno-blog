@@ -101,7 +101,11 @@ export function StepUpMfaModal({
 
         <div className="stepup-mfa-footer-tip">
           <span>尚未在 GOSSO 绑定 MFA？</span>
-          <a href={gossoAdminURL} target="_blank" rel="noreferrer">
+          <a
+            href={`${gossoAdminURL.replace(/\/$/, "")}/account-settings/mfa`}
+            target="_blank"
+            rel="noreferrer"
+          >
             前往账号中心绑定 <ExternalLink />
           </a>
         </div>
