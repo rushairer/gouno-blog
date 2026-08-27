@@ -76,7 +76,10 @@ function membershipTone(status: BlogMember["membership_status"]) {
 
 const isMfaError = (err: unknown): boolean => {
   if (err instanceof Error) {
-    return err.message.includes("recent_mfa_required") || err.message.includes("multi-factor");
+    return (
+      err.message.includes("recent_mfa_required") ||
+      err.message.includes("multi-factor")
+    );
   }
   return false;
 };
@@ -90,7 +93,9 @@ export default function AdminUsers() {
   const [saving, setSaving] = useState<number | null>(null);
   const [editing, setEditing] = useState<BlogMember | null>(null);
   const [stepUpOpen, setStepUpOpen] = useState(false);
-  const [pendingAction, setPendingAction] = useState<(() => Promise<void>) | null>(null);
+  const [pendingAction, setPendingAction] = useState<
+    (() => Promise<void>) | null
+  >(null);
   const [confirm, setConfirm] = useState<{
     member: BlogMember;
     action: "suspend" | "restore" | "transfer";
@@ -127,10 +132,14 @@ export default function AdminUsers() {
       notify("成员信息与权限已更新。");
     } catch (err) {
       if (isMfaError(err)) {
-        setPendingAction(() => () => updateMember(member, status, roles, displayName));
+        setPendingAction(
+          () => () => updateMember(member, status, roles, displayName),
+        );
         setStepUpOpen(true);
       } else {
-        setError(err instanceof Error ? err.message : "更新成员失败，请稍后重试。");
+        setError(
+          err instanceof Error ? err.message : "更新成员失败，请稍后重试。",
+        );
       }
     } finally {
       setSaving(null);
@@ -143,13 +152,10 @@ export default function AdminUsers() {
     const form = new FormData(event.currentTarget);
     const displayName = String(form.get("display_name") ?? "").trim();
     const isOwner = editing.roles.includes("owner");
-    const selectedRole = isOwner ? "owner" : String(form.get("role") || "author");
-    await updateMember(
-      editing,
-      "active",
-      [selectedRole],
-      displayName,
-    );
+    const selectedRole = isOwner
+      ? "owner"
+      : String(form.get("role") || "author");
+    await updateMember(editing, "active", [selectedRole], displayName);
     setEditing(null);
   };
 
@@ -177,7 +183,9 @@ export default function AdminUsers() {
         setPendingAction(() => () => executeConfirm());
         setStepUpOpen(true);
       } else {
-        setError(err instanceof Error ? err.message : "操作未完成，请稍后重试。");
+        setError(
+          err instanceof Error ? err.message : "操作未完成，请稍后重试。",
+        );
       }
     } finally {
       setSaving(null);
@@ -191,7 +199,12 @@ export default function AdminUsers() {
         description="管理 Blog 后台成员与角色分配；身份认证与账号安全由 GOSSO 提供。"
         actions={
           <>
-            <Button size="compact" type="button" onClick={() => void load()} loading={loading}>
+            <Button
+              size="compact"
+              type="button"
+              onClick={() => void load()}
+              loading={loading}
+            >
               <RefreshCw /> 刷新
             </Button>
             <a
@@ -212,91 +225,144 @@ export default function AdminUsers() {
         ) : members.length === 0 ? (
           <EmptyState
             label="暂未同步到任何登录用户。"
-            action={<Button size="compact" type="button" onClick={() => void load()}>重新加载</Button>}
+            action={
+              <Button size="compact" type="button" onClick={() => void load()}>
+                重新加载
+              </Button>
+            }
           />
         ) : (
           <Panel>
             <TableContainer>
               <table className="admin-table member-table">
-                <thead><tr><th>成员</th><th>Blog 角色</th><th>状态</th><th>操作</th></tr></thead>
-                <tbody>{members.map((member) => {
-                  const busy = saving === member.principal.id;
-                  const isOwner = member.roles.includes("owner");
-                  return <tr key={member.principal.id}>
-                    <td>
-                      <div className="member-identity">
-                        <span className="member-avatar" aria-hidden="true">{initials(member)}</span>
-                        <div>
-                          <strong>{memberName(member)}</strong>
-                          <div className="member-identity-sub">
-                            {member.principal.email ? <span>{member.principal.email} · </span> : null}
+                <thead>
+                  <tr>
+                    <th>成员</th>
+                    <th>Blog 角色</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {members.map((member) => {
+                    const busy = saving === member.principal.id;
+                    const isOwner = member.roles.includes("owner");
+                    return (
+                      <tr key={member.principal.id}>
+                        <td>
+                          <div className="member-identity">
+                            <span className="member-avatar" aria-hidden="true">
+                              {initials(member)}
+                            </span>
+                            <div>
+                              <strong>{memberName(member)}</strong>
+                              <div className="member-identity-sub">
+                                {member.principal.email ? (
+                                  <span>{member.principal.email} · </span>
+                                ) : null}
+                                <button
+                                  type="button"
+                                  className="member-id-copy"
+                                  title={`点击复制完整 Subject ID: ${member.principal.subject}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    void navigator.clipboard.writeText(
+                                      member.principal.subject,
+                                    );
+                                    notify(
+                                      `已复制完整 Subject ID: ${member.principal.subject}`,
+                                    );
+                                  }}
+                                >
+                                  ID: {member.principal.subject.slice(0, 8)}
+                                  <Copy size={11} aria-hidden="true" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="member-roles">
+                            {member.roles.length ? (
+                              member.roles.map((role) => (
+                                <Badge
+                                  key={role}
+                                  tone={role === "owner" ? "brand" : "neutral"}
+                                >
+                                  {roleLabels[role] || role}
+                                </Badge>
+                              ))
+                            ) : (
+                              <span className="muted-copy">尚未授予角色</span>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <Badge
+                            tone={membershipTone(member.membership_status)}
+                          >
+                            {membershipLabel(member.membership_status)}
+                          </Badge>
+                        </td>
+                        <td>
+                          <div className="table-actions">
                             <button
                               type="button"
-                              className="member-id-copy"
-                              title={`点击复制完整 Subject ID: ${member.principal.subject}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                void navigator.clipboard.writeText(member.principal.subject);
-                                notify(`已复制完整 Subject ID: ${member.principal.subject}`);
-                              }}
+                              title="编辑成员与权限"
+                              aria-label="编辑成员与权限"
+                              disabled={busy}
+                              onClick={() => setEditing(member)}
                             >
-                              ID: {member.principal.subject.slice(0, 8)}
-                              <Copy size={11} aria-hidden="true" />
+                              <KeyRound />
                             </button>
+                            {!isOwner ? (
+                              <button
+                                type="button"
+                                title="移交所有权"
+                                aria-label="移交所有权"
+                                disabled={
+                                  busy || member.membership_status !== "active"
+                                }
+                                onClick={() =>
+                                  setConfirm({ member, action: "transfer" })
+                                }
+                              >
+                                <Crown />
+                              </button>
+                            ) : null}
+                            {isOwner ? null : member.membership_status ===
+                              "suspended" ? (
+                              <button
+                                type="button"
+                                title="恢复成员"
+                                aria-label="恢复成员"
+                                disabled={busy}
+                                onClick={() =>
+                                  setConfirm({ member, action: "restore" })
+                                }
+                              >
+                                <RotateCcw />
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className="danger-action"
+                                title="暂停成员"
+                                aria-label="暂停成员"
+                                disabled={busy}
+                                onClick={() =>
+                                  setConfirm({ member, action: "suspend" })
+                                }
+                              >
+                                <Ban />
+                              </button>
+                            )}
                           </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td><div className="member-roles">{member.roles.length ? member.roles.map((role) => <Badge key={role} tone={role === "owner" ? "brand" : "neutral"}>{roleLabels[role] || role}</Badge>) : <span className="muted-copy">尚未授予角色</span>}</div></td>
-                    <td><Badge tone={membershipTone(member.membership_status)}>{membershipLabel(member.membership_status)}</Badge></td>
-                    <td>
-                      <div className="table-actions">
-                        <button
-                          type="button"
-                          title="编辑成员与权限"
-                          aria-label="编辑成员与权限"
-                          disabled={busy}
-                          onClick={() => setEditing(member)}
-                        >
-                          <KeyRound />
-                        </button>
-                        {!isOwner ? (
-                          <button
-                            type="button"
-                            title="移交所有权"
-                            aria-label="移交所有权"
-                            disabled={busy || member.membership_status !== "active"}
-                            onClick={() => setConfirm({ member, action: "transfer" })}
-                          >
-                            <Crown />
-                          </button>
-                        ) : null}
-                        {isOwner ? null : member.membership_status === "suspended" ? (
-                          <button
-                            type="button"
-                            title="恢复成员"
-                            aria-label="恢复成员"
-                            disabled={busy}
-                            onClick={() => setConfirm({ member, action: "restore" })}
-                          >
-                            <RotateCcw />
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className="danger-action"
-                            title="暂停成员"
-                            aria-label="暂停成员"
-                            disabled={busy}
-                            onClick={() => setConfirm({ member, action: "suspend" })}
-                          >
-                            <Ban />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>;
-                })}</tbody>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
               </table>
             </TableContainer>
           </Panel>
@@ -309,7 +375,10 @@ export default function AdminUsers() {
         onClose={() => setEditing(null)}
       >
         {editing ? (
-          <form className="modal-form member-role-form" onSubmit={(event) => void saveRoles(event)}>
+          <form
+            className="modal-form member-role-form"
+            onSubmit={(event) => void saveRoles(event)}
+          >
             <div className="member-modal-profile">
               <span className="member-avatar" aria-hidden="true">
                 {initials(editing)}
@@ -317,7 +386,9 @@ export default function AdminUsers() {
               <div className="member-modal-info">
                 <div className="member-modal-name">
                   <strong>{memberName(editing)}</strong>
-                  {editing.roles.includes("owner") ? <Badge tone="brand">所有者</Badge> : null}
+                  {editing.roles.includes("owner") ? (
+                    <Badge tone="brand">所有者</Badge>
+                  ) : null}
                 </div>
                 <span className="member-modal-meta">
                   {editing.principal.email || "GOSSO 已验证身份"}
@@ -331,7 +402,9 @@ export default function AdminUsers() {
                 type="text"
                 name="display_name"
                 defaultValue={editing.principal.display_name}
-                placeholder={editing.principal.email || "设置在 Blog 内部展示的名称"}
+                placeholder={
+                  editing.principal.email || "设置在 Blog 内部展示的名称"
+                }
                 maxLength={64}
                 autoComplete="off"
               />
@@ -357,12 +430,19 @@ export default function AdminUsers() {
                         <strong>所有者</strong>
                         <span className="member-role-tag">owner</span>
                       </div>
-                      <small>拥有站点最高管理权限。所有权仅可通过“移交所有权”操作进行转移。</small>
+                      <small>
+                        拥有站点最高管理权限。所有权仅可通过“移交所有权”操作进行转移。
+                      </small>
                     </div>
                   </label>
                 ) : (
                   assignableRoles.map((role) => {
-                    const currentRole = editing.roles.find((r) => assignableRoles.includes(r as typeof assignableRoles[number])) || "author";
+                    const currentRole =
+                      editing.roles.find((r) =>
+                        assignableRoles.includes(
+                          r as (typeof assignableRoles)[number],
+                        ),
+                      ) || "author";
                     return (
                       <label className="member-role-card" key={role}>
                         <input
@@ -386,10 +466,18 @@ export default function AdminUsers() {
             </div>
 
             <div className="modal-actions">
-              <Button variant="secondary" type="button" onClick={() => setEditing(null)}>
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={() => setEditing(null)}
+              >
                 取消
               </Button>
-              <Button variant="primary" type="submit" loading={saving === editing.principal.id}>
+              <Button
+                variant="primary"
+                type="submit"
+                loading={saving === editing.principal.id}
+              >
                 保存设置
               </Button>
             </div>
@@ -399,9 +487,27 @@ export default function AdminUsers() {
 
       <ConfirmDialog
         open={Boolean(confirm)}
-        title={confirm?.action === "transfer" ? "移交所有权" : confirm?.action === "suspend" ? "暂停成员" : "恢复成员"}
-        description={confirm?.action === "transfer" ? `确认将 Blog 的所有权移交给“${confirm && memberName(confirm.member)}”？当前所有者将保留管理员角色。` : confirm?.action === "suspend" ? `暂停“${confirm && memberName(confirm.member)}”后，其后台访问权限将立即失效。` : `确认恢复“${confirm && memberName(confirm.member)}”的成员资格？`}
-        confirmLabel={confirm?.action === "transfer" ? "确认移交" : confirm?.action === "suspend" ? "确认暂停" : "确认恢复"}
+        title={
+          confirm?.action === "transfer"
+            ? "移交所有权"
+            : confirm?.action === "suspend"
+              ? "暂停成员"
+              : "恢复成员"
+        }
+        description={
+          confirm?.action === "transfer"
+            ? `确认将 Blog 的所有权移交给“${confirm && memberName(confirm.member)}”？当前所有者将保留管理员角色。`
+            : confirm?.action === "suspend"
+              ? `暂停“${confirm && memberName(confirm.member)}”后，其后台访问权限将立即失效。`
+              : `确认恢复“${confirm && memberName(confirm.member)}”的成员资格？`
+        }
+        confirmLabel={
+          confirm?.action === "transfer"
+            ? "确认移交"
+            : confirm?.action === "suspend"
+              ? "确认暂停"
+              : "确认恢复"
+        }
         danger={confirm?.action !== "restore"}
         busy={saving !== null}
         onConfirm={executeConfirm}

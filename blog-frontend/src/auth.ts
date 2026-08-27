@@ -49,7 +49,10 @@ export const stepUpMfa = async (
   if (!response.ok) {
     let msg = "Failed to complete step-up MFA";
     try {
-      const data = (await response.json()) as { error?: { message?: string }; message?: string };
+      const data = (await response.json()) as {
+        error?: { message?: string };
+        message?: string;
+      };
       if (data?.error?.message) msg = data.error.message;
       else if (data?.message) msg = data.message;
     } catch {
@@ -57,8 +60,17 @@ export const stepUpMfa = async (
     }
     throw new Error(msg);
   }
-  const envelope = (await response.json()) as { data?: { access_token?: string; auth_time: number; amr: string[] } };
-  return envelope.data || (envelope as unknown as { access_token?: string; auth_time: number; amr: string[] });
+  const envelope = (await response.json()) as {
+    data?: { access_token?: string; auth_time: number; amr: string[] };
+  };
+  return (
+    envelope.data ||
+    (envelope as unknown as {
+      access_token?: string;
+      auth_time: number;
+      amr: string[];
+    })
+  );
 };
 
 export type ManagementAccess = "admin" | "denied" | "anonymous" | "error";
@@ -86,12 +98,14 @@ export function getCachedBlogSession(): BlogSessionData | null {
 }
 
 export function hasBlogPermission(permission: string): boolean {
-  if (!cachedBlogSession || cachedBlogSession.membership_status !== "active") return false;
+  if (!cachedBlogSession || cachedBlogSession.membership_status !== "active")
+    return false;
   return cachedBlogSession.permissions?.includes(permission) ?? false;
 }
 
 export function hasAnyBlogPermission(permissions: string[]): boolean {
-  if (!cachedBlogSession || cachedBlogSession.membership_status !== "active") return false;
+  if (!cachedBlogSession || cachedBlogSession.membership_status !== "active")
+    return false;
   return permissions.some((p) => cachedBlogSession?.permissions?.includes(p));
 }
 

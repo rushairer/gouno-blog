@@ -16,15 +16,38 @@ export type BlogMember = {
 };
 
 export const membersApi = {
-  list: () => readData<{ members: BlogMember[] }>(authenticatedApiFetch("/api/admin/members")),
-  update: (principalID: number, status: string, roles: string[], displayName?: string, reason = "") =>
-    readData<{ updated: boolean }>(authenticatedApiFetch(`/api/admin/members/${principalID}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ display_name: displayName, status, roles, reason }),
-    })),
+  list: () =>
+    readData<{ members: BlogMember[] }>(
+      authenticatedApiFetch("/api/admin/members"),
+    ),
+  update: (
+    principalID: number,
+    status: string,
+    roles: string[],
+    displayName?: string,
+    reason = "",
+  ) =>
+    readData<{ updated: boolean }>(
+      authenticatedApiFetch(`/api/admin/members/${principalID}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          display_name: displayName,
+          status,
+          roles,
+          reason,
+        }),
+      }),
+    ),
   transferOwner: (principalID: number, reason = "") =>
-    readData<{ transferred: boolean }>(authenticatedApiFetch(`/api/admin/members/${principalID}/transfer-owner`, {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason }),
-    })),
+    readData<{ transferred: boolean }>(
+      authenticatedApiFetch(
+        `/api/admin/members/${principalID}/transfer-owner`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason }),
+        },
+      ),
+    ),
 };

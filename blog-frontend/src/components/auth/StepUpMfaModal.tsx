@@ -95,7 +95,8 @@ export function StepUpMfaModal({
             />
           </div>
           <small className="stepup-mfa-hint">
-            打开您手机上的 Authenticator 应用（如 Google Authenticator、1Password）获取 6 位动态码。
+            打开您手机上的 Authenticator 应用（如 Google
+            Authenticator、1Password）获取 6 位动态码。
           </small>
         </label>
 

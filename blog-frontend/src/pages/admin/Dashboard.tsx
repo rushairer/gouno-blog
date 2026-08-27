@@ -117,7 +117,8 @@ export default function Dashboard() {
         title="数据概览"
         description="了解站点整体运营情况，掌握内容表现与用户互动。"
         actions={
-          hasBlogPermission("content.author") || hasBlogPermission("content.manage") ? (
+          hasBlogPermission("content.author") ||
+          hasBlogPermission("content.manage") ? (
             <Link
               className={buttonClassName({ variant: "primary" })}
               to="/admin/posts/new"
