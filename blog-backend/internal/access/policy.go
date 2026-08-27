@@ -27,7 +27,7 @@ func (p *PostPolicy) CanView(actor *Snapshot, post *domain.Post) (bool, string) 
 		return true, ""
 	}
 	if actor.HasPermission(PermissionAuthorContent) {
-		if post.CreatedByPrincipalID == nil || *post.CreatedByPrincipalID == actor.Principal.ID {
+		if post != nil && post.CreatedByPrincipalID != nil && *post.CreatedByPrincipalID == actor.Principal.ID {
 			return true, ""
 		}
 		return false, "您没有权限查看其他作者的文章"
@@ -55,7 +55,7 @@ func (p *PostPolicy) CanEdit(actor *Snapshot, post *domain.Post) (bool, string) 
 		return true, ""
 	}
 	if actor.HasPermission(PermissionAuthorContent) {
-		if post.CreatedByPrincipalID == nil || *post.CreatedByPrincipalID == actor.Principal.ID {
+		if post != nil && post.CreatedByPrincipalID != nil && *post.CreatedByPrincipalID == actor.Principal.ID {
 			return true, ""
 		}
 		return false, "您仅能编辑自己创建的文章"
@@ -102,7 +102,7 @@ func (p *MediaPolicy) CanView(actor *Snapshot, media *domain.MediaAsset) (bool, 
 		return true, ""
 	}
 	if actor.HasPermission(PermissionAuthorContent) {
-		if media.CreatedByPrincipalID == nil || *media.CreatedByPrincipalID == actor.Principal.ID {
+		if media != nil && media.CreatedByPrincipalID != nil && *media.CreatedByPrincipalID == actor.Principal.ID {
 			return true, ""
 		}
 		return false, "您没有权限查看其他作者的媒体"
@@ -130,7 +130,7 @@ func (p *MediaPolicy) CanUpdate(actor *Snapshot, media *domain.MediaAsset) (bool
 		return true, ""
 	}
 	if actor.HasPermission(PermissionAuthorContent) {
-		if media.CreatedByPrincipalID == nil || *media.CreatedByPrincipalID == actor.Principal.ID {
+		if media != nil && media.CreatedByPrincipalID != nil && *media.CreatedByPrincipalID == actor.Principal.ID {
 			return true, ""
 		}
 		return false, "您仅能编辑自己上传的媒体"
@@ -150,7 +150,7 @@ func (p *MediaPolicy) CanDelete(actor *Snapshot, media *domain.MediaAsset, refer
 		return true, ""
 	}
 	if actor.HasPermission(PermissionAuthorContent) {
-		if media.CreatedByPrincipalID == nil || *media.CreatedByPrincipalID == actor.Principal.ID {
+		if media != nil && media.CreatedByPrincipalID != nil && *media.CreatedByPrincipalID == actor.Principal.ID {
 			return true, ""
 		}
 		return false, "您只能删除自己上传的媒体图片"
