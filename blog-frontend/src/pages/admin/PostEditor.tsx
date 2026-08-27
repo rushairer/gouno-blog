@@ -833,13 +833,21 @@ export default function PostEditor() {
   };
 
   const primaryStatus: PostStatus =
-    publishIntent === "scheduled" ? "scheduled" : "published";
+    publishIntent === "scheduled"
+      ? "scheduled"
+      : publishIntent === "draft"
+        ? "draft"
+        : "published";
   const primaryLabel =
     publishIntent === "scheduled"
       ? "安排发布"
-      : post.status === "published"
-        ? "更新文章"
-        : "发布";
+      : publishIntent === "draft"
+        ? post.status === "published"
+          ? "下架为草稿"
+          : "保存草稿"
+        : post.status === "published"
+          ? "更新文章"
+          : "发布";
   if (!allowed || loading)
     return (
       <AdminPageState
@@ -881,14 +889,16 @@ export default function PostEditor() {
           >
             <ExternalLink /> 预览前台页面
           </Button>
-          <Button
-            variant="secondary"
-            type="button"
-            onClick={() => void persist("draft")}
-            disabled={saving}
-          >
-            <Save /> 保存草稿
-          </Button>
+          {post.status !== "published" && publishIntent !== "draft" ? (
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={() => void persist("draft")}
+              disabled={saving}
+            >
+              <Save /> 保存草稿
+            </Button>
+          ) : null}
           <Button
             variant="primary"
             type="button"
