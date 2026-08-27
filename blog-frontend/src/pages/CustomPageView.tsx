@@ -2,7 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { GitBranch, Mail, Rss, ShieldAlert } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { MarkdownRenderer } from "../components/MarkdownRenderer";
-import { DEFAULT_SITE_SETTINGS, getCachedSiteSettings } from "../config/site-defaults";
+import {
+  DEFAULT_SITE_SETTINGS,
+  getCachedSiteSettings,
+} from "../config/site-defaults";
 import { pagesApi } from "../api/pages";
 import { siteApi } from "../api/site";
 import { extractMarkdownTOC } from "../utils/markdown";

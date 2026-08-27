@@ -3431,7 +3431,7 @@ a {
 .editor-ai-presets button.editor-ai-ideate-btn:hover:not(:disabled) {
   background: var(--ui-brand);
   border-color: var(--ui-brand);
-  color: #fff;
+  color: var(--ui-on-brand);
 }
 .editor-ai-presets button:disabled {
   opacity: 0.5;

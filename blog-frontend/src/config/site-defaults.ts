@@ -34,7 +34,11 @@ export function getCachedSiteSettings(): SiteSettings | null {
 
 export function setCachedSiteSettings(settings: Partial<SiteSettings>): void {
   try {
-    const merged = { ...DEFAULT_SITE_SETTINGS, ...(getCachedSiteSettings() || {}), ...settings };
+    const merged = {
+      ...DEFAULT_SITE_SETTINGS,
+      ...(getCachedSiteSettings() || {}),
+      ...settings,
+    };
     localStorage.setItem(SITE_SETTINGS_STORAGE_KEY, JSON.stringify(merged));
     window.dispatchEvent(
       new CustomEvent(SITE_SETTINGS_UPDATED_EVENT, { detail: merged }),

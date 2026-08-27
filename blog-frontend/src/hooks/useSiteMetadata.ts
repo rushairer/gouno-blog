@@ -42,11 +42,13 @@ export function applySiteMetadata(settings: Partial<SiteSettings>) {
   // Route-level title hooks take precedence. This only replaces the static HTML fallback.
   const currentTitle = document.title;
   const defaultTitle = DEFAULT_SITE_SETTINGS.site_title;
-  if (!currentTitle || currentTitle === defaultTitle || currentTitle === "Gouno Blog") {
+  if (
+    !currentTitle ||
+    currentTitle === defaultTitle ||
+    currentTitle === "Gouno Blog"
+  ) {
     document.title =
-      settings.default_seo_title ||
-      settings.site_title ||
-      defaultTitle;
+      settings.default_seo_title || settings.site_title || defaultTitle;
   }
 }
 
