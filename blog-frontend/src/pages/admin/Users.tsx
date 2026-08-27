@@ -325,60 +325,6 @@ export default function AdminUsers() {
               </div>
             </div>
 
-            <div className="member-sso-card">
-              <div className="member-sso-card__title">
-                <span>身份认证与配置 (SSO Identity)</span>
-                <button
-                  type="button"
-                  className="member-sso-copy-btn"
-                  onClick={() => {
-                    const envText = `BLOG_BOOTSTRAP_OWNER_ISSUER=${editing.principal.issuer}\nBLOG_BOOTSTRAP_OWNER_SUBJECT=${editing.principal.subject}`;
-                    void navigator.clipboard.writeText(envText);
-                    notify("已复制初始化 Owner 环境变量 (BLOG_BOOTSTRAP_OWNER_*)");
-                  }}
-                >
-                  <Copy size={12} />
-                  <span>复制初始化配置</span>
-                </button>
-              </div>
-              <div className="member-sso-card__grid">
-                <div className="member-sso-item">
-                  <span className="member-sso-item__label">认证源 (Issuer)</span>
-                  <div className="member-sso-item__value">
-                    <code>{editing.principal.issuer}</code>
-                    <button
-                      type="button"
-                      className="icon-copy-btn"
-                      title="复制 Issuer"
-                      onClick={() => {
-                        void navigator.clipboard.writeText(editing.principal.issuer);
-                        notify("已复制 Issuer");
-                      }}
-                    >
-                      <Copy size={12} />
-                    </button>
-                  </div>
-                </div>
-                <div className="member-sso-item">
-                  <span className="member-sso-item__label">唯一标识 (Subject)</span>
-                  <div className="member-sso-item__value">
-                    <code>{editing.principal.subject}</code>
-                    <button
-                      type="button"
-                      className="icon-copy-btn"
-                      title="复制完整 Subject ID"
-                      onClick={() => {
-                        void navigator.clipboard.writeText(editing.principal.subject);
-                        notify("已复制完整 Subject ID");
-                      }}
-                    >
-                      <Copy size={12} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             <label className="member-field-group">
               <span className="member-field-label">成员显示昵称 / 备注名</span>
               <input
