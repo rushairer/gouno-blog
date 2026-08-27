@@ -44,7 +44,27 @@ const roleDescriptions: Record<string, string> = {
 };
 
 function memberName(member: BlogMember) {
-  return member.principal.display_name || member.principal.email || "未命名成员";
+  if (member.principal.display_name?.trim()) {
+    return member.principal.display_name.trim();
+  }
+  if (member.principal.email?.trim()) {
+    return member.principal.email.trim();
+  }
+  if (member.principal.subject?.trim()) {
+    return `用户 ${member.principal.subject.slice(0, 8)}`;
+  }
+  return "未命名成员";
+}
+
+function memberSubtitle(member: BlogMember) {
+  const parts: string[] = [];
+  if (member.principal.display_name && member.principal.email) {
+    parts.push(member.principal.email);
+  }
+  if (member.principal.subject) {
+    parts.push(`ID: ${member.principal.subject.slice(0, 8)}`);
+  }
+  return parts.length ? parts.join(" · ") : "GOSSO 已验证身份";
 }
 
 function initials(member: BlogMember) {
@@ -107,19 +127,20 @@ export default function AdminUsers() {
     member: BlogMember,
     status: string,
     roles: string[],
+    displayName?: string,
   ) => {
     setSaving(member.principal.id);
     setError("");
     try {
-      await membersApi.update(member.principal.id, status, roles);
+      await membersApi.update(member.principal.id, status, roles, displayName);
       await load();
-      notify("成员权限已更新。");
+      notify("成员信息与权限已更新。");
     } catch (err) {
       if (isMfaError(err)) {
-        setPendingAction(() => () => updateMember(member, status, roles));
+        setPendingAction(() => () => updateMember(member, status, roles, displayName));
         setStepUpOpen(true);
       } else {
-        setError(err instanceof Error ? err.message : "更新成员权限失败，请稍后重试。");
+        setError(err instanceof Error ? err.message : "更新成员失败，请稍后重试。");
       }
     } finally {
       setSaving(null);
@@ -130,11 +151,17 @@ export default function AdminUsers() {
     event.preventDefault();
     if (!editing) return;
     const form = new FormData(event.currentTarget);
+    const displayName = String(form.get("display_name") ?? "").trim();
     const roles = assignableRoles.filter((role) => form.get(role) === "on");
-    await updateMember(editing, "active", [
-      ...(editing.roles.includes("owner") ? ["owner"] : []),
-      ...roles,
-    ]);
+    await updateMember(
+      editing,
+      "active",
+      [
+        ...(editing.roles.includes("owner") ? ["owner"] : []),
+        ...roles,
+      ],
+      displayName,
+    );
     setEditing(null);
   };
 
@@ -208,15 +235,15 @@ export default function AdminUsers() {
                   const busy = saving === member.principal.id;
                   const isOwner = member.roles.includes("owner");
                   return <tr key={member.principal.id}>
-                    <td><div className="member-identity"><span className="member-avatar" aria-hidden="true">{initials(member)}</span><div><strong>{memberName(member)}</strong><small>{member.principal.email || "GOSSO 已验证身份"}</small></div></div></td>
+                    <td><div className="member-identity"><span className="member-avatar" aria-hidden="true">{initials(member)}</span><div><strong>{memberName(member)}</strong><small>{memberSubtitle(member)}</small></div></div></td>
                     <td><div className="member-roles">{member.roles.length ? member.roles.map((role) => <Badge key={role} tone={role === "owner" ? "brand" : "neutral"}>{roleLabels[role] || role}</Badge>) : <span className="muted-copy">尚未授予角色</span>}</div></td>
                     <td><Badge tone={membershipTone(member.membership_status)}>{membershipLabel(member.membership_status)}</Badge></td>
                     <td>
                       <div className="table-actions">
                         <button
                           type="button"
-                          title="管理角色"
-                          aria-label="管理角色"
+                          title="编辑成员与权限"
+                          aria-label="编辑成员与权限"
                           disabled={busy}
                           onClick={() => setEditing(member)}
                         >
@@ -267,7 +294,7 @@ export default function AdminUsers() {
 
       <Modal
         open={Boolean(editing)}
-        title={editing ? `管理成员角色` : "管理角色"}
+        title={editing ? "编辑成员信息与权限" : "管理权限"}
         onClose={() => setEditing(null)}
       >
         {editing ? (
@@ -282,36 +309,50 @@ export default function AdminUsers() {
                   {editing.roles.includes("owner") ? <Badge tone="brand">所有者</Badge> : null}
                 </div>
                 <span className="member-modal-meta">
-                  {editing.principal.email || "GOSSO 已验证身份"}
+                  {memberSubtitle(editing)}
                 </span>
               </div>
             </div>
 
-            <p className="member-role-hint">
-              角色由 Blog 本地维护；昵称与账号安全由 GOSSO 单点登录系统统一管理。
-            </p>
+            <label className="member-field-group">
+              <span className="member-field-label">成员显示昵称 / 备注名</span>
+              <input
+                type="text"
+                name="display_name"
+                defaultValue={editing.principal.display_name}
+                placeholder={editing.principal.email || "设置在 Blog 内部展示的名称"}
+                maxLength={64}
+                autoComplete="off"
+              />
+              <small className="member-field-hint">
+                用于在文章作者署名、操作审计日志及后台成员目录中展示。
+              </small>
+            </label>
 
-            <div className="member-role-list">
-              {assignableRoles.map((role) => {
-                const isOwner = editing.roles.includes("owner");
-                return (
-                  <label className="member-role-card" key={role}>
-                    <input
-                      type="checkbox"
-                      name={role}
-                      defaultChecked={editing.roles.includes(role) || isOwner}
-                      disabled={isOwner}
-                    />
-                    <div className="member-role-card__content">
-                      <div className="member-role-card__header">
-                        <strong>{roleLabels[role]}</strong>
-                        <span className="member-role-tag">{role}</span>
+            <div className="member-role-section">
+              <span className="member-field-label">Blog 角色分配</span>
+              <div className="member-role-list">
+                {assignableRoles.map((role) => {
+                  const isOwner = editing.roles.includes("owner");
+                  return (
+                    <label className="member-role-card" key={role}>
+                      <input
+                        type="checkbox"
+                        name={role}
+                        defaultChecked={editing.roles.includes(role) || isOwner}
+                        disabled={isOwner}
+                      />
+                      <div className="member-role-card__content">
+                        <div className="member-role-card__header">
+                          <strong>{roleLabels[role]}</strong>
+                          <span className="member-role-tag">{role}</span>
+                        </div>
+                        <small>{roleDescriptions[role]}</small>
                       </div>
-                      <small>{roleDescriptions[role]}</small>
-                    </div>
-                  </label>
-                );
-              })}
+                    </label>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="modal-actions">
@@ -319,7 +360,7 @@ export default function AdminUsers() {
                 取消
               </Button>
               <Button variant="primary" type="submit" loading={saving === editing.principal.id}>
-                保存角色
+                保存设置
               </Button>
             </div>
           </form>
