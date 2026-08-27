@@ -1,0 +1,134 @@
+package access_test
+
+import (
+	"testing"
+
+	"github.com/rushairer/blog-backend/internal/access"
+	"github.com/rushairer/blog-backend/internal/domain"
+)
+
+func TestPostPolicy(t *testing.T) {
+	authorActor := &access.Snapshot{
+		Principal:        access.Principal{ID: 100},
+		MembershipStatus: "active",
+		Permissions:      []string{access.PermissionAuthorContent},
+	}
+	managerActor := &access.Snapshot{
+		Principal:        access.Principal{ID: 200},
+		MembershipStatus: "active",
+		Permissions:      []string{access.PermissionManageContent, access.PermissionAuthorContent},
+	}
+	moderatorActor := &access.Snapshot{
+		Principal:        access.Principal{ID: 300},
+		MembershipStatus: "active",
+		Permissions:      []string{access.PermissionModerate},
+	}
+
+	authorID := int64(100)
+	otherID := int64(999)
+	myPost := &domain.Post{ID: 1, Title: "My Post", CreatedByPrincipalID: &authorID}
+	otherPost := &domain.Post{ID: 2, Title: "Other Post", CreatedByPrincipalID: &otherID}
+
+	policy := access.PostPolicy{}
+
+	// Scope check
+	authorFilter := domain.AdminPostFilter{}
+	policy.ScopePosts(authorActor, &authorFilter)
+	if authorFilter.CreatedByPrincipalID == nil || *authorFilter.CreatedByPrincipalID != 100 {
+		t.Fatalf("expected author filter to have CreatedByPrincipalID=100, got %#v", authorFilter.CreatedByPrincipalID)
+	}
+
+	managerFilter := domain.AdminPostFilter{}
+	policy.ScopePosts(managerActor, &managerFilter)
+	if managerFilter.CreatedByPrincipalID != nil {
+		t.Fatalf("expected manager filter to have nil CreatedByPrincipalID, got %#v", managerFilter.CreatedByPrincipalID)
+	}
+
+	// CanView check
+	if allowed, _ := policy.CanView(authorActor, myPost); !allowed {
+		t.Fatal("author should be allowed to view own post")
+	}
+	if allowed, _ := policy.CanView(authorActor, otherPost); allowed {
+		t.Fatal("author should NOT be allowed to view other's post")
+	}
+	if allowed, _ := policy.CanView(managerActor, otherPost); !allowed {
+		t.Fatal("manager should be allowed to view any post")
+	}
+	if allowed, _ := policy.CanView(moderatorActor, myPost); allowed {
+		t.Fatal("moderator should NOT be allowed to view post in admin")
+	}
+
+	// CanEdit check
+	if allowed, _ := policy.CanEdit(authorActor, myPost); !allowed {
+		t.Fatal("author should be allowed to edit own post")
+	}
+	if allowed, _ := policy.CanEdit(authorActor, otherPost); allowed {
+		t.Fatal("author should NOT be allowed to edit other's post")
+	}
+	if allowed, _ := policy.CanEdit(managerActor, otherPost); !allowed {
+		t.Fatal("manager should be allowed to edit any post")
+	}
+
+	// CanDelete check
+	if allowed, _ := policy.CanDelete(authorActor, myPost); allowed {
+		t.Fatal("author should NOT be allowed to delete post")
+	}
+	if allowed, _ := policy.CanDelete(managerActor, myPost); !allowed {
+		t.Fatal("manager should be allowed to delete post")
+	}
+}
+
+func TestMediaPolicy(t *testing.T) {
+	authorActor := &access.Snapshot{
+		Principal:        access.Principal{ID: 100},
+		MembershipStatus: "active",
+		Permissions:      []string{access.PermissionAuthorContent},
+	}
+	managerActor := &access.Snapshot{
+		Principal:        access.Principal{ID: 200},
+		MembershipStatus: "active",
+		Permissions:      []string{access.PermissionManageContent, access.PermissionAuthorContent},
+	}
+
+	authorID := int64(100)
+	otherID := int64(999)
+	myMedia := &domain.MediaAsset{ID: 10, Filename: "mine.png", CreatedByPrincipalID: &authorID}
+	otherMedia := &domain.MediaAsset{ID: 20, Filename: "other.png", CreatedByPrincipalID: &otherID}
+
+	policy := access.MediaPolicy{}
+
+	// Scope check
+	authorFilter := domain.MediaFilter{}
+	policy.ScopeMedia(authorActor, &authorFilter)
+	if authorFilter.CreatedByPrincipalID == nil || *authorFilter.CreatedByPrincipalID != 100 {
+		t.Fatalf("expected author media filter to have CreatedByPrincipalID=100, got %#v", authorFilter.CreatedByPrincipalID)
+	}
+
+	managerFilter := domain.MediaFilter{}
+	policy.ScopeMedia(managerActor, &managerFilter)
+	if managerFilter.CreatedByPrincipalID != nil {
+		t.Fatalf("expected manager media filter to have nil CreatedByPrincipalID, got %#v", managerFilter.CreatedByPrincipalID)
+	}
+
+	// CanDelete check
+	// 1. My media with 0 references
+	if allowed, _ := policy.CanDelete(authorActor, myMedia, 0); !allowed {
+		t.Fatal("author should be allowed to delete own unreferenced media")
+	}
+	// 2. My media with > 0 references
+	if allowed, _ := policy.CanDelete(authorActor, myMedia, 2); allowed {
+		t.Fatal("author should NOT be allowed to delete referenced media")
+	}
+	// 3. Other's media with 0 references
+	if allowed, _ := policy.CanDelete(authorActor, otherMedia, 0); allowed {
+		t.Fatal("author should NOT be allowed to delete other's media")
+	}
+	// 4. Manager deleting other's media with 0 references
+	if allowed, _ := policy.CanDelete(managerActor, otherMedia, 0); !allowed {
+		t.Fatal("manager should be allowed to delete unreferenced media")
+	}
+	// 5. Manager deleting media with > 0 references
+	if allowed, _ := policy.CanDelete(managerActor, otherMedia, 1); allowed {
+		t.Fatal("manager should NOT be allowed to delete referenced media")
+	}
+}

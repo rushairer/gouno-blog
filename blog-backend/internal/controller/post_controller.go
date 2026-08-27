@@ -40,7 +40,8 @@ type BlogService interface {
 }
 
 type PostController struct {
-	svc BlogService
+	svc    BlogService
+	policy access.PostPolicy
 }
 
 func NewPostController(svc BlogService) *PostController {
@@ -84,9 +85,15 @@ func (ctrl *PostController) Create(c *gin.Context) {
 		SEODescription: req.SEODescription,
 	}
 
-	if snapshot, ok := middleware.CurrentBlogAccess(c); ok && snapshot.Principal.ID > 0 {
-		post.CreatedByPrincipalID = &snapshot.Principal.ID
-		post.UpdatedByPrincipalID = &snapshot.Principal.ID
+	if snapshot, ok := middleware.CurrentBlogAccess(c); ok {
+		if allowed, reason := ctrl.policy.CanCreate(&snapshot); !allowed {
+			c.JSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, reason))
+			return
+		}
+		if snapshot.Principal.ID > 0 {
+			post.CreatedByPrincipalID = &snapshot.Principal.ID
+			post.UpdatedByPrincipalID = &snapshot.Principal.ID
+		}
 	}
 
 	if err := ctrl.svc.CreatePost(c.Request.Context(), post); err != nil {
@@ -116,10 +123,6 @@ func (ctrl *PostController) Update(c *gin.Context) {
 
 	var existing *domain.Post
 	if snapshot, hasAccess := middleware.CurrentBlogAccess(c); hasAccess {
-		if snapshot.MembershipStatus != "active" {
-			c.JSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, "forbidden"))
-			return
-		}
 		var getErr error
 		existing, getErr = ctrl.svc.GetAdminPost(c.Request.Context(), id)
 		if getErr != nil {
@@ -130,15 +133,8 @@ func (ctrl *PostController) Update(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gouno.NewErrorResponse(http.StatusNotFound, "post not found"))
 			return
 		}
-		hasManage := false
-		for _, p := range snapshot.Permissions {
-			if p == access.PermissionManageContent || p == access.PermissionManageSite {
-				hasManage = true
-				break
-			}
-		}
-		if !hasManage && existing.CreatedByPrincipalID != nil && *existing.CreatedByPrincipalID != snapshot.Principal.ID {
-			c.JSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, "您仅能编辑自己创建的文章"))
+		if allowed, reason := ctrl.policy.CanEdit(&snapshot, existing); !allowed {
+			c.JSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, reason))
 			return
 		}
 	}
@@ -185,17 +181,8 @@ func (ctrl *PostController) ListAdmin(c *gin.Context) {
 		Tag:      c.Query("tag"),
 	}
 
-	if snapshot, ok := middleware.CurrentBlogAccess(c); ok && snapshot.MembershipStatus == "active" {
-		hasManage := false
-		for _, p := range snapshot.Permissions {
-			if p == access.PermissionManageContent || p == access.PermissionManageSite {
-				hasManage = true
-				break
-			}
-		}
-		if !hasManage {
-			filter.CreatedByPrincipalID = &snapshot.Principal.ID
-		}
+	if snapshot, ok := middleware.CurrentBlogAccess(c); ok {
+		ctrl.policy.ScopePosts(&snapshot, &filter)
 	}
 
 	posts, total, err := ctrl.svc.ListAdminPosts(c.Request.Context(), filter, page, pageSize)
@@ -225,19 +212,8 @@ func (ctrl *PostController) GetAdmin(c *gin.Context) {
 	}
 
 	if snapshot, hasAccess := middleware.CurrentBlogAccess(c); hasAccess {
-		if snapshot.MembershipStatus != "active" {
-			c.JSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, "forbidden"))
-			return
-		}
-		hasManage := false
-		for _, p := range snapshot.Permissions {
-			if p == access.PermissionManageContent || p == access.PermissionManageSite {
-				hasManage = true
-				break
-			}
-		}
-		if !hasManage && post.CreatedByPrincipalID != nil && *post.CreatedByPrincipalID != snapshot.Principal.ID {
-			c.JSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, "您没有权限查看或编辑该文章"))
+		if allowed, reason := ctrl.policy.CanView(&snapshot, post); !allowed {
+			c.JSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, reason))
 			return
 		}
 	}

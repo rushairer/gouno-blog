@@ -192,7 +192,7 @@ func (s *ApprovalService) ApplyMediaCandidate(ctx context.Context, id int64) (*d
 	if err != nil || post == nil {
 		return nil, service.ErrPostNotFound
 	}
-	assets, err := s.growth.ListMedia(ctx)
+	assets, err := s.growth.ListMedia(ctx, domain.MediaFilter{})
 	if err != nil {
 		return nil, err
 	}
@@ -276,7 +276,7 @@ func (s *ApprovalService) ApplyMediaCandidates(ctx context.Context, runID int64,
 	if err != nil || post == nil {
 		return nil, service.ErrPostNotFound
 	}
-	assets, err := s.growth.ListMedia(ctx)
+	assets, err := s.growth.ListMedia(ctx, domain.MediaFilter{})
 	if err != nil {
 		return nil, err
 	}
@@ -333,7 +333,7 @@ func (s *ApprovalService) PreviewMediaCandidate(ctx context.Context, id int64) (
 	if err != nil {
 		return nil, err
 	}
-	assets, err := s.growth.ListMedia(ctx)
+	assets, err := s.growth.ListMedia(ctx, domain.MediaFilter{})
 	if err != nil {
 		return nil, err
 	}

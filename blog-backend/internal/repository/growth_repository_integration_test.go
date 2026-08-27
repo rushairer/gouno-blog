@@ -54,7 +54,7 @@ func TestGrowthRepositoryContentLifecycle(t *testing.T) {
 	if err := repo.CreateMedia(ctx, asset); err != nil {
 		t.Fatal(err)
 	}
-	assets, err := repo.ListMedia(ctx)
+	assets, err := repo.ListMedia(ctx, domain.MediaFilter{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +67,7 @@ func TestGrowthRepositoryContentLifecycle(t *testing.T) {
 	if !found {
 		t.Fatal("created media was not listed")
 	}
-	updatedAsset, err := repo.UpdateMediaAltText(ctx, asset.ID, "Updated alt text")
+	updatedAsset, err := repo.UpdateMediaAltText(ctx, asset.ID, "Updated alt text", nil)
 	if err != nil || updatedAsset.AltText != "Updated alt text" {
 		t.Fatalf("update alt text failed: asset=%#v err=%v", updatedAsset, err)
 	}
