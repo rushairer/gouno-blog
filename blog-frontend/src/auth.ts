@@ -1,4 +1,4 @@
-import { createGossoClient } from "@gosso/client";
+import { createGossoClient, parseJsonEnvelope } from "@gosso/client";
 
 export type {
   LoginResult,
@@ -41,36 +41,25 @@ export const stepUpMfa = async (
   code: string,
   type: "totp" | "backup_code" = "totp",
 ): Promise<{ access_token?: string; auth_time: number; amr: string[] }> => {
+  const clientAny = gossoClient as unknown as {
+    stepUpMfa?: (
+      code: string,
+      type?: "totp" | "backup_code",
+    ) => Promise<{ access_token?: string; auth_time: number; amr: string[] }>;
+  };
+  if (typeof clientAny.stepUpMfa === "function") {
+    return clientAny.stepUpMfa(code, type);
+  }
   const response = await apiFetch(`${gossoIssuer}/api/v1/auth/mfa/step-up`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ code, type }),
   });
-  if (!response.ok) {
-    let msg = "Failed to complete step-up MFA";
-    try {
-      const data = (await response.json()) as {
-        error?: { message?: string };
-        message?: string;
-      };
-      if (data?.error?.message) msg = data.error.message;
-      else if (data?.message) msg = data.message;
-    } catch {
-      // ignore
-    }
-    throw new Error(msg);
-  }
-  const envelope = (await response.json()) as {
-    data?: { access_token?: string; auth_time: number; amr: string[] };
-  };
-  return (
-    envelope.data ||
-    (envelope as unknown as {
-      access_token?: string;
-      auth_time: number;
-      amr: string[];
-    })
-  );
+  return parseJsonEnvelope<{
+    access_token?: string;
+    auth_time: number;
+    amr: string[];
+  }>(response, "Failed to complete step-up MFA");
 };
 
 export type ManagementAccess = "admin" | "denied" | "anonymous" | "error";
