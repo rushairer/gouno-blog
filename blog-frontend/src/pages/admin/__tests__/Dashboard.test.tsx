@@ -8,6 +8,10 @@ import { apiFetch } from "../../../auth";
 vi.mock("../../../auth", () => ({
   apiFetch: vi.fn(),
   getUserProfile: () => ({ name: "Admin", role: "admin" }),
+  hasBlogPermission: () => true,
+  hasAnyBlogPermission: () => true,
+  getBlogRoleLabel: () => "管理员",
+  getCachedBlogSession: () => null,
 }));
 
 vi.mock("../../../hooks/useAdminGuard", () => ({
