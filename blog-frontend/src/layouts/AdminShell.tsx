@@ -25,7 +25,10 @@ import {
   SITE_SETTINGS_UPDATED_EVENT,
 } from "../config/site-defaults";
 import { siteApi } from "../api/site";
-import { adminNavigation, getFilteredAdminNavigation } from "../utils/navigation";
+import {
+  adminNavigation,
+  getFilteredAdminNavigation,
+} from "../utils/navigation";
 
 function currentLabel(pathname: string) {
   if (pathname === "/admin/posts/new") return "新建文章";

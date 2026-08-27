@@ -2458,7 +2458,9 @@ a {
 [data-theme="dark"] .bulk-action-bar button,
 [data-theme="dark"] .toast,
 [data-theme="dark"] .modal,
-[data-theme="dark"] .modal-form input:not([type="checkbox"]):not([type="radio"]),
+[data-theme="dark"]
+  .modal-form
+  input:not([type="checkbox"]):not([type="radio"]),
 [data-theme="dark"] .modal-form textarea,
 [data-theme="dark"] .modal-form select {
   background-color: var(--surface);
@@ -2471,7 +2473,9 @@ a {
 [data-theme="dark"] .admin-search input,
 [data-theme="dark"] .admin-topbar-actions a,
 [data-theme="dark"] .admin-topbar-actions button,
-[data-theme="dark"] .modal-form input:not([type="checkbox"]):not([type="radio"]),
+[data-theme="dark"]
+  .modal-form
+  input:not([type="checkbox"]):not([type="radio"]),
 [data-theme="dark"] .modal-form textarea,
 [data-theme="dark"] .modal-form select {
   color: var(--ink);
@@ -3970,7 +3974,7 @@ a {
   align-items: center;
   gap: 3px;
   padding: 1px 5px;
-  background: var(--control-bg, rgba(0, 0, 0, 0.04));
+  background: var(--control-bg);
   border: 1px solid var(--admin-line);
   border-radius: 4px;
   font-family: var(--font-mono);
@@ -4105,8 +4109,8 @@ a {
   gap: 10px;
 }
 .member-role-card {
-  display: flex !important;
-  flex-direction: row !important;
+  display: flex;
+  flex-direction: row;
   align-items: flex-start;
   gap: 12px;
   padding: 12px 14px;
@@ -4114,7 +4118,10 @@ a {
   border-radius: var(--radius-control);
   background: var(--control-bg);
   cursor: pointer;
-  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 .member-role-card:hover {
   border-color: var(--brand);
@@ -4122,13 +4129,13 @@ a {
 }
 .member-role-card input[type="radio"],
 .member-role-card input[type="checkbox"] {
-  width: 16px !important;
-  min-width: 16px !important;
-  max-width: 16px !important;
-  height: 16px !important;
-  min-height: 16px !important;
-  margin: 3px 0 0 0 !important;
-  padding: 0 !important;
+  width: 16px;
+  min-width: 16px;
+  max-width: 16px;
+  height: 16px;
+  min-height: 16px;
+  margin: 3px 0 0 0;
+  padding: 0;
   accent-color: var(--brand);
   cursor: pointer;
 }
@@ -4220,8 +4227,8 @@ a {
   pointer-events: none;
 }
 .stepup-mfa-input-wrap input {
-  padding-left: 36px !important;
-  font-size: 16px !important;
+  padding-left: 36px;
+  font-size: 16px;
   font-family: var(--font-mono, monospace);
   letter-spacing: 2px;
 }

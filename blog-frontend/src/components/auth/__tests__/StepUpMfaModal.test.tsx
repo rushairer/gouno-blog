@@ -41,7 +41,9 @@ describe("StepUpMfaModal", () => {
   it("handles verification error gracefully", async () => {
     const onSuccess = vi.fn();
     const onClose = vi.fn();
-    vi.mocked(stepUpMfa).mockRejectedValueOnce(new Error("invalid verification code"));
+    vi.mocked(stepUpMfa).mockRejectedValueOnce(
+      new Error("invalid verification code"),
+    );
 
     render(
       <ToastProvider>
@@ -55,7 +57,9 @@ describe("StepUpMfaModal", () => {
     const submitBtn = screen.getByRole("button", { name: "验证并继续" });
     await userEvent.click(submitBtn);
 
-    expect(await screen.findByText("验证码错误或已过期，请重新输入。")).toBeInTheDocument();
+    expect(
+      await screen.findByText("验证码错误或已过期，请重新输入。"),
+    ).toBeInTheDocument();
     expect(onSuccess).not.toHaveBeenCalled();
   });
 });
