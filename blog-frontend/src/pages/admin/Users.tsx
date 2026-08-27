@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   Ban,
+  Copy,
   Crown,
   ExternalLink,
   KeyRound,
@@ -54,17 +55,6 @@ function memberName(member: BlogMember) {
     return `用户 ${member.principal.subject.slice(0, 8)}`;
   }
   return "未命名成员";
-}
-
-function memberSubtitle(member: BlogMember) {
-  const parts: string[] = [];
-  if (member.principal.display_name && member.principal.email) {
-    parts.push(member.principal.email);
-  }
-  if (member.principal.subject) {
-    parts.push(`ID: ${member.principal.subject.slice(0, 8)}`);
-  }
-  return parts.length ? parts.join(" · ") : "GOSSO 已验证身份";
 }
 
 function initials(member: BlogMember) {
@@ -235,7 +225,30 @@ export default function AdminUsers() {
                   const busy = saving === member.principal.id;
                   const isOwner = member.roles.includes("owner");
                   return <tr key={member.principal.id}>
-                    <td><div className="member-identity"><span className="member-avatar" aria-hidden="true">{initials(member)}</span><div><strong>{memberName(member)}</strong><small>{memberSubtitle(member)}</small></div></div></td>
+                    <td>
+                      <div className="member-identity">
+                        <span className="member-avatar" aria-hidden="true">{initials(member)}</span>
+                        <div>
+                          <strong>{memberName(member)}</strong>
+                          <div className="member-identity-sub">
+                            {member.principal.email ? <span>{member.principal.email} · </span> : null}
+                            <button
+                              type="button"
+                              className="member-id-copy"
+                              title={`点击复制完整 Subject ID: ${member.principal.subject}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void navigator.clipboard.writeText(member.principal.subject);
+                                notify(`已复制完整 Subject ID: ${member.principal.subject}`);
+                              }}
+                            >
+                              ID: {member.principal.subject.slice(0, 8)}
+                              <Copy size={11} aria-hidden="true" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
                     <td><div className="member-roles">{member.roles.length ? member.roles.map((role) => <Badge key={role} tone={role === "owner" ? "brand" : "neutral"}>{roleLabels[role] || role}</Badge>) : <span className="muted-copy">尚未授予角色</span>}</div></td>
                     <td><Badge tone={membershipTone(member.membership_status)}>{membershipLabel(member.membership_status)}</Badge></td>
                     <td>
@@ -309,8 +322,62 @@ export default function AdminUsers() {
                   {editing.roles.includes("owner") ? <Badge tone="brand">所有者</Badge> : null}
                 </div>
                 <span className="member-modal-meta">
-                  {memberSubtitle(editing)}
+                  {editing.principal.email || "GOSSO 已验证身份"}
                 </span>
+              </div>
+            </div>
+
+            <div className="member-sso-card">
+              <div className="member-sso-card__title">
+                <span>身份认证与配置 (SSO Identity)</span>
+                <button
+                  type="button"
+                  className="member-sso-copy-btn"
+                  onClick={() => {
+                    const envText = `BLOG_BOOTSTRAP_OWNER_ISSUER=${editing.principal.issuer}\nBLOG_BOOTSTRAP_OWNER_SUBJECT=${editing.principal.subject}`;
+                    void navigator.clipboard.writeText(envText);
+                    notify("已复制初始化 Owner 环境变量 (BLOG_BOOTSTRAP_OWNER_*)");
+                  }}
+                >
+                  <Copy size={12} />
+                  <span>复制初始化配置</span>
+                </button>
+              </div>
+              <div className="member-sso-card__grid">
+                <div className="member-sso-item">
+                  <span className="member-sso-item__label">认证源 (Issuer)</span>
+                  <div className="member-sso-item__value">
+                    <code>{editing.principal.issuer}</code>
+                    <button
+                      type="button"
+                      className="icon-copy-btn"
+                      title="复制 Issuer"
+                      onClick={() => {
+                        void navigator.clipboard.writeText(editing.principal.issuer);
+                        notify("已复制 Issuer");
+                      }}
+                    >
+                      <Copy size={12} />
+                    </button>
+                  </div>
+                </div>
+                <div className="member-sso-item">
+                  <span className="member-sso-item__label">唯一标识 (Subject)</span>
+                  <div className="member-sso-item__value">
+                    <code>{editing.principal.subject}</code>
+                    <button
+                      type="button"
+                      className="icon-copy-btn"
+                      title="复制完整 Subject ID"
+                      onClick={() => {
+                        void navigator.clipboard.writeText(editing.principal.subject);
+                        notify("已复制完整 Subject ID");
+                      }}
+                    >
+                      <Copy size={12} />
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
