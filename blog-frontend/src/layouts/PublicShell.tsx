@@ -11,6 +11,7 @@ import {
 import { pagesApi } from "../api/pages";
 import { siteApi } from "../api/site";
 import { publicNavigation } from "../utils/navigation";
+import { STORAGE_KEYS } from "../constants";
 import type { CustomPage, SiteSettings } from "../types/blog";
 
 export default function PublicShell({ children }: { children: ReactNode }) {
@@ -22,12 +23,12 @@ export default function PublicShell({ children }: { children: ReactNode }) {
   );
   const [navPages, setNavPages] = useState<CustomPage[]>([]);
   const [theme, setTheme] = useState<"light" | "dark">(() =>
-    localStorage.getItem("gouno-blog:theme") === "dark" ? "dark" : "light",
+    localStorage.getItem(STORAGE_KEYS.THEME) === "dark" ? "dark" : "light",
   );
 
   useLayoutEffect(() => {
     document.documentElement.dataset.theme = theme;
-    localStorage.setItem("gouno-blog:theme", theme);
+    localStorage.setItem(STORAGE_KEYS.THEME, theme);
   }, [theme]);
 
   useEffect(() => {

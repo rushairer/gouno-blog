@@ -1,4 +1,5 @@
 import type { SiteSettings } from "../types/blog";
+import { STORAGE_KEYS } from "../constants";
 
 export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   site_title: "Gouno Blog",
@@ -19,7 +20,7 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   favicon_url: "/favicon.svg",
 };
 
-export const SITE_SETTINGS_STORAGE_KEY = "gouno-blog:site-settings";
+export const SITE_SETTINGS_STORAGE_KEY = STORAGE_KEYS.SITE_SETTINGS;
 export const SITE_SETTINGS_UPDATED_EVENT = "gouno-blog:site-settings-updated";
 
 export function getCachedSiteSettings(): SiteSettings | null {

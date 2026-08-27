@@ -4,10 +4,13 @@ import { EmptyState, LoadingState } from "../components/ui";
 import { postsApi } from "../api/posts";
 import { siteApi } from "../api/site";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { useI18n } from "../i18n";
+import { PAGINATION_LIMITS } from "../constants";
 import type { Post } from "../types/blog";
 
 export default function Tags() {
-  usePageTitle("标签");
+  const { t } = useI18n();
+  usePageTitle(t("tagsPage.title"));
   const [tags, setTags] = useState<string[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -15,7 +18,12 @@ export default function Tags() {
   useEffect(() => {
     Promise.all([
       siteApi.getTags().catch(() => []),
-      postsApi.getPosts(new URLSearchParams({ page: "1", pageSize: "100" })),
+      postsApi.getPosts(
+        new URLSearchParams({
+          page: "1",
+          pageSize: String(PAGINATION_LIMITS.RUNS_PAGE_SIZE),
+        }),
+      ),
     ])
       .then(([tagData, postData]) => {
         setTags(tagData as string[]);
@@ -36,13 +44,13 @@ export default function Tags() {
   return (
     <div className="public-container simple-page taxonomy-page">
       <header>
-        <p>TAGS / SIGNALS</p>
-        <h1>标签</h1>
-        <span>从具体技术与概念进入文章。</span>
+        <p>{t("tagsPage.tagsMeta")}</p>
+        <h1>{t("tagsPage.title")}</h1>
+        <span>{t("tagsPage.subtitle")}</span>
       </header>
       <div className="simple-page__body">
         {loading ? (
-          <LoadingState label="正在整理标签索引…" />
+          <LoadingState label={t("tagsPage.loading")} />
         ) : tagCounts.length ? (
           <div className="tag-index">
             {tagCounts
@@ -51,12 +59,12 @@ export default function Tags() {
                 <Link key={tag} to={`/tags/${encodeURIComponent(tag)}`}>
                   <span>{String(index + 1).padStart(2, "0")}</span>
                   <strong>{tag}</strong>
-                  <small>{count} 篇</small>
+                  <small>{t("tagsPage.postCount", { count })}</small>
                 </Link>
               ))}
           </div>
         ) : (
-          <EmptyState label="文章添加标签后会在这里形成内容索引。" />
+          <EmptyState label={t("tagsPage.empty")} />
         )}
       </div>
     </div>

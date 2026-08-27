@@ -3,39 +3,52 @@ import { Link } from "react-router-dom";
 import { EmptyState, LoadingState } from "../components/ui";
 import { postsApi } from "../api/posts";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { useI18n } from "../i18n";
+import { PAGINATION_LIMITS } from "../constants";
 import type { Post } from "../types/blog";
 
 export default function Archive() {
-  usePageTitle("归档");
+  const { t, formatDate } = useI18n();
+  usePageTitle(t("archivePage.title"));
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     postsApi
-      .getPosts(new URLSearchParams({ page: "1", pageSize: "100" }))
+      .getPosts(
+        new URLSearchParams({
+          page: "1",
+          pageSize: String(PAGINATION_LIMITS.RUNS_PAGE_SIZE),
+        }),
+      )
       .then((data) => setPosts(data.list || []))
       .finally(() => setLoading(false));
   }, []);
+
   const groups = useMemo(
     () =>
       posts.reduce<Record<string, Post[]>>((all, post) => {
         const date = new Date(post.published_at || post.created_at);
-        const key = `${date.getFullYear()} 年 ${date.getMonth() + 1} 月`;
+        const key = formatDate(date.toISOString(), {
+          year: "numeric",
+          month: "long",
+        });
         (all[key] ||= []).push(post);
         return all;
       }, {}),
-    [posts],
+    [posts, formatDate],
   );
   const periods = Object.entries(groups);
   return (
     <div className="public-container simple-page">
       <header>
-        <p>ARCHIVE / TIME</p>
-        <h1>归档</h1>
-        <span>把写作放回时间里，看到问题如何变化，判断如何形成。</span>
+        <p>{t("archivePage.archiveMeta")}</p>
+        <h1>{t("archivePage.title")}</h1>
+        <span>{t("archivePage.subtitle")}</span>
       </header>
       <div className="simple-page__body">
         {loading ? (
-          <LoadingState label="正在整理时间线…" />
+          <LoadingState label={t("archivePage.loading")} />
         ) : periods.length ? (
           <div className="archive-list">
             {periods.map(([period, items]) => (
@@ -48,9 +61,9 @@ export default function Archive() {
                   {items.map((post) => (
                     <Link key={post.id} to={`/articles/${post.slug}`}>
                       <time>
-                        {new Date(
-                          post.published_at || post.created_at,
-                        ).toLocaleDateString("zh-CN", { day: "2-digit" })}
+                        {formatDate(post.published_at || post.created_at, {
+                          day: "2-digit",
+                        })}
                       </time>
                       <span>{post.title}</span>
                       <small>{post.tags.slice(0, 2).join(" / ")}</small>
@@ -61,7 +74,7 @@ export default function Archive() {
             ))}
           </div>
         ) : (
-          <EmptyState label="还没有可归档的文章。" />
+          <EmptyState label={t("archivePage.empty")} />
         )}
       </div>
     </div>

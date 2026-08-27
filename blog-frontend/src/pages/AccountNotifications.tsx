@@ -13,8 +13,11 @@ import {
 import { isLoggedIn, redirectToAuthorize } from "../auth";
 import { usePageTitle } from "../hooks/usePageTitle";
 
+import { useI18n } from "../i18n";
+
 export default function AccountNotifications() {
-  usePageTitle("通知");
+  const { t, formatDateTime } = useI18n();
+  usePageTitle(t("accountNotifications.title"));
   const [items, setItems] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -26,11 +29,11 @@ export default function AccountNotifications() {
       setItems(data.list || []);
       setError("");
     } catch {
-      setError("无法载入通知，请稍后重试。");
+      setError(t("accountNotifications.loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (!isLoggedIn()) {
@@ -51,18 +54,20 @@ export default function AccountNotifications() {
         ),
       );
     } catch {
-      setError("标记通知已读失败，请重试。");
+      setError(t("accountNotifications.markReadFailed"));
     }
   };
 
   return (
     <main className="public-container page-content">
       <PageHeader
-        title="通知"
-        description="查看与你相关的站点互动和系统提醒。"
+        title={t("accountNotifications.title")}
+        description={t("accountNotifications.description")}
       />
       <ContentStack>
-        {loading ? <LoadingState label="正在载入通知…" /> : null}
+        {loading ? (
+          <LoadingState label={t("accountNotifications.loading")} />
+        ) : null}
         {!loading && error ? (
           <ErrorState
             label={error}
@@ -72,13 +77,13 @@ export default function AccountNotifications() {
                 type="button"
                 onClick={() => void load()}
               >
-                重试
+                {t("common.retry")}
               </button>
             }
           />
         ) : null}
         {!loading && !error && items.length === 0 ? (
-          <EmptyState label="暂时没有通知。" />
+          <EmptyState label={t("accountNotifications.empty")} />
         ) : null}
         {!loading && !error && items.length > 0 ? (
           <section className="account-notification-list" aria-label="通知列表">
@@ -89,9 +94,11 @@ export default function AccountNotifications() {
               >
                 <Bell aria-hidden="true" />
                 <div>
-                  <strong>{item.title || "系统提醒"}</strong>
+                  <strong>
+                    {item.title || t("accountNotifications.systemAlert")}
+                  </strong>
                   {item.body ? <p>{item.body}</p> : null}
-                  <time>{new Date(item.created_at).toLocaleString()}</time>
+                  <time>{formatDateTime(item.created_at)}</time>
                 </div>
                 {!item.read_at ? (
                   <button
@@ -99,7 +106,7 @@ export default function AccountNotifications() {
                     type="button"
                     onClick={() => void markRead(item)}
                   >
-                    标为已读
+                    {t("accountNotifications.markAsRead")}
                   </button>
                 ) : null}
               </Panel>

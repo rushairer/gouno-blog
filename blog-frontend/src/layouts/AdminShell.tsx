@@ -42,6 +42,8 @@ function currentLabel(pathname: string) {
   );
 }
 
+import { STORAGE_KEYS, PAGINATION_LIMITS } from "../constants";
+
 export default function AdminShell({ children }: { children: ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -60,12 +62,12 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const [logoutError, setLogoutError] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
   const [theme, setTheme] = useState<"light" | "dark">(() =>
-    localStorage.getItem("gouno-blog:theme") === "dark" ? "dark" : "light",
+    localStorage.getItem(STORAGE_KEYS.THEME) === "dark" ? "dark" : "light",
   );
 
   useLayoutEffect(() => {
     document.documentElement.dataset.theme = theme;
-    localStorage.setItem("gouno-blog:theme", theme);
+    localStorage.setItem(STORAGE_KEYS.THEME, theme);
   }, [theme]);
 
   useEffect(() => {
@@ -109,7 +111,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     const fetchUnread = async () => {
       try {
         const { list } = await notificationsApi.getNotifications({
-          pageSize: 100,
+          pageSize: PAGINATION_LIMITS.RUNS_PAGE_SIZE,
         });
         setUnreadCount(list.filter((item) => !item.read_at).length);
       } catch {

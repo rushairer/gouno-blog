@@ -6,7 +6,7 @@ import {
   Routes,
   useLocation,
 } from "react-router-dom";
-import { I18nProvider } from "./i18n";
+import { I18nProvider, useI18n } from "./i18n";
 import { ToastProvider } from "./components/ui";
 import PublicShell from "./layouts/PublicShell";
 import AdminShell from "./layouts/AdminShell";
@@ -51,6 +51,7 @@ const AccountNotifications = React.lazy(
 import CustomPageView from "./pages/CustomPageView";
 
 function Public({ children }: { children: React.ReactNode }) {
+  const { t } = useI18n();
   return (
     <PublicShell>
       <React.Suspense
@@ -58,7 +59,7 @@ function Public({ children }: { children: React.ReactNode }) {
           <div className="public-container state-page">
             <div className="state-card">
               <span className="spinner" aria-hidden="true" />
-              <p>正在载入内容…</p>
+              <p>{t("common.loading")}</p>
             </div>
           </div>
         }
@@ -70,6 +71,7 @@ function Public({ children }: { children: React.ReactNode }) {
 }
 
 function AdminAccessDenied({ message }: { message?: string }) {
+  const { t } = useI18n();
   const [logoutError, setLogoutError] = useState("");
 
   const switchAccount = async () => {
@@ -77,7 +79,7 @@ function AdminAccessDenied({ message }: { message?: string }) {
     try {
       await logout();
     } catch {
-      setLogoutError("退出登录失败，请稍后重试。");
+      setLogoutError(t("auth.logoutFailed"));
     }
   };
 
@@ -85,18 +87,18 @@ function AdminAccessDenied({ message }: { message?: string }) {
     <PublicShell>
       <div className="public-container state-page" role="alert">
         <div className="state-card">
-          <h1>无后台访问权限</h1>
-          <p>{message || "当前账户没有博客后台所需的管理员角色。"}</p>
+          <h1>{t("auth.noAdminAccess")}</h1>
+          <p>{message || t("auth.noAdminAccessDesc")}</p>
           <div className="state__actions">
             <a className="btn btn-primary" href="/admin/dashboard">
-              返回概览
+              {t("common.back")}
             </a>
             <button
               className="btn btn-secondary"
               type="button"
               onClick={() => void switchAccount()}
             >
-              退出并切换账户
+              {t("auth.logout")}
             </button>
           </div>
           {logoutError ? <p className="form-error">{logoutError}</p> : null}
