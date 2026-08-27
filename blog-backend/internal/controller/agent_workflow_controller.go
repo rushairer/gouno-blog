@@ -7,12 +7,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	agentservice "github.com/rushairer/blog-backend/internal/agent"
@@ -814,33 +816,127 @@ func (ctrl *AgentController) EmitWorkflowEvent(c *gin.Context) {
 	c.JSON(http.StatusAccepted, gouno.NewSuccessResponse(gin.H{"accepted": true, "queued": queued}))
 }
 
+var idempotencyKeyRegex = regexp.MustCompile(`^[a-zA-Z0-9_\-\.]{1,128}$`)
+
+func validateIdempotencyKey(key string) bool {
+	return idempotencyKeyRegex.MatchString(key)
+}
+
+func parseWebhookHeaders(sigHeader, tsHeader string) (int64, string, error) {
+	sigHeader = strings.TrimSpace(sigHeader)
+	tsHeader = strings.TrimSpace(tsHeader)
+
+	var timestamp int64
+	var signatureHex string
+
+	if strings.Contains(sigHeader, "=") && (strings.Contains(sigHeader, "t=") || strings.Contains(sigHeader, "v1=")) {
+		parts := strings.Split(sigHeader, ",")
+		for _, part := range parts {
+			kv := strings.SplitN(strings.TrimSpace(part), "=", 2)
+			if len(kv) == 2 {
+				k, v := strings.TrimSpace(kv[0]), strings.TrimSpace(kv[1])
+				if k == "t" {
+					t, err := strconv.ParseInt(v, 10, 64)
+					if err == nil {
+						timestamp = t
+					}
+				} else if k == "v1" {
+					signatureHex = v
+				}
+			}
+		}
+	} else {
+		signatureHex = strings.TrimPrefix(sigHeader, "sha256=")
+		signatureHex = strings.TrimPrefix(signatureHex, "v1=")
+	}
+
+	if timestamp == 0 && tsHeader != "" {
+		t, err := strconv.ParseInt(tsHeader, 10, 64)
+		if err == nil {
+			timestamp = t
+		}
+	}
+
+	if timestamp == 0 {
+		return 0, "", fmt.Errorf("missing or invalid webhook timestamp")
+	}
+	if signatureHex == "" {
+		return 0, "", fmt.Errorf("missing webhook signature")
+	}
+
+	return timestamp, signatureHex, nil
+}
+
+func canonicalWebhookPayload(method, event string, timestamp int64, idempotencyKey string, bodyDigest string) string {
+	return fmt.Sprintf("v1\n%s\n%s\n%d\n%s\n%s",
+		strings.ToUpper(strings.TrimSpace(method)),
+		strings.ToLower(strings.TrimSpace(event)),
+		timestamp,
+		strings.TrimSpace(idempotencyKey),
+		bodyDigest,
+	)
+}
+
 func (ctrl *AgentController) ReceiveWorkflowWebhook(c *gin.Context) {
 	secret := strings.TrimSpace(os.Getenv("GOUNO_AI_WEBHOOK_SECRET"))
 	if !ValidWebhookSecret(secret) {
 		c.JSON(http.StatusServiceUnavailable, gouno.NewErrorResponse(http.StatusServiceUnavailable, "webhook connector is not configured"))
 		return
 	}
+
 	body, err := io.ReadAll(io.LimitReader(c.Request.Body, 1<<20+1))
 	if err != nil || len(body) == 0 || len(body) > 1<<20 || !json.Valid(body) {
 		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "webhook payload must be valid JSON under 1 MiB"))
 		return
 	}
-	signature := strings.TrimSpace(strings.TrimPrefix(c.GetHeader("X-Gouno-Signature"), "sha256="))
+
+	eventType := strings.TrimSpace(c.Param("event"))
+	if eventType == "" || len(eventType) > 80 {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "invalid webhook event"))
+		return
+	}
+
+	eventKey := strings.TrimSpace(c.GetHeader("Idempotency-Key"))
+	if eventKey == "" {
+		eventKey = strings.TrimSpace(c.GetHeader("X-Event-ID"))
+	}
+	if eventKey == "" || !validateIdempotencyKey(eventKey) {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "missing or invalid Idempotency-Key"))
+		return
+	}
+
+	timestamp, providedSigHex, err := parseWebhookHeaders(c.GetHeader("X-Gouno-Signature"), c.GetHeader("X-Gouno-Timestamp"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+
+	now := time.Now().Unix()
+	const maxSkewSeconds = 300 // 5 minutes
+	if timestamp < now-maxSkewSeconds {
+		c.JSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "webhook timestamp expired"))
+		return
+	}
+	if timestamp > now+maxSkewSeconds {
+		c.JSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "webhook timestamp in the future"))
+		return
+	}
+
+	bodySum := sha256.Sum256(body)
+	bodyDigest := hex.EncodeToString(bodySum[:])
+
+	canonical := canonicalWebhookPayload(c.Request.Method, eventType, timestamp, eventKey, bodyDigest)
 	digest := hmac.New(sha256.New, []byte(secret))
-	_, _ = digest.Write(body)
+	_, _ = digest.Write([]byte(canonical))
 	expected := hex.EncodeToString(digest.Sum(nil))
-	provided, decodeErr := hex.DecodeString(signature)
+
+	providedBytes, decodeErr := hex.DecodeString(providedSigHex)
 	expectedBytes, _ := hex.DecodeString(expected)
-	if decodeErr != nil || !hmac.Equal(provided, expectedBytes) {
+	if decodeErr != nil || len(providedBytes) != 32 || !hmac.Equal(providedBytes, expectedBytes) {
 		c.JSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "invalid webhook signature"))
 		return
 	}
-	eventType := strings.TrimSpace(c.Param("event"))
-	eventKey := strings.TrimSpace(c.GetHeader("Idempotency-Key"))
-	if eventKey == "" {
-		digest := sha256.Sum256(append([]byte(eventType+":"), body...))
-		eventKey = hex.EncodeToString(digest[:])
-	}
+
 	queued, err := ctrl.workflows.EmitEvent(c.Request.Context(), eventKey, eventType, body, nil)
 	if err != nil {
 		WriteDomainError(c, err)

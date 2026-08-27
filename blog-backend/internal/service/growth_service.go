@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/repository"
 )
 
 type GrowthStore interface {
@@ -25,7 +26,7 @@ type GrowthStore interface {
 }
 
 var (
-	ErrMediaInUse          = errors.New("media asset is referenced by published or draft posts")
+	ErrMediaInUse          = repository.ErrMediaInUse
 	ErrInvalidVersion      = errors.New("invalid version")
 	ErrInvalidMediaPayload = errors.New("invalid media asset")
 	ErrInvalidMediaID      = errors.New("invalid media id")
@@ -99,13 +100,6 @@ func (s *GrowthService) UpdateMedia(ctx context.Context, id int64, altText strin
 func (s *GrowthService) DeleteMedia(ctx context.Context, id int64) (*domain.MediaAsset, error) {
 	if id <= 0 {
 		return nil, ErrInvalidMediaID
-	}
-	references, err := s.store.CountMediaReferences(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	if references > 0 {
-		return nil, ErrMediaInUse
 	}
 	asset, err := s.store.DeleteMedia(ctx, id)
 	if errors.Is(err, sql.ErrNoRows) {

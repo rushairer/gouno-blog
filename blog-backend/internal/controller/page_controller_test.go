@@ -172,4 +172,29 @@ func TestPageControllerEndpoints(t *testing.T) {
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("Create reserved slug status = %d, want %d", w.Code, http.StatusBadRequest)
 	}
+
+	// 5. Create draft page
+	draftPayload := controller.CreatePageRequest{
+		Title:    "草稿页面",
+		Slug:     "draft-page",
+		Content:  "# Draft page content",
+		Template: "default",
+		Status:   domain.PageStatusDraft,
+	}
+	body, _ = json.Marshal(draftPayload)
+	req = httptest.NewRequest(http.MethodPost, "/api/admin/pages", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("Create draft page status = %d, want %d", w.Code, http.StatusCreated)
+	}
+
+	// 6. Anonymous access to draft page must return 404
+	req = httptest.NewRequest(http.MethodGet, "/api/pages/draft-page", nil)
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("Anonymous draft page access status = %d, want 404", w.Code)
+	}
 }

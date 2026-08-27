@@ -33,6 +33,28 @@ func BlogAccess(service *access.Service) gin.HandlerFunc {
 	}
 }
 
+// OptionalBlogAccess resolves Blog-local authorization if claims are present in context.
+// If claims are missing or invalid, it allows the request to continue anonymously.
+func OptionalBlogAccess(service *access.Service) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		claimsRaw, ok := c.Get("claims")
+		if !ok {
+			c.Next()
+			return
+		}
+		claims, ok := claimsRaw.(jwt.MapClaims)
+		if !ok {
+			c.Next()
+			return
+		}
+		snapshot, err := service.Resolve(c.Request.Context(), claims)
+		if err == nil {
+			c.Set(BlogAccessContextKey, snapshot)
+		}
+		c.Next()
+	}
+}
+
 func CurrentBlogAccess(c *gin.Context) (access.Snapshot, bool) {
 	value, ok := c.Get(BlogAccessContextKey)
 	snapshot, valid := value.(access.Snapshot)

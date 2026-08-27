@@ -85,10 +85,15 @@ type Member struct{ Snapshot }
 type Audit struct {
 	ID        int64           `json:"id"`
 	Action    string          `json:"action"`
+	Result    string          `json:"result"`
 	Actor     *Principal      `json:"actor,omitempty"`
 	Target    *Principal      `json:"target,omitempty"`
 	Before    json.RawMessage `json:"before"`
 	After     json.RawMessage `json:"after"`
+	RequestID string          `json:"request_id,omitempty"`
+	SessionID string          `json:"session_id,omitempty"`
+	SourceIP  string          `json:"source_ip,omitempty"`
+	Reason    string          `json:"reason,omitempty"`
 	CreatedAt time.Time       `json:"created_at"`
 }
 
@@ -196,7 +201,7 @@ RETURNING id, issuer, subject, display_name, email`, issuer, subject, display, e
 		if _, err = tx.ExecContext(ctx, `INSERT INTO blog_role_bindings (membership_id, role) VALUES ($1,'owner') ON CONFLICT DO NOTHING`, membershipID); err != nil {
 			return Snapshot{}, err
 		}
-		if _, err = tx.ExecContext(ctx, `INSERT INTO blog_authorization_audits (target_principal_id,action,after_state) VALUES ($1,'bootstrap_owner',jsonb_build_object('roles',jsonb_build_array('owner')))`, p.ID); err != nil {
+		if _, err = tx.ExecContext(ctx, `INSERT INTO blog_authorization_audits (target_principal_id,action,result,after_state) VALUES ($1,'bootstrap_owner','success',jsonb_build_object('roles',jsonb_build_array('owner')))`, p.ID); err != nil {
 			return Snapshot{}, err
 		}
 	}
@@ -270,17 +275,15 @@ func (s *Service) SetMember(ctx context.Context, actor Snapshot, principalID int
 		}
 		seen[role] = true
 	}
-	if has(roles, RoleOwner) && !has(actor.Roles, RoleOwner) {
-		return ErrOwnerOnly
-	}
-	if principalID == actor.Principal.ID && has(roles, RoleOwner) && !has(actor.Roles, RoleOwner) {
-		return ErrSelfEscalation
-	}
+
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
+
+	// Transaction-level advisory lock to serialize authorization changes
+	_, _ = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtext('blog_authorization_lock'))`)
 
 	if displayName != nil {
 		if _, err = tx.ExecContext(ctx, `UPDATE blog_principals SET display_name=$2 WHERE id=$1`, principalID, strings.TrimSpace(*displayName)); err != nil {
@@ -299,15 +302,21 @@ func (s *Service) SetMember(ctx context.Context, actor Snapshot, principalID int
 	} else if err != nil {
 		return err
 	}
-	if has([]string(previousRoles), RoleOwner) && (!has(roles, RoleOwner) || status != "active") {
-		var owners int
-		if err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM blog_role_bindings b JOIN blog_memberships m ON m.id=b.membership_id WHERE b.role='owner' AND m.status='active'`).Scan(&owners); err != nil {
-			return err
-		}
-		if owners <= 1 {
-			return ErrLastOwner
-		}
+
+	wasOwner := has([]string(previousRoles), RoleOwner)
+	willBeOwner := has(roles, RoleOwner)
+
+	// Admin cannot modify any Owner (cannot grant, cannot revoke, cannot suspend/remove/restore an Owner)
+	if (wasOwner || willBeOwner) && !has(actor.Roles, RoleOwner) {
+		_, _ = tx.ExecContext(ctx, `INSERT INTO blog_authorization_audits(actor_principal_id,target_principal_id,action,result,reason,request_id,source_ip) VALUES($1,$2,'membership_update_denied','denied',$3,$4,$5)`, actor.Principal.ID, principalID, "owner role changes require an active owner", requestID, sourceIP)
+		_ = tx.Commit()
+		return ErrOwnerOnly
 	}
+
+	if principalID == actor.Principal.ID && willBeOwner && !has(actor.Roles, RoleOwner) {
+		return ErrSelfEscalation
+	}
+
 	if _, err = tx.ExecContext(ctx, `UPDATE blog_memberships SET status=$2,authorization_version=authorization_version+1,updated_at=NOW() WHERE id=$1`, membershipID, status); err != nil {
 		return err
 	}
@@ -319,17 +328,27 @@ func (s *Service) SetMember(ctx context.Context, actor Snapshot, principalID int
 			return err
 		}
 	}
+
+	// Verify database-level invariant: At least 1 active owner must remain
+	var activeOwners int
+	if err = tx.QueryRowContext(ctx, `SELECT COUNT(DISTINCT m.principal_id) FROM blog_role_bindings b JOIN blog_memberships m ON m.id=b.membership_id WHERE b.role='owner' AND m.status='active'`).Scan(&activeOwners); err != nil {
+		return err
+	}
+	if activeOwners < 1 {
+		return ErrLastOwner
+	}
+
 	before, _ := json.Marshal(map[string]any{"status": previousStatus, "roles": previousRoles})
 	after, _ := json.Marshal(map[string]any{"status": status, "roles": roles})
-	_, err = tx.ExecContext(ctx, `INSERT INTO blog_authorization_audits(actor_principal_id,target_principal_id,action,before_state,after_state,request_id,source_ip,reason) VALUES($1,$2,'membership_updated',$3,$4,$5,$6,$7)`, actor.Principal.ID, principalID, before, after, requestID, sourceIP, strings.TrimSpace(reason))
+	_, err = tx.ExecContext(ctx, `INSERT INTO blog_authorization_audits(actor_principal_id,target_principal_id,action,result,before_state,after_state,request_id,source_ip,reason) VALUES($1,$2,'membership_updated','success',$3,$4,$5,$6,$7)`, actor.Principal.ID, principalID, before, after, requestID, sourceIP, strings.TrimSpace(reason))
 	if err != nil {
 		return err
 	}
 	return tx.Commit()
 }
 
-// TransferOwner atomically makes target the sole Owner and leaves the former
-// owner as an Admin. The caller must have already completed a recent MFA check.
+// TransferOwner atomically promotes target to Owner and demotes actor from Owner to Admin.
+// Existing other Owners are preserved. The caller must have already completed recent MFA.
 func (s *Service) TransferOwner(ctx context.Context, actor Snapshot, targetPrincipalID int64, reason, requestID, sourceIP string) error {
 	if !has(actor.Roles, RoleOwner) || actor.Principal.ID == targetPrincipalID {
 		return ErrOwnerOnly
@@ -339,30 +358,60 @@ func (s *Service) TransferOwner(ctx context.Context, actor Snapshot, targetPrinc
 		return err
 	}
 	defer tx.Rollback()
+
+	// Transaction-level advisory lock
+	_, _ = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtext('blog_authorization_lock'))`)
+
 	var targetMembership int64
-	if err = tx.QueryRowContext(ctx, `SELECT id FROM blog_memberships WHERE principal_id=$1 AND status='active' FOR UPDATE`, targetPrincipalID).Scan(&targetMembership); err != nil {
+	var targetRoles pq.StringArray
+	if err = tx.QueryRowContext(ctx, `SELECT m.id, COALESCE(array_agg(b.role) FILTER (WHERE b.role IS NOT NULL),'{}') FROM blog_memberships m LEFT JOIN blog_role_bindings b ON b.membership_id=m.id WHERE m.principal_id=$1 AND m.status='active' GROUP BY m.id FOR UPDATE`, targetPrincipalID).Scan(&targetMembership, &targetRoles); err != nil {
 		if err == sql.ErrNoRows {
 			return fmt.Errorf("target must be an active member")
 		}
 		return err
 	}
 	var actorMembership int64
-	if err = tx.QueryRowContext(ctx, `SELECT id FROM blog_memberships WHERE principal_id=$1 AND status='active' FOR UPDATE`, actor.Principal.ID).Scan(&actorMembership); err != nil {
+	var actorRoles pq.StringArray
+	if err = tx.QueryRowContext(ctx, `SELECT m.id, COALESCE(array_agg(b.role) FILTER (WHERE b.role IS NOT NULL),'{}') FROM blog_memberships m LEFT JOIN blog_role_bindings b ON b.membership_id=m.id WHERE m.principal_id=$1 AND m.status='active' GROUP BY m.id FOR UPDATE`, actor.Principal.ID).Scan(&actorMembership, &actorRoles); err != nil {
 		return err
 	}
-	if _, err = tx.ExecContext(ctx, `DELETE FROM blog_role_bindings WHERE role='owner'`); err != nil {
-		return err
-	}
-	if _, err = tx.ExecContext(ctx, `INSERT INTO blog_role_bindings(membership_id,role) VALUES($1,'owner')`, targetMembership); err != nil {
+
+	// Demote actor from owner and grant admin
+	if _, err = tx.ExecContext(ctx, `DELETE FROM blog_role_bindings WHERE membership_id=$1 AND role='owner'`, actorMembership); err != nil {
 		return err
 	}
 	if _, err = tx.ExecContext(ctx, `INSERT INTO blog_role_bindings(membership_id,role) VALUES($1,'admin') ON CONFLICT DO NOTHING`, actorMembership); err != nil {
 		return err
 	}
+
+	// Promote target to owner
+	if _, err = tx.ExecContext(ctx, `INSERT INTO blog_role_bindings(membership_id,role) VALUES($1,'owner') ON CONFLICT DO NOTHING`, targetMembership); err != nil {
+		return err
+	}
+
 	if _, err = tx.ExecContext(ctx, `UPDATE blog_memberships SET authorization_version=authorization_version+1,updated_at=NOW() WHERE id IN ($1,$2)`, actorMembership, targetMembership); err != nil {
 		return err
 	}
-	_, err = tx.ExecContext(ctx, `INSERT INTO blog_authorization_audits(actor_principal_id,target_principal_id,action,before_state,after_state,request_id,source_ip,reason) VALUES($1,$2,'owner_transferred',jsonb_build_object('owner_principal_id',$1),jsonb_build_object('owner_principal_id',$2),$3,$4,$5)`, actor.Principal.ID, targetPrincipalID, requestID, sourceIP, strings.TrimSpace(reason))
+
+	// Verify database-level invariant
+	var activeOwners int
+	if err = tx.QueryRowContext(ctx, `SELECT COUNT(DISTINCT m.principal_id) FROM blog_role_bindings b JOIN blog_memberships m ON m.id=b.membership_id WHERE b.role='owner' AND m.status='active'`).Scan(&activeOwners); err != nil {
+		return err
+	}
+	if activeOwners < 1 {
+		return ErrLastOwner
+	}
+
+	beforeState, _ := json.Marshal(map[string]any{
+		"actor":  map[string]any{"principal_id": actor.Principal.ID, "roles": actorRoles},
+		"target": map[string]any{"principal_id": targetPrincipalID, "roles": targetRoles},
+	})
+	afterState, _ := json.Marshal(map[string]any{
+		"actor":  map[string]any{"principal_id": actor.Principal.ID, "roles": []string{"admin"}},
+		"target": map[string]any{"principal_id": targetPrincipalID, "roles": []string{"owner"}},
+	})
+
+	_, err = tx.ExecContext(ctx, `INSERT INTO blog_authorization_audits(actor_principal_id,target_principal_id,action,result,before_state,after_state,request_id,source_ip,reason) VALUES($1,$2,'owner_transferred','success',$3,$4,$5,$6,$7)`, actor.Principal.ID, targetPrincipalID, beforeState, afterState, requestID, sourceIP, strings.TrimSpace(reason))
 	if err != nil {
 		return err
 	}
@@ -373,7 +422,7 @@ func (s *Service) ListAudits(ctx context.Context, limit int) ([]Audit, error) {
 	if limit < 1 || limit > 200 {
 		limit = 100
 	}
-	rows, err := s.db.QueryContext(ctx, `SELECT a.id,a.action,a.before_state,a.after_state,a.created_at,ap.id,ap.issuer,ap.subject,ap.display_name,ap.email,tp.id,tp.issuer,tp.subject,tp.display_name,tp.email FROM blog_authorization_audits a LEFT JOIN blog_principals ap ON ap.id=a.actor_principal_id LEFT JOIN blog_principals tp ON tp.id=a.target_principal_id ORDER BY a.created_at DESC LIMIT $1`, limit)
+	rows, err := s.db.QueryContext(ctx, `SELECT a.id,a.action,COALESCE(a.result,'success'),a.before_state,a.after_state,COALESCE(a.request_id,''),COALESCE(a.session_id,''),COALESCE(a.source_ip,''),COALESCE(a.reason,''),a.created_at,ap.id,ap.issuer,ap.subject,ap.display_name,ap.email,tp.id,tp.issuer,tp.subject,tp.display_name,tp.email FROM blog_authorization_audits a LEFT JOIN blog_principals ap ON ap.id=a.actor_principal_id LEFT JOIN blog_principals tp ON tp.id=a.target_principal_id ORDER BY a.created_at DESC LIMIT $1`, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -384,7 +433,7 @@ func (s *Service) ListAudits(ctx context.Context, limit int) ([]Audit, error) {
 		var actor, target Principal
 		var aid, tid sql.NullInt64
 		var ai, as, ad, ae, ti, ts, td, te sql.NullString
-		if err = rows.Scan(&a.ID, &a.Action, &a.Before, &a.After, &a.CreatedAt, &aid, &ai, &as, &ad, &ae, &tid, &ti, &ts, &td, &te); err != nil {
+		if err = rows.Scan(&a.ID, &a.Action, &a.Result, &a.Before, &a.After, &a.RequestID, &a.SessionID, &a.SourceIP, &a.Reason, &a.CreatedAt, &aid, &ai, &as, &ad, &ae, &tid, &ti, &ts, &td, &te); err != nil {
 			return nil, err
 		}
 		if aid.Valid {
@@ -401,15 +450,49 @@ func (s *Service) ListAudits(ctx context.Context, limit int) ([]Audit, error) {
 }
 
 func RecentMFA(claims jwt.MapClaims, now time.Time) bool {
-	raw, ok := claims["auth_time"].(float64)
-	if !ok {
+	if claims == nil {
 		return false
 	}
-	if now.Sub(time.Unix(int64(raw), 0)) > 10*time.Minute {
+	var authTimeUnix int64
+	switch v := claims["auth_time"].(type) {
+	case float64:
+		if v <= 0 {
+			return false
+		}
+		authTimeUnix = int64(v)
+	case json.Number:
+		n, err := v.Int64()
+		if err != nil || n <= 0 {
+			return false
+		}
+		authTimeUnix = n
+	case int64:
+		if v <= 0 {
+			return false
+		}
+		authTimeUnix = v
+	case int:
+		if v <= 0 {
+			return false
+		}
+		authTimeUnix = int64(v)
+	default:
 		return false
 	}
+
+	authTime := time.Unix(authTimeUnix, 0)
+	// Reject future timestamps exceeding allowed clock skew (60s)
+	if authTime.After(now.Add(60 * time.Second)) {
+		return false
+	}
+	// Reject auth older than 10 minutes
+	if now.Sub(authTime) > 10*time.Minute {
+		return false
+	}
+
 	for _, v := range stringsClaim(claims["amr"]) {
-		if v == "otp" || v == "mfa" || v == "swk" || v == "totp" {
+		switch strings.ToLower(v) {
+		case "otp", "totp", "mfa", "swk", "webauthn", "fido2":
 			return true
 		}
 	}
@@ -428,8 +511,12 @@ func (s *Service) RecoverOwner(ctx context.Context, issuer, subject, reason stri
 		return err
 	}
 	defer tx.Rollback()
+
+	// Transaction-level advisory lock
+	_, _ = tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtext('blog_authorization_lock'))`)
+
 	var ownerExists bool
-	if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM blog_role_bindings WHERE role='owner')`).Scan(&ownerExists); err != nil {
+	if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM blog_role_bindings b JOIN blog_memberships m ON m.id=b.membership_id WHERE b.role='owner' AND m.status='active')`).Scan(&ownerExists); err != nil {
 		return err
 	}
 	if ownerExists {
@@ -445,7 +532,7 @@ func (s *Service) RecoverOwner(ctx context.Context, issuer, subject, reason stri
 	if _, err = tx.ExecContext(ctx, `INSERT INTO blog_role_bindings (membership_id,role) VALUES ($1,'owner') ON CONFLICT DO NOTHING`, membershipID); err != nil {
 		return err
 	}
-	if _, err = tx.ExecContext(ctx, `INSERT INTO blog_authorization_audits (target_principal_id,action,after_state,reason) VALUES ($1,'owner_recovered',jsonb_build_object('roles',jsonb_build_array('owner')),$2)`, principalID, reason); err != nil {
+	if _, err = tx.ExecContext(ctx, `INSERT INTO blog_authorization_audits (target_principal_id,action,result,after_state,reason) VALUES ($1,'owner_recovered','success',jsonb_build_object('roles',jsonb_build_array('owner')),$2)`, principalID, reason); err != nil {
 		return err
 	}
 	return tx.Commit()

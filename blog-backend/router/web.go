@@ -138,6 +138,7 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 	optionalAuth := middleware.OptionalAuth(verifier, userAuthOptions)
 	accessService := access.NewService(opts.DB, opts.BootstrapOwner)
 	accessAuth := middleware.BlogAccess(accessService)
+	optionalAccessAuth := middleware.OptionalBlogAccess(accessService)
 	accessCtrl := controller.NewAccessController(accessService)
 
 	registerWebTestRouter(server)
@@ -169,7 +170,7 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 
 	// Public Blog Routes
 	api := server.Group("/api")
-	api.Use(optionalAuth)
+	api.Use(optionalAuth, optionalAccessAuth)
 	{
 		if agentCtrl != nil {
 			api.POST("/ai/webhooks/:event", agentCtrl.ReceiveWorkflowWebhook)

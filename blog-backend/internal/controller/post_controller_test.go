@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rushairer/blog-backend/internal/access"
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/service"
 )
@@ -25,7 +26,7 @@ type fakeBlogService struct {
 }
 
 func newFakeBlogService() *fakeBlogService {
-	post := &domain.Post{ID: 1, Title: "Hello", Slug: "hello", Content: "Body"}
+	post := &domain.Post{ID: 1, Title: "Hello", Slug: "hello", Content: "Body", Status: domain.PostStatusPublished}
 	return &fakeBlogService{
 		posts:       map[int64]*domain.Post{1: post},
 		postsBySlug: map[string]*domain.Post{"hello": post},
@@ -178,7 +179,7 @@ func TestListAdminPassesSearchFiltersAndPagination(t *testing.T) {
 
 func TestGetPostSupportsIDAndSlug(t *testing.T) {
 	svc := newFakeBlogService()
-	numericSlug := &domain.Post{ID: 2, Title: "Numeric slug", Slug: "112", Content: "Body"}
+	numericSlug := &domain.Post{ID: 2, Title: "Numeric slug", Slug: "112", Content: "Body", Status: domain.PostStatusPublished}
 	svc.posts[numericSlug.ID] = numericSlug
 	svc.postsBySlug[numericSlug.Slug] = numericSlug
 	router := setupControllerRouter(svc)
@@ -317,6 +318,83 @@ func TestBatchPosts(t *testing.T) {
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestGetPost_DraftAccessControl(t *testing.T) {
+	svc := newFakeBlogService()
+	authorID := int64(100)
+	otherID := int64(200)
+
+	svc.posts[2] = &domain.Post{ID: 2, Title: "Draft Post", Slug: "draft-post", Status: domain.PostStatusDraft, CreatedByPrincipalID: &authorID}
+	svc.postsBySlug["draft-post"] = svc.posts[2]
+
+	router := setupControllerRouter(svc)
+
+	// 1. Anonymous request for draft post returns 404 (not found / forbidden without existence leak)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/posts/draft-post", nil)
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("anonymous draft access: got status = %d, want 404", rec.Code)
+	}
+
+	// 2. Author accessing own draft post returns 200
+	authorRouter := gin.New()
+	ctrl := NewPostController(svc)
+	authorRouter.GET("/api/posts/:slugOrID", func(c *gin.Context) {
+		c.Set("blog_access", access.Snapshot{
+			Principal:        access.Principal{ID: authorID},
+			MembershipStatus: "active",
+			Roles:            []string{access.RoleAuthor},
+			Permissions:      []string{access.PermissionAuthorContent},
+		})
+		ctrl.Get(c)
+	})
+
+	rec = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/api/posts/draft-post", nil)
+	authorRouter.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("author own draft access: got status = %d, want 200", rec.Code)
+	}
+
+	// 3. Other author accessing draft post returns 404
+	otherAuthorRouter := gin.New()
+	otherAuthorRouter.GET("/api/posts/:slugOrID", func(c *gin.Context) {
+		c.Set("blog_access", access.Snapshot{
+			Principal:        access.Principal{ID: otherID},
+			MembershipStatus: "active",
+			Roles:            []string{access.RoleAuthor},
+			Permissions:      []string{access.PermissionAuthorContent},
+		})
+		ctrl.Get(c)
+	})
+
+	rec = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/api/posts/draft-post", nil)
+	otherAuthorRouter.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("other author draft access: got status = %d, want 404", rec.Code)
+	}
+
+	// 4. Editor accessing draft post returns 200
+	editorRouter := gin.New()
+	editorRouter.GET("/api/posts/:slugOrID", func(c *gin.Context) {
+		c.Set("blog_access", access.Snapshot{
+			Principal:        access.Principal{ID: 300},
+			MembershipStatus: "active",
+			Roles:            []string{access.RoleEditor},
+			Permissions:      []string{access.PermissionManageContent, access.PermissionAuthorContent},
+		})
+		ctrl.Get(c)
+	})
+
+	rec = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/api/posts/draft-post", nil)
+	editorRouter.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("editor draft access: got status = %d, want 200", rec.Code)
 	}
 }
 

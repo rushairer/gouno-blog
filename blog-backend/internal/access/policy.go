@@ -26,6 +26,34 @@ func (p *PostPolicy) CanView(actor *Snapshot, post *domain.Post) (bool, string) 
 	return false, "您没有权限查看文章"
 }
 
+// CanReadPost enforces unified Blog RBAC/ABAC policy for reading posts via public or admin endpoints.
+// Published posts are readable by anyone (including anonymous).
+// Unpublished/draft posts are readable ONLY by active Blog members who:
+// 1) Have content.manage permission (Editor, Admin, Owner); OR
+// 2) Have content.author permission AND are the verified creator of the post (post.CreatedByPrincipalID == actor.Principal.ID).
+// Legacy authorless drafts and other authors' drafts are rejected.
+func (p *PostPolicy) CanReadPost(actor *Snapshot, post *domain.Post) (bool, string) {
+	if post == nil {
+		return false, "post not found"
+	}
+	if post.Status == domain.PostStatusPublished {
+		return true, ""
+	}
+	if actor == nil || actor.MembershipStatus != "active" {
+		return false, "post not found"
+	}
+	if actor.HasPermission(PermissionManageContent) {
+		return true, ""
+	}
+	if actor.HasPermission(PermissionAuthorContent) {
+		if post.CreatedByPrincipalID != nil && *post.CreatedByPrincipalID == actor.Principal.ID {
+			return true, ""
+		}
+		return false, "post not found"
+	}
+	return false, "post not found"
+}
+
 // CanCreate checks if the actor can create a new post.
 func (p *PostPolicy) CanCreate(actor *Snapshot) (bool, string) {
 	if actor == nil || actor.MembershipStatus != "active" {
@@ -141,4 +169,26 @@ func (p *MediaPolicy) CanDelete(actor *Snapshot, media *domain.MediaAsset, refer
 		return false, "您只能删除自己上传的媒体图片"
 	}
 	return false, "无权限删除媒体"
+}
+
+// PagePolicy defines access and authorization rules for pages.
+type PagePolicy struct{}
+
+// CanReadPage enforces unified Blog RBAC/ABAC policy for reading pages.
+// Published pages are readable by anyone (including anonymous).
+// Unpublished/draft pages are readable ONLY by active Blog members with content.manage permission (Editor, Admin, Owner).
+func (p *PagePolicy) CanReadPage(actor *Snapshot, page *domain.Page) (bool, string) {
+	if page == nil {
+		return false, "page not found"
+	}
+	if page.Status == domain.PageStatusPublished {
+		return true, ""
+	}
+	if actor == nil || actor.MembershipStatus != "active" {
+		return false, "page not found"
+	}
+	if actor.HasPermission(PermissionManageContent) {
+		return true, ""
+	}
+	return false, "page not found"
 }
