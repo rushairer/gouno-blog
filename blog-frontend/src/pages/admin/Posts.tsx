@@ -66,8 +66,10 @@ export default function AdminPosts() {
     if (tag) query.set("tag", tag);
     Promise.all([
       postsApi.getPosts(query, true),
-      siteApi.getCategories(),
-      siteApi.getAdminTags(),
+      siteApi.getCategories().catch(() => []),
+      siteApi
+        .getAdminTags()
+        .catch(() => siteApi.getPublishedTagSummaries().catch(() => [])),
     ])
       .then(([result, categoryItems, tagItems]) => {
         if (ignore) return;
