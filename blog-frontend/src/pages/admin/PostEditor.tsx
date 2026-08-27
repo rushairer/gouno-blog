@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   Check,
   ExternalLink,
+  Eye,
   History,
   Image as ImageIcon,
   LoaderCircle,
@@ -14,6 +15,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { agentApi } from "../../api/agent";
 import { postsApi } from "../../api/posts";
 import { siteApi } from "../../api/site";
+import { useAbility } from "../../abilities";
 import {
   AdminPageState,
   Button,
@@ -70,15 +72,21 @@ export default function PostEditor() {
   );
   const navigate = useNavigate();
   const { notify } = useToast();
+  const { cannot } = useAbility();
   const [post, setPost] = useState<Post>(emptyPost);
+  const isReadOnly = Boolean(post.id && cannot("edit", "post", post));
 
   const editorTitle = isNew
     ? post.title
       ? `新建文章: ${post.title}`
       : "新建文章"
-    : post.title
-      ? `编辑: ${post.title}`
-      : "编辑文章";
+    : isReadOnly
+      ? post.title
+        ? `查看: ${post.title}`
+        : "查看文章"
+      : post.title
+        ? `编辑: ${post.title}`
+        : "编辑文章";
   usePageTitle(editorTitle, { admin: true });
   const [publishIntent, setPublishIntent] = useState<PostStatus>("draft");
   const [categories, setCategories] = useState<Category[]>([]);
@@ -874,7 +882,18 @@ export default function PostEditor() {
           <ArrowLeft /> 返回文章列表
         </button>
         <div className="editor-save-state">
-          {saving ? (
+          {isReadOnly ? (
+            <span
+              style={{
+                color: "var(--text-3)",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <Eye size={14} /> 只读模式（他人文章）
+            </span>
+          ) : saving ? (
             "正在保存…"
           ) : savedAt ? (
             <>
@@ -900,7 +919,9 @@ export default function PostEditor() {
           >
             <ExternalLink /> 预览前台页面
           </Button>
-          {post.status !== "published" && publishIntent !== "draft" ? (
+          {!isReadOnly &&
+          post.status !== "published" &&
+          publishIntent !== "draft" ? (
             <Button
               variant="secondary"
               type="button"
@@ -910,14 +931,16 @@ export default function PostEditor() {
               <Save /> 保存草稿
             </Button>
           ) : null}
-          <Button
-            variant="primary"
-            type="button"
-            onClick={() => void persist(primaryStatus)}
-            disabled={saving}
-          >
-            <Send /> {primaryLabel}
-          </Button>
+          {!isReadOnly ? (
+            <Button
+              variant="primary"
+              type="button"
+              onClick={() => void persist(primaryStatus)}
+              disabled={saving}
+            >
+              <Send /> {primaryLabel}
+            </Button>
+          ) : null}
         </div>
       </EditorCommandBar>
       <div className="editor-workspace">
@@ -978,38 +1001,42 @@ export default function PostEditor() {
               value={post.title}
               onChange={(event) => update("title", event.target.value)}
               placeholder="写一个清晰、具体的标题"
+              disabled={isReadOnly}
+              readOnly={isReadOnly}
               required
             />
-            <div className="editor-ai-inline">
-              <button
-                type="button"
-                onClick={() => void requestSuggestions("title")}
-                disabled={assistTask !== null}
-              >
-                <Sparkles />
-                {assistTask === "title" ? (
-                  <>
-                    <LoaderCircle className="is-spinning" /> 正在想标题…
-                  </>
-                ) : (
-                  "生成标题候选"
-                )}
-              </button>
-              {suggestionTask === "title" && suggestions.length > 0 ? (
-                <div className="editor-ai-candidates" aria-label="标题候选">
-                  {suggestions.map((item) => (
-                    <button
-                      key={item}
-                      type="button"
-                      onClick={() => applySuggestion("title", item)}
-                    >
-                      <span>{item}</span>
-                      <b>应用</b>
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
+            {!isReadOnly ? (
+              <div className="editor-ai-inline">
+                <button
+                  type="button"
+                  onClick={() => void requestSuggestions("title")}
+                  disabled={assistTask !== null}
+                >
+                  <Sparkles />
+                  {assistTask === "title" ? (
+                    <>
+                      <LoaderCircle className="is-spinning" /> 正在想标题…
+                    </>
+                  ) : (
+                    "生成标题候选"
+                  )}
+                </button>
+                {suggestionTask === "title" && suggestions.length > 0 ? (
+                  <div className="editor-ai-candidates" aria-label="标题候选">
+                    {suggestions.map((item) => (
+                      <button
+                        key={item}
+                        type="button"
+                        onClick={() => applySuggestion("title", item)}
+                      >
+                        <span>{item}</span>
+                        <b>应用</b>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </Field>
           <Field label="摘要">
             <Textarea
@@ -1019,37 +1046,41 @@ export default function PostEditor() {
               onChange={(event) => update("summary", event.target.value)}
               maxLength={300}
               placeholder="用两三句话说明文章解决的问题"
+              disabled={isReadOnly}
+              readOnly={isReadOnly}
             />
-            <div className="editor-ai-inline">
-              <button
-                type="button"
-                onClick={() => void requestSuggestions("summary")}
-                disabled={assistTask !== null}
-              >
-                <Sparkles />
-                {assistTask === "summary" ? (
-                  <>
-                    <LoaderCircle className="is-spinning" /> 正在提炼摘要…
-                  </>
-                ) : (
-                  "根据正文生成摘要"
-                )}
-              </button>
-              {suggestionTask === "summary" && suggestions.length > 0 ? (
-                <div className="editor-ai-candidates" aria-label="摘要候选">
-                  {suggestions.map((item) => (
-                    <button
-                      key={item}
-                      type="button"
-                      onClick={() => applySuggestion("summary", item)}
-                    >
-                      <span>{item}</span>
-                      <b>应用</b>
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
+            {!isReadOnly ? (
+              <div className="editor-ai-inline">
+                <button
+                  type="button"
+                  onClick={() => void requestSuggestions("summary")}
+                  disabled={assistTask !== null}
+                >
+                  <Sparkles />
+                  {assistTask === "summary" ? (
+                    <>
+                      <LoaderCircle className="is-spinning" /> 正在提炼摘要…
+                    </>
+                  ) : (
+                    "根据正文生成摘要"
+                  )}
+                </button>
+                {suggestionTask === "summary" && suggestions.length > 0 ? (
+                  <div className="editor-ai-candidates" aria-label="摘要候选">
+                    {suggestions.map((item) => (
+                      <button
+                        key={item}
+                        type="button"
+                        onClick={() => applySuggestion("summary", item)}
+                      >
+                        <span>{item}</span>
+                        <b>应用</b>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </Field>
           <div className="editor-tabs">
             <div className="tab-buttons">
@@ -1068,30 +1099,33 @@ export default function PostEditor() {
                 预览
               </button>
             </div>
-            <div className="editor-ai-tools-group">
-              <button
-                className={`editor-ai-tool-btn ${showAiWriting ? "active" : ""}`}
-                type="button"
-                onClick={() => {
-                  setShowAiWriting(!showAiWriting);
-                  setShowAiImage(false);
-                  setAssistError("");
-                }}
-              >
-                <Sparkles /> {showAiWriting ? "收起 AI 写作" : "AI 写作与润色"}
-              </button>
-              <button
-                className={`editor-ai-tool-btn ${showAiImage ? "active" : ""}`}
-                type="button"
-                onClick={() => {
-                  setShowAiImage(!showAiImage);
-                  setShowAiWriting(false);
-                  setAssistError("");
-                }}
-              >
-                <ImageIcon /> {showAiImage ? "收起 AI 插图" : "AI 文生图插画"}
-              </button>
-            </div>
+            {!isReadOnly ? (
+              <div className="editor-ai-tools-group">
+                <button
+                  className={`editor-ai-tool-btn ${showAiWriting ? "active" : ""}`}
+                  type="button"
+                  onClick={() => {
+                    setShowAiWriting(!showAiWriting);
+                    setShowAiImage(false);
+                    setAssistError("");
+                  }}
+                >
+                  <Sparkles />{" "}
+                  {showAiWriting ? "收起 AI 写作" : "AI 写作与润色"}
+                </button>
+                <button
+                  className={`editor-ai-tool-btn ${showAiImage ? "active" : ""}`}
+                  type="button"
+                  onClick={() => {
+                    setShowAiImage(!showAiImage);
+                    setShowAiWriting(false);
+                    setAssistError("");
+                  }}
+                >
+                  <ImageIcon /> {showAiImage ? "收起 AI 插图" : "AI 文生图插画"}
+                </button>
+              </div>
+            ) : null}
           </div>
           {showAiWriting ? (
             <AiWritingPanel>
@@ -1481,357 +1515,377 @@ export default function PostEditor() {
               onChange={(event) => update("content", event.target.value)}
               aria-label="文章正文 Markdown"
               placeholder={"## 从问题开始\n\n写下背景、约束、判断与实现…"}
+              disabled={isReadOnly}
+              readOnly={isReadOnly}
             />
           )}
         </main>
         <aside className="editor-inspector">
-          <div className="editor-inspector-ai-banner">
-            <Button
-              variant="primary"
-              type="button"
-              onClick={() => void autoFillAllMetadata()}
-              disabled={
-                metaLoading || (!post.title.trim() && !post.content.trim())
-              }
-            >
-              {metaLoading ? (
-                <>
-                  <LoaderCircle className="is-spinning" /> 正在智能分析全文…
-                </>
-              ) : (
-                <>
-                  <Sparkles /> ⚡ AI 一键补全元数据
-                </>
-              )}
-            </Button>
-          </div>
-          <details open>
-            <summary>发布设置</summary>
-            <Field label="状态">
-              <Select
-                value={publishIntent}
-                onChange={(event) => {
-                  setPublishIntent(event.target.value as PostStatus);
-                  dirty.current = true;
-                }}
-              >
-                <option value="draft">草稿</option>
-                <option value="published">立即发布</option>
-                <option value="scheduled">定时发布</option>
-              </Select>
-            </Field>
-            {publishIntent === "scheduled" ? (
-              <Field label="发布时间">
-                <Input
-                  type="datetime-local"
-                  value={post.scheduled_at?.slice(0, 16) || ""}
-                  onChange={(event) =>
-                    update("scheduled_at", event.target.value)
-                  }
-                />
-              </Field>
-            ) : null}
-          </details>
-          <details open>
-            <summary>分类与标签</summary>
-            <Field label="分类">
-              <Select
-                value={post.category_id || ""}
-                onChange={(event) =>
-                  update(
-                    "category_id",
-                    event.target.value ? Number(event.target.value) : null,
-                  )
-                }
-              >
-                <option value="">未分类</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </Select>
-              {categorySuggestion ? (
-                <button
+          <fieldset
+            disabled={isReadOnly}
+            style={{
+              border: "none",
+              padding: 0,
+              margin: 0,
+              display: "flex",
+              flexDirection: "column",
+              gap: 16,
+            }}
+          >
+            {!isReadOnly ? (
+              <div className="editor-inspector-ai-banner">
+                <Button
+                  variant="primary"
                   type="button"
-                  className="category-ai-badge"
-                  onClick={() => applyCategory(categorySuggestion)}
+                  onClick={() => void autoFillAllMetadata()}
+                  disabled={
+                    metaLoading || (!post.title.trim() && !post.content.trim())
+                  }
                 >
-                  <Sparkles /> 推荐: {categorySuggestion} (点击应用)
-                </button>
-              ) : (
+                  {metaLoading ? (
+                    <>
+                      <LoaderCircle className="is-spinning" /> 正在智能分析全文…
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles /> ⚡ AI 一键补全元数据
+                    </>
+                  )}
+                </Button>
+              </div>
+            ) : null}
+            <details open>
+              <summary>发布设置</summary>
+              <Field label="状态">
+                <Select
+                  value={publishIntent}
+                  onChange={(event) => {
+                    setPublishIntent(event.target.value as PostStatus);
+                    dirty.current = true;
+                  }}
+                >
+                  <option value="draft">草稿</option>
+                  <option value="published">立即发布</option>
+                  <option value="scheduled">定时发布</option>
+                </Select>
+              </Field>
+              {publishIntent === "scheduled" ? (
+                <Field label="发布时间">
+                  <Input
+                    type="datetime-local"
+                    value={post.scheduled_at?.slice(0, 16) || ""}
+                    onChange={(event) =>
+                      update("scheduled_at", event.target.value)
+                    }
+                  />
+                </Field>
+              ) : null}
+            </details>
+            <details open>
+              <summary>分类与标签</summary>
+              <Field label="分类">
+                <Select
+                  value={post.category_id || ""}
+                  onChange={(event) =>
+                    update(
+                      "category_id",
+                      event.target.value ? Number(event.target.value) : null,
+                    )
+                  }
+                >
+                  <option value="">未分类</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </Select>
+                {categorySuggestion ? (
+                  <button
+                    type="button"
+                    className="category-ai-badge"
+                    onClick={() => applyCategory(categorySuggestion)}
+                  >
+                    <Sparkles /> 推荐: {categorySuggestion} (点击应用)
+                  </button>
+                ) : (
+                  <div className="editor-ai-inline">
+                    <button
+                      type="button"
+                      onClick={() => void requestCategory()}
+                      disabled={assistTask !== null || !categories.length}
+                    >
+                      <Sparkles />
+                      {assistTask === "category" ? (
+                        <>
+                          <LoaderCircle className="is-spinning" /> 分析分类…
+                        </>
+                      ) : (
+                        "推荐最佳分类"
+                      )}
+                    </button>
+                  </div>
+                )}
+              </Field>
+              <Field label="标签" hint="使用逗号分隔，最多建议 10 个。">
+                <Input
+                  value={post.tags.join(", ")}
+                  onChange={(event) =>
+                    update(
+                      "tags",
+                      event.target.value
+                        .split(",")
+                        .map((tag) => tag.trim())
+                        .filter(Boolean),
+                    )
+                  }
+                  placeholder="Go, OIDC, 安全"
+                />
                 <div className="editor-ai-inline">
                   <button
                     type="button"
-                    onClick={() => void requestCategory()}
-                    disabled={assistTask !== null || !categories.length}
+                    onClick={() => void requestTags()}
+                    disabled={assistTask !== null}
                   >
                     <Sparkles />
-                    {assistTask === "category" ? (
+                    {assistTask === "tags" ? (
                       <>
-                        <LoaderCircle className="is-spinning" /> 分析分类…
+                        <LoaderCircle className="is-spinning" /> 正在提炼标签…
                       </>
                     ) : (
-                      "推荐最佳分类"
+                      "提取推荐标签"
                     )}
                   </button>
                 </div>
-              )}
-            </Field>
-            <Field label="标签" hint="使用逗号分隔，最多建议 10 个。">
-              <Input
-                value={post.tags.join(", ")}
-                onChange={(event) =>
-                  update(
-                    "tags",
-                    event.target.value
-                      .split(",")
-                      .map((tag) => tag.trim())
-                      .filter(Boolean),
-                  )
-                }
-                placeholder="Go, OIDC, 安全"
-              />
-              <div className="editor-ai-inline">
-                <button
-                  type="button"
-                  onClick={() => void requestTags()}
-                  disabled={assistTask !== null}
-                >
-                  <Sparkles />
-                  {assistTask === "tags" ? (
-                    <>
-                      <LoaderCircle className="is-spinning" /> 正在提炼标签…
-                    </>
-                  ) : (
-                    "提取推荐标签"
-                  )}
-                </button>
-              </div>
-              {tagSuggestions.length > 0 ? (
-                <div className="editor-tag-pills">
-                  <span
-                    style={{
-                      fontSize: 11,
-                      color: "var(--text-3)",
-                      width: "100%",
-                    }}
-                  >
-                    点击标签添加：
-                  </span>
-                  {tagSuggestions.map((tag) => {
-                    const isAdded = post.tags.includes(tag);
-                    return (
-                      <button
-                        key={tag}
-                        type="button"
-                        className={`editor-tag-pill ${isAdded ? "is-added" : ""}`}
-                        onClick={() => !isAdded && addTag(tag)}
-                        title={isAdded ? "已添加" : "点击添加此标签"}
-                      >
-                        {isAdded ? "✓" : "+"} {tag}
-                      </button>
-                    );
-                  })}
+                {tagSuggestions.length > 0 ? (
+                  <div className="editor-tag-pills">
+                    <span
+                      style={{
+                        fontSize: 11,
+                        color: "var(--text-3)",
+                        width: "100%",
+                      }}
+                    >
+                      点击标签添加：
+                    </span>
+                    {tagSuggestions.map((tag) => {
+                      const isAdded = post.tags.includes(tag);
+                      return (
+                        <button
+                          key={tag}
+                          type="button"
+                          className={`editor-tag-pill ${isAdded ? "is-added" : ""}`}
+                          onClick={() => !isAdded && addTag(tag)}
+                          title={isAdded ? "已添加" : "点击添加此标签"}
+                        >
+                          {isAdded ? "✓" : "+"} {tag}
+                        </button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      className="editor-tag-pill-all"
+                      onClick={addAllTags}
+                    >
+                      + 添加全部
+                    </button>
+                  </div>
+                ) : null}
+              </Field>
+            </details>
+            <details open>
+              <summary>封面与摘要</summary>
+              <Field label="封面 URL">
+                <Input
+                  value={post.cover_url || ""}
+                  onChange={(event) => update("cover_url", event.target.value)}
+                  placeholder="/media/cover.webp"
+                />
+                <div className="editor-ai-inline">
                   <button
                     type="button"
-                    className="editor-tag-pill-all"
-                    onClick={addAllTags}
+                    onClick={() => void requestSuggestions("cover_prompt")}
+                    disabled={assistTask !== null}
                   >
-                    + 添加全部
+                    <Sparkles />
+                    {assistTask === "cover_prompt" ? (
+                      <>
+                        <LoaderCircle className="is-spinning" /> 生成生图提示词…
+                      </>
+                    ) : (
+                      "生成生图 Prompt"
+                    )}
                   </button>
-                </div>
-              ) : null}
-            </Field>
-          </details>
-          <details open>
-            <summary>封面与摘要</summary>
-            <Field label="封面 URL">
-              <Input
-                value={post.cover_url || ""}
-                onChange={(event) => update("cover_url", event.target.value)}
-                placeholder="/media/cover.webp"
-              />
-              <div className="editor-ai-inline">
-                <button
-                  type="button"
-                  onClick={() => void requestSuggestions("cover_prompt")}
-                  disabled={assistTask !== null}
-                >
-                  <Sparkles />
-                  {assistTask === "cover_prompt" ? (
-                    <>
-                      <LoaderCircle className="is-spinning" /> 生成生图提示词…
-                    </>
-                  ) : (
-                    "生成生图 Prompt"
-                  )}
-                </button>
-                {suggestionTask === "cover_prompt" && suggestions.length > 0 ? (
-                  <div
-                    className="editor-ai-candidates"
-                    aria-label="Prompt 候选"
-                  >
-                    {suggestions.map((item) => (
-                      <div key={item} className="editor-prompt-candidate">
-                        <div className="editor-prompt-text">{item}</div>
-                        <div className="editor-prompt-candidate-actions">
-                          <Button
-                            variant="primary"
-                            type="button"
-                            disabled={generatingCoverPrompt !== null}
-                            onClick={() => void handleGenerateCover(item)}
-                          >
-                            {generatingCoverPrompt === item ? (
-                              <>
-                                <LoaderCircle className="is-spinning" />{" "}
-                                正在生图…
-                              </>
-                            ) : (
-                              <>🎨 生图</>
-                            )}
-                          </Button>
-                          <Button
-                            variant="secondary"
-                            type="button"
-                            onClick={() => {
-                              void navigator.clipboard.writeText(item);
-                              notify("生图提示词已复制到剪贴板！", "success");
-                            }}
-                          >
-                            📋 复制
-                          </Button>
+                  {suggestionTask === "cover_prompt" &&
+                  suggestions.length > 0 ? (
+                    <div
+                      className="editor-ai-candidates"
+                      aria-label="Prompt 候选"
+                    >
+                      {suggestions.map((item) => (
+                        <div key={item} className="editor-prompt-candidate">
+                          <div className="editor-prompt-text">{item}</div>
+                          <div className="editor-prompt-candidate-actions">
+                            <Button
+                              variant="primary"
+                              type="button"
+                              disabled={generatingCoverPrompt !== null}
+                              onClick={() => void handleGenerateCover(item)}
+                            >
+                              {generatingCoverPrompt === item ? (
+                                <>
+                                  <LoaderCircle className="is-spinning" />{" "}
+                                  正在生图…
+                                </>
+                              ) : (
+                                <>🎨 生图</>
+                              )}
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              type="button"
+                              onClick={() => {
+                                void navigator.clipboard.writeText(item);
+                                notify("生图提示词已复制到剪贴板！", "success");
+                              }}
+                            >
+                              📋 复制
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            </Field>
-            <Field label="替代文本">
-              <Input
-                value={post.cover_alt || ""}
-                onChange={(event) => update("cover_alt", event.target.value)}
-                placeholder="描述封面图场景与主题"
-              />
-              <div className="editor-ai-inline">
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </Field>
+              <Field label="替代文本">
+                <Input
+                  value={post.cover_alt || ""}
+                  onChange={(event) => update("cover_alt", event.target.value)}
+                  placeholder="描述封面图场景与主题"
+                />
+                <div className="editor-ai-inline">
+                  <button
+                    type="button"
+                    onClick={() => void requestSuggestions("alt")}
+                    disabled={assistTask !== null}
+                  >
+                    <Sparkles />
+                    {assistTask === "alt" ? (
+                      <>
+                        <LoaderCircle className="is-spinning" /> 正在生成 Alt…
+                      </>
+                    ) : (
+                      "生成 Alt 描述"
+                    )}
+                  </button>
+                  {suggestionTask === "alt" && suggestions.length > 0 ? (
+                    <div className="editor-ai-candidates" aria-label="Alt 候选">
+                      {suggestions.map((item) => (
+                        <button
+                          key={item}
+                          type="button"
+                          onClick={() => applySuggestion("alt", item)}
+                        >
+                          <span>{item}</span>
+                          <b>应用</b>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </Field>
+            </details>
+            <details open>
+              <summary>路径与 SEO</summary>
+              <div className="editor-ai-inline" style={{ marginBottom: 12 }}>
                 <button
                   type="button"
-                  onClick={() => void requestSuggestions("alt")}
+                  onClick={() => void requestSeo()}
                   disabled={assistTask !== null}
                 >
                   <Sparkles />
-                  {assistTask === "alt" ? (
+                  {assistTask === "seo" ? (
                     <>
-                      <LoaderCircle className="is-spinning" /> 正在生成 Alt…
+                      <LoaderCircle className="is-spinning" /> 正在优化 SEO…
                     </>
                   ) : (
-                    "生成 Alt 描述"
+                    "🎯 智能生成整套 SEO 配置"
                   )}
                 </button>
-                {suggestionTask === "alt" && suggestions.length > 0 ? (
-                  <div className="editor-ai-candidates" aria-label="Alt 候选">
-                    {suggestions.map((item) => (
-                      <button
-                        key={item}
-                        type="button"
-                        onClick={() => applySuggestion("alt", item)}
-                      >
-                        <span>{item}</span>
-                        <b>应用</b>
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
               </div>
-            </Field>
-          </details>
-          <details open>
-            <summary>路径与 SEO</summary>
-            <div className="editor-ai-inline" style={{ marginBottom: 12 }}>
-              <button
-                type="button"
-                onClick={() => void requestSeo()}
-                disabled={assistTask !== null}
-              >
-                <Sparkles />
-                {assistTask === "seo" ? (
-                  <>
-                    <LoaderCircle className="is-spinning" /> 正在优化 SEO…
-                  </>
-                ) : (
-                  "🎯 智能生成整套 SEO 配置"
-                )}
-              </button>
-            </div>
-            <Field
-              label="访问路径 (Slug)"
-              required
-              hint="访问路径为 /articles/<slug>"
-            >
-              <Input
-                className="mono"
-                value={post.slug}
-                onChange={(event) => update("slug", event.target.value)}
+              <Field
+                label="访问路径 (Slug)"
                 required
-              />
-              <div className="editor-ai-inline">
-                <button
-                  type="button"
-                  onClick={() => void requestSuggestions("slug")}
-                  disabled={assistTask !== null}
-                >
-                  <Sparkles />
-                  {assistTask === "slug" ? (
-                    <>
-                      <LoaderCircle className="is-spinning" /> 正在生成 Slug…
-                    </>
-                  ) : (
-                    "生成 Slug 候选"
-                  )}
-                </button>
-                {suggestionTask === "slug" && suggestions.length > 0 ? (
-                  <div className="editor-ai-candidates" aria-label="Slug 候选">
-                    {suggestions.map((item) => (
-                      <button
-                        key={item}
-                        type="button"
-                        onClick={() => applySuggestion("slug", item)}
-                      >
-                        <span className="mono">{item}</span>
-                        <b>应用</b>
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            </Field>
-            <Field
-              label="SEO 标题"
-              hint={`${(post.seo_title || "").length}/60`}
-            >
-              <Input
-                value={post.seo_title || ""}
-                maxLength={60}
-                onChange={(event) => update("seo_title", event.target.value)}
-                placeholder="留空时默认使用标题"
-              />
-            </Field>
-            <Field
-              label="SEO 描述"
-              hint={`${(post.seo_description || "").length}/160`}
-            >
-              <Textarea
-                rows={4}
-                value={post.seo_description || ""}
-                maxLength={160}
-                onChange={(event) =>
-                  update("seo_description", event.target.value)
-                }
-                placeholder="留空时默认使用摘要"
-              />
-            </Field>
-          </details>
+                hint="访问路径为 /articles/<slug>"
+              >
+                <Input
+                  className="mono"
+                  value={post.slug}
+                  onChange={(event) => update("slug", event.target.value)}
+                  required
+                />
+                <div className="editor-ai-inline">
+                  <button
+                    type="button"
+                    onClick={() => void requestSuggestions("slug")}
+                    disabled={assistTask !== null}
+                  >
+                    <Sparkles />
+                    {assistTask === "slug" ? (
+                      <>
+                        <LoaderCircle className="is-spinning" /> 正在生成 Slug…
+                      </>
+                    ) : (
+                      "生成 Slug 候选"
+                    )}
+                  </button>
+                  {suggestionTask === "slug" && suggestions.length > 0 ? (
+                    <div
+                      className="editor-ai-candidates"
+                      aria-label="Slug 候选"
+                    >
+                      {suggestions.map((item) => (
+                        <button
+                          key={item}
+                          type="button"
+                          onClick={() => applySuggestion("slug", item)}
+                        >
+                          <span className="mono">{item}</span>
+                          <b>应用</b>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </Field>
+              <Field
+                label="SEO 标题"
+                hint={`${(post.seo_title || "").length}/60`}
+              >
+                <Input
+                  value={post.seo_title || ""}
+                  maxLength={60}
+                  onChange={(event) => update("seo_title", event.target.value)}
+                  placeholder="留空时默认使用标题"
+                />
+              </Field>
+              <Field
+                label="SEO 描述"
+                hint={`${(post.seo_description || "").length}/160`}
+              >
+                <Textarea
+                  rows={4}
+                  value={post.seo_description || ""}
+                  maxLength={160}
+                  onChange={(event) =>
+                    update("seo_description", event.target.value)
+                  }
+                  placeholder="留空时默认使用摘要"
+                />
+              </Field>
+            </details>
+          </fieldset>
         </aside>
       </div>
       <ConfirmDialog

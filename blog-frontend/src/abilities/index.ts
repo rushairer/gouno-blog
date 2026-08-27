@@ -95,13 +95,13 @@ export function defineAbility(): AbilityChecker {
 
     // Post abilities
     if (subject === "post") {
-      if (action === "create") {
+      if (action === "create" || action === "view") {
         return (
           hasBlogPermission("content.author") ||
           hasBlogPermission("content.manage")
         );
       }
-      if (action === "view" || action === "edit" || action === "restore") {
+      if (action === "edit" || action === "restore") {
         if (hasBlogPermission("content.manage")) return true;
         if (hasBlogPermission("content.author")) {
           if (!resource) return true; // general capability
@@ -121,13 +121,13 @@ export function defineAbility(): AbilityChecker {
 
     // Media abilities
     if (subject === "media") {
-      if (action === "create") {
+      if (action === "create" || action === "view") {
         return (
           hasBlogPermission("content.author") ||
           hasBlogPermission("content.manage")
         );
       }
-      if (action === "view" || action === "edit") {
+      if (action === "edit") {
         if (hasBlogPermission("content.manage")) return true;
         if (hasBlogPermission("content.author")) {
           if (!resource) return true;

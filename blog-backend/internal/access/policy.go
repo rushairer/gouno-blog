@@ -8,31 +8,22 @@ import (
 type PostPolicy struct{}
 
 // ScopePosts modifies the filter based on the actor's permissions.
-// Authors only see their own posts, while managers (editors/admins/owners) see all posts.
+// Both authors and managers can browse all posts for team collaboration, unless a specific filter is set.
 func (p *PostPolicy) ScopePosts(actor *Snapshot, filter *domain.AdminPostFilter) {
 	if actor == nil || filter == nil {
 		return
 	}
-	if !actor.HasPermission(PermissionManageContent) {
-		filter.CreatedByPrincipalID = &actor.Principal.ID
-	}
 }
 
-// CanView checks if the actor can view the post in admin.
+// CanView checks if the actor can view the post in admin (read-only for non-owned posts).
 func (p *PostPolicy) CanView(actor *Snapshot, post *domain.Post) (bool, string) {
 	if actor == nil || actor.MembershipStatus != "active" {
 		return false, "您尚未登录或无权限访问"
 	}
-	if actor.HasPermission(PermissionManageContent) {
+	if actor.HasAnyPermission(PermissionAuthorContent, PermissionManageContent) {
 		return true, ""
 	}
-	if actor.HasPermission(PermissionAuthorContent) {
-		if post != nil && post.CreatedByPrincipalID != nil && *post.CreatedByPrincipalID == actor.Principal.ID {
-			return true, ""
-		}
-		return false, "您没有权限查看其他作者的文章"
-	}
-	return false, "您没有权限查看或编辑该文章"
+	return false, "您没有权限查看文章"
 }
 
 // CanCreate checks if the actor can create a new post.
@@ -47,6 +38,7 @@ func (p *PostPolicy) CanCreate(actor *Snapshot) (bool, string) {
 }
 
 // CanEdit checks if the actor can update the post.
+// Managers can edit any post; Authors can ONLY edit their own posts.
 func (p *PostPolicy) CanEdit(actor *Snapshot, post *domain.Post) (bool, string) {
 	if actor == nil || actor.MembershipStatus != "active" {
 		return false, "您尚未登录或无权限编辑文章"
@@ -58,7 +50,7 @@ func (p *PostPolicy) CanEdit(actor *Snapshot, post *domain.Post) (bool, string) 
 		if post != nil && post.CreatedByPrincipalID != nil && *post.CreatedByPrincipalID == actor.Principal.ID {
 			return true, ""
 		}
-		return false, "您仅能编辑自己创建的文章"
+		return false, "您仅能编辑自己创建的文章（他人文章仅供只读查看）"
 	}
 	return false, "您没有权限编辑该文章"
 }
@@ -83,13 +75,10 @@ func (p *PostPolicy) CanRestoreVersion(actor *Snapshot, post *domain.Post) (bool
 type MediaPolicy struct{}
 
 // ScopeMedia modifies the filter based on the actor's permissions.
-// Authors only see their own uploaded media, while managers see all media.
+// Both authors and managers can browse media library for insertion into articles.
 func (p *MediaPolicy) ScopeMedia(actor *Snapshot, filter *domain.MediaFilter) {
 	if actor == nil || filter == nil {
 		return
-	}
-	if !actor.HasPermission(PermissionManageContent) {
-		filter.CreatedByPrincipalID = &actor.Principal.ID
 	}
 }
 
@@ -98,14 +87,8 @@ func (p *MediaPolicy) CanView(actor *Snapshot, media *domain.MediaAsset) (bool, 
 	if actor == nil || actor.MembershipStatus != "active" {
 		return false, "您尚未登录或无权限查看媒体"
 	}
-	if actor.HasPermission(PermissionManageContent) {
+	if actor.HasAnyPermission(PermissionAuthorContent, PermissionManageContent) {
 		return true, ""
-	}
-	if actor.HasPermission(PermissionAuthorContent) {
-		if media != nil && media.CreatedByPrincipalID != nil && *media.CreatedByPrincipalID == actor.Principal.ID {
-			return true, ""
-		}
-		return false, "您没有权限查看其他作者的媒体"
 	}
 	return false, "无权限查看媒体"
 }
@@ -122,6 +105,7 @@ func (p *MediaPolicy) CanUpload(actor *Snapshot) (bool, string) {
 }
 
 // CanUpdate checks if the actor can update media alt text.
+// Managers can update any media; Authors can ONLY update their own media.
 func (p *MediaPolicy) CanUpdate(actor *Snapshot, media *domain.MediaAsset) (bool, string) {
 	if actor == nil || actor.MembershipStatus != "active" {
 		return false, "您尚未登录或无权限编辑媒体"
@@ -133,12 +117,13 @@ func (p *MediaPolicy) CanUpdate(actor *Snapshot, media *domain.MediaAsset) (bool
 		if media != nil && media.CreatedByPrincipalID != nil && *media.CreatedByPrincipalID == actor.Principal.ID {
 			return true, ""
 		}
-		return false, "您仅能编辑自己上传的媒体"
+		return false, "您仅能编辑自己上传的媒体素材"
 	}
 	return false, "无权限编辑媒体"
 }
 
 // CanDelete checks if the actor can delete the media asset.
+// Managers can delete any unreferenced media; Authors can ONLY delete their own unreferenced media.
 func (p *MediaPolicy) CanDelete(actor *Snapshot, media *domain.MediaAsset, referencesCount int64) (bool, string) {
 	if referencesCount > 0 {
 		return false, "该媒体仍被文章引用，移除引用后才能删除。"

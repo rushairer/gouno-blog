@@ -283,12 +283,8 @@ export default function MediaLibrary() {
   return (
     <AdminPage>
       <AdminPageHeader
-        title={can("batch", "media") ? "媒体库" : "我的媒体库"}
-        description={
-          can("batch", "media")
-            ? "上传、检索和复用全站内容中的图片资源，支持 AI 直接文生图入库。"
-            : "上传、检索和管理由您上传的图片资源，支持 AI 直接文生图入库。"
-        }
+        title="媒体库"
+        description="上传、检索和复用全站内容中的图片资源，支持 AI 直接文生图入库。"
         actions={
           <>
             {can("create", "media") ? (
