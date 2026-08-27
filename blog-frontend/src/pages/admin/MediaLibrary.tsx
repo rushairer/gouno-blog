@@ -252,14 +252,26 @@ export default function MediaLibrary() {
       setDeleteTarget(null);
       setReferences([]);
       notify("媒体已删除。", "success");
-    } catch {
+    } catch (err) {
+      let refs: typeof references = [];
       try {
-        const refs = await mediaApi.getMediaReferences(deleteTarget.id);
+        refs = await mediaApi.getMediaReferences(deleteTarget.id);
         setReferences(refs);
       } catch {
         setReferences([]);
       }
-      setError("该媒体仍被文章引用，移除引用后才能删除。");
+      if (refs.length > 0) {
+        setError("该媒体仍被文章引用，移除引用后才能删除。");
+      } else if (err instanceof Error && err.message) {
+        setError(
+          err.message ===
+            "media asset is still referenced by published or draft content"
+            ? "该媒体仍被文章引用，移除引用后才能删除。"
+            : err.message,
+        );
+      } else {
+        setError("删除媒体失败，请稍后重试。");
+      }
       setDeleteTarget(null);
     }
   };

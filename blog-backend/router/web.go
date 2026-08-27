@@ -240,6 +240,7 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 			author.POST("/admin/media", growthCtrl.UploadMedia)
 			author.PUT("/admin/media/:id", growthCtrl.UpdateMedia)
 			author.GET("/admin/media/:id/references", growthCtrl.MediaReferences)
+			author.DELETE("/admin/media/:id", growthCtrl.DeleteMedia)
 		}
 
 		// Content Management (Editors, Admins, Owners)
@@ -248,7 +249,6 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 		{
 			contentManage.POST("/admin/posts/batch", ctrl.Batch)
 			contentManage.DELETE("/posts/:slugOrID", ctrl.Delete)
-			contentManage.DELETE("/admin/media/:id", growthCtrl.DeleteMedia)
 			contentManage.GET("/admin/pages", pageCtrl.ListAdmin)
 			contentManage.GET("/admin/pages/:id", pageCtrl.GetAdmin)
 			contentManage.POST("/admin/pages", pageCtrl.Create)
