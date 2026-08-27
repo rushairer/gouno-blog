@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"github.com/lib/pq"
 	"github.com/rushairer/blog-backend/internal/domain"
@@ -152,11 +153,13 @@ func (r *GrowthRepository) ListMedia(ctx context.Context, filter domain.MediaFil
 	return assets, rows.Err()
 }
 
+var ErrMediaInUse = errors.New("media asset is referenced by published or draft posts")
+
 func (r *GrowthRepository) CountMediaReferences(ctx context.Context, id int64) (int64, error) {
 	var count int64
-	err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM posts p
-		JOIN media_assets m ON m.id=$1
-		WHERE p.content LIKE '%' || m.url || '%' OR p.cover_url = m.url`, id).Scan(&count)
+	err := r.db.QueryRowContext(ctx, `SELECT 
+		(SELECT COUNT(*) FROM posts p JOIN media_assets m ON m.id=$1 WHERE p.content LIKE '%' || m.url || '%' OR p.cover_url = m.url) +
+		(SELECT COUNT(*) FROM pages pg JOIN media_assets m ON m.id=$1 WHERE pg.content LIKE '%' || m.url || '%')`, id).Scan(&count)
 	return count, err
 }
 
@@ -181,12 +184,41 @@ func (r *GrowthRepository) ListMediaReferences(ctx context.Context, id int64) ([
 }
 
 func (r *GrowthRepository) DeleteMedia(ctx context.Context, id int64) (*domain.MediaAsset, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
 	var asset domain.MediaAsset
-	err := r.db.QueryRowContext(ctx, `DELETE FROM media_assets WHERE id = $1
-		RETURNING id, filename, storage_name, url, content_type, size_bytes, alt_text, created_by, created_by_principal_id, updated_by_principal_id, created_at`, id).
+	err = tx.QueryRowContext(ctx, `SELECT id, filename, storage_name, url, content_type, size_bytes, alt_text, created_by, created_by_principal_id, updated_by_principal_id, created_at
+		FROM media_assets WHERE id = $1 FOR UPDATE`, id).
 		Scan(&asset.ID, &asset.Filename, &asset.StorageName, &asset.URL, &asset.ContentType,
 			&asset.SizeBytes, &asset.AltText, &asset.CreatedBy, &asset.CreatedByPrincipalID, &asset.UpdatedByPrincipalID, &asset.CreatedAt)
-	return &asset, err
+	if err != nil {
+		return nil, err
+	}
+
+	var postRefs, pageRefs int64
+	if err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM posts WHERE content LIKE '%' || $1 || '%' OR cover_url = $1`, asset.URL).Scan(&postRefs); err != nil {
+		return nil, err
+	}
+	if err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM pages WHERE content LIKE '%' || $1 || '%'`, asset.URL).Scan(&pageRefs); err != nil {
+		return nil, err
+	}
+
+	if postRefs > 0 || pageRefs > 0 {
+		return nil, ErrMediaInUse
+	}
+
+	if _, err = tx.ExecContext(ctx, `DELETE FROM media_assets WHERE id = $1`, id); err != nil {
+		return nil, err
+	}
+
+	if err = tx.Commit(); err != nil {
+		return nil, err
+	}
+	return &asset, nil
 }
 
 func (r *GrowthRepository) UpdateMediaAltText(ctx context.Context, id int64, altText string, updatedByPrincipalID *int64) (*domain.MediaAsset, error) {

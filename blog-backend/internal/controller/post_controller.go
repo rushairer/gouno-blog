@@ -5,11 +5,9 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/rushairer/blog-backend/internal/access"
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/service"
@@ -257,66 +255,44 @@ func (ctrl *PostController) Delete(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }
 
-func isAdminPostRequest(c *gin.Context) bool {
-	if rawClaims, exists := c.Get("claims"); exists {
-		if claims, ok := rawClaims.(jwt.MapClaims); ok {
-			if roles, ok := claims["roles"].([]interface{}); ok {
-				for _, r := range roles {
-					if roleStr, ok := r.(string); ok && roleStr == "admin" {
-						return true
-					}
-				}
-			}
-			if roleStr, ok := claims["role"].(string); ok && roleStr == "admin" {
-				return true
-			}
-			if scopeStr, ok := claims["scope"].(string); ok {
-				for _, s := range strings.Fields(scopeStr) {
-					if s == "admin" {
-						return true
-					}
-				}
-			}
-		}
-	}
-	return false
-}
-
 func (ctrl *PostController) Get(c *gin.Context) {
 	slugOrID := c.Param("slugOrID")
-	admin := isAdminPostRequest(c)
+	var snapshot *access.Snapshot
+	if s, ok := middleware.CurrentBlogAccess(c); ok {
+		snapshot = &s
+	}
 
 	// Try ID first
 	id, err := strconv.ParseInt(slugOrID, 10, 64)
 	var post *domain.Post
 	if err == nil && id > 0 {
-		if admin {
-			post, err = ctrl.svc.GetAdminPost(c.Request.Context(), id)
-		} else {
-			post, err = ctrl.svc.GetPost(c.Request.Context(), id)
-		}
+		post, err = ctrl.svc.GetAdminPost(c.Request.Context(), id)
 		if err != nil && !errors.Is(err, service.ErrPostNotFound) {
 			WriteDomainError(c, err)
 			return
 		}
 		if post != nil {
+			if allowed, _ := ctrl.policy.CanReadPost(snapshot, post); !allowed {
+				c.JSON(http.StatusNotFound, gouno.NewErrorResponse(http.StatusNotFound, "post not found"))
+				return
+			}
 			c.JSON(http.StatusOK, gouno.NewSuccessResponse(post))
 			return
 		}
 	}
 
-	// Prefer an existing numeric ID, then fall back to a numeric slug.
-	if admin {
-		post, err = ctrl.svc.GetAdminPostBySlug(c.Request.Context(), slugOrID)
-	} else {
-		post, err = ctrl.svc.GetPostBySlug(c.Request.Context(), slugOrID)
-	}
-
+	// Prefer an existing numeric ID, then fall back to a slug.
+	post, err = ctrl.svc.GetAdminPostBySlug(c.Request.Context(), slugOrID)
 	if err != nil && !errors.Is(err, service.ErrPostNotFound) {
 		WriteDomainError(c, err)
 		return
 	}
 	if post == nil {
+		c.JSON(http.StatusNotFound, gouno.NewErrorResponse(http.StatusNotFound, "post not found"))
+		return
+	}
+
+	if allowed, _ := ctrl.policy.CanReadPost(snapshot, post); !allowed {
 		c.JSON(http.StatusNotFound, gouno.NewErrorResponse(http.StatusNotFound, "post not found"))
 		return
 	}

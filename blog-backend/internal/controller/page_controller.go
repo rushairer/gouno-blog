@@ -5,8 +5,9 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/rushairer/blog-backend/internal/access"
 	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/middleware"
 	"github.com/rushairer/gouno"
 )
 
@@ -23,7 +24,8 @@ type PageServiceInterface interface {
 }
 
 type PageController struct {
-	svc PageServiceInterface
+	svc    PageServiceInterface
+	policy access.PagePolicy
 }
 
 func NewPageController(svc PageServiceInterface) *PageController {
@@ -44,39 +46,24 @@ type CreatePageRequest struct {
 	SEODescription string            `json:"seo_description"`
 }
 
-func isAdminRequest(c *gin.Context) bool {
-	if rawClaims, exists := c.Get("claims"); exists {
-		if claims, ok := rawClaims.(jwt.MapClaims); ok {
-			if roles, ok := claims["roles"].([]interface{}); ok {
-				for _, r := range roles {
-					if roleStr, ok := r.(string); ok && roleStr == "admin" {
-						return true
-					}
-				}
-			}
-			if roleStr, ok := claims["role"].(string); ok && roleStr == "admin" {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 func (ctrl *PageController) GetPublicBySlug(c *gin.Context) {
 	slug := c.Param("slug")
-	var page *domain.Page
-	var err error
-
-	if isAdminRequest(c) {
-		page, err = ctrl.svc.GetPageBySlug(c.Request.Context(), slug)
-	} else {
-		page, err = ctrl.svc.GetPublishedPageBySlug(c.Request.Context(), slug)
+	var snapshot *access.Snapshot
+	if s, ok := middleware.CurrentBlogAccess(c); ok {
+		snapshot = &s
 	}
 
+	page, err := ctrl.svc.GetPageBySlug(c.Request.Context(), slug)
 	if err != nil || page == nil {
 		c.JSON(http.StatusNotFound, gouno.NewErrorResponse(http.StatusNotFound, "page not found"))
 		return
 	}
+
+	if allowed, _ := ctrl.policy.CanReadPage(snapshot, page); !allowed {
+		c.JSON(http.StatusNotFound, gouno.NewErrorResponse(http.StatusNotFound, "page not found"))
+		return
+	}
+
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(page))
 }
 
