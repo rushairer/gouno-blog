@@ -192,7 +192,35 @@ textarea.ui-control,
   transition:
     border-color 120ms ease,
     background-color 120ms ease,
-    color 120ms ease;
+    color 120ms ease,
+    transform 80ms ease,
+    opacity 120ms ease;
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn.is-loading {
+  cursor: wait;
+  opacity: 0.85;
+}
+
+.btn__spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: btn-spin 0.6s linear infinite;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+@keyframes btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .btn--compact {
@@ -901,4 +929,84 @@ textarea.ui-control,
   .form-actions--surface {
     padding: 16px;
   }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--ui-control) 0%,
+    var(--ui-control-hover) 50%,
+    var(--ui-control) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s infinite linear;
+  border-radius: var(--radius-control);
+}
+
+.skeleton--text {
+  min-height: 14px;
+}
+
+.skeleton--circular {
+  border-radius: 9999px;
+}
+
+.skeleton--rectangular {
+  border-radius: var(--radius-control);
+}
+
+.skeleton--card {
+  border-radius: var(--radius-panel);
+  min-height: 120px;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.table-skeleton-wrap {
+  width: 100%;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--radius-panel);
+  background: var(--ui-panel);
+  overflow: hidden;
+}
+
+.table-skeleton-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--ui-border);
+  background: var(--ui-control);
+}
+
+.table-skeleton-th {
+  flex: 1;
+}
+
+.table-skeleton-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.table-skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.table-skeleton-row:last-child {
+  border-bottom: 0;
+}
+
+.table-skeleton-td {
+  flex: 1;
 }

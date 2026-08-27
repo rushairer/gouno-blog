@@ -15,12 +15,12 @@ import {
   EmptyState,
   ErrorState,
   FilterBar,
-  LoadingState,
   Pagination,
   Panel,
   SearchField,
   Select,
   StatusBadge,
+  TableSkeleton,
   useToast,
 } from "../../components/ui";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
@@ -181,13 +181,13 @@ export default function AdminPosts() {
           <ErrorState
             label={error}
             action={
-              <button
-                className="btn btn-secondary"
-                type="button"
+              <Button
+                variant="secondary"
+                size="compact"
                 onClick={() => window.location.reload()}
               >
                 重新载入
-              </button>
+              </Button>
             }
           />
         ) : null}
@@ -290,7 +290,7 @@ export default function AdminPosts() {
           </BulkActionBar>
         ) : null}
         {loading ? (
-          <LoadingState label="正在载入文章…" />
+          <TableSkeleton columns={6} rows={6} />
         ) : !error && posts.length === 0 ? (
           <EmptyState
             label={
@@ -298,13 +298,13 @@ export default function AdminPosts() {
             }
             action={
               hasFilters ? (
-                <button
-                  className="btn btn-secondary"
-                  type="button"
+                <Button
+                  variant="secondary"
+                  size="compact"
                   onClick={clearFilters}
                 >
                   清除筛选
-                </button>
+                </Button>
               ) : can("create", "post") ? (
                 <Link className="btn btn-primary" to="/admin/posts/new">
                   <Plus /> 新建文章
