@@ -142,14 +142,12 @@ export default function AdminUsers() {
     if (!editing) return;
     const form = new FormData(event.currentTarget);
     const displayName = String(form.get("display_name") ?? "").trim();
-    const roles = assignableRoles.filter((role) => form.get(role) === "on");
+    const isOwner = editing.roles.includes("owner");
+    const selectedRole = isOwner ? "owner" : String(form.get("role") || "author");
     await updateMember(
       editing,
       "active",
-      [
-        ...(editing.roles.includes("owner") ? ["owner"] : []),
-        ...roles,
-      ],
+      [selectedRole],
       displayName,
     );
     setEditing(null);
@@ -397,28 +395,47 @@ export default function AdminUsers() {
             </label>
 
             <div className="member-role-section">
-              <span className="member-field-label">Blog 角色分配</span>
+              <span className="member-field-label">Blog 角色分配（单选）</span>
               <div className="member-role-list">
-                {assignableRoles.map((role) => {
-                  const isOwner = editing.roles.includes("owner");
-                  return (
-                    <label className="member-role-card" key={role}>
-                      <input
-                        type="checkbox"
-                        name={role}
-                        defaultChecked={editing.roles.includes(role) || isOwner}
-                        disabled={isOwner}
-                      />
-                      <div className="member-role-card__content">
-                        <div className="member-role-card__header">
-                          <strong>{roleLabels[role]}</strong>
-                          <span className="member-role-tag">{role}</span>
-                        </div>
-                        <small>{roleDescriptions[role]}</small>
+                {editing.roles.includes("owner") ? (
+                  <label className="member-role-card">
+                    <input
+                      type="radio"
+                      name="role"
+                      value="owner"
+                      defaultChecked
+                      disabled
+                    />
+                    <div className="member-role-card__content">
+                      <div className="member-role-card__header">
+                        <strong>所有者</strong>
+                        <span className="member-role-tag">owner</span>
                       </div>
-                    </label>
-                  );
-                })}
+                      <small>拥有站点最高管理权限。所有权仅可通过“移交所有权”操作进行转移。</small>
+                    </div>
+                  </label>
+                ) : (
+                  assignableRoles.map((role) => {
+                    const currentRole = editing.roles.find((r) => assignableRoles.includes(r as typeof assignableRoles[number])) || "author";
+                    return (
+                      <label className="member-role-card" key={role}>
+                        <input
+                          type="radio"
+                          name="role"
+                          value={role}
+                          defaultChecked={role === currentRole}
+                        />
+                        <div className="member-role-card__content">
+                          <div className="member-role-card__header">
+                            <strong>{roleLabels[role]}</strong>
+                            <span className="member-role-tag">{role}</span>
+                          </div>
+                          <small>{roleDescriptions[role]}</small>
+                        </div>
+                      </label>
+                    );
+                  })
+                )}
               </div>
             </div>
 
