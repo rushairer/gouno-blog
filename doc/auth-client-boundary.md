@@ -29,10 +29,26 @@ GOSSO Admin 的管理员账号、OAuth client、审计和系统状态属于管�
 页面只拥有展示、表单校验、交互和本地化状态。协议地址、请求体、Cookie、Token、CSRF、envelope 与认证错误分类不属于页面职责。
 
 `/admin/*` 由应用根部的单一访问门禁控制：它通过 Blog 的
-`/api/me/session` 读取后端已验证的 JWT `roles`，仅 `admin` 角色可以渲染
-后台框架。OAuth 请求 scope 和页面自身的 profile 缓存均不得作为授权依据。
+`/api/me/blog-session` 读取后端已验证的 JWT `roles`，仅 `admin` 角色可以渲染
+后台框架。Blog 仍会请求 `admin` scope 以取得 GOSSO 签发的角色声明，但 OAuth
+scope 和页面自身的 profile 缓存均不得作为授权依据。
 前端门禁只避免暴露工作区；所有管理 API 仍必须由后端角色中间件拒绝未授权
 请求。
+
+## 会话与浏览器安全基线
+
+- GOSSO 的浏览器会话使用 `__Host-access_token` 与
+  `__Host-refresh_token`：两者均为 `Secure`、`HttpOnly`、path 为 `/` 的
+  host-only Cookie；访问令牌使用 `SameSite=Lax`，刷新令牌使用
+  `SameSite=Strict`。
+- 刷新令牌必须在每次刷新时原子轮换，并启用重放检测、撤销和审计；Blog 不得
+  自行持久化、复制或解析刷新令牌。
+- Blog 所有不安全 HTTP 方法均要求同源双提交 CSRF token。令牌 Cookie 不是
+  身份凭据，且在 HTTPS 环境必须设置 `Secure`。
+- 浏览器入口的 CSP 必须以 `Content-Security-Policy`（不是
+  `Report-Only`）强制发送，并至少限制脚本为 `script-src 'self'`。当前
+  React 界面仍有动态 style 属性，故 `style-src 'unsafe-inline'` 是有意且
+  暂时的兼容项；新增内联脚本一律禁止。
 
 ## 依赖与发布
 

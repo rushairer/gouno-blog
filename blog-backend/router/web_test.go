@@ -27,6 +27,7 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 	foundRelated := false
 	foundAnalytics := false
 	foundMedia := false
+	foundBlogSession := false
 	foundHealth := false
 	for _, route := range engine.Routes() {
 		if route.Method == "PUT" && route.Path == "/api/posts/:slugOrID" {
@@ -47,9 +48,12 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 		if route.Method == "GET" && route.Path == "/healthz" {
 			foundHealth = true
 		}
+		if route.Method == "GET" && route.Path == "/api/me/blog-session" {
+			foundBlogSession = true
+		}
 	}
-	if !foundUpdate || !foundLike || !foundRelated || !foundAnalytics || !foundMedia || !foundHealth {
-		t.Fatalf("expected growth routes, update=%v like=%v related=%v analytics=%v media=%v health=%v", foundUpdate, foundLike, foundRelated, foundAnalytics, foundMedia, foundHealth)
+	if !foundUpdate || !foundLike || !foundRelated || !foundAnalytics || !foundMedia || !foundHealth || !foundBlogSession {
+		t.Fatalf("expected growth routes, update=%v like=%v related=%v analytics=%v media=%v health=%v blogSession=%v", foundUpdate, foundLike, foundRelated, foundAnalytics, foundMedia, foundHealth, foundBlogSession)
 	}
 	response := httptest.NewRecorder()
 	engine.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/healthz", nil))

@@ -83,7 +83,7 @@ func OptionalAuth(verifier *auth.Verifier, options AuthOptions) gin.HandlerFunc 
 				ctx.Next()
 				return
 			}
-			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, err.Error()))
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "invalid or expired authentication"))
 			return
 		}
 		setIdentity(ctx, claims)
@@ -114,7 +114,9 @@ func AuthMiddlewareWithOptions(verifier *auth.Verifier, options AuthOptions) gin
 		}
 		claims, err := verifyToken(verifier, tokenStr, options)
 		if err != nil {
-			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, err.Error()))
+			// Signature, issuer, audience and expiry diagnostics are useful to the
+			// server log but must not become an oracle for unauthenticated callers.
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "invalid or expired authentication"))
 			return
 		}
 		setIdentity(ctx, claims)

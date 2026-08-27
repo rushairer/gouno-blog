@@ -13,7 +13,10 @@ export type {
 
 const gossoIssuer = import.meta.env.VITE_GOSSO_ISSUER || window.location.origin;
 const gossoClientID = import.meta.env.VITE_GOSSO_CLIENT_ID || "blog-spa";
-const gossoScope = import.meta.env.VITE_GOSSO_SCOPE || "openid profile email";
+// `admin` asks GOSSO to include the role-bearing claim. It is never used as
+// authorization by this SPA; getManagementAccess verifies the returned role.
+const gossoScope =
+  import.meta.env.VITE_GOSSO_SCOPE || "openid profile email admin";
 export const gossoAdminURL =
   import.meta.env.VITE_GOSSO_ADMIN_URL || "/identity-admin";
 
@@ -46,7 +49,9 @@ export async function getManagementAccess(): Promise<ManagementAccess> {
   if (!isLoggedIn()) return "anonymous";
 
   try {
-    const response = await gossoClient.apiFetch("/api/me/session");
+    // `/api/me/session` is reserved by the gateway as a GOSSO session probe.
+    // This endpoint reaches Blog's JWT-verifying middleware.
+    const response = await gossoClient.apiFetch("/api/me/blog-session");
     if (response.status === 401) return "anonymous";
     if (!response.ok) return "error";
 

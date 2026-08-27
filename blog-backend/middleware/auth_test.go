@@ -174,6 +174,9 @@ func TestAuthMiddlewareRejectsTokenWithoutConfiguredAudience(t *testing.T) {
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d, want 401; body=%s", rec.Code, rec.Body.String())
 	}
+	if body := rec.Body.String(); !strings.Contains(body, "invalid or expired authentication") || strings.Contains(body, "audience") {
+		t.Fatalf("invalid token response must stay generic, body=%s", body)
+	}
 }
 
 func TestOptionalAuthAttachesIdentityFromHostCookieSession(t *testing.T) {

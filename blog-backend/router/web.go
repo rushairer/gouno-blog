@@ -195,7 +195,7 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 		me := api.Group("/me")
 		me.Use(userAuth)
 		{
-			me.GET("/session", func(c *gin.Context) {
+			me.GET("/blog-session", func(c *gin.Context) {
 				claims, _ := c.Get("claims")
 				values, _ := claims.(jwt.MapClaims)
 				c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{
