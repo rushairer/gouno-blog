@@ -7,32 +7,7 @@
     <meta name="theme-color" content="#24513f" />
     <meta name="description" content="记录、思考与分享。" />
     <title>Gouno Blog</title>
-    <script>
-      (function () {
-        try {
-          var rawTheme = localStorage.getItem("gouno-blog:theme");
-          if (rawTheme === "dark") {
-            document.documentElement.dataset.theme = "dark";
-          }
-          var rawSettings = localStorage.getItem("gouno-blog:site-settings");
-          if (rawSettings) {
-            var settings = JSON.parse(rawSettings);
-            if (settings.default_seo_title || settings.site_title) {
-              document.title = settings.default_seo_title || settings.site_title;
-            }
-            if (settings.favicon_url) {
-              var fav = document.getElementById("site-favicon");
-              if (fav) fav.href = settings.favicon_url;
-            }
-            var desc = settings.default_seo_description || settings.site_description;
-            if (desc) {
-              var meta = document.querySelector('meta[name="description"]');
-              if (meta) meta.setAttribute("content", desc);
-            }
-          }
-        } catch (e) {}
-      })();
-    </script>
+    <script src="/theme-bootstrap.js"></script>
   </head>
   <body>
     <div id="root"></div>

@@ -40,5 +40,6 @@ describe("admin route access", () => {
     });
     expect(screen.queryByLabelText("后台导航")).not.toBeInTheDocument();
     expect(redirectToAuthorize).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "重新授权" })).not.toBeInTheDocument();
   });
 });
