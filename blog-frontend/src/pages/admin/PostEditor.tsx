@@ -18,7 +18,6 @@ import {
   AdminPageState,
   Button,
   ConfirmDialog,
-  Feedback,
   Field,
   Input,
   Select,
@@ -921,7 +920,6 @@ export default function PostEditor() {
           </Button>
         </div>
       </EditorCommandBar>
-      {error ? <Feedback type="error">{error}</Feedback> : null}
       <div className="editor-workspace">
         <aside className="editor-outline">
           <div>

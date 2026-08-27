@@ -126,7 +126,7 @@ func (ctrl *PageController) GetAdmin(c *gin.Context) {
 func (ctrl *PageController) Create(c *gin.Context) {
 	var req CreatePageRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		WriteValidationError(c, err)
 		return
 	}
 
@@ -169,7 +169,7 @@ func (ctrl *PageController) Update(c *gin.Context) {
 
 	var req CreatePageRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		WriteValidationError(c, err)
 		return
 	}
 

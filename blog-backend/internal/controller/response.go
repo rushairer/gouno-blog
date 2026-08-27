@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync/atomic"
 
 	"github.com/gin-gonic/gin"
@@ -68,6 +69,37 @@ func WritePaginated(c *gin.Context, list any, total int, page, pageSize int) {
 		"page_size": pageSize,
 		"pageSize":  pageSize,
 	}))
+}
+
+// FormatValidationError transforms raw Gin binding and validator errors into user-friendly Chinese messages.
+func FormatValidationError(err error) string {
+	if err == nil {
+		return ""
+	}
+	errStr := err.Error()
+	switch {
+	case strings.Contains(errStr, "'Title'") || strings.Contains(errStr, "for 'Title'"):
+		return "请填写标题"
+	case strings.Contains(errStr, "'Content'") || strings.Contains(errStr, "for 'Content'"):
+		return "请填写正文内容"
+	case strings.Contains(errStr, "'Slug'") || strings.Contains(errStr, "for 'Slug'"):
+		return "请填写访问路径 (Slug)"
+	case strings.Contains(errStr, "'Name'") || strings.Contains(errStr, "for 'Name'"):
+		return "请填写名称"
+	case strings.Contains(errStr, "'Email'") || strings.Contains(errStr, "for 'Email'"):
+		return "请填写有效的邮箱地址"
+	case strings.Contains(errStr, "EOF") || strings.Contains(errStr, "invalid character"):
+		return "请求体格式无效，请检查提交数据"
+	default:
+		return "请求参数校验失败，请检查填写内容"
+	}
+}
+
+// WriteValidationError formats validation errors and responds with HTTP 400.
+func WriteValidationError(c *gin.Context, err error) {
+	msg := FormatValidationError(err)
+	c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, msg))
+	c.Abort()
 }
 
 // WriteDomainError maps known domain and repository errors to standard HTTP status codes.

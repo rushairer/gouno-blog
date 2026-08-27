@@ -14,15 +14,15 @@ import (
 var (
 	ErrCategoryNotFound     = repository.ErrCategoryNotFound
 	ErrCategorySlugInUse    = repository.ErrDuplicateSlug
-	ErrInvalidCategoryID    = errors.New("invalid category id")
-	ErrCategoryNameRequired = errors.New("name and a valid lowercase slug are required")
-	ErrInvalidTagPayload    = errors.New("invalid tag payload")
-	ErrInvalidSettings      = errors.New("invalid settings payload")
-	ErrSettingValueTooLong  = errors.New("site setting value is too long")
-	ErrSiteTitleEmpty       = errors.New("site title cannot be empty")
-	ErrInvalidRSSURL        = errors.New("rss_url must be a site path or an http(s) URL")
-	ErrInvalidGithubURL     = errors.New("github_url must be an http(s) URL")
-	ErrInvalidFaviconURL    = errors.New("favicon_url must be a site path or an http(s) URL")
+	ErrInvalidCategoryID    = errors.New("无效的分类 ID")
+	ErrCategoryNameRequired = errors.New("分类名称和有效的英文别名 (Slug) 均为必填项")
+	ErrInvalidTagPayload    = errors.New("无效的标签数据")
+	ErrInvalidSettings      = errors.New("无效的站点设置")
+	ErrSettingValueTooLong  = errors.New("设置项内容超出最大长度限制")
+	ErrSiteTitleEmpty       = errors.New("站点标题不能为空")
+	ErrInvalidRSSURL        = errors.New("RSS 地址格式无效，须为站内路径或 http(s) URL")
+	ErrInvalidGithubURL     = errors.New("GitHub 地址格式无效，须为有效的 http(s) URL")
+	ErrInvalidFaviconURL    = errors.New("站点图标 (Favicon) 地址格式无效")
 )
 
 var categorySlugPattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)

@@ -16,7 +16,6 @@ import {
   Checkbox,
   CheckboxField,
   ConfirmDialog,
-  Feedback,
   Field,
   Input,
   Select,
@@ -592,6 +591,16 @@ export default function PageEditor() {
     window.open(`/${currentPage.slug}`, "_blank");
   };
 
+  if (!isNew && error && !page.id) {
+    return (
+      <AdminPageState
+        title="无法编辑单页"
+        description={error}
+        label="无权限或单页不存在"
+      />
+    );
+  }
+
   if (!allowed || loading) {
     return (
       <AdminPageState
@@ -653,8 +662,6 @@ export default function PageEditor() {
           </Button>
         </div>
       </EditorCommandBar>
-
-      {error ? <Feedback type="error">{error}</Feedback> : null}
 
       <div
         className="editor-workspace"
