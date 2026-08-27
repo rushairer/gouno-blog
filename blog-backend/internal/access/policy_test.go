@@ -32,11 +32,11 @@ func TestPostPolicy(t *testing.T) {
 
 	policy := access.PostPolicy{}
 
-	// Scope check
+	// Scope check (Both authors and managers can browse all items by default)
 	authorFilter := domain.AdminPostFilter{}
 	policy.ScopePosts(authorActor, &authorFilter)
-	if authorFilter.CreatedByPrincipalID == nil || *authorFilter.CreatedByPrincipalID != 100 {
-		t.Fatalf("expected author filter to have CreatedByPrincipalID=100, got %#v", authorFilter.CreatedByPrincipalID)
+	if authorFilter.CreatedByPrincipalID != nil {
+		t.Fatalf("expected author filter to default to shared browse mode (nil CreatedByPrincipalID), got %#v", authorFilter.CreatedByPrincipalID)
 	}
 
 	managerFilter := domain.AdminPostFilter{}
@@ -45,15 +45,15 @@ func TestPostPolicy(t *testing.T) {
 		t.Fatalf("expected manager filter to have nil CreatedByPrincipalID, got %#v", managerFilter.CreatedByPrincipalID)
 	}
 
-	// CanView check
+	// CanView check (Visible to authors and managers)
 	if allowed, _ := policy.CanView(authorActor, myPost); !allowed {
 		t.Fatal("author should be allowed to view own post")
 	}
-	if allowed, _ := policy.CanView(authorActor, otherPost); allowed {
-		t.Fatal("author should NOT be allowed to view other's post")
+	if allowed, _ := policy.CanView(authorActor, otherPost); !allowed {
+		t.Fatal("author should be allowed to view other's post in read-only mode")
 	}
-	if allowed, _ := policy.CanView(authorActor, unownedPost); allowed {
-		t.Fatal("author should NOT be allowed to view unowned/legacy post")
+	if allowed, _ := policy.CanView(authorActor, unownedPost); !allowed {
+		t.Fatal("author should be allowed to view unowned/legacy post in read-only mode")
 	}
 	if allowed, _ := policy.CanView(managerActor, otherPost); !allowed {
 		t.Fatal("manager should be allowed to view any post")
@@ -111,17 +111,28 @@ func TestMediaPolicy(t *testing.T) {
 
 	policy := access.MediaPolicy{}
 
-	// Scope check
+	// Scope check (Both authors and managers can browse all media by default)
 	authorFilter := domain.MediaFilter{}
 	policy.ScopeMedia(authorActor, &authorFilter)
-	if authorFilter.CreatedByPrincipalID == nil || *authorFilter.CreatedByPrincipalID != 100 {
-		t.Fatalf("expected author media filter to have CreatedByPrincipalID=100, got %#v", authorFilter.CreatedByPrincipalID)
+	if authorFilter.CreatedByPrincipalID != nil {
+		t.Fatalf("expected author media filter to default to shared browse mode (nil CreatedByPrincipalID), got %#v", authorFilter.CreatedByPrincipalID)
 	}
 
 	managerFilter := domain.MediaFilter{}
 	policy.ScopeMedia(managerActor, &managerFilter)
 	if managerFilter.CreatedByPrincipalID != nil {
 		t.Fatalf("expected manager media filter to have nil CreatedByPrincipalID, got %#v", managerFilter.CreatedByPrincipalID)
+	}
+
+	// CanView check
+	if allowed, _ := policy.CanView(authorActor, myMedia); !allowed {
+		t.Fatal("author should be allowed to view own media")
+	}
+	if allowed, _ := policy.CanView(authorActor, otherMedia); !allowed {
+		t.Fatal("author should be allowed to view other's media for insertion")
+	}
+	if allowed, _ := policy.CanView(authorActor, unownedMedia); !allowed {
+		t.Fatal("author should be allowed to view unowned media")
 	}
 
 	// CanDelete check

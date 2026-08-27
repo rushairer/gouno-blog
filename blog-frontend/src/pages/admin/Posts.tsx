@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Copy, Edit2, Eye, Plus, Trash2, X } from "lucide-react";
+import { Copy, Edit2, Eye, FileText, Plus, Trash2, X } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { postsApi } from "../../api/posts";
 import { siteApi } from "../../api/site";
@@ -166,12 +166,8 @@ export default function AdminPosts() {
   return (
     <AdminPage>
       <AdminPageHeader
-        title={can("batch", "post") ? "文章" : "我的文章"}
-        description={
-          can("batch", "post")
-            ? "管理全站草稿、定时内容与已发布文章。"
-            : "管理由您创建的草稿、定时内容与已发布文章。"
-        }
+        title="文章"
+        description="管理全站草稿、定时内容与已发布文章。"
         actions={
           can("create", "post") ? (
             <Link className="btn btn-primary" to="/admin/posts/new">
@@ -415,7 +411,14 @@ export default function AdminPosts() {
                             >
                               <Edit2 />
                             </Link>
-                          ) : null}
+                          ) : (
+                            <Link
+                              to={`/admin/posts/${post.id}/edit`}
+                              title="查看详情（只读）"
+                            >
+                              <FileText />
+                            </Link>
+                          )}
                           {can("delete", "post", post) ? (
                             <button
                               className="danger-action"
