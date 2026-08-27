@@ -11,7 +11,13 @@ import {
   Sun,
 } from "lucide-react";
 import { notificationsApi } from "../api/notifications";
-import { gossoClient, logout } from "../auth";
+import {
+  getCachedBlogSession,
+  getBlogRoleLabel,
+  gossoClient,
+  hasBlogPermission,
+  logout,
+} from "../auth";
 import {
   DEFAULT_SITE_SETTINGS,
   getCachedSiteSettings,
@@ -19,7 +25,7 @@ import {
   SITE_SETTINGS_UPDATED_EVENT,
 } from "../config/site-defaults";
 import { siteApi } from "../api/site";
-import { adminNavigation } from "../utils/navigation";
+import { adminNavigation, getFilteredAdminNavigation } from "../utils/navigation";
 
 function currentLabel(pathname: string) {
   if (pathname === "/admin/posts/new") return "新建文章";
@@ -147,6 +153,9 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     }
   };
 
+  const filteredNav = getFilteredAdminNavigation(hasBlogPermission);
+  const session = getCachedBlogSession();
+
   return (
     <div className={`admin-shell ${mobileOpen ? "admin-nav-open" : ""}`}>
       <aside className="admin-sidebar" id="admin-sidebar">
@@ -154,7 +163,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
           {siteName}
         </Link>
         <nav aria-label="后台导航">
-          {adminNavigation.map((group) => (
+          {filteredNav.map((group) => (
             <section className="admin-nav-group" key={group.label}>
               <h2>{group.label}</h2>
               {group.items.map((item) => (
@@ -172,15 +181,23 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         </nav>
         <div className="admin-profile">
           <span className="admin-avatar">
-            {(user?.name || user?.preferred_username || "A")
+            {(
+              session?.principal?.display_name ||
+              user?.name ||
+              user?.preferred_username ||
+              "U"
+            )
               .slice(0, 2)
               .toUpperCase()}
           </span>
           <div>
             <strong>
-              {user?.name || user?.preferred_username || "管理员"}
+              {session?.principal?.display_name ||
+                user?.name ||
+                user?.preferred_username ||
+                "成员"}
             </strong>
-            <small>管理员</small>
+            <small>{getBlogRoleLabel()}</small>
           </div>
         </div>
       </aside>

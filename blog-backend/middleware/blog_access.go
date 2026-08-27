@@ -50,6 +50,34 @@ func RequireBlogPermission(service *access.Service, permission string) gin.Handl
 	}
 }
 
+func RequireAnyBlogPermission(service *access.Service, permissions ...string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		snapshot, ok := CurrentBlogAccess(c)
+		if !ok || snapshot.MembershipStatus != "active" {
+			c.AbortWithStatusJSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, "forbidden"))
+			return
+		}
+		for _, p := range permissions {
+			if service.Has(snapshot, p) {
+				c.Next()
+				return
+			}
+		}
+		c.AbortWithStatusJSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, "forbidden"))
+	}
+}
+
+func RequireActiveBlogMembership() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		snapshot, ok := CurrentBlogAccess(c)
+		if !ok || snapshot.MembershipStatus != "active" || len(snapshot.Roles) == 0 {
+			c.AbortWithStatusJSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, "forbidden"))
+			return
+		}
+		c.Next()
+	}
+}
+
 func RequireRecentMFA() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		claimsRaw, ok := c.Get("claims")

@@ -17,6 +17,10 @@ vi.mock("../../auth", () => ({
   },
   gossoAdminURL: "/identity-admin",
   logout: logoutMock,
+  getCachedBlogSession: () => null,
+  hasBlogPermission: () => true,
+  hasAnyBlogPermission: () => true,
+  getBlogRoleLabel: () => "管理员",
   apiFetch: () =>
     Promise.resolve({
       ok: true,

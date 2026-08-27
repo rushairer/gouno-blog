@@ -63,29 +63,92 @@ export const stepUpMfa = async (
 
 export type ManagementAccess = "admin" | "denied" | "anonymous" | "error";
 
+export interface BlogPrincipal {
+  id: number;
+  issuer: string;
+  subject: string;
+  display_name: string;
+  email: string;
+}
+
+export interface BlogSessionData {
+  principal: BlogPrincipal;
+  membership_status: string;
+  roles: string[];
+  permissions: string[];
+  authorization_version: number;
+}
+
+let cachedBlogSession: BlogSessionData | null = null;
+
+export function getCachedBlogSession(): BlogSessionData | null {
+  return cachedBlogSession;
+}
+
+export function hasBlogPermission(permission: string): boolean {
+  if (!cachedBlogSession || cachedBlogSession.membership_status !== "active") return false;
+  return cachedBlogSession.permissions?.includes(permission) ?? false;
+}
+
+export function hasAnyBlogPermission(permissions: string[]): boolean {
+  if (!cachedBlogSession || cachedBlogSession.membership_status !== "active") return false;
+  return permissions.some((p) => cachedBlogSession?.permissions?.includes(p));
+}
+
+export function getBlogRoleLabel(role?: string): string {
+  const target = role || cachedBlogSession?.roles?.[0];
+  switch (target) {
+    case "owner":
+      return "所有者";
+    case "admin":
+      return "管理员";
+    case "editor":
+      return "编辑";
+    case "author":
+      return "作者";
+    case "moderator":
+      return "审核员";
+    default:
+      return "成员";
+  }
+}
+
 /**
- * Resolves access from the blog API's verified cookie session. OAuth scopes
- * describe what was requested; only the JWT role claim authorizes the admin
- * workspace.
+ * Resolves access from the blog API's verified cookie session.
+ * Any active member with blog roles/permissions is granted management access.
  */
 export async function getManagementAccess(): Promise<ManagementAccess> {
-  if (!isLoggedIn()) return "anonymous";
+  if (!isLoggedIn()) {
+    cachedBlogSession = null;
+    return "anonymous";
+  }
 
   try {
-    // `/api/me/session` is reserved by the gateway as a GOSSO session probe.
-    // This endpoint reaches Blog's JWT-verifying middleware.
     const response = await gossoClient.apiFetch("/api/me/blog-session");
-    if (response.status === 401) return "anonymous";
+    if (response.status === 401) {
+      cachedBlogSession = null;
+      return "anonymous";
+    }
     if (!response.ok) return "error";
 
     const payload = (await response.json()) as {
-      data?: { permissions?: unknown };
-      permissions?: unknown;
-    };
-    const permissions = payload.data?.permissions ?? payload.permissions;
-    return Array.isArray(permissions) && permissions.includes("site.manage")
-      ? "admin"
-      : "denied";
+      data?: BlogSessionData;
+    } & BlogSessionData;
+    const session = payload.data || payload;
+    cachedBlogSession = session;
+
+    const isActive = session.membership_status
+      ? session.membership_status === "active"
+      : true;
+
+    if (
+      isActive &&
+      Array.isArray(session.permissions) &&
+      session.permissions.length > 0
+    ) {
+      return "admin";
+    }
+    return "denied";
   } catch {
     return "error";
   }
@@ -93,6 +156,9 @@ export async function getManagementAccess(): Promise<ManagementAccess> {
 
 /** Non-authoritative display hint for public-page affordances. */
 export function hasCachedAdminRole(): boolean {
+  if (cachedBlogSession?.roles?.length) {
+    return cachedBlogSession.membership_status === "active";
+  }
   return Boolean(gossoClient.getSnapshot().profile?.roles?.includes("admin"));
 }
 
@@ -102,6 +168,7 @@ export function canManageBlog(): boolean {
 }
 
 export async function logout() {
+  cachedBlogSession = null;
   try {
     await gossoClient.logout("/");
   } catch {

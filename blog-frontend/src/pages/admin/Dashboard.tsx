@@ -25,6 +25,7 @@ import {
   Panel,
 } from "../../components/ui";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
+import { hasBlogPermission } from "../../auth";
 
 interface Summary {
   total_posts: number;
@@ -116,12 +117,21 @@ export default function Dashboard() {
         title="数据概览"
         description="了解站点整体运营情况，掌握内容表现与用户互动。"
         actions={
-          <Link
-            className={buttonClassName({ variant: "primary" })}
-            to="/admin/posts/new"
-          >
-            <Plus /> 新建文章
-          </Link>
+          hasBlogPermission("content.author") || hasBlogPermission("content.manage") ? (
+            <Link
+              className={buttonClassName({ variant: "primary" })}
+              to="/admin/posts/new"
+            >
+              <Plus /> 新建文章
+            </Link>
+          ) : hasBlogPermission("community.moderate") ? (
+            <Link
+              className={buttonClassName({ variant: "primary" })}
+              to="/admin/comments?status=pending"
+            >
+              <MessageSquare /> 审核评论
+            </Link>
+          ) : null
         }
       />
       <ContentStack>
