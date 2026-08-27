@@ -20,12 +20,13 @@ func scanGrowthPost(scanner interface{ Scan(...any) error }) (*domain.Post, erro
 	var post domain.Post
 	err := scanner.Scan(&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags),
 		&post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt,
+		&post.CreatedByPrincipalID, &post.UpdatedByPrincipalID,
 		&post.CreatedAt, &post.UpdatedAt)
 	return &post, err
 }
 
 const growthPostColumns = `p.id, p.title, p.slug, p.summary, p.content, p.tags, p.status,
-	p.views_count, p.likes_count, p.published_at, p.scheduled_at, p.created_at, p.updated_at`
+	p.views_count, p.likes_count, p.published_at, p.scheduled_at, p.created_by_principal_id, p.updated_by_principal_id, p.created_at, p.updated_at`
 
 func (r *GrowthRepository) RelatedPosts(ctx context.Context, postID int64, tags []string, limit int) ([]*domain.Post, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT `+growthPostColumns+`
