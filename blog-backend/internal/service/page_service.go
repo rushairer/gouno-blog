@@ -12,11 +12,11 @@ import (
 )
 
 var (
-	ErrPageNotFound     = errors.New("page not found")
-	ErrInvalidSlug      = errors.New("invalid page slug")
-	ErrReservedSlug     = errors.New("page slug is reserved by the system")
-	ErrPageTitleEmpty   = errors.New("page title cannot be empty")
-	ErrDuplicateSlug    = errors.New("page slug already exists")
+	ErrPageNotFound   = errors.New("单页不存在或已被删除")
+	ErrInvalidSlug    = errors.New("无效的单页访问路径 (Slug)")
+	ErrReservedSlug   = errors.New("该单页访问路径为系统保留路径，无法使用")
+	ErrPageTitleEmpty = errors.New("单页标题不能为空")
+	ErrDuplicateSlug  = errors.New("单页访问路径 (Slug) 已被占用")
 )
 
 var slugRegex = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)

@@ -299,8 +299,8 @@ func TestScheduledPostRequiresFutureShanghaiTime(t *testing.T) {
 	svc := NewPostService(newFakePostRepo())
 	past := time.Now().Add(-time.Minute)
 	err := svc.CreatePost(context.Background(), &domain.Post{Title: "Later", Content: "Body", Status: domain.PostStatusScheduled, ScheduledAt: &past})
-	if err == nil || err.Error() != "scheduled_at must be in the future" {
-		t.Fatalf("CreatePost error = %v, want future schedule validation", err)
+	if err == nil || !errors.Is(err, ErrScheduledPast) {
+		t.Fatalf("CreatePost error = %v, want ErrScheduledPast", err)
 	}
 }
 

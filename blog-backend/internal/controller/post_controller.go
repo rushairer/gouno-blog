@@ -52,7 +52,7 @@ type CreatePostRequest struct {
 	Title          string            `json:"title" binding:"required"`
 	Slug           string            `json:"slug"`
 	Summary        string            `json:"summary"`
-	Content        string            `json:"content" binding:"required"`
+	Content        string            `json:"content"`
 	Tags           []string          `json:"tags"`
 	Status         domain.PostStatus `json:"status"`
 	ScheduledAt    *time.Time        `json:"scheduled_at"`
@@ -66,7 +66,7 @@ type CreatePostRequest struct {
 func (ctrl *PostController) Create(c *gin.Context) {
 	var req CreatePostRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		WriteValidationError(c, err)
 		return
 	}
 
@@ -117,7 +117,7 @@ func (ctrl *PostController) Update(c *gin.Context) {
 
 	var req CreatePostRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		WriteValidationError(c, err)
 		return
 	}
 
