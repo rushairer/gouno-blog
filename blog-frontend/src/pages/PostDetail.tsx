@@ -20,7 +20,7 @@ import {
   User,
   X,
 } from "lucide-react";
-import { canManageBlog, isLoggedIn } from "../auth";
+import { hasCachedAdminRole, isLoggedIn } from "../auth";
 import { analyticsApi } from "../api/analytics";
 import { commentsApi } from "../api/comments";
 import type { CommunityComment } from "../api/comments";
@@ -163,7 +163,7 @@ export default function PostDetail() {
 
         if (postResult.status === "fulfilled") {
           postData = postResult.value;
-        } else if (isPreviewParam || canManageBlog()) {
+        } else if (isPreviewParam || hasCachedAdminRole()) {
           try {
             postData = await postsApi.getAdminPost(slug);
             adminPreviewActive = true;
@@ -197,7 +197,7 @@ export default function PostDetail() {
         setIsAdminPreview(
           adminPreviewActive ||
             (Boolean(postData.status && postData.status !== "published") &&
-              canManageBlog()),
+              hasCachedAdminRole()),
         );
 
         const communityState =

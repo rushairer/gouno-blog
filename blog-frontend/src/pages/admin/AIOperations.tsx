@@ -6,9 +6,7 @@ import {
   Settings2,
   ShieldCheck,
   Sparkles,
-  X,
 } from "lucide-react";
-import { canManageBlog, isLoggedIn, redirectToAuthorize } from "../../auth";
 import { agentApi } from "../../api/agent";
 import { operationsApi } from "../../api/operations";
 import { workflowApi } from "../../api/workflows";
@@ -49,12 +47,13 @@ import {
   AdminPageState,
   Button,
   ConfirmDialog,
-  Feedback,
   SubnavTabs,
   Tab,
   TabList,
   TabPanel,
   Tabs,
+  ToastProvider,
+  useToast,
 } from "../../components/ui";
 import { useI18n } from "../../i18n";
 import "../../styles/agent-console.css";
@@ -75,8 +74,9 @@ function initialRecordType(): "agent" | "workflow" {
     : "workflow";
 }
 
-export default function AgentConsole() {
+function AgentConsoleContent() {
   const { locale, formatDateTime, t } = useI18n();
+  const { notify } = useToast();
   const labels = new Proxy({} as Record<string, string>, {
     get: (_, prop: string) => t(`agent.${prop}` as any),
   });
@@ -252,11 +252,6 @@ export default function AgentConsole() {
   }, [tab]);
 
   useEffect(() => {
-    if (!isLoggedIn() || !canManageBlog()) {
-      setLoading(false);
-      void redirectToAuthorize("/admin/ai-ops");
-      return;
-    }
     let ignore = false;
     setLoading(true);
     load()
@@ -272,10 +267,18 @@ export default function AgentConsole() {
   }, [load]);
 
   useEffect(() => {
-    if (!notice) return;
-    const timeout = window.setTimeout(() => setNotice(""), 5000);
-    return () => window.clearTimeout(timeout);
-  }, [notice]);
+    if (error) {
+      notify(error, "error");
+      setError("");
+    }
+  }, [error, notify]);
+
+  useEffect(() => {
+    if (notice) {
+      notify(notice, "success");
+      setNotice("");
+    }
+  }, [notice, notify]);
 
   const pendingCount = approvals.filter(
     (item) => item.status === "pending",
@@ -648,40 +651,6 @@ export default function AgentConsole() {
           </Button>
         }
       />
-      {error || notice ? (
-        <div className="agent-console__toasts" aria-live="polite">
-          {error ? (
-            <div className="agent-console__toast">
-              <Feedback type="error">{error}</Feedback>
-              <button
-                type="button"
-                title={locale === "zh" ? "关闭提示" : "Dismiss notification"}
-                aria-label={
-                  locale === "zh" ? "关闭提示" : "Dismiss notification"
-                }
-                onClick={() => setError("")}
-              >
-                <X />
-              </button>
-            </div>
-          ) : null}
-          {notice ? (
-            <div className="agent-console__toast">
-              <Feedback type="success">{notice}</Feedback>
-              <button
-                type="button"
-                title={locale === "zh" ? "关闭提示" : "Dismiss notification"}
-                aria-label={
-                  locale === "zh" ? "关闭提示" : "Dismiss notification"
-                }
-                onClick={() => setNotice("")}
-              >
-                <X />
-              </button>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
       <Tabs
         value={tab}
         onValueChange={(value) => selectTab(value as ConsoleTab)}
@@ -893,5 +862,13 @@ export default function AgentConsole() {
         onConfirm={deleteSelected}
       />
     </AdminPage>
+  );
+}
+
+export default function AgentConsole() {
+  return (
+    <ToastProvider>
+      <AgentConsoleContent />
+    </ToastProvider>
   );
 }

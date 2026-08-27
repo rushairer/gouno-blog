@@ -2030,6 +2030,32 @@ a {
   width: 15px;
   height: 15px;
 }
+.account-notification-list {
+  display: grid;
+  gap: 12px;
+}
+.account-notification {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+}
+.account-notification--unread {
+  border-left: 3px solid var(--ui-brand);
+}
+.account-notification > svg {
+  width: 20px;
+  color: var(--ui-brand);
+}
+.account-notification p,
+.account-notification time {
+  margin: 6px 0 0;
+  color: var(--ui-text-secondary);
+}
+.account-notification time {
+  display: block;
+  font-size: 12px;
+}
 .modal-backdrop {
   position: fixed;
   z-index: 250;

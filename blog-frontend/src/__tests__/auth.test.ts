@@ -141,7 +141,7 @@ describe("blog cookie session", () => {
     expect(headers.get("X-CSRF-Token")).toBe("csrf-value");
   });
 
-  it("derives management access from the cookie-authenticated server session", async () => {
+  it("derives management access only from the cookie-authenticated server role", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(Response.json({ sub: "1", name: "Admin" }))
@@ -149,15 +149,17 @@ describe("blog cookie session", () => {
         Response.json({
           data: { sub: "1", roles: ["admin"], scope: "openid profile" },
         }),
-      );
+      )
+      .mockResolvedValueOnce(Response.json({ data: { roles: ["admin"] } }));
     vi.stubGlobal("fetch", fetchMock);
-    const { gossoClient, canManageBlog, isLoggedIn } = await import("../auth");
+    const { gossoClient, getManagementAccess, isLoggedIn } =
+      await import("../auth");
     await gossoClient.fetchUserProfile();
     expect(isLoggedIn()).toBe(true);
-    expect(canManageBlog()).toBe(true);
+    await expect(getManagementAccess()).resolves.toBe("admin");
   });
 
-  it("derives management access from the granted admin scope when userinfo omits roles", async () => {
+  it("does not treat a requested admin scope as a management role", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
@@ -167,11 +169,12 @@ describe("blog cookie session", () => {
           scope: "openid profile admin",
         }),
       )
-      .mockResolvedValueOnce(Response.json({ data: { sub: "1" } }));
+      .mockResolvedValueOnce(Response.json({ data: { sub: "1" } }))
+      .mockResolvedValueOnce(Response.json({ data: { roles: ["user"] } }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const { gossoClient, canManageBlog } = await import("../auth");
+    const { gossoClient, getManagementAccess } = await import("../auth");
     await gossoClient.fetchUserProfile();
-    expect(canManageBlog()).toBe(true);
+    await expect(getManagementAccess()).resolves.toBe("denied");
   });
 });

@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -116,6 +117,9 @@ func TestAuthMiddlewareWithoutRequiredRoleReturnsForbidden(t *testing.T) {
 
 	if rec.Code != http.StatusForbidden {
 		t.Fatalf("status = %d, want 403; body=%s", rec.Code, rec.Body.String())
+	}
+	if body := rec.Body.String(); body == "" || !strings.Contains(body, "forbidden") || strings.Contains(body, "roles") {
+		t.Fatalf("forbidden response must stay generic, body=%s", body)
 	}
 }
 

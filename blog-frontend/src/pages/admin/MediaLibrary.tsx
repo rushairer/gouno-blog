@@ -9,7 +9,6 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { canManageBlog, isLoggedIn, redirectToAuthorize } from "../../auth";
 import { mediaApi } from "../../api/media";
 import { agentApi } from "../../api/agent";
 import {
@@ -116,11 +115,6 @@ export default function MediaLibrary() {
   }, []);
 
   useEffect(() => {
-    if (!isLoggedIn() || !canManageBlog()) {
-      setLoading(false);
-      void redirectToAuthorize("/admin/media");
-      return;
-    }
     load()
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));

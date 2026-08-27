@@ -1,10 +1,8 @@
-import { useEffect, useState } from "react";
-import { canManageBlog, isLoggedIn, redirectToAuthorize } from "../auth";
-
-export function useAdminGuard(returnTo: string) {
-  const [allowed] = useState(() => isLoggedIn() && canManageBlog());
-  useEffect(() => {
-    if (!allowed) redirectToAuthorize(returnTo);
-  }, [allowed, returnTo]);
-  return allowed;
+/**
+ * The route-level Admin boundary is the only frontend authorization gate.
+ * This compatibility hook deliberately stays permissive so page components
+ * cannot independently redirect or issue a second role lookup.
+ */
+export function useAdminGuard(_returnTo: string) {
+  return true;
 }

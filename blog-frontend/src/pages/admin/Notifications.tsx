@@ -28,7 +28,6 @@ import {
   Select,
   useToast,
 } from "../../components/ui";
-import { useAdminGuard } from "../../hooks/useAdminGuard";
 
 type DeleteAction =
   | { kind: "single"; id: number; title: string }
@@ -38,7 +37,6 @@ type DeleteAction =
   | null;
 
 export default function AdminNotifications() {
-  const allowed = useAdminGuard("/admin/notifications");
   const { notify } = useToast();
   const [items, setItems] = useState<Notification[]>([]);
   const [selected, setSelected] = useState<number[]>([]);
@@ -52,7 +50,6 @@ export default function AdminNotifications() {
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
-    if (!allowed) return;
     setLoading(true);
     try {
       const data = await notificationsApi.getNotifications();
@@ -63,7 +60,7 @@ export default function AdminNotifications() {
     } finally {
       setLoading(false);
     }
-  }, [allowed]);
+  }, []);
 
   useEffect(() => {
     void load();
