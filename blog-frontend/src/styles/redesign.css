@@ -4120,6 +4120,7 @@ a {
   border-color: var(--brand);
   background: var(--brand-soft);
 }
+.member-role-card input[type="radio"],
 .member-role-card input[type="checkbox"] {
   width: 16px !important;
   min-width: 16px !important;
@@ -4128,7 +4129,6 @@ a {
   min-height: 16px !important;
   margin: 3px 0 0 0 !important;
   padding: 0 !important;
-  border-radius: 4px;
   accent-color: var(--brand);
   cursor: pointer;
 }
