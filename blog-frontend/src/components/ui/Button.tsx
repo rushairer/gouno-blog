@@ -22,30 +22,59 @@ export function buttonClassName({
   );
 }
 
-export function Button({
-  variant = "secondary",
-  size = "regular",
-  className = "",
-  loading = false,
-  disabled,
-  children,
-  ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: ButtonVariant;
-  size?: ButtonSize;
-  loading?: boolean;
-}) {
+export const Button = forwardRef<
+  HTMLButtonElement,
+  React.ButtonHTMLAttributes<HTMLButtonElement> & {
+    variant?: ButtonVariant;
+    size?: ButtonSize;
+    loading?: boolean;
+    icon?: React.ReactNode;
+    iconPosition?: "left" | "right";
+  }
+>(function Button(
+  {
+    variant = "secondary",
+    size = "regular",
+    className = "",
+    loading = false,
+    disabled,
+    icon,
+    iconPosition = "left",
+    children,
+    type = "button",
+    ...props
+  },
+  ref,
+) {
   return (
     <button
-      className={buttonClassName({ variant, size, className })}
+      ref={ref}
+      type={type}
+      className={buttonClassName({
+        variant,
+        size,
+        className: classes(loading && "is-loading", className),
+      })}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       {...props}
     >
-      {children}
+      {loading ? (
+        <span className="btn__spinner" aria-hidden="true" />
+      ) : icon && iconPosition === "left" ? (
+        <span className="btn__icon" aria-hidden="true">
+          {icon}
+        </span>
+      ) : null}
+      {children ? <span className="btn__label">{children}</span> : null}
+      {!loading && icon && iconPosition === "right" ? (
+        <span className="btn__icon" aria-hidden="true">
+          {icon}
+        </span>
+      ) : null}
     </button>
   );
-}
+});
 
 export const IconButton = forwardRef<
   HTMLButtonElement,

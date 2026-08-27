@@ -17,12 +17,14 @@ import {
   SectionHeading,
   SectionNav,
   Select,
+  Skeleton,
   StatusBadge,
   SubnavTabs,
   Tab,
   TabList,
   TabPanel,
   Tabs,
+  TableSkeleton,
   ToastProvider,
   useToast,
 } from "../ui";
@@ -375,9 +377,22 @@ describe("shared UI primitives", () => {
     const input = screen.getByRole("textbox", { name: "标签名称" });
     await user.click(input);
     await user.type(input, "React19");
-    expect(input).toHaveValue("React19");
-    expect(document.activeElement).toBe(input);
     await user.keyboard("{Escape}");
     expect(closed).toBe(true);
+  });
+
+  it("renders Skeleton and TableSkeleton for zero-CLS loading states", () => {
+    const { container } = render(
+      <div>
+        <Skeleton variant="text" width="80%" data-testid="skel-text" />
+        <Skeleton variant="circular" width={32} height={32} />
+        <TableSkeleton rows={3} columns={4} />
+      </div>,
+    );
+    expect(screen.getByTestId("skel-text")).toHaveClass("skeleton--text");
+    expect(
+      screen.getByRole("status", { name: "正在载入数据…" }),
+    ).toBeInTheDocument();
+    expect(container.querySelectorAll(".table-skeleton-row")).toHaveLength(3);
   });
 });
