@@ -8,6 +8,7 @@ import {
   FileText,
   GitBranch,
   Heart,
+  Image as ImageIcon,
   MessageSquare,
   Plus,
 } from "lucide-react";
@@ -114,6 +115,11 @@ export default function Dashboard() {
     ...(summary?.daily_events || []).map((item) => item.count),
   );
 
+  const draftsCount = Math.max(
+    0,
+    (summary?.total_posts ?? 0) - (summary?.published_posts ?? 0),
+  );
+
   return (
     <AdminPage>
       <AdminPageHeader
@@ -147,7 +153,9 @@ export default function Dashboard() {
                   <FileText />
                   <span>文章</span>
                   <strong>{summary.total_posts}</strong>
-                  <small>已发布 {summary.published_posts}</small>
+                  <small>
+                    已发布 {summary.published_posts} · 草稿 {draftsCount}
+                  </small>
                 </Panel>
               ) : (
                 <Panel>
@@ -177,29 +185,36 @@ export default function Dashboard() {
                   <Heart />
                   <span>总点赞</span>
                   <strong>{summary.total_likes.toLocaleString()}</strong>
-                  <small>查看内容互动</small>
+                  <small>全站累计获赞</small>
                 </Panel>
               ) : (
                 <Panel>
                   <Heart />
                   <span>总点赞</span>
                   <strong>{summary.total_likes.toLocaleString()}</strong>
-                  <small>全站累计点赞</small>
+                  <small>全站累计获赞</small>
                 </Panel>
               )}
               {can("moderate", "comment") ? (
                 <Panel as={Link} to="/admin/comments?status=pending">
                   <MessageSquare />
-                  <span>评论</span>
+                  <span>评论互动</span>
                   <strong>{summary.total_comments}</strong>
                   <small>待审核 {summary.pending_comments}</small>
+                </Panel>
+              ) : can("view", "media") ? (
+                <Panel as={Link} to="/admin/media">
+                  <ImageIcon />
+                  <span>媒体素材</span>
+                  <strong>媒体库</strong>
+                  <small>浏览与选用全站素材</small>
                 </Panel>
               ) : (
                 <Panel>
                   <MessageSquare />
-                  <span>评论</span>
+                  <span>评论互动</span>
                   <strong>{summary.total_comments}</strong>
-                  <small>待审核 {summary.pending_comments}</small>
+                  <small>全站累计互动</small>
                 </Panel>
               )}
             </div>
@@ -207,7 +222,7 @@ export default function Dashboard() {
               <Panel className="traffic-panel">
                 <div className="panel-heading">
                   <h2>30 天流量趋势</h2>
-                  <span>页面事件</span>
+                  <span>页面访问</span>
                 </div>
                 <div
                   className="admin-chart"
@@ -215,17 +230,20 @@ export default function Dashboard() {
                   aria-label="最近 30 天访问趋势"
                 >
                   {summary.daily_events.map((item) => (
-                    <div key={item.date} title={`${item.date}: ${item.count}`}>
+                    <div
+                      key={item.date}
+                      title={`${item.date}: ${item.count} 次访问`}
+                    >
                       <div
                         className="admin-chart-bar"
                         style={{
                           height: `${Math.max(
-                            8,
+                            6,
                             Math.round((item.count / max) * 100),
                           )}%`,
                         }}
                       />
-                      <span>{item.date.slice(5)}</span>
+                      <small>{item.date.slice(5)}</small>
                     </div>
                   ))}
                 </div>
@@ -236,26 +254,49 @@ export default function Dashboard() {
                   <span>累计统计</span>
                 </div>
                 <div className="admin-status-grid">
-                  <div>
-                    <span>待审核评论</span>
-                    <strong>{summary.pending_comments}</strong>
-                  </div>
-                  <div>
-                    <span>被举报内容</span>
-                    <strong>{summary.reported_items}</strong>
-                  </div>
-                  <div>
-                    <span>总文章数</span>
-                    <strong>{summary.total_posts}</strong>
-                  </div>
-                  <div>
-                    <span>已发布文章</span>
-                    <strong>{summary.published_posts}</strong>
-                  </div>
+                  {can("moderate", "comment") ? (
+                    <>
+                      <div>
+                        <span>待审核评论</span>
+                        <strong>{summary.pending_comments}</strong>
+                      </div>
+                      <div>
+                        <span>被举报内容</span>
+                        <strong>{summary.reported_items}</strong>
+                      </div>
+                      <div>
+                        <span>总文章数</span>
+                        <strong>{summary.total_posts}</strong>
+                      </div>
+                      <div>
+                        <span>已发布文章</span>
+                        <strong>{summary.published_posts}</strong>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <span>总文章数</span>
+                        <strong>{summary.total_posts}</strong>
+                      </div>
+                      <div>
+                        <span>已发布文章</span>
+                        <strong>{summary.published_posts}</strong>
+                      </div>
+                      <div>
+                        <span>草稿与待发</span>
+                        <strong>{draftsCount}</strong>
+                      </div>
+                      <div>
+                        <span>全站累计阅读</span>
+                        <strong>{summary.total_views.toLocaleString()}</strong>
+                      </div>
+                    </>
+                  )}
                 </div>
               </Panel>
             </div>
-            {summary.ai_alerts?.length ? (
+            {can("manage", "ai") && summary.ai_alerts?.length ? (
               <Panel className="dashboard-ai-alerts">
                 <div className="panel-heading">
                   <div>
@@ -355,19 +396,31 @@ export default function Dashboard() {
                           <td>{post.views_count}</td>
                           <td>{post.likes_count}</td>
                           <td>
-                            {canEdit ? (
-                              <Link to={`/admin/posts/${post.id}/edit`}>
-                                编辑
-                              </Link>
-                            ) : (
+                            <div
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 12,
+                              }}
+                            >
+                              {canEdit ? (
+                                <Link to={`/admin/posts/${post.id}/edit`}>
+                                  编辑
+                                </Link>
+                              ) : (
+                                <Link to={`/admin/posts/${post.id}/edit`}>
+                                  查看
+                                </Link>
+                              )}
                               <Link
                                 to={`/articles/${post.slug || post.id}`}
                                 target="_blank"
                                 rel="noreferrer"
+                                style={{ color: "var(--text-3)" }}
                               >
-                                查看
+                                前台
                               </Link>
-                            )}
+                            </div>
                           </td>
                         </tr>
                       );
