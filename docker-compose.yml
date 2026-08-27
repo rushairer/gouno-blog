@@ -101,7 +101,7 @@ services:
       - BLOG_OAUTH_CLIENT_DESCRIPTION=OAuth2 Client for React Blog Frontend
       - BLOG_OAUTH_REDIRECT_URIS=https://localhost:8443/callback
       - BLOG_OAUTH_GRANT_TYPES=authorization_code,refresh_token
-      - BLOG_OAUTH_SCOPES=openid,profile,email,admin
+      - BLOG_OAUTH_SCOPES=openid,profile,email
     depends_on:
       gosso-admin-seed:
         condition: service_completed_successfully
@@ -135,6 +135,8 @@ services:
       - SSO_TOKEN_ISSUER=${SSO_TOKEN_ISSUER:-https://localhost:8443}
       - SSO_TOKEN_AUDIENCE=${SSO_TOKEN_AUDIENCE:-blog-spa}
       - SSO_CLIENT_ID=${SSO_CLIENT_ID:-blog-spa}
+      - BLOG_BOOTSTRAP_OWNER_ISSUER=${BLOG_BOOTSTRAP_OWNER_ISSUER:-https://localhost:8443}
+      - BLOG_BOOTSTRAP_OWNER_SUBJECT=${BLOG_BOOTSTRAP_OWNER_SUBJECT:-c6ac32f3-3c48-46b5-bae8-f17c17116dc5}
       - BLOG_VISITOR_SECRET=${BLOG_VISITOR_SECRET:-local-development-visitor-secret-change-me}
       - BLOG_MEDIA_DIR=/app/data/media
       - BLOG_MEDIA_STORAGE=${BLOG_MEDIA_STORAGE:-local}

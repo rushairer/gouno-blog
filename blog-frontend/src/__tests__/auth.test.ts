@@ -147,10 +147,12 @@ describe("blog cookie session", () => {
       .mockResolvedValueOnce(Response.json({ sub: "1", name: "Admin" }))
       .mockResolvedValueOnce(
         Response.json({
-          data: { sub: "1", roles: ["admin"], scope: "openid profile" },
+          data: { sub: "1", permissions: ["site.manage"] },
         }),
       )
-      .mockResolvedValueOnce(Response.json({ data: { roles: ["admin"] } }));
+      .mockResolvedValueOnce(
+        Response.json({ data: { permissions: ["site.manage"] } }),
+      );
     vi.stubGlobal("fetch", fetchMock);
     const { gossoClient, getManagementAccess, isLoggedIn } =
       await import("../auth");
@@ -166,11 +168,11 @@ describe("blog cookie session", () => {
         Response.json({
           sub: "1",
           name: "Admin",
-          scope: "openid profile admin",
+          scope: "openid profile",
         }),
       )
       .mockResolvedValueOnce(Response.json({ data: { sub: "1" } }))
-      .mockResolvedValueOnce(Response.json({ data: { roles: ["user"] } }));
+      .mockResolvedValueOnce(Response.json({ data: { permissions: [] } }));
     vi.stubGlobal("fetch", fetchMock);
 
     const { gossoClient, getManagementAccess } = await import("../auth");

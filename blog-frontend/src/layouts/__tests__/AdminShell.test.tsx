@@ -3,6 +3,7 @@ import { MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AdminShell from "../AdminShell";
 import AdminUsers from "../../pages/admin/Users";
+import { ToastProvider } from "../../components/ui";
 
 const { logoutMock } = vi.hoisted(() => ({ logoutMock: vi.fn() }));
 
@@ -62,13 +63,15 @@ describe("AdminShell navigation utilities", () => {
   it("points the identity management action at the gateway route", () => {
     render(
       <MemoryRouter>
-        <AdminUsers />
+        <ToastProvider>
+          <AdminUsers />
+        </ToastProvider>
       </MemoryRouter>,
     );
     expect(
-      screen.getByRole("link", { name: /打开 GOSSO 管理端/ }),
+      screen.getByRole("link", { name: /前往 GOSSO 管理/ }),
     ).toHaveAttribute("href", "/identity-admin");
-    expect(screen.getByText("Content Admin")).toBeInTheDocument();
+    expect(screen.getByText("成员与权限")).toBeInTheDocument();
   });
 
   it("submits the top search to the article management URL", () => {

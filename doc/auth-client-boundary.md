@@ -29,11 +29,19 @@ GOSSO Admin 的管理员账号、OAuth client、审计和系统状态属于管�
 页面只拥有展示、表单校验、交互和本地化状态。协议地址、请求体、Cookie、Token、CSRF、envelope 与认证错误分类不属于页面职责。
 
 `/admin/*` 由应用根部的单一访问门禁控制：它通过 Blog 的
-`/api/me/blog-session` 读取后端已验证的 JWT `roles`，仅 `admin` 角色可以渲染
-后台框架。Blog 仍会请求 `admin` scope 以取得 GOSSO 签发的角色声明，但 OAuth
-scope 和页面自身的 profile 缓存均不得作为授权依据。
-前端门禁只避免暴露工作区；所有管理 API 仍必须由后端角色中间件拒绝未授权
-请求。
+`/api/me/blog-session` 读取 Blog 后端的本地成员资格、角色和权限摘要；只有具备
+`site.manage` 权限的成员可以渲染完整后台框架。Blog 只请求最小 OAuth scope
+`openid profile email`；OAuth scope、SSO 全局角色和页面 profile 缓存均不得作为
+Blog 授权依据。前端门禁只避免暴露工作区；所有管理 API 仍必须由后端本地授权
+中间件拒绝未授权请求。
+
+Blog 以不可变的 `(issuer, subject)` 投影 SSO 身份；成员资格、固定角色
+`owner/admin/editor/author/moderator`、权限版本和授权审计均保存在 Blog 数据库。
+首次 Owner 只能由部署时明确配置的 issuer/subject 在带有已验签 SSO `admin` 角色
+时原子建立，之后 SSO 角色不会改变 Blog 权限。角色授予、暂停和 Owner 转移必须
+同时通过近期 MFA 校验；若访问令牌没有提供受签名保护的 `auth_time` 与 `amr`，Blog
+必须拒绝操作，绝不降级放行。缺失 Owner 时仅允许受控的本地
+`gouno owner-recover --issuer … --subject … --reason … --confirm` 恢复路径。
 
 ## 会话与浏览器安全基线
 

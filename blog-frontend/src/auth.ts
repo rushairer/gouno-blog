@@ -13,10 +13,9 @@ export type {
 
 const gossoIssuer = import.meta.env.VITE_GOSSO_ISSUER || window.location.origin;
 const gossoClientID = import.meta.env.VITE_GOSSO_CLIENT_ID || "blog-spa";
-// `admin` asks GOSSO to include the role-bearing claim. It is never used as
-// authorization by this SPA; getManagementAccess verifies the returned role.
-const gossoScope =
-  import.meta.env.VITE_GOSSO_SCOPE || "openid profile email admin";
+// Blog authorization is local and server-verified; never request an OAuth
+// `admin` scope merely to display or decide Blog permissions.
+const gossoScope = import.meta.env.VITE_GOSSO_SCOPE || "openid profile email";
 export const gossoAdminURL =
   import.meta.env.VITE_GOSSO_ADMIN_URL || "/identity-admin";
 
@@ -38,6 +37,30 @@ export const redirectToAuthorize = gossoClient.redirectToAuthorize;
 export const isLoggedIn = gossoClient.isLoggedIn;
 export const apiFetch = gossoClient.apiFetch;
 
+export const stepUpMfa = async (
+  code: string,
+  type: "totp" | "backup_code" = "totp",
+): Promise<{ access_token?: string; auth_time: number; amr: string[] }> => {
+  const response = await apiFetch(`${gossoIssuer}/api/v1/auth/mfa/step-up`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code, type }),
+  });
+  if (!response.ok) {
+    let msg = "Failed to complete step-up MFA";
+    try {
+      const data = (await response.json()) as { error?: { message?: string }; message?: string };
+      if (data?.error?.message) msg = data.error.message;
+      else if (data?.message) msg = data.message;
+    } catch {
+      // ignore
+    }
+    throw new Error(msg);
+  }
+  const envelope = (await response.json()) as { data?: { access_token?: string; auth_time: number; amr: string[] } };
+  return envelope.data || (envelope as unknown as { access_token?: string; auth_time: number; amr: string[] });
+};
+
 export type ManagementAccess = "admin" | "denied" | "anonymous" | "error";
 
 /**
@@ -56,11 +79,13 @@ export async function getManagementAccess(): Promise<ManagementAccess> {
     if (!response.ok) return "error";
 
     const payload = (await response.json()) as {
-      data?: { roles?: unknown };
-      roles?: unknown;
+      data?: { permissions?: unknown };
+      permissions?: unknown;
     };
-    const roles = payload.data?.roles ?? payload.roles;
-    return Array.isArray(roles) && roles.includes("admin") ? "admin" : "denied";
+    const permissions = payload.data?.permissions ?? payload.permissions;
+    return Array.isArray(permissions) && permissions.includes("site.manage")
+      ? "admin"
+      : "denied";
   } catch {
     return "error";
   }
