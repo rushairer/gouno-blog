@@ -262,18 +262,18 @@ func (s *Service) SetMember(ctx context.Context, actor Snapshot, principalID int
 		}
 	}
 
-	var previousRoles []string
+	var previousRoles pq.StringArray
 	var previousStatus string
 	var membershipID int64
 	err = tx.QueryRowContext(ctx, `SELECT m.id,m.status,COALESCE(array_agg(b.role) FILTER (WHERE b.role IS NOT NULL),'{}') FROM blog_memberships m LEFT JOIN blog_role_bindings b ON b.membership_id=m.id WHERE m.principal_id=$1 GROUP BY m.id`, principalID).Scan(&membershipID, &previousStatus, &previousRoles)
 	if err == sql.ErrNoRows {
 		err = tx.QueryRowContext(ctx, `INSERT INTO blog_memberships(principal_id,status) VALUES($1,$2) RETURNING id`, principalID, status).Scan(&membershipID)
 		previousStatus = ""
-		previousRoles = []string{}
+		previousRoles = pq.StringArray{}
 	} else if err != nil {
 		return err
 	}
-	if has(previousRoles, RoleOwner) && (!has(roles, RoleOwner) || status != "active") {
+	if has([]string(previousRoles), RoleOwner) && (!has(roles, RoleOwner) || status != "active") {
 		var owners int
 		if err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM blog_role_bindings b JOIN blog_memberships m ON m.id=b.membership_id WHERE b.role='owner' AND m.status='active'`).Scan(&owners); err != nil {
 			return err
