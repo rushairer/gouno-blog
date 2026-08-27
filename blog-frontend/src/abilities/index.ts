@@ -68,10 +68,19 @@ export function defineAbility(): AbilityChecker {
   ): boolean => {
     if (isSuspended) return false;
 
-    // Site / Members / AI management
+    // Site / Members / AI
     if (subject === "site") return hasBlogPermission("site.manage");
     if (subject === "members") return hasBlogPermission("members.manage");
-    if (subject === "ai") return hasBlogPermission("ai.manage");
+    if (subject === "ai") {
+      if (action === "create" || action === "view" || action === "edit") {
+        return (
+          hasBlogPermission("content.author") ||
+          hasBlogPermission("content.manage") ||
+          hasBlogPermission("ai.manage")
+        );
+      }
+      return hasBlogPermission("ai.manage");
+    }
     if (subject === "comment" || action === "moderate") {
       return hasBlogPermission("community.moderate");
     }

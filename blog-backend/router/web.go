@@ -243,6 +243,10 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 			author.PUT("/admin/media/:id", growthCtrl.UpdateMedia)
 			author.GET("/admin/media/:id/references", growthCtrl.MediaReferences)
 			author.DELETE("/admin/media/:id", growthCtrl.DeleteMedia)
+			if agentCtrl != nil {
+				author.POST("/admin/ai-draft-assist", agentCtrl.DraftAssist)
+				author.POST("/admin/ai-generate-image", agentCtrl.GenerateImage)
+			}
 		}
 
 		// Content Management (Editors, Admins, Owners)
@@ -284,8 +288,6 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 		aiOps.Use(userAuth, accessAuth, middleware.RequireBlogPermission(accessService, access.PermissionManageAI))
 		{
 			if agentCtrl != nil {
-				aiOps.POST("/admin/ai-draft-assist", agentCtrl.DraftAssist)
-				aiOps.POST("/admin/ai-generate-image", agentCtrl.GenerateImage)
 				aiOps.POST("/admin/ai-workflows/draft", agentCtrl.DraftWorkflow)
 				aiOps.POST("/admin/ai-workflows/agent-drafts", agentCtrl.DraftWorkflowAgents)
 				aiOps.GET("/admin/provider-profiles", agentCtrl.ListProviders)
