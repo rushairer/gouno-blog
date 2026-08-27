@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 	"github.com/rushairer/blog-backend/config"
+	"github.com/rushairer/blog-backend/internal/access"
 	agentservice "github.com/rushairer/blog-backend/internal/agent"
 	"github.com/rushairer/blog-backend/internal/connector"
 	"github.com/rushairer/blog-backend/internal/controller"
@@ -229,6 +230,10 @@ func startWebServer(cmd *cobra.Command, args []string) {
 		GrowthSvc:          growthSvc,
 		AgentCtrl:          agentCtrl,
 		Logger:             logger,
+		BootstrapOwner: access.Bootstrap{
+			Issuer:  os.Getenv("BLOG_BOOTSTRAP_OWNER_ISSUER"),
+			Subject: os.Getenv("BLOG_BOOTSTRAP_OWNER_SUBJECT"),
+		},
 	})
 
 	httpServer := &http.Server{

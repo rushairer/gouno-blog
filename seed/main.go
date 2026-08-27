@@ -168,7 +168,7 @@ func main() {
 		log.Printf("Seeding OAuth2 client %q...\n", clientID)
 		_, err = db.ExecContext(ctx,
 			`INSERT INTO oauth2_clients (account_id, client_id, name, description, redirect_uris, grant_types, scopes, is_confidential, metadata)
-			 VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, false, '{"capability":"admin"}'::jsonb)`,
+			 VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, false, '{}'::jsonb)`,
 			accountID, clientID, clientName, clientDescription, redirectURIsJSON, grantTypesJSON, scopesJSON,
 		)
 		if err != nil {
@@ -186,7 +186,7 @@ func main() {
 			     grant_types = $5::jsonb,
 			     scopes = $6::jsonb,
 			     is_confidential = false,
-			     metadata = '{"capability":"admin"}'::jsonb
+			     metadata = COALESCE(metadata, '{}'::jsonb) - 'capability'
 			 WHERE client_id = $7`,
 			accountID, clientName, clientDescription, redirectURIsJSON, grantTypesJSON, scopesJSON, clientID,
 		)
@@ -197,10 +197,10 @@ func main() {
 	}
 
 	// This seed owns the local first-party blog client. Keep the development
-	// administrator's stored consent in sync with the client policy so adding a
-	// required first-party scope (for example, admin) takes effect for an
-	// existing Docker volume. Production clients must obtain consent through the
-	// normal OAuth authorization flow instead.
+	// administrator's stored consent in sync with the client policy. Blog
+	// authorization is local and must never be represented by an OAuth scope.
+	// Production clients must obtain consent through the normal OAuth
+	// authorization flow instead.
 	_, err = db.ExecContext(ctx,
 		`INSERT INTO oauth2_consents (account_id, client_id, scopes, granted_at)
 		 SELECT $1, id, $2::jsonb, NOW()

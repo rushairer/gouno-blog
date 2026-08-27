@@ -26,4 +26,4 @@ services:
       args:
         VITE_GOSSO_ISSUER: ${VITE_GOSSO_ISSUER:-https://localhost:8443}
         VITE_GOSSO_CLIENT_ID: ${VITE_GOSSO_CLIENT_ID:-blog-spa}
-        VITE_GOSSO_SCOPE: ${VITE_GOSSO_SCOPE:-openid profile email admin}
+        VITE_GOSSO_SCOPE: ${VITE_GOSSO_SCOPE:-openid profile email}

@@ -19,7 +19,7 @@ It can generate go code from proto file.`,
 }
 
 func init() {
-	rootCmd.AddCommand(generator.GeneratorCmd, webCmd)
+	rootCmd.AddCommand(generator.GeneratorCmd, webCmd, ownerRecoverCmd)
 }
 
 func Execute() {

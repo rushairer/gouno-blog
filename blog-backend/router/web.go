@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/rushairer/blog-backend/internal/access"
 	"github.com/rushairer/blog-backend/internal/controller"
 	"github.com/rushairer/blog-backend/internal/media"
 	"github.com/rushairer/blog-backend/internal/repository"
@@ -34,6 +34,7 @@ type WebRouterOptions struct {
 	GrowthSvc          *service.GrowthService
 	AgentCtrl          *controller.AgentController
 	Logger             *zap.Logger
+	BootstrapOwner     access.Bootstrap
 }
 
 func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.AuthOptions, jwksURL, redisDSN, visitorSecret, mediaDir string, store media.Store, corsAllowedOrigins []string, agentCtrl *controller.AgentController) {
@@ -131,12 +132,13 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 
 	// Setup JWT verifier
 	verifier := auth.NewVerifier(jwksURL)
-	authOptions.RequiredRole = "admin"
-	adminAuth := middleware.AuthMiddlewareWithOptions(verifier, authOptions)
 	userAuthOptions := authOptions
 	userAuthOptions.RequiredRole = ""
 	userAuth := middleware.AuthMiddlewareWithOptions(verifier, userAuthOptions)
 	optionalAuth := middleware.OptionalAuth(verifier, userAuthOptions)
+	accessService := access.NewService(opts.DB, opts.BootstrapOwner)
+	accessAuth := middleware.BlogAccess(accessService)
+	accessCtrl := controller.NewAccessController(accessService)
 
 	registerWebTestRouter(server)
 	registerWebIndexRouter(server)
@@ -193,15 +195,9 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 		api.POST("/comments/:id/report", communityCtrl.ReportComment)
 
 		me := api.Group("/me")
-		me.Use(userAuth)
+		me.Use(userAuth, accessAuth)
 		{
-			me.GET("/blog-session", func(c *gin.Context) {
-				claims, _ := c.Get("claims")
-				values, _ := claims.(jwt.MapClaims)
-				c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{
-					"sub": values["sub"], "roles": values["roles"], "scope": values["scope"],
-				}))
-			})
+			me.GET("/blog-session", accessCtrl.Session)
 			me.GET("/notifications", communityCtrl.ListNotifications)
 			me.PUT("/notifications/read-all", communityCtrl.ReadAllNotifications)
 			me.PUT("/notifications/:id/read", communityCtrl.ReadNotification)
@@ -211,9 +207,19 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 			me.DELETE("/notifications/clear-all", communityCtrl.ClearNotifications)
 		}
 
-		// Protected Blog Routes (Admin Only)
+		members := api.Group("/admin/members")
+		members.Use(userAuth, accessAuth, middleware.RequireBlogPermission(accessService, access.PermissionManageMembers))
+		{
+			members.GET("", accessCtrl.ListMembers)
+			members.PUT("/:principalID", accessCtrl.UpdateMember)
+			members.POST("/:principalID/transfer-owner", accessCtrl.TransferOwner)
+			members.GET("/audits", accessCtrl.ListAudits)
+		}
+
+		// Existing administrative surfaces remain restricted to Blog-local site
+		// managers until their finer-grained content routes are split out.
 		admin := api.Group("")
-		admin.Use(adminAuth)
+		admin.Use(userAuth, accessAuth, middleware.RequireBlogPermission(accessService, access.PermissionManageSite))
 		{
 			admin.POST("/posts", ctrl.Create)
 			admin.GET("/admin/posts", ctrl.ListAdmin)
