@@ -24,6 +24,7 @@ import {
   useToast,
 } from "../../components/ui";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
+import { hasBlogPermission } from "../../auth";
 import type { Category, Post } from "../../types/blog";
 import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
 
@@ -32,6 +33,7 @@ const pageSize = 20;
 
 export default function AdminPosts() {
   const allowed = useAdminGuard("/admin/posts");
+  const canManage = hasBlogPermission("content.manage");
   const { notify } = useToast();
   const [params, setParams] = useSearchParams();
   const [posts, setPosts] = useState<Post[]>([]);
@@ -162,8 +164,12 @@ export default function AdminPosts() {
   return (
     <AdminPage>
       <AdminPageHeader
-        title="文章"
-        description="管理草稿、定时内容与已发布文章。"
+        title={canManage ? "文章" : "我的文章"}
+        description={
+          canManage
+            ? "管理全站草稿、定时内容与已发布文章。"
+            : "管理由您创建的草稿、定时内容与已发布文章。"
+        }
         actions={
           <Link className="btn btn-primary" to="/admin/posts/new">
             <Plus /> 新建文章
@@ -242,7 +248,7 @@ export default function AdminPosts() {
             </Button>
           ) : null}
         </FilterBar>
-        {selected.length ? (
+        {canManage && selected.length ? (
           <BulkActionBar
             selectionLabel={`已选择 ${selected.length} 篇`}
             onAIAssist={() => setAIOpen(true)}
@@ -258,7 +264,7 @@ export default function AdminPosts() {
                 )
               }
             >
-              发布
+              立即发布
             </Button>
             <Button
               variant="secondary"
@@ -312,23 +318,25 @@ export default function AdminPosts() {
               <table className="admin-table">
                 <thead>
                   <tr>
-                    <th>
-                      <input
-                        aria-label="选择当前页全部文章"
-                        type="checkbox"
-                        checked={
-                          posts.length > 0 &&
-                          posts.every((post) => selected.includes(post.id))
-                        }
-                        onChange={(event) =>
-                          setSelected(
-                            event.target.checked
-                              ? posts.map((post) => post.id)
-                              : [],
-                          )
-                        }
-                      />
-                    </th>
+                    {canManage ? (
+                      <th>
+                        <input
+                          aria-label="选择当前页全部文章"
+                          type="checkbox"
+                          checked={
+                            posts.length > 0 &&
+                            posts.every((post) => selected.includes(post.id))
+                          }
+                          onChange={(event) =>
+                            setSelected(
+                              event.target.checked
+                                ? posts.map((post) => post.id)
+                                : [],
+                            )
+                          }
+                        />
+                      </th>
+                    ) : null}
                     <th>文章</th>
                     <th>状态</th>
                     <th>更新时间</th>
@@ -339,20 +347,22 @@ export default function AdminPosts() {
                 <tbody>
                   {posts.map((post) => (
                     <tr key={post.id}>
-                      <td>
-                        <input
-                          aria-label={`选择 ${post.title}`}
-                          type="checkbox"
-                          checked={selected.includes(post.id)}
-                          onChange={(event) =>
-                            setSelected((current) =>
-                              event.target.checked
-                                ? [...new Set([...current, post.id])]
-                                : current.filter((id) => id !== post.id),
-                            )
-                          }
-                        />
-                      </td>
+                      {canManage ? (
+                        <td>
+                          <input
+                            aria-label={`选择 ${post.title}`}
+                            type="checkbox"
+                            checked={selected.includes(post.id)}
+                            onChange={(event) =>
+                              setSelected((current) =>
+                                event.target.checked
+                                  ? [...new Set([...current, post.id])]
+                                  : current.filter((id) => id !== post.id),
+                              )
+                            }
+                          />
+                        </td>
+                      ) : null}
                       <td>
                         <strong>{post.title}</strong>
                         <small>/{post.slug}</small>
@@ -365,7 +375,7 @@ export default function AdminPosts() {
                           post.updated_at || post.created_at,
                         ).toLocaleDateString("zh-CN")}
                       </td>
-                      <td>{post.views_count || 0}</td>
+                      <td>{(post.views_count ?? 0).toLocaleString()}</td>
                       <td>
                         <div className="table-actions">
                           <Link
@@ -400,15 +410,17 @@ export default function AdminPosts() {
                           >
                             <Edit2 />
                           </Link>
-                          <button
-                            className="danger-action"
-                            title="删除"
-                            onClick={() =>
-                              setDeleteTarget({ kind: "post", post })
-                            }
-                          >
-                            <Trash2 />
-                          </button>
+                          {canManage ? (
+                            <button
+                              className="danger-action"
+                              title="删除"
+                              onClick={() =>
+                                setDeleteTarget({ kind: "post", post })
+                              }
+                            >
+                              <Trash2 />
+                            </button>
+                          ) : null}
                         </div>
                       </td>
                     </tr>

@@ -10,9 +10,11 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rushairer/blog-backend/internal/access"
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/media"
 	"github.com/rushairer/blog-backend/internal/service"
+	"github.com/rushairer/blog-backend/middleware"
 	"github.com/rushairer/gouno"
 	"go.uber.org/zap"
 )
@@ -83,6 +85,32 @@ func (ctrl *GrowthController) ListVersions(c *gin.Context) {
 	if !ok {
 		return
 	}
+	if snapshot, hasAccess := middleware.CurrentBlogAccess(c); hasAccess {
+		if snapshot.MembershipStatus != "active" {
+			c.JSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, "forbidden"))
+			return
+		}
+		post, err := ctrl.posts.GetAdminPost(c.Request.Context(), postID)
+		if err != nil {
+			WriteDomainError(c, err)
+			return
+		}
+		if post == nil {
+			c.JSON(http.StatusNotFound, gouno.NewErrorResponse(http.StatusNotFound, "post not found"))
+			return
+		}
+		hasManage := false
+		for _, p := range snapshot.Permissions {
+			if p == access.PermissionManageContent || p == access.PermissionManageSite {
+				hasManage = true
+				break
+			}
+		}
+		if !hasManage && post.CreatedByPrincipalID != nil && *post.CreatedByPrincipalID != snapshot.Principal.ID {
+			c.JSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, "forbidden"))
+			return
+		}
+	}
 	versions, err := ctrl.growth.ListVersions(c.Request.Context(), postID)
 	if err != nil {
 		WriteDomainError(c, err)
@@ -100,12 +128,38 @@ func (ctrl *GrowthController) RestoreVersion(c *gin.Context) {
 	if !ok {
 		return
 	}
-	post, err := ctrl.growth.RestoreVersion(c.Request.Context(), postID, versionID)
+	if snapshot, hasAccess := middleware.CurrentBlogAccess(c); hasAccess {
+		if snapshot.MembershipStatus != "active" {
+			c.JSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, "forbidden"))
+			return
+		}
+		post, err := ctrl.posts.GetAdminPost(c.Request.Context(), postID)
+		if err != nil {
+			WriteDomainError(c, err)
+			return
+		}
+		if post == nil {
+			c.JSON(http.StatusNotFound, gouno.NewErrorResponse(http.StatusNotFound, "post not found"))
+			return
+		}
+		hasManage := false
+		for _, p := range snapshot.Permissions {
+			if p == access.PermissionManageContent || p == access.PermissionManageSite {
+				hasManage = true
+				break
+			}
+		}
+		if !hasManage && post.CreatedByPrincipalID != nil && *post.CreatedByPrincipalID != snapshot.Principal.ID {
+			c.JSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, "forbidden"))
+			return
+		}
+	}
+	restored, err := ctrl.growth.RestoreVersion(c.Request.Context(), postID, versionID)
 	if err != nil {
 		WriteDomainError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(post))
+	c.JSON(http.StatusOK, gouno.NewSuccessResponse(restored))
 }
 
 func (ctrl *GrowthController) ListMedia(c *gin.Context) {

@@ -25,7 +25,7 @@ import {
   Panel,
 } from "../../components/ui";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
-import { hasBlogPermission } from "../../auth";
+import { hasBlogPermission, getCachedBlogSession } from "../../auth";
 
 interface Summary {
   total_posts: number;
@@ -41,6 +41,7 @@ interface Summary {
     slug: string;
     views_count: number;
     likes_count: number;
+    created_by_principal_id?: number | null;
   }>;
   daily_events: Array<{ date: string; count: number }>;
   ai_alerts: Array<{
@@ -111,21 +112,27 @@ export default function Dashboard() {
     1,
     ...(summary?.daily_events || []).map((item) => item.count),
   );
+  const session = getCachedBlogSession();
+  const currentPrincipalId = session?.principal?.id;
+  const canManageContent = hasBlogPermission("content.manage");
+  const canAuthorContent = hasBlogPermission("content.author");
+  const canAccessPosts = canManageContent || canAuthorContent;
+  const canModerate = hasBlogPermission("community.moderate");
+
   return (
     <AdminPage>
       <AdminPageHeader
         title="数据概览"
         description="了解站点整体运营情况，掌握内容表现与用户互动。"
         actions={
-          hasBlogPermission("content.author") ||
-          hasBlogPermission("content.manage") ? (
+          canAccessPosts ? (
             <Link
               className={buttonClassName({ variant: "primary" })}
               to="/admin/posts/new"
             >
               <Plus /> 新建文章
             </Link>
-          ) : hasBlogPermission("community.moderate") ? (
+          ) : canModerate ? (
             <Link
               className={buttonClassName({ variant: "primary" })}
               to="/admin/comments?status=pending"
@@ -140,30 +147,66 @@ export default function Dashboard() {
         {summary ? (
           <>
             <div className="admin-metrics">
-              <Panel as={Link} to="/admin/posts">
-                <FileText />
-                <span>文章</span>
-                <strong>{summary.total_posts}</strong>
-                <small>已发布 {summary.published_posts}</small>
-              </Panel>
-              <Panel as={Link} to="/admin/posts?status=published">
-                <Eye />
-                <span>总阅读</span>
-                <strong>{summary.total_views.toLocaleString()}</strong>
-                <small>查看已发布文章</small>
-              </Panel>
-              <Panel as={Link} to="/admin/posts">
-                <Heart />
-                <span>总点赞</span>
-                <strong>{summary.total_likes.toLocaleString()}</strong>
-                <small>查看内容互动</small>
-              </Panel>
-              <Panel as={Link} to="/admin/comments?status=pending">
-                <MessageSquare />
-                <span>评论</span>
-                <strong>{summary.total_comments}</strong>
-                <small>待审核 {summary.pending_comments}</small>
-              </Panel>
+              {canAccessPosts ? (
+                <Panel as={Link} to="/admin/posts">
+                  <FileText />
+                  <span>文章</span>
+                  <strong>{summary.total_posts}</strong>
+                  <small>已发布 {summary.published_posts}</small>
+                </Panel>
+              ) : (
+                <Panel>
+                  <FileText />
+                  <span>文章</span>
+                  <strong>{summary.total_posts}</strong>
+                  <small>已发布 {summary.published_posts}</small>
+                </Panel>
+              )}
+              {canAccessPosts ? (
+                <Panel as={Link} to="/admin/posts?status=published">
+                  <Eye />
+                  <span>总阅读</span>
+                  <strong>{summary.total_views.toLocaleString()}</strong>
+                  <small>查看已发布文章</small>
+                </Panel>
+              ) : (
+                <Panel>
+                  <Eye />
+                  <span>总阅读</span>
+                  <strong>{summary.total_views.toLocaleString()}</strong>
+                  <small>全站累计阅读</small>
+                </Panel>
+              )}
+              {canAccessPosts ? (
+                <Panel as={Link} to="/admin/posts">
+                  <Heart />
+                  <span>总点赞</span>
+                  <strong>{summary.total_likes.toLocaleString()}</strong>
+                  <small>查看内容互动</small>
+                </Panel>
+              ) : (
+                <Panel>
+                  <Heart />
+                  <span>总点赞</span>
+                  <strong>{summary.total_likes.toLocaleString()}</strong>
+                  <small>全站累计点赞</small>
+                </Panel>
+              )}
+              {canModerate ? (
+                <Panel as={Link} to="/admin/comments?status=pending">
+                  <MessageSquare />
+                  <span>评论</span>
+                  <strong>{summary.total_comments}</strong>
+                  <small>待审核 {summary.pending_comments}</small>
+                </Panel>
+              ) : (
+                <Panel>
+                  <MessageSquare />
+                  <span>评论</span>
+                  <strong>{summary.total_comments}</strong>
+                  <small>待审核 {summary.pending_comments}</small>
+                </Panel>
+              )}
             </div>
             <div className="dashboard-grid">
               <Panel className="traffic-panel">
@@ -287,7 +330,9 @@ export default function Dashboard() {
             <Panel className="dashboard-table">
               <div className="panel-heading">
                 <h2>表现最佳文章</h2>
-                <Link to="/admin/posts">查看全部文章</Link>
+                {canAccessPosts ? (
+                  <Link to="/admin/posts">查看全部文章</Link>
+                ) : null}
               </div>
               <div className="table-scroll">
                 <table>
@@ -300,19 +345,39 @@ export default function Dashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {summary.top_posts.map((post, index) => (
-                      <tr key={post.id}>
-                        <td>
-                          <span>{index + 1}</span>
-                          {post.title}
-                        </td>
-                        <td>{post.views_count}</td>
-                        <td>{post.likes_count}</td>
-                        <td>
-                          <Link to={`/admin/posts/${post.id}/edit`}>编辑</Link>
-                        </td>
-                      </tr>
-                    ))}
+                    {summary.top_posts.map((post, index) => {
+                      const canEdit =
+                        canManageContent ||
+                        (canAuthorContent &&
+                          post.created_by_principal_id != null &&
+                          currentPrincipalId != null &&
+                          post.created_by_principal_id === currentPrincipalId);
+                      return (
+                        <tr key={post.id}>
+                          <td>
+                            <span>{index + 1}</span>
+                            {post.title}
+                          </td>
+                          <td>{post.views_count}</td>
+                          <td>{post.likes_count}</td>
+                          <td>
+                            {canEdit ? (
+                              <Link to={`/admin/posts/${post.id}/edit`}>
+                                编辑
+                              </Link>
+                            ) : (
+                              <Link
+                                to={`/articles/${post.slug || post.id}`}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                查看
+                              </Link>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

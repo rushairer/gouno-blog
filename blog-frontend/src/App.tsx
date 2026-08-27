@@ -20,7 +20,12 @@ import About from "./pages/About";
 import NotFound from "./pages/NotFound";
 import Callback from "./pages/Callback";
 import HostedLoginRedirect from "./pages/HostedLoginRedirect";
-import { getManagementAccess, logout, redirectToAuthorize } from "./auth";
+import {
+  getManagementAccess,
+  hasBlogPermission,
+  logout,
+  redirectToAuthorize,
+} from "./auth";
 import { useSiteMetadata } from "./hooks/useSiteMetadata";
 const Settings = React.lazy(() => import("./pages/Settings"));
 const Dashboard = React.lazy(() => import("./pages/admin/Dashboard"));
@@ -64,7 +69,7 @@ function Public({ children }: { children: React.ReactNode }) {
   );
 }
 
-function AdminAccessDenied() {
+function AdminAccessDenied({ message }: { message?: string }) {
   const [logoutError, setLogoutError] = useState("");
 
   const switchAccount = async () => {
@@ -81,10 +86,10 @@ function AdminAccessDenied() {
       <div className="public-container state-page" role="alert">
         <div className="state-card">
           <h1>无后台访问权限</h1>
-          <p>当前账户没有博客后台所需的管理员角色。</p>
+          <p>{message || "当前账户没有博客后台所需的管理员角色。"}</p>
           <div className="state__actions">
-            <a className="btn btn-primary" href="/">
-              返回站点
+            <a className="btn btn-primary" href="/admin/dashboard">
+              返回概览
             </a>
             <button
               className="btn btn-secondary"
@@ -101,7 +106,13 @@ function AdminAccessDenied() {
   );
 }
 
-function Admin({ children }: { children: React.ReactNode }) {
+function Admin({
+  children,
+  requiredPermissions,
+}: {
+  children: React.ReactNode;
+  requiredPermissions?: string[];
+}) {
   const location = useLocation();
   const [access, setAccess] = useState<
     "checking" | "admin" | "denied" | "anonymous" | "error"
@@ -181,6 +192,15 @@ function Admin({ children }: { children: React.ReactNode }) {
         </div>
       </PublicShell>
     );
+  }
+
+  if (requiredPermissions && requiredPermissions.length > 0) {
+    const hasAny = requiredPermissions.some((perm) => hasBlogPermission(perm));
+    if (!hasAny) {
+      return (
+        <AdminAccessDenied message="您当前的角色没有访问该管理模块的权限。" />
+      );
+    }
   }
 
   return (
@@ -328,7 +348,9 @@ export default function App() {
             <Route
               path="/admin/posts"
               element={
-                <Admin>
+                <Admin
+                  requiredPermissions={["content.author", "content.manage"]}
+                >
                   <AdminPosts />
                 </Admin>
               }
@@ -336,7 +358,9 @@ export default function App() {
             <Route
               path="/admin/posts/new"
               element={
-                <Admin>
+                <Admin
+                  requiredPermissions={["content.author", "content.manage"]}
+                >
                   <PostEditor />
                 </Admin>
               }
@@ -344,7 +368,9 @@ export default function App() {
             <Route
               path="/admin/posts/:id/edit"
               element={
-                <Admin>
+                <Admin
+                  requiredPermissions={["content.author", "content.manage"]}
+                >
                   <PostEditor />
                 </Admin>
               }
@@ -352,7 +378,7 @@ export default function App() {
             <Route
               path="/admin/pages"
               element={
-                <Admin>
+                <Admin requiredPermissions={["content.manage"]}>
                   <AdminPages />
                 </Admin>
               }
@@ -360,7 +386,7 @@ export default function App() {
             <Route
               path="/admin/pages/new"
               element={
-                <Admin>
+                <Admin requiredPermissions={["content.manage"]}>
                   <PageEditor />
                 </Admin>
               }
@@ -368,7 +394,7 @@ export default function App() {
             <Route
               path="/admin/pages/:id/edit"
               element={
-                <Admin>
+                <Admin requiredPermissions={["content.manage"]}>
                   <PageEditor />
                 </Admin>
               }
@@ -376,7 +402,7 @@ export default function App() {
             <Route
               path="/admin/categories"
               element={
-                <Admin>
+                <Admin requiredPermissions={["content.manage"]}>
                   <AdminCategories />
                 </Admin>
               }
@@ -384,7 +410,7 @@ export default function App() {
             <Route
               path="/admin/tags"
               element={
-                <Admin>
+                <Admin requiredPermissions={["content.manage"]}>
                   <AdminTags />
                 </Admin>
               }
@@ -392,7 +418,7 @@ export default function App() {
             <Route
               path="/admin/comments"
               element={
-                <Admin>
+                <Admin requiredPermissions={["community.moderate"]}>
                   <AdminComments />
                 </Admin>
               }
@@ -408,7 +434,9 @@ export default function App() {
             <Route
               path="/admin/media"
               element={
-                <Admin>
+                <Admin
+                  requiredPermissions={["content.author", "content.manage"]}
+                >
                   <MediaLibrary />
                 </Admin>
               }
@@ -416,7 +444,7 @@ export default function App() {
             <Route
               path="/admin/settings"
               element={
-                <Admin>
+                <Admin requiredPermissions={["site.manage"]}>
                   <AdminSiteSettings />
                 </Admin>
               }
@@ -424,7 +452,7 @@ export default function App() {
             <Route
               path="/admin/users"
               element={
-                <Admin>
+                <Admin requiredPermissions={["members.manage"]}>
                   <AdminUsers />
                 </Admin>
               }
@@ -432,7 +460,7 @@ export default function App() {
             <Route
               path="/admin/ai-ops"
               element={
-                <Admin>
+                <Admin requiredPermissions={["ai.manage"]}>
                   <AIOperations />
                 </Admin>
               }

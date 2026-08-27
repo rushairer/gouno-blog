@@ -27,6 +27,8 @@ export interface Post {
   likes_count?: number;
   published_at?: string;
   scheduled_at?: string;
+  created_by_principal_id?: number | null;
+  updated_by_principal_id?: number | null;
   created_at: string;
   updated_at?: string;
 }

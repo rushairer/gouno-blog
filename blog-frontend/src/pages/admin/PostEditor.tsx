@@ -850,6 +850,16 @@ export default function PostEditor() {
         : post.status === "published"
           ? "更新文章"
           : "发布";
+  if (!isNew && error && !post.id) {
+    return (
+      <AdminPageState
+        title="无法编辑文章"
+        description={error}
+        label="无权限或文章不存在"
+      />
+    );
+  }
+
   if (!allowed || loading)
     return (
       <AdminPageState

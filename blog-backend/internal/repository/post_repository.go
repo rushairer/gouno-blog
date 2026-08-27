@@ -21,12 +21,12 @@ func NewPostRepository(db *sql.DB) *PostRepository {
 
 func (r *PostRepository) Create(ctx context.Context, post *domain.Post) error {
 	query := `
-		INSERT INTO posts (title, slug, summary, content, tags, category_id, cover_url, cover_alt, seo_title, seo_description, status, views_count, likes_count, published_at, scheduled_at, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW(), NOW())
+		INSERT INTO posts (title, slug, summary, content, tags, category_id, cover_url, cover_alt, seo_title, seo_description, status, views_count, likes_count, published_at, scheduled_at, created_by_principal_id, updated_by_principal_id, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW(), NOW())
 		RETURNING id, created_at, updated_at
 	`
 	err := r.db.QueryRowContext(ctx, query,
-		post.Title, post.Slug, post.Summary, post.Content, pq.Array(post.Tags), post.CategoryID, post.CoverURL, post.CoverAlt, post.SEOTitle, post.SEODescription, post.Status, post.ViewsCount, post.LikesCount, post.PublishedAt, post.ScheduledAt,
+		post.Title, post.Slug, post.Summary, post.Content, pq.Array(post.Tags), post.CategoryID, post.CoverURL, post.CoverAlt, post.SEOTitle, post.SEODescription, post.Status, post.ViewsCount, post.LikesCount, post.PublishedAt, post.ScheduledAt, post.CreatedByPrincipalID, post.UpdatedByPrincipalID,
 	).Scan(&post.ID, &post.CreatedAt, &post.UpdatedAt)
 	return err
 }
@@ -36,12 +36,12 @@ func (r *PostRepository) Update(ctx context.Context, post *domain.Post) error {
 		UPDATE posts
 		SET title = $1, slug = $2, summary = $3, content = $4, tags = $5, category_id = $6,
 		    cover_url = $7, cover_alt = $8, seo_title = $9, seo_description = $10,
-		    status = $11, published_at = $12, scheduled_at = $13, updated_at = NOW()
-		WHERE id = $14
+		    status = $11, published_at = $12, scheduled_at = $13, updated_by_principal_id = $14, updated_at = NOW()
+		WHERE id = $15
 		RETURNING updated_at
 	`
 	err := r.db.QueryRowContext(ctx, query,
-		post.Title, post.Slug, post.Summary, post.Content, pq.Array(post.Tags), post.CategoryID, post.CoverURL, post.CoverAlt, post.SEOTitle, post.SEODescription, post.Status, post.PublishedAt, post.ScheduledAt, post.ID,
+		post.Title, post.Slug, post.Summary, post.Content, pq.Array(post.Tags), post.CategoryID, post.CoverURL, post.CoverAlt, post.SEOTitle, post.SEODescription, post.Status, post.PublishedAt, post.ScheduledAt, post.UpdatedByPrincipalID, post.ID,
 	).Scan(&post.UpdatedAt)
 	return err
 }
@@ -61,13 +61,13 @@ func (r *PostRepository) Delete(ctx context.Context, id int64) error {
 
 func (r *PostRepository) GetByID(ctx context.Context, id int64) (*domain.Post, error) {
 	query := `
-		SELECT id, title, slug, summary, content, tags, category_id, COALESCE(cover_url, ''), COALESCE(cover_alt, ''), COALESCE(seo_title, ''), COALESCE(seo_description, ''), status, views_count, likes_count, published_at, scheduled_at, created_at, updated_at
+		SELECT id, title, slug, summary, content, tags, category_id, COALESCE(cover_url, ''), COALESCE(cover_alt, ''), COALESCE(seo_title, ''), COALESCE(seo_description, ''), status, views_count, likes_count, published_at, scheduled_at, created_by_principal_id, updated_by_principal_id, created_at, updated_at
 		FROM posts
 		WHERE id = $1
 	`
 	var post domain.Post
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID, &post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt,
+		&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID, &post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt, &post.CreatedByPrincipalID, &post.UpdatedByPrincipalID, &post.CreatedAt, &post.UpdatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -80,13 +80,13 @@ func (r *PostRepository) GetByID(ctx context.Context, id int64) (*domain.Post, e
 
 func (r *PostRepository) GetBySlug(ctx context.Context, slug string) (*domain.Post, error) {
 	query := `
-		SELECT id, title, slug, summary, content, tags, category_id, COALESCE(cover_url, ''), COALESCE(cover_alt, ''), COALESCE(seo_title, ''), COALESCE(seo_description, ''), status, views_count, likes_count, published_at, scheduled_at, created_at, updated_at
+		SELECT id, title, slug, summary, content, tags, category_id, COALESCE(cover_url, ''), COALESCE(cover_alt, ''), COALESCE(seo_title, ''), COALESCE(seo_description, ''), status, views_count, likes_count, published_at, scheduled_at, created_by_principal_id, updated_by_principal_id, created_at, updated_at
 		FROM posts
 		WHERE slug = $1
 	`
 	var post domain.Post
 	err := r.db.QueryRowContext(ctx, query, slug).Scan(
-		&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID, &post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt,
+		&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID, &post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt, &post.CreatedByPrincipalID, &post.UpdatedByPrincipalID, &post.CreatedAt, &post.UpdatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -213,6 +213,10 @@ func (r *PostRepository) ListAdmin(ctx context.Context, filter domain.AdminPostF
 		args = append(args, filter.Tag)
 		where = append(where, fmt.Sprintf("$%d = ANY(p.tags)", len(args)))
 	}
+	if filter.CreatedByPrincipalID != nil {
+		args = append(args, *filter.CreatedByPrincipalID)
+		where = append(where, fmt.Sprintf("p.created_by_principal_id = $%d", len(args)))
+	}
 	whereSQL := ""
 	if len(where) > 0 {
 		whereSQL = " WHERE " + strings.Join(where, " AND ")
@@ -223,7 +227,7 @@ func (r *PostRepository) ListAdmin(ctx context.Context, filter domain.AdminPostF
 		return nil, 0, err
 	}
 	args = append(args, limit, offset)
-	listQuery := fmt.Sprintf(`SELECT p.id, p.title, p.slug, p.summary, p.content, p.tags, p.category_id, COALESCE(p.cover_url, ''), COALESCE(p.cover_alt, ''), COALESCE(p.seo_title, ''), COALESCE(p.seo_description, ''), p.status, p.views_count, p.likes_count, p.published_at, p.scheduled_at, p.created_at, p.updated_at
+	listQuery := fmt.Sprintf(`SELECT p.id, p.title, p.slug, p.summary, p.content, p.tags, p.category_id, COALESCE(p.cover_url, ''), COALESCE(p.cover_alt, ''), COALESCE(p.seo_title, ''), COALESCE(p.seo_description, ''), p.status, p.views_count, p.likes_count, p.published_at, p.scheduled_at, p.created_by_principal_id, p.updated_by_principal_id, p.created_at, p.updated_at
 		FROM posts p LEFT JOIN categories c ON c.id = p.category_id%s ORDER BY COALESCE(p.published_at, p.created_at) DESC, p.id DESC LIMIT $%d OFFSET $%d`, whereSQL, len(args)-1, len(args))
 	rows, err := r.db.QueryContext(ctx, listQuery, args...)
 	if err != nil {
@@ -233,7 +237,7 @@ func (r *PostRepository) ListAdmin(ctx context.Context, filter domain.AdminPostF
 	posts := make([]*domain.Post, 0)
 	for rows.Next() {
 		var post domain.Post
-		if err := rows.Scan(&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID, &post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt); err != nil {
+		if err := rows.Scan(&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID, &post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt, &post.CreatedByPrincipalID, &post.UpdatedByPrincipalID, &post.CreatedAt, &post.UpdatedAt); err != nil {
 			return nil, 0, err
 		}
 		posts = append(posts, &post)
