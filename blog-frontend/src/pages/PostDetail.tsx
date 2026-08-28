@@ -20,7 +20,9 @@ import {
   User,
   X,
 } from "lucide-react";
-import { hasCachedAdminRole, isLoggedIn } from "../auth";
+import { useSession } from "@gosso/client/react";
+import type { BlogUserProfile } from "../auth";
+import { canPreviewUnpublished } from "../abilities";
 import { analyticsApi } from "../api/analytics";
 import { commentsApi } from "../api/comments";
 import type { CommunityComment } from "../api/comments";
@@ -111,6 +113,8 @@ export default function PostDetail() {
   const navigate = useNavigate();
   const isPreviewParam = searchParams.get("preview") === "true";
   const { t, formatDate } = useI18n();
+  const session = useSession<BlogUserProfile>();
+  const canPreview = canPreviewUnpublished(session.profile);
   const [post, setPost] = useState<Post | null>(null);
   const [isAdminPreview, setIsAdminPreview] = useState(false);
   const [relatedPosts, setRelatedPosts] = useState<Post[]>([]);
@@ -164,7 +168,7 @@ export default function PostDetail() {
 
         if (postResult.status === "fulfilled") {
           postData = postResult.value;
-        } else if (isPreviewParam || hasCachedAdminRole()) {
+        } else if (isPreviewParam || canPreview) {
           try {
             postData = await postsApi.getAdminPost(slug);
             adminPreviewActive = true;
@@ -198,7 +202,7 @@ export default function PostDetail() {
         setIsAdminPreview(
           adminPreviewActive ||
             (Boolean(postData.status && postData.status !== "published") &&
-              hasCachedAdminRole()),
+              canPreview),
         );
 
         const communityState =
@@ -234,7 +238,7 @@ export default function PostDetail() {
     if (slug) {
       fetchPostAndComments();
     }
-  }, [slug, isPreviewParam, t]);
+  }, [slug, isPreviewParam, canPreview, t]);
 
   const articleSEO = useMemo(
     () =>
@@ -267,7 +271,7 @@ export default function PostDetail() {
     event.preventDefault();
     if (
       !post ||
-      (!isLoggedIn() && !commentAuthor.trim()) ||
+      (!session.loggedIn && !commentAuthor.trim()) ||
       !commentContent.trim()
     )
       return;
@@ -551,7 +555,7 @@ export default function PostDetail() {
                 </button>
               </div>
             ) : null}
-            {isLoggedIn() ? (
+            {session.loggedIn ? (
               <p className="muted">{t("signedInComment")}</p>
             ) : (
               <Field label={t("name")}>

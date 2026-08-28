@@ -30,6 +30,19 @@ type WebServerConfig struct {
 	RateLimitPerMinute int           `mapstructure:"rate_limit_per_minute"`
 	TrustedProxies     []string      `mapstructure:"trusted_proxies"`
 	CORSAllowedOrigins []string      `mapstructure:"cors_allowed_origins"`
+	SecureCookies      *bool         `mapstructure:"secure_cookies"`
+}
+
+// ResolveSecureCookies keeps development configurable while ensuring
+// production can never issue a non-Secure CSRF cookie.
+func (c WebServerConfig) ResolveSecureCookies(env string) bool {
+	if env == "production" {
+		return true
+	}
+	if c.SecureCookies != nil {
+		return *c.SecureCookies
+	}
+	return false
 }
 
 type DatabaseConfigDriverName string

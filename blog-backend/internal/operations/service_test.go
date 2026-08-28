@@ -2,16 +2,29 @@ package operations
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"testing"
 
+	_ "github.com/lib/pq"
 	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/repository"
 	"github.com/rushairer/blog-backend/internal/tool"
 )
 
+func testTransactor(t *testing.T) *repository.Transactor {
+	t.Helper()
+	db, err := sql.Open("postgres", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	return repository.NewTransactor(db, nil)
+}
+
 func TestRegisterOperationalToolsAreReadOnly(t *testing.T) {
 	registry := tool.New()
-	service := NewService(nil, registry, nil)
+	service := NewService(nil, registry, nil, testTransactor(t))
 	if err := service.RegisterTools(); err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +46,7 @@ func TestRegisterOperationalToolsAreReadOnly(t *testing.T) {
 
 func TestProductionToolCatalogIsJSONSerializable(t *testing.T) {
 	registry := tool.NewBlogRegistry(nil, nil, nil, nil)
-	if err := NewService(nil, registry, nil).RegisterTools(); err != nil {
+	if err := NewService(nil, registry, nil, testTransactor(t)).RegisterTools(); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := json.Marshal(registry.Catalog()); err != nil {

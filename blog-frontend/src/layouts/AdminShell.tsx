@@ -12,13 +12,8 @@ import {
 } from "lucide-react";
 import { notificationsApi } from "../api/notifications";
 import { useUserProfile } from "@gosso/client/react";
-import {
-  type BlogUserProfile,
-  getCachedBlogSession,
-  getBlogRoleLabel,
-  hasBlogPermission,
-  logout,
-} from "../auth";
+import { type BlogUserProfile, getBlogRoleLabel, logout } from "../auth";
+
 import {
   DEFAULT_SITE_SETTINGS,
   getCachedSiteSettings,
@@ -43,7 +38,11 @@ function currentLabel(pathname: string) {
   );
 }
 
-import { STORAGE_KEYS, PAGINATION_LIMITS } from "../constants";
+import {
+  STORAGE_KEYS,
+  PAGINATION_LIMITS,
+  MembershipStatus,
+} from "../constants";
 
 export default function AdminShell({ children }: { children: ReactNode }) {
   const location = useLocation();
@@ -159,8 +158,18 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     }
   };
 
-  const filteredNav = getFilteredAdminNavigation(hasBlogPermission);
-  const session = getCachedBlogSession();
+  const hasPerm = (perm: string) => {
+    if (
+      !user ||
+      (user.membership_status &&
+        user.membership_status !== MembershipStatus.ACTIVE)
+    ) {
+      return false;
+    }
+    return user.permissions?.includes(perm) ?? false;
+  };
+
+  const filteredNav = getFilteredAdminNavigation(hasPerm);
 
   return (
     <div className={`admin-shell ${mobileOpen ? "admin-nav-open" : ""}`}>
@@ -188,7 +197,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         <div className="admin-profile">
           <span className="admin-avatar">
             {(
-              session?.principal?.display_name ||
+              user?.principal?.display_name ||
               user?.name ||
               user?.preferred_username ||
               "U"
@@ -198,15 +207,16 @@ export default function AdminShell({ children }: { children: ReactNode }) {
           </span>
           <div>
             <strong>
-              {session?.principal?.display_name ||
+              {user?.principal?.display_name ||
                 user?.name ||
                 user?.preferred_username ||
                 "成员"}
             </strong>
-            <small>{getBlogRoleLabel()}</small>
+            <small>{getBlogRoleLabel(user?.roles?.[0])}</small>
           </div>
         </div>
       </aside>
+
       <div className="admin-main">
         <header className="admin-topbar">
           <button

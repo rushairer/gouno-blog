@@ -15,12 +15,12 @@ export default function Callback() {
   return (
     <AuthCallback
       onSuccess={handleSuccess}
-      renderError={(error) => (
+      renderError={(error, detail) => (
         <div className="auth-page">
           <Panel className="auth-card section-stack">
             <h2>{t("authError")}</h2>
             <p className="muted">
-              {error === "Missing authorization code or state parameter"
+              {detail?.code === "CALLBACK_PARAMS_MISSING"
                 ? t("invalidCallback")
                 : error || t("authFailed")}
             </p>

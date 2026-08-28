@@ -1,8 +1,4 @@
-import {
-  authenticatedApiFetch as apiFetch,
-  optionalApiFetch,
-  readData,
-} from "./client";
+import { apiClient } from "./client";
 
 export interface AnalyticsSummary {
   pending_comments: number;
@@ -11,17 +7,12 @@ export interface AnalyticsSummary {
 
 export const analyticsApi = {
   async getSummary(): Promise<AnalyticsSummary> {
-    return readData<AnalyticsSummary>(apiFetch("/api/admin/analytics"));
+    return apiClient.get<AnalyticsSummary>("/api/admin/analytics");
   },
 
   async recordView(slugOrID: string | number): Promise<void> {
-    return readData<void>(
-      optionalApiFetch(
-        `/api/posts/${encodeURIComponent(String(slugOrID))}/view`,
-        {
-          method: "POST",
-        },
-      ),
+    return apiClient.post<void>(
+      `/api/posts/${encodeURIComponent(String(slugOrID))}/view`,
     );
   },
 };

@@ -6,12 +6,13 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rushairer/blog-backend/middleware"
 )
 
 func TestBlogCSRFRejectsUnsafeRequestWithoutMatchingToken(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.Use(blogCSRFMiddleware(false))
+	router.Use(middleware.BlogCSRFMiddleware(false))
 	router.POST("/write", func(c *gin.Context) { c.Status(http.StatusNoContent) })
 	req := httptest.NewRequest(http.MethodPost, "/write", nil)
 	response := httptest.NewRecorder()
@@ -21,7 +22,7 @@ func TestBlogCSRFRejectsUnsafeRequestWithoutMatchingToken(t *testing.T) {
 	}
 
 	req = httptest.NewRequest(http.MethodPost, "/write", nil)
-	req.AddCookie(&http.Cookie{Name: blogCSRFCookie, Value: "token"})
+	req.AddCookie(&http.Cookie{Name: middleware.BlogCSRFCookie, Value: "token"})
 	req.Header.Set("X-CSRF-Token", "token")
 	response = httptest.NewRecorder()
 	router.ServeHTTP(response, req)
@@ -33,7 +34,7 @@ func TestBlogCSRFRejectsUnsafeRequestWithoutMatchingToken(t *testing.T) {
 func TestBlogCSRFRejectsBearerRequestWithoutMatchingToken(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.Use(blogCSRFMiddleware(false))
+	router.Use(middleware.BlogCSRFMiddleware(false))
 	router.POST("/write", func(c *gin.Context) { c.Status(http.StatusNoContent) })
 
 	req := httptest.NewRequest(http.MethodPost, "/write", nil)
@@ -48,7 +49,7 @@ func TestBlogCSRFRejectsBearerRequestWithoutMatchingToken(t *testing.T) {
 func TestBlogCSRFIssuesSecureCookie(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.Use(blogCSRFMiddleware(true))
+	router.Use(middleware.BlogCSRFMiddleware(true))
 	router.GET("/read", func(c *gin.Context) { c.Status(http.StatusNoContent) })
 
 	req := httptest.NewRequest(http.MethodGet, "/read", nil)
@@ -58,7 +59,7 @@ func TestBlogCSRFIssuesSecureCookie(t *testing.T) {
 		t.Fatalf("status = %d", response.Code)
 	}
 	cookie := response.Result().Cookies()
-	if len(cookie) != 1 || cookie[0].Name != blogCSRFCookie || !cookie[0].Secure {
-		t.Fatalf("expected a secure %s cookie, got %#v", blogCSRFCookie, cookie)
+	if len(cookie) != 1 || cookie[0].Name != middleware.BlogCSRFCookie || !cookie[0].Secure {
+		t.Fatalf("expected a secure %s cookie, got %#v", middleware.BlogCSRFCookie, cookie)
 	}
 }

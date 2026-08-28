@@ -4,7 +4,7 @@ import { I18nProvider, useI18n } from "./i18n";
 import { ToastProvider } from "./components/ui";
 import { GossoProvider, RequireAuth } from "@gosso/client/react";
 import { gossoClient, type BlogUserProfile, logout } from "./auth";
-import { MembershipStatus } from "./constants";
+import { isActiveMember } from "./abilities";
 import PublicShell from "./layouts/PublicShell";
 import AdminShell from "./layouts/AdminShell";
 import Home from "./pages/Home";
@@ -99,6 +99,32 @@ function AdminAccessDenied({ message }: { message?: string }) {
   );
 }
 
+function Account({
+  children,
+  redirectTo,
+}: {
+  children: React.ReactNode;
+  redirectTo: string;
+}) {
+  return (
+    <RequireAuth
+      redirectTo={redirectTo}
+      fallback={
+        <PublicShell>
+          <div className="public-container state-page" role="status">
+            <div className="state-card">
+              <span className="spinner" aria-hidden="true" />
+              <p>正在前往安全登录页…</p>
+            </div>
+          </div>
+        </PublicShell>
+      }
+    >
+      <Public>{children}</Public>
+    </RequireAuth>
+  );
+}
+
 function Admin({
   children,
   requiredPermissions,
@@ -111,12 +137,10 @@ function Admin({
       permissions={requiredPermissions}
       predicate={(profile) =>
         Boolean(
-          profile &&
-          (!profile.membership_status ||
-            profile.membership_status === MembershipStatus.ACTIVE) &&
+          isActiveMember(profile) &&
           (requiredPermissions && requiredPermissions.length > 0
             ? true
-            : Array.isArray(profile.permissions) &&
+            : Array.isArray(profile?.permissions) &&
               profile.permissions.length > 0),
         )
       }
@@ -155,7 +179,18 @@ function Admin({
 export default function App() {
   useSiteMetadata();
   return (
-    <GossoProvider client={gossoClient}>
+    <GossoProvider
+      client={gossoClient}
+      initializeSession
+      fallback={
+        <div className="public-container state-page" role="status">
+          <div className="state-card">
+            <span className="spinner" aria-hidden="true" />
+            <p>正在恢复登录状态…</p>
+          </div>
+        </div>
+      }
+    >
       <I18nProvider>
         <ToastProvider>
           <BrowserRouter>
@@ -252,17 +287,17 @@ export default function App() {
               <Route
                 path="/account/notifications"
                 element={
-                  <Public>
+                  <Account redirectTo="/account/notifications">
                     <AccountNotifications />
-                  </Public>
+                  </Account>
                 }
               />
               <Route
                 path="/account/settings"
                 element={
-                  <Public>
+                  <Account redirectTo="/account/settings">
                     <Settings />
-                  </Public>
+                  </Account>
                 }
               />
               <Route

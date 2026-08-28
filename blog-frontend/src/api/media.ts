@@ -1,4 +1,4 @@
-import { authenticatedApiFetch as apiFetch, readData } from "./client";
+import { apiClient } from "./client";
 
 export interface MediaItem {
   id: number;
@@ -25,42 +25,25 @@ export interface MediaReference {
 
 export const mediaApi = {
   async listMedia(): Promise<MediaItem[]> {
-    return readData<MediaItem[]>(apiFetch("/api/admin/media"));
+    return apiClient.get<MediaItem[]>("/api/admin/media");
   },
 
   async uploadMedia(formData: FormData): Promise<MediaItem> {
-    return readData<MediaItem>(
-      apiFetch("/api/admin/media", {
-        method: "POST",
-        body: formData,
-      }),
-    );
+    return apiClient.post<MediaItem>("/api/admin/media", formData);
   },
 
   async updateMedia(
     id: number | string,
     data: { alt_text: string },
   ): Promise<MediaItem> {
-    return readData<MediaItem>(
-      apiFetch(`/api/admin/media/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      }),
-    );
+    return apiClient.put<MediaItem>(`/api/admin/media/${id}`, data);
   },
 
   async deleteMedia(id: number | string): Promise<void> {
-    return readData<void>(
-      apiFetch(`/api/admin/media/${id}`, {
-        method: "DELETE",
-      }),
-    );
+    return apiClient.delete<void>(`/api/admin/media/${id}`);
   },
 
   async getMediaReferences(id: number | string): Promise<MediaReference[]> {
-    return readData<MediaReference[]>(
-      apiFetch(`/api/admin/media/${id}/references`),
-    );
+    return apiClient.get<MediaReference[]>(`/api/admin/media/${id}/references`);
   },
 };

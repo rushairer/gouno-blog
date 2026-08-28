@@ -1,4 +1,6 @@
-import { getCachedBlogSession, hasBlogPermission } from "../auth";
+import { useUserProfile } from "@gosso/client/react";
+import type { BlogUserProfile } from "../auth";
+import { MembershipStatus } from "../constants";
 import type { MediaItem } from "../api/media";
 import type { Post } from "../types/blog";
 
@@ -54,65 +56,80 @@ export interface AbilityChecker {
   principalId: number | null;
 }
 
-export function defineAbility(): AbilityChecker {
-  const session = getCachedBlogSession();
-  const currentPrincipalId = session?.principal?.id ?? null;
-  const isSuspended = Boolean(
-    session?.membership_status && session.membership_status !== "active",
+export function isActiveMember(profile: BlogUserProfile | null): boolean {
+  return Boolean(
+    profile &&
+    (!profile.membership_status ||
+      profile.membership_status === MembershipStatus.ACTIVE),
   );
+}
+
+export function canPreviewUnpublished(
+  profile: BlogUserProfile | null,
+): boolean {
+  return isActiveMember(profile) && Boolean(profile?.roles?.length);
+}
+
+export function defineAbility(session: BlogUserProfile | null): AbilityChecker {
+  const currentPrincipalId = session?.principal?.id ?? null;
+  const activeMember = isActiveMember(session);
+  const permissions = Array.isArray(session?.permissions)
+    ? session.permissions
+    : [];
+  const hasPerm = (p: string) => {
+    if (!activeMember) return false;
+    return permissions.includes(p);
+  };
 
   const can = (
     action: AbilityAction,
     subject: AbilitySubject,
     resource?: any,
   ): boolean => {
-    if (isSuspended) return false;
+    if (!activeMember) return false;
 
     // Site / Members / AI
-    if (subject === "site") return hasBlogPermission("site.manage");
-    if (subject === "members") return hasBlogPermission("members.manage");
+    if (subject === "site") return hasPerm("site.manage");
+    if (subject === "members") return hasPerm("members.manage");
     if (subject === "ai") {
       if (action === "create" || action === "view" || action === "edit") {
         return (
-          hasBlogPermission("content.author") ||
-          hasBlogPermission("content.manage") ||
-          hasBlogPermission("ai.manage")
+          hasPerm("content.author") ||
+          hasPerm("content.manage") ||
+          hasPerm("ai.manage")
         );
       }
-      return hasBlogPermission("ai.manage");
+      return hasPerm("ai.manage");
     }
     if (subject === "comment" || action === "moderate") {
-      return hasBlogPermission("community.moderate");
+      return hasPerm("community.moderate");
     }
 
     // Categories, Tags, Pages: require content.manage
     if (subject === "category" || subject === "tag" || subject === "page") {
-      return hasBlogPermission("content.manage");
+      return hasPerm("content.manage");
     }
 
     // Dashboard overview
     if (subject === "dashboard") {
       return (
-        hasBlogPermission("content.manage") ||
-        hasBlogPermission("content.author") ||
-        hasBlogPermission("community.moderate") ||
-        hasBlogPermission("site.manage") ||
-        hasBlogPermission("members.manage") ||
-        hasBlogPermission("ai.manage")
+        hasPerm("content.manage") ||
+        hasPerm("content.author") ||
+        hasPerm("community.moderate") ||
+        hasPerm("site.manage") ||
+        hasPerm("members.manage") ||
+        hasPerm("ai.manage")
       );
     }
 
     // Post abilities
     if (subject === "post") {
       if (action === "create" || action === "view") {
-        return (
-          hasBlogPermission("content.author") ||
-          hasBlogPermission("content.manage")
-        );
+        return hasPerm("content.author") || hasPerm("content.manage");
       }
       if (action === "edit" || action === "restore") {
-        if (hasBlogPermission("content.manage")) return true;
-        if (hasBlogPermission("content.author")) {
+        if (hasPerm("content.manage")) return true;
+        if (hasPerm("content.author")) {
           if (!resource) return true; // general capability
           const creatorId = resource.created_by_principal_id;
           return (
@@ -124,21 +141,18 @@ export function defineAbility(): AbilityChecker {
         return false;
       }
       if (action === "delete" || action === "batch") {
-        return hasBlogPermission("content.manage");
+        return hasPerm("content.manage");
       }
     }
 
     // Media abilities
     if (subject === "media") {
       if (action === "create" || action === "view") {
-        return (
-          hasBlogPermission("content.author") ||
-          hasBlogPermission("content.manage")
-        );
+        return hasPerm("content.author") || hasPerm("content.manage");
       }
       if (action === "edit") {
-        if (hasBlogPermission("content.manage")) return true;
-        if (hasBlogPermission("content.author")) {
+        if (hasPerm("content.manage")) return true;
+        if (hasPerm("content.author")) {
           if (!resource) return true;
           const creatorId = resource.created_by_principal_id;
           return (
@@ -155,8 +169,8 @@ export function defineAbility(): AbilityChecker {
           resource?.usage_count ?? resource?.references_count ?? 0;
         if (refCount > 0) return false;
 
-        if (hasBlogPermission("content.manage")) return true;
-        if (hasBlogPermission("content.author")) {
+        if (hasPerm("content.manage")) return true;
+        if (hasPerm("content.author")) {
           if (!resource) return true;
           const creatorId = resource.created_by_principal_id;
           return (
@@ -168,7 +182,7 @@ export function defineAbility(): AbilityChecker {
         return false;
       }
       if (action === "batch") {
-        return hasBlogPermission("content.manage");
+        return hasPerm("content.manage");
       }
     }
 
@@ -183,5 +197,6 @@ export function defineAbility(): AbilityChecker {
 }
 
 export function useAbility(): AbilityChecker {
-  return defineAbility();
+  const profile = useUserProfile<BlogUserProfile>();
+  return defineAbility(profile);
 }

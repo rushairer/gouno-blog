@@ -3,15 +3,33 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "../../../components/ui";
 import MediaLibrary from "../MediaLibrary";
 
-vi.mock("../../../auth", () => ({
-  apiFetch: vi.fn().mockResolvedValue(Response.json({ data: [] })),
-  canManageBlog: () => true,
-  isLoggedIn: () => true,
-  hasBlogPermission: () => true,
-  hasAnyBlogPermission: () => true,
-  getCachedBlogSession: () => null,
-  redirectToAuthorize: vi.fn(),
+vi.mock("@gosso/client/react", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@gosso/client/react")>()),
+  useUserProfile: () => ({
+    sub: "admin",
+    roles: ["admin"],
+    permissions: ["content.manage", "ai.manage"],
+  }),
 }));
+
+const { apiFetchMock } = vi.hoisted(() => ({
+  apiFetchMock: vi.fn().mockResolvedValue(Response.json({ data: [] })),
+}));
+
+vi.mock("../../../auth", async () => {
+  const { createMockGossoClient } =
+    await import("../../../test/mockGossoClient");
+  return {
+    apiFetch: apiFetchMock,
+    gossoClient: createMockGossoClient(apiFetchMock),
+    canManageBlog: () => true,
+    isLoggedIn: () => true,
+    hasBlogPermission: () => true,
+    hasAnyBlogPermission: () => true,
+    getCachedBlogSession: () => null,
+    redirectToAuthorize: vi.fn(),
+  };
+});
 
 describe("MediaLibrary", () => {
   beforeEach(() => {

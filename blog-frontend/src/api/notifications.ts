@@ -1,4 +1,4 @@
-import { authenticatedApiFetch as apiFetch, readData } from "./client";
+import { apiClient } from "./client";
 
 export interface Notification {
   id: number;
@@ -20,57 +20,38 @@ export const notificationsApi = {
     page?: number;
     pageSize?: number;
   }): Promise<{ list: Notification[]; total: number }> {
-    const search = new URLSearchParams();
-    if (params?.page) search.set("page", String(params.page));
-    if (params?.pageSize) search.set("pageSize", String(params.pageSize));
-    const query = search.toString();
-    return readData<{ list: Notification[]; total: number }>(
-      apiFetch(`/api/me/notifications${query ? `?${query}` : ""}`),
+    return apiClient.get<{ list: Notification[]; total: number }>(
+      "/api/me/notifications",
+      { params },
     );
   },
 
   async markRead(id: number | string): Promise<void> {
-    return readData<void>(
-      apiFetch(`/api/me/notifications/${id}/read`, {
-        method: "PUT",
-      }),
-    );
+    return apiClient.put<void>(`/api/me/notifications/${id}/read`);
   },
 
   async markAllRead(): Promise<void> {
-    return readData<void>(
-      apiFetch("/api/me/notifications/read-all", {
-        method: "PUT",
-      }),
-    );
+    return apiClient.put<void>("/api/me/notifications/read-all");
   },
 
   async deleteNotification(id: number | string): Promise<void> {
-    return readData<void>(
-      apiFetch(`/api/me/notifications/${id}`, {
-        method: "DELETE",
-      }),
-    );
+    return apiClient.delete<void>(`/api/me/notifications/${id}`);
   },
 
   async deleteNotifications(ids: (number | string)[]): Promise<void> {
-    return readData<void>(
-      apiFetch("/api/me/notifications/batch-delete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids }),
-      }),
-    );
+    return apiClient.post<void>("/api/me/notifications/batch-delete", {
+      ids,
+    });
   },
 
   async clearNotifications(
     onlyRead = false,
   ): Promise<{ deleted_count?: number }> {
-    const query = onlyRead ? "?only_read=true" : "";
-    return readData<{ deleted_count?: number }>(
-      apiFetch(`/api/me/notifications${query}`, {
-        method: "DELETE",
-      }),
+    return apiClient.delete<{ deleted_count?: number }>(
+      "/api/me/notifications",
+      {
+        params: onlyRead ? { only_read: "true" } : undefined,
+      },
     );
   },
 };

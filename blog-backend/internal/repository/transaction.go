@@ -5,28 +5,31 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
-	"sync/atomic"
 
 	"go.uber.org/zap"
 )
 
-var atomicLogger atomic.Pointer[zap.Logger]
-
-// SetLogger configures a structured logger for the repository transaction runner.
-func SetLogger(l *zap.Logger) {
-	atomicLogger.Store(l)
+type Transactor struct {
+	db     *sql.DB
+	logger *zap.Logger
 }
 
-// RunInTransaction executes fn within a database transaction with LevelReadCommitted isolation.
-// If fn returns an error or panics, the transaction is rolled back; otherwise it is committed.
-func RunInTransaction(ctx context.Context, db *sql.DB, fn func(tx *sql.Tx) error) (err error) {
-	return RunInTransactionIsolation(ctx, db, sql.LevelReadCommitted, fn)
+func NewTransactor(db *sql.DB, logger *zap.Logger) *Transactor {
+	if db == nil {
+		panic("repository.NewTransactor: db is required")
+	}
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+	return &Transactor{db: db, logger: logger}
 }
 
-// RunInTransactionIsolation is like RunInTransaction but allows specifying the isolation level.
-func RunInTransactionIsolation(ctx context.Context, db *sql.DB, isolation sql.IsolationLevel, fn func(tx *sql.Tx) error) (err error) {
-	tx, err := db.BeginTx(ctx, &sql.TxOptions{Isolation: isolation})
+func (t *Transactor) Run(ctx context.Context, fn func(tx *sql.Tx) error) error {
+	return t.RunIsolation(ctx, sql.LevelReadCommitted, fn)
+}
+
+func (t *Transactor) RunIsolation(ctx context.Context, isolation sql.IsolationLevel, fn func(tx *sql.Tx) error) (err error) {
+	tx, err := t.db.BeginTx(ctx, &sql.TxOptions{Isolation: isolation})
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
 	}
@@ -35,12 +38,12 @@ func RunInTransactionIsolation(ctx context.Context, db *sql.DB, isolation sql.Is
 	defer func() {
 		if p := recover(); p != nil {
 			if rerr := tx.Rollback(); rerr != nil {
-				logRollbackError("rollback failed during panic recovery", rerr)
+				t.logger.Warn("rollback failed during panic recovery", zap.Error(rerr))
 			}
 			panic(p)
 		} else if panicked || err != nil {
 			if rerr := tx.Rollback(); rerr != nil {
-				logRollbackError("rollback failed", rerr)
+				t.logger.Warn("rollback failed", zap.Error(rerr))
 				if err != nil {
 					err = errors.Join(err, fmt.Errorf("transaction rollback failed: %w", rerr))
 				} else {
@@ -62,12 +65,4 @@ func RunInTransactionIsolation(ctx context.Context, db *sql.DB, isolation sql.Is
 	}
 
 	return nil
-}
-
-func logRollbackError(msg string, rerr error) {
-	if l := atomicLogger.Load(); l != nil {
-		l.Warn(msg, zap.Error(rerr))
-	} else {
-		log.Printf("%s: %v", msg, rerr)
-	}
 }

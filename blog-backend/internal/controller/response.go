@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync/atomic"
 
 	"github.com/gin-gonic/gin"
 	agentservice "github.com/rushairer/blog-backend/internal/agent"
@@ -20,21 +19,11 @@ import (
 	"go.uber.org/zap"
 )
 
-var globalLogger atomic.Pointer[zap.Logger]
-
-// SetResponseLogger sets the global logger used by response helpers.
-func SetResponseLogger(logger *zap.Logger) {
-	globalLogger.Store(logger)
-}
-
 func getLogger(c *gin.Context) *zap.Logger {
 	if raw, ok := c.Get("logger"); ok {
 		if l, ok := raw.(*zap.Logger); ok && l != nil {
 			return l
 		}
-	}
-	if l := globalLogger.Load(); l != nil {
-		return l
 	}
 	return zap.L()
 }

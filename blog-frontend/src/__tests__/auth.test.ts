@@ -141,7 +141,7 @@ describe("blog cookie session", () => {
     expect(headers.get("X-CSRF-Token")).toBe("csrf-value");
   });
 
-  it("merives management profile and permissions via fetchUserProfile", async () => {
+  it("derives management profile and permissions via the shared policy", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(Response.json({ sub: "1", name: "Admin" }))
@@ -155,13 +155,15 @@ describe("blog cookie session", () => {
         }),
       );
     vi.stubGlobal("fetch", fetchMock);
-    const { gossoClient, hasBlogPermission, getCachedBlogSession, isLoggedIn } =
-      await import("../auth");
+    const { gossoClient } = await import("../auth");
+    const { defineAbility, canPreviewUnpublished } =
+      await import("../abilities");
     const profile = await gossoClient.fetchUserProfile();
-    expect(isLoggedIn()).toBe(true);
+    expect(gossoClient.getSnapshot().loggedIn).toBe(true);
     expect(profile.permissions).toContain("site.manage");
-    expect(hasBlogPermission("site.manage")).toBe(true);
-    expect(getCachedBlogSession()?.membership_status).toBe("active");
+    expect(defineAbility(profile).can("manage", "site")).toBe(true);
+    expect(canPreviewUnpublished(profile)).toBe(true);
+    expect(gossoClient.getSnapshot().profile?.membership_status).toBe("active");
   });
 
   it("does not grant permissions when membership is suspended", async () => {
@@ -185,8 +187,20 @@ describe("blog cookie session", () => {
       );
     vi.stubGlobal("fetch", fetchMock);
 
-    const { gossoClient, hasBlogPermission } = await import("../auth");
-    await gossoClient.fetchUserProfile();
-    expect(hasBlogPermission("site.manage")).toBe(false);
+    const { gossoClient } = await import("../auth");
+    const { defineAbility, canPreviewUnpublished } =
+      await import("../abilities");
+    const profile = await gossoClient.fetchUserProfile();
+    expect(defineAbility(profile).can("manage", "site")).toBe(false);
+    expect(canPreviewUnpublished(profile)).toBe(false);
+  });
+
+  it("denies every business ability without an authenticated profile", async () => {
+    const { defineAbility, canPreviewUnpublished } =
+      await import("../abilities");
+    const ability = defineAbility(null);
+    expect(ability.can("manage", "site")).toBe(false);
+    expect(ability.can("create", "post")).toBe(false);
+    expect(canPreviewUnpublished(null)).toBe(false);
   });
 });

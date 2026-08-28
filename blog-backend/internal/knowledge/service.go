@@ -38,10 +38,14 @@ type Service struct {
 	logger       *zap.Logger
 	cancel       context.CancelFunc
 	wg           sync.WaitGroup
+	transactor   *repository.Transactor
 }
 
-func NewService(db *sql.DB, secrets *secretbox.Box, allowedHosts []string, logger *zap.Logger) *Service {
-	return &Service{db: db, secrets: secrets, allowedHosts: allowedHosts, logger: logger}
+func NewService(db *sql.DB, secrets *secretbox.Box, allowedHosts []string, logger *zap.Logger, transactor *repository.Transactor) *Service {
+	if transactor == nil {
+		panic("knowledge.NewService: transactor is required")
+	}
+	return &Service{db: db, secrets: secrets, allowedHosts: allowedHosts, logger: logger, transactor: transactor}
 }
 
 const embeddingColumns = `id, name, base_url, model, dimensions, api_key_ciphertext,
@@ -346,7 +350,7 @@ func (s *Service) indexPost(ctx context.Context, postID int64, action, version s
 		if err != nil {
 			return err
 		}
-		err = repository.RunInTransaction(ctx, s.db, func(tx *sql.Tx) error {
+		err = s.transactor.Run(ctx, func(tx *sql.Tx) error {
 			if _, err := tx.ExecContext(ctx, `DELETE FROM ai_content_chunks
 				WHERE post_id=$1 AND embedding_profile_id=$2`, postID, profile.ID); err != nil {
 				return err
@@ -509,7 +513,7 @@ func (s *Service) ReplaceEvaluationCases(ctx context.Context, cases []Evaluation
 	if len(cases) == 0 || len(cases) > 100 {
 		return fmt.Errorf("%w: evaluation requires 1 to 100 cases", ErrInvalid)
 	}
-	return repository.RunInTransaction(ctx, s.db, func(tx *sql.Tx) error {
+	return s.transactor.Run(ctx, func(tx *sql.Tx) error {
 		if _, err := tx.ExecContext(ctx, `UPDATE ai_retrieval_eval_cases SET enabled=false, updated_at=NOW()`); err != nil {
 			return err
 		}

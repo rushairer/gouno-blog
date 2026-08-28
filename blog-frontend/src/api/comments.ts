@@ -1,9 +1,5 @@
-import {
-  authenticatedApiFetch as apiFetch,
-  optionalApiFetch,
-  publicApiFetch,
-  readData,
-} from "./client";
+import { ApiError } from "@gosso/client";
+import { apiClient } from "./client";
 import type { Comment } from "../types/blog";
 
 export interface CommunityComment extends Comment {
@@ -20,15 +16,13 @@ export const commentsApi = {
   async getPostComments(
     slugOrID: string | number,
   ): Promise<CommunityComment[]> {
-    return readData<CommunityComment[]>(
-      publicApiFetch(
-        `/api/posts/${encodeURIComponent(String(slugOrID))}/comments`,
-      ),
+    return apiClient.get<CommunityComment[]>(
+      `/api/posts/${encodeURIComponent(String(slugOrID))}/comments`,
     );
   },
 
   async getAllPostComments(postID: number | string): Promise<Comment[]> {
-    return readData<Comment[]>(apiFetch(`/api/posts/${postID}/comments/all`));
+    return apiClient.get<Comment[]>(`/api/posts/${postID}/comments/all`);
   },
 
   async getAdminComments(params?: {
@@ -37,15 +31,15 @@ export const commentsApi = {
     page?: number;
     pageSize?: number;
   }): Promise<CommunityComment[]> {
-    const search = new URLSearchParams();
-    if (params?.status) search.set("status", params.status);
-    if (params?.reported) search.set("reported", "true");
-    if (params?.page) search.set("page", String(params.page));
-    if (params?.pageSize) search.set("pageSize", String(params.pageSize));
-    const query = search.toString();
-    const result = await readData<unknown>(
-      apiFetch(`/api/admin/comments${query ? `?${query}` : ""}`),
-    );
+    const cleanParams: Record<string, string | number | boolean> = {};
+    if (params?.status) cleanParams.status = params.status;
+    if (params?.reported) cleanParams.reported = true;
+    if (params?.page) cleanParams.page = params.page;
+    if (params?.pageSize) cleanParams.pageSize = params.pageSize;
+
+    const result = await apiClient.get<unknown>("/api/admin/comments", {
+      params: cleanParams,
+    });
     if (Array.isArray(result)) return result as CommunityComment[];
     if (
       result &&
@@ -62,15 +56,9 @@ export const commentsApi = {
     slugOrID: string | number,
     payload: PostCommentPayload,
   ): Promise<CommunityComment> {
-    return readData<CommunityComment>(
-      optionalApiFetch(
-        `/api/posts/${encodeURIComponent(String(slugOrID))}/comments`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        },
-      ),
+    return apiClient.post<CommunityComment>(
+      `/api/posts/${encodeURIComponent(String(slugOrID))}/comments`,
+      payload,
     );
   },
 
@@ -78,51 +66,40 @@ export const commentsApi = {
     commentID: number | string,
     status: "visible" | "hidden" | "pending",
   ): Promise<void> {
-    return readData<void>(
-      apiFetch(`/api/admin/comments/${commentID}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      }),
-    );
+    return apiClient.put<void>(`/api/admin/comments/${commentID}`, {
+      status,
+    });
   },
 
   async deleteComment(commentID: number | string): Promise<void> {
-    return readData<void>(
-      apiFetch(`/api/comments/${commentID}`, {
-        method: "DELETE",
-      }),
-    );
+    return apiClient.delete<void>(`/api/comments/${commentID}`);
   },
 
   async reportComment(
     commentID: number | string,
     reason: string,
   ): Promise<"submitted" | "already-reported"> {
-    const response = await optionalApiFetch(
-      `/api/comments/${commentID}/report`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason }),
-      },
-    );
-    if (response.status === 409) return "already-reported";
-    await readData<void>(response);
-    return "submitted";
+    try {
+      await apiClient.post<void>(`/api/comments/${commentID}/report`, {
+        reason,
+      });
+      return "submitted";
+    } catch (err: unknown) {
+      if (err instanceof ApiError && err.status === 409) {
+        return "already-reported";
+      }
+      throw err;
+    }
   },
 
   async setLike(
     slugOrID: string | number,
     liked: boolean,
   ): Promise<{ liked: boolean; likes_count: number }> {
-    return readData<{ liked: boolean; likes_count: number }>(
-      optionalApiFetch(
-        `/api/posts/${encodeURIComponent(String(slugOrID))}/like`,
-        {
-          method: liked ? "PUT" : "DELETE",
-        },
-      ),
-    );
+    const url = `/api/posts/${encodeURIComponent(String(slugOrID))}/like`;
+    if (liked) {
+      return apiClient.put<{ liked: boolean; likes_count: number }>(url);
+    }
+    return apiClient.delete<{ liked: boolean; likes_count: number }>(url);
   },
 };

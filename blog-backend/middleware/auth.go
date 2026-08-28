@@ -17,6 +17,8 @@ type AuthOptions struct {
 	ClientID     string
 }
 
+const accessTokenCookie = "__Host-access_token"
+
 func bearerToken(ctx *gin.Context) (string, bool) {
 	authHeader := ctx.GetHeader("Authorization")
 	if authHeader == "" {
@@ -36,7 +38,7 @@ func requestToken(ctx *gin.Context) (string, bool) {
 	if token, ok := bearerToken(ctx); ok {
 		return token, true
 	}
-	if token, err := ctx.Cookie("__Host-access_token"); err == nil && token != "" {
+	if token, err := ctx.Cookie(accessTokenCookie); err == nil && token != "" {
 		return token, true
 	}
 	return "", false
@@ -67,7 +69,7 @@ func OptionalAuth(verifier *auth.Verifier, options AuthOptions) gin.HandlerFunc 
 		tokenStr, hasBearer := bearerToken(ctx)
 		if !hasBearer {
 			var err error
-			tokenStr, err = ctx.Cookie("__Host-access_token")
+			tokenStr, err = ctx.Cookie(accessTokenCookie)
 			if err != nil || tokenStr == "" {
 				ctx.Next()
 				return

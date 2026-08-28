@@ -4,7 +4,11 @@ import { describe, expect, it, vi } from "vitest";
 import { ConnectorWorkspace } from "../ConnectorWorkspace";
 
 const { apiFetch } = vi.hoisted(() => ({ apiFetch: vi.fn() }));
-vi.mock("../../../auth", () => ({ apiFetch }));
+vi.mock("../../../auth", async () => {
+  const { createMockGossoClient } =
+    await import("../../../test/mockGossoClient");
+  return { apiFetch, gossoClient: createMockGossoClient(apiFetch) };
+});
 
 function response(data: unknown, ok = true) {
   return new Response(JSON.stringify({ data, message: ok ? "" : "failed" }), {

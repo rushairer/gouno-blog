@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { membersApi, type BlogMember } from "../../api/members";
 import { gossoAdminURL } from "../../auth";
+import { ApiError } from "@gosso/client";
 import {
   AdminPage,
   AdminPageHeader,
@@ -75,6 +76,13 @@ function membershipTone(status: BlogMember["membership_status"]) {
 }
 
 const isMfaError = (err: unknown): boolean => {
+  if (err instanceof ApiError) {
+    return (
+      err.message.includes("recent_mfa_required") ||
+      err.message.includes("multi-factor") ||
+      err.message.includes("mfa_required")
+    );
+  }
   if (err instanceof Error) {
     return (
       err.message.includes("recent_mfa_required") ||

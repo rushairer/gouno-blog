@@ -10,6 +10,7 @@ web_server:
     trusted_proxies:
         - "127.0.0.1"
     cors_allowed_origins: []
+    secure_cookies: false
 database:
     default: postgres
     drivers:

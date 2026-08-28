@@ -12,6 +12,7 @@ import (
 
 	_ "github.com/lib/pq"
 	"github.com/rushairer/blog-backend/internal/migrations"
+	"github.com/rushairer/blog-backend/internal/repository"
 	"github.com/rushairer/blog-backend/internal/secretbox"
 )
 
@@ -34,7 +35,7 @@ func TestSandboxConnectorOutboxLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	svc := NewService(db, box)
+	svc := NewService(db, box, repository.NewTransactor(db, nil))
 	profile := &Profile{Name: fmt.Sprintf("sandbox-connector-test-%d", time.Now().UnixNano()), Kind: "newsletter", Sandbox: true, Enabled: true, Config: json.RawMessage(`{"audience":"test","rate_limit_per_minute":1}`)}
 	if err := svc.SaveProfile(ctx, profile, "mock-token-1234"); err != nil {
 		t.Fatal(err)

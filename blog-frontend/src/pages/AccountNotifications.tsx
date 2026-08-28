@@ -10,7 +10,6 @@ import {
   PageHeader,
   Panel,
 } from "../components/ui";
-import { isLoggedIn, redirectToAuthorize } from "../auth";
 import { usePageTitle } from "../hooks/usePageTitle";
 
 import { useI18n } from "../i18n";
@@ -36,10 +35,6 @@ export default function AccountNotifications() {
   }, [t]);
 
   useEffect(() => {
-    if (!isLoggedIn()) {
-      void redirectToAuthorize("/account/notifications");
-      return;
-    }
     void load();
   }, [load]);
 

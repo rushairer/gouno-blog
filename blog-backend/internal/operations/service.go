@@ -20,20 +20,24 @@ import (
 )
 
 type Service struct {
-	db     *sql.DB
-	tools  *tool.Registry
-	logger *zap.Logger
-	wg     sync.WaitGroup
-	repo   *repository.AgentRepository
-	posts  *service.PostService
+	db         *sql.DB
+	tools      *tool.Registry
+	logger     *zap.Logger
+	wg         sync.WaitGroup
+	repo       *repository.AgentRepository
+	posts      *service.PostService
+	transactor *repository.Transactor
 }
 
 func (s *Service) ConfigureGovernance(repo *repository.AgentRepository, posts *service.PostService) {
 	s.repo, s.posts = repo, posts
 }
 
-func NewService(db *sql.DB, tools *tool.Registry, logger *zap.Logger) *Service {
-	return &Service{db: db, tools: tools, logger: logger}
+func NewService(db *sql.DB, tools *tool.Registry, logger *zap.Logger, transactor *repository.Transactor) *Service {
+	if transactor == nil {
+		panic("operations.NewService: transactor is required")
+	}
+	return &Service{db: db, tools: tools, logger: logger, transactor: transactor}
 }
 
 func schema(properties string) json.RawMessage {
@@ -258,7 +262,7 @@ func (s *Service) saveLinkResults(ctx context.Context, postID int64, raw json.Ra
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}
-	return repository.RunInTransaction(ctx, s.db, func(tx *sql.Tx) error {
+	return s.transactor.Run(ctx, func(tx *sql.Tx) error {
 		if _, err := tx.ExecContext(ctx, `DELETE FROM ai_link_health_snapshots WHERE post_id=$1`, postID); err != nil {
 			return err
 		}
@@ -471,7 +475,7 @@ func (s *Service) IgnoreSuggestion(ctx context.Context, id int64, reason string)
 }
 
 func (s *Service) ConvertSuggestion(ctx context.Context, id int64) error {
-	return repository.RunInTransaction(ctx, s.db, func(tx *sql.Tx) error {
+	return s.transactor.Run(ctx, func(tx *sql.Tx) error {
 		var title, description, priority string
 		if err := tx.QueryRowContext(ctx, `SELECT title,description,priority FROM ai_operational_suggestions
 			WHERE id=$1 AND status='new' FOR UPDATE`, id).Scan(&title, &description, &priority); err != nil {

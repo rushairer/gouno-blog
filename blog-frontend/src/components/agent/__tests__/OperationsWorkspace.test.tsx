@@ -4,7 +4,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { OperationsWorkspace } from "../OperationsWorkspace";
 
 const { apiFetch } = vi.hoisted(() => ({ apiFetch: vi.fn() }));
-vi.mock("../../../auth", () => ({ apiFetch }));
+vi.mock("../../../auth", async () => {
+  const { createMockGossoClient } =
+    await import("../../../test/mockGossoClient");
+  return { apiFetch, gossoClient: createMockGossoClient(apiFetch) };
+});
 
 describe("OperationsWorkspace", () => {
   beforeEach(() => {
