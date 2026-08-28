@@ -36,7 +36,13 @@ var ErrLastOwner = errors.New("cannot remove the last owner")
 var ErrOwnerOnly = errors.New("owner role changes require an owner")
 var ErrSelfEscalation = errors.New("cannot grant owner to yourself")
 
-type Bootstrap struct{ Issuer, Subject string }
+type Bootstrap struct {
+	Issuer, Subject string
+	// IssuerMigrations maps a newly trusted issuer to its explicitly approved
+	// predecessor. The subject must remain byte-for-byte identical. This is a
+	// deployment migration allowlist, never a general account-linking mechanism.
+	IssuerMigrations map[string]string
+}
 
 type Principal struct {
 	ID          int64  `json:"id"`
@@ -104,6 +110,66 @@ type Service struct {
 
 func NewService(db *sql.DB, bootstrap Bootstrap) *Service {
 	return &Service{db: db, bootstrap: bootstrap}
+}
+
+func (s *Service) resolvePrincipal(ctx context.Context, tx *sql.Tx, issuer, subject, display, email, avatar string) (Principal, error) {
+	var p Principal
+	load := func(identityIssuer string) error {
+		return tx.QueryRowContext(ctx, `SELECT p.id,p.issuer,p.subject,p.display_name,p.email
+FROM blog_principal_identities i
+JOIN blog_principals p ON p.id=i.principal_id
+WHERE i.issuer=$1 AND i.subject=$2
+FOR UPDATE OF p`, identityIssuer, subject).Scan(&p.ID, &p.Issuer, &p.Subject, &p.DisplayName, &p.Email)
+	}
+
+	err := load(issuer)
+	if errors.Is(err, sql.ErrNoRows) {
+		legacyIssuer := strings.TrimSpace(s.bootstrap.IssuerMigrations[issuer])
+		if legacyIssuer != "" && legacyIssuer != issuer {
+			err = load(legacyIssuer)
+			if err == nil {
+				if _, err = tx.ExecContext(ctx, `INSERT INTO blog_principal_identities (principal_id,issuer,subject)
+VALUES ($1,$2,$3) ON CONFLICT (issuer,subject) DO NOTHING`, p.ID, issuer, subject); err != nil {
+					return Principal{}, err
+				}
+			}
+		}
+	}
+	if errors.Is(err, sql.ErrNoRows) {
+		err = tx.QueryRowContext(ctx, `INSERT INTO blog_principals (issuer,subject,display_name,email,avatar_url)
+VALUES ($1,$2,$3,$4,$5)
+ON CONFLICT (issuer,subject) DO UPDATE SET last_seen_at=NOW()
+RETURNING id,issuer,subject,display_name,email`, issuer, subject, display, email, avatar).
+			Scan(&p.ID, &p.Issuer, &p.Subject, &p.DisplayName, &p.Email)
+		if err == nil {
+			_, err = tx.ExecContext(ctx, `INSERT INTO blog_principal_identities (principal_id,issuer,subject)
+VALUES ($1,$2,$3) ON CONFLICT (issuer,subject) DO NOTHING`, p.ID, issuer, subject)
+		}
+	}
+	if err != nil {
+		return Principal{}, err
+	}
+
+	if _, err = tx.ExecContext(ctx, `UPDATE blog_principals SET
+display_name=CASE WHEN $2 != '' THEN $2 ELSE display_name END,
+email=CASE WHEN $3 != '' THEN $3 ELSE email END,
+avatar_url=CASE WHEN $4 != '' THEN $4 ELSE avatar_url END,
+last_seen_at=NOW()
+WHERE id=$1`, p.ID, display, email, avatar); err != nil {
+		return Principal{}, err
+	}
+	if _, err = tx.ExecContext(ctx, `UPDATE blog_principal_identities SET last_seen_at=NOW()
+WHERE issuer=$1 AND subject=$2`, issuer, subject); err != nil {
+		return Principal{}, err
+	}
+	p.Issuer, p.Subject = issuer, subject
+	if display != "" {
+		p.DisplayName = display
+	}
+	if email != "" {
+		p.Email = email
+	}
+	return p, nil
 }
 
 func stringsClaim(value any) []string {
@@ -179,13 +245,7 @@ func (s *Service) Resolve(ctx context.Context, claims jwt.MapClaims) (Snapshot, 
 	}
 	defer tx.Rollback()
 	var p Principal
-	err = tx.QueryRowContext(ctx, `INSERT INTO blog_principals (issuer, subject, display_name, email, avatar_url)
-VALUES ($1,$2,$3,$4,$5) ON CONFLICT (issuer,subject) DO UPDATE SET
-  display_name=CASE WHEN EXCLUDED.display_name != '' THEN EXCLUDED.display_name ELSE blog_principals.display_name END,
-  email=CASE WHEN EXCLUDED.email != '' THEN EXCLUDED.email ELSE blog_principals.email END,
-  avatar_url=CASE WHEN EXCLUDED.avatar_url != '' THEN EXCLUDED.avatar_url ELSE blog_principals.avatar_url END,
-  last_seen_at=NOW()
-RETURNING id, issuer, subject, display_name, email`, issuer, subject, display, email, avatar).Scan(&p.ID, &p.Issuer, &p.Subject, &p.DisplayName, &p.Email)
+	p, err = s.resolvePrincipal(ctx, tx, issuer, subject, display, email, avatar)
 	if err != nil {
 		return Snapshot{}, err
 	}

@@ -1,0 +1,208 @@
+package authbff
+
+import (
+	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"time"
+
+	"github.com/redis/go-redis/v9"
+	"github.com/tink-crypto/tink-go/v2/tink"
+)
+
+var ErrNotFound = errors.New("BFF record not found")
+
+type AuthorizationFlow struct {
+	State        string    `json:"state"`
+	Nonce        string    `json:"nonce"`
+	PKCEVerifier string    `json:"pkce_verifier"`
+	ReturnTo     string    `json:"return_to"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
+type Session struct {
+	Issuer       string         `json:"issuer"`
+	Subject      string         `json:"subject"`
+	SID          string         `json:"sid,omitempty"`
+	AccessToken  string         `json:"access_token"`
+	RefreshToken string         `json:"refresh_token"`
+	IDToken      string         `json:"id_token"`
+	TokenExpiry  time.Time      `json:"token_expiry"`
+	AuthTime     int64          `json:"auth_time,omitempty"`
+	AMR          []string       `json:"amr,omitempty"`
+	Claims       map[string]any `json:"claims"`
+	CreatedAt    time.Time      `json:"created_at"`
+}
+
+type Store struct {
+	redis  *redis.Client
+	aead   tink.AEAD
+	prefix string
+}
+
+func NewStore(client *redis.Client, primitive tink.AEAD, prefix string) (*Store, error) {
+	if client == nil || primitive == nil {
+		return nil, errors.New("Redis client and Tink AEAD are required")
+	}
+	if prefix == "" {
+		return nil, errors.New("Redis key prefix is required")
+	}
+	return &Store{redis: client, aead: primitive, prefix: prefix}, nil
+}
+
+func RandomHandle() (string, error) {
+	raw := make([]byte, 32)
+	if _, err := io.ReadFull(rand.Reader, raw); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(raw), nil
+}
+
+func (s *Store) PutFlow(ctx context.Context, handle string, flow AuthorizationFlow, ttl time.Duration) error {
+	if handle == "" || flow.State == "" || flow.Nonce == "" || flow.PKCEVerifier == "" || ttl <= 0 {
+		return errors.New("complete authorization flow and positive TTL are required")
+	}
+	return s.put(ctx, "flow", handle, flow, ttl, true)
+}
+
+func (s *Store) TakeFlow(ctx context.Context, handle string) (AuthorizationFlow, error) {
+	var flow AuthorizationFlow
+	key, aad := s.key("flow", handle)
+	value, err := s.redis.GetDel(ctx, key).Bytes()
+	if errors.Is(err, redis.Nil) {
+		return flow, ErrNotFound
+	}
+	if err != nil {
+		return flow, err
+	}
+	if err := s.open(value, aad, &flow); err != nil {
+		return flow, err
+	}
+	return flow, nil
+}
+
+func (s *Store) PutSession(ctx context.Context, handle string, session Session, ttl time.Duration) error {
+	if handle == "" || session.Issuer == "" || session.Subject == "" || session.IDToken == "" || ttl <= 0 {
+		return errors.New("complete session and positive TTL are required")
+	}
+	if err := s.put(ctx, "session", handle, session, ttl, false); err != nil {
+		return err
+	}
+	subKey := s.prefix + ":idx:sub:" + session.Subject
+	_ = s.redis.SAdd(ctx, subKey, handle).Err()
+	_ = s.redis.Expire(ctx, subKey, ttl).Err()
+
+	if session.SID != "" {
+		sidKey := s.prefix + ":idx:sid:" + session.SID
+		_ = s.redis.SAdd(ctx, sidKey, handle).Err()
+		_ = s.redis.Expire(ctx, sidKey, ttl).Err()
+	}
+	return nil
+}
+
+func (s *Store) GetSession(ctx context.Context, handle string) (Session, error) {
+	var session Session
+	key, aad := s.key("session", handle)
+	value, err := s.redis.Get(ctx, key).Bytes()
+	if errors.Is(err, redis.Nil) {
+		return session, ErrNotFound
+	}
+	if err != nil {
+		return session, err
+	}
+	if err := s.open(value, aad, &session); err != nil {
+		return session, err
+	}
+	return session, nil
+}
+
+func (s *Store) DeleteSession(ctx context.Context, handle string) error {
+	session, err := s.GetSession(ctx, handle)
+	if err == nil {
+		if session.Subject != "" {
+			_ = s.redis.SRem(ctx, s.prefix+":idx:sub:"+session.Subject, handle).Err()
+		}
+		if session.SID != "" {
+			_ = s.redis.SRem(ctx, s.prefix+":idx:sid:"+session.SID, handle).Err()
+		}
+	}
+	key, _ := s.key("session", handle)
+	return s.redis.Del(ctx, key).Err()
+}
+
+func (s *Store) DeleteBySubject(ctx context.Context, sub string) error {
+	if sub == "" {
+		return nil
+	}
+	subKey := s.prefix + ":idx:sub:" + sub
+	handles, err := s.redis.SMembers(ctx, subKey).Result()
+	if err != nil && !errors.Is(err, redis.Nil) {
+		return err
+	}
+	for _, handle := range handles {
+		_ = s.DeleteSession(ctx, handle)
+	}
+	_ = s.redis.Del(ctx, subKey)
+	return nil
+}
+
+func (s *Store) DeleteBySID(ctx context.Context, sid string) error {
+	if sid == "" {
+		return nil
+	}
+	sidKey := s.prefix + ":idx:sid:" + sid
+	handles, err := s.redis.SMembers(ctx, sidKey).Result()
+	if err != nil && !errors.Is(err, redis.Nil) {
+		return err
+	}
+	for _, handle := range handles {
+		_ = s.DeleteSession(ctx, handle)
+	}
+	_ = s.redis.Del(ctx, sidKey)
+	return nil
+}
+
+func (s *Store) put(ctx context.Context, kind, handle string, value any, ttl time.Duration, onlyIfAbsent bool) error {
+	plain, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	key, aad := s.key(kind, handle)
+	sealed, err := s.aead.Encrypt(plain, aad)
+	if err != nil {
+		return err
+	}
+	if onlyIfAbsent {
+		ok, err := s.redis.SetNX(ctx, key, sealed, ttl).Result()
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return errors.New("BFF record already exists")
+		}
+		return nil
+	}
+	return s.redis.Set(ctx, key, sealed, ttl).Err()
+}
+
+func (s *Store) open(value, aad []byte, target any) error {
+	plain, err := s.aead.Decrypt(value, aad)
+	if err != nil {
+		return fmt.Errorf("decrypt BFF record: %w", err)
+	}
+	if err := json.Unmarshal(plain, target); err != nil {
+		return fmt.Errorf("decode BFF record: %w", err)
+	}
+	return nil
+}
+
+func (s *Store) key(kind, handle string) (string, []byte) {
+	digest := sha256.Sum256([]byte(handle))
+	key := s.prefix + ":" + kind + ":" + base64.RawURLEncoding.EncodeToString(digest[:])
+	return key, []byte("gouno-blog-bff:" + kind + ":" + key)
+}

@@ -1,5 +1,7 @@
 #!/usr/bin/env sh
-# Generate the localhost certificate consumed by the Docker Caddy gateway.
+# Generate one development certificate with distinct local hostnames. Sharing
+# the certificate does not share origins, cookies, storage, or application
+# sessions; the hostnames remain separate browser security boundaries.
 set -eu
 
 if ! command -v mkcert >/dev/null 2>&1; then
@@ -15,8 +17,10 @@ key_file="$cert_dir/localhost-key.pem"
 mkdir -p "$cert_dir"
 chmod 700 "$cert_dir"
 mkcert -install
-mkcert -cert-file "$cert_file" -key-file "$key_file" localhost 127.0.0.1 ::1
+mkcert -cert-file "$cert_file" -key-file "$key_file" \
+	localhost sso.dev.local blog.dev.local cms.dev.local sso.local.test blog.local.test cms.local.test 127.0.0.1 ::1
 chmod 644 "$cert_file"
 chmod 600 "$key_file"
 
 printf '%s\n' "Generated $cert_file and $key_file"
+printf '%s\n' 'Ensure sso.dev.local, blog.dev.local, and cms.dev.local resolve to 127.0.0.1 before starting the split-origin stack.'

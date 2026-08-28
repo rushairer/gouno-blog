@@ -12,6 +12,7 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/redis/go-redis/v9"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func parseJSONList(envVal string, fallback []string) (string, error) {
@@ -95,6 +96,23 @@ func main() {
 		log.Fatalf("Failed to parse BLOG_OAUTH_SCOPES: %v", err)
 	}
 
+	isConfidential := strings.EqualFold(os.Getenv("BLOG_OAUTH_CONFIDENTIAL"), "true")
+	clientSecret := strings.TrimSpace(os.Getenv("BLOG_OAUTH_CLIENT_SECRET"))
+	var clientSecretHash string
+	if isConfidential && clientSecret != "" {
+		hash, err := bcrypt.GenerateFromPassword([]byte(clientSecret), bcrypt.DefaultCost)
+		if err != nil {
+			log.Fatalf("Failed to hash BLOG_OAUTH_CLIENT_SECRET: %v", err)
+		}
+		clientSecretHash = string(hash)
+	}
+
+	postLogoutRedirectURIsJSON, err := parseJSONList(os.Getenv("BLOG_OAUTH_POST_LOGOUT_REDIRECT_URIS"), []string{"https://localhost:8443/"})
+	if err != nil {
+		log.Fatalf("Failed to parse BLOG_OAUTH_POST_LOGOUT_REDIRECT_URIS: %v", err)
+	}
+	backchannelLogoutURI := envOrDefault("BLOG_OAUTH_BACKCHANNEL_LOGOUT_URI", "")
+
 	log.Println("Starting gouno-blog seed.")
 	log.Println("Connecting to GOSSO database...")
 
@@ -165,11 +183,20 @@ func main() {
 	}
 
 	if clientCount == 0 {
-		log.Printf("Seeding OAuth2 client %q...\n", clientID)
+		log.Printf("Seeding OAuth2 client %q (confidential: %v)...\n", clientID, isConfidential)
 		_, err = db.ExecContext(ctx,
-			`INSERT INTO oauth2_clients (account_id, client_id, name, description, redirect_uris, grant_types, scopes, is_confidential, metadata)
-			 VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, false, '{}'::jsonb)`,
-			accountID, clientID, clientName, clientDescription, redirectURIsJSON, grantTypesJSON, scopesJSON,
+			`INSERT INTO oauth2_clients (
+				account_id, client_id, client_secret_hash, name, description,
+				redirect_uris, post_logout_redirect_uris, grant_types, scopes,
+				is_confidential, metadata, backchannel_logout_uri, backchannel_logout_session_required
+			) VALUES (
+				$1, $2, $3, $4, $5,
+				$6::jsonb, $7::jsonb, $8::jsonb, $9::jsonb,
+				$10, '{}'::jsonb, $11, $12
+			)`,
+			accountID, clientID, clientSecretHash, clientName, clientDescription,
+			redirectURIsJSON, postLogoutRedirectURIsJSON, grantTypesJSON, scopesJSON,
+			isConfidential, backchannelLogoutURI, backchannelLogoutURI != "",
 		)
 		if err != nil {
 			log.Fatalf("Failed to seed OAuth2 client: %v", err)
@@ -183,12 +210,19 @@ func main() {
 			     name = $2,
 			     description = $3,
 			     redirect_uris = $4::jsonb,
-			     grant_types = $5::jsonb,
-			     scopes = $6::jsonb,
-			     is_confidential = false,
+			     post_logout_redirect_uris = $5::jsonb,
+			     grant_types = $6::jsonb,
+			     scopes = $7::jsonb,
+			     is_confidential = $8,
+			     client_secret_hash = CASE WHEN $9 <> '' THEN $9 ELSE client_secret_hash END,
+			     backchannel_logout_uri = $10,
+			     backchannel_logout_session_required = $11,
 			     metadata = COALESCE(metadata, '{}'::jsonb) - 'capability'
-			 WHERE client_id = $7`,
-			accountID, clientName, clientDescription, redirectURIsJSON, grantTypesJSON, scopesJSON, clientID,
+			 WHERE client_id = $12`,
+			accountID, clientName, clientDescription,
+			redirectURIsJSON, postLogoutRedirectURIsJSON, grantTypesJSON, scopesJSON,
+			isConfidential, clientSecretHash, backchannelLogoutURI, backchannelLogoutURI != "",
+			clientID,
 		)
 		if err != nil {
 			log.Fatalf("Failed to update OAuth2 client policy: %v", err)

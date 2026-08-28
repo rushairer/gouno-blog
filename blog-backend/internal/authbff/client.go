@@ -1,0 +1,364 @@
+package authbff
+
+import (
+	"context"
+	"crypto/subtle"
+	"errors"
+	"fmt"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
+
+	"github.com/coreos/go-oidc/v3/oidc"
+	"golang.org/x/oauth2"
+)
+
+type providerMetadata struct {
+	EndSessionEndpoint                        string `json:"end_session_endpoint"`
+	AuthorizationResponseIssuerParamSupported bool   `json:"authorization_response_iss_parameter_supported"`
+}
+
+type internalRoundTripper struct {
+	targetHost  string
+	internalURL *url.URL
+	base        http.RoundTripper
+}
+
+func (rt *internalRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	reqCopy := req.Clone(req.Context())
+	if reqCopy.URL.Host == rt.targetHost {
+		reqCopy.URL.Scheme = rt.internalURL.Scheme
+		reqCopy.URL.Host = rt.internalURL.Host
+		reqCopy.Host = rt.targetHost
+		if reqCopy.Header.Get("X-Forwarded-Proto") == "" {
+			reqCopy.Header.Set("X-Forwarded-Proto", "https")
+		}
+	}
+	base := rt.base
+	if base == nil {
+		base = http.DefaultTransport
+	}
+	return base.RoundTrip(reqCopy)
+}
+
+type Client struct {
+	config     Config
+	store      *Store
+	oauth      oauth2.Config
+	verifier   *oidc.IDTokenVerifier
+	endSession string
+	httpClient *http.Client
+	flowNow    func() time.Time
+}
+
+func (c *Client) withHTTPClient(ctx context.Context) context.Context {
+	if c.httpClient != nil {
+		ctx = oidc.ClientContext(ctx, c.httpClient)
+		ctx = context.WithValue(ctx, oauth2.HTTPClient, c.httpClient)
+	}
+	return ctx
+}
+
+func NewClient(ctx context.Context, config Config, store *Store, httpClient *http.Client) (*Client, error) {
+	config.ApplyDefaults()
+	if err := config.Validate(); err != nil {
+		return nil, err
+	}
+	if store == nil {
+		return nil, errors.New("BFF store is required")
+	}
+	if config.InternalEndpoint != "" {
+		internalURL, err := url.Parse(config.InternalEndpoint)
+		if err != nil {
+			return nil, fmt.Errorf("parse internal endpoint: %w", err)
+		}
+		issuerURL, err := url.Parse(config.Issuer)
+		if err != nil {
+			return nil, fmt.Errorf("parse issuer: %w", err)
+		}
+		targetHost := issuerURL.Host
+		var baseTransport http.RoundTripper
+		if httpClient != nil && httpClient.Transport != nil {
+			baseTransport = httpClient.Transport
+		}
+		transport := &internalRoundTripper{
+			targetHost:  targetHost,
+			internalURL: internalURL,
+			base:        baseTransport,
+		}
+		if httpClient == nil {
+			httpClient = &http.Client{
+				Transport: transport,
+				Timeout:   30 * time.Second,
+			}
+		} else {
+			httpClient.Transport = transport
+		}
+	}
+	if httpClient != nil {
+		ctx = oidc.ClientContext(ctx, httpClient)
+		ctx = context.WithValue(ctx, oauth2.HTTPClient, httpClient)
+	}
+	provider, err := oidc.NewProvider(ctx, config.Issuer)
+	if err != nil {
+		return nil, fmt.Errorf("discover OIDC provider: %w", err)
+	}
+	var metadata providerMetadata
+	if err := provider.Claims(&metadata); err != nil {
+		return nil, fmt.Errorf("decode OIDC metadata: %w", err)
+	}
+	if !metadata.AuthorizationResponseIssuerParamSupported {
+		return nil, errors.New("OIDC provider must support the RFC 9207 authorization response iss parameter")
+	}
+	endpoint := provider.Endpoint()
+	endpoint.AuthStyle = oauth2.AuthStyleInHeader
+	return &Client{
+		config: config,
+		store:  store,
+		oauth: oauth2.Config{
+			ClientID: config.ClientID, ClientSecret: config.ClientSecret,
+			RedirectURL: config.RedirectURL, Scopes: append([]string(nil), config.Scopes...), Endpoint: endpoint,
+		},
+		verifier:   provider.Verifier(&oidc.Config{ClientID: config.ClientID}),
+		endSession: metadata.EndSessionEndpoint,
+		httpClient: httpClient,
+		flowNow:    time.Now,
+	}, nil
+}
+
+func (c *Client) Begin(ctx context.Context, returnTo string) (handle, authorizationURL string, err error) {
+	returnTo, err = SafeReturnTo(returnTo)
+	if err != nil {
+		return "", "", err
+	}
+	handle, err = RandomHandle()
+	if err != nil {
+		return "", "", err
+	}
+	state, err := RandomHandle()
+	if err != nil {
+		return "", "", err
+	}
+	nonce, err := RandomHandle()
+	if err != nil {
+		return "", "", err
+	}
+	verifier := oauth2.GenerateVerifier()
+	flow := AuthorizationFlow{
+		State: state, Nonce: nonce, PKCEVerifier: verifier, ReturnTo: returnTo, CreatedAt: c.flowNow().UTC(),
+	}
+	if err := c.store.PutFlow(ctx, handle, flow, c.config.FlowTTL); err != nil {
+		return "", "", err
+	}
+	return handle, c.oauth.AuthCodeURL(state,
+		oauth2.S256ChallengeOption(verifier),
+		oidc.Nonce(nonce),
+		oauth2.SetAuthURLParam("resource", c.config.Resource),
+	), nil
+}
+
+func (c *Client) Complete(ctx context.Context, flowHandle string, query url.Values) (sessionHandle string, session Session, returnTo string, err error) {
+	ctx = c.withHTTPClient(ctx)
+	flow, err := c.store.TakeFlow(ctx, flowHandle)
+	if err != nil {
+		return "", session, "", err
+	}
+	if providerError := query.Get("error"); providerError != "" {
+		return "", session, "", fmt.Errorf("authorization failed: %s", providerError)
+	}
+	if !constantTimeEqual(query.Get("state"), flow.State) {
+		return "", session, "", errors.New("invalid OAuth state")
+	}
+	if !constantTimeEqual(query.Get("iss"), c.config.Issuer) {
+		return "", session, "", errors.New("invalid authorization response issuer")
+	}
+	code := query.Get("code")
+	if code == "" {
+		return "", session, "", errors.New("authorization code is missing")
+	}
+	token, err := c.oauth.Exchange(ctx, code,
+		oauth2.VerifierOption(flow.PKCEVerifier),
+		oauth2.SetAuthURLParam("resource", c.config.Resource),
+	)
+	if err != nil {
+		return "", session, "", fmt.Errorf("exchange authorization code: %w", err)
+	}
+	rawIDToken, _ := token.Extra("id_token").(string)
+	if rawIDToken == "" {
+		return "", session, "", errors.New("token response is missing id_token")
+	}
+	idToken, err := c.verifier.Verify(ctx, rawIDToken)
+	if err != nil {
+		return "", session, "", fmt.Errorf("verify ID token: %w", err)
+	}
+	if !constantTimeEqual(idToken.Nonce, flow.Nonce) {
+		return "", session, "", errors.New("invalid ID token nonce")
+	}
+	var claims struct {
+		Issuer   string   `json:"iss"`
+		Subject  string   `json:"sub"`
+		SID      string   `json:"sid"`
+		AuthTime int64    `json:"auth_time"`
+		AMR      []string `json:"amr"`
+	}
+	if err := idToken.Claims(&claims); err != nil {
+		return "", session, "", fmt.Errorf("decode ID token claims: %w", err)
+	}
+	allClaims := map[string]any{}
+	if err := idToken.Claims(&allClaims); err != nil {
+		return "", session, "", fmt.Errorf("decode verified ID token claims: %w", err)
+	}
+	if claims.Issuer != c.config.Issuer || claims.Subject == "" {
+		return "", session, "", errors.New("ID token identity claims are incomplete")
+	}
+	sessionHandle, err = RandomHandle()
+	if err != nil {
+		return "", session, "", err
+	}
+	session = Session{
+		Issuer: claims.Issuer, Subject: claims.Subject, SID: claims.SID,
+		AccessToken: token.AccessToken, RefreshToken: token.RefreshToken, IDToken: rawIDToken,
+		TokenExpiry: token.Expiry, AuthTime: claims.AuthTime, AMR: claims.AMR, CreatedAt: c.flowNow().UTC(),
+		Claims: allClaims,
+	}
+	if err := c.store.PutSession(ctx, sessionHandle, session, c.config.SessionTTL); err != nil {
+		return "", Session{}, "", err
+	}
+	return sessionHandle, session, flow.ReturnTo, nil
+}
+
+func (c *Client) Refresh(ctx context.Context, sessionHandle string) (Session, error) {
+	ctx = c.withHTTPClient(ctx)
+	session, err := c.store.GetSession(ctx, sessionHandle)
+	if err != nil {
+		return Session{}, err
+	}
+	if session.RefreshToken == "" {
+		return Session{}, errors.New("no refresh token in session")
+	}
+
+	t := &oauth2.Token{
+		RefreshToken: session.RefreshToken,
+		Expiry:       session.TokenExpiry,
+	}
+	tokenSource := c.oauth.TokenSource(ctx, t)
+	newToken, err := tokenSource.Token()
+	if err != nil {
+		return Session{}, fmt.Errorf("refresh token exchange: %w", err)
+	}
+
+	session.AccessToken = newToken.AccessToken
+	if newToken.RefreshToken != "" {
+		session.RefreshToken = newToken.RefreshToken
+	}
+	session.TokenExpiry = newToken.Expiry
+
+	if rawIDToken, ok := newToken.Extra("id_token").(string); ok && rawIDToken != "" {
+		if idToken, err := c.verifier.Verify(ctx, rawIDToken); err == nil {
+			session.IDToken = rawIDToken
+			var claims struct {
+				SID string `json:"sid"`
+			}
+			if err := idToken.Claims(&claims); err == nil && claims.SID != "" {
+				session.SID = claims.SID
+			}
+			allClaims := map[string]any{}
+			if err := idToken.Claims(&allClaims); err == nil {
+				session.Claims = allClaims
+			}
+		}
+	}
+
+	if err := c.store.PutSession(ctx, sessionHandle, session, c.config.SessionTTL); err != nil {
+		return Session{}, err
+	}
+	return session, nil
+}
+
+func (c *Client) LogoutURL(session Session, postLogoutRedirect string) (string, error) {
+	if c.endSession == "" {
+		return "", nil
+	}
+	endSessionURL, err := url.Parse(c.endSession)
+	if err != nil {
+		return "", err
+	}
+	q := endSessionURL.Query()
+	if session.IDToken != "" {
+		q.Set("id_token_hint", session.IDToken)
+	}
+	targetRedirect := c.config.PostLogoutURL
+	if postLogoutRedirect != "" {
+		if safe, err := SafeReturnTo(postLogoutRedirect); err == nil {
+			targetRedirect = safe
+		}
+	}
+	if targetRedirect != "" {
+		q.Set("post_logout_redirect_uri", targetRedirect)
+	}
+	q.Set("client_id", c.config.ClientID)
+	endSessionURL.RawQuery = q.Encode()
+	return endSessionURL.String(), nil
+}
+
+func (c *Client) BackChannelLogout(ctx context.Context, rawLogoutToken string) error {
+	ctx = c.withHTTPClient(ctx)
+	if rawLogoutToken == "" {
+		return errors.New("logout_token is required")
+	}
+	idToken, err := c.verifier.Verify(ctx, rawLogoutToken)
+	if err != nil {
+		return fmt.Errorf("verify logout token: %w", err)
+	}
+	if idToken.Nonce != "" {
+		return errors.New("logout token must not contain a nonce claim")
+	}
+	var claims struct {
+		Issuer  string                    `json:"iss"`
+		Subject string                    `json:"sub"`
+		SID     string                    `json:"sid"`
+		Events  map[string]map[string]any `json:"events"`
+	}
+	if err := idToken.Claims(&claims); err != nil {
+		return fmt.Errorf("decode logout token claims: %w", err)
+	}
+	if claims.Issuer != c.config.Issuer {
+		return errors.New("logout token issuer mismatch")
+	}
+	if _, ok := claims.Events["http://schemas.openid.net/event/backchannel-logout"]; !ok {
+		return errors.New("logout token missing backchannel-logout event claim")
+	}
+	if claims.SID == "" && claims.Subject == "" {
+		return errors.New("logout token must contain sid or sub")
+	}
+	if claims.SID != "" {
+		if err := c.store.DeleteBySID(ctx, claims.SID); err != nil {
+			return err
+		}
+	}
+	if claims.Subject != "" {
+		if err := c.store.DeleteBySubject(ctx, claims.Subject); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func SafeReturnTo(value string) (string, error) {
+	if value == "" {
+		return "/", nil
+	}
+	u, err := url.Parse(value)
+	if err != nil || u.IsAbs() || u.Host != "" || !strings.HasPrefix(u.Path, "/") || strings.HasPrefix(value, "//") {
+		return "", errors.New("return_to must be a local absolute path")
+	}
+	return u.RequestURI(), nil
+}
+
+func constantTimeEqual(left, right string) bool {
+	if len(left) != len(right) || left == "" {
+		return false
+	}
+	return subtle.ConstantTimeCompare([]byte(left), []byte(right)) == 1
+}

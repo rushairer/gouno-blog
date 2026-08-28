@@ -11,15 +11,14 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "gouno",
 	Short: "gouno-blog is a modern headless CMS and blogging platform backend",
-	Long: `gouno-blog is a modern headless CMS and blogging platform backend powered by gouno framework and Gosso authentication.`,
+	Long:  `gouno-blog is a modern headless CMS and blogging platform backend powered by gouno framework and Gosso authentication.`,
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,
 	},
 }
 
-
 func init() {
-	rootCmd.AddCommand(generator.GeneratorCmd, webCmd, ownerRecoverCmd)
+	rootCmd.AddCommand(generator.GeneratorCmd, webCmd, ownerRecoverCmd, bffKeygenCmd)
 }
 
 func Execute() {
