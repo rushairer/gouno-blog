@@ -67,6 +67,12 @@ import { MembershipStatus, RoleType } from "./constants";
 
 let cachedBlogSession: BlogSessionData | null = null;
 
+gossoClient.subscribe((snapshot) => {
+  if (!snapshot.loggedIn) {
+    cachedBlogSession = null;
+  }
+});
+
 export function getCachedBlogSession(): BlogSessionData | null {
   return cachedBlogSession;
 }

@@ -11,10 +11,10 @@ import {
   Sun,
 } from "lucide-react";
 import { notificationsApi } from "../api/notifications";
+import { useUserProfile } from "@gosso/client/react";
 import {
   getCachedBlogSession,
   getBlogRoleLabel,
-  gossoClient,
   hasBlogPermission,
   logout,
 } from "../auth";
@@ -47,7 +47,7 @@ import { STORAGE_KEYS, PAGINATION_LIMITS } from "../constants";
 export default function AdminShell({ children }: { children: ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const user = gossoClient.getUserProfile();
+  const user = useUserProfile();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [search, setSearch] = useState(() =>
     location.pathname === "/admin/posts"

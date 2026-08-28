@@ -7,6 +7,19 @@ import { ToastProvider } from "../../components/ui";
 
 const { logoutMock } = vi.hoisted(() => ({ logoutMock: vi.fn() }));
 
+vi.mock("@gosso/client/react", () => ({
+  useUserProfile: () => ({
+    name: "Content Admin",
+    email: "admin@example.com",
+  }),
+  useSession: () => ({
+    profile: { name: "Content Admin", email: "admin@example.com" },
+    loggedIn: true,
+    isAdmin: true,
+  }),
+  GossoProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
 vi.mock("../../auth", () => ({
   getUserProfile: () => ({ name: "Content Admin", email: "admin@example.com" }),
   gossoClient: {
