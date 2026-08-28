@@ -31,14 +31,8 @@ export const commentsApi = {
     page?: number;
     pageSize?: number;
   }): Promise<CommunityComment[]> {
-    const cleanParams: Record<string, string | number | boolean> = {};
-    if (params?.status) cleanParams.status = params.status;
-    if (params?.reported) cleanParams.reported = true;
-    if (params?.page) cleanParams.page = params.page;
-    if (params?.pageSize) cleanParams.pageSize = params.pageSize;
-
     const result = await apiClient.get<unknown>("/api/admin/comments", {
-      params: cleanParams,
+      params,
     });
     if (Array.isArray(result)) return result as CommunityComment[];
     if (

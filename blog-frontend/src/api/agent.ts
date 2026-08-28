@@ -10,7 +10,6 @@ import type {
   WorkflowInteractionTask,
 } from "../types/agent";
 import { apiClient } from "./client";
-import { parseJsonEnvelope } from "@gosso/client";
 
 export interface DraftMetadataResult {
   summary?: string;
@@ -248,15 +247,8 @@ export const agentApi = {
     apiClient.post<void>(`/api/admin/embedding-profiles/${id}/test`),
   retryIndex: () => apiClient.post<void>("/api/admin/ai-index/retry"),
   rebuildIndex: () => apiClient.post<void>("/api/admin/ai-index/rebuild"),
-  exportProviders: async () => {
-    const response = await apiClient.apiFetch(
-      "/api/admin/provider-profiles/export",
-    );
-    if (!response.ok) {
-      await parseJsonEnvelope<void>(response, "Failed to export providers");
-    }
-    return response.blob();
-  },
+  exportProviders: () =>
+    apiClient.getBlob("/api/admin/provider-profiles/export"),
   importProviders: (payload: unknown) =>
     apiClient.post<{ imported_count: number }>(
       "/api/admin/provider-profiles/import",
@@ -264,13 +256,6 @@ export const agentApi = {
     ),
   importSkill: (payload: unknown) =>
     apiClient.post<AgentSkill>("/api/admin/agent-skills/import", payload),
-  exportSkill: async (id: number) => {
-    const response = await apiClient.apiFetch(
-      `/api/admin/agent-skills/${id}/export`,
-    );
-    if (!response.ok) {
-      await parseJsonEnvelope<void>(response, "Failed to export skill");
-    }
-    return response.blob();
-  },
+  exportSkill: (id: number) =>
+    apiClient.getBlob(`/api/admin/agent-skills/${id}/export`),
 };
