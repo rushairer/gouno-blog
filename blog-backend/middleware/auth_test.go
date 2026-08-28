@@ -200,3 +200,48 @@ func TestOptionalAuthIgnoresExpiredHostCookieForPublicRoutes(t *testing.T) {
 		t.Fatalf("status = %d, want 204 for anonymous public request; body=%s", rec.Code, rec.Body.String())
 	}
 }
+
+func TestAuthMiddlewareAttachesIdentityFromHostCookieSessionWithoutClientID(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	verifier := auth.NewVerifier(serveJWKS(t, &privateKey.PublicKey).URL)
+
+	// Direct user browser session token issued by Gosso (without client_id or aud)
+	cookieToken := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
+		"sub":   "user-cookie-1",
+		"roles": []string{"admin"},
+		"iss":   "test-issuer",
+		"exp":   time.Now().Add(time.Hour).Unix(),
+	})
+	cookieToken.Header["kid"] = "test-key"
+	cookieTokenStr, err := cookieToken.SignedString(privateKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	router := gin.New()
+	router.GET("/admin", AuthMiddlewareWithOptions(verifier, AuthOptions{
+		RequiredRole: "admin",
+		Issuer:       "test-issuer",
+		Audience:     "blog-spa",
+		ClientID:     "blog-spa",
+	}), func(ctx *gin.Context) {
+		if sub, _ := ctx.Get("account_id"); sub == "user-cookie-1" {
+			ctx.Status(http.StatusNoContent)
+			return
+		}
+		ctx.Status(http.StatusUnauthorized)
+	})
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/admin", nil)
+	req.AddCookie(&http.Cookie{Name: "__Host-access_token", Value: cookieTokenStr})
+	router.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want 204; body=%s", rec.Code, rec.Body.String())
+	}
+}
+

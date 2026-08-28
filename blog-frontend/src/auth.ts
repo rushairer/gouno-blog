@@ -50,6 +50,7 @@ export const gossoClient = createGossoClient<BlogUserProfile>({
   postLoginDefaultPath: "/admin",
   loginPath: `${gossoAdminURL.replace(/\/$/, "")}/login`,
   storagePrefix: "gouno-blog",
+  sessionMode: "cookie",
   sessionProfileEndpoint: "/api/me/blog-session",
   csrfCookieName: "blog_csrf_token",
 });
