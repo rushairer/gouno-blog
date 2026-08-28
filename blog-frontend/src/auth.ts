@@ -52,46 +52,14 @@ export const gossoClient = createGossoClient<BlogUserProfile>({
   storagePrefix: "gouno-blog",
   sessionMode: "cookie",
   sessionProfileEndpoint: "/api/me/blog-session",
+  authorizeEndpoint: "/api/auth/login",
+  logoutEndpoint: "/api/auth/logout",
   csrfCookieName: "blog_csrf_token",
 });
 
-export const redirectToAuthorize = async (returnTo = "/admin") => {
-  if (typeof window !== "undefined") {
-    window.location.href = `/api/auth/login?return_to=${encodeURIComponent(returnTo)}`;
-  }
-};
-gossoClient.redirectToAuthorize = redirectToAuthorize;
-
+export const redirectToAuthorize = gossoClient.redirectToAuthorize;
+export const logout = gossoClient.logout;
 export const apiFetch = gossoClient.apiFetch;
 export const stepUpMfa = gossoClient.stepUpMfa;
 
 export { getBlogRoleLabel } from "./constants";
-
-export async function logout(redirectTo = "/") {
-  try {
-    const csrfToken =
-      typeof document !== "undefined"
-        ? document.cookie
-            .split("; ")
-            .find((row) => row.startsWith("blog_csrf_token="))
-            ?.split("=")[1] || ""
-        : "";
-    const resp = await fetch("/api/auth/logout", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRF-Token": csrfToken,
-      },
-    });
-    if (resp.ok) {
-      const data = (await resp.json()) as { logout_url?: string };
-      if (data?.logout_url && typeof window !== "undefined") {
-        window.location.href = data.logout_url;
-        return;
-      }
-    }
-  } catch (e) {
-    console.error("BFF logout error", e);
-  }
-  return gossoClient.logout(redirectTo);
-}
