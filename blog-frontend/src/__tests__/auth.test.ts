@@ -132,8 +132,8 @@ describe("blog cookie session", () => {
     document.cookie = "blog_csrf_token=csrf-value; path=/";
     const fetchMock = vi.fn().mockResolvedValue(Response.json({ data: {} }));
     vi.stubGlobal("fetch", fetchMock);
-    const { optionalApiFetch } = await import("../api/client");
-    await optionalApiFetch("/api/posts/example/comments", {
+    const { apiFetch } = await import("../auth");
+    await apiFetch("/api/posts/example/comments", {
       method: "POST",
       body: "{}",
     });
