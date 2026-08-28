@@ -16,26 +16,26 @@ export default function Callback() {
     <AuthCallback
       onSuccess={handleSuccess}
       renderError={(error) => (
-      <div className="auth-page">
-        <Panel className="auth-card section-stack">
-          <h2>{t("authError")}</h2>
-          <p className="muted">
-            {error === "Missing authorization code or state parameter"
-              ? t("invalidCallback")
-              : error || t("authFailed")}
-          </p>
-          <a href="/" className="btn btn-primary">
-            {t("goHome")}
-          </a>
-        </Panel>
-      </div>
+        <div className="auth-page">
+          <Panel className="auth-card section-stack">
+            <h2>{t("authError")}</h2>
+            <p className="muted">
+              {error === "Missing authorization code or state parameter"
+                ? t("invalidCallback")
+                : error || t("authFailed")}
+            </p>
+            <a href="/" className="btn btn-primary">
+              {t("goHome")}
+            </a>
+          </Panel>
+        </div>
       )}
       renderLoading={() => (
-    <div className="auth-page">
-      <Panel className="auth-card">
-        <LoadingState label={t("completingSignin")} />
-      </Panel>
-      </div>
+        <div className="auth-page">
+          <Panel className="auth-card">
+            <LoadingState label={t("completingSignin")} />
+          </Panel>
+        </div>
       )}
     />
   );

@@ -222,272 +222,272 @@ export default function App() {
     <GossoProvider client={gossoClient}>
       <I18nProvider>
         <ToastProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/callback" element={<Callback />} />
-            <Route
-              path="/login"
-              element={
-                <Public>
-                  <HostedLoginRedirect />
-                </Public>
-              }
-            />
-            <Route
-              path="/"
-              element={
-                <Public>
-                  <Home />
-                </Public>
-              }
-            />
-            <Route
-              path="/articles"
-              element={
-                <Public>
-                  <ArticleIndex />
-                </Public>
-              }
-            />
-            <Route
-              path="/articles/:slug"
-              element={
-                <Public>
-                  <PostDetail />
-                </Public>
-              }
-            />
-            <Route
-              path="/categories"
-              element={
-                <Public>
-                  <Categories />
-                </Public>
-              }
-            />
-            <Route
-              path="/categories/:slug"
-              element={
-                <Public>
-                  <ArticleIndex mode="category" />
-                </Public>
-              }
-            />
-            <Route
-              path="/tags"
-              element={
-                <Public>
-                  <Tags />
-                </Public>
-              }
-            />
-            <Route
-              path="/tags/:slug"
-              element={
-                <Public>
-                  <ArticleIndex mode="tag" />
-                </Public>
-              }
-            />
-            <Route
-              path="/archive"
-              element={
-                <Public>
-                  <Archive />
-                </Public>
-              }
-            />
-            <Route
-              path="/about"
-              element={
-                <Public>
-                  <About />
-                </Public>
-              }
-            />
-            <Route
-              path="/search"
-              element={
-                <Public>
-                  <ArticleIndex mode="search" />
-                </Public>
-              }
-            />
-            <Route
-              path="/account/notifications"
-              element={
-                <Public>
-                  <AccountNotifications />
-                </Public>
-              }
-            />
-            <Route
-              path="/account/settings"
-              element={
-                <Public>
-                  <Settings />
-                </Public>
-              }
-            />
-            <Route
-              path="/notifications"
-              element={<Navigate replace to="/account/notifications" />}
-            />
-            <Route
-              path="/settings"
-              element={<Navigate replace to="/account/settings" />}
-            />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/callback" element={<Callback />} />
+              <Route
+                path="/login"
+                element={
+                  <Public>
+                    <HostedLoginRedirect />
+                  </Public>
+                }
+              />
+              <Route
+                path="/"
+                element={
+                  <Public>
+                    <Home />
+                  </Public>
+                }
+              />
+              <Route
+                path="/articles"
+                element={
+                  <Public>
+                    <ArticleIndex />
+                  </Public>
+                }
+              />
+              <Route
+                path="/articles/:slug"
+                element={
+                  <Public>
+                    <PostDetail />
+                  </Public>
+                }
+              />
+              <Route
+                path="/categories"
+                element={
+                  <Public>
+                    <Categories />
+                  </Public>
+                }
+              />
+              <Route
+                path="/categories/:slug"
+                element={
+                  <Public>
+                    <ArticleIndex mode="category" />
+                  </Public>
+                }
+              />
+              <Route
+                path="/tags"
+                element={
+                  <Public>
+                    <Tags />
+                  </Public>
+                }
+              />
+              <Route
+                path="/tags/:slug"
+                element={
+                  <Public>
+                    <ArticleIndex mode="tag" />
+                  </Public>
+                }
+              />
+              <Route
+                path="/archive"
+                element={
+                  <Public>
+                    <Archive />
+                  </Public>
+                }
+              />
+              <Route
+                path="/about"
+                element={
+                  <Public>
+                    <About />
+                  </Public>
+                }
+              />
+              <Route
+                path="/search"
+                element={
+                  <Public>
+                    <ArticleIndex mode="search" />
+                  </Public>
+                }
+              />
+              <Route
+                path="/account/notifications"
+                element={
+                  <Public>
+                    <AccountNotifications />
+                  </Public>
+                }
+              />
+              <Route
+                path="/account/settings"
+                element={
+                  <Public>
+                    <Settings />
+                  </Public>
+                }
+              />
+              <Route
+                path="/notifications"
+                element={<Navigate replace to="/account/notifications" />}
+              />
+              <Route
+                path="/settings"
+                element={<Navigate replace to="/account/settings" />}
+              />
 
-            <Route
-              path="/admin"
-              element={<Navigate replace to="/admin/dashboard" />}
-            />
-            <Route
-              path="/admin/dashboard"
-              element={
-                <Admin>
-                  <Dashboard />
-                </Admin>
-              }
-            />
-            <Route
-              path="/admin/posts"
-              element={
-                <Admin
-                  requiredPermissions={["content.author", "content.manage"]}
-                >
-                  <AdminPosts />
-                </Admin>
-              }
-            />
-            <Route
-              path="/admin/posts/new"
-              element={
-                <Admin
-                  requiredPermissions={["content.author", "content.manage"]}
-                >
-                  <PostEditor />
-                </Admin>
-              }
-            />
-            <Route
-              path="/admin/posts/:id/edit"
-              element={
-                <Admin
-                  requiredPermissions={["content.author", "content.manage"]}
-                >
-                  <PostEditor />
-                </Admin>
-              }
-            />
-            <Route
-              path="/admin/pages"
-              element={
-                <Admin requiredPermissions={["content.manage"]}>
-                  <AdminPages />
-                </Admin>
-              }
-            />
-            <Route
-              path="/admin/pages/new"
-              element={
-                <Admin requiredPermissions={["content.manage"]}>
-                  <PageEditor />
-                </Admin>
-              }
-            />
-            <Route
-              path="/admin/pages/:id/edit"
-              element={
-                <Admin requiredPermissions={["content.manage"]}>
-                  <PageEditor />
-                </Admin>
-              }
-            />
-            <Route
-              path="/admin/categories"
-              element={
-                <Admin requiredPermissions={["content.manage"]}>
-                  <AdminCategories />
-                </Admin>
-              }
-            />
-            <Route
-              path="/admin/tags"
-              element={
-                <Admin requiredPermissions={["content.manage"]}>
-                  <AdminTags />
-                </Admin>
-              }
-            />
-            <Route
-              path="/admin/comments"
-              element={
-                <Admin requiredPermissions={["community.moderate"]}>
-                  <AdminComments />
-                </Admin>
-              }
-            />
-            <Route
-              path="/admin/notifications"
-              element={
-                <Admin>
-                  <AdminNotifications />
-                </Admin>
-              }
-            />
-            <Route
-              path="/admin/media"
-              element={
-                <Admin
-                  requiredPermissions={["content.author", "content.manage"]}
-                >
-                  <MediaLibrary />
-                </Admin>
-              }
-            />
-            <Route
-              path="/admin/settings"
-              element={
-                <Admin requiredPermissions={["site.manage"]}>
-                  <AdminSiteSettings />
-                </Admin>
-              }
-            />
-            <Route
-              path="/admin/users"
-              element={
-                <Admin requiredPermissions={["members.manage"]}>
-                  <AdminUsers />
-                </Admin>
-              }
-            />
-            <Route
-              path="/admin/ai-ops"
-              element={
-                <Admin requiredPermissions={["ai.manage"]}>
-                  <AIOperations />
-                </Admin>
-              }
-            />
-            <Route
-              path="/:slug"
-              element={
-                <Public>
-                  <CustomPageView />
-                </Public>
-              }
-            />
-            <Route
-              path="*"
-              element={
-                <Public>
-                  <NotFound />
-                </Public>
-              }
-            />
-          </Routes>
-        </BrowserRouter>
+              <Route
+                path="/admin"
+                element={<Navigate replace to="/admin/dashboard" />}
+              />
+              <Route
+                path="/admin/dashboard"
+                element={
+                  <Admin>
+                    <Dashboard />
+                  </Admin>
+                }
+              />
+              <Route
+                path="/admin/posts"
+                element={
+                  <Admin
+                    requiredPermissions={["content.author", "content.manage"]}
+                  >
+                    <AdminPosts />
+                  </Admin>
+                }
+              />
+              <Route
+                path="/admin/posts/new"
+                element={
+                  <Admin
+                    requiredPermissions={["content.author", "content.manage"]}
+                  >
+                    <PostEditor />
+                  </Admin>
+                }
+              />
+              <Route
+                path="/admin/posts/:id/edit"
+                element={
+                  <Admin
+                    requiredPermissions={["content.author", "content.manage"]}
+                  >
+                    <PostEditor />
+                  </Admin>
+                }
+              />
+              <Route
+                path="/admin/pages"
+                element={
+                  <Admin requiredPermissions={["content.manage"]}>
+                    <AdminPages />
+                  </Admin>
+                }
+              />
+              <Route
+                path="/admin/pages/new"
+                element={
+                  <Admin requiredPermissions={["content.manage"]}>
+                    <PageEditor />
+                  </Admin>
+                }
+              />
+              <Route
+                path="/admin/pages/:id/edit"
+                element={
+                  <Admin requiredPermissions={["content.manage"]}>
+                    <PageEditor />
+                  </Admin>
+                }
+              />
+              <Route
+                path="/admin/categories"
+                element={
+                  <Admin requiredPermissions={["content.manage"]}>
+                    <AdminCategories />
+                  </Admin>
+                }
+              />
+              <Route
+                path="/admin/tags"
+                element={
+                  <Admin requiredPermissions={["content.manage"]}>
+                    <AdminTags />
+                  </Admin>
+                }
+              />
+              <Route
+                path="/admin/comments"
+                element={
+                  <Admin requiredPermissions={["community.moderate"]}>
+                    <AdminComments />
+                  </Admin>
+                }
+              />
+              <Route
+                path="/admin/notifications"
+                element={
+                  <Admin>
+                    <AdminNotifications />
+                  </Admin>
+                }
+              />
+              <Route
+                path="/admin/media"
+                element={
+                  <Admin
+                    requiredPermissions={["content.author", "content.manage"]}
+                  >
+                    <MediaLibrary />
+                  </Admin>
+                }
+              />
+              <Route
+                path="/admin/settings"
+                element={
+                  <Admin requiredPermissions={["site.manage"]}>
+                    <AdminSiteSettings />
+                  </Admin>
+                }
+              />
+              <Route
+                path="/admin/users"
+                element={
+                  <Admin requiredPermissions={["members.manage"]}>
+                    <AdminUsers />
+                  </Admin>
+                }
+              />
+              <Route
+                path="/admin/ai-ops"
+                element={
+                  <Admin requiredPermissions={["ai.manage"]}>
+                    <AIOperations />
+                  </Admin>
+                }
+              />
+              <Route
+                path="/:slug"
+                element={
+                  <Public>
+                    <CustomPageView />
+                  </Public>
+                }
+              />
+              <Route
+                path="*"
+                element={
+                  <Public>
+                    <NotFound />
+                  </Public>
+                }
+              />
+            </Routes>
+          </BrowserRouter>
         </ToastProvider>
       </I18nProvider>
     </GossoProvider>

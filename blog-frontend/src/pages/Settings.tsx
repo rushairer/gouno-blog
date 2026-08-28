@@ -462,7 +462,8 @@ export default function Settings() {
                     className="btn btn-danger"
                     onClick={() => void revokeSession(session.id)}
                     disabled={
-                      loading || session.id === sessionManager.currentSession?.id
+                      loading ||
+                      session.id === sessionManager.currentSession?.id
                     }
                     type="button"
                   >
