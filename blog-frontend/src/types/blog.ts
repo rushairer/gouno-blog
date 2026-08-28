@@ -1,4 +1,6 @@
-export type PostStatus = "draft" | "scheduled" | "published";
+import type { PostStatus } from "../constants";
+
+export type { PostStatus };
 
 export interface Category {
   id: number;
