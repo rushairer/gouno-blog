@@ -16,7 +16,6 @@ import Archive from "./pages/Archive";
 import About from "./pages/About";
 import NotFound from "./pages/NotFound";
 import Callback from "./pages/Callback";
-import HostedLoginRedirect from "./pages/HostedLoginRedirect";
 import { useSiteMetadata } from "./hooks/useSiteMetadata";
 const Settings = React.lazy(() => import("./pages/Settings"));
 const Dashboard = React.lazy(() => import("./pages/admin/Dashboard"));
@@ -196,14 +195,6 @@ export default function App() {
           <BrowserRouter>
             <Routes>
               <Route path="/callback" element={<Callback />} />
-              <Route
-                path="/login"
-                element={
-                  <Public>
-                    <HostedLoginRedirect />
-                  </Public>
-                }
-              />
               <Route
                 path="/"
                 element={

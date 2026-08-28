@@ -45,11 +45,15 @@ services:
       GOUNO_DATABASE_DRIVERS_POSTGRES_DSN: ${GOSSO_DATABASE_DSN:?set GOSSO_DATABASE_DSN}
       GOUNO_REDIS_DSN: ${GOSSO_REDIS_DSN:?set GOSSO_REDIS_DSN}
       GOUNO_AUTH_ISSUER: ${PUBLIC_ORIGIN:?set PUBLIC_ORIGIN}
+      # OAuth authorization must hand unauthenticated browsers to the hosted
+      # identity UI. Never leave this at GOSSO's generic /login default: the
+      # Blog SPA owns that legacy path and would otherwise restart OAuth.
+      GOUNO_AUTH_LOGIN_URL: /identity-admin/login
       GOUNO_AUTH_PRIVATE_KEY_PATH: /run/secrets/gosso_signing_key
       GOUNO_AUTH_TOTP_ENCRYPTION_KEY: ${GOSSO_TOTP_KEY:?set a unique 64-character hex key}
       GOUNO_AUTH_VERIFY_HASH_PEPPER: ${GOSSO_VERIFY_PEPPER:?set GOSSO_VERIFY_PEPPER}
       GOUNO_CORS_ALLOWED_ORIGINS: ${GOSSO_CORS_ALLOWED_ORIGINS:?set an exact JSON origin list}
-      GOUNO_WEB_SERVER_TRUSTED_PROXIES: ${GOSSO_TRUSTED_PROXIES:?set an exact JSON CIDR list}
+      GOUNO_WEB_SERVER_TRUSTED_PROXIES: ${GOSSO_TRUSTED_PROXIES:?set an exact comma-separated CIDR list}
     secrets: [gosso_signing_key]
     depends_on:
       db: {condition: service_healthy}

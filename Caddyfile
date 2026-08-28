@@ -93,10 +93,6 @@ https://localhost:8443 {
 	@identity_admin_root path /identity-admin
 	redir @identity_admin_root /identity-admin/ permanent
 
-	# Backward-compatible entry only. Authentication UI is owned by GOSSO.
-	@legacy_login path /login
-	redir @legacy_login /identity-admin/login?{query} 308
-
 	handle /identity-admin/* {
 		reverse_proxy gosso-admin-frontend:8083 {
 			header_up Host localhost:8443
