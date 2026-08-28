@@ -40,7 +40,10 @@ const gossoClientID = import.meta.env.VITE_GOSSO_CLIENT_ID || "blog-spa";
 // `admin` scope merely to display or decide Blog permissions.
 const gossoScope = import.meta.env.VITE_GOSSO_SCOPE || "openid profile email";
 export const gossoAdminURL =
-  import.meta.env.VITE_GOSSO_ADMIN_URL || "/identity-admin";
+  import.meta.env.VITE_GOSSO_ADMIN_URL ||
+  (typeof window !== "undefined" && window.location.hostname.endsWith(".local")
+    ? "https://sso.dev.local"
+    : "/identity-admin");
 
 export const gossoClient = createGossoClient<BlogUserProfile>({
   issuer: gossoIssuer,
