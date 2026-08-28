@@ -119,11 +119,11 @@ describe("blog cookie session", () => {
     await expect(logout()).rejects.toThrow(/logout failed/i);
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://blog.example.test/api/v1/auth/logout",
+      "https://blog.example.test/api/auth/logout",
       expect.objectContaining({
         method: "POST",
         credentials: "same-origin",
-        headers: { "X-CSRF-Token": "gosso-token" },
+        headers: { "X-CSRF-Token": "blog-token" },
       }),
     );
   });
