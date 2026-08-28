@@ -37,6 +37,14 @@ export const apiFetch = gossoClient.apiFetch;
 
 export const stepUpMfa = gossoClient.stepUpMfa;
 
+/** Continue the deployment-specific hosted-login handoff using SDK configuration. */
+export function redirectToHostedLogin(search: string, hash: string): void {
+  const target = new URL(gossoClient.config.loginPath, window.location.origin);
+  target.search = search;
+  target.hash = hash;
+  window.location.replace(target.toString());
+}
+
 export type ManagementAccess = "admin" | "denied" | "anonymous" | "error";
 
 export interface BlogPrincipal {

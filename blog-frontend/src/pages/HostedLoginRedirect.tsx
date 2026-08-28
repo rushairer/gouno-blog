@@ -1,13 +1,12 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { gossoAdminURL } from "../auth";
+import { redirectToHostedLogin } from "../auth";
 
 export default function HostedLoginRedirect() {
   const location = useLocation();
 
   useEffect(() => {
-    const base = gossoAdminURL.replace(/\/$/, "");
-    window.location.replace(`${base}/login${location.search}${location.hash}`);
+    redirectToHostedLogin(location.search, location.hash);
   }, [location.hash, location.search]);
 
   return (

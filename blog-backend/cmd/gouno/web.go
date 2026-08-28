@@ -29,6 +29,7 @@ import (
 	"github.com/rushairer/blog-backend/middleware"
 	"github.com/rushairer/blog-backend/router"
 	"github.com/rushairer/blog-backend/utility"
+	gounoAuth "github.com/rushairer/gouno/auth"
 	gounoMiddleware "github.com/rushairer/gouno/middleware"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -75,7 +76,6 @@ func startWebServer(cmd *cobra.Command, args []string) {
 	loggerLevel := zap.NewAtomicLevelAt(zapcore.Level(globalConfig.LogConfig.Level))
 	logger := utility.NewLogger(loggerLevel)
 	repository.SetLogger(logger)
-
 	logger.Sugar().Info("starting web server...")
 
 	// init db
@@ -104,8 +104,6 @@ func startWebServer(cmd *cobra.Command, args []string) {
 	}
 
 	bootstrapDatabase(db, logger)
-	service.StartScheduledPublisher(ctx, repository.NewPostRepository(db), logger)
-
 	jwksURL := os.Getenv("SSO_JWKS_URL")
 	if jwksURL == "" {
 		jwksURL = "http://localhost:8088/.well-known/jwks.json"
@@ -122,6 +120,10 @@ func startWebServer(cmd *cobra.Command, args []string) {
 	}
 	engine.Use(
 		gin.Logger(),
+		func(ctx *gin.Context) {
+			ctx.Set("logger", logger)
+			ctx.Next()
+		},
 		middleware.RecoveryMiddleware(),
 		middleware.SecurityHeadersMiddleware(!globalConfig.WebServerConfig.Debug),
 		middleware.TimeoutMiddlewareWithOverrides(globalConfig.WebServerConfig.RequestTimeout, map[string]time.Duration{
@@ -214,6 +216,11 @@ func startWebServer(cmd *cobra.Command, args []string) {
 			agentRepo, runner, globalConfig.AIAgentConfig.SchedulerInterval, logger,
 		).Start(ctx)
 	}
+	verifier := gounoAuth.NewVerifier(jwksURL)
+	accessService := access.NewService(db, access.Bootstrap{
+		Issuer:  os.Getenv("BLOG_BOOTSTRAP_OWNER_ISSUER"),
+		Subject: os.Getenv("BLOG_BOOTSTRAP_OWNER_SUBJECT"),
+	})
 	router.RegisterWebRouterWithOptions(engine, router.WebRouterOptions{
 		DB:                 db,
 		AuthOptions:        authOptions,
@@ -230,10 +237,8 @@ func startWebServer(cmd *cobra.Command, args []string) {
 		GrowthSvc:          growthSvc,
 		AgentCtrl:          agentCtrl,
 		Logger:             logger,
-		BootstrapOwner: access.Bootstrap{
-			Issuer:  os.Getenv("BLOG_BOOTSTRAP_OWNER_ISSUER"),
-			Subject: os.Getenv("BLOG_BOOTSTRAP_OWNER_SUBJECT"),
-		},
+		Verifier:           verifier,
+		AccessService:      accessService,
 	})
 
 	httpServer := &http.Server{

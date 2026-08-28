@@ -3,6 +3,15 @@ import type React from "react";
 import { KeyRound, Laptop, Mail, Shield, User } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import {
+  useGossoClient,
+  useIsAuthenticated,
+  useMfa,
+  usePasskeys,
+  useProfileManager,
+  useSessions,
+  useUserProfile,
+} from "@gosso/client/react";
+import {
   ActionGroup,
   ContentStack,
   Feedback,
@@ -10,14 +19,7 @@ import {
   PageHeader,
   Panel,
 } from "../components/ui";
-import { gossoClient, isLoggedIn, redirectToAuthorize } from "../auth";
-import type {
-  MfaEnrollment,
-  MfaStatus,
-  PasskeyInfo,
-  SessionInfo,
-  UserProfile,
-} from "../auth";
+import { redirectToAuthorize } from "../auth";
 import { useI18n } from "../i18n";
 import { usePageTitle } from "../hooks/usePageTitle";
 
@@ -26,10 +28,14 @@ type SettingsTab = "profile" | "security" | "passkeys" | "sessions";
 export default function Settings() {
   const { t, formatDateTime } = useI18n();
   usePageTitle(t("accountSettings"));
+  const client = useGossoClient();
+  const loggedIn = useIsAuthenticated();
+  const profile = useUserProfile();
+  const profileManager = useProfileManager();
+  const mfa = useMfa();
+  const passkeyManager = usePasskeys();
+  const sessionManager = useSessions();
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
-  const [profile, setProfile] = useState<UserProfile | null>(() =>
-    gossoClient.getUserProfile(),
-  );
   const [displayName, setDisplayName] = useState(profile?.name || "");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -38,35 +44,40 @@ export default function Settings() {
   const [emailPassword, setEmailPassword] = useState("");
   const [emailCode, setEmailCode] = useState("");
   const [emailPending, setEmailPending] = useState(false);
-  const [mfaStatus, setMfaStatus] = useState<MfaStatus | null>(null);
-  const [mfaEnrollment, setMfaEnrollment] = useState<MfaEnrollment | null>(
-    null,
-  );
   const [mfaCode, setMfaCode] = useState("");
   const [mfaDisablePassword, setMfaDisablePassword] = useState("");
-  const [backupCodes, setBackupCodes] = useState<string[]>([]);
-  const [passkeys, setPasskeys] = useState<PasskeyInfo[]>([]);
   const [newPasskeyName, setNewPasskeyName] = useState("My passkey");
-  const [sessions, setSessions] = useState<SessionInfo[]>([]);
-  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const loading =
+    refreshing ||
+    profileManager.loading ||
+    mfa.loading ||
+    passkeyManager.loading ||
+    sessionManager.loading;
+  const error =
+    validationError ||
+    profileManager.error ||
+    mfa.error ||
+    passkeyManager.error ||
+    sessionManager.error;
 
   useEffect(() => {
-    if (!isLoggedIn()) {
-      redirectToAuthorize("/settings");
-      return;
-    }
-    void refreshSettings();
-  }, []);
+    if (!loggedIn) void redirectToAuthorize("/settings");
+  }, [loggedIn]);
+
+  useEffect(() => {
+    setDisplayName(profile?.name || "");
+    setNewEmail(profile?.email || "");
+  }, [profile]);
 
   const setFeedback = (
     nextSuccess: string | null,
     nextError: string | null = null,
   ) => {
     setSuccess(nextSuccess);
-    setError(nextError);
+    setValidationError(nextError);
   };
 
   const runAction = async (
@@ -74,7 +85,6 @@ export default function Settings() {
     successMessage: string,
   ) => {
     try {
-      setLoading(true);
       setFeedback(null);
       await action();
       setFeedback(successMessage);
@@ -83,38 +93,27 @@ export default function Settings() {
         null,
         err instanceof Error ? err.message : t("requestFailed"),
       );
-    } finally {
-      setLoading(false);
     }
   };
 
   const refreshSettings = async () => {
-    const [nextProfile, nextMfaStatus, nextPasskeys, nextSessions] =
-      await Promise.all([
-        gossoClient.fetchUserProfile(),
-        gossoClient.getMfaStatus(),
-        gossoClient.listPasskeys(),
-        gossoClient.listSessions(),
-      ]);
-    setProfile(nextProfile);
-    setDisplayName(nextProfile.name || "");
-    setNewEmail(nextProfile.email || "");
-    setMfaStatus(nextMfaStatus);
-    setPasskeys(nextPasskeys);
-    setSessions(nextSessions);
     try {
-      const current = await gossoClient.getCurrentSession();
-      setCurrentSessionId(current.id);
-    } catch {
-      setCurrentSessionId(null);
+      setRefreshing(true);
+      await Promise.all([
+        client.fetchUserProfile(),
+        mfa.reload(),
+        passkeyManager.reload(),
+        sessionManager.reload(),
+      ]);
+    } finally {
+      setRefreshing(false);
     }
   };
 
   const saveProfile = async (event: React.FormEvent) => {
     event.preventDefault();
     await runAction(async () => {
-      const nextProfile = await gossoClient.updateProfile(displayName.trim());
-      setProfile(nextProfile);
+      await profileManager.updateDisplayName(displayName.trim());
     }, t("profileUpdated"));
   };
 
@@ -125,7 +124,7 @@ export default function Settings() {
       return;
     }
     await runAction(async () => {
-      await gossoClient.changePassword(currentPassword, newPassword);
+      await profileManager.changePassword(currentPassword, newPassword);
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -135,7 +134,7 @@ export default function Settings() {
   const requestEmailCode = async (event: React.FormEvent) => {
     event.preventDefault();
     await runAction(async () => {
-      await gossoClient.requestEmailChange(newEmail.trim(), emailPassword);
+      await profileManager.requestEmailChange(newEmail.trim(), emailPassword);
       setEmailPending(true);
     }, t("codeSent"));
   };
@@ -143,11 +142,10 @@ export default function Settings() {
   const confirmEmail = async (event: React.FormEvent) => {
     event.preventDefault();
     await runAction(async () => {
-      const nextProfile = await gossoClient.confirmEmailChange(
+      await profileManager.confirmEmailChange(
         newEmail.trim(),
         emailCode.trim(),
       );
-      setProfile(nextProfile);
       setEmailPending(false);
       setEmailPassword("");
       setEmailCode("");
@@ -156,56 +154,48 @@ export default function Settings() {
 
   const enrollMfa = async () => {
     await runAction(async () => {
-      setMfaEnrollment(await gossoClient.enrollMfa());
+      await mfa.startEnroll();
     }, t("mfaStarted"));
   };
 
   const activateMfa = async (event: React.FormEvent) => {
     event.preventDefault();
     await runAction(async () => {
-      const codes = await gossoClient.activateMfa(mfaCode.trim());
-      setBackupCodes(codes);
-      setMfaEnrollment(null);
+      await mfa.activate(mfaCode.trim());
       setMfaCode("");
-      setMfaStatus(await gossoClient.getMfaStatus());
     }, t("mfaEnabled"));
   };
 
   const disableMfa = async (event: React.FormEvent) => {
     event.preventDefault();
     await runAction(async () => {
-      await gossoClient.disableMfa(mfaDisablePassword);
+      await mfa.disable(mfaDisablePassword);
       setMfaDisablePassword("");
-      setMfaStatus(await gossoClient.getMfaStatus());
-      setBackupCodes([]);
     }, t("mfaDisabled"));
   };
 
   const regenerateBackupCodes = async () => {
     await runAction(async () => {
-      setBackupCodes(await gossoClient.generateBackupCodes());
+      await mfa.regenerateBackupCodes();
     }, t("backupRegenerated"));
   };
 
   const addPasskey = async (event: React.FormEvent) => {
     event.preventDefault();
     await runAction(async () => {
-      await gossoClient.registerPasskey(newPasskeyName.trim());
-      setPasskeys(await gossoClient.listPasskeys());
+      await passkeyManager.register(newPasskeyName.trim());
     }, t("passkeyAdded"));
   };
 
   const removePasskey = async (id: string) => {
     await runAction(async () => {
-      await gossoClient.deletePasskey(id);
-      setPasskeys(await gossoClient.listPasskeys());
+      await passkeyManager.remove(id);
     }, t("passkeyRemoved"));
   };
 
   const revokeSession = async (id: string) => {
     await runAction(async () => {
-      await gossoClient.revokeSession(id);
-      setSessions(await gossoClient.listSessions());
+      await sessionManager.revoke(id);
     }, t("sessionRevoked"));
   };
 
@@ -348,9 +338,9 @@ export default function Settings() {
                 <h2 className="section-title">{t("mfa")}</h2>
                 <p className="muted">
                   {t("status")}:{" "}
-                  {mfaStatus?.enabled ? t("enabled") : t("disabled")}
+                  {mfa.status.enabled ? t("enabled") : t("disabled")}
                 </p>
-                {!mfaStatus?.enabled && !mfaEnrollment && (
+                {!mfa.status.enabled && !mfa.enrollment && (
                   <button
                     className="btn btn-primary"
                     onClick={enrollMfa}
@@ -360,21 +350,21 @@ export default function Settings() {
                     {t("startMfa")}
                   </button>
                 )}
-                {mfaEnrollment && (
+                {mfa.enrollment && (
                   <form className="form-stack" onSubmit={activateMfa}>
                     <div className="mfa-enrollment">
                       <div className="mfa-qr" aria-label={t("appLink")}>
                         <QRCodeSVG
-                          value={mfaEnrollment.otpauth_url}
+                          value={mfa.enrollment.otpauth_url}
                           size={192}
                           marginSize={3}
                           level="M"
                         />
                       </div>
                       <p className="muted mfa-enrollment__details">
-                        {t("secret")}: <strong>{mfaEnrollment.secret}</strong>
+                        {t("secret")}: <strong>{mfa.enrollment.secret}</strong>
                         <br />
-                        {t("appLink")}: {mfaEnrollment.otpauth_url}
+                        {t("appLink")}: {mfa.enrollment.otpauth_url}
                       </p>
                     </div>
                     <Field label={t("authenticatorCode")}>
@@ -389,7 +379,7 @@ export default function Settings() {
                     </button>
                   </form>
                 )}
-                {mfaStatus?.enabled && (
+                {mfa.status.enabled && (
                   <form className="form-stack" onSubmit={disableMfa}>
                     <button
                       type="button"
@@ -414,9 +404,9 @@ export default function Settings() {
                     </button>
                   </form>
                 )}
-                {backupCodes.length > 0 && (
+                {mfa.backupCodes.length > 0 && (
                   <div className="code-grid">
-                    {backupCodes.map((code) => (
+                    {mfa.backupCodes.map((code) => (
                       <code key={code}>{code}</code>
                     ))}
                   </div>
@@ -437,7 +427,7 @@ export default function Settings() {
                   {t("addPasskey")}
                 </button>
               </form>
-              {passkeys.map((passkey) => (
+              {passkeyManager.passkeys.map((passkey) => (
                 <div key={passkey.id} className="list-row">
                   <span>{passkey.name}</span>
                   <button
@@ -455,12 +445,12 @@ export default function Settings() {
 
           {activeTab === "sessions" && (
             <div className="section-stack">
-              {sessions.map((session) => (
+              {sessionManager.sessions.map((session) => (
                 <div key={session.id} className="list-row">
                   <div>
                     <strong>
                       {session.user_agent || t("unknownDevice")}{" "}
-                      {session.id === currentSessionId
+                      {session.id === sessionManager.currentSession?.id
                         ? `(${t("current")})`
                         : ""}
                     </strong>
@@ -471,7 +461,9 @@ export default function Settings() {
                   <button
                     className="btn btn-danger"
                     onClick={() => void revokeSession(session.id)}
-                    disabled={loading || session.id === currentSessionId}
+                    disabled={
+                      loading || session.id === sessionManager.currentSession?.id
+                    }
                     type="button"
                   >
                     {t("revoke")}

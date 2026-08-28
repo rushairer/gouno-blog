@@ -8,6 +8,8 @@ import {
 } from "react-router-dom";
 import { I18nProvider, useI18n } from "./i18n";
 import { ToastProvider } from "./components/ui";
+import { GossoProvider } from "@gosso/client/react";
+import { gossoClient } from "./auth";
 import PublicShell from "./layouts/PublicShell";
 import AdminShell from "./layouts/AdminShell";
 import Home from "./pages/Home";
@@ -217,8 +219,9 @@ function Admin({
 export default function App() {
   useSiteMetadata();
   return (
-    <I18nProvider>
-      <ToastProvider>
+    <GossoProvider client={gossoClient}>
+      <I18nProvider>
+        <ToastProvider>
         <BrowserRouter>
           <Routes>
             <Route path="/callback" element={<Callback />} />
@@ -485,7 +488,8 @@ export default function App() {
             />
           </Routes>
         </BrowserRouter>
-      </ToastProvider>
-    </I18nProvider>
+        </ToastProvider>
+      </I18nProvider>
+    </GossoProvider>
   );
 }
