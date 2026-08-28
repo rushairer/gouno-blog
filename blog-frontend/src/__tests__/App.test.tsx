@@ -3,11 +3,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../App";
 import { getManagementAccess, redirectToAuthorize } from "../auth";
 
-vi.mock("../auth", () => ({
-  getManagementAccess: vi.fn(),
-  redirectToAuthorize: vi.fn(),
-  logout: vi.fn(),
-}));
+vi.mock("../auth", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../auth")>();
+  return {
+    ...actual,
+    getManagementAccess: vi.fn(),
+    redirectToAuthorize: vi.fn(),
+    logout: vi.fn(),
+  };
+});
 
 describe("admin route access", () => {
   beforeEach(() => {

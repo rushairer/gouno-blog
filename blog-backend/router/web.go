@@ -34,10 +34,24 @@ type WebRouterOptions struct {
 	GrowthSvc          *service.GrowthService
 	AgentCtrl          *controller.AgentController
 	Logger             *zap.Logger
-	BootstrapOwner     access.Bootstrap
+	Verifier           *auth.Verifier
+	AccessService      *access.Service
 }
 
 func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.AuthOptions, jwksURL, redisDSN, visitorSecret, mediaDir string, store media.Store, corsAllowedOrigins []string, agentCtrl *controller.AgentController) {
+	postRepo := repository.NewPostRepository(db)
+	postSvc := service.NewPostService(postRepo)
+	pageRepo := repository.NewPageRepository(db)
+	pageSvc := service.NewPageService(pageRepo)
+	catRepo := repository.NewCategoryRepository(db)
+	catSvc := service.NewCategoryService(catRepo)
+	communityRepo := repository.NewCommunityRepository(db)
+	communitySvc := service.NewCommunityService(communityRepo, postRepo)
+	growthRepo := repository.NewGrowthRepository(db)
+	growthSvc := service.NewGrowthService(growthRepo)
+	verifier := auth.NewVerifier(jwksURL)
+	accessService := access.NewService(db, access.Bootstrap{})
+
 	RegisterWebRouterWithOptions(server, WebRouterOptions{
 		DB:                 db,
 		AuthOptions:        authOptions,
@@ -47,13 +61,23 @@ func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.Au
 		MediaDir:           mediaDir,
 		MediaStore:         store,
 		CORSAllowedOrigins: corsAllowedOrigins,
+		PostSvc:            postSvc,
+		PageSvc:            pageSvc,
+		CategorySvc:        catSvc,
+		CommunitySvc:       communitySvc,
+		GrowthSvc:          growthSvc,
 		AgentCtrl:          agentCtrl,
+		Verifier:           verifier,
+		AccessService:      accessService,
 	})
 }
 
 func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
-	if opts.Logger != nil {
-		controller.SetResponseLogger(opts.Logger)
+	if opts.PostSvc == nil || opts.PageSvc == nil || opts.CategorySvc == nil || opts.CommunitySvc == nil || opts.GrowthSvc == nil {
+		panic("RegisterWebRouterWithOptions: all application services are required")
+	}
+	if opts.Verifier == nil || opts.AccessService == nil {
+		panic("RegisterWebRouterWithOptions: verifier and access service are required")
 	}
 	server.Use(corsMiddleware(opts.CORSAllowedOrigins))
 	server.Use(requestBodyLimitMiddleware())
@@ -66,31 +90,18 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 		ctx.Status(http.StatusNoContent)
 	})
 
-	// Setup repository and service if not provided
 	postSvc := opts.PostSvc
-	if postSvc == nil {
-		postSvc = service.NewPostService(repository.NewPostRepository(opts.DB))
-	}
 	ctrl := controller.NewPostController(postSvc)
 
 	pageSvc := opts.PageSvc
-	if pageSvc == nil {
-		pageSvc = service.NewPageService(repository.NewPageRepository(opts.DB))
-	}
 	pageCtrl := controller.NewPageController(pageSvc)
 
 	catSvc := opts.CategorySvc
-	if catSvc == nil {
-		catSvc = service.NewCategoryService(repository.NewCategoryRepository(opts.DB))
-	}
 	contentCtrl := controller.NewContentController(catSvc)
 
 	feedCtrl := controller.NewFeedController(postSvc, pageSvc, catSvc)
 
 	communitySvc := opts.CommunitySvc
-	if communitySvc == nil {
-		communitySvc = service.NewCommunityService(repository.NewCommunityRepository(opts.DB), repository.NewPostRepository(opts.DB))
-	}
 	var interactionLimiter service.RateLimiter
 	if opts.RedisDSN != "" {
 		if limiter, err := service.NewRedisRateLimiter(opts.RedisDSN); err == nil {
@@ -100,9 +111,6 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 	communityCtrl := controller.NewCommunityController(communitySvc, interactionLimiter, opts.VisitorSecret, opts.Logger)
 
 	growthSvc := opts.GrowthSvc
-	if growthSvc == nil {
-		growthSvc = service.NewGrowthService(repository.NewGrowthRepository(opts.DB))
-	}
 	growthCtrl := controller.NewGrowthController(growthSvc, postSvc, communitySvc, opts.MediaStore, opts.Logger)
 
 	if opts.MediaStore != nil {
@@ -122,7 +130,6 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 	}
 
 	authOptions := opts.AuthOptions
-	jwksURL := opts.JWKSURL
 	agentCtrl := opts.AgentCtrl
 
 	// RSS & Sitemap Routes
@@ -131,12 +138,12 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 	server.GET("/sitemap.xml", feedCtrl.GetSitemap)
 
 	// Setup JWT verifier
-	verifier := auth.NewVerifier(jwksURL)
+	verifier := opts.Verifier
 	userAuthOptions := authOptions
 	userAuthOptions.RequiredRole = ""
 	userAuth := middleware.AuthMiddlewareWithOptions(verifier, userAuthOptions)
 	optionalAuth := middleware.OptionalAuth(verifier, userAuthOptions)
-	accessService := access.NewService(opts.DB, opts.BootstrapOwner)
+	accessService := opts.AccessService
 	accessAuth := middleware.BlogAccess(accessService)
 	optionalAccessAuth := middleware.OptionalBlogAccess(accessService)
 	accessCtrl := controller.NewAccessController(accessService)
