@@ -87,7 +87,7 @@ chmod 600 keys/private.pem
 - Redirect URI：`https://localhost:8443/callback`
 - Scopes：`openid profile email`
 
-GOSSO Admin 使用独立 OAuth client 和 Redirect URI：`https://localhost:8443/identity-admin/callback`。GOSSO 的 `login_url` 指向 `https://localhost:8443/identity-admin/login`；旧 `/login` 仅保留重定向。Blog 前端通过 `@gosso/client` 使用 `__Host-*` HttpOnly Cookie 会话；访问与刷新 Token 不会写入浏览器可读存储。它仍使用授权码 + PKCE，并只在 `sessionStorage` 中临时保存 PKCE 状态和最小化的界面授权信息。
+GOSSO Admin 使用独立 OAuth client 和 Redirect URI：`https://localhost:8443/identity-admin/callback`。GOSSO 的 `login_url` 指向 `https://localhost:8443/identity-admin/login`；Blog 不提供 `/login` 路由。Blog 前端通过 `@gosso/client` 使用 `__Host-*` HttpOnly Cookie 会话；访问与刷新 Token 不会写入浏览器可读存储。它仍使用授权码 + PKCE，并只在 `sessionStorage` 中临时保存 PKCE 状态和最小化的界面授权信息。
 
 无感切换依赖统一网关下的 GOSSO 中心登录态：用户登录 `identity-admin` 后访问 `/admin`，blog 会发起 `/oauth2/authorize`。如果 GOSSO cookie 中的中心会话仍有效，GOSSO 会直接回调 `/callback` 并建立 Blog Cookie 会话，用户无需再次输入账号密码。
 
@@ -244,6 +244,16 @@ export BLOG_AGENT_PREVIOUS_MASTER_KEYS="1:<old-base64-key>"
 `main` 镜像不得用于生产。生产部署使用 `docker-compose.production.yml`，
 所有应用与第三方镜像都必须以 `version@sha256:digest` 提供，所有密码、
 签名密钥、TOTP key、pepper、数据库 DSN 和 Agent key 都必须显式设置。
+
+生产身份链路有两个不可省略的部署契约：GOSSO 的
+`GOUNO_AUTH_LOGIN_URL` 固定为 `/identity-admin/login`。Blog 不提供 `/login`
+路由，所有 Client 必须通过 GOSSO 的授权端点进入统一登录页；不要添加
+Blog 或网关层的 `/login` 兼容跳转，否则错误配置可能再次形成认证循环。
+`GOSSO_TRUSTED_PROXIES` 必须是
+仅包含实际反向代理容器网络的精确、逗号分隔 CIDR 列表；不要沿用与运行时
+Docker/Podman 网络不匹配的默认网段，否则所有访问者会共享代理 IP 的
+认证限流额度。CI 的 `Authentication deployment contract` 检查会同时
+校验生产 Compose、Blog 路由和本段文档。
 
 公开发布和安全报告分别遵循 [RELEASE_CHECKLIST.md](./RELEASE_CHECKLIST.md)
 与 [SECURITY.md](./SECURITY.md)。完整仓库采用 [MIT License](./LICENSE)。

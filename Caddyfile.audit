@@ -90,9 +90,6 @@ https://localhost:18443 {
 	@identity_admin_root path /identity-admin
 	redir @identity_admin_root /identity-admin/ permanent
 
-	@legacy_login path /login
-	redir @legacy_login /identity-admin/login?{query} 308
-
 	handle /identity-admin/* {
 		reverse_proxy gosso-admin-frontend:8083 {
 			header_up Host localhost:18443

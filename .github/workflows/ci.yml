@@ -138,6 +138,9 @@ jobs:
       - name: Source override Compose config validation
         run: docker compose -f docker-compose.yml -f docker-compose.source.yml config
 
+      - name: Authentication deployment contract
+        run: node scripts/check-auth-deployment-contract.mjs
+
   dependency-review:
     name: Dependency review
     if: github.event_name == 'pull_request'
