@@ -115,8 +115,8 @@ export const workflowApi = {
     signal?: AbortSignal,
   ) =>
     apiClient.get<ResourcePage>(
-      `/api/admin/ai-resources/${encodeURIComponent(type)}?${parameters}`,
-      { signal },
+      `/api/admin/ai-resources/${encodeURIComponent(type)}`,
+      { params: parameters, signal },
     ),
   draftWorkflow: (prompt: string) =>
     apiClient.post<{
