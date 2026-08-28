@@ -79,7 +79,12 @@ func OptionalAuth(verifier *auth.Verifier, options AuthOptions) gin.HandlerFunc 
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "invalid authorization format"))
 			return
 		}
-		claims, err := verifyToken(verifier, tokenStr, options)
+		verifyOpts := options
+		if !hasBearer {
+			verifyOpts.ClientID = ""
+			verifyOpts.Audience = ""
+		}
+		claims, err := verifyToken(verifier, tokenStr, verifyOpts)
 		if err != nil {
 			if !hasBearer {
 				ctx.Next()
@@ -109,12 +114,25 @@ func AuthMiddlewareWithOptions(verifier *auth.Verifier, options AuthOptions) gin
 	}
 
 	return func(ctx *gin.Context) {
-		tokenStr, ok := requestToken(ctx)
-		if !ok {
-			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "missing authorization header"))
-			return
+		tokenStr, hasBearer := bearerToken(ctx)
+		if !hasBearer {
+			var err error
+			tokenStr, err = ctx.Cookie(accessTokenCookie)
+			if err != nil || tokenStr == "" {
+				ctx.AbortWithStatusJSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "missing authorization header"))
+				return
+			}
 		}
-		claims, err := verifyToken(verifier, tokenStr, options)
+
+		verifyOpts := options
+		if !hasBearer {
+			// For browser cookie sessions directly issued by Gosso to the browser,
+			// the token is a first-party session token without client_id / audience binding.
+			verifyOpts.ClientID = ""
+			verifyOpts.Audience = ""
+		}
+
+		claims, err := verifyToken(verifier, tokenStr, verifyOpts)
 		if err != nil {
 			// Signature, issuer, audience and expiry diagnostics are useful to the
 			// server log but must not become an oracle for unauthenticated callers.
