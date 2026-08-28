@@ -21,6 +21,23 @@ export const RoleType = {
 
 export type RoleType = (typeof RoleType)[keyof typeof RoleType];
 
+export function getBlogRoleLabel(role?: string): string {
+  switch (role) {
+    case RoleType.OWNER:
+      return "所有者";
+    case RoleType.ADMIN:
+      return "管理员";
+    case RoleType.EDITOR:
+      return "编辑";
+    case RoleType.AUTHOR:
+      return "作者";
+    case RoleType.REVIEWER:
+      return "审核员";
+    default:
+      return "成员";
+  }
+}
+
 export const PostStatus = {
   PUBLISHED: "published",
   DRAFT: "draft",
