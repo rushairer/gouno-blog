@@ -1,5 +1,10 @@
 import { apiClient } from "./client";
-import type { PaginatedPosts, Post, PostVersion } from "../types/blog";
+import type {
+  PaginatedPosts,
+  Post,
+  PostStatus,
+  PostVersion,
+} from "../types/blog";
 
 export interface PostPayload {
   title: string;
@@ -7,7 +12,7 @@ export interface PostPayload {
   summary?: string;
   content: string;
   tags?: string[];
-  status?: "draft" | "scheduled" | "published";
+  status?: PostStatus;
   scheduled_at?: string;
 }
 

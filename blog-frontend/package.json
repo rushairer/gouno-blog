@@ -17,9 +17,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@gosso/client": "0.8.1",
+    "@gosso/client": "file:../../gosso-client",
     "i18next": "^26.3.6",
-
     "lucide-react": "^1.21.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.7",

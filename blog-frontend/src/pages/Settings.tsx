@@ -2,14 +2,7 @@ import { useEffect, useState } from "react";
 import type React from "react";
 import { KeyRound, Laptop, Mail, Shield, User } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import {
-  useGossoClient,
-  useMfa,
-  usePasskeys,
-  useProfileManager,
-  useSessions,
-  useUserProfile,
-} from "@gosso/client/react";
+import { useAccountSecurityHub } from "@gosso/client/react";
 import {
   ActionGroup,
   ContentStack,
@@ -26,12 +19,16 @@ type SettingsTab = "profile" | "security" | "passkeys" | "sessions";
 export default function Settings() {
   const { t, formatDateTime } = useI18n();
   usePageTitle(t("accountSettings"));
-  const client = useGossoClient();
-  const profile = useUserProfile();
-  const profileManager = useProfileManager();
-  const mfa = useMfa();
-  const passkeyManager = usePasskeys();
-  const sessionManager = useSessions();
+  const {
+    profile,
+    profileManager,
+    mfa,
+    passkeys: passkeyManager,
+    sessions: sessionManager,
+    loading: hubLoading,
+    error: hubError,
+    refreshAll: refreshSettings,
+  } = useAccountSecurityHub();
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
   const [displayName, setDisplayName] = useState(profile?.name || "");
   const [currentPassword, setCurrentPassword] = useState("");
@@ -44,21 +41,10 @@ export default function Settings() {
   const [mfaCode, setMfaCode] = useState("");
   const [mfaDisablePassword, setMfaDisablePassword] = useState("");
   const [newPasskeyName, setNewPasskeyName] = useState("My passkey");
-  const [refreshing, setRefreshing] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const loading =
-    refreshing ||
-    profileManager.loading ||
-    mfa.loading ||
-    passkeyManager.loading ||
-    sessionManager.loading;
-  const error =
-    validationError ||
-    profileManager.error ||
-    mfa.error ||
-    passkeyManager.error ||
-    sessionManager.error;
+  const loading = hubLoading;
+  const error = validationError || hubError;
 
   useEffect(() => {
     setDisplayName(profile?.name || "");
@@ -86,20 +72,6 @@ export default function Settings() {
         null,
         err instanceof Error ? err.message : t("requestFailed"),
       );
-    }
-  };
-
-  const refreshSettings = async () => {
-    try {
-      setRefreshing(true);
-      await Promise.all([
-        client.fetchUserProfile(),
-        mfa.reload(),
-        passkeyManager.reload(),
-        sessionManager.reload(),
-      ]);
-    } finally {
-      setRefreshing(false);
     }
   };
 

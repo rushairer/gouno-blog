@@ -1,12 +1,7 @@
 import { apiClient } from "./client";
+import type { BlogPrincipal } from "../auth";
 
-export type BlogPrincipal = {
-  id: number;
-  issuer: string;
-  subject: string;
-  display_name: string;
-  email: string;
-};
+export type { BlogPrincipal };
 
 export type BlogMember = {
   principal: BlogPrincipal;
