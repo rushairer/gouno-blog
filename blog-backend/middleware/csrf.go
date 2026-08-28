@@ -25,7 +25,8 @@ func BlogCSRFMiddleware(secure bool) gin.HandlerFunc {
 			return
 		}
 		// The public webhook authenticates itself with a body HMAC.
-		if strings.HasPrefix(ctx.Request.URL.Path, "/api/ai/webhooks/") {
+		// OIDC backchannel-logout authenticates itself with a signed JWT logout_token.
+		if strings.HasPrefix(ctx.Request.URL.Path, "/api/ai/webhooks/") || ctx.Request.URL.Path == "/api/auth/backchannel-logout" {
 			ctx.Next()
 			return
 		}
