@@ -1,5 +1,4 @@
 import { createGossoClient } from "@gosso/client";
-import { RoleType } from "./constants";
 
 export type {
   LoginResult,
@@ -59,27 +58,8 @@ export const redirectToAuthorize = gossoClient.redirectToAuthorize;
 export const apiFetch = gossoClient.apiFetch;
 export const stepUpMfa = gossoClient.stepUpMfa;
 
-export function getBlogRoleLabel(role?: string): string {
-  switch (role) {
-    case RoleType.OWNER:
-      return "所有者";
-    case RoleType.ADMIN:
-      return "管理员";
-    case RoleType.EDITOR:
-      return "编辑";
-    case RoleType.AUTHOR:
-      return "作者";
-    case RoleType.REVIEWER:
-      return "审核员";
-    default:
-      return "成员";
-  }
-}
+export { getBlogRoleLabel } from "./constants";
 
-export async function logout() {
-  try {
-    await gossoClient.logout("/");
-  } catch {
-    throw new Error("退出登录失败，请重试。");
-  }
+export async function logout(redirectTo = "/") {
+  return gossoClient.logout(redirectTo);
 }

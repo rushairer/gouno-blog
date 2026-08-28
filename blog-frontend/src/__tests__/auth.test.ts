@@ -116,7 +116,7 @@ describe("blog cookie session", () => {
     vi.stubGlobal("fetch", fetchMock);
     const { logout } = await import("../auth");
 
-    await expect(logout()).rejects.toThrow("退出登录失败");
+    await expect(logout()).rejects.toThrow(/logout failed/i);
 
     expect(fetchMock).toHaveBeenCalledWith(
       "https://blog.example.test/api/v1/auth/logout",

@@ -189,13 +189,9 @@ func WriteDomainError(c *gin.Context, err error) {
 		)
 	}
 
-	baseResp := gouno.NewErrorResponse(status, message)
-	resp := gin.H{
-		"code":    baseResp.Code,
-		"message": baseResp.Message,
-	}
+	resp := gouno.NewErrorResponse(status, message)
 	if reqIDStr != "" {
-		resp["request_id"] = reqIDStr
+		resp = resp.WithRequestID(reqIDStr)
 	}
 	c.JSON(status, resp)
 	c.Abort()

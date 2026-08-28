@@ -57,7 +57,6 @@ describe("ConnectorWorkspace", () => {
     render(
       <ConnectorWorkspace
         locale="en"
-        readData={async <T,>(res: Response) => (await res.json()).data as T}
         onRefresh={onRefresh}
       />,
     );
