@@ -1,15 +1,10 @@
-import React, { useCallback, useEffect, useState } from "react";
-import {
-  BrowserRouter,
-  Navigate,
-  Route,
-  Routes,
-  useLocation,
-} from "react-router-dom";
+import React, { useState } from "react";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { I18nProvider, useI18n } from "./i18n";
 import { ToastProvider } from "./components/ui";
-import { GossoProvider } from "@gosso/client/react";
-import { gossoClient } from "./auth";
+import { GossoProvider, RequireAuth } from "@gosso/client/react";
+import { gossoClient, type BlogUserProfile, logout } from "./auth";
+import { MembershipStatus } from "./constants";
 import PublicShell from "./layouts/PublicShell";
 import AdminShell from "./layouts/AdminShell";
 import Home from "./pages/Home";
@@ -22,12 +17,6 @@ import About from "./pages/About";
 import NotFound from "./pages/NotFound";
 import Callback from "./pages/Callback";
 import HostedLoginRedirect from "./pages/HostedLoginRedirect";
-import {
-  getManagementAccess,
-  hasBlogPermission,
-  logout,
-  redirectToAuthorize,
-} from "./auth";
 import { useSiteMetadata } from "./hooks/useSiteMetadata";
 const Settings = React.lazy(() => import("./pages/Settings"));
 const Dashboard = React.lazy(() => import("./pages/admin/Dashboard"));
@@ -117,102 +106,49 @@ function Admin({
   children: React.ReactNode;
   requiredPermissions?: string[];
 }) {
-  const location = useLocation();
-  const [access, setAccess] = useState<
-    "checking" | "admin" | "denied" | "anonymous" | "error"
-  >("checking");
-  const [redirectError, setRedirectError] = useState("");
-  const [retryCount, setRetryCount] = useState(0);
-  const returnTo = `${location.pathname}${location.search}${location.hash}`;
-
-  const startAuthorization = useCallback(async () => {
-    setRedirectError("");
-    try {
-      await redirectToAuthorize(returnTo);
-    } catch {
-      setRedirectError("无法打开登录页，请检查网络后重试。");
-    }
-  }, [returnTo]);
-
-  useEffect(() => {
-    let active = true;
-    setAccess("checking");
-    void getManagementAccess().then((nextAccess) => {
-      if (active) setAccess(nextAccess);
-    });
-    return () => {
-      active = false;
-    };
-  }, [retryCount, returnTo]);
-
-  useEffect(() => {
-    if (access === "anonymous") void startAuthorization();
-  }, [access, startAuthorization]);
-
-  if (access === "checking" || access === "anonymous") {
-    return (
-      <PublicShell>
-        <div className="public-container state-page" role="status">
-          <div className="state-card">
-            <span className="spinner" aria-hidden="true" />
-            <h1>{access === "checking" ? "正在验证权限" : "需要登录"}</h1>
-            <p>
-              {access === "checking"
-                ? "正在确认后台访问权限…"
-                : redirectError || "正在前往安全登录页…"}
-            </p>
-            {redirectError ? (
-              <button
-                className="btn btn-primary"
-                type="button"
-                onClick={() => void startAuthorization()}
-              >
-                重新登录
-              </button>
-            ) : null}
-          </div>
-        </div>
-      </PublicShell>
-    );
-  }
-
-  if (access === "denied") return <AdminAccessDenied />;
-
-  if (access === "error") {
-    return (
-      <PublicShell>
-        <div className="public-container state-page" role="alert">
-          <div className="state-card">
-            <h1>无法验证后台权限</h1>
-            <p>请检查网络后重试。为保护后台内容，暂时不会打开管理工作区。</p>
-            <button
-              className="btn btn-primary"
-              type="button"
-              onClick={() => setRetryCount((current) => current + 1)}
-            >
-              重试
-            </button>
-          </div>
-        </div>
-      </PublicShell>
-    );
-  }
-
-  if (requiredPermissions && requiredPermissions.length > 0) {
-    const hasAny = requiredPermissions.some((perm) => hasBlogPermission(perm));
-    if (!hasAny) {
-      return (
-        <AdminAccessDenied message="您当前的角色没有访问该管理模块的权限。" />
-      );
-    }
-  }
-
   return (
-    <AdminShell>
-      <React.Suspense fallback={<div className="loading">正在载入工作区…</div>}>
-        {children}
-      </React.Suspense>
-    </AdminShell>
+    <RequireAuth<BlogUserProfile>
+      permissions={requiredPermissions}
+      predicate={(profile) =>
+        Boolean(
+          profile &&
+          (!profile.membership_status ||
+            profile.membership_status === MembershipStatus.ACTIVE) &&
+          (requiredPermissions && requiredPermissions.length > 0
+            ? true
+            : Array.isArray(profile.permissions) &&
+              profile.permissions.length > 0),
+        )
+      }
+      fallback={
+        <PublicShell>
+          <div className="public-container state-page" role="status">
+            <div className="state-card">
+              <span className="spinner" aria-hidden="true" />
+              <h1>正在验证权限</h1>
+              <p>正在前往安全登录页…</p>
+            </div>
+          </div>
+        </PublicShell>
+      }
+      unauthorized={
+        <AdminAccessDenied
+          message={
+            requiredPermissions && requiredPermissions.length > 0
+              ? "您当前的角色没有访问该管理模块的权限。"
+              : undefined
+          }
+        />
+      }
+    >
+      <AdminShell>
+        <React.Suspense
+          fallback={<div className="loading">正在载入工作区…</div>}
+        >
+          {children}
+        </React.Suspense>
+      </AdminShell>
+    </RequireAuth>
   );
 }
 

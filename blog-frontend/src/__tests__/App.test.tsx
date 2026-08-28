@@ -1,14 +1,42 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../App";
-import { getManagementAccess, redirectToAuthorize } from "../auth";
+import type { SessionSnapshot } from "@gosso/client";
+import type { BlogUserProfile } from "../auth";
+
+const {
+  redirectToAuthorizeMock,
+  getSnapshotMock,
+  subscribeMock,
+  setMockSnapshot,
+} = vi.hoisted(() => {
+  let currentSnapshot: SessionSnapshot<BlogUserProfile> = {
+    accessToken: null,
+    refreshToken: null,
+    profile: null,
+    loggedIn: false,
+    isAdmin: false,
+  };
+  return {
+    redirectToAuthorizeMock: vi.fn().mockResolvedValue(undefined),
+    getSnapshotMock: vi.fn(() => currentSnapshot),
+    subscribeMock: vi.fn(() => () => {}),
+    setMockSnapshot: (snapshot: SessionSnapshot<BlogUserProfile>) => {
+      currentSnapshot = snapshot;
+    },
+  };
+});
 
 vi.mock("../auth", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../auth")>();
   return {
     ...actual,
-    getManagementAccess: vi.fn(),
-    redirectToAuthorize: vi.fn(),
+    gossoClient: {
+      ...actual.gossoClient,
+      redirectToAuthorize: redirectToAuthorizeMock,
+      getSnapshot: getSnapshotMock,
+      subscribe: subscribeMock,
+    },
     logout: vi.fn(),
   };
 });
@@ -16,8 +44,13 @@ vi.mock("../auth", async (importOriginal) => {
 describe("admin route access", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getManagementAccess).mockResolvedValue("anonymous");
-    vi.mocked(redirectToAuthorize).mockResolvedValue(undefined);
+    setMockSnapshot({
+      accessToken: null,
+      refreshToken: null,
+      profile: null,
+      loggedIn: false,
+      isAdmin: false,
+    });
     window.history.replaceState({}, "", "/admin/dashboard");
   });
 
@@ -25,16 +58,22 @@ describe("admin route access", () => {
     render(<App />);
 
     await waitFor(() => {
-      expect(screen.getByRole("status")).toHaveTextContent("需要登录");
+      expect(screen.getByRole("status")).toHaveTextContent("正在验证权限");
       expect(screen.getByRole("status")).toHaveTextContent(
         "正在前往安全登录页…",
       );
-      expect(redirectToAuthorize).toHaveBeenCalledWith("/admin/dashboard");
+      expect(redirectToAuthorizeMock).toHaveBeenCalledWith("/admin/dashboard");
     });
   });
 
   it("keeps a signed-in non-admin user outside the admin shell", async () => {
-    vi.mocked(getManagementAccess).mockResolvedValue("denied");
+    setMockSnapshot({
+      accessToken: "token",
+      refreshToken: "refresh",
+      profile: { sub: "1", permissions: [] },
+      loggedIn: true,
+      isAdmin: false,
+    });
     render(<App />);
 
     await waitFor(() => {
@@ -43,7 +82,7 @@ describe("admin route access", () => {
       ).toBeInTheDocument();
     });
     expect(screen.queryByLabelText("后台导航")).not.toBeInTheDocument();
-    expect(redirectToAuthorize).not.toHaveBeenCalled();
+    expect(redirectToAuthorizeMock).not.toHaveBeenCalled();
     expect(
       screen.queryByRole("button", { name: "重新授权" }),
     ).not.toBeInTheDocument();

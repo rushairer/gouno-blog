@@ -4,10 +4,10 @@ import { KeyRound, Laptop, Mail, Shield, User } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import {
   useGossoClient,
-  useIsAuthenticated,
   useMfa,
   usePasskeys,
   useProfileManager,
+  useRequireAuth,
   useSessions,
   useUserProfile,
 } from "@gosso/client/react";
@@ -19,7 +19,6 @@ import {
   PageHeader,
   Panel,
 } from "../components/ui";
-import { redirectToAuthorize } from "../auth";
 import { useI18n } from "../i18n";
 import { usePageTitle } from "../hooks/usePageTitle";
 
@@ -29,7 +28,7 @@ export default function Settings() {
   const { t, formatDateTime } = useI18n();
   usePageTitle(t("accountSettings"));
   const client = useGossoClient();
-  const loggedIn = useIsAuthenticated();
+  useRequireAuth({ redirectTo: "/settings" });
   const profile = useUserProfile();
   const profileManager = useProfileManager();
   const mfa = useMfa();
@@ -62,10 +61,6 @@ export default function Settings() {
     mfa.error ||
     passkeyManager.error ||
     sessionManager.error;
-
-  useEffect(() => {
-    if (!loggedIn) void redirectToAuthorize("/settings");
-  }, [loggedIn]);
 
   useEffect(() => {
     setDisplayName(profile?.name || "");
