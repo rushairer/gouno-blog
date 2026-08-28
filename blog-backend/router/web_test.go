@@ -6,8 +6,12 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rushairer/blog-backend/internal/access"
 	"github.com/rushairer/blog-backend/internal/media"
+	"github.com/rushairer/blog-backend/internal/repository"
+	"github.com/rushairer/blog-backend/internal/service"
 	"github.com/rushairer/blog-backend/middleware"
+	auth "github.com/rushairer/gouno/auth"
 )
 
 func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
@@ -18,9 +22,17 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 			t.Fatalf("route registration panicked: %v", recovered)
 		}
 	}()
-	RegisterWebRouter(engine, nil, middleware.AuthOptions{
-		Issuer: "http://issuer.test", Audience: "blog-spa", ClientID: "blog-spa",
-	}, "http://127.0.0.1:1/jwks", "", "test-secret", t.TempDir(), media.NewLocal(t.TempDir()), nil, nil)
+	postRepo := repository.NewPostRepository(nil)
+	RegisterWebRouterWithOptions(engine, WebRouterOptions{
+		AuthOptions:   middleware.AuthOptions{Issuer: "http://issuer.test", Audience: "blog-spa", ClientID: "blog-spa"},
+		VisitorSecret: "test-secret", MediaDir: t.TempDir(), MediaStore: media.NewLocal(t.TempDir()),
+		PostSvc:      service.NewPostService(postRepo),
+		PageSvc:      service.NewPageService(repository.NewPageRepository(nil)),
+		CategorySvc:  service.NewCategoryService(repository.NewCategoryRepository(nil)),
+		CommunitySvc: service.NewCommunityService(repository.NewCommunityRepository(nil), postRepo),
+		GrowthSvc:    service.NewGrowthService(repository.NewGrowthRepository(nil)),
+		Verifier:     auth.NewVerifier("http://127.0.0.1:1/jwks"), AccessService: access.NewService(nil, access.Bootstrap{}),
+	})
 
 	foundUpdate := false
 	foundLike := false

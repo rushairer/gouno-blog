@@ -56,10 +56,14 @@ type Service struct {
 	oauthAuthorize string
 	oauthToken     string
 	searchConsole  string
+	transactor     *repository.Transactor
 }
 
-func NewService(db *sql.DB, secrets *secretbox.Box) *Service {
-	return &Service{db: db, secrets: secrets, httpClient: &http.Client{Timeout: 15 * time.Second}, oauthAuthorize: "https://accounts.google.com/o/oauth2/v2/auth", oauthToken: "https://oauth2.googleapis.com/token", searchConsole: "https://searchconsole.googleapis.com/webmasters/v3/sites/"}
+func NewService(db *sql.DB, secrets *secretbox.Box, transactor *repository.Transactor) *Service {
+	if transactor == nil {
+		panic("connector.NewService: transactor is required")
+	}
+	return &Service{db: db, secrets: secrets, transactor: transactor, httpClient: &http.Client{Timeout: 15 * time.Second}, oauthAuthorize: "https://accounts.google.com/o/oauth2/v2/auth", oauthToken: "https://oauth2.googleapis.com/token", searchConsole: "https://searchconsole.googleapis.com/webmasters/v3/sites/"}
 }
 
 func validKind(kind string) bool {
@@ -418,7 +422,7 @@ func (s *Service) Revoke(ctx context.Context, id int64) error {
 // DeliverMock is deliberately a no-network transport. It records the same
 // idempotency and audit transition a real connector will require.
 func (s *Service) DeliverMock(ctx context.Context, id int64) error {
-	return repository.RunInTransaction(ctx, s.db, func(tx *sql.Tx) error {
+	return s.transactor.Run(ctx, func(tx *sql.Tx) error {
 		var item OutboxItem
 		var sandbox bool
 		var config []byte

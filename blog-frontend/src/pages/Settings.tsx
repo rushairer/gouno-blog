@@ -7,7 +7,6 @@ import {
   useMfa,
   usePasskeys,
   useProfileManager,
-  useRequireAuth,
   useSessions,
   useUserProfile,
 } from "@gosso/client/react";
@@ -28,7 +27,6 @@ export default function Settings() {
   const { t, formatDateTime } = useI18n();
   usePageTitle(t("accountSettings"));
   const client = useGossoClient();
-  useRequireAuth({ redirectTo: "/settings" });
   const profile = useUserProfile();
   const profileManager = useProfileManager();
   const mfa = useMfa();

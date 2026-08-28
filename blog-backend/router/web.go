@@ -10,7 +10,6 @@ import (
 	"github.com/rushairer/blog-backend/internal/access"
 	"github.com/rushairer/blog-backend/internal/controller"
 	"github.com/rushairer/blog-backend/internal/media"
-	"github.com/rushairer/blog-backend/internal/repository"
 	"github.com/rushairer/blog-backend/internal/service"
 	"github.com/rushairer/blog-backend/middleware"
 	"github.com/rushairer/gouno"
@@ -21,7 +20,6 @@ import (
 type WebRouterOptions struct {
 	DB                 *sql.DB
 	AuthOptions        middleware.AuthOptions
-	JWKSURL            string
 	RedisDSN           string
 	VisitorSecret      string
 	MediaDir           string
@@ -36,40 +34,7 @@ type WebRouterOptions struct {
 	Logger             *zap.Logger
 	Verifier           *auth.Verifier
 	AccessService      *access.Service
-}
-
-func RegisterWebRouter(server *gin.Engine, db *sql.DB, authOptions middleware.AuthOptions, jwksURL, redisDSN, visitorSecret, mediaDir string, store media.Store, corsAllowedOrigins []string, agentCtrl *controller.AgentController) {
-	postRepo := repository.NewPostRepository(db)
-	postSvc := service.NewPostService(postRepo)
-	pageRepo := repository.NewPageRepository(db)
-	pageSvc := service.NewPageService(pageRepo)
-	catRepo := repository.NewCategoryRepository(db)
-	catSvc := service.NewCategoryService(catRepo)
-	communityRepo := repository.NewCommunityRepository(db)
-	communitySvc := service.NewCommunityService(communityRepo, postRepo)
-	growthRepo := repository.NewGrowthRepository(db)
-	growthSvc := service.NewGrowthService(growthRepo)
-	verifier := auth.NewVerifier(jwksURL)
-	accessService := access.NewService(db, access.Bootstrap{})
-
-	RegisterWebRouterWithOptions(server, WebRouterOptions{
-		DB:                 db,
-		AuthOptions:        authOptions,
-		JWKSURL:            jwksURL,
-		RedisDSN:           redisDSN,
-		VisitorSecret:      visitorSecret,
-		MediaDir:           mediaDir,
-		MediaStore:         store,
-		CORSAllowedOrigins: corsAllowedOrigins,
-		PostSvc:            postSvc,
-		PageSvc:            pageSvc,
-		CategorySvc:        catSvc,
-		CommunitySvc:       communitySvc,
-		GrowthSvc:          growthSvc,
-		AgentCtrl:          agentCtrl,
-		Verifier:           verifier,
-		AccessService:      accessService,
-	})
+	SecureCookies      bool
 }
 
 func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
@@ -79,9 +44,9 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 	if opts.Verifier == nil || opts.AccessService == nil {
 		panic("RegisterWebRouterWithOptions: verifier and access service are required")
 	}
-	server.Use(corsMiddleware(opts.CORSAllowedOrigins))
-	server.Use(requestBodyLimitMiddleware())
-	server.Use(blogCSRFMiddleware(true))
+	server.Use(middleware.CORSMiddleware(opts.CORSAllowedOrigins))
+	server.Use(middleware.RequestBodyLimitMiddleware())
+	server.Use(middleware.BlogCSRFMiddleware(opts.SecureCookies))
 	server.GET("/healthz", func(ctx *gin.Context) {
 		if opts.DB == nil || opts.DB.PingContext(ctx.Request.Context()) != nil {
 			ctx.Status(http.StatusServiceUnavailable)

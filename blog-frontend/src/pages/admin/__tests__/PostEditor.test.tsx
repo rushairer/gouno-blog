@@ -5,14 +5,22 @@ import PostEditor from "../PostEditor";
 import { ToastProvider } from "../../../components/ui";
 import { postsApi } from "../../../api/posts";
 import { siteApi } from "../../../api/site";
-import * as auth from "../../../auth";
 import type { Post } from "../../../types/blog";
+import { GossoProvider } from "@gosso/client/react";
+
+const snapshot = {
+  loggedIn: true,
+  isAdmin: true,
+  profile: { sub: "admin", roles: ["admin"] },
+};
+const mockClient = {
+  subscribe: () => () => {},
+  getSnapshot: () => snapshot,
+} as any;
 
 describe("PostEditor", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    vi.spyOn(auth, "isLoggedIn").mockReturnValue(true);
-    vi.spyOn(auth, "canManageBlog").mockReturnValue(true);
     vi.spyOn(siteApi, "getCategories").mockResolvedValue([]);
     vi.spyOn(postsApi, "getVersions").mockResolvedValue([]);
   });
@@ -35,13 +43,15 @@ describe("PostEditor", () => {
     const getPostSpy = vi.spyOn(postsApi, "getPost");
 
     render(
-      <ToastProvider>
-        <MemoryRouter initialEntries={["/admin/posts/5/edit"]}>
-          <Routes>
-            <Route path="/admin/posts/:id/edit" element={<PostEditor />} />
-          </Routes>
-        </MemoryRouter>
-      </ToastProvider>,
+      <GossoProvider client={mockClient}>
+        <ToastProvider>
+          <MemoryRouter initialEntries={["/admin/posts/5/edit"]}>
+            <Routes>
+              <Route path="/admin/posts/:id/edit" element={<PostEditor />} />
+            </Routes>
+          </MemoryRouter>
+        </ToastProvider>
+      </GossoProvider>,
     );
 
     await waitFor(() => {

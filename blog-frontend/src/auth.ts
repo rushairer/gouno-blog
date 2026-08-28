@@ -1,5 +1,5 @@
 import { createGossoClient } from "@gosso/client";
-import { MembershipStatus, RoleType } from "./constants";
+import { RoleType } from "./constants";
 
 export type {
   LoginResult,
@@ -56,40 +56,11 @@ export const gossoClient = createGossoClient<BlogUserProfile>({
 });
 
 export const redirectToAuthorize = gossoClient.redirectToAuthorize;
-export const isLoggedIn = gossoClient.isLoggedIn;
 export const apiFetch = gossoClient.apiFetch;
 export const stepUpMfa = gossoClient.stepUpMfa;
 
-export function getCachedBlogSession(): BlogUserProfile | null {
-  return gossoClient.getSnapshot().profile;
-}
-
-export function hasBlogPermission(permission: string): boolean {
-  const profile = gossoClient.getSnapshot().profile;
-  if (
-    !profile ||
-    (profile.membership_status &&
-      profile.membership_status !== MembershipStatus.ACTIVE)
-  )
-    return false;
-  return profile.permissions?.includes(permission) ?? false;
-}
-
-export function hasAnyBlogPermission(permissions: string[]): boolean {
-  const profile = gossoClient.getSnapshot().profile;
-  if (
-    !profile ||
-    (profile.membership_status &&
-      profile.membership_status !== MembershipStatus.ACTIVE)
-  )
-    return false;
-  return permissions.some((p) => profile.permissions?.includes(p));
-}
-
 export function getBlogRoleLabel(role?: string): string {
-  const profile = gossoClient.getSnapshot().profile;
-  const target = role || profile?.roles?.[0];
-  switch (target) {
+  switch (role) {
     case RoleType.OWNER:
       return "所有者";
     case RoleType.ADMIN:
@@ -103,20 +74,6 @@ export function getBlogRoleLabel(role?: string): string {
     default:
       return "成员";
   }
-}
-
-/** Non-authoritative display hint for public-page affordances. */
-export function hasCachedAdminRole(): boolean {
-  const profile = gossoClient.getSnapshot().profile;
-  if (profile?.roles?.length) {
-    return profile.membership_status === MembershipStatus.ACTIVE;
-  }
-  return Boolean(profile?.roles?.includes("admin"));
-}
-
-/** @deprecated Use RequireAuth / useRequireAuth for route authorization. */
-export function canManageBlog(): boolean {
-  return hasCachedAdminRole();
 }
 
 export async function logout() {

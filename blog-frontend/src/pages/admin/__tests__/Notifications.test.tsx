@@ -6,10 +6,16 @@ import AdminNotifications from "../Notifications";
 import { apiFetch } from "../../../auth";
 import { ToastProvider } from "../../../components/ui";
 
-vi.mock("../../../auth", () => ({
-  apiFetch: vi.fn(),
-  getUserProfile: () => ({ name: "Admin", role: "admin" }),
-}));
+vi.mock("../../../auth", async () => {
+  const apiFetch = vi.fn();
+  const { createMockGossoClient } =
+    await import("../../../test/mockGossoClient");
+  return {
+    apiFetch,
+    gossoClient: createMockGossoClient(apiFetch),
+    getUserProfile: () => ({ name: "Admin", role: "admin" }),
+  };
+});
 
 vi.mock("../../../hooks/useAdminGuard", () => ({
   useAdminGuard: () => true,

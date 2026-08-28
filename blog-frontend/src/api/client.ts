@@ -1,20 +1,27 @@
 import { parseJsonEnvelope } from "@gosso/client";
-import { apiFetch as sdkApiFetch } from "../auth";
+import { gossoClient } from "../auth";
+
+export const apiClient = {
+  get: gossoClient.get,
+  post: gossoClient.post,
+  put: gossoClient.put,
+  patch: gossoClient.patch,
+  delete: gossoClient.delete,
+  apiFetch: gossoClient.apiFetch,
+};
 
 export function authenticatedApiFetch(
   input: string,
   init?: RequestInit,
 ): Promise<Response> {
-  return init ? sdkApiFetch(input, init) : sdkApiFetch(input);
+  return gossoClient.apiFetch(input, init);
 }
 
 export function publicApiFetch(
   input: RequestInfo | URL,
   init?: RequestInit,
 ): Promise<Response> {
-  return init
-    ? sdkApiFetch(input.toString(), init)
-    : sdkApiFetch(input.toString());
+  return gossoClient.apiFetch(input.toString(), init);
 }
 
 /** Authentication is optional; transport and HTTP failures are never swallowed. */
@@ -22,9 +29,7 @@ export function optionalApiFetch(
   input: RequestInfo | URL,
   init?: RequestInit,
 ): Promise<Response> {
-  return init
-    ? sdkApiFetch(input.toString(), init)
-    : sdkApiFetch(input.toString());
+  return gossoClient.apiFetch(input.toString(), init);
 }
 
 export async function readData<T>(

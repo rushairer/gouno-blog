@@ -4,14 +4,22 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import PageEditor from "../PageEditor";
 import { ToastProvider } from "../../../components/ui";
 import { pagesApi } from "../../../api/pages";
-import * as auth from "../../../auth";
 import type { CustomPage } from "../../../types/blog";
+import { GossoProvider } from "@gosso/client/react";
+
+const snapshot = {
+  loggedIn: true,
+  isAdmin: true,
+  profile: { sub: "admin", roles: ["admin"] },
+};
+const mockClient = {
+  subscribe: () => () => {},
+  getSnapshot: () => snapshot,
+} as any;
 
 describe("PageEditor", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    vi.spyOn(auth, "isLoggedIn").mockReturnValue(true);
-    vi.spyOn(auth, "canManageBlog").mockReturnValue(true);
   });
 
   it("loads page via getAdminPage and renders fields and AI assistant tools", async () => {
@@ -36,13 +44,15 @@ describe("PageEditor", () => {
       .mockResolvedValue(mockPage);
 
     render(
-      <ToastProvider>
-        <MemoryRouter initialEntries={["/admin/pages/3/edit"]}>
-          <Routes>
-            <Route path="/admin/pages/:id/edit" element={<PageEditor />} />
-          </Routes>
-        </MemoryRouter>
-      </ToastProvider>,
+      <GossoProvider client={mockClient}>
+        <ToastProvider>
+          <MemoryRouter initialEntries={["/admin/pages/3/edit"]}>
+            <Routes>
+              <Route path="/admin/pages/:id/edit" element={<PageEditor />} />
+            </Routes>
+          </MemoryRouter>
+        </ToastProvider>
+      </GossoProvider>,
     );
 
     await waitFor(() => {

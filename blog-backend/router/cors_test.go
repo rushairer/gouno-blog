@@ -6,12 +6,13 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rushairer/blog-backend/middleware"
 )
 
 func TestCORSMiddlewareRejectsUntrustedUnsafeOrigin(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.Use(corsMiddleware(nil))
+	router.Use(middleware.CORSMiddleware(nil))
 	router.POST("/api/posts", func(c *gin.Context) { c.Status(http.StatusCreated) })
 
 	req := httptest.NewRequest(http.MethodPost, "http://blog.test/api/posts", nil)
@@ -30,7 +31,7 @@ func TestCORSMiddlewareRejectsUntrustedUnsafeOrigin(t *testing.T) {
 func TestCORSMiddlewareAllowsSameOriginAndConfiguredOrigin(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.Use(corsMiddleware([]string{"https://console.example.test"}))
+	router.Use(middleware.CORSMiddleware([]string{"https://console.example.test"}))
 	router.POST("/api/posts", func(c *gin.Context) { c.Status(http.StatusCreated) })
 
 	for _, origin := range []string{"http://blog.test", "https://console.example.test"} {
@@ -50,7 +51,7 @@ func TestCORSMiddlewareAllowsSameOriginAndConfiguredOrigin(t *testing.T) {
 func TestCORSMiddlewareTreatsExplicitPortAsSameOrigin(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.Use(corsMiddleware(nil))
+	router.Use(middleware.CORSMiddleware(nil))
 	router.POST("/api/posts", func(c *gin.Context) { c.Status(http.StatusCreated) })
 
 	req := httptest.NewRequest(http.MethodPost, "http://blog.test:8080/api/posts", nil)
@@ -67,7 +68,7 @@ func TestCORSMiddlewareTreatsExplicitPortAsSameOrigin(t *testing.T) {
 func TestCORSMiddlewareAllowsForwardedHTTPSLocalhostOrigin(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.Use(corsMiddleware(nil))
+	router.Use(middleware.CORSMiddleware(nil))
 	router.POST("/api/posts", func(c *gin.Context) { c.Status(http.StatusCreated) })
 
 	req := httptest.NewRequest(http.MethodPost, "http://blog-backend:8082/api/posts", nil)
@@ -85,7 +86,7 @@ func TestCORSMiddlewareAllowsForwardedHTTPSLocalhostOrigin(t *testing.T) {
 func TestCORSMiddlewareRejectsSpoofedForwardedHost(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.Use(corsMiddleware(nil))
+	router.Use(middleware.CORSMiddleware(nil))
 	router.POST("/api/admin/provider-profiles/1/test", func(c *gin.Context) { c.Status(http.StatusOK) })
 
 	req := httptest.NewRequest(http.MethodPost, "http://blog-backend:8082/api/admin/provider-profiles/1/test", nil)

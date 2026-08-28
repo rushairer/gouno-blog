@@ -8,7 +8,7 @@ import type {
   WorkflowRunEvent,
   WorkflowStepRun,
 } from "../types/agent";
-import { authenticatedApiFetch as apiFetch, readData } from "./client";
+import { apiClient } from "./client";
 
 export interface ResourceOption {
   type: string;
@@ -27,140 +27,99 @@ export interface ResourcePage {
 }
 
 export const workflowApi = {
-  getWorkflows: () => readData<Workflow[]>(apiFetch("/api/admin/ai-workflows")),
+  getWorkflows: () => apiClient.get<Workflow[]>("/api/admin/ai-workflows"),
   getVersions: (id: number) =>
-    readData<Workflow[]>(apiFetch(`/api/admin/ai-workflows/${id}/versions`)),
+    apiClient.get<Workflow[]>(`/api/admin/ai-workflows/${id}/versions`),
   save: (workflow: Partial<Workflow>) =>
-    readData<Workflow>(
-      apiFetch(
-        workflow.id
-          ? `/api/admin/ai-workflows/${workflow.id}`
-          : "/api/admin/ai-workflows",
-        {
-          method: workflow.id ? "PUT" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(workflow),
-        },
-      ),
-    ),
+    workflow.id
+      ? apiClient.put<Workflow>(
+          `/api/admin/ai-workflows/${workflow.id}`,
+          workflow,
+        )
+      : apiClient.post<Workflow>("/api/admin/ai-workflows", workflow),
   remove: (id: number) =>
-    readData<void>(
-      apiFetch(`/api/admin/ai-workflows/${id}`, { method: "DELETE" }),
-    ),
+    apiClient.delete<void>(`/api/admin/ai-workflows/${id}`),
   setEnabled: (id: number, enabled: boolean) =>
-    readData<void>(
-      apiFetch(
-        `/api/admin/ai-workflows/${id}/${enabled ? "enable" : "disable"}`,
-        { method: "POST" },
-      ),
+    apiClient.post<void>(
+      `/api/admin/ai-workflows/${id}/${enabled ? "enable" : "disable"}`,
     ),
   rollback: (id: number, version: number) =>
-    readData<void>(
-      apiFetch(`/api/admin/ai-workflows/${id}/rollback`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ version }),
-      }),
-    ),
+    apiClient.post<void>(`/api/admin/ai-workflows/${id}/rollback`, {
+      version,
+    }),
   run: (id: number, input: Record<string, unknown>, dryRun = false) =>
-    readData<WorkflowRun>(
-      apiFetch(`/api/admin/ai-workflows/${id}/${dryRun ? "dry-run" : "run"}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ input }),
-      }),
+    apiClient.post<WorkflowRun>(
+      `/api/admin/ai-workflows/${id}/${dryRun ? "dry-run" : "run"}`,
+      { input },
     ),
   preflight: (id: number, input: Record<string, unknown>, dryRun = false) =>
-    readData<{
+    apiClient.post<{
       ready: boolean;
       checks: Array<{ key: string; status: string; message?: string }>;
-    }>(
-      apiFetch(`/api/admin/ai-workflows/${id}/preflight`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ input, dry_run: dryRun }),
-      }),
-    ),
+    }>(`/api/admin/ai-workflows/${id}/preflight`, {
+      input,
+      dry_run: dryRun,
+    }),
   getMetrics: async () =>
     (
-      await readData<{ workflows: WorkflowMetric[] }>(
-        apiFetch("/api/admin/ai-workflow-metrics"),
+      await apiClient.get<{ workflows: WorkflowMetric[] }>(
+        "/api/admin/ai-workflow-metrics",
       )
     ).workflows || [],
   getRuns: (workflowID?: number) =>
-    readData<WorkflowRun[]>(
-      apiFetch(
-        `/api/admin/ai-workflow-runs${workflowID ? `?workflow_id=${workflowID}` : ""}`,
-      ),
-    ),
+    apiClient.get<WorkflowRun[]>("/api/admin/ai-workflow-runs", {
+      params: workflowID ? { workflow_id: workflowID } : undefined,
+    }),
   getRunSteps: (id: number) =>
-    readData<WorkflowStepRun[]>(
-      apiFetch(`/api/admin/ai-workflow-runs/${id}/steps`),
-    ),
+    apiClient.get<WorkflowStepRun[]>(`/api/admin/ai-workflow-runs/${id}/steps`),
   getRunResources: (id: number) =>
-    readData<WorkflowResource[]>(
-      apiFetch(`/api/admin/ai-workflow-runs/${id}/resources`),
+    apiClient.get<WorkflowResource[]>(
+      `/api/admin/ai-workflow-runs/${id}/resources`,
     ),
   getRunInteractions: (id: number) =>
-    readData<WorkflowInteractionTask[]>(
-      apiFetch(`/api/admin/ai-workflow-runs/${id}/interactions`),
+    apiClient.get<WorkflowInteractionTask[]>(
+      `/api/admin/ai-workflow-runs/${id}/interactions`,
     ),
   getRunMediaCandidates: (id: number) =>
-    readData<MediaCandidate[]>(
-      apiFetch(`/api/admin/ai-workflow-runs/${id}/media-candidates`),
+    apiClient.get<MediaCandidate[]>(
+      `/api/admin/ai-workflow-runs/${id}/media-candidates`,
     ),
   getRunEvents: (id: number) =>
-    readData<WorkflowRunEvent[]>(
-      apiFetch(`/api/admin/ai-workflow-runs/${id}/events`),
+    apiClient.get<WorkflowRunEvent[]>(
+      `/api/admin/ai-workflow-runs/${id}/events`,
     ),
   resolveInteraction: (task: WorkflowInteractionTask, response: unknown) =>
-    readData<WorkflowInteractionTask>(
-      apiFetch(`/api/admin/ai-interactions/${task.id}/resolve`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resume_token: task.resume_token, response }),
-      }),
+    apiClient.post<WorkflowInteractionTask>(
+      `/api/admin/ai-interactions/${task.id}/resolve`,
+      { resume_token: task.resume_token, response },
     ),
   cancelInteraction: (task: WorkflowInteractionTask) =>
-    readData<void>(
-      apiFetch(`/api/admin/ai-interactions/${task.id}/cancel`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resume_token: task.resume_token }),
-      }),
-    ),
+    apiClient.post<void>(`/api/admin/ai-interactions/${task.id}/cancel`, {
+      resume_token: task.resume_token,
+    }),
   retryRun: (
     id: number,
     payload: { step_id: string; iteration?: number; iterations?: number[] },
   ) =>
-    readData<WorkflowRun>(
-      apiFetch(`/api/admin/ai-workflow-runs/${id}/retry`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      }),
+    apiClient.post<WorkflowRun>(
+      `/api/admin/ai-workflow-runs/${id}/retry`,
+      payload,
     ),
   cancelRun: (id: number) =>
-    readData<void>(
-      apiFetch(`/api/admin/ai-workflow-runs/${id}/cancel`, { method: "POST" }),
-    ),
+    apiClient.post<void>(`/api/admin/ai-workflow-runs/${id}/cancel`),
   deleteRun: (id: number) =>
-    readData<void>(
-      apiFetch(`/api/admin/ai-workflow-runs/${id}`, { method: "DELETE" }),
-    ),
+    apiClient.delete<void>(`/api/admin/ai-workflow-runs/${id}`),
   getResources: (
     type: string,
     parameters: URLSearchParams,
     signal?: AbortSignal,
   ) =>
-    readData<ResourcePage>(
-      apiFetch(
-        `/api/admin/ai-resources/${encodeURIComponent(type)}?${parameters}`,
-        { signal },
-      ),
+    apiClient.get<ResourcePage>(
+      `/api/admin/ai-resources/${encodeURIComponent(type)}?${parameters}`,
+      { signal },
     ),
   draftWorkflow: (prompt: string) =>
-    readData<{
+    apiClient.post<{
       workflow: Workflow;
       provider: string;
       model: string;
@@ -171,15 +130,9 @@ export const workflowApi = {
         skill_name?: string;
       }>;
       readiness?: { message?: string };
-    }>(
-      apiFetch("/api/admin/ai-workflows/draft", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-      }),
-    ),
+    }>("/api/admin/ai-workflows/draft", { prompt }),
   draftAgentSkills: (prompt: string) =>
-    readData<{
+    apiClient.post<{
       drafts: Array<{
         name: string;
         description: string;
@@ -189,11 +142,5 @@ export const workflowApi = {
       }>;
       provider: string;
       model: string;
-    }>(
-      apiFetch("/api/admin/ai-workflows/agent-drafts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-      }),
-    ),
+    }>("/api/admin/ai-workflows/agent-drafts", { prompt }),
 };

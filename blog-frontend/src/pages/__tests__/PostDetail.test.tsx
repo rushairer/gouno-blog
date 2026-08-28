@@ -3,6 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { I18nProvider } from "../../i18n";
+import { GossoProvider } from "@gosso/client/react";
+import { gossoClient } from "../../auth";
 import PostDetail from "../PostDetail";
 
 const post = {
@@ -20,13 +22,15 @@ const post = {
 
 function renderPostDetail() {
   return render(
-    <I18nProvider>
-      <MemoryRouter initialEntries={["/posts/markdown-post"]}>
-        <Routes>
-          <Route path="/posts/:slug" element={<PostDetail />} />
-        </Routes>
-      </MemoryRouter>
-    </I18nProvider>,
+    <GossoProvider client={gossoClient}>
+      <I18nProvider>
+        <MemoryRouter initialEntries={["/posts/markdown-post"]}>
+          <Routes>
+            <Route path="/posts/:slug" element={<PostDetail />} />
+          </Routes>
+        </MemoryRouter>
+      </I18nProvider>
+    </GossoProvider>,
   );
 }
 
@@ -273,15 +277,19 @@ describe("PostDetail", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     render(
-      <I18nProvider>
-        <MemoryRouter
-          initialEntries={["/posts/daily-ai-news-2026-08-21-380?preview=true"]}
-        >
-          <Routes>
-            <Route path="/posts/:slug" element={<PostDetail />} />
-          </Routes>
-        </MemoryRouter>
-      </I18nProvider>,
+      <GossoProvider client={gossoClient}>
+        <I18nProvider>
+          <MemoryRouter
+            initialEntries={[
+              "/posts/daily-ai-news-2026-08-21-380?preview=true",
+            ]}
+          >
+            <Routes>
+              <Route path="/posts/:slug" element={<PostDetail />} />
+            </Routes>
+          </MemoryRouter>
+        </I18nProvider>
+      </GossoProvider>,
     );
 
     // Header and content render properly

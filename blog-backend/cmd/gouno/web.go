@@ -75,7 +75,6 @@ func startWebServer(cmd *cobra.Command, args []string) {
 
 	loggerLevel := zap.NewAtomicLevelAt(zapcore.Level(globalConfig.LogConfig.Level))
 	logger := utility.NewLogger(loggerLevel)
-	repository.SetLogger(logger)
 	logger.Sugar().Info("starting web server...")
 
 	// init db
@@ -136,109 +135,9 @@ func startWebServer(cmd *cobra.Command, args []string) {
 		}),
 		gounoMiddleware.RateLimitMiddleware(ctx, globalConfig.WebServerConfig.RateLimitPerMinute, time.Minute),
 	)
-	visitorSecret := os.Getenv("BLOG_VISITOR_SECRET")
-	if env == "production" && visitorSecret == "" {
-		log.Fatal("BLOG_VISITOR_SECRET is required in production")
-	}
-	if env == "production" && globalConfig.AIAgentConfig.Enabled && !controller.ValidWebhookSecret(os.Getenv("GOUNO_AI_WEBHOOK_SECRET")) {
-		log.Fatal("GOUNO_AI_WEBHOOK_SECRET must be at least 32 characters in production when AI Agents are enabled")
-	}
-	mediaDir := os.Getenv("BLOG_MEDIA_DIR")
-	if mediaDir == "" {
-		mediaDir = "./data/media"
-	}
-	mediaStore, err := media.FromEnvironment(ctx, mediaDir)
-	if err != nil {
-		log.Fatalf("configure media storage: %v", err)
-	}
-	postRepo := repository.NewPostRepository(db)
-	postSvc := service.NewPostService(postRepo)
-	pageRepo := repository.NewPageRepository(db)
-	pageSvc := service.NewPageService(pageRepo)
-	catRepo := repository.NewCategoryRepository(db)
-	catSvc := service.NewCategoryService(catRepo)
-	communityRepo := repository.NewCommunityRepository(db)
-	communitySvc := service.NewCommunityService(communityRepo, postRepo)
-	growthRepo := repository.NewGrowthRepository(db)
-	growthSvc := service.NewGrowthService(growthRepo)
-
-	service.StartScheduledPublisher(ctx, postSvc, logger)
-
-	var agentCtrl *controller.AgentController
-	if globalConfig.AIAgentConfig.Enabled {
-		secrets, err := secretbox.NewKeyring(
-			os.Getenv("BLOG_AGENT_MASTER_KEY"),
-			os.Getenv("BLOG_AGENT_MASTER_KEY_VERSION"),
-			os.Getenv("BLOG_AGENT_PREVIOUS_MASTER_KEYS"),
-		)
-		if err != nil {
-			log.Fatalf("configure AI Agent secret encryption: %v", err)
-		}
-		agentRepo := repository.NewAgentRepository(db)
-		knowledgeSvc := knowledge.NewService(db, secrets, globalConfig.AIAgentConfig.AllowedHosts, logger)
-		knowledgeSvc.Start(ctx)
-		toolRegistry := tool.NewBlogRegistry(postSvc, communitySvc, growthSvc, pageSvc, knowledgeSvc)
-		operationsSvc := operations.NewService(db, toolRegistry, logger)
-		operationsSvc.ConfigureGovernance(agentRepo, postSvc)
-		if err := operationsSvc.RegisterTools(); err != nil {
-			log.Fatalf("register AI operations tools: %v", err)
-		}
-		operationsSvc.Start(ctx)
-		management := agentservice.NewManagementService(
-			agentRepo, secrets, globalConfig.AIAgentConfig.AllowedHosts,
-			toolRegistry.AgentNames(), toolRegistry.ProposalNames(),
-		)
-		if created, err := management.BootstrapStarterPack(ctx); err != nil {
-			log.Fatalf("reconcile AI workspace starter pack: %v", err)
-		} else if created > 0 {
-			logger.Info("Reconciled AI workspace starter Agents", zap.Int("created", created))
-		}
-		runner := agentservice.NewRunner(agentRepo, management, toolRegistry, postSvc)
-		generation := agentservice.NewGenerationService(agentRepo, management, growthSvc, mediaStore)
-		approvals := agentservice.NewApprovalService(agentRepo, postSvc, management, growthSvc, mediaStore, pageSvc)
-		approvals.SetGenerationService(generation)
-		workflowSvc := workflowservice.NewService(db, runner, management, toolRegistry)
-		workflowSvc.StartScheduler(ctx, globalConfig.AIAgentConfig.SchedulerInterval)
-		connectorSvc := connector.NewService(db, secrets)
-		agentCtrl = controller.NewAgentControllerWithOptions(controller.AgentControllerOptions{
-			Management: management,
-			Runner:     runner,
-			Approvals:  approvals,
-			Tools:      toolRegistry,
-			WorkerCtx:  ctx,
-			Knowledge:  knowledgeSvc,
-			Workflows:  workflowSvc,
-			Operations: operationsSvc,
-			Connectors: connectorSvc,
-			Generation: generation,
-		})
-		agentservice.NewScheduler(
-			agentRepo, runner, globalConfig.AIAgentConfig.SchedulerInterval, logger,
-		).Start(ctx)
-	}
-	verifier := gounoAuth.NewVerifier(jwksURL)
-	accessService := access.NewService(db, access.Bootstrap{
-		Issuer:  os.Getenv("BLOG_BOOTSTRAP_OWNER_ISSUER"),
-		Subject: os.Getenv("BLOG_BOOTSTRAP_OWNER_SUBJECT"),
-	})
-	router.RegisterWebRouterWithOptions(engine, router.WebRouterOptions{
-		DB:                 db,
-		AuthOptions:        authOptions,
-		JWKSURL:            jwksURL,
-		RedisDSN:           globalConfig.RedisConfig.DSN,
-		VisitorSecret:      visitorSecret,
-		MediaDir:           mediaDir,
-		MediaStore:         mediaStore,
-		CORSAllowedOrigins: globalConfig.WebServerConfig.CORSAllowedOrigins,
-		PostSvc:            postSvc,
-		PageSvc:            pageSvc,
-		CategorySvc:        catSvc,
-		CommunitySvc:       communitySvc,
-		GrowthSvc:          growthSvc,
-		AgentCtrl:          agentCtrl,
-		Logger:             logger,
-		Verifier:           verifier,
-		AccessService:      accessService,
+	newApplication(ctx, applicationConfig{
+		Global: globalConfig, Env: env, DB: db, Engine: engine, Logger: logger,
+		JWKSURL: jwksURL, AuthOptions: authOptions,
 	})
 
 	httpServer := &http.Server{
@@ -276,4 +175,100 @@ func startWebServer(cmd *cobra.Command, args []string) {
 	// Close
 
 	logger.Sugar().Info("server exiting")
+}
+
+type applicationConfig struct {
+	Global      config.GoUnoConfig
+	Env         string
+	DB          *sql.DB
+	Engine      *gin.Engine
+	Logger      *zap.Logger
+	JWKSURL     string
+	AuthOptions middleware.AuthOptions
+}
+
+// newApplication is the sole composition root for repositories, services,
+// workers, controllers and router dependencies.
+func newApplication(ctx context.Context, cfg applicationConfig) {
+	visitorSecret := os.Getenv("BLOG_VISITOR_SECRET")
+	if cfg.Env == "production" && visitorSecret == "" {
+		log.Fatal("BLOG_VISITOR_SECRET is required in production")
+	}
+	if cfg.Env == "production" && cfg.Global.AIAgentConfig.Enabled && !controller.ValidWebhookSecret(os.Getenv("GOUNO_AI_WEBHOOK_SECRET")) {
+		log.Fatal("GOUNO_AI_WEBHOOK_SECRET must be at least 32 characters in production when AI Agents are enabled")
+	}
+	mediaDir := os.Getenv("BLOG_MEDIA_DIR")
+	if mediaDir == "" {
+		mediaDir = "./data/media"
+	}
+	mediaStore, err := media.FromEnvironment(ctx, mediaDir)
+	if err != nil {
+		log.Fatalf("configure media storage: %v", err)
+	}
+
+	transactor := repository.NewTransactor(cfg.DB, cfg.Logger)
+	postRepo := repository.NewPostRepository(cfg.DB)
+	postSvc := service.NewPostService(postRepo)
+	pageSvc := service.NewPageService(repository.NewPageRepository(cfg.DB))
+	catSvc := service.NewCategoryService(repository.NewCategoryRepository(cfg.DB))
+	communitySvc := service.NewCommunityService(repository.NewCommunityRepository(cfg.DB), postRepo)
+	growthSvc := service.NewGrowthService(repository.NewGrowthRepository(cfg.DB))
+	service.StartScheduledPublisher(ctx, postSvc, cfg.Logger)
+
+	var agentCtrl *controller.AgentController
+	if cfg.Global.AIAgentConfig.Enabled {
+		secrets, err := secretbox.NewKeyring(
+			os.Getenv("BLOG_AGENT_MASTER_KEY"),
+			os.Getenv("BLOG_AGENT_MASTER_KEY_VERSION"),
+			os.Getenv("BLOG_AGENT_PREVIOUS_MASTER_KEYS"),
+		)
+		if err != nil {
+			log.Fatalf("configure AI Agent secret encryption: %v", err)
+		}
+		agentRepo := repository.NewAgentRepository(cfg.DB)
+		knowledgeSvc := knowledge.NewService(cfg.DB, secrets, cfg.Global.AIAgentConfig.AllowedHosts, cfg.Logger, transactor)
+		knowledgeSvc.Start(ctx)
+		toolRegistry := tool.NewBlogRegistry(postSvc, communitySvc, growthSvc, pageSvc, knowledgeSvc)
+		operationsSvc := operations.NewService(cfg.DB, toolRegistry, cfg.Logger, transactor)
+		operationsSvc.ConfigureGovernance(agentRepo, postSvc)
+		if err := operationsSvc.RegisterTools(); err != nil {
+			log.Fatalf("register AI operations tools: %v", err)
+		}
+		operationsSvc.Start(ctx)
+		management := agentservice.NewManagementService(
+			agentRepo, secrets, cfg.Global.AIAgentConfig.AllowedHosts,
+			toolRegistry.AgentNames(), toolRegistry.ProposalNames(),
+		)
+		if created, err := management.BootstrapStarterPack(ctx); err != nil {
+			log.Fatalf("reconcile AI workspace starter pack: %v", err)
+		} else if created > 0 {
+			cfg.Logger.Info("Reconciled AI workspace starter Agents", zap.Int("created", created))
+		}
+		runner := agentservice.NewRunner(agentRepo, management, toolRegistry, postSvc)
+		generation := agentservice.NewGenerationService(agentRepo, management, growthSvc, mediaStore)
+		approvals := agentservice.NewApprovalService(agentRepo, postSvc, management, growthSvc, mediaStore, pageSvc)
+		approvals.SetGenerationService(generation)
+		workflowSvc := workflowservice.NewService(cfg.DB, runner, management, toolRegistry, transactor)
+		workflowSvc.StartScheduler(ctx, cfg.Global.AIAgentConfig.SchedulerInterval)
+		connectorSvc := connector.NewService(cfg.DB, secrets, transactor)
+		agentCtrl = controller.NewAgentControllerWithOptions(controller.AgentControllerOptions{
+			Management: management, Runner: runner, Approvals: approvals, Tools: toolRegistry,
+			WorkerCtx: ctx, Knowledge: knowledgeSvc, Workflows: workflowSvc, Operations: operationsSvc,
+			Connectors: connectorSvc, Generation: generation,
+		})
+		agentservice.NewScheduler(agentRepo, runner, cfg.Global.AIAgentConfig.SchedulerInterval, cfg.Logger).Start(ctx)
+	}
+
+	verifier := gounoAuth.NewVerifier(cfg.JWKSURL)
+	accessService := access.NewService(cfg.DB, access.Bootstrap{
+		Issuer: os.Getenv("BLOG_BOOTSTRAP_OWNER_ISSUER"), Subject: os.Getenv("BLOG_BOOTSTRAP_OWNER_SUBJECT"),
+	})
+	router.RegisterWebRouterWithOptions(cfg.Engine, router.WebRouterOptions{
+		DB: cfg.DB, AuthOptions: cfg.AuthOptions, RedisDSN: cfg.Global.RedisConfig.DSN,
+		VisitorSecret: visitorSecret, MediaDir: mediaDir, MediaStore: mediaStore,
+		CORSAllowedOrigins: cfg.Global.WebServerConfig.CORSAllowedOrigins,
+		PostSvc:            postSvc, PageSvc: pageSvc, CategorySvc: catSvc, CommunitySvc: communitySvc,
+		GrowthSvc: growthSvc, AgentCtrl: agentCtrl, Logger: cfg.Logger, Verifier: verifier,
+		AccessService: accessService, SecureCookies: cfg.Global.WebServerConfig.ResolveSecureCookies(cfg.Env),
+	})
 }

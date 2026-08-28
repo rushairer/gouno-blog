@@ -1,9 +1,4 @@
-import {
-  authenticatedApiFetch as apiFetch,
-  optionalApiFetch,
-  publicApiFetch,
-  readData,
-} from "./client";
+import { apiClient } from "./client";
 import type { PaginatedPosts, Post, PostVersion } from "../types/blog";
 
 export interface PostPayload {
@@ -22,47 +17,39 @@ export const postsApi = {
     admin = false,
   ): Promise<PaginatedPosts> {
     const path = admin ? "/api/admin/posts" : "/api/posts";
-    let query = "";
-    if (params) {
-      if (params instanceof URLSearchParams) {
-        query = params.toString();
-      } else {
-        const search = new URLSearchParams();
-        Object.entries(params).forEach(([k, v]) => {
-          if (v !== undefined && v !== "") {
-            if (admin && k === "search" && !params.q) {
-              search.set("q", String(v));
-            } else {
-              search.set(k, String(v));
-            }
+    const cleanParams: Record<string, string | number> = {};
+    if (params && !(params instanceof URLSearchParams)) {
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== "") {
+          if (admin && k === "search" && !params.q) {
+            cleanParams.q = v;
+          } else {
+            cleanParams[k] = v;
           }
-        });
-        query = search.toString();
-      }
+        }
+      });
     }
-    return readData<PaginatedPosts>(
-      apiFetch(`${path}${query ? `?${query}` : ""}`),
-    );
+    return apiClient.get<PaginatedPosts>(path, {
+      params: params instanceof URLSearchParams ? params : cleanParams,
+    });
   },
 
   async getPost(slugOrID: string | number): Promise<Post> {
-    return readData<Post>(
-      publicApiFetch(`/api/posts/${encodeURIComponent(String(slugOrID))}`),
+    return apiClient.get<Post>(
+      `/api/posts/${encodeURIComponent(String(slugOrID))}`,
     );
   },
 
   async getAdminPost(slugOrID: number | string): Promise<Post> {
-    return readData<Post>(
-      apiFetch(`/api/admin/posts/${encodeURIComponent(String(slugOrID))}`),
+    return apiClient.get<Post>(
+      `/api/admin/posts/${encodeURIComponent(String(slugOrID))}`,
     );
   },
 
   async getRelatedPosts(slugOrID: string | number): Promise<Post[]> {
     return (
-      (await readData<Post[] | null>(
-        publicApiFetch(
-          `/api/posts/${encodeURIComponent(String(slugOrID))}/related`,
-        ),
+      (await apiClient.get<Post[] | null>(
+        `/api/posts/${encodeURIComponent(String(slugOrID))}/related`,
       )) || []
     );
   },
@@ -70,55 +57,33 @@ export const postsApi = {
   async getCommunityState(
     slugOrID: string | number,
   ): Promise<{ liked: boolean; likes_count: number }> {
-    return readData<{ liked: boolean; likes_count: number }>(
-      optionalApiFetch(
-        `/api/posts/${encodeURIComponent(String(slugOrID))}/community`,
-      ),
+    return apiClient.get<{ liked: boolean; likes_count: number }>(
+      `/api/posts/${encodeURIComponent(String(slugOrID))}/community`,
     );
   },
 
   async createPost(payload: PostPayload): Promise<Post> {
-    return readData<Post>(
-      apiFetch("/api/posts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      }),
-    );
+    return apiClient.post<Post>("/api/posts", payload);
   },
 
   async updatePost(id: number | string, payload: PostPayload): Promise<Post> {
-    return readData<Post>(
-      apiFetch(`/api/posts/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      }),
-    );
+    return apiClient.put<Post>(`/api/posts/${id}`, payload);
   },
 
   async deletePost(id: number | string): Promise<void> {
-    return readData<void>(
-      apiFetch(`/api/posts/${id}`, {
-        method: "DELETE",
-      }),
-    );
+    return apiClient.delete<void>(`/api/posts/${id}`);
   },
 
   async getVersions(postID: number | string): Promise<PostVersion[]> {
-    return readData<PostVersion[]>(
-      apiFetch(`/api/admin/posts/${postID}/versions`),
-    );
+    return apiClient.get<PostVersion[]>(`/api/admin/posts/${postID}/versions`);
   },
 
   async restoreVersion(
     postID: number | string,
     versionID: number | string,
   ): Promise<Post> {
-    return readData<Post>(
-      apiFetch(`/api/admin/posts/${postID}/versions/${versionID}/restore`, {
-        method: "POST",
-      }),
+    return apiClient.post<Post>(
+      `/api/admin/posts/${postID}/versions/${versionID}/restore`,
     );
   },
 
@@ -126,17 +91,9 @@ export const postsApi = {
     slug: string,
     params?: URLSearchParams | Record<string, string | number>,
   ): Promise<PaginatedPosts> {
-    let query = "";
-    if (params) {
-      query =
-        params instanceof URLSearchParams
-          ? params.toString()
-          : new URLSearchParams(params as Record<string, string>).toString();
-    }
-    return readData<PaginatedPosts>(
-      apiFetch(
-        `/api/categories/${encodeURIComponent(slug)}/posts${query ? `?${query}` : ""}`,
-      ),
+    return apiClient.get<PaginatedPosts>(
+      `/api/categories/${encodeURIComponent(slug)}/posts`,
+      { params },
     );
   },
 
@@ -144,12 +101,6 @@ export const postsApi = {
     ids: (number | string)[],
     action: "publish" | "draft" | "delete",
   ): Promise<void> {
-    return readData<void>(
-      apiFetch("/api/admin/posts/batch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids, action }),
-      }),
-    );
+    return apiClient.post<void>("/api/admin/posts/batch", { ids, action });
   },
 };

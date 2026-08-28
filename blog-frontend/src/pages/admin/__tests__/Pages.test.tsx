@@ -4,14 +4,22 @@ import { MemoryRouter } from "react-router-dom";
 import AdminPages from "../Pages";
 import { ToastProvider } from "../../../components/ui";
 import { pagesApi } from "../../../api/pages";
-import * as auth from "../../../auth";
 import type { PaginatedPages } from "../../../types/blog";
+import { GossoProvider } from "@gosso/client/react";
+
+const snapshot = {
+  loggedIn: true,
+  isAdmin: true,
+  profile: { sub: "admin", roles: ["admin"] },
+};
+const mockClient = {
+  subscribe: () => () => {},
+  getSnapshot: () => snapshot,
+} as any;
 
 describe("AdminPages", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    vi.spyOn(auth, "isLoggedIn").mockReturnValue(true);
-    vi.spyOn(auth, "canManageBlog").mockReturnValue(true);
   });
 
   it("renders the list of custom pages with actions", async () => {
@@ -52,11 +60,13 @@ describe("AdminPages", () => {
     vi.spyOn(pagesApi, "getAdminPages").mockResolvedValue(mockData);
 
     render(
-      <ToastProvider>
-        <MemoryRouter initialEntries={["/admin/pages"]}>
-          <AdminPages />
-        </MemoryRouter>
-      </ToastProvider>,
+      <GossoProvider client={mockClient}>
+        <ToastProvider>
+          <MemoryRouter initialEntries={["/admin/pages"]}>
+            <AdminPages />
+          </MemoryRouter>
+        </ToastProvider>
+      </GossoProvider>,
     );
 
     await waitFor(() => {

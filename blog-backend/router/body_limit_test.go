@@ -8,14 +8,15 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rushairer/blog-backend/middleware"
 )
 
 func TestRequestBodyLimitRejectsOversizedJSONBeforeHandler(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.Use(requestBodyLimitMiddleware())
+	router.Use(middleware.RequestBodyLimitMiddleware())
 	router.POST("/api/write", func(c *gin.Context) { c.Status(http.StatusNoContent) })
-	req := httptest.NewRequest(http.MethodPost, "/api/write", bytes.NewReader(make([]byte, maxAPIJSONBody+1)))
+	req := httptest.NewRequest(http.MethodPost, "/api/write", bytes.NewReader(make([]byte, middleware.MaxAPIJSONBody+1)))
 	req.Header.Set("Content-Type", "application/json")
 	response := httptest.NewRecorder()
 	router.ServeHTTP(response, req)
@@ -27,7 +28,7 @@ func TestRequestBodyLimitRejectsOversizedJSONBeforeHandler(t *testing.T) {
 func TestRequestBodyLimitCapsChunkedJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.Use(requestBodyLimitMiddleware())
+	router.Use(middleware.RequestBodyLimitMiddleware())
 	router.POST("/api/write", func(c *gin.Context) {
 		_, err := io.ReadAll(c.Request.Body)
 		if err == nil {
@@ -36,7 +37,7 @@ func TestRequestBodyLimitCapsChunkedJSON(t *testing.T) {
 		}
 		c.Status(http.StatusRequestEntityTooLarge)
 	})
-	req := httptest.NewRequest(http.MethodPost, "/api/write", bytes.NewReader(make([]byte, maxAPIJSONBody+1)))
+	req := httptest.NewRequest(http.MethodPost, "/api/write", bytes.NewReader(make([]byte, middleware.MaxAPIJSONBody+1)))
 	req.ContentLength = -1
 	req.Header.Set("Content-Type", "application/json")
 	response := httptest.NewRecorder()

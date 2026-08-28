@@ -5,14 +5,29 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import Dashboard from "../Dashboard";
 import { apiFetch } from "../../../auth";
 
-vi.mock("../../../auth", () => ({
-  apiFetch: vi.fn(),
-  getUserProfile: () => ({ name: "Admin", role: "admin" }),
-  hasBlogPermission: () => true,
-  hasAnyBlogPermission: () => true,
-  getBlogRoleLabel: () => "管理员",
-  getCachedBlogSession: () => null,
+vi.mock("@gosso/client/react", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@gosso/client/react")>()),
+  useUserProfile: () => ({
+    sub: "admin",
+    roles: ["admin"],
+    permissions: ["content.manage", "community.moderate", "ai.manage"],
+  }),
 }));
+
+vi.mock("../../../auth", async () => {
+  const apiFetch = vi.fn();
+  const { createMockGossoClient } =
+    await import("../../../test/mockGossoClient");
+  return {
+    apiFetch,
+    gossoClient: createMockGossoClient(apiFetch),
+    getUserProfile: () => ({ name: "Admin", role: "admin" }),
+    hasBlogPermission: () => true,
+    hasAnyBlogPermission: () => true,
+    getBlogRoleLabel: () => "管理员",
+    getCachedBlogSession: () => null,
+  };
+});
 
 vi.mock("../../../hooks/useAdminGuard", () => ({
   useAdminGuard: () => true,

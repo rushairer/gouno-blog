@@ -1,4 +1,3 @@
-import { authenticatedApiFetch as apiFetch, readData } from "./client";
 import type {
   Agent,
   AgentApproval,
@@ -10,6 +9,8 @@ import type {
   ToolDefinition,
   WorkflowInteractionTask,
 } from "../types/agent";
+import { apiClient } from "./client";
+import { parseJsonEnvelope } from "@gosso/client";
 
 export interface DraftMetadataResult {
   summary?: string;
@@ -52,18 +53,12 @@ export const agentApi = {
   async getDraftAssist(
     payload: DraftAssistPayload,
   ): Promise<DraftAssistResponse> {
-    const data = await readData<{
+    const data = await apiClient.post<{
       suggestions: string[];
       metadata?: DraftMetadataResult;
       provider?: string;
       model?: string;
-    }>(
-      apiFetch("/api/admin/ai-draft-assist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      }),
-    );
+    }>("/api/admin/ai-draft-assist", payload);
     return {
       suggestions: data.suggestions || [],
       metadata: data.metadata,
@@ -75,13 +70,11 @@ export const agentApi = {
     prompt: string;
     alt_text?: string;
   }): Promise<{ url: string; asset_id?: number; alt_text?: string }> {
-    return readData<{ url: string; asset_id?: number; alt_text?: string }>(
-      apiFetch("/api/admin/ai-generate-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      }),
-    );
+    return apiClient.post<{
+      url: string;
+      asset_id?: number;
+      alt_text?: string;
+    }>("/api/admin/ai-generate-image", payload);
   },
   async generateCoverImage(payload: {
     prompt: string;
@@ -90,13 +83,17 @@ export const agentApi = {
     return this.generateImage(payload);
   },
   async getToolCatalog(): Promise<ToolDefinition[]> {
-    return readData<ToolDefinition[]>(apiFetch("/api/admin/agent-tools"));
+    return apiClient.get<ToolDefinition[]>("/api/admin/agent-tools");
   },
 
   async getInteractions(): Promise<WorkflowInteractionTask[]> {
-    const res = await apiFetch("/api/admin/ai-interactions");
-    if (!res.ok) return [];
-    return readData<WorkflowInteractionTask[]>(res);
+    try {
+      return await apiClient.get<WorkflowInteractionTask[]>(
+        "/api/admin/ai-interactions",
+      );
+    } catch {
+      return [];
+    }
   },
 
   async resolveInteraction(
@@ -104,79 +101,60 @@ export const agentApi = {
     resumeToken: string,
     response: Record<string, unknown>,
   ): Promise<WorkflowInteractionTask> {
-    return readData<WorkflowInteractionTask>(
-      apiFetch(`/api/admin/ai-interactions/${taskId}/resolve`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resume_token: resumeToken, response }),
-      }),
+    return apiClient.post<WorkflowInteractionTask>(
+      `/api/admin/ai-interactions/${taskId}/resolve`,
+      { resume_token: resumeToken, response },
     );
   },
 
   async getProviderProfiles(): Promise<ProviderProfile[]> {
-    return readData<ProviderProfile[]>(
-      apiFetch("/api/admin/provider-profiles"),
-    );
+    return apiClient.get<ProviderProfile[]>("/api/admin/provider-profiles");
   },
 
   async saveProviderProfile(
     profile: Partial<ProviderProfile>,
   ): Promise<ProviderProfile> {
-    return readData<ProviderProfile>(
-      apiFetch(
-        profile.id
-          ? `/api/admin/provider-profiles/${profile.id}`
-          : "/api/admin/provider-profiles",
-        {
-          method: profile.id ? "PUT" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(profile),
-        },
-      ),
-    );
+    return profile.id
+      ? apiClient.put<ProviderProfile>(
+          `/api/admin/provider-profiles/${profile.id}`,
+          profile,
+        )
+      : apiClient.post<ProviderProfile>(
+          "/api/admin/provider-profiles",
+          profile,
+        );
   },
 
   async saveProviderProfileWithSetup(
     profile: Partial<ProviderProfile>,
   ): Promise<{ profile: ProviderProfile; starter_agents_created: number }> {
-    return readData<{
-      profile: ProviderProfile;
-      starter_agents_created: number;
-    }>(
-      apiFetch(
-        profile.id
-          ? `/api/admin/provider-profiles/${profile.id}`
-          : "/api/admin/provider-profiles",
-        {
-          method: profile.id ? "PUT" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(profile),
-        },
-      ),
-    );
+    return profile.id
+      ? apiClient.put<{
+          profile: ProviderProfile;
+          starter_agents_created: number;
+        }>(`/api/admin/provider-profiles/${profile.id}`, profile)
+      : apiClient.post<{
+          profile: ProviderProfile;
+          starter_agents_created: number;
+        }>("/api/admin/provider-profiles", profile);
   },
 
   async getEmbeddingProfiles(): Promise<EmbeddingProfile[]> {
-    return readData<EmbeddingProfile[]>(
-      apiFetch("/api/admin/embedding-profiles"),
-    );
+    return apiClient.get<EmbeddingProfile[]>("/api/admin/embedding-profiles");
   },
 
   async saveEmbeddingProfile(
     profile: Partial<EmbeddingProfile>,
   ): Promise<EmbeddingProfile> {
-    return readData<EmbeddingProfile>(
-      apiFetch(
-        profile.id
-          ? `/api/admin/embedding-profiles/${profile.id}`
-          : "/api/admin/embedding-profiles",
-        {
-          method: profile.id ? "PUT" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(profile),
-        },
-      ),
-    );
+    return profile.id
+      ? apiClient.put<EmbeddingProfile>(
+          `/api/admin/embedding-profiles/${profile.id}`,
+          profile,
+        )
+      : apiClient.post<EmbeddingProfile>(
+          "/api/admin/embedding-profiles",
+          profile,
+        );
   },
 
   async getIndexStatus(): Promise<{
@@ -184,31 +162,27 @@ export const agentApi = {
     failed: number;
     chunks: number;
   }> {
-    return readData<{ queued: number; failed: number; chunks: number }>(
-      apiFetch("/api/admin/ai-index/status"),
-    );
+    return apiClient.get<{
+      queued: number;
+      failed: number;
+      chunks: number;
+    }>("/api/admin/ai-index/status");
   },
 
   async getAgents(): Promise<Agent[]> {
-    return readData<Agent[]>(apiFetch("/api/admin/agents"));
+    return apiClient.get<Agent[]>("/api/admin/agents");
   },
 
   async saveAgent(agent: Partial<Agent>): Promise<Agent> {
-    return readData<Agent>(
-      apiFetch(
-        agent.id ? `/api/admin/agents/${agent.id}` : "/api/admin/agents",
-        {
-          method: agent.id ? "PUT" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(agent),
-        },
-      ),
-    );
+    return agent.id
+      ? apiClient.put<Agent>(`/api/admin/agents/${agent.id}`, agent)
+      : apiClient.post<Agent>("/api/admin/agents", agent);
   },
 
   async getAgentRuns(pageSize = 100): Promise<AgentRun[]> {
-    const data = await readData<{ list: AgentRun[] }>(
-      apiFetch(`/api/admin/agent-runs?pageSize=${pageSize}`),
+    const data = await apiClient.get<{ list: AgentRun[] }>(
+      "/api/admin/agent-runs",
+      { params: { pageSize } },
     );
     return data.list || [];
   },
@@ -216,8 +190,8 @@ export const agentApi = {
   async getAgentRunDetail(
     runId: string,
   ): Promise<{ run: AgentRun; tool_calls: AgentToolCall[] }> {
-    return readData<{ run: AgentRun; tool_calls: AgentToolCall[] }>(
-      apiFetch(`/api/admin/agent-runs/${runId}`),
+    return apiClient.get<{ run: AgentRun; tool_calls: AgentToolCall[] }>(
+      `/api/admin/agent-runs/${runId}`,
     );
   },
 
@@ -225,120 +199,78 @@ export const agentApi = {
     status = "pending",
     pageSize = 100,
   ): Promise<AgentApproval[]> {
-    const data = await readData<{ list: AgentApproval[] }>(
-      apiFetch(
-        `/api/admin/agent-approvals?status=${encodeURIComponent(status)}&pageSize=${pageSize}`,
-      ),
+    const data = await apiClient.get<{ list: AgentApproval[] }>(
+      "/api/admin/agent-approvals",
+      { params: { status, pageSize } },
     );
     return data.list || [];
   },
 
   async getAgentSkills(): Promise<AgentSkill[]> {
-    return readData<AgentSkill[]>(apiFetch("/api/admin/agent-skills"));
+    return apiClient.get<AgentSkill[]>("/api/admin/agent-skills");
   },
 
   async saveAgentSkill(skill: Partial<AgentSkill>): Promise<AgentSkill> {
-    return readData<AgentSkill>(
-      apiFetch(
-        skill.id
-          ? `/api/admin/agent-skills/${skill.id}`
-          : "/api/admin/agent-skills",
-        {
-          method: skill.id ? "PUT" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(skill),
-        },
-      ),
-    );
+    return skill.id
+      ? apiClient.put<AgentSkill>(`/api/admin/agent-skills/${skill.id}`, skill)
+      : apiClient.post<AgentSkill>("/api/admin/agent-skills", skill);
   },
 
   copySkill: (id: number, name: string) =>
-    readData<void>(
-      apiFetch(`/api/admin/agent-skills/${id}/copy`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
-      }),
-    ),
-  runAgent: (id: number) =>
-    readData<void>(apiFetch(`/api/admin/agents/${id}/run`, { method: "POST" })),
+    apiClient.post<void>(`/api/admin/agent-skills/${id}/copy`, { name }),
+  runAgent: (id: number) => apiClient.post<void>(`/api/admin/agents/${id}/run`),
   setAgentEnabled: (id: number, enabled: boolean) =>
-    readData<void>(
-      apiFetch(`/api/admin/agents/${id}/${enabled ? "enable" : "disable"}`, {
-        method: "POST",
-      }),
+    apiClient.post<void>(
+      `/api/admin/agents/${id}/${enabled ? "enable" : "disable"}`,
     ),
   reviewApproval: (id: number, approved: boolean) =>
-    readData<void>(
-      apiFetch(
-        `/api/admin/agent-approvals/${id}/${approved ? "approve" : "reject"}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ note: "" }),
-        },
-      ),
+    apiClient.post<void>(
+      `/api/admin/agent-approvals/${id}/${approved ? "approve" : "reject"}`,
+      { note: "" },
     ),
   deleteAgentRun: (id: string) =>
-    readData<void>(
-      apiFetch(`/api/admin/agent-runs/${id}`, { method: "DELETE" }),
-    ),
+    apiClient.delete<void>(`/api/admin/agent-runs/${id}`),
   deleteAgent: (id: number) =>
-    readData<void>(apiFetch(`/api/admin/agents/${id}`, { method: "DELETE" })),
+    apiClient.delete<void>(`/api/admin/agents/${id}`),
   deleteProviderProfile: (id: number) =>
-    readData<void>(
-      apiFetch(`/api/admin/provider-profiles/${id}`, { method: "DELETE" }),
-    ),
+    apiClient.delete<void>(`/api/admin/provider-profiles/${id}`),
   deleteEmbeddingProfile: (id: number) =>
-    readData<void>(
-      apiFetch(`/api/admin/embedding-profiles/${id}`, { method: "DELETE" }),
-    ),
+    apiClient.delete<void>(`/api/admin/embedding-profiles/${id}`),
   deleteAgentSkill: (id: number) =>
-    readData<void>(
-      apiFetch(`/api/admin/agent-skills/${id}`, { method: "DELETE" }),
-    ),
+    apiClient.delete<void>(`/api/admin/agent-skills/${id}`),
   setDefaultProvider: (id: number, purpose: "writing" | "image") =>
-    readData<void>(
-      apiFetch(`/api/admin/provider-profiles/${id}/default/${purpose}`, {
-        method: "POST",
-      }),
+    apiClient.post<void>(
+      `/api/admin/provider-profiles/${id}/default/${purpose}`,
     ),
   testProvider: (id: number) =>
-    readData<void>(
-      apiFetch(`/api/admin/provider-profiles/${id}/test`, { method: "POST" }),
-    ),
+    apiClient.post<void>(`/api/admin/provider-profiles/${id}/test`),
   testEmbedding: (id: number) =>
-    readData<void>(
-      apiFetch(`/api/admin/embedding-profiles/${id}/test`, { method: "POST" }),
-    ),
-  retryIndex: () =>
-    readData<void>(apiFetch("/api/admin/ai-index/retry", { method: "POST" })),
-  rebuildIndex: () =>
-    readData<void>(apiFetch("/api/admin/ai-index/rebuild", { method: "POST" })),
+    apiClient.post<void>(`/api/admin/embedding-profiles/${id}/test`),
+  retryIndex: () => apiClient.post<void>("/api/admin/ai-index/retry"),
+  rebuildIndex: () => apiClient.post<void>("/api/admin/ai-index/rebuild"),
   exportProviders: async () => {
-    const response = await apiFetch("/api/admin/provider-profiles/export");
-    if (!response.ok) await readData<void>(response);
+    const response = await apiClient.apiFetch(
+      "/api/admin/provider-profiles/export",
+    );
+    if (!response.ok) {
+      await parseJsonEnvelope<void>(response, "Failed to export providers");
+    }
     return response.blob();
   },
   importProviders: (payload: unknown) =>
-    readData<{ imported_count: number }>(
-      apiFetch("/api/admin/provider-profiles/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      }),
+    apiClient.post<{ imported_count: number }>(
+      "/api/admin/provider-profiles/import",
+      payload,
     ),
   importSkill: (payload: unknown) =>
-    readData<AgentSkill>(
-      apiFetch("/api/admin/agent-skills/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      }),
-    ),
+    apiClient.post<AgentSkill>("/api/admin/agent-skills/import", payload),
   exportSkill: async (id: number) => {
-    const response = await apiFetch(`/api/admin/agent-skills/${id}/export`);
-    if (!response.ok) await readData<void>(response);
+    const response = await apiClient.apiFetch(
+      `/api/admin/agent-skills/${id}/export`,
+    );
+    if (!response.ok) {
+      await parseJsonEnvelope<void>(response, "Failed to export skill");
+    }
     return response.blob();
   },
 };

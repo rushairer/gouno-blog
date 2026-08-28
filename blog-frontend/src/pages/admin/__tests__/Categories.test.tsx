@@ -5,9 +5,12 @@ import { apiFetch } from "../../../auth";
 import { ToastProvider } from "../../../components/ui";
 import Categories from "../Categories";
 
-vi.mock("../../../auth", () => ({
-  apiFetch: vi.fn(),
-}));
+vi.mock("../../../auth", async () => {
+  const apiFetch = vi.fn();
+  const { createMockGossoClient } =
+    await import("../../../test/mockGossoClient");
+  return { apiFetch, gossoClient: createMockGossoClient(apiFetch) };
+});
 
 vi.mock("../../../hooks/useAdminGuard", () => ({
   useAdminGuard: () => true,

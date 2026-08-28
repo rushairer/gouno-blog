@@ -1,4 +1,4 @@
-import { authenticatedApiFetch as apiFetch, readData } from "./client";
+import { apiClient } from "./client";
 import { setCachedSiteSettings } from "../config/site-defaults";
 import type { Category, SiteSettings } from "../types/blog";
 
@@ -9,13 +9,13 @@ export interface TagSummary {
 
 export const siteApi = {
   async getSiteSettings(): Promise<SiteSettings> {
-    const data = await readData<SiteSettings>(apiFetch("/api/site"));
+    const data = await apiClient.get<SiteSettings>("/api/site");
     if (data && typeof data === "object") setCachedSiteSettings(data);
     return data;
   },
 
   async getAdminSettings(): Promise<SiteSettings> {
-    const data = await readData<SiteSettings>(apiFetch("/api/admin/settings"));
+    const data = await apiClient.get<SiteSettings>("/api/admin/settings");
     if (data && typeof data === "object") setCachedSiteSettings(data);
     return data;
   },
@@ -23,12 +23,9 @@ export const siteApi = {
   async updateAdminSettings(
     settings: Record<string, string>,
   ): Promise<SiteSettings> {
-    const data = await readData<SiteSettings>(
-      apiFetch("/api/admin/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settings),
-      }),
+    const data = await apiClient.put<SiteSettings>(
+      "/api/admin/settings",
+      settings,
     );
     if (data && typeof data === "object") setCachedSiteSettings(data);
     return data;
@@ -41,81 +38,57 @@ export const siteApi = {
   },
 
   async getCategories(): Promise<Category[]> {
-    return readData<Category[]>(apiFetch("/api/categories"));
+    return apiClient.get<Category[]>("/api/categories");
   },
 
   async getAdminCategories(): Promise<Category[]> {
-    return readData<Category[]>(apiFetch("/api/admin/categories"));
+    return apiClient.get<Category[]>("/api/admin/categories");
   },
 
   async createCategory(category: Partial<Category>): Promise<Category> {
-    return readData<Category>(
-      apiFetch("/api/admin/categories", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(category),
-      }),
-    );
+    return apiClient.post<Category>("/api/admin/categories", category);
   },
 
   async updateCategory(
     id: number | string,
     category: Partial<Category>,
   ): Promise<Category> {
-    return readData<Category>(
-      apiFetch(`/api/admin/categories/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(category),
-      }),
-    );
+    return apiClient.put<Category>(`/api/admin/categories/${id}`, category);
   },
 
   async deleteCategory(id: number | string): Promise<void> {
-    return readData<void>(
-      apiFetch(`/api/admin/categories/${id}`, {
-        method: "DELETE",
-      }),
-    );
+    return apiClient.delete<void>(`/api/admin/categories/${id}`);
   },
 
   async getTags(): Promise<string[]> {
-    return readData<string[]>(apiFetch("/api/tags"));
+    return apiClient.get<string[]>("/api/tags");
   },
 
   async getPublishedTagSummaries(): Promise<TagSummary[]> {
-    return readData<TagSummary[]>(apiFetch("/api/tags/summary"));
+    return apiClient.get<TagSummary[]>("/api/tags/summary");
   },
 
   async getAdminTags(): Promise<TagSummary[]> {
-    return readData<TagSummary[]>(apiFetch("/api/admin/tags"));
+    return apiClient.get<TagSummary[]>("/api/admin/tags");
   },
 
   async renameTag(oldName: string, newName: string): Promise<void> {
-    return readData<void>(
-      apiFetch(`/api/admin/tags/${encodeURIComponent(oldName)}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newName }),
-      }),
+    return apiClient.put<void>(
+      `/api/admin/tags/${encodeURIComponent(oldName)}`,
+      { name: newName },
     );
   },
 
   async mergeTags(source: string, target: string): Promise<void> {
-    return readData<void>(
-      apiFetch("/api/admin/tags/merge", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ source, target }),
-      }),
-    );
+    return apiClient.post<void>("/api/admin/tags/merge", {
+      source,
+      target,
+    });
   },
 
   async deleteTag(name: string): Promise<void> {
-    return readData<void>(
-      apiFetch(`/api/admin/tags/${encodeURIComponent(name)}`, {
-        method: "DELETE",
-      }),
+    return apiClient.delete<void>(
+      `/api/admin/tags/${encodeURIComponent(name)}`,
     );
   },
 };

@@ -3,7 +3,12 @@ import { describe, expect, it, vi } from "vitest";
 import { apiFetch } from "../../../auth";
 import { WorkflowLauncher } from "../WorkflowLauncher";
 
-vi.mock("../../../auth", () => ({ apiFetch: vi.fn() }));
+vi.mock("../../../auth", async () => {
+  const apiFetch = vi.fn();
+  const { createMockGossoClient } =
+    await import("../../../test/mockGossoClient");
+  return { apiFetch, gossoClient: createMockGossoClient(apiFetch) };
+});
 
 const workflow = {
   id: 38,
@@ -98,7 +103,6 @@ describe("WorkflowLauncher", () => {
     await waitFor(() =>
       expect(apiFetch).toHaveBeenCalledWith(
         expect.stringContaining("/api/admin/ai-resources/post?key=17"),
-        expect.any(Object),
       ),
     );
   });

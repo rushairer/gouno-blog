@@ -1,4 +1,4 @@
-import { authenticatedApiFetch, readData } from "./client";
+import { apiClient } from "./client";
 
 export type BlogPrincipal = {
   id: number;
@@ -16,10 +16,7 @@ export type BlogMember = {
 };
 
 export const membersApi = {
-  list: () =>
-    readData<{ members: BlogMember[] }>(
-      authenticatedApiFetch("/api/admin/members"),
-    ),
+  list: () => apiClient.get<{ members: BlogMember[] }>("/api/admin/members"),
   update: (
     principalID: number,
     status: string,
@@ -27,27 +24,15 @@ export const membersApi = {
     displayName?: string,
     reason = "",
   ) =>
-    readData<{ updated: boolean }>(
-      authenticatedApiFetch(`/api/admin/members/${principalID}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          display_name: displayName,
-          status,
-          roles,
-          reason,
-        }),
-      }),
-    ),
+    apiClient.put<{ updated: boolean }>(`/api/admin/members/${principalID}`, {
+      display_name: displayName,
+      status,
+      roles,
+      reason,
+    }),
   transferOwner: (principalID: number, reason = "") =>
-    readData<{ transferred: boolean }>(
-      authenticatedApiFetch(
-        `/api/admin/members/${principalID}/transfer-owner`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ reason }),
-        },
-      ),
+    apiClient.post<{ transferred: boolean }>(
+      `/api/admin/members/${principalID}/transfer-owner`,
+      { reason },
     ),
 };

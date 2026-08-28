@@ -34,6 +34,7 @@ vi.mock("../auth", async (importOriginal) => {
     gossoClient: {
       ...actual.gossoClient,
       redirectToAuthorize: redirectToAuthorizeMock,
+      initializeSession: vi.fn().mockResolvedValue(getSnapshotMock()),
       getSnapshot: getSnapshotMock,
       subscribe: subscribeMock,
     },

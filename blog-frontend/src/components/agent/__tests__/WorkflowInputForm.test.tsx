@@ -4,7 +4,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiFetch } from "../../../auth";
 import { WorkflowInputForm } from "../WorkflowInputForm";
 
-vi.mock("../../../auth", () => ({ apiFetch: vi.fn() }));
+vi.mock("../../../auth", async () => {
+  const apiFetch = vi.fn();
+  const { createMockGossoClient } =
+    await import("../../../test/mockGossoClient");
+  return { apiFetch, gossoClient: createMockGossoClient(apiFetch) };
+});
 
 describe("WorkflowInputForm", () => {
   beforeEach(() => {
@@ -64,7 +69,6 @@ describe("WorkflowInputForm", () => {
     await waitFor(() =>
       expect(apiFetch).toHaveBeenCalledWith(
         expect.stringContaining("/api/admin/ai-resources/post?"),
-        expect.anything(),
       ),
     );
     await user.click(
@@ -115,7 +119,6 @@ describe("WorkflowInputForm", () => {
         expect.stringMatching(
           /status=published.*published_within_days=2|published_within_days=2.*status=published/,
         ),
-        expect.anything(),
       ),
     );
   });
@@ -146,7 +149,6 @@ describe("WorkflowInputForm", () => {
     await waitFor(() =>
       expect(apiFetch).toHaveBeenCalledWith(
         expect.stringContaining("missing_alt=true"),
-        expect.anything(),
       ),
     );
   });

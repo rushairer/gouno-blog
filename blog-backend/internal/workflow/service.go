@@ -27,12 +27,13 @@ var (
 )
 
 type Service struct {
-	db        *sql.DB
-	runner    *agentservice.Runner
-	agents    *agentservice.ManagementService
-	tools     *tool.Registry
-	catalog   *ResourceCatalog
-	workerSem chan struct{}
+	db         *sql.DB
+	runner     *agentservice.Runner
+	agents     *agentservice.ManagementService
+	tools      *tool.Registry
+	catalog    *ResourceCatalog
+	workerSem  chan struct{}
+	transactor *repository.Transactor
 }
 
 type PreflightCheck struct {
@@ -172,8 +173,11 @@ func containsString(values []string, target string) bool {
 	return false
 }
 
-func NewService(db *sql.DB, runner *agentservice.Runner, agents *agentservice.ManagementService, registry *tool.Registry) *Service {
-	return &Service{db: db, runner: runner, agents: agents, tools: registry, catalog: NewResourceCatalog(db), workerSem: make(chan struct{}, 4)}
+func NewService(db *sql.DB, runner *agentservice.Runner, agents *agentservice.ManagementService, registry *tool.Registry, transactor *repository.Transactor) *Service {
+	if transactor == nil {
+		panic("workflow.NewService: transactor is required")
+	}
+	return &Service{db: db, runner: runner, agents: agents, tools: registry, catalog: NewResourceCatalog(db), workerSem: make(chan struct{}, 4), transactor: transactor}
 }
 
 const workflowColumns = `w.id, w.name, w.description, w.enabled, w.cron_expression, w.timezone, w.next_run_at, w.template_key,
@@ -1111,7 +1115,7 @@ func (s *Service) ReconcileMediaRun(ctx context.Context, runID int64) error {
 }
 
 func (s *Service) Cancel(ctx context.Context, runID int64) error {
-	return repository.RunInTransaction(ctx, s.db, func(tx *sql.Tx) error {
+	return s.transactor.Run(ctx, func(tx *sql.Tx) error {
 		result, err := tx.ExecContext(ctx, `UPDATE ai_workflow_runs SET status='cancelled',finished_at=NOW(),error_code='cancelled',error_message='cancelled by administrator'
 			WHERE id=$1 AND status IN ('queued','running','awaiting_approval','waiting_for_user')`, runID)
 		if err != nil {
@@ -1133,7 +1137,7 @@ func (s *Service) Cancel(ctx context.Context, runID int64) error {
 }
 
 func (s *Service) DeleteRun(ctx context.Context, runID int64) error {
-	return repository.RunInTransaction(ctx, s.db, func(tx *sql.Tx) error {
+	return s.transactor.Run(ctx, func(tx *sql.Tx) error {
 		var status string
 		if err := tx.QueryRowContext(ctx, `SELECT status FROM ai_workflow_runs WHERE id=$1 FOR UPDATE`, runID).Scan(&status); err != nil {
 			return err

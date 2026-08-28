@@ -14,6 +14,7 @@ web_server:
         - "172.16.0.0/12"
     # Same-origin requests need no CORS configuration. Add only explicit public origins here.
     cors_allowed_origins: []
+    secure_cookies: true
 database:
     default: postgres
     drivers:

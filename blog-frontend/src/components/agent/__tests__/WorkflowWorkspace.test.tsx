@@ -4,7 +4,11 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { WorkflowWorkspace } from "../WorkflowWorkspace";
 
 const { apiFetch } = vi.hoisted(() => ({ apiFetch: vi.fn() }));
-vi.mock("../../../auth", () => ({ apiFetch }));
+vi.mock("../../../auth", async () => {
+  const { createMockGossoClient } =
+    await import("../../../test/mockGossoClient");
+  return { apiFetch, gossoClient: createMockGossoClient(apiFetch) };
+});
 
 const workflow = {
   id: 7,

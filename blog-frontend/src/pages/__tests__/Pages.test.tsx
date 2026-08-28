@@ -7,12 +7,17 @@ import { I18nProvider } from "../../i18n";
 import { ToastProvider } from "../../components/ui";
 import AdminPages from "../admin/Pages";
 
-vi.mock("../../auth", () => ({
-  apiFetch: vi.fn(),
-  canManageBlog: vi.fn(),
-  isLoggedIn: vi.fn(),
-  redirectToAuthorize: vi.fn(),
-}));
+vi.mock("../../auth", async () => {
+  const apiFetch = vi.fn();
+  const { createMockGossoClient } = await import("../../test/mockGossoClient");
+  return {
+    apiFetch,
+    gossoClient: createMockGossoClient(apiFetch),
+    canManageBlog: vi.fn(),
+    isLoggedIn: vi.fn(),
+    redirectToAuthorize: vi.fn(),
+  };
+});
 
 const mockPage = {
   id: 10,
