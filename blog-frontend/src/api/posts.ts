@@ -17,20 +17,19 @@ export const postsApi = {
     admin = false,
   ): Promise<PaginatedPosts> {
     const path = admin ? "/api/admin/posts" : "/api/posts";
-    const cleanParams: Record<string, string | number> = {};
-    if (params && !(params instanceof URLSearchParams)) {
-      Object.entries(params).forEach(([k, v]) => {
-        if (v !== undefined && v !== "") {
-          if (admin && k === "search" && !params.q) {
-            cleanParams.q = v;
-          } else {
-            cleanParams[k] = v;
-          }
-        }
-      });
+    let queryParams = params;
+    if (
+      admin &&
+      params &&
+      !(params instanceof URLSearchParams) &&
+      params.search &&
+      !params.q
+    ) {
+      const { search, ...rest } = params;
+      queryParams = { ...rest, q: search };
     }
     return apiClient.get<PaginatedPosts>(path, {
-      params: params instanceof URLSearchParams ? params : cleanParams,
+      params: queryParams,
     });
   },
 

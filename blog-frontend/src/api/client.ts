@@ -1,14 +1,7 @@
 import { parseJsonEnvelope } from "@gosso/client";
 import { gossoClient } from "../auth";
 
-export const apiClient = {
-  get: gossoClient.get,
-  post: gossoClient.post,
-  put: gossoClient.put,
-  patch: gossoClient.patch,
-  delete: gossoClient.delete,
-  apiFetch: gossoClient.apiFetch,
-};
+export const apiClient = gossoClient;
 
 export function authenticatedApiFetch(
   input: string,
