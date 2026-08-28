@@ -1,4 +1,4 @@
-import { createGossoClient, parseJsonEnvelope } from "@gosso/client";
+import { createGossoClient } from "@gosso/client";
 
 export type {
   LoginResult,
@@ -27,8 +27,6 @@ export const gossoClient = createGossoClient({
   postLoginDefaultPath: "/admin",
   loginPath: `${gossoAdminURL.replace(/\/$/, "")}/login`,
   storagePrefix: "gouno-blog",
-  // Remove this explicit setting after the registry dependency moves to 0.4.
-  sessionMode: "cookie",
   sessionProfileEndpoint: "/api/me/session",
   csrfCookieName: "blog_csrf_token",
 });
@@ -37,30 +35,7 @@ export const redirectToAuthorize = gossoClient.redirectToAuthorize;
 export const isLoggedIn = gossoClient.isLoggedIn;
 export const apiFetch = gossoClient.apiFetch;
 
-export const stepUpMfa = async (
-  code: string,
-  type: "totp" | "backup_code" = "totp",
-): Promise<{ access_token?: string; auth_time: number; amr: string[] }> => {
-  const clientAny = gossoClient as unknown as {
-    stepUpMfa?: (
-      code: string,
-      type?: "totp" | "backup_code",
-    ) => Promise<{ access_token?: string; auth_time: number; amr: string[] }>;
-  };
-  if (typeof clientAny.stepUpMfa === "function") {
-    return clientAny.stepUpMfa(code, type);
-  }
-  const response = await apiFetch(`${gossoIssuer}/api/v1/auth/mfa/step-up`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ code, type }),
-  });
-  return parseJsonEnvelope<{
-    access_token?: string;
-    auth_time: number;
-    amr: string[];
-  }>(response, "Failed to complete step-up MFA");
-};
+export const stepUpMfa = gossoClient.stepUpMfa;
 
 export type ManagementAccess = "admin" | "denied" | "anonymous" | "error";
 
