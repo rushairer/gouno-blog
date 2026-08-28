@@ -1,0 +1,226 @@
+name: gouno-blog-production-split
+
+x-hardened: &hardened
+  restart: unless-stopped
+  read_only: true
+  security_opt: [no-new-privileges:true]
+  cap_drop: [ALL]
+
+services:
+  db:
+    image: ${POSTGRES_IMAGE:-pgvector/pgvector:pg15@sha256:a20a57d7aa5217a6af0a391ccf69f4a8512406d6c14be08132f801468cc3cc62}
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-gosso}
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    security_opt: [no-new-privileges:true]
+
+  redis:
+    image: ${REDIS_IMAGE:-redis:7-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2}
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD}
+    command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$${REDIS_PASSWORD}\""]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    security_opt: [no-new-privileges:true]
+
+  gosso:
+    <<: *hardened
+    image: ${GOSSO_IMAGE:?set GOSSO_IMAGE to version@sha256:digest}
+    tmpfs: [/tmp]
+    environment:
+      GOUNO_ENV: production
+      GOUNO_WEB_SERVER_ADDRESS: 0.0.0.0
+      GOUNO_WEB_SERVER_PORT: 8080
+      GOUNO_WEB_SERVER_DEBUG: false
+      GOUNO_DATABASE_DEFAULT: postgres
+      GOUNO_DATABASE_DRIVERS_POSTGRES_DSN: ${GOSSO_DATABASE_DSN:?set GOSSO_DATABASE_DSN}
+      GOUNO_REDIS_DSN: ${GOSSO_REDIS_DSN:?set GOSSO_REDIS_DSN}
+      GOUNO_AUTH_ISSUER: https://${SSO_DOMAIN:-sso.io84.com}
+      GOUNO_AUTH_LOGIN_URL: /login
+      GOUNO_AUTH_PASSWORD_RESET_BASE_URL: https://${SSO_DOMAIN:-sso.io84.com}/reset-password
+      GOUNO_AUTH_PRIVATE_KEY_PATH: /run/secrets/gosso_signing_key
+      GOUNO_AUTH_TOTP_ENCRYPTION_KEY: ${GOSSO_TOTP_KEY:?set unique 64-char hex key}
+      GOUNO_AUTH_VERIFY_HASH_PEPPER: ${GOSSO_VERIFY_PEPPER:?set GOSSO_VERIFY_PEPPER}
+      GOUNO_AUTH_WEBAUTHN_RP_ID: ${SSO_DOMAIN:-sso.io84.com}
+      GOUNO_AUTH_WEBAUTHN_RP_NAME: ${WEBAUTHN_RP_NAME:-io84 SSO}
+      GOUNO_AUTH_WEBAUTHN_RP_ORIGIN: https://${SSO_DOMAIN:-sso.io84.com}
+      GOUNO_SMTP_HOST: ${SMTP_HOST:-}
+      GOUNO_SMTP_PORT: ${SMTP_PORT:-587}
+      GOUNO_SMTP_USERNAME: ${SMTP_USERNAME:-}
+      GOUNO_SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      GOUNO_SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-noreply@io84.com}
+      GOUNO_SMTP_FROM_NAME: ${SMTP_FROM_NAME:-io84 Security}
+      GOUNO_CORS_ALLOWED_ORIGINS: ${GOSSO_CORS_ALLOWED_ORIGINS:-["https://sso.io84.com","https://blog.io84.com"]}
+      GOUNO_WEB_SERVER_TRUSTED_PROXIES: ${GOSSO_TRUSTED_PROXIES:-172.21.0.0/16,127.0.0.1/32}
+    secrets:
+      - gosso_signing_key
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_healthy}
+
+  gosso-admin-seed:
+    <<: *hardened
+    image: ${GOSSO_ADMIN_SEED_IMAGE:?set GOSSO_ADMIN_SEED_IMAGE to version@sha256:digest}
+    restart: 'no'
+    tmpfs: [/tmp]
+    environment:
+      GOSSO_ADMIN_ENV: production
+      PG_DSN: ${GOSSO_DATABASE_DSN:?set GOSSO_DATABASE_DSN}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:?set ADMIN_USERNAME}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD}
+      ADMIN_DISPLAY_NAME: ${ADMIN_DISPLAY_NAME:-System Admin}
+      OAUTH2_CLIENT_REDIRECT_URIS: https://${SSO_DOMAIN:-sso.io84.com}/callback,https://${SSO_DOMAIN:-sso.io84.com}/admin/callback
+    depends_on:
+      db: {condition: service_healthy}
+      gosso: {condition: service_started}
+
+  blog-seed:
+    <<: *hardened
+    image: ${GOUNO_BLOG_SEED_IMAGE:?set GOUNO_BLOG_SEED_IMAGE to version@sha256:digest}
+    restart: 'no'
+    tmpfs: [/tmp]
+    environment:
+      PG_DSN: ${GOSSO_DATABASE_DSN:?set GOSSO_DATABASE_DSN}
+      REDIS_DSN: ${GOSSO_REDIS_DSN:?set GOSSO_REDIS_DSN}
+      BLOG_OAUTH_ACCOUNT_ID: ${BLOG_OAUTH_OWNER_ID:-00000000-0000-0000-0000-000000000001}
+      BLOG_OAUTH_CLIENT_ID: ${BLOG_OIDC_CLIENT_ID:-blog-bff}
+      BLOG_OAUTH_CLIENT_NAME: "io84 Blog BFF"
+      BLOG_OAUTH_CLIENT_DESCRIPTION: "Confidential OAuth2 Client for Blog BFF"
+      BLOG_OAUTH_CONFIDENTIAL: "true"
+      BLOG_OAUTH_CLIENT_SECRET: ${BLOG_OIDC_CLIENT_SECRET:?set BLOG_OIDC_CLIENT_SECRET}
+      BLOG_OAUTH_REDIRECT_URIS: https://${BLOG_DOMAIN:-blog.io84.com}/api/auth/callback
+      BLOG_OAUTH_POST_LOGOUT_REDIRECT_URIS: https://${BLOG_DOMAIN:-blog.io84.com}/
+      BLOG_OAUTH_BACKCHANNEL_LOGOUT_URI: http://blog-backend:8082/api/auth/backchannel-logout
+      BLOG_OAUTH_GRANT_TYPES: authorization_code,refresh_token
+      BLOG_OAUTH_SCOPES: openid,profile,email
+    depends_on:
+      gosso-admin-seed: {condition: service_completed_successfully}
+
+  blog-media-init:
+    image: ${GOUNO_BLOG_BACKEND_IMAGE:?set GOUNO_BLOG_BACKEND_IMAGE to version@sha256:digest}
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["chown -R 10001:10001 /app/data/media"]
+    read_only: true
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    cap_add: [CHOWN]
+    restart: "no"
+    volumes:
+      - blog_media:/app/data/media
+
+  blog-backend:
+    <<: *hardened
+    image: ${GOUNO_BLOG_BACKEND_IMAGE:?set GOUNO_BLOG_BACKEND_IMAGE to version@sha256:digest}
+    tmpfs: [/tmp]
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DATABASE: ${BLOG_POSTGRES_DB:-blog}
+      GOUNO_DATABASE_DRIVERS_POSTGRES_DSN: ${BLOG_DATABASE_DSN:?set BLOG_DATABASE_DSN}
+      GOUNO_REDIS_DSN: ${BLOG_REDIS_DSN:?set BLOG_REDIS_DSN}
+      SSO_TOKEN_ISSUER: https://${SSO_DOMAIN:-sso.io84.com}
+      BLOG_BOOTSTRAP_OWNER_ISSUER: https://${SSO_DOMAIN:-sso.io84.com}
+      BLOG_BOOTSTRAP_OWNER_SUBJECT: ${BLOG_BOOTSTRAP_OWNER_SUBJECT:?set BLOG_BOOTSTRAP_OWNER_SUBJECT}
+      BLOG_IDENTITY_ISSUER_MIGRATIONS: '{"https://${SSO_DOMAIN:-sso.io84.com}":"https://${LEGACY_DOMAIN:-io84.com}"}'
+      BLOG_BFF_ENABLED: "true"
+      BLOG_OIDC_ISSUER: https://${SSO_DOMAIN:-sso.io84.com}
+      BLOG_OIDC_CLIENT_ID: ${BLOG_OIDC_CLIENT_ID:-blog-bff}
+      BLOG_OIDC_CLIENT_SECRET: ${BLOG_OIDC_CLIENT_SECRET:?set BLOG_OIDC_CLIENT_SECRET}
+      BLOG_OIDC_REDIRECT_URL: https://${BLOG_DOMAIN:-blog.io84.com}/api/auth/callback
+      BLOG_OIDC_POST_LOGOUT_URL: https://${BLOG_DOMAIN:-blog.io84.com}/
+      BLOG_OIDC_RESOURCE: https://${BLOG_DOMAIN:-blog.io84.com}/api
+      BLOG_OIDC_SCOPES: "openid profile email"
+      BLOG_OIDC_INTERNAL_ENDPOINT: http://gosso:8080
+      BLOG_BFF_TINK_KEYSET_PATH: /run/secrets/blog_bff_tink_keyset
+      BLOG_VISITOR_SECRET: ${BLOG_VISITOR_SECRET:?set BLOG_VISITOR_SECRET}
+      BLOG_MEDIA_DIR: /app/data/media
+      BLOG_MEDIA_STORAGE: ${BLOG_MEDIA_STORAGE:-local}
+      BLOG_MEDIA_S3_BUCKET: ${BLOG_MEDIA_S3_BUCKET:-}
+      BLOG_MEDIA_S3_REGION: ${BLOG_MEDIA_S3_REGION:-}
+      BLOG_MEDIA_S3_ENDPOINT: ${BLOG_MEDIA_S3_ENDPOINT:-}
+      BLOG_MEDIA_S3_PUBLIC_BASE_URL: ${BLOG_MEDIA_S3_PUBLIC_BASE_URL:-}
+      BLOG_MEDIA_S3_PREFIX: ${BLOG_MEDIA_S3_PREFIX:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      GOUNO_AI_AGENTS_ENABLED: ${GOUNO_AI_AGENTS_ENABLED:-true}
+      BLOG_AGENT_MASTER_KEY: ${BLOG_AGENT_MASTER_KEY:?set 32-byte base64 key}
+      BLOG_AGENT_MASTER_KEY_VERSION: ${BLOG_AGENT_MASTER_KEY_VERSION:-1}
+      BLOG_AGENT_PREVIOUS_MASTER_KEYS: ${BLOG_AGENT_PREVIOUS_MASTER_KEYS:-}
+      GOUNO_AI_WEBHOOK_SECRET: ${GOUNO_AI_WEBHOOK_SECRET:?set GOUNO_AI_WEBHOOK_SECRET}
+    secrets:
+      - blog_bff_tink_keyset
+    volumes:
+      - blog_media:/app/data/media
+    depends_on:
+      db: {condition: service_healthy}
+      gosso: {condition: service_started}
+      blog-seed: {condition: service_completed_successfully}
+      blog-media-init: {condition: service_completed_successfully}
+
+  blog-frontend:
+    <<: *hardened
+    image: ${GOUNO_BLOG_FRONTEND_IMAGE:?set GOUNO_BLOG_FRONTEND_IMAGE to version@sha256:digest}
+    tmpfs: [/tmp, /var/cache/nginx, /var/run]
+    depends_on:
+      blog-backend: {condition: service_healthy}
+
+  gosso-admin-frontend:
+    <<: *hardened
+    image: ${GOSSO_ADMIN_FRONTEND_IMAGE:?set GOSSO_ADMIN_FRONTEND_IMAGE to version@sha256:digest}
+    tmpfs: [/tmp, /var/cache/nginx, /var/run]
+    depends_on:
+      gosso: {condition: service_started}
+
+  gateway:
+    <<: *hardened
+    image: ${CADDY_IMAGE:-caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    tmpfs: [/tmp]
+    volumes:
+      - ./Caddyfile.production-split:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - blog-frontend
+      - blog-backend
+      - gosso-admin-frontend
+      - gosso
+
+secrets:
+  gosso_signing_key:
+    file: ${GOSSO_SIGNING_KEY_FILE:?set GOSSO_SIGNING_KEY_FILE}
+  blog_bff_tink_keyset:
+    file: ${BLOG_BFF_TINK_KEYSET_FILE:?set BLOG_BFF_TINK_KEYSET_FILE}
+
+volumes:
+  db_data:
+  redis_data:
+  blog_media:
+  caddy_data:
+  caddy_config:
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16

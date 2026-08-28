@@ -11,4 +11,5 @@ db_data/
 *.pem
 certs/
 keys/
+secrets/
 .env

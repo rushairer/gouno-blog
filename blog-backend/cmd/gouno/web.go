@@ -3,19 +3,24 @@ package gouno
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
+	"github.com/redis/go-redis/v9"
 	"github.com/rushairer/blog-backend/config"
 	"github.com/rushairer/blog-backend/internal/access"
 	agentservice "github.com/rushairer/blog-backend/internal/agent"
+	"github.com/rushairer/blog-backend/internal/authbff"
 	"github.com/rushairer/blog-backend/internal/connector"
 	"github.com/rushairer/blog-backend/internal/controller"
 	"github.com/rushairer/blog-backend/internal/knowledge"
@@ -206,6 +211,42 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		log.Fatalf("configure media storage: %v", err)
 	}
 
+	var bffClient *authbff.Client
+	if enabled, parseErr := strconv.ParseBool(os.Getenv("BLOG_BFF_ENABLED")); parseErr == nil && enabled {
+		redisOptions, parseErr := redis.ParseURL(cfg.Global.RedisConfig.DSN)
+		if parseErr != nil {
+			log.Fatalf("configure Blog BFF Redis: %v", parseErr)
+		}
+		redisClient := redis.NewClient(redisOptions)
+		if parseErr = redisClient.Ping(ctx).Err(); parseErr != nil {
+			log.Fatalf("connect Blog BFF Redis: %v", parseErr)
+		}
+		primitive, parseErr := authbff.LoadAEAD(os.Getenv("BLOG_BFF_TINK_KEYSET_PATH"))
+		if parseErr != nil {
+			log.Fatalf("load Blog BFF Tink keyset: %v", parseErr)
+		}
+		bffConfig := authbff.Config{
+			Issuer: os.Getenv("BLOG_OIDC_ISSUER"), ClientID: os.Getenv("BLOG_OIDC_CLIENT_ID"),
+			ClientSecret: os.Getenv("BLOG_OIDC_CLIENT_SECRET"), RedirectURL: os.Getenv("BLOG_OIDC_REDIRECT_URL"),
+			PostLogoutURL: os.Getenv("BLOG_OIDC_POST_LOGOUT_URL"), Resource: os.Getenv("BLOG_OIDC_RESOURCE"),
+			Scopes: strings.Fields(os.Getenv("BLOG_OIDC_SCOPES")), TinkKeysetPath: os.Getenv("BLOG_BFF_TINK_KEYSET_PATH"),
+			InternalEndpoint: os.Getenv("BLOG_OIDC_INTERNAL_ENDPOINT"),
+		}
+		store, storeErr := authbff.NewStore(redisClient, primitive, "blog:auth:v1")
+		if storeErr != nil {
+			log.Fatalf("configure Blog BFF store: %v", storeErr)
+		}
+		bffClient, parseErr = authbff.NewClient(ctx, bffConfig, store, nil)
+		if parseErr != nil {
+			log.Fatalf("configure Blog BFF OIDC client: %v", parseErr)
+		}
+	} else if parseErr != nil && os.Getenv("BLOG_BFF_ENABLED") != "" {
+		log.Fatalf("BLOG_BFF_ENABLED must be a boolean: %v", parseErr)
+	}
+	// Only the explicit legacy mode may accept the identity provider's browser
+	// cookie. The split-origin BFF accepts its own opaque session cookie instead.
+	cfg.AuthOptions.AllowProviderCookie = bffClient == nil
+
 	transactor := repository.NewTransactor(cfg.DB, cfg.Logger)
 	postRepo := repository.NewPostRepository(cfg.DB)
 	postSvc := service.NewPostService(postRepo)
@@ -260,8 +301,15 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 	}
 
 	verifier := gounoAuth.NewVerifier(cfg.JWKSURL)
+	issuerMigrations := map[string]string{}
+	if raw := os.Getenv("BLOG_IDENTITY_ISSUER_MIGRATIONS"); raw != "" {
+		if err := json.Unmarshal([]byte(raw), &issuerMigrations); err != nil {
+			log.Fatalf("BLOG_IDENTITY_ISSUER_MIGRATIONS must be a JSON object of new issuer to legacy issuer: %v", err)
+		}
+	}
 	accessService := access.NewService(cfg.DB, access.Bootstrap{
 		Issuer: os.Getenv("BLOG_BOOTSTRAP_OWNER_ISSUER"), Subject: os.Getenv("BLOG_BOOTSTRAP_OWNER_SUBJECT"),
+		IssuerMigrations: issuerMigrations,
 	})
 	router.RegisterWebRouterWithOptions(cfg.Engine, router.WebRouterOptions{
 		DB: cfg.DB, AuthOptions: cfg.AuthOptions, RedisDSN: cfg.Global.RedisConfig.DSN,
@@ -270,5 +318,6 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		PostSvc:            postSvc, PageSvc: pageSvc, CategorySvc: catSvc, CommunitySvc: communitySvc,
 		GrowthSvc: growthSvc, AgentCtrl: agentCtrl, Logger: cfg.Logger, Verifier: verifier,
 		AccessService: accessService, SecureCookies: cfg.Global.WebServerConfig.ResolveSecureCookies(cfg.Env),
+		BFFClient: bffClient,
 	})
 }

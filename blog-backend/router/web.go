@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/access"
+	"github.com/rushairer/blog-backend/internal/authbff"
 	"github.com/rushairer/blog-backend/internal/controller"
 	"github.com/rushairer/blog-backend/internal/media"
 	"github.com/rushairer/blog-backend/internal/service"
@@ -35,6 +36,7 @@ type WebRouterOptions struct {
 	Verifier           *auth.Verifier
 	AccessService      *access.Service
 	SecureCookies      bool
+	BFFClient          *authbff.Client
 }
 
 func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
@@ -47,6 +49,10 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 	server.Use(middleware.CORSMiddleware(opts.CORSAllowedOrigins))
 	server.Use(middleware.RequestBodyLimitMiddleware())
 	server.Use(middleware.BlogCSRFMiddleware(opts.SecureCookies))
+	if opts.BFFClient != nil {
+		server.Use(opts.BFFClient.SessionMiddleware())
+		opts.BFFClient.RegisterRoutes(server)
+	}
 	server.GET("/healthz", func(ctx *gin.Context) {
 		if opts.DB == nil || opts.DB.PingContext(ctx.Request.Context()) != nil {
 			ctx.Status(http.StatusServiceUnavailable)

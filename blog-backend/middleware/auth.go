@@ -15,6 +15,9 @@ type AuthOptions struct {
 	Issuer       string
 	Audience     string
 	ClientID     string
+	// AllowProviderCookie exists only for the time-bounded same-origin rollback
+	// stack. Split-origin BFF deployments must leave it false.
+	AllowProviderCookie bool
 }
 
 const accessTokenCookie = "__Host-access_token"
@@ -66,8 +69,12 @@ func setIdentity(ctx *gin.Context, claims jwt.MapClaims) {
 // the cookie session there, while public content remains readable anonymously.
 func OptionalAuth(verifier *auth.Verifier, options AuthOptions) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
+		if _, verifiedByBFF := ctx.Get("claims"); verifiedByBFF {
+			ctx.Next()
+			return
+		}
 		tokenStr, hasBearer := bearerToken(ctx)
-		if !hasBearer {
+		if !hasBearer && options.AllowProviderCookie {
 			var err error
 			tokenStr, err = ctx.Cookie(accessTokenCookie)
 			if err != nil || tokenStr == "" {
@@ -76,6 +83,10 @@ func OptionalAuth(verifier *auth.Verifier, options AuthOptions) gin.HandlerFunc 
 			}
 		}
 		if tokenStr == "" {
+			if !options.AllowProviderCookie && !hasBearer {
+				ctx.Next()
+				return
+			}
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "invalid authorization format"))
 			return
 		}
@@ -114,32 +125,46 @@ func AuthMiddlewareWithOptions(verifier *auth.Verifier, options AuthOptions) gin
 	}
 
 	return func(ctx *gin.Context) {
-		tokenStr, hasBearer := bearerToken(ctx)
-		if !hasBearer {
-			var err error
-			tokenStr, err = ctx.Cookie(accessTokenCookie)
-			if err != nil || tokenStr == "" {
-				ctx.AbortWithStatusJSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "missing authorization header"))
-				return
+		var claims jwt.MapClaims
+		if existing, verifiedByBFF := ctx.Get("claims"); verifiedByBFF {
+			if m, ok := existing.(jwt.MapClaims); ok {
+				claims = m
 			}
 		}
 
-		verifyOpts := options
-		if !hasBearer {
-			// For browser cookie sessions directly issued by Gosso to the browser,
-			// the token is a first-party session token without client_id / audience binding.
-			verifyOpts.ClientID = ""
-			verifyOpts.Audience = ""
-		}
+		if claims == nil {
+			tokenStr, hasBearer := bearerToken(ctx)
+			if !hasBearer && options.AllowProviderCookie {
+				var err error
+				tokenStr, err = ctx.Cookie(accessTokenCookie)
+				if err != nil || tokenStr == "" {
+					ctx.AbortWithStatusJSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "missing authorization header"))
+					return
+				}
+			}
+			if tokenStr == "" {
+				ctx.AbortWithStatusJSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "missing authorization header"))
+				return
+			}
 
-		claims, err := verifyToken(verifier, tokenStr, verifyOpts)
-		if err != nil {
-			// Signature, issuer, audience and expiry diagnostics are useful to the
-			// server log but must not become an oracle for unauthenticated callers.
-			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "invalid or expired authentication"))
-			return
+			verifyOpts := options
+			if !hasBearer && options.AllowProviderCookie {
+				// For browser cookie sessions directly issued by Gosso to the browser,
+				// the token is a first-party session token without client_id / audience binding.
+				verifyOpts.ClientID = ""
+				verifyOpts.Audience = ""
+			}
+
+			var err error
+			claims, err = verifyToken(verifier, tokenStr, verifyOpts)
+			if err != nil {
+				// Signature, issuer, audience and expiry diagnostics are useful to the
+				// server log but must not become an oracle for unauthenticated callers.
+				ctx.AbortWithStatusJSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "invalid or expired authentication"))
+				return
+			}
+			setIdentity(ctx, claims)
 		}
-		setIdentity(ctx, claims)
 
 		// Role authorization
 		if options.RequiredRole != "" {
