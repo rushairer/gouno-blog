@@ -54,12 +54,7 @@ describe("ConnectorWorkspace", () => {
       return Promise.resolve(response({ state: "mock-state" }));
     });
     const onRefresh = vi.fn().mockResolvedValue(undefined);
-    render(
-      <ConnectorWorkspace
-        locale="en"
-        onRefresh={onRefresh}
-      />,
-    );
+    render(<ConnectorWorkspace locale="en" onRefresh={onRefresh} />);
     expect(
       (await screen.findAllByText("Newsletter sandbox")).length,
     ).toBeGreaterThan(0);
