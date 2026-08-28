@@ -141,42 +141,52 @@ describe("blog cookie session", () => {
     expect(headers.get("X-CSRF-Token")).toBe("csrf-value");
   });
 
-  it("derives management access only from the cookie-authenticated server role", async () => {
+  it("merives management profile and permissions via fetchUserProfile", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(Response.json({ sub: "1", name: "Admin" }))
       .mockResolvedValueOnce(
         Response.json({
-          data: { sub: "1", permissions: ["site.manage"] },
+          data: {
+            membership_status: "active",
+            roles: ["admin"],
+            permissions: ["site.manage"],
+          },
         }),
-      )
-      .mockResolvedValueOnce(
-        Response.json({ data: { permissions: ["site.manage"] } }),
       );
     vi.stubGlobal("fetch", fetchMock);
-    const { gossoClient, getManagementAccess, isLoggedIn } =
+    const { gossoClient, hasBlogPermission, getCachedBlogSession, isLoggedIn } =
       await import("../auth");
-    await gossoClient.fetchUserProfile();
+    const profile = await gossoClient.fetchUserProfile();
     expect(isLoggedIn()).toBe(true);
-    await expect(getManagementAccess()).resolves.toBe("admin");
+    expect(profile.permissions).toContain("site.manage");
+    expect(hasBlogPermission("site.manage")).toBe(true);
+    expect(getCachedBlogSession()?.membership_status).toBe("active");
   });
 
-  it("does not treat a requested admin scope as a management role", async () => {
+  it("does not grant permissions when membership is suspended", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
         Response.json({
           sub: "1",
-          name: "Admin",
+          name: "Suspended User",
           scope: "openid profile",
         }),
       )
-      .mockResolvedValueOnce(Response.json({ data: { sub: "1" } }))
-      .mockResolvedValueOnce(Response.json({ data: { permissions: [] } }));
+      .mockResolvedValueOnce(
+        Response.json({
+          data: {
+            membership_status: "suspended",
+            roles: ["admin"],
+            permissions: ["site.manage"],
+          },
+        }),
+      );
     vi.stubGlobal("fetch", fetchMock);
 
-    const { gossoClient, getManagementAccess } = await import("../auth");
+    const { gossoClient, hasBlogPermission } = await import("../auth");
     await gossoClient.fetchUserProfile();
-    await expect(getManagementAccess()).resolves.toBe("denied");
+    expect(hasBlogPermission("site.manage")).toBe(false);
   });
 });

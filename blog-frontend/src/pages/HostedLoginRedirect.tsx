@@ -1,13 +1,14 @@
 import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
-import { redirectToHostedLogin } from "../auth";
+import { useSearchParams } from "react-router-dom";
+import { gossoClient } from "../auth";
 
 export default function HostedLoginRedirect() {
-  const location = useLocation();
+  const [params] = useSearchParams();
+  const returnTo = params.get("return_to") || "/admin";
 
   useEffect(() => {
-    redirectToHostedLogin(location.search, location.hash);
-  }, [location.hash, location.search]);
+    void gossoClient.redirectToAuthorize(returnTo);
+  }, [returnTo]);
 
   return (
     <div className="public-container state-page" role="status">
