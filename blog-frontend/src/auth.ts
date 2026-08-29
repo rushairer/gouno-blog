@@ -1,4 +1,5 @@
 import { createGossoClient } from "@gosso/client";
+import { useUserProfile } from "@gosso/client/react";
 
 export type {
   LoginResult,
@@ -39,25 +40,31 @@ const gossoClientID = import.meta.env.VITE_GOSSO_CLIENT_ID || "blog-spa";
 // Blog authorization is local and server-verified; never request an OAuth
 // `admin` scope merely to display or decide Blog permissions.
 const gossoScope = import.meta.env.VITE_GOSSO_SCOPE || "openid profile email";
-export function resolveGossoAdminURL(): string {
+export function getGossoAdminURL(user?: BlogUserProfile | null): string {
   if (import.meta.env.VITE_GOSSO_ADMIN_URL) {
     return import.meta.env.VITE_GOSSO_ADMIN_URL;
   }
-  if (typeof window !== "undefined") {
-    const { protocol, hostname, port } = window.location;
-    if (hostname.startsWith("blog.")) {
-      const ssoHost = hostname.replace(/^blog\./, "sso.");
-      const portSuffix = port ? `:${port}` : "";
-      return `${protocol}//${ssoHost}${portSuffix}`;
-    }
-    if (hostname.endsWith(".local") || hostname.endsWith(".local.test")) {
-      return "https://sso.dev.local";
-    }
+  if (user?.principal?.issuer) {
+    return user.principal.issuer;
   }
-  return "https://sso.io84.com";
+  if (user?.issuer) {
+    return String(user.issuer);
+  }
+  if (gossoIssuer && typeof window !== "undefined" && gossoIssuer !== window.location.origin) {
+    return gossoIssuer;
+  }
+  return "";
 }
 
-export const gossoAdminURL = resolveGossoAdminURL();
+export function useSafeUserProfile(): BlogUserProfile | null {
+  try {
+    return useUserProfile<BlogUserProfile>();
+  } catch {
+    return null;
+  }
+}
+
+export const gossoAdminURL = import.meta.env.VITE_GOSSO_ADMIN_URL || "";
 
 export const gossoClient = createGossoClient<BlogUserProfile>({
   issuer: gossoIssuer,

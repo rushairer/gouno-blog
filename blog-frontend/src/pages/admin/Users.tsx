@@ -9,8 +9,9 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { membersApi, type BlogMember } from "../../api/members";
-import { gossoAdminURL } from "../../auth";
+import { getGossoAdminURL, type BlogUserProfile } from "../../auth";
 import { ApiError } from "@gosso/client";
+import { useUserProfile } from "@gosso/client/react";
 import {
   AdminPage,
   AdminPageHeader,
@@ -94,6 +95,7 @@ const isMfaError = (err: unknown): boolean => {
 
 export default function AdminUsers() {
   const allowed = useAdminGuard("/admin/users");
+  const user = useUserProfile<BlogUserProfile>();
   const { notify } = useToast();
   const [members, setMembers] = useState<BlogMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -215,14 +217,23 @@ export default function AdminUsers() {
             >
               <RefreshCw /> 刷新
             </Button>
-            <a
-              className="btn btn-secondary btn--compact"
-              href={gossoAdminURL}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <ExternalLink /> 前往 GOSSO 管理
-            </a>
+            {(() => {
+              const targetAdminURL =
+                getGossoAdminURL(user) ||
+                members.find((m) => m.principal?.issuer)?.principal?.issuer ||
+                "";
+              if (!targetAdminURL) return null;
+              return (
+                <a
+                  className="btn btn-secondary btn--compact"
+                  href={targetAdminURL}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <ExternalLink /> 前往 GOSSO 管理
+                </a>
+              );
+            })()}
           </>
         }
       />

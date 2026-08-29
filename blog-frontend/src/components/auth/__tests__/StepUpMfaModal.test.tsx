@@ -7,6 +7,8 @@ import { ToastProvider } from "../../ui";
 vi.mock("../../../auth", () => ({
   stepUpMfa: vi.fn(),
   gossoAdminURL: "https://auth.example.com",
+  getGossoAdminURL: () => "https://auth.example.com",
+  useSafeUserProfile: () => ({ principal: { issuer: "https://auth.example.com" } }),
 }));
 
 import { stepUpMfa } from "../../../auth";
