@@ -146,7 +146,7 @@ services:
       - BLOG_OIDC_CLIENT_ID=${BLOG_OIDC_CLIENT_ID:-}
       - BLOG_OIDC_CLIENT_SECRET=${BLOG_OIDC_CLIENT_SECRET:-}
       - BLOG_OIDC_REDIRECT_URL=${BLOG_OIDC_REDIRECT_URL:-https://blog.dev.local/api/auth/callback}
-      - BLOG_OIDC_POST_LOGOUT_URL=${BLOG_OIDC_POST_LOGOUT_URL:-https://blog.dev.local/api/auth/logout/callback}
+      - BLOG_OIDC_POST_LOGOUT_URL=${BLOG_OIDC_POST_LOGOUT_URL:-https://blog.dev.local/}
       - BLOG_OIDC_RESOURCE=${BLOG_OIDC_RESOURCE:-https://blog.dev.local/api}
       - BLOG_OIDC_SCOPES=${BLOG_OIDC_SCOPES:-openid profile email}
       - BLOG_BFF_TINK_KEYSET_PATH=${BLOG_BFF_TINK_KEYSET_PATH:-/run/secrets/blog-bff-tink.json}

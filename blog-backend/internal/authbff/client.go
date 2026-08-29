@@ -289,7 +289,7 @@ func (c *Client) Refresh(ctx context.Context, sessionHandle string) (Session, er
 	return res.(Session), nil
 }
 
-func (c *Client) LogoutURL(session Session, postLogoutRedirect string) (string, error) {
+func (c *Client) LogoutURL(ctx context.Context, session Session, postLogoutRedirect string) (string, error) {
 	if c.endSession == "" {
 		return "", nil
 	}
@@ -309,6 +309,17 @@ func (c *Client) LogoutURL(session Session, postLogoutRedirect string) (string, 
 		q.Set("post_logout_redirect_uri", targetRedirect)
 	}
 	q.Set("client_id", c.config.ClientID)
+	// Generate and store a state parameter for CSRF protection on the
+	// RP-initiated logout flow. The OP will echo it back in the post-logout
+	// redirect, allowing the BFF to verify the response authenticity.
+	logoutState, err := RandomHandle()
+	if err != nil {
+		return "", fmt.Errorf("generate logout state: %w", err)
+	}
+	if err := c.store.PutLogoutState(ctx, logoutState, c.config.FlowTTL); err != nil {
+		return "", fmt.Errorf("store logout state: %w", err)
+	}
+	q.Set("state", logoutState)
 	endSessionURL.RawQuery = q.Encode()
 	return endSessionURL.String(), nil
 }

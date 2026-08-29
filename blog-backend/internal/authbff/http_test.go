@@ -145,6 +145,9 @@ func TestLogoutHandler(t *testing.T) {
 	if !strings.Contains(resp.LogoutURL, "client_id=") || !strings.Contains(resp.LogoutURL, "post_logout_redirect_uri=") {
 		t.Fatalf("logout_url missing standard RP logout parameters: %s", resp.LogoutURL)
 	}
+	if !strings.Contains(resp.LogoutURL, "state=") {
+		t.Fatalf("logout_url must include state parameter for CSRF protection: %s", resp.LogoutURL)
+	}
 
 	// Verify session was deleted
 	if _, err := store.GetSession(ctx, handle); err == nil {
