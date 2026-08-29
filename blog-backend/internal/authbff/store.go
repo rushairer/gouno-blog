@@ -181,6 +181,33 @@ func (s *Store) CheckAndMarkLogoutTokenReplay(ctx context.Context, jti string, t
 	return ok, nil
 }
 
+// PutLogoutState stores a logout state nonce for CSRF protection on
+// RP-initiated logout. The state is consumed once via TakeLogoutState.
+func (s *Store) PutLogoutState(ctx context.Context, state string, ttl time.Duration) error {
+	if state == "" || ttl <= 0 {
+		return errors.New("state and positive TTL are required")
+	}
+	return s.put(ctx, "logout_state", state, struct{}{}, ttl, true)
+}
+
+// TakeLogoutState atomically consumes and returns the logout state.
+// Returns ErrNotFound if the state does not exist or was already consumed.
+func (s *Store) TakeLogoutState(ctx context.Context, state string) error {
+	if state == "" {
+		return errors.New("state is required")
+	}
+	key, aad := s.key("logout_state", state)
+	value, err := s.redis.GetDel(ctx, key).Bytes()
+	if errors.Is(err, redis.Nil) {
+		return ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	var dummy struct{}
+	return s.open(value, aad, &dummy)
+}
+
 func (s *Store) put(ctx context.Context, kind, handle string, value any, ttl time.Duration, onlyIfAbsent bool) error {
 	plain, err := json.Marshal(value)
 	if err != nil {

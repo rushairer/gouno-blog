@@ -59,3 +59,6 @@ for (const identityPath of ["/.well-known", "/oauth2", "/oidc", "/api/v1"]) {
 }
 
 console.log("Authentication deployment contract is intact.");
+
+// Also enforce production image digest pinning.
+await import("./check-production-digest.mjs");

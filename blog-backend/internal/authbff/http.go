@@ -133,7 +133,7 @@ func (c *Client) logoutHandler(ctx *gin.Context) {
 		_ = c.RevokeToken(ctx.Request.Context(), session.AccessToken, "access_token")
 	}
 
-	logoutURL, _ := c.LogoutURL(session, ctx.Query("post_logout_redirect_uri"))
+	logoutURL, _ := c.LogoutURL(ctx.Request.Context(), session, ctx.Query("post_logout_redirect_uri"))
 	if ctx.Query("redirect") == "true" && logoutURL != "" {
 		ctx.Redirect(http.StatusFound, logoutURL)
 		return

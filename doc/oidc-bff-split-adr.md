@@ -27,7 +27,10 @@ Connect Core、RP-Initiated Logout 1.0 和 Back-Channel Logout 1.0 Final 为规�
 
 - Flow：Authorization Code + PKCE S256；Client 认证为 `client_secret_basic`。
 - Blog redirect URI：`https://blog.io84.com/api/auth/callback`。
-- Blog post-logout URI：`https://blog.io84.com/api/auth/logout/callback`。
+- Blog post-logout URI：`https://blog.io84.com/`。
+  RP-initiated logout 完成后浏览器返回 Blog 首页；不存在独立的
+  `/api/auth/logout/callback` 端点，因为 BFF 已在 logout 请求阶段完成
+  服务端会话销毁和 token 撤销。
 - Blog back-channel logout URI：
   `https://blog.io84.com/api/auth/backchannel-logout`。
 - Scope：`openid profile email`。
