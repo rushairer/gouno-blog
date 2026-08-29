@@ -126,6 +126,13 @@ func (c *Client) logoutHandler(ctx *gin.Context) {
 	}
 	clearHostCookie(ctx, c.config.SessionCookie, http.SameSiteStrictMode)
 
+	// Defense-in-depth: Immediately revoke refresh token via RFC 7009 server-to-server.
+	if session.RefreshToken != "" {
+		_ = c.RevokeToken(ctx.Request.Context(), session.RefreshToken, "refresh_token")
+	} else if session.AccessToken != "" {
+		_ = c.RevokeToken(ctx.Request.Context(), session.AccessToken, "access_token")
+	}
+
 	logoutURL, _ := c.LogoutURL(session, ctx.Query("post_logout_redirect_uri"))
 	if ctx.Query("redirect") == "true" && logoutURL != "" {
 		ctx.Redirect(http.StatusFound, logoutURL)

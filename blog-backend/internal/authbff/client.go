@@ -345,6 +345,44 @@ func (c *Client) BackChannelLogout(ctx context.Context, rawLogoutToken string) e
 	return nil
 }
 
+// RevokeToken calls the OP's RFC 7009 revocation endpoint to immediately invalidate a token server-to-server.
+func (c *Client) RevokeToken(ctx context.Context, token string, tokenTypeHint string) error {
+	if token == "" {
+		return nil
+	}
+	ctx = c.withHTTPClient(ctx)
+	revokeEndpoint := strings.TrimRight(c.config.Issuer, "/") + "/oauth2/revoke"
+	form := url.Values{
+		"token":         {token},
+		"client_id":     {c.config.ClientID},
+		"client_secret": {c.config.ClientSecret},
+	}
+	if tokenTypeHint != "" {
+		form.Set("token_type_hint", tokenTypeHint)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, revokeEndpoint, strings.NewReader(form.Encode()))
+	if err != nil {
+		return fmt.Errorf("create revoke request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	client := c.httpClient
+	if client == nil {
+		client = http.DefaultClient
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("execute revoke request: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode >= 400 {
+		return fmt.Errorf("token revocation returned status %d", resp.StatusCode)
+	}
+	return nil
+}
+
 func SafeReturnTo(value string) (string, error) {
 	if value == "" {
 		return "/", nil
