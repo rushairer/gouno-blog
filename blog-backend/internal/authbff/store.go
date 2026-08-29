@@ -167,6 +167,20 @@ func (s *Store) DeleteBySID(ctx context.Context, sid string) error {
 	return nil
 }
 
+// CheckAndMarkLogoutTokenReplay atomically sets a replay marker for the given jti.
+// Returns true if the token is new (not replayed), false if it has already been seen.
+func (s *Store) CheckAndMarkLogoutTokenReplay(ctx context.Context, jti string, ttl time.Duration) (bool, error) {
+	if jti == "" {
+		return false, errors.New("jti is required")
+	}
+	key := s.prefix + ":replay:logout:" + jti
+	ok, err := s.redis.SetNX(ctx, key, "1", ttl).Result()
+	if err != nil {
+		return false, err
+	}
+	return ok, nil
+}
+
 func (s *Store) put(ctx context.Context, kind, handle string, value any, ttl time.Duration, onlyIfAbsent bool) error {
 	plain, err := json.Marshal(value)
 	if err != nil {

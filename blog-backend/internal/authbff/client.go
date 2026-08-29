@@ -285,9 +285,7 @@ func (c *Client) LogoutURL(session Session, postLogoutRedirect string) (string, 
 		return "", err
 	}
 	q := endSessionURL.Query()
-	if session.IDToken != "" {
-		q.Set("id_token_hint", session.IDToken)
-	}
+	// Do NOT put id_token_hint in the URL to prevent token leakage in browser history, referer, or logs.
 	targetRedirect := c.config.PostLogoutURL
 	if postLogoutRedirect != "" {
 		if safe, err := SafeReturnTo(postLogoutRedirect); err == nil {
@@ -315,10 +313,13 @@ func (c *Client) BackChannelLogout(ctx context.Context, rawLogoutToken string) e
 		return errors.New("logout token must not contain a nonce claim")
 	}
 	var claims struct {
-		Issuer  string                    `json:"iss"`
-		Subject string                    `json:"sub"`
-		SID     string                    `json:"sid"`
-		Events  map[string]map[string]any `json:"events"`
+		Issuer    string                    `json:"iss"`
+		Subject   string                    `json:"sub"`
+		SID       string                    `json:"sid"`
+		Events    map[string]map[string]any `json:"events"`
+		JWTID     string                    `json:"jti"`
+		IssuedAt  int64                     `json:"iat"`
+		ExpiresAt int64                     `json:"exp"`
 	}
 	if err := idToken.Claims(&claims); err != nil {
 		return fmt.Errorf("decode logout token claims: %w", err)
@@ -326,21 +327,42 @@ func (c *Client) BackChannelLogout(ctx context.Context, rawLogoutToken string) e
 	if claims.Issuer != c.config.Issuer {
 		return errors.New("logout token issuer mismatch")
 	}
+	if claims.JWTID == "" {
+		return errors.New("logout token missing jti claim")
+	}
+	if claims.IssuedAt == 0 {
+		return errors.New("logout token missing iat claim")
+	}
 	if _, ok := claims.Events["http://schemas.openid.net/event/backchannel-logout"]; !ok {
 		return errors.New("logout token missing backchannel-logout event claim")
 	}
 	if claims.SID == "" && claims.Subject == "" {
 		return errors.New("logout token must contain sid or sub")
 	}
-	if claims.SID != "" {
-		if err := c.store.DeleteBySID(ctx, claims.SID); err != nil {
-			return err
+
+	// Replay protection using Redis SETNX with TTL
+	replayTTL := 24 * time.Hour
+	if claims.ExpiresAt > 0 {
+		expTime := time.Unix(claims.ExpiresAt, 0)
+		if rem := time.Until(expTime); rem > 0 && rem < replayTTL {
+			replayTTL = rem
 		}
 	}
+	ok, err := c.store.CheckAndMarkLogoutTokenReplay(ctx, claims.JWTID, replayTTL)
+	if err != nil {
+		return fmt.Errorf("check logout token replay: %w", err)
+	}
+	if !ok {
+		return errors.New("logout token has already been processed")
+	}
+
+	// If SID is present, isolate logout to that specific session only.
+	if claims.SID != "" {
+		return c.store.DeleteBySID(ctx, claims.SID)
+	}
+	// Otherwise fallback to revoking all sessions for the subject.
 	if claims.Subject != "" {
-		if err := c.store.DeleteBySubject(ctx, claims.Subject); err != nil {
-			return err
-		}
+		return c.store.DeleteBySubject(ctx, claims.Subject)
 	}
 	return nil
 }

@@ -66,7 +66,8 @@ services:
       GOUNO_SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       GOUNO_SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-noreply@io84.com}
       GOUNO_SMTP_FROM_NAME: ${SMTP_FROM_NAME:-io84 Security}
-      GOUNO_CORS_ALLOWED_ORIGINS: ${GOSSO_CORS_ALLOWED_ORIGINS:-["https://sso.io84.com","https://blog.io84.com"]}
+      GOUNO_AUTH_ENFORCE_PKCE_FOR_CONFIDENTIAL: "true"
+      GOUNO_CORS_ALLOWED_ORIGINS: ${GOSSO_CORS_ALLOWED_ORIGINS:-["https://sso.io84.com"]}
       GOUNO_WEB_SERVER_TRUSTED_PROXIES: ${GOSSO_TRUSTED_PROXIES:-172.21.0.0/16,127.0.0.1/32}
     secrets:
       - gosso_signing_key
@@ -107,6 +108,7 @@ services:
       BLOG_OAUTH_REDIRECT_URIS: https://${BLOG_DOMAIN:-blog.io84.com}/api/auth/callback
       BLOG_OAUTH_POST_LOGOUT_REDIRECT_URIS: https://${BLOG_DOMAIN:-blog.io84.com}/
       BLOG_OAUTH_BACKCHANNEL_LOGOUT_URI: http://blog-backend:8082/api/auth/backchannel-logout
+      BLOG_OAUTH_ALLOWED_RESOURCES: https://${BLOG_DOMAIN:-blog.io84.com}/api
       BLOG_OAUTH_GRANT_TYPES: authorization_code,refresh_token
       BLOG_OAUTH_SCOPES: openid,profile,email
     depends_on:
@@ -137,6 +139,8 @@ services:
       GOUNO_DATABASE_DRIVERS_POSTGRES_DSN: ${BLOG_DATABASE_DSN:?set BLOG_DATABASE_DSN}
       GOUNO_REDIS_DSN: ${BLOG_REDIS_DSN:?set BLOG_REDIS_DSN}
       SSO_TOKEN_ISSUER: https://${SSO_DOMAIN:-sso.io84.com}
+      SSO_TOKEN_AUDIENCE: https://${BLOG_DOMAIN:-blog.io84.com}/api
+      SSO_CLIENT_ID: ${BLOG_OIDC_CLIENT_ID:-blog-bff}
       BLOG_BOOTSTRAP_OWNER_ISSUER: https://${SSO_DOMAIN:-sso.io84.com}
       BLOG_BOOTSTRAP_OWNER_SUBJECT: ${BLOG_BOOTSTRAP_OWNER_SUBJECT:?set BLOG_BOOTSTRAP_OWNER_SUBJECT}
       BLOG_IDENTITY_ISSUER_MIGRATIONS: '{"https://${SSO_DOMAIN:-sso.io84.com}":"https://${LEGACY_DOMAIN:-io84.com}"}'
