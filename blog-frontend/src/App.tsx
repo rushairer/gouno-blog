@@ -15,7 +15,6 @@ import Tags from "./pages/Tags";
 import Archive from "./pages/Archive";
 import About from "./pages/About";
 import NotFound from "./pages/NotFound";
-import Callback from "./pages/Callback";
 import { useSiteMetadata } from "./hooks/useSiteMetadata";
 const Settings = React.lazy(() => import("./pages/Settings"));
 const Dashboard = React.lazy(() => import("./pages/admin/Dashboard"));
@@ -194,7 +193,6 @@ export default function App() {
         <ToastProvider>
           <BrowserRouter>
             <Routes>
-              <Route path="/callback" element={<Callback />} />
               <Route
                 path="/"
                 element={

@@ -36,10 +36,6 @@ export interface BlogUserProfile {
 export type BlogSessionData = BlogUserProfile;
 
 const gossoIssuer = import.meta.env.VITE_GOSSO_ISSUER || window.location.origin;
-const gossoClientID = import.meta.env.VITE_GOSSO_CLIENT_ID || "blog-spa";
-// Blog authorization is local and server-verified; never request an OAuth
-// `admin` scope merely to display or decide Blog permissions.
-const gossoScope = import.meta.env.VITE_GOSSO_SCOPE || "openid profile email";
 export function getGossoAdminURL(user?: BlogUserProfile | null): string {
   if (import.meta.env.VITE_GOSSO_ADMIN_URL) {
     return import.meta.env.VITE_GOSSO_ADMIN_URL;
@@ -50,7 +46,11 @@ export function getGossoAdminURL(user?: BlogUserProfile | null): string {
   if (user?.issuer) {
     return String(user.issuer);
   }
-  if (gossoIssuer && typeof window !== "undefined" && gossoIssuer !== window.location.origin) {
+  if (
+    gossoIssuer &&
+    typeof window !== "undefined" &&
+    gossoIssuer !== window.location.origin
+  ) {
     return gossoIssuer;
   }
   return "";
@@ -68,9 +68,9 @@ export const gossoAdminURL = import.meta.env.VITE_GOSSO_ADMIN_URL || "";
 
 export const gossoClient = createGossoClient<BlogUserProfile>({
   issuer: gossoIssuer,
-  clientId: gossoClientID,
-  redirectUri: `${window.location.origin}/callback`,
-  scope: gossoScope,
+  clientId: "",
+  redirectUri: "",
+  scope: "",
   postLoginDefaultPath: "/admin",
   loginPath: `${gossoAdminURL.replace(/\/$/, "")}/login`,
   storagePrefix: "gouno-blog",

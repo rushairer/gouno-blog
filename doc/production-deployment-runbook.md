@@ -26,9 +26,9 @@ cd /Users/aben/Git/gouno-blog/blog-backend
 go run ./cmd/main.go bff-keygen --out /opt/gouno-blog/secrets/blog-bff-tink.json
 chmod 600 /opt/gouno-blog/secrets/blog-bff-tink.json
 
-# 2. 生成 Blog BFF 客户端通信密钥 (Client Secret)
-openssl rand -hex 32 > /opt/gouno-blog/secrets/blog-bff-client-secret.txt
-chmod 600 /opt/gouno-blog/secrets/blog-bff-client-secret.txt
+# 2. 生成 Blog BFF 客户端通信密钥文件 (Client Secret File)
+openssl rand -hex 32 > /opt/gouno-blog/secrets/blog_oauth_client_secret
+chmod 600 /opt/gouno-blog/secrets/blog_oauth_client_secret
 ```
 
 ---
@@ -60,13 +60,13 @@ BLOG_DOMAIN=blog.io84.com
 LEGACY_DOMAIN=io84.com
 PUBLIC_ORIGIN=https://sso.io84.com
 
-# 镜像版本
-GOSSO_IMAGE=ghcr.io/rushairer/gosso:main
-GOSSO_ADMIN_FRONTEND_IMAGE=ghcr.io/rushairer/gosso-admin-frontend-identity-admin:main
-GOSSO_ADMIN_SEED_IMAGE=ghcr.io/rushairer/gosso-admin-seed:main
-GOUNO_BLOG_BACKEND_IMAGE=ghcr.io/rushairer/gouno-blog-backend:main
-GOUNO_BLOG_FRONTEND_IMAGE=ghcr.io/rushairer/gouno-blog-frontend:main
-GOUNO_BLOG_SEED_IMAGE=ghcr.io/rushairer/gouno-blog-seed:main
+# 镜像版本（生产环境严格要求使用发布镜像的不可变 SHA-256 Digest，禁止使用浮动 tag 如 :main）
+GOSSO_IMAGE=ghcr.io/rushairer/gosso:v0.8.0@sha256:<GOSSO_DIGEST>
+GOSSO_ADMIN_FRONTEND_IMAGE=ghcr.io/rushairer/gosso-admin-frontend-identity-admin:v0.6.0@sha256:<ADMIN_FRONTEND_DIGEST>
+GOSSO_ADMIN_SEED_IMAGE=ghcr.io/rushairer/gosso-admin-seed:v0.6.0@sha256:<ADMIN_SEED_DIGEST>
+GOUNO_BLOG_BACKEND_IMAGE=ghcr.io/rushairer/gouno-blog-backend:v1.0.0@sha256:<BLOG_BACKEND_DIGEST>
+GOUNO_BLOG_FRONTEND_IMAGE=ghcr.io/rushairer/gouno-blog-frontend:v1.0.0@sha256:<BLOG_FRONTEND_DIGEST>
+GOUNO_BLOG_SEED_IMAGE=ghcr.io/rushairer/gouno-blog-seed:v1.0.0@sha256:<BLOG_SEED_DIGEST>
 
 # 数据库连接
 POSTGRES_USER=postgres
@@ -76,9 +76,9 @@ BLOG_DATABASE_DSN=host=db user=postgres password=<SECURE_PASSWORD> dbname=blog p
 GOSSO_REDIS_DSN=redis://:<REDIS_PASSWORD>@redis:6379/0
 BLOG_REDIS_DSN=redis://:<REDIS_PASSWORD>@redis:6379/0
 
-# OIDC 与 BFF 密钥
+# OIDC 与 BFF 密钥（通过受限权限的 Secret 文件挂载）
 BLOG_OIDC_CLIENT_ID=blog-bff
-BLOG_OIDC_CLIENT_SECRET=<SECURE_CLIENT_SECRET>
+BLOG_OAUTH_CLIENT_SECRET_FILE=/opt/gouno-blog/secrets/blog_oauth_client_secret
 GOSSO_SIGNING_KEY_FILE=/opt/gouno-blog/secrets/gosso_private.pem
 BLOG_BFF_TINK_KEYSET_FILE=/opt/gouno-blog/secrets/blog-bff-tink.json
 

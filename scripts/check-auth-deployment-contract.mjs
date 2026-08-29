@@ -32,7 +32,7 @@ const forbidden = new Map([
   ["Caddyfile", ["@legacy_login", "redir @legacy_login"]],
   ["Caddyfile.audit", ["@legacy_login", "redir @legacy_login"]],
   ["Caddyfile.local-split", ["Access-Control-Allow-Origin *", ".local.test Domain=", "identity-admin"]],
-  ["blog-frontend/src/App.tsx", ['path="/login"']],
+  ["blog-frontend/src/App.tsx", ['path="/login"', 'path="/callback"']],
 ]);
 
 for (const [path, snippets] of forbidden) {

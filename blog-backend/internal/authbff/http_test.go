@@ -190,3 +190,29 @@ func TestSessionMiddlewareInfiltration(t *testing.T) {
 		t.Fatalf("expected 200 OK, got %d (%s)", w.Code, w.Body.String())
 	}
 }
+
+func TestConcurrentRefresh_AlreadyRefreshed(t *testing.T) {
+	client, store := testBFFClientWithStore(t)
+	ctx := context.Background()
+	handle, _ := RandomHandle()
+	session := Session{
+		Issuer:       "https://sso.local.test",
+		Subject:      "user-123",
+		AccessToken:  "acc-token-fresh",
+		RefreshToken: "ref-token-123",
+		IDToken:      "id-token-abc",
+		TokenExpiry:  time.Now().Add(10 * time.Minute), // Fresh token!
+		Claims:       map[string]any{"email": "user@io84.com"},
+		CreatedAt:    time.Now(),
+	}
+	_ = store.PutSession(ctx, handle, session, time.Hour)
+
+	// Since token is fresh (valid > 30s into future), Refresh returns it immediately without remote call
+	refreshed, err := client.Refresh(ctx, handle)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if refreshed.AccessToken != "acc-token-fresh" {
+		t.Fatalf("expected cached access token, got %s", refreshed.AccessToken)
+	}
+}

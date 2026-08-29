@@ -110,7 +110,11 @@ func startWebServer(cmd *cobra.Command, args []string) {
 	bootstrapDatabase(db, logger)
 	jwksURL := os.Getenv("SSO_JWKS_URL")
 	if jwksURL == "" {
-		jwksURL = "http://localhost:8088/.well-known/jwks.json"
+		if issuer := strings.TrimRight(os.Getenv("SSO_TOKEN_ISSUER"), "/"); issuer != "" {
+			jwksURL = issuer + "/.well-known/jwks.json"
+		} else {
+			jwksURL = "http://localhost:8088/.well-known/jwks.json"
+		}
 	}
 	authOptions := middleware.AuthOptions{
 		Issuer:   os.Getenv("SSO_TOKEN_ISSUER"),
@@ -225,9 +229,10 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		if parseErr != nil {
 			log.Fatalf("load Blog BFF Tink keyset: %v", parseErr)
 		}
+		clientSecret := readSecretFromFileOrEnv(os.Getenv("BLOG_OIDC_CLIENT_SECRET_FILE"), os.Getenv("BLOG_OIDC_CLIENT_SECRET"))
 		bffConfig := authbff.Config{
 			Issuer: os.Getenv("BLOG_OIDC_ISSUER"), ClientID: os.Getenv("BLOG_OIDC_CLIENT_ID"),
-			ClientSecret: os.Getenv("BLOG_OIDC_CLIENT_SECRET"), RedirectURL: os.Getenv("BLOG_OIDC_REDIRECT_URL"),
+			ClientSecret: clientSecret, RedirectURL: os.Getenv("BLOG_OIDC_REDIRECT_URL"),
 			PostLogoutURL: os.Getenv("BLOG_OIDC_POST_LOGOUT_URL"), Resource: os.Getenv("BLOG_OIDC_RESOURCE"),
 			Scopes: strings.Fields(os.Getenv("BLOG_OIDC_SCOPES")), TinkKeysetPath: os.Getenv("BLOG_BFF_TINK_KEYSET_PATH"),
 			InternalEndpoint: os.Getenv("BLOG_OIDC_INTERNAL_ENDPOINT"),
@@ -321,3 +326,13 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		BFFClient: bffClient,
 	})
 }
+
+func readSecretFromFileOrEnv(filePath, envVal string) string {
+	if filePath != "" {
+		if data, err := os.ReadFile(filePath); err == nil {
+			return strings.TrimSpace(string(data))
+		}
+	}
+	return envVal
+}
+

@@ -11,16 +11,10 @@ describe("blog cookie session", () => {
     document.cookie = "__Host-csrf_token=; path=/; max-age=0; Secure";
   });
 
-  it("keeps only PKCE state in session storage", async () => {
+  it("does not hold access tokens or refresh tokens in the browser", async () => {
     const { gossoClient } = await import("../auth");
     expect(gossoClient.getAccessToken()).toBeNull();
     expect(gossoClient.getRefreshToken()).toBeNull();
-    expect(Object.values(gossoClient.storageKeys)).toEqual(
-      expect.arrayContaining([
-        "gouno-blog:pkce_verifier",
-        "gouno-blog:auth_state",
-      ]),
-    );
   });
 
   it("adds the CSRF token to unsafe blog API requests without an Authorization header", async () => {
