@@ -8,6 +8,8 @@ services:
       - GOUNO_AUTH_WEBAUTHN_RP_ID=sso.dev.local
       - GOUNO_AUTH_WEBAUTHN_RP_NAME=gosso-sso-local
       - GOUNO_AUTH_WEBAUTHN_RP_ORIGIN=https://sso.dev.local
+      - GOUNO_AUTH_ENFORCE_PKCE_FOR_CONFIDENTIAL=true
+      - GOUNO_CORS_ALLOWED_ORIGINS=["https://sso.dev.local","https://sso.local.test"]
 
   gosso-admin-seed:
     pull_policy: missing
@@ -33,11 +35,14 @@ services:
       - BLOG_OAUTH_REDIRECT_URIS=https://blog.dev.local/api/auth/callback
       - BLOG_OAUTH_POST_LOGOUT_REDIRECT_URIS=https://blog.dev.local/
       - BLOG_OAUTH_BACKCHANNEL_LOGOUT_URI=http://blog-backend:8082/api/auth/backchannel-logout
+      - BLOG_OAUTH_ALLOWED_RESOURCES=https://blog.dev.local/api,https://blog.local.test/api
 
   blog-backend:
     pull_policy: never
     environment:
       - SSO_TOKEN_ISSUER=https://sso.dev.local
+      - SSO_TOKEN_AUDIENCE=https://blog.dev.local/api
+      - SSO_CLIENT_ID=blog-bff
       - BLOG_BOOTSTRAP_OWNER_ISSUER=https://sso.dev.local
       - BLOG_IDENTITY_ISSUER_MIGRATIONS={"https://sso.dev.local":"https://localhost:8443","https://sso.local.test":"https://localhost:8443"}
       - BLOG_BFF_ENABLED=true

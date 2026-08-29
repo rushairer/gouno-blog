@@ -155,3 +155,31 @@ func TestConfigRequiresConfidentialHTTPSBoundary(t *testing.T) {
 		t.Fatal("non-HTTPS issuer must be rejected")
 	}
 }
+
+func TestLogoutTokenReplayProtection(t *testing.T) {
+	store, _ := testStore(t)
+	ctx := context.Background()
+
+	ok, err := store.CheckAndMarkLogoutTokenReplay(ctx, "jti-12345", 5*time.Minute)
+	if err != nil {
+		t.Fatalf("unexpected error checking jti: %v", err)
+	}
+	if !ok {
+		t.Fatal("first check of jti-12345 should succeed")
+	}
+
+	// Replay should fail
+	ok, err = store.CheckAndMarkLogoutTokenReplay(ctx, "jti-12345", 5*time.Minute)
+	if err != nil {
+		t.Fatalf("unexpected error on replay check: %v", err)
+	}
+	if ok {
+		t.Fatal("replayed jti-12345 must be detected and rejected")
+	}
+
+	// Different jti should succeed
+	ok, err = store.CheckAndMarkLogoutTokenReplay(ctx, "jti-67890", 5*time.Minute)
+	if err != nil || !ok {
+		t.Fatalf("distinct jti should succeed: ok=%v, err=%v", ok, err)
+	}
+}

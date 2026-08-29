@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -137,6 +138,12 @@ func TestLogoutHandler(t *testing.T) {
 	}
 	if resp.LogoutURL == "" {
 		t.Fatal("expected non-empty logout_url for RP-initiated logout")
+	}
+	if strings.Contains(resp.LogoutURL, "id_token_hint") || strings.Contains(resp.LogoutURL, "id-token-abc") {
+		t.Fatalf("logout_url must NOT leak id_token_hint into browser URL: %s", resp.LogoutURL)
+	}
+	if !strings.Contains(resp.LogoutURL, "client_id=") || !strings.Contains(resp.LogoutURL, "post_logout_redirect_uri=") {
+		t.Fatalf("logout_url missing standard RP logout parameters: %s", resp.LogoutURL)
 	}
 
 	// Verify session was deleted
