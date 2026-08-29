@@ -121,6 +121,10 @@ func main() {
 		log.Fatalf("Failed to parse BLOG_OAUTH_POST_LOGOUT_REDIRECT_URIS: %v", err)
 	}
 	backchannelLogoutURI := envOrDefault("BLOG_OAUTH_BACKCHANNEL_LOGOUT_URI", "")
+	allowedResourcesJSON, err := parseJSONList(os.Getenv("BLOG_OAUTH_ALLOWED_RESOURCES"), nil)
+	if err != nil {
+		log.Fatalf("Failed to parse BLOG_OAUTH_ALLOWED_RESOURCES: %v", err)
+	}
 
 	log.Println("Starting gouno-blog seed.")
 	log.Println("Connecting to GOSSO database...")
@@ -197,15 +201,18 @@ func main() {
 			`INSERT INTO oauth2_clients (
 				account_id, client_id, client_secret_hash, name, description,
 				redirect_uris, post_logout_redirect_uris, grant_types, scopes,
-				is_confidential, metadata, backchannel_logout_uri, backchannel_logout_session_required
+				is_confidential, metadata, backchannel_logout_uri, backchannel_logout_session_required,
+				allowed_resources
 			) VALUES (
 				$1, $2, $3, $4, $5,
 				$6::jsonb, $7::jsonb, $8::jsonb, $9::jsonb,
-				$10, '{}'::jsonb, $11, $12
+				$10, '{}'::jsonb, $11, $12,
+				$13::jsonb
 			)`,
 			accountID, clientID, clientSecretHash, clientName, clientDescription,
 			redirectURIsJSON, postLogoutRedirectURIsJSON, grantTypesJSON, scopesJSON,
 			isConfidential, backchannelLogoutURI, backchannelLogoutURI != "",
+			allowedResourcesJSON,
 		)
 		if err != nil {
 			log.Fatalf("Failed to seed OAuth2 client: %v", err)
@@ -226,11 +233,13 @@ func main() {
 			     client_secret_hash = CASE WHEN $9 <> '' THEN $9 ELSE client_secret_hash END,
 			     backchannel_logout_uri = $10,
 			     backchannel_logout_session_required = $11,
+			     allowed_resources = $12::jsonb,
 			     metadata = COALESCE(metadata, '{}'::jsonb) - 'capability'
-			 WHERE client_id = $12`,
+			 WHERE client_id = $13`,
 			accountID, clientName, clientDescription,
 			redirectURIsJSON, postLogoutRedirectURIsJSON, grantTypesJSON, scopesJSON,
 			isConfidential, clientSecretHash, backchannelLogoutURI, backchannelLogoutURI != "",
+			allowedResourcesJSON,
 			clientID,
 		)
 		if err != nil {
