@@ -28,9 +28,8 @@ describe("blog cookie session", () => {
     expect(headers.get("Authorization")).toBeNull();
   });
 
-  it("refreshes an expired cookie session once, then retries the protected request", async () => {
+  it("refreshes and retries a protected request after receiving 401", async () => {
     document.cookie = "blog_csrf_token=blog-csrf; path=/";
-    document.cookie = "__Host-csrf_token=gosso-csrf; path=/; Secure";
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
@@ -38,9 +37,6 @@ describe("blog cookie session", () => {
           status: 401,
         }),
       )
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ expires_in: 900 }), { status: 200 }),
-      )
       .mockResolvedValueOnce(Response.json({ data: { list: [] } }));
     vi.stubGlobal("fetch", fetchMock);
     const { apiFetch } = await import("../auth");
@@ -48,60 +44,11 @@ describe("blog cookie session", () => {
     const response = await apiFetch("/api/admin/posts");
 
     expect(response.ok).toBe(true);
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      2,
-      "https://blog.example.test/api/v1/auth/refresh",
-      expect.objectContaining({
-        method: "POST",
-        credentials: "same-origin",
-        headers: {
-          "X-Gosso-Cookie-Session": "1",
-          "X-CSRF-Token": "gosso-csrf",
-        },
-      }),
-    );
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it("renews a missing GOSSO CSRF cookie before refreshing a long-idle session", async () => {
-    document.cookie = "blog_csrf_token=blog-csrf; path=/";
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(new Response(null, { status: 401 }))
-      .mockImplementationOnce(async () => {
-        document.cookie =
-          "__Host-csrf_token=renewed-gosso-csrf; path=/; Secure";
-        return new Response(null, { status: 401 });
-      })
-      .mockResolvedValueOnce(Response.json({ data: { expires_in: 900 } }))
-      .mockResolvedValueOnce(Response.json({ data: { list: [] } }));
-    vi.stubGlobal("fetch", fetchMock);
-    const { apiFetch } = await import("../auth");
-
-    const response = await apiFetch("/api/admin/posts");
-
-    expect(response.ok).toBe(true);
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      2,
-      "https://blog.example.test/api/v1/auth/session",
-      { credentials: "same-origin" },
-    );
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      3,
-      "https://blog.example.test/api/v1/auth/refresh",
-      expect.objectContaining({
-        headers: {
-          "X-Gosso-Cookie-Session": "1",
-          "X-CSRF-Token": "renewed-gosso-csrf",
-        },
-      }),
-    );
-    expect(fetchMock).toHaveBeenCalledTimes(4);
-  });
-
-  it("uses only the GOSSO CSRF cookie when revoking a cookie session", async () => {
+  it("uses only the Blog CSRF cookie when revoking a cookie session", async () => {
     document.cookie = "blog_csrf_token=blog-token; path=/";
-    document.cookie = "__Host-csrf_token=gosso-token; path=/; Secure";
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ message: "CSRF token mismatch" }), {
         status: 403,
@@ -136,18 +83,17 @@ describe("blog cookie session", () => {
   });
 
   it("derives management profile and permissions via the shared policy", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(Response.json({ sub: "1", name: "Admin" }))
-      .mockResolvedValueOnce(
-        Response.json({
-          data: {
-            membership_status: "active",
-            roles: ["admin"],
-            permissions: ["site.manage"],
-          },
-        }),
-      );
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      Response.json({
+        data: {
+          sub: "1",
+          name: "Admin",
+          membership_status: "active",
+          roles: ["admin"],
+          permissions: ["site.manage"],
+        },
+      }),
+    );
     vi.stubGlobal("fetch", fetchMock);
     const { gossoClient } = await import("../auth");
     const { defineAbility, canPreviewUnpublished } =
@@ -158,27 +104,53 @@ describe("blog cookie session", () => {
     expect(defineAbility(profile).can("manage", "site")).toBe(true);
     expect(canPreviewUnpublished(profile)).toBe(true);
     expect(gossoClient.getSnapshot().profile?.membership_status).toBe("active");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/me/blog-session",
+      expect.objectContaining({
+        credentials: "same-origin",
+      }),
+    );
+  });
+
+  it("strictly enforces BFF boundary: no browser requests to IdP issuer", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      Response.json({
+        data: {
+          sub: "1",
+          name: "Admin",
+          roles: ["admin"],
+          permissions: ["site.manage"],
+        },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const { gossoClient, apiFetch, logout } = await import("../auth");
+
+    await gossoClient.fetchUserProfile();
+    await apiFetch("/api/posts");
+    await logout().catch(() => {});
+
+    // Assert zero requests made to sso issuer directly
+    const allUrls = fetchMock.mock.calls.map(([callUrl]) => String(callUrl));
+    for (const calledUrl of allUrls) {
+      expect(calledUrl).not.toMatch(/\/oidc\//);
+      expect(calledUrl).not.toMatch(/\/oauth2\//);
+      expect(calledUrl).not.toMatch(/^https:\/\/sso\./);
+    }
   });
 
   it("does not grant permissions when membership is suspended", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(
-        Response.json({
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      Response.json({
+        data: {
           sub: "1",
           name: "Suspended User",
-          scope: "openid profile",
-        }),
-      )
-      .mockResolvedValueOnce(
-        Response.json({
-          data: {
-            membership_status: "suspended",
-            roles: ["admin"],
-            permissions: ["site.manage"],
-          },
-        }),
-      );
+          membership_status: "suspended",
+          roles: ["admin"],
+          permissions: ["site.manage"],
+        },
+      }),
+    );
     vi.stubGlobal("fetch", fetchMock);
 
     const { gossoClient } = await import("../auth");

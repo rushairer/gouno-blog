@@ -177,6 +177,11 @@ services:
       - blog_oauth_client_secret
     volumes:
       - blog_media:/app/data/media
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8082/healthz >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
     depends_on:
       db: {condition: service_healthy}
       gosso: {condition: service_started}

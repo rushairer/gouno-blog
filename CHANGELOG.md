@@ -5,6 +5,15 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-08-29
+
+### Security
+- **RFC 7009 Token Revocation Authentication**: Update `authbff/client.go` to authenticate revocation requests using HTTP Basic Auth (`client_secret_basic`).
+- **RFC 10017 BFF Boundary Isolation**: Upgrade `@gosso/client` to `0.8.8` to strictly confine browser requests to same-origin endpoints.
+
+### Fixed
+- **Container Health Check**: Add healthcheck probe to `blog-backend` in `docker-compose.production-split.yml`.
+
 ## [1.2.0] - 2026-08-29
 
 ### Added
