@@ -104,13 +104,15 @@ services:
       BLOG_OAUTH_CLIENT_NAME: "io84 Blog BFF"
       BLOG_OAUTH_CLIENT_DESCRIPTION: "Confidential OAuth2 Client for Blog BFF"
       BLOG_OAUTH_CONFIDENTIAL: "true"
-      BLOG_OAUTH_CLIENT_SECRET: ${BLOG_OIDC_CLIENT_SECRET:?set BLOG_OIDC_CLIENT_SECRET}
+      BLOG_OAUTH_CLIENT_SECRET_FILE: /run/secrets/blog_oauth_client_secret
       BLOG_OAUTH_REDIRECT_URIS: https://${BLOG_DOMAIN:-blog.io84.com}/api/auth/callback
       BLOG_OAUTH_POST_LOGOUT_REDIRECT_URIS: https://${BLOG_DOMAIN:-blog.io84.com}/
       BLOG_OAUTH_BACKCHANNEL_LOGOUT_URI: http://blog-backend:8082/api/auth/backchannel-logout
       BLOG_OAUTH_ALLOWED_RESOURCES: https://${BLOG_DOMAIN:-blog.io84.com}/api
       BLOG_OAUTH_GRANT_TYPES: authorization_code,refresh_token
       BLOG_OAUTH_SCOPES: openid,profile,email
+    secrets:
+      - blog_oauth_client_secret
     depends_on:
       gosso-admin-seed: {condition: service_completed_successfully}
 
@@ -138,6 +140,7 @@ services:
       POSTGRES_DATABASE: ${BLOG_POSTGRES_DB:-blog}
       GOUNO_DATABASE_DRIVERS_POSTGRES_DSN: ${BLOG_DATABASE_DSN:?set BLOG_DATABASE_DSN}
       GOUNO_REDIS_DSN: ${BLOG_REDIS_DSN:?set BLOG_REDIS_DSN}
+      SSO_JWKS_URL: https://${SSO_DOMAIN:-sso.io84.com}/.well-known/jwks.json
       SSO_TOKEN_ISSUER: https://${SSO_DOMAIN:-sso.io84.com}
       SSO_TOKEN_AUDIENCE: https://${BLOG_DOMAIN:-blog.io84.com}/api
       SSO_CLIENT_ID: ${BLOG_OIDC_CLIENT_ID:-blog-bff}
@@ -147,7 +150,7 @@ services:
       BLOG_BFF_ENABLED: "true"
       BLOG_OIDC_ISSUER: https://${SSO_DOMAIN:-sso.io84.com}
       BLOG_OIDC_CLIENT_ID: ${BLOG_OIDC_CLIENT_ID:-blog-bff}
-      BLOG_OIDC_CLIENT_SECRET: ${BLOG_OIDC_CLIENT_SECRET:?set BLOG_OIDC_CLIENT_SECRET}
+      BLOG_OIDC_CLIENT_SECRET_FILE: /run/secrets/blog_oauth_client_secret
       BLOG_OIDC_REDIRECT_URL: https://${BLOG_DOMAIN:-blog.io84.com}/api/auth/callback
       BLOG_OIDC_POST_LOGOUT_URL: https://${BLOG_DOMAIN:-blog.io84.com}/
       BLOG_OIDC_RESOURCE: https://${BLOG_DOMAIN:-blog.io84.com}/api
@@ -171,6 +174,7 @@ services:
       GOUNO_AI_WEBHOOK_SECRET: ${GOUNO_AI_WEBHOOK_SECRET:?set GOUNO_AI_WEBHOOK_SECRET}
     secrets:
       - blog_bff_tink_keyset
+      - blog_oauth_client_secret
     volumes:
       - blog_media:/app/data/media
     depends_on:
@@ -215,6 +219,8 @@ secrets:
     file: ${GOSSO_SIGNING_KEY_FILE:?set GOSSO_SIGNING_KEY_FILE}
   blog_bff_tink_keyset:
     file: ${BLOG_BFF_TINK_KEYSET_FILE:?set BLOG_BFF_TINK_KEYSET_FILE}
+  blog_oauth_client_secret:
+    file: ${BLOG_OAUTH_CLIENT_SECRET_FILE:?set BLOG_OAUTH_CLIENT_SECRET_FILE}
 
 volumes:
   db_data:

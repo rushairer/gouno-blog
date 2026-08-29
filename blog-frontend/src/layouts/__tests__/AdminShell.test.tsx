@@ -30,7 +30,10 @@ vi.mock("../../auth", () => ({
   },
   gossoAdminURL: "/identity-admin",
   getGossoAdminURL: () => "/identity-admin",
-  useSafeUserProfile: () => ({ name: "Content Admin", email: "admin@example.com" }),
+  useSafeUserProfile: () => ({
+    name: "Content Admin",
+    email: "admin@example.com",
+  }),
   logout: logoutMock,
   getCachedBlogSession: () => null,
   hasBlogPermission: () => true,

@@ -55,6 +55,15 @@ func envOrDefault(name, fallback string) string {
 	return value
 }
 
+func readSecretFromFileOrEnv(filePath, envVal string) string {
+	if filePath != "" {
+		if data, err := os.ReadFile(filePath); err == nil {
+			return strings.TrimSpace(string(data))
+		}
+	}
+	return strings.TrimSpace(envVal)
+}
+
 func invalidateConsentCache(ctx context.Context, redisDSN, accountID, clientID string) error {
 	options, err := redis.ParseURL(redisDSN)
 	if err != nil {
@@ -97,12 +106,12 @@ func main() {
 	}
 
 	isConfidential := strings.EqualFold(os.Getenv("BLOG_OAUTH_CONFIDENTIAL"), "true")
-	clientSecret := strings.TrimSpace(os.Getenv("BLOG_OAUTH_CLIENT_SECRET"))
+	clientSecret := readSecretFromFileOrEnv(os.Getenv("BLOG_OAUTH_CLIENT_SECRET_FILE"), os.Getenv("BLOG_OAUTH_CLIENT_SECRET"))
 	var clientSecretHash string
 	if isConfidential && clientSecret != "" {
 		hash, err := bcrypt.GenerateFromPassword([]byte(clientSecret), bcrypt.DefaultCost)
 		if err != nil {
-			log.Fatalf("Failed to hash BLOG_OAUTH_CLIENT_SECRET: %v", err)
+			log.Fatalf("Failed to hash client secret: %v", err)
 		}
 		clientSecretHash = string(hash)
 	}

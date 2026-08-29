@@ -12,6 +12,7 @@ import (
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"
+	"golang.org/x/sync/singleflight"
 )
 
 type providerMetadata struct {
@@ -43,13 +44,14 @@ func (rt *internalRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 }
 
 type Client struct {
-	config     Config
-	store      *Store
-	oauth      oauth2.Config
-	verifier   *oidc.IDTokenVerifier
-	endSession string
-	httpClient *http.Client
-	flowNow    func() time.Time
+	config       Config
+	store        *Store
+	oauth        oauth2.Config
+	verifier     *oidc.IDTokenVerifier
+	endSession   string
+	httpClient   *http.Client
+	flowNow      func() time.Time
+	refreshGroup singleflight.Group
 }
 
 func (c *Client) withHTTPClient(ctx context.Context) context.Context {
@@ -230,50 +232,61 @@ func (c *Client) Complete(ctx context.Context, flowHandle string, query url.Valu
 
 func (c *Client) Refresh(ctx context.Context, sessionHandle string) (Session, error) {
 	ctx = c.withHTTPClient(ctx)
-	session, err := c.store.GetSession(ctx, sessionHandle)
-	if err != nil {
-		return Session{}, err
-	}
-	if session.RefreshToken == "" {
-		return Session{}, errors.New("no refresh token in session")
-	}
+	res, err, _ := c.refreshGroup.Do(sessionHandle, func() (any, error) {
+		session, err := c.store.GetSession(ctx, sessionHandle)
+		if err != nil {
+			return Session{}, err
+		}
+		// If a concurrent request refreshed the session while waiting for the lock,
+		// and the token is valid for at least 30 seconds into the future, return it.
+		if session.TokenExpiry.After(c.flowNow().Add(30 * time.Second)) {
+			return session, nil
+		}
+		if session.RefreshToken == "" {
+			return Session{}, errors.New("no refresh token in session")
+		}
 
-	t := &oauth2.Token{
-		RefreshToken: session.RefreshToken,
-		Expiry:       session.TokenExpiry,
-	}
-	tokenSource := c.oauth.TokenSource(ctx, t)
-	newToken, err := tokenSource.Token()
-	if err != nil {
-		return Session{}, fmt.Errorf("refresh token exchange: %w", err)
-	}
+		t := &oauth2.Token{
+			RefreshToken: session.RefreshToken,
+			Expiry:       session.TokenExpiry,
+		}
+		tokenSource := c.oauth.TokenSource(ctx, t)
+		newToken, err := tokenSource.Token()
+		if err != nil {
+			return Session{}, fmt.Errorf("refresh token exchange: %w", err)
+		}
 
-	session.AccessToken = newToken.AccessToken
-	if newToken.RefreshToken != "" {
-		session.RefreshToken = newToken.RefreshToken
-	}
-	session.TokenExpiry = newToken.Expiry
+		session.AccessToken = newToken.AccessToken
+		if newToken.RefreshToken != "" {
+			session.RefreshToken = newToken.RefreshToken
+		}
+		session.TokenExpiry = newToken.Expiry
 
-	if rawIDToken, ok := newToken.Extra("id_token").(string); ok && rawIDToken != "" {
-		if idToken, err := c.verifier.Verify(ctx, rawIDToken); err == nil {
-			session.IDToken = rawIDToken
-			var claims struct {
-				SID string `json:"sid"`
-			}
-			if err := idToken.Claims(&claims); err == nil && claims.SID != "" {
-				session.SID = claims.SID
-			}
-			allClaims := map[string]any{}
-			if err := idToken.Claims(&allClaims); err == nil {
-				session.Claims = allClaims
+		if rawIDToken, ok := newToken.Extra("id_token").(string); ok && rawIDToken != "" {
+			if idToken, err := c.verifier.Verify(ctx, rawIDToken); err == nil {
+				session.IDToken = rawIDToken
+				var claims struct {
+					SID string `json:"sid"`
+				}
+				if err := idToken.Claims(&claims); err == nil && claims.SID != "" {
+					session.SID = claims.SID
+				}
+				allClaims := map[string]any{}
+				if err := idToken.Claims(&allClaims); err == nil {
+					session.Claims = allClaims
+				}
 			}
 		}
-	}
 
-	if err := c.store.PutSession(ctx, sessionHandle, session, c.config.SessionTTL); err != nil {
+		if err := c.store.PutSession(ctx, sessionHandle, session, c.config.SessionTTL); err != nil {
+			return Session{}, err
+		}
+		return session, nil
+	})
+	if err != nil {
 		return Session{}, err
 	}
-	return session, nil
+	return res.(Session), nil
 }
 
 func (c *Client) LogoutURL(session Session, postLogoutRedirect string) (string, error) {
