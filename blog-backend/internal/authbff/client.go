@@ -388,9 +388,7 @@ func (c *Client) RevokeToken(ctx context.Context, token string, tokenTypeHint st
 	ctx = c.withHTTPClient(ctx)
 	revokeEndpoint := strings.TrimRight(c.config.Issuer, "/") + "/oauth2/revoke"
 	form := url.Values{
-		"token":         {token},
-		"client_id":     {c.config.ClientID},
-		"client_secret": {c.config.ClientSecret},
+		"token": {token},
 	}
 	if tokenTypeHint != "" {
 		form.Set("token_type_hint", tokenTypeHint)
@@ -401,6 +399,9 @@ func (c *Client) RevokeToken(ctx context.Context, token string, tokenTypeHint st
 		return fmt.Errorf("create revoke request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	if c.config.ClientID != "" && c.config.ClientSecret != "" {
+		req.SetBasicAuth(c.config.ClientID, c.config.ClientSecret)
+	}
 
 	client := c.httpClient
 	if client == nil {
