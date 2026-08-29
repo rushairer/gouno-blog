@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ExternalLink, KeyRound, ShieldCheck } from "lucide-react";
-import { stepUpMfa, gossoAdminURL } from "../../auth";
+import { stepUpMfa, getGossoAdminURL, useSafeUserProfile } from "../../auth";
 import { Button, Feedback, Modal, useToast } from "../ui";
 
 interface StepUpMfaModalProps {
@@ -14,6 +14,7 @@ export function StepUpMfaModal({
   onClose,
   onSuccess,
 }: StepUpMfaModalProps) {
+  const user = useSafeUserProfile();
   const { notify } = useToast();
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -100,16 +101,22 @@ export function StepUpMfaModal({
           </small>
         </label>
 
-        <div className="stepup-mfa-footer-tip">
-          <span>尚未在 GOSSO 绑定 MFA？</span>
-          <a
-            href={`${gossoAdminURL.replace(/\/$/, "")}/account-settings/mfa`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            前往账号中心绑定 <ExternalLink />
-          </a>
-        </div>
+        {(() => {
+          const adminURL = getGossoAdminURL(user);
+          if (!adminURL) return null;
+          return (
+            <div className="stepup-mfa-footer-tip">
+              <span>尚未在 GOSSO 绑定 MFA？</span>
+              <a
+                href={`${adminURL.replace(/\/$/, "")}/account-settings/mfa`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                前往账号中心绑定 <ExternalLink />
+              </a>
+            </div>
+          );
+        })()}
 
         <div className="modal-actions">
           <Button
