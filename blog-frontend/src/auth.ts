@@ -39,11 +39,25 @@ const gossoClientID = import.meta.env.VITE_GOSSO_CLIENT_ID || "blog-spa";
 // Blog authorization is local and server-verified; never request an OAuth
 // `admin` scope merely to display or decide Blog permissions.
 const gossoScope = import.meta.env.VITE_GOSSO_SCOPE || "openid profile email";
-export const gossoAdminURL =
-  import.meta.env.VITE_GOSSO_ADMIN_URL ||
-  (typeof window !== "undefined" && window.location.hostname.endsWith(".local")
-    ? "https://sso.dev.local"
-    : "/identity-admin");
+export function resolveGossoAdminURL(): string {
+  if (import.meta.env.VITE_GOSSO_ADMIN_URL) {
+    return import.meta.env.VITE_GOSSO_ADMIN_URL;
+  }
+  if (typeof window !== "undefined") {
+    const { protocol, hostname, port } = window.location;
+    if (hostname.startsWith("blog.")) {
+      const ssoHost = hostname.replace(/^blog\./, "sso.");
+      const portSuffix = port ? `:${port}` : "";
+      return `${protocol}//${ssoHost}${portSuffix}`;
+    }
+    if (hostname.endsWith(".local") || hostname.endsWith(".local.test")) {
+      return "https://sso.dev.local";
+    }
+  }
+  return "https://sso.io84.com";
+}
+
+export const gossoAdminURL = resolveGossoAdminURL();
 
 export const gossoClient = createGossoClient<BlogUserProfile>({
   issuer: gossoIssuer,
