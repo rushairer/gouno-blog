@@ -9,7 +9,7 @@ services:
       - GOUNO_AUTH_WEBAUTHN_RP_NAME=gosso-sso-local
       - GOUNO_AUTH_WEBAUTHN_RP_ORIGIN=https://sso.dev.local
       - GOUNO_AUTH_ENFORCE_PKCE_FOR_CONFIDENTIAL=true
-      - GOUNO_CORS_ALLOWED_ORIGINS=["https://sso.dev.local","https://sso.local.test"]
+      - GOUNO_CORS_ALLOWED_ORIGINS=https://sso.dev.local,https://sso.local.test
 
   gosso-admin-seed:
     pull_policy: missing

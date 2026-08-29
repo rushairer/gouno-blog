@@ -119,6 +119,22 @@ curl -I "https://blog.io84.com/api/auth/login?return_to=/admin"
 
 若上线过程中出现不可预期的严重异常，可随时执行 10 分钟回滚流程恢复至旧同源单域栈：
 
+### 5.1 回滚前置条件验证
+
+```bash
+# 验证 legacy 环境配置文件存在
+test -f /opt/gouno-blog/.env.legacy && echo "OK: .env.legacy exists" || echo "MISSING: .env.legacy"
+
+# 验证 legacy 镜像仍然可用
+docker image inspect $(grep GOSSO_IMAGE /opt/gouno-blog/.env.legacy | cut -d= -f2) >/dev/null 2>&1 && echo "OK: gosso image" || echo "MISSING: gosso image"
+docker image inspect $(grep GOUNO_BLOG_BACKEND_IMAGE /opt/gouno-blog/.env.legacy | cut -d= -f2) >/dev/null 2>&1 && echo "OK: blog-backend image" || echo "MISSING: blog-backend image"
+
+# 验证旧版 Caddyfile 存在
+test -f /opt/gouno-blog/Caddyfile.production && echo "OK: Caddyfile.production exists" || echo "MISSING: Caddyfile.production"
+```
+
+### 5.2 回滚执行步骤
+
 ```bash
 # 步骤 1: 停止拆分栈容器
 docker compose -f docker-compose.production-split.yml down
@@ -131,3 +147,78 @@ curl -fsSL https://io84.com/api/auth/session
 ```
 
 > **注意**：由于数据库迁移采用 **additive 模型**（仅新增 `blog_principal_identities` 别名表），回滚时**无需降级数据库**，旧版服务可直接兼容运行。
+
+### 5.3 数据库与 Redis 备份恢复
+
+#### 备份（部署前必做）
+
+```bash
+# 1. 数据库备份
+mkdir -p /opt/gouno-blog/backups
+docker exec sso-blog-db pg_dumpall -U postgres > /opt/gouno-blog/backups/db-backup-$(date +%Y%m%d%H%M%S).sql
+
+# 2. Redis 持久化快照（如果 Redis 已开启 AOF，可直接拷贝 appendonly 文件）
+docker exec sso-blog-redis redis-cli -a "$REDIS_PASSWORD" SAVE
+docker cp sso-blog-redis:/data /opt/gouno-blog/backups/redis-backup-$(date +%Y%m%d%H%M%S)
+
+# 3. 密钥文件备份
+cp -r /opt/gouno-blog/secrets /opt/gouno-blog/backups/secrets-backup-$(date +%Y%m%d%H%M%S)
+```
+
+#### 恢复验证
+
+```bash
+# 1. 验证备份文件完整性
+ls -lh /opt/gouno-blog/backups/
+
+# 2. 恢复数据库（在回滚后验证旧数据可访问）
+# docker exec -i sso-blog-db psql -U postgres < /opt/gouno-blog/backups/db-backup-YYYYMMDDHHMMSS.sql
+
+# 3. 验证密钥文件可读
+test -r /opt/gouno-blog/secrets/gosso_private.pem && echo "OK: signing key" || echo "MISSING: signing key"
+test -r /opt/gouno-blog/secrets/blog-bff-tink.json && echo "OK: tink keyset" || echo "MISSING: tink keyset"
+```
+
+### 5.4 回滚计时记录模板
+
+每次回滚演练必须记录实际计时：
+
+| 步骤 | 目标时间 | 实际时间 | 备注 |
+|------|----------|----------|------|
+| 验证前置条件 | 1 分钟 | | |
+| 停止拆分栈 | 1 分钟 | | |
+| 启动旧版栈 | 3 分钟 | | |
+| DNS 切换（如需） | 2 分钟 | | |
+| 健康检查验证 | 1 分钟 | | |
+| **总计** | **≤10 分钟** | | |
+
+### 5.5 回滚演练频率
+
+- 每次生产变更前必须完成一次完整回滚演练
+- 演练记录存档至少 30 天
+- 演练必须使用实际生产环境配置（非模拟环境）
+
+---
+
+## 6. 浏览器兼容性验证矩阵
+
+在进入生产灰度前，必须在以下浏览器环境中完成完整的 BFF 登录、本地退出、全局退出、back-channel logout 和 Passkey 验证：
+
+| 浏览器 | 隐私模式 | 第三方 Cookie | 存储分区 | 验证状态 |
+|--------|----------|---------------|----------|----------|
+| Chrome (最新) | 普通/无痕 | 启用/禁用 | 启用/禁用 | |
+| Firefox (最新) | 普通/隐私 | 启用/禁用 | 启用/禁用 | |
+| Safari (最新) | 普通/无痕 | 启用/禁用 | 启用/禁用 | |
+
+### 验证清单
+
+- [ ] 未登录访问 `blog.io84.com/api/auth/me` → 返回未登录
+- [ ] 点击登录跳转至 `sso.io84.com` 授权页
+- [ ] 完成授权后回调至 `blog.io84.com` 并建立 BFF 会话
+- [ ] 浏览器 DevTools 中无 access_token / refresh_token / id_token
+- [ ] Cookie 仅包含 `__Host-Http-blog-session`，域为 `blog.io84.com`，无 `.io84.com` 顶级域 Cookie
+- [ ] 本地 logout 清除 Blog BFF 会话，跳转至 SSO 确认页
+- [ ] 全局 logout 清除 SSO 会话并触发 back-channel logout
+- [ ] back-channel logout 成功清除 Blog BFF 会话
+- [ ] Passkey 注册和验证正常（`sso.io84.com` RP ID）
+- [ ] 多标签页同时刷新会话无冲突
