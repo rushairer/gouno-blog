@@ -1,6 +1,6 @@
--- Keep the original identity columns on blog_principals for rollback and
--- compatibility. New issuer identities are attached additively to the stable
--- Blog principal instead of rewriting or deleting the legacy issuer.
+-- Preserve the original identity columns on blog_principals as durable identity
+-- records. New issuer identities are attached additively to the stable Blog
+-- principal instead of rewriting or deleting existing identity data.
 CREATE TABLE IF NOT EXISTS blog_principal_identities (
     id BIGSERIAL PRIMARY KEY,
     principal_id BIGINT NOT NULL REFERENCES blog_principals(id) ON DELETE CASCADE,

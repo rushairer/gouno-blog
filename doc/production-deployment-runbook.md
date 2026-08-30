@@ -1,6 +1,6 @@
 # GOSSO / Blog OIDC 独立域拆分生产部署与运维手册
 
-本文档为 `sso.io84.com`（GOSSO 认证平台）与 `blog.io84.com`（Personal Blog BFF）独立域拆分的生产部署操作指南与应急回滚手册。
+本文档为 `sso.io84.com`（GOSSO 认证平台）与 `blog.io84.com`（Personal Blog BFF）独立域拆分的生产部署操作指南。
 
 ---
 
@@ -62,7 +62,6 @@ WHERE table_name = 'blog_principal_identities';
 # 基础域名
 SSO_DOMAIN=sso.io84.com
 BLOG_DOMAIN=blog.io84.com
-LEGACY_DOMAIN=io84.com
 PUBLIC_ORIGIN=https://sso.io84.com
 
 # 镜像版本（生产环境严格要求使用发布镜像的不可变 SHA-256 Digest，禁止使用浮动 tag 如 :main）
@@ -124,77 +123,7 @@ curl -I "https://blog.io84.com/api/auth/login?return_to=/admin"
 
 ---
 
-## 5. 故障应急手册与恢复
-
-### 5.1 服务启停与维护
-
-```bash
-# 停止生产栈容器
-docker compose -f docker-compose.production.yml down
-
-# 重新启动生产栈
-docker compose --env-file /opt/gouno-blog/.env.production -f docker-compose.production.yml up -d
-
-# 步骤 3: 验证拆分域恢复
-curl -fsSL https://sso.io84.com/.well-known/openid-configuration | jq -e '.issuer == "https://sso.io84.com"'
-curl -fsSL https://blog.io84.com/api/auth/me | jq -e '.authenticated == false or .authenticated == true'
-```
-
-> **注意**：身份迁移采用 **additive 模型**（仅新增 `blog_principal_identities` 别名表）。回滚依赖已验证的数据库备份、不可变镜像、配置版本及兼容性检查；不要求固定天数的旧生产栈并行运行。
-
-### 5.3 数据库与 Redis 备份恢复
-
-#### 备份（部署前必做）
-
-```bash
-# 1. 数据库备份
-mkdir -p /opt/gouno-blog/backups
-docker exec sso-blog-db pg_dumpall -U postgres > /opt/gouno-blog/backups/db-backup-$(date +%Y%m%d%H%M%S).sql
-
-# 2. Redis 持久化快照（如果 Redis 已开启 AOF，可直接拷贝 appendonly 文件）
-docker exec sso-blog-redis redis-cli -a "$REDIS_PASSWORD" SAVE
-docker cp sso-blog-redis:/data /opt/gouno-blog/backups/redis-backup-$(date +%Y%m%d%H%M%S)
-
-# 3. 密钥文件备份
-cp -r /opt/gouno-blog/secrets /opt/gouno-blog/backups/secrets-backup-$(date +%Y%m%d%H%M%S)
-```
-
-#### 恢复验证
-
-```bash
-# 1. 验证备份文件完整性
-ls -lh /opt/gouno-blog/backups/
-
-# 2. 恢复数据库（在回滚后验证旧数据可访问）
-# docker exec -i sso-blog-db psql -U postgres < /opt/gouno-blog/backups/db-backup-YYYYMMDDHHMMSS.sql
-
-# 3. 验证密钥文件可读
-test -r /opt/gouno-blog/secrets/gosso_private.pem && echo "OK: signing key" || echo "MISSING: signing key"
-test -r /opt/gouno-blog/secrets/blog-bff-tink.json && echo "OK: tink keyset" || echo "MISSING: tink keyset"
-```
-
-### 5.4 回滚计时记录模板
-
-每次回滚演练必须记录实际计时：
-
-| 步骤 | 目标时间 | 实际时间 | 备注 |
-|------|----------|----------|------|
-| 验证前置条件 | 1 分钟 | | |
-| 停止拆分栈 | 1 分钟 | | |
-| 启动已验证的回滚镜像与配置 | 3 分钟 | | |
-| 恢复路由配置（如需） | 2 分钟 | | |
-| 健康检查验证 | 1 分钟 | | |
-| **总计** | **≤10 分钟** | | |
-
-### 5.5 回滚演练频率
-
-- 每次生产变更前必须完成一次完整回滚演练
-- 演练记录存档至少 30 天
-- 演练必须使用实际生产环境配置（非模拟环境）
-
----
-
-## 6. 浏览器兼容性验证矩阵
+## 5. 浏览器兼容性验证矩阵
 
 在进入生产灰度前，必须在以下浏览器环境中完成完整的 BFF 登录、本地退出、全局退出、back-channel logout 和 Passkey 验证：
 

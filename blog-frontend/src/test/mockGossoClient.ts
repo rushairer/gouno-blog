@@ -3,7 +3,7 @@ import { createGossoClient } from "@gosso/client";
 export function createMockGossoClient(fetchImpl: typeof fetch) {
   return createGossoClient({
     issuer: "https://sso.test",
-    clientId: "blog-spa-test",
+    clientId: "blog-bff-test",
     redirectUri: "https://blog.test/callback",
     fetchImpl: (input, init) => {
       if (!init || init.method === "GET") return fetchImpl(input);

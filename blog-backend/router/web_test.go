@@ -24,7 +24,7 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 	}()
 	postRepo := repository.NewPostRepository(nil)
 	RegisterWebRouterWithOptions(engine, WebRouterOptions{
-		AuthOptions:   middleware.AuthOptions{Issuer: "http://issuer.test", Audience: "blog-spa", ClientID: "blog-spa"},
+		AuthOptions:   middleware.AuthOptions{Issuer: "http://issuer.test", Audience: "blog-bff", ClientID: "blog-bff"},
 		VisitorSecret: "test-secret", MediaDir: t.TempDir(), MediaStore: media.NewLocal(t.TempDir()),
 		PostSvc:      service.NewPostService(postRepo),
 		PageSvc:      service.NewPageService(repository.NewPageRepository(nil)),

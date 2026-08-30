@@ -28,7 +28,7 @@ The app works behind the gateway without extra frontend configuration. Override 
 
 ```bash
 VITE_GOSSO_ISSUER=https://localhost:8443
-VITE_GOSSO_CLIENT_ID=blog-spa
+VITE_GOSSO_CLIENT_ID=blog-bff
 ```
 
 The redirect URI is derived from the current browser origin as `${window.location.origin}/callback`.

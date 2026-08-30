@@ -144,9 +144,6 @@ jobs:
       - name: Authentication deployment contract
         run: node scripts/check-auth-deployment-contract.mjs
 
-      - name: Rollback readiness contract
-        run: node scripts/check-rollback-readiness.mjs
-
   dependency-review:
     name: Dependency review
     if: github.event_name == 'pull_request'

@@ -4,7 +4,7 @@
  * Verifies that all image references in production compose files use
  * immutable digest references (e.g. @sha256:abc123...) rather than
  * floating tags (e.g. :latest, :v1.2.3). This prevents accidental
- * rollback to an older or tampered image.
+ * deployment of an older or tampered image.
  *
  * Usage: node scripts/check-production-digest.mjs
  */

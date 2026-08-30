@@ -152,7 +152,7 @@ docker compose -f docker-compose.yml -f docker-compose.source.yml up -d --build
 export VITE_GOSSO_ISSUER=http://localhost:8088
 export SSO_JWKS_URL=http://host.docker.internal:8088/.well-known/jwks.json
 export SSO_TOKEN_ISSUER=http://localhost:8088
-export SSO_CLIENT_ID=blog-spa
+export SSO_CLIENT_ID=blog-bff
 ```
 
 ### 7. 多语言与国际化 (i18n)
