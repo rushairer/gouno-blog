@@ -237,8 +237,54 @@ func (c *Client) Refresh(ctx context.Context, sessionHandle string) (Session, er
 		if err != nil {
 			return Session{}, err
 		}
-		// If a concurrent request refreshed the session while waiting for the lock,
-		// and the token is valid for at least 30 seconds into the future, return it.
+		// If a concurrent request in this process already refreshed the session, return it.
+		if session.TokenExpiry.After(c.flowNow().Add(30 * time.Second)) {
+			return session, nil
+		}
+		if session.RefreshToken == "" {
+			return Session{}, errors.New("no refresh token in session")
+		}
+
+		// Acquire distributed lock across replicas
+		lockTTL := 10 * time.Second
+		lockOwner, acquired, err := c.store.AcquireRefreshLock(ctx, sessionHandle, lockTTL)
+		if err != nil {
+			return Session{}, fmt.Errorf("acquire refresh lock: %w", err)
+		}
+		if !acquired {
+			// Another replica is refreshing this token. Wait and re-check session.
+			waitStart := time.Now()
+			for time.Since(waitStart) < 5*time.Second {
+				select {
+				case <-ctx.Done():
+					return Session{}, ctx.Err()
+				case <-time.After(100 * time.Millisecond):
+				}
+				session, err = c.store.GetSession(ctx, sessionHandle)
+				if err == nil && session.TokenExpiry.After(c.flowNow().Add(30*time.Second)) {
+					return session, nil
+				}
+				lockOwner, acquired, err = c.store.AcquireRefreshLock(ctx, sessionHandle, lockTTL)
+				if err != nil {
+					return Session{}, fmt.Errorf("re-acquire refresh lock: %w", err)
+				}
+				if acquired {
+					break
+				}
+			}
+			if !acquired {
+				return Session{}, errors.New("concurrent session refresh in progress")
+			}
+		}
+		defer func() {
+			_ = c.store.ReleaseRefreshLock(context.Background(), sessionHandle, lockOwner)
+		}()
+
+		// Double-check session after acquiring distributed lock
+		session, err = c.store.GetSession(ctx, sessionHandle)
+		if err != nil {
+			return Session{}, err
+		}
 		if session.TokenExpiry.After(c.flowNow().Add(30 * time.Second)) {
 			return session, nil
 		}

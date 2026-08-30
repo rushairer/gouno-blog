@@ -582,6 +582,41 @@ func (s *Service) RecoverOwner(ctx context.Context, issuer, subject, reason stri
 	return tx.Commit()
 }
 
+type IntegrityReport struct {
+	PrincipalCount      int64 `json:"principal_count"`
+	IdentityCount       int64 `json:"identity_count"`
+	MembershipCount     int64 `json:"membership_count"`
+	RoleBindingCount    int64 `json:"role_binding_count"`
+	ActiveOwnerCount    int64 `json:"active_owner_count"`
+	ConflictingSubjects int64 `json:"conflicting_subjects"`
+}
+
+// VerifyIntegrity runs a read-only integrity audit across Blog principals, identities, and roles.
+func (s *Service) VerifyIntegrity(ctx context.Context) (IntegrityReport, error) {
+	var r IntegrityReport
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM blog_principals`).Scan(&r.PrincipalCount); err != nil {
+		return r, err
+	}
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM blog_principal_identities`).Scan(&r.IdentityCount); err != nil {
+		return r, err
+	}
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM blog_memberships`).Scan(&r.MembershipCount); err != nil {
+		return r, err
+	}
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM blog_role_bindings`).Scan(&r.RoleBindingCount); err != nil {
+		return r, err
+	}
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM blog_role_bindings b JOIN blog_memberships m ON m.id=b.membership_id WHERE b.role='owner' AND m.status='active'`).Scan(&r.ActiveOwnerCount); err != nil {
+		return r, err
+	}
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM (
+		SELECT subject FROM blog_principal_identities GROUP BY subject HAVING COUNT(DISTINCT principal_id) > 1
+	) conflicts`).Scan(&r.ConflictingSubjects); err != nil {
+		return r, err
+	}
+	return r, nil
+}
+
 func ClaimSnapshot(ctx context.Context) (Snapshot, bool) {
 	value := ctx.Value(snapshotKey{})
 	snapshot, ok := value.(Snapshot)

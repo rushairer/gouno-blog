@@ -265,3 +265,39 @@ func (s *Store) key(kind, handle string) (string, []byte) {
 	key := s.prefix + ":" + kind + ":" + base64.RawURLEncoding.EncodeToString(digest[:])
 	return key, []byte("gouno-blog-bff:" + kind + ":" + key)
 }
+
+// AcquireRefreshLock acquires a distributed lock for refreshing a session.
+func (s *Store) AcquireRefreshLock(ctx context.Context, handle string, ttl time.Duration) (string, bool, error) {
+	if handle == "" || ttl <= 0 {
+		return "", false, errors.New("handle and positive ttl are required")
+	}
+	owner, err := RandomHandle()
+	if err != nil {
+		return "", false, err
+	}
+	digest := sha256.Sum256([]byte(handle))
+	key := s.prefix + ":lock:refresh:" + base64.RawURLEncoding.EncodeToString(digest[:])
+	ok, err := s.redis.SetNX(ctx, key, owner, ttl).Result()
+	if err != nil {
+		return "", false, err
+	}
+	return owner, ok, nil
+}
+
+var releaseRefreshLockScript = redis.NewScript(`
+if redis.call("GET", KEYS[1]) == ARGV[1] then
+    return redis.call("DEL", KEYS[1])
+else
+    return 0
+end
+`)
+
+// ReleaseRefreshLock releases a distributed lock if the caller still owns it.
+func (s *Store) ReleaseRefreshLock(ctx context.Context, handle, owner string) error {
+	if handle == "" || owner == "" {
+		return nil
+	}
+	digest := sha256.Sum256([]byte(handle))
+	key := s.prefix + ":lock:refresh:" + base64.RawURLEncoding.EncodeToString(digest[:])
+	return releaseRefreshLockScript.Run(ctx, s.redis, []string{key}, owner).Err()
+}

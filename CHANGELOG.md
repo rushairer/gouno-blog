@@ -5,6 +5,13 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Security
+- **BFF Multi-Replica Distributed Lock**: Add Redis distributed mutex and double-checked expiration validation for BFF session token refresh to prevent concurrent token rotation and false-positive reuse detection (`internal/authbff/store.go`, `internal/authbff/client.go`).
+- **Read-Only Authorization Integrity Check**: Add `VerifyIntegrity` audit method to verify Blog principals, issuer aliases, active memberships, and role owner consistency without side effects (`internal/access/service.go`).
+
+### Changed
+- **Local Compose and Caddy Alignment**: Align default `docker-compose.yml` and `Caddyfile` with the `.dev.local` split-identity topology, eliminating legacy single-origin and `/identity-admin` paths (`docker-compose.yml`, `Caddyfile`).
+
 ## [1.3.1] - 2026-08-30
 
 ### Fixed

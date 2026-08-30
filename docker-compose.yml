@@ -49,18 +49,18 @@ services:
       - GOUNO_DATABASE_DEFAULT=postgres
       - GOUNO_DATABASE_DRIVERS_POSTGRES_DSN=host=db user=postgres password=${BLOG_POSTGRES_PASSWORD:-password} dbname=gosso port=5432 sslmode=disable TimeZone=Asia/Shanghai search_path=public
       - GOUNO_REDIS_DSN=redis://redis:6379/0
-      - GOUNO_AUTH_ISSUER=https://localhost:8443
-      - GOUNO_AUTH_LOGIN_URL=/identity-admin/login
-      - GOUNO_AUTH_PASSWORD_RESET_BASE_URL=https://localhost:8443/identity-admin/reset-password
+      - GOUNO_AUTH_ISSUER=${GOUNO_AUTH_ISSUER:-https://sso.dev.local}
+      - GOUNO_AUTH_LOGIN_URL=/login
+      - GOUNO_AUTH_PASSWORD_RESET_BASE_URL=https://sso.dev.local/reset-password
       - GOUNO_AUTH_PRIVATE_KEY_PATH=/app/keys/private.pem
       - GOUNO_AUTH_TOTP_ENCRYPTION_KEY=${GOUNO_AUTH_TOTP_ENCRYPTION_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
       - GOUNO_AUTH_VERIFY_HASH_PEPPER=${GOUNO_AUTH_VERIFY_HASH_PEPPER:-0000000000000000000000000000000000000000000000000000000000000000}
       - GOUNO_SMTP_HOST=mailpit
       - GOUNO_SMTP_PORT=1025
       - GOUNO_SMTP_TLS_POLICY=notls
-      - GOUNO_AUTH_WEBAUTHN_RP_ID=localhost
-      - GOUNO_AUTH_WEBAUTHN_RP_NAME=gouno-blog-dev
-      - GOUNO_AUTH_WEBAUTHN_RP_ORIGIN=https://localhost:8443
+      - GOUNO_AUTH_WEBAUTHN_RP_ID=${GOUNO_AUTH_WEBAUTHN_RP_ID:-sso.dev.local}
+      - GOUNO_AUTH_WEBAUTHN_RP_NAME=gouno-sso-dev
+      - GOUNO_AUTH_WEBAUTHN_RP_ORIGIN=https://sso.dev.local
     volumes:
       - ./keys:/app/keys
     depends_on:
@@ -81,7 +81,7 @@ services:
       - ADMIN_USERNAME=admin
       - ADMIN_PASSWORD=admin123
       - ADMIN_DISPLAY_NAME=System Admin
-      - OAUTH2_CLIENT_REDIRECT_URIS=https://localhost:8443/identity-admin/callback
+      - OAUTH2_CLIENT_REDIRECT_URIS=https://sso.dev.local/callback,https://sso.dev.local/admin/callback
     depends_on:
       db:
         condition: service_healthy
@@ -96,10 +96,15 @@ services:
       - PG_DSN=host=db user=postgres password=${BLOG_POSTGRES_PASSWORD:-password} dbname=gosso port=5432 sslmode=disable
       - REDIS_DSN=redis://redis:6379/0
       - BLOG_OAUTH_ACCOUNT_ID=00000000-0000-0000-0000-000000000001
-      - BLOG_OAUTH_CLIENT_ID=blog-spa
-      - BLOG_OAUTH_CLIENT_NAME=Personal Blog SPA
-      - BLOG_OAUTH_CLIENT_DESCRIPTION=OAuth2 Client for React Blog Frontend
-      - BLOG_OAUTH_REDIRECT_URIS=https://localhost:8443/callback
+      - BLOG_OAUTH_CLIENT_ID=blog-bff
+      - BLOG_OAUTH_CLIENT_NAME=Personal Blog BFF
+      - BLOG_OAUTH_CLIENT_DESCRIPTION=Confidential OAuth2 Client for Blog BFF
+      - BLOG_OAUTH_CONFIDENTIAL=true
+      - BLOG_OAUTH_CLIENT_SECRET=blog-bff-secret-local
+      - BLOG_OAUTH_REDIRECT_URIS=https://blog.dev.local/api/auth/callback
+      - BLOG_OAUTH_POST_LOGOUT_REDIRECT_URIS=https://blog.dev.local/api/auth/logout/callback
+      - BLOG_OAUTH_BACKCHANNEL_LOGOUT_URI=https://blog.dev.local/api/auth/backchannel-logout
+      - BLOG_OAUTH_ALLOWED_RESOURCES=https://blog.dev.local/api,https://blog.local.test/api
       - BLOG_OAUTH_GRANT_TYPES=authorization_code,refresh_token
       - BLOG_OAUTH_SCOPES=openid,profile,email
     depends_on:
@@ -132,18 +137,15 @@ services:
       - GOUNO_DATABASE_DRIVERS_POSTGRES_DSN=host=db user=postgres password=${BLOG_POSTGRES_PASSWORD:-password} dbname=blog port=5432 sslmode=disable TimeZone=Asia/Shanghai search_path=public
       - GOUNO_REDIS_DSN=redis://redis:6379/0
       - SSO_JWKS_URL=${SSO_JWKS_URL:-http://gosso:8080/.well-known/jwks.json}
-      - SSO_TOKEN_ISSUER=${SSO_TOKEN_ISSUER:-https://localhost:8443}
-      - SSO_TOKEN_AUDIENCE=${SSO_TOKEN_AUDIENCE:-blog-spa}
-      - SSO_CLIENT_ID=${SSO_CLIENT_ID:-blog-spa}
-      - BLOG_BOOTSTRAP_OWNER_ISSUER=${BLOG_BOOTSTRAP_OWNER_ISSUER:-https://localhost:8443}
+      - SSO_TOKEN_ISSUER=${SSO_TOKEN_ISSUER:-https://sso.dev.local}
+      - SSO_TOKEN_AUDIENCE=${SSO_TOKEN_AUDIENCE:-https://blog.dev.local/api}
+      - SSO_CLIENT_ID=${SSO_CLIENT_ID:-blog-bff}
+      - BLOG_BOOTSTRAP_OWNER_ISSUER=${BLOG_BOOTSTRAP_OWNER_ISSUER:-https://sso.dev.local}
       - BLOG_BOOTSTRAP_OWNER_SUBJECT=${BLOG_BOOTSTRAP_OWNER_SUBJECT:-c6ac32f3-3c48-46b5-bae8-f17c17116dc5}
-      # The split-origin profile enables these only after a confidential client
-      # and Tink keyset have been provisioned. The legacy local stack remains
-      # operational while the BFF tests are under construction.
-      - BLOG_BFF_ENABLED=${BLOG_BFF_ENABLED:-false}
+      - BLOG_BFF_ENABLED=${BLOG_BFF_ENABLED:-true}
       - BLOG_OIDC_ISSUER=${BLOG_OIDC_ISSUER:-https://sso.dev.local}
-      - BLOG_OIDC_CLIENT_ID=${BLOG_OIDC_CLIENT_ID:-}
-      - BLOG_OIDC_CLIENT_SECRET=${BLOG_OIDC_CLIENT_SECRET:-}
+      - BLOG_OIDC_CLIENT_ID=${BLOG_OIDC_CLIENT_ID:-blog-bff}
+      - BLOG_OIDC_CLIENT_SECRET=${BLOG_OIDC_CLIENT_SECRET:-blog-bff-secret-local}
       - BLOG_OIDC_REDIRECT_URL=${BLOG_OIDC_REDIRECT_URL:-https://blog.dev.local/api/auth/callback}
       - BLOG_OIDC_POST_LOGOUT_URL=${BLOG_OIDC_POST_LOGOUT_URL:-https://blog.dev.local/api/auth/logout/callback}
       - BLOG_OIDC_RESOURCE=${BLOG_OIDC_RESOURCE:-https://blog.dev.local/api}
@@ -191,7 +193,7 @@ services:
         condition: service_healthy
 
   gosso-admin-frontend:
-    image: ghcr.io/rushairer/gosso-admin-frontend-identity-admin:${GOSSO_ADMIN_FRONTEND_IMAGE_TAG:-main}
+    image: ghcr.io/rushairer/gosso-admin-frontend:${GOSSO_ADMIN_FRONTEND_IMAGE_TAG:-main}
     pull_policy: always
     container_name: sso-blog-gosso-admin-frontend
     healthcheck:
@@ -208,8 +210,10 @@ services:
     container_name: sso-blog-gateway
     ports:
       - "127.0.0.1:8443:8443"
+      - "127.0.0.1:443:443"
+      - "127.0.0.1:80:80"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./Caddyfile.local-split:/etc/caddy/Caddyfile:ro
       - ${LOCAL_TLS_CERT_FILE:-./certs/localhost.pem}:/etc/caddy/certs/localhost.pem:ro
       - ${LOCAL_TLS_KEY_FILE:-./certs/localhost-key.pem}:/etc/caddy/certs/localhost-key.pem:ro
     depends_on:
