@@ -5,6 +5,11 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.3.5] - 2026-08-30
+
+### Fixed
+- Pin `@gosso/client` to the immutable registry release `0.9.1`.
+
 ## [1.3.4] - 2026-08-30
 
 ### Changed
