@@ -18,8 +18,10 @@ mkdir -p "$cert_dir"
 chmod 700 "$cert_dir"
 mkcert -install
 mkcert -cert-file "$cert_file" -key-file "$key_file" \
-	localhost sso.dev.local blog.dev.local cms.dev.local sso.local.test blog.local.test cms.local.test 127.0.0.1 ::1
+	localhost sso.dev.local blog.dev.local cms.dev.local 127.0.0.1 ::1
+cp "$(mkcert -CAROOT)/rootCA.pem" "$cert_dir/local-dev-root-ca.pem"
 chmod 644 "$cert_file"
+chmod 644 "$cert_dir/local-dev-root-ca.pem"
 chmod 600 "$key_file"
 
 printf '%s\n' "Generated $cert_file and $key_file"

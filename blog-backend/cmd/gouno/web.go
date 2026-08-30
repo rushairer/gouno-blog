@@ -126,7 +126,7 @@ func startWebServer(cmd *cobra.Command, args []string) {
 		log.Fatalf("invalid trusted proxies configuration: %v", err)
 	}
 	engine.Use(
-		gin.Logger(),
+		gin.LoggerWithFormatter(middleware.SafeAccessLogFormatter),
 		func(ctx *gin.Context) {
 			ctx.Set("logger", logger)
 			ctx.Next()
@@ -234,7 +234,6 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 			ClientSecret: clientSecret, RedirectURL: os.Getenv("BLOG_OIDC_REDIRECT_URL"),
 			PostLogoutURL: os.Getenv("BLOG_OIDC_POST_LOGOUT_URL"), Resource: os.Getenv("BLOG_OIDC_RESOURCE"),
 			Scopes: strings.Fields(os.Getenv("BLOG_OIDC_SCOPES")), TinkKeysetPath: os.Getenv("BLOG_BFF_TINK_KEYSET_PATH"),
-			InternalEndpoint: os.Getenv("BLOG_OIDC_INTERNAL_ENDPOINT"),
 		}
 		store, storeErr := authbff.NewStore(redisClient, primitive, "blog:auth:v1")
 		if storeErr != nil {
@@ -244,8 +243,13 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		if parseErr != nil {
 			log.Fatalf("configure Blog BFF OIDC client: %v", parseErr)
 		}
-	} else if parseErr != nil && os.Getenv("BLOG_BFF_ENABLED") != "" {
-		log.Fatalf("BLOG_BFF_ENABLED must be a boolean: %v", parseErr)
+	} else {
+		if parseErr != nil && os.Getenv("BLOG_BFF_ENABLED") != "" {
+			log.Fatalf("BLOG_BFF_ENABLED must be a boolean: %v", parseErr)
+		}
+		if cfg.Env == "production" {
+			log.Fatal("BLOG_BFF_ENABLED must be true in production")
+		}
 	}
 
 	transactor := repository.NewTransactor(cfg.DB, cfg.Logger)

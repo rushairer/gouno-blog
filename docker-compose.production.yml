@@ -29,7 +29,8 @@ services:
     restart: unless-stopped
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD}
-    command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$${REDIS_PASSWORD}\""]
+      BLOG_REDIS_PASSWORD: ${BLOG_REDIS_PASSWORD:?set BLOG_REDIS_PASSWORD}
+    command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$${REDIS_PASSWORD}\" --user blog on \">$$BLOG_REDIS_PASSWORD\" ~blog:* +@all -@dangerous"]
     volumes:
       - redis_data:/data
     healthcheck:
@@ -136,12 +137,9 @@ services:
     image: ${GOUNO_BLOG_BACKEND_IMAGE:?set GOUNO_BLOG_BACKEND_IMAGE to version@sha256:digest}
     tmpfs: [/tmp]
     environment:
-      POSTGRES_HOST: db
-      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
-      POSTGRES_DATABASE: ${BLOG_POSTGRES_DB:-blog}
       GOUNO_DATABASE_DRIVERS_POSTGRES_DSN: ${BLOG_DATABASE_DSN:?set BLOG_DATABASE_DSN}
       GOUNO_REDIS_DSN: ${BLOG_REDIS_DSN:?set BLOG_REDIS_DSN}
+      GOUNO_WEB_SERVER_TRUSTED_PROXIES: 172.21.0.0/16
       SSO_JWKS_URL: https://${SSO_DOMAIN:?set SSO_DOMAIN}/.well-known/jwks.json
       SSO_TOKEN_ISSUER: https://${SSO_DOMAIN:?set SSO_DOMAIN}
       SSO_TOKEN_AUDIENCE: https://${BLOG_DOMAIN:?set BLOG_DOMAIN}/api
@@ -156,7 +154,6 @@ services:
       BLOG_OIDC_POST_LOGOUT_URL: https://${BLOG_DOMAIN:?set BLOG_DOMAIN}/api/auth/logout/callback
       BLOG_OIDC_RESOURCE: https://${BLOG_DOMAIN:?set BLOG_DOMAIN}/api
       BLOG_OIDC_SCOPES: "openid profile email"
-      BLOG_OIDC_INTERNAL_ENDPOINT: http://gosso:8080
       BLOG_BFF_TINK_KEYSET_PATH: /run/secrets/blog_bff_tink_keyset
       BLOG_VISITOR_SECRET: ${BLOG_VISITOR_SECRET:?set BLOG_VISITOR_SECRET}
       BLOG_MEDIA_DIR: /app/data/media
@@ -215,11 +212,11 @@ services:
       - ./Caddyfile.production:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
-    depends_on:
-      - blog-frontend
-      - blog-backend
-      - gosso-admin-frontend
-      - gosso
+    networks:
+      default:
+        aliases:
+          - sso.io84.com
+          - blog.io84.com
 
 secrets:
   gosso_signing_key:

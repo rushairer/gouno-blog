@@ -26,9 +26,8 @@ type Config struct {
 	FlowCookie     string
 	SessionTTL     time.Duration
 	FlowTTL        time.Duration
-	RedisPrefix      string
-	TinkKeysetPath   string
-	InternalEndpoint string
+	RedisPrefix    string
+	TinkKeysetPath string
 }
 
 func (c *Config) ApplyDefaults() {

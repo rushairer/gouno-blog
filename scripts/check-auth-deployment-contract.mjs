@@ -6,6 +6,9 @@ const required = new Map([
     [
       "GOUNO_AUTH_LOGIN_URL: /login",
       "GOUNO_WEB_SERVER_TRUSTED_PROXIES: ${GOSSO_TRUSTED_PROXIES:?set GOSSO_TRUSTED_PROXIES}",
+      "BLOG_BFF_ENABLED: \"true\"",
+      "BLOG_REDIS_PASSWORD: ${BLOG_REDIS_PASSWORD:?set BLOG_REDIS_PASSWORD}",
+      "GOUNO_WEB_SERVER_TRUSTED_PROXIES: 172.21.0.0/16",
     ],
   ],
   [
@@ -32,6 +35,9 @@ const forbidden = new Map([
   ["Caddyfile", ["@legacy_login", "redir @legacy_login", "Access-Control-Allow-Origin *", ".local.test Domain=", "identity-admin"]],
   ["Caddyfile.production", ["@legacy_login", "redir @legacy_login", "Access-Control-Allow-Origin *", "Domain=", "identity-admin"]],
   ["blog-frontend/src/App.tsx", ['path="/login"', 'path="/callback"']],
+  ["docker-compose.yml", ["BLOG_OIDC_INTERNAL_ENDPOINT", "blog.local.test", "sso.local.test"]],
+  ["docker-compose.production.yml", ["BLOG_OIDC_INTERNAL_ENDPOINT"]],
+  ["blog-backend/config/openapi.yaml", ["BearerAuth"]],
 ]);
 
 for (const [path, snippets] of forbidden) {
