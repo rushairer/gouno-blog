@@ -5,6 +5,13 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-08-30
+
+### Security
+- Stop inferring that identities with the same subject on different issuers belong
+  to the same Blog principal. Cross-issuer aliases now require an explicitly
+  approved, auditable mapping with an evidence reference before they are used.
+
 ### Security
 - **BFF Multi-Replica Distributed Lock**: Add Redis distributed mutex and double-checked expiration validation for BFF session token refresh to prevent concurrent token rotation and false-positive reuse detection (`internal/authbff/store.go`, `internal/authbff/client.go`).
 - **Read-Only Authorization Integrity Check**: Add `VerifyIntegrity` audit method to verify Blog principals, issuer aliases, active memberships, and role owner consistency without side effects (`internal/access/service.go`).
@@ -81,6 +88,11 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 ### Added
 - Initial integrated Blog, Gosso, Admin, database, cache, and gateway distribution.
 
-[Unreleased]: https://github.com/rushairer/gouno-blog/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/rushairer/gouno-blog/compare/v1.3.2...HEAD
+[1.3.2]: https://github.com/rushairer/gouno-blog/compare/v1.3.1...v1.3.2
+[1.3.1]: https://github.com/rushairer/gouno-blog/compare/v1.3.0...v1.3.1
+[1.3.0]: https://github.com/rushairer/gouno-blog/compare/v1.2.1...v1.3.0
+[1.2.1]: https://github.com/rushairer/gouno-blog/compare/v1.2.0...v1.2.1
+[1.2.0]: https://github.com/rushairer/gouno-blog/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/rushairer/gouno-blog/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/rushairer/gouno-blog/releases/tag/v1.0.0
