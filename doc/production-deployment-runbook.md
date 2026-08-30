@@ -74,7 +74,9 @@ POSTGRES_PASSWORD=<SECURE_PASSWORD>
 GOSSO_DATABASE_DSN=host=db user=postgres password=<SECURE_PASSWORD> dbname=gosso port=5432 sslmode=disable TimeZone=Asia/Shanghai search_path=public
 BLOG_DATABASE_DSN=host=db user=postgres password=<SECURE_PASSWORD> dbname=blog port=5432 sslmode=disable TimeZone=Asia/Shanghai search_path=public
 GOSSO_REDIS_DSN=redis://:<REDIS_PASSWORD>@redis:6379/0
-BLOG_REDIS_DSN=redis://:<REDIS_PASSWORD>@redis:6379/0
+BLOG_REDIS_DSN=redis://:<REDIS_PASSWORD>@redis:6379/1
+# Back-channel logout SSRF 白名单（容器内私网直连时填写容器网段，如 172.21.0.0/16；公网 DNS 访问留空）
+GOSSO_BACKCHANNEL_ALLOWED_CIDRS=
 
 # OIDC 与 BFF 密钥（通过受限权限的 Secret 文件挂载）
 BLOG_OIDC_CLIENT_ID=blog-bff
