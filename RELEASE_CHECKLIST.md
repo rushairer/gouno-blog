@@ -9,7 +9,9 @@
 - [ ] Cookie, CSRF, CORS, callback, authorization, and security-header tests pass.
 - [ ] Authentication deployment contract passes: GOSSO uses
   `/login` on the SSO origin, and Blog does not reintroduce a `/login` route,
-  and the exact runtime proxy CIDR is supplied through `GOSSO_TRUSTED_PROXIES`.
+  and the exact runtime proxy CIDR is supplied through `GOSSO_TRUSTED_PROXIES`
+  and `GOSSO_BACKCHANNEL_ALLOWED_CIDRS` allows container network for back-channel logout.
+- [ ] Docker secret files in `/opt/gouno-blog/secrets/*` are present with `chmod 600` permissions.
 - [ ] The tag workflow attaches each Blog image digest plus SPDX and CycloneDX
   SBOMs to the GitHub Release; provenance and cosign verification succeed.
 - [ ] Isolated containers, networks, volumes, and temporary files are removed.
