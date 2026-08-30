@@ -110,7 +110,7 @@ services:
       BLOG_OAUTH_CONFIDENTIAL: "true"
       BLOG_OAUTH_CLIENT_SECRET_FILE: /run/secrets/blog_oauth_client_secret
       BLOG_OAUTH_REDIRECT_URIS: https://${BLOG_DOMAIN:?set BLOG_DOMAIN}/api/auth/callback
-      BLOG_OAUTH_POST_LOGOUT_REDIRECT_URIS: https://${BLOG_DOMAIN:?set BLOG_DOMAIN}/
+      BLOG_OAUTH_POST_LOGOUT_REDIRECT_URIS: https://${BLOG_DOMAIN:?set BLOG_DOMAIN}/api/auth/logout/callback,https://${BLOG_DOMAIN:?set BLOG_DOMAIN}/
       BLOG_OAUTH_BACKCHANNEL_LOGOUT_URI: https://${BLOG_DOMAIN:?set BLOG_DOMAIN}/api/auth/backchannel-logout
       BLOG_OAUTH_ALLOWED_RESOURCES: https://${BLOG_DOMAIN:?set BLOG_DOMAIN}/api
       BLOG_OAUTH_GRANT_TYPES: authorization_code,refresh_token
