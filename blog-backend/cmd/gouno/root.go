@@ -18,7 +18,7 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(generator.GeneratorCmd, webCmd, ownerRecoverCmd, bffKeygenCmd)
+	rootCmd.AddCommand(generator.GeneratorCmd, webCmd, ownerRecoverCmd, identityAliasApproveCmd, bffKeygenCmd)
 }
 
 func Execute() {

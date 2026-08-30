@@ -24,6 +24,23 @@ func TestNeutralDefaultsMigrationDoesNotExposePersonalEmail(t *testing.T) {
 	}
 }
 
+func TestIssuerAliasMigrationDoesNotInferCrossIssuerIdentity(t *testing.T) {
+	body, err := migrationFiles.ReadFile("sql/084_add_sso_issuer_aliases.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(body), "INSERT INTO blog_principal_identities") {
+		t.Fatal("issuer migration must not infer aliases from matching subject values")
+	}
+	approval, err := migrationFiles.ReadFile("sql/085_add_identity_alias_approvals.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(approval), "evidence_reference") || !strings.Contains(string(approval), "UNIQUE (issuer, subject)") {
+		t.Fatal("approved aliases must retain evidence and a one-to-one identity constraint")
+	}
+}
+
 func TestUpAppliesCurrentSchemaAndIsIdempotent(t *testing.T) {
 	dsn := os.Getenv("BLOG_TEST_POSTGRES_DSN")
 	if dsn == "" {
@@ -176,8 +193,8 @@ func TestUpAppliesCurrentSchemaAndIsIdempotent(t *testing.T) {
 	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_skills WHERE system_key IS NOT NULL`).Scan(&systemSkills); err != nil {
 		t.Fatal(err)
 	}
-	if systemSkills != 12 {
-		t.Fatalf("expected 12 system Skills, got %d", systemSkills)
+	if systemSkills != 15 {
+		t.Fatalf("expected 15 system Skills, got %d", systemSkills)
 	}
 	var resourceSystemSkills int
 	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_skills WHERE system_key IN
@@ -207,8 +224,8 @@ func TestUpAppliesCurrentSchemaAndIsIdempotent(t *testing.T) {
 	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_agents WHERE deleted_at IS NULL`).Scan(&starterAgents); err != nil {
 		t.Fatal(err)
 	}
-	if starterAgents != 12 {
-		t.Fatalf("expected 12 starter Agents after Provider bootstrap, got %d", starterAgents)
+	if starterAgents != 15 {
+		t.Fatalf("expected 15 starter Agents after Provider bootstrap, got %d", starterAgents)
 	}
 	var resourceWorkflows int
 	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_workflows WHERE template_key IN
@@ -246,8 +263,8 @@ func TestUpAppliesCurrentSchemaAndIsIdempotent(t *testing.T) {
 		WHERE w.template_key LIKE 'selected_%' AND v.scope_policy->>'mode'='strict'`).Scan(&strictVersions); err != nil {
 		t.Fatal(err)
 	}
-	if strictVersions != 8 {
-		t.Fatalf("expected 8 strict selected-resource Workflow versions, got %d", strictVersions)
+	if strictVersions != 10 {
+		t.Fatalf("expected 10 strict selected-resource Workflow versions, got %d", strictVersions)
 	}
 	// Operators may enable a reviewed starter Workflow after migration. Its
 	// enabled state is runtime configuration, not a schema invariant.

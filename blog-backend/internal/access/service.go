@@ -35,6 +35,7 @@ var ErrForbidden = errors.New("forbidden")
 var ErrLastOwner = errors.New("cannot remove the last owner")
 var ErrOwnerOnly = errors.New("owner role changes require an owner")
 var ErrSelfEscalation = errors.New("cannot grant owner to yourself")
+var ErrIdentityAliasConflict = errors.New("identity alias is already bound to a different principal")
 
 type Bootstrap struct {
 	Issuer, Subject string
@@ -99,6 +100,17 @@ type Audit struct {
 	CreatedAt time.Time       `json:"created_at"`
 }
 
+// IdentityAliasApproval is an explicit, operator-attested cross-issuer identity
+// mapping. Equal subject text is intentionally not evidence of identity.
+type IdentityAliasApproval struct {
+	LegacyIssuer      string
+	LegacySubject     string
+	NewIssuer         string
+	NewSubject        string
+	ApprovedBy        string
+	EvidenceReference string
+}
+
 type Service struct {
 	db        *sql.DB
 	bootstrap Bootstrap
@@ -154,6 +166,71 @@ WHERE issuer=$1 AND subject=$2`, issuer, subject); err != nil {
 		p.Email = email
 	}
 	return p, nil
+}
+
+// ApproveIdentityAlias atomically records an operator-approved mapping and
+// attaches the new issuer/subject to the existing Blog principal. It never
+// links identities using email, display name, or matching subject text.
+func (s *Service) ApproveIdentityAlias(ctx context.Context, approval IdentityAliasApproval) error {
+	for label, value := range map[string]string{
+		"legacy issuer":      approval.LegacyIssuer,
+		"legacy subject":     approval.LegacySubject,
+		"new issuer":         approval.NewIssuer,
+		"new subject":        approval.NewSubject,
+		"approved by":        approval.ApprovedBy,
+		"evidence reference": approval.EvidenceReference,
+	} {
+		if strings.TrimSpace(value) == "" {
+			return fmt.Errorf("%s is required", label)
+		}
+	}
+	if approval.LegacyIssuer == approval.NewIssuer && approval.LegacySubject == approval.NewSubject {
+		return errors.New("identity alias must differ from the existing identity")
+	}
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var principalID int64
+	err = tx.QueryRowContext(ctx, `SELECT principal_id FROM blog_principal_identities
+		WHERE issuer=$1 AND subject=$2 FOR UPDATE`, approval.LegacyIssuer, approval.LegacySubject).Scan(&principalID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return errors.New("legacy identity was not found")
+	}
+	if err != nil {
+		return err
+	}
+
+	var existingPrincipalID int64
+	err = tx.QueryRowContext(ctx, `SELECT principal_id FROM blog_principal_identities
+		WHERE issuer=$1 AND subject=$2 FOR UPDATE`, approval.NewIssuer, approval.NewSubject).Scan(&existingPrincipalID)
+	if err == nil && existingPrincipalID != principalID {
+		return ErrIdentityAliasConflict
+	}
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return err
+	}
+
+	if _, err = tx.ExecContext(ctx, `INSERT INTO blog_principal_identity_alias_approvals
+		(principal_id,issuer,subject,approved_by,evidence_reference)
+		VALUES ($1,$2,$3,$4,$5)
+		ON CONFLICT (issuer,subject) DO NOTHING`, principalID, approval.NewIssuer, approval.NewSubject, approval.ApprovedBy, approval.EvidenceReference); err != nil {
+		return err
+	}
+	if _, err = tx.ExecContext(ctx, `INSERT INTO blog_principal_identities (principal_id,issuer,subject)
+		VALUES ($1,$2,$3) ON CONFLICT (issuer,subject) DO NOTHING`, principalID, approval.NewIssuer, approval.NewSubject); err != nil {
+		return err
+	}
+	if _, err = tx.ExecContext(ctx, `INSERT INTO blog_authorization_audits
+		(target_principal_id,action,result,after_state,reason)
+		VALUES ($1,'identity_alias_approved','success',jsonb_build_object('issuer',$2::text,'subject',$3::text),$4)`,
+		principalID, approval.NewIssuer, approval.NewSubject, approval.EvidenceReference); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func stringsClaim(value any) []string {
