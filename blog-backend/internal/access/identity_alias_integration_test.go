@@ -52,11 +52,14 @@ VALUES ($1,$2,$3)`, principalID, legacyIssuer, subject); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := db.ExecContext(ctx, `INSERT INTO blog_principal_identities (principal_id,issuer,subject)
-VALUES ($1,$2,$3)`, principalID, newIssuer, subject); err != nil {
+	svc := access.NewService(db, access.Bootstrap{})
+	if err := svc.ApproveIdentityAlias(ctx, access.IdentityAliasApproval{
+		LegacyIssuer: legacyIssuer, LegacySubject: subject,
+		NewIssuer: newIssuer, NewSubject: subject,
+		ApprovedBy: "local-integration-test", EvidenceReference: "test://authoritative-gosso-map/issuer-alias",
+	}); err != nil {
 		t.Fatal(err)
 	}
-	svc := access.NewService(db, access.Bootstrap{})
 	snapshot, err := svc.Resolve(ctx, jwt.MapClaims{
 		"iss": newIssuer, "sub": subject, "name": "Migrated User", "email": "user@example.test",
 	})
@@ -87,6 +90,15 @@ WHERE principal_id=$1 AND subject=$2 AND issuer=ANY($3)`, principalID, subject, 
 	}
 	if storedIssuer != legacyIssuer {
 		t.Fatalf("legacy principal issuer was rewritten: got %s", storedIssuer)
+	}
+	var approvalCount int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM blog_principal_identity_alias_approvals
+WHERE principal_id=$1 AND issuer=$2 AND subject=$3 AND evidence_reference=$4`,
+		principalID, newIssuer, subject, "test://authoritative-gosso-map/issuer-alias").Scan(&approvalCount); err != nil {
+		t.Fatal(err)
+	}
+	if approvalCount != 1 {
+		t.Fatalf("expected one audited alias approval, got %d", approvalCount)
 	}
 }
 
