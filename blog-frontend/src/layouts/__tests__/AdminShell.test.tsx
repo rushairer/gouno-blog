@@ -28,8 +28,8 @@ vi.mock("../../auth", () => ({
       email: "admin@example.com",
     }),
   },
-  gossoAdminURL: "/identity-admin",
-  getGossoAdminURL: () => "/identity-admin",
+  gossoAdminURL: "https://sso.io84.com",
+  getGossoAdminURL: () => "https://sso.io84.com",
   useSafeUserProfile: () => ({
     name: "Content Admin",
     email: "admin@example.com",
@@ -92,7 +92,7 @@ describe("AdminShell navigation utilities", () => {
     );
     expect(
       screen.getByRole("link", { name: /前往 GOSSO 管理/ }),
-    ).toHaveAttribute("href", "/identity-admin");
+    ).toHaveAttribute("href", "https://sso.io84.com");
     expect(screen.getByText("成员与权限")).toBeInTheDocument();
   });
 

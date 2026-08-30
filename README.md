@@ -243,7 +243,7 @@ export BLOG_AGENT_PREVIOUS_MASTER_KEYS="1:<old-base64-key>"
 签名密钥、TOTP key、pepper、数据库 DSN 和 Agent key 都必须显式设置。
 
 生产身份链路有两个不可省略的部署契约：GOSSO 的
-`GOUNO_AUTH_LOGIN_URL` 固定为 `/identity-admin/login`。Blog 不提供 `/login`
+`GOUNO_AUTH_LOGIN_URL` 固定为 `/login`。Blog 不提供 `/login`
 路由，所有 Client 必须通过 GOSSO 的授权端点进入统一登录页；不要添加
 Blog 或网关层的 `/login` 兼容跳转，否则错误配置可能再次形成认证循环。
 `GOSSO_TRUSTED_PROXIES` 必须是
