@@ -6,7 +6,7 @@ import (
 )
 
 func TestSafeReturnToRejectsOpenRedirects(t *testing.T) {
-	for _, value := range []string{"https://evil.example/", "//evil.example/", "admin", "javascript:alert(1)"} {
+	for _, value := range []string{"https://evil.example/", "//evil.example/", "admin", "javascript:alert(1)", "/\\\\evil.example/", "/%5c%5cevil.example/", "/%2f%2fevil.example/"} {
 		if _, err := SafeReturnTo(value); err == nil {
 			t.Fatalf("unsafe return_to accepted: %q", value)
 		}

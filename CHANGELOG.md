@@ -5,6 +5,31 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-08-31
+
+### Changed
+- **Breaking:** Production Blog database, Redis, visitor-session, and workflow
+  webhook secrets must now be supplied through Docker Secret files. Raw Blog
+  secret environment variables are no longer accepted by the production
+  deployment contract.
+- Require the Blog callback, logout callback, and API resource to remain on the
+  exact Blog origin, while every discovered OIDC endpoint must remain on the
+  exact HTTPS issuer origin.
+- Make the locally configured issuer and subject the only Blog owner-bootstrap
+  identity; provider roles and scopes no longer grant Blog authorization.
+
+### Security
+- Prevent refresh/logout races from resurrecting deleted Redis sessions and
+  make back-channel logout replay claims atomic.
+- Strictly verify refreshed ID tokens and preserve issuer, subject, SID,
+  authentication time, AMR, and claim continuity.
+- Fail closed when the configured owner account is missing and disable seeded
+  consent in production.
+- Pin every default application image and the backend builder image to immutable
+  digests.
+- Add the 2026-08-31 split-domain OAuth/OIDC baseline audit and production
+  acceptance gates.
+
 ## [1.3.5] - 2026-08-30
 
 ### Fixed
@@ -111,7 +136,10 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 ### Added
 - Initial integrated Blog, Gosso, Admin, database, cache, and gateway distribution.
 
-[Unreleased]: https://github.com/rushairer/gouno-blog/compare/v1.3.3...HEAD
+[Unreleased]: https://github.com/rushairer/gouno-blog/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/rushairer/gouno-blog/compare/v1.3.5...v2.0.0
+[1.3.5]: https://github.com/rushairer/gouno-blog/compare/v1.3.4...v1.3.5
+[1.3.4]: https://github.com/rushairer/gouno-blog/compare/v1.3.3...v1.3.4
 [1.3.3]: https://github.com/rushairer/gouno-blog/compare/v1.3.2...v1.3.3
 [1.3.2]: https://github.com/rushairer/gouno-blog/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/rushairer/gouno-blog/compare/v1.3.0...v1.3.1

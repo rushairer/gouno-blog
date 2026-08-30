@@ -9,6 +9,13 @@ const required = new Map([
       "BLOG_BFF_ENABLED: \"true\"",
       "BLOG_REDIS_PASSWORD: ${BLOG_REDIS_PASSWORD:?set BLOG_REDIS_PASSWORD}",
       "GOUNO_WEB_SERVER_TRUSTED_PROXIES: 172.21.0.0/16",
+      "GOUNO_DATABASE_DRIVERS_POSTGRES_DSN_FILE: /run/secrets/blog_database_dsn",
+      "GOUNO_REDIS_DSN_FILE: /run/secrets/blog_redis_dsn",
+      "BLOG_OIDC_REDIRECT_URL: https://${BLOG_DOMAIN:?set BLOG_DOMAIN}/api/auth/callback",
+      "BLOG_OIDC_POST_LOGOUT_URL: https://${BLOG_DOMAIN:?set BLOG_DOMAIN}/api/auth/logout/callback",
+      "BLOG_OAUTH_BACKCHANNEL_LOGOUT_URI: https://${BLOG_DOMAIN:?set BLOG_DOMAIN}/api/auth/backchannel-logout",
+      'BLOG_OAUTH_ALLOW_ACCOUNT_FALLBACK: "false"',
+      'BLOG_OAUTH_SEED_CONSENT: "false"',
     ],
   ],
   [

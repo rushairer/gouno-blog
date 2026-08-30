@@ -64,6 +64,11 @@ func startWebServer(cmd *cobra.Command, args []string) {
 
 	configPath := cmd.Flag("config_path").Value.String()
 	env := cmd.Flag("env").Value.String()
+	for _, secretEnv := range [][2]string{{"GOUNO_AI_WEBHOOK_SECRET", "GOUNO_AI_WEBHOOK_SECRET_FILE"}} {
+		if err := loadSecretFileIntoEnv(secretEnv[0], secretEnv[1]); err != nil {
+			log.Fatalf("load %s: %v", secretEnv[0], err)
+		}
+	}
 
 	configManager, err := config.NewConfigManager(cmd, configPath, env)
 	if err != nil {
@@ -198,7 +203,7 @@ type applicationConfig struct {
 // newApplication is the sole composition root for repositories, services,
 // workers, controllers and router dependencies.
 func newApplication(ctx context.Context, cfg applicationConfig) {
-	visitorSecret := os.Getenv("BLOG_VISITOR_SECRET")
+	visitorSecret := readSecretFromFileOrEnv(os.Getenv("BLOG_VISITOR_SECRET_FILE"), os.Getenv("BLOG_VISITOR_SECRET"))
 	if cfg.Env == "production" && visitorSecret == "" {
 		log.Fatal("BLOG_VISITOR_SECRET is required in production")
 	}
@@ -327,4 +332,16 @@ func readSecretFromFileOrEnv(filePath, envVal string) string {
 		}
 	}
 	return envVal
+}
+
+func loadSecretFileIntoEnv(valueName, fileName string) error {
+	path := strings.TrimSpace(os.Getenv(fileName))
+	if path == "" {
+		return nil
+	}
+	value := readSecretFromFileOrEnv(path, "")
+	if value == "" {
+		return fmt.Errorf("%s is unreadable or empty", fileName)
+	}
+	return os.Setenv(valueName, value)
 }

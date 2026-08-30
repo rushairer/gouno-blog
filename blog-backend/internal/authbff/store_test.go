@@ -90,6 +90,58 @@ func TestSessionTokensStayServerSideAndEncrypted(t *testing.T) {
 	}
 }
 
+func TestReplaceSessionCannotResurrectLoggedOutSession(t *testing.T) {
+	store, _ := testStore(t)
+	ctx := context.Background()
+	handle, _ := RandomHandle()
+	oldSession := Session{Issuer: "https://sso.local.test", Subject: "subject", SID: "sid-old", RefreshToken: "refresh-old", IDToken: "id-old"}
+	newSession := oldSession
+	newSession.SID = "sid-new"
+	newSession.RefreshToken = "refresh-new"
+	newSession.IDToken = "id-new"
+	if err := store.PutSession(ctx, handle, oldSession, time.Hour); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.DeleteSession(ctx, handle); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.ReplaceSession(ctx, handle, oldSession, newSession, time.Hour); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("logged-out session was replaceable: %v", err)
+	}
+	if _, err := store.GetSession(ctx, handle); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("logged-out session was resurrected: %v", err)
+	}
+}
+
+func TestReplaceSessionUpdatesSIDIndex(t *testing.T) {
+	store, _ := testStore(t)
+	ctx := context.Background()
+	handle, _ := RandomHandle()
+	oldSession := Session{Issuer: "https://sso.local.test", Subject: "subject", SID: "sid-old", RefreshToken: "refresh-old", IDToken: "id-old"}
+	newSession := oldSession
+	newSession.SID = "sid-new"
+	newSession.RefreshToken = "refresh-new"
+	newSession.IDToken = "id-new"
+	if err := store.PutSession(ctx, handle, oldSession, time.Hour); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.ReplaceSession(ctx, handle, oldSession, newSession, time.Hour); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.DeleteBySID(ctx, "sid-old"); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := store.GetSession(ctx, handle); err != nil || got.RefreshToken != "refresh-new" {
+		t.Fatalf("new session removed by stale SID index: %#v, %v", got, err)
+	}
+	if err := store.DeleteBySID(ctx, "sid-new"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.GetSession(ctx, handle); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("new SID did not target refreshed session: %v", err)
+	}
+}
+
 func TestStoreDeleteBySubjectAndSID(t *testing.T) {
 	store, _ := testStore(t)
 	ctx := context.Background()
@@ -154,6 +206,16 @@ func TestConfigRequiresConfidentialHTTPSBoundary(t *testing.T) {
 	if err := cfg.Validate(); err == nil {
 		t.Fatal("non-HTTPS issuer must be rejected")
 	}
+	cfg.Issuer = "https://sso.local.test"
+	cfg.Resource = "https://other.local.test/api"
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("cross-origin resource must be rejected")
+	}
+	cfg.Resource = "https://blog.local.test/api"
+	cfg.PostLogoutURL = "https://blog.local.test/"
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("non-callback post-logout URL must be rejected")
+	}
 }
 
 func TestLogoutTokenReplayProtection(t *testing.T) {
@@ -182,6 +244,26 @@ func TestLogoutTokenReplayProtection(t *testing.T) {
 	processed, err = store.IsLogoutTokenProcessed(ctx, "jti-67890")
 	if err != nil || processed {
 		t.Fatalf("distinct jti should remain unprocessed: processed=%v, err=%v", processed, err)
+	}
+}
+
+func TestLogoutTokenClaimIsAtomicAcrossReplicas(t *testing.T) {
+	store, _ := testStore(t)
+	ctx := context.Background()
+	owner, acquired, completed, err := store.ClaimLogoutToken(ctx, "jti-atomic", time.Minute)
+	if err != nil || !acquired || completed || owner == "" {
+		t.Fatalf("first claim failed: owner=%q acquired=%v completed=%v err=%v", owner, acquired, completed, err)
+	}
+	_, acquired, completed, err = store.ClaimLogoutToken(ctx, "jti-atomic", time.Minute)
+	if err != nil || acquired || completed {
+		t.Fatalf("concurrent claim was not blocked: acquired=%v completed=%v err=%v", acquired, completed, err)
+	}
+	if err := store.FinishLogoutToken(ctx, "jti-atomic", owner, time.Hour); err != nil {
+		t.Fatal(err)
+	}
+	_, acquired, completed, err = store.ClaimLogoutToken(ctx, "jti-atomic", time.Minute)
+	if err != nil || acquired || !completed {
+		t.Fatalf("completed replay was not idempotent: acquired=%v completed=%v err=%v", acquired, completed, err)
 	}
 }
 

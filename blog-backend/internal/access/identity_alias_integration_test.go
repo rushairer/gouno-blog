@@ -102,6 +102,43 @@ WHERE principal_id=$1 AND issuer=$2 AND subject=$3 AND evidence_reference=$4`,
 	}
 }
 
+func TestBootstrapUsesOnlyExactLocalIdentity(t *testing.T) {
+	dsn := os.Getenv("BLOG_TEST_POSTGRES_DSN")
+	if dsn == "" {
+		t.Skip("BLOG_TEST_POSTGRES_DSN is not set")
+	}
+	db, err := sql.Open("postgres", dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	ctx := context.Background()
+	if err := migrations.Up(ctx, db); err != nil {
+		t.Fatal(err)
+	}
+	issuer := "https://sso.dev.local:8443"
+	bootstrapSub := fmt.Sprintf("bootstrap-test-%d", time.Now().UnixNano())
+	otherSub := bootstrapSub + "-other"
+	svc := access.NewService(db, access.Bootstrap{Issuer: issuer, Subject: bootstrapSub})
+	bootstrap, err := svc.Resolve(ctx, jwt.MapClaims{"iss": issuer, "sub": bootstrapSub, "roles": []any{"ordinary-user"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(context.Background(), `DELETE FROM blog_principals WHERE subject IN ($1,$2)`, bootstrapSub, otherSub)
+	})
+	if !bootstrap.HasRole(access.RoleOwner) {
+		t.Fatalf("exact locally configured bootstrap identity was not owner: %#v", bootstrap)
+	}
+	other, err := svc.Resolve(ctx, jwt.MapClaims{"iss": issuer, "sub": otherSub, "roles": []any{"admin", "owner"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(other.Roles) != 0 || other.MembershipStatus != "" {
+		t.Fatalf("provider roles granted Blog authorization: %#v", other)
+	}
+}
+
 func TestUnapprovedIssuerDoesNotLinkBySubject(t *testing.T) {
 	// Runtime resolution only accepts a pre-created exact issuer/subject alias.
 	// Matching subject text is never an account-linking signal.

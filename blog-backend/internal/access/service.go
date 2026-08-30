@@ -214,15 +214,35 @@ func (s *Service) ApproveIdentityAlias(ctx context.Context, approval IdentityAli
 		return err
 	}
 
-	if _, err = tx.ExecContext(ctx, `INSERT INTO blog_principal_identity_alias_approvals
-		(principal_id,issuer,subject,approved_by,evidence_reference)
-		VALUES ($1,$2,$3,$4,$5)
-		ON CONFLICT (issuer,subject) DO NOTHING`, principalID, approval.NewIssuer, approval.NewSubject, approval.ApprovedBy, approval.EvidenceReference); err != nil {
+	var approvalID int64
+	err = tx.QueryRowContext(ctx, `INSERT INTO blog_principal_identity_alias_approvals
+			(principal_id,issuer,subject,approved_by,evidence_reference)
+			VALUES ($1,$2,$3,$4,$5)
+			ON CONFLICT (issuer,subject) DO NOTHING RETURNING id`, principalID, approval.NewIssuer, approval.NewSubject, approval.ApprovedBy, approval.EvidenceReference).Scan(&approvalID)
+	if errors.Is(err, sql.ErrNoRows) {
+		var approvedPrincipalID int64
+		if err = tx.QueryRowContext(ctx, `SELECT principal_id FROM blog_principal_identity_alias_approvals
+			WHERE issuer=$1 AND subject=$2 FOR UPDATE`, approval.NewIssuer, approval.NewSubject).Scan(&approvedPrincipalID); err != nil {
+			return err
+		}
+		if approvedPrincipalID != principalID {
+			return ErrIdentityAliasConflict
+		}
+	} else if err != nil {
 		return err
 	}
 	if _, err = tx.ExecContext(ctx, `INSERT INTO blog_principal_identities (principal_id,issuer,subject)
-		VALUES ($1,$2,$3) ON CONFLICT (issuer,subject) DO NOTHING`, principalID, approval.NewIssuer, approval.NewSubject); err != nil {
+			VALUES ($1,$2,$3) ON CONFLICT (issuer,subject) DO UPDATE SET last_seen_at=blog_principal_identities.last_seen_at
+			RETURNING id`, principalID, approval.NewIssuer, approval.NewSubject); err != nil {
 		return err
+	}
+	var linkedPrincipalID int64
+	if err = tx.QueryRowContext(ctx, `SELECT principal_id FROM blog_principal_identities
+		WHERE issuer=$1 AND subject=$2 FOR UPDATE`, approval.NewIssuer, approval.NewSubject).Scan(&linkedPrincipalID); err != nil {
+		return err
+	}
+	if linkedPrincipalID != principalID {
+		return ErrIdentityAliasConflict
 	}
 	if _, err = tx.ExecContext(ctx, `INSERT INTO blog_authorization_audits
 		(target_principal_id,action,result,after_state,reason)
@@ -286,7 +306,8 @@ func permissions(roles []string) []string {
 }
 
 // Resolve verifies no identity itself: callers pass only already JWT-verified claims.
-// It performs JIT identity projection and the one-time, explicitly configured bootstrap.
+// It performs JIT identity projection and the one-time, explicitly configured
+// local bootstrap. Provider roles and scopes never participate in Blog grants.
 func (s *Service) Resolve(ctx context.Context, claims jwt.MapClaims) (Snapshot, error) {
 	issuer, subject := stringClaim(claims, "iss"), stringClaim(claims, "sub")
 	if issuer == "" || subject == "" {
@@ -314,7 +335,7 @@ func (s *Service) Resolve(ctx context.Context, claims jwt.MapClaims) (Snapshot, 
 	if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM blog_role_bindings WHERE role='owner')`).Scan(&ownerExists); err != nil {
 		return Snapshot{}, err
 	}
-	if !ownerExists && issuer == s.bootstrap.Issuer && subject == s.bootstrap.Subject && has(stringsClaim(claims["roles"]), "admin") {
+	if !ownerExists && issuer == s.bootstrap.Issuer && subject == s.bootstrap.Subject {
 		var membershipID int64
 		if err = tx.QueryRowContext(ctx, `INSERT INTO blog_memberships (principal_id) VALUES ($1) ON CONFLICT (principal_id) DO UPDATE SET status='active', authorization_version=blog_memberships.authorization_version+1, updated_at=NOW() RETURNING id`, p.ID).Scan(&membershipID); err != nil {
 			return Snapshot{}, err

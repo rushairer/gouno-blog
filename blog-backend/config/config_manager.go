@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 
@@ -21,6 +22,14 @@ func NewConfigManager(
 	configPath string,
 	env string,
 ) (*ConfigManager, error) {
+	for _, secretEnv := range [][2]string{
+		{"GOUNO_DATABASE_DRIVERS_POSTGRES_DSN", "GOUNO_DATABASE_DRIVERS_POSTGRES_DSN_FILE"},
+		{"GOUNO_REDIS_DSN", "GOUNO_REDIS_DSN_FILE"},
+	} {
+		if err := loadEnvironmentSecretFile(secretEnv[0], secretEnv[1]); err != nil {
+			return nil, err
+		}
+	}
 
 	configManager := ConfigManager{}
 
@@ -68,6 +77,25 @@ func NewConfigManager(
 	}
 	configManager.SetConfig(&newConfig)
 	return &configManager, nil
+}
+
+func loadEnvironmentSecretFile(valueName, fileName string) error {
+	path := strings.TrimSpace(os.Getenv(fileName))
+	if path == "" {
+		return nil
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("read %s: %w", fileName, err)
+	}
+	value := strings.TrimSpace(string(data))
+	if value == "" {
+		return fmt.Errorf("%s is empty", fileName)
+	}
+	if err := os.Setenv(valueName, value); err != nil {
+		return fmt.Errorf("set %s: %w", valueName, err)
+	}
+	return nil
 }
 
 func (cm *ConfigManager) SetConfig(config *GoUnoConfig) {

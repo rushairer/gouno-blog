@@ -17,6 +17,7 @@ import (
 
 type providerMetadata struct {
 	EndSessionEndpoint                        string `json:"end_session_endpoint"`
+	JWKSURI                                   string `json:"jwks_uri"`
 	AuthorizationResponseIssuerParamSupported bool   `json:"authorization_response_iss_parameter_supported"`
 }
 
@@ -47,10 +48,11 @@ func NewClient(ctx context.Context, config Config, store *Store, httpClient *htt
 	if store == nil {
 		return nil, errors.New("BFF store is required")
 	}
-	if httpClient != nil {
-		ctx = oidc.ClientContext(ctx, httpClient)
-		ctx = context.WithValue(ctx, oauth2.HTTPClient, httpClient)
+	if httpClient == nil {
+		httpClient = &http.Client{Timeout: 30 * time.Second}
 	}
+	ctx = oidc.ClientContext(ctx, httpClient)
+	ctx = context.WithValue(ctx, oauth2.HTTPClient, httpClient)
 	provider, err := oidc.NewProvider(ctx, config.Issuer)
 	if err != nil {
 		return nil, fmt.Errorf("discover OIDC provider: %w", err)
@@ -63,6 +65,18 @@ func NewClient(ctx context.Context, config Config, store *Store, httpClient *htt
 		return nil, errors.New("OIDC provider must support the RFC 9207 authorization response iss parameter")
 	}
 	endpoint := provider.Endpoint()
+	issuerURL, _ := absoluteHTTPSURL(config.Issuer)
+	for label, rawEndpoint := range map[string]string{
+		"authorization endpoint": endpoint.AuthURL,
+		"token endpoint":         endpoint.TokenURL,
+		"JWKS URI":               metadata.JWKSURI,
+		"end-session endpoint":   metadata.EndSessionEndpoint,
+	} {
+		parsed, endpointErr := absoluteHTTPSURL(rawEndpoint)
+		if endpointErr != nil || !sameOrigin(issuerURL, parsed) {
+			return nil, fmt.Errorf("OIDC %s must use the configured issuer HTTPS origin", label)
+		}
+	}
 	endpoint.AuthStyle = oauth2.AuthStyleInHeader
 	return &Client{
 		config: config,
@@ -244,6 +258,7 @@ func (c *Client) Refresh(ctx context.Context, sessionHandle string) (Session, er
 			return Session{}, errors.New("no refresh token in session")
 		}
 
+		previousSession := session
 		t := &oauth2.Token{
 			RefreshToken: session.RefreshToken,
 			Expiry:       session.TokenExpiry,
@@ -261,22 +276,40 @@ func (c *Client) Refresh(ctx context.Context, sessionHandle string) (Session, er
 		session.TokenExpiry = newToken.Expiry
 
 		if rawIDToken, ok := newToken.Extra("id_token").(string); ok && rawIDToken != "" {
-			if idToken, err := c.verifier.Verify(ctx, rawIDToken); err == nil {
-				session.IDToken = rawIDToken
-				var claims struct {
-					SID string `json:"sid"`
-				}
-				if err := idToken.Claims(&claims); err == nil && claims.SID != "" {
-					session.SID = claims.SID
-				}
-				allClaims := map[string]any{}
-				if err := idToken.Claims(&allClaims); err == nil {
-					session.Claims = allClaims
-				}
+			idToken, verifyErr := c.verifier.Verify(ctx, rawIDToken)
+			if verifyErr != nil {
+				_ = c.revokeReplacementToken(context.Background(), newToken)
+				return Session{}, fmt.Errorf("verify refreshed ID token: %w", verifyErr)
 			}
+			var claims struct {
+				Issuer   string   `json:"iss"`
+				Subject  string   `json:"sub"`
+				SID      string   `json:"sid"`
+				AuthTime int64    `json:"auth_time"`
+				AMR      []string `json:"amr"`
+			}
+			if claimsErr := idToken.Claims(&claims); claimsErr != nil {
+				_ = c.revokeReplacementToken(context.Background(), newToken)
+				return Session{}, fmt.Errorf("decode refreshed ID token claims: %w", claimsErr)
+			}
+			if claims.Issuer != session.Issuer || claims.Subject != session.Subject {
+				_ = c.revokeReplacementToken(context.Background(), newToken)
+				return Session{}, errors.New("refreshed ID token identity mismatch")
+			}
+			allClaims := map[string]any{}
+			if claimsErr := idToken.Claims(&allClaims); claimsErr != nil {
+				_ = c.revokeReplacementToken(context.Background(), newToken)
+				return Session{}, fmt.Errorf("decode refreshed ID token: %w", claimsErr)
+			}
+			session.IDToken = rawIDToken
+			session.SID = claims.SID
+			session.AuthTime = claims.AuthTime
+			session.AMR = claims.AMR
+			session.Claims = allClaims
 		}
 
-		if err := c.store.PutSession(ctx, sessionHandle, session, c.config.SessionTTL); err != nil {
+		if err := c.store.ReplaceSession(ctx, sessionHandle, previousSession, session, c.config.SessionTTL); err != nil {
+			_ = c.revokeReplacementToken(context.Background(), newToken)
 			return Session{}, err
 		}
 		return session, nil
@@ -285,6 +318,16 @@ func (c *Client) Refresh(ctx context.Context, sessionHandle string) (Session, er
 		return Session{}, err
 	}
 	return res.(Session), nil
+}
+
+func (c *Client) revokeReplacementToken(ctx context.Context, token *oauth2.Token) error {
+	if token == nil {
+		return nil
+	}
+	if token.RefreshToken != "" {
+		return c.RevokeToken(ctx, token.RefreshToken, "refresh_token")
+	}
+	return c.RevokeToken(ctx, token.AccessToken, "access_token")
 }
 
 func (c *Client) LogoutURL(ctx context.Context, session Session, postLogoutRedirect string) (string, error) {
@@ -371,13 +414,22 @@ func (c *Client) BackChannelLogout(ctx context.Context, rawLogoutToken string) e
 			replayTTL = rem
 		}
 	}
-	processed, err := c.store.IsLogoutTokenProcessed(ctx, claims.JWTID)
+	claimOwner, acquired, processed, err := c.store.ClaimLogoutToken(ctx, claims.JWTID, time.Minute)
 	if err != nil {
-		return fmt.Errorf("check logout token replay: %w", err)
+		return fmt.Errorf("claim logout token: %w", err)
 	}
 	if processed {
 		return nil
 	}
+	if !acquired {
+		return errors.New("logout token is already being processed")
+	}
+	completed := false
+	defer func() {
+		if !completed {
+			_ = c.store.ReleaseLogoutToken(context.Background(), claims.JWTID, claimOwner)
+		}
+	}()
 
 	// If SID is present, isolate logout to that specific session only.
 	if claims.SID != "" {
@@ -389,9 +441,10 @@ func (c *Client) BackChannelLogout(ctx context.Context, rawLogoutToken string) e
 	if err != nil {
 		return err
 	}
-	if err := c.store.MarkLogoutTokenProcessed(ctx, claims.JWTID, replayTTL); err != nil {
+	if err := c.store.FinishLogoutToken(ctx, claims.JWTID, claimOwner, replayTTL); err != nil {
 		return fmt.Errorf("mark logout token processed: %w", err)
 	}
+	completed = true
 	return nil
 }
 
@@ -439,7 +492,7 @@ func SafeReturnTo(value string) (string, error) {
 		return "/", nil
 	}
 	u, err := url.Parse(value)
-	if err != nil || u.IsAbs() || u.Host != "" || !strings.HasPrefix(u.Path, "/") || strings.HasPrefix(value, "//") {
+	if err != nil || u.IsAbs() || u.Host != "" || !strings.HasPrefix(u.Path, "/") || strings.HasPrefix(u.Path, "//") || strings.Contains(u.Path, "\\") || strings.ContainsAny(value, "\r\n") {
 		return "", errors.New("return_to must be a local absolute path")
 	}
 	return u.RequestURI(), nil

@@ -35,7 +35,7 @@ services:
     restart: unless-stopped
 
   gosso:
-    image: ghcr.io/rushairer/gosso:${GOSSO_IMAGE_TAG:-main}
+    image: ${GOSSO_IMAGE:-ghcr.io/rushairer/gosso@sha256:0db6f974de68e414ec9e61c0819d2180c298301c90f0fb19e5b75a869db8be7c}
     pull_policy: always
     container_name: sso-blog-gosso
     command: ["web", "-e", "development"]
@@ -75,7 +75,7 @@ services:
         condition: service_started
 
   gosso-admin-seed:
-    image: ghcr.io/rushairer/gosso-admin-seed:${GOSSO_ADMIN_SEED_IMAGE_TAG:-main}
+    image: ${GOSSO_ADMIN_SEED_IMAGE:-ghcr.io/rushairer/gosso-admin-seed@sha256:d1fe793f2b0fd68292594c379a53f3f3855df480b512b3b7ef0fecd883dfd5d0}
     pull_policy: always
     container_name: sso-blog-gosso-admin-seed
     environment:
@@ -92,13 +92,15 @@ services:
         condition: service_started
 
   blog-client-seed:
-    image: ghcr.io/rushairer/gouno-blog-seed:${GOUNO_BLOG_SEED_IMAGE_TAG:-main}
+    image: ${GOUNO_BLOG_SEED_IMAGE:-ghcr.io/rushairer/gouno-blog-seed@sha256:804cf360b2c3265369b70bcccc98396fd78af2d5c0f1b3ed87e6f729877f71e9}
     pull_policy: always
     container_name: sso-blog-client-seed
     environment:
       - PG_DSN=host=db user=postgres password=${BLOG_POSTGRES_PASSWORD:-password} dbname=gosso port=5432 sslmode=disable
       - REDIS_DSN=redis://redis:6379/0
       - BLOG_OAUTH_ACCOUNT_ID=00000000-0000-0000-0000-000000000001
+      - BLOG_OAUTH_ALLOW_ACCOUNT_FALLBACK=true
+      - BLOG_OAUTH_SEED_CONSENT=true
       - BLOG_OAUTH_CLIENT_ID=blog-bff
       - BLOG_OAUTH_CLIENT_NAME=Personal Blog BFF
       - BLOG_OAUTH_CLIENT_DESCRIPTION=Confidential OAuth2 Client for Blog BFF
@@ -115,7 +117,7 @@ services:
         condition: service_completed_successfully
 
   blog-media-init:
-    image: ghcr.io/rushairer/gouno-blog-backend:${GOUNO_BLOG_BACKEND_IMAGE_TAG:-main}
+    image: ${GOUNO_BLOG_BACKEND_IMAGE:-ghcr.io/rushairer/gouno-blog-backend@sha256:48eaff296f28e68cd9472a7d7877ea12610f52998e6a159497d8b78cad72c2d7}
     pull_policy: always
     user: "0:0"
     entrypoint: ["/bin/sh", "-c"]
@@ -129,7 +131,7 @@ services:
       - blog_media:/app/data/media
 
   blog-backend:
-    image: ghcr.io/rushairer/gouno-blog-backend:${GOUNO_BLOG_BACKEND_IMAGE_TAG:-main}
+    image: ${GOUNO_BLOG_BACKEND_IMAGE:-ghcr.io/rushairer/gouno-blog-backend@sha256:48eaff296f28e68cd9472a7d7877ea12610f52998e6a159497d8b78cad72c2d7}
     pull_policy: always
     container_name: sso-blog-backend
     environment:
@@ -193,7 +195,7 @@ services:
         condition: service_completed_successfully
 
   blog-frontend:
-    image: ghcr.io/rushairer/gouno-blog-frontend:${GOUNO_BLOG_FRONTEND_IMAGE_TAG:-main}
+    image: ${GOUNO_BLOG_FRONTEND_IMAGE:-ghcr.io/rushairer/gouno-blog-frontend@sha256:38e41263ff6537283964f85121552401892f671f00f61a9ce2066704ce52f219}
     pull_policy: always
     container_name: sso-blog-frontend
     depends_on:
@@ -201,7 +203,7 @@ services:
         condition: service_healthy
 
   gosso-admin-frontend:
-    image: ghcr.io/rushairer/gosso-admin-frontend:${GOSSO_ADMIN_FRONTEND_IMAGE_TAG:-main}
+    image: ${GOSSO_ADMIN_FRONTEND_IMAGE:-ghcr.io/rushairer/gosso-admin-frontend@sha256:ac483781e51588ddccfa85ee7929e40164645251c9f0cbe08f1b0c065d5e1bb1}
     pull_policy: always
     container_name: sso-blog-gosso-admin-frontend
     healthcheck:

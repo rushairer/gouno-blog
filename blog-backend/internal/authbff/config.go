@@ -68,12 +68,20 @@ func (c Config) Validate() error {
 	if err != nil || redirect.RawQuery != "" || redirect.Fragment != "" {
 		return errors.New("redirect URL must be an exact absolute HTTPS URL without query or fragment")
 	}
-	if _, err := absoluteHTTPSURL(c.Resource); err != nil {
+	if redirect.Path != "/api/auth/callback" {
+		return errors.New("redirect URL path must be /api/auth/callback")
+	}
+	resource, err := absoluteHTTPSURL(c.Resource)
+	if err != nil || resource.RawQuery != "" || resource.Fragment != "" {
 		return errors.New("resource must be an absolute HTTPS URI")
 	}
+	if resource.Path != "/api" || !sameOrigin(redirect, resource) {
+		return errors.New("resource must be the Blog origin /api URI")
+	}
 	if c.PostLogoutURL != "" {
-		if _, err := absoluteHTTPSURL(c.PostLogoutURL); err != nil {
-			return errors.New("post logout URL must be an absolute HTTPS URL")
+		postLogout, postLogoutErr := absoluteHTTPSURL(c.PostLogoutURL)
+		if postLogoutErr != nil || postLogout.RawQuery != "" || postLogout.Fragment != "" || postLogout.Path != "/api/auth/logout/callback" || !sameOrigin(redirect, postLogout) {
+			return errors.New("post logout URL must be the exact Blog-origin /api/auth/logout/callback URL")
 		}
 	}
 	if c.SessionTTL <= 0 || c.FlowTTL <= 0 || c.FlowTTL > 15*time.Minute {
@@ -86,6 +94,10 @@ func (c Config) Validate() error {
 		return errors.New("OIDC scopes must start with openid")
 	}
 	return nil
+}
+
+func sameOrigin(left, right *url.URL) bool {
+	return left != nil && right != nil && strings.EqualFold(left.Scheme, right.Scheme) && strings.EqualFold(left.Host, right.Host)
 }
 
 func absoluteHTTPSURL(value string) (*url.URL, error) {

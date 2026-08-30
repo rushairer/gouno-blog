@@ -74,6 +74,7 @@ func (c *Client) loginHandler(ctx *gin.Context) {
 }
 
 func (c *Client) callbackHandler(ctx *gin.Context) {
+	ctx.Header("Cache-Control", "no-store")
 	handle, err := ctx.Cookie(c.config.FlowCookie)
 	clearHostCookie(ctx, c.config.FlowCookie, http.SameSiteLaxMode)
 	if err != nil || handle == "" {
@@ -86,7 +87,6 @@ func (c *Client) callbackHandler(ctx *gin.Context) {
 		return
 	}
 	setHostCookie(ctx, c.config.SessionCookie, sessionHandle, int(c.config.SessionTTL.Seconds()), http.SameSiteStrictMode)
-	ctx.Header("Cache-Control", "no-store")
 	ctx.Redirect(http.StatusSeeOther, returnTo)
 }
 

@@ -114,6 +114,59 @@ func (s *Store) PutSession(ctx context.Context, handle string, session Session, 
 	return err
 }
 
+// ReplaceSession updates an existing session without allowing a concurrent
+// logout to be undone. The watched transaction fails closed when the session
+// key has been deleted between the refresh-token exchange and persistence.
+func (s *Store) ReplaceSession(ctx context.Context, handle string, previous, session Session, ttl time.Duration) error {
+	if handle == "" || session.Issuer == "" || session.Subject == "" || session.IDToken == "" || ttl <= 0 {
+		return errors.New("complete session and positive TTL are required")
+	}
+	plain, err := json.Marshal(session)
+	if err != nil {
+		return err
+	}
+	key, aad := s.key("session", handle)
+	sealed, err := s.aead.Encrypt(plain, aad)
+	if err != nil {
+		return err
+	}
+
+	for attempt := 0; attempt < 3; attempt++ {
+		err = s.redis.Watch(ctx, func(tx *redis.Tx) error {
+			exists, watchErr := tx.Exists(ctx, key).Result()
+			if watchErr != nil {
+				return watchErr
+			}
+			if exists == 0 {
+				return ErrNotFound
+			}
+			_, watchErr = tx.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
+				pipe.Set(ctx, key, sealed, ttl)
+				if previous.Subject != "" && previous.Subject != session.Subject {
+					pipe.SRem(ctx, s.prefix+":idx:sub:"+previous.Subject, handle)
+				}
+				subKey := s.prefix + ":idx:sub:" + session.Subject
+				pipe.SAdd(ctx, subKey, handle)
+				pipe.Expire(ctx, subKey, ttl)
+				if previous.SID != "" && previous.SID != session.SID {
+					pipe.SRem(ctx, s.prefix+":idx:sid:"+previous.SID, handle)
+				}
+				if session.SID != "" {
+					sidKey := s.prefix + ":idx:sid:" + session.SID
+					pipe.SAdd(ctx, sidKey, handle)
+					pipe.Expire(ctx, sidKey, ttl)
+				}
+				return nil
+			})
+			return watchErr
+		}, key)
+		if !errors.Is(err, redis.TxFailedErr) {
+			return err
+		}
+	}
+	return errors.New("session changed concurrently during refresh")
+}
+
 func (s *Store) GetSession(ctx context.Context, handle string) (Session, error) {
 	var session Session
 	key, aad := s.key("session", handle)
@@ -197,6 +250,77 @@ func (s *Store) MarkLogoutTokenProcessed(ctx context.Context, jti string, ttl ti
 	}
 	key := s.prefix + ":replay:logout:" + jti
 	return s.redis.Set(ctx, key, "1", ttl).Err()
+}
+
+// ClaimLogoutToken serializes back-channel logout processing across replicas.
+// completed is true for an already processed replay; acquired is true only for
+// the caller that owns the processing lease.
+func (s *Store) ClaimLogoutToken(ctx context.Context, jti string, lease time.Duration) (owner string, acquired, completed bool, err error) {
+	if jti == "" || lease <= 0 {
+		return "", false, false, errors.New("jti and positive lease are required")
+	}
+	key := s.prefix + ":replay:logout:" + jti
+	current, getErr := s.redis.Get(ctx, key).Result()
+	if getErr == nil && current == "completed" {
+		return "", false, true, nil
+	}
+	if getErr != nil && !errors.Is(getErr, redis.Nil) {
+		return "", false, false, getErr
+	}
+	owner, err = RandomHandle()
+	if err != nil {
+		return "", false, false, err
+	}
+	ok, err := s.redis.SetNX(ctx, key, "processing:"+owner, lease).Result()
+	if err != nil {
+		return "", false, false, err
+	}
+	if ok {
+		return owner, true, false, nil
+	}
+	current, err = s.redis.Get(ctx, key).Result()
+	if err != nil {
+		return "", false, false, err
+	}
+	return "", false, current == "completed", nil
+}
+
+var finishLogoutTokenScript = redis.NewScript(`
+if redis.call("GET", KEYS[1]) == "processing:" .. ARGV[1] then
+    redis.call("SET", KEYS[1], "completed", "PX", ARGV[2])
+    return 1
+end
+return 0
+`)
+
+func (s *Store) FinishLogoutToken(ctx context.Context, jti, owner string, ttl time.Duration) error {
+	if jti == "" || owner == "" || ttl <= 0 {
+		return errors.New("jti, owner and positive ttl are required")
+	}
+	key := s.prefix + ":replay:logout:" + jti
+	result, err := finishLogoutTokenScript.Run(ctx, s.redis, []string{key}, owner, ttl.Milliseconds()).Int()
+	if err != nil {
+		return err
+	}
+	if result != 1 {
+		return errors.New("logout token processing lease was lost")
+	}
+	return nil
+}
+
+var releaseLogoutTokenScript = redis.NewScript(`
+if redis.call("GET", KEYS[1]) == "processing:" .. ARGV[1] then
+    return redis.call("DEL", KEYS[1])
+end
+return 0
+`)
+
+func (s *Store) ReleaseLogoutToken(ctx context.Context, jti, owner string) error {
+	if jti == "" || owner == "" {
+		return nil
+	}
+	key := s.prefix + ":replay:logout:" + jti
+	return releaseLogoutTokenScript.Run(ctx, s.redis, []string{key}, owner).Err()
 }
 
 // PutLogoutState stores a logout state nonce for CSRF protection on

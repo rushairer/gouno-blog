@@ -88,6 +88,8 @@ func main() {
 	}
 
 	accountID := envOrDefault("BLOG_OAUTH_ACCOUNT_ID", "00000000-0000-0000-0000-000000000001")
+	allowAccountFallback := strings.EqualFold(strings.TrimSpace(os.Getenv("BLOG_OAUTH_ALLOW_ACCOUNT_FALLBACK")), "true")
+	seedConsent := strings.EqualFold(strings.TrimSpace(os.Getenv("BLOG_OAUTH_SEED_CONSENT")), "true")
 	clientID := envOrDefault("BLOG_OAUTH_CLIENT_ID", "blog-bff")
 	clientName := envOrDefault("BLOG_OAUTH_CLIENT_NAME", "Personal Blog BFF")
 	clientDescription := envOrDefault("BLOG_OAUTH_CLIENT_DESCRIPTION", "Confidential OAuth2 Client for Blog BFF")
@@ -169,7 +171,9 @@ func main() {
 	}
 	log.Println("Schema detected. Starting database seeding...")
 
-	// Ensure the account exists in GOSSO, or fallback to the admin user
+	// Production is fail-closed. The explicit fallback below exists only for
+	// local development environments that opt in with
+	// BLOG_OAUTH_ALLOW_ACCOUNT_FALLBACK=true.
 	var exists bool
 	err = db.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM accounts WHERE id = $1)", accountID).Scan(&exists)
 	if err != nil {
@@ -177,10 +181,14 @@ func main() {
 	}
 
 	if !exists {
+		if !allowAccountFallback {
+			log.Fatalf("Configured Blog OAuth owner account %s does not exist; refusing to bind the client to another identity", accountID)
+		}
 		log.Printf("Account %s does not exist in accounts table. Fetching admin account...", accountID)
 		err = db.QueryRowContext(ctx, "SELECT id FROM accounts WHERE username = 'admin' LIMIT 1").Scan(&accountID)
 		if err == sql.ErrNoRows {
-			// If admin doesn't exist, fallback to the first available account
+			// Local development may use the first available account when its
+			// conventional admin fixture is absent.
 			err = db.QueryRowContext(ctx, "SELECT id FROM accounts LIMIT 1").Scan(&accountID)
 		}
 		if err != nil {
@@ -253,20 +261,22 @@ func main() {
 	// authorization is local and must never be represented by an OAuth scope.
 	// Production clients must obtain consent through the normal OAuth
 	// authorization flow instead.
-	_, err = db.ExecContext(ctx,
-		`INSERT INTO oauth2_consents (account_id, client_id, scopes, granted_at)
-		 SELECT $1, id, $2::jsonb, NOW()
-		 FROM oauth2_clients
-		 WHERE client_id = $3
-		 ON CONFLICT (account_id, client_id) WHERE deleted_at IS NULL
-		 DO UPDATE SET scopes = EXCLUDED.scopes, granted_at = EXCLUDED.granted_at, deleted_at = NULL`,
-		accountID, scopesJSON, clientID,
-	)
-	if err != nil {
-		log.Fatalf("Failed to seed OAuth2 consent: %v", err)
-	}
-	if err := invalidateConsentCache(ctx, redisDSN, accountID, clientID); err != nil {
-		log.Fatalf("Failed to invalidate OAuth2 consent cache: %v", err)
+	if seedConsent {
+		_, err = db.ExecContext(ctx,
+			`INSERT INTO oauth2_consents (account_id, client_id, scopes, granted_at)
+			 SELECT $1, id, $2::jsonb, NOW()
+			 FROM oauth2_clients
+			 WHERE client_id = $3
+			 ON CONFLICT (account_id, client_id) WHERE deleted_at IS NULL
+			 DO UPDATE SET scopes = EXCLUDED.scopes, granted_at = EXCLUDED.granted_at, deleted_at = NULL`,
+			accountID, scopesJSON, clientID,
+		)
+		if err != nil {
+			log.Fatalf("Failed to seed OAuth2 consent: %v", err)
+		}
+		if err := invalidateConsentCache(ctx, redisDSN, accountID, clientID); err != nil {
+			log.Fatalf("Failed to invalidate OAuth2 consent cache: %v", err)
+		}
 	}
 
 	log.Printf("Database seeding completed successfully. Blog OAuth client: %s.", clientID)
