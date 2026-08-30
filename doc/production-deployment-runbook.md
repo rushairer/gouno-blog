@@ -14,7 +14,7 @@
 | `sso` | A / AAAA | `<生产服务器IP>` | GOSSO 认证平台与 Admin UI |
 | `blog` | A / AAAA | `<生产服务器IP>` | 个人博客 BFF 与前端 SPA |
 | `cms` | A / AAAA | `<生产服务器IP>` | 预留 CMS 域名 |
-| `@` (`io84.com`) | A / AAAA | `<生产服务器IP>` | 旧生产域名（保留 14 天平滑过渡） |
+| `@` (`io84.com`) | A / AAAA | 按既有站点策略 | 不是本次 SSO / Blog 发布的认证入口 |
 
 ### B. 生产密钥生成
 在安全环境或生产服务器上生成运行期密钥：
@@ -26,7 +26,12 @@ cd /Users/aben/Git/gouno-blog/blog-backend
 go run ./cmd/main.go bff-keygen --out /opt/gouno-blog/secrets/blog-bff-tink.json
 chmod 600 /opt/gouno-blog/secrets/blog-bff-tink.json
 
-# 2. 生成 Blog BFF 客户端通信密钥文件 (Client Secret File)
+# 2. 生成 GOSSO TOTP 加密密钥与验证 pepper
+openssl rand -hex 32 > /opt/gouno-blog/secrets/gosso_totp_key
+openssl rand -hex 32 > /opt/gouno-blog/secrets/gosso_verify_pepper
+chmod 600 /opt/gouno-blog/secrets/gosso_totp_key /opt/gouno-blog/secrets/gosso_verify_pepper
+
+# 3. 生成 Blog BFF 客户端通信密钥文件 (Client Secret File)
 openssl rand -hex 32 > /opt/gouno-blog/secrets/blog_oauth_client_secret
 chmod 600 /opt/gouno-blog/secrets/blog_oauth_client_secret
 ```
@@ -82,6 +87,8 @@ GOSSO_BACKCHANNEL_ALLOWED_CIDRS=
 BLOG_OIDC_CLIENT_ID=blog-bff
 BLOG_OAUTH_CLIENT_SECRET_FILE=/opt/gouno-blog/secrets/blog_oauth_client_secret
 GOSSO_SIGNING_KEY_FILE=/opt/gouno-blog/secrets/gosso_private.pem
+GOSSO_TOTP_KEY_FILE=/opt/gouno-blog/secrets/gosso_totp_key
+GOSSO_VERIFY_PEPPER_FILE=/opt/gouno-blog/secrets/gosso_verify_pepper
 BLOG_BFF_TINK_KEYSET_FILE=/opt/gouno-blog/secrets/blog-bff-tink.json
 
 # 管理员初始化
@@ -128,11 +135,12 @@ docker compose -f docker-compose.production.yml down
 # 重新启动生产栈
 docker compose --env-file /opt/gouno-blog/.env.production -f docker-compose.production.yml up -d
 
-# 步骤 3: 验证旧站点恢复
-curl -fsSL https://io84.com/api/auth/session
+# 步骤 3: 验证拆分域恢复
+curl -fsSL https://sso.io84.com/.well-known/openid-configuration | jq -e '.issuer == "https://sso.io84.com"'
+curl -fsSL https://blog.io84.com/api/auth/me | jq -e '.authenticated == false or .authenticated == true'
 ```
 
-> **注意**：由于数据库迁移采用 **additive 模型**（仅新增 `blog_principal_identities` 别名表），回滚时**无需降级数据库**，旧版服务可直接兼容运行。
+> **注意**：身份迁移采用 **additive 模型**（仅新增 `blog_principal_identities` 别名表）。回滚依赖已验证的数据库备份、不可变镜像、配置版本及兼容性检查；不要求固定天数的旧生产栈并行运行。
 
 ### 5.3 数据库与 Redis 备份恢复
 
@@ -173,8 +181,8 @@ test -r /opt/gouno-blog/secrets/blog-bff-tink.json && echo "OK: tink keyset" || 
 |------|----------|----------|------|
 | 验证前置条件 | 1 分钟 | | |
 | 停止拆分栈 | 1 分钟 | | |
-| 启动旧版栈 | 3 分钟 | | |
-| DNS 切换（如需） | 2 分钟 | | |
+| 启动已验证的回滚镜像与配置 | 3 分钟 | | |
+| 恢复路由配置（如需） | 2 分钟 | | |
 | 健康检查验证 | 1 分钟 | | |
 | **总计** | **≤10 分钟** | | |
 

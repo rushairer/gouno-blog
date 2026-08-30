@@ -47,8 +47,9 @@ Connect Core、RP-Initiated Logout 1.0 和 Back-Channel Logout 1.0 Final 为规�
   权威映射证据引用，冲突时原子失败。
 - WebAuthn RP ID 最终迁移为 `sso.io84.com`。旧 credential 保留，用户在密码/MFA
   验证后重新注册 Passkey。
-- 旧生产栈保留至少 14 天；全局退出只结束当前中心 SSO session。“退出所有设备”
-  是独立操作。
+- 回滚以已验证的数据库备份、不可变镜像、配置版本和 additive schema compatibility
+  为基础；不要求固定天数的旧生产栈并行。全局退出只结束当前中心 SSO session。
+  “退出所有设备”是独立操作。
 - 第一阶段复用身份数据库，不执行物理迁库。
 
 ## 本地拓扑门禁
