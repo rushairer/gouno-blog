@@ -79,7 +79,7 @@ paths:
       summary: Create a new post
       description: Create a new blog post. Requires administrator authentication.
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       requestBody:
         required: true
         content:
@@ -136,7 +136,7 @@ paths:
       summary: Update an existing post
       description: Modify an existing blog post details. Requires administrator authentication.
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - name: id
           in: path
@@ -172,7 +172,7 @@ paths:
       summary: Delete a post
       description: Permanently remove a post by ID. Requires administrator authentication.
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - name: id
           in: path
@@ -209,7 +209,7 @@ paths:
       summary: List all posts for administration
       description: Includes draft, scheduled, and published posts. Requires administrator authentication.
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - name: q
           in: query
@@ -304,7 +304,7 @@ paths:
       summary: List all comments for a post
       description: Retrieve all comments for moderation, including pending hidden comments. Requires administrator authentication.
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - name: slugOrID
           in: path
@@ -333,7 +333,7 @@ paths:
       summary: Update comment visibility
       description: Mark a comment visible or hidden for public readers. Requires administrator authentication.
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - name: id
           in: path
@@ -364,7 +364,7 @@ paths:
       summary: Delete a comment
       description: Remove a comment by its unique ID. Requires administrator authentication.
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - name: id
           in: path
@@ -453,7 +453,7 @@ paths:
     get:
       summary: List the signed-in user's notifications and unread count
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       responses:
         '200':
           description: Notification page
@@ -464,7 +464,7 @@ paths:
     put:
       summary: Mark one owned notification as read
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - name: id
           in: path
@@ -481,7 +481,7 @@ paths:
     put:
       summary: Mark all owned notifications as read
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       responses:
         '200':
           description: Notifications marked read
@@ -490,7 +490,7 @@ paths:
     get:
       summary: List comments across articles for moderation
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - name: status
           in: query
@@ -509,7 +509,7 @@ paths:
     put:
       summary: Change a comment's moderation status
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - name: id
           in: path
@@ -548,7 +548,7 @@ paths:
     get:
       summary: List saved article versions
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - name: id
           in: path
@@ -563,7 +563,7 @@ paths:
     post:
       summary: Restore an article version
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - name: id
           in: path
@@ -585,14 +585,14 @@ paths:
     get:
       summary: List media assets
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       responses:
         '200':
           description: Media assets ordered newest first
     post:
       summary: Upload an image
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       requestBody:
         required: true
         content:
@@ -616,7 +616,7 @@ paths:
     put:
       summary: Update a media asset metadata (e.g. alt text)
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - name: id
           in: path
@@ -643,7 +643,7 @@ paths:
     delete:
       summary: Delete a media asset and its local file
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - name: id
           in: path
@@ -660,7 +660,7 @@ paths:
     get:
       summary: List posts that reference a media asset
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - name: id
           in: path
@@ -675,7 +675,7 @@ paths:
     get:
       summary: Get content and engagement analytics
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       responses:
         '200':
           description: Aggregate counters, top posts, and a 14-day traffic series
@@ -684,14 +684,14 @@ paths:
     get:
       summary: List AI provider profiles
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       responses:
         '200':
           description: Provider profiles with masked key metadata
     post:
       summary: Create an AI provider profile
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       requestBody:
         required: true
         content:
@@ -709,7 +709,7 @@ paths:
       summary: Update an AI provider profile
       description: Omit api_key to retain the existing encrypted secret.
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - $ref: '#/components/parameters/ResourceID'
       requestBody:
@@ -724,7 +724,7 @@ paths:
     delete:
       summary: Delete an unused AI provider profile
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - $ref: '#/components/parameters/ResourceID'
       responses:
@@ -737,7 +737,7 @@ paths:
     post:
       summary: Test an AI provider connection
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - $ref: '#/components/parameters/ResourceID'
       responses:
@@ -748,14 +748,14 @@ paths:
     get:
       summary: List AI Agents
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       responses:
         '200':
           description: Configured Agents
     post:
       summary: Create an AI Agent
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       requestBody:
         required: true
         content:
@@ -770,7 +770,7 @@ paths:
     get:
       summary: Get one AI Agent
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - $ref: '#/components/parameters/ResourceID'
       responses:
@@ -779,7 +779,7 @@ paths:
     put:
       summary: Update an AI Agent
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - $ref: '#/components/parameters/ResourceID'
       requestBody:
@@ -794,7 +794,7 @@ paths:
     delete:
       summary: Soft-delete an AI Agent
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - $ref: '#/components/parameters/ResourceID'
       responses:
@@ -805,7 +805,7 @@ paths:
     post:
       summary: Enable an AI Agent
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - $ref: '#/components/parameters/ResourceID'
       responses:
@@ -816,7 +816,7 @@ paths:
     post:
       summary: Disable an AI Agent
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - $ref: '#/components/parameters/ResourceID'
       responses:
@@ -827,7 +827,7 @@ paths:
     post:
       summary: Queue an immediate AI Agent run
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - $ref: '#/components/parameters/ResourceID'
       requestBody:
@@ -849,7 +849,7 @@ paths:
     get:
       summary: List Blog tools available to AI Agents
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       responses:
         '200':
           description: Tool schemas and risk levels
@@ -858,14 +858,14 @@ paths:
     get:
       summary: List versioned AI Agent Skills
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       responses:
         '200':
           description: Configured reusable Skills
     post:
       summary: Create a versioned AI Agent Skill
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       requestBody:
         required: true
         content:
@@ -880,7 +880,7 @@ paths:
     get:
       summary: Get an AI Agent Skill
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - $ref: '#/components/parameters/ResourceID'
       responses:
@@ -889,7 +889,7 @@ paths:
     put:
       summary: Update an AI Agent Skill and increment its version
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - $ref: '#/components/parameters/ResourceID'
       requestBody:
@@ -904,7 +904,7 @@ paths:
     delete:
       summary: Soft-delete an AI Agent Skill
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - $ref: '#/components/parameters/ResourceID'
       responses:
@@ -915,7 +915,7 @@ paths:
     post:
       summary: Copy the current immutable Skill Version into a custom Skill
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - $ref: '#/components/parameters/ResourceID'
       requestBody:
@@ -934,7 +934,7 @@ paths:
     get:
       summary: List AI Agent runs
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - name: agent_id
           in: query
@@ -959,7 +959,7 @@ paths:
     get:
       summary: Get an AI Agent run and its tool-call timeline
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - $ref: '#/components/parameters/ResourceID'
       responses:
@@ -970,7 +970,7 @@ paths:
     get:
       summary: List AI Agent approvals
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - name: status
           in: query
@@ -986,7 +986,7 @@ paths:
     post:
       summary: Approve and execute an AI Agent proposal
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - $ref: '#/components/parameters/ResourceID'
       requestBody:
@@ -1004,7 +1004,7 @@ paths:
     post:
       summary: Reject an AI Agent proposal
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - $ref: '#/components/parameters/ResourceID'
       requestBody:
@@ -1059,14 +1059,14 @@ paths:
     get:
       summary: List categories for administration
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       responses:
         '200':
           description: Category list
     post:
       summary: Create a category
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       responses:
         '201':
           description: Category created
@@ -1075,7 +1075,7 @@ paths:
     put:
       summary: Update a category
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - name: id
           in: path
@@ -1088,7 +1088,7 @@ paths:
     delete:
       summary: Delete a category and unclassify its posts
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       parameters:
         - name: id
           in: path
@@ -1103,7 +1103,7 @@ paths:
     get:
       summary: List tags with post counts
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       responses:
         '200':
           description: Tag summaries
@@ -1112,14 +1112,14 @@ paths:
     get:
       summary: Get editable site settings
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       responses:
         '200':
           description: Site settings
     put:
       summary: Update allow-listed site settings
       security:
-        - BearerAuth: []
+        - BlogSessionCookie: []
       responses:
         '200':
           description: Updated site settings
@@ -1127,14 +1127,14 @@ paths:
   /admin/ai-workflows:
     get:
       summary: List AI Workflows
-      security: [{BearerAuth: []}]
+      security: [{BlogSessionCookie: []}]
       responses:
         '200':
           description: Current Workflow versions, including structured input and run scope.
     post:
       summary: Create an AI Workflow
       description: Input schemas may use x-gouno-resource and x-gouno-widget annotations. Schemas are compiled and validated when saved.
-      security: [{BearerAuth: []}]
+      security: [{BlogSessionCookie: []}]
       requestBody:
         required: true
         content:
@@ -1146,7 +1146,7 @@ paths:
   /admin/ai-workflows/{id}:
     put:
       summary: Create a new immutable Workflow version
-      security: [{BearerAuth: []}]
+      security: [{BlogSessionCookie: []}]
       parameters:
         - {name: id, in: path, required: true, schema: {type: integer}}
       requestBody:
@@ -1161,7 +1161,7 @@ paths:
     post:
       summary: Queue a Workflow run
       description: Backward compatible endpoint. The input value is validated against the locked Workflow JSON Schema; resource references become the strict run target scope.
-      security: [{BearerAuth: []}]
+      security: [{BlogSessionCookie: []}]
       parameters:
         - {name: id, in: path, required: true, schema: {type: integer}}
       requestBody:
@@ -1176,7 +1176,7 @@ paths:
     post:
       summary: Queue a Workflow dry-run
       description: Uses the same structured input, scope, budget, and snapshot rules without executing approved writes.
-      security: [{BearerAuth: []}]
+      security: [{BlogSessionCookie: []}]
       parameters:
         - {name: id, in: path, required: true, schema: {type: integer}}
       requestBody:
@@ -1190,7 +1190,7 @@ paths:
     get:
       summary: Search resources for Workflow input
       description: Returns minimal labels and audit metadata, never article bodies, commenter identity, or media bytes. Type-specific filters are strictly validated.
-      security: [{BearerAuth: []}]
+      security: [{BlogSessionCookie: []}]
       parameters:
         - name: type
           in: path
@@ -1216,7 +1216,7 @@ paths:
     get:
       summary: List the immutable resource snapshot for a Workflow run
       description: Includes manual and query targets plus discovered read-only resources. Deleted resources remain represented by their minimal snapshot.
-      security: [{BearerAuth: []}]
+      security: [{BlogSessionCookie: []}]
       parameters:
         - {name: id, in: path, required: true, schema: {type: integer}}
       responses:
@@ -1234,7 +1234,7 @@ paths:
     post:
       summary: Retry failed Workflow resources
       description: Queues a new run for selected failed for_each iterations, reusing the original input and resource-query snapshot.
-      security: [{BearerAuth: []}]
+      security: [{BlogSessionCookie: []}]
       parameters:
         - {name: id, in: path, required: true, schema: {type: integer, minimum: 1}}
       requestBody:
@@ -1256,7 +1256,7 @@ paths:
     post:
       summary: Ingest a domain event for matching Workflows
       description: Idempotently accepts an event and queues enabled Workflows with matching event_triggers. The event payload is validated by each Workflow input schema.
-      security: [{BearerAuth: []}]
+      security: [{BlogSessionCookie: []}]
       requestBody:
         required: true
         content:
@@ -1291,43 +1291,43 @@ paths:
   /admin/ai-connectors:
     get:
       summary: List sandbox connector profiles
-      security: [{BearerAuth: []}]
+      security: [{BlogSessionCookie: []}]
       responses: {'200': {description: Connector profiles without plaintext credentials}}
     post:
       summary: Create or update a sandbox connector profile
-      security: [{BearerAuth: []}]
+      security: [{BlogSessionCookie: []}]
       responses: {'200': {description: Encrypted sandbox profile saved}, '400': {description: Invalid connector profile}}
   /admin/ai-connector-outbox:
     get:
       summary: List approval-gated sandbox deliveries
-      security: [{BearerAuth: []}]
+      security: [{BlogSessionCookie: []}]
       responses: {'200': {description: Outbox records and delivery states}}
     post:
       summary: Queue a sandbox delivery
-      security: [{BearerAuth: []}]
+      security: [{BlogSessionCookie: []}]
       responses: {'202': {description: Idempotent Outbox item awaiting approval}}
   /admin/ai-connector-outbox/{id}/approve:
     post:
       summary: Approve a sandbox Outbox item
-      security: [{BearerAuth: []}]
+      security: [{BlogSessionCookie: []}]
       parameters: [{name: id, in: path, required: true, schema: {type: integer}}]
       responses: {'200': {description: Item approved}}
   /admin/ai-connector-outbox/{id}/revoke:
     post:
       summary: Revoke a pending sandbox Outbox item
-      security: [{BearerAuth: []}]
+      security: [{BlogSessionCookie: []}]
       parameters: [{name: id, in: path, required: true, schema: {type: integer}}]
       responses: {'200': {description: Item revoked}}
   /admin/ai-connector-outbox/{id}/deliver-mock:
     post:
       summary: Record a no-network mock delivery
-      security: [{BearerAuth: []}]
+      security: [{BlogSessionCookie: []}]
       parameters: [{name: id, in: path, required: true, schema: {type: integer}}]
       responses: {'200': {description: Mock delivery recorded without external request}}
   /admin/ai-connector-outbox/{id}/retry:
     post:
       summary: Retry a failed sandbox delivery
-      security: [{BearerAuth: []}]
+      security: [{BlogSessionCookie: []}]
       parameters: [{name: id, in: path, required: true, schema: {type: integer}}]
       responses: {'200': {description: Failed item returned to approved sandbox delivery state}}
 
@@ -1341,10 +1341,10 @@ components:
         type: integer
         minimum: 1
   securitySchemes:
-    BearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
+    BlogSessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-Http-blog-session
   schemas:
     AIWorkflowScopePolicy:
       type: object

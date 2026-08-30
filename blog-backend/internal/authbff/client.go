@@ -20,29 +20,6 @@ type providerMetadata struct {
 	AuthorizationResponseIssuerParamSupported bool   `json:"authorization_response_iss_parameter_supported"`
 }
 
-type internalRoundTripper struct {
-	targetHost  string
-	internalURL *url.URL
-	base        http.RoundTripper
-}
-
-func (rt *internalRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	reqCopy := req.Clone(req.Context())
-	if reqCopy.URL.Host == rt.targetHost {
-		reqCopy.URL.Scheme = rt.internalURL.Scheme
-		reqCopy.URL.Host = rt.internalURL.Host
-		reqCopy.Host = rt.targetHost
-		if reqCopy.Header.Get("X-Forwarded-Proto") == "" {
-			reqCopy.Header.Set("X-Forwarded-Proto", "https")
-		}
-	}
-	base := rt.base
-	if base == nil {
-		base = http.DefaultTransport
-	}
-	return base.RoundTrip(reqCopy)
-}
-
 type Client struct {
 	config       Config
 	store        *Store
@@ -69,34 +46,6 @@ func NewClient(ctx context.Context, config Config, store *Store, httpClient *htt
 	}
 	if store == nil {
 		return nil, errors.New("BFF store is required")
-	}
-	if config.InternalEndpoint != "" {
-		internalURL, err := url.Parse(config.InternalEndpoint)
-		if err != nil {
-			return nil, fmt.Errorf("parse internal endpoint: %w", err)
-		}
-		issuerURL, err := url.Parse(config.Issuer)
-		if err != nil {
-			return nil, fmt.Errorf("parse issuer: %w", err)
-		}
-		targetHost := issuerURL.Host
-		var baseTransport http.RoundTripper
-		if httpClient != nil && httpClient.Transport != nil {
-			baseTransport = httpClient.Transport
-		}
-		transport := &internalRoundTripper{
-			targetHost:  targetHost,
-			internalURL: internalURL,
-			base:        baseTransport,
-		}
-		if httpClient == nil {
-			httpClient = &http.Client{
-				Transport: transport,
-				Timeout:   30 * time.Second,
-			}
-		} else {
-			httpClient.Transport = transport
-		}
 	}
 	if httpClient != nil {
 		ctx = oidc.ClientContext(ctx, httpClient)
@@ -246,7 +195,10 @@ func (c *Client) Refresh(ctx context.Context, sessionHandle string) (Session, er
 		}
 
 		// Acquire distributed lock across replicas
-		lockTTL := 10 * time.Second
+		// Keep the lock longer than the configured OAuth HTTP timeout (30s), so
+		// a slow token response cannot allow a second replica to reuse a rotated
+		// refresh token. The owner-bound Lua release remains safe after expiry.
+		lockTTL := 45 * time.Second
 		lockOwner, acquired, err := c.store.AcquireRefreshLock(ctx, sessionHandle, lockTTL)
 		if err != nil {
 			return Session{}, fmt.Errorf("acquire refresh lock: %w", err)

@@ -153,7 +153,10 @@ func (c *Client) logoutHandler(ctx *gin.Context) {
 		_ = c.RevokeToken(ctx.Request.Context(), session.AccessToken, "access_token")
 	}
 
-	logoutURL, _ := c.LogoutURL(ctx.Request.Context(), session, ctx.Query("post_logout_redirect_uri"))
+	// The OP only receives the single exact, registered callback URI. Any
+	// desired Blog-local destination is stored with the logout state rather than
+	// being forwarded as an unregistered relative URI.
+	logoutURL, _ := c.LogoutURL(ctx.Request.Context(), session, "")
 	if ctx.Query("redirect") == "true" && logoutURL != "" {
 		ctx.Redirect(http.StatusFound, logoutURL)
 		return

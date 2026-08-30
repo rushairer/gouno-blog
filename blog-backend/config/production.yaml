@@ -11,7 +11,7 @@ web_server:
     # of the global 429 path without removing rate limiting.
     rate_limit_per_minute: 300
     trusted_proxies:
-        - "172.16.0.0/12"
+        - "172.21.0.0/16"
     # Same-origin requests need no CORS configuration. Add only explicit public origins here.
     cors_allowed_origins: []
     secure_cookies: true

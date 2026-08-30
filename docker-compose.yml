@@ -49,9 +49,9 @@ services:
       - GOUNO_DATABASE_DEFAULT=postgres
       - GOUNO_DATABASE_DRIVERS_POSTGRES_DSN=host=db user=postgres password=${BLOG_POSTGRES_PASSWORD:-password} dbname=gosso port=5432 sslmode=disable TimeZone=Asia/Shanghai search_path=public
       - GOUNO_REDIS_DSN=redis://redis:6379/0
-      - GOUNO_AUTH_ISSUER=${GOUNO_AUTH_ISSUER:-https://sso.dev.local}
+      - GOUNO_AUTH_ISSUER=${GOUNO_AUTH_ISSUER:-https://sso.dev.local:8443}
       - GOUNO_AUTH_LOGIN_URL=/login
-      - GOUNO_AUTH_PASSWORD_RESET_BASE_URL=https://sso.dev.local/reset-password
+      - GOUNO_AUTH_PASSWORD_RESET_BASE_URL=https://sso.dev.local:8443/reset-password
       - GOUNO_AUTH_PRIVATE_KEY_PATH=/app/keys/private.pem
       - GOUNO_AUTH_TOTP_ENCRYPTION_KEY=${GOUNO_AUTH_TOTP_ENCRYPTION_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
       - GOUNO_AUTH_VERIFY_HASH_PEPPER=${GOUNO_AUTH_VERIFY_HASH_PEPPER:-0000000000000000000000000000000000000000000000000000000000000000}
@@ -60,10 +60,12 @@ services:
       - GOUNO_SMTP_TLS_POLICY=notls
       - GOUNO_AUTH_WEBAUTHN_RP_ID=${GOUNO_AUTH_WEBAUTHN_RP_ID:-sso.dev.local}
       - GOUNO_AUTH_WEBAUTHN_RP_NAME=gouno-sso-dev
-      - GOUNO_AUTH_WEBAUTHN_RP_ORIGIN=https://sso.dev.local
+      - GOUNO_AUTH_WEBAUTHN_RP_ORIGIN=https://sso.dev.local:8443
       - GOUNO_AUTH_BACKCHANNEL_ALLOWED_CIDRS=${GOSSO_BACKCHANNEL_ALLOWED_CIDRS:-172.21.0.0/16,127.0.0.1/32}
     volumes:
       - ./keys:/app/keys
+    extra_hosts:
+      - "blog.dev.local:172.21.0.10"
     depends_on:
       db:
         condition: service_healthy
@@ -82,7 +84,7 @@ services:
       - ADMIN_USERNAME=admin
       - ADMIN_PASSWORD=admin123
       - ADMIN_DISPLAY_NAME=System Admin
-      - OAUTH2_CLIENT_REDIRECT_URIS=https://sso.dev.local/callback,https://sso.dev.local/admin/callback
+      - OAUTH2_CLIENT_REDIRECT_URIS=https://sso.dev.local:8443/callback,https://sso.dev.local:8443/admin/callback
     depends_on:
       db:
         condition: service_healthy
@@ -102,10 +104,10 @@ services:
       - BLOG_OAUTH_CLIENT_DESCRIPTION=Confidential OAuth2 Client for Blog BFF
       - BLOG_OAUTH_CONFIDENTIAL=true
       - BLOG_OAUTH_CLIENT_SECRET=blog-bff-secret-local
-      - BLOG_OAUTH_REDIRECT_URIS=https://blog.dev.local/api/auth/callback
-      - BLOG_OAUTH_POST_LOGOUT_REDIRECT_URIS=https://blog.dev.local/api/auth/logout/callback
-      - BLOG_OAUTH_BACKCHANNEL_LOGOUT_URI=https://blog.dev.local/api/auth/backchannel-logout
-      - BLOG_OAUTH_ALLOWED_RESOURCES=https://blog.dev.local/api,https://blog.local.test/api
+      - BLOG_OAUTH_REDIRECT_URIS=https://blog.dev.local:8443/api/auth/callback
+      - BLOG_OAUTH_POST_LOGOUT_REDIRECT_URIS=https://blog.dev.local:8443/api/auth/logout/callback
+      - BLOG_OAUTH_BACKCHANNEL_LOGOUT_URI=https://blog.dev.local:8443/api/auth/backchannel-logout
+      - BLOG_OAUTH_ALLOWED_RESOURCES=https://blog.dev.local:8443/api
       - BLOG_OAUTH_GRANT_TYPES=authorization_code,refresh_token
       - BLOG_OAUTH_SCOPES=openid,profile,email
     depends_on:
@@ -137,22 +139,22 @@ services:
       - POSTGRES_DATABASE=blog
       - GOUNO_DATABASE_DRIVERS_POSTGRES_DSN=host=db user=postgres password=${BLOG_POSTGRES_PASSWORD:-password} dbname=blog port=5432 sslmode=disable TimeZone=Asia/Shanghai search_path=public
       - GOUNO_REDIS_DSN=redis://redis:6379/0
-      - SSO_JWKS_URL=${SSO_JWKS_URL:-http://gosso:8080/.well-known/jwks.json}
-      - SSO_TOKEN_ISSUER=${SSO_TOKEN_ISSUER:-https://sso.dev.local}
-      - SSO_TOKEN_AUDIENCE=${SSO_TOKEN_AUDIENCE:-https://blog.dev.local/api}
+      - SSO_JWKS_URL=${SSO_JWKS_URL:-https://sso.dev.local:8443/.well-known/jwks.json}
+      - SSO_TOKEN_ISSUER=${SSO_TOKEN_ISSUER:-https://sso.dev.local:8443}
+      - SSO_TOKEN_AUDIENCE=${SSO_TOKEN_AUDIENCE:-https://blog.dev.local:8443/api}
       - SSO_CLIENT_ID=${SSO_CLIENT_ID:-blog-bff}
-      - BLOG_BOOTSTRAP_OWNER_ISSUER=${BLOG_BOOTSTRAP_OWNER_ISSUER:-https://sso.dev.local}
+      - BLOG_BOOTSTRAP_OWNER_ISSUER=${BLOG_BOOTSTRAP_OWNER_ISSUER:-https://sso.dev.local:8443}
       - BLOG_BOOTSTRAP_OWNER_SUBJECT=${BLOG_BOOTSTRAP_OWNER_SUBJECT:-c6ac32f3-3c48-46b5-bae8-f17c17116dc5}
       - BLOG_BFF_ENABLED=${BLOG_BFF_ENABLED:-true}
-      - BLOG_OIDC_ISSUER=${BLOG_OIDC_ISSUER:-https://sso.dev.local}
+      - BLOG_OIDC_ISSUER=${BLOG_OIDC_ISSUER:-https://sso.dev.local:8443}
       - BLOG_OIDC_CLIENT_ID=${BLOG_OIDC_CLIENT_ID:-blog-bff}
       - BLOG_OIDC_CLIENT_SECRET=${BLOG_OIDC_CLIENT_SECRET:-blog-bff-secret-local}
-      - BLOG_OIDC_REDIRECT_URL=${BLOG_OIDC_REDIRECT_URL:-https://blog.dev.local/api/auth/callback}
-      - BLOG_OIDC_POST_LOGOUT_URL=${BLOG_OIDC_POST_LOGOUT_URL:-https://blog.dev.local/api/auth/logout/callback}
-      - BLOG_OIDC_RESOURCE=${BLOG_OIDC_RESOURCE:-https://blog.dev.local/api}
+      - BLOG_OIDC_REDIRECT_URL=${BLOG_OIDC_REDIRECT_URL:-https://blog.dev.local:8443/api/auth/callback}
+      - BLOG_OIDC_POST_LOGOUT_URL=${BLOG_OIDC_POST_LOGOUT_URL:-https://blog.dev.local:8443/api/auth/logout/callback}
+      - BLOG_OIDC_RESOURCE=${BLOG_OIDC_RESOURCE:-https://blog.dev.local:8443/api}
       - BLOG_OIDC_SCOPES=${BLOG_OIDC_SCOPES:-openid profile email}
-      - BLOG_OIDC_INTERNAL_ENDPOINT=${BLOG_OIDC_INTERNAL_ENDPOINT:-http://gosso:8080}
       - BLOG_BFF_TINK_KEYSET_PATH=${BLOG_BFF_TINK_KEYSET_PATH:-/run/secrets/blog-bff-tink.json}
+      - SSL_CERT_FILE=/etc/ssl/certs/local-dev-root-ca.pem
       - BLOG_VISITOR_SECRET=${BLOG_VISITOR_SECRET:-local-development-visitor-secret-change-me}
       - BLOG_MEDIA_DIR=/app/data/media
       - BLOG_MEDIA_STORAGE=${BLOG_MEDIA_STORAGE:-local}
@@ -171,6 +173,9 @@ services:
     volumes:
       - blog_media:/app/data/media
       - ./secrets:/run/secrets:ro
+      - ${LOCAL_TLS_ROOT_CA_FILE:-./certs/local-dev-root-ca.pem}:/etc/ssl/certs/local-dev-root-ca.pem:ro
+    extra_hosts:
+      - "sso.dev.local:172.21.0.10"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8082/healthz >/dev/null || exit 1"]
       interval: 15s
@@ -219,11 +224,12 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ${LOCAL_TLS_CERT_FILE:-./certs/localhost.pem}:/etc/caddy/certs/localhost.pem:ro
       - ${LOCAL_TLS_KEY_FILE:-./certs/localhost-key.pem}:/etc/caddy/certs/localhost-key.pem:ro
-    depends_on:
-      - blog-frontend
-      - blog-backend
-      - gosso-admin-frontend
-      - gosso
+    networks:
+      default:
+        aliases:
+          - sso.dev.local
+          - blog.dev.local
+        ipv4_address: 172.21.0.10
 
 volumes:
   db_data:

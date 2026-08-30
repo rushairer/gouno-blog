@@ -40,6 +40,27 @@ chmod 600 /opt/gouno-blog/secrets/blog_oauth_client_secret
 
 ## 2. 数据库迁移（零停机 Additive 迁移）
 
+### 2.1 先建立最小权限数据库账户
+
+不要把 Postgres bootstrap superuser 交给任何常驻应用容器。上线前由受控 DBA
+会话执行一次以下账户隔离；`gosso_app` 只拥有 `gosso`，`blog_app` 只拥有
+`blog`。生产密码须以 secret 管理，不得写入本命令历史或仓库。
+
+```sql
+CREATE ROLE gosso_app LOGIN PASSWORD '<GOSSO_DB_PASSWORD>' NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT;
+CREATE ROLE blog_app  LOGIN PASSWORD '<BLOG_DB_PASSWORD>'  NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT;
+ALTER DATABASE gosso OWNER TO gosso_app;
+ALTER DATABASE blog OWNER TO blog_app;
+REVOKE ALL ON DATABASE gosso FROM PUBLIC, blog_app;
+REVOKE ALL ON DATABASE blog FROM PUBLIC, gosso_app;
+GRANT CONNECT ON DATABASE gosso TO gosso_app;
+GRANT CONNECT ON DATABASE blog TO blog_app;
+```
+
+在已有数据库中，还必须由每个数据库的 owner 将既有 schema、表、序列和默认
+权限授予对应应用角色；完成后以 `blog_app` 登录验证其不能连接 `gosso`。
+这一步是发布阻断项：在它完成前，不得将新的生产 Compose 配置投入运行。
+
 在生产 Postgres 数据库中执行 additive 迁移脚本（不会破坏或删除任何现有数据）：
 
 ```bash
@@ -74,11 +95,11 @@ GOUNO_BLOG_SEED_IMAGE=ghcr.io/rushairer/gouno-blog-seed:v1.0.0@sha256:<BLOG_SEED
 
 # 数据库连接
 POSTGRES_USER=postgres
-POSTGRES_PASSWORD=<SECURE_PASSWORD>
-GOSSO_DATABASE_DSN=host=db user=postgres password=<SECURE_PASSWORD> dbname=gosso port=5432 sslmode=disable TimeZone=Asia/Shanghai search_path=public
-BLOG_DATABASE_DSN=host=db user=postgres password=<SECURE_PASSWORD> dbname=blog port=5432 sslmode=disable TimeZone=Asia/Shanghai search_path=public
+POSTGRES_PASSWORD=<BOOTSTRAP_SUPERUSER_PASSWORD>
+GOSSO_DATABASE_DSN=host=db user=gosso_app password=<GOSSO_DB_PASSWORD> dbname=gosso port=5432 sslmode=disable TimeZone=Asia/Shanghai search_path=public
+BLOG_DATABASE_DSN=host=db user=blog_app password=<BLOG_DB_PASSWORD> dbname=blog port=5432 sslmode=disable TimeZone=Asia/Shanghai search_path=public
 GOSSO_REDIS_DSN=redis://:<REDIS_PASSWORD>@redis:6379/0
-BLOG_REDIS_DSN=redis://:<REDIS_PASSWORD>@redis:6379/1
+BLOG_REDIS_DSN=redis://blog:<BLOG_REDIS_PASSWORD>@redis:6379/1
 # Back-channel logout SSRF 白名单（容器内私网直连时填写容器网段，如 172.21.0.0/16；公网 DNS 访问留空）
 GOSSO_BACKCHANNEL_ALLOWED_CIDRS=
 
@@ -99,6 +120,9 @@ BLOG_VISITOR_SECRET=<32_BYTE_RANDOM_SECRET>
 BLOG_AGENT_MASTER_KEY=<32_BYTE_BASE64_KEY>
 GOUNO_AI_WEBHOOK_SECRET=<32_BYTE_RANDOM_SECRET>
 ```
+
+Redis 启动时会创建只允许访问 `blog:*` 键空间的 `blog` ACL 用户。验证该用户
+不能执行 `SELECT 0` 后读取 GOSSO 键，且不能执行 `CONFIG`、`ACL` 等管理命令。
 
 ---
 

@@ -16,10 +16,10 @@
 }
 
 # Split-origin local development topology (.dev.local)
-https://sso.dev.local, https://sso.dev.local:8443, https://sso.local.test, https://sso.local.test:8443 {
+https://sso.dev.local:8443 {
 	tls /etc/caddy/certs/localhost.pem /etc/caddy/certs/localhost-key.pem
 	import security_headers
-	header Content-Security-Policy "default-src 'self'; base-uri 'self'; connect-src 'self'; font-src 'self' data: https://fonts.gstatic.com; form-action 'self' https://sso.dev.local https://sso.dev.local:8443 https://sso.local.test; frame-ancestors 'self'; img-src 'self' data: blob:; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com"
+	header Content-Security-Policy "default-src 'self'; base-uri 'self'; connect-src 'self'; font-src 'self' data: https://fonts.gstatic.com; form-action 'self' https://sso.dev.local:8443; frame-ancestors 'self'; img-src 'self' data: blob:; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com"
 
 	@identity_api path /.well-known/* /oauth2/* /oidc/* /api/v1/* /readiness
 	handle @identity_api {
@@ -39,10 +39,10 @@ https://sso.dev.local, https://sso.dev.local:8443, https://sso.local.test, https
 	}
 }
 
-https://blog.dev.local, https://blog.dev.local:8443, https://blog.local.test, https://blog.local.test:8443 {
+https://blog.dev.local:8443 {
 	tls /etc/caddy/certs/localhost.pem /etc/caddy/certs/localhost-key.pem
 	import security_headers
-	header Content-Security-Policy "default-src 'self'; base-uri 'self'; connect-src 'self'; font-src 'self' data: https://fonts.gstatic.com; form-action 'self' https://sso.dev.local https://sso.dev.local:8443 https://sso.local.test; frame-ancestors 'self'; img-src 'self' data: blob:; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com"
+	header Content-Security-Policy "default-src 'self'; base-uri 'self'; connect-src 'self'; font-src 'self' data: https://fonts.gstatic.com; form-action 'self' https://sso.dev.local:8443; frame-ancestors 'self'; img-src 'self' data: blob:; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com"
 
 	@blog_backend path /api/* /feed.xml /rss /sitemap.xml /media/* /swagger*
 	handle @blog_backend {
@@ -62,7 +62,7 @@ https://blog.dev.local, https://blog.dev.local:8443, https://blog.local.test, ht
 	}
 }
 
-https://cms.dev.local, https://cms.dev.local:8443, https://cms.local.test, https://cms.local.test:8443 {
+https://cms.dev.local:8443 {
 	tls /etc/caddy/certs/localhost.pem /etc/caddy/certs/localhost-key.pem
 	import security_headers
 	respond "CMS client is reserved but not deployed" 404

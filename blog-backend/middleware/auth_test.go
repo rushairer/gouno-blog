@@ -107,7 +107,7 @@ func TestAuthMiddlewareMissingHeaderReturnsUnauthorized(t *testing.T) {
 	}
 }
 
-func TestAuthMiddlewareWithoutRequiredRoleReturnsForbidden(t *testing.T) {
+func TestAuthMiddlewareRejectsBearerWithoutBFFSession(t *testing.T) {
 	router, token := setupAuthTestRouter(t, []string{"user"})
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/admin", nil)
@@ -115,15 +115,15 @@ func TestAuthMiddlewareWithoutRequiredRoleReturnsForbidden(t *testing.T) {
 
 	router.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusForbidden {
-		t.Fatalf("status = %d, want 403; body=%s", rec.Code, rec.Body.String())
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401; body=%s", rec.Code, rec.Body.String())
 	}
-	if body := rec.Body.String(); body == "" || !strings.Contains(body, "forbidden") || strings.Contains(body, "roles") {
-		t.Fatalf("forbidden response must stay generic, body=%s", body)
+	if body := rec.Body.String(); body == "" || !strings.Contains(body, "BFF session") || strings.Contains(body, "roles") {
+		t.Fatalf("Bearer rejection must stay generic, body=%s", body)
 	}
 }
 
-func TestAuthMiddlewareWithRequiredRoleAllowsRequest(t *testing.T) {
+func TestAuthMiddlewareDoesNotAcceptValidBearerToken(t *testing.T) {
 	router, token := setupAuthTestRouter(t, []string{"admin"})
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/admin", nil)
@@ -131,8 +131,8 @@ func TestAuthMiddlewareWithRequiredRoleAllowsRequest(t *testing.T) {
 
 	router.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusNoContent {
-		t.Fatalf("status = %d, want 204; body=%s", rec.Code, rec.Body.String())
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401; body=%s", rec.Code, rec.Body.String())
 	}
 }
 
@@ -188,8 +188,8 @@ func TestAuthMiddlewareRejectsTokenWithoutConfiguredAudience(t *testing.T) {
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d, want 401; body=%s", rec.Code, rec.Body.String())
 	}
-	if body := rec.Body.String(); !strings.Contains(body, "invalid or expired authentication") || strings.Contains(body, "audience") {
-		t.Fatalf("invalid token response must stay generic, body=%s", body)
+	if body := rec.Body.String(); !strings.Contains(body, "BFF session") || strings.Contains(body, "audience") {
+		t.Fatalf("Bearer rejection must not expose verification detail, body=%s", body)
 	}
 }
 
@@ -213,4 +213,3 @@ func TestAuthMiddlewareRejectsCookieAuthentication(t *testing.T) {
 		t.Fatalf("cookie was unexpectedly accepted by AuthMiddleware: status=%d", rec.Code)
 	}
 }
-
