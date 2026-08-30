@@ -5,15 +5,24 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.3.4] - 2026-08-30
+
+### Changed
+- Make the confidential Blog BFF client and split-domain callback endpoints the
+  only seed and source-override defaults.
+- State explicitly that the split-domain topology is permanent; remove the
+  obsolete identity-transition contingency runbook, ADR language, and CI gate.
+
+### Removed
+- Remove the retired identity-transition readiness checker.
+
 ## [1.3.3] - 2026-08-30
 
 ### Security
-- Retire the runnable shared-origin cluster deployment in favor of the distinct
-  local SSO, Blog, and CMS origins maintained by this distribution.
+- Retire the superseded deployment repository in favor of the distinct local
+  SSO, Blog, and CMS origins maintained by this distribution.
 
 ### Fixed
-- Make rollback validation require additive migration, immutable artifacts, and
-  verified recovery instead of a fixed legacy-stack coexistence period.
 - Align the production runbook with the required GOSSO TOTP key and verification
   pepper secret files.
 
@@ -29,7 +38,7 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 - **Read-Only Authorization Integrity Check**: Add `VerifyIntegrity` audit method to verify Blog principals, issuer aliases, active memberships, and role owner consistency without side effects (`internal/access/service.go`).
 
 ### Changed
-- **Local Compose and Caddy Alignment**: Align default `docker-compose.yml` and `Caddyfile` with the `.dev.local` split-identity topology, eliminating legacy single-origin and `/identity-admin` paths (`docker-compose.yml`, `Caddyfile`).
+- **Local Compose and Caddy Alignment**: Align default `docker-compose.yml` and `Caddyfile` with the `.dev.local` split-identity topology.
 
 ## [1.3.1] - 2026-08-30
 
@@ -51,9 +60,6 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 - **GET Logout CSRF Prevention**: GET `/oidc/logout` now shows a confirmation page; actual session logout only occurs via POST.
 - **Legacy Logout Session Isolation**: ID token hints without `sid` no longer trigger full account session revocation; the OP resolves the current session from the cookie and logs out only it.
 - **RFC 8707 Resource Enforcement**: Blog seed now persists `allowed_resources` to the database; the OP rejects `resource` requests from clients with no registered allowed resources.
-
-### Fixed
-- **Rollback Documentation**: Add database/Redis/secret backup, recovery verification, 10-minute rollback timing template, and browser compatibility matrix to the production deployment runbook.
 
 ## [1.2.1] - 2026-08-29
 
