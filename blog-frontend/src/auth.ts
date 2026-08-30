@@ -76,7 +76,7 @@ export const gossoClient = createGossoClient<BlogUserProfile>({
   storagePrefix: "gouno-blog",
   sessionMode: "cookie",
   sessionProfileEndpoint: "/api/me/blog-session",
-	  sessionRefreshEndpoint: "/api/auth/refresh",
+  sessionRefreshEndpoint: "/api/auth/refresh",
   authorizeEndpoint: "/api/auth/login",
   logoutEndpoint: "/api/auth/logout",
   csrfCookieName: "blog_csrf_token",
