@@ -62,7 +62,7 @@ PUBLIC_ORIGIN=https://sso.io84.com
 
 # 镜像版本（生产环境严格要求使用发布镜像的不可变 SHA-256 Digest，禁止使用浮动 tag 如 :main）
 GOSSO_IMAGE=ghcr.io/rushairer/gosso:v0.8.0@sha256:<GOSSO_DIGEST>
-GOSSO_ADMIN_FRONTEND_IMAGE=ghcr.io/rushairer/gosso-admin-frontend-identity-admin:v0.6.0@sha256:<ADMIN_FRONTEND_DIGEST>
+GOSSO_ADMIN_FRONTEND_IMAGE=ghcr.io/rushairer/gosso-admin-frontend:v0.6.0@sha256:<ADMIN_FRONTEND_DIGEST>
 GOSSO_ADMIN_SEED_IMAGE=ghcr.io/rushairer/gosso-admin-seed:v0.6.0@sha256:<ADMIN_SEED_DIGEST>
 GOUNO_BLOG_BACKEND_IMAGE=ghcr.io/rushairer/gouno-blog-backend:v1.0.0@sha256:<BLOG_BACKEND_DIGEST>
 GOUNO_BLOG_FRONTEND_IMAGE=ghcr.io/rushairer/gouno-blog-frontend:v1.0.0@sha256:<BLOG_FRONTEND_DIGEST>
