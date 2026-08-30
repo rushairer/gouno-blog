@@ -100,7 +100,7 @@ GOUNO_AI_WEBHOOK_SECRET=<32_BYTE_RANDOM_SECRET>
 
 ### 启动服务
 ```bash
-docker compose --env-file /opt/gouno-blog/.env.production -f docker-compose.production-split.yml up -d
+docker compose --env-file /opt/gouno-blog/.env.production -f docker-compose.production.yml up -d
 ```
 
 ### 自动化冒烟测试（Smoke Test）
@@ -117,32 +117,16 @@ curl -I "https://blog.io84.com/api/auth/login?return_to=/admin"
 
 ---
 
-## 5. 应急回滚手册（10 分钟切流恢复）
+## 5. 故障应急手册与恢复
 
-若上线过程中出现不可预期的严重异常，可随时执行 10 分钟回滚流程恢复至旧同源单域栈：
-
-### 5.1 回滚前置条件验证
+### 5.1 服务启停与维护
 
 ```bash
-# 验证 legacy 环境配置文件存在
-test -f /opt/gouno-blog/.env.legacy && echo "OK: .env.legacy exists" || echo "MISSING: .env.legacy"
+# 停止生产栈容器
+docker compose -f docker-compose.production.yml down
 
-# 验证 legacy 镜像仍然可用
-docker image inspect $(grep GOSSO_IMAGE /opt/gouno-blog/.env.legacy | cut -d= -f2) >/dev/null 2>&1 && echo "OK: gosso image" || echo "MISSING: gosso image"
-docker image inspect $(grep GOUNO_BLOG_BACKEND_IMAGE /opt/gouno-blog/.env.legacy | cut -d= -f2) >/dev/null 2>&1 && echo "OK: blog-backend image" || echo "MISSING: blog-backend image"
-
-# 验证旧版 Caddyfile 存在
-test -f /opt/gouno-blog/Caddyfile.production && echo "OK: Caddyfile.production exists" || echo "MISSING: Caddyfile.production"
-```
-
-### 5.2 回滚执行步骤
-
-```bash
-# 步骤 1: 停止拆分栈容器
-docker compose -f docker-compose.production-split.yml down
-
-# 步骤 2: 重新启动旧版生产单域栈
-docker compose --env-file /opt/gouno-blog/.env.legacy -f docker-compose.production.yml up -d
+# 重新启动生产栈
+docker compose --env-file /opt/gouno-blog/.env.production -f docker-compose.production.yml up -d
 
 # 步骤 3: 验证旧站点恢复
 curl -fsSL https://io84.com/api/auth/session

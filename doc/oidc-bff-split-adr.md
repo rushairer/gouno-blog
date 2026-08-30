@@ -50,6 +50,6 @@ Connect Core、RP-Initiated Logout 1.0 和 Back-Channel Logout 1.0 Final 为规�
 
 ## 本地拓扑门禁
 
-开发环境使用 `sso.local.test`、`blog.local.test`、`cms.local.test` 与受信任 HTTPS，
-以真实验证 host-only Cookie 和 origin 隔离。`Caddyfile.local-split` 是候选配置；
-在 BFF、GOSSO 标准能力和 Admin 根路径全部通过测试前，不替换当前默认本地入口。
+开发环境使用 `sso.dev.local` / `sso.local.test`、`blog.dev.local` / `blog.local.test`、`cms.dev.local` / `cms.local.test` 与受信任 HTTPS，
+以真实验证 host-only Cookie 和 origin 隔离。`Caddyfile` 与 `Caddyfile.production` 已全面作为标准默认配置固化。
+

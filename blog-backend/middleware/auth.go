@@ -15,12 +15,7 @@ type AuthOptions struct {
 	Issuer       string
 	Audience     string
 	ClientID     string
-	// AllowProviderCookie exists only for the time-bounded same-origin rollback
-	// stack. Split-origin BFF deployments must leave it false.
-	AllowProviderCookie bool
 }
-
-const accessTokenCookie = "__Host-access_token"
 
 func bearerToken(ctx *gin.Context) (string, bool) {
 	authHeader := ctx.GetHeader("Authorization")
@@ -32,19 +27,6 @@ func bearerToken(ctx *gin.Context) (string, bool) {
 		return "", false
 	}
 	return parts[1], true
-}
-
-// requestToken accepts an explicit Bearer token first, then the HttpOnly
-// browser-session cookie issued by Gosso. The cookie path is deliberately a
-// fallback so API clients retain standard OAuth behaviour.
-func requestToken(ctx *gin.Context) (string, bool) {
-	if token, ok := bearerToken(ctx); ok {
-		return token, true
-	}
-	if token, err := ctx.Cookie(accessTokenCookie); err == nil && token != "" {
-		return token, true
-	}
-	return "", false
 }
 
 func verifyToken(verifier *auth.Verifier, tokenStr string, options AuthOptions) (jwt.MapClaims, error) {
@@ -63,10 +45,7 @@ func setIdentity(ctx *gin.Context, claims jwt.MapClaims) {
 
 // OptionalAuth attaches verified identity when credentials are valid. Missing
 // credentials remain anonymous. An explicit Bearer token is an API client's
-// assertion and is therefore rejected when malformed or invalid. In contrast,
-// an expired browser-session cookie must not turn a public resource into a 401:
-// protected browser calls receive a 401 from AuthMiddleware and the SDK refreshes
-// the cookie session there, while public content remains readable anonymously.
+// assertion and is therefore rejected when malformed or invalid.
 func OptionalAuth(verifier *auth.Verifier, options AuthOptions) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		if _, verifiedByBFF := ctx.Get("claims"); verifiedByBFF {
@@ -74,33 +53,16 @@ func OptionalAuth(verifier *auth.Verifier, options AuthOptions) gin.HandlerFunc 
 			return
 		}
 		tokenStr, hasBearer := bearerToken(ctx)
-		if !hasBearer && options.AllowProviderCookie {
-			var err error
-			tokenStr, err = ctx.Cookie(accessTokenCookie)
-			if err != nil || tokenStr == "" {
-				ctx.Next()
-				return
-			}
+		if !hasBearer {
+			ctx.Next()
+			return
 		}
 		if tokenStr == "" {
-			if !options.AllowProviderCookie && !hasBearer {
-				ctx.Next()
-				return
-			}
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "invalid authorization format"))
 			return
 		}
-		verifyOpts := options
-		if !hasBearer {
-			verifyOpts.ClientID = ""
-			verifyOpts.Audience = ""
-		}
-		claims, err := verifyToken(verifier, tokenStr, verifyOpts)
+		claims, err := verifyToken(verifier, tokenStr, options)
 		if err != nil {
-			if !hasBearer {
-				ctx.Next()
-				return
-			}
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "invalid or expired authentication"))
 			return
 		}
@@ -134,29 +96,13 @@ func AuthMiddlewareWithOptions(verifier *auth.Verifier, options AuthOptions) gin
 
 		if claims == nil {
 			tokenStr, hasBearer := bearerToken(ctx)
-			if !hasBearer && options.AllowProviderCookie {
-				var err error
-				tokenStr, err = ctx.Cookie(accessTokenCookie)
-				if err != nil || tokenStr == "" {
-					ctx.AbortWithStatusJSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "missing authorization header"))
-					return
-				}
-			}
-			if tokenStr == "" {
+			if !hasBearer || tokenStr == "" {
 				ctx.AbortWithStatusJSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "missing authorization header"))
 				return
 			}
 
-			verifyOpts := options
-			if !hasBearer && options.AllowProviderCookie {
-				// For browser cookie sessions directly issued by Gosso to the browser,
-				// the token is a first-party session token without client_id / audience binding.
-				verifyOpts.ClientID = ""
-				verifyOpts.Audience = ""
-			}
-
 			var err error
-			claims, err = verifyToken(verifier, tokenStr, verifyOpts)
+			claims, err = verifyToken(verifier, tokenStr, options)
 			if err != nil {
 				// Signature, issuer, audience and expiry diagnostics are useful to the
 				// server log but must not become an oracle for unauthenticated callers.

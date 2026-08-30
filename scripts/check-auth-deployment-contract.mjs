@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 
 const required = new Map([
   [
-    "docker-compose.production-split.yml",
+    "docker-compose.production.yml",
     [
       "GOUNO_AUTH_LOGIN_URL: /login",
       "GOUNO_WEB_SERVER_TRUSTED_PROXIES: ${GOSSO_TRUSTED_PROXIES:?set GOSSO_TRUSTED_PROXIES}",
@@ -29,9 +29,8 @@ if (failures.length > 0) {
 }
 
 const forbidden = new Map([
-  ["Caddyfile", ["@legacy_login", "redir @legacy_login"]],
-  ["Caddyfile.audit", ["@legacy_login", "redir @legacy_login"]],
-  ["Caddyfile.local-split", ["Access-Control-Allow-Origin *", ".local.test Domain=", "identity-admin"]],
+  ["Caddyfile", ["@legacy_login", "redir @legacy_login", "Access-Control-Allow-Origin *", ".local.test Domain=", "identity-admin"]],
+  ["Caddyfile.production", ["@legacy_login", "redir @legacy_login", "Access-Control-Allow-Origin *", "Domain=", "identity-admin"]],
   ["blog-frontend/src/App.tsx", ['path="/login"', 'path="/callback"']],
 ]);
 
@@ -44,17 +43,17 @@ for (const [path, snippets] of forbidden) {
   }
 }
 
-const splitCaddy = await readFile("Caddyfile.local-split", "utf8");
+const localCaddy = await readFile("Caddyfile", "utf8");
 for (const hostname of ["sso.dev.local", "blog.dev.local", "cms.dev.local"]) {
-  if (!splitCaddy.includes(`https://${hostname}`)) {
-    throw new Error(`Caddyfile.local-split: missing distinct origin ${hostname}`);
+  if (!localCaddy.includes(`https://${hostname}`)) {
+    throw new Error(`Caddyfile: missing distinct origin ${hostname}`);
   }
 }
 
-const blogBlock = splitCaddy.split("https://blog.dev.local", 2)[1]?.split("https://cms.dev.local", 1)[0] ?? "";
+const blogBlock = localCaddy.split("https://blog.dev.local", 2)[1]?.split("https://cms.dev.local", 1)[0] ?? "";
 for (const identityPath of ["/.well-known", "/oauth2", "/oidc", "/api/v1"]) {
   if (blogBlock.includes(identityPath)) {
-    throw new Error(`Caddyfile.local-split: Blog must not proxy identity path ${identityPath}`);
+    throw new Error(`Caddyfile: Blog must not proxy identity path ${identityPath}`);
   }
 }
 

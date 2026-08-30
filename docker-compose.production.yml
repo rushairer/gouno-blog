@@ -212,7 +212,7 @@ services:
       - "${HTTPS_PORT:-443}:443"
     tmpfs: [/tmp]
     volumes:
-      - ./Caddyfile.production-split:/etc/caddy/Caddyfile:ro
+      - ./Caddyfile.production:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:

@@ -213,7 +213,7 @@ services:
       - "127.0.0.1:443:443"
       - "127.0.0.1:80:80"
     volumes:
-      - ./Caddyfile.local-split:/etc/caddy/Caddyfile:ro
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ${LOCAL_TLS_CERT_FILE:-./certs/localhost.pem}:/etc/caddy/certs/localhost.pem:ro
       - ${LOCAL_TLS_KEY_FILE:-./certs/localhost-key.pem}:/etc/caddy/certs/localhost-key.pem:ro
     depends_on:
