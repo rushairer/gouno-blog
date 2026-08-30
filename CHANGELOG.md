@@ -5,6 +5,18 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.3.3] - 2026-08-30
+
+### Security
+- Retire the runnable shared-origin cluster deployment in favor of the distinct
+  local SSO, Blog, and CMS origins maintained by this distribution.
+
+### Fixed
+- Make rollback validation require additive migration, immutable artifacts, and
+  verified recovery instead of a fixed legacy-stack coexistence period.
+- Align the production runbook with the required GOSSO TOTP key and verification
+  pepper secret files.
+
 ## [1.3.2] - 2026-08-30
 
 ### Security
@@ -88,7 +100,8 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 ### Added
 - Initial integrated Blog, Gosso, Admin, database, cache, and gateway distribution.
 
-[Unreleased]: https://github.com/rushairer/gouno-blog/compare/v1.3.2...HEAD
+[Unreleased]: https://github.com/rushairer/gouno-blog/compare/v1.3.3...HEAD
+[1.3.3]: https://github.com/rushairer/gouno-blog/compare/v1.3.2...v1.3.3
 [1.3.2]: https://github.com/rushairer/gouno-blog/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/rushairer/gouno-blog/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/rushairer/gouno-blog/compare/v1.2.1...v1.3.0

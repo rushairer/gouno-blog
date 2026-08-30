@@ -4,7 +4,8 @@
  * Verifies that the rollback safety commitments documented in the ADR
  * (doc/oidc-bff-split-adr.md) are enforced:
  *
- * 1. Old production stack must be retained for at least 14 days.
+ * 1. Rollback must be based on verified backups and immutable artifacts, not a
+ *    permanently retained legacy production stack or fixed coexistence window.
  * 2. Back-channel logout is configured (so old sessions can be invalidated).
  * 3. No "delete volume" or destructive cleanup in production compose.
  *
@@ -12,14 +13,19 @@
  */
 import { readFile } from "node:fs/promises";
 
-const MIN_RETENTION_DAYS = 14;
 const failures = [];
 
-// 1. ADR must mention 14-day retention.
+// 1. ADR must document additive migration and a verifiable rollback path.
 try {
   const adr = await readFile("doc/oidc-bff-split-adr.md", "utf8");
-  if (!adr.includes("14")) {
-    failures.push("ADR must document at least 14-day old stack retention.");
+  if (!adr.toLowerCase().includes("additive")) {
+    failures.push("ADR must document additive identity migration.");
+  }
+  if (!adr.includes("回滚") && !adr.toLowerCase().includes("rollback")) {
+    failures.push("ADR must document a verifiable rollback path.");
+  }
+  if (adr.includes("14 天") || adr.includes("14-day")) {
+    failures.push("ADR must not require a fixed legacy-stack coexistence period.");
   }
   if (!adr.includes("backchannel-logout") && !adr.includes("backchannel_logout")) {
     failures.push("ADR must document back-channel logout capability for rollback safety.");
@@ -78,4 +84,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log(`OK: Rollback readiness verified (${MIN_RETENTION_DAYS}-day retention, back-channel logout, no destructive ops).`);
+console.log("OK: Rollback readiness verified (additive migration, back-channel logout, no destructive ops).");
