@@ -38,10 +38,13 @@ Connect Core、RP-Initiated Logout 1.0 和 Back-Channel Logout 1.0 Final 为规�
 
 ## 迁移与回滚
 
-- issuer 从 `https://io84.com` 迁移到 `https://sso.io84.com` 时，只允许显式配置的
-  新旧 issuer 对；subject 必须完全一致。
+- issuer 从 `https://io84.com` 迁移到 `https://sso.io84.com` 时，身份键始终是
+  `(issuer, subject)`。即使 subject 文本相同，也不得自动合并；必须使用来自
+  GOSSO 权威账户映射的显式、一对一、可审计批准。
 - `blog_principal_identities` 以 additive 方式保存 identity alias。原
   `blog_principals.issuer/subject`、membership 和角色不改写、不删除。
+- 通过受控的本地 `identity-alias-approve` 操作创建 alias；每次操作记录批准人和
+  权威映射证据引用，冲突时原子失败。
 - WebAuthn RP ID 最终迁移为 `sso.io84.com`。旧 credential 保留，用户在密码/MFA
   验证后重新注册 Passkey。
 - 旧生产栈保留至少 14 天；全局退出只结束当前中心 SSO session。“退出所有设备”
@@ -52,4 +55,3 @@ Connect Core、RP-Initiated Logout 1.0 和 Back-Channel Logout 1.0 Final 为规�
 
 开发环境使用 `sso.dev.local` / `sso.local.test`、`blog.dev.local` / `blog.local.test`、`cms.dev.local` / `cms.local.test` 与受信任 HTTPS，
 以真实验证 host-only Cookie 和 origin 隔离。`Caddyfile` 与 `Caddyfile.production` 已全面作为标准默认配置固化。
-
