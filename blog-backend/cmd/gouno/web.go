@@ -263,7 +263,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 	var agentCtrl *controller.AgentController
 	if cfg.Global.AIAgentConfig.Enabled {
 		secrets, err := secretbox.NewKeyring(
-			os.Getenv("BLOG_AGENT_MASTER_KEY"),
+			readSecretFromFileOrEnv(os.Getenv("BLOG_AGENT_MASTER_KEY_FILE"), os.Getenv("BLOG_AGENT_MASTER_KEY")),
 			os.Getenv("BLOG_AGENT_MASTER_KEY_VERSION"),
 			os.Getenv("BLOG_AGENT_PREVIOUS_MASTER_KEYS"),
 		)

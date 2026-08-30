@@ -53,13 +53,9 @@ services:
       GOUNO_REDIS_DSN: ${GOSSO_REDIS_DSN:?set GOSSO_REDIS_DSN}
       GOUNO_AUTH_ISSUER: https://${SSO_DOMAIN:?set SSO_DOMAIN}
       GOUNO_AUTH_LOGIN_URL: /login
-      GOUNO_AUTH_PASSWORD_RESET_BASE_URL: https://${SSO_DOMAIN:?set SSO_DOMAIN}/reset-password
       GOUNO_AUTH_PRIVATE_KEY_PATH: /run/secrets/gosso_signing_key
-      # GOSSO currently accepts these two startup keys only as environment
-      # values. The external operations environment injects them at runtime;
-      # they are intentionally absent from this repository.
-      GOUNO_AUTH_TOTP_ENCRYPTION_KEY: ${GOSSO_TOTP_KEY:?set through the external secret provider}
-      GOUNO_AUTH_VERIFY_HASH_PEPPER: ${GOSSO_VERIFY_PEPPER:?set through the external secret provider}
+      GOUNO_AUTH_TOTP_ENCRYPTION_KEY_PATH: /run/secrets/gosso_totp_key
+      GOUNO_AUTH_VERIFY_HASH_PEPPER_PATH: /run/secrets/gosso_verify_pepper
       GOUNO_AUTH_WEBAUTHN_RP_ID: ${SSO_DOMAIN:?set SSO_DOMAIN}
       GOUNO_AUTH_WEBAUTHN_RP_NAME: ${WEBAUTHN_RP_NAME:-SSO}
       GOUNO_AUTH_WEBAUTHN_RP_ORIGIN: https://${SSO_DOMAIN:?set SSO_DOMAIN}
@@ -75,6 +71,8 @@ services:
       GOUNO_WEB_SERVER_TRUSTED_PROXIES: ${GOSSO_TRUSTED_PROXIES:?set GOSSO_TRUSTED_PROXIES}
     secrets:
       - gosso_signing_key
+      - gosso_totp_key
+      - gosso_verify_pepper
     depends_on:
       db: {condition: service_healthy}
       redis: {condition: service_healthy}
@@ -171,13 +169,14 @@ services:
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       GOUNO_AI_AGENTS_ENABLED: ${GOUNO_AI_AGENTS_ENABLED:-true}
-      BLOG_AGENT_MASTER_KEY: ${BLOG_AGENT_MASTER_KEY:?set 32-byte base64 key}
+      BLOG_AGENT_MASTER_KEY_FILE: /run/secrets/blog_agent_master_key
       BLOG_AGENT_MASTER_KEY_VERSION: ${BLOG_AGENT_MASTER_KEY_VERSION:-1}
       BLOG_AGENT_PREVIOUS_MASTER_KEYS: ${BLOG_AGENT_PREVIOUS_MASTER_KEYS:-}
       GOUNO_AI_WEBHOOK_SECRET: ${GOUNO_AI_WEBHOOK_SECRET:?set GOUNO_AI_WEBHOOK_SECRET}
     secrets:
       - blog_bff_tink_keyset
       - blog_oauth_client_secret
+      - blog_agent_master_key
     volumes:
       - blog_media:/app/data/media
     healthcheck:
@@ -225,10 +224,16 @@ services:
 secrets:
   gosso_signing_key:
     file: ${GOSSO_SIGNING_KEY_FILE:?set GOSSO_SIGNING_KEY_FILE}
+  gosso_totp_key:
+    file: ${GOSSO_TOTP_KEY_FILE:?set GOSSO_TOTP_KEY_FILE}
+  gosso_verify_pepper:
+    file: ${GOSSO_VERIFY_PEPPER_FILE:?set GOSSO_VERIFY_PEPPER_FILE}
   blog_bff_tink_keyset:
     file: ${BLOG_BFF_TINK_KEYSET_FILE:?set BLOG_BFF_TINK_KEYSET_FILE}
   blog_oauth_client_secret:
     file: ${BLOG_OAUTH_CLIENT_SECRET_FILE:?set BLOG_OAUTH_CLIENT_SECRET_FILE}
+  blog_agent_master_key:
+    file: ${BLOG_AGENT_MASTER_KEY_FILE:?set BLOG_AGENT_MASTER_KEY_FILE}
 
 volumes:
   db_data:
