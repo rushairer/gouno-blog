@@ -61,6 +61,7 @@ services:
       - GOUNO_AUTH_WEBAUTHN_RP_ID=${GOUNO_AUTH_WEBAUTHN_RP_ID:-sso.dev.local}
       - GOUNO_AUTH_WEBAUTHN_RP_NAME=gouno-sso-dev
       - GOUNO_AUTH_WEBAUTHN_RP_ORIGIN=https://sso.dev.local
+      - GOUNO_AUTH_BACKCHANNEL_ALLOWED_CIDRS=${GOSSO_BACKCHANNEL_ALLOWED_CIDRS:-172.21.0.0/16,127.0.0.1/32}
     volumes:
       - ./keys:/app/keys
     depends_on:
