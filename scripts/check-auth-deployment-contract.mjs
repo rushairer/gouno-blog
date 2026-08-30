@@ -2,10 +2,10 @@ import { readFile } from "node:fs/promises";
 
 const required = new Map([
   [
-    "docker-compose.production.yml",
+    "docker-compose.production-split.yml",
     [
-      "GOUNO_AUTH_LOGIN_URL: /identity-admin/login",
-      "GOUNO_WEB_SERVER_TRUSTED_PROXIES: ${GOSSO_TRUSTED_PROXIES:?set an exact comma-separated CIDR list}",
+      "GOUNO_AUTH_LOGIN_URL: /login",
+      "GOUNO_WEB_SERVER_TRUSTED_PROXIES: ${GOSSO_TRUSTED_PROXIES:?set GOSSO_TRUSTED_PROXIES}",
     ],
   ],
   [

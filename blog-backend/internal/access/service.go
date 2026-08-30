@@ -38,10 +38,6 @@ var ErrSelfEscalation = errors.New("cannot grant owner to yourself")
 
 type Bootstrap struct {
 	Issuer, Subject string
-	// IssuerMigrations maps a newly trusted issuer to its explicitly approved
-	// predecessor. The subject must remain byte-for-byte identical. This is a
-	// deployment migration allowlist, never a general account-linking mechanism.
-	IssuerMigrations map[string]string
 }
 
 type Principal struct {
@@ -123,18 +119,6 @@ FOR UPDATE OF p`, identityIssuer, subject).Scan(&p.ID, &p.Issuer, &p.Subject, &p
 	}
 
 	err := load(issuer)
-	if errors.Is(err, sql.ErrNoRows) {
-		legacyIssuer := strings.TrimSpace(s.bootstrap.IssuerMigrations[issuer])
-		if legacyIssuer != "" && legacyIssuer != issuer {
-			err = load(legacyIssuer)
-			if err == nil {
-				if _, err = tx.ExecContext(ctx, `INSERT INTO blog_principal_identities (principal_id,issuer,subject)
-VALUES ($1,$2,$3) ON CONFLICT (issuer,subject) DO NOTHING`, p.ID, issuer, subject); err != nil {
-					return Principal{}, err
-				}
-			}
-		}
-	}
 	if errors.Is(err, sql.ErrNoRows) {
 		err = tx.QueryRowContext(ctx, `INSERT INTO blog_principals (issuer,subject,display_name,email,avatar_url)
 VALUES ($1,$2,$3,$4,$5)

@@ -40,7 +40,7 @@ Gouno Blog 是一个构建于 GoUno 与 GOSSO 的开源、自托管博客运营�
 ├── retrospective.md           # 前后端 SSO 集成开发指南与最佳实践
 ├── docker-compose.yml         # 镜像化本地集群编排配置
 ├── docker-compose.source.yml  # 本地源码构建 override
-├── docker-compose.production.yml # 生产部署编排配置
+├── docker-compose.production-split.yml # 无密生产部署模板
 ├── Caddyfile                  # Caddy HTTPS 反向代理配置
 ├── doc/                       # 架构边界、AI 工作台和发布记录
 ├── init.sql                   # 数据库初始化脚本
@@ -241,7 +241,7 @@ export BLOG_AGENT_PREVIOUS_MASTER_KEYS="1:<old-base64-key>"
 ## 开发与生产部署边界
 
 根目录 `docker-compose.yml` 仅用于本地开发，其中的固定凭据和浮动
-`main` 镜像不得用于生产。生产部署使用 `docker-compose.production.yml`，
+`main` 镜像不得用于生产。生产部署使用 `docker-compose.production-split.yml`，
 所有应用与第三方镜像都必须以 `version@sha256:digest` 提供，所有密码、
 签名密钥、TOTP key、pepper、数据库 DSN 和 Agent key 都必须显式设置。
 

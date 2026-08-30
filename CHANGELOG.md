@@ -5,6 +5,16 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-08-30
+
+### Changed
+- Move legacy issuer preservation to an additive database alias migration; runtime Blog authorization accepts only the configured SSO issuer.
+- Route RP-initiated logout through a same-origin callback that consumes the one-time logout state.
+
+### Security
+- Refresh expiring BFF OAuth sessions only on the server and clear invalid sessions before application authorization runs.
+- Validate every declared production Compose image reference for digest pinning, including interpolated values.
+
 ### Security
 - **Logout URI SSRF/XSS Prevention**: Validate front-channel and back-channel logout URIs at registration/update time (HTTPS-only, no loopback/private IPs, no fragments/credentials). HTML-escape front-channel iframe URIs to prevent stored XSS.
 - **GET Logout CSRF Prevention**: GET `/oidc/logout` now shows a confirmation page; actual session logout only occurs via POST.

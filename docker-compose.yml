@@ -137,7 +137,6 @@ services:
       - SSO_CLIENT_ID=${SSO_CLIENT_ID:-blog-spa}
       - BLOG_BOOTSTRAP_OWNER_ISSUER=${BLOG_BOOTSTRAP_OWNER_ISSUER:-https://localhost:8443}
       - BLOG_BOOTSTRAP_OWNER_SUBJECT=${BLOG_BOOTSTRAP_OWNER_SUBJECT:-c6ac32f3-3c48-46b5-bae8-f17c17116dc5}
-      - BLOG_IDENTITY_ISSUER_MIGRATIONS=${BLOG_IDENTITY_ISSUER_MIGRATIONS:-{"https://sso.dev.local":"https://localhost:8443"}}
       # The split-origin profile enables these only after a confidential client
       # and Tink keyset have been provisioned. The legacy local stack remains
       # operational while the BFF tests are under construction.
@@ -146,7 +145,7 @@ services:
       - BLOG_OIDC_CLIENT_ID=${BLOG_OIDC_CLIENT_ID:-}
       - BLOG_OIDC_CLIENT_SECRET=${BLOG_OIDC_CLIENT_SECRET:-}
       - BLOG_OIDC_REDIRECT_URL=${BLOG_OIDC_REDIRECT_URL:-https://blog.dev.local/api/auth/callback}
-      - BLOG_OIDC_POST_LOGOUT_URL=${BLOG_OIDC_POST_LOGOUT_URL:-https://blog.dev.local/}
+      - BLOG_OIDC_POST_LOGOUT_URL=${BLOG_OIDC_POST_LOGOUT_URL:-https://blog.dev.local/api/auth/logout/callback}
       - BLOG_OIDC_RESOURCE=${BLOG_OIDC_RESOURCE:-https://blog.dev.local/api}
       - BLOG_OIDC_SCOPES=${BLOG_OIDC_SCOPES:-openid profile email}
       - BLOG_BFF_TINK_KEYSET_PATH=${BLOG_BFF_TINK_KEYSET_PATH:-/run/secrets/blog-bff-tink.json}
