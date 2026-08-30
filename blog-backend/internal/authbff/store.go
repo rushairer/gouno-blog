@@ -90,19 +90,28 @@ func (s *Store) PutSession(ctx context.Context, handle string, session Session, 
 	if handle == "" || session.Issuer == "" || session.Subject == "" || session.IDToken == "" || ttl <= 0 {
 		return errors.New("complete session and positive TTL are required")
 	}
-	if err := s.put(ctx, "session", handle, session, ttl, false); err != nil {
+	plain, err := json.Marshal(session)
+	if err != nil {
+		return err
+	}
+	key, aad := s.key("session", handle)
+	sealed, err := s.aead.Encrypt(plain, aad)
+	if err != nil {
 		return err
 	}
 	subKey := s.prefix + ":idx:sub:" + session.Subject
-	_ = s.redis.SAdd(ctx, subKey, handle).Err()
-	_ = s.redis.Expire(ctx, subKey, ttl).Err()
-
-	if session.SID != "" {
-		sidKey := s.prefix + ":idx:sid:" + session.SID
-		_ = s.redis.SAdd(ctx, sidKey, handle).Err()
-		_ = s.redis.Expire(ctx, sidKey, ttl).Err()
-	}
-	return nil
+	_, err = s.redis.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
+		pipe.Set(ctx, key, sealed, ttl)
+		pipe.SAdd(ctx, subKey, handle)
+		pipe.Expire(ctx, subKey, ttl)
+		if session.SID != "" {
+			sidKey := s.prefix + ":idx:sid:" + session.SID
+			pipe.SAdd(ctx, sidKey, handle)
+			pipe.Expire(ctx, sidKey, ttl)
+		}
+		return nil
+	})
+	return err
 }
 
 func (s *Store) GetSession(ctx context.Context, handle string) (Session, error) {
@@ -145,10 +154,11 @@ func (s *Store) DeleteBySubject(ctx context.Context, sub string) error {
 		return err
 	}
 	for _, handle := range handles {
-		_ = s.DeleteSession(ctx, handle)
+		if err := s.DeleteSession(ctx, handle); err != nil {
+			return err
+		}
 	}
-	_ = s.redis.Del(ctx, subKey)
-	return nil
+	return s.redis.Del(ctx, subKey).Err()
 }
 
 func (s *Store) DeleteBySID(ctx context.Context, sid string) error {
@@ -161,24 +171,32 @@ func (s *Store) DeleteBySID(ctx context.Context, sid string) error {
 		return err
 	}
 	for _, handle := range handles {
-		_ = s.DeleteSession(ctx, handle)
+		if err := s.DeleteSession(ctx, handle); err != nil {
+			return err
+		}
 	}
-	_ = s.redis.Del(ctx, sidKey)
-	return nil
+	return s.redis.Del(ctx, sidKey).Err()
 }
 
-// CheckAndMarkLogoutTokenReplay atomically sets a replay marker for the given jti.
-// Returns true if the token is new (not replayed), false if it has already been seen.
-func (s *Store) CheckAndMarkLogoutTokenReplay(ctx context.Context, jti string, ttl time.Duration) (bool, error) {
+func (s *Store) IsLogoutTokenProcessed(ctx context.Context, jti string) (bool, error) {
 	if jti == "" {
 		return false, errors.New("jti is required")
 	}
 	key := s.prefix + ":replay:logout:" + jti
-	ok, err := s.redis.SetNX(ctx, key, "1", ttl).Result()
+	exists, err := s.redis.Exists(ctx, key).Result()
 	if err != nil {
 		return false, err
 	}
-	return ok, nil
+	return exists > 0, nil
+}
+
+// MarkLogoutTokenProcessed records a replay marker after logout side effects succeed.
+func (s *Store) MarkLogoutTokenProcessed(ctx context.Context, jti string, ttl time.Duration) error {
+	if jti == "" {
+		return errors.New("jti is required")
+	}
+	key := s.prefix + ":replay:logout:" + jti
+	return s.redis.Set(ctx, key, "1", ttl).Err()
 }
 
 // PutLogoutState stores a logout state nonce for CSRF protection on

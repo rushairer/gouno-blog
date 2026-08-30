@@ -364,7 +364,8 @@ func (c *Client) BackChannelLogout(ctx context.Context, rawLogoutToken string) e
 		return errors.New("logout token must contain sid or sub")
 	}
 
-	// Replay protection using Redis SETNX with TTL
+	// Replay protection is committed only after session deletion succeeds. A
+	// duplicate delivery of an already-processed logout token is idempotent.
 	replayTTL := 24 * time.Hour
 	if claims.ExpiresAt > 0 {
 		expTime := time.Unix(claims.ExpiresAt, 0)
@@ -372,21 +373,26 @@ func (c *Client) BackChannelLogout(ctx context.Context, rawLogoutToken string) e
 			replayTTL = rem
 		}
 	}
-	ok, err := c.store.CheckAndMarkLogoutTokenReplay(ctx, claims.JWTID, replayTTL)
+	processed, err := c.store.IsLogoutTokenProcessed(ctx, claims.JWTID)
 	if err != nil {
 		return fmt.Errorf("check logout token replay: %w", err)
 	}
-	if !ok {
-		return errors.New("logout token has already been processed")
+	if processed {
+		return nil
 	}
 
 	// If SID is present, isolate logout to that specific session only.
 	if claims.SID != "" {
-		return c.store.DeleteBySID(ctx, claims.SID)
+		err = c.store.DeleteBySID(ctx, claims.SID)
+	} else if claims.Subject != "" {
+		// Otherwise fallback to revoking all sessions for the subject.
+		err = c.store.DeleteBySubject(ctx, claims.Subject)
 	}
-	// Otherwise fallback to revoking all sessions for the subject.
-	if claims.Subject != "" {
-		return c.store.DeleteBySubject(ctx, claims.Subject)
+	if err != nil {
+		return err
+	}
+	if err := c.store.MarkLogoutTokenProcessed(ctx, claims.JWTID, replayTTL); err != nil {
+		return fmt.Errorf("mark logout token processed: %w", err)
 	}
 	return nil
 }
