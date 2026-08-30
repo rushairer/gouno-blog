@@ -30,7 +30,7 @@ try {
 
 // 2. Production compose must not contain destructive volume operations.
 const prodComposeFiles = [
-  "docker-compose.production-split.yml",
+  "docker-compose.production.yml",
 ];
 for (const file of prodComposeFiles) {
   let content;

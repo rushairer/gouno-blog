@@ -247,9 +247,6 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 	} else if parseErr != nil && os.Getenv("BLOG_BFF_ENABLED") != "" {
 		log.Fatalf("BLOG_BFF_ENABLED must be a boolean: %v", parseErr)
 	}
-	// Only the explicit legacy mode may accept the identity provider's browser
-	// cookie. The split-origin BFF accepts its own opaque session cookie instead.
-	cfg.AuthOptions.AllowProviderCookie = bffClient == nil
 
 	transactor := repository.NewTransactor(cfg.DB, cfg.Logger)
 	postRepo := repository.NewPostRepository(cfg.DB)

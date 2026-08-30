@@ -11,7 +11,7 @@
 import { readFile } from "node:fs/promises";
 
 const COMPOSE_FILES = [
-  "docker-compose.production-split.yml",
+  "docker-compose.production.yml",
 ];
 
 // Capture the complete YAML scalar, including Compose interpolation messages

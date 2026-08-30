@@ -51,15 +51,15 @@ func setupAuthTestRouter(t *testing.T, roles []string) (*gin.Engine, string) {
 
 	router := gin.New()
 	router.GET("/admin", AuthMiddlewareWithOptions(verifier, AuthOptions{
-		RequiredRole: "admin", AllowProviderCookie: true,
-		Issuer:   "test-issuer",
-		Audience: "test-audience",
-		ClientID: "test-client-id",
+		RequiredRole: "admin",
+		Issuer:       "test-issuer",
+		Audience:     "test-audience",
+		ClientID:     "test-client-id",
 	}), func(ctx *gin.Context) {
 		ctx.Status(http.StatusNoContent)
 	})
 	router.GET("/optional", OptionalAuth(verifier, AuthOptions{
-		Issuer: "test-issuer", Audience: "test-audience", ClientID: "test-client-id", AllowProviderCookie: true,
+		Issuer: "test-issuer", Audience: "test-audience", ClientID: "test-client-id",
 	}), func(ctx *gin.Context) {
 		if subject, _ := ctx.Get("account_id"); subject == "user-1" {
 			ctx.Status(http.StatusNoContent)
@@ -68,7 +68,7 @@ func setupAuthTestRouter(t *testing.T, roles []string) (*gin.Engine, string) {
 		ctx.Status(http.StatusUnauthorized)
 	})
 	router.GET("/optional-anonymous", OptionalAuth(verifier, AuthOptions{
-		Issuer: "test-issuer", Audience: "test-audience", ClientID: "test-client-id", AllowProviderCookie: true,
+		Issuer: "test-issuer", Audience: "test-audience", ClientID: "test-client-id",
 	}), func(ctx *gin.Context) {
 		if _, authenticated := ctx.Get("account_id"); authenticated {
 			ctx.Status(http.StatusInternalServerError)
@@ -136,11 +136,25 @@ func TestAuthMiddlewareWithRequiredRoleAllowsRequest(t *testing.T) {
 	}
 }
 
-func TestAuthMiddlewareAcceptsHostCookieSession(t *testing.T) {
-	router, token := setupAuthTestRouter(t, []string{"admin"})
+func TestAuthMiddlewareAcceptsPreAttachedBFFClaims(t *testing.T) {
+	router, _ := setupAuthTestRouter(t, []string{"admin"})
+	router.GET("/admin-bff", func(ctx *gin.Context) {
+		ctx.Set("claims", jwt.MapClaims{
+			"sub":   "user-bff-1",
+			"roles": []any{"admin"},
+		})
+		ctx.Next()
+	}, AuthMiddlewareWithOptions(auth.NewVerifier("http://127.0.0.1:1/jwks"), AuthOptions{
+		RequiredRole: "admin",
+		Issuer:       "test-issuer",
+		Audience:     "test-audience",
+		ClientID:     "test-client-id",
+	}), func(ctx *gin.Context) {
+		ctx.Status(http.StatusNoContent)
+	})
+
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/admin", nil)
-	req.AddCookie(&http.Cookie{Name: "__Host-access_token", Value: token})
+	req := httptest.NewRequest(http.MethodGet, "/admin-bff", nil)
 	router.ServeHTTP(rec, req)
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("status = %d, want 204; body=%s", rec.Code, rec.Body.String())
@@ -165,7 +179,7 @@ func TestAuthMiddlewareRejectsTokenWithoutConfiguredAudience(t *testing.T) {
 
 	router := gin.New()
 	router.GET("/admin", AuthMiddlewareWithOptions(verifier, AuthOptions{
-		RequiredRole: "admin", Issuer: "test-issuer", Audience: "test-audience", ClientID: "test-client-id", AllowProviderCookie: true,
+		RequiredRole: "admin", Issuer: "test-issuer", Audience: "test-audience", ClientID: "test-client-id",
 	}), func(ctx *gin.Context) { ctx.Status(http.StatusNoContent) })
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/admin", nil)
@@ -179,86 +193,24 @@ func TestAuthMiddlewareRejectsTokenWithoutConfiguredAudience(t *testing.T) {
 	}
 }
 
-func TestOptionalAuthAttachesIdentityFromHostCookieSession(t *testing.T) {
-	router, token := setupAuthTestRouter(t, []string{"admin"})
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/optional", nil)
-	req.AddCookie(&http.Cookie{Name: "__Host-access_token", Value: token})
-	router.ServeHTTP(rec, req)
-	if rec.Code != http.StatusNoContent {
-		t.Fatalf("status = %d, want 204; body=%s", rec.Code, rec.Body.String())
-	}
-}
-
-func TestOptionalAuthIgnoresExpiredHostCookieForPublicRoutes(t *testing.T) {
+func TestOptionalAuthIgnoresAnonymousRequests(t *testing.T) {
 	router, _ := setupAuthTestRouter(t, []string{"admin"})
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/optional-anonymous", nil)
-	req.AddCookie(&http.Cookie{Name: "__Host-access_token", Value: "expired-or-invalid"})
 	router.ServeHTTP(rec, req)
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("status = %d, want 204 for anonymous public request; body=%s", rec.Code, rec.Body.String())
 	}
 }
 
-func TestAuthMiddlewareAttachesIdentityFromHostCookieSessionWithoutClientID(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatal(err)
-	}
-	verifier := auth.NewVerifier(serveJWKS(t, &privateKey.PublicKey).URL)
-
-	// Direct user browser session token issued by Gosso (without client_id or aud)
-	cookieToken := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
-		"sub":   "user-cookie-1",
-		"roles": []string{"admin"},
-		"iss":   "test-issuer",
-		"exp":   time.Now().Add(time.Hour).Unix(),
-	})
-	cookieToken.Header["kid"] = "test-key"
-	cookieTokenStr, err := cookieToken.SignedString(privateKey)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	router := gin.New()
-	router.GET("/admin", AuthMiddlewareWithOptions(verifier, AuthOptions{
-		RequiredRole:        "admin",
-		Issuer:              "test-issuer",
-		Audience:            "blog-spa",
-		ClientID:            "blog-spa",
-		AllowProviderCookie: true,
-	}), func(ctx *gin.Context) {
-		if sub, _ := ctx.Get("account_id"); sub == "user-cookie-1" {
-			ctx.Status(http.StatusNoContent)
-			return
-		}
-		ctx.Status(http.StatusUnauthorized)
-	})
-
+func TestAuthMiddlewareRejectsCookieAuthentication(t *testing.T) {
+	router, token := setupAuthTestRouter(t, []string{"admin"})
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/admin", nil)
-	req.AddCookie(&http.Cookie{Name: "__Host-access_token", Value: cookieTokenStr})
-	router.ServeHTTP(rec, req)
-	if rec.Code != http.StatusNoContent {
-		t.Fatalf("status = %d, want 204; body=%s", rec.Code, rec.Body.String())
-	}
-}
-
-func TestBFFModeRejectsIdentityProviderCookie(t *testing.T) {
-	router, token := setupAuthTestRouter(t, []string{"admin"})
-	// Register a separate route whose options intentionally leave the legacy
-	// provider-cookie switch disabled.
-	verifier := auth.NewVerifier("http://127.0.0.1:1/jwks")
-	router.GET("/bff-only", AuthMiddlewareWithOptions(verifier, AuthOptions{
-		Issuer: "test-issuer", Audience: "test-audience", ClientID: "test-client-id",
-	}), func(ctx *gin.Context) { ctx.Status(http.StatusNoContent) })
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/bff-only", nil)
 	req.AddCookie(&http.Cookie{Name: "__Host-access_token", Value: token})
 	router.ServeHTTP(rec, req)
 	if rec.Code != http.StatusUnauthorized {
-		t.Fatalf("provider cookie was accepted in BFF mode: status=%d", rec.Code)
+		t.Fatalf("cookie was unexpectedly accepted by AuthMiddleware: status=%d", rec.Code)
 	}
 }
+
