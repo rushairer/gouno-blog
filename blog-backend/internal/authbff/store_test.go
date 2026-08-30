@@ -184,3 +184,37 @@ func TestLogoutTokenReplayProtection(t *testing.T) {
 		t.Fatalf("distinct jti should remain unprocessed: processed=%v, err=%v", processed, err)
 	}
 }
+
+func TestStoreRefreshLock(t *testing.T) {
+	store, _ := testStore(t)
+	ctx := context.Background()
+
+	handle := "session-lock-test"
+	owner1, acquired1, err := store.AcquireRefreshLock(ctx, handle, 5*time.Second)
+	if err != nil || !acquired1 || owner1 == "" {
+		t.Fatalf("first lock acquire failed: owner=%s, acquired=%v, err=%v", owner1, acquired1, err)
+	}
+
+	owner2, acquired2, err := store.AcquireRefreshLock(ctx, handle, 5*time.Second)
+	if err != nil || acquired2 {
+		t.Fatalf("second concurrent lock acquire must fail: owner=%s, acquired=%v, err=%v", owner2, acquired2, err)
+	}
+
+	// Release with wrong owner should not release lock
+	if err := store.ReleaseRefreshLock(ctx, handle, "wrong-owner"); err != nil {
+		t.Fatalf("release with wrong owner error: %v", err)
+	}
+	_, acquired3, err := store.AcquireRefreshLock(ctx, handle, 5*time.Second)
+	if err != nil || acquired3 {
+		t.Fatalf("lock must still be held after invalid release: acquired=%v", acquired3)
+	}
+
+	// Release with correct owner
+	if err := store.ReleaseRefreshLock(ctx, handle, owner1); err != nil {
+		t.Fatalf("release lock error: %v", err)
+	}
+	owner4, acquired4, err := store.AcquireRefreshLock(ctx, handle, 5*time.Second)
+	if err != nil || !acquired4 || owner4 == "" {
+		t.Fatalf("lock acquire after release failed: owner=%s, acquired=%v, err=%v", owner4, acquired4, err)
+	}
+}
