@@ -2,6 +2,7 @@ package authbff
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -13,6 +14,7 @@ func (c *Client) RegisterRoutes(router gin.IRouter) {
 	router.GET("/api/auth/me", c.meHandler)
 	router.POST("/api/auth/refresh", c.refreshHandler)
 	router.POST("/api/auth/logout", c.logoutHandler)
+	router.GET("/api/auth/logout/callback", c.logoutCallbackHandler)
 	router.POST("/api/auth/backchannel-logout", c.backchannelLogoutHandler)
 }
 
@@ -32,6 +34,15 @@ func (c *Client) SessionMiddleware() gin.HandlerFunc {
 			ctx.Next()
 			return
 		}
+		if !session.TokenExpiry.IsZero() && session.TokenExpiry.Before(time.Now().Add(30*time.Second)) {
+			session, err = c.Refresh(ctx.Request.Context(), handle)
+			if err != nil {
+				_ = c.store.DeleteSession(ctx.Request.Context(), handle)
+				clearHostCookie(ctx, c.config.SessionCookie, http.SameSiteStrictMode)
+				ctx.Next()
+				return
+			}
+		}
 		claims := jwt.MapClaims(session.Claims)
 		claims["iss"], claims["sub"] = session.Issuer, session.Subject
 		claims["sid"], claims["auth_time"], claims["amr"] = session.SID, session.AuthTime, session.AMR
@@ -40,6 +51,15 @@ func (c *Client) SessionMiddleware() gin.HandlerFunc {
 		ctx.Set("blog_bff_session_id", handle)
 		ctx.Next()
 	}
+}
+
+func (c *Client) logoutCallbackHandler(ctx *gin.Context) {
+	ctx.Header("Cache-Control", "no-store")
+	if err := c.store.TakeLogoutState(ctx.Request.Context(), ctx.Query("state")); err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid logout state"})
+		return
+	}
+	ctx.Redirect(http.StatusSeeOther, "/")
 }
 
 func (c *Client) loginHandler(ctx *gin.Context) {

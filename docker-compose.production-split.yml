@@ -1,4 +1,4 @@
-name: gouno-blog-production-split
+name: ${COMPOSE_PROJECT_NAME:?set COMPOSE_PROJECT_NAME in the external operations environment}
 
 x-hardened: &hardened
   restart: unless-stopped
@@ -51,24 +51,27 @@ services:
       GOUNO_DATABASE_DEFAULT: postgres
       GOUNO_DATABASE_DRIVERS_POSTGRES_DSN: ${GOSSO_DATABASE_DSN:?set GOSSO_DATABASE_DSN}
       GOUNO_REDIS_DSN: ${GOSSO_REDIS_DSN:?set GOSSO_REDIS_DSN}
-      GOUNO_AUTH_ISSUER: https://${SSO_DOMAIN:-sso.io84.com}
+      GOUNO_AUTH_ISSUER: https://${SSO_DOMAIN:?set SSO_DOMAIN}
       GOUNO_AUTH_LOGIN_URL: /login
-      GOUNO_AUTH_PASSWORD_RESET_BASE_URL: https://${SSO_DOMAIN:-sso.io84.com}/reset-password
+      GOUNO_AUTH_PASSWORD_RESET_BASE_URL: https://${SSO_DOMAIN:?set SSO_DOMAIN}/reset-password
       GOUNO_AUTH_PRIVATE_KEY_PATH: /run/secrets/gosso_signing_key
-      GOUNO_AUTH_TOTP_ENCRYPTION_KEY: ${GOSSO_TOTP_KEY:?set unique 64-char hex key}
-      GOUNO_AUTH_VERIFY_HASH_PEPPER: ${GOSSO_VERIFY_PEPPER:?set GOSSO_VERIFY_PEPPER}
-      GOUNO_AUTH_WEBAUTHN_RP_ID: ${SSO_DOMAIN:-sso.io84.com}
-      GOUNO_AUTH_WEBAUTHN_RP_NAME: ${WEBAUTHN_RP_NAME:-io84 SSO}
-      GOUNO_AUTH_WEBAUTHN_RP_ORIGIN: https://${SSO_DOMAIN:-sso.io84.com}
+      # GOSSO currently accepts these two startup keys only as environment
+      # values. The external operations environment injects them at runtime;
+      # they are intentionally absent from this repository.
+      GOUNO_AUTH_TOTP_ENCRYPTION_KEY: ${GOSSO_TOTP_KEY:?set through the external secret provider}
+      GOUNO_AUTH_VERIFY_HASH_PEPPER: ${GOSSO_VERIFY_PEPPER:?set through the external secret provider}
+      GOUNO_AUTH_WEBAUTHN_RP_ID: ${SSO_DOMAIN:?set SSO_DOMAIN}
+      GOUNO_AUTH_WEBAUTHN_RP_NAME: ${WEBAUTHN_RP_NAME:-SSO}
+      GOUNO_AUTH_WEBAUTHN_RP_ORIGIN: https://${SSO_DOMAIN:?set SSO_DOMAIN}
       GOUNO_SMTP_HOST: ${SMTP_HOST:-}
       GOUNO_SMTP_PORT: ${SMTP_PORT:-587}
       GOUNO_SMTP_USERNAME: ${SMTP_USERNAME:-}
       GOUNO_SMTP_PASSWORD: ${SMTP_PASSWORD:-}
-      GOUNO_SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-noreply@io84.com}
-      GOUNO_SMTP_FROM_NAME: ${SMTP_FROM_NAME:-io84 Security}
+      GOUNO_SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:?set SMTP_FROM_EMAIL}
+      GOUNO_SMTP_FROM_NAME: ${SMTP_FROM_NAME:?set SMTP_FROM_NAME}
       GOUNO_AUTH_ENFORCE_PKCE_FOR_CONFIDENTIAL: "true"
-      GOUNO_CORS_ALLOWED_ORIGINS: ${GOSSO_CORS_ALLOWED_ORIGINS:-["https://sso.io84.com"]}
-      GOUNO_WEB_SERVER_TRUSTED_PROXIES: ${GOSSO_TRUSTED_PROXIES:-172.21.0.0/16,127.0.0.1/32}
+      GOUNO_CORS_ALLOWED_ORIGINS: ${GOSSO_CORS_ALLOWED_ORIGINS:?set GOSSO_CORS_ALLOWED_ORIGINS}
+      GOUNO_WEB_SERVER_TRUSTED_PROXIES: ${GOSSO_TRUSTED_PROXIES:?set GOSSO_TRUSTED_PROXIES}
     secrets:
       - gosso_signing_key
     depends_on:
@@ -86,7 +89,7 @@ services:
       ADMIN_USERNAME: ${ADMIN_USERNAME:?set ADMIN_USERNAME}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD}
       ADMIN_DISPLAY_NAME: ${ADMIN_DISPLAY_NAME:-System Admin}
-      OAUTH2_CLIENT_REDIRECT_URIS: https://${SSO_DOMAIN:-sso.io84.com}/callback,https://${SSO_DOMAIN:-sso.io84.com}/admin/callback
+      OAUTH2_CLIENT_REDIRECT_URIS: https://${SSO_DOMAIN:?set SSO_DOMAIN}/callback,https://${SSO_DOMAIN:?set SSO_DOMAIN}/admin/callback
     depends_on:
       db: {condition: service_healthy}
       gosso: {condition: service_started}
@@ -101,14 +104,14 @@ services:
       REDIS_DSN: ${GOSSO_REDIS_DSN:?set GOSSO_REDIS_DSN}
       BLOG_OAUTH_ACCOUNT_ID: ${BLOG_OAUTH_OWNER_ID:-00000000-0000-0000-0000-000000000001}
       BLOG_OAUTH_CLIENT_ID: ${BLOG_OIDC_CLIENT_ID:-blog-bff}
-      BLOG_OAUTH_CLIENT_NAME: "io84 Blog BFF"
+      BLOG_OAUTH_CLIENT_NAME: "Blog BFF"
       BLOG_OAUTH_CLIENT_DESCRIPTION: "Confidential OAuth2 Client for Blog BFF"
       BLOG_OAUTH_CONFIDENTIAL: "true"
       BLOG_OAUTH_CLIENT_SECRET_FILE: /run/secrets/blog_oauth_client_secret
-      BLOG_OAUTH_REDIRECT_URIS: https://${BLOG_DOMAIN:-blog.io84.com}/api/auth/callback
-      BLOG_OAUTH_POST_LOGOUT_REDIRECT_URIS: https://${BLOG_DOMAIN:-blog.io84.com}/
-      BLOG_OAUTH_BACKCHANNEL_LOGOUT_URI: http://blog-backend:8082/api/auth/backchannel-logout
-      BLOG_OAUTH_ALLOWED_RESOURCES: https://${BLOG_DOMAIN:-blog.io84.com}/api
+      BLOG_OAUTH_REDIRECT_URIS: https://${BLOG_DOMAIN:?set BLOG_DOMAIN}/api/auth/callback
+      BLOG_OAUTH_POST_LOGOUT_REDIRECT_URIS: https://${BLOG_DOMAIN:?set BLOG_DOMAIN}/
+      BLOG_OAUTH_BACKCHANNEL_LOGOUT_URI: https://${BLOG_DOMAIN:?set BLOG_DOMAIN}/api/auth/backchannel-logout
+      BLOG_OAUTH_ALLOWED_RESOURCES: https://${BLOG_DOMAIN:?set BLOG_DOMAIN}/api
       BLOG_OAUTH_GRANT_TYPES: authorization_code,refresh_token
       BLOG_OAUTH_SCOPES: openid,profile,email
     secrets:
@@ -140,20 +143,19 @@ services:
       POSTGRES_DATABASE: ${BLOG_POSTGRES_DB:-blog}
       GOUNO_DATABASE_DRIVERS_POSTGRES_DSN: ${BLOG_DATABASE_DSN:?set BLOG_DATABASE_DSN}
       GOUNO_REDIS_DSN: ${BLOG_REDIS_DSN:?set BLOG_REDIS_DSN}
-      SSO_JWKS_URL: https://${SSO_DOMAIN:-sso.io84.com}/.well-known/jwks.json
-      SSO_TOKEN_ISSUER: https://${SSO_DOMAIN:-sso.io84.com}
-      SSO_TOKEN_AUDIENCE: https://${BLOG_DOMAIN:-blog.io84.com}/api
+      SSO_JWKS_URL: https://${SSO_DOMAIN:?set SSO_DOMAIN}/.well-known/jwks.json
+      SSO_TOKEN_ISSUER: https://${SSO_DOMAIN:?set SSO_DOMAIN}
+      SSO_TOKEN_AUDIENCE: https://${BLOG_DOMAIN:?set BLOG_DOMAIN}/api
       SSO_CLIENT_ID: ${BLOG_OIDC_CLIENT_ID:-blog-bff}
-      BLOG_BOOTSTRAP_OWNER_ISSUER: https://${SSO_DOMAIN:-sso.io84.com}
+      BLOG_BOOTSTRAP_OWNER_ISSUER: https://${SSO_DOMAIN:?set SSO_DOMAIN}
       BLOG_BOOTSTRAP_OWNER_SUBJECT: ${BLOG_BOOTSTRAP_OWNER_SUBJECT:?set BLOG_BOOTSTRAP_OWNER_SUBJECT}
-      BLOG_IDENTITY_ISSUER_MIGRATIONS: '{"https://${SSO_DOMAIN:-sso.io84.com}":"https://${LEGACY_DOMAIN:-io84.com}"}'
       BLOG_BFF_ENABLED: "true"
-      BLOG_OIDC_ISSUER: https://${SSO_DOMAIN:-sso.io84.com}
+      BLOG_OIDC_ISSUER: https://${SSO_DOMAIN:?set SSO_DOMAIN}
       BLOG_OIDC_CLIENT_ID: ${BLOG_OIDC_CLIENT_ID:-blog-bff}
       BLOG_OIDC_CLIENT_SECRET_FILE: /run/secrets/blog_oauth_client_secret
-      BLOG_OIDC_REDIRECT_URL: https://${BLOG_DOMAIN:-blog.io84.com}/api/auth/callback
-      BLOG_OIDC_POST_LOGOUT_URL: https://${BLOG_DOMAIN:-blog.io84.com}/
-      BLOG_OIDC_RESOURCE: https://${BLOG_DOMAIN:-blog.io84.com}/api
+      BLOG_OIDC_REDIRECT_URL: https://${BLOG_DOMAIN:?set BLOG_DOMAIN}/api/auth/callback
+      BLOG_OIDC_POST_LOGOUT_URL: https://${BLOG_DOMAIN:?set BLOG_DOMAIN}/api/auth/logout/callback
+      BLOG_OIDC_RESOURCE: https://${BLOG_DOMAIN:?set BLOG_DOMAIN}/api
       BLOG_OIDC_SCOPES: "openid profile email"
       BLOG_OIDC_INTERNAL_ENDPOINT: http://gosso:8080
       BLOG_BFF_TINK_KEYSET_PATH: /run/secrets/blog_bff_tink_keyset
@@ -229,10 +231,20 @@ secrets:
 
 volumes:
   db_data:
+    external: true
+    name: ${POSTGRES_VOLUME_NAME:?set POSTGRES_VOLUME_NAME}
   redis_data:
+    external: true
+    name: ${REDIS_VOLUME_NAME:?set REDIS_VOLUME_NAME}
   blog_media:
+    external: true
+    name: ${BLOG_MEDIA_VOLUME_NAME:?set BLOG_MEDIA_VOLUME_NAME}
   caddy_data:
+    external: true
+    name: ${CADDY_DATA_VOLUME_NAME:?set CADDY_DATA_VOLUME_NAME}
   caddy_config:
+    external: true
+    name: ${CADDY_CONFIG_VOLUME_NAME:?set CADDY_CONFIG_VOLUME_NAME}
 
 networks:
   default:

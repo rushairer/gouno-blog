@@ -37,6 +37,7 @@ describe("blog cookie session", () => {
           status: 401,
         }),
       )
+      .mockResolvedValueOnce(Response.json({ ok: true }))
       .mockResolvedValueOnce(Response.json({ data: { list: [] } }));
     vi.stubGlobal("fetch", fetchMock);
     const { apiFetch } = await import("../auth");
@@ -44,7 +45,11 @@ describe("blog cookie session", () => {
     const response = await apiFetch("/api/admin/posts");
 
     expect(response.ok).toBe(true);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://blog.example.test/api/auth/refresh",
+      expect.objectContaining({ method: "POST", credentials: "same-origin" }),
+    );
   });
 
   it("uses only the Blog CSRF cookie when revoking a cookie session", async () => {

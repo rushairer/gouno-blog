@@ -1,6 +1,6 @@
 {
-	# Production Caddy configuration for io84.com multi-domain split
-	email {$ACME_EMAIL:admin@io84.com}
+	# Values are supplied by the external operations environment, never Git.
+	email {$ACME_EMAIL}
 }
 
 (security_headers) {
@@ -17,64 +17,47 @@
 	}
 }
 
-# 1. Identity Provider & Admin Portal (sso.io84.com)
-https://sso.io84.com {
+https://{$SSO_DOMAIN} {
 	import security_headers
-	header Content-Security-Policy "default-src 'self'; base-uri 'self'; connect-src 'self'; font-src 'self' data: https://fonts.gstatic.com; form-action 'self' https://sso.io84.com; frame-ancestors 'self'; img-src 'self' data: blob:; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com"
-
-	# OIDC Discovery, OAuth2, and GOSSO Management APIs
+	header Content-Security-Policy "default-src 'self'; base-uri 'self'; connect-src 'self'; font-src 'self' data: https://fonts.gstatic.com; form-action 'self' https://{$SSO_DOMAIN}; frame-ancestors 'self'; img-src 'self' data: blob:; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com"
 	@identity_api path /.well-known/* /oauth2/* /oidc/* /api/v1/* /readiness
 	handle @identity_api {
 		reverse_proxy gosso:8080 {
-			header_up Host sso.io84.com
+			header_up Host {$SSO_DOMAIN}
 			header_up X-Forwarded-Proto https
 			header_up X-Real-IP {http.request.remote.host}
 		}
 	}
-
-	# Hosted Admin & Account Settings UI
 	handle {
 		reverse_proxy gosso-admin-frontend:8083 {
-			header_up Host sso.io84.com
+			header_up Host {$SSO_DOMAIN}
 			header_up X-Forwarded-Proto https
 			header_up X-Real-IP {http.request.remote.host}
 		}
 	}
 }
 
-# 2. Personal Blog & Confidential BFF (blog.io84.com)
-https://blog.io84.com {
+https://{$BLOG_DOMAIN} {
 	import security_headers
-	header Content-Security-Policy "default-src 'self'; base-uri 'self'; connect-src 'self'; font-src 'self' data: https://fonts.gstatic.com; form-action 'self' https://sso.io84.com; frame-ancestors 'self'; img-src 'self' data: blob:; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com"
-
-	# Blog Backend API, Media, Feeds & BFF endpoints
+	header Content-Security-Policy "default-src 'self'; base-uri 'self'; connect-src 'self'; font-src 'self' data: https://fonts.gstatic.com; form-action 'self' https://{$SSO_DOMAIN}; frame-ancestors 'self'; img-src 'self' data: blob:; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com"
 	@blog_backend path /api/* /feed.xml /rss /sitemap.xml /media/* /swagger*
 	handle @blog_backend {
 		reverse_proxy blog-backend:8082 {
-			header_up Host blog.io84.com
+			header_up Host {$BLOG_DOMAIN}
 			header_up X-Forwarded-Proto https
 			header_up X-Real-IP {http.request.remote.host}
 		}
 	}
-
-	# Blog React Frontend SPA
 	handle {
 		reverse_proxy blog-frontend:8081 {
-			header_up Host blog.io84.com
+			header_up Host {$BLOG_DOMAIN}
 			header_up X-Forwarded-Proto https
 			header_up X-Real-IP {http.request.remote.host}
 		}
 	}
 }
 
-# 3. Reserved CMS Domain (cms.io84.com)
-https://cms.io84.com {
+https://{$CMS_DOMAIN} {
 	import security_headers
 	respond "CMS client is reserved but not deployed" 404
-}
-
-# 4. Legacy Origin Transition & Rollback Window (io84.com)
-https://io84.com {
-	import security_headers
-	redir https://blog.io84.com{uri} permanent
 }

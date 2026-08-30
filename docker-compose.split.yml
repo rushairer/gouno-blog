@@ -33,24 +33,24 @@ services:
       - BLOG_OAUTH_CONFIDENTIAL=true
       - BLOG_OAUTH_CLIENT_SECRET=blog-bff-secret-local
       - BLOG_OAUTH_REDIRECT_URIS=https://blog.dev.local/api/auth/callback
-      - BLOG_OAUTH_POST_LOGOUT_REDIRECT_URIS=https://blog.dev.local/
-      - BLOG_OAUTH_BACKCHANNEL_LOGOUT_URI=http://blog-backend:8082/api/auth/backchannel-logout
+      - BLOG_OAUTH_POST_LOGOUT_REDIRECT_URIS=https://blog.dev.local/api/auth/logout/callback
+      - BLOG_OAUTH_BACKCHANNEL_LOGOUT_URI=https://blog.dev.local/api/auth/backchannel-logout
       - BLOG_OAUTH_ALLOWED_RESOURCES=https://blog.dev.local/api,https://blog.local.test/api
 
   blog-backend:
     pull_policy: never
     environment:
+      - GOUNO_CORS_ALLOWED_ORIGINS=https://blog.dev.local,https://blog.dev.local:8443,https://blog.local.test,https://blog.local.test:8443
       - SSO_TOKEN_ISSUER=https://sso.dev.local
       - SSO_TOKEN_AUDIENCE=https://blog.dev.local/api
       - SSO_CLIENT_ID=blog-bff
       - BLOG_BOOTSTRAP_OWNER_ISSUER=https://sso.dev.local
-      - BLOG_IDENTITY_ISSUER_MIGRATIONS={"https://sso.dev.local":"https://localhost:8443","https://sso.local.test":"https://localhost:8443"}
       - BLOG_BFF_ENABLED=true
       - BLOG_OIDC_ISSUER=https://sso.dev.local
       - BLOG_OIDC_CLIENT_ID=blog-bff
       - BLOG_OIDC_CLIENT_SECRET=blog-bff-secret-local
       - BLOG_OIDC_REDIRECT_URL=https://blog.dev.local/api/auth/callback
-      - BLOG_OIDC_POST_LOGOUT_URL=https://blog.dev.local/
+      - BLOG_OIDC_POST_LOGOUT_URL=https://blog.dev.local/api/auth/logout/callback
       - BLOG_OIDC_RESOURCE=https://blog.dev.local/api
       - BLOG_OIDC_SCOPES=openid profile email
       - BLOG_OIDC_INTERNAL_ENDPOINT=http://gosso:8080

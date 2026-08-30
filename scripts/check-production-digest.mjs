@@ -12,12 +12,11 @@ import { readFile } from "node:fs/promises";
 
 const COMPOSE_FILES = [
   "docker-compose.production-split.yml",
-  "docker-compose.production.yml",
 ];
 
-// Pattern: image: <name>[:<tag>][@<digest>]
-// We only accept references that include @sha256:
-const IMAGE_LINE_RE = /^\s*image:\s*(\S+)\s*$/gm;
+// Capture the complete YAML scalar, including Compose interpolation messages
+// that contain spaces (for example `${GOSSO_IMAGE:?set ...@sha256:digest}`).
+const IMAGE_LINE_RE = /^\s*image:\s*(.+?)\s*$/gm;
 
 const failures = [];
 const checked = [];
@@ -33,7 +32,7 @@ for (const file of COMPOSE_FILES) {
 
   let match;
   while ((match = IMAGE_LINE_RE.exec(content)) !== null) {
-    const imageRef = match[1];
+    const imageRef = match[1].replace(/\s+#.*$/, "").trim();
     checked.push(`${file}: ${imageRef}`);
 
     if (!imageRef.includes("@sha256:")) {

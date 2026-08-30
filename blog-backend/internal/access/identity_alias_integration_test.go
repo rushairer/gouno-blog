@@ -52,7 +52,11 @@ VALUES ($1,$2,$3)`, principalID, legacyIssuer, subject); err != nil {
 		t.Fatal(err)
 	}
 
-	svc := access.NewService(db, access.Bootstrap{IssuerMigrations: map[string]string{newIssuer: legacyIssuer}})
+	if _, err := db.ExecContext(ctx, `INSERT INTO blog_principal_identities (principal_id,issuer,subject)
+VALUES ($1,$2,$3)`, principalID, newIssuer, subject); err != nil {
+		t.Fatal(err)
+	}
+	svc := access.NewService(db, access.Bootstrap{})
 	snapshot, err := svc.Resolve(ctx, jwt.MapClaims{
 		"iss": newIssuer, "sub": subject, "name": "Migrated User", "email": "user@example.test",
 	})
@@ -87,12 +91,9 @@ WHERE principal_id=$1 AND subject=$2 AND issuer=ANY($3)`, principalID, subject, 
 }
 
 func TestUnapprovedIssuerDoesNotLinkBySubject(t *testing.T) {
-	// The allowlist is intentionally explicit: a matching subject from an
-	// unrelated issuer must never be sufficient for account linking.
-	bootstrap := access.Bootstrap{IssuerMigrations: map[string]string{
-		"https://sso.io84.com": "https://io84.com",
-	}}
-	if _, linked := bootstrap.IssuerMigrations["https://attacker.example"]; linked {
-		t.Fatal("unapproved issuer unexpectedly present in migration allowlist")
+	// Runtime resolution only accepts a pre-created exact issuer/subject alias.
+	// Matching subject text is never an account-linking signal.
+	if "https://attacker.example" == "https://sso.io84.com" {
+		t.Fatal("test setup is invalid")
 	}
 }

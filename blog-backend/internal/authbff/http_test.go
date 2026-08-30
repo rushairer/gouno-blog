@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -24,7 +25,7 @@ func testBFFClientWithStore(t *testing.T) (*Client, *Store) {
 		ClientID:      "blog-bff",
 		ClientSecret:  "secret-123",
 		RedirectURL:   "https://blog.local.test/api/auth/callback",
-		PostLogoutURL: "https://blog.local.test/",
+		PostLogoutURL: "https://blog.local.test/api/auth/logout/callback",
 		Resource:      "https://blog.local.test/api",
 	}
 	cfg.ApplyDefaults()
@@ -35,6 +36,33 @@ func testBFFClientWithStore(t *testing.T) (*Client, *Store) {
 		flowNow:    time.Now,
 	}
 	return client, store
+}
+
+func TestLogoutCallbackConsumesStateOnce(t *testing.T) {
+	client, store := testBFFClientWithStore(t)
+	logoutURL, err := client.LogoutURL(context.Background(), Session{}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	parsed, err := url.Parse(logoutURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state := parsed.Query().Get("state")
+	if state == "" {
+		t.Fatal("logout state is missing")
+	}
+	router := gin.New()
+	client.RegisterRoutes(router)
+	req := httptest.NewRequest(http.MethodGet, "/api/auth/logout/callback?state="+url.QueryEscape(state), nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	if w.Code != http.StatusSeeOther || w.Header().Get("Location") != "/" {
+		t.Fatalf("unexpected callback response: %d %q", w.Code, w.Header().Get("Location"))
+	}
+	if err := store.TakeLogoutState(context.Background(), state); err == nil {
+		t.Fatal("logout state should have been consumed")
+	}
 }
 
 func TestMeHandler(t *testing.T) {

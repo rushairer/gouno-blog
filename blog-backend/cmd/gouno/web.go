@@ -3,7 +3,6 @@ package gouno
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -306,15 +305,8 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 	}
 
 	verifier := gounoAuth.NewVerifier(cfg.JWKSURL)
-	issuerMigrations := map[string]string{}
-	if raw := os.Getenv("BLOG_IDENTITY_ISSUER_MIGRATIONS"); raw != "" {
-		if err := json.Unmarshal([]byte(raw), &issuerMigrations); err != nil {
-			log.Fatalf("BLOG_IDENTITY_ISSUER_MIGRATIONS must be a JSON object of new issuer to legacy issuer: %v", err)
-		}
-	}
 	accessService := access.NewService(cfg.DB, access.Bootstrap{
 		Issuer: os.Getenv("BLOG_BOOTSTRAP_OWNER_ISSUER"), Subject: os.Getenv("BLOG_BOOTSTRAP_OWNER_SUBJECT"),
-		IssuerMigrations: issuerMigrations,
 	})
 	router.RegisterWebRouterWithOptions(cfg.Engine, router.WebRouterOptions{
 		DB: cfg.DB, AuthOptions: cfg.AuthOptions, RedisDSN: cfg.Global.RedisConfig.DSN,
@@ -335,4 +327,3 @@ func readSecretFromFileOrEnv(filePath, envVal string) string {
 	}
 	return envVal
 }
-
