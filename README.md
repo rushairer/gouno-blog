@@ -20,14 +20,13 @@ Gouno Blog 是一个构建于 GoUno 与 GOSSO 的开源、自托管博客运营�
 
 系统采用“业务应用轻依赖身份提供商”的架构。`gouno-blog` 不包含 GOSSO 或 GOSSO Admin 源码，也不把它们作为 Git 子模块；本地完整集群通过已发布 Docker 镜像接入，业务代码只通过 OIDC/OAuth2 和 JWKS 与身份服务交互。
 
-* **Caddy HTTPS Gateway (`https://localhost:8443`)**：统一网关入口。
-  - `/` -> **blog-frontend** (React SPA 门户)
-  - `/api/` -> **blog-backend** (GoUno 博客后端)
-  - `/swagger/` -> **Swagger UI & OpenAPI Spec** (API 接口文档)
-  - `/identity-admin/` -> **gosso-admin-frontend** (GOSSO 身份管理控制台)
-  - `/api/v1/`、`/oauth2/`、`/oidc/`、`/.well-known/` -> **gosso**
-* **GOSSO / OIDC Provider**：负责登录、授权码流程、Token 签发、MFA、Passkey 等身份能力；唯一登录 UI 由 `/identity-admin/login` 下的 GOSSO 托管前端提供，业务前端不实现凭据表单。本地默认使用 `ghcr.io/rushairer/gosso` 镜像。
-* **blog-backend**：博客 API 后端，使用 `gouno` Web 框架开发，向身份服务拉取 JWKS 公钥并校验登录凭证与用户权限；内置受控 AI Agent Runner、Workflow 引擎、Cron Scheduler、Blog Tools 与人工审批。
+* **Caddy HTTPS Gateway (`https://sso.dev.local:8443`, `https://blog.dev.local:8443`)**：统一多子域网关入口。
+  - `https://blog.dev.local:8443/` -> **blog-frontend** (React SPA 门户)
+  - `https://blog.dev.local:8443/api/` -> **blog-backend** (GoUno 博客后端 BFF)
+  - `https://sso.dev.local:8443/` -> **gosso-admin-frontend** (GOSSO 身份管理控制台)
+  - `https://sso.dev.local:8443/api/v1/`、`/oauth2/`、`/oidc/`、`/.well-known/` -> **gosso**
+* **GOSSO / OIDC Provider**：负责登录、授权码流程、Token 签发、MFA、Passkey 等身份能力；唯一登录 UI 由 `sso.dev.local`（生产 `sso.io84.com`）下的 GOSSO 托管前端提供，业务前端不实现凭据表单。
+* **blog-backend**：博客 API 后端与 Confidential BFF，使用 `gouno` Web 框架开发，执行 OIDC 授权码 + PKCE 交换并维护同域 `__Host-*` Cookie 会话；向身份服务拉取 JWKS 公钥并校验登录凭证与用户权限；内置受控 AI Agent Runner、Workflow 引擎、Cron Scheduler、Blog Tools 与人工审批。
 * **blog-frontend**：基于 React 构建的单页面应用（SPA），提供门户展示、`/admin` 博客管理控制台和 `/admin/ai-ops` AI 运营控制台。
 
 ---
@@ -83,15 +82,13 @@ chmod 600 keys/private.pem
 
 默认 compose 会启动 blog、GOSSO、GOSSO Admin、PostgreSQL、Redis、Mailpit 和统一网关，并自动注册博客前端 OAuth client：
 
-- Client ID：`blog-spa`
-- Redirect URI：`https://localhost:8443/callback`
+- Blog BFF Client ID：`blog-bff`
+- Redirect URI：`https://blog.dev.local:8443/api/auth/callback`
+- Post Logout Redirect URI：`https://blog.dev.local:8443/api/auth/logout/callback`
+- Back-Channel Logout URI：`https://blog.dev.local:8443/api/auth/backchannel-logout`
 - Scopes：`openid profile email`
 
-GOSSO Admin 使用独立 OAuth client 和 Redirect URI：`https://localhost:8443/identity-admin/callback`。GOSSO 的 `login_url` 指向 `https://localhost:8443/identity-admin/login`；Blog 不提供 `/login` 路由。Blog 前端通过 `@gosso/client` 使用 `__Host-*` HttpOnly Cookie 会话；访问与刷新 Token 不会写入浏览器可读存储。它仍使用授权码 + PKCE，并只在 `sessionStorage` 中临时保存 PKCE 状态和最小化的界面授权信息。
-
-无感切换依赖统一网关下的 GOSSO 中心登录态：用户登录 `identity-admin` 后访问 `/admin`，blog 会发起 `/oauth2/authorize`。如果 GOSSO cookie 中的中心会话仍有效，GOSSO 会直接回调 `/callback` 并建立 Blog Cookie 会话，用户无需再次输入账号密码。
-
-后端管理接口仍由 blog 后端执行权限校验；当前默认要求 Access Token 中包含 `roles: ["admin"]`。
+GOSSO Admin 使用独立 OAuth client 和 Redirect URI：`https://sso.dev.local:8443/callback`。GOSSO 的 `login_url` 指向 `https://sso.dev.local:8443/login`；Blog 不提供 `/login` 路由。Blog 前端通过 `@gosso/client` 使用同域 `__Host-*` HttpOnly Cookie 业务会话；访问与刷新 Token 由 Blog BFF 服务端通过 Google Tink AEAD 密钥加密存储在 Redis 中，浏览器端零 Token 暴露。
 
 ```bash
 docker compose up -d
@@ -120,7 +117,7 @@ export GOUNO_BLOG_BACKEND_IMAGE=ghcr.io/rushairer/gouno-blog-backend:vX.Y.Z@sha2
 export GOUNO_BLOG_FRONTEND_IMAGE=ghcr.io/rushairer/gouno-blog-frontend:vX.Y.Z@sha256:...
 export GOUNO_BLOG_SEED_IMAGE=ghcr.io/rushairer/gouno-blog-seed:vX.Y.Z@sha256:...
 export GOSSO_IMAGE=ghcr.io/rushairer/gosso:vX.Y.Z@sha256:...
-export GOSSO_ADMIN_FRONTEND_IMAGE=ghcr.io/rushairer/gosso-admin-frontend-identity-admin:vX.Y.Z@sha256:...
+export GOSSO_ADMIN_FRONTEND_IMAGE=ghcr.io/rushairer/gosso-admin-frontend:vX.Y.Z@sha256:...
 export GOSSO_ADMIN_SEED_IMAGE=ghcr.io/rushairer/gosso-admin-seed:vX.Y.Z@sha256:...
 ```
 
@@ -135,11 +132,11 @@ docker compose -f docker-compose.yml -f docker-compose.source.yml up -d --build
 后端会在数据库可用后才通过 `/healthz` 就绪检查；前端会等待该检查成功，避免容器刚启动时将请求转发到尚未完成数据库初始化的 API。
 
 ### 5. 访问测试
-- 打开浏览器访问门户：[https://localhost:8443/](https://localhost:8443/)
-- 访问博客后台管理（触发 SSO 登录流）：[https://localhost:8443/admin](https://localhost:8443/admin)
-- 访问 AI 运营控制台：[https://localhost:8443/admin/ai-ops](https://localhost:8443/admin/ai-ops)
-- 访问 GOSSO 身份管理控制台：[https://localhost:8443/identity-admin](https://localhost:8443/identity-admin)
-- 访问 API Swagger 文档：[https://localhost:8443/swagger](https://localhost:8443/swagger)
+- 打开浏览器访问门户：[https://blog.dev.local:8443/](https://blog.dev.local:8443/)
+- 访问博客后台管理（触发 SSO 登录流）：[https://blog.dev.local:8443/admin](https://blog.dev.local:8443/admin)
+- 访问 AI 运营控制台：[https://blog.dev.local:8443/admin/ai-ops](https://blog.dev.local:8443/admin/ai-ops)
+- 访问 GOSSO 身份管理控制台：[https://sso.dev.local:8443/](https://sso.dev.local:8443/)
+- 访问 API Swagger 文档：[https://blog.dev.local:8443/swagger/index.html](https://blog.dev.local:8443/swagger/index.html)
 - 使用本地默认管理员账户登录：
   - 用户名：`admin`
   - 密码：`admin123`

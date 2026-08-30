@@ -8,7 +8,7 @@
 - [ ] Production Compose rejects missing secrets and image digests.
 - [ ] Cookie, CSRF, CORS, callback, authorization, and security-header tests pass.
 - [ ] Authentication deployment contract passes: GOSSO uses
-  `/identity-admin/login`, and Blog does not reintroduce a `/login` route,
+  `/login` on the SSO origin, and Blog does not reintroduce a `/login` route,
   and the exact runtime proxy CIDR is supplied through `GOSSO_TRUSTED_PROXIES`.
 - [ ] The tag workflow attaches each Blog image digest plus SPDX and CycloneDX
   SBOMs to the GitHub Release; provenance and cosign verification succeed.
