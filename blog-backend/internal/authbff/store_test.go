@@ -160,26 +160,27 @@ func TestLogoutTokenReplayProtection(t *testing.T) {
 	store, _ := testStore(t)
 	ctx := context.Background()
 
-	ok, err := store.CheckAndMarkLogoutTokenReplay(ctx, "jti-12345", 5*time.Minute)
+	processed, err := store.IsLogoutTokenProcessed(ctx, "jti-12345")
 	if err != nil {
 		t.Fatalf("unexpected error checking jti: %v", err)
 	}
-	if !ok {
-		t.Fatal("first check of jti-12345 should succeed")
+	if processed {
+		t.Fatal("new jti-12345 should not be processed yet")
 	}
 
-	// Replay should fail
-	ok, err = store.CheckAndMarkLogoutTokenReplay(ctx, "jti-12345", 5*time.Minute)
+	if err := store.MarkLogoutTokenProcessed(ctx, "jti-12345", 5*time.Minute); err != nil {
+		t.Fatalf("unexpected error marking jti: %v", err)
+	}
+	processed, err = store.IsLogoutTokenProcessed(ctx, "jti-12345")
 	if err != nil {
 		t.Fatalf("unexpected error on replay check: %v", err)
 	}
-	if ok {
-		t.Fatal("replayed jti-12345 must be detected and rejected")
+	if !processed {
+		t.Fatal("marked jti-12345 must be reported as processed")
 	}
 
-	// Different jti should succeed
-	ok, err = store.CheckAndMarkLogoutTokenReplay(ctx, "jti-67890", 5*time.Minute)
-	if err != nil || !ok {
-		t.Fatalf("distinct jti should succeed: ok=%v, err=%v", ok, err)
+	processed, err = store.IsLogoutTokenProcessed(ctx, "jti-67890")
+	if err != nil || processed {
+		t.Fatalf("distinct jti should remain unprocessed: processed=%v, err=%v", processed, err)
 	}
 }
