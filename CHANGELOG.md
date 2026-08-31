@@ -5,6 +5,8 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-08-31
+
 ### Security
 - Extend production Docker Secret-only injection to PostgreSQL, Redis, GOSSO
   database/Redis/SMTP credentials, and the GOSSO Admin and Blog seed jobs;
