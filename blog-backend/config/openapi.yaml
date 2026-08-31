@@ -4,14 +4,14 @@ info:
   description: REST API for managing posts and comments in Gouno Blog.
   version: 1.1.0
 servers:
-  - url: https://localhost:8443/api
+  - url: https://blog.dev.local/api
     description: Caddy HTTPS gateway local entry point
 paths:
   /feed.xml:
     get:
       summary: RSS 2.0 feed
       servers:
-        - url: https://localhost:8443
+        - url: https://blog.dev.local
       responses:
         '200':
           description: Published article feed
@@ -23,7 +23,7 @@ paths:
     get:
       summary: RSS feed compatibility alias
       servers:
-        - url: https://localhost:8443
+        - url: https://blog.dev.local
       responses:
         '200':
           description: Published article feed
@@ -35,7 +35,7 @@ paths:
     get:
       summary: Public sitemap
       servers:
-        - url: https://localhost:8443
+        - url: https://blog.dev.local
       responses:
         '200':
           description: Public site URL index

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Security
+
+- Fail closed when a configured BFF Secret file cannot be read; optional
+  historical AEAD key files remain intentionally empty on first deployment.
+
 ### Added
 
 - Added an S3-compatible media storage backend for uploads and AI-generated images, selected through environment configuration.

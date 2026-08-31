@@ -7,7 +7,7 @@ export default defineConfig({
     environment: 'jsdom',
     environmentOptions: {
       jsdom: {
-        url: 'https://localhost:8443/',
+        url: 'https://blog.dev.local/',
       },
     },
     setupFiles: './src/test/setup.ts',

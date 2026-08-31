@@ -20,7 +20,7 @@ describe("applySiteMetadata", () => {
 
     expect(
       document.head.querySelector<HTMLLinkElement>("#site-favicon")?.href,
-    ).toBe("https://localhost:8443/media/site-icon.png");
+    ).toBe("https://blog.dev.local/media/site-icon.png");
     expect(document.head.querySelector("#site-favicon")).toHaveAttribute(
       "type",
       "image/png",

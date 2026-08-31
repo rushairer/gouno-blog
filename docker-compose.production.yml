@@ -12,33 +12,34 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
       POSTGRES_DB: ${POSTGRES_DB:-gosso}
     volumes:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
       - db_data:/var/lib/postgresql/data
+    secrets: [postgres_password]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
       interval: 10s
       timeout: 5s
       retries: 10
     security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
 
   redis:
     image: ${REDIS_IMAGE:-redis:7-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2}
     restart: unless-stopped
-    environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD}
-      BLOG_REDIS_PASSWORD: ${BLOG_REDIS_PASSWORD:?set BLOG_REDIS_PASSWORD}
-    command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$${REDIS_PASSWORD}\" --user blog on \">$$BLOG_REDIS_PASSWORD\" ~blog:* +@all -@dangerous"]
+    command: ["sh", "-ec", "redis_password=$$(cat /run/secrets/redis_password); blog_redis_password=$$(cat /run/secrets/blog_redis_password); exec redis-server --appendonly yes --requirepass \"$$redis_password\" --user blog on \">$$blog_redis_password\" ~blog:* +@all -@dangerous"]
+    secrets: [redis_password, blog_redis_password]
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
+      test: ["CMD-SHELL", "redis-cli -a \"$$(cat /run/secrets/redis_password)\" ping | grep PONG"]
       interval: 10s
       timeout: 5s
       retries: 10
     security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
 
   gosso:
     <<: *hardened
@@ -50,8 +51,8 @@ services:
       GOUNO_WEB_SERVER_PORT: 8080
       GOUNO_WEB_SERVER_DEBUG: false
       GOUNO_DATABASE_DEFAULT: postgres
-      GOUNO_DATABASE_DRIVERS_POSTGRES_DSN: ${GOSSO_DATABASE_DSN:?set GOSSO_DATABASE_DSN}
-      GOUNO_REDIS_DSN: ${GOSSO_REDIS_DSN:?set GOSSO_REDIS_DSN}
+      GOUNO_DATABASE_DRIVERS_POSTGRES_DSN_FILE: /run/secrets/gosso_database_dsn
+      GOUNO_REDIS_DSN_FILE: /run/secrets/gosso_redis_dsn
       GOUNO_AUTH_ISSUER: https://${SSO_DOMAIN:?set SSO_DOMAIN}
       GOUNO_AUTH_LOGIN_URL: /login
       GOUNO_AUTH_PRIVATE_KEY_PATH: /run/secrets/gosso_signing_key
@@ -63,7 +64,7 @@ services:
       GOUNO_SMTP_HOST: ${SMTP_HOST:-}
       GOUNO_SMTP_PORT: ${SMTP_PORT:-587}
       GOUNO_SMTP_USERNAME: ${SMTP_USERNAME:-}
-      GOUNO_SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      GOUNO_SMTP_PASSWORD_FILE: /run/secrets/gosso_smtp_password
       GOUNO_SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:?set SMTP_FROM_EMAIL}
       GOUNO_SMTP_FROM_NAME: ${SMTP_FROM_NAME:?set SMTP_FROM_NAME}
       GOUNO_AUTH_ENFORCE_PKCE_FOR_CONFIDENTIAL: "true"
@@ -74,6 +75,9 @@ services:
       - gosso_signing_key
       - gosso_totp_key
       - gosso_verify_pepper
+      - gosso_database_dsn
+      - gosso_redis_dsn
+      - gosso_smtp_password
     depends_on:
       db: {condition: service_healthy}
       redis: {condition: service_healthy}
@@ -85,11 +89,12 @@ services:
     tmpfs: [/tmp]
     environment:
       GOSSO_ADMIN_ENV: production
-      PG_DSN: ${GOSSO_DATABASE_DSN:?set GOSSO_DATABASE_DSN}
+      PG_DSN_FILE: /run/secrets/gosso_database_dsn
       ADMIN_USERNAME: ${ADMIN_USERNAME:?set ADMIN_USERNAME}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD}
+      ADMIN_PASSWORD_FILE: /run/secrets/admin_password
       ADMIN_DISPLAY_NAME: ${ADMIN_DISPLAY_NAME:-System Admin}
       OAUTH2_CLIENT_REDIRECT_URIS: https://${SSO_DOMAIN:?set SSO_DOMAIN}/callback,https://${SSO_DOMAIN:?set SSO_DOMAIN}/admin/callback
+    secrets: [gosso_database_dsn, admin_password]
     depends_on:
       db: {condition: service_healthy}
       gosso: {condition: service_started}
@@ -100,8 +105,8 @@ services:
     restart: 'no'
     tmpfs: [/tmp]
     environment:
-      PG_DSN: ${GOSSO_DATABASE_DSN:?set GOSSO_DATABASE_DSN}
-      REDIS_DSN: ${GOSSO_REDIS_DSN:?set GOSSO_REDIS_DSN}
+      PG_DSN_FILE: /run/secrets/gosso_database_dsn
+      REDIS_DSN_FILE: /run/secrets/gosso_redis_dsn
       BLOG_OAUTH_ACCOUNT_ID: ${BLOG_OAUTH_OWNER_ID:-${BLOG_BOOTSTRAP_OWNER_SUBJECT:?set BLOG_BOOTSTRAP_OWNER_SUBJECT}}
       BLOG_OAUTH_ALLOW_ACCOUNT_FALLBACK: "false"
       BLOG_OAUTH_SEED_CONSENT: "false"
@@ -118,6 +123,8 @@ services:
       BLOG_OAUTH_SCOPES: openid,profile,email
     secrets:
       - blog_oauth_client_secret
+      - gosso_database_dsn
+      - gosso_redis_dsn
     depends_on:
       gosso-admin-seed: {condition: service_completed_successfully}
 
@@ -170,12 +177,13 @@ services:
       GOUNO_AI_AGENTS_ENABLED: ${GOUNO_AI_AGENTS_ENABLED:-true}
       BLOG_AGENT_MASTER_KEY_FILE: /run/secrets/blog_agent_master_key
       BLOG_AGENT_MASTER_KEY_VERSION: ${BLOG_AGENT_MASTER_KEY_VERSION:-1}
-      BLOG_AGENT_PREVIOUS_MASTER_KEYS: ${BLOG_AGENT_PREVIOUS_MASTER_KEYS:-}
+      BLOG_AGENT_PREVIOUS_MASTER_KEYS_FILE: /run/secrets/blog_agent_previous_master_keys
       GOUNO_AI_WEBHOOK_SECRET_FILE: /run/secrets/blog_webhook_secret
     secrets:
       - blog_bff_tink_keyset
       - blog_oauth_client_secret
       - blog_agent_master_key
+      - blog_agent_previous_master_keys
       - blog_database_dsn
       - blog_redis_dsn
       - blog_visitor_secret
@@ -231,12 +239,28 @@ secrets:
     file: ${GOSSO_TOTP_KEY_FILE:?set GOSSO_TOTP_KEY_FILE}
   gosso_verify_pepper:
     file: ${GOSSO_VERIFY_PEPPER_FILE:?set GOSSO_VERIFY_PEPPER_FILE}
+  postgres_password:
+    file: ${POSTGRES_PASSWORD_FILE:?set POSTGRES_PASSWORD_FILE}
+  redis_password:
+    file: ${REDIS_PASSWORD_FILE:?set REDIS_PASSWORD_FILE}
+  blog_redis_password:
+    file: ${BLOG_REDIS_PASSWORD_FILE:?set BLOG_REDIS_PASSWORD_FILE}
+  gosso_database_dsn:
+    file: ${GOSSO_DATABASE_DSN_FILE:?set GOSSO_DATABASE_DSN_FILE}
+  gosso_redis_dsn:
+    file: ${GOSSO_REDIS_DSN_FILE:?set GOSSO_REDIS_DSN_FILE}
+  gosso_smtp_password:
+    file: ${SMTP_PASSWORD_FILE:?set SMTP_PASSWORD_FILE}
+  admin_password:
+    file: ${ADMIN_PASSWORD_FILE:?set ADMIN_PASSWORD_FILE}
   blog_bff_tink_keyset:
     file: ${BLOG_BFF_TINK_KEYSET_FILE:?set BLOG_BFF_TINK_KEYSET_FILE}
   blog_oauth_client_secret:
     file: ${BLOG_OAUTH_CLIENT_SECRET_FILE:?set BLOG_OAUTH_CLIENT_SECRET_FILE}
   blog_agent_master_key:
     file: ${BLOG_AGENT_MASTER_KEY_FILE:?set BLOG_AGENT_MASTER_KEY_FILE}
+  blog_agent_previous_master_keys:
+    file: ${BLOG_AGENT_PREVIOUS_MASTER_KEYS_FILE:?set BLOG_AGENT_PREVIOUS_MASTER_KEYS_FILE}
   blog_database_dsn:
     file: ${BLOG_DATABASE_DSN_FILE:?set BLOG_DATABASE_DSN_FILE}
   blog_redis_dsn:

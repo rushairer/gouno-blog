@@ -102,7 +102,7 @@ describe("PostDetail", () => {
     ).toHaveAttribute("content", "Summary");
     expect(
       document.head.querySelector('link[rel="canonical"]'),
-    ).toHaveAttribute("href", "https://localhost:8443/articles/markdown-post");
+    ).toHaveAttribute("href", "https://blog.dev.local/articles/markdown-post");
     expect(
       document.head.querySelector('script[data-blog-seo="article"]')
         ?.textContent,

@@ -24,6 +24,6 @@ services:
       context: ./blog-frontend
       dockerfile: Dockerfile
       args:
-        VITE_GOSSO_ISSUER: ${VITE_GOSSO_ISSUER:-https://localhost:8443}
+        VITE_GOSSO_ISSUER: ${VITE_GOSSO_ISSUER:-https://sso.dev.local}
         VITE_GOSSO_CLIENT_ID: ${VITE_GOSSO_CLIENT_ID:-blog-bff}
         VITE_GOSSO_SCOPE: ${VITE_GOSSO_SCOPE:-openid profile email}

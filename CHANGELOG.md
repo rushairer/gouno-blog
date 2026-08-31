@@ -5,6 +5,19 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Security
+- Extend production Docker Secret-only injection to PostgreSQL, Redis, GOSSO
+  database/Redis/SMTP credentials, and the GOSSO Admin and Blog seed jobs;
+  configured Secret files now fail closed when unreadable or empty.
+- Make the local GOSSO container trust the development CA for HTTPS
+  Back-Channel Logout delivery, and enforce that mount in the authentication
+  deployment contract.
+
+### Fixed
+- Canonicalize active local OAuth/OIDC documentation, Compose defaults,
+  OpenAPI examples, Caddy policy, and test origins to `*.dev.local` without
+  an explicit default HTTPS port.
+
 ## [1.4.0] - 2026-08-31
 
 ### Changed

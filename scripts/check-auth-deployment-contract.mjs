@@ -7,7 +7,11 @@ const required = new Map([
       "GOUNO_AUTH_LOGIN_URL: /login",
       "GOUNO_WEB_SERVER_TRUSTED_PROXIES: ${GOSSO_TRUSTED_PROXIES:?set GOSSO_TRUSTED_PROXIES}",
       "BLOG_BFF_ENABLED: \"true\"",
-      "BLOG_REDIS_PASSWORD: ${BLOG_REDIS_PASSWORD:?set BLOG_REDIS_PASSWORD}",
+      "POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password",
+      "GOUNO_DATABASE_DRIVERS_POSTGRES_DSN_FILE: /run/secrets/gosso_database_dsn",
+      "GOUNO_REDIS_DSN_FILE: /run/secrets/gosso_redis_dsn",
+      "PG_DSN_FILE: /run/secrets/gosso_database_dsn",
+      "REDIS_DSN_FILE: /run/secrets/gosso_redis_dsn",
       "GOUNO_WEB_SERVER_TRUSTED_PROXIES: 172.21.0.0/16",
       "GOUNO_DATABASE_DRIVERS_POSTGRES_DSN_FILE: /run/secrets/blog_database_dsn",
       "GOUNO_REDIS_DSN_FILE: /run/secrets/blog_redis_dsn",
@@ -21,6 +25,13 @@ const required = new Map([
   [
     "README.md",
     ["Blog 不提供 `/login`", "GOSSO_TRUSTED_PROXIES"],
+  ],
+  [
+    "docker-compose.yml",
+    [
+      "SSL_CERT_FILE=/etc/ssl/certs/local-dev-root-ca.pem",
+      "${LOCAL_TLS_ROOT_CA_FILE:-./certs/local-dev-root-ca.pem}:/etc/ssl/certs/local-dev-root-ca.pem:ro",
+    ],
   ],
 ]);
 
@@ -42,8 +53,22 @@ const forbidden = new Map([
   ["Caddyfile", ["@legacy_login", "redir @legacy_login", "Access-Control-Allow-Origin *", ".local.test Domain=", "identity-admin"]],
   ["Caddyfile.production", ["@legacy_login", "redir @legacy_login", "Access-Control-Allow-Origin *", "Domain=", "identity-admin"]],
   ["blog-frontend/src/App.tsx", ['path="/login"', 'path="/callback"']],
-  ["docker-compose.yml", ["BLOG_OIDC_INTERNAL_ENDPOINT", "blog.local.test", "sso.local.test"]],
-  ["docker-compose.production.yml", ["BLOG_OIDC_INTERNAL_ENDPOINT"]],
+  ["docker-compose.yml", ["BLOG_OIDC_INTERNAL_ENDPOINT", "blog.local.test", "sso.local.test", "https://sso.dev.local:443", "https://blog.dev.local:443", "8443"]],
+  ["docker-compose.source.yml", ["localhost:8443", "8443"]],
+  ["docker-compose.production.yml", [
+    "BLOG_OIDC_INTERNAL_ENDPOINT",
+    "POSTGRES_PASSWORD: ${",
+    "REDIS_PASSWORD: ${",
+    "BLOG_REDIS_PASSWORD: ${",
+    "GOUNO_DATABASE_DRIVERS_POSTGRES_DSN: ${",
+    "GOUNO_REDIS_DSN: ${",
+    "GOUNO_SMTP_PASSWORD: ${",
+    "PG_DSN: ${",
+    "REDIS_DSN: ${",
+    "ADMIN_PASSWORD: ${",
+  ]],
+  ["Caddyfile", [":443", "8443"]],
+  [".env.example", [":443", "8443"]],
   ["blog-backend/config/openapi.yaml", ["BearerAuth"]],
 ]);
 

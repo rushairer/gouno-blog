@@ -20,11 +20,11 @@ Gouno Blog 是一个构建于 GoUno 与 GOSSO 的开源、自托管博客运营�
 
 系统采用“业务应用轻依赖身份提供商”的架构。`gouno-blog` 不包含 GOSSO 或 GOSSO Admin 源码，也不把它们作为 Git 子模块；本地完整集群通过已发布 Docker 镜像接入，业务代码只通过 OIDC/OAuth2 和 JWKS 与身份服务交互。
 
-* **Caddy HTTPS Gateway (`https://sso.dev.local:443`, `https://blog.dev.local:443`)**：统一多子域网关入口。
-  - `https://blog.dev.local:443/` -> **blog-frontend** (React SPA 门户)
-  - `https://blog.dev.local:443/api/` -> **blog-backend** (GoUno 博客后端 BFF)
-  - `https://sso.dev.local:443/` -> **gosso-admin-frontend** (GOSSO 身份管理控制台)
-  - `https://sso.dev.local:443/api/v1/`、`/oauth2/`、`/oidc/`、`/.well-known/` -> **gosso**
+* **Caddy HTTPS Gateway (`https://sso.dev.local`, `https://blog.dev.local`)**：统一多子域网关入口。
+  - `https://blog.dev.local/` -> **blog-frontend** (React SPA 门户)
+  - `https://blog.dev.local/api/` -> **blog-backend** (GoUno 博客后端 BFF)
+  - `https://sso.dev.local/` -> **gosso-admin-frontend** (GOSSO 身份管理控制台)
+  - `https://sso.dev.local/api/v1/`、`/oauth2/`、`/oidc/`、`/.well-known/` -> **gosso**
 * **GOSSO / OIDC Provider**：负责登录、授权码流程、Token 签发、MFA、Passkey 等身份能力；唯一登录 UI 由 `sso.dev.local`（生产 `sso.io84.com`）下的 GOSSO 托管前端提供，业务前端不实现凭据表单。
 * **blog-backend**：博客 API 后端与 Confidential BFF，使用 `gouno` Web 框架开发，执行 OIDC 授权码 + PKCE 交换并维护同域 `__Host-*` Cookie 会话；向身份服务拉取 JWKS 公钥并校验登录凭证与用户权限；内置受控 AI Agent Runner、Workflow 引擎、Cron Scheduler、Blog Tools 与人工审批。
 * **blog-frontend**：基于 React 构建的单页面应用（SPA），提供门户展示、`/admin` 博客管理控制台和 `/admin/ai-ops` AI 运营控制台。
@@ -84,12 +84,12 @@ chmod 600 keys/private.pem
 默认 compose 会启动 blog、GOSSO、GOSSO Admin、PostgreSQL、Redis、Mailpit 和统一网关，并自动注册博客前端 OAuth client：
 
 - Blog BFF Client ID：`blog-bff`
-- Redirect URI：`https://blog.dev.local:443/api/auth/callback`
-- Post Logout Redirect URI：`https://blog.dev.local:443/api/auth/logout/callback`
-- Back-Channel Logout URI：`https://blog.dev.local:443/api/auth/backchannel-logout`
+- Redirect URI：`https://blog.dev.local/api/auth/callback`
+- Post Logout Redirect URI：`https://blog.dev.local/api/auth/logout/callback`
+- Back-Channel Logout URI：`https://blog.dev.local/api/auth/backchannel-logout`
 - Scopes：`openid profile email`
 
-GOSSO Admin 使用独立 OAuth client 和 Redirect URI：`https://sso.dev.local:443/callback`。GOSSO 的 `login_url` 指向 `https://sso.dev.local:443/login`；Blog 不提供 `/login` 路由。Blog 前端通过 `@gosso/client` 使用同域 `__Host-*` HttpOnly Cookie 业务会话；访问与刷新 Token 由 Blog BFF 服务端通过 Google Tink AEAD 密钥加密存储在 Redis 中，浏览器端零 Token 暴露。
+GOSSO Admin 使用独立 OAuth client 和 Redirect URI：`https://sso.dev.local/callback`。GOSSO 的 `login_url` 指向 `https://sso.dev.local/login`；Blog 不提供 `/login` 路由。Blog 前端通过 `@gosso/client` 使用同域 `__Host-*` HttpOnly Cookie 业务会话；访问与刷新 Token 由 Blog BFF 服务端通过 Google Tink AEAD 密钥加密存储在 Redis 中，浏览器端零 Token 暴露。
 
 ```bash
 docker compose up -d
@@ -133,11 +133,11 @@ docker compose -f docker-compose.yml -f docker-compose.source.yml up -d --build
 后端会在数据库可用后才通过 `/healthz` 就绪检查；前端会等待该检查成功，避免容器刚启动时将请求转发到尚未完成数据库初始化的 API。
 
 ### 5. 访问测试
-- 打开浏览器访问门户：[https://blog.dev.local:443/](https://blog.dev.local:443/)（或直接 [https://blog.dev.local/](https://blog.dev.local/)）
-- 访问博客后台管理（触发 SSO 登录流）：[https://blog.dev.local:443/admin](https://blog.dev.local:443/admin)
-- 访问 AI 运营控制台：[https://blog.dev.local:443/admin/ai-ops](https://blog.dev.local:443/admin/ai-ops)
-- 访问 GOSSO 身份管理控制台：[https://sso.dev.local:443/](https://sso.dev.local:443/)
-- 访问 API Swagger 文档：[https://blog.dev.local:443/swagger/index.html](https://blog.dev.local:443/swagger/index.html)
+- 打开浏览器访问门户：[https://blog.dev.local/](https://blog.dev.local/)
+- 访问博客后台管理（触发 SSO 登录流）：[https://blog.dev.local/admin](https://blog.dev.local/admin)
+- 访问 AI 运营控制台：[https://blog.dev.local/admin/ai-ops](https://blog.dev.local/admin/ai-ops)
+- 访问 GOSSO 身份管理控制台：[https://sso.dev.local/](https://sso.dev.local/)
+- 访问 API Swagger 文档：[https://blog.dev.local/swagger/index.html](https://blog.dev.local/swagger/index.html)
 - 使用本地默认管理员账户登录：
   - 用户名：`admin`
   - 密码：`admin123`
@@ -149,9 +149,9 @@ docker compose -f docker-compose.yml -f docker-compose.source.yml up -d --build
 如需让 `gouno-blog` 连接外部 OIDC/GOSSO，而不是本地 compose 内的 `gosso`，可以覆盖以下配置，并按需停用本地身份相关服务：
 
 ```bash
-export VITE_GOSSO_ISSUER=http://localhost:8088
-export SSO_JWKS_URL=http://host.docker.internal:8088/.well-known/jwks.json
-export SSO_TOKEN_ISSUER=http://localhost:8088
+export VITE_GOSSO_ISSUER=https://sso.dev.local
+export SSO_JWKS_URL=https://sso.dev.local/.well-known/jwks.json
+export SSO_TOKEN_ISSUER=https://sso.dev.local
 export SSO_CLIENT_ID=blog-bff
 ```
 
@@ -204,14 +204,13 @@ docker compose up -d
 
 默认部署采用同源 API，不开放跨域访问。若前端确实部署在不同的受信任 Origin，请在后端运行配置的 `web_server.cors_allowed_origins` 中逐项列出完整 Origin（例如 `https://console.example.com`）；不要使用通配符。未列入名单的跨源写请求会被拒绝。
 
-生产镜像不再内置 Blog 数据库 DSN。启动后端必须提供 `GOUNO_DATABASE_DRIVERS_POSTGRES_DSN`；Compose 为本地开发临时生成该值，初始化任务也会使用同一个 `BLOG_POSTGRES_PASSWORD`。部署时应至少设置独立的 `BLOG_POSTGRES_PASSWORD`、`GOUNO_DATABASE_DRIVERS_POSTGRES_DSN`、`BLOG_VISITOR_SECRET`、至少 32 字符的 `GOUNO_AI_WEBHOOK_SECRET` 和 Agent 主密钥，推荐使用平台的 Secret 管理能力，而不是提交 `.env` 文件。生产环境启用 AI Agent 而未配置有效 Webhook 密钥时会拒绝启动。
+生产镜像不再内置 Blog 数据库 DSN。生产 Compose 只能通过 Docker Secret 文件提供数据库/Redis DSN、密码、BFF 密钥、Webhook 密钥与 Agent 主密钥；不要以环境变量或 `.env` 文件传递这些值。生产环境启用 AI Agent 而未配置有效 Webhook 密钥时会拒绝启动。
 
-`BLOG_AGENT_MASTER_KEY` 解码后必须恰好为 32 字节。生产配置默认关闭 Agent，且启用时缺少有效主密钥会拒绝启动。主密钥轮换时，提升 `BLOG_AGENT_MASTER_KEY_VERSION`，并暂时通过 `BLOG_AGENT_PREVIOUS_MASTER_KEYS` 保留旧版本：
+`BLOG_AGENT_MASTER_KEY` 解码后必须恰好为 32 字节。生产配置默认关闭 Agent，且启用时缺少有效主密钥会拒绝启动。主密钥轮换时，提升 `BLOG_AGENT_MASTER_KEY_VERSION`，并通过受控的 Secret 文件保留旧版本：
 
 ```bash
-export BLOG_AGENT_MASTER_KEY_VERSION=2
-export BLOG_AGENT_MASTER_KEY="<new-base64-key>"
-export BLOG_AGENT_PREVIOUS_MASTER_KEYS="1:<old-base64-key>"
+BLOG_AGENT_MASTER_KEY_VERSION=2
+# BLOG_AGENT_MASTER_KEY_FILE 与旧密钥文件由部署平台作为 Docker Secret 挂载。
 ```
 
 旧密钥只用于解密旧记录，新保存的 Provider Key 会使用当前版本。管理员重新保存所有 Provider 凭据后即可移除旧密钥；丢失仍在使用的旧密钥会导致对应 Provider 无法运行。

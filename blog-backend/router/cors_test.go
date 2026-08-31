@@ -65,15 +65,15 @@ func TestCORSMiddlewareTreatsExplicitPortAsSameOrigin(t *testing.T) {
 	}
 }
 
-func TestCORSMiddlewareAllowsForwardedHTTPSLocalhostOrigin(t *testing.T) {
+func TestCORSMiddlewareAllowsForwardedHTTPSBlogOrigin(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	router.Use(middleware.CORSMiddleware(nil))
 	router.POST("/api/posts", func(c *gin.Context) { c.Status(http.StatusCreated) })
 
 	req := httptest.NewRequest(http.MethodPost, "http://blog-backend:8082/api/posts", nil)
-	req.Host = "localhost:8443"
-	req.Header.Set("Origin", "https://localhost:8443")
+	req.Host = "blog.dev.local"
+	req.Header.Set("Origin", "https://blog.dev.local")
 	req.Header.Set("X-Forwarded-Proto", "https")
 	response := httptest.NewRecorder()
 	router.ServeHTTP(response, req)

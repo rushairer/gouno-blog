@@ -271,7 +271,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		secrets, err := secretbox.NewKeyring(
 			readSecretFromFileOrEnv(os.Getenv("BLOG_AGENT_MASTER_KEY_FILE"), os.Getenv("BLOG_AGENT_MASTER_KEY")),
 			os.Getenv("BLOG_AGENT_MASTER_KEY_VERSION"),
-			os.Getenv("BLOG_AGENT_PREVIOUS_MASTER_KEYS"),
+			readOptionalSecretFromFileOrEnv(os.Getenv("BLOG_AGENT_PREVIOUS_MASTER_KEYS_FILE"), os.Getenv("BLOG_AGENT_PREVIOUS_MASTER_KEYS")),
 		)
 		if err != nil {
 			log.Fatalf("configure AI Agent secret encryption: %v", err)
@@ -326,12 +326,32 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 }
 
 func readSecretFromFileOrEnv(filePath, envVal string) string {
-	if filePath != "" {
-		if data, err := os.ReadFile(filePath); err == nil {
-			return strings.TrimSpace(string(data))
-		}
+	if filePath == "" {
+		return envVal
 	}
-	return envVal
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		log.Fatalf("read configured secret file %q: %v", filePath, err)
+	}
+	value := strings.TrimSpace(string(data))
+	if value == "" {
+		log.Fatalf("configured secret file %q is empty", filePath)
+	}
+	return value
+}
+
+// readOptionalSecretFromFileOrEnv has the same fail-closed file semantics as
+// readSecretFromFileOrEnv, but allows an intentionally empty value for optional
+// historical encryption keys.
+func readOptionalSecretFromFileOrEnv(filePath, envVal string) string {
+	if filePath == "" {
+		return envVal
+	}
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		log.Fatalf("read configured secret file %q: %v", filePath, err)
+	}
+	return strings.TrimSpace(string(data))
 }
 
 func loadSecretFileIntoEnv(valueName, fileName string) error {

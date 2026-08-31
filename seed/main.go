@@ -57,9 +57,15 @@ func envOrDefault(name, fallback string) string {
 
 func readSecretFromFileOrEnv(filePath, envVal string) string {
 	if filePath != "" {
-		if data, err := os.ReadFile(filePath); err == nil {
-			return strings.TrimSpace(string(data))
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			log.Fatalf("read configured Secret file %q: %v", filePath, err)
 		}
+		value := strings.TrimSpace(string(data))
+		if value == "" {
+			log.Fatalf("configured Secret file %q is empty", filePath)
+		}
+		return value
 	}
 	return strings.TrimSpace(envVal)
 }
@@ -78,13 +84,13 @@ func invalidateConsentCache(ctx context.Context, redisDSN, accountID, clientID s
 }
 
 func main() {
-	dsn := os.Getenv("PG_DSN")
+	dsn := readSecretFromFileOrEnv(os.Getenv("PG_DSN_FILE"), os.Getenv("PG_DSN"))
 	if dsn == "" {
-		log.Fatal("PG_DSN environment variable is required")
+		log.Fatal("PG_DSN or PG_DSN_FILE is required")
 	}
-	redisDSN := os.Getenv("REDIS_DSN")
+	redisDSN := readSecretFromFileOrEnv(os.Getenv("REDIS_DSN_FILE"), os.Getenv("REDIS_DSN"))
 	if redisDSN == "" {
-		log.Fatal("REDIS_DSN environment variable is required")
+		log.Fatal("REDIS_DSN or REDIS_DSN_FILE is required")
 	}
 
 	accountID := envOrDefault("BLOG_OAUTH_ACCOUNT_ID", "00000000-0000-0000-0000-000000000001")
@@ -94,7 +100,7 @@ func main() {
 	clientName := envOrDefault("BLOG_OAUTH_CLIENT_NAME", "Personal Blog BFF")
 	clientDescription := envOrDefault("BLOG_OAUTH_CLIENT_DESCRIPTION", "Confidential OAuth2 Client for Blog BFF")
 
-	redirectURIsJSON, err := parseJSONList(os.Getenv("BLOG_OAUTH_REDIRECT_URIS"), []string{"https://blog.dev.local:443/api/auth/callback"})
+	redirectURIsJSON, err := parseJSONList(os.Getenv("BLOG_OAUTH_REDIRECT_URIS"), []string{"https://blog.dev.local/api/auth/callback"})
 	if err != nil {
 		log.Fatalf("Failed to parse BLOG_OAUTH_REDIRECT_URIS: %v", err)
 	}
@@ -118,12 +124,12 @@ func main() {
 		clientSecretHash = string(hash)
 	}
 
-	postLogoutRedirectURIsJSON, err := parseJSONList(os.Getenv("BLOG_OAUTH_POST_LOGOUT_REDIRECT_URIS"), []string{"https://blog.dev.local:443/api/auth/logout/callback"})
+	postLogoutRedirectURIsJSON, err := parseJSONList(os.Getenv("BLOG_OAUTH_POST_LOGOUT_REDIRECT_URIS"), []string{"https://blog.dev.local/api/auth/logout/callback"})
 	if err != nil {
 		log.Fatalf("Failed to parse BLOG_OAUTH_POST_LOGOUT_REDIRECT_URIS: %v", err)
 	}
-	backchannelLogoutURI := envOrDefault("BLOG_OAUTH_BACKCHANNEL_LOGOUT_URI", "https://blog.dev.local:443/api/auth/backchannel-logout")
-	allowedResourcesJSON, err := parseJSONList(os.Getenv("BLOG_OAUTH_ALLOWED_RESOURCES"), []string{"https://blog.dev.local:443/api"})
+	backchannelLogoutURI := envOrDefault("BLOG_OAUTH_BACKCHANNEL_LOGOUT_URI", "https://blog.dev.local/api/auth/backchannel-logout")
+	allowedResourcesJSON, err := parseJSONList(os.Getenv("BLOG_OAUTH_ALLOWED_RESOURCES"), []string{"https://blog.dev.local/api"})
 	if err != nil {
 		log.Fatalf("Failed to parse BLOG_OAUTH_ALLOWED_RESOURCES: %v", err)
 	}
