@@ -94,7 +94,7 @@ func main() {
 	clientName := envOrDefault("BLOG_OAUTH_CLIENT_NAME", "Personal Blog BFF")
 	clientDescription := envOrDefault("BLOG_OAUTH_CLIENT_DESCRIPTION", "Confidential OAuth2 Client for Blog BFF")
 
-	redirectURIsJSON, err := parseJSONList(os.Getenv("BLOG_OAUTH_REDIRECT_URIS"), []string{"https://blog.dev.local:8443/api/auth/callback"})
+	redirectURIsJSON, err := parseJSONList(os.Getenv("BLOG_OAUTH_REDIRECT_URIS"), []string{"https://blog.dev.local:443/api/auth/callback"})
 	if err != nil {
 		log.Fatalf("Failed to parse BLOG_OAUTH_REDIRECT_URIS: %v", err)
 	}
@@ -118,12 +118,12 @@ func main() {
 		clientSecretHash = string(hash)
 	}
 
-	postLogoutRedirectURIsJSON, err := parseJSONList(os.Getenv("BLOG_OAUTH_POST_LOGOUT_REDIRECT_URIS"), []string{"https://blog.dev.local:8443/api/auth/logout/callback"})
+	postLogoutRedirectURIsJSON, err := parseJSONList(os.Getenv("BLOG_OAUTH_POST_LOGOUT_REDIRECT_URIS"), []string{"https://blog.dev.local:443/api/auth/logout/callback"})
 	if err != nil {
 		log.Fatalf("Failed to parse BLOG_OAUTH_POST_LOGOUT_REDIRECT_URIS: %v", err)
 	}
-	backchannelLogoutURI := envOrDefault("BLOG_OAUTH_BACKCHANNEL_LOGOUT_URI", "https://blog.dev.local:8443/api/auth/backchannel-logout")
-	allowedResourcesJSON, err := parseJSONList(os.Getenv("BLOG_OAUTH_ALLOWED_RESOURCES"), []string{"https://blog.dev.local:8443/api"})
+	backchannelLogoutURI := envOrDefault("BLOG_OAUTH_BACKCHANNEL_LOGOUT_URI", "https://blog.dev.local:443/api/auth/backchannel-logout")
+	allowedResourcesJSON, err := parseJSONList(os.Getenv("BLOG_OAUTH_ALLOWED_RESOURCES"), []string{"https://blog.dev.local:443/api"})
 	if err != nil {
 		log.Fatalf("Failed to parse BLOG_OAUTH_ALLOWED_RESOURCES: %v", err)
 	}

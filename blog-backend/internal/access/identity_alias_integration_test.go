@@ -116,7 +116,7 @@ func TestBootstrapUsesOnlyExactLocalIdentity(t *testing.T) {
 	if err := migrations.Up(ctx, db); err != nil {
 		t.Fatal(err)
 	}
-	issuer := "https://sso.dev.local:8443"
+	issuer := "https://sso.dev.local:443"
 	bootstrapSub := fmt.Sprintf("bootstrap-test-%d", time.Now().UnixNano())
 	otherSub := bootstrapSub + "-other"
 	svc := access.NewService(db, access.Bootstrap{Issuer: issuer, Subject: bootstrapSub})

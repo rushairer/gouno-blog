@@ -38,3 +38,11 @@ This document defines the **immutable architectural rules, security baselines, a
 - Follow Semantic Versioning (SemVer).
 - Prior to official public GA release, development and security hardening iterate within the **`1.x`** major series (e.g. `1.4.0`). Major version `2.0.0` is reserved for true generational product milestones.
 - Keep `CHANGELOG.md` updated for every release.
+
+---
+
+## 4. Local Domain & Standard Port Contract
+
+- **Standard Ports Only**: Local development domains are strictly **`https://sso.dev.local:443`** (or standard `https://sso.dev.local`) and **`https://blog.dev.local:443`** (or standard `https://blog.dev.local`).
+- **Forbid Port 8443**: Non-standard port `8443` is explicitly forbidden. Caddy gateway listens on `443` / `80`. Agents must never drift back to `8443`.
+
