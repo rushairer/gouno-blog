@@ -331,11 +331,8 @@ func (s *Service) Resolve(ctx context.Context, claims jwt.MapClaims) (Snapshot, 
 	if err != nil {
 		return Snapshot{}, err
 	}
-	var ownerExists bool
-	if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM blog_role_bindings WHERE role='owner')`).Scan(&ownerExists); err != nil {
-		return Snapshot{}, err
-	}
-	if !ownerExists && issuer == s.bootstrap.Issuer && subject == s.bootstrap.Subject {
+	isBootstrapOwner := s.bootstrap.Issuer != "" && s.bootstrap.Subject != "" && issuer == s.bootstrap.Issuer && subject == s.bootstrap.Subject
+	if isBootstrapOwner {
 		var membershipID int64
 		if err = tx.QueryRowContext(ctx, `INSERT INTO blog_memberships (principal_id) VALUES ($1) ON CONFLICT (principal_id) DO UPDATE SET status='active', authorization_version=blog_memberships.authorization_version+1, updated_at=NOW() RETURNING id`, p.ID).Scan(&membershipID); err != nil {
 			return Snapshot{}, err
