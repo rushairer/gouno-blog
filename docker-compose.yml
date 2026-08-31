@@ -1,6 +1,6 @@
 services:
   db:
-    image: pgvector/pgvector:pg15@sha256:a20a57d7aa5217a6af0a391ccf69f4a8512406d6c14be08132f801468cc3cc62
+    image: pgvector/pgvector:pg15
     container_name: sso-blog-db
     ports:
       - "127.0.0.1:5432:5432"
@@ -16,7 +16,7 @@ services:
       retries: 5
 
   redis:
-    image: redis:7-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2
+    image: redis:7-alpine
     container_name: sso-blog-redis
     ports:
       - "127.0.0.1:6379:6379"
@@ -27,7 +27,7 @@ services:
       retries: 5
 
   mailpit:
-    image: axllent/mailpit:v1.27.8@sha256:6abc8e633df15eaf785cfcf38bae48e66f64beecdc03121e249d0f9ec15f0707
+    image: axllent/mailpit:v1.27.8
     container_name: sso-blog-mailpit
     ports:
       - "127.0.0.1:1025:1025"
@@ -35,7 +35,7 @@ services:
     restart: unless-stopped
 
   gosso:
-    image: ${GOSSO_IMAGE:-ghcr.io/rushairer/gosso@sha256:0db6f974de68e414ec9e61c0819d2180c298301c90f0fb19e5b75a869db8be7c}
+    image: ${GOSSO_IMAGE:-ghcr.io/rushairer/gosso:main}
     pull_policy: always
     container_name: sso-blog-gosso
     command: ["web", "-e", "development"]
@@ -75,7 +75,7 @@ services:
         condition: service_started
 
   gosso-admin-seed:
-    image: ${GOSSO_ADMIN_SEED_IMAGE:-ghcr.io/rushairer/gosso-admin-seed@sha256:d1fe793f2b0fd68292594c379a53f3f3855df480b512b3b7ef0fecd883dfd5d0}
+    image: ${GOSSO_ADMIN_SEED_IMAGE:-ghcr.io/rushairer/gosso-admin-seed:main}
     pull_policy: always
     container_name: sso-blog-gosso-admin-seed
     environment:
@@ -92,7 +92,7 @@ services:
         condition: service_started
 
   blog-client-seed:
-    image: ${GOUNO_BLOG_SEED_IMAGE:-ghcr.io/rushairer/gouno-blog-seed@sha256:804cf360b2c3265369b70bcccc98396fd78af2d5c0f1b3ed87e6f729877f71e9}
+    image: ${GOUNO_BLOG_SEED_IMAGE:-ghcr.io/rushairer/gouno-blog-seed:main}
     pull_policy: always
     container_name: sso-blog-client-seed
     environment:
@@ -117,7 +117,7 @@ services:
         condition: service_completed_successfully
 
   blog-media-init:
-    image: ${GOUNO_BLOG_BACKEND_IMAGE:-ghcr.io/rushairer/gouno-blog-backend@sha256:48eaff296f28e68cd9472a7d7877ea12610f52998e6a159497d8b78cad72c2d7}
+    image: ${GOUNO_BLOG_BACKEND_IMAGE:-ghcr.io/rushairer/gouno-blog-backend:main}
     pull_policy: always
     user: "0:0"
     entrypoint: ["/bin/sh", "-c"]
@@ -131,7 +131,7 @@ services:
       - blog_media:/app/data/media
 
   blog-backend:
-    image: ${GOUNO_BLOG_BACKEND_IMAGE:-ghcr.io/rushairer/gouno-blog-backend@sha256:48eaff296f28e68cd9472a7d7877ea12610f52998e6a159497d8b78cad72c2d7}
+    image: ${GOUNO_BLOG_BACKEND_IMAGE:-ghcr.io/rushairer/gouno-blog-backend:main}
     pull_policy: always
     container_name: sso-blog-backend
     environment:
@@ -195,7 +195,7 @@ services:
         condition: service_completed_successfully
 
   blog-frontend:
-    image: ${GOUNO_BLOG_FRONTEND_IMAGE:-ghcr.io/rushairer/gouno-blog-frontend@sha256:38e41263ff6537283964f85121552401892f671f00f61a9ce2066704ce52f219}
+    image: ${GOUNO_BLOG_FRONTEND_IMAGE:-ghcr.io/rushairer/gouno-blog-frontend:main}
     pull_policy: always
     container_name: sso-blog-frontend
     depends_on:
@@ -203,7 +203,7 @@ services:
         condition: service_healthy
 
   gosso-admin-frontend:
-    image: ${GOSSO_ADMIN_FRONTEND_IMAGE:-ghcr.io/rushairer/gosso-admin-frontend@sha256:ac483781e51588ddccfa85ee7929e40164645251c9f0cbe08f1b0c065d5e1bb1}
+    image: ${GOSSO_ADMIN_FRONTEND_IMAGE:-ghcr.io/rushairer/gosso-admin-frontend:main}
     pull_policy: always
     container_name: sso-blog-gosso-admin-frontend
     healthcheck:
@@ -216,7 +216,7 @@ services:
       - gosso
 
   gateway:
-    image: caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d
+    image: caddy:2.10.2-alpine
     container_name: sso-blog-gateway
     ports:
       - "127.0.0.1:8443:8443"
