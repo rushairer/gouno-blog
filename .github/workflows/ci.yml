@@ -125,11 +125,11 @@ jobs:
       - name: Docker Compose config validation
         run: docker compose config
 
-      - name: Enforce immutable default images
+      - name: Enforce development application image channel
         run: |
           docker compose config | awk '
-            /image:/ && $2 !~ /@sha256:[a-f0-9]{64}$/ {
-              print "image is not pinned by digest: " $2
+            /image: ghcr.io\/rushairer\/(gosso|gosso-admin-seed|gosso-admin-frontend|gouno-blog-seed|gouno-blog-backend|gouno-blog-frontend):/ && $2 !~ /:main$/ {
+              print "development application image must follow :main: " $2
               invalid = 1
             }
             END { exit invalid }
