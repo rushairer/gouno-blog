@@ -6,6 +6,7 @@ import {
   AdminPageHeader,
   BulkActionBar,
   Button,
+  ButtonLink,
   ConfirmDialog,
   ContentStack,
   copyText,
@@ -120,9 +121,9 @@ export default function AdminPages() {
         title="单页"
         description="管理关于我、友情链接、隐私政策等独立单页。"
         actions={
-          <Link className="btn btn-primary" to="/admin/pages/new">
-            <Plus /> 新建单页
-          </Link>
+          <ButtonLink variant="primary" to="/admin/pages/new" icon={<Plus />}>
+            新建单页
+          </ButtonLink>
         }
       />
 
@@ -210,9 +211,13 @@ export default function AdminPages() {
                   清除筛选
                 </button>
               ) : (
-                <Link className="btn btn-primary" to="/admin/pages/new">
-                  <Plus /> 新建单页
-                </Link>
+                <ButtonLink
+                  variant="primary"
+                  to="/admin/pages/new"
+                  icon={<Plus />}
+                >
+                  新建单页
+                </ButtonLink>
               )
             }
           />

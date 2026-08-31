@@ -222,8 +222,12 @@ export default function Categories() {
         title="分类"
         description="建立长期稳定的内容脉络与主题结构。"
         actions={
-          <Button variant="primary" type="button" onClick={openCreateDrawer}>
-            <Plus />
+          <Button
+            variant="primary"
+            type="button"
+            icon={<Plus />}
+            onClick={openCreateDrawer}
+          >
             新建分类
           </Button>
         }

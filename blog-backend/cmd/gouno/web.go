@@ -214,6 +214,9 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 	if mediaDir == "" {
 		mediaDir = "./data/media"
 	}
+	if err := configureMediaS3Credentials(cfg.Env); err != nil {
+		log.Fatalf("configure S3 media credentials: %v", err)
+	}
 	mediaStore, err := media.FromEnvironment(ctx, mediaDir)
 	if err != nil {
 		log.Fatalf("configure media storage: %v", err)
@@ -323,6 +326,43 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		AccessService: accessService, SecureCookies: cfg.Global.WebServerConfig.ResolveSecureCookies(cfg.Env),
 		BFFClient: bffClient,
 	})
+}
+
+// configureMediaS3Credentials loads optional local-development credentials from
+// files, while production accepts S3 static credentials exclusively from
+// Docker Secret files. The AWS SDK reads the resulting standard variables.
+func configureMediaS3Credentials(env string) error {
+	if !strings.EqualFold(strings.TrimSpace(os.Getenv("BLOG_MEDIA_STORAGE")), "s3") {
+		return nil
+	}
+	for _, secret := range [][2]string{
+		{"AWS_ACCESS_KEY_ID", "AWS_ACCESS_KEY_ID_FILE"},
+		{"AWS_SECRET_ACCESS_KEY", "AWS_SECRET_ACCESS_KEY_FILE"},
+	} {
+		valueName, fileName := secret[0], secret[1]
+		path := strings.TrimSpace(os.Getenv(fileName))
+		if env == "production" && strings.TrimSpace(os.Getenv(valueName)) != "" {
+			return fmt.Errorf("%s must not be supplied through the environment in production", valueName)
+		}
+		if env == "production" && path == "" {
+			return fmt.Errorf("%s is required when BLOG_MEDIA_STORAGE=s3 in production", fileName)
+		}
+		if path == "" {
+			continue
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("read %s: %w", fileName, err)
+		}
+		value := strings.TrimSpace(string(data))
+		if value == "" {
+			return fmt.Errorf("%s is empty", fileName)
+		}
+		if err := os.Setenv(valueName, value); err != nil {
+			return fmt.Errorf("set %s: %w", valueName, err)
+		}
+	}
+	return nil
 }
 
 func readSecretFromFileOrEnv(filePath, envVal string) string {

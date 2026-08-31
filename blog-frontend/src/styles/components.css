@@ -197,6 +197,25 @@ textarea.ui-control,
     opacity 120ms ease;
 }
 
+/*
+ * Button content is always composed from fixed icon and label slots. Keeping
+ * the SVG inside an inline-flex slot avoids browser baseline alignment and
+ * gives every Lucide icon the same layout box.
+ */
+.btn__icon {
+  display: inline-flex;
+  flex: 0 0 var(--button-icon-size, 16px);
+  align-items: center;
+  justify-content: center;
+  width: var(--button-icon-size, 16px);
+  height: var(--button-icon-size, 16px);
+}
+
+.btn__label {
+  display: block;
+  line-height: 1;
+}
+
 .btn:active:not(:disabled) {
   transform: translateY(1px);
 }
@@ -235,6 +254,10 @@ textarea.ui-control,
   flex: 0 0 16px;
   stroke-width: 2;
   color: currentColor;
+}
+
+.btn__icon svg {
+  display: block;
 }
 
 .btn-primary {

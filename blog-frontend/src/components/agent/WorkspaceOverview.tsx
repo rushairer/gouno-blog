@@ -75,9 +75,9 @@ export function WorkspaceOverview({
         <Button
           variant="primary"
           type="button"
+          icon={<GitBranch />}
           onClick={() => onNavigate("automation")}
         >
-          <GitBranch />
           {zh ? "查看自动化" : "Explore automation"}
         </Button>
       </Panel>
@@ -133,9 +133,9 @@ export function WorkspaceOverview({
             <Button
               variant="secondary"
               type="button"
+              icon={<ShieldCheck />}
               onClick={() => onNavigate("inbox")}
             >
-              <ShieldCheck />
               {zh ? "进入待我处理" : "Open review queue"}
             </Button>
           </div>
@@ -180,9 +180,9 @@ export function WorkspaceOverview({
           <Button
             variant="secondary"
             type="button"
+            icon={<Play />}
             onClick={() => onNavigate("automation")}
           >
-            <Play />
             {zh ? "配置自动化" : "Configure automation"}
           </Button>
         </Panel>

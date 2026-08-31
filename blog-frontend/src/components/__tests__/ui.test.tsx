@@ -1,10 +1,13 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
+import { Plus } from "lucide-react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import {
   Badge,
   Button,
+  ButtonLink,
   BulkActionBar,
   Drawer,
   EditorPanel,
@@ -78,6 +81,38 @@ describe("shared UI primitives", () => {
     expect(button).toHaveClass("btn-primary");
     expect(button).toBeDisabled();
     expect(button).toHaveAttribute("aria-busy", "true");
+  });
+
+  it("places button icons in the shared fixed-size icon slot", () => {
+    const { container } = render(
+      <Button variant="primary" icon={<Plus data-testid="add-icon" />}>
+        新建分类
+      </Button>,
+    );
+
+    const button = screen.getByRole("button", { name: "新建分类" });
+    expect(button.querySelector(".btn__icon")).toContainElement(
+      screen.getByTestId("add-icon"),
+    );
+    expect(button.querySelector(".btn__label")).toHaveTextContent("新建分类");
+    expect(
+      container.querySelector(".btn > .btn__icon + .btn__label"),
+    ).toBeInTheDocument();
+  });
+
+  it("gives navigation actions the same button and icon-slot contract", () => {
+    render(
+      <MemoryRouter>
+        <ButtonLink variant="primary" to="/admin/posts/new" icon={<Plus />}>
+          新建文章
+        </ButtonLink>
+      </MemoryRouter>,
+    );
+
+    const link = screen.getByRole("link", { name: "新建文章" });
+    expect(link).toHaveClass("btn", "btn-primary");
+    expect(link.querySelector(".btn__icon")).toBeInTheDocument();
+    expect(link.querySelector(".btn__label")).toHaveTextContent("新建文章");
   });
 
   it("keeps batch actions in one accessible toolbar with shared AI and cancel controls", async () => {

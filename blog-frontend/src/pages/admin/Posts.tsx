@@ -9,6 +9,7 @@ import {
   AdminPageHeader,
   BulkActionBar,
   Button,
+  ButtonLink,
   ConfirmDialog,
   ContentStack,
   copyText,
@@ -170,9 +171,9 @@ export default function AdminPosts() {
         description="管理全站草稿、定时内容与已发布文章。"
         actions={
           can("create", "post") ? (
-            <Link className="btn btn-primary" to="/admin/posts/new">
-              <Plus /> 新建文章
-            </Link>
+            <ButtonLink variant="primary" to="/admin/posts/new" icon={<Plus />}>
+              新建文章
+            </ButtonLink>
           ) : null
         }
       />
@@ -306,9 +307,13 @@ export default function AdminPosts() {
                   清除筛选
                 </Button>
               ) : can("create", "post") ? (
-                <Link className="btn btn-primary" to="/admin/posts/new">
-                  <Plus /> 新建文章
-                </Link>
+                <ButtonLink
+                  variant="primary"
+                  to="/admin/posts/new"
+                  icon={<Plus />}
+                >
+                  新建文章
+                </ButtonLink>
               ) : null
             }
           />

@@ -292,6 +292,7 @@ export default function MediaLibrary() {
                 <Button
                   variant="secondary"
                   type="button"
+                  icon={<Sparkles />}
                   onClick={() => {
                     setAiDrawerOpen(true);
                     setAiGenerated(null);
@@ -300,15 +301,14 @@ export default function MediaLibrary() {
                     setAiError("");
                   }}
                 >
-                  <Sparkles />
                   AI 文生图
                 </Button>
                 <Button
                   variant="primary"
                   type="button"
+                  icon={<ImagePlus />}
                   onClick={() => setUploadDrawerOpen(true)}
                 >
-                  <ImagePlus />
                   上传图片
                 </Button>
               </>

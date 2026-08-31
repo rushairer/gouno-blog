@@ -433,10 +433,10 @@ func (c *Client) BackChannelLogout(ctx context.Context, rawLogoutToken string) e
 
 	// If SID is present, isolate logout to that specific session only.
 	if claims.SID != "" {
-		err = c.store.DeleteBySID(ctx, claims.SID)
+		err = c.store.DeleteBySID(ctx, claims.Issuer, claims.SID)
 	} else if claims.Subject != "" {
 		// Otherwise fallback to revoking all sessions for the subject.
-		err = c.store.DeleteBySubject(ctx, claims.Subject)
+		err = c.store.DeleteByIdentity(ctx, claims.Issuer, claims.Subject)
 	}
 	if err != nil {
 		return err

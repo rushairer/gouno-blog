@@ -5,6 +5,22 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-09-01
+
+### Security
+
+- Scope Blog BFF Redis subject and SID session indexes to the verified issuer,
+  preventing a Back-Channel Logout token from one issuer from deleting a
+  same-value identity session belonging to another issuer.
+- Require production S3 static credentials to arrive only through non-empty
+  Docker Secret files; reject raw credential environment variables whenever
+  S3 media storage is enabled.
+
+### Fixed
+
+- Standardize admin action buttons and navigation links on fixed icon/label
+  slots for consistent alignment and accessible UI behavior.
+
 ## [1.4.1] - 2026-08-31
 
 ### Security
@@ -151,7 +167,8 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 ### Added
 - Initial integrated Blog, Gosso, Admin, database, cache, and gateway distribution.
 
-[Unreleased]: https://github.com/rushairer/gouno-blog/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/rushairer/gouno-blog/compare/v1.4.2...HEAD
+[1.4.2]: https://github.com/rushairer/gouno-blog/compare/v1.4.1...v1.4.2
 [1.4.0]: https://github.com/rushairer/gouno-blog/compare/v1.3.5...v1.4.0
 [1.3.5]: https://github.com/rushairer/gouno-blog/compare/v1.3.4...v1.3.5
 [1.3.4]: https://github.com/rushairer/gouno-blog/compare/v1.3.3...v1.3.4

@@ -99,13 +99,13 @@ func (s *Store) PutSession(ctx context.Context, handle string, session Session, 
 	if err != nil {
 		return err
 	}
-	subKey := s.prefix + ":idx:sub:" + session.Subject
+	subKey := s.identityIndexKey("sub", session.Issuer, session.Subject)
 	_, err = s.redis.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
 		pipe.Set(ctx, key, sealed, ttl)
 		pipe.SAdd(ctx, subKey, handle)
 		pipe.Expire(ctx, subKey, ttl)
 		if session.SID != "" {
-			sidKey := s.prefix + ":idx:sid:" + session.SID
+			sidKey := s.identityIndexKey("sid", session.Issuer, session.SID)
 			pipe.SAdd(ctx, sidKey, handle)
 			pipe.Expire(ctx, sidKey, ttl)
 		}
@@ -142,17 +142,17 @@ func (s *Store) ReplaceSession(ctx context.Context, handle string, previous, ses
 			}
 			_, watchErr = tx.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
 				pipe.Set(ctx, key, sealed, ttl)
-				if previous.Subject != "" && previous.Subject != session.Subject {
-					pipe.SRem(ctx, s.prefix+":idx:sub:"+previous.Subject, handle)
+				if previous.Issuer != "" && previous.Subject != "" && (previous.Issuer != session.Issuer || previous.Subject != session.Subject) {
+					pipe.SRem(ctx, s.identityIndexKey("sub", previous.Issuer, previous.Subject), handle)
 				}
-				subKey := s.prefix + ":idx:sub:" + session.Subject
+				subKey := s.identityIndexKey("sub", session.Issuer, session.Subject)
 				pipe.SAdd(ctx, subKey, handle)
 				pipe.Expire(ctx, subKey, ttl)
-				if previous.SID != "" && previous.SID != session.SID {
-					pipe.SRem(ctx, s.prefix+":idx:sid:"+previous.SID, handle)
+				if previous.Issuer != "" && previous.SID != "" && (previous.Issuer != session.Issuer || previous.SID != session.SID) {
+					pipe.SRem(ctx, s.identityIndexKey("sid", previous.Issuer, previous.SID), handle)
 				}
 				if session.SID != "" {
-					sidKey := s.prefix + ":idx:sid:" + session.SID
+					sidKey := s.identityIndexKey("sid", session.Issuer, session.SID)
 					pipe.SAdd(ctx, sidKey, handle)
 					pipe.Expire(ctx, sidKey, ttl)
 				}
@@ -187,21 +187,21 @@ func (s *Store) DeleteSession(ctx context.Context, handle string) error {
 	session, err := s.GetSession(ctx, handle)
 	if err == nil {
 		if session.Subject != "" {
-			_ = s.redis.SRem(ctx, s.prefix+":idx:sub:"+session.Subject, handle).Err()
+			_ = s.redis.SRem(ctx, s.identityIndexKey("sub", session.Issuer, session.Subject), handle).Err()
 		}
 		if session.SID != "" {
-			_ = s.redis.SRem(ctx, s.prefix+":idx:sid:"+session.SID, handle).Err()
+			_ = s.redis.SRem(ctx, s.identityIndexKey("sid", session.Issuer, session.SID), handle).Err()
 		}
 	}
 	key, _ := s.key("session", handle)
 	return s.redis.Del(ctx, key).Err()
 }
 
-func (s *Store) DeleteBySubject(ctx context.Context, sub string) error {
-	if sub == "" {
+func (s *Store) DeleteByIdentity(ctx context.Context, issuer, subject string) error {
+	if issuer == "" || subject == "" {
 		return nil
 	}
-	subKey := s.prefix + ":idx:sub:" + sub
+	subKey := s.identityIndexKey("sub", issuer, subject)
 	handles, err := s.redis.SMembers(ctx, subKey).Result()
 	if err != nil && !errors.Is(err, redis.Nil) {
 		return err
@@ -214,11 +214,11 @@ func (s *Store) DeleteBySubject(ctx context.Context, sub string) error {
 	return s.redis.Del(ctx, subKey).Err()
 }
 
-func (s *Store) DeleteBySID(ctx context.Context, sid string) error {
-	if sid == "" {
+func (s *Store) DeleteBySID(ctx context.Context, issuer, sid string) error {
+	if issuer == "" || sid == "" {
 		return nil
 	}
-	sidKey := s.prefix + ":idx:sid:" + sid
+	sidKey := s.identityIndexKey("sid", issuer, sid)
 	handles, err := s.redis.SMembers(ctx, sidKey).Result()
 	if err != nil && !errors.Is(err, redis.Nil) {
 		return err
@@ -388,6 +388,14 @@ func (s *Store) key(kind, handle string) (string, []byte) {
 	digest := sha256.Sum256([]byte(handle))
 	key := s.prefix + ":" + kind + ":" + base64.RawURLEncoding.EncodeToString(digest[:])
 	return key, []byte("gouno-blog-bff:" + kind + ":" + key)
+}
+
+// identityIndexKey scopes every session index to the verified issuer. Subject
+// and SID values are only unique within an issuer, so a valid logout token
+// must never be able to delete a session belonging to another identity domain.
+func (s *Store) identityIndexKey(kind, issuer, value string) string {
+	digest := sha256.Sum256([]byte(issuer + "\x00" + value))
+	return s.prefix + ":idx:" + kind + ":" + base64.RawURLEncoding.EncodeToString(digest[:])
 }
 
 // AcquireRefreshLock acquires a distributed lock for refreshing a session.

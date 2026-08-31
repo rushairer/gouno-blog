@@ -172,8 +172,8 @@ services:
       BLOG_MEDIA_S3_ENDPOINT: ${BLOG_MEDIA_S3_ENDPOINT:-}
       BLOG_MEDIA_S3_PUBLIC_BASE_URL: ${BLOG_MEDIA_S3_PUBLIC_BASE_URL:-}
       BLOG_MEDIA_S3_PREFIX: ${BLOG_MEDIA_S3_PREFIX:-}
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_ACCESS_KEY_ID_FILE: /run/secrets/blog_media_s3_access_key_id
+      AWS_SECRET_ACCESS_KEY_FILE: /run/secrets/blog_media_s3_secret_access_key
       GOUNO_AI_AGENTS_ENABLED: ${GOUNO_AI_AGENTS_ENABLED:-true}
       BLOG_AGENT_MASTER_KEY_FILE: /run/secrets/blog_agent_master_key
       BLOG_AGENT_MASTER_KEY_VERSION: ${BLOG_AGENT_MASTER_KEY_VERSION:-1}
@@ -188,6 +188,8 @@ services:
       - blog_redis_dsn
       - blog_visitor_secret
       - blog_webhook_secret
+      - blog_media_s3_access_key_id
+      - blog_media_s3_secret_access_key
     volumes:
       - blog_media:/app/data/media
     healthcheck:
@@ -269,6 +271,12 @@ secrets:
     file: ${BLOG_VISITOR_SECRET_FILE:?set BLOG_VISITOR_SECRET_FILE}
   blog_webhook_secret:
     file: ${GOUNO_AI_WEBHOOK_SECRET_FILE:?set GOUNO_AI_WEBHOOK_SECRET_FILE}
+  blog_media_s3_access_key_id:
+    # Empty placeholders keep local-media production deployments renderable;
+    # the application rejects them whenever BLOG_MEDIA_STORAGE=s3.
+    file: ${BLOG_MEDIA_S3_ACCESS_KEY_ID_FILE:-/dev/null}
+  blog_media_s3_secret_access_key:
+    file: ${BLOG_MEDIA_S3_SECRET_ACCESS_KEY_FILE:-/dev/null}
 
 volumes:
   db_data:

@@ -128,13 +128,13 @@ func TestReplaceSessionUpdatesSIDIndex(t *testing.T) {
 	if err := store.ReplaceSession(ctx, handle, oldSession, newSession, time.Hour); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.DeleteBySID(ctx, "sid-old"); err != nil {
+	if err := store.DeleteBySID(ctx, oldSession.Issuer, "sid-old"); err != nil {
 		t.Fatal(err)
 	}
 	if got, err := store.GetSession(ctx, handle); err != nil || got.RefreshToken != "refresh-new" {
 		t.Fatalf("new session removed by stale SID index: %#v, %v", got, err)
 	}
-	if err := store.DeleteBySID(ctx, "sid-new"); err != nil {
+	if err := store.DeleteBySID(ctx, newSession.Issuer, "sid-new"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := store.GetSession(ctx, handle); !errors.Is(err, ErrNotFound) {
@@ -142,7 +142,7 @@ func TestReplaceSessionUpdatesSIDIndex(t *testing.T) {
 	}
 }
 
-func TestStoreDeleteBySubjectAndSID(t *testing.T) {
+func TestStoreDeleteByIdentityAndSID(t *testing.T) {
 	store, _ := testStore(t)
 	ctx := context.Background()
 	h1, _ := RandomHandle()
@@ -170,7 +170,7 @@ func TestStoreDeleteBySubjectAndSID(t *testing.T) {
 	_ = store.PutSession(ctx, h3, s3, time.Hour)
 
 	// Test DeleteBySID for sid-1
-	if err := store.DeleteBySID(ctx, "sid-1"); err != nil {
+	if err := store.DeleteBySID(ctx, s1.Issuer, "sid-1"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := store.GetSession(ctx, h1); !errors.Is(err, ErrNotFound) {
@@ -180,8 +180,8 @@ func TestStoreDeleteBySubjectAndSID(t *testing.T) {
 		t.Fatalf("session h2 should still exist: %v", err)
 	}
 
-	// Test DeleteBySubject for user-1
-	if err := store.DeleteBySubject(ctx, "user-1"); err != nil {
+	// Test issuer-scoped identity deletion for user-1.
+	if err := store.DeleteByIdentity(ctx, s2.Issuer, "user-1"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := store.GetSession(ctx, h2); !errors.Is(err, ErrNotFound) {
@@ -189,6 +189,36 @@ func TestStoreDeleteBySubjectAndSID(t *testing.T) {
 	}
 	if _, err := store.GetSession(ctx, h3); err != nil {
 		t.Fatalf("session h3 for user-2 should still exist: %v", err)
+	}
+}
+
+func TestStoreIdentityIndexesDoNotCrossIssuers(t *testing.T) {
+	store, _ := testStore(t)
+	ctx := context.Background()
+	hA, _ := RandomHandle()
+	hB, _ := RandomHandle()
+	sessionA := Session{Issuer: "https://issuer-a.test", Subject: "same-sub", SID: "same-sid", IDToken: "id-a"}
+	sessionB := Session{Issuer: "https://issuer-b.test", Subject: "same-sub", SID: "same-sid", IDToken: "id-b"}
+	if err := store.PutSession(ctx, hA, sessionA, time.Hour); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.PutSession(ctx, hB, sessionB, time.Hour); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.DeleteByIdentity(ctx, sessionA.Issuer, sessionA.Subject); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.GetSession(ctx, hA); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("issuer A identity session was not deleted: %v", err)
+	}
+	if _, err := store.GetSession(ctx, hB); err != nil {
+		t.Fatalf("issuer B session was deleted by issuer A subject logout: %v", err)
+	}
+	if err := store.DeleteBySID(ctx, sessionB.Issuer, sessionB.SID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.GetSession(ctx, hB); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("issuer B SID session was not deleted: %v", err)
 	}
 }
 
