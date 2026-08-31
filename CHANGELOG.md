@@ -5,7 +5,7 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
-## [2.0.0] - 2026-08-31
+## [1.4.0] - 2026-08-31
 
 ### Changed
 - **Breaking:** Production Blog database, Redis, visitor-session, and workflow
@@ -136,8 +136,8 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 ### Added
 - Initial integrated Blog, Gosso, Admin, database, cache, and gateway distribution.
 
-[Unreleased]: https://github.com/rushairer/gouno-blog/compare/v2.0.0...HEAD
-[2.0.0]: https://github.com/rushairer/gouno-blog/compare/v1.3.5...v2.0.0
+[Unreleased]: https://github.com/rushairer/gouno-blog/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/rushairer/gouno-blog/compare/v1.3.5...v1.4.0
 [1.3.5]: https://github.com/rushairer/gouno-blog/compare/v1.3.4...v1.3.5
 [1.3.4]: https://github.com/rushairer/gouno-blog/compare/v1.3.3...v1.3.4
 [1.3.3]: https://github.com/rushairer/gouno-blog/compare/v1.3.2...v1.3.3
