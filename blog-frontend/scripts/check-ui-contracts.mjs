@@ -31,6 +31,28 @@ function location(sourceFile, node) {
   );
 }
 
+function buttonChildIcon(node, sourceFile) {
+  let icon = null;
+  function visitChild(child) {
+    if (icon) return;
+    const tag = jsxTagName(child, sourceFile);
+    if (tag && (tag === "svg" || /^[A-Z]/.test(tag))) {
+      icon = child;
+      return;
+    }
+    if (ts.isJsxExpression(child) && child.expression) {
+      if (ts.isConditionalExpression(child.expression)) {
+        visitChild(child.expression.whenTrue);
+        visitChild(child.expression.whenFalse);
+      } else if (ts.isParenthesizedExpression(child.expression)) {
+        visitChild(child.expression.expression);
+      }
+    }
+  }
+  visitChild(node);
+  return icon;
+}
+
 function checkTsxContracts(name, source) {
   if (!name.endsWith(".tsx") || name.includes("__tests__")) return;
   const sourceFile = ts.createSourceFile(
@@ -60,10 +82,10 @@ function checkTsxContracts(name, source) {
         ["Button", "ButtonLink", "ChoiceButton"].includes(tag)
       ) {
         for (const child of node.children) {
-          const childTag = jsxTagName(child, sourceFile);
-          if (childTag && (childTag === "svg" || /^[A-Z]/.test(childTag))) {
+          const icon = buttonChildIcon(child, sourceFile);
+          if (icon) {
             failures.push(
-              `${name}:${location(sourceFile, child)} ${tag} icons must use the icon prop, not children`,
+              `${name}:${location(sourceFile, icon)} ${tag} icons must use the icon prop, not children`,
             );
           }
         }

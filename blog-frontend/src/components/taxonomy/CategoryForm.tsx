@@ -42,8 +42,7 @@ export function CategoryForm({
           <Button variant="secondary" type="button" onClick={onCancel}>
             取消
           </Button>
-          <Button variant="primary">
-            {creating ? <Plus /> : <Save />}
+          <Button variant="primary" icon={creating ? <Plus /> : <Save />}>
             {creating ? "创建分类" : "保存分类"}
           </Button>
         </>

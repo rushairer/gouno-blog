@@ -574,8 +574,8 @@ export function WorkflowWorkspace({
                             .setEnabled(workflow.id, !workflow.enabled)
                             .then(() => onRefresh?.())
                         }
+                        icon={workflow.enabled ? <CirclePause /> : <Play />}
                       >
-                        {workflow.enabled ? <CirclePause /> : <Play />}
                         {workflow.enabled ? labels.disable : labels.enable}
                       </Button>
                       <Button

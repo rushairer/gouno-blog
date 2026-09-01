@@ -223,8 +223,10 @@ export default function Tags() {
             >
               取消
             </Button>
-            <Button variant="primary">
-              {tagEdit?.mode === "merge" ? <Merge /> : <Save />}
+            <Button
+              variant="primary"
+              icon={tagEdit?.mode === "merge" ? <Merge /> : <Save />}
+            >
               {tagEdit?.mode === "merge" ? "合并标签" : "保存名称"}
             </Button>
           </div>

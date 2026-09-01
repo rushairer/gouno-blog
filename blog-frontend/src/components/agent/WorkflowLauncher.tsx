@@ -174,8 +174,9 @@ export function WorkflowLauncher({
             loading={busy}
             disabled={!workflow}
             onClick={() => void run()}
+            icon={busy ? <Sparkles /> : <Play />}
           >
-            {busy ? <Sparkles /> : <Play />}运行
+            运行
           </Button>
         </div>
       </div>
