@@ -822,7 +822,7 @@
 }
 
 .agent-schedule-last-run small {
-  margin-top: 0 !important;
+  margin-top: 0;
   color: var(--color-text-muted);
   font-size: 11.5px;
   white-space: nowrap;
@@ -2464,7 +2464,7 @@ td .agent-chip-list {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--ui-on-brand);
 }
 .workflow-resource-pagination {
   display: flex;

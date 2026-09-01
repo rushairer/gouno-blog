@@ -395,11 +395,12 @@ function ResourcePicker({
                   (entry) => String(entry) === item.key,
                 );
                 return (
-                  <button
+                  <Button
                     type="button"
                     className={`workflow-resource-card ${checked ? "is-selected" : ""}`}
                     key={`${item.type}:${item.key}`}
                     onClick={() => toggle(item.key)}
+                    aria-pressed={checked}
                   >
                     <div className="workflow-resource-card__control">
                       {multiple ? (
@@ -426,7 +427,7 @@ function ResourcePicker({
                         </p>
                       ) : null}
                     </div>
-                  </button>
+                  </Button>
                 );
               })}
             </div>
