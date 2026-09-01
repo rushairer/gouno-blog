@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"runtime/debug"
-	"strings"
 	"time"
 
 	"github.com/gin-contrib/timeout"
@@ -50,18 +49,14 @@ func RecoveryMiddleware() gin.HandlerFunc {
 	)
 }
 
-// SecurityHeadersMiddleware sets common security response headers, delegating
-// the shared static headers to the gouno framework and keeping the
-// blog-specific CSP policy (with the swagger docs exception) local.
+// SecurityHeadersMiddleware sets application-level headers that are not owned
+// by the edge gateway. Caddy is the single Content-Security-Policy authority
+// for Blog responses, preventing browsers from receiving accidental policy
+// intersections from the gateway, frontend, and backend.
 func SecurityHeadersMiddleware(isProduction bool) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		csp := "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
-		if strings.HasPrefix(ctx.Request.URL.Path, "/swagger") {
-			csp = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: https://unpkg.com; connect-src 'self' https://unpkg.com;"
-		}
 		gounoMiddleware.SecurityHeaders(gounoMiddleware.SecurityHeadersOptions{
 			IsProduction:      isProduction,
-			CSP:               csp,
 			PermissionsPolicy: "geolocation=(), camera=(), microphone=(), payment=()",
 		})(ctx)
 	}

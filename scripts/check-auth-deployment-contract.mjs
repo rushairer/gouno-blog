@@ -17,6 +17,7 @@ const required = new Map([
       "GOUNO_REDIS_DSN_FILE: /run/secrets/blog_redis_dsn",
       "BLOG_OIDC_REDIRECT_URL: https://${BLOG_DOMAIN:?set BLOG_DOMAIN}/api/auth/callback",
       "BLOG_OIDC_POST_LOGOUT_URL: https://${BLOG_DOMAIN:?set BLOG_DOMAIN}/api/auth/logout/callback",
+      "BLOG_OAUTH_POST_LOGOUT_REDIRECT_URIS: https://${BLOG_DOMAIN:?set BLOG_DOMAIN}/api/auth/logout/callback",
       "BLOG_OAUTH_BACKCHANNEL_LOGOUT_URI: https://${BLOG_DOMAIN:?set BLOG_DOMAIN}/api/auth/backchannel-logout",
 	      "AWS_ACCESS_KEY_ID_FILE: /run/secrets/blog_media_s3_access_key_id",
 	      "AWS_SECRET_ACCESS_KEY_FILE: /run/secrets/blog_media_s3_secret_access_key",
@@ -72,6 +73,7 @@ const forbidden = new Map([
 	    "AWS_ACCESS_KEY_ID: ${",
     "AWS_SECRET_ACCESS_KEY: ${",
 	    "BLOG_OAUTH_OWNER_ID",
+    "BLOG_OAUTH_POST_LOGOUT_REDIRECT_URIS: https://${BLOG_DOMAIN:?set BLOG_DOMAIN}/api/auth/logout/callback,",
   ]],
   ["Caddyfile", [":443", "8443"]],
   [".env.example", [":443", "8443"]],
@@ -98,6 +100,13 @@ const blogBlock = localCaddy.split("https://blog.dev.local", 2)[1]?.split("https
 for (const identityPath of ["/.well-known", "/oauth2", "/oidc", "/api/v1"]) {
   if (blogBlock.includes(identityPath)) {
     throw new Error(`Caddyfile: Blog must not proxy identity path ${identityPath}`);
+  }
+}
+
+for (const path of ["blog-frontend/security-headers.conf", "blog-backend/middleware/middleware.go"]) {
+  const content = await readFile(path, "utf8");
+  if (/add_header\s+Content-Security-Policy|ctx\.Header\(\s*"Content-Security-Policy"|CSP:\s*["'`]/.test(content)) {
+    throw new Error(`${path}: Caddy must remain the only Blog Content-Security-Policy authority`);
   }
 }
 

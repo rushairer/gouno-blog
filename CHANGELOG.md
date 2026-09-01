@@ -5,6 +5,18 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.5.4] - 2026-09-01
+
+### Security
+
+- Restrict the production `blog-bff` RP-Initiated Logout registration to its
+  exact, state-validated Blog callback URI.
+
+### Fixed
+
+- Make Caddy the single Content-Security-Policy authority for Blog responses,
+  eliminating conflicting policy headers from the frontend and backend.
+
 ## [1.5.3] - 2026-09-01
 
 ### Fixed
