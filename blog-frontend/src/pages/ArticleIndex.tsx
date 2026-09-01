@@ -8,6 +8,7 @@ import {
 } from "react-router-dom";
 import { ArrowRight, SlidersHorizontal } from "lucide-react";
 import {
+  ButtonLink,
   EmptyState,
   Feedback,
   LoadingState,
@@ -131,12 +132,12 @@ export default function ArticleIndex({
               label="没有找到符合条件的文章。"
               action={
                 <>
-                  <Link className="btn btn-secondary" to="/articles">
+                  <ButtonLink variant="secondary" to="/articles">
                     浏览全部文章
-                  </Link>
-                  <Link className="btn btn-secondary" to="/archive">
+                  </ButtonLink>
+                  <ButtonLink variant="secondary" to="/archive">
                     浏览归档
-                  </Link>
+                  </ButtonLink>
                 </>
               }
             />

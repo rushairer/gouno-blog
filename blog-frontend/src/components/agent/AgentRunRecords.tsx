@@ -2,7 +2,14 @@ import { ArrowLeft, Eye, ListChecks, Trash2 } from "lucide-react";
 import type { Agent, AgentRun, AgentToolCall } from "../../types/agent";
 import { RiskPill, StatusPill } from "./StatusPill";
 import { MarkdownRenderer } from "../MarkdownRenderer";
-import { Button, EmptyState, Panel, PanelHeader, WorkspacePanel } from "../ui";
+import {
+  Button,
+  EmptyState,
+  IconButton,
+  Panel,
+  PanelHeader,
+  WorkspacePanel,
+} from "../ui";
 
 export function JsonPreview({ value }: { value: unknown }) {
   if (
@@ -650,8 +657,8 @@ export function RecordsWorkspace({
             size="compact"
             type="button"
             onClick={onClearInspect}
+            icon={<ArrowLeft />}
           >
-            <ArrowLeft />
             {zh ? "返回 Agent 运行列表" : "Back to Agent runs"}
           </Button>
         </div>
@@ -677,8 +684,8 @@ export function RecordsWorkspace({
                       variant="secondary"
                       type="button"
                       onClick={() => onDelete(selectedRun.run)}
+                      icon={<Trash2 />}
                     >
-                      <Trash2 />
                       {zh ? "删除记录" : "Delete record"}
                     </Button>
                   ) : null}
@@ -750,8 +757,8 @@ export function RecordsWorkspace({
                 {runs.map((run) => (
                   <tr key={run.id}>
                     <td>
-                      <button
-                        type="button"
+                      <Button
+                        variant="ghost"
                         className="workflow-name-button"
                         onClick={() => onInspect(run)}
                       >
@@ -760,7 +767,7 @@ export function RecordsWorkspace({
                             `Agent #${run.agent_id}`}
                         </strong>
                         <small>Run #{run.id}</small>
-                      </button>
+                      </Button>
                     </td>
                     <td>
                       <strong>{run.provider}</strong>
@@ -790,23 +797,20 @@ export function RecordsWorkspace({
                     </td>
                     <td>
                       <div className="agent-row-actions">
-                        <button
-                          type="button"
-                          title={zh ? "查看详情" : "Inspect"}
+                        <IconButton
+                          label={zh ? "查看详情" : "Inspect"}
+                          icon={<Eye />}
                           onClick={() => onInspect(run)}
-                        >
-                          <Eye />
-                        </button>
+                        />
                         {["succeeded", "failed", "cancelled"].includes(
                           run.status,
                         ) ? (
-                          <button
-                            type="button"
-                            title={zh ? "删除记录" : "Delete record"}
+                          <IconButton
+                            variant="danger"
+                            label={zh ? "删除记录" : "Delete record"}
+                            icon={<Trash2 />}
                             onClick={() => onDelete(run)}
-                          >
-                            <Trash2 />
-                          </button>
+                          />
                         ) : null}
                       </div>
                     </td>

@@ -645,8 +645,8 @@ function AgentConsoleContent() {
             variant="secondary"
             type="button"
             onClick={() => void refresh()}
+            icon={<RefreshCw />}
           >
-            <RefreshCw />
             {t("agent.refresh")}
           </Button>
         }

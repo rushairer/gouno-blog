@@ -69,5 +69,13 @@ describe("PostEditor", () => {
     expect(screen.getByLabelText("文章正文 Markdown")).toHaveValue(
       "AI 运营生成的正文内容。",
     );
+    expect(screen.getByRole("tab", { name: "Markdown" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByRole("tab", { name: "预览" })).toHaveAttribute(
+      "aria-selected",
+      "false",
+    );
   });
 });

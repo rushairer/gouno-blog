@@ -16,6 +16,7 @@ import {
   EmptyState,
   ErrorState,
   FilterBar,
+  IconButton,
   Pagination,
   Panel,
   SearchField,
@@ -244,8 +245,9 @@ export default function AdminPosts() {
               size="compact"
               type="button"
               onClick={clearFilters}
+              icon={<X />}
             >
-              <X /> 清除
+              清除
             </Button>
           ) : null}
         </FilterBar>
@@ -284,8 +286,8 @@ export default function AdminPosts() {
               size="compact"
               type="button"
               onClick={() => setDeleteTarget({ kind: "batch" })}
+              icon={<Trash2 />}
             >
-              <Trash2 />
               删除
             </Button>
           </BulkActionBar>
@@ -397,8 +399,9 @@ export default function AdminPosts() {
                           >
                             <Eye />
                           </Link>
-                          <button
-                            title="复制链接"
+                          <IconButton
+                            label="复制链接"
+                            icon={<Copy />}
                             onClick={() =>
                               void copyText(
                                 `${location.origin}/articles/${post.slug}`,
@@ -406,9 +409,7 @@ export default function AdminPosts() {
                                 "文章链接已复制。",
                               )
                             }
-                          >
-                            <Copy />
-                          </button>
+                          />
                           {can("edit", "post", post) ? (
                             <Link
                               to={`/admin/posts/${post.id}/edit`}
@@ -425,15 +426,14 @@ export default function AdminPosts() {
                             </Link>
                           )}
                           {can("delete", "post", post) ? (
-                            <button
-                              className="danger-action"
-                              title="删除"
+                            <IconButton
+                              variant="danger"
+                              label="删除"
+                              icon={<Trash2 />}
                               onClick={() =>
                                 setDeleteTarget({ kind: "post", post })
                               }
-                            >
-                              <Trash2 />
-                            </button>
+                            />
                           ) : null}
                         </div>
                       </td>

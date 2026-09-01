@@ -8,6 +8,7 @@ import {
 } from "react";
 import type React from "react";
 import { AlertTriangle, CheckCircle2, Info, X } from "lucide-react";
+import { IconButton } from "./Button";
 
 export type ToastTone = "success" | "error" | "info" | "warning";
 
@@ -61,13 +62,13 @@ export function Toast({
     >
       {toastIcons[toast.tone]}
       <span>{toast.message}</span>
-      <button
-        type="button"
-        aria-label="关闭提示"
+      <IconButton
+        label="关闭提示"
+        icon={<X />}
+        size="compact"
+        variant="ghost"
         onClick={() => onDismiss(toast.id)}
-      >
-        <X />
-      </button>
+      />
     </div>
   );
 }

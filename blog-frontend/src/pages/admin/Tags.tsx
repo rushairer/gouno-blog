@@ -133,8 +133,8 @@ export default function Tags() {
               size="compact"
               type="button"
               onClick={() => setDeleteTarget({ kind: "batch" })}
+              icon={<Trash2 />}
             >
-              <Trash2 />
               删除
             </Button>
           </BulkActionBar>
@@ -172,8 +172,8 @@ export default function Tags() {
                     size="compact"
                     type="button"
                     onClick={() => setTagEdit({ tag, mode: "rename" })}
+                    icon={<Save />}
                   >
-                    <Save />
                     重命名
                   </Button>
                   <Button
@@ -181,8 +181,8 @@ export default function Tags() {
                     size="compact"
                     type="button"
                     onClick={() => setTagEdit({ tag, mode: "merge" })}
+                    icon={<Merge />}
                   >
-                    <Merge />
                     合并
                   </Button>
                   <Button
@@ -190,8 +190,8 @@ export default function Tags() {
                     size="compact"
                     type="button"
                     onClick={() => setDeleteTarget({ kind: "tag", item: tag })}
+                    icon={<Trash2 />}
                   >
-                    <Trash2 />
                     删除
                   </Button>
                 </div>

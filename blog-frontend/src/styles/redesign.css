@@ -156,7 +156,7 @@ a {
   width: 140px;
   padding: 7px 4px;
 }
-.header-search button {
+.header-search .btn {
   width: 34px;
   height: 34px;
   display: grid;
@@ -1672,7 +1672,7 @@ a {
   border-color: var(--ui-border-emphasis);
   box-shadow: 0 0 0 3px var(--ui-focus-ring);
 }
-.admin-search > button {
+.admin-search > .btn {
   width: 24px;
   height: 30px;
   display: grid;
@@ -1709,7 +1709,8 @@ a {
   gap: 8px;
 }
 .admin-topbar-actions a,
-.admin-topbar-actions button {
+.admin-topbar-actions .btn,
+.admin-topbar-actions .icon-button {
   min-height: 34px;
   display: inline-flex;
   align-items: center;
@@ -2010,7 +2011,7 @@ a {
 .toast--warning > svg {
   color: var(--ui-warning);
 }
-.toast button {
+.toast .icon-button {
   width: 28px;
   height: 28px;
   display: grid;
@@ -2323,7 +2324,7 @@ a {
 .workflow-resource-selection > span > svg {
   color: var(--text-muted);
 }
-.workflow-resource-selection button {
+.workflow-resource-selection .btn {
   width: 28px;
   height: 28px;
   display: inline-grid;
@@ -2923,7 +2924,7 @@ a {
   font-weight: 600;
   color: var(--ui-text);
 }
-.editor-outline button {
+.editor-outline .btn {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -2933,7 +2934,7 @@ a {
   font-size: 11px;
   cursor: pointer;
 }
-.editor-outline button svg {
+.editor-outline .btn svg {
   width: 13px;
 }
 .editor-outline nav {
@@ -2985,7 +2986,7 @@ a {
   font-size: 11px;
   line-height: 1.7;
 }
-.version-drawer button {
+.version-drawer .btn {
   width: 100%;
   display: grid;
   gap: 4px;
@@ -3288,7 +3289,7 @@ a {
   gap: 8px;
   margin-top: 8px;
 }
-.editor-ai-inline > button {
+.editor-ai-inline > .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3301,10 +3302,10 @@ a {
   cursor: pointer;
   padding: 3px 0;
 }
-.editor-ai-inline > button:hover {
+.editor-ai-inline > .btn:hover {
   color: var(--action-primary-hover);
 }
-.editor-ai-inline > button:disabled {
+.editor-ai-inline > .btn:disabled {
   cursor: wait;
   opacity: 0.7;
 }
@@ -3323,7 +3324,7 @@ a {
   max-width: 100%;
   box-sizing: border-box;
 }
-.editor-ai-candidates > button {
+.editor-ai-candidates > .btn {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
@@ -3366,7 +3367,7 @@ a {
   display: flex;
   gap: 4px;
 }
-.editor-tabs .tab-buttons button {
+.editor-tabs [role="tab"] {
   padding: 8px 16px;
   border: 0;
   border-bottom: 2px solid transparent;
@@ -3379,10 +3380,10 @@ a {
     color 120ms ease,
     border-color 120ms ease;
 }
-.editor-tabs .tab-buttons button:hover {
+.editor-tabs [role="tab"]:hover {
   color: var(--ui-text);
 }
-.editor-tabs .tab-buttons button.active {
+.editor-tabs [role="tab"][aria-selected="true"] {
   border-color: var(--ui-brand);
   color: var(--ui-brand);
   font-weight: 600;
@@ -3393,7 +3394,7 @@ a {
   align-items: center;
   flex-wrap: wrap;
 }
-.editor-ai-tool-btn {
+.editor-ai-tool-control {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -3408,22 +3409,22 @@ a {
   transition: all 150ms ease;
   margin-bottom: 4px;
 }
-.editor-ai-tool-btn:hover {
+.editor-ai-tool-control:hover {
   background: var(--ui-control-hover);
   border-color: var(--ui-brand);
   color: var(--ui-brand);
 }
-.editor-ai-tool-btn.active {
+.editor-ai-tool-control.active {
   background: var(--ui-brand);
   color: var(--ui-on-brand);
   border-color: var(--ui-brand);
 }
-.editor-ai-tool-btn.active:hover {
+.editor-ai-tool-control.active:hover {
   background: var(--ui-brand-hover);
   color: var(--ui-on-brand);
   border-color: var(--ui-brand-hover);
 }
-.editor-ai-tool-btn svg {
+.editor-ai-tool-control .btn__icon svg {
   width: 14px;
   height: 14px;
   flex-shrink: 0;
@@ -3463,7 +3464,7 @@ a {
   flex-wrap: wrap;
   gap: 8px;
 }
-.editor-ai-presets button {
+.editor-ai-presets .btn {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -3477,23 +3478,24 @@ a {
   cursor: pointer;
   transition: all 120ms ease;
 }
-.editor-ai-presets button:hover:not(:disabled) {
+.editor-ai-presets .btn:hover:not(:disabled) {
   border-color: var(--ui-brand);
   color: var(--ui-brand);
   background: var(--ui-panel);
 }
-.editor-ai-presets button.editor-ai-ideate-btn {
+.editor-ai-presets .choice-button.editor-ai-ideate-control {
   background: color-mix(in srgb, var(--ui-brand) 12%, transparent);
   border-color: color-mix(in srgb, var(--ui-brand) 40%, transparent);
   color: var(--ui-brand);
   font-weight: 600;
 }
-.editor-ai-presets button.editor-ai-ideate-btn:hover:not(:disabled) {
+.editor-ai-presets
+  .choice-button.editor-ai-ideate-control:hover:not(:disabled) {
   background: var(--ui-brand);
   border-color: var(--ui-brand);
   color: var(--ui-on-brand);
 }
-.editor-ai-presets button:disabled {
+.editor-ai-presets .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -3508,7 +3510,7 @@ a {
   min-height: 38px;
   min-width: 180px;
 }
-.editor-ai-prompt-box button {
+.editor-ai-prompt-box .btn {
   white-space: nowrap;
 }
 .editor-ai-result-box {
@@ -3671,7 +3673,7 @@ a {
   display: grid;
   gap: 8px;
 }
-.editor-inspector-ai-banner button {
+.editor-inspector-ai-banner .btn {
   width: 100%;
   justify-content: center;
   font-weight: 600;
@@ -3783,7 +3785,7 @@ a {
   gap: 6px;
   align-items: center;
 }
-.editor-prompt-candidate-actions button {
+.editor-prompt-candidate-actions .btn {
   display: inline-flex;
   grid-template-columns: none;
   width: auto;
@@ -4372,7 +4374,7 @@ a {
     outline: 0;
     background: transparent;
   }
-  .mobile-public-search button {
+  .mobile-public-search .btn {
     min-height: 32px;
     border: 0;
     background: var(--brand);
@@ -4617,7 +4619,8 @@ a {
     display: none;
   }
   .admin-topbar-actions a,
-  .admin-topbar-actions button {
+  .admin-topbar-actions .btn,
+  .admin-topbar-actions .icon-button {
     width: 34px;
     justify-content: center;
     padding: 0;

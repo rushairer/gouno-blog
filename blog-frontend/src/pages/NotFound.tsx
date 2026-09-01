@@ -2,6 +2,7 @@ import { BookOpen, FileText, FolderTree, Home, Search } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useI18n } from "../i18n";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { Button, Input } from "../components/ui";
 
 export default function NotFound() {
   const navigate = useNavigate();
@@ -30,16 +31,16 @@ export default function NotFound() {
 
         <form className="not-found-search" onSubmit={handleSearch}>
           <Search className="not-found-search__icon" />
-          <input
+          <Input
             name="q"
             type="search"
             aria-label={t("searchPosts")}
             placeholder={t("notFound.searchPlaceholder")}
             autoComplete="off"
           />
-          <button type="submit" className="not-found-search__btn">
+          <Button type="submit" className="not-found-search__btn">
             {t("notFound.searchButton")}
-          </button>
+          </Button>
         </form>
 
         <div className="not-found-nav">

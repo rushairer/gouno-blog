@@ -1,7 +1,7 @@
 import type React from "react";
 import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import { classes } from "./classes";
-import { Button } from "./Button";
+import { Button, IconButton } from "./Button";
 
 export function Pagination({
   page,
@@ -25,40 +25,39 @@ export function Pagination({
         className={classes("pagination-compact", className)}
         aria-label={label}
       >
-        <button
-          type="button"
+        <IconButton
+          label="上一页"
+          icon={<ChevronLeft />}
+          size="compact"
           disabled={page <= 1}
-          aria-label="上一页"
           onClick={() => onChange(Math.max(1, page - 1))}
-        >
-          <ChevronLeft aria-hidden="true" />
-        </button>
+        />
         <span aria-live="polite">
           {page} / {pages}
         </span>
-        <button
-          type="button"
+        <IconButton
+          label="下一页"
+          icon={<ChevronRight />}
+          size="compact"
           disabled={page >= pages}
-          aria-label="下一页"
           onClick={() => onChange(Math.min(pages, page + 1))}
-        >
-          <ChevronRight aria-hidden="true" />
-        </button>
+        />
       </nav>
     );
   }
   return (
     <nav className={classes("pagination", className)} aria-label={label}>
       {Array.from({ length: pages }, (_, index) => index + 1).map((item) => (
-        <button
+        <Button
           key={item}
           type="button"
-          className={item === page ? "active" : ""}
+          variant={item === page ? "primary" : "secondary"}
+          className="pagination__page"
           aria-current={item === page ? "page" : undefined}
           onClick={() => onChange(item)}
         >
           {item}
-        </button>
+        </Button>
       ))}
     </nav>
   );
@@ -96,8 +95,8 @@ export function BulkActionBar({
             size="compact"
             type="button"
             onClick={onAIAssist}
+            icon={<Sparkles />}
           >
-            <Sparkles />
             {aiLabel}
           </Button>
         ) : null}

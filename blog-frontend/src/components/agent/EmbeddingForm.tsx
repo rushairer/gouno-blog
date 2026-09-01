@@ -209,8 +209,12 @@ export function EmbeddingForm({
           <Button variant="secondary" type="button" onClick={onCancel}>
             {labels.cancel}
           </Button>
-          <Button variant="primary" type="submit" loading={saving}>
-            <Save />
+          <Button
+            variant="primary"
+            type="submit"
+            loading={saving}
+            icon={<Save />}
+          >
             {saving ? labels.saving : labels.save}
           </Button>
         </FormActions>

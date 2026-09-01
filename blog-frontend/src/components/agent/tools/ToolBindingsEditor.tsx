@@ -184,8 +184,8 @@ export function ToolBindingsEditor({
             variant={mode === "visual" ? "primary" : "secondary"}
             size="compact"
             onClick={() => setMode("visual")}
+            icon={<FormInput size={14} />}
           >
-            <FormInput size={14} />
             {isZh ? "可视化配置" : "Visual Form"}
           </Button>
           <Button
@@ -193,8 +193,8 @@ export function ToolBindingsEditor({
             variant={mode === "json" ? "primary" : "secondary"}
             size="compact"
             onClick={() => setMode("json")}
+            icon={<Code2 size={14} />}
           >
-            <Code2 size={14} />
             JSON
           </Button>
         </div>

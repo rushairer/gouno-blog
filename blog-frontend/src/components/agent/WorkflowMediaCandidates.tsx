@@ -1,7 +1,7 @@
 import { LoaderCircle } from "lucide-react";
 import type { ArticleImagePreview } from "../../api/operations";
 import type { MediaCandidate } from "../../types/agent";
-import { Select } from "../ui";
+import { Button, Checkbox, Input, Select, Textarea } from "../ui";
 
 function elapsed(start?: string, now = Date.now()): string {
   if (!start) return "-";
@@ -111,9 +111,8 @@ export function WorkflowMediaCandidates({
           </small>
         </div>
         <div className="row-actions workflow-candidate-batch-actions">
-          <button
-            className="btn btn-secondary"
-            type="button"
+          <Button
+            variant="secondary"
             disabled={batchBusy !== "" || selectedCandidates.length === 0}
             onClick={() => void onBatchSelect()}
           >
@@ -124,10 +123,9 @@ export function WorkflowMediaCandidates({
               : zh
                 ? "批量选择"
                 : "Select selected"}
-          </button>
-          <button
-            className="btn btn-secondary"
-            type="button"
+          </Button>
+          <Button
+            variant="secondary"
             disabled={batchBusy !== "" || selectedCandidates.length === 0}
             onClick={() => void onBatchPreview()}
           >
@@ -138,10 +136,9 @@ export function WorkflowMediaCandidates({
               : zh
                 ? "批量预览"
                 : "Preview selected"}
-          </button>
-          <button
-            className="btn btn-secondary"
-            type="button"
+          </Button>
+          <Button
+            variant="secondary"
             disabled={batchBusy !== "" || selectedCandidates.length === 0}
             onClick={() => void onBatchReject()}
           >
@@ -152,10 +149,9 @@ export function WorkflowMediaCandidates({
               : zh
                 ? "批量放弃"
                 : "Reject selected"}
-          </button>
-          <button
-            className="btn btn-primary"
-            type="button"
+          </Button>
+          <Button
+            variant="primary"
             disabled={
               batchBusy !== "" ||
               selectedCandidates.length === 0 ||
@@ -175,7 +171,7 @@ export function WorkflowMediaCandidates({
               : zh
                 ? "批量确认应用"
                 : "Apply selected"}
-          </button>
+          </Button>
         </div>
       </div>
       <div className="workflow-candidate-list">
@@ -193,8 +189,7 @@ export function WorkflowMediaCandidates({
             ) : null}
             <div className="workflow-candidate-card__content">
               <label className="workflow-candidate-choice">
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={Boolean(candidateSelections[candidate.id])}
                   disabled={
                     candidate.generation_status !== "generated" ||
@@ -248,7 +243,7 @@ export function WorkflowMediaCandidates({
                   {(candidatePlacement[candidate.id] ||
                     candidate.placement ||
                     "cover") === "inline" ? (
-                    <input
+                    <Input
                       className="input-field"
                       value={
                         candidateAnchor[candidate.id] ?? candidate.anchor ?? ""
@@ -270,7 +265,7 @@ export function WorkflowMediaCandidates({
               ) : null}
               <p>{candidate.brief || candidate.headline}</p>
               {candidate.generation_status !== "generated" ? (
-                <textarea
+                <Textarea
                   className="input-field"
                   rows={2}
                   aria-label={
@@ -347,44 +342,40 @@ export function WorkflowMediaCandidates({
             </div>
             <div className="row-actions workflow-candidate-card__actions">
               {candidate.generation_status === "generated" ? (
-                <button
-                  className="btn btn-secondary"
-                  type="button"
+                <Button
+                  variant="secondary"
                   disabled={hasUnsavedCandidateSelection(candidate)}
                   onClick={() => void onPreviewCandidate(candidate, true)}
                 >
                   {zh ? "预览文章" : "Preview article"}
-                </button>
+                </Button>
               ) : null}
               {candidate.generation_status === "generated" &&
               candidate.selected &&
               hasUnsavedCandidateSelection(candidate) ? (
-                <button
-                  className="btn btn-secondary"
-                  type="button"
+                <Button
+                  variant="secondary"
                   disabled={!hasValidCandidateSelection(candidate)}
                   onClick={() => void onCandidateAction(candidate, "select")}
                 >
                   {zh ? "保存位置" : "Save placement"}
-                </button>
+                </Button>
               ) : null}
               {candidate.generation_status === "generated" &&
               !candidate.selected ? (
-                <button
-                  className="btn btn-secondary"
-                  type="button"
+                <Button
+                  variant="secondary"
                   onClick={() => void onCandidateAction(candidate, "select")}
                 >
                   {zh ? "选择" : "Select"}
-                </button>
+                </Button>
               ) : null}
               {candidate.generation_status === "generated" &&
               candidate.selected &&
               !candidate.applied_version_id ? (
                 <>
-                  <button
-                    className="btn btn-primary"
-                    type="button"
+                  <Button
+                    variant="primary"
                     disabled={
                       hasUnsavedCandidateSelection(candidate) ||
                       !imagePreviews[candidate.id]?.version_matches ||
@@ -393,45 +384,41 @@ export function WorkflowMediaCandidates({
                     onClick={() => void onCandidateAction(candidate, "apply")}
                   >
                     {zh ? "确认应用" : "Apply to article"}
-                  </button>
+                  </Button>
                 </>
               ) : null}
               {candidate.generation_status === "generated" &&
               !candidate.applied_version_id ? (
-                <button
-                  className="btn btn-secondary"
-                  type="button"
+                <Button
+                  variant="secondary"
                   onClick={() => void onCandidateAction(candidate, "reject")}
                 >
                   {zh ? "放弃候选" : "Reject"}
-                </button>
+                </Button>
               ) : null}
               {candidate.generation_status === "brief_ready" ? (
                 <>
-                  <button
-                    className="btn btn-primary"
-                    type="button"
+                  <Button
+                    variant="primary"
                     onClick={() =>
                       void onCandidateAction(candidate, "regenerate")
                     }
                   >
                     {zh ? "开始生成候选图片" : "Generate image candidates"}
-                  </button>
-                  <button
-                    className="btn btn-secondary"
-                    type="button"
+                  </Button>
+                  <Button
+                    variant="secondary"
                     onClick={() => void onCandidateAction(candidate, "reject")}
                   >
                     {zh ? "放弃候选" : "Reject"}
-                  </button>
+                  </Button>
                 </>
               ) : null}
               {candidate.generation_status === "failed" ||
               candidate.generation_status === "ready_to_generate" ||
               candidate.generation_status === "cancelled" ? (
-                <button
-                  className="btn btn-secondary"
-                  type="button"
+                <Button
+                  variant="secondary"
                   onClick={() =>
                     void onCandidateAction(candidate, "regenerate")
                   }
@@ -439,16 +426,15 @@ export function WorkflowMediaCandidates({
                   {zh
                     ? "按这些要求重新生成"
                     : "Regenerate with these instructions"}
-                </button>
+                </Button>
               ) : null}
               {candidate.generation_status === "generating" ? (
-                <button
-                  className="btn btn-secondary"
-                  type="button"
+                <Button
+                  variant="secondary"
                   onClick={() => void onCancelGeneration(candidate)}
                 >
                   {zh ? "取消生成" : "Cancel generation"}
-                </button>
+                </Button>
               ) : null}
             </div>
           </div>

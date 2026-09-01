@@ -151,8 +151,8 @@ export function OperationsWorkspace({
             loading={refreshing}
             disabled={refreshing}
             onClick={() => void refreshSuggestions()}
+            icon={<RefreshCw />}
           >
-            <RefreshCw />
             {zh ? "刷新建议" : "Refresh suggestions"}
           </Button>
         </div>
@@ -244,8 +244,8 @@ export function OperationsWorkspace({
                   size="compact"
                   type="button"
                   onClick={() => ignoreSuggestion(item)}
+                  icon={<ThumbsDown />}
                 >
-                  <ThumbsDown />
                   {zh ? "暂不处理" : "Defer"}
                 </Button>
                 <Button
@@ -255,8 +255,8 @@ export function OperationsWorkspace({
                   onClick={() =>
                     void mutate(() => operationsApi.convertSuggestion(item.id))
                   }
+                  icon={<Check />}
                 >
-                  <Check />
                   {zh ? "创建编辑任务" : "Create editorial task"}
                 </Button>
               </div>
@@ -371,8 +371,8 @@ export function OperationsWorkspace({
                       ),
                     )
                   }
+                  icon={<ThumbsDown />}
                 >
-                  <ThumbsDown />
                   {zh ? "拒绝" : "Reject"}
                 </Button>
                 <Button
@@ -384,8 +384,8 @@ export function OperationsWorkspace({
                       operationsApi.reviewMediaCandidate(item.id, "ready"),
                     )
                   }
+                  icon={<Check />}
                 >
-                  <Check />
                   {zh ? "审核通过，进入生成" : "Approve for generation"}
                 </Button>
               </div>
@@ -433,8 +433,8 @@ export function OperationsWorkspace({
                       operationsApi.generateMediaCandidate(item.id),
                     )
                   }
+                  icon={<Play />}
                 >
-                  <Play />
                   {zh ? "生成图片" : "Generate image"}
                 </Button>
               </div>
@@ -491,8 +491,8 @@ export function OperationsWorkspace({
                         ),
                       )
                     }
+                    icon={<X />}
                   >
-                    <X />
                     {zh ? "取消" : "Cancel"}
                   </Button>
                   <Button
@@ -504,8 +504,8 @@ export function OperationsWorkspace({
                         operationsApi.setEditorialTaskStatus(task.id, "done"),
                       )
                     }
+                    icon={<Check />}
                   >
-                    <Check />
                     {zh ? "标记完成" : "Mark complete"}
                   </Button>
                 </div>

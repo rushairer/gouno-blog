@@ -104,11 +104,10 @@ export function Modal({
           <IconButton
             ref={closeButton}
             label="关闭弹窗"
+            icon={<X />}
             type="button"
             onClick={onClose}
-          >
-            <X />
-          </IconButton>
+          />
         </header>
         {children}
       </section>
@@ -164,11 +163,10 @@ export function Drawer({
           <IconButton
             ref={closeButton}
             label="关闭面板"
+            icon={<X />}
             type="button"
             onClick={onClose}
-          >
-            <X />
-          </IconButton>
+          />
         </header>
         {children}
       </section>

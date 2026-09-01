@@ -9,7 +9,6 @@ import {
   MessageSquare,
   Trash2,
 } from "lucide-react";
-import { Link } from "react-router-dom";
 import { notificationsApi } from "../../api/notifications";
 import type { Notification } from "../../api/notifications";
 import {
@@ -17,7 +16,7 @@ import {
   AdminPageHeader,
   BulkActionBar,
   Button,
-  buttonClassName,
+  ButtonLink,
   Checkbox,
   ConfirmDialog,
   ContentStack,
@@ -265,8 +264,9 @@ export default function AdminNotifications() {
                 type="button"
                 disabled={busy}
                 onClick={() => void markAllRead()}
+                icon={<CheckCheck />}
               >
-                <CheckCheck /> 全部标为已读
+                全部标为已读
               </Button>
             ) : null}
             {readCount > 0 ? (
@@ -275,8 +275,9 @@ export default function AdminNotifications() {
                 type="button"
                 disabled={busy}
                 onClick={() => setDeleteAction({ kind: "clear_read" })}
+                icon={<Trash2 />}
               >
-                <Trash2 /> 清空已读
+                清空已读
               </Button>
             ) : null}
             {items.length > 0 ? (
@@ -285,8 +286,9 @@ export default function AdminNotifications() {
                 type="button"
                 disabled={busy}
                 onClick={() => setDeleteAction({ kind: "clear_all" })}
+                icon={<Trash2 />}
               >
-                <Trash2 /> 清空全部
+                清空全部
               </Button>
             ) : null}
           </div>
@@ -351,8 +353,9 @@ export default function AdminNotifications() {
               type="button"
               disabled={busy}
               onClick={() => void markSelectedRead()}
+              icon={<Check />}
             >
-              <Check /> 标为已读
+              标为已读
             </Button>
             <Button
               variant="danger"
@@ -362,8 +365,9 @@ export default function AdminNotifications() {
               onClick={() =>
                 setDeleteAction({ kind: "batch", ids: [...selected] })
               }
+              icon={<Trash2 />}
             >
-              <Trash2 /> 批量删除
+              批量删除
             </Button>
           </BulkActionBar>
         ) : null}
@@ -442,21 +446,20 @@ export default function AdminNotifications() {
                         onClick={() => void markOneRead(item)}
                         title="标为已读"
                       >
-                        <Check size={14} /> 标为已读
+                        标为已读
                       </Button>
                     ) : null}
 
                     {destination ? (
-                      <Link
-                        className={buttonClassName({
-                          variant: "secondary",
-                          size: "compact",
-                        })}
+                      <ButtonLink
+                        size="compact"
                         to={destination}
                         onClick={() => void markOneRead(item)}
+                        icon={<ChevronRight size={14} />}
+                        iconPosition="right"
                       >
-                        前往处理 <ChevronRight size={14} />
-                      </Link>
+                        前往处理
+                      </ButtonLink>
                     ) : null}
 
                     <Button
@@ -471,8 +474,9 @@ export default function AdminNotifications() {
                         })
                       }
                       title="删除此通知"
+                      icon={<Trash2 size={14} />}
                     >
-                      <Trash2 size={14} /> 删除
+                      删除
                     </Button>
                   </div>
                 </div>

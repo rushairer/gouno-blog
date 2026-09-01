@@ -126,7 +126,8 @@ export function FriendlyApprovalQueue({
             {approvals.map((approval) => {
               const summary = approvalSummary(approval, zh);
               return (
-                <button
+                <Button
+                  variant="ghost"
                   className={selected?.id === approval.id ? "active" : ""}
                   key={approval.id}
                   type="button"
@@ -140,8 +141,10 @@ export function FriendlyApprovalQueue({
                         : `From AI run #${approval.run_id}`}
                     </small>
                   </span>
-                  <StatusPill status={approval.status} locale={locale} />
-                </button>
+                  <span className="btn__status">
+                    <StatusPill status={approval.status} locale={locale} />
+                  </span>
+                </Button>
               );
             })}
           </div>
@@ -218,16 +221,16 @@ export function FriendlyApprovalQueue({
                       variant="secondary"
                       type="button"
                       onClick={() => onReview(selected, false)}
+                      icon={<X />}
                     >
-                      <X />
                       {zh ? "拒绝此建议" : "Reject proposal"}
                     </Button>
                     <Button
                       variant="primary"
                       type="button"
                       onClick={() => onReview(selected, true)}
+                      icon={<ShieldCheck />}
                     >
-                      <ShieldCheck />
                       {selected.status === "failed"
                         ? zh
                           ? "重试批准并执行"
@@ -311,23 +314,21 @@ export function InteractionInbox({
             {task.interaction_type === "choice" &&
             Array.isArray(task.options) ? (
               task.options.map((option, index) => (
-                <button
-                  className="btn btn-secondary"
-                  type="button"
+                <Button
+                  variant="secondary"
                   key={index}
                   onClick={() => void resolve(task, { option })}
                 >
                   {String(option)}
-                </button>
+                </Button>
               ))
             ) : (
-              <button
-                className="btn btn-primary"
-                type="button"
+              <Button
+                variant="primary"
                 onClick={() => void resolve(task, { confirmed: true })}
               >
                 {zh ? "确认并继续" : "Confirm and continue"}
-              </button>
+              </Button>
             )}
           </div>
         ))}

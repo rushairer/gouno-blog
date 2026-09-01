@@ -100,9 +100,12 @@ export function EditorPanel({
         }
         description={description}
         actions={
-          <IconButton type="button" label={closeLabel} onClick={onClose}>
-            <X />
-          </IconButton>
+          <IconButton
+            type="button"
+            label={closeLabel}
+            icon={<X />}
+            onClick={onClose}
+          />
         }
       />
       {children}

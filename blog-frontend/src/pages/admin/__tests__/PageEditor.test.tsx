@@ -65,6 +65,14 @@ describe("PageEditor", () => {
     expect(screen.getByLabelText("单页正文 Markdown")).toHaveValue(
       "## 关于我们\n\n欢迎来到我们的博客。",
     );
+    expect(screen.getByRole("tab", { name: "Markdown" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByRole("tab", { name: "预览" })).toHaveAttribute(
+      "aria-selected",
+      "false",
+    );
 
     // Check AI tool buttons
     expect(

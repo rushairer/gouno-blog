@@ -1,6 +1,12 @@
 import { ExternalLink, Shield } from "lucide-react";
 import { getGossoAdminURL, useSafeUserProfile } from "../auth";
-import { ContentStack, Feedback, PageHeader, Panel } from "../components/ui";
+import {
+  ButtonLink,
+  ContentStack,
+  Feedback,
+  PageHeader,
+  Panel,
+} from "../components/ui";
 import { useI18n } from "../i18n";
 import { usePageTitle } from "../hooks/usePageTitle";
 
@@ -27,10 +33,15 @@ export default function Settings() {
               或身份会话管理。需要修改登录安全设置时，请前往身份管理中心完成近期强认证。
             </p>
             {adminURL ? (
-              <a className="btn btn-primary" href={adminURL} rel="noreferrer">
+              <ButtonLink
+                variant="primary"
+                to={adminURL}
+                rel="noreferrer"
+                icon={<ExternalLink size={16} />}
+                iconPosition="right"
+              >
                 打开 GOSSO Admin
-                <ExternalLink size={16} />
-              </a>
+              </ButtonLink>
             ) : (
               <Feedback type="error">
                 当前会话未提供身份管理中心地址，请联系管理员配置

@@ -131,8 +131,13 @@ export function WorkflowRunDetail({
   return (
     <div className="workflow-run-detail-view section-stack">
       <div className="workflow-detail-nav">
-        <Button variant="ghost" size="compact" type="button" onClick={onBack}>
-          <ArrowLeft />
+        <Button
+          variant="ghost"
+          size="compact"
+          type="button"
+          onClick={onBack}
+          icon={<ArrowLeft />}
+        >
           {zh ? "返回运行记录列表" : "Back to run records"}
         </Button>
       </div>
@@ -155,8 +160,8 @@ export function WorkflowRunDetail({
                     type="button"
                     disabled={cancelling}
                     onClick={() => void onCancelRun()}
+                    icon={<Ban />}
                   >
-                    <Ban />
                     {cancelling
                       ? zh
                         ? "放弃中…"
@@ -174,8 +179,8 @@ export function WorkflowRunDetail({
                     type="button"
                     disabled={deleting}
                     onClick={() => void onDeleteRun()}
+                    icon={<Trash2 />}
                   >
-                    <Trash2 />
                     {deleting
                       ? zh
                         ? "清理中…"
@@ -323,21 +328,19 @@ export function WorkflowRunDetail({
                       {task.interaction_type === "choice" &&
                       Array.isArray(task.options) ? (
                         task.options.map((option, index) => (
-                          <button
-                            className="btn btn-secondary"
-                            type="button"
+                          <Button
+                            variant="secondary"
                             key={index}
                             onClick={() =>
                               void onResolveInteraction(task, { option })
                             }
                           >
                             {String(option)}
-                          </button>
+                          </Button>
                         ))
                       ) : (
-                        <button
-                          className="btn btn-primary"
-                          type="button"
+                        <Button
+                          variant="primary"
                           onClick={() =>
                             void onResolveInteraction(task, {
                               confirmed: true,
@@ -345,15 +348,14 @@ export function WorkflowRunDetail({
                           }
                         >
                           {zh ? "确认并继续" : "Confirm and continue"}
-                        </button>
+                        </Button>
                       )}
-                      <button
-                        className="btn btn-secondary"
-                        type="button"
+                      <Button
+                        variant="secondary"
                         onClick={() => void onCancelInteraction(task)}
                       >
                         {zh ? "取消任务" : "Cancel task"}
-                      </button>
+                      </Button>
                     </div>
                   ) : task.response ? (
                     <JsonLog value={task.response} />
@@ -444,8 +446,8 @@ export function WorkflowRunDetail({
                       .map((step) => step.step_id),
                   ),
                 ).map((stepID) => (
-                  <button
-                    className="btn btn-secondary"
+                  <Button
+                    variant="secondary"
                     key={stepID}
                     type="button"
                     disabled={retrying !== ""}
@@ -458,7 +460,7 @@ export function WorkflowRunDetail({
                       : zh
                         ? `重试 ${stepID} 的全部失败项`
                         : `Retry all failed ${stepID}`}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
@@ -505,9 +507,8 @@ export function WorkflowRunDetail({
                         <p>{step.error_message}</p>
                         {step.status === "failed" &&
                         step.iteration !== undefined ? (
-                          <button
-                            className="btn btn-secondary"
-                            type="button"
+                          <Button
+                            variant="secondary"
                             disabled={retrying !== ""}
                             onClick={() => void onRetryStep(step)}
                           >
@@ -518,7 +519,7 @@ export function WorkflowRunDetail({
                               : zh
                                 ? "重试此资源"
                                 : "Retry resource"}
-                          </button>
+                          </Button>
                         ) : null}
                       </div>
                     ) : null}

@@ -1,5 +1,5 @@
 import { DatabaseZap, Sparkles } from "lucide-react";
-import { Field } from "../../ui";
+import { Button, Field, Input } from "../../ui";
 
 export interface KnowledgeSearchBinding {
   limit?: number;
@@ -52,14 +52,14 @@ export function KnowledgeSearchConfig({
           {KNOWLEDGE_PRESETS.map((p) => {
             const active = limit === p.limit;
             return (
-              <button
+              <Button
                 key={p.limit}
-                type="button"
+                variant="ghost"
                 className={`rss-config-chip ${active ? "rss-config-chip--added" : ""}`}
                 onClick={() => onChange({ ...value, limit: p.limit })}
               >
                 {p.label}
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -70,7 +70,7 @@ export function KnowledgeSearchConfig({
           label={isZh ? "单次证据切片召回条数" : "Evidence snippets limit"}
           hint={isZh ? "默认 8，范围 1~20 条" : "Default 8, range 1-20"}
         >
-          <input
+          <Input
             type="number"
             className="input-field"
             min={1}

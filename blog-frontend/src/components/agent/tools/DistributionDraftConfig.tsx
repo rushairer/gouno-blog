@@ -1,5 +1,5 @@
 import { Share2, Sparkles } from "lucide-react";
-import { Field, Select } from "../../ui";
+import { Button, Field, Select } from "../../ui";
 
 export interface DistributionDraftBinding {
   format?: "social" | "newsletter" | "faq" | "image_brief";
@@ -66,16 +66,16 @@ export function DistributionDraftConfig({
           {PLATFORM_PRESETS.map((p) => {
             const active = format === p.format && platform === p.platform;
             return (
-              <button
+              <Button
                 key={p.label}
-                type="button"
+                variant="ghost"
                 className={`rss-config-chip ${active ? "rss-config-chip--added" : ""}`}
                 onClick={() =>
                   onChange({ ...value, format: p.format, platform: p.platform })
                 }
               >
                 {p.label}
-              </button>
+              </Button>
             );
           })}
         </div>

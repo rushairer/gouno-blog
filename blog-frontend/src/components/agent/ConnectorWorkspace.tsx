@@ -18,6 +18,7 @@ import {
   Button,
   EmptyState,
   Feedback,
+  IconButton,
   Panel,
   PanelHeader,
   Select,
@@ -263,8 +264,8 @@ export function ConnectorWorkspace({
             type="button"
             disabled={!name.trim() || (!sandbox && !credential.trim())}
             onClick={() => void saveProfile()}
+            icon={<KeyRound />}
           >
-            <KeyRound />
             {zh ? "保存 Profile" : "Save profile"}
           </Button>
         </div>
@@ -305,8 +306,8 @@ export function ConnectorWorkspace({
                         size="compact"
                         type="button"
                         onClick={() => void startOAuth(profile.id)}
+                        icon={<KeyRound />}
                       >
-                        <KeyRound />
                         {profile.kind === "search_console" && !profile.sandbox
                           ? zh
                             ? "连接 Google"
@@ -339,8 +340,8 @@ export function ConnectorWorkspace({
               variant="primary"
               type="button"
               onClick={() => void completeOAuth()}
+              icon={<Check />}
             >
-              <Check />
               {zh ? "完成 Mock 回调" : "Complete mock callback"}
             </Button>
           </div>
@@ -395,8 +396,8 @@ export function ConnectorWorkspace({
             type="button"
             disabled={!selectedProfile || !key.trim()}
             onClick={() => void queue()}
+            icon={<Play />}
           >
-            <Play />
             {zh ? "加入 Outbox" : "Queue Outbox item"}
           </Button>
         </div>
@@ -431,22 +432,20 @@ export function ConnectorWorkspace({
                     <td>
                       <div className="agent-row-actions">
                         {item.status === "awaiting_approval" ? (
-                          <button
-                            type="button"
-                            title={zh ? "批准" : "Approve"}
+                          <IconButton
+                            label={zh ? "批准" : "Approve"}
+                            icon={<Check />}
                             onClick={() =>
                               void action(() =>
                                 connectorApi.actOnOutbox(item.id, "approve"),
                               )
                             }
-                          >
-                            <Check />
-                          </button>
+                          />
                         ) : null}
                         {item.status === "approved" ? (
-                          <button
-                            type="button"
-                            title={zh ? "Mock 投递" : "Mock deliver"}
+                          <IconButton
+                            label={zh ? "Mock 投递" : "Mock deliver"}
+                            icon={<Play />}
                             onClick={() =>
                               void action(() =>
                                 connectorApi.actOnOutbox(
@@ -455,37 +454,32 @@ export function ConnectorWorkspace({
                                 ),
                               )
                             }
-                          >
-                            <Play />
-                          </button>
+                          />
                         ) : null}
                         {item.status === "failed" ? (
-                          <button
-                            type="button"
-                            title={zh ? "重试" : "Retry"}
+                          <IconButton
+                            label={zh ? "重试" : "Retry"}
+                            icon={<RotateCcw />}
                             onClick={() =>
                               void action(() =>
                                 connectorApi.actOnOutbox(item.id, "retry"),
                               )
                             }
-                          >
-                            <RotateCcw />
-                          </button>
+                          />
                         ) : null}
                         {["awaiting_approval", "approved", "failed"].includes(
                           item.status,
                         ) ? (
-                          <button
-                            type="button"
-                            title={zh ? "撤销" : "Revoke"}
+                          <IconButton
+                            variant="danger"
+                            label={zh ? "撤销" : "Revoke"}
+                            icon={<ShieldOff />}
                             onClick={() =>
                               void action(() =>
                                 connectorApi.actOnOutbox(item.id, "revoke"),
                               )
                             }
-                          >
-                            <ShieldOff />
-                          </button>
+                          />
                         ) : null}
                         {item.status === "revoked" ? (
                           <Trash2 aria-hidden="true" />

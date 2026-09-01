@@ -459,8 +459,8 @@ export function AgentForm({
             type="submit"
             loading={saving}
             disabled={providers.length === 0 || skillOptions.length === 0}
+            icon={<Save />}
           >
-            <Save />
             {saving ? labels.saving : labels.saveAgent}
           </Button>
         </FormActions>

@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Menu, Moon, Rss, Search, Sun, X } from "lucide-react";
+import { Button, IconButton } from "../components/ui";
 import {
   DEFAULT_SITE_SETTINGS,
   getCachedSiteSettings,
@@ -137,7 +138,9 @@ export default function PublicShell({ children }: { children: ReactNode }) {
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="搜索文章或主题"
               />
-              <button type="submit">搜索</button>
+              <Button variant="secondary" type="submit">
+                搜索
+              </Button>
             </form>
           </nav>
           <div className="public-actions">
@@ -167,31 +170,33 @@ export default function PublicShell({ children }: { children: ReactNode }) {
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="搜索"
               />
-              <button type="submit" aria-label="提交搜索">
-                <Search />
-              </button>
+              <IconButton
+                type="submit"
+                label="提交搜索"
+                icon={<Search />}
+                variant="ghost"
+                size="compact"
+              />
             </form>
-            <button
+            <IconButton
               className="bare-icon theme-toggle"
-              type="button"
+              label="切换主题"
+              icon={theme === "light" ? <Moon /> : <Sun />}
+              variant="ghost"
               onClick={() =>
                 setTheme((current) => (current === "light" ? "dark" : "light"))
               }
-              aria-label="切换主题"
               aria-pressed={theme === "dark"}
-            >
-              {theme === "light" ? <Moon /> : <Sun />}
-            </button>
-            <button
+            />
+            <IconButton
               className="bare-icon menu-toggle"
-              type="button"
+              label={open ? "关闭导航" : "打开导航"}
+              icon={open ? <X /> : <Menu />}
+              variant="ghost"
               onClick={() => setOpen(!open)}
-              aria-label={open ? "关闭导航" : "打开导航"}
               aria-expanded={open}
               aria-controls="public-navigation"
-            >
-              {open ? <X /> : <Menu />}
-            </button>
+            />
           </div>
         </div>
       </header>

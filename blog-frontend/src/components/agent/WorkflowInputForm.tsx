@@ -8,6 +8,7 @@ import {
   Feedback,
   Field,
   Input,
+  IconButton,
   Modal,
   Pagination,
   SearchField,
@@ -285,14 +286,11 @@ function ResourcePicker({
                     <small>{locale === "zh" ? "已失效" : "Unavailable"}</small>
                   ) : null}
                 </span>
-                <button
-                  type="button"
-                  title={locale === "zh" ? "移除" : "Remove"}
-                  aria-label={`${locale === "zh" ? "移除" : "Remove"} ${label}`}
+                <IconButton
+                  label={`${locale === "zh" ? "移除" : "Remove"} ${label}`}
+                  icon={<X />}
                   onClick={() => toggle(key)}
-                >
-                  <X />
-                </button>
+                />
               </span>
             );
           })
@@ -314,8 +312,8 @@ function ResourcePicker({
         size="compact"
         type="button"
         onClick={() => setOpen(true)}
+        icon={<Plus />}
       >
-        <Plus />
         {locale === "zh" ? "选择资源" : "Select resources"}
       </Button>
       <Modal
@@ -396,8 +394,8 @@ function ResourcePicker({
                   (entry) => String(entry) === item.key,
                 );
                 return (
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost"
                     className={checked ? "selected" : ""}
                     key={`${item.type}:${item.key}`}
                     onClick={() => toggle(item.key)}
@@ -414,7 +412,7 @@ function ResourcePicker({
                         {item.description ? ` · ${item.description}` : ""}
                       </small>
                     </span>
-                  </button>
+                  </Button>
                 );
               })}
             </div>

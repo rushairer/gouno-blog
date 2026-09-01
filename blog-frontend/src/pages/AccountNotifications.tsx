@@ -3,6 +3,7 @@ import { Bell } from "lucide-react";
 import { notificationsApi } from "../api/notifications";
 import type { Notification } from "../api/notifications";
 import {
+  Button,
   ContentStack,
   EmptyState,
   ErrorState,
@@ -67,13 +68,9 @@ export default function AccountNotifications() {
           <ErrorState
             label={error}
             action={
-              <button
-                className="btn btn-primary"
-                type="button"
-                onClick={() => void load()}
-              >
+              <Button variant="primary" onClick={() => void load()}>
                 {t("common.retry")}
-              </button>
+              </Button>
             }
           />
         ) : null}
@@ -96,13 +93,12 @@ export default function AccountNotifications() {
                   <time>{formatDateTime(item.created_at)}</time>
                 </div>
                 {!item.read_at ? (
-                  <button
-                    className="btn btn-secondary"
-                    type="button"
+                  <Button
+                    variant="secondary"
                     onClick={() => void markRead(item)}
                   >
                     {t("accountNotifications.markAsRead")}
-                  </button>
+                  </Button>
                 ) : null}
               </Panel>
             ))}

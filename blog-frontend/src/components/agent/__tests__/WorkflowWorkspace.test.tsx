@@ -1,6 +1,13 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  render as renderWithRouter,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import type React from "react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { MemoryRouter } from "react-router-dom";
 import { WorkflowWorkspace } from "../WorkflowWorkspace";
 
 const { apiFetch } = vi.hoisted(() => ({ apiFetch: vi.fn() }));
@@ -24,6 +31,11 @@ const workflow = {
   created_at: "2026-08-01T00:00:00Z",
   updated_at: "2026-08-01T00:00:00Z",
 };
+
+function render(ui: React.ReactElement) {
+  return renderWithRouter(<MemoryRouter>{ui}</MemoryRouter>);
+}
+
 describe("WorkflowWorkspace", () => {
   beforeEach(() => {
     apiFetch.mockReset().mockResolvedValue(Response.json({ data: {} }));

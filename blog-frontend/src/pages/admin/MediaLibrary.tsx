@@ -367,8 +367,9 @@ export default function MediaLibrary() {
                 setQuery("");
                 setType("");
               }}
+              icon={<X />}
             >
-              <X /> 清除
+              清除
             </Button>
           ) : null}
         </FilterBar>
@@ -387,8 +388,8 @@ export default function MediaLibrary() {
                 setReferences([]);
                 setError("");
               }}
+              icon={<Trash2 />}
             >
-              <Trash2 />
               删除
             </Button>
           </BulkActionBar>
@@ -447,9 +448,8 @@ export default function MediaLibrary() {
                   </small>
                 </div>
                 <div className="row-actions">
-                  <button
-                    className="btn btn-secondary"
-                    type="button"
+                  <Button
+                    variant="secondary"
                     title={t("copyRelativeUrl")}
                     onClick={() =>
                       void copyText(
@@ -458,13 +458,12 @@ export default function MediaLibrary() {
                         t("relativeUrlCopied"),
                       )
                     }
+                    icon={<Link2 />}
                   >
-                    <Link2 />
                     {t("copyRelativeUrl")}
-                  </button>
-                  <button
-                    className="btn btn-secondary"
-                    type="button"
+                  </Button>
+                  <Button
+                    variant="secondary"
                     title={t("copyMarkdown")}
                     onClick={() =>
                       void copyText(
@@ -473,35 +472,33 @@ export default function MediaLibrary() {
                         "媒体 Markdown 已复制。",
                       )
                     }
+                    icon={<Copy />}
                   >
-                    <Copy />
                     {t("copyMarkdown")}
-                  </button>
+                  </Button>
                   {can("edit", "media", asset) ? (
-                    <button
-                      className="btn btn-secondary"
-                      type="button"
+                    <Button
+                      variant="secondary"
                       title={t("editAltText")}
                       onClick={() => openEditAltDrawer(asset)}
+                      icon={<Pencil />}
                     >
-                      <Pencil />
                       {t("editAltText")}
-                    </button>
+                    </Button>
                   ) : null}
                   {can("delete", "media", asset) ? (
-                    <button
-                      className="btn btn-danger"
-                      type="button"
+                    <Button
+                      variant="danger"
                       title={t("delete")}
                       onClick={() => {
                         setDeleteTarget(asset);
                         setReferences([]);
                         setError("");
                       }}
+                      icon={<Trash2 />}
                     >
-                      <Trash2 />
                       {t("delete")}
-                    </button>
+                    </Button>
                   ) : null}
                 </div>
               </Panel>

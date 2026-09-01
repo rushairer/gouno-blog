@@ -20,7 +20,7 @@ import {
   AdminPageHeader,
   AdminPageState,
   Button,
-  buttonClassName,
+  ButtonLink,
   ContentStack,
   Feedback,
   Panel,
@@ -127,19 +127,17 @@ export default function Dashboard() {
         description="了解站点整体运营情况，掌握内容表现与用户互动。"
         actions={
           can("create", "post") ? (
-            <Link
-              className={buttonClassName({ variant: "primary" })}
-              to="/admin/posts/new"
-            >
-              <Plus /> 新建文章
-            </Link>
+            <ButtonLink variant="primary" to="/admin/posts/new" icon={<Plus />}>
+              新建文章
+            </ButtonLink>
           ) : can("moderate", "comment") ? (
-            <Link
-              className={buttonClassName({ variant: "primary" })}
+            <ButtonLink
+              variant="primary"
               to="/admin/comments?status=pending"
+              icon={<MessageSquare />}
             >
-              <MessageSquare /> 审核评论
-            </Link>
+              审核评论
+            </ButtonLink>
           ) : null
         }
       />
@@ -314,8 +312,8 @@ export default function Dashboard() {
                       type="button"
                       disabled={clearingAlerts}
                       onClick={() => void dismissAllAlerts()}
+                      icon={<CheckCheck />}
                     >
-                      <CheckCheck />
                       {clearingAlerts ? "正在清除…" : "全部已读"}
                     </Button>
                     <Link to="/admin/ai-ops?tab=records">查看全部记录</Link>

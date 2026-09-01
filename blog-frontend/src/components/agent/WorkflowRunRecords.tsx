@@ -15,6 +15,7 @@ import {
   EmptyState,
   Feedback,
   FilterBar,
+  IconButton,
   Select,
   WorkspacePanel,
 } from "../ui";
@@ -666,8 +667,9 @@ export function WorkflowRunRecords({
                   setWorkflowID(0);
                   setStatusFilter("all");
                 }}
+                icon={<X />}
               >
-                <X /> {zh ? "清除" : "Clear"}
+                {zh ? "清除" : "Clear"}
               </Button>
             ) : null}
           </FilterBar>
@@ -697,8 +699,8 @@ export function WorkflowRunRecords({
                     {filtered.map((run) => (
                       <tr key={run.id}>
                         <td>
-                          <button
-                            type="button"
+                          <Button
+                            variant="ghost"
                             className="workflow-name-button"
                             onClick={() => void inspect(run)}
                           >
@@ -709,7 +711,7 @@ export function WorkflowRunRecords({
                             <small>
                               Run #{run.id} · v{run.workflow_version_id}
                             </small>
-                          </button>
+                          </Button>
                         </td>
                         <td>
                           <strong>
@@ -741,40 +743,36 @@ export function WorkflowRunRecords({
                         </td>
                         <td>
                           <div className="agent-row-actions">
-                            <button
-                              type="button"
-                              title={zh ? "查看详情" : "Inspect"}
+                            <IconButton
+                              label={zh ? "查看详情" : "Inspect"}
+                              icon={<Eye />}
                               disabled={loadingID === run.id}
                               onClick={() => void inspect(run)}
-                            >
-                              <Eye />
-                            </button>
+                            />
                             {[
                               "queued",
                               "running",
                               "awaiting_approval",
                               "waiting_for_user",
                             ].includes(run.status) ? (
-                              <button
-                                type="button"
-                                title={zh ? "放弃/终止运行" : "Cancel run"}
+                              <IconButton
+                                variant="danger"
+                                label={zh ? "放弃/终止运行" : "Cancel run"}
+                                icon={<Ban />}
                                 disabled={cancelling}
                                 onClick={() => void cancelRunByID(run)}
-                              >
-                                <Ban />
-                              </button>
+                              />
                             ) : null}
                             {["succeeded", "failed", "cancelled"].includes(
                               run.status,
                             ) ? (
-                              <button
-                                type="button"
-                                title={zh ? "删除记录" : "Delete record"}
+                              <IconButton
+                                variant="danger"
+                                label={zh ? "删除记录" : "Delete record"}
+                                icon={<Trash2 />}
                                 disabled={deleting}
                                 onClick={() => void deleteRunByID(run)}
-                              >
-                                <Trash2 />
-                              </button>
+                              />
                             ) : null}
                           </div>
                         </td>

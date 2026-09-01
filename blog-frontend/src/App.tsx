@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { I18nProvider, useI18n } from "./i18n";
-import { ToastProvider } from "./components/ui";
+import { Button, ButtonLink, ToastProvider } from "./components/ui";
 import { GossoProvider, RequireAuth } from "@gosso/client/react";
 import { gossoClient, type BlogUserProfile, logout } from "./auth";
 import { isActiveMember } from "./abilities";
@@ -79,16 +79,12 @@ function AdminAccessDenied({ message }: { message?: string }) {
           <h1>{t("auth.noAdminAccess")}</h1>
           <p>{message || t("auth.noAdminAccessDesc")}</p>
           <div className="state__actions">
-            <a className="btn btn-primary" href="/admin/dashboard">
+            <ButtonLink variant="primary" to="/admin/dashboard">
               {t("common.back")}
-            </a>
-            <button
-              className="btn btn-secondary"
-              type="button"
-              onClick={() => void switchAccount()}
-            >
+            </ButtonLink>
+            <Button variant="secondary" onClick={() => void switchAccount()}>
               {t("auth.logout")}
-            </button>
+            </Button>
           </div>
           {logoutError ? <p className="form-error">{logoutError}</p> : null}
         </div>

@@ -24,6 +24,18 @@ export type ButtonLinkProps = React.ComponentPropsWithoutRef<typeof Link> & {
   iconPosition?: ButtonIconPosition;
 };
 
+export type IconButtonProps = Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  "children"
+> & {
+  /** Accessible name for an icon-only action. */
+  label: string;
+  /** Rendered in the shared, fixed-size icon slot. */
+  icon: React.ReactNode;
+  size?: "regular" | "compact";
+  variant?: "secondary" | "ghost" | "danger";
+};
+
 export function buttonClassName({
   variant = "secondary",
   size = "regular",
@@ -123,19 +135,55 @@ export const ButtonLink = forwardRef<HTMLAnchorElement, ButtonLinkProps>(
   },
 );
 
-export const IconButton = forwardRef<
-  HTMLButtonElement,
-  React.ButtonHTMLAttributes<HTMLButtonElement> & { label: string }
->(function IconButton({ children, label, className = "", ...props }, ref) {
+export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
+  function IconButton(
+    {
+      icon,
+      label,
+      size = "regular",
+      variant = "secondary",
+      className = "",
+      type = "button",
+      ...props
+    },
+    ref,
+  ) {
+    return (
+      <button
+        ref={ref}
+        type={type}
+        className={classes(
+          "icon-button",
+          size === "compact" && "icon-button--compact",
+          `icon-button--${variant}`,
+          className,
+        )}
+        aria-label={label}
+        title={label}
+        {...props}
+      >
+        <span className="icon-button__icon" aria-hidden="true">
+          {icon}
+        </span>
+      </button>
+    );
+  },
+);
+
+export function ChoiceButton({
+  selected = false,
+  children,
+  className = "",
+  ...props
+}: Omit<ButtonProps, "variant"> & { selected?: boolean }) {
   return (
-    <button
-      ref={ref}
-      className={classes("icon-button", className)}
-      aria-label={label}
-      title={label}
+    <Button
       {...props}
+      variant="ghost"
+      className={classes("choice-button", selected && "is-selected", className)}
+      aria-pressed={selected}
     >
       {children}
-    </button>
+    </Button>
   );
-});
+}

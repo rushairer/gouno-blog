@@ -8,6 +8,7 @@ import {
   Badge,
   Button,
   ButtonLink,
+  ChoiceButton,
   BulkActionBar,
   Drawer,
   EditorPanel,
@@ -15,6 +16,7 @@ import {
   FormActions,
   FormLayout,
   Input,
+  IconButton,
   Modal,
   Pagination,
   SectionHeading,
@@ -98,6 +100,26 @@ describe("shared UI primitives", () => {
     expect(
       container.querySelector(".btn > .btn__icon + .btn__label"),
     ).toBeInTheDocument();
+  });
+
+  it("keeps icon-only controls in a labelled fixed-size icon slot", () => {
+    const { container } = render(
+      <IconButton label="删除分类" variant="danger" icon={<Plus />} />,
+    );
+    const button = screen.getByRole("button", { name: "删除分类" });
+    expect(button).toHaveClass("icon-button", "icon-button--danger");
+    expect(button.querySelector(".icon-button__icon")).toBeInTheDocument();
+    expect(
+      container.querySelector(".icon-button__icon > svg"),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps selectable action chips in the shared pressed-button contract", () => {
+    render(<ChoiceButton selected>摘要候选</ChoiceButton>);
+    expect(screen.getByRole("button", { name: "摘要候选" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
   });
 
   it("gives navigation actions the same button and icon-slot contract", () => {

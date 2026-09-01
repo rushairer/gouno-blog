@@ -7,6 +7,7 @@ import rehypeHighlight from "rehype-highlight";
 import { Check, Copy } from "lucide-react";
 import { useI18n } from "../i18n";
 import { markdownHeadingID } from "../utils/markdown";
+import { Button } from "./ui";
 
 function textContent(value: ReactNode): string {
   if (typeof value === "string" || typeof value === "number")
@@ -36,16 +37,16 @@ function CodeBlock({
 
   return (
     <div className="code-block-wrapper">
-      <button
-        type="button"
-        className="code-copy-btn"
+      <Button
+        variant="ghost"
+        className="code-copy-control"
         onClick={() => void copy()}
         aria-label={t("copyCode")}
         title={t("copyCode")}
+        icon={copied ? <Check size={14} /> : <Copy size={14} />}
       >
-        {copied ? <Check size={14} /> : <Copy size={14} />}
-        <span>{copied ? t("copied") : t("copyCode")}</span>
-      </button>
+        {copied ? t("copied") : t("copyCode")}
+      </Button>
       <pre>
         <code className={className}>{children}</code>
       </pre>

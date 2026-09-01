@@ -30,6 +30,7 @@ import type {
 } from "../../types/agent";
 import {
   Button,
+  ButtonLink,
   Checkbox,
   ConfirmDialog,
   EditorPanel,
@@ -39,6 +40,7 @@ import {
   FormActions,
   FormLayout,
   Input,
+  IconButton,
   PanelHeader,
   SearchField,
   Select,
@@ -469,8 +471,8 @@ export function WorkflowWorkspace({
                 url.searchParams.delete("workflow");
                 window.history.replaceState(null, "", url);
               }}
+              icon={<ArrowLeft />}
             >
-              <ArrowLeft />
               {locale === "zh" ? "返回工作流列表" : "Back to workflows"}
             </Button>
           </div>
@@ -536,26 +538,26 @@ export function WorkflowWorkspace({
                               : "Disabled"
                         }
                       />
-                      <a
-                        className="btn btn-secondary"
-                        href={`/admin/ai-ops?tab=records&record=workflow&workflow=${workflow.id}`}
+                      <ButtonLink
+                        variant="secondary"
+                        to={`/admin/ai-ops?tab=records&record=workflow&workflow=${workflow.id}`}
                       >
                         {locale === "zh" ? "运行记录" : "Run records"}
-                      </a>
+                      </ButtonLink>
                       <Button
                         variant="secondary"
                         type="button"
                         onClick={() => setEditing(workflow)}
+                        icon={<Edit2 />}
                       >
-                        <Edit2 />
                         {locale === "zh" ? "编辑" : "Edit"}
                       </Button>
                       <Button
                         variant="secondary"
                         type="button"
                         onClick={() => void loadVersions(workflow)}
+                        icon={<History />}
                       >
-                        <History />
                         {labels.versions}
                       </Button>
                       <Button
@@ -580,8 +582,8 @@ export function WorkflowWorkspace({
                         variant="danger"
                         type="button"
                         onClick={() => setDeleteTarget(workflow)}
+                        icon={<Trash2 />}
                       >
-                        <Trash2 />
                         {locale === "zh" ? "删除" : "Delete"}
                       </Button>
                     </div>
@@ -718,15 +720,15 @@ export function WorkflowWorkspace({
                     <div className="workflow-run-feedback">
                       <span>{feedback.message}</span>
                       {feedback.runID ? (
-                        <a
-                          className="btn btn-secondary"
-                          href={`/admin/ai-ops?tab=records&record=workflow&workflow=${workflow.id}&run=${feedback.runID}`}
+                        <ButtonLink
+                          variant="secondary"
+                          to={`/admin/ai-ops?tab=records&record=workflow&workflow=${workflow.id}&run=${feedback.runID}`}
                         >
                           {runFeedbackActionLabel(
                             feedback.action || "viewRun",
                             locale,
                           )}
-                        </a>
+                        </ButtonLink>
                       ) : null}
                     </div>
                   </Feedback>
@@ -798,9 +800,10 @@ export function WorkflowWorkspace({
                 {versions[workflow.id]?.length ? (
                   <div className="agent-chip-list">
                     {versions[workflow.id].map((version) => (
-                      <button
-                        type="button"
+                      <Button
+                        variant="ghost"
                         key={version.version_id}
+                        className="agent-chip"
                         disabled={
                           version.current_version === workflow.current_version
                         }
@@ -809,9 +812,10 @@ export function WorkflowWorkspace({
                             .rollback(workflow.id, version.current_version || 0)
                             .then(() => onRefresh?.())
                         }
+                        icon={<RotateCcw />}
                       >
-                        <RotateCcw />v{version.current_version}
-                      </button>
+                        v{version.current_version}
+                      </Button>
                     ))}
                   </div>
                 ) : null}
@@ -833,8 +837,8 @@ export function WorkflowWorkspace({
                 variant="primary"
                 type="button"
                 onClick={() => setEditing("new")}
+                icon={<Plus />}
               >
-                <Plus />
                 {labels.add}
               </Button>
             }
@@ -854,29 +858,29 @@ export function WorkflowWorkspace({
                 }
               />
               <div className="workflow-filter-chips">
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
                   className={`workflow-chip ${statusFilter === "all" ? "active" : ""}`}
                   onClick={() => setStatusFilter("all")}
                 >
                   {locale === "zh" ? "全部" : "All"} ({workflows.length})
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  variant="ghost"
                   className={`workflow-chip ${statusFilter === "enabled" ? "active" : ""}`}
                   onClick={() => setStatusFilter("enabled")}
                 >
                   {locale === "zh" ? "已启用" : "Enabled"} (
                   {workflows.filter((w) => w.enabled).length})
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  variant="ghost"
                   className={`workflow-chip ${statusFilter === "disabled" ? "active" : ""}`}
                   onClick={() => setStatusFilter("disabled")}
                 >
                   {locale === "zh" ? "已停用" : "Disabled"} (
                   {workflows.filter((w) => !w.enabled).length})
-                </button>
+                </Button>
               </div>
               <span>
                 {locale === "zh"
@@ -944,8 +948,8 @@ export function WorkflowWorkspace({
                         }
                       >
                         <td>
-                          <button
-                            type="button"
+                          <Button
+                            variant="ghost"
                             className="workflow-name-button"
                             onClick={() => {
                               setSelectedWorkflowID(workflow.id);
@@ -959,7 +963,7 @@ export function WorkflowWorkspace({
                           >
                             <strong>{workflow.name}</strong>
                             <small>{workflow.description}</small>
-                          </button>
+                          </Button>
                         </td>
                         <td>
                           <StatusPill
@@ -1015,13 +1019,13 @@ export function WorkflowWorkspace({
                         </td>
                         <td>
                           <div className="agent-row-actions">
-                            <button
-                              type="button"
-                              title={
+                            <IconButton
+                              label={
                                 locale === "zh"
                                   ? "进入详情 / 运行"
                                   : "Inspect / Run"
                               }
+                              icon={<ChevronRight />}
                               onClick={() => {
                                 setSelectedWorkflowID(workflow.id);
                                 const url = new URL(window.location.href);
@@ -1031,43 +1035,38 @@ export function WorkflowWorkspace({
                                 );
                                 window.history.replaceState(null, "", url);
                               }}
-                            >
-                              <ChevronRight />
-                            </button>
-                            <button
-                              type="button"
-                              title={locale === "zh" ? "编辑" : "Edit"}
+                            />
+                            <IconButton
+                              label={locale === "zh" ? "编辑" : "Edit"}
+                              icon={<Edit2 />}
                               onClick={() => setEditing(workflow)}
-                            >
-                              <Edit2 />
-                            </button>
-                            <button
-                              type="button"
-                              disabled={
-                                !workflow.enabled && Boolean(runBlockReason)
-                              }
-                              title={
+                            />
+                            <IconButton
+                              label={
                                 !workflow.enabled && runBlockReason
                                   ? runBlockReason
                                   : workflow.enabled
                                     ? labels.disable
                                     : labels.enable
                               }
+                              icon={
+                                workflow.enabled ? <CirclePause /> : <Play />
+                              }
+                              disabled={
+                                !workflow.enabled && Boolean(runBlockReason)
+                              }
                               onClick={() =>
                                 void workflowApi
                                   .setEnabled(workflow.id, !workflow.enabled)
                                   .then(() => onRefresh?.())
                               }
-                            >
-                              {workflow.enabled ? <CirclePause /> : <Play />}
-                            </button>
-                            <button
-                              type="button"
-                              title={locale === "zh" ? "删除" : "Delete"}
+                            />
+                            <IconButton
+                              variant="danger"
+                              label={locale === "zh" ? "删除" : "Delete"}
+                              icon={<Trash2 />}
                               onClick={() => setDeleteTarget(workflow)}
-                            >
-                              <Trash2 />
-                            </button>
+                            />
                           </div>
                         </td>
                       </tr>
@@ -1333,8 +1332,12 @@ function ResourceQueryBuilder({
           </strong>
           <p>每次计划运行开始时固定目标集合；后续重试会复用同一快照。</p>
         </div>
-        <Button variant="secondary" type="button" onClick={onAdd}>
-          <Plus />
+        <Button
+          variant="secondary"
+          type="button"
+          onClick={onAdd}
+          icon={<Plus />}
+        >
           添加动态资源筛选
         </Button>
       </section>
@@ -1374,8 +1377,13 @@ function ResourceQueryBuilder({
             </small>
           ) : null}
         </div>
-        <Button variant="ghost" size="compact" type="button" onClick={onRemove}>
-          <X />
+        <Button
+          variant="ghost"
+          size="compact"
+          type="button"
+          onClick={onRemove}
+          icon={<X />}
+        >
           移除
         </Button>
       </div>
@@ -1514,8 +1522,13 @@ function SchemaFieldBuilder({
           <strong>输入字段</strong>
           <p>资源字段会自动显示为文章、评论或媒体等选择器。</p>
         </div>
-        <Button variant="secondary" size="compact" type="button" onClick={add}>
-          <Plus />
+        <Button
+          variant="secondary"
+          size="compact"
+          type="button"
+          onClick={add}
+          icon={<Plus />}
+        >
           添加字段
         </Button>
       </div>
@@ -1682,8 +1695,8 @@ function SchemaFieldBuilder({
                     ),
                   });
                 }}
+                icon={<Trash2 />}
               >
-                <Trash2 />
                 删除
               </Button>
             </div>
@@ -2182,8 +2195,8 @@ function WorkflowEditor({
                 type="button"
                 disabled={planning}
                 onClick={() => void generateDraft()}
+                icon={<GitBranch />}
               >
-                <GitBranch />
                 {planning ? "正在生成草案…" : "用 AI 生成 Workflow 草案"}
               </Button>
               <Button
@@ -2191,8 +2204,8 @@ function WorkflowEditor({
                 type="button"
                 disabled={draftingAgents || planning}
                 onClick={() => void generateAgentDrafts()}
+                icon={<Plus />}
               >
-                <Plus />
                 {draftingAgents
                   ? "正在生成 Agent 草案…"
                   : "没有合适 Agent？生成草案"}
@@ -2221,8 +2234,8 @@ function WorkflowEditor({
                       type="button"
                       disabled={savingAgentDraft !== null}
                       onClick={() => void materializeAgentDraft(draft)}
+                      icon={<Save />}
                     >
-                      <Save />
                       {savingAgentDraft === draft.name
                         ? "正在创建…"
                         : "确认创建停用 Agent"}
@@ -2359,29 +2372,24 @@ function WorkflowEditor({
                     {step.type}
                   </span>
                   <div className="agent-row-actions">
-                    <button
-                      type="button"
-                      title="上移"
+                    <IconButton
+                      label="上移"
+                      icon={<ArrowUp />}
                       disabled={index === 0}
                       onClick={() => moveStep(index, -1)}
-                    >
-                      <ArrowUp />
-                    </button>
-                    <button
-                      type="button"
-                      title="下移"
+                    />
+                    <IconButton
+                      label="下移"
+                      icon={<ArrowDown />}
                       disabled={index === parsedSteps.length - 1}
                       onClick={() => moveStep(index, 1)}
-                    >
-                      <ArrowDown />
-                    </button>
-                    <button
-                      type="button"
-                      title="删除"
+                    />
+                    <IconButton
+                      variant="danger"
+                      label="删除"
+                      icon={<Trash2 />}
                       onClick={() => removeStep(index)}
-                    >
-                      <Trash2 />
-                    </button>
+                    />
                   </div>
                 </header>
                 {step.type === "model" ? (
@@ -2551,9 +2559,10 @@ function WorkflowEditor({
                             ))}
                           </Select>
                         </Field>
-                        <button
-                          type="button"
-                          title="删除嵌套步骤"
+                        <IconButton
+                          variant="danger"
+                          label="删除嵌套步骤"
+                          icon={<Trash2 />}
                           onClick={() =>
                             updateStep(index, {
                               ...step,
@@ -2562,9 +2571,7 @@ function WorkflowEditor({
                               ),
                             })
                           }
-                        >
-                          <Trash2 />
-                        </button>
+                        />
                       </div>
                     ))}
                     <Button
@@ -2586,8 +2593,8 @@ function WorkflowEditor({
                           ],
                         })
                       }
+                      icon={<Plus />}
                     >
-                      <Plus />
                       添加嵌套模型步骤
                     </Button>
                   </div>
@@ -2756,8 +2763,7 @@ function WorkflowEditor({
           <Button variant="secondary" type="button" onClick={onCancel}>
             {labels.cancel}
           </Button>
-          <Button variant="primary" type="submit">
-            <Save />
+          <Button variant="primary" type="submit" icon={<Save />}>
             {labels.save}
           </Button>
         </FormActions>

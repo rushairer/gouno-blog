@@ -15,11 +15,15 @@ import {
   Button,
   Checkbox,
   CheckboxField,
+  ChoiceButton,
   ConfirmDialog,
   Field,
   Input,
   Select,
   Textarea,
+  Tab,
+  TabList,
+  Tabs,
   useToast,
 } from "../../components/ui";
 import { MarkdownRenderer } from "../../components/MarkdownRenderer";
@@ -614,9 +618,14 @@ export default function PageEditor() {
   return (
     <ContentEditorFrame>
       <EditorCommandBar>
-        <button className="editor-back" type="button" onClick={leaveEditor}>
-          <ArrowLeft /> 返回单页列表
-        </button>
+        <Button
+          className="editor-back"
+          variant="ghost"
+          onClick={leaveEditor}
+          icon={<ArrowLeft />}
+        >
+          返回单页列表
+        </Button>
         <div className="editor-save-state">
           {saving ? (
             "正在保存…"
@@ -641,24 +650,27 @@ export default function PageEditor() {
             type="button"
             onClick={() => void openFrontsitePreview()}
             disabled={saving}
+            icon={<ExternalLink />}
           >
-            <ExternalLink /> 预览前台页面
+            预览前台页面
           </Button>
           <Button
             variant="secondary"
             type="button"
             onClick={() => void persist("draft")}
             disabled={saving}
+            icon={<Save />}
           >
-            <Save /> 保存草稿
+            保存草稿
           </Button>
           <Button
             variant="primary"
             type="button"
             onClick={() => void persist("published")}
             disabled={saving}
+            icon={<Send />}
           >
-            <Send /> {page.status === "published" ? "更新单页" : "发布"}
+            {page.status === "published" ? "更新单页" : "发布"}
           </Button>
         </div>
       </EditorCommandBar>
@@ -678,31 +690,25 @@ export default function PageEditor() {
               required
             />
             <div className="editor-ai-inline">
-              <button
-                type="button"
+              <Button
+                variant="ghost"
                 onClick={() => void requestSuggestions("title")}
                 disabled={assistTask !== null}
+                icon={<Sparkles />}
               >
-                <Sparkles />
-                {assistTask === "title" ? (
-                  <>
-                    <LoaderCircle className="is-spinning" /> 正在想标题…
-                  </>
-                ) : (
-                  "生成标题候选"
-                )}
-              </button>
+                {assistTask === "title" ? "正在想标题…" : "生成标题候选"}
+              </Button>
               {suggestionTask === "title" && suggestions.length > 0 ? (
                 <div className="editor-ai-candidates" aria-label="标题候选">
                   {suggestions.map((item) => (
-                    <button
+                    <Button
                       key={item}
-                      type="button"
+                      variant="ghost"
                       onClick={() => applySuggestion("title", item)}
                     >
                       <span>{item}</span>
                       <b>应用</b>
-                    </button>
+                    </Button>
                   ))}
                 </div>
               ) : null}
@@ -719,86 +725,75 @@ export default function PageEditor() {
               placeholder="用一两句话说明单页内容"
             />
             <div className="editor-ai-inline">
-              <button
-                type="button"
+              <Button
+                variant="ghost"
                 onClick={() => void requestSuggestions("summary")}
                 disabled={assistTask !== null}
+                icon={<Sparkles />}
               >
-                <Sparkles />
-                {assistTask === "summary" ? (
-                  <>
-                    <LoaderCircle className="is-spinning" /> 正在提炼摘要…
-                  </>
-                ) : (
-                  "根据正文生成摘要"
-                )}
-              </button>
+                {assistTask === "summary"
+                  ? "正在提炼摘要…"
+                  : "根据正文生成摘要"}
+              </Button>
               {suggestionTask === "summary" && suggestions.length > 0 ? (
                 <div className="editor-ai-candidates" aria-label="摘要候选">
                   {suggestions.map((item) => (
-                    <button
+                    <Button
                       key={item}
-                      type="button"
+                      variant="ghost"
                       onClick={() => applySuggestion("summary", item)}
                     >
                       <span>{item}</span>
                       <b>应用</b>
-                    </button>
+                    </Button>
                   ))}
                 </div>
               ) : null}
             </div>
           </Field>
 
-          <div className="editor-tabs">
-            <div className="tab-buttons">
-              <button
-                className={!preview ? "active" : ""}
-                type="button"
-                onClick={() => setPreview(false)}
-              >
-                Markdown
-              </button>
-              <button
-                className={preview ? "active" : ""}
-                type="button"
-                onClick={() => setPreview(true)}
-              >
-                预览
-              </button>
-            </div>
+          <Tabs
+            className="editor-tabs"
+            value={preview ? "preview" : "markdown"}
+            onValueChange={(value) => setPreview(value === "preview")}
+          >
+            <TabList label="编辑模式">
+              <Tab value="markdown">Markdown</Tab>
+              <Tab value="preview">预览</Tab>
+            </TabList>
             <div className="editor-ai-tools-group">
-              <button
-                className={`editor-ai-tool-btn ${showAiWriting ? "active" : ""}`}
-                type="button"
+              <Button
+                variant="ghost"
+                className={`editor-ai-tool-control ${showAiWriting ? "active" : ""}`}
                 onClick={() => {
                   setShowAiWriting(!showAiWriting);
                   setShowAiImage(false);
                   setAssistError("");
                 }}
+                icon={<Sparkles />}
               >
-                <Sparkles /> {showAiWriting ? "收起 AI 写作" : "AI 写作与润色"}
-              </button>
-              <button
-                className={`editor-ai-tool-btn ${showAiImage ? "active" : ""}`}
-                type="button"
+                {showAiWriting ? "收起 AI 写作" : "AI 写作与润色"}
+              </Button>
+              <Button
+                variant="ghost"
+                className={`editor-ai-tool-control ${showAiImage ? "active" : ""}`}
                 onClick={() => {
                   setShowAiImage(!showAiImage);
                   setShowAiWriting(false);
                   setAssistError("");
                 }}
+                icon={<ImageIcon />}
               >
-                <ImageIcon /> {showAiImage ? "收起 AI 插图" : "AI 文生图插画"}
-              </button>
+                {showAiImage ? "收起 AI 插图" : "AI 文生图插画"}
+              </Button>
             </div>
-          </div>
+          </Tabs>
 
           {showAiWriting ? (
             <AiWritingPanel>
               <div className="editor-ai-panel-header">
                 <div className="editor-ai-presets">
-                  <button
-                    type="button"
+                  <ChoiceButton
                     onClick={() =>
                       void handleGenerateContent(
                         "基于单页标题和摘要，撰写结构严谨、排版精美且适合独立单页展示的 Markdown 完整初稿，包含引言、分章节介绍和关键信息汇总。",
@@ -807,9 +802,8 @@ export default function PageEditor() {
                     disabled={aiContentLoading}
                   >
                     📄 一键起草单页初稿
-                  </button>
-                  <button
-                    type="button"
+                  </ChoiceButton>
+                  <ChoiceButton
                     onClick={() =>
                       void handleGenerateContent(
                         "保持页面原意，优化段落连贯性、语言流畅度与排版格式，提升可读性。",
@@ -818,9 +812,8 @@ export default function PageEditor() {
                     disabled={aiContentLoading || !page.content.trim()}
                   >
                     ✨ 润色与排版
-                  </button>
-                  <button
-                    type="button"
+                  </ChoiceButton>
+                  <ChoiceButton
                     onClick={() =>
                       void handleGenerateContent(
                         "对现有单页正文进行扩充与深化，补充背景说明、服务介绍、常见细节或案例示例。",
@@ -829,9 +822,8 @@ export default function PageEditor() {
                     disabled={aiContentLoading || !page.content.trim()}
                   >
                     ➕ 扩充内容细节
-                  </button>
-                  <button
-                    type="button"
+                  </ChoiceButton>
+                  <ChoiceButton
                     onClick={() =>
                       void handleGenerateContent(
                         "在保留核心信息的前提下，精简冗余表述，使单页表达更加凝练直观。",
@@ -840,7 +832,7 @@ export default function PageEditor() {
                     disabled={aiContentLoading || !page.content.trim()}
                   >
                     📝 精简提炼
-                  </button>
+                  </ChoiceButton>
                 </div>
               </div>
               <div className="editor-ai-prompt-box">
@@ -931,9 +923,8 @@ export default function PageEditor() {
             <AiImageGenerationPanel>
               <div className="editor-ai-panel-header">
                 <div className="editor-ai-presets">
-                  <button
-                    type="button"
-                    className="editor-ai-ideate-btn"
+                  <ChoiceButton
+                    className="editor-ai-ideate-control"
                     onClick={() => void handleIdeateImagePrompts()}
                     disabled={aiIdeateLoading || aiImageLoading}
                   >
@@ -944,9 +935,8 @@ export default function PageEditor() {
                     ) : (
                       "✨ 结合页面智能构思画面"
                     )}
-                  </button>
-                  <button
-                    type="button"
+                  </ChoiceButton>
+                  <ChoiceButton
                     onClick={() =>
                       void handleGenerateAiImage(
                         page.title
@@ -957,9 +947,8 @@ export default function PageEditor() {
                     disabled={aiImageLoading}
                   >
                     📊 架构图解风
-                  </button>
-                  <button
-                    type="button"
+                  </ChoiceButton>
+                  <ChoiceButton
                     onClick={() =>
                       void handleGenerateAiImage(
                         page.title
@@ -970,9 +959,8 @@ export default function PageEditor() {
                     disabled={aiImageLoading}
                   >
                     🖼️ 科技插画风
-                  </button>
-                  <button
-                    type="button"
+                  </ChoiceButton>
+                  <ChoiceButton
                     onClick={() =>
                       void handleGenerateAiImage(
                         page.title
@@ -983,9 +971,8 @@ export default function PageEditor() {
                     disabled={aiImageLoading}
                   >
                     🎬 电影概念风
-                  </button>
-                  <button
-                    type="button"
+                  </ChoiceButton>
+                  <ChoiceButton
                     onClick={() =>
                       void handleGenerateAiImage(
                         page.title
@@ -996,9 +983,8 @@ export default function PageEditor() {
                     disabled={aiImageLoading}
                   >
                     🎨 3D 立体风
-                  </button>
-                  <button
-                    type="button"
+                  </ChoiceButton>
+                  <ChoiceButton
                     onClick={() =>
                       void handleGenerateAiImage(
                         page.title
@@ -1009,7 +995,7 @@ export default function PageEditor() {
                     disabled={aiImageLoading}
                   >
                     🧸 简单卡通风
-                  </button>
+                  </ChoiceButton>
                 </div>
               </div>
               <div className="editor-ai-prompt-box">
@@ -1272,20 +1258,16 @@ export default function PageEditor() {
           <details open>
             <summary>路径与 SEO</summary>
             <div className="editor-ai-inline" style={{ marginBottom: 12 }}>
-              <button
-                type="button"
+              <Button
+                variant="ghost"
                 onClick={() => void requestSeo()}
                 disabled={assistTask !== null}
+                icon={<Sparkles />}
               >
-                <Sparkles />
-                {assistTask === "seo" ? (
-                  <>
-                    <LoaderCircle className="is-spinning" /> 正在优化 SEO…
-                  </>
-                ) : (
-                  "🎯 智能生成整套 SEO 配置"
-                )}
-              </button>
+                {assistTask === "seo"
+                  ? "正在优化 SEO…"
+                  : "🎯 智能生成整套 SEO 配置"}
+              </Button>
             </div>
             <Field label="访问路径 (Slug)" required hint="访问路径为 /<slug>">
               <Input
@@ -1296,31 +1278,25 @@ export default function PageEditor() {
                 required
               />
               <div className="editor-ai-inline">
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
                   onClick={() => void requestSuggestions("slug")}
                   disabled={assistTask !== null}
+                  icon={<Sparkles />}
                 >
-                  <Sparkles />
-                  {assistTask === "slug" ? (
-                    <>
-                      <LoaderCircle className="is-spinning" /> 正在生成 Slug…
-                    </>
-                  ) : (
-                    "生成 Slug 候选"
-                  )}
-                </button>
+                  {assistTask === "slug" ? "正在生成 Slug…" : "生成 Slug 候选"}
+                </Button>
                 {suggestionTask === "slug" && suggestions.length > 0 ? (
                   <div className="editor-ai-candidates" aria-label="Slug 候选">
                     {suggestions.map((item) => (
-                      <button
+                      <Button
                         key={item}
-                        type="button"
+                        variant="ghost"
                         onClick={() => applySuggestion("slug", item)}
                       >
                         <span className="mono">{item}</span>
                         <b>应用</b>
-                      </button>
+                      </Button>
                     ))}
                   </div>
                 ) : null}

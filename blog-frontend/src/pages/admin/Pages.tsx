@@ -13,6 +13,7 @@ import {
   EmptyState,
   ErrorState,
   FilterBar,
+  IconButton,
   LoadingState,
   Pagination,
   Panel,
@@ -132,13 +133,12 @@ export default function AdminPages() {
           <ErrorState
             label={error}
             action={
-              <button
-                className="btn btn-secondary"
-                type="button"
+              <Button
+                variant="secondary"
                 onClick={() => window.location.reload()}
               >
                 重新载入
-              </button>
+              </Button>
             }
           />
         ) : null}
@@ -168,8 +168,9 @@ export default function AdminPages() {
               size="compact"
               type="button"
               onClick={clearFilters}
+              icon={<X />}
             >
-              <X /> 清除
+              清除
             </Button>
           ) : null}
         </FilterBar>
@@ -185,8 +186,8 @@ export default function AdminPages() {
               size="compact"
               type="button"
               onClick={() => setDeleteTarget({ kind: "batch" })}
+              icon={<Trash2 />}
             >
-              <Trash2 />
               删除
             </Button>
           </BulkActionBar>
@@ -203,13 +204,9 @@ export default function AdminPages() {
             }
             action={
               hasFilters ? (
-                <button
-                  className="btn btn-secondary"
-                  type="button"
-                  onClick={clearFilters}
-                >
+                <Button variant="secondary" onClick={clearFilters}>
                   清除筛选
-                </button>
+                </Button>
               ) : (
                 <ButtonLink
                   variant="primary"
@@ -305,9 +302,9 @@ export default function AdminPages() {
                           >
                             <Eye />
                           </Link>
-                          <button
-                            type="button"
-                            title="复制链接"
+                          <IconButton
+                            label="复制链接"
+                            icon={<Copy />}
                             onClick={() =>
                               void copyText(
                                 `${location.origin}/${p.slug}`,
@@ -315,22 +312,18 @@ export default function AdminPages() {
                                 "单页链接已复制。",
                               )
                             }
-                          >
-                            <Copy />
-                          </button>
+                          />
                           <Link to={`/admin/pages/${p.id}/edit`} title="编辑">
                             <Edit2 />
                           </Link>
-                          <button
-                            type="button"
-                            className="danger-action"
-                            title="删除"
+                          <IconButton
+                            variant="danger"
+                            label="删除"
+                            icon={<Trash2 />}
                             onClick={() =>
                               setDeleteTarget({ kind: "page", page: p })
                             }
-                          >
-                            <Trash2 />
-                          </button>
+                          />
                         </div>
                       </td>
                     </tr>

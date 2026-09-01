@@ -155,8 +155,8 @@ export default function AdminComments() {
               size="compact"
               type="button"
               onClick={() => setDeleteTarget({ kind: "batch" })}
+              icon={<Trash2 />}
             >
-              <Trash2 />
               删除
             </Button>
           </BulkActionBar>
@@ -220,8 +220,9 @@ export default function AdminComments() {
                     size="compact"
                     type="button"
                     onClick={() => setDeleteTarget(comment)}
+                    icon={<Trash2 />}
                   >
-                    <Trash2 /> 删除
+                    删除
                   </Button>
                 </div>
               </Panel>

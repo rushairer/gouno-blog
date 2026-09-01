@@ -1,10 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  Link,
-  useNavigate,
-  useParams,
-  useSearchParams,
-} from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   Calendar,
@@ -29,12 +24,17 @@ import type { CommunityComment } from "../api/comments";
 import { postsApi } from "../api/posts";
 import {
   Badge,
+  Button,
+  ButtonLink,
   EmptyState,
   Feedback,
   Field,
+  IconButton,
+  Input,
   LoadingState,
   Modal,
   Panel,
+  Textarea,
 } from "../components/ui";
 import { useI18n } from "../i18n";
 import { useArticleSEO } from "../utils/seo";
@@ -71,23 +71,25 @@ function CommentItem({
         <p>{comment.content}</p>
         <div className="comment-actions">
           {!comment.parent_id ? (
-            <button
+            <Button
               type="button"
-              className="text-button"
+              variant="ghost"
+              size="compact"
               onClick={() => onReply(comment)}
+              icon={<Reply size={14} />}
             >
-              <Reply size={14} />
               {t("reply")}
-            </button>
+            </Button>
           ) : null}
-          <button
+          <Button
             type="button"
-            className="text-button"
+            variant="ghost"
+            size="compact"
             onClick={() => onReport(comment)}
+            icon={<Flag size={14} />}
           >
-            <Flag size={14} />
             {t("report")}
-          </button>
+          </Button>
         </div>
       </div>
       {replies.length > 0 ? (
@@ -110,7 +112,6 @@ function CommentItem({
 export default function PostDetail() {
   const { slug } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const isPreviewParam = searchParams.get("preview") === "true";
   const { t, formatDate } = useI18n();
   const session = useSession<BlogUserProfile>();
@@ -351,18 +352,16 @@ export default function PostDetail() {
           <div
             style={{ display: "flex", justifyContent: "center", gap: "12px" }}
           >
-            <button
-              type="button"
-              className="btn btn-primary"
+            <Button
+              variant="primary"
               onClick={() => window.location.reload()}
+              icon={<RefreshCw size={15} />}
             >
-              <RefreshCw size={15} />
               {t("retry")}
-            </button>
-            <Link to="/articles" className="btn btn-secondary">
-              <ArrowLeft size={15} />
+            </Button>
+            <ButtonLink to="/articles" icon={<ArrowLeft size={15} />}>
               {t("backToFeed")}
-            </Link>
+            </ButtonLink>
           </div>
         </div>
       </div>
@@ -395,13 +394,9 @@ export default function PostDetail() {
               </span>
             </div>
             {post?.id ? (
-              <button
-                className="btn btn-secondary btn--compact"
-                type="button"
-                onClick={() => navigate(`/admin/posts/${post.id}/edit`)}
-              >
+              <ButtonLink size="compact" to={`/admin/posts/${post.id}/edit`}>
                 返回编辑器
-              </button>
+              </ButtonLink>
             ) : null}
           </div>
         ) : null}
@@ -455,16 +450,17 @@ export default function PostDetail() {
             <MarkdownRenderer content={post.content} />
 
             <div className="article-actions">
-              <button
-                type="button"
+              <Button
+                variant="ghost"
                 className={`like-button ${liked ? "liked" : ""}`}
                 onClick={handleLike}
+                aria-pressed={liked}
+                icon={
+                  <Heart size={20} fill={liked ? "currentColor" : "none"} />
+                }
               >
-                <Heart size={20} fill={liked ? "currentColor" : "none"} />
-                <span>
-                  {likes} {t("likes")}
-                </span>
-              </button>
+                {likes} {t("likes")}
+              </Button>
             </div>
           </Panel>
 
@@ -545,21 +541,18 @@ export default function PostDetail() {
             {replyingTo ? (
               <div className="replying-banner">
                 <span>{t("replyingTo", { name: replyingTo.author })}</span>
-                <button
-                  type="button"
-                  className="icon-button"
+                <IconButton
+                  label={t("cancelReply")}
+                  icon={<X size={16} />}
                   onClick={() => setReplyingTo(null)}
-                  aria-label={t("cancelReply")}
-                >
-                  <X size={16} />
-                </button>
+                />
               </div>
             ) : null}
             {session.loggedIn ? (
               <p className="muted">{t("signedInComment")}</p>
             ) : (
               <Field label={t("name")}>
-                <input
+                <Input
                   type="text"
                   className="input-field"
                   placeholder={t("yourName")}
@@ -571,7 +564,7 @@ export default function PostDetail() {
               </Field>
             )}
             <Field label={t("comment")}>
-              <textarea
+              <Textarea
                 className="input-field"
                 placeholder={t("typeComment")}
                 rows={4}
@@ -581,14 +574,14 @@ export default function PostDetail() {
                 required
               />
             </Field>
-            <button
+            <Button
+              variant="primary"
               type="submit"
-              className="btn btn-primary"
-              disabled={commentLoading}
+              loading={commentLoading}
+              icon={<Send />}
             >
-              <Send />
               {commentLoading ? t("posting") : t("postComment")}
-            </button>
+            </Button>
           </form>
         </Panel>
       </div>
@@ -604,7 +597,7 @@ export default function PostDetail() {
         <form className="modal-form" onSubmit={handleReport}>
           <label>
             {t("reportReason")}
-            <textarea
+            <Textarea
               rows={4}
               value={reportReason}
               onChange={(event) => setReportReason(event.target.value)}
@@ -612,19 +605,17 @@ export default function PostDetail() {
             />
           </label>
           <div className="modal-actions">
-            <button
-              className="btn btn-secondary"
-              type="button"
+            <Button
               onClick={() => {
                 setReportingComment(null);
                 setReportReason("");
               }}
             >
               {t("cancel")}
-            </button>
-            <button className="btn btn-primary" type="submit">
-              <Flag /> {t("report")}
-            </button>
+            </Button>
+            <Button variant="primary" type="submit" icon={<Flag />}>
+              {t("report")}
+            </Button>
           </div>
         </form>
       </Modal>

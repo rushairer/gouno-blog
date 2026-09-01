@@ -49,7 +49,7 @@
   gap: 14px;
 }
 
-.workspace-overview__summary > button {
+.workspace-overview__summary > .btn {
   display: grid;
   grid-template-columns: auto 1fr;
   align-items: center;
@@ -449,7 +449,7 @@
   padding: 0;
 }
 
-.workflow-master-list > button {
+.workflow-master-list > .btn {
   display: flex;
   width: 100%;
   align-items: start;
@@ -465,7 +465,7 @@
 }
 
 .workflow-master-list > button:hover,
-.workflow-master-list > button.active {
+.workflow-master-list > .btn.active {
   background: var(--agent-accent-soft);
 }
 
@@ -866,7 +866,7 @@ td .agent-chip-list {
   text-transform: capitalize;
 }
 
-.agent-chip-list button {
+.agent-chip-list .btn {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -895,7 +895,7 @@ td .agent-chip-list {
   gap: 3px;
 }
 
-.agent-row-actions button {
+.agent-row-actions .btn {
   display: grid;
   width: 32px;
   height: 32px;
@@ -1067,7 +1067,7 @@ td .agent-chip-list {
   color: var(--agent-accent);
   overflow-wrap: anywhere;
 }
-.workflow-planner__agent-draft .button {
+.workflow-planner__agent-draft .btn {
   justify-self: start;
 }
 .workflow-list-toolbar {
@@ -1347,7 +1347,7 @@ td .agent-chip-list {
 }
 
 .agent-run-list > button,
-.agent-approval-list > button {
+.agent-approval-list > .btn {
   display: grid;
   width: 100%;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -1362,15 +1362,15 @@ td .agent-chip-list {
   text-align: left;
 }
 
-.agent-run-list > button:hover,
-.agent-run-list > button.active,
-.agent-approval-list > button:hover,
-.agent-approval-list > button.active {
+.agent-run-list > .btn:hover,
+.agent-run-list > .btn.active,
+.agent-approval-list > .btn:hover,
+.agent-approval-list > .btn.active {
   background: var(--agent-accent-soft);
 }
 
-.agent-run-list button > span,
-.agent-approval-list button > span {
+.agent-run-list .btn > span,
+.agent-approval-list .btn > span {
   display: grid;
   gap: 5px;
 }
@@ -2005,7 +2005,7 @@ td .agent-chip-list {
   padding: 14px;
 }
 
-.agent-filter button {
+.agent-filter .btn {
   border: 0;
   border-radius: 6px;
   background: transparent;
@@ -2016,12 +2016,12 @@ td .agent-chip-list {
   padding: 8px 12px;
 }
 
-.agent-filter button.active {
+.agent-filter .btn.active {
   background: var(--agent-accent-soft);
   color: var(--agent-accent);
 }
 
-.agent-approval-list > button {
+.agent-approval-list > .btn {
   grid-template-columns: 1fr auto;
 }
 
@@ -2264,7 +2264,7 @@ td .agent-chip-list {
   max-height: 48vh;
   overflow: auto;
 }
-.workflow-resource-options > button {
+.workflow-resource-options > .btn {
   width: 100%;
   border: 1px solid var(--line);
   background: var(--surface);
@@ -2272,7 +2272,7 @@ td .agent-chip-list {
   text-align: left;
   border-radius: 6px;
 }
-.workflow-resource-options > button.selected {
+.workflow-resource-options > .btn.selected {
   border-color: var(--brand);
   background: var(--brand-soft);
 }
@@ -2293,7 +2293,7 @@ td .agent-chip-list {
   justify-content: center;
   gap: 10px;
 }
-.workflow-resource-pagination button {
+.workflow-resource-pagination .btn {
   width: 32px;
   height: 32px;
   display: inline-grid;

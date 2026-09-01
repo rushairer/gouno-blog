@@ -10,6 +10,7 @@ import {
   Search,
   Sun,
 } from "lucide-react";
+import { Button, IconButton } from "../components/ui";
 import { notificationsApi } from "../api/notifications";
 import { useUserProfile } from "@gosso/client/react";
 import { type BlogUserProfile, getBlogRoleLabel, logout } from "../auth";
@@ -219,25 +220,28 @@ export default function AdminShell({ children }: { children: ReactNode }) {
 
       <div className="admin-main">
         <header className="admin-topbar">
-          <button
+          <IconButton
             className="bare-icon admin-menu"
-            type="button"
-            aria-label="切换后台导航"
+            label="切换后台导航"
+            icon={<Menu />}
+            variant="ghost"
             aria-expanded={mobileOpen}
             aria-controls="admin-sidebar"
             onClick={() => setMobileOpen(!mobileOpen)}
-          >
-            <Menu />
-          </button>
+          />
           <div className="breadcrumb">
             <Link to="/admin/dashboard">后台</Link>
             <span>/</span>
             <strong>{currentLabel(location.pathname)}</strong>
           </div>
           <form className="admin-search" role="search" onSubmit={submitSearch}>
-            <button type="submit" aria-label="提交文章搜索">
-              <Search />
-            </button>
+            <IconButton
+              type="submit"
+              label="提交文章搜索"
+              icon={<Search />}
+              variant="ghost"
+              size="compact"
+            />
             <input
               className="admin-search__input"
               aria-label="搜索文章"
@@ -271,27 +275,27 @@ export default function AdminShell({ children }: { children: ReactNode }) {
               </span>
               <span>通知</span>
             </Link>
-            <button
+            <Button
+              variant="ghost"
               className="admin-theme-toggle"
-              type="button"
               onClick={() =>
                 setTheme((current) => (current === "light" ? "dark" : "light"))
               }
               aria-label="切换后台主题"
               aria-pressed={theme === "dark"}
+              icon={theme === "light" ? <Moon /> : <Sun />}
             >
-              {theme === "light" ? <Moon /> : <Sun />}
-              <span>{theme === "light" ? "深色模式" : "浅色模式"}</span>
-            </button>
-            <button
-              type="button"
+              {theme === "light" ? "深色模式" : "浅色模式"}
+            </Button>
+            <Button
+              variant="ghost"
               onClick={() => void handleLogout()}
               disabled={loggingOut}
               aria-label="退出登录"
+              icon={<LogOut />}
             >
-              <LogOut />
-              <span>{loggingOut ? "正在退出…" : "退出登录"}</span>
-            </button>
+              {loggingOut ? "正在退出…" : "退出登录"}
+            </Button>
           </div>
         </header>
         {logoutError ? (
@@ -302,11 +306,12 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         <main className="admin-content">{children}</main>
       </div>
       {mobileOpen ? (
-        <button
+        <IconButton
           className="admin-nav-scrim"
-          type="button"
+          label="关闭后台导航"
+          icon={<span />}
+          variant="ghost"
           onClick={() => setMobileOpen(false)}
-          aria-label="关闭后台导航"
         />
       ) : null}
     </div>

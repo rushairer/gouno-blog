@@ -1,5 +1,5 @@
 import { Calendar, Sparkles } from "lucide-react";
-import { Field } from "../../ui";
+import { Button, Field, Input } from "../../ui";
 
 export interface StalePostsBinding {
   older_than_days?: number;
@@ -55,16 +55,16 @@ export function StalePostsConfig({
           {STALE_PRESETS.map((p) => {
             const active = olderThanDays === p.days;
             return (
-              <button
+              <Button
                 key={p.days}
-                type="button"
+                variant="ghost"
                 className={`rss-config-chip ${active ? "rss-config-chip--added" : ""}`}
                 onClick={() =>
                   onChange({ ...value, older_than_days: p.days, limit })
                 }
               >
                 {p.label}
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -79,7 +79,7 @@ export function StalePostsConfig({
               : "Posts unedited for this many days (1-3650)"
           }
         >
-          <input
+          <Input
             type="number"
             className="input-field"
             min={1}

@@ -17,10 +17,12 @@ import {
   AdminPageHeader,
   Badge,
   Button,
+  ButtonLink,
   ConfirmDialog,
   ContentStack,
   EmptyState,
   Feedback,
+  IconButton,
   LoadingState,
   Modal,
   Panel,
@@ -214,8 +216,9 @@ export default function AdminUsers() {
               type="button"
               onClick={() => void load()}
               loading={loading}
+              icon={<RefreshCw />}
             >
-              <RefreshCw /> 刷新
+              刷新
             </Button>
             {(() => {
               const targetAdminURL =
@@ -224,14 +227,15 @@ export default function AdminUsers() {
                 "";
               if (!targetAdminURL) return null;
               return (
-                <a
-                  className="btn btn-secondary btn--compact"
-                  href={targetAdminURL}
+                <ButtonLink
+                  size="compact"
+                  to={targetAdminURL}
                   target="_blank"
                   rel="noreferrer"
+                  icon={<ExternalLink />}
                 >
-                  <ExternalLink /> 前往 GOSSO 管理
-                </a>
+                  前往 GOSSO 管理
+                </ButtonLink>
               );
             })()}
           </>
@@ -279,8 +283,9 @@ export default function AdminUsers() {
                                 {member.principal.email ? (
                                   <span>{member.principal.email} · </span>
                                 ) : null}
-                                <button
-                                  type="button"
+                                <Button
+                                  variant="ghost"
+                                  size="compact"
                                   className="member-id-copy"
                                   title={`点击复制完整 Subject ID: ${member.principal.subject}`}
                                   onClick={(e) => {
@@ -292,10 +297,10 @@ export default function AdminUsers() {
                                       `已复制完整 Subject ID: ${member.principal.subject}`,
                                     );
                                   }}
+                                  icon={<Copy size={11} />}
                                 >
                                   ID: {member.principal.subject.slice(0, 8)}
-                                  <Copy size={11} aria-hidden="true" />
-                                </button>
+                                </Button>
                               </div>
                             </div>
                           </div>
@@ -325,56 +330,44 @@ export default function AdminUsers() {
                         </td>
                         <td>
                           <div className="table-actions">
-                            <button
-                              type="button"
-                              title="编辑成员与权限"
-                              aria-label="编辑成员与权限"
+                            <IconButton
+                              label="编辑成员与权限"
+                              icon={<KeyRound />}
                               disabled={busy}
                               onClick={() => setEditing(member)}
-                            >
-                              <KeyRound />
-                            </button>
+                            />
                             {!isOwner ? (
-                              <button
-                                type="button"
-                                title="移交所有权"
-                                aria-label="移交所有权"
+                              <IconButton
+                                label="移交所有权"
+                                icon={<Crown />}
                                 disabled={
                                   busy || member.membership_status !== "active"
                                 }
                                 onClick={() =>
                                   setConfirm({ member, action: "transfer" })
                                 }
-                              >
-                                <Crown />
-                              </button>
+                              />
                             ) : null}
                             {isOwner ? null : member.membership_status ===
                               "suspended" ? (
-                              <button
-                                type="button"
-                                title="恢复成员"
-                                aria-label="恢复成员"
+                              <IconButton
+                                label="恢复成员"
+                                icon={<RotateCcw />}
                                 disabled={busy}
                                 onClick={() =>
                                   setConfirm({ member, action: "restore" })
                                 }
-                              >
-                                <RotateCcw />
-                              </button>
+                              />
                             ) : (
-                              <button
-                                type="button"
-                                className="danger-action"
-                                title="暂停成员"
-                                aria-label="暂停成员"
+                              <IconButton
+                                variant="danger"
+                                label="暂停成员"
+                                icon={<Ban />}
                                 disabled={busy}
                                 onClick={() =>
                                   setConfirm({ member, action: "suspend" })
                                 }
-                              >
-                                <Ban />
-                              </button>
+                              />
                             )}
                           </div>
                         </td>

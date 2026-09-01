@@ -243,8 +243,13 @@ export default function AdminSiteSettings() {
                   />
                 </Field>
                 <FormActions>
-                  <Button variant="primary" type="submit" loading={saving}>
-                    <Save /> {saving ? "正在保存…" : "保存设置"}
+                  <Button
+                    variant="primary"
+                    type="submit"
+                    loading={saving}
+                    icon={<Save />}
+                  >
+                    {saving ? "正在保存…" : "保存设置"}
                   </Button>
                 </FormActions>
               </FormLayout>
@@ -314,8 +319,9 @@ export default function AdminSiteSettings() {
                       type="button"
                       loading={uploadingImage}
                       onClick={() => fileInputRef.current?.click()}
+                      icon={<Upload />}
                     >
-                      <Upload /> 上传插图
+                      上传插图
                     </Button>
                   </div>
                   {value.hero_image_url ? (
@@ -372,15 +378,21 @@ export default function AdminSiteSettings() {
                   />
                 </Field>
                 <FormActions>
-                  <Button variant="primary" type="submit" loading={saving}>
-                    <Save /> {saving ? "正在保存…" : "保存设置"}
+                  <Button
+                    variant="primary"
+                    type="submit"
+                    loading={saving}
+                    icon={<Save />}
+                  >
+                    {saving ? "正在保存…" : "保存设置"}
                   </Button>
                   <Button
                     variant="secondary"
                     type="button"
                     onClick={resetHeroDefaults}
+                    icon={<RotateCcw />}
                   >
-                    <RotateCcw /> 恢复默认文案
+                    恢复默认文案
                   </Button>
                 </FormActions>
               </FormLayout>
@@ -424,8 +436,9 @@ export default function AdminSiteSettings() {
                       type="button"
                       loading={uploadingImage}
                       onClick={() => faviconInputRef.current?.click()}
+                      icon={<Upload />}
                     >
-                      <Upload /> 上传图标
+                      上传图标
                     </Button>
                   </div>
                   {value.favicon_url ? (
@@ -443,8 +456,13 @@ export default function AdminSiteSettings() {
                   ) : null}
                 </Field>
                 <FormActions>
-                  <Button variant="primary" type="submit" loading={saving}>
-                    <Save /> {saving ? "正在保存…" : "保存设置"}
+                  <Button
+                    variant="primary"
+                    type="submit"
+                    loading={saving}
+                    icon={<Save />}
+                  >
+                    {saving ? "正在保存…" : "保存设置"}
                   </Button>
                 </FormActions>
               </FormLayout>
@@ -482,8 +500,13 @@ export default function AdminSiteSettings() {
                   />
                 </Field>
                 <FormActions>
-                  <Button variant="primary" type="submit" loading={saving}>
-                    <Save /> {saving ? "正在保存…" : "保存设置"}
+                  <Button
+                    variant="primary"
+                    type="submit"
+                    loading={saving}
+                    icon={<Save />}
+                  >
+                    {saving ? "正在保存…" : "保存设置"}
                   </Button>
                 </FormActions>
               </FormLayout>
@@ -514,8 +537,13 @@ export default function AdminSiteSettings() {
                   />
                 </Field>
                 <FormActions>
-                  <Button variant="primary" type="submit" loading={saving}>
-                    <Save /> {saving ? "正在保存…" : "保存设置"}
+                  <Button
+                    variant="primary"
+                    type="submit"
+                    loading={saving}
+                    icon={<Save />}
+                  >
+                    {saving ? "正在保存…" : "保存设置"}
                   </Button>
                 </FormActions>
               </FormLayout>

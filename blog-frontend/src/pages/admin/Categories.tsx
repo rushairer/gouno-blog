@@ -14,6 +14,7 @@ import {
   EmptyState,
   Feedback,
   LoadingState,
+  IconButton,
   Panel,
   TableContainer,
   useToast,
@@ -245,8 +246,8 @@ export default function Categories() {
               size="compact"
               type="button"
               onClick={() => setDeleteTarget({ kind: "batch" })}
+              icon={<Trash2 />}
             >
-              <Trash2 />
               删除
             </Button>
           </BulkActionBar>
@@ -294,21 +295,19 @@ export default function Categories() {
                       <td>{item.sort_order || 0}</td>
                       <td>
                         <div className="table-actions">
-                          <button
-                            title="编辑分类"
+                          <IconButton
+                            label="编辑分类"
+                            icon={<Edit2 />}
                             onClick={() => openEditDrawer(item)}
-                          >
-                            <Edit2 />
-                          </button>
-                          <button
-                            className="danger-action"
-                            title="删除分类"
+                          />
+                          <IconButton
+                            variant="danger"
+                            label="删除分类"
+                            icon={<Trash2 />}
                             onClick={() =>
                               setDeleteTarget({ kind: "category", item })
                             }
-                          >
-                            <Trash2 />
-                          </button>
+                          />
                         </div>
                       </td>
                     </tr>

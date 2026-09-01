@@ -1,7 +1,6 @@
 import { useRef } from "react";
 import {
   Bot,
-  ChevronRight,
   CirclePause,
   Copy,
   DatabaseZap,
@@ -38,6 +37,7 @@ import { RiskPill, StatusPill } from "./StatusPill";
 import {
   Button,
   EmptyState,
+  IconButton,
   PanelHeader,
   Select,
   SubnavTabs,
@@ -292,8 +292,8 @@ export function AdvancedWorkspace({
                     ? onEditAgent("new")
                     : onError(labels.providerNeeded)
                 }
+                icon={<Plus />}
               >
-                <Plus />
                 {labels.createAgent}
               </Button>
             }
@@ -311,17 +311,16 @@ export function AdvancedWorkspace({
                   ? "保存首个可用模型连接后，系统会自动创建 8 个停用的默认 Agent，供你审核后启用。"
                   : "Saving the first usable model connection creates eight disabled default Agents for review."}
               </p>
-              <button
+              <Button
                 className="text-link"
-                type="button"
+                variant="ghost"
                 onClick={() => onSelectSection("providers")}
+                icon={<KeyRound />}
               >
-                <KeyRound />
                 {locale === "zh"
                   ? "配置模型连接"
                   : "Configure a model connection"}
-                <ChevronRight />
-              </button>
+              </Button>
             </div>
           ) : (
             <div className="table-scroll">
@@ -439,43 +438,36 @@ export function AdvancedWorkspace({
                         </td>
                         <td>
                           <div className="agent-row-actions">
-                            <button
-                              type="button"
-                              title={labels.runNow}
+                            <IconButton
+                              label={labels.runNow}
+                              icon={<Play />}
                               onClick={() => void onRunAgent(agent)}
                               disabled={!agent.enabled}
-                            >
-                              <Play />
-                            </button>
-                            <button
-                              type="button"
-                              title={labels.edit}
+                            />
+                            <IconButton
+                              label={labels.edit}
+                              icon={<Edit2 />}
                               onClick={() => onEditAgent(agent)}
-                            >
-                              <Edit2 />
-                            </button>
-                            <button
-                              type="button"
-                              title={
+                            />
+                            <IconButton
+                              label={
                                 agent.enabled ? labels.disable : labels.enable
                               }
+                              icon={agent.enabled ? <CirclePause /> : <Play />}
                               onClick={() => void onToggleAgentEnabled(agent)}
-                            >
-                              {agent.enabled ? <CirclePause /> : <Play />}
-                            </button>
+                            />
                             {!agent.system_key ? (
-                              <button
-                                type="button"
-                                title={labels.delete}
+                              <IconButton
+                                variant="danger"
+                                label={labels.delete}
+                                icon={<Trash2 />}
                                 onClick={() =>
                                   onDeleteTarget({
                                     kind: "agent",
                                     value: agent,
                                   })
                                 }
-                              >
-                                <Trash2 />
-                              </button>
+                              />
                             ) : null}
                           </div>
                         </td>
@@ -514,16 +506,16 @@ export function AdvancedWorkspace({
                   variant="secondary"
                   type="button"
                   onClick={() => skillFileInputRef.current?.click()}
+                  icon={<Upload />}
                 >
-                  <Upload />
                   {locale === "zh" ? "导入 Skill" : "Import Skill"}
                 </Button>
                 <Button
                   variant="primary"
                   type="button"
                   onClick={() => onEditSkill("new")}
+                  icon={<Plus />}
                 >
-                  <Plus />
                   {locale === "zh" ? "创建 Skill" : "Create Skill"}
                 </Button>
               </>
@@ -587,41 +579,34 @@ export function AdvancedWorkspace({
                       </td>
                       <td>
                         <div className="agent-row-actions">
-                          <button
-                            type="button"
-                            title={
+                          <IconButton
+                            label={
                               locale === "zh" ? "导出 Skill" : "Export Skill"
                             }
+                            icon={<Download />}
                             onClick={() => void onExportSkill(skill)}
-                          >
-                            <Download />
-                          </button>
-                          <button
-                            type="button"
-                            title={
+                          />
+                          <IconButton
+                            label={
                               locale === "zh" ? "复制 Skill" : "Copy Skill"
                             }
+                            icon={<Copy />}
                             onClick={() => void onCopySkill(skill)}
-                          >
-                            <Copy />
-                          </button>
-                          <button
-                            type="button"
-                            title={labels.edit}
+                          />
+                          <IconButton
+                            label={labels.edit}
+                            icon={<Edit2 />}
                             onClick={() => onEditSkill(skill)}
-                          >
-                            <Edit2 />
-                          </button>
+                          />
                           {!skill.system_key ? (
-                            <button
-                              type="button"
-                              title={labels.delete}
+                            <IconButton
+                              variant="danger"
+                              label={labels.delete}
+                              icon={<Trash2 />}
                               onClick={() =>
                                 onDeleteTarget({ kind: "skill", value: skill })
                               }
-                            >
-                              <Trash2 />
-                            </button>
+                            />
                           ) : null}
                         </div>
                       </td>
@@ -656,20 +641,23 @@ export function AdvancedWorkspace({
                   variant="secondary"
                   type="button"
                   onClick={() => void onExportProviders()}
+                  icon={<Download />}
                 >
-                  <Download />
                   {labels.exportProviders}
                 </Button>
                 <Button
                   variant="secondary"
                   type="button"
                   onClick={() => providerFileInputRef.current?.click()}
+                  icon={<Upload />}
                 >
-                  <Upload />
                   {labels.importProviders}
                 </Button>
-                <Button variant="primary" onClick={() => onEditProvider("new")}>
-                  <Plus />
+                <Button
+                  variant="primary"
+                  onClick={() => onEditProvider("new")}
+                  icon={<Plus />}
+                >
                   {locale === "zh" ? "添加模型连接" : labels.createProvider}
                 </Button>
               </>
@@ -803,9 +791,8 @@ export function AdvancedWorkspace({
                       </td>
                       <td>
                         <div className="agent-row-actions">
-                          <button
-                            type="button"
-                            title={
+                          <IconButton
+                            label={
                               testingConnections.includes(
                                 `provider:${provider.id}`,
                               )
@@ -827,36 +814,34 @@ export function AdvancedWorkspace({
                                 provider.name,
                               )
                             }
-                          >
-                            <RefreshCw
-                              className={
-                                testingConnections.includes(
-                                  `provider:${provider.id}`,
-                                )
-                                  ? "agent-row-actions__spinner"
-                                  : undefined
-                              }
-                            />
-                          </button>
-                          <button
-                            type="button"
-                            title={labels.edit}
+                            icon={
+                              <RefreshCw
+                                className={
+                                  testingConnections.includes(
+                                    `provider:${provider.id}`,
+                                  )
+                                    ? "agent-row-actions__spinner"
+                                    : undefined
+                                }
+                              />
+                            }
+                          />
+                          <IconButton
+                            label={labels.edit}
+                            icon={<Edit2 />}
                             onClick={() => onEditProvider(provider)}
-                          >
-                            <Edit2 />
-                          </button>
-                          <button
-                            type="button"
-                            title={labels.delete}
+                          />
+                          <IconButton
+                            variant="danger"
+                            label={labels.delete}
+                            icon={<Trash2 />}
                             onClick={() =>
                               onDeleteTarget({
                                 kind: "provider",
                                 value: provider,
                               })
                             }
-                          >
-                            <Trash2 />
-                          </button>
+                          />
                         </div>
                       </td>
                     </tr>
@@ -898,24 +883,24 @@ export function AdvancedWorkspace({
                   variant="secondary"
                   type="button"
                   onClick={() => void onRetryIndex()}
+                  icon={<RefreshCw />}
                 >
-                  <RefreshCw />
                   {locale === "zh" ? "重试失败任务" : "Retry failed"}
                 </Button>
                 <Button
                   variant="secondary"
                   type="button"
                   onClick={() => void onRebuildIndex()}
+                  icon={<RefreshCw />}
                 >
-                  <RefreshCw />
                   {locale === "zh" ? "全量重建" : "Rebuild all"}
                 </Button>
                 <Button
                   variant="primary"
                   type="button"
                   onClick={() => onEditEmbedding("new")}
+                  icon={<Plus />}
                 >
-                  <Plus />
                   {locale === "zh"
                     ? "添加 Embedding 模型"
                     : "Add embedding profile"}
@@ -981,9 +966,8 @@ export function AdvancedWorkspace({
                         </td>
                         <td>
                           <div className="agent-row-actions">
-                            <button
-                              type="button"
-                              title={
+                            <IconButton
+                              label={
                                 testingConnections.includes(
                                   `embedding:${profile.id}`,
                                 )
@@ -1005,36 +989,34 @@ export function AdvancedWorkspace({
                                   profile.name,
                                 )
                               }
-                            >
-                              <RefreshCw
-                                className={
-                                  testingConnections.includes(
-                                    `embedding:${profile.id}`,
-                                  )
-                                    ? "agent-row-actions__spinner"
-                                    : undefined
-                                }
-                              />
-                            </button>
-                            <button
-                              type="button"
-                              title={labels.edit}
+                              icon={
+                                <RefreshCw
+                                  className={
+                                    testingConnections.includes(
+                                      `embedding:${profile.id}`,
+                                    )
+                                      ? "agent-row-actions__spinner"
+                                      : undefined
+                                  }
+                                />
+                              }
+                            />
+                            <IconButton
+                              label={labels.edit}
+                              icon={<Settings2 />}
                               onClick={() => onEditEmbedding(profile)}
-                            >
-                              <Settings2 />
-                            </button>
-                            <button
-                              type="button"
-                              title={labels.delete}
+                            />
+                            <IconButton
+                              variant="danger"
+                              label={labels.delete}
+                              icon={<Trash2 />}
                               onClick={() =>
                                 onDeleteTarget({
                                   kind: "embedding",
                                   value: profile,
                                 })
                               }
-                            >
-                              <Trash2 />
-                            </button>
+                            />
                           </div>
                         </td>
                       </tr>

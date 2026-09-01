@@ -1,5 +1,5 @@
 import { BarChart3, Sparkles } from "lucide-react";
-import { Field } from "../../ui";
+import { Button, Field, Input } from "../../ui";
 
 export interface LowEngagementBinding {
   min_views?: number;
@@ -56,9 +56,9 @@ export function LowEngagementConfig({
           {ENGAGEMENT_PRESETS.map((p) => {
             const active = maxRate === p.rate && minViews === p.views;
             return (
-              <button
+              <Button
                 key={p.label}
-                type="button"
+                variant="ghost"
                 className={`rss-config-chip ${active ? "rss-config-chip--added" : ""}`}
                 onClick={() =>
                   onChange({
@@ -70,7 +70,7 @@ export function LowEngagementConfig({
                 }
               >
                 {p.label}
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -85,7 +85,7 @@ export function LowEngagementConfig({
               : "Posts with at least this many views"
           }
         >
-          <input
+          <Input
             type="number"
             className="input-field"
             min={1}

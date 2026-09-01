@@ -49,8 +49,12 @@ export function MediaUploadForm({
           >
             {labels.cancel}
           </Button>
-          <Button variant="primary" disabled={!file} loading={uploading}>
-            <ImagePlus />
+          <Button
+            variant="primary"
+            disabled={!file}
+            loading={uploading}
+            icon={<ImagePlus />}
+          >
             {uploading ? labels.uploading : labels.uploadImage}
           </Button>
         </>
@@ -131,8 +135,12 @@ export function MediaAltTextForm({
           >
             {labels.cancel}
           </Button>
-          <Button variant="primary" loading={saving} type="submit">
-            <Pencil />
+          <Button
+            variant="primary"
+            loading={saving}
+            type="submit"
+            icon={<Pencil />}
+          >
             {saving ? labels.saving : labels.saveChanges}
           </Button>
         </>
@@ -233,14 +241,15 @@ export function MediaImageGenerationForm({
       <Field label="风格预设" hint="点击预设快速填入专业提示词风格">
         <div className="editor-ai-presets" style={{ marginTop: 4 }}>
           {presets.map(([label, value]) => (
-            <button
+            <Button
               key={label}
-              type="button"
+              variant="ghost"
+              className="editor-ai-preset"
               onClick={() => onPromptChange(value)}
               disabled={generating}
             >
               {label}
-            </button>
+            </Button>
           ))}
         </div>
       </Field>
@@ -279,8 +288,9 @@ export function MediaImageGenerationForm({
                 variant="primary"
                 type="button"
                 onClick={() => onCopy(`![${generated.alt}](${generated.url})`)}
+                icon={<Copy />}
               >
-                <Copy /> 复制 Markdown
+                复制 Markdown
               </Button>
               <Button variant="secondary" type="button" onClick={onReset}>
                 ➕ 生成下一张
@@ -303,16 +313,11 @@ export function MediaImageGenerationForm({
           type="button"
           disabled={generating || !prompt.trim()}
           onClick={onGenerate}
+          icon={
+            generating ? <LoaderCircle className="is-spinning" /> : <Sparkles />
+          }
         >
-          {generating ? (
-            <>
-              <LoaderCircle className="is-spinning" /> 正在绘制入库中…
-            </>
-          ) : (
-            <>
-              <Sparkles /> 开始生图并入库
-            </>
-          )}
+          {generating ? "正在绘制入库中…" : "开始生图并入库"}
         </Button>
       </FormActions>
     </div>

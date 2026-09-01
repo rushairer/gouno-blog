@@ -1,5 +1,5 @@
 import { Plus, Rss, Sparkles, Trash2 } from "lucide-react";
-import { Button, Field } from "../../ui";
+import { Button, Field, Input } from "../../ui";
 
 export interface RssFeedItem {
   name: string;
@@ -141,9 +141,9 @@ export function RssFetchConfig({
               (f) => f.url.toLowerCase() === preset.url.toLowerCase(),
             );
             return (
-              <button
+              <Button
                 key={preset.url}
-                type="button"
+                variant="ghost"
                 className={`rss-config-chip ${exists ? "rss-config-chip--added" : ""}`}
                 onClick={() => addPreset(preset)}
                 disabled={exists}
@@ -158,7 +158,7 @@ export function RssFetchConfig({
                 }
               >
                 + {preset.label}
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -172,7 +172,7 @@ export function RssFetchConfig({
         </div>
         {feeds.map((feed, idx) => (
           <div key={idx} className="rss-config-table__row">
-            <input
+            <Input
               type="text"
               className="input-field"
               placeholder={isZh ? "如: 机器之心 / OpenAI" : "e.g. OpenAI Blog"}
@@ -208,9 +208,8 @@ export function RssFetchConfig({
                     ? "删除此源"
                     : "Remove feed"
               }
-            >
-              <Trash2 size={14} />
-            </Button>
+              icon={<Trash2 size={14} />}
+            ></Button>
           </div>
         ))}
       </div>
@@ -221,8 +220,8 @@ export function RssFetchConfig({
           variant="secondary"
           size="compact"
           onClick={() => addFeed()}
+          icon={<Plus size={14} />}
         >
-          <Plus size={14} />
           {isZh ? "添加订阅源" : "Add Feed"}
         </Button>
       </div>
