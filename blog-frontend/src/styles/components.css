@@ -587,6 +587,23 @@ textarea.ui-control,
   min-width: 0;
 }
 
+/* Editor tabs reserve the remaining track for mode tabs and anchor tools right. */
+.tabs.editor-tabs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+@media (max-width: 720px) {
+  .tabs.editor-tabs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tabs.editor-tabs .editor-ai-tools-group {
+    justify-self: end;
+  }
+}
+
 .tab-list {
   display: flex;
   align-items: stretch;
