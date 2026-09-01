@@ -93,6 +93,7 @@ export function StepUpMfaModal({
               onChange={(e) => setCode(e.target.value)}
               autoComplete="one-time-code"
               maxLength={16}
+              className="stepup-mfa-input"
             />
           </div>
           <small className="stepup-mfa-hint">

@@ -22,6 +22,7 @@ const required = new Map([
 	      "AWS_SECRET_ACCESS_KEY_FILE: /run/secrets/blog_media_s3_secret_access_key",
       'BLOG_OAUTH_ALLOW_ACCOUNT_FALLBACK: "false"',
       'BLOG_OAUTH_SEED_CONSENT: "false"',
+      'BLOG_OAUTH_ACCOUNT_ID: ${BLOG_BOOTSTRAP_OWNER_SUBJECT:?set BLOG_BOOTSTRAP_OWNER_SUBJECT}',
     ],
   ],
   [
@@ -69,7 +70,8 @@ const forbidden = new Map([
     "REDIS_DSN: ${",
     "ADMIN_PASSWORD: ${",
 	    "AWS_ACCESS_KEY_ID: ${",
-	    "AWS_SECRET_ACCESS_KEY: ${",
+    "AWS_SECRET_ACCESS_KEY: ${",
+	    "BLOG_OAUTH_OWNER_ID",
   ]],
   ["Caddyfile", [":443", "8443"]],
   [".env.example", [":443", "8443"]],

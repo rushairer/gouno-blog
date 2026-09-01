@@ -1,4 +1,4 @@
-import { Database, Plus, Search, X } from "lucide-react";
+import { Database, Plus, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { workflowApi } from "../../api/workflows";
 import type { ResourceOption } from "../../api/workflows";
@@ -13,6 +13,7 @@ import {
   Pagination,
   SearchField,
   Select,
+  StatusBadge,
 } from "../ui";
 
 type SchemaProperty = {
@@ -394,25 +395,38 @@ function ResourcePicker({
                   (entry) => String(entry) === item.key,
                 );
                 return (
-                  <Button
-                    variant="ghost"
-                    className={checked ? "selected" : ""}
+                  <button
+                    type="button"
+                    className={`workflow-resource-card ${checked ? "is-selected" : ""}`}
                     key={`${item.type}:${item.key}`}
                     onClick={() => toggle(item.key)}
                   >
-                    <span>
+                    <div className="workflow-resource-card__control">
                       {multiple ? (
-                        <Checkbox readOnly checked={checked} />
+                        <Checkbox readOnly checked={checked} tabIndex={-1} />
                       ) : (
-                        <Search />
+                        <span
+                          className={`workflow-resource-radio ${checked ? "is-checked" : ""}`}
+                          aria-hidden="true"
+                        />
                       )}
-                      <strong>{item.label}</strong>
-                      <small>
-                        {item.status}
-                        {item.description ? ` · ${item.description}` : ""}
-                      </small>
-                    </span>
-                  </Button>
+                    </div>
+                    <div className="workflow-resource-card__main">
+                      <div className="workflow-resource-card__header">
+                        <strong className="workflow-resource-card__title">
+                          {item.label}
+                        </strong>
+                        {item.status ? (
+                          <StatusBadge status={item.status} />
+                        ) : null}
+                      </div>
+                      {item.description ? (
+                        <p className="workflow-resource-card__desc">
+                          {item.description}
+                        </p>
+                      ) : null}
+                    </div>
+                  </button>
                 );
               })}
             </div>

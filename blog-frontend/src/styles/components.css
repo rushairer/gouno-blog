@@ -4,8 +4,8 @@
   :is(input, textarea, select):not([type="checkbox"]):not([type="radio"]):not(
     [type="file"]
   ):not([type="range"]):not(.ui-control):not(.admin-search__input):not(
-    .editor-title
-  ):not(.editor-body) {
+    .stepup-mfa-input
+  ):not(.editor-title):not(.editor-body) {
   width: 100%;
   min-width: 0;
   min-height: var(--control-height);
@@ -39,8 +39,8 @@ textarea.ui-control,
   :is(input, textarea, select):not([type="checkbox"]):not([type="radio"]):not(
     [type="file"]
   ):not([type="range"]):not(.ui-control):not(.admin-search__input):not(
-    .editor-title
-  ):not(.editor-body):hover:not(:disabled):not([readonly]) {
+    .stepup-mfa-input
+  ):not(.editor-title):not(.editor-body):hover:not(:disabled):not([readonly]) {
   border-color: var(--ui-border-hover);
   background: var(--ui-control-hover);
 }
@@ -51,8 +51,8 @@ textarea.ui-control,
   :is(input, textarea, select):not([type="checkbox"]):not([type="radio"]):not(
     [type="file"]
   ):not([type="range"]):not(.ui-control):not(.admin-search__input):not(
-    .editor-title
-  ):not(.editor-body):focus {
+    .stepup-mfa-input
+  ):not(.editor-title):not(.editor-body):focus {
   border-color: var(--ui-border-emphasis);
   background: var(--ui-control);
   box-shadow: 0 0 0 3px var(--ui-focus-ring);

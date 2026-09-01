@@ -261,6 +261,7 @@ export default function AdminUsers() {
                 <thead>
                   <tr>
                     <th>成员</th>
+                    <th>账号 ID</th>
                     <th>Blog 角色</th>
                     <th>状态</th>
                     <th>操作</th>
@@ -279,31 +280,33 @@ export default function AdminUsers() {
                             </span>
                             <div>
                               <strong>{memberName(member)}</strong>
-                              <div className="member-identity-sub">
-                                {member.principal.email ? (
-                                  <span>{member.principal.email} · </span>
-                                ) : null}
-                                <Button
-                                  variant="ghost"
-                                  size="compact"
-                                  className="member-id-copy"
-                                  title={`点击复制完整 Subject ID: ${member.principal.subject}`}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    void navigator.clipboard.writeText(
-                                      member.principal.subject,
-                                    );
-                                    notify(
-                                      `已复制完整 Subject ID: ${member.principal.subject}`,
-                                    );
-                                  }}
-                                  icon={<Copy size={11} />}
-                                >
-                                  ID: {member.principal.subject.slice(0, 8)}
-                                </Button>
-                              </div>
+                              {member.principal.email ? (
+                                <span className="member-identity-sub">
+                                  {member.principal.email}
+                                </span>
+                              ) : null}
                             </div>
                           </div>
+                        </td>
+                        <td>
+                          <Button
+                            variant="ghost"
+                            size="compact"
+                            className="member-id-copy"
+                            title={`点击复制完整 Subject ID: ${member.principal.subject}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void navigator.clipboard.writeText(
+                                member.principal.subject,
+                              );
+                              notify(
+                                `已复制完整 Subject ID: ${member.principal.subject}`,
+                              );
+                            }}
+                            icon={<Copy size={13} />}
+                          >
+                            {member.principal.subject.slice(0, 8)}
+                          </Button>
                         </td>
                         <td>
                           <div className="member-roles">

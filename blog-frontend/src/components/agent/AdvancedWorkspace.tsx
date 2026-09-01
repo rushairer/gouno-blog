@@ -324,17 +324,15 @@ export function AdvancedWorkspace({
             </div>
           ) : (
             <div className="table-scroll">
-              <table className="content-table agent-table">
+              <table className="content-table agent-table agent-table--agents">
                 <thead>
                   <tr>
                     <th>{labels.agents}</th>
                     <th>{labels.status}</th>
                     <th>{labels.provider}</th>
-                    <th>{labels.schedule}</th>
                     <th>{labels.capabilities}</th>
-                    <th>{labels.lastRun}</th>
-                    <th>{labels.nextRun}</th>
-                    <th>{labels.actions}</th>
+                    <th>{labels.scheduleAndRun || labels.schedule}</th>
+                    <th className="text-right">{labels.actions}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -360,7 +358,7 @@ export function AdvancedWorkspace({
                             <div>
                               <strong>{agent.name}</strong>
                               {agent.system_key ? (
-                                <small>
+                                <small className="agent-identity__tag">
                                   {locale === "zh"
                                     ? "默认能力"
                                     : "Default capability"}
@@ -400,43 +398,50 @@ export function AdvancedWorkspace({
                           </div>
                         </td>
                         <td>
-                          <strong>
-                            {agent.trigger_type === "cron"
-                              ? agent.cron_expression
-                              : labels.manual}
-                          </strong>
-                          <small>{agent.timezone}</small>
+                          <div className="agent-skill-identity">
+                            <strong>{agent.skill?.name || "—"}</strong>
+                            <small>
+                              v{agent.skill?.version || "—"} ·{" "}
+                              {toolsForSkill.length} Tools
+                            </small>
+                          </div>
                         </td>
                         <td>
-                          <strong>{agent.skill?.name || "—"}</strong>
-                          <small>
-                            v{agent.skill?.version || "—"} ·{" "}
-                            {toolsForSkill.length} Tools
-                          </small>
+                          <div className="agent-schedule-cell">
+                            <div className="agent-schedule-main">
+                              <strong>
+                                {agent.trigger_type === "cron"
+                                  ? agent.cron_expression
+                                  : labels.manual}
+                              </strong>
+                              {agent.trigger_type === "cron" && agent.timezone ? (
+                                <small>{agent.timezone}</small>
+                              ) : null}
+                            </div>
+                            <div className="agent-schedule-meta">
+                              {latestRun ? (
+                                <div className="agent-schedule-last-run">
+                                  <StatusPill
+                                    status={latestRun.status}
+                                    locale={locale}
+                                  />
+                                  <small>
+                                    {formatDateTime(latestRun.created_at)}
+                                  </small>
+                                </div>
+                              ) : (
+                                <small className="text-muted">{labels.never}</small>
+                              )}
+                              {agent.trigger_type === "cron" && agent.next_run_at ? (
+                                <small className="agent-schedule-next">
+                                  {locale === "zh" ? "下次: " : "Next: "}
+                                  {formatDateTime(agent.next_run_at)}
+                                </small>
+                              ) : null}
+                            </div>
+                          </div>
                         </td>
-                        <td>
-                          {latestRun ? (
-                            <>
-                              <StatusPill
-                                status={latestRun.status}
-                                locale={locale}
-                              />
-                              <small>
-                                {formatDateTime(latestRun.created_at)}
-                              </small>
-                            </>
-                          ) : (
-                            <small>{labels.never}</small>
-                          )}
-                        </td>
-                        <td>
-                          <strong>
-                            {agent.next_run_at
-                              ? formatDateTime(agent.next_run_at)
-                              : "—"}
-                          </strong>
-                        </td>
-                        <td>
+                        <td className="text-right">
                           <div className="agent-row-actions">
                             <IconButton
                               label={labels.runNow}

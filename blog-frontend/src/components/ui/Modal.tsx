@@ -140,9 +140,9 @@ export function Drawer({
   if (!open) return null;
 
   return (
-    <div className="modal-backdrop">
+    <div className="drawer-backdrop">
       <div
-        className="modal-scrim"
+        className="drawer-scrim"
         role="presentation"
         aria-hidden="true"
         onClick={onClose}

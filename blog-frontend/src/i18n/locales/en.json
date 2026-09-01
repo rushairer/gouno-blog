@@ -377,6 +377,7 @@
     "blankAgent": "Blank Agent",
     "status": "Status",
     "schedule": "Schedule",
+    "scheduleAndRun": "Schedule & Runs",
     "lastRun": "Last run",
     "nextRun": "Next run",
     "actions": "Actions",

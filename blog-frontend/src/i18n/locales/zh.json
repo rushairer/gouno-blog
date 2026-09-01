@@ -377,6 +377,7 @@
     "blankAgent": "空白 Agent",
     "status": "状态",
     "schedule": "执行周期",
+    "scheduleAndRun": "调度与运行",
     "lastRun": "上次运行",
     "nextRun": "下次运行",
     "actions": "操作",

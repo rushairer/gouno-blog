@@ -5,7 +5,18 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
-## [1.5.0] - 2026-09-01
+## [1.5.1] - 2026-09-01
+
+### Fixed
+
+- Unify AI Operations overview metrics with Dashboard standard `.admin-metrics` Panel cards and typography.
+- Fix approval queue item tag wrapping by maintaining horizontal distribution.
+- Separate member account ID into a dedicated table column with standard compact copy action.
+- Fix MFA security verification modal input icon overlap.
+- Fix role card radio alignment in member edit modal.
+- Fix workflow table title and description cell overflow and text wrapping.
+- Redesign workflow input resource selector into structured cards with control, title, status badges, and description.
+
 
 ### Changed
 

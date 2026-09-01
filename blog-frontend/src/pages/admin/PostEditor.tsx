@@ -6,6 +6,7 @@ import {
   Eye,
   History,
   Image as ImageIcon,
+  List,
   LoaderCircle,
   Save,
   Send,
@@ -958,29 +959,44 @@ export default function PostEditor() {
       <div className="editor-workspace">
         <aside className="editor-outline">
           <div>
-            <h2>文档大纲</h2>
+            <h2>{showVersions ? "版本历史" : "文档大纲"}</h2>
             <Button
               variant="ghost"
+              size="compact"
               onClick={() => setShowVersions(!showVersions)}
-              icon={<History />}
+              icon={showVersions ? <List /> : <History />}
             >
-              版本历史 ({versions.length})
+              {showVersions ? "查看大纲" : `版本历史 (${versions.length})`}
             </Button>
           </div>
           {showVersions ? (
             <div className="version-drawer">
-              {versions.map((version) => (
-                <ChoiceButton
-                  key={version.id}
-                  onClick={() => setRestoreTarget(version)}
-                >
-                  <strong>{version.title}</strong>
-                  <small>
-                    {new Date(version.created_at).toLocaleString("zh-CN")} ·
-                    点击恢复
-                  </small>
-                </ChoiceButton>
-              ))}
+              {versions.length === 0 ? (
+                <p className="version-drawer__empty">暂无历史版本记录</p>
+              ) : (
+                versions.map((version) => (
+                  <ChoiceButton
+                    key={version.id}
+                    className="version-item"
+                    onClick={() => setRestoreTarget(version)}
+                  >
+                    <span className="version-item__title">
+                      {version.title || "无标题草稿"}
+                    </span>
+                    <span className="version-item__meta">
+                      <time className="version-item__time">
+                        {new Date(version.created_at).toLocaleString("zh-CN", {
+                          month: "2-digit",
+                          day: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </time>
+                      <span className="version-item__action">恢复</span>
+                    </span>
+                  </ChoiceButton>
+                ))
+              )}
             </div>
           ) : (
             <nav>

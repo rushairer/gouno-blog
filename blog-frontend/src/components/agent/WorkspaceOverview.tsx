@@ -82,35 +82,39 @@ export function WorkspaceOverview({
         </Button>
       </Panel>
       <section
-        className="workspace-overview__summary"
+        className="workspace-overview__summary admin-metrics"
         aria-label={zh ? "当前待办" : "Current work"}
       >
-        <Button
-          variant="ghost"
+        <Panel
+          as="button"
+          type="button"
           onClick={() => onNavigate("inbox")}
-          icon={<ShieldCheck />}
         >
+          <ShieldCheck />
+          <span>{zh ? "待审批变更" : "Pending Approvals"}</span>
           <strong>{pendingApprovals}</strong>
-          <span>{zh ? "项等待审批" : "awaiting approval"}</span>
-        </Button>
-        <Button
-          variant="ghost"
+          <small>{zh ? "项等待审批" : "awaiting approval"}</small>
+        </Panel>
+        <Panel
+          as="button"
+          type="button"
           onClick={() => onNavigate("inbox")}
-          icon={<Lightbulb />}
         >
+          <Lightbulb />
+          <span>{zh ? "内容建议" : "Content Suggestions"}</span>
           <strong>{newSuggestions + pendingCandidates}</strong>
-          <span>
-            {zh ? "条内容建议待处理" : "content suggestions to review"}
-          </span>
-        </Button>
-        <Button
-          variant="ghost"
+          <small>{zh ? "条待处理" : "to review"}</small>
+        </Panel>
+        <Panel
+          as="button"
+          type="button"
           onClick={() => onNavigate("inbox")}
-          icon={<Sparkles />}
         >
+          <Sparkles />
+          <span>{zh ? "图片任务" : "Media Generation"}</span>
           <strong>{readyMedia}</strong>
-          <span>{zh ? "个图片任务可生成" : "image tasks ready"}</span>
-        </Button>
+          <small>{zh ? "个可生成" : "ready"}</small>
+        </Panel>
       </section>
       <div className="workspace-overview__columns">
         <Panel>

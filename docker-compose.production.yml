@@ -107,7 +107,10 @@ services:
     environment:
       PG_DSN_FILE: /run/secrets/gosso_database_dsn
       REDIS_DSN_FILE: /run/secrets/gosso_redis_dsn
-      BLOG_OAUTH_ACCOUNT_ID: ${BLOG_OAUTH_OWNER_ID:-${BLOG_BOOTSTRAP_OWNER_SUBJECT:?set BLOG_BOOTSTRAP_OWNER_SUBJECT}}
+      # The OAuth client owner and the Blog authorization owner are the same
+      # local GOSSO subject. Keep one source of truth so an obsolete optional
+      # owner override cannot cause this one-shot seed to fail closed.
+      BLOG_OAUTH_ACCOUNT_ID: ${BLOG_BOOTSTRAP_OWNER_SUBJECT:?set BLOG_BOOTSTRAP_OWNER_SUBJECT}
       BLOG_OAUTH_ALLOW_ACCOUNT_FALLBACK: "false"
       BLOG_OAUTH_SEED_CONSENT: "false"
       BLOG_OAUTH_CLIENT_ID: ${BLOG_OIDC_CLIENT_ID:-blog-bff}
