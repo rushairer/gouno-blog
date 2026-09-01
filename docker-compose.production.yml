@@ -24,11 +24,16 @@ services:
       timeout: 5s
       retries: 10
     security_opt: [no-new-privileges:true]
-    cap_drop: [ALL]
+    # The database entrypoint must access legacy bind-mounted data before it
+    # can drop to the postgres user.
+    cap_drop: []
 
   redis:
     image: ${REDIS_IMAGE:-redis:7-alpine@sha256:e7723ff73d963f5cc6d9c4643ea3d989527a402a319239054e9472a7fb9219a2}
     restart: unless-stopped
+    # Podman bind-mounted persistent data can retain host ownership from a
+    # previous deployment; run the service entrypoint as root.
+    user: "0:0"
     command: ["sh", "-ec", "redis_password=$$(cat /run/secrets/redis_password); blog_redis_password=$$(cat /run/secrets/blog_redis_password); exec redis-server --appendonly yes --requirepass \"$$redis_password\" --user blog on \">$$blog_redis_password\" ~blog:* +@all -@dangerous"]
     secrets: [redis_password, blog_redis_password]
     volumes:
@@ -39,12 +44,21 @@ services:
       timeout: 5s
       retries: 10
     security_opt: [no-new-privileges:true]
-    cap_drop: [ALL]
+    # Redis writes AOF rewrite files into a legacy bind-mounted data tree.
+    cap_drop: []
+
+  # Internal SMTP capture preserves the existing deployment behavior. Set
+  # SMTP_HOST/SMTP_PORT to an external provider to override it.
+  mailpit:
+    image: ${MAILPIT_IMAGE:-axllent/mailpit@sha256:6abc8e633df15eaf785cfcf38bae48e66f64beecdc03121e249d0f9ec15f0707}
+    restart: unless-stopped
 
   gosso:
     <<: *hardened
     image: ${GOSSO_IMAGE:?set GOSSO_IMAGE to version@sha256:digest}
-    tmpfs: [/tmp]
+    # Podman needs a writable mountpoint before it can bind file secrets into a
+    # read-only root filesystem.
+    tmpfs: [/tmp, /run/secrets]
     environment:
       GOUNO_ENV: production
       GOUNO_WEB_SERVER_ADDRESS: 0.0.0.0
@@ -55,18 +69,19 @@ services:
       GOUNO_REDIS_DSN_FILE: /run/secrets/gosso_redis_dsn
       GOUNO_AUTH_ISSUER: https://${SSO_DOMAIN:?set SSO_DOMAIN}
       GOUNO_AUTH_LOGIN_URL: /login
+      GOUNO_AUTH_PASSWORD_RESET_BASE_URL: ${GOSSO_PASSWORD_RESET_BASE_URL:-https://${SSO_DOMAIN}/reset-password}
       GOUNO_AUTH_PRIVATE_KEY_PATH: /run/secrets/gosso_signing_key
+      GOUNO_AUTH_KEY_ID: ${GOSSO_AUTH_KEY_ID:-gosso-key-1}
       GOUNO_AUTH_TOTP_ENCRYPTION_KEY_PATH: /run/secrets/gosso_totp_key
       GOUNO_AUTH_VERIFY_HASH_PEPPER_PATH: /run/secrets/gosso_verify_pepper
       GOUNO_AUTH_WEBAUTHN_RP_ID: ${SSO_DOMAIN:?set SSO_DOMAIN}
       GOUNO_AUTH_WEBAUTHN_RP_NAME: ${WEBAUTHN_RP_NAME:-SSO}
       GOUNO_AUTH_WEBAUTHN_RP_ORIGIN: https://${SSO_DOMAIN:?set SSO_DOMAIN}
-      GOUNO_SMTP_HOST: ${SMTP_HOST:-}
-      GOUNO_SMTP_PORT: ${SMTP_PORT:-587}
+      GOUNO_SMTP_HOST: ${SMTP_HOST:-mailpit}
+      GOUNO_SMTP_PORT: ${SMTP_PORT:-1025}
       GOUNO_SMTP_USERNAME: ${SMTP_USERNAME:-}
       GOUNO_SMTP_PASSWORD_FILE: /run/secrets/gosso_smtp_password
-      GOUNO_SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:?set SMTP_FROM_EMAIL}
-      GOUNO_SMTP_FROM_NAME: ${SMTP_FROM_NAME:?set SMTP_FROM_NAME}
+      GOUNO_SMTP_FROM: ${SMTP_FROM_EMAIL:?set SMTP_FROM_EMAIL}
       GOUNO_AUTH_ENFORCE_PKCE_FOR_CONFIDENTIAL: "true"
       GOUNO_AUTH_BACKCHANNEL_ALLOWED_CIDRS: ${GOSSO_BACKCHANNEL_ALLOWED_CIDRS:-}
       GOUNO_CORS_ALLOWED_ORIGINS: ${GOSSO_CORS_ALLOWED_ORIGINS:?set GOSSO_CORS_ALLOWED_ORIGINS}
@@ -81,12 +96,13 @@ services:
     depends_on:
       db: {condition: service_healthy}
       redis: {condition: service_healthy}
+      mailpit: {condition: service_started}
 
   gosso-admin-seed:
     <<: *hardened
     image: ${GOSSO_ADMIN_SEED_IMAGE:?set GOSSO_ADMIN_SEED_IMAGE to version@sha256:digest}
     restart: 'no'
-    tmpfs: [/tmp]
+    tmpfs: [/tmp, /run/secrets]
     environment:
       GOSSO_ADMIN_ENV: production
       PG_DSN_FILE: /run/secrets/gosso_database_dsn
@@ -103,7 +119,7 @@ services:
     <<: *hardened
     image: ${GOUNO_BLOG_SEED_IMAGE:?set GOUNO_BLOG_SEED_IMAGE to version@sha256:digest}
     restart: 'no'
-    tmpfs: [/tmp]
+    tmpfs: [/tmp, /run/secrets]
     environment:
       PG_DSN_FILE: /run/secrets/gosso_database_dsn
       REDIS_DSN_FILE: /run/secrets/gosso_redis_dsn
@@ -147,7 +163,7 @@ services:
   blog-backend:
     <<: *hardened
     image: ${GOUNO_BLOG_BACKEND_IMAGE:?set GOUNO_BLOG_BACKEND_IMAGE to version@sha256:digest}
-    tmpfs: [/tmp]
+    tmpfs: [/tmp, /run/secrets]
     environment:
       GOUNO_DATABASE_DRIVERS_POSTGRES_DSN_FILE: /run/secrets/blog_database_dsn
       GOUNO_REDIS_DSN_FILE: /run/secrets/blog_redis_dsn
@@ -209,20 +225,24 @@ services:
   blog-frontend:
     <<: *hardened
     image: ${GOUNO_BLOG_FRONTEND_IMAGE:?set GOUNO_BLOG_FRONTEND_IMAGE to version@sha256:digest}
-    tmpfs: [/tmp, /var/cache/nginx, /var/run]
+    tmpfs: [/tmp:mode=1777, /var/cache/nginx:mode=1777, /var/run:mode=1777]
     depends_on:
       blog-backend: {condition: service_healthy}
 
   gosso-admin-frontend:
     <<: *hardened
     image: ${GOSSO_ADMIN_FRONTEND_IMAGE:?set GOSSO_ADMIN_FRONTEND_IMAGE to version@sha256:digest}
-    tmpfs: [/tmp, /var/cache/nginx, /var/run]
+    tmpfs: [/tmp:mode=1777, /var/cache/nginx:mode=1777, /var/run:mode=1777]
     depends_on:
       gosso: {condition: service_started}
 
   gateway:
-    <<: *hardened
     image: ${CADDY_IMAGE:-caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d}
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL}
+      SSO_DOMAIN: ${SSO_DOMAIN:?set SSO_DOMAIN}
+      BLOG_DOMAIN: ${BLOG_DOMAIN:?set BLOG_DOMAIN}
+      CMS_DOMAIN: ${CMS_DOMAIN:?set CMS_DOMAIN}
     ports:
       - "${HTTP_PORT:-80}:80"
       - "${HTTPS_PORT:-443}:443"

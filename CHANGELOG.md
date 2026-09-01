@@ -5,6 +5,18 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.5.3] - 2026-09-01
+
+### Fixed
+
+- Make the production Compose deployment compatible with rootful Podman and
+  persisted legacy data: writable service initialization, file-secret mounts,
+  and Nginx temporary directories now start correctly.
+- Pass the required runtime variables to Caddy and GOSSO, including the RSA
+  key ID and SMTP sender configuration.
+- Restore the internal Mailpit SMTP capture service used by the existing
+  deployment; external SMTP settings continue to override its defaults.
+
 ## [1.5.2] - 2026-09-01
 
 ### Fixed
