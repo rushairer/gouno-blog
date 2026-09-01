@@ -5,6 +5,22 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-09-01
+
+### Changed
+
+- Standardize the Blog frontend on shared Button, ButtonLink, IconButton,
+  ChoiceButton, Tabs, form-control, pagination, and overlay interaction
+  contracts. Icons now render through fixed component-owned slots with
+  consistent loading, disabled, compact, and accessible states.
+- Migrate portal, administration, workflow, editor, table, and AI-operation
+  actions away from page-local button markup and styling.
+
+### Added
+
+- Enforce UI contracts against raw application buttons, raw button classes,
+  direct button-child SVGs, and native selects outside shared UI primitives.
+
 ## [1.4.2] - 2026-09-01
 
 ### Security
