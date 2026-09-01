@@ -5,6 +5,22 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.5.2] - 2026-09-01
+
+### Fixed
+
+- Align the single-page editor's draft, publish, update, and unpublish actions
+  with the article editor so the selected publishing intent always matches the
+  action that is submitted.
+- Restore frontend quality gates by formatting affected UI files and keeping
+  the shared profile hook compliant with React Hook ordering rules.
+
+### Changed
+
+- Upgrade the Blog frontend to `@gosso/client` 0.9.2 for the current
+  cookie-session and OAuth flow handling fixes.
+- Update the production image template to use GOSSO Admin `v0.7.4`.
+
 ## [1.5.1] - 2026-09-01
 
 ### Fixed
