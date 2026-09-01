@@ -3,6 +3,7 @@ package authbff
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -219,6 +220,77 @@ func TestSessionMiddlewareInfiltration(t *testing.T) {
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200 OK, got %d (%s)", w.Code, w.Body.String())
+	}
+}
+
+func TestSessionMiddlewareRejectsSessionPastAbsoluteLifetime(t *testing.T) {
+	client, store := testBFFClientWithStore(t)
+	client.config.SessionTTL = time.Hour
+	client.flowNow = func() time.Time { return time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC) }
+	router := gin.New()
+	router.Use(client.SessionMiddleware())
+	router.GET("/protected", func(c *gin.Context) {
+		if _, ok := c.Get("claims"); ok {
+			c.Status(http.StatusOK)
+			return
+		}
+		c.Status(http.StatusUnauthorized)
+	})
+
+	handle, _ := RandomHandle()
+	session := Session{
+		Issuer: "https://sso.local.test", Subject: "user-123", IDToken: "id-token",
+		TokenExpiry: client.flowNow().Add(time.Hour), CreatedAt: client.flowNow().Add(-2 * time.Hour),
+	}
+	if err := store.PutSession(context.Background(), handle, session, 4*time.Hour); err != nil {
+		t.Fatal(err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
+	req.AddCookie(&http.Cookie{Name: client.config.SessionCookie, Value: handle})
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expired absolute session was accepted: %d", w.Code)
+	}
+	if _, err := store.GetSession(context.Background(), handle); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("expired session was not deleted: %v", err)
+	}
+}
+
+func TestRefreshRejectsSessionPastAbsoluteLifetime(t *testing.T) {
+	client, store := testBFFClientWithStore(t)
+	client.config.SessionTTL = time.Hour
+	client.flowNow = func() time.Time { return time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC) }
+	handle, _ := RandomHandle()
+	session := Session{
+		Issuer: "https://sso.local.test", Subject: "user-123", AccessToken: "still-fresh",
+		RefreshToken: "refresh-token", IDToken: "id-token",
+		TokenExpiry: client.flowNow().Add(time.Hour), CreatedAt: client.flowNow().Add(-2 * time.Hour),
+	}
+	if err := store.PutSession(context.Background(), handle, session, 4*time.Hour); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := client.Refresh(context.Background(), handle); !errors.Is(err, ErrSessionExpired) {
+		t.Fatalf("refresh accepted a session past its absolute lifetime: %v", err)
+	}
+}
+
+func TestLogoutFailsClosedWhenSessionStoreIsUnavailable(t *testing.T) {
+	client, store := testBFFClientWithStore(t)
+	if err := store.redis.Close(); err != nil {
+		t.Fatal(err)
+	}
+	router := gin.New()
+	client.RegisterRoutes(router)
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/logout", nil)
+	req.AddCookie(&http.Cookie{Name: client.config.SessionCookie, Value: "stolen-session-handle"})
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	if w.Code != http.StatusServiceUnavailable {
+		t.Fatalf("logout reported success while the session store was unavailable: %d %s", w.Code, w.Body.String())
+	}
+	if len(w.Result().Cookies()) == 0 || w.Result().Cookies()[0].MaxAge >= 0 {
+		t.Fatal("logout must clear the browser cookie even when server-side deletion needs a retry")
 	}
 }
 

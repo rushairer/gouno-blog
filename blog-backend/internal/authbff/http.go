@@ -1,6 +1,7 @@
 package authbff
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
@@ -30,6 +31,12 @@ func (c *Client) SessionMiddleware() gin.HandlerFunc {
 		}
 		session, err := c.store.GetSession(ctx.Request.Context(), handle)
 		if err != nil || session.Issuer != c.config.Issuer || session.Subject == "" {
+			clearHostCookie(ctx, c.config.SessionCookie, http.SameSiteStrictMode)
+			ctx.Next()
+			return
+		}
+		if _, err := c.sessionRemainingTTL(session); err != nil {
+			_ = c.store.DeleteSession(ctx.Request.Context(), handle)
 			clearHostCookie(ctx, c.config.SessionCookie, http.SameSiteStrictMode)
 			ctx.Next()
 			return
@@ -103,6 +110,12 @@ func (c *Client) meHandler(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{"authenticated": false})
 		return
 	}
+	if _, err := c.sessionRemainingTTL(session); err != nil {
+		_ = c.store.DeleteSession(ctx.Request.Context(), handle)
+		clearHostCookie(ctx, c.config.SessionCookie, http.SameSiteStrictMode)
+		ctx.JSON(http.StatusOK, gin.H{"authenticated": false})
+		return
+	}
 	ctx.JSON(http.StatusOK, gin.H{
 		"authenticated": true,
 		"user": gin.H{
@@ -139,10 +152,15 @@ func (c *Client) refreshHandler(ctx *gin.Context) {
 func (c *Client) logoutHandler(ctx *gin.Context) {
 	ctx.Header("Cache-Control", "no-store")
 	var session Session
+	var storeErr error
 	handle, err := ctx.Cookie(c.config.SessionCookie)
 	if err == nil && handle != "" {
-		session, _ = c.store.GetSession(ctx.Request.Context(), handle)
-		_ = c.store.DeleteSession(ctx.Request.Context(), handle)
+		session, storeErr = c.store.GetSession(ctx.Request.Context(), handle)
+		if storeErr == nil {
+			storeErr = c.store.DeleteSession(ctx.Request.Context(), handle)
+		} else if errors.Is(storeErr, ErrNotFound) {
+			storeErr = nil
+		}
 	}
 	clearHostCookie(ctx, c.config.SessionCookie, http.SameSiteStrictMode)
 
@@ -151,6 +169,10 @@ func (c *Client) logoutHandler(ctx *gin.Context) {
 		_ = c.RevokeToken(ctx.Request.Context(), session.RefreshToken, "refresh_token")
 	} else if session.AccessToken != "" {
 		_ = c.RevokeToken(ctx.Request.Context(), session.AccessToken, "access_token")
+	}
+	if storeErr != nil {
+		ctx.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"error": "session store unavailable; retry logout"})
+		return
 	}
 
 	// The OP only receives the single exact, registered callback URI. Any

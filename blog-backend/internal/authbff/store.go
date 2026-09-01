@@ -185,16 +185,24 @@ func (s *Store) GetSession(ctx context.Context, handle string) (Session, error) 
 
 func (s *Store) DeleteSession(ctx context.Context, handle string) error {
 	session, err := s.GetSession(ctx, handle)
-	if err == nil {
-		if session.Subject != "" {
-			_ = s.redis.SRem(ctx, s.identityIndexKey("sub", session.Issuer, session.Subject), handle).Err()
-		}
-		if session.SID != "" {
-			_ = s.redis.SRem(ctx, s.identityIndexKey("sid", session.Issuer, session.SID), handle).Err()
-		}
+	if errors.Is(err, ErrNotFound) {
+		return nil
+	}
+	if err != nil {
+		return err
 	}
 	key, _ := s.key("session", handle)
-	return s.redis.Del(ctx, key).Err()
+	_, err = s.redis.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
+		if session.Subject != "" {
+			pipe.SRem(ctx, s.identityIndexKey("sub", session.Issuer, session.Subject), handle)
+		}
+		if session.SID != "" {
+			pipe.SRem(ctx, s.identityIndexKey("sid", session.Issuer, session.SID), handle)
+		}
+		pipe.Del(ctx, key)
+		return nil
+	})
+	return err
 }
 
 func (s *Store) DeleteByIdentity(ctx context.Context, issuer, subject string) error {

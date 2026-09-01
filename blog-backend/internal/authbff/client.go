@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/oauth2"
 	"golang.org/x/sync/singleflight"
 )
@@ -30,6 +31,22 @@ type Client struct {
 	httpClient   *http.Client
 	flowNow      func() time.Time
 	refreshGroup singleflight.Group
+}
+
+var ErrSessionExpired = errors.New("BFF session has reached its absolute lifetime")
+
+// sessionRemainingTTL enforces SessionTTL as an absolute lifetime from the
+// original authorization callback. Redis persistence must never turn the
+// browser's fixed-lifetime session cookie into a renewable bearer credential.
+func (c *Client) sessionRemainingTTL(session Session) (time.Duration, error) {
+	if session.CreatedAt.IsZero() {
+		return 0, ErrSessionExpired
+	}
+	remaining := session.CreatedAt.Add(c.config.SessionTTL).Sub(c.flowNow())
+	if remaining <= 0 {
+		return 0, ErrSessionExpired
+	}
+	return remaining, nil
 }
 
 func (c *Client) withHTTPClient(ctx context.Context) context.Context {
@@ -200,6 +217,9 @@ func (c *Client) Refresh(ctx context.Context, sessionHandle string) (Session, er
 		if err != nil {
 			return Session{}, err
 		}
+		if _, err := c.sessionRemainingTTL(session); err != nil {
+			return Session{}, err
+		}
 		// If a concurrent request in this process already refreshed the session, return it.
 		if session.TokenExpiry.After(c.flowNow().Add(30 * time.Second)) {
 			return session, nil
@@ -249,6 +269,9 @@ func (c *Client) Refresh(ctx context.Context, sessionHandle string) (Session, er
 		// Double-check session after acquiring distributed lock
 		session, err = c.store.GetSession(ctx, sessionHandle)
 		if err != nil {
+			return Session{}, err
+		}
+		if _, err := c.sessionRemainingTTL(session); err != nil {
 			return Session{}, err
 		}
 		if session.TokenExpiry.After(c.flowNow().Add(30 * time.Second)) {
@@ -308,7 +331,12 @@ func (c *Client) Refresh(ctx context.Context, sessionHandle string) (Session, er
 			session.Claims = allClaims
 		}
 
-		if err := c.store.ReplaceSession(ctx, sessionHandle, previousSession, session, c.config.SessionTTL); err != nil {
+		remainingTTL, err := c.sessionRemainingTTL(session)
+		if err != nil {
+			_ = c.revokeReplacementToken(context.Background(), newToken)
+			return Session{}, err
+		}
+		if err := c.store.ReplaceSession(ctx, sessionHandle, previousSession, session, remainingTTL); err != nil {
 			_ = c.revokeReplacementToken(context.Background(), newToken)
 			return Session{}, err
 		}
@@ -377,6 +405,9 @@ func (c *Client) BackChannelLogout(ctx context.Context, rawLogoutToken string) e
 	if idToken.Nonce != "" {
 		return errors.New("logout token must not contain a nonce claim")
 	}
+	if err := validateLogoutTokenType(rawLogoutToken); err != nil {
+		return err
+	}
 	var claims struct {
 		Issuer    string                    `json:"iss"`
 		Subject   string                    `json:"sub"`
@@ -395,8 +426,9 @@ func (c *Client) BackChannelLogout(ctx context.Context, rawLogoutToken string) e
 	if claims.JWTID == "" {
 		return errors.New("logout token missing jti claim")
 	}
-	if claims.IssuedAt == 0 {
-		return errors.New("logout token missing iat claim")
+	now := c.flowNow()
+	if err := validateLogoutTokenIssuedAt(claims.IssuedAt, now); err != nil {
+		return err
 	}
 	if _, ok := claims.Events["http://schemas.openid.net/event/backchannel-logout"]; !ok {
 		return errors.New("logout token missing backchannel-logout event claim")
@@ -410,7 +442,7 @@ func (c *Client) BackChannelLogout(ctx context.Context, rawLogoutToken string) e
 	replayTTL := 24 * time.Hour
 	if claims.ExpiresAt > 0 {
 		expTime := time.Unix(claims.ExpiresAt, 0)
-		if rem := time.Until(expTime); rem > 0 && rem < replayTTL {
+		if rem := expTime.Sub(now); rem > 0 && rem < replayTTL {
 			replayTTL = rem
 		}
 	}
@@ -445,6 +477,28 @@ func (c *Client) BackChannelLogout(ctx context.Context, rawLogoutToken string) e
 		return fmt.Errorf("mark logout token processed: %w", err)
 	}
 	completed = true
+	return nil
+}
+
+func validateLogoutTokenType(rawLogoutToken string) error {
+	parsedToken, _, err := jwt.NewParser().ParseUnverified(rawLogoutToken, jwt.MapClaims{})
+	if err != nil {
+		return fmt.Errorf("parse verified logout token header: %w", err)
+	}
+	if tokenType, _ := parsedToken.Header["typ"].(string); tokenType != "logout+jwt" {
+		return errors.New("logout token typ must be logout+jwt")
+	}
+	return nil
+}
+
+func validateLogoutTokenIssuedAt(rawIssuedAt int64, now time.Time) error {
+	if rawIssuedAt == 0 {
+		return errors.New("logout token missing iat claim")
+	}
+	issuedAt := time.Unix(rawIssuedAt, 0)
+	if issuedAt.After(now.Add(time.Minute)) || issuedAt.Before(now.Add(-5*time.Minute)) {
+		return errors.New("logout token iat is outside the accepted window")
+	}
 	return nil
 }
 

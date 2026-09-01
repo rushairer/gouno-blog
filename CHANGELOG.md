@@ -21,6 +21,18 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 - Enforce UI contracts against raw application buttons, raw button classes,
   direct button-child SVGs, and native selects outside shared UI primitives.
 
+## [1.4.3] - 2026-09-01
+
+### Security
+
+- Enforce the Blog BFF's 12-hour session limit as an absolute lifetime instead
+  of extending Redis sessions after token refresh, preventing copied session
+  handles from renewing beyond the browser Cookie lifetime.
+- Fail closed when local logout cannot read or atomically delete the Redis
+  session, and keep subject/SID index cleanup in the same Redis transaction.
+- Require explicitly typed, recently issued Back-Channel Logout tokens and
+  align the production template with GOSSO `v1.5.4` logout-token hardening.
+
 ## [1.4.2] - 2026-09-01
 
 ### Security

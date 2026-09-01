@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - Fail closed when a configured BFF Secret file cannot be read; optional
   historical AEAD key files remain intentionally empty on first deployment.
+- Enforce an absolute BFF session lifetime, make Redis session deletion atomic,
+  surface logout-store failures, and require recent explicitly typed
+  Back-Channel Logout tokens.
 
 ### Added
 
