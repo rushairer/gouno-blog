@@ -3,7 +3,12 @@ import type React from "react";
 import { Link } from "react-router-dom";
 import { classes } from "./classes";
 
-export type ButtonVariant = "primary" | "secondary" | "danger" | "ghost";
+export type ButtonVariant =
+  | "primary"
+  | "secondary"
+  | "danger"
+  | "ghost"
+  | "link";
 export type ButtonSize = "regular" | "compact";
 export type ButtonIconPosition = "left" | "right";
 

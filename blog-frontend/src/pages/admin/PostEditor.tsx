@@ -1105,6 +1105,7 @@ export default function PostEditor() {
               <div className="editor-ai-tools-group">
                 <Button
                   variant="ghost"
+                  size="compact"
                   className={`editor-ai-tool-control ${showAiWriting ? "active" : ""}`}
                   onClick={() => {
                     setShowAiWriting(!showAiWriting);
@@ -1117,6 +1118,7 @@ export default function PostEditor() {
                 </Button>
                 <Button
                   variant="ghost"
+                  size="compact"
                   className={`editor-ai-tool-control ${showAiImage ? "active" : ""}`}
                   onClick={() => {
                     setShowAiImage(!showAiImage);

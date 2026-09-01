@@ -3363,7 +3363,9 @@ a {
   justify-content: space-between;
   border-bottom: 1px solid var(--ui-border);
 }
-.editor-tabs .tab-buttons {
+.editor-tabs .tab-list {
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   gap: 4px;
 }
@@ -3390,24 +3392,19 @@ a {
 }
 .editor-ai-tools-group {
   display: flex;
+  flex: 0 0 auto;
+  margin-left: auto;
   gap: 8px;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 .editor-ai-tool-control {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: var(--radius-control);
-  border: 1px solid var(--ui-border);
-  background: var(--ui-panel);
+  --button-icon-size: 14px;
+  min-height: var(--control-height-compact);
+  padding-inline: 10px;
   color: var(--ui-brand);
   font-size: 12px;
   font-weight: 600;
-  cursor: pointer;
-  transition: all 150ms ease;
-  margin-bottom: 4px;
 }
 .editor-ai-tool-control:hover {
   background: var(--ui-control-hover);
@@ -3465,18 +3462,11 @@ a {
   gap: 8px;
 }
 .editor-ai-presets .btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px 10px;
-  border: 1px solid var(--ui-border);
+  min-height: var(--control-height-compact);
+  padding-inline: 10px;
   border-radius: 20px;
-  background: var(--ui-control);
-  color: var(--ui-text);
   font-size: 12px;
   font-weight: 500;
-  cursor: pointer;
-  transition: all 120ms ease;
 }
 .editor-ai-presets .btn:hover:not(:disabled) {
   border-color: var(--ui-brand);
@@ -3498,6 +3488,12 @@ a {
 .editor-ai-presets .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.editor-ai-inline > .btn.btn-ghost:hover:not(:disabled),
+.editor-ai-inline > .btn.btn-ghost:active:not(:disabled) {
+  background: transparent;
+  color: var(--ui-brand-hover);
 }
 .editor-ai-prompt-box {
   display: flex;

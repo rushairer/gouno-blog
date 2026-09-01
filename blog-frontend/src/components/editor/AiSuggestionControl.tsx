@@ -21,7 +21,7 @@ export function AiSuggestionControl({
   return (
     <div className="editor-ai-inline">
       <Button
-        variant="ghost"
+        variant="link"
         className="editor-ai-inline__trigger"
         onClick={onRequest}
         disabled={loading}

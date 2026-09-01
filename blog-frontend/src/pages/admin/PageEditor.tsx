@@ -764,6 +764,7 @@ export default function PageEditor() {
             <div className="editor-ai-tools-group">
               <Button
                 variant="ghost"
+                size="compact"
                 className={`editor-ai-tool-control ${showAiWriting ? "active" : ""}`}
                 onClick={() => {
                   setShowAiWriting(!showAiWriting);
@@ -776,6 +777,7 @@ export default function PageEditor() {
               </Button>
               <Button
                 variant="ghost"
+                size="compact"
                 className={`editor-ai-tool-control ${showAiImage ? "active" : ""}`}
                 onClick={() => {
                   setShowAiImage(!showAiImage);

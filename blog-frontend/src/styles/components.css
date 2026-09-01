@@ -309,6 +309,21 @@ textarea.ui-control,
   color: var(--ui-text);
 }
 
+.btn-link,
+.btn-link:hover:not(:disabled),
+.btn-link:active:not(:disabled) {
+  border-color: transparent;
+  background: transparent;
+  color: var(--ui-brand);
+  text-decoration: none;
+}
+
+.btn-link:hover:not(:disabled) {
+  color: var(--ui-brand-hover);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .btn:disabled {
   cursor: not-allowed;
   opacity: 0.55;
