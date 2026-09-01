@@ -57,11 +57,7 @@ export function getGossoAdminURL(user?: BlogUserProfile | null): string {
 }
 
 export function useSafeUserProfile(): BlogUserProfile | null {
-  try {
-    return useUserProfile<BlogUserProfile>();
-  } catch {
-    return null;
-  }
+  return useUserProfile<BlogUserProfile>();
 }
 
 export const gossoAdminURL = import.meta.env.VITE_GOSSO_ADMIN_URL || "";

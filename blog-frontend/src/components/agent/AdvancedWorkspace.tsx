@@ -414,7 +414,8 @@ export function AdvancedWorkspace({
                                   ? agent.cron_expression
                                   : labels.manual}
                               </strong>
-                              {agent.trigger_type === "cron" && agent.timezone ? (
+                              {agent.trigger_type === "cron" &&
+                              agent.timezone ? (
                                 <small>{agent.timezone}</small>
                               ) : null}
                             </div>
@@ -430,9 +431,12 @@ export function AdvancedWorkspace({
                                   </small>
                                 </div>
                               ) : (
-                                <small className="text-muted">{labels.never}</small>
+                                <small className="text-muted">
+                                  {labels.never}
+                                </small>
                               )}
-                              {agent.trigger_type === "cron" && agent.next_run_at ? (
+                              {agent.trigger_type === "cron" &&
+                              agent.next_run_at ? (
                                 <small className="agent-schedule-next">
                                   {locale === "zh" ? "下次: " : "Next: "}
                                   {formatDateTime(agent.next_run_at)}

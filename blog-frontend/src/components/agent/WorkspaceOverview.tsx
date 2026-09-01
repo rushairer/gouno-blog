@@ -85,31 +85,19 @@ export function WorkspaceOverview({
         className="workspace-overview__summary admin-metrics"
         aria-label={zh ? "当前待办" : "Current work"}
       >
-        <Panel
-          as="button"
-          type="button"
-          onClick={() => onNavigate("inbox")}
-        >
+        <Panel as="button" type="button" onClick={() => onNavigate("inbox")}>
           <ShieldCheck />
           <span>{zh ? "待审批变更" : "Pending Approvals"}</span>
           <strong>{pendingApprovals}</strong>
           <small>{zh ? "项等待审批" : "awaiting approval"}</small>
         </Panel>
-        <Panel
-          as="button"
-          type="button"
-          onClick={() => onNavigate("inbox")}
-        >
+        <Panel as="button" type="button" onClick={() => onNavigate("inbox")}>
           <Lightbulb />
           <span>{zh ? "内容建议" : "Content Suggestions"}</span>
           <strong>{newSuggestions + pendingCandidates}</strong>
           <small>{zh ? "条待处理" : "to review"}</small>
         </Panel>
-        <Panel
-          as="button"
-          type="button"
-          onClick={() => onNavigate("inbox")}
-        >
+        <Panel as="button" type="button" onClick={() => onNavigate("inbox")}>
           <Sparkles />
           <span>{zh ? "图片任务" : "Media Generation"}</span>
           <strong>{readyMedia}</strong>

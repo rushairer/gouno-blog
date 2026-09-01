@@ -133,11 +133,15 @@ describe("PageEditor", () => {
     );
 
     await screen.findByDisplayValue("关于我们");
-    expect(screen.getByRole("button", { name: "保存草稿" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "保存草稿" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "保存草稿" })).toHaveClass(
       "btn-primary",
     );
-    expect(screen.queryByRole("button", { name: "发布" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "发布" }),
+    ).not.toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText("状态"), "published");
     expect(screen.getByRole("button", { name: "保存草稿" })).toHaveClass(
@@ -151,6 +155,8 @@ describe("PageEditor", () => {
         expect.objectContaining({ status: "published" }),
       );
     });
-    expect(screen.getByRole("button", { name: "更新单页" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "更新单页" }),
+    ).toBeInTheDocument();
   });
 });
