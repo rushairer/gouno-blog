@@ -65,6 +65,7 @@ export default function PageEditor() {
   const { notify } = useToast();
 
   const [page, setPage] = useState<CustomPage>(emptyPage);
+  const [publishIntent, setPublishIntent] = useState<PostStatus>("draft");
   const editorTitle = isNew
     ? page.title
       ? `新建单页: ${page.title}`
@@ -112,6 +113,7 @@ export default function PageEditor() {
         .getAdminPage(id)
         .then((data) => {
           setPage(data);
+          setPublishIntent(data.status || "draft");
           setError("");
         })
         .catch((reason: Error) => {
@@ -181,6 +183,7 @@ export default function PageEditor() {
           result = await pagesApi.createPage(payload);
         }
         setPage(result);
+        setPublishIntent(result.status || "draft");
         dirty.current = false;
         setSavedAt(new Date());
         if (!automatic) {
@@ -208,6 +211,17 @@ export default function PageEditor() {
     if (dirty.current) setConfirmExit(true);
     else navigate("/admin/pages");
   };
+
+  const primaryStatus: PostStatus =
+    publishIntent === "draft" ? "draft" : "published";
+  const primaryLabel =
+    publishIntent === "draft"
+      ? page.status === "published"
+        ? "下架为草稿"
+        : "保存草稿"
+      : page.status === "published"
+        ? "更新单页"
+        : "发布";
 
   const requestSeo = async () => {
     if (!page.title.trim() && !page.content.trim()) {
@@ -654,23 +668,25 @@ export default function PageEditor() {
           >
             预览前台页面
           </Button>
-          <Button
-            variant="secondary"
-            type="button"
-            onClick={() => void persist("draft")}
-            disabled={saving}
-            icon={<Save />}
-          >
-            保存草稿
-          </Button>
+          {page.status !== "published" && publishIntent !== "draft" ? (
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={() => void persist("draft")}
+              disabled={saving}
+              icon={<Save />}
+            >
+              保存草稿
+            </Button>
+          ) : null}
           <Button
             variant="primary"
             type="button"
-            onClick={() => void persist("published")}
+            onClick={() => void persist(primaryStatus)}
             disabled={saving}
             icon={<Send />}
           >
-            {page.status === "published" ? "更新单页" : "发布"}
+            {primaryLabel}
           </Button>
         </div>
       </EditorCommandBar>
@@ -1194,9 +1210,11 @@ export default function PageEditor() {
             <summary>发布设置</summary>
             <Field label="状态">
               <Select
-                value={page.status || "draft"}
+                value={publishIntent}
                 onChange={(event) => {
-                  update("status", event.target.value as PostStatus);
+                  setPublishIntent(event.target.value as PostStatus);
+                  dirty.current = true;
+                  setSavedAt(null);
                 }}
               >
                 <option value="draft">草稿</option>
