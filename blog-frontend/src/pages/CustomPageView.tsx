@@ -10,6 +10,7 @@ import { pagesApi } from "../api/pages";
 import { siteApi } from "../api/site";
 import { extractMarkdownTOC } from "../utils/markdown";
 import type { CustomPage, SiteSettings } from "../types/blog";
+import { Banner } from "../components/ui";
 import NotFound from "./NotFound";
 
 export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
@@ -118,26 +119,9 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
 
   const draftBanner =
     page.status === "draft" ? (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          padding: "10px 16px",
-          marginBottom: "24px",
-          borderRadius: "var(--radius-control)",
-          background: "var(--brand-soft)",
-          color: "var(--brand)",
-          fontSize: "13px",
-          fontWeight: 500,
-        }}
-      >
-        <ShieldAlert size={16} />
-        <span>
-          <strong>管理员预览模式</strong> ·
-          该单页当前为草稿状态，仅对管理员可见。
-        </span>
-      </div>
+      <Banner tone="brand" icon={<ShieldAlert size={16} />}>
+        <strong>管理员预览模式</strong> · 该单页当前为草稿状态，仅对管理员可见。
+      </Banner>
     ) : null;
 
   // 1. About Template

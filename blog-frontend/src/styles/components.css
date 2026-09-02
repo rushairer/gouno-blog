@@ -784,6 +784,62 @@ textarea.ui-control,
   color: var(--ui-danger);
 }
 
+.banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 10px var(--space-4);
+  margin-bottom: var(--space-6);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--radius-control);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-control);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.banner__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.banner__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.banner--brand {
+  border-color: var(--ui-border-emphasis);
+  background: var(--ui-brand-soft);
+  color: var(--ui-brand);
+}
+
+.banner--info {
+  border-color: var(--ui-info);
+  background: var(--ui-info-soft);
+  color: var(--ui-info);
+}
+
+.banner--warning {
+  border-color: var(--ui-warning-alpha-border);
+  background: var(--ui-warning-soft);
+  color: var(--ui-warning);
+}
+
+.banner--danger {
+  border-color: var(--ui-danger);
+  background: var(--ui-danger-soft);
+  color: var(--ui-danger);
+}
+
+.banner--success {
+  border-color: var(--ui-success);
+  background: var(--ui-success-soft);
+  color: var(--ui-success);
+}
+
 .state {
   min-height: 190px;
   display: grid;

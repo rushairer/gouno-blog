@@ -23,10 +23,12 @@ import { commentsApi } from "../api/comments";
 import type { CommunityComment } from "../api/comments";
 import { postsApi } from "../api/posts";
 import {
+  ActionGroup,
   Badge,
   Button,
   ButtonLink,
   EmptyState,
+  ErrorState,
   Feedback,
   Field,
   IconButton,
@@ -330,40 +332,25 @@ export default function PostDetail() {
       return <NotFound />;
     }
     return (
-      <div
-        className="public-container"
-        style={{ padding: "60px 0", maxWidth: "640px", margin: "0 auto" }}
-      >
-        <div className="not-found-card" style={{ textAlign: "center" }}>
-          <div className="not-found-badge">
-            <span className="not-found-code">ERROR</span>
-            <span className="not-found-badge__dot">/</span>
-            <span className="not-found-badge__label">{t("error")}</span>
-          </div>
-          <h1
-            className="not-found-title"
-            style={{ fontSize: "1.5rem", margin: "16px 0 8px" }}
-          >
-            {t("failedFetch")}
-          </h1>
-          <p className="not-found-subtitle" style={{ marginBottom: "24px" }}>
-            {error}
-          </p>
-          <div
-            style={{ display: "flex", justifyContent: "center", gap: "12px" }}
-          >
-            <Button
-              variant="primary"
-              onClick={() => window.location.reload()}
-              icon={<RefreshCw size={15} />}
-            >
-              {t("retry")}
-            </Button>
-            <ButtonLink to="/articles" icon={<ArrowLeft size={15} />}>
-              {t("backToFeed")}
-            </ButtonLink>
-          </div>
-        </div>
+      <div className="public-container state-page">
+        <ErrorState
+          title={t("failedFetch")}
+          description={error}
+          action={
+            <ActionGroup>
+              <Button
+                variant="primary"
+                onClick={() => window.location.reload()}
+                icon={<RefreshCw size={15} />}
+              >
+                {t("retry")}
+              </Button>
+              <ButtonLink to="/articles" icon={<ArrowLeft size={15} />}>
+                {t("backToFeed")}
+              </ButtonLink>
+            </ActionGroup>
+          }
+        />
       </div>
     );
   }

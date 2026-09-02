@@ -28,17 +28,56 @@ export function LoadingState({ label }: { label: string }) {
   );
 }
 
-export function EmptyState({
-  label,
-  action,
+export type BannerTone = "brand" | "warning" | "danger" | "info" | "success";
+
+export function Banner({
+  tone = "info",
+  icon,
+  children,
+  className = "",
 }: {
-  label: string;
-  action?: React.ReactNode;
+  tone?: BannerTone;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="state">
-      <BookOpen aria-hidden="true" />
-      <p>{label}</p>
+    <div
+      className={classes("banner", `banner--${tone}`, className)}
+      role="status"
+    >
+      {icon ? (
+        <span className="banner__icon" aria-hidden="true">
+          {icon}
+        </span>
+      ) : null}
+      <div className="banner__content">{children}</div>
+    </div>
+  );
+}
+
+export function EmptyState({
+  label,
+  title,
+  description,
+  icon,
+  action,
+  className = "",
+}: {
+  label?: string | null;
+  title?: string | null;
+  description?: string | null;
+  icon?: React.ReactNode;
+  action?: React.ReactNode;
+  className?: string;
+}) {
+  const IconElement = icon ?? <BookOpen aria-hidden="true" />;
+  const headingText = title ?? label;
+  return (
+    <div className={classes("state", className)}>
+      {IconElement}
+      {headingText ? <p>{headingText}</p> : null}
+      {description ? <p className="state__desc">{description}</p> : null}
       {action ? <div className="state__actions">{action}</div> : null}
     </div>
   );
@@ -46,15 +85,26 @@ export function EmptyState({
 
 export function ErrorState({
   label,
+  title,
+  description,
+  icon,
   action,
+  className = "",
 }: {
-  label: string;
+  label?: string | null;
+  title?: string | null;
+  description?: string | null;
+  icon?: React.ReactNode;
   action?: React.ReactNode;
+  className?: string;
 }) {
+  const IconElement = icon ?? <AlertTriangle aria-hidden="true" />;
+  const headingText = title ?? label;
   return (
-    <div className="state state--error" role="alert">
-      <AlertTriangle aria-hidden="true" />
-      <p>{label}</p>
+    <div className={classes("state", "state--error", className)} role="alert">
+      {IconElement}
+      {headingText ? <p>{headingText}</p> : null}
+      {description ? <p className="state__desc">{description}</p> : null}
       {action ? <div className="state__actions">{action}</div> : null}
     </div>
   );
