@@ -1,4 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import {
+  DEFAULT_SITE_SETTINGS,
+  getCachedSiteSettings,
+  SITE_SETTINGS_UPDATED_EVENT,
+} from "../config/site-defaults";
+import { siteApi } from "../api/site";
 
 export interface ArticleSEO {
   title: string;
@@ -7,6 +13,27 @@ export interface ArticleSEO {
   publishedAt: string;
   tags: string[];
 }
+
+let cachedBrand =
+  getCachedSiteSettings()?.site_title || DEFAULT_SITE_SETTINGS.site_title;
+
+if (typeof window !== "undefined") {
+  window.addEventListener(SITE_SETTINGS_UPDATED_EVENT, (e: Event) => {
+    const detail = (e as CustomEvent).detail;
+    if (detail?.site_title) cachedBrand = detail.site_title;
+  });
+}
+
+siteApi
+  .getSiteSettings()
+  .then((settings) => {
+    if (settings?.site_title) {
+      cachedBrand = settings.site_title;
+    }
+  })
+  .catch(() => {
+    // Graceful fallback
+  });
 
 function setMeta(selector: string, attributes: Record<string, string>) {
   let element = document.head.querySelector<HTMLMetaElement>(selector);
@@ -30,15 +57,36 @@ function setMeta(selector: string, attributes: Record<string, string>) {
   };
 }
 
-export function useArticleSEO(article: ArticleSEO | null, brand: string) {
+export function useArticleSEO(article: ArticleSEO | null, brand?: string) {
+  const [siteBrand, setSiteBrand] = useState(
+    () => brand || cachedBrand || DEFAULT_SITE_SETTINGS.site_title,
+  );
+
+  useEffect(() => {
+    if (brand) {
+      setSiteBrand(brand);
+      return;
+    }
+    const handleUpdate = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.site_title) setSiteBrand(detail.site_title);
+    };
+    window.addEventListener(SITE_SETTINGS_UPDATED_EVENT, handleUpdate);
+    return () => {
+      window.removeEventListener(SITE_SETTINGS_UPDATED_EVENT, handleUpdate);
+    };
+  }, [brand]);
+
   useEffect(() => {
     if (!article) return;
+    const currentBrand =
+      brand || siteBrand || cachedBrand || DEFAULT_SITE_SETTINGS.site_title;
     const canonicalURL = new URL(
       `/articles/${article.slug}`,
       window.location.origin,
     ).toString();
     const previousTitle = document.title;
-    document.title = `${article.title} - ${brand}`;
+    document.title = `${article.title} - ${currentBrand}`;
 
     const restoreMeta = [
       setMeta('meta[name="description"]', {

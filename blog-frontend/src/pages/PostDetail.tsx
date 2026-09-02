@@ -254,7 +254,7 @@ export default function PostDetail() {
         : null,
     [post],
   );
-  useArticleSEO(articleSEO, t("brand"));
+  useArticleSEO(articleSEO);
 
   const handleLike = async () => {
     if (!post) return;

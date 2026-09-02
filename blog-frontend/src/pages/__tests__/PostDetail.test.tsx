@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { I18nProvider } from "../../i18n";
 import { GossoProvider } from "@gosso/client/react";
 import { gossoClient } from "../../auth";
+import { SITE_SETTINGS_UPDATED_EVENT } from "../../config/site-defaults";
 import PostDetail from "../PostDetail";
 
 const post = {
@@ -302,6 +303,46 @@ describe("PostDetail", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/admin/posts/daily-ai-news-2026-08-21-380",
       expect.objectContaining({ credentials: "same-origin" }),
+    );
+  });
+
+  it("updates page title using dynamically configured site title", async () => {
+    window.dispatchEvent(
+      new CustomEvent(SITE_SETTINGS_UPDATED_EVENT, {
+        detail: { site_title: "Custom Tech Blog" },
+      }),
+    );
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = input.toString();
+      if (url === "/api/posts/markdown-post") {
+        return Response.json({ data: post });
+      }
+      if (url === "/api/posts/7/comments") {
+        return Response.json({ data: [] });
+      }
+      if (url === "/api/posts/markdown-post/community") {
+        return Response.json({ data: { liked: false, likes_count: 0 } });
+      }
+      if (url === "/api/posts/markdown-post/related") {
+        return Response.json({ data: [] });
+      }
+      return new Response(null, { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderPostDetail();
+
+    expect(
+      await screen.findByRole("heading", { name: "Markdown Post" }),
+    ).toBeInTheDocument();
+    expect(document.title).toBe("Markdown Post - Custom Tech Blog");
+
+    // Reset to default for other tests
+    window.dispatchEvent(
+      new CustomEvent(SITE_SETTINGS_UPDATED_EVENT, {
+        detail: { site_title: "Gouno Blog" },
+      }),
     );
   });
 });
