@@ -1,4 +1,11 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "../../../components/ui";
 import MediaLibrary from "../MediaLibrary";
@@ -260,5 +267,65 @@ describe("MediaLibrary", () => {
         body: JSON.stringify({ alt_text: "New Alt Description" }),
       }),
     );
+  });
+
+  it("submits upload image drawer form when upload button is clicked with selected file", async () => {
+    const user = userEvent.setup();
+    const mockUploaded = {
+      id: 3,
+      filename: "test-upload.png",
+      url: "/media/test-upload.png",
+      content_type: "image/png",
+      size_bytes: 2048,
+      alt_text: "Test Upload Alt",
+      created_at: "2026-09-02T12:00:00Z",
+      usage_count: 0,
+    };
+
+    const apiFetchMock = vi.mocked((await import("../../../auth")).apiFetch);
+    apiFetchMock
+      .mockResolvedValueOnce(Response.json({ data: [] }))
+      .mockResolvedValueOnce(Response.json({ data: mockUploaded }));
+
+    render(
+      <ToastProvider>
+        <MediaLibrary />
+      </ToastProvider>,
+    );
+
+    await screen.findByText("No images uploaded yet.");
+    await user.click(screen.getByRole("button", { name: "上传图片" }));
+
+    const drawer = screen.getByRole("dialog", { name: "上传图片" });
+    const fileInput = drawer.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    const testFile = new File(["dummy content"], "test-upload.png", {
+      type: "image/png",
+    });
+    fireEvent.change(fileInput, { target: { files: [testFile] } });
+
+    expect(
+      await within(drawer).findByText("test-upload.png"),
+    ).toBeInTheDocument();
+
+    const uploadBtn = within(drawer).getByRole("button", {
+      name: "Upload image",
+    });
+    expect(uploadBtn).not.toBeDisabled();
+    expect(uploadBtn).toHaveAttribute("type", "submit");
+
+    fireEvent.submit(drawer.querySelector("form")!);
+
+    await waitFor(() => {
+      expect(apiFetchMock).toHaveBeenCalledWith(
+        "/api/admin/media",
+        expect.objectContaining({
+          method: "POST",
+        }),
+      );
+    });
+
+    expect(await screen.findByText("图片已上传。")).toBeInTheDocument();
   });
 });

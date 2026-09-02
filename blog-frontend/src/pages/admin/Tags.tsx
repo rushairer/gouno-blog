@@ -225,6 +225,7 @@ export default function Tags() {
             </Button>
             <Button
               variant="primary"
+              type="submit"
               icon={tagEdit?.mode === "merge" ? <Merge /> : <Save />}
             >
               {tagEdit?.mode === "merge" ? "合并标签" : "保存名称"}

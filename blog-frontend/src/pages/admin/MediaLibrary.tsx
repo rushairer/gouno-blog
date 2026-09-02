@@ -70,6 +70,7 @@ export default function MediaLibrary() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadDrawerOpen, setUploadDrawerOpen] = useState(false);
+  const [uploadError, setUploadError] = useState("");
   const [error, setError] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [altText, setAltText] = useState("");
@@ -113,6 +114,7 @@ export default function MediaLibrary() {
     const form = event.currentTarget;
     if (!file) return;
     setUploading(true);
+    setUploadError("");
     setError("");
     const data = new FormData();
     data.append("file", file);
@@ -126,7 +128,9 @@ export default function MediaLibrary() {
       setUploadDrawerOpen(false);
       notify("图片已上传。", "success");
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("requestFailed"));
+      const msg = err instanceof Error ? err.message : t("requestFailed");
+      setUploadError(msg);
+      notify(msg, "error");
     } finally {
       setUploading(false);
     }
@@ -307,7 +311,10 @@ export default function MediaLibrary() {
                   variant="primary"
                   type="button"
                   icon={<ImagePlus />}
-                  onClick={() => setUploadDrawerOpen(true)}
+                  onClick={() => {
+                    setUploadError("");
+                    setUploadDrawerOpen(true);
+                  }}
                 >
                   上传图片
                 </Button>
@@ -512,11 +519,17 @@ export default function MediaLibrary() {
         open={uploadDrawerOpen}
         title="上传图片"
         description="选择图片并补充替代文本，便于内容复用与无障碍阅读。"
-        onClose={() => !uploading && setUploadDrawerOpen(false)}
+        onClose={() => {
+          if (!uploading) {
+            setUploadDrawerOpen(false);
+            setUploadError("");
+          }
+        }}
       >
         <MediaUploadForm
           file={file}
           altText={altText}
+          error={uploadError}
           uploading={uploading}
           labels={{
             imageFile: t("imageFile"),
@@ -527,7 +540,10 @@ export default function MediaLibrary() {
           }}
           onFileChange={setFile}
           onAltTextChange={setAltText}
-          onCancel={() => setUploadDrawerOpen(false)}
+          onCancel={() => {
+            setUploadDrawerOpen(false);
+            setUploadError("");
+          }}
           onSubmit={upload}
         />
       </Drawer>

@@ -3,6 +3,14 @@
 All notable changes to the complete Gouno Blog distribution are documented in
 this file. The format follows Keep a Changelog and Semantic Versioning.
 
+## [1.5.7] - 2026-09-02
+
+### Fixed
+
+- Add explicit `type="submit"` attribute to action buttons in media upload (`MediaUploadForm`), category (`CategoryForm`), and tag management (`Tags`) modal/drawer forms so form submissions execute properly under UI component defaults.
+- Surface upload error feedback directly within the media upload drawer and display toast notifications on upload failures.
+- Add test coverage verifying media library drawer form submission and API dispatch.
+
 ## [1.5.6] - 2026-09-02
 
 ### Fixed

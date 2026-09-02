@@ -13,6 +13,7 @@ import {
 export function MediaUploadForm({
   file,
   altText,
+  error,
   uploading,
   labels,
   onFileChange,
@@ -22,6 +23,7 @@ export function MediaUploadForm({
 }: {
   file: File | null;
   altText: string;
+  error?: string;
   uploading: boolean;
   labels: {
     imageFile: string;
@@ -51,6 +53,7 @@ export function MediaUploadForm({
           </Button>
           <Button
             variant="primary"
+            type="submit"
             disabled={!file}
             loading={uploading}
             icon={<ImagePlus />}
@@ -68,7 +71,6 @@ export function MediaUploadForm({
         <Input
           type="file"
           accept="image/jpeg,image/png,image/webp,image/gif"
-          required
           onChange={(event) => onFileChange(event.target.files?.[0] || null)}
         />
       </Field>
@@ -87,6 +89,7 @@ export function MediaUploadForm({
           onChange={(event) => onAltTextChange(event.target.value)}
         />
       </Field>
+      {error ? <Feedback type="error">{error}</Feedback> : null}
     </OverlayForm>
   );
 }
