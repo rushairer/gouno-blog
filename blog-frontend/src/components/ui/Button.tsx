@@ -39,6 +39,19 @@ export type IconButtonProps = Omit<
   icon: React.ReactNode;
   size?: "regular" | "compact";
   variant?: "secondary" | "ghost" | "danger";
+  loading?: boolean;
+};
+
+export type IconButtonLinkProps = Omit<
+  React.ComponentPropsWithoutRef<typeof Link>,
+  "children"
+> & {
+  /** Accessible name for an icon-only link. */
+  label: string;
+  /** Rendered in the shared, fixed-size icon slot. */
+  icon: React.ReactNode;
+  size?: "regular" | "compact";
+  variant?: "secondary" | "ghost" | "danger";
 };
 
 export function buttonClassName({
@@ -148,6 +161,8 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
       size = "regular",
       variant = "secondary",
       className = "",
+      loading = false,
+      disabled,
       type = "button",
       ...props
     },
@@ -161,19 +176,60 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
           "icon-button",
           size === "compact" && "icon-button--compact",
           `icon-button--${variant}`,
+          loading && "is-loading",
           className,
         )}
+        disabled={disabled || loading}
+        aria-busy={loading || undefined}
         aria-label={label}
         title={label}
         {...props}
       >
-        <span className="icon-button__icon" aria-hidden="true">
-          {icon}
-        </span>
+        {loading ? (
+          <span className="btn__spinner" aria-hidden="true" />
+        ) : (
+          <span className="icon-button__icon" aria-hidden="true">
+            {icon}
+          </span>
+        )}
       </button>
     );
   },
 );
+
+export const IconButtonLink = forwardRef<
+  HTMLAnchorElement,
+  IconButtonLinkProps
+>(function IconButtonLink(
+  {
+    icon,
+    label,
+    size = "regular",
+    variant = "secondary",
+    className = "",
+    ...props
+  },
+  ref,
+) {
+  return (
+    <Link
+      ref={ref}
+      className={classes(
+        "icon-button",
+        size === "compact" && "icon-button--compact",
+        `icon-button--${variant}`,
+        className,
+      )}
+      aria-label={label}
+      title={label}
+      {...props}
+    >
+      <span className="icon-button__icon" aria-hidden="true">
+        {icon}
+      </span>
+    </Link>
+  );
+});
 
 export function ChoiceButton({
   selected = false,

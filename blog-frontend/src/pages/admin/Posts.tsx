@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Copy, Edit2, Eye, FileText, Plus, Trash2, X } from "lucide-react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { postsApi } from "../../api/posts";
 import { siteApi } from "../../api/site";
 import type { TagSummary } from "../../api/site";
@@ -17,6 +17,7 @@ import {
   ErrorState,
   FilterBar,
   IconButton,
+  IconButtonLink,
   Pagination,
   Panel,
   SearchField,
@@ -385,7 +386,7 @@ export default function AdminPosts() {
                       <td>{(post.views_count ?? 0).toLocaleString()}</td>
                       <td>
                         <div className="table-actions">
-                          <Link
+                          <IconButtonLink
                             to={
                               post.status === "published"
                                 ? `/articles/${post.slug}`
@@ -393,12 +394,11 @@ export default function AdminPosts() {
                             }
                             target="_blank"
                             rel="noreferrer"
-                            title={
+                            label={
                               post.status === "published" ? "查看" : "预览"
                             }
-                          >
-                            <Eye />
-                          </Link>
+                            icon={<Eye />}
+                          />
                           <IconButton
                             label="复制链接"
                             icon={<Copy />}
@@ -411,19 +411,17 @@ export default function AdminPosts() {
                             }
                           />
                           {can("edit", "post", post) ? (
-                            <Link
+                            <IconButtonLink
                               to={`/admin/posts/${post.id}/edit`}
-                              title="编辑"
-                            >
-                              <Edit2 />
-                            </Link>
+                              label="编辑"
+                              icon={<Edit2 />}
+                            />
                           ) : (
-                            <Link
+                            <IconButtonLink
                               to={`/admin/posts/${post.id}/edit`}
-                              title="查看详情（只读）"
-                            >
-                              <FileText />
-                            </Link>
+                              label="查看详情（只读）"
+                              icon={<FileText />}
+                            />
                           )}
                           {can("delete", "post", post) ? (
                             <IconButton
