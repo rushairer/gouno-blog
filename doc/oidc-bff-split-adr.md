@@ -13,9 +13,9 @@ Connect Core、RP-Initiated Logout 1.0 和 Back-Channel Logout 1.0 Final 为规�
 
 ## 信任边界
 
-- `sso.io84.com` 只持有 host-only 中心 SSO Cookie，提供 discovery、authorize、
+- `sso.example.com` 只持有 host-only 中心 SSO Cookie，提供 discovery、authorize、
   token、userinfo、JWKS、`/login`、账户功能和 `/admin`。
-- Blog 是 confidential BFF。浏览器只持有 `blog.io84.com` 的 Secure、HttpOnly、
+- Blog 是 confidential BFF。浏览器只持有 `blog.example.com` 的 Secure、HttpOnly、
   host-only opaque 业务会话 Cookie；OAuth Token 只保存在服务端。
 - Blog 浏览器不跨域调用 token、userinfo、refresh、revoke 或身份 CSRF API。
 - Blog 和 SSO 默认不为 BFF 流程开放 CORS。任何未来跨域浏览器能力必须使用精确
@@ -26,26 +26,26 @@ Connect Core、RP-Initiated Logout 1.0 和 Back-Channel Logout 1.0 Final 为规�
 ## Client 契约
 
 - Flow：Authorization Code + PKCE S256；Client 认证为 `client_secret_basic`。
-- Blog redirect URI：`https://blog.io84.com/api/auth/callback`。
-- Blog post-logout URI：`https://blog.io84.com/api/auth/logout/callback`（及回退根路径 `https://blog.io84.com/`）。
+- Blog redirect URI：`https://blog.example.com/api/auth/callback`。
+- Blog post-logout URI：`https://blog.example.com/api/auth/logout/callback`（及回退根路径 `https://blog.example.com/`）。
   RP-initiated logout 请求携带一次性 `state`，OP 在注销完成后重定向回 Blog 回调端点，
   BFF 原子消费并校验 `state` 防重放与防 CSRF，最后将浏览器重定向至 Blog 首页。
 - Blog back-channel logout URI：
-  `https://blog.io84.com/api/auth/backchannel-logout`。
+  `https://blog.example.com/api/auth/backchannel-logout`。
 - Scope：`openid profile email`。
-- RFC 8707 resource/audience：`https://blog.io84.com/api`。
+- RFC 8707 resource/audience：`https://blog.example.com/api`。
 - CMS 使用独立 Client、secret、redirect URI、resource、权限和业务 Cookie。
 
 ## 迁移与身份连续性
 
-- issuer 从 `https://io84.com` 迁移到 `https://sso.io84.com` 时，身份键始终是
+- issuer 从 `https://example.com` 迁移到 `https://sso.example.com` 时，身份键始终是
   `(issuer, subject)`。即使 subject 文本相同，也不得自动合并；必须使用来自
   GOSSO 权威账户映射的显式、一对一、可审计批准。
 - `blog_principal_identities` 以 additive 方式保存 identity alias。原
   `blog_principals.issuer/subject`、membership 和角色不改写、不删除。
 - 通过受控的本地 `identity-alias-approve` 操作创建 alias；每次操作记录批准人和
   权威映射证据引用，冲突时原子失败。
-- WebAuthn RP ID 最终迁移为 `sso.io84.com`。旧 credential 保留，用户在密码/MFA
+- WebAuthn RP ID 最终迁移为 `sso.example.com`。旧 credential 保留，用户在密码/MFA
   验证后重新注册 Passkey。
 - 独立域拆分是目标拓扑；不支持恢复为单域名部署。全局退出只结束当前中心 SSO
   session。“退出所有设备”是独立操作。
