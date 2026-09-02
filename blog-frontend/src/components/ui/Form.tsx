@@ -150,6 +150,44 @@ export const Checkbox = forwardRef<
   );
 });
 
+export const Radio = forwardRef<
+  HTMLInputElement,
+  Omit<React.InputHTMLAttributes<HTMLInputElement>, "type">
+>(function Radio({ className = "", ...props }, ref) {
+  return (
+    <input
+      ref={ref}
+      className={classes("ui-radio", className)}
+      type="radio"
+      {...props}
+    />
+  );
+});
+
+export const Switch = forwardRef<
+  HTMLInputElement,
+  Omit<React.InputHTMLAttributes<HTMLInputElement>, "type"> & {
+    label?: React.ReactNode;
+  }
+>(function Switch({ className = "", label, id, ...props }, ref) {
+  return (
+    <label className={classes("ui-switch-label", className)}>
+      <input
+        ref={ref}
+        id={id}
+        className="ui-switch"
+        type="checkbox"
+        role="switch"
+        {...props}
+      />
+      <span className="ui-switch__track" aria-hidden="true">
+        <span className="ui-switch__thumb" />
+      </span>
+      {label ? <span className="ui-switch__text">{label}</span> : null}
+    </label>
+  );
+});
+
 export function CheckboxField({
   children,
   className = "",

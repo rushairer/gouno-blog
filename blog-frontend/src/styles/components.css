@@ -217,7 +217,13 @@ textarea.ui-control,
 }
 
 .btn:active:not(:disabled) {
-  transform: translateY(1px);
+  transform: translateY(1px) scale(0.985);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--ui-brand);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--ui-focus-ring);
 }
 
 .btn.is-loading {
@@ -351,6 +357,28 @@ textarea.ui-control,
   background: var(--ui-control);
   color: var(--ui-text-secondary);
   cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease,
+    color 120ms ease,
+    transform 80ms ease,
+    box-shadow 120ms ease;
+}
+
+.icon-button:active:not(:disabled) {
+  transform: translateY(1px) scale(0.96);
+}
+
+.icon-button:focus-visible {
+  outline: 2px solid var(--ui-brand);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--ui-focus-ring);
+}
+
+.icon-button:hover:not(:disabled) {
+  border-color: var(--ui-border-hover);
+  background: var(--ui-control-hover);
+  color: var(--ui-text);
 }
 
 .icon-button--compact {
