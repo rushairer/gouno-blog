@@ -13,14 +13,14 @@ import (
 )
 
 func interactionColumns() string {
-	return `id,workflow_run_id,agent_run_id,workflow_step_id,interaction_type,schema,payload,options,status,resume_token,response,expires_at,resolved_by,resolved_at,created_at,updated_at`
+	return `id,workflow_run_id,agent_run_id,workflow_step_id,interaction_type,schema,payload,options,status,resume_token,response,expires_at,resolved_by_principal_id,resolved_at,created_at,updated_at`
 }
 
 func scanInteraction(scanner interface{ Scan(...any) error }) (*domain.WorkflowInteractionTask, error) {
 	var item domain.WorkflowInteractionTask
 	err := scanner.Scan(&item.ID, &item.WorkflowRunID, &item.AgentRunID, &item.WorkflowStepID, &item.InteractionType,
 		&item.Schema, &item.Payload, &item.Options, &item.Status, &item.ResumeToken, &item.Response, &item.ExpiresAt,
-		&item.ResolvedBy, &item.ResolvedAt, &item.CreatedAt, &item.UpdatedAt)
+		&item.ResolvedByPrincipalID, &item.ResolvedAt, &item.CreatedAt, &item.UpdatedAt)
 	return &item, err
 }
 
@@ -76,18 +76,18 @@ func (r *AgentRepository) ListPendingInteractions(ctx context.Context) ([]*domai
 	return items, rows.Err()
 }
 
-func (r *AgentRepository) ResolveInteraction(ctx context.Context, id int64, token string, response json.RawMessage, subject string) (*domain.WorkflowInteractionTask, error) {
-	item, err := scanInteraction(r.db.QueryRowContext(ctx, `UPDATE workflow_interaction_tasks SET status='resolved',response=$3,resolved_by=$4,resolved_at=NOW(),updated_at=NOW()
-		WHERE id=$1 AND resume_token=$2 AND status='pending' AND (expires_at IS NULL OR expires_at>NOW()) RETURNING `+interactionColumns(), id, token, response, subject))
+func (r *AgentRepository) ResolveInteraction(ctx context.Context, id int64, token string, response json.RawMessage, principalID int64) (*domain.WorkflowInteractionTask, error) {
+	item, err := scanInteraction(r.db.QueryRowContext(ctx, `UPDATE workflow_interaction_tasks SET status='resolved',response=$3,resolved_by_principal_id=$4,resolved_at=NOW(),updated_at=NOW()
+		WHERE id=$1 AND resume_token=$2 AND status='pending' AND (expires_at IS NULL OR expires_at>NOW()) RETURNING `+interactionColumns(), id, token, response, principalID))
 	if err != nil {
 		return nil, err
 	}
 	return item, nil
 }
 
-func (r *AgentRepository) CancelInteraction(ctx context.Context, id int64, token, subject string) error {
-	result, err := r.db.ExecContext(ctx, `UPDATE workflow_interaction_tasks SET status='cancelled',resolved_by=$3,resolved_at=NOW(),updated_at=NOW()
-		WHERE id=$1 AND resume_token=$2 AND status='pending'`, id, token, subject)
+func (r *AgentRepository) CancelInteraction(ctx context.Context, id int64, token string, principalID int64) error {
+	result, err := r.db.ExecContext(ctx, `UPDATE workflow_interaction_tasks SET status='cancelled',resolved_by_principal_id=$3,resolved_at=NOW(),updated_at=NOW()
+		WHERE id=$1 AND resume_token=$2 AND status='pending'`, id, token, principalID)
 	if err != nil {
 		return err
 	}

@@ -26,14 +26,14 @@ func NewCommunityRepository(db *sql.DB) *CommunityRepository {
 func scanComment(scanner interface{ Scan(...any) error }) (*domain.Comment, error) {
 	var comment domain.Comment
 	err := scanner.Scan(
-		&comment.ID, &comment.PostID, &comment.ParentID, &comment.Author, &comment.AuthorSubject,
+		&comment.ID, &comment.PostID, &comment.ParentID, &comment.Author, &comment.AuthorPrincipalID,
 		&comment.AuthorType, &comment.Content, &comment.Status, &comment.IsVisible,
 		&comment.ReportCount, &comment.CreatedAt,
 	)
 	return &comment, err
 }
 
-const commentColumns = `c.id, c.post_id, c.parent_id, c.author, c.author_subject,
+const commentColumns = `c.id, c.post_id, c.parent_id, c.author, c.author_principal_id,
 	c.author_type, c.content, c.status, c.is_visible,
 	(SELECT COUNT(*) FROM comment_reports cr WHERE cr.comment_id = c.id), c.created_at`
 
@@ -47,8 +47,8 @@ func (r *CommunityRepository) CreateComment(ctx context.Context, comment *domain
 	if comment.ParentID != nil {
 		var parentPostID int64
 		var parentParentID *int64
-		var recipient *string
-		if err := tx.QueryRowContext(ctx, `SELECT post_id, parent_id, author_subject FROM comments WHERE id = $1`, *comment.ParentID).
+		var recipient *int64
+		if err := tx.QueryRowContext(ctx, `SELECT post_id, parent_id, author_principal_id FROM comments WHERE id = $1`, *comment.ParentID).
 			Scan(&parentPostID, &parentParentID, &recipient); err != nil {
 			return err
 		}
@@ -59,16 +59,16 @@ func (r *CommunityRepository) CreateComment(ctx context.Context, comment *domain
 			return ErrCommentDepthExceeded
 		}
 		if err := tx.QueryRowContext(ctx, `
-			INSERT INTO comments (post_id, parent_id, author, author_subject, author_type, content, status, is_visible, created_at)
+			INSERT INTO comments (post_id, parent_id, author, author_principal_id, author_type, content, status, is_visible, created_at)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
 			RETURNING id, created_at
-		`, comment.PostID, comment.ParentID, comment.Author, comment.AuthorSubject, comment.AuthorType,
+		`, comment.PostID, comment.ParentID, comment.Author, comment.AuthorPrincipalID, comment.AuthorType,
 			comment.Content, comment.Status, comment.IsVisible).Scan(&comment.ID, &comment.CreatedAt); err != nil {
 			return err
 		}
-		if comment.IsVisible && recipient != nil && *recipient != "" && (comment.AuthorSubject == nil || *recipient != *comment.AuthorSubject) {
+		if comment.IsVisible && recipient != nil && (comment.AuthorPrincipalID == nil || *recipient != *comment.AuthorPrincipalID) {
 			if _, err := tx.ExecContext(ctx, `
-				INSERT INTO notifications (recipient_subject, type, post_id, comment_id, actor_name)
+				INSERT INTO notifications (recipient_principal_id, type, post_id, comment_id, actor_name)
 				VALUES ($1, 'comment_reply', $2, $3, $4)
 				ON CONFLICT DO NOTHING
 			`, *recipient, comment.PostID, comment.ID, comment.Author); err != nil {
@@ -79,10 +79,10 @@ func (r *CommunityRepository) CreateComment(ctx context.Context, comment *domain
 	}
 
 	if err := tx.QueryRowContext(ctx, `
-		INSERT INTO comments (post_id, parent_id, author, author_subject, author_type, content, status, is_visible, created_at)
+		INSERT INTO comments (post_id, parent_id, author, author_principal_id, author_type, content, status, is_visible, created_at)
 		VALUES ($1, NULL, $2, $3, $4, $5, $6, $7, NOW())
 		RETURNING id, created_at
-	`, comment.PostID, comment.Author, comment.AuthorSubject, comment.AuthorType, comment.Content,
+	`, comment.PostID, comment.Author, comment.AuthorPrincipalID, comment.AuthorType, comment.Content,
 		comment.Status, comment.IsVisible).Scan(&comment.ID, &comment.CreatedAt); err != nil {
 		return err
 	}
@@ -150,10 +150,10 @@ func (r *CommunityRepository) ModerateComment(ctx context.Context, id int64, sta
 	var parentID *int64
 	var postID int64
 	var author string
-	var authorSubject *string
+	var authorPrincipalID *int64
 	var previousStatus string
-	if err := tx.QueryRowContext(ctx, `SELECT parent_id, post_id, author, author_subject, status FROM comments WHERE id = $1 FOR UPDATE`, id).
-		Scan(&parentID, &postID, &author, &authorSubject, &previousStatus); err != nil {
+	if err := tx.QueryRowContext(ctx, `SELECT parent_id, post_id, author, author_principal_id, status FROM comments WHERE id = $1 FOR UPDATE`, id).
+		Scan(&parentID, &postID, &author, &authorPrincipalID, &previousStatus); err != nil {
 		return err
 	}
 	result, err := tx.ExecContext(ctx, `UPDATE comments SET status = $1, is_visible = $2, moderated_at = NOW() WHERE id = $3`, status, visible, id)
@@ -164,13 +164,13 @@ func (r *CommunityRepository) ModerateComment(ctx context.Context, id int64, sta
 		return sql.ErrNoRows
 	}
 	if status == "visible" && previousStatus != "visible" && parentID != nil {
-		var recipient *string
-		if err := tx.QueryRowContext(ctx, `SELECT author_subject FROM comments WHERE id = $1`, *parentID).Scan(&recipient); err != nil {
+		var recipientPrincipalID *int64
+		if err := tx.QueryRowContext(ctx, `SELECT author_principal_id FROM comments WHERE id = $1`, *parentID).Scan(&recipientPrincipalID); err != nil {
 			return err
 		}
-		if recipient != nil && *recipient != "" && (authorSubject == nil || *recipient != *authorSubject) {
-			if _, err := tx.ExecContext(ctx, `INSERT INTO notifications (recipient_subject, type, post_id, comment_id, actor_name)
-				VALUES ($1, 'comment_reply', $2, $3, $4) ON CONFLICT DO NOTHING`, *recipient, postID, id, author); err != nil {
+		if recipientPrincipalID != nil && (authorPrincipalID == nil || *recipientPrincipalID != *authorPrincipalID) {
+			if _, err := tx.ExecContext(ctx, `INSERT INTO notifications (recipient_principal_id, type, post_id, comment_id, actor_name)
+				VALUES ($1, 'comment_reply', $2, $3, $4) ON CONFLICT DO NOTHING`, *recipientPrincipalID, postID, id, author); err != nil {
 				return err
 			}
 		}
@@ -251,15 +251,15 @@ func (r *CommunityRepository) CommunityState(ctx context.Context, postID int64, 
 	return state, nil
 }
 
-func (r *CommunityRepository) ListNotifications(ctx context.Context, subject string, limit, offset int) ([]*domain.Notification, int, error) {
+func (r *CommunityRepository) ListNotifications(ctx context.Context, principalID int64, limit, offset int) ([]*domain.Notification, int, error) {
 	var unread int
-	if err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM notifications WHERE recipient_subject = $1 AND read_at IS NULL`, subject).Scan(&unread); err != nil {
+	if err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM notifications WHERE recipient_principal_id = $1 AND read_at IS NULL`, principalID).Scan(&unread); err != nil {
 		return nil, 0, err
 	}
 	rows, err := r.db.QueryContext(ctx, `SELECT n.id, n.type, n.post_id, COALESCE(p.slug,''), COALESCE(p.title,''), n.comment_id,
 		n.actor_name, COALESCE(n.title,''), COALESCE(n.body,''), COALESCE(n.href,''), n.read_at, n.created_at
 		FROM notifications n LEFT JOIN posts p ON p.id = n.post_id
-		WHERE n.recipient_subject = $1 ORDER BY n.created_at DESC LIMIT $2 OFFSET $3`, subject, limit, offset)
+		WHERE n.recipient_principal_id = $1 ORDER BY n.created_at DESC LIMIT $2 OFFSET $3`, principalID, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -277,8 +277,8 @@ func (r *CommunityRepository) ListNotifications(ctx context.Context, subject str
 	return notifications, unread, rows.Err()
 }
 
-func (r *CommunityRepository) ReadNotification(ctx context.Context, subject string, id int64) error {
-	result, err := r.db.ExecContext(ctx, `UPDATE notifications SET read_at = COALESCE(read_at, NOW()) WHERE id = $1 AND recipient_subject = $2`, id, subject)
+func (r *CommunityRepository) ReadNotification(ctx context.Context, principalID, id int64) error {
+	result, err := r.db.ExecContext(ctx, `UPDATE notifications SET read_at = COALESCE(read_at, NOW()) WHERE id = $1 AND recipient_principal_id = $2`, id, principalID)
 	if err != nil {
 		return err
 	}
@@ -288,13 +288,13 @@ func (r *CommunityRepository) ReadNotification(ctx context.Context, subject stri
 	return nil
 }
 
-func (r *CommunityRepository) ReadAllNotifications(ctx context.Context, subject string) error {
-	_, err := r.db.ExecContext(ctx, `UPDATE notifications SET read_at = COALESCE(read_at, NOW()) WHERE recipient_subject = $1`, subject)
+func (r *CommunityRepository) ReadAllNotifications(ctx context.Context, principalID int64) error {
+	_, err := r.db.ExecContext(ctx, `UPDATE notifications SET read_at = COALESCE(read_at, NOW()) WHERE recipient_principal_id = $1`, principalID)
 	return err
 }
 
-func (r *CommunityRepository) DeleteNotification(ctx context.Context, subject string, id int64) error {
-	result, err := r.db.ExecContext(ctx, `DELETE FROM notifications WHERE id = $1 AND recipient_subject = $2`, id, subject)
+func (r *CommunityRepository) DeleteNotification(ctx context.Context, principalID, id int64) error {
+	result, err := r.db.ExecContext(ctx, `DELETE FROM notifications WHERE id = $1 AND recipient_principal_id = $2`, id, principalID)
 	if err != nil {
 		return err
 	}
@@ -304,20 +304,20 @@ func (r *CommunityRepository) DeleteNotification(ctx context.Context, subject st
 	return nil
 }
 
-func (r *CommunityRepository) DeleteNotifications(ctx context.Context, subject string, ids []int64) error {
+func (r *CommunityRepository) DeleteNotifications(ctx context.Context, principalID int64, ids []int64) error {
 	if len(ids) == 0 {
 		return nil
 	}
-	_, err := r.db.ExecContext(ctx, `DELETE FROM notifications WHERE recipient_subject = $1 AND id = ANY($2)`, subject, ids)
+	_, err := r.db.ExecContext(ctx, `DELETE FROM notifications WHERE recipient_principal_id = $1 AND id = ANY($2)`, principalID, ids)
 	return err
 }
 
-func (r *CommunityRepository) ClearNotifications(ctx context.Context, subject string, onlyRead bool) (int64, error) {
-	query := `DELETE FROM notifications WHERE recipient_subject = $1`
+func (r *CommunityRepository) ClearNotifications(ctx context.Context, principalID int64, onlyRead bool) (int64, error) {
+	query := `DELETE FROM notifications WHERE recipient_principal_id = $1`
 	if onlyRead {
 		query += ` AND read_at IS NOT NULL`
 	}
-	res, err := r.db.ExecContext(ctx, query, subject)
+	res, err := r.db.ExecContext(ctx, query, principalID)
 	if err != nil {
 		return 0, err
 	}

@@ -7,7 +7,7 @@ describe("blog cookie session", () => {
     vi.resetModules();
     localStorage.clear();
     sessionStorage.clear();
-    document.cookie = "blog_csrf_token=; path=/; max-age=0";
+    document.cookie = "__Host-blog-csrf=; path=/; max-age=0; Secure";
     document.cookie = "__Host-csrf_token=; path=/; max-age=0; Secure";
   });
 
@@ -18,7 +18,7 @@ describe("blog cookie session", () => {
   });
 
   it("adds the CSRF token to unsafe blog API requests without an Authorization header", async () => {
-    document.cookie = "blog_csrf_token=csrf-value; path=/";
+    document.cookie = "__Host-blog-csrf=csrf-value; path=/; Secure";
     const fetchMock = vi.fn().mockResolvedValue(Response.json({ data: {} }));
     vi.stubGlobal("fetch", fetchMock);
     const { apiFetch } = await import("../auth");
@@ -29,7 +29,7 @@ describe("blog cookie session", () => {
   });
 
   it("refreshes and retries a protected request after receiving 401", async () => {
-    document.cookie = "blog_csrf_token=blog-csrf; path=/";
+    document.cookie = "__Host-blog-csrf=blog-csrf; path=/; Secure";
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
@@ -53,7 +53,7 @@ describe("blog cookie session", () => {
   });
 
   it("uses only the Blog CSRF cookie when revoking a cookie session", async () => {
-    document.cookie = "blog_csrf_token=blog-token; path=/";
+    document.cookie = "__Host-blog-csrf=blog-token; path=/; Secure";
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ message: "CSRF token mismatch" }), {
         status: 403,
@@ -75,7 +75,7 @@ describe("blog cookie session", () => {
   });
 
   it("protects anonymous community writes with the same CSRF-aware API helper", async () => {
-    document.cookie = "blog_csrf_token=csrf-value; path=/";
+    document.cookie = "__Host-blog-csrf=csrf-value; path=/; Secure";
     const fetchMock = vi.fn().mockResolvedValue(Response.json({ data: {} }));
     vi.stubGlobal("fetch", fetchMock);
     const { apiFetch } = await import("../auth");

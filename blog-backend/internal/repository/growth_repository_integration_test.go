@@ -46,10 +46,9 @@ func TestGrowthRepositoryContentLifecycle(t *testing.T) {
 		t.Fatalf("restore mismatch: post=%#v err=%v", restored, err)
 	}
 
-	creator := "integration-admin"
 	asset := &domain.MediaAsset{
 		Filename: "test.png", StorageName: fmt.Sprintf("test-%d.png", suffix), URL: "/media/test.png",
-		ContentType: "image/png", SizeBytes: 128, AltText: "Test image", CreatedBy: &creator,
+		ContentType: "image/png", SizeBytes: 128, AltText: "Test image",
 	}
 	if err := repo.CreateMedia(ctx, asset); err != nil {
 		t.Fatal(err)

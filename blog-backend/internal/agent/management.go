@@ -59,8 +59,8 @@ func (s *ManagementService) DefaultWritingClient(ctx context.Context) (*domain.P
 	return nil, nil, fmt.Errorf("%w: an enabled default writing Provider is required", ErrInvalid)
 }
 
-func (s *ManagementService) Notify(ctx context.Context, recipient, eventType, title, body, href, key string) error {
-	return s.repo.CreateSystemNotification(ctx, recipient, eventType, title, body, href, key)
+func (s *ManagementService) Notify(ctx context.Context, recipientPrincipalID int64, eventType, title, body, href, key string) error {
+	return s.repo.CreateSystemNotification(ctx, recipientPrincipalID, eventType, title, body, href, key)
 }
 
 func (s *ManagementService) GetProvider(ctx context.Context, id int64) (*domain.ProviderProfile, error) {
@@ -361,7 +361,7 @@ func (s *ManagementService) ImportSkill(ctx context.Context, value *domain.Agent
 	return s.SaveSkill(ctx, value)
 }
 
-func (s *ManagementService) CopySkill(ctx context.Context, skillID int64, name string, createdBy *string) (*domain.AgentSkill, error) {
+func (s *ManagementService) CopySkill(ctx context.Context, skillID int64, name string, createdByPrincipalID int64) (*domain.AgentSkill, error) {
 	source, err := s.GetSkill(ctx, skillID)
 	if err != nil {
 		return nil, err
@@ -378,7 +378,7 @@ func (s *ManagementService) CopySkill(ctx context.Context, skillID int64, name s
 		MaxSteps:           skillVersion.MaxSteps, MaxInputTokens: skillVersion.MaxInputTokens, MaxOutputTokens: skillVersion.MaxOutputTokens,
 		DefaultDailyRunLimit: skillVersion.DefaultDailyRunLimit, DefaultMonthlyTokenBudget: skillVersion.DefaultMonthlyTokenBudget,
 		InputSchema: skillVersion.InputSchema, AllowedTriggers: slices.Clone(skillVersion.AllowedTriggers),
-		CreatedBy: createdBy,
+		CreatedByPrincipalID: &createdByPrincipalID,
 	}
 	if skill.Name == "" {
 		skill.Name = source.Name + " Copy"

@@ -17,7 +17,7 @@ func (c *Client) RegisterRoutes(router gin.IRouter) {
 	router.POST("/api/auth/logout", c.logoutHandler)
 	router.GET("/api/auth/logout/callback", c.logoutCallbackHandler)
 	router.POST("/api/auth/backchannel-logout", c.backchannelLogoutHandler)
-	router.POST("/api/auth/mfa/step-up", c.stepUpMfaHandler)
+	router.GET("/api/auth/mfa/step-up", c.stepUpMfaHandler)
 }
 
 // SessionMiddleware projects only already verified, server-side ID-token
@@ -53,8 +53,10 @@ func (c *Client) SessionMiddleware() gin.HandlerFunc {
 		}
 		claims := jwt.MapClaims(session.Claims)
 		claims["iss"], claims["sub"] = session.Issuer, session.Subject
-		claims["sid"], claims["auth_time"], claims["amr"] = session.SID, session.AuthTime, session.AMR
-		ctx.Set("account_id", session.Subject)
+		claims["sid"], claims["auth_time"], claims["amr"], claims["acr"] = session.SID, session.AuthTime, session.AMR, session.ACR
+		// Bare subject strings are never stable authorization identities. Access
+		// middleware resolves this verified issuer/subject pair to principal_id.
+		ctx.Set("account_id", session.Subject) // transitional display-only context
 		ctx.Set("claims", claims)
 		ctx.Set("blog_bff_session_id", handle)
 		ctx.Next()
@@ -122,10 +124,9 @@ func (c *Client) meHandler(ctx *gin.Context) {
 		"user": gin.H{
 			"id":         session.Subject,
 			"issuer":     session.Issuer,
-			"sid":        session.SID,
 			"auth_time":  session.AuthTime,
 			"amr":        session.AMR,
-			"claims":     session.Claims,
+			"acr":        session.ACR,
 			"expires_at": session.TokenExpiry.Unix(),
 		},
 	})
@@ -211,26 +212,13 @@ func (c *Client) stepUpMfaHandler(ctx *gin.Context) {
 		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
-	var req struct {
-		Code string `json:"code" binding:"required"`
-		Type string `json:"type"`
-	}
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid step-up request"})
-		return
-	}
-	session, err := c.StepUpMFA(ctx.Request.Context(), handle, req.Code, req.Type)
+	flowHandle, authorizationURL, err := c.BeginStepUp(ctx.Request.Context(), handle, ctx.Query("return_to"))
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "unable to start step-up authentication"})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"data": gin.H{
-			"auth_time": session.AuthTime,
-			"amr":       session.AMR,
-		},
-	})
+	setHostCookie(ctx, c.config.FlowCookie, flowHandle, int(c.config.FlowTTL.Seconds()), http.SameSiteLaxMode)
+	ctx.Redirect(http.StatusFound, authorizationURL)
 }
 
 func setHostCookie(ctx *gin.Context, name, value string, maxAge int, sameSite http.SameSite) {

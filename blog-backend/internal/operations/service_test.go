@@ -56,14 +56,14 @@ func TestProductionToolCatalogIsJSONSerializable(t *testing.T) {
 
 func TestFeedbackValidationRejectsInvalidTargetsAndLabels(t *testing.T) {
 	service := &Service{}
-	valid := &domain.AIFeedback{TargetType: "run", TargetID: 1, Label: "adopted", CreatedBy: "admin"}
+	valid := &domain.AIFeedback{TargetType: "run", TargetID: 1, Label: "adopted", CreatedByPrincipalID: 1}
 	if err := service.SaveFeedback(context.Background(), &domain.AIFeedback{
-		TargetType: "visitor", TargetID: valid.TargetID, Label: valid.Label, CreatedBy: valid.CreatedBy,
+		TargetType: "visitor", TargetID: valid.TargetID, Label: valid.Label, CreatedByPrincipalID: valid.CreatedByPrincipalID,
 	}); err == nil {
 		t.Fatal("visitor feedback target should be rejected")
 	}
 	if err := service.SaveFeedback(context.Background(), &domain.AIFeedback{
-		TargetType: valid.TargetType, TargetID: valid.TargetID, Label: "positive", CreatedBy: valid.CreatedBy,
+		TargetType: valid.TargetType, TargetID: valid.TargetID, Label: "positive", CreatedByPrincipalID: valid.CreatedByPrincipalID,
 	}); err == nil {
 		t.Fatal("unknown feedback label should be rejected")
 	}

@@ -45,16 +45,16 @@ type TextGenerationResult struct {
 }
 
 type ImageGenerationRequest struct {
-	Prompt           string
-	AltText          string
-	Creator          string
-	Source           string
-	Operation        string
-	Deadline         time.Duration
-	AgentRunID       *int64
-	WorkflowRunID    *int64
-	MediaCandidateID *int64
-	Filename         string
+	Prompt             string
+	AltText            string
+	CreatorPrincipalID int64
+	Source             string
+	Operation          string
+	Deadline           time.Duration
+	AgentRunID         *int64
+	WorkflowRunID      *int64
+	MediaCandidateID   *int64
+	Filename           string
 }
 
 func NewGenerationService(repo *repository.AgentRepository, management *ManagementService, growth *service.GrowthService, store media.Store) *GenerationService {
@@ -160,8 +160,8 @@ func (s *GenerationService) GenerateImage(ctx context.Context, req ImageGenerati
 		filename = fmt.Sprintf(filename, ext)
 	}
 	asset := &domain.MediaAsset{Filename: filename, StorageName: storageName, URL: s.media.URL(storageName), ContentType: image.MIMEType, SizeBytes: int64(len(image.Data)), AltText: req.AltText}
-	if req.Creator != "" {
-		asset.CreatedBy = &req.Creator
+	if req.CreatorPrincipalID > 0 {
+		asset.CreatedByPrincipalID = &req.CreatorPrincipalID
 	}
 	if err = s.growth.CreateMedia(ctx, asset); err != nil {
 		_ = s.media.Delete(ctx, storageName)

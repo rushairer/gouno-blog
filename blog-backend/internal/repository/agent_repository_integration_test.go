@@ -117,7 +117,7 @@ func TestFailedApprovalRemainsActionableAndCanBeReclaimed(t *testing.T) {
 	if !found {
 		t.Fatal("failed approval was not returned as actionable work")
 	}
-	if err := repo.ClaimApproval(ctx, approvalID, "test-reviewer", "retry"); err != nil {
+	if err := repo.ClaimApproval(ctx, approvalID, 1, "retry"); err != nil {
 		t.Fatalf("failed approval must be reclaimable: %v", err)
 	}
 	claimed, err := repo.GetApproval(ctx, approvalID)

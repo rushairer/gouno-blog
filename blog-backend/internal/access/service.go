@@ -100,6 +100,30 @@ type Audit struct {
 	CreatedAt time.Time       `json:"created_at"`
 }
 
+type SecurityAudit struct {
+	ActorPrincipalID int64
+	Action           string
+	Result           string
+	SessionID        string
+	RequestID        string
+	SourceIP         string
+	ACR              string
+	AMR              []string
+	AuthTime         *time.Time
+}
+
+func (s *Service) RecordSecurityAudit(ctx context.Context, value SecurityAudit) error {
+	if value.ActorPrincipalID <= 0 || strings.TrimSpace(value.Action) == "" {
+		return fmt.Errorf("security audit requires actor and action")
+	}
+	amr, _ := json.Marshal(value.AMR)
+	_, err := s.db.ExecContext(ctx, `INSERT INTO blog_authorization_audits
+		(actor_principal_id,action,result,session_id,request_id,source_ip,acr,amr,auth_time)
+		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`, value.ActorPrincipalID, value.Action,
+		value.Result, value.SessionID, value.RequestID, value.SourceIP, value.ACR, amr, value.AuthTime)
+	return err
+}
+
 // IdentityAliasApproval is an explicit, operator-attested cross-issuer identity
 // mapping. Equal subject text is intentionally not evidence of identity.
 type IdentityAliasApproval struct {
@@ -334,14 +358,28 @@ func (s *Service) Resolve(ctx context.Context, claims jwt.MapClaims) (Snapshot, 
 	isBootstrapOwner := s.bootstrap.Issuer != "" && s.bootstrap.Subject != "" && issuer == s.bootstrap.Issuer && subject == s.bootstrap.Subject
 	if isBootstrapOwner {
 		var membershipID int64
-		if err = tx.QueryRowContext(ctx, `INSERT INTO blog_memberships (principal_id) VALUES ($1) ON CONFLICT (principal_id) DO UPDATE SET status='active', authorization_version=blog_memberships.authorization_version+1, updated_at=NOW() RETURNING id`, p.ID).Scan(&membershipID); err != nil {
+		membershipChanged := false
+		var currentStatus string
+		err = tx.QueryRowContext(ctx, `SELECT id,status FROM blog_memberships WHERE principal_id=$1 FOR UPDATE`, p.ID).Scan(&membershipID, &currentStatus)
+		if errors.Is(err, sql.ErrNoRows) {
+			err = tx.QueryRowContext(ctx, `INSERT INTO blog_memberships (principal_id,status) VALUES ($1,'active') RETURNING id`, p.ID).Scan(&membershipID)
+			membershipChanged = err == nil
+		} else if err == nil && currentStatus != "active" {
+			_, err = tx.ExecContext(ctx, `UPDATE blog_memberships SET status='active', authorization_version=authorization_version+1, updated_at=NOW() WHERE id=$1`, membershipID)
+			membershipChanged = err == nil
+		}
+		if err != nil {
 			return Snapshot{}, err
 		}
-		if _, err = tx.ExecContext(ctx, `INSERT INTO blog_role_bindings (membership_id, role) VALUES ($1,'owner') ON CONFLICT DO NOTHING`, membershipID); err != nil {
-			return Snapshot{}, err
+		binding, bindingErr := tx.ExecContext(ctx, `INSERT INTO blog_role_bindings (membership_id, role) VALUES ($1,'owner') ON CONFLICT DO NOTHING`, membershipID)
+		if bindingErr != nil {
+			return Snapshot{}, bindingErr
 		}
-		if _, err = tx.ExecContext(ctx, `INSERT INTO blog_authorization_audits (target_principal_id,action,result,after_state) VALUES ($1,'bootstrap_owner','success',jsonb_build_object('roles',jsonb_build_array('owner')))`, p.ID); err != nil {
-			return Snapshot{}, err
+		roleChanged, _ := binding.RowsAffected()
+		if membershipChanged || roleChanged > 0 {
+			if _, err = tx.ExecContext(ctx, `INSERT INTO blog_authorization_audits (target_principal_id,action,result,after_state) VALUES ($1,'bootstrap_owner','success',jsonb_build_object('roles',jsonb_build_array('owner')))`, p.ID); err != nil {
+				return Snapshot{}, err
+			}
 		}
 	}
 	var status sql.NullString

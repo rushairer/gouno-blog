@@ -50,14 +50,16 @@ func (r *fakeCommunityRepo) SetLike(_ context.Context, postID int64, actor strin
 func (r *fakeCommunityRepo) CommunityState(_ context.Context, _ int64, actor, _ string) (*domain.CommunityState, error) {
 	return &domain.CommunityState{Liked: r.likes[actor]}, nil
 }
-func (r *fakeCommunityRepo) ListNotifications(_ context.Context, subject string, _, _ int) ([]*domain.Notification, int, error) {
-	return r.notifications[subject], len(r.notifications[subject]), nil
+func (r *fakeCommunityRepo) ListNotifications(_ context.Context, principalID int64, _, _ int) ([]*domain.Notification, int, error) {
+	return nil, 0, nil
 }
-func (*fakeCommunityRepo) ReadNotification(context.Context, string, int64) error { return nil }
-func (*fakeCommunityRepo) ReadAllNotifications(context.Context, string) error    { return nil }
-func (*fakeCommunityRepo) DeleteNotification(context.Context, string, int64) error { return nil }
-func (*fakeCommunityRepo) DeleteNotifications(context.Context, string, []int64) error { return nil }
-func (*fakeCommunityRepo) ClearNotifications(context.Context, string, bool) (int64, error) { return 0, nil }
+func (*fakeCommunityRepo) ReadNotification(context.Context, int64, int64) error      { return nil }
+func (*fakeCommunityRepo) ReadAllNotifications(context.Context, int64) error         { return nil }
+func (*fakeCommunityRepo) DeleteNotification(context.Context, int64, int64) error    { return nil }
+func (*fakeCommunityRepo) DeleteNotifications(context.Context, int64, []int64) error { return nil }
+func (*fakeCommunityRepo) ClearNotifications(context.Context, int64, bool) (int64, error) {
+	return 0, nil
+}
 
 type fakePostLookup struct {
 	post        *domain.Post
@@ -85,13 +87,12 @@ func newCommunityServiceForTest(repo *fakeCommunityRepo) *CommunityService {
 func TestCommunityCreateCommentUsesAuthenticatedIdentityAndIsVisible(t *testing.T) {
 	repo := &fakeCommunityRepo{}
 	svc := newCommunityServiceForTest(repo)
-	comment, err := svc.CreateComment(context.Background(), 1, nil, Actor{
-		Key: "user:42", Subject: "42", DisplayName: "Ada", Authenticated: true,
-	}, "spoofed", "Hello")
+	actor := Actor{Key: "principal:42", PrincipalID: 42, DisplayName: "Ada", Authenticated: true}
+	comment, err := svc.CreateComment(context.Background(), 1, nil, actor, "spoofed", "Hello")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if comment.Author != "Ada" || comment.AuthorSubject == nil || *comment.AuthorSubject != "42" {
+	if comment.Author != "Ada" || comment.AuthorPrincipalID == nil || *comment.AuthorPrincipalID != actor.PrincipalID {
 		t.Fatalf("authenticated identity not applied: %#v", comment)
 	}
 	if comment.Status != "visible" || !comment.IsVisible {

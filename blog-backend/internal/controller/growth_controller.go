@@ -182,11 +182,6 @@ func (ctrl *GrowthController) UploadMedia(c *gin.Context) {
 		Filename: header.Filename, StorageName: storageName, URL: ctrl.media.URL(storageName),
 		ContentType: contentType, SizeBytes: header.Size, AltText: strings.TrimSpace(c.PostForm("alt_text")),
 	}
-	if subject, exists := c.Get("account_id"); exists {
-		if value, ok := subject.(string); ok && value != "" {
-			asset.CreatedBy = &value
-		}
-	}
 	if snapshot, ok := middleware.CurrentBlogAccess(c); ok && snapshot.Principal.ID > 0 {
 		asset.CreatedByPrincipalID = &snapshot.Principal.ID
 		asset.UpdatedByPrincipalID = &snapshot.Principal.ID

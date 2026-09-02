@@ -35,10 +35,9 @@ func NewCommunityController(svc *service.CommunityService, limiter service.RateL
 }
 
 func (ctrl *CommunityController) actor(c *gin.Context) service.Actor {
-	if subject, ok := c.Get("account_id"); ok {
-		sub, _ := subject.(string)
-		if sub != "" {
-			name := sub
+	if principal, ok := c.Get("blog_principal_id"); ok {
+		if principalID, principalOK := principal.(int64); principalOK && principalID > 0 {
+			name := "Member"
 			if rawClaims, exists := c.Get("claims"); exists {
 				if claims, ok := rawClaims.(jwt.MapClaims); ok {
 					for _, claim := range []string{"name", "preferred_username"} {
@@ -49,7 +48,7 @@ func (ctrl *CommunityController) actor(c *gin.Context) service.Actor {
 					}
 				}
 			}
-			return service.Actor{Key: "user:" + sub, Subject: sub, DisplayName: name, Authenticated: true}
+			return service.Actor{Key: "principal:" + strconv.FormatInt(principalID, 10), PrincipalID: principalID, DisplayName: name, Authenticated: true}
 		}
 	}
 	visitorID := ctrl.visitorID(c)
@@ -208,17 +207,17 @@ func (ctrl *CommunityController) ReportComment(c *gin.Context) {
 	c.JSON(http.StatusCreated, gouno.NewSuccessResponse(nil))
 }
 
-func subject(c *gin.Context) string {
-	value, _ := c.Get("account_id")
-	sub, _ := value.(string)
-	return sub
+func principalID(c *gin.Context) int64 {
+	v, _ := c.Get("blog_principal_id")
+	id, _ := v.(int64)
+	return id
 }
 
 func (ctrl *CommunityController) ListNotifications(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "30"))
 	page, pageSize = normalizedPagination(page, pageSize, 30)
-	items, unread, err := ctrl.svc.ListNotifications(c.Request.Context(), subject(c), page, pageSize)
+	items, unread, err := ctrl.svc.ListNotifications(c.Request.Context(), principalID(c), page, pageSize)
 	if err != nil {
 		WriteDomainError(c, err)
 		return
@@ -237,7 +236,7 @@ func (ctrl *CommunityController) ReadNotification(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if err := ctrl.svc.ReadNotification(c.Request.Context(), subject(c), id); err != nil {
+	if err := ctrl.svc.ReadNotification(c.Request.Context(), principalID(c), id); err != nil {
 		WriteDomainError(c, err)
 		return
 	}
@@ -245,7 +244,7 @@ func (ctrl *CommunityController) ReadNotification(c *gin.Context) {
 }
 
 func (ctrl *CommunityController) ReadAllNotifications(c *gin.Context) {
-	if err := ctrl.svc.ReadAllNotifications(c.Request.Context(), subject(c)); err != nil {
+	if err := ctrl.svc.ReadAllNotifications(c.Request.Context(), principalID(c)); err != nil {
 		WriteDomainError(c, err)
 		return
 	}
@@ -257,7 +256,7 @@ func (ctrl *CommunityController) DeleteNotification(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if err := ctrl.svc.DeleteNotification(c.Request.Context(), subject(c), id); err != nil {
+	if err := ctrl.svc.DeleteNotification(c.Request.Context(), principalID(c), id); err != nil {
 		WriteDomainError(c, err)
 		return
 	}
@@ -274,7 +273,7 @@ func (ctrl *CommunityController) BatchDeleteNotifications(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
 		return
 	}
-	if err := ctrl.svc.DeleteNotifications(c.Request.Context(), subject(c), req.IDs); err != nil {
+	if err := ctrl.svc.DeleteNotifications(c.Request.Context(), principalID(c), req.IDs); err != nil {
 		WriteDomainError(c, err)
 		return
 	}
@@ -283,7 +282,7 @@ func (ctrl *CommunityController) BatchDeleteNotifications(c *gin.Context) {
 
 func (ctrl *CommunityController) ClearNotifications(c *gin.Context) {
 	onlyRead, _ := strconv.ParseBool(c.DefaultQuery("only_read", "false"))
-	count, err := ctrl.svc.ClearNotifications(c.Request.Context(), subject(c), onlyRead)
+	count, err := ctrl.svc.ClearNotifications(c.Request.Context(), principalID(c), onlyRead)
 	if err != nil {
 		WriteDomainError(c, err)
 		return
@@ -334,4 +333,3 @@ func (ctrl *CommunityController) DeleteComment(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
 }
-

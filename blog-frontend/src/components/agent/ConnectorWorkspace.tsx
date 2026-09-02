@@ -131,20 +131,21 @@ export function ConnectorWorkspace({
     try {
       const profile = profiles.find((item) => item.id === id);
       const real = profile?.kind === "search_console" && !profile.sandbox;
+      if (real) {
+        window.location.assign(`/api/admin/ai-connectors/${id}/oauth/start`);
+        return;
+      }
       const result = await connectorApi.startOAuth(
         id,
         real ? "search_console" : undefined,
       );
       setState(result.state);
       setOAuthProvider(real ? "search_console" : "mock");
-      if (real && result.authorization_url)
-        window.location.assign(result.authorization_url);
-      else
-        setMessage(
-          zh
-            ? "已生成一次性 Mock OAuth 状态。"
-            : "One-time mock OAuth state generated.",
-        );
+      setMessage(
+        zh
+          ? "已生成一次性 Mock OAuth 状态。"
+          : "One-time mock OAuth state generated.",
+      );
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Request failed");
     }

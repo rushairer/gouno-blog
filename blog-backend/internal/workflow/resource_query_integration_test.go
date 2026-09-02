@@ -29,7 +29,7 @@ func TestScheduledResourceQueryRetryKeepsSnapshotAndScope(t *testing.T) {
 	})
 
 	service := &Service{db: db, catalog: NewResourceCatalog(db)}
-	run, err := service.queue(ctx, workflowID, false, json.RawMessage(`{}`), nil, true, true)
+	run, err := service.queue(ctx, workflowID, false, json.RawMessage(`{}`), nil, "scheduler", "", true, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +55,7 @@ func TestScheduledResourceQueryRetryKeepsSnapshotAndScope(t *testing.T) {
 	if _, err := db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status='failed',finished_at=NOW() WHERE id=$1`, run.ID); err != nil {
 		t.Fatal(err)
 	}
-	retry, err := service.queue(ctx, workflowID, false, json.RawMessage(`{}`), nil, true, true)
+	retry, err := service.queue(ctx, workflowID, false, json.RawMessage(`{}`), nil, "scheduler", "", true, true)
 	if err != nil {
 		t.Fatal(err)
 	}

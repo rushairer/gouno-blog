@@ -72,19 +72,19 @@ func (r *Runner) ListToolCalls(ctx context.Context, runID int64) ([]*domain.Agen
 	return r.repo.ListToolCalls(ctx, runID)
 }
 
-func (r *Runner) Queue(ctx context.Context, agentID int64, trigger domain.AgentTriggerType, triggeredBy *string, input json.RawMessage, scheduleKey *string) (*domain.AgentRun, error) {
-	return r.queue(ctx, agentID, trigger, triggeredBy, input, scheduleKey, nil, nil)
+func (r *Runner) Queue(ctx context.Context, agentID int64, trigger domain.AgentTriggerType, triggeredByPrincipalID *int64, input json.RawMessage, scheduleKey *string) (*domain.AgentRun, error) {
+	return r.queue(ctx, agentID, trigger, triggeredByPrincipalID, input, scheduleKey, nil, nil)
 }
 
-func (r *Runner) QueueWorkflow(ctx context.Context, agentID int64, triggeredBy *string, input json.RawMessage, workflowVersionID int64, workflowRunIDs ...int64) (*domain.AgentRun, error) {
+func (r *Runner) QueueWorkflow(ctx context.Context, agentID int64, triggeredByPrincipalID *int64, input json.RawMessage, workflowVersionID int64, workflowRunIDs ...int64) (*domain.AgentRun, error) {
 	var workflowRunID *int64
 	if len(workflowRunIDs) > 0 {
 		workflowRunID = &workflowRunIDs[0]
 	}
-	return r.queue(ctx, agentID, domain.AgentTriggerManual, triggeredBy, input, nil, &workflowVersionID, workflowRunID)
+	return r.queue(ctx, agentID, domain.AgentTriggerManual, triggeredByPrincipalID, input, nil, &workflowVersionID, workflowRunID)
 }
 
-func (r *Runner) queue(ctx context.Context, agentID int64, trigger domain.AgentTriggerType, triggeredBy *string, input json.RawMessage, scheduleKey *string, workflowVersionID, workflowRunID *int64) (*domain.AgentRun, error) {
+func (r *Runner) queue(ctx context.Context, agentID int64, trigger domain.AgentTriggerType, triggeredByPrincipalID *int64, input json.RawMessage, scheduleKey *string, workflowVersionID, workflowRunID *int64) (*domain.AgentRun, error) {
 	value, err := r.management.GetAgent(ctx, agentID)
 	if err != nil {
 		return nil, err
@@ -125,7 +125,7 @@ func (r *Runner) queue(ctx context.Context, agentID int64, trigger domain.AgentT
 		return nil, ErrTokenBudget
 	}
 	run := &domain.AgentRun{
-		AgentID: agentID, TriggerType: trigger, TriggeredBy: triggeredBy, ScheduleKey: scheduleKey,
+		AgentID: agentID, TriggerType: trigger, TriggeredByPrincipalID: triggeredByPrincipalID, ScheduleKey: scheduleKey,
 		Status: domain.AgentRunQueued, Input: input, Provider: profile.ProviderType, Model: profile.Model,
 		SkillVersionID:    value.SkillVersionID,
 		WorkflowVersionID: workflowVersionID,
@@ -166,13 +166,13 @@ func (r *Runner) notifyRunFailure(ctx context.Context, runID int64, message stri
 	if err != nil {
 		return
 	}
-	recipient := ""
-	if run.TriggeredBy != nil {
-		recipient = *run.TriggeredBy
-	} else if agent.CreatedBy != nil {
-		recipient = *agent.CreatedBy
+	var recipientPrincipalID int64
+	if run.TriggeredByPrincipalID != nil {
+		recipientPrincipalID = *run.TriggeredByPrincipalID
+	} else if agent.CreatedByPrincipalID != nil {
+		recipientPrincipalID = *agent.CreatedByPrincipalID
 	}
-	_ = r.repo.CreateSystemNotification(ctx, recipient, "ai_run_failed",
+	_ = r.repo.CreateSystemNotification(ctx, recipientPrincipalID, "ai_run_failed",
 		"Agent 运行失败："+agent.Name, message, fmt.Sprintf("/admin/ai-ops?tab=records&record=agent&run=%d", runID), fmt.Sprintf("agent-run-%d", runID))
 }
 

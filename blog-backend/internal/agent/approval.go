@@ -75,11 +75,11 @@ func (s *ApprovalService) ListInteractions(ctx context.Context, runID int64) ([]
 func (s *ApprovalService) ListPendingInteractions(ctx context.Context) ([]*domain.WorkflowInteractionTask, error) {
 	return s.repo.ListPendingInteractions(ctx)
 }
-func (s *ApprovalService) ResolveInteraction(ctx context.Context, id int64, token string, response json.RawMessage, subject string) (*domain.WorkflowInteractionTask, error) {
-	return s.repo.ResolveInteraction(ctx, id, token, response, subject)
+func (s *ApprovalService) ResolveInteraction(ctx context.Context, id int64, token string, response json.RawMessage, principalID int64) (*domain.WorkflowInteractionTask, error) {
+	return s.repo.ResolveInteraction(ctx, id, token, response, principalID)
 }
-func (s *ApprovalService) CancelInteraction(ctx context.Context, id int64, token, subject string) error {
-	return s.repo.CancelInteraction(ctx, id, token, subject)
+func (s *ApprovalService) CancelInteraction(ctx context.Context, id int64, token string, principalID int64) error {
+	return s.repo.CancelInteraction(ctx, id, token, principalID)
 }
 func (s *ApprovalService) ListMediaCandidateEvents(ctx context.Context, id int64) ([]*domain.WorkflowRunEvent, error) {
 	return s.repo.ListMediaCandidateEvents(ctx, id)
@@ -388,11 +388,11 @@ func (s *ApprovalService) appendCandidateEvent(ctx context.Context, candidateID 
 	_ = s.repo.AppendWorkflowRunEvent(ctx, &domain.WorkflowRunEvent{WorkflowRunID: &runID, WorkflowStepID: candidate.WorkflowStepID, InteractionTaskID: candidate.InteractionTaskID, EventType: eventType, Payload: raw})
 }
 
-func (s *ApprovalService) ReviewMediaCandidate(ctx context.Context, id int64, action, reviewer, note string) error {
+func (s *ApprovalService) ReviewMediaCandidate(ctx context.Context, id int64, action string, reviewerPrincipalID int64, note string) error {
 	if id <= 0 || (action != "ready" && action != "reject") || (action == "reject" && strings.TrimSpace(note) == "") {
 		return ErrInvalid
 	}
-	if err := s.repo.ReviewMediaCandidate(ctx, id, action, reviewer, strings.TrimSpace(note)); err != nil {
+	if err := s.repo.ReviewMediaCandidate(ctx, id, action, reviewerPrincipalID, strings.TrimSpace(note)); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrApprovalConflict
 		}
@@ -414,7 +414,7 @@ func (s *ApprovalService) AttachMediaAsset(ctx context.Context, candidateID, med
 	return nil
 }
 
-func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, creator string) error {
+func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, creatorPrincipalID int64) error {
 	if id <= 0 || s.generation == nil {
 		return ErrInvalid
 	}
@@ -434,7 +434,7 @@ func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, 
 	if candidate.RegenerationInstruction != "" {
 		prompt += "\n\nAdditional editor requirements for this generation:\n" + candidate.RegenerationInstruction
 	}
-	asset, err := s.generation.GenerateImage(ctx, ImageGenerationRequest{Prompt: prompt, AltText: candidate.AltText, Creator: creator,
+	asset, err := s.generation.GenerateImage(ctx, ImageGenerationRequest{Prompt: prompt, AltText: candidate.AltText, CreatorPrincipalID: creatorPrincipalID,
 		Source: "agent_candidate", Operation: "media.generate_candidate", Deadline: 15 * time.Minute,
 		AgentRunID: &candidate.SourceRunID, WorkflowRunID: candidate.WorkflowRunID, MediaCandidateID: &candidate.ID, Filename: "ai-" + strconv.FormatInt(candidate.ID, 10) + "%s"})
 	if err != nil {
@@ -453,11 +453,11 @@ func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, 
 	return nil
 }
 
-func (s *ApprovalService) GenerateDirectImage(ctx context.Context, prompt, altText, creator string) (*domain.MediaAsset, error) {
+func (s *ApprovalService) GenerateDirectImage(ctx context.Context, prompt, altText string, creatorPrincipalID int64) (*domain.MediaAsset, error) {
 	if s.generation == nil {
 		return nil, ErrInvalid
 	}
-	return s.generation.GenerateImage(ctx, ImageGenerationRequest{Prompt: prompt, AltText: altText, Creator: creator, Source: "editor", Operation: "editor.image", Deadline: 5 * time.Minute})
+	return s.generation.GenerateImage(ctx, ImageGenerationRequest{Prompt: prompt, AltText: altText, CreatorPrincipalID: creatorPrincipalID, Source: "editor", Operation: "editor.image", Deadline: 5 * time.Minute})
 }
 
 func (s *ApprovalService) SetMediaGenerationInstruction(ctx context.Context, id int64, instruction string) error {
@@ -477,8 +477,8 @@ func (s *ApprovalService) SetMediaGenerationInstruction(ctx context.Context, id 
 	return nil
 }
 
-func (s *ApprovalService) Reject(ctx context.Context, id int64, reviewer, note string) error {
-	if err := s.repo.RejectApproval(ctx, id, reviewer, strings.TrimSpace(note)); err != nil {
+func (s *ApprovalService) Reject(ctx context.Context, id int64, reviewerPrincipalID int64, note string) error {
+	if err := s.repo.RejectApproval(ctx, id, reviewerPrincipalID, strings.TrimSpace(note)); err != nil {
 		return ErrApprovalConflict
 	}
 	return nil
@@ -488,7 +488,7 @@ func (s *ApprovalService) ReconcileApprovalRun(ctx context.Context, approvalID i
 	return s.repo.ReconcileApprovalRun(ctx, approvalID)
 }
 
-func (s *ApprovalService) Approve(ctx context.Context, id int64, reviewer, note string) error {
+func (s *ApprovalService) Approve(ctx context.Context, id int64, reviewerPrincipalID int64, note string) error {
 	approval, err := s.repo.GetApproval(ctx, id)
 	if err != nil {
 		return translateError(err)
@@ -506,7 +506,7 @@ func (s *ApprovalService) Approve(ctx context.Context, id int64, reviewer, note 
 	if err := s.validateConflict(ctx, approval); err != nil {
 		return err
 	}
-	if err := s.repo.ClaimApproval(ctx, id, reviewer, strings.TrimSpace(note)); err != nil {
+	if err := s.repo.ClaimApproval(ctx, id, reviewerPrincipalID, strings.TrimSpace(note)); err != nil {
 		return ErrApprovalConflict
 	}
 	if err := s.execute(ctx, approval); err != nil {
@@ -519,7 +519,7 @@ func (s *ApprovalService) Approve(ctx context.Context, id int64, reviewer, note 
 // StartImageGenerationForApprovedBrief bridges the approved image brief to the
 // run-owned image task. It intentionally runs after approval is committed so a
 // retry can never create a second candidate or bypass the existing approval.
-func (s *ApprovalService) StartImageGenerationForApprovedBrief(ctx context.Context, approvalID int64, creator string) error {
+func (s *ApprovalService) StartImageGenerationForApprovedBrief(ctx context.Context, approvalID int64, creatorPrincipalID int64) error {
 	approval, err := s.repo.GetApproval(ctx, approvalID)
 	if err != nil {
 		return translateError(err)
@@ -536,7 +536,7 @@ func (s *ApprovalService) StartImageGenerationForApprovedBrief(ctx context.Conte
 			continue
 		}
 		s.appendCandidateEvent(ctx, candidate.ID, "image_candidates_created", map[string]any{"candidate_id": candidate.ID, "post_id": candidate.PostID})
-		return s.GenerateMediaCandidate(ctx, candidate.ID, creator)
+		return s.GenerateMediaCandidate(ctx, candidate.ID, creatorPrincipalID)
 	}
 	return ErrApprovalConflict
 }

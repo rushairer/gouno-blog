@@ -10,7 +10,7 @@ import (
 	gounoMiddleware "github.com/rushairer/gouno/middleware"
 )
 
-const BlogCSRFCookie = "blog_csrf_token"
+const BlogCSRFCookie = "__Host-blog-csrf"
 
 const BlogCSRFMaxAge = 24 * time.Hour
 

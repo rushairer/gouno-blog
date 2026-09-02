@@ -28,6 +28,7 @@ type Config struct {
 	FlowTTL        time.Duration
 	RedisPrefix    string
 	TinkKeysetPath string
+	RequiredACR    string
 }
 
 func (c *Config) ApplyDefaults() {
@@ -48,6 +49,9 @@ func (c *Config) ApplyDefaults() {
 	}
 	if c.RedisPrefix == "" {
 		c.RedisPrefix = "blog:auth:v1"
+	}
+	if c.RequiredACR == "" {
+		c.RequiredACR = "urn:gouno:aal2"
 	}
 }
 
@@ -92,6 +96,9 @@ func (c Config) Validate() error {
 	}
 	if len(c.Scopes) == 0 || c.Scopes[0] != "openid" {
 		return errors.New("OIDC scopes must start with openid")
+	}
+	if c.RequiredACR != "urn:gouno:aal2" {
+		return errors.New("required ACR must be urn:gouno:aal2")
 	}
 	return nil
 }

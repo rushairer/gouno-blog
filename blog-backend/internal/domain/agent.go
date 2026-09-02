@@ -111,7 +111,7 @@ type Agent struct {
 	MonthlyTokenBudget      int64            `json:"monthly_token_budget"`
 	LastRunAt               *time.Time       `json:"last_run_at,omitempty"`
 	NextRunAt               *time.Time       `json:"next_run_at,omitempty"`
-	CreatedBy               *string          `json:"created_by,omitempty"`
+	CreatedByPrincipalID    *int64           `json:"created_by_principal_id,omitempty"`
 	CreatedAt               time.Time        `json:"created_at"`
 	UpdatedAt               time.Time        `json:"updated_at"`
 }
@@ -138,7 +138,7 @@ type AgentSkill struct {
 	VersionID                 int64              `json:"version_id"`
 	InputSchema               json.RawMessage    `json:"input_schema"`
 	AllowedTriggers           []AgentTriggerType `json:"allowed_triggers"`
-	CreatedBy                 *string            `json:"created_by,omitempty"`
+	CreatedByPrincipalID      *int64             `json:"created_by_principal_id,omitempty"`
 	CreatedAt                 time.Time          `json:"created_at"`
 	UpdatedAt                 time.Time          `json:"updated_at"`
 }
@@ -155,28 +155,28 @@ const (
 )
 
 type AgentRun struct {
-	ID                int64            `json:"id"`
-	AgentID           int64            `json:"agent_id"`
-	AgentName         string           `json:"agent_name,omitempty"`
-	TriggerType       AgentTriggerType `json:"trigger_type"`
-	TriggeredBy       *string          `json:"triggered_by,omitempty"`
-	ScheduleKey       *string          `json:"-"`
-	Status            AgentRunStatus   `json:"status"`
-	Input             json.RawMessage  `json:"input"`
-	OutputSummary     string           `json:"output_summary"`
-	Provider          ProviderType     `json:"provider"`
-	Model             string           `json:"model"`
-	InputTokens       int64            `json:"input_tokens"`
-	OutputTokens      int64            `json:"output_tokens"`
-	ErrorCode         *string          `json:"error_code,omitempty"`
-	ErrorMessage      *string          `json:"error_message,omitempty"`
-	StartedAt         *time.Time       `json:"started_at,omitempty"`
-	FinishedAt        *time.Time       `json:"finished_at,omitempty"`
-	CreatedAt         time.Time        `json:"created_at"`
-	Citations         []AgentCitation  `json:"citations"`
-	SkillVersionID    *int64           `json:"skill_version_id,omitempty"`
-	WorkflowVersionID *int64           `json:"workflow_version_id,omitempty"`
-	WorkflowRunID     *int64           `json:"workflow_run_id,omitempty"`
+	ID                     int64            `json:"id"`
+	AgentID                int64            `json:"agent_id"`
+	AgentName              string           `json:"agent_name,omitempty"`
+	TriggerType            AgentTriggerType `json:"trigger_type"`
+	TriggeredByPrincipalID *int64           `json:"triggered_by_principal_id,omitempty"`
+	ScheduleKey            *string          `json:"-"`
+	Status                 AgentRunStatus   `json:"status"`
+	Input                  json.RawMessage  `json:"input"`
+	OutputSummary          string           `json:"output_summary"`
+	Provider               ProviderType     `json:"provider"`
+	Model                  string           `json:"model"`
+	InputTokens            int64            `json:"input_tokens"`
+	OutputTokens           int64            `json:"output_tokens"`
+	ErrorCode              *string          `json:"error_code,omitempty"`
+	ErrorMessage           *string          `json:"error_message,omitempty"`
+	StartedAt              *time.Time       `json:"started_at,omitempty"`
+	FinishedAt             *time.Time       `json:"finished_at,omitempty"`
+	CreatedAt              time.Time        `json:"created_at"`
+	Citations              []AgentCitation  `json:"citations"`
+	SkillVersionID         *int64           `json:"skill_version_id,omitempty"`
+	WorkflowVersionID      *int64           `json:"workflow_version_id,omitempty"`
+	WorkflowRunID          *int64           `json:"workflow_run_id,omitempty"`
 }
 
 type ToolRiskLevel string
@@ -223,21 +223,21 @@ const (
 )
 
 type AgentApproval struct {
-	ID              int64           `json:"id"`
-	RunID           int64           `json:"run_id"`
-	ToolCallID      int64           `json:"tool_call_id"`
-	AgentName       string          `json:"agent_name,omitempty"`
-	ActionType      string          `json:"action_type"`
-	TargetType      string          `json:"target_type"`
-	TargetID        *int64          `json:"target_id,omitempty"`
-	ProposedPayload json.RawMessage `json:"proposed_payload"`
-	BeforeSnapshot  json.RawMessage `json:"before_snapshot,omitempty"`
-	Status          ApprovalStatus  `json:"status"`
-	ReviewedBy      *string         `json:"reviewed_by,omitempty"`
-	ReviewNote      *string         `json:"review_note,omitempty"`
-	ReviewedAt      *time.Time      `json:"reviewed_at,omitempty"`
-	ExpiresAt       time.Time       `json:"expires_at"`
-	CreatedAt       time.Time       `json:"created_at"`
+	ID                    int64           `json:"id"`
+	RunID                 int64           `json:"run_id"`
+	ToolCallID            int64           `json:"tool_call_id"`
+	AgentName             string          `json:"agent_name,omitempty"`
+	ActionType            string          `json:"action_type"`
+	TargetType            string          `json:"target_type"`
+	TargetID              *int64          `json:"target_id,omitempty"`
+	ProposedPayload       json.RawMessage `json:"proposed_payload"`
+	BeforeSnapshot        json.RawMessage `json:"before_snapshot,omitempty"`
+	Status                ApprovalStatus  `json:"status"`
+	ReviewedByPrincipalID *int64          `json:"reviewed_by_principal_id,omitempty"`
+	ReviewNote            *string         `json:"review_note,omitempty"`
+	ReviewedAt            *time.Time      `json:"reviewed_at,omitempty"`
+	ExpiresAt             time.Time       `json:"expires_at"`
+	CreatedAt             time.Time       `json:"created_at"`
 }
 
 // MediaCandidate is a governed hand-off from either an approved proposal or
@@ -260,7 +260,7 @@ type MediaCandidate struct {
 	AltText                 string       `json:"alt_text"`
 	MediaAssetID            *int64       `json:"media_asset_id,omitempty"`
 	MediaAssetURL           string       `json:"media_asset_url,omitempty"`
-	ReviewedBy              *string      `json:"reviewed_by,omitempty"`
+	ReviewedByPrincipalID   *int64       `json:"reviewed_by_principal_id,omitempty"`
 	ReviewNote              string       `json:"review_note,omitempty"`
 	ReviewedAt              *time.Time   `json:"reviewed_at,omitempty"`
 	CreatedAt               time.Time    `json:"created_at"`

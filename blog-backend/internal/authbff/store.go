@@ -18,11 +18,16 @@ import (
 var ErrNotFound = errors.New("BFF record not found")
 
 type AuthorizationFlow struct {
-	State        string    `json:"state"`
-	Nonce        string    `json:"nonce"`
-	PKCEVerifier string    `json:"pkce_verifier"`
-	ReturnTo     string    `json:"return_to"`
-	CreatedAt    time.Time `json:"created_at"`
+	State        string `json:"state"`
+	Nonce        string `json:"nonce"`
+	PKCEVerifier string `json:"pkce_verifier"`
+	ReturnTo     string `json:"return_to"`
+	// Purpose is either login or step_up.  A step-up flow is bound to the
+	// pre-existing BFF session handle; that binding never travels through the
+	// browser.
+	Purpose       string    `json:"purpose"`
+	SessionHandle string    `json:"session_handle,omitempty"`
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 type Session struct {
@@ -35,8 +40,61 @@ type Session struct {
 	TokenExpiry  time.Time      `json:"token_expiry"`
 	AuthTime     int64          `json:"auth_time,omitempty"`
 	AMR          []string       `json:"amr,omitempty"`
+	ACR          string         `json:"acr,omitempty"`
 	Claims       map[string]any `json:"claims"`
 	CreatedAt    time.Time      `json:"created_at"`
+}
+
+// RotateSession replaces oldHandle with newHandle in one watched Redis
+// transaction.  It fails closed if logout removed the old session while the
+// authorization-code exchange was in progress.
+func (s *Store) RotateSession(ctx context.Context, oldHandle, newHandle string, previous, session Session, ttl time.Duration) error {
+	if oldHandle == "" || newHandle == "" || oldHandle == newHandle || session.Issuer == "" || session.Subject == "" || session.IDToken == "" || ttl <= 0 {
+		return errors.New("complete distinct session handles and session are required")
+	}
+	plain, err := json.Marshal(session)
+	if err != nil {
+		return err
+	}
+	oldKey, _ := s.key("session", oldHandle)
+	newKey, newAAD := s.key("session", newHandle)
+	sealed, err := s.aead.Encrypt(plain, newAAD)
+	if err != nil {
+		return err
+	}
+	for attempt := 0; attempt < 3; attempt++ {
+		err = s.redis.Watch(ctx, func(tx *redis.Tx) error {
+			exists, watchErr := tx.Exists(ctx, oldKey).Result()
+			if watchErr != nil || exists == 0 {
+				if watchErr != nil {
+					return watchErr
+				}
+				return ErrNotFound
+			}
+			_, watchErr = tx.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
+				pipe.Set(ctx, newKey, sealed, ttl)
+				pipe.Del(ctx, oldKey)
+				if previous.Issuer != "" && previous.Subject != "" {
+					pipe.SRem(ctx, s.identityIndexKey("sub", previous.Issuer, previous.Subject), oldHandle)
+				}
+				pipe.SAdd(ctx, s.identityIndexKey("sub", session.Issuer, session.Subject), newHandle)
+				pipe.Expire(ctx, s.identityIndexKey("sub", session.Issuer, session.Subject), ttl)
+				if previous.Issuer != "" && previous.SID != "" {
+					pipe.SRem(ctx, s.identityIndexKey("sid", previous.Issuer, previous.SID), oldHandle)
+				}
+				if session.SID != "" {
+					pipe.SAdd(ctx, s.identityIndexKey("sid", session.Issuer, session.SID), newHandle)
+					pipe.Expire(ctx, s.identityIndexKey("sid", session.Issuer, session.SID), ttl)
+				}
+				return nil
+			})
+			return watchErr
+		}, oldKey, newKey)
+		if !errors.Is(err, redis.TxFailedErr) {
+			return err
+		}
+	}
+	return errors.New("session changed concurrently during rotation")
 }
 
 type Store struct {

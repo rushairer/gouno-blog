@@ -57,11 +57,11 @@ type ContentCandidateSet struct {
 }
 
 type AIFeedback struct {
-	ID         int64     `json:"id"`
-	TargetType string    `json:"target_type"`
-	TargetID   int64     `json:"target_id"`
-	Label      string    `json:"label"`
-	Note       string    `json:"note"`
-	CreatedBy  string    `json:"created_by"`
-	CreatedAt  time.Time `json:"created_at"`
+	ID                   int64     `json:"id"`
+	TargetType           string    `json:"target_type"`
+	TargetID             int64     `json:"target_id"`
+	Label                string    `json:"label"`
+	Note                 string    `json:"note"`
+	CreatedByPrincipalID int64     `json:"created_by_principal_id"`
+	CreatedAt            time.Time `json:"created_at"`
 }

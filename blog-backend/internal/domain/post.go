@@ -64,17 +64,17 @@ type TagSummary struct {
 }
 
 type Comment struct {
-	ID            int64     `json:"id"`
-	PostID        int64     `json:"post_id"`
-	ParentID      *int64    `json:"parent_id,omitempty"`
-	Author        string    `json:"author"`
-	AuthorSubject *string   `json:"-"`
-	AuthorType    string    `json:"author_type"`
-	Content       string    `json:"content"`
-	Status        string    `json:"status"`
-	IsVisible     bool      `json:"is_visible"`
-	ReportCount   int       `json:"report_count,omitempty"`
-	CreatedAt     time.Time `json:"created_at"`
+	ID                int64     `json:"id"`
+	PostID            int64     `json:"post_id"`
+	ParentID          *int64    `json:"parent_id,omitempty"`
+	Author            string    `json:"author"`
+	AuthorPrincipalID *int64    `json:"-"`
+	AuthorType        string    `json:"author_type"`
+	Content           string    `json:"content"`
+	Status            string    `json:"status"`
+	IsVisible         bool      `json:"is_visible"`
+	ReportCount       int       `json:"report_count,omitempty"`
+	CreatedAt         time.Time `json:"created_at"`
 }
 
 type Notification struct {
@@ -124,7 +124,6 @@ type MediaAsset struct {
 	ContentType          string    `json:"content_type"`
 	SizeBytes            int64     `json:"size_bytes"`
 	AltText              string    `json:"alt_text"`
-	CreatedBy            *string   `json:"created_by,omitempty"`
 	CreatedByPrincipalID *int64    `json:"created_by_principal_id,omitempty"`
 	UpdatedByPrincipalID *int64    `json:"updated_by_principal_id,omitempty"`
 	CreatedAt            time.Time `json:"created_at"`

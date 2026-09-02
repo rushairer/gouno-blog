@@ -181,6 +181,9 @@ services:
       BLOG_OIDC_REDIRECT_URL: https://${BLOG_DOMAIN:?set BLOG_DOMAIN}/api/auth/callback
       BLOG_OIDC_POST_LOGOUT_URL: https://${BLOG_DOMAIN:?set BLOG_DOMAIN}/api/auth/logout/callback
       BLOG_OIDC_RESOURCE: https://${BLOG_DOMAIN:?set BLOG_DOMAIN}/api
+
+      # Exact URI registered at Google; never accept a per-profile callback.
+      BLOG_CONNECTOR_OAUTH_REDIRECT_URL: https://${BLOG_DOMAIN:?set BLOG_DOMAIN}/api/auth/connectors/google/callback
       BLOG_OIDC_SCOPES: "openid profile email"
       BLOG_BFF_TINK_KEYSET_PATH: /run/secrets/blog_bff_tink_keyset
       BLOG_VISITOR_SECRET_FILE: /run/secrets/blog_visitor_secret

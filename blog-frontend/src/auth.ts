@@ -75,35 +75,18 @@ export const gossoClient = createGossoClient<BlogUserProfile>({
   sessionRefreshEndpoint: "/api/auth/refresh",
   authorizeEndpoint: "/api/auth/login",
   logoutEndpoint: "/api/auth/logout",
-  csrfCookieName: "blog_csrf_token",
+  csrfCookieName: "__Host-blog-csrf",
 });
 
 export const redirectToAuthorize = gossoClient.redirectToAuthorize;
 export const logout = gossoClient.logout;
 export const apiFetch = gossoClient.apiFetch;
 
-export async function stepUpMfa(
-  code: string,
-  type: "totp" | "backup_code" = "totp",
-): Promise<{ auth_time: number; amr: string[] }> {
-  const res = await apiFetch("/api/auth/mfa/step-up", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ code, type }),
-  });
-  if (!res.ok) {
-    let msg = "验证失败，请稍后重试。";
-    try {
-      const data = await res.json();
-      if (data.error) msg = data.error;
-      else if (data.message) msg = data.message;
-    } catch {
-      // fallback
-    }
-    throw new Error(msg);
-  }
-  const json = await res.json();
-  return json.data || json;
+// MFA verification is owned by the OIDC provider.  This is a top-level
+// navigation, not a fetch, so no authorization code or provider token is ever
+// made available to application JavaScript.
+export function stepUpMfa(returnTo = window.location.pathname + window.location.search): void {
+  window.location.assign(`/api/auth/mfa/step-up?return_to=${encodeURIComponent(returnTo)}`);
 }
 
 export { getBlogRoleLabel } from "./constants";

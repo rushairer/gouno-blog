@@ -3,11 +3,16 @@
 All notable changes to the complete Gouno Blog distribution are documented in
 this file. The format follows Keep a Changelog and Semantic Versioning.
 
-## [Unreleased]
+## [1.5.5] - 2026-09-02
+
+### Changed
+- Complete AI and Community identity hard cutover to `blog_principal_id`, removing legacy bare subject columns and parameters across database schema, repositories, controllers, tools, and background tasks.
+- Backfill unmapped legacy development rows to the earliest active owner principal.
+- Enforce AAL2 baseline and 10-minute transaction MFA step-up requirements on sensitive AI, ownership, and management routes.
 
 ### Added
-
 - Add same-origin Step-Up MFA endpoint (`/api/auth/mfa/step-up`) in the Blog BFF to handle multi-factor verification server-to-server and refresh session claims within the confidential BFF boundary.
+- Database migrations 085 (Connector PKCE), 086 (Community principal identity), 087 (AI principal columns), 088 (AI principal backfill), and 089 (drop legacy identity columns).
 
 ## [1.5.4] - 2026-09-01
 

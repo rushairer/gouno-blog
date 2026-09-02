@@ -56,7 +56,7 @@ func (r *AgentRepository) CreateMediaCandidateFromRun(ctx context.Context, runID
 
 func (r *AgentRepository) ListMediaCandidates(ctx context.Context) ([]*domain.MediaCandidate, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT id,post_id,source_run_id,source_approval_id,headline,brief,platform,provider,model,input_tokens,output_tokens,media_asset_id,COALESCE((SELECT url FROM media_assets WHERE id=ai_media_candidates.media_asset_id),''),
-		generation_status,safety_status,copyright_status,alt_text,reviewed_by,review_note,reviewed_at,created_at,workflow_run_id,COALESCE(workflow_step_id,''),interaction_task_id,COALESCE(post_version_token,''),generation_attempt,selected_at,applied_version_id,COALESCE(error_code,''),COALESCE(error_message,''),placement,COALESCE(anchor,''),selected,applied_at,generation_started_at,generation_deadline_at,cancelled_at,regeneration_instruction
+		generation_status,safety_status,copyright_status,alt_text,reviewed_by_principal_id,review_note,reviewed_at,created_at,workflow_run_id,COALESCE(workflow_step_id,''),interaction_task_id,COALESCE(post_version_token,''),generation_attempt,selected_at,applied_version_id,COALESCE(error_code,''),COALESCE(error_message,''),placement,COALESCE(anchor,''),selected,applied_at,generation_started_at,generation_deadline_at,cancelled_at,regeneration_instruction
 		FROM ai_media_candidates ORDER BY created_at DESC`)
 	if err != nil {
 		return nil, err
@@ -67,7 +67,7 @@ func (r *AgentRepository) ListMediaCandidates(ctx context.Context) ([]*domain.Me
 		var item domain.MediaCandidate
 		if err := rows.Scan(&item.ID, &item.PostID, &item.SourceRunID, &item.SourceApprovalID, &item.Headline,
 			&item.Brief, &item.Platform, &item.Provider, &item.Model, &item.InputTokens, &item.OutputTokens, &item.MediaAssetID, &item.MediaAssetURL, &item.GenerationStatus,
-			&item.SafetyStatus, &item.CopyrightStatus, &item.AltText, &item.ReviewedBy, &item.ReviewNote,
+			&item.SafetyStatus, &item.CopyrightStatus, &item.AltText, &item.ReviewedByPrincipalID, &item.ReviewNote,
 			&item.ReviewedAt, &item.CreatedAt, &item.WorkflowRunID, &item.WorkflowStepID, &item.InteractionTaskID, &item.PostVersionToken, &item.GenerationAttempt, &item.SelectedAt, &item.AppliedVersionID, &item.ErrorCode, &item.ErrorMessage, &item.Placement, &item.Anchor, &item.Selected, &item.AppliedAt, &item.GenerationStartedAt, &item.GenerationDeadlineAt, &item.CancelledAt, &item.RegenerationInstruction); err != nil {
 			return nil, err
 		}
@@ -188,10 +188,10 @@ func (r *AgentRepository) ClaimMediaGeneration(ctx context.Context, id int64) (*
 	err := r.db.QueryRowContext(ctx, `UPDATE ai_media_candidates SET generation_status='generating',generation_attempt=generation_attempt+1,error_code=NULL,error_message=NULL,generation_started_at=NOW(),generation_deadline_at=NOW()+INTERVAL '15 minutes',cancelled_at=NULL
 		WHERE id=$1 AND generation_status IN ('brief_ready','ready_to_generate','failed','cancelled')
 		RETURNING id,post_id,source_run_id,source_approval_id,headline,brief,platform,provider,model,input_tokens,output_tokens,media_asset_id,
-		generation_status,safety_status,copyright_status,alt_text,reviewed_by,review_note,reviewed_at,created_at,generation_attempt,regeneration_instruction`, id).Scan(
+		generation_status,safety_status,copyright_status,alt_text,reviewed_by_principal_id,review_note,reviewed_at,created_at,generation_attempt,regeneration_instruction`, id).Scan(
 		&item.ID, &item.PostID, &item.SourceRunID, &item.SourceApprovalID, &item.Headline, &item.Brief, &item.Platform,
 		&item.Provider, &item.Model, &item.InputTokens, &item.OutputTokens, &item.MediaAssetID, &item.GenerationStatus,
-		&item.SafetyStatus, &item.CopyrightStatus, &item.AltText, &item.ReviewedBy, &item.ReviewNote, &item.ReviewedAt, &item.CreatedAt, &item.GenerationAttempt, &item.RegenerationInstruction)
+		&item.SafetyStatus, &item.CopyrightStatus, &item.AltText, &item.ReviewedByPrincipalID, &item.ReviewNote, &item.ReviewedAt, &item.CreatedAt, &item.GenerationAttempt, &item.RegenerationInstruction)
 	return &item, err
 }
 
@@ -245,7 +245,7 @@ func (r *AgentRepository) CancelMediaGeneration(ctx context.Context, candidateID
 	return nil
 }
 
-func (r *AgentRepository) ReviewMediaCandidate(ctx context.Context, id int64, action, reviewer, note string) error {
+func (r *AgentRepository) ReviewMediaCandidate(ctx context.Context, id int64, action string, reviewerPrincipalID int64, note string) error {
 	status, safety, copyright := "", "", ""
 	switch action {
 	case "ready":
@@ -256,8 +256,8 @@ func (r *AgentRepository) ReviewMediaCandidate(ctx context.Context, id int64, ac
 		return errors.New("invalid media candidate review")
 	}
 	result, err := r.db.ExecContext(ctx, `UPDATE ai_media_candidates SET generation_status=$2,safety_status=$3,
-		copyright_status=$4,reviewed_by=$5,review_note=$6,reviewed_at=NOW()
-		WHERE id=$1 AND generation_status='brief_ready'`, id, status, safety, copyright, reviewer, note)
+		copyright_status=$4,reviewed_by_principal_id=$5,review_note=$6,reviewed_at=NOW()
+		WHERE id=$1 AND generation_status='brief_ready'`, id, status, safety, copyright, reviewerPrincipalID, note)
 	if err != nil {
 		return err
 	}

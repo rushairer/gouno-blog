@@ -1,9 +1,16 @@
+// Package connector is an in-development, isolated integration module.
+//
+// IMPORTANT: Do not change its OAuth, credential, delivery, Sandbox, or
+// provider behaviour without an explicit user instruction naming connector
+// work. It must not be wired into core Blog business flows by default.
 package connector
 
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -56,14 +63,19 @@ type Service struct {
 	oauthAuthorize string
 	oauthToken     string
 	searchConsole  string
+	redirectURL    string
 	transactor     *repository.Transactor
 }
 
-func NewService(db *sql.DB, secrets *secretbox.Box, transactor *repository.Transactor) *Service {
+func NewService(db *sql.DB, secrets *secretbox.Box, transactor *repository.Transactor, redirectURL ...string) *Service {
 	if transactor == nil {
 		panic("connector.NewService: transactor is required")
 	}
-	return &Service{db: db, secrets: secrets, transactor: transactor, httpClient: &http.Client{Timeout: 15 * time.Second}, oauthAuthorize: "https://accounts.google.com/o/oauth2/v2/auth", oauthToken: "https://oauth2.googleapis.com/token", searchConsole: "https://searchconsole.googleapis.com/webmasters/v3/sites/"}
+	callback := ""
+	if len(redirectURL) > 0 {
+		callback = strings.TrimSpace(redirectURL[0])
+	}
+	return &Service{db: db, secrets: secrets, transactor: transactor, httpClient: &http.Client{Timeout: 15 * time.Second}, oauthAuthorize: "https://accounts.google.com/o/oauth2/v2/auth", oauthToken: "https://oauth2.googleapis.com/token", searchConsole: "https://searchconsole.googleapis.com/webmasters/v3/sites/", redirectURL: callback}
 }
 
 func validKind(kind string) bool {
@@ -181,6 +193,9 @@ func (s *Service) BeginOAuth(ctx context.Context, profileID int64) (string, erro
 // non-sandbox connector. The profile config supplies its registered OAuth
 // client and callback; the Google endpoints remain fixed in code.
 func (s *Service) BeginSearchConsoleOAuth(ctx context.Context, profileID int64) (string, string, error) {
+	if s.redirectURL == "" {
+		return "", "", ErrInvalid
+	}
 	var raw json.RawMessage
 	var kind string
 	if err := s.db.QueryRowContext(ctx, `SELECT kind,config FROM ai_connector_profiles WHERE id=$1 AND sandbox=FALSE AND enabled=TRUE`, profileID).Scan(&kind, &raw); err != nil {
@@ -200,7 +215,24 @@ func (s *Service) BeginSearchConsoleOAuth(ctx context.Context, profileID int64) 
 	if err != nil {
 		return "", "", err
 	}
-	query := url.Values{"client_id": {config.ClientID}, "redirect_uri": {config.RedirectURI}, "response_type": {"code"}, "scope": {"https://www.googleapis.com/auth/webmasters.readonly"}, "access_type": {"offline"}, "prompt": {"consent"}, "state": {state}}
+	verifierBytes := make([]byte, 48)
+	if _, err := rand.Read(verifierBytes); err != nil {
+		return "", "", err
+	}
+	verifier := base64.RawURLEncoding.EncodeToString(verifierBytes)
+	ciphertext, nonce, err := s.secrets.Encrypt(verifier)
+	if err != nil {
+		return "", "", err
+	}
+	result, err := s.db.ExecContext(ctx, `UPDATE ai_connector_profiles SET oauth_pkce_ciphertext=$2,oauth_pkce_nonce=$3 WHERE id=$1 AND oauth_state=$4 AND oauth_state_expires_at>NOW()`, profileID, ciphertext, nonce, state)
+	if err != nil {
+		return "", "", err
+	}
+	if n, _ := result.RowsAffected(); n != 1 {
+		return "", "", ErrNotFound
+	}
+	challenge := sha256.Sum256([]byte(verifier))
+	query := url.Values{"client_id": {config.ClientID}, "redirect_uri": {s.redirectURL}, "response_type": {"code"}, "scope": {"https://www.googleapis.com/auth/webmasters.readonly"}, "access_type": {"offline"}, "prompt": {"consent"}, "state": {state}, "code_challenge": {base64.RawURLEncoding.EncodeToString(challenge[:])}, "code_challenge_method": {"S256"}}
 	return state, s.oauthAuthorize + "?" + query.Encode(), nil
 }
 
@@ -225,13 +257,16 @@ func (s *Service) CompleteOAuthMock(ctx context.Context, state, code string) err
 // CompleteSearchConsoleOAuth exchanges a short-lived authorization code for
 // encrypted refresh-token material. Only Google OAuth endpoints are used.
 func (s *Service) CompleteSearchConsoleOAuth(ctx context.Context, state, code string) error {
+	if s.redirectURL == "" {
+		return ErrInvalid
+	}
 	if strings.TrimSpace(state) == "" || strings.TrimSpace(code) == "" {
 		return ErrInvalid
 	}
 	var raw json.RawMessage
-	var ciphertext, nonce []byte
+	var ciphertext, nonce, pkceCiphertext, pkceNonce []byte
 	var keyVersion int
-	if err := s.db.QueryRowContext(ctx, `SELECT config,credential_ciphertext,credential_nonce,key_version FROM ai_connector_profiles WHERE oauth_state=$1 AND oauth_state_expires_at>NOW() AND kind='search_console' AND sandbox=FALSE`, state).Scan(&raw, &ciphertext, &nonce, &keyVersion); err != nil {
+	if err := s.db.QueryRowContext(ctx, `SELECT config,credential_ciphertext,credential_nonce,key_version,oauth_pkce_ciphertext,oauth_pkce_nonce FROM ai_connector_profiles WHERE oauth_state=$1 AND oauth_state_expires_at>NOW() AND kind='search_console' AND sandbox=FALSE`, state).Scan(&raw, &ciphertext, &nonce, &keyVersion, &pkceCiphertext, &pkceNonce); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrNotFound
 		}
@@ -245,7 +280,11 @@ func (s *Service) CompleteSearchConsoleOAuth(ctx context.Context, state, code st
 	if err != nil || strings.TrimSpace(clientSecret) == "" {
 		return ErrInvalid
 	}
-	form := url.Values{"code": {code}, "client_id": {config.ClientID}, "client_secret": {clientSecret}, "redirect_uri": {config.RedirectURI}, "grant_type": {"authorization_code"}}
+	verifier, err := s.secrets.Decrypt(pkceCiphertext, pkceNonce, s.secrets.KeyVersion())
+	if err != nil || verifier == "" {
+		return ErrInvalid
+	}
+	form := url.Values{"code": {code}, "client_id": {config.ClientID}, "client_secret": {clientSecret}, "redirect_uri": {s.redirectURL}, "code_verifier": {verifier}, "grant_type": {"authorization_code"}}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.oauthToken, strings.NewReader(form.Encode()))
 	if err != nil {
 		return err
@@ -274,7 +313,7 @@ func (s *Service) CompleteSearchConsoleOAuth(ctx context.Context, state, code st
 	if err != nil {
 		return err
 	}
-	result, err := s.db.ExecContext(ctx, `UPDATE ai_connector_profiles SET credential_ciphertext=$2,credential_nonce=$3,credential_last4=$4,key_version=$5,oauth_state=NULL,oauth_state_expires_at=NULL,updated_at=NOW() WHERE oauth_state=$1 AND oauth_state_expires_at>NOW() AND kind='search_console' AND sandbox=FALSE`, state, ciphertext, nonce, secretbox.Last4(token.RefreshToken), s.secrets.KeyVersion())
+	result, err := s.db.ExecContext(ctx, `UPDATE ai_connector_profiles SET credential_ciphertext=$2,credential_nonce=$3,credential_last4=$4,key_version=$5,oauth_state=NULL,oauth_state_expires_at=NULL,oauth_pkce_ciphertext=NULL,oauth_pkce_nonce=NULL,updated_at=NOW() WHERE oauth_state=$1 AND oauth_state_expires_at>NOW() AND kind='search_console' AND sandbox=FALSE`, state, ciphertext, nonce, secretbox.Last4(token.RefreshToken), s.secrets.KeyVersion())
 	if err != nil {
 		return err
 	}

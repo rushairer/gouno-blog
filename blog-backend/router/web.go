@@ -53,6 +53,9 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 		server.Use(opts.BFFClient.SessionMiddleware())
 		opts.BFFClient.RegisterRoutes(server)
 	}
+	if opts.AgentCtrl != nil {
+		server.GET("/api/auth/connectors/google/callback", opts.AgentCtrl.CompleteSearchConsoleOAuthCallback)
+	}
 	server.GET("/healthz", func(ctx *gin.Context) {
 		if opts.DB == nil || opts.DB.PingContext(ctx.Request.Context()) != nil {
 			ctx.Status(http.StatusServiceUnavailable)
@@ -174,7 +177,7 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 		api.POST("/comments/:id/report", communityCtrl.ReportComment)
 
 		me := api.Group("/me")
-		me.Use(userAuth, accessAuth)
+		me.Use(userAuth, accessAuth, middleware.RequireActiveBlogMembership())
 		{
 			me.GET("/blog-session", accessCtrl.Session)
 			me.GET("/notifications", communityCtrl.ListNotifications)
@@ -187,7 +190,7 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 		}
 
 		members := api.Group("/admin/members")
-		members.Use(userAuth, accessAuth, middleware.RequireBlogPermission(accessService, access.PermissionManageMembers))
+		members.Use(userAuth, accessAuth, middleware.RequireBlogPermission(accessService, access.PermissionManageMembers), middleware.RequireAAL2(), middleware.RequireRecentMFAForUnsafeMethods(), middleware.AuditSensitiveChanges(accessService))
 		{
 			members.GET("", accessCtrl.ListMembers)
 			members.PUT("/:principalID", accessCtrl.UpdateMember)
@@ -257,6 +260,7 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 		// Site Settings (Admins, Owners)
 		siteSettings := api.Group("")
 		siteSettings.Use(userAuth, accessAuth, middleware.RequireBlogPermission(accessService, access.PermissionManageSite))
+		siteSettings.Use(middleware.RequireAAL2(), middleware.RequireRecentMFAForUnsafeMethods(), middleware.AuditSensitiveChanges(accessService))
 		{
 			siteSettings.GET("/admin/settings", contentCtrl.GetSiteSettings)
 			siteSettings.PUT("/admin/settings", contentCtrl.UpdateSiteSettings)
@@ -264,13 +268,13 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 
 		// AI Operations & Automated Agents (AI Managers, Admins, Owners)
 		aiOps := api.Group("")
-		aiOps.Use(userAuth, accessAuth, middleware.RequireBlogPermission(accessService, access.PermissionManageAI))
+		aiOps.Use(userAuth, accessAuth, middleware.RequireBlogPermission(accessService, access.PermissionManageAI), middleware.RequireAAL2(), middleware.RequireRecentMFAForUnsafeMethods(), middleware.AuditSensitiveChanges(accessService))
 		{
 			if agentCtrl != nil {
 				aiOps.POST("/admin/ai-workflows/draft", agentCtrl.DraftWorkflow)
 				aiOps.POST("/admin/ai-workflows/agent-drafts", agentCtrl.DraftWorkflowAgents)
 				aiOps.GET("/admin/provider-profiles", agentCtrl.ListProviders)
-				aiOps.GET("/admin/provider-profiles/export", agentCtrl.ExportProviders)
+				aiOps.GET("/admin/provider-profiles/export", middleware.RequireRecentMFA(), agentCtrl.ExportProviders)
 				aiOps.POST("/admin/provider-profiles/import", agentCtrl.ImportProviders)
 				aiOps.POST("/admin/provider-profiles", agentCtrl.CreateProvider)
 				aiOps.PUT("/admin/provider-profiles/:id", agentCtrl.UpdateProvider)
@@ -343,6 +347,7 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 				aiOps.GET("/admin/ai-connectors", agentCtrl.ListConnectorProfiles)
 				aiOps.POST("/admin/ai-connectors", agentCtrl.SaveConnectorProfile)
 				aiOps.POST("/admin/ai-connectors/:id/oauth/start", agentCtrl.BeginConnectorOAuth)
+				aiOps.GET("/admin/ai-connectors/:id/oauth/start", middleware.RequireRecentMFA(), agentCtrl.BeginSearchConsoleOAuthRedirect)
 				aiOps.POST("/admin/ai-connectors/oauth/callback", agentCtrl.CompleteConnectorOAuth)
 				aiOps.POST("/admin/ai-connectors/:id/search-console/summary", agentCtrl.SearchConsoleSummary)
 				aiOps.GET("/admin/ai-connector-outbox", agentCtrl.ListConnectorOutbox)

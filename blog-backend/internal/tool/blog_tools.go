@@ -38,7 +38,7 @@ func NewBlogRegistry(posts *service.PostService, community *service.CommunitySer
 			Configuration:  schema(`{"feeds":{"type":"array","minItems":1,"maxItems":10,"items":{"type":"object","additionalProperties":false,"required":["name","url"],"properties":{"name":{"type":"string","maxLength":120},"url":{"type":"string","format":"uri"}}},"max_per_feed":{"type":"integer","minimum":1,"maximum":20},"max_items":{"type":"integer","minimum":1,"maximum":50}}`, "feeds"),
 			DefaultBinding: json.RawMessage(`{"feeds":[{"name":"OpenAI News","url":"https://openai.com/news/rss.xml"},{"name":"Google Blog","url":"https://blog.google/rss/"},{"name":"TechCrunch AI","url":"https://techcrunch.com/category/artificial-intelligence/feed/"}],"max_per_feed":8,"max_items":20}`),
 			Output:         json.RawMessage(`{"type":"object","properties":{"items":{"type":"array"}}}`), Surfaces: []string{"agent"}, Risk: domain.ToolRiskRead,
-			Execute:        fetchRSS,
+			Execute: fetchRSS,
 		},
 		Definition{
 			Name: "data.json_parse", Description: "Parse a bounded JSON object from a model output.",
@@ -196,7 +196,6 @@ func NewBlogRegistry(posts *service.PostService, community *service.CommunitySer
 	)
 }
 
-
 func schema(properties string, required ...string) json.RawMessage {
 	value := `{"type":"object","additionalProperties":false,"properties":` + properties
 	if len(required) > 0 {
@@ -316,9 +315,6 @@ func (t *BlogTools) listPendingComments(ctx context.Context, raw json.RawMessage
 	comments, total, err := t.community.ListAdminComments(ctx, "pending", args.ReportedOnly, 1, args.Limit)
 	if err != nil {
 		return nil, err
-	}
-	for _, comment := range comments {
-		comment.AuthorSubject = nil
 	}
 	return map[string]any{"list": comments, "total": total}, nil
 }

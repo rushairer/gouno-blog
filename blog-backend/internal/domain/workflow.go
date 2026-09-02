@@ -60,7 +60,7 @@ type Workflow struct {
 	ResourceQueryLastCount   *int                   `json:"resource_query_last_count,omitempty"`
 	ResourceQueryLastRunAt   *time.Time             `json:"resource_query_last_run_at,omitempty"`
 	ResourceQueryEmptyPolicy string                 `json:"resource_query_empty_policy"`
-	CreatedBy                *string                `json:"created_by,omitempty"`
+	CreatedByPrincipalID     *int64                 `json:"created_by_principal_id,omitempty"`
 	CreatedAt                time.Time              `json:"created_at"`
 	UpdatedAt                time.Time              `json:"updated_at"`
 }
@@ -97,25 +97,27 @@ type ResourceQuery struct {
 }
 
 type WorkflowRun struct {
-	ID                int64           `json:"id"`
-	WorkflowID        int64           `json:"workflow_id"`
-	WorkflowVersionID int64           `json:"workflow_version_id"`
-	DryRun            bool            `json:"dry_run"`
-	Status            string          `json:"status"`
-	Input             json.RawMessage `json:"input"`
-	Output            json.RawMessage `json:"output,omitempty"`
-	ErrorCode         *string         `json:"error_code,omitempty"`
-	ErrorMessage      *string         `json:"error_message,omitempty"`
-	InputTokens       int64           `json:"input_tokens"`
-	OutputTokens      int64           `json:"output_tokens"`
-	TriggeredBy       *string         `json:"triggered_by,omitempty"`
-	ScheduleKey       *string         `json:"schedule_key,omitempty"`
-	RetryOfRunID      *int64          `json:"retry_of_run_id,omitempty"`
-	RetryStepID       *string         `json:"retry_step_id,omitempty"`
-	RetryIterations   []int           `json:"retry_iterations,omitempty"`
-	StartedAt         *time.Time      `json:"started_at,omitempty"`
-	FinishedAt        *time.Time      `json:"finished_at,omitempty"`
-	CreatedAt         time.Time       `json:"created_at"`
+	ID                     int64           `json:"id"`
+	WorkflowID             int64           `json:"workflow_id"`
+	WorkflowVersionID      int64           `json:"workflow_version_id"`
+	DryRun                 bool            `json:"dry_run"`
+	Status                 string          `json:"status"`
+	Input                  json.RawMessage `json:"input"`
+	Output                 json.RawMessage `json:"output,omitempty"`
+	ErrorCode              *string         `json:"error_code,omitempty"`
+	ErrorMessage           *string         `json:"error_message,omitempty"`
+	InputTokens            int64           `json:"input_tokens"`
+	OutputTokens           int64           `json:"output_tokens"`
+	TriggeredByPrincipalID *int64          `json:"triggered_by_principal_id,omitempty"`
+	TriggerKind            string          `json:"trigger_kind"`
+	SourceRef              string          `json:"source_ref,omitempty"`
+	ScheduleKey            *string         `json:"schedule_key,omitempty"`
+	RetryOfRunID           *int64          `json:"retry_of_run_id,omitempty"`
+	RetryStepID            *string         `json:"retry_step_id,omitempty"`
+	RetryIterations        []int           `json:"retry_iterations,omitempty"`
+	StartedAt              *time.Time      `json:"started_at,omitempty"`
+	FinishedAt             *time.Time      `json:"finished_at,omitempty"`
+	CreatedAt              time.Time       `json:"created_at"`
 }
 
 type WorkflowStepRun struct {
@@ -142,22 +144,22 @@ const (
 )
 
 type WorkflowInteractionTask struct {
-	ID              int64                     `json:"id"`
-	WorkflowRunID   *int64                    `json:"workflow_run_id,omitempty"`
-	AgentRunID      *int64                    `json:"agent_run_id,omitempty"`
-	WorkflowStepID  string                    `json:"workflow_step_id,omitempty"`
-	InteractionType string                    `json:"interaction_type"`
-	Schema          json.RawMessage           `json:"schema"`
-	Payload         json.RawMessage           `json:"payload"`
-	Options         json.RawMessage           `json:"options"`
-	Status          WorkflowInteractionStatus `json:"status"`
-	ResumeToken     string                    `json:"resume_token,omitempty"`
-	Response        json.RawMessage           `json:"response,omitempty"`
-	ExpiresAt       *time.Time                `json:"expires_at,omitempty"`
-	ResolvedBy      *string                   `json:"resolved_by,omitempty"`
-	ResolvedAt      *time.Time                `json:"resolved_at,omitempty"`
-	CreatedAt       time.Time                 `json:"created_at"`
-	UpdatedAt       time.Time                 `json:"updated_at"`
+	ID                    int64                     `json:"id"`
+	WorkflowRunID         *int64                    `json:"workflow_run_id,omitempty"`
+	AgentRunID            *int64                    `json:"agent_run_id,omitempty"`
+	WorkflowStepID        string                    `json:"workflow_step_id,omitempty"`
+	InteractionType       string                    `json:"interaction_type"`
+	Schema                json.RawMessage           `json:"schema"`
+	Payload               json.RawMessage           `json:"payload"`
+	Options               json.RawMessage           `json:"options"`
+	Status                WorkflowInteractionStatus `json:"status"`
+	ResumeToken           string                    `json:"resume_token,omitempty"`
+	Response              json.RawMessage           `json:"response,omitempty"`
+	ExpiresAt             *time.Time                `json:"expires_at,omitempty"`
+	ResolvedByPrincipalID *int64                    `json:"resolved_by_principal_id,omitempty"`
+	ResolvedAt            *time.Time                `json:"resolved_at,omitempty"`
+	CreatedAt             time.Time                 `json:"created_at"`
+	UpdatedAt             time.Time                 `json:"updated_at"`
 }
 
 type WorkflowRunEvent struct {

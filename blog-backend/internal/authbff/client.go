@@ -1,10 +1,8 @@
 package authbff
 
 import (
-	"bytes"
 	"context"
 	"crypto/subtle"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -112,6 +110,23 @@ func NewClient(ctx context.Context, config Config, store *Store, httpClient *htt
 }
 
 func (c *Client) Begin(ctx context.Context, returnTo string) (handle, authorizationURL string, err error) {
+	return c.begin(ctx, returnTo, "login", "", "")
+}
+
+// BeginStepUp starts a fresh, browser-navigated OIDC authorization request.
+// The old BFF handle is stored only in the encrypted server-side flow record.
+func (c *Client) BeginStepUp(ctx context.Context, sessionHandle, returnTo string) (handle, authorizationURL string, err error) {
+	session, err := c.store.GetSession(ctx, sessionHandle)
+	if err != nil || session.Issuer != c.config.Issuer || session.Subject == "" {
+		return "", "", errors.New("unauthorized")
+	}
+	if _, err := c.sessionRemainingTTL(session); err != nil {
+		return "", "", err
+	}
+	return c.begin(ctx, returnTo, "step_up", sessionHandle, "600")
+}
+
+func (c *Client) begin(ctx context.Context, returnTo, purpose, sessionHandle, maxAge string) (handle, authorizationURL string, err error) {
 	returnTo, err = SafeReturnTo(returnTo)
 	if err != nil {
 		return "", "", err
@@ -130,16 +145,22 @@ func (c *Client) Begin(ctx context.Context, returnTo string) (handle, authorizat
 	}
 	verifier := oauth2.GenerateVerifier()
 	flow := AuthorizationFlow{
-		State: state, Nonce: nonce, PKCEVerifier: verifier, ReturnTo: returnTo, CreatedAt: c.flowNow().UTC(),
+		State: state, Nonce: nonce, PKCEVerifier: verifier, ReturnTo: returnTo,
+		Purpose: purpose, SessionHandle: sessionHandle, CreatedAt: c.flowNow().UTC(),
 	}
 	if err := c.store.PutFlow(ctx, handle, flow, c.config.FlowTTL); err != nil {
 		return "", "", err
 	}
-	return handle, c.oauth.AuthCodeURL(state,
+	options := []oauth2.AuthCodeOption{
 		oauth2.S256ChallengeOption(verifier),
 		oidc.Nonce(nonce),
 		oauth2.SetAuthURLParam("resource", c.config.Resource),
-	), nil
+		oauth2.SetAuthURLParam("acr_values", c.config.RequiredACR),
+	}
+	if maxAge != "" {
+		options = append(options, oauth2.SetAuthURLParam("max_age", maxAge))
+	}
+	return handle, c.oauth.AuthCodeURL(state, options...), nil
 }
 
 func (c *Client) Complete(ctx context.Context, flowHandle string, query url.Values) (sessionHandle string, session Session, returnTo string, err error) {
@@ -185,6 +206,7 @@ func (c *Client) Complete(ctx context.Context, flowHandle string, query url.Valu
 		SID      string   `json:"sid"`
 		AuthTime int64    `json:"auth_time"`
 		AMR      []string `json:"amr"`
+		ACR      string   `json:"acr"`
 	}
 	if err := idToken.Claims(&claims); err != nil {
 		return "", session, "", fmt.Errorf("decode ID token claims: %w", err)
@@ -196,6 +218,9 @@ func (c *Client) Complete(ctx context.Context, flowHandle string, query url.Valu
 	if claims.Issuer != c.config.Issuer || claims.Subject == "" {
 		return "", session, "", errors.New("ID token identity claims are incomplete")
 	}
+	if claims.ACR != c.config.RequiredACR || claims.AuthTime <= 0 || len(claims.AMR) == 0 {
+		return "", session, "", errors.New("ID token does not satisfy required strong authentication")
+	}
 	sessionHandle, err = RandomHandle()
 	if err != nil {
 		return "", session, "", err
@@ -203,11 +228,32 @@ func (c *Client) Complete(ctx context.Context, flowHandle string, query url.Valu
 	session = Session{
 		Issuer: claims.Issuer, Subject: claims.Subject, SID: claims.SID,
 		AccessToken: token.AccessToken, RefreshToken: token.RefreshToken, IDToken: rawIDToken,
-		TokenExpiry: token.Expiry, AuthTime: claims.AuthTime, AMR: claims.AMR, CreatedAt: c.flowNow().UTC(),
+		TokenExpiry: token.Expiry, AuthTime: claims.AuthTime, AMR: claims.AMR, ACR: claims.ACR, CreatedAt: c.flowNow().UTC(),
 		Claims: allClaims,
 	}
-	if err := c.store.PutSession(ctx, sessionHandle, session, c.config.SessionTTL); err != nil {
-		return "", Session{}, "", err
+	if flow.Purpose == "step_up" {
+		if flow.SessionHandle == "" {
+			return "", Session{}, "", errors.New("step-up flow is not bound to a session")
+		}
+		previous, getErr := c.store.GetSession(ctx, flow.SessionHandle)
+		if getErr != nil || previous.Issuer != session.Issuer || previous.Subject != session.Subject {
+			return "", Session{}, "", errors.New("step-up session identity mismatch")
+		}
+		remainingTTL, ttlErr := c.sessionRemainingTTL(previous)
+		if ttlErr != nil {
+			return "", Session{}, "", ttlErr
+		}
+		// A step-up cannot extend the original BFF absolute lifetime.
+		session.CreatedAt = previous.CreatedAt
+		if err := c.store.RotateSession(ctx, flow.SessionHandle, sessionHandle, previous, session, remainingTTL); err != nil {
+			return "", Session{}, "", err
+		}
+	} else if flow.Purpose == "login" || flow.Purpose == "" {
+		if err := c.store.PutSession(ctx, sessionHandle, session, c.config.SessionTTL); err != nil {
+			return "", Session{}, "", err
+		}
+	} else {
+		return "", Session{}, "", errors.New("invalid authorization flow purpose")
 	}
 	return sessionHandle, session, flow.ReturnTo, nil
 }
@@ -561,100 +607,9 @@ func constantTimeEqual(left, right string) bool {
 	return subtle.ConstantTimeCompare([]byte(left), []byte(right)) == 1
 }
 
-// StepUpMFA forwards an MFA step-up verification code to the OP and refreshes
-// the local BFF session's auth_time and amr claims on success.
+// StepUpMFA is intentionally retired.  MFA must use BeginStepUp so the
+// browser never causes the BFF to present a Blog-resource access token to the
+// identity provider.
 func (c *Client) StepUpMFA(ctx context.Context, sessionHandle, code, mfaType string) (Session, error) {
-	ctx = c.withHTTPClient(ctx)
-	session, err := c.store.GetSession(ctx, sessionHandle)
-	if err != nil || session.Issuer != c.config.Issuer || session.Subject == "" {
-		return Session{}, errors.New("unauthorized")
-	}
-	remainingTTL, err := c.sessionRemainingTTL(session)
-	if err != nil {
-		return Session{}, ErrSessionExpired
-	}
-
-	if session.AccessToken == "" || (!session.TokenExpiry.IsZero() && session.TokenExpiry.Before(time.Now().Add(10*time.Second))) {
-		if session.RefreshToken != "" {
-			session, err = c.Refresh(ctx, sessionHandle)
-			if err != nil {
-				return Session{}, fmt.Errorf("session refresh before step-up: %w", err)
-			}
-		}
-	}
-
-	if mfaType == "" {
-		mfaType = "totp"
-	}
-
-	stepUpEndpoint := strings.TrimRight(c.config.Issuer, "/") + "/api/v1/auth/mfa/step-up"
-	reqBody, err := json.Marshal(map[string]string{
-		"code": code,
-		"type": mfaType,
-	})
-	if err != nil {
-		return Session{}, fmt.Errorf("marshal step-up body: %w", err)
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, stepUpEndpoint, bytes.NewReader(reqBody))
-	if err != nil {
-		return Session{}, fmt.Errorf("create step-up request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+session.AccessToken)
-
-	client := c.httpClient
-	if client == nil {
-		client = http.DefaultClient
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return Session{}, fmt.Errorf("execute step-up request: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	var result struct {
-		Success bool `json:"success"`
-		Data    struct {
-			AccessToken string   `json:"access_token"`
-			AuthTime    int64    `json:"auth_time"`
-			AMR         []string `json:"amr"`
-		} `json:"data"`
-		Message string `json:"message"`
-		Error   string `json:"error"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return Session{}, fmt.Errorf("decode step-up response: %w", err)
-	}
-	if resp.StatusCode != http.StatusOK || (!result.Success && result.Data.AuthTime == 0) {
-		msg := result.Message
-		if msg == "" {
-			msg = result.Error
-		}
-		if msg == "" {
-			msg = "invalid verification code"
-		}
-		return Session{}, errors.New(msg)
-	}
-
-	previousSession := session
-	nowUnix := time.Now().Unix()
-	if result.Data.AuthTime > 0 {
-		session.AuthTime = result.Data.AuthTime
-	} else {
-		session.AuthTime = nowUnix
-	}
-	if len(result.Data.AMR) > 0 {
-		session.AMR = result.Data.AMR
-	} else {
-		session.AMR = []string{"pwd", "otp"}
-	}
-	if result.Data.AccessToken != "" {
-		session.AccessToken = result.Data.AccessToken
-	}
-
-	if err := c.store.ReplaceSession(ctx, sessionHandle, previousSession, session, remainingTTL); err != nil {
-		return Session{}, fmt.Errorf("save step-up session: %w", err)
-	}
-	return session, nil
+	return Session{}, errors.New("direct MFA verification is retired; start the OIDC step-up flow")
 }

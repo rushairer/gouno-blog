@@ -13,7 +13,7 @@ import (
 )
 
 const approvalColumns = `ap.id, ap.run_id, ap.tool_call_id, ap.action_type, ap.target_type,
-	ap.target_id, ap.proposed_payload, ap.before_snapshot, ap.status, ap.reviewed_by,
+	ap.target_id, ap.proposed_payload, ap.before_snapshot, ap.status, ap.reviewed_by_principal_id,
 	ap.review_note, ap.reviewed_at, ap.expires_at, ap.created_at`
 
 func scanApproval(scanner interface{ Scan(...any) error }) (*domain.AgentApproval, error) {
@@ -22,7 +22,7 @@ func scanApproval(scanner interface{ Scan(...any) error }) (*domain.AgentApprova
 	err := scanner.Scan(
 		&approval.ID, &approval.RunID, &approval.ToolCallID, &approval.ActionType,
 		&approval.TargetType, &approval.TargetID, &approval.ProposedPayload, &before,
-		&approval.Status, &approval.ReviewedBy, &approval.ReviewNote, &approval.ReviewedAt,
+		&approval.Status, &approval.ReviewedByPrincipalID, &approval.ReviewNote, &approval.ReviewedAt,
 		&approval.ExpiresAt, &approval.CreatedAt,
 	)
 	approval.BeforeSnapshot = before
@@ -141,10 +141,10 @@ func (r *AgentRepository) ListApprovals(ctx context.Context, status string, limi
 	return result, total, rows.Err()
 }
 
-func (r *AgentRepository) ClaimApproval(ctx context.Context, id int64, reviewer, note string) error {
+func (r *AgentRepository) ClaimApproval(ctx context.Context, id int64, reviewerPrincipalID int64, note string) error {
 	result, err := r.db.ExecContext(ctx, `UPDATE ai_approvals SET
-		status='approved', reviewed_by=$2, review_note=$3, reviewed_at=NOW()
-		WHERE id=$1 AND status IN ('pending','failed') AND expires_at > NOW()`, id, reviewer, note)
+		status='approved', reviewed_by_principal_id=$2, review_note=$3, reviewed_at=NOW()
+		WHERE id=$1 AND status IN ('pending','failed') AND expires_at > NOW()`, id, reviewerPrincipalID, note)
 	if err != nil {
 		return err
 	}
@@ -171,10 +171,10 @@ func (r *AgentRepository) SetApprovalTarget(ctx context.Context, id, targetID in
 	return nil
 }
 
-func (r *AgentRepository) RejectApproval(ctx context.Context, id int64, reviewer, note string) error {
+func (r *AgentRepository) RejectApproval(ctx context.Context, id int64, reviewerPrincipalID int64, note string) error {
 	result, err := r.db.ExecContext(ctx, `UPDATE ai_approvals SET
-		status='rejected', reviewed_by=$2, review_note=$3, reviewed_at=NOW()
-		WHERE id=$1 AND status IN ('pending','failed')`, id, reviewer, note)
+		status='rejected', reviewed_by_principal_id=$2, review_note=$3, reviewed_at=NOW()
+		WHERE id=$1 AND status IN ('pending','failed')`, id, reviewerPrincipalID, note)
 	if err != nil {
 		return err
 	}

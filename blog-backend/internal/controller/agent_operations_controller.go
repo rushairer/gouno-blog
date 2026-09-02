@@ -121,9 +121,12 @@ func (ctrl *AgentController) ReviewMediaCandidate(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
 		return
 	}
-	reviewer, _ := c.Get("account_id")
-	reviewerText, _ := reviewer.(string)
-	if err := ctrl.approvals.ReviewMediaCandidate(c.Request.Context(), id, req.Action, reviewerText, req.Note); err != nil {
+	reviewerPrincipalID, ok := interactionPrincipalID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "authenticated local principal is required"))
+		return
+	}
+	if err := ctrl.approvals.ReviewMediaCandidate(c.Request.Context(), id, req.Action, reviewerPrincipalID, req.Note); err != nil {
 		WriteDomainError(c, err)
 		return
 	}
@@ -176,10 +179,13 @@ func (ctrl *AgentController) GenerateMediaCandidate(c *gin.Context) {
 			return
 		}
 	}
-	creator, _ := c.Get("account_id")
-	creatorText, _ := creator.(string)
+	creatorPrincipalID, ok := interactionPrincipalID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "authenticated local principal is required"))
+		return
+	}
 	go func() {
-		_ = ctrl.approvals.GenerateMediaCandidate(ctrl.workerCtx, id, creatorText)
+		_ = ctrl.approvals.GenerateMediaCandidate(ctrl.workerCtx, id, creatorPrincipalID)
 	}()
 	c.JSON(http.StatusAccepted, gouno.NewSuccessResponse(nil))
 }
@@ -370,9 +376,12 @@ func (ctrl *AgentController) SaveFeedback(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
 		return
 	}
-	if subject, exists := c.Get("account_id"); exists {
-		value.CreatedBy, _ = subject.(string)
+	principalID, ok := interactionPrincipalID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "authenticated local principal is required"))
+		return
 	}
+	value.CreatedByPrincipalID = principalID
 	if err := ctrl.operations.SaveFeedback(c.Request.Context(), &value); err != nil {
 		WriteDomainError(c, err)
 		return
@@ -403,9 +412,12 @@ func (ctrl *AgentController) GenerateImage(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "prompt is required"))
 		return
 	}
-	creator, _ := c.Get("account_id")
-	creatorText, _ := creator.(string)
-	asset, err := ctrl.approvals.GenerateDirectImage(c.Request.Context(), prompt, req.AltText, creatorText)
+	creatorPrincipalID, ok := interactionPrincipalID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "authenticated local principal is required"))
+		return
+	}
+	asset, err := ctrl.approvals.GenerateDirectImage(c.Request.Context(), prompt, req.AltText, creatorPrincipalID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
 		return

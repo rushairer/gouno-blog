@@ -1,6 +1,10 @@
+// Connector administration is under active product design. Do not extend or
+// alter its routes, callback handling, or external integrations without an
+// explicit user instruction naming connector work.
 package controller
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"net/http"
 
@@ -8,6 +12,8 @@ import (
 	"github.com/rushairer/blog-backend/internal/connector"
 	"github.com/rushairer/gouno"
 )
+
+const connectorFlowCookie = "__Host-Http-blog-connector-flow"
 
 func (ctrl *AgentController) SetConnectorService(value *connector.Service) { ctrl.connectors = value }
 
@@ -58,6 +64,21 @@ func (ctrl *AgentController) BeginConnectorOAuth(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"state": state, "sandbox": true}))
 }
 
+func (ctrl *AgentController) BeginSearchConsoleOAuthRedirect(c *gin.Context) {
+	id, ok := ParamPositiveID(c, "id")
+	if !ok {
+		return
+	}
+	state, authorizationURL, err := ctrl.connectors.BeginSearchConsoleOAuth(c.Request.Context(), id)
+	if err != nil {
+		WriteDomainError(c, err)
+		return
+	}
+	http.SetCookie(c.Writer, &http.Cookie{Name: connectorFlowCookie, Value: state, Path: "/", MaxAge: 600, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode})
+	c.Header("Cache-Control", "no-store")
+	c.Redirect(http.StatusFound, authorizationURL)
+}
+
 func (ctrl *AgentController) CompleteConnectorOAuth(c *gin.Context) {
 	var req struct {
 		State    string `json:"state"`
@@ -79,6 +100,21 @@ func (ctrl *AgentController) CompleteConnectorOAuth(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"connected": true, "sandbox": req.Provider != "search_console"}))
+}
+
+// CompleteSearchConsoleOAuthCallback is the registered Google redirect URI.
+// It intentionally consumes the code server-side and removes it from browser
+// history by redirecting to the management UI.
+func (ctrl *AgentController) CompleteSearchConsoleOAuthCallback(c *gin.Context) {
+	c.Header("Cache-Control", "no-store")
+	state := c.Query("state")
+	cookieState, cookieErr := c.Cookie(connectorFlowCookie)
+	http.SetCookie(c.Writer, &http.Cookie{Name: connectorFlowCookie, Path: "/", MaxAge: -1, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode})
+	if cookieErr != nil || len(state) == 0 || len(state) != len(cookieState) || subtle.ConstantTimeCompare([]byte(state), []byte(cookieState)) != 1 || c.Query("error") != "" || ctrl.connectors.CompleteSearchConsoleOAuth(c.Request.Context(), state, c.Query("code")) != nil {
+		c.Redirect(http.StatusSeeOther, "/admin/ai?connector_oauth=failed")
+		return
+	}
+	c.Redirect(http.StatusSeeOther, "/admin/ai?connector_oauth=connected")
 }
 
 func (ctrl *AgentController) SearchConsoleSummary(c *gin.Context) {

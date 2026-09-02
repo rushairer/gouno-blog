@@ -340,7 +340,7 @@ func (ctrl *AgentController) saveProvider(c *gin.Context, id int64) {
 	profile := &domain.ProviderProfile{
 		ID: id, Name: req.Name, ProviderType: req.ProviderType, BaseURL: req.BaseURL,
 		Model: req.Model, Enabled: req.Enabled, ProtocolMode: strings.TrimSpace(req.ProtocolMode),
-		StreamMode: strings.TrimSpace(req.StreamMode),
+		StreamMode:            strings.TrimSpace(req.StreamMode),
 		RequestTimeoutSeconds: req.RequestTimeoutSeconds, MaxOutputTokens: req.MaxOutputTokens,
 	}
 	if err := ctrl.svc.SaveProvider(c.Request.Context(), profile, req.APIKey); err != nil {
@@ -432,11 +432,13 @@ func (ctrl *AgentController) saveSkill(c *gin.Context, id int64) {
 	}
 	value.ID = id
 	if id == 0 {
-		if subject, exists := c.Get("account_id"); exists {
-			if text, ok := subject.(string); ok && text != "" {
-				value.CreatedBy = &text
-			}
+		raw, exists := c.Get("blog_principal_id")
+		principalID, ok := raw.(int64)
+		if !exists || !ok || principalID <= 0 {
+			c.JSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "local principal is required"))
+			return
 		}
+		value.CreatedByPrincipalID = &principalID
 	}
 	if err := ctrl.svc.SaveSkill(c.Request.Context(), &value); err != nil {
 		WriteDomainError(c, err)
@@ -494,11 +496,13 @@ func (ctrl *AgentController) ImportSkill(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
 		return
 	}
-	if subject, exists := c.Get("account_id"); exists {
-		if text, ok := subject.(string); ok && text != "" {
-			item.CreatedBy = &text
-		}
+	raw, exists := c.Get("blog_principal_id")
+	principalID, ok := raw.(int64)
+	if !exists || !ok || principalID <= 0 {
+		c.JSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "local principal is required"))
+		return
 	}
+	item.CreatedByPrincipalID = &principalID
 	if err := ctrl.svc.ImportSkill(c.Request.Context(), &item); err != nil {
 		WriteDomainError(c, err)
 		return
@@ -520,13 +524,12 @@ func (ctrl *AgentController) CopySkill(c *gin.Context) {
 			return
 		}
 	}
-	var subject *string
-	if raw, exists := c.Get("account_id"); exists {
-		if text, ok := raw.(string); ok && text != "" {
-			subject = &text
-		}
+	principalID, ok := interactionPrincipalID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "local principal is required"))
+		return
 	}
-	item, err := ctrl.svc.CopySkill(c.Request.Context(), id, req.Name, subject)
+	item, err := ctrl.svc.CopySkill(c.Request.Context(), id, req.Name, principalID)
 	if err != nil {
 		WriteDomainError(c, err)
 		return
@@ -567,11 +570,13 @@ func (ctrl *AgentController) saveAgent(c *gin.Context, id int64) {
 	}
 	value.ID = id
 	if id == 0 {
-		if subject, exists := c.Get("account_id"); exists {
-			if text, ok := subject.(string); ok && text != "" {
-				value.CreatedBy = &text
-			}
+		raw, exists := c.Get("blog_principal_id")
+		principalID, ok := raw.(int64)
+		if !exists || !ok || principalID <= 0 {
+			c.JSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "local principal is required"))
+			return
 		}
+		value.CreatedByPrincipalID = &principalID
 	}
 	if err := ctrl.svc.SaveAgent(c.Request.Context(), &value); err != nil {
 		WriteDomainError(c, err)
@@ -649,13 +654,13 @@ func (ctrl *AgentController) RunAgent(c *gin.Context) {
 	if len(input) == 0 {
 		input = json.RawMessage(`{}`)
 	}
-	var subject *string
-	if value, exists := c.Get("account_id"); exists {
-		if text, ok := value.(string); ok && text != "" {
-			subject = &text
-		}
+	raw, exists := c.Get("blog_principal_id")
+	principalID, ok := raw.(int64)
+	if !exists || !ok || principalID <= 0 {
+		c.JSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "authenticated local principal is required"))
+		return
 	}
-	run, err := ctrl.runner.Queue(c.Request.Context(), id, domain.AgentTriggerManual, subject, input, nil)
+	run, err := ctrl.runner.Queue(c.Request.Context(), id, domain.AgentTriggerManual, &principalID, input, nil)
 	if err != nil {
 		WriteDomainError(c, err)
 		return
@@ -743,16 +748,22 @@ func (ctrl *AgentController) reviewApproval(c *gin.Context, approve bool) {
 			return
 		}
 	}
-	reviewer, _ := c.Get("account_id")
-	reviewerText, _ := reviewer.(string)
+	raw, exists := c.Get("blog_principal_id")
+	reviewerPrincipalID, ok := raw.(int64)
+	if !exists || !ok || reviewerPrincipalID <= 0 {
+		c.JSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "authenticated local principal is required"))
+		return
+	}
 	var err error
 	if approve {
-		err = ctrl.approvals.Approve(c.Request.Context(), id, reviewerText, req.Note)
+		err = ctrl.approvals.Approve(c.Request.Context(), id, reviewerPrincipalID, req.Note)
 		if err == nil {
-			go func() { _ = ctrl.approvals.StartImageGenerationForApprovedBrief(ctrl.workerCtx, id, reviewerText) }()
+			go func() {
+				_ = ctrl.approvals.StartImageGenerationForApprovedBrief(ctrl.workerCtx, id, reviewerPrincipalID)
+			}()
 		}
 	} else {
-		err = ctrl.approvals.Reject(c.Request.Context(), id, reviewerText, req.Note)
+		err = ctrl.approvals.Reject(c.Request.Context(), id, reviewerPrincipalID, req.Note)
 	}
 	if err != nil {
 		WriteDomainError(c, err)

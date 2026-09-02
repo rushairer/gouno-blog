@@ -2,12 +2,12 @@ package service
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -26,7 +26,7 @@ var (
 
 type Actor struct {
 	Key           string
-	Subject       string
+	PrincipalID   int64
 	DisplayName   string
 	Authenticated bool
 }
@@ -66,7 +66,6 @@ func (m *VisitorTokenManager) GenerateVisitorID(clientIP string) string {
 	return base64.RawURLEncoding.EncodeToString(buf)
 }
 
-
 type CommunityRepository interface {
 	CreateComment(context.Context, *domain.Comment) error
 	GetVisibleComments(context.Context, int64) ([]*domain.Comment, error)
@@ -76,12 +75,12 @@ type CommunityRepository interface {
 	ReportComment(context.Context, int64, string, string) error
 	SetLike(context.Context, int64, string, bool) (*domain.CommunityState, error)
 	CommunityState(context.Context, int64, string, string) (*domain.CommunityState, error)
-	ListNotifications(context.Context, string, int, int) ([]*domain.Notification, int, error)
-	ReadNotification(context.Context, string, int64) error
-	ReadAllNotifications(context.Context, string) error
-	DeleteNotification(context.Context, string, int64) error
-	DeleteNotifications(context.Context, string, []int64) error
-	ClearNotifications(context.Context, string, bool) (int64, error)
+	ListNotifications(context.Context, int64, int, int) ([]*domain.Notification, int, error)
+	ReadNotification(context.Context, int64, int64) error
+	ReadAllNotifications(context.Context, int64) error
+	DeleteNotification(context.Context, int64, int64) error
+	DeleteNotifications(context.Context, int64, []int64) error
+	ClearNotifications(context.Context, int64, bool) (int64, error)
 }
 
 type CommunityService struct {
@@ -135,7 +134,7 @@ func (s *CommunityService) CreateComment(ctx context.Context, postID int64, pare
 	}
 	if actor.Authenticated {
 		comment.Author = actor.DisplayName
-		comment.AuthorSubject = &actor.Subject
+		comment.AuthorPrincipalID = &actor.PrincipalID
 		comment.AuthorType = "user"
 		comment.Status = "visible"
 		comment.IsVisible = true
@@ -198,40 +197,40 @@ func (s *CommunityService) SetLike(ctx context.Context, postID int64, actor Acto
 }
 
 func (s *CommunityService) State(ctx context.Context, postID int64, actor Actor) (*domain.CommunityState, error) {
-	return s.repo.CommunityState(ctx, postID, actor.Key, actor.Subject)
+	return s.repo.CommunityState(ctx, postID, actor.Key, "")
 }
 
-func (s *CommunityService) ListNotifications(ctx context.Context, subject string, page, pageSize int) ([]*domain.Notification, int, error) {
+func (s *CommunityService) ListNotifications(ctx context.Context, principalID int64, page, pageSize int) ([]*domain.Notification, int, error) {
 	if page < 1 {
 		page = 1
 	}
 	if pageSize < 1 || pageSize > 100 {
 		pageSize = 20
 	}
-	return s.repo.ListNotifications(ctx, subject, pageSize, (page-1)*pageSize)
+	return s.repo.ListNotifications(ctx, principalID, pageSize, (page-1)*pageSize)
 }
 
-func (s *CommunityService) ReadNotification(ctx context.Context, subject string, id int64) error {
-	return s.repo.ReadNotification(ctx, subject, id)
+func (s *CommunityService) ReadNotification(ctx context.Context, principalID, id int64) error {
+	return s.repo.ReadNotification(ctx, principalID, id)
 }
 
-func (s *CommunityService) ReadAllNotifications(ctx context.Context, subject string) error {
-	return s.repo.ReadAllNotifications(ctx, subject)
+func (s *CommunityService) ReadAllNotifications(ctx context.Context, principalID int64) error {
+	return s.repo.ReadAllNotifications(ctx, principalID)
 }
 
-func (s *CommunityService) DeleteNotification(ctx context.Context, subject string, id int64) error {
-	return s.repo.DeleteNotification(ctx, subject, id)
+func (s *CommunityService) DeleteNotification(ctx context.Context, principalID, id int64) error {
+	return s.repo.DeleteNotification(ctx, principalID, id)
 }
 
-func (s *CommunityService) DeleteNotifications(ctx context.Context, subject string, ids []int64) error {
+func (s *CommunityService) DeleteNotifications(ctx context.Context, principalID int64, ids []int64) error {
 	if len(ids) == 0 {
 		return nil
 	}
-	return s.repo.DeleteNotifications(ctx, subject, ids)
+	return s.repo.DeleteNotifications(ctx, principalID, ids)
 }
 
-func (s *CommunityService) ClearNotifications(ctx context.Context, subject string, readOnly bool) (int64, error) {
-	return s.repo.ClearNotifications(ctx, subject, readOnly)
+func (s *CommunityService) ClearNotifications(ctx context.Context, principalID int64, readOnly bool) (int64, error) {
+	return s.repo.ClearNotifications(ctx, principalID, readOnly)
 }
 
 func parsePositiveID(value string) (int64, error) {

@@ -647,10 +647,14 @@ func (ctrl *AgentController) saveWorkflow(c *gin.Context, id int64) {
 		return
 	}
 	value.ID = id
-	if subject, exists := c.Get("account_id"); exists {
-		if text, ok := subject.(string); ok && text != "" {
-			value.CreatedBy = &text
+	if id == 0 {
+		raw, exists := c.Get("blog_principal_id")
+		principalID, ok := raw.(int64)
+		if !exists || !ok || principalID <= 0 {
+			c.JSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "authenticated local principal is required"))
+			return
 		}
+		value.CreatedByPrincipalID = &principalID
 	}
 	if err := ctrl.workflows.Save(c.Request.Context(), &value); err != nil {
 		WriteDomainError(c, err)
@@ -704,13 +708,11 @@ func (ctrl *AgentController) setWorkflowEnabled(c *gin.Context, enabled bool) {
 	if !ok {
 		return
 	}
-	var subject *string
-	if raw, exists := c.Get("account_id"); exists {
-		if text, ok := raw.(string); ok && text != "" {
-			subject = &text
-		}
+	if _, ok := interactionPrincipalID(c); !ok {
+		c.JSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "authenticated local principal is required"))
+		return
 	}
-	if err := ctrl.workflows.SetEnabled(c.Request.Context(), id, enabled, subject); err != nil {
+	if err := ctrl.workflows.SetEnabled(c.Request.Context(), id, enabled); err != nil {
 		WriteDomainError(c, err)
 		return
 	}
@@ -753,13 +755,13 @@ func (ctrl *AgentController) RetryWorkflowRun(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
 		return
 	}
-	var subject *string
-	if raw, exists := c.Get("account_id"); exists {
-		if text, ok := raw.(string); ok && text != "" {
-			subject = &text
-		}
+	raw, exists := c.Get("blog_principal_id")
+	principalID, ok := raw.(int64)
+	if !exists || !ok || principalID <= 0 {
+		c.JSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "authenticated local principal is required"))
+		return
 	}
-	run, err := ctrl.workflows.RetryFailed(c.Request.Context(), id, req.StepID, req.Iterations, subject)
+	run, err := ctrl.workflows.RetryFailed(c.Request.Context(), id, req.StepID, req.Iterations, &principalID)
 	if err != nil {
 		WriteDomainError(c, err)
 		return
@@ -802,13 +804,12 @@ func (ctrl *AgentController) EmitWorkflowEvent(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
 		return
 	}
-	var subject *string
-	if raw, exists := c.Get("account_id"); exists {
-		if text, ok := raw.(string); ok && text != "" {
-			subject = &text
-		}
+	principalID, ok := interactionPrincipalID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "authenticated local principal is required"))
+		return
 	}
-	queued, err := ctrl.workflows.EmitEvent(c.Request.Context(), req.EventKey, req.Event, req.Payload, subject)
+	queued, err := ctrl.workflows.EmitEvent(c.Request.Context(), req.EventKey, req.Event, req.Payload, &principalID)
 	if err != nil {
 		WriteDomainError(c, err)
 		return
@@ -958,13 +959,13 @@ func (ctrl *AgentController) queueWorkflow(c *gin.Context, dryRun bool) {
 			return
 		}
 	}
-	var subject *string
-	if raw, exists := c.Get("account_id"); exists {
-		if text, ok := raw.(string); ok && text != "" {
-			subject = &text
-		}
+	raw, exists := c.Get("blog_principal_id")
+	principalID, ok := raw.(int64)
+	if !exists || !ok || principalID <= 0 {
+		c.JSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "authenticated local principal is required"))
+		return
 	}
-	run, err := ctrl.workflows.Queue(c.Request.Context(), id, dryRun, req.Input, subject)
+	run, err := ctrl.workflows.Queue(c.Request.Context(), id, dryRun, req.Input, &principalID)
 	if err != nil {
 		WriteDomainError(c, err)
 		return
@@ -1072,13 +1073,10 @@ func (ctrl *AgentController) ListPendingInteractions(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
 }
 
-func interactionSubject(c *gin.Context) string {
-	if raw, ok := c.Get("account_id"); ok {
-		if value, ok := raw.(string); ok {
-			return value
-		}
-	}
-	return "admin"
+func interactionPrincipalID(c *gin.Context) (int64, bool) {
+	raw, exists := c.Get("blog_principal_id")
+	principalID, ok := raw.(int64)
+	return principalID, exists && ok && principalID > 0
 }
 
 func (ctrl *AgentController) ResolveInteraction(c *gin.Context) {
@@ -1097,7 +1095,12 @@ func (ctrl *AgentController) ResolveInteraction(c *gin.Context) {
 	if len(req.Response) == 0 {
 		req.Response = json.RawMessage(`{}`)
 	}
-	item, err := ctrl.approvals.ResolveInteraction(c.Request.Context(), id, req.ResumeToken, req.Response, interactionSubject(c))
+	principalID, ok := interactionPrincipalID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "authenticated local principal is required"))
+		return
+	}
+	item, err := ctrl.approvals.ResolveInteraction(c.Request.Context(), id, req.ResumeToken, req.Response, principalID)
 	if err != nil {
 		WriteDomainError(c, err)
 		return
@@ -1128,7 +1131,12 @@ func (ctrl *AgentController) CancelInteraction(c *gin.Context) {
 		WriteDomainError(c, err)
 		return
 	}
-	if err := ctrl.approvals.CancelInteraction(c.Request.Context(), id, req.ResumeToken, interactionSubject(c)); err != nil {
+	principalID, ok := interactionPrincipalID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "authenticated local principal is required"))
+		return
+	}
+	if err := ctrl.approvals.CancelInteraction(c.Request.Context(), id, req.ResumeToken, principalID); err != nil {
 		WriteDomainError(c, err)
 		return
 	}

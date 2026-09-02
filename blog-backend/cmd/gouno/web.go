@@ -304,7 +304,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		approvals.SetGenerationService(generation)
 		workflowSvc := workflowservice.NewService(cfg.DB, runner, management, toolRegistry, transactor)
 		workflowSvc.StartScheduler(ctx, cfg.Global.AIAgentConfig.SchedulerInterval)
-		connectorSvc := connector.NewService(cfg.DB, secrets, transactor)
+		connectorSvc := connector.NewService(cfg.DB, secrets, transactor, os.Getenv("BLOG_CONNECTOR_OAUTH_REDIRECT_URL"))
 		agentCtrl = controller.NewAgentControllerWithOptions(controller.AgentControllerOptions{
 			Management: management, Runner: runner, Approvals: approvals, Tools: toolRegistry,
 			WorkerCtx: ctx, Knowledge: knowledgeSvc, Workflows: workflowSvc, Operations: operationsSvc,

@@ -113,6 +113,28 @@ func TestReplaceSessionCannotResurrectLoggedOutSession(t *testing.T) {
 	}
 }
 
+func TestRotateSessionInvalidatesOldHandle(t *testing.T) {
+	store, _ := testStore(t)
+	ctx := context.Background()
+	oldHandle, _ := RandomHandle()
+	newHandle, _ := RandomHandle()
+	oldSession := Session{Issuer: "https://sso.local.test", Subject: "subject", SID: "sid-old", IDToken: "id-old"}
+	newSession := oldSession
+	newSession.SID, newSession.IDToken, newSession.ACR = "sid-new", "id-new", "urn:gouno:aal2"
+	if err := store.PutSession(ctx, oldHandle, oldSession, time.Hour); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.RotateSession(ctx, oldHandle, newHandle, oldSession, newSession, time.Hour); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.GetSession(ctx, oldHandle); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("old handle remains valid after rotation: %v", err)
+	}
+	if got, err := store.GetSession(ctx, newHandle); err != nil || got.ACR != "urn:gouno:aal2" {
+		t.Fatalf("rotated session missing or incorrect: %#v, %v", got, err)
+	}
+}
+
 func TestReplaceSessionUpdatesSIDIndex(t *testing.T) {
 	store, _ := testStore(t)
 	ctx := context.Background()

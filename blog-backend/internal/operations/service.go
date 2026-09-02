@@ -81,7 +81,7 @@ func (s *Service) getMediaAsset(ctx context.Context, raw json.RawMessage) (any, 
 		return nil, tool.ErrInvalidArgument
 	}
 	var item domain.MediaAsset
-	err := s.db.QueryRowContext(ctx, `SELECT id,filename,storage_name,url,content_type,size_bytes,alt_text,created_by,created_at FROM media_assets WHERE id=$1`, args.ID).Scan(&item.ID, &item.Filename, &item.StorageName, &item.URL, &item.ContentType, &item.SizeBytes, &item.AltText, &item.CreatedBy, &item.CreatedAt)
+	err := s.db.QueryRowContext(ctx, `SELECT id,filename,storage_name,url,content_type,size_bytes,alt_text,created_by_principal_id,created_at FROM media_assets WHERE id=$1`, args.ID).Scan(&item.ID, &item.Filename, &item.StorageName, &item.URL, &item.ContentType, &item.SizeBytes, &item.AltText, &item.CreatedByPrincipalID, &item.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -715,13 +715,13 @@ func (s *Service) SaveFeedback(ctx context.Context, value *domain.AIFeedback) er
 	if value.Label != "adopted" && value.Label != "rejected" && value.Label != "invalid" {
 		return tool.ErrInvalidArgument
 	}
-	if value.TargetID <= 0 || strings.TrimSpace(value.CreatedBy) == "" || len(value.Note) > 2000 {
+	if value.TargetID <= 0 || value.CreatedByPrincipalID <= 0 || len(value.Note) > 2000 {
 		return tool.ErrInvalidArgument
 	}
-	return s.db.QueryRowContext(ctx, `INSERT INTO ai_feedback(target_type,target_id,label,note,created_by)
-		VALUES($1,$2,$3,$4,$5) ON CONFLICT(target_type,target_id,created_by)
+	return s.db.QueryRowContext(ctx, `INSERT INTO ai_feedback(target_type,target_id,label,note,created_by_principal_id)
+		VALUES($1,$2,$3,$4,$5) ON CONFLICT(target_type,target_id,created_by_principal_id)
 		DO UPDATE SET label=EXCLUDED.label,note=EXCLUDED.note,created_at=NOW()
-		RETURNING id,created_at`, value.TargetType, value.TargetID, value.Label, strings.TrimSpace(value.Note), value.CreatedBy).
+		RETURNING id,created_at`, value.TargetType, value.TargetID, value.Label, strings.TrimSpace(value.Note), value.CreatedByPrincipalID).
 		Scan(&value.ID, &value.CreatedAt)
 }
 
