@@ -18,11 +18,7 @@ export function StepUpMfaModal({ open, onClose }: StepUpMfaModalProps) {
   };
 
   return (
-    <Modal
-      open={open}
-      title="高权限安全验证"
-      onClose={onClose}
-    >
+    <Modal open={open} title="高权限安全验证" onClose={onClose}>
       <form className="modal-form stepup-mfa-form" onSubmit={handleSubmit}>
         <div className="stepup-mfa-header">
           <div className="stepup-mfa-icon" aria-hidden="true">
@@ -30,9 +26,7 @@ export function StepUpMfaModal({ open, onClose }: StepUpMfaModalProps) {
           </div>
           <div>
             <strong>需要进行二次身份验证</strong>
-            <p>
-              为保障站点安全，请前往统一身份中心完成近期多因素身份验证。
-            </p>
+            <p>为保障站点安全，请前往统一身份中心完成近期多因素身份验证。</p>
           </div>
         </div>
 
@@ -54,11 +48,7 @@ export function StepUpMfaModal({ open, onClose }: StepUpMfaModalProps) {
         })()}
 
         <div className="modal-actions">
-          <Button
-            variant="secondary"
-            type="button"
-            onClick={onClose}
-          >
+          <Button variant="secondary" type="button" onClick={onClose}>
             取消
           </Button>
           <Button variant="primary" type="submit">

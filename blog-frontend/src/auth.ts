@@ -85,8 +85,12 @@ export const apiFetch = gossoClient.apiFetch;
 // MFA verification is owned by the OIDC provider.  This is a top-level
 // navigation, not a fetch, so no authorization code or provider token is ever
 // made available to application JavaScript.
-export function stepUpMfa(returnTo = window.location.pathname + window.location.search): void {
-  window.location.assign(`/api/auth/mfa/step-up?return_to=${encodeURIComponent(returnTo)}`);
+export function stepUpMfa(
+  returnTo = window.location.pathname + window.location.search,
+): void {
+  window.location.assign(
+    `/api/auth/mfa/step-up?return_to=${encodeURIComponent(returnTo)}`,
+  );
 }
 
 export { getBlogRoleLabel } from "./constants";

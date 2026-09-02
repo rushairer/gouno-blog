@@ -3,6 +3,14 @@
 All notable changes to the complete Gouno Blog distribution are documented in
 this file. The format follows Keep a Changelog and Semantic Versioning.
 
+## [1.5.6] - 2026-09-02
+
+### Fixed
+
+- Associate AI workspace starter pack bootstrap agents, workflows, and workflow versions with the earliest active owner principal to avoid not-null constraint errors on startup.
+- Use dynamic site title in the article detail page for accurate browser title and OpenGraph metadata.
+- Format frontend authentication and MFA modal components to maintain code quality standards.
+
 ## [1.5.5] - 2026-09-02
 
 ### Changed
