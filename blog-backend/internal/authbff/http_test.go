@@ -319,3 +319,95 @@ func TestConcurrentRefresh_AlreadyRefreshed(t *testing.T) {
 		t.Fatalf("expected cached access token, got %s", refreshed.AccessToken)
 	}
 }
+
+func TestStepUpMfaHandler(t *testing.T) {
+	client, store := testBFFClientWithStore(t)
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/v1/auth/mfa/step-up" && r.Method == http.MethodPost {
+			auth := r.Header.Get("Authorization")
+			if auth != "Bearer acc-token-valid" {
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			var body struct {
+				Code string `json:"code"`
+				Type string `json:"type"`
+			}
+			_ = json.NewDecoder(r.Body).Decode(&body)
+			if body.Code == "123456" {
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(map[string]any{
+					"success": true,
+					"data": map[string]any{
+						"auth_time": 1788220000,
+						"amr":       []string{"pwd", "otp"},
+					},
+				})
+				return
+			}
+			w.WriteHeader(http.StatusBadRequest)
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"success": false,
+				"message": "invalid verification code",
+			})
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer mockServer.Close()
+
+	client.config.Issuer = mockServer.URL
+	client.httpClient = mockServer.Client()
+
+	router := gin.New()
+	client.RegisterRoutes(router)
+
+	ctx := context.Background()
+	handle, _ := RandomHandle()
+	session := Session{
+		Issuer:      mockServer.URL,
+		Subject:     "user-123",
+		AccessToken: "acc-token-valid",
+		IDToken:     "id-token-valid",
+		TokenExpiry: time.Now().Add(time.Hour),
+		CreatedAt:   time.Now(),
+	}
+	if err := store.PutSession(ctx, handle, session, time.Hour); err != nil {
+		t.Fatalf("failed to put test session: %v", err)
+	}
+
+	// Test valid code
+	reqBody := `{"code":"123456","type":"totp"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/mfa/step-up", strings.NewReader(reqBody))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(&http.Cookie{
+		Name:  client.config.SessionCookie,
+		Value: handle,
+	})
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d: %s", w.Code, w.Body.String())
+	}
+
+	updatedSession, _ := store.GetSession(ctx, handle)
+	if updatedSession.AuthTime != 1788220000 {
+		t.Fatalf("expected auth_time 1788220000, got %d", updatedSession.AuthTime)
+	}
+
+	// Test invalid code
+	badBody := `{"code":"000000","type":"totp"}`
+	badReq := httptest.NewRequest(http.MethodPost, "/api/auth/mfa/step-up", strings.NewReader(badBody))
+	badReq.Header.Set("Content-Type", "application/json")
+	badReq.AddCookie(&http.Cookie{
+		Name:  client.config.SessionCookie,
+		Value: handle,
+	})
+	badW := httptest.NewRecorder()
+	router.ServeHTTP(badW, badReq)
+
+	if badW.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 Bad Request, got %d", badW.Code)
+	}
+}

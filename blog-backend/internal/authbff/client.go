@@ -1,8 +1,10 @@
 package authbff
 
 import (
+	"bytes"
 	"context"
 	"crypto/subtle"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -557,4 +559,102 @@ func constantTimeEqual(left, right string) bool {
 		return false
 	}
 	return subtle.ConstantTimeCompare([]byte(left), []byte(right)) == 1
+}
+
+// StepUpMFA forwards an MFA step-up verification code to the OP and refreshes
+// the local BFF session's auth_time and amr claims on success.
+func (c *Client) StepUpMFA(ctx context.Context, sessionHandle, code, mfaType string) (Session, error) {
+	ctx = c.withHTTPClient(ctx)
+	session, err := c.store.GetSession(ctx, sessionHandle)
+	if err != nil || session.Issuer != c.config.Issuer || session.Subject == "" {
+		return Session{}, errors.New("unauthorized")
+	}
+	remainingTTL, err := c.sessionRemainingTTL(session)
+	if err != nil {
+		return Session{}, ErrSessionExpired
+	}
+
+	if session.AccessToken == "" || (!session.TokenExpiry.IsZero() && session.TokenExpiry.Before(time.Now().Add(10*time.Second))) {
+		if session.RefreshToken != "" {
+			session, err = c.Refresh(ctx, sessionHandle)
+			if err != nil {
+				return Session{}, fmt.Errorf("session refresh before step-up: %w", err)
+			}
+		}
+	}
+
+	if mfaType == "" {
+		mfaType = "totp"
+	}
+
+	stepUpEndpoint := strings.TrimRight(c.config.Issuer, "/") + "/api/v1/auth/mfa/step-up"
+	reqBody, err := json.Marshal(map[string]string{
+		"code": code,
+		"type": mfaType,
+	})
+	if err != nil {
+		return Session{}, fmt.Errorf("marshal step-up body: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, stepUpEndpoint, bytes.NewReader(reqBody))
+	if err != nil {
+		return Session{}, fmt.Errorf("create step-up request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+session.AccessToken)
+
+	client := c.httpClient
+	if client == nil {
+		client = http.DefaultClient
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return Session{}, fmt.Errorf("execute step-up request: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	var result struct {
+		Success bool `json:"success"`
+		Data    struct {
+			AccessToken string   `json:"access_token"`
+			AuthTime    int64    `json:"auth_time"`
+			AMR         []string `json:"amr"`
+		} `json:"data"`
+		Message string `json:"message"`
+		Error   string `json:"error"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return Session{}, fmt.Errorf("decode step-up response: %w", err)
+	}
+	if resp.StatusCode != http.StatusOK || (!result.Success && result.Data.AuthTime == 0) {
+		msg := result.Message
+		if msg == "" {
+			msg = result.Error
+		}
+		if msg == "" {
+			msg = "invalid verification code"
+		}
+		return Session{}, errors.New(msg)
+	}
+
+	previousSession := session
+	nowUnix := time.Now().Unix()
+	if result.Data.AuthTime > 0 {
+		session.AuthTime = result.Data.AuthTime
+	} else {
+		session.AuthTime = nowUnix
+	}
+	if len(result.Data.AMR) > 0 {
+		session.AMR = result.Data.AMR
+	} else {
+		session.AMR = []string{"pwd", "otp"}
+	}
+	if result.Data.AccessToken != "" {
+		session.AccessToken = result.Data.AccessToken
+	}
+
+	if err := c.store.ReplaceSession(ctx, sessionHandle, previousSession, session, remainingTTL); err != nil {
+		return Session{}, fmt.Errorf("save step-up session: %w", err)
+	}
+	return session, nil
 }

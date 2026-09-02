@@ -5,6 +5,10 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- Add same-origin Step-Up MFA endpoint (`/api/auth/mfa/step-up`) in the Blog BFF to handle multi-factor verification server-to-server and refresh session claims within the confidential BFF boundary.
+
 ## [1.5.4] - 2026-09-01
 
 ### Security

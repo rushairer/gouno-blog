@@ -81,6 +81,29 @@ export const gossoClient = createGossoClient<BlogUserProfile>({
 export const redirectToAuthorize = gossoClient.redirectToAuthorize;
 export const logout = gossoClient.logout;
 export const apiFetch = gossoClient.apiFetch;
-export const stepUpMfa = gossoClient.stepUpMfa;
+
+export async function stepUpMfa(
+  code: string,
+  type: "totp" | "backup_code" = "totp",
+): Promise<{ auth_time: number; amr: string[] }> {
+  const res = await apiFetch("/api/auth/mfa/step-up", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code, type }),
+  });
+  if (!res.ok) {
+    let msg = "验证失败，请稍后重试。";
+    try {
+      const data = await res.json();
+      if (data.error) msg = data.error;
+      else if (data.message) msg = data.message;
+    } catch {
+      // fallback
+    }
+    throw new Error(msg);
+  }
+  const json = await res.json();
+  return json.data || json;
+}
 
 export { getBlogRoleLabel } from "./constants";

@@ -17,6 +17,7 @@ func (c *Client) RegisterRoutes(router gin.IRouter) {
 	router.POST("/api/auth/logout", c.logoutHandler)
 	router.GET("/api/auth/logout/callback", c.logoutCallbackHandler)
 	router.POST("/api/auth/backchannel-logout", c.backchannelLogoutHandler)
+	router.POST("/api/auth/mfa/step-up", c.stepUpMfaHandler)
 }
 
 // SessionMiddleware projects only already verified, server-side ID-token
@@ -201,6 +202,35 @@ func (c *Client) backchannelLogoutHandler(ctx *gin.Context) {
 		return
 	}
 	ctx.Status(http.StatusOK)
+}
+
+func (c *Client) stepUpMfaHandler(ctx *gin.Context) {
+	ctx.Header("Cache-Control", "no-store")
+	handle, err := ctx.Cookie(c.config.SessionCookie)
+	if err != nil || handle == "" {
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+	var req struct {
+		Code string `json:"code" binding:"required"`
+		Type string `json:"type"`
+	}
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid step-up request"})
+		return
+	}
+	session, err := c.StepUpMFA(ctx.Request.Context(), handle, req.Code, req.Type)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": gin.H{
+			"auth_time": session.AuthTime,
+			"amr":       session.AMR,
+		},
+	})
 }
 
 func setHostCookie(ctx *gin.Context, name, value string, maxAge int, sameSite http.SameSite) {
