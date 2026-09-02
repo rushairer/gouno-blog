@@ -68,6 +68,18 @@ func (r *AgentRepository) BootstrapStarterPack(ctx context.Context) (int, error)
 		return 0, err
 	}
 
+	var ownerPrincipalID int64
+	err = tx.QueryRowContext(ctx, `SELECT p.id FROM blog_principals p
+		JOIN blog_memberships m ON m.principal_id=p.id AND m.status='active'
+		JOIN blog_role_bindings r ON r.membership_id=m.id AND r.role='owner'
+		ORDER BY p.created_at, p.id LIMIT 1`).Scan(&ownerPrincipalID)
+	if errors.Is(err, sql.ErrNoRows) {
+		err = tx.QueryRowContext(ctx, `SELECT id FROM blog_principals ORDER BY created_at, id LIMIT 1`).Scan(&ownerPrincipalID)
+	}
+	if err != nil {
+		return 0, fmt.Errorf("resolve starter pack owner principal: %w", err)
+	}
+
 	rows, err := tx.QueryContext(ctx, `SELECT s.system_key, s.name, s.description,
 		s.default_daily_run_limit, s.default_monthly_token_budget, sv.id
 		FROM ai_skills s JOIN ai_skill_versions sv ON sv.skill_id=s.id AND sv.version=s.version
@@ -104,10 +116,10 @@ func (r *AgentRepository) BootstrapStarterPack(ctx context.Context) (int, error)
 	for _, item := range items {
 		var agentID int64
 		err := tx.QueryRowContext(ctx, `INSERT INTO ai_agents
-			(system_key,name,description,provider_profile_id,skill_version_id,enabled,trigger_type,timezone,daily_run_limit,monthly_token_budget)
-			VALUES ($1,$2,$3,NULL,$4,FALSE,'manual','Asia/Shanghai',$5,$6)
+			(system_key,name,description,provider_profile_id,skill_version_id,enabled,trigger_type,timezone,daily_run_limit,monthly_token_budget,created_by_principal_id)
+			VALUES ($1,$2,$3,NULL,$4,FALSE,'manual','Asia/Shanghai',$5,$6,$7)
 			ON CONFLICT (system_key) WHERE system_key IS NOT NULL DO NOTHING
-			RETURNING id`, item.systemKey, item.name, item.description, item.skillVersionID, item.dailyLimit, item.monthlyBudget).Scan(&agentID)
+			RETURNING id`, item.systemKey, item.name, item.description, item.skillVersionID, item.dailyLimit, item.monthlyBudget, ownerPrincipalID).Scan(&agentID)
 		if errors.Is(err, sql.ErrNoRows) {
 			err = tx.QueryRowContext(ctx, `SELECT id FROM ai_agents WHERE system_key=$1 AND deleted_at IS NULL`, item.systemKey).Scan(&agentID)
 			if errors.Is(err, sql.ErrNoRows) {
@@ -179,15 +191,15 @@ func (r *AgentRepository) BootstrapStarterPack(ctx context.Context) (int, error)
 			if errors.Is(err, sql.ErrNoRows) {
 				currentVersion = 1
 				err = tx.QueryRowContext(ctx, `INSERT INTO ai_workflows
-					(name, description, enabled, template_key, cron_expression, timezone, current_version)
-					VALUES ($1, $2, FALSE, $3, $4, 'Asia/Shanghai', $5)
-					RETURNING id`, meta.name, meta.description, key, meta.cronExpression, currentVersion).Scan(&workflowID)
+					(name, description, enabled, template_key, cron_expression, timezone, current_version, created_by_principal_id)
+					VALUES ($1, $2, FALSE, $3, $4, 'Asia/Shanghai', $5, $6)
+					RETURNING id`, meta.name, meta.description, key, meta.cronExpression, currentVersion, ownerPrincipalID).Scan(&workflowID)
 				if err != nil {
 					return 0, fmt.Errorf("create starter workflow %q: %w", key, err)
 				}
 				if _, err = tx.ExecContext(ctx, `INSERT INTO ai_workflow_versions
-					(workflow_id, version, input_schema, steps) VALUES ($1, $2, $3, $4)`, workflowID, currentVersion,
-					json.RawMessage(`{"type":"object","additionalProperties":false}`), steps); err != nil {
+					(workflow_id, version, input_schema, steps, created_by_principal_id) VALUES ($1, $2, $3, $4, $5)`, workflowID, currentVersion,
+					json.RawMessage(`{"type":"object","additionalProperties":false}`), steps, ownerPrincipalID); err != nil {
 					return 0, fmt.Errorf("create starter workflow %q version: %w", key, err)
 				}
 				continue
@@ -199,8 +211,8 @@ func (r *AgentRepository) BootstrapStarterPack(ctx context.Context) (int, error)
 				return 0, err
 			}
 			if _, err = tx.ExecContext(ctx, `INSERT INTO ai_workflow_versions
-				(workflow_id, version, input_schema, steps) VALUES ($1, $2, $3, $4)`, workflowID, currentVersion,
-				json.RawMessage(`{"type":"object","additionalProperties":false}`), steps); err != nil {
+				(workflow_id, version, input_schema, steps, created_by_principal_id) VALUES ($1, $2, $3, $4, $5)`, workflowID, currentVersion,
+				json.RawMessage(`{"type":"object","additionalProperties":false}`), steps, ownerPrincipalID); err != nil {
 				return 0, err
 			}
 			continue
@@ -215,12 +227,12 @@ func (r *AgentRepository) BootstrapStarterPack(ctx context.Context) (int, error)
 			return 0, err
 		}
 		if _, err = tx.ExecContext(ctx, `INSERT INTO ai_workflow_versions
-			(workflow_id,version,input_schema,steps) VALUES ($1,$2,$3,$4)`, workflowID, currentVersion,
-			json.RawMessage(`{"type":"object","additionalProperties":false}`), steps); err != nil {
+			(workflow_id,version,input_schema,steps,created_by_principal_id) VALUES ($1,$2,$3,$4,$5)`, workflowID, currentVersion,
+			json.RawMessage(`{"type":"object","additionalProperties":false}`), steps, ownerPrincipalID); err != nil {
 			return 0, err
 		}
 	}
-	additionalCreated, err := reconcileProviderDependentStarters(ctx, tx, systemAgents)
+	additionalCreated, err := reconcileProviderDependentStarters(ctx, tx, systemAgents, ownerPrincipalID)
 	if err != nil {
 		return 0, err
 	}

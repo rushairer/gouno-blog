@@ -108,7 +108,7 @@ func stepsHaveFixedAgents(steps []domain.WorkflowStep) bool {
 	return found
 }
 
-func reconcileProviderDependentStarters(ctx context.Context, tx *sql.Tx, systemAgents map[string]int64) (int, error) {
+func reconcileProviderDependentStarters(ctx context.Context, tx *sql.Tx, systemAgents map[string]int64, ownerPrincipalID int64) (int, error) {
 	created := 0
 	for _, definition := range providerStarterWorkflows() {
 		agentID := systemAgents[definition.agentKey]
@@ -133,9 +133,9 @@ func reconcileProviderDependentStarters(ctx context.Context, tx *sql.Tx, systemA
 				name += " [" + definition.key + "]"
 			}
 			err = tx.QueryRowContext(ctx, `INSERT INTO ai_workflows
-				(name,description,enabled,template_key,cron_expression,timezone,current_version,resource_query_empty_policy)
-				VALUES($1,$2,FALSE,$3,NULLIF($4,''),'Asia/Shanghai',1,'succeed') RETURNING id,current_version`,
-				name, definition.description, definition.key, definition.cron).Scan(&workflowID, &version)
+				(name,description,enabled,template_key,cron_expression,timezone,current_version,resource_query_empty_policy,created_by_principal_id)
+				VALUES($1,$2,FALSE,$3,NULLIF($4,''),'Asia/Shanghai',1,'succeed',$5) RETURNING id,current_version`,
+				name, definition.description, definition.key, definition.cron, ownerPrincipalID).Scan(&workflowID, &version)
 			if err != nil {
 				return created, fmt.Errorf("create starter Workflow %q: %w", definition.key, err)
 			}
@@ -154,10 +154,10 @@ func reconcileProviderDependentStarters(ctx context.Context, tx *sql.Tx, systemA
 				return created, err
 			}
 		}
-		if _, err := tx.ExecContext(ctx, `INSERT INTO ai_workflow_versions(workflow_id,version,input_schema,steps,scope_policy)
-			VALUES($1,$2,$3,$4,$5) ON CONFLICT(workflow_id,version) DO UPDATE
-			SET input_schema=EXCLUDED.input_schema,steps=EXCLUDED.steps,scope_policy=EXCLUDED.scope_policy`,
-			workflowID, version, definition.inputSchema, stepsJSON, definition.scopePolicy); err != nil {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO ai_workflow_versions(workflow_id,version,input_schema,steps,scope_policy,created_by_principal_id)
+			VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(workflow_id,version) DO UPDATE
+			SET input_schema=EXCLUDED.input_schema,steps=EXCLUDED.steps,scope_policy=EXCLUDED.scope_policy,created_by_principal_id=EXCLUDED.created_by_principal_id`,
+			workflowID, version, definition.inputSchema, stepsJSON, definition.scopePolicy, ownerPrincipalID); err != nil {
 			return created, fmt.Errorf("version starter Workflow %q: %w", definition.key, err)
 		}
 	}
