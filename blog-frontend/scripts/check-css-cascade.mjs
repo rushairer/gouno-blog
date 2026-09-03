@@ -36,7 +36,13 @@ async function collectCssFiles(directory, prefix = "") {
     }
   }
 
-  return files;
+  return files.sort((left, right) =>
+    left.relativePath.localeCompare(right.relativePath),
+  );
+}
+
+function withoutComments(value) {
+  return value.replace(/\/\*[\s\S]*?\*\//g, "").trim();
 }
 
 function atRuleName(prelude) {
@@ -100,7 +106,7 @@ function inspectTopLevelBlocks(source, relativePath, failures) {
     if (parenDepth > 0) continue;
 
     if (character === "{") {
-      const prelude = source.slice(statementStart, index).trim();
+      const prelude = withoutComments(source.slice(statementStart, index));
       if (depth === 0 && prelude) {
         const name = atRuleName(prelude);
         if (!name || !allowedBlockAtRules.has(name)) {
@@ -125,7 +131,7 @@ function inspectTopLevelBlocks(source, relativePath, failures) {
     }
 
     if (character === ";" && depth === 0) {
-      const statement = source.slice(statementStart, index).trim();
+      const statement = withoutComments(source.slice(statementStart, index));
       if (
         statement &&
         !allowedStatementAtRules.some((prefix) => statement.startsWith(prefix))
@@ -142,7 +148,7 @@ function inspectTopLevelBlocks(source, relativePath, failures) {
     failures.push(`${relativePath}: unbalanced braces (${depth})`);
   }
 
-  const trailing = source.slice(statementStart).trim();
+  const trailing = withoutComments(source.slice(statementStart));
   if (trailing) {
     failures.push(
       `${relativePath}: trailing unparsed CSS "${shortPrelude(trailing)}"`,
@@ -156,7 +162,8 @@ let tailwindImports = 0;
 
 for (const file of cssFiles) {
   const source = await readFile(file.absolutePath, "utf8");
-  const imports = source.match(/@import\s+(?:url\()?\s*["']tailwindcss["']/g) ?? [];
+  const imports =
+    source.match(/@import\s+(?:url\()?\s*["']tailwindcss["']/g) ?? [];
   tailwindImports += imports.length;
 
   if (file.relativePath === tailwindEntry) {
@@ -169,12 +176,6 @@ for (const file of cssFiles) {
     );
   }
 
-  if (/\*\s*\{[^{}]*\b(?:margin|padding)(?:-[\w-]+)?\s*:/s.test(source)) {
-    failures.push(
-      `${file.relativePath}: standalone universal spacing resets are forbidden`,
-    );
-  }
-
   inspectTopLevelBlocks(source, file.relativePath, failures);
 }
 
@@ -183,12 +184,17 @@ if (tailwindImports !== 1) {
 }
 
 const mainSource = await readFile(path.join(sourceRoot, "main.tsx"), "utf8");
-const cssImports = [...mainSource.matchAll(/^\s*import\s+["']([^"']+\.css)["'];?/gm)].map(
-  (match) => match[1],
-);
+const cssImports = [
+  ...mainSource.matchAll(/^\s*import\s+["']([^"']+\.css)["'];?/gm),
+].map((match) => match[1]);
 if (cssImports[0] !== "./styles/tailwind.css") {
   failures.push(
     `main.tsx: first CSS import must be ./styles/tailwind.css, found ${cssImports[0] ?? "none"}`,
+  );
+}
+if (cssImports.at(-1) !== "./styles/accessibility.css") {
+  failures.push(
+    `main.tsx: final CSS import must be ./styles/accessibility.css, found ${cssImports.at(-1) ?? "none"}`,
   );
 }
 

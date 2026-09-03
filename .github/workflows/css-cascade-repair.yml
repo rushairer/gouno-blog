@@ -35,6 +35,76 @@ jobs:
         run: npm run format
       - name: Verify complete frontend quality gate
         run: npm run quality
+      - name: Render utility precedence probe
+        env:
+          PROBE_DIR: ${{ runner.temp }}/gouno-blog-css-cascade
+        run: |
+          set -euo pipefail
+          mkdir -p "$PROBE_DIR"
+          node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync } from 'node:fs';
+          import path from 'node:path';
+
+          const html = readFileSync('dist/index.html', 'utf8');
+          const hrefs = [...html.matchAll(/<link[^>]+href=["']([^"']+\.css)["']/g)].map((match) => match[1]);
+          if (hrefs.length === 0) throw new Error('No built stylesheet links found');
+          const css = hrefs
+            .map((href) => readFileSync(path.join('dist', href.replace(/^\.?\//, '')), 'utf8'))
+            .join('\n');
+          writeFileSync(path.join(process.env.PROBE_DIR, 'app.css'), css);
+          NODE
+          cat > "$PROBE_DIR/index.html" <<'HTML'
+          <!doctype html>
+          <html lang="en">
+            <head>
+              <meta charset="utf-8" />
+              <meta name="viewport" content="width=device-width, initial-scale=1" />
+              <link rel="stylesheet" href="./app.css" />
+              <title>Gouno Blog CSS cascade probe</title>
+            </head>
+            <body style="background:#0f1217;color:#e5e7eb;font-family:system-ui;display:grid;place-items:center;min-height:100vh">
+              <section style="border:1px solid #2b3441;border-radius:12px;padding:24px;background:#171c24">
+                <strong>Tailwind utility precedence</strong>
+                <span id="probe" class="p-6" style="display:inline-block;margin-left:16px;border:1px solid #22c55e">probe</span>
+                <output id="result" style="display:block;margin-top:16px"></output>
+              </section>
+              <script>
+                addEventListener('load', () => {
+                  const style = getComputedStyle(document.getElementById('probe'));
+                  const padding = [style.paddingLeft, style.paddingRight, style.paddingTop, style.paddingBottom].join(',');
+                  document.documentElement.dataset.padding = padding;
+                  document.documentElement.dataset.boxSizing = style.boxSizing;
+                  document.getElementById('result').textContent = `padding=${padding}; box-sizing=${style.boxSizing}`;
+                });
+              </script>
+            </body>
+          </html>
+          HTML
+          python3 -m http.server 4173 --directory "$PROBE_DIR" > "$PROBE_DIR/server.log" 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          for _ in {1..20}; do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then break; fi
+            sleep 0.25
+          done
+          BROWSER="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$BROWSER"
+          "$BROWSER" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=3000 \
+            --dump-dom http://127.0.0.1:4173/ > "$PROBE_DIR/dom.html"
+          grep -F 'data-padding="24px,24px,24px,24px"' "$PROBE_DIR/dom.html"
+          grep -F 'data-box-sizing="border-box"' "$PROBE_DIR/dom.html"
+          "$BROWSER" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --virtual-time-budget=3000 \
+            --window-size=1000,420 --screenshot="$PROBE_DIR/probe.png" http://127.0.0.1:4173/
+          test -s "$PROBE_DIR/probe.png"
+      - name: Upload rendered cascade evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: gouno-blog-css-cascade-evidence
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            ${{ runner.temp }}/gouno-blog-css-cascade/dom.html
+            ${{ runner.temp }}/gouno-blog-css-cascade/probe.png
       - name: Verify patch integrity
         run: git diff --check
         working-directory: .

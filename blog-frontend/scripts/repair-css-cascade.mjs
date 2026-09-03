@@ -99,7 +99,7 @@ async function updateDesignSystem() {
 
   source = source.replace(
     "## Repository boundaries",
-    `## CSS cascade isolation\n\n- Tailwind is imported exactly once from \`src/styles/tailwind.css\`, which must be the first CSS entry loaded by \`main.tsx\`.\n- Global document defaults live in \`@layer base\`; reusable product styles live in \`@layer components\`; semantic variables live in \`@layer theme\`.\n- Accessibility overrides that must outrank utilities live in the final \`overrides\` layer.\n- Unlayered source rules and standalone universal spacing resets are rejected by \`npm run lint:css\`.\n\n## Repository boundaries`,
+    `## CSS cascade isolation\n\n- Tailwind is imported exactly once from \`src/styles/tailwind.css\`, which must be the first CSS entry loaded by \`main.tsx\`.\n- Global document defaults live in \`@layer base\`; reusable product styles live in \`@layer components\`; semantic variables live in \`@layer theme\`.\n- Accessibility overrides that must outrank utilities live in the final \`overrides\` layer and are loaded last.\n- Every source stylesheet must place style rules inside an explicit cascade layer; \`npm run lint:css\` rejects unlayered top-level rules and invalid entry ordering.\n\n## Repository boundaries`,
   );
   await writeFile(file, source);
 }
@@ -110,7 +110,7 @@ await writeFile(
 );
 await writeFile(
   fromRoot("src/styles/accessibility.css"),
-  `@layer overrides {\n  @media (prefers-reduced-motion: reduce) {\n    *,\n    *::before,\n    *::after {\n      scroll-behavior: auto !important;\n      animation-duration: 0.01ms !important;\n      animation-iteration-count: 1 !important;\n      transition-duration: 0.01ms !important;\n    }\n  }\n}\n`,
+  `@layer overrides {\n  @media (prefers-reduced-motion: reduce) {\n    *,\n    *::before,\n    *::after {\n      scroll-behavior: auto;\n      animation-duration: 0.01ms;\n      animation-iteration-count: 1;\n      transition-duration: 0.01ms;\n    }\n  }\n}\n`,
 );
 
 await migrateIndex();
