@@ -5,16 +5,16 @@ import type { TagSummary } from "../../api/site";
 import {
   AdminPage,
   AdminPageHeader,
+  AsyncState,
   BulkActionBar,
   Button,
   Checkbox,
   ConfirmDialog,
   ContentStack,
-  EmptyState,
   Feedback,
-  LoadingState,
   Modal,
   Panel,
+  TableSkeleton,
   useToast,
 } from "../../components/ui";
 import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
@@ -121,7 +121,9 @@ export default function Tags() {
         description="整理文章中的具体技术与概念信号，支持批量清洗与合并。"
       />
       <ContentStack>
-        {error ? <Feedback type="error">{error}</Feedback> : null}
+        {error && tags.length > 0 ? (
+          <Feedback type="error">{error}</Feedback>
+        ) : null}
         {selected.length ? (
           <BulkActionBar
             selectionLabel={`已选择 ${selected.length} 个标签`}
@@ -139,11 +141,15 @@ export default function Tags() {
             </Button>
           </BulkActionBar>
         ) : null}
-        {loading ? (
-          <LoadingState label="正在整理标签结构…" />
-        ) : tags.length === 0 ? (
-          <EmptyState label="文章添加标签后会自动在这里汇总。" />
-        ) : (
+        <AsyncState
+          loading={loading}
+          skeleton={<TableSkeleton rows={4} columns={3} />}
+          error={error && tags.length === 0 ? error : null}
+          onRetry={load}
+          retryLabel="重新载入"
+          empty={!loading && tags.length === 0 && !error}
+          emptyTitle="文章添加标签后会自动在这里汇总。"
+        >
           <div className="tag-admin-grid">
             {tags.map((tag) => (
               <Panel className="tag-admin-card" key={tag.name}>
@@ -198,7 +204,7 @@ export default function Tags() {
               </Panel>
             ))}
           </div>
-        )}
+        </AsyncState>
       </ContentStack>
       <Modal
         open={tagEdit !== null}

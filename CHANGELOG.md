@@ -3,6 +3,15 @@
 All notable changes to the complete Gouno Blog distribution are documented in
 this file. The format follows Keep a Changelog and Semantic Versioning.
 
+## [1.5.8] - 2026-09-03
+
+### Changed
+
+- Refactor admin management views (comments, categories, tags, notifications) to use `AsyncState` with structured table skeletons and dedicated error-retry handling, eliminating layout shifts and state collision bugs.
+- Introduce reusable `Card` primitive (`Card`, `CardHeader`, `CardContent`, `CardFooter`) in UI component library with variant and interactive hover/active feedback.
+- Replace full-page reloads on article detail error recovery with in-place reactive re-fetch.
+- Standardize version history drawer empty state and notification action bar styling.
+
 ## [1.5.7] - 2026-09-02
 
 ### Fixed

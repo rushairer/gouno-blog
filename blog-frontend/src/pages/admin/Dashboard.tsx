@@ -414,7 +414,7 @@ export default function Dashboard() {
                                 to={`/articles/${post.slug || post.id}`}
                                 target="_blank"
                                 rel="noreferrer"
-                                style={{ color: "var(--text-3)" }}
+                                style={{ color: "var(--ui-text-muted)" }}
                               >
                                 前台
                               </Link>

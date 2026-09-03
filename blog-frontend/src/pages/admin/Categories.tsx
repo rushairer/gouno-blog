@@ -5,18 +5,18 @@ import { agentApi } from "../../api/agent";
 import {
   AdminPage,
   AdminPageHeader,
+  AsyncState,
   BulkActionBar,
   Button,
   Checkbox,
   ConfirmDialog,
   ContentStack,
   Drawer,
-  EmptyState,
   Feedback,
-  LoadingState,
   IconButton,
   Panel,
   TableContainer,
+  TableSkeleton,
   useToast,
 } from "../../components/ui";
 import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
@@ -234,7 +234,9 @@ export default function Categories() {
         }
       />
       <ContentStack>
-        {error ? <Feedback type="error">{error}</Feedback> : null}
+        {error && categories.length > 0 ? (
+          <Feedback type="error">{error}</Feedback>
+        ) : null}
         {selected.length ? (
           <BulkActionBar
             selectionLabel={`已选择 ${selected.length} 个分类`}
@@ -252,21 +254,25 @@ export default function Categories() {
             </Button>
           </BulkActionBar>
         ) : null}
-        {loading ? (
-          <LoadingState label="正在整理分类结构…" />
-        ) : categories.length === 0 ? (
-          <EmptyState label="还没有分类。创建第一个分类来组织长期主题。" />
-        ) : (
+        <AsyncState
+          loading={loading}
+          skeleton={<TableSkeleton rows={4} columns={6} />}
+          error={error && categories.length === 0 ? error : null}
+          onRetry={load}
+          retryLabel="重新载入"
+          empty={!loading && categories.length === 0 && !error}
+          emptyTitle="还没有分类。创建第一个分类来组织长期主题。"
+        >
           <Panel className="taxonomy-table">
             <TableContainer>
               <table className="admin-table">
                 <thead>
                   <tr>
                     <th>选择</th>
-                    <th>名称</th>
-                    <th>Slug</th>
-                    <th>文章</th>
                     <th>排序</th>
+                    <th>名称</th>
+                    <th>Slug 标识</th>
+                    <th>文章数</th>
                     <th>操作</th>
                   </tr>
                 </thead>
@@ -281,18 +287,28 @@ export default function Categories() {
                             setSelected((current) =>
                               event.target.checked
                                 ? [...new Set([...current, item.id])]
-                                : current.filter((key) => key !== item.id),
+                                : current.filter((id) => id !== item.id),
                             )
                           }
                         />
                       </td>
                       <td>
-                        <strong>{item.name}</strong>
-                        <small>{item.description}</small>
+                        <span className="mono-num">{item.sort_order ?? 0}</span>
                       </td>
-                      <td className="mono">{item.slug}</td>
-                      <td>{item.post_count || 0}</td>
-                      <td>{item.sort_order || 0}</td>
+                      <td>
+                        <strong>{item.name}</strong>
+                        {item.description ? (
+                          <div className="table-subtext">
+                            {item.description}
+                          </div>
+                        ) : null}
+                      </td>
+                      <td>
+                        <code>{item.slug}</code>
+                      </td>
+                      <td>
+                        <span className="mono-num">{item.post_count ?? 0}</span>
+                      </td>
                       <td>
                         <div className="table-actions">
                           <IconButton
@@ -316,7 +332,7 @@ export default function Categories() {
               </table>
             </TableContainer>
           </Panel>
-        )}
+        </AsyncState>
       </ContentStack>
 
       {/* 新建分类 Drawer */}

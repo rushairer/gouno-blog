@@ -9,6 +9,10 @@ import {
   Badge,
   Button,
   ButtonLink,
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
   ChoiceButton,
   BulkActionBar,
   Drawer,
@@ -494,5 +498,30 @@ describe("shared UI primitives", () => {
       </AsyncState>,
     );
     expect(screen.getByText("Data Content")).toBeInTheDocument();
+  });
+
+  it("renders Card with header, content, footer, variants and interactive states", () => {
+    const { container } = render(
+      <Card variant="elevated" padding="lg" interactive>
+        <CardHeader
+          title="Card Title"
+          description="Card Description"
+          action={<button type="button">Action</button>}
+        />
+        <CardContent>Card Body</CardContent>
+        <CardFooter>Card Bottom</CardFooter>
+      </Card>,
+    );
+    expect(screen.getByText("Card Title")).toBeInTheDocument();
+    expect(screen.getByText("Card Description")).toBeInTheDocument();
+    expect(screen.getByText("Card Body")).toBeInTheDocument();
+    expect(screen.getByText("Card Bottom")).toBeInTheDocument();
+    const cardEl = container.querySelector(".ui-card");
+    expect(cardEl).toHaveClass(
+      "ui-card--elevated",
+      "ui-card--padding-lg",
+      "ui-card--interactive",
+    );
+    expect(cardEl).toHaveAttribute("tabindex", "0");
   });
 });

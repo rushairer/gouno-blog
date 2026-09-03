@@ -22,6 +22,7 @@ import {
   Button,
   ChoiceButton,
   ConfirmDialog,
+  EmptyState,
   Field,
   Input,
   Select,
@@ -972,7 +973,7 @@ export default function PostEditor() {
           {showVersions ? (
             <div className="version-drawer">
               {versions.length === 0 ? (
-                <p className="version-drawer__empty">暂无历史版本记录</p>
+                <EmptyState label="暂无历史版本记录" />
               ) : (
                 versions.map((version) => (
                   <ChoiceButton

@@ -11,3 +11,4 @@ export * from "./Pagination";
 export * from "./StatusIndicator";
 export * from "./Skeleton";
 export * from "./AsyncState";
+export * from "./Card";

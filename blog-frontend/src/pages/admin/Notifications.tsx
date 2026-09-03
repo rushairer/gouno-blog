@@ -12,19 +12,20 @@ import {
 import { notificationsApi } from "../../api/notifications";
 import type { Notification } from "../../api/notifications";
 import {
+  ActionGroup,
   AdminPage,
   AdminPageHeader,
+  AsyncState,
   BulkActionBar,
   Button,
   ButtonLink,
   Checkbox,
   ConfirmDialog,
   ContentStack,
-  EmptyState,
   Feedback,
   FilterBar,
-  LoadingState,
   Select,
+  TableSkeleton,
   useToast,
 } from "../../components/ui";
 
@@ -254,10 +255,7 @@ export default function AdminNotifications() {
         title="通知中心"
         description="查看系统告警、AI 自动化异常与站点互动通知，并支持批量管理与清理。"
         actions={
-          <div
-            className="admin-page-actions-group"
-            style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}
-          >
+          <ActionGroup>
             {unreadCount > 0 ? (
               <Button
                 variant="secondary"
@@ -291,11 +289,13 @@ export default function AdminNotifications() {
                 清空全部
               </Button>
             ) : null}
-          </div>
+          </ActionGroup>
         }
       />
       <ContentStack>
-        {error ? <Feedback type="error">{error}</Feedback> : null}
+        {error && items.length > 0 ? (
+          <Feedback type="error">{error}</Feedback>
+        ) : null}
 
         <FilterBar>
           <Select
@@ -372,11 +372,15 @@ export default function AdminNotifications() {
           </BulkActionBar>
         ) : null}
 
-        {loading ? (
-          <LoadingState label="正在载入通知…" />
-        ) : filtered.length === 0 ? (
-          <EmptyState label="暂无相关通知记录。" />
-        ) : (
+        <AsyncState
+          loading={loading}
+          skeleton={<TableSkeleton rows={5} columns={3} />}
+          error={error && items.length === 0 ? error : null}
+          onRetry={load}
+          retryLabel="重新载入"
+          empty={!loading && filtered.length === 0 && !error}
+          emptyTitle="暂无相关通知记录。"
+        >
           <div className="admin-notification-list">
             {filtered.map((item) => {
               const { destination, icon, tag, tagClass, iconClass } =
@@ -483,7 +487,7 @@ export default function AdminNotifications() {
               );
             })}
           </div>
-        )}
+        </AsyncState>
       </ContentStack>
 
       <ConfirmDialog

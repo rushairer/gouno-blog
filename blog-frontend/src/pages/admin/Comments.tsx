@@ -5,17 +5,17 @@ import { commentsApi } from "../../api/comments";
 import {
   AdminPage,
   AdminPageHeader,
+  AsyncState,
   BulkActionBar,
   Button,
   Checkbox,
   ConfirmDialog,
   ContentStack,
-  EmptyState,
   Feedback,
   FilterBar,
-  LoadingState,
   Panel,
   Select,
+  TableSkeleton,
   useToast,
 } from "../../components/ui";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
@@ -121,7 +121,9 @@ export default function AdminComments() {
         description="审核讨论、处理举报，并维护高质量的交流空间。"
       />
       <ContentStack>
-        {error ? <Feedback type="error">{error}</Feedback> : null}
+        {error && comments.length > 0 ? (
+          <Feedback type="error">{error}</Feedback>
+        ) : null}
         <FilterBar>
           <Select
             size="compact"
@@ -161,11 +163,15 @@ export default function AdminComments() {
             </Button>
           </BulkActionBar>
         ) : null}
-        {loading ? (
-          <LoadingState label="正在载入评论…" />
-        ) : comments.length === 0 ? (
-          <EmptyState label="当前队列已经处理完毕。" />
-        ) : (
+        <AsyncState
+          loading={loading}
+          skeleton={<TableSkeleton rows={4} columns={4} />}
+          error={error && comments.length === 0 ? error : null}
+          onRetry={load}
+          retryLabel="重新载入"
+          empty={!loading && comments.length === 0 && !error}
+          emptyTitle="当前队列已经处理完毕。"
+        >
           <div className="moderation-list">
             {comments.map((comment) => (
               <Panel key={comment.id}>
@@ -228,7 +234,7 @@ export default function AdminComments() {
               </Panel>
             ))}
           </div>
-        )}
+        </AsyncState>
       </ContentStack>
       <ConfirmDialog
         open={deleteTarget !== null}

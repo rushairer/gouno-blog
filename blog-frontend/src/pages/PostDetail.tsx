@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -153,95 +153,93 @@ export default function PostDetail() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  useEffect(() => {
-    async function fetchPostAndComments() {
-      if (!slug) return;
-      try {
-        setLoading(true);
-        setError(null);
-        let postData: Post | null = null;
-        let adminPreviewActive = false;
+  const fetchPostAndComments = useCallback(async () => {
+    if (!slug) return;
+    try {
+      setLoading(true);
+      setError(null);
+      let postData: Post | null = null;
+      let adminPreviewActive = false;
 
-        const [postResult, communityResult, relatedResult] =
-          await Promise.allSettled([
-            postsApi.getPost(slug),
-            postsApi.getCommunityState(slug),
-            postsApi.getRelatedPosts(slug),
-          ]);
+      const [postResult, communityResult, relatedResult] =
+        await Promise.allSettled([
+          postsApi.getPost(slug),
+          postsApi.getCommunityState(slug),
+          postsApi.getRelatedPosts(slug),
+        ]);
 
-        if (postResult.status === "fulfilled") {
-          postData = postResult.value;
-        } else if (isPreviewParam || canPreview) {
+      if (postResult.status === "fulfilled") {
+        postData = postResult.value;
+      } else if (isPreviewParam || canPreview) {
+        try {
+          postData = await postsApi.getAdminPost(slug);
+          adminPreviewActive = true;
+        } catch {
           try {
-            postData = await postsApi.getAdminPost(slug);
-            adminPreviewActive = true;
-          } catch {
-            try {
-              let adminID: string | number = slug;
-              if (!/^\d+$/.test(slug || "")) {
-                const listData = await postsApi
-                  .getPosts({ q: slug || "", search: slug || "" }, true)
-                  .catch(() => null);
-                const found = listData?.list?.find(
-                  (item: Post) => item.slug === slug,
-                );
-                if (found) adminID = found.id;
-              }
-              if (/^\d+$/.test(String(adminID))) {
-                postData = await postsApi.getAdminPost(adminID);
-                adminPreviewActive = true;
-              }
-            } catch (adminErr) {
-              console.error("Admin preview fetch error:", adminErr);
+            let adminID: string | number = slug;
+            if (!/^\d+$/.test(slug || "")) {
+              const listData = await postsApi
+                .getPosts({ q: slug || "", search: slug || "" }, true)
+                .catch(() => null);
+              const found = listData?.list?.find(
+                (item: Post) => item.slug === slug,
+              );
+              if (found) adminID = found.id;
             }
+            if (/^\d+$/.test(String(adminID))) {
+              postData = await postsApi.getAdminPost(adminID);
+              adminPreviewActive = true;
+            }
+          } catch (adminErr) {
+            console.error("Admin preview fetch error:", adminErr);
           }
         }
-
-        if (!postData) {
-          throw new Error(t("postNotFound"));
-        }
-
-        setPost(postData);
-        setIsAdminPreview(
-          adminPreviewActive ||
-            (Boolean(postData.status && postData.status !== "published") &&
-              canPreview),
-        );
-
-        const communityState =
-          communityResult.status === "fulfilled" ? communityResult.value : null;
-        setLikes(communityState?.likes_count ?? postData.likes_count ?? 0);
-        setLiked(communityState?.liked || false);
-        setRelatedPosts(
-          relatedResult.status === "fulfilled" ? relatedResult.value : [],
-        );
-        const viewKey = `${SESSION_KEYS.POST_VIEWED_PREFIX}${postData.id}`;
-        const alreadyViewed = sessionStorage.getItem(viewKey) === "1";
-        setViews((postData.views_count || 0) + (alreadyViewed ? 0 : 1));
-
-        if (!alreadyViewed && postData.status === "published") {
-          sessionStorage.setItem(viewKey, "1");
-          analyticsApi.recordView(postData.id).catch((e) => console.error(e));
-        }
-
-        try {
-          const postComments = await commentsApi.getPostComments(postData.id);
-          setComments(postComments || []);
-        } catch {
-          setComments([]);
-        }
-      } catch (err: unknown) {
-        console.error(err);
-        setError(err instanceof Error ? err.message : t("failedFetch"));
-      } finally {
-        setLoading(false);
       }
-    }
 
-    if (slug) {
-      fetchPostAndComments();
+      if (!postData) {
+        throw new Error(t("postNotFound"));
+      }
+
+      setPost(postData);
+      setIsAdminPreview(
+        adminPreviewActive ||
+          (Boolean(postData.status && postData.status !== "published") &&
+            canPreview),
+      );
+
+      const communityState =
+        communityResult.status === "fulfilled" ? communityResult.value : null;
+      setLikes(communityState?.likes_count ?? postData.likes_count ?? 0);
+      setLiked(communityState?.liked || false);
+      setRelatedPosts(
+        relatedResult.status === "fulfilled" ? relatedResult.value : [],
+      );
+      const viewKey = `${SESSION_KEYS.POST_VIEWED_PREFIX}${postData.id}`;
+      const alreadyViewed = sessionStorage.getItem(viewKey) === "1";
+      setViews((postData.views_count || 0) + (alreadyViewed ? 0 : 1));
+
+      if (!alreadyViewed && postData.status === "published") {
+        sessionStorage.setItem(viewKey, "1");
+        analyticsApi.recordView(postData.id).catch((e) => console.error(e));
+      }
+
+      try {
+        const postComments = await commentsApi.getPostComments(postData.id);
+        setComments(postComments || []);
+      } catch {
+        setComments([]);
+      }
+    } catch (err: unknown) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : t("failedFetch"));
+    } finally {
+      setLoading(false);
     }
   }, [slug, isPreviewParam, canPreview, t]);
+
+  useEffect(() => {
+    fetchPostAndComments();
+  }, [fetchPostAndComments]);
 
   const articleSEO = useMemo(
     () =>
@@ -340,7 +338,7 @@ export default function PostDetail() {
             <ActionGroup>
               <Button
                 variant="primary"
-                onClick={() => window.location.reload()}
+                onClick={fetchPostAndComments}
                 icon={<RefreshCw size={15} />}
               >
                 {t("retry")}
