@@ -2068,6 +2068,8 @@ a {
   place-items: center;
   padding: 24px;
   background: var(--ui-overlay);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 .modal-scrim,
 .drawer-scrim {
@@ -2157,6 +2159,8 @@ a {
   display: flex;
   justify-content: flex-end;
   background: var(--ui-overlay);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 .drawer {
   position: relative;
@@ -2664,6 +2668,22 @@ a {
   padding: 13px 12px;
   border-bottom: 1px solid var(--admin-line);
   text-align: left;
+}
+.admin-table th:last-child,
+.admin-table td:last-child {
+  text-align: right;
+}
+.admin-table td .status-badge,
+.admin-table td .status-pill,
+.admin-table td .badge,
+.admin-table td .icon-button,
+.admin-table td .btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.admin-table td .row-actions,
+.admin-table td .action-group {
+  justify-content: flex-end;
 }
 .dashboard-table th,
 .admin-table th {

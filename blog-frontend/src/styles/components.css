@@ -399,6 +399,12 @@ textarea.ui-control,
   background: transparent;
 }
 
+.icon-button--primary {
+  border-color: var(--ui-brand);
+  background: var(--ui-brand);
+  color: var(--ui-on-brand);
+}
+
 .icon-button--danger {
   border-color: var(--ui-danger);
   background: var(--ui-danger-soft);
@@ -965,6 +971,29 @@ textarea.ui-control,
   background: var(--ui-danger-soft);
   color: var(--ui-danger);
   border-color: var(--ui-danger);
+}
+
+.badge--primary {
+  background: var(--ui-brand-soft);
+  color: var(--ui-brand);
+  border-color: var(--ui-brand);
+}
+
+.badge--secondary,
+.badge--neutral {
+  background: var(--ui-control-hover);
+  color: var(--ui-text-secondary);
+  border-color: var(--ui-border);
+}
+
+.badge--destructive {
+  background: var(--ui-danger-soft);
+  color: var(--ui-danger);
+  border-color: var(--ui-danger);
+}
+
+.badge--pill {
+  border-radius: 9999px;
 }
 
 .pagination {

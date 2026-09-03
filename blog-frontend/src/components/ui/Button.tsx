@@ -75,6 +75,14 @@ export type ButtonLinkProps = React.ComponentPropsWithoutRef<typeof Link> &
     iconPosition?: ButtonIconPosition;
   };
 
+export type IconButtonVariant =
+  | "secondary"
+  | "ghost"
+  | "danger"
+  | "primary"
+  | "destructive"
+  | "outline";
+
 export type IconButtonProps = Omit<
   React.ButtonHTMLAttributes<HTMLButtonElement>,
   "children"
@@ -84,7 +92,7 @@ export type IconButtonProps = Omit<
   /** Rendered in the shared, fixed-size icon slot. */
   icon: React.ReactNode;
   size?: ButtonSize;
-  variant?: "secondary" | "ghost" | "danger";
+  variant?: IconButtonVariant;
   loading?: boolean;
 };
 
@@ -97,7 +105,7 @@ export type IconButtonLinkProps = Omit<
   /** Rendered in the shared, fixed-size icon slot. */
   icon: React.ReactNode;
   size?: ButtonSize;
-  variant?: "secondary" | "ghost" | "danger";
+  variant?: IconButtonVariant;
   disabled?: boolean;
 };
 
@@ -228,6 +236,12 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
     },
     ref,
   ) {
+    const normalizedVariant =
+      variant === "destructive"
+        ? "danger"
+        : variant === "outline"
+          ? "secondary"
+          : variant;
     return (
       <button
         ref={ref}
@@ -235,7 +249,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
         className={classes(
           "icon-button",
           size === "compact" && "icon-button--compact",
-          `icon-button--${variant}`,
+          `icon-button--${normalizedVariant}`,
           loading && "is-loading",
           className,
         )}
@@ -273,13 +287,19 @@ export const IconButtonLink = forwardRef<
   },
   ref,
 ) {
+  const normalizedVariant =
+    variant === "destructive"
+      ? "danger"
+      : variant === "outline"
+        ? "secondary"
+        : variant;
   return (
     <Link
       ref={ref}
       className={classes(
         "icon-button",
         size === "compact" && "icon-button--compact",
-        `icon-button--${variant}`,
+        `icon-button--${normalizedVariant}`,
         disabled && "is-disabled",
         className,
       )}

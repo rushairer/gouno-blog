@@ -12,4 +12,5 @@ export * from "./StatusIndicator";
 export * from "./Skeleton";
 export * from "./AsyncState";
 export * from "./Card";
+export * from "./Badge";
 export * from "./Dialog";

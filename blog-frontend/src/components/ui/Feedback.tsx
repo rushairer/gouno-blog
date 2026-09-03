@@ -129,57 +129,10 @@ export async function copyText(
   }
 }
 
-export type BadgeTone = "brand" | "success" | "warning" | "danger" | "neutral";
-
-export function Badge({
-  children,
-  tone = "neutral",
-  className = "",
-}: {
-  children: React.ReactNode;
-  tone?: BadgeTone;
-  className?: string;
-}) {
-  return (
-    <span
-      className={classes(
-        "badge",
-        tone !== "neutral" && `badge--${tone}`,
-        className,
-      )}
-    >
-      {children}
-    </span>
-  );
-}
-
-export type PostStatus = "published" | "draft" | "scheduled" | "hidden";
-
-export function StatusBadge({
-  status = "draft",
-  className = "",
-  label,
-}: {
-  status?: PostStatus | string;
-  className?: string;
-  label?: React.ReactNode;
-}) {
-  const normalizedStatus = status || "draft";
-  const defaultLabels: Record<string, string> = {
-    published: "已发布",
-    draft: "草稿",
-    scheduled: "定时发布",
-    hidden: "已隐藏",
-  };
-  return (
-    <span
-      className={classes(
-        "status-badge",
-        `status-badge--${normalizedStatus}`,
-        className,
-      )}
-    >
-      {label || defaultLabels[normalizedStatus] || normalizedStatus}
-    </span>
-  );
-}
+export {
+  Badge,
+  StatusBadge,
+  type BadgeTone,
+  type BadgeProps,
+  type PostStatus,
+} from "./Badge";
