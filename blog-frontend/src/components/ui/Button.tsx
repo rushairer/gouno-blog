@@ -1,6 +1,8 @@
 import { forwardRef } from "react";
 import type React from "react";
 import { Link } from "react-router-dom";
+import { cva, type VariantProps } from "class-variance-authority";
+import { cn } from "../../lib/utils";
 import { classes } from "./classes";
 
 export type ButtonVariant =
@@ -8,27 +10,70 @@ export type ButtonVariant =
   | "secondary"
   | "danger"
   | "ghost"
-  | "link";
-export type ButtonSize = "regular" | "compact";
+  | "link"
+  | "default"
+  | "destructive"
+  | "outline";
+export type ButtonSize =
+  | "regular"
+  | "compact"
+  | "sm"
+  | "base"
+  | "lg"
+  | "default"
+  | "icon";
 export type ButtonIconPosition = "left" | "right";
 
-export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: ButtonVariant;
-  size?: ButtonSize;
-  loading?: boolean;
-  /** Rendered in the shared, fixed-size icon slot. */
-  icon?: React.ReactNode;
-  iconPosition?: ButtonIconPosition;
-};
+export const buttonVariants = cva(
+  "btn inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer",
+  {
+    variants: {
+      variant: {
+        primary: "btn-primary",
+        default: "btn-primary",
+        secondary: "btn-secondary",
+        danger: "btn-danger",
+        destructive: "btn-danger",
+        ghost: "btn-ghost",
+        outline: "btn-secondary",
+        link: "btn-link",
+      },
+      size: {
+        regular: "",
+        base: "",
+        default: "",
+        compact: "btn--compact",
+        sm: "btn--compact",
+        lg: "",
+        icon: "icon-button",
+      },
+    },
+    defaultVariants: {
+      variant: "secondary",
+      size: "regular",
+    },
+  },
+);
 
-export type ButtonLinkProps = React.ComponentPropsWithoutRef<typeof Link> & {
-  variant?: ButtonVariant;
-  size?: ButtonSize;
-  disabled?: boolean;
-  /** Rendered in the shared, fixed-size icon slot. */
-  icon?: React.ReactNode;
-  iconPosition?: ButtonIconPosition;
-};
+export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> &
+  VariantProps<typeof buttonVariants> & {
+    variant?: ButtonVariant;
+    size?: ButtonSize;
+    loading?: boolean;
+    /** Rendered in the shared, fixed-size icon slot. */
+    icon?: React.ReactNode;
+    iconPosition?: ButtonIconPosition;
+  };
+
+export type ButtonLinkProps = React.ComponentPropsWithoutRef<typeof Link> &
+  VariantProps<typeof buttonVariants> & {
+    variant?: ButtonVariant;
+    size?: ButtonSize;
+    disabled?: boolean;
+    /** Rendered in the shared, fixed-size icon slot. */
+    icon?: React.ReactNode;
+    iconPosition?: ButtonIconPosition;
+  };
 
 export type IconButtonProps = Omit<
   React.ButtonHTMLAttributes<HTMLButtonElement>,
@@ -38,7 +83,7 @@ export type IconButtonProps = Omit<
   label: string;
   /** Rendered in the shared, fixed-size icon slot. */
   icon: React.ReactNode;
-  size?: "regular" | "compact";
+  size?: ButtonSize;
   variant?: "secondary" | "ghost" | "danger";
   loading?: boolean;
 };
@@ -51,7 +96,7 @@ export type IconButtonLinkProps = Omit<
   label: string;
   /** Rendered in the shared, fixed-size icon slot. */
   icon: React.ReactNode;
-  size?: "regular" | "compact";
+  size?: ButtonSize;
   variant?: "secondary" | "ghost" | "danger";
   disabled?: boolean;
 };
@@ -65,10 +110,8 @@ export function buttonClassName({
   size?: ButtonSize;
   className?: string;
 } = {}) {
-  return classes(
-    "btn",
-    `btn-${variant}`,
-    size === "compact" && "btn--compact",
+  return cn(
+    buttonVariants({ variant: variant as any, size: size as any }),
     className,
   );
 }
