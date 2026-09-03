@@ -149,17 +149,11 @@ export function MediaAltTextForm({
         </>
       }
     >
-      <div className="editor-ai-image-preview" style={{ marginBottom: 12 }}>
+      <div className="editor-ai-image-preview editor-inline-box">
         <img
           src={asset.url}
           alt={asset.alt_text || asset.filename}
-          style={{
-            maxHeight: 200,
-            objectFit: "contain",
-            width: "100%",
-            borderRadius: 8,
-            background: "var(--bg-muted)",
-          }}
+          className="media-asset-preview-img"
         />
       </div>
       <p className="upload-file-summary">
@@ -242,7 +236,7 @@ export function MediaImageGenerationForm({
   return (
     <div className="drawer-form">
       <Field label="风格预设" hint="点击预设快速填入专业提示词风格">
-        <div className="editor-ai-presets" style={{ marginTop: 4 }}>
+        <div className="editor-ai-presets">
           {presets.map(([label, value]) => (
             <Button
               key={label}
@@ -280,7 +274,7 @@ export function MediaImageGenerationForm({
       </Field>
       {error ? <Feedback type="error">{error}</Feedback> : null}
       {generated ? (
-        <div className="editor-ai-image-result" style={{ marginTop: 8 }}>
+        <div className="editor-ai-image-result">
           <div className="editor-ai-image-preview">
             <img src={generated.url} alt={generated.alt} />
           </div>
@@ -302,7 +296,7 @@ export function MediaImageGenerationForm({
           </div>
         </div>
       ) : null}
-      <FormActions className="drawer-actions" style={{ marginTop: 12 }}>
+      <FormActions className="drawer-actions">
         <Button
           variant="secondary"
           type="button"

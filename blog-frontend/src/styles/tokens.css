@@ -62,17 +62,34 @@
     transparent
   );
 
+  --space-0-5: 2px;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
+  --space-5: 20px;
   --space-6: 24px;
   --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
   --control-height: 38px;
   --control-height-compact: 34px;
   --radius-control: 6px;
   --radius-panel: 8px;
   --radius-overlay: 10px;
+
+  /* Typography Scale */
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-base: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 22px;
+  --font-size-2xl: 26px;
+  --font-size-3xl: 30px;
+  --font-size-4xl: 34px;
+
   --font-size-page-title: 34px;
   --font-size-panel-title: 20px;
   --font-size-body: 14px;

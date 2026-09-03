@@ -7,6 +7,7 @@ import type { TagSummary } from "../../api/site";
 import {
   AdminPage,
   AdminPageHeader,
+  AsyncState,
   BulkActionBar,
   Button,
   ButtonLink,
@@ -293,34 +294,40 @@ export default function AdminPosts() {
             </Button>
           </BulkActionBar>
         ) : null}
-        {loading ? (
-          <TableSkeleton columns={6} rows={6} />
-        ) : !error && posts.length === 0 ? (
-          <EmptyState
-            label={
-              hasFilters ? "没有符合当前筛选条件的文章。" : "还没有发布过文章。"
-            }
-            action={
-              hasFilters ? (
-                <Button
-                  variant="secondary"
-                  size="compact"
-                  onClick={clearFilters}
-                >
-                  清除筛选
-                </Button>
-              ) : can("create", "post") ? (
-                <ButtonLink
-                  variant="primary"
-                  to="/admin/posts/new"
-                  icon={<Plus />}
-                >
-                  新建文章
-                </ButtonLink>
-              ) : null
-            }
-          />
-        ) : posts.length ? (
+        <AsyncState
+          loading={loading}
+          skeleton={<TableSkeleton columns={6} rows={6} />}
+          error={error}
+          empty={!error && posts.length === 0}
+          emptyState={
+            <EmptyState
+              label={
+                hasFilters
+                  ? "没有符合当前筛选条件的文章。"
+                  : "还没有发布过文章。"
+              }
+              action={
+                hasFilters ? (
+                  <Button
+                    variant="secondary"
+                    size="compact"
+                    onClick={clearFilters}
+                  >
+                    清除筛选
+                  </Button>
+                ) : can("create", "post") ? (
+                  <ButtonLink
+                    variant="primary"
+                    to="/admin/posts/new"
+                    icon={<Plus />}
+                  >
+                    新建文章
+                  </ButtonLink>
+                ) : null
+              }
+            />
+          }
+        >
           <Panel className="posts-table-panel">
             <div className="table-scroll">
               <table className="admin-table">
@@ -358,14 +365,14 @@ export default function AdminPosts() {
                       {can("batch", "post") ? (
                         <td>
                           <input
-                            aria-label={`选择 ${post.title}`}
+                            aria-label={`选择文章 ${post.title}`}
                             type="checkbox"
                             checked={selected.includes(post.id)}
                             onChange={(event) =>
-                              setSelected((current) =>
+                              setSelected(
                                 event.target.checked
-                                  ? [...new Set([...current, post.id])]
-                                  : current.filter((id) => id !== post.id),
+                                  ? [...selected, post.id]
+                                  : selected.filter((id) => id !== post.id),
                               )
                             }
                           />
@@ -441,7 +448,7 @@ export default function AdminPosts() {
               </table>
             </div>
           </Panel>
-        ) : null}
+        </AsyncState>
         {!loading && total > pageSize ? (
           <Pagination
             className="admin-pagination"

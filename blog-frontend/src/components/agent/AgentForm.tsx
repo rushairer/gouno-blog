@@ -237,29 +237,10 @@ export function AgentForm({
         </Field>
 
         {hasUpgrade && latestSkill ? (
-          <div
-            className="workflow-runtime-input"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "12px",
-              borderColor:
-                "color-mix(in srgb, var(--warning, #f59e0b) 50%, var(--agent-border))",
-              background:
-                "color-mix(in srgb, var(--warning, #f59e0b) 8%, var(--ui-panel))",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <Sparkles
-                style={{
-                  width: 18,
-                  height: 18,
-                  color: "var(--warning, #f59e0b)",
-                  flexShrink: 0,
-                }}
-              />
-              <span style={{ fontSize: "0.875rem" }}>
+          <div className="workflow-runtime-input agent-skill-upgrade-notice">
+            <div className="agent-skill-upgrade-notice__content">
+              <Sparkles className="agent-skill-upgrade-notice__icon" />
+              <span className="agent-skill-upgrade-notice__text">
                 {locale === "zh"
                   ? `检测到该 Skill 已更新至 v${latestSkill.version}（当前仍锁定在历史版本 v${selectedSkill?.version}）`
                   : `Newer Skill version v${latestSkill.version} available (currently locked to v${selectedSkill?.version})`}

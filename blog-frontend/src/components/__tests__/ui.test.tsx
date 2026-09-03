@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import {
+  AsyncState,
   Badge,
   Button,
   ButtonLink,
@@ -451,5 +452,47 @@ describe("shared UI primitives", () => {
       screen.getByRole("status", { name: "正在载入数据…" }),
     ).toBeInTheDocument();
     expect(container.querySelectorAll(".table-skeleton-row")).toHaveLength(3);
+  });
+
+  it("handles loading, error retry, empty, and data states uniformly in AsyncState", async () => {
+    const user = userEvent.setup();
+    let retried = false;
+
+    const { rerender } = render(
+      <AsyncState loading skeleton={<div>Custom Skeleton</div>}>
+        <div>Data Content</div>
+      </AsyncState>,
+    );
+    expect(screen.getByText("Custom Skeleton")).toBeInTheDocument();
+
+    rerender(
+      <AsyncState
+        loading={false}
+        error="网络请求失败"
+        onRetry={() => {
+          retried = true;
+        }}
+      >
+        <div>Data Content</div>
+      </AsyncState>,
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent("网络请求失败");
+    const retryBtn = screen.getByRole("button", { name: "重试" });
+    await user.click(retryBtn);
+    expect(retried).toBe(true);
+
+    rerender(
+      <AsyncState loading={false} empty emptyTitle="暂无数据">
+        <div>Data Content</div>
+      </AsyncState>,
+    );
+    expect(screen.getByText("暂无数据")).toBeInTheDocument();
+
+    rerender(
+      <AsyncState loading={false}>
+        <div>Data Content</div>
+      </AsyncState>,
+    );
+    expect(screen.getByText("Data Content")).toBeInTheDocument();
   });
 });

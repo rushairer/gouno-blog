@@ -691,10 +691,7 @@ export default function PageEditor() {
         </div>
       </EditorCommandBar>
 
-      <div
-        className="editor-workspace"
-        style={{ gridTemplateColumns: "minmax(480px, 1fr) 280px" }}
-      >
+      <div className="editor-workspace">
         <main className="editor-canvas">
           <Field label="标题" required>
             <Textarea
@@ -1277,7 +1274,7 @@ export default function PageEditor() {
 
           <details open>
             <summary>路径与 SEO</summary>
-            <div className="editor-ai-inline" style={{ marginBottom: 12 }}>
+            <div className="editor-ai-inline editor-inline-box">
               <Button
                 variant="ghost"
                 onClick={() => void requestSeo()}

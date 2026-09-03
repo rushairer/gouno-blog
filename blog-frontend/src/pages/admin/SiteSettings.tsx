@@ -292,15 +292,9 @@ export default function AdminSiteSettings() {
                   label="右侧插图 URL"
                   hint="可直接输入图片地址，或点击下方按钮上传新图片。"
                 >
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "8px",
-                      alignItems: "center",
-                    }}
-                  >
+                  <div className="upload-row">
                     <Input
-                      style={{ flex: 1 }}
+                      className="flex-1"
                       value={value.hero_image_url ?? ""}
                       onChange={(event) =>
                         field("hero_image_url", event.target.value)
@@ -311,7 +305,7 @@ export default function AdminSiteSettings() {
                       ref={fileInputRef}
                       type="file"
                       accept="image/*"
-                      style={{ display: "none" }}
+                      className="sr-only"
                       onChange={handleImageUpload}
                     />
                     <Button
@@ -325,40 +319,19 @@ export default function AdminSiteSettings() {
                     </Button>
                   </div>
                   {value.hero_image_url ? (
-                    <div
-                      style={{
-                        marginTop: "12px",
-                        display: "flex",
-                        gap: "16px",
-                        alignItems: "flex-start",
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: "160px",
-                          height: "100px",
-                          overflow: "hidden",
-                          borderRadius: "var(--radius-control)",
-                          border: "1px solid var(--line)",
-                          background: "var(--ui-art-surface)",
-                        }}
-                      >
+                    <div className="upload-preview-card">
+                      <div className="upload-preview-img-box">
                         <img
                           src={value.hero_image_url}
                           alt="Hero 预览"
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover",
-                            display: "block",
-                          }}
+                          className="upload-preview-img"
                         />
                       </div>
                       <Button
                         variant="ghost"
+                        size="compact"
                         type="button"
                         onClick={() => field("hero_image_url", "")}
-                        style={{ fontSize: "12px" }}
                       >
                         清空插图
                       </Button>
@@ -409,15 +382,9 @@ export default function AdminSiteSettings() {
                   label="Favicon 地址"
                   hint="支持站内路径（如 /media/icon.png）或完整 http(s) URL；建议使用正方形 PNG、WebP 或 SVG。"
                 >
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "8px",
-                      alignItems: "center",
-                    }}
-                  >
+                  <div className="upload-row">
                     <Input
-                      style={{ flex: 1 }}
+                      className="flex-1"
                       value={value.favicon_url ?? ""}
                       onChange={(event) =>
                         field("favicon_url", event.target.value)
@@ -428,7 +395,7 @@ export default function AdminSiteSettings() {
                       ref={faviconInputRef}
                       type="file"
                       accept="image/png,image/webp,image/gif,image/jpeg"
-                      style={{ display: "none" }}
+                      className="sr-only"
                       onChange={handleFaviconUpload}
                     />
                     <Button
@@ -447,11 +414,7 @@ export default function AdminSiteSettings() {
                       alt="Favicon 预览"
                       width={32}
                       height={32}
-                      style={{
-                        display: "block",
-                        marginTop: "12px",
-                        objectFit: "contain",
-                      }}
+                      className="favicon-preview-img"
                     />
                   ) : null}
                 </Field>

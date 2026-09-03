@@ -1806,7 +1806,7 @@ export default function PostEditor() {
             </details>
             <details open>
               <summary>路径与 SEO</summary>
-              <div className="editor-ai-inline" style={{ marginBottom: 12 }}>
+              <div className="editor-ai-inline editor-inline-box">
                 <Button
                   variant="ghost"
                   onClick={() => void requestSeo()}

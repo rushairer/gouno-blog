@@ -3012,3 +3012,29 @@ td .agent-chip-list {
   padding-top: 10px;
   border-top: 1px solid var(--agent-border);
 }
+
+.agent-skill-upgrade-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  border-color: color-mix(in srgb, var(--ui-warning) 50%, var(--agent-border));
+  background: color-mix(in srgb, var(--ui-warning) 8%, var(--ui-panel));
+}
+
+.agent-skill-upgrade-notice__content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.agent-skill-upgrade-notice__icon {
+  width: 18px;
+  height: 18px;
+  color: var(--ui-warning);
+  flex-shrink: 0;
+}
+
+.agent-skill-upgrade-notice__text {
+  font-size: var(--font-size-body);
+}
