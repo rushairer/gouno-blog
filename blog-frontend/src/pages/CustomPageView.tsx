@@ -128,13 +128,14 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
   if (page.template === "about") {
     const markText =
       page.title.length > 4 ? page.title.slice(0, 4) : page.title;
-    const markFontSize = markText.length > 2 ? "22px" : "34px";
 
     return (
       <div className="public-container about-page">
         {draftBanner}
         <header>
-          <div className="about-mark" style={{ fontSize: markFontSize }}>
+          <div
+            className={`about-mark ${markText.length > 2 ? "about-mark--compact" : ""}`}
+          >
             {markText}
           </div>
           <div>

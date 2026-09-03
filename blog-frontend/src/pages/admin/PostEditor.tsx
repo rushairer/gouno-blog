@@ -1580,15 +1580,7 @@ export default function PostEditor() {
                 </div>
                 {tagSuggestions.length > 0 ? (
                   <div className="editor-tag-pills">
-                    <span
-                      style={{
-                        fontSize: 11,
-                        color: "var(--text-3)",
-                        width: "100%",
-                      }}
-                    >
-                      点击标签添加：
-                    </span>
+                    <span className="editor-tag-hint">点击标签添加：</span>
                     {tagSuggestions.map((tag) => {
                       const isAdded = post.tags.includes(tag);
                       return (

@@ -1408,3 +1408,14 @@ textarea.ui-control,
   align-items: center;
   gap: 4px;
 }
+
+.checkbox-field--end {
+  margin-left: auto;
+}
+
+.editor-tag-hint {
+  display: block;
+  font-size: var(--font-size-label);
+  color: var(--ui-text-muted);
+  width: 100%;
+}

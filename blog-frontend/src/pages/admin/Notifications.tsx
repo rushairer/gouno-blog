@@ -20,6 +20,7 @@ import {
   Button,
   ButtonLink,
   Checkbox,
+  CheckboxField,
   ConfirmDialog,
   ContentStack,
   Feedback,
@@ -323,22 +324,13 @@ export default function AdminNotifications() {
           </Select>
 
           {filtered.length > 0 ? (
-            <label
-              className="checkbox-field"
-              style={{
-                marginLeft: "auto",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                fontSize: "13px",
-              }}
-            >
+            <CheckboxField className="checkbox-field--end">
               <Checkbox
                 checked={allFilteredSelected}
                 onChange={(e) => toggleSelectAllFiltered(e.target.checked)}
               />
               全选当前列表
-            </label>
+            </CheckboxField>
           ) : null}
         </FilterBar>
 

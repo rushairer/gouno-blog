@@ -499,7 +499,7 @@ export function AdvancedWorkspace({
             ref={skillFileInputRef}
             type="file"
             accept=".json,application/json"
-            style={{ display: "none" }}
+            hidden
             onChange={(event) => void onImportSkill(event)}
           />
           <PanelHeader
@@ -634,7 +634,7 @@ export function AdvancedWorkspace({
             ref={providerFileInputRef}
             type="file"
             accept=".json,application/json"
-            style={{ display: "none" }}
+            hidden
             onChange={(event) => void onImportProviders(event)}
           />
           <PanelHeader
