@@ -5,6 +5,10 @@ import ts from "typescript";
 
 const root = fileURLToPath(new URL("../src/", import.meta.url));
 const files = [];
+const primitiveStyleFiles = new Set([
+  "styles/components.css",
+  "styles/design-system-alignment.css",
+]);
 
 async function collect(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -55,11 +59,25 @@ function buttonChildIcon(node, sourceFile) {
     if (ts.isConditionalExpression(child)) {
       visitChild(child.whenTrue);
       visitChild(child.whenFalse);
-      return;
     }
   }
   visitChild(node);
   return icon;
+}
+
+function staticClassName(attribute) {
+  const initializer = attribute.initializer;
+  if (!initializer) return "";
+  if (ts.isStringLiteral(initializer)) return initializer.text;
+  if (
+    ts.isJsxExpression(initializer) &&
+    initializer.expression &&
+    (ts.isStringLiteral(initializer.expression) ||
+      ts.isNoSubstitutionTemplateLiteral(initializer.expression))
+  ) {
+    return initializer.expression.text;
+  }
+  return "";
 }
 
 function checkTsxContracts(name, source) {
@@ -108,14 +126,15 @@ function checkTsxContracts(name, source) {
           attribute.name.text !== "className"
         )
           continue;
-        const initializer = attribute.initializer;
-        const value =
-          initializer && ts.isStringLiteral(initializer)
-            ? initializer.text
-            : "";
+        const value = staticClassName(attribute);
         if (/(^|\s)btn(?:\s|$)/.test(value)) {
           failures.push(
             `${name}:${location(sourceFile, attribute)} shared button classes must use Button or ButtonLink`,
+          );
+        }
+        if (!sharedPrimitive && /(^|\s)badge(?:\s|$)/.test(value)) {
+          failures.push(
+            `${name}:${location(sourceFile, attribute)} shared badge classes must use Badge`,
           );
         }
       }
@@ -149,7 +168,7 @@ for (const path of files) {
     });
   }
   checkTsxContracts(name, source);
-  if (name.endsWith(".css") && name !== "styles/components.css") {
+  if (name.endsWith(".css") && !primitiveStyleFiles.has(name)) {
     source.split("\n").forEach((line, index) => {
       if (
         /^\.(panel|field|input-field|btn|icon-button|feedback|state)\s*[{,:]/.test(
@@ -157,7 +176,7 @@ for (const path of files) {
         )
       ) {
         failures.push(
-          `${name}:${index + 1} shared primitive is owned by styles/components.css`,
+          `${name}:${index + 1} shared primitive is owned by the design-system style layers`,
         );
       }
     });

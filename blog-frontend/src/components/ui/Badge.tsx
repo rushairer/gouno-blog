@@ -1,5 +1,6 @@
 import type React from "react";
-import { classes } from "./classes";
+import { cva, type VariantProps } from "class-variance-authority";
+import { cn } from "../../lib/utils";
 
 export type BadgeTone =
   | "brand"
@@ -11,7 +12,35 @@ export type BadgeTone =
   | "danger"
   | "destructive";
 
-export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
+export const badgeVariants = cva(
+  "badge inline-flex items-center whitespace-nowrap border text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2",
+  {
+    variants: {
+      tone: {
+        brand: "badge--brand",
+        primary: "badge--brand",
+        secondary: "badge--neutral",
+        neutral: "badge--neutral",
+        success: "badge--success",
+        warning: "badge--warning",
+        danger: "badge--danger",
+        destructive: "badge--danger",
+      },
+      pill: {
+        true: "badge--pill",
+        false: "",
+      },
+    },
+    defaultVariants: {
+      tone: "neutral",
+      pill: false,
+    },
+  },
+);
+
+export interface BadgeProps
+  extends React.HTMLAttributes<HTMLSpanElement>,
+    VariantProps<typeof badgeVariants> {
   tone?: BadgeTone;
   pill?: boolean;
   children: React.ReactNode;
@@ -24,23 +53,9 @@ export function Badge({
   className = "",
   ...props
 }: BadgeProps) {
-  const normalizedTone =
-    tone === "primary"
-      ? "brand"
-      : tone === "secondary"
-        ? "neutral"
-        : tone === "destructive"
-          ? "danger"
-          : tone;
-
   return (
     <span
-      className={classes(
-        "badge",
-        normalizedTone !== "neutral" && `badge--${normalizedTone}`,
-        pill && "badge--pill",
-        className,
-      )}
+      className={cn(badgeVariants({ tone, pill }), className)}
       {...props}
     >
       {children}
@@ -68,7 +83,7 @@ export function StatusBadge({
   };
   return (
     <span
-      className={classes(
+      className={cn(
         "status-badge",
         `status-badge--${normalizedStatus}`,
         className,

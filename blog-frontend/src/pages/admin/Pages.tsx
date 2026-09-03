@@ -5,6 +5,7 @@ import {
   AdminPage,
   AdminPageHeader,
   AsyncState,
+  Badge,
   BulkActionBar,
   Button,
   ButtonLink,
@@ -21,6 +22,7 @@ import {
   SearchField,
   Select,
   StatusBadge,
+  TableContainer,
   TableSkeleton,
   useToast,
 } from "../../components/ui";
@@ -215,7 +217,7 @@ export default function AdminPages() {
           }
         >
           <Panel className="posts-table-panel">
-            <div className="table-scroll">
+            <TableContainer>
               <table className="admin-table">
                 <thead>
                   <tr>
@@ -266,13 +268,13 @@ export default function AdminPages() {
                         <code>{`/${p.slug}`}</code>
                       </td>
                       <td>
-                        <span className="badge badge-secondary">
+                        <Badge tone="secondary">
                           {p.template || "default"}
-                        </span>
+                        </Badge>
                       </td>
                       <td>
                         {p.show_in_nav ? (
-                          <span className="badge badge-success">{`主导航 (权重:${p.sort_order})`}</span>
+                          <Badge tone="success">{`主导航 (权重:${p.sort_order})`}</Badge>
                         ) : (
                           <span className="text-muted text-sm">隐藏</span>
                         )}
@@ -324,7 +326,7 @@ export default function AdminPages() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </TableContainer>
           </Panel>
         </AsyncState>
 

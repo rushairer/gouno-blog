@@ -1,61 +1,58 @@
-# UI Design System Baseline
+# Gouno Blog Design System
 
-This document defines the shared component contracts for the frontend. New UI
-must use these primitives instead of reproducing their markup or layout rules.
+The Blog frontend and `gosso-admin/gosso-admin-frontend` share one interaction and layout contract. Product branding may keep a distinct editorial accent hue, but component geometry, spacing, state semantics, surface depth, and accessibility behavior must remain equivalent.
 
-## Foundations
+## Primitive ownership
 
-- **Tokens**: consume the existing `--ui-*`, `--control-height`, typography,
-  spacing, and radius variables. Do not introduce page-local substitutes for a
-  common control value.
-- **Primitives**: `Button`, `ButtonLink`, `IconButton`, form controls, `Panel`,
-  feedback, modal, tabs, and layout components live in `src/components/ui`.
-- **Composition**: pages compose primitives; they do not set a primitive's
-  internal alignment, icon dimensions, or state colors.
+- Shared controls live in `src/components/ui` and compose `cn`, `cva`, Radix UI, and semantic CSS tokens.
+- Feature code must use `Button`, `ButtonLink`, `IconButton`, `IconButtonLink`, `Badge`, `Dialog`, `Modal`, `Panel`, `TableContainer`, and shared form controls instead of duplicating their markup.
+- `IconButton` and `IconButtonLink` require both `label` and `icon`; the primitive owns the accessible name and fixed icon slot.
+- Button icons use the `icon` prop. Do not place SVG children directly inside a text button.
+- Legacy size aliases remain accepted for compatibility, but new code uses `sm`, `default`, or `lg`.
 
-## Button contract
+## Control matrix
 
-Use `Button` for in-place text actions, `ButtonLink` for route navigation, and
-`IconButton` for icon-only actions.
+| Size | Height | Text action padding | Icon action |
+| --- | ---: | ---: | ---: |
+| `sm` | 34px | 12px | 34 x 34px |
+| `default` | 38px | 14px | 38 x 38px |
+| `lg` | 46px | 18px | 46 x 46px |
 
-```tsx
-<Button variant="primary" icon={<Plus />}>新建分类</Button>
-<ButtonLink variant="primary" to="/admin/posts/new" icon={<Plus />}>
-  新建文章
-</ButtonLink>
-<Button variant="secondary" icon={<ArrowRight />} iconPosition="right">
-  下一步
-</Button>
-<IconButton label="编辑" icon={<Pencil />} />
+Buttons use an 8px radius. Small controls use a 6px icon/label gap; default and large controls use 8px. Icons always render in a fixed 16px, non-shrinking slot.
+
+Canonical action variants are `primary`, `secondary`, `destructive`/`danger`, `ghost`, and `outline`. `default`, `base`, `regular`, and `compact` are compatibility aliases only.
+
+## Badge contract
+
+Badges default to a neutral tone and use an 8px radius, 3px vertical padding, and 8px horizontal padding. Supported semantic tones are `primary`/`brand`, `secondary`/`neutral`, `success`, `warning`, and `destructive`/`danger`. Use `pill` only when a fully rounded capsule is semantically useful.
+
+## Layout rhythm
+
+- Page and panel groups use 24px (`gap-6`) as the default vertical rhythm; dense item groups use 12-16px.
+- Cards and panels use 24px internal padding unless a component explicitly owns a flush table or list.
+- Form labels sit 6px above their controls. Fields are separated by 16px. Submit/action rows start after 16px.
+- Admin content uses responsive horizontal padding capped at 36px.
+
+## Data display
+
+Table cells are vertically centered. Text, icons, badges, and actions that belong together stay on one line. Action columns are right-aligned and use a non-wrapping 8px action group. Icon slots and controls must declare non-shrinking behavior.
+
+Use `TableContainer` for horizontal overflow and shared table rhythm. Do not recreate its scroll wrapper in feature pages.
+
+## Surface and overlay contract
+
+Panels use semantic surface tokens, an 8% text-derived border, a 12px radius, and a restrained elevation shadow. Interactive cards lift by at most 1px. Light and dark themes keep the same hierarchy and only swap token values.
+
+`Dialog` and `Modal` use Radix UI focus management. Overlays blur by 8px, dialog surfaces use a 12px radius, and footer actions are separated by a top border and aligned to the end. Escape and outside-click behavior must be configured through the shared primitive rather than reimplemented by a page.
+
+## Repository boundaries
+
+Design-system work must continue to respect the root `AGENTS.md`: do not change connector behavior or `src/components/agent/ConnectorWorkspace.tsx` as part of general UI alignment, and do not introduce port `8443`.
+
+## Verification
+
+Before merging frontend changes, run:
+
+```bash
+npm run format && npm run quality
 ```
-
-- Use the `icon` prop; do not put a leading or trailing SVG in `children`.
-- `IconButton` requires both `label` and `icon`; it owns the accessible name,
-  fixed icon slot, compact size, and semantic visual tone. Never place SVG
-  children directly in an icon-only action.
-- `Button` owns the `btn__icon` and `btn__label` slots, including their size
-  and vertical alignment.
-- Use `loading` rather than adding a page-specific spinner.
-- Use the four semantic variants only: `primary`, `secondary`, `danger`, and
-  `ghost`. Add a variant only when its meaning is reusable across screens.
-
-## Migration rule
-
-Raw `<button>` and `className="btn ..."` are forbidden outside
-`src/components/ui` semantic primitives. New and migrated interactions must use
-`Button`, `ButtonLink`, or `IconButton` according to their navigation and
-action semantics.
-
-## Alignment and composition contract
-
-- Controls use the shared regular or compact height only. A page may place a
-  component in a layout, but must not offset its icon, label, or internal
-  padding with page-local margins.
-- `FilterBar`, `ActionGroup`, `PanelHeader`, `Pagination`, `Tabs`, `Modal`,
-  and `Drawer` compose their own alignment. Pages provide content and actions,
-  not duplicated control markup.
-- Route changes use `ButtonLink`; in-place mutations use `Button`; icon-only
-  mutations use `IconButton`. Semantic tabs remain the `Tabs` primitive.
-- The UI contract checker rejects native buttons, native selects, direct SVG
-  children in `Button`/`ButtonLink`/`ChoiceButton`, raw `btn` classes, and
-  `buttonClassName` outside the shared UI primitives and test fixtures.

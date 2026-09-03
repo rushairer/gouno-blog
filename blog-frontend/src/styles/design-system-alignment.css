@@ -1,0 +1,311 @@
+/*
+ * Cross-product design-system alignment layer.
+ *
+ * The public Blog may retain its editorial accent hue. Geometry, rhythm,
+ * elevation, semantic states, and interaction behavior align with GOSSO Admin.
+ */
+:root {
+  --ds-surface-page: var(--ui-page);
+  --ds-surface-panel: var(--ui-panel);
+  --ds-surface-elevated: var(--ui-elevated);
+  --ds-surface-control: var(--ui-control);
+  --ds-surface-control-hover: var(--ui-control-hover);
+  --ds-text-primary: var(--ui-text);
+  --ds-text-secondary: var(--ui-text-secondary);
+  --ds-border-default: var(--ui-border);
+  --ds-border-subtle: color-mix(in srgb, var(--ui-text) 8%, transparent);
+  --ds-brand: var(--ui-brand);
+  --ds-brand-hover: var(--ui-brand-hover);
+  --ds-danger: var(--ui-danger);
+  --ds-overlay: var(--ui-overlay);
+  --ds-panel-shadow: 0 8px 24px
+    color-mix(in srgb, var(--ui-overlay) 12%, transparent);
+  --ds-panel-shadow-hover: 0 12px 30px
+    color-mix(in srgb, var(--ui-overlay) 18%, transparent);
+  --ds-dialog-shadow: 0 24px 64px
+    color-mix(in srgb, var(--ui-overlay) 52%, transparent);
+  --ds-page-padding-inline: clamp(20px, 3vw, 36px);
+
+  --control-h-sm: 34px;
+  --control-h-base: 38px;
+  --control-h-lg: 46px;
+  --control-height: 38px;
+  --control-height-compact: 34px;
+  --radius-control: 8px;
+  --radius-panel: 12px;
+  --radius-overlay: 12px;
+}
+
+.admin-content {
+  padding: 28px var(--ds-page-padding-inline) 48px;
+}
+
+.admin-topbar {
+  padding-inline: var(--ds-page-padding-inline);
+}
+
+.admin-page {
+  display: grid;
+  gap: 24px;
+}
+
+.admin-page-header {
+  margin: 0;
+}
+
+.content-stack {
+  gap: 24px;
+}
+
+.btn {
+  min-height: var(--control-h-base);
+  gap: 8px;
+  border-radius: var(--radius-control);
+  padding-inline: 14px;
+  line-height: 1;
+}
+
+.btn--default {
+  min-height: var(--control-h-base);
+}
+
+.btn--compact {
+  min-height: var(--control-h-sm);
+  gap: 6px;
+  border-radius: var(--radius-control);
+  padding-inline: 12px;
+}
+
+.btn--large {
+  min-height: var(--control-h-lg);
+  padding-inline: 18px;
+  font-size: var(--font-size-md);
+}
+
+.btn.btn--icon,
+.icon-button,
+.icon-button--default {
+  width: var(--control-h-base);
+  height: var(--control-h-base);
+  min-height: var(--control-h-base);
+  padding: 0;
+}
+
+.icon-button--compact {
+  width: var(--control-h-sm);
+  height: var(--control-h-sm);
+  min-height: var(--control-h-sm);
+}
+
+.icon-button--large {
+  width: var(--control-h-lg);
+  height: var(--control-h-lg);
+  min-height: var(--control-h-lg);
+}
+
+.btn__icon,
+.icon-button__icon,
+.btn__spinner {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn__icon > svg,
+.icon-button__icon > svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+}
+
+.btn__label {
+  min-width: 0;
+  line-height: 1;
+}
+
+.badge,
+.status-pill,
+.status-badge {
+  min-height: 24px;
+  gap: 4px;
+  margin: 0;
+  border-radius: var(--radius-control);
+  padding: 3px 8px;
+  line-height: 1.35;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.badge--pill {
+  border-radius: 9999px;
+}
+
+.panel,
+.ui-card {
+  border-color: var(--ds-border-subtle);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--ds-panel-shadow);
+}
+
+.ui-card--interactive:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--ds-panel-shadow-hover);
+}
+
+.form-layout {
+  gap: 16px;
+}
+
+.field {
+  gap: 6px;
+}
+
+.form-actions,
+.modal-actions,
+.action-group,
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.form-actions,
+.modal-actions {
+  padding-top: 16px;
+}
+
+.table-scroll {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.admin-table th,
+.admin-table td,
+.content-table th,
+.content-table td {
+  vertical-align: middle;
+}
+
+.admin-table th:last-child,
+.admin-table td:last-child,
+.content-table th:last-child,
+.content-table td:last-child {
+  text-align: right;
+}
+
+.table-actions,
+.row-actions,
+.action-group {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.admin-table td:last-child > :is(.table-actions, .row-actions, .action-group),
+.content-table td:last-child > :is(.table-actions, .row-actions, .action-group) {
+  width: 100%;
+}
+
+.table-actions > *,
+.row-actions > *,
+.action-group > *,
+.admin-table td :is(.btn, .icon-button, .badge, .status-pill, .status-badge, svg),
+.content-table td :is(.btn, .icon-button, .badge, .status-pill, .status-badge, svg) {
+  flex-shrink: 0;
+}
+
+.ds-dialog-overlay,
+.modal-backdrop,
+.drawer-backdrop {
+  z-index: 1000;
+  background: var(--ds-overlay);
+  backdrop-filter: blur(8px);
+}
+
+.ds-dialog-content,
+.modal,
+.drawer {
+  border: 1px solid var(--ds-border-subtle);
+  border-radius: var(--radius-overlay);
+  background: var(--ds-surface-panel);
+  color: var(--ds-text-primary);
+  box-shadow: var(--ds-dialog-shadow);
+}
+
+.ds-dialog-content {
+  z-index: 1001;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+}
+
+.ds-dialog-close {
+  background: transparent;
+  color: var(--ds-text-secondary);
+}
+
+.ds-dialog-close:hover {
+  background: var(--ds-surface-control-hover);
+  color: var(--ds-text-primary);
+}
+
+.ds-dialog-close:focus-visible {
+  outline: 2px solid var(--ds-brand);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--ui-focus-ring);
+}
+
+.modal-header {
+  margin: 0;
+  padding: 0 40px 16px 0;
+  border-bottom: 1px solid var(--ds-border-default);
+}
+
+.modal-body {
+  min-width: 0;
+}
+
+.ds-dialog-footer,
+.modal-actions {
+  margin: 0;
+  border-top: 1px solid var(--ds-border-default);
+}
+
+@media (max-width: 720px) {
+  .admin-content,
+  .admin-topbar {
+    padding-inline: 20px;
+  }
+
+  .ds-dialog-content {
+    width: calc(100vw - 24px);
+    padding: 20px;
+  }
+
+  .ds-dialog-footer,
+  .modal-actions,
+  .form-actions {
+    align-items: stretch;
+  }
+
+  .ds-dialog-footer > *,
+  .modal-actions > *,
+  .form-actions > * {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .icon-button,
+  .ui-card--interactive,
+  .ds-dialog-overlay,
+  .ds-dialog-content {
+    animation-duration: 0.01ms;
+    transition-duration: 0.01ms;
+  }
+}

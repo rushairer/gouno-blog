@@ -14,18 +14,23 @@ export type ButtonVariant =
   | "default"
   | "destructive"
   | "outline";
+
+/**
+ * Canonical sizes are sm/default/lg/icon. The legacy regular/base/compact
+ * aliases remain supported while feature code migrates to the shared contract.
+ */
 export type ButtonSize =
-  | "regular"
-  | "compact"
   | "sm"
-  | "base"
-  | "lg"
   | "default"
-  | "icon";
+  | "lg"
+  | "icon"
+  | "regular"
+  | "base"
+  | "compact";
 export type ButtonIconPosition = "left" | "right";
 
 export const buttonVariants = cva(
-  "btn inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer",
+  "btn inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer",
   {
     variants: {
       variant: {
@@ -39,18 +44,18 @@ export const buttonVariants = cva(
         link: "btn-link",
       },
       size: {
-        regular: "",
-        base: "",
-        default: "",
+        regular: "btn--default",
+        base: "btn--default",
+        default: "btn--default",
         compact: "btn--compact",
         sm: "btn--compact",
-        lg: "",
-        icon: "icon-button",
+        lg: "btn--large",
+        icon: "btn--icon",
       },
     },
     defaultVariants: {
       variant: "secondary",
-      size: "regular",
+      size: "default",
     },
   },
 );
@@ -109,26 +114,29 @@ export type IconButtonLinkProps = Omit<
   disabled?: boolean;
 };
 
+function iconButtonSizeClass(size: ButtonSize) {
+  if (size === "compact" || size === "sm") return "icon-button--compact";
+  if (size === "lg") return "icon-button--large";
+  return "icon-button--default";
+}
+
 export function buttonClassName({
   variant = "secondary",
-  size = "regular",
+  size = "default",
   className = "",
 }: {
   variant?: ButtonVariant;
   size?: ButtonSize;
   className?: string;
 } = {}) {
-  return cn(
-    buttonVariants({ variant: variant as any, size: size as any }),
-    className,
-  );
+  return cn(buttonVariants({ variant, size }), className);
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   function Button(
     {
       variant = "secondary",
-      size = "regular",
+      size = "default",
       className = "",
       loading = false,
       disabled,
@@ -154,15 +162,15 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         {...props}
       >
         {loading ? (
-          <span className="btn__spinner" aria-hidden="true" />
+          <span className="btn__spinner shrink-0" aria-hidden="true" />
         ) : icon && iconPosition === "left" ? (
-          <span className="btn__icon" aria-hidden="true">
+          <span className="btn__icon shrink-0" aria-hidden="true">
             {icon}
           </span>
         ) : null}
-        {children ? <span className="btn__label">{children}</span> : null}
+        {children ? <span className="btn__label min-w-0">{children}</span> : null}
         {!loading && icon && iconPosition === "right" ? (
-          <span className="btn__icon" aria-hidden="true">
+          <span className="btn__icon shrink-0" aria-hidden="true">
             {icon}
           </span>
         ) : null}
@@ -175,7 +183,7 @@ export const ButtonLink = forwardRef<HTMLAnchorElement, ButtonLinkProps>(
   function ButtonLink(
     {
       variant = "secondary",
-      size = "regular",
+      size = "default",
       className = "",
       disabled = false,
       icon,
@@ -196,23 +204,23 @@ export const ButtonLink = forwardRef<HTMLAnchorElement, ButtonLinkProps>(
         })}
         aria-disabled={disabled ? "true" : undefined}
         tabIndex={disabled ? -1 : undefined}
-        onClick={(e) => {
+        onClick={(event) => {
           if (disabled) {
-            e.preventDefault();
+            event.preventDefault();
             return;
           }
-          onClick?.(e);
+          onClick?.(event);
         }}
         {...props}
       >
         {icon && iconPosition === "left" ? (
-          <span className="btn__icon" aria-hidden="true">
+          <span className="btn__icon shrink-0" aria-hidden="true">
             {icon}
           </span>
         ) : null}
-        {children ? <span className="btn__label">{children}</span> : null}
+        {children ? <span className="btn__label min-w-0">{children}</span> : null}
         {icon && iconPosition === "right" ? (
-          <span className="btn__icon" aria-hidden="true">
+          <span className="btn__icon shrink-0" aria-hidden="true">
             {icon}
           </span>
         ) : null}
@@ -226,7 +234,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
     {
       icon,
       label,
-      size = "regular",
+      size = "default",
       variant = "secondary",
       className = "",
       loading = false,
@@ -248,7 +256,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
         type={type}
         className={classes(
           "icon-button",
-          size === "compact" && "icon-button--compact",
+          iconButtonSizeClass(size),
           `icon-button--${normalizedVariant}`,
           loading && "is-loading",
           className,
@@ -260,9 +268,9 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
         {...props}
       >
         {loading ? (
-          <span className="btn__spinner" aria-hidden="true" />
+          <span className="btn__spinner shrink-0" aria-hidden="true" />
         ) : (
-          <span className="icon-button__icon" aria-hidden="true">
+          <span className="icon-button__icon shrink-0" aria-hidden="true">
             {icon}
           </span>
         )}
@@ -278,7 +286,7 @@ export const IconButtonLink = forwardRef<
   {
     icon,
     label,
-    size = "regular",
+    size = "default",
     variant = "secondary",
     className = "",
     disabled = false,
@@ -298,7 +306,7 @@ export const IconButtonLink = forwardRef<
       ref={ref}
       className={classes(
         "icon-button",
-        size === "compact" && "icon-button--compact",
+        iconButtonSizeClass(size),
         `icon-button--${normalizedVariant}`,
         disabled && "is-disabled",
         className,
@@ -307,16 +315,16 @@ export const IconButtonLink = forwardRef<
       aria-disabled={disabled ? "true" : undefined}
       tabIndex={disabled ? -1 : undefined}
       title={label}
-      onClick={(e) => {
+      onClick={(event) => {
         if (disabled) {
-          e.preventDefault();
+          event.preventDefault();
           return;
         }
-        onClick?.(e);
+        onClick?.(event);
       }}
       {...props}
     >
-      <span className="icon-button__icon" aria-hidden="true">
+      <span className="icon-button__icon shrink-0" aria-hidden="true">
         {icon}
       </span>
     </Link>
@@ -333,7 +341,11 @@ export function ChoiceButton({
     <Button
       {...props}
       variant="ghost"
-      className={classes("choice-button", selected && "is-selected", className)}
+      className={classes(
+        "choice-button",
+        selected && "is-selected",
+        className,
+      )}
       aria-pressed={selected}
     >
       {children}
