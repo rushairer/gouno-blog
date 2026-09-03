@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Copy, Edit2, Eye, Plus, Trash2, X } from "lucide-react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import {
   AdminPage,
   AdminPageHeader,
@@ -15,6 +15,7 @@ import {
   EmptyState,
   FilterBar,
   IconButton,
+  IconButtonLink,
   Pagination,
   Panel,
   SearchField,
@@ -286,14 +287,13 @@ export default function AdminPages() {
                       </td>
                       <td>
                         <div className="table-actions">
-                          <Link
+                          <IconButtonLink
                             to={`/${p.slug}`}
                             target="_blank"
                             rel="noreferrer"
-                            title={p.status === "published" ? "查看" : "预览"}
-                          >
-                            <Eye />
-                          </Link>
+                            label={p.status === "published" ? "查看" : "预览"}
+                            icon={<Eye />}
+                          />
                           <IconButton
                             label="复制链接"
                             icon={<Copy />}
@@ -305,9 +305,11 @@ export default function AdminPages() {
                               )
                             }
                           />
-                          <Link to={`/admin/pages/${p.id}/edit`} title="编辑">
-                            <Edit2 />
-                          </Link>
+                          <IconButtonLink
+                            to={`/admin/pages/${p.id}/edit`}
+                            label="编辑"
+                            icon={<Edit2 />}
+                          />
                           <IconButton
                             variant="danger"
                             label="删除"
