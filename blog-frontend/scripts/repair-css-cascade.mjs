@@ -18,11 +18,11 @@ function splitLeadingImports(source) {
   let remaining = source.trimStart();
 
   while (remaining.startsWith("@import ")) {
-    const semicolon = remaining.indexOf(";");
-    if (semicolon < 0) throw new Error("Unterminated CSS import");
-    const statement = remaining.slice(0, semicolon + 1);
+    const newline = remaining.indexOf("\n");
+    const statement = (newline < 0 ? remaining : remaining.slice(0, newline)).trim();
+    if (!statement.endsWith(";")) throw new Error("Unterminated CSS import");
     if (!statement.includes("tailwindcss")) imports.push(statement);
-    remaining = remaining.slice(semicolon + 1).trimStart();
+    remaining = newline < 0 ? "" : remaining.slice(newline + 1).trimStart();
   }
 
   return { imports, remaining };
