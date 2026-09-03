@@ -4,8 +4,8 @@ import { Link } from "react-router-dom";
 import {
   EmptyState,
   Feedback,
-  LoadingState,
   SectionHeading,
+  Skeleton,
 } from "../components/ui";
 import {
   authorInitials,
@@ -113,8 +113,25 @@ export default function Home() {
 
   if (loading)
     return (
-      <div className="public-container state-page">
-        <LoadingState label="正在整理文章…" />
+      <div
+        className="public-container home-skeleton"
+        role="status"
+        aria-label="正在加载内容…"
+      >
+        <div className="home-skeleton__hero">
+          <Skeleton variant="text" height={42} width="55%" />
+          <Skeleton variant="text" height={20} width="80%" />
+          <Skeleton variant="rectangular" height={220} width="100%" />
+        </div>
+        <div className="home-skeleton__list">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="home-skeleton__item">
+              <Skeleton variant="text" height={24} width="70%" />
+              <Skeleton variant="text" height={16} width="95%" />
+              <Skeleton variant="text" height={14} width="35%" />
+            </div>
+          ))}
+        </div>
       </div>
     );
 

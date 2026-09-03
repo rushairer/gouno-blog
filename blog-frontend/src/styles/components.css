@@ -1147,6 +1147,37 @@ textarea.ui-control,
   flex: 1;
 }
 
+.home-skeleton {
+  padding-block: var(--space-8);
+}
+
+.home-skeleton__hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-8);
+}
+
+.home-skeleton__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.home-skeleton__item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.editor-alt-input {
+  max-width: 160px;
+}
+
+.editor-ai-candidates--spaced {
+  margin-top: var(--space-2);
+}
+
 /* Upload, Preview & Editor Utilities */
 .upload-row {
   display: flex;

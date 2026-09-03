@@ -592,6 +592,15 @@ select option {
   color: var(--color-primary);
 }
 
+.topic-button:focus-visible,
+.quick-action:focus-visible,
+.topic-row:focus-visible,
+.ghost-icon:focus-visible {
+  outline: 2px solid var(--ui-brand);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--ui-focus-ring);
+}
+
 .chip-row {
   gap: 8px;
   flex-wrap: wrap;

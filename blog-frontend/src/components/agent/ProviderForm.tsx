@@ -5,11 +5,13 @@ import type { ProviderProfile, ProviderType } from "../../types/agent";
 import { emptyProvider } from "../../types/agent";
 import {
   Button,
+  Checkbox,
   EditorPanel,
   Field,
   FormActions,
   FormGrid,
   FormLayout,
+  Input,
   Select,
 } from "../ui";
 
@@ -87,8 +89,7 @@ export function ProviderForm({
       <FormLayout onSubmit={submit}>
         <FormGrid columns={2}>
           <Field label={labels.providerName}>
-            <input
-              className="input-field"
+            <Input
               required
               value={value.name}
               onChange={(event) =>
@@ -246,8 +247,8 @@ export function ProviderForm({
         )}
         <FormGrid columns={2}>
           <Field label={labels.baseUrl}>
-            <input
-              className="input-field mono"
+            <Input
+              className="mono"
               type="url"
               required
               value={value.base_url}
@@ -260,8 +261,8 @@ export function ProviderForm({
             />
           </Field>
           <Field label={labels.model}>
-            <input
-              className="input-field mono"
+            <Input
+              className="mono"
               required
               placeholder={
                 value.provider_type === "openai"
@@ -283,8 +284,8 @@ export function ProviderForm({
         <Field
           label={`${labels.apiKey}${initial ? ` · ${labels.leaveBlank}` : ""}`}
         >
-          <input
-            className="input-field mono"
+          <Input
+            className="mono"
             type="password"
             required={!initial}
             autoComplete="new-password"
@@ -302,8 +303,7 @@ export function ProviderForm({
             label={labels.timeout}
             hint="图片生成模型建议设为 900 秒；最长 1800 秒。"
           >
-            <input
-              className="input-field"
+            <Input
               type="number"
               min="1"
               max="1800"
@@ -317,8 +317,7 @@ export function ProviderForm({
             />
           </Field>
           <Field label={labels.maxOutput}>
-            <input
-              className="input-field"
+            <Input
               type="number"
               min="1"
               max="100000"
@@ -333,8 +332,7 @@ export function ProviderForm({
           </Field>
         </FormGrid>
         <label className="checkbox-label">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={value.enabled}
             onChange={(event) =>
               setValue((current) => ({

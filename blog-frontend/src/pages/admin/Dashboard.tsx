@@ -22,6 +22,7 @@ import {
   Button,
   ButtonLink,
   ContentStack,
+  EmptyState,
   Feedback,
   Panel,
 } from "../../components/ui";
@@ -373,58 +374,65 @@ export default function Dashboard() {
                 ) : null}
               </div>
               <div className="table-scroll">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>文章</th>
-                      <th>阅读量</th>
-                      <th>点赞</th>
-                      <th>操作</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {summary.top_posts.map((post, index) => {
-                      const canEdit = can("edit", "post", post);
-                      return (
-                        <tr key={post.id}>
-                          <td>
-                            <span>{index + 1}</span>
-                            {post.title}
-                          </td>
-                          <td>{post.views_count}</td>
-                          <td>{post.likes_count}</td>
-                          <td>
-                            <div
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 12,
-                              }}
-                            >
-                              {canEdit ? (
-                                <Link to={`/admin/posts/${post.id}/edit`}>
-                                  编辑
-                                </Link>
-                              ) : (
-                                <Link to={`/admin/posts/${post.id}/edit`}>
-                                  查看
-                                </Link>
-                              )}
-                              <Link
-                                to={`/articles/${post.slug || post.id}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                style={{ color: "var(--ui-text-muted)" }}
-                              >
-                                前台
-                              </Link>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                {summary.top_posts.length === 0 ? (
+                  <EmptyState label="暂无表现数据" />
+                ) : (
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>文章</th>
+                        <th>阅读量</th>
+                        <th>点赞</th>
+                        <th>操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {summary.top_posts.map((post, index) => {
+                        const canEdit = can("edit", "post", post);
+                        return (
+                          <tr key={post.id}>
+                            <td>
+                              <span>{index + 1}</span>
+                              {post.title}
+                            </td>
+                            <td>{post.views_count}</td>
+                            <td>{post.likes_count}</td>
+                            <td>
+                              <div className="row-actions">
+                                {canEdit ? (
+                                  <ButtonLink
+                                    variant="ghost"
+                                    size="compact"
+                                    to={`/admin/posts/${post.id}/edit`}
+                                  >
+                                    编辑
+                                  </ButtonLink>
+                                ) : (
+                                  <ButtonLink
+                                    variant="ghost"
+                                    size="compact"
+                                    to={`/admin/posts/${post.id}/edit`}
+                                  >
+                                    查看
+                                  </ButtonLink>
+                                )}
+                                <ButtonLink
+                                  variant="ghost"
+                                  size="compact"
+                                  to={`/articles/${post.slug || post.id}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  前台
+                                </ButtonLink>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </Panel>
           </>

@@ -4,11 +4,13 @@ import type { FormEvent } from "react";
 import type { EmbeddingProfile } from "../../types/agent";
 import {
   Button,
+  Checkbox,
   EditorPanel,
   Field,
   FormActions,
   FormGrid,
   FormLayout,
+  Input,
 } from "../ui";
 
 export type EmbeddingFormValue = {
@@ -105,8 +107,7 @@ export function EmbeddingForm({
       <FormLayout onSubmit={submit}>
         <FormGrid columns={2}>
           <Field label={labels.name}>
-            <input
-              className="input-field"
+            <Input
               required
               value={value.name}
               onChange={(event) =>
@@ -118,8 +119,8 @@ export function EmbeddingForm({
             />
           </Field>
           <Field label={labels.model}>
-            <input
-              className="input-field mono"
+            <Input
+              className="mono"
               required
               value={value.model}
               onChange={(event) =>
@@ -132,8 +133,8 @@ export function EmbeddingForm({
           </Field>
         </FormGrid>
         <Field label={labels.base}>
-          <input
-            className="input-field mono"
+          <Input
+            className="mono"
             type="url"
             required
             value={value.base_url}
@@ -146,8 +147,8 @@ export function EmbeddingForm({
           />
         </Field>
         <Field label={`${labels.key}${initial ? ` · ${labels.keep}` : ""}`}>
-          <input
-            className="input-field mono"
+          <Input
+            className="mono"
             type="password"
             required={!initial}
             autoComplete="new-password"
@@ -162,8 +163,7 @@ export function EmbeddingForm({
         </Field>
         <FormGrid columns={2}>
           <Field label={labels.dimensions}>
-            <input
-              className="input-field"
+            <Input
               type="number"
               min="64"
               max="4096"
@@ -177,8 +177,7 @@ export function EmbeddingForm({
             />
           </Field>
           <Field label={labels.timeout}>
-            <input
-              className="input-field"
+            <Input
               type="number"
               min="1"
               max="600"
@@ -193,8 +192,7 @@ export function EmbeddingForm({
           </Field>
         </FormGrid>
         <label className="checkbox-label">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={value.enabled}
             onChange={(event) =>
               setValue((current) => ({

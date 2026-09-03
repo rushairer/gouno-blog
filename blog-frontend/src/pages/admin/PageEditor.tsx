@@ -1016,7 +1016,7 @@ export default function PageEditor() {
                   disabled={aiImageLoading}
                 />
                 <Input
-                  style={{ maxWidth: 160 }}
+                  className="editor-alt-input"
                   placeholder="图片描述 (Alt)"
                   value={imageAlt}
                   onChange={(e) => setImageAlt(e.target.value)}
@@ -1034,9 +1034,8 @@ export default function PageEditor() {
               </div>
               {imagePromptCandidates.length > 0 ? (
                 <div
-                  className="editor-ai-candidates"
+                  className="editor-ai-candidates editor-ai-candidates--spaced"
                   aria-label="画面构思候选"
-                  style={{ marginTop: 8 }}
                 >
                   {imagePromptCandidates.map((item) => {
                     const match = item.match(/\[中文说明:\s*([^\]]+)\]/);
