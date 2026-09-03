@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
-    "format:check": "prettier --write \"src/**/*.{ts,tsx,css}\" && node scripts/print-formatted-files.mjs && exit 1",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
     "lint": "oxlint",
     "lint:ui": "node scripts/check-ui-contracts.mjs",
     "test": "vitest",
@@ -16,6 +16,7 @@
     "check": "npm run format:check && tsc -b && oxlint src && npm run test:coverage",
     "quality": "npm run format:check && npm run lint && npm run lint:ui && tsc -b && npm run test:coverage && npm run build",
     "preview": "vite preview"
+
   },
   "dependencies": {
     "@gosso/client": "0.9.2",

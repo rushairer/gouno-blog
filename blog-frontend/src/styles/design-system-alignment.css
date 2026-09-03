@@ -207,15 +207,21 @@
 }
 
 .admin-table td:last-child > :is(.table-actions, .row-actions, .action-group),
-.content-table td:last-child > :is(.table-actions, .row-actions, .action-group) {
+.content-table
+  td:last-child
+  > :is(.table-actions, .row-actions, .action-group) {
   width: 100%;
 }
 
 .table-actions > *,
 .row-actions > *,
 .action-group > *,
-.admin-table td :is(.btn, .icon-button, .badge, .status-pill, .status-badge, svg),
-.content-table td :is(.btn, .icon-button, .badge, .status-pill, .status-badge, svg) {
+.admin-table
+  td
+  :is(.btn, .icon-button, .badge, .status-pill, .status-badge, svg),
+.content-table
+  td
+  :is(.btn, .icon-button, .badge, .status-pill, .status-badge, svg) {
   flex-shrink: 0;
 }
 
@@ -238,6 +244,7 @@
 }
 
 .ds-dialog-content {
+  position: fixed;
   z-index: 1001;
   max-height: calc(100vh - 32px);
   overflow-y: auto;
