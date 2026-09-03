@@ -23,8 +23,9 @@ const DialogOverlay = React.forwardRef<
 ));
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
-interface DialogContentProps
-  extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
+interface DialogContentProps extends React.ComponentPropsWithoutRef<
+  typeof DialogPrimitive.Content
+> {
   showCloseButton?: boolean;
   closeLabel?: string;
 }
@@ -71,10 +72,7 @@ const DialogHeader = ({
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
-    className={cn(
-      "flex flex-col gap-1.5 text-center sm:text-left",
-      className,
-    )}
+    className={cn("flex flex-col gap-1.5 text-center sm:text-left", className)}
     {...props}
   />
 );

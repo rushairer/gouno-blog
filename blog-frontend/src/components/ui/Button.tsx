@@ -168,7 +168,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             {icon}
           </span>
         ) : null}
-        {children ? <span className="btn__label min-w-0">{children}</span> : null}
+        {children ? (
+          <span className="btn__label min-w-0">{children}</span>
+        ) : null}
         {!loading && icon && iconPosition === "right" ? (
           <span className="btn__icon shrink-0" aria-hidden="true">
             {icon}
@@ -218,7 +220,9 @@ export const ButtonLink = forwardRef<HTMLAnchorElement, ButtonLinkProps>(
             {icon}
           </span>
         ) : null}
-        {children ? <span className="btn__label min-w-0">{children}</span> : null}
+        {children ? (
+          <span className="btn__label min-w-0">{children}</span>
+        ) : null}
         {icon && iconPosition === "right" ? (
           <span className="btn__icon shrink-0" aria-hidden="true">
             {icon}
@@ -341,11 +345,7 @@ export function ChoiceButton({
     <Button
       {...props}
       variant="ghost"
-      className={classes(
-        "choice-button",
-        selected && "is-selected",
-        className,
-      )}
+      className={classes("choice-button", selected && "is-selected", className)}
       aria-pressed={selected}
     >
       {children}
