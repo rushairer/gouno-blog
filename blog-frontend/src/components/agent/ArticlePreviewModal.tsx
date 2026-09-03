@@ -1,7 +1,7 @@
 import type { ArticleImagePreview } from "../../api/operations";
 import type { MediaCandidate } from "../../types/agent";
 import { MarkdownRenderer } from "../MarkdownRenderer";
-import { Modal } from "../ui";
+import { Button, Modal } from "../ui";
 
 export interface ArticlePreviewModalProps {
   candidate: MediaCandidate;
@@ -46,6 +46,13 @@ export function ArticlePreviewModal({
             <MarkdownRenderer content={preview.content} />
           ) : null}
         </article>
+        {!isCurrent ? (
+          <div className="modal-actions">
+            <Button variant="primary" type="button" disabled>
+              {zh ? "确认应用" : "Apply to article"}
+            </Button>
+          </div>
+        ) : null}
       </div>
     </Modal>
   );
