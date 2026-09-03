@@ -187,7 +187,7 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
     return (
       <div className="public-container custom-page links-page">
         {draftBanner}
-        <header className="article-header" style={{ marginBottom: "28px" }}>
+        <header className="article-header article-header--spaced">
           <h1 className="article-title">{page.title}</h1>
         </header>
         <div className="article-content">

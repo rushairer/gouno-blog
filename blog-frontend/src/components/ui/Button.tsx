@@ -24,6 +24,7 @@ export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 export type ButtonLinkProps = React.ComponentPropsWithoutRef<typeof Link> & {
   variant?: ButtonVariant;
   size?: ButtonSize;
+  disabled?: boolean;
   /** Rendered in the shared, fixed-size icon slot. */
   icon?: React.ReactNode;
   iconPosition?: ButtonIconPosition;
@@ -52,6 +53,7 @@ export type IconButtonLinkProps = Omit<
   icon: React.ReactNode;
   size?: "regular" | "compact";
   variant?: "secondary" | "ghost" | "danger";
+  disabled?: boolean;
 };
 
 export function buttonClassName({
@@ -124,9 +126,11 @@ export const ButtonLink = forwardRef<HTMLAnchorElement, ButtonLinkProps>(
       variant = "secondary",
       size = "regular",
       className = "",
+      disabled = false,
       icon,
       iconPosition = "left",
       children,
+      onClick,
       ...props
     },
     ref,
@@ -134,7 +138,20 @@ export const ButtonLink = forwardRef<HTMLAnchorElement, ButtonLinkProps>(
     return (
       <Link
         ref={ref}
-        className={buttonClassName({ variant, size, className })}
+        className={buttonClassName({
+          variant,
+          size,
+          className: classes(disabled && "is-disabled", className),
+        })}
+        aria-disabled={disabled ? "true" : undefined}
+        tabIndex={disabled ? -1 : undefined}
+        onClick={(e) => {
+          if (disabled) {
+            e.preventDefault();
+            return;
+          }
+          onClick?.(e);
+        }}
         {...props}
       >
         {icon && iconPosition === "left" ? (
@@ -207,6 +224,8 @@ export const IconButtonLink = forwardRef<
     size = "regular",
     variant = "secondary",
     className = "",
+    disabled = false,
+    onClick,
     ...props
   },
   ref,
@@ -218,10 +237,20 @@ export const IconButtonLink = forwardRef<
         "icon-button",
         size === "compact" && "icon-button--compact",
         `icon-button--${variant}`,
+        disabled && "is-disabled",
         className,
       )}
       aria-label={label}
+      aria-disabled={disabled ? "true" : undefined}
+      tabIndex={disabled ? -1 : undefined}
       title={label}
+      onClick={(e) => {
+        if (disabled) {
+          e.preventDefault();
+          return;
+        }
+        onClick?.(e);
+      }}
       {...props}
     >
       <span className="icon-button__icon" aria-hidden="true">

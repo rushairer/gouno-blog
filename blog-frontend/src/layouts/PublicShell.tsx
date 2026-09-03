@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Menu, Moon, Rss, Search, Sun, X } from "lucide-react";
-import { Button, IconButton } from "../components/ui";
+import { Button, IconButton, Input } from "../components/ui";
 import {
   DEFAULT_SITE_SETTINGS,
   getCachedSiteSettings,
@@ -131,9 +131,9 @@ export default function PublicShell({ children }: { children: ReactNode }) {
               <label className="sr-only" htmlFor="mobile-global-search">
                 搜索文章
               </label>
-              <Search />
-              <input
+              <Input
                 id="mobile-global-search"
+                size="compact"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="搜索文章或主题"
@@ -164,8 +164,9 @@ export default function PublicShell({ children }: { children: ReactNode }) {
               <label className="sr-only" htmlFor="global-search">
                 搜索文章
               </label>
-              <input
+              <Input
                 id="global-search"
+                size="compact"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="搜索"

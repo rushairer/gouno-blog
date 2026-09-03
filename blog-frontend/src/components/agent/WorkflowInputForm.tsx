@@ -14,6 +14,7 @@ import {
   SearchField,
   Select,
   StatusBadge,
+  Textarea,
 } from "../ui";
 
 type SchemaProperty = {
@@ -632,8 +633,8 @@ export function WorkflowInputForm({
             ? "高级：查看或编辑输入 JSON"
             : "Advanced: view or edit input JSON"}
         </summary>
-        <textarea
-          className="input-field mono"
+        <Textarea
+          className="mono"
           rows={7}
           value={raw}
           onChange={(event) => {

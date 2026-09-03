@@ -209,6 +209,7 @@ export function ConfirmDialog({
           <Button
             variant={danger ? "danger" : "primary"}
             type="button"
+            loading={busy}
             disabled={busy}
             onClick={() => void onConfirm()}
           >

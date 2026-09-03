@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ArrowRight, GitBranch, Mail, Rss } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
+  Button,
   EmptyState,
   Feedback,
   SectionHeading,
@@ -88,6 +89,8 @@ export default function Home() {
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
+  const handleRetry = () => setReloadKey((k) => k + 1);
 
   usePageTitle("", {
     brand: site.site_title,
@@ -95,6 +98,7 @@ export default function Home() {
   });
 
   useEffect(() => {
+    setLoading(true);
     Promise.all([
       postsApi.getPosts(new URLSearchParams({ page: "1", pageSize: "12" })),
       siteApi.getCategories().catch(() => []),
@@ -106,10 +110,11 @@ export default function Home() {
         setCategories(categoryData || []);
         setTagSummaries(tagData || []);
         setSite({ ...DEFAULT_SITE_SETTINGS, ...siteData });
+        setError("");
       })
       .catch((reason: Error) => setError(reason.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [reloadKey]);
 
   if (loading)
     return (
@@ -141,7 +146,7 @@ export default function Home() {
     <>
       <section className="home-hero public-container">
         <div className="home-hero-copy">
-          <h1 style={{ whiteSpace: "pre-line" }}>
+          <h1 className="whitespace-pre-line">
             {site.hero_title || DEFAULT_SITE_SETTINGS.hero_title}
           </h1>
           <p>
@@ -165,7 +170,14 @@ export default function Home() {
       </section>
 
       <div className="public-container">
-        {error ? <Feedback type="error">{error}</Feedback> : null}
+        {error ? (
+          <div className="error-retry-banner">
+            <Feedback type="error">{error}</Feedback>
+            <Button variant="secondary" size="compact" onClick={handleRetry}>
+              重试
+            </Button>
+          </div>
+        ) : null}
         {!error && posts.length === 0 ? (
           <EmptyState label="这里还没有文章。完成第一篇写作后，它会成为首页主角。" />
         ) : null}

@@ -459,7 +459,7 @@ export default function MediaLibrary() {
                   >
                     {t("altText")}:{" "}
                     {asset.alt_text || (
-                      <span style={{ opacity: 0.6 }}>{t("notSet")}</span>
+                      <span className="text-muted">{t("notSet")}</span>
                     )}
                   </small>
                 </div>

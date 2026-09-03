@@ -1,7 +1,7 @@
 import { Code2, FormInput, Sliders } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { ToolDefinition } from "../../../types/agent";
-import { Button, Field } from "../../ui";
+import { Button, Field, Textarea } from "../../ui";
 import { DEFAULT_RSS_FEEDS, RssFetchConfig } from "./RssFetchConfig";
 import type { RssFetchBinding } from "./RssFetchConfig";
 import { StalePostsConfig } from "./StalePostsConfig";
@@ -312,8 +312,8 @@ export function ToolBindingsEditor({
                 : "Bindings are pinned to the Skill Version and securely merged at runtime."
             }
           >
-            <textarea
-              className={`input-field mono ${jsonError ? "input-field--error" : ""}`}
+            <Textarea
+              className={`mono ${jsonError ? "input-field--error" : ""}`}
               rows={8}
               value={jsonText}
               onChange={(e) => handleJsonChange(e.target.value)}

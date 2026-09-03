@@ -425,7 +425,7 @@ export default function PostDetail() {
                   {likes}
                 </span>
               </div>
-              <div className="chip-row" style={{ marginTop: "16px" }}>
+              <div className="chip-row chip-row--spaced">
                 {post.tags.map((tag) => (
                   <Badge key={tag}>#{tag}</Badge>
                 ))}

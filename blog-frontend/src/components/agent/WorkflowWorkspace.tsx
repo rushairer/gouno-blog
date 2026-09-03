@@ -44,6 +44,7 @@ import {
   PanelHeader,
   SearchField,
   Select,
+  Textarea,
   WorkspacePanel,
 } from "../ui";
 import { StatusPill } from "./StatusPill";
@@ -2169,8 +2170,7 @@ function WorkflowEditor({
                 只生成未启用草案，不会运行或修改内容。
               </p>
             </div>
-            <textarea
-              className="input-field"
+            <Textarea
               rows={4}
               value={goal}
               onChange={(event) => setGoal(event.target.value)}
@@ -2726,8 +2726,8 @@ function WorkflowEditor({
             label={labels.schema}
             hint="JSON Schema。资源字段使用 x-gouno-resource 和 x-gouno-widget 扩展。"
           >
-            <textarea
-              className="input-field mono"
+            <Textarea
+              className="mono"
               rows={8}
               value={schema}
               onChange={(event) => setSchema(event.target.value)}
@@ -2737,8 +2737,8 @@ function WorkflowEditor({
             label={labels.steps}
             hint="允许 resource_query、model、for_each、approval_gate、output；服务端会校验每个步骤。"
           >
-            <textarea
-              className="input-field mono"
+            <Textarea
+              className="mono"
               rows={16}
               value={steps}
               onChange={(event) => setSteps(event.target.value)}

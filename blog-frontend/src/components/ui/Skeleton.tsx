@@ -82,3 +82,27 @@ export function TableSkeleton({
     </div>
   );
 }
+
+export function ArticleListSkeleton({
+  count = 4,
+  className = "",
+}: {
+  count?: number;
+  className?: string;
+}) {
+  return (
+    <div
+      className={classes("article-list-skeleton", className)}
+      aria-label="正在载入文章列表…"
+      role="status"
+    >
+      {Array.from({ length: count }).map((_, index) => (
+        <div key={`article-skel-${index}`} className="article-skeleton-card">
+          <Skeleton variant="text" height={24} width="70%" />
+          <Skeleton variant="text" height={16} width="95%" />
+          <Skeleton variant="text" height={14} width="35%" />
+        </div>
+      ))}
+    </div>
+  );
+}

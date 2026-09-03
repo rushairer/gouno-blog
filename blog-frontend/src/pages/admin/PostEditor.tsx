@@ -22,6 +22,7 @@ import {
   ChoiceButton,
   ConfirmDialog,
   EmptyState,
+  Feedback,
   Field,
   Input,
   Select,
@@ -893,14 +894,7 @@ export default function PostEditor() {
         </Button>
         <div className="editor-save-state">
           {isReadOnly ? (
-            <span
-              style={{
-                color: "var(--text-3)",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
+            <span className="editor-readonly-indicator">
               <Eye size={14} /> 只读模式（他人文章）
             </span>
           ) : saving ? (
@@ -1214,17 +1208,7 @@ export default function PostEditor() {
                 </Button>
               </div>
               {assistError ? (
-                <div
-                  style={{
-                    color: "var(--danger, #ef4444)",
-                    fontSize: 12,
-                    padding: "4px 8px",
-                    background: "rgba(239, 68, 68, 0.08)",
-                    borderRadius: 4,
-                  }}
-                >
-                  {assistError}
-                </div>
+                <Feedback type="error">{assistError}</Feedback>
               ) : null}
               {generatedContent ? (
                 <div className="editor-ai-result-box">
@@ -1382,16 +1366,7 @@ export default function PostEditor() {
                     return (
                       <div key={item} className="editor-prompt-candidate">
                         {chDesc ? (
-                          <div
-                            style={{
-                              fontWeight: 600,
-                              fontSize: 12,
-                              color: "var(--ui-brand)",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 4,
-                            }}
-                          >
+                          <div className="editor-prompt-badge">
                             <Sparkles size={13} /> {chDesc}
                           </div>
                         ) : null}
@@ -1427,17 +1402,7 @@ export default function PostEditor() {
                 </div>
               ) : null}
               {assistError ? (
-                <div
-                  style={{
-                    color: "var(--danger, #ef4444)",
-                    fontSize: 12,
-                    padding: "4px 8px",
-                    background: "rgba(239, 68, 68, 0.08)",
-                    borderRadius: 4,
-                  }}
-                >
-                  {assistError}
-                </div>
+                <Feedback type="error">{assistError}</Feedback>
               ) : null}
               {generatedImage ? (
                 <div className="editor-ai-image-result">
@@ -1505,17 +1470,7 @@ export default function PostEditor() {
           )}
         </main>
         <aside className="editor-inspector">
-          <fieldset
-            disabled={isReadOnly}
-            style={{
-              border: "none",
-              padding: 0,
-              margin: 0,
-              display: "flex",
-              flexDirection: "column",
-              gap: 16,
-            }}
-          >
+          <fieldset disabled={isReadOnly} className="fieldset-unstyled">
             {!isReadOnly ? (
               <div className="editor-inspector-ai-banner">
                 <Button

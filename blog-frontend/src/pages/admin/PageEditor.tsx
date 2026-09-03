@@ -16,6 +16,7 @@ import {
   CheckboxField,
   ChoiceButton,
   ConfirmDialog,
+  Feedback,
   Field,
   Input,
   Select,
@@ -877,17 +878,7 @@ export default function PageEditor() {
                 </Button>
               </div>
               {assistError ? (
-                <div
-                  style={{
-                    color: "var(--danger, #ef4444)",
-                    fontSize: 12,
-                    padding: "4px 8px",
-                    background: "rgba(239, 68, 68, 0.08)",
-                    borderRadius: 4,
-                  }}
-                >
-                  {assistError}
-                </div>
+                <Feedback type="error">{assistError}</Feedback>
               ) : null}
               {generatedContent ? (
                 <div className="editor-ai-result-box">
@@ -1046,16 +1037,7 @@ export default function PageEditor() {
                     return (
                       <div key={item} className="editor-prompt-candidate">
                         {chDesc ? (
-                          <div
-                            style={{
-                              fontWeight: 600,
-                              fontSize: 12,
-                              color: "var(--ui-brand)",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 4,
-                            }}
-                          >
+                          <div className="editor-prompt-badge">
                             <Sparkles size={13} /> {chDesc}
                           </div>
                         ) : null}
@@ -1091,17 +1073,7 @@ export default function PageEditor() {
                 </div>
               ) : null}
               {assistError ? (
-                <div
-                  style={{
-                    color: "var(--danger, #ef4444)",
-                    fontSize: 12,
-                    padding: "4px 8px",
-                    background: "rgba(239, 68, 68, 0.08)",
-                    borderRadius: 4,
-                  }}
-                >
-                  {assistError}
-                </div>
+                <Feedback type="error">{assistError}</Feedback>
               ) : null}
               {generatedImage ? (
                 <div className="editor-ai-image-result">
@@ -1212,16 +1184,7 @@ export default function PageEditor() {
               </Select>
             </Field>
             <Field label="主导航栏联动">
-              <CheckboxField
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  cursor: "pointer",
-                  fontSize: "13px",
-                  color: "var(--text-2)",
-                }}
-              >
+              <CheckboxField>
                 <Checkbox
                   checked={page.show_in_nav}
                   onChange={(event) =>

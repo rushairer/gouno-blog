@@ -8,10 +8,11 @@ import {
 } from "react-router-dom";
 import { ArrowRight, SlidersHorizontal } from "lucide-react";
 import {
+  ArticleListSkeleton,
+  Button,
   ButtonLink,
   EmptyState,
-  Feedback,
-  LoadingState,
+  ErrorState,
   Pagination,
   SearchField,
 } from "../components/ui";
@@ -51,6 +52,9 @@ export default function ArticleIndex({
         : mode === "category"
           ? `分类：${category}`
           : "全部文章";
+  const [reloadKey, setReloadKey] = useState(0);
+  const handleRetry = () => setReloadKey((k) => k + 1);
+
   usePageTitle(title);
 
   useEffect(() => {
@@ -73,7 +77,7 @@ export default function ArticleIndex({
       })
       .catch((reason: Error) => setError(reason.message))
       .finally(() => setLoading(false));
-  }, [page, q, tag, category]);
+  }, [page, q, tag, category, reloadKey]);
 
   const pages = Math.max(1, Math.ceil(total / 10));
   return (
@@ -124,9 +128,21 @@ export default function ArticleIndex({
         </aside>
         <section className="article-results" aria-live="polite">
           {loading ? (
-            <LoadingState label="正在载入文章…" />
+            <ArticleListSkeleton />
           ) : error ? (
-            <Feedback type="error">{error}</Feedback>
+            <ErrorState
+              title="文章载入失败"
+              description={error}
+              action={
+                <Button
+                  variant="secondary"
+                  size="compact"
+                  onClick={handleRetry}
+                >
+                  重试
+                </Button>
+              }
+            />
           ) : posts.length === 0 ? (
             <EmptyState
               label="没有找到符合条件的文章。"
