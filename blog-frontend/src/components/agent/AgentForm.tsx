@@ -10,11 +10,13 @@ import type {
 import { emptyAgent } from "../../types/agent";
 import {
   Button,
+  Checkbox,
   EditorPanel,
   Field,
   FormActions,
   FormGrid,
   FormLayout,
+  Input,
   Select,
 } from "../ui";
 
@@ -133,8 +135,7 @@ export function AgentForm({
       <FormLayout onSubmit={submit}>
         <FormGrid columns={2}>
           <Field label={labels.agentName}>
-            <input
-              className="input-field"
+            <Input
               required
               value={value.name}
               onChange={(event) =>
@@ -181,8 +182,7 @@ export function AgentForm({
         </FormGrid>
 
         <Field label={labels.descriptionLabel}>
-          <input
-            className="input-field"
+          <Input
             value={value.description}
             onChange={(event) =>
               setValue((current) => ({
@@ -291,8 +291,7 @@ export function AgentForm({
             </Select>
           </Field>
           <Field label={labels.dailyRuns}>
-            <input
-              className="input-field"
+            <Input
               type="number"
               min="1"
               value={value.daily_run_limit}
@@ -309,8 +308,8 @@ export function AgentForm({
         {value.trigger_type === "cron" ? (
           <FormGrid columns={2}>
             <Field label={labels.cron}>
-              <input
-                className="input-field mono"
+              <Input
+                className="mono"
                 required
                 placeholder="0 9 * * 1"
                 value={value.cron_expression || ""}
@@ -323,8 +322,8 @@ export function AgentForm({
               />
             </Field>
             <Field label={labels.timezone}>
-              <input
-                className="input-field mono"
+              <Input
+                className="mono"
                 required
                 value={value.timezone}
                 onChange={(event) =>
@@ -340,8 +339,7 @@ export function AgentForm({
 
         <div className="agent-limit-grid">
           <Field label={labels.monthlyBudget}>
-            <input
-              className="input-field"
+            <Input
               type="number"
               min="1"
               value={value.monthly_token_budget}
@@ -357,8 +355,7 @@ export function AgentForm({
             label={locale === "zh" ? "最大步数覆盖" : "Max steps override"}
             hint={limitHint}
           >
-            <input
-              className="input-field"
+            <Input
               type="number"
               min="1"
               max={selectedSkill?.max_steps}
@@ -379,8 +376,7 @@ export function AgentForm({
             }
             hint={limitHint}
           >
-            <input
-              className="input-field"
+            <Input
               type="number"
               min="1"
               max={selectedSkill?.max_input_tokens}
@@ -401,8 +397,7 @@ export function AgentForm({
             }
             hint={limitHint}
           >
-            <input
-              className="input-field"
+            <Input
               type="number"
               min="1"
               max={selectedSkill?.max_output_tokens}
@@ -418,8 +413,7 @@ export function AgentForm({
         </div>
 
         <label className="checkbox-label">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={value.enabled}
             onChange={(event) =>
               setValue((current) => ({

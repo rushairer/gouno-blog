@@ -7,7 +7,6 @@ import {
   History,
   Image as ImageIcon,
   List,
-  LoaderCircle,
   Save,
   Send,
   Sparkles,
@@ -1039,16 +1038,11 @@ export default function PostEditor() {
                 <Button
                   variant="ghost"
                   onClick={() => void requestSuggestions("title")}
+                  loading={assistTask === "title"}
                   disabled={assistTask !== null}
                   icon={<Sparkles />}
                 >
-                  {assistTask === "title" ? (
-                    <>
-                      <LoaderCircle className="is-spinning" /> 正在想标题…
-                    </>
-                  ) : (
-                    "生成标题候选"
-                  )}
+                  {assistTask === "title" ? "正在想标题…" : "生成标题候选"}
                 </Button>
                 {suggestionTask === "title" && suggestions.length > 0 ? (
                   <div className="editor-ai-candidates" aria-label="标题候选">
@@ -1082,16 +1076,13 @@ export default function PostEditor() {
                 <Button
                   variant="ghost"
                   onClick={() => void requestSuggestions("summary")}
+                  loading={assistTask === "summary"}
                   disabled={assistTask !== null}
                   icon={<Sparkles />}
                 >
-                  {assistTask === "summary" ? (
-                    <>
-                      <LoaderCircle className="is-spinning" /> 正在提炼摘要…
-                    </>
-                  ) : (
-                    "根据正文生成摘要"
-                  )}
+                  {assistTask === "summary"
+                    ? "正在提炼摘要…"
+                    : "根据正文生成摘要"}
                 </Button>
                 {suggestionTask === "summary" && suggestions.length > 0 ? (
                   <div className="editor-ai-candidates" aria-label="摘要候选">
@@ -1212,20 +1203,14 @@ export default function PostEditor() {
                   variant="primary"
                   type="button"
                   onClick={() => void handleGenerateContent()}
+                  loading={aiContentLoading}
                   disabled={
-                    aiContentLoading ||
-                    (!contentPrompt.trim() &&
-                      !post.title.trim() &&
-                      !post.content.trim())
+                    !contentPrompt.trim() &&
+                    !post.title.trim() &&
+                    !post.content.trim()
                   }
                 >
-                  {aiContentLoading ? (
-                    <>
-                      <LoaderCircle className="is-spinning" /> 正在生成…
-                    </>
-                  ) : (
-                    "生成 / 执行"
-                  )}
+                  {aiContentLoading ? "正在生成…" : "生成 / 执行"}
                 </Button>
               </div>
               {assistError ? (
@@ -1285,15 +1270,11 @@ export default function PostEditor() {
                   <ChoiceButton
                     className="editor-ai-ideate-control"
                     onClick={() => void handleIdeateImagePrompts()}
+                    loading={aiIdeateLoading}
                     disabled={aiIdeateLoading || aiImageLoading}
+                    icon={<Sparkles />}
                   >
-                    {aiIdeateLoading ? (
-                      <>
-                        <LoaderCircle className="is-spinning" /> 正在构思画面…
-                      </>
-                    ) : (
-                      "✨ 结合文章智能构思画面"
-                    )}
+                    {aiIdeateLoading ? "正在构思画面…" : "结合文章智能构思画面"}
                   </ChoiceButton>
                   <ChoiceButton
                     onClick={() =>
@@ -1381,18 +1362,10 @@ export default function PostEditor() {
                   variant="primary"
                   type="button"
                   onClick={() => void handleGenerateAiImage()}
-                  disabled={
-                    aiImageLoading ||
-                    (!imagePrompt.trim() && !post.title.trim())
-                  }
+                  loading={aiImageLoading}
+                  disabled={!imagePrompt.trim() && !post.title.trim()}
                 >
-                  {aiImageLoading ? (
-                    <>
-                      <LoaderCircle className="is-spinning" /> 正在绘制…
-                    </>
-                  ) : (
-                    "🎨 开始生图"
-                  )}
+                  {aiImageLoading ? "正在绘制…" : "开始生图"}
                 </Button>
               </div>
               {imagePromptCandidates.length > 0 ? (
@@ -1550,19 +1523,11 @@ export default function PostEditor() {
                   variant="primary"
                   type="button"
                   onClick={() => void autoFillAllMetadata()}
-                  disabled={
-                    metaLoading || (!post.title.trim() && !post.content.trim())
-                  }
+                  loading={metaLoading}
+                  disabled={!post.title.trim() && !post.content.trim()}
+                  icon={<Sparkles />}
                 >
-                  {metaLoading ? (
-                    <>
-                      <LoaderCircle className="is-spinning" /> 正在智能分析全文…
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles /> ⚡ AI 一键补全元数据
-                    </>
-                  )}
+                  {metaLoading ? "正在智能分析全文…" : "AI 一键补全元数据"}
                 </Button>
               </div>
             ) : null}
@@ -1625,16 +1590,11 @@ export default function PostEditor() {
                     <Button
                       variant="ghost"
                       onClick={() => void requestCategory()}
+                      loading={assistTask === "category"}
                       disabled={assistTask !== null || !categories.length}
                       icon={<Sparkles />}
                     >
-                      {assistTask === "category" ? (
-                        <>
-                          <LoaderCircle className="is-spinning" /> 分析分类…
-                        </>
-                      ) : (
-                        "推荐最佳分类"
-                      )}
+                      {assistTask === "category" ? "分析分类…" : "推荐最佳分类"}
                     </Button>
                   </div>
                 )}
@@ -1657,16 +1617,11 @@ export default function PostEditor() {
                   <Button
                     variant="ghost"
                     onClick={() => void requestTags()}
+                    loading={assistTask === "tags"}
                     disabled={assistTask !== null}
                     icon={<Sparkles />}
                   >
-                    {assistTask === "tags" ? (
-                      <>
-                        <LoaderCircle className="is-spinning" /> 正在提炼标签…
-                      </>
-                    ) : (
-                      "提取推荐标签"
-                    )}
+                    {assistTask === "tags" ? "正在提炼标签…" : "提取推荐标签"}
                   </Button>
                 </div>
                 {tagSuggestions.length > 0 ? (
@@ -1715,16 +1670,13 @@ export default function PostEditor() {
                   <Button
                     variant="ghost"
                     onClick={() => void requestSuggestions("cover_prompt")}
+                    loading={assistTask === "cover_prompt"}
                     disabled={assistTask !== null}
                     icon={<Sparkles />}
                   >
-                    {assistTask === "cover_prompt" ? (
-                      <>
-                        <LoaderCircle className="is-spinning" /> 生成生图提示词…
-                      </>
-                    ) : (
-                      "生成生图 Prompt"
-                    )}
+                    {assistTask === "cover_prompt"
+                      ? "生成生图提示词…"
+                      : "生成生图 Prompt"}
                   </Button>
                   {suggestionTask === "cover_prompt" &&
                   suggestions.length > 0 ? (
@@ -1740,16 +1692,12 @@ export default function PostEditor() {
                               variant="primary"
                               type="button"
                               disabled={generatingCoverPrompt !== null}
+                              loading={generatingCoverPrompt === item}
                               onClick={() => void handleGenerateCover(item)}
                             >
-                              {generatingCoverPrompt === item ? (
-                                <>
-                                  <LoaderCircle className="is-spinning" />{" "}
-                                  正在生图…
-                                </>
-                              ) : (
-                                <>🎨 生图</>
-                              )}
+                              {generatingCoverPrompt === item
+                                ? "正在生图…"
+                                : "生图"}
                             </Button>
                             <Button
                               variant="secondary"
@@ -1778,16 +1726,11 @@ export default function PostEditor() {
                   <Button
                     variant="ghost"
                     onClick={() => void requestSuggestions("alt")}
+                    loading={assistTask === "alt"}
                     disabled={assistTask !== null}
                     icon={<Sparkles />}
                   >
-                    {assistTask === "alt" ? (
-                      <>
-                        <LoaderCircle className="is-spinning" /> 正在生成 Alt…
-                      </>
-                    ) : (
-                      "生成 Alt 描述"
-                    )}
+                    {assistTask === "alt" ? "正在生成 Alt…" : "生成 Alt 描述"}
                   </Button>
                   {suggestionTask === "alt" && suggestions.length > 0 ? (
                     <div className="editor-ai-candidates" aria-label="Alt 候选">
@@ -1811,16 +1754,13 @@ export default function PostEditor() {
                 <Button
                   variant="ghost"
                   onClick={() => void requestSeo()}
+                  loading={assistTask === "seo"}
                   disabled={assistTask !== null}
                   icon={<Sparkles />}
                 >
-                  {assistTask === "seo" ? (
-                    <>
-                      <LoaderCircle className="is-spinning" /> 正在优化 SEO…
-                    </>
-                  ) : (
-                    "🎯 智能生成整套 SEO 配置"
-                  )}
+                  {assistTask === "seo"
+                    ? "正在优化 SEO…"
+                    : "智能生成整套 SEO 配置"}
                 </Button>
               </div>
               <Field
@@ -1838,16 +1778,13 @@ export default function PostEditor() {
                   <Button
                     variant="ghost"
                     onClick={() => void requestSuggestions("slug")}
+                    loading={assistTask === "slug"}
                     disabled={assistTask !== null}
                     icon={<Sparkles />}
                   >
-                    {assistTask === "slug" ? (
-                      <>
-                        <LoaderCircle className="is-spinning" /> 正在生成 Slug…
-                      </>
-                    ) : (
-                      "生成 Slug 候选"
-                    )}
+                    {assistTask === "slug"
+                      ? "正在生成 Slug…"
+                      : "生成 Slug 候选"}
                   </Button>
                   {suggestionTask === "slug" && suggestions.length > 0 ? (
                     <div

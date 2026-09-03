@@ -20,7 +20,9 @@ vi.mock("@gosso/client/react", async (importOriginal) => ({
 }));
 
 const { apiFetchMock } = vi.hoisted(() => ({
-  apiFetchMock: vi.fn().mockResolvedValue(Response.json({ data: [] })),
+  apiFetchMock: vi
+    .fn()
+    .mockImplementation(() => Promise.resolve(Response.json({ data: [] }))),
 }));
 
 vi.mock("../../../auth", async () => {
@@ -41,6 +43,9 @@ vi.mock("../../../auth", async () => {
 describe("MediaLibrary", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    apiFetchMock.mockImplementation(() =>
+      Promise.resolve(Response.json({ data: [] })),
+    );
   });
 
   it("keeps upload in a drawer while the library toolbar remains focused on filtering", async () => {

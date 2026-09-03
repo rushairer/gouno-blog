@@ -4,22 +4,23 @@ import { Link, useSearchParams } from "react-router-dom";
 import {
   AdminPage,
   AdminPageHeader,
+  AsyncState,
   BulkActionBar,
   Button,
   ButtonLink,
+  Checkbox,
   ConfirmDialog,
   ContentStack,
   copyText,
   EmptyState,
-  ErrorState,
   FilterBar,
   IconButton,
-  LoadingState,
   Pagination,
   Panel,
   SearchField,
   Select,
   StatusBadge,
+  TableSkeleton,
   useToast,
 } from "../../components/ui";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
@@ -49,6 +50,8 @@ export default function AdminPages() {
   const q = params.get("q") || "";
   const status = params.get("status") || "";
   const page = Math.max(1, Number(params.get("page")) || 1);
+  const [reloadKey, setReloadKey] = useState(0);
+  const load = () => setReloadKey((k) => k + 1);
 
   useEffect(() => {
     if (!allowed) return;
@@ -74,7 +77,7 @@ export default function AdminPages() {
     return () => {
       ignore = true;
     };
-  }, [allowed, page, q, status]);
+  }, [allowed, page, q, reloadKey, status]);
 
   const setFilter = (key: string, value: string) => {
     const next = new URLSearchParams(params);
@@ -129,20 +132,6 @@ export default function AdminPages() {
       />
 
       <ContentStack>
-        {error ? (
-          <ErrorState
-            label={error}
-            action={
-              <Button
-                variant="secondary"
-                onClick={() => window.location.reload()}
-              >
-                重新载入
-              </Button>
-            }
-          />
-        ) : null}
-
         <FilterBar>
           <SearchField
             aria-label="搜索单页"
@@ -193,41 +182,45 @@ export default function AdminPages() {
           </BulkActionBar>
         ) : null}
 
-        {loading ? (
-          <LoadingState label="正在载入单页…" />
-        ) : !error && pages.length === 0 ? (
-          <EmptyState
-            label={
-              hasFilters
-                ? "没有符合当前筛选条件的单页。"
-                : "还没有创建过独立单页。"
-            }
-            action={
-              hasFilters ? (
-                <Button variant="secondary" onClick={clearFilters}>
-                  清除筛选
-                </Button>
-              ) : (
-                <ButtonLink
-                  variant="primary"
-                  to="/admin/pages/new"
-                  icon={<Plus />}
-                >
-                  新建单页
-                </ButtonLink>
-              )
-            }
-          />
-        ) : pages.length ? (
+        <AsyncState
+          loading={loading}
+          skeleton={<TableSkeleton columns={7} rows={6} />}
+          error={error}
+          onRetry={() => void load()}
+          empty={!error && pages.length === 0}
+          emptyState={
+            <EmptyState
+              label={
+                hasFilters
+                  ? "没有符合当前筛选条件的单页。"
+                  : "还没有创建过独立单页。"
+              }
+              action={
+                hasFilters ? (
+                  <Button variant="secondary" onClick={clearFilters}>
+                    清除筛选
+                  </Button>
+                ) : (
+                  <ButtonLink
+                    variant="primary"
+                    to="/admin/pages/new"
+                    icon={<Plus />}
+                  >
+                    新建单页
+                  </ButtonLink>
+                )
+              }
+            />
+          }
+        >
           <Panel className="posts-table-panel">
             <div className="table-scroll">
               <table className="admin-table">
                 <thead>
                   <tr>
                     <th>
-                      <input
+                      <Checkbox
                         aria-label="选择当前页全部单页"
-                        type="checkbox"
                         checked={
                           pages.length > 0 &&
                           pages.every((p) => selected.includes(p.id))
@@ -252,9 +245,8 @@ export default function AdminPages() {
                   {pages.map((p) => (
                     <tr key={p.id}>
                       <td>
-                        <input
+                        <Checkbox
                           aria-label={`选择 ${p.title}`}
-                          type="checkbox"
                           checked={selected.includes(p.id)}
                           onChange={(event) =>
                             setSelected((current) =>
@@ -332,7 +324,7 @@ export default function AdminPages() {
               </table>
             </div>
           </Panel>
-        ) : null}
+        </AsyncState>
 
         {!loading && total > pageSize ? (
           <Pagination

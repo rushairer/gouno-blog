@@ -640,20 +640,13 @@ export function WorkflowWorkspace({
                 <div className="row-actions workflow-detail-actions">
                   <Button
                     variant="secondary"
-                    loading={Boolean(activeRun)}
-                    disabled={Boolean(runBlockReason)}
+                    loading={Boolean(activeRun?.dryRun)}
+                    disabled={Boolean(runBlockReason) || Boolean(activeRun)}
                     title={runBlockReason || undefined}
                     type="button"
                     onClick={() => void runWorkflow(workflow, true, runInput())}
+                    icon={<TestTube2 />}
                   >
-                    {activeRun?.dryRun ? (
-                      <span
-                        className="spinner workflow-button-spinner"
-                        aria-hidden="true"
-                      />
-                    ) : (
-                      <TestTube2 />
-                    )}
                     {activeRun?.dryRun
                       ? locale === "zh"
                         ? "试运行中…"
@@ -662,26 +655,20 @@ export function WorkflowWorkspace({
                   </Button>
                   <Button
                     variant="primary"
-                    loading={Boolean(activeRun)}
+                    loading={Boolean(activeRun && !activeRun.dryRun)}
                     disabled={
                       !workflow.enabled ||
                       latestRun?.status === "running" ||
-                      Boolean(runBlockReason)
+                      Boolean(runBlockReason) ||
+                      Boolean(activeRun)
                     }
                     title={runBlockReason || undefined}
                     type="button"
                     onClick={() =>
                       void runWorkflow(workflow, false, runInput())
                     }
+                    icon={<Play />}
                   >
-                    {activeRun && !activeRun.dryRun ? (
-                      <span
-                        className="spinner workflow-button-spinner"
-                        aria-hidden="true"
-                      />
-                    ) : (
-                      <Play />
-                    )}
                     {activeRun && !activeRun.dryRun
                       ? locale === "zh"
                         ? "运行中…"

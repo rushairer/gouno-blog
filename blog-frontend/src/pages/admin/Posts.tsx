@@ -11,6 +11,7 @@ import {
   BulkActionBar,
   Button,
   ButtonLink,
+  Checkbox,
   ConfirmDialog,
   ContentStack,
   copyText,
@@ -55,6 +56,8 @@ export default function AdminPosts() {
   const category = params.get("category") || "";
   const tag = params.get("tag") || "";
   const page = Math.max(1, Number(params.get("page")) || 1);
+  const [reloadKey, setReloadKey] = useState(0);
+  const load = () => setReloadKey((k) => k + 1);
 
   useEffect(() => {
     if (!allowed) return;
@@ -93,7 +96,7 @@ export default function AdminPosts() {
     return () => {
       ignore = true;
     };
-  }, [allowed, category, page, q, status, tag]);
+  }, [allowed, category, page, q, reloadKey, status, tag]);
 
   const setFilter = (key: string, value: string) => {
     const next = new URLSearchParams(params);
@@ -298,6 +301,7 @@ export default function AdminPosts() {
           loading={loading}
           skeleton={<TableSkeleton columns={6} rows={6} />}
           error={error}
+          onRetry={() => void load()}
           empty={!error && posts.length === 0}
           emptyState={
             <EmptyState
@@ -318,10 +322,11 @@ export default function AdminPosts() {
                 ) : can("create", "post") ? (
                   <ButtonLink
                     variant="primary"
+                    size="compact"
                     to="/admin/posts/new"
                     icon={<Plus />}
                   >
-                    新建文章
+                    撰写第一篇文章
                   </ButtonLink>
                 ) : null
               }
@@ -335,9 +340,8 @@ export default function AdminPosts() {
                   <tr>
                     {can("batch", "post") ? (
                       <th>
-                        <input
+                        <Checkbox
                           aria-label="选择当前页全部文章"
-                          type="checkbox"
                           checked={
                             posts.length > 0 &&
                             posts.every((post) => selected.includes(post.id))
@@ -364,9 +368,8 @@ export default function AdminPosts() {
                     <tr key={post.id}>
                       {can("batch", "post") ? (
                         <td>
-                          <input
+                          <Checkbox
                             aria-label={`选择文章 ${post.title}`}
-                            type="checkbox"
                             checked={selected.includes(post.id)}
                             onChange={(event) =>
                               setSelected(

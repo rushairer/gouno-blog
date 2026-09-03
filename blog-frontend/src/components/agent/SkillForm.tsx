@@ -15,7 +15,9 @@ import {
   FormActions,
   FormGrid,
   FormLayout,
+  Input,
   Select,
+  Textarea,
 } from "../ui";
 import { RiskPill } from "./StatusPill";
 import { ToolBindingsEditor } from "./tools/ToolBindingsEditor";
@@ -133,8 +135,7 @@ export function SkillForm({
       <FormLayout onSubmit={submit}>
         <FormGrid columns={2}>
           <Field label={labels.name}>
-            <input
-              className="input-field"
+            <Input
               required
               value={value.name}
               onChange={(event) =>
@@ -170,8 +171,7 @@ export function SkillForm({
           </Field>
         </FormGrid>
         <Field label={labels.description}>
-          <input
-            className="input-field"
+          <Input
             value={value.description}
             onChange={(event) =>
               setValue((current) => ({
@@ -182,8 +182,8 @@ export function SkillForm({
           />
         </Field>
         <Field label={labels.prompt}>
-          <textarea
-            className="input-field mono"
+          <Textarea
+            className="mono"
             rows={8}
             required
             value={value.system_prompt}
@@ -232,8 +232,8 @@ export function SkillForm({
               : "Input JSON Schema (Draft 2020-12)"
           }
         >
-          <textarea
-            className="input-field mono"
+          <Textarea
+            className="mono"
             rows={6}
             required
             value={schemaText}
@@ -312,8 +312,7 @@ export function SkillForm({
         />
         <div className="agent-limit-grid">
           <Field label="Max steps">
-            <input
-              className="input-field"
+            <Input
               type="number"
               min="1"
               max="20"
@@ -329,8 +328,7 @@ export function SkillForm({
           <Field
             label={locale === "zh" ? "默认日运行上限" : "Default daily limit"}
           >
-            <input
-              className="input-field"
+            <Input
               type="number"
               min="1"
               value={value.default_daily_run_limit}
@@ -343,8 +341,7 @@ export function SkillForm({
             />
           </Field>
           <Field label="Max input tokens">
-            <input
-              className="input-field"
+            <Input
               type="number"
               min="1"
               value={value.max_input_tokens}
@@ -357,8 +354,7 @@ export function SkillForm({
             />
           </Field>
           <Field label="Max output tokens">
-            <input
-              className="input-field"
+            <Input
               type="number"
               min="1"
               value={value.max_output_tokens}
@@ -377,8 +373,7 @@ export function SkillForm({
                 : "Default monthly token budget"
             }
           >
-            <input
-              className="input-field"
+            <Input
               type="number"
               min="1"
               value={value.default_monthly_token_budget}

@@ -34,19 +34,28 @@ function location(sourceFile, node) {
 function buttonChildIcon(node, sourceFile) {
   let icon = null;
   function visitChild(child) {
-    if (icon) return;
+    if (icon || !child) return;
+    if (ts.isParenthesizedExpression(child)) {
+      visitChild(child.expression);
+      return;
+    }
+    if (ts.isJsxFragment(child)) {
+      child.children.forEach(visitChild);
+      return;
+    }
     const tag = jsxTagName(child, sourceFile);
     if (tag && (tag === "svg" || /^[A-Z]/.test(tag))) {
       icon = child;
       return;
     }
     if (ts.isJsxExpression(child) && child.expression) {
-      if (ts.isConditionalExpression(child.expression)) {
-        visitChild(child.expression.whenTrue);
-        visitChild(child.expression.whenFalse);
-      } else if (ts.isParenthesizedExpression(child.expression)) {
-        visitChild(child.expression.expression);
-      }
+      visitChild(child.expression);
+      return;
+    }
+    if (ts.isConditionalExpression(child)) {
+      visitChild(child.whenTrue);
+      visitChild(child.whenFalse);
+      return;
     }
   }
   visitChild(node);

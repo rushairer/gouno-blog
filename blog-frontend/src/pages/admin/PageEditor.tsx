@@ -4,7 +4,6 @@ import {
   Check,
   ExternalLink,
   Image as ImageIcon,
-  LoaderCircle,
   Save,
   Send,
   Sparkles,
@@ -867,20 +866,14 @@ export default function PageEditor() {
                   variant="primary"
                   type="button"
                   onClick={() => void handleGenerateContent()}
+                  loading={aiContentLoading}
                   disabled={
-                    aiContentLoading ||
-                    (!contentPrompt.trim() &&
-                      !page.title.trim() &&
-                      !page.content.trim())
+                    !contentPrompt.trim() &&
+                    !page.title.trim() &&
+                    !page.content.trim()
                   }
                 >
-                  {aiContentLoading ? (
-                    <>
-                      <LoaderCircle className="is-spinning" /> 正在生成…
-                    </>
-                  ) : (
-                    "生成 / 执行"
-                  )}
+                  {aiContentLoading ? "正在生成…" : "生成 / 执行"}
                 </Button>
               </div>
               {assistError ? (
@@ -941,15 +934,11 @@ export default function PageEditor() {
                   <ChoiceButton
                     className="editor-ai-ideate-control"
                     onClick={() => void handleIdeateImagePrompts()}
+                    loading={aiIdeateLoading}
                     disabled={aiIdeateLoading || aiImageLoading}
+                    icon={<Sparkles />}
                   >
-                    {aiIdeateLoading ? (
-                      <>
-                        <LoaderCircle className="is-spinning" /> 正在构思画面…
-                      </>
-                    ) : (
-                      "✨ 结合页面智能构思画面"
-                    )}
+                    {aiIdeateLoading ? "正在构思画面…" : "结合页面智能构思画面"}
                   </ChoiceButton>
                   <ChoiceButton
                     onClick={() =>
@@ -1037,18 +1026,10 @@ export default function PageEditor() {
                   variant="primary"
                   type="button"
                   onClick={() => void handleGenerateAiImage()}
-                  disabled={
-                    aiImageLoading ||
-                    (!imagePrompt.trim() && !page.title.trim())
-                  }
+                  loading={aiImageLoading}
+                  disabled={!imagePrompt.trim() && !page.title.trim()}
                 >
-                  {aiImageLoading ? (
-                    <>
-                      <LoaderCircle className="is-spinning" /> 正在绘制…
-                    </>
-                  ) : (
-                    "🎨 开始生图"
-                  )}
+                  {aiImageLoading ? "正在绘制…" : "开始生图"}
                 </Button>
               </div>
               {imagePromptCandidates.length > 0 ? (
@@ -1187,19 +1168,11 @@ export default function PageEditor() {
               variant="primary"
               type="button"
               onClick={() => void autoFillAllMetadata()}
-              disabled={
-                metaLoading || (!page.title.trim() && !page.content.trim())
-              }
+              loading={metaLoading}
+              disabled={!page.title.trim() && !page.content.trim()}
+              icon={<Sparkles />}
             >
-              {metaLoading ? (
-                <>
-                  <LoaderCircle className="is-spinning" /> 正在智能分析全文…
-                </>
-              ) : (
-                <>
-                  <Sparkles /> ⚡ AI 一键补全元数据
-                </>
-              )}
+              {metaLoading ? "正在智能分析全文…" : "AI 一键补全元数据"}
             </Button>
           </div>
 

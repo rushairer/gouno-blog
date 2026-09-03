@@ -16,6 +16,7 @@ import { useAbility } from "../../abilities";
 import {
   AdminPage,
   AdminPageHeader,
+  AsyncState,
   BulkActionBar,
   Button,
   Checkbox,
@@ -26,10 +27,10 @@ import {
   EmptyState,
   Feedback,
   FilterBar,
-  LoadingState,
   Panel,
   SearchField,
   Select,
+  TableSkeleton,
   useToast,
 } from "../../components/ui";
 import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
@@ -401,13 +402,21 @@ export default function MediaLibrary() {
             </Button>
           </BulkActionBar>
         ) : null}
-        {loading ? (
-          <LoadingState label={t("loadingResources")} />
-        ) : assets.length === 0 ? (
-          <EmptyState label={t("noMedia")} />
-        ) : visibleAssets.length === 0 ? (
-          <EmptyState label="没有符合条件的媒体资源。" />
-        ) : (
+        <AsyncState
+          loading={loading}
+          skeleton={<TableSkeleton rows={4} columns={4} />}
+          error={assets.length === 0 ? error : null}
+          onRetry={() => void load()}
+          retryLabel="重新载入"
+          empty={!loading && visibleAssets.length === 0 && !error}
+          emptyState={
+            <EmptyState
+              label={
+                assets.length === 0 ? t("noMedia") : "没有符合条件的媒体资源。"
+              }
+            />
+          }
+        >
           <div className="media-grid">
             {visibleAssets.map((asset) => (
               <Panel
@@ -511,7 +520,7 @@ export default function MediaLibrary() {
               </Panel>
             ))}
           </div>
-        )}
+        </AsyncState>
       </ContentStack>
 
       {/* 上传图片 Drawer */}
