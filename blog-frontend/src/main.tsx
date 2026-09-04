@@ -12,9 +12,9 @@ import App from "./App.tsx";
 import { GlobalStepUpBoundary } from "./components/auth/GlobalStepUpBoundary";
 
 createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <GlobalStepUpBoundary>
+  <GlobalStepUpBoundary>
+    <StrictMode>
       <App />
-    </GlobalStepUpBoundary>
-  </StrictMode>,
+    </StrictMode>
+  </GlobalStepUpBoundary>,
 );
