@@ -19,7 +19,9 @@ function requestPath(input: unknown): string {
   try {
     return new URL(
       value,
-      typeof window !== "undefined" ? window.location.origin : "http://localhost",
+      typeof window !== "undefined"
+        ? window.location.origin
+        : "http://localhost",
     ).pathname;
   } catch {
     return value;
