@@ -57,10 +57,7 @@ export function GlobalStepUpBoundary({ children }: { children: ReactNode }) {
   return (
     <>
       {children}
-      <StepUpMfaModal
-        open={stepUpOpen}
-        onClose={() => setStepUpOpen(false)}
-      />
+      <StepUpMfaModal open={stepUpOpen} onClose={() => setStepUpOpen(false)} />
       {unhandledError ? (
         <div className="toast-region">
           <Toast
