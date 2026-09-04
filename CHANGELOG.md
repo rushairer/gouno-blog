@@ -3,6 +3,15 @@
 All notable changes to the complete Gouno Blog distribution are documented in
 this file. The format follows Keep a Changelog and Semantic Versioning.
 
+## [1.5.18] - 2026-09-04
+
+### Changed
+
+- Align UI/UX design system with GOSSO Admin: normalize panel/card header anatomy (`.panel-heading`, `.panel-header`, `.card-header`, `.card-title`, `.card-description`, `.panel-heading__action`, `.panel-header__action`).
+- Align panel body and card content (`.panel-body`, `.card-content`, `.flush` modifier) and card footer (`.card-footer`).
+- Add definition list alignment (`.detail-list`, `.detail-row`, `.detail-label`, `.detail-value`) with cross-alias `.definition-*` variants.
+- Add form action bar alignment (`.form-submit-bar`, `.is-sticky` modifier, `.form-submit-bar__status`) with cross-alias `.form-action-bar`.
+
 ## [1.5.17] - 2026-09-04
 
 ### Changed
