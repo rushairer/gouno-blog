@@ -82,11 +82,7 @@ describe("AdminShell navigation utilities", () => {
       name: "查看通知中心",
     });
     expect(notificationsLink).toHaveAttribute("href", "/admin/notifications");
-    expect(notificationsLink).toHaveClass(
-      "btn",
-      "btn-ghost",
-      "btn--compact",
-    );
+    expect(notificationsLink).toHaveClass("btn", "btn-ghost", "btn--compact");
 
     const logoutButton = screen.getByRole("button", { name: "退出登录" });
     expect(logoutButton).toHaveClass("btn", "btn-ghost", "btn--compact");
