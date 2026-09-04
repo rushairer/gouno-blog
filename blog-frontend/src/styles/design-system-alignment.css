@@ -119,7 +119,9 @@
   }
 
   .btn.btn--icon,
+  .btn.btn-icon,
   .icon-button,
+  .icon-btn,
   .icon-button--default {
     width: var(--control-h-base);
     height: var(--control-h-base);
@@ -127,13 +129,15 @@
     padding: 0;
   }
 
-  .icon-button--compact {
+  .icon-button--compact,
+  .icon-btn.btn-sm {
     width: var(--control-h-sm);
     height: var(--control-h-sm);
     min-height: var(--control-h-sm);
   }
 
-  .icon-button--large {
+  .icon-button--large,
+  .icon-btn.btn-lg {
     width: var(--control-h-lg);
     height: var(--control-h-lg);
     min-height: var(--control-h-lg);
@@ -176,21 +180,36 @@
     color: var(--ui-on-brand);
   }
 
+  .btn-danger {
+    border-color: color-mix(in srgb, var(--ui-danger) 28%, transparent);
+    background: var(--ui-danger-soft);
+    color: var(--ui-danger);
+  }
+
+  .btn-danger:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--ui-danger) 44%, transparent);
+    background: color-mix(in srgb, var(--ui-danger-soft) 78%, var(--ui-danger));
+    color: var(--ui-danger);
+  }
+
   .icon-button--danger {
-    border-color: var(--ui-danger);
+    border-color: color-mix(in srgb, var(--ui-danger) 28%, transparent);
     background: var(--ui-danger-soft);
     color: var(--ui-danger);
   }
 
   .icon-button--danger:hover:not(:disabled) {
-    border-color: var(--ui-danger);
+    border-color: color-mix(in srgb, var(--ui-danger) 44%, transparent);
     background: color-mix(in srgb, var(--ui-danger-soft) 78%, var(--ui-danger));
     color: var(--ui-danger);
   }
 
   .btn__icon,
+  .btn > .btn-icon,
   .icon-button__icon,
-  .btn__spinner {
+  .icon-btn__icon,
+  .btn__spinner,
+  .btn-spinner {
     display: inline-flex;
     width: 16px;
     height: 16px;
@@ -200,7 +219,9 @@
   }
 
   .btn__icon > svg,
-  .icon-button__icon > svg {
+  .btn > .btn-icon > svg,
+  .icon-button__icon > svg,
+  .icon-btn__icon > svg {
     display: block;
     width: 16px;
     height: 16px;
@@ -260,29 +281,48 @@
   }
 
   .panel,
-  .ui-card {
+  .admin-panel,
+  .ui-card,
+  .glass-card {
     border-color: var(--ds-border-subtle);
     border-radius: var(--radius-panel);
     box-shadow: var(--ds-panel-shadow);
   }
 
-  .ui-card--padding-none {
+  .ui-card--padding-none,
+  .glass-card--padding-none {
     padding: 0;
   }
 
-  .ui-card--padding-sm {
+  .ui-card--padding-sm,
+  .glass-card--padding-sm {
     padding: 12px;
   }
 
-  .ui-card--padding-base {
+  .ui-card--padding-base,
+  .glass-card--padding-base {
     padding: 24px;
   }
 
-  .ui-card--padding-lg {
+  .ui-card--padding-lg,
+  .glass-card--padding-lg {
     padding: 32px;
   }
 
-  .ui-card--interactive:hover {
+  .ui-card--subtle,
+  .glass-card--subtle {
+    background: var(--ui-page);
+    box-shadow: none;
+  }
+
+  .ui-card--elevated,
+  .glass-card--elevated {
+    background: var(--ds-surface-elevated);
+    box-shadow: var(--ds-panel-shadow-hover);
+  }
+
+  .ui-card--interactive:hover,
+  .glass-card--interactive:hover {
     transform: translateY(-1px);
     box-shadow: var(--ds-panel-shadow-hover);
   }
@@ -297,6 +337,8 @@
 
   .form-actions,
   .modal-actions,
+  .modal-footer,
+  .drawer-footer,
   .action-group,
   .row-actions {
     display: flex;
@@ -307,7 +349,8 @@
   }
 
   .form-actions,
-  .modal-actions {
+  .modal-actions,
+  .modal-footer {
     padding-top: 16px;
   }
 
@@ -331,29 +374,83 @@
   }
 
   .table-actions,
+  .button-group,
   .row-actions,
   .action-group {
+    display: inline-flex;
     flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
     white-space: nowrap;
   }
 
-  .admin-table td:last-child > :is(.table-actions, .row-actions, .action-group),
+  .admin-table
+    td:last-child
+    > :is(.table-actions, .button-group, .row-actions, .action-group),
   .content-table
     td:last-child
-    > :is(.table-actions, .row-actions, .action-group) {
+    > :is(.table-actions, .button-group, .row-actions, .action-group) {
     width: 100%;
+    display: inline-flex;
+    justify-content: flex-end;
   }
 
   .table-actions > *,
+  .button-group > *,
   .row-actions > *,
   .action-group > *,
   .admin-table
     td
-    :is(.btn, .icon-button, .badge, .status-pill, .status-badge, svg),
+    :is(
+      .btn,
+      .icon-button,
+      .icon-btn,
+      .badge,
+      .status-pill,
+      .status-badge,
+      svg
+    ),
   .content-table
     td
-    :is(.btn, .icon-button, .badge, .status-pill, .status-badge, svg) {
+    :is(
+      .btn,
+      .icon-button,
+      .icon-btn,
+      .badge,
+      .status-pill,
+      .status-badge,
+      svg
+    ) {
     flex-shrink: 0;
+  }
+
+  :is(.admin-table, .content-table)
+    td
+    :is(.table-actions, .button-group, .row-actions, .action-group)
+    :is(.icon-button, .icon-btn, .btn--icon, .btn-icon) {
+    width: var(--control-h-sm);
+    height: var(--control-h-sm);
+    min-height: var(--control-h-sm);
+  }
+
+  :is(.admin-table, .content-table)
+    td
+    :is(.table-actions, .button-group, .row-actions, .action-group)
+    .btn:not(:is(.icon-button, .icon-btn, .btn--icon, .btn-icon)) {
+    min-height: var(--control-h-sm);
+    height: var(--control-h-sm);
+    padding-inline: 12px;
+    font-size: var(--font-size-sm);
+    gap: 6px;
+  }
+
+  .cell-nowrap,
+  .cell-icon-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
   }
 
   .ds-dialog-overlay,
@@ -408,7 +505,8 @@
   }
 
   .ds-dialog-footer,
-  .modal-actions {
+  .modal-actions,
+  .modal-footer {
     margin: 0;
     border-top: 1px solid var(--ds-border-default);
   }
@@ -426,12 +524,14 @@
 
     .ds-dialog-footer,
     .modal-actions,
+    .modal-footer,
     .form-actions {
       align-items: stretch;
     }
 
     .ds-dialog-footer > *,
     .modal-actions > *,
+    .modal-footer > *,
     .form-actions > * {
       width: 100%;
     }

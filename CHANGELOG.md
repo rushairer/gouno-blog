@@ -3,6 +3,15 @@
 All notable changes to the complete Gouno Blog distribution are documented in
 this file. The format follows Keep a Changelog and Semantic Versioning.
 
+## [1.5.11] - 2026-09-04
+
+### Changed
+
+- Align UI/UX design system with GOSSO Admin: standardize table action container (`.table-actions`, `.button-group`, `.row-actions`, `.action-group`) with unified 8px gap (`gap-2`) and right alignment.
+- Standardize table action button dimensions to 34px (`--control-h-sm`), with 34px × 34px icon buttons and 34px compact text buttons.
+- Refine danger button styling (`.btn-danger`, `.icon-button--danger`) with subtle 28% translucent border and soft background, eliminating heavy solid red border.
+- Add cross-project class aliases (`.icon-btn`, `.btn-icon`, `.modal-footer`, `.glass-card`).
+
 ## [1.5.10] - 2026-09-04
 
 ### Fixed
