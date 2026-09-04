@@ -107,6 +107,54 @@
     border-radius: 8px;
   }
 
+  .icon-button--secondary {
+    border-color: var(--ui-border);
+    background: var(--ui-control);
+    color: var(--ui-text-secondary);
+  }
+
+  .icon-button--secondary:hover:not(:disabled) {
+    border-color: var(--ui-border-emphasis);
+    background: var(--ui-control-hover);
+    color: var(--ui-brand);
+  }
+
+  .icon-button--ghost {
+    border-color: transparent;
+    background: transparent;
+    color: var(--ui-text-secondary);
+  }
+
+  .icon-button--ghost:hover:not(:disabled) {
+    border-color: transparent;
+    background: var(--ui-control-hover);
+    color: var(--ui-text);
+  }
+
+  .icon-button--primary {
+    border-color: var(--ui-brand);
+    background: var(--ui-brand);
+    color: var(--ui-on-brand);
+  }
+
+  .icon-button--primary:hover:not(:disabled) {
+    border-color: var(--ui-brand-hover);
+    background: var(--ui-brand-hover);
+    color: var(--ui-on-brand);
+  }
+
+  .icon-button--danger {
+    border-color: var(--ui-danger);
+    background: var(--ui-danger-soft);
+    color: var(--ui-danger);
+  }
+
+  .icon-button--danger:hover:not(:disabled) {
+    border-color: var(--ui-danger);
+    background: color-mix(in srgb, var(--ui-danger-soft) 78%, var(--ui-danger));
+    color: var(--ui-danger);
+  }
+
   .btn__icon,
   .icon-button__icon,
   .btn__spinner {
@@ -148,11 +196,57 @@
     border-radius: 9999px;
   }
 
+  .badge--brand {
+    border-color: color-mix(in srgb, var(--ui-brand) 32%, transparent);
+    background: var(--ui-brand-soft);
+    color: var(--ui-brand);
+  }
+
+  .badge--neutral {
+    border-color: var(--ds-border-subtle);
+    background: var(--ui-control-hover);
+    color: var(--ui-text-secondary);
+  }
+
+  .badge--success {
+    border-color: color-mix(in srgb, var(--ui-success) 28%, transparent);
+    background: var(--ui-success-soft);
+    color: var(--ui-success);
+  }
+
+  .badge--warning {
+    border-color: color-mix(in srgb, var(--ui-warning) 28%, transparent);
+    background: var(--ui-warning-soft);
+    color: var(--ui-warning);
+  }
+
+  .badge--danger {
+    border-color: color-mix(in srgb, var(--ui-danger) 28%, transparent);
+    background: var(--ui-danger-soft);
+    color: var(--ui-danger);
+  }
+
   .panel,
   .ui-card {
     border-color: var(--ds-border-subtle);
     border-radius: var(--radius-panel);
     box-shadow: var(--ds-panel-shadow);
+  }
+
+  .ui-card--padding-none {
+    padding: 0;
+  }
+
+  .ui-card--padding-sm {
+    padding: 12px;
+  }
+
+  .ui-card--padding-base {
+    padding: 24px;
+  }
+
+  .ui-card--padding-lg {
+    padding: 32px;
   }
 
   .ui-card--interactive:hover {
