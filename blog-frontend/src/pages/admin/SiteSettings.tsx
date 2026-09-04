@@ -69,7 +69,10 @@ export default function AdminSiteSettings() {
           if (pending) {
             const parsed = JSON.parse(pending);
             merged = { ...merged, ...parsed };
-            notify("已恢复待保存的站点设置，请点击“保存设置”以提交。", "info");
+            notify(
+              "已恢复未保存的修改内容。当前尚未生效，请点击“保存设置”以提交生效。",
+              "info",
+            );
           }
         } catch {}
         setValue(merged);
