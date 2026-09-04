@@ -50,7 +50,7 @@ Panels use semantic surface tokens, an 8% text-derived border, a 12px radius, an
 - Tailwind is imported exactly once from `src/styles/tailwind.css`, which must be the first CSS entry loaded by `main.tsx`.
 - Global document defaults live in `@layer base`; reusable product styles live in `@layer components`; semantic variables live in `@layer theme`.
 - Accessibility overrides that must outrank utilities live in the final `overrides` layer and are loaded last.
-- Every source stylesheet must place style rules inside an explicit cascade layer; `npm run lint:css` rejects unlayered top-level rules and invalid entry ordering.
+- Every source stylesheet must place style rules inside an explicit cascade layer; `npm run lint:css` rejects unlayered top-level rules, `!important`, duplicate Tailwind imports, and invalid entry ordering.
 
 ## Repository boundaries
 

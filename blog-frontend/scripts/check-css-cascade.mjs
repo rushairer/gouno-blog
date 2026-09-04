@@ -176,6 +176,14 @@ for (const file of cssFiles) {
     );
   }
 
+  source.split("\n").forEach((line, index) => {
+    if (line.includes("!important")) {
+      failures.push(
+        `${file.relativePath}:${index + 1}: !important is forbidden in source styles`,
+      );
+    }
+  });
+
   inspectTopLevelBlocks(source, file.relativePath, failures);
 }
 
