@@ -12,6 +12,7 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 - Unify notification design language across admin settings by eliminating duplicate simultaneous page `<Feedback>` and floating `<Toast>` banners.
 - Extract unified `isMfaError` helper in frontend auth module shared between user membership and site settings.
 - Fix Radix Dialog overlay and content z-index hierarchy conflict with admin sticky topbar by removing conflicting `z-50` utility classes, ensuring dialog overlay (`z-index: 1000`) cleanly masks the topbar (`z-index: 80`).
+- Log detailed error diagnostics in BFF authentication callback handler when callback validation fails.
 
 ## [1.5.8] - 2026-09-03
 

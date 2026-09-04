@@ -2,6 +2,7 @@ package authbff
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"time"
 
@@ -93,6 +94,7 @@ func (c *Client) callbackHandler(ctx *gin.Context) {
 	}
 	sessionHandle, _, returnTo, err := c.Complete(ctx.Request.Context(), handle, ctx.Request.URL.Query())
 	if err != nil {
+		log.Printf("[authbff] login callback validation failed: %v", err)
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "login callback validation failed"})
 		return
 	}
