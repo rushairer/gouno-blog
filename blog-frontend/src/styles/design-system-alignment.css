@@ -953,6 +953,64 @@
     align-self: start;
   }
 
+  /* Notice Cards & Banner Info alignment */
+  .notice-card,
+  .notice-card--info {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--ds-border-subtle);
+    border-radius: var(--radius-panel);
+    background: var(--ui-panel);
+    color: var(--ds-text-primary);
+  }
+
+  .notice-card--stacked {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .notice-card.success,
+  .notice-card--success {
+    border-color: color-mix(in srgb, var(--ui-success) 28%, transparent);
+    background: var(--ui-success-soft);
+    color: var(--ui-success);
+  }
+
+  /* Inline Status and Metrics alignment */
+  .inline-status-title {
+    font-size: var(--font-size-base, 14px);
+    color: var(--ds-text-secondary);
+  }
+
+  .inline-status-value {
+    font-size: var(--font-size-md, 15px);
+    font-weight: 700;
+    margin-top: 2px;
+  }
+
+  .inline-status-value--success {
+    color: var(--ui-success);
+  }
+
+  .inline-status-value--danger {
+    color: var(--ui-danger);
+  }
+
+  .system-link {
+    color: var(--ds-brand);
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+
+  .system-link:hover {
+    color: var(--ds-brand-hover);
+    text-decoration: underline;
+  }
+
   @media (max-width: 720px) {
     .admin-content,
     .admin-topbar {

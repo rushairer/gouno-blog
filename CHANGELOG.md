@@ -3,6 +3,13 @@
 All notable changes to the complete Gouno Blog distribution are documented in
 this file. The format follows Keep a Changelog and Semantic Versioning.
 
+## [1.5.16] - 2026-09-04
+
+### Changed
+
+- Align UI/UX design system with GOSSO Admin: standardize notice cards and informational banners (`.notice-card`, `.notice-card--info`, `.notice-card--stacked`, `.notice-card.success`, `.notice-card--success`).
+- Align inline status indicators and metric labels (`.inline-status-title`, `.inline-status-value`, `.inline-status-value--success`, `.inline-status-value--danger`, `.system-link`).
+
 ## [1.5.15] - 2026-09-04
 
 ### Changed
