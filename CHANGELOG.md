@@ -3,6 +3,15 @@
 All notable changes to the complete Gouno Blog distribution are documented in
 this file. The format follows Keep a Changelog and Semantic Versioning.
 
+## [1.5.20] - 2026-09-04
+
+### Changed
+
+- Align UI/UX design system with GOSSO Admin: standardize list stacks and item rows (`.list-stack`, `.list-row`, `.list-row-main`, `.list-icon`, `.list-title`, `.list-meta`).
+- Align data table header and row hover states across `.admin-table`, `.content-table`, and `.dashboard-table` (uppercase tracking headers, hover row highlighting, text-right action columns, nested strong/small typography).
+- Standardize plain sections (`.plain-section`, `.plain-section-title`).
+- Normalize button group alignment variants (`.button-group-left`, `.button-group-right`, `.button-group-between`) and link buttons (`.btn-link`).
+
 ## [1.5.19] - 2026-09-04
 
 ### Changed

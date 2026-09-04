@@ -1602,4 +1602,157 @@
     font-size: var(--font-size-md, 15px);
     font-weight: 700;
   }
+
+  /* ==========================================================================
+     Pass 10 — List Stack/Row, Table Row States & Section/Button Alignment
+     ========================================================================== */
+
+  /* List Stack & List Row */
+  .list-stack,
+  .item-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .list-row,
+  .item-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--ds-border-default);
+  }
+
+  .list-row:last-child,
+  .item-row:last-child {
+    border-bottom: 0;
+  }
+
+  .list-row-main,
+  .item-row-main {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .list-icon,
+  .item-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--ds-border-default);
+    border-radius: var(--radius-control);
+    background: var(--ds-surface-panel);
+    color: var(--ds-text-secondary);
+  }
+
+  .list-title,
+  .item-title {
+    color: var(--ds-text-primary);
+    font-size: var(--font-size-base, 14px);
+    font-weight: 700;
+  }
+
+  .list-meta,
+  .item-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 3px;
+    color: var(--ds-text-secondary);
+    font-size: var(--font-size-xs, 12px);
+  }
+
+  /* Table Header & Row Hover States */
+  :is(.admin-table, .content-table, .dashboard-table) th {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--ds-border-default);
+    background: var(--ds-surface-panel);
+    color: var(--ds-text-secondary);
+    font-size: var(--font-size-xs, 12px);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  :is(.admin-table, .content-table, .dashboard-table) td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--ds-border-subtle);
+    color: var(--ds-text-primary);
+    vertical-align: middle;
+  }
+
+  :is(.admin-table, .content-table, .dashboard-table) tr:last-child td {
+    border-bottom: 0;
+  }
+
+  :is(.admin-table, .content-table, .dashboard-table) tr:hover td {
+    background: var(--ds-surface-control-hover);
+  }
+
+  :is(.admin-table, .content-table, .dashboard-table) th.col-w-actions,
+  :is(.admin-table, .content-table, .dashboard-table) td.col-w-actions {
+    text-align: right;
+  }
+
+  :is(.admin-table, .content-table, .dashboard-table) td strong {
+    display: block;
+    color: var(--ds-text-primary);
+    font-weight: 600;
+  }
+
+  :is(.admin-table, .content-table, .dashboard-table) td small {
+    display: block;
+    margin-top: 2px;
+    color: var(--ds-text-secondary);
+    font-size: var(--font-size-xs, 12px);
+  }
+
+  /* Plain Section & Button Group Variants */
+  .plain-section {
+    padding: 20px;
+    border-top: 1px solid var(--ds-border-default);
+  }
+
+  .plain-section:first-child {
+    border-top: 0;
+  }
+
+  .plain-section-title {
+    margin-bottom: 14px;
+    color: var(--ds-text-primary);
+    font-size: var(--font-size-md, 15px);
+    font-weight: 700;
+  }
+
+  .button-group-left {
+    justify-content: flex-start;
+  }
+
+  .button-group-right {
+    justify-content: flex-end;
+  }
+
+  .button-group-between {
+    justify-content: space-between;
+  }
+
+  .btn-link {
+    background: transparent;
+    border-color: transparent;
+    color: var(--ds-brand);
+    padding: 0;
+    min-height: auto;
+  }
+
+  .btn-link:hover {
+    color: var(--ds-brand-hover);
+    text-decoration: underline;
+  }
 }
