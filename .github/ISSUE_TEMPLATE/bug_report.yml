@@ -1,0 +1,79 @@
+name: Bug report
+description: Report a reproducible defect in Gouno Blog
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve Gouno Blog. Do not include credentials, OAuth tokens, API keys, personal data, or exploit details for an undisclosed security issue. Use the private security reporting path in SECURITY.md for vulnerabilities.
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      description: Release version, image digest, or commit SHA where the issue occurs.
+      placeholder: v1.2.3 or 0123456789abcdef...
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Blog frontend
+        - Blog backend / API
+        - Authentication / BFF
+        - AI Agent / Workflow
+        - Provider / Connector
+        - Media
+        - Deployment / Docker
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, browser, deployment mode, database/Redis versions, and other relevant runtime details.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Provide the smallest deterministic sequence that reproduces the problem.
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sanitized logs or screenshots
+      description: Redact secrets, tokens, session identifiers, personal data, internal hostnames, and customer content.
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I searched existing issues for the same problem.
+          required: true
+        - label: I removed secrets and sensitive data from this report.
+          required: true
+        - label: This is not an undisclosed security vulnerability.
+          required: true

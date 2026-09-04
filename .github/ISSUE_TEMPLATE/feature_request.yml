@@ -1,0 +1,60 @@
+name: Feature request
+description: Propose a focused improvement to Gouno Blog
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Prefer a concrete user problem and measurable outcome over a solution-only request. Changes to authentication, authorization, AI Tool capabilities, external delivery, or production security boundaries must include threat/risk considerations.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: What user or operator problem exists today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed outcome
+      description: Describe the desired behavior. Implementation details are optional.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Public blog
+        - CMS / admin
+        - Authentication / authorization
+        - AI Agent / Workflow
+        - Provider / Connector
+        - Media
+        - Operations / deployment
+        - Developer experience
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints and compatibility
+      description: Note API, database, browser, deployment, security, accessibility, or backward-compatibility constraints.
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: List observable conditions that would make this request complete.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I searched existing issues and discussions for the same request.
+          required: true
+        - label: I described the problem and acceptance criteria, not only a preferred implementation.
+          required: true

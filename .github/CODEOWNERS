@@ -1,0 +1,24 @@
+* @rushairer
+
+# Security-sensitive identity and authorization boundaries
+/blog-backend/internal/authbff/ @rushairer
+/blog-backend/internal/access/ @rushairer
+/blog-backend/middleware/ @rushairer
+
+# Outbound trust boundaries and encrypted credentials
+/blog-backend/internal/provider/ @rushairer
+/blog-backend/internal/connector/ @rushairer
+/blog-backend/internal/secretbox/ @rushairer
+
+# AI execution, approval and external side effects
+/blog-backend/internal/workflow/ @rushairer
+/blog-backend/internal/operations/ @rushairer
+/blog-backend/internal/tool/ @rushairer
+
+# Production deployment and supply chain
+/.github/workflows/ @rushairer
+/docker-compose.production.yml @rushairer
+/Caddyfile.production @rushairer
+/blog-backend/Dockerfile @rushairer
+/blog-frontend/Dockerfile @rushairer
+/seed/Dockerfile @rushairer
