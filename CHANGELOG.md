@@ -3,6 +3,19 @@
 All notable changes to the complete Gouno Blog distribution are documented in
 this file. The format follows Keep a Changelog and Semantic Versioning.
 
+## [1.5.17] - 2026-09-04
+
+### Changed
+
+- Align UI/UX design system with GOSSO Admin: normalize loading spinner geometry and animation (`.spinner`, `.loading-spinner`, `--sm/md/lg` variants, `.page-loading`).
+- Align sidebar nav link geometry (`.admin-nav-group a`, `.admin-nav-link`, `.sidebar-link`): 40px min-height, 12px padding, token-based hover/active colors.
+- Align sidebar section label (`.admin-nav-group h2`, `.admin-nav-section-title`): uppercase, 12px, 0.08em tracking.
+- Align avatar component (`.admin-avatar`, `.avatar`, `--circle`, `--sm`, `--lg`): 34px, 8px radius, brand background.
+- Normalize admin profile strip (`.admin-profile`, `.admin-profile div/strong/small`).
+- Add breadcrumb alignment (`.breadcrumb`, `.page-breadcrumb`).
+- Anchor reading progress bar to brand token (`.reading-progress-bar`).
+- Normalize `:focus-visible` ring across buttons, nav links and tabs.
+
 ## [1.5.16] - 2026-09-04
 
 ### Changed
