@@ -23,7 +23,7 @@ export default function Categories() {
 
   return (
     <div className="public-container simple-page taxonomy-page">
-      <header>
+      <header className="taxonomy-header">
         <p>{t("categoriesPage.categoryMeta")}</p>
         <h1>{t("categoriesPage.title")}</h1>
         <span>{t("categoriesPage.subtitle")}</span>

@@ -43,7 +43,7 @@ export default function Tags() {
 
   return (
     <div className="public-container simple-page taxonomy-page">
-      <header>
+      <header className="taxonomy-header">
         <p>{t("tagsPage.tagsMeta")}</p>
         <h1>{t("tagsPage.title")}</h1>
         <span>{t("tagsPage.subtitle")}</span>

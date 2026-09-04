@@ -41,7 +41,7 @@ export default function Archive() {
   const periods = Object.entries(groups);
   return (
     <div className="public-container simple-page">
-      <header>
+      <header className="archive-header">
         <p>{t("archivePage.archiveMeta")}</p>
         <h1>{t("archivePage.title")}</h1>
         <span>{t("archivePage.subtitle")}</span>
