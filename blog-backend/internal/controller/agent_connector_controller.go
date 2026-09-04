@@ -111,10 +111,10 @@ func (ctrl *AgentController) CompleteSearchConsoleOAuthCallback(c *gin.Context) 
 	cookieState, cookieErr := c.Cookie(connectorFlowCookie)
 	http.SetCookie(c.Writer, &http.Cookie{Name: connectorFlowCookie, Path: "/", MaxAge: -1, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode})
 	if cookieErr != nil || len(state) == 0 || len(state) != len(cookieState) || subtle.ConstantTimeCompare([]byte(state), []byte(cookieState)) != 1 || c.Query("error") != "" || ctrl.connectors.CompleteSearchConsoleOAuth(c.Request.Context(), state, c.Query("code")) != nil {
-		c.Redirect(http.StatusSeeOther, "/admin/ai?connector_oauth=failed")
+		c.Redirect(http.StatusSeeOther, "/admin/ai-ops?tab=advanced&connector_oauth=failed")
 		return
 	}
-	c.Redirect(http.StatusSeeOther, "/admin/ai?connector_oauth=connected")
+	c.Redirect(http.StatusSeeOther, "/admin/ai-ops?tab=advanced&connector_oauth=connected")
 }
 
 func (ctrl *AgentController) SearchConsoleSummary(c *gin.Context) {

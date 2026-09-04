@@ -9,9 +9,12 @@ import "./styles/components.css";
 import "./styles/design-system-alignment.css";
 import "./styles/accessibility.css";
 import App from "./App.tsx";
+import { GlobalStepUpBoundary } from "./components/auth/GlobalStepUpBoundary";
 
 createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
+  <GlobalStepUpBoundary>
+    <StrictMode>
+      <App />
+    </StrictMode>
+  </GlobalStepUpBoundary>,
 );

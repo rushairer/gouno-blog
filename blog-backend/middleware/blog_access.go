@@ -108,6 +108,15 @@ func RequireRecentMFA() gin.HandlerFunc {
 		claimsRaw, ok := c.Get("claims")
 		claims, valid := claimsRaw.(jwt.MapClaims)
 		if !ok || !valid || !access.RecentMFA(claims, time.Now()) {
+			// A document navigation cannot render the SPA Step-Up modal from a JSON
+			// 403 response. Return to the AI console with an explicit one-shot UI
+			// signal while keeping fetch/XHR callers on the normal API error path.
+			if c.Request.Method == http.MethodGet &&
+				(c.GetHeader("Sec-Fetch-Mode") == "navigate" || c.GetHeader("Sec-Fetch-Dest") == "document") {
+				c.Redirect(http.StatusSeeOther, "/admin/ai-ops?mfa_step_up=1")
+				c.Abort()
+				return
+			}
 			c.AbortWithStatusJSON(http.StatusForbidden, gouno.NewErrorResponse(http.StatusForbidden, "recent multi-factor authentication required"))
 			return
 		}

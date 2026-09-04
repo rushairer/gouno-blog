@@ -1,16 +1,17 @@
 import { ExternalLink, ShieldCheck } from "lucide-react";
-import { stepUpMfa, getGossoAdminURL, useSafeUserProfile } from "../../auth";
+import { stepUpMfa, getGossoAdminURL } from "../../auth";
 import { Button, Modal } from "../ui";
 
 interface StepUpMfaModalProps {
   open: boolean;
   onClose: () => void;
-  onSuccess: () => Promise<void> | void;
+  // Kept for backward compatibility with existing page-level callers. The
+  // step-up flow is a top-level navigation, so continuation happens after the
+  // browser returns to the application rather than inside this modal.
+  onSuccess?: () => Promise<void> | void;
 }
 
 export function StepUpMfaModal({ open, onClose }: StepUpMfaModalProps) {
-  const user = useSafeUserProfile();
-
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     onClose();
@@ -31,7 +32,7 @@ export function StepUpMfaModal({ open, onClose }: StepUpMfaModalProps) {
         </div>
 
         {(() => {
-          const adminURL = getGossoAdminURL(user);
+          const adminURL = getGossoAdminURL();
           if (!adminURL) return null;
           return (
             <div className="stepup-mfa-footer-tip">
