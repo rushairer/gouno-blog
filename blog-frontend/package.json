@@ -14,9 +14,9 @@
     "test:run": "tsc -b && vitest run",
     "test:coverage": "vitest run --coverage",
     "check": "npm run format:check && tsc -b && oxlint src && npm run test:coverage",
-    "quality": "npm run format:check && npm run lint && npm run lint:ui && tsc -b && npm run test:coverage && npm run build",
-    "preview": "vite preview"
-
+    "quality": "npm run format:check && npm run lint && npm run lint:ui && npm run lint:css && tsc -b && npm run test:coverage && npm run build",
+    "preview": "vite preview",
+    "lint:css": "node scripts/check-css-cascade.mjs"
   },
   "dependencies": {
     "@gosso/client": "0.9.2",

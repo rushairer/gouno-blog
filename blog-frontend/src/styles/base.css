@@ -1,59 +1,55 @@
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
 
-html {
-  scroll-behavior: smooth;
-}
+  body {
+    background: var(--ui-public-page);
+    color: var(--ui-text);
+    font-family: var(--font-ui);
+    font-size: var(--font-size-body);
+  }
 
-body {
-  background: var(--ui-public-page);
-  color: var(--ui-text);
-  font-family: var(--font-ui);
-  font-size: var(--font-size-body);
-}
+  button,
+  input,
+  textarea,
+  select {
+    color: inherit;
+    font-family: var(--font-ui);
+  }
 
-button,
-input,
-textarea,
-select {
-  color: inherit;
-  font-family: var(--font-ui);
-}
+  code,
+  pre,
+  .mono {
+    font-family: var(--font-mono);
+  }
 
-code,
-pre,
-.mono {
-  font-family: var(--font-mono);
-}
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
 
-button,
-a {
-  -webkit-tap-highlight-color: transparent;
-}
+  :focus {
+    outline: none;
+  }
 
-:focus {
-  outline: none;
-}
+  :focus-visible {
+    outline: 3px solid var(--ui-focus-ring);
+    outline-offset: 2px;
+  }
 
-:focus-visible {
-  outline: 3px solid var(--ui-focus-ring);
-  outline-offset: 2px;
-}
+  ::selection {
+    background: var(--ui-brand-soft);
+    color: var(--ui-text);
+  }
 
-::selection {
-  background: var(--ui-brand-soft);
-  color: var(--ui-text);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    scroll-behavior: auto;
-    transition-duration: 0.01ms;
-    animation-duration: 0.01ms;
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      scroll-behavior: auto;
+      transition-duration: 0.01ms;
+      animation-duration: 0.01ms;
+    }
   }
 }

@@ -1,187 +1,189 @@
-:root {
-  color-scheme: light;
+@layer theme {
+  :root {
+    color-scheme: light;
 
-  --font-ui:
-    Inter, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", system-ui,
-    sans-serif;
-  --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
-  --font-serif: var(--font-ui);
-  --font-sans: var(--font-ui);
+    --font-ui:
+      Inter, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", system-ui,
+      sans-serif;
+    --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+    --font-serif: var(--font-ui);
+    --font-sans: var(--font-ui);
 
-  --ui-page: #f7f7f5;
-  --ui-public-page: #f7f4ee;
-  --ui-panel: #fffdfc;
-  --ui-elevated: #ffffff;
-  --ui-control: #fffdfc;
-  --ui-control-hover: #f3f4f1;
-  --ui-text: #181816;
-  --ui-text-secondary: #5d5d56;
-  --ui-text-muted: #7a7b73;
-  --ui-text-placeholder: #85857d;
-  --ui-text-disabled: #989990;
-  --ui-border: #d9dcd6;
-  --ui-border-hover: #a9afa7;
-  --ui-border-emphasis: #24513f;
-  --ui-brand: #24513f;
-  --ui-brand-hover: #193d2e;
-  --ui-brand-active: #123124;
-  --ui-brand-soft: #e8efea;
-  --ui-on-brand: #ffffff;
-  --ui-danger: #a63f32;
-  --ui-danger-soft: #f9e9e6;
-  --ui-on-danger: #ffffff;
-  --ui-success: #246b49;
-  --ui-success-soft: #e8f4eb;
-  --ui-warning: #805b08;
-  --ui-warning-soft: #f9efd9;
-  --ui-info: #29548b;
-  --ui-info-soft: #e8eef7;
-  --ui-focus-ring: color-mix(in srgb, var(--ui-brand) 24%, transparent);
-  --ui-disabled-surface: #eeefec;
-  --ui-readonly-surface: #f4f4f1;
-  --ui-overlay: rgba(18, 22, 19, 0.52);
-  --ui-shadow-float: 0 8px 28px rgba(24, 24, 22, 0.1);
-  --ui-art-surface: #eee9df;
-  --ui-code-control: rgba(255, 255, 255, 0.12);
-  --ui-code-control-border: rgba(255, 255, 255, 0.2);
-  --ui-on-code: #f1f5f9;
-  --ui-code-comment: #8b949e;
-  --ui-code-keyword: #ff7b72;
-  --ui-code-string: #a5d6ff;
-  --ui-code-number: #79c0ff;
-  --ui-code-function: #d2a8ff;
-  --ui-code-type: #ffa657;
-  --ui-warning-alpha-soft: color-mix(
-    in srgb,
-    var(--ui-warning) 12%,
-    transparent
-  );
-  --ui-warning-alpha-border: color-mix(
-    in srgb,
-    var(--ui-warning) 30%,
-    transparent
-  );
+    --ui-page: #f7f7f5;
+    --ui-public-page: #f7f4ee;
+    --ui-panel: #fffdfc;
+    --ui-elevated: #ffffff;
+    --ui-control: #fffdfc;
+    --ui-control-hover: #f3f4f1;
+    --ui-text: #181816;
+    --ui-text-secondary: #5d5d56;
+    --ui-text-muted: #7a7b73;
+    --ui-text-placeholder: #85857d;
+    --ui-text-disabled: #989990;
+    --ui-border: #d9dcd6;
+    --ui-border-hover: #a9afa7;
+    --ui-border-emphasis: #24513f;
+    --ui-brand: #24513f;
+    --ui-brand-hover: #193d2e;
+    --ui-brand-active: #123124;
+    --ui-brand-soft: #e8efea;
+    --ui-on-brand: #ffffff;
+    --ui-danger: #a63f32;
+    --ui-danger-soft: #f9e9e6;
+    --ui-on-danger: #ffffff;
+    --ui-success: #246b49;
+    --ui-success-soft: #e8f4eb;
+    --ui-warning: #805b08;
+    --ui-warning-soft: #f9efd9;
+    --ui-info: #29548b;
+    --ui-info-soft: #e8eef7;
+    --ui-focus-ring: color-mix(in srgb, var(--ui-brand) 24%, transparent);
+    --ui-disabled-surface: #eeefec;
+    --ui-readonly-surface: #f4f4f1;
+    --ui-overlay: rgba(18, 22, 19, 0.52);
+    --ui-shadow-float: 0 8px 28px rgba(24, 24, 22, 0.1);
+    --ui-art-surface: #eee9df;
+    --ui-code-control: rgba(255, 255, 255, 0.12);
+    --ui-code-control-border: rgba(255, 255, 255, 0.2);
+    --ui-on-code: #f1f5f9;
+    --ui-code-comment: #8b949e;
+    --ui-code-keyword: #ff7b72;
+    --ui-code-string: #a5d6ff;
+    --ui-code-number: #79c0ff;
+    --ui-code-function: #d2a8ff;
+    --ui-code-type: #ffa657;
+    --ui-warning-alpha-soft: color-mix(
+      in srgb,
+      var(--ui-warning) 12%,
+      transparent
+    );
+    --ui-warning-alpha-border: color-mix(
+      in srgb,
+      var(--ui-warning) 30%,
+      transparent
+    );
 
-  --space-0-5: 2px;
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-8: 32px;
-  --space-10: 40px;
-  --space-12: 48px;
+    --space-0-5: 2px;
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+    --space-12: 48px;
 
-  --control-height: 38px;
-  --control-height-compact: 34px;
-  --radius-control: 6px;
-  --radius-panel: 8px;
-  --radius-overlay: 12px;
+    --control-height: 38px;
+    --control-height-compact: 34px;
+    --radius-control: 6px;
+    --radius-panel: 8px;
+    --radius-overlay: 12px;
 
-  /* Typography Scale */
-  --font-size-xs: 12px;
-  --font-size-sm: 13px;
-  --font-size-base: 14px;
-  --font-size-md: 16px;
-  --font-size-lg: 18px;
-  --font-size-xl: 22px;
-  --font-size-2xl: 26px;
-  --font-size-3xl: 30px;
-  --font-size-4xl: 34px;
+    /* Typography Scale */
+    --font-size-xs: 12px;
+    --font-size-sm: 13px;
+    --font-size-base: 14px;
+    --font-size-md: 16px;
+    --font-size-lg: 18px;
+    --font-size-xl: 22px;
+    --font-size-2xl: 26px;
+    --font-size-3xl: 30px;
+    --font-size-4xl: 34px;
 
-  --font-size-page-title: 34px;
-  --font-size-panel-title: 20px;
-  --font-size-body: 14px;
-  --font-size-control: 13px;
-  --font-size-label: 12px;
+    --font-size-page-title: 34px;
+    --font-size-panel-title: 20px;
+    --font-size-body: 14px;
+    --font-size-control: 13px;
+    --font-size-label: 12px;
 
-  /* Compatibility bridge. Values remain owned by semantic tokens above. */
-  --paper: var(--ui-public-page);
-  --admin-bg: var(--ui-page);
-  --surface: var(--ui-panel);
-  --ink: var(--ui-text);
-  --text-2: var(--ui-text-secondary);
-  --text-3: var(--ui-text-muted);
-  --brand: var(--ui-brand);
-  --brand-hover: var(--ui-brand-hover);
-  --brand-soft: var(--ui-brand-soft);
-  --brick: var(--ui-danger);
-  --danger: var(--ui-danger);
-  --warning: var(--ui-warning);
-  --success: var(--ui-success);
-  --line: var(--ui-border);
-  --admin-line: var(--ui-border);
-  --code: #1e211f;
-  --shadow-float: var(--ui-shadow-float);
-  --control-bg: var(--ui-control);
-  --control-bg-hover: var(--ui-control-hover);
-  --control-border: var(--ui-border);
-  --control-placeholder: var(--ui-text-placeholder);
-  --action-primary-bg: var(--ui-brand);
-  --action-primary-hover: var(--ui-brand-hover);
-  --action-primary-fg: var(--ui-on-brand);
-  --status-success-bg: var(--ui-success-soft);
-  --status-success-fg: var(--ui-success);
-  --status-warning-bg: var(--ui-warning-soft);
-  --status-warning-fg: var(--ui-warning);
-  --status-info-bg: var(--ui-info-soft);
-  --status-info-fg: var(--ui-info);
-  --status-danger-bg: var(--ui-danger-soft);
-  --status-danger-fg: var(--ui-danger);
-  --bg-main: var(--ui-public-page);
-  --bg-panel: var(--ui-panel);
-  --bg-muted: var(--ui-control-hover);
-  --bg-warm: var(--ui-brand-soft);
-  --border-card: var(--ui-border);
-  --border-strong: var(--ui-border-hover);
-  --color-primary: var(--ui-brand);
-  --color-primary-hover: var(--ui-brand-hover);
-  --color-text-main: var(--ui-text);
-  --color-text-muted: var(--ui-text-secondary);
-  --color-text-soft: var(--ui-text-muted);
-  --danger-color: var(--ui-danger);
-  --success-color: var(--ui-success);
-  --radius-sm: var(--radius-control);
-  --radius-md: var(--radius-panel);
-  --radius-lg: var(--radius-overlay);
-}
+    /* Compatibility bridge. Values remain owned by semantic tokens above. */
+    --paper: var(--ui-public-page);
+    --admin-bg: var(--ui-page);
+    --surface: var(--ui-panel);
+    --ink: var(--ui-text);
+    --text-2: var(--ui-text-secondary);
+    --text-3: var(--ui-text-muted);
+    --brand: var(--ui-brand);
+    --brand-hover: var(--ui-brand-hover);
+    --brand-soft: var(--ui-brand-soft);
+    --brick: var(--ui-danger);
+    --danger: var(--ui-danger);
+    --warning: var(--ui-warning);
+    --success: var(--ui-success);
+    --line: var(--ui-border);
+    --admin-line: var(--ui-border);
+    --code: #1e211f;
+    --shadow-float: var(--ui-shadow-float);
+    --control-bg: var(--ui-control);
+    --control-bg-hover: var(--ui-control-hover);
+    --control-border: var(--ui-border);
+    --control-placeholder: var(--ui-text-placeholder);
+    --action-primary-bg: var(--ui-brand);
+    --action-primary-hover: var(--ui-brand-hover);
+    --action-primary-fg: var(--ui-on-brand);
+    --status-success-bg: var(--ui-success-soft);
+    --status-success-fg: var(--ui-success);
+    --status-warning-bg: var(--ui-warning-soft);
+    --status-warning-fg: var(--ui-warning);
+    --status-info-bg: var(--ui-info-soft);
+    --status-info-fg: var(--ui-info);
+    --status-danger-bg: var(--ui-danger-soft);
+    --status-danger-fg: var(--ui-danger);
+    --bg-main: var(--ui-public-page);
+    --bg-panel: var(--ui-panel);
+    --bg-muted: var(--ui-control-hover);
+    --bg-warm: var(--ui-brand-soft);
+    --border-card: var(--ui-border);
+    --border-strong: var(--ui-border-hover);
+    --color-primary: var(--ui-brand);
+    --color-primary-hover: var(--ui-brand-hover);
+    --color-text-main: var(--ui-text);
+    --color-text-muted: var(--ui-text-secondary);
+    --color-text-soft: var(--ui-text-muted);
+    --danger-color: var(--ui-danger);
+    --success-color: var(--ui-success);
+    --radius-sm: var(--radius-control);
+    --radius-md: var(--radius-panel);
+    --radius-lg: var(--radius-overlay);
+  }
 
-[data-theme="dark"] {
-  color-scheme: dark;
-  --ui-page: #0f1217;
-  --ui-public-page: #0f1217;
-  --ui-panel: #171c24;
-  --ui-elevated: #202832;
-  --ui-control: #10151d;
-  --ui-control-hover: #18202a;
-  --ui-text: #e5e7eb;
-  --ui-text-secondary: #9ca3af;
-  --ui-text-muted: #6b7280;
-  --ui-text-placeholder: #6b7280;
-  --ui-text-disabled: #4b5563;
-  --ui-border: #2b3441;
-  --ui-border-hover: #3d4a5d;
-  --ui-border-emphasis: #8fc0a6;
-  --ui-brand: #92c2a9;
-  --ui-brand-hover: #acd2bd;
-  --ui-brand-active: #c1dfcf;
-  --ui-brand-soft: #1d3328;
-  --ui-on-brand: #0f1217;
-  --ui-danger: #f87171;
-  --ui-danger-soft: rgba(239, 68, 68, 0.15);
-  --ui-on-danger: #ffffff;
-  --ui-success: #4ade80;
-  --ui-success-soft: rgba(34, 197, 94, 0.15);
-  --ui-warning: #fbbf24;
-  --ui-warning-soft: rgba(245, 158, 11, 0.15);
-  --ui-info: #38bdf8;
-  --ui-info-soft: rgba(56, 189, 248, 0.15);
-  --ui-focus-ring: color-mix(in srgb, var(--ui-brand) 34%, transparent);
-  --ui-disabled-surface: #1c232d;
-  --ui-readonly-surface: #171c24;
-  --ui-overlay: rgba(4, 8, 13, 0.75);
-  --ui-shadow-float: 0 16px 36px rgba(0, 0, 0, 0.35);
-  --ui-art-surface: #171c24;
-  --code: #101210;
+  [data-theme="dark"] {
+    color-scheme: dark;
+    --ui-page: #0f1217;
+    --ui-public-page: #0f1217;
+    --ui-panel: #171c24;
+    --ui-elevated: #202832;
+    --ui-control: #10151d;
+    --ui-control-hover: #18202a;
+    --ui-text: #e5e7eb;
+    --ui-text-secondary: #9ca3af;
+    --ui-text-muted: #6b7280;
+    --ui-text-placeholder: #6b7280;
+    --ui-text-disabled: #4b5563;
+    --ui-border: #2b3441;
+    --ui-border-hover: #3d4a5d;
+    --ui-border-emphasis: #8fc0a6;
+    --ui-brand: #92c2a9;
+    --ui-brand-hover: #acd2bd;
+    --ui-brand-active: #c1dfcf;
+    --ui-brand-soft: #1d3328;
+    --ui-on-brand: #0f1217;
+    --ui-danger: #f87171;
+    --ui-danger-soft: rgba(239, 68, 68, 0.15);
+    --ui-on-danger: #ffffff;
+    --ui-success: #4ade80;
+    --ui-success-soft: rgba(34, 197, 94, 0.15);
+    --ui-warning: #fbbf24;
+    --ui-warning-soft: rgba(245, 158, 11, 0.15);
+    --ui-info: #38bdf8;
+    --ui-info-soft: rgba(56, 189, 248, 0.15);
+    --ui-focus-ring: color-mix(in srgb, var(--ui-brand) 34%, transparent);
+    --ui-disabled-surface: #1c232d;
+    --ui-readonly-surface: #171c24;
+    --ui-overlay: rgba(4, 8, 13, 0.75);
+    --ui-shadow-float: 0 16px 36px rgba(0, 0, 0, 0.35);
+    --ui-art-surface: #171c24;
+    --code: #101210;
+  }
 }

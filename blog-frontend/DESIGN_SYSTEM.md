@@ -45,6 +45,13 @@ Panels use semantic surface tokens, an 8% text-derived border, a 12px radius, an
 
 `Dialog` and `Modal` use Radix UI focus management. Overlays blur by 8px, dialog surfaces use a 12px radius, and footer actions are separated by a top border and aligned to the end. Escape and outside-click behavior must be configured through the shared primitive rather than reimplemented by a page.
 
+## CSS cascade isolation
+
+- Tailwind is imported exactly once from `src/styles/tailwind.css`, which must be the first CSS entry loaded by `main.tsx`.
+- Global document defaults live in `@layer base`; reusable product styles live in `@layer components`; semantic variables live in `@layer theme`.
+- Accessibility overrides that must outrank utilities live in the final `overrides` layer and are loaded last.
+- Every source stylesheet must place style rules inside an explicit cascade layer; `npm run lint:css` rejects unlayered top-level rules and invalid entry ordering.
+
 ## Repository boundaries
 
 Design-system work must continue to respect the root `AGENTS.md`: do not change connector behavior or `src/components/agent/ConnectorWorkspace.tsx` as part of general UI alignment, and do not introduce port `8443`.
