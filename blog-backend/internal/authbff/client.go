@@ -110,7 +110,7 @@ func NewClient(ctx context.Context, config Config, store *Store, httpClient *htt
 }
 
 func (c *Client) Begin(ctx context.Context, returnTo string) (handle, authorizationURL string, err error) {
-	return c.begin(ctx, returnTo, "login", "", "")
+	return c.begin(ctx, returnTo, "login", "", "", "")
 }
 
 // BeginStepUp starts a fresh, browser-navigated OIDC authorization request.
@@ -123,10 +123,14 @@ func (c *Client) BeginStepUp(ctx context.Context, sessionHandle, returnTo string
 	if _, err := c.sessionRemainingTTL(session); err != nil {
 		return "", "", err
 	}
-	return c.begin(ctx, returnTo, "step_up", sessionHandle, "600")
+	loginHint := session.Subject
+	if username, ok := session.Claims["preferred_username"].(string); ok && username != "" {
+		loginHint = username
+	}
+	return c.begin(ctx, returnTo, "step_up", sessionHandle, "600", loginHint)
 }
 
-func (c *Client) begin(ctx context.Context, returnTo, purpose, sessionHandle, maxAge string) (handle, authorizationURL string, err error) {
+func (c *Client) begin(ctx context.Context, returnTo, purpose, sessionHandle, maxAge, loginHint string) (handle, authorizationURL string, err error) {
 	returnTo, err = SafeReturnTo(returnTo)
 	if err != nil {
 		return "", "", err
@@ -159,6 +163,9 @@ func (c *Client) begin(ctx context.Context, returnTo, purpose, sessionHandle, ma
 	}
 	if maxAge != "" {
 		options = append(options, oauth2.SetAuthURLParam("max_age", maxAge))
+	}
+	if loginHint != "" {
+		options = append(options, oauth2.SetAuthURLParam("login_hint", loginHint))
 	}
 	return handle, c.oauth.AuthCodeURL(state, options...), nil
 }

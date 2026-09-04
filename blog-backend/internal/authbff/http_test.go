@@ -353,7 +353,7 @@ func TestStepUpMfaHandler(t *testing.T) {
 		t.Fatalf("expected 302, got %d: %s", w.Code, w.Body.String())
 	}
 	location := w.Header().Get("Location")
-	if !strings.Contains(location, "acr_values=urn%3Agouno%3Aaal2") || !strings.Contains(location, "max_age=600") {
+	if !strings.Contains(location, "acr_values=urn%3Agouno%3Aaal2") || !strings.Contains(location, "max_age=600") || !strings.Contains(location, "login_hint=user-123") {
 		t.Fatalf("step-up authorization request lacks strong-auth parameters: %q", location)
 	}
 	if len(w.Result().Cookies()) != 1 || w.Result().Cookies()[0].Name != client.config.FlowCookie {

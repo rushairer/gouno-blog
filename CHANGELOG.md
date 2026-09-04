@@ -3,6 +3,12 @@
 All notable changes to the complete Gouno Blog distribution are documented in
 this file. The format follows Keep a Changelog and Semantic Versioning.
 
+## [1.5.10] - 2026-09-04
+
+### Fixed
+
+- Send OpenID Connect `login_hint` (bound to active session's `preferred_username` or `Subject`) in `BeginStepUp` authorization requests to prevent cross-account identity mismatch errors during Sudo Mode step-up authentication (`blog-backend/internal/authbff/client.go`).
+
 ## [1.5.9] - 2026-09-04
 
 ### Fixed
