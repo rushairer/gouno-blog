@@ -27,7 +27,9 @@ export function GlobalStepUpBoundary({ children }: { children: ReactNode }) {
     window.history.replaceState(
       window.history.state,
       "",
-      `${window.location.pathname}${search ? `?${search}` : ""}${window.location.hash}`,
+      `${window.location.pathname}${search ? `?${search}` : ""}${
+        window.location.hash
+      }`,
     );
     setStepUpOpen(true);
   }, []);
@@ -48,7 +50,10 @@ export function GlobalStepUpBoundary({ children }: { children: ReactNode }) {
     window.addEventListener("unhandledrejection", handleUnhandledRejection);
     return () => {
       window.removeEventListener(STEP_UP_MFA_REQUIRED_EVENT, requestStepUp);
-      window.removeEventListener("unhandledrejection", handleUnhandledRejection);
+      window.removeEventListener(
+        "unhandledrejection",
+        handleUnhandledRejection,
+      );
     };
   }, []);
 
