@@ -26,9 +26,29 @@ func scanProvider(scanner interface{ Scan(...any) error }) (*domain.ProviderProf
 	return &profile, err
 }
 
+// ReserveProviderID obtains the immutable database identity before a new
+// Provider API key is encrypted so the ID can be authenticated as AEAD
+// associated data. Sequence gaps are expected if the later write fails.
+func (r *AgentRepository) ReserveProviderID(ctx context.Context) (int64, error) {
+	var id int64
+	err := r.db.QueryRowContext(ctx, `SELECT nextval(pg_get_serial_sequence('ai_provider_profiles', 'id')::regclass)`).Scan(&id)
+	return id, err
+}
+
 func (r *AgentRepository) CreateProvider(ctx context.Context, profile *domain.ProviderProfile) error {
 	if profile.StreamMode == "" {
 		profile.StreamMode = "auto"
+	}
+	if profile.ID > 0 {
+		return r.db.QueryRowContext(ctx, `INSERT INTO ai_provider_profiles
+			(id, name, provider_type, base_url, model, api_key_ciphertext, api_key_nonce, api_key_last4,
+			 key_version, enabled, protocol_mode, stream_mode, request_timeout_seconds, max_output_tokens)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+			RETURNING created_at, updated_at`,
+			profile.ID, profile.Name, profile.ProviderType, profile.BaseURL, profile.Model, profile.APIKeyCiphertext,
+			profile.APIKeyNonce, profile.APIKeyLast4, profile.KeyVersion, profile.Enabled,
+			profile.ProtocolMode, profile.StreamMode, profile.RequestTimeoutSeconds, profile.MaxOutputTokens,
+		).Scan(&profile.CreatedAt, &profile.UpdatedAt)
 	}
 	return r.db.QueryRowContext(ctx, `INSERT INTO ai_provider_profiles
 		(name, provider_type, base_url, model, api_key_ciphertext, api_key_nonce, api_key_last4,
