@@ -3,6 +3,14 @@
 All notable changes to the complete Gouno Blog distribution are documented in
 this file. The format follows Keep a Changelog and Semantic Versioning.
 
+## [1.5.22] - 2026-09-04
+
+### Changed
+
+- Align UI/UX design system with GOSSO Admin: redesign table filter bar to a single-row horizontal layout with unified 36px control height (search input, select dropdowns, clear button and actions).
+- Fix admin sidebar section heading spacing and indentation alignment (`padding: 10px 12px 6px`, consistent rhythm with nav links).
+- Add floating bulk action bar styling (`.bulk-action-bar`, `.table-bulk-actions`) and empty state normalization (`.filter-empty-state`, `.data-table-empty-wrap`).
+
 ## [1.5.21] - 2026-09-04
 
 ### Changed

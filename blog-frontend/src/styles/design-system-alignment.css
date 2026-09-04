@@ -563,25 +563,160 @@
   .filter-bar,
   .table-filter-bar {
     display: flex;
+    flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
-    gap: 12px;
-    padding: 14px 20px;
+    gap: 10px 12px;
+    padding: 12px 16px;
+    border: 1px solid var(--ds-border-default);
+    border-radius: var(--radius-panel);
+    background: var(--ds-surface-panel);
+  }
+
+  .search-field,
+  .filter-bar__search {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    flex: 0 1 280px;
+    min-width: 180px;
+    max-width: 340px;
+  }
+
+  :is(.filter-bar, .table-filter-bar) .select-control {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    flex: 0 1 150px;
+    min-width: 120px;
+    max-width: 180px;
+  }
+
+  :is(.filter-bar, .table-filter-bar) .table-filter-field {
+    width: auto;
+    min-width: 140px;
+    max-width: 220px;
+    flex: 0 1 auto;
+  }
+
+  :is(.filter-bar, .table-filter-bar) .checkbox-field {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    white-space: nowrap;
+    font-size: var(--font-size-sm, 13px);
+  }
+
+  .filter-bar__count {
+    flex-shrink: 0;
+    color: var(--ds-text-secondary);
+    font-size: var(--font-size-xs, 12px);
+    white-space: nowrap;
   }
 
   .filter-bar__actions,
   .table-filter-actions {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 8px;
     margin-left: auto;
+    flex-shrink: 0;
   }
 
-  .search-field {
-    position: relative;
-    display: flex;
+  /* Filter bar controls unified height & baseline */
+  :is(.filter-bar, .table-filter-bar)
+    :is(
+      .search-field,
+      .select-control,
+      .select-control select,
+      .select-control .ui-control,
+      .search-field input,
+      .search-field .ui-control,
+      .ui-control,
+      .input-field,
+      .btn,
+      .btn-sm,
+      .filter-clear,
+      select,
+      input:not([type="checkbox"]):not([type="radio"])
+    ) {
+    height: 36px;
+    min-height: 36px;
+    max-height: 36px;
+    box-sizing: border-box;
+    font-size: var(--font-size-sm, 13px);
+  }
+
+  .search-field svg {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 15px;
+    height: 15px;
+    color: var(--ds-text-secondary);
+    pointer-events: none;
+  }
+
+  .search-field :is(input, .ui-control) {
+    width: 100%;
+    padding: 0 12px 0 32px;
+    border: 1px solid var(--ds-border-default);
+    border-radius: var(--radius-control);
+    background: var(--ds-surface-control);
+    color: var(--ds-text-primary);
+  }
+
+  .select-control svg {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 15px;
+    height: 15px;
+    color: var(--ds-text-secondary);
+    pointer-events: none;
+  }
+
+  .select-control :is(select, .ui-control) {
+    width: 100%;
+    appearance: none;
+    padding: 0 30px 0 12px;
+    border: 1px solid var(--ds-border-default);
+    border-radius: var(--radius-control);
+    background: var(--ds-surface-control);
+    color: var(--ds-text-primary);
+  }
+
+  :is(.filter-bar, .table-filter-bar) .btn {
+    padding: 0 12px;
+    border-radius: var(--radius-control);
+    font-weight: 600;
+    display: inline-flex;
     align-items: center;
-    min-width: 0;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  @media (max-width: 640px) {
+    .filter-bar,
+    .table-filter-bar {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    :is(.filter-bar, .table-filter-bar)
+      :is(.search-field, .select-control, .table-filter-field) {
+      width: 100%;
+      max-width: 100%;
+    }
+
+    .filter-bar__actions,
+    .table-filter-actions {
+      margin-left: 0;
+      width: 100%;
+      justify-content: flex-end;
+    }
   }
 
   /* Skeleton Loading Shimmer alignment */
@@ -1146,15 +1281,30 @@
   }
 
   /* Sidebar section label alignment */
+  .admin-nav-group {
+    margin-bottom: 20px;
+  }
+
+  .admin-nav-group + .admin-nav-group {
+    margin-top: 4px;
+  }
+
   .admin-nav-group h2,
   .admin-nav-section-title,
   .sidebar-section-title {
-    padding: 0 4px;
+    display: block;
+    padding: 10px 12px 6px;
+    margin: 0;
     color: var(--ds-text-secondary);
     font-size: var(--font-size-xs, 12px);
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+    line-height: 1.4;
+  }
+
+  .admin-nav-group:first-child h2 {
+    padding-top: 4px;
   }
 
   /* Avatar alignment */
@@ -1899,5 +2049,56 @@
     font-size: var(--font-size-sm, 13px);
     font-weight: 700;
     letter-spacing: 0.05em;
+  }
+
+  /* ==========================================================================
+     Pass 12 — Bulk Action Floating Bar & Filter Empty States
+     ========================================================================== */
+
+  .bulk-action-bar,
+  .table-bulk-actions {
+    position: sticky;
+    top: 76px;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 10px 16px;
+    border: 1px solid var(--ds-brand);
+    border-radius: var(--radius-panel);
+    background: var(--ds-surface-elevated);
+    box-shadow: var(--ds-panel-shadow);
+  }
+
+  .bulk-action-bar__summary {
+    color: var(--ds-text-primary);
+    font-size: var(--font-size-sm, 13px);
+    font-weight: 600;
+  }
+
+  .bulk-action-bar__actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .bulk-action-bar__actions .btn {
+    height: 32px;
+    min-height: 32px;
+    padding: 0 12px;
+    font-size: var(--font-size-xs, 12px);
+  }
+
+  .filter-empty-state,
+  .data-table-empty-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    text-align: center;
+    color: var(--ds-text-secondary);
   }
 }
