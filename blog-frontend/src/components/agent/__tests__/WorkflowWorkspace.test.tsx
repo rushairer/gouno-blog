@@ -106,7 +106,7 @@ describe("WorkflowWorkspace", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("filters by status chips", async () => {
+  it("filters by status dropdown", async () => {
     const user = userEvent.setup();
     const active = {
       ...workflow,
@@ -134,7 +134,10 @@ describe("WorkflowWorkspace", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: /已启用/ }));
+    const statusSelect = screen.getByRole("combobox", {
+      name: "按状态筛选 Workflow",
+    });
+    await user.selectOptions(statusSelect, "enabled");
     expect(
       screen.getByRole("button", { name: /Active workflow/ }),
     ).toBeInTheDocument();
@@ -142,7 +145,7 @@ describe("WorkflowWorkspace", () => {
       screen.queryByRole("button", { name: /Paused workflow/ }),
     ).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /已停用/ }));
+    await user.selectOptions(statusSelect, "disabled");
     expect(
       screen.queryByRole("button", { name: /Active workflow/ }),
     ).not.toBeInTheDocument();

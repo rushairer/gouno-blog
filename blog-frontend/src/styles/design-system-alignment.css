@@ -83,7 +83,7 @@
 
   .admin-page {
     display: grid;
-    gap: 24px;
+    gap: 16px;
   }
 
   .admin-page-header {
@@ -91,7 +91,8 @@
   }
 
   .content-stack {
-    gap: 24px;
+    display: grid;
+    gap: 16px;
   }
 
   .btn {
@@ -573,14 +574,24 @@
     background: var(--ds-surface-panel);
   }
 
-  .search-field,
-  .filter-bar__search {
+  :is(.filter-bar, .table-filter-bar) :is(.search-field, .filter-bar__search) {
     position: relative;
     display: inline-flex;
     align-items: center;
     flex: 0 1 280px;
     min-width: 180px;
     max-width: 340px;
+  }
+
+  .search-field {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    width: 100%;
+    height: 36px;
+    min-height: 36px;
+    max-height: 36px;
+    box-sizing: border-box;
   }
 
   :is(.filter-bar, .table-filter-bar) .select-control {
@@ -763,9 +774,7 @@
     gap: 8px;
   }
 
-  .form-actions,
-  .modal-actions,
-  .modal-footer {
+  .form-actions {
     padding-top: 16px;
   }
 
@@ -893,9 +902,25 @@
     overflow-y: auto;
   }
 
+  .modal.ds-dialog-content {
+    display: flex;
+    flex-direction: column;
+    max-height: min(88vh, 760px);
+    overflow: hidden;
+    padding: 0;
+    gap: 0;
+  }
+
   .ds-dialog-close {
     background: transparent;
     color: var(--ds-text-secondary);
+  }
+
+  .modal .ds-dialog-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 10;
   }
 
   .ds-dialog-close:hover {
@@ -909,14 +934,67 @@
     box-shadow: 0 0 0 4px var(--ui-focus-ring);
   }
 
-  .modal-header {
+  .modal-header,
+  .modal > header {
+    flex: 0 0 auto;
     margin: 0;
-    padding: 0 40px 16px 0;
+    padding: 16px 48px 14px 20px;
     border-bottom: 1px solid var(--ds-border-default);
+    background: var(--ds-surface-panel);
+    position: relative;
+    z-index: 2;
   }
 
   .modal-body {
+    flex: 1 1 auto;
     min-width: 0;
+    min-height: 0;
+    max-height: calc(min(88vh, 760px) - 120px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    padding: 18px 20px;
+  }
+
+  .modal-body .confirm-dialog,
+  .modal-body .modal-form {
+    padding: 0;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .modal-body .modal-actions {
+    margin-top: 20px;
+    padding-top: 0;
+    border-top: none;
+  }
+
+  .modal-footer,
+  .ds-dialog-footer {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 14px 20px 16px;
+    border-top: 1px solid var(--ds-border-default);
+    background: var(--ds-surface-panel);
+    position: relative;
+    z-index: 2;
+  }
+
+  .modal-footer .modal-actions,
+  .modal-footer .workflow-launcher__footer,
+  .ds-dialog-footer .modal-actions {
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
   }
 
   /* Confirm Dialog alignment */
@@ -1011,6 +1089,11 @@
     overflow-y: auto;
   }
 
+  .drawer-body .drawer-form {
+    padding: 0;
+    overflow: visible;
+  }
+
   .drawer-actions,
   .drawer-footer {
     display: flex;
@@ -1021,11 +1104,10 @@
     border-top: 1px solid var(--ds-border-default);
   }
 
-  .ds-dialog-footer,
-  .modal-actions,
-  .modal-footer {
+  .modal-actions {
     margin: 0;
-    border-top: 1px solid var(--ds-border-default);
+    border-top: none;
+    background: transparent;
   }
 
   /* Code Chips & URI Copy alignment */
@@ -2109,13 +2191,13 @@
   /* Page Header Anatomy & Actions Alignment */
   .admin-page-header,
   .page-header {
-    min-height: 72px;
+    min-height: auto;
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 20px;
-    margin-bottom: 24px;
-    padding-bottom: 18px;
+    gap: 16px;
+    margin: 0;
+    padding-bottom: 14px;
     border-bottom: 1px solid var(--ds-border-default);
   }
 

@@ -116,9 +116,27 @@ export function WorkflowLauncher({
     <Modal
       className="workflow-launcher-modal"
       open={open}
+      size="md"
       title={title}
       description={`已选择 ${resourceKeys.length} 项资源；Workflow 默认只能访问这些目标。`}
       onClose={onClose}
+      footer={
+        <div className="workflow-launcher__footer modal-actions">
+          <Button variant="secondary" type="button" onClick={onClose}>
+            关闭
+          </Button>
+          <Button
+            variant="primary"
+            type="button"
+            loading={busy}
+            disabled={!workflow}
+            onClick={() => void run()}
+            icon={busy ? <Sparkles /> : <Play />}
+          >
+            运行
+          </Button>
+        </div>
+      }
     >
       <div className="workflow-launcher">
         <div className="workflow-launcher__body">
@@ -163,21 +181,6 @@ export function WorkflowLauncher({
               ) : null}
             </Feedback>
           ) : null}
-        </div>
-        <div className="workflow-launcher__footer modal-actions">
-          <Button variant="secondary" type="button" onClick={onClose}>
-            关闭
-          </Button>
-          <Button
-            variant="primary"
-            type="button"
-            loading={busy}
-            disabled={!workflow}
-            onClick={() => void run()}
-            icon={busy ? <Sparkles /> : <Play />}
-          >
-            运行
-          </Button>
         </div>
       </div>
     </Modal>

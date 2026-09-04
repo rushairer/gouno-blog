@@ -64,20 +64,33 @@ function useOverlayDialog(
   }, [closeButton, containerRef, open]);
 }
 
+export type ModalSize = "sm" | "md" | "lg" | "xl";
+
+const modalSizeClasses: Record<ModalSize, string> = {
+  sm: "max-w-md",
+  md: "max-w-xl",
+  lg: "max-w-3xl",
+  xl: "max-w-5xl",
+};
+
 export function Modal({
   open,
   title,
   description,
   children,
+  footer,
   onClose,
   className,
+  size = "md",
 }: {
   open: boolean;
   title: string;
   description?: string;
   children: React.ReactNode;
+  footer?: React.ReactNode;
   onClose: () => void;
   className?: string;
+  size?: ModalSize;
 }) {
   if (!open) return null;
 
@@ -89,7 +102,7 @@ export function Modal({
       }}
     >
       <DialogContent
-        className={classes("modal", className)}
+        className={classes("modal", modalSizeClasses[size], className)}
         closeLabel="关闭弹窗"
       >
         <DialogHeader className="modal-header">
@@ -99,6 +112,7 @@ export function Modal({
           ) : null}
         </DialogHeader>
         <div className="modal-body">{children}</div>
+        {footer ? <div className="modal-footer">{footer}</div> : null}
       </DialogContent>
     </Dialog>
   );
@@ -183,10 +197,13 @@ export function ConfirmDialog({
   onClose: () => void;
 }) {
   return (
-    <Modal open={open} title={title} onClose={busy ? () => undefined : onClose}>
-      <div className="confirm-dialog">
-        <p>{description}</p>
-        <div className="modal-actions">
+    <Modal
+      open={open}
+      title={title}
+      size="sm"
+      onClose={busy ? () => undefined : onClose}
+      footer={
+        <>
           <Button
             variant="secondary"
             type="button"
@@ -204,7 +221,11 @@ export function ConfirmDialog({
           >
             {busy ? "正在处理…" : confirmLabel}
           </Button>
-        </div>
+        </>
+      }
+    >
+      <div className="confirm-dialog">
+        <p>{description}</p>
       </div>
     </Modal>
   );

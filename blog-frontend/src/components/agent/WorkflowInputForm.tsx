@@ -321,6 +321,7 @@ function ResourcePicker({
       <Modal
         className="workflow-resource-modal"
         open={open}
+        size="lg"
         title={locale === "zh" ? "选择 Workflow 输入" : "Select workflow input"}
         description={
           multiple
@@ -328,62 +329,80 @@ function ResourcePicker({
             : undefined
         }
         onClose={() => setOpen(false)}
+        footer={
+          <Button
+            variant="secondary"
+            type="button"
+            onClick={() => setOpen(false)}
+          >
+            {locale === "zh" ? "完成" : "Done"}
+          </Button>
+        }
       >
         <div className="workflow-resource-picker">
-          <SearchField
-            autoFocus
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-              setPage(1);
-            }}
-            placeholder={locale === "zh" ? "搜索资源" : "Search resources"}
-          />
-          {(resourceFilters[resourceType] || []).length ? (
-            <div className="workflow-resource-filters">
-              {resourceFilters[resourceType].map((filter) => (
-                <label key={filter.key}>
-                  <span>{locale === "zh" ? filter.zh : filter.en}</span>
-                  {filter.type === "select" ? (
-                    <Select
-                      size="compact"
-                      value={filters[filter.key] || ""}
-                      onChange={(event) => {
-                        setFilters((current) => ({
-                          ...current,
-                          [filter.key]: event.target.value,
-                        }));
-                        setPage(1);
-                      }}
-                    >
-                      <option value="">
-                        {locale === "zh" ? "全部" : "All"}
-                      </option>
-                      {filter.options?.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {locale === "zh" ? option.zh : option.en}
+          <div className="workflow-resource-toolbar">
+            <SearchField
+              autoFocus
+              size="compact"
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setPage(1);
+              }}
+              placeholder={locale === "zh" ? "搜索资源" : "Search resources"}
+            />
+            {(resourceFilters[resourceType] || []).length ? (
+              <div className="workflow-resource-filters">
+                {resourceFilters[resourceType].map((filter) => (
+                  <label
+                    className="workflow-resource-filter-item"
+                    key={filter.key}
+                  >
+                    <span className="workflow-resource-filter-label">
+                      {locale === "zh" ? filter.zh : filter.en}
+                    </span>
+                    {filter.type === "select" ? (
+                      <Select
+                        size="compact"
+                        value={filters[filter.key] || ""}
+                        onChange={(event) => {
+                          setFilters((current) => ({
+                            ...current,
+                            [filter.key]: event.target.value,
+                          }));
+                          setPage(1);
+                        }}
+                      >
+                        <option value="">
+                          {locale === "zh" ? "全部" : "All"}
                         </option>
-                      ))}
-                    </Select>
-                  ) : (
-                    <Input
-                      type={filter.type}
-                      min={filter.type === "number" ? 0 : undefined}
-                      placeholder={filter.placeholder}
-                      value={filters[filter.key] || ""}
-                      onChange={(event) => {
-                        setFilters((current) => ({
-                          ...current,
-                          [filter.key]: event.target.value,
-                        }));
-                        setPage(1);
-                      }}
-                    />
-                  )}
-                </label>
-              ))}
-            </div>
-          ) : null}
+                        {filter.options?.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {locale === "zh" ? option.zh : option.en}
+                          </option>
+                        ))}
+                      </Select>
+                    ) : (
+                      <Input
+                        size="compact"
+                        type={filter.type}
+                        min={filter.type === "number" ? 0 : undefined}
+                        placeholder={filter.placeholder}
+                        value={filters[filter.key] || ""}
+                        onChange={(event) => {
+                          setFilters((current) => ({
+                            ...current,
+                            [filter.key]: event.target.value,
+                          }));
+                          setPage(1);
+                        }}
+                      />
+                    )}
+                  </label>
+                ))}
+              </div>
+            ) : null}
+          </div>
           {error ? <Feedback type="error">{error}</Feedback> : null}
           {loading ? (
             <p className="muted">
@@ -396,11 +415,18 @@ function ResourcePicker({
                   (entry) => String(entry) === item.key,
                 );
                 return (
-                  <Button
-                    type="button"
+                  <div
+                    role="button"
+                    tabIndex={0}
                     className={`workflow-resource-card ${checked ? "is-selected" : ""}`}
                     key={`${item.type}:${item.key}`}
                     onClick={() => toggle(item.key)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        toggle(item.key);
+                      }
+                    }}
                     aria-pressed={checked}
                   >
                     <div className="workflow-resource-card__control">
@@ -428,7 +454,7 @@ function ResourcePicker({
                         </p>
                       ) : null}
                     </div>
-                  </Button>
+                  </div>
                 );
               })}
             </div>
@@ -442,15 +468,6 @@ function ResourcePicker({
               label={locale === "zh" ? "资源分页" : "Resource pagination"}
             />
           ) : null}
-          <div className="modal-actions">
-            <Button
-              variant="secondary"
-              type="button"
-              onClick={() => setOpen(false)}
-            >
-              {locale === "zh" ? "完成" : "Done"}
-            </Button>
-          </div>
         </div>
       </Modal>
     </div>

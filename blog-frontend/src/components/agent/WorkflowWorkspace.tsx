@@ -37,6 +37,7 @@ import {
   EmptyState,
   Feedback,
   Field,
+  FilterBar,
   FormActions,
   FormLayout,
   Input,
@@ -832,7 +833,7 @@ export function WorkflowWorkspace({
             }
           />
           {workflows.length > 0 ? (
-            <div className="workflow-list-toolbar">
+            <FilterBar className="workflow-list-toolbar">
               <SearchField
                 aria-label={
                   locale === "zh" ? "搜索 Workflow" : "Search workflows"
@@ -844,38 +845,53 @@ export function WorkflowWorkspace({
                     ? "按名称、说明或模板搜索"
                     : "Search by name, description, or template"
                 }
+                size="compact"
               />
-              <div className="workflow-filter-chips">
-                <Button
-                  variant="ghost"
-                  className={`workflow-chip ${statusFilter === "all" ? "active" : ""}`}
-                  onClick={() => setStatusFilter("all")}
-                >
-                  {locale === "zh" ? "全部" : "All"} ({workflows.length})
-                </Button>
-                <Button
-                  variant="ghost"
-                  className={`workflow-chip ${statusFilter === "enabled" ? "active" : ""}`}
-                  onClick={() => setStatusFilter("enabled")}
-                >
+              <Select
+                aria-label={
+                  locale === "zh" ? "按状态筛选 Workflow" : "Filter by status"
+                }
+                value={statusFilter}
+                onChange={(event) =>
+                  setStatusFilter(
+                    event.target.value as "all" | "enabled" | "disabled",
+                  )
+                }
+                size="compact"
+              >
+                <option value="all">
+                  {locale === "zh" ? "全部状态" : "All Status"} (
+                  {workflows.length})
+                </option>
+                <option value="enabled">
                   {locale === "zh" ? "已启用" : "Enabled"} (
                   {workflows.filter((w) => w.enabled).length})
-                </Button>
-                <Button
-                  variant="ghost"
-                  className={`workflow-chip ${statusFilter === "disabled" ? "active" : ""}`}
-                  onClick={() => setStatusFilter("disabled")}
-                >
+                </option>
+                <option value="disabled">
                   {locale === "zh" ? "已停用" : "Disabled"} (
                   {workflows.filter((w) => !w.enabled).length})
-                </Button>
-              </div>
-              <span>
+                </option>
+              </Select>
+              <span className="filter-bar__count">
                 {locale === "zh"
                   ? `${visibleWorkflows.length} / ${workflows.length} 个 Workflow`
                   : `${visibleWorkflows.length} of ${workflows.length} workflows`}
               </span>
-            </div>
+              {workflowQuery || statusFilter !== "all" ? (
+                <Button
+                  variant="ghost"
+                  size="compact"
+                  type="button"
+                  onClick={() => {
+                    setWorkflowQuery("");
+                    setStatusFilter("all");
+                  }}
+                  icon={<X />}
+                >
+                  {locale === "zh" ? "清除" : "Clear"}
+                </Button>
+              ) : null}
+            </FilterBar>
           ) : null}
           {workflows.length === 0 || visibleWorkflows.length === 0 ? (
             <EmptyState
