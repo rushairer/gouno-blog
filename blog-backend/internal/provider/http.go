@@ -223,13 +223,6 @@ func (p *HTTPProvider) do(ctx context.Context, path string, body any) (*http.Res
 		baseURL = strings.TrimSuffix(baseURL, "/v1")
 	}
 	targetURL := baseURL + path
-	if p.name == "gemini" && !strings.Contains(targetURL, "key=") {
-		if strings.Contains(targetURL, "?") {
-			targetURL += "&key=" + url.QueryEscape(p.key)
-		} else {
-			targetURL += "?key=" + url.QueryEscape(p.key)
-		}
-	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, targetURL, bytes.NewReader(raw))
 	if err != nil {
 		return nil, err
@@ -239,7 +232,6 @@ func (p *HTTPProvider) do(ctx context.Context, path string, body any) (*http.Res
 		req.Header.Set("Authorization", "Bearer "+p.key)
 	} else if p.name == "gemini" {
 		req.Header.Set("x-goog-api-key", p.key)
-		req.Header.Set("Authorization", "Bearer "+p.key)
 	} else {
 		req.Header.Set("x-api-key", p.key)
 		req.Header.Set("anthropic-version", "2023-06-01")
