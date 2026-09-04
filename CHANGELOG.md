@@ -3,6 +3,15 @@
 All notable changes to the complete Gouno Blog distribution are documented in
 this file. The format follows Keep a Changelog and Semantic Versioning.
 
+## [1.5.23] - 2026-09-04
+
+### Changed
+
+- Align UI/UX design system with GOSSO Admin: standardize page header anatomy (`.admin-page-header`, `.page-header`, `.admin-page-heading`, `.admin-page-actions`, `.admin-page-count`).
+- Standardize taxonomy and tag admin cards grid (`.tag-admin-grid`, `.tag-admin-card`, `.tag-admin-card__content`, `.tag-admin-card__actions`).
+- Standardize media grid and media cards (`.media-grid`, `.media-card`, hover elevation and action layout).
+- Standardize editor AI prompt box, result container, and candidate preview (`.editor-ai-prompt-box`, `.editor-ai-result-box`, `.editor-ai-result-header`, `.editor-ai-result-preview`).
+
 ## [1.5.22] - 2026-09-04
 
 ### Changed
