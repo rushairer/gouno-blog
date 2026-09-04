@@ -23,7 +23,8 @@ func (c *Client) RegisterRoutes(router gin.IRouter) {
 
 // SessionMiddleware projects only already verified, server-side ID-token
 // claims into the Blog authorization pipeline. It never accepts a provider
-// token from a browser cookie.
+// token from a browser cookie. Recent MFA freshness is projected only from
+// Blog-owned evidence created by an interactive authorization callback.
 func (c *Client) SessionMiddleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		handle, err := ctx.Cookie(c.config.SessionCookie)
@@ -34,11 +35,13 @@ func (c *Client) SessionMiddleware() gin.HandlerFunc {
 		session, err := c.store.GetSession(ctx.Request.Context(), handle)
 		if err != nil || session.Issuer != c.config.Issuer || session.Subject == "" {
 			clearHostCookie(ctx, c.config.SessionCookie, http.SameSiteStrictMode)
+			_ = c.store.DeleteRecentMFA(ctx.Request.Context(), handle)
 			ctx.Next()
 			return
 		}
 		if _, err := c.sessionRemainingTTL(session); err != nil {
 			_ = c.store.DeleteSession(ctx.Request.Context(), handle)
+			_ = c.store.DeleteRecentMFA(ctx.Request.Context(), handle)
 			clearHostCookie(ctx, c.config.SessionCookie, http.SameSiteStrictMode)
 			ctx.Next()
 			return
@@ -47,14 +50,24 @@ func (c *Client) SessionMiddleware() gin.HandlerFunc {
 			session, err = c.Refresh(ctx.Request.Context(), handle)
 			if err != nil {
 				_ = c.store.DeleteSession(ctx.Request.Context(), handle)
+				_ = c.store.DeleteRecentMFA(ctx.Request.Context(), handle)
 				clearHostCookie(ctx, c.config.SessionCookie, http.SameSiteStrictMode)
 				ctx.Next()
 				return
 			}
 		}
 		claims := jwt.MapClaims(session.Claims)
+		// A refresh response may contain auth_time/amr, but those provider claims
+		// must never renew Blog transaction freshness. Remove them before the BFF
+		// projects its independently persisted evidence.
+		delete(claims, "auth_time")
+		delete(claims, "amr")
 		claims["iss"], claims["sub"] = session.Issuer, session.Subject
-		claims["sid"], claims["auth_time"], claims["amr"], claims["acr"] = session.SID, session.AuthTime, session.AMR, session.ACR
+		claims["sid"], claims["acr"] = session.SID, session.ACR
+		if evidence, evidenceErr := c.store.GetRecentMFA(ctx.Request.Context(), handle); evidenceErr == nil {
+			claims["auth_time"] = evidence.AuthTime
+			claims["amr"] = append([]string(nil), evidence.AMR...)
+		}
 		// Bare subject strings are never stable authorization identities. Access
 		// middleware resolves this verified issuer/subject pair to principal_id.
 		ctx.Set("account_id", session.Subject) // transitional display-only context
@@ -92,10 +105,26 @@ func (c *Client) callbackHandler(ctx *gin.Context) {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "login flow cookie is missing"})
 		return
 	}
-	sessionHandle, _, returnTo, err := c.Complete(ctx.Request.Context(), handle, ctx.Request.URL.Query())
+	flow, err := c.store.PeekFlow(ctx.Request.Context(), handle)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid login transaction"})
+		return
+	}
+	sessionHandle, session, returnTo, err := c.Complete(ctx.Request.Context(), handle, ctx.Request.URL.Query())
 	if err != nil {
 		log.Printf("[authbff] login callback validation failed: %v", err)
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "login callback validation failed"})
+		return
+	}
+	if err := c.persistRecentMFAFromCallback(ctx.Request.Context(), flow, sessionHandle, session); err != nil {
+		_ = c.store.DeleteSession(ctx.Request.Context(), sessionHandle)
+		_ = c.store.DeleteRecentMFA(ctx.Request.Context(), sessionHandle)
+		if errors.Is(err, ErrRecentMFARequired) {
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "recent multi-factor authentication required"})
+			return
+		}
+		log.Printf("[authbff] persist recent MFA evidence failed: %v", err)
+		ctx.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"error": "unable to establish login session"})
 		return
 	}
 	setHostCookie(ctx, c.config.SessionCookie, sessionHandle, int(c.config.SessionTTL.Seconds()), http.SameSiteStrictMode)
@@ -111,12 +140,14 @@ func (c *Client) meHandler(ctx *gin.Context) {
 	}
 	session, err := c.store.GetSession(ctx.Request.Context(), handle)
 	if err != nil || session.Issuer != c.config.Issuer || session.Subject == "" {
+		_ = c.store.DeleteRecentMFA(ctx.Request.Context(), handle)
 		clearHostCookie(ctx, c.config.SessionCookie, http.SameSiteStrictMode)
 		ctx.JSON(http.StatusOK, gin.H{"authenticated": false})
 		return
 	}
 	if _, err := c.sessionRemainingTTL(session); err != nil {
 		_ = c.store.DeleteSession(ctx.Request.Context(), handle)
+		_ = c.store.DeleteRecentMFA(ctx.Request.Context(), handle)
 		clearHostCookie(ctx, c.config.SessionCookie, http.SameSiteStrictMode)
 		ctx.JSON(http.StatusOK, gin.H{"authenticated": false})
 		return
@@ -143,6 +174,7 @@ func (c *Client) refreshHandler(ctx *gin.Context) {
 	}
 	session, err := c.Refresh(ctx.Request.Context(), handle)
 	if err != nil {
+		_ = c.store.DeleteRecentMFA(ctx.Request.Context(), handle)
 		clearHostCookie(ctx, c.config.SessionCookie, http.SameSiteStrictMode)
 		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "refresh failed"})
 		return
@@ -165,6 +197,7 @@ func (c *Client) logoutHandler(ctx *gin.Context) {
 		} else if errors.Is(storeErr, ErrNotFound) {
 			storeErr = nil
 		}
+		_ = c.store.DeleteRecentMFA(ctx.Request.Context(), handle)
 	}
 	clearHostCookie(ctx, c.config.SessionCookie, http.SameSiteStrictMode)
 
