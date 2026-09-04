@@ -37,6 +37,7 @@ import {
   AiImageGenerationPanel,
   AiWritingPanel,
   ContentEditorFrame,
+  EditorCommandActions,
   EditorCommandBar,
 } from "../../components/editor/ContentEditorFrame";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
@@ -914,7 +915,7 @@ export default function PostEditor() {
             "所有更改已保存"
           )}
         </div>
-        <div>
+        <EditorCommandActions>
           <Button
             variant="secondary"
             type="button"
@@ -948,7 +949,7 @@ export default function PostEditor() {
               {primaryLabel}
             </Button>
           ) : null}
-        </div>
+        </EditorCommandActions>
       </EditorCommandBar>
       <div className="editor-workspace">
         <aside className="editor-outline">

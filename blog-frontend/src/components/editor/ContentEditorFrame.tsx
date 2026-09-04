@@ -15,6 +15,17 @@ export function EditorCommandBar({ children }: { children: React.ReactNode }) {
   return <header className="editor-commandbar">{children}</header>;
 }
 
+export function EditorCommandActions({
+  children,
+  className = "",
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={classes("editor-command-actions", className)}>
+      {children}
+    </div>
+  );
+}
+
 export function AiWritingPanel({ children }: { children: React.ReactNode }) {
   return (
     <section className="editor-ai-writing-panel" aria-label="AI 写作与润色">
