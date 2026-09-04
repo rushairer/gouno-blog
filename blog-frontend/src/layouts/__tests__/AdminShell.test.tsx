@@ -122,6 +122,21 @@ describe("AdminShell navigation utilities", () => {
     );
   });
 
+  it("defaults administration to the shared dark surface theme", () => {
+    render(
+      <MemoryRouter initialEntries={["/admin/dashboard"]}>
+        <AdminShell>
+          <h1>Dashboard</h1>
+        </AdminShell>
+      </MemoryRouter>,
+    );
+
+    const toggle = screen.getByRole("button", { name: "切换后台主题" });
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(localStorage.getItem("gouno-blog:theme")).toBe("dark");
+  });
+
   it("restores and toggles the shared site theme from administration", () => {
     localStorage.setItem("gouno-blog:theme", "dark");
     document.documentElement.dataset.theme = "dark";
