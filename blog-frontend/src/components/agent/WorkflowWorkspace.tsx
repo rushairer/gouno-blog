@@ -32,6 +32,7 @@ import {
   Button,
   ButtonLink,
   Checkbox,
+  CheckboxField,
   ConfirmDialog,
   EditorPanel,
   EmptyState,
@@ -1637,9 +1638,8 @@ function SchemaFieldBuilder({
               </Field>
             </div>
             <div className="form-grid">
-              <label className="checkbox-field">
-                <input
-                  type="checkbox"
+              <CheckboxField>
+                <Checkbox
                   checked={(schema.required || []).includes(key)}
                   onChange={(event) =>
                     save({
@@ -1652,8 +1652,8 @@ function SchemaFieldBuilder({
                     })
                   }
                 />
-                必填
-              </label>
+                <span>必填</span>
+              </CheckboxField>
               {resource || isArray ? (
                 <>
                   <Field label="最少数量">
@@ -2439,9 +2439,8 @@ function WorkflowEditor({
                         ))}
                       </Select>
                     </Field>
-                    <label className="checkbox-field">
-                      <input
-                        type="checkbox"
+                    <CheckboxField>
+                      <Checkbox
                         checked={step.include_context !== false}
                         onChange={(event) =>
                           updateStep(index, {
@@ -2450,14 +2449,14 @@ function WorkflowEditor({
                           })
                         }
                       />
-                      包含受控上下文
-                    </label>
+                      <span>包含受控上下文</span>
+                    </CheckboxField>
                   </div>
                 ) : null}
                 {step.type === "for_each" ? (
                   <div className="form-grid">
                     <Field label="集合 JSON Pointer">
-                      <input
+                      <Input
                         className="mono"
                         value={step.collection_pointer || ""}
                         onChange={(event) =>
@@ -2469,7 +2468,7 @@ function WorkflowEditor({
                       />
                     </Field>
                     <Field label="最多处理">
-                      <input
+                      <Input
                         type="number"
                         min="1"
                         max="100"
@@ -2486,7 +2485,7 @@ function WorkflowEditor({
                       />
                     </Field>
                     <Field label="最大并发">
-                      <input
+                      <Input
                         type="number"
                         min="0"
                         max="10"
@@ -2502,9 +2501,8 @@ function WorkflowEditor({
                         }
                       />
                     </Field>
-                    <label className="checkbox-field">
-                      <input
-                        type="checkbox"
+                    <CheckboxField>
+                      <Checkbox
                         checked={Boolean(step.continue_on_error)}
                         onChange={(event) =>
                           updateStep(index, {
@@ -2513,8 +2511,8 @@ function WorkflowEditor({
                           })
                         }
                       />
-                      单项失败后继续
-                    </label>
+                      <span>单项失败后继续</span>
+                    </CheckboxField>
                   </div>
                 ) : null}
                 {step.type === "for_each" ? (

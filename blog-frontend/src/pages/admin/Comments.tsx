@@ -9,6 +9,7 @@ import {
   BulkActionBar,
   Button,
   Checkbox,
+  CheckboxField,
   ConfirmDialog,
   ContentStack,
   Feedback,
@@ -136,7 +137,7 @@ export default function AdminComments() {
             <option value="hidden">已隐藏</option>
             <option value="all">全部</option>
           </Select>
-          <label className="checkbox-field">
+          <CheckboxField>
             <Checkbox
               checked={reported}
               onChange={(event) =>
@@ -144,7 +145,7 @@ export default function AdminComments() {
               }
             />{" "}
             仅看被举报
-          </label>
+          </CheckboxField>
         </FilterBar>
         {selected.length ? (
           <BulkActionBar

@@ -10,6 +10,7 @@ import type {
 import {
   Button,
   Checkbox,
+  CheckboxField,
   EditorPanel,
   Field,
   FormActions,
@@ -244,7 +245,7 @@ export function SkillForm({
           <legend>{labels.triggers}</legend>
           <div>
             {(["manual", "cron"] as const).map((trigger) => (
-              <label className="checkbox-field" key={trigger}>
+              <CheckboxField key={trigger}>
                 <Checkbox
                   checked={value.allowed_triggers.includes(trigger)}
                   onChange={(event) =>
@@ -259,7 +260,7 @@ export function SkillForm({
                   }
                 />
                 <span>{labels[trigger]}</span>
-              </label>
+              </CheckboxField>
             ))}
           </div>
         </fieldset>
