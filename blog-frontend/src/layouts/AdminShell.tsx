@@ -63,7 +63,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const [logoutError, setLogoutError] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
   const [theme, setTheme] = useState<"light" | "dark">(() =>
-    localStorage.getItem(STORAGE_KEYS.THEME) === "dark" ? "dark" : "light",
+    localStorage.getItem(STORAGE_KEYS.THEME) === "light" ? "light" : "dark",
   );
 
   useLayoutEffect(() => {
