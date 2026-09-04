@@ -78,6 +78,7 @@ func TestSessionMiddlewareUsesOnlyBFFRecentMFAEvidence(t *testing.T) {
 		Issuer:      client.config.Issuer,
 		Subject:     "user-123",
 		SID:         "sid-123",
+		IDToken:     "verified-id-token-fixture",
 		TokenExpiry: now.Add(time.Hour),
 		AuthTime:    now.Unix(), // Simulates a refresh response claiming fresh authentication.
 		AMR:         []string{"pwd", "webauthn"},
