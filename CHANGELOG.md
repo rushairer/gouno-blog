@@ -3,6 +3,16 @@
 All notable changes to the complete Gouno Blog distribution are documented in
 this file. The format follows Keep a Changelog and Semantic Versioning.
 
+## [1.5.21] - 2026-09-04
+
+### Changed
+
+- Align UI/UX design system with GOSSO Admin: standardize 404 / Not Found page layout and card (`.not-found-page`, `.not-found-card`, `.not-found-title`, `.not-found-subtitle`).
+- Normalize 2-column form grid (`.form-grid-2`) and card grid (`.card-grid`) with mobile breakpoints.
+- Standardize semantic status dots (`.status-dot`, `--success`, `--warning`, `--danger`, `--brand`).
+- Normalize section and modal dividers (`.modal-section-divider`, `.section-divider`).
+- Standardize security MFA secret boxes and backup codes grid (`.mfa-secret-box`, `.mfa-secret-code`, `.mfa-backup-codes-grid`, `.mfa-backup-code`).
+
 ## [1.5.20] - 2026-09-04
 
 ### Changed

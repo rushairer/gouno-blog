@@ -18,6 +18,8 @@
     --ds-brand: var(--ui-brand);
     --ds-brand-hover: var(--ui-brand-hover);
     --ds-danger: var(--ui-danger);
+    --ds-success: var(--ui-success);
+    --ds-warning: var(--ui-warning);
     --ds-overlay: var(--ui-overlay);
     --ds-panel-shadow: 0 8px 24px
       color-mix(in srgb, var(--ui-overlay) 12%, transparent);
@@ -1754,5 +1756,148 @@
   .btn-link:hover {
     color: var(--ds-brand-hover);
     text-decoration: underline;
+  }
+
+  /* ==========================================================================
+     Pass 11 — Not-Found Page, Grids, Status Dots, Dividers & MFA Codes
+     ========================================================================== */
+
+  /* Not Found / Error Page Layout & Card */
+  .not-found-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 60vh;
+    padding: 40px 20px;
+  }
+
+  .not-found-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    width: 100%;
+    max-width: 540px;
+    padding: 32px 24px;
+    border: 1px solid var(--ds-border-default);
+    border-radius: var(--radius-panel);
+    background: var(--ds-surface-panel);
+    box-shadow: var(--ds-panel-shadow);
+  }
+
+  .not-found-title {
+    margin: 16px 0 8px;
+    color: var(--ds-text-primary);
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+
+  .not-found-subtitle {
+    margin: 0 0 24px;
+    max-width: 460px;
+    color: var(--ds-text-secondary);
+    font-size: var(--font-size-base, 14px);
+    line-height: 1.5;
+  }
+
+  /* Responsive Grids */
+  .form-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+  }
+
+  @media (max-width: 640px) {
+    .form-grid-2 {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Status Dots */
+  .status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: var(--ds-text-secondary);
+  }
+
+  .status-dot--success {
+    background: var(--ds-success);
+  }
+
+  .status-dot--warning {
+    background: var(--ds-warning);
+  }
+
+  .status-dot--danger {
+    background: var(--ds-danger);
+  }
+
+  .status-dot--brand {
+    background: var(--ds-brand);
+  }
+
+  /* Section & Modal Dividers */
+  .modal-section-divider,
+  .section-divider {
+    width: 100%;
+    margin: 20px 0;
+    border: 0;
+    border-top: 1px solid var(--ds-border-default);
+  }
+
+  /* Security MFA Secret Box & Backup Codes Grid */
+  .mfa-secret-box {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+    border: 1px solid var(--ds-border-subtle);
+    border-radius: var(--radius-control);
+    background: var(--ds-surface-control);
+  }
+
+  .mfa-secret-code {
+    color: var(--ds-text-primary);
+    font-family: var(--font-mono, monospace);
+    font-size: var(--font-size-sm, 13px);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+
+  .mfa-backup-codes-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    padding: 16px;
+    border: 1px solid var(--ds-border-subtle);
+    border-radius: var(--radius-panel);
+    background: var(--ds-surface-control);
+    text-align: center;
+  }
+
+  @media (max-width: 640px) {
+    .mfa-backup-codes-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  .mfa-backup-code {
+    color: var(--ds-text-primary);
+    font-family: var(--font-mono, monospace);
+    font-size: var(--font-size-sm, 13px);
+    font-weight: 700;
+    letter-spacing: 0.05em;
   }
 }
