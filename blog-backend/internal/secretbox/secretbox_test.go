@@ -32,6 +32,58 @@ func TestEncryptUsesRandomNonceAndDecrypts(t *testing.T) {
 	}
 }
 
+func TestEncryptWithAADBindsProviderRecord(t *testing.T) {
+	box, err := New(testKey('a'))
+	if err != nil {
+		t.Fatal(err)
+	}
+	version := box.KeyVersion()
+	providerAAD := ProviderAPIKeyAAD(42, version)
+	ciphertext, nonce, err := box.EncryptWithAAD("sk-record-bound", providerAAD)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plaintext, err := box.DecryptWithAAD(ciphertext, nonce, version, providerAAD)
+	if err != nil || plaintext != "sk-record-bound" {
+		t.Fatalf("decrypt = %q, %v", plaintext, err)
+	}
+	if _, err := box.DecryptWithAAD(ciphertext, nonce, version, ProviderAPIKeyAAD(43, version)); err == nil {
+		t.Fatal("ciphertext moved to another Provider record must not decrypt")
+	}
+	if _, err := box.Decrypt(ciphertext, nonce, version); err == nil {
+		t.Fatal("record-bound ciphertext must not decrypt through the legacy nil-AAD path")
+	}
+}
+
+func TestEncryptWithAADRequiresStableContext(t *testing.T) {
+	box, err := New(testKey('a'))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := box.EncryptWithAAD("secret", nil); err == nil {
+		t.Fatal("expected missing associated data error")
+	}
+	if _, err := box.DecryptWithAAD([]byte("ciphertext"), []byte("nonce"), box.KeyVersion(), nil); err == nil {
+		t.Fatal("expected missing associated data error")
+	}
+	if aad := ProviderAPIKeyAAD(0, box.KeyVersion()); len(aad) != 0 {
+		t.Fatalf("invalid Provider ID produced AAD: %q", aad)
+	}
+	if aad := ProviderAPIKeyAAD(1, 0); len(aad) != 0 {
+		t.Fatalf("invalid key version produced AAD: %q", aad)
+	}
+}
+
+func TestDecryptRejectsInvalidNonceWithoutPanicking(t *testing.T) {
+	box, err := New(testKey('a'))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := box.Decrypt([]byte("ciphertext"), []byte("short"), box.KeyVersion()); err == nil {
+		t.Fatal("expected invalid nonce error")
+	}
+}
+
 func TestWrongKeyCannotDecrypt(t *testing.T) {
 	first, _ := New(testKey('a'))
 	second, _ := New(testKey('b'))
@@ -76,6 +128,29 @@ func TestKeyringDecryptsPreviousVersionDuringRotation(t *testing.T) {
 	}
 	if _, err := original.Decrypt(newCiphertext, newNonce, 2); err == nil {
 		t.Fatal("old keyring must not decrypt the new version")
+	}
+}
+
+func TestKeyringDecryptsRecordBoundSecretAcrossRotation(t *testing.T) {
+	original, err := NewKeyring(testKey('a'), "1", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	aad := ProviderAPIKeyAAD(77, 1)
+	ciphertext, nonce, err := original.EncryptWithAAD("rotating-record-secret", aad)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rotated, err := NewKeyring(testKey('b'), "2", "1:"+testKey('a'))
+	if err != nil {
+		t.Fatal(err)
+	}
+	plaintext, err := rotated.DecryptWithAAD(ciphertext, nonce, 1, ProviderAPIKeyAAD(77, 1))
+	if err != nil || plaintext != "rotating-record-secret" {
+		t.Fatalf("decrypt = %q, %v", plaintext, err)
+	}
+	if _, err := rotated.DecryptWithAAD(ciphertext, nonce, 1, ProviderAPIKeyAAD(77, 2)); err == nil {
+		t.Fatal("changing the stored key version context must fail authentication")
 	}
 }
 
