@@ -46,6 +46,39 @@
     padding-inline: var(--ds-page-padding-inline);
   }
 
+  .admin-topbar-actions .btn {
+    min-height: var(--control-h-sm);
+    gap: 6px;
+    border-radius: var(--radius-control);
+    padding-inline: 12px;
+    font-size: var(--font-size-sm);
+  }
+
+  .admin-topbar-actions .btn.btn-ghost {
+    border-color: transparent;
+    background: transparent;
+    color: var(--ui-text-secondary);
+  }
+
+  .admin-topbar-actions .btn.btn-ghost:hover:not(:disabled),
+  .admin-topbar-actions a.btn.btn-ghost:hover {
+    border-color: transparent;
+    background: var(--ui-control-hover);
+    color: var(--ui-text);
+  }
+
+  .admin-topbar-actions .admin-theme-toggle.btn-ghost[aria-pressed="true"] {
+    border-color: color-mix(in srgb, var(--ui-brand) 28%, transparent);
+    background: var(--ui-brand-soft);
+    color: var(--ui-brand);
+  }
+
+  .admin-topbar-actions .admin-topbar-logout.btn-ghost:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--ui-danger) 28%, transparent);
+    background: var(--ui-danger-soft);
+    color: var(--ui-danger);
+  }
+
   .admin-page {
     display: grid;
     gap: 24px;
