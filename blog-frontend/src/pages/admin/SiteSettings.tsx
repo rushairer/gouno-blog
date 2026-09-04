@@ -35,6 +35,9 @@ import type { SiteSettings } from "../../types/blog";
 
 type SettingsTab = "basic" | "appearance" | "hero" | "social" | "seo";
 
+const commonImageAccept =
+  "image/jpeg,image/png,image/webp,image/gif,image/svg+xml,image/x-icon,image/vnd.microsoft.icon,image/avif,image/bmp,.svg,.ico,.avif,.bmp";
+
 export default function AdminSiteSettings() {
   const allowed = useAdminGuard("/admin/settings");
   const { notify } = useToast();
@@ -304,7 +307,7 @@ export default function AdminSiteSettings() {
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept="image/*"
+                      accept={commonImageAccept}
                       className="sr-only"
                       onChange={handleImageUpload}
                     />
@@ -380,7 +383,7 @@ export default function AdminSiteSettings() {
               <FormLayout onSubmit={save}>
                 <Field
                   label="Favicon 地址"
-                  hint="支持站内路径（如 /media/icon.png）或完整 http(s) URL；建议使用正方形 PNG、WebP 或 SVG。"
+                  hint="支持站内路径（如 /media/icon.png）或完整 http(s) URL；支持 PNG、WebP、GIF、JPEG、SVG、ICO、AVIF 与 BMP。"
                 >
                   <div className="upload-row">
                     <Input
@@ -394,7 +397,7 @@ export default function AdminSiteSettings() {
                     <input
                       ref={faviconInputRef}
                       type="file"
-                      accept="image/png,image/webp,image/gif,image/jpeg"
+                      accept={commonImageAccept}
                       className="sr-only"
                       onChange={handleFaviconUpload}
                     />
