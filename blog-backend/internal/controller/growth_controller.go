@@ -21,10 +21,15 @@ import (
 const maxMediaSize = 10 << 20
 
 var allowedMediaTypes = map[string]string{
-	"image/jpeg": ".jpg",
-	"image/png":  ".png",
-	"image/webp": ".webp",
-	"image/gif":  ".gif",
+	"image/jpeg":               ".jpg",
+	"image/png":                ".png",
+	"image/webp":               ".webp",
+	"image/gif":                ".gif",
+	"image/svg+xml":            ".svg",
+	"image/x-icon":             ".ico",
+	"image/vnd.microsoft.icon": ".ico",
+	"image/avif":               ".avif",
+	"image/bmp":                ".bmp",
 }
 
 type GrowthController struct {
@@ -305,12 +310,58 @@ func validateMedia(header *multipart.FileHeader) (string, string, error) {
 	if err != nil {
 		return "", "", errors.New("could not read image")
 	}
-	contentType := http.DetectContentType(buffer[:n])
+	contentType := detectMediaContentType(header.Filename, buffer[:n])
 	extension, ok := allowedMediaTypes[contentType]
 	if !ok {
-		return "", "", errors.New("only JPEG, PNG, WebP and GIF images are supported")
+		return "", "", errors.New("only JPEG, PNG, WebP, GIF, SVG, ICO, AVIF and BMP images are supported")
 	}
 	return contentType, extension, nil
+}
+
+func detectMediaContentType(filename string, sample []byte) string {
+	contentType := http.DetectContentType(sample)
+	if _, ok := allowedMediaTypes[contentType]; ok {
+		return contentType
+	}
+
+	lowerName := strings.ToLower(filename)
+	if strings.HasSuffix(lowerName, ".svg") && looksLikeSVG(sample) {
+		return "image/svg+xml"
+	}
+	if strings.HasSuffix(lowerName, ".ico") && looksLikeICO(sample) {
+		return "image/x-icon"
+	}
+	if strings.HasSuffix(lowerName, ".avif") && looksLikeAVIF(sample) {
+		return "image/avif"
+	}
+	return contentType
+}
+
+func looksLikeSVG(sample []byte) bool {
+	value := strings.TrimSpace(strings.TrimPrefix(string(sample), "\ufeff"))
+	value = strings.ToLower(value)
+	return strings.Contains(value, "<svg")
+}
+
+func looksLikeICO(sample []byte) bool {
+	return len(sample) >= 4 && sample[0] == 0 && sample[1] == 0 && sample[2] == 1 && sample[3] == 0
+}
+
+func looksLikeAVIF(sample []byte) bool {
+	if len(sample) < 12 || string(sample[4:8]) != "ftyp" {
+		return false
+	}
+	limit := len(sample)
+	if limit > 64 {
+		limit = 64
+	}
+	for offset := 8; offset+4 <= limit; offset += 4 {
+		brand := string(sample[offset : offset+4])
+		if brand == "avif" || brand == "avis" {
+			return true
+		}
+	}
+	return false
 }
 
 func randomMediaName(extension string) (string, error) {
