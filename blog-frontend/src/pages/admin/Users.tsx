@@ -9,8 +9,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { membersApi, type BlogMember } from "../../api/members";
-import { getGossoAdminURL, type BlogUserProfile } from "../../auth";
-import { ApiError } from "@gosso/client";
+import { getGossoAdminURL, isMfaError, type BlogUserProfile } from "../../auth";
 import { useUserProfile } from "@gosso/client/react";
 import {
   AdminPage,
@@ -77,23 +76,6 @@ function membershipTone(status: BlogMember["membership_status"]) {
   if (status === "suspended" || status === "removed") return "danger" as const;
   return "neutral" as const;
 }
-
-const isMfaError = (err: unknown): boolean => {
-  if (err instanceof ApiError) {
-    return (
-      err.message.includes("recent_mfa_required") ||
-      err.message.includes("multi-factor") ||
-      err.message.includes("mfa_required")
-    );
-  }
-  if (err instanceof Error) {
-    return (
-      err.message.includes("recent_mfa_required") ||
-      err.message.includes("multi-factor")
-    );
-  }
-  return false;
-};
 
 export default function AdminUsers() {
   const allowed = useAdminGuard("/admin/users");

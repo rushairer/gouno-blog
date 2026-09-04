@@ -3,6 +3,15 @@
 All notable changes to the complete Gouno Blog distribution are documented in
 this file. The format follows Keep a Changelog and Semantic Versioning.
 
+## [1.5.9] - 2026-09-04
+
+### Fixed
+
+- Add MFA Step-Up modal challenge (`StepUpMfaModal`) to blog admin Site Settings (`/admin/settings`), automatically intercepting `recent_mfa_required` API errors during settings updates.
+- Persist pending site settings in `sessionStorage` across SSO Step-Up redirections to prevent form draft loss.
+- Unify notification design language across admin settings by eliminating duplicate simultaneous page `<Feedback>` and floating `<Toast>` banners.
+- Extract unified `isMfaError` helper in frontend auth module shared between user membership and site settings.
+
 ## [1.5.8] - 2026-09-03
 
 ### Changed

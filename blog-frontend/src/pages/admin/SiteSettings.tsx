@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { mediaApi } from "../../api/media";
 import { siteApi } from "../../api/site";
+import { isMfaError } from "../../auth";
+import { StepUpMfaModal } from "../../components/auth/StepUpMfaModal";
 import {
   AdminPage,
   AdminPageHeader,
@@ -48,18 +50,32 @@ export default function AdminSiteSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const [stepUpOpen, setStepUpOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<
+    (() => Promise<void>) | null
+  >(null);
 
   useEffect(() => {
     if (!allowed) return;
     siteApi
       .getAdminSettings()
-      .then((data) => setValue({ ...DEFAULT_SITE_SETTINGS, ...data }))
+      .then((data) => {
+        let merged = { ...DEFAULT_SITE_SETTINGS, ...data };
+        try {
+          const pending = sessionStorage.getItem(
+            "gouno-blog:pending_site_settings",
+          );
+          if (pending) {
+            const parsed = JSON.parse(pending);
+            merged = { ...merged, ...parsed };
+            notify("已恢复待保存的站点设置，请点击“保存设置”以提交。", "info");
+          }
+        } catch {}
+        setValue(merged);
+      })
       .catch((reason: Error) => {
-        const msg = reason.message;
-        setError(msg);
-        notify(msg, "error");
+        setError(reason.message);
       })
       .finally(() => setLoading(false));
   }, [allowed, notify]);
@@ -120,17 +136,17 @@ export default function AdminSiteSettings() {
     notify("已填充为默认 Hero 标语与插图，点击“保存设置”即可生效。", "success");
   };
 
-  const save = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const save = async (event?: React.FormEvent) => {
+    if (event) event.preventDefault();
     const rss = value.rss_url.trim();
     if (rss && !rss.startsWith("/") && !/^https?:\/\//i.test(rss)) {
-      const msg = "RSS 地址必须是以 / 开头的站内路径，或完整的 http(s) URL。";
-      setError(msg);
-      notify(msg, "error");
+      notify(
+        "RSS 地址必须是以 / 开头的站内路径，或完整的 http(s) URL。",
+        "error",
+      );
       return;
     }
     setSaving(true);
-    setNotice("");
     setError("");
     try {
       const updated = await siteApi.updateAdminSettings({
@@ -138,11 +154,23 @@ export default function AdminSiteSettings() {
         rss_url: rss || "/feed.xml",
       });
       setValue(updated);
-      setNotice("站点设置已保存。");
+      try {
+        sessionStorage.removeItem("gouno-blog:pending_site_settings");
+      } catch {}
       notify("站点设置已成功保存。", "success");
     } catch (reason) {
+      if (isMfaError(reason)) {
+        try {
+          sessionStorage.setItem(
+            "gouno-blog:pending_site_settings",
+            JSON.stringify(value),
+          );
+        } catch {}
+        setPendingAction(() => () => save());
+        setStepUpOpen(true);
+        return;
+      }
       const msg = reason instanceof Error ? reason.message : "保存失败";
-      setError(msg);
       notify(msg, "error");
     } finally {
       setSaving(false);
@@ -164,7 +192,6 @@ export default function AdminSiteSettings() {
         title="站点设置"
         description="管理品牌信息、首页标语、社交入口和默认 SEO 元数据。"
       />
-      {notice ? <Feedback type="success">{notice}</Feedback> : null}
       {error ? <Feedback type="error">{error}</Feedback> : null}
       <Tabs
         value={activeTab}
@@ -517,6 +544,21 @@ export default function AdminSiteSettings() {
           ) : null}
         </TabPanel>
       </Tabs>
+
+      <StepUpMfaModal
+        open={stepUpOpen}
+        onClose={() => {
+          setStepUpOpen(false);
+          setPendingAction(null);
+        }}
+        onSuccess={async () => {
+          if (pendingAction) {
+            const action = pendingAction;
+            setPendingAction(null);
+            await action();
+          }
+        }}
+      />
     </AdminPage>
   );
 }

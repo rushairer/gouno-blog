@@ -93,4 +93,15 @@ export function stepUpMfa(
   );
 }
 
+export function isMfaError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err || "");
+  const lower = message.toLowerCase();
+  return (
+    lower.includes("recent_mfa_required") ||
+    lower.includes("recent multi-factor") ||
+    lower.includes("multi-factor") ||
+    lower.includes("mfa_required")
+  );
+}
+
 export { getBlogRoleLabel } from "./constants";
