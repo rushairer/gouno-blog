@@ -25,7 +25,7 @@ export function Card({
       className={classes(
         "ui-card",
         variant !== "default" && `ui-card--${variant}`,
-        padding !== "base" && `ui-card--padding-${padding}`,
+        `ui-card--padding-${padding}`,
         interactive && "ui-card--interactive",
         className,
       )}
@@ -51,9 +51,7 @@ export function CardHeader({
   className?: string;
 }) {
   if (children) {
-    return (
-      <div className={classes("ui-card__header", className)}>{children}</div>
-    );
+    return <div className={classes("ui-card__header", className)}>{children}</div>;
   }
 
   return (
@@ -71,16 +69,12 @@ export function CardContent({
   children,
   className = "",
 }: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div className={classes("ui-card__content", className)}>{children}</div>
-  );
+  return <div className={classes("ui-card__content", className)}>{children}</div>;
 }
 
 export function CardFooter({
   children,
   className = "",
 }: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div className={classes("ui-card__footer", className)}>{children}</div>
-  );
+  return <div className={classes("ui-card__footer", className)}>{children}</div>;
 }
