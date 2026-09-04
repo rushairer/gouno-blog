@@ -643,6 +643,7 @@ function AgentConsoleContent() {
         actions={
           <Button
             variant="secondary"
+            size="compact"
             type="button"
             onClick={() => void refresh()}
             icon={<RefreshCw />}
