@@ -39,6 +39,34 @@ jobs:
           coverage=$(go tool cover -func=coverage.out | awk '/^total:/ { gsub("%", "", $3); print $3 }')
           awk -v coverage="$coverage" 'BEGIN { if (coverage < 15) { printf "backend coverage %.1f%% is below the 15%% floor\n", coverage; exit 1 } }'
 
+      - name: Enforce security package coverage ratchet
+        run: |
+          check_package_coverage() {
+            package="$1"
+            floor="$2"
+            target="$3"
+            output=$(go test -cover "$package")
+            printf '%s\n' "$output"
+            coverage=$(printf '%s\n' "$output" | sed -n 's/.*coverage: \([0-9][0-9.]*\)% of statements.*/\1/p' | tail -1)
+            if [ -z "$coverage" ]; then
+              echo "could not determine coverage for $package" >&2
+              exit 1
+            fi
+            awk -v package="$package" -v coverage="$coverage" -v floor="$floor" -v target="$target" 'BEGIN {
+              if (coverage + 0 < floor + 0) {
+                printf "%s coverage %.1f%% is below the %.1f%% ratchet floor (A+ target %.1f%%)\n", package, coverage, floor, target
+                exit 1
+              }
+              printf "%s coverage %.1f%% >= %.1f%% ratchet floor; A+ target %.1f%%\n", package, coverage, floor, target
+            }'
+          }
+
+          # Ratchet floors reflect current measured coverage and may only move
+          # upward. They will be raised to the A+ targets as focused tests land.
+          check_package_coverage ./internal/secretbox 85 85
+          check_package_coverage ./internal/provider 60 75
+          check_package_coverage ./internal/authbff 50 80
+
       - name: Vet
         run: go vet ./...
 
