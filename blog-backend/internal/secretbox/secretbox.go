@@ -14,6 +14,8 @@ import (
 
 const KeyVersion = 1
 
+const providerAPIKeyAADPrefix = "gouno:ai-provider-api-key:v1:"
+
 type Box struct {
 	currentVersion int
 	keys           map[int]cipher.AEAD
@@ -84,7 +86,30 @@ func (b *Box) KeyVersion() int {
 	return b.currentVersion
 }
 
+// ProviderAPIKeyAAD returns immutable associated data for a Provider API key.
+// The domain separator prevents reuse across secret types; Provider ID and key
+// version bind the ciphertext to one database record and one keyring version.
+func ProviderAPIKeyAAD(providerID int64, keyVersion int) []byte {
+	if providerID <= 0 || keyVersion <= 0 {
+		return nil
+	}
+	return []byte(providerAPIKeyAADPrefix + strconv.FormatInt(providerID, 10) + ":" + strconv.Itoa(keyVersion))
+}
+
 func (b *Box) Encrypt(plaintext string) (ciphertext, nonce []byte, err error) {
+	return b.encrypt(plaintext, nil)
+}
+
+// EncryptWithAAD encrypts a record-bound secret. Callers must provide stable,
+// non-empty associated data; legacy secret formats continue to use Encrypt.
+func (b *Box) EncryptWithAAD(plaintext string, aad []byte) (ciphertext, nonce []byte, err error) {
+	if len(aad) == 0 {
+		return nil, nil, errors.New("associated data is required")
+	}
+	return b.encrypt(plaintext, aad)
+}
+
+func (b *Box) encrypt(plaintext string, aad []byte) (ciphertext, nonce []byte, err error) {
 	if plaintext == "" {
 		return nil, nil, errors.New("API key is required")
 	}
@@ -93,15 +118,31 @@ func (b *Box) Encrypt(plaintext string) (ciphertext, nonce []byte, err error) {
 	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
 		return nil, nil, err
 	}
-	return aead.Seal(nil, nonce, []byte(plaintext), nil), nonce, nil
+	return aead.Seal(nil, nonce, []byte(plaintext), aad), nonce, nil
 }
 
 func (b *Box) Decrypt(ciphertext, nonce []byte, version int) (string, error) {
+	return b.decrypt(ciphertext, nonce, version, nil)
+}
+
+// DecryptWithAAD decrypts a record-bound secret. Associated data must exactly
+// match the value used at encryption time.
+func (b *Box) DecryptWithAAD(ciphertext, nonce []byte, version int, aad []byte) (string, error) {
+	if len(aad) == 0 {
+		return "", errors.New("associated data is required")
+	}
+	return b.decrypt(ciphertext, nonce, version, aad)
+}
+
+func (b *Box) decrypt(ciphertext, nonce []byte, version int, aad []byte) (string, error) {
 	aead, exists := b.keys[version]
 	if !exists {
 		return "", fmt.Errorf("unsupported secret key version %d", version)
 	}
-	plaintext, err := aead.Open(nil, nonce, ciphertext, nil)
+	if len(nonce) != aead.NonceSize() {
+		return "", errors.New("decrypt provider API key")
+	}
+	plaintext, err := aead.Open(nil, nonce, ciphertext, aad)
 	if err != nil {
 		return "", errors.New("decrypt provider API key")
 	}
