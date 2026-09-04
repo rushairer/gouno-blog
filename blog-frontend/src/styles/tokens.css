@@ -143,9 +143,11 @@
     --color-text-soft: var(--ui-text-muted);
     --danger-color: var(--ui-danger);
     --success-color: var(--ui-success);
-    --radius-sm: var(--radius-control);
-    --radius-md: var(--radius-panel);
-    --radius-lg: var(--radius-overlay);
+    --radius-xs: 4px;
+    --radius-sm: 4px;
+    --radius-md: var(--radius-control);
+    --radius-lg: 8px;
+    --radius-xl: var(--radius-overlay);
   }
 
   [data-theme="dark"] {

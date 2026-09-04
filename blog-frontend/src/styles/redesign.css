@@ -1729,11 +1729,12 @@
     white-space: nowrap;
     cursor: pointer;
   }
-  .admin-topbar-actions a:hover {
+  .admin-topbar-actions a:hover,
+  .admin-topbar-actions .btn:hover {
     border-color: var(--brand);
     color: var(--brand);
   }
-  .admin-topbar-actions button:hover {
+  .admin-topbar-actions .admin-topbar-logout:hover {
     border-color: var(--danger);
     color: var(--danger);
   }

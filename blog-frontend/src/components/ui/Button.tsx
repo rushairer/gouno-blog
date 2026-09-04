@@ -30,7 +30,7 @@ export type ButtonSize =
 export type ButtonIconPosition = "left" | "right";
 
 export const buttonVariants = cva(
-  "btn inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer",
+  "btn inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-control)] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer",
   {
     variants: {
       variant: {
@@ -49,7 +49,7 @@ export const buttonVariants = cva(
         default: "btn--default",
         compact: "btn--compact",
         sm: "btn--compact",
-        lg: "btn--large",
+        lg: "btn--large rounded-lg",
         icon: "btn--icon",
       },
     },

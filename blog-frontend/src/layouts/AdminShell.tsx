@@ -10,7 +10,7 @@ import {
   Search,
   Sun,
 } from "lucide-react";
-import { Button, IconButton } from "../components/ui";
+import { Button, ButtonLink, IconButton } from "../components/ui";
 import { notificationsApi } from "../api/notifications";
 import { useUserProfile } from "@gosso/client/react";
 import { type BlogUserProfile, getBlogRoleLabel, logout } from "../auth";
@@ -251,32 +251,39 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             />
           </form>
           <div className="admin-topbar-actions">
-            <Link
+            <ButtonLink
               to="/"
               target="_blank"
               rel="noreferrer"
               aria-label="在新窗口查看前台站点"
+              variant="ghost"
+              size="sm"
+              icon={<ExternalLink />}
             >
-              <ExternalLink />
-              <span>查看站点</span>
-            </Link>
-            <Link
+              查看站点
+            </ButtonLink>
+            <ButtonLink
               to="/admin/notifications"
               className="admin-topbar-notifications"
               aria-label="查看通知中心"
+              variant="ghost"
+              size="sm"
+              icon={
+                <span className="admin-topbar-notifications__icon">
+                  <Bell />
+                  {unreadCount > 0 ? (
+                    <span className="admin-topbar-notifications__badge">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  ) : null}
+                </span>
+              }
             >
-              <span className="admin-topbar-notifications__icon">
-                <Bell />
-                {unreadCount > 0 ? (
-                  <span className="admin-topbar-notifications__badge">
-                    {unreadCount > 99 ? "99+" : unreadCount}
-                  </span>
-                ) : null}
-              </span>
-              <span>通知</span>
-            </Link>
+              通知
+            </ButtonLink>
             <Button
               variant="ghost"
+              size="sm"
               className="admin-theme-toggle"
               onClick={() =>
                 setTheme((current) => (current === "light" ? "dark" : "light"))
@@ -289,6 +296,8 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             </Button>
             <Button
               variant="ghost"
+              size="sm"
+              className="admin-topbar-logout"
               onClick={() => void handleLogout()}
               disabled={loggingOut}
               aria-label="退出登录"

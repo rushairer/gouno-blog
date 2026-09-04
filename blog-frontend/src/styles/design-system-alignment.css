@@ -32,9 +32,10 @@
     --control-h-lg: 46px;
     --control-height: 38px;
     --control-height-compact: 34px;
-    --radius-control: 8px;
+    --radius-control: 6px;
     --radius-panel: 12px;
     --radius-overlay: 12px;
+    --radius-lg: 8px;
   }
 
   .admin-content {
@@ -79,6 +80,7 @@
 
   .btn--large {
     min-height: var(--control-h-lg);
+    border-radius: 8px;
     padding-inline: 18px;
     font-size: var(--font-size-md);
   }
@@ -102,6 +104,7 @@
     width: var(--control-h-lg);
     height: var(--control-h-lg);
     min-height: var(--control-h-lg);
+    border-radius: 8px;
   }
 
   .btn__icon,
