@@ -2575,4 +2575,98 @@
     white-space: pre-wrap;
     word-break: break-all;
   }
+
+  /* ==========================================================================
+     Pass 16 — System Status Indicators, Icon Badges & Setup Cards
+     ========================================================================== */
+
+  /* Inline Status Rows & Lists */
+  .inline-status-list {
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid var(--ds-border-default);
+  }
+
+  .inline-status-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--ds-border-default);
+  }
+
+  .inline-status-row:last-child {
+    border-bottom: 0;
+  }
+
+  /* Semantic Inline Icon Badges */
+  .inline-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-control);
+    background: var(--ds-surface-control);
+    color: var(--ds-text-secondary);
+  }
+
+  .inline-icon--success {
+    background: var(--status-success-subtle);
+    color: var(--status-success);
+  }
+
+  .inline-icon--danger {
+    background: color-mix(in srgb, var(--ds-danger) 10%, transparent);
+    color: var(--ds-danger);
+  }
+
+  .inline-icon--warning {
+    background: var(--status-warning-subtle);
+    color: var(--status-warning);
+  }
+
+  .inline-icon--info {
+    background: color-mix(in srgb, var(--ds-brand) 10%, transparent);
+    color: var(--ds-brand);
+  }
+
+  /* Setup & Health Cards */
+  .setup-card,
+  .health-card {
+    display: flex;
+    gap: 16px;
+    padding: 18px 20px;
+    border: 1px solid var(--ds-border-default);
+    border-radius: var(--radius-panel);
+    background: var(--ds-surface-panel);
+    box-shadow: var(--ds-panel-shadow);
+  }
+
+  .setup-card {
+    flex-direction: column;
+  }
+
+  .health-card {
+    align-items: center;
+  }
+
+  .setup-title {
+    margin: 0;
+    color: var(--ds-text-primary);
+    font-size: var(--font-size-md, 15px);
+    font-weight: 700;
+  }
+
+  .health-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: var(--radius-control);
+    background: var(--ds-surface-control);
+    flex-shrink: 0;
+  }
 }

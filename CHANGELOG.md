@@ -3,6 +3,14 @@
 All notable changes to the complete Gouno Blog distribution are documented in
 this file. The format follows Keep a Changelog and Semantic Versioning.
 
+## [1.5.26] - 2026-09-04
+
+### Changed
+
+- Align UI/UX design system with GOSSO Admin: standardize inline status list and rows (`.inline-status-list`, `.inline-status-row`).
+- Standardize semantic inline icon badges (`.inline-icon`, `--success`, `--danger`, `--warning`, `--info`).
+- Standardize setup cards and health status cards (`.setup-card`, `.health-card`, `.setup-title`, `.health-icon`).
+
 ## [1.5.25] - 2026-09-04
 
 ### Changed
