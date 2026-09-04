@@ -3,6 +3,16 @@
 All notable changes to the complete Gouno Blog distribution are documented in
 this file. The format follows Keep a Changelog and Semantic Versioning.
 
+## [1.5.12] - 2026-09-04
+
+### Changed
+
+- Align UI/UX design system with GOSSO Admin: normalize form controls (`.ui-control`, `.input-field`), compact control variants, and select wrappers.
+- Standardize Switch and Checkbox component styling (`.ui-switch-label`, `.switch-field`, `.ui-switch__text`, `.ui-switch__label`).
+- Harmonize Empty and Error states (`.state`, `.empty-state`, `.state__actions`, `.empty-state-actions`) with unified 40px icon sizing, typography, and spacing.
+- Align Feedback banner styles (`.feedback--error`, `.feedback-error`, `.feedback--success`, `.feedback-success`).
+- Standardize Tab button height (34px), active states, and Toast notification container/card cross-project aliases.
+
 ## [1.5.11] - 2026-09-04
 
 ### Changed

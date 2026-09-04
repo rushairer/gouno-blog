@@ -335,6 +335,204 @@
     gap: 6px;
   }
 
+  /* Form controls alignment */
+  .ui-control,
+  .input-field {
+    width: 100%;
+    min-height: var(--control-h-base);
+    padding: 8px 14px;
+    border: 1px solid var(--ds-border-default);
+    border-radius: var(--radius-control);
+    background: var(--ds-surface-control);
+    color: var(--ds-text-primary);
+    font-size: var(--font-size-base, 14px);
+    line-height: 1.4;
+    transition:
+      border-color 0.16s ease,
+      box-shadow 0.16s ease,
+      background 0.16s ease;
+  }
+
+  .ui-control--compact,
+  .input-field--compact {
+    min-height: var(--control-h-sm);
+    padding-block: 6px;
+  }
+
+  .select-control,
+  .select-control-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+  }
+
+  /* Switch & Checkbox alignment */
+  .ui-switch-label,
+  .switch-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .ui-switch__text,
+  .ui-switch__label {
+    font-size: var(--font-size-base, 14px);
+    color: var(--ds-text-primary);
+  }
+
+  /* Empty & Error State alignment */
+  .state,
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 36px 24px;
+    text-align: center;
+    color: var(--ds-text-secondary);
+    width: 100%;
+  }
+
+  .state > svg,
+  .empty-state svg {
+    width: 40px;
+    height: 40px;
+    margin: 0 auto 12px;
+    color: var(--ds-text-secondary);
+    flex-shrink: 0;
+  }
+
+  .state > p:first-of-type,
+  .empty-state h3,
+  .empty-state strong {
+    display: block;
+    color: var(--ds-text-primary);
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .state__desc,
+  .empty-state p {
+    max-width: 440px;
+    margin: 6px auto 0;
+    color: var(--ds-text-secondary);
+    font-size: 13.5px;
+    line-height: 1.5;
+  }
+
+  .state__actions,
+  .empty-state-actions {
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  /* Feedback message alignment */
+  .feedback {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-radius: var(--radius-control);
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .feedback--error,
+  .feedback-error {
+    border: 1px solid color-mix(in srgb, var(--ui-danger) 28%, transparent);
+    background: var(--ui-danger-soft);
+    color: var(--ui-danger);
+  }
+
+  .feedback--success,
+  .feedback-success {
+    border: 1px solid color-mix(in srgb, var(--ui-success) 28%, transparent);
+    background: var(--ui-success-soft);
+    color: var(--ui-success);
+  }
+
+  /* Tabs alignment */
+  .subnav-tabs > [role="tablist"],
+  .tabs-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 4px;
+    border: 1px solid var(--ds-border-default);
+    border-radius: 8px;
+    background: var(--ds-surface-panel);
+  }
+
+  .subnav-tabs__tab,
+  .tab-btn {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    gap: 7px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--ds-text-secondary);
+    cursor: pointer;
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1;
+    transition:
+      background 0.16s ease,
+      color 0.16s ease;
+  }
+
+  .subnav-tabs__tab:hover,
+  .tab-btn:hover {
+    background: var(--ds-surface-control-hover);
+    color: var(--ds-text-primary);
+  }
+
+  .subnav-tabs__tab[aria-selected="true"],
+  .tab-btn.active,
+  .tab-btn[aria-selected="true"] {
+    background: var(--ds-surface-elevated);
+    color: var(--ui-brand);
+  }
+
+  /* Toast notification alignment */
+  .toast-region,
+  .toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1100;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 400px;
+    width: calc(100% - 40px);
+    pointer-events: none;
+  }
+
+  .toast,
+  .toast-item {
+    pointer-events: auto;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: var(--radius-control);
+    border: 1px solid var(--ds-border-default);
+    background: var(--ds-surface-panel);
+    box-shadow: var(--ds-panel-shadow-hover);
+    color: var(--ds-text-primary);
+    font-size: 13.5px;
+  }
+
   .form-actions,
   .modal-actions,
   .modal-footer,
