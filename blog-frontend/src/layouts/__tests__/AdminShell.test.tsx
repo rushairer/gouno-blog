@@ -59,7 +59,7 @@ describe("AdminShell navigation utilities", () => {
     delete document.documentElement.dataset.theme;
   });
 
-  it("uses configured site identity and exposes frontsite and logout actions", async () => {
+  it("uses configured site identity and shared topbar action primitives", async () => {
     render(
       <MemoryRouter initialEntries={["/admin/dashboard"]}>
         <AdminShell>
@@ -71,14 +71,26 @@ describe("AdminShell navigation utilities", () => {
     expect(
       await screen.findByRole("link", { name: "Configured Site" }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "在新窗口查看前台站点" }),
-    ).toHaveAttribute("href", "/");
-    expect(screen.getByRole("link", { name: "查看通知中心" })).toHaveAttribute(
-      "href",
-      "/admin/notifications",
+
+    const frontsiteLink = screen.getByRole("link", {
+      name: "在新窗口查看前台站点",
+    });
+    expect(frontsiteLink).toHaveAttribute("href", "/");
+    expect(frontsiteLink).toHaveClass("btn", "btn-ghost", "btn--compact");
+
+    const notificationsLink = screen.getByRole("link", {
+      name: "查看通知中心",
+    });
+    expect(notificationsLink).toHaveAttribute("href", "/admin/notifications");
+    expect(notificationsLink).toHaveClass(
+      "btn",
+      "btn-ghost",
+      "btn--compact",
     );
-    fireEvent.click(screen.getByRole("button", { name: "退出登录" }));
+
+    const logoutButton = screen.getByRole("button", { name: "退出登录" });
+    expect(logoutButton).toHaveClass("btn", "btn-ghost", "btn--compact");
+    fireEvent.click(logoutButton);
     expect(logoutMock).toHaveBeenCalledOnce();
   });
 
