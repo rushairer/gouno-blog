@@ -63,6 +63,13 @@ export function Badge({
 
 export type PostStatus = "published" | "draft" | "scheduled" | "hidden";
 
+const statusTones: Record<string, BadgeTone> = {
+  published: "success",
+  draft: "neutral",
+  scheduled: "warning",
+  hidden: "danger",
+};
+
 export function StatusBadge({
   status = "draft",
   className = "",
@@ -80,7 +87,8 @@ export function StatusBadge({
     hidden: "已隐藏",
   };
   return (
-    <span
+    <Badge
+      tone={statusTones[normalizedStatus] || "neutral"}
       className={cn(
         "status-badge",
         `status-badge--${normalizedStatus}`,
@@ -88,6 +96,6 @@ export function StatusBadge({
       )}
     >
       {label || defaultLabels[normalizedStatus] || normalizedStatus}
-    </span>
+    </Badge>
   );
 }
