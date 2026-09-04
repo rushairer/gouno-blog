@@ -50,10 +50,7 @@ export function GlobalStepUpBoundary({ children }: { children: ReactNode }) {
     window.addEventListener("unhandledrejection", handleUnhandledRejection);
     return () => {
       window.removeEventListener(STEP_UP_MFA_REQUIRED_EVENT, requestStepUp);
-      window.removeEventListener(
-        "unhandledrejection",
-        handleUnhandledRejection,
-      );
+      window.removeEventListener("unhandledrejection", handleUnhandledRejection);
     };
   }, []);
 
