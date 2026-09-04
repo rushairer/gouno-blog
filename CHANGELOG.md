@@ -3,6 +3,16 @@
 All notable changes to the complete Gouno Blog distribution are documented in
 this file. The format follows Keep a Changelog and Semantic Versioning.
 
+## [1.5.19] - 2026-09-04
+
+### Changed
+
+- Align UI/UX design system with GOSSO Admin: standardize form input affix wrapper (`.input-affix-wrapper`, `.input-prefix-icon`, `.input-suffix-icon`, `.input-icon-button`, `.has-prefix`, `.has-suffix`).
+- Normalize multiline text input (`.textarea-field`, `textarea.ui-control`, `textarea.input-field`): 88px min-height, vertical resize, 1.5 line-height.
+- Standardize form field metadata (`.field__label` / `.form-label`, `.field__required` / `.form-label-required`, `.field__hint` / `.form-hint`, `.field__error` / `.form-error`, `.field--invalid`).
+- Normalize checkbox and checkbox group (`.checkbox-field`, `.checkbox-group`, `.ui-checkbox`).
+- Align metric strips and field summary cards (`.metric-strip`, `.metric-item`, `.field-card`, `.field-label`, `.field-value`).
+
 ## [1.5.18] - 2026-09-04
 
 ### Changed
