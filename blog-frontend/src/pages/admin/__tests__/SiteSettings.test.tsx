@@ -116,7 +116,9 @@ describe("AdminSiteSettings", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByDisplayValue("暂存的草稿标题")).toBeInTheDocument();
+    expect(
+      await screen.findByDisplayValue("暂存的草稿标题"),
+    ).toBeInTheDocument();
     expect(
       await screen.findByText(
         "已恢复未保存的修改内容。当前尚未生效，请点击“保存设置”以提交生效。",
