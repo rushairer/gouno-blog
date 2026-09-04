@@ -3,6 +3,14 @@
 All notable changes to the complete Gouno Blog distribution are documented in
 this file. The format follows Keep a Changelog and Semantic Versioning.
 
+## [1.5.13] - 2026-09-04
+
+### Changed
+
+- Align UI/UX design system with GOSSO Admin: standardize table pagination bar layout (`.pagination`, `.pagination-compact`, `.table-pagination`, `.pagination__info`, `.table-pagination-info`).
+- Align table filter bars and search field wrappers (`.filter-bar`, `.table-filter-bar`, `.filter-bar__actions`, `.table-filter-actions`, `.search-field`).
+- Standardize skeleton and shimmer placeholder variants (`.skeleton--text`, `.skeleton-text`, `.skeleton--circular`, `.skeleton-circular`, `.skeleton--rectangular`, `.skeleton-rectangular`, `.skeleton--card`, `.skeleton-card`, `.table-skeleton-wrap`).
+
 ## [1.5.12] - 2026-09-04
 
 ### Changed

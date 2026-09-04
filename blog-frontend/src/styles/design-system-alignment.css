@@ -533,6 +533,86 @@
     font-size: 13.5px;
   }
 
+  /* Table Pagination alignment */
+  .pagination,
+  .pagination-compact,
+  .table-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 20px;
+    border-top: 1px solid var(--ds-border-default);
+    background: var(--ds-surface-panel);
+    border-bottom-left-radius: var(--radius-panel);
+    border-bottom-right-radius: var(--radius-panel);
+  }
+
+  .pagination__info,
+  .table-pagination-info {
+    font-size: var(--font-size-sm, 13px);
+    color: var(--ds-text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Filter Bar & Search Field alignment */
+  .filter-bar,
+  .table-filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+  }
+
+  .filter-bar__actions,
+  .table-filter-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+  }
+
+  .search-field {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+
+  /* Skeleton Loading Shimmer alignment */
+  .skeleton--text,
+  .skeleton-text {
+    border-radius: var(--radius-xs, 4px);
+    min-height: 14px;
+  }
+
+  .skeleton--circular,
+  .skeleton-circular {
+    border-radius: 9999px;
+  }
+
+  .skeleton--rectangular,
+  .skeleton-rectangular {
+    border-radius: var(--radius-control);
+  }
+
+  .skeleton--card,
+  .skeleton-card {
+    border-radius: var(--radius-panel);
+    min-height: 120px;
+  }
+
+  .table-skeleton-wrap {
+    width: 100%;
+    border: 1px solid var(--ds-border-default);
+    border-radius: var(--radius-panel);
+    background: var(--ds-surface-panel);
+    overflow: hidden;
+  }
+
   .form-actions,
   .modal-actions,
   .modal-footer,
