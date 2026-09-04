@@ -66,11 +66,11 @@ export function MediaUploadForm({
       <Field
         label={labels.imageFile}
         required
-        hint="支持 JPEG、PNG、WebP 与 GIF。"
+        hint="支持 JPEG、PNG、WebP、GIF、SVG、ICO、AVIF 与 BMP。"
       >
         <Input
           type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif"
+          accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,image/x-icon,image/vnd.microsoft.icon,image/avif,image/bmp,.svg,.ico,.avif,.bmp"
           onChange={(event) => onFileChange(event.target.files?.[0] || null)}
         />
       </Field>
