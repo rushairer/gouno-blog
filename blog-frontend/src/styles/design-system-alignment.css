@@ -2358,4 +2358,121 @@
     max-height: 240px;
     overflow-y: auto;
   }
+
+  /* ==========================================================================
+     Pass 14 — Post & Page Editor Workspace Multi-Column Grid Alignment
+     ========================================================================== */
+
+  /* Standard 3-column workspace for editors with outline/history */
+  .editor-workspace {
+    display: grid;
+    grid-template-columns: 220px minmax(480px, 1fr) 280px;
+    min-height: calc(100vh - 122px);
+  }
+
+  /* Two-column layout for editors without outline (e.g. PageEditor):
+     canvas maps to column 1, inspector maps to column 2 */
+  .editor-workspace:not(:has(.editor-outline)) {
+    grid-template-columns: minmax(480px, 1fr) 280px;
+  }
+
+  .editor-workspace:not(:has(.editor-outline)) > .editor-canvas {
+    grid-column: 1;
+  }
+
+  .editor-workspace:not(:has(.editor-outline)) > .editor-inspector {
+    grid-column: 2;
+  }
+
+  /* Outline, Canvas, and Inspector alignment */
+  .editor-outline,
+  .editor-inspector {
+    position: sticky;
+    top: 122px;
+    height: calc(100vh - 122px);
+    overflow-y: auto;
+    background: var(--ds-surface-panel);
+  }
+
+  .editor-outline {
+    border-right: 1px solid var(--ds-border-default);
+    padding: 18px 14px;
+  }
+
+  .editor-inspector {
+    border-left: 1px solid var(--ds-border-default);
+  }
+
+  .editor-canvas {
+    display: flex;
+    flex-direction: column;
+    padding: 28px 36px;
+    min-width: 0;
+    background: var(--ds-surface-panel);
+    flex: 1;
+  }
+
+  .editor-title {
+    width: 100%;
+    min-height: 52px;
+    padding: 10px 14px;
+    resize: vertical;
+    border: 1px solid var(--ds-border-default);
+    border-radius: var(--radius-control);
+    background: var(--ds-surface-control);
+    color: var(--ds-text-primary);
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .editor-body {
+    width: 100%;
+    flex: 1;
+    min-height: 520px;
+    padding: 16px 18px;
+    resize: vertical;
+    border: 1px solid var(--ds-border-default);
+    border-radius: var(--radius-control);
+    background: var(--ds-surface-control);
+    color: var(--ds-text-primary);
+    font-family: var(--font-mono, monospace);
+    font-size: var(--font-size-sm, 14px);
+    line-height: 1.8;
+  }
+
+  .editor-preview {
+    width: 100%;
+    flex: 1;
+    min-height: 520px;
+    padding: 24px 28px;
+    border: 1px solid var(--ds-border-default);
+    border-radius: var(--radius-control);
+    background: var(--ds-surface-panel);
+    overflow-y: auto;
+  }
+
+  @media (max-width: 1080px) {
+    .editor-workspace {
+      grid-template-columns: minmax(480px, 1fr) 260px;
+    }
+
+    .editor-outline {
+      display: none;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .editor-workspace,
+    .editor-workspace:not(:has(.editor-outline)) {
+      grid-template-columns: 1fr;
+    }
+
+    .editor-inspector {
+      position: static;
+      height: auto;
+      border-top: 1px solid var(--ds-border-default);
+      border-left: 0;
+    }
+  }
 }

@@ -3,6 +3,13 @@
 All notable changes to the complete Gouno Blog distribution are documented in
 this file. The format follows Keep a Changelog and Semantic Versioning.
 
+## [1.5.24] - 2026-09-04
+
+### Changed
+
+- Align UI/UX design system with GOSSO Admin: unify post and page editor workspace multi-column grid (`.editor-workspace`, `.editor-workspace:not(:has(.editor-outline))`).
+- Align canvas (main editor) and inspector (right sidebar) layout dimensions across 3-column (articles with outline/history) and 2-column (standalone pages) editor variants so that standalone pages match article canvas and right sidebar proportions seamlessly.
+
 ## [1.5.23] - 2026-09-04
 
 ### Changed
