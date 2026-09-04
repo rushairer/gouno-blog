@@ -321,7 +321,6 @@ export default function MediaLibrary() {
                 </Button>
               </>
             ) : null}
-            <span className="admin-page-count">{assets.length} 个资源</span>
           </>
         }
       />

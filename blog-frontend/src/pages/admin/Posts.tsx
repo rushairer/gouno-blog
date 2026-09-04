@@ -25,6 +25,7 @@ import {
   SearchField,
   Select,
   StatusBadge,
+  TableContainer,
   TableSkeleton,
   useToast,
 } from "../../components/ui";
@@ -334,7 +335,7 @@ export default function AdminPosts() {
           }
         >
           <Panel className="posts-table-panel">
-            <div className="table-scroll">
+            <TableContainer>
               <table className="admin-table">
                 <thead>
                   <tr>
@@ -449,7 +450,7 @@ export default function AdminPosts() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </TableContainer>
           </Panel>
         </AsyncState>
         {!loading && total > pageSize ? (
