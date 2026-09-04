@@ -3,6 +3,13 @@
 All notable changes to the complete Gouno Blog distribution are documented in
 this file. The format follows Keep a Changelog and Semantic Versioning.
 
+## [1.5.25] - 2026-09-04
+
+### Changed
+
+- Align UI/UX design system with GOSSO Admin: standardize editor sticky command bar layout and elements (`.editor-commandbar`, `.editor-back`, `.editor-save-state`).
+- Standardize preformatted JSON and code block viewer typography and border tokens (`.code-block-viewer`, `pre.code-block-viewer`).
+
 ## [1.5.24] - 2026-09-04
 
 ### Changed
