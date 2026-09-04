@@ -89,22 +89,31 @@ func (s *ManagementService) SaveProvider(ctx context.Context, profile *domain.Pr
 		return err
 	}
 	replaceSecret := apiKey != ""
-	if profile.ID == 0 && !replaceSecret {
+	isNew := profile.ID == 0
+	if isNew && !replaceSecret {
 		return fmt.Errorf("%w: API key is required", ErrInvalid)
 	}
+	if isNew {
+		id, err := s.repo.ReserveProviderID(ctx)
+		if err != nil {
+			return err
+		}
+		profile.ID = id
+	}
 	if replaceSecret {
-		ciphertext, nonce, err := s.secrets.Encrypt(apiKey)
+		keyVersion := s.secrets.KeyVersion()
+		ciphertext, nonce, err := s.secrets.EncryptWithAAD(apiKey, secretbox.ProviderAPIKeyAAD(profile.ID, keyVersion))
 		if err != nil {
 			return err
 		}
 		profile.APIKeyCiphertext = ciphertext
 		profile.APIKeyNonce = nonce
 		profile.APIKeyLast4 = secretbox.Last4(apiKey)
-		profile.KeyVersion = s.secrets.KeyVersion()
+		profile.KeyVersion = keyVersion
 		profile.HasAPIKey = true
 	}
 	var err error
-	if profile.ID == 0 {
+	if isNew {
 		err = s.repo.CreateProvider(ctx, profile)
 	} else {
 		err = s.repo.UpdateProvider(ctx, profile, replaceSecret)
@@ -176,7 +185,18 @@ func (s *ManagementService) ProviderClient(ctx context.Context, id int64) (provi
 	if !profile.Enabled {
 		return nil, fmt.Errorf("%w: provider is disabled", ErrInvalid)
 	}
-	key, err := s.secrets.Decrypt(profile.APIKeyCiphertext, profile.APIKeyNonce, profile.KeyVersion)
+	key, err := s.secrets.DecryptWithAAD(
+		profile.APIKeyCiphertext,
+		profile.APIKeyNonce,
+		profile.KeyVersion,
+		secretbox.ProviderAPIKeyAAD(profile.ID, profile.KeyVersion),
+	)
+	if err != nil {
+		// Backward compatibility for Provider secrets written before record-bound
+		// AAD was introduced. New AAD-bound ciphertext cannot downgrade through
+		// this path because AES-GCM authentication also covers the original AAD.
+		key, err = s.secrets.Decrypt(profile.APIKeyCiphertext, profile.APIKeyNonce, profile.KeyVersion)
+	}
 	if err != nil {
 		return nil, err
 	}

@@ -36,7 +36,17 @@ func TestLiveConfiguredProvidersGenerateImage(t *testing.T) {
 			if err := db.QueryRowContext(context.Background(), `SELECT id, name, provider_type, base_url, model, api_key_ciphertext, api_key_nonce, key_version, enabled, request_timeout_seconds FROM ai_provider_profiles WHERE name = $1 AND deleted_at IS NULL`, name).Scan(&profile.ID, &profile.Name, &profile.ProviderType, &profile.BaseURL, &profile.Model, &profile.APIKeyCiphertext, &profile.APIKeyNonce, &profile.KeyVersion, &profile.Enabled, &profile.RequestTimeoutSeconds); err != nil {
 				t.Fatalf("load %s: %v", name, err)
 			}
-			key, err := box.Decrypt(profile.APIKeyCiphertext, profile.APIKeyNonce, profile.KeyVersion)
+			key, err := box.DecryptWithAAD(
+				profile.APIKeyCiphertext,
+				profile.APIKeyNonce,
+				profile.KeyVersion,
+				secretbox.ProviderAPIKeyAAD(profile.ID, profile.KeyVersion),
+			)
+			if err != nil {
+				// Keep the live smoke test compatible with Provider secrets created
+				// before record-bound associated data was introduced.
+				key, err = box.Decrypt(profile.APIKeyCiphertext, profile.APIKeyNonce, profile.KeyVersion)
+			}
 			if err != nil {
 				t.Fatalf("decrypt %s: %v", name, err)
 			}
