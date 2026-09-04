@@ -59,7 +59,7 @@ describe("AdminShell navigation utilities", () => {
     delete document.documentElement.dataset.theme;
   });
 
-  it("uses configured site identity and exposes frontsite and logout actions", async () => {
+  it("uses configured site identity and shared topbar action primitives", async () => {
     render(
       <MemoryRouter initialEntries={["/admin/dashboard"]}>
         <AdminShell>
@@ -71,14 +71,22 @@ describe("AdminShell navigation utilities", () => {
     expect(
       await screen.findByRole("link", { name: "Configured Site" }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "在新窗口查看前台站点" }),
-    ).toHaveAttribute("href", "/");
-    expect(screen.getByRole("link", { name: "查看通知中心" })).toHaveAttribute(
-      "href",
-      "/admin/notifications",
-    );
-    fireEvent.click(screen.getByRole("button", { name: "退出登录" }));
+
+    const frontsiteLink = screen.getByRole("link", {
+      name: "在新窗口查看前台站点",
+    });
+    expect(frontsiteLink).toHaveAttribute("href", "/");
+    expect(frontsiteLink).toHaveClass("btn", "btn-ghost", "btn--compact");
+
+    const notificationsLink = screen.getByRole("link", {
+      name: "查看通知中心",
+    });
+    expect(notificationsLink).toHaveAttribute("href", "/admin/notifications");
+    expect(notificationsLink).toHaveClass("btn", "btn-ghost", "btn--compact");
+
+    const logoutButton = screen.getByRole("button", { name: "退出登录" });
+    expect(logoutButton).toHaveClass("btn", "btn-ghost", "btn--compact");
+    fireEvent.click(logoutButton);
     expect(logoutMock).toHaveBeenCalledOnce();
   });
 
@@ -120,6 +128,21 @@ describe("AdminShell navigation utilities", () => {
     expect(screen.getByLabelText("current location")).toHaveTextContent(
       "/admin/posts?q=%E7%B3%BB%E7%BB%9F%20%E6%9E%B6%E6%9E%84",
     );
+  });
+
+  it("defaults administration to the shared dark surface theme", () => {
+    render(
+      <MemoryRouter initialEntries={["/admin/dashboard"]}>
+        <AdminShell>
+          <h1>Dashboard</h1>
+        </AdminShell>
+      </MemoryRouter>,
+    );
+
+    const toggle = screen.getByRole("button", { name: "切换后台主题" });
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(localStorage.getItem("gouno-blog:theme")).toBe("dark");
   });
 
   it("restores and toggles the shared site theme from administration", () => {
