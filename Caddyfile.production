@@ -39,7 +39,13 @@ https://{$SSO_DOMAIN} {
 
 https://{$BLOG_DOMAIN} {
 	import security_headers
-	header Content-Security-Policy "default-src 'self'; base-uri 'self'; connect-src 'self'; font-src 'self' data: https://fonts.gstatic.com; form-action 'self' https://{$SSO_DOMAIN}; frame-ancestors 'self'; img-src 'self' data: blob:; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com"
+	@blog_svg path /media/*.svg
+	@blog_non_svg {
+		not path /media/*.svg
+	}
+	header @blog_svg Content-Security-Policy "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; img-src data:; object-src 'none'; script-src 'none'; style-src 'unsafe-inline'; sandbox"
+	header @blog_svg Referrer-Policy no-referrer
+	header @blog_non_svg Content-Security-Policy "default-src 'self'; base-uri 'self'; connect-src 'self'; font-src 'self' data: https://fonts.gstatic.com; form-action 'self' https://{$SSO_DOMAIN}; frame-ancestors 'self'; img-src 'self' data: blob:; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com"
 	@blog_backend path /api/* /feed.xml /rss /sitemap.xml /media/* /swagger*
 	handle @blog_backend {
 		reverse_proxy blog-backend:8082 {

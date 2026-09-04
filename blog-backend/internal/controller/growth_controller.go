@@ -315,6 +315,11 @@ func validateMedia(header *multipart.FileHeader) (string, string, error) {
 	if !ok {
 		return "", "", errors.New("only JPEG, PNG, WebP, GIF, SVG, ICO, AVIF and BMP images are supported")
 	}
+	if contentType == "image/svg+xml" {
+		if err := validateStaticSVGUpload(header); err != nil {
+			return "", "", err
+		}
+	}
 	return contentType, extension, nil
 }
 
