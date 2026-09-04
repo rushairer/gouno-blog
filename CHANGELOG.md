@@ -11,6 +11,7 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 - Persist pending site settings in `sessionStorage` across SSO Step-Up redirections to prevent form draft loss.
 - Unify notification design language across admin settings by eliminating duplicate simultaneous page `<Feedback>` and floating `<Toast>` banners.
 - Extract unified `isMfaError` helper in frontend auth module shared between user membership and site settings.
+- Fix Radix Dialog overlay and content z-index hierarchy conflict with admin sticky topbar by removing conflicting `z-50` utility classes, ensuring dialog overlay (`z-index: 1000`) cleanly masks the topbar (`z-index: 80`).
 
 ## [1.5.8] - 2026-09-03
 
