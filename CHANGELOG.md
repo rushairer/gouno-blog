@@ -3,6 +3,13 @@
 All notable changes to the complete Gouno Blog distribution are documented in
 this file. The format follows Keep a Changelog and Semantic Versioning.
 
+## [1.5.14] - 2026-09-04
+
+### Changed
+
+- Align UI/UX design system with GOSSO Admin: standardize Drawer slide-over panels and backdrop blur overlays (`.drawer-backdrop`, `.drawer-overlay`, `.drawer`, `.drawer-panel`, `.drawer > header`, `.drawer-header`, `.drawer-actions`, `.drawer-footer`).
+- Standardize Confirm Dialog modal components (`.confirm-dialog`, `.confirm-dialog-title`, `.confirm-dialog-icon`, `.confirm-dialog-message`).
+
 ## [1.5.13] - 2026-09-04
 
 ### Changed
