@@ -891,6 +891,68 @@
     border-top: 1px solid var(--ds-border-default);
   }
 
+  /* Code Chips & URI Copy alignment */
+  .inline-code,
+  .client-id-code {
+    display: inline-flex;
+    align-items: center;
+    background: var(--ui-page);
+    border: 1px solid var(--ds-border-subtle);
+    padding: 2px 8px;
+    border-radius: var(--radius-xs, 4px);
+    font-family: var(--font-mono, monospace);
+    font-size: var(--font-size-xs, 12px);
+    color: var(--ds-text-secondary);
+    line-height: 1.35;
+  }
+
+  .uri-copy-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 8px 4px 12px;
+    background: var(--ds-surface-panel);
+    border: 1px solid var(--ds-border-subtle);
+    border-radius: var(--radius-control);
+    font-family: var(--font-mono, monospace);
+    font-size: var(--font-size-xs, 12px);
+    color: var(--ds-text-secondary);
+    max-width: 100%;
+    transition:
+      border-color 0.15s ease,
+      background 0.15s ease;
+  }
+
+  .uri-copy-chip:hover {
+    border-color: var(--ui-border-hover);
+    background: var(--ds-surface-control-hover);
+    color: var(--ds-text-primary);
+  }
+
+  /* Error Retry Banner alignment */
+  .error-retry-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 16px;
+    margin-bottom: 24px;
+    border: 1px solid color-mix(in srgb, var(--ui-danger) 28%, transparent);
+    border-radius: var(--radius-control);
+    background: var(--ui-danger-soft);
+    color: var(--ui-danger);
+  }
+
+  /* Sticky Section Navigation alignment */
+  .section-nav {
+    position: sticky;
+    top: 88px;
+    display: grid;
+    gap: 4px;
+    align-self: start;
+  }
+
   @media (max-width: 720px) {
     .admin-content,
     .admin-topbar {

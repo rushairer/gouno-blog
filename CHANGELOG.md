@@ -3,6 +3,13 @@
 All notable changes to the complete Gouno Blog distribution are documented in
 this file. The format follows Keep a Changelog and Semantic Versioning.
 
+## [1.5.15] - 2026-09-04
+
+### Changed
+
+- Align UI/UX design system with GOSSO Admin: standardize inline code chips and URI copy chips (`.inline-code`, `.client-id-code`, `.uri-copy-chip`, `.uri-copy-text`, `.uri-copy-btn`).
+- Align error retry banners (`.error-retry-banner`) and sticky section navigation bars (`.section-nav`).
+
 ## [1.5.14] - 2026-09-04
 
 ### Changed
