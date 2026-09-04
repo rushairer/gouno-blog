@@ -158,7 +158,7 @@ export function Drawer({
         aria-labelledby={titleID}
         aria-describedby={description ? descriptionID : undefined}
       >
-        <header>
+        <header className="drawer-header">
           <div>
             <h2 id={titleID}>{title}</h2>
             {description ? <p id={descriptionID}>{description}</p> : null}
@@ -171,7 +171,7 @@ export function Drawer({
             onClick={onClose}
           />
         </header>
-        {children}
+        <div className="drawer-body">{children}</div>
       </section>
     </div>
   );
