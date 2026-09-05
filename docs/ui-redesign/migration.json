@@ -99,6 +99,30 @@
         "blocker": null
       }
     },
+    "publicPhaseReview": {
+      "task": "U02c",
+      "status": "verified",
+      "reviewedHead": "e616b032a981914fedcfb1c420d77bc42da77b4c",
+      "relatedGossoAdminHead": "f9466f3c103cd7a40e24ec90556a359331e2adc8",
+      "commands": [
+        "git status --short --branch && git rev-parse HEAD",
+        "git -C ../gosso-admin status --short --branch && git -C ../gosso-admin rev-parse HEAD",
+        "git diff --check 607c07b..HEAD",
+        "blog-frontend: npm run quality",
+        "curl -k https://blog.dev.local/",
+        "docker compose ps --format json"
+      ],
+      "result": "U02a/U02b public diff and ledger independently reviewed; git diff check and full Blog quality passed (47 files/179 tests; statements 55.74%, branches 45.86%, functions 45.52%, lines 57.91%; production build passed). UI-contract and CSS-cascade checks found no public-page conflict or unregistered exception.",
+      "browser": "Standard HTTPS https://blog.dev.local rendered the data-backed homepage and a real long-form article. The article had the expected title, canonical URL, meta description, heading anchors, code-copy controls and no horizontal overflow at desktop and 390x844. /categories rendered at 768x1024 light; /categories/ai?page=1 preserved the route/query and rendered at 390x844 dark. Authenticated /account/settings and /account/notifications rendered at 390x844 dark without an error state.",
+      "unverified": [
+        "live preview=true authorization branches",
+        "live like, comment, reply, report and mark-read mutations",
+        "forced live API error and retry states",
+        "production-domain flows"
+      ],
+      "blocker": null,
+      "handoff": "U03a is unlocked; preserve public routes and begin only the Admin shell, Dashboard and list-template scope."
+    },
     "qualityScripts": {
       "blogFrontend": ["format:check", "lint", "lint:ui", "lint:css", "tsc -b (no typecheck script)", "test:coverage", "build"],
       "gossoAdminFrontend": ["format:check", "lint", "lint:ui", "lint:css", "typecheck", "test:coverage", "build"],
@@ -225,7 +249,7 @@
       "implementation": "migrated",
       "verification": "verified",
       "evidence": [
-        "U02b PostDetail tests verify Markdown headings/TOC anchors, image rendering, fenced-code keyboard copy and SEO; full Blog quality passes"
+        "U02b PostDetail tests verify Markdown headings/TOC anchors, image rendering, fenced-code keyboard copy and SEO; U02c independently verified a real long-form article at desktop and 390x844 with heading anchors, code controls and no horizontal overflow"
       ]
     },
     {
@@ -1519,7 +1543,7 @@
       ],
       "implementation": "migrated",
       "verification": "verified",
-      "evidence": ["U02a browser: homepage verified at 1440x900, 768x1024 and 390x844 in light and dark themes; in-app browser also rendered navigation and theme toggle"]
+      "evidence": ["U02a browser: homepage verified at 1440x900, 768x1024 and 390x844 in light and dark themes; U02c independently rendered the data-backed standard-HTTPS homepage and rechecked theme/responsive navigation"]
     },
     {
       "id": "blog:pages/About.tsx",
@@ -1607,7 +1631,7 @@
       "implementation": "migrated",
       "verification": "verified",
       "evidence": [
-        "U02b AccountNotifications tests cover empty, retryable error, unread and mark-read success states; App test preserves anonymous redirect target"
+        "U02b AccountNotifications tests cover empty, retryable error, unread and mark-read success states; U02c rendered the authenticated live notification list at 390x844 dark without mutating read state"
       ]
     },
     {
@@ -1689,7 +1713,7 @@
       ],
       "implementation": "migrated",
       "verification": "verified",
-      "evidence": ["U02a full Blog quality pass covers article index regressions; responsive browser verification completed"]
+      "evidence": ["U02a full Blog quality pass covers article index regressions; U02c verified /categories/ai?page=1 against live data at 390x844 dark with the route/query preserved and no horizontal overflow"]
     },
     {
       "id": "blog:pages/Categories.tsx",
@@ -1724,7 +1748,7 @@
       ],
       "implementation": "migrated",
       "verification": "verified",
-      "evidence": ["U02a targeted taxonomy/archive tests, full Blog quality pass, and responsive browser verification"]
+      "evidence": ["U02a targeted taxonomy/archive tests and full Blog quality pass; U02c independently rendered /categories against live data at 768x1024 light with canonical category links and no horizontal overflow"]
     },
     {
       "id": "blog:pages/CustomPageView.tsx",
@@ -1910,7 +1934,7 @@
       "implementation": "migrated",
       "verification": "verified",
       "evidence": [
-        "U02b PostDetail tests cover Markdown/image/anchor/code-copy/SEO, preview success and denied preview, comment/reply success and inline interaction failure; live article browser route unverified because local API was unavailable"
+        "U02b PostDetail tests cover Markdown/image/anchor/code-copy/SEO, preview success and denied preview, comment/reply success and inline interaction failure; U02c rendered a live data-backed article over standard HTTPS at desktop and 390x844, confirming canonical/meta, heading anchors, code controls, light/dark and no horizontal overflow"
       ]
     },
     {
@@ -1954,7 +1978,7 @@
       "implementation": "migrated",
       "verification": "verified",
       "evidence": [
-        "U02b Settings tests cover configured GOSSO Admin link and missing-URL error without changing identity/session ownership"
+        "U02b Settings tests cover configured GOSSO Admin link and missing-URL error without changing identity/session ownership; U02c rendered the authenticated settings handoff to GOSSO Admin at 390x844 dark"
       ]
     },
     {

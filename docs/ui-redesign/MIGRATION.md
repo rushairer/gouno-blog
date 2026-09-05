@@ -26,6 +26,14 @@ The JSON ledger is authoritative. Implementation and real browser verification a
 - Unverified: the local API at `127.0.0.1:8082` was unavailable (`curl` exit 7), so a live data-backed article, authenticated account pages, live interaction submissions, and the 768px tablet viewport were not browser-tested. Automated tests cover Markdown anchors/images/code copy/SEO, preview success/denial, comment/reply, interaction failure, account redirect, notification states, settings URL/error, and callback-window behavior.
 - Handoff: U02c may independently review U02a/U02b. With a local backend and authenticated session, prioritize live article/account browser evidence; do not begin Admin implementation during the review.
 
+## U02c public-phase review (2026-09-06) — verified
+
+- Preconditions: U02a and U02b are `verified`; `gouno-blog` and related `gosso-admin` were clean on `main` at review start (`e616b03` / `f9466f3`). Review covered the public-page changes from `607c07b..HEAD` and did not implement Admin pages.
+- Static and automated review: public migration entries match their implementation/test/browser evidence. `git diff --check 607c07b..HEAD` exited 0. `blog-frontend npm run quality` exited 0 (47 files / 179 tests; statements 55.74%, branches 45.86%, functions 45.52%, lines 57.91%); UI-contract, CSS-cascade, TypeScript and production build passed with unchanged thresholds. Existing oxlint warnings remain non-blocking. No legacy public-style conflict or unregistered exception was found.
+- Browser: standard HTTPS `https://blog.dev.local` rendered the data-backed homepage and a real long-form article. Desktop dark and 390×844 light/dark article checks confirmed title, canonical/meta description, heading anchors, eight code-copy controls and no horizontal overflow. `/categories` rendered at 768×1024 light; `/categories/ai?page=1` preserved its deep link and query at 390×844 dark. Authenticated `/account/settings` and `/account/notifications` rendered at 390×844 dark without an error state. No interaction mutation was submitted.
+- Unverified: live `preview=true` authorization branches; live like/comment/reply/report/mark-read mutations; forced live API error/retry states; production-domain flows. Automated regressions cover these contracts where listed in the corresponding entries.
+- Conclusion and handoff: U02c is `verified` with no blocker. U03a may begin; preserve the verified public routes and limit work to Admin shell, Dashboard and list templates.
+
 ## Phase 0 source inventory
 
 The authoritative machine-readable inventory is `migration.json.phase0Inventory`. The source scan records the following boundaries without changing runtime behavior:
@@ -80,9 +88,9 @@ Automated checks do not replace authenticated browser regression. Entries remain
 
 | Surface | Routes / subview | Implementation | Verification |
 | --- | --- | --- | --- |
-| blog:App.tsx |  | not-started | not-run |
-| blog:components/ErrorBoundary.tsx |  | not-started | not-run |
-| blog:components/MarkdownRenderer.tsx |  | not-started | not-run |
+| blog:App.tsx |  | migrated | verified |
+| blog:components/ErrorBoundary.tsx |  | migrated | verified |
+| blog:components/MarkdownRenderer.tsx |  | migrated | verified |
 | blog-admin:components/agent/AdvancedWorkspace.tsx | /admin/ai-ops | not-started | not-run |
 | blog-admin:components/agent/AgentForm.tsx | /admin/ai-ops | not-started | not-run |
 | blog-admin:components/agent/AgentRunRecords.tsx | /admin/ai-ops | not-started | not-run |
@@ -118,18 +126,18 @@ Automated checks do not replace authenticated browser regression. Entries remain
 | blog-admin:components/media/MediaDrawerForms.tsx |  | not-started | not-run |
 | blog-admin:components/taxonomy/CategoryForm.tsx |  | not-started | not-run |
 | blog-admin:layouts/AdminShell.tsx |  | not-started | not-run |
-| blog:layouts/PublicShell.tsx |  | not-started | not-run |
-| blog:pages/About.tsx | /about | not-started | not-run |
-| blog:pages/AccountNotifications.tsx | /account/notifications, /notifications | not-started | not-run |
-| blog:pages/Archive.tsx | /archive | not-started | not-run |
-| blog:pages/ArticleIndex.tsx | /articles, /search, /categories/:slug, /tags/:slug | not-started | not-run |
-| blog:pages/Categories.tsx | /categories | not-started | not-run |
-| blog:pages/CustomPageView.tsx | /:slug | not-started | not-run |
-| blog:pages/Home.tsx | / | not-started | not-run |
-| blog:pages/NotFound.tsx | * | not-started | not-run |
-| blog:pages/PostDetail.tsx | /articles/:slug | not-started | not-run |
-| blog:pages/Settings.tsx | /account/settings, /settings | not-started | not-run |
-| blog:pages/Tags.tsx | /tags | not-started | not-run |
+| blog:layouts/PublicShell.tsx |  | migrated | verified |
+| blog:pages/About.tsx | /about | migrated | verified |
+| blog:pages/AccountNotifications.tsx | /account/notifications, /notifications | migrated | verified |
+| blog:pages/Archive.tsx | /archive | migrated | verified |
+| blog:pages/ArticleIndex.tsx | /articles, /search, /categories/:slug, /tags/:slug | migrated | verified |
+| blog:pages/Categories.tsx | /categories | migrated | verified |
+| blog:pages/CustomPageView.tsx | /:slug | migrated | verified |
+| blog:pages/Home.tsx | / | migrated | verified |
+| blog:pages/NotFound.tsx | * | migrated | verified |
+| blog:pages/PostDetail.tsx | /articles/:slug | migrated | verified |
+| blog:pages/Settings.tsx | /account/settings, /settings | migrated | verified |
+| blog:pages/Tags.tsx | /tags | migrated | verified |
 | blog-admin:pages/admin/AIOperations.tsx | /admin/ai-ops | not-started | not-run |
 | blog-admin:pages/admin/Categories.tsx | /admin/categories | not-started | not-run |
 | blog-admin:pages/admin/Comments.tsx | /admin/comments | not-started | not-run |
