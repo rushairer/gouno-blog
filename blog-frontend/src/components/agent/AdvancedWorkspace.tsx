@@ -13,7 +13,6 @@ import {
   Play,
   Plus,
   RefreshCw,
-  Settings2,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -948,7 +947,8 @@ export function AdvancedWorkspace({
                       <th>{labels.providerName}</th>
                       <th>{labels.baseUrl}</th>
                       <th>{labels.model}</th>
-                      <th>{locale === "zh" ? "维度" : "Dimensions"}</th>
+                      <th>{locale === "zh" ? "向量维度" : "Dimensions"}</th>
+                      <th>{labels.apiKey}</th>
                       <th>{labels.status}</th>
                       <th>{labels.actions}</th>
                     </tr>
@@ -957,14 +957,19 @@ export function AdvancedWorkspace({
                     {embeddingProfiles.map((profile) => (
                       <tr key={profile.id}>
                         <td>
-                          <strong>{profile.name}</strong>
-                          <small className="secret-mask">
-                            •••• {profile.api_key_last4}
-                          </small>
+                          <div className="provider-identity">
+                            <strong>{profile.name}</strong>
+                          </div>
                         </td>
                         <td className="mono">{profile.base_url}</td>
                         <td className="mono">{profile.model}</td>
                         <td>{profile.dimensions}</td>
+                        <td>
+                          <span className="secret-mask">
+                            •••• {profile.api_key_last4}
+                          </span>
+                          <small>{labels.keyStored}</small>
+                        </td>
                         <td>
                           <span
                             className={`agent-state agent-state--${profile.enabled ? "active" : "paused"}`}
@@ -1012,7 +1017,7 @@ export function AdvancedWorkspace({
                             />
                             <IconButton
                               label={labels.edit}
-                              icon={<Settings2 />}
+                              icon={<Edit2 />}
                               onClick={() => onEditEmbedding(profile)}
                             />
                             <IconButton

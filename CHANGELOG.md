@@ -5,6 +5,10 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+
+- Align Knowledge Base (Embedding Profiles) table layout and styling with Model Connections (Provider Profiles): separate API Key into an isolated secret-masked column with standard subtext, use `.provider-identity` cell structure, and unify action icon primitives (`Edit2`).
+
 ### Added
 
 - Add universal form draft preservation and auto-restore hook (`useFormDraft`) with `STEP_UP_MFA_REQUIRED_EVENT` snapshotting across Site Settings, AI Provider, Embedding, and Agent forms to prevent input loss during Step-Up MFA authentication.
