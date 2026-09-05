@@ -3,7 +3,7 @@
   "baseline": {
     "date": "2026-09-05",
     "blogQuality": "U01a verified: quality passes after coverage tests; prior branch coverage baseline 44.58%, current reproduction 44.44%",
-    "gossoAdminQuality": "passed with warnings",
+    "gossoAdminQuality": "U01b verified: quality passes after standardizing Vitest jsdom URL to https://sso.dev.local/identity-admin/; 20 files and 110 tests pass with existing warnings",
     "browser": "public home, login and unauthenticated blog admin redirect inspected; authenticated flows not verified",
     "baselineCommands": {
       "packagesUi": {
@@ -77,10 +77,9 @@
     },
     "knownBlockers": [
       "blog branch coverage is 44.58%, below the configured 45% threshold",
-      "gosso-admin vitest jsdom URL still contains forbidden localhost:8443/identity-admin/",
       "existing non-blocking oxlint, Vite config, jsdom navigation, font resolution and Lightning CSS warnings"
     ],
-    "verification": "static source scan and command output recorded; authenticated browser routes, responsive widths and light/dark evidence remain not-run"
+    "verification": "static source scan and command output recorded; U01b browser evidence confirms https://sso.dev.local login route and existing /identity-admin/ fallback; authenticated browser routes, responsive widths and light/dark evidence remain not-run"
   },
   "entries": [
     {

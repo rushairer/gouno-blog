@@ -7,7 +7,7 @@ The JSON ledger is authoritative. Implementation and real browser verification a
 - `@gouno/ui`: `npm run typecheck`, `npm run build`, `npm test` (2 tests) and `npm run showcase:build` pass.
 - `blog-frontend`: formatting, UI-contract, CSS-cascade checks, TypeScript, 160 tests and production build pass. The quality command is blocked by the existing global branch-coverage threshold (44.58%, required 45%).
 - U01a 已完成：补充公共分类、标签、归档页面及 posts API 参数/空回退测试；`blog-frontend npm run quality` 通过，任务标记 verified。浏览器证据仍未执行。
-- `gosso-admin-frontend`: formatting, UI-contract, CSS-cascade checks, TypeScript, 108 tests and production build pass (existing non-blocking lint/Vite warnings only).
+- `gosso-admin-frontend`: U01b verified. Vitest jsdom now uses `https://sso.dev.local/identity-admin/`; formatting, UI-contract, CSS-cascade checks, TypeScript, 110 tests and production build pass (existing non-blocking lint/Vite/jsdom warnings remain).
 - `packages/ui/showcase`: standalone component showcase is available via `npm run showcase:dev` or `npm run showcase:build`.
 
 ## Phase 0 source inventory
@@ -35,7 +35,14 @@ The authoritative machine-readable inventory is `migration.json.phase0Inventory`
 | `blog-frontend` | formatting, lint, UI-contract, CSS-cascade, `npx tsc -b`, and build passed; 42 files / 160 tests passed; `npm run test:coverage` exits non-zero at 44.58% branches vs 45% threshold |
 | `gosso-admin-frontend` | `npm run quality` passed; 19 files / 108 tests passed; coverage 43.89% statements, 39.22% branches, 31.83% functions, 44.63% lines; existing lint/Vite/jsdom warnings |
 
-Known follow-up items are recorded rather than silently fixed: Blog branch coverage is below threshold, Gosso Admin's Vitest jsdom URL still uses forbidden `localhost:8443/identity-admin/`, and existing non-blocking warnings remain. No authenticated browser, responsive-width, or light/dark route evidence has been added, so all ledger entries remain `verification: not-run`.
+Known follow-up items are recorded rather than silently fixed: Blog branch coverage is below threshold and existing non-blocking lint/Vite/jsdom warnings remain. U01b's browser evidence covers the standard SSO origin and login route only; no authenticated browser, responsive-width, or light/dark route evidence has been added, so migration entries remain `verification: not-run`.
+
+## U01b evidence (2026-09-06)
+
+- Source: `/Users/aben/Git/gosso-admin/gosso-admin-frontend/vitest.config.ts` now configures jsdom as `https://sso.dev.local/identity-admin/`; `rg -n "localhost:8443" gosso-admin-frontend` returns no matches.
+- Targeted test: `npm run test:run -- src/config/__tests__/appPaths.test.ts src/config/__tests__/testUrl.test.ts` — exit 0; 2 files / 3 tests passed, covering app-root and `/identity-admin/` path semantics on the standard origin.
+- Quality/build: `npm run quality` — exit 0; 20 files / 110 tests passed; coverage 43.89% statements, 39.22% branches, 31.83% functions, 44.63% lines; build passed.
+- Browser: `https://sso.dev.local/` visibly served the GOSSO Admin login page and redirected to the standard-origin `/login?...` route; direct `https://sso.dev.local/identity-admin/` loaded the existing “页面未找到” fallback. Authenticated browser flows were not run.
 
 Automated checks do not replace authenticated browser regression. Entries remain `not-run` until the corresponding route, permission state, responsive width and light/dark mode have captured evidence.
 
