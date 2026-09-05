@@ -122,7 +122,7 @@ export function Select({
   ...props
 }: SelectProps) {
   return (
-    <div className="relative min-w-0">
+    <div className="select-control relative min-w-0">
       <select
         {...props}
         data-slot="select-trigger"

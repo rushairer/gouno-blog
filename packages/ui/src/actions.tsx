@@ -81,7 +81,7 @@ export function Button({
           {icon}
         </span>
       ) : null}
-      {children}
+      <span className="btn__label">{children}</span>
       {!loading && icon && iconPosition === "right" ? (
         <span className="btn__icon" data-icon="inline-end" aria-hidden="true">
           {icon}
@@ -108,7 +108,9 @@ export function IconButton({
       size="icon"
       aria-label={label}
       title={label}
-    />
+    >
+      <span className="icon-button__icon">{props.icon}</span>
+    </Button>
   );
 }
 interface LinkAdapterProps extends AnchorHTMLAttributes<HTMLAnchorElement> {
@@ -168,7 +170,7 @@ export function ButtonLink({
             {icon}
           </span>
         ) : null}
-        {children}
+        <span className="btn__label">{children}</span>
         {icon && iconPosition === "right" ? (
           <span className="btn__icon" data-icon="inline-end" aria-hidden="true">
             {icon}

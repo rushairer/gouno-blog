@@ -116,14 +116,23 @@ export function StatusBadge({
     )[status] ||
     status;
   return tone ? (
-    <Badge tone={tone} className={cn("status-pill", className)}>
+    <Badge
+      tone={tone}
+      className={cn(
+        `status-badge status-badge--${status} status-pill`,
+        className,
+      )}
+    >
       {text}
     </Badge>
   ) : (
     <StatusIndicator
       status={status}
       label={text}
-      className={cn("status-pill", className)}
+      className={cn(
+        `status-badge status-badge--${status} status-pill`,
+        className,
+      )}
     />
   );
 }
