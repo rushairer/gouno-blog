@@ -1,7 +1,7 @@
 import { cloneElement, forwardRef, isValidElement, useId } from "react";
 import type React from "react";
 import { ChevronDown, Search } from "lucide-react";
-import { classes } from "./classes";
+import { cn } from "../../lib/utils";
 
 export function FormActions({
   children,
@@ -10,9 +10,9 @@ export function FormActions({
 }: React.HTMLAttributes<HTMLDivElement> & { surface?: boolean }) {
   return (
     <div
-      className={classes(
-        "form-actions",
-        surface && "form-actions--surface",
+      className={cn(
+        "form-actions flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border/50",
+        surface && "form-actions--surface bg-card/40 p-4 rounded-lg",
         className,
       )}
     >
@@ -25,23 +25,25 @@ export function FormLayout({
   className = "",
   ...props
 }: React.FormHTMLAttributes<HTMLFormElement>) {
-  return <form className={classes("form-layout", className)} {...props} />;
+  return <form className={cn("form-layout space-y-4", className)} {...props} />;
 }
 
 export function OverlayForm({
   children,
   actions,
   className = "",
-  actionClassName = "drawer-actions",
+  actionClassName = "",
   ...props
 }: React.FormHTMLAttributes<HTMLFormElement> & {
   actions: React.ReactNode;
   actionClassName?: string;
 }) {
   return (
-    <FormLayout className={classes("drawer-form", className)} {...props}>
+    <FormLayout className={cn("drawer-form space-y-4", className)} {...props}>
       {children}
-      <FormActions className={actionClassName}>{actions}</FormActions>
+      <FormActions className={cn("mt-6", actionClassName)}>
+        {actions}
+      </FormActions>
     </FormLayout>
   );
 }
@@ -51,13 +53,19 @@ export function FormGrid({
   columns = 2,
   className = "",
 }: React.HTMLAttributes<HTMLDivElement> & { columns?: 1 | 2 | 3 | 4 | 5 }) {
+  const colClass =
+    columns === 1
+      ? "grid-cols-1"
+      : columns === 3
+        ? "grid-cols-1 md:grid-cols-3"
+        : columns === 4
+          ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-4"
+          : columns === 5
+            ? "grid-cols-1 md:grid-cols-3 lg:grid-cols-5"
+            : "grid-cols-1 md:grid-cols-2";
+
   return (
-    <div
-      className={classes("form-grid", className)}
-      style={{ "--form-columns": columns } as React.CSSProperties}
-    >
-      {children}
-    </div>
+    <div className={cn("grid gap-4", colClass, className)}>{children}</div>
   );
 }
 
@@ -81,9 +89,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   return (
     <input
       ref={ref}
-      className={classes(
-        "ui-control",
-        size === "compact" && "ui-control--compact",
+      className={cn(
+        "flex w-full rounded-[var(--radius-control,6px)] border border-border bg-input px-3 py-1.5 text-sm text-foreground shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50",
+        size === "compact" ? "ui-control--compact h-8 text-xs px-2.5" : "h-9",
+        invalid && "border-destructive focus-visible:ring-destructive/30",
         className,
       )}
       aria-invalid={invalid || undefined}
@@ -96,15 +105,17 @@ export const Textarea = forwardRef<
   HTMLTextAreaElement,
   React.TextareaHTMLAttributes<HTMLTextAreaElement> & ControlProps
 >(function Textarea(
-  { className = "", size = "regular", invalid, ...props },
+  { className = "", size = "regular", invalid, rows = 4, ...props },
   ref,
 ) {
   return (
     <textarea
       ref={ref}
-      className={classes(
-        "ui-control",
-        size === "compact" && "ui-control--compact",
+      rows={rows}
+      className={cn(
+        "flex min-h-[80px] w-full rounded-[var(--radius-control,6px)] border border-border bg-input px-3 py-2 text-sm text-foreground shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50",
+        size === "compact" ? "ui-control--compact text-xs p-2" : "",
+        invalid && "border-destructive focus-visible:ring-destructive/30",
         className,
       )}
       aria-invalid={invalid || undefined}
@@ -115,23 +126,31 @@ export const Textarea = forwardRef<
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
   function Select(
-    { className = "", size = "regular", invalid, ...props },
+    { className = "", size = "regular", invalid, children, ...props },
     ref,
   ) {
     return (
-      <span className="select-control">
+      <div className="select-control relative flex items-center w-full">
         <select
           ref={ref}
-          className={classes(
-            "ui-control",
-            size === "compact" && "ui-control--compact",
+          className={cn(
+            "flex w-full appearance-none rounded-[var(--radius-control,6px)] border border-border bg-input px-3 py-1.5 pr-8 text-sm text-foreground shadow-sm transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50",
+            size === "compact"
+              ? "ui-control--compact h-8 text-xs px-2.5"
+              : "h-9",
+            invalid && "border-destructive focus-visible:ring-destructive/30",
             className,
           )}
           aria-invalid={invalid || undefined}
           {...props}
+        >
+          {children}
+        </select>
+        <ChevronDown
+          className="pointer-events-none absolute right-3 h-4 w-4 text-muted-foreground"
+          aria-hidden="true"
         />
-        <ChevronDown aria-hidden="true" />
-      </span>
+      </div>
     );
   },
 );
@@ -143,7 +162,10 @@ export const Checkbox = forwardRef<
   return (
     <input
       ref={ref}
-      className={classes("ui-checkbox", className)}
+      className={cn(
+        "h-4 w-4 rounded-[4px] border border-border bg-input text-primary accent-primary focus:ring-2 focus:ring-ring focus:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
+        className,
+      )}
       type="checkbox"
       {...props}
     />
@@ -157,7 +179,10 @@ export const Radio = forwardRef<
   return (
     <input
       ref={ref}
-      className={classes("ui-radio", className)}
+      className={cn(
+        "h-4 w-4 rounded-full border border-border bg-input text-primary accent-primary focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+        className,
+      )}
       type="radio"
       {...props}
     />
@@ -171,19 +196,26 @@ export const Switch = forwardRef<
   }
 >(function Switch({ className = "", label, id, ...props }, ref) {
   return (
-    <label className={classes("ui-switch-label", className)}>
+    <label
+      className={cn(
+        "inline-flex items-center gap-2 cursor-pointer select-none",
+        className,
+      )}
+    >
       <input
         ref={ref}
         id={id}
-        className="ui-switch"
+        className="sr-only peer"
         type="checkbox"
         role="switch"
         {...props}
       />
-      <span className="ui-switch__track" aria-hidden="true">
-        <span className="ui-switch__thumb" />
-      </span>
-      {label ? <span className="ui-switch__text">{label}</span> : null}
+      <div className="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent bg-zinc-700 transition-colors duration-200 ease-in-out peer-checked:bg-primary peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-background peer-disabled:cursor-not-allowed peer-disabled:opacity-50">
+        <span className="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out translate-x-0 peer-checked:translate-x-4" />
+      </div>
+      {label ? (
+        <span className="text-sm font-medium text-foreground">{label}</span>
+      ) : null}
     </label>
   );
 });
@@ -196,7 +228,13 @@ export function CheckboxField({
   children: React.ReactNode;
 }) {
   return (
-    <label className={classes("checkbox-field", className)} {...props}>
+    <label
+      className={cn(
+        "inline-flex items-center gap-2 text-sm text-foreground cursor-pointer select-none",
+        className,
+      )}
+      {...props}
+    >
       {children}
     </label>
   );
@@ -231,38 +269,35 @@ export function Field({
   }>(children)
     ? cloneElement(children, {
         id: children.props.id || controlID,
-        className: classes("input-field", children.props.className),
         required: children.props.required ?? required,
         "aria-describedby": children.props["aria-describedby"] || descriptionID,
         "aria-invalid":
           children.props["aria-invalid"] || Boolean(error) || undefined,
       })
     : children;
+
   return (
-    <div
-      className={classes(
-        "field",
-        Boolean(error) && "field--invalid",
-        className,
-      )}
-    >
-      <label className="field__label" htmlFor={controlID}>
+    <div className={cn("field space-y-1.5", className)}>
+      <label
+        className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider"
+        htmlFor={controlID}
+      >
         <span>{label}</span>
         {required ? (
-          <span className="field__required" aria-hidden="true">
+          <span className="text-destructive ml-1" aria-hidden="true">
             *
           </span>
         ) : null}
       </label>
       {control}
       {error ? (
-        <span className="field__error" id={descriptionID}>
+        <p className="text-xs text-destructive font-medium" id={descriptionID}>
           {error}
-        </span>
+        </p>
       ) : hint ? (
-        <span className="field__hint" id={descriptionID}>
+        <p className="text-xs text-muted-foreground" id={descriptionID}>
           {hint}
-        </span>
+        </p>
       ) : null}
     </div>
   );
@@ -274,15 +309,12 @@ export function SearchField({
   ...props
 }: InputProps) {
   return (
-    <div
-      className={classes(
-        "search-field",
-        size === "regular" && "search-field--regular",
-        className,
-      )}
-    >
-      <Search aria-hidden="true" />
-      <Input type="search" size={size} {...props} />
+    <div className={cn("relative flex items-center w-full", className)}>
+      <Search
+        className="pointer-events-none absolute left-3 h-4 w-4 text-muted-foreground"
+        aria-hidden="true"
+      />
+      <Input type="search" size={size} className="pl-9" {...props} />
     </div>
   );
 }

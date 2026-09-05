@@ -1062,14 +1062,14 @@
   }
 
   .sudo-banner--inactive {
-    border: 1px solid var(--status-warning-border, #f59e0b);
-    background: var(--status-warning-subtle, rgba(245, 158, 11, 0.1));
+    border: 1px solid var(--status-warning-border);
+    background: var(--status-warning-subtle);
     color: var(--ds-text-primary);
   }
 
   .sudo-banner--active {
-    border: 1px solid var(--status-success-border, #10b981);
-    background: var(--status-success-subtle, rgba(16, 185, 129, 0.08));
+    border: 1px solid var(--status-success-border);
+    background: var(--status-success-subtle);
     color: var(--ds-text-primary);
     padding: 10px 16px;
   }
@@ -1092,11 +1092,11 @@
   }
 
   .sudo-banner__icon--warning {
-    color: var(--status-warning-text, #f59e0b);
+    color: var(--status-warning-text);
   }
 
   .sudo-banner__icon--active {
-    color: var(--status-success-text, #10b981);
+    color: var(--status-success-text);
   }
 
   .sudo-banner__icon svg {
@@ -1130,8 +1130,8 @@
 
   .sudo-banner__badge {
     font-size: var(--font-size-xs, 12px);
-    color: var(--status-success-text, #10b981);
-    background: rgba(16, 185, 129, 0.15);
+    color: var(--status-success-text);
+    background: var(--status-success-subtle);
     padding: 2px 8px;
     border-radius: var(--radius-pill, 9999px);
     font-weight: 500;
@@ -1180,7 +1180,7 @@
     align-items: center;
     justify-content: center;
     padding: 24px;
-    background: rgba(10, 15, 26, 0.65);
+    background: var(--background);
     backdrop-filter: blur(8px);
     border-radius: var(--radius-panel);
   }
@@ -1210,12 +1210,12 @@
     width: 52px;
     height: 52px;
     border-radius: 50%;
-    background: var(--status-warning-subtle, rgba(245, 158, 11, 0.12));
-    color: var(--status-warning-text, #f59e0b);
+    background: var(--status-warning-subtle);
+    color: var(--status-warning-text);
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid var(--status-warning-border, #f59e0b);
+    border: 1px solid var(--status-warning-border);
   }
 
   .sudo-gate-icon svg {
@@ -1255,9 +1255,9 @@
     gap: 8px;
     font-size: 12.5px;
     font-weight: 500;
-    color: var(--status-success-text, #10b981);
-    background: var(--status-success-subtle, rgba(16, 185, 129, 0.1));
-    border: 1px solid var(--status-success-border, #10b981);
+    color: var(--status-success-text);
+    background: var(--status-success-subtle);
+    border: 1px solid var(--status-success-border);
     padding: 4px 12px;
     border-radius: var(--radius-pill, 9999px);
     margin-bottom: 16px;

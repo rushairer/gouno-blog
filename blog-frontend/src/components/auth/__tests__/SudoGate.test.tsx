@@ -15,17 +15,23 @@ describe("SudoGate", () => {
 
   it("renders locked overlay when Sudo is not active", async () => {
     const user = userEvent.setup();
-    const openPopupSpy = vi.spyOn(mfaModule, "openStepUpPopup").mockImplementation((_, onSuccess) => {
-      onSuccess?.();
-      return true;
-    });
+    const openPopupSpy = vi
+      .spyOn(mfaModule, "openStepUpPopup")
+      .mockImplementation((_, onSuccess) => {
+        onSuccess?.();
+        return true;
+      });
 
     render(
-      <SudoGate title="受保护表单" description="需要验证" actionLabel="立即解锁">
+      <SudoGate
+        title="受保护表单"
+        description="需要验证"
+        actionLabel="立即解锁"
+      >
         <form>
           <input data-testid="secret-input" defaultValue="secret_val" />
         </form>
-      </SudoGate>
+      </SudoGate>,
     );
 
     expect(screen.getByText("受保护表单")).toBeInTheDocument();
@@ -43,7 +49,7 @@ describe("SudoGate", () => {
     render(
       <SudoGate>
         <div data-testid="unlocked-content">可编辑的内容</div>
-      </SudoGate>
+      </SudoGate>,
     );
 
     expect(screen.getByTestId("unlocked-content")).toBeInTheDocument();

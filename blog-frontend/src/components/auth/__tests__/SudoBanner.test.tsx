@@ -15,10 +15,12 @@ describe("SudoBanner", () => {
 
   it("renders inactive banner with activation button when Sudo is expired", async () => {
     const user = userEvent.setup();
-    const openPopupSpy = vi.spyOn(mfaModule, "openStepUpPopup").mockImplementation((_, onSuccess) => {
-      onSuccess?.();
-      return true;
-    });
+    const openPopupSpy = vi
+      .spyOn(mfaModule, "openStepUpPopup")
+      .mockImplementation((_, onSuccess) => {
+        onSuccess?.();
+        return true;
+      });
 
     render(<SudoBanner />);
 
@@ -37,6 +39,8 @@ describe("SudoBanner", () => {
 
     expect(screen.getByText("Sudo 安全提权已激活")).toBeInTheDocument();
     expect(screen.getByText(/剩余有效时间约/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "立即激活 Sudo 提权" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "立即激活 Sudo 提权" }),
+    ).not.toBeInTheDocument();
   });
 });

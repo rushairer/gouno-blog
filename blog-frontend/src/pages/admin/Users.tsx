@@ -244,134 +244,140 @@ export default function AdminUsers() {
             actionLabel="解锁以管理成员权限"
           >
             <Panel>
-            <TableContainer>
-              <table className="admin-table member-table">
-                <thead>
-                  <tr>
-                    <th>成员</th>
-                    <th>账号 ID</th>
-                    <th>Blog 角色</th>
-                    <th>状态</th>
-                    <th>操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {members.map((member) => {
-                    const busy = saving === member.principal.id;
-                    const isOwner = member.roles.includes("owner");
-                    return (
-                      <tr key={member.principal.id}>
-                        <td>
-                          <div className="member-identity">
-                            <span className="member-avatar" aria-hidden="true">
-                              {initials(member)}
-                            </span>
-                            <div>
-                              <strong>{memberName(member)}</strong>
-                              {member.principal.email ? (
-                                <span className="member-identity-sub">
-                                  {member.principal.email}
-                                </span>
-                              ) : null}
+              <TableContainer>
+                <table className="admin-table member-table">
+                  <thead>
+                    <tr>
+                      <th>成员</th>
+                      <th>账号 ID</th>
+                      <th>Blog 角色</th>
+                      <th>状态</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {members.map((member) => {
+                      const busy = saving === member.principal.id;
+                      const isOwner = member.roles.includes("owner");
+                      return (
+                        <tr key={member.principal.id}>
+                          <td>
+                            <div className="member-identity">
+                              <span
+                                className="member-avatar"
+                                aria-hidden="true"
+                              >
+                                {initials(member)}
+                              </span>
+                              <div>
+                                <strong>{memberName(member)}</strong>
+                                {member.principal.email ? (
+                                  <span className="member-identity-sub">
+                                    {member.principal.email}
+                                  </span>
+                                ) : null}
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td>
-                          <Button
-                            variant="ghost"
-                            size="compact"
-                            className="member-id-copy"
-                            title={`点击复制完整 Subject ID: ${member.principal.subject}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              void navigator.clipboard.writeText(
-                                member.principal.subject,
-                              );
-                              notify(
-                                `已复制完整 Subject ID: ${member.principal.subject}`,
-                              );
-                            }}
-                            icon={<Copy size={13} />}
-                          >
-                            {member.principal.subject.slice(0, 8)}
-                          </Button>
-                        </td>
-                        <td>
-                          <div className="member-roles">
-                            {member.roles.length ? (
-                              member.roles.map((role) => (
-                                <Badge
-                                  key={role}
-                                  tone={role === "owner" ? "brand" : "neutral"}
-                                >
-                                  {roleLabels[role] || role}
-                                </Badge>
-                              ))
-                            ) : (
-                              <span className="muted-copy">尚未授予角色</span>
-                            )}
-                          </div>
-                        </td>
-                        <td>
-                          <Badge
-                            tone={membershipTone(member.membership_status)}
-                          >
-                            {membershipLabel(member.membership_status)}
-                          </Badge>
-                        </td>
-                        <td>
-                          <div className="table-actions">
-                            <IconButton
-                              label="编辑成员与权限"
-                              icon={<KeyRound />}
-                              disabled={busy}
-                              onClick={() => setEditing(member)}
-                            />
-                            {!isOwner ? (
+                          </td>
+                          <td>
+                            <Button
+                              variant="ghost"
+                              size="compact"
+                              className="member-id-copy"
+                              title={`点击复制完整 Subject ID: ${member.principal.subject}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void navigator.clipboard.writeText(
+                                  member.principal.subject,
+                                );
+                                notify(
+                                  `已复制完整 Subject ID: ${member.principal.subject}`,
+                                );
+                              }}
+                              icon={<Copy size={13} />}
+                            >
+                              {member.principal.subject.slice(0, 8)}
+                            </Button>
+                          </td>
+                          <td>
+                            <div className="member-roles">
+                              {member.roles.length ? (
+                                member.roles.map((role) => (
+                                  <Badge
+                                    key={role}
+                                    tone={
+                                      role === "owner" ? "brand" : "neutral"
+                                    }
+                                  >
+                                    {roleLabels[role] || role}
+                                  </Badge>
+                                ))
+                              ) : (
+                                <span className="muted-copy">尚未授予角色</span>
+                              )}
+                            </div>
+                          </td>
+                          <td>
+                            <Badge
+                              tone={membershipTone(member.membership_status)}
+                            >
+                              {membershipLabel(member.membership_status)}
+                            </Badge>
+                          </td>
+                          <td>
+                            <div className="table-actions">
                               <IconButton
-                                label="移交所有权"
-                                icon={<Crown />}
-                                disabled={
-                                  busy || member.membership_status !== "active"
-                                }
-                                onClick={() =>
-                                  setConfirm({ member, action: "transfer" })
-                                }
-                              />
-                            ) : null}
-                            {isOwner ? null : member.membership_status ===
-                              "suspended" ? (
-                              <IconButton
-                                label="恢复成员"
-                                icon={<RotateCcw />}
+                                label="编辑成员与权限"
+                                icon={<KeyRound />}
                                 disabled={busy}
-                                onClick={() =>
-                                  setConfirm({ member, action: "restore" })
-                                }
+                                onClick={() => setEditing(member)}
                               />
-                            ) : (
-                              <IconButton
-                                variant="danger"
-                                label="暂停成员"
-                                icon={<Ban />}
-                                disabled={busy}
-                                onClick={() =>
-                                  setConfirm({ member, action: "suspend" })
-                                }
-                              />
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </TableContainer>
-          </Panel>
-        </SudoGate>
-      )}
-    </ContentStack>
+                              {!isOwner ? (
+                                <IconButton
+                                  label="移交所有权"
+                                  icon={<Crown />}
+                                  disabled={
+                                    busy ||
+                                    member.membership_status !== "active"
+                                  }
+                                  onClick={() =>
+                                    setConfirm({ member, action: "transfer" })
+                                  }
+                                />
+                              ) : null}
+                              {isOwner ? null : member.membership_status ===
+                                "suspended" ? (
+                                <IconButton
+                                  label="恢复成员"
+                                  icon={<RotateCcw />}
+                                  disabled={busy}
+                                  onClick={() =>
+                                    setConfirm({ member, action: "restore" })
+                                  }
+                                />
+                              ) : (
+                                <IconButton
+                                  variant="danger"
+                                  label="暂停成员"
+                                  icon={<Ban />}
+                                  disabled={busy}
+                                  onClick={() =>
+                                    setConfirm({ member, action: "suspend" })
+                                  }
+                                />
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </TableContainer>
+            </Panel>
+          </SudoGate>
+        )}
+      </ContentStack>
 
       <Modal
         open={Boolean(editing)}

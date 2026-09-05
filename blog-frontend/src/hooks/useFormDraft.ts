@@ -50,7 +50,10 @@ export function useFormDraft<T>(
   const save = useCallback(
     (customValue?: T) => {
       if (!enabled) return;
-      setFormDraft(key, customValue !== undefined ? customValue : valueRef.current);
+      setFormDraft(
+        key,
+        customValue !== undefined ? customValue : valueRef.current,
+      );
     },
     [enabled, key],
   );
@@ -64,7 +67,12 @@ export function useFormDraft<T>(
     if (draft !== null) {
       if (setValue) {
         setValue((prev) => {
-          if (typeof prev === "object" && prev !== null && typeof draft === "object" && draft !== null) {
+          if (
+            typeof prev === "object" &&
+            prev !== null &&
+            typeof draft === "object" &&
+            draft !== null
+          ) {
             return { ...prev, ...draft };
           }
           return draft;

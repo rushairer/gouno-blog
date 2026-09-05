@@ -1,34 +1,29 @@
-import type React from "react";
+import React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../../lib/utils";
 
-export type BadgeTone =
-  | "brand"
-  | "primary"
-  | "secondary"
-  | "neutral"
-  | "success"
-  | "warning"
-  | "danger"
-  | "destructive";
-
 export const badgeVariants = cva(
-  "badge inline-flex items-center whitespace-nowrap border text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2",
+  "inline-flex items-center gap-1.5 whitespace-nowrap border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
   {
     variants: {
       tone: {
-        brand: "badge--brand",
-        primary: "badge--brand",
-        secondary: "badge--neutral",
-        neutral: "badge--neutral",
-        success: "badge--success",
-        warning: "badge--warning",
-        danger: "badge--danger",
-        destructive: "badge--danger",
+        primary:
+          "border-transparent bg-primary text-primary-foreground shadow-sm hover:bg-primary/80",
+        brand:
+          "border-transparent bg-primary text-primary-foreground shadow-sm hover:bg-primary/80",
+        secondary:
+          "border-border bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        neutral:
+          "border-border bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        success: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
+        warning: "border-amber-500/30 bg-amber-500/15 text-amber-300",
+        danger: "border-red-500/30 bg-red-500/15 text-red-300",
+        destructive: "border-red-500/30 bg-red-500/15 text-red-300",
+        info: "border-sky-500/30 bg-sky-500/15 text-sky-300",
       },
       pill: {
-        true: "badge--pill",
-        false: "",
+        true: "rounded-full",
+        false: "rounded-[var(--radius-control,4px)]",
       },
     },
     defaultVariants: {
@@ -38,46 +33,68 @@ export const badgeVariants = cva(
   },
 );
 
+export type BadgeTone =
+  | "primary"
+  | "secondary"
+  | "brand"
+  | "success"
+  | "warning"
+  | "danger"
+  | "destructive"
+  | "neutral"
+  | "info";
+
 export interface BadgeProps
   extends
     React.HTMLAttributes<HTMLSpanElement>,
     VariantProps<typeof badgeVariants> {
   tone?: BadgeTone;
   pill?: boolean;
-  children: React.ReactNode;
 }
 
 export function Badge({
   children,
   tone = "neutral",
   pill = false,
-  className = "",
+  title,
+  className,
   ...props
 }: BadgeProps) {
   return (
-    <span className={cn(badgeVariants({ tone, pill }), className)} {...props}>
+    <span
+      className={cn(
+        "badge",
+        tone && `badge--${tone}`,
+        badgeVariants({ tone, pill }),
+        className,
+      )}
+      title={title}
+      {...props}
+    >
       {children}
     </span>
   );
 }
 
+/** @deprecated Use `Badge` instead. */
+export const Tag = Badge;
+
 export type PostStatus = "published" | "draft" | "scheduled" | "hidden";
 
-const statusTones: Record<string, BadgeTone> = {
-  published: "success",
-  draft: "neutral",
-  scheduled: "warning",
-  hidden: "danger",
-};
-
 export function StatusBadge({
-  status = "draft",
-  className = "",
+  children,
+  status,
   label,
+  tone,
+  compact = false,
+  className = "",
 }: {
+  children?: React.ReactNode;
   status?: PostStatus | string;
-  className?: string;
   label?: React.ReactNode;
+  tone?: "success" | "danger" | "warning" | "neutral";
+  compact?: boolean;
+  className?: string;
 }) {
   const normalizedStatus = status || "draft";
   const defaultLabels: Record<string, string> = {
@@ -86,16 +103,42 @@ export function StatusBadge({
     scheduled: "定时发布",
     hidden: "已隐藏",
   };
+
+  const resolvedTone: "success" | "danger" | "warning" | "neutral" =
+    tone ||
+    (normalizedStatus === "published" || normalizedStatus === "active"
+      ? "success"
+      : normalizedStatus === "scheduled" || normalizedStatus === "draft"
+        ? "warning"
+        : normalizedStatus === "hidden"
+          ? "neutral"
+          : "neutral");
+
+  const displayContent =
+    children || label || defaultLabels[normalizedStatus] || normalizedStatus;
+
   return (
     <Badge
-      tone={statusTones[normalizedStatus] || "neutral"}
+      tone={resolvedTone}
+      pill
       className={cn(
         "status-badge",
         `status-badge--${normalizedStatus}`,
+        compact && "px-2 py-0 text-[11px]",
         className,
       )}
     >
-      {label || defaultLabels[normalizedStatus] || normalizedStatus}
+      <span
+        className={cn(
+          "inline-block h-1.5 w-1.5 rounded-full",
+          resolvedTone === "success" && "bg-emerald-400",
+          resolvedTone === "danger" && "bg-red-400",
+          resolvedTone === "warning" && "bg-amber-400",
+          resolvedTone === "neutral" && "bg-zinc-400",
+        )}
+        aria-hidden="true"
+      />
+      {displayContent}
     </Badge>
   );
 }

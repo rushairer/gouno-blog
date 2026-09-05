@@ -1,9 +1,7 @@
-import { forwardRef } from "react";
-import type React from "react";
-import { Link } from "react-router-dom";
+import React, { forwardRef } from "react";
+import { Link, type LinkProps } from "react-router-dom";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../../lib/utils";
-import { classes } from "./classes";
 
 export type ButtonVariant =
   | "primary"
@@ -15,10 +13,6 @@ export type ButtonVariant =
   | "destructive"
   | "outline";
 
-/**
- * Canonical sizes are sm/default/lg/icon. The legacy regular/base/compact
- * aliases remain supported while feature code migrates to the shared contract.
- */
 export type ButtonSize =
   | "sm"
   | "default"
@@ -27,30 +21,38 @@ export type ButtonSize =
   | "regular"
   | "base"
   | "compact";
+
 export type ButtonIconPosition = "left" | "right";
 
 export const buttonVariants = cva(
-  "btn inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-control)] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer",
+  "btn inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-control,6px)] text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer active:scale-[0.985]",
   {
     variants: {
       variant: {
-        primary: "btn-primary",
-        default: "btn-primary",
-        secondary: "btn-secondary",
-        danger: "btn-danger",
-        destructive: "btn-danger",
-        ghost: "btn-ghost",
-        outline: "btn-secondary",
-        link: "btn-link",
+        default:
+          "btn-primary bg-primary text-primary-foreground shadow-sm hover:bg-blue-600 active:bg-blue-700",
+        primary:
+          "btn-primary bg-primary text-primary-foreground shadow-sm hover:bg-blue-600 active:bg-blue-700",
+        destructive:
+          "btn-danger border border-destructive/30 bg-destructive/15 text-red-200 hover:bg-destructive/25 active:bg-destructive/35",
+        danger:
+          "btn-danger border border-destructive/30 bg-destructive/15 text-red-200 hover:bg-destructive/25 active:bg-destructive/35",
+        outline:
+          "btn-secondary border border-border bg-secondary text-foreground hover:bg-zinc-800 hover:border-zinc-600 active:bg-zinc-900",
+        secondary:
+          "btn-secondary border border-border bg-secondary text-foreground hover:bg-zinc-800 hover:border-zinc-600 active:bg-zinc-900",
+        ghost:
+          "btn-ghost text-muted-foreground hover:bg-accent hover:text-accent-foreground active:bg-zinc-800",
+        link: "btn-link text-primary underline-offset-4 hover:underline p-0 h-auto font-normal",
       },
       size: {
-        regular: "btn--default",
-        base: "btn--default",
-        default: "btn--default",
-        compact: "btn--compact",
-        sm: "btn--compact",
-        lg: "btn--large rounded-lg",
-        icon: "btn--icon",
+        default: "h-9 px-4 py-2",
+        base: "h-9 px-4 py-2",
+        regular: "h-9 px-4 py-2",
+        sm: "btn-sm btn--compact h-8 rounded-[4px] px-3 text-xs",
+        compact: "btn-sm btn--compact h-8 rounded-[4px] px-3 text-xs",
+        lg: "h-11 rounded-lg px-8 text-base",
+        icon: "h-9 w-9 p-0",
       },
     },
     defaultVariants: {
@@ -60,64 +62,25 @@ export const buttonVariants = cva(
   },
 );
 
-export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> &
-  VariantProps<typeof buttonVariants> & {
-    variant?: ButtonVariant;
-    size?: ButtonSize;
-    loading?: boolean;
-    /** Rendered in the shared, fixed-size icon slot. */
-    icon?: React.ReactNode;
-    iconPosition?: ButtonIconPosition;
-  };
-
-export type ButtonLinkProps = React.ComponentPropsWithoutRef<typeof Link> &
-  VariantProps<typeof buttonVariants> & {
-    variant?: ButtonVariant;
-    size?: ButtonSize;
-    disabled?: boolean;
-    /** Rendered in the shared, fixed-size icon slot. */
-    icon?: React.ReactNode;
-    iconPosition?: ButtonIconPosition;
-  };
-
-export type IconButtonVariant =
-  | "secondary"
-  | "ghost"
-  | "danger"
-  | "primary"
-  | "destructive"
-  | "outline";
-
-export type IconButtonProps = Omit<
-  React.ButtonHTMLAttributes<HTMLButtonElement>,
-  "children"
-> & {
-  /** Accessible name for an icon-only action. */
-  label: string;
-  /** Rendered in the shared, fixed-size icon slot. */
-  icon: React.ReactNode;
+export interface ButtonProps
+  extends
+    React.ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {
+  variant?: ButtonVariant;
   size?: ButtonSize;
-  variant?: IconButtonVariant;
   loading?: boolean;
-};
+  icon?: React.ReactNode;
+  iconPosition?: ButtonIconPosition;
+}
 
-export type IconButtonLinkProps = Omit<
-  React.ComponentPropsWithoutRef<typeof Link>,
-  "children"
-> & {
-  /** Accessible name for an icon-only link. */
-  label: string;
-  /** Rendered in the shared, fixed-size icon slot. */
-  icon: React.ReactNode;
+export interface ButtonLinkProps
+  extends Omit<LinkProps, "to">, VariantProps<typeof buttonVariants> {
+  to: string;
+  variant?: ButtonVariant;
   size?: ButtonSize;
-  variant?: IconButtonVariant;
+  icon?: React.ReactNode;
+  iconPosition?: ButtonIconPosition;
   disabled?: boolean;
-};
-
-function iconButtonSizeClass(size: ButtonSize) {
-  if (size === "compact" || size === "sm") return "icon-button--compact";
-  if (size === "lg") return "icon-button--large";
-  return "icon-button--default";
 }
 
 export function buttonClassName({
@@ -148,23 +111,30 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     },
     ref,
   ) {
+    const isDisabled = disabled || loading;
     return (
       <button
         ref={ref}
         type={type}
-        className={buttonClassName({
-          variant,
-          size,
-          className: classes(loading && "is-loading", className),
-        })}
-        disabled={disabled || loading}
+        className={cn(
+          buttonVariants({ variant, size }),
+          loading && "cursor-wait opacity-80",
+          className,
+        )}
+        disabled={isDisabled}
         aria-busy={loading || undefined}
         {...props}
       >
         {loading ? (
-          <span className="btn__spinner shrink-0" aria-hidden="true" />
+          <span
+            className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent shrink-0"
+            aria-hidden="true"
+          />
         ) : icon && iconPosition === "left" ? (
-          <span className="btn__icon shrink-0" aria-hidden="true">
+          <span
+            className="btn__icon inline-flex shrink-0 items-center"
+            aria-hidden="true"
+          >
             {icon}
           </span>
         ) : null}
@@ -172,7 +142,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           <span className="btn__label min-w-0">{children}</span>
         ) : null}
         {!loading && icon && iconPosition === "right" ? (
-          <span className="btn__icon shrink-0" aria-hidden="true">
+          <span
+            className="btn__icon inline-flex shrink-0 items-center"
+            aria-hidden="true"
+          >
             {icon}
           </span>
         ) : null}
@@ -192,6 +165,7 @@ export const ButtonLink = forwardRef<HTMLAnchorElement, ButtonLinkProps>(
       iconPosition = "left",
       children,
       onClick,
+      to,
       ...props
     },
     ref,
@@ -199,11 +173,12 @@ export const ButtonLink = forwardRef<HTMLAnchorElement, ButtonLinkProps>(
     return (
       <Link
         ref={ref}
-        className={buttonClassName({
-          variant,
-          size,
-          className: classes(disabled && "is-disabled", className),
-        })}
+        to={to}
+        className={cn(
+          buttonVariants({ variant, size }),
+          disabled && "pointer-events-none opacity-50",
+          className,
+        )}
         aria-disabled={disabled ? "true" : undefined}
         tabIndex={disabled ? -1 : undefined}
         onClick={(event) => {
@@ -216,7 +191,10 @@ export const ButtonLink = forwardRef<HTMLAnchorElement, ButtonLinkProps>(
         {...props}
       >
         {icon && iconPosition === "left" ? (
-          <span className="btn__icon shrink-0" aria-hidden="true">
+          <span
+            className="btn__icon inline-flex shrink-0 items-center"
+            aria-hidden="true"
+          >
             {icon}
           </span>
         ) : null}
@@ -224,7 +202,10 @@ export const ButtonLink = forwardRef<HTMLAnchorElement, ButtonLinkProps>(
           <span className="btn__label min-w-0">{children}</span>
         ) : null}
         {icon && iconPosition === "right" ? (
-          <span className="btn__icon shrink-0" aria-hidden="true">
+          <span
+            className="btn__icon inline-flex shrink-0 items-center"
+            aria-hidden="true"
+          >
             {icon}
           </span>
         ) : null}
@@ -232,6 +213,34 @@ export const ButtonLink = forwardRef<HTMLAnchorElement, ButtonLinkProps>(
     );
   },
 );
+
+export type IconButtonVariant =
+  | "secondary"
+  | "ghost"
+  | "danger"
+  | "primary"
+  | "destructive"
+  | "outline";
+
+export interface IconButtonProps extends Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  "children"
+> {
+  label: string;
+  icon: React.ReactNode;
+  size?: ButtonSize;
+  variant?: IconButtonVariant;
+  loading?: boolean;
+}
+
+export interface IconButtonLinkProps extends Omit<LinkProps, "children"> {
+  to: string;
+  label: string;
+  icon: React.ReactNode;
+  size?: ButtonSize;
+  variant?: IconButtonVariant;
+  disabled?: boolean;
+}
 
 export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
   function IconButton(
@@ -248,21 +257,22 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
     },
     ref,
   ) {
-    const normalizedVariant =
+    const normalizedVariant: ButtonVariant =
       variant === "destructive"
         ? "danger"
         : variant === "outline"
           ? "secondary"
           : variant;
+
     return (
       <button
         ref={ref}
         type={type}
-        className={classes(
+        className={cn(
           "icon-button",
-          iconButtonSizeClass(size),
           `icon-button--${normalizedVariant}`,
-          loading && "is-loading",
+          buttonVariants({ variant: normalizedVariant, size: "icon" }),
+          loading && "cursor-wait opacity-80",
           className,
         )}
         disabled={disabled || loading}
@@ -272,9 +282,15 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
         {...props}
       >
         {loading ? (
-          <span className="btn__spinner shrink-0" aria-hidden="true" />
+          <span
+            className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent shrink-0"
+            aria-hidden="true"
+          />
         ) : (
-          <span className="icon-button__icon shrink-0" aria-hidden="true">
+          <span
+            className="icon-button__icon inline-flex shrink-0 items-center justify-center"
+            aria-hidden="true"
+          >
             {icon}
           </span>
         )}
@@ -295,24 +311,27 @@ export const IconButtonLink = forwardRef<
     className = "",
     disabled = false,
     onClick,
+    to,
     ...props
   },
   ref,
 ) {
-  const normalizedVariant =
+  const normalizedVariant: ButtonVariant =
     variant === "destructive"
       ? "danger"
       : variant === "outline"
         ? "secondary"
         : variant;
+
   return (
     <Link
       ref={ref}
-      className={classes(
+      to={to}
+      className={cn(
         "icon-button",
-        iconButtonSizeClass(size),
         `icon-button--${normalizedVariant}`,
-        disabled && "is-disabled",
+        buttonVariants({ variant: normalizedVariant, size: "icon" }),
+        disabled && "pointer-events-none opacity-50",
         className,
       )}
       aria-label={label}
@@ -328,7 +347,10 @@ export const IconButtonLink = forwardRef<
       }}
       {...props}
     >
-      <span className="icon-button__icon shrink-0" aria-hidden="true">
+      <span
+        className="icon-button__icon inline-flex shrink-0 items-center justify-center"
+        aria-hidden="true"
+      >
         {icon}
       </span>
     </Link>
@@ -344,8 +366,12 @@ export function ChoiceButton({
   return (
     <Button
       {...props}
-      variant="ghost"
-      className={classes("choice-button", selected && "is-selected", className)}
+      variant={selected ? "primary" : "ghost"}
+      className={cn(
+        "justify-start font-normal",
+        selected && "font-medium shadow-sm",
+        className,
+      )}
       aria-pressed={selected}
     >
       {children}

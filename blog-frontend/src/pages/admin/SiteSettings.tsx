@@ -207,353 +207,353 @@ export default function AdminSiteSettings() {
           onValueChange={(v) => setActiveTab(v as SettingsTab)}
           id="site-settings"
         >
-        <TabList label="站点设置">
-          <Tab value="basic">
-            <FileText aria-hidden="true" />
-            <span>基础信息</span>
-          </Tab>
-          <Tab value="appearance">
-            <ImageIcon aria-hidden="true" />
-            <span>网站图标</span>
-          </Tab>
-          <Tab value="hero">
-            <ImageIcon aria-hidden="true" />
-            <span>首页 Hero</span>
-          </Tab>
-          <Tab value="social">
-            <Mail aria-hidden="true" />
-            <span>公开联系方式</span>
-          </Tab>
-          <Tab value="seo">
-            <Search aria-hidden="true" />
-            <span>SEO</span>
-          </Tab>
-        </TabList>
-        <TabPanel value={activeTab}>
-          {activeTab === "basic" ? (
-            <WorkspacePanel>
-              <PanelHeader
-                title="基础信息"
-                description="站点名称、内容定位和作者展示信息。"
-              />
-              <FormLayout onSubmit={save}>
-                <Field label="站点名称" required>
-                  <Input
-                    required
-                    value={value.site_title}
-                    onChange={(event) =>
-                      field("site_title", event.target.value)
-                    }
-                  />
-                </Field>
-                <Field label="站点描述">
-                  <Textarea
-                    rows={3}
-                    value={value.site_description}
-                    onChange={(event) =>
-                      field("site_description", event.target.value)
-                    }
-                  />
-                </Field>
-                <Field label="页脚文本">
-                  <Input
-                    value={value.footer_text || ""}
-                    onChange={(event) =>
-                      field("footer_text", event.target.value)
-                    }
-                    placeholder="Built with care, code, and curiosity."
-                  />
-                </Field>
-                <Field label="作者名称">
-                  <Input
-                    value={value.author_name}
-                    onChange={(event) =>
-                      field("author_name", event.target.value)
-                    }
-                  />
-                </Field>
-                <Field label="作者简介">
-                  <Textarea
-                    rows={4}
-                    value={value.author_bio}
-                    onChange={(event) =>
-                      field("author_bio", event.target.value)
-                    }
-                  />
-                </Field>
-                <FormActions>
-                  <Button
-                    variant="primary"
-                    type="submit"
-                    loading={saving}
-                    icon={<Save />}
-                  >
-                    {saving ? "正在保存…" : "保存设置"}
-                  </Button>
-                </FormActions>
-              </FormLayout>
-            </WorkspacePanel>
-          ) : null}
-          {activeTab === "hero" ? (
-            <WorkspacePanel>
-              <PanelHeader
-                title="首页 Hero 标语与插图"
-                description="定制前台首页顶部的 Slogan 标语、描述以及右侧系统图。"
-              />
-              <FormLayout onSubmit={save}>
-                <Field
-                  label="Hero 主标题"
-                  hint="支持多行输入，回车换行将在首页以分行呈现。"
-                >
-                  <Textarea
-                    rows={3}
-                    value={value.hero_title ?? ""}
-                    onChange={(event) =>
-                      field("hero_title", event.target.value)
-                    }
-                    placeholder={"记录探索与思考，\n沉淀见解与价值。"}
-                  />
-                </Field>
-                <Field
-                  label="Hero 副标题描述"
-                  hint="对网站主题、关注领域的补充说明。"
-                >
-                  <Textarea
-                    rows={3}
-                    value={value.hero_description ?? ""}
-                    onChange={(event) =>
-                      field("hero_description", event.target.value)
-                    }
-                    placeholder="专注于长期记录、深度思考与知识沉淀。写下探索的过程，也分享有价值的见解。"
-                  />
-                </Field>
-                <Field
-                  label="右侧插图 URL"
-                  hint="可直接输入图片地址，或点击下方按钮上传新图片。"
-                >
-                  <div className="upload-row">
+          <TabList label="站点设置">
+            <Tab value="basic">
+              <FileText aria-hidden="true" />
+              <span>基础信息</span>
+            </Tab>
+            <Tab value="appearance">
+              <ImageIcon aria-hidden="true" />
+              <span>网站图标</span>
+            </Tab>
+            <Tab value="hero">
+              <ImageIcon aria-hidden="true" />
+              <span>首页 Hero</span>
+            </Tab>
+            <Tab value="social">
+              <Mail aria-hidden="true" />
+              <span>公开联系方式</span>
+            </Tab>
+            <Tab value="seo">
+              <Search aria-hidden="true" />
+              <span>SEO</span>
+            </Tab>
+          </TabList>
+          <TabPanel value={activeTab}>
+            {activeTab === "basic" ? (
+              <WorkspacePanel>
+                <PanelHeader
+                  title="基础信息"
+                  description="站点名称、内容定位和作者展示信息。"
+                />
+                <FormLayout onSubmit={save}>
+                  <Field label="站点名称" required>
                     <Input
-                      className="flex-1"
-                      value={value.hero_image_url ?? ""}
+                      required
+                      value={value.site_title}
                       onChange={(event) =>
-                        field("hero_image_url", event.target.value)
+                        field("site_title", event.target.value)
                       }
-                      placeholder="/editorial-system-map.png"
                     />
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept={commonImageAccept}
-                      className="sr-only"
-                      onChange={handleImageUpload}
+                  </Field>
+                  <Field label="站点描述">
+                    <Textarea
+                      rows={3}
+                      value={value.site_description}
+                      onChange={(event) =>
+                        field("site_description", event.target.value)
+                      }
                     />
+                  </Field>
+                  <Field label="页脚文本">
+                    <Input
+                      value={value.footer_text || ""}
+                      onChange={(event) =>
+                        field("footer_text", event.target.value)
+                      }
+                      placeholder="Built with care, code, and curiosity."
+                    />
+                  </Field>
+                  <Field label="作者名称">
+                    <Input
+                      value={value.author_name}
+                      onChange={(event) =>
+                        field("author_name", event.target.value)
+                      }
+                    />
+                  </Field>
+                  <Field label="作者简介">
+                    <Textarea
+                      rows={4}
+                      value={value.author_bio}
+                      onChange={(event) =>
+                        field("author_bio", event.target.value)
+                      }
+                    />
+                  </Field>
+                  <FormActions>
                     <Button
-                      variant="secondary"
-                      type="button"
-                      loading={uploadingImage}
-                      onClick={() => fileInputRef.current?.click()}
-                      icon={<Upload />}
+                      variant="primary"
+                      type="submit"
+                      loading={saving}
+                      icon={<Save />}
                     >
-                      上传插图
+                      {saving ? "正在保存…" : "保存设置"}
                     </Button>
-                  </div>
-                  {value.hero_image_url ? (
-                    <div className="upload-preview-card">
-                      <div className="upload-preview-img-box">
-                        <img
-                          src={value.hero_image_url}
-                          alt="Hero 预览"
-                          className="upload-preview-img"
-                        />
-                      </div>
+                  </FormActions>
+                </FormLayout>
+              </WorkspacePanel>
+            ) : null}
+            {activeTab === "hero" ? (
+              <WorkspacePanel>
+                <PanelHeader
+                  title="首页 Hero 标语与插图"
+                  description="定制前台首页顶部的 Slogan 标语、描述以及右侧系统图。"
+                />
+                <FormLayout onSubmit={save}>
+                  <Field
+                    label="Hero 主标题"
+                    hint="支持多行输入，回车换行将在首页以分行呈现。"
+                  >
+                    <Textarea
+                      rows={3}
+                      value={value.hero_title ?? ""}
+                      onChange={(event) =>
+                        field("hero_title", event.target.value)
+                      }
+                      placeholder={"记录探索与思考，\n沉淀见解与价值。"}
+                    />
+                  </Field>
+                  <Field
+                    label="Hero 副标题描述"
+                    hint="对网站主题、关注领域的补充说明。"
+                  >
+                    <Textarea
+                      rows={3}
+                      value={value.hero_description ?? ""}
+                      onChange={(event) =>
+                        field("hero_description", event.target.value)
+                      }
+                      placeholder="专注于长期记录、深度思考与知识沉淀。写下探索的过程，也分享有价值的见解。"
+                    />
+                  </Field>
+                  <Field
+                    label="右侧插图 URL"
+                    hint="可直接输入图片地址，或点击下方按钮上传新图片。"
+                  >
+                    <div className="upload-row">
+                      <Input
+                        className="flex-1"
+                        value={value.hero_image_url ?? ""}
+                        onChange={(event) =>
+                          field("hero_image_url", event.target.value)
+                        }
+                        placeholder="/editorial-system-map.png"
+                      />
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept={commonImageAccept}
+                        className="sr-only"
+                        onChange={handleImageUpload}
+                      />
                       <Button
-                        variant="ghost"
-                        size="compact"
+                        variant="secondary"
                         type="button"
-                        onClick={() => field("hero_image_url", "")}
+                        loading={uploadingImage}
+                        onClick={() => fileInputRef.current?.click()}
+                        icon={<Upload />}
                       >
-                        清空插图
+                        上传插图
                       </Button>
                     </div>
-                  ) : null}
-                </Field>
-                <Field
-                  label="右侧插图底部标注"
-                  hint="显示在插图右下角的排版小字，例如 EXPLORE / THINK / SHARE。"
-                >
-                  <Input
-                    value={value.hero_image_caption ?? ""}
-                    onChange={(event) =>
-                      field("hero_image_caption", event.target.value)
-                    }
-                    placeholder="EXPLORE / THINK / SHARE"
-                  />
-                </Field>
-                <FormActions>
-                  <Button
-                    variant="primary"
-                    type="submit"
-                    loading={saving}
-                    icon={<Save />}
+                    {value.hero_image_url ? (
+                      <div className="upload-preview-card">
+                        <div className="upload-preview-img-box">
+                          <img
+                            src={value.hero_image_url}
+                            alt="Hero 预览"
+                            className="upload-preview-img"
+                          />
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="compact"
+                          type="button"
+                          onClick={() => field("hero_image_url", "")}
+                        >
+                          清空插图
+                        </Button>
+                      </div>
+                    ) : null}
+                  </Field>
+                  <Field
+                    label="右侧插图底部标注"
+                    hint="显示在插图右下角的排版小字，例如 EXPLORE / THINK / SHARE。"
                   >
-                    {saving ? "正在保存…" : "保存设置"}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    type="button"
-                    onClick={resetHeroDefaults}
-                    icon={<RotateCcw />}
-                  >
-                    恢复默认文案
-                  </Button>
-                </FormActions>
-              </FormLayout>
-            </WorkspacePanel>
-          ) : null}
-          {activeTab === "appearance" ? (
-            <WorkspacePanel>
-              <PanelHeader
-                title="网站图标"
-                description="设置浏览器标签页中显示的 Favicon。"
-              />
-              <FormLayout onSubmit={save}>
-                <Field
-                  label="Favicon 地址"
-                  hint="支持站内路径（如 /media/icon.png）或完整 http(s) URL；支持 PNG、WebP、GIF、JPEG、SVG、ICO、AVIF 与 BMP。"
-                >
-                  <div className="upload-row">
                     <Input
-                      className="flex-1"
-                      value={value.favicon_url ?? ""}
+                      value={value.hero_image_caption ?? ""}
                       onChange={(event) =>
-                        field("favicon_url", event.target.value)
+                        field("hero_image_caption", event.target.value)
                       }
-                      placeholder="/favicon.svg"
+                      placeholder="EXPLORE / THINK / SHARE"
                     />
-                    <input
-                      ref={faviconInputRef}
-                      type="file"
-                      accept={commonImageAccept}
-                      className="sr-only"
-                      onChange={handleFaviconUpload}
-                    />
+                  </Field>
+                  <FormActions>
+                    <Button
+                      variant="primary"
+                      type="submit"
+                      loading={saving}
+                      icon={<Save />}
+                    >
+                      {saving ? "正在保存…" : "保存设置"}
+                    </Button>
                     <Button
                       variant="secondary"
                       type="button"
-                      loading={uploadingImage}
-                      onClick={() => faviconInputRef.current?.click()}
-                      icon={<Upload />}
+                      onClick={resetHeroDefaults}
+                      icon={<RotateCcw />}
                     >
-                      上传图标
+                      恢复默认文案
                     </Button>
-                  </div>
-                  {value.favicon_url ? (
-                    <img
-                      src={value.favicon_url}
-                      alt="Favicon 预览"
-                      width={32}
-                      height={32}
-                      className="favicon-preview-img"
+                  </FormActions>
+                </FormLayout>
+              </WorkspacePanel>
+            ) : null}
+            {activeTab === "appearance" ? (
+              <WorkspacePanel>
+                <PanelHeader
+                  title="网站图标"
+                  description="设置浏览器标签页中显示的 Favicon。"
+                />
+                <FormLayout onSubmit={save}>
+                  <Field
+                    label="Favicon 地址"
+                    hint="支持站内路径（如 /media/icon.png）或完整 http(s) URL；支持 PNG、WebP、GIF、JPEG、SVG、ICO、AVIF 与 BMP。"
+                  >
+                    <div className="upload-row">
+                      <Input
+                        className="flex-1"
+                        value={value.favicon_url ?? ""}
+                        onChange={(event) =>
+                          field("favicon_url", event.target.value)
+                        }
+                        placeholder="/favicon.svg"
+                      />
+                      <input
+                        ref={faviconInputRef}
+                        type="file"
+                        accept={commonImageAccept}
+                        className="sr-only"
+                        onChange={handleFaviconUpload}
+                      />
+                      <Button
+                        variant="secondary"
+                        type="button"
+                        loading={uploadingImage}
+                        onClick={() => faviconInputRef.current?.click()}
+                        icon={<Upload />}
+                      >
+                        上传图标
+                      </Button>
+                    </div>
+                    {value.favicon_url ? (
+                      <img
+                        src={value.favicon_url}
+                        alt="Favicon 预览"
+                        width={32}
+                        height={32}
+                        className="favicon-preview-img"
+                      />
+                    ) : null}
+                  </Field>
+                  <FormActions>
+                    <Button
+                      variant="primary"
+                      type="submit"
+                      loading={saving}
+                      icon={<Save />}
+                    >
+                      {saving ? "正在保存…" : "保存设置"}
+                    </Button>
+                  </FormActions>
+                </FormLayout>
+              </WorkspacePanel>
+            ) : null}
+            {activeTab === "social" ? (
+              <WorkspacePanel>
+                <PanelHeader
+                  title="公开联系方式"
+                  description="留空时前台不会显示对应入口；这些信息与 GOSSO 登录账号资料相互独立。"
+                />
+                <FormLayout onSubmit={save}>
+                  <Field label="公开联系邮箱">
+                    <Input
+                      type="email"
+                      value={value.email}
+                      onChange={(event) => field("email", event.target.value)}
                     />
-                  ) : null}
-                </Field>
-                <FormActions>
-                  <Button
-                    variant="primary"
-                    type="submit"
-                    loading={saving}
-                    icon={<Save />}
-                  >
-                    {saving ? "正在保存…" : "保存设置"}
-                  </Button>
-                </FormActions>
-              </FormLayout>
-            </WorkspacePanel>
-          ) : null}
-          {activeTab === "social" ? (
-            <WorkspacePanel>
-              <PanelHeader
-                title="公开联系方式"
-                description="留空时前台不会显示对应入口；这些信息与 GOSSO 登录账号资料相互独立。"
-              />
-              <FormLayout onSubmit={save}>
-                <Field label="公开联系邮箱">
-                  <Input
-                    type="email"
-                    value={value.email}
-                    onChange={(event) => field("email", event.target.value)}
-                  />
-                </Field>
-                <Field label="GitHub">
-                  <Input
-                    type="url"
-                    value={value.github_url}
-                    onChange={(event) =>
-                      field("github_url", event.target.value)
-                    }
-                  />
-                </Field>
-                <Field label="RSS">
-                  <Input
-                    className="mono"
-                    value={value.rss_url}
-                    onChange={(event) => field("rss_url", event.target.value)}
-                    placeholder="/feed.xml"
-                  />
-                </Field>
-                <FormActions>
-                  <Button
-                    variant="primary"
-                    type="submit"
-                    loading={saving}
-                    icon={<Save />}
-                  >
-                    {saving ? "正在保存…" : "保存设置"}
-                  </Button>
-                </FormActions>
-              </FormLayout>
-            </WorkspacePanel>
-          ) : null}
-          {activeTab === "seo" ? (
-            <WorkspacePanel>
-              <PanelHeader
-                title="默认 SEO"
-                description="作为文章未单独配置 SEO 信息时的站点级默认值。"
-              />
-              <FormLayout onSubmit={save}>
-                <Field label="默认标题">
-                  <Input
-                    value={value.default_seo_title}
-                    onChange={(event) =>
-                      field("default_seo_title", event.target.value)
-                    }
-                  />
-                </Field>
-                <Field label="默认描述">
-                  <Textarea
-                    rows={4}
-                    value={value.default_seo_description}
-                    onChange={(event) =>
-                      field("default_seo_description", event.target.value)
-                    }
-                  />
-                </Field>
-                <FormActions>
-                  <Button
-                    variant="primary"
-                    type="submit"
-                    loading={saving}
-                    icon={<Save />}
-                  >
-                    {saving ? "正在保存…" : "保存设置"}
-                  </Button>
-                </FormActions>
-              </FormLayout>
-            </WorkspacePanel>
-          ) : null}
-        </TabPanel>
-      </Tabs>
-    </SudoGate>
+                  </Field>
+                  <Field label="GitHub">
+                    <Input
+                      type="url"
+                      value={value.github_url}
+                      onChange={(event) =>
+                        field("github_url", event.target.value)
+                      }
+                    />
+                  </Field>
+                  <Field label="RSS">
+                    <Input
+                      className="mono"
+                      value={value.rss_url}
+                      onChange={(event) => field("rss_url", event.target.value)}
+                      placeholder="/feed.xml"
+                    />
+                  </Field>
+                  <FormActions>
+                    <Button
+                      variant="primary"
+                      type="submit"
+                      loading={saving}
+                      icon={<Save />}
+                    >
+                      {saving ? "正在保存…" : "保存设置"}
+                    </Button>
+                  </FormActions>
+                </FormLayout>
+              </WorkspacePanel>
+            ) : null}
+            {activeTab === "seo" ? (
+              <WorkspacePanel>
+                <PanelHeader
+                  title="默认 SEO"
+                  description="作为文章未单独配置 SEO 信息时的站点级默认值。"
+                />
+                <FormLayout onSubmit={save}>
+                  <Field label="默认标题">
+                    <Input
+                      value={value.default_seo_title}
+                      onChange={(event) =>
+                        field("default_seo_title", event.target.value)
+                      }
+                    />
+                  </Field>
+                  <Field label="默认描述">
+                    <Textarea
+                      rows={4}
+                      value={value.default_seo_description}
+                      onChange={(event) =>
+                        field("default_seo_description", event.target.value)
+                      }
+                    />
+                  </Field>
+                  <FormActions>
+                    <Button
+                      variant="primary"
+                      type="submit"
+                      loading={saving}
+                      icon={<Save />}
+                    >
+                      {saving ? "正在保存…" : "保存设置"}
+                    </Button>
+                  </FormActions>
+                </FormLayout>
+              </WorkspacePanel>
+            ) : null}
+          </TabPanel>
+        </Tabs>
+      </SudoGate>
 
       <StepUpMfaModal
         open={stepUpOpen}

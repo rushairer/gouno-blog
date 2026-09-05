@@ -14,3 +14,5 @@ export * from "./AsyncState";
 export * from "./Card";
 export * from "./Badge";
 export * from "./Dialog";
+export * from "./DropdownMenu";
+export * from "./Table";

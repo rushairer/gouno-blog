@@ -2,7 +2,7 @@ import { useEffect, useId, useRef } from "react";
 import type React from "react";
 import { X } from "lucide-react";
 import { Button, IconButton } from "./Button";
-import { classes } from "./classes";
+import { cn } from "../../lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -80,7 +80,7 @@ export function Modal({
   children,
   footer,
   onClose,
-  className,
+  className = "",
   size = "md",
 }: {
   open: boolean;
@@ -102,17 +102,21 @@ export function Modal({
       }}
     >
       <DialogContent
-        className={classes("modal", modalSizeClasses[size], className)}
+        className={cn(modalSizeClasses[size], className)}
         closeLabel="关闭弹窗"
       >
-        <DialogHeader className="modal-header">
+        <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {description ? (
             <DialogDescription>{description}</DialogDescription>
           ) : null}
         </DialogHeader>
-        <div className="modal-body">{children}</div>
-        {footer ? <div className="modal-footer">{footer}</div> : null}
+        <div className="py-2">{children}</div>
+        {footer ? (
+          <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
+            {footer}
+          </div>
+        ) : null}
       </DialogContent>
     </Dialog>
   );
@@ -124,7 +128,7 @@ export function Drawer({
   description,
   children,
   onClose,
-  className,
+  className = "",
 }: {
   open: boolean;
   title: string;
@@ -143,35 +147,47 @@ export function Drawer({
   if (!open) return null;
 
   return (
-    <div className="drawer-backdrop">
+    <div className="fixed inset-0 z-50 flex justify-end">
       <div
-        className="drawer-scrim"
+        className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
         role="presentation"
         aria-hidden="true"
         onClick={onClose}
       />
       <section
         ref={containerRef}
-        className={`drawer${className ? ` ${className}` : ""}`}
+        className={cn(
+          "relative z-10 flex h-full w-full max-w-md flex-col border-l border-border bg-card p-6 text-card-foreground shadow-2xl transition-transform",
+          className,
+        )}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleID}
         aria-describedby={description ? descriptionID : undefined}
       >
-        <header className="drawer-header">
+        <header className="flex items-start justify-between pb-4 border-b border-border">
           <div>
-            <h2 id={titleID}>{title}</h2>
-            {description ? <p id={descriptionID}>{description}</p> : null}
+            <h2 id={titleID} className="text-lg font-bold text-foreground">
+              {title}
+            </h2>
+            {description ? (
+              <p
+                id={descriptionID}
+                className="mt-1 text-sm text-muted-foreground"
+              >
+                {description}
+              </p>
+            ) : null}
           </div>
           <IconButton
             ref={closeButton}
             label="关闭面板"
-            icon={<X />}
+            icon={<X className="h-4 w-4" />}
             type="button"
             onClick={onClose}
           />
         </header>
-        <div className="drawer-body">{children}</div>
+        <div className="flex-1 overflow-y-auto py-4">{children}</div>
       </section>
     </div>
   );
@@ -224,8 +240,8 @@ export function ConfirmDialog({
         </>
       }
     >
-      <div className="confirm-dialog">
-        <p>{description}</p>
+      <div className="text-sm text-muted-foreground leading-relaxed">
+        {description}
       </div>
     </Modal>
   );

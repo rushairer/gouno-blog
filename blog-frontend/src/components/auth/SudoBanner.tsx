@@ -17,7 +17,8 @@ export function SudoBanner({
   description = "此区域涉及站点核心安全与权限配置。建议在编辑前提前激活 Sudo 提权，以确保后续保存无需被打断。",
   onActivated,
 }: SudoBannerProps) {
-  const { isSudoActive, remainingMinutes, activating, activateSudo } = useSudoMode();
+  const { isSudoActive, remainingMinutes, activating, activateSudo } =
+    useSudoMode();
 
   if (isSudoActive) {
     return (
@@ -27,7 +28,10 @@ export function SudoBanner({
         aria-label="Sudo 安全提权状态"
       >
         <div className="sudo-banner__content">
-          <div className="sudo-banner__icon sudo-banner__icon--active" aria-hidden="true">
+          <div
+            className="sudo-banner__icon sudo-banner__icon--active"
+            aria-hidden="true"
+          >
             <ShieldCheck />
           </div>
           <div className="sudo-banner__text">
@@ -48,7 +52,10 @@ export function SudoBanner({
       aria-label="Sudo 提权提示"
     >
       <div className="sudo-banner__content">
-        <div className="sudo-banner__icon sudo-banner__icon--warning" aria-hidden="true">
+        <div
+          className="sudo-banner__icon sudo-banner__icon--warning"
+          aria-hidden="true"
+        >
           <ShieldAlert />
         </div>
         <div className="sudo-banner__text">

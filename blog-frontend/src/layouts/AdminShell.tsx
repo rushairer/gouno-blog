@@ -9,6 +9,7 @@ import {
   Moon,
   Search,
   Sun,
+  X,
 } from "lucide-react";
 import { Button, ButtonLink, IconButton } from "../components/ui";
 import { notificationsApi } from "../api/notifications";
@@ -26,6 +27,12 @@ import {
   adminNavigation,
   getFilteredAdminNavigation,
 } from "../utils/navigation";
+import {
+  STORAGE_KEYS,
+  PAGINATION_LIMITS,
+  MembershipStatus,
+} from "../constants";
+import { cn } from "../lib/utils";
 
 function currentLabel(pathname: string) {
   if (pathname === "/admin/posts/new") return "新建文章";
@@ -38,12 +45,6 @@ function currentLabel(pathname: string) {
       .find((item) => pathname.startsWith(item.path))?.label || "管理后台"
   );
 }
-
-import {
-  STORAGE_KEYS,
-  PAGINATION_LIMITS,
-  MembershipStatus,
-} from "../constants";
 
 export default function AdminShell({ children }: { children: ReactNode }) {
   const location = useLocation();
@@ -173,30 +174,73 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const filteredNav = getFilteredAdminNavigation(hasPerm);
 
   return (
-    <div className={`admin-shell ${mobileOpen ? "admin-nav-open" : ""}`}>
-      <aside className="admin-sidebar" id="admin-sidebar">
-        <Link className="wordmark admin-wordmark" to="/admin/dashboard">
-          {siteName}
-        </Link>
-        <nav aria-label="后台导航">
+    <div
+      className={cn(
+        "admin-shell grid min-h-screen w-full lg:grid-cols-[250px_1fr] bg-background text-foreground",
+        mobileOpen && "admin-nav-open",
+      )}
+    >
+      {/* Sidebar */}
+      <aside
+        id="admin-sidebar"
+        className={cn(
+          "admin-sidebar fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-[#11161d] p-4 transition-transform lg:static lg:flex lg:w-auto lg:translate-x-0",
+          mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full",
+        )}
+      >
+        <div className="flex items-center justify-between pb-3 mb-2 border-b border-border/60">
+          <Link
+            className="wordmark admin-wordmark text-lg font-bold tracking-tight text-foreground"
+            to="/admin/dashboard"
+          >
+            {siteName}
+          </Link>
+          <IconButton
+            className="lg:hidden"
+            label="关闭后台导航"
+            icon={<X className="h-5 w-5" />}
+            variant="ghost"
+            size="sm"
+            onClick={() => setMobileOpen(false)}
+          />
+        </div>
+
+        <nav
+          aria-label="后台导航"
+          className="flex-1 space-y-6 overflow-y-auto py-2"
+        >
           {filteredNav.map((group) => (
-            <section className="admin-nav-group" key={group.label}>
-              <h2>{group.label}</h2>
-              {group.items.map((item) => (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => setMobileOpen(false)}
-                >
-                  {item.icon}
-                  <span>{item.label}</span>
-                </NavLink>
-              ))}
+            <section className="admin-nav-group space-y-1" key={group.label}>
+              <h2 className="px-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground/70">
+                {group.label}
+              </h2>
+              <div className="space-y-0.5">
+                {group.items.map((item) => (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                        isActive
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+                      )
+                    }
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <span className="shrink-0">{item.icon}</span>
+                    <span>{item.label}</span>
+                  </NavLink>
+                ))}
+              </div>
             </section>
           ))}
         </nav>
-        <div className="admin-profile">
-          <span className="admin-avatar">
+
+        {/* Profile Card */}
+        <div className="admin-profile flex items-center gap-3 rounded-lg border border-border bg-card p-3 pt-3 mt-4 border-t border-border/60">
+          <span className="admin-avatar flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/20 text-primary font-bold text-xs">
             {(
               user?.principal?.display_name ||
               user?.name ||
@@ -206,51 +250,72 @@ export default function AdminShell({ children }: { children: ReactNode }) {
               .slice(0, 2)
               .toUpperCase()}
           </span>
-          <div>
-            <strong>
+          <div className="min-w-0 flex-1">
+            <strong className="block truncate text-xs font-semibold text-foreground">
               {user?.principal?.display_name ||
                 user?.name ||
                 user?.preferred_username ||
                 "成员"}
             </strong>
-            <small>{getBlogRoleLabel(user?.roles?.[0])}</small>
+            <small className="block truncate text-[11px] text-muted-foreground">
+              {getBlogRoleLabel(user?.roles?.[0])}
+            </small>
           </div>
         </div>
       </aside>
 
-      <div className="admin-main">
-        <header className="admin-topbar">
-          <IconButton
-            className="bare-icon admin-menu"
-            label="切换后台导航"
-            icon={<Menu />}
-            variant="ghost"
-            aria-expanded={mobileOpen}
-            aria-controls="admin-sidebar"
-            onClick={() => setMobileOpen(!mobileOpen)}
-          />
-          <div className="breadcrumb">
-            <Link to="/admin/dashboard">后台</Link>
-            <span>/</span>
-            <strong>{currentLabel(location.pathname)}</strong>
+      {/* Main Container */}
+      <div className="admin-main flex min-w-0 flex-col">
+        {/* Topbar */}
+        <header className="admin-topbar sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-border bg-[#121720]/90 px-6 backdrop-blur-md">
+          <div className="flex items-center gap-3">
+            <IconButton
+              className="bare-icon admin-menu lg:hidden"
+              label="切换后台导航"
+              icon={<Menu className="h-5 w-5" />}
+              variant="ghost"
+              size="sm"
+              aria-expanded={mobileOpen}
+              aria-controls="admin-sidebar"
+              onClick={() => setMobileOpen(!mobileOpen)}
+            />
+            <div className="breadcrumb flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              <Link
+                to="/admin/dashboard"
+                className="hover:text-foreground transition-colors"
+              >
+                后台
+              </Link>
+              <span>/</span>
+              <strong className="text-foreground">
+                {currentLabel(location.pathname)}
+              </strong>
+            </div>
           </div>
-          <form className="admin-search" role="search" onSubmit={submitSearch}>
+
+          <form
+            className="admin-search hidden md:flex items-center relative max-w-sm flex-1 mx-4"
+            role="search"
+            onSubmit={submitSearch}
+          >
             <IconButton
               type="submit"
               label="提交文章搜索"
-              icon={<Search />}
+              icon={<Search className="h-3.5 w-3.5 text-muted-foreground" />}
               variant="ghost"
-              size="compact"
+              size="sm"
+              className="absolute left-1"
             />
             <input
-              className="admin-search__input"
+              className="admin-search__input flex h-8 w-full rounded-md border border-border bg-input pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
               aria-label="搜索文章"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="搜索文章标题、摘要或正文…"
             />
           </form>
-          <div className="admin-topbar-actions">
+
+          <div className="admin-topbar-actions flex items-center gap-2">
             <ButtonLink
               to="/"
               target="_blank"
@@ -258,9 +323,9 @@ export default function AdminShell({ children }: { children: ReactNode }) {
               aria-label="在新窗口查看前台站点"
               variant="ghost"
               size="sm"
-              icon={<ExternalLink />}
+              icon={<ExternalLink className="h-3.5 w-3.5" />}
             >
-              查看站点
+              <span className="hidden sm:inline">查看站点</span>
             </ButtonLink>
             <ButtonLink
               to="/admin/notifications"
@@ -269,17 +334,17 @@ export default function AdminShell({ children }: { children: ReactNode }) {
               variant="ghost"
               size="sm"
               icon={
-                <span className="admin-topbar-notifications__icon">
-                  <Bell />
+                <span className="admin-topbar-notifications__icon relative inline-flex">
+                  <Bell className="h-4 w-4" />
                   {unreadCount > 0 ? (
-                    <span className="admin-topbar-notifications__badge">
+                    <span className="admin-topbar-notifications__badge absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
                       {unreadCount > 99 ? "99+" : unreadCount}
                     </span>
                   ) : null}
                 </span>
               }
             >
-              通知
+              <span className="hidden sm:inline">通知</span>
             </ButtonLink>
             <Button
               variant="ghost"
@@ -290,9 +355,17 @@ export default function AdminShell({ children }: { children: ReactNode }) {
               }
               aria-label="切换后台主题"
               aria-pressed={theme === "dark"}
-              icon={theme === "light" ? <Moon /> : <Sun />}
+              icon={
+                theme === "light" ? (
+                  <Moon className="h-4 w-4" />
+                ) : (
+                  <Sun className="h-4 w-4" />
+                )
+              }
             >
-              {theme === "light" ? "深色模式" : "浅色模式"}
+              <span className="hidden sm:inline">
+                {theme === "light" ? "深色" : "浅色"}
+              </span>
             </Button>
             <Button
               variant="ghost"
@@ -301,25 +374,32 @@ export default function AdminShell({ children }: { children: ReactNode }) {
               onClick={() => void handleLogout()}
               disabled={loggingOut}
               aria-label="退出登录"
-              icon={<LogOut />}
+              icon={<LogOut className="h-4 w-4" />}
             >
-              {loggingOut ? "正在退出…" : "退出登录"}
+              <span className="hidden sm:inline">
+                {loggingOut ? "正在退出…" : "退出登录"}
+              </span>
             </Button>
           </div>
         </header>
+
         {logoutError ? (
-          <p className="admin-logout-error" role="alert">
+          <p
+            className="admin-logout-error p-4 bg-destructive/15 text-destructive text-sm font-medium border-b border-destructive/30"
+            role="alert"
+          >
             {logoutError}
           </p>
         ) : null}
-        <main className="admin-content">{children}</main>
+
+        <main className="admin-content flex-1 p-6 md:p-8 max-w-7xl w-full mx-auto">
+          {children}
+        </main>
       </div>
+
       {mobileOpen ? (
-        <IconButton
-          className="admin-nav-scrim"
-          label="关闭后台导航"
-          icon={<span />}
-          variant="ghost"
+        <div
+          className="admin-nav-scrim fixed inset-0 z-40 bg-black/60 backdrop-blur-xs lg:hidden"
           onClick={() => setMobileOpen(false)}
         />
       ) : null}

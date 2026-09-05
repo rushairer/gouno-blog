@@ -23,7 +23,10 @@ describe("useSudoMode", () => {
 
   it("calculates active state and remaining minutes correctly", () => {
     const now = Date.now();
-    localStorage.setItem("gouno:sudo_activated_at", String(now - 2 * 60 * 1000)); // 2 minutes ago
+    localStorage.setItem(
+      "gouno:sudo_activated_at",
+      String(now - 2 * 60 * 1000),
+    ); // 2 minutes ago
 
     const { result } = renderHook(() => useSudoMode());
     expect(result.current.isSudoActive).toBe(true);

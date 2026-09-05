@@ -42,10 +42,12 @@ describe("StepUpMfaModal", () => {
     const onSuccess = vi.fn();
     const onClose = vi.fn();
 
-    vi.spyOn(mfaModule, "openStepUpPopup").mockImplementation((_returnTo, successCb) => {
-      successCb?.();
-      return true;
-    });
+    vi.spyOn(mfaModule, "openStepUpPopup").mockImplementation(
+      (_returnTo, successCb) => {
+        successCb?.();
+        return true;
+      },
+    );
 
     render(
       <ToastProvider>

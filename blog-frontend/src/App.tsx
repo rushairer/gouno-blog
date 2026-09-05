@@ -213,8 +213,8 @@ function StepUpPopupCallbackView() {
         >
           身份认证已成功同步，主页面正在自动继续操作。
         </p>
-        <button
-          type="button"
+        <Button
+          variant="secondary"
           onClick={() => {
             checkAndHandleStepUpPopupCallback();
             try {
@@ -223,11 +223,10 @@ function StepUpPopupCallbackView() {
               // Ignore
             }
           }}
-          className="btn btn-secondary btn--default"
-          style={{ marginTop: 20 }}
+          className="mt-5"
         >
           关闭窗口
-        </button>
+        </Button>
       </div>
     </div>
   );

@@ -16,7 +16,11 @@ interface StepUpMfaModalProps {
   onSuccess?: () => Promise<void> | void;
 }
 
-export function StepUpMfaModal({ open, onClose, onSuccess }: StepUpMfaModalProps) {
+export function StepUpMfaModal({
+  open,
+  onClose,
+  onSuccess,
+}: StepUpMfaModalProps) {
   useEffect(() => {
     if (!open) return;
     const handleCompleted = async () => {

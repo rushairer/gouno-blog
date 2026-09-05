@@ -6,6 +6,7 @@ const sourceRoot = fileURLToPath(new URL("../src/", import.meta.url));
 const tailwindEntry = "styles/tailwind.css";
 const allowedBlockAtRules = new Set([
   "@layer",
+  "@theme",
   "@font-face",
   "@property",
   "@keyframes",

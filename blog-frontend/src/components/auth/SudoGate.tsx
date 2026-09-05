@@ -24,14 +24,19 @@ export function SudoGate({
   className = "",
   locked: forceLocked,
 }: SudoGateProps) {
-  const { isSudoActive, remainingMinutes, activating, activateSudo } = useSudoMode();
+  const { isSudoActive, remainingMinutes, activating, activateSudo } =
+    useSudoMode();
 
   const isLocked = forceLocked !== undefined ? forceLocked : !isSudoActive;
 
   if (!isLocked) {
     return (
       <div className={`sudo-gate-container sudo-gate--unlocked ${className}`}>
-        <div className="sudo-gate-header-badge" role="status" aria-label="Sudo 安全提权已生效">
+        <div
+          className="sudo-gate-header-badge"
+          role="status"
+          aria-label="Sudo 安全提权已生效"
+        >
           <ShieldCheck className="w-4 h-4 text-[var(--status-success-text)]" />
           <span>Sudo 已解锁（剩余约 {remainingMinutes} 分钟）</span>
         </div>
@@ -46,7 +51,11 @@ export function SudoGate({
         {children}
       </div>
 
-      <div className="sudo-gate-overlay" role="region" aria-label="Sudo 权限锁定">
+      <div
+        className="sudo-gate-overlay"
+        role="region"
+        aria-label="Sudo 权限锁定"
+      >
         <div className="sudo-gate-card">
           <div className="sudo-gate-icon-wrapper" aria-hidden="true">
             <div className="sudo-gate-icon-glow" />

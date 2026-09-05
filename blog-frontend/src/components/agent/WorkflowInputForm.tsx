@@ -267,7 +267,9 @@ function ResourcePicker({
     onChange(next);
   };
   return (
-    <div className={`workflow-resource-field ${className || ""}`.trim()}>
+    <div
+      className={`workflow-resource-field input-field ${className || ""}`.trim()}
+    >
       <div className="workflow-resource-selection">
         {selected.length ? (
           selected.map((entry) => {

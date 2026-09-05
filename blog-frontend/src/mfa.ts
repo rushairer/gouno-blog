@@ -174,7 +174,8 @@ export function openStepUpPopup(
 
   const storageListener = (event: StorageEvent) => {
     if (
-      (event.key === "gouno_step_up_event" || event.key === "gouno:sudo_activated_at") &&
+      (event.key === "gouno_step_up_event" ||
+        event.key === "gouno:sudo_activated_at") &&
       event.newValue
     ) {
       triggerSuccess();
@@ -208,13 +209,19 @@ export function openStepUpPopup(
         let recentAuth = false;
         try {
           const sudoTime = localStorage.getItem("gouno:sudo_activated_at");
-          if (sudoTime && Math.abs(Date.now() - parseInt(sudoTime, 10)) < 15000) {
+          if (
+            sudoTime &&
+            Math.abs(Date.now() - parseInt(sudoTime, 10)) < 15000
+          ) {
             recentAuth = true;
           }
           const stepUpEvent = localStorage.getItem("gouno_step_up_event");
           if (stepUpEvent) {
             const data = JSON.parse(stepUpEvent);
-            if (data?.timestamp && Math.abs(Date.now() - data.timestamp) < 15000) {
+            if (
+              data?.timestamp &&
+              Math.abs(Date.now() - data.timestamp) < 15000
+            ) {
               recentAuth = true;
             }
           }
@@ -229,8 +236,13 @@ export function openStepUpPopup(
           setTimeout(() => {
             if (!completed) {
               try {
-                const sudoTime = localStorage.getItem("gouno:sudo_activated_at");
-                if (sudoTime && Math.abs(Date.now() - parseInt(sudoTime, 10)) < 15000) {
+                const sudoTime = localStorage.getItem(
+                  "gouno:sudo_activated_at",
+                );
+                if (
+                  sudoTime &&
+                  Math.abs(Date.now() - parseInt(sudoTime, 10)) < 15000
+                ) {
                   triggerSuccess();
                   return;
                 }
