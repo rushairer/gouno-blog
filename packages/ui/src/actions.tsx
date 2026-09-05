@@ -110,6 +110,7 @@ export function IconButton({
       variant={variant}
       size="icon"
       aria-label={label}
+      aria-pressed={props["aria-pressed"]}
       title={label}
     >
       <span className="icon-button__icon">{icon}</span>

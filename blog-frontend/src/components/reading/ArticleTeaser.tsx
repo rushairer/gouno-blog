@@ -19,7 +19,7 @@ export function ArticleTeaser({
   return (
     <article
       className={cn(
-        "group grid min-w-0 gap-5 border-b py-6",
+        "editorial-story group grid min-w-0 gap-5 border-b py-6",
         post.cover_url && !compact && "sm:grid-cols-[minmax(0,1fr)_180px]",
       )}
     >
