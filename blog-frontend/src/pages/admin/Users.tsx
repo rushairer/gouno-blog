@@ -23,6 +23,8 @@ import {
   EmptyState,
   Feedback,
   IconButton,
+  ListRow,
+  ListStack,
   LoadingState,
   Modal,
   TableContainer,
@@ -187,6 +189,45 @@ export default function AdminUsers() {
     }
   };
 
+  const renderActions = (member: BlogMember) => {
+    const busy = saving === member.principal.id;
+    const isOwner = member.roles.includes("owner");
+    return (
+      <>
+        <IconButton
+          label="编辑成员与权限"
+          icon={<KeyRound />}
+          disabled={busy}
+          onClick={() => setEditing(member)}
+        />
+        {!isOwner ? (
+          <IconButton
+            label="移交所有权"
+            icon={<Crown />}
+            disabled={busy || member.membership_status !== "active"}
+            onClick={() => setConfirm({ member, action: "transfer" })}
+          />
+        ) : null}
+        {isOwner ? null : member.membership_status === "suspended" ? (
+          <IconButton
+            label="恢复成员"
+            icon={<RotateCcw />}
+            disabled={busy}
+            onClick={() => setConfirm({ member, action: "restore" })}
+          />
+        ) : (
+          <IconButton
+            variant="danger"
+            label="暂停成员"
+            icon={<Ban />}
+            disabled={busy}
+            onClick={() => setConfirm({ member, action: "suspend" })}
+          />
+        )}
+      </>
+    );
+  };
+
   return (
     <AdminPage>
       <AdminPageHeader
@@ -243,7 +284,7 @@ export default function AdminUsers() {
             description="修改 Blog 成员角色、移交所有权或暂停成员资格需要近期多因素身份认证。解锁后享有 10 分钟无打扰操作期。"
             actionLabel="解锁以管理成员权限"
           >
-            <Card className="border-border/80 bg-card shadow-xs overflow-hidden">
+            <Card className="hidden overflow-hidden border-border/80 bg-card shadow-xs md:block">
               <TableContainer>
                 <table className="admin-table member-table">
                   <thead>
@@ -256,42 +297,141 @@ export default function AdminUsers() {
                     </tr>
                   </thead>
                   <tbody>
-                    {members.map((member) => {
-                      const busy = saving === member.principal.id;
-                      const isOwner = member.roles.includes("owner");
-                      return (
-                        <tr
-                          key={member.principal.id}
-                          className="hover:bg-muted/40 transition-colors"
-                        >
-                          <td>
-                            <div className="flex items-center gap-3">
-                              <span
-                                className="h-9 w-9 rounded-full bg-primary/10 text-primary font-semibold flex items-center justify-center shrink-0 text-sm"
-                                aria-hidden="true"
-                              >
-                                {initials(member)}
-                              </span>
-                              <div className="flex flex-col gap-0.5">
-                                <strong className="font-semibold text-foreground text-sm">
-                                  {memberName(member)}
-                                </strong>
-                                {member.principal.email ? (
-                                  <span className="text-xs text-muted-foreground font-mono">
-                                    {member.principal.email}
-                                  </span>
-                                ) : null}
-                              </div>
+                    {members.map((member) => (
+                      <tr
+                        key={member.principal.id}
+                        className="hover:bg-muted/40 transition-colors"
+                      >
+                        <td>
+                          <div className="flex items-center gap-3">
+                            <span
+                              className="h-9 w-9 rounded-full bg-primary/10 text-primary font-semibold flex items-center justify-center shrink-0 text-sm"
+                              aria-hidden="true"
+                            >
+                              {initials(member)}
+                            </span>
+                            <div className="flex flex-col gap-0.5">
+                              <strong className="font-semibold text-foreground text-sm">
+                                {memberName(member)}
+                              </strong>
+                              {member.principal.email ? (
+                                <span className="text-xs text-muted-foreground font-mono">
+                                  {member.principal.email}
+                                </span>
+                              ) : null}
                             </div>
-                          </td>
-                          <td>
+                          </div>
+                        </td>
+                        <td>
+                          <Button
+                            variant="ghost"
+                            size="compact"
+                            className="member-id-copy font-mono text-xs"
+                            title={`点击复制完整 Subject ID: ${member.principal.subject}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void navigator.clipboard.writeText(
+                                member.principal.subject,
+                              );
+                              notify(
+                                `已复制完整 Subject ID: ${member.principal.subject}`,
+                              );
+                            }}
+                            icon={<Copy size={13} />}
+                          >
+                            {member.principal.subject.slice(0, 8)}
+                          </Button>
+                        </td>
+                        <td>
+                          <div className="flex flex-wrap gap-1">
+                            {member.roles.length ? (
+                              member.roles.map((role) => (
+                                <Badge
+                                  key={role}
+                                  tone={role === "owner" ? "brand" : "neutral"}
+                                >
+                                  {roleLabels[role] || role}
+                                </Badge>
+                              ))
+                            ) : (
+                              <span className="text-muted-foreground/60 text-xs italic">
+                                尚未授予角色
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <Badge
+                            tone={membershipTone(member.membership_status)}
+                            pill
+                          >
+                            {membershipLabel(member.membership_status)}
+                          </Badge>
+                        </td>
+                        <td>
+                          <div className="flex items-center justify-end gap-1">
+                            {renderActions(member)}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </TableContainer>
+            </Card>
+            <Card className="border-border/80 bg-card px-4 shadow-xs md:hidden">
+              <ListStack role="list" aria-label="成员列表">
+                {members.map((member) => (
+                  <div key={member.principal.id} role="listitem">
+                    <ListRow
+                      action={renderActions(member)}
+                      className="items-start gap-3 [&>div:last-child]:w-full [&>div:last-child]:justify-end"
+                    >
+                      <div className="flex items-start gap-3">
+                        <span
+                          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary"
+                          aria-hidden="true"
+                        >
+                          {initials(member)}
+                        </span>
+                        <div className="min-w-0 flex-1 space-y-2">
+                          <div className="flex items-start justify-between gap-3">
+                            <strong className="min-w-0 break-words text-sm font-semibold leading-snug">
+                              {memberName(member)}
+                            </strong>
+                            <Badge
+                              tone={membershipTone(member.membership_status)}
+                              pill
+                            >
+                              {membershipLabel(member.membership_status)}
+                            </Badge>
+                          </div>
+                          {member.principal.email ? (
+                            <div className="break-all font-mono text-xs text-muted-foreground">
+                              {member.principal.email}
+                            </div>
+                          ) : null}
+                          <div className="flex flex-wrap items-center gap-2">
+                            {member.roles.length ? (
+                              member.roles.map((role) => (
+                                <Badge
+                                  key={role}
+                                  tone={role === "owner" ? "brand" : "neutral"}
+                                >
+                                  {roleLabels[role] || role}
+                                </Badge>
+                              ))
+                            ) : (
+                              <span className="text-xs italic text-muted-foreground">
+                                尚未授予角色
+                              </span>
+                            )}
                             <Button
                               variant="ghost"
                               size="compact"
-                              className="member-id-copy font-mono text-xs"
+                              className="font-mono text-xs"
                               title={`点击复制完整 Subject ID: ${member.principal.subject}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
+                              onClick={() => {
                                 void navigator.clipboard.writeText(
                                   member.principal.subject,
                                 );
@@ -303,85 +443,13 @@ export default function AdminUsers() {
                             >
                               {member.principal.subject.slice(0, 8)}
                             </Button>
-                          </td>
-                          <td>
-                            <div className="flex flex-wrap gap-1">
-                              {member.roles.length ? (
-                                member.roles.map((role) => (
-                                  <Badge
-                                    key={role}
-                                    tone={
-                                      role === "owner" ? "brand" : "neutral"
-                                    }
-                                  >
-                                    {roleLabels[role] || role}
-                                  </Badge>
-                                ))
-                              ) : (
-                                <span className="text-muted-foreground/60 text-xs italic">
-                                  尚未授予角色
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td>
-                            <Badge
-                              tone={membershipTone(member.membership_status)}
-                              pill
-                            >
-                              {membershipLabel(member.membership_status)}
-                            </Badge>
-                          </td>
-                          <td>
-                            <div className="flex items-center justify-end gap-1">
-                              <IconButton
-                                label="编辑成员与权限"
-                                icon={<KeyRound />}
-                                disabled={busy}
-                                onClick={() => setEditing(member)}
-                              />
-                              {!isOwner ? (
-                                <IconButton
-                                  label="移交所有权"
-                                  icon={<Crown />}
-                                  disabled={
-                                    busy ||
-                                    member.membership_status !== "active"
-                                  }
-                                  onClick={() =>
-                                    setConfirm({ member, action: "transfer" })
-                                  }
-                                />
-                              ) : null}
-                              {isOwner ? null : member.membership_status ===
-                                "suspended" ? (
-                                <IconButton
-                                  label="恢复成员"
-                                  icon={<RotateCcw />}
-                                  disabled={busy}
-                                  onClick={() =>
-                                    setConfirm({ member, action: "restore" })
-                                  }
-                                />
-                              ) : (
-                                <IconButton
-                                  variant="danger"
-                                  label="暂停成员"
-                                  icon={<Ban />}
-                                  disabled={busy}
-                                  onClick={() =>
-                                    setConfirm({ member, action: "suspend" })
-                                  }
-                                />
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </TableContainer>
+                          </div>
+                        </div>
+                      </div>
+                    </ListRow>
+                  </div>
+                ))}
+              </ListStack>
             </Card>
           </SudoGate>
         )}

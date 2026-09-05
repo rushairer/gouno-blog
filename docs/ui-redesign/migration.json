@@ -102,7 +102,7 @@
     "publicPhaseReview": {
       "task": "U02c",
       "status": "verified",
-      "reviewedHead": "e616b032a981914fedcfb1c420d77bc42da77b4c",
+      "reviewedHead": "7b773bdbda705209e7bacecf243c60b1cc8de62d",
       "relatedGossoAdminHead": "f9466f3c103cd7a40e24ec90556a359331e2adc8",
       "commands": [
         "git status --short --branch && git rev-parse HEAD",
@@ -112,7 +112,7 @@
         "curl -k https://blog.dev.local/",
         "docker compose ps --format json"
       ],
-      "result": "U02a/U02b public diff and ledger independently reviewed; git diff check and full Blog quality passed (47 files/179 tests; statements 55.74%, branches 45.86%, functions 45.52%, lines 57.91%; production build passed). UI-contract and CSS-cascade checks found no public-page conflict or unregistered exception.",
+      "result": "U02a/U02b public diff and ledger independently reviewed; git diff check and full Blog quality passed. The 2026-09-06 U03a preflight rechecked the clean main HEAD at 7b773bd: changes since the original e616b03 review were limited to the documented article-content scrolling fix and review ledger updates, and the final Blog quality gate still passed (49 files/185 tests; statements 55.81%, branches 46.42%, functions 45.56%, lines 58.02%; production build passed). UI-contract and CSS-cascade checks found no public-page conflict or unregistered exception.",
       "browser": "Standard HTTPS https://blog.dev.local rendered the data-backed homepage and a real long-form article. The article had the expected title, canonical URL, meta description, heading anchors, code-copy controls and no horizontal overflow at desktop and 390x844. /categories rendered at 768x1024 light; /categories/ai?page=1 preserved the route/query and rendered at 390x844 dark. Authenticated /account/settings and /account/notifications rendered at 390x844 dark without an error state.",
       "unverified": [
         "live preview=true authorization branches",
@@ -122,6 +122,31 @@
       ],
       "blocker": null,
       "handoff": "U03a is unlocked; preserve public routes and begin only the Admin shell, Dashboard and list-template scope."
+    },
+    "adminShellPhase": {
+      "task": "U03a",
+      "status": "verified",
+      "baseHead": "7b773bdbda705209e7bacecf243c60b1cc8de62d",
+      "relatedGossoAdminHead": "f9466f3c103cd7a40e24ec90556a359331e2adc8",
+      "branch": "codex/u03a-blog-admin-shell",
+      "commands": [
+        "blog-frontend: npm run test:run -- src/layouts/__tests__/AdminShell.test.tsx src/pages/admin/__tests__/Dashboard.test.tsx src/pages/admin/__tests__/Posts.test.tsx src/pages/admin/__tests__/Pages.test.tsx src/pages/admin/__tests__/Users.test.tsx",
+        "blog-frontend: npm run quality",
+        "docker compose -f docker-compose.yml -f docker-compose.source.yml build blog-frontend",
+        "docker compose -f docker-compose.yml -f docker-compose.source.yml up -d --no-deps blog-frontend",
+        "git diff --check"
+      ],
+      "result": "Admin shell toolbar responsiveness and shared navigation Sheet were verified; Posts, Pages and Users retain their existing desktop tables while adding compact mobile rows from shared ListStack/ListRow primitives. Search/filter/query, pagination, selection, batch actions, retry/empty states, permissions and protected member actions retain their existing API and authorization paths. Targeted tests passed (5 files/13 tests); full Blog quality passed (49 files/185 tests; statements 55.81%, branches 46.42%, functions 45.56%, lines 58.02%) with UI-contract, CSS-cascade, TypeScript and production build green.",
+      "browser": "The locally rebuilt source image rendered authenticated standard-HTTPS Admin routes. At 1440x900 and 1024x768 the Dashboard used the desktop sidebar with no document overflow; at 768x1024 it used the navigation Sheet, a two-column metric grid and light theme; at 390x844 the dark-theme Posts and Pages routes showed compact rows, hidden desktop tables and no overflow. /admin/posts?status=draft&page=1 preserved the deep link and exposed the selection/bulk toolbar after checking a row. /admin/users mounted six compact rows behind the unchanged live Sudo lock; no high-privilege action was attempted. Browser console error/warning log was empty.",
+      "unverified": [
+        "forced live API error and retry injection",
+        "live pagination beyond the available local result counts",
+        "alternate-role browser sessions for every navigation permission combination",
+        "Sudo unlock and member mutations",
+        "production-domain flows"
+      ],
+      "blocker": null,
+      "handoff": "U03b and U03c are unlocked; keep editor internals in U03b and complete support-page/member overlays in U03c."
     },
     "qualityScripts": {
       "blogFrontend": ["format:check", "lint", "lint:ui", "lint:css", "tsc -b (no typecheck script)", "test:coverage", "build"],
@@ -1494,7 +1519,16 @@
         "disabled",
         "success"
       ],
-      "sharedComponents": [],
+      "sharedComponents": [
+        "@gouno/ui:AdminShell",
+        "@gouno/ui:NavigationGroup",
+        "@gouno/ui:SearchField",
+        "@gouno/ui:ThemeToggle",
+        "@gouno/ui:Button",
+        "@gouno/ui:ButtonLink",
+        "@gouno/ui:IconButton",
+        "@gouno/ui:Feedback"
+      ],
       "responsive": [
         "desktop",
         "tablet",
@@ -1504,9 +1538,11 @@
         "light",
         "dark"
       ],
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": [
+        "U03a AdminShell tests cover the navigation Sheet, route close behavior, toolbar responsiveness, search, theme, logout and permission-filtered navigation; authenticated browser checks cover desktop sidebar and sub-1024 Sheet layouts"
+      ]
     },
     {
       "id": "blog:layouts/PublicShell.tsx",
@@ -2169,7 +2205,9 @@
         "/admin",
         "/admin/dashboard"
       ],
-      "interactions": [],
+      "interactions": [
+        "dismissAllAlerts"
+      ],
       "urlParameters": [],
       "apiModules": [
         "../../abilities",
@@ -2185,7 +2223,16 @@
         "disabled",
         "success"
       ],
-      "sharedComponents": [],
+      "sharedComponents": [
+        "@gouno/ui:AdminPage",
+        "@gouno/ui:AdminPageHeader",
+        "@gouno/ui:AdminPageState",
+        "@gouno/ui:Card",
+        "@gouno/ui:Table",
+        "@gouno/ui:EmptyState",
+        "@gouno/ui:Feedback",
+        "@gouno/ui:Badge"
+      ],
       "responsive": [
         "desktop",
         "tablet",
@@ -2195,9 +2242,11 @@
         "light",
         "dark"
       ],
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": [
+        "U03a Dashboard regression and full Blog quality pass; authenticated 1440x900, 1024x768 and 768x1024 browser checks show real metrics, permission-derived actions, responsive grids and no document overflow in light/dark themes"
+      ]
     },
     {
       "id": "blog-admin:pages/admin/MediaLibrary.tsx",
@@ -2342,7 +2391,13 @@
         "/admin/pages"
       ],
       "interactions": [
-        "load"
+        "batch",
+        "copy",
+        "load",
+        "performDelete",
+        "selection",
+        "setFilter",
+        "workflow launch"
       ],
       "urlParameters": [
         "page",
@@ -2361,7 +2416,17 @@
         "disabled",
         "success"
       ],
-      "sharedComponents": [],
+      "sharedComponents": [
+        "@gouno/ui:AdminPage",
+        "@gouno/ui:AdminPageHeader",
+        "@gouno/ui:AsyncState",
+        "@gouno/ui:FilterBar",
+        "@gouno/ui:TableContainer",
+        "@gouno/ui:ListStack",
+        "@gouno/ui:ListRow",
+        "@gouno/ui:BulkActionBar",
+        "@gouno/ui:Pagination"
+      ],
       "responsive": [
         "desktop",
         "tablet",
@@ -2371,9 +2436,11 @@
         "light",
         "dark"
       ],
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": [
+        "U03a Pages tests cover data-backed desktop/mobile rows and selection-to-AI flow; authenticated 390x844 dark browser evidence shows two compact rows, hidden desktop table and no document overflow"
+      ]
     },
     {
       "id": "blog-admin:pages/admin/PostEditor.tsx",
@@ -2438,7 +2505,13 @@
         "/admin/posts"
       ],
       "interactions": [
-        "load"
+        "batch",
+        "copy",
+        "load",
+        "performDelete",
+        "selection",
+        "setFilter",
+        "workflow launch"
       ],
       "urlParameters": [
         "category",
@@ -2461,7 +2534,17 @@
         "disabled",
         "success"
       ],
-      "sharedComponents": [],
+      "sharedComponents": [
+        "@gouno/ui:AdminPage",
+        "@gouno/ui:AdminPageHeader",
+        "@gouno/ui:AsyncState",
+        "@gouno/ui:FilterBar",
+        "@gouno/ui:TableContainer",
+        "@gouno/ui:ListStack",
+        "@gouno/ui:ListRow",
+        "@gouno/ui:BulkActionBar",
+        "@gouno/ui:Pagination"
+      ],
       "responsive": [
         "desktop",
         "tablet",
@@ -2471,9 +2554,11 @@
         "light",
         "dark"
       ],
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": [
+        "U03a Posts tests cover desktop/mobile rows, loading/error retry/filtered empty states, query propagation and selection-to-AI flow; authenticated 390x844 dark browser evidence preserves ?status=draft&page=1 and exposes the bulk toolbar without overflow"
+      ]
     },
     {
       "id": "blog-admin:pages/admin/SiteSettings.tsx",
@@ -2567,6 +2652,7 @@
         "/admin/users"
       ],
       "interactions": [
+        "copy",
         "executeConfirm",
         "load",
         "saveRoles",
@@ -2589,7 +2675,17 @@
         "disabled",
         "success"
       ],
-      "sharedComponents": [],
+      "sharedComponents": [
+        "@gouno/ui:AdminPage",
+        "@gouno/ui:AdminPageHeader",
+        "@gouno/ui:TableContainer",
+        "@gouno/ui:ListStack",
+        "@gouno/ui:ListRow",
+        "@gouno/ui:LoadingState",
+        "@gouno/ui:EmptyState",
+        "@gouno/ui:Modal",
+        "@gouno/ui:ConfirmDialog"
+      ],
       "responsive": [
         "desktop",
         "tablet",
@@ -2599,9 +2695,11 @@
         "light",
         "dark"
       ],
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": [
+        "U03a Users test covers the compact member row and protected edit entry; authenticated 390x844 dark browser evidence mounts six compact rows behind the unchanged live Sudo lock, with no member mutation attempted"
+      ]
     },
     {
       "id": "gosso-admin:App.tsx",

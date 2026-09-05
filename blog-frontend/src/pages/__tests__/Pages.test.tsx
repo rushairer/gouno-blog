@@ -68,10 +68,10 @@ describe("AdminPages", () => {
     const user = userEvent.setup();
     renderPages();
 
-    expect(await screen.findByText("关于本站")).toBeInTheDocument();
-    expect(screen.getByText("/about")).toBeInTheDocument();
+    expect((await screen.findAllByText("关于本站")).length).toBeGreaterThan(1);
+    expect(screen.getAllByText("/about").length).toBeGreaterThan(1);
 
-    const checkbox = screen.getByLabelText("选择 关于本站");
+    const [checkbox] = screen.getAllByLabelText("选择 关于本站");
     expect(checkbox).not.toBeChecked();
 
     await user.click(checkbox);

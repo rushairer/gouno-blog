@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import AdminPages from "../Pages";
 import { ToastProvider } from "@gouno/ui";
@@ -17,12 +18,23 @@ const mockClient = {
   getSnapshot: () => snapshot,
 } as any;
 
+vi.mock("../../../components/agent/WorkflowLauncher", () => ({
+  WorkflowLauncher: ({
+    open,
+    resourceKeys,
+  }: {
+    open: boolean;
+    resourceKeys: number[];
+  }) => (open ? <div>launcher:{resourceKeys.join(",")}</div> : null),
+}));
+
 describe("AdminPages", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
 
   it("renders the list of custom pages with actions", async () => {
+    const user = userEvent.setup();
     const mockData: PaginatedPages = {
       list: [
         {
@@ -70,12 +82,21 @@ describe("AdminPages", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("关于站点")).toBeInTheDocument();
-      expect(screen.getByText("/about")).toBeInTheDocument();
-      expect(screen.getByText("友情链接")).toBeInTheDocument();
-      expect(screen.getByText("/links")).toBeInTheDocument();
+      expect(screen.getAllByText("关于站点").length).toBeGreaterThan(1);
+      expect(screen.getAllByText("/about").length).toBeGreaterThan(1);
+      expect(screen.getAllByText("友情链接").length).toBeGreaterThan(1);
+      expect(screen.getAllByText("/links").length).toBeGreaterThan(1);
       expect(screen.getAllByText("已发布").length).toBeGreaterThan(0);
       expect(screen.getAllByText("草稿").length).toBeGreaterThan(0);
     });
+
+    const mobileList = screen.getByRole("list", { name: "单页列表" });
+    expect(within(mobileList).getAllByRole("listitem")).toHaveLength(2);
+    await user.click(
+      within(mobileList).getByRole("checkbox", { name: "选择 关于站点" }),
+    );
+    expect(screen.getByText("已选择 1 页")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "交给 AI" }));
+    expect(screen.getByText("launcher:1")).toBeInTheDocument();
   });
 });

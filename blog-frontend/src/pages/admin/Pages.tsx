@@ -18,6 +18,8 @@ import {
   FilterBar,
   IconButton,
   IconButtonLink,
+  ListRow,
+  ListStack,
   Pagination,
   SearchField,
   Select,
@@ -93,6 +95,39 @@ export default function AdminPages() {
   const hasFilters = Boolean(q || status);
   const clearFilters = () => setParams({});
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const renderActions = (pageItem: CustomPage) => (
+    <>
+      <IconButtonLink
+        to={`/${pageItem.slug}`}
+        target="_blank"
+        rel="noreferrer"
+        label={pageItem.status === "published" ? "查看" : "预览"}
+        icon={<Eye />}
+      />
+      <IconButton
+        label="复制链接"
+        icon={<Copy />}
+        onClick={() =>
+          void copyText(
+            `${location.origin}/${pageItem.slug}`,
+            notify,
+            "单页链接已复制。",
+          )
+        }
+      />
+      <IconButtonLink
+        to={`/admin/pages/${pageItem.id}/edit`}
+        label="编辑"
+        icon={<Edit2 />}
+      />
+      <IconButton
+        variant="danger"
+        label="删除"
+        icon={<Trash2 />}
+        onClick={() => setDeleteTarget({ kind: "page", page: pageItem })}
+      />
+    </>
+  );
 
   const performDelete = async () => {
     if (!deleteTarget) return;
@@ -218,7 +253,7 @@ export default function AdminPages() {
             />
           }
         >
-          <Card className="border-border/80 bg-card shadow-xs overflow-hidden">
+          <Card className="hidden overflow-hidden border-border/80 bg-card shadow-xs md:block">
             <TableContainer>
               <table className="admin-table">
                 <thead>
@@ -308,37 +343,7 @@ export default function AdminPages() {
                       </td>
                       <td>
                         <div className="flex items-center justify-end gap-1">
-                          <IconButtonLink
-                            to={`/${p.slug}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            label={p.status === "published" ? "查看" : "预览"}
-                            icon={<Eye />}
-                          />
-                          <IconButton
-                            label="复制链接"
-                            icon={<Copy />}
-                            onClick={() =>
-                              void copyText(
-                                `${location.origin}/${p.slug}`,
-                                notify,
-                                "单页链接已复制。",
-                              )
-                            }
-                          />
-                          <IconButtonLink
-                            to={`/admin/pages/${p.id}/edit`}
-                            label="编辑"
-                            icon={<Edit2 />}
-                          />
-                          <IconButton
-                            variant="danger"
-                            label="删除"
-                            icon={<Trash2 />}
-                            onClick={() =>
-                              setDeleteTarget({ kind: "page", page: p })
-                            }
-                          />
+                          {renderActions(p)}
                         </div>
                       </td>
                     </tr>
@@ -346,6 +351,59 @@ export default function AdminPages() {
                 </tbody>
               </table>
             </TableContainer>
+          </Card>
+          <Card className="border-border/80 bg-card px-4 shadow-xs md:hidden">
+            <ListStack role="list" aria-label="单页列表">
+              {pages.map((pageItem) => (
+                <div key={pageItem.id} role="listitem">
+                  <ListRow
+                    action={renderActions(pageItem)}
+                    className="items-start gap-3 [&>div:last-child]:w-full [&>div:last-child]:justify-end"
+                  >
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        aria-label={`选择 ${pageItem.title}`}
+                        checked={selected.includes(pageItem.id)}
+                        onChange={(event) =>
+                          setSelected((current) =>
+                            event.target.checked
+                              ? [...new Set([...current, pageItem.id])]
+                              : current.filter((id) => id !== pageItem.id),
+                          )
+                        }
+                      />
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <div className="flex items-start justify-between gap-3">
+                          <strong className="min-w-0 break-words text-sm font-semibold leading-snug">
+                            {pageItem.title}
+                          </strong>
+                          <StatusBadge status={pageItem.status || "draft"} />
+                        </div>
+                        <div className="break-all font-mono text-xs text-muted-foreground">
+                          /{pageItem.slug}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                          <Badge tone="neutral">
+                            {pageItem.template || "default"}
+                          </Badge>
+                          <span>
+                            {pageItem.show_in_nav
+                              ? `主导航 · ${pageItem.sort_order}`
+                              : "导航隐藏"}
+                          </span>
+                          <time>
+                            更新于{" "}
+                            {new Date(
+                              pageItem.updated_at || pageItem.created_at,
+                            ).toLocaleDateString("zh-CN")}
+                          </time>
+                        </div>
+                      </div>
+                    </div>
+                  </ListRow>
+                </div>
+              ))}
+            </ListStack>
           </Card>
         </AsyncState>
 

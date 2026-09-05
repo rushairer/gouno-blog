@@ -1,17 +1,17 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AdminShell from "../AdminShell";
 import AdminUsers from "../../pages/admin/Users";
 import { ToastProvider } from "@gouno/ui";
 
-const { logoutMock } = vi.hoisted(() => ({ logoutMock: vi.fn() }));
+const { logoutMock, userProfileMock } = vi.hoisted(() => ({
+  logoutMock: vi.fn(),
+  userProfileMock: vi.fn(),
+}));
 
 vi.mock("@gosso/client/react", () => ({
-  useUserProfile: () => ({
-    name: "Content Admin",
-    email: "admin@example.com",
-  }),
+  useUserProfile: userProfileMock,
   useSession: () => ({
     profile: { name: "Content Admin", email: "admin@example.com" },
     loggedIn: true,
@@ -55,6 +55,18 @@ vi.mock("../../api/site", () => ({
 describe("AdminShell navigation utilities", () => {
   beforeEach(() => {
     logoutMock.mockClear();
+    userProfileMock.mockReturnValue({
+      name: "Content Admin",
+      email: "admin@example.com",
+      permissions: [
+        "content.author",
+        "content.manage",
+        "community.moderate",
+        "ai.manage",
+        "site.manage",
+        "members.manage",
+      ],
+    });
     localStorage.clear();
     delete document.documentElement.dataset.theme;
   });
@@ -88,6 +100,48 @@ describe("AdminShell navigation utilities", () => {
     expect(logoutButton).toHaveClass("btn", "btn-ghost", "btn--compact");
     fireEvent.click(logoutButton);
     expect(logoutMock).toHaveBeenCalledOnce();
+
+    expect(screen.getByRole("search")).toHaveClass("hidden", "lg:flex");
+    expect(frontsiteLink.parentElement).toHaveClass("hidden", "sm:inline-flex");
+  });
+
+  it("opens the shared navigation sheet and closes it after route selection", () => {
+    render(
+      <MemoryRouter initialEntries={["/admin/dashboard"]}>
+        <AdminShell>
+          <h1>Dashboard</h1>
+        </AdminShell>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "后台导航" }));
+    const sheet = screen.getByRole("dialog");
+    expect(within(sheet).getByRole("link", { name: "文章" })).toBeVisible();
+    fireEvent.click(within(sheet).getByRole("link", { name: "文章" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("filters navigation from the existing permission list", () => {
+    userProfileMock.mockReturnValue({
+      name: "Moderator",
+      permissions: ["community.moderate"],
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/admin/dashboard"]}>
+        <AdminShell>
+          <h1>Dashboard</h1>
+        </AdminShell>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("link", { name: "评论" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "文章" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "成员与权限" }),
+    ).not.toBeInTheDocument();
   });
 
   it("points the identity management action at the gateway route", () => {

@@ -34,6 +34,14 @@ The JSON ledger is authoritative. Implementation and real browser verification a
 - Unverified: live `preview=true` authorization branches; live like/comment/reply/report/mark-read mutations; forced live API error/retry states; production-domain flows. Automated regressions cover these contracts where listed in the corresponding entries.
 - Conclusion and handoff: U02c is `verified` with no blocker. U03a may begin; preserve the verified public routes and limit work to Admin shell, Dashboard and list templates.
 
+## U03a Admin shell, Dashboard and list templates (2026-09-06) — verified
+
+- Preconditions and scope: U02c was rechecked at clean `main` HEAD `7b773bd` and remained `verified`; related `gosso-admin` was clean at `f9466f3`. Work ran on `codex/u03a-blog-admin-shell` and stayed within AdminShell, Dashboard review, and Posts/Pages/Users list templates. Connector, backend, authentication, session, database and production configuration were not changed.
+- Implementation: AdminShell retains existing notification/search/theme/logout and permission filtering while hiding nonessential toolbar content below its responsive breakpoints. Posts, Pages and Users keep their desktop tables and existing API/action predicates, with compact mobile rows built from shared `ListStack`/`ListRow` primitives. Search/filter/query, pagination, selection, bulk actions, previews, edits, deletes and protected member actions keep their previous behavior.
+- Automated verification: targeted Admin regressions exited 0 (5 files / 13 tests). The first full quality run exposed one old Pages test that assumed only one rendered responsive row; after updating it to assert both desktop and mobile representations, final `blog-frontend npm run quality` exited 0 (49 files / 185 tests; statements 55.81%, branches 46.42%, functions 45.56%, lines 58.02%). Formatting, oxlint, UI-contract, CSS-cascade, TypeScript, coverage and production build all passed; existing oxlint warnings remain non-blocking. `git diff --check` exited 0, and the local source-compose frontend build/replacement exited 0.
+- Browser: authenticated `https://blog.dev.local` used the rebuilt local source image. The Dashboard showed a desktop sidebar/four-column metrics at 1440×900 and 1024×768; 768×1024 used the navigation Sheet, two-column metrics and light theme. At 390×844 dark, Posts and Pages showed compact rows with hidden desktop tables and no document overflow; `/admin/posts?status=draft&page=1` preserved its query and exposed the selection/bulk toolbar after checking a real draft. Users mounted six compact rows behind the unchanged Sudo lock; no privileged mutation was attempted. Browser console error/warning output was empty and the temporary viewport override was reset.
+- Unverified and handoff: forced live API error injection, live multi-page pagination, all alternate-role browser sessions, Sudo unlock/member mutations and production-domain flows were not run. Automated tests cover error/empty/retry, permission-filtered navigation, critical actions and selection/bulk contracts. No blocker remains; U03b and U03c are unlocked, with editor internals reserved for U03b and complete support/member overlays reserved for U03c.
+
 ## Phase 0 source inventory
 
 The authoritative machine-readable inventory is `migration.json.phase0Inventory`. The source scan records the following boundaries without changing runtime behavior:
@@ -125,7 +133,7 @@ Automated checks do not replace authenticated browser regression. Entries remain
 | blog-admin:components/editor/ContentEditorFrame.tsx |  | not-started | not-run |
 | blog-admin:components/media/MediaDrawerForms.tsx |  | not-started | not-run |
 | blog-admin:components/taxonomy/CategoryForm.tsx |  | not-started | not-run |
-| blog-admin:layouts/AdminShell.tsx |  | not-started | not-run |
+| blog-admin:layouts/AdminShell.tsx |  | migrated | verified |
 | blog:layouts/PublicShell.tsx |  | migrated | verified |
 | blog:pages/About.tsx | /about | migrated | verified |
 | blog:pages/AccountNotifications.tsx | /account/notifications, /notifications | migrated | verified |
@@ -141,16 +149,16 @@ Automated checks do not replace authenticated browser regression. Entries remain
 | blog-admin:pages/admin/AIOperations.tsx | /admin/ai-ops | not-started | not-run |
 | blog-admin:pages/admin/Categories.tsx | /admin/categories | not-started | not-run |
 | blog-admin:pages/admin/Comments.tsx | /admin/comments | not-started | not-run |
-| blog-admin:pages/admin/Dashboard.tsx | /admin, /admin/dashboard | not-started | not-run |
+| blog-admin:pages/admin/Dashboard.tsx | /admin, /admin/dashboard | migrated | verified |
 | blog-admin:pages/admin/MediaLibrary.tsx | /admin/medialibrary | not-started | not-run |
 | blog-admin:pages/admin/Notifications.tsx | /admin/notifications | not-started | not-run |
 | blog-admin:pages/admin/PageEditor.tsx | /admin/pages/new, /admin/pages/:id/edit | not-started | not-run |
-| blog-admin:pages/admin/Pages.tsx | /admin/pages | not-started | not-run |
+| blog-admin:pages/admin/Pages.tsx | /admin/pages | migrated | verified |
 | blog-admin:pages/admin/PostEditor.tsx | /admin/posts/new, /admin/posts/:id/edit | not-started | not-run |
-| blog-admin:pages/admin/Posts.tsx | /admin/posts | not-started | not-run |
+| blog-admin:pages/admin/Posts.tsx | /admin/posts | migrated | verified |
 | blog-admin:pages/admin/SiteSettings.tsx | /admin/settings | not-started | not-run |
 | blog-admin:pages/admin/Tags.tsx | /admin/tags | not-started | not-run |
-| blog-admin:pages/admin/Users.tsx | /admin/users | not-started | not-run |
+| blog-admin:pages/admin/Users.tsx | /admin/users | migrated | verified |
 | gosso-admin:App.tsx |  | not-started | not-run |
 | gosso-admin:components/ErrorBoundary.tsx |  | not-started | not-run |
 | gosso-admin:components/auth/LoginPreview.tsx |  | not-started | not-run |

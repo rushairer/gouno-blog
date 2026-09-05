@@ -183,7 +183,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
           <form
             role="search"
             onSubmit={submitSearch}
-            className="flex items-center gap-1"
+            className="hidden items-center gap-1 lg:flex"
           >
             <SearchField
               aria-label="搜索文章"
@@ -194,15 +194,17 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             />
             <IconButton type="submit" label="提交文章搜索" icon={<Search />} />
           </form>
-          <ButtonLink
-            to="/"
-            target="_blank"
-            rel="noreferrer"
-            aria-label="在新窗口查看前台站点"
-            variant="ghost"
-            size="icon"
-            icon={<ExternalLink />}
-          />
+          <span className="hidden sm:inline-flex">
+            <ButtonLink
+              to="/"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="在新窗口查看前台站点"
+              variant="ghost"
+              size="icon"
+              icon={<ExternalLink />}
+            />
+          </span>
           <ButtonLink
             to="/admin/notifications"
             aria-label="查看通知中心"

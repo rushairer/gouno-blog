@@ -21,6 +21,8 @@ import {
   FilterBar,
   IconButton,
   IconButtonLink,
+  ListRow,
+  ListStack,
   Pagination,
   SearchField,
   Select,
@@ -170,6 +172,53 @@ export default function AdminPosts() {
   const hasFilters = Boolean(q || status || category || tag);
   const clearFilters = () => setParams({});
   const pages = Math.max(1, Math.ceil(total / pageSize));
+  const renderActions = (post: Post) => (
+    <>
+      <IconButtonLink
+        to={
+          post.status === "published"
+            ? `/articles/${post.slug}`
+            : `/articles/${post.slug}?preview=true`
+        }
+        target="_blank"
+        rel="noreferrer"
+        label={post.status === "published" ? "查看" : "预览"}
+        icon={<Eye />}
+      />
+      <IconButton
+        label="复制链接"
+        icon={<Copy />}
+        onClick={() =>
+          void copyText(
+            `${location.origin}/articles/${post.slug}`,
+            notify,
+            "文章链接已复制。",
+          )
+        }
+      />
+      {can("edit", "post", post) ? (
+        <IconButtonLink
+          to={`/admin/posts/${post.id}/edit`}
+          label="编辑"
+          icon={<Edit2 />}
+        />
+      ) : (
+        <IconButtonLink
+          to={`/admin/posts/${post.id}/edit`}
+          label="查看详情（只读）"
+          icon={<FileText />}
+        />
+      )}
+      {can("delete", "post", post) ? (
+        <IconButton
+          variant="danger"
+          label="删除"
+          icon={<Trash2 />}
+          onClick={() => setDeleteTarget({ kind: "post", post })}
+        />
+      ) : null}
+    </>
+  );
 
   return (
     <AdminPage>
@@ -336,7 +385,7 @@ export default function AdminPosts() {
             />
           }
         >
-          <Card className="border-border/80 bg-card shadow-xs overflow-hidden">
+          <Card className="hidden overflow-hidden border-border/80 bg-card shadow-xs md:block">
             <TableContainer>
               <table className="admin-table">
                 <thead>
@@ -419,53 +468,7 @@ export default function AdminPosts() {
                       </td>
                       <td>
                         <div className="flex items-center justify-end gap-1">
-                          <IconButtonLink
-                            to={
-                              post.status === "published"
-                                ? `/articles/${post.slug}`
-                                : `/articles/${post.slug}?preview=true`
-                            }
-                            target="_blank"
-                            rel="noreferrer"
-                            label={
-                              post.status === "published" ? "查看" : "预览"
-                            }
-                            icon={<Eye />}
-                          />
-                          <IconButton
-                            label="复制链接"
-                            icon={<Copy />}
-                            onClick={() =>
-                              void copyText(
-                                `${location.origin}/articles/${post.slug}`,
-                                notify,
-                                "文章链接已复制。",
-                              )
-                            }
-                          />
-                          {can("edit", "post", post) ? (
-                            <IconButtonLink
-                              to={`/admin/posts/${post.id}/edit`}
-                              label="编辑"
-                              icon={<Edit2 />}
-                            />
-                          ) : (
-                            <IconButtonLink
-                              to={`/admin/posts/${post.id}/edit`}
-                              label="查看详情（只读）"
-                              icon={<FileText />}
-                            />
-                          )}
-                          {can("delete", "post", post) ? (
-                            <IconButton
-                              variant="danger"
-                              label="删除"
-                              icon={<Trash2 />}
-                              onClick={() =>
-                                setDeleteTarget({ kind: "post", post })
-                              }
-                            />
-                          ) : null}
+                          {renderActions(post)}
                         </div>
                       </td>
                     </tr>
@@ -473,6 +476,59 @@ export default function AdminPosts() {
                 </tbody>
               </table>
             </TableContainer>
+          </Card>
+          <Card className="border-border/80 bg-card px-4 shadow-xs md:hidden">
+            <ListStack role="list" aria-label="文章列表">
+              {posts.map((post) => (
+                <div key={post.id} role="listitem">
+                  <ListRow
+                    action={renderActions(post)}
+                    className="items-start gap-3 [&>div:last-child]:w-full [&>div:last-child]:justify-end"
+                  >
+                    <div className="flex items-start gap-3">
+                      {can("batch", "post") ? (
+                        <Checkbox
+                          aria-label={`选择文章 ${post.title}`}
+                          checked={selected.includes(post.id)}
+                          onChange={(event) =>
+                            setSelected(
+                              event.target.checked
+                                ? [...selected, post.id]
+                                : selected.filter((id) => id !== post.id),
+                            )
+                          }
+                        />
+                      ) : null}
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <div className="flex items-start justify-between gap-3">
+                          <strong className="min-w-0 break-words text-sm font-semibold leading-snug">
+                            {post.title}
+                          </strong>
+                          <StatusBadge status={post.status} />
+                        </div>
+                        <div className="break-all font-mono text-xs text-muted-foreground">
+                          /{post.slug}
+                        </div>
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                          {post.category ? (
+                            <span>{post.category.name}</span>
+                          ) : null}
+                          <time>
+                            更新于{" "}
+                            {new Date(
+                              post.updated_at || post.created_at,
+                            ).toLocaleDateString("zh-CN")}
+                          </time>
+                          <span>
+                            {(post.views_count ?? 0).toLocaleString()} 次阅读
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </ListRow>
+                </div>
+              ))}
+            </ListStack>
           </Card>
         </AsyncState>
         {!loading && total > pageSize ? (
