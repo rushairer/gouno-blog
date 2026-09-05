@@ -370,9 +370,31 @@ export default function AdminUsers() {
         open={Boolean(editing)}
         title={editing ? "编辑成员信息与权限" : "管理权限"}
         onClose={() => setEditing(null)}
+        footer={
+          editing ? (
+            <>
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={() => setEditing(null)}
+              >
+                取消
+              </Button>
+              <Button
+                variant="primary"
+                type="submit"
+                form="member-role-form"
+                loading={saving === editing.principal.id}
+              >
+                保存设置
+              </Button>
+            </>
+          ) : null
+        }
       >
         {editing ? (
           <form
+            id="member-role-form"
             className="modal-form member-role-form"
             onSubmit={(event) => void saveRoles(event)}
           >
@@ -422,61 +444,44 @@ export default function AdminUsers() {
                       defaultChecked
                       disabled
                     />
-                    <div className="member-role-card__content">
-                      <div className="member-role-card__header">
+                    <div className="member-role-card-content">
+                      <div className="member-role-card-header">
                         <strong>所有者</strong>
-                        <span className="member-role-tag">owner</span>
+                        <span className="member-role-badge">不可变更</span>
                       </div>
-                      <small>
-                        拥有站点最高管理权限。所有权仅可通过“移交所有权”操作进行转移。
-                      </small>
+                      <p>
+                        拥有 Blog
+                        最高管理权限；所有权仅可通过“移交所有权”操作转让。
+                      </p>
                     </div>
                   </label>
                 ) : (
-                  assignableRoles.map((role) => {
-                    const currentRole =
-                      editing.roles.find((r) =>
-                        assignableRoles.includes(
-                          r as (typeof assignableRoles)[number],
-                        ),
-                      ) || "author";
+                  manageableRoles.map((role) => {
+                    const isCurrent = editing.roles.includes(role);
                     return (
-                      <label className="member-role-card" key={role}>
+                      <label key={role} className="member-role-card">
                         <input
                           type="radio"
                           name="role"
                           value={role}
-                          defaultChecked={role === currentRole}
+                          defaultChecked={isCurrent}
                         />
-                        <div className="member-role-card__content">
-                          <div className="member-role-card__header">
-                            <strong>{roleLabels[role]}</strong>
-                            <span className="member-role-tag">{role}</span>
+                        <div className="member-role-card-content">
+                          <div className="member-role-card-header">
+                            <strong>{getBlogRoleLabel(role)}</strong>
+                            {isCurrent ? (
+                              <span className="member-role-badge current">
+                                当前角色
+                              </span>
+                            ) : null}
                           </div>
-                          <small>{roleDescriptions[role]}</small>
+                          <p>{roleDescriptions[role]}</p>
                         </div>
                       </label>
                     );
                   })
                 )}
               </div>
-            </div>
-
-            <div className="modal-actions">
-              <Button
-                variant="secondary"
-                type="button"
-                onClick={() => setEditing(null)}
-              >
-                取消
-              </Button>
-              <Button
-                variant="primary"
-                type="submit"
-                loading={saving === editing.principal.id}
-              >
-                保存设置
-              </Button>
             </div>
           </form>
         ) : null}

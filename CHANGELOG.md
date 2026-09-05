@@ -7,6 +7,7 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- Standardize Modal structure and design system alignment: move modal action buttons out of form/body content into unified sticky `footer` prop across all modals (Step-Up MFA, Tags, Users, Post Reports, Article Preview), and maintain stable close button geometry anchored to the title bar regardless of subtitle presence.
 - Align Knowledge Base (Embedding Profiles) table layout and styling with Model Connections (Provider Profiles): separate API Key into an isolated secret-masked column with standard subtext, use `.provider-identity` cell structure, and unify action icon primitives (`Edit2`).
 
 ### Added

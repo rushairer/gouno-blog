@@ -578,8 +578,34 @@ export default function PostDetail() {
           setReportingComment(null);
           setReportReason("");
         }}
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={() => {
+                setReportingComment(null);
+                setReportReason("");
+              }}
+            >
+              {t("cancel")}
+            </Button>
+            <Button
+              variant="primary"
+              type="submit"
+              form="report-comment-form"
+              icon={<Flag />}
+            >
+              {t("report")}
+            </Button>
+          </>
+        }
       >
-        <form className="modal-form" onSubmit={handleReport}>
+        <form
+          id="report-comment-form"
+          className="modal-form"
+          onSubmit={handleReport}
+        >
           <label>
             {t("reportReason")}
             <Textarea
@@ -589,19 +615,6 @@ export default function PostDetail() {
               required
             />
           </label>
-          <div className="modal-actions">
-            <Button
-              onClick={() => {
-                setReportingComment(null);
-                setReportReason("");
-              }}
-            >
-              {t("cancel")}
-            </Button>
-            <Button variant="primary" type="submit" icon={<Flag />}>
-              {t("report")}
-            </Button>
-          </div>
         </form>
       </Modal>
     </>

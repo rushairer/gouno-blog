@@ -32,6 +32,18 @@ export function ArticlePreviewModal({
             : "The article changed after this preview was generated, so this candidate can no longer be applied safely."
       }
       onClose={onClose}
+      footer={
+        <div className="modal-actions">
+          <Button variant="secondary" type="button" onClick={onClose}>
+            {zh ? "关闭" : "Close"}
+          </Button>
+          {!isCurrent ? (
+            <Button variant="primary" type="button" disabled>
+              {zh ? "确认应用" : "Apply to article"}
+            </Button>
+          ) : null}
+        </div>
+      }
     >
       <div className="workflow-preview-modal__body">
         <article className="workflow-article-preview-surface">
@@ -46,13 +58,6 @@ export function ArticlePreviewModal({
             <MarkdownRenderer content={preview.content} />
           ) : null}
         </article>
-        {!isCurrent ? (
-          <div className="modal-actions">
-            <Button variant="primary" type="button" disabled>
-              {zh ? "确认应用" : "Apply to article"}
-            </Button>
-          </div>
-        ) : null}
       </div>
     </Modal>
   );

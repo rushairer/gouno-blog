@@ -43,8 +43,26 @@ export function StepUpMfaModal({ open, onClose, onSuccess }: StepUpMfaModalProps
   };
 
   return (
-    <Modal open={open} title="高权限安全验证" onClose={onClose}>
-      <form className="modal-form stepup-mfa-form" onSubmit={handleSubmit}>
+    <Modal
+      open={open}
+      title="高权限安全验证"
+      onClose={onClose}
+      footer={
+        <>
+          <Button variant="secondary" type="button" onClick={onClose}>
+            取消
+          </Button>
+          <Button variant="primary" type="submit" form="stepup-mfa-form">
+            前往统一身份中心
+          </Button>
+        </>
+      }
+    >
+      <form
+        id="stepup-mfa-form"
+        className="modal-form stepup-mfa-form"
+        onSubmit={handleSubmit}
+      >
         <div className="stepup-mfa-header">
           <div className="stepup-mfa-icon" aria-hidden="true">
             <ShieldCheck />
@@ -74,15 +92,6 @@ export function StepUpMfaModal({ open, onClose, onSuccess }: StepUpMfaModalProps
             </div>
           );
         })()}
-
-        <div className="modal-actions">
-          <Button variant="secondary" type="button" onClick={onClose}>
-            取消
-          </Button>
-          <Button variant="primary" type="submit">
-            前往统一身份中心
-          </Button>
-        </div>
       </form>
     </Modal>
   );

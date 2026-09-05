@@ -215,13 +215,8 @@ export default function Tags() {
             : `为“${tagEdit?.tag.name}”输入新名称。`
         }
         onClose={() => setTagEdit(null)}
-      >
-        <form className="modal-form" onSubmit={saveTag}>
-          <label>
-            {tagEdit?.mode === "merge" ? "目标标签" : "新标签名称"}
-            <input name="value" required autoFocus />
-          </label>
-          <div className="modal-actions">
+        footer={
+          <>
             <Button
               variant="secondary"
               type="button"
@@ -232,11 +227,19 @@ export default function Tags() {
             <Button
               variant="primary"
               type="submit"
+              form="tag-edit-form"
               icon={tagEdit?.mode === "merge" ? <Merge /> : <Save />}
             >
               {tagEdit?.mode === "merge" ? "合并标签" : "保存名称"}
             </Button>
-          </div>
+          </>
+        }
+      >
+        <form id="tag-edit-form" className="modal-form" onSubmit={saveTag}>
+          <label>
+            {tagEdit?.mode === "merge" ? "目标标签" : "新标签名称"}
+            <input name="value" required autoFocus />
+          </label>
         </form>
       </Modal>
       <ConfirmDialog
