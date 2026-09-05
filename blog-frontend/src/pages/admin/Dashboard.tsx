@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   AlertTriangle,
+  ArrowUpRight,
   Bot,
   CheckCheck,
   ChevronRight,
@@ -8,9 +9,9 @@ import {
   FileText,
   GitBranch,
   Heart,
-  Image as ImageIcon,
   MessageSquare,
   Plus,
+  TrendingUp,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { analyticsApi } from "../../api/analytics";
@@ -19,12 +20,22 @@ import {
   AdminPage,
   AdminPageHeader,
   AdminPageState,
+  Badge,
   Button,
   ButtonLink,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
   ContentStack,
   EmptyState,
   Feedback,
-  Panel,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "../../components/ui";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 import { useAbility } from "../../abilities";
@@ -66,9 +77,9 @@ function alertPresentation(alert: Summary["ai_alerts"][number]) {
   return {
     destination,
     icon: workflow ? (
-      <GitBranch aria-hidden="true" />
+      <GitBranch className="h-4 w-4" aria-hidden="true" />
     ) : (
-      <Bot aria-hidden="true" />
+      <Bot className="h-4 w-4" aria-hidden="true" />
     ),
     label: workflow ? "Workflow 执行失败" : "Agent 执行失败",
     action: destination.includes("run=") ? "查看失败详情" : "打开运行中心",
@@ -111,6 +122,7 @@ export default function Dashboard() {
         label="正在进入内容工作台…"
       />
     );
+
   const max = Math.max(
     1,
     ...(summary?.daily_events || []).map((item) => item.count),
@@ -142,280 +154,508 @@ export default function Dashboard() {
           ) : null
         }
       />
-      <ContentStack>
+      <ContentStack className="space-y-6">
         {error ? <Feedback type="error">{error}</Feedback> : null}
         {summary ? (
           <>
-            <div className="admin-metrics">
+            {/* Top 4 Metrics Cards */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {/* Metric 1: Total Posts */}
               {can("view", "post") ? (
-                <Panel as={Link} to="/admin/posts">
-                  <FileText />
-                  <span>文章</span>
-                  <strong>{summary.total_posts}</strong>
-                  <small>
-                    已发布 {summary.published_posts} · 草稿 {draftsCount}
-                  </small>
-                </Panel>
-              ) : (
-                <Panel>
-                  <FileText />
-                  <span>文章</span>
-                  <strong>{summary.total_posts}</strong>
-                  <small>已发布 {summary.published_posts}</small>
-                </Panel>
-              )}
-              {can("view", "post") ? (
-                <Panel as={Link} to="/admin/posts?status=published">
-                  <Eye />
-                  <span>总阅读</span>
-                  <strong>{summary.total_views.toLocaleString()}</strong>
-                  <small>查看已发布文章</small>
-                </Panel>
-              ) : (
-                <Panel>
-                  <Eye />
-                  <span>总阅读</span>
-                  <strong>{summary.total_views.toLocaleString()}</strong>
-                  <small>全站累计阅读</small>
-                </Panel>
-              )}
-              {can("view", "post") ? (
-                <Panel as={Link} to="/admin/posts">
-                  <Heart />
-                  <span>总点赞</span>
-                  <strong>{summary.total_likes.toLocaleString()}</strong>
-                  <small>全站累计获赞</small>
-                </Panel>
-              ) : (
-                <Panel>
-                  <Heart />
-                  <span>总点赞</span>
-                  <strong>{summary.total_likes.toLocaleString()}</strong>
-                  <small>全站累计获赞</small>
-                </Panel>
-              )}
-              {can("moderate", "comment") ? (
-                <Panel as={Link} to="/admin/comments?status=pending">
-                  <MessageSquare />
-                  <span>评论互动</span>
-                  <strong>{summary.total_comments}</strong>
-                  <small>待审核 {summary.pending_comments}</small>
-                </Panel>
-              ) : can("view", "media") ? (
-                <Panel as={Link} to="/admin/media">
-                  <ImageIcon />
-                  <span>媒体素材</span>
-                  <strong>媒体库</strong>
-                  <small>浏览与选用全站素材</small>
-                </Panel>
-              ) : (
-                <Panel>
-                  <MessageSquare />
-                  <span>评论互动</span>
-                  <strong>{summary.total_comments}</strong>
-                  <small>全站累计互动</small>
-                </Panel>
-              )}
-            </div>
-            <div className="dashboard-grid">
-              <Panel className="traffic-panel">
-                <div className="panel-heading">
-                  <h2>30 天流量趋势</h2>
-                  <span>页面访问</span>
-                </div>
-                <div
-                  className="admin-chart"
-                  role="img"
-                  aria-label="最近 30 天访问趋势"
+                <Link
+                  to="/admin/posts"
+                  className="block focus-visible:outline-none"
                 >
-                  {summary.daily_events.map((item) => (
-                    <div
-                      key={item.date}
-                      title={`${item.date}: ${item.count} 次访问`}
-                    >
-                      <div
-                        className="admin-chart-bar"
-                        style={{
-                          height: `${Math.max(
-                            6,
-                            Math.round((item.count / max) * 100),
-                          )}%`,
-                        }}
-                      />
-                      <small>{item.date.slice(5)}</small>
+                  <Card
+                    interactive
+                    className="group relative overflow-hidden transition-all duration-200 hover:border-primary/40 hover:shadow-md h-full"
+                  >
+                    <div className="p-5 flex flex-col justify-between h-full space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          文章总数
+                        </span>
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 text-primary">
+                          <FileText className="h-4 w-4" />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-3xl font-bold tracking-tight text-foreground">
+                          {summary.total_posts}
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground flex items-center gap-1.5">
+                          <span>已发布 {summary.published_posts}</span>
+                          <span className="text-border">·</span>
+                          <span className="text-amber-400">
+                            草稿 {draftsCount}
+                          </span>
+                        </p>
+                      </div>
                     </div>
-                  ))}
-                </div>
-              </Panel>
-              <Panel className="top-posts-panel">
-                <div className="panel-heading">
-                  <h2>内容指标</h2>
-                  <span>累计统计</span>
-                </div>
-                <div className="admin-status-grid">
-                  {can("moderate", "comment") ? (
-                    <>
-                      <div>
-                        <span>待审核评论</span>
-                        <strong>{summary.pending_comments}</strong>
+                  </Card>
+                </Link>
+              ) : (
+                <Card className="group relative overflow-hidden h-full">
+                  <div className="p-5 flex flex-col justify-between h-full space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        文章总数
+                      </span>
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 text-primary">
+                        <FileText className="h-4 w-4" />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-3xl font-bold tracking-tight text-foreground">
+                        {summary.total_posts}
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground flex items-center gap-1.5">
+                        <span>已发布 {summary.published_posts}</span>
+                        <span className="text-border">·</span>
+                        <span className="text-amber-400">
+                          草稿 {draftsCount}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+              {/* Metric 2: Total Views */}
+              {can("view", "post") ? (
+                <Link
+                  to="/admin/posts?status=published"
+                  className="block focus-visible:outline-none"
+                >
+                  <Card
+                    interactive
+                    className="group relative overflow-hidden transition-all duration-200 hover:border-emerald-500/40 hover:shadow-md h-full"
+                  >
+                    <div className="p-5 flex flex-col justify-between h-full space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          总阅读量
+                        </span>
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
+                          <Eye className="h-4 w-4" />
+                        </div>
                       </div>
                       <div>
-                        <span>被举报内容</span>
-                        <strong>{summary.reported_items}</strong>
+                        <div className="text-3xl font-bold tracking-tight text-foreground">
+                          {summary.total_views.toLocaleString()}
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          全站累计公开阅读次数
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                </Link>
+              ) : (
+                <Card className="group relative overflow-hidden h-full">
+                  <div className="p-5 flex flex-col justify-between h-full space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        总阅读量
+                      </span>
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
+                        <Eye className="h-4 w-4" />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-3xl font-bold tracking-tight text-foreground">
+                        {summary.total_views.toLocaleString()}
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        全站累计公开阅读次数
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+              {/* Metric 3: Total Likes */}
+              {can("view", "post") ? (
+                <Link
+                  to="/admin/posts"
+                  className="block focus-visible:outline-none"
+                >
+                  <Card
+                    interactive
+                    className="group relative overflow-hidden transition-all duration-200 hover:border-pink-500/40 hover:shadow-md h-full"
+                  >
+                    <div className="p-5 flex flex-col justify-between h-full space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          总获赞数
+                        </span>
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-pink-500/10 text-pink-400">
+                          <Heart className="h-4 w-4" />
+                        </div>
                       </div>
                       <div>
-                        <span>总文章数</span>
-                        <strong>{summary.total_posts}</strong>
+                        <div className="text-3xl font-bold tracking-tight text-foreground">
+                          {summary.total_likes.toLocaleString()}
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          读者正向互动累计
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                </Link>
+              ) : (
+                <Card className="group relative overflow-hidden h-full">
+                  <div className="p-5 flex flex-col justify-between h-full space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        总获赞数
+                      </span>
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-pink-500/10 text-pink-400">
+                        <Heart className="h-4 w-4" />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-3xl font-bold tracking-tight text-foreground">
+                        {summary.total_likes.toLocaleString()}
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        读者正向互动累计
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+              {/* Metric 4: Comments / Media */}
+              {can("moderate", "comment") || can("view", "media") ? (
+                <Link
+                  to={
+                    can("moderate", "comment")
+                      ? "/admin/comments?status=pending"
+                      : "/admin/media"
+                  }
+                  className="block focus-visible:outline-none"
+                >
+                  <Card
+                    interactive
+                    className="group relative overflow-hidden transition-all duration-200 hover:border-violet-500/40 hover:shadow-md h-full"
+                  >
+                    <div className="p-5 flex flex-col justify-between h-full space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          评论互动
+                        </span>
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-400">
+                          <MessageSquare className="h-4 w-4" />
+                        </div>
                       </div>
                       <div>
-                        <span>已发布文章</span>
-                        <strong>{summary.published_posts}</strong>
+                        <div className="text-3xl font-bold tracking-tight text-foreground">
+                          {summary.total_comments}
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground flex items-center gap-1.5">
+                          {summary.pending_comments > 0 ? (
+                            <span className="font-semibold text-amber-400">
+                              待审核 {summary.pending_comments} 条
+                            </span>
+                          ) : (
+                            <span>全站互动良好</span>
+                          )}
+                        </p>
                       </div>
-                    </>
-                  ) : (
-                    <>
-                      <div>
-                        <span>总文章数</span>
-                        <strong>{summary.total_posts}</strong>
+                    </div>
+                  </Card>
+                </Link>
+              ) : (
+                <Card className="group relative overflow-hidden h-full">
+                  <div className="p-5 flex flex-col justify-between h-full space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        评论互动
+                      </span>
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-400">
+                        <MessageSquare className="h-4 w-4" />
                       </div>
-                      <div>
-                        <span>已发布文章</span>
-                        <strong>{summary.published_posts}</strong>
+                    </div>
+                    <div>
+                      <div className="text-3xl font-bold tracking-tight text-foreground">
+                        {summary.total_comments}
                       </div>
-                      <div>
-                        <span>草稿与待发</span>
-                        <strong>{draftsCount}</strong>
-                      </div>
-                      <div>
-                        <span>全站累计阅读</span>
-                        <strong>{summary.total_views.toLocaleString()}</strong>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </Panel>
+                      <p className="mt-1 text-xs text-muted-foreground flex items-center gap-1.5">
+                        {summary.pending_comments > 0 ? (
+                          <span className="font-semibold text-amber-400">
+                            待审核 {summary.pending_comments} 条
+                          </span>
+                        ) : (
+                          <span>全站互动良好</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              )}
             </div>
-            {can("manage", "ai") && summary.ai_alerts?.length ? (
-              <Panel className="dashboard-ai-alerts">
-                <div className="panel-heading">
-                  <div>
-                    <h2>
-                      <AlertTriangle /> AI 运营提醒
-                    </h2>
-                    <small>
-                      需要你处理的自动化异常，点击可直接查看执行记录。
-                    </small>
+
+            {/* Main Section: Traffic Chart & Content Health */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+              {/* Traffic Chart (2 cols) */}
+              <Card className="lg:col-span-2 overflow-hidden flex flex-col">
+                <CardHeader className="pb-2 border-b border-border/60">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 text-primary" />
+                        30 天访问趋势
+                      </CardTitle>
+                      <p className="text-xs text-muted-foreground">
+                        每日页面访问量分布
+                      </p>
+                    </div>
+                    <Badge tone="primary" pill>
+                      近 30 天
+                    </Badge>
                   </div>
-                  <div className="dashboard-ai-alerts__actions">
-                    <Button
-                      variant="secondary"
-                      size="compact"
-                      type="button"
-                      disabled={clearingAlerts}
-                      onClick={() => void dismissAllAlerts()}
-                      icon={<CheckCheck />}
+                </CardHeader>
+                <CardContent className="pt-6 flex-1 flex flex-col justify-end">
+                  <div
+                    className="flex h-48 items-end gap-1.5 sm:gap-2 px-2"
+                    role="img"
+                    aria-label="最近 30 天访问趋势"
+                  >
+                    {summary.daily_events.map((item) => {
+                      const pct = Math.max(
+                        6,
+                        Math.round((item.count / max) * 100),
+                      );
+                      return (
+                        <div
+                          key={item.date}
+                          className="group relative flex-1 flex flex-col items-center justify-end h-full"
+                          title={`${item.date}: ${item.count} 次访问`}
+                        >
+                          <div
+                            className="w-full rounded-t-sm bg-primary/70 transition-all duration-200 group-hover:bg-primary group-hover:shadow-sm"
+                            style={{ height: `${pct}%` }}
+                          />
+                          <span className="mt-2 text-[10px] text-muted-foreground/60 hidden sm:block truncate">
+                            {item.date.slice(8)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Content Health & Moderation (1 col) */}
+              <Card className="flex flex-col">
+                <CardHeader className="pb-2 border-b border-border/60">
+                  <CardTitle className="text-base">内容治理与指标</CardTitle>
+                  <p className="text-xs text-muted-foreground">
+                    关键待办事项与健康指标
+                  </p>
+                </CardHeader>
+                <CardContent className="pt-6 flex-1 flex flex-col justify-center space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-lg border border-border bg-secondary/40 p-3.5 space-y-1">
+                      <span className="text-xs text-muted-foreground font-medium">
+                        待审核评论
+                      </span>
+                      <div className="text-xl font-bold text-foreground">
+                        {summary.pending_comments}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-border bg-secondary/40 p-3.5 space-y-1">
+                      <span className="text-xs text-muted-foreground font-medium">
+                        被举报内容
+                      </span>
+                      <div className="text-xl font-bold text-foreground">
+                        {summary.reported_items}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-border bg-secondary/40 p-3.5 space-y-1">
+                      <span className="text-xs text-muted-foreground font-medium">
+                        已发布文章
+                      </span>
+                      <div className="text-xl font-bold text-emerald-400">
+                        {summary.published_posts}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-border bg-secondary/40 p-3.5 space-y-1">
+                      <span className="text-xs text-muted-foreground font-medium">
+                        草稿待发布
+                      </span>
+                      <div className="text-xl font-bold text-amber-400">
+                        {draftsCount}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-border/50 flex items-center justify-between text-xs text-muted-foreground">
+                    <span>系统状态正常</span>
+                    <Link
+                      to="/admin/posts"
+                      className="text-primary hover:underline font-medium inline-flex items-center gap-1"
                     >
-                      {clearingAlerts ? "正在清除…" : "全部已读"}
-                    </Button>
-                    <Link to="/admin/ai-ops?tab=records">查看全部记录</Link>
+                      文章管理 <ChevronRight className="h-3 w-3" />
+                    </Link>
                   </div>
-                </div>
-                <div className="dashboard-ai-alert-list">
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* AI Operations Alerts Card (if any) */}
+            {can("manage", "ai") && summary.ai_alerts?.length ? (
+              <Card className="border-amber-500/30 bg-amber-950/10 overflow-hidden">
+                <CardHeader className="pb-3 border-b border-amber-500/20">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="space-y-1">
+                      <CardTitle className="text-base text-amber-300 flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />
+                        AI 运营提醒
+                      </CardTitle>
+                      <p className="text-xs text-muted-foreground">
+                        需要你关注或审批的自动化执行记录，点击可直接查看详情。
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="secondary"
+                        size="compact"
+                        type="button"
+                        disabled={clearingAlerts}
+                        onClick={() => void dismissAllAlerts()}
+                        icon={<CheckCheck className="h-3.5 w-3.5" />}
+                      >
+                        {clearingAlerts ? "正在清除…" : "全部已读"}
+                      </Button>
+                      <ButtonLink
+                        variant="ghost"
+                        size="compact"
+                        to="/admin/ai-ops?tab=records"
+                      >
+                        查看全部记录
+                      </ButtonLink>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0 divide-y divide-amber-500/10">
                   {summary.ai_alerts.map((alert) => {
                     const presentation = alertPresentation(alert);
                     return (
                       <Link
-                        className="dashboard-ai-alert"
                         key={alert.id}
                         to={presentation.destination}
+                        className="flex items-center justify-between gap-4 p-4 transition-colors hover:bg-amber-500/5 group"
                       >
-                        <span
-                          className="dashboard-ai-alert__icon"
-                          aria-hidden="true"
-                        >
-                          {presentation.icon}
-                        </span>
-                        <span className="dashboard-ai-alert__content">
-                          <strong>
-                            {presentation.label}
-                            <em>
-                              {alert.title
-                                .replace(
-                                  /^(?:AI 自动化|Workflow|Agent)\s*运行失败：?\s*/,
-                                  "",
-                                )
-                                .trim()}
-                            </em>
-                          </strong>
-                          <span>
-                            {alert.body
-                              ? `失败原因：${alert.body}`
-                              : "运行未完成，请打开记录查看失败步骤。"}
-                          </span>
-                          <small>
-                            {new Date(alert.created_at).toLocaleString("zh-CN")}
-                          </small>
-                        </span>
-                        <span className="dashboard-ai-alert__action">
-                          {presentation.action}
-                          <ChevronRight aria-hidden="true" />
-                        </span>
+                        <div className="flex items-start gap-3 min-w-0 flex-1">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-400 mt-0.5">
+                            {presentation.icon}
+                          </div>
+                          <div className="space-y-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-sm font-semibold text-foreground">
+                                {presentation.label}
+                              </span>
+                              <span className="text-xs font-medium text-amber-300">
+                                {alert.title
+                                  .replace(
+                                    /^(?:AI 自动化|Workflow|Agent)\s*运行失败：?\s*/,
+                                    "",
+                                  )
+                                  .trim()}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground line-clamp-1">
+                              {alert.body
+                                ? `失败原因：${alert.body}`
+                                : "运行未完成，请打开记录查看失败步骤。"}
+                            </p>
+                            <time className="text-[11px] text-muted-foreground/60 block">
+                              {new Date(alert.created_at).toLocaleString(
+                                "zh-CN",
+                              )}
+                            </time>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs font-medium text-primary shrink-0 group-hover:translate-x-0.5 transition-transform">
+                          <span>{presentation.action}</span>
+                          <ChevronRight className="h-3.5 w-3.5" />
+                        </div>
                       </Link>
                     );
                   })}
-                </div>
-              </Panel>
+                </CardContent>
+              </Card>
             ) : null}
-            <Panel className="dashboard-table">
-              <div className="panel-heading">
-                <h2>表现最佳文章</h2>
-                {can("view", "post") ? (
-                  <Link to="/admin/posts">查看全部文章</Link>
-                ) : null}
-              </div>
-              <div className="table-scroll">
+
+            {/* Top Posts Table Card */}
+            <Card className="overflow-hidden">
+              <CardHeader className="pb-3 border-b border-border/60">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <CardTitle className="text-base">表现最佳文章</CardTitle>
+                    <p className="text-xs text-muted-foreground">
+                      按全站阅读量与点赞数排序的热门内容
+                    </p>
+                  </div>
+                  {can("view", "post") ? (
+                    <ButtonLink
+                      variant="ghost"
+                      size="compact"
+                      to="/admin/posts"
+                      icon={<ArrowUpRight />}
+                    >
+                      查看全部文章
+                    </ButtonLink>
+                  ) : null}
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
                 {summary.top_posts.length === 0 ? (
-                  <EmptyState label="暂无表现数据" />
+                  <EmptyState label="暂无表现数据" className="py-12" />
                 ) : (
-                  <table className="admin-table">
-                    <thead>
-                      <tr>
-                        <th>文章</th>
-                        <th>阅读量</th>
-                        <th>点赞</th>
-                        <th>操作</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12 text-center">排名</TableHead>
+                        <TableHead>文章标题</TableHead>
+                        <TableHead className="w-28 text-right">
+                          阅读量
+                        </TableHead>
+                        <TableHead className="w-28 text-right">
+                          点赞数
+                        </TableHead>
+                        <TableHead className="w-36 text-right">操作</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {summary.top_posts.map((post, index) => {
                         const canEdit = can("edit", "post", post);
                         return (
-                          <tr key={post.id}>
-                            <td>
-                              <span>{index + 1}</span>
+                          <TableRow key={post.id} className="hover:bg-muted/40">
+                            <TableCell className="text-center font-mono font-medium text-muted-foreground text-xs">
+                              {index + 1}
+                            </TableCell>
+                            <TableCell className="font-medium text-foreground">
                               {post.title}
-                            </td>
-                            <td>{post.views_count}</td>
-                            <td>{post.likes_count}</td>
-                            <td>
-                              <div className="row-actions">
-                                {canEdit ? (
-                                  <ButtonLink
-                                    variant="ghost"
-                                    size="compact"
-                                    to={`/admin/posts/${post.id}/edit`}
-                                  >
-                                    编辑
-                                  </ButtonLink>
-                                ) : (
-                                  <ButtonLink
-                                    variant="ghost"
-                                    size="compact"
-                                    to={`/admin/posts/${post.id}/edit`}
-                                  >
-                                    查看
-                                  </ButtonLink>
-                                )}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                              {post.views_count.toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                              {post.likes_count.toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="inline-flex items-center justify-end gap-1.5">
+                                <ButtonLink
+                                  variant="ghost"
+                                  size="compact"
+                                  to={`/admin/posts/${post.id}/edit`}
+                                >
+                                  {canEdit ? "编辑" : "查看"}
+                                </ButtonLink>
                                 <ButtonLink
                                   variant="ghost"
                                   size="compact"
@@ -426,15 +666,15 @@ export default function Dashboard() {
                                   前台
                                 </ButtonLink>
                               </div>
-                            </td>
-                          </tr>
+                            </TableCell>
+                          </TableRow>
                         );
                       })}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 )}
-              </div>
-            </Panel>
+              </CardContent>
+            </Card>
           </>
         ) : null}
       </ContentStack>

@@ -19,6 +19,7 @@ import {
   AsyncState,
   BulkActionBar,
   Button,
+  Card,
   Checkbox,
   ConfirmDialog,
   ContentStack,
@@ -27,7 +28,6 @@ import {
   EmptyState,
   Feedback,
   FilterBar,
-  Panel,
   SearchField,
   Select,
   TableSkeleton,
@@ -341,45 +341,47 @@ export default function MediaLibrary() {
             ) : null}
           </Feedback>
         ) : null}
-        <FilterBar>
-          <SearchField
-            aria-label="搜索媒体"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="搜索文件名或替代文本"
-          />
-          <Select
-            size="compact"
-            aria-label="媒体类型"
-            value={type}
-            onChange={(event) => setType(event.target.value)}
-          >
-            <option value="">全部类型</option>
-            {contentTypes.map((item) => (
-              <option key={item} value={item}>
-                {item.replace("image/", "").toUpperCase()}
-              </option>
-            ))}
-          </Select>
-          <span className="filter-bar__count">
-            {visibleAssets.length} / {assets.length}
-          </span>
-          {query || type ? (
-            <Button
-              className="filter-bar__actions"
-              variant="ghost"
+        <Card className="border-border/80 bg-card p-4 shadow-xs">
+          <FilterBar>
+            <SearchField
+              aria-label="搜索媒体"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="搜索文件名或替代文本"
+            />
+            <Select
               size="compact"
-              type="button"
-              onClick={() => {
-                setQuery("");
-                setType("");
-              }}
-              icon={<X />}
+              aria-label="媒体类型"
+              value={type}
+              onChange={(event) => setType(event.target.value)}
             >
-              清除
-            </Button>
-          ) : null}
-        </FilterBar>
+              <option value="">全部类型</option>
+              {contentTypes.map((item) => (
+                <option key={item} value={item}>
+                  {item.replace("image/", "").toUpperCase()}
+                </option>
+              ))}
+            </Select>
+            <span className="filter-bar__count">
+              {visibleAssets.length} / {assets.length}
+            </span>
+            {query || type ? (
+              <Button
+                className="filter-bar__actions"
+                variant="ghost"
+                size="compact"
+                type="button"
+                onClick={() => {
+                  setQuery("");
+                  setType("");
+                }}
+                icon={<X />}
+              >
+                清除
+              </Button>
+            ) : null}
+          </FilterBar>
+        </Card>
         {can("batch", "media") && selectedAssets.length ? (
           <BulkActionBar
             selectionLabel={`已选择 ${selectedAssets.length} 个媒体`}
@@ -416,40 +418,58 @@ export default function MediaLibrary() {
             />
           }
         >
-          <div className="media-grid">
+          <div className="media-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {visibleAssets.map((asset) => (
-              <Panel
-                className="media-card"
+              <Card
+                className="media-card group relative flex flex-col justify-between overflow-hidden border-border/80 bg-card shadow-xs hover:border-primary/40 hover:shadow-sm transition-all"
                 id={`asset-${asset.id}`}
                 key={asset.id}
               >
-                {can("batch", "media") ? (
-                  <Checkbox
-                    aria-label={`选择媒体 ${asset.filename}`}
-                    checked={selectedAssets.includes(asset.id)}
-                    onChange={(event) =>
-                      setSelectedAssets((current) =>
-                        event.target.checked
-                          ? [...new Set([...current, asset.id])]
-                          : current.filter((id) => id !== asset.id),
-                      )
-                    }
+                <div className="relative aspect-video w-full overflow-hidden bg-muted/40 border-b border-border/60">
+                  {can("batch", "media") ? (
+                    <div className="absolute top-2 left-2 z-10 rounded bg-background/80 backdrop-blur-xs p-1">
+                      <Checkbox
+                        aria-label={`选择媒体 ${asset.filename}`}
+                        checked={selectedAssets.includes(asset.id)}
+                        onChange={(event) =>
+                          setSelectedAssets((current) =>
+                            event.target.checked
+                              ? [...new Set([...current, asset.id])]
+                              : current.filter((id) => id !== asset.id),
+                          )
+                        }
+                      />
+                    </div>
+                  ) : null}
+                  <img
+                    src={asset.url}
+                    alt={asset.alt_text || asset.filename}
+                    loading="lazy"
+                    className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
-                ) : null}
-                <img
-                  src={asset.url}
-                  alt={asset.alt_text || asset.filename}
-                  loading="lazy"
-                />
-                <div>
-                  <strong>{asset.filename}</strong>
-                  <small>
-                    {Math.ceil(asset.size_bytes / 1024)} KB ·{" "}
-                    {formatDateTime(asset.created_at)} · 引用{" "}
-                    {asset.usage_count || 0}
-                  </small>
+                </div>
+                <div className="flex-1 p-3.5 space-y-1.5">
+                  <strong
+                    className="block font-semibold text-sm text-foreground truncate"
+                    title={asset.filename}
+                  >
+                    {asset.filename}
+                  </strong>
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
+                    <span>{Math.ceil(asset.size_bytes / 1024)} KB</span>
+                    <span>·</span>
+                    <span>{formatDateTime(asset.created_at)}</span>
+                    {asset.usage_count ? (
+                      <>
+                        <span>·</span>
+                        <span className="text-primary font-sans">
+                          引用 {asset.usage_count}
+                        </span>
+                      </>
+                    ) : null}
+                  </div>
                   <small
-                    className="media-card__alt"
+                    className="media-card__alt block text-xs text-muted-foreground truncate"
                     title={
                       asset.alt_text
                         ? `${t("altText")}: ${asset.alt_text}`
@@ -458,65 +478,75 @@ export default function MediaLibrary() {
                   >
                     {t("altText")}:{" "}
                     {asset.alt_text || (
-                      <span className="text-muted">{t("notSet")}</span>
+                      <span className="text-muted-foreground/60 italic">
+                        {t("notSet")}
+                      </span>
                     )}
                   </small>
                 </div>
-                <div className="row-actions">
-                  <Button
-                    variant="secondary"
-                    title={t("copyRelativeUrl")}
-                    onClick={() =>
-                      void copyText(
-                        getRelativeMediaUrl(asset.url),
-                        notify,
-                        t("relativeUrlCopied"),
-                      )
-                    }
-                    icon={<Link2 />}
-                  >
-                    {t("copyRelativeUrl")}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    title={t("copyMarkdown")}
-                    onClick={() =>
-                      void copyText(
-                        `![${asset.alt_text || asset.filename}](${asset.url})`,
-                        notify,
-                        "媒体 Markdown 已复制。",
-                      )
-                    }
-                    icon={<Copy />}
-                  >
-                    {t("copyMarkdown")}
-                  </Button>
-                  {can("edit", "media", asset) ? (
+                <div className="row-actions flex items-center justify-between border-t border-border/60 bg-muted/20 p-2 gap-1">
+                  <div className="flex items-center gap-1">
                     <Button
-                      variant="secondary"
-                      title={t("editAltText")}
-                      onClick={() => openEditAltDrawer(asset)}
-                      icon={<Pencil />}
+                      variant="ghost"
+                      size="compact"
+                      title={t("copyRelativeUrl")}
+                      onClick={() =>
+                        void copyText(
+                          getRelativeMediaUrl(asset.url),
+                          notify,
+                          t("relativeUrlCopied"),
+                        )
+                      }
+                      icon={<Link2 />}
                     >
-                      {t("editAltText")}
+                      {t("copyRelativeUrl")}
                     </Button>
-                  ) : null}
-                  {can("delete", "media", asset) ? (
                     <Button
-                      variant="danger"
-                      title={t("delete")}
-                      onClick={() => {
-                        setDeleteTarget(asset);
-                        setReferences([]);
-                        setError("");
-                      }}
-                      icon={<Trash2 />}
+                      variant="ghost"
+                      size="compact"
+                      title={t("copyMarkdown")}
+                      onClick={() =>
+                        void copyText(
+                          `![${asset.alt_text || asset.filename}](${asset.url})`,
+                          notify,
+                          "媒体 Markdown 已复制。",
+                        )
+                      }
+                      icon={<Copy />}
                     >
-                      {t("delete")}
+                      {t("copyMarkdown")}
                     </Button>
-                  ) : null}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {can("edit", "media", asset) ? (
+                      <Button
+                        variant="ghost"
+                        size="compact"
+                        title={t("editAltText")}
+                        onClick={() => openEditAltDrawer(asset)}
+                        icon={<Pencil />}
+                      >
+                        {t("editAltText")}
+                      </Button>
+                    ) : null}
+                    {can("delete", "media", asset) ? (
+                      <Button
+                        variant="danger"
+                        size="compact"
+                        title={t("delete")}
+                        onClick={() => {
+                          setDeleteTarget(asset);
+                          setReferences([]);
+                          setError("");
+                        }}
+                        icon={<Trash2 />}
+                      >
+                        {t("delete")}
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
-              </Panel>
+              </Card>
             ))}
           </div>
         </AsyncState>

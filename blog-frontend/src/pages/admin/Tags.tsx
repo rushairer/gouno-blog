@@ -6,14 +6,15 @@ import {
   AdminPage,
   AdminPageHeader,
   AsyncState,
+  Badge,
   BulkActionBar,
   Button,
+  Card,
   Checkbox,
   ConfirmDialog,
   ContentStack,
   Feedback,
   Modal,
-  Panel,
   TableSkeleton,
   useToast,
 } from "../../components/ui";
@@ -150,31 +151,42 @@ export default function Tags() {
           empty={!loading && tags.length === 0 && !error}
           emptyTitle="文章添加标签后会自动在这里汇总。"
         >
-          <div className="tag-admin-grid">
+          <div className="tag-admin-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {tags.map((tag) => (
-              <Panel className="tag-admin-card" key={tag.name}>
-                <Checkbox
-                  className="tag-admin-card__checkbox"
-                  aria-label={`选择标签 ${tag.name}`}
-                  checked={selected.includes(tag.name)}
-                  onChange={(event) =>
-                    setSelected((current) =>
-                      event.target.checked
-                        ? [...new Set([...current, tag.name])]
-                        : current.filter((key) => key !== tag.name),
-                    )
-                  }
-                />
-                <div className="tag-admin-card__content">
-                  <strong>{tag.name}</strong>
-                  <span>{tag.post_count} 篇文章</span>
+              <Card
+                className="tag-admin-card flex flex-col justify-between border-border/80 bg-card p-4 shadow-xs hover:border-primary/40 transition-colors"
+                key={tag.name}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      className="tag-admin-card__checkbox"
+                      aria-label={`选择标签 ${tag.name}`}
+                      checked={selected.includes(tag.name)}
+                      onChange={(event) =>
+                        setSelected((current) =>
+                          event.target.checked
+                            ? [...new Set([...current, tag.name])]
+                            : current.filter((key) => key !== tag.name),
+                        )
+                      }
+                    />
+                    <div className="tag-admin-card__content flex flex-col gap-0.5">
+                      <strong className="text-sm font-semibold text-foreground">
+                        {tag.name}
+                      </strong>
+                    </div>
+                  </div>
+                  <Badge tone="neutral" pill className="text-xs font-mono">
+                    {tag.post_count} 篇
+                  </Badge>
                 </div>
                 <div
-                  className="tag-admin-card__actions"
+                  className="tag-admin-card__actions flex items-center justify-end gap-1.5 pt-3 mt-3 border-t border-border/60"
                   aria-label={`标签 ${tag.name} 操作`}
                 >
                   <Button
-                    variant="secondary"
+                    variant="ghost"
                     size="compact"
                     type="button"
                     onClick={() => setTagEdit({ tag, mode: "rename" })}
@@ -183,7 +195,7 @@ export default function Tags() {
                     重命名
                   </Button>
                   <Button
-                    variant="secondary"
+                    variant="ghost"
                     size="compact"
                     type="button"
                     onClick={() => setTagEdit({ tag, mode: "merge" })}
@@ -201,7 +213,7 @@ export default function Tags() {
                     删除
                   </Button>
                 </div>
-              </Panel>
+              </Card>
             ))}
           </div>
         </AsyncState>

@@ -5,6 +5,7 @@ import {
   Check,
   CheckCheck,
   ChevronRight,
+  Filter,
   GitBranch,
   MessageSquare,
   Trash2,
@@ -16,19 +17,21 @@ import {
   AdminPage,
   AdminPageHeader,
   AsyncState,
+  Badge,
   BulkActionBar,
   Button,
   ButtonLink,
+  Card,
   Checkbox,
   CheckboxField,
   ConfirmDialog,
   ContentStack,
   Feedback,
-  FilterBar,
   Select,
   TableSkeleton,
   useToast,
 } from "../../components/ui";
+import { cn } from "../../lib/utils";
 
 type DeleteAction =
   | { kind: "single"; id: number; title: string }
@@ -207,29 +210,29 @@ export default function AdminNotifications() {
             ? `/articles/${item.post_slug}${item.comment_id ? `#comment-${item.comment_id}` : ""}`
             : "/admin/comments");
 
-    let icon = <Bell />;
+    let icon = <Bell className="h-4 w-4" />;
     let tag = "系统通知";
-    let tagClass = "";
-    let iconClass = "";
+    let tone: "info" | "warning" | "primary" = "info";
+    let iconBg = "bg-sky-500/10 text-sky-400";
 
     if (isWorkflow) {
-      icon = <GitBranch />;
+      icon = <GitBranch className="h-4 w-4" />;
       tag = "Workflow 告警";
-      tagClass = "admin-notification-tag--ai";
-      iconClass = "admin-notification-icon--ai";
+      tone = "warning";
+      iconBg = "bg-amber-500/10 text-amber-400";
     } else if (isAI) {
-      icon = <Bot />;
+      icon = <Bot className="h-4 w-4" />;
       tag = "AI 运营告警";
-      tagClass = "admin-notification-tag--ai";
-      iconClass = "admin-notification-icon--ai";
+      tone = "warning";
+      iconBg = "bg-amber-500/10 text-amber-400";
     } else if (item.type === "comment_reply" || item.type === "comment") {
-      icon = <MessageSquare />;
+      icon = <MessageSquare className="h-4 w-4" />;
       tag = "评论互动";
-      tagClass = "admin-notification-tag--comment";
-      iconClass = "admin-notification-icon--comment";
+      tone = "primary";
+      iconBg = "bg-violet-500/10 text-violet-400";
     }
 
-    return { destination, icon, tag, tagClass, iconClass };
+    return { destination, icon, tag, tone, iconBg };
   };
 
   const confirmTitle =
@@ -263,7 +266,7 @@ export default function AdminNotifications() {
                 type="button"
                 disabled={busy}
                 onClick={() => void markAllRead()}
-                icon={<CheckCheck />}
+                icon={<CheckCheck className="h-4 w-4" />}
               >
                 全部标为已读
               </Button>
@@ -274,7 +277,7 @@ export default function AdminNotifications() {
                 type="button"
                 disabled={busy}
                 onClick={() => setDeleteAction({ kind: "clear_read" })}
-                icon={<Trash2 />}
+                icon={<Trash2 className="h-4 w-4" />}
               >
                 清空已读
               </Button>
@@ -285,7 +288,7 @@ export default function AdminNotifications() {
                 type="button"
                 disabled={busy}
                 onClick={() => setDeleteAction({ kind: "clear_all" })}
-                icon={<Trash2 />}
+                icon={<Trash2 className="h-4 w-4" />}
               >
                 清空全部
               </Button>
@@ -293,46 +296,63 @@ export default function AdminNotifications() {
           </ActionGroup>
         }
       />
-      <ContentStack>
+      <ContentStack className="space-y-6">
         {error && items.length > 0 ? (
           <Feedback type="error">{error}</Feedback>
         ) : null}
 
-        <FilterBar>
-          <Select
-            size="compact"
-            aria-label="状态筛选"
-            value={statusFilter}
-            onChange={(e) =>
-              setStatusFilter(e.target.value as typeof statusFilter)
-            }
-          >
-            <option value="all">全部状态 ({items.length})</option>
-            <option value="unread">未读通知 ({unreadCount})</option>
-            <option value="read">已读通知 ({readCount})</option>
-          </Select>
+        {/* Filter Toolbar Card */}
+        <Card className="p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  筛选
+                </span>
+              </div>
+              <Select
+                size="compact"
+                aria-label="状态筛选"
+                value={statusFilter}
+                onChange={(e) =>
+                  setStatusFilter(e.target.value as typeof statusFilter)
+                }
+                className="w-40"
+              >
+                <option value="all">全部状态 ({items.length})</option>
+                <option value="unread">未读通知 ({unreadCount})</option>
+                <option value="read">已读通知 ({readCount})</option>
+              </Select>
 
-          <Select
-            size="compact"
-            aria-label="类型筛选"
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}
-          >
-            <option value="all">全部类型</option>
-            <option value="ai">AI 运营告警</option>
-            <option value="comment">互动与评论</option>
-          </Select>
+              <Select
+                size="compact"
+                aria-label="类型筛选"
+                value={typeFilter}
+                onChange={(e) =>
+                  setTypeFilter(e.target.value as typeof typeFilter)
+                }
+                className="w-36"
+              >
+                <option value="all">全部类型</option>
+                <option value="ai">AI 运营告警</option>
+                <option value="comment">互动与评论</option>
+              </Select>
+            </div>
 
-          {filtered.length > 0 ? (
-            <CheckboxField className="checkbox-field--end">
-              <Checkbox
-                checked={allFilteredSelected}
-                onChange={(e) => toggleSelectAllFiltered(e.target.checked)}
-              />
-              全选当前列表
-            </CheckboxField>
-          ) : null}
-        </FilterBar>
+            {filtered.length > 0 ? (
+              <div className="flex items-center">
+                <CheckboxField className="text-xs text-muted-foreground select-none">
+                  <Checkbox
+                    checked={allFilteredSelected}
+                    onChange={(e) => toggleSelectAllFiltered(e.target.checked)}
+                  />
+                  <span>全选当前列表 ({filtered.length})</span>
+                </CheckboxField>
+              </div>
+            ) : null}
+          </div>
+        </Card>
 
         {selected.length > 0 ? (
           <BulkActionBar
@@ -345,7 +365,7 @@ export default function AdminNotifications() {
               type="button"
               disabled={busy}
               onClick={() => void markSelectedRead()}
-              icon={<Check />}
+              icon={<Check className="h-3.5 w-3.5" />}
             >
               标为已读
             </Button>
@@ -357,7 +377,7 @@ export default function AdminNotifications() {
               onClick={() =>
                 setDeleteAction({ kind: "batch", ids: [...selected] })
               }
-              icon={<Trash2 />}
+              icon={<Trash2 className="h-3.5 w-3.5" />}
             >
               批量删除
             </Button>
@@ -373,9 +393,9 @@ export default function AdminNotifications() {
           empty={!loading && filtered.length === 0 && !error}
           emptyTitle="暂无相关通知记录。"
         >
-          <div className="admin-notification-list">
+          <div className="space-y-3">
             {filtered.map((item) => {
-              const { destination, icon, tag, tagClass, iconClass } =
+              const { destination, icon, tag, tone, iconBg } =
                 resolvePresentation(item);
               const isUnread = !item.read_at;
               const isChecked = selected.includes(item.id);
@@ -384,98 +404,125 @@ export default function AdminNotifications() {
                 (item.actor_name ? `${item.actor_name} 互动消息` : "系统提醒");
 
               return (
-                <div
+                <Card
                   key={item.id}
-                  className={`admin-notification-card ${isUnread ? "admin-notification-card--unread" : ""}`}
+                  className={cn(
+                    "p-4 transition-all duration-200",
+                    isUnread
+                      ? "border-primary/40 bg-card shadow-sm"
+                      : "border-border/60 bg-card/60 opacity-90",
+                  )}
                 >
-                  <div className="admin-notification-select">
-                    <Checkbox
-                      aria-label={`选择通知 ${item.id}`}
-                      checked={isChecked}
-                      onChange={(e) => {
-                        setSelected((prev) =>
-                          e.target.checked
-                            ? [...prev, item.id]
-                            : prev.filter((id) => id !== item.id),
-                        );
-                      }}
-                    />
-                  </div>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-start gap-3.5 min-w-0 flex-1">
+                      <div className="pt-1 shrink-0">
+                        <Checkbox
+                          aria-label={`选择通知 ${item.id}`}
+                          checked={isChecked}
+                          onChange={(e) => {
+                            setSelected((prev) =>
+                              e.target.checked
+                                ? [...prev, item.id]
+                                : prev.filter((id) => id !== item.id),
+                            );
+                          }}
+                        />
+                      </div>
 
-                  <div className={`admin-notification-icon ${iconClass}`}>
-                    {icon}
-                  </div>
-
-                  <div className="admin-notification-main">
-                    <div className="admin-notification-header">
-                      <strong className="admin-notification-title">
-                        {displayTitle}
-                      </strong>
-                      <span className={`admin-notification-tag ${tagClass}`}>
-                        {tag}
-                      </span>
-                      <time
-                        className="admin-notification-time"
-                        dateTime={item.created_at}
+                      <div
+                        className={cn(
+                          "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+                          iconBg,
+                        )}
                       >
-                        {new Date(item.created_at).toLocaleString("zh-CN")}
-                      </time>
+                        {icon}
+                      </div>
+
+                      <div className="space-y-1 min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <strong className="text-sm font-semibold text-foreground">
+                            {displayTitle}
+                          </strong>
+                          <Badge
+                            tone={tone}
+                            pill
+                            className="text-[10px] px-2 py-0"
+                          >
+                            {tag}
+                          </Badge>
+                          {isUnread ? (
+                            <span
+                              className="inline-block h-2 w-2 rounded-full bg-primary"
+                              aria-label="未读"
+                            />
+                          ) : null}
+                          <time
+                            className="text-xs text-muted-foreground font-mono"
+                            dateTime={item.created_at}
+                          >
+                            {new Date(item.created_at).toLocaleString("zh-CN")}
+                          </time>
+                        </div>
+
+                        {item.body ? (
+                          <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                            {item.body}
+                          </p>
+                        ) : null}
+
+                        {item.post_title ? (
+                          <p className="text-[11px] text-muted-foreground/80 font-medium">
+                            关联文章：{item.post_title}
+                          </p>
+                        ) : null}
+                      </div>
                     </div>
 
-                    {item.body ? (
-                      <p className="admin-notification-body">{item.body}</p>
-                    ) : null}
+                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                      {isUnread ? (
+                        <Button
+                          variant="secondary"
+                          size="compact"
+                          type="button"
+                          onClick={() => void markOneRead(item)}
+                          title="标为已读"
+                        >
+                          标为已读
+                        </Button>
+                      ) : null}
 
-                    {item.post_title ? (
-                      <small className="admin-notification-meta">
-                        关联文章：{item.post_title}
-                      </small>
-                    ) : null}
-                  </div>
+                      {destination ? (
+                        <ButtonLink
+                          variant="ghost"
+                          size="compact"
+                          to={destination}
+                          onClick={() => void markOneRead(item)}
+                          icon={<ChevronRight className="h-3.5 w-3.5" />}
+                          iconPosition="right"
+                        >
+                          前往处理
+                        </ButtonLink>
+                      ) : null}
 
-                  <div className="admin-notification-actions">
-                    {isUnread ? (
                       <Button
-                        variant="secondary"
+                        variant="danger"
                         size="compact"
                         type="button"
-                        onClick={() => void markOneRead(item)}
-                        title="标为已读"
+                        onClick={() =>
+                          setDeleteAction({
+                            kind: "single",
+                            id: item.id,
+                            title: displayTitle,
+                          })
+                        }
+                        title="删除此通知"
+                        icon={<Trash2 className="h-3.5 w-3.5" />}
                       >
-                        标为已读
+                        删除
                       </Button>
-                    ) : null}
-
-                    {destination ? (
-                      <ButtonLink
-                        size="compact"
-                        to={destination}
-                        onClick={() => void markOneRead(item)}
-                        icon={<ChevronRight size={14} />}
-                        iconPosition="right"
-                      >
-                        前往处理
-                      </ButtonLink>
-                    ) : null}
-
-                    <Button
-                      variant="danger"
-                      size="compact"
-                      type="button"
-                      onClick={() =>
-                        setDeleteAction({
-                          kind: "single",
-                          id: item.id,
-                          title: displayTitle,
-                        })
-                      }
-                      title="删除此通知"
-                      icon={<Trash2 size={14} />}
-                    >
-                      删除
-                    </Button>
+                    </div>
                   </div>
-                </div>
+                </Card>
               );
             })}
           </div>

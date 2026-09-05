@@ -6,15 +6,16 @@ import {
   AdminPage,
   AdminPageHeader,
   AsyncState,
+  Badge,
   BulkActionBar,
   Button,
+  Card,
   Checkbox,
   CheckboxField,
   ConfirmDialog,
   ContentStack,
   Feedback,
   FilterBar,
-  Panel,
   Select,
   TableSkeleton,
   useToast,
@@ -125,28 +126,30 @@ export default function AdminComments() {
         {error && comments.length > 0 ? (
           <Feedback type="error">{error}</Feedback>
         ) : null}
-        <FilterBar>
-          <Select
-            size="compact"
-            aria-label="评论状态"
-            value={status}
-            onChange={(event) => setFilter("status", event.target.value)}
-          >
-            <option value="pending">待审核</option>
-            <option value="visible">已通过</option>
-            <option value="hidden">已隐藏</option>
-            <option value="all">全部</option>
-          </Select>
-          <CheckboxField>
-            <Checkbox
-              checked={reported}
-              onChange={(event) =>
-                setFilter("reported", event.target.checked ? "true" : "")
-              }
-            />{" "}
-            仅看被举报
-          </CheckboxField>
-        </FilterBar>
+        <Card className="border-border/80 bg-card p-4 shadow-xs">
+          <FilterBar>
+            <Select
+              size="compact"
+              aria-label="评论状态"
+              value={status}
+              onChange={(event) => setFilter("status", event.target.value)}
+            >
+              <option value="pending">待审核</option>
+              <option value="visible">已通过</option>
+              <option value="hidden">已隐藏</option>
+              <option value="all">全部</option>
+            </Select>
+            <CheckboxField>
+              <Checkbox
+                checked={reported}
+                onChange={(event) =>
+                  setFilter("reported", event.target.checked ? "true" : "")
+                }
+              />{" "}
+              仅看被举报
+            </CheckboxField>
+          </FilterBar>
+        </Card>
         {selected.length ? (
           <BulkActionBar
             selectionLabel={`已选择 ${selected.length} 条评论`}
@@ -173,41 +176,54 @@ export default function AdminComments() {
           empty={!loading && comments.length === 0 && !error}
           emptyTitle="当前队列已经处理完毕。"
         >
-          <div className="moderation-list">
+          <div className="moderation-list space-y-3">
             {comments.map((comment) => (
-              <Panel key={comment.id}>
-                <Checkbox
-                  aria-label={`选择评论 ${comment.id}`}
-                  checked={selected.includes(comment.id)}
-                  onChange={(event) =>
-                    setSelected((current) =>
-                      event.target.checked
-                        ? [...new Set([...current, comment.id])]
-                        : current.filter((id) => id !== comment.id),
-                    )
-                  }
-                />
-                <div className="comment-avatar">
-                  {comment.author.slice(0, 1)}
-                </div>
-                <div>
-                  <div>
-                    <strong>{comment.author}</strong>
-                    <time>
-                      {new Date(comment.created_at).toLocaleString("zh-CN")}
-                    </time>
-                    {comment.report_count ? (
-                      <span className="report-label">
-                        被举报 {comment.report_count} 次
-                      </span>
-                    ) : null}
+              <Card
+                key={comment.id}
+                className="p-4 border-border/80 bg-card shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4"
+              >
+                <div className="flex items-start gap-3.5 flex-1 min-w-0">
+                  <div className="pt-0.5">
+                    <Checkbox
+                      aria-label={`选择评论 ${comment.id}`}
+                      checked={selected.includes(comment.id)}
+                      onChange={(event) =>
+                        setSelected((current) =>
+                          event.target.checked
+                            ? [...new Set([...current, comment.id])]
+                            : current.filter((id) => id !== comment.id),
+                        )
+                      }
+                    />
                   </div>
-                  <p>{comment.content}</p>
-                  <small>文章 #{comment.post_id}</small>
+                  <div className="h-9 w-9 rounded-full bg-primary/10 text-primary font-semibold flex items-center justify-center shrink-0 text-sm">
+                    {comment.author.slice(0, 1).toUpperCase()}
+                  </div>
+                  <div className="space-y-1 flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <strong className="text-sm font-semibold text-foreground">
+                        {comment.author}
+                      </strong>
+                      <time className="text-xs text-muted-foreground font-mono">
+                        {new Date(comment.created_at).toLocaleString("zh-CN")}
+                      </time>
+                      {comment.report_count ? (
+                        <Badge tone="danger" pill className="text-[11px]">
+                          被举报 {comment.report_count} 次
+                        </Badge>
+                      ) : null}
+                      <span className="text-xs text-muted-foreground/80 font-mono">
+                        文章 #{comment.post_id}
+                      </span>
+                    </div>
+                    <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
+                      {comment.content}
+                    </p>
+                  </div>
                 </div>
-                <div className="table-actions">
+                <div className="flex items-center justify-end gap-1.5 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-border/60">
                   <Button
-                    variant="secondary"
+                    variant="ghost"
                     size="compact"
                     type="button"
                     onClick={() => void moderate(comment, "visible")}
@@ -215,7 +231,7 @@ export default function AdminComments() {
                     通过
                   </Button>
                   <Button
-                    variant="secondary"
+                    variant="ghost"
                     size="compact"
                     type="button"
                     onClick={() => void moderate(comment, "hidden")}
@@ -232,7 +248,7 @@ export default function AdminComments() {
                     删除
                   </Button>
                 </div>
-              </Panel>
+              </Card>
             ))}
           </div>
         </AsyncState>

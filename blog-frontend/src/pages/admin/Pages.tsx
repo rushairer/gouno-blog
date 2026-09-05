@@ -9,6 +9,7 @@ import {
   BulkActionBar,
   Button,
   ButtonLink,
+  Card,
   Checkbox,
   ConfirmDialog,
   ContentStack,
@@ -18,7 +19,6 @@ import {
   IconButton,
   IconButtonLink,
   Pagination,
-  Panel,
   SearchField,
   Select,
   StatusBadge,
@@ -135,37 +135,39 @@ export default function AdminPages() {
       />
 
       <ContentStack>
-        <FilterBar>
-          <SearchField
-            aria-label="搜索单页"
-            value={q}
-            onChange={(event) => setFilter("q", event.target.value)}
-            placeholder="搜索标题、摘要或路径"
-          />
-          <Select
-            size="compact"
-            aria-label="单页状态"
-            value={status}
-            onChange={(event) => setFilter("status", event.target.value)}
-          >
-            <option value="">全部状态</option>
-            <option value="published">已发布</option>
-            <option value="draft">草稿</option>
-          </Select>
-          <span className="filter-bar__count">{total} 页</span>
-          {hasFilters ? (
-            <Button
-              className="filter-bar__actions"
-              variant="ghost"
+        <Card className="border-border/80 bg-card p-4 shadow-xs">
+          <FilterBar>
+            <SearchField
+              aria-label="搜索单页"
+              value={q}
+              onChange={(event) => setFilter("q", event.target.value)}
+              placeholder="搜索标题、摘要或路径"
+            />
+            <Select
               size="compact"
-              type="button"
-              onClick={clearFilters}
-              icon={<X />}
+              aria-label="单页状态"
+              value={status}
+              onChange={(event) => setFilter("status", event.target.value)}
             >
-              清除
-            </Button>
-          ) : null}
-        </FilterBar>
+              <option value="">全部状态</option>
+              <option value="published">已发布</option>
+              <option value="draft">草稿</option>
+            </Select>
+            <span className="filter-bar__count">{total} 页</span>
+            {hasFilters ? (
+              <Button
+                className="filter-bar__actions"
+                variant="ghost"
+                size="compact"
+                type="button"
+                onClick={clearFilters}
+                icon={<X />}
+              >
+                清除
+              </Button>
+            ) : null}
+          </FilterBar>
+        </Card>
 
         {selected.length ? (
           <BulkActionBar
@@ -216,12 +218,12 @@ export default function AdminPages() {
             />
           }
         >
-          <Panel className="posts-table-panel">
+          <Card className="border-border/80 bg-card shadow-xs overflow-hidden">
             <TableContainer>
               <table className="admin-table">
                 <thead>
                   <tr>
-                    <th>
+                    <th className="w-12 text-center">
                       <Checkbox
                         aria-label="选择当前页全部单页"
                         checked={
@@ -236,18 +238,21 @@ export default function AdminPages() {
                       />
                     </th>
                     <th>单页</th>
-                    <th>访问路径</th>
-                    <th>模板</th>
-                    <th>导航展示</th>
-                    <th>状态</th>
-                    <th>更新时间</th>
-                    <th>操作</th>
+                    <th className="w-40">访问路径</th>
+                    <th className="w-28">模板</th>
+                    <th className="w-36">导航展示</th>
+                    <th className="w-28">状态</th>
+                    <th className="w-32">更新时间</th>
+                    <th className="w-36 text-right">操作</th>
                   </tr>
                 </thead>
                 <tbody>
                   {pages.map((p) => (
-                    <tr key={p.id}>
-                      <td>
+                    <tr
+                      key={p.id}
+                      className="hover:bg-muted/40 transition-colors"
+                    >
+                      <td className="text-center">
                         <Checkbox
                           aria-label={`选择 ${p.title}`}
                           checked={selected.includes(p.id)}
@@ -261,11 +266,23 @@ export default function AdminPages() {
                         />
                       </td>
                       <td>
-                        <strong>{p.title}</strong>
-                        <small>{p.summary || "无摘要"}</small>
+                        <div className="flex flex-col gap-0.5">
+                          <strong className="font-semibold text-foreground text-sm">
+                            {p.title}
+                          </strong>
+                          {p.summary ? (
+                            <span className="text-xs text-muted-foreground line-clamp-1">
+                              {p.summary}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground/60 italic">
+                              无摘要
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td>
-                        <code>{`/${p.slug}`}</code>
+                        <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground">{`/${p.slug}`}</code>
                       </td>
                       <td>
                         <Badge tone="secondary">
@@ -276,19 +293,23 @@ export default function AdminPages() {
                         {p.show_in_nav ? (
                           <Badge tone="success">{`主导航 (权重:${p.sort_order})`}</Badge>
                         ) : (
-                          <span className="text-muted text-sm">隐藏</span>
+                          <span className="text-muted-foreground/60 text-xs">
+                            隐藏
+                          </span>
                         )}
                       </td>
                       <td>
                         <StatusBadge status={p.status || "draft"} />
                       </td>
                       <td>
-                        {new Date(
-                          p.updated_at || p.created_at,
-                        ).toLocaleDateString("zh-CN")}
+                        <time className="text-xs text-muted-foreground font-mono">
+                          {new Date(
+                            p.updated_at || p.created_at,
+                          ).toLocaleDateString("zh-CN")}
+                        </time>
                       </td>
                       <td>
-                        <div className="table-actions">
+                        <div className="flex items-center justify-end gap-1">
                           <IconButtonLink
                             to={`/${p.slug}`}
                             target="_blank"
@@ -327,17 +348,19 @@ export default function AdminPages() {
                 </tbody>
               </table>
             </TableContainer>
-          </Panel>
+          </Card>
         </AsyncState>
 
         {!loading && total > pageSize ? (
-          <Pagination
-            className="admin-pagination"
-            page={page}
-            pages={totalPages}
-            label="单页分页"
-            onChange={(nextPage) => setFilter("page", String(nextPage))}
-          />
+          <div className="flex justify-center pt-2">
+            <Pagination
+              className="admin-pagination"
+              page={page}
+              pages={totalPages}
+              label="单页分页"
+              onChange={(nextPage) => setFilter("page", String(nextPage))}
+            />
+          </div>
         ) : null}
       </ContentStack>
 

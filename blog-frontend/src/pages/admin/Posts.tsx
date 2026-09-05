@@ -11,6 +11,7 @@ import {
   BulkActionBar,
   Button,
   ButtonLink,
+  Card,
   Checkbox,
   ConfirmDialog,
   ContentStack,
@@ -21,7 +22,6 @@ import {
   IconButton,
   IconButtonLink,
   Pagination,
-  Panel,
   SearchField,
   Select,
   StatusBadge,
@@ -199,64 +199,66 @@ export default function AdminPosts() {
             }
           />
         ) : null}
-        <FilterBar>
-          <SearchField
-            aria-label="搜索文章"
-            value={q}
-            onChange={(event) => setFilter("q", event.target.value)}
-            placeholder="搜索标题、摘要或正文"
-          />
-          <Select
-            size="compact"
-            aria-label="文章状态"
-            value={status}
-            onChange={(event) => setFilter("status", event.target.value)}
-          >
-            <option value="">全部状态</option>
-            <option value="published">已发布</option>
-            <option value="draft">草稿</option>
-            <option value="scheduled">定时发布</option>
-          </Select>
-          <Select
-            size="compact"
-            aria-label="文章分类"
-            value={category}
-            onChange={(event) => setFilter("category", event.target.value)}
-          >
-            <option value="">全部分类</option>
-            {categories.map((item) => (
-              <option key={item.id} value={item.slug}>
-                {item.name}
-              </option>
-            ))}
-          </Select>
-          <Select
-            size="compact"
-            aria-label="文章标签"
-            value={tag}
-            onChange={(event) => setFilter("tag", event.target.value)}
-          >
-            <option value="">全部标签</option>
-            {tags.map((item) => (
-              <option key={item.name} value={item.name}>
-                {item.name}
-              </option>
-            ))}
-          </Select>
-          <span className="filter-bar__count">{total} 篇</span>
-          {q || status || category || tag ? (
-            <Button
-              className="filter-bar__actions"
-              variant="ghost"
+        <Card className="border-border/80 bg-card p-4 shadow-xs">
+          <FilterBar>
+            <SearchField
+              aria-label="搜索文章"
+              value={q}
+              onChange={(event) => setFilter("q", event.target.value)}
+              placeholder="搜索标题、摘要或正文"
+            />
+            <Select
               size="compact"
-              type="button"
-              onClick={clearFilters}
-              icon={<X />}
+              aria-label="文章状态"
+              value={status}
+              onChange={(event) => setFilter("status", event.target.value)}
             >
-              清除
-            </Button>
-          ) : null}
-        </FilterBar>
+              <option value="">全部状态</option>
+              <option value="published">已发布</option>
+              <option value="draft">草稿</option>
+              <option value="scheduled">定时发布</option>
+            </Select>
+            <Select
+              size="compact"
+              aria-label="文章分类"
+              value={category}
+              onChange={(event) => setFilter("category", event.target.value)}
+            >
+              <option value="">全部分类</option>
+              {categories.map((item) => (
+                <option key={item.id} value={item.slug}>
+                  {item.name}
+                </option>
+              ))}
+            </Select>
+            <Select
+              size="compact"
+              aria-label="文章标签"
+              value={tag}
+              onChange={(event) => setFilter("tag", event.target.value)}
+            >
+              <option value="">全部标签</option>
+              {tags.map((item) => (
+                <option key={item.name} value={item.name}>
+                  {item.name}
+                </option>
+              ))}
+            </Select>
+            <span className="filter-bar__count">{total} 篇</span>
+            {q || status || category || tag ? (
+              <Button
+                className="filter-bar__actions"
+                variant="ghost"
+                size="compact"
+                type="button"
+                onClick={clearFilters}
+                icon={<X />}
+              >
+                清除
+              </Button>
+            ) : null}
+          </FilterBar>
+        </Card>
         {can("batch", "post") && selected.length ? (
           <BulkActionBar
             selectionLabel={`已选择 ${selected.length} 篇`}
@@ -334,13 +336,13 @@ export default function AdminPosts() {
             />
           }
         >
-          <Panel className="posts-table-panel">
+          <Card className="border-border/80 bg-card shadow-xs overflow-hidden">
             <TableContainer>
               <table className="admin-table">
                 <thead>
                   <tr>
                     {can("batch", "post") ? (
-                      <th>
+                      <th className="w-12 text-center">
                         <Checkbox
                           aria-label="选择当前页全部文章"
                           checked={
@@ -358,17 +360,20 @@ export default function AdminPosts() {
                       </th>
                     ) : null}
                     <th>文章</th>
-                    <th>状态</th>
-                    <th>更新时间</th>
-                    <th>阅读</th>
-                    <th>操作</th>
+                    <th className="w-32">状态</th>
+                    <th className="w-36">更新时间</th>
+                    <th className="w-24">阅读</th>
+                    <th className="w-40 text-right">操作</th>
                   </tr>
                 </thead>
                 <tbody>
                   {posts.map((post) => (
-                    <tr key={post.id}>
+                    <tr
+                      key={post.id}
+                      className="hover:bg-muted/40 transition-colors"
+                    >
                       {can("batch", "post") ? (
-                        <td>
+                        <td className="text-center">
                           <Checkbox
                             aria-label={`选择文章 ${post.title}`}
                             checked={selected.includes(post.id)}
@@ -383,20 +388,37 @@ export default function AdminPosts() {
                         </td>
                       ) : null}
                       <td>
-                        <strong>{post.title}</strong>
-                        <small>/{post.slug}</small>
+                        <div className="flex flex-col gap-0.5">
+                          <strong className="font-semibold text-foreground leading-snug">
+                            {post.title}
+                          </strong>
+                          <span className="text-xs text-muted-foreground font-mono">
+                            /{post.slug}
+                            {post.category ? (
+                              <span className="ml-2 inline-flex items-center rounded-sm bg-secondary px-1.5 py-0.5 text-[11px] font-sans text-secondary-foreground">
+                                {post.category.name}
+                              </span>
+                            ) : null}
+                          </span>
+                        </div>
                       </td>
                       <td>
                         <StatusBadge status={post.status} />
                       </td>
                       <td>
-                        {new Date(
-                          post.updated_at || post.created_at,
-                        ).toLocaleDateString("zh-CN")}
+                        <time className="text-xs text-muted-foreground font-mono">
+                          {new Date(
+                            post.updated_at || post.created_at,
+                          ).toLocaleDateString("zh-CN")}
+                        </time>
                       </td>
-                      <td>{(post.views_count ?? 0).toLocaleString()}</td>
                       <td>
-                        <div className="table-actions">
+                        <span className="text-xs font-mono text-muted-foreground">
+                          {(post.views_count ?? 0).toLocaleString()}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="flex items-center justify-end gap-1">
                           <IconButtonLink
                             to={
                               post.status === "published"
@@ -451,16 +473,18 @@ export default function AdminPosts() {
                 </tbody>
               </table>
             </TableContainer>
-          </Panel>
+          </Card>
         </AsyncState>
         {!loading && total > pageSize ? (
-          <Pagination
-            className="admin-pagination"
-            page={page}
-            pages={pages}
-            label="文章分页"
-            onChange={(nextPage) => setFilter("page", String(nextPage))}
-          />
+          <div className="flex justify-center pt-2">
+            <Pagination
+              className="admin-pagination"
+              page={page}
+              pages={pages}
+              label="文章分页"
+              onChange={(nextPage) => setFilter("page", String(nextPage))}
+            />
+          </div>
         ) : null}
       </ContentStack>
       <ConfirmDialog

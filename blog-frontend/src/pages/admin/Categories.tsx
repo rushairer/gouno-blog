@@ -8,13 +8,13 @@ import {
   AsyncState,
   BulkActionBar,
   Button,
+  Card,
   Checkbox,
   ConfirmDialog,
   ContentStack,
   Drawer,
   Feedback,
   IconButton,
-  Panel,
   TableContainer,
   TableSkeleton,
   useToast,
@@ -263,23 +263,26 @@ export default function Categories() {
           empty={!loading && categories.length === 0 && !error}
           emptyTitle="还没有分类。创建第一个分类来组织长期主题。"
         >
-          <Panel className="taxonomy-table">
+          <Card className="border-border/80 bg-card shadow-xs overflow-hidden">
             <TableContainer>
               <table className="admin-table">
                 <thead>
                   <tr>
-                    <th>选择</th>
-                    <th>排序</th>
-                    <th>名称</th>
-                    <th>Slug 标识</th>
-                    <th>文章数</th>
-                    <th>操作</th>
+                    <th className="w-12 text-center">选择</th>
+                    <th className="w-20">排序</th>
+                    <th>分类名称与描述</th>
+                    <th className="w-48">Slug 标识</th>
+                    <th className="w-24">文章数</th>
+                    <th className="w-32 text-right">操作</th>
                   </tr>
                 </thead>
                 <tbody>
                   {categories.map((item) => (
-                    <tr key={item.id}>
-                      <td>
+                    <tr
+                      key={item.id}
+                      className="hover:bg-muted/40 transition-colors"
+                    >
+                      <td className="text-center">
                         <Checkbox
                           aria-label={`选择分类 ${item.name}`}
                           checked={selected.includes(item.id)}
@@ -293,24 +296,34 @@ export default function Categories() {
                         />
                       </td>
                       <td>
-                        <span className="mono-num">{item.sort_order ?? 0}</span>
+                        <span className="font-mono text-xs text-muted-foreground">
+                          {item.sort_order ?? 0}
+                        </span>
                       </td>
                       <td>
-                        <strong>{item.name}</strong>
-                        {item.description ? (
-                          <div className="table-subtext">
-                            {item.description}
-                          </div>
-                        ) : null}
+                        <div className="flex flex-col gap-0.5">
+                          <strong className="font-semibold text-foreground text-sm">
+                            {item.name}
+                          </strong>
+                          {item.description ? (
+                            <span className="text-xs text-muted-foreground line-clamp-1">
+                              {item.description}
+                            </span>
+                          ) : null}
+                        </div>
                       </td>
                       <td>
-                        <code>{item.slug}</code>
+                        <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground">
+                          {item.slug}
+                        </code>
                       </td>
                       <td>
-                        <span className="mono-num">{item.post_count ?? 0}</span>
+                        <span className="font-mono text-xs text-muted-foreground">
+                          {item.post_count ?? 0}
+                        </span>
                       </td>
                       <td>
-                        <div className="table-actions">
+                        <div className="flex items-center justify-end gap-1">
                           <IconButton
                             label="编辑分类"
                             icon={<Edit2 />}
@@ -331,7 +344,7 @@ export default function Categories() {
                 </tbody>
               </table>
             </TableContainer>
-          </Panel>
+          </Card>
         </AsyncState>
       </ContentStack>
 

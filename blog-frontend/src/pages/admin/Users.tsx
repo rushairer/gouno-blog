@@ -17,6 +17,7 @@ import {
   Badge,
   Button,
   ButtonLink,
+  Card,
   ConfirmDialog,
   ContentStack,
   EmptyState,
@@ -24,7 +25,6 @@ import {
   IconButton,
   LoadingState,
   Modal,
-  Panel,
   TableContainer,
   useToast,
 } from "../../components/ui";
@@ -243,16 +243,16 @@ export default function AdminUsers() {
             description="修改 Blog 成员角色、移交所有权或暂停成员资格需要近期多因素身份认证。解锁后享有 10 分钟无打扰操作期。"
             actionLabel="解锁以管理成员权限"
           >
-            <Panel>
+            <Card className="border-border/80 bg-card shadow-xs overflow-hidden">
               <TableContainer>
                 <table className="admin-table member-table">
                   <thead>
                     <tr>
                       <th>成员</th>
-                      <th>账号 ID</th>
-                      <th>Blog 角色</th>
-                      <th>状态</th>
-                      <th>操作</th>
+                      <th className="w-32">账号 ID</th>
+                      <th className="w-48">Blog 角色</th>
+                      <th className="w-28">状态</th>
+                      <th className="w-36 text-right">操作</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -260,19 +260,24 @@ export default function AdminUsers() {
                       const busy = saving === member.principal.id;
                       const isOwner = member.roles.includes("owner");
                       return (
-                        <tr key={member.principal.id}>
+                        <tr
+                          key={member.principal.id}
+                          className="hover:bg-muted/40 transition-colors"
+                        >
                           <td>
-                            <div className="member-identity">
+                            <div className="flex items-center gap-3">
                               <span
-                                className="member-avatar"
+                                className="h-9 w-9 rounded-full bg-primary/10 text-primary font-semibold flex items-center justify-center shrink-0 text-sm"
                                 aria-hidden="true"
                               >
                                 {initials(member)}
                               </span>
-                              <div>
-                                <strong>{memberName(member)}</strong>
+                              <div className="flex flex-col gap-0.5">
+                                <strong className="font-semibold text-foreground text-sm">
+                                  {memberName(member)}
+                                </strong>
                                 {member.principal.email ? (
-                                  <span className="member-identity-sub">
+                                  <span className="text-xs text-muted-foreground font-mono">
                                     {member.principal.email}
                                   </span>
                                 ) : null}
@@ -283,7 +288,7 @@ export default function AdminUsers() {
                             <Button
                               variant="ghost"
                               size="compact"
-                              className="member-id-copy"
+                              className="member-id-copy font-mono text-xs"
                               title={`点击复制完整 Subject ID: ${member.principal.subject}`}
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -300,7 +305,7 @@ export default function AdminUsers() {
                             </Button>
                           </td>
                           <td>
-                            <div className="member-roles">
+                            <div className="flex flex-wrap gap-1">
                               {member.roles.length ? (
                                 member.roles.map((role) => (
                                   <Badge
@@ -313,19 +318,22 @@ export default function AdminUsers() {
                                   </Badge>
                                 ))
                               ) : (
-                                <span className="muted-copy">尚未授予角色</span>
+                                <span className="text-muted-foreground/60 text-xs italic">
+                                  尚未授予角色
+                                </span>
                               )}
                             </div>
                           </td>
                           <td>
                             <Badge
                               tone={membershipTone(member.membership_status)}
+                              pill
                             >
                               {membershipLabel(member.membership_status)}
                             </Badge>
                           </td>
                           <td>
-                            <div className="table-actions">
+                            <div className="flex items-center justify-end gap-1">
                               <IconButton
                                 label="编辑成员与权限"
                                 icon={<KeyRound />}
@@ -374,7 +382,7 @@ export default function AdminUsers() {
                   </tbody>
                 </table>
               </TableContainer>
-            </Panel>
+            </Card>
           </SudoGate>
         )}
       </ContentStack>
