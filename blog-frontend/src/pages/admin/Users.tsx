@@ -456,7 +456,7 @@ export default function AdminUsers() {
                     </div>
                   </label>
                 ) : (
-                  manageableRoles.map((role) => {
+                  assignableRoles.map((role) => {
                     const isCurrent = editing.roles.includes(role);
                     return (
                       <label key={role} className="member-role-card">
@@ -468,7 +468,7 @@ export default function AdminUsers() {
                         />
                         <div className="member-role-card-content">
                           <div className="member-role-card-header">
-                            <strong>{getBlogRoleLabel(role)}</strong>
+                            <strong>{roleLabels[role]}</strong>
                             {isCurrent ? (
                               <span className="member-role-badge current">
                                 当前角色
