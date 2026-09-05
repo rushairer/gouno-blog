@@ -306,7 +306,7 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
         </Panel>
 
         {toc.length > 0 ? (
-          <aside className="order-first self-start lg:order-none lg:sticky lg:top-24">
+          <aside className="order-first self-start lg:order-none lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-2 lg:[scrollbar-gutter:stable]">
             <Panel className="gap-3 p-4">
               <h2 className="text-sm font-semibold">目录导航</h2>
               <nav className="flex flex-col gap-1" aria-label="目录导航">

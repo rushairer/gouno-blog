@@ -89,6 +89,15 @@ describe("PostDetail", () => {
       "href",
       "#heading-section",
     );
+    expect(
+      screen.getByRole("navigation", { name: /table of contents/i })
+        .parentElement?.parentElement,
+    ).toHaveClass(
+      "lg:max-h-[calc(100dvh-7rem)]",
+      "lg:overflow-y-auto",
+      "lg:overscroll-contain",
+      "lg:[scrollbar-gutter:stable]",
+    );
     expect(screen.getByText("bold")).toBeInTheDocument();
     expect(screen.getByText("code")).toBeInTheDocument();
     expect(

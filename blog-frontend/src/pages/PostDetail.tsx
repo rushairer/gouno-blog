@@ -470,7 +470,7 @@ export default function PostDetail() {
           </Panel>
 
           {toc.length > 0 && (
-            <aside className="order-first self-start lg:order-none lg:sticky lg:top-24">
+            <aside className="order-first self-start lg:order-none lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-2 lg:[scrollbar-gutter:stable]">
               <Panel className="gap-3 p-4">
                 <h2 className="flex items-center gap-2 text-sm font-semibold">
                   <List size={18} />
