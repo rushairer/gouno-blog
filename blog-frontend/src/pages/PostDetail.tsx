@@ -25,6 +25,7 @@ import { postsApi } from "../api/posts";
 import {
   ActionGroup,
   Badge,
+  Banner,
   Button,
   ButtonLink,
   EmptyState,
@@ -35,6 +36,7 @@ import {
   Input,
   LoadingState,
   Modal,
+  PageHeader,
   Panel,
   Textarea,
 } from "@gouno/ui";
@@ -61,17 +63,17 @@ function CommentItem({
 }: CommentItemProps) {
   const { t, formatDateTime } = useI18n();
   return (
-    <div id={`comment-${comment.id}`} className="comment-thread">
-      <div className="comment-item">
-        <div className="comment-item__header">
+    <div id={`comment-${comment.id}`} className="space-y-3">
+      <div className="rounded-lg border bg-card p-4">
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <strong>{comment.author}</strong>
-          <span className={`author-type author-type--${comment.author_type}`}>
+          <Badge>
             {comment.author_type === "user" ? t("signedIn") : t("guest")}
-          </span>
-          <span className="muted">{formatDateTime(comment.created_at)}</span>
+          </Badge>
+          <span>{formatDateTime(comment.created_at)}</span>
         </div>
-        <p>{comment.content}</p>
-        <div className="comment-actions">
+        <p className="mt-3 whitespace-pre-wrap leading-7">{comment.content}</p>
+        <div className="mt-3 flex flex-wrap gap-2">
           {!comment.parent_id ? (
             <Button
               type="button"
@@ -95,7 +97,7 @@ function CommentItem({
         </div>
       </div>
       {replies.length > 0 ? (
-        <div className="comment-replies">
+        <div className="ml-4 space-y-3 border-l pl-4 sm:ml-8">
           {replies.map((reply) => (
             <CommentItem
               key={reply.id}
@@ -132,6 +134,7 @@ export default function PostDetail() {
   const [reportingComment, setReportingComment] =
     useState<CommunityComment | null>(null);
   const [reportReason, setReportReason] = useState("");
+  const [interactionError, setInteractionError] = useState<string | null>(null);
 
   const [likes, setLikes] = useState(0);
   const [liked, setLiked] = useState(false);
@@ -259,12 +262,16 @@ export default function PostDetail() {
   const handleLike = async () => {
     if (!post) return;
     const nextLiked = !liked;
+    setInteractionError(null);
     try {
       const state = await commentsApi.setLike(post.id, nextLiked);
       setLiked(state.liked);
       setLikes(state.likes_count);
     } catch (err: unknown) {
       console.error(err);
+      setInteractionError(
+        err instanceof Error ? err.message : t("failedFetch"),
+      );
     }
   };
 
@@ -278,6 +285,7 @@ export default function PostDetail() {
       return;
 
     setCommentLoading(true);
+    setInteractionError(null);
     try {
       const created = await commentsApi.postComment(post.id, {
         author: commentAuthor,
@@ -294,7 +302,9 @@ export default function PostDetail() {
         setCommentNotice(t("commentPendingReview"));
       }
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : t("failedPostComment"));
+      setInteractionError(
+        err instanceof Error ? err.message : t("failedPostComment"),
+      );
     } finally {
       setCommentLoading(false);
     }
@@ -303,17 +313,24 @@ export default function PostDetail() {
   const handleReport = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!reportingComment) return;
-    const result = await commentsApi.reportComment(
-      reportingComment.id,
-      reportReason.trim(),
-    );
-    setCommentNotice(
-      result === "already-reported"
-        ? t("alreadyReported")
-        : t("reportSubmitted"),
-    );
-    setReportingComment(null);
-    setReportReason("");
+    setInteractionError(null);
+    try {
+      const result = await commentsApi.reportComment(
+        reportingComment.id,
+        reportReason.trim(),
+      );
+      setCommentNotice(
+        result === "already-reported"
+          ? t("alreadyReported")
+          : t("reportSubmitted"),
+      );
+      setReportingComment(null);
+      setReportReason("");
+    } catch (err: unknown) {
+      setInteractionError(
+        err instanceof Error ? err.message : t("failedFetch"),
+      );
+    }
   };
 
   if (loading) {
@@ -330,7 +347,7 @@ export default function PostDetail() {
       return <NotFound />;
     }
     return (
-      <div className="public-container state-page">
+      <div className="mx-auto flex min-h-[50vh] max-w-3xl items-center justify-center">
         <ErrorState
           title={t("failedFetch")}
           description={error}
@@ -366,45 +383,48 @@ export default function PostDetail() {
   return (
     <>
       <div
-        className="reading-progress-bar"
+        className="fixed inset-x-0 top-0 z-50 h-1 bg-primary transition-[width]"
         style={{ width: `${scrollProgress}%` }}
       />
-      <div className="article-shell section-stack">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
         {isAdminPreview ? (
-          <div className="admin-preview-banner">
-            <div className="admin-preview-banner__text">
-              <ShieldAlert size={16} />
+          <Banner tone="brand" icon={<ShieldAlert size={16} />}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <span>
-                管理员预览模式：当前正在预览未发布的文章（草稿/定时发布）。普通访客无法查看此页面。
+                <strong>管理员预览模式</strong> ·
+                当前正在预览未发布的文章（草稿/定时发布）。普通访客无法查看此页面。
               </span>
+              {post?.id ? (
+                <ButtonLink size="compact" to={`/admin/posts/${post.id}/edit`}>
+                  返回编辑器
+                </ButtonLink>
+              ) : null}
             </div>
-            {post?.id ? (
-              <ButtonLink size="compact" to={`/admin/posts/${post.id}/edit`}>
-                返回编辑器
-              </ButtonLink>
-            ) : null}
-          </div>
+          </Banner>
         ) : null}
-        <Link to="/articles" className="text-link">
+        <Link
+          to="/articles"
+          className="inline-flex w-fit items-center gap-2 text-sm text-muted-foreground hover:text-primary"
+        >
           <ArrowLeft size={16} />
           {t("backToFeed")}
         </Link>
 
         <div
-          className={`article-layout ${toc.length === 0 ? "article-layout--no-toc" : ""}`}
+          className={`grid min-w-0 gap-8 ${toc.length === 0 ? "mx-auto w-full max-w-4xl" : "lg:grid-cols-[minmax(0,1fr)_16rem]"}`}
         >
-          <Panel as="article" className="article">
-            <header>
+          <Panel as="article" className="gap-8 p-5 sm:p-8">
+            <div className="flex flex-col gap-5 border-b pb-8">
               {post.cover_url ? (
                 <img
-                  className="article-cover"
+                  className="max-h-[28rem] w-full rounded-lg border object-cover"
                   src={post.cover_url}
                   alt={post.cover_alt || post.title}
                 />
               ) : null}
-              <h1>{post.title}</h1>
-              <div className="inline-meta">
-                <span>
+              <PageHeader title={post.title} description={post.summary} />
+              <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5">
                   <Calendar size={15} />
                   {formatDate(post.created_at, {
                     year: "numeric",
@@ -412,29 +432,29 @@ export default function PostDetail() {
                     day: "numeric",
                   })}
                 </span>
-                <span>
+                <span className="inline-flex items-center gap-1.5">
                   <User size={15} />
                   {t("author")}
                 </span>
-                <span>
+                <span className="inline-flex items-center gap-1.5">
                   <Eye size={15} />
                   {views}
                 </span>
-                <span>
+                <span className="inline-flex items-center gap-1.5">
                   <Heart size={15} />
                   {likes}
                 </span>
               </div>
-              <div className="chip-row chip-row--spaced">
+              <div className="flex flex-wrap gap-2">
                 {post.tags.map((tag) => (
                   <Badge key={tag}>#{tag}</Badge>
                 ))}
               </div>
-            </header>
+            </div>
 
             <MarkdownRenderer content={post.content} />
 
-            <div className="article-actions">
+            <div className="flex justify-center border-t pt-6">
               <Button
                 variant="ghost"
                 className={`like-button ${liked ? "liked" : ""}`}
@@ -450,18 +470,21 @@ export default function PostDetail() {
           </Panel>
 
           {toc.length > 0 && (
-            <aside className="toc-sidebar">
-              <Panel className="sidebar-card">
-                <h2>
+            <aside className="order-first self-start lg:order-none lg:sticky lg:top-24">
+              <Panel className="gap-3 p-4">
+                <h2 className="flex items-center gap-2 text-sm font-semibold">
                   <List size={18} />
                   {t("tableOfContents")}
                 </h2>
-                <nav className="toc-list">
+                <nav
+                  className="flex flex-col gap-1"
+                  aria-label={t("tableOfContents")}
+                >
                   {toc.map((item) => (
                     <a
                       key={item.id}
                       href={`#${item.id}`}
-                      className={`toc-item toc-item--level-${item.level}`}
+                      className={`rounded px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-primary ${item.level > 2 ? "pl-5" : ""}`}
                     >
                       {item.text}
                     </a>
@@ -473,18 +496,20 @@ export default function PostDetail() {
         </div>
 
         {relatedPosts.length > 0 ? (
-          <Panel className="section-stack">
-            <h3 className="section-title">{t("relatedPosts")}</h3>
-            <div className="related-post-grid">
+          <Panel className="gap-5">
+            <h2 className="text-lg font-semibold">{t("relatedPosts")}</h2>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {relatedPosts.map((item) => (
                 <Link
                   key={item.id}
                   to={`/articles/${item.slug}`}
-                  className="related-post-card"
+                  className="flex min-w-0 flex-col gap-2 rounded-lg border p-4 hover:border-primary hover:bg-accent/40"
                 >
                   <strong>{item.title}</strong>
-                  <span>{item.summary}</span>
-                  <small>
+                  <span className="line-clamp-2 text-sm text-muted-foreground">
+                    {item.summary}
+                  </span>
+                  <small className="text-xs text-muted-foreground">
                     {item.tags
                       .slice(0, 3)
                       .map((tag) => `#${tag}`)
@@ -496,16 +521,16 @@ export default function PostDetail() {
           </Panel>
         ) : null}
 
-        <Panel className="section-stack">
-          <h3 className="section-title">
+        <Panel className="gap-6">
+          <h2 className="flex items-center gap-2 text-lg font-semibold">
             <MessageSquare size={20} />
             {t("discussion", { count: comments.length })}
-          </h3>
+          </h2>
 
           {comments.length === 0 ? (
             <EmptyState label={t("noComments")} />
           ) : (
-            <div className="comments-list">
+            <div className="space-y-4">
               {rootComments.map((comment) => (
                 <CommentItem
                   key={comment.id}
@@ -518,13 +543,19 @@ export default function PostDetail() {
             </div>
           )}
 
-          <form className="form-stack" onSubmit={handleAddComment}>
-            <h4>{t("leaveComment")}</h4>
+          <form
+            className="flex flex-col gap-4 border-t pt-6"
+            onSubmit={handleAddComment}
+          >
+            <h3 className="font-semibold">{t("leaveComment")}</h3>
+            {interactionError ? (
+              <Feedback type="error">{interactionError}</Feedback>
+            ) : null}
             {commentNotice && (
               <Feedback type="success">{commentNotice}</Feedback>
             )}
             {replyingTo ? (
-              <div className="replying-banner">
+              <div className="flex items-center justify-between rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm">
                 <span>{t("replyingTo", { name: replyingTo.author })}</span>
                 <IconButton
                   label={t("cancelReply")}
@@ -534,12 +565,13 @@ export default function PostDetail() {
               </div>
             ) : null}
             {session.loggedIn ? (
-              <p className="muted">{t("signedInComment")}</p>
+              <p className="text-sm text-muted-foreground">
+                {t("signedInComment")}
+              </p>
             ) : (
               <Field label={t("name")}>
                 <Input
                   type="text"
-                  className="input-field"
                   placeholder={t("yourName")}
                   value={commentAuthor}
                   onChange={(event) => setCommentAuthor(event.target.value)}
@@ -550,7 +582,6 @@ export default function PostDetail() {
             )}
             <Field label={t("comment")}>
               <Textarea
-                className="input-field"
                 placeholder={t("typeComment")}
                 rows={4}
                 value={commentContent}
@@ -603,10 +634,10 @@ export default function PostDetail() {
       >
         <form
           id="report-comment-form"
-          className="modal-form"
+          className="flex flex-col gap-4"
           onSubmit={handleReport}
         >
-          <label>
+          <label className="flex flex-col gap-2 text-sm font-medium">
             {t("reportReason")}
             <Textarea
               rows={4}

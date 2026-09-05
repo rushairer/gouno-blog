@@ -1,8 +1,8 @@
 import { BookOpen, FileText, FolderTree, Home, Search } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useI18n } from "../i18n";
 import { usePageTitle } from "../hooks/usePageTitle";
-import { Button, Input } from "@gouno/ui";
+import { Button, ButtonLink, Input, PageHeader, Panel } from "@gouno/ui";
 
 export default function NotFound() {
   const navigate = useNavigate();
@@ -18,55 +18,61 @@ export default function NotFound() {
   };
 
   return (
-    <div className="public-container not-found-page">
-      <div className="not-found-card">
-        <div className="not-found-badge">
-          <span className="not-found-code">404</span>
-          <span className="not-found-badge__dot">/</span>
-          <span className="not-found-badge__label">{t("notFound.badge")}</span>
+    <div className="flex min-h-[55vh] items-center justify-center">
+      <Panel className="mx-auto w-full max-w-3xl items-center px-5 py-10 text-center sm:px-10">
+        <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+          <span>404</span>
+          <span aria-hidden="true">/</span>
+          <span>{t("notFound.badge")}</span>
         </div>
+        <PageHeader
+          title={t("notFound.heading")}
+          description={t("notFound.description")}
+          className="w-full items-center justify-center text-center md:items-center md:justify-center [&>div]:text-center"
+        />
 
-        <h1 className="not-found-title">{t("notFound.heading")}</h1>
-        <p className="not-found-subtitle">{t("notFound.description")}</p>
-
-        <form className="not-found-search" onSubmit={handleSearch}>
-          <Search className="not-found-search__icon" />
+        <form
+          className="flex w-full max-w-lg items-center gap-2"
+          onSubmit={handleSearch}
+        >
+          <Search className="size-5 shrink-0 text-muted-foreground" />
           <Input
+            className="min-w-0 flex-1"
             name="q"
             type="search"
             aria-label={t("searchPosts")}
             placeholder={t("notFound.searchPlaceholder")}
             autoComplete="off"
           />
-          <Button type="submit" className="not-found-search__btn">
+          <Button type="submit" variant="primary">
             {t("notFound.searchButton")}
           </Button>
         </form>
 
-        <div className="not-found-nav">
-          <span className="not-found-nav__label">
+        <div className="flex w-full flex-col items-center gap-4 border-t pt-6">
+          <span className="text-xs text-muted-foreground">
             {t("notFound.suggestedLinks")}
           </span>
-          <div className="not-found-nav__links">
-            <Link to="/" className="not-found-nav__item">
-              <Home />
-              <span>{t("nav.home")}</span>
-            </Link>
-            <Link to="/articles" className="not-found-nav__item">
-              <BookOpen />
-              <span>{t("notFound.allArticles")}</span>
-            </Link>
-            <Link to="/categories" className="not-found-nav__item">
-              <FolderTree />
-              <span>{t("notFound.contentCategories")}</span>
-            </Link>
-            <Link to="/archive" className="not-found-nav__item">
-              <FileText />
-              <span>{t("notFound.siteArchive")}</span>
-            </Link>
+          <div className="grid w-full grid-cols-2 gap-2 sm:grid-cols-4">
+            <ButtonLink variant="secondary" to="/" icon={<Home />}>
+              {t("nav.home")}
+            </ButtonLink>
+            <ButtonLink variant="secondary" to="/articles" icon={<BookOpen />}>
+              {t("notFound.allArticles")}
+            </ButtonLink>
+            <ButtonLink
+              variant="secondary"
+              to="/categories"
+              icon={<FolderTree />}
+            >
+              {t("notFound.contentCategories")}
+            </ButtonLink>
+            <ButtonLink variant="secondary" to="/archive" icon={<FileText />}>
+              {t("notFound.siteArchive")}
+            </ButtonLink>
           </div>
         </div>
-      </div>
+      </Panel>
     </div>
   );
 }

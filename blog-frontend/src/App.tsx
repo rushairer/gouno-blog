@@ -7,7 +7,14 @@ import {
   useLocation,
 } from "react-router-dom";
 import { I18nProvider, useI18n } from "./i18n";
-import { Button, ButtonLink, ToastProvider } from "@gouno/ui";
+import {
+  Button,
+  ButtonLink,
+  LoadingState,
+  PageHeader,
+  Panel,
+  ToastProvider,
+} from "@gouno/ui";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { GossoProvider, RequireAuth } from "@gosso/client/react";
 import { gossoClient, type BlogUserProfile, logout } from "./auth";
@@ -57,11 +64,8 @@ function Public({ children }: { children: React.ReactNode }) {
     <PublicShell>
       <React.Suspense
         fallback={
-          <div className="public-container state-page">
-            <div className="state-card">
-              <span className="spinner" aria-hidden="true" />
-              <p>{t("common.loading")}</p>
-            </div>
+          <div className="flex min-h-[50vh] items-center justify-center">
+            <LoadingState label={t("common.loading")} />
           </div>
         }
       >
@@ -117,11 +121,8 @@ function Account({
       redirectTo={redirectTo}
       fallback={
         <PublicShell>
-          <div className="public-container state-page" role="status">
-            <div className="state-card">
-              <span className="spinner" aria-hidden="true" />
-              <p>正在前往安全登录页…</p>
-            </div>
+          <div className="flex min-h-[50vh] items-center justify-center">
+            <LoadingState label="正在前往安全登录页…" />
           </div>
         </PublicShell>
       }
@@ -196,29 +197,14 @@ function StepUpPopupCallbackView() {
   }, []);
 
   return (
-    <div className="public-container state-page" role="status">
-      <div className="state-card" style={{ maxWidth: 440, padding: 32 }}>
-        <span
-          className="spinner"
-          style={{
-            borderColor: "var(--status-success-border, #10b981)",
-            borderTopColor: "transparent",
-          }}
-          aria-hidden="true"
+    <div className="grid min-h-dvh place-items-center bg-background p-4">
+      <Panel className="w-full max-w-md text-center">
+        <LoadingState label="身份认证已成功同步" />
+        <PageHeader
+          title="高权限验证已完成"
+          description="身份认证已成功同步，主页面正在自动继续操作。"
+          className="items-center justify-center text-center md:items-center md:justify-center [&>div]:text-center"
         />
-        <h2 style={{ fontSize: 18, fontWeight: 700, marginTop: 16 }}>
-          高权限验证已完成
-        </h2>
-        <p
-          style={{
-            fontSize: 14,
-            color: "var(--ds-text-secondary)",
-            marginTop: 8,
-            lineHeight: 1.5,
-          }}
-        >
-          身份认证已成功同步，主页面正在自动继续操作。
-        </p>
         <Button
           variant="secondary"
           onClick={() => {
@@ -233,7 +219,7 @@ function StepUpPopupCallbackView() {
         >
           关闭窗口
         </Button>
-      </div>
+      </Panel>
     </div>
   );
 }
@@ -268,11 +254,8 @@ export default function App() {
       client={gossoClient}
       initializeSession
       fallback={
-        <div className="public-container state-page" role="status">
-          <div className="state-card">
-            <span className="spinner" aria-hidden="true" />
-            <p>正在恢复登录状态…</p>
-          </div>
+        <div className="grid min-h-dvh place-items-center bg-background p-4">
+          <LoadingState label="正在恢复登录状态…" />
         </div>
       }
     >

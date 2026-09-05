@@ -2,7 +2,7 @@ import { Component } from "react";
 import type { ErrorInfo, ReactNode } from "react";
 import { AlertTriangle, Home, RefreshCw } from "lucide-react";
 import i18n from "i18next";
-import { Button } from "@gouno/ui";
+import { ActionGroup, Button, ErrorState, Panel } from "@gouno/ui";
 
 interface Props {
   children: ReactNode;
@@ -45,47 +45,47 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="error-boundary-wrapper">
-          <div className="state-card error-boundary-card">
-            <div className="error-boundary-icon-wrap">
-              <AlertTriangle className="error-boundary-icon" size={40} />
-            </div>
-            <h2 className="error-boundary-title">
-              {i18n.t("errorBoundary.title", {
+        <div className="grid min-h-dvh place-items-center bg-background p-4">
+          <Panel className="w-full max-w-xl">
+            <ErrorState
+              icon={<AlertTriangle size={40} />}
+              title={i18n.t("errorBoundary.title", {
                 defaultValue: "页面遇到了错误",
               })}
-            </h2>
-            <p className="error-boundary-desc">
-              {i18n.t("errorBoundary.description", {
+              description={i18n.t("errorBoundary.description", {
                 defaultValue: "抱歉，当前页面加载异常，请尝试刷新或返回首页。",
               })}
-            </p>
+              action={
+                <ActionGroup>
+                  <Button
+                    variant="primary"
+                    icon={<RefreshCw size={16} />}
+                    onClick={this.handleReload}
+                  >
+                    {i18n.t("errorBoundary.reloadPage", {
+                      defaultValue: "刷新页面",
+                    })}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    icon={<Home size={16} />}
+                    onClick={this.handleGoHome}
+                  >
+                    {i18n.t("errorBoundary.goHome", {
+                      defaultValue: "返回首页",
+                    })}
+                  </Button>
+                </ActionGroup>
+              }
+            />
             {import.meta.env.DEV && this.state.error && (
-              <pre className="error-boundary-stack">
+              <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded-lg border bg-muted p-4 font-mono text-xs text-muted-foreground">
                 {this.state.error.message}
                 {"\n\n"}
                 {this.state.error.stack}
               </pre>
             )}
-            <div className="error-boundary-actions">
-              <Button
-                variant="primary"
-                icon={<RefreshCw size={16} />}
-                onClick={this.handleReload}
-              >
-                {i18n.t("errorBoundary.reloadPage", {
-                  defaultValue: "刷新页面",
-                })}
-              </Button>
-              <Button
-                variant="secondary"
-                icon={<Home size={16} />}
-                onClick={this.handleGoHome}
-              >
-                {i18n.t("errorBoundary.goHome", { defaultValue: "返回首页" })}
-              </Button>
-            </div>
-          </div>
+          </Panel>
         </div>
       );
     }

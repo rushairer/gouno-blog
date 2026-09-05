@@ -17,17 +17,17 @@ export default function Settings() {
   usePageTitle(t("accountSettings"));
 
   return (
-    <div>
+    <main className="mx-auto flex w-full max-w-4xl flex-col gap-6">
       <PageHeader title={t("accountSettings")} />
 
       <Panel>
         <ContentStack>
-          <div className="section-stack">
-            <h2 className="section-title">
+          <div className="flex flex-col gap-4">
+            <h2 className="flex items-center gap-2 text-lg font-semibold">
               <Shield size={18} />
               账户安全由 GOSSO Admin 管理
             </h2>
-            <p className="muted">
+            <p className="text-sm leading-7 text-muted-foreground">
               Blog
               仅维护博客侧资料、成员关系和权限，不再直接提供密码、邮箱、MFA、Passkey
               或身份会话管理。需要修改登录安全设置时，请前往身份管理中心完成近期强认证。
@@ -51,6 +51,6 @@ export default function Settings() {
           </div>
         </ContentStack>
       </Panel>
-    </div>
+    </main>
   );
 }

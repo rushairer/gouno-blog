@@ -89,3 +89,47 @@ describe("admin route access", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+describe("step-up callback window", () => {
+  it("renders a token-based completion state without restoring a new session", () => {
+    vi.spyOn(window, "close").mockImplementation(() => undefined);
+    window.history.replaceState({}, "", "/?step_up_success=1");
+
+    render(<App />);
+
+    expect(
+      screen.getByRole("heading", { name: "高权限验证已完成" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "关闭窗口" }),
+    ).toBeInTheDocument();
+    expect(redirectToAuthorizeMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("account route access", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setMockSnapshot({
+      accessToken: null,
+      refreshToken: null,
+      profile: null,
+      loggedIn: false,
+      isAdmin: false,
+    });
+    window.history.replaceState({}, "", "/account/notifications");
+  });
+
+  it("preserves the requested account route while redirecting an anonymous reader", async () => {
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "正在前往安全登录页…",
+      );
+      expect(redirectToAuthorizeMock).toHaveBeenCalledWith(
+        "/account/notifications",
+      );
+    });
+  });
+});

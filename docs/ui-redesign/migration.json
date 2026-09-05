@@ -132,7 +132,14 @@
         "disabled",
         "success"
       ],
-      "sharedComponents": [],
+      "sharedComponents": [
+        "@gouno/ui:Button",
+        "@gouno/ui:ButtonLink",
+        "@gouno/ui:LoadingState",
+        "@gouno/ui:PageHeader",
+        "@gouno/ui:Panel",
+        "@gouno/ui:ToastProvider"
+      ],
       "responsive": [
         "desktop",
         "tablet",
@@ -142,9 +149,11 @@
         "light",
         "dark"
       ],
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": [
+        "U02b App tests cover anonymous account redirect preservation and the step-up callback window; callback visibly verified at 1440x900 without changing callback/session semantics"
+      ]
     },
     {
       "id": "blog:components/ErrorBoundary.tsx",
@@ -163,7 +172,12 @@
         "disabled",
         "success"
       ],
-      "sharedComponents": [],
+      "sharedComponents": [
+        "@gouno/ui:ActionGroup",
+        "@gouno/ui:Button",
+        "@gouno/ui:ErrorState",
+        "@gouno/ui:Panel"
+      ],
       "responsive": [
         "desktop",
         "tablet",
@@ -173,9 +187,11 @@
         "light",
         "dark"
       ],
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": [
+        "U02b ErrorBoundary tests cover shared recovery state and explicit fallback; full Blog quality passes"
+      ]
     },
     {
       "id": "blog:components/MarkdownRenderer.tsx",
@@ -196,7 +212,7 @@
         "disabled",
         "success"
       ],
-      "sharedComponents": [],
+      "sharedComponents": ["@gouno/ui:Button"],
       "responsive": [
         "desktop",
         "tablet",
@@ -206,9 +222,11 @@
         "light",
         "dark"
       ],
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": [
+        "U02b PostDetail tests verify Markdown headings/TOC anchors, image rendering, fenced-code keyboard copy and SEO; full Blog quality passes"
+      ]
     },
     {
       "id": "blog-admin:components/agent/AdvancedWorkspace.tsx",
@@ -1522,7 +1540,12 @@
         "disabled",
         "success"
       ],
-      "sharedComponents": [],
+      "sharedComponents": [
+        "@gouno/ui:Banner",
+        "@gouno/ui:LoadingState",
+        "@gouno/ui:PageHeader",
+        "@gouno/ui:Panel"
+      ],
       "responsive": [
         "desktop",
         "tablet",
@@ -1532,9 +1555,11 @@
         "light",
         "dark"
       ],
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": [
+        "U02b /about fallback visibly verified at 1440x900 and 390x844 in light and dark themes; CustomPageView tests and full Blog quality pass"
+      ]
     },
     {
       "id": "blog:pages/AccountNotifications.tsx",
@@ -1561,7 +1586,15 @@
         "disabled",
         "success"
       ],
-      "sharedComponents": [],
+      "sharedComponents": [
+        "@gouno/ui:Button",
+        "@gouno/ui:ContentStack",
+        "@gouno/ui:EmptyState",
+        "@gouno/ui:ErrorState",
+        "@gouno/ui:LoadingState",
+        "@gouno/ui:PageHeader",
+        "@gouno/ui:Panel"
+      ],
       "responsive": [
         "desktop",
         "tablet",
@@ -1571,9 +1604,11 @@
         "light",
         "dark"
       ],
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": [
+        "U02b AccountNotifications tests cover empty, retryable error, unread and mark-read success states; App test preserves anonymous redirect target"
+      ]
     },
     {
       "id": "blog:pages/Archive.tsx",
@@ -1715,7 +1750,12 @@
         "disabled",
         "success"
       ],
-      "sharedComponents": [],
+      "sharedComponents": [
+        "@gouno/ui:Banner",
+        "@gouno/ui:LoadingState",
+        "@gouno/ui:PageHeader",
+        "@gouno/ui:Panel"
+      ],
       "responsive": [
         "desktop",
         "tablet",
@@ -1725,9 +1765,11 @@
         "light",
         "dark"
       ],
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": [
+        "U02b CustomPageView template/SEO tests pass; /about fallback visibly verified at desktop/mobile and light/dark"
+      ]
     },
     {
       "id": "blog:pages/Home.tsx",
@@ -1788,7 +1830,13 @@
         "disabled",
         "success"
       ],
-      "sharedComponents": [],
+      "sharedComponents": [
+        "@gouno/ui:Button",
+        "@gouno/ui:ButtonLink",
+        "@gouno/ui:Input",
+        "@gouno/ui:PageHeader",
+        "@gouno/ui:Panel"
+      ],
       "responsive": [
         "desktop",
         "tablet",
@@ -1798,9 +1846,11 @@
         "light",
         "dark"
       ],
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": [
+        "U02b 404 search/navigation tests pass; /not-a-real-page visibly verified at 1440x900 and 390x844"
+      ]
     },
     {
       "id": "blog:pages/PostDetail.tsx",
@@ -1835,7 +1885,19 @@
         "disabled",
         "success"
       ],
-      "sharedComponents": [],
+      "sharedComponents": [
+        "@gouno/ui:Badge",
+        "@gouno/ui:Banner",
+        "@gouno/ui:Button",
+        "@gouno/ui:EmptyState",
+        "@gouno/ui:ErrorState",
+        "@gouno/ui:Feedback",
+        "@gouno/ui:Field",
+        "@gouno/ui:LoadingState",
+        "@gouno/ui:Modal",
+        "@gouno/ui:PageHeader",
+        "@gouno/ui:Panel"
+      ],
       "responsive": [
         "desktop",
         "tablet",
@@ -1845,9 +1907,11 @@
         "light",
         "dark"
       ],
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": [
+        "U02b PostDetail tests cover Markdown/image/anchor/code-copy/SEO, preview success and denied preview, comment/reply success and inline interaction failure; live article browser route unverified because local API was unavailable"
+      ]
     },
     {
       "id": "blog:pages/Settings.tsx",
@@ -1871,7 +1935,13 @@
         "disabled",
         "success"
       ],
-      "sharedComponents": [],
+      "sharedComponents": [
+        "@gouno/ui:ButtonLink",
+        "@gouno/ui:ContentStack",
+        "@gouno/ui:Feedback",
+        "@gouno/ui:PageHeader",
+        "@gouno/ui:Panel"
+      ],
       "responsive": [
         "desktop",
         "tablet",
@@ -1881,9 +1951,11 @@
         "light",
         "dark"
       ],
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": [
+        "U02b Settings tests cover configured GOSSO Admin link and missing-URL error without changing identity/session ownership"
+      ]
     },
     {
       "id": "blog:pages/Tags.tsx",

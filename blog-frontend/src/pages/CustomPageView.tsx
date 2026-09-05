@@ -10,7 +10,7 @@ import { pagesApi } from "../api/pages";
 import { siteApi } from "../api/site";
 import { extractMarkdownTOC } from "../utils/markdown";
 import type { CustomPage, SiteSettings } from "../types/blog";
-import { Banner } from "@gouno/ui";
+import { Banner, LoadingState, PageHeader, Panel } from "@gouno/ui";
 import NotFound from "./NotFound";
 
 export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
@@ -108,11 +108,11 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
 
   if (loading || !page) {
     return (
-      <div className="public-container state-page">
-        <div className="state-card">
-          <span className="spinner" aria-hidden="true" />
-          <p>正在载入页面…</p>
-        </div>
+      <div
+        className="flex min-h-[50vh] items-center justify-center"
+        role="status"
+      >
+        <LoadingState label="正在载入页面…" />
       </div>
     );
   }
@@ -130,44 +130,57 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
       page.title.length > 4 ? page.title.slice(0, 4) : page.title;
 
     return (
-      <div className="public-container about-page">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
         {draftBanner}
-        <header>
+        <header className="flex flex-col items-start gap-6 border-b pb-8 sm:flex-row sm:items-center">
           <div
-            className={`about-mark ${markText.length > 2 ? "about-mark--compact" : ""}`}
+            className={`grid size-24 shrink-0 place-items-center rounded-full border-2 border-primary bg-card font-semibold text-primary ${markText.length > 2 ? "text-xl" : "text-3xl"}`}
           >
             {markText}
           </div>
           <div>
-            <p>
+            <p className="text-xs font-medium tracking-wider text-muted-foreground">
               {(page.slug || "about").toUpperCase()} /{" "}
               {(
                 site.site_title || DEFAULT_SITE_SETTINGS.site_title
               ).toUpperCase()}
             </p>
-            <h1>{page.summary || page.title}</h1>
+            <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
+              {page.summary || page.title}
+            </h1>
           </div>
         </header>
-        <div className="about-grid">
-          <main>
+        <div className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_16rem]">
+          <main className="min-w-0">
             <MarkdownRenderer content={page.content} />
           </main>
-          <aside>
-            <h2>订阅与联系</h2>
+          <Panel as="aside" className="self-start lg:sticky lg:top-24">
+            <h2 className="font-semibold">订阅与联系</h2>
             {site.github_url ? (
-              <a href={site.github_url} target="_blank" rel="noreferrer">
-                <GitBranch /> GitHub
+              <a
+                className="flex items-center gap-2 border-t pt-3 text-sm text-muted-foreground hover:text-primary"
+                href={site.github_url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <GitBranch className="size-4" /> GitHub
               </a>
             ) : null}
             {site.email ? (
-              <a href={`mailto:${site.email}`}>
-                <Mail /> Email
+              <a
+                className="flex items-center gap-2 border-t pt-3 text-sm text-muted-foreground hover:text-primary"
+                href={`mailto:${site.email}`}
+              >
+                <Mail className="size-4" /> Email
               </a>
             ) : null}
-            <a href={site.rss_url || "/feed.xml"}>
-              <Rss /> RSS
+            <a
+              className="flex items-center gap-2 border-t pt-3 text-sm text-muted-foreground hover:text-primary"
+              href={site.rss_url || "/feed.xml"}
+            >
+              <Rss className="size-4" /> RSS
             </a>
-          </aside>
+          </Panel>
         </div>
       </div>
     );
@@ -176,7 +189,7 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
   // 2. Blank Template (Full width clean container)
   if (page.template === "blank") {
     return (
-      <div className="public-container custom-page custom-page--blank">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
         {draftBanner}
         <MarkdownRenderer content={page.content} />
       </div>
@@ -186,14 +199,12 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
   // 3. Links Template
   if (page.template === "links") {
     return (
-      <div className="public-container custom-page links-page">
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
         {draftBanner}
-        <header className="article-header article-header--spaced">
-          <h1 className="article-title">{page.title}</h1>
-        </header>
-        <div className="article-content">
+        <PageHeader title={page.title} description={page.summary} />
+        <Panel>
           <MarkdownRenderer content={page.content} />
-        </div>
+        </Panel>
       </div>
     );
   }
@@ -201,18 +212,20 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
   // 4. Timeline Template
   if (page.template === "timeline") {
     return (
-      <div className="public-container custom-page timeline-page">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
         {draftBanner}
-        <header className="page-hero">
-          <p className="page-hero-eyebrow">TIMELINE / ROADMAP</p>
-          <h1 className="page-hero-title">{page.title}</h1>
-          {page.summary ? (
-            <p className="page-hero-summary">{page.summary}</p>
-          ) : null}
-        </header>
-        <div className="timeline-content">
+        <PageHeader
+          title={page.title}
+          description={page.summary}
+          action={
+            <span className="text-xs font-semibold tracking-wider text-primary">
+              TIMELINE / ROADMAP
+            </span>
+          }
+        />
+        <Panel>
           <MarkdownRenderer content={page.content} />
-        </div>
+        </Panel>
       </div>
     );
   }
@@ -220,18 +233,20 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
   // 5. Projects Template
   if (page.template === "projects") {
     return (
-      <div className="public-container custom-page projects-page">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
         {draftBanner}
-        <header className="page-hero">
-          <p className="page-hero-eyebrow">PORTFOLIO / SHOWCASE</p>
-          <h1 className="page-hero-title">{page.title}</h1>
-          {page.summary ? (
-            <p className="page-hero-summary">{page.summary}</p>
-          ) : null}
-        </header>
-        <div className="projects-content">
+        <PageHeader
+          title={page.title}
+          description={page.summary}
+          action={
+            <span className="text-xs font-semibold tracking-wider text-primary">
+              PORTFOLIO / SHOWCASE
+            </span>
+          }
+        />
+        <Panel>
           <MarkdownRenderer content={page.content} />
-        </div>
+        </Panel>
       </div>
     );
   }
@@ -239,18 +254,20 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
   // 6. Focus Template
   if (page.template === "focus") {
     return (
-      <div className="public-container custom-page focus-page">
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
         {draftBanner}
-        <header className="focus-header">
-          <div className="focus-indicator">ESSAY & FOCUS</div>
-          <h1 className="focus-title">{page.title}</h1>
-          {page.summary ? (
-            <p className="focus-summary">{page.summary}</p>
-          ) : null}
-        </header>
-        <div className="focus-content">
+        <PageHeader
+          title={page.title}
+          description={page.summary}
+          action={
+            <span className="text-xs font-semibold tracking-wider text-primary">
+              ESSAY & FOCUS
+            </span>
+          }
+        />
+        <Panel>
           <MarkdownRenderer content={page.content} />
-        </div>
+        </Panel>
       </div>
     );
   }
@@ -258,54 +275,52 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
   // 7. FAQ Template
   if (page.template === "faq") {
     return (
-      <div className="public-container custom-page faq-page">
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
         {draftBanner}
-        <header className="page-hero">
-          <p className="page-hero-eyebrow">FAQ / GUIDES</p>
-          <h1 className="page-hero-title">{page.title}</h1>
-          {page.summary ? (
-            <p className="page-hero-summary">{page.summary}</p>
-          ) : null}
-        </header>
-        <div className="faq-content">
+        <PageHeader
+          title={page.title}
+          description={page.summary}
+          action={
+            <span className="text-xs font-semibold tracking-wider text-primary">
+              FAQ / GUIDES
+            </span>
+          }
+        />
+        <Panel>
           <MarkdownRenderer content={page.content} />
-        </div>
+        </Panel>
       </div>
     );
   }
 
   // 8. Default Standard Template
   return (
-    <div className="public-container custom-page">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
       {draftBanner}
       <div
-        className={`article-layout ${toc.length === 0 ? "article-layout--no-toc" : ""}`}
+        className={`grid min-w-0 gap-8 ${toc.length === 0 ? "mx-auto w-full max-w-3xl" : "lg:grid-cols-[minmax(0,1fr)_16rem]"}`}
       >
-        <article className="article-main">
-          <header className="article-header">
-            <h1 className="article-title">{page.title}</h1>
-          </header>
-          <div className="article-content">
-            <MarkdownRenderer content={page.content} />
-          </div>
-        </article>
+        <Panel as="article" className="gap-8">
+          <PageHeader title={page.title} description={page.summary} />
+          <MarkdownRenderer content={page.content} />
+        </Panel>
 
         {toc.length > 0 ? (
-          <aside className="article-sidebar">
-            <div className="toc-card">
-              <h3>目录导航</h3>
-              <nav className="toc-list">
+          <aside className="order-first self-start lg:order-none lg:sticky lg:top-24">
+            <Panel className="gap-3 p-4">
+              <h2 className="text-sm font-semibold">目录导航</h2>
+              <nav className="flex flex-col gap-1" aria-label="目录导航">
                 {toc.map((item) => (
                   <a
                     key={item.id}
                     href={`#${item.id}`}
-                    className={`toc-item toc-item--h${item.level}`}
+                    className={`rounded px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-primary ${item.level > 2 ? "pl-5" : ""}`}
                   >
                     {item.text}
                   </a>
                 ))}
               </nav>
-            </div>
+            </Panel>
           </aside>
         ) : null}
       </div>

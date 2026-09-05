@@ -17,6 +17,15 @@ The JSON ledger is authoritative. Implementation and real browser verification a
 - Verification: `blog-frontend/npm run quality` exit 0 (44 files / 167 tests, branch coverage 45.03%, production build passed). Targeted public regression tests (Home, PublicShell, TaxonomyArchive) exit 0 (3 files / 12 tests).
 - Browser: in-app browser visibly rendered `/` and `/categories` at `http://127.0.0.1:5173`; navigation/footer and theme toggle were present. Playwright verified the homepage and `/categories` at 1440×900, 768×1024 and 390×844; each viewport passed both light and dark `documentElement.dataset.theme` checks. Screenshots were captured to `/tmp/u02a-{1440,768,390}-{light,dark}.png`.
 
+## U02b evidence (2026-09-06) — verified
+
+- Preconditions: U02a is `verified`; `gouno-blog` and related `gosso-admin` were clean on `main` at start (`91029fe` / `f9466f3`).
+- Implementation: article reading, Markdown/code/image/TOC presentation, custom/About pages, account notification/settings states, 404, error boundary, and Step-Up callback presentation use `@gouno/ui` primitives plus current Tailwind tokens. Inline feedback now exposes like/comment/report failures. Existing API, preview, SEO, permission, authentication, session-restoration, and external identity-management semantics are unchanged; Connector was not touched.
+- Verification: targeted reading/public-state regression passed (5 files / 21 tests); ErrorBoundary/Settings regression passed (2 files / 4 tests). Final `blog-frontend npm run quality` passed (47 files / 179 tests; statements 55.81%, branches 45.89%, functions 45.62%, lines 57.96%) with the unchanged coverage thresholds and a successful production build. Existing non-blocking oxlint warnings remain.
+- Browser: local Vite visibly rendered `/about` at 1440×900 light and 390×844 dark, `/not-a-real-page` at desktop and 390×844 mobile, and `/?step_up_success=1` at 1440×900 dark. The browser confirmed `data-theme=light/dark`; layout, headings, navigation, callback status, and mobile wrapping were visible.
+- Unverified: the local API at `127.0.0.1:8082` was unavailable (`curl` exit 7), so a live data-backed article, authenticated account pages, live interaction submissions, and the 768px tablet viewport were not browser-tested. Automated tests cover Markdown anchors/images/code copy/SEO, preview success/denial, comment/reply, interaction failure, account redirect, notification states, settings URL/error, and callback-window behavior.
+- Handoff: U02c may independently review U02a/U02b. With a local backend and authenticated session, prioritize live article/account browser evidence; do not begin Admin implementation during the review.
+
 ## Phase 0 source inventory
 
 The authoritative machine-readable inventory is `migration.json.phase0Inventory`. The source scan records the following boundaries without changing runtime behavior:

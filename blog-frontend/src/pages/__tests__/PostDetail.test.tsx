@@ -14,7 +14,7 @@ const post = {
   slug: "markdown-post",
   summary: "Summary",
   content:
-    "## Section\nThis has **bold** text and `code`.\n\n![Architecture diagram](/media/diagram.jpg)\n\n- first\n- second",
+    "## Section\nThis has **bold** text and `code`.\n\n```ts\nconst answer = 42;\n```\n\n![Architecture diagram](/media/diagram.jpg)\n\n- first\n- second",
   cover_url: "/media/cover.jpg",
   cover_alt: "Cover image",
   tags: ["go"],
@@ -81,9 +81,14 @@ describe("PostDetail", () => {
     expect(
       await screen.findByRole("heading", { name: "Markdown Post" }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "Section" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Section" })).toHaveAttribute(
+      "id",
+      "heading-section",
+    );
+    expect(screen.getByRole("link", { name: "Section" })).toHaveAttribute(
+      "href",
+      "#heading-section",
+    );
     expect(screen.getByText("bold")).toBeInTheDocument();
     expect(screen.getByText("code")).toBeInTheDocument();
     expect(
@@ -115,6 +120,69 @@ describe("PostDetail", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/posts/7/comments",
       expect.objectContaining({ credentials: "same-origin" }),
+    );
+  });
+
+  it("copies a fenced code block with the shared keyboard-accessible control", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = input.toString();
+        if (url === "/api/posts/markdown-post") {
+          return Response.json({ data: post });
+        }
+        if (url === "/api/posts/7/comments") {
+          return Response.json({ data: [] });
+        }
+        return new Response(null, { status: 404 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderPostDetail();
+
+    await screen.findByRole("heading", { name: "Markdown Post" });
+    const copy = screen.getByRole("button", { name: /copy code/i });
+    copy.focus();
+    await user.keyboard("{Enter}");
+
+    expect(await navigator.clipboard.readText()).toBe("const answer = 42;");
+    expect(
+      screen.getByRole("button", { name: /copy code/i }),
+    ).toHaveTextContent(/copied/i);
+  });
+
+  it("shows inline feedback when a like request fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = input.toString();
+        if (url === "/api/posts/markdown-post") {
+          return Response.json({ data: post });
+        }
+        if (url === "/api/posts/7/comments") {
+          return Response.json({ data: [] });
+        }
+        if (url === "/api/posts/7/like" && init?.method === "PUT") {
+          return Response.json(
+            { message: "Like is temporarily unavailable" },
+            { status: 503 },
+          );
+        }
+        return new Response(null, { status: 404 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderPostDetail();
+
+    await screen.findByRole("heading", { name: "Markdown Post" });
+    await user.click(screen.getByRole("button", { name: /likes/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Like is temporarily unavailable",
+    );
+    expect(screen.getByRole("button", { name: /likes/i })).toHaveAttribute(
+      "aria-pressed",
+      "false",
     );
   });
 
@@ -302,6 +370,46 @@ describe("PostDetail", () => {
     // Verify admin endpoint was called
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/admin/posts/daily-ai-news-2026-08-21-380",
+      expect.objectContaining({ credentials: "same-origin" }),
+    );
+  });
+
+  it("does not expose draft content when the admin preview endpoint denies access", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = input.toString();
+      if (url === "/api/posts/private-draft") {
+        return new Response(null, { status: 404 });
+      }
+      if (url === "/api/admin/posts/private-draft") {
+        return Response.json({ message: "Forbidden" }, { status: 403 });
+      }
+      if (url === "/api/admin/posts?q=private-draft&search=private-draft") {
+        return Response.json({ message: "Forbidden" }, { status: 403 });
+      }
+      return new Response(null, { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <GossoProvider client={gossoClient}>
+        <I18nProvider>
+          <MemoryRouter initialEntries={["/posts/private-draft?preview=true"]}>
+            <Routes>
+              <Route path="/posts/:slug" element={<PostDetail />} />
+            </Routes>
+          </MemoryRouter>
+        </I18nProvider>
+      </GossoProvider>,
+    );
+
+    expect(
+      await screen.findByRole("heading", {
+        name: /page you are looking for|你寻找的页面/i,
+      }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Private draft content")).not.toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/admin/posts/private-draft",
       expect.objectContaining({ credentials: "same-origin" }),
     );
   });

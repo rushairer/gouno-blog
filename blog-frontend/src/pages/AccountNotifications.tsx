@@ -55,7 +55,7 @@ export default function AccountNotifications() {
   };
 
   return (
-    <main className="public-container page-content">
+    <main className="mx-auto flex w-full max-w-4xl flex-col gap-6">
       <PageHeader
         title={t("accountNotifications.title")}
         description={t("accountNotifications.description")}
@@ -78,23 +78,30 @@ export default function AccountNotifications() {
           <EmptyState label={t("accountNotifications.empty")} />
         ) : null}
         {!loading && !error && items.length > 0 ? (
-          <section className="account-notification-list" aria-label="通知列表">
+          <section className="grid gap-3" aria-label="通知列表">
             {items.map((item) => (
               <Panel
                 key={item.id}
-                className={`account-notification ${item.read_at ? "" : "account-notification--unread"}`}
+                className={`grid gap-3 sm:grid-cols-[1.25rem_minmax(0,1fr)_auto] ${item.read_at ? "" : "border-l-4 border-l-primary"}`}
               >
-                <Bell aria-hidden="true" />
-                <div>
+                <Bell className="size-5 text-primary" aria-hidden="true" />
+                <div className="min-w-0">
                   <strong>
                     {item.title || t("accountNotifications.systemAlert")}
                   </strong>
-                  {item.body ? <p>{item.body}</p> : null}
-                  <time>{formatDateTime(item.created_at)}</time>
+                  {item.body ? (
+                    <p className="mt-1 break-words text-sm text-muted-foreground">
+                      {item.body}
+                    </p>
+                  ) : null}
+                  <time className="mt-2 block text-xs text-muted-foreground">
+                    {formatDateTime(item.created_at)}
+                  </time>
                 </div>
                 {!item.read_at ? (
                   <Button
                     variant="secondary"
+                    className="sm:self-start"
                     onClick={() => void markRead(item)}
                   >
                     {t("accountNotifications.markAsRead")}
