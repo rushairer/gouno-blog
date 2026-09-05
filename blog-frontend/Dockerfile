@@ -10,6 +10,7 @@ ENV VITE_GOSSO_CLIENT_ID=${VITE_GOSSO_CLIENT_ID}
 ENV VITE_GOSSO_SCOPE=${VITE_GOSSO_SCOPE}
 
 COPY package*.json ./
+COPY vendor/gouno-ui-0.1.0.tgz ./vendor/
 RUN npm ci
 
 COPY . .
