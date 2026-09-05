@@ -11,8 +11,11 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
+	agentservice "github.com/rushairer/blog-backend/internal/agent"
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/migrations"
+	"github.com/rushairer/blog-backend/internal/repository"
+	"github.com/rushairer/blog-backend/internal/testsupport"
 )
 
 func TestScheduledResourceQueryRetryKeepsSnapshotAndScope(t *testing.T) {
@@ -89,7 +92,7 @@ func TestResourceQueryEmptyPolicyCanFailWithoutAgentRun(t *testing.T) {
 	if err := db.QueryRowContext(ctx, `INSERT INTO ai_workflow_runs(workflow_id,workflow_version_id,input) VALUES($1,$2,'{}') RETURNING id`, workflowID, versionID).Scan(&runID); err != nil {
 		t.Fatal(err)
 	}
-	service := &Service{db: db, catalog: NewResourceCatalog(db)}
+	service := &Service{db: db, catalog: NewResourceCatalog(db), agents: agentservice.NewManagementService(repository.NewAgentRepository(db), nil, nil, nil, nil)}
 	service.Execute(ctx, runID)
 	var status, message string
 	if err := db.QueryRowContext(ctx, `SELECT status,error_message FROM ai_workflow_runs WHERE id=$1`, runID).Scan(&status, &message); err != nil {
@@ -105,10 +108,12 @@ func TestSavePersistsResourceQueryPreview(t *testing.T) {
 	t.Cleanup(func() { _ = db.Close() })
 	ctx := context.Background()
 	service := &Service{db: db, catalog: NewResourceCatalog(db)}
+	principalID := testsupport.Principal(t, db)
 	value := &domain.Workflow{
-		Name:        fmt.Sprintf("resource-query-preview-%d", time.Now().UnixNano()),
-		Description: "Resource query preview integration test",
-		InputSchema: json.RawMessage(`{"type":"object","additionalProperties":false}`),
+		CreatedByPrincipalID: &principalID,
+		Name:                 fmt.Sprintf("resource-query-preview-%d", time.Now().UnixNano()),
+		Description:          "Resource query preview integration test",
+		InputSchema:          json.RawMessage(`{"type":"object","additionalProperties":false}`),
 		Steps: []domain.WorkflowStep{
 			{ID: "select_posts", Type: "resource_query", ResourceType: "post", Filter: json.RawMessage(`{"tag":"__resource_query_no_match__"}`), MaxItems: 20},
 			{ID: "result", Type: "output", OutputPointer: "/steps/select_posts"},
@@ -365,18 +370,19 @@ func insertQueryTestPost(t *testing.T, ctx context.Context, db *sql.DB, status s
 
 func createResourceQueryWorkflow(t *testing.T, ctx context.Context, db *sql.DB, steps []map[string]any) (int64, int64) {
 	t.Helper()
+	principalID := testsupport.Principal(t, db)
 	unique := fmt.Sprintf("resource-query-workflow-%d", time.Now().UnixNano())
 	var workflowID, versionID int64
-	if err := db.QueryRowContext(ctx, `INSERT INTO ai_workflows(name,description,enabled,cron_expression,timezone,template_key)
-		VALUES($1,'Resource query integration test',TRUE,'0 9 * * *','Asia/Shanghai',$2) RETURNING id`, unique, unique).Scan(&workflowID); err != nil {
+	if err := db.QueryRowContext(ctx, `INSERT INTO ai_workflows(name,description,enabled,cron_expression,timezone,template_key,created_by_principal_id)
+		VALUES($1,'Resource query integration test',TRUE,'0 9 * * *','Asia/Shanghai',$2,$3) RETURNING id`, unique, unique, principalID).Scan(&workflowID); err != nil {
 		t.Fatal(err)
 	}
 	rawSteps, err := json.Marshal(steps)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := db.QueryRowContext(ctx, `INSERT INTO ai_workflow_versions(workflow_id,version,input_schema,steps,scope_policy)
-		VALUES($1,1,'{}',$2,'{"mode":"strict","discovery_tools":[]}') RETURNING id`, workflowID, rawSteps).Scan(&versionID); err != nil {
+	if err := db.QueryRowContext(ctx, `INSERT INTO ai_workflow_versions(workflow_id,version,input_schema,steps,scope_policy,created_by_principal_id)
+		VALUES($1,1,'{}',$2,'{"mode":"strict","discovery_tools":[]}',$3) RETURNING id`, workflowID, rawSteps, principalID).Scan(&versionID); err != nil {
 		t.Fatal(err)
 	}
 	return workflowID, versionID

@@ -135,6 +135,7 @@ export interface WorkflowScopePolicy {
 }
 
 export interface Workflow {
+  readonly creation_origin?: "human" | "system" | "legacy";
   id: number;
   name: string;
   description: string;
@@ -329,6 +330,7 @@ export interface OutcomeMetrics {
 }
 
 export interface Agent {
+  readonly creation_origin?: "human" | "system" | "legacy";
   id: number;
   system_key?: string;
   name: string;
@@ -352,6 +354,7 @@ export interface Agent {
 }
 
 export interface AgentSkill {
+  readonly creation_origin?: "human" | "system" | "legacy";
   id: number;
   system_key?: string;
   name: string;

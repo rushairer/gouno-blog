@@ -1,18 +1,4 @@
--- Q01a: approved exact human identity or proven system provenance.
-SELECT blog_identity_apply('ai_agents');
-SELECT blog_identity_apply('ai_skills');
-SELECT blog_identity_apply('ai_skill_versions');
-SELECT blog_identity_apply('ai_workflows');
-SELECT blog_identity_apply('ai_workflow_versions');
-SELECT blog_identity_apply('ai_workflow_runs');
-SELECT blog_identity_apply('ai_agent_runs');
-SELECT blog_identity_apply('ai_approvals');
-SELECT blog_identity_apply('workflow_interaction_tasks');
-SELECT blog_identity_apply('ai_media_candidates');
-SELECT blog_identity_apply('ai_feedback');
-
--- Revalidate before destructive cutover, including databases already at 088.
--- Q01a: humans retain principals, system seeds carry explicit provenance.
+-- Development-stage hard cutover: principal ids are the only human identity.
 UPDATE ai_workflow_runs SET trigger_kind=CASE
   WHEN schedule_key IS NOT NULL THEN 'scheduler'
   WHEN triggered_by LIKE 'event:%' THEN 'event'
@@ -20,11 +6,11 @@ UPDATE ai_workflow_runs SET trigger_kind=CASE
   ELSE 'manual' END,
   source_ref=CASE WHEN triggered_by LIKE 'event:%' THEN substring(triggered_by FROM 7) ELSE source_ref END;
 
-ALTER TABLE ai_agents ALTER COLUMN created_by_principal_id DROP NOT NULL;
-ALTER TABLE ai_skills ALTER COLUMN created_by_principal_id DROP NOT NULL;
-ALTER TABLE ai_skill_versions ALTER COLUMN created_by_principal_id DROP NOT NULL;
-ALTER TABLE ai_workflows ALTER COLUMN created_by_principal_id DROP NOT NULL;
-ALTER TABLE ai_workflow_versions ALTER COLUMN created_by_principal_id DROP NOT NULL;
+ALTER TABLE ai_agents ALTER COLUMN created_by_principal_id SET NOT NULL;
+ALTER TABLE ai_skills ALTER COLUMN created_by_principal_id SET NOT NULL;
+ALTER TABLE ai_skill_versions ALTER COLUMN created_by_principal_id SET NOT NULL;
+ALTER TABLE ai_workflows ALTER COLUMN created_by_principal_id SET NOT NULL;
+ALTER TABLE ai_workflow_versions ALTER COLUMN created_by_principal_id SET NOT NULL;
 ALTER TABLE ai_feedback ALTER COLUMN created_by_principal_id SET NOT NULL;
 
 ALTER TABLE ai_feedback DROP CONSTRAINT IF EXISTS ai_feedback_target_type_target_id_created_by_key;

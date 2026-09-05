@@ -112,6 +112,7 @@ type Agent struct {
 	LastRunAt               *time.Time       `json:"last_run_at,omitempty"`
 	NextRunAt               *time.Time       `json:"next_run_at,omitempty"`
 	CreatedByPrincipalID    *int64           `json:"created_by_principal_id,omitempty"`
+	CreationOrigin          string           `json:"creation_origin,omitempty"`
 	CreatedAt               time.Time        `json:"created_at"`
 	UpdatedAt               time.Time        `json:"updated_at"`
 }
@@ -139,6 +140,7 @@ type AgentSkill struct {
 	InputSchema               json.RawMessage    `json:"input_schema"`
 	AllowedTriggers           []AgentTriggerType `json:"allowed_triggers"`
 	CreatedByPrincipalID      *int64             `json:"created_by_principal_id,omitempty"`
+	CreationOrigin            string             `json:"creation_origin,omitempty"`
 	CreatedAt                 time.Time          `json:"created_at"`
 	UpdatedAt                 time.Time          `json:"updated_at"`
 }

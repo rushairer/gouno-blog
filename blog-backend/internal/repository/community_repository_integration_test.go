@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/rushairer/blog-backend/internal/testsupport"
 	"os"
 	"sync"
 	"testing"
@@ -70,7 +71,7 @@ func TestCommunityRepositoryInteractionOwnershipAndUniqueness(t *testing.T) {
 		t.Fatalf("concurrent like was not idempotent: %#v", state)
 	}
 
-	parentPrincipalID := int64(1)
+	parentPrincipalID := testsupport.Principal(t, db)
 	parent := &domain.Comment{
 		PostID: postID, Author: "Parent", AuthorPrincipalID: &parentPrincipalID, AuthorType: "user",
 		Content: "Parent comment", Status: "visible", IsVisible: true,
@@ -78,7 +79,7 @@ func TestCommunityRepositoryInteractionOwnershipAndUniqueness(t *testing.T) {
 	if err := repo.CreateComment(ctx, parent); err != nil {
 		t.Fatal(err)
 	}
-	replyPrincipalID := int64(2)
+	replyPrincipalID := testsupport.Principal(t, db)
 	reply := &domain.Comment{
 		PostID: postID, ParentID: &parent.ID, Author: "Reply", AuthorPrincipalID: &replyPrincipalID,
 		AuthorType: "user", Content: "Reply comment", Status: "visible", IsVisible: true,
@@ -86,15 +87,15 @@ func TestCommunityRepositoryInteractionOwnershipAndUniqueness(t *testing.T) {
 	if err := repo.CreateComment(ctx, reply); err != nil {
 		t.Fatal(err)
 	}
-	parentNotifications, unread, err := repo.ListNotifications(ctx, 1, 10, 0)
+	parentNotifications, unread, err := repo.ListNotifications(ctx, parentPrincipalID, 10, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	otherNotifications, _, _ := repo.ListNotifications(ctx, 2, 10, 0)
+	otherNotifications, _, _ := repo.ListNotifications(ctx, replyPrincipalID, 10, 0)
 	if len(parentNotifications) != 1 || unread != 1 || len(otherNotifications) != 0 {
 		t.Fatalf("notification ownership mismatch: parent=%d unread=%d other=%d", len(parentNotifications), unread, len(otherNotifications))
 	}
-	if err := repo.ReadNotification(ctx, 2, parentNotifications[0].ID); !errors.Is(err, sql.ErrNoRows) {
+	if err := repo.ReadNotification(ctx, replyPrincipalID, parentNotifications[0].ID); !errors.Is(err, sql.ErrNoRows) {
 		t.Fatalf("another subject should not read the notification, got %v", err)
 	}
 	if err := repo.ModerateComment(ctx, reply.ID, "hidden"); err != nil {
@@ -103,7 +104,7 @@ func TestCommunityRepositoryInteractionOwnershipAndUniqueness(t *testing.T) {
 	if err := repo.ModerateComment(ctx, reply.ID, "visible"); err != nil {
 		t.Fatal(err)
 	}
-	parentNotifications, _, _ = repo.ListNotifications(ctx, 1, 10, 0)
+	parentNotifications, _, _ = repo.ListNotifications(ctx, parentPrincipalID, 10, 0)
 	if len(parentNotifications) != 1 {
 		t.Fatalf("re-approving a reply created a duplicate notification: %d", len(parentNotifications))
 	}

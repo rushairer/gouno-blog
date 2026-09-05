@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/rushairer/blog-backend/internal/testsupport"
 	"os"
 	"testing"
 	"time"
@@ -38,15 +39,16 @@ func TestDeleteProviderRevokesCredentialAfterAgentSoftDelete(t *testing.T) {
 		_, _ = db.ExecContext(ctx, `DELETE FROM ai_provider_profiles WHERE id=$1`, profile.ID)
 	}()
 
+	principalID := testsupport.Principal(t, db)
 	var skillVersionID int64
 	if err := db.QueryRowContext(ctx, `SELECT id FROM ai_skill_versions ORDER BY id LIMIT 1`).Scan(&skillVersionID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := db.ExecContext(ctx, `INSERT INTO ai_agents
 		(name, description, provider_profile_id, skill_version_id, enabled, trigger_type, timezone,
-		 daily_run_limit, monthly_token_budget, deleted_at)
-		VALUES ($1, '', $2, $3, false, 'manual', 'Asia/Shanghai', 1, 100, NOW())`,
-		name+"-agent", profile.ID, skillVersionID); err != nil {
+		 daily_run_limit, monthly_token_budget, deleted_at, created_by_principal_id)
+		VALUES ($1, '', $2, $3, false, 'manual', 'Asia/Shanghai', 1, 100, NOW(), $4)`,
+		name+"-agent", profile.ID, skillVersionID, principalID); err != nil {
 		t.Fatal(err)
 	}
 	if err := repo.DeleteProvider(ctx, profile.ID); err != nil {
@@ -83,8 +85,8 @@ func TestFailedApprovalRemainsActionableAndCanBeReclaimed(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := db.QueryRowContext(ctx, `INSERT INTO ai_agent_runs
-		(agent_id,trigger_type,status,input,provider,model)
-		VALUES($1,'manual','awaiting_approval','{}','openai','test-model') RETURNING id`, agentID).Scan(&runID); err != nil {
+		(agent_id,trigger_type,status,input,provider,model,skill_version_id)
+		VALUES($1,'manual','awaiting_approval','{}','openai','test-model',(SELECT skill_version_id FROM ai_agents WHERE id=$1)) RETURNING id`, agentID).Scan(&runID); err != nil {
 		t.Fatal(err)
 	}
 	defer func() { _, _ = db.ExecContext(ctx, `DELETE FROM ai_agent_runs WHERE id=$1`, runID) }()

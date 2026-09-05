@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/rushairer/blog-backend/internal/testsupport"
 	"os"
 	"strings"
 	"testing"
@@ -101,14 +102,15 @@ func TestStrictWorkflowRunScope(t *testing.T) {
 
 func createStrictScopeFixture(t *testing.T, ctx context.Context, db *sql.DB) (int64, int64, int64) {
 	t.Helper()
+	principalID := testsupport.Principal(t, db)
 	unique := fmt.Sprintf("scope-test-%d", time.Now().UnixNano())
 	var workflowID, versionID, runID int64
-	if err := db.QueryRowContext(ctx, `INSERT INTO ai_workflows(name,description,template_key)
-		VALUES($1,'Strict scope test',$2) RETURNING id`, unique, unique).Scan(&workflowID); err != nil {
+	if err := db.QueryRowContext(ctx, `INSERT INTO ai_workflows(name,description,template_key,created_by_principal_id)
+		VALUES($1,'Strict scope test',$2,$3) RETURNING id`, unique, unique, principalID).Scan(&workflowID); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.QueryRowContext(ctx, `INSERT INTO ai_workflow_versions(workflow_id,version,input_schema,steps,scope_policy)
-		VALUES($1,1,'{}','[]','{"mode":"strict","discovery_tools":["content.search_knowledge"]}') RETURNING id`, workflowID).Scan(&versionID); err != nil {
+	if err := db.QueryRowContext(ctx, `INSERT INTO ai_workflow_versions(workflow_id,version,input_schema,steps,scope_policy,created_by_principal_id)
+		VALUES($1,1,'{}','[]','{"mode":"strict","discovery_tools":["content.search_knowledge"]}',$2) RETURNING id`, workflowID, principalID).Scan(&versionID); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.QueryRowContext(ctx, `INSERT INTO ai_workflow_runs(workflow_id,workflow_version_id,input)

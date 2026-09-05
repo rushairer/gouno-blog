@@ -426,20 +426,13 @@ func (ctrl *AgentController) UpdateSkill(c *gin.Context) {
 
 func (ctrl *AgentController) saveSkill(c *gin.Context, id int64) {
 	var value domain.AgentSkill
-	if err := bindAgentJSON(c, &value); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+	if err := bindHumanTemplateJSON(c, &value); err != nil {
+		if !c.IsAborted() {
+			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		}
 		return
 	}
 	value.ID = id
-	if id == 0 {
-		raw, exists := c.Get("blog_principal_id")
-		principalID, ok := raw.(int64)
-		if !exists || !ok || principalID <= 0 {
-			c.JSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "local principal is required"))
-			return
-		}
-		value.CreatedByPrincipalID = &principalID
-	}
 	if err := ctrl.svc.SaveSkill(c.Request.Context(), &value); err != nil {
 		WriteDomainError(c, err)
 		return
@@ -564,20 +557,13 @@ func (ctrl *AgentController) UpdateAgent(c *gin.Context) {
 
 func (ctrl *AgentController) saveAgent(c *gin.Context, id int64) {
 	var value domain.Agent
-	if err := bindAgentJSON(c, &value); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+	if err := bindHumanTemplateJSON(c, &value); err != nil {
+		if !c.IsAborted() {
+			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		}
 		return
 	}
 	value.ID = id
-	if id == 0 {
-		raw, exists := c.Get("blog_principal_id")
-		principalID, ok := raw.(int64)
-		if !exists || !ok || principalID <= 0 {
-			c.JSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "local principal is required"))
-			return
-		}
-		value.CreatedByPrincipalID = &principalID
-	}
 	if err := ctrl.svc.SaveAgent(c.Request.Context(), &value); err != nil {
 		WriteDomainError(c, err)
 		return
@@ -808,4 +794,32 @@ func bindWorkflowJSON(c *gin.Context, value any) bool {
 		return false
 	}
 	return true
+}
+
+// Response-only provenance is ignored on input. Every new version is attributed
+// to the authenticated local actor, including edits of system templates.
+func bindHumanTemplateJSON(c *gin.Context, value any) error {
+	if err := bindAgentJSON(c, value); err != nil {
+		return err
+	}
+	raw, exists := c.Get("blog_principal_id")
+	principal, ok := raw.(int64)
+	if !exists || !ok || principal <= 0 {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "authenticated local principal is required"))
+		return fmt.Errorf("authenticated local principal is required")
+	}
+	switch v := value.(type) {
+	case *domain.Agent:
+		v.CreatedByPrincipalID = &principal
+		v.CreationOrigin = ""
+	case *domain.AgentSkill:
+		v.CreatedByPrincipalID = &principal
+		v.CreationOrigin = ""
+	case *domain.Workflow:
+		v.CreatedByPrincipalID = &principal
+		v.CreationOrigin = ""
+	default:
+		return fmt.Errorf("unsupported human template")
+	}
+	return nil
 }

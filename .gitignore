@@ -13,3 +13,6 @@ certs/
 keys/
 secrets/
 .env
+
+# Python quality tooling
+__pycache__/

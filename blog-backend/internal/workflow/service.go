@@ -182,14 +182,14 @@ func NewService(db *sql.DB, runner *agentservice.Runner, agents *agentservice.Ma
 
 const workflowColumns = `w.id, w.name, w.description, w.enabled, w.cron_expression, w.timezone, w.next_run_at, w.template_key,
 	w.current_version, v.id, v.input_schema, v.steps, v.scope_policy, w.event_triggers, w.resource_query_preview, w.resource_query_preview_at,
-	w.resource_query_last_count, w.resource_query_last_run_at, w.resource_query_empty_policy, w.created_by_principal_id, w.created_at, w.updated_at`
+	w.resource_query_last_count, w.resource_query_last_run_at, w.resource_query_empty_policy, w.created_by_principal_id, w.creation_origin, w.created_at, w.updated_at`
 
 func scanWorkflow(scanner interface{ Scan(...any) error }) (*domain.Workflow, error) {
 	var value domain.Workflow
 	var steps, scopePolicy, eventTriggers, queryPreview []byte
 	err := scanner.Scan(&value.ID, &value.Name, &value.Description, &value.Enabled, &value.CronExpression, &value.Timezone, &value.NextRunAt, &value.TemplateKey,
 		&value.CurrentVersion, &value.VersionID, &value.InputSchema, &steps, &scopePolicy, &eventTriggers, &queryPreview, &value.ResourceQueryPreviewAt,
-		&value.ResourceQueryLastCount, &value.ResourceQueryLastRunAt, &value.ResourceQueryEmptyPolicy, &value.CreatedByPrincipalID,
+		&value.ResourceQueryLastCount, &value.ResourceQueryLastRunAt, &value.ResourceQueryEmptyPolicy, &value.CreatedByPrincipalID, &value.CreationOrigin,
 		&value.CreatedAt, &value.UpdatedAt)
 	if err == nil {
 		err = json.Unmarshal(steps, &value.Steps)
@@ -622,7 +622,7 @@ func workflowAgentIDs(steps []domain.WorkflowStep) []int64 {
 func (s *Service) Versions(ctx context.Context, id int64) ([]*domain.Workflow, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT w.id, w.name, w.description, w.enabled, w.cron_expression, w.timezone, w.next_run_at, w.template_key,
 		v.version, v.id, v.input_schema, v.steps, v.scope_policy, w.event_triggers, w.resource_query_preview, w.resource_query_preview_at,
-		w.resource_query_last_count, w.resource_query_last_run_at, w.resource_query_empty_policy, v.created_by_principal_id, w.created_at, v.created_at
+		w.resource_query_last_count, w.resource_query_last_run_at, w.resource_query_empty_policy, v.created_by_principal_id, v.creation_origin, w.created_at, v.created_at
 		FROM ai_workflows w JOIN ai_workflow_versions v ON v.workflow_id=w.id
 		WHERE w.id=$1 ORDER BY v.version DESC`, id)
 	if err != nil {

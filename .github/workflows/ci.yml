@@ -76,6 +76,39 @@ jobs:
       - name: Check known Go vulnerabilities
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.6.0 ./...
 
+  database-integration:
+    name: Isolated database integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: blog-backend/go.mod
+          cache-dependency-path: blog-backend/go.sum
+
+      - name: Verify false-green detection
+        run: python3 -m unittest discover -s scripts -p 'test_check_db_integration.py'
+
+      - name: Migrate and run required integration tests with race detection
+        run: python3 scripts/check-db-integration.py --output "$RUNNER_TEMP/blog-db-integration"
+
+      - name: Retain integration evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: database-integration
+          path: |
+            ${{ runner.temp }}/blog-db-integration/*.json
+            ${{ runner.temp }}/blog-db-integration/*.jsonl
+            ${{ runner.temp }}/blog-db-integration/*.stderr
+            ${{ runner.temp }}/blog-db-integration/*.cover
+          if-no-files-found: warn
+          retention-days: 7
+
   seed:
     name: Seed quality
     runs-on: ubuntu-latest
@@ -139,11 +172,8 @@ jobs:
           }
           EOF
 
-      - name: UI contract checks
-        run: npm run lint:ui
-
-      - name: Format, lint, typecheck, coverage and build
-        run: npm run check && npm run build
+      - name: Format, lint, UI/CSS contracts, typecheck, coverage and build
+        run: npm run quality
 
   compose:
     name: Compose config

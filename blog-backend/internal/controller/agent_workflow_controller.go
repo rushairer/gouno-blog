@@ -643,19 +643,19 @@ func (ctrl *AgentController) DeleteWorkflow(c *gin.Context) {
 
 func (ctrl *AgentController) saveWorkflow(c *gin.Context, id int64) {
 	var value domain.Workflow
-	if !bindWorkflowJSON(c, &value) {
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxWorkflowJSONBody)
+	if err := bindHumanTemplateJSON(c, &value); err != nil {
+		if !c.IsAborted() {
+			status := http.StatusBadRequest
+			var tooLarge *http.MaxBytesError
+			if errors.As(err, &tooLarge) {
+				status = http.StatusRequestEntityTooLarge
+			}
+			c.JSON(status, gouno.NewErrorResponse(status, err.Error()))
+		}
 		return
 	}
 	value.ID = id
-	if id == 0 {
-		raw, exists := c.Get("blog_principal_id")
-		principalID, ok := raw.(int64)
-		if !exists || !ok || principalID <= 0 {
-			c.JSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "authenticated local principal is required"))
-			return
-		}
-		value.CreatedByPrincipalID = &principalID
-	}
 	if err := ctrl.workflows.Save(c.Request.Context(), &value); err != nil {
 		WriteDomainError(c, err)
 		return

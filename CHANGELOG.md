@@ -3,6 +3,18 @@
 All notable changes to the complete Gouno Blog distribution are documented in
 this file. The format follows Keep a Changelog and Semantic Versioning.
 
+## [Unreleased]
+
+### Fixed
+
+- Allow fresh databases to migrate without an Owner. Record system template provenance and require explicit exact-identity approval for unresolved historical human records; see [migration exception and upgrade impact](doc/quality/adr-q01a-identity-migrations.md).
+- Attribute Skill and Workflow edits' new versions to the authenticated local actor, preserving original template provenance.
+
+### Added
+
+- Local `identity-backfill report` / `approve` commands with transactional, evidence-referenced mapping records.
+- Disposable database integration CI gate and historical upgrade regressions; align frontend CI with the complete quality command.
+
 ## [1.5.26] - 2026-09-04
 
 ### Changed

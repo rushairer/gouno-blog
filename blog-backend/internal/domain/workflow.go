@@ -61,6 +61,7 @@ type Workflow struct {
 	ResourceQueryLastRunAt   *time.Time             `json:"resource_query_last_run_at,omitempty"`
 	ResourceQueryEmptyPolicy string                 `json:"resource_query_empty_policy"`
 	CreatedByPrincipalID     *int64                 `json:"created_by_principal_id,omitempty"`
+	CreationOrigin           string                 `json:"creation_origin,omitempty"`
 	CreatedAt                time.Time              `json:"created_at"`
 	UpdatedAt                time.Time              `json:"updated_at"`
 }

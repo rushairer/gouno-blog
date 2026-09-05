@@ -13,6 +13,12 @@ import (
 var migrationFiles embed.FS
 
 func Up(ctx context.Context, db *sql.DB) error {
+	return up(ctx, db, migrationFiles)
+}
+
+// up uses the same transaction/ledger path for embedded migrations and real
+// historical SQL fixtures in upgrade tests. Production always uses Up.
+func up(ctx context.Context, db *sql.DB, source fs.FS) error {
 	if _, err := db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS blog_schema_migrations (
 		version TEXT PRIMARY KEY,
 		applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -20,7 +26,7 @@ func Up(ctx context.Context, db *sql.DB) error {
 		return fmt.Errorf("create migration table: %w", err)
 	}
 
-	names, err := fs.Glob(migrationFiles, "sql/*.sql")
+	names, err := fs.Glob(source, "sql/*.sql")
 	if err != nil {
 		return fmt.Errorf("list migrations: %w", err)
 	}
@@ -33,7 +39,7 @@ func Up(ctx context.Context, db *sql.DB) error {
 		if applied {
 			continue
 		}
-		body, err := migrationFiles.ReadFile(name)
+		body, err := fs.ReadFile(source, name)
 		if err != nil {
 			return err
 		}

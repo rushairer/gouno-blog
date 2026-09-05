@@ -68,18 +68,6 @@ func (r *AgentRepository) BootstrapStarterPack(ctx context.Context) (int, error)
 		return 0, err
 	}
 
-	var ownerPrincipalID int64
-	err = tx.QueryRowContext(ctx, `SELECT p.id FROM blog_principals p
-		JOIN blog_memberships m ON m.principal_id=p.id AND m.status='active'
-		JOIN blog_role_bindings r ON r.membership_id=m.id AND r.role='owner'
-		ORDER BY p.created_at, p.id LIMIT 1`).Scan(&ownerPrincipalID)
-	if errors.Is(err, sql.ErrNoRows) {
-		err = tx.QueryRowContext(ctx, `SELECT id FROM blog_principals ORDER BY created_at, id LIMIT 1`).Scan(&ownerPrincipalID)
-	}
-	if err != nil {
-		return 0, fmt.Errorf("resolve starter pack owner principal: %w", err)
-	}
-
 	rows, err := tx.QueryContext(ctx, `SELECT s.system_key, s.name, s.description,
 		s.default_daily_run_limit, s.default_monthly_token_budget, sv.id
 		FROM ai_skills s JOIN ai_skill_versions sv ON sv.skill_id=s.id AND sv.version=s.version
@@ -116,10 +104,10 @@ func (r *AgentRepository) BootstrapStarterPack(ctx context.Context) (int, error)
 	for _, item := range items {
 		var agentID int64
 		err := tx.QueryRowContext(ctx, `INSERT INTO ai_agents
-			(system_key,name,description,provider_profile_id,skill_version_id,enabled,trigger_type,timezone,daily_run_limit,monthly_token_budget,created_by_principal_id)
+			(system_key,name,description,provider_profile_id,skill_version_id,enabled,trigger_type,timezone,daily_run_limit,monthly_token_budget,creation_origin)
 			VALUES ($1,$2,$3,NULL,$4,FALSE,'manual','Asia/Shanghai',$5,$6,$7)
 			ON CONFLICT (system_key) WHERE system_key IS NOT NULL DO NOTHING
-			RETURNING id`, item.systemKey, item.name, item.description, item.skillVersionID, item.dailyLimit, item.monthlyBudget, ownerPrincipalID).Scan(&agentID)
+			RETURNING id`, item.systemKey, item.name, item.description, item.skillVersionID, item.dailyLimit, item.monthlyBudget, "system").Scan(&agentID)
 		if errors.Is(err, sql.ErrNoRows) {
 			err = tx.QueryRowContext(ctx, `SELECT id FROM ai_agents WHERE system_key=$1 AND deleted_at IS NULL`, item.systemKey).Scan(&agentID)
 			if errors.Is(err, sql.ErrNoRows) {
@@ -191,15 +179,15 @@ func (r *AgentRepository) BootstrapStarterPack(ctx context.Context) (int, error)
 			if errors.Is(err, sql.ErrNoRows) {
 				currentVersion = 1
 				err = tx.QueryRowContext(ctx, `INSERT INTO ai_workflows
-					(name, description, enabled, template_key, cron_expression, timezone, current_version, created_by_principal_id)
+					(name, description, enabled, template_key, cron_expression, timezone, current_version, creation_origin)
 					VALUES ($1, $2, FALSE, $3, $4, 'Asia/Shanghai', $5, $6)
-					RETURNING id`, meta.name, meta.description, key, meta.cronExpression, currentVersion, ownerPrincipalID).Scan(&workflowID)
+					RETURNING id`, meta.name, meta.description, key, meta.cronExpression, currentVersion, "system").Scan(&workflowID)
 				if err != nil {
 					return 0, fmt.Errorf("create starter workflow %q: %w", key, err)
 				}
 				if _, err = tx.ExecContext(ctx, `INSERT INTO ai_workflow_versions
-					(workflow_id, version, input_schema, steps, created_by_principal_id) VALUES ($1, $2, $3, $4, $5)`, workflowID, currentVersion,
-					json.RawMessage(`{"type":"object","additionalProperties":false}`), steps, ownerPrincipalID); err != nil {
+					(workflow_id, version, input_schema, steps, creation_origin) VALUES ($1, $2, $3, $4, $5)`, workflowID, currentVersion,
+					json.RawMessage(`{"type":"object","additionalProperties":false}`), steps, "system"); err != nil {
 					return 0, fmt.Errorf("create starter workflow %q version: %w", key, err)
 				}
 				continue
@@ -211,8 +199,8 @@ func (r *AgentRepository) BootstrapStarterPack(ctx context.Context) (int, error)
 				return 0, err
 			}
 			if _, err = tx.ExecContext(ctx, `INSERT INTO ai_workflow_versions
-				(workflow_id, version, input_schema, steps, created_by_principal_id) VALUES ($1, $2, $3, $4, $5)`, workflowID, currentVersion,
-				json.RawMessage(`{"type":"object","additionalProperties":false}`), steps, ownerPrincipalID); err != nil {
+				(workflow_id, version, input_schema, steps, creation_origin) VALUES ($1, $2, $3, $4, $5)`, workflowID, currentVersion,
+				json.RawMessage(`{"type":"object","additionalProperties":false}`), steps, "system"); err != nil {
 				return 0, err
 			}
 			continue
@@ -227,12 +215,12 @@ func (r *AgentRepository) BootstrapStarterPack(ctx context.Context) (int, error)
 			return 0, err
 		}
 		if _, err = tx.ExecContext(ctx, `INSERT INTO ai_workflow_versions
-			(workflow_id,version,input_schema,steps,created_by_principal_id) VALUES ($1,$2,$3,$4,$5)`, workflowID, currentVersion,
-			json.RawMessage(`{"type":"object","additionalProperties":false}`), steps, ownerPrincipalID); err != nil {
+			(workflow_id,version,input_schema,steps,creation_origin) VALUES ($1,$2,$3,$4,$5)`, workflowID, currentVersion,
+			json.RawMessage(`{"type":"object","additionalProperties":false}`), steps, "system"); err != nil {
 			return 0, err
 		}
 	}
-	additionalCreated, err := reconcileProviderDependentStarters(ctx, tx, systemAgents, ownerPrincipalID)
+	additionalCreated, err := reconcileProviderDependentStarters(ctx, tx, systemAgents)
 	if err != nil {
 		return 0, err
 	}
@@ -249,7 +237,7 @@ func (r *AgentRepository) BootstrapStarterPack(ctx context.Context) (int, error)
 const agentColumns = `a.id, a.system_key, a.name, a.description, a.provider_profile_id,
 	a.skill_version_id, a.enabled, a.trigger_type, a.cron_expression, a.timezone,
 	a.max_steps_override, a.max_input_tokens_override, a.max_output_tokens_override, a.daily_run_limit,
-	a.monthly_token_budget, a.last_run_at, a.next_run_at, a.created_by_principal_id, a.created_at, a.updated_at`
+	a.monthly_token_budget, a.last_run_at, a.next_run_at, a.created_by_principal_id, a.creation_origin, a.created_at, a.updated_at`
 
 func scanAgent(scanner interface{ Scan(...any) error }) (*domain.Agent, error) {
 	var agent domain.Agent
@@ -258,7 +246,7 @@ func scanAgent(scanner interface{ Scan(...any) error }) (*domain.Agent, error) {
 		&agent.SkillVersionID, &agent.Enabled, &agent.TriggerType, &agent.CronExpression, &agent.Timezone,
 		&agent.MaxStepsOverride, &agent.MaxInputTokensOverride, &agent.MaxOutputTokensOverride,
 		&agent.DailyRunLimit, &agent.MonthlyTokenBudget, &agent.LastRunAt, &agent.NextRunAt,
-		&agent.CreatedByPrincipalID, &agent.CreatedAt, &agent.UpdatedAt,
+		&agent.CreatedByPrincipalID, &agent.CreationOrigin, &agent.CreatedAt, &agent.UpdatedAt,
 	)
 	return &agent, err
 }
@@ -318,7 +306,7 @@ func (r *AgentRepository) ListAgents(ctx context.Context) ([]*domain.Agent, erro
 const skillColumns = `s.id, s.system_key, s.name, s.description, s.system_prompt, s.capabilities, s.tool_bindings, s.execution_mode,
 	s.content_publish_mode, s.max_steps, s.max_input_tokens, s.max_output_tokens, s.default_daily_run_limit, s.default_monthly_token_budget,
 	s.version, COALESCE((SELECT sv.id FROM ai_skill_versions sv WHERE sv.skill_id=s.id AND sv.version=s.version),0),
-	s.input_schema, s.allowed_triggers, s.created_by_principal_id, s.created_at, s.updated_at`
+	s.input_schema, s.allowed_triggers, s.created_by_principal_id, s.creation_origin, s.created_at, s.updated_at`
 
 func scanSkill(scanner interface{ Scan(...any) error }) (*domain.AgentSkill, error) {
 	var skill domain.AgentSkill
@@ -326,7 +314,7 @@ func scanSkill(scanner interface{ Scan(...any) error }) (*domain.AgentSkill, err
 	err := scanner.Scan(&skill.ID, &skill.SystemKey, &skill.Name, &skill.Description, &skill.SystemPrompt, &capabilities,
 		&toolBindings, &skill.ExecutionMode, &skill.ContentPublishMode, &skill.MaxSteps, &skill.MaxInputTokens, &skill.MaxOutputTokens,
 		&skill.DefaultDailyRunLimit, &skill.DefaultMonthlyTokenBudget, &skill.Version, &skill.VersionID,
-		&inputSchema, &triggers, &skill.CreatedByPrincipalID,
+		&inputSchema, &triggers, &skill.CreatedByPrincipalID, &skill.CreationOrigin,
 		&skill.CreatedAt, &skill.UpdatedAt)
 	if err == nil {
 		err = json.Unmarshal(capabilities, &skill.Capabilities)
@@ -425,7 +413,7 @@ func (r *AgentRepository) ListSkillVersions(ctx context.Context, skillID int64) 
 	rows, err := r.db.QueryContext(ctx, `SELECT sv.skill_id, s.system_key, s.name, s.description, sv.system_prompt,
 		sv.capabilities, sv.tool_bindings, sv.execution_mode, sv.content_publish_mode, sv.max_steps, sv.max_input_tokens, sv.max_output_tokens,
 		sv.default_daily_run_limit, sv.default_monthly_token_budget, sv.version, sv.id, sv.input_schema,
-		sv.allowed_triggers, sv.created_by_principal_id, s.created_at, sv.created_at
+		sv.allowed_triggers, sv.created_by_principal_id, sv.creation_origin, s.created_at, sv.created_at
 		FROM ai_skill_versions sv JOIN ai_skills s ON s.id=sv.skill_id
 		WHERE sv.skill_id=$1 ORDER BY sv.version DESC`, skillID)
 	if err != nil {
@@ -447,7 +435,7 @@ func (r *AgentRepository) GetSkillVersion(ctx context.Context, versionID int64) 
 	return scanSkill(r.db.QueryRowContext(ctx, `SELECT sv.skill_id, s.system_key, s.name, s.description, sv.system_prompt,
 		sv.capabilities, sv.tool_bindings, sv.execution_mode, sv.content_publish_mode, sv.max_steps, sv.max_input_tokens, sv.max_output_tokens,
 		sv.default_daily_run_limit, sv.default_monthly_token_budget, sv.version, sv.id, sv.input_schema,
-		sv.allowed_triggers, sv.created_by_principal_id, s.created_at, sv.created_at
+		sv.allowed_triggers, sv.created_by_principal_id, sv.creation_origin, s.created_at, sv.created_at
 		FROM ai_skill_versions sv JOIN ai_skills s ON s.id=sv.skill_id WHERE sv.id=$1`, versionID))
 }
 
