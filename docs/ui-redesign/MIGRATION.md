@@ -6,6 +6,7 @@ The JSON ledger is authoritative. Implementation and real browser verification a
 
 - `@gouno/ui`: `npm run typecheck`, `npm run build`, `npm test` (2 tests) and `npm run showcase:build` pass.
 - `blog-frontend`: formatting, UI-contract, CSS-cascade checks, TypeScript, 160 tests and production build pass. The quality command is blocked by the existing global branch-coverage threshold (44.58%, required 45%).
+- U01a 已完成：补充公共分类、标签、归档页面及 posts API 参数/空回退测试；`blog-frontend npm run quality` 通过，任务标记 verified。浏览器证据仍未执行。
 - `gosso-admin-frontend`: formatting, UI-contract, CSS-cascade checks, TypeScript, 108 tests and production build pass (existing non-blocking lint/Vite warnings only).
 - `packages/ui/showcase`: standalone component showcase is available via `npm run showcase:dev` or `npm run showcase:build`.
 

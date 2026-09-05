@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "baseline": {
     "date": "2026-09-05",
-    "blogQuality": "checks pass except global branch coverage threshold (44.58%, required 45%)",
+    "blogQuality": "U01a verified: quality passes after coverage tests; prior branch coverage baseline 44.58%, current reproduction 44.44%",
     "gossoAdminQuality": "passed with warnings",
     "browser": "public home, login and unauthenticated blog admin redirect inspected; authenticated flows not verified",
     "baselineCommands": {
