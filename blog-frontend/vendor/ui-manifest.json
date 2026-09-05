@@ -2,7 +2,7 @@
   "name": "@gouno/ui",
   "version": "0.1.0",
   "archive": "gouno-ui-0.1.0.tgz",
-  "sha256": "a9ee08235e60017c3cca6b26f4c5343c8f6ef12eb164f0f597fc1506d3de29cc",
-  "integrity": "sha512-OQGjpkb+zQvRSIw7Qx2EuxCADt7prhftomuy1bueEPGt9AgvmImtpNt3N2CP7JjflaBay63YKBWMBFT4DpbldA==",
+  "sha256": "b86698a7ad7409bed50396f64f5b45acae8e995bcc1dec025bbe24fae2c58630",
+  "integrity": "sha512-iwi4xaQLfHQzuWEPVRt/9iMzwx3GwkEElfHzctnOJ8ymxPgQbWByilfFiIY9B266FOByDlzwQQaB6iwlRlKX1g==",
   "source": "gouno-blog/packages/ui"
 }

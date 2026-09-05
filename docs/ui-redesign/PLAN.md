@@ -36,7 +36,7 @@
 | U01a | 修复/解释 Blog branch coverage 阻断 | 阶段 0 | planned |
 | U01b | 修正 gosso-admin 测试 URL 的标准 HTTPS 端口契约 | 阶段 0 | planned |
 | U01c | 共享包安装、展示和三品牌主题验收 | U01a、U01b | planned |
-| U01d | 共享包阶段独立复核 | U01c | planned |
+| U01d | 共享包阶段独立复核 | U01c | verified |
 | U02a | Blog 公共 Shell 与发现页 | U01d | planned |
 | U02b | Blog 阅读页与公共状态 | U02a | planned |
 | U02c | Blog 公共页面阶段复核 | U02b | planned |

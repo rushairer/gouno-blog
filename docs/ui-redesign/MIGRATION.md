@@ -23,7 +23,7 @@ The authoritative machine-readable inventory is `migration.json.phase0Inventory`
 ## Shared package and distribution evidence
 
 - Both consumers resolve `@gouno/ui@0.1.0` from `vendor/gouno-ui-0.1.0.tgz`.
-- The two `vendor/ui-manifest.json` files agree with the checked-in consumer archive: SHA-256 `a9ee08235e60017c3cca6b26f4c5343c8f6ef12eb164f0f597fc1506d3de29cc` and npm integrity `sha512-OQGjpkb+zQvRSIw7Qx2EuxCADt7prhftomuy1bueEPGt9AgvmImtpNt3N2CP7JjflaBay63YKBWMBFT4DpbldA==`.
+- The two `vendor/ui-manifest.json` files agree with the checked-in consumer archive: SHA-256 `b86698a7ad7409bed50396f64f5b45acae8e995bcc1dec025bbe24fae2c58630` and npm integrity `sha512-iwi4xaQLfHQzuWEPVRt/9iMzwx3GwkEElfHzctnOJ8ymxPgQbWByilfFiIY9B266FOByDlzwQQaB6iwlRlKX1g==`.
 - Both consumer Tailwind entrypoints import the shared tokens/base CSS and register `@source "../../node_modules/@gouno/ui/dist"`.
 - `packages/ui/showcase` builds independently with `npm run showcase:build`; its page visibly includes shell, layout, form, feedback, table and status-badge combinations.
 
@@ -34,6 +34,14 @@ The authoritative machine-readable inventory is `migration.json.phase0Inventory`
 - Archive/consumer check: both consumer archives are byte-identical and match the updated manifests (`a9ee…29cc`, `sha512-OQGj…ldA==`); package version is `0.1.0`. Both Tailwind entrypoints import shared `tokens.css`/`base.css` and register the shared `@source`; bootstrap and bundled fonts are present in the package output.
 - Browser: local showcase at `http://127.0.0.1:5173/` visibly rendered the AdminShell/navigation, page/panel layout, form input, feedback, table and status badges. Theme menu exposed 浅色/深色/跟随系统; selecting light yielded `data-theme=light`, selecting dark yielded `data-theme=dark`, and system resolved to the current dark preference. The showcase uses `blog-admin`; all three brand values are covered by package ThemeProvider tests.
 - Not measured: authenticated Blog/gosso-admin application routes, responsive widths, and production-domain browser flows remain outside U01c and were not run. No Connector behavior was changed.
+
+## U01d review (2026-09-06) — verified
+
+- Preconditions and baseline: U01a/U01b/U01c are marked `verified`; `git status --short --branch` exited 0 and both repositories were clean on `main` at review start and remained clean after verification commands.
+- Verification commands: `blog-frontend npm run quality` exit 0 (44 files / 167 tests; branches 45.03%); `packages/ui npm run typecheck`, `npm test -- --run`, `npm run build`, and `npm run showcase:build` exit 0 (5 tests); `gosso-admin-frontend npm run quality` exit 0 (20 files / 110 tests); `npm pack --json` to a temporary destination exit 0. Existing oxlint, Vite config, jsdom navigation, font-resolution, Lightning CSS `@theme`, and Node localStorage warnings remain non-blocking.
+- Archive review finding and resolution: `node scripts/ui/distribute.mjs blog-frontend ../gosso-admin/gosso-admin-frontend` exited 0. `cmp` of the two consumer archives exited 0, and all three archives now match SHA-256 `b86698a7ad7409bed50396f64f5b45acae8e995bcc1dec025bbe24fae2c58630` and integrity `sha512-iwi4xaQLfHQzuWEPVRt/9iMzwx3GwkEElfHzctnOJ8ymxPgQbWByilfFiIY9B266FOByDlzwQQaB6iwlRlKX1g==`.
+- Browser evidence: local showcase `http://127.0.0.1:5173/` visibly showed shared shell, navigation, layout, form, feedback, table and status badges; theme menu opened and selecting dark resulted in `document.documentElement.dataset.theme=dark` (brand `blog-admin`). No authenticated routes, responsive widths, production domains, or full three-consumer browser run were measured.
+- Conclusion and handoff: U01d is `verified`; `rg -n "localhost:8443" ...` exited 1 as expected (no matches), and `git diff --check` exited 0. U02a may begin.
 
 ## Baseline commands and known blockers
 

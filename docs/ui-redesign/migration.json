@@ -64,8 +64,8 @@
     "sharedPackage": {
       "package": "@gouno/ui@0.1.0",
       "archive": "gouno-ui-0.1.0.tgz",
-      "sha256": "a9ee08235e60017c3cca6b26f4c5343c8f6ef12eb164f0f597fc1506d3de29cc",
-      "integrity": "sha512-OQGjpkb+zQvRSIw7Qx2EuxCADt7prhftomuy1bueEPGt9AgvmImtpNt3N2CP7JjflaBay63YKBWMBFT4DpbldA==",
+      "sha256": "b86698a7ad7409bed50396f64f5b45acae8e995bcc1dec025bbe24fae2c58630",
+      "integrity": "sha512-iwi4xaQLfHQzuWEPVRt/9iMzwx3GwkEElfHzctnOJ8ymxPgQbWByilfFiIY9B266FOByDlzwQQaB6iwlRlKX1g==",
       "consumers": ["blog-frontend", "gosso-admin-frontend"],
       "tailwindSource": "@source ../../node_modules/@gouno/ui/dist in both consumer Tailwind entrypoints",
       "showcase": "packages/ui/showcase builds independently",
@@ -83,6 +83,20 @@
         "brands": ["blog", "blog-admin", "gosso-admin"],
         "modes": ["light", "dark", "system"],
         "browser": "showcase visibly renders shell, layout, form, feedback, table and status badges; light/dark/system controls verified on blog-admin brand"
+      },
+      "u01dReview": {
+        "status": "verified",
+        "commands": [
+          "blog-frontend: npm run quality",
+          "packages/ui: npm run typecheck && npm test -- --run && npm run build && npm run showcase:build",
+          "gosso-admin-frontend: npm run quality",
+          "packages/ui: npm pack --json to a temporary destination",
+          "node scripts/ui/distribute.mjs blog-frontend ../gosso-admin/gosso-admin-frontend"
+        ],
+        "result": "Blog quality passed (44 files/167 tests; branches 45.03%); gosso-admin quality passed (20 files/110 tests); shared package tests/build/showcase passed. Distribution script exit 0 refreshed all three archives to sha256 b86698a7ad7409bed50396f64f5b45acae8e995bcc1dec025bbe24fae2c58630 with matching integrity sha512-iwi4xaQLfHQzuWEPVRt/9iMzwx3GwkEElfHzctnOJ8ymxPgQbWByilfFiIY9B266FOByDlzwQQaB6iwlRlKX1g==.",
+        "browser": "http://127.0.0.1:5173/ visibly rendered showcase shell/layout/form/feedback/table/status; selecting dark yielded documentElement data-theme=dark",
+        "unverified": ["authenticated application routes", "responsive widths", "production domains", "full three-consumer browser run"],
+        "blocker": null
       }
     },
     "qualityScripts": {
@@ -91,7 +105,6 @@
       "packagesUi": ["typecheck", "build", "test", "showcase:build"]
     },
     "knownBlockers": [
-      "blog branch coverage is 44.58%, below the configured 45% threshold",
       "existing non-blocking oxlint, Vite config, jsdom navigation, font resolution and Lightning CSS warnings"
     ],
     "verification": "static source scan and command output recorded; U01b browser evidence confirms https://sso.dev.local login route and existing /identity-admin/ fallback; authenticated browser routes, responsive widths and light/dark evidence remain not-run"
