@@ -177,6 +177,18 @@ function Admin({
 }
 
 function StepUpPopupCallbackView() {
+  React.useEffect(() => {
+    checkAndHandleStepUpPopupCallback();
+    const timer = setTimeout(() => {
+      try {
+        window.close();
+      } catch {
+        // Ignore
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <div className="public-container state-page" role="status">
       <div className="state-card" style={{ maxWidth: 440, padding: 32 }}>
@@ -203,7 +215,14 @@ function StepUpPopupCallbackView() {
         </p>
         <button
           type="button"
-          onClick={() => window.close()}
+          onClick={() => {
+            checkAndHandleStepUpPopupCallback();
+            try {
+              window.close();
+            } catch {
+              // Ignore
+            }
+          }}
           className="btn btn-secondary btn--default"
           style={{ marginTop: 20 }}
         >

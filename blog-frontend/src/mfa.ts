@@ -31,38 +31,48 @@ export function checkAndHandleStepUpPopupCallback(): boolean {
     params.get("step_up_success") === "1";
   if (!isPopup) return false;
 
-  // 1. BroadcastChannel: Works seamlessly between same-origin windows even if COOP severed window.opener
-  try {
-    if (typeof BroadcastChannel !== "undefined") {
-      const channel = new BroadcastChannel("gouno_mfa_step_up");
-      channel.postMessage({
-        type: STEP_UP_MESSAGE_TYPE,
-        timestamp: Date.now(),
-      });
-      channel.close();
-    }
-  } catch {
-    // Ignore BroadcastChannel errors
-  }
+  const now = Date.now();
 
-  // 2. Storage Event: Cross-tab / cross-window persistence
+  // 1. Storage Event: Cross-tab / cross-window persistence (write both keys)
   try {
+    localStorage.setItem("gouno:sudo_activated_at", now.toString());
     localStorage.setItem(
       "gouno_step_up_event",
       JSON.stringify({
         type: STEP_UP_MESSAGE_TYPE,
-        timestamp: Date.now(),
+        timestamp: now,
       }),
     );
   } catch {
     // Ignore localStorage errors
   }
 
+  // 2. BroadcastChannel: Works seamlessly between same-origin windows even if COOP severed window.opener
+  try {
+    if (typeof BroadcastChannel !== "undefined") {
+      const channel = new BroadcastChannel("gouno_mfa_step_up");
+      channel.postMessage({
+        type: STEP_UP_MESSAGE_TYPE,
+        timestamp: now,
+      });
+      // Do not close immediately to prevent cancellation in browser event loop
+      setTimeout(() => {
+        try {
+          channel.close();
+        } catch {
+          // Ignore
+        }
+      }, 1000);
+    }
+  } catch {
+    // Ignore BroadcastChannel errors
+  }
+
   // 3. postMessage to window.opener if still linked
   try {
     if (window.opener && window.opener !== window) {
       window.opener.postMessage(
-        { type: STEP_UP_MESSAGE_TYPE },
+        { type: STEP_UP_MESSAGE_TYPE, timestamp: now },
         window.location.origin,
       );
     }
@@ -121,6 +131,11 @@ export function openStepUpPopup(
     completed = true;
     cleanup();
     try {
+      localStorage.setItem("gouno:sudo_activated_at", Date.now().toString());
+    } catch {
+      // Ignore
+    }
+    try {
       if (popup && !popup.closed) {
         popup.close();
       }
@@ -158,15 +173,11 @@ export function openStepUpPopup(
   };
 
   const storageListener = (event: StorageEvent) => {
-    if (event.key === "gouno_step_up_event" && event.newValue) {
-      try {
-        const data = JSON.parse(event.newValue);
-        if (data?.type === STEP_UP_MESSAGE_TYPE) {
-          triggerSuccess();
-        }
-      } catch {
-        // Ignore parse error
-      }
+    if (
+      (event.key === "gouno_step_up_event" || event.key === "gouno:sudo_activated_at") &&
+      event.newValue
+    ) {
+      triggerSuccess();
     }
   };
 
@@ -190,15 +201,50 @@ export function openStepUpPopup(
     // Ignore BroadcastChannel errors
   }
 
-  // 4. Poll for popup closed state
+  // 4. Poll for popup closed state with recent auth detection
   timer = setInterval(() => {
     if (!popup || popup.closed) {
       if (!completed) {
-        cleanup();
-        onCancel?.();
+        let recentAuth = false;
+        try {
+          const sudoTime = localStorage.getItem("gouno:sudo_activated_at");
+          if (sudoTime && Math.abs(Date.now() - parseInt(sudoTime, 10)) < 15000) {
+            recentAuth = true;
+          }
+          const stepUpEvent = localStorage.getItem("gouno_step_up_event");
+          if (stepUpEvent) {
+            const data = JSON.parse(stepUpEvent);
+            if (data?.timestamp && Math.abs(Date.now() - data.timestamp) < 15000) {
+              recentAuth = true;
+            }
+          }
+        } catch {
+          // Ignore
+        }
+
+        if (recentAuth) {
+          triggerSuccess();
+        } else {
+          // Wait briefly in case storage/broadcast events are still propagating
+          setTimeout(() => {
+            if (!completed) {
+              try {
+                const sudoTime = localStorage.getItem("gouno:sudo_activated_at");
+                if (sudoTime && Math.abs(Date.now() - parseInt(sudoTime, 10)) < 15000) {
+                  triggerSuccess();
+                  return;
+                }
+              } catch {
+                // Ignore
+              }
+              cleanup();
+              onCancel?.();
+            }
+          }, 400);
+        }
       }
     }
-  }, 500);
+  }, 300);
 
   return true;
 }

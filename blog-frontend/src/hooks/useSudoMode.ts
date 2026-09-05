@@ -71,7 +71,7 @@ export function useSudoMode(): SudoModeState {
 
   useEffect(() => {
     updateRemaining();
-    const interval = setInterval(updateRemaining, 5000);
+    const interval = setInterval(updateRemaining, 3000);
 
     const handleCompleted = () => {
       recordSudoSuccess();
@@ -81,15 +81,22 @@ export function useSudoMode(): SudoModeState {
     const handleStorage = (e: StorageEvent) => {
       if (e.key === SUDO_STORAGE_KEY || e.key === "gouno_step_up_event") {
         updateRemaining();
+        setActivating(false);
       }
+    };
+
+    const handleFocus = () => {
+      updateRemaining();
     };
 
     window.addEventListener(STEP_UP_COMPLETED_EVENT, handleCompleted);
     window.addEventListener("storage", handleStorage);
+    window.addEventListener("focus", handleFocus);
     return () => {
       clearInterval(interval);
       window.removeEventListener(STEP_UP_COMPLETED_EVENT, handleCompleted);
       window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("focus", handleFocus);
     };
   }, [recordSudoSuccess, updateRemaining]);
 
@@ -106,6 +113,7 @@ export function useSudoMode(): SudoModeState {
             resolve(true);
           },
           () => {
+            updateRemaining();
             setActivating(false);
             resolve(false);
           },
@@ -116,7 +124,7 @@ export function useSudoMode(): SudoModeState {
         }
       });
     },
-    [recordSudoSuccess],
+    [recordSudoSuccess, updateRemaining],
   );
 
   const isSudoActive = remainingMs > 0;
