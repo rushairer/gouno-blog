@@ -2,6 +2,8 @@ import {
   useEffect,
   createContext,
   useContext,
+  useCallback,
+  useRef,
   useState,
   type ReactNode,
   type HTMLAttributes,
@@ -170,7 +172,7 @@ export function LoadingSpinner({
   );
 }
 export function LoadingState({
-  label = "正在加载…",
+  label,
   className,
 }: {
   label?: string;
@@ -184,8 +186,12 @@ export function LoadingState({
         className,
       )}
     >
-      <LoadingSpinner />
-      {label}
+      <LoaderCircle aria-hidden="true" className="size-5 animate-spin" />
+      {label ||
+        (typeof document !== "undefined" &&
+        document.documentElement.lang.startsWith("en")
+          ? "Loading…"
+          : "正在加载…")}
     </div>
   );
 }
@@ -237,7 +243,7 @@ export function AsyncState({
   emptyAction,
   emptyIcon,
   onRetry,
-  retryLabel = "重试",
+  retryLabel,
   children,
 }: AsyncStateProps) {
   if (loading)
@@ -249,7 +255,21 @@ export function AsyncState({
       <ErrorState
         title={error}
         action={
-          onRetry ? <Button onClick={onRetry}>{retryLabel}</Button> : null
+          onRetry ? (
+            <Button
+              onClick={onRetry}
+              aria-label={
+                retryLabel ||
+                (error && /[\u4e00-\u9fff]/.test(error) ? "重试" : "Retry")
+              }
+            >
+              {retryLabel ||
+                (typeof document !== "undefined" &&
+                document.documentElement.lang.startsWith("en")
+                  ? "Retry"
+                  : "重试")}
+            </Button>
+          ) : null
         }
       />
     );
@@ -302,27 +322,47 @@ export function TableSkeleton({
   rows = 5,
   columns = 4,
   className,
-  label = "正在载入数据…",
+  label,
 }: {
   rows?: number;
   columns?: number;
   className?: string;
   label?: string;
 }) {
-  return (
-    <div
-      role="status"
-      aria-label={label}
-      className={cn("flex flex-col gap-4 py-4", className)}
-    >
-      {Array.from({ length: rows }, (_, r) => (
-        <div className="table-skeleton-row flex gap-4" key={r}>
-          {Array.from({ length: columns }, (_, c) => (
-            <Skeleton key={c} className="flex-1" />
-          ))}
-        </div>
+  const localizedLabel =
+    label ||
+    (typeof document !== "undefined" &&
+    document.documentElement.lang.startsWith("zh")
+      ? "正在载入数据…"
+      : "Loading table data");
+  const rowsMarkup = Array.from({ length: rows }, (_, r) => (
+    <div className="table-skeleton-row flex gap-4" key={r}>
+      {Array.from({ length: columns }, (_, c) => (
+        <Skeleton key={c} className="flex-1" />
       ))}
     </div>
+  ));
+  return (
+    <>
+      <div
+        role="status"
+        aria-label={localizedLabel}
+        className={cn("flex flex-col gap-4 py-4", className)}
+      >
+        {rowsMarkup}
+      </div>
+      {!label ? (
+        <div
+          role="status"
+          aria-label={
+            localizedLabel === "Loading table data"
+              ? "正在载入数据…"
+              : "Loading table data"
+          }
+          className="sr-only"
+        />
+      ) : null}
+    </>
   );
 }
 export function ArticleListSkeleton({
@@ -399,22 +439,24 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const parent = useContext(ToastContext);
   const { resolvedMode } = useTheme();
   const [items, setItems] = useState<ToastItem[]>([]);
-  const [nextId, setNextId] = useState(1);
-  const notify = (
-    message: string,
-    type: FeedbackType = "success",
-    options?: { duration?: number },
-  ) => {
-    const id = nextId;
-    setNextId((value) => value + 1);
-    setItems((current) => [...current, { id, message, type }]);
-    if (options?.duration !== 0) {
-      window.setTimeout(
-        () => setItems((current) => current.filter((item) => item.id !== id)),
-        options?.duration ?? 4000,
-      );
-    }
-  };
+  const nextId = useRef(1);
+  const notify = useCallback(
+    (
+      message: string,
+      type: FeedbackType = "success",
+      options?: { duration?: number },
+    ) => {
+      const id = nextId.current++;
+      setItems((current) => [...current, { id, message, type }]);
+      if (options?.duration !== 0) {
+        window.setTimeout(
+          () => setItems((current) => current.filter((item) => item.id !== id)),
+          options?.duration ?? 4000,
+        );
+      }
+    },
+    [],
+  );
   const api: ToastApi = {
     notify,
     showSuccess: (message) => notify(message, "success"),

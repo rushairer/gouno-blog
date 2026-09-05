@@ -36,6 +36,7 @@ export function CategoryForm({
   const creating = mode === "create";
   return (
     <OverlayForm
+      className="drawer-form"
       onSubmit={onSubmit}
       actions={
         <>

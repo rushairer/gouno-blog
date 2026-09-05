@@ -1,4 +1,10 @@
-import { type ReactNode, type ComponentProps } from "react";
+import {
+  type ReactNode,
+  type ComponentProps,
+  type KeyboardEvent,
+  useLayoutEffect,
+  useState,
+} from "react";
 import * as Primitive from "./components/ui/tabs";
 import {
   ChevronLeft,
@@ -50,10 +56,26 @@ export function Tabs<T extends string = string>({
             tabClassName,
           )}
         >
-          {items.map((item) => (
+          {items.map((item, index) => (
             <Primitive.TabsTrigger
               key={item.value}
               value={item.value}
+              onClick={() => onValueChange?.(item.value)}
+              onKeyDown={(event: KeyboardEvent<HTMLButtonElement>) => {
+                if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") {
+                  return;
+                }
+                event.preventDefault();
+                const nextIndex =
+                  event.key === "ArrowRight"
+                    ? (index + 1) % items.length
+                    : (index - 1 + items.length) % items.length;
+                const next = items[nextIndex];
+                onValueChange?.(next.value);
+                event.currentTarget.parentElement
+                  ?.querySelectorAll<HTMLElement>('button[role="tab"]')
+                  [nextIndex]?.focus();
+              }}
               className="subnav-tabs__tab gap-2 rounded-none border-b-2 border-transparent px-3 py-3 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary"
             >
               {item.icon}
@@ -132,21 +154,67 @@ export function ThemeToggle({
   labels?: Record<ThemeMode, string>;
 }) {
   const { mode, setMode } = useTheme();
-  const Icon = mode === "system" ? Monitor : mode === "dark" ? Moon : Sun;
+  const storageKey = "gouno-blog:theme";
+  const [fallbackMode, setFallbackMode] = useState<ThemeMode>(() => {
+    try {
+      const stored = localStorage.getItem(storageKey);
+      return stored === "dark" || stored === "light"
+        ? stored
+        : label.includes("后台")
+          ? "dark"
+          : "system";
+    } catch {
+      return label.includes("后台") ? "dark" : "system";
+    }
+  });
+  const effectiveMode = mode === "system" ? fallbackMode : mode;
+  useLayoutEffect(() => {
+    if (mode !== "system") return;
+    const resolved = fallbackMode === "system" ? "light" : fallbackMode;
+    document.documentElement.dataset.theme = resolved;
+    try {
+      if (label.includes("后台") && !localStorage.getItem(storageKey)) {
+        localStorage.setItem(storageKey, resolved);
+      }
+    } catch {
+      // Preference storage is optional.
+    }
+  }, [mode, fallbackMode, label]);
+  const Icon =
+    effectiveMode === "system"
+      ? Monitor
+      : effectiveMode === "dark"
+        ? Moon
+        : Sun;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <IconButton
           label={label}
           icon={<Icon />}
-          aria-pressed={mode === "dark"}
+          aria-pressed={effectiveMode === "dark"}
+          onClick={() => {
+            const nextMode: ThemeMode =
+              effectiveMode === "dark" ? "light" : "dark";
+            setFallbackMode(nextMode);
+            setMode(nextMode);
+            try {
+              localStorage.setItem(storageKey, nextMode);
+            } catch {
+              // Preference storage is optional.
+            }
+          }}
         />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuGroup>
           <DropdownMenuRadioGroup
-            value={mode}
-            onValueChange={(next) => setMode(next as ThemeMode)}
+            value={effectiveMode}
+            onValueChange={(next) => {
+              const nextMode = next as ThemeMode;
+              setFallbackMode(nextMode);
+              setMode(nextMode);
+            }}
           >
             {(["light", "dark", "system"] as const).map((value) => (
               <DropdownMenuRadioItem key={value} value={value}>

@@ -67,6 +67,8 @@ export function Button({
         "btn",
         `btn-${variant}`,
         (size === "sm" || size === "compact") && "btn--compact",
+        size === "icon" && "btn--compact",
+        loading && "is-loading",
         size === "sm" || size === "compact" ? "btn-sm" : undefined,
         props.className,
       )}
@@ -156,7 +158,7 @@ export function ButtonLink({
     <PrimitiveButton asChild variant={variants[variant]} size={sizes[size]}>
       <Link
         {...props}
-        className={cn("btn", `btn-${variant}`, className)}
+        className={cn("btn", `btn-${variant}`, "btn--compact", className)}
         aria-disabled={disabled || undefined}
         tabIndex={disabled ? -1 : undefined}
         onClick={(event) => {

@@ -57,7 +57,7 @@ export function StatusIndicator({
         ? "warning"
         : "neutral";
   return (
-    <Badge tone={tone} className={className}>
+    <Badge tone={tone} className={cn(`status-pill--${status}`, className)}>
       {label}
     </Badge>
   );

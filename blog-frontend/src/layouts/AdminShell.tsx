@@ -187,6 +187,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
           >
             <SearchField
               aria-label="搜索文章"
+              type="text"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="搜索文章…"

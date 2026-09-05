@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type ReactNode,
@@ -77,7 +78,30 @@ export function Modal({
         document.activeElement instanceof HTMLElement
           ? document.activeElement
           : null;
+    return () => {
+      if (previousFocus.current?.isConnected) previousFocus.current.focus();
+    };
   }, [visible]);
+  useLayoutEffect(() => {
+    if (visible) {
+      const control = document.querySelector<HTMLElement>(
+        "[data-state='open'] [autofocus], [data-state='open'] [autoFocus]",
+      );
+      control?.focus();
+    }
+  }, [visible]);
+  useEffect(() => {
+    if (!visible || !closeOnEsc) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [visible, closeOnEsc, onClose]);
   return (
     <Dialog
       open={visible}
@@ -151,7 +175,22 @@ export function Drawer({
         document.activeElement instanceof HTMLElement
           ? document.activeElement
           : null;
+    return () => {
+      if (previousFocus.current?.isConnected) previousFocus.current.focus();
+    };
   }, [visible]);
+  useEffect(() => {
+    if (!visible || !closeOnEsc) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [visible, closeOnEsc, onClose]);
   return (
     <Sheet
       open={visible}
@@ -221,6 +260,15 @@ export function ConfirmDialog({
   const pending = busy || loading;
   const close = onClose || onCancel || (() => {});
   const en = true;
+  useEffect(() => {
+    if (!open || pending) return;
+    const handleBackdropClick = (event: MouseEvent) => {
+      const target = event.target as Element | null;
+      if (!target?.closest('[data-slot="alert-dialog-content"]')) close();
+    };
+    document.addEventListener("click", handleBackdropClick);
+    return () => document.removeEventListener("click", handleBackdropClick);
+  }, [open, pending, close]);
   return (
     <AlertDialog
       open={open}
@@ -228,7 +276,7 @@ export function ConfirmDialog({
         if (!next && !pending) close();
       }}
     >
-      <AlertDialogContent>
+      <AlertDialogContent role="dialog">
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription asChild>

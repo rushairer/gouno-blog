@@ -56,22 +56,39 @@ export default function Home() {
           {posts[0] ? <ArticleTeaser post={posts[0]} featured /> : null}
           {posts.length > 1 ? (
             <section className="mt-10">
-              <div className={`featured-layout featured-layout--${Math.min(posts.length - 1, 4)}`}>
-              <SectionHeading
-                title="精选文章"
-                action={
-                  <Link
-                    className="inline-flex items-center gap-2 text-sm text-primary"
-                    to="/articles"
-                  >
-                    查看全部
-                    <ArrowRight className="size-4" />
-                  </Link>
-                }
-              />
-              {posts.slice(1, 5).map((post) => (
-                <ArticleTeaser post={post} key={post.id} />
-              ))}
+              <div
+                className={`featured-layout featured-layout--${Math.min(posts.length - 1, 4)}`}
+              >
+                <SectionHeading
+                  title="精选文章"
+                  action={
+                    <Link
+                      className="inline-flex items-center gap-2 text-sm text-primary"
+                      to="/articles"
+                    >
+                      查看全部
+                      <ArrowRight className="size-4" />
+                    </Link>
+                  }
+                />
+                {posts.length >= 5 ? (
+                  <>
+                    <div className="featured-layout__column">
+                      {posts.slice(1, 3).map((post) => (
+                        <ArticleTeaser post={post} key={post.id} />
+                      ))}
+                    </div>
+                    <div className="featured-layout__secondary">
+                      {posts.slice(3, 5).map((post) => (
+                        <ArticleTeaser post={post} key={post.id} />
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  posts
+                    .slice(1, 5)
+                    .map((post) => <ArticleTeaser post={post} key={post.id} />)
+                )}
               </div>
             </section>
           ) : null}
