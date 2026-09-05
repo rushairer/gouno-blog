@@ -29,6 +29,7 @@ import {
   useToast,
 } from "../../components/ui";
 import { StepUpMfaModal } from "../../components/auth/StepUpMfaModal";
+import { SudoBanner } from "../../components/auth/SudoBanner";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 
 const assignableRoles = ["admin", "editor", "author", "moderator"] as const;
@@ -224,6 +225,7 @@ export default function AdminUsers() {
         }
       />
       <ContentStack>
+        <SudoBanner />
         {error ? <Feedback type="error">{error}</Feedback> : null}
         {loading ? (
           <LoadingState label="正在同步成员目录…" />

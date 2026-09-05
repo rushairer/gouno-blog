@@ -33,6 +33,7 @@ import { EmbeddingForm } from "./EmbeddingForm";
 import type { EmbeddingFormValue } from "./EmbeddingForm";
 import { ConnectorWorkspace } from "./ConnectorWorkspace";
 import { RiskPill, StatusPill } from "./StatusPill";
+import { SudoBanner } from "../auth/SudoBanner";
 import {
   Button,
   EmptyState,
@@ -629,6 +630,7 @@ export function AdvancedWorkspace({
 
       {!editingAgent && !editingProvider && advancedSection === "providers" ? (
         <WorkspacePanel className="agent-table-panel">
+          <SudoBanner compact />
           <input
             ref={providerFileInputRef}
             type="file"
@@ -873,6 +875,7 @@ export function AdvancedWorkspace({
       !editingEmbedding &&
       advancedSection === "knowledge" ? (
         <WorkspacePanel className="agent-table-panel knowledge-workspace">
+          <SudoBanner compact />
           <PanelHeader
             title={labels.knowledge}
             description={

@@ -12,6 +12,7 @@ import { mediaApi } from "../../api/media";
 import { siteApi } from "../../api/site";
 import { isMfaError } from "../../auth";
 import { StepUpMfaModal } from "../../components/auth/StepUpMfaModal";
+import { SudoBanner } from "../../components/auth/SudoBanner";
 import {
   AdminPage,
   AdminPageHeader,
@@ -195,6 +196,7 @@ export default function AdminSiteSettings() {
         title="站点设置"
         description="管理品牌信息、首页标语、社交入口和默认 SEO 元数据。"
       />
+      <SudoBanner />
       {error ? <Feedback type="error">{error}</Feedback> : null}
       <Tabs
         value={activeTab}

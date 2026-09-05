@@ -1048,6 +1048,110 @@
     gap: 8px;
   }
 
+  /* Sudo Mode Banner alignment */
+  .sudo-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 18px;
+    border-radius: var(--radius-panel);
+    margin-bottom: 20px;
+    font-size: var(--font-size-sm, 13.5px);
+    transition: all 0.2s ease;
+  }
+
+  .sudo-banner--inactive {
+    border: 1px solid var(--status-warning-border, #f59e0b);
+    background: var(--status-warning-subtle, rgba(245, 158, 11, 0.1));
+    color: var(--ds-text-primary);
+  }
+
+  .sudo-banner--active {
+    border: 1px solid var(--status-success-border, #10b981);
+    background: var(--status-success-subtle, rgba(16, 185, 129, 0.08));
+    color: var(--ds-text-primary);
+    padding: 10px 16px;
+  }
+
+  .sudo-banner__content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .sudo-banner__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+  }
+
+  .sudo-banner__icon--warning {
+    color: var(--status-warning-text, #f59e0b);
+  }
+
+  .sudo-banner__icon--active {
+    color: var(--status-success-text, #10b981);
+  }
+
+  .sudo-banner__icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .sudo-banner__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .sudo-banner--active .sudo-banner__text {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .sudo-banner__title {
+    font-weight: 600;
+    color: var(--ds-text-primary);
+  }
+
+  .sudo-banner__desc {
+    margin: 0;
+    font-size: var(--font-size-xs, 12.5px);
+    color: var(--ds-text-secondary);
+    line-height: 1.45;
+  }
+
+  .sudo-banner__badge {
+    font-size: var(--font-size-xs, 12px);
+    color: var(--status-success-text, #10b981);
+    background: rgba(16, 185, 129, 0.15);
+    padding: 2px 8px;
+    border-radius: var(--radius-pill, 9999px);
+    font-weight: 500;
+  }
+
+  .sudo-banner__actions {
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 640px) {
+    .sudo-banner {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 12px;
+    }
+    .sudo-banner__actions {
+      align-self: flex-start;
+    }
+  }
+
   /* Confirm Dialog alignment */
   .confirm-dialog {
     display: flex;

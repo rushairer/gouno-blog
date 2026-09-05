@@ -12,6 +12,8 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ### Added
 
+- Add Proactive Sudo Mode Sensing & Status Banner (`useSudoMode`, `SudoBanner`) across Site Settings, Member Roles, and AI Model Connections, allowing users to pre-activate security credentials and view real-time remaining Sudo validity.
+- Add zero-cognitive-load automatic background request re-dispatch on Step-Up MFA completion so that saving forms completes seamlessly with instant success feedback.
 - Add universal form draft preservation and auto-restore hook (`useFormDraft`) with `STEP_UP_MFA_REQUIRED_EVENT` snapshotting across Site Settings, AI Provider, Embedding, and Agent forms to prevent input loss during Step-Up MFA authentication.
 - Add seamless popup-based Step-Up MFA authentication (`openStepUpPopup`, `checkAndHandleStepUpPopupCallback`) to allow in-place verification and automatic request retry without page reloads.
 
