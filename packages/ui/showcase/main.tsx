@@ -15,6 +15,12 @@ import {
   ThemeToggle,
   NavigationGroup,
   navigationItemClass,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "../src";
 import "../src/tokens.css";
 import "../src/base.css";
@@ -54,6 +60,29 @@ function Showcase() {
               </Field>
               {saved ? <Feedback type="success">设置已保存。</Feedback> : null}
               <Button onClick={() => setSaved(true)}>保存设置</Button>
+            </Panel>
+            <Panel id="table-status" className="xl:col-span-2">
+              <PanelHeader title="表格与状态" description="列表数据与共享状态徽章组合。" />
+              <div className="overflow-x-auto rounded-lg border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>模块</TableHead>
+                      <TableHead>状态</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell>主题令牌</TableCell>
+                      <TableCell><Badge tone="success">已验证</Badge></TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>归档分发</TableCell>
+                      <TableCell><Badge tone="warning">待复核</Badge></TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
             </Panel>
           </div>
         </AdminPage>

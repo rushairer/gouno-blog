@@ -24,4 +24,25 @@ describe("ThemeProvider", () => {
     expect(() => render(<ThemeProvider brand="blog" storageKey="test-theme-no-media"><Probe /></ThemeProvider>)).not.toThrow();
     Object.defineProperty(window, "matchMedia", { configurable: true, value: original });
   });
+
+  it.each(["blog", "blog-admin", "gosso-admin"] as const)(
+    "supports the %s brand with system mode",
+    (brand) => {
+      Object.defineProperty(window, "matchMedia", {
+        configurable: true,
+        value: () => ({
+          matches: true,
+          addEventListener: () => {},
+          removeEventListener: () => {},
+        }),
+      });
+      render(
+        <ThemeProvider brand={brand} storageKey={`test-theme-${brand}`}>
+          <Probe />
+        </ThemeProvider>,
+      );
+      expect(screen.getByText(`${brand}:dark`)).toBeTruthy();
+      expect(document.documentElement.dataset.brand).toBe(brand);
+    },
+  );
 });

@@ -64,11 +64,26 @@
     "sharedPackage": {
       "package": "@gouno/ui@0.1.0",
       "archive": "gouno-ui-0.1.0.tgz",
-      "sha256": "6e0297b741dda9a9449f163731496c07e7e615cedad6d4e31b9bbad1b6bef6cf",
-      "integrity": "sha512-N0UbwrXrhWQk3TSFuIaUhPEsbOGgXwtljqr8Ukn1I9tvn2IG2s6jcVl/1lL4RrNDj5uqn3XC2+nYFWG6Bz66Rw==",
+      "sha256": "a9ee08235e60017c3cca6b26f4c5343c8f6ef12eb164f0f597fc1506d3de29cc",
+      "integrity": "sha512-OQGjpkb+zQvRSIw7Qx2EuxCADt7prhftomuy1bueEPGt9AgvmImtpNt3N2CP7JjflaBay63YKBWMBFT4DpbldA==",
       "consumers": ["blog-frontend", "gosso-admin-frontend"],
       "tailwindSource": "@source ../../node_modules/@gouno/ui/dist in both consumer Tailwind entrypoints",
-      "showcase": "packages/ui/showcase builds independently"
+      "showcase": "packages/ui/showcase builds independently",
+      "u01cValidation": {
+        "status": "verified",
+        "commands": [
+          "npm ci",
+          "npm run typecheck",
+          "npm test -- --run",
+          "npm run build",
+          "npm pack --json",
+          "npm run showcase:build"
+        ],
+        "tests": "5 passed",
+        "brands": ["blog", "blog-admin", "gosso-admin"],
+        "modes": ["light", "dark", "system"],
+        "browser": "showcase visibly renders shell, layout, form, feedback, table and status badges; light/dark/system controls verified on blog-admin brand"
+      }
     },
     "qualityScripts": {
       "blogFrontend": ["format:check", "lint", "lint:ui", "lint:css", "tsc -b (no typecheck script)", "test:coverage", "build"],
