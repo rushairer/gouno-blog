@@ -23,7 +23,7 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 - Align Toast notification layout: vertically center icon and text, set `flex: 1` on message container, and push close button to the far right (`margin-left: auto`).
 - Match Workflow resume checkpoints by iteration, preserving each for_each item's output and failed-item retry selection.
 
-- Allow fresh databases to migrate without an Owner. Record system template provenance and require explicit exact-identity approval for unresolved historical human records; see [migration exception and upgrade impact](doc/quality/adr-q01a-identity-migrations.md).
+- Allow fresh databases to migrate without an Owner. Record system template provenance and require explicit exact-identity approval for unresolved historical human records; see [migration exception and upgrade impact](docs/quality/adr-q01a-identity-migrations.md).
 - Attribute Skill and Workflow edits' new versions to the authenticated local actor, preserving original template provenance.
 
 ### Added

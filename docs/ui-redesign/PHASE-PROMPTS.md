@@ -1,6 +1,18 @@
 # 阶段提示词
 
-以下提示词可直接复制到新会话。每次只执行一个阶段。提示词中的“当前阶段”必须与 `PLAN.md` 一致。
+以下提示词是旧版的大阶段入口，可用于快速了解范围。实际执行请优先使用 `docs/ui-redesign/tasks/` 下的单张任务卡；它们采用 `docs/quality/tasks` 的任务、验收和结果记录方式。每次新会话只执行一张任务卡。
+
+## 任务卡通用启动段
+
+```text
+你正在执行 docs/ui-redesign/tasks/ 下的一张 UI 重构任务卡。
+
+先阅读根目录 AGENTS.md、docs/ui-redesign/PLAN.md、docs/ui-redesign/migration.json、docs/ui-redesign/MIGRATION.md、对应任务卡，以及当前相关仓库的 git status。核对任务卡前置条件、当前 HEAD 和工作区；前置不满足时停止实现并记录 blocked。
+
+只处理任务卡范围，保留未相关改动，使用 apply_patch。保持现有 API、权限、认证、安全、数据库和会话语义；Connector 未明确授权时只改展示层。不要降低测试门槛、删除断言、通过重复运行掩盖失败、手工编辑分发归档或发布远端。
+
+完成后必须填写任务卡“结果”，更新 migration.json 和 MIGRATION.md，并报告实际命令、退出状态、浏览器证据、未测项、阻断项和下一任务交接信息。
+```
 
 ## 通用前缀
 

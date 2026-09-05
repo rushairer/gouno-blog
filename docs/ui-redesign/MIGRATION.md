@@ -9,6 +9,33 @@ The JSON ledger is authoritative. Implementation and real browser verification a
 - `gosso-admin-frontend`: formatting, UI-contract, CSS-cascade checks, TypeScript, 108 tests and production build pass (existing non-blocking lint/Vite warnings only).
 - `packages/ui/showcase`: standalone component showcase is available via `npm run showcase:dev` or `npm run showcase:build`.
 
+## Phase 0 source inventory
+
+The authoritative machine-readable inventory is `migration.json.phase0Inventory`. The source scan records the following boundaries without changing runtime behavior:
+
+- Blog has public, account, admin and catch-all routes. The account aliases `/notifications` and `/settings` redirect to their canonical paths; `/admin` redirects to `/admin/dashboard`; the media library entry is `/admin/media`.
+- Gosso Admin has OIDC/password-recovery routes, authenticated account settings, admin-only system management, canonical redirects for `/account-settings` and `/system-management`, and an `*` fallback.
+- Blog state and overlay surfaces include public/mobile navigation, article interaction and reporting, notification read states, CRUD/editor drawers, AI workspace forms and run records, media/taxonomy drawers, Step-up MFA and logout/permission failures. Connector is listed for display-only migration coverage; OAuth, credentials, Sandbox, Outbox and delivery transitions remain out of scope.
+- Gosso Admin state and overlay surfaces include login/MFA/Passkey, callback and reset errors, account panels, Sudo verification, client/user/audit/site/system management, confirmation dialogs and management modals.
+- Blog API dependencies are `agent`, `analytics`, `comments`, `connectors`, `media`, `members`, `notifications`, `operations`, `pages`, `posts`, `site` and `workflows`. Gosso Admin service dependencies are `accountService`, `auditService`, `clientService`, `siteSettingsService`, `systemService` plus `@gosso/client` authentication/session APIs.
+
+## Shared package and distribution evidence
+
+- Both consumers resolve `@gouno/ui@0.1.0` from `vendor/gouno-ui-0.1.0.tgz`.
+- The two `vendor/ui-manifest.json` files agree on archive name, SHA-256 `6e0297b741dda9a9449f163731496c07e7e615cedad6d4e31b9bbad1b6bef6cf`, and npm integrity `sha512-N0UbwrXrhWQk3TSFuIaUhPEsbOGgXwtljqr8Ukn1I9tvn2IG2s6jcVl/1lL4RrNDj5uqn3XC2+nYFWG6Bz66Rw==`.
+- Both consumer Tailwind entrypoints import the shared tokens/base CSS and register `@source "../../node_modules/@gouno/ui/dist"`.
+- `packages/ui/showcase` builds independently with `npm run showcase:build`.
+
+## Baseline commands and known blockers
+
+| Workspace | Commands / result |
+| --- | --- |
+| `packages/ui` | `npm run typecheck`, `npm run build`, `npm test -- --run` (2 passed), `npm run showcase:build`: passed; existing font-resolution and Lightning CSS `@theme` warnings |
+| `blog-frontend` | formatting, lint, UI-contract, CSS-cascade, `npx tsc -b`, and build passed; 42 files / 160 tests passed; `npm run test:coverage` exits non-zero at 44.58% branches vs 45% threshold |
+| `gosso-admin-frontend` | `npm run quality` passed; 19 files / 108 tests passed; coverage 43.89% statements, 39.22% branches, 31.83% functions, 44.63% lines; existing lint/Vite/jsdom warnings |
+
+Known follow-up items are recorded rather than silently fixed: Blog branch coverage is below threshold, Gosso Admin's Vitest jsdom URL still uses forbidden `localhost:8443/identity-admin/`, and existing non-blocking warnings remain. No authenticated browser, responsive-width, or light/dark route evidence has been added, so all ledger entries remain `verification: not-run`.
+
 Automated checks do not replace authenticated browser regression. Entries remain `not-run` until the corresponding route, permission state, responsive width and light/dark mode have captured evidence.
 
 | Surface | Routes / subview | Implementation | Verification |

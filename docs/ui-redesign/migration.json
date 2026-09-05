@@ -4,7 +4,83 @@
     "date": "2026-09-05",
     "blogQuality": "checks pass except global branch coverage threshold (44.58%, required 45%)",
     "gossoAdminQuality": "passed with warnings",
-    "browser": "public home, login and unauthenticated blog admin redirect inspected; authenticated flows not verified"
+    "browser": "public home, login and unauthenticated blog admin redirect inspected; authenticated flows not verified",
+    "baselineCommands": {
+      "packagesUi": {
+        "commands": [
+          "npm run typecheck",
+          "npm run build",
+          "npm test -- --run",
+          "npm run showcase:build"
+        ],
+        "result": "pass; 2 tests passed; showcase build emits existing font resolution and Lightning CSS @theme warnings"
+      },
+      "blogFrontend": {
+        "commands": [
+          "npm run format:check",
+          "npm run lint",
+          "npm run lint:ui",
+          "npm run lint:css",
+          "npx tsc -b",
+          "npm run test:coverage",
+          "npm run build"
+        ],
+        "result": "format/UI/CSS/typecheck/build pass; 42 files and 160 tests pass; coverage command exits 1 because branches are 44.58% against 45%"
+      },
+      "gossoAdminFrontend": {
+        "commands": ["npm run quality"],
+        "result": "pass; 19 files and 108 tests pass; existing lint/Vite/jsdom warnings remain; coverage 43.89/39.22/31.83/44.63%"
+      }
+    }
+  },
+  "phase0Inventory": {
+    "routes": {
+      "blog": {
+        "public": ["/", "/articles", "/articles/:slug", "/categories", "/categories/:slug", "/tags", "/tags/:slug", "/archive", "/about", "/search", "/:slug", "*"],
+        "account": ["/account/notifications", "/account/settings", "/notifications -> /account/notifications", "/settings -> /account/settings"],
+        "admin": ["/admin -> /admin/dashboard", "/admin/dashboard", "/admin/posts", "/admin/posts/new", "/admin/posts/:id/edit", "/admin/pages", "/admin/pages/new", "/admin/pages/:id/edit", "/admin/categories", "/admin/tags", "/admin/comments", "/admin/notifications", "/admin/media", "/admin/settings", "/admin/users", "/admin/ai-ops"]
+      },
+      "gossoAdmin": {
+        "auth": ["/callback", "/login", "/forgot-password", "/reset-password"],
+        "account": ["/account-settings -> /account-settings/profile", "/account-settings/:tab"],
+        "system": ["/system-management -> /system-management/clients", "/system-management/:tab"],
+        "fallback": ["*"]
+      }
+    },
+    "stateAndOverlayScan": {
+      "blog": {
+        "states": ["loading", "empty", "error", "error retry", "unauthorized", "disabled", "success"],
+        "overlays": ["PublicShell mobile Drawer", "PostDetail report/comment surfaces", "ArticlePreviewModal", "WorkflowInputForm/WorkflowLauncher Modal", "StepUpMfaModal", "MediaLibrary and taxonomy drawers"],
+        "interactions": ["search", "pagination/filter", "comments/like/report", "CRUD", "AI generation/suggestions", "workflow/agent run actions", "copy", "logout and step-up"],
+        "apiModules": ["agent", "analytics", "comments", "connectors (display-only during migration)", "media", "members", "notifications", "operations", "pages", "posts", "site", "workflows"]
+      },
+      "gossoAdmin": {
+        "states": ["loading", "empty", "error", "error retry", "unauthorized redirect", "disabled", "success"],
+        "overlays": ["SudoContext Modal", "EmailChangeModal", "MFA enrollment/backup-code dialogs", "Passkey dialogs", "AuditLogDetailModal", "ClientEditorModal", "ClientSecretModal", "AssignRolesModal", "CreateUserModal", "ResetPasswordModal", "UserConsentsModal", "confirm dialogs"],
+        "interactions": ["login/MFA/passkey", "callback handling", "password reset", "profile/email/password/session/MFA/passkey management", "client CRUD/secret rotation", "user CRUD/roles/consents", "audit detail", "site settings", "system status"],
+        "apiServices": ["accountService", "auditService", "clientService", "siteSettingsService", "systemService", "@gosso/client authentication/session APIs"]
+      }
+    },
+    "sharedPackage": {
+      "package": "@gouno/ui@0.1.0",
+      "archive": "gouno-ui-0.1.0.tgz",
+      "sha256": "6e0297b741dda9a9449f163731496c07e7e615cedad6d4e31b9bbad1b6bef6cf",
+      "integrity": "sha512-N0UbwrXrhWQk3TSFuIaUhPEsbOGgXwtljqr8Ukn1I9tvn2IG2s6jcVl/1lL4RrNDj5uqn3XC2+nYFWG6Bz66Rw==",
+      "consumers": ["blog-frontend", "gosso-admin-frontend"],
+      "tailwindSource": "@source ../../node_modules/@gouno/ui/dist in both consumer Tailwind entrypoints",
+      "showcase": "packages/ui/showcase builds independently"
+    },
+    "qualityScripts": {
+      "blogFrontend": ["format:check", "lint", "lint:ui", "lint:css", "tsc -b (no typecheck script)", "test:coverage", "build"],
+      "gossoAdminFrontend": ["format:check", "lint", "lint:ui", "lint:css", "typecheck", "test:coverage", "build"],
+      "packagesUi": ["typecheck", "build", "test", "showcase:build"]
+    },
+    "knownBlockers": [
+      "blog branch coverage is 44.58%, below the configured 45% threshold",
+      "gosso-admin vitest jsdom URL still contains forbidden localhost:8443/identity-admin/",
+      "existing non-blocking oxlint, Vite config, jsdom navigation, font resolution and Lightning CSS warnings"
+    ],
+    "verification": "static source scan and command output recorded; authenticated browser routes, responsive widths and light/dark evidence remain not-run"
   },
   "entries": [
     {
@@ -2005,7 +2081,7 @@
       "app": "blog-admin",
       "source": "blog-frontend/src/pages/admin/MediaLibrary.tsx",
       "routes": [
-        "/admin/medialibrary"
+        "/admin/media"
       ],
       "interactions": [
         "handleGenerateAiImage",
