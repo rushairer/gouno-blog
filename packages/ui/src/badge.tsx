@@ -31,7 +31,6 @@ export function Badge({
         `badge--${tone}`,
         "rounded-sm px-1.5 py-0.5 font-medium",
         colors[tone],
-        compact && "compact",
         className,
       )}
     />
@@ -94,7 +93,7 @@ export function StatusBadge({
   children,
   label,
   tone,
-  compact: _compact,
+  compact,
   className,
 }: {
   status?: string;

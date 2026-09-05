@@ -492,7 +492,7 @@ export function Toast({
 }
 export async function copyText(
   value: string,
-  notify: typeof toastApi.notify,
+  notify: ToastApi["notify"],
   successMessage = "已复制到剪贴板。",
 ) {
   try {
