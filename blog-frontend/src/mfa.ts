@@ -1,4 +1,5 @@
 export const STEP_UP_MFA_REQUIRED_EVENT = "gouno:step-up-mfa-required";
+export const STEP_UP_COMPLETED_EVENT = "gouno:step-up-completed";
 export const STEP_UP_MFA_QUERY_PARAM = "mfa_step_up";
 export const STEP_UP_POPUP_PARAM = "step_up_popup";
 export const STEP_UP_MESSAGE_TYPE = "GOUNO_STEP_UP_COMPLETED";
@@ -126,6 +127,7 @@ export function openStepUpPopup(
     } catch {
       // Ignore close error
     }
+    window.dispatchEvent(new Event(STEP_UP_COMPLETED_EVENT));
     onSuccess?.();
   };
 

@@ -1,8 +1,9 @@
+import { useEffect } from "react";
 import { ExternalLink, ShieldCheck } from "lucide-react";
 import { stepUpMfa, getGossoAdminURL } from "../../auth";
 import {
   openStepUpPopup,
-  requestStepUpMfaPrompt,
+  STEP_UP_COMPLETED_EVENT,
   STEP_UP_POPUP_PARAM,
 } from "../../mfa";
 import { Button, Modal } from "../ui";
@@ -16,10 +17,22 @@ interface StepUpMfaModalProps {
 }
 
 export function StepUpMfaModal({ open, onClose, onSuccess }: StepUpMfaModalProps) {
+  useEffect(() => {
+    if (!open) return;
+    const handleCompleted = async () => {
+      onClose();
+      if (onSuccess) {
+        await onSuccess();
+      }
+    };
+    window.addEventListener(STEP_UP_COMPLETED_EVENT, handleCompleted);
+    return () => {
+      window.removeEventListener(STEP_UP_COMPLETED_EVENT, handleCompleted);
+    };
+  }, [open, onClose, onSuccess]);
+
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    // Proactively notify any active forms to snapshot their draft state
-    requestStepUpMfaPrompt();
 
     // Try seamless in-place popup verification first
     const opened = openStepUpPopup(

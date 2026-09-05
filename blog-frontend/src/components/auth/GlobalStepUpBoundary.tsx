@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import {
+  STEP_UP_COMPLETED_EVENT,
   STEP_UP_MFA_QUERY_PARAM,
   STEP_UP_MFA_REQUIRED_EVENT,
   isMfaError,
@@ -36,6 +37,7 @@ export function GlobalStepUpBoundary({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const requestStepUp = () => setStepUpOpen(true);
+    const handleCompleted = () => setStepUpOpen(false);
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
       if (isMfaError(event.reason)) {
         setStepUpOpen(true);
@@ -47,9 +49,11 @@ export function GlobalStepUpBoundary({ children }: { children: ReactNode }) {
     };
 
     window.addEventListener(STEP_UP_MFA_REQUIRED_EVENT, requestStepUp);
+    window.addEventListener(STEP_UP_COMPLETED_EVENT, handleCompleted);
     window.addEventListener("unhandledrejection", handleUnhandledRejection);
     return () => {
       window.removeEventListener(STEP_UP_MFA_REQUIRED_EVENT, requestStepUp);
+      window.removeEventListener(STEP_UP_COMPLETED_EVENT, handleCompleted);
       window.removeEventListener(
         "unhandledrejection",
         handleUnhandledRejection,
