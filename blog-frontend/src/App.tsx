@@ -5,7 +5,7 @@ import { Button, ButtonLink, ToastProvider } from "./components/ui";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { GossoProvider, RequireAuth } from "@gosso/client/react";
 import { gossoClient, type BlogUserProfile, logout } from "./auth";
-import { checkAndHandleStepUpPopupCallback } from "./mfa";
+import { checkAndHandleStepUpPopupCallback, STEP_UP_POPUP_PARAM } from "./mfa";
 import { isActiveMember } from "./abilities";
 
 if (typeof window !== "undefined") {
@@ -176,8 +176,59 @@ function Admin({
   );
 }
 
+function StepUpPopupCallbackView() {
+  return (
+    <div className="public-container state-page" role="status">
+      <div className="state-card" style={{ maxWidth: 440, padding: 32 }}>
+        <span
+          className="spinner"
+          style={{
+            borderColor: "var(--status-success-border, #10b981)",
+            borderTopColor: "transparent",
+          }}
+          aria-hidden="true"
+        />
+        <h2 style={{ fontSize: 18, fontWeight: 700, marginTop: 16 }}>
+          高权限验证已完成
+        </h2>
+        <p
+          style={{
+            fontSize: 14,
+            color: "var(--ds-text-secondary)",
+            marginTop: 8,
+            lineHeight: 1.5,
+          }}
+        >
+          身份认证已成功同步，主页面正在自动继续操作。
+        </p>
+        <button
+          type="button"
+          onClick={() => window.close()}
+          className="btn btn-secondary btn--default"
+          style={{ marginTop: 20 }}
+        >
+          关闭窗口
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   useSiteMetadata();
+  if (typeof window !== "undefined") {
+    const params = new URLSearchParams(window.location.search);
+    if (
+      params.get(STEP_UP_POPUP_PARAM) === "1" ||
+      params.get("step_up_success") === "1"
+    ) {
+      return (
+        <I18nProvider>
+          <StepUpPopupCallbackView />
+        </I18nProvider>
+      );
+    }
+  }
   return (
     <GossoProvider
       client={gossoClient}
