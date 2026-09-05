@@ -16,6 +16,8 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Fix `.panel-header` margin/padding inside `.workspace-panel` to eliminate double horizontal inset and align perfectly with table and form content.
+- Standardize `.panel-header` titles across Knowledge Base and Connector workspaces to plain text titles without inline icons.
 - Align Toast notification layout: vertically center icon and text, set `flex: 1` on message container, and push close button to the far right (`margin-left: auto`).
 - Match Workflow resume checkpoints by iteration, preserving each for_each item's output and failed-item retry selection.
 

@@ -874,12 +874,7 @@ export function AdvancedWorkspace({
       advancedSection === "knowledge" ? (
         <WorkspacePanel className="agent-table-panel knowledge-workspace">
           <PanelHeader
-            title={
-              <>
-                <DatabaseZap />
-                {labels.knowledge}
-              </>
-            }
+            title={labels.knowledge}
             description={
               locale === "zh"
                 ? "仅索引已发布文章；Embedding 模型负责把文章转换为可检索的知识库。"

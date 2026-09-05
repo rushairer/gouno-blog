@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import {
   Check,
   KeyRound,
-  LockKeyhole,
   Play,
   RotateCcw,
   ShieldOff,
@@ -185,12 +184,7 @@ export function ConnectorWorkspace({
     <div className="connector-workspace section-stack">
       <Panel>
         <PanelHeader
-          title={
-            <>
-              <LockKeyhole />
-              {zh ? "受控连接器" : "Controlled connectors"}
-            </>
-          }
+          title={zh ? "受控连接器" : "Controlled connectors"}
           description={
             zh
               ? "Search Console 支持只读 Google OAuth；其余连接器仍为本地 Sandbox Mock。"

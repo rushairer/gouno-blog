@@ -1537,8 +1537,6 @@
      ========================================================================== */
 
   /* Panel / card header slot alignment */
-  .panel-heading,
-  .panel-header,
   .card-header {
     display: flex;
     align-items: flex-start;
@@ -1546,6 +1544,26 @@
     gap: 16px;
     padding: 18px 20px;
     border-bottom: 1px solid var(--ds-border-default);
+  }
+
+  .panel-heading,
+  .panel-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 0 0 16px 0;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--ds-border-default);
+  }
+
+  .workspace-panel > .panel-header,
+  .panel > .panel-header,
+  .agent-table-panel > .panel-header,
+  .editor-panel > .panel-header {
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
   }
 
   .panel-heading h2,
