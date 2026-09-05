@@ -159,12 +159,13 @@ export function LoadingSpinner({
 }) {
   return (
     <LoaderCircle
-      aria-hidden="true"
-      className={cn(
-        "animate-spin",
-        size === "sm" ? "size-4" : size === "lg" ? "size-8" : "size-5",
-        className,
-      )}
+      role="status"
+      aria-label="Loading"
+      className={cn("animate-spin", className)}
+      style={{
+        width: size === "sm" ? 20 : size === "lg" ? 48 : 32,
+        height: size === "sm" ? 20 : size === "lg" ? 48 : 32,
+      }}
     />
   );
 }
@@ -285,6 +286,7 @@ export function Skeleton({
       aria-hidden="true"
       className={cn(
         `skeleton--${variant}`,
+        variant === "rectangular" && "skeleton-rectangular",
         variant === "circular"
           ? "rounded-full"
           : variant === "card"

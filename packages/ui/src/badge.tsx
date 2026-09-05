@@ -31,6 +31,7 @@ export function Badge({
         `badge--${tone}`,
         "rounded-sm px-1.5 py-0.5 font-medium",
         colors[tone],
+        compact && "compact",
         className,
       )}
     />
@@ -120,6 +121,7 @@ export function StatusBadge({
       tone={tone}
       className={cn(
         `status-badge status-badge--${status} status-pill`,
+        compact && "compact",
         className,
       )}
     >
@@ -131,6 +133,7 @@ export function StatusBadge({
       label={text}
       className={cn(
         `status-badge status-badge--${status} status-pill`,
+        compact && "compact",
         className,
       )}
     />

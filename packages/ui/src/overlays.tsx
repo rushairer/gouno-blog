@@ -220,9 +220,7 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const pending = busy || loading;
   const close = onClose || onCancel || (() => {});
-  const en =
-    typeof document !== "undefined" &&
-    document.documentElement.lang.startsWith("en");
+  const en = true;
   return (
     <AlertDialog
       open={open}
