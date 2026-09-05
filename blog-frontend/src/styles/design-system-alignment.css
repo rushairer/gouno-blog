@@ -1152,6 +1152,117 @@
     }
   }
 
+  /* Sudo Gate Overlay Lock System */
+  .sudo-gate-container {
+    position: relative;
+    width: 100%;
+  }
+
+  .sudo-gate--locked {
+    position: relative;
+    border-radius: var(--radius-panel);
+    overflow: hidden;
+  }
+
+  .sudo-gate-content-locked {
+    opacity: 0.3;
+    filter: blur(4px) grayscale(0.2);
+    pointer-events: none;
+    user-select: none;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .sudo-gate-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(10, 15, 26, 0.65);
+    backdrop-filter: blur(8px);
+    border-radius: var(--radius-panel);
+  }
+
+  .sudo-gate-card {
+    max-width: 480px;
+    width: 100%;
+    padding: 32px 28px;
+    background: var(--ds-surface-panel);
+    border: 1px solid var(--ds-border-default);
+    border-radius: var(--radius-overlay);
+    box-shadow: var(--ds-dialog-shadow);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+    animation: modal-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .sudo-gate-icon-wrapper {
+    position: relative;
+    margin-bottom: 2px;
+  }
+
+  .sudo-gate-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--status-warning-subtle, rgba(245, 158, 11, 0.12));
+    color: var(--status-warning-text, #f59e0b);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--status-warning-border, #f59e0b);
+  }
+
+  .sudo-gate-icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .sudo-gate-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .sudo-gate-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--ds-text-primary);
+    margin: 0;
+  }
+
+  .sudo-gate-desc {
+    font-size: 13.5px;
+    color: var(--ds-text-secondary);
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .sudo-gate-tip {
+    font-size: 12px;
+    color: var(--ds-text-secondary);
+    opacity: 0.8;
+  }
+
+  .sudo-gate-header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--status-success-text, #10b981);
+    background: var(--status-success-subtle, rgba(16, 185, 129, 0.1));
+    border: 1px solid var(--status-success-border, #10b981);
+    padding: 4px 12px;
+    border-radius: var(--radius-pill, 9999px);
+    margin-bottom: 16px;
+  }
+
   /* Confirm Dialog alignment */
   .confirm-dialog {
     display: flex;

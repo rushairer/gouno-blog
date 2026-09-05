@@ -10,8 +10,7 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 - Standardize Modal structure and design system alignment: move modal action buttons out of form/body content into unified sticky `footer` prop across all modals (Step-Up MFA, Tags, Users, Post Reports, Article Preview), and maintain stable close button geometry anchored to the title bar regardless of subtitle presence.
 - Align Knowledge Base (Embedding Profiles) table layout and styling with Model Connections (Provider Profiles): separate API Key into an isolated secret-masked column with standard subtext, use `.provider-identity` cell structure, and unify action icon primitives (`Edit2`).
 
-### Added
-
+- Add Frosted-Glass Sudo Security Gate (`<SudoGate>`) to lock and blur high-privilege configuration zones (Site Settings, Member Roles, Model Connections, Knowledge Base) until authenticated, with 1-click MFA step-up activation and 10-minute non-disruptive editing windows.
 - Add Proactive Sudo Mode Sensing & Status Banner (`useSudoMode`, `SudoBanner`) across Site Settings, Member Roles, and AI Model Connections, allowing users to pre-activate security credentials and view real-time remaining Sudo validity.
 - Add zero-cognitive-load automatic background request re-dispatch on Step-Up MFA completion so that saving forms completes seamlessly with instant success feedback.
 - Add universal form draft preservation and auto-restore hook (`useFormDraft`) with `STEP_UP_MFA_REQUIRED_EVENT` snapshotting across Site Settings, AI Provider, Embedding, and Agent forms to prevent input loss during Step-Up MFA authentication.

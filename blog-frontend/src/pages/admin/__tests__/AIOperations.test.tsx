@@ -116,6 +116,7 @@ function renderConsole() {
 describe("AIOperations", () => {
   beforeEach(() => {
     localStorage.setItem("gouno-blog:locale", "en");
+    localStorage.setItem("gouno:sudo_activated_at", String(Date.now()));
     vi.mocked(isLoggedIn).mockReturnValue(true);
     vi.mocked(canManageBlog).mockReturnValue(true);
     vi.mocked(apiFetch).mockImplementation(async (input) =>

@@ -33,7 +33,7 @@ import { EmbeddingForm } from "./EmbeddingForm";
 import type { EmbeddingFormValue } from "./EmbeddingForm";
 import { ConnectorWorkspace } from "./ConnectorWorkspace";
 import { RiskPill, StatusPill } from "./StatusPill";
-import { SudoBanner } from "../auth/SudoBanner";
+import { SudoGate } from "../auth/SudoGate";
 import {
   Button,
   EmptyState,
@@ -629,9 +629,13 @@ export function AdvancedWorkspace({
       ) : null}
 
       {!editingAgent && !editingProvider && advancedSection === "providers" ? (
-        <WorkspacePanel className="agent-table-panel">
-          <SudoBanner compact />
-          <input
+        <SudoGate
+          title="模型连接与密钥保护"
+          description="添加、修改、导出或删除 AI 模型连接涉及敏感 API Key 凭据。解锁后享有 10 分钟无打扰编辑期。"
+          actionLabel="解锁以管理模型连接"
+        >
+          <WorkspacePanel className="agent-table-panel">
+            <input
             ref={providerFileInputRef}
             type="file"
             accept=".json,application/json"
@@ -861,7 +865,8 @@ export function AdvancedWorkspace({
             </div>
           )}
         </WorkspacePanel>
-      ) : null}
+      </SudoGate>
+    ) : null}
 
       {!editingAgent &&
       !editingProvider &&
@@ -874,9 +879,13 @@ export function AdvancedWorkspace({
       !editingProvider &&
       !editingEmbedding &&
       advancedSection === "knowledge" ? (
-        <WorkspacePanel className="agent-table-panel knowledge-workspace">
-          <SudoBanner compact />
-          <PanelHeader
+        <SudoGate
+          title="知识库与向量模型保护"
+          description="添加、编辑或删除 Embedding 知识库模型及全量重建索引需要近期多因素身份认证。解锁后享有 10 分钟无打扰编辑期。"
+          actionLabel="解锁以管理知识库"
+        >
+          <WorkspacePanel className="agent-table-panel knowledge-workspace">
+            <PanelHeader
             title={labels.knowledge}
             description={
               locale === "zh"
@@ -1039,7 +1048,8 @@ export function AdvancedWorkspace({
             )}
           </section>
         </WorkspacePanel>
-      ) : null}
+      </SudoGate>
+    ) : null}
     </>
   );
 }

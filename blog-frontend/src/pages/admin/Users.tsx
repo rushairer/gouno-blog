@@ -29,7 +29,7 @@ import {
   useToast,
 } from "../../components/ui";
 import { StepUpMfaModal } from "../../components/auth/StepUpMfaModal";
-import { SudoBanner } from "../../components/auth/SudoBanner";
+import { SudoGate } from "../../components/auth/SudoGate";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 
 const assignableRoles = ["admin", "editor", "author", "moderator"] as const;
@@ -225,7 +225,6 @@ export default function AdminUsers() {
         }
       />
       <ContentStack>
-        <SudoBanner />
         {error ? <Feedback type="error">{error}</Feedback> : null}
         {loading ? (
           <LoadingState label="正在同步成员目录…" />
@@ -239,7 +238,12 @@ export default function AdminUsers() {
             }
           />
         ) : (
-          <Panel>
+          <SudoGate
+            title="成员与权限安全保护"
+            description="修改 Blog 成员角色、移交所有权或暂停成员资格需要近期多因素身份认证。解锁后享有 10 分钟无打扰操作期。"
+            actionLabel="解锁以管理成员权限"
+          >
+            <Panel>
             <TableContainer>
               <table className="admin-table member-table">
                 <thead>
@@ -365,8 +369,9 @@ export default function AdminUsers() {
               </table>
             </TableContainer>
           </Panel>
-        )}
-      </ContentStack>
+        </SudoGate>
+      )}
+    </ContentStack>
 
       <Modal
         open={Boolean(editing)}

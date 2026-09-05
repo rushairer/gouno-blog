@@ -12,7 +12,7 @@ import { mediaApi } from "../../api/media";
 import { siteApi } from "../../api/site";
 import { isMfaError } from "../../auth";
 import { StepUpMfaModal } from "../../components/auth/StepUpMfaModal";
-import { SudoBanner } from "../../components/auth/SudoBanner";
+import { SudoGate } from "../../components/auth/SudoGate";
 import {
   AdminPage,
   AdminPageHeader,
@@ -196,13 +196,17 @@ export default function AdminSiteSettings() {
         title="站点设置"
         description="管理品牌信息、首页标语、社交入口和默认 SEO 元数据。"
       />
-      <SudoBanner />
       {error ? <Feedback type="error">{error}</Feedback> : null}
-      <Tabs
-        value={activeTab}
-        onValueChange={(v) => setActiveTab(v as SettingsTab)}
-        id="site-settings"
+      <SudoGate
+        title="站点核心配置保护"
+        description="修改站点品牌、SEO、页脚或联系方式等敏感设置需要近期多因素身份认证。解锁后享有 10 分钟无打扰编辑期。"
+        actionLabel="解锁以修改设置"
       >
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as SettingsTab)}
+          id="site-settings"
+        >
         <TabList label="站点设置">
           <Tab value="basic">
             <FileText aria-hidden="true" />
@@ -549,6 +553,7 @@ export default function AdminSiteSettings() {
           ) : null}
         </TabPanel>
       </Tabs>
+    </SudoGate>
 
       <StepUpMfaModal
         open={stepUpOpen}

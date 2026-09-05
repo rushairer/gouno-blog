@@ -41,6 +41,7 @@ describe("AdminSiteSettings", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     sessionStorage.clear();
+    localStorage.setItem("gouno:sudo_activated_at", String(Date.now()));
     vi.mocked(siteApi.getAdminSettings).mockResolvedValue({
       site_title: "测试博客",
       site_description: "这是测试描述",
