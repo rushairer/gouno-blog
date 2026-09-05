@@ -54,7 +54,7 @@ export function Tabs<T extends string = string>({
             <Primitive.TabsTrigger
               key={item.value}
               value={item.value}
-              className="gap-2 rounded-none border-b-2 border-transparent px-3 py-3 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary"
+              className="subnav-tabs__tab gap-2 rounded-none border-b-2 border-transparent px-3 py-3 shadow-none data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary"
             >
               {item.icon}
               {item.label}
@@ -100,6 +100,30 @@ export const TabsList = TabList;
 export const TabsTrigger = Tab;
 export const TabsContent = TabPanel;
 export const SubnavTabs = Tabs;
+export function SectionNav({
+  label,
+  items,
+  className,
+}: {
+  label: string;
+  items: readonly { id: string; label: ReactNode }[];
+  className?: string;
+}) {
+  return (
+    <nav aria-label={label} className={cn("section-nav", className)}>
+      {items.map((item, index) => (
+        <a
+          key={item.id}
+          href={`#${item.id}`}
+          aria-current={index === 0 ? "location" : undefined}
+          className="section-nav__link"
+        >
+          {item.label}
+        </a>
+      ))}
+    </nav>
+  );
+}
 export function ThemeToggle({
   label = "主题",
   labels = { light: "浅色", dark: "深色", system: "跟随系统" },
@@ -159,6 +183,8 @@ export function Pagination({
       aria-label={label}
       className={cn(
         "flex flex-wrap items-center justify-end gap-2 py-3",
+        "pagination",
+        mode === "compact" && "pagination-compact",
         className,
       )}
     >
@@ -226,7 +252,12 @@ export function BulkActionBar({
     >
       <strong className="mr-auto text-sm">{selectionLabel}</strong>
       {onAIAssist ? (
-        <Button size="sm" icon={<Sparkles />} onClick={onAIAssist}>
+        <Button
+          className="bulk-action-bar__ai"
+          size="sm"
+          icon={<Sparkles />}
+          onClick={onAIAssist}
+        >
           {aiLabel}
         </Button>
       ) : null}

@@ -64,6 +64,7 @@ export function Button({
     <PrimitiveButton
       {...props}
       className={cn(
+        "btn",
         `btn-${variant}`,
         size === "sm" || size === "compact" ? "btn-sm" : undefined,
         props.className,
@@ -96,6 +97,7 @@ export interface IconButtonProps extends Omit<ButtonProps, "children"> {
 }
 export function IconButton({
   label,
+  icon,
   size: _size,
   variant = "ghost",
   ...props
@@ -109,7 +111,7 @@ export function IconButton({
       aria-label={label}
       title={label}
     >
-      <span className="icon-button__icon">{props.icon}</span>
+      <span className="icon-button__icon">{icon}</span>
     </Button>
   );
 }
@@ -144,6 +146,7 @@ export function ButtonLink({
   disabled,
   children,
   onClick,
+  className,
   ...props
 }: ButtonLinkProps) {
   const Link = useContext(LinkContext);
@@ -151,6 +154,7 @@ export function ButtonLink({
     <PrimitiveButton asChild variant={variants[variant]} size={sizes[size]}>
       <Link
         {...props}
+        className={cn("btn", `btn-${variant}`, className)}
         aria-disabled={disabled || undefined}
         tabIndex={disabled ? -1 : undefined}
         onClick={(event) => {

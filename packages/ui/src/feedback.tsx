@@ -2,6 +2,7 @@ import {
   useEffect,
   createContext,
   useContext,
+  useState,
   type ReactNode,
   type HTMLAttributes,
 } from "react";
@@ -11,6 +12,7 @@ import {
   Info,
   Inbox,
   LoaderCircle,
+  X,
 } from "lucide-react";
 import { Toaster, toast } from "sonner";
 import { Alert } from "./components/ui/alert";
@@ -344,27 +346,48 @@ export function ArticleListSkeleton({
     </div>
   );
 }
-const toastApi = {
+function notifyToast(
+  message: string,
+  type: FeedbackType = "success",
+  options?: { duration?: number },
+) {
+  const id = toast.custom(
+    () => (
+      <div
+        role={type === "warning" || type === "error" ? "alert" : "status"}
+        className={cn(
+          `toast--${type}`,
+          "flex min-w-72 items-center gap-3 rounded-lg border bg-popover p-4 text-sm text-popover-foreground shadow-lg",
+          tones[type],
+        )}
+      >
+        <span className="min-w-0 flex-1">{message}</span>
+        <button
+          type="button"
+          aria-label="关闭提示"
+          className="rounded-sm p-1 text-muted-foreground hover:text-foreground"
+          onClick={() => toast.dismiss(id)}
+        >
+          <X aria-hidden="true" className="size-4" />
+        </button>
+      </div>
+    ),
+    { duration: options?.duration === 0 ? Infinity : options?.duration },
+  );
+  return id;
+}
+type ToastItem = { id: number; message: string; type: FeedbackType };
+type ToastApi = {
   notify: (
     message: string,
-    type: FeedbackType = "success",
+    type?: FeedbackType,
     options?: { duration?: number },
-  ) => {
-    toast[type](message, {
-      duration: options?.duration === 0 ? Infinity : options?.duration,
-    });
-  },
-  showSuccess: (message: string) => {
-    toast.success(message);
-  },
-  showError: (message: string) => {
-    toast.error(message);
-  },
-  showInfo: (message: string) => {
-    toast.info(message);
-  },
+  ) => void;
+  showSuccess: (message: string) => void;
+  showError: (message: string) => void;
+  showInfo: (message: string) => void;
 };
-const ToastContext = createContext<typeof toastApi | null>(null);
+const ToastContext = createContext<ToastApi | null>(null);
 export function useToast() {
   const value = useContext(ToastContext);
   if (!value) throw new Error("useToast must be used within a ToastProvider");
@@ -373,21 +396,66 @@ export function useToast() {
 export function ToastProvider({ children }: { children: ReactNode }) {
   const parent = useContext(ToastContext);
   const { resolvedMode } = useTheme();
+  const [items, setItems] = useState<ToastItem[]>([]);
+  const [nextId, setNextId] = useState(1);
+  const notify = (
+    message: string,
+    type: FeedbackType = "success",
+    options?: { duration?: number },
+  ) => {
+    const id = nextId;
+    setNextId((value) => value + 1);
+    setItems((current) => [...current, { id, message, type }]);
+    if (options?.duration !== 0) {
+      window.setTimeout(
+        () => setItems((current) => current.filter((item) => item.id !== id)),
+        options?.duration ?? 4000,
+      );
+    }
+  };
+  const api: ToastApi = {
+    notify,
+    showSuccess: (message) => notify(message, "success"),
+    showError: (message) => notify(message, "error"),
+    showInfo: (message) => notify(message, "info"),
+  };
   return (
-    <ToastContext.Provider value={toastApi}>
+    <ToastContext.Provider value={api}>
       {children}
       {!parent ? (
-        <Toaster
-          theme={resolvedMode}
-          closeButton
-          position="bottom-right"
-          toastOptions={{
-            classNames: {
-              toast: "border-border bg-popover text-popover-foreground",
-              description: "text-muted-foreground",
-            },
-          }}
-        />
+        <div
+          className="fixed bottom-4 right-4 z-50 flex flex-col gap-3"
+          data-theme={resolvedMode}
+        >
+          {items.map((item) => (
+            <div
+              key={item.id}
+              role={
+                item.type === "warning" || item.type === "error"
+                  ? "alert"
+                  : "status"
+              }
+              className={cn(
+                `toast--${item.type}`,
+                "flex min-w-72 items-center gap-3 rounded-lg border bg-popover p-4 text-sm text-popover-foreground shadow-lg",
+                tones[item.type],
+              )}
+            >
+              <span className="min-w-0 flex-1">{item.message}</span>
+              <button
+                type="button"
+                aria-label="关闭提示"
+                onClick={() =>
+                  setItems((current) =>
+                    current.filter((entry) => entry.id !== item.id),
+                  )
+                }
+              >
+                <X aria-hidden="true" className="size-4" />
+              </button>
+            </div>
+          ))}
+        </div>
       ) : null}
     </ToastContext.Provider>
   );

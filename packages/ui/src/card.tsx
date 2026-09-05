@@ -16,6 +16,7 @@ export function Card({
   return (
     <Component
       {...props}
+      tabIndex={interactive ? (props.tabIndex ?? 0) : props.tabIndex}
       data-slot="card"
       className={cn(
         "ui-card min-w-0 rounded-lg border bg-card text-card-foreground",
@@ -29,7 +30,8 @@ export function Card({
         variant === "subtle" && "bg-muted",
         variant === "elevated" && "shadow-lg ui-card--elevated",
         padding === "lg" && "ui-card--padding-lg",
-        interactive && "cursor-pointer hover:border-primary",
+        interactive &&
+          "cursor-pointer hover:border-primary ui-card--interactive",
         className,
       )}
     />

@@ -299,7 +299,10 @@ export function FormLayout({
   ...props
 }: FormHTMLAttributes<HTMLFormElement>) {
   return (
-    <form {...props} className={cn("flex min-w-0 flex-col gap-6", className)} />
+    <form
+      {...props}
+      className={cn("form-layout flex min-w-0 flex-col gap-6", className)}
+    />
   );
 }
 export function FormGrid({
@@ -325,7 +328,7 @@ export function FormGrid({
   );
 }
 export function FormActions({
-  surface: _surface,
+  surface,
   className,
   ...props
 }: HTMLAttributes<HTMLDivElement> & { surface?: boolean }) {
@@ -334,6 +337,7 @@ export function FormActions({
       {...props}
       className={cn(
         "flex flex-wrap items-center justify-end gap-3 border-t pt-5",
+        surface && "form-actions--surface",
         className,
       )}
     />

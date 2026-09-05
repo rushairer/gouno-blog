@@ -210,7 +210,7 @@ export function EditorPanel({
   className?: string;
 }) {
   return (
-    <Panel className={className}>
+    <Panel className={cn("editor-panel", className)}>
       <PanelHeader
         title={
           <span className="flex items-center gap-2">
