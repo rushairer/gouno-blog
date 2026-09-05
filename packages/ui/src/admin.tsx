@@ -1,9 +1,112 @@
-import {type ReactNode,useState} from 'react';
-import {Menu} from 'lucide-react';
-import {IconButton} from './actions';
-import {Sheet,SheetContent,SheetHeader,SheetTitle} from './components/ui/sheet';
-export interface AdminShellProps {brand:ReactNode;navigation:(close:()=>void)=>ReactNode;toolbar?:ReactNode;breadcrumbs?:ReactNode;account?:ReactNode;footer?:ReactNode;children:ReactNode;navigationLabel?:string;}
+import { type ReactNode, useState } from "react";
+import { Menu } from "lucide-react";
+import { IconButton } from "./actions";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "./components/ui/sheet";
+export interface AdminShellProps {
+  brand: ReactNode;
+  navigation: (close: () => void) => ReactNode;
+  toolbar?: ReactNode;
+  breadcrumbs?: ReactNode;
+  account?: ReactNode;
+  footer?: ReactNode;
+  children: ReactNode;
+  navigationLabel?: string;
+}
 /** Router and permissions are supplied by each application; this template owns only presentation. */
-export function AdminShell({brand,navigation,toolbar,breadcrumbs,account,footer,children,navigationLabel='后台导航'}:AdminShellProps){const [open,setOpen]=useState(false);return <div className="min-h-dvh bg-background text-foreground"><a href="#workspace-main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-popover focus:p-3">跳至主要内容</a><header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 lg:px-6"><div className="flex min-w-0 items-center gap-3 lg:w-[216px]"><IconButton className="lg:hidden" label={navigationLabel} icon={<Menu/>} onClick={()=>setOpen(true)}/><div className="min-w-0 truncate text-base font-semibold tracking-tight text-primary">{brand}</div></div><div className="hidden min-w-0 flex-1 text-sm text-muted-foreground md:block">{breadcrumbs}</div><div className="ml-auto flex items-center gap-2">{toolbar}{account}</div></header><div className="grid min-h-[calc(100dvh-64px)] lg:grid-cols-[240px_minmax(0,1fr)]"><aside className="sticky top-16 hidden h-[calc(100dvh-64px)] flex-col border-r bg-sidebar px-3 py-5 lg:flex"><nav aria-label={navigationLabel} className="min-h-0 flex-1 overflow-y-auto">{navigation(()=>{})}</nav>{footer?<div className="mt-4 border-t pt-4">{footer}</div>:null}</aside><main id="workspace-main" tabIndex={-1} className="min-w-0 px-4 py-6 outline-none md:px-6 xl:px-8">{children}</main></div><Sheet open={open} onOpenChange={setOpen}><SheetContent side="left" className="flex w-[280px] flex-col"><SheetHeader><SheetTitle>{brand}</SheetTitle></SheetHeader><nav aria-label={navigationLabel} className="flex-1 overflow-auto px-3">{navigation(()=>setOpen(false))}</nav>{footer?<div className="p-4">{footer}</div>:null}</SheetContent></Sheet></div>;}
-export function NavigationGroup({label,children}:{label:string;children:ReactNode}){return <section className="mb-6 flex flex-col gap-1"><h2 className="px-3 pb-2 text-xs font-medium text-muted-foreground">{label}</h2>{children}</section>;}
-export const navigationItemClass='flex min-h-10 items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground [&_svg]:size-4 [&.active]:bg-accent [&.active]:font-medium [&.active]:text-accent-foreground';
+export function AdminShell({
+  brand,
+  navigation,
+  toolbar,
+  breadcrumbs,
+  account,
+  footer,
+  children,
+  navigationLabel = "后台导航",
+}: AdminShellProps) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="min-h-dvh bg-background text-foreground">
+      <a
+        href="#workspace-main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-popover focus:p-3"
+      >
+        跳至主要内容
+      </a>
+      <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 lg:px-6">
+        <div className="flex min-w-0 items-center gap-3 lg:w-[216px]">
+          <IconButton
+            className="lg:hidden"
+            label={navigationLabel}
+            icon={<Menu />}
+            onClick={() => setOpen(true)}
+          />
+          <div className="min-w-0 truncate text-base font-semibold tracking-tight text-primary">
+            {brand}
+          </div>
+        </div>
+        <div className="hidden min-w-0 flex-1 text-sm text-muted-foreground md:block">
+          {breadcrumbs}
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          {toolbar}
+          {account}
+        </div>
+      </header>
+      <div className="grid min-h-[calc(100dvh-64px)] lg:grid-cols-[240px_minmax(0,1fr)]">
+        <aside className="sticky top-16 hidden h-[calc(100dvh-64px)] flex-col border-r bg-sidebar px-3 py-5 lg:flex">
+          <nav
+            aria-label={navigationLabel}
+            className="min-h-0 flex-1 overflow-y-auto"
+          >
+            {navigation(() => {})}
+          </nav>
+          {footer ? <div className="mt-4 border-t pt-4">{footer}</div> : null}
+        </aside>
+        <main
+          id="workspace-main"
+          tabIndex={-1}
+          className="min-w-0 px-4 py-6 outline-none md:px-6 xl:px-8"
+        >
+          {children}
+        </main>
+      </div>
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent side="left" className="flex w-[280px] flex-col">
+          <SheetHeader>
+            <SheetTitle>{brand}</SheetTitle>
+          </SheetHeader>
+          <nav
+            aria-label={navigationLabel}
+            className="flex-1 overflow-auto px-3"
+          >
+            {navigation(() => setOpen(false))}
+          </nav>
+          {footer ? <div className="p-4">{footer}</div> : null}
+        </SheetContent>
+      </Sheet>
+    </div>
+  );
+}
+export function NavigationGroup({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="mb-6 flex flex-col gap-1">
+      <h2 className="px-3 pb-2 text-xs font-medium text-muted-foreground">
+        {label}
+      </h2>
+      {children}
+    </section>
+  );
+}
+export const navigationItemClass =
+  "flex min-h-10 items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground [&_svg]:size-4 [&.active]:bg-accent [&.active]:font-medium [&.active]:text-accent-foreground";
