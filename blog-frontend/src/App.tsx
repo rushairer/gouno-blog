@@ -5,7 +5,12 @@ import { Button, ButtonLink, ToastProvider } from "./components/ui";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { GossoProvider, RequireAuth } from "@gosso/client/react";
 import { gossoClient, type BlogUserProfile, logout } from "./auth";
+import { checkAndHandleStepUpPopupCallback } from "./mfa";
 import { isActiveMember } from "./abilities";
+
+if (typeof window !== "undefined") {
+  checkAndHandleStepUpPopupCallback();
+}
 import PublicShell from "./layouts/PublicShell";
 import AdminShell from "./layouts/AdminShell";
 import Home from "./pages/Home";

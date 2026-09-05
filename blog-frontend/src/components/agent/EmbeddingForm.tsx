@@ -2,6 +2,7 @@ import { DatabaseZap, Save } from "lucide-react";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import type { EmbeddingProfile } from "../../types/agent";
+import { useFormDraft } from "../../hooks/useFormDraft";
 import {
   Button,
   Checkbox,
@@ -88,21 +89,31 @@ export function EmbeddingForm({
         },
   );
   const [saving, setSaving] = useState(false);
+  const draftKey = `embedding-${initial?.id ?? "new"}`;
+  const { clearDraft } = useFormDraft(draftKey, value, setValue);
+
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setSaving(true);
     try {
       await onSave(value);
+      clearDraft();
     } finally {
       setSaving(false);
     }
   };
+
+  const handleCancel = () => {
+    clearDraft();
+    onCancel();
+  };
+
   return (
     <EditorPanel
       title={labels.title}
       icon={<DatabaseZap />}
       closeLabel={labels.cancel}
-      onClose={onCancel}
+      onClose={handleCancel}
     >
       <FormLayout onSubmit={submit}>
         <FormGrid columns={2}>

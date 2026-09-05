@@ -8,6 +8,7 @@ import type {
   TriggerType,
 } from "../../types/agent";
 import { emptyAgent } from "../../types/agent";
+import { useFormDraft } from "../../hooks/useFormDraft";
 import {
   Button,
   Checkbox,
@@ -50,6 +51,8 @@ export function AgentForm({
     initial ? { ...initial } : emptyAgent(providers[0]?.id),
   );
   const [saving, setSaving] = useState(false);
+  const draftKey = `agent-${initial?.id ?? "new"}`;
+  const { clearDraft } = useFormDraft(draftKey, value, setValue);
 
   const skillOptions = useMemo(() => {
     const list = [...skills];
@@ -110,9 +113,15 @@ export function AgentForm({
     setSaving(true);
     try {
       await onSave(value);
+      clearDraft();
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleCancel = () => {
+    clearDraft();
+    onCancel();
   };
 
   const limitHint =
@@ -130,7 +139,7 @@ export function AgentForm({
       title={initial ? labels.editAgent : labels.createAgent}
       icon={<Bot />}
       closeLabel={labels.cancel}
-      onClose={onCancel}
+      onClose={handleCancel}
     >
       <FormLayout onSubmit={submit}>
         <FormGrid columns={2}>

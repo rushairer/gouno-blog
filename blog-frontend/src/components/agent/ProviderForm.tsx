@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import type { ProviderProfile, ProviderType } from "../../types/agent";
 import { emptyProvider } from "../../types/agent";
+import { useFormDraft } from "../../hooks/useFormDraft";
 import {
   Button,
   Checkbox,
@@ -68,15 +69,23 @@ export function ProviderForm({
         },
   );
   const [saving, setSaving] = useState(false);
+  const draftKey = `provider-${initial?.id ?? "new"}`;
+  const { clearDraft } = useFormDraft(draftKey, value, setValue);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setSaving(true);
     try {
       await onSave(value);
+      clearDraft();
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleCancel = () => {
+    clearDraft();
+    onCancel();
   };
 
   return (
@@ -84,7 +93,7 @@ export function ProviderForm({
       title={initial ? labels.editProvider : labels.createProvider}
       icon={<KeyRound />}
       closeLabel={labels.cancel}
-      onClose={onCancel}
+      onClose={handleCancel}
     >
       <FormLayout onSubmit={submit}>
         <FormGrid columns={2}>

@@ -5,6 +5,11 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- Add universal form draft preservation and auto-restore hook (`useFormDraft`) with `STEP_UP_MFA_REQUIRED_EVENT` snapshotting across Site Settings, AI Provider, Embedding, and Agent forms to prevent input loss during Step-Up MFA authentication.
+- Add seamless popup-based Step-Up MFA authentication (`openStepUpPopup`, `checkAndHandleStepUpPopupCallback`) to allow in-place verification and automatic request retry without page reloads.
+
 ### Fixed
 
 - Match Workflow resume checkpoints by iteration, preserving each for_each item's output and failed-item retry selection.

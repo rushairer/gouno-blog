@@ -1,21 +1,45 @@
 import { ExternalLink, ShieldCheck } from "lucide-react";
 import { stepUpMfa, getGossoAdminURL } from "../../auth";
+import {
+  openStepUpPopup,
+  requestStepUpMfaPrompt,
+  STEP_UP_POPUP_PARAM,
+} from "../../mfa";
 import { Button, Modal } from "../ui";
 
 interface StepUpMfaModalProps {
   open: boolean;
   onClose: () => void;
-  // Kept for backward compatibility with existing page-level callers. The
-  // step-up flow is a top-level navigation, so continuation happens after the
-  // browser returns to the application rather than inside this modal.
+  // If provided, will be called directly when popup verification completes
+  // without page reload.
   onSuccess?: () => Promise<void> | void;
 }
 
-export function StepUpMfaModal({ open, onClose }: StepUpMfaModalProps) {
+export function StepUpMfaModal({ open, onClose, onSuccess }: StepUpMfaModalProps) {
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    onClose();
-    stepUpMfa();
+    // Proactively notify any active forms to snapshot their draft state
+    requestStepUpMfaPrompt();
+
+    // Try seamless in-place popup verification first
+    const opened = openStepUpPopup(
+      `/admin?${STEP_UP_POPUP_PARAM}=1`,
+      async () => {
+        onClose();
+        if (onSuccess) {
+          await onSuccess();
+        }
+      },
+      () => {
+        // Closed without completing
+      },
+    );
+
+    if (!opened) {
+      // Fallback to top-level navigation if popup was blocked by browser
+      onClose();
+      stepUpMfa();
+    }
   };
 
   return (
@@ -28,6 +52,9 @@ export function StepUpMfaModal({ open, onClose }: StepUpMfaModalProps) {
           <div>
             <strong>需要进行二次身份验证</strong>
             <p>为保障站点安全，请前往统一身份中心完成近期多因素身份验证。</p>
+            <p className="text-muted text-xs mt-1">
+              ✓ 系统已为您自动暂存当前表单内容，完成验证后将无缝继续。
+            </p>
           </div>
         </div>
 
