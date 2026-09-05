@@ -56,6 +56,7 @@ export default function Home() {
           {posts[0] ? <ArticleTeaser post={posts[0]} featured /> : null}
           {posts.length > 1 ? (
             <section className="mt-10">
+              <div className={`featured-layout featured-layout--${Math.min(posts.length - 1, 4)}`}>
               <SectionHeading
                 title="精选文章"
                 action={
@@ -71,6 +72,7 @@ export default function Home() {
               {posts.slice(1, 5).map((post) => (
                 <ArticleTeaser post={post} key={post.id} />
               ))}
+              </div>
             </section>
           ) : null}
         </div>

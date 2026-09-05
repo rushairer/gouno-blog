@@ -136,7 +136,11 @@ export function ThemeToggle({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <IconButton label={label} icon={<Icon />} />
+        <IconButton
+          label={label}
+          icon={<Icon />}
+          aria-pressed={mode === "dark"}
+        />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuGroup>

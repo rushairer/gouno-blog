@@ -66,6 +66,7 @@ export function Button({
       className={cn(
         "btn",
         `btn-${variant}`,
+        (size === "sm" || size === "compact") && "btn--compact",
         size === "sm" || size === "compact" ? "btn-sm" : undefined,
         props.className,
       )}

@@ -183,7 +183,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
           <form
             role="search"
             onSubmit={submitSearch}
-            className="hidden items-center gap-1 xl:flex"
+            className="flex items-center gap-1"
           >
             <SearchField
               aria-label="搜索文章"

@@ -193,7 +193,7 @@ export default function PublicShell({ children }: { children: ReactNode }) {
               </a>
             ) : null}
           </nav>
-          <p className="text-xs text-muted-foreground md:col-span-2">
+          <p className="footer-meta text-xs text-muted-foreground md:col-span-2">
             {!footerText
               ? `© ${year} ${siteTitle}`
               : footerText.startsWith("©")
