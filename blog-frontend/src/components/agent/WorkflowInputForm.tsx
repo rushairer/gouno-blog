@@ -15,7 +15,7 @@ import {
   Select,
   StatusBadge,
   Textarea,
-} from "../ui";
+} from "@gouno/ui";
 
 type SchemaProperty = {
   type?: string;

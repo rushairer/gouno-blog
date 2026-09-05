@@ -12,7 +12,7 @@ import {
   FormGrid,
   FormLayout,
   Input,
-} from "../ui";
+} from "@gouno/ui";
 
 export type EmbeddingFormValue = {
   id?: number;

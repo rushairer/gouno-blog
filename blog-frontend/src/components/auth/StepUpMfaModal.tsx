@@ -6,7 +6,7 @@ import {
   STEP_UP_COMPLETED_EVENT,
   STEP_UP_POPUP_PARAM,
 } from "../../mfa";
-import { Button, Modal } from "../ui";
+import { Button, Modal } from "@gouno/ui";
 
 interface StepUpMfaModalProps {
   open: boolean;

@@ -6,7 +6,7 @@ import {
   useParams,
   useSearchParams,
 } from "react-router-dom";
-import { ArrowRight, SlidersHorizontal } from "lucide-react";
+import { Search } from "lucide-react";
 import {
   ArticleListSkeleton,
   Button,
@@ -15,10 +15,11 @@ import {
   ErrorState,
   Pagination,
   SearchField,
-} from "../components/ui";
+  Field,
+} from "@gouno/ui";
 import { postsApi } from "../api/posts";
 import { siteApi } from "../api/site";
-import { markdownToPlainText } from "../utils/markdown";
+import { ArticleTeaser } from "../components/reading/ArticleTeaser";
 import { usePageTitle } from "../hooks/usePageTitle";
 import type { Post } from "../types/blog";
 
@@ -81,154 +82,98 @@ export default function ArticleIndex({
 
   const pages = Math.max(1, Math.ceil(total / 10));
   return (
-    <div className="public-container index-page">
-      <header className="index-header">
-        <p>ARTICLES / INDEX</p>
-        <h1>{title}</h1>
-        <span>{total} 篇文章，持续记录问题、选择与实现。</span>
+    <div className="flex flex-col gap-8">
+      <header>
+        <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
+        <p className="mt-3 text-sm text-muted-foreground">
+          {total} 篇文章，持续记录问题、选择与实现。
+        </p>
       </header>
-      <div className="index-layout">
-        <aside className="index-filters">
-          <h2>
-            <SlidersHorizontal /> 筛选
-          </h2>
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              const data = new FormData(event.currentTarget);
-              navigate(
-                `/search?q=${encodeURIComponent(String(data.get("q") || ""))}`,
-              );
-            }}
-          >
-            <label htmlFor="article-search">关键词</label>
+      <section aria-label="筛选" className="flex flex-col gap-4 border-y py-5">
+        <form
+          className="flex max-w-xl gap-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const data = new FormData(event.currentTarget);
+            navigate(
+              `/search?q=${encodeURIComponent(String(data.get("q") || ""))}`,
+            );
+          }}
+        >
+          <Field label="关键词" className="flex-1">
             <SearchField
               id="article-search"
               name="q"
               defaultValue={q}
-              size="regular"
               aria-label="搜索文章"
             />
-          </form>
-          <h3>标签</h3>
-          <div className="filter-tags">
-            <Link className={!tag ? "active" : ""} to="/articles">
-              全部
+          </Field>
+          <Button type="submit" className="self-end" icon={<Search />}>
+            搜索
+          </Button>
+        </form>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="mr-2 text-sm text-muted-foreground">标签</span>
+          <Link
+            className="rounded-md border px-3 py-1 text-sm hover:bg-accent"
+            to="/articles"
+          >
+            全部
+          </Link>
+          {tags.slice(0, 18).map((item) => (
+            <Link
+              aria-current={item === tag ? "page" : undefined}
+              className="rounded-md border px-3 py-1 text-sm hover:bg-accent aria-[current=page]:border-primary aria-[current=page]:bg-accent"
+              key={item}
+              to={`/tags/${encodeURIComponent(item)}`}
+            >
+              {item}
             </Link>
-            {tags.slice(0, 18).map((item) => (
-              <Link
-                className={item === tag ? "active" : ""}
-                key={item}
-                to={`/tags/${encodeURIComponent(item)}`}
-              >
-                {item}
-              </Link>
-            ))}
-          </div>
-        </aside>
-        <section className="article-results" aria-live="polite">
-          {loading ? (
-            <ArticleListSkeleton />
-          ) : error ? (
-            <ErrorState
-              title="文章载入失败"
-              description={error}
-              action={
-                <Button
-                  variant="secondary"
-                  size="compact"
-                  onClick={handleRetry}
-                >
-                  重试
-                </Button>
-              }
-            />
-          ) : posts.length === 0 ? (
-            <EmptyState
-              label="没有找到符合条件的文章。"
-              action={
-                <>
-                  <ButtonLink variant="secondary" to="/articles">
-                    浏览全部文章
-                  </ButtonLink>
-                  <ButtonLink variant="secondary" to="/archive">
-                    浏览归档
-                  </ButtonLink>
-                </>
-              }
-            />
-          ) : (
-            posts.map((post, index) => (
-              <article
-                className={`article-index-row ${post.cover_url ? "article-index-row--has-cover" : ""}`}
-                key={post.id}
-              >
-                <span>
-                  {String((page - 1) * 10 + index + 1).padStart(2, "0")}
-                </span>
-                <div>
-                  <Link to={`/articles/${post.slug}`}>
-                    <h2>{post.title}</h2>
-                  </Link>
-                  <p>{markdownToPlainText(post.summary)}</p>
-                  <div>
-                    {post.tags.map((item) => (
-                      <Link key={item} to={`/tags/${encodeURIComponent(item)}`}>
-                        {item}
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-                {post.cover_url ? (
-                  <Link
-                    className="article-index-cover-link"
-                    to={`/articles/${post.slug}`}
-                    tabIndex={-1}
-                    aria-hidden="true"
-                  >
-                    <img
-                      className="article-index-cover"
-                      src={post.cover_url}
-                      alt={post.cover_alt || post.title}
-                      loading="lazy"
-                    />
-                  </Link>
-                ) : null}
-                <div>
-                  <time>
-                    {new Date(
-                      post.published_at || post.created_at,
-                    ).toLocaleDateString("zh-CN")}
-                  </time>
-                  <span>
-                    {Math.max(3, Math.ceil((post.content?.length || 0) / 500))}{" "}
-                    分钟
-                  </span>
-                  <Link
-                    to={`/articles/${post.slug}`}
-                    aria-label={`阅读 ${post.title}`}
-                  >
-                    <ArrowRight />
-                  </Link>
-                </div>
-              </article>
-            ))
-          )}
-          {!loading && total > 10 ? (
-            <Pagination
-              page={page}
-              pages={pages}
-              label="文章分页"
-              onChange={(nextPage) => {
-                const next = new URLSearchParams(params);
-                next.set("page", String(nextPage));
-                setParams(next);
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }}
-            />
-          ) : null}
-        </section>
-      </div>
+          ))}
+        </div>
+      </section>
+      <section aria-live="polite" className="mx-auto w-full max-w-[900px]">
+        {loading ? (
+          <ArticleListSkeleton />
+        ) : error ? (
+          <ErrorState
+            title="文章载入失败"
+            description={error}
+            action={<Button onClick={handleRetry}>重试</Button>}
+          />
+        ) : posts.length === 0 ? (
+          <EmptyState
+            label="没有找到符合条件的文章。"
+            action={
+              <>
+                <ButtonLink to="/articles">浏览全部文章</ButtonLink>
+                <ButtonLink to="/archive">浏览归档</ButtonLink>
+              </>
+            }
+          />
+        ) : (
+          posts.map((post) => <ArticleTeaser key={post.id} post={post} />)
+        )}
+        {!loading && total > 10 ? (
+          <Pagination
+            page={page}
+            pages={pages}
+            label="文章分页"
+            onChange={(nextPage) => {
+              const next = new URLSearchParams(params);
+              next.set("page", String(nextPage));
+              setParams(next);
+              window.scrollTo({
+                top: 0,
+                behavior: window.matchMedia("(prefers-reduced-motion: reduce)")
+                  .matches
+                  ? "auto"
+                  : "smooth",
+              });
+            }}
+          />
+        ) : null}
+      </section>
       <span className="sr-only">{location.pathname}</span>
     </div>
   );

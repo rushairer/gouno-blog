@@ -4,7 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiFetch, canManageBlog, isLoggedIn } from "../../auth";
 import { I18nProvider } from "../../i18n";
-import { ToastProvider } from "../../components/ui";
+import { ToastProvider } from "@gouno/ui";
 import AdminPages from "../admin/Pages";
 
 vi.mock("../../auth", async () => {

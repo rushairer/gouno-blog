@@ -6,7 +6,7 @@ import {
   STEP_UP_MFA_REQUIRED_EVENT,
   isMfaError,
 } from "../../mfa";
-import { Toast } from "../ui";
+import { Toast } from "@gouno/ui";
 import { StepUpMfaModal } from "./StepUpMfaModal";
 
 function rejectionMessage(reason: unknown): string {

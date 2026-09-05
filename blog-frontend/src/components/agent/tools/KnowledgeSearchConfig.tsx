@@ -1,5 +1,5 @@
 import { DatabaseZap, Sparkles } from "lucide-react";
-import { Button, Field, Input } from "../../ui";
+import { Button, Field, Input } from "@gouno/ui";
 
 export interface KnowledgeSearchBinding {
   limit?: number;

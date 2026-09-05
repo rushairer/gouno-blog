@@ -12,7 +12,7 @@ import type {
   OperationalSuggestion,
   Workflow,
 } from "../../types/agent";
-import { Button, Panel } from "../ui";
+import { Button, Panel } from "@gouno/ui";
 
 export type ConsoleTab =
   | "overview"

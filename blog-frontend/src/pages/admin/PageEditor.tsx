@@ -25,7 +25,7 @@ import {
   TabList,
   Tabs,
   useToast,
-} from "../../components/ui";
+} from "@gouno/ui";
 import { MarkdownRenderer } from "../../components/MarkdownRenderer";
 import {
   AiImageGenerationPanel,
@@ -771,7 +771,7 @@ export default function PageEditor() {
             value={preview ? "preview" : "markdown"}
             onValueChange={(value) => setPreview(value === "preview")}
           >
-            <TabList label="编辑模式">
+            <TabList aria-label="编辑模式">
               <Tab value="markdown">Markdown</Tab>
               <Tab value="preview">预览</Tab>
             </TabList>

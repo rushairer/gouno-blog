@@ -1,6 +1,6 @@
 import type React from "react";
 import { Plus, Save } from "lucide-react";
-import { Button, Field, Input, OverlayForm, Textarea } from "../ui";
+import { Button, Field, Input, OverlayForm, Textarea } from "@gouno/ui";
 import { AiSuggestionControl } from "../editor/AiSuggestionControl";
 
 export type CategoryFormValue = {

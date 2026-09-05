@@ -9,7 +9,7 @@ import {
   Panel,
   PanelHeader,
   WorkspacePanel,
-} from "../ui";
+} from "@gouno/ui";
 
 export function JsonPreview({ value }: { value: unknown }) {
   if (

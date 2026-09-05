@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import { EmptyState, LoadingState } from "../components/ui";
+import { EmptyState, LoadingState } from "@gouno/ui";
 import { siteApi } from "../api/site";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useI18n } from "../i18n";

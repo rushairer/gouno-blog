@@ -8,7 +8,7 @@ import type {
   WorkflowRunEvent,
   WorkflowStepRun,
 } from "../../types/agent";
-import { Button, EmptyState, PanelHeader, WorkspacePanel } from "../ui";
+import { Button, EmptyState, PanelHeader, WorkspacePanel } from "@gouno/ui";
 import { StatusPill } from "./StatusPill";
 import { WorkflowMediaCandidates } from "./WorkflowMediaCandidates";
 import { WorkflowRunOutput } from "./WorkflowRunOutput";

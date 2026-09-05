@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { StepUpMfaModal } from "../StepUpMfaModal";
-import { ToastProvider } from "../../ui";
+import { ToastProvider } from "@gouno/ui";
 import * as mfaModule from "../../../mfa";
 
 vi.mock("../../../auth", () => ({

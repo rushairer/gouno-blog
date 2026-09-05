@@ -19,7 +19,7 @@ import {
   Input,
   Select,
   Textarea,
-} from "../ui";
+} from "@gouno/ui";
 import { RiskPill } from "./StatusPill";
 import { ToolBindingsEditor } from "./tools/ToolBindingsEditor";
 

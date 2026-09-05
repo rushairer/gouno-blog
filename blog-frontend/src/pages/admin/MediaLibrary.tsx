@@ -32,7 +32,7 @@ import {
   Select,
   TableSkeleton,
   useToast,
-} from "../../components/ui";
+} from "@gouno/ui";
 import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
 import {
   MediaAltTextForm,

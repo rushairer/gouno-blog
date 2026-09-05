@@ -19,7 +19,7 @@ import {
   Select,
   TableSkeleton,
   useToast,
-} from "../../components/ui";
+} from "@gouno/ui";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
 

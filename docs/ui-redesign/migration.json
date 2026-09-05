@@ -1,0 +1,3749 @@
+{
+  "schemaVersion": 1,
+  "baseline": {
+    "date": "2026-09-05",
+    "blogQuality": "passed with warnings",
+    "gossoAdminQuality": "passed with warnings",
+    "browser": "public home, login and unauthenticated blog admin redirect inspected; authenticated flows not verified"
+  },
+  "entries": [
+    {
+      "id": "blog:App.tsx",
+      "app": "blog",
+      "source": "blog-frontend/src/App.tsx",
+      "routes": [],
+      "interactions": [],
+      "urlParameters": [
+        "step_up_success"
+      ],
+      "apiModules": [
+        "./abilities",
+        "./auth"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog:components/ErrorBoundary.tsx",
+      "app": "blog",
+      "source": "blog-frontend/src/components/ErrorBoundary.tsx",
+      "routes": [],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog:components/MarkdownRenderer.tsx",
+      "app": "blog",
+      "source": "blog-frontend/src/components/MarkdownRenderer.tsx",
+      "routes": [],
+      "interactions": [
+        "copy"
+      ],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:components/agent/AdvancedWorkspace.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/components/agent/AdvancedWorkspace.tsx",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [
+        "../auth/SudoGate"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:components/agent/AgentForm.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/components/agent/AgentForm.tsx",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "interactions": [
+        "handleCancel",
+        "selectedSkill",
+        "submit"
+      ],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:components/agent/AgentRunRecords.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/components/agent/AgentRunRecords.tsx",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:components/agent/ArticlePreviewModal.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/components/agent/ArticlePreviewModal.tsx",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [
+        "../../api/operations"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "connector:components/agent/ConnectorWorkspace.tsx",
+      "app": "connector",
+      "source": "blog-frontend/src/components/agent/ConnectorWorkspace.tsx",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "interactions": [
+        "completeOAuth",
+        "load",
+        "queue",
+        "saveProfile",
+        "startOAuth"
+      ],
+      "urlParameters": [
+        "code",
+        "state"
+      ],
+      "apiModules": [
+        "../../api/connectors"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:components/agent/EmbeddingForm.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/components/agent/EmbeddingForm.tsx",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "interactions": [
+        "handleCancel",
+        "submit"
+      ],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:components/agent/InboxWorkspace.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/components/agent/InboxWorkspace.tsx",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "interactions": [
+        "selectedIsActionable",
+        "selectedSummary"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../../api/workflows"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:components/agent/OperationsWorkspace.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/components/agent/OperationsWorkspace.tsx",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "interactions": [
+        "closedTasks",
+        "handledSuggestions",
+        "openTasks",
+        "refreshSuggestions"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../../api/operations"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:components/agent/ProposalPreview.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/components/agent/ProposalPreview.tsx",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:components/agent/ProviderForm.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/components/agent/ProviderForm.tsx",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "interactions": [
+        "handleCancel",
+        "submit"
+      ],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:components/agent/SkillForm.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/components/agent/SkillForm.tsx",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "interactions": [
+        "submit"
+      ],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:components/agent/StatusPill.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/components/agent/StatusPill.tsx",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:components/agent/WorkflowInputForm.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/components/agent/WorkflowInputForm.tsx",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "interactions": [
+        "selected",
+        "selectedSignature",
+        "toggle",
+        "update"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../../api/workflows"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:components/agent/WorkflowLauncher.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/components/agent/WorkflowLauncher.tsx",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "interactions": [
+        "run"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../../api/workflows"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:components/agent/WorkflowMediaCandidates.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/components/agent/WorkflowMediaCandidates.tsx",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "interactions": [
+        "selectedCandidates",
+        "selection",
+        "selectionForCandidate"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../../api/operations"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:components/agent/WorkflowRunDetail.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/components/agent/WorkflowRunDetail.tsx",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [
+        "../../api/operations"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:components/agent/WorkflowRunOutput.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/components/agent/WorkflowRunOutput.tsx",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:components/agent/WorkflowRunRecords.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/components/agent/WorkflowRunRecords.tsx",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "interactions": [
+        "cancelGeneration",
+        "cancelInteraction",
+        "cancelRun",
+        "cancelRunByID",
+        "deleteRun",
+        "deleteRunByID",
+        "refreshTimer",
+        "requested",
+        "requestedID",
+        "selectedCandidates",
+        "selectionForCandidate",
+        "selections"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../../api/operations",
+        "../../api/workflows"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:components/agent/WorkflowWorkspace.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/components/agent/WorkflowWorkspace.tsx",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "interactions": [
+        "deleteWorkflow",
+        "loadVersions",
+        "removeResourceQuery",
+        "removeStep",
+        "runBlockReason",
+        "runFeedbackActionLabel",
+        "runInput",
+        "runWorkflow",
+        "save",
+        "selectedAgent",
+        "selectedWorkflow",
+        "submit",
+        "updateFilter",
+        "updateForEachFailurePolicy",
+        "updateResourceQuery",
+        "updateStep"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../../api/agent",
+        "../../api/workflows"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:components/agent/WorkspaceOverview.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/components/agent/WorkspaceOverview.tsx",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:components/agent/tools/DistributionDraftConfig.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/components/agent/tools/DistributionDraftConfig.tsx",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:components/agent/tools/KnowledgeSearchConfig.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/components/agent/tools/KnowledgeSearchConfig.tsx",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:components/agent/tools/LowEngagementConfig.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/components/agent/tools/LowEngagementConfig.tsx",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:components/agent/tools/RssFetchConfig.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/components/agent/tools/RssFetchConfig.tsx",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "interactions": [
+        "removeFeed",
+        "updateFeed"
+      ],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:components/agent/tools/StalePostsConfig.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/components/agent/tools/StalePostsConfig.tsx",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:components/agent/tools/ToolBindingsEditor.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/components/agent/tools/ToolBindingsEditor.tsx",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "interactions": [
+        "handleJsonChange"
+      ],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog:components/auth/GlobalStepUpBoundary.tsx",
+      "app": "blog",
+      "source": "blog-frontend/src/components/auth/GlobalStepUpBoundary.tsx",
+      "routes": [],
+      "interactions": [
+        "handleCompleted",
+        "handleUnhandledRejection",
+        "requestStepUp"
+      ],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog:components/auth/StepUpMfaModal.tsx",
+      "app": "blog",
+      "source": "blog-frontend/src/components/auth/StepUpMfaModal.tsx",
+      "routes": [],
+      "interactions": [
+        "handleCompleted",
+        "handleSubmit",
+        "opened"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../../auth"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog:components/auth/SudoBanner.tsx",
+      "app": "blog",
+      "source": "blog-frontend/src/components/auth/SudoBanner.tsx",
+      "routes": [],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog:components/auth/SudoGate.tsx",
+      "app": "blog",
+      "source": "blog-frontend/src/components/auth/SudoGate.tsx",
+      "routes": [],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:components/editor/AiSuggestionControl.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/components/editor/AiSuggestionControl.tsx",
+      "routes": [],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:components/editor/ContentEditorFrame.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/components/editor/ContentEditorFrame.tsx",
+      "routes": [],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:components/media/MediaDrawerForms.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/components/media/MediaDrawerForms.tsx",
+      "routes": [],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:components/taxonomy/CategoryForm.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/components/taxonomy/CategoryForm.tsx",
+      "routes": [],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:layouts/AdminShell.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/layouts/AdminShell.tsx",
+      "routes": [],
+      "interactions": [
+        "handleChanged",
+        "handleLogout",
+        "handleStorage",
+        "handleUpdate",
+        "submitSearch"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../api/notifications",
+        "../api/site",
+        "../auth"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog:layouts/PublicShell.tsx",
+      "app": "blog",
+      "source": "blog-frontend/src/layouts/PublicShell.tsx",
+      "routes": [],
+      "interactions": [
+        "handleStorage",
+        "handleUpdate"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../api/pages",
+        "../api/site"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog:pages/About.tsx",
+      "app": "blog",
+      "source": "blog-frontend/src/pages/About.tsx",
+      "routes": [
+        "/about"
+      ],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog:pages/AccountNotifications.tsx",
+      "app": "blog",
+      "source": "blog-frontend/src/pages/AccountNotifications.tsx",
+      "routes": [
+        "/account/notifications",
+        "/notifications"
+      ],
+      "interactions": [
+        "load",
+        "markRead"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../api/notifications"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog:pages/Archive.tsx",
+      "app": "blog",
+      "source": "blog-frontend/src/pages/Archive.tsx",
+      "routes": [
+        "/archive"
+      ],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [
+        "../api/posts"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog:pages/ArticleIndex.tsx",
+      "app": "blog",
+      "source": "blog-frontend/src/pages/ArticleIndex.tsx",
+      "routes": [
+        "/articles",
+        "/search",
+        "/categories/:slug",
+        "/tags/:slug"
+      ],
+      "interactions": [
+        "handleRetry"
+      ],
+      "urlParameters": [
+        "category",
+        "page",
+        "q",
+        "tag"
+      ],
+      "apiModules": [
+        "../api/posts",
+        "../api/site"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog:pages/Categories.tsx",
+      "app": "blog",
+      "source": "blog-frontend/src/pages/Categories.tsx",
+      "routes": [
+        "/categories"
+      ],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [
+        "../api/site"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog:pages/CustomPageView.tsx",
+      "app": "blog",
+      "source": "blog-frontend/src/pages/CustomPageView.tsx",
+      "routes": [
+        "/:slug"
+      ],
+      "interactions": [
+        "markText"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../api/pages",
+        "../api/site"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog:pages/Home.tsx",
+      "app": "blog",
+      "source": "blog-frontend/src/pages/Home.tsx",
+      "routes": [
+        "/"
+      ],
+      "interactions": [
+        "handleRetry"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../api/posts",
+        "../api/site"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog:pages/NotFound.tsx",
+      "app": "blog",
+      "source": "blog-frontend/src/pages/NotFound.tsx",
+      "routes": [
+        "*"
+      ],
+      "interactions": [
+        "handleSearch"
+      ],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog:pages/PostDetail.tsx",
+      "app": "blog",
+      "source": "blog-frontend/src/pages/PostDetail.tsx",
+      "routes": [
+        "/articles/:slug"
+      ],
+      "interactions": [
+        "created",
+        "handleAddComment",
+        "handleLike",
+        "handleReport",
+        "handleScroll"
+      ],
+      "urlParameters": [
+        "preview"
+      ],
+      "apiModules": [
+        "../abilities",
+        "../api/analytics",
+        "../api/comments",
+        "../api/posts",
+        "../auth"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog:pages/Settings.tsx",
+      "app": "blog",
+      "source": "blog-frontend/src/pages/Settings.tsx",
+      "routes": [
+        "/account/settings",
+        "/settings"
+      ],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [
+        "../auth"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog:pages/Tags.tsx",
+      "app": "blog",
+      "source": "blog-frontend/src/pages/Tags.tsx",
+      "routes": [
+        "/tags"
+      ],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [
+        "../api/posts",
+        "../api/site"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:pages/admin/AIOperations.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/pages/admin/AIOperations.tsx",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "interactions": [
+        "copySkill",
+        "deleteAgentRun",
+        "deleteSelected",
+        "handleImportProviders",
+        "handleImportSkill",
+        "load",
+        "loadWorkflowRuns",
+        "queueWorkflow",
+        "refresh",
+        "requested",
+        "requestedID",
+        "runAgent",
+        "saveAgent",
+        "saveEmbedding",
+        "saveProvider",
+        "saveSkill",
+        "saveWorkflow",
+        "selectAdvanced",
+        "selectTab"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../../api/agent",
+        "../../api/operations",
+        "../../api/workflows"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:pages/admin/Categories.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/pages/admin/Categories.tsx",
+      "routes": [
+        "/admin/categories"
+      ],
+      "interactions": [
+        "createCategory",
+        "load",
+        "openCreateDrawer",
+        "openEditDrawer",
+        "remove",
+        "removed",
+        "requestCategorySlug",
+        "saveCategory"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../../api/agent",
+        "../../api/site"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:pages/admin/Comments.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/pages/admin/Comments.tsx",
+      "routes": [
+        "/admin/comments"
+      ],
+      "interactions": [
+        "load",
+        "remove",
+        "removed"
+      ],
+      "urlParameters": [
+        "reported",
+        "status"
+      ],
+      "apiModules": [
+        "../../api/comments"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:pages/admin/Dashboard.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/pages/admin/Dashboard.tsx",
+      "routes": [
+        "/admin",
+        "/admin/dashboard"
+      ],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [
+        "../../abilities",
+        "../../api/analytics",
+        "../../api/notifications"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:pages/admin/MediaLibrary.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/pages/admin/MediaLibrary.tsx",
+      "routes": [
+        "/admin/medialibrary"
+      ],
+      "interactions": [
+        "handleGenerateAiImage",
+        "handleSaveAltText",
+        "load",
+        "openEditAltDrawer",
+        "remove",
+        "removed",
+        "updated"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../../abilities",
+        "../../api/agent",
+        "../../api/media"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:pages/admin/Notifications.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/pages/admin/Notifications.tsx",
+      "routes": [
+        "/admin/notifications"
+      ],
+      "interactions": [
+        "confirmDescription",
+        "confirmTitle",
+        "executeDelete",
+        "load",
+        "markAllRead",
+        "markOneRead",
+        "markSelectedRead",
+        "toggleSelectAllFiltered"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../../api/notifications"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:pages/admin/PageEditor.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/pages/admin/PageEditor.tsx",
+      "routes": [
+        "/admin/pages/new",
+        "/admin/pages/:id/edit"
+      ],
+      "interactions": [
+        "copyImageMarkdown",
+        "handleGenerateAiImage",
+        "handleGenerateContent",
+        "handleIdeateImagePrompts",
+        "openFrontsitePreview",
+        "requestSeo",
+        "requestSuggestions",
+        "update"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../../api/agent",
+        "../../api/pages"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:pages/admin/Pages.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/pages/admin/Pages.tsx",
+      "routes": [
+        "/admin/pages"
+      ],
+      "interactions": [
+        "load"
+      ],
+      "urlParameters": [
+        "page",
+        "q",
+        "status"
+      ],
+      "apiModules": [
+        "../../api/pages"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:pages/admin/PostEditor.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/pages/admin/PostEditor.tsx",
+      "routes": [
+        "/admin/posts/new",
+        "/admin/posts/:id/edit"
+      ],
+      "interactions": [
+        "copyImageMarkdown",
+        "handleGenerateAiImage",
+        "handleGenerateContent",
+        "handleGenerateCover",
+        "handleIdeateImagePrompts",
+        "openFrontsitePreview",
+        "requestCategory",
+        "requestSeo",
+        "requestSuggestions",
+        "requestTags",
+        "requests",
+        "restoreVersion",
+        "restored",
+        "saved",
+        "update"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../../abilities",
+        "../../api/agent",
+        "../../api/posts",
+        "../../api/site"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:pages/admin/Posts.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/pages/admin/Posts.tsx",
+      "routes": [
+        "/admin/posts"
+      ],
+      "interactions": [
+        "load"
+      ],
+      "urlParameters": [
+        "category",
+        "page",
+        "q",
+        "status",
+        "tag"
+      ],
+      "apiModules": [
+        "../../abilities",
+        "../../api/posts",
+        "../../api/site"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:pages/admin/SiteSettings.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/pages/admin/SiteSettings.tsx",
+      "routes": [
+        "/admin/settings"
+      ],
+      "interactions": [
+        "handleFaviconUpload",
+        "handleImageUpload",
+        "save",
+        "updated"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../../api/media",
+        "../../api/site",
+        "../../auth",
+        "../../components/auth/StepUpMfaModal",
+        "../../components/auth/SudoGate"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:pages/admin/Tags.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/pages/admin/Tags.tsx",
+      "routes": [
+        "/admin/tags"
+      ],
+      "interactions": [
+        "load",
+        "remove",
+        "removed",
+        "saveTag"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../../api/site"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:pages/admin/Users.tsx",
+      "app": "blog-admin",
+      "source": "blog-frontend/src/pages/admin/Users.tsx",
+      "routes": [
+        "/admin/users"
+      ],
+      "interactions": [
+        "executeConfirm",
+        "load",
+        "saveRoles",
+        "selectedRole",
+        "updateMember"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../../api/members",
+        "../../auth",
+        "../../components/auth/StepUpMfaModal",
+        "../../components/auth/SudoGate"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:App.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/App.tsx",
+      "routes": [],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [
+        "./auth",
+        "./components/auth/SudoContext"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:components/ErrorBoundary.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/components/ErrorBoundary.tsx",
+      "routes": [],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:components/auth/LoginPreview.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/components/auth/LoginPreview.tsx",
+      "routes": [],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:components/auth/LoginSurface.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/components/auth/LoginSurface.tsx",
+      "routes": [],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:components/auth/SudoContext.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/components/auth/SudoContext.tsx",
+      "routes": [],
+      "interactions": [
+        "handleClose",
+        "handleMfaSubmit",
+        "handlePasskeyStepUp"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../../auth"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:components/layout/AdminLayout.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/components/layout/AdminLayout.tsx",
+      "routes": [],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [
+        "../../auth",
+        "../../services"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:pages/AccountSettings.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/pages/AccountSettings.tsx",
+      "routes": [
+        "/account-settings",
+        "/account-settings/:tab"
+      ],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:pages/Callback.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/pages/Callback.tsx",
+      "routes": [
+        "/callback"
+      ],
+      "interactions": [
+        "handleSuccess"
+      ],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:pages/ForgotPassword.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/pages/ForgotPassword.tsx",
+      "routes": [
+        "/forgot-password"
+      ],
+      "interactions": [
+        "handleSubmit"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../auth"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:pages/Home.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/pages/Home.tsx",
+      "routes": [
+        "/"
+      ],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [
+        "../auth"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:pages/Login.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/pages/Login.tsx",
+      "routes": [
+        "/login"
+      ],
+      "interactions": [
+        "handleBackToLogin",
+        "handleLogin",
+        "handleMfaVerify",
+        "handlePasskeyLogin",
+        "handleSwitchAccount"
+      ],
+      "urlParameters": [
+        "login_hint",
+        "reason",
+        "redirect_uri"
+      ],
+      "apiModules": [
+        "../auth",
+        "../components/auth/LoginSurface",
+        "../services"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:pages/NotFound.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/pages/NotFound.tsx",
+      "routes": [
+        "*"
+      ],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:pages/ResetPassword.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/pages/ResetPassword.tsx",
+      "routes": [
+        "/reset-password"
+      ],
+      "interactions": [
+        "handleSubmit"
+      ],
+      "urlParameters": [
+        "token"
+      ],
+      "apiModules": [
+        "../auth"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:pages/SystemManagement.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/pages/SystemManagement.tsx",
+      "routes": [
+        "/system-management",
+        "/system-management/:tab"
+      ],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:pages/account-settings/EmailChangeModal.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/pages/account-settings/EmailChangeModal.tsx",
+      "routes": [
+        "/account-settings/profile"
+      ],
+      "interactions": [
+        "handleConfirmEmailChange",
+        "requestVerificationCode",
+        "updatedProfile"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../../auth"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:pages/account-settings/MFAPanel.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/pages/account-settings/MFAPanel.tsx",
+      "routes": [
+        "/account-settings/mfa"
+      ],
+      "interactions": [
+        "confirmed",
+        "handleActivateMFA",
+        "handleDisableMFA",
+        "handleEnrollMFA",
+        "handleGenerateBackupCodes"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../../components/auth/SudoContext"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:pages/account-settings/PasskeysPanel.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/pages/account-settings/PasskeysPanel.tsx",
+      "routes": [
+        "/account-settings/passkeys"
+      ],
+      "interactions": [
+        "confirmed",
+        "handleDeletePasskey",
+        "handleOpenAddPasskey",
+        "handleRegisterPasskey"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../../components/auth/SudoContext"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:pages/account-settings/PasswordPanel.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/pages/account-settings/PasswordPanel.tsx",
+      "routes": [
+        "/account-settings/password"
+      ],
+      "interactions": [
+        "handleSubmit"
+      ],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:pages/account-settings/ProfilePanel.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/pages/account-settings/ProfilePanel.tsx",
+      "routes": [
+        "/account-settings/profile"
+      ],
+      "interactions": [
+        "handleCloseEmailModal",
+        "handleSaveName",
+        "handleStartEditEmail",
+        "handleStartEditName"
+      ],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:pages/account-settings/SessionsPanel.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/pages/account-settings/SessionsPanel.tsx",
+      "routes": [
+        "/account-settings/sessions"
+      ],
+      "interactions": [
+        "confirmed",
+        "handleRevokeSession"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../../auth"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:pages/system-management/AuditLogsTab.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/pages/system-management/AuditLogsTab.tsx",
+      "routes": [
+        "/system-management/audit-logs"
+      ],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:pages/system-management/ClientsTab.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/pages/system-management/ClientsTab.tsx",
+      "routes": [
+        "/system-management/clients"
+      ],
+      "interactions": [
+        "copySecret",
+        "handleCheckboxChange",
+        "handleClientFormSubmit",
+        "handleCopyUri",
+        "handleDeleteClient",
+        "handleOpenClientModal",
+        "handleRotateSecret"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../../components/auth/SudoContext",
+        "../../services"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:pages/system-management/SiteSettingsTab.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/pages/system-management/SiteSettingsTab.tsx",
+      "routes": [
+        "/system-management/site-settings"
+      ],
+      "interactions": [
+        "load",
+        "save",
+        "update",
+        "updated"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../../components/auth/LoginPreview",
+        "../../components/auth/SudoContext",
+        "../../services"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:pages/system-management/SystemStatusTab.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/pages/system-management/SystemStatusTab.tsx",
+      "routes": [
+        "/system-management/system"
+      ],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:pages/system-management/UsersTab.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/pages/system-management/UsersTab.tsx",
+      "routes": [
+        "/system-management/users"
+      ],
+      "interactions": [
+        "handleAssignRole",
+        "handleClearLockout",
+        "handleCreateUser",
+        "handleDeleteUser",
+        "handleOpenConsentModal",
+        "handleOpenPasswordModal",
+        "handleOpenRoleModal",
+        "handleRemoveRole",
+        "handleResetPassword",
+        "handleResetUserMFA",
+        "handleRevokeConsent",
+        "handleToggleUserStatus",
+        "updated",
+        "updatedRoles"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../../components/auth/SudoContext",
+        "../../services"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:pages/system-management/audit/AuditLogDetailModal.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/pages/system-management/audit/AuditLogDetailModal.tsx",
+      "routes": [
+        "/system-management/audit"
+      ],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:pages/system-management/clients/ClientEditorModal.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/pages/system-management/clients/ClientEditorModal.tsx",
+      "routes": [
+        "/system-management/clients"
+      ],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:pages/system-management/clients/ClientSecretModal.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/pages/system-management/clients/ClientSecretModal.tsx",
+      "routes": [
+        "/system-management/clients"
+      ],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:pages/system-management/users/AssignRolesModal.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/pages/system-management/users/AssignRolesModal.tsx",
+      "routes": [
+        "/system-management/users"
+      ],
+      "interactions": [
+        "handleAddRoleSubmit"
+      ],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:pages/system-management/users/CreateUserModal.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/pages/system-management/users/CreateUserModal.tsx",
+      "routes": [
+        "/system-management/users"
+      ],
+      "interactions": [
+        "handleSubmit"
+      ],
+      "urlParameters": [],
+      "apiModules": [
+        "../../../services"
+      ],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:pages/system-management/users/ResetPasswordModal.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/pages/system-management/users/ResetPasswordModal.tsx",
+      "routes": [
+        "/system-management/users"
+      ],
+      "interactions": [
+        "handleSubmit"
+      ],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "gosso-admin:pages/system-management/users/UserConsentsModal.tsx",
+      "app": "gosso-admin",
+      "source": "gosso-admin-frontend/src/pages/system-management/users/UserConsentsModal.tsx",
+      "routes": [
+        "/system-management/users"
+      ],
+      "interactions": [],
+      "urlParameters": [],
+      "apiModules": [],
+      "permission": "preserve existing application guards and action predicates",
+      "states": [
+        "loading",
+        "empty",
+        "error",
+        "unauthorized",
+        "disabled",
+        "success"
+      ],
+      "sharedComponents": [],
+      "responsive": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:site-settings-tabs:basic",
+      "app": "blog-admin",
+      "routes": [
+        "/admin/settings"
+      ],
+      "subview": "basic",
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:site-settings-tabs:appearance",
+      "app": "blog-admin",
+      "routes": [
+        "/admin/settings"
+      ],
+      "subview": "appearance",
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:site-settings-tabs:hero",
+      "app": "blog-admin",
+      "routes": [
+        "/admin/settings"
+      ],
+      "subview": "hero",
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:site-settings-tabs:social",
+      "app": "blog-admin",
+      "routes": [
+        "/admin/settings"
+      ],
+      "subview": "social",
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:site-settings-tabs:seo",
+      "app": "blog-admin",
+      "routes": [
+        "/admin/settings"
+      ],
+      "subview": "seo",
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:ai-workspaces:overview",
+      "app": "blog-admin",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "subview": "overview",
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:ai-workspaces:inbox",
+      "app": "blog-admin",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "subview": "inbox",
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:ai-workspaces:automation",
+      "app": "blog-admin",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "subview": "automation",
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:ai-workspaces:records:agent",
+      "app": "blog-admin",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "subview": "records:agent",
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:ai-workspaces:records:workflow",
+      "app": "blog-admin",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "subview": "records:workflow",
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:ai-workspaces:advanced:agents",
+      "app": "blog-admin",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "subview": "advanced:agents",
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:ai-workspaces:advanced:skills",
+      "app": "blog-admin",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "subview": "advanced:skills",
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:ai-workspaces:advanced:tools",
+      "app": "blog-admin",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "subview": "advanced:tools",
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:ai-workspaces:advanced:knowledge",
+      "app": "blog-admin",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "subview": "advanced:knowledge",
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:ai-workspaces:advanced:providers",
+      "app": "blog-admin",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "subview": "advanced:providers",
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    },
+    {
+      "id": "blog-admin:ai-workspaces:advanced:connectors",
+      "app": "blog-admin",
+      "routes": [
+        "/admin/ai-ops"
+      ],
+      "subview": "advanced:connectors",
+      "implementation": "not-started",
+      "verification": "not-run",
+      "evidence": []
+    }
+  ]
+}

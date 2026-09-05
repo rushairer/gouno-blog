@@ -1,5 +1,5 @@
 import { riskLabel, statusLabel } from "./labels";
-import { RiskBadge, StatusIndicator } from "../ui";
+import { RiskBadge, StatusIndicator } from "@gouno/ui";
 
 export function StatusPill({
   status,

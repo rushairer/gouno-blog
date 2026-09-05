@@ -1,0 +1,55 @@
+@theme inline {
+  --font-sans: 'Inter Variable', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --color-background: var(--background); --color-foreground: var(--foreground);
+  --color-card: var(--card); --color-card-foreground: var(--foreground);
+  --color-popover: var(--popover); --color-popover-foreground: var(--foreground);
+  --color-primary: var(--primary); --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary); --color-secondary-foreground: var(--foreground);
+  --color-muted: var(--muted); --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent); --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border); --color-input: var(--input); --color-ring: var(--ring);
+  --color-destructive: var(--destructive); --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success); --color-success-subtle: var(--success-subtle);
+  --color-warning: var(--warning); --color-warning-subtle: var(--warning-subtle);
+  --color-info: var(--info); --color-info-subtle: var(--info-subtle);
+  --color-danger-subtle: var(--danger-subtle); --color-overlay: var(--overlay);
+  --color-sidebar: var(--sidebar); --color-sidebar-foreground: var(--foreground);
+  --color-sidebar-accent: var(--accent); --color-sidebar-accent-foreground: var(--accent-foreground);
+  --color-sidebar-border: var(--border); --color-sidebar-ring: var(--ring);
+  --color-sidebar-primary: var(--primary); --color-sidebar-primary-foreground: var(--primary-foreground);
+  --color-editor: var(--editor); --color-editor-foreground: var(--foreground);
+  --color-chart-1: var(--chart-1); --color-chart-2: var(--chart-2); --color-chart-3: var(--chart-3); --color-chart-4: var(--chart-4); --color-chart-5: var(--chart-5);
+  --radius-sm: 4px; --radius-md: 6px; --radius-lg: 10px; --radius-xl: 10px;
+  --shadow-sm: 0 1px 2px var(--shadow-color);
+  --shadow-lg: 0 12px 40px var(--shadow-color);
+}
+@layer base {
+  :root, [data-theme='light'] {
+    --background: #ffffff; --foreground: #18212e; --card: #ffffff; --popover: #ffffff;
+    --secondary: #f1f3f6; --muted: #f3f5f7; --muted-foreground: #596576;
+    --border: #c5ccd5; --input: #ffffff; --sidebar: #f7f8fa; --editor: #f7f8fa;
+    --success: #17633f; --success-subtle: #eaf7ef; --warning: #825400; --warning-subtle: #fff5db;
+    --destructive: #b52938; --destructive-foreground: #ffffff; --danger-subtle: #fff0f1;
+    --info: #255bab; --info-subtle: #edf4ff; --overlay: #10182780; --shadow-color: #10182720;
+    --code-keyword: #7944a0; --code-string: #17633f; --code-number: #8a481e; --code-comment: #657080;
+    --brand-hue: 257; --primary: oklch(0.48 0.15 var(--brand-hue)); --primary-foreground: #ffffff;
+    --accent: oklch(0.96 0.018 var(--brand-hue)); --accent-foreground: oklch(0.4 0.12 var(--brand-hue)); --ring: var(--primary);
+    --radius: 6px; --radius-control: 6px; --content-width: 1200px; --reading-width: 720px;
+    --chart-1: var(--primary); --chart-2: var(--success); --chart-3: var(--warning); --chart-4: var(--info); --chart-5: var(--muted-foreground);
+  }
+  [data-theme='dark'] {
+    --background: #11151b; --foreground: #edf1f7; --card: #171d25; --popover: #1c242e;
+    --secondary: #242d39; --muted: #202832; --muted-foreground: #a8b3c3;
+    --border: #485465; --input: #171d25; --sidebar: #141a22; --editor: #141a22;
+    --success: #82dbad; --success-subtle: #183329; --warning: #f0ca75; --warning-subtle: #362b18;
+    --destructive: #ffa1ab; --destructive-foreground: #35151a; --danger-subtle: #361f27;
+    --info: #a0c5ff; --info-subtle: #1c2c44; --overlay: #05080dba; --shadow-color: #00000050;
+    --code-keyword: #d3b1f2; --code-string: #82dbad; --code-number: #f0ca75; --code-comment: #9aa7b9;
+    --primary: oklch(0.76 0.11 var(--brand-hue)); --primary-foreground: #11151b;
+    --accent: oklch(0.27 0.03 var(--brand-hue)); --accent-foreground: oklch(0.83 0.07 var(--brand-hue));
+  }
+  [data-brand='blog'] { --brand-hue: 257; }
+  [data-brand='blog-admin'] { --brand-hue: 195; }
+  [data-brand='gosso-admin'] { --brand-hue: 295; }
+}

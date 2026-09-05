@@ -14,7 +14,7 @@ import {
   FormLayout,
   Input,
   Select,
-} from "../ui";
+} from "@gouno/ui";
 
 export interface ProviderFormValue {
   id?: number;

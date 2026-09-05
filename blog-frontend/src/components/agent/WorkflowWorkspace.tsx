@@ -48,7 +48,7 @@ import {
   Select,
   Textarea,
   WorkspacePanel,
-} from "../ui";
+} from "@gouno/ui";
 import { StatusPill } from "./StatusPill";
 import { statusLabel } from "./labels";
 import { WorkflowInputForm } from "./WorkflowInputForm";

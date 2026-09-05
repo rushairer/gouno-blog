@@ -1,7 +1,13 @@
 import React, { useState } from "react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+} from "react-router-dom";
 import { I18nProvider, useI18n } from "./i18n";
-import { Button, ButtonLink, ToastProvider } from "./components/ui";
+import { Button, ButtonLink, ToastProvider } from "@gouno/ui";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { GossoProvider, RequireAuth } from "@gosso/client/react";
 import { gossoClient, type BlogUserProfile, logout } from "./auth";
@@ -232,6 +238,16 @@ function StepUpPopupCallbackView() {
   );
 }
 
+function RouteBrand() {
+  const { pathname } = useLocation();
+  React.useLayoutEffect(() => {
+    document.documentElement.dataset.brand = /^\/admin(?:\/|$)/.test(pathname)
+      ? "blog-admin"
+      : "blog";
+  }, [pathname]);
+  return null;
+}
+
 export default function App() {
   useSiteMetadata();
   if (typeof window !== "undefined") {
@@ -264,6 +280,7 @@ export default function App() {
         <ToastProvider>
           <ErrorBoundary>
             <BrowserRouter>
+              <RouteBrand />
               <Routes>
                 <Route
                   path="/"

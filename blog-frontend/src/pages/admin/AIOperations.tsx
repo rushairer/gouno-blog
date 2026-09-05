@@ -54,7 +54,7 @@ import {
   Tabs,
   ToastProvider,
   useToast,
-} from "../../components/ui";
+} from "@gouno/ui";
 import { useI18n } from "../../i18n";
 import "../../styles/agent-console.css";
 
@@ -657,7 +657,7 @@ function AgentConsoleContent() {
         onValueChange={(value) => selectTab(value as ConsoleTab)}
         id="agent-workspace"
       >
-        <TabList label={t("agent.title")}>
+        <TabList aria-label={t("agent.title")}>
           {tabs.map(([value, Icon, label]) => (
             <Tab key={value} value={value}>
               <Icon aria-hidden="true" />
@@ -717,7 +717,9 @@ function AgentConsoleContent() {
             {tab === "records" ? (
               <div className="records-hub section-stack">
                 <SubnavTabs
-                  label={locale === "zh" ? "运行中心类型" : "Run center type"}
+                  aria-label={
+                    locale === "zh" ? "运行中心类型" : "Run center type"
+                  }
                   value={recordType}
                   onValueChange={(value) => {
                     const next = value as typeof recordType;

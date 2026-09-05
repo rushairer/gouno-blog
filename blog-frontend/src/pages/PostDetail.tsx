@@ -37,7 +37,7 @@ import {
   Modal,
   Panel,
   Textarea,
-} from "../components/ui";
+} from "@gouno/ui";
 import { useI18n } from "../i18n";
 import { useArticleSEO } from "../utils/seo";
 import { MarkdownRenderer } from "../components/MarkdownRenderer";

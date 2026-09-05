@@ -42,7 +42,7 @@ import {
   Select,
   SubnavTabs,
   WorkspacePanel,
-} from "../ui";
+} from "@gouno/ui";
 
 export type AdvancedSection =
   | "agents"
@@ -164,7 +164,7 @@ export function AdvancedWorkspace({
   return (
     <>
       <SubnavTabs
-        label={labels.advanced}
+        aria-label={labels.advanced}
         value={advancedSection}
         onValueChange={(value) => onSelectSection(value as AdvancedSection)}
         items={[

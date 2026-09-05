@@ -18,7 +18,7 @@ import {
   TableContainer,
   TableSkeleton,
   useToast,
-} from "../../components/ui";
+} from "@gouno/ui";
 import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
 import { CategoryForm } from "../../components/taxonomy/CategoryForm";
 import type { CategoryFormValue } from "../../components/taxonomy/CategoryForm";

@@ -31,7 +31,7 @@ import {
   Textarea,
   useToast,
   WorkspacePanel,
-} from "../../components/ui";
+} from "@gouno/ui";
 import { DEFAULT_SITE_SETTINGS } from "../../config/site-defaults";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 import type { SiteSettings } from "../../types/blog";
@@ -207,7 +207,7 @@ export default function AdminSiteSettings() {
           onValueChange={(v) => setActiveTab(v as SettingsTab)}
           id="site-settings"
         >
-          <TabList label="站点设置">
+          <TabList aria-label="站点设置">
             <Tab value="basic">
               <FileText aria-hidden="true" />
               <span>基础信息</span>

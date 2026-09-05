@@ -2,7 +2,7 @@ import { Play, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { workflowApi } from "../../api/workflows";
 import type { Workflow } from "../../types/agent";
-import { Button, Feedback, Modal, Select } from "../ui";
+import { Button, Feedback, Modal, Select } from "@gouno/ui";
 import { WorkflowInputForm } from "./WorkflowInputForm";
 
 function resourceField(workflow: Workflow, type: string): string | undefined {

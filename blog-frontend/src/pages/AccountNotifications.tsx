@@ -10,7 +10,7 @@ import {
   LoadingState,
   PageHeader,
   Panel,
-} from "../components/ui";
+} from "@gouno/ui";
 import { usePageTitle } from "../hooks/usePageTitle";
 
 import { useI18n } from "../i18n";

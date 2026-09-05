@@ -28,7 +28,7 @@ import {
   TableContainer,
   TableSkeleton,
   useToast,
-} from "../../components/ui";
+} from "@gouno/ui";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 import { useAbility } from "../../abilities";
 import type { Category, Post } from "../../types/blog";

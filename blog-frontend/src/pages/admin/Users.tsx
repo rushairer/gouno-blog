@@ -27,7 +27,7 @@ import {
   Modal,
   TableContainer,
   useToast,
-} from "../../components/ui";
+} from "@gouno/ui";
 import { StepUpMfaModal } from "../../components/auth/StepUpMfaModal";
 import { SudoGate } from "../../components/auth/SudoGate";
 import { useAdminGuard } from "../../hooks/useAdminGuard";

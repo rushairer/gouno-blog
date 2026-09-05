@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import PostEditor from "../PostEditor";
-import { ToastProvider } from "../../../components/ui";
+import { ToastProvider } from "@gouno/ui";
 import { postsApi } from "../../../api/posts";
 import { siteApi } from "../../../api/site";
 import type { Post } from "../../../types/blog";

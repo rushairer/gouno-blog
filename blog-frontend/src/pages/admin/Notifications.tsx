@@ -30,7 +30,7 @@ import {
   Select,
   TableSkeleton,
   useToast,
-} from "../../components/ui";
+} from "@gouno/ui";
 import { cn } from "../../lib/utils";
 
 type DeleteAction =
@@ -212,7 +212,7 @@ export default function AdminNotifications() {
 
     let icon = <Bell className="h-4 w-4" />;
     let tag = "系统通知";
-    let tone: "info" | "warning" | "primary" = "info";
+    let tone: "info" | "warning" | "brand" = "info";
     let iconBg = "bg-sky-500/10 text-sky-400";
 
     if (isWorkflow) {
@@ -228,7 +228,7 @@ export default function AdminNotifications() {
     } else if (item.type === "comment_reply" || item.type === "comment") {
       icon = <MessageSquare className="h-4 w-4" />;
       tag = "评论互动";
-      tone = "primary";
+      tone = "brand";
       iconBg = "bg-violet-500/10 text-violet-400";
     }
 

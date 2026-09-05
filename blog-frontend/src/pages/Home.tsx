@@ -1,360 +1,184 @@
-import { useEffect, useState } from "react";
-import { ArrowRight, GitBranch, Mail, Rss } from "lucide-react";
 import { Link } from "react-router-dom";
+import { ArrowRight, GitBranch, Mail, Rss } from "lucide-react";
 import {
   Button,
   EmptyState,
   Feedback,
   SectionHeading,
-  Skeleton,
-} from "../components/ui";
-import {
-  authorInitials,
-  DEFAULT_SITE_SETTINGS,
-  getCachedSiteSettings,
-} from "../config/site-defaults";
-import { postsApi } from "../api/posts";
-import { siteApi } from "../api/site";
-import { markdownToPlainText } from "../utils/markdown";
-import { usePageTitle } from "../hooks/usePageTitle";
-import type { Category, Post, SiteSettings } from "../types/blog";
-import type { TagSummary } from "../api/site";
-
-const readTime = (post: Post) =>
-  Math.max(3, Math.ceil((post.content?.length || post.summary.length) / 500));
-
-function Story({
-  post,
-  index,
-  featured = false,
-}: {
-  post: Post;
-  index: number;
-  featured?: boolean;
-}) {
-  return (
-    <article
-      className={`editorial-story ${featured ? "editorial-story--featured" : ""}`}
-    >
-      <span className="story-index">{String(index).padStart(2, "0")}</span>
-      <div className="story-body">
-        {post.cover_url ? (
-          <Link
-            className="story-cover-link"
-            to={`/articles/${post.slug}`}
-            tabIndex={-1}
-            aria-hidden="true"
-          >
-            <img
-              className="story-cover"
-              src={post.cover_url}
-              alt={post.cover_alt || post.title}
-              loading="lazy"
-            />
-          </Link>
-        ) : null}
-        <div>
-          <Link to={`/articles/${post.slug}`}>
-            <h3>{post.title}</h3>
-          </Link>
-          <p>{markdownToPlainText(post.summary)}</p>
-          <div className="story-meta">
-            <time>
-              {new Date(
-                post.published_at || post.created_at,
-              ).toLocaleDateString("zh-CN")}
-            </time>
-            <span>{readTime(post)} 分钟阅读</span>
-            {post.tags.slice(0, 2).map((tag) => (
-              <Link key={tag} to={`/tags/${encodeURIComponent(tag)}`}>
-                {tag}
-              </Link>
-            ))}
-          </div>
-          <Link className="text-action" to={`/articles/${post.slug}`}>
-            阅读文章 <ArrowRight />
-          </Link>
-        </div>
-      </div>
-    </article>
-  );
-}
-
+  ArticleListSkeleton,
+} from "@gouno/ui";
+import { DEFAULT_SITE_SETTINGS, authorInitials } from "../config/site-defaults";
+import { ArticleTeaser } from "../components/reading/ArticleTeaser";
+import { usePublicHome } from "../features/public/usePublicHome";
 export default function Home() {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [tagSummaries, setTagSummaries] = useState<TagSummary[]>([]);
-  const [site, setSite] = useState<SiteSettings>(
-    () => getCachedSiteSettings() || DEFAULT_SITE_SETTINGS,
-  );
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [reloadKey, setReloadKey] = useState(0);
-  const handleRetry = () => setReloadKey((k) => k + 1);
-
-  usePageTitle("", {
-    brand: site.site_title,
-    subtitle: site.site_description || site.default_seo_description,
-  });
-
-  useEffect(() => {
-    setLoading(true);
-    Promise.all([
-      postsApi.getPosts(new URLSearchParams({ page: "1", pageSize: "12" })),
-      siteApi.getCategories().catch(() => []),
-      siteApi.getPublishedTagSummaries().catch(() => []),
-      siteApi.getSiteSettings().catch(() => DEFAULT_SITE_SETTINGS),
-    ])
-      .then(([postData, categoryData, tagData, siteData]) => {
-        setPosts(postData.list || []);
-        setCategories(categoryData || []);
-        setTagSummaries(tagData || []);
-        setSite({ ...DEFAULT_SITE_SETTINGS, ...siteData });
-        setError("");
-      })
-      .catch((reason: Error) => setError(reason.message))
-      .finally(() => setLoading(false));
-  }, [reloadKey]);
-
-  if (loading)
-    return (
-      <div
-        className="public-container home-skeleton"
-        role="status"
-        aria-label="正在加载内容…"
-      >
-        <div className="home-skeleton__hero">
-          <Skeleton variant="text" height={42} width="55%" />
-          <Skeleton variant="text" height={20} width="80%" />
-          <Skeleton variant="rectangular" height={220} width="100%" />
-        </div>
-        <div className="home-skeleton__list">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="home-skeleton__item">
-              <Skeleton variant="text" height={24} width="70%" />
-              <Skeleton variant="text" height={16} width="95%" />
-              <Skeleton variant="text" height={14} width="35%" />
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-
-  const lead = posts[0];
-  const featuredPosts = posts.slice(1, 5);
+  const { posts, categories, tagSummaries, site, loading, error, handleRetry } =
+    usePublicHome();
+  if (loading) return <ArticleListSkeleton />;
   return (
-    <>
-      <section className="home-hero public-container">
-        <div className="home-hero-copy">
-          <h1 className="whitespace-pre-line">
+    <div className="flex flex-col gap-12 md:gap-16">
+      <section className="grid items-center gap-8 border-b pb-10 md:grid-cols-[minmax(0,1fr)_320px]">
+        <div>
+          <h1 className="max-w-3xl whitespace-pre-line text-3xl font-semibold leading-tight tracking-tight md:text-[40px]">
             {site.hero_title || DEFAULT_SITE_SETTINGS.hero_title}
           </h1>
-          <p>
+          <p className="mt-5 max-w-2xl text-base leading-8 text-muted-foreground">
             {site.hero_description ?? DEFAULT_SITE_SETTINGS.hero_description}
           </p>
-          {lead ? <Story post={lead} index={1} featured /> : null}
         </div>
         {site.hero_image_url ? (
-          <figure className="system-art">
+          <figure>
             <img
               src={site.hero_image_url}
               alt={
                 site.hero_image_caption || "由模块、关系与路径组成的抽象系统图"
               }
+              className="aspect-[4/3] w-full rounded-lg object-cover"
             />
             {site.hero_image_caption ? (
-              <span className="art-caption">{site.hero_image_caption}</span>
+              <figcaption className="mt-2 text-xs text-muted-foreground">
+                {site.hero_image_caption}
+              </figcaption>
             ) : null}
           </figure>
         ) : null}
       </section>
-
-      <div className="public-container">
-        {error ? (
-          <div className="error-retry-banner">
-            <Feedback type="error">{error}</Feedback>
-            <Button variant="secondary" size="compact" onClick={handleRetry}>
-              重试
-            </Button>
-          </div>
-        ) : null}
-        {!error && posts.length === 0 ? (
-          <EmptyState label="这里还没有文章。完成第一篇写作后，它会成为首页主角。" />
-        ) : null}
-        {featuredPosts.length ? (
-          <section className="home-section">
-            <SectionHeading
-              title="精选文章"
-              action={
-                <Link to="/articles">
-                  查看全部 <ArrowRight />
-                </Link>
-              }
-            />
-            <div
-              className={`featured-layout featured-layout--${featuredPosts.length}`}
-            >
-              {featuredPosts.length < 3 ? (
-                featuredPosts.map((post, index) => (
-                  <Story
-                    key={post.id}
-                    post={post}
-                    index={index + 2}
-                    featured={featuredPosts.length === 1}
-                  />
-                ))
-              ) : featuredPosts.length === 3 ? (
-                <>
-                  <Story post={featuredPosts[0]} index={2} featured />
-                  <div className="featured-layout__secondary">
-                    {featuredPosts.slice(1).map((post, index) => (
-                      <Story key={post.id} post={post} index={index + 3} />
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="featured-layout__column">
-                    {featuredPosts.slice(0, 2).map((post, index) => (
-                      <Story key={post.id} post={post} index={index + 2} />
-                    ))}
-                  </div>
-                  <div className="featured-layout__secondary">
-                    {featuredPosts.slice(2).map((post, index) => (
-                      <Story key={post.id} post={post} index={index + 4} />
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          </section>
-        ) : null}
-
-        {posts.length > 0 ? (
-          <section className="home-section">
-            <SectionHeading title="最新文章" />
-            <div className="latest-table" role="list">
-              {posts.slice(0, 8).map((post) => (
-                <article key={post.id} role="listitem">
-                  <div className="latest-table-main">
-                    {post.cover_url ? (
-                      <Link
-                        className="latest-table-cover-link"
-                        to={`/articles/${post.slug}`}
-                        tabIndex={-1}
-                        aria-hidden="true"
-                      >
-                        <img
-                          className="latest-table-cover"
-                          src={post.cover_url}
-                          alt={post.cover_alt || post.title}
-                          loading="lazy"
-                        />
-                      </Link>
-                    ) : null}
-                    <div>
-                      <Link to={`/articles/${post.slug}`}>
-                        <h3>{post.title}</h3>
-                      </Link>
-                      <p>{markdownToPlainText(post.summary)}</p>
-                    </div>
-                  </div>
-                  <time>
-                    {new Date(
-                      post.published_at || post.created_at,
-                    ).toLocaleDateString("zh-CN")}
-                  </time>
-                  <span>{readTime(post)} 分钟</span>
-                  <div>
-                    {post.tags.slice(0, 3).map((tag) => (
-                      <Link key={tag} to={`/tags/${encodeURIComponent(tag)}`}>
-                        {tag}
-                      </Link>
-                    ))}
-                  </div>
-                </article>
+      {error ? (
+        <div className="flex flex-col gap-3">
+          <Feedback type="error">{error}</Feedback>
+          <Button onClick={handleRetry}>重试</Button>
+        </div>
+      ) : null}
+      {!error && !posts.length ? (
+        <EmptyState label="这里还没有文章。完成第一篇写作后，它会成为首页主角。" />
+      ) : null}
+      <div className="grid items-start gap-12 lg:grid-cols-[minmax(0,1fr)_240px]">
+        <div className="min-w-0">
+          {posts[0] ? <ArticleTeaser post={posts[0]} featured /> : null}
+          {posts.length > 1 ? (
+            <section className="mt-10">
+              <SectionHeading
+                title="精选文章"
+                action={
+                  <Link
+                    className="inline-flex items-center gap-2 text-sm text-primary"
+                    to="/articles"
+                  >
+                    查看全部
+                    <ArrowRight className="size-4" />
+                  </Link>
+                }
+              />
+              {posts.slice(1, 5).map((post) => (
+                <ArticleTeaser post={post} key={post.id} />
               ))}
-            </div>
-          </section>
-        ) : null}
-
-        {categories.length || tagSummaries.length ? (
-          <section className="home-section topic-index">
-            <SectionHeading title="主题索引" />
-            <div className="topic-columns">
+            </section>
+          ) : null}
+        </div>
+        <aside className="flex flex-col gap-8 lg:sticky lg:top-24">
+          {categories.length || tagSummaries.length ? (
+            <section>
+              <h2 className="mb-5 text-sm font-semibold">主题索引</h2>
               {categories.length ? (
-                <div>
-                  <h3>核心分类</h3>
-                  {categories.map((category, index) => (
+                <div className="flex flex-col gap-3">
+                  <h3 className="text-xs text-muted-foreground">核心分类</h3>
+                  {categories.map((category) => (
                     <Link
+                      className="flex items-center justify-between gap-3 text-sm hover:text-primary"
                       key={category.id}
                       to={`/categories/${encodeURIComponent(category.slug)}`}
                     >
                       <span>{category.name}</span>
-                      <strong>
-                        {String(index + 1).padStart(2, "0")} ·{" "}
+                      <span className="text-xs tabular-nums text-muted-foreground">
                         {category.post_count || 0} 篇
-                      </strong>
+                      </span>
                     </Link>
                   ))}
                 </div>
               ) : null}
               {tagSummaries.length ? (
-                <div>
-                  <h3>热门标签</h3>
-                  <div className="tag-cloud">
+                <div className="mt-6">
+                  <h3 className="mb-3 text-xs text-muted-foreground">
+                    热门标签
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
                     {tagSummaries.slice(0, 16).map(({ name, post_count }) => (
-                      <Link key={name} to={`/tags/${encodeURIComponent(name)}`}>
-                        {name}
-                        <sup>{post_count}</sup>
+                      <Link
+                        key={name}
+                        to={`/tags/${encodeURIComponent(name)}`}
+                        className="rounded-md bg-muted px-2 py-1 text-xs hover:bg-accent"
+                      >
+                        {name}{" "}
+                        <span className="text-muted-foreground">
+                          {post_count}
+                        </span>
                       </Link>
                     ))}
                   </div>
                 </div>
               ) : null}
+            </section>
+          ) : null}
+          <section className="border-t pt-6">
+            <span className="mb-4 flex size-10 items-center justify-center rounded-md bg-accent font-semibold text-primary">
+              {authorInitials(site.author_name)}
+            </span>
+            <h2 className="font-semibold">{site.author_name}</h2>
+            <p className="mt-2 text-sm leading-7 text-muted-foreground">
+              {site.author_bio}
+            </p>
+            <div className="mt-4 flex flex-wrap gap-4 text-sm text-primary">
+              <Link to="/about">关于本站</Link>
+              {site.github_url ? (
+                <a
+                  className="inline-flex items-center gap-1"
+                  href={site.github_url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <GitBranch className="size-4" />
+                  GitHub
+                </a>
+              ) : null}
             </div>
           </section>
-        ) : null}
-
-        <section className="author-section">
-          <div className="author-monogram">
-            {authorInitials(site.author_name)}
-          </div>
-          <div>
-            <h2>{site.author_name}</h2>
-            <p>{site.author_bio}</p>
-          </div>
-          <div className="author-links">
-            <Link to="/about">
-              关于本站 <ArrowRight />
-            </Link>
-            {site.github_url ? (
-              <a href={site.github_url} target="_blank" rel="noreferrer">
-                <GitBranch /> GitHub
-              </a>
-            ) : null}
+        </aside>
+      </div>
+      {posts.length ? (
+        <section>
+          <SectionHeading title="最新文章" />
+          <div className="grid gap-x-10 md:grid-cols-2">
+            {posts.slice(0, 8).map((post) => (
+              <ArticleTeaser key={post.id} post={post} compact />
+            ))}
           </div>
         </section>
-      </div>
-
-      <section className="subscribe-strip">
-        <div className="public-container">
-          <div>
-            <h2>订阅更新</h2>
-            <p>每当有新文章发布，都可以通过你熟悉的方式收到。</p>
-          </div>
-          <div>
-            <a href={site.rss_url || "/feed.xml"}>
-              <Rss /> RSS
+      ) : null}
+      <section className="flex flex-col justify-between gap-5 border-t pt-8 sm:flex-row sm:items-center">
+        <div>
+          <h2 className="text-lg font-semibold">订阅更新</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            每当有新文章发布，都可以通过你熟悉的方式收到。
+          </p>
+        </div>
+        <div className="flex gap-5 text-sm text-primary">
+          <a
+            className="inline-flex items-center gap-2"
+            href={site.rss_url || "/feed.xml"}
+          >
+            <Rss className="size-4" />
+            RSS
+          </a>
+          {site.email ? (
+            <a
+              className="inline-flex items-center gap-2"
+              href={`mailto:${site.email}`}
+            >
+              <Mail className="size-4" />
+              Email
             </a>
-            {site.email ? (
-              <a href={`mailto:${site.email}`}>
-                <Mail /> Email
-              </a>
-            ) : null}
-          </div>
+          ) : null}
         </div>
       </section>
-    </>
+    </div>
   );
 }

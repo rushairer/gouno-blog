@@ -7,7 +7,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "../../../components/ui";
+import { ToastProvider } from "@gouno/ui";
 import MediaLibrary from "../MediaLibrary";
 
 vi.mock("@gosso/client/react", async (importOriginal) => ({

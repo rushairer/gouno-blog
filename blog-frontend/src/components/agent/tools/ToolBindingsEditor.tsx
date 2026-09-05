@@ -1,7 +1,7 @@
 import { Code2, FormInput, Sliders } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { ToolDefinition } from "../../../types/agent";
-import { Button, Field, Textarea } from "../../ui";
+import { Button, Field, Textarea } from "@gouno/ui";
 import { DEFAULT_RSS_FEEDS, RssFetchConfig } from "./RssFetchConfig";
 import type { RssFetchBinding } from "./RssFetchConfig";
 import { StalePostsConfig } from "./StalePostsConfig";

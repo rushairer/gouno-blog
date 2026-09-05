@@ -7,7 +7,7 @@ import rehypeHighlight from "rehype-highlight";
 import { Check, Copy } from "lucide-react";
 import { useI18n } from "../i18n";
 import { markdownHeadingID } from "../utils/markdown";
-import { Button } from "./ui";
+import { Button } from "@gouno/ui";
 
 function textContent(value: ReactNode): string {
   if (typeof value === "string" || typeof value === "number")

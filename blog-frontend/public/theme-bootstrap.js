@@ -1,10 +1,5 @@
 (() => {
   try {
-    const rawTheme = localStorage.getItem("gouno-blog:theme");
-    if (rawTheme === "dark") {
-      document.documentElement.dataset.theme = "dark";
-    }
-
     const rawSettings = localStorage.getItem("gouno-blog:site-settings");
     if (!rawSettings) return;
 

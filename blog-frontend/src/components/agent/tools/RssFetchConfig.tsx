@@ -1,5 +1,5 @@
 import { Plus, Rss, Sparkles, Trash2 } from "lucide-react";
-import { Button, Field, Input } from "../../ui";
+import { Button, Field, Input } from "@gouno/ui";
 
 export interface RssFeedItem {
   name: string;

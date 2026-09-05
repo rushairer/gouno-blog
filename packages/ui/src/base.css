@@ -1,0 +1,25 @@
+@font-face { font-family: 'Inter Variable'; font-style: normal; font-weight: 100 900; font-display: swap; src: url('./fonts/inter-latin-wght-normal.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url('./fonts/jetbrains-mono-latin-400-normal.woff2') format('woff2'); }
+@layer base {
+  * { border-color: var(--border); }
+  html { color-scheme: light dark; scroll-padding-top: 80px; }
+  body { margin: 0; background: var(--background); color: var(--foreground); font-family: var(--font-sans); font-size: 14px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  body, #root { min-height: 100vh; }
+  button, input, select, textarea { font: inherit; }
+  button:not(:disabled), [role='button']:not([aria-disabled='true']) { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
+  ::selection { background: var(--accent); color: var(--accent-foreground); }
+  img { max-width: 100%; }
+  pre, code, kbd { font-family: var(--font-mono); }
+  th { text-align: start; }
+  [data-slot='table-head'] { color: var(--muted-foreground); }
+  [data-slot='table-cell'], [data-slot='table-head'] { padding: 12px 16px; }
+  [data-slot='table-row']:hover { background: var(--muted); }
+  [data-slot='dialog-overlay'], [data-slot='sheet-overlay'], [data-slot='alert-dialog-overlay'] { background: var(--overlay); }
+  [data-slot='dialog-content'], [data-slot='sheet-content'] { max-height: 92dvh; overflow-y: auto; }
+  [data-slot='dialog-content'] { width: calc(100% - 32px); }
+  [data-slot='button'] { border-radius: var(--radius-control); }
+  [data-slot='button'] svg { width: 16px; height: 16px; flex-shrink: 0; }
+  @media (max-width: 767px) { [data-slot='button'], [data-slot='input'], [data-slot='select-trigger'] { min-height: 44px; } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s; transition-duration: 0s; scroll-behavior: auto; } }
+}

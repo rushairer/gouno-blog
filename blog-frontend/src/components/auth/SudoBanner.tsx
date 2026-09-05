@@ -1,6 +1,6 @@
 import { ShieldAlert, ShieldCheck, Sparkles } from "lucide-react";
 import { useSudoMode } from "../../hooks/useSudoMode";
-import { Button } from "../ui";
+import { Button } from "@gouno/ui";
 
 export interface SudoBannerProps {
   className?: string;

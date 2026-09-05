@@ -10,7 +10,7 @@ import { pagesApi } from "../api/pages";
 import { siteApi } from "../api/site";
 import { extractMarkdownTOC } from "../utils/markdown";
 import type { CustomPage, SiteSettings } from "../types/blog";
-import { Banner } from "../components/ui";
+import { Banner } from "@gouno/ui";
 import NotFound from "./NotFound";
 
 export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {

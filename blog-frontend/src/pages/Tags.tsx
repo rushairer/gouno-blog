@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { EmptyState, LoadingState } from "../components/ui";
+import { EmptyState, LoadingState } from "@gouno/ui";
 import { postsApi } from "../api/posts";
 import { siteApi } from "../api/site";
 import { usePageTitle } from "../hooks/usePageTitle";

@@ -6,7 +6,7 @@ import {
   Feedback,
   PageHeader,
   Panel,
-} from "../components/ui";
+} from "@gouno/ui";
 import { useI18n } from "../i18n";
 import { usePageTitle } from "../hooks/usePageTitle";
 

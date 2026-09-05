@@ -37,7 +37,7 @@ import {
   TableSkeleton,
   ToastProvider,
   useToast,
-} from "../ui";
+} from "@gouno/ui";
 
 describe("shared UI primitives", () => {
   it("connects Field labels, hints, errors, and required state to its control", () => {

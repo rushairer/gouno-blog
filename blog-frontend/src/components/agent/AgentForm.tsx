@@ -19,7 +19,7 @@ import {
   FormLayout,
   Input,
   Select,
-} from "../ui";
+} from "@gouno/ui";
 
 type AgentFormValue = Omit<
   Agent,

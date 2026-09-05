@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiFetch } from "../../../auth";
-import { ToastProvider } from "../../../components/ui";
+import { ToastProvider } from "@gouno/ui";
 import Tags from "../Tags";
 
 vi.mock("../../../auth", async () => {

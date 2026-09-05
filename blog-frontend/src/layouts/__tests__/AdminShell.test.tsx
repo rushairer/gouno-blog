@@ -3,7 +3,7 @@ import { MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AdminShell from "../AdminShell";
 import AdminUsers from "../../pages/admin/Users";
-import { ToastProvider } from "../../components/ui";
+import { ToastProvider } from "@gouno/ui";
 
 const { logoutMock } = vi.hoisted(() => ({ logoutMock: vi.fn() }));
 

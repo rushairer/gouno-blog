@@ -4,7 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AdminNotifications from "../Notifications";
 import { apiFetch } from "../../../auth";
-import { ToastProvider } from "../../../components/ui";
+import { ToastProvider } from "@gouno/ui";
 
 vi.mock("../../../auth", async () => {
   const apiFetch = vi.fn();

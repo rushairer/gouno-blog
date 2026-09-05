@@ -1,7 +1,7 @@
 import { LoaderCircle } from "lucide-react";
 import type { ArticleImagePreview } from "../../api/operations";
 import type { MediaCandidate } from "../../types/agent";
-import { Button, Checkbox, Input, Select, Textarea } from "../ui";
+import { Button, Checkbox, Input, Select, Textarea } from "@gouno/ui";
 
 function elapsed(start?: string, now = Date.now()): string {
   if (!start) return "-";

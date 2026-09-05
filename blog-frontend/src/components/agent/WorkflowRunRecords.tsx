@@ -18,7 +18,7 @@ import {
   IconButton,
   Select,
   WorkspacePanel,
-} from "../ui";
+} from "@gouno/ui";
 import { ArticlePreviewModal } from "./ArticlePreviewModal";
 import { StatusPill } from "./StatusPill";
 import { WorkflowRunDetail } from "./WorkflowRunDetail";

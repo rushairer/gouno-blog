@@ -8,7 +8,7 @@ import {
   Input,
   OverlayForm,
   Textarea,
-} from "../ui";
+} from "@gouno/ui";
 
 export function MediaUploadForm({
   file,

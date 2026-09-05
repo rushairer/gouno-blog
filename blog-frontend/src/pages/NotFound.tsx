@@ -2,7 +2,7 @@ import { BookOpen, FileText, FolderTree, Home, Search } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useI18n } from "../i18n";
 import { usePageTitle } from "../hooks/usePageTitle";
-import { Button, Input } from "../components/ui";
+import { Button, Input } from "@gouno/ui";
 
 export default function NotFound() {
   const navigate = useNavigate();

@@ -36,7 +36,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "../../components/ui";
+} from "@gouno/ui";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 import { useAbility } from "../../abilities";
 
@@ -412,7 +412,7 @@ export default function Dashboard() {
                         每日页面访问量分布
                       </p>
                     </div>
-                    <Badge tone="primary" pill>
+                    <Badge tone="brand" pill>
                       近 30 天
                     </Badge>
                   </div>

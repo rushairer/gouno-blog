@@ -3,7 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import PageEditor from "../PageEditor";
-import { ToastProvider } from "../../../components/ui";
+import { ToastProvider } from "@gouno/ui";
 import { pagesApi } from "../../../api/pages";
 import type { CustomPage } from "../../../types/blog";
 import { GossoProvider } from "@gosso/client/react";

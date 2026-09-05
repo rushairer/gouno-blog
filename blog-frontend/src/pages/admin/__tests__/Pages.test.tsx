@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import AdminPages from "../Pages";
-import { ToastProvider } from "../../../components/ui";
+import { ToastProvider } from "@gouno/ui";
 import { pagesApi } from "../../../api/pages";
 import type { PaginatedPages } from "../../../types/blog";
 import { GossoProvider } from "@gosso/client/react";

@@ -25,7 +25,7 @@ import {
   TableContainer,
   TableSkeleton,
   useToast,
-} from "../../components/ui";
+} from "@gouno/ui";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 import { pagesApi } from "../../api/pages";
 import type { CustomPage } from "../../types/blog";
@@ -285,9 +285,7 @@ export default function AdminPages() {
                         <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground">{`/${p.slug}`}</code>
                       </td>
                       <td>
-                        <Badge tone="secondary">
-                          {p.template || "default"}
-                        </Badge>
+                        <Badge tone="neutral">{p.template || "default"}</Badge>
                       </td>
                       <td>
                         {p.show_in_nav ? (
