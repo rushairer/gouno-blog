@@ -62,6 +62,7 @@ export function ThemeProvider({
   );
   const resolvedMode = resolveMode(mode, systemDark);
   useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
     const query = window.matchMedia("(prefers-color-scheme: dark)");
     const update = () => setSystemDark(query.matches);
     const storage = (event: StorageEvent) => {

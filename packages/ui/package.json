@@ -30,8 +30,9 @@
     "build": "tsc -p tsconfig.build.json && node scripts/assets.mjs",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "dev": "vite --host 127.0.0.1",
-    "showcase:build": "vite build",
-    "test": "vitest run"
+    "showcase:build": "vite build --config showcase/vite.config.ts",
+    "showcase:dev": "vite --config showcase/vite.config.ts",
+    "test": "vitest run --environment jsdom"
   },
   "peerDependencies": {
     "react": "^19.2.0",

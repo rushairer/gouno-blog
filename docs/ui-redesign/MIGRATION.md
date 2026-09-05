@@ -2,6 +2,15 @@
 
 The JSON ledger is authoritative. Implementation and real browser verification are tracked independently. No production data or credentials belong in evidence.
 
+## Baseline evidence (2026-09-05)
+
+- `@gouno/ui`: `npm run typecheck`, `npm run build`, `npm test` (2 tests) and `npm run showcase:build` pass.
+- `blog-frontend`: formatting, UI-contract, CSS-cascade checks, TypeScript, 160 tests and production build pass. The quality command is blocked by the existing global branch-coverage threshold (44.58%, required 45%).
+- `gosso-admin-frontend`: formatting, UI-contract, CSS-cascade checks, TypeScript, 108 tests and production build pass (existing non-blocking lint/Vite warnings only).
+- `packages/ui/showcase`: standalone component showcase is available via `npm run showcase:dev` or `npm run showcase:build`.
+
+Automated checks do not replace authenticated browser regression. Entries remain `not-run` until the corresponding route, permission state, responsive width and light/dark mode have captured evidence.
+
 | Surface | Routes / subview | Implementation | Verification |
 | --- | --- | --- | --- |
 | blog:App.tsx |  | not-started | not-run |
