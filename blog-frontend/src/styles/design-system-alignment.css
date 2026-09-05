@@ -525,7 +525,7 @@
   .toast-item {
     pointer-events: auto;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 10px;
     padding: 12px 14px;
     border-radius: var(--radius-control);
@@ -534,6 +534,31 @@
     box-shadow: var(--ds-panel-shadow-hover);
     color: var(--ds-text-primary);
     font-size: 13.5px;
+  }
+
+  .toast > svg,
+  .toast__icon,
+  .toast-item__icon {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+  }
+
+  .toast span,
+  .toast__message,
+  .toast-item__message {
+    flex: 1;
+    min-width: 0;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+
+  .toast .icon-button,
+  .toast__close,
+  .toast-item__close,
+  .toast button {
+    margin-left: auto;
+    flex-shrink: 0;
   }
 
   /* Table Pagination alignment */

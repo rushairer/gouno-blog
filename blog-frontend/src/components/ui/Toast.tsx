@@ -60,13 +60,16 @@ export function Toast({
         toast.tone === "error" || toast.tone === "warning" ? "alert" : "status"
       }
     >
-      {toastIcons[toast.tone]}
-      <span>{toast.message}</span>
+      <span className="toast__icon" aria-hidden="true">
+        {toastIcons[toast.tone]}
+      </span>
+      <span className="toast__message">{toast.message}</span>
       <IconButton
         label="关闭提示"
         icon={<X />}
         size="compact"
         variant="ghost"
+        className="toast__close"
         onClick={() => onDismiss(toast.id)}
       />
     </div>
