@@ -50,4 +50,4 @@ go run ./cmd identity-backfill approve --config_path ./config --env development 
 python3 scripts/check-db-integration.py
 ```
 
-在仓库根目录执行。全门禁不会因身份回归通过而忽略其他失败；当前 Workflow 剩余失败见 [Q01b](tasks/Q01b-workflow-iterations.md)。本任务没有执行推送、发布或任何现存实例升级。
+在仓库根目录执行。全门禁不会因身份回归通过而忽略其他失败；原 Workflow 失败已由 [Q01b](tasks/Q01b-workflow-iterations.md) 修复并通过全门禁。本任务没有执行推送、发布或任何现存实例升级。

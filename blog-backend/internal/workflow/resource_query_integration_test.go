@@ -191,7 +191,7 @@ func TestForEachCanAggregatePartialFailures(t *testing.T) {
 		{"id": "result", "type": "output", "output_pointer": "/steps/batch"},
 	})
 	t.Cleanup(func() { cleanupResourceQueryFixture(t, ctx, db, workflowID, versionID, 0) })
-	service := &Service{db: db}
+	service := &Service{db: db, agents: agentservice.NewManagementService(repository.NewAgentRepository(db), nil, nil, nil, nil)}
 	var runID int64
 	input := `{"items":[{"value":"first"},{"missing":true},{"value":"third"}]}`
 	if err := db.QueryRowContext(ctx, `INSERT INTO ai_workflow_runs(workflow_id,workflow_version_id,input) VALUES($1,$2,$3) RETURNING id`, workflowID, versionID, input).Scan(&runID); err != nil {
@@ -250,6 +250,9 @@ func TestRetryFailedForEachIterationUsesOriginalInput(t *testing.T) {
 	}
 	if err := service.execute(ctx, runID); err != nil {
 		t.Fatal(err)
+	}
+	if _, err := service.RetryFailed(ctx, runID, "value", []int{0}, nil); err == nil {
+		t.Fatal("successful iteration must not be retried")
 	}
 	retry, err := service.RetryFailed(ctx, runID, "value", []int{1}, nil)
 	if err != nil {
@@ -428,4 +431,70 @@ func workflowQuerySnapshot(t *testing.T, ctx context.Context, db *sql.DB, runID 
 		t.Fatal(err)
 	}
 	return string(output)
+}
+
+func TestForEachResumeKeepsIterationOutputs(t *testing.T) {
+	for _, concurrency := range []int{1, 3} {
+		t.Run(fmt.Sprintf("workers-%d", concurrency), func(t *testing.T) {
+			db := openWorkflowIntegrationDB(t)
+			t.Cleanup(func() { db.Close() })
+			ctx := context.Background()
+			workflowID, versionID := createResourceQueryWorkflow(t, ctx, db, []map[string]any{
+				{"id": "batch", "type": "for_each", "collection_pointer": "/input/items", "max_items": 3, "max_concurrency": concurrency,
+					"steps": []map[string]any{{"id": "value", "type": "output", "output_pointer": "/item/value"}}},
+				{"id": "result", "type": "output", "output_pointer": "/steps/batch"},
+			})
+			t.Cleanup(func() { cleanupResourceQueryFixture(t, ctx, db, workflowID, versionID, 0) })
+			service := &Service{db: db}
+			var runID int64
+			if err := db.QueryRowContext(ctx, `INSERT INTO ai_workflow_runs(workflow_id,workflow_version_id,input) VALUES($1,$2,'{"items":[{"value":"first"},{"value":"second"},{"value":"third"}]}') RETURNING id`, workflowID, versionID).Scan(&runID); err != nil {
+				t.Fatal(err)
+			}
+			// Persist one completed child through the real executor, as if execution
+			// stopped before recording its parent. Resume must reuse this checkpoint
+			// and execute the other two iterations independently.
+			index := 1
+			child := []domain.WorkflowStep{{ID: "value", Type: "output", OutputPointer: "/item/value"}}
+			item := map[string]any{"value": "checkpoint-second"}
+			document := map[string]any{"input": map[string]any{}, "steps": map[string]any{}, "item": item}
+			if _, _, _, _, err := service.executeSteps(ctx, &domain.WorkflowRun{ID: runID}, child, document, item, &index); err != nil {
+				t.Fatal(err)
+			}
+			if err := service.execute(ctx, runID); err != nil {
+				t.Fatal(err)
+			}
+			var before string
+			var count int
+			if err := db.QueryRowContext(ctx, `SELECT output::text FROM ai_workflow_runs WHERE id=$1`, runID).Scan(&before); err != nil {
+				t.Fatal(err)
+			}
+			var result []string
+			if err := json.Unmarshal([]byte(before), &result); err != nil {
+				t.Fatal(err)
+			}
+			if len(result) != 3 || result[0] != "first" || result[1] != "checkpoint-second" || result[2] != "third" {
+				t.Fatalf("resumed outputs=%v", result)
+			}
+			if err := db.QueryRowContext(ctx, `SELECT count(*) FROM ai_workflow_step_runs WHERE workflow_run_id=$1`, runID).Scan(&count); err != nil {
+				t.Fatal(err)
+			}
+			if count != 5 {
+				t.Fatalf("checkpoint count=%d", count)
+			}
+			if _, err := db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status='queued' WHERE id=$1`, runID); err != nil {
+				t.Fatal(err)
+			}
+			if err := service.execute(ctx, runID); err != nil {
+				t.Fatal(err)
+			}
+			var after string
+			var afterCount int
+			if err := db.QueryRowContext(ctx, `SELECT output::text,(SELECT count(*) FROM ai_workflow_step_runs WHERE workflow_run_id=$1) FROM ai_workflow_runs WHERE id=$1`, runID).Scan(&after, &afterCount); err != nil {
+				t.Fatal(err)
+			}
+			if after != before || afterCount != count {
+				t.Fatal("repeat execution changed outputs or duplicated checkpoints")
+			}
+		})
+	}
 }

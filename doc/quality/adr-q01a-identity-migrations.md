@@ -43,4 +43,4 @@ Starter Pack 的受控插入使用 system + NULL；移除最早 Owner/普通用�
 
 ## 验证与限制
 
-见 [Q01a 结果](tasks/Q01a-fresh-install.md) 和 [操作说明](identity-backfill.md)。Q01 全门禁还有独立 Workflow 失败，不能因本 ADR 的身份回归通过而解锁 Q02。并发多进程迁移锁、生产升级耗时、真实备份恢复及浏览器认证全链路不在本次已验证范围。
+见 [Q01a 结果](tasks/Q01a-fresh-install.md) 和 [操作说明](identity-backfill.md)。Q01a 当时发现的独立 Workflow 失败已由 Q01b 后续修复，完整门禁通过后才解锁 Q02。并发多进程迁移锁、生产升级耗时、真实备份恢复及浏览器认证全链路不在本次已验证范围。

@@ -1254,6 +1254,10 @@ func (s *Service) execute(ctx context.Context, runID int64) error {
 }
 
 func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, steps []domain.WorkflowStep, document map[string]any, item any, iteration *int) (any, bool, int64, int64, error) {
+	iterationValue := -1
+	if iteration != nil {
+		iterationValue = *iteration
+	}
 	var output any
 	var totalInput, totalOutput int64
 	awaiting := false
@@ -1263,10 +1267,11 @@ func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, ste
 		var stepOutput any
 		var err error
 		// Rebuild the document from completed step outputs after an interaction
-		// is resolved. This prevents duplicate model calls on resume.
+		// is resolved. Match the write key, including the iteration, so resume
+		// never reuses another item's output or repeats completed model calls.
 		if step.Type != "human_interaction" {
 			var previous []byte
-			if queryErr := s.db.QueryRowContext(ctx, `SELECT output FROM ai_workflow_step_runs WHERE workflow_run_id=$1 AND step_id=$2 AND status='succeeded' ORDER BY id DESC LIMIT 1`, run.ID, step.ID).Scan(&previous); queryErr == nil && len(previous) > 0 && json.Unmarshal(previous, &stepOutput) == nil {
+			if queryErr := s.db.QueryRowContext(ctx, `SELECT output FROM ai_workflow_step_runs WHERE workflow_run_id=$1 AND step_id=$2 AND iteration=$3 AND status='succeeded' ORDER BY id DESC LIMIT 1`, run.ID, step.ID, iterationValue).Scan(&previous); queryErr == nil && len(previous) > 0 && json.Unmarshal(previous, &stepOutput) == nil {
 				if step.Type == "model" {
 					stepOutput, err = s.enrichApprovedModelOutput(ctx, run.ID, stepOutput)
 					if err != nil {
