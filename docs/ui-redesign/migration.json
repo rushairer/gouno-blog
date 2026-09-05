@@ -1489,7 +1489,7 @@
         "disabled",
         "success"
       ],
-      "sharedComponents": [],
+      "sharedComponents": ["@gouno/ui:Input", "@gouno/ui:IconButton", "@gouno/ui:ThemeToggle", "@gouno/ui:Drawer"],
       "responsive": [
         "desktop",
         "tablet",
@@ -1499,9 +1499,9 @@
         "light",
         "dark"
       ],
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": ["U02a browser: homepage verified at 1440x900, 768x1024 and 390x844 in light and dark themes; in-app browser also rendered navigation and theme toggle"]
     },
     {
       "id": "blog:pages/About.tsx",
@@ -1596,7 +1596,7 @@
         "disabled",
         "success"
       ],
-      "sharedComponents": [],
+      "sharedComponents": ["@gouno/ui:PageHeader", "@gouno/ui:Panel", "@gouno/ui:LoadingState", "@gouno/ui:EmptyState"],
       "responsive": [
         "desktop",
         "tablet",
@@ -1606,9 +1606,9 @@
         "light",
         "dark"
       ],
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": ["U02a targeted taxonomy/archive tests, full Blog quality pass, and responsive browser verification"]
     },
     {
       "id": "blog:pages/ArticleIndex.tsx",
@@ -1642,7 +1642,7 @@
         "disabled",
         "success"
       ],
-      "sharedComponents": [],
+      "sharedComponents": ["@gouno/ui:SearchField", "@gouno/ui:Pagination", "@gouno/ui:ArticleListSkeleton", "@gouno/ui:EmptyState", "@gouno/ui:ErrorState"],
       "responsive": [
         "desktop",
         "tablet",
@@ -1652,9 +1652,9 @@
         "light",
         "dark"
       ],
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": ["U02a full Blog quality pass covers article index regressions; responsive browser verification completed"]
     },
     {
       "id": "blog:pages/Categories.tsx",
@@ -1677,7 +1677,7 @@
         "disabled",
         "success"
       ],
-      "sharedComponents": [],
+      "sharedComponents": ["@gouno/ui:PageHeader", "@gouno/ui:Panel", "@gouno/ui:LoadingState", "@gouno/ui:EmptyState"],
       "responsive": [
         "desktop",
         "tablet",
@@ -1687,9 +1687,9 @@
         "light",
         "dark"
       ],
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": ["U02a targeted taxonomy/archive tests, full Blog quality pass, and responsive browser verification"]
     },
     {
       "id": "blog:pages/CustomPageView.tsx",
@@ -1753,7 +1753,7 @@
         "disabled",
         "success"
       ],
-      "sharedComponents": [],
+      "sharedComponents": ["@gouno/ui:SectionHeading", "@gouno/ui:Button", "@gouno/ui:Feedback", "@gouno/ui:EmptyState", "@gouno/ui:ArticleListSkeleton"],
       "responsive": [
         "desktop",
         "tablet",
@@ -1763,9 +1763,9 @@
         "light",
         "dark"
       ],
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": ["U02a Home tests and full Blog quality pass; homepage verified at 1440x900, 768x1024 and 390x844 in light and dark themes"]
     },
     {
       "id": "blog:pages/NotFound.tsx",
@@ -1907,7 +1907,7 @@
         "disabled",
         "success"
       ],
-      "sharedComponents": [],
+      "sharedComponents": ["@gouno/ui:PageHeader", "@gouno/ui:Panel", "@gouno/ui:LoadingState", "@gouno/ui:EmptyState"],
       "responsive": [
         "desktop",
         "tablet",
@@ -1917,9 +1917,9 @@
         "light",
         "dark"
       ],
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": ["U02a targeted taxonomy/archive tests, full Blog quality pass, and responsive browser verification"]
     },
     {
       "id": "blog-admin:pages/admin/AIOperations.tsx",

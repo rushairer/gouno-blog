@@ -10,6 +10,13 @@ The JSON ledger is authoritative. Implementation and real browser verification a
 - `gosso-admin-frontend`: U01b verified. Vitest jsdom now uses `https://sso.dev.local/identity-admin/`; formatting, UI-contract, CSS-cascade checks, TypeScript, 110 tests and production build pass (existing non-blocking lint/Vite/jsdom warnings remain).
 - `packages/ui/showcase`: standalone component showcase is available via `npm run showcase:dev` or `npm run showcase:build`.
 
+## U02a evidence (2026-09-06) — verified
+
+- Preconditions: U01d is `verified`; `gouno-blog` and related `gosso-admin` were clean on `main` at start (`607c07b` / `581ae03`).
+- Implementation: public taxonomy and archive pages now use `@gouno/ui` `PageHeader`/`Panel` plus shared token utility classes. Existing API calls, canonical links, search/filter/page parameters, and loading/empty/error behavior remain unchanged. No Connector or security/session behavior was touched.
+- Verification: `blog-frontend/npm run quality` exit 0 (44 files / 167 tests, branch coverage 45.03%, production build passed). Targeted public regression tests (Home, PublicShell, TaxonomyArchive) exit 0 (3 files / 12 tests).
+- Browser: in-app browser visibly rendered `/` and `/categories` at `http://127.0.0.1:5173`; navigation/footer and theme toggle were present. Playwright verified the homepage and `/categories` at 1440×900, 768×1024 and 390×844; each viewport passed both light and dark `documentElement.dataset.theme` checks. Screenshots were captured to `/tmp/u02a-{1440,768,390}-{light,dark}.png`.
+
 ## Phase 0 source inventory
 
 The authoritative machine-readable inventory is `migration.json.phase0Inventory`. The source scan records the following boundaries without changing runtime behavior:

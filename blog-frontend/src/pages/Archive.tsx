@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { EmptyState, LoadingState } from "@gouno/ui";
+import { EmptyState, LoadingState, PageHeader, Panel } from "@gouno/ui";
 import { postsApi } from "../api/posts";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useI18n } from "../i18n";
@@ -40,33 +40,50 @@ export default function Archive() {
   );
   const periods = Object.entries(groups);
   return (
-    <div className="public-container simple-page">
-      <header className="archive-header">
-        <p>{t("archivePage.archiveMeta")}</p>
-        <h1>{t("archivePage.title")}</h1>
-        <span>{t("archivePage.subtitle")}</span>
-      </header>
-      <div className="simple-page__body">
+    <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-8">
+      <PageHeader
+        title={t("archivePage.title")}
+        description={
+          <span>
+            <span className="mr-2 text-xs font-medium uppercase tracking-wider text-primary">
+              {t("archivePage.archiveMeta")}
+            </span>
+            {t("archivePage.subtitle")}
+          </span>
+        }
+      />
+      <Panel className="simple-page__body">
         {loading ? (
           <LoadingState label={t("archivePage.loading")} />
         ) : periods.length ? (
-          <div className="archive-list">
+          <div className="flex flex-col gap-8">
             {periods.map(([period, items]) => (
-              <section key={period}>
-                <h2>
+              <section
+                key={period}
+                className="border-t pt-5 first:border-0 first:pt-0"
+              >
+                <h2 className="flex items-baseline gap-3 text-lg font-semibold tracking-tight">
                   {period}
-                  <small>{items.length}</small>
+                  <small className="text-xs font-normal text-muted-foreground">
+                    {items.length}
+                  </small>
                 </h2>
-                <div>
+                <div className="mt-3 divide-y">
                   {items.map((post) => (
-                    <Link key={post.id} to={`/articles/${post.slug}`}>
-                      <time>
+                    <Link
+                      key={post.id}
+                      to={`/articles/${post.slug}`}
+                      className="group grid grid-cols-[3rem_minmax(0,1fr)_auto] items-center gap-3 py-3 hover:text-primary"
+                    >
+                      <time className="text-xs font-mono text-muted-foreground">
                         {formatDate(post.published_at || post.created_at, {
                           day: "2-digit",
                         })}
                       </time>
-                      <span>{post.title}</span>
-                      <small>{post.tags.slice(0, 2).join(" / ")}</small>
+                      <span className="truncate">{post.title}</span>
+                      <small className="hidden text-xs text-muted-foreground sm:block">
+                        {post.tags.slice(0, 2).join(" / ")}
+                      </small>
                     </Link>
                   ))}
                 </div>
@@ -76,7 +93,7 @@ export default function Archive() {
         ) : (
           <EmptyState label={t("archivePage.empty")} />
         )}
-      </div>
+      </Panel>
     </div>
   );
 }

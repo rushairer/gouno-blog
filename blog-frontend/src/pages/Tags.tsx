@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { EmptyState, LoadingState } from "@gouno/ui";
+import { EmptyState, LoadingState, PageHeader, Panel } from "@gouno/ui";
 import { postsApi } from "../api/posts";
 import { siteApi } from "../api/site";
 import { usePageTitle } from "../hooks/usePageTitle";
@@ -42,31 +42,47 @@ export default function Tags() {
   );
 
   return (
-    <div className="public-container simple-page taxonomy-page">
-      <header className="taxonomy-header">
-        <p>{t("tagsPage.tagsMeta")}</p>
-        <h1>{t("tagsPage.title")}</h1>
-        <span>{t("tagsPage.subtitle")}</span>
-      </header>
-      <div className="simple-page__body">
+    <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-8">
+      <PageHeader
+        title={t("tagsPage.title")}
+        description={
+          <span>
+            <span className="mr-2 text-xs font-medium uppercase tracking-wider text-primary">
+              {t("tagsPage.tagsMeta")}
+            </span>
+            {t("tagsPage.subtitle")}
+          </span>
+        }
+      />
+      <Panel className="simple-page__body">
         {loading ? (
           <LoadingState label={t("tagsPage.loading")} />
         ) : tagCounts.length ? (
-          <div className="tag-index">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {tagCounts
               .sort((a, b) => b.count - a.count)
               .map(({ tag, count }, index) => (
-                <Link key={tag} to={`/tags/${encodeURIComponent(tag)}`}>
-                  <span>{String(index + 1).padStart(2, "0")}</span>
-                  <strong>{tag}</strong>
-                  <small>{t("tagsPage.postCount", { count })}</small>
+                <Link
+                  key={tag}
+                  to={`/tags/${encodeURIComponent(tag)}`}
+                  className="group flex items-center gap-4 rounded-md border px-4 py-3 hover:border-primary hover:bg-accent/40"
+                >
+                  <span className="text-xs font-mono text-primary">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <strong className="min-w-0 flex-1 truncate group-hover:text-primary">
+                    {tag}
+                  </strong>
+                  <small className="text-xs text-muted-foreground">
+                    {t("tagsPage.postCount", { count })}
+                  </small>
                 </Link>
               ))}
           </div>
         ) : (
           <EmptyState label={t("tagsPage.empty")} />
         )}
-      </div>
+      </Panel>
     </div>
   );
 }
