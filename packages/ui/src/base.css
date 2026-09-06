@@ -143,10 +143,10 @@
     gap: 16px;
     padding-bottom: 8px;
   }
-  .posts-list-surface[data-density="compact"] .grid.md\:hidden {
+  [data-slot="responsive-list"][data-density="compact"] .grid.md\:hidden {
     gap: 8px;
   }
-  .posts-list-surface[data-density="touch"] .grid.md\:hidden {
+  [data-slot="responsive-list"][data-density="touch"] .grid.md\:hidden {
     gap: 16px;
   }
   .state-feedback > div {

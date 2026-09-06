@@ -207,7 +207,6 @@ function ListDemo() {
         </Button>
       }
       stateControls={<StateControls state={state} setState={setState} />}
-      panel={false}
     >
       <Panel data-density={density} className="posts-list-surface">
         <PanelHeader
@@ -259,6 +258,7 @@ function ListDemo() {
           {state === "ready" || state === "success" ? (
             <>
               <ResponsiveList
+                density={density}
                 table={
                   <DataTable density={density}>
                   <TableHeader>

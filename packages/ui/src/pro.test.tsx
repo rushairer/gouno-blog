@@ -4,6 +4,7 @@ import {
   DashboardTemplate,
   EditorWorkspaceTemplate,
   ListPageTemplate,
+  ResponsiveList,
 } from "./pro";
 
 describe("Gouno Pro page templates", () => {
@@ -26,7 +27,6 @@ describe("Gouno Pro page templates", () => {
       <ListPageTemplate
         title="Posts"
         action={<button>新建</button>}
-        panel={false}
       >
         <div>列表内容</div>
       </ListPageTemplate>,
@@ -47,5 +47,11 @@ describe("Gouno Pro page templates", () => {
     expect(screen.getByText("大纲")).toBeTruthy();
     expect(screen.getByText("画布")).toBeTruthy();
     expect(screen.getByText("Inspector")).toBeTruthy();
+    expect(document.querySelector('[data-slot="editor-workspace"]')).toBeTruthy();
+  });
+
+  it("exposes density on the responsive list surface", () => {
+    render(<ResponsiveList density="compact" table={<div>table</div>} mobile={<div>mobile</div>} />);
+    expect(document.querySelector('[data-slot="responsive-list"]')?.getAttribute("data-density")).toBe("compact");
   });
 });
