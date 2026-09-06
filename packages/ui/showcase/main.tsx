@@ -31,6 +31,7 @@ import {
   Field,
   Input,
   ListPageTemplate,
+  Modal,
   NavigationGroup,
   PageHeader,
   Panel,
@@ -50,6 +51,7 @@ import {
 } from "../src";
 import { showcaseCatalog as nav } from "./catalog";
 import { showcaseRecords as records } from "./fixtures";
+import { gossoUsers } from "./fixtures";
 import {
   StateControls,
   StatePanel,
@@ -191,26 +193,34 @@ function Foundations() {
   );
 }
 
-function ListDemo() {
+function ListDemo({ kind = "posts" }: { kind?: "posts" | "users" | "clients" | "audit" }) {
   const [state, setState] = useState<DemoState>("ready");
   const [density, setDensity] = useState<TableDensity>("default");
   const [selected, setSelected] = useState<string[]>([]);
   const [query, setQuery] = useState("");
-  const visible = records.filter((row) => row[0].includes(query));
+  const source = kind === "users"
+    ? [["admin@example.com", "管理员", "活跃", "2026-09-06"], ["editor@example.com", "编辑", "活跃", "2026-09-05"], ["suspended@example.com", "审核员", "已停用", "2026-09-02"]]
+    : kind === "clients"
+      ? [["blog-bff", "Confidential", "https://blog.dev.local/callback", "openid profile"], ["admin-console", "Public", "https://admin.dev.local/callback", "openid admin"]]
+      : kind === "audit"
+        ? [["登录成功", "admin@example.com", "认证", "2026-09-06 15:24"], ["更新客户端", "admin@example.com", "客户端", "2026-09-06 14:18"], ["撤销会话", "ops@example.com", "会话", "2026-09-06 11:02"]]
+        : records;
+  const visible = source.filter((row) => row[0].includes(query));
+  const copy = kind === "users" ? ["用户管理", "管理用户、角色、MFA 和账户状态。", "用户列表", "创建用户"] : kind === "clients" ? ["客户端管理", "管理 OAuth 客户端、回调地址和授权范围。", "已注册客户端", "注册客户端"] : kind === "audit" ? ["审计日志", "按时间查看认证与系统管理事件。", "最近事件", "导出日志"] : ["Posts 列表模板", "筛选、批量操作、状态 Badge、分页和移动端列表的统一参考。", "全部文章", "新建文章"];
   return (
     <ListPageTemplate
-      title="Posts 列表模板"
-      description="筛选、批量操作、状态 Badge、分页和移动端列表的统一参考。"
+      title={copy[0]}
+      description={copy[1]}
       action={
         <Button variant="primary" icon={<Plus />}>
-          新建文章
+          {copy[3]}
         </Button>
       }
       stateControls={<StateControls state={state} setState={setState} />}
     >
       <Panel data-density={density} className="posts-list-surface">
         <PanelHeader
-          title="全部文章"
+          title={copy[2]}
           description={`${visible.length} 条结果 · 最后同步于刚刚`}
           actions={
             <Select
@@ -373,6 +383,16 @@ function ListDemo() {
       </Panel>
     </ListPageTemplate>
   );
+}
+
+function GossoUsersDemo() {
+  const [state, setState] = useState<DemoState>("ready");
+  const [selected, setSelected] = useState<string[]>([]);
+  const [dialog, setDialog] = useState<string | null>(null);
+  return <ListPageTemplate title="用户管理" description="管理用户、角色、MFA 和账户状态。" action={<Button variant="primary" icon={<Plus />}>添加用户</Button>} stateControls={<StateControls state={state} setState={setState} />}>
+    {state !== "ready" ? <Panel><StatePanel state={state} onRetry={() => setState("ready")} /></Panel> : <Panel><PanelHeader title="用户" description={`${gossoUsers.length} 个账户`} /><FilterBar><Field label="搜索" hideLabel><Input prefixIcon={<Search />} placeholder="搜索用户名或邮箱" /></Field><Button variant="secondary">筛选</Button></FilterBar><DataTable><TableHeader><TableRow><TableHead><input type="checkbox" aria-label="全选" onChange={e => setSelected(e.target.checked ? gossoUsers.map(u => u.id) : [])} /></TableHead><TableHead>用户</TableHead><TableHead>状态</TableHead><TableHead>角色</TableHead><TableHead>操作</TableHead></TableRow></TableHeader><TableBody>{gossoUsers.map(user => <TableRow key={user.id}><TableCell><input type="checkbox" aria-label={`选择 ${user.username}`} checked={selected.includes(user.id)} onChange={e => setSelected(s => e.target.checked ? [...s,user.id] : s.filter(id => id !== user.id))} /></TableCell><TableCell><div className="font-medium">{user.display_name}</div><div className="text-xs text-muted-foreground">{user.username} · {user.id}</div></TableCell><TableCell><Badge tone={user.status === "active" ? "success" : "danger"}>{user.status === "active" ? "活跃" : "已停用"}</Badge></TableCell><TableCell><div className="flex flex-wrap gap-1">{user.roles?.map(r => <Badge key={r.id} tone="neutral" title={r.description}>{r.name}</Badge>)}</div></TableCell><TableCell><ActionGroup><Button size="sm" variant="secondary" onClick={() => setDialog(`角色：${user.display_name}`)}>角色</Button><Button size="sm" variant="secondary" onClick={() => setDialog(`安全操作：${user.display_name}`)}>安全</Button><Button size="sm" variant="danger" onClick={() => setDialog(`删除：${user.display_name}`)}>删除</Button></ActionGroup></TableCell></TableRow>)}</TableBody></DataTable></Panel>}
+    <Modal open={Boolean(dialog)} onOpenChange={open => !open && setDialog(null)} title={dialog ?? "用户操作"}><div className="space-y-4"><p className="text-sm text-muted-foreground">静态模拟 Gosso Admin 的确认、角色、密码、MFA、锁定和删除操作。</p><Button variant="secondary" onClick={() => setDialog(null)}>取消</Button><Button variant="primary" onClick={() => { setDialog(null); setState("success"); }}>确认</Button></div></Modal>
+  </ListPageTemplate>;
 }
 
 function EditorDemo() {
@@ -577,10 +597,19 @@ function DashboardDemo({ gosso = false }: { gosso?: boolean }) {
         <>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {[
-              ["本月阅读", "28.4k", "+18.6%", "较上月", "up"],
-              ["已发布", "126", "+24", "本月新增", "up"],
-              ["待处理", "18", "4", "需要关注", "warn"],
-              ["草稿", "32", "6", "最近 7 天", "neutral"],
+              ...(gosso
+                ? [
+                    ["运行服务", "12", "全部正常", "当前集群", "up"],
+                    ["活跃用户", "1,284", "+8.2%", "较上周", "up"],
+                    ["客户端", "36", "2", "待审核", "warn"],
+                    ["审计事件", "248", "过去 24h", "最近活动", "neutral"],
+                  ]
+                : [
+                    ["本月阅读", "28.4k", "+18.6%", "较上月", "up"],
+                    ["已发布", "126", "+24", "本月新增", "up"],
+                    ["待处理", "18", "4", "需要关注", "warn"],
+                    ["草稿", "32", "6", "最近 7 天", "neutral"],
+                  ]),
             ].map(([label, value, change, hint, tone]) => (
               <Card key={label} className="relative overflow-hidden">
                 <div className="absolute right-5 top-5 rounded-full bg-accent p-2 text-primary">
@@ -614,12 +643,12 @@ function DashboardDemo({ gosso = false }: { gosso?: boolean }) {
           </div>
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
             <Panel>
-              <PanelHeader
-                title="内容表现"
-                description="过去 7 天的阅读趋势。"
+                <PanelHeader
+                title={gosso ? "系统健康度" : "内容表现"}
+                description={gosso ? "服务、数据库和队列的实时状态。" : "过去 7 天的阅读趋势。"}
                 actions={
                   <Button size="sm" variant="ghost">
-                    查看分析
+                  {gosso ? "查看详情" : "查看分析"}
                   </Button>
                 }
               />
@@ -652,35 +681,35 @@ function DashboardDemo({ gosso = false }: { gosso?: boolean }) {
               </div>
             </Panel>
             <Panel>
-              <PanelHeader title="快捷操作" description="常用工作流" />
+              <PanelHeader title={gosso ? "管理入口" : "快捷操作"} description={gosso ? "常用系统管理操作" : "常用工作流"} />
               <div className="flex flex-col gap-2">
                 <Button
                   className="justify-start"
                   variant="ghost"
                   icon={<Plus />}
                 >
-                  创建新文章
+                  {gosso ? "管理用户" : "创建新文章"}
                 </Button>
                 <Button
                   className="justify-start"
                   variant="ghost"
                   icon={<FileText />}
                 >
-                  管理页面
+                  {gosso ? "管理客户端" : "管理页面"}
                 </Button>
                 <Button
                   className="justify-start"
                   variant="ghost"
                   icon={<Settings />}
                 >
-                  站点设置
+                  {gosso ? "站点设置" : "站点设置"}
                 </Button>
                 <Button
                   className="justify-start"
                   variant="ghost"
                   icon={<Shield />}
                 >
-                  查看审核队列
+                  {gosso ? "查看审计日志" : "查看审核队列"}
                 </Button>
               </div>
             </Panel>
@@ -923,8 +952,16 @@ function App() {
         return <AccountDemo />;
       case "gosso-system":
         return <DashboardDemo gosso />;
+      case "gosso-users":
+        return <GossoUsersDemo />;
+      case "gosso-clients":
+        return <ListDemo kind="clients" />;
       case "gosso-audit":
-        return <ListDemo />;
+        return <ListDemo kind="audit" />;
+      case "gosso-settings":
+        return <EditorDemo />;
+      case "gosso-status":
+        return <DashboardDemo gosso />;
       default:
         return <Foundations />;
     }

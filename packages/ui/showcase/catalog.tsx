@@ -44,7 +44,11 @@ export const showcaseCatalog: { group: string; items: ShowcasePage[] }[] = [
       { id: "gosso-login", label: "登录与 MFA", icon: <Lock /> },
       { id: "gosso-account", label: "账户设置", icon: <Users /> },
       { id: "gosso-system", label: "系统管理", icon: <Shield /> },
+      { id: "gosso-users", label: "用户管理", icon: <Users /> },
+      { id: "gosso-clients", label: "客户端管理", icon: <Shield /> },
       { id: "gosso-audit", label: "审计日志", icon: <FileText /> },
+      { id: "gosso-settings", label: "站点设置", icon: <Settings /> },
+      { id: "gosso-status", label: "系统状态", icon: <Activity /> },
     ],
   },
 ];
