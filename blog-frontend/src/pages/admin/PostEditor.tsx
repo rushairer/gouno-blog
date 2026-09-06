@@ -951,6 +951,7 @@ export default function PostEditor() {
           ) : null}
         </EditorCommandActions>
       </EditorCommandBar>
+      {error ? <Feedback type="error">{error}</Feedback> : null}
       <div className="editor-workspace">
         <aside className="editor-outline">
           <div>

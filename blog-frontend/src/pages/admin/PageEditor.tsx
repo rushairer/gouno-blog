@@ -692,6 +692,8 @@ export default function PageEditor() {
         </EditorCommandActions>
       </EditorCommandBar>
 
+      {error ? <Feedback type="error">{error}</Feedback> : null}
+
       <div className="editor-workspace">
         <main className="editor-canvas">
           <Field label="标题" required>

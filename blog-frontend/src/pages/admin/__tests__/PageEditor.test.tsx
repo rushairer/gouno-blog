@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import PageEditor from "../PageEditor";
@@ -18,43 +18,48 @@ const mockClient = {
   getSnapshot: () => snapshot,
 } as any;
 
+function renderEditor(path = "/admin/pages/new") {
+  return render(
+    <GossoProvider client={mockClient}>
+      <ToastProvider>
+        <MemoryRouter initialEntries={[path]}>
+          <Routes>
+            <Route path="/admin/pages/new" element={<PageEditor />} />
+            <Route path="/admin/pages/:id/edit" element={<PageEditor />} />
+          </Routes>
+        </MemoryRouter>
+      </ToastProvider>
+    </GossoProvider>,
+  );
+}
+
+const draftPage: CustomPage = {
+  id: 3,
+  title: "关于我们",
+  slug: "about-us",
+  summary: "本站与团队介绍页面",
+  content: "## 关于我们\n\n欢迎来到我们的博客。",
+  template: "about",
+  status: "draft",
+  allow_comments: false,
+  show_in_nav: true,
+  sort_order: 10,
+  seo_title: "关于我们 - 深度技术博客",
+  seo_description: "了解博主的背景与愿景。",
+  created_at: new Date().toISOString(),
+};
+
 describe("PageEditor", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
 
   it("loads page via getAdminPage and renders fields and AI assistant tools", async () => {
-    const mockPage: CustomPage = {
-      id: 3,
-      title: "关于我们",
-      slug: "about-us",
-      summary: "本站与团队介绍页面",
-      content: "## 关于我们\n\n欢迎来到我们的博客。",
-      template: "about",
-      status: "draft",
-      allow_comments: false,
-      show_in_nav: true,
-      sort_order: 10,
-      seo_title: "关于我们 - 深度技术博客",
-      seo_description: "了解博主的背景与愿景。",
-      created_at: new Date().toISOString(),
-    };
-
     const getAdminPageSpy = vi
       .spyOn(pagesApi, "getAdminPage")
-      .mockResolvedValue(mockPage);
+      .mockResolvedValue(draftPage);
 
-    render(
-      <GossoProvider client={mockClient}>
-        <ToastProvider>
-          <MemoryRouter initialEntries={["/admin/pages/3/edit"]}>
-            <Routes>
-              <Route path="/admin/pages/:id/edit" element={<PageEditor />} />
-            </Routes>
-          </MemoryRouter>
-        </ToastProvider>
-      </GossoProvider>,
-    );
+    renderEditor("/admin/pages/3/edit");
 
     await waitFor(() => {
       expect(getAdminPageSpy).toHaveBeenCalledWith("3");
@@ -120,17 +125,7 @@ describe("PageEditor", () => {
       created_at: new Date().toISOString(),
     });
 
-    render(
-      <GossoProvider client={mockClient}>
-        <ToastProvider>
-          <MemoryRouter initialEntries={["/admin/pages/3/edit"]}>
-            <Routes>
-              <Route path="/admin/pages/:id/edit" element={<PageEditor />} />
-            </Routes>
-          </MemoryRouter>
-        </ToastProvider>
-      </GossoProvider>,
-    );
+    renderEditor("/admin/pages/3/edit");
 
     await screen.findByDisplayValue("关于我们");
     expect(
@@ -158,5 +153,74 @@ describe("PageEditor", () => {
     expect(
       screen.getByRole("button", { name: "更新单页" }),
     ).toBeInTheDocument();
+  });
+
+  it("keeps unsaved page fields mounted across responsive reflow", async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    const title =
+      await screen.findByPlaceholderText("写一个清晰、具体的单页标题");
+    const slug = screen.getByPlaceholderText("about");
+    const body = screen.getByLabelText("单页正文 Markdown");
+    await user.type(title, "移动端草稿");
+    await user.type(slug, "mobile-draft");
+    await user.type(body, "尚未保存的正文");
+
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      value: 390,
+    });
+    fireEvent(window, new Event("resize"));
+
+    expect(title).toHaveValue("移动端草稿");
+    expect(slug).toHaveValue("mobile-draft");
+    expect(body).toHaveValue("尚未保存的正文");
+    expect(screen.getByText("有未保存的更改")).toBeInTheDocument();
+  });
+
+  it("saves before opening the frontsite preview", async () => {
+    const user = userEvent.setup();
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+    const createPageSpy = vi.spyOn(pagesApi, "createPage").mockResolvedValue({
+      ...draftPage,
+      title: "预览单页",
+      slug: "preview-page",
+    });
+    renderEditor();
+
+    await user.type(
+      await screen.findByPlaceholderText("写一个清晰、具体的单页标题"),
+      "预览单页",
+    );
+    await user.type(screen.getByPlaceholderText("about"), "preview-page");
+    await user.click(screen.getByRole("button", { name: "预览前台页面" }));
+
+    await waitFor(() =>
+      expect(createPageSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "预览单页",
+          slug: "preview-page",
+          status: "draft",
+        }),
+      ),
+    );
+    expect(openSpy).toHaveBeenCalledWith("/preview-page", "_blank");
+  });
+
+  it("shows the backend conflict message without masking it", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(pagesApi, "getAdminPage").mockResolvedValue(draftPage);
+    vi.spyOn(pagesApi, "updatePage").mockRejectedValue(
+      new Error("单页已被其他编辑者更新（409 冲突）"),
+    );
+    renderEditor("/admin/pages/3/edit");
+
+    await screen.findByDisplayValue(draftPage.title);
+    await user.click(screen.getByRole("button", { name: "保存草稿" }));
+
+    expect(
+      await screen.findAllByText("单页已被其他编辑者更新（409 冲突）"),
+    ).not.toHaveLength(0);
   });
 });

@@ -148,6 +148,30 @@
       "blocker": null,
       "handoff": "U03b and U03c are unlocked; keep editor internals in U03b and complete support-page/member overlays in U03c."
     },
+    "editorPhase": {
+      "task": "U03b",
+      "status": "verified",
+      "baseHead": "ababc210f3a5b75a23d0b0fa2d49991567c48518",
+      "relatedGossoAdminHead": "f9466f3c103cd7a40e24ec90556a359331e2adc8",
+      "branch": "codex/u03b-blog-editors",
+      "commands": [
+        "blog-frontend: npm run test:run -- src/components/editor/__tests__/ContentEditorFrame.test.tsx src/pages/admin/__tests__/PostEditor.test.tsx src/pages/admin/__tests__/PageEditor.test.tsx",
+        "blog-frontend: npm run quality",
+        "blog-frontend: npm run build",
+        "docker compose -f docker-compose.yml -f docker-compose.source.yml build blog-frontend",
+        "docker compose -f docker-compose.yml -f docker-compose.source.yml up -d --no-deps blog-frontend",
+        "git diff --check"
+      ],
+      "result": "编辑器展示层改为共享 token 驱动的响应式工作区；新增统一命令栏、画布、检查器、AI 面板、版本历史和代码/表格内部滚动样式。仅补充错误反馈渲染，未改 API、权限、认证、安全、数据库或会话语义。定向回归 3 文件/15 测试通过；完整 quality 50 文件/196 测试通过，coverage statements 57.06%、branches 47.87%、functions 46.98%、lines 59.32%，生产构建和 source compose 替换通过。",
+      "browser": "认证会话下通过标准 HTTPS https://blog.dev.local 使用重建的本地 source 镜像验证。文章编辑器在默认桌面视口显示大纲/画布/检查器三栏；768x1024 平板隐藏大纲并保留检查器；390x844 移动端命令栏、编辑区和检查器纵向重排。未保存标题/正文跨视口重排保留；Markdown 预览中的长代码与宽表在内部容器滚动；文章与单页编辑器均无页面级横向溢出，console error/warning 为 0。",
+      "unverified": [
+        "真实后端保存/发布/恢复/预览/冲突写入未在浏览器提交",
+        "AI 写作、生图、媒体选择和 SEO 请求未在浏览器触发",
+        "强制 API 错误注入、生产域名和所有替代角色会话"
+      ],
+      "blocker": null,
+      "handoff": "U03c 可开始；保留编辑器 API/权限语义，继续完成 Taxonomy、Comments、Notifications、Media、Settings 及 Users 安全展示。"
+    },
     "qualityScripts": {
       "blogFrontend": ["format:check", "lint", "lint:ui", "lint:css", "tsc -b (no typecheck script)", "test:coverage", "build"],
       "gossoAdminFrontend": ["format:check", "lint", "lint:ui", "lint:css", "typecheck", "test:coverage", "build"],
@@ -156,7 +180,7 @@
     "knownBlockers": [
       "existing non-blocking oxlint, Vite config, jsdom navigation, font resolution and Lightning CSS warnings"
     ],
-    "verification": "static source scan and command output recorded; U01b browser evidence confirms https://sso.dev.local login route and existing /identity-admin/ fallback; authenticated browser routes, responsive widths and light/dark evidence remain not-run"
+    "verification": "U03b editor migration verified with static source scan, targeted/full command output, standard HTTPS authenticated browser evidence at desktop/tablet/mobile, and source-compose replacement; remaining unverified editor actions are listed in baseline.editorPhase.unverified"
   },
   "entries": [
     {
@@ -1395,9 +1419,11 @@
         "light",
         "dark"
       ],
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": [
+        "U03b 组件回归覆盖命令栏、AI 面板、候选应用和 loading disabled 展示；完整 quality 通过"
+      ]
     },
     {
       "id": "blog-admin:components/editor/ContentEditorFrame.tsx",
@@ -1426,9 +1452,11 @@
         "light",
         "dark"
       ],
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": [
+        "U03b 共享编辑器框架测试通过；桌面/平板/移动浏览器证据确认稳定工作区与无页面横向溢出"
+      ]
     },
     {
       "id": "blog-admin:components/media/MediaDrawerForms.tsx",
@@ -2379,9 +2407,11 @@
         "light",
         "dark"
       ],
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": [
+        "U03b PageEditor 回归覆盖未保存重排、预览前保存、409 冲突反馈；标准 HTTPS 桌面与 390x844 移动证据通过"
+      ]
     },
     {
       "id": "blog-admin:pages/admin/Pages.tsx",
@@ -2493,9 +2523,11 @@
         "light",
         "dark"
       ],
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": [
+        "U03b PostEditor 回归覆盖草稿保存、发布状态、版本恢复、冲突反馈、只读权限、宽内容预览与未保存重排；标准 HTTPS 桌面/768x1024/390x844 证据通过"
+      ]
     },
     {
       "id": "blog-admin:pages/admin/Posts.tsx",
