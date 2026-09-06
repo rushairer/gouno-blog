@@ -58,12 +58,12 @@ export function Feedback({
       role={type === "error" ? "alert" : "status"}
       className={cn(
         `feedback-${type}`,
-        "flex items-start gap-3 text-sm",
+        "feedback flex items-center gap-3 text-sm",
         tones[type],
         className,
       )}
     >
-      <Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+      <Icon aria-hidden="true" className="size-4 shrink-0" />
       <div className="min-w-0 flex-1">{children}</div>
     </Alert>
   );

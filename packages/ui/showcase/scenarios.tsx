@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { Lock } from "lucide-react";
-import { Button, EmptyState, ErrorState, LoadingState } from "../src";
+import { Button, Feedback, EmptyState, ErrorState, LoadingState } from "../src";
 
 export type DemoState =
-  "ready" | "loading" | "empty" | "error" | "forbidden" | "success";
+  "ready" | "loading" | "empty" | "error" | "forbidden" | "success" | "conflict";
 export function StatePanel({
   state,
   onRetry,
@@ -33,7 +33,9 @@ export function StatePanel({
       />
     );
   if (state === "success")
-    return <Feedback type="success">操作已完成，列表数据已更新。</Feedback>;
+    return <Feedback type="success" className="state-feedback">操作已完成。</Feedback>;
+  if (state === "conflict")
+    return <Feedback type="error" className="state-feedback"><span>内容已被其他会话更新，当前编辑器已锁定。请重新载入后再提交。</span><Button size="sm" onClick={onRetry}>重新载入</Button></Feedback>;
   return null;
 }
 export function StateControls({
@@ -50,6 +52,7 @@ export function StateControls({
     error: "错误",
     forbidden: "无权限",
     success: "成功",
+    conflict: "冲突",
   };
   return (
     <div
@@ -62,6 +65,7 @@ export function StateControls({
           key={value}
           size="sm"
           variant={state === value ? "primary" : "ghost"}
+          aria-pressed={state === value}
           onClick={() => setState(value)}
         >
           {labels[value]}

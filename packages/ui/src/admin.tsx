@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { Menu } from "lucide-react";
 import { IconButton } from "./actions";
 import {
@@ -29,6 +29,7 @@ export function AdminShell({
   navigationLabel = "后台导航",
 }: AdminShellProps) {
   const [open, setOpen] = useState(false);
+  const navigationTrigger = useRef<HTMLButtonElement>(null);
   return (
     <div className="min-h-dvh bg-background text-foreground">
       <a
@@ -40,6 +41,7 @@ export function AdminShell({
       <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 lg:px-6">
         <div className="flex min-w-0 items-center gap-3 lg:w-[216px]">
           <IconButton
+            ref={navigationTrigger}
             className="lg:hidden"
             label={navigationLabel}
             icon={<Menu />}
@@ -76,7 +78,11 @@ export function AdminShell({
         </main>
       </div>
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="left" className="flex w-[280px] flex-col">
+        <SheetContent side="left" className="flex w-[280px] flex-col bg-sidebar" aria-describedby={undefined}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            navigationTrigger.current?.focus();
+          }}>
           <SheetHeader>
             <SheetTitle>{brand}</SheetTitle>
           </SheetHeader>

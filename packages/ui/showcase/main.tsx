@@ -26,6 +26,7 @@ import {
   DataTable,
   DashboardTemplate,
   EditorWorkspaceTemplate,
+  FilterBar,
   Feedback,
   Field,
   Input,
@@ -98,6 +99,13 @@ function Foundations() {
             <Badge tone="success">已完成</Badge>
             <Badge tone="warning">待处理</Badge>
             <Badge tone="info">信息</Badge>
+          </div>
+        </Panel>
+        <Panel>
+          <PanelHeader title="状态提示与 Box 间距" description="基础提示统一图标、文字、操作对齐和项目间距。" />
+          <div className="flex flex-col gap-3">
+            <Feedback type="success">操作已完成。</Feedback>
+            <Feedback type="error"><span>需要修正后才能继续。</span><Button size="sm">重新载入</Button></Feedback>
           </div>
         </Panel>
         <Panel>
@@ -201,7 +209,7 @@ function ListDemo() {
       stateControls={<StateControls state={state} setState={setState} />}
       panel={false}
     >
-      <Panel>
+      <Panel data-density={density} className="posts-list-surface">
         <PanelHeader
           title="全部文章"
           description={`${visible.length} 条结果 · 最后同步于刚刚`}
@@ -219,8 +227,8 @@ function ListDemo() {
             </Select>
           }
         />
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <Field label="搜索" className="min-w-[240px]">
+        <FilterBar className="posts-filter-bar">
+          <Field label="搜索" className="w-full min-w-0 md:max-w-[34rem] md:flex-1" hideLabel>
             <Input
               prefixIcon={<Search />}
               value={query}
@@ -228,13 +236,13 @@ function ListDemo() {
               placeholder="搜索标题"
             />
           </Field>
-          <ActionGroup>
-            <Button variant="secondary">筛选</Button>
-            <Button variant="ghost">导出</Button>
+          <ActionGroup className="w-full md:w-auto">
+            <Button className="flex-1 md:flex-none" variant="secondary">筛选</Button>
+            <Button className="flex-1 md:flex-none" variant="ghost">导出</Button>
           </ActionGroup>
-        </div>
+        </FilterBar>
         {selected.length > 0 ? (
-          <Feedback type="info" className="mt-4">
+          <Feedback type="info">
             已选择 {selected.length} 项。
             <Button
               size="sm"
@@ -246,7 +254,7 @@ function ListDemo() {
             </Button>
           </Feedback>
         ) : null}
-        <div className="mt-5">
+        <>
           <StatePanel state={state} onRetry={() => setState("ready")} />
           {state === "ready" || state === "success" ? (
             <>
@@ -341,7 +349,7 @@ function ListDemo() {
                   </>
                 }
               />
-              <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <span>
                   显示 {visible.length} / {records.length} 条
                 </span>
@@ -361,7 +369,7 @@ function ListDemo() {
               </div>
             </>
           ) : null}
-        </div>
+        </>
       </Panel>
     </ListPageTemplate>
   );
@@ -370,7 +378,7 @@ function ListDemo() {
 function EditorDemo() {
   const [state, setState] = useState<DemoState>("ready");
   const [preview, setPreview] = useState(false);
-  const [saveState, setSaveState] = useState<"dirty" | "saved" | "failed">(
+  const [saveState, setSaveState] = useState<"dirty" | "saved" | "failed" | "conflict">(
     "dirty",
   );
   return (
@@ -505,7 +513,9 @@ function EditorDemo() {
                 ? "有未保存的修改。"
                 : saveState === "failed"
                   ? "保存失败，修改仍保留在本地。"
-                  : "所有修改都已保存。"}
+                  : saveState === "conflict"
+                    ? "检测到版本冲突，提交已暂停。"
+                    : "所有修改都已保存。"}
             </Feedback>
             <ActionGroup>
               <Button
@@ -521,6 +531,9 @@ function EditorDemo() {
                 onClick={() => setSaveState("failed")}
               >
                 模拟保存失败
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => setSaveState("conflict")}>
+                模拟版本冲突
               </Button>
             </ActionGroup>
           </div>
@@ -603,39 +616,35 @@ function DashboardDemo({ gosso = false }: { gosso?: boolean }) {
             <Panel>
               <PanelHeader
                 title="内容表现"
-                description="过去 7 天的阅读和发布趋势。"
+                description="过去 7 天的阅读趋势。"
                 actions={
                   <Button size="sm" variant="ghost">
                     查看分析
                   </Button>
                 }
               />
-              <div className="mt-5 flex h-48 items-end gap-2 rounded-lg bg-muted/40 px-4 pb-4 pt-6 sm:gap-4">
-                {[35, 52, 44, 70, 58, 82, 66, 92, 75, 88, 78, 96].map(
+              <div className="flex h-48 items-end gap-2 rounded-lg bg-muted/40 px-4 pb-4 pt-6 sm:gap-4">
+                {[35, 52, 44, 70, 58, 82, 96].map(
                   (height, index) => (
                     <div
                       key={index}
-                      className="group flex h-full flex-1 flex-col justify-end gap-2"
+                      className="group flex h-full min-w-0 flex-1 flex-col justify-end gap-2"
                     >
                       <div
-                        className="h-full rounded-t-sm bg-primary/20 transition-colors group-hover:bg-primary/50"
+                        className="h-full rounded-t-sm bg-primary/70 transition-colors group-hover:bg-primary"
                         style={{ height: `${height}%` }}
                       />
                       <span className="text-center text-[11px] text-muted-foreground">
-                        {index % 2 === 0 ? `周${index / 2 + 1}` : ""}
+                        {["周一", "周二", "周三", "周四", "周五", "周六", "周日"][index]}
                       </span>
                     </div>
                   ),
                 )}
               </div>
-              <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                 <span className="flex items-center gap-2">
                   <span className="size-2 rounded-full bg-primary" />
                   阅读量
-                </span>
-                <span className="flex items-center gap-2">
-                  <span className="size-2 rounded-full bg-success" />
-                  发布量
                 </span>
                 <span className="ml-auto font-medium text-foreground">
                   +18.6% 较上周
@@ -644,7 +653,7 @@ function DashboardDemo({ gosso = false }: { gosso?: boolean }) {
             </Panel>
             <Panel>
               <PanelHeader title="快捷操作" description="常用工作流" />
-              <div className="mt-2 flex flex-col gap-2">
+              <div className="flex flex-col gap-2">
                 <Button
                   className="justify-start"
                   variant="ghost"
@@ -705,7 +714,7 @@ function DashboardDemo({ gosso = false }: { gosso?: boolean }) {
                       {type} · {date}
                     </div>
                   </div>
-                  <Badge tone={status === "已发布" ? "success" : "warning"}>
+                  <Badge tone={status === "已发布" ? "success" : status === "草稿" ? "neutral" : "warning"}>
                     {status}
                   </Badge>
                 </div>
@@ -973,7 +982,7 @@ function App() {
       <ThemeToggle />
     </ActionGroup>
   );
-  const navigation = () => (
+  const navigation = (close: () => void) => (
     <>
       {navigationGroups.map((group) => (
         <NavigationGroup key={group.group} label={group.group}>
@@ -981,11 +990,13 @@ function App() {
             <a
               key={item.id}
               href={`#${item.id}`}
+              aria-current={page === item.id ? "page" : undefined}
               className={`${navigationItemClass} ${page === item.id ? "active" : ""}`}
               onClick={(e) => {
                 e.preventDefault();
                 window.location.hash = item.id;
                 setPage(item.id);
+                close();
               }}
             >
               {item.icon}

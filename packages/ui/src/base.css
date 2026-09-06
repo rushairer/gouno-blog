@@ -81,9 +81,12 @@
   [data-slot="alert-dialog-overlay"] {
     background: var(--overlay);
   }
-  [data-slot="dialog-content"],
-  [data-slot="sheet-content"] {
+  [data-slot="dialog-content"] {
     max-height: 92dvh;
+    overflow-y: auto;
+  }
+  [data-slot="sheet-content"] {
+    max-height: 100dvh;
     overflow-y: auto;
   }
   [data-slot="dialog-content"] {
@@ -131,6 +134,35 @@
   }
   [data-slot="table-container"][data-density="touch"] [data-slot="table-cell"] {
     padding: 14px 16px;
+  }
+  .posts-list-surface[data-density="compact"] .posts-filter-bar {
+    gap: 8px;
+    padding-bottom: 0;
+  }
+  .posts-list-surface[data-density="touch"] .posts-filter-bar {
+    gap: 16px;
+    padding-bottom: 8px;
+  }
+  .posts-list-surface[data-density="compact"] .grid.md\:hidden {
+    gap: 8px;
+  }
+  .posts-list-surface[data-density="touch"] .grid.md\:hidden {
+    gap: 16px;
+  }
+  .state-feedback > div {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .feedback {
+    display: flex !important;
+    align-items: center !important;
+    grid-template-columns: none !important;
+  }
+  .feedback > svg {
+    transform: none !important;
+    translate: none !important;
   }
   /* Icon-only actions share one size, optical center, and state treatment. */
   .icon-button {

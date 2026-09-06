@@ -152,6 +152,7 @@ export function Field({
   required = false,
   className,
   noMargin: _noMargin,
+  hideLabel = false,
 }: {
   label: ReactNode;
   children: ReactNode;
@@ -161,6 +162,7 @@ export function Field({
   required?: boolean;
   className?: string;
   noMargin?: boolean;
+  hideLabel?: boolean;
 }) {
   const generated = useId();
   const child = isValidElement<{
@@ -178,7 +180,7 @@ export function Field({
       data-invalid={error ? true : undefined}
       className={cn("field min-w-0", className)}
     >
-      <FieldLabel htmlFor={controlId}>
+      <FieldLabel htmlFor={controlId} className={hideLabel ? "sr-only" : undefined}>
         {label}
         {required ? (
           <span aria-hidden="true" className="text-destructive">
