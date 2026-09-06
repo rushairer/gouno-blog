@@ -188,6 +188,7 @@ export default function AdminPosts() {
       <IconButton
         label="复制链接"
         icon={<Copy />}
+        variant="secondary"
         onClick={() =>
           void copyText(
             `${location.origin}/articles/${post.slug}`,
@@ -385,7 +386,7 @@ export default function AdminPosts() {
             />
           }
         >
-          <Card className="hidden overflow-hidden border-border/80 bg-card shadow-xs md:block">
+          <Card className="hidden overflow-hidden border-0 bg-card p-0 shadow-xs md:block">
             <TableContainer>
               <table className="admin-table">
                 <thead>
@@ -467,7 +468,7 @@ export default function AdminPosts() {
                         </span>
                       </td>
                       <td>
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="table-actions flex items-center justify-end gap-1">
                           {renderActions(post)}
                         </div>
                       </td>

@@ -110,3 +110,67 @@
     }
   }
 }
+
+@layer components {
+  /* Icon-only actions share one size, optical center, and state treatment. */
+  .icon-button {
+    display: inline-flex;
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    line-height: 1;
+  }
+
+  .icon-button > .icon-button__icon,
+  .icon-button > .btn__icon {
+    display: inline-flex;
+    width: 16px;
+    height: 16px;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+
+  .icon-button > :is(.icon-button__icon, .btn__icon) > svg {
+    display: block;
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+  }
+
+  .icon-button--secondary {
+    border: 1px solid var(--border);
+    background: var(--secondary);
+    color: var(--muted-foreground);
+  }
+
+  .icon-button--secondary:hover:not(:disabled),
+  .icon-button--secondary:focus-visible {
+    border-color: var(--primary);
+    background: var(--accent);
+    color: var(--foreground);
+  }
+
+  .icon-button--danger {
+    border: 1px solid
+      var(
+        --destructive-border,
+        color-mix(in srgb, var(--destructive) 42%, var(--border))
+      );
+    background: var(
+      --destructive-subtle,
+      color-mix(in srgb, var(--destructive) 12%, transparent)
+    );
+    color: var(--destructive);
+  }
+
+  .icon-button--danger:hover:not(:disabled),
+  .icon-button--danger:focus-visible {
+    border-color: var(--destructive);
+    background: color-mix(in srgb, var(--destructive) 20%, var(--card));
+    color: var(--destructive);
+  }
+}

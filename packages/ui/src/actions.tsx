@@ -191,6 +191,8 @@ export function ButtonLink({
 export function IconButtonLink({
   label,
   icon,
+  className,
+  variant = "secondary",
   ...props
 }: ButtonLinkProps & { label: string; icon: ReactNode }) {
   return (
@@ -198,6 +200,8 @@ export function IconButtonLink({
       {...props}
       size="icon"
       icon={icon}
+      variant={variant}
+      className={cn("icon-button", `icon-button--${variant}`, className)}
       aria-label={label}
       title={label}
     />
