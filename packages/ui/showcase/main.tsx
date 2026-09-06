@@ -59,7 +59,15 @@ import "./showcase.css";
 
 type DemoState = ScenarioState;
 type Brand = "blog" | "blog-admin" | "gosso-admin";
+type Workspace = "gouno-ui" | Brand;
 type PreviewWidth = "full" | "desktop" | "tablet" | "mobile";
+
+function workspaceForPage(page: string): Workspace {
+  if (page.startsWith("blog-")) return "blog";
+  if (page.startsWith("admin-")) return "blog-admin";
+  if (page.startsWith("gosso-")) return "gosso-admin";
+  return "gouno-ui";
+}
 
 function Foundations() {
   const [density, setDensity] = useState<TableDensity>("default");
@@ -74,7 +82,6 @@ function Foundations() {
             <Button variant="primary" icon={<Plus />}>
               新增示例
             </Button>
-            <ThemeToggle />
           </ActionGroup>
         }
       />
@@ -383,6 +390,7 @@ function EditorDemo() {
         }
       />
       <StateControls state={state} setState={setState} />
+      {state === "ready" ? (
       <EditorWorkspaceTemplate
         outline={
           <>
@@ -425,8 +433,7 @@ function EditorDemo() {
               保存失败，请检查必填字段后重试。
             </Feedback>
           ) : null}
-          {state === "ready" ? (
-            preview ? (
+          {preview ? (
               <article className="prose max-w-none">
                 <h2>设计系统迁移计划</h2>
                 <p>这是静态预览，用来验证阅读宽度、标题层级和内容间距。</p>
@@ -469,9 +476,6 @@ function EditorDemo() {
                   <code className="whitespace-pre">{`| 状态 | 数量 |\n| --- | ---: |\n| 已发布 | 126 |\n| 草稿 | 32 |`}</code>
                 </div>
               </div>
-            )
-          ) : (
-            <StatePanel state={state} onRetry={() => setState("ready")} />
           )}
         </Panel>
         }
@@ -488,10 +492,20 @@ function EditorDemo() {
             <Field label="摘要">
               <Input defaultValue="统一页面视觉语言" />
             </Field>
-            <Feedback type={saveState === "dirty" ? "warning" : "success"}>
+            <Feedback
+              type={
+                saveState === "dirty"
+                  ? "warning"
+                  : saveState === "failed"
+                    ? "error"
+                    : "success"
+              }
+            >
               {saveState === "dirty"
                 ? "有未保存的修改。"
-                : "所有修改都已保存。"}
+                : saveState === "failed"
+                  ? "保存失败，修改仍保留在本地。"
+                  : "所有修改都已保存。"}
             </Feedback>
             <ActionGroup>
               <Button
@@ -513,6 +527,11 @@ function EditorDemo() {
         </Panel>
         }
       />
+      ) : (
+        <Panel>
+          <StatePanel state={state} onRetry={() => setState("ready")} />
+        </Panel>
+      )}
     </>
   );
 }
@@ -741,6 +760,9 @@ function AccountDemo({ login = false }: { login?: boolean }) {
 }
 
 function App() {
+  const params = new URLSearchParams(window.location.search);
+  const embedded = params.get("embedded") === "1";
+  const embeddedPreview = params.get("preview") as PreviewWidth | null;
   const [page, setPage] = useState(() => {
     const candidate = window.location.hash.slice(1);
     return nav
@@ -749,12 +771,75 @@ function App() {
       ? candidate
       : "foundations";
   });
-  const [brand, setBrand] = useState<Brand>("blog-admin");
+  const [brand, setBrand] = useState<Brand>(() => {
+    const candidate = params.get("brand");
+    if (
+      candidate === "blog" ||
+      candidate === "blog-admin" ||
+      candidate === "gosso-admin"
+    )
+      return candidate;
+    const initialWorkspace = workspaceForPage(window.location.hash.slice(1));
+    return initialWorkspace === "gouno-ui" ? "blog-admin" : initialWorkspace;
+  });
+  const [workspace, setWorkspace] = useState<Workspace>(() => {
+    const candidate = params.get("workspace");
+    return candidate === "blog" ||
+      candidate === "blog-admin" ||
+      candidate === "gosso-admin" ||
+      candidate === "gouno-ui"
+      ? candidate
+      : workspaceForPage(window.location.hash.slice(1));
+  });
   const [previewWidth, setPreviewWidth] = useState<PreviewWidth>("full");
   const current = useMemo(
     () => nav.flatMap((g) => g.items).find((item) => item.id === page),
     [page],
   );
+  const workspaceLabel =
+    workspace === "gouno-ui"
+      ? "Gouno UI"
+      : workspace === "blog"
+        ? "Blog"
+        : workspace === "blog-admin"
+          ? "Blog Admin"
+          : "Gosso Admin";
+  const workspaceGroup =
+    workspace === "gouno-ui"
+      ? "Foundations"
+      : workspace === "blog"
+      ? "Blog 公共"
+      : workspace === "blog-admin"
+        ? "Blog Admin"
+        : "Gosso Admin";
+  const navigationGroups = nav.filter((group) => group.group === workspaceGroup);
+  const switchWorkspace = (nextWorkspace: Workspace) => {
+    setWorkspace(nextWorkspace);
+    if (nextWorkspace !== "gouno-ui") setBrand(nextWorkspace);
+    const nextGroup =
+      nextWorkspace === "gouno-ui"
+        ? "Foundations"
+        : nextWorkspace === "blog"
+        ? "Blog 公共"
+        : nextWorkspace === "blog-admin"
+          ? "Blog Admin"
+          : "Gosso Admin";
+    const belongsToWorkspace = nav
+      .find((group) => group.group === nextGroup)
+      ?.items.some((item) => item.id === page);
+    if (!belongsToWorkspace) {
+      const defaultPage =
+        nextWorkspace === "gouno-ui"
+          ? "foundations"
+          : nextWorkspace === "blog"
+          ? "blog-home"
+          : nextWorkspace === "blog-admin"
+            ? "admin-dashboard"
+            : "gosso-system";
+      window.location.hash = defaultPage;
+      setPage(defaultPage);
+    }
+  };
   useEffect(() => {
     const onHashChange = () => {
       const candidate = window.location.hash.slice(1);
@@ -764,11 +849,45 @@ function App() {
           .some((item) => item.id === candidate)
       ) {
         setPage(candidate);
+        const nextWorkspace = workspaceForPage(candidate);
+        setWorkspace(nextWorkspace);
+        if (nextWorkspace !== "gouno-ui") setBrand(nextWorkspace);
       }
     };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
+  useEffect(() => {
+    if (!embedded) window.scrollTo({ top: 0 });
+  }, [embedded, previewWidth]);
+  useEffect(() => {
+    if (embedded && window.parent !== window)
+      window.parent.postMessage(
+        { type: "gouno-showcase:navigate", page },
+        window.location.origin,
+      );
+  }, [embedded, page]);
+  useEffect(() => {
+    if (embedded) return;
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type === "gouno-showcase:navigate") {
+        const nextPage = String(event.data.page || "");
+        if (
+          nav
+            .flatMap((group) => group.items)
+            .some((item) => item.id === nextPage)
+        ) {
+          setPage(nextPage);
+          window.history.replaceState(null, "", `#${nextPage}`);
+        }
+      }
+      if (event.data?.type === "gouno-showcase:brand")
+        setBrand(event.data.brand as Brand);
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [embedded]);
   const render = () => {
     switch (page) {
       case "foundations":
@@ -801,80 +920,153 @@ function App() {
         return <Foundations />;
     }
   };
+  const workspaceControl = (
+      <Select
+        aria-label="产品空间"
+        size="compact"
+        value={workspace}
+        onChange={(e) => switchWorkspace(e.target.value as Workspace)}
+      >
+        <option value="gouno-ui">Gouno UI</option>
+        <option value="blog">Blog</option>
+        <option value="blog-admin">Blog Admin</option>
+        <option value="gosso-admin">Gosso Admin</option>
+      </Select>
+  );
+  const viewportControl = (
+    <Select
+      aria-label="预览宽度"
+      size="compact"
+      value={previewWidth}
+      onChange={(event) =>
+        setPreviewWidth(event.target.value as PreviewWidth)
+      }
+    >
+      <option value="full">全宽</option>
+      <option value="desktop">桌面 1024</option>
+      <option value="tablet">平板 768</option>
+      <option value="mobile">移动 390</option>
+    </Select>
+  );
+  const themeColorControl = workspace === "gouno-ui" ? (
+    <Select
+      aria-label="Gouno UI 主题色"
+      value={brand}
+      onChange={(event) => {
+        const nextBrand = event.target.value as Brand;
+        setBrand(nextBrand);
+        if (embedded && window.parent !== window)
+          window.parent.postMessage(
+            { type: "gouno-showcase:brand", brand: nextBrand },
+            window.location.origin,
+          );
+      }}
+    >
+      <option value="blog">Blog 蓝</option>
+      <option value="blog-admin">Blog Admin 青</option>
+      <option value="gosso-admin">Gosso Admin 紫</option>
+    </Select>
+  ) : null;
+  const shellControls = (
+    <ActionGroup>
+      {themeColorControl}
+      <ThemeToggle />
+    </ActionGroup>
+  );
+  const navigation = () => (
+    <>
+      {navigationGroups.map((group) => (
+        <NavigationGroup key={group.group} label={group.group}>
+          {group.items.map((item) => (
+            <a
+              key={item.id}
+              href={`#${item.id}`}
+              className={`${navigationItemClass} ${page === item.id ? "active" : ""}`}
+              onClick={(e) => {
+                e.preventDefault();
+                window.location.hash = item.id;
+                setPage(item.id);
+              }}
+            >
+              {item.icon}
+              {item.label}
+            </a>
+          ))}
+        </NavigationGroup>
+      ))}
+    </>
+  );
   return (
     <ThemeProvider brand={brand} storageKey="gouno-ui-showcase:theme">
       <ToastProvider>
+        {!embedded ? (
+          <div className="h-dvh overflow-hidden bg-background text-foreground">
+            <header className="flex h-12 items-center justify-between gap-3 border-b border-primary/20 bg-sidebar px-3 text-sidebar-foreground shadow-sm lg:px-4">
+              <div className="flex items-center gap-2 text-xs font-semibold tracking-wide text-primary">
+                <span className="size-2 rounded-full bg-primary" />
+                Gouno UI Showcase
+              </div>
+              <ActionGroup>
+                {workspaceControl}
+                {viewportControl}
+              </ActionGroup>
+            </header>
+            <main
+              className={
+                previewWidth === "full"
+                  ? "h-[calc(100dvh-48px)] min-w-0"
+                  : "h-[calc(100dvh-48px)] min-w-0 overflow-auto bg-muted/30 p-4 lg:p-6"
+              }
+            >
+              <iframe
+                key={`${page}-${workspace}-${brand}-${previewWidth}`}
+                title={`${current?.label ?? "页面"} ${previewWidth} 视口预览`}
+                src={`${window.location.pathname}?embedded=1&workspace=${workspace}&brand=${brand}&preview=${previewWidth}#${page}`}
+                className={
+                  previewWidth === "full"
+                    ? "block h-full w-full border-0 bg-background"
+                    : "mx-auto block rounded-lg border bg-background shadow-sm"
+                }
+                style={{
+                  boxSizing: previewWidth === "full" ? "border-box" : "content-box",
+                  width:
+                    previewWidth === "full"
+                      ? "100%"
+                      : previewWidth === "desktop"
+                      ? 1024
+                      : previewWidth === "tablet"
+                        ? 768
+                        : 390,
+                  height:
+                    previewWidth === "full"
+                      ? "100%"
+                      : previewWidth === "desktop"
+                      ? 768
+                      : previewWidth === "tablet"
+                        ? 1024
+                        : 844,
+                }}
+              />
+            </main>
+          </div>
+        ) : (
         <AdminShell
           brand={
-            <button
-              className="font-semibold text-primary"
-              onClick={() => setPage("foundations")}
-            >
-              Gouno UI Demo
-            </button>
-          }
-          toolbar={
-            <ActionGroup>
-              <Select
-                aria-label="品牌"
-                value={brand}
-                onChange={(e) => setBrand(e.target.value as Brand)}
+            embedded ? (
+              <span className="font-semibold text-primary">{workspaceLabel}</span>
+            ) : (
+              <button
+                className="font-semibold text-primary"
+                onClick={() => setPage("foundations")}
               >
-                <option value="blog">Blog</option>
-                <option value="blog-admin">Blog Admin</option>
-                <option value="gosso-admin">Gosso Admin</option>
-              </Select>
-              <Select
-                aria-label="预览宽度"
-                value={previewWidth}
-                onChange={(event) =>
-                  setPreviewWidth(event.target.value as PreviewWidth)
-                }
-              >
-                <option value="full">全宽</option>
-                <option value="desktop">桌面 1024</option>
-                <option value="tablet">平板 768</option>
-                <option value="mobile">移动 390</option>
-              </Select>
-              <ThemeToggle />
-            </ActionGroup>
+                Gouno UI Demo
+              </button>
+            )
           }
-          navigation={() => (
-            <>
-              {nav.map((group) => (
-                <NavigationGroup key={group.group} label={group.group}>
-                  {group.items.map((item) => (
-                    <a
-                      key={item.id}
-                      href={`#${item.id}`}
-                      className={`${navigationItemClass} ${page === item.id ? "active" : ""}`}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        window.location.hash = item.id;
-                        setPage(item.id);
-                      }}
-                    >
-                      {item.icon}
-                      {item.label}
-                    </a>
-                  ))}
-                </NavigationGroup>
-              ))}
-            </>
-          )}
+          toolbar={shellControls}
+          navigation={navigation}
         >
-          <AdminPage
-            style={{
-              maxWidth:
-                previewWidth === "desktop"
-                  ? 1024
-                  : previewWidth === "tablet"
-                    ? 768
-                    : previewWidth === "mobile"
-                      ? 390
-                      : undefined,
-            }}
-          >
+          <AdminPage>
             <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
               <Menu className="size-4" />
               页面 Demo / {current?.label} / 预览：
@@ -884,12 +1076,13 @@ function App() {
                   desktop: "1024px",
                   tablet: "768px",
                   mobile: "390px",
-                }[previewWidth]
+                }[embeddedPreview || previewWidth]
               }
             </div>
             {render()}
           </AdminPage>
         </AdminShell>
+        )}
       </ToastProvider>
     </ThemeProvider>
   );

@@ -10,7 +10,9 @@ Tables expose `default`, `compact`, and `touch` density through `Table` and `Dat
 
 The showcase also includes a hash-addressable `状态与弹层` page covering shared Dialog, Drawer, ConfirmDialog, Toast, form-error, and Step-Up presentation. For example, open `/#overlays` during local development to review the interaction contract without connecting an application service.
 
-The toolbar's `预览宽度` control constrains the workspace to full width, 1024px desktop, 768px tablet, or 390px mobile so responsive states can be reviewed without resizing the browser.
+The compact 48px global workbench uses a distinct semantic sidebar surface and exposes only `产品空间` and `预览宽度`. Every mode renders the selected workspace in one same-origin iframe: full width fills the available canvas, while the fixed options provide real 1024×768, 768×1024, or 390×844 content viewports. This triggers the same media queries as the consuming applications. Use the URL printed by Vite because it will select another port when 5173 is already occupied.
+
+The `产品空间` selector keeps information architecture separate from visual brand tokens: Gouno UI owns Foundations and overlay contracts, while Blog, Blog Admin, and Gosso Admin each own their product pages. Navigation and light/dark/system controls live only inside the iframe shell. Gouno UI also exposes a theme-color preview for the three product token sets; product workspaces always use their fixed brand. Iframe navigation is synchronized to the workbench so changing viewport preserves the current page.
 
 Import Tailwind once in the consuming app, then `@gouno/ui/tokens.css` and `@gouno/ui/base.css`; explicitly register `node_modules/@gouno/ui/dist` with `@source`. Wrap the complete app (including error and auth boundaries) in `ThemeProvider`; supply its origin-local storage key and brand. Install the exported bootstrap as a parser-blocking, same-origin script before application CSS. A router adapter provides `Link` through `NavigationProvider`.
 
