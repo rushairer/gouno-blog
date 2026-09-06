@@ -25,14 +25,17 @@ import {
   CardHeader,
   DataTable,
   DashboardTemplate,
+  EditorWorkspaceTemplate,
   Feedback,
   Field,
   Input,
+  ListPageTemplate,
   NavigationGroup,
   PageHeader,
   Panel,
   PanelHeader,
   Select,
+  ResponsiveList,
   TableBody,
   TableCell,
   TableHead,
@@ -180,17 +183,17 @@ function ListDemo() {
   const [query, setQuery] = useState("");
   const visible = records.filter((row) => row[0].includes(query));
   return (
-    <>
-      <PageHeader
-        title="Posts 列表模板"
-        description="筛选、批量操作、状态 Badge、分页和移动端列表的统一参考。"
-        action={
-          <Button variant="primary" icon={<Plus />}>
-            新建文章
-          </Button>
-        }
-      />
-      <StateControls state={state} setState={setState} />
+    <ListPageTemplate
+      title="Posts 列表模板"
+      description="筛选、批量操作、状态 Badge、分页和移动端列表的统一参考。"
+      action={
+        <Button variant="primary" icon={<Plus />}>
+          新建文章
+        </Button>
+      }
+      stateControls={<StateControls state={state} setState={setState} />}
+      panel={false}
+    >
       <Panel>
         <PanelHeader
           title="全部文章"
@@ -240,8 +243,9 @@ function ListDemo() {
           <StatePanel state={state} onRetry={() => setState("ready")} />
           {state === "ready" || state === "success" ? (
             <>
-              <div className="hidden md:block">
-                <DataTable density={density}>
+              <ResponsiveList
+                table={
+                  <DataTable density={density}>
                   <TableHeader>
                     <TableRow>
                       <TableHead>
@@ -298,35 +302,38 @@ function ListDemo() {
                       </TableRow>
                     ))}
                   </TableBody>
-                </DataTable>
-              </div>
-              <div className="grid gap-3 md:hidden">
-                {visible.map((row) => (
-                  <Card key={row[0]} padding="sm">
-                    <CardContent>
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="font-medium">{row[0]}</div>
-                          <div className="mt-1 text-sm text-muted-foreground">
-                            {row[3]}
+                  </DataTable>
+                }
+                mobile={
+                  <>
+                    {visible.map((row) => (
+                      <Card key={row[0]} padding="sm">
+                        <CardContent>
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="font-medium">{row[0]}</div>
+                              <div className="mt-1 text-sm text-muted-foreground">
+                                {row[3]}
+                              </div>
+                            </div>
+                            <Badge
+                              tone={row[1] === "已发布" ? "success" : "warning"}
+                            >
+                              {row[1]}
+                            </Badge>
                           </div>
-                        </div>
-                        <Badge
-                          tone={row[1] === "已发布" ? "success" : "warning"}
-                        >
-                          {row[1]}
-                        </Badge>
-                      </div>
-                      <div className="mt-3 flex gap-2">
-                        <Button size="sm">编辑</Button>
-                        <Button size="sm" variant="ghost">
-                          更多
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                          <div className="mt-3 flex gap-2">
+                            <Button size="sm">编辑</Button>
+                            <Button size="sm" variant="ghost">
+                              更多
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </>
+                }
+              />
               <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
                 <span>
                   显示 {visible.length} / {records.length} 条
@@ -349,7 +356,7 @@ function ListDemo() {
           ) : null}
         </div>
       </Panel>
-    </>
+    </ListPageTemplate>
   );
 }
 
@@ -376,8 +383,9 @@ function EditorDemo() {
         }
       />
       <StateControls state={state} setState={setState} />
-      <div className="grid gap-6 xl:grid-cols-[200px_minmax(0,1fr)_320px]">
-        <Panel className="hidden xl:block">
+      <EditorWorkspaceTemplate
+        outline={
+          <>
           <PanelHeader title="大纲" description="文章结构" />
           <nav className="flex flex-col gap-2 text-sm">
             <a
@@ -399,7 +407,9 @@ function EditorDemo() {
               元信息
             </a>
           </nav>
-        </Panel>
+          </>
+        }
+        canvas={
         <Panel className="min-h-[520px]">
           <PanelHeader
             title={preview ? "预览" : "编辑内容"}
@@ -464,6 +474,8 @@ function EditorDemo() {
             <StatePanel state={state} onRetry={() => setState("ready")} />
           )}
         </Panel>
+        }
+        inspector={
         <Panel>
           <PanelHeader title="Inspector" description="页面设置和发布选项。" />
           <div className="flex flex-col gap-4">
@@ -499,7 +511,8 @@ function EditorDemo() {
             </ActionGroup>
           </div>
         </Panel>
-      </div>
+        }
+      />
     </>
   );
 }
