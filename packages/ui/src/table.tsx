@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { Table } from "./components/ui/table";
+import { Table, type TableDensity } from "./components/ui/table";
 import { TableSkeleton } from "./feedback";
 import { cn } from "./lib/utils";
 export interface DataTableProps {
@@ -10,6 +10,7 @@ export interface DataTableProps {
   empty?: boolean;
   emptyState?: ReactNode;
   className?: string;
+  density?: TableDensity;
 }
 export function DataTable({
   children,
@@ -19,6 +20,7 @@ export function DataTable({
   empty,
   emptyState,
   className,
+  density = "default",
 }: DataTableProps) {
   if (loading)
     return (
@@ -30,8 +32,12 @@ export function DataTable({
     );
   if (empty && emptyState) return <>{emptyState}</>;
   return (
-    <div className={cn("min-w-0 rounded-lg border", className)}>
-      <Table>{children}</Table>
+    <div
+      data-slot="table-container"
+      data-density={density}
+      className={cn("min-w-0 rounded-lg border", className)}
+    >
+      <Table density={density}>{children}</Table>
     </div>
   );
 }

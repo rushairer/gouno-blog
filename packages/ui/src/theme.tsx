@@ -14,7 +14,7 @@ export type Density = "comfortable" | "compact";
 export const brandNames: Record<Brand, string> = {
   blog: "Blog",
   "blog-admin": "Blog Admin",
-  "gosso-admin": "GOSSO Admin",
+  "gosso-admin": "Gosso Admin",
 };
 export function resolveMode(
   mode: ThemeMode,

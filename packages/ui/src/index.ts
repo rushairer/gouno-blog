@@ -8,6 +8,7 @@ export * from "./navigation";
 export * from "./table";
 export * from "./theme";
 export * from "./admin";
+export * from "./pro";
 export * from "./lib/utils";
 export * from "./components/ui/dialog";
 export * from "./components/ui/dropdown-menu";

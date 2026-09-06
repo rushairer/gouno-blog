@@ -112,6 +112,22 @@
 }
 
 @layer components {
+  [data-slot="table-container"][data-density="compact"]
+    [data-slot="table-head"] {
+    height: 36px;
+    padding-inline: 12px;
+  }
+  [data-slot="table-container"][data-density="compact"]
+    [data-slot="table-cell"] {
+    padding: 8px 12px;
+  }
+  [data-slot="table-container"][data-density="touch"] [data-slot="table-head"] {
+    height: 48px;
+    padding-inline: 16px;
+  }
+  [data-slot="table-container"][data-density="touch"] [data-slot="table-cell"] {
+    padding: 14px 16px;
+  }
   /* Icon-only actions share one size, optical center, and state treatment. */
   .icon-button {
     display: inline-flex;

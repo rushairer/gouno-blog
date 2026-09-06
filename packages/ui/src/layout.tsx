@@ -2,6 +2,7 @@ import { type ReactNode, type ElementType, type HTMLAttributes } from "react";
 import { X } from "lucide-react";
 import { cn } from "./lib/utils";
 import { IconButton } from "./actions";
+import type { TableDensity } from "./components/ui/table";
 export function Panel({
   as: Component = "section",
   className,
@@ -173,11 +174,14 @@ export const FilterBar = ({
   <div {...props} className={cn("flex flex-wrap items-end gap-3", className)} />
 );
 export const TableContainer = ({
+  density = "default",
   className,
   ...props
-}: HTMLAttributes<HTMLDivElement>) => (
+}: HTMLAttributes<HTMLDivElement> & { density?: TableDensity }) => (
   <div
     {...props}
+    data-slot="table-container"
+    data-density={density}
     className={cn("min-w-0 overflow-x-auto rounded-lg border", className)}
   />
 );
