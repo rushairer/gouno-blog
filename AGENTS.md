@@ -62,3 +62,13 @@ This document defines the **immutable architectural rules, security baselines, a
 - The distribution step must update both `blog-frontend/vendor/gouno-ui-0.1.0.tgz` and `blog-frontend/package-lock.json`; never commit a new vendored archive with a stale `@gouno/ui` integrity value.
 - Before committing, run `npm ci` in `blog-frontend` and build the Dockerfile (`docker build -f blog-frontend/Dockerfile blog-frontend`) so the Node 20 CI environment verifies the lockfile and archive together.
 - Keep `blog-frontend/vendor/ui-manifest.json` and the lockfile integrity synchronized with the exact archive committed to Git.
+
+## 7. UI Refactoring Execution Convention
+
+- Complete a coherent page or shared UI abstraction as a batch before running a browser audit.
+- Do not repeat the full test and build suite for every small visual correction.
+- Do not re-verify an already confirmed behavior unless there is evidence of regression.
+- Run typecheck, tests, builds, and vendored package synchronization at the end of a coherent UI phase.
+- Use browser verification to confirm actual visual and interaction results; tests and builds do not replace visual confirmation.
+- Continue within the user's authorized scope without pausing for confirmation after every internal implementation step.
+- Preserve uncommitted work, authentication boundaries, the Connector hold, and vendored UI integrity rules.
