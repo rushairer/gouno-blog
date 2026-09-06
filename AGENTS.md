@@ -53,3 +53,12 @@ This document defines the **immutable architectural rules, security baselines, a
 - The external connector module (`blog-backend/internal/connector`, its controller/routes, migrations, and frontend workspace) is under active product design and is **not production-complete**.
 - Do not add, alter, enable, remove, or refactor connector behaviour—including Google/Search Console OAuth, callback URIs, credential lifecycle, delivery, or Sandbox behaviour—unless the user gives an explicit instruction that names the connector work.
 - Treat connector code as isolated from core Blog behaviour. Do not introduce automatic business-event, workflow, publishing, or analytics calls into it without an explicit product decision.
+
+---
+
+## 6. Vendored UI Package & Lockfile Integrity
+
+- When `packages/ui` changes, distribute the package with `node scripts/ui/distribute.mjs blog-frontend`.
+- The distribution step must update both `blog-frontend/vendor/gouno-ui-0.1.0.tgz` and `blog-frontend/package-lock.json`; never commit a new vendored archive with a stale `@gouno/ui` integrity value.
+- Before committing, run `npm ci` in `blog-frontend` and build the Dockerfile (`docker build -f blog-frontend/Dockerfile blog-frontend`) so the Node 20 CI environment verifies the lockfile and archive together.
+- Keep `blog-frontend/vendor/ui-manifest.json` and the lockfile integrity synchronized with the exact archive committed to Git.
