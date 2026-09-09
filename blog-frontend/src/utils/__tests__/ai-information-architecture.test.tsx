@@ -25,7 +25,10 @@ describe("Blog Admin AI information architecture", () => {
   });
 
   it("keeps both AI destinations permission-gated in the router", () => {
-    const appSource = readFileSync(resolve(process.cwd(), "src/App.tsx"), "utf8");
+    const appSource = readFileSync(
+      resolve(process.cwd(), "src/App.tsx"),
+      "utf8",
+    );
 
     expect(appSource).toContain('path="/admin/ai-ops"');
     expect(appSource).toContain('path="/admin/ai-settings"');
