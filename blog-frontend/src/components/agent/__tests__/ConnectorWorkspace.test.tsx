@@ -30,7 +30,11 @@ function mockEmptyConnectorState() {
 describe("ConnectorWorkspace", () => {
   beforeEach(() => {
     apiFetch.mockReset();
-    window.history.replaceState({}, "", "/admin/ai-settings?section=connectors");
+    window.history.replaceState(
+      {},
+      "",
+      "/admin/ai-settings?section=connectors",
+    );
   });
 
   it("loads sandbox profiles and keeps OAuth, approval and delivery on mock APIs", async () => {
@@ -70,9 +74,9 @@ describe("ConnectorWorkspace", () => {
     });
     const onRefresh = vi.fn().mockResolvedValue(undefined);
     render(<ConnectorWorkspace locale="en" onRefresh={onRefresh} />);
-    expect((await screen.findAllByText("Newsletter sandbox")).length).toBeGreaterThan(
-      0,
-    );
+    expect(
+      (await screen.findAllByText("Newsletter sandbox")).length,
+    ).toBeGreaterThan(0);
     await userEvent
       .setup()
       .click(screen.getByRole("button", { name: "Start mock OAuth" }));
