@@ -15,6 +15,8 @@ import {
   Drawer,
   Feedback,
   IconButton,
+  ListRow,
+  ListStack,
   TableContainer,
   TableSkeleton,
   useToast,
@@ -53,7 +55,6 @@ export default function Categories() {
   const [selected, setSelected] = useState<number[]>([]);
   const [aiOpen, setAIOpen] = useState(false);
 
-  // AI Slug states
   const [slugLoading, setSlugLoading] = useState(false);
   const [slugCandidates, setSlugCandidates] = useState<string[]>([]);
   const [activeSlugMode, setActiveSlugMode] = useState<
@@ -217,6 +218,33 @@ export default function Categories() {
     }
   };
 
+  const setSelectedCategory = (id: number, checked: boolean) => {
+    setSelected((current) =>
+      checked
+        ? [...new Set([...current, id])]
+        : current.filter((item) => item !== id),
+    );
+  };
+
+  const renderActions = (item: Category) => (
+    <>
+      <IconButton
+        label={`编辑分类 ${item.name}`}
+        icon={<Edit2 />}
+        onClick={() => openEditDrawer(item)}
+      />
+      <IconButton
+        variant="danger"
+        label={`删除分类 ${item.name}`}
+        icon={<Trash2 />}
+        onClick={() => setDeleteTarget({ kind: "category", item })}
+      />
+    </>
+  );
+
+  const allSelected =
+    categories.length > 0 && categories.every((item) => selected.includes(item.id));
+
   return (
     <AdminPage>
       <AdminPageHeader
@@ -263,12 +291,24 @@ export default function Categories() {
           empty={!loading && categories.length === 0 && !error}
           emptyTitle="还没有分类。创建第一个分类来组织长期主题。"
         >
-          <Card className="border-border/80 bg-card shadow-xs overflow-hidden">
+          <Card className="hidden overflow-hidden border-border/80 bg-card md:block">
             <TableContainer>
               <table className="admin-table">
                 <thead>
                   <tr>
-                    <th className="w-12 text-center">选择</th>
+                    <th className="w-12 text-center">
+                      <Checkbox
+                        aria-label="选择全部分类"
+                        checked={allSelected}
+                        onChange={(event) =>
+                          setSelected(
+                            event.target.checked
+                              ? categories.map((item) => item.id)
+                              : [],
+                          )
+                        }
+                      />
+                    </th>
                     <th className="w-20">排序</th>
                     <th>分类名称与描述</th>
                     <th className="w-48">Slug 标识</th>
@@ -287,11 +327,7 @@ export default function Categories() {
                           aria-label={`选择分类 ${item.name}`}
                           checked={selected.includes(item.id)}
                           onChange={(event) =>
-                            setSelected((current) =>
-                              event.target.checked
-                                ? [...new Set([...current, item.id])]
-                                : current.filter((id) => id !== item.id),
-                            )
+                            setSelectedCategory(item.id, event.target.checked)
                           }
                         />
                       </td>
@@ -324,19 +360,7 @@ export default function Categories() {
                       </td>
                       <td>
                         <div className="flex items-center justify-end gap-1">
-                          <IconButton
-                            label="编辑分类"
-                            icon={<Edit2 />}
-                            onClick={() => openEditDrawer(item)}
-                          />
-                          <IconButton
-                            variant="danger"
-                            label="删除分类"
-                            icon={<Trash2 />}
-                            onClick={() =>
-                              setDeleteTarget({ kind: "category", item })
-                            }
-                          />
+                          {renderActions(item)}
                         </div>
                       </td>
                     </tr>
@@ -345,10 +369,53 @@ export default function Categories() {
               </table>
             </TableContainer>
           </Card>
+
+          <Card className="border-border/80 bg-card px-4 md:hidden">
+            <ListStack role="list" aria-label="分类列表">
+              {categories.map((item) => (
+                <div key={item.id} role="listitem">
+                  <ListRow
+                    action={renderActions(item)}
+                    className="items-start gap-3 [&>div:last-child]:w-full [&>div:last-child]:justify-end"
+                  >
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        aria-label={`选择分类 ${item.name}`}
+                        checked={selected.includes(item.id)}
+                        onChange={(event) =>
+                          setSelectedCategory(item.id, event.target.checked)
+                        }
+                      />
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <div className="flex items-start justify-between gap-3">
+                          <strong className="min-w-0 break-words text-sm font-semibold leading-snug">
+                            {item.name}
+                          </strong>
+                          <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                            {item.post_count ?? 0} 篇
+                          </span>
+                        </div>
+                        {item.description ? (
+                          <p className="text-xs leading-relaxed text-muted-foreground">
+                            {item.description}
+                          </p>
+                        ) : null}
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                          <code className="break-all rounded bg-muted px-1.5 py-0.5 font-mono">
+                            {item.slug}
+                          </code>
+                          <span>排序 {item.sort_order ?? 0}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </ListRow>
+                </div>
+              ))}
+            </ListStack>
+          </Card>
         </AsyncState>
       </ContentStack>
 
-      {/* 新建分类 Drawer */}
       <Drawer
         open={creatingCategory}
         title="新建分类"
@@ -369,7 +436,6 @@ export default function Categories() {
         />
       </Drawer>
 
-      {/* 编辑分类 Drawer */}
       <Drawer
         open={editingCategory !== null}
         title="编辑分类"
