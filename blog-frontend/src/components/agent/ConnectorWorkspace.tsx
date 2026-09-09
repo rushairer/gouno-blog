@@ -72,21 +72,47 @@ export function ConnectorWorkspace({
 
   useEffect(() => {
     const query = new URLSearchParams(window.location.search);
+    const oauthResult = query.get("connector_oauth");
     const returnedState = query.get("state");
     const returnedCode = query.get("code");
+    let changed = false;
+
+    if (oauthResult === "connected") {
+      setMessage(
+        zh
+          ? "Search Console 已连接。"
+          : "Search Console connected successfully.",
+      );
+      query.delete("connector_oauth");
+      changed = true;
+    } else if (oauthResult === "failed") {
+      setError(
+        zh
+          ? "Search Console 连接失败，请重试。"
+          : "Search Console connection failed. Please try again.",
+      );
+      query.delete("connector_oauth");
+      changed = true;
+    }
+
     if (returnedState && returnedCode) {
       setState(returnedState);
       setCode(returnedCode);
       setOAuthProvider("search_console");
       query.delete("state");
       query.delete("code");
+      changed = true;
+    }
+
+    if (changed) {
+      const search = query.toString();
       window.history.replaceState(
-        {},
+        window.history.state,
         "",
-        `${window.location.pathname}${query.size ? `?${query}` : ""}`,
+        `${window.location.pathname}${search ? `?${search}` : ""}${window.location.hash}`,
       );
     }
-  }, []);
+  }, [zh]);
 
   const load = useCallback(async () => {
     const [profileData, outboxData] = await Promise.all([

@@ -10,7 +10,7 @@ vi.mock("../../../auth", () => ({
 
 describe("GlobalStepUpBoundary", () => {
   beforeEach(() => {
-    window.history.replaceState({}, "", "/admin/ai-ops");
+    window.history.replaceState({}, "", "/admin/ai-settings");
   });
 
   it("opens the high-privilege verification UI when an AI API requests step-up", async () => {
@@ -30,11 +30,11 @@ describe("GlobalStepUpBoundary", () => {
     ).toBeInTheDocument();
   });
 
-  it("consumes the one-shot navigation query and opens the same UI", async () => {
+  it("consumes the one-shot navigation query without losing the AI Settings section", async () => {
     window.history.replaceState(
       {},
       "",
-      "/admin/ai-ops?mfa_step_up=1&tab=advanced",
+      "/admin/ai-settings?section=connectors&mfa_step_up=1",
     );
 
     render(
@@ -44,7 +44,7 @@ describe("GlobalStepUpBoundary", () => {
     );
 
     expect(await screen.findByText("高权限安全验证")).toBeInTheDocument();
-    expect(window.location.pathname).toBe("/admin/ai-ops");
-    expect(window.location.search).toBe("?tab=advanced");
+    expect(window.location.pathname).toBe("/admin/ai-settings");
+    expect(window.location.search).toBe("?section=connectors");
   });
 });

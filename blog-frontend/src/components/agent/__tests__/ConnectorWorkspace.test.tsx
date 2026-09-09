@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ConnectorWorkspace } from "../ConnectorWorkspace";
 
 const { apiFetch } = vi.hoisted(() => ({ apiFetch: vi.fn() }));
@@ -17,7 +17,22 @@ function response(data: unknown, ok = true) {
   });
 }
 
+function mockEmptyConnectorState() {
+  apiFetch.mockImplementation((path: string) => {
+    if (path === "/api/admin/ai-connectors")
+      return Promise.resolve(response([]));
+    if (path === "/api/admin/ai-connector-outbox")
+      return Promise.resolve(response([]));
+    return Promise.resolve(response({}));
+  });
+}
+
 describe("ConnectorWorkspace", () => {
+  beforeEach(() => {
+    apiFetch.mockReset();
+    window.history.replaceState({}, "", "/admin/ai-settings?section=connectors");
+  });
+
   it("loads sandbox profiles and keeps OAuth, approval and delivery on mock APIs", async () => {
     apiFetch.mockImplementation((path: string) => {
       if (path === "/api/admin/ai-connectors")
@@ -76,5 +91,45 @@ describe("ConnectorWorkspace", () => {
         expect.objectContaining({ method: "POST" }),
       ),
     );
+  });
+
+  it("surfaces and consumes a successful Search Console OAuth return", async () => {
+    mockEmptyConnectorState();
+    window.history.replaceState(
+      {},
+      "",
+      "/admin/ai-settings?section=connectors&connector_oauth=connected#profiles",
+    );
+
+    render(
+      <ConnectorWorkspace locale="en" onRefresh={vi.fn().mockResolvedValue(undefined)} />,
+    );
+
+    expect(
+      await screen.findByText("Search Console connected successfully."),
+    ).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/admin/ai-settings");
+    expect(window.location.search).toBe("?section=connectors");
+    expect(window.location.hash).toBe("#profiles");
+  });
+
+  it("surfaces and consumes a failed Search Console OAuth return", async () => {
+    mockEmptyConnectorState();
+    window.history.replaceState(
+      {},
+      "",
+      "/admin/ai-settings?section=connectors&connector_oauth=failed",
+    );
+
+    render(
+      <ConnectorWorkspace locale="en" onRefresh={vi.fn().mockResolvedValue(undefined)} />,
+    );
+
+    expect(
+      await screen.findByText(
+        "Search Console connection failed. Please try again.",
+      ),
+    ).toBeInTheDocument();
+    expect(window.location.search).toBe("?section=connectors");
   });
 });
