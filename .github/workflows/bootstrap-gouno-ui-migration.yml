@@ -104,12 +104,18 @@ jobs:
           await writeFile(packagePath, `${JSON.stringify(manifest, null, 2)}\n`);
 
           const tsconfigPath = './tsconfig.app.json';
-          const tsconfig = JSON.parse(await readFile(tsconfigPath, 'utf8'));
-          tsconfig.compilerOptions.paths = {
-            ...(tsconfig.compilerOptions.paths || {}),
-            '@gouno/ui': ['./node_modules/@gouno/ui-legacy/dist/index.d.ts'],
-          };
-          await writeFile(tsconfigPath, `${JSON.stringify(tsconfig, null, 2)}\n`);
+          let tsconfig = await readFile(tsconfigPath, 'utf8');
+          const moduleResolutionMarker = '    "moduleResolution": "bundler",\n';
+          if (!tsconfig.includes('"@gouno/ui"')) {
+            if (!tsconfig.includes(moduleResolutionMarker)) {
+              throw new Error('unable to locate tsconfig moduleResolution marker');
+            }
+            tsconfig = tsconfig.replace(
+              moduleResolutionMarker,
+              `${moduleResolutionMarker}    "paths": {\n      "@gouno/ui": ["./node_modules/@gouno/ui-legacy/dist/index.d.ts"]\n    },\n`,
+            );
+            await writeFile(tsconfigPath, tsconfig);
+          }
 
           const vitePath = './vite.config.ts';
           let vite = await readFile(vitePath, 'utf8');
