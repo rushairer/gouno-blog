@@ -166,6 +166,7 @@ jobs:
           EOF
           npm install --package-lock-only --ignore-scripts
           npm ci
+          npx prettier --write src/components/agent/__tests__/ConnectorWorkspace.test.tsx
           node --input-type=module <<'EOF'
           const core = await import('@gouno/ui/core');
           const patterns = await import('@gouno/ui/patterns');
@@ -197,7 +198,8 @@ jobs:
             blog-frontend/package-lock.json \
             blog-frontend/tsconfig.app.json \
             blog-frontend/vite.config.ts \
-            blog-frontend/src/styles/tailwind.css
+            blog-frontend/src/styles/tailwind.css \
+            blog-frontend/src/components/agent/__tests__/ConnectorWorkspace.test.tsx
           if git diff --cached --quiet; then
             echo "Gouno UI migration bridge is already bootstrapped."
             exit 0
