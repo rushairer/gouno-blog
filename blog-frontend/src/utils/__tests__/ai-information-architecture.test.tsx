@@ -18,7 +18,9 @@ describe("Blog Admin AI information architecture", () => {
       (group) => group.label === "互动管理",
     );
     expect(
-      interactionGroup?.items.some((item) => item.path.startsWith("/admin/ai-")),
+      interactionGroup?.items.some((item) =>
+        item.path.startsWith("/admin/ai-"),
+      ),
     ).toBe(false);
   });
 

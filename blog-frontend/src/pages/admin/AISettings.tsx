@@ -58,7 +58,9 @@ function AISettingsContent() {
   const labels = new Proxy({} as Record<string, string>, {
     get: (_, prop: string) => t(`agent.${prop}` as any),
   });
-  const [section, setSection] = useState<AdvancedSection>(initialSettingsSection);
+  const [section, setSection] = useState<AdvancedSection>(
+    initialSettingsSection,
+  );
   const [providers, setProviders] = useState<ProviderProfile[]>([]);
   const [embeddingProfiles, setEmbeddingProfiles] = useState<
     EmbeddingProfile[]
@@ -346,9 +348,7 @@ function AISettingsContent() {
         ? agentApi.testProvider(id)
         : agentApi.testEmbedding(id));
       setNotice(
-        locale === "zh"
-          ? `${name}：连接成功`
-          : `${name}: connection succeeded`,
+        locale === "zh" ? `${name}：连接成功` : `${name}: connection succeeded`,
       );
     } catch (reason) {
       const message = requestError(reason, fallbackError);
@@ -366,7 +366,9 @@ function AISettingsContent() {
       if (deleteTarget.kind === "agent") {
         await mutate(() => agentApi.deleteAgent(deleteTarget.value.id));
       } else if (deleteTarget.kind === "provider") {
-        await mutate(() => agentApi.deleteProviderProfile(deleteTarget.value.id));
+        await mutate(() =>
+          agentApi.deleteProviderProfile(deleteTarget.value.id),
+        );
       } else if (deleteTarget.kind === "skill") {
         await mutate(() => agentApi.deleteAgentSkill(deleteTarget.value.id));
       } else {
