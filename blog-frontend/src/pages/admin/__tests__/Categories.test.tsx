@@ -75,7 +75,9 @@ describe("Admin Categories", () => {
     const table = await screen.findByRole("table");
     const mobileList = screen.getByRole("list", { name: "分类列表" });
     expect(within(table).getByText("engineering-practice")).toBeInTheDocument();
-    expect(within(mobileList).getByText("engineering-practice")).toBeInTheDocument();
+    expect(
+      within(mobileList).getByText("engineering-practice"),
+    ).toBeInTheDocument();
     expect(table.closest('[class*="md:block"]')).toBeTruthy();
     expect(mobileList.closest('[class*="md:hidden"]')).toBeTruthy();
 
@@ -90,6 +92,8 @@ describe("Admin Categories", () => {
     fireEvent.click(
       within(mobileList).getByRole("button", { name: "编辑分类 工程实践" }),
     );
-    expect(screen.getByRole("dialog", { name: "编辑分类" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: "编辑分类" }),
+    ).toBeInTheDocument();
   });
 });

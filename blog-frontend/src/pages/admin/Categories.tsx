@@ -243,7 +243,8 @@ export default function Categories() {
   );
 
   const allSelected =
-    categories.length > 0 && categories.every((item) => selected.includes(item.id));
+    categories.length > 0 &&
+    categories.every((item) => selected.includes(item.id));
 
   return (
     <AdminPage>
