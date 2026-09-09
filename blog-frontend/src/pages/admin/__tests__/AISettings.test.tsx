@@ -104,6 +104,7 @@ function renderSettings() {
 
 describe("AISettings", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     window.history.replaceState(null, "", "/admin/ai-settings");
     localStorage.setItem("gouno-blog:locale", "en");
     localStorage.setItem("gouno:sudo_activated_at", String(Date.now()));
@@ -115,7 +116,7 @@ describe("AISettings", () => {
   it("loads stable configuration dependencies without operations feeds", async () => {
     renderSettings();
     expect(
-      await screen.findByRole("heading", { name: "AI Settings" }),
+      await screen.findByRole("button", { name: "Create Agent" }),
     ).toBeInTheDocument();
     await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(7));
     expect(screen.getAllByText("Weekly Operations").length).toBeGreaterThan(0);
@@ -177,7 +178,7 @@ describe("AISettings", () => {
   it("closes a section-scoped editor when changing AI Settings sections", async () => {
     const user = userEvent.setup();
     renderSettings();
-    await screen.findByRole("heading", { name: "AI Settings" });
+    await screen.findByRole("button", { name: "Create Agent" });
     await user.click(screen.getByRole("button", { name: "Create Agent" }));
     expect(
       screen.getByRole("heading", { name: "Create Agent" }),

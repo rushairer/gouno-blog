@@ -94,6 +94,7 @@ function renderConsole() {
 
 describe("AIOperations", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     window.history.replaceState(null, "", "/admin/ai-ops");
     localStorage.setItem("gouno-blog:locale", "en");
     localStorage.setItem("gouno:sudo_activated_at", String(Date.now()));
