@@ -168,11 +168,7 @@ jobs:
           npm ci
           npx prettier --write \
             scripts/check-ui-contracts.mjs \
-            src/components/agent/__tests__/AIPreviewPanel.test.tsx \
-            src/components/agent/__tests__/ConnectorWorkspace.test.tsx \
-            src/pages/admin/Demo.tsx \
-            src/pages/admin/LinkPage.tsx \
-            src/pages/admin/Links.tsx
+            src/components/agent/__tests__/ConnectorWorkspace.test.tsx
           node --input-type=module <<'EOF'
           const core = await import('@gouno/ui/core');
           const patterns = await import('@gouno/ui/patterns');
@@ -206,11 +202,7 @@ jobs:
             blog-frontend/vite.config.ts \
             blog-frontend/src/styles/tailwind.css \
             blog-frontend/scripts/check-ui-contracts.mjs \
-            blog-frontend/src/components/agent/__tests__/AIPreviewPanel.test.tsx \
-            blog-frontend/src/components/agent/__tests__/ConnectorWorkspace.test.tsx \
-            blog-frontend/src/pages/admin/Demo.tsx \
-            blog-frontend/src/pages/admin/LinkPage.tsx \
-            blog-frontend/src/pages/admin/Links.tsx
+            blog-frontend/src/components/agent/__tests__/ConnectorWorkspace.test.tsx
           if git diff --cached --quiet; then
             echo "Gouno UI migration bridge is already bootstrapped."
             exit 0
