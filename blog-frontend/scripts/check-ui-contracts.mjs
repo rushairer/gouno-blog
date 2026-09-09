@@ -9,6 +9,8 @@ const primitiveStyleFiles = new Set([
   "styles/components.css",
   "styles/design-system-alignment.css",
 ]);
+const rawElevationPattern =
+  /(^|[\s"'`])(?:[a-z-]+:)*shadow-(?:xs|sm|md|lg|xl|2xl)(?=[\s"'`]|$)/;
 
 async function collect(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -90,7 +92,6 @@ function checkTsxContracts(name, source) {
     ts.ScriptKind.TSX,
   );
   const sharedPrimitive = name.startsWith("components/ui/");
-  const blogAdminProduct = name.startsWith("pages/admin/");
 
   function visit(node) {
     if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) {
@@ -138,16 +139,6 @@ function checkTsxContracts(name, source) {
             `${name}:${location(sourceFile, attribute)} shared badge classes must use Badge`,
           );
         }
-        if (
-          blogAdminProduct &&
-          /(^|\s)(?:[a-z-]+:)*shadow-(?:xs|sm|md|lg|xl|2xl)(?=\s|$)/.test(
-            value,
-          )
-        ) {
-          failures.push(
-            `${name}:${location(sourceFile, attribute)} Blog Admin product surfaces must use semantic elevation instead of raw shadow sizes`,
-          );
-        }
       }
     }
     if (
@@ -176,6 +167,15 @@ for (const path of files) {
         failures.push(`${name}:${index + 1} literal white outside tokens.css`);
       if (/!important/.test(line))
         failures.push(`${name}:${index + 1} !important is not allowed`);
+    });
+  }
+  if (name.startsWith("pages/admin/") && name.endsWith(".tsx")) {
+    source.split("\n").forEach((line, index) => {
+      if (rawElevationPattern.test(line)) {
+        failures.push(
+          `${name}:${index + 1} Blog Admin product surfaces must use semantic elevation instead of raw shadow sizes`,
+        );
+      }
     });
   }
   checkTsxContracts(name, source);
