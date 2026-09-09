@@ -120,14 +120,26 @@ jobs:
 
           const vitePath = './vite.config.ts';
           let vite = await readFile(vitePath, 'utf8');
-          const marker = "  plugins: [tailwindcss(), react()],\n";
+          const viteMarker = "  plugins: [tailwindcss(), react()],\n";
           if (!vite.includes("@gouno/ui-legacy")) {
-            if (!vite.includes(marker)) throw new Error('unable to locate Vite plugin marker');
+            if (!vite.includes(viteMarker)) throw new Error('unable to locate Vite plugin marker');
             vite = vite.replace(
-              marker,
-              `${marker}  resolve: {\n    alias: [{ find: /^@gouno\\/ui$/, replacement: '@gouno/ui-legacy' }],\n  },\n`,
+              viteMarker,
+              `${viteMarker}  resolve: {\n    alias: [{ find: /^@gouno\\/ui$/, replacement: '@gouno/ui-legacy' }],\n  },\n`,
             );
             await writeFile(vitePath, vite);
+          }
+
+          const tailwindPath = './src/styles/tailwind.css';
+          let tailwind = await readFile(tailwindPath, 'utf8');
+          const canonicalSource = '@source "../../node_modules/@gouno/ui/dist";\n';
+          const legacySource = '@source "../../node_modules/@gouno/ui-legacy/dist";\n';
+          if (!tailwind.includes(legacySource)) {
+            if (!tailwind.includes(canonicalSource)) {
+              throw new Error('unable to locate canonical Tailwind package source');
+            }
+            tailwind = tailwind.replace(canonicalSource, `${canonicalSource}${legacySource}`);
+            await writeFile(tailwindPath, tailwind);
           }
           EOF
 
@@ -184,7 +196,8 @@ jobs:
             blog-frontend/package.json \
             blog-frontend/package-lock.json \
             blog-frontend/tsconfig.app.json \
-            blog-frontend/vite.config.ts
+            blog-frontend/vite.config.ts \
+            blog-frontend/src/styles/tailwind.css
           if git diff --cached --quiet; then
             echo "Gouno UI migration bridge is already bootstrapped."
             exit 0
