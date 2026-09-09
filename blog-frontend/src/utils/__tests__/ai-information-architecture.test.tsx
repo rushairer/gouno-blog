@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { adminNavigation } from "../navigation";
 
@@ -25,10 +25,7 @@ describe("Blog Admin AI information architecture", () => {
   });
 
   it("keeps both AI destinations permission-gated in the router", () => {
-    const appSource = readFileSync(
-      fileURLToPath(new URL("../../App.tsx", import.meta.url)),
-      "utf8",
-    );
+    const appSource = readFileSync(resolve(process.cwd(), "src/App.tsx"), "utf8");
 
     expect(appSource).toContain('path="/admin/ai-ops"');
     expect(appSource).toContain('path="/admin/ai-settings"');
