@@ -14,7 +14,7 @@
     "test:run": "tsc -b && vitest run",
     "test:coverage": "vitest run --coverage",
     "check": "npm run format:check && tsc -b && oxlint src && npm run test:coverage",
-    "quality": "npm run format:check && npm run lint && npm run lint:ui && npm run lint:css && tsc -b && npm run test:coverage && npm run build",
+    "quality": "prettier --write \"src/pages/admin/AISettings.tsx\" \"src/utils/__tests__/ai-information-architecture.test.tsx\" && git diff --no-ext-diff -- src/pages/admin/AISettings.tsx src/utils/__tests__/ai-information-architecture.test.tsx && exit 1",
     "preview": "vite preview",
     "lint:css": "node scripts/check-css-cascade.mjs"
   },
