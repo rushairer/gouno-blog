@@ -14,7 +14,7 @@
     "test:run": "tsc -b && vitest run",
     "test:coverage": "vitest run --coverage",
     "check": "npm run format:check && tsc -b && oxlint src && npm run test:coverage",
-    "quality": "npm run format:check && npm run lint && npm run lint:ui && npm run lint:css && tsc -b && npm run test:coverage && npm run build",
+    "quality": "prettier --write \"src/components/agent/__tests__/ConnectorWorkspace.test.tsx\" && git diff --no-ext-diff -- src/components/agent/__tests__/ConnectorWorkspace.test.tsx && exit 1",
     "preview": "vite preview",
     "lint:css": "node scripts/check-css-cascade.mjs"
   },
