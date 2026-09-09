@@ -31,8 +31,9 @@ describe("Blog Admin AI information architecture", () => {
     expect(appSource).toContain('path="/admin/ai-ops"');
     expect(appSource).toContain('path="/admin/ai-settings"');
     expect(appSource).toContain('import("./pages/admin/AISettings")');
-    expect(appSource.match(/requiredPermissions=\{\["ai\.manage"\]\}/g)?.length).toBe(
-      2,
-    );
+    const aiGateCount = appSource.match(
+      /requiredPermissions=\{\["ai\.manage"\]\}/g,
+    )?.length;
+    expect(aiGateCount).toBe(2);
   });
 });

@@ -47,6 +47,10 @@ function initialSettingsSection(): AdvancedSection {
     : "agents";
 }
 
+function requestError(reason: unknown, fallback: string): string {
+  return reason instanceof Error ? reason.message : fallback;
+}
+
 function AISettingsContent() {
   const { locale, formatDateTime, t } = useI18n();
   const { notify } = useToast();
@@ -56,33 +60,53 @@ function AISettingsContent() {
   });
   const [section, setSection] = useState<AdvancedSection>(initialSettingsSection);
   const [providers, setProviders] = useState<ProviderProfile[]>([]);
-  const [embeddingProfiles, setEmbeddingProfiles] = useState<EmbeddingProfile[]>([]);
-  const [indexStatus, setIndexStatus] = useState({ queued: 0, failed: 0, chunks: 0 });
+  const [embeddingProfiles, setEmbeddingProfiles] = useState<
+    EmbeddingProfile[]
+  >([]);
+  const [indexStatus, setIndexStatus] = useState({
+    queued: 0,
+    failed: 0,
+    chunks: 0,
+  });
   const [agents, setAgents] = useState<Agent[]>([]);
   const [runs, setRuns] = useState<AgentRun[]>([]);
   const [tools, setTools] = useState<ToolDefinition[]>([]);
   const [skills, setSkills] = useState<AgentSkill[]>([]);
   const [editingAgent, setEditingAgent] = useState<Agent | "new" | null>(null);
-  const [editingProvider, setEditingProvider] = useState<ProviderProfile | "new" | null>(null);
-  const [editingEmbedding, setEditingEmbedding] = useState<EmbeddingProfile | "new" | null>(null);
-  const [editingSkill, setEditingSkill] = useState<AgentSkill | "new" | null>(null);
+  const [editingProvider, setEditingProvider] = useState<
+    ProviderProfile | "new" | null
+  >(null);
+  const [editingEmbedding, setEditingEmbedding] = useState<
+    EmbeddingProfile | "new" | null
+  >(null);
+  const [editingSkill, setEditingSkill] = useState<AgentSkill | "new" | null>(
+    null,
+  );
   const [testingConnections, setTestingConnections] = useState<string[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const fallbackError = t("agent.requestFailed");
 
   const load = useCallback(async () => {
-    const [providerData, embeddingData, indexData, agentData, runData, toolData, skillData] =
-      await Promise.all([
-        agentApi.getProviderProfiles(),
-        agentApi.getEmbeddingProfiles(),
-        agentApi.getIndexStatus(),
-        agentApi.getAgents(),
-        agentApi.getAgentRuns(100),
-        agentApi.getToolCatalog(),
-        agentApi.getAgentSkills(),
-      ]);
+    const [
+      providerData,
+      embeddingData,
+      indexData,
+      agentData,
+      runData,
+      toolData,
+      skillData,
+    ] = await Promise.all([
+      agentApi.getProviderProfiles(),
+      agentApi.getEmbeddingProfiles(),
+      agentApi.getIndexStatus(),
+      agentApi.getAgents(),
+      agentApi.getAgentRuns(100),
+      agentApi.getToolCatalog(),
+      agentApi.getAgentSkills(),
+    ]);
     setProviders(providerData);
     setEmbeddingProfiles(embeddingData);
     setIndexStatus(indexData);
@@ -136,7 +160,7 @@ function AISettingsContent() {
     try {
       await load();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : t("agent.requestFailed"));
+      setError(requestError(reason, fallbackError));
     }
   };
 
@@ -160,7 +184,7 @@ function AISettingsContent() {
         );
       }
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : t("agent.requestFailed"));
+      setError(requestError(reason, fallbackError));
     }
   };
 
@@ -171,7 +195,7 @@ function AISettingsContent() {
       setEditingEmbedding(null);
       await refresh();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : t("agent.requestFailed"));
+      setError(requestError(reason, fallbackError));
     }
   };
 
@@ -184,7 +208,7 @@ function AISettingsContent() {
       setEditingAgent(null);
       await refresh();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : t("agent.requestFailed"));
+      setError(requestError(reason, fallbackError));
     }
   };
 
@@ -195,7 +219,7 @@ function AISettingsContent() {
       setEditingSkill(null);
       await refresh();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : t("agent.requestFailed"));
+      setError(requestError(reason, fallbackError));
     }
   };
 
@@ -209,11 +233,13 @@ function AISettingsContent() {
       anchor.click();
       URL.revokeObjectURL(url);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : t("agent.requestFailed"));
+      setError(requestError(reason, fallbackError));
     }
   };
 
-  const handleImportProviders = async (event: ChangeEvent<HTMLInputElement>) => {
+  const handleImportProviders = async (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
     event.target.value = "";
@@ -234,7 +260,7 @@ function AISettingsContent() {
           : `Successfully imported ${data.imported_count} model connections.`,
       );
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : t("agent.requestFailed"));
+      setError(requestError(reason, fallbackError));
     }
   };
 
@@ -259,7 +285,7 @@ function AISettingsContent() {
           : `Successfully imported Skill “${data.name || file.name}”.`,
       );
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : t("agent.requestFailed"));
+      setError(requestError(reason, fallbackError));
     }
   };
 
@@ -273,7 +299,7 @@ function AISettingsContent() {
       anchor.click();
       URL.revokeObjectURL(url);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : t("agent.requestFailed"));
+      setError(requestError(reason, fallbackError));
     }
   };
 
@@ -291,7 +317,7 @@ function AISettingsContent() {
           : `Created custom Skill copy “${name.trim()}”.`,
       );
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : t("agent.requestFailed"));
+      setError(requestError(reason, fallbackError));
     }
   };
 
@@ -300,7 +326,7 @@ function AISettingsContent() {
       await mutate(() => agentApi.runAgent(agent.id));
       navigate("/admin/ai-ops?tab=records&record=agent");
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : t("agent.requestFailed"));
+      setError(requestError(reason, fallbackError));
     }
   };
 
@@ -316,18 +342,21 @@ function AISettingsContent() {
     setError("");
     setNotice("");
     try {
-      await (kind === "provider" ? agentApi.testProvider(id) : agentApi.testEmbedding(id));
+      await (kind === "provider"
+        ? agentApi.testProvider(id)
+        : agentApi.testEmbedding(id));
       setNotice(
-        locale === "zh" ? `${name}：连接成功` : `${name}: connection succeeded`,
+        locale === "zh"
+          ? `${name}：连接成功`
+          : `${name}: connection succeeded`,
       );
     } catch (reason) {
-      setError(
-        locale === "zh"
-          ? `${name}：${reason instanceof Error ? reason.message : t("agent.requestFailed")}`
-          : `${name}: ${reason instanceof Error ? reason.message : t("agent.requestFailed")}`,
-      );
+      const message = requestError(reason, fallbackError);
+      setError(`${name}：${message}`);
     } finally {
-      setTestingConnections((current) => current.filter((item) => item !== key));
+      setTestingConnections((current) =>
+        current.filter((item) => item !== key),
+      );
     }
   };
 
@@ -341,24 +370,28 @@ function AISettingsContent() {
       } else if (deleteTarget.kind === "skill") {
         await mutate(() => agentApi.deleteAgentSkill(deleteTarget.value.id));
       } else {
-        await mutate(() => agentApi.deleteEmbeddingProfile(deleteTarget.value.id));
+        await mutate(() =>
+          agentApi.deleteEmbeddingProfile(deleteTarget.value.id),
+        );
       }
       setDeleteTarget(null);
     } catch (reason) {
-      const message = reason instanceof Error ? reason.message : t("agent.requestFailed");
+      const message = requestError(reason, fallbackError);
       setError(message.replace(/^provider profile is in use:\s*/i, ""));
     }
   };
 
+  const title = locale === "zh" ? "AI 设置" : "AI Settings";
+  const description =
+    locale === "zh"
+      ? "管理长期稳定的 AI 能力、模型与连接器配置；运行、审批和执行证据留在 AI 运营。"
+      : "Manage stable AI capabilities, models, and connector configuration. Runs, approvals, and execution evidence stay in AI Operations.";
+
   if (loading) {
     return (
       <AdminPageState
-        title={locale === "zh" ? "AI 设置" : "AI Settings"}
-        description={
-          locale === "zh"
-            ? "管理 Agent、Skill、Tools、知识索引、模型连接与 Sandbox 连接器。"
-            : "Manage Agents, Skills, Tools, knowledge indexing, model connections, and sandbox connectors."
-        }
+        title={title}
+        description={description}
         label={locale === "zh" ? "正在加载 AI 设置…" : "Loading AI settings…"}
       />
     );
@@ -367,12 +400,8 @@ function AISettingsContent() {
   return (
     <AdminPage className="agent-console">
       <AdminPageHeader
-        title={locale === "zh" ? "AI 设置" : "AI Settings"}
-        description={
-          locale === "zh"
-            ? "管理长期稳定的 AI 能力、模型与连接器配置；运行、审批和执行证据留在 AI 运营。"
-            : "Manage stable AI capabilities, models, and connector configuration. Runs, approvals, and execution evidence stay in AI Operations."
-        }
+        title={title}
+        description={description}
         actions={
           <Button
             variant="secondary"
@@ -414,33 +443,40 @@ function AISettingsContent() {
         onRunAgent={runAgent}
         onToggleAgentEnabled={async (agent) => {
           try {
-            await mutate(() => agentApi.setAgentEnabled(agent.id, !agent.enabled));
+            await mutate(() =>
+              agentApi.setAgentEnabled(agent.id, !agent.enabled),
+            );
           } catch (reason) {
-            setError(reason instanceof Error ? reason.message : t("agent.requestFailed"));
+            setError(requestError(reason, fallbackError));
           }
         }}
         onSetDefaultProvider={async (id, usage) => {
           try {
             await mutate(() => agentApi.setDefaultProvider(id, usage));
-            setNotice(
-              id === 0
-                ? locale === "zh"
+            const cleared = id === 0;
+            if (locale === "zh") {
+              setNotice(
+                cleared
                   ? usage === "writing"
                     ? "已取消默认文本模型。"
                     : "已取消默认图片模型。"
                   : usage === "writing"
+                    ? "默认文本模型已更新。"
+                    : "默认图片模型已更新。",
+              );
+            } else {
+              setNotice(
+                cleared
+                  ? usage === "writing"
                     ? "Cleared default text model."
                     : "Cleared default image model."
-                : locale === "zh"
-                  ? usage === "writing"
-                    ? "默认文本模型已更新。"
-                    : "默认图片模型已更新。"
                   : usage === "writing"
                     ? "Default text model updated."
                     : "Default image model updated.",
-            );
+              );
+            }
           } catch (reason) {
-            setError(reason instanceof Error ? reason.message : t("agent.requestFailed"));
+            setError(requestError(reason, fallbackError));
           }
         }}
         onTestConnection={testConnection}
@@ -453,14 +489,14 @@ function AISettingsContent() {
           try {
             await mutate(() => agentApi.retryIndex());
           } catch (reason) {
-            setError(reason instanceof Error ? reason.message : t("agent.requestFailed"));
+            setError(requestError(reason, fallbackError));
           }
         }}
         onRebuildIndex={async () => {
           try {
             await mutate(() => agentApi.rebuildIndex());
           } catch (reason) {
-            setError(reason instanceof Error ? reason.message : t("agent.requestFailed"));
+            setError(requestError(reason, fallbackError));
           }
         }}
         onDeleteTarget={setDeleteTarget}
