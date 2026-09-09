@@ -249,7 +249,7 @@ export default function AdminPosts() {
             }
           />
         ) : null}
-        <Card className="border-border/80 bg-card p-4 ">
+        <Card className="border-border/80 bg-card p-4">
           <FilterBar>
             <SearchField
               aria-label="搜索文章"
@@ -386,7 +386,7 @@ export default function AdminPosts() {
             />
           }
         >
-          <Card className="hidden overflow-hidden border-0 bg-card p-0  md:block">
+          <Card className="hidden overflow-hidden border-0 bg-card p-0 md:block">
             <TableContainer>
               <table className="admin-table">
                 <thead>
@@ -478,7 +478,7 @@ export default function AdminPosts() {
               </table>
             </TableContainer>
           </Card>
-          <Card className="border-border/80 bg-card px-4  md:hidden">
+          <Card className="border-border/80 bg-card px-4 md:hidden">
             <ListStack role="list" aria-label="文章列表">
               {posts.map((post) => (
                 <div key={post.id} role="listitem">

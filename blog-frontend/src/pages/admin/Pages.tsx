@@ -170,7 +170,7 @@ export default function AdminPages() {
       />
 
       <ContentStack>
-        <Card className="border-border/80 bg-card p-4 ">
+        <Card className="border-border/80 bg-card p-4">
           <FilterBar>
             <SearchField
               aria-label="搜索单页"
@@ -253,7 +253,7 @@ export default function AdminPages() {
             />
           }
         >
-          <Card className="hidden overflow-hidden border-border/80 bg-card  md:block">
+          <Card className="hidden overflow-hidden border-border/80 bg-card md:block">
             <TableContainer>
               <table className="admin-table">
                 <thead>
@@ -352,7 +352,7 @@ export default function AdminPages() {
               </table>
             </TableContainer>
           </Card>
-          <Card className="border-border/80 bg-card px-4  md:hidden">
+          <Card className="border-border/80 bg-card px-4 md:hidden">
             <ListStack role="list" aria-label="单页列表">
               {pages.map((pageItem) => (
                 <div key={pageItem.id} role="listitem">

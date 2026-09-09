@@ -341,7 +341,7 @@ export default function MediaLibrary() {
             ) : null}
           </Feedback>
         ) : null}
-        <Card className="border-border/80 bg-card p-4 ">
+        <Card className="border-border/80 bg-card p-4">
           <FilterBar>
             <SearchField
               aria-label="搜索媒体"
@@ -421,7 +421,7 @@ export default function MediaLibrary() {
           <div className="media-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {visibleAssets.map((asset) => (
               <Card
-                className="media-card group relative flex flex-col justify-between overflow-hidden border-border/80 bg-card  hover:border-primary/40  transition-all"
+                className="media-card group relative flex flex-col justify-between overflow-hidden border-border/80 bg-card hover:border-primary/40 transition-all"
                 id={`asset-${asset.id}`}
                 key={asset.id}
               >

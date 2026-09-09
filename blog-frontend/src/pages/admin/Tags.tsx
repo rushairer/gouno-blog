@@ -154,7 +154,7 @@ export default function Tags() {
           <div className="tag-admin-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {tags.map((tag) => (
               <Card
-                className="tag-admin-card flex flex-col justify-between border-border/80 bg-card p-4  hover:border-primary/40 transition-colors"
+                className="tag-admin-card flex flex-col justify-between border-border/80 bg-card p-4 hover:border-primary/40 transition-colors"
                 key={tag.name}
               >
                 <div className="flex items-start justify-between gap-2">
