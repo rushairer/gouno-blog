@@ -120,8 +120,12 @@ describe("AISettings", () => {
     await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(7));
     expect(screen.getAllByText("Weekly Operations").length).toBeGreaterThan(0);
 
-    const urls = vi.mocked(apiFetch).mock.calls.map(([input]) => input.toString());
-    expect(urls).not.toContain("/api/admin/agent-approvals?status=pending&pageSize=100");
+    const urls = vi
+      .mocked(apiFetch)
+      .mock.calls.map(([input]) => input.toString());
+    expect(urls).not.toContain(
+      "/api/admin/agent-approvals?status=pending&pageSize=100",
+    );
     expect(urls).not.toContain("/api/admin/ai-workflows");
     expect(urls).not.toContain("/api/admin/ai-suggestions?status=all");
   });

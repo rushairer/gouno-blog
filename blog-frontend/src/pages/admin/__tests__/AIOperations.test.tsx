@@ -121,7 +121,9 @@ describe("AIOperations", () => {
       screen.queryByRole("tab", { name: "Advanced settings" }),
     ).not.toBeInTheDocument();
 
-    const urls = vi.mocked(apiFetch).mock.calls.map(([input]) => input.toString());
+    const urls = vi
+      .mocked(apiFetch)
+      .mock.calls.map(([input]) => input.toString());
     expect(urls).not.toContain("/api/admin/provider-profiles");
     expect(urls).not.toContain("/api/admin/embedding-profiles");
     expect(urls).not.toContain("/api/admin/ai-index/status");
@@ -230,7 +232,9 @@ describe("AIOperations", () => {
     );
     render(
       <I18nProvider>
-        <MemoryRouter initialEntries={["/admin/ai-ops?tab=advanced&section=providers"]}>
+        <MemoryRouter
+          initialEntries={["/admin/ai-ops?tab=advanced&section=providers"]}
+        >
           <Routes>
             <Route path="/admin/ai-ops" element={<AIOperations />} />
             <Route
