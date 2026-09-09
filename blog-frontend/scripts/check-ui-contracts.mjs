@@ -90,6 +90,7 @@ function checkTsxContracts(name, source) {
     ts.ScriptKind.TSX,
   );
   const sharedPrimitive = name.startsWith("components/ui/");
+  const blogAdminProduct = name.startsWith("pages/admin/");
 
   function visit(node) {
     if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) {
@@ -135,6 +136,16 @@ function checkTsxContracts(name, source) {
         if (!sharedPrimitive && /(^|\s)badge(?:\s|$)/.test(value)) {
           failures.push(
             `${name}:${location(sourceFile, attribute)} shared badge classes must use Badge`,
+          );
+        }
+        if (
+          blogAdminProduct &&
+          /(^|\s)(?:[a-z-]+:)*shadow-(?:xs|sm|md|lg|xl|2xl)(?=\s|$)/.test(
+            value,
+          )
+        ) {
+          failures.push(
+            `${name}:${location(sourceFile, attribute)} Blog Admin product surfaces must use semantic elevation instead of raw shadow sizes`,
           );
         }
       }
