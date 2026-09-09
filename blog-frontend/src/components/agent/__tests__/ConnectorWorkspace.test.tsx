@@ -70,9 +70,9 @@ describe("ConnectorWorkspace", () => {
     });
     const onRefresh = vi.fn().mockResolvedValue(undefined);
     render(<ConnectorWorkspace locale="en" onRefresh={onRefresh} />);
-    expect(
-      (await screen.findAllByText("Newsletter sandbox")).length,
-    ).toBeGreaterThan(0);
+    expect((await screen.findAllByText("Newsletter sandbox")).length).toBeGreaterThan(
+      0,
+    );
     await userEvent
       .setup()
       .click(screen.getByRole("button", { name: "Start mock OAuth" }));
