@@ -102,7 +102,10 @@ describe("ConnectorWorkspace", () => {
     );
 
     render(
-      <ConnectorWorkspace locale="en" onRefresh={vi.fn().mockResolvedValue(undefined)} />,
+      <ConnectorWorkspace
+        locale="en"
+        onRefresh={vi.fn().mockResolvedValue(undefined)}
+      />,
     );
 
     expect(
@@ -122,7 +125,10 @@ describe("ConnectorWorkspace", () => {
     );
 
     render(
-      <ConnectorWorkspace locale="en" onRefresh={vi.fn().mockResolvedValue(undefined)} />,
+      <ConnectorWorkspace
+        locale="en"
+        onRefresh={vi.fn().mockResolvedValue(undefined)}
+      />,
     );
 
     expect(
