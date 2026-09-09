@@ -409,7 +409,7 @@ export default function AdminNotifications() {
                   className={cn(
                     "p-4 transition-all duration-200",
                     isUnread
-                      ? "border-primary/40 bg-card shadow-sm"
+                      ? "border-primary/40 bg-card"
                       : "border-border/60 bg-card/60 opacity-90",
                   )}
                 >

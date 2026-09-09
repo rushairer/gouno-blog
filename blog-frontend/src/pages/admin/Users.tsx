@@ -284,7 +284,7 @@ export default function AdminUsers() {
             description="修改 Blog 成员角色、移交所有权或暂停成员资格需要近期多因素身份认证。解锁后享有 10 分钟无打扰操作期。"
             actionLabel="解锁以管理成员权限"
           >
-            <Card className="hidden overflow-hidden border-border/80 bg-card shadow-xs md:block">
+            <Card className="hidden overflow-hidden border-border/80 bg-card md:block">
               <TableContainer>
                 <table className="admin-table member-table">
                   <thead>
@@ -379,7 +379,7 @@ export default function AdminUsers() {
                 </table>
               </TableContainer>
             </Card>
-            <Card className="border-border/80 bg-card px-4 shadow-xs md:hidden">
+            <Card className="border-border/80 bg-card px-4 md:hidden">
               <ListStack role="list" aria-label="成员列表">
                 {members.map((member) => (
                   <div key={member.principal.id} role="listitem">
