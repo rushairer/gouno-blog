@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - .github/workflows/bootstrap-gouno-ui-migration.yml
+      - blog-frontend/src/**
   workflow_dispatch:
     inputs:
       ref:
