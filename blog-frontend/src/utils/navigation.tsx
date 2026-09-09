@@ -9,6 +9,7 @@ import {
   Image,
   MessageSquare,
   Settings,
+  Settings2,
   Tags,
   Users,
 } from "lucide-react";
@@ -75,10 +76,21 @@ export const adminNavigation: Array<{ label: string; items: AdminNavItem[] }> =
           permissions: ["community.moderate"],
         },
         { label: "通知中心", path: "/admin/notifications", icon: <Bell /> },
+      ],
+    },
+    {
+      label: "AI",
+      items: [
         {
           label: "AI 运营",
           path: "/admin/ai-ops",
           icon: <Bot />,
+          permissions: ["ai.manage"],
+        },
+        {
+          label: "AI 设置",
+          path: "/admin/ai-settings",
+          icon: <Settings2 />,
           permissions: ["ai.manage"],
         },
       ],

@@ -50,6 +50,7 @@ const AdminSiteSettings = React.lazy(
 const AdminUsers = React.lazy(() => import("./pages/admin/Users"));
 const MediaLibrary = React.lazy(() => import("./pages/admin/MediaLibrary"));
 const AIOperations = React.lazy(() => import("./pages/admin/AIOperations"));
+const AISettings = React.lazy(() => import("./pages/admin/AISettings"));
 const AdminNotifications = React.lazy(
   () => import("./pages/admin/Notifications"),
 );
@@ -499,6 +500,14 @@ export default function App() {
                   element={
                     <Admin requiredPermissions={["ai.manage"]}>
                       <AIOperations />
+                    </Admin>
+                  }
+                />
+                <Route
+                  path="/admin/ai-settings"
+                  element={
+                    <Admin requiredPermissions={["ai.manage"]}>
+                      <AISettings />
                     </Admin>
                   }
                 />
