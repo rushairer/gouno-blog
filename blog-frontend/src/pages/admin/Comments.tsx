@@ -126,7 +126,7 @@ export default function AdminComments() {
         {error && comments.length > 0 ? (
           <Feedback type="error">{error}</Feedback>
         ) : null}
-        <Card className="border-border/80 bg-card p-4 shadow-xs">
+        <Card className="border-border/80 bg-card p-4 ">
           <FilterBar>
             <Select
               size="compact"
@@ -180,7 +180,7 @@ export default function AdminComments() {
             {comments.map((comment) => (
               <Card
                 key={comment.id}
-                className="p-4 border-border/80 bg-card shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4"
+                className="p-4 border-border/80 bg-card  flex flex-col md:flex-row md:items-center justify-between gap-4"
               >
                 <div className="flex items-start gap-3.5 flex-1 min-w-0">
                   <div className="pt-0.5">

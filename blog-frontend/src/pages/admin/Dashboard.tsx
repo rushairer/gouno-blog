@@ -168,7 +168,7 @@ export default function Dashboard() {
                 >
                   <Card
                     interactive
-                    className="group relative overflow-hidden transition-all duration-200 hover:border-primary/40 hover:shadow-md h-full"
+                    className="group relative overflow-hidden transition-all duration-200 hover:border-primary/40  h-full"
                   >
                     <div className="p-5 flex flex-col justify-between h-full space-y-3">
                       <div className="flex items-center justify-between">
@@ -229,7 +229,7 @@ export default function Dashboard() {
                 >
                   <Card
                     interactive
-                    className="group relative overflow-hidden transition-all duration-200 hover:border-emerald-500/40 hover:shadow-md h-full"
+                    className="group relative overflow-hidden transition-all duration-200 hover:border-emerald-500/40  h-full"
                   >
                     <div className="p-5 flex flex-col justify-between h-full space-y-3">
                       <div className="flex items-center justify-between">
@@ -282,7 +282,7 @@ export default function Dashboard() {
                 >
                   <Card
                     interactive
-                    className="group relative overflow-hidden transition-all duration-200 hover:border-pink-500/40 hover:shadow-md h-full"
+                    className="group relative overflow-hidden transition-all duration-200 hover:border-pink-500/40  h-full"
                   >
                     <div className="p-5 flex flex-col justify-between h-full space-y-3">
                       <div className="flex items-center justify-between">
@@ -339,7 +339,7 @@ export default function Dashboard() {
                 >
                   <Card
                     interactive
-                    className="group relative overflow-hidden transition-all duration-200 hover:border-violet-500/40 hover:shadow-md h-full"
+                    className="group relative overflow-hidden transition-all duration-200 hover:border-violet-500/40  h-full"
                   >
                     <div className="p-5 flex flex-col justify-between h-full space-y-3">
                       <div className="flex items-center justify-between">
@@ -435,7 +435,7 @@ export default function Dashboard() {
                           title={`${item.date}: ${item.count} 次访问`}
                         >
                           <div
-                            className="w-full rounded-t-sm bg-primary/70 transition-all duration-200 group-hover:bg-primary group-hover:shadow-sm"
+                            className="w-full rounded-t-sm bg-primary/70 transition-all duration-200 group-hover:bg-primary "
                             style={{ height: `${pct}%` }}
                           />
                           <span className="mt-2 text-[10px] text-muted-foreground/60 hidden sm:block truncate">
