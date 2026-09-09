@@ -14,12 +14,7 @@ import type {
 } from "../../types/agent";
 import { Button, Panel } from "@gouno/ui";
 
-export type ConsoleTab =
-  | "overview"
-  | "inbox"
-  | "automation"
-  | "records"
-  | "advanced";
+export type ConsoleTab = "overview" | "inbox" | "automation" | "records";
 
 interface WorkspaceOverviewProps {
   locale: "en" | "zh";

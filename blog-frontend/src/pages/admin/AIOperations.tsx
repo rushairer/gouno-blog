@@ -3,10 +3,10 @@ import {
   Clock3,
   GitBranch,
   RefreshCw,
-  Settings2,
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
+import { Navigate } from "react-router-dom";
 import { agentApi } from "../../api/agent";
 import { operationsApi } from "../../api/operations";
 import { workflowApi } from "../../api/workflows";
@@ -14,30 +14,19 @@ import type {
   Agent,
   AgentApproval,
   AgentRun,
-  AgentSkill,
   ContentCandidateSet,
   EditorialTask,
-  EmbeddingProfile,
   MediaCandidate,
   OperationalSuggestion,
-  ProviderProfile,
   ToolDefinition,
   Workflow,
   WorkflowInteractionTask,
   WorkflowMetric,
   WorkflowRun,
 } from "../../types/agent";
-import type { SkillFormValue } from "../../components/agent/SkillForm";
-import type { ProviderFormValue } from "../../components/agent/ProviderForm";
-import type { EmbeddingFormValue } from "../../components/agent/EmbeddingForm";
 import { WorkspaceOverview } from "../../components/agent/WorkspaceOverview";
 import type { ConsoleTab } from "../../components/agent/WorkspaceOverview";
 import { InboxWorkspace } from "../../components/agent/InboxWorkspace";
-import { AdvancedWorkspace } from "../../components/agent/AdvancedWorkspace";
-import type {
-  AdvancedSection,
-  DeleteTarget,
-} from "../../components/agent/AdvancedWorkspace";
 import { RecordsWorkspace } from "../../components/agent/AgentRunRecords";
 import { WorkflowWorkspace } from "../../components/agent/WorkflowWorkspace";
 import { WorkflowRunRecords } from "../../components/agent/WorkflowRunRecords";
@@ -46,7 +35,6 @@ import {
   AdminPageHeader,
   AdminPageState,
   Button,
-  ConfirmDialog,
   SubnavTabs,
   Tab,
   TabList,
@@ -58,17 +46,36 @@ import {
 import { useI18n } from "../../i18n";
 import "../../styles/agent-console.css";
 
+const LEGACY_SETTINGS_SECTIONS = new Set([
+  "agents",
+  "skills",
+  "tools",
+  "knowledge",
+  "providers",
+  "connectors",
+]);
+
+function legacySettingsDestination(): string | null {
+  if (typeof window === "undefined") return null;
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("tab") !== "advanced") return null;
+  const section = params.get("section");
+  return section && LEGACY_SETTINGS_SECTIONS.has(section)
+    ? `/admin/ai-settings?section=${encodeURIComponent(section)}`
+    : "/admin/ai-settings";
+}
+
 function initialConsoleTab(): ConsoleTab {
+  if (typeof window === "undefined") return "overview";
   const requested = new URLSearchParams(window.location.search).get("tab");
   return requested &&
-    ["overview", "inbox", "automation", "records", "advanced"].includes(
-      requested,
-    )
+    ["overview", "inbox", "automation", "records"].includes(requested)
     ? (requested as ConsoleTab)
     : "overview";
 }
 
 function initialRecordType(): "agent" | "workflow" {
+  if (typeof window === "undefined") return "workflow";
   return new URLSearchParams(window.location.search).get("record") === "agent"
     ? "agent"
     : "workflow";
@@ -77,26 +84,11 @@ function initialRecordType(): "agent" | "workflow" {
 function AgentConsoleContent() {
   const { locale, formatDateTime, t } = useI18n();
   const { notify } = useToast();
-  const labels = new Proxy({} as Record<string, string>, {
-    get: (_, prop: string) => t(`agent.${prop}` as any),
-  });
   const [tab, setTab] = useState<ConsoleTab>(initialConsoleTab);
-  const [advancedSection, setAdvancedSection] =
-    useState<AdvancedSection>("agents");
-  const [providers, setProviders] = useState<ProviderProfile[]>([]);
-  const [embeddingProfiles, setEmbeddingProfiles] = useState<
-    EmbeddingProfile[]
-  >([]);
-  const [indexStatus, setIndexStatus] = useState<{
-    queued: number;
-    failed: number;
-    chunks: number;
-  }>({ queued: 0, failed: 0, chunks: 0 });
   const [agents, setAgents] = useState<Agent[]>([]);
   const [runs, setRuns] = useState<AgentRun[]>([]);
   const [approvals, setApprovals] = useState<AgentApproval[]>([]);
   const [tools, setTools] = useState<ToolDefinition[]>([]);
-  const [skills, setSkills] = useState<AgentSkill[]>([]);
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [workflowRuns, setWorkflowRuns] = useState<WorkflowRun[]>([]);
   const [workflowMetrics, setWorkflowMetrics] = useState<WorkflowMetric[]>([]);
@@ -116,21 +108,9 @@ function AgentConsoleContent() {
     run: AgentRun;
     tool_calls: import("../../types/agent").AgentToolCall[];
   } | null>(null);
-  const [editingAgent, setEditingAgent] = useState<Agent | "new" | null>(null);
-  const [editingProvider, setEditingProvider] = useState<
-    ProviderProfile | "new" | null
-  >(null);
-  const [editingEmbedding, setEditingEmbedding] = useState<
-    EmbeddingProfile | "new" | null
-  >(null);
-  const [editingSkill, setEditingSkill] = useState<AgentSkill | "new" | null>(
-    null,
-  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [testingConnections, setTestingConnections] = useState<string[]>([]);
-  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const inspectedAgentRunFromURL = useRef(false);
 
   useEffect(() => {
@@ -144,7 +124,7 @@ function AgentConsoleContent() {
       new URLSearchParams(window.location.search).get("run"),
     );
     if (!requestedID) return;
-    const requested = runs.find((r) => r.id === requestedID);
+    const requested = runs.find((run) => run.id === requestedID);
     if (!requested) {
       if (runs.length > 0) {
         inspectedAgentRunFromURL.current = true;
@@ -160,23 +140,10 @@ function AgentConsoleContent() {
   }, [tab, recordType, runs]);
 
   const selectTab = (nextTab: ConsoleTab) => {
-    setEditingAgent(null);
-    setEditingProvider(null);
-    setEditingEmbedding(null);
-    setEditingSkill(null);
     setTab(nextTab);
     const url = new URL(window.location.href);
     url.searchParams.set("tab", nextTab);
     window.history.replaceState(null, "", url);
-  };
-
-  const selectAdvanced = (section: AdvancedSection) => {
-    setEditingAgent(null);
-    setEditingProvider(null);
-    setEditingEmbedding(null);
-    setEditingSkill(null);
-    setAdvancedSection(section);
-    setTab("advanced");
   };
 
   const load = useCallback(async () => {
@@ -188,14 +155,10 @@ function AgentConsoleContent() {
       }
     };
     const [
-      providerData,
-      embeddingData,
-      indexData,
       agentData,
       runData,
       approvalData,
       toolData,
-      skillData,
       workflowData,
       workflowRunData,
       workflowMetricData,
@@ -204,14 +167,10 @@ function AgentConsoleContent() {
       mediaCandidateData,
       editorialTaskData,
     ] = await Promise.all([
-      agentApi.getProviderProfiles(),
-      agentApi.getEmbeddingProfiles(),
-      agentApi.getIndexStatus(),
       agentApi.getAgents(),
       agentApi.getAgentRuns(100),
       agentApi.getAgentApprovals("pending", 100),
       agentApi.getToolCatalog(),
-      agentApi.getAgentSkills(),
       workflowApi.getWorkflows(),
       loadWorkflowRuns(),
       workflowApi.getMetrics(),
@@ -220,14 +179,10 @@ function AgentConsoleContent() {
       operationsApi.getMediaCandidates(),
       operationsApi.getEditorialTasks(),
     ]);
-    setProviders(providerData);
-    setEmbeddingProfiles(embeddingData);
-    setIndexStatus(indexData);
     setAgents(agentData);
     setRuns(runData || []);
     setApprovals(approvalData || []);
     setTools(toolData);
-    setSkills(skillData);
     setWorkflows(workflowData);
     setWorkflowRuns(workflowRunData);
     setWorkflowMetrics(workflowMetricData || []);
@@ -267,17 +222,15 @@ function AgentConsoleContent() {
   }, [load]);
 
   useEffect(() => {
-    if (error) {
-      notify(error, "error");
-      setError("");
-    }
+    if (!error) return;
+    notify(error, "error");
+    setError("");
   }, [error, notify]);
 
   useEffect(() => {
-    if (notice) {
-      notify(notice, "success");
-      setNotice("");
-    }
+    if (!notice) return;
+    notify(notice, "success");
+    setNotice("");
   }, [notice, notify]);
 
   const pendingCount = approvals.filter(
@@ -299,165 +252,6 @@ function AgentConsoleContent() {
     setError("");
     await operation();
     await refresh();
-  };
-
-  const saveProvider = async (value: ProviderFormValue) => {
-    setError("");
-    try {
-      const result = await agentApi.saveProviderProfileWithSetup(value);
-      setEditingProvider(null);
-      await refresh();
-      if (result.starter_agents_created > 0) {
-        setNotice(
-          locale === "zh"
-            ? `已初始化 ${result.starter_agents_created} 个默认 Agent，全部保持停用，等待你审核启用。`
-            : `Initialized ${result.starter_agents_created} default Agents. They remain disabled until reviewed.`,
-        );
-      }
-    } catch (reason) {
-      setError(
-        reason instanceof Error ? reason.message : t("agent.requestFailed"),
-      );
-    }
-  };
-
-  const saveEmbedding = async (value: EmbeddingFormValue) => {
-    setError("");
-    try {
-      await agentApi.saveEmbeddingProfile(value);
-      setEditingEmbedding(null);
-      await refresh();
-    } catch (reason) {
-      setError(
-        reason instanceof Error ? reason.message : t("agent.requestFailed"),
-      );
-    }
-  };
-
-  const saveAgent = async (
-    value: Omit<Agent, "id" | "created_at" | "updated_at"> & { id?: number },
-  ) => {
-    setError("");
-    try {
-      await agentApi.saveAgent(value);
-      setEditingAgent(null);
-      await refresh();
-    } catch (reason) {
-      setError(
-        reason instanceof Error ? reason.message : t("agent.requestFailed"),
-      );
-    }
-  };
-
-  const saveSkill = async (value: SkillFormValue) => {
-    setError("");
-    try {
-      await agentApi.saveAgentSkill(value);
-      setEditingSkill(null);
-      await refresh();
-    } catch (reason) {
-      setError(
-        reason instanceof Error ? reason.message : t("agent.requestFailed"),
-      );
-    }
-  };
-
-  const exportProviders = async () => {
-    const blob = await agentApi.exportProviders();
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `model-connections-${new Date().toISOString().slice(0, 10)}.json`;
-    anchor.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleImportProviders = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    event.target.value = "";
-    try {
-      const text = await file.text();
-      let payload: unknown;
-      try {
-        payload = JSON.parse(text);
-      } catch {
-        setError(t("agent.invalidJsonFile"));
-        return;
-      }
-      const data = await agentApi.importProviders(payload);
-      await refresh();
-      setNotice(
-        locale === "zh"
-          ? `已成功导入 ${data.imported_count} 个模型连接。`
-          : `Successfully imported ${data.imported_count} model connections.`,
-      );
-    } catch (reason) {
-      setError(
-        reason instanceof Error ? reason.message : t("agent.requestFailed"),
-      );
-    }
-  };
-
-  const handleImportSkill = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    event.target.value = "";
-    try {
-      const text = await file.text();
-      let payload: unknown;
-      try {
-        payload = JSON.parse(text);
-      } catch {
-        setError(t("agent.invalidJsonFile"));
-        return;
-      }
-      const data = await agentApi.importSkill(payload);
-      await refresh();
-      setNotice(
-        locale === "zh"
-          ? `已成功导入 Skill“${data.name || file.name}”。`
-          : `Successfully imported Skill “${data.name || file.name}”.`,
-      );
-    } catch (reason) {
-      setError(
-        reason instanceof Error ? reason.message : t("agent.requestFailed"),
-      );
-    }
-  };
-
-  const exportSkill = async (skill: AgentSkill) => {
-    const blob = await agentApi.exportSkill(skill.id);
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `skill-${skill.id}-v${skill.version}.json`;
-    anchor.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const copySkill = async (skill: AgentSkill) => {
-    const name = window.prompt(
-      locale === "zh" ? "复制后的 Skill 名称" : "Name for the copied Skill",
-      `${skill.name} Copy`,
-    );
-    if (!name?.trim()) return;
-    try {
-      await mutate(() => agentApi.copySkill(skill.id, name.trim()));
-      setNotice(
-        locale === "zh"
-          ? `已创建 Skill“${name.trim()}”的自定义副本。`
-          : `Created custom Skill copy “${name.trim()}”.`,
-      );
-    } catch (reason) {
-      setError(
-        reason instanceof Error ? reason.message : t("agent.requestFailed"),
-      );
-    }
   };
 
   const saveWorkflow = async (value: {
@@ -490,51 +284,7 @@ function AgentConsoleContent() {
     workflowID: number,
     dryRun: boolean,
     input: Record<string, unknown>,
-  ) => {
-    return workflowApi.preflight(workflowID, input, dryRun);
-  };
-
-  const runAgent = async (agent: Agent) => {
-    try {
-      await mutate(() => agentApi.runAgent(agent.id));
-      selectTab("records");
-    } catch (reason) {
-      setError(
-        reason instanceof Error ? reason.message : t("agent.requestFailed"),
-      );
-    }
-  };
-
-  const testConnection = async (
-    kind: "provider" | "embedding",
-    id: number,
-    name: string,
-  ) => {
-    const key = `${kind}:${id}`;
-    setTestingConnections((current) =>
-      current.includes(key) ? current : [...current, key],
-    );
-    setError("");
-    setNotice("");
-    try {
-      await (kind === "provider"
-        ? agentApi.testProvider(id)
-        : agentApi.testEmbedding(id));
-      setNotice(
-        locale === "zh" ? `${name}：连接成功` : `${name}: connection succeeded`,
-      );
-    } catch (reason) {
-      setError(
-        locale === "zh"
-          ? `${name}：${reason instanceof Error ? reason.message : t("agent.requestFailed")}`
-          : `${name}: ${reason instanceof Error ? reason.message : t("agent.requestFailed")}`,
-      );
-    } finally {
-      setTestingConnections((current) =>
-        current.filter((item) => item !== key),
-      );
-    }
-  };
+  ) => workflowApi.preflight(workflowID, input, dryRun);
 
   const inspectRun = async (run: AgentRun) => {
     try {
@@ -594,30 +344,6 @@ function AgentConsoleContent() {
     }
   };
 
-  const deleteSelected = async () => {
-    if (!deleteTarget) return;
-    try {
-      if (deleteTarget.kind === "agent")
-        await mutate(() => agentApi.deleteAgent(deleteTarget.value.id));
-      else if (deleteTarget.kind === "provider")
-        await mutate(() =>
-          agentApi.deleteProviderProfile(deleteTarget.value.id),
-        );
-      else if (deleteTarget.kind === "skill")
-        await mutate(() => agentApi.deleteAgentSkill(deleteTarget.value.id));
-      else
-        await mutate(() =>
-          agentApi.deleteEmbeddingProfile(deleteTarget.value.id),
-        );
-      setDeleteTarget(null);
-    } catch (reason) {
-      const msg =
-        reason instanceof Error ? reason.message : t("agent.requestFailed");
-      const cleanMsg = msg.replace(/^provider profile is in use:\s*/i, "");
-      setError(cleanMsg);
-    }
-  };
-
   if (loading)
     return (
       <AdminPageState
@@ -632,7 +358,6 @@ function AgentConsoleContent() {
     ["inbox", ShieldCheck, t("agent.inbox")],
     ["automation", GitBranch, t("agent.automation")],
     ["records", Clock3, t("agent.records")],
-    ["advanced", Settings2, t("agent.advanced")],
   ] as const;
 
   return (
@@ -762,113 +487,16 @@ function AgentConsoleContent() {
                 )}
               </div>
             ) : null}
-
-            {tab === "advanced" ? (
-              <AdvancedWorkspace
-                locale={locale}
-                labels={labels}
-                advancedSection={advancedSection}
-                onSelectSection={selectAdvanced}
-                agents={agents}
-                skills={skills}
-                tools={tools}
-                providers={providers}
-                embeddingProfiles={embeddingProfiles}
-                runs={runs}
-                indexStatus={indexStatus}
-                editingAgent={editingAgent}
-                editingProvider={editingProvider}
-                editingEmbedding={editingEmbedding}
-                editingSkill={editingSkill}
-                testingConnections={testingConnections}
-                onEditAgent={setEditingAgent}
-                onEditProvider={setEditingProvider}
-                onEditEmbedding={setEditingEmbedding}
-                onEditSkill={setEditingSkill}
-                onSaveAgent={saveAgent}
-                onSaveProvider={saveProvider}
-                onSaveEmbedding={saveEmbedding}
-                onSaveSkill={saveSkill}
-                onRunAgent={runAgent}
-                onToggleAgentEnabled={(agent) =>
-                  mutate(() =>
-                    agentApi.setAgentEnabled(agent.id, !agent.enabled),
-                  ).catch((reason: Error) => setError(reason.message))
-                }
-                onSetDefaultProvider={(id, usage) =>
-                  mutate(() => agentApi.setDefaultProvider(id, usage))
-                    .then(() =>
-                      setNotice(
-                        id === 0
-                          ? locale === "zh"
-                            ? usage === "writing"
-                              ? "已取消默认文本模型。"
-                              : "已取消默认图片模型。"
-                            : usage === "writing"
-                              ? "Cleared default text model."
-                              : "Cleared default image model."
-                          : locale === "zh"
-                            ? usage === "writing"
-                              ? "默认文本模型已更新。"
-                              : "默认图片模型已更新。"
-                            : usage === "writing"
-                              ? "Default text model updated."
-                              : "Default image model updated.",
-                      ),
-                    )
-                    .catch((reason: Error) => setError(reason.message))
-                }
-                onTestConnection={testConnection}
-                onExportProviders={exportProviders}
-                onImportProviders={handleImportProviders}
-                onExportSkill={(skill) =>
-                  exportSkill(skill).catch((reason: Error) =>
-                    setError(reason.message),
-                  )
-                }
-                onImportSkill={handleImportSkill}
-                onCopySkill={copySkill}
-                onRetryIndex={() => mutate(() => agentApi.retryIndex())}
-                onRebuildIndex={() => mutate(() => agentApi.rebuildIndex())}
-                onDeleteTarget={setDeleteTarget}
-                onError={setError}
-                onRefresh={refresh}
-                formatDateTime={formatDateTime}
-              />
-            ) : null}
           </div>
         </TabPanel>
       </Tabs>
-      <ConfirmDialog
-        open={deleteTarget !== null}
-        title={
-          deleteTarget?.kind === "agent"
-            ? t("agent.deleteAgentConfirm")
-            : deleteTarget?.kind === "embedding"
-              ? t("agent.deleteEmbeddingConfirm")
-              : deleteTarget?.kind === "skill"
-                ? t("agent.deleteSkillConfirm")
-                : t("agent.deleteProviderConfirm")
-        }
-        description={
-          deleteTarget?.kind === "agent"
-            ? t("agent.deleteAgentConfirm")
-            : deleteTarget?.kind === "embedding"
-              ? t("agent.deleteEmbeddingConfirm")
-              : deleteTarget?.kind === "skill"
-                ? t("agent.deleteSkillConfirm")
-                : t("agent.deleteProviderConfirm")
-        }
-        confirmLabel={t("agent.delete")}
-        danger
-        onClose={() => setDeleteTarget(null)}
-        onConfirm={deleteSelected}
-      />
     </AdminPage>
   );
 }
 
 export default function AgentConsole() {
+  const settingsDestination = legacySettingsDestination();
+  if (settingsDestination) return <Navigate replace to={settingsDestination} />;
   return (
     <ToastProvider>
       <AgentConsoleContent />
