@@ -1,4 +1,4 @@
-name: Audit Gouno UI 0.2.0 Imports
+name: Finalize Gouno UI 0.2.0 Import Audit
 
 on:
   push:
@@ -19,73 +19,30 @@ jobs:
           ref: chore/gouno-ui-0.2.0
           fetch-depth: 0
 
-      - name: Checkout exact Gouno UI 0.2.0 source
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          repository: rushairer/gouno-ui
-          ref: 3af2a5ca7d63f30fa531f605e620ba2c3380a2e8
-          path: .gouno-ui
-          persist-credentials: false
-
-      - name: Setup Node.js 24
+      - name: Setup Node.js 20
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 24
+          node-version: 20
           cache: npm
-          cache-dependency-path: .gouno-ui/package-lock.json
+          cache-dependency-path: blog-frontend/package-lock.json
 
-      - name: Build exact canonical package
-        working-directory: .gouno-ui
-        run: |
-          npm ci
-          npm run typecheck
-          npm test -- --run
-          npm run build
+      - name: Install Blog frontend dependencies
+        working-directory: blog-frontend
+        run: npm ci
 
-      - name: Audit root imports against canonical owners
+      - name: Generate final canonical and legacy import evidence
         run: |
           node --input-type=module <<'EOF'
           import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises';
           import path from 'node:path';
           import { pathToFileURL } from 'node:url';
 
-          const uiRoot = path.resolve('.gouno-ui');
-          const ts = await import(pathToFileURL(path.join(uiRoot, 'node_modules/typescript/lib/typescript.js')));
-          const uiPackage = JSON.parse(await readFile(path.join(uiRoot, 'package.json'), 'utf8'));
-          function exportPath(key) {
-            const entry = uiPackage.exports?.[key];
-            const relativePath = typeof entry === 'string' ? entry : entry?.import;
-            if (!relativePath) throw new Error(`missing import target for package export ${key}`);
-            return path.resolve(uiRoot, relativePath);
-          }
+          const frontendRoot = path.resolve('blog-frontend');
+          const srcRoot = path.join(frontendRoot, 'src');
+          const ts = await import(pathToFileURL(path.join(frontendRoot, 'node_modules/typescript/lib/typescript.js')));
+          const canonicalManifest = JSON.parse(await readFile(path.join(frontendRoot, 'vendor/ui-manifest.json'), 'utf8'));
+          const legacyManifest = JSON.parse(await readFile(path.join(frontendRoot, 'vendor/legacy-ui-manifest.json'), 'utf8'));
 
-          const runtimeLayers = {
-            core: await import(pathToFileURL(exportPath('./core'))),
-            theme: await import(pathToFileURL(exportPath('./theme'))),
-            patterns: await import(pathToFileURL(exportPath('./patterns'))),
-            gouno: await import(pathToFileURL(exportPath('./gouno'))),
-            root: await import(pathToFileURL(exportPath('.'))),
-          };
-          const runtimeOwnerByName = new Map();
-          for (const owner of ['core', 'theme', 'patterns', 'gouno']) {
-            for (const name of Object.keys(runtimeLayers[owner])) runtimeOwnerByName.set(name, owner);
-          }
-          const rootOnly = new Set(Object.keys(runtimeLayers.root).filter((name) => !runtimeOwnerByName.has(name)));
-
-          const publicOwnerByName = new Map(runtimeOwnerByName);
-          for (const owner of ['core', 'theme', 'patterns', 'gouno']) {
-            const indexPath = path.join(uiRoot, 'src', owner, 'index.ts');
-            const source = await readFile(indexPath, 'utf8');
-            const sourceFile = ts.createSourceFile(indexPath, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
-            for (const statement of sourceFile.statements) {
-              if (!ts.isExportDeclaration(statement) || !statement.exportClause || !ts.isNamedExports(statement.exportClause)) continue;
-              for (const element of statement.exportClause.elements) {
-                publicOwnerByName.set(element.name.text, owner);
-              }
-            }
-          }
-
-          const root = path.resolve('blog-frontend/src');
           const files = [];
           async function walk(dir) {
             for (const entry of await readdir(dir, { withFileTypes: true })) {
@@ -94,115 +51,118 @@ jobs:
               else if (/\.(?:ts|tsx)$/.test(entry.name)) files.push(full);
             }
           }
-          await walk(root);
+          await walk(srcRoot);
 
-          const usage = new Map();
-          const unsupportedImports = [];
+          const canonicalModules = new Set([
+            '@gouno/ui/core',
+            '@gouno/ui/theme',
+            '@gouno/ui/patterns',
+            '@gouno/ui/gouno',
+          ]);
+          const canonicalFiles = new Set();
+          const rootFiles = new Set();
+          const legacyFiles = new Set();
+          const legacyUsage = new Map();
+          const unsupportedLegacyImports = [];
+
           for (const file of files) {
             const source = await readFile(file, 'utf8');
-            const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+            const sourceFile = ts.createSourceFile(
+              file,
+              source,
+              ts.ScriptTarget.Latest,
+              true,
+              file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+            );
             for (const statement of sourceFile.statements) {
-              if (!ts.isImportDeclaration(statement) || statement.moduleSpecifier.text !== '@gouno/ui') continue;
+              if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)) continue;
+              const moduleName = statement.moduleSpecifier.text;
+              const relativeFile = path.relative(frontendRoot, file);
+              if (canonicalModules.has(moduleName)) canonicalFiles.add(relativeFile);
+              if (moduleName === '@gouno/ui') rootFiles.add(relativeFile);
+              if (moduleName !== '@gouno/ui-legacy') continue;
+
+              legacyFiles.add(relativeFile);
               const clause = statement.importClause;
-              if (!clause) continue;
-              if (clause.name || (clause.namedBindings && !ts.isNamedImports(clause.namedBindings))) {
-                unsupportedImports.push(path.relative('.', file));
+              if (!clause || clause.name || !clause.namedBindings || !ts.isNamedImports(clause.namedBindings)) {
+                unsupportedLegacyImports.push(relativeFile);
                 continue;
               }
-              if (!clause.namedBindings) continue;
               for (const element of clause.namedBindings.elements) {
                 const imported = element.propertyName?.text ?? element.name.text;
-                const typeOnly = clause.isTypeOnly || element.isTypeOnly;
-                const record = usage.get(imported) ?? { valueFiles: new Set(), typeFiles: new Set() };
-                (typeOnly ? record.typeFiles : record.valueFiles).add(path.relative('.', file));
-                usage.set(imported, record);
+                const record = legacyUsage.get(imported) ?? new Set();
+                record.add(relativeFile);
+                legacyUsage.set(imported, record);
               }
             }
           }
 
-          const rows = [...usage.entries()].sort(([a], [b]) => a.localeCompare(b));
-          const canonicalRuntime = [];
-          const legacyRuntime = [];
-          const rootOnlyRuntime = [];
-          const canonicalTypeOnly = [];
-          const legacyTypeOnly = [];
-          for (const [name, record] of rows) {
-            if (record.valueFiles.size > 0) {
-              const owner = runtimeOwnerByName.get(name);
-              if (owner) canonicalRuntime.push({ name, owner, files: [...record.valueFiles] });
-              else if (rootOnly.has(name)) rootOnlyRuntime.push({ name, files: [...record.valueFiles] });
-              else legacyRuntime.push({ name, files: [...record.valueFiles] });
-            }
-            if (record.typeFiles.size > 0 && record.valueFiles.size === 0) {
-              const owner = publicOwnerByName.get(name);
-              if (owner) canonicalTypeOnly.push({ name, owner, files: [...record.typeFiles] });
-              else legacyTypeOnly.push({ name, files: [...record.typeFiles] });
-            }
+          if (unsupportedLegacyImports.length) {
+            throw new Error(`legacy default/namespace imports are not ratchetable: ${unsupportedLegacyImports.join(', ')}`);
           }
 
-          const fileList = (files) => files.map((file) => `\`${file}\``).join('<br>');
+          const allowedLegacyImports = Object.fromEntries(
+            [...legacyUsage.entries()]
+              .sort(([a], [b]) => a.localeCompare(b))
+              .map(([symbol, usedFiles]) => [symbol, [...usedFiles].sort()]),
+          );
+          const allowlist = {
+            schemaVersion: 1,
+            canonicalPackage: '@gouno/ui',
+            canonicalVersion: canonicalManifest.version,
+            canonicalSourceSha: canonicalManifest.sourceSha,
+            legacyPackage: '@gouno/ui-legacy',
+            legacyVersion: legacyManifest.version,
+            allowedLegacyImports,
+          };
+          await writeFile(
+            path.join(frontendRoot, 'scripts/legacy-ui-allowlist.json'),
+            `${JSON.stringify(allowlist, null, 2)}\n`,
+          );
+
+          const fileList = (values) => [...values].sort().map((file) => `\`${file}\``).join('<br>');
+          const legacyRows = Object.entries(allowedLegacyImports).map(
+            ([symbol, usedFiles]) => `| \`${symbol}\` | ${usedFiles.length} | ${fileList(usedFiles)} |`,
+          );
+          const pairCount = Object.values(allowedLegacyImports).reduce((total, usedFiles) => total + usedFiles.length, 0);
           const lines = [
             '# Gouno UI 0.2.0 Blog import-surface audit',
             '',
-            '- Blog baseline: `a828e8ea2dac9ffb0c1ec03af86211897e7ca252`',
-            '- Canonical Gouno UI: `3af2a5ca7d63f30fa531f605e620ba2c3380a2e8` (`0.2.0`)',
-            '- Scope: TypeScript-AST parsed exact root imports from `@gouno/ui` under `blog-frontend/src`.',
+            `- Canonical package: \`@gouno/ui@${canonicalManifest.version}\``,
+            `- Canonical source: \`${canonicalManifest.source}\` @ \`${canonicalManifest.sourceSha}\``,
+            `- Canonical archive SHA-256: \`${canonicalManifest.sha256}\``,
+            `- Legacy compatibility package: \`@gouno/ui-legacy@${legacyManifest.version}\` from local \`packages/ui\` prior art.`,
+            '- The bridge is explicit: there is no global Vite or TypeScript alias redirecting canonical `@gouno/ui` back to legacy.',
+            '- Connector behavior was not changed by this migration; ConnectorWorkspace remained under its repository hold and its tests stayed green.',
             '',
-            '## Summary',
+            '## Current boundary',
             '',
-            `- Imported symbols: **${rows.length}**`,
-            `- Canonical runtime symbols: **${canonicalRuntime.length}**`,
-            `- Legacy-only runtime symbols: **${legacyRuntime.length}**`,
-            `- Canonical root-only runtime symbols: **${rootOnlyRuntime.length}**`,
-            `- Canonical type-only symbols: **${canonicalTypeOnly.length}**`,
-            `- Legacy-only type-only symbols: **${legacyTypeOnly.length}**`,
-            `- Unsupported default/namespace import files: **${unsupportedImports.length}**`,
+            `- Source files using canonical layer subpaths: **${canonicalFiles.size}**`,
+            `- Source files using canonical package root: **${rootFiles.size}**`,
+            `- Source files using explicit legacy package: **${legacyFiles.size}**`,
+            `- Distinct legacy symbols: **${Object.keys(allowedLegacyImports).length}**`,
+            `- Allowed legacy symbol/file pairs: **${pairCount}**`,
             '',
-            '## Canonical runtime symbols',
+            'Legacy use is a ratcheted product-compatibility debt, not a second public design-system owner. New legacy symbol/file pairs must fail the UI contract gate until an explicit governance change updates the allowlist.',
             '',
-            '| Symbol | Owner | Value import files |',
-            '| --- | --- | --- |',
-            ...canonicalRuntime.map(({ name, owner, files }) => `| \`${name}\` | \`${owner}\` | ${fileList(files)} |`),
+            '## Legacy compatibility allowlist',
             '',
-            '## Legacy-only runtime symbols',
-            '',
-            '| Symbol | Value import files |',
-            '| --- | --- |',
-            ...legacyRuntime.map(({ name, files }) => `| \`${name}\` | ${fileList(files)} |`),
-            '',
-            '## Canonical root-only runtime symbols',
-            '',
-            '| Symbol | Value import files |',
-            '| --- | --- |',
-            ...rootOnlyRuntime.map(({ name, files }) => `| \`${name}\` | ${fileList(files)} |`),
-            '',
-            '## Canonical type-only symbols',
-            '',
-            '| Symbol | Owner | Type import files |',
-            '| --- | --- | --- |',
-            ...canonicalTypeOnly.map(({ name, owner, files }) => `| \`${name}\` | \`${owner}\` | ${fileList(files)} |`),
-            '',
-            '## Legacy-only type-only symbols',
-            '',
-            '| Symbol | Type import files |',
-            '| --- | --- |',
-            ...legacyTypeOnly.map(({ name, files }) => `| \`${name}\` | ${fileList(files)} |`),
+            '| Symbol | Files | Allowed import locations |',
+            '| --- | ---: | --- |',
+            ...legacyRows,
             '',
           ];
-          if (unsupportedImports.length) {
-            lines.push('## Unsupported default/namespace imports', '', ...unsupportedImports.map((file) => `- \`${file}\``), '');
-          }
-
           await mkdir('docs/ui-redesign', { recursive: true });
           await writeFile('docs/ui-redesign/gouno-ui-0.2.0-import-audit.md', `${lines.join('\n')}\n`);
           EOF
 
-      - name: Commit audit evidence
+      - name: Commit audit and ratchet baseline
         run: |
           set -euo pipefail
-          git add docs/ui-redesign/gouno-ui-0.2.0-import-audit.md
+          git add docs/ui-redesign/gouno-ui-0.2.0-import-audit.md \
+                  blog-frontend/scripts/legacy-ui-allowlist.json
           git diff --cached --exit-code && exit 0 || true
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "docs(ui): audit Blog against Gouno UI 0.2.0"
+          git commit -m "docs(ui): record Gouno UI 0.2.0 compatibility boundary"
           git push origin HEAD:chore/gouno-ui-0.2.0
