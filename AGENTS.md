@@ -56,12 +56,15 @@ This document defines the **immutable architectural rules, security baselines, a
 
 ---
 
-## 6. Vendored UI Package & Lockfile Integrity
+## 6. Canonical Gouno UI & Legacy Compatibility Integrity
 
-- When `packages/ui` changes, distribute the package with `node scripts/ui/distribute.mjs blog-frontend`.
-- The distribution step must update both `blog-frontend/vendor/gouno-ui-0.1.0.tgz` and `blog-frontend/package-lock.json`; never commit a new vendored archive with a stale `@gouno/ui` integrity value.
-- Before committing, run `npm ci` in `blog-frontend` and build the Dockerfile (`docker build -f blog-frontend/Dockerfile blog-frontend`) so the Node 20 CI environment verifies the lockfile and archive together.
-- Keep `blog-frontend/vendor/ui-manifest.json` and the lockfile integrity synchronized with the exact archive committed to Git.
+- `rushairer/gouno-ui` is the **single canonical design-system owner**. `blog-frontend` consumes its verified vendored artifact as `@gouno/ui`; production code should import canonical components from the explicit `@gouno/ui/core`, `@gouno/ui/theme`, `@gouno/ui/patterns`, or `@gouno/ui/gouno` entrypoint. The package root is not a second ownership layer.
+- The historical local `packages/ui` tree is **legacy compatibility prior art only**. It is distributed as `@gouno/ui-legacy` with `node scripts/ui/distribute.mjs blog-frontend`; that command must never overwrite the canonical `@gouno/ui` archive, manifest, source provenance, or dependency.
+- Canonical artifacts are synchronized only through `.github/workflows/sync-gouno-ui.yml`. The workflow must build and verify the selected upstream ref, derive the package version dynamically, update only the canonical archive/dependency/manifest, preserve the legacy package, run `blog-frontend` quality, and build the frontend Docker image before committing.
+- Keep `blog-frontend/vendor/ui-manifest.json`, `blog-frontend/vendor/gouno-ui-source.txt`, `blog-frontend/package.json`, and the canonical lockfile entry synchronized with the exact external artifact. Keep `blog-frontend/vendor/legacy-ui-manifest.json` and `@gouno/ui-legacy` synchronized with the local compatibility archive independently.
+- `blog-frontend/scripts/legacy-ui-allowlist.json` is a **ratchet**, not an invitation to reuse legacy APIs. `npm run lint:ui` must fail on every new `@gouno/ui-legacy` symbol/file pair and on stale allowlist pairs; legacy debt may only stay fixed or shrink unless an explicit governance decision updates the baseline.
+- Do not add a Vite or TypeScript alias that redirects canonical `@gouno/ui` imports back to legacy. Do not introduce new root-level `@gouno/ui` component imports when a formal layer subpath owns the symbol.
+- Before committing any UI vendor change, run `npm ci` and `npm run quality` in `blog-frontend`, then build the Dockerfile (`docker build -f blog-frontend/Dockerfile blog-frontend`) so package, lockfile, runtime imports, Tailwind sources and container build are verified together.
 
 ## 7. UI Refactoring Execution Convention
 
@@ -71,4 +74,4 @@ This document defines the **immutable architectural rules, security baselines, a
 - Run typecheck, tests, builds, and vendored package synchronization at the end of a coherent UI phase.
 - Use browser verification to confirm actual visual and interaction results; tests and builds do not replace visual confirmation.
 - Continue within the user's authorized scope without pausing for confirmation after every internal implementation step.
-- Preserve uncommitted work, authentication boundaries, the Connector hold, and vendored UI integrity rules.
+- Preserve uncommitted work, authentication boundaries, the Connector hold, and canonical/legacy UI integrity rules.
