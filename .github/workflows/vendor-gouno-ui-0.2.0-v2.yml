@@ -186,7 +186,7 @@ jobs:
             'Pagination', 'PaginationProps',
             'Tabs', 'TabList', 'Tab', 'TabPanel', 'TabsProps', 'TabListProps', 'TabProps', 'TabPanelProps', 'TabItem',
             'Badge', 'BadgeProps', 'BadgeTone',
-            'FormLayout', 'FormLayoutProps',
+            'FormLayout', 'FormLayoutProps', 'FormActions', 'FormActionsProps',
             'Card', 'CardHeader', 'CardContent', 'CardFooter', 'CardProps', 'CardHeaderProps', 'CardContentProps', 'CardFooterProps',
             'Skeleton', 'SkeletonProps', 'TableSkeleton', 'TableSkeletonProps',
             'ThemeProvider', 'ThemeProviderProps', 'ThemeToggle', 'ThemeToggleProps', 'useTheme', 'ThemeName', 'ThemeMode', 'ThemeBrand', 'ThemeContextValue',
