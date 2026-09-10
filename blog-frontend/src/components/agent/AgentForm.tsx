@@ -9,17 +9,14 @@ import type {
 } from "../../types/agent";
 import { emptyAgent } from "../../types/agent";
 import { useFormDraft } from "../../hooks/useFormDraft";
+import { Checkbox, Field, FormGrid, Input } from "@gouno/ui/core";
 import {
   Button,
-  Checkbox,
   EditorPanel,
-  Field,
   FormActions,
-  FormGrid,
   FormLayout,
-  Input,
   Select,
-} from "@gouno/ui";
+} from "@gouno/ui-legacy";
 
 type AgentFormValue = Omit<
   Agent,

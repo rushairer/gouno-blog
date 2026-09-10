@@ -12,7 +12,7 @@ import { ProposalPreview } from "./ProposalPreview";
 import { StatusPill } from "./StatusPill";
 import { OperationsWorkspace } from "./OperationsWorkspace";
 import { JsonPreview } from "./AgentRunRecords";
-import { Button, EmptyState, Panel } from "@gouno/ui";
+import { Button, EmptyState, Panel } from "@gouno/ui-legacy";
 
 function approvalSummary(
   approval: AgentApproval,

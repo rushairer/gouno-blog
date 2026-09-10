@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import { postsApi } from "../../api/posts";
 import { siteApi } from "../../api/site";
 import type { TagSummary } from "../../api/site";
+import { Checkbox, IconButtonLink, SearchField } from "@gouno/ui/core";
 import {
   AdminPage,
   AdminPageHeader,
@@ -12,7 +13,6 @@ import {
   Button,
   ButtonLink,
   Card,
-  Checkbox,
   ConfirmDialog,
   ContentStack,
   copyText,
@@ -20,17 +20,15 @@ import {
   ErrorState,
   FilterBar,
   IconButton,
-  IconButtonLink,
   ListRow,
   ListStack,
   Pagination,
-  SearchField,
   Select,
   StatusBadge,
   TableContainer,
   TableSkeleton,
   useToast,
-} from "@gouno/ui";
+} from "@gouno/ui-legacy";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 import { useAbility } from "../../abilities";
 import type { Category, Post } from "../../types/blog";

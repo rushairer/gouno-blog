@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Merge, Save, Trash2 } from "lucide-react";
 import { siteApi } from "../../api/site";
 import type { TagSummary } from "../../api/site";
+import { Checkbox, Modal } from "@gouno/ui/core";
 import {
   AdminPage,
   AdminPageHeader,
@@ -10,14 +11,12 @@ import {
   BulkActionBar,
   Button,
   Card,
-  Checkbox,
   ConfirmDialog,
   ContentStack,
   Feedback,
-  Modal,
   TableSkeleton,
   useToast,
-} from "@gouno/ui";
+} from "@gouno/ui-legacy";
 import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { EmptyState, LoadingState, PageHeader, Panel } from "@gouno/ui";
+import { PageHeader } from "@gouno/ui/gouno";
+import { EmptyState, LoadingState, Panel } from "@gouno/ui-legacy";
 import { postsApi } from "../api/posts";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useI18n } from "../i18n";

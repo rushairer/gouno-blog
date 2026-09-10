@@ -1,5 +1,6 @@
 import { Calendar, Sparkles } from "lucide-react";
-import { Button, Field, Input } from "@gouno/ui";
+import { Field, Input } from "@gouno/ui/core";
+import { Button } from "@gouno/ui-legacy";
 
 export interface StalePostsBinding {
   older_than_days?: number;

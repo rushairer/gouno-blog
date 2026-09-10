@@ -11,6 +11,7 @@ import {
 import { membersApi, type BlogMember } from "../../api/members";
 import { getGossoAdminURL, isMfaError, type BlogUserProfile } from "../../auth";
 import { useUserProfile } from "@gosso/client/react";
+import { Modal } from "@gouno/ui/core";
 import {
   AdminPage,
   AdminPageHeader,
@@ -26,10 +27,9 @@ import {
   ListRow,
   ListStack,
   LoadingState,
-  Modal,
   TableContainer,
   useToast,
-} from "@gouno/ui";
+} from "@gouno/ui-legacy";
 import { StepUpMfaModal } from "../../components/auth/StepUpMfaModal";
 import { SudoGate } from "../../components/auth/SudoGate";
 import { useAdminGuard } from "../../hooks/useAdminGuard";

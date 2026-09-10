@@ -1,12 +1,7 @@
 import { ExternalLink, Shield } from "lucide-react";
 import { getGossoAdminURL, useSafeUserProfile } from "../auth";
-import {
-  ButtonLink,
-  ContentStack,
-  Feedback,
-  PageHeader,
-  Panel,
-} from "@gouno/ui";
+import { PageHeader } from "@gouno/ui/gouno";
+import { ButtonLink, ContentStack, Feedback, Panel } from "@gouno/ui-legacy";
 import { useI18n } from "../i18n";
 import { usePageTitle } from "../hooks/usePageTitle";
 

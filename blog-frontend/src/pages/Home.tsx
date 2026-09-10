@@ -6,7 +6,7 @@ import {
   Feedback,
   SectionHeading,
   ArticleListSkeleton,
-} from "@gouno/ui";
+} from "@gouno/ui-legacy";
 import { DEFAULT_SITE_SETTINGS, authorInitials } from "../config/site-defaults";
 import { ArticleTeaser } from "../components/reading/ArticleTeaser";
 import { usePublicHome } from "../features/public/usePublicHome";

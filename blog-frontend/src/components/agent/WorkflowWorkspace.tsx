@@ -29,26 +29,28 @@ import type {
   WorkflowStep,
 } from "../../types/agent";
 import {
-  Button,
-  ButtonLink,
   Checkbox,
   CheckboxField,
+  Field,
+  Input,
+  SearchField,
+  Textarea,
+} from "@gouno/ui/core";
+import {
+  Button,
+  ButtonLink,
   ConfirmDialog,
   EditorPanel,
   EmptyState,
   Feedback,
-  Field,
   FilterBar,
   FormActions,
   FormLayout,
-  Input,
   IconButton,
   PanelHeader,
-  SearchField,
   Select,
-  Textarea,
   WorkspacePanel,
-} from "@gouno/ui";
+} from "@gouno/ui-legacy";
 import { StatusPill } from "./StatusPill";
 import { statusLabel } from "./labels";
 import { WorkflowInputForm } from "./WorkflowInputForm";
@@ -846,7 +848,7 @@ export function WorkflowWorkspace({
                     ? "按名称、说明或模板搜索"
                     : "Search by name, description, or template"
                 }
-                size="compact"
+                size="small"
               />
               <Select
                 aria-label={
@@ -2670,7 +2672,7 @@ function WorkflowEditor({
             </Select>
           </div>
           <Input
-            size="compact"
+            size="small"
             value={toolQuery}
             onChange={(event) => setToolQuery(event.target.value)}
             placeholder="搜索可用 Tool"

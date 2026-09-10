@@ -42,7 +42,7 @@ import {
   Select,
   SubnavTabs,
   WorkspacePanel,
-} from "@gouno/ui";
+} from "@gouno/ui-legacy";
 
 export type AdvancedSection =
   | "agents"

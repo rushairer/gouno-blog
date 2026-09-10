@@ -2,7 +2,7 @@ import { Component } from "react";
 import type { ErrorInfo, ReactNode } from "react";
 import { AlertTriangle, Home, RefreshCw } from "lucide-react";
 import i18n from "i18next";
-import { ActionGroup, Button, ErrorState, Panel } from "@gouno/ui";
+import { ActionGroup, Button, ErrorState, Panel } from "@gouno/ui-legacy";
 
 interface Props {
   children: ReactNode;

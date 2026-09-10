@@ -17,6 +17,15 @@ import { Link } from "react-router-dom";
 import { analyticsApi } from "../../api/analytics";
 import { notificationsApi } from "../../api/notifications";
 import {
+  CardTitle,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@gouno/ui/core";
+import {
   AdminPage,
   AdminPageHeader,
   AdminPageState,
@@ -26,17 +35,10 @@ import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
   ContentStack,
   EmptyState,
   Feedback,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@gouno/ui";
+} from "@gouno/ui-legacy";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 import { useAbility } from "../../abilities";
 

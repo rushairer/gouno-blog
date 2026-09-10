@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Edit2, Plus, Trash2 } from "lucide-react";
 import { siteApi } from "../../api/site";
 import { agentApi } from "../../api/agent";
+import { Checkbox, Drawer } from "@gouno/ui/core";
 import {
   AdminPage,
   AdminPageHeader,
@@ -9,10 +10,8 @@ import {
   BulkActionBar,
   Button,
   Card,
-  Checkbox,
   ConfirmDialog,
   ContentStack,
-  Drawer,
   Feedback,
   IconButton,
   ListRow,
@@ -20,7 +19,7 @@ import {
   TableContainer,
   TableSkeleton,
   useToast,
-} from "@gouno/ui";
+} from "@gouno/ui-legacy";
 import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
 import { CategoryForm } from "../../components/taxonomy/CategoryForm";
 import type { CategoryFormValue } from "../../components/taxonomy/CategoryForm";

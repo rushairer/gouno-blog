@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { notificationsApi } from "../../api/notifications";
 import type { Notification } from "../../api/notifications";
+import { Checkbox, CheckboxField } from "@gouno/ui/core";
 import {
   ActionGroup,
   AdminPage,
@@ -22,15 +23,13 @@ import {
   Button,
   ButtonLink,
   Card,
-  Checkbox,
-  CheckboxField,
   ConfirmDialog,
   ContentStack,
   Feedback,
   Select,
   TableSkeleton,
   useToast,
-} from "@gouno/ui";
+} from "@gouno/ui-legacy";
 import { cn } from "../../lib/utils";
 
 type DeleteAction =

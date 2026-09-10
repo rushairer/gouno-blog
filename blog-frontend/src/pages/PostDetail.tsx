@@ -22,6 +22,8 @@ import { analyticsApi } from "../api/analytics";
 import { commentsApi } from "../api/comments";
 import type { CommunityComment } from "../api/comments";
 import { postsApi } from "../api/posts";
+import { Field, Input, Modal, Textarea } from "@gouno/ui/core";
+import { PageHeader } from "@gouno/ui/gouno";
 import {
   ActionGroup,
   Badge,
@@ -31,15 +33,10 @@ import {
   EmptyState,
   ErrorState,
   Feedback,
-  Field,
   IconButton,
-  Input,
   LoadingState,
-  Modal,
-  PageHeader,
   Panel,
-  Textarea,
-} from "@gouno/ui";
+} from "@gouno/ui-legacy";
 import { useI18n } from "../i18n";
 import { useArticleSEO } from "../utils/seo";
 import { MarkdownRenderer } from "../components/MarkdownRenderer";

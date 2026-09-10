@@ -42,7 +42,7 @@ import {
   Tabs,
   ToastProvider,
   useToast,
-} from "@gouno/ui";
+} from "@gouno/ui-legacy";
 import { useI18n } from "../../i18n";
 import "../../styles/agent-console.css";
 

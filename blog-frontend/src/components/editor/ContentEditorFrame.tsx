@@ -1,5 +1,5 @@
 import type React from "react";
-import { classes } from "@gouno/ui";
+import { classes } from "@gouno/ui-legacy";
 
 export function ContentEditorFrame({
   children,

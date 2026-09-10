@@ -1,7 +1,7 @@
 import { type ReactNode } from "react";
 import { KeyRound, Lock, ShieldCheck, Sparkles } from "lucide-react";
 import { useSudoMode } from "../../hooks/useSudoMode";
-import { Button } from "@gouno/ui";
+import { Button } from "@gouno/ui-legacy";
 
 export interface SudoGateProps {
   children: ReactNode;

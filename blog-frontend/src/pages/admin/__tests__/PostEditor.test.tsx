@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import PostEditor from "../PostEditor";
-import { ToastProvider } from "@gouno/ui";
+import { ToastProvider } from "@gouno/ui-legacy";
 import { postsApi } from "../../../api/posts";
 import { siteApi } from "../../../api/site";
 import type { Post } from "../../../types/blog";

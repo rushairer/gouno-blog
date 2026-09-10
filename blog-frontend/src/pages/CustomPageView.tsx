@@ -10,7 +10,8 @@ import { pagesApi } from "../api/pages";
 import { siteApi } from "../api/site";
 import { extractMarkdownTOC } from "../utils/markdown";
 import type { CustomPage, SiteSettings } from "../types/blog";
-import { Banner, LoadingState, PageHeader, Panel } from "@gouno/ui";
+import { PageHeader } from "@gouno/ui/gouno";
+import { Banner, LoadingState, Panel } from "@gouno/ui-legacy";
 import NotFound from "./NotFound";
 
 export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
@@ -217,7 +218,7 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
         <PageHeader
           title={page.title}
           description={page.summary}
-          action={
+          actions={
             <span className="text-xs font-semibold tracking-wider text-primary">
               TIMELINE / ROADMAP
             </span>
@@ -238,7 +239,7 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
         <PageHeader
           title={page.title}
           description={page.summary}
-          action={
+          actions={
             <span className="text-xs font-semibold tracking-wider text-primary">
               PORTFOLIO / SHOWCASE
             </span>
@@ -259,7 +260,7 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
         <PageHeader
           title={page.title}
           description={page.summary}
-          action={
+          actions={
             <span className="text-xs font-semibold tracking-wider text-primary">
               ESSAY & FOCUS
             </span>
@@ -280,7 +281,7 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
         <PageHeader
           title={page.title}
           description={page.summary}
-          action={
+          actions={
             <span className="text-xs font-semibold tracking-wider text-primary">
               FAQ / GUIDES
             </span>

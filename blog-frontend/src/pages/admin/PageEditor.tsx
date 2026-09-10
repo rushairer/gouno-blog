@@ -10,22 +10,24 @@ import {
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-  AdminPageState,
-  Button,
   Checkbox,
   CheckboxField,
   ChoiceButton,
-  ConfirmDialog,
-  Feedback,
   Field,
   Input,
-  Select,
   Textarea,
+} from "@gouno/ui/core";
+import {
+  AdminPageState,
+  Button,
+  ConfirmDialog,
+  Feedback,
+  Select,
   Tab,
   TabList,
   Tabs,
   useToast,
-} from "@gouno/ui";
+} from "@gouno/ui-legacy";
 import { MarkdownRenderer } from "../../components/MarkdownRenderer";
 import {
   AiImageGenerationPanel,

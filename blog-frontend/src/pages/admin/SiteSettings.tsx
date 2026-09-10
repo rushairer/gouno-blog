@@ -13,25 +13,23 @@ import { siteApi } from "../../api/site";
 import { isMfaError } from "../../auth";
 import { StepUpMfaModal } from "../../components/auth/StepUpMfaModal";
 import { SudoGate } from "../../components/auth/SudoGate";
+import { Field, Input, Textarea } from "@gouno/ui/core";
 import {
   AdminPage,
   AdminPageHeader,
   AdminPageState,
   Button,
   Feedback,
-  Field,
   FormActions,
   FormLayout,
-  Input,
   PanelHeader,
   Tab,
   TabList,
   TabPanel,
   Tabs,
-  Textarea,
   useToast,
   WorkspacePanel,
-} from "@gouno/ui";
+} from "@gouno/ui-legacy";
 import { DEFAULT_SITE_SETTINGS } from "../../config/site-defaults";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 import type { SiteSettings } from "../../types/blog";
