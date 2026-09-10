@@ -1,0 +1,86 @@
+name: Finalize Gouno UI 0.2.0 Migration
+
+on:
+  push:
+    branches: [chore/gouno-ui-0.2.0]
+    paths:
+      - .github/workflows/finalize-gouno-ui-0.2.0.yml
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout migration branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: chore/gouno-ui-0.2.0
+          fetch-depth: 0
+
+      - name: Reconcile current migration evidence
+        run: |
+          node --input-type=module <<'EOF'
+          import { readFile, writeFile } from 'node:fs/promises';
+          const path = 'docs/ui-redesign/MIGRATION.md';
+          let source = await readFile(path, 'utf8');
+          const oldBlock = `## Shared package and distribution evidence
+
+- Both consumers resolve \`@gouno/ui@0.1.0\` from \`vendor/gouno-ui-0.1.0.tgz\`.
+- The two \`vendor/ui-manifest.json\` files agree with the checked-in consumer archive: SHA-256 \`b86698a7ad7409bed50396f64f5b45acae8e995bcc1dec025bbe24fae2c58630\` and npm integrity \`sha512-iwi4xaQLfHQzuWEPVRt/9iMzwx3GwkEElfHzctnOJ8ymxPgQbWByilfFiIY9B266FOByDlzwQQaB6iwlRlKX1g==\`.
+- Both consumer Tailwind entrypoints import the shared tokens/base CSS and register \`@source "../../node_modules/@gouno/ui/dist"\`.
+- \`packages/ui/showcase\` builds independently with \`npm run showcase:build\`; its page visibly includes shell, layout, form, feedback, table and status-badge combinations.`;
+          const newBlock = `## Shared package and distribution evidence — current boundary (2026-09-11)
+
+- Gosso Admin consumes the external canonical \`@gouno/ui@0.2.0\` artifact built from \`rushairer/gouno-ui@3af2a5ca7d63f30fa531f605e620ba2c3380a2e8\`; its vendored tgz SHA-256 is \`e0fa85594b579c971599e045855bf37b9ea25371df42e0cf15bf90dc5d86d24d\` and its version-aware sync path has been verified as a true no-op when upstream has not changed.
+- Gouno Blog now uses the same verified external artifact as canonical \`@gouno/ui@0.2.0\`, while the historical local \`packages/ui@0.1.0\` is isolated as explicit \`@gouno/ui-legacy\` compatibility prior art. Canonical and legacy archives have separate manifests and integrity records; there is no Vite or TypeScript alias redirecting canonical imports to legacy.
+- Blog production imports are split by formal ownership. The audited migration boundary contains 45 source files using canonical layer subpaths and 77 files with explicit legacy imports; legacy debt is fixed at 54 symbols / 404 symbol-file pairs by \`blog-frontend/scripts/legacy-ui-allowlist.json\` and \`npm run lint:ui\` must reject both new and stale pairs.
+- Blog Tailwind scans both canonical and legacy package output while compatibility remains. Local \`node scripts/ui/distribute.mjs blog-frontend\` updates only \`@gouno/ui-legacy\`; external canonical updates are owned solely by \`.github/workflows/sync-gouno-ui.yml\`.
+- The 0.2.0 rollout preserved the Connector hold: Connector behavior was not changed and ConnectorWorkspace regressions remained green through the migration.`;
+          if (!source.includes(oldBlock)) throw new Error('stale shared package evidence block was not found exactly');
+          source = source.replace(oldBlock, newBlock);
+          await writeFile(path, source);
+          EOF
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: blog-frontend/package-lock.json
+
+      - name: Verify frontend and governance scripts
+        run: |
+          node --check scripts/ui/distribute.mjs
+          cd blog-frontend
+          npm ci
+          npm run quality
+
+      - name: Build frontend container
+        run: docker build -f blog-frontend/Dockerfile blog-frontend
+
+      - name: Remove migration-only workflows and commit final state
+        run: |
+          set -euo pipefail
+          rm -f \
+            .github/workflows/audit-gouno-ui-0.2.0.yml \
+            .github/workflows/vendor-gouno-ui-0.2.0.yml \
+            .github/workflows/vendor-gouno-ui-0.2.0-v2.yml \
+            .github/workflows/finalize-gouno-ui-0.2.0.yml
+          git add -A \
+            AGENTS.md \
+            docs/ui-redesign/MIGRATION.md \
+            docs/ui-redesign/gouno-ui-0.2.0-import-audit.md \
+            scripts/ui/distribute.mjs \
+            blog-frontend/scripts/check-ui-contracts.mjs \
+            blog-frontend/scripts/legacy-ui-allowlist.json \
+            .github/workflows
+          if git diff --cached --quiet; then
+            echo "Gouno UI 0.2.0 migration governance is already finalized."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(ui): finalize Gouno UI 0.2.0 migration"
+          git push origin HEAD:chore/gouno-ui-0.2.0
