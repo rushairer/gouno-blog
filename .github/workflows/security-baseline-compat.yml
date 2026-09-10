@@ -1,0 +1,73 @@
+name: Gosso 1.6 Compatibility Finalizer
+
+on:
+  push:
+    branches:
+      - security/baseline-2026-09
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: security/baseline-2026-09
+          fetch-depth: 0
+      - name: Align deployment contract with Gosso 1.6
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          compose = Path("docker-compose.yml")
+          text = compose.read_text()
+          old = "GOUNO_AUTH_BACKCHANNEL_ALLOWED_CIDRS=${GOSSO_BACKCHANNEL_ALLOWED_CIDRS:-172.21.0.0/16,127.0.0.1/32}"
+          new = "GOUNO_AUTH_BACKCHANNEL_ALLOWED_CIDRS=${GOSSO_BACKCHANNEL_ALLOWED_CIDRS:-172.21.0.0/16}"
+          if old not in text:
+              raise SystemExit("development backchannel allowlist anchor not found")
+          compose.write_text(text.replace(old, new, 1))
+
+          env = Path(".env.production.example")
+          text = env.read_text()
+          old = "GOSSO_IMAGE=ghcr.io/rushairer/gosso:v1.5.4@sha256:<GOSSO_DIGEST>"
+          new = "GOSSO_IMAGE=ghcr.io/rushairer/gosso:v1.6.0@sha256:<GOSSO_DIGEST>"
+          if old not in text:
+              raise SystemExit("production Gosso image anchor not found")
+          env.write_text(text.replace(old, new, 1))
+
+          checklist = Path("RELEASE_CHECKLIST.md")
+          text = checklist.read_text()
+          old = "  and `GOSSO_BACKCHANNEL_ALLOWED_CIDRS` allows container network for back-channel logout."
+          new = "  and `GOSSO_BACKCHANNEL_ALLOWED_CIDRS` allows only the exact container network needed for back-channel logout; Gosso 1.6+ hard-denies loopback, link-local, metadata, unspecified, and multicast targets even when a broad CIDR is configured."
+          if old not in text:
+              raise SystemExit("release checklist backchannel anchor not found")
+          checklist.write_text(text.replace(old, new, 1))
+
+          changelog = Path("CHANGELOG.md")
+          text = changelog.read_text()
+          marker = "### Changed\n\n"
+          bullet = "- Align the bundled Gosso deployment contract with the 1.6 security baseline: remove the ineffective loopback back-channel allowlist, keep only the explicit Docker private subnet, and update the production Gosso image example to v1.6.0.\n"
+          if marker not in text:
+              raise SystemExit("Unreleased Changed section anchor not found")
+          if bullet not in text:
+              text = text.replace(marker, marker + bullet, 1)
+          changelog.write_text(text)
+          PY
+          git diff --check
+          grep -F 'GOUNO_AUTH_BACKCHANNEL_ALLOWED_CIDRS=${GOSSO_BACKCHANNEL_ALLOWED_CIDRS:-172.21.0.0/16}' docker-compose.yml
+          grep -F 'GOSSO_IMAGE=ghcr.io/rushairer/gosso:v1.6.0@sha256:<GOSSO_DIGEST>' .env.production.example
+      - name: Commit compatibility changes
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docker-compose.yml .env.production.example RELEASE_CHECKLIST.md CHANGELOG.md
+          git commit -m "fix(security): align deployment with Gosso 1.6"
+          git push origin HEAD:security/baseline-2026-09
