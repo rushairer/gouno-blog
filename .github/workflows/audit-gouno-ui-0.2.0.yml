@@ -1,0 +1,169 @@
+name: Audit Gouno UI 0.2.0 Imports
+
+on:
+  push:
+    branches: [chore/gouno-ui-0.2.0]
+    paths:
+      - .github/workflows/audit-gouno-ui-0.2.0.yml
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Blog migration branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: chore/gouno-ui-0.2.0
+          fetch-depth: 0
+
+      - name: Checkout exact Gouno UI 0.2.0 source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: rushairer/gouno-ui
+          ref: 3af2a5ca7d63f30fa531f605e620ba2c3380a2e8
+          path: .gouno-ui
+          persist-credentials: false
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: .gouno-ui/package-lock.json
+
+      - name: Build exact canonical package
+        working-directory: .gouno-ui
+        run: |
+          npm ci
+          npm run typecheck
+          npm test -- --run
+          npm run build
+
+      - name: Audit root imports against canonical runtime owners
+        run: |
+          node --input-type=module <<'EOF'
+          import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises';
+          import path from 'node:path';
+          import { pathToFileURL } from 'node:url';
+
+          const root = path.resolve('blog-frontend/src');
+          const layers = {
+            core: await import(pathToFileURL(path.resolve('.gouno-ui/dist/core.js'))),
+            theme: await import(pathToFileURL(path.resolve('.gouno-ui/dist/theme.js'))),
+            patterns: await import(pathToFileURL(path.resolve('.gouno-ui/dist/patterns.js'))),
+            gouno: await import(pathToFileURL(path.resolve('.gouno-ui/dist/gouno.js'))),
+            root: await import(pathToFileURL(path.resolve('.gouno-ui/dist/index.js'))),
+          };
+
+          const ownerByName = new Map();
+          for (const owner of ['core', 'theme', 'patterns', 'gouno']) {
+            for (const name of Object.keys(layers[owner])) ownerByName.set(name, owner);
+          }
+          const rootOnly = new Set(Object.keys(layers.root).filter((name) => !ownerByName.has(name)));
+
+          const files = [];
+          async function walk(dir) {
+            for (const entry of await readdir(dir, { withFileTypes: true })) {
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory()) await walk(full);
+              else if (/\.(?:ts|tsx)$/.test(entry.name)) files.push(full);
+            }
+          }
+          await walk(root);
+
+          const usage = new Map();
+          for (const file of files) {
+            const source = await readFile(file, 'utf8');
+            const importRe = /import\s+(type\s+)?\{([\s\S]*?)\}\s+from\s+["']@gouno\/ui["'];?/g;
+            for (const match of source.matchAll(importRe)) {
+              const statementTypeOnly = Boolean(match[1]);
+              for (const rawPart of match[2].split(',')) {
+                let part = rawPart.trim();
+                if (!part) continue;
+                let typeOnly = statementTypeOnly;
+                if (part.startsWith('type ')) {
+                  typeOnly = true;
+                  part = part.slice(5).trim();
+                }
+                const imported = part.split(/\s+as\s+/)[0]?.trim();
+                if (!imported) continue;
+                const record = usage.get(imported) ?? { valueFiles: new Set(), typeFiles: new Set() };
+                (typeOnly ? record.typeFiles : record.valueFiles).add(path.relative('.', file));
+                usage.set(imported, record);
+              }
+            }
+          }
+
+          const rows = [...usage.entries()].sort(([a], [b]) => a.localeCompare(b));
+          const canonical = [];
+          const legacyOnly = [];
+          const rootOnlyUsed = [];
+          const typeOnlyUnknown = [];
+          for (const [name, record] of rows) {
+            const owner = ownerByName.get(name);
+            if (record.valueFiles.size > 0) {
+              if (owner) canonical.push({ name, owner, files: [...record.valueFiles] });
+              else if (rootOnly.has(name)) rootOnlyUsed.push({ name, files: [...record.valueFiles] });
+              else legacyOnly.push({ name, files: [...record.valueFiles] });
+            } else if (!owner && !rootOnly.has(name)) {
+              typeOnlyUnknown.push({ name, files: [...record.typeFiles] });
+            }
+          }
+
+          const lines = [
+            '# Gouno UI 0.2.0 Blog import-surface audit',
+            '',
+            '- Blog baseline: `a828e8ea2dac9ffb0c1ec03af86211897e7ca252`',
+            '- Canonical Gouno UI: `3af2a5ca7d63f30fa531f605e620ba2c3380a2e8` (`0.2.0`)',
+            '- Scope: exact root imports from `@gouno/ui` under `blog-frontend/src`.',
+            '',
+            `## Summary`,
+            '',
+            `- Imported symbol families: **${rows.length}**`,
+            `- Canonical runtime symbols: **${canonical.length}**`,
+            `- Legacy-only runtime symbols: **${legacyOnly.length}**`,
+            `- Canonical root-only runtime symbols: **${rootOnlyUsed.length}**`,
+            `- Unknown type-only symbols: **${typeOnlyUnknown.length}**`,
+            '',
+            '## Canonical runtime symbols',
+            '',
+            '| Symbol | Owner | Value import files |',
+            '| --- | --- | --- |',
+            ...canonical.map(({ name, owner, files }) => `| \`${name}\` | \`${owner}\` | ${files.map((file) => `\`${file}\``).join('<br>')} |`),
+            '',
+            '## Legacy-only runtime symbols',
+            '',
+            '| Symbol | Value import files |',
+            '| --- | --- |',
+            ...legacyOnly.map(({ name, files }) => `| \`${name}\` | ${files.map((file) => `\`${file}\``).join('<br>')} |`),
+            '',
+            '## Canonical root-only runtime symbols',
+            '',
+            '| Symbol | Value import files |',
+            '| --- | --- |',
+            ...rootOnlyUsed.map(({ name, files }) => `| \`${name}\` | ${files.map((file) => `\`${file}\``).join('<br>')} |`),
+            '',
+            '## Unknown type-only symbols',
+            '',
+            '| Symbol | Type import files |',
+            '| --- | --- |',
+            ...typeOnlyUnknown.map(({ name, files }) => `| \`${name}\` | ${files.map((file) => `\`${file}\``).join('<br>')} |`),
+            '',
+          ];
+
+          await mkdir('docs/ui-redesign', { recursive: true });
+          await writeFile('docs/ui-redesign/gouno-ui-0.2.0-import-audit.md', `${lines.join('\n')}\n`);
+          EOF
+
+      - name: Commit audit evidence
+        run: |
+          set -euo pipefail
+          git add docs/ui-redesign/gouno-ui-0.2.0-import-audit.md
+          git diff --cached --exit-code && exit 0 || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "docs(ui): audit Blog against Gouno UI 0.2.0"
+          git push origin HEAD:chore/gouno-ui-0.2.0
