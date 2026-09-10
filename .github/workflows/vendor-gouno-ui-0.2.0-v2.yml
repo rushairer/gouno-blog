@@ -187,6 +187,7 @@ jobs:
             'Tabs', 'TabList', 'Tab', 'TabPanel', 'TabsProps', 'TabListProps', 'TabProps', 'TabPanelProps', 'TabItem',
             'Badge', 'BadgeProps', 'BadgeTone',
           ]);
+          const compactCanonicalTags = new Set(['SearchField', 'Input']);
 
           const files = [];
           async function walk(dir) {
@@ -227,6 +228,23 @@ jobs:
               }).join('\n');
               replacements.push({ start: statement.getStart(sourceFile), end: statement.getEnd(), text: rendered });
             }
+
+            function visit(node) {
+              if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
+                const tag = node.tagName.getText(sourceFile);
+                if (compactCanonicalTags.has(tag)) {
+                  for (const prop of node.attributes.properties) {
+                    if (!ts.isJsxAttribute(prop) || prop.name.text !== 'size' || !prop.initializer || !ts.isStringLiteral(prop.initializer)) continue;
+                    if (prop.initializer.text === 'compact') {
+                      replacements.push({ start: prop.initializer.getStart(sourceFile), end: prop.initializer.getEnd(), text: '"small"' });
+                    }
+                  }
+                }
+              }
+              ts.forEachChild(node, visit);
+            }
+            visit(sourceFile);
+
             for (const replacement of replacements.sort((a, b) => b.start - a.start)) {
               source = source.slice(0, replacement.start) + replacement.text + source.slice(replacement.end);
             }
@@ -237,7 +255,7 @@ jobs:
           }
 
           const customPage = path.join(frontendRoot, 'src/pages/CustomPageView.tsx');
-          let customPageSource = await readFile(customPage, 'utf8');
+          const customPageSource = await readFile(customPage, 'utf8');
           const migratedCustomPage = customPageSource.replace(/\baction=/g, 'actions=');
           if (migratedCustomPage !== customPageSource) {
             await writeFile(customPage, migratedCustomPage);
