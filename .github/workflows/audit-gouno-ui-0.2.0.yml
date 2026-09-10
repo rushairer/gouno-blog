@@ -42,7 +42,7 @@ jobs:
           npm test -- --run
           npm run build
 
-      - name: Audit root imports against canonical runtime owners
+      - name: Audit root imports against canonical owners
         run: |
           node --input-type=module <<'EOF'
           import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises';
@@ -50,6 +50,7 @@ jobs:
           import { pathToFileURL } from 'node:url';
 
           const uiRoot = path.resolve('.gouno-ui');
+          const ts = await import(pathToFileURL(path.join(uiRoot, 'node_modules/typescript/lib/typescript.js')));
           const uiPackage = JSON.parse(await readFile(path.join(uiRoot, 'package.json'), 'utf8'));
           function exportPath(key) {
             const entry = uiPackage.exports?.[key];
@@ -58,21 +59,33 @@ jobs:
             return path.resolve(uiRoot, relativePath);
           }
 
-          const root = path.resolve('blog-frontend/src');
-          const layers = {
+          const runtimeLayers = {
             core: await import(pathToFileURL(exportPath('./core'))),
             theme: await import(pathToFileURL(exportPath('./theme'))),
             patterns: await import(pathToFileURL(exportPath('./patterns'))),
             gouno: await import(pathToFileURL(exportPath('./gouno'))),
             root: await import(pathToFileURL(exportPath('.'))),
           };
-
-          const ownerByName = new Map();
+          const runtimeOwnerByName = new Map();
           for (const owner of ['core', 'theme', 'patterns', 'gouno']) {
-            for (const name of Object.keys(layers[owner])) ownerByName.set(name, owner);
+            for (const name of Object.keys(runtimeLayers[owner])) runtimeOwnerByName.set(name, owner);
           }
-          const rootOnly = new Set(Object.keys(layers.root).filter((name) => !ownerByName.has(name)));
+          const rootOnly = new Set(Object.keys(runtimeLayers.root).filter((name) => !runtimeOwnerByName.has(name)));
 
+          const publicOwnerByName = new Map(runtimeOwnerByName);
+          for (const owner of ['core', 'theme', 'patterns', 'gouno']) {
+            const indexPath = path.join(uiRoot, 'src', owner, 'index.ts');
+            const source = await readFile(indexPath, 'utf8');
+            const sourceFile = ts.createSourceFile(indexPath, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+            for (const statement of sourceFile.statements) {
+              if (!ts.isExportDeclaration(statement) || !statement.exportClause || !ts.isNamedExports(statement.exportClause)) continue;
+              for (const element of statement.exportClause.elements) {
+                publicOwnerByName.set(element.name.text, owner);
+              }
+            }
+          }
+
+          const root = path.resolve('blog-frontend/src');
           const files = [];
           async function walk(dir) {
             for (const entry of await readdir(dir, { withFileTypes: true })) {
@@ -84,21 +97,22 @@ jobs:
           await walk(root);
 
           const usage = new Map();
+          const unsupportedImports = [];
           for (const file of files) {
             const source = await readFile(file, 'utf8');
-            const importRe = /import\s+(type\s+)?\{([\s\S]*?)\}\s+from\s+["']@gouno\/ui["'];?/g;
-            for (const match of source.matchAll(importRe)) {
-              const statementTypeOnly = Boolean(match[1]);
-              for (const rawPart of match[2].split(',')) {
-                let part = rawPart.trim();
-                if (!part) continue;
-                let typeOnly = statementTypeOnly;
-                if (part.startsWith('type ')) {
-                  typeOnly = true;
-                  part = part.slice(5).trim();
-                }
-                const imported = part.split(/\s+as\s+/)[0]?.trim();
-                if (!imported) continue;
+            const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+            for (const statement of sourceFile.statements) {
+              if (!ts.isImportDeclaration(statement) || statement.moduleSpecifier.text !== '@gouno/ui') continue;
+              const clause = statement.importClause;
+              if (!clause) continue;
+              if (clause.name || (clause.namedBindings && !ts.isNamedImports(clause.namedBindings))) {
+                unsupportedImports.push(path.relative('.', file));
+                continue;
+              }
+              if (!clause.namedBindings) continue;
+              for (const element of clause.namedBindings.elements) {
+                const imported = element.propertyName?.text ?? element.name.text;
+                const typeOnly = clause.isTypeOnly || element.isTypeOnly;
                 const record = usage.get(imported) ?? { valueFiles: new Set(), typeFiles: new Set() };
                 (typeOnly ? record.typeFiles : record.valueFiles).add(path.relative('.', file));
                 usage.set(imported, record);
@@ -107,61 +121,77 @@ jobs:
           }
 
           const rows = [...usage.entries()].sort(([a], [b]) => a.localeCompare(b));
-          const canonical = [];
-          const legacyOnly = [];
-          const rootOnlyUsed = [];
-          const typeOnlyUnknown = [];
+          const canonicalRuntime = [];
+          const legacyRuntime = [];
+          const rootOnlyRuntime = [];
+          const canonicalTypeOnly = [];
+          const legacyTypeOnly = [];
           for (const [name, record] of rows) {
-            const owner = ownerByName.get(name);
             if (record.valueFiles.size > 0) {
-              if (owner) canonical.push({ name, owner, files: [...record.valueFiles] });
-              else if (rootOnly.has(name)) rootOnlyUsed.push({ name, files: [...record.valueFiles] });
-              else legacyOnly.push({ name, files: [...record.valueFiles] });
-            } else if (!owner && !rootOnly.has(name)) {
-              typeOnlyUnknown.push({ name, files: [...record.typeFiles] });
+              const owner = runtimeOwnerByName.get(name);
+              if (owner) canonicalRuntime.push({ name, owner, files: [...record.valueFiles] });
+              else if (rootOnly.has(name)) rootOnlyRuntime.push({ name, files: [...record.valueFiles] });
+              else legacyRuntime.push({ name, files: [...record.valueFiles] });
+            }
+            if (record.typeFiles.size > 0 && record.valueFiles.size === 0) {
+              const owner = publicOwnerByName.get(name);
+              if (owner) canonicalTypeOnly.push({ name, owner, files: [...record.typeFiles] });
+              else legacyTypeOnly.push({ name, files: [...record.typeFiles] });
             }
           }
 
+          const fileList = (files) => files.map((file) => `\`${file}\``).join('<br>');
           const lines = [
             '# Gouno UI 0.2.0 Blog import-surface audit',
             '',
             '- Blog baseline: `a828e8ea2dac9ffb0c1ec03af86211897e7ca252`',
             '- Canonical Gouno UI: `3af2a5ca7d63f30fa531f605e620ba2c3380a2e8` (`0.2.0`)',
-            '- Scope: exact root imports from `@gouno/ui` under `blog-frontend/src`.',
+            '- Scope: TypeScript-AST parsed exact root imports from `@gouno/ui` under `blog-frontend/src`.',
             '',
             '## Summary',
             '',
-            `- Imported symbol families: **${rows.length}**`,
-            `- Canonical runtime symbols: **${canonical.length}**`,
-            `- Legacy-only runtime symbols: **${legacyOnly.length}**`,
-            `- Canonical root-only runtime symbols: **${rootOnlyUsed.length}**`,
-            `- Unknown type-only symbols: **${typeOnlyUnknown.length}**`,
+            `- Imported symbols: **${rows.length}**`,
+            `- Canonical runtime symbols: **${canonicalRuntime.length}**`,
+            `- Legacy-only runtime symbols: **${legacyRuntime.length}**`,
+            `- Canonical root-only runtime symbols: **${rootOnlyRuntime.length}**`,
+            `- Canonical type-only symbols: **${canonicalTypeOnly.length}**`,
+            `- Legacy-only type-only symbols: **${legacyTypeOnly.length}**`,
+            `- Unsupported default/namespace import files: **${unsupportedImports.length}**`,
             '',
             '## Canonical runtime symbols',
             '',
             '| Symbol | Owner | Value import files |',
             '| --- | --- | --- |',
-            ...canonical.map(({ name, owner, files }) => `| \`${name}\` | \`${owner}\` | ${files.map((file) => `\`${file}\``).join('<br>')} |`),
+            ...canonicalRuntime.map(({ name, owner, files }) => `| \`${name}\` | \`${owner}\` | ${fileList(files)} |`),
             '',
             '## Legacy-only runtime symbols',
             '',
             '| Symbol | Value import files |',
             '| --- | --- |',
-            ...legacyOnly.map(({ name, files }) => `| \`${name}\` | ${files.map((file) => `\`${file}\``).join('<br>')} |`),
+            ...legacyRuntime.map(({ name, files }) => `| \`${name}\` | ${fileList(files)} |`),
             '',
             '## Canonical root-only runtime symbols',
             '',
             '| Symbol | Value import files |',
             '| --- | --- |',
-            ...rootOnlyUsed.map(({ name, files }) => `| \`${name}\` | ${files.map((file) => `\`${file}\``).join('<br>')} |`),
+            ...rootOnlyRuntime.map(({ name, files }) => `| \`${name}\` | ${fileList(files)} |`),
             '',
-            '## Unknown type-only symbols',
+            '## Canonical type-only symbols',
+            '',
+            '| Symbol | Owner | Type import files |',
+            '| --- | --- | --- |',
+            ...canonicalTypeOnly.map(({ name, owner, files }) => `| \`${name}\` | \`${owner}\` | ${fileList(files)} |`),
+            '',
+            '## Legacy-only type-only symbols',
             '',
             '| Symbol | Type import files |',
             '| --- | --- |',
-            ...typeOnlyUnknown.map(({ name, files }) => `| \`${name}\` | ${files.map((file) => `\`${file}\``).join('<br>')} |`),
+            ...legacyTypeOnly.map(({ name, files }) => `| \`${name}\` | ${fileList(files)} |`),
             '',
           ];
+          if (unsupportedImports.length) {
+            lines.push('## Unsupported default/namespace imports', '', ...unsupportedImports.map((file) => `- \`${file}\``), '');
+          }
 
           await mkdir('docs/ui-redesign', { recursive: true });
           await writeFile('docs/ui-redesign/gouno-ui-0.2.0-import-audit.md', `${lines.join('\n')}\n`);
