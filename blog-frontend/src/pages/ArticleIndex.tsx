@@ -7,6 +7,7 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import { Search } from "lucide-react";
+import { SearchField, Field } from "@gouno/ui/core";
 import {
   ArticleListSkeleton,
   Button,
@@ -14,9 +15,7 @@ import {
   EmptyState,
   ErrorState,
   Pagination,
-  SearchField,
-  Field,
-} from "@gouno/ui";
+} from "@gouno/ui-legacy";
 import { postsApi } from "../api/posts";
 import { siteApi } from "../api/site";
 import { ArticleTeaser } from "../components/reading/ArticleTeaser";

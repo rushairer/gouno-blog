@@ -1,5 +1,5 @@
 import { Sparkles } from "lucide-react";
-import { Button } from "@gouno/ui";
+import { Button } from "@gouno/ui-legacy";
 
 export function AiSuggestionControl({
   label,

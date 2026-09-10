@@ -1,14 +1,7 @@
 import type React from "react";
 import { Copy, ImagePlus, LoaderCircle, Pencil, Sparkles } from "lucide-react";
-import {
-  Button,
-  Feedback,
-  Field,
-  FormActions,
-  Input,
-  OverlayForm,
-  Textarea,
-} from "@gouno/ui";
+import { Field, Input, OverlayForm, Textarea } from "@gouno/ui/core";
+import { Button, Feedback, FormActions } from "@gouno/ui-legacy";
 
 export function MediaUploadForm({
   file,

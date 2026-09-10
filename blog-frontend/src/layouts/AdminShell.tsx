@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Bell, ExternalLink, LogOut, Search } from "lucide-react";
-import { Button, ButtonLink, IconButton } from "@gouno/ui";
+import { Button, ButtonLink, IconButton } from "@gouno/ui-legacy";
 import { notificationsApi } from "../api/notifications";
 import { useUserProfile } from "@gosso/client/react";
 import { type BlogUserProfile, getBlogRoleLabel, logout } from "../auth";
@@ -19,14 +19,13 @@ import {
   getFilteredAdminNavigation,
 } from "../utils/navigation";
 import { PAGINATION_LIMITS, MembershipStatus } from "../constants";
+import { SearchField } from "@gouno/ui/core";
+import { NavigationGroup, navigationItemClass } from "@gouno/ui/gouno";
 import {
   AdminShell as SharedAdminShell,
-  NavigationGroup,
-  navigationItemClass,
   ThemeToggle,
-  SearchField,
   Feedback,
-} from "@gouno/ui";
+} from "@gouno/ui-legacy";
 
 function currentLabel(pathname: string) {
   if (pathname === "/admin/posts/new") return "新建文章";

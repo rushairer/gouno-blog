@@ -21,7 +21,7 @@ import {
   Panel,
   PanelHeader,
   Select,
-} from "@gouno/ui";
+} from "@gouno/ui-legacy";
 
 type Locale = "en" | "zh";
 

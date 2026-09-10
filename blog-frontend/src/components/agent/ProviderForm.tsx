@@ -4,17 +4,14 @@ import type { FormEvent } from "react";
 import type { ProviderProfile, ProviderType } from "../../types/agent";
 import { emptyProvider } from "../../types/agent";
 import { useFormDraft } from "../../hooks/useFormDraft";
+import { Checkbox, Field, FormGrid, Input } from "@gouno/ui/core";
 import {
   Button,
-  Checkbox,
   EditorPanel,
-  Field,
   FormActions,
-  FormGrid,
   FormLayout,
-  Input,
   Select,
-} from "@gouno/ui";
+} from "@gouno/ui-legacy";
 
 export interface ProviderFormValue {
   id?: number;

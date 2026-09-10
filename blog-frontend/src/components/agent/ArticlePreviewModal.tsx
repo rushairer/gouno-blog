@@ -1,7 +1,8 @@
 import type { ArticleImagePreview } from "../../api/operations";
 import type { MediaCandidate } from "../../types/agent";
 import { MarkdownRenderer } from "../MarkdownRenderer";
-import { Button, Modal } from "@gouno/ui";
+import { Modal } from "@gouno/ui/core";
+import { Button } from "@gouno/ui-legacy";
 
 export interface ArticlePreviewModalProps {
   candidate: MediaCandidate;

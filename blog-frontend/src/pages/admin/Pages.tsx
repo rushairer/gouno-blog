@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Copy, Edit2, Eye, Plus, Trash2, X } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
+import { Checkbox, IconButtonLink, SearchField } from "@gouno/ui/core";
 import {
   AdminPage,
   AdminPageHeader,
@@ -10,24 +11,21 @@ import {
   Button,
   ButtonLink,
   Card,
-  Checkbox,
   ConfirmDialog,
   ContentStack,
   copyText,
   EmptyState,
   FilterBar,
   IconButton,
-  IconButtonLink,
   ListRow,
   ListStack,
   Pagination,
-  SearchField,
   Select,
   StatusBadge,
   TableContainer,
   TableSkeleton,
   useToast,
-} from "@gouno/ui";
+} from "@gouno/ui-legacy";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 import { pagesApi } from "../../api/pages";
 import type { CustomPage } from "../../types/blog";

@@ -3,16 +3,8 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import type { EmbeddingProfile } from "../../types/agent";
 import { useFormDraft } from "../../hooks/useFormDraft";
-import {
-  Button,
-  Checkbox,
-  EditorPanel,
-  Field,
-  FormActions,
-  FormGrid,
-  FormLayout,
-  Input,
-} from "@gouno/ui";
+import { Checkbox, Field, FormGrid, Input } from "@gouno/ui/core";
+import { Button, EditorPanel, FormActions, FormLayout } from "@gouno/ui-legacy";
 
 export type EmbeddingFormValue = {
   id?: number;

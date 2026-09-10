@@ -3,7 +3,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import AdminPages from "../Pages";
-import { ToastProvider } from "@gouno/ui";
+import { ToastProvider } from "@gouno/ui-legacy";
 import { pagesApi } from "../../../api/pages";
 import type { PaginatedPages } from "../../../types/blog";
 import { GossoProvider } from "@gosso/client/react";

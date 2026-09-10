@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { commentsApi } from "../../api/comments";
+import { Checkbox, CheckboxField } from "@gouno/ui/core";
 import {
   AdminPage,
   AdminPageHeader,
@@ -10,8 +11,6 @@ import {
   BulkActionBar,
   Button,
   Card,
-  Checkbox,
-  CheckboxField,
   ConfirmDialog,
   ContentStack,
   Feedback,
@@ -19,7 +18,7 @@ import {
   Select,
   TableSkeleton,
   useToast,
-} from "@gouno/ui";
+} from "@gouno/ui-legacy";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
 

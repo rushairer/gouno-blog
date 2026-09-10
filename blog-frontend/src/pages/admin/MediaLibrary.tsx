@@ -13,6 +13,7 @@ import { mediaApi } from "../../api/media";
 import type { MediaItem, MediaReference } from "../../api/media";
 import { agentApi } from "../../api/agent";
 import { useAbility } from "../../abilities";
+import { Checkbox, Drawer, SearchField } from "@gouno/ui/core";
 import {
   AdminPage,
   AdminPageHeader,
@@ -20,19 +21,16 @@ import {
   BulkActionBar,
   Button,
   Card,
-  Checkbox,
   ConfirmDialog,
   ContentStack,
   copyText,
-  Drawer,
   EmptyState,
   Feedback,
   FilterBar,
-  SearchField,
   Select,
   TableSkeleton,
   useToast,
-} from "@gouno/ui";
+} from "@gouno/ui-legacy";
 import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
 import {
   MediaAltTextForm,

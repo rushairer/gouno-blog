@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
+import { ChoiceButton, Drawer, Field, Input, Modal } from "@gouno/ui/core";
 import {
   AsyncState,
   Badge,
@@ -13,16 +14,11 @@ import {
   CardContent,
   CardFooter,
   CardHeader,
-  ChoiceButton,
   BulkActionBar,
-  Drawer,
   EditorPanel,
-  Field,
   FormActions,
   FormLayout,
-  Input,
   IconButton,
-  Modal,
   Pagination,
   SectionHeading,
   SectionNav,
@@ -37,7 +33,7 @@ import {
   TableSkeleton,
   ToastProvider,
   useToast,
-} from "@gouno/ui";
+} from "@gouno/ui-legacy";
 
 describe("shared UI primitives", () => {
   it("connects Field labels, hints, errors, and required state to its control", () => {

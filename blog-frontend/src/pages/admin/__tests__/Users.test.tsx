@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "@gouno/ui";
+import { ToastProvider } from "@gouno/ui-legacy";
 import { membersApi, type BlogMember } from "../../../api/members";
 import AdminUsers from "../Users";
 

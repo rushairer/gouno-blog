@@ -16,22 +16,19 @@ import { agentApi } from "../../api/agent";
 import { postsApi } from "../../api/posts";
 import { siteApi } from "../../api/site";
 import { useAbility } from "../../abilities";
+import { ChoiceButton, Field, Input, Textarea } from "@gouno/ui/core";
 import {
   AdminPageState,
   Button,
-  ChoiceButton,
   ConfirmDialog,
   EmptyState,
   Feedback,
-  Field,
-  Input,
   Select,
-  Textarea,
   Tab,
   TabList,
   Tabs,
   useToast,
-} from "@gouno/ui";
+} from "@gouno/ui-legacy";
 import { MarkdownRenderer } from "../../components/MarkdownRenderer";
 import {
   AiImageGenerationPanel,

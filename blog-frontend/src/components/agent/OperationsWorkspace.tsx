@@ -16,7 +16,8 @@ import type {
   OperationalSuggestion,
 } from "../../types/agent";
 import { operationsApi } from "../../api/operations";
-import { BulkActionBar, Button, Checkbox, EmptyState, Panel } from "@gouno/ui";
+import { Checkbox } from "@gouno/ui/core";
+import { BulkActionBar, Button, EmptyState, Panel } from "@gouno/ui-legacy";
 import { StatusPill } from "./StatusPill";
 import { WorkflowLauncher } from "./WorkflowLauncher";
 

@@ -7,14 +7,14 @@ import {
   useLocation,
 } from "react-router-dom";
 import { I18nProvider, useI18n } from "./i18n";
+import { PageHeader } from "@gouno/ui/gouno";
 import {
   Button,
   ButtonLink,
   LoadingState,
-  PageHeader,
   Panel,
   ToastProvider,
-} from "@gouno/ui";
+} from "@gouno/ui-legacy";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { GossoProvider, RequireAuth } from "@gosso/client/react";
 import { gossoClient, type BlogUserProfile, logout } from "./auth";

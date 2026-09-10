@@ -2,15 +2,15 @@ import { useCallback, useEffect, useState } from "react";
 import { Bell } from "lucide-react";
 import { notificationsApi } from "../api/notifications";
 import type { Notification } from "../api/notifications";
+import { PageHeader } from "@gouno/ui/gouno";
 import {
   Button,
   ContentStack,
   EmptyState,
   ErrorState,
   LoadingState,
-  PageHeader,
   Panel,
-} from "@gouno/ui";
+} from "@gouno/ui-legacy";
 import { usePageTitle } from "../hooks/usePageTitle";
 
 import { useI18n } from "../i18n";

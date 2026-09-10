@@ -8,18 +8,20 @@ import type {
   ToolDefinition,
 } from "../../types/agent";
 import {
-  Button,
   Checkbox,
   CheckboxField,
-  EditorPanel,
   Field,
-  FormActions,
   FormGrid,
-  FormLayout,
   Input,
-  Select,
   Textarea,
-} from "@gouno/ui";
+} from "@gouno/ui/core";
+import {
+  Button,
+  EditorPanel,
+  FormActions,
+  FormLayout,
+  Select,
+} from "@gouno/ui-legacy";
 import { RiskPill } from "./StatusPill";
 import { ToolBindingsEditor } from "./tools/ToolBindingsEditor";
 

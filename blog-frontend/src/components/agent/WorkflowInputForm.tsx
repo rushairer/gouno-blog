@@ -3,19 +3,21 @@ import { useEffect, useMemo, useState } from "react";
 import { workflowApi } from "../../api/workflows";
 import type { ResourceOption } from "../../api/workflows";
 import {
-  Button,
   Checkbox,
-  Feedback,
   Field,
   Input,
-  IconButton,
   Modal,
-  Pagination,
   SearchField,
+  Textarea,
+} from "@gouno/ui/core";
+import {
+  Button,
+  Feedback,
+  IconButton,
+  Pagination,
   Select,
   StatusBadge,
-  Textarea,
-} from "@gouno/ui";
+} from "@gouno/ui-legacy";
 
 type SchemaProperty = {
   type?: string;
@@ -345,7 +347,7 @@ function ResourcePicker({
           <div className="workflow-resource-toolbar">
             <SearchField
               autoFocus
-              size="compact"
+              size="small"
               value={query}
               onChange={(event) => {
                 setQuery(event.target.value);
@@ -386,7 +388,7 @@ function ResourcePicker({
                       </Select>
                     ) : (
                       <Input
-                        size="compact"
+                        size="small"
                         type={filter.type}
                         min={filter.type === "number" ? 0 : undefined}
                         placeholder={filter.placeholder}

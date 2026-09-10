@@ -1,0 +1,9 @@
+{
+  "name": "@gouno/ui",
+  "alias": "@gouno/ui-legacy",
+  "version": "0.1.0",
+  "archive": "gouno-ui-legacy-0.1.0.tgz",
+  "sha256": "0288a99c4392a7f128ec2a72165e8ab6fbc49411de4ea5624fd87d3670b6e42e",
+  "integrity": "sha512-V62hMUlYnbLbFlj9gLUacojqSZuwouIgUulBpkgPFgbxLP+keB2iaZeRiWwImOUwwjnrOu+BR87zMSac7ZdJog==",
+  "source": "gouno-blog/packages/ui"
+}
