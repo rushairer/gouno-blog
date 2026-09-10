@@ -1,0 +1,298 @@
+name: Vendor verified Gouno UI 0.2.0 v2
+
+on:
+  push:
+    branches: [chore/gouno-ui-0.2.0]
+    paths:
+      - .github/workflows/vendor-gouno-ui-0.2.0-v2.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: vendor-gouno-ui-0.2.0-v2
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Blog migration branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: chore/gouno-ui-0.2.0
+          fetch-depth: 0
+
+      - name: Checkout exact verified Gouno UI source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: rushairer/gouno-ui
+          ref: 3af2a5ca7d63f30fa531f605e620ba2c3380a2e8
+          path: .gouno-ui
+          persist-credentials: false
+
+      - name: Setup Node.js 24 for Gouno UI
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: .gouno-ui/package-lock.json
+
+      - name: Rebuild exact verified package
+        working-directory: .gouno-ui
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run build
+          npm pack
+          test "$(sha256sum gouno-ui-0.2.0.tgz | awk '{print $1}')" = "e0fa85594b579c971599e045855bf37b9ea25371df42e0cf15bf90dc5d86d24d"
+
+      - name: Prepare canonical and explicit legacy packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          VENDOR="$GITHUB_WORKSPACE/blog-frontend/vendor"
+          OLD="$VENDOR/gouno-ui-0.1.0.tgz"
+          LEGACY="$VENDOR/gouno-ui-legacy-0.1.0.tgz"
+          CANONICAL="$VENDOR/gouno-ui-0.2.0.tgz"
+
+          if [ -f "$OLD" ]; then cp "$OLD" "$LEGACY"; fi
+          test -f "$LEGACY"
+
+          node --input-type=module - "$VENDOR/ui-manifest.json" "$LEGACY" <<'EOF'
+          import { createHash } from 'node:crypto';
+          import { readFile, writeFile } from 'node:fs/promises';
+          const [, , manifestPath, archivePath] = process.argv;
+          const current = JSON.parse(await readFile(manifestPath, 'utf8'));
+          const archive = await readFile(archivePath);
+          const sha256 = createHash('sha256').update(archive).digest('hex');
+          const integrity = `sha512-${createHash('sha512').update(archive).digest('base64')}`;
+          if (current.version !== '0.1.0' || current.sha256 !== sha256 || current.integrity !== integrity) {
+            throw new Error('existing Blog legacy Gouno UI archive does not match its manifest');
+          }
+          const legacy = {
+            name: '@gouno/ui',
+            alias: '@gouno/ui-legacy',
+            version: '0.1.0',
+            archive: 'gouno-ui-legacy-0.1.0.tgz',
+            sha256,
+            integrity,
+            source: 'gouno-blog/packages/ui',
+          };
+          await writeFile(manifestPath.replace('ui-manifest.json', 'legacy-ui-manifest.json'), `${JSON.stringify(legacy, null, 2)}\n`);
+          EOF
+
+          cp ".gouno-ui/gouno-ui-0.2.0.tgz" "$CANONICAL"
+          rm -f "$OLD"
+          SHA256="$(sha256sum "$CANONICAL" | awk '{print $1}')"
+          INTEGRITY="sha512-$(openssl dgst -sha512 -binary "$CANONICAL" | openssl base64 -A)"
+          test "$SHA256" = "e0fa85594b579c971599e045855bf37b9ea25371df42e0cf15bf90dc5d86d24d"
+
+          cat > "$VENDOR/gouno-ui-source.txt" <<'EOF'
+          repository=https://github.com/rushairer/gouno-ui
+          ref=main
+          sha=3af2a5ca7d63f30fa531f605e620ba2c3380a2e8
+          EOF
+
+          node --input-type=module - "$VENDOR/ui-manifest.json" "$SHA256" "$INTEGRITY" <<'EOF'
+          import { writeFile } from 'node:fs/promises';
+          const [, , path, sha256, integrity] = process.argv;
+          const manifest = {
+            name: '@gouno/ui',
+            version: '0.2.0',
+            archive: 'gouno-ui-0.2.0.tgz',
+            sha256,
+            integrity,
+            source: 'rushairer/gouno-ui',
+            sourceSha: '3af2a5ca7d63f30fa531f605e620ba2c3380a2e8',
+          };
+          await writeFile(path, `${JSON.stringify(manifest, null, 2)}\n`);
+          EOF
+
+          node --input-type=module <<'EOF'
+          import { readFile, writeFile } from 'node:fs/promises';
+          const packagePath = 'blog-frontend/package.json';
+          const pkg = JSON.parse(await readFile(packagePath, 'utf8'));
+          pkg.dependencies['@gouno/ui'] = 'file:vendor/gouno-ui-0.2.0.tgz';
+          pkg.dependencies['@gouno/ui-legacy'] = 'file:vendor/gouno-ui-legacy-0.1.0.tgz';
+          await writeFile(packagePath, `${JSON.stringify(pkg, null, 2)}\n`);
+
+          const cssPath = 'blog-frontend/src/styles/tailwind.css';
+          let css = await readFile(cssPath, 'utf8');
+          const canonicalSource = '@source "../../node_modules/@gouno/ui/dist";';
+          const legacySource = '@source "../../node_modules/@gouno/ui-legacy/dist";';
+          if (!css.includes(canonicalSource)) throw new Error('canonical Tailwind source marker is missing');
+          if (!css.includes(legacySource)) css = css.replace(canonicalSource, `${canonicalSource}\n${legacySource}`);
+          await writeFile(cssPath, css);
+
+          const dockerPath = 'blog-frontend/Dockerfile';
+          let docker = await readFile(dockerPath, 'utf8');
+          docker = docker.replace('COPY vendor/gouno-ui-0.1.0.tgz ./vendor/', 'COPY vendor/gouno-ui-*.tgz ./vendor/');
+          if (!docker.includes('COPY vendor/gouno-ui-*.tgz ./vendor/')) throw new Error('unable to make Blog Docker vendor copy version-aware');
+          await writeFile(dockerPath, docker);
+          EOF
+
+      - name: Setup Node.js 20 for Blog
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: blog-frontend/package-lock.json
+
+      - name: Refresh Blog lockfile and install both UI packages
+        working-directory: blog-frontend
+        run: |
+          set -euo pipefail
+          rm -rf node_modules
+          node --input-type=module <<'EOF'
+          import { readFile, writeFile } from 'node:fs/promises';
+          const lock = JSON.parse(await readFile('./package-lock.json', 'utf8'));
+          if (lock.packages) {
+            delete lock.packages['node_modules/@gouno/ui'];
+            delete lock.packages['node_modules/@gouno/ui-legacy'];
+          }
+          await writeFile('./package-lock.json', `${JSON.stringify(lock, null, 2)}\n`);
+          EOF
+          npm install --package-lock-only --ignore-scripts
+          npm ci
+
+      - name: Split root imports with explicit compatibility overrides
+        run: |
+          node --input-type=module <<'EOF'
+          import { readdir, readFile, writeFile } from 'node:fs/promises';
+          import path from 'node:path';
+          import { pathToFileURL } from 'node:url';
+
+          const uiRoot = path.resolve('.gouno-ui');
+          const frontendRoot = path.resolve('blog-frontend');
+          const ts = await import(pathToFileURL(path.join(frontendRoot, 'node_modules/typescript/lib/typescript.js')));
+          const ownerByName = new Map();
+          for (const owner of ['core', 'theme', 'patterns', 'gouno']) {
+            const indexPath = path.join(uiRoot, 'src', owner, 'index.ts');
+            const source = await readFile(indexPath, 'utf8');
+            const sourceFile = ts.createSourceFile(indexPath, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+            for (const statement of sourceFile.statements) {
+              if (!ts.isExportDeclaration(statement) || !statement.exportClause || !ts.isNamedExports(statement.exportClause)) continue;
+              for (const element of statement.exportClause.elements) ownerByName.set(element.name.text, owner);
+            }
+          }
+          ownerByName.set('cn', 'root');
+
+          const legacyOverrides = new Set([
+            'Button', 'ButtonLink', 'IconButton', 'ButtonProps', 'ButtonLinkProps', 'IconButtonProps',
+            'ButtonVariant', 'ButtonSize', 'ButtonColor', 'ButtonShape',
+            'Select', 'SelectProps', 'ControlSize',
+            'BulkActionBar', 'BulkActionBarProps',
+            'Pagination', 'PaginationProps',
+            'Tabs', 'TabList', 'Tab', 'TabPanel', 'TabsProps', 'TabListProps', 'TabProps', 'TabPanelProps', 'TabItem',
+            'Badge', 'BadgeProps', 'BadgeTone',
+          ]);
+
+          const files = [];
+          async function walk(dir) {
+            for (const entry of await readdir(dir, { withFileTypes: true })) {
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory()) await walk(full);
+              else if (/\.(?:ts|tsx)$/.test(entry.name)) files.push(full);
+            }
+          }
+          await walk(path.join(frontendRoot, 'src'));
+
+          const changed = [];
+          for (const file of files) {
+            let source = await readFile(file, 'utf8');
+            const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+            const replacements = [];
+            for (const statement of sourceFile.statements) {
+              if (!ts.isImportDeclaration(statement) || statement.moduleSpecifier.text !== '@gouno/ui') continue;
+              const clause = statement.importClause;
+              if (!clause || clause.name || !clause.namedBindings || !ts.isNamedImports(clause.namedBindings)) {
+                throw new Error(`unsupported @gouno/ui root import in ${path.relative('.', file)}`);
+              }
+              const groups = new Map();
+              for (const element of clause.namedBindings.elements) {
+                const imported = element.propertyName?.text ?? element.name.text;
+                const owner = legacyOverrides.has(imported) ? 'legacy' : (ownerByName.get(imported) ?? 'legacy');
+                const list = groups.get(owner) ?? [];
+                list.push(element.getText(sourceFile));
+                groups.set(owner, list);
+              }
+              const prefix = clause.isTypeOnly ? 'import type' : 'import';
+              const order = ['core', 'theme', 'patterns', 'gouno', 'root', 'legacy'];
+              const rendered = order.flatMap((owner) => {
+                const specifiers = groups.get(owner);
+                if (!specifiers?.length) return [];
+                const moduleName = owner === 'root' ? '@gouno/ui' : owner === 'legacy' ? '@gouno/ui-legacy' : `@gouno/ui/${owner}`;
+                return [`${prefix} { ${specifiers.join(', ')} } from "${moduleName}";`];
+              }).join('\n');
+              replacements.push({ start: statement.getStart(sourceFile), end: statement.getEnd(), text: rendered });
+            }
+            for (const replacement of replacements.sort((a, b) => b.start - a.start)) {
+              source = source.slice(0, replacement.start) + replacement.text + source.slice(replacement.end);
+            }
+            if (replacements.length) {
+              await writeFile(file, source);
+              changed.push(path.relative(frontendRoot, file));
+            }
+          }
+
+          const customPage = path.join(frontendRoot, 'src/pages/CustomPageView.tsx');
+          let customPageSource = await readFile(customPage, 'utf8');
+          const migratedCustomPage = customPageSource.replace(/\baction=/g, 'actions=');
+          if (migratedCustomPage !== customPageSource) {
+            await writeFile(customPage, migratedCustomPage);
+            if (!changed.includes('src/pages/CustomPageView.tsx')) changed.push('src/pages/CustomPageView.tsx');
+          }
+
+          await writeFile('/tmp/gouno-ui-migrated-files.txt', `${changed.join('\n')}\n`);
+          console.log(`split ${changed.length} Blog source files; compatibility overrides: ${[...legacyOverrides].join(', ')}`);
+          EOF
+
+          if [ -s /tmp/gouno-ui-migrated-files.txt ]; then
+            (cd blog-frontend && sort -u /tmp/gouno-ui-migrated-files.txt | xargs npx prettier --write)
+          fi
+
+      - name: Verify package provenance
+        working-directory: blog-frontend
+        run: |
+          node --input-type=module <<'EOF'
+          import { createHash } from 'node:crypto';
+          import { readFile } from 'node:fs/promises';
+          const pkg = JSON.parse(await readFile('./package.json', 'utf8'));
+          for (const [manifestFile, dependency] of [
+            ['./vendor/ui-manifest.json', '@gouno/ui'],
+            ['./vendor/legacy-ui-manifest.json', '@gouno/ui-legacy'],
+          ]) {
+            const manifest = JSON.parse(await readFile(manifestFile, 'utf8'));
+            const archive = await readFile(`./vendor/${manifest.archive}`);
+            const installed = JSON.parse(await readFile(`./node_modules/${dependency}/package.json`, 'utf8'));
+            const sha256 = createHash('sha256').update(archive).digest('hex');
+            const integrity = `sha512-${createHash('sha512').update(archive).digest('base64')}`;
+            if (pkg.dependencies?.[dependency] !== `file:vendor/${manifest.archive}`) throw new Error(`${dependency} dependency path does not match manifest`);
+            if (installed.version !== manifest.version) throw new Error(`${dependency} installed version does not match manifest`);
+            if (manifest.sha256 !== sha256 || manifest.integrity !== integrity) throw new Error(`${dependency} archive digest does not match manifest`);
+          }
+          const source = await readFile('./vendor/gouno-ui-source.txt', 'utf8');
+          const canonical = JSON.parse(await readFile('./vendor/ui-manifest.json', 'utf8'));
+          if (!source.includes(`sha=${canonical.sourceSha}`)) throw new Error('canonical source SHA does not match manifest');
+          EOF
+
+      - name: Run full Blog frontend quality gate
+        working-directory: blog-frontend
+        run: npm run quality
+
+      - name: Build Blog frontend container
+        run: docker build -f blog-frontend/Dockerfile blog-frontend
+
+      - name: Commit generated migration state
+        run: |
+          set -euo pipefail
+          git add -A blog-frontend
+          if git diff --cached --quiet; then
+            echo "Blog Gouno UI 0.2.0 migration state is already generated."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(ui): vendor Gouno UI 0.2.0 bridge"
+          git push origin HEAD:chore/gouno-ui-0.2.0
