@@ -49,13 +49,22 @@ jobs:
           import path from 'node:path';
           import { pathToFileURL } from 'node:url';
 
+          const uiRoot = path.resolve('.gouno-ui');
+          const uiPackage = JSON.parse(await readFile(path.join(uiRoot, 'package.json'), 'utf8'));
+          function exportPath(key) {
+            const entry = uiPackage.exports?.[key];
+            const relativePath = typeof entry === 'string' ? entry : entry?.import;
+            if (!relativePath) throw new Error(`missing import target for package export ${key}`);
+            return path.resolve(uiRoot, relativePath);
+          }
+
           const root = path.resolve('blog-frontend/src');
           const layers = {
-            core: await import(pathToFileURL(path.resolve('.gouno-ui/dist/core.js'))),
-            theme: await import(pathToFileURL(path.resolve('.gouno-ui/dist/theme.js'))),
-            patterns: await import(pathToFileURL(path.resolve('.gouno-ui/dist/patterns.js'))),
-            gouno: await import(pathToFileURL(path.resolve('.gouno-ui/dist/gouno.js'))),
-            root: await import(pathToFileURL(path.resolve('.gouno-ui/dist/index.js'))),
+            core: await import(pathToFileURL(exportPath('./core'))),
+            theme: await import(pathToFileURL(exportPath('./theme'))),
+            patterns: await import(pathToFileURL(exportPath('./patterns'))),
+            gouno: await import(pathToFileURL(exportPath('./gouno'))),
+            root: await import(pathToFileURL(exportPath('.'))),
           };
 
           const ownerByName = new Map();
@@ -120,7 +129,7 @@ jobs:
             '- Canonical Gouno UI: `3af2a5ca7d63f30fa531f605e620ba2c3380a2e8` (`0.2.0`)',
             '- Scope: exact root imports from `@gouno/ui` under `blog-frontend/src`.',
             '',
-            `## Summary`,
+            '## Summary',
             '',
             `- Imported symbol families: **${rows.length}**`,
             `- Canonical runtime symbols: **${canonical.length}**`,
