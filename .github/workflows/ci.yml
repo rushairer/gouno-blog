@@ -156,6 +156,41 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify Gouno UI vendor provenance
+        run: |
+          node --input-type=module <<'EOF'
+          import { createHash } from 'node:crypto';
+          import { readFile } from 'node:fs/promises';
+
+          const pkg = JSON.parse(await readFile('./package.json', 'utf8'));
+          const pairs = [
+            ['./vendor/ui-manifest.json', '@gouno/ui'],
+            ['./vendor/legacy-ui-manifest.json', '@gouno/ui-legacy'],
+          ];
+          for (const [manifestFile, dependency] of pairs) {
+            const manifest = JSON.parse(await readFile(manifestFile, 'utf8'));
+            const archive = await readFile(`./vendor/${manifest.archive}`);
+            const installed = JSON.parse(await readFile(`./node_modules/${dependency}/package.json`, 'utf8'));
+            const sha256 = createHash('sha256').update(archive).digest('hex');
+            const integrity = `sha512-${createHash('sha512').update(archive).digest('base64')}`;
+            if (pkg.dependencies?.[dependency] !== `file:vendor/${manifest.archive}`) {
+              throw new Error(`${dependency} dependency does not match vendor manifest archive`);
+            }
+            if (installed.version !== manifest.version) {
+              throw new Error(`${dependency} installed version does not match vendor manifest`);
+            }
+            if (manifest.sha256 !== sha256 || manifest.integrity !== integrity) {
+              throw new Error(`${dependency} archive digest does not match vendor manifest`);
+            }
+          }
+
+          const canonical = JSON.parse(await readFile('./vendor/ui-manifest.json', 'utf8'));
+          const source = await readFile('./vendor/gouno-ui-source.txt', 'utf8');
+          if (!source.includes(`sha=${canonical.sourceSha}`)) {
+            throw new Error('canonical Gouno UI source SHA does not match vendor manifest');
+          }
+          EOF
+
       - name: Verify shared GOSSO client registry release
         run: |
           node --input-type=module <<'EOF'
