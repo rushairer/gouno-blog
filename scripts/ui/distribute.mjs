@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import {
   copyFileSync,
-  createHash,
   mkdirSync,
   readFileSync,
   readdirSync,
@@ -32,7 +32,11 @@ for (const arg of targets) {
   mkdirSync(vendor, { recursive: true });
 
   for (const name of readdirSync(vendor)) {
-    if (name.startsWith('gouno-ui-legacy-') && name.endsWith('.tgz') && name !== archiveName) {
+    if (
+      name.startsWith('gouno-ui-legacy-') &&
+      name.endsWith('.tgz') &&
+      name !== archiveName
+    ) {
       unlinkSync(path.join(vendor, name));
     }
   }
