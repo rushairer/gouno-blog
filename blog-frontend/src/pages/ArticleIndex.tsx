@@ -7,20 +7,40 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import { Search } from "lucide-react";
-import { SearchField, Field } from "@gouno/ui/core";
 import {
-  ArticleListSkeleton,
+  Alert,
   Button,
   ButtonLink,
-  EmptyState,
-  ErrorState,
+  Empty,
+  Field,
   Pagination,
-} from "@gouno/ui-legacy";
+  SearchField,
+  Skeleton,
+} from "@gouno/ui/core";
 import { postsApi } from "../api/posts";
 import { siteApi } from "../api/site";
 import { ArticleTeaser } from "../components/reading/ArticleTeaser";
 import { usePageTitle } from "../hooks/usePageTitle";
 import type { Post } from "../types/blog";
+
+function ArticleListSkeleton() {
+  return (
+    <div
+      role="status"
+      aria-label="文章列表加载中"
+      className="flex flex-col gap-6"
+    >
+      {Array.from({ length: 4 }, (_, index) => (
+        <div key={index} className="border-b pb-6">
+          <Skeleton className="h-3 w-32" />
+          <Skeleton className="mt-3 h-7 w-4/5" />
+          <Skeleton className="mt-3 h-4 w-full" />
+          <Skeleton className="mt-2 h-4 w-2/3" />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function ArticleIndex({
   mode = "articles",
@@ -79,7 +99,6 @@ export default function ArticleIndex({
       .finally(() => setLoading(false));
   }, [page, q, tag, category, reloadKey]);
 
-  const pages = Math.max(1, Math.ceil(total / 10));
   return (
     <div className="flex flex-col gap-8">
       <header>
@@ -135,19 +154,24 @@ export default function ArticleIndex({
         {loading ? (
           <ArticleListSkeleton />
         ) : error ? (
-          <ErrorState
-            title="文章载入失败"
-            description={error}
-            action={<Button onClick={handleRetry}>重试</Button>}
-          />
+          <div className="flex flex-col items-start gap-3">
+            <Alert
+              type="error"
+              title="文章载入失败"
+              description={error}
+              showIcon
+            />
+            <Button onClick={handleRetry}>重试</Button>
+          </div>
         ) : posts.length === 0 ? (
-          <EmptyState
-            label="没有找到符合条件的文章。"
+          <Empty
+            title="没有找到符合条件的文章。"
+            description="可以调整关键词或返回全部文章继续浏览。"
             action={
-              <>
+              <div className="flex flex-wrap justify-center gap-2">
                 <ButtonLink to="/articles">浏览全部文章</ButtonLink>
                 <ButtonLink to="/archive">浏览归档</ButtonLink>
-              </>
+              </div>
             }
           />
         ) : (
@@ -155,9 +179,11 @@ export default function ArticleIndex({
         )}
         {!loading && total > 10 ? (
           <Pagination
+            className="mt-8"
             page={page}
-            pages={pages}
-            label="文章分页"
+            total={total}
+            pageSize={10}
+            ariaLabel="文章分页"
             onChange={(nextPage) => {
               const next = new URLSearchParams(params);
               next.set("page", String(nextPage));
