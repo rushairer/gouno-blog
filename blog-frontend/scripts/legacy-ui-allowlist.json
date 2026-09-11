@@ -6,10 +6,7 @@
   "legacyPackage": "@gouno/ui-legacy",
   "legacyVersion": "0.1.0",
   "allowedLegacyImports": {
-    "ActionGroup": [
-      "src/pages/PostDetail.tsx",
-      "src/pages/admin/Notifications.tsx"
-    ],
+    "ActionGroup": ["src/pages/admin/Notifications.tsx"],
     "AdminPage": [
       "src/pages/admin/AIOperations.tsx",
       "src/pages/admin/AISettings.tsx",
@@ -55,14 +52,12 @@
     ],
     "Badge": [
       "src/components/__tests__/ui.test.tsx",
-      "src/pages/PostDetail.tsx",
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/Notifications.tsx",
       "src/pages/admin/Pages.tsx",
       "src/pages/admin/Tags.tsx",
       "src/pages/admin/Users.tsx"
     ],
-    "Banner": ["src/pages/PostDetail.tsx"],
     "BulkActionBar": [
       "src/components/__tests__/ui.test.tsx",
       "src/components/agent/OperationsWorkspace.tsx",
@@ -93,7 +88,6 @@
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/components/agent/WorkspaceOverview.tsx",
       "src/components/agent/tools/ToolBindingsEditor.tsx",
-      "src/pages/PostDetail.tsx",
       "src/pages/admin/AIOperations.tsx",
       "src/pages/admin/AISettings.tsx",
       "src/pages/admin/Categories.tsx",
@@ -112,7 +106,6 @@
       "src/App.tsx",
       "src/components/__tests__/ui.test.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
-      "src/pages/PostDetail.tsx",
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/Notifications.tsx",
       "src/pages/admin/Pages.tsx",
@@ -184,7 +177,6 @@
       "src/components/agent/WorkflowRunDetail.tsx",
       "src/components/agent/WorkflowRunRecords.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
-      "src/pages/PostDetail.tsx",
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Pages.tsx",
@@ -192,10 +184,7 @@
       "src/pages/admin/Posts.tsx",
       "src/pages/admin/Users.tsx"
     ],
-    "ErrorState": [
-      "src/pages/PostDetail.tsx",
-      "src/pages/admin/Posts.tsx"
-    ],
+    "ErrorState": ["src/pages/admin/Posts.tsx"],
     "Feedback": [
       "src/components/agent/ConnectorWorkspace.tsx",
       "src/components/agent/WorkflowInputForm.tsx",
@@ -203,7 +192,6 @@
       "src/components/agent/WorkflowRunRecords.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/components/media/MediaDrawerForms.tsx",
-      "src/pages/PostDetail.tsx",
       "src/pages/admin/Categories.tsx",
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/MediaLibrary.tsx",
@@ -248,7 +236,6 @@
       "src/components/agent/WorkflowInputForm.tsx",
       "src/components/agent/WorkflowRunRecords.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
-      "src/pages/PostDetail.tsx",
       "src/pages/admin/Categories.tsx",
       "src/pages/admin/Pages.tsx",
       "src/pages/admin/Posts.tsx",
@@ -266,11 +253,7 @@
       "src/pages/admin/Posts.tsx",
       "src/pages/admin/Users.tsx"
     ],
-    "LoadingState": [
-      "src/App.tsx",
-      "src/pages/PostDetail.tsx",
-      "src/pages/admin/Users.tsx"
-    ],
+    "LoadingState": ["src/App.tsx", "src/pages/admin/Users.tsx"],
     "Pagination": [
       "src/components/__tests__/ui.test.tsx",
       "src/components/agent/WorkflowInputForm.tsx",
@@ -283,8 +266,7 @@
       "src/components/agent/ConnectorWorkspace.tsx",
       "src/components/agent/InboxWorkspace.tsx",
       "src/components/agent/OperationsWorkspace.tsx",
-      "src/components/agent/WorkspaceOverview.tsx",
-      "src/pages/PostDetail.tsx"
+      "src/components/agent/WorkspaceOverview.tsx"
     ],
     "PanelHeader": [
       "src/components/agent/AdvancedWorkspace.tsx",
