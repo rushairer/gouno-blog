@@ -3,7 +3,6 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiFetch } from "../../../auth";
-import { ToastProvider } from "@gouno/ui-legacy";
 import AdminComments from "../Comments";
 
 vi.mock("../../../auth", async () => {
@@ -23,8 +22,9 @@ vi.mock("../../../components/agent/WorkflowLauncher", () => ({
   }) => (open ? <div>launcher:{resourceKeys.join(",")}</div> : null),
 }));
 
-describe("AdminComments structured AI input", () => {
+describe("AdminComments canonical UI migration", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.mocked(apiFetch).mockResolvedValue(
       Response.json({
         data: {
@@ -45,16 +45,17 @@ describe("AdminComments structured AI input", () => {
     );
   });
 
-  it("passes selected comment IDs to the Workflow launcher", async () => {
+  it("keeps the canonical page grammar and passes selected comment IDs to the Workflow launcher", async () => {
     const user = userEvent.setup();
     render(
       <MemoryRouter>
-        <ToastProvider>
-          <AdminComments />
-        </ToastProvider>
+        <AdminComments />
       </MemoryRouter>,
     );
 
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "评论" }),
+    ).toBeInTheDocument();
     await user.click(
       await screen.findByRole("checkbox", { name: "选择评论 17" }),
     );

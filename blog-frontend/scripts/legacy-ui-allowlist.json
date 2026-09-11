@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "canonicalPackage": "@gouno/ui",
   "canonicalVersion": "0.2.0",
-  "canonicalSourceSha": "3af2a5ca7d63f30fa531f605e620ba2c3380a2e8",
+  "canonicalSourceSha": "0ba9fabda8e61f3a278b3fb5f37b8f671c167abb",
   "legacyPackage": "@gouno/ui-legacy",
   "legacyVersion": "0.1.0",
   "allowedLegacyImports": {
@@ -15,7 +15,6 @@
       "src/pages/admin/AIOperations.tsx",
       "src/pages/admin/AISettings.tsx",
       "src/pages/admin/Categories.tsx",
-      "src/pages/admin/Comments.tsx",
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Notifications.tsx",
@@ -29,7 +28,6 @@
       "src/pages/admin/AIOperations.tsx",
       "src/pages/admin/AISettings.tsx",
       "src/pages/admin/Categories.tsx",
-      "src/pages/admin/Comments.tsx",
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Notifications.tsx",
@@ -47,17 +45,11 @@
       "src/pages/admin/PostEditor.tsx",
       "src/pages/admin/SiteSettings.tsx"
     ],
-    "AdminShell": [
-      "src/layouts/AdminShell.tsx"
-    ],
-    "ArticleListSkeleton": [
-      "src/pages/ArticleIndex.tsx",
-      "src/pages/Home.tsx"
-    ],
+    "AdminShell": ["src/layouts/AdminShell.tsx"],
+    "ArticleListSkeleton": ["src/pages/ArticleIndex.tsx", "src/pages/Home.tsx"],
     "AsyncState": [
       "src/components/__tests__/ui.test.tsx",
       "src/pages/admin/Categories.tsx",
-      "src/pages/admin/Comments.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Notifications.tsx",
       "src/pages/admin/Pages.tsx",
@@ -67,22 +59,17 @@
     "Badge": [
       "src/components/__tests__/ui.test.tsx",
       "src/pages/PostDetail.tsx",
-      "src/pages/admin/Comments.tsx",
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/Notifications.tsx",
       "src/pages/admin/Pages.tsx",
       "src/pages/admin/Tags.tsx",
       "src/pages/admin/Users.tsx"
     ],
-    "Banner": [
-      "src/pages/CustomPageView.tsx",
-      "src/pages/PostDetail.tsx"
-    ],
+    "Banner": ["src/pages/CustomPageView.tsx", "src/pages/PostDetail.tsx"],
     "BulkActionBar": [
       "src/components/__tests__/ui.test.tsx",
       "src/components/agent/OperationsWorkspace.tsx",
       "src/pages/admin/Categories.tsx",
-      "src/pages/admin/Comments.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Notifications.tsx",
       "src/pages/admin/Pages.tsx",
@@ -132,7 +119,6 @@
       "src/pages/admin/AIOperations.tsx",
       "src/pages/admin/AISettings.tsx",
       "src/pages/admin/Categories.tsx",
-      "src/pages/admin/Comments.tsx",
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Notifications.tsx",
@@ -162,7 +148,6 @@
     "Card": [
       "src/components/__tests__/ui.test.tsx",
       "src/pages/admin/Categories.tsx",
-      "src/pages/admin/Comments.tsx",
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Notifications.tsx",
@@ -175,21 +160,16 @@
       "src/components/__tests__/ui.test.tsx",
       "src/pages/admin/Dashboard.tsx"
     ],
-    "CardFooter": [
-      "src/components/__tests__/ui.test.tsx"
-    ],
+    "CardFooter": ["src/components/__tests__/ui.test.tsx"],
     "CardHeader": [
       "src/components/__tests__/ui.test.tsx",
       "src/pages/admin/Dashboard.tsx"
     ],
-    "classes": [
-      "src/components/editor/ContentEditorFrame.tsx"
-    ],
+    "classes": ["src/components/editor/ContentEditorFrame.tsx"],
     "ConfirmDialog": [
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/pages/admin/AISettings.tsx",
       "src/pages/admin/Categories.tsx",
-      "src/pages/admin/Comments.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Notifications.tsx",
       "src/pages/admin/PageEditor.tsx",
@@ -203,7 +183,6 @@
       "src/pages/AccountNotifications.tsx",
       "src/pages/Settings.tsx",
       "src/pages/admin/Categories.tsx",
-      "src/pages/admin/Comments.tsx",
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Notifications.tsx",
@@ -267,7 +246,6 @@
       "src/pages/PostDetail.tsx",
       "src/pages/Settings.tsx",
       "src/pages/admin/Categories.tsx",
-      "src/pages/admin/Comments.tsx",
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Notifications.tsx",
@@ -280,7 +258,6 @@
     "FilterBar": [
       "src/components/agent/WorkflowRunRecords.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
-      "src/pages/admin/Comments.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Pages.tsx",
       "src/pages/admin/Posts.tsx"
@@ -374,16 +351,12 @@
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/pages/admin/SiteSettings.tsx"
     ],
-    "RiskBadge": [
-      "src/components/agent/StatusPill.tsx"
-    ],
+    "RiskBadge": ["src/components/agent/StatusPill.tsx"],
     "SectionHeading": [
       "src/components/__tests__/ui.test.tsx",
       "src/pages/Home.tsx"
     ],
-    "SectionNav": [
-      "src/components/__tests__/ui.test.tsx"
-    ],
+    "SectionNav": ["src/components/__tests__/ui.test.tsx"],
     "Select": [
       "src/components/__tests__/ui.test.tsx",
       "src/components/agent/AdvancedWorkspace.tsx",
@@ -397,7 +370,6 @@
       "src/components/agent/WorkflowRunRecords.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/components/agent/tools/DistributionDraftConfig.tsx",
-      "src/pages/admin/Comments.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Notifications.tsx",
       "src/pages/admin/PageEditor.tsx",
@@ -405,18 +377,14 @@
       "src/pages/admin/PostEditor.tsx",
       "src/pages/admin/Posts.tsx"
     ],
-    "Skeleton": [
-      "src/components/__tests__/ui.test.tsx"
-    ],
+    "Skeleton": ["src/components/__tests__/ui.test.tsx"],
     "StatusBadge": [
       "src/components/__tests__/ui.test.tsx",
       "src/components/agent/WorkflowInputForm.tsx",
       "src/pages/admin/Pages.tsx",
       "src/pages/admin/Posts.tsx"
     ],
-    "StatusIndicator": [
-      "src/components/agent/StatusPill.tsx"
-    ],
+    "StatusIndicator": ["src/components/agent/StatusPill.tsx"],
     "SubnavTabs": [
       "src/components/__tests__/ui.test.tsx",
       "src/components/agent/AdvancedWorkspace.tsx",
@@ -438,7 +406,6 @@
     "TableSkeleton": [
       "src/components/__tests__/ui.test.tsx",
       "src/pages/admin/Categories.tsx",
-      "src/pages/admin/Comments.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Notifications.tsx",
       "src/pages/admin/Pages.tsx",
@@ -464,16 +431,12 @@
       "src/pages/admin/PostEditor.tsx",
       "src/pages/admin/SiteSettings.tsx"
     ],
-    "ThemeProvider": [
-      "src/main.tsx"
-    ],
+    "ThemeProvider": ["src/main.tsx"],
     "ThemeToggle": [
       "src/layouts/AdminShell.tsx",
       "src/layouts/PublicShell.tsx"
     ],
-    "Toast": [
-      "src/components/auth/GlobalStepUpBoundary.tsx"
-    ],
+    "Toast": ["src/components/auth/GlobalStepUpBoundary.tsx"],
     "ToastProvider": [
       "src/App.tsx",
       "src/components/__tests__/ui.test.tsx",
@@ -483,7 +446,6 @@
       "src/pages/admin/AIOperations.tsx",
       "src/pages/admin/AISettings.tsx",
       "src/pages/admin/__tests__/Categories.test.tsx",
-      "src/pages/admin/__tests__/Comments.test.tsx",
       "src/pages/admin/__tests__/MediaLibrary.test.tsx",
       "src/pages/admin/__tests__/Notifications.test.tsx",
       "src/pages/admin/__tests__/PageEditor.test.tsx",
@@ -499,7 +461,6 @@
       "src/pages/admin/AIOperations.tsx",
       "src/pages/admin/AISettings.tsx",
       "src/pages/admin/Categories.tsx",
-      "src/pages/admin/Comments.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Notifications.tsx",
       "src/pages/admin/PageEditor.tsx",
