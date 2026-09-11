@@ -75,3 +75,17 @@ This document defines the **immutable architectural rules, security baselines, a
 - Use browser verification to confirm actual visual and interaction results; tests and builds do not replace visual confirmation.
 - Continue within the user's authorized scope without pausing for confirmation after every internal implementation step.
 - Preserve uncommitted work, authentication boundaries, the Connector hold, and canonical/legacy UI integrity rules.
+
+---
+
+## 8. Backend Capability Module Architecture
+
+- `blog-backend` is a complex application and its target organization is **Capability Module**: capability first, layer second. The authoritative project description is `blog-backend/ARCHITECTURE.md`.
+- `blog-backend/internal/domain`, `internal/repository`, `internal/service`, and `internal/controller` are transitional flat-layer migration buckets. Do not add new business ownership to them when a capability-local home exists or can be introduced coherently.
+- New business capabilities should live under `blog-backend/internal/<capability>/` and contain only the `domain`, `repository`, `service`, `controller`, or other internal packages they actually require. Never create empty layers for symmetry.
+- Migrate existing flat-layer code by coherent capability slices. Do not perform filename-only moves that leave cross-package ownership unresolved, change behavior accidentally, or create import cycles.
+- Shared HTTP/controller primitives belong in `blog-backend/internal/controllerutil`; capability controllers may depend on this package. The legacy `internal/controller` package may expose compatibility facades during migration but is not the destination for new business controllers.
+- Gouno Core does not own this architecture. Any `.gouno/codegen.yaml` added to Blog must encode Blog's proven project policy, not copy the default `gouno-template` generator catalog by assumption.
+- Preserve existing `suite` semantics. If Capability Module generation is introduced, use a distinct project-owned generator such as `module` rather than silently redefining `suite`.
+- Every backend architecture batch must pass the repository's full backend, database-integration, dependency-review, compose, and unaffected frontend/seed gates before merge to `main`.
+- Architecture work never overrides Sections 1-5: the confidential BFF, identity/session rules, deployment contracts, and Connector Module Hold remain immutable unless the user explicitly changes them.
