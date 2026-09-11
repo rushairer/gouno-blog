@@ -22,21 +22,22 @@ import { analyticsApi } from "../api/analytics";
 import { commentsApi } from "../api/comments";
 import type { CommunityComment } from "../api/comments";
 import { postsApi } from "../api/posts";
-import { Field, Input, Modal, Textarea } from "@gouno/ui/core";
-import { PageHeader } from "@gouno/ui/gouno";
 import {
-  ActionGroup,
-  Badge,
-  Banner,
+  Alert,
   Button,
   ButtonLink,
-  EmptyState,
-  ErrorState,
-  Feedback,
+  Card,
+  Empty,
+  Field,
   IconButton,
-  LoadingState,
-  Panel,
-} from "@gouno/ui-legacy";
+  Input,
+  Modal,
+  Result,
+  Skeleton,
+  Tag,
+  Textarea,
+} from "@gouno/ui/core";
+import { PageHeader } from "@gouno/ui/gouno";
 import { useI18n } from "../i18n";
 import { useArticleSEO } from "../utils/seo";
 import { MarkdownRenderer } from "../components/MarkdownRenderer";
@@ -52,6 +53,42 @@ interface CommentItemProps {
   onReport: (comment: CommunityComment) => void;
 }
 
+function ArticleDetailSkeleton({ label }: { label: string }) {
+  return (
+    <div
+      role="status"
+      aria-label={label}
+      className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_15rem]"
+    >
+      <Card padding="none" className="overflow-hidden">
+        <Skeleton className="aspect-[16/7] w-full rounded-none" />
+        <div className="space-y-6 p-6 sm:p-8">
+          <Skeleton className="h-8 w-4/5" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-2/3" />
+          <div className="flex gap-3">
+            <Skeleton className="h-6 w-24" />
+            <Skeleton className="h-6 w-20" />
+            <Skeleton className="h-6 w-20" />
+          </div>
+          {Array.from({ length: 6 }, (_, index) => (
+            <Skeleton
+              key={index}
+              className={`h-4 ${index % 2 === 0 ? "w-full" : "w-5/6"}`}
+            />
+          ))}
+        </div>
+      </Card>
+      <div className="space-y-3">
+        <Skeleton className="h-5 w-20" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-4/5" />
+        <Skeleton className="h-4 w-3/4" />
+      </div>
+    </div>
+  );
+}
+
 function CommentItem({
   comment,
   replies,
@@ -64,9 +101,9 @@ function CommentItem({
       <div className="rounded-lg border bg-card p-4">
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <strong>{comment.author}</strong>
-          <Badge>
+          <Tag>
             {comment.author_type === "user" ? t("signedIn") : t("guest")}
-          </Badge>
+          </Tag>
           <span>{formatDateTime(comment.created_at)}</span>
         </div>
         <p className="mt-3 whitespace-pre-wrap leading-7">{comment.content}</p>
@@ -75,7 +112,7 @@ function CommentItem({
             <Button
               type="button"
               variant="ghost"
-              size="compact"
+              size="small"
               onClick={() => onReply(comment)}
               icon={<Reply size={14} />}
             >
@@ -85,7 +122,7 @@ function CommentItem({
           <Button
             type="button"
             variant="ghost"
-            size="compact"
+            size="small"
             onClick={() => onReport(comment)}
             icon={<Flag size={14} />}
           >
@@ -331,7 +368,7 @@ export default function PostDetail() {
   };
 
   if (loading) {
-    return <LoadingState label={t("loadingArticle")} />;
+    return <ArticleDetailSkeleton label={t("loadingArticle")} />;
   }
 
   if (error || !post) {
@@ -345,22 +382,30 @@ export default function PostDetail() {
     }
     return (
       <div className="mx-auto flex min-h-[50vh] max-w-3xl items-center justify-center">
-        <ErrorState
+        <Result
+          role="alert"
+          status="error"
+          headingLevel={1}
           title={t("failedFetch")}
           description={error}
-          action={
-            <ActionGroup>
+          extra={
+            <div className="flex flex-wrap items-center justify-center gap-2">
               <Button
-                variant="primary"
+                variant="solid"
+                color="primary"
                 onClick={fetchPostAndComments}
                 icon={<RefreshCw size={15} />}
               >
                 {t("retry")}
               </Button>
-              <ButtonLink to="/articles" icon={<ArrowLeft size={15} />}>
+              <ButtonLink
+                variant="outline"
+                to="/articles"
+                icon={<ArrowLeft size={15} />}
+              >
                 {t("backToFeed")}
               </ButtonLink>
-            </ActionGroup>
+            </div>
           }
         />
       </div>
@@ -385,19 +430,20 @@ export default function PostDetail() {
       />
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
         {isAdminPreview ? (
-          <Banner tone="brand" icon={<ShieldAlert size={16} />}>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <span>
-                <strong>管理员预览模式</strong> ·
-                当前正在预览未发布的文章（草稿/定时发布）。普通访客无法查看此页面。
-              </span>
-              {post?.id ? (
-                <ButtonLink size="compact" to={`/admin/posts/${post.id}/edit`}>
+          <Alert
+            type="warning"
+            showIcon
+            icon={<ShieldAlert size={16} />}
+            title="管理员预览模式"
+            description="当前正在预览未发布的文章（草稿/定时发布）。普通访客无法查看此页面。"
+            action={
+              post.id ? (
+                <ButtonLink size="small" to={`/admin/posts/${post.id}/edit`}>
                   返回编辑器
                 </ButtonLink>
-              ) : null}
-            </div>
-          </Banner>
+              ) : null
+            }
+          />
         ) : null}
         <Link
           to="/articles"
@@ -410,7 +456,7 @@ export default function PostDetail() {
         <div
           className={`grid min-w-0 gap-8 ${toc.length === 0 ? "mx-auto w-full max-w-4xl" : "lg:grid-cols-[minmax(0,1fr)_16rem]"}`}
         >
-          <Panel as="article" className="gap-8 p-5 sm:p-8">
+          <Card as="article" className="gap-8 p-5 sm:p-8">
             <div className="flex flex-col gap-5 border-b pb-8">
               {post.cover_url ? (
                 <img
@@ -444,7 +490,7 @@ export default function PostDetail() {
               </div>
               <div className="flex flex-wrap gap-2">
                 {post.tags.map((tag) => (
-                  <Badge key={tag}>#{tag}</Badge>
+                  <Tag key={tag}>#{tag}</Tag>
                 ))}
               </div>
             </div>
@@ -464,11 +510,11 @@ export default function PostDetail() {
                 {likes} {t("likes")}
               </Button>
             </div>
-          </Panel>
+          </Card>
 
           {toc.length > 0 && (
             <aside className="order-first self-start lg:order-none lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-2 lg:[scrollbar-gutter:stable]">
-              <Panel className="gap-3 p-4">
+              <Card className="gap-3 p-4">
                 <h2 className="flex items-center gap-2 text-sm font-semibold">
                   <List size={18} />
                   {t("tableOfContents")}
@@ -487,13 +533,13 @@ export default function PostDetail() {
                     </a>
                   ))}
                 </nav>
-              </Panel>
+              </Card>
             </aside>
           )}
         </div>
 
         {relatedPosts.length > 0 ? (
-          <Panel className="gap-5">
+          <Card className="gap-5">
             <h2 className="text-lg font-semibold">{t("relatedPosts")}</h2>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {relatedPosts.map((item) => (
@@ -515,17 +561,17 @@ export default function PostDetail() {
                 </Link>
               ))}
             </div>
-          </Panel>
+          </Card>
         ) : null}
 
-        <Panel className="gap-6">
+        <Card className="gap-6">
           <h2 className="flex items-center gap-2 text-lg font-semibold">
             <MessageSquare size={20} />
             {t("discussion", { count: comments.length })}
           </h2>
 
           {comments.length === 0 ? (
-            <EmptyState label={t("noComments")} />
+            <Empty title={t("noComments")} />
           ) : (
             <div className="space-y-4">
               {rootComments.map((comment) => (
@@ -546,11 +592,15 @@ export default function PostDetail() {
           >
             <h3 className="font-semibold">{t("leaveComment")}</h3>
             {interactionError ? (
-              <Feedback type="error">{interactionError}</Feedback>
+              <Alert type="error" role="alert">
+                {interactionError}
+              </Alert>
             ) : null}
-            {commentNotice && (
-              <Feedback type="success">{commentNotice}</Feedback>
-            )}
+            {commentNotice ? (
+              <Alert type="success" role="status">
+                {commentNotice}
+              </Alert>
+            ) : null}
             {replyingTo ? (
               <div className="flex items-center justify-between rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm">
                 <span>{t("replyingTo", { name: replyingTo.author })}</span>
@@ -588,7 +638,8 @@ export default function PostDetail() {
               />
             </Field>
             <Button
-              variant="primary"
+              variant="solid"
+              color="primary"
               type="submit"
               loading={commentLoading}
               icon={<Send />}
@@ -596,7 +647,7 @@ export default function PostDetail() {
               {commentLoading ? t("posting") : t("postComment")}
             </Button>
           </form>
-        </Panel>
+        </Card>
       </div>
       <Modal
         open={reportingComment !== null}
@@ -609,7 +660,7 @@ export default function PostDetail() {
         footer={
           <>
             <Button
-              variant="secondary"
+              variant="outline"
               type="button"
               onClick={() => {
                 setReportingComment(null);
@@ -619,7 +670,8 @@ export default function PostDetail() {
               {t("cancel")}
             </Button>
             <Button
-              variant="primary"
+              variant="solid"
+              color="primary"
               type="submit"
               form="report-comment-form"
               icon={<Flag />}
