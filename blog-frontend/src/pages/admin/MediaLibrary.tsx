@@ -474,7 +474,9 @@ export default function MediaLibrary() {
         <Card padding="lg">
           <Empty
             icon={<ImagePlus className="size-7 text-muted-foreground" />}
-            title={assets.length === 0 ? t("noMedia") : "没有符合条件的媒体资源。"}
+            title={
+              assets.length === 0 ? t("noMedia") : "没有符合条件的媒体资源。"
+            }
             description={
               assets.length === 0
                 ? "上传图片或使用 AI 文生图创建第一张媒体资源。"
