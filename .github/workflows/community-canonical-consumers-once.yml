@@ -1,0 +1,54 @@
+name: Canonicalize Community consumers once
+
+on:
+  push:
+    branches:
+      - refactor/community-canonical-consumers
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: refactor/community-canonical-consumers
+          fetch-depth: 0
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
+        with:
+          go-version-file: blog-backend/go.mod
+          cache-dependency-path: blog-backend/go.sum
+      - name: Move consumers to canonical Community packages
+        run: |
+          python3 script/canonicalize_community_consumers_once.py
+          gofmt -w \
+            blog-backend/cmd/gouno/web.go \
+            blog-backend/router/web.go \
+            blog-backend/router/web_test.go \
+            blog-backend/internal/controller/growth_controller.go \
+            blog-backend/internal/tool/blog_tools.go \
+            blog-backend/internal/controllerutil/response.go \
+            blog-backend/internal/domain/post.go
+          git rm \
+            blog-backend/internal/controller/community_controller.go \
+            blog-backend/internal/service/community_service.go \
+            blog-backend/internal/repository/community_repository.go \
+            blog-backend/internal/service/rate_limiter.go \
+            blog-backend/internal/service/rate_limiter_test.go \
+            blog-backend/internal/service/community_service_test.go \
+            blog-backend/internal/repository/community_repository_integration_test.go
+      - name: Verify full backend
+        working-directory: blog-backend
+        run: |
+          go test ./...
+          go vet ./...
+      - name: Commit migration and remove one-shot files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/community-canonical-consumers-once.yml script/canonicalize_community_consumers_once.py
+          git add blog-backend
+          git commit -m "refactor(community): migrate consumers to canonical capability"
+          git push origin HEAD:refactor/community-canonical-consumers
