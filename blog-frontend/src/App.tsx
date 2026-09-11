@@ -54,31 +54,19 @@ const AccountNotifications = React.lazy(
 );
 import CustomPageView from "./pages/CustomPageView";
 
-function LoadingStatus({
-  label,
-  className = "",
-}: {
-  label: string;
-  className?: string;
-}) {
-  return (
-    <div
-      role="status"
-      className={`flex items-center justify-center gap-3 text-sm text-muted-foreground ${className}`}
-    >
-      <Spinner className="size-5 text-primary" />
-      <span>{label}</span>
-    </div>
-  );
-}
-
 function Public({ children }: { children: React.ReactNode }) {
   const { t } = useI18n();
   return (
     <PublicShell>
       <React.Suspense
         fallback={
-          <LoadingStatus label={t("common.loading")} className="min-h-[50vh]" />
+          <div
+            role="status"
+            className="flex min-h-[50vh] items-center justify-center gap-3 text-sm text-muted-foreground"
+          >
+            <Spinner className="size-5 text-primary" />
+            <span>{t("common.loading")}</span>
+          </div>
         }
       >
         {children}
@@ -107,11 +95,7 @@ function AdminAccessDenied({ message }: { message?: string }) {
           <h1>{t("auth.noAdminAccess")}</h1>
           <p>{message || t("auth.noAdminAccessDesc")}</p>
           <div className="state__actions">
-            <ButtonLink
-              variant="solid"
-              color="primary"
-              to="/admin/dashboard"
-            >
+            <ButtonLink variant="solid" color="primary" to="/admin/dashboard">
               {t("common.back")}
             </ButtonLink>
             <Button variant="outline" onClick={() => void switchAccount()}>
@@ -137,10 +121,13 @@ function Account({
       redirectTo={redirectTo}
       fallback={
         <PublicShell>
-          <LoadingStatus
-            label="正在前往安全登录页…"
-            className="min-h-[50vh]"
-          />
+          <div
+            role="status"
+            className="flex min-h-[50vh] items-center justify-center gap-3 text-sm text-muted-foreground"
+          >
+            <Spinner className="size-5 text-primary" />
+            <span>正在前往安全登录页…</span>
+          </div>
         </PublicShell>
       }
     >
@@ -216,7 +203,13 @@ function StepUpPopupCallbackView() {
   return (
     <div className="grid min-h-dvh place-items-center bg-background p-4">
       <Card className="w-full max-w-md items-center text-center">
-        <LoadingStatus label="身份认证已成功同步" />
+        <div
+          role="status"
+          className="flex items-center justify-center gap-3 text-sm text-muted-foreground"
+        >
+          <Spinner className="size-5 text-primary" />
+          <span>身份认证已成功同步</span>
+        </div>
         <PageHeader
           title="高权限验证已完成"
           description="身份认证已成功同步，主页面正在自动继续操作。"
@@ -272,7 +265,13 @@ export default function App() {
       initializeSession
       fallback={
         <div className="grid min-h-dvh place-items-center bg-background p-4">
-          <LoadingStatus label="正在恢复登录状态…" />
+          <div
+            role="status"
+            className="flex items-center justify-center gap-3 text-sm text-muted-foreground"
+          >
+            <Spinner className="size-5 text-primary" />
+            <span>正在恢复登录状态…</span>
+          </div>
         </div>
       }
     >
