@@ -1,45 +1,27 @@
 package domain
 
-import "time"
+import pagedomain "github.com/rushairer/blog-backend/internal/page/domain"
 
-type PageStatus string
-
-const (
-	PageStatusDraft     PageStatus = "draft"
-	PageStatusPublished PageStatus = "published"
-)
-
-type PageTemplate string
+// Page domain aliases are retained while callers migrate to the capability-owned package.
+type PageStatus = pagedomain.PageStatus
 
 const (
-	PageTemplateDefault  PageTemplate = "default"
-	PageTemplateAbout    PageTemplate = "about"
-	PageTemplateLinks    PageTemplate = "links"
-	PageTemplateBlank    PageTemplate = "blank"
-	PageTemplateTimeline PageTemplate = "timeline"
-	PageTemplateProjects PageTemplate = "projects"
-	PageTemplateFocus    PageTemplate = "focus"
-	PageTemplateFAQ      PageTemplate = "faq"
+	PageStatusDraft     = pagedomain.PageStatusDraft
+	PageStatusPublished = pagedomain.PageStatusPublished
 )
 
-type Page struct {
-	ID             int64      `json:"id"`
-	Title          string     `json:"title"`
-	Slug           string     `json:"slug"`
-	Content        string     `json:"content"`
-	Summary        string     `json:"summary"`
-	Template       string     `json:"template"`
-	Status         PageStatus `json:"status"`
-	AllowComments  bool       `json:"allow_comments"`
-	ShowInNav      bool       `json:"show_in_nav"`
-	SortOrder      int        `json:"sort_order"`
-	SEOTitle       string     `json:"seo_title"`
-	SEODescription string     `json:"seo_description"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
-}
+type PageTemplate = pagedomain.PageTemplate
 
-type AdminPageFilter struct {
-	Query  string
-	Status PageStatus
-}
+const (
+	PageTemplateDefault  = pagedomain.PageTemplateDefault
+	PageTemplateAbout    = pagedomain.PageTemplateAbout
+	PageTemplateLinks    = pagedomain.PageTemplateLinks
+	PageTemplateBlank    = pagedomain.PageTemplateBlank
+	PageTemplateTimeline = pagedomain.PageTemplateTimeline
+	PageTemplateProjects = pagedomain.PageTemplateProjects
+	PageTemplateFocus    = pagedomain.PageTemplateFocus
+	PageTemplateFAQ      = pagedomain.PageTemplateFAQ
+)
+
+type Page = pagedomain.Page
+type AdminPageFilter = pagedomain.AdminPageFilter
