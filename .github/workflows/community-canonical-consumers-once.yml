@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: community-canonical-consumers-once
+  cancel-in-progress: true
+
 jobs:
   finalize:
     runs-on: ubuntu-latest
@@ -30,7 +34,10 @@ jobs:
             blog-backend/internal/controller/growth_controller.go \
             blog-backend/internal/tool/blog_tools.go \
             blog-backend/internal/controllerutil/response.go \
-            blog-backend/internal/domain/post.go
+            blog-backend/internal/domain/post.go \
+            blog-backend/internal/testsupport/database.go \
+            blog-backend/internal/community/repository/repository_integration_test.go \
+            blog-backend/internal/repository/growth_repository_integration_test.go
           git rm \
             blog-backend/internal/controller/community_controller.go \
             blog-backend/internal/service/community_service.go \
