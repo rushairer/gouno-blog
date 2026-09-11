@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { Inbox } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Card, Empty, Spinner } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
-import { EmptyState, LoadingState, Panel } from "@gouno/ui-legacy";
 import { postsApi } from "../api/posts";
 import { siteApi } from "../api/site";
 import { usePageTitle } from "../hooks/usePageTitle";
@@ -55,9 +56,15 @@ export default function Tags() {
           </span>
         }
       />
-      <Panel className="simple-page__body">
+      <Card as="section" className="simple-page__body">
         {loading ? (
-          <LoadingState label={t("tagsPage.loading")} />
+          <div
+            role="status"
+            className="flex items-center justify-center gap-3 py-12 text-sm text-muted-foreground"
+          >
+            <Spinner className="size-5 text-primary" />
+            <span>{t("tagsPage.loading")}</span>
+          </div>
         ) : tagCounts.length ? (
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {tagCounts
@@ -81,9 +88,12 @@ export default function Tags() {
               ))}
           </div>
         ) : (
-          <EmptyState label={t("tagsPage.empty")} />
+          <Empty
+            icon={<Inbox className="size-5 text-muted-foreground" />}
+            title={t("tagsPage.empty")}
+          />
         )}
-      </Panel>
+      </Card>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { ExternalLink, Shield } from "lucide-react";
 import { getGossoAdminURL, useSafeUserProfile } from "../auth";
+import { Alert, ButtonLink, Card } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
-import { ButtonLink, ContentStack, Feedback, Panel } from "@gouno/ui-legacy";
 import { useI18n } from "../i18n";
 import { usePageTitle } from "../hooks/usePageTitle";
 
@@ -15,8 +15,8 @@ export default function Settings() {
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-6">
       <PageHeader title={t("accountSettings")} />
 
-      <Panel>
-        <ContentStack>
+      <Card as="section">
+        <div className="flex min-w-0 flex-col gap-6">
           <div className="flex flex-col gap-4">
             <h2 className="flex items-center gap-2 text-lg font-semibold">
               <Shield size={18} />
@@ -29,23 +29,24 @@ export default function Settings() {
             </p>
             {adminURL ? (
               <ButtonLink
-                variant="primary"
+                variant="solid"
+                color="primary"
                 to={adminURL}
                 rel="noreferrer"
                 icon={<ExternalLink size={16} />}
-                iconPosition="right"
+                iconPlacement="end"
               >
                 打开 GOSSO Admin
               </ButtonLink>
             ) : (
-              <Feedback type="error">
+              <Alert type="error" showIcon>
                 当前会话未提供身份管理中心地址，请联系管理员配置
                 VITE_GOSSO_ADMIN_URL。
-              </Feedback>
+              </Alert>
             )}
           </div>
-        </ContentStack>
-      </Panel>
+        </div>
+      </Card>
     </main>
   );
 }

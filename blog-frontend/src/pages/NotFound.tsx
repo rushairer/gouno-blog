@@ -2,9 +2,8 @@ import { BookOpen, FileText, FolderTree, Home, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useI18n } from "../i18n";
 import { usePageTitle } from "../hooks/usePageTitle";
-import { Input } from "@gouno/ui/core";
+import { Button, ButtonLink, Card, Input } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
-import { Button, ButtonLink, Panel } from "@gouno/ui-legacy";
 
 export default function NotFound() {
   const navigate = useNavigate();
@@ -21,7 +20,10 @@ export default function NotFound() {
 
   return (
     <div className="flex min-h-[55vh] items-center justify-center">
-      <Panel className="mx-auto w-full max-w-3xl items-center px-5 py-10 text-center sm:px-10">
+      <Card
+        as="section"
+        className="mx-auto w-full max-w-3xl items-center px-5 py-10 text-center sm:px-10"
+      >
         <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
           <span>404</span>
           <span aria-hidden="true">/</span>
@@ -46,7 +48,7 @@ export default function NotFound() {
             placeholder={t("notFound.searchPlaceholder")}
             autoComplete="off"
           />
-          <Button type="submit" variant="primary">
+          <Button type="submit" variant="solid" color="primary">
             {t("notFound.searchButton")}
           </Button>
         </form>
@@ -56,25 +58,25 @@ export default function NotFound() {
             {t("notFound.suggestedLinks")}
           </span>
           <div className="grid w-full grid-cols-2 gap-2 sm:grid-cols-4">
-            <ButtonLink variant="secondary" to="/" icon={<Home />}>
+            <ButtonLink variant="outline" to="/" icon={<Home />}>
               {t("nav.home")}
             </ButtonLink>
-            <ButtonLink variant="secondary" to="/articles" icon={<BookOpen />}>
+            <ButtonLink variant="outline" to="/articles" icon={<BookOpen />}>
               {t("notFound.allArticles")}
             </ButtonLink>
             <ButtonLink
-              variant="secondary"
+              variant="outline"
               to="/categories"
               icon={<FolderTree />}
             >
               {t("notFound.contentCategories")}
             </ButtonLink>
-            <ButtonLink variant="secondary" to="/archive" icon={<FileText />}>
+            <ButtonLink variant="outline" to="/archive" icon={<FileText />}>
               {t("notFound.siteArchive")}
             </ButtonLink>
           </div>
         </div>
-      </Panel>
+      </Card>
     </div>
   );
 }

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Inbox } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Card, Empty, Spinner } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
-import { EmptyState, LoadingState, Panel } from "@gouno/ui-legacy";
 import { siteApi } from "../api/site";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useI18n } from "../i18n";
@@ -35,9 +35,15 @@ export default function Categories() {
           </span>
         }
       />
-      <Panel className="simple-page__body">
+      <Card as="section" className="simple-page__body">
         {loading ? (
-          <LoadingState label={t("categoriesPage.loading")} />
+          <div
+            role="status"
+            className="flex items-center justify-center gap-3 py-12 text-sm text-muted-foreground"
+          >
+            <Spinner className="size-5 text-primary" />
+            <span>{t("categoriesPage.loading")}</span>
+          </div>
         ) : categories.length ? (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {categories.map((item, index) => (
@@ -65,9 +71,12 @@ export default function Categories() {
             ))}
           </div>
         ) : (
-          <EmptyState label={t("categoriesPage.empty")} />
+          <Empty
+            icon={<Inbox className="size-5 text-muted-foreground" />}
+            title={t("categoriesPage.empty")}
+          />
         )}
-      </Panel>
+      </Card>
     </div>
   );
 }

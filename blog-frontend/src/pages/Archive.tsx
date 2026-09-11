@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { Inbox } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Card, Empty, Spinner } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
-import { EmptyState, LoadingState, Panel } from "@gouno/ui-legacy";
 import { postsApi } from "../api/posts";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useI18n } from "../i18n";
@@ -53,9 +54,15 @@ export default function Archive() {
           </span>
         }
       />
-      <Panel className="simple-page__body">
+      <Card as="section" className="simple-page__body">
         {loading ? (
-          <LoadingState label={t("archivePage.loading")} />
+          <div
+            role="status"
+            className="flex items-center justify-center gap-3 py-12 text-sm text-muted-foreground"
+          >
+            <Spinner className="size-5 text-primary" />
+            <span>{t("archivePage.loading")}</span>
+          </div>
         ) : periods.length ? (
           <div className="flex flex-col gap-8">
             {periods.map(([period, items]) => (
@@ -92,9 +99,12 @@ export default function Archive() {
             ))}
           </div>
         ) : (
-          <EmptyState label={t("archivePage.empty")} />
+          <Empty
+            icon={<Inbox className="size-5 text-muted-foreground" />}
+            title={t("archivePage.empty")}
+          />
         )}
-      </Panel>
+      </Card>
     </div>
   );
 }
