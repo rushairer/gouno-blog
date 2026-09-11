@@ -9,7 +9,11 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { membersApi, type BlogMember } from "../../api/members";
-import { getGossoAdminURL, isMfaError, type BlogUserProfile } from "../../auth";
+import {
+  getGossoAdminURL,
+  isMfaError,
+  type BlogUserProfile,
+} from "../../auth";
 import { useUserProfile } from "@gosso/client/react";
 import {
   Alert,
@@ -38,6 +42,7 @@ import { SudoGate } from "../../components/auth/SudoGate";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 
 const assignableRoles = ["admin", "editor", "author", "moderator"] as const;
+const assignableRoleSet = new Set<string>(assignableRoles);
 const roleLabels: Record<string, string> = {
   owner: "所有者",
   admin: "管理员",
@@ -77,42 +82,35 @@ function membershipLabel(status: BlogMember["membership_status"]) {
   return "访客";
 }
 
-function MembershipTag({ status }: { status: BlogMember["membership_status"] }) {
-  return (
-    <Tag
-      color={
-        status === "active"
-          ? "success"
-          : status === "suspended" || status === "removed"
-            ? "error"
-            : "default"
-      }
-    >
-      {membershipLabel(status)}
-    </Tag>
-  );
+function MembershipTag({
+  status,
+}: {
+  status: BlogMember["membership_status"];
+}) {
+  if (status === "active") {
+    return <Tag color="success">{membershipLabel(status)}</Tag>;
+  }
+  if (status === "suspended" || status === "removed") {
+    return <Tag color="error">{membershipLabel(status)}</Tag>;
+  }
+  return <Tag>{membershipLabel(status)}</Tag>;
 }
 
 function RoleTag({ role }: { role: string }) {
-  return (
-    <Tag
-      color={
-        role === "owner" ? "warning" : role === "admin" ? "primary" : "default"
-      }
-    >
-      {roleLabels[role] || role}
-    </Tag>
-  );
+  if (role === "owner") return <Tag color="warning">{roleLabels[role]}</Tag>;
+  if (role === "admin") return <Tag color="primary">{roleLabels[role]}</Tag>;
+  return <Tag>{roleLabels[role] || role}</Tag>;
+}
+
+function editableRole(member: BlogMember) {
+  if (member.roles.includes("owner")) return "owner";
+  return member.roles.find((role) => assignableRoleSet.has(role)) || "author";
 }
 
 function MembersLoadingState() {
   return (
     <Card padding="base" aria-label="成员加载中">
-      <div
-        className="flex flex-col gap-4"
-        role="status"
-        aria-live="polite"
-      >
+      <div className="flex flex-col gap-4" role="status" aria-live="polite">
         <p className="text-sm text-muted-foreground">正在同步成员目录…</p>
         {Array.from({ length: 4 }, (_, index) => (
           <div
@@ -444,11 +442,7 @@ export default function AdminUsers() {
             aria-label="成员列表"
           >
             {members.map((member) => (
-              <Card
-                key={member.principal.id}
-                padding="base"
-                role="listitem"
-              >
+              <Card key={member.principal.id} padding="base" role="listitem">
                 <div className="flex flex-col gap-4">
                   <div className="flex items-start gap-3">
                     <span
@@ -582,15 +576,7 @@ export default function AdminUsers() {
               <Select
                 aria-label="Blog 角色"
                 name="role"
-                defaultValue={
-                  editing.roles.includes("owner")
-                    ? "owner"
-                    : editing.roles.find((role) =>
-                          assignableRoles.includes(
-                            role as (typeof assignableRoles)[number],
-                          ),
-                        ) || "author"
-                }
+                defaultValue={editableRole(editing)}
                 disabled={editing.roles.includes("owner")}
               >
                 {editing.roles.includes("owner") ? (
@@ -607,13 +593,7 @@ export default function AdminUsers() {
             <p className="text-xs leading-relaxed text-muted-foreground">
               {editing.roles.includes("owner")
                 ? "拥有 Blog 最高管理权限；所有权仅可通过“移交所有权”操作转让。"
-                : roleDescriptions[
-                    editing.roles.find((role) =>
-                      assignableRoles.includes(
-                        role as (typeof assignableRoles)[number],
-                      ),
-                    ) || "author"
-                  ]}
+                : roleDescriptions[editableRole(editing)]}
             </p>
           </form>
         ) : null}
