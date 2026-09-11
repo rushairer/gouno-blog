@@ -45,7 +45,9 @@ Migration is intentionally incremental:
 
 Do not perform filename-only moves that leave package ownership ambiguous or introduce circular dependencies.
 
-The `page` capability is the first migrated reference slice. Its canonical implementation lives under `internal/page/`; legacy Page symbols in the flat packages are temporary compatibility facades.
+The `page` capability is the first fully migrated reference slice. Its canonical implementation lives under `internal/page/`; legacy Page symbols in the flat packages are temporary compatibility facades.
+
+The `community` migration is intentionally staged because historical Post APIs still expose comment behavior and shared error sentinels. Community-owned domain models and persistence now belong under `internal/community/domain` and `internal/community/repository`; the legacy flat packages retain aliases/facades while service/controller ownership is migrated in a later coherent slice. Shared interaction rate limiting belongs under `internal/ratelimit`, not a business service layer.
 
 ## Shared HTTP controller primitives
 
