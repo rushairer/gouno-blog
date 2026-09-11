@@ -1,9 +1,6 @@
 package service
 
 import (
-	"context"
-
-	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/repository"
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
 )
@@ -34,9 +31,3 @@ func IsReservedSlug(slug string) bool {
 func ValidateSlug(slug string) error {
 	return pageservice.ValidateSlug(slug)
 }
-
-// Compile-time compatibility documentation for the facade's public Page-oriented API.
-var (
-	_ func(context.Context, *domain.Page) error = (*PageService).CreatePage
-	_ func(context.Context, *domain.Page) error = (*PageService).UpdatePage
-)
