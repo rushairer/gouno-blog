@@ -202,7 +202,7 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 		moderate := api.Group("")
 		moderate.Use(userAuth, accessAuth, middleware.RequireBlogPermission(accessService, access.PermissionModerate))
 		{
-			moderate.GET("/posts/:slugOrID/comments/all", ctrl.GetAllComments)
+			moderate.GET("/posts/:slugOrID/comments/all", communityCtrl.GetAllComments)
 			moderate.GET("/admin/comments", communityCtrl.ListAdminComments)
 			moderate.PUT("/admin/comments/:id", communityCtrl.ModerateComment)
 			moderate.DELETE("/comments/:id", communityCtrl.DeleteComment)
