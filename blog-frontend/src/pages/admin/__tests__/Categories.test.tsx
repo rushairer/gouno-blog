@@ -49,9 +49,9 @@ describe("Admin Categories", () => {
     expect(
       screen.getByRole("button", { name: "智能生成 Slug 候选" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "创建分类" })).toHaveClass(
-      "btn-primary",
-    );
+    const createButton = screen.getByRole("button", { name: "创建分类" });
+    expect(createButton).toHaveAttribute("type", "submit");
+    expect(createButton).toHaveClass("bg-primary", "text-primary-foreground");
   });
 
   it("renders one category collection as desktop table and mobile list with shared selection", async () => {

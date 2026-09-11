@@ -1,7 +1,7 @@
 import type React from "react";
 import { Plus, Save } from "lucide-react";
 import { Field, Input, OverlayForm, Textarea } from "@gouno/ui/core";
-import { Button } from "@gouno/ui-legacy";
+import { Button } from "@gouno/ui/core";
 import { AiSuggestionControl } from "../editor/AiSuggestionControl";
 
 export type CategoryFormValue = {
@@ -41,11 +41,11 @@ export function CategoryForm({
       onSubmit={onSubmit}
       actions={
         <>
-          <Button variant="secondary" type="button" onClick={onCancel}>
+          <Button variant="outline" type="button" onClick={onCancel}>
             取消
           </Button>
           <Button
-            variant="primary"
+            variant="solid"
             type="submit"
             icon={creating ? <Plus /> : <Save />}
           >

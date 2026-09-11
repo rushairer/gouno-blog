@@ -104,7 +104,6 @@
       "src/components/agent/tools/StalePostsConfig.tsx",
       "src/components/agent/tools/ToolBindingsEditor.tsx",
       "src/components/media/MediaDrawerForms.tsx",
-      "src/components/taxonomy/CategoryForm.tsx",
       "src/pages/AccountNotifications.tsx",
       "src/pages/ArticleIndex.tsx",
       "src/pages/Home.tsx",
