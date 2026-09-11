@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import {
+  Bot,
   Copy,
   ImagePlus,
   Link2,
@@ -13,24 +14,21 @@ import { mediaApi } from "../../api/media";
 import type { MediaItem, MediaReference } from "../../api/media";
 import { agentApi } from "../../api/agent";
 import { useAbility } from "../../abilities";
-import { Checkbox, Drawer, SearchField } from "@gouno/ui/core";
 import {
-  AdminPage,
-  AdminPageHeader,
-  AsyncState,
-  BulkActionBar,
+  Alert,
   Button,
   Card,
-  ConfirmDialog,
-  ContentStack,
-  copyText,
-  EmptyState,
-  Feedback,
-  FilterBar,
+  Checkbox,
+  Drawer,
+  Empty,
+  SearchField,
   Select,
-  TableSkeleton,
-  useToast,
-} from "@gouno/ui-legacy";
+  Skeleton,
+  Tag,
+} from "@gouno/ui/core";
+import { PageHeader } from "@gouno/ui/gouno";
+import { BulkActionBar } from "@gouno/ui/patterns";
+import { ConfirmDialog, useToast } from "@gouno/ui-legacy";
 import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
 import {
   MediaAltTextForm,
@@ -46,6 +44,36 @@ function isBatchDeleteTarget(
   target: DeleteTarget,
 ): target is BatchDeleteTarget {
   return Boolean(target && "kind" in target && target.kind === "batch");
+}
+
+function selectValue(value: string | string[]) {
+  return Array.isArray(value) ? (value[0] ?? "") : value;
+}
+
+function MediaSkeleton() {
+  return (
+    <div
+      className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+      role="status"
+      aria-label="媒体加载中"
+      aria-live="polite"
+    >
+      {Array.from({ length: 4 }, (_, index) => (
+        <Card key={index} padding="none" className="overflow-hidden">
+          <Skeleton className="aspect-video w-full" />
+          <div className="space-y-3 p-4">
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-3 w-1/2" />
+            <Skeleton className="h-3 w-5/6" />
+          </div>
+          <div className="flex justify-between border-t p-2">
+            <Skeleton className="h-8 w-24" />
+            <Skeleton className="h-8 w-20" />
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
 }
 
 export function getRelativeMediaUrl(rawUrl: string): string {
@@ -80,13 +108,11 @@ export default function MediaLibrary() {
   const [selectedAssets, setSelectedAssets] = useState<number[]>([]);
   const [aiOpen, setAIOpen] = useState(false);
 
-  // Edit Alt Text states
   const [editingAsset, setEditingAsset] = useState<MediaItem | null>(null);
   const [editAltText, setEditAltText] = useState("");
   const [savingAltText, setSavingAltText] = useState(false);
   const [editAltError, setEditAltError] = useState("");
 
-  // AI Text-to-Image states
   const [aiDrawerOpen, setAiDrawerOpen] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiAlt, setAiAlt] = useState("");
@@ -107,6 +133,15 @@ export default function MediaLibrary() {
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
   }, [load]);
+
+  const copyMediaText = async (value: string, successMessage: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      notify(successMessage, "success");
+    } catch {
+      notify("复制失败，请手动复制。", "error");
+    }
+  };
 
   const upload = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -282,76 +317,93 @@ export default function MediaLibrary() {
     () => [...new Set(assets.map((asset) => asset.content_type))],
     [assets],
   );
+  const hasFilters = Boolean(query || type);
+
+  const clearFilters = () => {
+    setQuery("");
+    setType("");
+  };
+
+  const setSelectedAsset = (id: number, checked: boolean) => {
+    setSelectedAssets((current) =>
+      checked
+        ? [...new Set([...current, id])]
+        : current.filter((item) => item !== id),
+    );
+  };
 
   return (
-    <AdminPage>
-      <AdminPageHeader
+    <div className="flex flex-col gap-6">
+      <PageHeader
         title="媒体库"
         description="上传、检索和复用全站内容中的图片资源，支持 AI 直接文生图入库。"
         actions={
-          <>
-            {can("create", "media") ? (
-              <>
-                <Button
-                  variant="secondary"
-                  type="button"
-                  icon={<Sparkles />}
-                  onClick={() => {
-                    setAiDrawerOpen(true);
-                    setAiGenerated(null);
-                    setAiPrompt("");
-                    setAiAlt("");
-                    setAiError("");
-                  }}
-                >
-                  AI 文生图
-                </Button>
-                <Button
-                  variant="primary"
-                  type="button"
-                  icon={<ImagePlus />}
-                  onClick={() => {
-                    setUploadError("");
-                    setUploadDrawerOpen(true);
-                  }}
-                >
-                  上传图片
-                </Button>
-              </>
-            ) : null}
-          </>
+          can("create", "media") ? (
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <Button
+                type="button"
+                icon={<Sparkles />}
+                onClick={() => {
+                  setAiDrawerOpen(true);
+                  setAiGenerated(null);
+                  setAiPrompt("");
+                  setAiAlt("");
+                  setAiError("");
+                }}
+              >
+                AI 文生图
+              </Button>
+              <Button
+                variant="solid"
+                color="primary"
+                type="button"
+                icon={<ImagePlus />}
+                onClick={() => {
+                  setUploadError("");
+                  setUploadDrawerOpen(true);
+                }}
+              >
+                上传图片
+              </Button>
+            </div>
+          ) : undefined
         }
       />
-      <ContentStack>
-        {error ? (
-          <Feedback type="error">
-            {error}
-            {references.length ? (
-              <ul className="media-reference-list">
-                {references.map((item) => (
-                  <li key={item.post_id}>
-                    <a href={`/admin/posts/${item.post_id}/edit`}>
-                      {item.post_title}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </Feedback>
-        ) : null}
-        <Card className="border-border/80 bg-card p-4">
-          <FilterBar>
+
+      {error && assets.length > 0 ? (
+        <Alert type="error" showIcon title={error}>
+          {references.length ? (
+            <ul className="mt-2 flex flex-col gap-1 text-sm">
+              {references.map((item) => (
+                <li key={item.post_id}>
+                  <a
+                    className="font-medium text-primary underline-offset-4 hover:underline"
+                    href={`/admin/posts/${item.post_id}/edit`}
+                  >
+                    {item.post_title}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </Alert>
+      ) : null}
+
+      <Card padding="base">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="min-w-0 flex-1">
             <SearchField
               aria-label="搜索媒体"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="搜索文件名或替代文本"
             />
+          </div>
+          <div className="min-w-0 lg:w-44 lg:shrink-0">
             <Select
-              size="compact"
               aria-label="媒体类型"
               value={type}
-              onChange={(event) => setType(event.target.value)}
+              onChange={(value) => setType(selectValue(value))}
             >
               <option value="">全部类型</option>
               {contentTypes.map((item) => (
@@ -360,197 +412,221 @@ export default function MediaLibrary() {
                 </option>
               ))}
             </Select>
-            <span className="filter-bar__count">
+          </div>
+          <div className="flex items-center justify-between gap-3 lg:justify-end">
+            <span className="whitespace-nowrap text-sm text-muted-foreground">
               {visibleAssets.length} / {assets.length}
             </span>
-            {query || type ? (
+            {hasFilters ? (
               <Button
-                className="filter-bar__actions"
-                variant="ghost"
-                size="compact"
+                size="small"
+                variant="text"
                 type="button"
-                onClick={() => {
-                  setQuery("");
-                  setType("");
-                }}
+                onClick={clearFilters}
                 icon={<X />}
               >
                 清除
               </Button>
             ) : null}
-          </FilterBar>
-        </Card>
-        {can("batch", "media") && selectedAssets.length ? (
-          <BulkActionBar
-            selectionLabel={`已选择 ${selectedAssets.length} 个媒体`}
-            onAIAssist={() => setAIOpen(true)}
-            onCancel={() => setSelectedAssets([])}
-          >
-            <Button
-              variant="danger"
-              size="compact"
-              type="button"
-              onClick={() => {
-                setDeleteTarget({ kind: "batch" });
-                setReferences([]);
-                setError("");
-              }}
-              icon={<Trash2 />}
-            >
-              删除
-            </Button>
-          </BulkActionBar>
-        ) : null}
-        <AsyncState
-          loading={loading}
-          skeleton={<TableSkeleton rows={4} columns={4} />}
-          error={assets.length === 0 ? error : null}
-          onRetry={() => void load()}
-          retryLabel="重新载入"
-          empty={!loading && visibleAssets.length === 0 && !error}
-          emptyState={
-            <EmptyState
-              label={
-                assets.length === 0 ? t("noMedia") : "没有符合条件的媒体资源。"
-              }
-            />
-          }
+          </div>
+        </div>
+      </Card>
+
+      {can("batch", "media") && selectedAssets.length > 0 ? (
+        <BulkActionBar
+          selectionLabel={`已选择 ${selectedAssets.length} 个媒体`}
+          onCancel={() => setSelectedAssets([])}
         >
-          <div className="media-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {visibleAssets.map((asset) => (
-              <Card
-                className="media-card group relative flex flex-col justify-between overflow-hidden border-border/80 bg-card hover:border-primary/40 transition-all"
-                id={`asset-${asset.id}`}
-                key={asset.id}
-              >
-                <div className="relative aspect-video w-full overflow-hidden bg-muted/40 border-b border-border/60">
-                  {can("batch", "media") ? (
-                    <div className="absolute top-2 left-2 z-10 rounded bg-background/80 backdrop-blur-xs p-1">
-                      <Checkbox
-                        aria-label={`选择媒体 ${asset.filename}`}
-                        checked={selectedAssets.includes(asset.id)}
-                        onChange={(event) =>
-                          setSelectedAssets((current) =>
-                            event.target.checked
-                              ? [...new Set([...current, asset.id])]
-                              : current.filter((id) => id !== asset.id),
-                          )
-                        }
-                      />
-                    </div>
-                  ) : null}
-                  <img
-                    src={asset.url}
-                    alt={asset.alt_text || asset.filename}
-                    loading="lazy"
-                    className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                </div>
-                <div className="flex-1 p-3.5 space-y-1.5">
+          <Button size="small" icon={<Bot />} onClick={() => setAIOpen(true)}>
+            交给 AI
+          </Button>
+          <Button
+            size="small"
+            color="error"
+            type="button"
+            onClick={() => {
+              setDeleteTarget({ kind: "batch" });
+              setReferences([]);
+              setError("");
+            }}
+            icon={<Trash2 />}
+          >
+            删除
+          </Button>
+        </BulkActionBar>
+      ) : null}
+
+      {loading ? (
+        <MediaSkeleton />
+      ) : error && assets.length === 0 ? (
+        <Alert
+          type="error"
+          showIcon
+          title="媒体加载失败"
+          description={error}
+          action={
+            <Button size="small" onClick={() => void load()}>
+              重新载入
+            </Button>
+          }
+        />
+      ) : visibleAssets.length === 0 ? (
+        <Card padding="lg">
+          <Empty
+            icon={<ImagePlus className="size-7 text-muted-foreground" />}
+            title={
+              assets.length === 0 ? t("noMedia") : "没有符合条件的媒体资源。"
+            }
+            description={
+              assets.length === 0
+                ? "上传图片或使用 AI 文生图创建第一张媒体资源。"
+                : "调整文件名、替代文本或媒体类型筛选后重试。"
+            }
+            action={
+              hasFilters ? (
+                <Button size="small" onClick={clearFilters}>
+                  清除筛选
+                </Button>
+              ) : undefined
+            }
+          />
+        </Card>
+      ) : (
+        <div
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+          role="list"
+          aria-label="媒体资源"
+        >
+          {visibleAssets.map((asset) => (
+            <Card
+              className="group overflow-hidden transition-all hover:border-primary/40"
+              id={`asset-${asset.id}`}
+              key={asset.id}
+              padding="none"
+              role="listitem"
+            >
+              <div className="relative aspect-video w-full overflow-hidden border-b bg-muted/40">
+                {can("batch", "media") ? (
+                  <div className="absolute left-2 top-2 z-10 rounded-md bg-background/85 p-1 backdrop-blur">
+                    <Checkbox
+                      aria-label={`选择媒体 ${asset.filename}`}
+                      checked={selectedAssets.includes(asset.id)}
+                      onChange={(event) =>
+                        setSelectedAsset(asset.id, event.target.checked)
+                      }
+                    />
+                  </div>
+                ) : null}
+                <img
+                  src={asset.url}
+                  alt={asset.alt_text || asset.filename}
+                  loading="lazy"
+                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+              </div>
+              <div className="flex flex-1 flex-col gap-2 p-4">
+                <div className="flex items-start justify-between gap-2">
                   <strong
-                    className="block font-semibold text-sm text-foreground truncate"
+                    className="min-w-0 truncate text-sm font-semibold"
                     title={asset.filename}
                   >
                     {asset.filename}
                   </strong>
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
-                    <span>{Math.ceil(asset.size_bytes / 1024)} KB</span>
-                    <span>·</span>
-                    <span>{formatDateTime(asset.created_at)}</span>
-                    {asset.usage_count ? (
-                      <>
-                        <span>·</span>
-                        <span className="text-primary font-sans">
-                          引用 {asset.usage_count}
-                        </span>
-                      </>
-                    ) : null}
-                  </div>
-                  <small
-                    className="media-card__alt block text-xs text-muted-foreground truncate"
-                    title={
-                      asset.alt_text
-                        ? `${t("altText")}: ${asset.alt_text}`
-                        : undefined
+                  <Tag>
+                    {asset.content_type.replace("image/", "").toUpperCase()}
+                  </Tag>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-xs text-muted-foreground">
+                  <span>{Math.ceil(asset.size_bytes / 1024)} KB</span>
+                  <time>{formatDateTime(asset.created_at)}</time>
+                  {asset.usage_count ? (
+                    <span className="font-sans text-primary">
+                      引用 {asset.usage_count}
+                    </span>
+                  ) : null}
+                </div>
+                <small
+                  className="truncate text-xs text-muted-foreground"
+                  title={
+                    asset.alt_text
+                      ? `${t("altText")}: ${asset.alt_text}`
+                      : undefined
+                  }
+                >
+                  {t("altText")}:{" "}
+                  {asset.alt_text || (
+                    <span className="italic text-muted-foreground/60">
+                      {t("notSet")}
+                    </span>
+                  )}
+                </small>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t bg-muted/20 p-2">
+                <div className="flex flex-wrap items-center gap-1">
+                  <Button
+                    variant="text"
+                    size="small"
+                    aria-label={`${t("copyRelativeUrl")} ${asset.filename}`}
+                    onClick={() =>
+                      void copyMediaText(
+                        getRelativeMediaUrl(asset.url),
+                        t("relativeUrlCopied"),
+                      )
                     }
+                    icon={<Link2 />}
                   >
-                    {t("altText")}:{" "}
-                    {asset.alt_text || (
-                      <span className="text-muted-foreground/60 italic">
-                        {t("notSet")}
-                      </span>
-                    )}
-                  </small>
+                    {t("copyRelativeUrl")}
+                  </Button>
+                  <Button
+                    variant="text"
+                    size="small"
+                    aria-label={`${t("copyMarkdown")} ${asset.filename}`}
+                    onClick={() =>
+                      void copyMediaText(
+                        `![${asset.alt_text || asset.filename}](${asset.url})`,
+                        "媒体 Markdown 已复制。",
+                      )
+                    }
+                    icon={<Copy />}
+                  >
+                    {t("copyMarkdown")}
+                  </Button>
                 </div>
-                <div className="row-actions flex items-center justify-between border-t border-border/60 bg-muted/20 p-2 gap-1">
-                  <div className="flex items-center gap-1">
+                <div className="flex flex-wrap items-center gap-1">
+                  {can("edit", "media", asset) ? (
                     <Button
-                      variant="ghost"
-                      size="compact"
-                      title={t("copyRelativeUrl")}
-                      onClick={() =>
-                        void copyText(
-                          getRelativeMediaUrl(asset.url),
-                          notify,
-                          t("relativeUrlCopied"),
-                        )
-                      }
-                      icon={<Link2 />}
+                      variant="text"
+                      size="small"
+                      aria-label={`${t("editAltText")} ${asset.filename}`}
+                      onClick={() => openEditAltDrawer(asset)}
+                      icon={<Pencil />}
                     >
-                      {t("copyRelativeUrl")}
+                      {t("editAltText")}
                     </Button>
+                  ) : null}
+                  {can("delete", "media", asset) ? (
                     <Button
-                      variant="ghost"
-                      size="compact"
-                      title={t("copyMarkdown")}
-                      onClick={() =>
-                        void copyText(
-                          `![${asset.alt_text || asset.filename}](${asset.url})`,
-                          notify,
-                          "媒体 Markdown 已复制。",
-                        )
-                      }
-                      icon={<Copy />}
+                      variant="text"
+                      color="error"
+                      size="small"
+                      aria-label={`${t("delete")} ${asset.filename}`}
+                      onClick={() => {
+                        setDeleteTarget(asset);
+                        setReferences([]);
+                        setError("");
+                      }}
+                      icon={<Trash2 />}
                     >
-                      {t("copyMarkdown")}
+                      {t("delete")}
                     </Button>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {can("edit", "media", asset) ? (
-                      <Button
-                        variant="ghost"
-                        size="compact"
-                        title={t("editAltText")}
-                        onClick={() => openEditAltDrawer(asset)}
-                        icon={<Pencil />}
-                      >
-                        {t("editAltText")}
-                      </Button>
-                    ) : null}
-                    {can("delete", "media", asset) ? (
-                      <Button
-                        variant="danger"
-                        size="compact"
-                        title={t("delete")}
-                        onClick={() => {
-                          setDeleteTarget(asset);
-                          setReferences([]);
-                          setError("");
-                        }}
-                        icon={<Trash2 />}
-                      >
-                        {t("delete")}
-                      </Button>
-                    ) : null}
-                  </div>
+                  ) : null}
                 </div>
-              </Card>
-            ))}
-          </div>
-        </AsyncState>
-      </ContentStack>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
 
-      {/* 上传图片 Drawer */}
       <Drawer
         open={uploadDrawerOpen}
         title="上传图片"
@@ -584,7 +660,6 @@ export default function MediaLibrary() {
         />
       </Drawer>
 
-      {/* AI 文生图 Drawer */}
       <Drawer
         open={aiDrawerOpen}
         title="AI 文生图"
@@ -601,7 +676,7 @@ export default function MediaLibrary() {
           onAltChange={setAiAlt}
           onGenerate={() => void handleGenerateAiImage()}
           onCancel={() => setAiDrawerOpen(false)}
-          onCopy={(value) => void copyText(value, notify, "Markdown 已复制！")}
+          onCopy={(value) => void copyMediaText(value, "Markdown 已复制！")}
           onReset={() => {
             setAiGenerated(null);
             setAiPrompt("");
@@ -609,7 +684,6 @@ export default function MediaLibrary() {
         />
       </Drawer>
 
-      {/* 编辑替代文本 Drawer */}
       <Drawer
         open={editingAsset !== null}
         title={t("editAltText")}
@@ -658,6 +732,6 @@ export default function MediaLibrary() {
         onClose={() => setAIOpen(false)}
         title="将所选媒体交给 AI"
       />
-    </AdminPage>
+    </div>
   );
 }
