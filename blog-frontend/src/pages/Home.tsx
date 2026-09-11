@@ -1,19 +1,35 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, GitBranch, Mail, Rss } from "lucide-react";
-import {
-  Button,
-  EmptyState,
-  Feedback,
-  SectionHeading,
-  ArticleListSkeleton,
-} from "@gouno/ui-legacy";
+import { Alert, Button, Empty, Skeleton } from "@gouno/ui/core";
 import { DEFAULT_SITE_SETTINGS, authorInitials } from "../config/site-defaults";
 import { ArticleTeaser } from "../components/reading/ArticleTeaser";
 import { usePublicHome } from "../features/public/usePublicHome";
+
+function HomeLoading() {
+  return (
+    <div className="flex flex-col gap-10" role="status" aria-label="首页加载中">
+      <div className="grid gap-6 border-b pb-10 md:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="space-y-4">
+          <Skeleton className="h-10 w-4/5" />
+          <Skeleton className="h-5 w-3/4" />
+        </div>
+        <Skeleton className="aspect-[4/3] w-full rounded-lg" />
+      </div>
+      <Skeleton className="h-52 w-full" />
+      <div className="grid gap-8 md:grid-cols-2">
+        <Skeleton className="h-40 w-full" />
+        <Skeleton className="h-40 w-full" />
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const { posts, categories, tagSummaries, site, loading, error, handleRetry } =
     usePublicHome();
-  if (loading) return <ArticleListSkeleton />;
+
+  if (loading) return <HomeLoading />;
+
   return (
     <div className="flex flex-col gap-12 md:gap-16">
       <section className="grid items-center gap-8 border-b pb-10 md:grid-cols-[minmax(0,1fr)_320px]">
@@ -42,35 +58,44 @@ export default function Home() {
           </figure>
         ) : null}
       </section>
+
       {error ? (
-        <div className="flex flex-col gap-3">
-          <Feedback type="error">{error}</Feedback>
+        <div className="flex flex-col items-start gap-3">
+          <Alert
+            type="error"
+            title="首页内容加载失败"
+            description={error}
+            showIcon
+          />
           <Button onClick={handleRetry}>重试</Button>
         </div>
       ) : null}
+
       {!error && !posts.length ? (
-        <EmptyState label="这里还没有文章。完成第一篇写作后，它会成为首页主角。" />
+        <Empty
+          title="这里还没有文章"
+          description="完成第一篇写作后，它会成为首页主角。"
+        />
       ) : null}
+
       <div className="grid items-start gap-12 lg:grid-cols-[minmax(0,1fr)_240px]">
         <div className="min-w-0">
           {posts[0] ? <ArticleTeaser post={posts[0]} featured /> : null}
           {posts.length > 1 ? (
             <section className="mt-10">
+              <div className="mb-7 flex items-center justify-between gap-4">
+                <h2 className="text-lg font-semibold">精选文章</h2>
+                <Link
+                  className="inline-flex items-center gap-2 text-sm text-primary"
+                  to="/articles"
+                >
+                  查看全部
+                  <ArrowRight className="size-4" />
+                </Link>
+              </div>
               <div
                 className={`featured-layout featured-layout--${Math.min(posts.length - 1, 4)}`}
               >
-                <SectionHeading
-                  title="精选文章"
-                  action={
-                    <Link
-                      className="inline-flex items-center gap-2 text-sm text-primary"
-                      to="/articles"
-                    >
-                      查看全部
-                      <ArrowRight className="size-4" />
-                    </Link>
-                  }
-                />
                 {posts.length >= 5 ? (
                   <>
                     <div className="featured-layout__column">
@@ -162,9 +187,10 @@ export default function Home() {
           </section>
         </aside>
       </div>
+
       {posts.length ? (
         <section>
-          <SectionHeading title="最新文章" />
+          <h2 className="mb-7 text-lg font-semibold">最新文章</h2>
           <div className="grid gap-x-10 md:grid-cols-2">
             {posts.slice(0, 8).map((post) => (
               <ArticleTeaser key={post.id} post={post} compact />
@@ -172,6 +198,7 @@ export default function Home() {
           </div>
         </section>
       ) : null}
+
       <section className="flex flex-col justify-between gap-5 border-t pt-8 sm:flex-row sm:items-center">
         <div>
           <h2 className="text-lg font-semibold">订阅更新</h2>
