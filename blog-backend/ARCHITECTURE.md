@@ -38,11 +38,14 @@ Migration is intentionally incremental:
 1. identify a capability and its dependency boundary;
 2. extract genuinely shared infrastructure before moving business code;
 3. move domain/repository/service/controller code as one coherent capability slice where practical;
-4. update imports and route wiring without changing externally observable behavior;
-5. pass the full backend and repository CI gates before merging;
-6. only then migrate the next capability.
+4. retain narrow compatibility facades when moving all consumers in the same change would create unnecessary blast radius;
+5. update imports and route wiring without changing externally observable behavior;
+6. pass the full backend and repository CI gates before merging;
+7. only then migrate the next capability.
 
 Do not perform filename-only moves that leave package ownership ambiguous or introduce circular dependencies.
+
+The `page` capability is the first migrated reference slice. Its canonical implementation lives under `internal/page/`; legacy Page symbols in the flat packages are temporary compatibility facades.
 
 ## Shared HTTP controller primitives
 
@@ -68,17 +71,22 @@ controller -> service -> repository
 
 Cross-capability dependencies must be explicit and should target the narrowest stable package/API available. Do not share business behavior by moving it into a generic global layer bucket.
 
-## Gouno relationship
+## Project-owned Codegen
 
-Gouno provides reusable mechanisms and the project-aware Codegen protocol/runtime. This repository owns its architecture and any future `.gouno/codegen.yaml` policy.
+Gouno provides reusable mechanisms and the project-aware Codegen protocol/runtime. This repository owns its architecture and its `.gouno/codegen.yaml` policy.
 
-For this backend:
+The Blog backend uses Gouno Codegen v1 and exposes a project-owned `module` generator:
 
-- Capability Module is the project architecture convention.
-- A future `module` generator may encode this convention after the migration shape is proven in real capabilities.
-- The default `gouno-template` Flat Layered structure is a reference for simpler applications and is not authoritative for this repository.
-- Existing `suite` semantics must not be silently redefined to mean Capability Module generation.
+```bash
+go run ./cmd gen module <name>
+```
+
+The generator creates a minimal Capability Module skeleton under `internal/<capability>/` with `domain`, `repository`, `service`, and `controller` packages. It intentionally does **not** generate database code, routes, dependency injection, cross-capability imports, migrations, or a mandatory `module.go`; those decisions are capability-specific and must be added from real requirements.
+
+The generated four-layer skeleton is a starting shape for business capabilities, not a requirement that every capability retain every layer. Remove unused layers instead of keeping empty architecture for symmetry.
+
+The default `gouno-template` Flat Layered structure remains the reference for simpler applications and is not authoritative for this repository. Existing `suite` semantics are not redefined here; Blog uses the distinct `module` generator for Capability Module creation.
 
 ## Security and product boundaries
 
-Architecture refactoring must preserve the root `AGENTS.md` security contract, especially the confidential BFF boundary and Connector Module Hold. Structural cleanup is not authorization to change OAuth/OIDC, session, connector, credential, deployment, or security behavior.
+Architecture refactoring and Codegen must preserve the root `AGENTS.md` security contract, especially the confidential BFF boundary and Connector Module Hold. Structural cleanup is not authorization to change OAuth/OIDC, session, connector, credential, deployment, or security behavior.
