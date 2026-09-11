@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	agentservice "github.com/rushairer/blog-backend/internal/agent"
+	communityservice "github.com/rushairer/blog-backend/internal/community/service"
 	"github.com/rushairer/blog-backend/internal/knowledge"
 	"github.com/rushairer/blog-backend/internal/repository"
 	"github.com/rushairer/blog-backend/internal/service"
@@ -98,6 +99,7 @@ func WriteDomainError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, sql.ErrNoRows),
 		errors.Is(err, service.ErrPostNotFound),
+		errors.Is(err, communityservice.ErrPostNotFound),
 		errors.Is(err, service.ErrCategoryNotFound),
 		errors.Is(err, service.ErrPageNotFound),
 		errors.Is(err, workflowservice.ErrNotFound),
@@ -130,7 +132,9 @@ func WriteDomainError(c *gin.Context, err error) {
 		errors.Is(err, service.ErrInvalidPostSlug),
 		errors.Is(err, service.ErrInvalidCommentID),
 		errors.Is(err, service.ErrCommentAuthorEmpty),
+		errors.Is(err, communityservice.ErrCommentAuthorEmpty),
 		errors.Is(err, service.ErrCommentContentEmpty),
+		errors.Is(err, communityservice.ErrCommentContentEmpty),
 		errors.Is(err, service.ErrCommentContentTooLong),
 		errors.Is(err, service.ErrAuthorTooLong),
 		errors.Is(err, service.ErrParentCommentNotFound),

@@ -101,6 +101,20 @@ func TestCommunityRepositoryInteractionOwnershipAndUniqueness(t *testing.T) {
 	if err := repo.ModerateComment(ctx, reply.ID, "hidden"); err != nil {
 		t.Fatal(err)
 	}
+	visible, err := repo.GetVisibleComments(ctx, postID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(visible) != 1 || visible[0].ID != parent.ID {
+		t.Fatalf("visible comment query leaked hidden reply: %#v", visible)
+	}
+	all, err := repo.GetAllComments(ctx, postID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(all) != 2 {
+		t.Fatalf("moderation query should include hidden comments: got %d", len(all))
+	}
 	if err := repo.ModerateComment(ctx, reply.ID, "visible"); err != nil {
 		t.Fatal(err)
 	}

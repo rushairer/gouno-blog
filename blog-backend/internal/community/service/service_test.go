@@ -6,33 +6,33 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rushairer/blog-backend/internal/domain"
-	"github.com/rushairer/blog-backend/internal/repository"
+	communitydomain "github.com/rushairer/blog-backend/internal/community/domain"
+	communityrepository "github.com/rushairer/blog-backend/internal/community/repository"
+	rootdomain "github.com/rushairer/blog-backend/internal/domain"
 )
 
 type fakeCommunityRepo struct {
-	created       *domain.Comment
+	created       *communitydomain.Comment
 	createErr     error
 	reportErr     error
 	moderateID    int64
 	moderateState string
 	likes         map[string]bool
-	notifications map[string][]*domain.Notification
 }
 
-func (r *fakeCommunityRepo) CreateComment(_ context.Context, comment *domain.Comment) error {
+func (r *fakeCommunityRepo) CreateComment(_ context.Context, comment *communitydomain.Comment) error {
 	r.created = comment
 	comment.ID = 11
 	comment.CreatedAt = time.Now()
 	return r.createErr
 }
-func (*fakeCommunityRepo) GetVisibleComments(context.Context, int64) ([]*domain.Comment, error) {
+func (*fakeCommunityRepo) GetVisibleComments(context.Context, int64) ([]*communitydomain.Comment, error) {
 	return nil, nil
 }
-func (*fakeCommunityRepo) GetAllComments(context.Context, int64) ([]*domain.Comment, error) {
+func (*fakeCommunityRepo) GetAllComments(context.Context, int64) ([]*communitydomain.Comment, error) {
 	return nil, nil
 }
-func (*fakeCommunityRepo) ListCommentsForAdmin(context.Context, string, bool, int, int) ([]*domain.Comment, int, error) {
+func (*fakeCommunityRepo) ListCommentsForAdmin(context.Context, string, bool, int, int) ([]*communitydomain.Comment, int, error) {
 	return nil, 0, nil
 }
 func (r *fakeCommunityRepo) ModerateComment(_ context.Context, id int64, status string) error {
@@ -43,17 +43,17 @@ func (*fakeCommunityRepo) DeleteComment(context.Context, int64) error { return n
 func (r *fakeCommunityRepo) ReportComment(context.Context, int64, string, string) error {
 	return r.reportErr
 }
-func (r *fakeCommunityRepo) SetLike(_ context.Context, postID int64, actor string, liked bool) (*domain.CommunityState, error) {
+func (r *fakeCommunityRepo) SetLike(_ context.Context, _ int64, actor string, liked bool) (*communitydomain.State, error) {
 	if r.likes == nil {
 		r.likes = map[string]bool{}
 	}
 	r.likes[actor] = liked
-	return &domain.CommunityState{Liked: liked, LikesCount: 1}, nil
+	return &communitydomain.State{Liked: liked, LikesCount: 1}, nil
 }
-func (r *fakeCommunityRepo) CommunityState(_ context.Context, _ int64, actor, _ string) (*domain.CommunityState, error) {
-	return &domain.CommunityState{Liked: r.likes[actor]}, nil
+func (r *fakeCommunityRepo) CommunityState(_ context.Context, _ int64, actor, _ string) (*communitydomain.State, error) {
+	return &communitydomain.State{Liked: r.likes[actor]}, nil
 }
-func (r *fakeCommunityRepo) ListNotifications(_ context.Context, principalID int64, _, _ int) ([]*domain.Notification, int, error) {
+func (*fakeCommunityRepo) ListNotifications(context.Context, int64, int, int) ([]*communitydomain.Notification, int, error) {
 	return nil, 0, nil
 }
 func (*fakeCommunityRepo) ReadNotification(context.Context, int64, int64) error      { return nil }
@@ -65,18 +65,18 @@ func (*fakeCommunityRepo) ClearNotifications(context.Context, int64, bool) (int6
 }
 
 type fakePostLookup struct {
-	post        *domain.Post
-	postsByID   map[int64]*domain.Post
-	postsBySlug map[string]*domain.Post
+	post        *rootdomain.Post
+	postsByID   map[int64]*rootdomain.Post
+	postsBySlug map[string]*rootdomain.Post
 }
 
-func (f fakePostLookup) GetByID(_ context.Context, id int64) (*domain.Post, error) {
+func (f fakePostLookup) GetByID(_ context.Context, id int64) (*rootdomain.Post, error) {
 	if f.postsByID != nil {
 		return f.postsByID[id], nil
 	}
 	return f.post, nil
 }
-func (f fakePostLookup) GetBySlug(_ context.Context, slug string) (*domain.Post, error) {
+func (f fakePostLookup) GetBySlug(_ context.Context, slug string) (*rootdomain.Post, error) {
 	if f.postsBySlug != nil {
 		return f.postsBySlug[slug], nil
 	}
@@ -84,7 +84,7 @@ func (f fakePostLookup) GetBySlug(_ context.Context, slug string) (*domain.Post,
 }
 
 func newCommunityServiceForTest(repo *fakeCommunityRepo) *CommunityService {
-	return NewCommunityService(repo, fakePostLookup{post: &domain.Post{ID: 1, Slug: "post", Status: domain.PostStatusPublished}})
+	return NewCommunityService(repo, fakePostLookup{post: &rootdomain.Post{ID: 1, Slug: "post", Status: rootdomain.PostStatusPublished}})
 }
 
 func TestCommunityCreateCommentUsesAuthenticatedIdentityAndIsVisible(t *testing.T) {
@@ -119,21 +119,21 @@ func TestCommunityCreateAnonymousCommentRequiresNameAndIsPending(t *testing.T) {
 }
 
 func TestCommunityRejectsInvalidModerationStateAndDuplicateReport(t *testing.T) {
-	repo := &fakeCommunityRepo{reportErr: repository.ErrDuplicateInteraction}
+	repo := &fakeCommunityRepo{reportErr: communityrepository.ErrDuplicateInteraction}
 	svc := newCommunityServiceForTest(repo)
 	if err := svc.ModerateComment(context.Background(), 3, "deleted"); !errors.Is(err, ErrInvalidCommentStatus) {
 		t.Fatalf("expected ErrInvalidCommentStatus, got %v", err)
 	}
 	err := svc.ReportComment(context.Background(), 3, Actor{Key: "anon:a"}, "spam")
-	if !errors.Is(err, repository.ErrDuplicateInteraction) {
+	if !errors.Is(err, communityrepository.ErrDuplicateInteraction) {
 		t.Fatalf("expected duplicate report error, got %v", err)
 	}
 }
 
 func TestCommunityResolvesNumericSlugWhenIDDoesNotExist(t *testing.T) {
-	post := &domain.Post{ID: 8, Slug: "112", Status: domain.PostStatusPublished}
+	post := &rootdomain.Post{ID: 8, Slug: "112", Status: rootdomain.PostStatusPublished}
 	svc := NewCommunityService(&fakeCommunityRepo{}, fakePostLookup{
-		postsByID: map[int64]*domain.Post{}, postsBySlug: map[string]*domain.Post{"112": post},
+		postsByID: map[int64]*rootdomain.Post{}, postsBySlug: map[string]*rootdomain.Post{"112": post},
 	})
 	resolved, err := svc.ResolvePublishedPost(context.Background(), "112")
 	if err != nil || resolved.ID != post.ID {
