@@ -1,14 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  Bot,
-  Copy,
-  Edit2,
-  Eye,
-  FileText,
-  Plus,
-  Trash2,
-  X,
-} from "lucide-react";
+import { Bot, Copy, Edit2, Eye, FileText, Plus, Trash2, X } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { postsApi } from "../../api/posts";
 import { siteApi } from "../../api/site";
@@ -424,9 +415,7 @@ export default function AdminPosts() {
         <Card padding="lg">
           <Empty
             title={
-              hasFilters
-                ? "没有符合当前筛选条件的文章。"
-                : "还没有发布过文章。"
+              hasFilters ? "没有符合当前筛选条件的文章。" : "还没有发布过文章。"
             }
             action={
               hasFilters ? (
@@ -496,7 +485,9 @@ export default function AdminPosts() {
                         </strong>
                         <div className="flex flex-wrap items-center gap-2 font-mono text-xs text-muted-foreground">
                           <span>/{post.slug}</span>
-                          {post.category ? <Tag>{post.category.name}</Tag> : null}
+                          {post.category ? (
+                            <Tag>{post.category.name}</Tag>
+                          ) : null}
                         </div>
                       </div>
                     </TableCell>
@@ -555,7 +546,9 @@ export default function AdminPosts() {
                         /{post.slug}
                       </div>
                       <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                        {post.category ? <span>{post.category.name}</span> : null}
+                        {post.category ? (
+                          <span>{post.category.name}</span>
+                        ) : null}
                         <time>
                           更新于{" "}
                           {new Date(
