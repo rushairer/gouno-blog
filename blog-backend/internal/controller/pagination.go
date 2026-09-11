@@ -5,7 +5,10 @@ import (
 	"github.com/rushairer/blog-backend/internal/controllerutil"
 )
 
-const maxPage = 10_000
+const (
+	maxPage     = 10_000
+	maxPageSize = 100
+)
 
 func normalizedPagination(page, pageSize, defaultSize int) (int, int) {
 	return controllerutil.NormalizePagination(page, pageSize, defaultSize)
