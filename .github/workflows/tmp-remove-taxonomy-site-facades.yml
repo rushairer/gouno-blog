@@ -1,0 +1,75 @@
+name: Temporary Remove Taxonomy Site Facades
+
+on:
+  push:
+    branches: [refactor/remove-taxonomy-site-flat-facades]
+    paths:
+      - ".github/workflows/tmp-remove-taxonomy-site-facades.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: refactor/remove-taxonomy-site-flat-facades
+
+      - name: Setup Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: blog-backend/go.mod
+          cache-dependency-path: blog-backend/go.sum
+
+      - name: Prove flat facades have no external Go consumers
+        shell: bash
+        run: |
+          set -euo pipefail
+          candidates='blog-backend/internal/repository/category_repository.go|blog-backend/internal/service/category_service.go|blog-backend/internal/controller/content_controller.go|blog-backend/internal/controller/content_settings_test.go'
+          patterns=(
+            'repository\.(NewCategoryRepository|NewTagRepository|NewSettingRepository|CategoryRepository|CategoryReader|CategoryWriter|TagRepository|SettingRepository)'
+            'service\.(NewCategoryService|CategoryService|CategoryRequest|TagService|SettingService|ValidSiteURL|ErrCategoryNotFound|ErrCategorySlugInUse|ErrInvalidCategoryID|ErrCategoryNameRequired|ErrInvalidTagPayload|ErrInvalidSettings|ErrSettingValueTooLong|ErrSiteTitleEmpty|ErrInvalidRSSURL|ErrInvalidGithubURL|ErrInvalidFaviconURL)'
+            'controller\.(NewContentController|ContentController)'
+          )
+          for pattern in "${patterns[@]}"; do
+            matches="$(git grep -n -E "$pattern" -- blog-backend ':!blog-backend/vendor' || true)"
+            external="$(printf '%s\n' "$matches" | grep -Ev "^($candidates):" || true)"
+            if [ -n "$external" ]; then
+              echo "external legacy facade consumer remains for $pattern" >&2
+              printf '%s\n' "$external" >&2
+              exit 1
+            fi
+          done
+          test -f blog-backend/internal/repository/category_repository.go
+          test -f blog-backend/internal/service/category_service.go
+          test -f blog-backend/internal/controller/content_controller.go
+          test -f blog-backend/internal/controller/content_settings_test.go
+
+      - name: Remove dead flat facades
+        run: |
+          rm \
+            blog-backend/internal/repository/category_repository.go \
+            blog-backend/internal/service/category_service.go \
+            blog-backend/internal/controller/content_controller.go \
+            blog-backend/internal/controller/content_settings_test.go
+
+      - name: Verify canonical backend without facades
+        working-directory: blog-backend
+        run: |
+          go test ./...
+          go vet ./...
+
+      - name: Remove migration workflow
+        run: rm .github/workflows/tmp-remove-taxonomy-site-facades.yml
+
+      - name: Commit facade removal
+        run: |
+          git config user.name "Aben"
+          git config user.email "5195693+rushairer@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "refactor(architecture): remove taxonomy and site flat facades"
+          git push origin HEAD:refactor/remove-taxonomy-site-flat-facades
