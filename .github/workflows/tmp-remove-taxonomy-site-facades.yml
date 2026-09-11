@@ -30,9 +30,9 @@ jobs:
           set -euo pipefail
           candidates='blog-backend/internal/repository/category_repository.go|blog-backend/internal/service/category_service.go|blog-backend/internal/controller/content_controller.go|blog-backend/internal/controller/content_settings_test.go'
           patterns=(
-            'repository\.(NewCategoryRepository|NewTagRepository|NewSettingRepository|CategoryRepository|CategoryReader|CategoryWriter|TagRepository|SettingRepository)'
-            'service\.(NewCategoryService|CategoryService|CategoryRequest|TagService|SettingService|ValidSiteURL|ErrCategoryNotFound|ErrCategorySlugInUse|ErrInvalidCategoryID|ErrCategoryNameRequired|ErrInvalidTagPayload|ErrInvalidSettings|ErrSettingValueTooLong|ErrSiteTitleEmpty|ErrInvalidRSSURL|ErrInvalidGithubURL|ErrInvalidFaviconURL)'
-            'controller\.(NewContentController|ContentController)'
+            '(^|[^[:alnum:]_])repository\.(NewCategoryRepository|NewTagRepository|NewSettingRepository|CategoryRepository|CategoryReader|CategoryWriter|TagRepository|SettingRepository)'
+            '(^|[^[:alnum:]_])service\.(NewCategoryService|CategoryService|CategoryRequest|TagService|SettingService|ValidSiteURL|ErrCategoryNotFound|ErrCategorySlugInUse|ErrInvalidCategoryID|ErrCategoryNameRequired|ErrInvalidTagPayload|ErrInvalidSettings|ErrSettingValueTooLong|ErrSiteTitleEmpty|ErrInvalidRSSURL|ErrInvalidGithubURL|ErrInvalidFaviconURL)'
+            '(^|[^[:alnum:]_])controller\.(NewContentController|ContentController)'
           )
           for pattern in "${patterns[@]}"; do
             matches="$(git grep -n -E "$pattern" -- blog-backend ':!blog-backend/vendor' || true)"
