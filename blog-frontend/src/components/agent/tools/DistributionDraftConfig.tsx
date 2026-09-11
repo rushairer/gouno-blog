@@ -1,6 +1,6 @@
 import { Share2, Sparkles } from "lucide-react";
-import { Field } from "@gouno/ui/core";
-import { Button, Select } from "@gouno/ui-legacy";
+import { Button, Field } from "@gouno/ui/core";
+import { Select } from "@gouno/ui-legacy";
 
 export interface DistributionDraftBinding {
   format?: "social" | "newsletter" | "faq" | "image_brief";

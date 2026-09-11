@@ -2,7 +2,7 @@ import type { ArticleImagePreview } from "../../api/operations";
 import type { MediaCandidate } from "../../types/agent";
 import { MarkdownRenderer } from "../MarkdownRenderer";
 import { Modal } from "@gouno/ui/core";
-import { Button } from "@gouno/ui-legacy";
+import { Button } from "@gouno/ui/core";
 
 export interface ArticlePreviewModalProps {
   candidate: MediaCandidate;
@@ -35,11 +35,11 @@ export function ArticlePreviewModal({
       onClose={onClose}
       footer={
         <div className="modal-actions">
-          <Button variant="secondary" type="button" onClick={onClose}>
+          <Button variant="outline" type="button" onClick={onClose}>
             {zh ? "关闭" : "Close"}
           </Button>
           {!isCurrent ? (
-            <Button variant="primary" type="button" disabled>
+            <Button variant="solid" type="button" disabled>
               {zh ? "确认应用" : "Apply to article"}
             </Button>
           ) : null}

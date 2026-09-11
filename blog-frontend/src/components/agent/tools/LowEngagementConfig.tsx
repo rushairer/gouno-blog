@@ -1,6 +1,5 @@
 import { BarChart3, Sparkles } from "lucide-react";
-import { Field, Input } from "@gouno/ui/core";
-import { Button } from "@gouno/ui-legacy";
+import { Button, Field, Input } from "@gouno/ui/core";
 
 export interface LowEngagementBinding {
   min_views?: number;

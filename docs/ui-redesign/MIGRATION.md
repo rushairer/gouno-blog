@@ -61,13 +61,13 @@ The authoritative machine-readable inventory is `migration.json.phase0Inventory`
 - Gosso Admin state and overlay surfaces include login/MFA/Passkey, callback and reset errors, account panels, Sudo verification, client/user/audit/site/system management, confirmation dialogs and management modals.
 - Blog API dependencies are `agent`, `analytics`, `comments`, `connectors`, `media`, `members`, `notifications`, `operations`, `pages`, `posts`, `site` and `workflows`. Gosso Admin service dependencies are `accountService`, `auditService`, `clientService`, `siteSettingsService`, `systemService` plus `@gosso/client` authentication/session APIs.
 
-## Shared package and distribution evidence — current boundary (2026-09-11)
+## Shared package and distribution evidence — current boundary (2026-09-12)
 
-- Gosso Admin consumes the external canonical `@gouno/ui@0.2.0` artifact built from `rushairer/gouno-ui@3af2a5ca7d63f30fa531f605e620ba2c3380a2e8`; its vendored tgz SHA-256 is `e0fa85594b579c971599e045855bf37b9ea25371df42e0cf15bf90dc5d86d24d` and its version-aware sync path has been verified as a true no-op when upstream has not changed.
-- Gouno Blog now uses the same verified external artifact as canonical `@gouno/ui@0.2.0`, while the historical local `packages/ui@0.1.0` is isolated as explicit `@gouno/ui-legacy` compatibility prior art. Canonical and legacy archives have separate manifests and integrity records; there is no Vite or TypeScript alias redirecting canonical imports to legacy.
-- Blog production imports are split by formal ownership. The audited migration boundary contains 45 source files using canonical layer subpaths and 77 files with explicit legacy imports; legacy debt is fixed at 54 symbols / 404 symbol-file pairs by `blog-frontend/scripts/legacy-ui-allowlist.json` and `npm run lint:ui` must reject both new and stale pairs.
+- Gosso Admin consumes the external canonical `@gouno/ui@0.3.0` artifact built from `rushairer/gouno-ui@970bc1b0ad49de7b233901a5faf03c63dfa05892`; its vendored tgz SHA-256 is `1b09702168a5e1c46be59bf56c6786bcf49d109b422362192678aae93f42e30f` and its version-aware sync path has been verified as a true no-op when upstream has not changed.
+- Gouno Blog now uses the same verified external artifact as canonical `@gouno/ui@0.3.0`, while the historical local `packages/ui@0.1.0` is isolated as explicit `@gouno/ui-legacy` compatibility prior art. Canonical and legacy archives have separate manifests and integrity records; there is no Vite or TypeScript alias redirecting canonical imports to legacy.
+- Blog production imports are split by formal ownership. The audited migration boundary contains 52 source files using canonical layer subpaths and 59 files with explicit legacy imports; legacy debt is fixed at 48 symbols / 364 symbol-file pairs by `blog-frontend/scripts/legacy-ui-allowlist.json` and `npm run lint:ui` must reject both new and stale pairs.
 - Blog Tailwind scans both canonical and legacy package output while compatibility remains. Local `node scripts/ui/distribute.mjs blog-frontend` updates only `@gouno/ui-legacy`; external canonical updates are owned solely by `.github/workflows/sync-gouno-ui.yml`.
-- The 0.2.0 rollout preserved the Connector hold: Connector behavior was not changed and ConnectorWorkspace regressions remained green through the migration.
+- The 0.3.0 synchronization preserved the Connector hold: Connector behavior was not changed and ConnectorWorkspace regressions remained green through the full frontend quality gate.
 
 ## U01c evidence (2026-09-06)
 

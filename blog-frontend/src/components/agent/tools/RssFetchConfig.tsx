@@ -1,6 +1,5 @@
 import { Plus, Rss, Sparkles, Trash2 } from "lucide-react";
-import { Field, Input } from "@gouno/ui/core";
-import { Button } from "@gouno/ui-legacy";
+import { Button, Field, Input } from "@gouno/ui/core";
 
 export interface RssFeedItem {
   name: string;
@@ -191,8 +190,8 @@ export function RssFetchConfig({
             />
             <Button
               type="button"
-              variant="secondary"
-              size="compact"
+              variant="outline"
+              size="small"
               aria-label={
                 isZh
                   ? `删除 ${feed.name || "此源"}`
@@ -218,8 +217,8 @@ export function RssFetchConfig({
       <div className="rss-config-card__footer">
         <Button
           type="button"
-          variant="secondary"
-          size="compact"
+          variant="outline"
+          size="small"
           onClick={() => addFeed()}
           icon={<Plus size={14} />}
         >

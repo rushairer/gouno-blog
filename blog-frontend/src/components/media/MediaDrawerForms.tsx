@@ -1,7 +1,7 @@
 import type React from "react";
 import { Copy, ImagePlus, LoaderCircle, Pencil, Sparkles } from "lucide-react";
-import { Field, Input, OverlayForm, Textarea } from "@gouno/ui/core";
-import { Button, Feedback, FormActions } from "@gouno/ui-legacy";
+import { Button, Field, Input, OverlayForm, Textarea } from "@gouno/ui/core";
+import { Feedback, FormActions } from "@gouno/ui-legacy";
 
 export function MediaUploadForm({
   file,
@@ -37,7 +37,7 @@ export function MediaUploadForm({
       actions={
         <>
           <Button
-            variant="secondary"
+            variant="outline"
             type="button"
             disabled={uploading}
             onClick={onCancel}
@@ -45,7 +45,7 @@ export function MediaUploadForm({
             {labels.cancel}
           </Button>
           <Button
-            variant="primary"
+            variant="solid"
             type="submit"
             disabled={!file}
             loading={uploading}
@@ -124,7 +124,7 @@ export function MediaAltTextForm({
       actions={
         <>
           <Button
-            variant="secondary"
+            variant="outline"
             type="button"
             disabled={saving}
             onClick={onCancel}
@@ -132,7 +132,7 @@ export function MediaAltTextForm({
             {labels.cancel}
           </Button>
           <Button
-            variant="primary"
+            variant="solid"
             loading={saving}
             type="submit"
             icon={<Pencil />}
@@ -275,14 +275,14 @@ export function MediaImageGenerationForm({
             <div className="editor-ai-image-code">{`![${generated.alt}](${generated.url})`}</div>
             <div className="editor-ai-image-actions">
               <Button
-                variant="primary"
+                variant="solid"
                 type="button"
                 onClick={() => onCopy(`![${generated.alt}](${generated.url})`)}
                 icon={<Copy />}
               >
                 复制 Markdown
               </Button>
-              <Button variant="secondary" type="button" onClick={onReset}>
+              <Button variant="outline" type="button" onClick={onReset}>
                 ➕ 生成下一张
               </Button>
             </div>
@@ -291,7 +291,7 @@ export function MediaImageGenerationForm({
       ) : null}
       <FormActions className="drawer-actions">
         <Button
-          variant="secondary"
+          variant="outline"
           type="button"
           disabled={generating}
           onClick={onCancel}
@@ -299,7 +299,7 @@ export function MediaImageGenerationForm({
           {generated ? "完成" : "取消"}
         </Button>
         <Button
-          variant="primary"
+          variant="solid"
           type="button"
           disabled={generating || !prompt.trim()}
           onClick={onGenerate}
