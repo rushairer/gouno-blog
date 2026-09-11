@@ -285,7 +285,6 @@
       "src/components/agent/WorkflowInputForm.tsx",
       "src/components/agent/WorkflowRunRecords.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
-      "src/layouts/PublicShell.tsx",
       "src/pages/PostDetail.tsx",
       "src/pages/admin/Categories.tsx",
       "src/pages/admin/Pages.tsx",
@@ -426,7 +425,6 @@
       "src/pages/admin/PostEditor.tsx",
       "src/pages/admin/SiteSettings.tsx"
     ],
-    "ThemeToggle": ["src/layouts/PublicShell.tsx"],
     "Toast": ["src/components/auth/GlobalStepUpBoundary.tsx"],
     "ToastProvider": [
       "src/App.tsx",

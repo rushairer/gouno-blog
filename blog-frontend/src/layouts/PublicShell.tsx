@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Menu, Rss, Search } from "lucide-react";
-import { Input, Drawer } from "@gouno/ui/core";
-import { IconButton, ThemeToggle } from "@gouno/ui-legacy";
+import { Drawer, IconButton, Input } from "@gouno/ui/core";
+import { ThemeToggle } from "@gouno/ui/theme";
 import {
   DEFAULT_SITE_SETTINGS,
   getCachedSiteSettings,
