@@ -18,10 +18,13 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(newIdentityBackfillCommand(), generator.GeneratorCmd, webCmd, ownerRecoverCmd, identityAliasApproveCmd, bffKeygenCmd)
+	rootCmd.AddCommand(newIdentityBackfillCommand(), webCmd, ownerRecoverCmd, identityAliasApproveCmd, bffKeygenCmd)
 }
 
 func Execute() {
+	if _, err := generator.AttachProjectCommand(rootCmd, ""); err != nil {
+		log.Fatalf("load project commands: %v", err)
+	}
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatalf("Error executing root command: %v", err)
 		os.Exit(1)
