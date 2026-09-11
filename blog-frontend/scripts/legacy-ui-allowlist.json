@@ -13,7 +13,6 @@
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Notifications.tsx",
-      "src/pages/admin/Pages.tsx",
       "src/pages/admin/Posts.tsx",
       "src/pages/admin/SiteSettings.tsx"
     ],
@@ -23,7 +22,6 @@
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Notifications.tsx",
-      "src/pages/admin/Pages.tsx",
       "src/pages/admin/Posts.tsx",
       "src/pages/admin/SiteSettings.tsx"
     ],
@@ -39,21 +37,18 @@
       "src/components/__tests__/ui.test.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Notifications.tsx",
-      "src/pages/admin/Pages.tsx",
       "src/pages/admin/Posts.tsx"
     ],
     "Badge": [
       "src/components/__tests__/ui.test.tsx",
       "src/pages/admin/Dashboard.tsx",
-      "src/pages/admin/Notifications.tsx",
-      "src/pages/admin/Pages.tsx"
+      "src/pages/admin/Notifications.tsx"
     ],
     "BulkActionBar": [
       "src/components/__tests__/ui.test.tsx",
       "src/components/agent/OperationsWorkspace.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Notifications.tsx",
-      "src/pages/admin/Pages.tsx",
       "src/pages/admin/Posts.tsx"
     ],
     "Button": [
@@ -81,7 +76,6 @@
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Notifications.tsx",
       "src/pages/admin/PageEditor.tsx",
-      "src/pages/admin/Pages.tsx",
       "src/pages/admin/PostEditor.tsx",
       "src/pages/admin/Posts.tsx",
       "src/pages/admin/SiteSettings.tsx"
@@ -91,7 +85,6 @@
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/Notifications.tsx",
-      "src/pages/admin/Pages.tsx",
       "src/pages/admin/Posts.tsx"
     ],
     "Card": [
@@ -99,7 +92,6 @@
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Notifications.tsx",
-      "src/pages/admin/Pages.tsx",
       "src/pages/admin/Posts.tsx"
     ],
     "CardContent": [
@@ -128,12 +120,10 @@
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Notifications.tsx",
-      "src/pages/admin/Pages.tsx",
       "src/pages/admin/Posts.tsx"
     ],
     "copyText": [
       "src/pages/admin/MediaLibrary.tsx",
-      "src/pages/admin/Pages.tsx",
       "src/pages/admin/Posts.tsx"
     ],
     "EditorPanel": [
@@ -155,7 +145,6 @@
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/MediaLibrary.tsx",
-      "src/pages/admin/Pages.tsx",
       "src/pages/admin/PostEditor.tsx",
       "src/pages/admin/Posts.tsx"
     ],
@@ -178,7 +167,6 @@
       "src/components/agent/WorkflowRunRecords.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/pages/admin/MediaLibrary.tsx",
-      "src/pages/admin/Pages.tsx",
       "src/pages/admin/Posts.tsx"
     ],
     "FormActions": [
@@ -208,21 +196,13 @@
       "src/components/agent/WorkflowInputForm.tsx",
       "src/components/agent/WorkflowRunRecords.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
-      "src/pages/admin/Pages.tsx",
       "src/pages/admin/Posts.tsx"
     ],
-    "ListRow": [
-      "src/pages/admin/Pages.tsx",
-      "src/pages/admin/Posts.tsx"
-    ],
-    "ListStack": [
-      "src/pages/admin/Pages.tsx",
-      "src/pages/admin/Posts.tsx"
-    ],
+    "ListRow": ["src/pages/admin/Posts.tsx"],
+    "ListStack": ["src/pages/admin/Posts.tsx"],
     "Pagination": [
       "src/components/__tests__/ui.test.tsx",
       "src/components/agent/WorkflowInputForm.tsx",
-      "src/pages/admin/Pages.tsx",
       "src/pages/admin/Posts.tsx"
     ],
     "Panel": [
@@ -258,7 +238,6 @@
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Notifications.tsx",
       "src/pages/admin/PageEditor.tsx",
-      "src/pages/admin/Pages.tsx",
       "src/pages/admin/PostEditor.tsx",
       "src/pages/admin/Posts.tsx"
     ],
@@ -266,7 +245,6 @@
     "StatusBadge": [
       "src/components/__tests__/ui.test.tsx",
       "src/components/agent/WorkflowInputForm.tsx",
-      "src/pages/admin/Pages.tsx",
       "src/pages/admin/Posts.tsx"
     ],
     "SubnavTabs": [
@@ -281,15 +259,11 @@
       "src/pages/admin/PostEditor.tsx",
       "src/pages/admin/SiteSettings.tsx"
     ],
-    "TableContainer": [
-      "src/pages/admin/Pages.tsx",
-      "src/pages/admin/Posts.tsx"
-    ],
+    "TableContainer": ["src/pages/admin/Posts.tsx"],
     "TableSkeleton": [
       "src/components/__tests__/ui.test.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Notifications.tsx",
-      "src/pages/admin/Pages.tsx",
       "src/pages/admin/Posts.tsx"
     ],
     "TabList": [
