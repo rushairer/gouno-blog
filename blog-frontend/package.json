@@ -44,7 +44,7 @@
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.18.2",
     "rehype-highlight": "^7.0.2",
-    "remark-gfm": "^4.1.0",
+    "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.3",
     "@gouno/ui": "file:vendor/gouno-ui-0.3.0.tgz",
