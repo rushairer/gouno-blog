@@ -431,7 +431,6 @@
       "src/pages/admin/PostEditor.tsx",
       "src/pages/admin/SiteSettings.tsx"
     ],
-    "ThemeProvider": ["src/main.tsx"],
     "ThemeToggle": [
       "src/layouts/AdminShell.tsx",
       "src/layouts/PublicShell.tsx"
