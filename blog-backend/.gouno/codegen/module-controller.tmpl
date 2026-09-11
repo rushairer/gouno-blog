@@ -1,0 +1,8 @@
+package controller
+
+// {{ camel (arg "name") }}Controller owns HTTP adapter behavior for the {{ snake (arg "name") }} capability.
+type {{ camel (arg "name") }}Controller struct{}
+
+func New{{ camel (arg "name") }}Controller() *{{ camel (arg "name") }}Controller {
+	return &{{ camel (arg "name") }}Controller{}
+}
