@@ -1,0 +1,67 @@
+name: Gosso Release BFF Compatibility
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - ".github/workflows/gosso-release-bff-compat.yml"
+      - "docker-compose.yml"
+      - "docker-compose.source.yml"
+      - "Caddyfile"
+      - "seed/**"
+      - "blog-backend/**"
+      - "scripts/check-auth-deployment-contract.mjs"
+      - "scripts/check-gosso-release-bff-compat.sh"
+  pull_request:
+    branches: [main, master]
+    paths:
+      - ".github/workflows/gosso-release-bff-compat.yml"
+      - "docker-compose.yml"
+      - "docker-compose.source.yml"
+      - "Caddyfile"
+      - "seed/**"
+      - "blog-backend/**"
+      - "scripts/check-auth-deployment-contract.mjs"
+      - "scripts/check-gosso-release-bff-compat.sh"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: gosso-release-bff-compat-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GOSSO_RELEASE_VERSION: "1.6.1"
+  GOSSO_RELEASE_DIGEST: "sha256:cf3c321279b9860bbbcf30735dcd0d3a3465151075420d8fa70d6d66e580838b"
+  GOSSO_RELEASE_IMAGE: ghcr.io/rushairer/gosso:v1.6.1@sha256:cf3c321279b9860bbbcf30735dcd0d3a3465151075420d8fa70d6d66e580838b
+
+jobs:
+  gosso-1-6-1-bff:
+    name: Gosso v1.6.1 BFF acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Detect published Gosso runtime identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          runtime_uid="$(docker run --rm --entrypoint id "$GOSSO_RELEASE_IMAGE" -u)"
+          echo "GOSSO_RUNTIME_UID=${runtime_uid}" >> "$GITHUB_ENV"
+          echo "Published Gosso runtime UID: ${runtime_uid}"
+
+      - name: Verify released Gosso and current Blog BFF compatibility
+        run: bash scripts/check-gosso-release-bff-compat.sh
