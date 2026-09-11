@@ -9,6 +9,8 @@ import (
 )
 
 var (
+	ErrCommentAuthorEmpty    = communityservice.ErrCommentAuthorEmpty
+	ErrCommentContentEmpty   = communityservice.ErrCommentContentEmpty
 	ErrCommentContentTooLong = communityservice.ErrCommentContentTooLong
 	ErrAuthorTooLong         = communityservice.ErrAuthorTooLong
 	ErrParentCommentNotFound = communityservice.ErrParentCommentNotFound
