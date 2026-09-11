@@ -1,5 +1,5 @@
 name: Sync Gouno UI
-# Last explicit upstream sync target: gouno-ui main@0ba9fabda8e61f3a278b3fb5f37b8f671c167abb.
+# Last explicit upstream sync target: gouno-ui main@970bc1b0ad49de7b233901a5faf03c63dfa05892 (0.3.0 rollout).
 
 on:
   push:
