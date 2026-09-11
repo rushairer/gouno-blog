@@ -4,13 +4,15 @@ set -euo pipefail
 GOSSO_RELEASE_VERSION="${GOSSO_RELEASE_VERSION:-1.6.0}"
 GOSSO_RELEASE_DIGEST="${GOSSO_RELEASE_DIGEST:-sha256:5c91647bdfe7c8de9dec8e40f882680c91883f9ba2dce6fd309f7f8f3d05f445}"
 GOSSO_COMPAT_PORT="${GOSSO_COMPAT_PORT:-18081}"
-GOSSO_RUNTIME_UID="${GOSSO_RUNTIME_UID:-10001}"
+GOSSO_RUNTIME_UID="${GOSSO_RUNTIME_UID:-100}"
 BLOG_RUNTIME_UID="${BLOG_RUNTIME_UID:-10001}"
 BLOG_RESOURCE="https://blog.dev.local/api"
 BLOG_CLIENT_ID="blog-bff"
 BLOG_CLIENT_SECRET="blog-bff-secret-local"
 
 export GOSSO_IMAGE="ghcr.io/rushairer/gosso:v${GOSSO_RELEASE_VERSION}@${GOSSO_RELEASE_DIGEST}"
+export NO_PROXY="127.0.0.1,localhost,sso.dev.local,blog.dev.local,cms.dev.local,${NO_PROXY:-}"
+export no_proxy="$NO_PROXY"
 
 key_dir="$(mktemp -d)"
 cert_dir="$(mktemp -d)"
@@ -64,11 +66,12 @@ EOF
 
 prepare_signing_key() {
   openssl genpkey -algorithm RSA -out "$key_dir/private.pem" -pkeyopt rsa_keygen_bits:2048 >/dev/null 2>&1
+  chmod 700 "$key_dir"
   chmod 600 "$key_dir/private.pem"
   if [ "$(id -u)" -eq 0 ]; then
-    chown "${GOSSO_RUNTIME_UID}:${GOSSO_RUNTIME_UID}" "$key_dir" "$key_dir/private.pem"
+    chown -R "${GOSSO_RUNTIME_UID}:${GOSSO_RUNTIME_UID}" "$key_dir"
   else
-    sudo chown "${GOSSO_RUNTIME_UID}:${GOSSO_RUNTIME_UID}" "$key_dir" "$key_dir/private.pem"
+    sudo chown -R "${GOSSO_RUNTIME_UID}:${GOSSO_RUNTIME_UID}" "$key_dir"
   fi
 }
 
@@ -126,24 +129,24 @@ trap cleanup EXIT
 
 printf '[compat] Gosso release: v%s@%s\n' "$GOSSO_RELEASE_VERSION" "$GOSSO_RELEASE_DIGEST"
 
-if ! "${compose[@]}" config | grep -Fq "image: ${GOSSO_IMAGE}"; then
-  echo '[compat] compose did not resolve the pinned Gosso release image' >&2
-  exit 1
-fi
-if ! "${compose[@]}" config | grep -Fq 'GOUNO_AUTH_BACKCHANNEL_ALLOWED_CIDRS=172.21.0.0/16'; then
-  echo '[compat] Blog stack is not explicitly allowlisting its private Docker bridge for back-channel logout' >&2
-  exit 1
-fi
-if "${compose[@]}" config | grep -F 'GOUNO_AUTH_BACKCHANNEL_ALLOWED_CIDRS=' | grep -Eq '127\.0\.0\.1|::1'; then
-  echo '[compat] loopback must never be allowlisted for back-channel logout' >&2
-  exit 1
-fi
+compose_json="$("${compose[@]}" config --format json)"
+COMPOSE_JSON="$compose_json" EXPECTED_IMAGE="$GOSSO_IMAGE" python3 - <<'PY'
+import json
+import os
+
+cfg = json.loads(os.environ['COMPOSE_JSON'])
+gosso = cfg['services']['gosso']
+assert gosso.get('image') == os.environ['EXPECTED_IMAGE'], (gosso.get('image'), os.environ['EXPECTED_IMAGE'])
+env = gosso.get('environment') or {}
+allowed = env.get('GOUNO_AUTH_BACKCHANNEL_ALLOWED_CIDRS')
+assert allowed == '172.21.0.0/16', allowed
+assert '127.0.0.1' not in allowed and '::1' not in allowed, allowed
+PY
 printf '[ok] deployment contract pins the release and private-CIDR exception only\n'
 
 "${compose[@]}" pull gosso gosso-admin-seed
 "${compose[@]}" build blog-backend blog-client-seed
 
-# Generate the exact Tink keyset format consumed by the current backend binary.
 if [ "$(id -u)" -eq 0 ]; then
   chown "${BLOG_RUNTIME_UID}:${BLOG_RUNTIME_UID}" "$secret_dir"
 else
@@ -169,9 +172,6 @@ if [ "$ready" != "true" ]; then
 fi
 printf '[ok] release image booted, migrated, and became ready\n'
 
-# Bootstrap the account with the current Admin seed artifact, then execute the
-# current Blog seed image built from this checkout. This exercises the real
-# cross-repository schema dependency without modifying either seed policy.
 "${compose[@]}" run --rm --no-deps gosso-admin-seed
 "${compose[@]}" run --rm --no-deps blog-client-seed
 
@@ -290,9 +290,6 @@ refreshed_refresh_token="$(printf '%s' "$refresh_json" | python3 -c 'import json
 jwt_assert_resource_token "$refreshed_access_token"
 printf '[ok] refresh preserves the exact Blog resource audience\n'
 
-# Build the current BFF runtime around the released OP and exercise its browser
-# boundary plus real HTTPS back-channel logout over the explicitly allowed
-# private Docker bridge.
 printf '127.0.0.1 sso.dev.local blog.dev.local %s\n' "$hosts_marker" | sudo tee -a /etc/hosts >/dev/null
 "${compose[@]}" up -d --no-deps gateway
 for _ in $(seq 1 30); do
@@ -323,7 +320,6 @@ curl -sS -D /tmp/blog-bff-login-headers.txt -o /tmp/blog-bff-login-body.txt \
 BFF_RESOURCE="$BLOG_RESOURCE" python3 - <<'PY'
 from urllib.parse import parse_qs, urlparse
 import os
-import re
 
 headers = open('/tmp/blog-bff-login-headers.txt', encoding='utf-8').read().splitlines()
 location = ''
@@ -385,7 +381,6 @@ if [ "$backchannel_ok" != "true" ]; then
 fi
 printf '[ok] HTTPS back-channel logout succeeds through the explicit private-CIDR exception\n'
 
-# Exercise RFC 7009 with the latest refresh credential after all assertions.
 revoke_token="$refreshed_refresh_token"
 if [ -z "$revoke_token" ]; then
   revoke_token="$refresh_token"
