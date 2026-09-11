@@ -361,89 +361,6 @@ func (r *PostRepository) PublishScheduled(ctx context.Context) (int64, error) {
 	return result.RowsAffected()
 }
 
-// Comments Repository Methods
-func (r *PostRepository) CreateComment(ctx context.Context, comment *domain.Comment) error {
-	query := `
-		INSERT INTO comments (post_id, parent_id, author, content, is_visible, created_at)
-		VALUES ($1, $2, $3, $4, false, NOW())
-		RETURNING id, is_visible, created_at
-	`
-	err := r.db.QueryRowContext(ctx, query,
-		comment.PostID, comment.ParentID, comment.Author, comment.Content,
-	).Scan(&comment.ID, &comment.IsVisible, &comment.CreatedAt)
-	return err
-}
-
-func (r *PostRepository) GetVisibleCommentsByPostID(ctx context.Context, postID int64) ([]*domain.Comment, error) {
-	return r.getCommentsByPostID(ctx, postID, true)
-}
-
-func (r *PostRepository) GetAllCommentsByPostID(ctx context.Context, postID int64) ([]*domain.Comment, error) {
-	return r.getCommentsByPostID(ctx, postID, false)
-}
-
-func (r *PostRepository) getCommentsByPostID(ctx context.Context, postID int64, visibleOnly bool) ([]*domain.Comment, error) {
-	query := `
-		SELECT id, post_id, parent_id, author, content, is_visible, created_at
-		FROM comments
-		WHERE post_id = $1
-		ORDER BY created_at ASC
-	`
-	if visibleOnly {
-		query = `
-			SELECT id, post_id, parent_id, author, content, is_visible, created_at
-			FROM comments
-			WHERE post_id = $1 AND is_visible = true
-			ORDER BY created_at ASC
-		`
-	}
-	rows, err := r.db.QueryContext(ctx, query, postID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	comments := make([]*domain.Comment, 0)
-	for rows.Next() {
-		var comment domain.Comment
-		err := rows.Scan(&comment.ID, &comment.PostID, &comment.ParentID, &comment.Author, &comment.Content, &comment.IsVisible, &comment.CreatedAt)
-		if err != nil {
-			return nil, err
-		}
-		comments = append(comments, &comment)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return comments, nil
-}
-
-func (r *PostRepository) SetCommentVisibility(ctx context.Context, id int64, isVisible bool) error {
-	query := `UPDATE comments SET is_visible = $1 WHERE id = $2`
-	result, err := r.db.ExecContext(ctx, query, isVisible, id)
-	if err != nil {
-		return err
-	}
-	rows, err := result.RowsAffected()
-	if err == nil && rows == 0 {
-		return sql.ErrNoRows
-	}
-	return err
-}
-
-func (r *PostRepository) DeleteComment(ctx context.Context, id int64) error {
-	query := `DELETE FROM comments WHERE id = $1`
-	result, err := r.db.ExecContext(ctx, query, id)
-	if err != nil {
-		return err
-	}
-	rows, err := result.RowsAffected()
-	if err == nil && rows == 0 {
-		return sql.ErrNoRows
-	}
-	return err
-}
-
 func (r *PostRepository) Batch(ctx context.Context, ids []int64, action string) (int64, error) {
 	var (
 		result sql.Result
@@ -475,4 +392,3 @@ func (r *PostRepository) Batch(ctx context.Context, ids []int64, action string) 
 	}
 	return result.RowsAffected()
 }
-
