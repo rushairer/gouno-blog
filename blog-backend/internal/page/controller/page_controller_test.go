@@ -182,7 +182,7 @@ func TestPageControllerEndpoints(t *testing.T) {
 	w = httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 	if w.Code != http.StatusCreated {
-		t.Fatalf("Create draft page status = %d, want %d", w.Code, http.StatusCreated, w.Body.String())
+		t.Fatalf("Create draft page status = %d, want %d; body: %s", w.Code, http.StatusCreated, w.Body.String())
 	}
 
 	req = httptest.NewRequest(http.MethodGet, "/api/pages/draft-page", nil)
