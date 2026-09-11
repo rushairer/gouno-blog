@@ -10,7 +10,6 @@
     "AdminPage": [
       "src/pages/admin/AIOperations.tsx",
       "src/pages/admin/AISettings.tsx",
-      "src/pages/admin/Categories.tsx",
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Notifications.tsx",
@@ -21,7 +20,6 @@
     "AdminPageHeader": [
       "src/pages/admin/AIOperations.tsx",
       "src/pages/admin/AISettings.tsx",
-      "src/pages/admin/Categories.tsx",
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Notifications.tsx",
@@ -39,7 +37,6 @@
     ],
     "AsyncState": [
       "src/components/__tests__/ui.test.tsx",
-      "src/pages/admin/Categories.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Notifications.tsx",
       "src/pages/admin/Pages.tsx",
@@ -54,7 +51,6 @@
     "BulkActionBar": [
       "src/components/__tests__/ui.test.tsx",
       "src/components/agent/OperationsWorkspace.tsx",
-      "src/pages/admin/Categories.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Notifications.tsx",
       "src/pages/admin/Pages.tsx",
@@ -81,7 +77,6 @@
       "src/components/agent/tools/ToolBindingsEditor.tsx",
       "src/pages/admin/AIOperations.tsx",
       "src/pages/admin/AISettings.tsx",
-      "src/pages/admin/Categories.tsx",
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Notifications.tsx",
@@ -101,7 +96,6 @@
     ],
     "Card": [
       "src/components/__tests__/ui.test.tsx",
-      "src/pages/admin/Categories.tsx",
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Notifications.tsx",
@@ -131,7 +125,6 @@
       "src/pages/admin/Users.tsx"
     ],
     "ContentStack": [
-      "src/pages/admin/Categories.tsx",
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Notifications.tsx",
@@ -174,7 +167,6 @@
       "src/components/agent/WorkflowRunRecords.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/components/media/MediaDrawerForms.tsx",
-      "src/pages/admin/Categories.tsx",
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Notifications.tsx",
@@ -216,17 +208,14 @@
       "src/components/agent/WorkflowInputForm.tsx",
       "src/components/agent/WorkflowRunRecords.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
-      "src/pages/admin/Categories.tsx",
       "src/pages/admin/Pages.tsx",
       "src/pages/admin/Posts.tsx"
     ],
     "ListRow": [
-      "src/pages/admin/Categories.tsx",
       "src/pages/admin/Pages.tsx",
       "src/pages/admin/Posts.tsx"
     ],
     "ListStack": [
-      "src/pages/admin/Categories.tsx",
       "src/pages/admin/Pages.tsx",
       "src/pages/admin/Posts.tsx"
     ],
@@ -293,13 +282,11 @@
       "src/pages/admin/SiteSettings.tsx"
     ],
     "TableContainer": [
-      "src/pages/admin/Categories.tsx",
       "src/pages/admin/Pages.tsx",
       "src/pages/admin/Posts.tsx"
     ],
     "TableSkeleton": [
       "src/components/__tests__/ui.test.tsx",
-      "src/pages/admin/Categories.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Notifications.tsx",
       "src/pages/admin/Pages.tsx",
