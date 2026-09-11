@@ -29,6 +29,9 @@ func (r *fakeCommunityRepo) CreateComment(_ context.Context, comment *domain.Com
 func (*fakeCommunityRepo) GetVisibleComments(context.Context, int64) ([]*domain.Comment, error) {
 	return nil, nil
 }
+func (*fakeCommunityRepo) GetAllComments(context.Context, int64) ([]*domain.Comment, error) {
+	return nil, nil
+}
 func (*fakeCommunityRepo) ListCommentsForAdmin(context.Context, string, bool, int, int) ([]*domain.Comment, int, error) {
 	return nil, 0, nil
 }
