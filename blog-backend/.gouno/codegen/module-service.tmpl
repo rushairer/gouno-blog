@@ -1,0 +1,8 @@
+package service
+
+// {{ camel (arg "name") }}Service owns application behavior for the {{ snake (arg "name") }} capability.
+type {{ camel (arg "name") }}Service struct{}
+
+func New{{ camel (arg "name") }}Service() *{{ camel (arg "name") }}Service {
+	return &{{ camel (arg "name") }}Service{}
+}
