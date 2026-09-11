@@ -49,6 +49,15 @@ jobs:
             .replace('variant="primary"', 'variant="solid"');
           await writeFile(formPath, migrated);
 
+          const testPath = 'blog-frontend/src/pages/admin/__tests__/Categories.test.tsx';
+          const testSource = await readFile(testPath, 'utf8');
+          const oldAssertion = `expect(screen.getByRole("button", { name: "创建分类" })).toHaveClass(\n      "btn-primary",\n    );`;
+          const canonicalAssertion = `expect(screen.getByRole("button", { name: "创建分类" })).toHaveAttribute(\n      "data-variant",\n      "solid",\n    );`;
+          if (!testSource.includes(oldAssertion)) {
+            throw new Error('Expected legacy CategoryForm primary button assertion was not found');
+          }
+          await writeFile(testPath, testSource.replace(oldAssertion, canonicalAssertion));
+
           const allowlistPath = 'blog-frontend/scripts/legacy-ui-allowlist.json';
           const targetFile = 'src/components/taxonomy/CategoryForm.tsx';
           const allowlist = JSON.parse(await readFile(allowlistPath, 'utf8'));
@@ -69,6 +78,7 @@ jobs:
           npm ci
           npx prettier --write \
             src/components/taxonomy/CategoryForm.tsx \
+            src/pages/admin/__tests__/Categories.test.tsx \
             scripts/legacy-ui-allowlist.json
           npm run test:run -- src/pages/admin/__tests__/Categories.test.tsx
           npm run quality
@@ -87,11 +97,13 @@ jobs:
           grep -q '@gouno/ui/core' blog-frontend/src/components/taxonomy/CategoryForm.tsx
           grep -q 'variant="outline"' blog-frontend/src/components/taxonomy/CategoryForm.tsx
           grep -q 'variant="solid"' blog-frontend/src/components/taxonomy/CategoryForm.tsx
+          grep -q '"data-variant"' blog-frontend/src/pages/admin/__tests__/Categories.test.tsx
 
           rm .github/workflows/migrate-category-form-once.yml
 
           git add \
             blog-frontend/src/components/taxonomy/CategoryForm.tsx \
+            blog-frontend/src/pages/admin/__tests__/Categories.test.tsx \
             blog-frontend/scripts/legacy-ui-allowlist.json \
             .github/workflows/migrate-category-form-once.yml
           git config user.name "github-actions[bot]"
