@@ -1,20 +1,24 @@
 package controller
 
 import (
-	"errors"
-	"net/http"
-
 	"github.com/gin-gonic/gin"
+	sitecontroller "github.com/rushairer/blog-backend/internal/site/controller"
 	"github.com/rushairer/blog-backend/internal/service"
-	"github.com/rushairer/gouno"
+	taxonomycontroller "github.com/rushairer/blog-backend/internal/taxonomy/controller"
 )
 
+// ContentController is retained as a compatibility facade while callers move
+// to the capability-owned Taxonomy and Site controllers.
 type ContentController struct {
-	svc service.CategoryService
+	taxonomy *taxonomycontroller.Controller
+	site     *sitecontroller.Controller
 }
 
 func NewContentController(svc service.CategoryService) *ContentController {
-	return &ContentController{svc: svc}
+	return &ContentController{
+		taxonomy: taxonomycontroller.New(svc),
+		site:     sitecontroller.New(svc),
+	}
 }
 
 func validSiteURL(value string, allowPath bool) bool {
@@ -22,187 +26,49 @@ func validSiteURL(value string, allowPath bool) bool {
 }
 
 func (ctrl *ContentController) ListCategories(c *gin.Context) {
-	items, err := ctrl.svc.ListCategories(c.Request.Context())
-	if err != nil {
-		WriteDomainError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
+	ctrl.taxonomy.ListCategories(c)
 }
 
 func (ctrl *ContentController) ListPublishedTagSummaries(c *gin.Context) {
-	items, err := ctrl.svc.ListPublishedTagSummaries(c.Request.Context())
-	if err != nil {
-		WriteDomainError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
+	ctrl.taxonomy.ListPublishedTagSummaries(c)
 }
 
 func (ctrl *ContentController) ListCategoryPosts(c *gin.Context) {
-	page, pageSize := ExtractPagination(c, 10)
-
-	posts, total, err := ctrl.svc.ListCategoryPosts(c.Request.Context(), c.Param("slug"), page, pageSize)
-	if err != nil {
-		if errors.Is(err, service.ErrCategoryNotFound) {
-			c.JSON(http.StatusNotFound, gouno.NewErrorResponse(http.StatusNotFound, "category not found"))
-			return
-		}
-		WriteDomainError(c, err)
-		return
-	}
-	WritePaginated(c, posts, total, page, pageSize)
+	ctrl.taxonomy.ListCategoryPosts(c)
 }
 
 func (ctrl *ContentController) CreateCategory(c *gin.Context) {
-	var req service.CategoryRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "name and a valid lowercase slug are required"))
-		return
-	}
-	item, err := ctrl.svc.CreateCategory(c.Request.Context(), &req)
-	if err != nil {
-		if errors.Is(err, service.ErrCategoryNameRequired) {
-			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
-			return
-		}
-		WriteDomainError(c, err)
-		return
-	}
-	c.JSON(http.StatusCreated, gouno.NewSuccessResponse(item))
+	ctrl.taxonomy.CreateCategory(c)
 }
 
 func (ctrl *ContentController) UpdateCategory(c *gin.Context) {
-	id, ok := ParamPositiveID(c, "id")
-	if !ok {
-		return
-	}
-	var req service.CategoryRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "name and a valid lowercase slug are required"))
-		return
-	}
-	err := ctrl.svc.UpdateCategory(c.Request.Context(), id, &req)
-	if err != nil {
-		if errors.Is(err, service.ErrCategoryNotFound) {
-			c.JSON(http.StatusNotFound, gouno.NewErrorResponse(http.StatusNotFound, "category not found"))
-			return
-		}
-		if errors.Is(err, service.ErrCategoryNameRequired) || errors.Is(err, service.ErrInvalidCategoryID) {
-			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
-			return
-		}
-		WriteDomainError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
+	ctrl.taxonomy.UpdateCategory(c)
 }
 
 func (ctrl *ContentController) DeleteCategory(c *gin.Context) {
-	id, ok := ParamPositiveID(c, "id")
-	if !ok {
-		return
-	}
-	err := ctrl.svc.DeleteCategory(c.Request.Context(), id)
-	if err != nil {
-		if errors.Is(err, service.ErrCategoryNotFound) {
-			c.JSON(http.StatusNotFound, gouno.NewErrorResponse(http.StatusNotFound, "category not found"))
-			return
-		}
-		if errors.Is(err, service.ErrInvalidCategoryID) {
-			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
-			return
-		}
-		WriteDomainError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
+	ctrl.taxonomy.DeleteCategory(c)
 }
 
 func (ctrl *ContentController) ListAdminTags(c *gin.Context) {
-	items, err := ctrl.svc.ListAdminTags(c.Request.Context())
-	if err != nil {
-		WriteDomainError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
+	ctrl.taxonomy.ListAdminTags(c)
 }
 
 func (ctrl *ContentController) RenameTag(c *gin.Context) {
-	var req struct {
-		Name string `json:"name"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "new tag name is required"))
-		return
-	}
-	err := ctrl.svc.RenameTag(c.Request.Context(), c.Param("name"), req.Name)
-	if err != nil {
-		if errors.Is(err, service.ErrInvalidTagPayload) {
-			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "new tag name is required"))
-			return
-		}
-		WriteDomainError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
+	ctrl.taxonomy.RenameTag(c)
 }
 
 func (ctrl *ContentController) DeleteTag(c *gin.Context) {
-	err := ctrl.svc.DeleteTag(c.Request.Context(), c.Param("name"))
-	if err != nil {
-		WriteDomainError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
+	ctrl.taxonomy.DeleteTag(c)
 }
 
 func (ctrl *ContentController) MergeTags(c *gin.Context) {
-	var req struct {
-		Source string `json:"source"`
-		Target string `json:"target"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil || req.Source == "" || req.Target == "" || req.Source == req.Target {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "distinct source and target tags are required"))
-		return
-	}
-	err := ctrl.svc.MergeTags(c.Request.Context(), req.Source, req.Target)
-	if err != nil {
-		WriteDomainError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
+	ctrl.taxonomy.MergeTags(c)
 }
 
 func (ctrl *ContentController) GetSiteSettings(c *gin.Context) {
-	settings, err := ctrl.svc.GetSiteSettings(c.Request.Context())
-	if err != nil {
-		WriteDomainError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(settings))
+	ctrl.site.GetSiteSettings(c)
 }
 
 func (ctrl *ContentController) UpdateSiteSettings(c *gin.Context) {
-	var requested map[string]string
-	if err := c.ShouldBindJSON(&requested); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "invalid settings payload"))
-		return
-	}
-	settings, err := ctrl.svc.UpdateSiteSettings(c.Request.Context(), requested)
-	if err != nil {
-		switch {
-		case errors.Is(err, service.ErrSettingValueTooLong),
-			errors.Is(err, service.ErrSiteTitleEmpty),
-			errors.Is(err, service.ErrInvalidRSSURL),
-			errors.Is(err, service.ErrInvalidGithubURL),
-			errors.Is(err, service.ErrInvalidFaviconURL):
-			c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
-			return
-		default:
-			WriteDomainError(c, err)
-			return
-		}
-	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(settings))
+	ctrl.site.UpdateSiteSettings(c)
 }

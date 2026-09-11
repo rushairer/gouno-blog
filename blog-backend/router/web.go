@@ -15,6 +15,10 @@ import (
 	"github.com/rushairer/blog-backend/internal/media"
 	"github.com/rushairer/blog-backend/internal/ratelimit"
 	"github.com/rushairer/blog-backend/internal/service"
+	sitecontroller "github.com/rushairer/blog-backend/internal/site/controller"
+	siteservice "github.com/rushairer/blog-backend/internal/site/service"
+	taxonomycontroller "github.com/rushairer/blog-backend/internal/taxonomy/controller"
+	taxonomyservice "github.com/rushairer/blog-backend/internal/taxonomy/service"
 	"github.com/rushairer/blog-backend/middleware"
 	"github.com/rushairer/gouno"
 	auth "github.com/rushairer/gouno/auth"
@@ -31,7 +35,8 @@ type WebRouterOptions struct {
 	CORSAllowedOrigins []string
 	PostSvc            *service.PostService
 	PageSvc            *service.PageService
-	CategorySvc        service.CategoryService
+	TaxonomySvc        taxonomyservice.Service
+	SiteSvc            siteservice.Service
 	CommunitySvc       *communityservice.CommunityService
 	GrowthSvc          *service.GrowthService
 	AgentCtrl          *controller.AgentController
@@ -43,7 +48,7 @@ type WebRouterOptions struct {
 }
 
 func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
-	if opts.PostSvc == nil || opts.PageSvc == nil || opts.CategorySvc == nil || opts.CommunitySvc == nil || opts.GrowthSvc == nil {
+	if opts.PostSvc == nil || opts.PageSvc == nil || opts.TaxonomySvc == nil || opts.SiteSvc == nil || opts.CommunitySvc == nil || opts.GrowthSvc == nil {
 		panic("RegisterWebRouterWithOptions: all application services are required")
 	}
 	if opts.Verifier == nil || opts.AccessService == nil {
@@ -73,10 +78,13 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 	pageSvc := opts.PageSvc
 	pageCtrl := controller.NewPageController(pageSvc)
 
-	catSvc := opts.CategorySvc
-	contentCtrl := controller.NewContentController(catSvc)
+	taxonomySvc := opts.TaxonomySvc
+	taxonomyCtrl := taxonomycontroller.New(taxonomySvc)
 
-	feedCtrl := controller.NewFeedController(postSvc, pageSvc, catSvc)
+	siteSvc := opts.SiteSvc
+	siteCtrl := sitecontroller.New(siteSvc)
+
+	feedCtrl := controller.NewFeedController(postSvc, pageSvc, siteSvc)
 
 	communitySvc := opts.CommunitySvc
 	var interactionLimiter ratelimit.Limiter
@@ -168,12 +176,12 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 		api.PUT("/posts/:slugOrID/like", communityCtrl.Like)
 		api.DELETE("/posts/:slugOrID/like", communityCtrl.Unlike)
 		api.GET("/tags", ctrl.ListTags)
-		api.GET("/tags/summary", contentCtrl.ListPublishedTagSummaries)
-		api.GET("/categories", contentCtrl.ListCategories)
-		api.GET("/categories/:slug/posts", contentCtrl.ListCategoryPosts)
+		api.GET("/tags/summary", taxonomyCtrl.ListPublishedTagSummaries)
+		api.GET("/categories", taxonomyCtrl.ListCategories)
+		api.GET("/categories/:slug/posts", taxonomyCtrl.ListCategoryPosts)
 		api.GET("/pages/nav", pageCtrl.GetNavPages)
 		api.GET("/pages/:slug", pageCtrl.GetPublicBySlug)
-		api.GET("/site", contentCtrl.GetSiteSettings)
+		api.GET("/site", siteCtrl.GetSiteSettings)
 
 		api.GET("/posts/:slugOrID/comments", communityCtrl.GetComments)
 		api.POST("/posts/:slugOrID/comments", communityCtrl.CreateComment)
@@ -221,8 +229,8 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 			author.PUT("/posts/:slugOrID", ctrl.Update)
 			author.GET("/admin/posts/:id/versions", growthCtrl.ListVersions)
 			author.POST("/admin/posts/:id/versions/:versionID/restore", growthCtrl.RestoreVersion)
-			author.GET("/admin/categories", contentCtrl.ListCategories)
-			author.GET("/admin/tags", contentCtrl.ListAdminTags)
+			author.GET("/admin/categories", taxonomyCtrl.ListCategories)
+			author.GET("/admin/tags", taxonomyCtrl.ListAdminTags)
 			author.GET("/admin/media", growthCtrl.ListMedia)
 			author.POST("/admin/media", growthCtrl.UploadMedia)
 			author.PUT("/admin/media/:id", growthCtrl.UpdateMedia)
@@ -245,12 +253,12 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 			contentManage.POST("/admin/pages", pageCtrl.Create)
 			contentManage.PUT("/admin/pages/:id", pageCtrl.Update)
 			contentManage.DELETE("/admin/pages/:id", pageCtrl.Delete)
-			contentManage.POST("/admin/categories", contentCtrl.CreateCategory)
-			contentManage.PUT("/admin/categories/:id", contentCtrl.UpdateCategory)
-			contentManage.DELETE("/admin/categories/:id", contentCtrl.DeleteCategory)
-			contentManage.PUT("/admin/tags/:name", contentCtrl.RenameTag)
-			contentManage.POST("/admin/tags/merge", contentCtrl.MergeTags)
-			contentManage.DELETE("/admin/tags/:name", contentCtrl.DeleteTag)
+			contentManage.POST("/admin/categories", taxonomyCtrl.CreateCategory)
+			contentManage.PUT("/admin/categories/:id", taxonomyCtrl.UpdateCategory)
+			contentManage.DELETE("/admin/categories/:id", taxonomyCtrl.DeleteCategory)
+			contentManage.PUT("/admin/tags/:name", taxonomyCtrl.RenameTag)
+			contentManage.POST("/admin/tags/merge", taxonomyCtrl.MergeTags)
+			contentManage.DELETE("/admin/tags/:name", taxonomyCtrl.DeleteTag)
 		}
 
 		// Analytics / General Overview (Any active Blog staff role)
@@ -265,8 +273,8 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 		siteSettings.Use(userAuth, accessAuth, middleware.RequireBlogPermission(accessService, access.PermissionManageSite))
 		siteSettings.Use(middleware.RequireAAL2(), middleware.RequireRecentMFAForUnsafeMethods(), middleware.AuditSensitiveChanges(accessService))
 		{
-			siteSettings.GET("/admin/settings", contentCtrl.GetSiteSettings)
-			siteSettings.PUT("/admin/settings", contentCtrl.UpdateSiteSettings)
+			siteSettings.GET("/admin/settings", siteCtrl.GetSiteSettings)
+			siteSettings.PUT("/admin/settings", siteCtrl.UpdateSiteSettings)
 		}
 
 		// AI Operations & Automated Agents (AI Managers, Admins, Owners)
