@@ -1,0 +1,100 @@
+name: Migrate Blog Category Form Once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/migrate-category-form-once.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: migrate-blog-category-form-once
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: blog-frontend/package-lock.json
+
+      - name: Apply canonical CategoryForm migration and verify
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          node --input-type=module <<'EOF'
+          import { readFile, writeFile } from 'node:fs/promises';
+
+          const formPath = 'blog-frontend/src/components/taxonomy/CategoryForm.tsx';
+          const source = await readFile(formPath, 'utf8');
+          const legacyImport = 'import { Button } from "@gouno/ui-legacy";';
+          if (!source.includes(legacyImport)) {
+            throw new Error('Expected CategoryForm legacy Button import was not found');
+          }
+          const migrated = source
+            .replace(legacyImport, 'import { Button } from "@gouno/ui/core";')
+            .replace('variant="secondary"', 'variant="outline"')
+            .replace('variant="primary"', 'variant="solid"');
+          await writeFile(formPath, migrated);
+
+          const allowlistPath = 'blog-frontend/scripts/legacy-ui-allowlist.json';
+          const targetFile = 'src/components/taxonomy/CategoryForm.tsx';
+          const allowlist = JSON.parse(await readFile(allowlistPath, 'utf8'));
+          const files = allowlist.allowedLegacyImports?.Button;
+          if (!Array.isArray(files) || !files.includes(targetFile)) {
+            throw new Error(`Expected Button legacy pair for ${targetFile}`);
+          }
+          const next = files.filter((file) => file !== targetFile);
+          if (files.length - next.length !== 1) {
+            throw new Error('Expected exactly one CategoryForm legacy Button pair');
+          }
+          if (next.length) allowlist.allowedLegacyImports.Button = next;
+          else delete allowlist.allowedLegacyImports.Button;
+          await writeFile(allowlistPath, `${JSON.stringify(allowlist, null, 2)}\n`);
+          EOF
+
+          cd blog-frontend
+          npm ci
+          npx prettier --write \
+            src/components/taxonomy/CategoryForm.tsx \
+            scripts/legacy-ui-allowlist.json
+          npm run test:run -- src/pages/admin/__tests__/Categories.test.tsx
+          npm run quality
+          cd ..
+          docker build -f blog-frontend/Dockerfile blog-frontend
+
+      - name: Commit verified migration and self-clean
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if grep -n '@gouno/ui-legacy' blog-frontend/src/components/taxonomy/CategoryForm.tsx; then
+            echo 'CategoryForm still imports legacy UI' >&2
+            exit 1
+          fi
+          grep -q '@gouno/ui/core' blog-frontend/src/components/taxonomy/CategoryForm.tsx
+          grep -q 'variant="outline"' blog-frontend/src/components/taxonomy/CategoryForm.tsx
+          grep -q 'variant="solid"' blog-frontend/src/components/taxonomy/CategoryForm.tsx
+
+          rm .github/workflows/migrate-category-form-once.yml
+
+          git add \
+            blog-frontend/src/components/taxonomy/CategoryForm.tsx \
+            blog-frontend/scripts/legacy-ui-allowlist.json \
+            .github/workflows/migrate-category-form-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "refactor(ui): migrate Blog CategoryForm to canonical Gouno UI"
+          git push origin HEAD:main
