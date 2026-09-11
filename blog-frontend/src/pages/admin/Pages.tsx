@@ -208,7 +208,8 @@ export default function AdminPages() {
   };
 
   const allSelected =
-    pages.length > 0 && pages.every((pageItem) => selected.includes(pageItem.id));
+    pages.length > 0 &&
+    pages.every((pageItem) => selected.includes(pageItem.id));
 
   return (
     <div className="flex flex-col gap-6">
@@ -240,7 +241,9 @@ export default function AdminPages() {
             className="w-full sm:w-40"
             aria-label="单页状态"
             value={status}
-            onChange={(event) => setFilter("status", event.target.value)}
+            onChange={(value) =>
+              setFilter("status", Array.isArray(value) ? (value[0] ?? "") : value)
+            }
           >
             <option value="">全部状态</option>
             <option value="published">已发布</option>
