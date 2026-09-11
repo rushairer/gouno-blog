@@ -6,13 +6,11 @@
   "legacyPackage": "@gouno/ui-legacy",
   "legacyVersion": "0.1.0",
   "allowedLegacyImports": {
-    "ActionGroup": ["src/pages/admin/Notifications.tsx"],
     "AdminPage": [
       "src/pages/admin/AIOperations.tsx",
       "src/pages/admin/AISettings.tsx",
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/MediaLibrary.tsx",
-      "src/pages/admin/Notifications.tsx",
       "src/pages/admin/SiteSettings.tsx"
     ],
     "AdminPageHeader": [
@@ -20,7 +18,6 @@
       "src/pages/admin/AISettings.tsx",
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/MediaLibrary.tsx",
-      "src/pages/admin/Notifications.tsx",
       "src/pages/admin/SiteSettings.tsx"
     ],
     "AdminPageState": [
@@ -33,19 +30,16 @@
     ],
     "AsyncState": [
       "src/components/__tests__/ui.test.tsx",
-      "src/pages/admin/MediaLibrary.tsx",
-      "src/pages/admin/Notifications.tsx"
+      "src/pages/admin/MediaLibrary.tsx"
     ],
     "Badge": [
       "src/components/__tests__/ui.test.tsx",
-      "src/pages/admin/Dashboard.tsx",
-      "src/pages/admin/Notifications.tsx"
+      "src/pages/admin/Dashboard.tsx"
     ],
     "BulkActionBar": [
       "src/components/__tests__/ui.test.tsx",
       "src/components/agent/OperationsWorkspace.tsx",
-      "src/pages/admin/MediaLibrary.tsx",
-      "src/pages/admin/Notifications.tsx"
+      "src/pages/admin/MediaLibrary.tsx"
     ],
     "Button": [
       "src/components/__tests__/ui.test.tsx",
@@ -70,7 +64,6 @@
       "src/pages/admin/AISettings.tsx",
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/MediaLibrary.tsx",
-      "src/pages/admin/Notifications.tsx",
       "src/pages/admin/PageEditor.tsx",
       "src/pages/admin/PostEditor.tsx",
       "src/pages/admin/SiteSettings.tsx"
@@ -78,14 +71,12 @@
     "ButtonLink": [
       "src/components/__tests__/ui.test.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
-      "src/pages/admin/Dashboard.tsx",
-      "src/pages/admin/Notifications.tsx"
+      "src/pages/admin/Dashboard.tsx"
     ],
     "Card": [
       "src/components/__tests__/ui.test.tsx",
       "src/pages/admin/Dashboard.tsx",
-      "src/pages/admin/MediaLibrary.tsx",
-      "src/pages/admin/Notifications.tsx"
+      "src/pages/admin/MediaLibrary.tsx"
     ],
     "CardContent": [
       "src/components/__tests__/ui.test.tsx",
@@ -111,8 +102,7 @@
     ],
     "ContentStack": [
       "src/pages/admin/Dashboard.tsx",
-      "src/pages/admin/MediaLibrary.tsx",
-      "src/pages/admin/Notifications.tsx"
+      "src/pages/admin/MediaLibrary.tsx"
     ],
     "copyText": ["src/pages/admin/MediaLibrary.tsx"],
     "EditorPanel": [
@@ -145,7 +135,6 @@
       "src/components/media/MediaDrawerForms.tsx",
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/MediaLibrary.tsx",
-      "src/pages/admin/Notifications.tsx",
       "src/pages/admin/PageEditor.tsx",
       "src/pages/admin/PostEditor.tsx",
       "src/pages/admin/SiteSettings.tsx"
@@ -218,7 +207,6 @@
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/components/agent/tools/DistributionDraftConfig.tsx",
       "src/pages/admin/MediaLibrary.tsx",
-      "src/pages/admin/Notifications.tsx",
       "src/pages/admin/PageEditor.tsx",
       "src/pages/admin/PostEditor.tsx"
     ],
@@ -241,8 +229,7 @@
     ],
     "TableSkeleton": [
       "src/components/__tests__/ui.test.tsx",
-      "src/pages/admin/MediaLibrary.tsx",
-      "src/pages/admin/Notifications.tsx"
+      "src/pages/admin/MediaLibrary.tsx"
     ],
     "TabList": [
       "src/components/__tests__/ui.test.tsx",

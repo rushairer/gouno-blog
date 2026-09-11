@@ -92,8 +92,9 @@ describe("Admin Notifications Page", () => {
       await screen.findByText("Workflow 运行失败：AI 每日资讯"),
     ).toBeInTheDocument();
 
-    const typeSelect = screen.getByLabelText("类型筛选");
-    await user.selectOptions(typeSelect, "ai");
+    const typeSelect = screen.getByRole("combobox", { name: "类型筛选" });
+    await user.click(typeSelect);
+    await user.click(screen.getByRole("option", { name: "AI 运营告警" }));
 
     expect(
       screen.getByText("Workflow 运行失败：AI 每日资讯"),
