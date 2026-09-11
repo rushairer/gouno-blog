@@ -7,7 +7,7 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
-- Align the bundled Gosso deployment contract with the 1.6 security baseline: remove the ineffective loopback back-channel allowlist, keep only the explicit Docker private subnet, and update the production Gosso image example to v1.6.0.
+- Align the bundled Gosso deployment contract with the final 1.6 security baseline: keep only the explicit Docker private back-channel subnet, advance the production Gosso image example to v1.6.1, and gate confidential-BFF RFC 7009 revocation against the published v1.6.1 artifact.
 - Standardize Modal structure and design system alignment: move modal action buttons out of form/body content into unified sticky `footer` prop across all modals (Step-Up MFA, Tags, Users, Post Reports, Article Preview), and maintain stable close button geometry anchored to the title bar regardless of subtitle presence.
 - Align Knowledge Base (Embedding Profiles) table layout and styling with Model Connections (Provider Profiles): separate API Key into an isolated secret-masked column with standard subtext, use `.provider-identity` cell structure, and unify action icon primitives (`Edit2`).
 
