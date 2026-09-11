@@ -7,10 +7,11 @@ import (
 	"time"
 
 	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/testsupport"
 )
 
 func TestGrowthRepositoryContentLifecycle(t *testing.T) {
-	db := communityTestDB(t)
+	db := testsupport.OpenTestDB(t)
 	defer db.Close()
 	ctx := context.Background()
 	suffix := time.Now().UnixNano()

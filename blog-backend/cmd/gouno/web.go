@@ -20,6 +20,8 @@ import (
 	"github.com/rushairer/blog-backend/internal/access"
 	agentservice "github.com/rushairer/blog-backend/internal/agent"
 	"github.com/rushairer/blog-backend/internal/authbff"
+	communityrepository "github.com/rushairer/blog-backend/internal/community/repository"
+	communityservice "github.com/rushairer/blog-backend/internal/community/service"
 	"github.com/rushairer/blog-backend/internal/connector"
 	"github.com/rushairer/blog-backend/internal/controller"
 	"github.com/rushairer/blog-backend/internal/knowledge"
@@ -265,7 +267,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 	postSvc := service.NewPostService(postRepo)
 	pageSvc := service.NewPageService(repository.NewPageRepository(cfg.DB))
 	catSvc := service.NewCategoryService(repository.NewCategoryRepository(cfg.DB))
-	communitySvc := service.NewCommunityService(repository.NewCommunityRepository(cfg.DB), postRepo)
+	communitySvc := communityservice.NewCommunityService(communityrepository.NewCommunityRepository(cfg.DB), postRepo)
 	growthSvc := service.NewGrowthService(repository.NewGrowthRepository(cfg.DB))
 	service.StartScheduledPublisher(ctx, postSvc, cfg.Logger)
 

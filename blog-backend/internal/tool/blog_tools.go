@@ -8,21 +8,26 @@ import (
 	"io"
 	"strings"
 
+	communitydomain "github.com/rushairer/blog-backend/internal/community/domain"
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/knowledge"
 	"github.com/rushairer/blog-backend/internal/service"
 )
 
+type communityModerationReader interface {
+	ListAdminComments(context.Context, string, bool, int, int) ([]*communitydomain.Comment, int, error)
+}
+
 type BlogTools struct {
 	posts      *service.PostService
-	community  *service.CommunityService
+	community  communityModerationReader
 	growth     *service.GrowthService
 	pages      *service.PageService
 	linkClient linkHTTPClient
 	knowledge  *knowledge.Service
 }
 
-func NewBlogRegistry(posts *service.PostService, community *service.CommunityService, growth *service.GrowthService, pages *service.PageService, knowledgeServices ...*knowledge.Service) *Registry {
+func NewBlogRegistry(posts *service.PostService, community communityModerationReader, growth *service.GrowthService, pages *service.PageService, knowledgeServices ...*knowledge.Service) *Registry {
 	var knowledgeService *knowledge.Service
 	if len(knowledgeServices) > 0 {
 		knowledgeService = knowledgeServices[0]

@@ -8,6 +8,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/access"
+	communityrepository "github.com/rushairer/blog-backend/internal/community/repository"
+	communityservice "github.com/rushairer/blog-backend/internal/community/service"
 	"github.com/rushairer/blog-backend/internal/media"
 	"github.com/rushairer/blog-backend/internal/repository"
 	"github.com/rushairer/blog-backend/internal/service"
@@ -30,7 +32,7 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 		PostSvc:      service.NewPostService(postRepo),
 		PageSvc:      service.NewPageService(repository.NewPageRepository(nil)),
 		CategorySvc:  service.NewCategoryService(repository.NewCategoryRepository(nil)),
-		CommunitySvc: service.NewCommunityService(repository.NewCommunityRepository(nil), postRepo),
+		CommunitySvc: communityservice.NewCommunityService(communityrepository.NewCommunityRepository(nil), postRepo),
 		GrowthSvc:    service.NewGrowthService(repository.NewGrowthRepository(nil)),
 		Verifier:     auth.NewVerifier("http://127.0.0.1:1/jwks"), AccessService: access.NewService(nil, access.Bootstrap{}),
 	})

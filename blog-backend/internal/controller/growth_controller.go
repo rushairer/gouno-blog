@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
@@ -32,17 +33,21 @@ var allowedMediaTypes = map[string]string{
 	"image/bmp":                ".bmp",
 }
 
+type publishedPostResolver interface {
+	ResolvePublishedPost(context.Context, string) (*domain.Post, error)
+}
+
 type GrowthController struct {
 	growth      *service.GrowthService
 	posts       *service.PostService
-	community   *service.CommunityService
+	community   publishedPostResolver
 	media       media.Store
 	logger      *zap.Logger
 	postPolicy  access.PostPolicy
 	mediaPolicy access.MediaPolicy
 }
 
-func NewGrowthController(growth *service.GrowthService, posts *service.PostService, community *service.CommunityService, store media.Store, logger *zap.Logger) *GrowthController {
+func NewGrowthController(growth *service.GrowthService, posts *service.PostService, community publishedPostResolver, store media.Store, logger *zap.Logger) *GrowthController {
 	if logger == nil {
 		logger = zap.L()
 	}

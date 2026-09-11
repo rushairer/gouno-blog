@@ -42,7 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Adopt Capability Module as the backend ownership model for complex business areas; the legacy global layer directories are migration buckets rather than destinations for new business ownership.
 - Add project-owned Gouno Codegen v1 `module` generation and retain upstream/default `suite` semantics unchanged.
 - Move the Page canonical implementation under `internal/page/{domain,repository,service,controller}` while retaining narrow flat-layer compatibility facades.
-- Move Community domain, persistence, service, and HTTP controller ownership under `internal/community/{domain,repository,service,controller}`, extract interaction rate limiting to shared `internal/ratelimit`, route moderation comment reads through the Community capability, and remove duplicate legacy Comment contracts/handlers from Post service, repository, and controller code.
+- Complete the Community Capability Module migration under `internal/community/{domain,repository,service,controller}`: move composition/root consumers to canonical packages or narrow interfaces, extract interaction rate limiting to shared `internal/ratelimit`, route moderation comment reads through Community, remove duplicate Post Comment ownership, remove flat Community facades and root Community domain aliases, and centralize integration DB setup in `internal/testsupport.OpenTestDB`.
 - Workflow inputs are now compiled and validated with JSON Schema when saved and queued; resource Workflows default to strict run scope.
 - Standard Workflow drafts are now compiled from server-owned templates; image Brief drafts carry `format=image_brief` and do not imply real image generation.
 
