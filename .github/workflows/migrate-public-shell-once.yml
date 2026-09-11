@@ -1,0 +1,113 @@
+name: Migrate Blog PublicShell Once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/migrate-public-shell-once.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: migrate-blog-public-shell-once
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: blog-frontend/package-lock.json
+
+      - name: Apply canonical PublicShell migration and verify
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cp .github/migrations/public-shell/PublicShell.test.tsx blog-frontend/src/layouts/__tests__/PublicShell.test.tsx
+
+          node --input-type=module <<'EOF'
+          import { readFile, writeFile } from 'node:fs/promises';
+
+          const sourcePath = 'blog-frontend/src/layouts/PublicShell.tsx';
+          const source = await readFile(sourcePath, 'utf8');
+          const legacyImport = 'import { IconButton, ThemeToggle } from "@gouno/ui-legacy";';
+          if (!source.includes(legacyImport)) {
+            throw new Error('Expected PublicShell legacy import was not found');
+          }
+          const nextSource = source
+            .replace('import { Input, Drawer } from "@gouno/ui/core";', 'import { Drawer, IconButton, Input } from "@gouno/ui/core";')
+            .replace(legacyImport, 'import { ThemeToggle } from "@gouno/ui/theme";');
+          if (nextSource.includes('@gouno/ui-legacy')) {
+            throw new Error('PublicShell still imports legacy UI after replacement');
+          }
+          await writeFile(sourcePath, nextSource);
+
+          const allowlistPath = 'blog-frontend/scripts/legacy-ui-allowlist.json';
+          const targetFile = 'src/layouts/PublicShell.tsx';
+          const symbols = ['IconButton', 'ThemeToggle'];
+          const allowlist = JSON.parse(await readFile(allowlistPath, 'utf8'));
+          allowlist.canonicalSourceSha = '0ba9fabda8e61f3a278b3fb5f37b8f671c167abb';
+          let removedPairs = 0;
+          for (const symbol of symbols) {
+            const files = allowlist.allowedLegacyImports?.[symbol];
+            if (!Array.isArray(files) || !files.includes(targetFile)) {
+              throw new Error(`Expected ${symbol} legacy pair for ${targetFile}`);
+            }
+            const next = files.filter((file) => file !== targetFile);
+            removedPairs += files.length - next.length;
+            if (next.length) allowlist.allowedLegacyImports[symbol] = next;
+            else delete allowlist.allowedLegacyImports[symbol];
+          }
+          if (removedPairs !== 2) {
+            throw new Error(`Expected exactly 2 legacy pairs for ${targetFile}, removed ${removedPairs}`);
+          }
+          await writeFile(allowlistPath, `${JSON.stringify(allowlist, null, 2)}\n`);
+          EOF
+
+          cd blog-frontend
+          npm ci
+          npx prettier --write \
+            src/layouts/PublicShell.tsx \
+            src/layouts/__tests__/PublicShell.test.tsx \
+            scripts/legacy-ui-allowlist.json
+          npm run test:run -- src/layouts/__tests__/PublicShell.test.tsx
+          npm run quality
+          cd ..
+          docker build -f blog-frontend/Dockerfile blog-frontend
+
+      - name: Commit verified migration and self-clean
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if grep -n "@gouno/ui-legacy" blog-frontend/src/layouts/PublicShell.tsx; then
+            echo "PublicShell still imports legacy UI" >&2
+            exit 1
+          fi
+          grep -q '@gouno/ui/core' blog-frontend/src/layouts/PublicShell.tsx
+          grep -q '@gouno/ui/theme' blog-frontend/src/layouts/PublicShell.tsx
+
+          rm -rf .github/migrations/public-shell
+          rm .github/workflows/migrate-public-shell-once.yml
+
+          git add \
+            blog-frontend/src/layouts/PublicShell.tsx \
+            blog-frontend/src/layouts/__tests__/PublicShell.test.tsx \
+            blog-frontend/scripts/legacy-ui-allowlist.json \
+            .github/migrations/public-shell \
+            .github/workflows/migrate-public-shell-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "refactor(ui): migrate Blog PublicShell to canonical Gouno UI"
+          git push origin HEAD:main
