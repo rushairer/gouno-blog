@@ -73,10 +73,8 @@ export default function AdminNotifications() {
   const [selected, setSelected] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [statusFilter, setStatusFilter] =
-    useState<NotificationStatus>("all");
-  const [typeFilter, setTypeFilter] =
-    useState<NotificationTypeFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<NotificationStatus>("all");
+  const [typeFilter, setTypeFilter] = useState<NotificationTypeFilter>("all");
   const [deleteAction, setDeleteAction] = useState<DeleteAction>(null);
   const [busy, setBusy] = useState(false);
 
@@ -198,8 +196,7 @@ export default function AdminNotifications() {
         setSelected((current) =>
           current.filter((id) =>
             items.find(
-              (notification) =>
-                notification.id === id && !notification.read_at,
+              (notification) => notification.id === id && !notification.read_at,
             ),
           ),
         );
@@ -255,9 +252,7 @@ export default function AdminNotifications() {
       const filteredIdsSet = new Set(
         filtered.map((notification) => notification.id),
       );
-      setSelected((current) =>
-        current.filter((id) => !filteredIdsSet.has(id)),
-      );
+      setSelected((current) => current.filter((id) => !filteredIdsSet.has(id)));
     }
   };
 
@@ -476,9 +471,7 @@ export default function AdminNotifications() {
           <Empty
             icon={<Bell className="size-7 text-muted-foreground" />}
             title={
-              hasFilters
-                ? "暂无符合当前筛选条件的通知。"
-                : "暂无相关通知记录。"
+              hasFilters ? "暂无符合当前筛选条件的通知。" : "暂无相关通知记录。"
             }
             description={
               hasFilters
