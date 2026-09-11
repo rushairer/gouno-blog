@@ -23,10 +23,10 @@ rel = "cmd/gouno/web.go"
 text = read(rel)
 text = replace_once(
     text,
-    '\t"github.com/rushairer/blog-backend/internal/domain"\n',
+    '\t"github.com/rushairer/blog-backend/internal/connector"\n',
+    '\t"github.com/rushairer/blog-backend/internal/connector"\n'
     '\tcommunityrepository "github.com/rushairer/blog-backend/internal/community/repository"\n'
-    '\tcommunityservice "github.com/rushairer/blog-backend/internal/community/service"\n'
-    '\t"github.com/rushairer/blog-backend/internal/domain"\n',
+    '\tcommunityservice "github.com/rushairer/blog-backend/internal/community/service"\n',
     f"{rel} canonical imports",
 )
 text = replace_once(
@@ -42,25 +42,23 @@ rel = "router/web.go"
 text = read(rel)
 text = replace_once(
     text,
-    '\t"github.com/rushairer/blog-backend/internal/access"\n\t"github.com/rushairer/blog-backend/internal/controller"\n',
-    '\t"github.com/rushairer/blog-backend/internal/access"\n'
+    '\t"github.com/rushairer/blog-backend/internal/authbff"\n',
+    '\t"github.com/rushairer/blog-backend/internal/authbff"\n'
     '\tcommunitycontroller "github.com/rushairer/blog-backend/internal/community/controller"\n'
-    '\tcommunityservice "github.com/rushairer/blog-backend/internal/community/service"\n'
-    '\t"github.com/rushairer/blog-backend/internal/controller"\n',
+    '\tcommunityservice "github.com/rushairer/blog-backend/internal/community/service"\n',
     f"{rel} community imports",
 )
 text = replace_once(
     text,
-    '\t"github.com/rushairer/blog-backend/internal/media"\n\t"github.com/rushairer/blog-backend/internal/service"\n',
+    '\t"github.com/rushairer/blog-backend/internal/media"\n',
     '\t"github.com/rushairer/blog-backend/internal/media"\n'
-    '\t"github.com/rushairer/blog-backend/internal/ratelimit"\n'
-    '\t"github.com/rushairer/blog-backend/internal/service"\n',
+    '\t"github.com/rushairer/blog-backend/internal/ratelimit"\n',
     f"{rel} ratelimit import",
 )
 text = replace_once(
     text,
-    '\tCommunitySvc *service.CommunityService\n',
-    '\tCommunitySvc *communityservice.CommunityService\n',
+    '\tCommunitySvc       *service.CommunityService\n',
+    '\tCommunitySvc       *communityservice.CommunityService\n',
     f"{rel} CommunitySvc type",
 )
 text = replace_once(
@@ -198,12 +196,17 @@ replacements = {
 }
 for old_name, new_name in replacements.items():
     text = replace_once(text, old_name, new_name, f"{rel} {old_name}")
-# Remove the old facade identities now duplicated by canonical identities.
 for line in [
     '\t\terrors.Is(err, service.ErrCommentAuthorEmpty),\n',
     '\t\terrors.Is(err, service.ErrCommentContentEmpty),\n',
 ]:
     text = replace_once(text, line, '', f"{rel} remove facade error identity")
+text = replace_once(
+    text,
+    '\t"github.com/rushairer/blog-backend/internal/repository"\n',
+    '',
+    f"{rel} remove legacy repository import",
+)
 write(rel, text)
 
 # Root domain no longer aliases Community types once legacy facades/tests are gone.
