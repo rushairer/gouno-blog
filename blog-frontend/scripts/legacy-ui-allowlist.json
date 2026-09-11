@@ -44,7 +44,6 @@
       "src/pages/admin/PostEditor.tsx",
       "src/pages/admin/SiteSettings.tsx"
     ],
-    "ArticleListSkeleton": ["src/pages/ArticleIndex.tsx", "src/pages/Home.tsx"],
     "AsyncState": [
       "src/components/__tests__/ui.test.tsx",
       "src/pages/admin/Categories.tsx",
@@ -94,8 +93,6 @@
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/components/agent/WorkspaceOverview.tsx",
       "src/components/agent/tools/ToolBindingsEditor.tsx",
-      "src/pages/ArticleIndex.tsx",
-      "src/pages/Home.tsx",
       "src/pages/PostDetail.tsx",
       "src/pages/admin/AIOperations.tsx",
       "src/pages/admin/AISettings.tsx",
@@ -115,7 +112,6 @@
       "src/App.tsx",
       "src/components/__tests__/ui.test.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
-      "src/pages/ArticleIndex.tsx",
       "src/pages/PostDetail.tsx",
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/Notifications.tsx",
@@ -188,8 +184,6 @@
       "src/components/agent/WorkflowRunDetail.tsx",
       "src/components/agent/WorkflowRunRecords.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
-      "src/pages/ArticleIndex.tsx",
-      "src/pages/Home.tsx",
       "src/pages/PostDetail.tsx",
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/MediaLibrary.tsx",
@@ -199,7 +193,6 @@
       "src/pages/admin/Users.tsx"
     ],
     "ErrorState": [
-      "src/pages/ArticleIndex.tsx",
       "src/pages/PostDetail.tsx",
       "src/pages/admin/Posts.tsx"
     ],
@@ -210,7 +203,6 @@
       "src/components/agent/WorkflowRunRecords.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/components/media/MediaDrawerForms.tsx",
-      "src/pages/Home.tsx",
       "src/pages/PostDetail.tsx",
       "src/pages/admin/Categories.tsx",
       "src/pages/admin/Dashboard.tsx",
@@ -282,7 +274,6 @@
     "Pagination": [
       "src/components/__tests__/ui.test.tsx",
       "src/components/agent/WorkflowInputForm.tsx",
-      "src/pages/ArticleIndex.tsx",
       "src/pages/admin/Pages.tsx",
       "src/pages/admin/Posts.tsx"
     ],
@@ -303,10 +294,7 @@
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/pages/admin/SiteSettings.tsx"
     ],
-    "SectionHeading": [
-      "src/components/__tests__/ui.test.tsx",
-      "src/pages/Home.tsx"
-    ],
+    "SectionHeading": ["src/components/__tests__/ui.test.tsx"],
     "SectionNav": ["src/components/__tests__/ui.test.tsx"],
     "Select": [
       "src/components/__tests__/ui.test.tsx",
