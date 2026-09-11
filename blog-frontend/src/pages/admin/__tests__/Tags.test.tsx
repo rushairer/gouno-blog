@@ -21,7 +21,7 @@ describe("Admin Tags", () => {
     vi.mocked(apiFetch).mockResolvedValue(Response.json({ data: [] }));
   });
 
-  it("keeps tag names in a dedicated left-aligned content region with shared action buttons", async () => {
+  it("keeps tag names in a dedicated content region with canonical action buttons", async () => {
     vi.mocked(apiFetch).mockResolvedValue(
       Response.json({ data: [{ name: "OpenAI", post_count: 3 }] }),
     );
@@ -38,10 +38,14 @@ describe("Admin Tags", () => {
     expect(
       container.querySelector(".tag-admin-card__content"),
     ).toHaveTextContent("OpenAI");
-    expect(screen.getByRole("button", { name: "重命名" })).toHaveClass("btn");
-    expect(screen.getByRole("button", { name: "合并" })).toHaveClass("btn");
-    expect(screen.getByRole("button", { name: "删除" })).toHaveClass(
-      "btn-danger",
-    );
+
+    const rename = screen.getByRole("button", { name: "重命名" });
+    const merge = screen.getByRole("button", { name: "合并" });
+    const remove = screen.getByRole("button", { name: "删除" });
+
+    expect(rename).toHaveAttribute("data-slot", "button");
+    expect(merge).toHaveAttribute("data-slot", "button");
+    expect(remove).toHaveAttribute("data-slot", "button");
+    expect(remove).toHaveClass("text-destructive");
   });
 });

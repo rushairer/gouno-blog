@@ -1,22 +1,22 @@
 import { useCallback, useEffect, useState } from "react";
-import { Merge, Save, Trash2 } from "lucide-react";
+import { Bot, Merge, Save, Trash2 } from "lucide-react";
 import { siteApi } from "../../api/site";
 import type { TagSummary } from "../../api/site";
-import { Checkbox, Modal } from "@gouno/ui/core";
 import {
-  AdminPage,
-  AdminPageHeader,
-  AsyncState,
-  Badge,
-  BulkActionBar,
+  Alert,
   Button,
   Card,
-  ConfirmDialog,
-  ContentStack,
-  Feedback,
-  TableSkeleton,
-  useToast,
-} from "@gouno/ui-legacy";
+  Checkbox,
+  Empty,
+  FormField,
+  Input,
+  Modal,
+  Skeleton,
+  Tag,
+} from "@gouno/ui/core";
+import { PageHeader } from "@gouno/ui/gouno";
+import { BulkActionBar } from "@gouno/ui/patterns";
+import { ConfirmDialog, useToast } from "@gouno/ui-legacy";
 import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 
@@ -25,6 +25,33 @@ type DeleteTarget =
   | { kind: "tag"; item: TagSummary }
   | { kind: "batch" }
   | null;
+
+function TagGridSkeleton() {
+  return (
+    <div
+      className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+      role="status"
+      aria-label="标签加载中"
+      aria-live="polite"
+    >
+      {Array.from({ length: 4 }, (_, index) => (
+        <Card key={index} padding="sm" className="gap-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Skeleton className="size-4" />
+              <Skeleton className="h-4 w-20" />
+            </div>
+            <Skeleton className="h-6 w-12" />
+          </div>
+          <div className="flex justify-end gap-2 border-t pt-3">
+            <Skeleton className="h-7 w-16" />
+            <Skeleton className="h-7 w-12" />
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
+}
 
 export default function Tags() {
   const allowed = useAdminGuard("/admin/tags");
@@ -115,108 +142,125 @@ export default function Tags() {
   };
 
   return (
-    <AdminPage>
-      <AdminPageHeader
+    <div className="flex flex-col gap-6">
+      <PageHeader
         title="标签"
         description="整理文章中的具体技术与概念信号，支持批量清洗与合并。"
       />
-      <ContentStack>
-        {error && tags.length > 0 ? (
-          <Feedback type="error">{error}</Feedback>
-        ) : null}
-        {selected.length ? (
-          <BulkActionBar
-            selectionLabel={`已选择 ${selected.length} 个标签`}
-            onAIAssist={() => setAIOpen(true)}
-            onCancel={() => setSelected([])}
-          >
-            <Button
-              variant="danger"
-              size="compact"
-              type="button"
-              onClick={() => setDeleteTarget({ kind: "batch" })}
-              icon={<Trash2 />}
-            >
-              删除
-            </Button>
-          </BulkActionBar>
-        ) : null}
-        <AsyncState
-          loading={loading}
-          skeleton={<TableSkeleton rows={4} columns={3} />}
-          error={error && tags.length === 0 ? error : null}
-          onRetry={load}
-          retryLabel="重新载入"
-          empty={!loading && tags.length === 0 && !error}
-          emptyTitle="文章添加标签后会自动在这里汇总。"
+
+      {error && tags.length > 0 ? (
+        <Alert type="error" showIcon title={error} />
+      ) : null}
+
+      {selected.length > 0 ? (
+        <BulkActionBar
+          selectionLabel={`已选择 ${selected.length} 个标签`}
+          onCancel={() => setSelected([])}
         >
-          <div className="tag-admin-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {tags.map((tag) => (
-              <Card
-                className="tag-admin-card flex flex-col justify-between border-border/80 bg-card p-4 hover:border-primary/40 transition-colors"
-                key={tag.name}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      className="tag-admin-card__checkbox"
-                      aria-label={`选择标签 ${tag.name}`}
-                      checked={selected.includes(tag.name)}
-                      onChange={(event) =>
-                        setSelected((current) =>
-                          event.target.checked
-                            ? [...new Set([...current, tag.name])]
-                            : current.filter((key) => key !== tag.name),
-                        )
-                      }
-                    />
-                    <div className="tag-admin-card__content flex flex-col gap-0.5">
-                      <strong className="text-sm font-semibold text-foreground">
-                        {tag.name}
-                      </strong>
-                    </div>
+          <Button size="small" icon={<Bot />} onClick={() => setAIOpen(true)}>
+            交给 AI
+          </Button>
+          <Button
+            size="small"
+            color="error"
+            icon={<Trash2 />}
+            onClick={() => setDeleteTarget({ kind: "batch" })}
+          >
+            删除
+          </Button>
+        </BulkActionBar>
+      ) : null}
+
+      {loading ? (
+        <TagGridSkeleton />
+      ) : error && tags.length === 0 ? (
+        <Alert
+          type="error"
+          showIcon
+          title="标签加载失败"
+          description={error}
+          action={
+            <Button size="small" onClick={() => void load()}>
+              重新载入
+            </Button>
+          }
+        />
+      ) : tags.length === 0 ? (
+        <Card padding="lg">
+          <Empty
+            title="文章添加标签后会自动在这里汇总。"
+            description="标签来自文章内容，无需在这里提前创建。"
+          />
+        </Card>
+      ) : (
+        <div className="tag-admin-grid grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          {tags.map((tag) => (
+            <Card
+              key={tag.name}
+              padding="sm"
+              className="tag-admin-card gap-0 transition-colors hover:border-primary/40"
+              data-state={selected.includes(tag.name) ? "selected" : undefined}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  <Checkbox
+                    className="tag-admin-card__checkbox"
+                    aria-label={`选择标签 ${tag.name}`}
+                    checked={selected.includes(tag.name)}
+                    onChange={(event) =>
+                      setSelected((current) =>
+                        event.target.checked
+                          ? [...new Set([...current, tag.name])]
+                          : current.filter((key) => key !== tag.name),
+                      )
+                    }
+                  />
+                  <div className="tag-admin-card__content min-w-0">
+                    <strong className="truncate text-sm font-semibold text-foreground">
+                      {tag.name}
+                    </strong>
                   </div>
-                  <Badge tone="neutral" pill className="text-xs font-mono">
-                    {tag.post_count} 篇
-                  </Badge>
                 </div>
-                <div
-                  className="tag-admin-card__actions flex items-center justify-end gap-1.5 pt-3 mt-3 border-t border-border/60"
-                  aria-label={`标签 ${tag.name} 操作`}
+                <Tag className="shrink-0 font-mono">{tag.post_count} 篇</Tag>
+              </div>
+              <div
+                className="tag-admin-card__actions mt-4 flex flex-wrap items-center justify-end gap-1 border-t pt-3"
+                aria-label={`标签 ${tag.name} 操作`}
+              >
+                <Button
+                  size="small"
+                  variant="text"
+                  type="button"
+                  onClick={() => setTagEdit({ tag, mode: "rename" })}
+                  icon={<Save />}
                 >
-                  <Button
-                    variant="ghost"
-                    size="compact"
-                    type="button"
-                    onClick={() => setTagEdit({ tag, mode: "rename" })}
-                    icon={<Save />}
-                  >
-                    重命名
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="compact"
-                    type="button"
-                    onClick={() => setTagEdit({ tag, mode: "merge" })}
-                    icon={<Merge />}
-                  >
-                    合并
-                  </Button>
-                  <Button
-                    variant="danger"
-                    size="compact"
-                    type="button"
-                    onClick={() => setDeleteTarget({ kind: "tag", item: tag })}
-                    icon={<Trash2 />}
-                  >
-                    删除
-                  </Button>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </AsyncState>
-      </ContentStack>
+                  重命名
+                </Button>
+                <Button
+                  size="small"
+                  variant="text"
+                  type="button"
+                  onClick={() => setTagEdit({ tag, mode: "merge" })}
+                  icon={<Merge />}
+                >
+                  合并
+                </Button>
+                <Button
+                  size="small"
+                  variant="text"
+                  color="error"
+                  type="button"
+                  onClick={() => setDeleteTarget({ kind: "tag", item: tag })}
+                  icon={<Trash2 />}
+                >
+                  删除
+                </Button>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
       <Modal
         open={tagEdit !== null}
         title={tagEdit?.mode === "merge" ? "合并标签" : "重命名标签"}
@@ -229,14 +273,15 @@ export default function Tags() {
         footer={
           <>
             <Button
-              variant="secondary"
+              variant="outline"
               type="button"
               onClick={() => setTagEdit(null)}
             >
               取消
             </Button>
             <Button
-              variant="primary"
+              variant="solid"
+              color="primary"
               type="submit"
               form="tag-edit-form"
               icon={tagEdit?.mode === "merge" ? <Merge /> : <Save />}
@@ -246,13 +291,20 @@ export default function Tags() {
           </>
         }
       >
-        <form id="tag-edit-form" className="modal-form" onSubmit={saveTag}>
-          <label>
-            {tagEdit?.mode === "merge" ? "目标标签" : "新标签名称"}
-            <input name="value" required autoFocus />
-          </label>
+        <form
+          id="tag-edit-form"
+          className="flex flex-col gap-4"
+          onSubmit={saveTag}
+        >
+          <FormField
+            label={tagEdit?.mode === "merge" ? "目标标签" : "新标签名称"}
+            required
+          >
+            <Input name="value" required autoFocus />
+          </FormField>
         </form>
       </Modal>
+
       <ConfirmDialog
         open={deleteTarget !== null}
         title={deleteTarget?.kind === "batch" ? "批量删除标签" : "删除标签"}
@@ -268,6 +320,7 @@ export default function Tags() {
         onClose={() => setDeleteTarget(null)}
         onConfirm={remove}
       />
+
       <WorkflowLauncher
         open={aiOpen}
         resourceType="tag"
@@ -275,6 +328,6 @@ export default function Tags() {
         onClose={() => setAIOpen(false)}
         title="将所选标签交给 AI"
       />
-    </AdminPage>
+    </div>
   );
 }
