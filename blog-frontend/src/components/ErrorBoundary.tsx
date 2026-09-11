@@ -1,8 +1,8 @@
 import { Component } from "react";
 import type { ErrorInfo, ReactNode } from "react";
-import { AlertTriangle, Home, RefreshCw } from "lucide-react";
+import { Home, RefreshCw } from "lucide-react";
 import i18n from "i18next";
-import { ActionGroup, Button, ErrorState, Panel } from "@gouno/ui-legacy";
+import { Button, Card, Result } from "@gouno/ui/core";
 
 interface Props {
   children: ReactNode;
@@ -46,19 +46,20 @@ export class ErrorBoundary extends Component<Props, State> {
 
       return (
         <div className="grid min-h-dvh place-items-center bg-background p-4">
-          <Panel className="w-full max-w-xl">
-            <ErrorState
-              icon={<AlertTriangle size={40} />}
+          <Card as="section" className="w-full max-w-xl">
+            <Result
+              status="error"
               title={i18n.t("errorBoundary.title", {
                 defaultValue: "页面遇到了错误",
               })}
               description={i18n.t("errorBoundary.description", {
                 defaultValue: "抱歉，当前页面加载异常，请尝试刷新或返回首页。",
               })}
-              action={
-                <ActionGroup>
+              extra={
+                <div className="flex flex-wrap items-center justify-center gap-2">
                   <Button
-                    variant="primary"
+                    variant="solid"
+                    color="primary"
                     icon={<RefreshCw size={16} />}
                     onClick={this.handleReload}
                   >
@@ -67,7 +68,7 @@ export class ErrorBoundary extends Component<Props, State> {
                     })}
                   </Button>
                   <Button
-                    variant="secondary"
+                    variant="outline"
                     icon={<Home size={16} />}
                     onClick={this.handleGoHome}
                   >
@@ -75,7 +76,7 @@ export class ErrorBoundary extends Component<Props, State> {
                       defaultValue: "返回首页",
                     })}
                   </Button>
-                </ActionGroup>
+                </div>
               }
             />
             {import.meta.env.DEV && this.state.error && (
@@ -85,7 +86,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 {this.state.error.stack}
               </pre>
             )}
-          </Panel>
+          </Card>
         </div>
       );
     }
