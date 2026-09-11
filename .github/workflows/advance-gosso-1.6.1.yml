@@ -19,7 +19,7 @@ jobs:
           ref: test/gosso-1.6-bff-compat
           fetch-depth: 0
 
-      - name: Advance exact Gosso release pin
+      - name: Advance non-workflow Gosso release references
         shell: bash
         run: |
           set -euo pipefail
@@ -27,14 +27,6 @@ jobs:
           from pathlib import Path
 
           replacements = {
-              ".github/workflows/gosso-release-bff-compat.yml": [
-                  (
-                      "GOSSO_RELEASE_IMAGE: ghcr.io/rushairer/gosso:v1.6.0@sha256:5c91647bdfe7c8de9dec8e40f882680c91883f9ba2dce6fd309f7f8f3d05f445",
-                      "GOSSO_RELEASE_VERSION: 1.6.1\n  GOSSO_RELEASE_DIGEST: sha256:cf3c321279b9860bbbcf30735dcd0d3a3465151075420d8fa70d6d66e580838b\n  GOSSO_RELEASE_IMAGE: ghcr.io/rushairer/gosso:v1.6.1@sha256:cf3c321279b9860bbbcf30735dcd0d3a3465151075420d8fa70d6d66e580838b",
-                  ),
-                  ("gosso-1-6-bff:", "gosso-1-6-1-bff:"),
-                  ("name: Gosso v1.6.0 BFF acceptance", "name: Gosso v1.6.1 BFF acceptance"),
-              ],
               "scripts/check-gosso-release-bff-compat.sh": [
                   ("GOSSO_RELEASE_VERSION=\"${GOSSO_RELEASE_VERSION:-1.6.0}\"", "GOSSO_RELEASE_VERSION=\"${GOSSO_RELEASE_VERSION:-1.6.1}\""),
                   ("GOSSO_RELEASE_DIGEST=\"${GOSSO_RELEASE_DIGEST:-sha256:5c91647bdfe7c8de9dec8e40f882680c91883f9ba2dce6fd309f7f8f3d05f445}\"", "GOSSO_RELEASE_DIGEST=\"${GOSSO_RELEASE_DIGEST:-sha256:cf3c321279b9860bbbcf30735dcd0d3a3465151075420d8fa70d6d66e580838b}\""),
@@ -62,18 +54,17 @@ jobs:
           PY
 
           git diff --check
-          grep -Fq 'v1.6.1@sha256:cf3c321279b9860bbbcf30735dcd0d3a3465151075420d8fa70d6d66e580838b' .github/workflows/gosso-release-bff-compat.yml
           grep -Fq 'GOSSO_RELEASE_VERSION="${GOSSO_RELEASE_VERSION:-1.6.1}"' scripts/check-gosso-release-bff-compat.sh
+          grep -Fq 'sha256:cf3c321279b9860bbbcf30735dcd0d3a3465151075420d8fa70d6d66e580838b' scripts/check-gosso-release-bff-compat.sh
           grep -Fq 'GOSSO_IMAGE=ghcr.io/rushairer/gosso:v1.6.1@sha256:<GOSSO_DIGEST>' .env.production.example
           grep -Fq 'RFC 7009 revocation' CHANGELOG.md
 
-      - name: Commit final compatibility update and remove helper
+      - name: Commit non-workflow compatibility references
         shell: bash
         run: |
           set -euo pipefail
-          git rm .github/workflows/advance-gosso-1.6.1.yml
           git config user.name "Aben"
           git config user.email "5195693+rushairer@users.noreply.github.com"
-          git add .github/workflows/gosso-release-bff-compat.yml scripts/check-gosso-release-bff-compat.sh .env.production.example CHANGELOG.md
-          git commit -m "test(auth): advance Blog BFF gate to Gosso 1.6.1"
+          git add scripts/check-gosso-release-bff-compat.sh .env.production.example CHANGELOG.md
+          git commit -m "test(auth): align Blog deployment with Gosso 1.6.1"
           git push origin HEAD:test/gosso-1.6-bff-compat
