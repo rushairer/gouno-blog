@@ -9,11 +9,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { membersApi, type BlogMember } from "../../api/members";
-import {
-  getGossoAdminURL,
-  isMfaError,
-  type BlogUserProfile,
-} from "../../auth";
+import { getGossoAdminURL, isMfaError, type BlogUserProfile } from "../../auth";
 import { useUserProfile } from "@gosso/client/react";
 import {
   Alert,
