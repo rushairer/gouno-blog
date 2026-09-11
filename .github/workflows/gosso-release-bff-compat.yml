@@ -33,6 +33,9 @@ concurrency:
   group: gosso-release-bff-compat-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  GOSSO_RELEASE_IMAGE: ghcr.io/rushairer/gosso:v1.6.0@sha256:5c91647bdfe7c8de9dec8e40f882680c91883f9ba2dce6fd309f7f8f3d05f445
+
 jobs:
   gosso-1-6-bff:
     name: Gosso v1.6.0 BFF acceptance
@@ -49,6 +52,14 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Detect published Gosso runtime identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          runtime_uid="$(docker run --rm --entrypoint id "$GOSSO_RELEASE_IMAGE" -u)"
+          echo "GOSSO_RUNTIME_UID=${runtime_uid}" >> "$GITHUB_ENV"
+          echo "Published Gosso runtime UID: ${runtime_uid}"
 
       - name: Verify released Gosso and current Blog BFF compatibility
         run: bash scripts/check-gosso-release-bff-compat.sh
