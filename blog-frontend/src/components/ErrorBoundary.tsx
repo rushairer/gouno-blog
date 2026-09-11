@@ -48,6 +48,7 @@ export class ErrorBoundary extends Component<Props, State> {
         <div className="grid min-h-dvh place-items-center bg-background p-4">
           <Card as="section" className="w-full max-w-xl">
             <Result
+              role="alert"
               status="error"
               title={i18n.t("errorBoundary.title", {
                 defaultValue: "页面遇到了错误",
