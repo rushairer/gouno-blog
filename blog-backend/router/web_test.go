@@ -3,6 +3,7 @@ package router
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -41,6 +42,8 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 	foundMedia := false
 	foundBlogSession := false
 	foundHealth := false
+	foundCommunityModeration := false
+	communityModerationHandler := ""
 	for _, route := range engine.Routes() {
 		if route.Method == "PUT" && route.Path == "/api/posts/:slugOrID" {
 			foundUpdate = true
@@ -63,9 +66,16 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 		if route.Method == "GET" && route.Path == "/api/me/blog-session" {
 			foundBlogSession = true
 		}
+		if route.Method == "GET" && route.Path == "/api/posts/:slugOrID/comments/all" {
+			foundCommunityModeration = true
+			communityModerationHandler = route.Handler
+		}
 	}
-	if !foundUpdate || !foundLike || !foundRelated || !foundAnalytics || !foundMedia || !foundHealth || !foundBlogSession {
-		t.Fatalf("expected growth routes, update=%v like=%v related=%v analytics=%v media=%v health=%v blogSession=%v", foundUpdate, foundLike, foundRelated, foundAnalytics, foundMedia, foundHealth, foundBlogSession)
+	if !foundUpdate || !foundLike || !foundRelated || !foundAnalytics || !foundMedia || !foundHealth || !foundBlogSession || !foundCommunityModeration {
+		t.Fatalf("expected routes, update=%v like=%v related=%v analytics=%v media=%v health=%v blogSession=%v communityModeration=%v", foundUpdate, foundLike, foundRelated, foundAnalytics, foundMedia, foundHealth, foundBlogSession, foundCommunityModeration)
+	}
+	if !strings.Contains(communityModerationHandler, "internal/community/controller") {
+		t.Fatalf("comments/all must be owned by canonical Community controller, handler=%q", communityModerationHandler)
 	}
 	response := httptest.NewRecorder()
 	engine.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/healthz", nil))
