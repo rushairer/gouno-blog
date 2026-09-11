@@ -64,6 +64,7 @@ export default function AccountNotifications() {
         ) : null}
         {!loading && error ? (
           <Result
+            role="alert"
             status="error"
             title={error}
             extra={
