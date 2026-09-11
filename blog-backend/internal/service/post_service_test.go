@@ -14,7 +14,6 @@ import (
 type fakePostRepo struct {
 	posts       map[int64]*domain.Post
 	postsBySlug map[string]*domain.Post
-	comments    map[int64][]*domain.Comment
 	lastLimit   int
 	lastOffset  int
 	updateErr   error
@@ -25,7 +24,6 @@ func newFakePostRepo() *fakePostRepo {
 	return &fakePostRepo{
 		posts:       make(map[int64]*domain.Post),
 		postsBySlug: make(map[string]*domain.Post),
-		comments:    make(map[int64][]*domain.Comment),
 	}
 }
 
@@ -133,41 +131,6 @@ func (r *fakePostRepo) PublishScheduled(context.Context) (int64, error) { return
 
 func (r *fakePostRepo) ListTags(context.Context) ([]string, error) {
 	return []string{"go"}, nil
-}
-
-func (r *fakePostRepo) CreateComment(_ context.Context, comment *domain.Comment) error {
-	r.comments[comment.PostID] = append(r.comments[comment.PostID], comment)
-	return nil
-}
-
-func (r *fakePostRepo) GetVisibleCommentsByPostID(_ context.Context, postID int64) ([]*domain.Comment, error) {
-	comments := make([]*domain.Comment, 0)
-	for _, comment := range r.comments[postID] {
-		if comment.IsVisible {
-			comments = append(comments, comment)
-		}
-	}
-	return comments, nil
-}
-
-func (r *fakePostRepo) GetAllCommentsByPostID(_ context.Context, postID int64) ([]*domain.Comment, error) {
-	return r.comments[postID], nil
-}
-
-func (r *fakePostRepo) SetCommentVisibility(_ context.Context, id int64, isVisible bool) error {
-	for _, comments := range r.comments {
-		for _, comment := range comments {
-			if comment.ID == id {
-				comment.IsVisible = isVisible
-				return nil
-			}
-		}
-	}
-	return sql.ErrNoRows
-}
-
-func (r *fakePostRepo) DeleteComment(context.Context, int64) error {
-	return nil
 }
 
 func (r *fakePostRepo) Batch(_ context.Context, ids []int64, _ string) (int64, error) {
@@ -330,57 +293,12 @@ func TestGetAdminPostAllowsDraftWithoutChangingPublicReadPolicy(t *testing.T) {
 	}
 }
 
-func TestCommentValidation(t *testing.T) {
-	svc := NewPostService(newFakePostRepo())
-
-	err := svc.CreateComment(context.Background(), &domain.Comment{PostID: 1, Author: "", Content: "Body"})
-	if !errors.Is(err, ErrCommentAuthorEmpty) {
-		t.Fatalf("CreateComment error = %v, want author validation", err)
-	}
-
-	err = svc.DeletePost(context.Background(), 1)
-	if err != nil {
-		t.Fatalf("DeletePost returned error: %v", err)
-	}
-
+func TestDeletePostMapsMissingRowToNotFound(t *testing.T) {
 	repo := newFakePostRepo()
 	repo.deleteErr = sql.ErrNoRows
-	err = NewPostService(repo).DeletePost(context.Background(), 99)
+	err := NewPostService(repo).DeletePost(context.Background(), 99)
 	if !errors.Is(err, ErrPostNotFound) {
 		t.Fatalf("DeletePost error = %v, want ErrPostNotFound", err)
-	}
-}
-
-func TestCommentsDefaultToModeratedVisibility(t *testing.T) {
-	repo := newFakePostRepo()
-	repo.comments[1] = []*domain.Comment{
-		{ID: 1, PostID: 1, Author: "Ada", Content: "Visible", IsVisible: true},
-		{ID: 2, PostID: 1, Author: "Grace", Content: "Pending", IsVisible: false},
-	}
-	svc := NewPostService(repo)
-
-	publicComments, err := svc.GetComments(context.Background(), 1)
-	if err != nil {
-		t.Fatalf("GetComments returned error: %v", err)
-	}
-	if len(publicComments) != 1 || publicComments[0].Content != "Visible" {
-		t.Fatalf("public comments = %#v, want only visible comment", publicComments)
-	}
-
-	adminComments, err := svc.GetAllComments(context.Background(), 1)
-	if err != nil {
-		t.Fatalf("GetAllComments returned error: %v", err)
-	}
-	if len(adminComments) != 2 {
-		t.Fatalf("admin comments length = %d, want 2", len(adminComments))
-	}
-
-	if err := svc.SetCommentVisibility(context.Background(), 2, true); err != nil {
-		t.Fatalf("SetCommentVisibility returned error: %v", err)
-	}
-	publicComments, _ = svc.GetComments(context.Background(), 1)
-	if len(publicComments) != 2 {
-		t.Fatalf("public comments length after approval = %d, want 2", len(publicComments))
 	}
 }
 
@@ -397,4 +315,3 @@ func TestBatchPostsValidation(t *testing.T) {
 		t.Fatalf("BatchPosts(valid) = (%d, %v), want (2, nil)", affected, err)
 	}
 }
-

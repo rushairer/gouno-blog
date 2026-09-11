@@ -130,7 +130,6 @@ func WriteDomainError(c *gin.Context, err error) {
 		errors.Is(err, service.ErrScheduledPast),
 		errors.Is(err, service.ErrInvalidPostID),
 		errors.Is(err, service.ErrInvalidPostSlug),
-		errors.Is(err, service.ErrInvalidCommentID),
 		errors.Is(err, service.ErrCommentAuthorEmpty),
 		errors.Is(err, communityservice.ErrCommentAuthorEmpty),
 		errors.Is(err, service.ErrCommentContentEmpty),

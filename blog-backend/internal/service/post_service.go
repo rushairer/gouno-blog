@@ -14,19 +14,16 @@ import (
 )
 
 var (
-	ErrPostNotFound        = errors.New("文章不存在或已被删除")
-	ErrSlugInUse           = errors.New("文章路径 (Slug) 已被占用，请使用其他别名")
-	ErrPostTitleEmpty      = errors.New("文章标题不能为空")
-	ErrPostContentEmpty    = errors.New("发布文章时正文内容不能为空")
-	ErrInvalidPostStatus   = errors.New("无效的文章状态")
-	ErrScheduledPast       = errors.New("定时发布时间必须为未来时间")
-	ErrInvalidPostID       = errors.New("无效的文章 ID")
-	ErrInvalidPostSlug     = errors.New("无效的文章路径 (Slug)")
-	ErrInvalidCommentID    = errors.New("无效的评论 ID")
-	ErrCommentAuthorEmpty  = errors.New("评论者昵称不能为空")
-	ErrCommentContentEmpty = errors.New("评论内容不能为空")
-	ErrBatchInvalidIDs     = errors.New("请选择 1 到 100 篇需要操作的文章")
-	ErrBatchInvalidAction  = errors.New("无效的批量操作指令")
+	ErrPostNotFound       = errors.New("文章不存在或已被删除")
+	ErrSlugInUse          = errors.New("文章路径 (Slug) 已被占用，请使用其他别名")
+	ErrPostTitleEmpty     = errors.New("文章标题不能为空")
+	ErrPostContentEmpty   = errors.New("发布文章时正文内容不能为空")
+	ErrInvalidPostStatus  = errors.New("无效的文章状态")
+	ErrScheduledPast      = errors.New("定时发布时间必须为未来时间")
+	ErrInvalidPostID      = errors.New("无效的文章 ID")
+	ErrInvalidPostSlug    = errors.New("无效的文章路径 (Slug)")
+	ErrBatchInvalidIDs    = errors.New("请选择 1 到 100 篇需要操作的文章")
+	ErrBatchInvalidAction = errors.New("无效的批量操作指令")
 )
 
 type PostRepository interface {
@@ -45,11 +42,6 @@ type PostRepository interface {
 	ListLowEngagementPublished(ctx context.Context, minViews int64, maxEngagementRate float64, limit int) ([]*domain.Post, error)
 	ListTags(ctx context.Context) ([]string, error)
 	PublishScheduled(ctx context.Context) (int64, error)
-	CreateComment(ctx context.Context, comment *domain.Comment) error
-	GetVisibleCommentsByPostID(ctx context.Context, postID int64) ([]*domain.Comment, error)
-	GetAllCommentsByPostID(ctx context.Context, postID int64) ([]*domain.Comment, error)
-	SetCommentVisibility(ctx context.Context, id int64, isVisible bool) error
-	DeleteComment(ctx context.Context, id int64) error
 	Batch(ctx context.Context, ids []int64, action string) (int64, error)
 }
 
@@ -379,53 +371,6 @@ func (s *PostService) PublishScheduled(ctx context.Context) (int64, error) {
 
 func (s *PostService) ListTags(ctx context.Context) ([]string, error) {
 	return s.repo.ListTags(ctx)
-}
-
-func (s *PostService) CreateComment(ctx context.Context, comment *domain.Comment) error {
-	if comment.PostID <= 0 {
-		return ErrInvalidPostID
-	}
-	if comment.Author == "" {
-		return ErrCommentAuthorEmpty
-	}
-	if comment.Content == "" {
-		return ErrCommentContentEmpty
-	}
-	return s.repo.CreateComment(ctx, comment)
-}
-
-func (s *PostService) GetComments(ctx context.Context, postID int64) ([]*domain.Comment, error) {
-	return s.repo.GetVisibleCommentsByPostID(ctx, postID)
-}
-
-func (s *PostService) GetAllComments(ctx context.Context, postID int64) ([]*domain.Comment, error) {
-	return s.repo.GetAllCommentsByPostID(ctx, postID)
-}
-
-func (s *PostService) SetCommentVisibility(ctx context.Context, id int64, isVisible bool) error {
-	if id <= 0 {
-		return ErrInvalidCommentID
-	}
-	if err := s.repo.SetCommentVisibility(ctx, id, isVisible); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return ErrPostNotFound
-		}
-		return err
-	}
-	return nil
-}
-
-func (s *PostService) DeleteComment(ctx context.Context, id int64) error {
-	if id <= 0 {
-		return ErrInvalidCommentID
-	}
-	if err := s.repo.DeleteComment(ctx, id); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return ErrPostNotFound
-		}
-		return err
-	}
-	return nil
 }
 
 // Helpers
