@@ -10,8 +10,8 @@ import { pagesApi } from "../api/pages";
 import { siteApi } from "../api/site";
 import { extractMarkdownTOC } from "../utils/markdown";
 import type { CustomPage, SiteSettings } from "../types/blog";
+import { Alert, Card, Spinner } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
-import { Banner, LoadingState, Panel } from "@gouno/ui-legacy";
 import NotFound from "./NotFound";
 
 export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
@@ -51,7 +51,6 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
       })
       .catch(() => {
         if (!ignore) {
-          // If fixedSlug is 'about' and not yet in backend DB (or network down), fallback to site-defaults
           if (slug === "about") {
             setPage({
               id: 0,
@@ -81,7 +80,6 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
     };
   }, [slug]);
 
-  // SEO updates
   useEffect(() => {
     if (page) {
       const pageTitle = page.seo_title || page.title;
@@ -110,22 +108,27 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
   if (loading || !page) {
     return (
       <div
-        className="flex min-h-[50vh] items-center justify-center"
+        className="flex min-h-[50vh] items-center justify-center gap-3 text-sm text-muted-foreground"
         role="status"
       >
-        <LoadingState label="正在载入页面…" />
+        <Spinner className="size-5 text-primary" />
+        <span>正在载入页面…</span>
       </div>
     );
   }
 
   const draftBanner =
     page.status === "draft" ? (
-      <Banner tone="brand" icon={<ShieldAlert size={16} />}>
+      <Alert
+        type="info"
+        showIcon
+        icon={<ShieldAlert size={16} />}
+        role="status"
+      >
         <strong>管理员预览模式</strong> · 该单页当前为草稿状态，仅对管理员可见。
-      </Banner>
+      </Alert>
     ) : null;
 
-  // 1. About Template
   if (page.template === "about") {
     const markText =
       page.title.length > 4 ? page.title.slice(0, 4) : page.title;
@@ -155,7 +158,7 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
           <main className="min-w-0">
             <MarkdownRenderer content={page.content} />
           </main>
-          <Panel as="aside" className="self-start lg:sticky lg:top-24">
+          <Card as="aside" className="self-start lg:sticky lg:top-24">
             <h2 className="font-semibold">订阅与联系</h2>
             {site.github_url ? (
               <a
@@ -181,13 +184,12 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
             >
               <Rss className="size-4" /> RSS
             </a>
-          </Panel>
+          </Card>
         </div>
       </div>
     );
   }
 
-  // 2. Blank Template (Full width clean container)
   if (page.template === "blank") {
     return (
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
@@ -197,20 +199,18 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
     );
   }
 
-  // 3. Links Template
   if (page.template === "links") {
     return (
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
         {draftBanner}
         <PageHeader title={page.title} description={page.summary} />
-        <Panel>
+        <Card as="section">
           <MarkdownRenderer content={page.content} />
-        </Panel>
+        </Card>
       </div>
     );
   }
 
-  // 4. Timeline Template
   if (page.template === "timeline") {
     return (
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
@@ -224,14 +224,13 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
             </span>
           }
         />
-        <Panel>
+        <Card as="section">
           <MarkdownRenderer content={page.content} />
-        </Panel>
+        </Card>
       </div>
     );
   }
 
-  // 5. Projects Template
   if (page.template === "projects") {
     return (
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
@@ -245,14 +244,13 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
             </span>
           }
         />
-        <Panel>
+        <Card as="section">
           <MarkdownRenderer content={page.content} />
-        </Panel>
+        </Card>
       </div>
     );
   }
 
-  // 6. Focus Template
   if (page.template === "focus") {
     return (
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
@@ -266,14 +264,13 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
             </span>
           }
         />
-        <Panel>
+        <Card as="section">
           <MarkdownRenderer content={page.content} />
-        </Panel>
+        </Card>
       </div>
     );
   }
 
-  // 7. FAQ Template
   if (page.template === "faq") {
     return (
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
@@ -287,28 +284,27 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
             </span>
           }
         />
-        <Panel>
+        <Card as="section">
           <MarkdownRenderer content={page.content} />
-        </Panel>
+        </Card>
       </div>
     );
   }
 
-  // 8. Default Standard Template
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
       {draftBanner}
       <div
         className={`grid min-w-0 gap-8 ${toc.length === 0 ? "mx-auto w-full max-w-3xl" : "lg:grid-cols-[minmax(0,1fr)_16rem]"}`}
       >
-        <Panel as="article" className="gap-8">
+        <Card as="article" className="gap-8">
           <PageHeader title={page.title} description={page.summary} />
           <MarkdownRenderer content={page.content} />
-        </Panel>
+        </Card>
 
         {toc.length > 0 ? (
           <aside className="order-first self-start lg:order-none lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-2 lg:[scrollbar-gutter:stable]">
-            <Panel className="gap-3 p-4">
+            <Card className="gap-3 p-4">
               <h2 className="text-sm font-semibold">目录导航</h2>
               <nav className="flex flex-col gap-1" aria-label="目录导航">
                 {toc.map((item) => (
@@ -321,7 +317,7 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
                   </a>
                 ))}
               </nav>
-            </Panel>
+            </Card>
           </aside>
         ) : null}
       </div>
