@@ -37,6 +37,7 @@ jobs:
 
           cp .github/migrations/status-pills/StatusPill.tsx blog-frontend/src/components/agent/StatusPill.tsx
           cp .github/migrations/status-pills/StatusPill.test.tsx blog-frontend/src/components/agent/__tests__/StatusPill.test.tsx
+          cp .github/migrations/status-pills/OperationsWorkspace.test.tsx blog-frontend/src/components/agent/__tests__/OperationsWorkspace.test.tsx
 
           node --input-type=module <<'EOF'
           import { readFile, writeFile } from 'node:fs/promises';
@@ -68,8 +69,11 @@ jobs:
           npx prettier --write \
             src/components/agent/StatusPill.tsx \
             src/components/agent/__tests__/StatusPill.test.tsx \
+            src/components/agent/__tests__/OperationsWorkspace.test.tsx \
             scripts/legacy-ui-allowlist.json
-          npm run test:run -- src/components/agent/__tests__/StatusPill.test.tsx
+          npm run test:run -- \
+            src/components/agent/__tests__/StatusPill.test.tsx \
+            src/components/agent/__tests__/OperationsWorkspace.test.tsx
           npm run quality
           cd ..
           docker build -f blog-frontend/Dockerfile blog-frontend
@@ -91,6 +95,7 @@ jobs:
           git add \
             blog-frontend/src/components/agent/StatusPill.tsx \
             blog-frontend/src/components/agent/__tests__/StatusPill.test.tsx \
+            blog-frontend/src/components/agent/__tests__/OperationsWorkspace.test.tsx \
             blog-frontend/scripts/legacy-ui-allowlist.json \
             .github/migrations/status-pills \
             .github/workflows/migrate-status-pills-once.yml
