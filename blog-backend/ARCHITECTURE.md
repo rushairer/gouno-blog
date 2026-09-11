@@ -47,9 +47,11 @@ Do not perform filename-only moves that leave package ownership ambiguous or int
 
 The `page` capability is the first fully migrated reference slice. Its canonical implementation lives under `internal/page/`; legacy Page symbols in the flat packages are temporary compatibility facades.
 
-The `community` capability owns its domain, persistence, service, and HTTP controller under `internal/community/{domain,repository,service,controller}`. The moderation-only `GET /api/posts/:slugOrID/comments/all` route is also owned by the Community controller, so all active Community HTTP routes are capability-owned. Shared interaction rate limiting lives under `internal/ratelimit`, not a business service layer.
+The `community` capability is fully canonical under `internal/community/{domain,repository,service,controller}`. Its composition root, router, moderation Tool integration, and HTTP error mapping now depend on canonical Community packages or narrow capability contracts. The moderation-only `GET /api/posts/:slugOrID/comments/all` route is owned by the Community controller, so all active Community HTTP routes are capability-owned. Shared interaction rate limiting lives under `internal/ratelimit`, not a business service layer.
 
-The duplicate Comment methods and contracts that previously remained on `PostService`, `PostRepository`, and `PostController` have been removed after active routes and tests moved to Community. Compatibility aliases that still serve real cross-package callers remain in the Community/domain facades and must be removed only after those callers migrate to canonical capability packages.
+The duplicate Comment methods previously present on `PostService`, `PostRepository`, and `PostController`, the flat Community service/repository/controller facades, the old service-level rate-limiter facade, and the root `domain.Comment` / `domain.Notification` / `domain.CommunityState` aliases have been removed. Consumers that need only part of Community depend on narrow contracts: Growth requires published-post resolution, while Blog Tools require moderation-list reads.
+
+Integration database setup discovered during the migration is shared through `internal/testsupport.OpenTestDB`; capability tests must not depend on private helpers owned by another capability's test file.
 
 ## Shared HTTP controller primitives
 
@@ -61,7 +63,7 @@ internal/controllerutil/
 
 This package is an application-level HTTP adapter utility boundary. Capability controllers may depend on it. It must not depend on capability controller packages.
 
-The legacy `internal/controller` package may temporarily expose compatibility facades while controllers are moved out of the flat bucket. Those facades are migration scaffolding, not a destination for new business controllers.
+The legacy `internal/controller` package may temporarily expose compatibility facades while other controllers are moved out of the flat bucket. Those facades are migration scaffolding, not a destination for new business controllers.
 
 ## Dependency direction
 
