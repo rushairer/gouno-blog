@@ -1,9 +1,9 @@
 {
   "name": "@gouno/ui",
-  "version": "0.2.0",
-  "archive": "gouno-ui-0.2.0.tgz",
-  "sha256": "b84ec06aed0e93c3f67f23aa7a4542bda3b2283260b71b5c1033e24605db3f74",
-  "integrity": "sha512-SkhMY1+03zFXGTg2nPzg9mS25xfDgNUBdMm/5c5YrL4/hN0vTo0CY7CHKe6Pe2R1ZPRHbHFJnjC6h4WB+FVQgg==",
+  "version": "0.3.0",
+  "archive": "gouno-ui-0.3.0.tgz",
+  "sha256": "1b09702168a5e1c46be59bf56c6786bcf49d109b422362192678aae93f42e30f",
+  "integrity": "sha512-FOMzh7csNhMQhLZJNPOu0X2MlKqFv7sgSMKNj9CDEA7nQUm/t8ehy8fiW3Z0PvPaqbCBPJbnjRUycEcNmEtdJw==",
   "source": "rushairer/gouno-ui",
-  "sourceSha": "0ba9fabda8e61f3a278b3fb5f37b8f671c167abb"
+  "sourceSha": "970bc1b0ad49de7b233901a5faf03c63dfa05892"
 }
