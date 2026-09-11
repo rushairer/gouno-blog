@@ -1,0 +1,54 @@
+name: Gosso Release BFF Compatibility
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - ".github/workflows/gosso-release-bff-compat.yml"
+      - "docker-compose.yml"
+      - "docker-compose.source.yml"
+      - "Caddyfile"
+      - "seed/**"
+      - "blog-backend/**"
+      - "scripts/check-auth-deployment-contract.mjs"
+      - "scripts/check-gosso-release-bff-compat.sh"
+  pull_request:
+    branches: [main, master]
+    paths:
+      - ".github/workflows/gosso-release-bff-compat.yml"
+      - "docker-compose.yml"
+      - "docker-compose.source.yml"
+      - "Caddyfile"
+      - "seed/**"
+      - "blog-backend/**"
+      - "scripts/check-auth-deployment-contract.mjs"
+      - "scripts/check-gosso-release-bff-compat.sh"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: gosso-release-bff-compat-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gosso-1-6-bff:
+    name: Gosso v1.6.0 BFF acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify released Gosso and current Blog BFF compatibility
+        run: bash scripts/check-gosso-release-bff-compat.sh
