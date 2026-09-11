@@ -1,25 +1,26 @@
 import { useCallback, useEffect, useState } from "react";
-import { Edit2, Plus, Trash2 } from "lucide-react";
+import { Bot, Edit2, Plus, Trash2 } from "lucide-react";
 import { siteApi } from "../../api/site";
 import { agentApi } from "../../api/agent";
-import { Checkbox, Drawer } from "@gouno/ui/core";
 import {
-  AdminPage,
-  AdminPageHeader,
-  AsyncState,
-  BulkActionBar,
+  Alert,
   Button,
   Card,
-  ConfirmDialog,
-  ContentStack,
-  Feedback,
+  Checkbox,
+  Drawer,
+  Empty,
   IconButton,
-  ListRow,
-  ListStack,
-  TableContainer,
-  TableSkeleton,
-  useToast,
-} from "@gouno/ui-legacy";
+  Skeleton,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@gouno/ui/core";
+import { PageHeader } from "@gouno/ui/gouno";
+import { BulkActionBar } from "@gouno/ui/patterns";
+import { ConfirmDialog, useToast } from "@gouno/ui-legacy";
 import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
 import { CategoryForm } from "../../components/taxonomy/CategoryForm";
 import type { CategoryFormValue } from "../../components/taxonomy/CategoryForm";
@@ -37,6 +38,36 @@ const emptyCategoryForm: CategoryFormValue = {
   description: "",
   sort_order: 0,
 };
+
+function CategoriesSkeleton() {
+  return (
+    <Card padding="base">
+      <div
+        className="flex flex-col gap-4"
+        role="status"
+        aria-label="分类加载中"
+        aria-live="polite"
+      >
+        {Array.from({ length: 4 }, (_, index) => (
+          <div
+            key={index}
+            className="grid gap-3 border-t pt-4 first:border-t-0 first:pt-0 md:grid-cols-[3rem_5rem_minmax(0,1fr)_12rem_6rem_8rem]"
+          >
+            <Skeleton className="h-5 w-5" />
+            <Skeleton className="h-4 w-8" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-48" />
+            </div>
+            <Skeleton className="h-5 w-28" />
+            <Skeleton className="h-4 w-10" />
+            <Skeleton className="h-8 w-20" />
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
 
 export default function Categories() {
   const allowed = useAdminGuard("/admin/categories");
@@ -228,12 +259,14 @@ export default function Categories() {
   const renderActions = (item: Category) => (
     <>
       <IconButton
+        variant="ghost"
         label={`编辑分类 ${item.name}`}
         icon={<Edit2 />}
         onClick={() => openEditDrawer(item)}
       />
       <IconButton
-        variant="danger"
+        variant="ghost"
+        color="error"
         label={`删除分类 ${item.name}`}
         icon={<Trash2 />}
         onClick={() => setDeleteTarget({ kind: "category", item })}
@@ -246,13 +279,14 @@ export default function Categories() {
     categories.every((item) => selected.includes(item.id));
 
   return (
-    <AdminPage>
-      <AdminPageHeader
+    <div className="flex flex-col gap-6">
+      <PageHeader
         title="分类"
         description="建立长期稳定的内容脉络与主题结构。"
         actions={
           <Button
-            variant="primary"
+            variant="solid"
+            color="primary"
             type="button"
             icon={<Plus />}
             onClick={openCreateDrawer}
@@ -261,124 +295,92 @@ export default function Categories() {
           </Button>
         }
       />
-      <ContentStack>
-        {error && categories.length > 0 ? (
-          <Feedback type="error">{error}</Feedback>
-        ) : null}
-        {selected.length ? (
-          <BulkActionBar
-            selectionLabel={`已选择 ${selected.length} 个分类`}
-            onAIAssist={() => setAIOpen(true)}
-            onCancel={() => setSelected([])}
-          >
-            <Button
-              variant="danger"
-              size="compact"
-              type="button"
-              onClick={() => setDeleteTarget({ kind: "batch" })}
-              icon={<Trash2 />}
-            >
-              删除
-            </Button>
-          </BulkActionBar>
-        ) : null}
-        <AsyncState
-          loading={loading}
-          skeleton={<TableSkeleton rows={4} columns={6} />}
-          error={error && categories.length === 0 ? error : null}
-          onRetry={load}
-          retryLabel="重新载入"
-          empty={!loading && categories.length === 0 && !error}
-          emptyTitle="还没有分类。创建第一个分类来组织长期主题。"
-        >
-          <Card className="hidden overflow-hidden border-border/80 bg-card md:block">
-            <TableContainer>
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th className="w-12 text-center">
-                      <Checkbox
-                        aria-label="选择全部分类"
-                        checked={allSelected}
-                        onChange={(event) =>
-                          setSelected(
-                            event.target.checked
-                              ? categories.map((item) => item.id)
-                              : [],
-                          )
-                        }
-                      />
-                    </th>
-                    <th className="w-20">排序</th>
-                    <th>分类名称与描述</th>
-                    <th className="w-48">Slug 标识</th>
-                    <th className="w-24">文章数</th>
-                    <th className="w-32 text-right">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {categories.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="hover:bg-muted/40 transition-colors"
-                    >
-                      <td className="text-center">
-                        <Checkbox
-                          aria-label={`选择分类 ${item.name}`}
-                          checked={selected.includes(item.id)}
-                          onChange={(event) =>
-                            setSelectedCategory(item.id, event.target.checked)
-                          }
-                        />
-                      </td>
-                      <td>
-                        <span className="font-mono text-xs text-muted-foreground">
-                          {item.sort_order ?? 0}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="flex flex-col gap-0.5">
-                          <strong className="font-semibold text-foreground text-sm">
-                            {item.name}
-                          </strong>
-                          {item.description ? (
-                            <span className="text-xs text-muted-foreground line-clamp-1">
-                              {item.description}
-                            </span>
-                          ) : null}
-                        </div>
-                      </td>
-                      <td>
-                        <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground">
-                          {item.slug}
-                        </code>
-                      </td>
-                      <td>
-                        <span className="font-mono text-xs text-muted-foreground">
-                          {item.post_count ?? 0}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="flex items-center justify-end gap-1">
-                          {renderActions(item)}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </TableContainer>
-          </Card>
 
-          <Card className="border-border/80 bg-card px-4 md:hidden">
-            <ListStack role="list" aria-label="分类列表">
-              {categories.map((item) => (
-                <div key={item.id} role="listitem">
-                  <ListRow
-                    action={renderActions(item)}
-                    className="items-start gap-3 [&>div:last-child]:w-full [&>div:last-child]:justify-end"
-                  >
-                    <div className="flex items-start gap-3">
+      {error && categories.length > 0 ? (
+        <Alert type="error" showIcon title={error} />
+      ) : null}
+
+      {selected.length > 0 ? (
+        <BulkActionBar
+          selectionLabel={`已选择 ${selected.length} 个分类`}
+          onCancel={() => setSelected([])}
+        >
+          <Button size="small" icon={<Bot />} onClick={() => setAIOpen(true)}>
+            交给 AI
+          </Button>
+          <Button
+            size="small"
+            color="error"
+            type="button"
+            onClick={() => setDeleteTarget({ kind: "batch" })}
+            icon={<Trash2 />}
+          >
+            删除
+          </Button>
+        </BulkActionBar>
+      ) : null}
+
+      {loading ? (
+        <CategoriesSkeleton />
+      ) : error && categories.length === 0 ? (
+        <Alert
+          type="error"
+          showIcon
+          title="分类加载失败"
+          description={error}
+          action={
+            <Button size="small" onClick={() => void load()}>
+              重新载入
+            </Button>
+          }
+        />
+      ) : categories.length === 0 ? (
+        <Card padding="lg">
+          <Empty
+            title="还没有分类。创建第一个分类来组织长期主题。"
+            action={
+              <Button
+                size="small"
+                variant="solid"
+                color="primary"
+                icon={<Plus />}
+                onClick={openCreateDrawer}
+              >
+                新建分类
+              </Button>
+            }
+          />
+        </Card>
+      ) : (
+        <>
+          <div className="hidden md:block">
+            <Table density="compact" bordered>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12 text-center">
+                    <Checkbox
+                      aria-label="选择全部分类"
+                      checked={allSelected}
+                      onChange={(event) =>
+                        setSelected(
+                          event.target.checked
+                            ? categories.map((item) => item.id)
+                            : [],
+                        )
+                      }
+                    />
+                  </TableHead>
+                  <TableHead className="w-20">排序</TableHead>
+                  <TableHead>分类名称与描述</TableHead>
+                  <TableHead className="w-48">Slug 标识</TableHead>
+                  <TableHead className="w-24">文章数</TableHead>
+                  <TableHead className="w-32 text-right">操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {categories.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="text-center">
                       <Checkbox
                         aria-label={`选择分类 ${item.name}`}
                         checked={selected.includes(item.id)}
@@ -386,35 +388,92 @@ export default function Categories() {
                           setSelectedCategory(item.id, event.target.checked)
                         }
                       />
-                      <div className="min-w-0 flex-1 space-y-2">
-                        <div className="flex items-start justify-between gap-3">
-                          <strong className="min-w-0 break-words text-sm font-semibold leading-snug">
-                            {item.name}
-                          </strong>
-                          <span className="shrink-0 font-mono text-xs text-muted-foreground">
-                            {item.post_count ?? 0} 篇
-                          </span>
-                        </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {item.sort_order ?? 0}
+                      </span>
+                    </TableCell>
+                    <TableCell className="whitespace-normal">
+                      <div className="flex flex-col gap-0.5">
+                        <strong className="text-sm font-semibold text-foreground">
+                          {item.name}
+                        </strong>
                         {item.description ? (
-                          <p className="text-xs leading-relaxed text-muted-foreground">
+                          <span className="line-clamp-1 text-xs text-muted-foreground">
                             {item.description}
-                          </p>
+                          </span>
                         ) : null}
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                          <code className="break-all rounded bg-muted px-1.5 py-0.5 font-mono">
-                            {item.slug}
-                          </code>
-                          <span>排序 {item.sort_order ?? 0}</span>
-                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
+                        {item.slug}
+                      </code>
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {item.post_count ?? 0}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-end gap-1">
+                        {renderActions(item)}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div
+            className="grid gap-3 md:hidden"
+            role="list"
+            aria-label="分类列表"
+          >
+            {categories.map((item) => (
+              <Card key={item.id} padding="base" role="listitem">
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      aria-label={`选择分类 ${item.name}`}
+                      checked={selected.includes(item.id)}
+                      onChange={(event) =>
+                        setSelectedCategory(item.id, event.target.checked)
+                      }
+                    />
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="flex items-start justify-between gap-3">
+                        <strong className="min-w-0 break-words text-sm font-semibold leading-snug">
+                          {item.name}
+                        </strong>
+                        <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                          {item.post_count ?? 0} 篇
+                        </span>
+                      </div>
+                      {item.description ? (
+                        <p className="text-xs leading-relaxed text-muted-foreground">
+                          {item.description}
+                        </p>
+                      ) : null}
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                        <code className="break-all rounded bg-muted px-1.5 py-0.5 font-mono">
+                          {item.slug}
+                        </code>
+                        <span>排序 {item.sort_order ?? 0}</span>
                       </div>
                     </div>
-                  </ListRow>
+                  </div>
+                  <div className="flex items-center justify-end gap-1">
+                    {renderActions(item)}
+                  </div>
                 </div>
-              ))}
-            </ListStack>
-          </Card>
-        </AsyncState>
-      </ContentStack>
+              </Card>
+            ))}
+          </div>
+        </>
+      )}
 
       <Drawer
         open={creatingCategory}
@@ -473,6 +532,7 @@ export default function Categories() {
         onClose={() => setDeleteTarget(null)}
         onConfirm={remove}
       />
+
       <WorkflowLauncher
         open={aiOpen}
         resourceType="category"
@@ -480,6 +540,6 @@ export default function Categories() {
         onClose={() => setAIOpen(false)}
         title="将所选分类交给 AI"
       />
-    </AdminPage>
+    </div>
   );
 }
