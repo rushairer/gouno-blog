@@ -13,6 +13,10 @@ import (
 	"github.com/rushairer/blog-backend/internal/media"
 	"github.com/rushairer/blog-backend/internal/repository"
 	"github.com/rushairer/blog-backend/internal/service"
+	siterepository "github.com/rushairer/blog-backend/internal/site/repository"
+	siteservice "github.com/rushairer/blog-backend/internal/site/service"
+	taxonomyrepository "github.com/rushairer/blog-backend/internal/taxonomy/repository"
+	taxonomyservice "github.com/rushairer/blog-backend/internal/taxonomy/service"
 	"github.com/rushairer/blog-backend/middleware"
 	auth "github.com/rushairer/gouno/auth"
 )
@@ -31,7 +35,8 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 		VisitorSecret: "test-secret", MediaDir: t.TempDir(), MediaStore: media.NewLocal(t.TempDir()),
 		PostSvc:      service.NewPostService(postRepo),
 		PageSvc:      service.NewPageService(repository.NewPageRepository(nil)),
-		CategorySvc:  service.NewCategoryService(repository.NewCategoryRepository(nil)),
+		TaxonomySvc:  taxonomyservice.New(taxonomyrepository.New(nil)),
+		SiteSvc:      siteservice.New(siterepository.New(nil)),
 		CommunitySvc: communityservice.NewCommunityService(communityrepository.NewCommunityRepository(nil), postRepo),
 		GrowthSvc:    service.NewGrowthService(repository.NewGrowthRepository(nil)),
 		Verifier:     auth.NewVerifier("http://127.0.0.1:1/jwks"), AccessService: access.NewService(nil, access.Bootstrap{}),
@@ -46,6 +51,10 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 	foundHealth := false
 	foundCommunityModeration := false
 	communityModerationHandler := ""
+	foundTaxonomy := false
+	taxonomyHandler := ""
+	foundSite := false
+	siteHandler := ""
 	for _, route := range engine.Routes() {
 		if route.Method == "PUT" && route.Path == "/api/posts/:slugOrID" {
 			foundUpdate = true
@@ -72,12 +81,26 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 			foundCommunityModeration = true
 			communityModerationHandler = route.Handler
 		}
+		if route.Method == "GET" && route.Path == "/api/categories" {
+			foundTaxonomy = true
+			taxonomyHandler = route.Handler
+		}
+		if route.Method == "GET" && route.Path == "/api/site" {
+			foundSite = true
+			siteHandler = route.Handler
+		}
 	}
-	if !foundUpdate || !foundLike || !foundRelated || !foundAnalytics || !foundMedia || !foundHealth || !foundBlogSession || !foundCommunityModeration {
-		t.Fatalf("expected routes, update=%v like=%v related=%v analytics=%v media=%v health=%v blogSession=%v communityModeration=%v", foundUpdate, foundLike, foundRelated, foundAnalytics, foundMedia, foundHealth, foundBlogSession, foundCommunityModeration)
+	if !foundUpdate || !foundLike || !foundRelated || !foundAnalytics || !foundMedia || !foundHealth || !foundBlogSession || !foundCommunityModeration || !foundTaxonomy || !foundSite {
+		t.Fatalf("expected routes, update=%v like=%v related=%v analytics=%v media=%v health=%v blogSession=%v communityModeration=%v taxonomy=%v site=%v", foundUpdate, foundLike, foundRelated, foundAnalytics, foundMedia, foundHealth, foundBlogSession, foundCommunityModeration, foundTaxonomy, foundSite)
 	}
 	if !strings.Contains(communityModerationHandler, "internal/community/controller") {
 		t.Fatalf("comments/all must be owned by canonical Community controller, handler=%q", communityModerationHandler)
+	}
+	if !strings.Contains(taxonomyHandler, "internal/taxonomy/controller") {
+		t.Fatalf("categories must be owned by canonical Taxonomy controller, handler=%q", taxonomyHandler)
+	}
+	if !strings.Contains(siteHandler, "internal/site/controller") {
+		t.Fatalf("site settings must be owned by canonical Site controller, handler=%q", siteHandler)
 	}
 	response := httptest.NewRecorder()
 	engine.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/healthz", nil))

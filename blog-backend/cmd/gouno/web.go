@@ -30,6 +30,10 @@ import (
 	"github.com/rushairer/blog-backend/internal/repository"
 	"github.com/rushairer/blog-backend/internal/secretbox"
 	"github.com/rushairer/blog-backend/internal/service"
+	siterepository "github.com/rushairer/blog-backend/internal/site/repository"
+	siteservice "github.com/rushairer/blog-backend/internal/site/service"
+	taxonomyrepository "github.com/rushairer/blog-backend/internal/taxonomy/repository"
+	taxonomyservice "github.com/rushairer/blog-backend/internal/taxonomy/service"
 	"github.com/rushairer/blog-backend/internal/tool"
 	workflowservice "github.com/rushairer/blog-backend/internal/workflow"
 	"github.com/rushairer/blog-backend/middleware"
@@ -266,7 +270,8 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 	postRepo := repository.NewPostRepository(cfg.DB)
 	postSvc := service.NewPostService(postRepo)
 	pageSvc := service.NewPageService(repository.NewPageRepository(cfg.DB))
-	catSvc := service.NewCategoryService(repository.NewCategoryRepository(cfg.DB))
+	taxonomySvc := taxonomyservice.New(taxonomyrepository.New(cfg.DB))
+	siteSvc := siteservice.New(siterepository.New(cfg.DB))
 	communitySvc := communityservice.NewCommunityService(communityrepository.NewCommunityRepository(cfg.DB), postRepo)
 	growthSvc := service.NewGrowthService(repository.NewGrowthRepository(cfg.DB))
 	service.StartScheduledPublisher(ctx, postSvc, cfg.Logger)
@@ -323,7 +328,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		DB: cfg.DB, AuthOptions: cfg.AuthOptions, RedisDSN: cfg.Global.RedisConfig.DSN,
 		VisitorSecret: visitorSecret, MediaDir: mediaDir, MediaStore: mediaStore,
 		CORSAllowedOrigins: cfg.Global.WebServerConfig.CORSAllowedOrigins,
-		PostSvc:            postSvc, PageSvc: pageSvc, CategorySvc: catSvc, CommunitySvc: communitySvc,
+		PostSvc:            postSvc, PageSvc: pageSvc, TaxonomySvc: taxonomySvc, SiteSvc: siteSvc, CommunitySvc: communitySvc,
 		GrowthSvc: growthSvc, AgentCtrl: agentCtrl, Logger: cfg.Logger, Verifier: verifier,
 		AccessService: accessService, SecureCookies: cfg.Global.WebServerConfig.ResolveSecureCookies(cfg.Env),
 		BFFClient: bffClient,

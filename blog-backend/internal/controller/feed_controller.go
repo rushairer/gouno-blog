@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"context"
 	"encoding/xml"
 	"fmt"
 	"net/http"
@@ -12,14 +13,18 @@ import (
 	"github.com/rushairer/blog-backend/internal/service"
 )
 
-type FeedController struct {
-	svc     BlogService
-	pageSvc *service.PageService
-	catSvc  service.CategoryService
+type SiteSettingsReader interface {
+	GetSiteSettings(ctx context.Context) (map[string]string, error)
 }
 
-func NewFeedController(svc BlogService, pageSvc *service.PageService, catSvc service.CategoryService) *FeedController {
-	return &FeedController{svc: svc, pageSvc: pageSvc, catSvc: catSvc}
+type FeedController struct {
+	svc          BlogService
+	pageSvc      *service.PageService
+	siteSettings SiteSettingsReader
+}
+
+func NewFeedController(svc BlogService, pageSvc *service.PageService, siteSettings SiteSettingsReader) *FeedController {
+	return &FeedController{svc: svc, pageSvc: pageSvc, siteSettings: siteSettings}
 }
 
 // RSS 2.0 Structs
@@ -176,10 +181,10 @@ func getBaseURL(c *gin.Context) string {
 func (ctrl *FeedController) siteIdentity(c *gin.Context) (string, string) {
 	title := "Gouno Blog"
 	description := "记录、思考与分享。"
-	if ctrl.catSvc == nil {
+	if ctrl.siteSettings == nil {
 		return title, description
 	}
-	settings, err := ctrl.catSvc.GetSiteSettings(c.Request.Context())
+	settings, err := ctrl.siteSettings.GetSiteSettings(c.Request.Context())
 	if err != nil || settings == nil {
 		return title, description
 	}

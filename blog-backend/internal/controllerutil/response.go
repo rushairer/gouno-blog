@@ -14,6 +14,8 @@ import (
 	communityservice "github.com/rushairer/blog-backend/internal/community/service"
 	"github.com/rushairer/blog-backend/internal/knowledge"
 	"github.com/rushairer/blog-backend/internal/service"
+	siteservice "github.com/rushairer/blog-backend/internal/site/service"
+	taxonomyservice "github.com/rushairer/blog-backend/internal/taxonomy/service"
 	workflowservice "github.com/rushairer/blog-backend/internal/workflow"
 	"github.com/rushairer/blog-backend/internal/workflowplan"
 	"github.com/rushairer/gouno"
@@ -100,7 +102,7 @@ func WriteDomainError(c *gin.Context, err error) {
 	case errors.Is(err, sql.ErrNoRows),
 		errors.Is(err, service.ErrPostNotFound),
 		errors.Is(err, communityservice.ErrPostNotFound),
-		errors.Is(err, service.ErrCategoryNotFound),
+		errors.Is(err, taxonomyservice.ErrCategoryNotFound),
 		errors.Is(err, service.ErrPageNotFound),
 		errors.Is(err, workflowservice.ErrNotFound),
 		errors.Is(err, knowledge.ErrNotFound),
@@ -109,7 +111,7 @@ func WriteDomainError(c *gin.Context, err error) {
 
 	case errors.Is(err, service.ErrSlugInUse),
 		errors.Is(err, service.ErrMediaInUse),
-		errors.Is(err, service.ErrCategorySlugInUse),
+		errors.Is(err, taxonomyservice.ErrCategorySlugInUse),
 		errors.Is(err, service.ErrDuplicateSlug),
 		errors.Is(err, communityrepository.ErrDuplicateInteraction),
 		errors.Is(err, workflowservice.ErrConflict),
@@ -140,14 +142,15 @@ func WriteDomainError(c *gin.Context, err error) {
 		errors.Is(err, service.ErrInvalidVersion),
 		errors.Is(err, service.ErrInvalidMediaPayload),
 		errors.Is(err, service.ErrInvalidMediaID),
-		errors.Is(err, service.ErrCategoryNameRequired),
-		errors.Is(err, service.ErrInvalidCategoryID),
-		errors.Is(err, service.ErrInvalidTagPayload),
-		errors.Is(err, service.ErrInvalidSettings),
-		errors.Is(err, service.ErrSettingValueTooLong),
-		errors.Is(err, service.ErrSiteTitleEmpty),
-		errors.Is(err, service.ErrInvalidRSSURL),
-		errors.Is(err, service.ErrInvalidGithubURL),
+		errors.Is(err, taxonomyservice.ErrCategoryNameRequired),
+		errors.Is(err, taxonomyservice.ErrInvalidCategoryID),
+		errors.Is(err, taxonomyservice.ErrInvalidTagPayload),
+		errors.Is(err, siteservice.ErrInvalidSettings),
+		errors.Is(err, siteservice.ErrSettingValueTooLong),
+		errors.Is(err, siteservice.ErrSiteTitleEmpty),
+		errors.Is(err, siteservice.ErrInvalidRSSURL),
+		errors.Is(err, siteservice.ErrInvalidGithubURL),
+		errors.Is(err, siteservice.ErrInvalidFaviconURL),
 		errors.Is(err, service.ErrBatchInvalidIDs),
 		errors.Is(err, service.ErrBatchInvalidAction),
 		errors.Is(err, service.ErrReservedSlug),
