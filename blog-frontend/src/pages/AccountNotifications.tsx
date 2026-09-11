@@ -1,18 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { Bell } from "lucide-react";
+import { Bell, Inbox } from "lucide-react";
 import { notificationsApi } from "../api/notifications";
 import type { Notification } from "../api/notifications";
+import { Button, Card, Empty, Result, Spinner } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
-import {
-  Button,
-  ContentStack,
-  EmptyState,
-  ErrorState,
-  LoadingState,
-  Panel,
-} from "@gouno/ui-legacy";
 import { usePageTitle } from "../hooks/usePageTitle";
-
 import { useI18n } from "../i18n";
 
 export default function AccountNotifications() {
@@ -60,27 +52,41 @@ export default function AccountNotifications() {
         title={t("accountNotifications.title")}
         description={t("accountNotifications.description")}
       />
-      <ContentStack>
+      <div className="flex min-w-0 flex-col gap-6">
         {loading ? (
-          <LoadingState label={t("accountNotifications.loading")} />
+          <div
+            role="status"
+            className="flex items-center justify-center gap-3 py-12 text-sm text-muted-foreground"
+          >
+            <Spinner className="size-5 text-primary" />
+            <span>{t("accountNotifications.loading")}</span>
+          </div>
         ) : null}
         {!loading && error ? (
-          <ErrorState
-            label={error}
-            action={
-              <Button variant="primary" onClick={() => void load()}>
+          <Result
+            status="error"
+            title={error}
+            extra={
+              <Button
+                variant="solid"
+                color="primary"
+                onClick={() => void load()}
+              >
                 {t("common.retry")}
               </Button>
             }
           />
         ) : null}
         {!loading && !error && items.length === 0 ? (
-          <EmptyState label={t("accountNotifications.empty")} />
+          <Empty
+            icon={<Inbox className="size-5 text-muted-foreground" />}
+            title={t("accountNotifications.empty")}
+          />
         ) : null}
         {!loading && !error && items.length > 0 ? (
           <section className="grid gap-3" aria-label="通知列表">
             {items.map((item) => (
-              <Panel
+              <Card
                 key={item.id}
                 className={`grid gap-3 sm:grid-cols-[1.25rem_minmax(0,1fr)_auto] ${item.read_at ? "" : "border-l-4 border-l-primary"}`}
               >
@@ -100,18 +106,18 @@ export default function AccountNotifications() {
                 </div>
                 {!item.read_at ? (
                   <Button
-                    variant="secondary"
+                    variant="outline"
                     className="sm:self-start"
                     onClick={() => void markRead(item)}
                   >
                     {t("accountNotifications.markAsRead")}
                   </Button>
                 ) : null}
-              </Panel>
+              </Card>
             ))}
           </section>
         ) : null}
-      </ContentStack>
+      </div>
     </main>
   );
 }
