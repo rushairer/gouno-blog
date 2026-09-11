@@ -9,8 +9,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/access"
 	"github.com/rushairer/blog-backend/internal/authbff"
+	communitycontroller "github.com/rushairer/blog-backend/internal/community/controller"
+	communityservice "github.com/rushairer/blog-backend/internal/community/service"
 	"github.com/rushairer/blog-backend/internal/controller"
 	"github.com/rushairer/blog-backend/internal/media"
+	"github.com/rushairer/blog-backend/internal/ratelimit"
 	"github.com/rushairer/blog-backend/internal/service"
 	"github.com/rushairer/blog-backend/middleware"
 	"github.com/rushairer/gouno"
@@ -29,7 +32,7 @@ type WebRouterOptions struct {
 	PostSvc            *service.PostService
 	PageSvc            *service.PageService
 	CategorySvc        service.CategoryService
-	CommunitySvc       *service.CommunityService
+	CommunitySvc       *communityservice.CommunityService
 	GrowthSvc          *service.GrowthService
 	AgentCtrl          *controller.AgentController
 	Logger             *zap.Logger
@@ -76,13 +79,13 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 	feedCtrl := controller.NewFeedController(postSvc, pageSvc, catSvc)
 
 	communitySvc := opts.CommunitySvc
-	var interactionLimiter service.RateLimiter
+	var interactionLimiter ratelimit.Limiter
 	if opts.RedisDSN != "" {
-		if limiter, err := service.NewRedisRateLimiter(opts.RedisDSN); err == nil {
+		if limiter, err := ratelimit.NewRedisLimiter(opts.RedisDSN); err == nil {
 			interactionLimiter = limiter
 		}
 	}
-	communityCtrl := controller.NewCommunityController(communitySvc, interactionLimiter, opts.VisitorSecret, opts.Logger)
+	communityCtrl := communitycontroller.NewCommunityController(communitySvc, interactionLimiter, opts.VisitorSecret, opts.Logger)
 
 	growthSvc := opts.GrowthSvc
 	growthCtrl := controller.NewGrowthController(growthSvc, postSvc, communitySvc, opts.MediaStore, opts.Logger)

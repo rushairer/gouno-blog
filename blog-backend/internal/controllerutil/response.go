@@ -10,9 +10,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	agentservice "github.com/rushairer/blog-backend/internal/agent"
+	communityrepository "github.com/rushairer/blog-backend/internal/community/repository"
 	communityservice "github.com/rushairer/blog-backend/internal/community/service"
 	"github.com/rushairer/blog-backend/internal/knowledge"
-	"github.com/rushairer/blog-backend/internal/repository"
 	"github.com/rushairer/blog-backend/internal/service"
 	workflowservice "github.com/rushairer/blog-backend/internal/workflow"
 	"github.com/rushairer/blog-backend/internal/workflowplan"
@@ -111,7 +111,7 @@ func WriteDomainError(c *gin.Context, err error) {
 		errors.Is(err, service.ErrMediaInUse),
 		errors.Is(err, service.ErrCategorySlugInUse),
 		errors.Is(err, service.ErrDuplicateSlug),
-		errors.Is(err, repository.ErrDuplicateInteraction),
+		errors.Is(err, communityrepository.ErrDuplicateInteraction),
 		errors.Is(err, workflowservice.ErrConflict),
 		errors.Is(err, agentservice.ErrConflict),
 		errors.Is(err, agentservice.ErrProviderInUse),
@@ -130,15 +130,13 @@ func WriteDomainError(c *gin.Context, err error) {
 		errors.Is(err, service.ErrScheduledPast),
 		errors.Is(err, service.ErrInvalidPostID),
 		errors.Is(err, service.ErrInvalidPostSlug),
-		errors.Is(err, service.ErrCommentAuthorEmpty),
 		errors.Is(err, communityservice.ErrCommentAuthorEmpty),
-		errors.Is(err, service.ErrCommentContentEmpty),
 		errors.Is(err, communityservice.ErrCommentContentEmpty),
-		errors.Is(err, service.ErrCommentContentTooLong),
-		errors.Is(err, service.ErrAuthorTooLong),
-		errors.Is(err, service.ErrParentCommentNotFound),
-		errors.Is(err, service.ErrInvalidCommentStatus),
-		errors.Is(err, service.ErrReportReasonTooLong),
+		errors.Is(err, communityservice.ErrCommentContentTooLong),
+		errors.Is(err, communityservice.ErrAuthorTooLong),
+		errors.Is(err, communityservice.ErrParentCommentNotFound),
+		errors.Is(err, communityservice.ErrInvalidCommentStatus),
+		errors.Is(err, communityservice.ErrReportReasonTooLong),
 		errors.Is(err, service.ErrInvalidVersion),
 		errors.Is(err, service.ErrInvalidMediaPayload),
 		errors.Is(err, service.ErrInvalidMediaID),
@@ -155,8 +153,8 @@ func WriteDomainError(c *gin.Context, err error) {
 		errors.Is(err, service.ErrReservedSlug),
 		errors.Is(err, service.ErrInvalidSlug),
 		errors.Is(err, service.ErrPageTitleEmpty),
-		errors.Is(err, repository.ErrParentCommentMismatch),
-		errors.Is(err, repository.ErrCommentDepthExceeded),
+		errors.Is(err, communityrepository.ErrParentCommentMismatch),
+		errors.Is(err, communityrepository.ErrCommentDepthExceeded),
 		errors.Is(err, workflowservice.ErrInvalid),
 		errors.Is(err, knowledge.ErrInvalid),
 		errors.Is(err, agentservice.ErrInvalid),

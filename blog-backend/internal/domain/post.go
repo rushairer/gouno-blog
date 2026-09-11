@@ -1,10 +1,6 @@
 package domain
 
-import (
-	"time"
-
-	communitydomain "github.com/rushairer/blog-backend/internal/community/domain"
-)
+import "time"
 
 type PostStatus string
 
@@ -66,11 +62,6 @@ type TagSummary struct {
 	Name      string `json:"name"`
 	PostCount int64  `json:"post_count"`
 }
-
-// Community domain aliases are retained while callers migrate to the capability-owned package.
-type Comment = communitydomain.Comment
-type Notification = communitydomain.Notification
-type CommunityState = communitydomain.State
 
 type PostVersion struct {
 	ID             int64      `json:"id"`
