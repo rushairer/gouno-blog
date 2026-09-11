@@ -1,0 +1,39 @@
+name: Community capability route finalizer
+
+on:
+  push:
+    branches:
+      - refactor/community-service-controller
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: refactor/community-service-controller
+          fetch-depth: 0
+      - name: Move moderation route to Community capability
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("blog-backend/router/web.go")
+          text = path.read_text()
+          old = 'moderate.GET("/posts/:slugOrID/comments/all", ctrl.GetAllComments)'
+          new = 'moderate.GET("/posts/:slugOrID/comments/all", communityCtrl.GetAllComments)'
+          if text.count(old) != 1:
+              raise SystemExit(f"expected exactly one legacy comments/all route, found {text.count(old)}")
+          path.write_text(text.replace(old, new))
+          PY
+      - name: Commit route change and remove one-shot workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/community-capability-route-once.yml
+          git add blog-backend/router/web.go
+          git commit -m "refactor(community): route moderation reads through capability"
+          git push origin HEAD:refactor/community-service-controller
