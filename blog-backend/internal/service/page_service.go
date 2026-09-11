@@ -1,8 +1,8 @@
 package service
 
 import (
-	"github.com/rushairer/blog-backend/internal/repository"
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
+	"github.com/rushairer/blog-backend/internal/repository"
 )
 
 var (
