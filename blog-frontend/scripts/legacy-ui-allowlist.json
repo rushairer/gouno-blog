@@ -17,8 +17,7 @@
       "src/pages/admin/Pages.tsx",
       "src/pages/admin/Posts.tsx",
       "src/pages/admin/SiteSettings.tsx",
-      "src/pages/admin/Tags.tsx",
-      "src/pages/admin/Users.tsx"
+      "src/pages/admin/Tags.tsx"
     ],
     "AdminPageHeader": [
       "src/pages/admin/AIOperations.tsx",
@@ -30,8 +29,7 @@
       "src/pages/admin/Pages.tsx",
       "src/pages/admin/Posts.tsx",
       "src/pages/admin/SiteSettings.tsx",
-      "src/pages/admin/Tags.tsx",
-      "src/pages/admin/Users.tsx"
+      "src/pages/admin/Tags.tsx"
     ],
     "AdminPageState": [
       "src/pages/admin/AIOperations.tsx",
@@ -55,8 +53,7 @@
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/Notifications.tsx",
       "src/pages/admin/Pages.tsx",
-      "src/pages/admin/Tags.tsx",
-      "src/pages/admin/Users.tsx"
+      "src/pages/admin/Tags.tsx"
     ],
     "BulkActionBar": [
       "src/components/__tests__/ui.test.tsx",
@@ -98,8 +95,7 @@
       "src/pages/admin/PostEditor.tsx",
       "src/pages/admin/Posts.tsx",
       "src/pages/admin/SiteSettings.tsx",
-      "src/pages/admin/Tags.tsx",
-      "src/pages/admin/Users.tsx"
+      "src/pages/admin/Tags.tsx"
     ],
     "ButtonLink": [
       "src/components/__tests__/ui.test.tsx",
@@ -107,8 +103,7 @@
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/Notifications.tsx",
       "src/pages/admin/Pages.tsx",
-      "src/pages/admin/Posts.tsx",
-      "src/pages/admin/Users.tsx"
+      "src/pages/admin/Posts.tsx"
     ],
     "Card": [
       "src/components/__tests__/ui.test.tsx",
@@ -118,8 +113,7 @@
       "src/pages/admin/Notifications.tsx",
       "src/pages/admin/Pages.tsx",
       "src/pages/admin/Posts.tsx",
-      "src/pages/admin/Tags.tsx",
-      "src/pages/admin/Users.tsx"
+      "src/pages/admin/Tags.tsx"
     ],
     "CardContent": [
       "src/components/__tests__/ui.test.tsx",
@@ -150,8 +144,7 @@
       "src/pages/admin/Notifications.tsx",
       "src/pages/admin/Pages.tsx",
       "src/pages/admin/Posts.tsx",
-      "src/pages/admin/Tags.tsx",
-      "src/pages/admin/Users.tsx"
+      "src/pages/admin/Tags.tsx"
     ],
     "copyText": [
       "src/pages/admin/MediaLibrary.tsx",
@@ -179,8 +172,7 @@
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Pages.tsx",
       "src/pages/admin/PostEditor.tsx",
-      "src/pages/admin/Posts.tsx",
-      "src/pages/admin/Users.tsx"
+      "src/pages/admin/Posts.tsx"
     ],
     "ErrorState": ["src/pages/admin/Posts.tsx"],
     "Feedback": [
@@ -197,8 +189,7 @@
       "src/pages/admin/PageEditor.tsx",
       "src/pages/admin/PostEditor.tsx",
       "src/pages/admin/SiteSettings.tsx",
-      "src/pages/admin/Tags.tsx",
-      "src/pages/admin/Users.tsx"
+      "src/pages/admin/Tags.tsx"
     ],
     "FilterBar": [
       "src/components/agent/WorkflowRunRecords.tsx",
@@ -236,22 +227,18 @@
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/pages/admin/Categories.tsx",
       "src/pages/admin/Pages.tsx",
-      "src/pages/admin/Posts.tsx",
-      "src/pages/admin/Users.tsx"
+      "src/pages/admin/Posts.tsx"
     ],
     "ListRow": [
       "src/pages/admin/Categories.tsx",
       "src/pages/admin/Pages.tsx",
-      "src/pages/admin/Posts.tsx",
-      "src/pages/admin/Users.tsx"
+      "src/pages/admin/Posts.tsx"
     ],
     "ListStack": [
       "src/pages/admin/Categories.tsx",
       "src/pages/admin/Pages.tsx",
-      "src/pages/admin/Posts.tsx",
-      "src/pages/admin/Users.tsx"
+      "src/pages/admin/Posts.tsx"
     ],
-    "LoadingState": ["src/pages/admin/Users.tsx"],
     "Pagination": [
       "src/components/__tests__/ui.test.tsx",
       "src/components/agent/WorkflowInputForm.tsx",
@@ -317,8 +304,7 @@
     "TableContainer": [
       "src/pages/admin/Categories.tsx",
       "src/pages/admin/Pages.tsx",
-      "src/pages/admin/Posts.tsx",
-      "src/pages/admin/Users.tsx"
+      "src/pages/admin/Posts.tsx"
     ],
     "TableSkeleton": [
       "src/components/__tests__/ui.test.tsx",
