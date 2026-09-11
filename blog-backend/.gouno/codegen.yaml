@@ -1,0 +1,28 @@
+schema: gouno.dev/codegen/v1
+command:
+  use: gen
+  short: Generate project code
+  aliases: [generator]
+
+generators:
+  - name: module
+    aliases: [m]
+    short: Generate a capability module skeleton
+    args:
+      - name: name
+        required: true
+    flags:
+      - name: force
+        shorthand: f
+        type: bool
+        default: false
+        description: force overwrite
+    outputs:
+      - template: .gouno/codegen/module-domain.tmpl
+        path: 'internal/{{ snake (arg "name") }}/domain/{{ snake (arg "name") }}.go'
+      - template: .gouno/codegen/module-repository.tmpl
+        path: 'internal/{{ snake (arg "name") }}/repository/{{ snake (arg "name") }}_repository.go'
+      - template: .gouno/codegen/module-service.tmpl
+        path: 'internal/{{ snake (arg "name") }}/service/{{ snake (arg "name") }}_service.go'
+      - template: .gouno/codegen/module-controller.tmpl
+        path: 'internal/{{ snake (arg "name") }}/controller/{{ snake (arg "name") }}_controller.go'

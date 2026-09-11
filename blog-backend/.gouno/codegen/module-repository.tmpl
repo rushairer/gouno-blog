@@ -1,0 +1,8 @@
+package repository
+
+// {{ camel (arg "name") }}Repository owns persistence for the {{ snake (arg "name") }} capability.
+type {{ camel (arg "name") }}Repository struct{}
+
+func New{{ camel (arg "name") }}Repository() *{{ camel (arg "name") }}Repository {
+	return &{{ camel (arg "name") }}Repository{}
+}
