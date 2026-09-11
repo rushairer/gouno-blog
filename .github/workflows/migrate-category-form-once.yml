@@ -52,7 +52,7 @@ jobs:
           const testPath = 'blog-frontend/src/pages/admin/__tests__/Categories.test.tsx';
           const testSource = await readFile(testPath, 'utf8');
           const oldAssertion = `expect(screen.getByRole("button", { name: "创建分类" })).toHaveClass(\n      "btn-primary",\n    );`;
-          const canonicalAssertion = `expect(screen.getByRole("button", { name: "创建分类" })).toHaveAttribute(\n      "data-variant",\n      "solid",\n    );`;
+          const canonicalAssertion = `const createButton = screen.getByRole("button", { name: "创建分类" });\n    expect(createButton).toHaveAttribute("type", "submit");\n    expect(createButton).toHaveClass("bg-primary", "text-primary-foreground");`;
           if (!testSource.includes(oldAssertion)) {
             throw new Error('Expected legacy CategoryForm primary button assertion was not found');
           }
@@ -97,7 +97,7 @@ jobs:
           grep -q '@gouno/ui/core' blog-frontend/src/components/taxonomy/CategoryForm.tsx
           grep -q 'variant="outline"' blog-frontend/src/components/taxonomy/CategoryForm.tsx
           grep -q 'variant="solid"' blog-frontend/src/components/taxonomy/CategoryForm.tsx
-          grep -q '"data-variant"' blog-frontend/src/pages/admin/__tests__/Categories.test.tsx
+          grep -q 'bg-primary' blog-frontend/src/pages/admin/__tests__/Categories.test.tsx
 
           rm .github/workflows/migrate-category-form-once.yml
 
