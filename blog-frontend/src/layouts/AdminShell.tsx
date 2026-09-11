@@ -1,8 +1,20 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Bell, ExternalLink, LogOut, Search } from "lucide-react";
-import { Button, ButtonLink, IconButton } from "@gouno/ui-legacy";
+import {
+  Alert,
+  ButtonLink,
+  IconButton,
+  IconButtonLink,
+  SearchField,
+} from "@gouno/ui/core";
+import {
+  AppShell,
+  NavigationGroup,
+  navigationItemClass,
+} from "@gouno/ui/gouno";
+import { ThemeToggle, useTheme } from "@gouno/ui/theme";
 import { notificationsApi } from "../api/notifications";
 import { useUserProfile } from "@gosso/client/react";
 import { type BlogUserProfile, getBlogRoleLabel, logout } from "../auth";
@@ -19,13 +31,8 @@ import {
   getFilteredAdminNavigation,
 } from "../utils/navigation";
 import { PAGINATION_LIMITS, MembershipStatus } from "../constants";
-import { SearchField } from "@gouno/ui/core";
-import { NavigationGroup, navigationItemClass } from "@gouno/ui/gouno";
-import {
-  AdminShell as SharedAdminShell,
-  ThemeToggle,
-  Feedback,
-} from "@gouno/ui-legacy";
+
+const THEME_STORAGE_KEY = "gouno-blog:theme";
 
 function currentLabel(pathname: string) {
   if (pathname === "/admin/posts/new") return "新建文章";
@@ -43,6 +50,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const user = useUserProfile<BlogUserProfile>();
+  const { mode: themeMode, setMode: setThemeMode } = useTheme();
   const [search, setSearch] = useState(() =>
     location.pathname === "/admin/posts"
       ? new URLSearchParams(location.search).get("q") || ""
@@ -55,6 +63,18 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
+
+  useLayoutEffect(() => {
+    if (themeMode !== "system") return;
+    let hasStoredPreference = false;
+    try {
+      hasStoredPreference = localStorage.getItem(THEME_STORAGE_KEY) !== null;
+    } catch {
+      // The in-memory theme can still follow the product default.
+    }
+    if (!hasStoredPreference) setThemeMode("dark");
+  }, [setThemeMode, themeMode]);
+
   useEffect(() => {
     siteApi
       .getSiteSettings()
@@ -157,9 +177,10 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const filteredNav = getFilteredAdminNavigation(hasPerm);
 
   return (
-    <SharedAdminShell
+    <AppShell
       brand={<Link to="/admin/dashboard">{siteName}</Link>}
       breadcrumbs={<span>{currentLabel(location.pathname)}</span>}
+      navigationLabel="后台导航"
       navigation={(close) =>
         filteredNav.map((group) => (
           <NavigationGroup key={group.label} label={group.label}>
@@ -194,13 +215,12 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             <IconButton type="submit" label="提交文章搜索" icon={<Search />} />
           </form>
           <span className="hidden sm:inline-flex">
-            <ButtonLink
+            <IconButtonLink
               to="/"
               target="_blank"
               rel="noreferrer"
-              aria-label="在新窗口查看前台站点"
+              label="在新窗口查看前台站点"
               variant="ghost"
-              size="icon"
               icon={<ExternalLink />}
             />
           </span>
@@ -208,6 +228,8 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             to="/admin/notifications"
             aria-label="查看通知中心"
             variant="ghost"
+            size="small"
+            shape={unreadCount > 0 ? "round" : "circle"}
             icon={<Bell />}
           >
             {unreadCount > 0 ? (unreadCount > 99 ? "99+" : unreadCount) : null}
@@ -216,12 +238,11 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         </>
       }
       account={
-        <Button
+        <IconButton
           variant="ghost"
-          size="icon"
           loading={loggingOut}
           onClick={() => void handleLogout()}
-          aria-label="退出登录"
+          label="退出登录"
           icon={<LogOut />}
         />
       }
@@ -250,8 +271,15 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         </div>
       }
     >
-      {logoutError ? <Feedback type="error">{logoutError}</Feedback> : null}
+      {logoutError ? (
+        <Alert
+          type="error"
+          showIcon
+          title="退出登录失败"
+          description={logoutError}
+        />
+      ) : null}
       {children}
-    </SharedAdminShell>
+    </AppShell>
   );
 }

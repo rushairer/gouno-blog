@@ -1,9 +1,17 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { MemoryRouter, useLocation } from "react-router-dom";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import { Link, MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { NavigationProvider } from "@gouno/ui/core";
+import { ThemeProvider } from "@gouno/ui/theme";
+import { ToastProvider } from "@gouno/ui-legacy";
 import AdminShell from "../AdminShell";
 import AdminUsers from "../../pages/admin/Users";
-import { ToastProvider } from "@gouno/ui-legacy";
 
 const { logoutMock, userProfileMock } = vi.hoisted(() => ({
   logoutMock: vi.fn(),
@@ -52,9 +60,25 @@ vi.mock("../../api/site", () => ({
   },
 }));
 
+function renderAdminShell(
+  children: React.ReactNode,
+  initialEntries = ["/admin/dashboard"],
+) {
+  return render(
+    <MemoryRouter initialEntries={initialEntries}>
+      <ThemeProvider brand="blog-admin" storageKey="gouno-blog:theme">
+        <NavigationProvider link={Link}>
+          <AdminShell>{children}</AdminShell>
+        </NavigationProvider>
+      </ThemeProvider>
+    </MemoryRouter>,
+  );
+}
+
 describe("AdminShell navigation utilities", () => {
   beforeEach(() => {
-    logoutMock.mockClear();
+    logoutMock.mockReset();
+    logoutMock.mockResolvedValue(undefined);
     userProfileMock.mockReturnValue({
       name: "Content Admin",
       email: "admin@example.com",
@@ -71,14 +95,8 @@ describe("AdminShell navigation utilities", () => {
     delete document.documentElement.dataset.theme;
   });
 
-  it("uses configured site identity and shared topbar action primitives", async () => {
-    render(
-      <MemoryRouter initialEntries={["/admin/dashboard"]}>
-        <AdminShell>
-          <h1>Dashboard</h1>
-        </AdminShell>
-      </MemoryRouter>,
-    );
+  it("uses configured site identity and canonical topbar action semantics", async () => {
+    renderAdminShell(<h1>Dashboard</h1>);
 
     expect(
       await screen.findByRole("link", { name: "Configured Site" }),
@@ -88,16 +106,15 @@ describe("AdminShell navigation utilities", () => {
       name: "在新窗口查看前台站点",
     });
     expect(frontsiteLink).toHaveAttribute("href", "/");
-    expect(frontsiteLink).toHaveClass("btn", "btn-ghost", "btn--compact");
+    expect(frontsiteLink).toHaveAttribute("target", "_blank");
+    expect(frontsiteLink).toHaveAttribute("rel", "noreferrer");
 
     const notificationsLink = screen.getByRole("link", {
       name: "查看通知中心",
     });
     expect(notificationsLink).toHaveAttribute("href", "/admin/notifications");
-    expect(notificationsLink).toHaveClass("btn", "btn-ghost", "btn--compact");
 
     const logoutButton = screen.getByRole("button", { name: "退出登录" });
-    expect(logoutButton).toHaveClass("btn", "btn-ghost", "btn--compact");
     fireEvent.click(logoutButton);
     expect(logoutMock).toHaveBeenCalledOnce();
 
@@ -105,14 +122,8 @@ describe("AdminShell navigation utilities", () => {
     expect(frontsiteLink.parentElement).toHaveClass("hidden", "sm:inline-flex");
   });
 
-  it("opens the shared navigation sheet and closes it after route selection", () => {
-    render(
-      <MemoryRouter initialEntries={["/admin/dashboard"]}>
-        <AdminShell>
-          <h1>Dashboard</h1>
-        </AdminShell>
-      </MemoryRouter>,
-    );
+  it("opens the canonical navigation sheet and closes it after route selection", () => {
+    renderAdminShell(<h1>Dashboard</h1>);
 
     fireEvent.click(screen.getByRole("button", { name: "后台导航" }));
     const sheet = screen.getByRole("dialog");
@@ -127,13 +138,7 @@ describe("AdminShell navigation utilities", () => {
       permissions: ["community.moderate"],
     });
 
-    render(
-      <MemoryRouter initialEntries={["/admin/dashboard"]}>
-        <AdminShell>
-          <h1>Dashboard</h1>
-        </AdminShell>
-      </MemoryRouter>,
-    );
+    renderAdminShell(<h1>Dashboard</h1>);
 
     expect(screen.getByRole("link", { name: "评论" })).toBeInTheDocument();
     expect(
@@ -168,13 +173,9 @@ describe("AdminShell navigation utilities", () => {
         </output>
       );
     }
-    render(
-      <MemoryRouter initialEntries={["/admin/dashboard"]}>
-        <AdminShell>
-          <LocationProbe />
-        </AdminShell>
-      </MemoryRouter>,
-    );
+
+    renderAdminShell(<LocationProbe />);
+
     fireEvent.change(screen.getByRole("textbox", { name: "搜索文章" }), {
       target: { value: "系统 架构" },
     });
@@ -184,41 +185,36 @@ describe("AdminShell navigation utilities", () => {
     );
   });
 
-  it("defaults administration to the shared dark surface theme", () => {
-    render(
-      <MemoryRouter initialEntries={["/admin/dashboard"]}>
-        <AdminShell>
-          <h1>Dashboard</h1>
-        </AdminShell>
-      </MemoryRouter>,
-    );
+  it("keeps the first-visit dark default as Blog product policy", async () => {
+    renderAdminShell(<h1>Dashboard</h1>);
 
-    const toggle = screen.getByRole("button", { name: "切换后台主题" });
-    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    await waitFor(() =>
+      expect(localStorage.getItem("gouno-blog:theme")).toBe("dark"),
+    );
     expect(document.documentElement.dataset.theme).toBe("dark");
-    expect(localStorage.getItem("gouno-blog:theme")).toBe("dark");
+    expect(
+      screen.getByRole("button", { name: "切换后台主题" }),
+    ).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("restores and toggles the shared site theme from administration", () => {
-    localStorage.setItem("gouno-blog:theme", "dark");
-    document.documentElement.dataset.theme = "dark";
+  it("restores an explicit shared light preference without overriding it", () => {
+    localStorage.setItem("gouno-blog:theme", "light");
+    document.documentElement.dataset.theme = "light";
 
-    render(
-      <MemoryRouter initialEntries={["/admin/dashboard"]}>
-        <AdminShell>
-          <h1>Dashboard</h1>
-        </AdminShell>
-      </MemoryRouter>,
-    );
+    renderAdminShell(<h1>Dashboard</h1>);
 
-    const toggle = screen.getByRole("button", { name: "切换后台主题" });
-    expect(toggle).toHaveAttribute("aria-pressed", "true");
-    expect(document.documentElement.dataset.theme).toBe("dark");
-    expect(localStorage.getItem("gouno-blog:theme")).toBe("dark");
-
-    fireEvent.click(toggle);
-    expect(toggle).toHaveAttribute("aria-pressed", "false");
-    expect(document.documentElement.dataset.theme).toBe("light");
     expect(localStorage.getItem("gouno-blog:theme")).toBe("light");
+    expect(document.documentElement.dataset.theme).toBe("light");
+    expect(
+      screen.getByRole("button", { name: "切换后台主题" }),
+    ).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("honors an explicitly persisted system preference", () => {
+    localStorage.setItem("gouno-blog:theme", "system");
+
+    renderAdminShell(<h1>Dashboard</h1>);
+
+    expect(localStorage.getItem("gouno-blog:theme")).toBe("system");
   });
 });
