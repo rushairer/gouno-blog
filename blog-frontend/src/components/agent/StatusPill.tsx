@@ -1,5 +1,28 @@
+import { Tag, type TagColor } from "@gouno/ui/core";
 import { riskLabel, statusLabel } from "./labels";
-import { RiskBadge, StatusIndicator } from "@gouno/ui-legacy";
+
+function statusColor(status: string): TagColor {
+  if (
+    /^(success|published|completed|active|approved|delivered)$/.test(status)
+  ) {
+    return "success";
+  }
+  if (/^(danger|failed|rejected|error)$/.test(status)) return "error";
+  if (
+    /^(warning|pending|draft|running|waiting_for_user|awaiting_approval)$/.test(
+      status,
+    )
+  ) {
+    return "warning";
+  }
+  return "default";
+}
+
+function riskColor(risk: string): TagColor {
+  if (["high", "critical"].includes(risk)) return "error";
+  if (["medium", "moderate"].includes(risk)) return "warning";
+  return "default";
+}
 
 export function StatusPill({
   status,
@@ -11,10 +34,9 @@ export function StatusPill({
   label?: string;
 }) {
   return (
-    <StatusIndicator
-      status={status}
-      label={label || statusLabel(status, locale)}
-    />
+    <Tag color={statusColor(status)} className={`status-pill--${status}`}>
+      {label || statusLabel(status, locale)}
+    </Tag>
   );
 }
 
@@ -27,5 +49,5 @@ export function RiskPill({
   locale: "en" | "zh";
   label?: string;
 }) {
-  return <RiskBadge level={risk} label={label || riskLabel(risk, locale)} />;
+  return <Tag color={riskColor(risk)}>{label || riskLabel(risk, locale)}</Tag>;
 }

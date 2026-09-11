@@ -167,8 +167,12 @@ describe("OperationsWorkspace", () => {
       screen.queryByRole("heading", { name: "旧的链接检查建议" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByText("自动已解决", { selector: ".status-pill--resolved" }),
-    ).toBeInTheDocument();
+      screen
+        .getAllByText("自动已解决")
+        .some((element) =>
+          element.parentElement?.classList.contains("status-pill--resolved"),
+        ),
+    ).toBe(true);
   });
 
   it("reviews an approved image brief before exposing image generation", async () => {

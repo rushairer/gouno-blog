@@ -8,13 +8,13 @@ describe("StatusPill", () => {
       <StatusPill status="waiting_for_user" locale="zh" />,
     );
 
-    expect(screen.getByText("等待你处理")).toHaveClass(
+    expect(screen.getByText("等待你处理").parentElement).toHaveClass(
       "status-pill--waiting_for_user",
     );
 
     rerender(<StatusPill status="waiting_for_user" locale="en" />);
 
-    expect(screen.getByText("Waiting for you")).toHaveClass(
+    expect(screen.getByText("Waiting for you").parentElement).toHaveClass(
       "status-pill--waiting_for_user",
     );
   });

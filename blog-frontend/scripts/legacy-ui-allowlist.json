@@ -345,7 +345,6 @@
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/pages/admin/SiteSettings.tsx"
     ],
-    "RiskBadge": ["src/components/agent/StatusPill.tsx"],
     "SectionHeading": [
       "src/components/__tests__/ui.test.tsx",
       "src/pages/Home.tsx"
@@ -378,7 +377,6 @@
       "src/pages/admin/Pages.tsx",
       "src/pages/admin/Posts.tsx"
     ],
-    "StatusIndicator": ["src/components/agent/StatusPill.tsx"],
     "SubnavTabs": [
       "src/components/__tests__/ui.test.tsx",
       "src/components/agent/AdvancedWorkspace.tsx",
