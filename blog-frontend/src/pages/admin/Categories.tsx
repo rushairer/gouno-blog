@@ -346,7 +346,7 @@ export default function Categories() {
                 icon={<Plus />}
                 onClick={openCreateDrawer}
               >
-                新建分类
+                创建第一个分类
               </Button>
             }
           />
