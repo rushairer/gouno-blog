@@ -47,7 +47,9 @@ Do not perform filename-only moves that leave package ownership ambiguous or int
 
 The `page` capability is the first fully migrated reference slice. Its canonical implementation lives under `internal/page/`; legacy Page symbols in the flat packages are temporary compatibility facades.
 
-The `community` migration is intentionally staged because historical Post APIs still expose comment behavior and shared error sentinels. Community-owned domain models and persistence now belong under `internal/community/domain` and `internal/community/repository`; the legacy flat packages retain aliases/facades while service/controller ownership is migrated in a later coherent slice. Shared interaction rate limiting belongs under `internal/ratelimit`, not a business service layer.
+The `community` capability now owns its domain, persistence, service, and HTTP controller under `internal/community/{domain,repository,service,controller}`. The moderation-only `GET /api/posts/:slugOrID/comments/all` route is also owned by the Community controller, so all active Community HTTP routes are capability-owned. Shared interaction rate limiting lives under `internal/ratelimit`, not a business service layer.
+
+Historical Comment methods still present on `PostService`, `PostRepository`, and `PostController` are compatibility debt only; they are not the runtime ownership path. Remove them in a separate cleanup after call-site and test migration proves they are unused, rather than coupling that deletion to the ownership move.
 
 ## Shared HTTP controller primitives
 
