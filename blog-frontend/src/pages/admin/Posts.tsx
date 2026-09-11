@@ -1,34 +1,33 @@
 import { useEffect, useState } from "react";
-import { Copy, Edit2, Eye, FileText, Plus, Trash2, X } from "lucide-react";
+import { Bot, Copy, Edit2, Eye, FileText, Plus, Trash2, X } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { postsApi } from "../../api/posts";
 import { siteApi } from "../../api/site";
 import type { TagSummary } from "../../api/site";
-import { Checkbox, IconButtonLink, SearchField } from "@gouno/ui/core";
 import {
-  AdminPage,
-  AdminPageHeader,
-  AsyncState,
-  BulkActionBar,
+  Alert,
   Button,
   ButtonLink,
   Card,
-  ConfirmDialog,
-  ContentStack,
-  copyText,
-  EmptyState,
-  ErrorState,
-  FilterBar,
+  Checkbox,
+  Empty,
   IconButton,
-  ListRow,
-  ListStack,
+  IconButtonLink,
   Pagination,
+  SearchField,
   Select,
-  StatusBadge,
-  TableContainer,
-  TableSkeleton,
-  useToast,
-} from "@gouno/ui-legacy";
+  Skeleton,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Tag,
+} from "@gouno/ui/core";
+import { PageHeader } from "@gouno/ui/gouno";
+import { BulkActionBar } from "@gouno/ui/patterns";
+import { ConfirmDialog, useToast } from "@gouno/ui-legacy";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 import { useAbility } from "../../abilities";
 import type { Category, Post } from "../../types/blog";
@@ -36,6 +35,46 @@ import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
 
 type DeleteTarget = { kind: "post"; post: Post } | { kind: "batch" } | null;
 const pageSize = 20;
+
+function selectValue(value: string | string[]) {
+  return Array.isArray(value) ? (value[0] ?? "") : value;
+}
+
+function PostStatusTag({ status }: { status?: string }) {
+  if (status === "published") return <Tag color="success">已发布</Tag>;
+  if (status === "scheduled") return <Tag color="warning">定时发布</Tag>;
+  return <Tag>草稿</Tag>;
+}
+
+function PostsSkeleton() {
+  return (
+    <Card padding="base">
+      <div
+        className="flex flex-col gap-4"
+        role="status"
+        aria-label="文章加载中"
+        aria-live="polite"
+      >
+        {Array.from({ length: 6 }, (_, index) => (
+          <div
+            key={index}
+            className="grid gap-3 border-t pt-4 first:border-t-0 first:pt-0 md:grid-cols-[3rem_minmax(0,1fr)_7rem_8rem_6rem_9rem]"
+          >
+            <Skeleton className="h-5 w-5" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-52" />
+              <Skeleton className="h-3 w-36" />
+            </div>
+            <Skeleton className="h-6 w-16" />
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-4 w-12" />
+            <Skeleton className="h-8 w-24" />
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
 
 export default function AdminPosts() {
   const allowed = useAdminGuard("/admin/posts");
@@ -58,7 +97,7 @@ export default function AdminPosts() {
   const tag = params.get("tag") || "";
   const page = Math.max(1, Number(params.get("page")) || 1);
   const [reloadKey, setReloadKey] = useState(0);
-  const load = () => setReloadKey((k) => k + 1);
+  const load = () => setReloadKey((key) => key + 1);
 
   useEffect(() => {
     if (!allowed) return;
@@ -107,30 +146,6 @@ export default function AdminPosts() {
     setParams(next, { replace: key === "q" });
   };
 
-  const performDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleting(true);
-    try {
-      if (deleteTarget.kind === "post") {
-        await postsApi.deletePost(deleteTarget.post.id);
-        setPosts((current) =>
-          current.filter((item) => item.id !== deleteTarget.post.id),
-        );
-        setTotal((current) => Math.max(0, current - 1));
-        notify("文章已删除。");
-      } else {
-        await batch("delete");
-      }
-      setDeleteTarget(null);
-    } catch (reason) {
-      setError(
-        reason instanceof Error ? reason.message : "删除失败，请稍后重试。",
-      );
-    } finally {
-      setDeleting(false);
-    }
-  };
-
   const batch = async (action: "publish" | "draft" | "delete") => {
     if (selected.length === 0) return;
     try {
@@ -167,12 +182,60 @@ export default function AdminPosts() {
     }
   };
 
+  const performDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      if (deleteTarget.kind === "post") {
+        await postsApi.deletePost(deleteTarget.post.id);
+        setPosts((current) =>
+          current.filter((item) => item.id !== deleteTarget.post.id),
+        );
+        setTotal((current) => Math.max(0, current - 1));
+        notify("文章已删除。");
+      } else {
+        await batch("delete");
+      }
+      setDeleteTarget(null);
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "删除失败，请稍后重试。",
+      );
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const hasFilters = Boolean(q || status || category || tag);
   const clearFilters = () => setParams({});
-  const pages = Math.max(1, Math.ceil(total / pageSize));
+
+  const copyPostLink = async (post: Post) => {
+    try {
+      await navigator.clipboard.writeText(
+        `${window.location.origin}/articles/${post.slug}`,
+      );
+      notify("文章链接已复制。");
+    } catch {
+      notify("复制文章链接失败，请手动复制。", "error");
+    }
+  };
+
+  const setSelectedPost = (id: number, checked: boolean) => {
+    setSelected((current) =>
+      checked
+        ? [...new Set([...current, id])]
+        : current.filter((item) => item !== id),
+    );
+  };
+
+  const canBatch = can("batch", "post");
+  const allSelected =
+    posts.length > 0 && posts.every((post) => selected.includes(post.id));
+
   const renderActions = (post: Post) => (
     <>
       <IconButtonLink
+        variant="ghost"
         to={
           post.status === "published"
             ? `/articles/${post.slug}`
@@ -180,38 +243,35 @@ export default function AdminPosts() {
         }
         target="_blank"
         rel="noreferrer"
-        label={post.status === "published" ? "查看" : "预览"}
+        label={`${post.status === "published" ? "查看" : "预览"}文章 ${post.title}`}
         icon={<Eye />}
       />
       <IconButton
-        label="复制链接"
+        variant="ghost"
+        label={`复制文章链接 ${post.title}`}
         icon={<Copy />}
-        variant="secondary"
-        onClick={() =>
-          void copyText(
-            `${location.origin}/articles/${post.slug}`,
-            notify,
-            "文章链接已复制。",
-          )
-        }
+        onClick={() => void copyPostLink(post)}
       />
       {can("edit", "post", post) ? (
         <IconButtonLink
+          variant="ghost"
           to={`/admin/posts/${post.id}/edit`}
-          label="编辑"
+          label={`编辑文章 ${post.title}`}
           icon={<Edit2 />}
         />
       ) : (
         <IconButtonLink
+          variant="ghost"
           to={`/admin/posts/${post.id}/edit`}
-          label="查看详情（只读）"
+          label={`查看文章详情（只读） ${post.title}`}
           icon={<FileText />}
         />
       )}
       {can("delete", "post", post) ? (
         <IconButton
-          variant="danger"
-          label="删除"
+          variant="ghost"
+          color="error"
+          label={`删除文章 ${post.title}`}
           icon={<Trash2 />}
           onClick={() => setDeleteTarget({ kind: "post", post })}
         />
@@ -220,328 +280,310 @@ export default function AdminPosts() {
   );
 
   return (
-    <AdminPage>
-      <AdminPageHeader
+    <div className="flex flex-col gap-6">
+      <PageHeader
         title="文章"
         description="管理全站草稿、定时内容与已发布文章。"
         actions={
           can("create", "post") ? (
-            <ButtonLink variant="primary" to="/admin/posts/new" icon={<Plus />}>
+            <ButtonLink
+              variant="solid"
+              color="primary"
+              to="/admin/posts/new"
+              icon={<Plus />}
+            >
               新建文章
             </ButtonLink>
           ) : null
         }
       />
-      <ContentStack>
-        {error ? (
-          <ErrorState
-            label={error}
+
+      <Card padding="sm">
+        <div className="flex flex-wrap items-center gap-3">
+          <SearchField
+            className="min-w-[14rem] flex-1"
+            aria-label="搜索文章"
+            value={q}
+            onChange={(event) => setFilter("q", event.target.value)}
+            placeholder="搜索标题、摘要或正文"
+          />
+          <Select
+            className="w-full sm:w-36"
+            aria-label="文章状态"
+            value={status}
+            onChange={(value) => setFilter("status", selectValue(value))}
+          >
+            <option value="">全部状态</option>
+            <option value="published">已发布</option>
+            <option value="draft">草稿</option>
+            <option value="scheduled">定时发布</option>
+          </Select>
+          <Select
+            className="w-full sm:w-40"
+            aria-label="文章分类"
+            value={category}
+            onChange={(value) => setFilter("category", selectValue(value))}
+          >
+            <option value="">全部分类</option>
+            {categories.map((item) => (
+              <option key={item.id} value={item.slug}>
+                {item.name}
+              </option>
+            ))}
+          </Select>
+          <Select
+            className="w-full sm:w-40"
+            aria-label="文章标签"
+            value={tag}
+            onChange={(value) => setFilter("tag", selectValue(value))}
+          >
+            <option value="">全部标签</option>
+            {tags.map((item) => (
+              <option key={item.name} value={item.name}>
+                {item.name}
+              </option>
+            ))}
+          </Select>
+          <span className="text-sm text-muted-foreground">{total} 篇</span>
+          {hasFilters ? (
+            <Button
+              variant="ghost"
+              size="small"
+              type="button"
+              onClick={clearFilters}
+              icon={<X />}
+            >
+              清除
+            </Button>
+          ) : null}
+        </div>
+      </Card>
+
+      {error && posts.length > 0 ? (
+        <Alert type="error" showIcon title={error} />
+      ) : null}
+
+      {canBatch && selected.length > 0 ? (
+        <BulkActionBar
+          selectionLabel={`已选择 ${selected.length} 篇`}
+          onCancel={() => setSelected([])}
+        >
+          <Button size="small" icon={<Bot />} onClick={() => setAIOpen(true)}>
+            交给 AI
+          </Button>
+          <Button
+            size="small"
+            type="button"
+            onClick={() => void batch("publish")}
+          >
+            立即发布
+          </Button>
+          <Button
+            size="small"
+            type="button"
+            onClick={() => void batch("draft")}
+          >
+            转为草稿
+          </Button>
+          <Button
+            size="small"
+            color="error"
+            type="button"
+            onClick={() => setDeleteTarget({ kind: "batch" })}
+            icon={<Trash2 />}
+          >
+            删除
+          </Button>
+        </BulkActionBar>
+      ) : null}
+
+      {loading ? (
+        <PostsSkeleton />
+      ) : error && posts.length === 0 ? (
+        <Alert
+          type="error"
+          showIcon
+          title="文章加载失败"
+          description={error}
+          action={
+            <Button size="small" onClick={() => void load()}>
+              重试
+            </Button>
+          }
+        />
+      ) : posts.length === 0 ? (
+        <Card padding="lg">
+          <Empty
+            title={
+              hasFilters ? "没有符合当前筛选条件的文章。" : "还没有发布过文章。"
+            }
             action={
-              <Button
-                variant="secondary"
-                size="compact"
-                onClick={() => window.location.reload()}
-              >
-                重新载入
-              </Button>
+              hasFilters ? (
+                <Button size="small" onClick={clearFilters}>
+                  清除筛选
+                </Button>
+              ) : can("create", "post") ? (
+                <ButtonLink
+                  size="small"
+                  variant="solid"
+                  color="primary"
+                  to="/admin/posts/new"
+                  icon={<Plus />}
+                >
+                  撰写第一篇文章
+                </ButtonLink>
+              ) : null
             }
           />
-        ) : null}
-        <Card className="border-border/80 bg-card p-4">
-          <FilterBar>
-            <SearchField
-              aria-label="搜索文章"
-              value={q}
-              onChange={(event) => setFilter("q", event.target.value)}
-              placeholder="搜索标题、摘要或正文"
-            />
-            <Select
-              size="compact"
-              aria-label="文章状态"
-              value={status}
-              onChange={(event) => setFilter("status", event.target.value)}
-            >
-              <option value="">全部状态</option>
-              <option value="published">已发布</option>
-              <option value="draft">草稿</option>
-              <option value="scheduled">定时发布</option>
-            </Select>
-            <Select
-              size="compact"
-              aria-label="文章分类"
-              value={category}
-              onChange={(event) => setFilter("category", event.target.value)}
-            >
-              <option value="">全部分类</option>
-              {categories.map((item) => (
-                <option key={item.id} value={item.slug}>
-                  {item.name}
-                </option>
-              ))}
-            </Select>
-            <Select
-              size="compact"
-              aria-label="文章标签"
-              value={tag}
-              onChange={(event) => setFilter("tag", event.target.value)}
-            >
-              <option value="">全部标签</option>
-              {tags.map((item) => (
-                <option key={item.name} value={item.name}>
-                  {item.name}
-                </option>
-              ))}
-            </Select>
-            <span className="filter-bar__count">{total} 篇</span>
-            {q || status || category || tag ? (
-              <Button
-                className="filter-bar__actions"
-                variant="ghost"
-                size="compact"
-                type="button"
-                onClick={clearFilters}
-                icon={<X />}
-              >
-                清除
-              </Button>
-            ) : null}
-          </FilterBar>
         </Card>
-        {can("batch", "post") && selected.length ? (
-          <BulkActionBar
-            selectionLabel={`已选择 ${selected.length} 篇`}
-            onAIAssist={() => setAIOpen(true)}
-            onCancel={() => setSelected([])}
-          >
-            <Button
-              variant="secondary"
-              size="compact"
-              type="button"
-              onClick={() =>
-                void batch("publish").catch((reason: Error) =>
-                  setError(reason.message),
-                )
-              }
-            >
-              立即发布
-            </Button>
-            <Button
-              variant="secondary"
-              size="compact"
-              type="button"
-              onClick={() =>
-                void batch("draft").catch((reason: Error) =>
-                  setError(reason.message),
-                )
-              }
-            >
-              转为草稿
-            </Button>
-            <Button
-              variant="danger"
-              size="compact"
-              type="button"
-              onClick={() => setDeleteTarget({ kind: "batch" })}
-              icon={<Trash2 />}
-            >
-              删除
-            </Button>
-          </BulkActionBar>
-        ) : null}
-        <AsyncState
-          loading={loading}
-          skeleton={<TableSkeleton columns={6} rows={6} />}
-          error={error}
-          onRetry={() => void load()}
-          empty={!error && posts.length === 0}
-          emptyState={
-            <EmptyState
-              label={
-                hasFilters
-                  ? "没有符合当前筛选条件的文章。"
-                  : "还没有发布过文章。"
-              }
-              action={
-                hasFilters ? (
-                  <Button
-                    variant="secondary"
-                    size="compact"
-                    onClick={clearFilters}
-                  >
-                    清除筛选
-                  </Button>
-                ) : can("create", "post") ? (
-                  <ButtonLink
-                    variant="primary"
-                    size="compact"
-                    to="/admin/posts/new"
-                    icon={<Plus />}
-                  >
-                    撰写第一篇文章
-                  </ButtonLink>
-                ) : null
-              }
-            />
-          }
-        >
-          <Card className="hidden overflow-hidden border-0 bg-card p-0 md:block">
-            <TableContainer>
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    {can("batch", "post") ? (
-                      <th className="w-12 text-center">
-                        <Checkbox
-                          aria-label="选择当前页全部文章"
-                          checked={
-                            posts.length > 0 &&
-                            posts.every((post) => selected.includes(post.id))
-                          }
-                          onChange={(event) =>
-                            setSelected(
-                              event.target.checked
-                                ? posts.map((post) => post.id)
-                                : [],
-                            )
-                          }
-                        />
-                      </th>
-                    ) : null}
-                    <th>文章</th>
-                    <th className="w-32">状态</th>
-                    <th className="w-36">更新时间</th>
-                    <th className="w-24">阅读</th>
-                    <th className="w-40 text-right">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {posts.map((post) => (
-                    <tr
-                      key={post.id}
-                      className="hover:bg-muted/40 transition-colors"
-                    >
-                      {can("batch", "post") ? (
-                        <td className="text-center">
-                          <Checkbox
-                            aria-label={`选择文章 ${post.title}`}
-                            checked={selected.includes(post.id)}
-                            onChange={(event) =>
-                              setSelected(
-                                event.target.checked
-                                  ? [...selected, post.id]
-                                  : selected.filter((id) => id !== post.id),
-                              )
-                            }
-                          />
-                        </td>
-                      ) : null}
-                      <td>
-                        <div className="flex flex-col gap-0.5">
-                          <strong className="font-semibold text-foreground leading-snug">
-                            {post.title}
-                          </strong>
-                          <span className="text-xs text-muted-foreground font-mono">
-                            /{post.slug}
-                            {post.category ? (
-                              <span className="ml-2 inline-flex items-center rounded-sm bg-secondary px-1.5 py-0.5 text-[11px] font-sans text-secondary-foreground">
-                                {post.category.name}
-                              </span>
-                            ) : null}
-                          </span>
-                        </div>
-                      </td>
-                      <td>
-                        <StatusBadge status={post.status} />
-                      </td>
-                      <td>
-                        <time className="text-xs text-muted-foreground font-mono">
-                          {new Date(
-                            post.updated_at || post.created_at,
-                          ).toLocaleDateString("zh-CN")}
-                        </time>
-                      </td>
-                      <td>
-                        <span className="text-xs font-mono text-muted-foreground">
-                          {(post.views_count ?? 0).toLocaleString()}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="table-actions flex items-center justify-end gap-1">
-                          {renderActions(post)}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </TableContainer>
-          </Card>
-          <Card className="border-border/80 bg-card px-4 md:hidden">
-            <ListStack role="list" aria-label="文章列表">
-              {posts.map((post) => (
-                <div key={post.id} role="listitem">
-                  <ListRow
-                    action={renderActions(post)}
-                    className="items-start gap-3 [&>div:last-child]:w-full [&>div:last-child]:justify-end"
-                  >
-                    <div className="flex items-start gap-3">
-                      {can("batch", "post") ? (
+      ) : (
+        <>
+          <div className="hidden md:block">
+            <Table density="compact" bordered>
+              <TableHeader>
+                <TableRow>
+                  {canBatch ? (
+                    <TableHead className="w-12 text-center">
+                      <Checkbox
+                        aria-label="选择当前页全部文章"
+                        checked={allSelected}
+                        onChange={(event) =>
+                          setSelected(
+                            event.target.checked
+                              ? posts.map((post) => post.id)
+                              : [],
+                          )
+                        }
+                      />
+                    </TableHead>
+                  ) : null}
+                  <TableHead>文章</TableHead>
+                  <TableHead className="w-32">状态</TableHead>
+                  <TableHead className="w-36">更新时间</TableHead>
+                  <TableHead className="w-24">阅读</TableHead>
+                  <TableHead className="w-40 text-right">操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {posts.map((post) => (
+                  <TableRow key={post.id}>
+                    {canBatch ? (
+                      <TableCell className="text-center">
                         <Checkbox
                           aria-label={`选择文章 ${post.title}`}
                           checked={selected.includes(post.id)}
                           onChange={(event) =>
-                            setSelected(
-                              event.target.checked
-                                ? [...selected, post.id]
-                                : selected.filter((id) => id !== post.id),
-                            )
+                            setSelectedPost(post.id, event.target.checked)
                           }
                         />
-                      ) : null}
-                      <div className="min-w-0 flex-1 space-y-2">
-                        <div className="flex items-start justify-between gap-3">
-                          <strong className="min-w-0 break-words text-sm font-semibold leading-snug">
-                            {post.title}
-                          </strong>
-                          <StatusBadge status={post.status} />
-                        </div>
-                        <div className="break-all font-mono text-xs text-muted-foreground">
-                          /{post.slug}
-                        </div>
-                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                      </TableCell>
+                    ) : null}
+                    <TableCell className="whitespace-normal">
+                      <div className="flex flex-col gap-0.5">
+                        <strong className="font-semibold leading-snug text-foreground">
+                          {post.title}
+                        </strong>
+                        <div className="flex flex-wrap items-center gap-2 font-mono text-xs text-muted-foreground">
+                          <span>/{post.slug}</span>
                           {post.category ? (
-                            <span>{post.category.name}</span>
+                            <Tag>{post.category.name}</Tag>
                           ) : null}
-                          <time>
-                            更新于{" "}
-                            {new Date(
-                              post.updated_at || post.created_at,
-                            ).toLocaleDateString("zh-CN")}
-                          </time>
-                          <span>
-                            {(post.views_count ?? 0).toLocaleString()} 次阅读
-                          </span>
                         </div>
                       </div>
-                    </div>
-                  </ListRow>
-                </div>
-              ))}
-            </ListStack>
-          </Card>
-        </AsyncState>
-        {!loading && total > pageSize ? (
-          <div className="flex justify-center pt-2">
-            <Pagination
-              className="admin-pagination"
-              page={page}
-              pages={pages}
-              label="文章分页"
-              onChange={(nextPage) => setFilter("page", String(nextPage))}
-            />
+                    </TableCell>
+                    <TableCell>
+                      <PostStatusTag status={post.status} />
+                    </TableCell>
+                    <TableCell>
+                      <time className="font-mono text-xs text-muted-foreground">
+                        {new Date(
+                          post.updated_at || post.created_at,
+                        ).toLocaleDateString("zh-CN")}
+                      </time>
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {(post.views_count ?? 0).toLocaleString()}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-end gap-1">
+                        {renderActions(post)}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
-        ) : null}
-      </ContentStack>
+
+          <div
+            className="grid gap-3 md:hidden"
+            role="list"
+            aria-label="文章列表"
+          >
+            {posts.map((post) => (
+              <Card key={post.id} padding="base" role="listitem">
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-start gap-3">
+                    {canBatch ? (
+                      <Checkbox
+                        aria-label={`选择文章 ${post.title}`}
+                        checked={selected.includes(post.id)}
+                        onChange={(event) =>
+                          setSelectedPost(post.id, event.target.checked)
+                        }
+                      />
+                    ) : null}
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="flex items-start justify-between gap-3">
+                        <strong className="min-w-0 break-words text-sm font-semibold leading-snug">
+                          {post.title}
+                        </strong>
+                        <PostStatusTag status={post.status} />
+                      </div>
+                      <div className="break-all font-mono text-xs text-muted-foreground">
+                        /{post.slug}
+                      </div>
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                        {post.category ? (
+                          <span>{post.category.name}</span>
+                        ) : null}
+                        <time>
+                          更新于{" "}
+                          {new Date(
+                            post.updated_at || post.created_at,
+                          ).toLocaleDateString("zh-CN")}
+                        </time>
+                        <span>
+                          {(post.views_count ?? 0).toLocaleString()} 次阅读
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-end gap-1">
+                    {renderActions(post)}
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </>
+      )}
+
+      {!loading && total > pageSize ? (
+        <div className="flex justify-center pt-2">
+          <Pagination
+            page={page}
+            total={total}
+            pageSize={pageSize}
+            ariaLabel="文章分页"
+            align="center"
+            onChange={(nextPage) => setFilter("page", String(nextPage))}
+          />
+        </div>
+      ) : null}
+
       <ConfirmDialog
         open={deleteTarget !== null}
         title={deleteTarget?.kind === "post" ? "删除文章" : "批量删除文章"}
@@ -565,6 +607,6 @@ export default function AdminPosts() {
         onClose={() => setAIOpen(false)}
         title="将所选文章交给 AI"
       />
-    </AdminPage>
+    </div>
   );
 }
