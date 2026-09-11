@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
-    "format:check": "prettier src/pages/admin/Posts.tsx | diff -u src/pages/admin/Posts.tsx - || true",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
     "lint": "oxlint",
     "lint:ui": "node scripts/check-ui-contracts.mjs",
     "test": "vitest",
