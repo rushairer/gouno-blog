@@ -12,24 +12,20 @@ import {
 } from "lucide-react";
 import { notificationsApi } from "../../api/notifications";
 import type { Notification } from "../../api/notifications";
-import { Checkbox, CheckboxField } from "@gouno/ui/core";
 import {
-  ActionGroup,
-  AdminPage,
-  AdminPageHeader,
-  AsyncState,
-  Badge,
-  BulkActionBar,
+  Alert,
   Button,
   ButtonLink,
   Card,
-  ConfirmDialog,
-  ContentStack,
-  Feedback,
+  Checkbox,
+  Empty,
   Select,
-  TableSkeleton,
-  useToast,
-} from "@gouno/ui-legacy";
+  Skeleton,
+  Tag,
+} from "@gouno/ui/core";
+import { PageHeader } from "@gouno/ui/gouno";
+import { BulkActionBar } from "@gouno/ui/patterns";
+import { ConfirmDialog, useToast } from "@gouno/ui-legacy";
 import { cn } from "../../lib/utils";
 
 type DeleteAction =
@@ -38,6 +34,38 @@ type DeleteAction =
   | { kind: "clear_read" }
   | { kind: "clear_all" }
   | null;
+type NotificationStatus = "all" | "unread" | "read";
+type NotificationTypeFilter = "all" | "ai" | "comment";
+
+function selectValue(value: string | string[]) {
+  return String(Array.isArray(value) ? (value[0] ?? "") : value);
+}
+
+function NotificationsSkeleton() {
+  return (
+    <div
+      className="flex flex-col gap-3"
+      role="status"
+      aria-label="通知加载中"
+      aria-live="polite"
+    >
+      {Array.from({ length: 5 }, (_, index) => (
+        <Card key={index} padding="base">
+          <div className="flex items-start gap-4">
+            <Skeleton className="size-4" />
+            <Skeleton className="size-9 rounded-lg" />
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-3 w-4/5" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+            <Skeleton className="h-8 w-24" />
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
+}
 
 export default function AdminNotifications() {
   const { notify } = useToast();
@@ -45,10 +73,10 @@ export default function AdminNotifications() {
   const [selected, setSelected] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "unread" | "read">(
-    "all",
-  );
-  const [typeFilter, setTypeFilter] = useState<"all" | "ai" | "comment">("all");
+  const [statusFilter, setStatusFilter] =
+    useState<NotificationStatus>("all");
+  const [typeFilter, setTypeFilter] =
+    useState<NotificationTypeFilter>("all");
   const [deleteAction, setDeleteAction] = useState<DeleteAction>(null);
   const [busy, setBusy] = useState(false);
 
@@ -75,7 +103,11 @@ export default function AdminNotifications() {
       await notificationsApi.markRead(item.id);
       const now = new Date().toISOString();
       setItems((current) =>
-        current.map((n) => (n.id === item.id ? { ...n, read_at: now } : n)),
+        current.map((notification) =>
+          notification.id === item.id
+            ? { ...notification, read_at: now }
+            : notification,
+        ),
       );
       window.dispatchEvent(new CustomEvent("community:notifications-changed"));
     } catch (err) {
@@ -89,7 +121,10 @@ export default function AdminNotifications() {
       await notificationsApi.markAllRead();
       const now = new Date().toISOString();
       setItems((current) =>
-        current.map((n) => ({ ...n, read_at: n.read_at || now })),
+        current.map((notification) => ({
+          ...notification,
+          read_at: notification.read_at || now,
+        })),
       );
       window.dispatchEvent(new CustomEvent("community:notifications-changed"));
       notify("全部通知已标记为已读。");
@@ -104,17 +139,27 @@ export default function AdminNotifications() {
     if (selected.length === 0) return;
     setBusy(true);
     try {
-      const toRead = items.filter((n) => selected.includes(n.id) && !n.read_at);
-      await Promise.all(toRead.map((n) => notificationsApi.markRead(n.id)));
+      const selectedCount = selected.length;
+      const toRead = items.filter(
+        (notification) =>
+          selected.includes(notification.id) && !notification.read_at,
+      );
+      await Promise.all(
+        toRead.map((notification) =>
+          notificationsApi.markRead(notification.id),
+        ),
+      );
       const now = new Date().toISOString();
       setItems((current) =>
-        current.map((n) =>
-          selected.includes(n.id) ? { ...n, read_at: n.read_at || now } : n,
+        current.map((notification) =>
+          selected.includes(notification.id)
+            ? { ...notification, read_at: notification.read_at || now }
+            : notification,
         ),
       );
       setSelected([]);
       window.dispatchEvent(new CustomEvent("community:notifications-changed"));
-      notify(`已将选中的 ${selected.length} 条通知标为已读。`);
+      notify(`已将选中的 ${selectedCount} 条通知标为已读。`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "批量标记已读失败");
     } finally {
@@ -130,7 +175,9 @@ export default function AdminNotifications() {
     try {
       if (deleteAction.kind === "single") {
         await notificationsApi.deleteNotification(deleteAction.id);
-        setItems((current) => current.filter((n) => n.id !== deleteAction.id));
+        setItems((current) =>
+          current.filter((notification) => notification.id !== deleteAction.id),
+        );
         setSelected((current) =>
           current.filter((id) => id !== deleteAction.id),
         );
@@ -138,14 +185,23 @@ export default function AdminNotifications() {
       } else if (deleteAction.kind === "batch") {
         await notificationsApi.deleteNotifications(deleteAction.ids);
         const idsSet = new Set(deleteAction.ids);
-        setItems((current) => current.filter((n) => !idsSet.has(n.id)));
+        setItems((current) =>
+          current.filter((notification) => !idsSet.has(notification.id)),
+        );
         setSelected([]);
         notify(`已删除选中的 ${deleteAction.ids.length} 条通知。`);
       } else if (deleteAction.kind === "clear_read") {
         await notificationsApi.clearNotifications(true);
-        setItems((current) => current.filter((n) => !n.read_at));
+        setItems((current) =>
+          current.filter((notification) => !notification.read_at),
+        );
         setSelected((current) =>
-          current.filter((id) => items.find((n) => n.id === id && !n.read_at)),
+          current.filter((id) =>
+            items.find(
+              (notification) =>
+                notification.id === id && !notification.read_at,
+            ),
+          ),
         );
         notify("已清空所有已读通知。");
       } else if (deleteAction.kind === "clear_all") {
@@ -177,23 +233,37 @@ export default function AdminNotifications() {
   }, [items, statusFilter, typeFilter]);
 
   const unreadCount = useMemo(
-    () => items.filter((n) => !n.read_at).length,
+    () => items.filter((notification) => !notification.read_at).length,
     [items],
   );
   const readCount = items.length - unreadCount;
+  const hasFilters = statusFilter !== "all" || typeFilter !== "all";
+
+  const clearFilters = () => {
+    setStatusFilter("all");
+    setTypeFilter("all");
+    setSelected([]);
+  };
 
   const toggleSelectAllFiltered = (checked: boolean) => {
     if (checked) {
-      const filteredIds = filtered.map((n) => n.id);
-      setSelected((prev) => Array.from(new Set([...prev, ...filteredIds])));
+      const filteredIds = filtered.map((notification) => notification.id);
+      setSelected((current) =>
+        Array.from(new Set([...current, ...filteredIds])),
+      );
     } else {
-      const filteredIdsSet = new Set(filtered.map((n) => n.id));
-      setSelected((prev) => prev.filter((id) => !filteredIdsSet.has(id)));
+      const filteredIdsSet = new Set(
+        filtered.map((notification) => notification.id),
+      );
+      setSelected((current) =>
+        current.filter((id) => !filteredIdsSet.has(id)),
+      );
     }
   };
 
   const allFilteredSelected =
-    filtered.length > 0 && filtered.every((n) => selected.includes(n.id));
+    filtered.length > 0 &&
+    filtered.every((notification) => selected.includes(notification.id));
 
   const resolvePresentation = (item: Notification) => {
     const isAI = item.type?.startsWith("ai_");
@@ -209,29 +279,29 @@ export default function AdminNotifications() {
             ? `/articles/${item.post_slug}${item.comment_id ? `#comment-${item.comment_id}` : ""}`
             : "/admin/comments");
 
-    let icon = <Bell className="h-4 w-4" />;
+    let icon = <Bell className="size-4" />;
     let tag = "系统通知";
-    let tone: "info" | "warning" | "brand" = "info";
-    let iconBg = "bg-sky-500/10 text-sky-400";
+    let color: "info" | "warning" | "primary" = "info";
+    let iconClass = "bg-info-subtle text-info";
 
     if (isWorkflow) {
-      icon = <GitBranch className="h-4 w-4" />;
+      icon = <GitBranch className="size-4" />;
       tag = "Workflow 告警";
-      tone = "warning";
-      iconBg = "bg-amber-500/10 text-amber-400";
+      color = "warning";
+      iconClass = "bg-warning-subtle text-warning";
     } else if (isAI) {
-      icon = <Bot className="h-4 w-4" />;
+      icon = <Bot className="size-4" />;
       tag = "AI 运营告警";
-      tone = "warning";
-      iconBg = "bg-amber-500/10 text-amber-400";
+      color = "warning";
+      iconClass = "bg-warning-subtle text-warning";
     } else if (item.type === "comment_reply" || item.type === "comment") {
-      icon = <MessageSquare className="h-4 w-4" />;
+      icon = <MessageSquare className="size-4" />;
       tag = "评论互动";
-      tone = "brand";
-      iconBg = "bg-violet-500/10 text-violet-400";
+      color = "primary";
+      iconClass = "bg-accent text-accent-foreground";
     }
 
-    return { destination, icon, tag, tone, iconBg };
+    return { destination, icon, tag, color, iconClass };
   };
 
   const confirmTitle =
@@ -253,280 +323,303 @@ export default function AdminNotifications() {
           : "确定要清空所有通知记录吗？包括未读和已读通知，此操作无法撤销。";
 
   return (
-    <AdminPage>
-      <AdminPageHeader
+    <div className="flex flex-col gap-6">
+      <PageHeader
         title="通知中心"
         description="查看系统告警、AI 自动化异常与站点互动通知，并支持批量管理与清理。"
         actions={
-          <ActionGroup>
-            {unreadCount > 0 ? (
+          items.length > 0 ? (
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {unreadCount > 0 ? (
+                <Button
+                  size="small"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void markAllRead()}
+                  icon={<CheckCheck />}
+                >
+                  全部标为已读
+                </Button>
+              ) : null}
+              {readCount > 0 ? (
+                <Button
+                  size="small"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setDeleteAction({ kind: "clear_read" })}
+                  icon={<Trash2 />}
+                >
+                  清空已读
+                </Button>
+              ) : null}
               <Button
-                variant="secondary"
-                type="button"
-                disabled={busy}
-                onClick={() => void markAllRead()}
-                icon={<CheckCheck className="h-4 w-4" />}
-              >
-                全部标为已读
-              </Button>
-            ) : null}
-            {readCount > 0 ? (
-              <Button
-                variant="secondary"
-                type="button"
-                disabled={busy}
-                onClick={() => setDeleteAction({ kind: "clear_read" })}
-                icon={<Trash2 className="h-4 w-4" />}
-              >
-                清空已读
-              </Button>
-            ) : null}
-            {items.length > 0 ? (
-              <Button
-                variant="danger"
+                size="small"
+                color="error"
                 type="button"
                 disabled={busy}
                 onClick={() => setDeleteAction({ kind: "clear_all" })}
-                icon={<Trash2 className="h-4 w-4" />}
+                icon={<Trash2 />}
               >
                 清空全部
               </Button>
-            ) : null}
-          </ActionGroup>
+            </div>
+          ) : undefined
         }
       />
-      <ContentStack className="space-y-6">
-        {error && items.length > 0 ? (
-          <Feedback type="error">{error}</Feedback>
-        ) : null}
 
-        {/* Filter Toolbar Card */}
-        <Card className="p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-2">
-                <Filter className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  筛选
-                </span>
-              </div>
+      {error && items.length > 0 ? (
+        <Alert type="error" showIcon title={error} />
+      ) : null}
+
+      <Card padding="base">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <Filter className="size-3.5" />
+              <span>筛选</span>
+            </div>
+            <div className="w-44">
               <Select
-                size="compact"
                 aria-label="状态筛选"
                 value={statusFilter}
-                onChange={(e) =>
-                  setStatusFilter(e.target.value as typeof statusFilter)
-                }
-                className="w-40"
+                onChange={(value) => {
+                  setStatusFilter(selectValue(value) as NotificationStatus);
+                  setSelected([]);
+                }}
               >
                 <option value="all">全部状态 ({items.length})</option>
                 <option value="unread">未读通知 ({unreadCount})</option>
                 <option value="read">已读通知 ({readCount})</option>
               </Select>
-
+            </div>
+            <div className="w-40">
               <Select
-                size="compact"
                 aria-label="类型筛选"
                 value={typeFilter}
-                onChange={(e) =>
-                  setTypeFilter(e.target.value as typeof typeFilter)
-                }
-                className="w-36"
+                onChange={(value) => {
+                  setTypeFilter(selectValue(value) as NotificationTypeFilter);
+                  setSelected([]);
+                }}
               >
                 <option value="all">全部类型</option>
                 <option value="ai">AI 运营告警</option>
                 <option value="comment">互动与评论</option>
               </Select>
             </div>
-
-            {filtered.length > 0 ? (
-              <div className="flex items-center">
-                <CheckboxField className="text-xs text-muted-foreground select-none">
-                  <Checkbox
-                    checked={allFilteredSelected}
-                    onChange={(e) => toggleSelectAllFiltered(e.target.checked)}
-                  />
-                  <span>全选当前列表 ({filtered.length})</span>
-                </CheckboxField>
-              </div>
+            {hasFilters ? (
+              <Button size="small" variant="text" onClick={clearFilters}>
+                清除筛选
+              </Button>
             ) : null}
           </div>
-        </Card>
 
-        {selected.length > 0 ? (
-          <BulkActionBar
-            selectionLabel={`已选择 ${selected.length} 条通知`}
-            onCancel={() => setSelected([])}
-          >
-            <Button
-              variant="secondary"
-              size="compact"
-              type="button"
-              disabled={busy}
-              onClick={() => void markSelectedRead()}
-              icon={<Check className="h-3.5 w-3.5" />}
-            >
-              标为已读
-            </Button>
-            <Button
-              variant="danger"
-              size="compact"
-              type="button"
-              disabled={busy}
-              onClick={() =>
-                setDeleteAction({ kind: "batch", ids: [...selected] })
-              }
-              icon={<Trash2 className="h-3.5 w-3.5" />}
-            >
-              批量删除
-            </Button>
-          </BulkActionBar>
-        ) : null}
+          {filtered.length > 0 ? (
+            <label className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Checkbox
+                aria-label="全选当前通知列表"
+                checked={allFilteredSelected}
+                onChange={(event) =>
+                  toggleSelectAllFiltered(event.target.checked)
+                }
+              />
+              <span>全选当前列表 ({filtered.length})</span>
+            </label>
+          ) : null}
+        </div>
+      </Card>
 
-        <AsyncState
-          loading={loading}
-          skeleton={<TableSkeleton rows={5} columns={3} />}
-          error={error && items.length === 0 ? error : null}
-          onRetry={load}
-          retryLabel="重新载入"
-          empty={!loading && filtered.length === 0 && !error}
-          emptyTitle="暂无相关通知记录。"
+      {selected.length > 0 ? (
+        <BulkActionBar
+          selectionLabel={`已选择 ${selected.length} 条通知`}
+          onCancel={() => setSelected([])}
         >
-          <div className="space-y-3">
-            {filtered.map((item) => {
-              const { destination, icon, tag, tone, iconBg } =
-                resolvePresentation(item);
-              const isUnread = !item.read_at;
-              const isChecked = selected.includes(item.id);
-              const displayTitle =
-                item.title ||
-                (item.actor_name ? `${item.actor_name} 互动消息` : "系统提醒");
+          <Button
+            size="small"
+            type="button"
+            disabled={busy}
+            onClick={() => void markSelectedRead()}
+            icon={<Check />}
+          >
+            标为已读
+          </Button>
+          <Button
+            size="small"
+            color="error"
+            type="button"
+            disabled={busy}
+            onClick={() =>
+              setDeleteAction({ kind: "batch", ids: [...selected] })
+            }
+            icon={<Trash2 />}
+          >
+            批量删除
+          </Button>
+        </BulkActionBar>
+      ) : null}
 
-              return (
-                <Card
-                  key={item.id}
-                  className={cn(
-                    "p-4 transition-all duration-200",
-                    isUnread
-                      ? "border-primary/40 bg-card"
-                      : "border-border/60 bg-card/60 opacity-90",
-                  )}
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex items-start gap-3.5 min-w-0 flex-1">
-                      <div className="pt-1 shrink-0">
-                        <Checkbox
-                          aria-label={`选择通知 ${item.id}`}
-                          checked={isChecked}
-                          onChange={(e) => {
-                            setSelected((prev) =>
-                              e.target.checked
-                                ? [...prev, item.id]
-                                : prev.filter((id) => id !== item.id),
-                            );
-                          }}
-                        />
-                      </div>
+      {loading ? (
+        <NotificationsSkeleton />
+      ) : error && items.length === 0 ? (
+        <Alert
+          type="error"
+          showIcon
+          title="通知加载失败"
+          description={error}
+          action={
+            <Button size="small" onClick={() => void load()}>
+              重新载入
+            </Button>
+          }
+        />
+      ) : filtered.length === 0 ? (
+        <Card padding="lg">
+          <Empty
+            icon={<Bell className="size-7 text-muted-foreground" />}
+            title={
+              hasFilters
+                ? "暂无符合当前筛选条件的通知。"
+                : "暂无相关通知记录。"
+            }
+            description={
+              hasFilters
+                ? "调整状态或类型筛选后重试。"
+                : "系统告警、AI 异常和互动提醒会出现在这里。"
+            }
+            action={
+              hasFilters ? (
+                <Button size="small" onClick={clearFilters}>
+                  清除筛选
+                </Button>
+              ) : undefined
+            }
+          />
+        </Card>
+      ) : (
+        <div className="flex flex-col gap-3" role="list" aria-label="通知列表">
+          {filtered.map((item) => {
+            const { destination, icon, tag, color, iconClass } =
+              resolvePresentation(item);
+            const isUnread = !item.read_at;
+            const isChecked = selected.includes(item.id);
+            const displayTitle =
+              item.title ||
+              (item.actor_name ? `${item.actor_name} 互动消息` : "系统提醒");
 
-                      <div
-                        className={cn(
-                          "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
-                          iconBg,
-                        )}
-                      >
-                        {icon}
-                      </div>
+            return (
+              <Card
+                key={item.id}
+                padding="base"
+                role="listitem"
+                className={cn(
+                  "transition-colors",
+                  isUnread
+                    ? "border-primary/40"
+                    : "border-border/60 bg-card/70",
+                  isChecked && "bg-accent/20",
+                )}
+              >
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex min-w-0 flex-1 items-start gap-3.5">
+                    <Checkbox
+                      aria-label={`选择通知 ${item.id}`}
+                      checked={isChecked}
+                      onChange={(event) => {
+                        setSelected((current) =>
+                          event.target.checked
+                            ? [...current, item.id]
+                            : current.filter((id) => id !== item.id),
+                        );
+                      }}
+                    />
 
-                      <div className="space-y-1 min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <strong className="text-sm font-semibold text-foreground">
-                            {displayTitle}
-                          </strong>
-                          <Badge
-                            tone={tone}
-                            pill
-                            className="text-[10px] px-2 py-0"
-                          >
-                            {tag}
-                          </Badge>
-                          {isUnread ? (
-                            <span
-                              className="inline-block h-2 w-2 rounded-full bg-primary"
-                              aria-label="未读"
-                            />
-                          ) : null}
-                          <time
-                            className="text-xs text-muted-foreground font-mono"
-                            dateTime={item.created_at}
-                          >
-                            {new Date(item.created_at).toLocaleString("zh-CN")}
-                          </time>
-                        </div>
-
-                        {item.body ? (
-                          <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
-                            {item.body}
-                          </p>
-                        ) : null}
-
-                        {item.post_title ? (
-                          <p className="text-[11px] text-muted-foreground/80 font-medium">
-                            关联文章：{item.post_title}
-                          </p>
-                        ) : null}
-                      </div>
+                    <div
+                      className={cn(
+                        "flex size-9 shrink-0 items-center justify-center rounded-lg",
+                        iconClass,
+                      )}
+                    >
+                      {icon}
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                      {isUnread ? (
-                        <Button
-                          variant="secondary"
-                          size="compact"
-                          type="button"
-                          onClick={() => void markOneRead(item)}
-                          title="标为已读"
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <strong className="text-sm font-semibold text-foreground">
+                          {displayTitle}
+                        </strong>
+                        <Tag color={color}>{tag}</Tag>
+                        {isUnread ? (
+                          <span
+                            className="inline-block size-2 rounded-full bg-primary"
+                            aria-label="未读"
+                          />
+                        ) : null}
+                        <time
+                          className="font-mono text-xs text-muted-foreground"
+                          dateTime={item.created_at}
                         >
-                          标为已读
-                        </Button>
+                          {new Date(item.created_at).toLocaleString("zh-CN")}
+                        </time>
+                      </div>
+
+                      {item.body ? (
+                        <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                          {item.body}
+                        </p>
                       ) : null}
 
-                      {destination ? (
-                        <ButtonLink
-                          variant="ghost"
-                          size="compact"
-                          to={destination}
-                          onClick={() => void markOneRead(item)}
-                          icon={<ChevronRight className="h-3.5 w-3.5" />}
-                          iconPosition="right"
-                        >
-                          前往处理
-                        </ButtonLink>
+                      {item.post_title ? (
+                        <p className="text-[11px] font-medium text-muted-foreground/80">
+                          关联文章：{item.post_title}
+                        </p>
                       ) : null}
-
-                      <Button
-                        variant="danger"
-                        size="compact"
-                        type="button"
-                        onClick={() =>
-                          setDeleteAction({
-                            kind: "single",
-                            id: item.id,
-                            title: displayTitle,
-                          })
-                        }
-                        title="删除此通知"
-                        icon={<Trash2 className="h-3.5 w-3.5" />}
-                      >
-                        删除
-                      </Button>
                     </div>
                   </div>
-                </Card>
-              );
-            })}
-          </div>
-        </AsyncState>
-      </ContentStack>
+
+                  <div className="flex shrink-0 items-center gap-2 self-end sm:self-center">
+                    {isUnread ? (
+                      <Button
+                        size="small"
+                        type="button"
+                        onClick={() => void markOneRead(item)}
+                      >
+                        标为已读
+                      </Button>
+                    ) : null}
+
+                    <ButtonLink
+                      variant="text"
+                      size="small"
+                      to={destination}
+                      onClick={() => void markOneRead(item)}
+                      icon={<ChevronRight />}
+                      iconPlacement="end"
+                    >
+                      前往处理
+                    </ButtonLink>
+
+                    <Button
+                      variant="text"
+                      color="error"
+                      size="small"
+                      type="button"
+                      onClick={() =>
+                        setDeleteAction({
+                          kind: "single",
+                          id: item.id,
+                          title: displayTitle,
+                        })
+                      }
+                      icon={<Trash2 />}
+                    >
+                      删除
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
       <ConfirmDialog
         open={deleteAction !== null}
@@ -542,6 +635,6 @@ export default function AdminNotifications() {
         onClose={() => setDeleteAction(null)}
         onConfirm={executeDelete}
       />
-    </AdminPage>
+    </div>
   );
 }
