@@ -1,5 +1,5 @@
 import type React from "react";
-import { classes } from "@gouno/ui-legacy";
+import { cn } from "@gouno/ui";
 
 export function ContentEditorFrame({
   children,
@@ -8,7 +8,7 @@ export function ContentEditorFrame({
   children: React.ReactNode;
   className?: string;
 }) {
-  return <div className={classes("editor-page", className)}>{children}</div>;
+  return <div className={cn("editor-page", className)}>{children}</div>;
 }
 
 export function EditorCommandBar({ children }: { children: React.ReactNode }) {
@@ -20,9 +20,7 @@ export function EditorCommandActions({
   className = "",
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={classes("editor-command-actions", className)}>
-      {children}
-    </div>
+    <div className={cn("editor-command-actions", className)}>{children}</div>
   );
 }
 

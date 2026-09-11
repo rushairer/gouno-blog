@@ -106,7 +106,6 @@
       "src/components/auth/StepUpMfaModal.tsx",
       "src/components/auth/SudoBanner.tsx",
       "src/components/auth/SudoGate.tsx",
-      "src/components/editor/AiSuggestionControl.tsx",
       "src/components/media/MediaDrawerForms.tsx",
       "src/components/taxonomy/CategoryForm.tsx",
       "src/pages/AccountNotifications.tsx",
@@ -162,7 +161,6 @@
       "src/components/__tests__/ui.test.tsx",
       "src/pages/admin/Dashboard.tsx"
     ],
-    "classes": ["src/components/editor/ContentEditorFrame.tsx"],
     "ConfirmDialog": [
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/pages/admin/AISettings.tsx",
