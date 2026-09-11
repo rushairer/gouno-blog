@@ -1,6 +1,6 @@
 import { ShieldAlert, ShieldCheck, Sparkles } from "lucide-react";
 import { useSudoMode } from "../../hooks/useSudoMode";
-import { Button } from "@gouno/ui-legacy";
+import { Button } from "@gouno/ui/core";
 
 export interface SudoBannerProps {
   className?: string;
@@ -65,8 +65,8 @@ export function SudoBanner({
       </div>
       <div className="sudo-banner__actions">
         <Button
-          variant="secondary"
-          size="compact"
+          variant="outline"
+          size="small"
           loading={activating}
           onClick={() => void activateSudo(onActivated)}
           icon={activating ? <Sparkles /> : <ShieldCheck />}

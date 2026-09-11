@@ -7,7 +7,7 @@ import {
   STEP_UP_POPUP_PARAM,
 } from "../../mfa";
 import { Modal } from "@gouno/ui/core";
-import { Button } from "@gouno/ui-legacy";
+import { Button } from "@gouno/ui/core";
 
 interface StepUpMfaModalProps {
   open: boolean;
@@ -67,10 +67,10 @@ export function StepUpMfaModal({
       onClose={onClose}
       footer={
         <>
-          <Button variant="secondary" type="button" onClick={onClose}>
+          <Button variant="outline" type="button" onClick={onClose}>
             取消
           </Button>
-          <Button variant="primary" type="submit" form="stepup-mfa-form">
+          <Button variant="solid" type="submit" form="stepup-mfa-form">
             前往统一身份中心
           </Button>
         </>

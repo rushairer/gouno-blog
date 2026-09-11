@@ -1,7 +1,7 @@
 import { type ReactNode } from "react";
 import { KeyRound, Lock, ShieldCheck, Sparkles } from "lucide-react";
 import { useSudoMode } from "../../hooks/useSudoMode";
-import { Button } from "@gouno/ui-legacy";
+import { Button } from "@gouno/ui/core";
 
 export interface SudoGateProps {
   children: ReactNode;
@@ -69,8 +69,8 @@ export function SudoGate({
           </div>
           <div className="sudo-gate-actions">
             <Button
-              variant="primary"
-              size="default"
+              variant="solid"
+              size="middle"
               loading={activating}
               onClick={() => void activateSudo()}
               icon={activating ? <Sparkles /> : <KeyRound />}
