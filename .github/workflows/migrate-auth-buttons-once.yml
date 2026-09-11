@@ -1,0 +1,150 @@
+name: Migrate Blog Auth Buttons Once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/migrate-auth-buttons-once.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: migrate-blog-auth-buttons-once
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: blog-frontend/package-lock.json
+
+      - name: Apply canonical auth button migrations and verify
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          node --input-type=module <<'EOF'
+          import { readFile, writeFile } from 'node:fs/promises';
+
+          const files = [
+            {
+              path: 'blog-frontend/src/components/auth/StepUpMfaModal.tsx',
+              replacements: [
+                ['import { Button } from "@gouno/ui-legacy";', 'import { Button } from "@gouno/ui/core";'],
+                ['variant="secondary"', 'variant="outline"'],
+                ['variant="primary"', 'variant="solid"'],
+              ],
+            },
+            {
+              path: 'blog-frontend/src/components/auth/SudoBanner.tsx',
+              replacements: [
+                ['import { Button } from "@gouno/ui-legacy";', 'import { Button } from "@gouno/ui/core";'],
+                ['variant="secondary"', 'variant="outline"'],
+                ['size="compact"', 'size="small"'],
+              ],
+            },
+            {
+              path: 'blog-frontend/src/components/auth/SudoGate.tsx',
+              replacements: [
+                ['import { Button } from "@gouno/ui-legacy";', 'import { Button } from "@gouno/ui/core";'],
+                ['variant="primary"', 'variant="solid"'],
+                ['size="default"', 'size="middle"'],
+              ],
+            },
+          ];
+
+          for (const file of files) {
+            let source = await readFile(file.path, 'utf8');
+            for (const [from, to] of file.replacements) {
+              if (!source.includes(from)) {
+                throw new Error(`Expected auth migration token not found in ${file.path}: ${from}`);
+              }
+              source = source.replace(from, to);
+            }
+            if (source.includes('@gouno/ui-legacy')) {
+              throw new Error(`${file.path} still imports legacy UI after Button migration`);
+            }
+            await writeFile(file.path, source);
+          }
+
+          const allowlistPath = 'blog-frontend/scripts/legacy-ui-allowlist.json';
+          const targets = [
+            'src/components/auth/StepUpMfaModal.tsx',
+            'src/components/auth/SudoBanner.tsx',
+            'src/components/auth/SudoGate.tsx',
+          ];
+          const allowlist = JSON.parse(await readFile(allowlistPath, 'utf8'));
+          allowlist.canonicalSourceSha = '0ba9fabda8e61f3a278b3fb5f37b8f671c167abb';
+          const buttonFiles = allowlist.allowedLegacyImports?.Button;
+          if (!Array.isArray(buttonFiles)) {
+            throw new Error('Expected Button legacy allowlist');
+          }
+          for (const target of targets) {
+            if (!buttonFiles.includes(target)) {
+              throw new Error(`Expected Button legacy pair for ${target}`);
+            }
+          }
+          const next = buttonFiles.filter((file) => !targets.includes(file));
+          const removedPairs = buttonFiles.length - next.length;
+          if (removedPairs !== 3) {
+            throw new Error(`Expected exactly 3 auth Button legacy pairs, removed ${removedPairs}`);
+          }
+          if (next.length) allowlist.allowedLegacyImports.Button = next;
+          else delete allowlist.allowedLegacyImports.Button;
+          await writeFile(allowlistPath, `${JSON.stringify(allowlist, null, 2)}\n`);
+          EOF
+
+          cd blog-frontend
+          npm ci
+          npx prettier --write \
+            src/components/auth/StepUpMfaModal.tsx \
+            src/components/auth/SudoBanner.tsx \
+            src/components/auth/SudoGate.tsx \
+            scripts/legacy-ui-allowlist.json
+          npm run test:run -- \
+            src/components/auth/__tests__/StepUpMfaModal.test.tsx \
+            src/components/auth/__tests__/SudoBanner.test.tsx \
+            src/components/auth/__tests__/SudoGate.test.tsx
+          npm run quality
+          cd ..
+          docker build -f blog-frontend/Dockerfile blog-frontend
+
+      - name: Commit verified migrations and self-clean
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for file in \
+            blog-frontend/src/components/auth/StepUpMfaModal.tsx \
+            blog-frontend/src/components/auth/SudoBanner.tsx \
+            blog-frontend/src/components/auth/SudoGate.tsx; do
+            if grep -n "@gouno/ui-legacy" "$file"; then
+              echo "$file still imports legacy UI" >&2
+              exit 1
+            fi
+            grep -q '@gouno/ui/core' "$file"
+          done
+
+          rm .github/workflows/migrate-auth-buttons-once.yml
+
+          git add \
+            blog-frontend/src/components/auth/StepUpMfaModal.tsx \
+            blog-frontend/src/components/auth/SudoBanner.tsx \
+            blog-frontend/src/components/auth/SudoGate.tsx \
+            blog-frontend/scripts/legacy-ui-allowlist.json \
+            .github/workflows/migrate-auth-buttons-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "refactor(ui): migrate Blog auth buttons to canonical Gouno UI"
+          git push origin HEAD:main
