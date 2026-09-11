@@ -242,7 +242,10 @@ export default function AdminPages() {
             aria-label="单页状态"
             value={status}
             onChange={(value) =>
-              setFilter("status", Array.isArray(value) ? (value[0] ?? "") : value)
+              setFilter(
+                "status",
+                Array.isArray(value) ? (value[0] ?? "") : value,
+              )
             }
           >
             <option value="">全部状态</option>
