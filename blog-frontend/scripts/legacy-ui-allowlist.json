@@ -99,7 +99,6 @@
       "src/pages/AccountNotifications.tsx",
       "src/pages/ArticleIndex.tsx",
       "src/pages/Home.tsx",
-      "src/pages/NotFound.tsx",
       "src/pages/PostDetail.tsx",
       "src/pages/admin/AIOperations.tsx",
       "src/pages/admin/AISettings.tsx",
@@ -120,9 +119,7 @@
       "src/components/__tests__/ui.test.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/pages/ArticleIndex.tsx",
-      "src/pages/NotFound.tsx",
       "src/pages/PostDetail.tsx",
-      "src/pages/Settings.tsx",
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/Notifications.tsx",
       "src/pages/admin/Pages.tsx",
@@ -164,7 +161,6 @@
     ],
     "ContentStack": [
       "src/pages/AccountNotifications.tsx",
-      "src/pages/Settings.tsx",
       "src/pages/admin/Categories.tsx",
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/MediaLibrary.tsx",
@@ -197,12 +193,9 @@
       "src/components/agent/WorkflowRunRecords.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/pages/AccountNotifications.tsx",
-      "src/pages/Archive.tsx",
       "src/pages/ArticleIndex.tsx",
-      "src/pages/Categories.tsx",
       "src/pages/Home.tsx",
       "src/pages/PostDetail.tsx",
-      "src/pages/Tags.tsx",
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Pages.tsx",
@@ -226,7 +219,6 @@
       "src/components/media/MediaDrawerForms.tsx",
       "src/pages/Home.tsx",
       "src/pages/PostDetail.tsx",
-      "src/pages/Settings.tsx",
       "src/pages/admin/Categories.tsx",
       "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/MediaLibrary.tsx",
@@ -292,11 +284,8 @@
     "LoadingState": [
       "src/App.tsx",
       "src/pages/AccountNotifications.tsx",
-      "src/pages/Archive.tsx",
-      "src/pages/Categories.tsx",
       "src/pages/CustomPageView.tsx",
       "src/pages/PostDetail.tsx",
-      "src/pages/Tags.tsx",
       "src/pages/admin/Users.tsx"
     ],
     "Pagination": [
@@ -315,13 +304,8 @@
       "src/components/agent/OperationsWorkspace.tsx",
       "src/components/agent/WorkspaceOverview.tsx",
       "src/pages/AccountNotifications.tsx",
-      "src/pages/Archive.tsx",
-      "src/pages/Categories.tsx",
       "src/pages/CustomPageView.tsx",
-      "src/pages/NotFound.tsx",
-      "src/pages/PostDetail.tsx",
-      "src/pages/Settings.tsx",
-      "src/pages/Tags.tsx"
+      "src/pages/PostDetail.tsx"
     ],
     "PanelHeader": [
       "src/components/agent/AdvancedWorkspace.tsx",
