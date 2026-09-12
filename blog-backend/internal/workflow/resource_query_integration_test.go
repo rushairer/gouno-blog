@@ -26,7 +26,7 @@ func newResourceQueryManagement(db *sql.DB) *agentservice.ManagementService {
 		Agents:        agentrepository.NewDefinitionRepository(db),
 		Skills:        agentrepository.NewSkillRepository(db),
 		Notifications: notificationrepository.NewSystemNotificationRepository(db),
-		StarterPack:   agentrepository.NewAgentRepository(db),
+		StarterPack:   nil,
 	}, nil, nil, nil, nil)
 }
 
