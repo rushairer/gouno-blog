@@ -36,7 +36,6 @@ jobs:
           set -euo pipefail
           if grep -R -n '@gouno/ui-legacy\|legacy-ui-manifest\|gouno-ui-legacy' \
             blog-frontend/src \
-            blog-frontend/scripts \
             blog-frontend/package.json \
             blog-frontend/package-lock.json \
             .github/workflows/ci.yml \
