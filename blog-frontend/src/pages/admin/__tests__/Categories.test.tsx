@@ -33,29 +33,33 @@ describe("Admin Categories", () => {
     vi.mocked(apiFetch).mockResolvedValue(Response.json({ data: [] }));
   });
 
-  it("opens category creation in the right-side drawer with AI Slug assistant", async () => {
+  it("uses the Showcase empty state and canonical category drawer composition", async () => {
     renderCategories();
 
+    expect(await screen.findByText("还没有分类")).toBeInTheDocument();
     expect(
-      await screen.findByText("还没有分类。创建第一个分类来组织长期主题。"),
+      screen.getByText("创建第一个分类来组织长期主题。"),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("dialog", { name: "新建分类" }),
     ).not.toBeInTheDocument();
+
     fireEvent.click(screen.getByRole("button", { name: "新建分类" }));
-    const form = screen
-      .getByRole("dialog", { name: "新建分类" })
-      .querySelector(".drawer-form");
-    expect(form?.querySelectorAll(".field")).toHaveLength(4);
+    const dialog = screen.getByRole("dialog", { name: "新建分类" });
+    expect(dialog.querySelector(".drawer-form")).toBeNull();
+    expect(within(dialog).getByLabelText("分类名称")).toBeInTheDocument();
+    expect(within(dialog).getByLabelText("Slug 标识")).toBeInTheDocument();
+    expect(within(dialog).getByLabelText("分类描述")).toBeInTheDocument();
+    expect(within(dialog).getByLabelText("分类排序")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "智能生成 Slug 候选" }),
+      within(dialog).getByRole("button", { name: "AI 生成" }),
     ).toBeInTheDocument();
-    const createButton = screen.getByRole("button", { name: "创建分类" });
-    expect(createButton).toHaveAttribute("type", "submit");
-    expect(createButton).toHaveClass("bg-primary", "text-primary-foreground");
+    expect(
+      within(dialog).getByRole("button", { name: "创建分类" }),
+    ).toHaveClass("bg-primary", "text-primary-foreground");
   });
 
-  it("renders one category collection as desktop table and mobile list with shared selection", async () => {
+  it("renders one category collection as Showcase desktop/mobile views with shared selection", async () => {
     vi.mocked(apiFetch).mockResolvedValue(
       Response.json({
         data: [
@@ -89,12 +93,18 @@ describe("Admin Categories", () => {
       within(mobileList).getByRole("checkbox", { name: "选择分类 工程实践" }),
     ).toBeChecked();
     expect(screen.getByText("已选择 1 个分类")).toBeInTheDocument();
+    expect(within(table).getByText("工程实践").closest("tr")).toHaveAttribute(
+      "data-state",
+      "selected",
+    );
 
     fireEvent.click(
       within(mobileList).getByRole("button", { name: "编辑分类 工程实践" }),
     );
-    expect(
-      screen.getByRole("dialog", { name: "编辑分类" }),
-    ).toBeInTheDocument();
+    const dialog = screen.getByRole("dialog", { name: "编辑分类" });
+    expect(within(dialog).getByLabelText("分类名称")).toHaveValue("工程实践");
+    expect(within(dialog).getByLabelText("Slug 标识")).toHaveValue(
+      "engineering-practice",
+    );
   });
 });
