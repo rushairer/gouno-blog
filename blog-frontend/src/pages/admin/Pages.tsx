@@ -1,5 +1,15 @@
 import { useEffect, useState } from "react";
-import { Bot, Copy, Edit2, Eye, Plus, Trash2, X } from "lucide-react";
+import {
+  Copy,
+  Edit2,
+  Eye,
+  FileText,
+  Plus,
+  Search,
+  Sparkles,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import {
   Alert,
@@ -10,8 +20,9 @@ import {
   Empty,
   IconButton,
   IconButtonLink,
+  Input,
+  Modal,
   Pagination,
-  SearchField,
   Select,
   Skeleton,
   Table,
@@ -21,21 +32,22 @@ import {
   TableHeader,
   TableRow,
   Tag,
+  Text,
 } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
 import { BulkActionBar } from "@gouno/ui/patterns";
 
-import { ConfirmActionModal } from "../../components/ConfirmActionModal";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 import { pagesApi } from "../../api/pages";
 import type { CustomPage } from "../../types/blog";
 import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
-import { useAppFeedback } from "../../components/feedback/AppFeedbackProvider";
 
 type DeleteTarget =
   | { kind: "page"; page: CustomPage }
   | { kind: "batch" }
   | null;
+type Notice = { type: "success" | "info" | "error"; message: string } | null;
+
 const pageSize = 20;
 
 function PageStatusTag({ status }: { status?: string }) {
@@ -46,28 +58,67 @@ function PageStatusTag({ status }: { status?: string }) {
   );
 }
 
-function PagesSkeleton() {
+function PageActions({
+  page,
+  onCopy,
+  onDelete,
+}: {
+  page: CustomPage;
+  onCopy: (page: CustomPage) => void;
+  onDelete: (page: CustomPage) => void;
+}) {
   return (
-    <Card padding="base">
-      <div
-        className="flex flex-col gap-4"
-        role="status"
-        aria-label="单页加载中"
-        aria-live="polite"
-      >
-        {Array.from({ length: 6 }, (_, index) => (
+    <div className="flex min-w-max flex-nowrap items-center justify-end gap-1">
+      <IconButtonLink
+        to={`/${page.slug}`}
+        target="_blank"
+        rel="noreferrer"
+        label={`${page.status === "published" ? "查看" : "预览"}单页 ${page.title}`}
+        icon={<Eye />}
+        variant="ghost"
+      />
+      <IconButton
+        variant="ghost"
+        label={`复制单页链接 ${page.title}`}
+        icon={<Copy />}
+        onClick={() => onCopy(page)}
+      />
+      <IconButtonLink
+        variant="ghost"
+        to={`/admin/pages/${page.id}/edit`}
+        label={`编辑单页 ${page.title}`}
+        icon={<Edit2 />}
+      />
+      <IconButton
+        variant="ghost"
+        color="error"
+        label={`删除单页 ${page.title}`}
+        icon={<Trash2 />}
+        onClick={() => onDelete(page)}
+      />
+    </div>
+  );
+}
+
+function LoadingPages() {
+  return (
+    <Card padding="base" aria-label="单页加载中">
+      <div className="flex flex-col gap-4" role="status" aria-live="polite">
+        <Text size="sm" tone="muted">
+          正在加载单页…
+        </Text>
+        {Array.from({ length: 5 }, (_, index) => (
           <div
             key={index}
-            className="grid gap-3 border-t pt-4 first:border-t-0 first:pt-0 md:grid-cols-[3rem_minmax(0,1fr)_9rem_7rem_8rem]"
+            className="grid gap-3 border-t pt-4 first:border-t-0 first:pt-0 md:grid-cols-[minmax(0,1fr)_9rem_7rem_7rem]"
           >
-            <Skeleton className="h-5 w-5" />
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-40" />
-              <Skeleton className="h-3 w-52" />
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-4 w-2/3" />
+              <Skeleton className="h-3 w-4/5" />
             </div>
             <Skeleton className="h-5 w-24" />
-            <Skeleton className="h-6 w-14" />
-            <Skeleton className="h-8 w-24" />
+            <Skeleton className="h-6 w-16" />
+            <Skeleton className="h-4 w-20" />
           </div>
         ))}
       </div>
@@ -77,12 +128,12 @@ function PagesSkeleton() {
 
 export default function AdminPages() {
   const allowed = useAdminGuard("/admin/pages");
-  const { notify } = useAppFeedback();
   const [params, setParams] = useSearchParams();
   const [pages, setPages] = useState<CustomPage[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [notice, setNotice] = useState<Notice>(null);
   const [selected, setSelected] = useState<number[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const [deleting, setDeleting] = useState(false);
@@ -106,10 +157,11 @@ export default function AdminPages() {
         setPages(result.list || []);
         setTotal(result.total || 0);
         setSelected([]);
-        setError("");
+        setAIOpen(false);
+        setLoadError("");
       })
       .catch((reason: Error) => {
-        if (!ignore) setError(reason.message);
+        if (!ignore) setLoadError(reason.message);
       })
       .finally(() => {
         if (!ignore) setLoading(false);
@@ -125,57 +177,36 @@ export default function AdminPages() {
     if (value) next.set(key, value);
     else next.delete(key);
     if (key !== "page") next.delete("page");
+    setSelected([]);
+    setAIOpen(false);
     setParams(next, { replace: key === "q" });
   };
 
   const hasFilters = Boolean(q || status);
-  const clearFilters = () => setParams({});
+  const clearFilters = () => {
+    setSelected([]);
+    setAIOpen(false);
+    setParams({});
+  };
 
   const copyPageLink = async (pageItem: CustomPage) => {
     try {
       await navigator.clipboard.writeText(
         `${window.location.origin}/${pageItem.slug}`,
       );
-      notify("单页链接已复制。");
+      setNotice({ type: "success", message: "单页链接已复制。" });
     } catch {
-      notify("复制单页链接失败，请手动复制。", "error");
+      setNotice({
+        type: "error",
+        message: "复制单页链接失败，请手动复制。",
+      });
     }
   };
-
-  const renderActions = (pageItem: CustomPage) => (
-    <>
-      <IconButtonLink
-        to={`/${pageItem.slug}`}
-        target="_blank"
-        rel="noreferrer"
-        label={`${pageItem.status === "published" ? "查看" : "预览"}单页 ${pageItem.title}`}
-        icon={<Eye />}
-      />
-      <IconButton
-        variant="ghost"
-        label={`复制单页链接 ${pageItem.title}`}
-        icon={<Copy />}
-        onClick={() => void copyPageLink(pageItem)}
-      />
-      <IconButtonLink
-        variant="ghost"
-        to={`/admin/pages/${pageItem.id}/edit`}
-        label={`编辑单页 ${pageItem.title}`}
-        icon={<Edit2 />}
-      />
-      <IconButton
-        variant="ghost"
-        color="error"
-        label={`删除单页 ${pageItem.title}`}
-        icon={<Trash2 />}
-        onClick={() => setDeleteTarget({ kind: "page", page: pageItem })}
-      />
-    </>
-  );
 
   const performDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
+    setNotice(null);
     try {
       if (deleteTarget.kind === "page") {
         await pagesApi.deletePage(deleteTarget.page.id);
@@ -183,19 +214,28 @@ export default function AdminPages() {
           current.filter((item) => item.id !== deleteTarget.page.id),
         );
         setTotal((current) => Math.max(0, current - 1));
-        notify("单页已删除。");
+        setNotice({ type: "success", message: "单页已删除。" });
       } else {
+        const count = selected.length;
         await Promise.all(selected.map((id) => pagesApi.deletePage(id)));
         setPages((current) =>
           current.filter((item) => !selected.includes(item.id)),
         );
-        setTotal((current) => Math.max(0, current - selected.length));
+        setTotal((current) => Math.max(0, current - count));
         setSelected([]);
-        notify("所选单页已删除。");
+        setAIOpen(false);
+        setNotice({
+          type: "success",
+          message: `所选 ${count} 个单页已删除。`,
+        });
       }
       setDeleteTarget(null);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "删除失败，请稍后重试。");
+    } catch (reason) {
+      setNotice({
+        type: "error",
+        message:
+          reason instanceof Error ? reason.message : "删除失败，请稍后重试。",
+      });
     } finally {
       setDeleting(false);
     }
@@ -212,6 +252,13 @@ export default function AdminPages() {
   const allSelected =
     pages.length > 0 &&
     pages.every((pageItem) => selected.includes(pageItem.id));
+
+  const deleteDescription =
+    deleteTarget?.kind === "page"
+      ? `确认永久删除《${deleteTarget.page.title}》（/${deleteTarget.page.slug}）？此操作无法撤销。`
+      : deleteTarget?.kind === "batch"
+        ? `确认永久删除选中的 ${selected.length} 个单页？此操作无法撤销。`
+        : undefined;
 
   return (
     <div className="flex flex-col gap-6">
@@ -230,61 +277,82 @@ export default function AdminPages() {
         }
       />
 
-      <Card padding="sm">
-        <div className="flex flex-wrap items-center gap-3">
-          <SearchField
-            className="min-w-[14rem] flex-1"
-            aria-label="搜索单页"
-            value={q}
-            onChange={(event) => setFilter("q", event.target.value)}
-            placeholder="搜索标题、摘要或路径"
-          />
-          <Select
-            className="w-full sm:w-40"
-            aria-label="单页状态"
-            value={status}
-            onChange={(value) =>
-              setFilter(
-                "status",
-                Array.isArray(value) ? (value[0] ?? "") : value,
-              )
-            }
-          >
-            <option value="">全部状态</option>
-            <option value="published">已发布</option>
-            <option value="draft">草稿</option>
-          </Select>
-          <span className="text-sm text-muted-foreground">{total} 页</span>
-          {hasFilters ? (
-            <Button
-              variant="ghost"
-              size="small"
-              type="button"
-              onClick={clearFilters}
-              icon={<X />}
+      {notice ? (
+        <Alert
+          type={notice.type}
+          showIcon
+          title={notice.message}
+          closable={{ onClose: () => setNotice(null) }}
+        />
+      ) : null}
+
+      <Card padding="base">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="min-w-0 flex-1">
+            <Input
+              aria-label="搜索单页"
+              prefix={<Search className="size-4" />}
+              value={q}
+              onChange={(event) => setFilter("q", event.target.value)}
+              placeholder="搜索标题、摘要或路径"
+            />
+          </div>
+          <div className="min-w-0 lg:w-40 lg:shrink-0">
+            <Select
+              aria-label="单页状态"
+              value={status}
+              onChange={(value) =>
+                setFilter(
+                  "status",
+                  Array.isArray(value) ? (value[0] ?? "") : String(value),
+                )
+              }
             >
-              清除
-            </Button>
-          ) : null}
+              <option value="">全部状态</option>
+              <option value="published">已发布</option>
+              <option value="draft">草稿</option>
+            </Select>
+          </div>
+          <div className="flex items-center justify-between gap-3 lg:justify-end">
+            <Text size="sm" tone="muted" className="whitespace-nowrap">
+              {total} 页
+            </Text>
+            {hasFilters ? (
+              <Button
+                size="small"
+                variant="text"
+                icon={<X />}
+                onClick={clearFilters}
+              >
+                清除
+              </Button>
+            ) : null}
+          </div>
         </div>
       </Card>
 
-      {error && pages.length > 0 ? (
-        <Alert type="error" showIcon title={error} />
+      {loadError && pages.length > 0 ? (
+        <Alert type="error" showIcon title={loadError} />
       ) : null}
 
       {selected.length > 0 ? (
         <BulkActionBar
           selectionLabel={`已选择 ${selected.length} 页`}
-          onCancel={() => setSelected([])}
+          onCancel={() => {
+            setSelected([]);
+            setAIOpen(false);
+          }}
         >
-          <Button size="small" icon={<Bot />} onClick={() => setAIOpen(true)}>
+          <Button
+            size="small"
+            icon={<Sparkles />}
+            onClick={() => setAIOpen(true)}
+          >
             交给 AI
           </Button>
           <Button
             size="small"
             color="error"
-            type="button"
             onClick={() => setDeleteTarget({ kind: "batch" })}
             icon={<Trash2 />}
           >
@@ -294,15 +362,15 @@ export default function AdminPages() {
       ) : null}
 
       {loading ? (
-        <PagesSkeleton />
-      ) : error && pages.length === 0 ? (
+        <LoadingPages />
+      ) : loadError && pages.length === 0 ? (
         <Alert
           type="error"
           showIcon
           title="单页加载失败"
-          description={error}
+          description={loadError}
           action={
-            <Button size="small" onClick={() => void load()}>
+            <Button size="small" onClick={load}>
               重新载入
             </Button>
           }
@@ -310,25 +378,28 @@ export default function AdminPages() {
       ) : pages.length === 0 ? (
         <Card padding="lg">
           <Empty
+            icon={<FileText className="size-7 text-muted-foreground" />}
             title={
               hasFilters
-                ? "没有符合当前筛选条件的单页。"
-                : "还没有创建过独立单页。"
+                ? "没有符合当前筛选条件的单页"
+                : "还没有创建过独立单页"
+            }
+            description={
+              hasFilters
+                ? "调整或清除筛选条件后重试。"
+                : "创建关于我、友情链接或隐私政策等独立页面。"
             }
             action={
               hasFilters ? (
-                <Button size="small" onClick={clearFilters}>
-                  清除筛选
-                </Button>
+                <Button onClick={clearFilters}>清除筛选</Button>
               ) : (
                 <ButtonLink
-                  size="small"
                   variant="solid"
                   color="primary"
                   to="/admin/pages/new"
                   icon={<Plus />}
                 >
-                  创建第一个单页
+                  新建单页
                 </ButtonLink>
               )
             }
@@ -359,24 +430,29 @@ export default function AdminPages() {
                   <TableHead className="w-36">导航展示</TableHead>
                   <TableHead className="w-28">状态</TableHead>
                   <TableHead className="w-32">更新时间</TableHead>
-                  <TableHead className="w-36 text-right">操作</TableHead>
+                  <TableHead className="w-40 text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {pages.map((pageItem) => (
-                  <TableRow key={pageItem.id}>
+                  <TableRow
+                    key={pageItem.id}
+                    data-state={
+                      selected.includes(pageItem.id) ? "selected" : undefined
+                    }
+                  >
                     <TableCell className="text-center">
                       <Checkbox
-                        aria-label={`选择 ${pageItem.title}`}
+                        aria-label={`选择单页 ${pageItem.title}`}
                         checked={selected.includes(pageItem.id)}
                         onChange={(event) =>
                           setSelectedPage(pageItem.id, event.target.checked)
                         }
                       />
                     </TableCell>
-                    <TableCell className="whitespace-normal">
-                      <div className="flex flex-col gap-0.5">
-                        <strong className="text-sm font-semibold text-foreground">
+                    <TableCell className="min-w-72 whitespace-normal">
+                      <div className="flex flex-col gap-1">
+                        <strong className="text-sm font-semibold leading-snug text-foreground">
                           {pageItem.title}
                         </strong>
                         {pageItem.summary ? (
@@ -404,9 +480,9 @@ export default function AdminPages() {
                           主导航 · {pageItem.sort_order}
                         </Tag>
                       ) : (
-                        <span className="text-xs text-muted-foreground/60">
+                        <Text size="xs" tone="muted">
                           隐藏
-                        </span>
+                        </Text>
                       )}
                     </TableCell>
                     <TableCell>
@@ -420,9 +496,13 @@ export default function AdminPages() {
                       </time>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center justify-end gap-1">
-                        {renderActions(pageItem)}
-                      </div>
+                      <PageActions
+                        page={pageItem}
+                        onCopy={(item) => void copyPageLink(item)}
+                        onDelete={(item) =>
+                          setDeleteTarget({ kind: "page", page: item })
+                        }
+                      />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -436,84 +516,103 @@ export default function AdminPages() {
             aria-label="单页列表"
           >
             {pages.map((pageItem) => (
-              <Card key={pageItem.id} padding="base" role="listitem">
+              <Card
+                key={pageItem.id}
+                padding="base"
+                role="listitem"
+                className={
+                  selected.includes(pageItem.id)
+                    ? "border-primary/40 bg-accent/20"
+                    : undefined
+                }
+              >
                 <div className="flex flex-col gap-4">
                   <div className="flex items-start gap-3">
                     <Checkbox
-                      aria-label={`选择 ${pageItem.title}`}
+                      aria-label={`选择单页 ${pageItem.title}`}
                       checked={selected.includes(pageItem.id)}
                       onChange={(event) =>
                         setSelectedPage(pageItem.id, event.target.checked)
                       }
                     />
-                    <div className="min-w-0 flex-1 space-y-2">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3">
                         <strong className="min-w-0 break-words text-sm font-semibold leading-snug">
                           {pageItem.title}
                         </strong>
                         <PageStatusTag status={pageItem.status} />
                       </div>
-                      <div className="break-all font-mono text-xs text-muted-foreground">
+                      <code className="mt-1 block break-all font-mono text-xs text-muted-foreground">
                         /{pageItem.slug}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                        <Tag>{pageItem.template || "default"}</Tag>
-                        <span>
-                          {pageItem.show_in_nav
-                            ? `主导航 · ${pageItem.sort_order}`
-                            : "导航隐藏"}
-                        </span>
-                        <time>
-                          更新于{" "}
-                          {new Date(
-                            pageItem.updated_at || pageItem.created_at,
-                          ).toLocaleDateString("zh-CN")}
-                        </time>
-                      </div>
+                      </code>
+                      {pageItem.summary ? (
+                        <Text
+                          size="xs"
+                          tone="muted"
+                          className="mt-2 line-clamp-2"
+                        >
+                          {pageItem.summary}
+                        </Text>
+                      ) : null}
                     </div>
                   </div>
-                  <div className="flex items-center justify-end gap-1">
-                    {renderActions(pageItem)}
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <Tag>{pageItem.template || "default"}</Tag>
+                    <span>
+                      {pageItem.show_in_nav
+                        ? `主导航 · ${pageItem.sort_order}`
+                        : "导航隐藏"}
+                    </span>
+                    <time>
+                      更新于{" "}
+                      {new Date(
+                        pageItem.updated_at || pageItem.created_at,
+                      ).toLocaleDateString("zh-CN")}
+                    </time>
                   </div>
+                  <PageActions
+                    page={pageItem}
+                    onCopy={(item) => void copyPageLink(item)}
+                    onDelete={(item) =>
+                      setDeleteTarget({ kind: "page", page: item })
+                    }
+                  />
                 </div>
               </Card>
             ))}
           </div>
+
+          {total > pageSize ? (
+            <Pagination
+              ariaLabel="单页分页"
+              page={page}
+              total={total}
+              pageSize={pageSize}
+              onChange={(nextPage) => setFilter("page", String(nextPage))}
+              align="center"
+              showTotal={(count, range) =>
+                `${range[0]}-${range[1]} / ${count} 页`
+              }
+            />
+          ) : null}
         </>
       )}
 
-      {!loading && total > pageSize ? (
-        <div className="flex justify-center pt-2">
-          <Pagination
-            page={page}
-            total={total}
-            pageSize={pageSize}
-            ariaLabel="单页分页"
-            align="center"
-            onChange={(nextPage) => setFilter("page", String(nextPage))}
-          />
-        </div>
-      ) : null}
-
-      <ConfirmActionModal
+      <Modal
         open={deleteTarget !== null}
-        title={deleteTarget?.kind === "page" ? "删除单页" : "批量删除单页"}
-        description={
-          deleteTarget?.kind === "page" ? (
-            <>
-              确认永久删除《{deleteTarget.page.title}》（/
-              {deleteTarget.page.slug}）？此操作无法撤销。
-            </>
-          ) : (
-            <>确认永久删除选中的 {selected.length} 个单页？此操作无法撤销。</>
-          )
-        }
-        confirmLabel="永久删除"
-        danger
-        busy={deleting}
+        title={deleteTarget?.kind === "batch" ? "批量删除单页" : "删除单页"}
+        description={deleteDescription}
         onClose={() => setDeleteTarget(null)}
-        onConfirm={performDelete}
-      />
+        onOk={performDelete}
+        okText="永久删除"
+        confirmLoading={deleting}
+        okButtonProps={{ variant: "solid", color: "error" }}
+      >
+        <Text size="sm" tone="muted">
+          删除后无法恢复，请确认目标无误。
+        </Text>
+      </Modal>
+
       <WorkflowLauncher
         open={aiOpen}
         resourceType="page"
