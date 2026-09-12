@@ -188,7 +188,6 @@ func startWebServer(cmd *cobra.Command, args []string) {
 	logger.Sugar().Info("shutting down gracefully, press Ctrl+C again to force")
 
 	// The context is used to inform the server it has 5 seconds to finish
-	// the request it is currently handling
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := httpServer.Shutdown(ctx); err != nil {
@@ -279,7 +278,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 	communitySvc := communityservice.NewCommunityService(communityrepository.NewCommunityRepository(cfg.DB), postRepo)
 	mediaSvc := mediaservice.New(mediarepository.New(cfg.DB))
 	analyticsSvc := newAnalyticsService(cfg.DB)
-	growthSvc := service.NewGrowthService(repository.NewGrowthRepository(cfg.DB), analyticsSvc)
+	growthSvc := service.NewGrowthService(repository.NewGrowthRepository(cfg.DB))
 	service.StartScheduledPublisher(ctx, postSvc, cfg.Logger)
 
 	var agentCtrl *controller.AgentController
