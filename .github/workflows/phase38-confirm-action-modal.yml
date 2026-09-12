@@ -44,7 +44,7 @@ jobs:
             let text = fs.readFileSync(path, 'utf8');
             if (!text.includes('ConfirmDialog')) throw new Error(`ConfirmDialog missing from ${path}`);
 
-            const legacyImport = /import\s*\{([\s\S]*?)\}\s*from\s*["']@gouno\/ui-legacy["'];/;
+            const legacyImport = /import\s*\{([^}]*)\}\s*from\s*["']@gouno\/ui-legacy["'];/;
             const match = text.match(legacyImport);
             if (!match) throw new Error(`legacy import missing from ${path}`);
             const names = match[1]
