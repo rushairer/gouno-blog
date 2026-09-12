@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -133,14 +133,11 @@ describe("AISettings", () => {
 
   it("copies a Skill from the dedicated Skills settings section", async () => {
     const user = userEvent.setup();
-    const prompt = vi
-      .spyOn(window, "prompt")
-      .mockReturnValue("Weekly Operations Copy");
     vi.mocked(apiFetch).mockImplementation(async (input, init) => {
       const url = input.toString();
       if (url === "/api/admin/agent-skills/1/copy" && init?.method === "POST") {
         return Response.json({
-          data: { id: 2, name: "Weekly Operations Copy" },
+          data: { id: 2, name: "Editorial Operations Copy" },
         });
       }
       return Response.json({ data: responseFor(url) });
@@ -149,16 +146,37 @@ describe("AISettings", () => {
     renderSettings();
     await user.click(await screen.findByRole("tab", { name: "Skills" }));
     await user.click(screen.getByRole("button", { name: "Copy Skill" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Copy Skill" });
+    const nameInput = within(dialog).getByRole("textbox", {
+      name: "Copied Skill name",
+    });
+    expect(nameInput).toHaveValue("Weekly Operations Copy");
+    expect(
+      vi
+        .mocked(apiFetch)
+        .mock.calls.filter(
+          ([input, init]) =>
+            input.toString() === "/api/admin/agent-skills/1/copy" &&
+            init?.method === "POST",
+        ),
+    ).toHaveLength(0);
+
+    await user.clear(nameInput);
+    await user.type(nameInput, "Editorial Operations Copy");
+    await user.click(
+      within(dialog).getByRole("button", { name: "Create copy" }),
+    );
+
     await waitFor(() =>
       expect(apiFetch).toHaveBeenCalledWith(
         "/api/admin/agent-skills/1/copy",
         expect.objectContaining({
           method: "POST",
-          body: JSON.stringify({ name: "Weekly Operations Copy" }),
+          body: JSON.stringify({ name: "Editorial Operations Copy" }),
         }),
       ),
     );
-    prompt.mockRestore();
   });
 
   it("opens Provider management from the dedicated settings section", async () => {
