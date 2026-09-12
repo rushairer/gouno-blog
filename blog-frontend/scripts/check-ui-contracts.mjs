@@ -13,6 +13,14 @@ const retiredProductStyles = new Set([
   "styles/redesign.css",
   "styles/tokens.css",
 ]);
+const retiredProductComponents = new Set([
+  "components/ConfirmActionModal.tsx",
+  "components/taxonomy/CategoryForm.tsx",
+]);
+const agentConsoleStyleConsumers = new Set([
+  "pages/admin/AISettings.tsx",
+  "pages/admin/AIOperations.tsx",
+]);
 const canonicalUiModules = new Set([
   "@gouno/ui/core",
   "@gouno/ui/theme",
@@ -24,6 +32,7 @@ const rawElevationPattern =
   /(^|[\s"'`])(?:[a-z-]+:)*shadow-(?:xs|sm|md|lg|xl|2xl)(?=[\s"'`]|$)/;
 const canonicalPrimitiveSelector =
   /^\.(?:panel|field|input-field|btn|btn__label|icon-button|feedback|state|tab|tab-list|ui-card|choice-button|badge)(?=$|[\s:{,[.#>+~])/;
+const agentConsoleStyleImport = /(?:^|\/)styles\/agent-console\.css$/;
 
 async function collect(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -112,6 +121,16 @@ function checkUiImports(name, source) {
     )
       continue;
     const moduleName = statement.moduleSpecifier.text;
+
+    if (
+      agentConsoleStyleImport.test(moduleName) &&
+      !agentConsoleStyleConsumers.has(name)
+    ) {
+      failures.push(
+        `${name}:${location(sourceFile, statement)} agent-console.css is feature-scoped to AI Settings and AI Operations`,
+      );
+    }
+
     if (!moduleName.startsWith("@gouno/ui")) continue;
 
     if (moduleName === "@gouno/ui-legacy") {
@@ -235,6 +254,12 @@ for (const path of files) {
   if (retiredProductStyles.has(name)) {
     failures.push(
       `${name}: retired legacy stylesheet must not be reintroduced; canonical tokens and primitives are owned by @gouno/ui`,
+    );
+  }
+
+  if (retiredProductComponents.has(name)) {
+    failures.push(
+      `${name}: retired compatibility component must not be reintroduced; use canonical @gouno/ui composition directly`,
     );
   }
 
