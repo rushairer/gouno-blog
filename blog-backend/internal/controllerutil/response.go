@@ -13,6 +13,7 @@ import (
 	communityrepository "github.com/rushairer/blog-backend/internal/community/repository"
 	communityservice "github.com/rushairer/blog-backend/internal/community/service"
 	"github.com/rushairer/blog-backend/internal/knowledge"
+	mediaservice "github.com/rushairer/blog-backend/internal/media/service"
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
 	"github.com/rushairer/blog-backend/internal/service"
 	siteservice "github.com/rushairer/blog-backend/internal/site/service"
@@ -104,6 +105,7 @@ func WriteDomainError(c *gin.Context, err error) {
 		errors.Is(err, service.ErrPostNotFound),
 		errors.Is(err, communityservice.ErrPostNotFound),
 		errors.Is(err, taxonomyservice.ErrCategoryNotFound),
+		errors.Is(err, mediaservice.ErrMediaNotFound),
 		errors.Is(err, pageservice.ErrPageNotFound),
 		errors.Is(err, workflowservice.ErrNotFound),
 		errors.Is(err, knowledge.ErrNotFound),
@@ -111,7 +113,7 @@ func WriteDomainError(c *gin.Context, err error) {
 		status = http.StatusNotFound
 
 	case errors.Is(err, service.ErrSlugInUse),
-		errors.Is(err, service.ErrMediaInUse),
+		errors.Is(err, mediaservice.ErrMediaInUse),
 		errors.Is(err, taxonomyservice.ErrCategorySlugInUse),
 		errors.Is(err, pageservice.ErrDuplicateSlug),
 		errors.Is(err, communityrepository.ErrDuplicateInteraction),
@@ -141,8 +143,8 @@ func WriteDomainError(c *gin.Context, err error) {
 		errors.Is(err, communityservice.ErrInvalidCommentStatus),
 		errors.Is(err, communityservice.ErrReportReasonTooLong),
 		errors.Is(err, service.ErrInvalidVersion),
-		errors.Is(err, service.ErrInvalidMediaPayload),
-		errors.Is(err, service.ErrInvalidMediaID),
+		errors.Is(err, mediaservice.ErrInvalidMediaPayload),
+		errors.Is(err, mediaservice.ErrInvalidMediaID),
 		errors.Is(err, taxonomyservice.ErrCategoryNameRequired),
 		errors.Is(err, taxonomyservice.ErrInvalidCategoryID),
 		errors.Is(err, taxonomyservice.ErrInvalidTagPayload),
