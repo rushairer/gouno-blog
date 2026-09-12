@@ -5,25 +5,27 @@ import (
 	"database/sql"
 	"errors"
 
+	analyticsrepository "github.com/rushairer/blog-backend/internal/analytics/repository"
+	analyticsservice "github.com/rushairer/blog-backend/internal/analytics/service"
 	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 type GrowthStore interface {
+	analyticsrepository.Repository
 	RelatedPosts(context.Context, int64, []string, int) ([]*domain.Post, error)
 	ListVersions(context.Context, int64) ([]*domain.PostVersion, error)
 	RestoreVersion(context.Context, int64, int64) (*domain.Post, error)
-	RecordEvent(context.Context, int64, string, string) error
-	AnalyticsSummary(context.Context) (*domain.AnalyticsSummary, error)
 }
 
 var ErrInvalidVersion = errors.New("invalid version")
 
 type GrowthService struct {
-	store GrowthStore
+	store     GrowthStore
+	analytics analyticsservice.Service
 }
 
 func NewGrowthService(store GrowthStore) *GrowthService {
-	return &GrowthService{store: store}
+	return &GrowthService{store: store, analytics: analyticsservice.New(store)}
 }
 
 func (s *GrowthService) RelatedPosts(ctx context.Context, post *domain.Post) ([]*domain.Post, error) {
@@ -55,12 +57,13 @@ func (s *GrowthService) RestoreVersion(ctx context.Context, postID, versionID in
 }
 
 func (s *GrowthService) RecordView(ctx context.Context, postID int64, actorKey string) error {
-	if postID <= 0 {
+	err := s.analytics.RecordView(ctx, postID, actorKey)
+	if errors.Is(err, analyticsservice.ErrInvalidPostID) {
 		return ErrInvalidPostID
 	}
-	return s.store.RecordEvent(ctx, postID, "view", actorKey)
+	return err
 }
 
 func (s *GrowthService) AnalyticsSummary(ctx context.Context) (*domain.AnalyticsSummary, error) {
-	return s.store.AnalyticsSummary(ctx)
+	return s.analytics.AnalyticsSummary(ctx)
 }
