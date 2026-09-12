@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { ReactNode } from "react";
 import { I18nextProvider, useTranslation } from "react-i18next";
+import { ConfigProvider, enUS, zhCN } from "@gouno/ui/core";
 import i18n, { storageKey } from "./i18n/index";
 import type { Locale } from "./i18n/index";
 import en from "./i18n/locales/en.json";
@@ -15,8 +16,28 @@ type NestedKeyOf<ObjectType extends object> = {
 
 export type TranslationKey = NestedKeyOf<typeof en>;
 
+function GounoLocaleProvider({ children }: { children: ReactNode }) {
+  const { i18n: currentI18n } = useTranslation();
+  const lang =
+    currentI18n?.resolvedLanguage ||
+    currentI18n?.language ||
+    i18n.resolvedLanguage ||
+    i18n.language ||
+    "en";
+
+  return (
+    <ConfigProvider locale={lang.startsWith("zh") ? zhCN : enUS}>
+      {children}
+    </ConfigProvider>
+  );
+}
+
 export function I18nProvider({ children }: { children: ReactNode }) {
-  return <I18nextProvider i18n={i18n}>{children}</I18nextProvider>;
+  return (
+    <I18nextProvider i18n={i18n}>
+      <GounoLocaleProvider>{children}</GounoLocaleProvider>
+    </I18nextProvider>
+  );
 }
 
 // oxlint-disable-next-line react/only-export-components
