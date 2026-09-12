@@ -29,6 +29,18 @@ jobs:
       - name: Apply fail-closed Starter Pack coordinator cutover
         run: python3 .github/scripts/refactor_starterpack_coordinator.py
 
+      - name: Remove obsolete non-bootstrap test wiring
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('blog-backend/internal/workflow/resource_query_integration_test.go')
+          text = path.read_text()
+          old = 'StarterPack: agentrepository.NewAgentRepository(db),'
+          if text.count(old) != 1:
+              raise SystemExit(f'expected exactly one legacy StarterPack test dependency, found {text.count(old)}')
+          path.write_text(text.replace(old, 'StarterPack: nil,', 1))
+          PY
+
       - name: Format changed Go files
         run: |
           gofmt -w \
@@ -40,22 +52,23 @@ jobs:
             blog-backend/internal/migrations/starterpack_test_helper_test.go \
             blog-backend/internal/migrations/migrate_integration_test.go \
             blog-backend/internal/migrations/identity_backfill_integration_test.go \
+            blog-backend/internal/workflow/resource_query_integration_test.go \
             blog-backend/cmd/gouno/web.go
 
       - name: Enforce Starter Pack ownership cutover
         run: |
           test ! -e blog-backend/internal/agent/repository/agent_repository.go
           test ! -e blog-backend/internal/agent/repository/workflow_starters.go
-          ! grep -R -q 'agentrepository.NewAgentRepository' blog-backend
-          ! grep -R -q 'BootstrapStarterPack' blog-backend/internal/agent/repository
-          grep -q 'starterpack.NewCoordinator' blog-backend/cmd/gouno/web.go
-          grep -q 'StarterPack: starterPackCoordinator' blog-backend/cmd/gouno/web.go
-          grep -q 'type Coordinator struct' blog-backend/internal/starterpack/coordinator.go
-          grep -q 'SelectStarterProviderIDTx' blog-backend/internal/provider/repository/starter.go
-          grep -q 'ListSystemStarterSkillsTx' blog-backend/internal/agent/repository/starter_skill_repository.go
-          grep -q 'ReconcileSystemAgentTx' blog-backend/internal/agent/repository/starter_definition_repository.go
-          grep -q 'ReconcileCoreStarterWorkflows' blog-backend/internal/workflow/repository/core_starters.go
-          grep -q 'Starter Pack application coordinator' blog-backend/ARCHITECTURE_CONVERGENCE.md
+          ! grep -R -F -q 'agentrepository.NewAgentRepository' blog-backend
+          ! grep -R -F -q 'BootstrapStarterPack' blog-backend/internal/agent/repository
+          grep -F -q 'starterpack.NewCoordinator' blog-backend/cmd/gouno/web.go
+          grep -F -q 'StarterPack: starterPackCoordinator' blog-backend/cmd/gouno/web.go
+          grep -F -q 'type Coordinator struct' blog-backend/internal/starterpack/coordinator.go
+          grep -F -q 'SelectStarterProviderIDTx' blog-backend/internal/provider/repository/starter.go
+          grep -F -q 'ListSystemStarterSkillsTx' blog-backend/internal/agent/repository/starter_skill_repository.go
+          grep -F -q 'ReconcileSystemAgentTx' blog-backend/internal/agent/repository/starter_definition_repository.go
+          grep -F -q 'ReconcileCoreStarterWorkflows' blog-backend/internal/workflow/repository/core_starters.go
+          grep -F -q 'Starter Pack application coordinator' blog-backend/ARCHITECTURE_CONVERGENCE.md
           git diff --check
 
       - name: Test
