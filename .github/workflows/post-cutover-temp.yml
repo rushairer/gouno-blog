@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           ref: refactor/post-runtime-cutover
-      - uses: actions/setup-go@0aaccfd36b6b5bd29e1f0ad13ec53cd73036b6a6
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
         with:
           go-version-file: blog-backend/go.mod
           cache-dependency-path: blog-backend/go.sum
