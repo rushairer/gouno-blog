@@ -19,6 +19,8 @@ import (
 	mediaservice "github.com/rushairer/blog-backend/internal/media/service"
 	pagecontroller "github.com/rushairer/blog-backend/internal/page/controller"
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
+	postversioncontroller "github.com/rushairer/blog-backend/internal/postversion/controller"
+	postversionservice "github.com/rushairer/blog-backend/internal/postversion/service"
 	"github.com/rushairer/blog-backend/internal/ratelimit"
 	recommendationcontroller "github.com/rushairer/blog-backend/internal/recommendation/controller"
 	recommendationservice "github.com/rushairer/blog-backend/internal/recommendation/service"
@@ -49,6 +51,7 @@ type WebRouterOptions struct {
 	CommunitySvc       *communityservice.CommunityService
 	AnalyticsSvc       analyticsservice.Service
 	RecommendationSvc  recommendationservice.Service
+	PostVersionSvc     postversionservice.Service
 	GrowthSvc          *service.GrowthService
 	AgentCtrl          *controller.AgentController
 	Logger             *zap.Logger
@@ -59,7 +62,7 @@ type WebRouterOptions struct {
 }
 
 func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
-	if opts.PostSvc == nil || opts.PageSvc == nil || opts.MediaSvc == nil || opts.TaxonomySvc == nil || opts.SiteSvc == nil || opts.CommunitySvc == nil || opts.AnalyticsSvc == nil || opts.RecommendationSvc == nil || opts.GrowthSvc == nil {
+	if opts.PostSvc == nil || opts.PageSvc == nil || opts.MediaSvc == nil || opts.TaxonomySvc == nil || opts.SiteSvc == nil || opts.CommunitySvc == nil || opts.AnalyticsSvc == nil || opts.RecommendationSvc == nil || opts.PostVersionSvc == nil || opts.GrowthSvc == nil {
 		panic("RegisterWebRouterWithOptions: all application services are required")
 	}
 	if opts.Verifier == nil || opts.AccessService == nil {
@@ -107,11 +110,9 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 	communityCtrl := communitycontroller.NewCommunityController(communitySvc, interactionLimiter, opts.VisitorSecret, opts.Logger)
 
 	mediaCtrl := mediacontroller.New(opts.MediaSvc, opts.MediaStore)
-
-	growthSvc := opts.GrowthSvc
-	growthCtrl := controller.NewGrowthController(growthSvc, postSvc, communitySvc)
 	analyticsCtrl := analyticscontroller.New(opts.AnalyticsSvc, communitySvc)
 	recommendationCtrl := recommendationcontroller.New(opts.RecommendationSvc, communitySvc)
+	postVersionCtrl := postversioncontroller.New(opts.PostVersionSvc, postSvc)
 
 	if opts.MediaStore != nil {
 		if _, local := opts.MediaStore.LocalPath(".probe"); local && os.MkdirAll(opts.MediaDir, 0o750) == nil {
@@ -242,8 +243,8 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 			author.GET("/admin/posts", ctrl.ListAdmin)
 			author.GET("/admin/posts/:id", ctrl.GetAdmin)
 			author.PUT("/posts/:slugOrID", ctrl.Update)
-			author.GET("/admin/posts/:id/versions", growthCtrl.ListVersions)
-			author.POST("/admin/posts/:id/versions/:versionID/restore", growthCtrl.RestoreVersion)
+			author.GET("/admin/posts/:id/versions", postVersionCtrl.ListVersions)
+			author.POST("/admin/posts/:id/versions/:versionID/restore", postVersionCtrl.RestoreVersion)
 			author.GET("/admin/categories", taxonomyCtrl.ListCategories)
 			author.GET("/admin/tags", taxonomyCtrl.ListAdminTags)
 			author.GET("/admin/media", mediaCtrl.List)
