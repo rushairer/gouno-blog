@@ -27,6 +27,8 @@ import (
 	"github.com/rushairer/blog-backend/internal/knowledge"
 	"github.com/rushairer/blog-backend/internal/media"
 	"github.com/rushairer/blog-backend/internal/operations"
+	pagerepository "github.com/rushairer/blog-backend/internal/page/repository"
+	pageservice "github.com/rushairer/blog-backend/internal/page/service"
 	"github.com/rushairer/blog-backend/internal/repository"
 	"github.com/rushairer/blog-backend/internal/secretbox"
 	"github.com/rushairer/blog-backend/internal/service"
@@ -269,7 +271,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 	transactor := repository.NewTransactor(cfg.DB, cfg.Logger)
 	postRepo := repository.NewPostRepository(cfg.DB)
 	postSvc := service.NewPostService(postRepo)
-	pageSvc := service.NewPageService(repository.NewPageRepository(cfg.DB))
+	pageSvc := pageservice.NewPageService(pagerepository.NewPageRepository(cfg.DB))
 	taxonomySvc := taxonomyservice.New(taxonomyrepository.New(cfg.DB))
 	siteSvc := siteservice.New(siterepository.New(cfg.DB))
 	communitySvc := communityservice.NewCommunityService(communityrepository.NewCommunityRepository(cfg.DB), postRepo)

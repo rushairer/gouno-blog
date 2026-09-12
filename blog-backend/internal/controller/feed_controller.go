@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rushairer/blog-backend/internal/service"
+	pageservice "github.com/rushairer/blog-backend/internal/page/service"
 )
 
 type SiteSettingsReader interface {
@@ -19,11 +19,11 @@ type SiteSettingsReader interface {
 
 type FeedController struct {
 	svc          BlogService
-	pageSvc      *service.PageService
+	pageSvc      *pageservice.PageService
 	siteSettings SiteSettingsReader
 }
 
-func NewFeedController(svc BlogService, pageSvc *service.PageService, siteSettings SiteSettingsReader) *FeedController {
+func NewFeedController(svc BlogService, pageSvc *pageservice.PageService, siteSettings SiteSettingsReader) *FeedController {
 	return &FeedController{svc: svc, pageSvc: pageSvc, siteSettings: siteSettings}
 }
 
