@@ -1,5 +1,5 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiFetch } from "../../../auth";
 import { WorkflowLauncher } from "../WorkflowLauncher";
 
@@ -48,27 +48,35 @@ function jsonResponse(data: unknown) {
   });
 }
 
+function resourceResponse(label: string) {
+  return jsonResponse({
+    list: [
+      {
+        type: "post",
+        key: "17",
+        label,
+        version_token: "v1",
+        metadata: {},
+      },
+    ],
+    total: 1,
+    unavailable_keys: [],
+  });
+}
+
 describe("WorkflowLauncher", () => {
-  it("uses a bounded modal layout and keeps long selected resource labels readable", async () => {
+  beforeEach(() => {
+    vi.mocked(apiFetch).mockReset();
+  });
+
+  it("uses the canonical Showcase modal composition and locks source-page scope", async () => {
     const longTitle =
       "AI 每日资讯：Gemini 3.7 Flash 发布、GPT-5.6 提速 14 倍、SpaceX 完成收购 Cursor";
     vi.mocked(apiFetch).mockImplementation(async (path) => {
       if (String(path) === "/api/admin/ai-workflows")
         return jsonResponse([workflow]);
       if (String(path).startsWith("/api/admin/ai-resources/post?"))
-        return jsonResponse({
-          list: [
-            {
-              type: "post",
-              key: "17",
-              label: longTitle,
-              version_token: "v1",
-              metadata: {},
-            },
-          ],
-          total: 1,
-          unavailable_keys: [],
-        });
+        return resourceResponse(longTitle);
       throw new Error(`Unexpected request: ${String(path)}`);
     });
 
@@ -82,28 +90,63 @@ describe("WorkflowLauncher", () => {
       />,
     );
 
-    const dialog = screen.getByRole("dialog");
-    expect(dialog).toHaveClass("workflow-launcher-modal");
-    expect(
-      dialog.querySelector(".workflow-launcher__body"),
-    ).toBeInTheDocument();
-    expect(
-      dialog.querySelector(".workflow-launcher__footer"),
-    ).toBeInTheDocument();
+    const dialog = screen.getByRole("dialog", { name: "将所选文章交给 AI" });
+    expect(dialog).not.toHaveClass("workflow-launcher-modal");
+    expect(dialog.querySelector(".workflow-launcher__body")).toBeNull();
+    expect(dialog.querySelector(".workflow-launcher__footer")).toBeNull();
 
-    const label = await screen.findByText(longTitle);
-    expect(label).toHaveClass("workflow-resource-label");
-    expect(label).toHaveAttribute("title", longTitle);
-    expect(label.closest(".workflow-resource-field")).toHaveClass(
-      "input-field",
-    );
     expect(
-      within(dialog).getByRole("button", { name: `移除 ${longTitle}` }),
+      await within(dialog).findByRole("combobox", { name: "Workflow" }),
     ).toBeInTheDocument();
-    await waitFor(() =>
-      expect(apiFetch).toHaveBeenCalledWith(
-        expect.stringContaining("/api/admin/ai-resources/post?key=17"),
-      ),
+    expect(await within(dialog).findByText(longTitle)).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("范围来自当前页面选择，启动后不可在此修改"),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole("button", { name: `移除 ${longTitle}` }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("button", { name: "关闭" }),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "运行" })).toBeEnabled();
+
+    await waitFor(() => {
+      expect(
+        vi.mocked(apiFetch).mock.calls.map(([path]) => String(path)),
+      ).toContain("/api/admin/ai-resources/post?key=17");
+    });
+  });
+
+  it("renders the Showcase warning state when no compatible workflow exists", async () => {
+    vi.mocked(apiFetch).mockImplementation(async (path) => {
+      if (String(path) === "/api/admin/ai-workflows") return jsonResponse([]);
+      if (String(path).startsWith("/api/admin/ai-resources/post?"))
+        return resourceResponse("测试文章");
+      throw new Error(`Unexpected request: ${String(path)}`);
+    });
+
+    render(
+      <WorkflowLauncher
+        open
+        resourceType="post"
+        resourceKeys={[17]}
+        title="将所选文章交给 AI"
+        onClose={vi.fn()}
+      />,
     );
+
+    const dialog = screen.getByRole("dialog", { name: "将所选文章交给 AI" });
+    expect(
+      await within(dialog).findByText("没有兼容 Workflow"),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(
+        /真实产品只显示 input schema 声明了当前资源类型/,
+      ),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "运行" })).toBeDisabled();
+    expect(
+      within(dialog).getByRole("button", { name: "关闭" }),
+    ).toBeInTheDocument();
   });
 });

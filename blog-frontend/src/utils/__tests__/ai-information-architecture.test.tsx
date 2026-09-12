@@ -8,8 +8,10 @@ function source(path: string): string {
 }
 
 describe("Blog Admin AI information architecture", () => {
-  it("exposes AI Operations and AI Settings as sibling top-level destinations", () => {
-    const aiGroup = adminNavigation.find((group) => group.label === "AI");
+  it("exposes AI Operations and AI Settings as Showcase-aligned sibling destinations", () => {
+    const aiGroup = adminNavigation.find(
+      (group) => group.label === "AI Automation AI 运营",
+    );
     expect(aiGroup?.items.map((item) => item.path)).toEqual([
       "/admin/ai-ops",
       "/admin/ai-settings",
@@ -18,12 +20,10 @@ describe("Blog Admin AI information architecture", () => {
       aiGroup?.items.every((item) => item.permissions?.includes("ai.manage")),
     ).toBe(true);
 
-    const interactionGroup = adminNavigation.find(
-      (group) => group.label === "互动管理",
-    );
+    const otherGroups = adminNavigation.filter((group) => group !== aiGroup);
     expect(
-      interactionGroup?.items.some((item) =>
-        item.path.startsWith("/admin/ai-"),
+      otherGroups.some((group) =>
+        group.items.some((item) => item.path.startsWith("/admin/ai-")),
       ),
     ).toBe(false);
   });
