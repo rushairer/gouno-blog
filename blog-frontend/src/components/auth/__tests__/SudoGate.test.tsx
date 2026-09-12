@@ -36,7 +36,9 @@ describe("SudoGate", () => {
 
     expect(screen.getByText("受保护表单")).toBeInTheDocument();
     expect(screen.getByText("需要验证")).toBeInTheDocument();
-    expect(screen.getByTestId("secret-input").closest(".hidden")).not.toBeNull();
+    expect(
+      screen.getByTestId("secret-input").closest(".hidden"),
+    ).not.toBeNull();
     const unlockBtn = screen.getByRole("button", { name: "立即解锁" });
     expect(unlockBtn).toBeInTheDocument();
 
@@ -55,7 +57,9 @@ describe("SudoGate", () => {
 
     expect(screen.getByTestId("unlocked-content")).toBeInTheDocument();
     expect(screen.getByText(/Sudo 已解锁 · 剩余约/)).toBeInTheDocument();
-    expect(screen.queryByText("高权限安全保护区域")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("高权限安全保护区域"),
+    ).not.toBeInTheDocument();
   });
 
   it("supports the Users alert presentation and explicit relock", async () => {
@@ -74,6 +78,8 @@ describe("SudoGate", () => {
     await user.click(screen.getByRole("button", { name: "重新锁定" }));
 
     expect(screen.getByText("高权限安全保护区域")).toBeInTheDocument();
-    expect(screen.getByTestId("member-directory").closest(".hidden")).not.toBeNull();
+    expect(
+      screen.getByTestId("member-directory").closest(".hidden"),
+    ).not.toBeNull();
   });
 });
