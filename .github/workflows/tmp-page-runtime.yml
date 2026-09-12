@@ -58,7 +58,7 @@ jobs:
             echo 'active runtime still depends on flat PageService alias' >&2
             exit 1
           fi
-          if git grep -n 'service.ErrPageNotFound\|service.ErrDuplicateSlug\|service.ErrReservedSlug\|service.ErrInvalidSlug\|service.ErrPageTitleEmpty' -- blog-backend/internal/controllerutil/response.go; then
+          if git grep -nE '(^|[^[:alnum:]_])service\.Err(PageNotFound|DuplicateSlug|ReservedSlug|InvalidSlug|PageTitleEmpty)' -- blog-backend/internal/controllerutil/response.go; then
             echo 'shared HTTP error mapping still depends on flat Page errors' >&2
             exit 1
           fi
