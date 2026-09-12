@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/access"
+	analyticscontroller "github.com/rushairer/blog-backend/internal/analytics/controller"
 	"github.com/rushairer/blog-backend/internal/authbff"
 	communitycontroller "github.com/rushairer/blog-backend/internal/community/controller"
 	communityservice "github.com/rushairer/blog-backend/internal/community/service"
@@ -104,6 +105,7 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 
 	growthSvc := opts.GrowthSvc
 	growthCtrl := controller.NewGrowthController(growthSvc, postSvc, communitySvc)
+	analyticsCtrl := analyticscontroller.New(growthSvc.AnalyticsService(), communitySvc)
 
 	if opts.MediaStore != nil {
 		if _, local := opts.MediaStore.LocalPath(".probe"); local && os.MkdirAll(opts.MediaDir, 0o750) == nil {
@@ -176,7 +178,7 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 		}
 		api.GET("/posts", ctrl.List)
 		api.GET("/posts/:slugOrID", ctrl.Get)
-		api.POST("/posts/:slugOrID/view", growthCtrl.TrackView)
+		api.POST("/posts/:slugOrID/view", analyticsCtrl.TrackView)
 		api.GET("/posts/:slugOrID/related", growthCtrl.RelatedPosts)
 		api.GET("/posts/:slugOrID/community", communityCtrl.State)
 		api.POST("/posts/:slugOrID/like", communityCtrl.Like)
@@ -272,7 +274,7 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 		staffOverview := api.Group("")
 		staffOverview.Use(userAuth, accessAuth, middleware.RequireActiveBlogMembership())
 		{
-			staffOverview.GET("/admin/analytics", growthCtrl.Analytics)
+			staffOverview.GET("/admin/analytics", analyticsCtrl.Summary)
 		}
 
 		// Site Settings (Admins, Owners)
