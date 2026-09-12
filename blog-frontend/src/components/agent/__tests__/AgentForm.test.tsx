@@ -92,6 +92,8 @@ describe("AgentForm", () => {
     expect(
       screen.queryByText(/检测到该 Skill 已更新至 v4/),
     ).not.toBeInTheDocument();
-    expect(screen.getAllByText(/AI 每日资讯 · v4/).length).toBeGreaterThanOrEqual(2);
+    expect(
+      screen.getAllByText(/AI 每日资讯 · v4/).length,
+    ).toBeGreaterThanOrEqual(2);
   });
 });
