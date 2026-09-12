@@ -254,7 +254,10 @@ export function AgentForm({
                 suffix = locale === "zh" ? " (当前绑定)" : " (Current)";
               }
               return (
-                <option key={skill.version_id} value={String(skill.version_id)}>
+                <option
+                  key={skill.version_id}
+                  value={String(skill.version_id)}
+                >
                   {skill.name} · v{skill.version}
                   {suffix}
                 </option>
