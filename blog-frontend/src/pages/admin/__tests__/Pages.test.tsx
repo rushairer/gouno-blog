@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
@@ -7,7 +7,6 @@ import AdminPages from "../Pages";
 import { pagesApi } from "../../../api/pages";
 import type { PaginatedPages } from "../../../types/blog";
 import { GossoProvider } from "@gosso/client/react";
-import { AppFeedbackProvider } from "../../../components/feedback/AppFeedbackProvider";
 
 const snapshot = {
   loggedIn: true,
@@ -34,7 +33,7 @@ describe("AdminPages", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders the list of custom pages with actions", async () => {
+  it("keeps real page data and actions on the Showcase composition", async () => {
     const user = userEvent.setup();
     const mockData: PaginatedPages = {
       list: [
@@ -74,11 +73,9 @@ describe("AdminPages", () => {
 
     render(
       <GossoProvider client={mockClient}>
-        <AppFeedbackProvider>
-          <MemoryRouter initialEntries={["/admin/pages"]}>
-            <AdminPages />
-          </MemoryRouter>
-        </AppFeedbackProvider>
+        <MemoryRouter initialEntries={["/admin/pages"]}>
+          <AdminPages />
+        </MemoryRouter>
       </GossoProvider>,
     );
 
@@ -91,10 +88,15 @@ describe("AdminPages", () => {
       expect(screen.getAllByText("草稿").length).toBeGreaterThan(0);
     });
 
+    expect(
+      screen.getByRole("textbox", { name: "搜索单页" }),
+    ).toBeInTheDocument();
     const mobileList = screen.getByRole("list", { name: "单页列表" });
     expect(within(mobileList).getAllByRole("listitem")).toHaveLength(2);
     await user.click(
-      within(mobileList).getByRole("checkbox", { name: "选择 关于站点" }),
+      within(mobileList).getByRole("checkbox", {
+        name: "选择单页 关于站点",
+      }),
     );
     expect(screen.getByText("已选择 1 页")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "交给 AI" }));
