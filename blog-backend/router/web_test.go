@@ -17,6 +17,8 @@ import (
 	mediaservice "github.com/rushairer/blog-backend/internal/media/service"
 	pagerepository "github.com/rushairer/blog-backend/internal/page/repository"
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
+	postversionrepository "github.com/rushairer/blog-backend/internal/postversion/repository"
+	postversionservice "github.com/rushairer/blog-backend/internal/postversion/service"
 	recommendationrepository "github.com/rushairer/blog-backend/internal/recommendation/repository"
 	recommendationservice "github.com/rushairer/blog-backend/internal/recommendation/service"
 	"github.com/rushairer/blog-backend/internal/repository"
@@ -49,6 +51,7 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 		CommunitySvc:      communityservice.NewCommunityService(communityrepository.NewCommunityRepository(nil), postRepo),
 		AnalyticsSvc:      analyticsservice.New(analyticsrepository.New(nil)),
 		RecommendationSvc: recommendationservice.New(recommendationrepository.New(nil)),
+		PostVersionSvc:    postversionservice.New(postversionrepository.New(nil)),
 		GrowthSvc:         service.NewGrowthService(repository.NewGrowthRepository(nil)),
 		Verifier:          auth.NewVerifier("http://127.0.0.1:1/jwks"), AccessService: access.NewService(nil, access.Bootstrap{}),
 	})
@@ -61,6 +64,10 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 	relatedHandler := ""
 	foundAnalytics := false
 	analyticsHandler := ""
+	foundVersions := false
+	versionsHandler := ""
+	foundRestoreVersion := false
+	restoreVersionHandler := ""
 	foundMedia := false
 	foundAdminMedia := false
 	adminMediaHandler := ""
@@ -93,6 +100,14 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 			foundAnalytics = true
 			analyticsHandler = route.Handler
 		}
+		if route.Method == "GET" && route.Path == "/api/admin/posts/:id/versions" {
+			foundVersions = true
+			versionsHandler = route.Handler
+		}
+		if route.Method == "POST" && route.Path == "/api/admin/posts/:id/versions/:versionID/restore" {
+			foundRestoreVersion = true
+			restoreVersionHandler = route.Handler
+		}
 		if route.Method == "GET" && route.Path == "/media/:filename" {
 			foundMedia = true
 		}
@@ -123,8 +138,8 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 			siteHandler = route.Handler
 		}
 	}
-	if !foundUpdate || !foundLike || !foundView || !foundRelated || !foundAnalytics || !foundMedia || !foundAdminMedia || !foundHealth || !foundBlogSession || !foundCommunityModeration || !foundPage || !foundTaxonomy || !foundSite {
-		t.Fatalf("expected routes, update=%v like=%v view=%v related=%v analytics=%v media=%v adminMedia=%v health=%v blogSession=%v communityModeration=%v page=%v taxonomy=%v site=%v", foundUpdate, foundLike, foundView, foundRelated, foundAnalytics, foundMedia, foundAdminMedia, foundHealth, foundBlogSession, foundCommunityModeration, foundPage, foundTaxonomy, foundSite)
+	if !foundUpdate || !foundLike || !foundView || !foundRelated || !foundAnalytics || !foundVersions || !foundRestoreVersion || !foundMedia || !foundAdminMedia || !foundHealth || !foundBlogSession || !foundCommunityModeration || !foundPage || !foundTaxonomy || !foundSite {
+		t.Fatalf("expected routes, update=%v like=%v view=%v related=%v analytics=%v versions=%v restoreVersion=%v media=%v adminMedia=%v health=%v blogSession=%v communityModeration=%v page=%v taxonomy=%v site=%v", foundUpdate, foundLike, foundView, foundRelated, foundAnalytics, foundVersions, foundRestoreVersion, foundMedia, foundAdminMedia, foundHealth, foundBlogSession, foundCommunityModeration, foundPage, foundTaxonomy, foundSite)
 	}
 	if !strings.Contains(viewHandler, "internal/analytics/controller") {
 		t.Fatalf("view tracking must be owned by canonical Analytics controller, handler=%q", viewHandler)
@@ -134,6 +149,12 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 	}
 	if !strings.Contains(relatedHandler, "internal/recommendation/controller") {
 		t.Fatalf("related posts must be owned by canonical Recommendation controller, handler=%q", relatedHandler)
+	}
+	if !strings.Contains(versionsHandler, "internal/postversion/controller") {
+		t.Fatalf("version listing must be owned by canonical Post Version controller, handler=%q", versionsHandler)
+	}
+	if !strings.Contains(restoreVersionHandler, "internal/postversion/controller") {
+		t.Fatalf("version restore must be owned by canonical Post Version controller, handler=%q", restoreVersionHandler)
 	}
 	if !strings.Contains(adminMediaHandler, "internal/media/controller") {
 		t.Fatalf("admin media must be owned by canonical Media controller, handler=%q", adminMediaHandler)
