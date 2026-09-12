@@ -12,8 +12,7 @@ import { ProposalPreview } from "./ProposalPreview";
 import { StatusPill } from "./StatusPill";
 import { OperationsWorkspace } from "./OperationsWorkspace";
 import { JsonPreview } from "./AgentRunRecords";
-import { Button, Empty } from "@gouno/ui/core";
-import { Panel } from "@gouno/ui-legacy";
+import { Button, Card, Empty } from "@gouno/ui/core";
 
 function approvalSummary(
   approval: AgentApproval,
@@ -104,7 +103,7 @@ export function FriendlyApprovalQueue({
     selected?.status === "pending" || selected?.status === "failed";
 
   return (
-    <Panel className="approval-queue">
+    <Card padding="base" className="approval-queue">
       <div className="panel-heading">
         <div>
           <h3>
@@ -256,7 +255,7 @@ export function FriendlyApprovalQueue({
           </div>
         </div>
       )}
-    </Panel>
+    </Card>
   );
 }
 
@@ -277,7 +276,7 @@ export function InteractionInbox({
   };
 
   return (
-    <Panel className="approval-queue">
+    <Card padding="base" className="approval-queue">
       <div className="panel-heading">
         <div>
           <h3>{zh ? "流程交互" : "Workflow interactions"}</h3>
@@ -336,7 +335,7 @@ export function InteractionInbox({
           </div>
         ))}
       </div>
-    </Panel>
+    </Card>
   );
 }
 
