@@ -6,10 +6,12 @@ import (
 	"errors"
 
 	"github.com/rushairer/blog-backend/internal/domain"
+	recommendationrepository "github.com/rushairer/blog-backend/internal/recommendation/repository"
+	recommendationservice "github.com/rushairer/blog-backend/internal/recommendation/service"
 )
 
 type GrowthStore interface {
-	RelatedPosts(context.Context, int64, []string, int) ([]*domain.Post, error)
+	recommendationrepository.Repository
 	ListVersions(context.Context, int64) ([]*domain.PostVersion, error)
 	RestoreVersion(context.Context, int64, int64) (*domain.Post, error)
 }
@@ -17,21 +19,20 @@ type GrowthStore interface {
 var ErrInvalidVersion = errors.New("invalid version")
 
 type GrowthService struct {
-	store GrowthStore
+	store          GrowthStore
+	recommendation recommendationservice.Service
 }
 
 func NewGrowthService(store GrowthStore) *GrowthService {
-	return &GrowthService{store: store}
+	return &GrowthService{store: store, recommendation: recommendationservice.New(store)}
 }
 
 func (s *GrowthService) RelatedPosts(ctx context.Context, post *domain.Post) ([]*domain.Post, error) {
-	if post == nil || post.ID <= 0 {
+	posts, err := s.recommendation.RelatedPosts(ctx, post)
+	if errors.Is(err, recommendationservice.ErrPostNotFound) {
 		return nil, ErrPostNotFound
 	}
-	if len(post.Tags) == 0 {
-		return []*domain.Post{}, nil
-	}
-	return s.store.RelatedPosts(ctx, post.ID, post.Tags, 4)
+	return posts, err
 }
 
 func (s *GrowthService) ListVersions(ctx context.Context, postID int64) ([]*domain.PostVersion, error) {
