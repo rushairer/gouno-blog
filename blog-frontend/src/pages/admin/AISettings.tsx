@@ -18,7 +18,15 @@ import type {
   AdvancedSection,
   DeleteTarget,
 } from "../../components/agent/AdvancedWorkspace";
-import { Button, Card, Modal, Skeleton, Text } from "@gouno/ui/core";
+import {
+  Button,
+  Card,
+  FormField,
+  Input,
+  Modal,
+  Skeleton,
+  Text,
+} from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
 
 import { useI18n } from "../../i18n";
@@ -82,6 +90,10 @@ function AISettingsContent() {
   const [editingSkill, setEditingSkill] = useState<AgentSkill | "new" | null>(
     null,
   );
+  const [copySkillTarget, setCopySkillTarget] = useState<AgentSkill | null>(
+    null,
+  );
+  const [copySkillName, setCopySkillName] = useState("");
   const [testingConnections, setTestingConnections] = useState<string[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const [loading, setLoading] = useState(true);
@@ -148,6 +160,8 @@ function AISettingsContent() {
     setEditingProvider(null);
     setEditingEmbedding(null);
     setEditingSkill(null);
+    setCopySkillTarget(null);
+    setCopySkillName("");
     setSection(next);
     const url = new URL(window.location.href);
     if (next === "agents") url.searchParams.delete("section");
@@ -303,18 +317,23 @@ function AISettingsContent() {
     }
   };
 
-  const copySkill = async (skill: AgentSkill) => {
-    const name = window.prompt(
-      locale === "zh" ? "复制后的 Skill 名称" : "Name for the copied Skill",
-      `${skill.name} Copy`,
-    );
-    if (!name?.trim()) return;
+  const requestSkillCopy = async (skill: AgentSkill) => {
+    setCopySkillTarget(skill);
+    setCopySkillName(`${skill.name} Copy`);
+  };
+
+  const confirmSkillCopy = async () => {
+    if (!copySkillTarget) return;
+    const name = copySkillName.trim();
+    if (!name) return;
     try {
-      await mutate(() => agentApi.copySkill(skill.id, name.trim()));
+      await mutate(() => agentApi.copySkill(copySkillTarget.id, name));
+      setCopySkillTarget(null);
+      setCopySkillName("");
       setNotice(
         locale === "zh"
-          ? `已创建 Skill“${name.trim()}”的自定义副本。`
-          : `Created custom Skill copy “${name.trim()}”.`,
+          ? `已创建 Skill“${name}”的自定义副本。`
+          : `Created custom Skill copy “${name}”.`,
       );
     } catch (reason) {
       setError(requestError(reason, fallbackError));
@@ -499,7 +518,7 @@ function AISettingsContent() {
         onImportProviders={handleImportProviders}
         onExportSkill={exportSkill}
         onImportSkill={handleImportSkill}
-        onCopySkill={copySkill}
+        onCopySkill={requestSkillCopy}
         onRetryIndex={async () => {
           try {
             await mutate(() => agentApi.retryIndex());
@@ -519,6 +538,38 @@ function AISettingsContent() {
         onRefresh={refresh}
         formatDateTime={formatDateTime}
       />
+
+      <Modal
+        open={copySkillTarget !== null}
+        title={locale === "zh" ? "复制 Skill" : "Copy Skill"}
+        description={
+          locale === "zh"
+            ? "为副本设置一个独立名称；原 Skill 与版本历史不会被修改。"
+            : "Choose an independent name for the copy. The source Skill and its version history remain unchanged."
+        }
+        onClose={() => {
+          setCopySkillTarget(null);
+          setCopySkillName("");
+        }}
+        onOk={() => void confirmSkillCopy()}
+        okText={locale === "zh" ? "创建副本" : "Create copy"}
+        cancelText={locale === "zh" ? "取消" : "Cancel"}
+        okButtonProps={{ disabled: !copySkillName.trim() }}
+      >
+        <FormField
+          label={locale === "zh" ? "副本 Skill 名称" : "Copied Skill name"}
+          required
+        >
+          <Input
+            autoFocus
+            aria-label={
+              locale === "zh" ? "副本 Skill 名称" : "Copied Skill name"
+            }
+            value={copySkillName}
+            onChange={(event) => setCopySkillName(event.target.value)}
+          />
+        </FormField>
+      </Modal>
 
       <Modal
         open={deleteTarget !== null}
