@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { OperationsWorkspace } from "../OperationsWorkspace";
@@ -87,6 +87,118 @@ describe("OperationsWorkspace", () => {
         body: JSON.stringify({ candidate_id: 11 }),
       }),
     );
+  });
+
+  it("requires a governed reason before deferring an operational suggestion", async () => {
+    const user = userEvent.setup();
+    const onRefresh = vi.fn().mockResolvedValue(undefined);
+    render(
+      <OperationsWorkspace
+        locale="en"
+        onRefresh={onRefresh}
+        editorialTasks={[]}
+        candidateSets={[]}
+        suggestions={[
+          {
+            id: 7,
+            source_type: "broken_links",
+            source_key: "post:4",
+            title: "Repair links",
+            description: "Two cached checks failed.",
+            priority: "high",
+            evidence: { failures: 2 },
+            status: "new",
+            created_at: "2026-07-30T00:00:00Z",
+            updated_at: "2026-07-30T00:00:00Z",
+          },
+        ]}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Defer" }));
+    const dialog = screen.getByRole("dialog", { name: "Defer suggestion" });
+    const reasonInput = within(dialog).getByRole("textbox", {
+      name: "Reason for deferring",
+    });
+    const confirm = within(dialog).getByRole("button", {
+      name: "Confirm defer",
+    });
+    const deferCalls = () =>
+      apiFetch.mock.calls.filter(
+        ([url, options]) =>
+          String(url) === "/api/admin/ai-suggestions/7/ignore" &&
+          options?.method === "POST",
+      );
+
+    expect(reasonInput).toHaveValue("");
+    expect(confirm).toBeDisabled();
+    expect(deferCalls()).toHaveLength(0);
+
+    await user.type(reasonInput, "Wait for the source refresh");
+    expect(confirm).toBeEnabled();
+    expect(deferCalls()).toHaveLength(0);
+    await user.click(confirm);
+
+    await waitFor(() => expect(deferCalls()).toHaveLength(1));
+    expect(deferCalls()[0]?.[1]).toEqual(
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ reason: "Wait for the source refresh" }),
+      }),
+    );
+    await waitFor(() => expect(onRefresh).toHaveBeenCalled());
+  });
+
+  it("does not expose the ignore mutation again when refresh fails after a successful defer", async () => {
+    const user = userEvent.setup();
+    const onRefresh = vi.fn().mockRejectedValue(new Error("refresh failed"));
+    render(
+      <OperationsWorkspace
+        locale="en"
+        onRefresh={onRefresh}
+        editorialTasks={[]}
+        candidateSets={[]}
+        suggestions={[
+          {
+            id: 7,
+            source_type: "broken_links",
+            source_key: "post:4",
+            title: "Repair links",
+            description: "Two cached checks failed.",
+            priority: "high",
+            evidence: { failures: 2 },
+            status: "new",
+            created_at: "2026-07-30T00:00:00Z",
+            updated_at: "2026-07-30T00:00:00Z",
+          },
+        ]}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Defer" }));
+    const dialog = screen.getByRole("dialog", { name: "Defer suggestion" });
+    await user.type(
+      within(dialog).getByRole("textbox", { name: "Reason for deferring" }),
+      "Wait for the source refresh",
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: "Confirm defer" }),
+    );
+
+    const deferCalls = () =>
+      apiFetch.mock.calls.filter(
+        ([url, options]) =>
+          String(url) === "/api/admin/ai-suggestions/7/ignore" &&
+          options?.method === "POST",
+      );
+    await waitFor(() => expect(deferCalls()).toHaveLength(1));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Defer suggestion" }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(onRefresh).toHaveBeenCalledOnce();
+    expect(deferCalls()).toHaveLength(1);
   });
 
   it("separates open editorial tasks from handled suggestions without the retired history shell", async () => {

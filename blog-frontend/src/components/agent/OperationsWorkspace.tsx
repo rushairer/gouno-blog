@@ -18,14 +18,18 @@ import type {
 } from "../../types/agent";
 import { operationsApi } from "../../api/operations";
 import {
+  Alert,
   Button,
   Card,
   CardContent,
   CardHeader,
   Checkbox,
   Empty,
+  FormField,
+  Modal,
   Tag,
   Text,
+  Textarea,
 } from "@gouno/ui/core";
 import { BulkActionBar } from "@gouno/ui/patterns";
 import { WorkflowLauncher } from "./WorkflowLauncher";
@@ -157,6 +161,11 @@ export function OperationsWorkspace({
   const mediaReviewCount = pendingMedia.length + readyMedia.length;
   const [refreshing, setRefreshing] = useState(false);
   const [selectedSuggestions, setSelectedSuggestions] = useState<number[]>([]);
+  const [deferTarget, setDeferTarget] = useState<OperationalSuggestion | null>(
+    null,
+  );
+  const [deferReason, setDeferReason] = useState("");
+  const [deferError, setDeferError] = useState("");
   const [aiOpen, setAIOpen] = useState(false);
 
   const mutate = async (operation: () => Promise<unknown>) => {
@@ -173,12 +182,38 @@ export function OperationsWorkspace({
     }
   };
 
-  const ignoreSuggestion = (item: OperationalSuggestion) => {
-    const reason = window.prompt(
-      zh ? "为什么暂不处理？" : "Why defer this suggestion?",
-    );
-    if (reason?.trim())
-      void mutate(() => operationsApi.ignoreSuggestion(item.id, reason.trim()));
+  const requestSuggestionDefer = (item: OperationalSuggestion) => {
+    setDeferTarget(item);
+    setDeferReason("");
+    setDeferError("");
+  };
+
+  const confirmSuggestionDefer = async () => {
+    if (!deferTarget) return;
+    const reason = deferReason.trim();
+    if (!reason) return;
+    setDeferError("");
+    try {
+      await operationsApi.ignoreSuggestion(deferTarget.id, reason);
+    } catch (error) {
+      setDeferError(
+        error instanceof Error
+          ? error.message
+          : zh
+            ? "暂缓建议失败，请重试。"
+            : "Failed to defer the suggestion. Please try again.",
+      );
+      return;
+    }
+
+    setDeferTarget(null);
+    setDeferReason("");
+    try {
+      await onRefresh();
+    } catch {
+      // The mutation already succeeded. Never reopen the modal or make the
+      // operator retry the same ignore request just because refresh failed.
+    }
   };
 
   return (
@@ -318,7 +353,7 @@ export function OperationsWorkspace({
                         variant="outline"
                         size="small"
                         type="button"
-                        onClick={() => ignoreSuggestion(item)}
+                        onClick={() => requestSuggestionDefer(item)}
                         icon={<ThumbsDown />}
                       >
                         {zh ? "暂不处理" : "Defer"}
@@ -681,6 +716,55 @@ export function OperationsWorkspace({
           </details>
         </Card>
       ) : null}
+
+      <Modal
+        open={deferTarget !== null}
+        title={zh ? "暂不处理建议" : "Defer suggestion"}
+        description={
+          deferTarget
+            ? zh
+              ? `记录“${deferTarget.title}”暂不处理的原因，便于后续审计和重新判断。`
+              : `Record why “${deferTarget.title}” is being deferred so the decision can be audited and revisited.`
+            : undefined
+        }
+        onClose={() => {
+          setDeferTarget(null);
+          setDeferReason("");
+          setDeferError("");
+        }}
+        onOk={() => void confirmSuggestionDefer()}
+        okText={zh ? "确认暂缓" : "Confirm defer"}
+        cancelText={zh ? "取消" : "Cancel"}
+        okButtonProps={{ disabled: !deferReason.trim() }}
+      >
+        <div className="flex flex-col gap-3">
+          {deferError ? (
+            <Alert
+              type="error"
+              showIcon
+              title={zh ? "暂缓失败" : "Unable to defer suggestion"}
+              description={deferError}
+            />
+          ) : null}
+          <FormField
+            label={zh ? "暂不处理原因" : "Reason for deferring"}
+            required
+          >
+            <Textarea
+              autoFocus
+              rows={4}
+              aria-label={zh ? "暂不处理原因" : "Reason for deferring"}
+              value={deferReason}
+              onChange={(event) => setDeferReason(event.target.value)}
+              placeholder={
+                zh
+                  ? "例如：等待上游数据刷新后再判断"
+                  : "For example: wait for the upstream data refresh before revisiting"
+              }
+            />
+          </FormField>
+        </div>
+      </Modal>
 
       <WorkflowLauncher
         open={aiOpen}
