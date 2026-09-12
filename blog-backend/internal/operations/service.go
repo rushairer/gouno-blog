@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/rushairer/blog-backend/internal/domain"
+	postservice "github.com/rushairer/blog-backend/internal/post/service"
 	"github.com/rushairer/blog-backend/internal/repository"
-	"github.com/rushairer/blog-backend/internal/service"
 	"github.com/rushairer/blog-backend/internal/tool"
 	"go.uber.org/zap"
 )
@@ -25,11 +25,11 @@ type Service struct {
 	logger     *zap.Logger
 	wg         sync.WaitGroup
 	repo       *repository.AgentRepository
-	posts      *service.PostService
+	posts      *postservice.PostService
 	transactor *repository.Transactor
 }
 
-func (s *Service) ConfigureGovernance(repo *repository.AgentRepository, posts *service.PostService) {
+func (s *Service) ConfigureGovernance(repo *repository.AgentRepository, posts *postservice.PostService) {
 	s.repo, s.posts = repo, posts
 }
 

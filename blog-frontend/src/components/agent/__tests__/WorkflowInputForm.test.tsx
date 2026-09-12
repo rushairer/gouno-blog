@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiFetch } from "../../../auth";
@@ -60,8 +60,7 @@ describe("WorkflowInputForm", () => {
       />,
     );
 
-    await user.click(screen.getByRole("combobox"));
-    await user.click(screen.getByRole("option", { name: "faq" }));
+    await user.selectOptions(screen.getByLabelText(/输出格式/), "faq");
     expect(onChange).toHaveBeenCalledWith(
       expect.objectContaining({ format: "faq" }),
     );
@@ -112,10 +111,7 @@ describe("WorkflowInputForm", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "选择资源" }));
-    const statusFilter = screen.getByText("状态").closest("label");
-    expect(statusFilter).not.toBeNull();
-    await user.click(within(statusFilter as HTMLElement).getByRole("combobox"));
-    await user.click(screen.getByRole("option", { name: "published" }));
+    await user.selectOptions(screen.getByLabelText("状态"), "published");
     await user.type(screen.getByLabelText("最近发布天数"), "2");
 
     await waitFor(() =>
@@ -148,10 +144,7 @@ describe("WorkflowInputForm", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "选择资源" }));
-    const altFilter = screen.getByText("Alt 文本").closest("label");
-    expect(altFilter).not.toBeNull();
-    await user.click(within(altFilter as HTMLElement).getByRole("combobox"));
-    await user.click(screen.getByRole("option", { name: "仅缺失 Alt" }));
+    await user.selectOptions(screen.getByLabelText("Alt 文本"), "true");
 
     await waitFor(() =>
       expect(apiFetch).toHaveBeenCalledWith(

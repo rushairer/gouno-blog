@@ -15,9 +15,9 @@ import (
 	"github.com/rushairer/blog-backend/internal/knowledge"
 	mediaservice "github.com/rushairer/blog-backend/internal/media/service"
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
+	postservice "github.com/rushairer/blog-backend/internal/post/service"
 	postversionservice "github.com/rushairer/blog-backend/internal/postversion/service"
 	recommendationservice "github.com/rushairer/blog-backend/internal/recommendation/service"
-	"github.com/rushairer/blog-backend/internal/service"
 	siteservice "github.com/rushairer/blog-backend/internal/site/service"
 	taxonomyservice "github.com/rushairer/blog-backend/internal/taxonomy/service"
 	workflowservice "github.com/rushairer/blog-backend/internal/workflow"
@@ -104,7 +104,7 @@ func WriteDomainError(c *gin.Context, err error) {
 	status := http.StatusInternalServerError
 	switch {
 	case errors.Is(err, sql.ErrNoRows),
-		errors.Is(err, service.ErrPostNotFound),
+		errors.Is(err, postservice.ErrPostNotFound),
 		errors.Is(err, communityservice.ErrPostNotFound),
 		errors.Is(err, recommendationservice.ErrPostNotFound),
 		errors.Is(err, postversionservice.ErrPostNotFound),
@@ -116,7 +116,7 @@ func WriteDomainError(c *gin.Context, err error) {
 		errors.Is(err, agentservice.ErrNotFound):
 		status = http.StatusNotFound
 
-	case errors.Is(err, service.ErrSlugInUse),
+	case errors.Is(err, postservice.ErrSlugInUse),
 		errors.Is(err, mediaservice.ErrMediaInUse),
 		errors.Is(err, taxonomyservice.ErrCategorySlugInUse),
 		errors.Is(err, pageservice.ErrDuplicateSlug),
@@ -133,12 +133,12 @@ func WriteDomainError(c *gin.Context, err error) {
 		errors.Is(err, workflowplan.ErrAgentSkillRequired):
 		status = http.StatusConflict
 
-	case errors.Is(err, service.ErrPostTitleEmpty),
-		errors.Is(err, service.ErrPostContentEmpty),
-		errors.Is(err, service.ErrInvalidPostStatus),
-		errors.Is(err, service.ErrScheduledPast),
-		errors.Is(err, service.ErrInvalidPostID),
-		errors.Is(err, service.ErrInvalidPostSlug),
+	case errors.Is(err, postservice.ErrPostTitleEmpty),
+		errors.Is(err, postservice.ErrPostContentEmpty),
+		errors.Is(err, postservice.ErrInvalidPostStatus),
+		errors.Is(err, postservice.ErrScheduledPast),
+		errors.Is(err, postservice.ErrInvalidPostID),
+		errors.Is(err, postservice.ErrInvalidPostSlug),
 		errors.Is(err, communityservice.ErrCommentAuthorEmpty),
 		errors.Is(err, communityservice.ErrCommentContentEmpty),
 		errors.Is(err, communityservice.ErrCommentContentTooLong),
@@ -159,8 +159,8 @@ func WriteDomainError(c *gin.Context, err error) {
 		errors.Is(err, siteservice.ErrInvalidRSSURL),
 		errors.Is(err, siteservice.ErrInvalidGithubURL),
 		errors.Is(err, siteservice.ErrInvalidFaviconURL),
-		errors.Is(err, service.ErrBatchInvalidIDs),
-		errors.Is(err, service.ErrBatchInvalidAction),
+		errors.Is(err, postservice.ErrBatchInvalidIDs),
+		errors.Is(err, postservice.ErrBatchInvalidAction),
 		errors.Is(err, pageservice.ErrReservedSlug),
 		errors.Is(err, pageservice.ErrInvalidSlug),
 		errors.Is(err, pageservice.ErrPageTitleEmpty),

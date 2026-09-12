@@ -219,7 +219,9 @@ export function SkillForm({
             onChange={(nextValue) =>
               setValue((current) => ({
                 ...current,
-                content_publish_mode: String(nextValue) as ContentPublishMode,
+                content_publish_mode: String(
+                  nextValue,
+                ) as ContentPublishMode,
               }))
             }
           >

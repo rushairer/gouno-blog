@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/access"
 	"github.com/rushairer/blog-backend/internal/domain"
-	"github.com/rushairer/blog-backend/internal/service"
+	postservice "github.com/rushairer/blog-backend/internal/post/service"
 	"github.com/rushairer/blog-backend/middleware"
 	"github.com/rushairer/gouno"
 )
@@ -262,7 +262,7 @@ func (ctrl *PostController) Get(c *gin.Context) {
 	var post *domain.Post
 	if err == nil && id > 0 {
 		post, err = ctrl.svc.GetAdminPost(c.Request.Context(), id)
-		if err != nil && !errors.Is(err, service.ErrPostNotFound) {
+		if err != nil && !errors.Is(err, postservice.ErrPostNotFound) {
 			WriteDomainError(c, err)
 			return
 		}
@@ -278,7 +278,7 @@ func (ctrl *PostController) Get(c *gin.Context) {
 
 	// Prefer an existing numeric ID, then fall back to a slug.
 	post, err = ctrl.svc.GetAdminPostBySlug(c.Request.Context(), slugOrID)
-	if err != nil && !errors.Is(err, service.ErrPostNotFound) {
+	if err != nil && !errors.Is(err, postservice.ErrPostNotFound) {
 		WriteDomainError(c, err)
 		return
 	}

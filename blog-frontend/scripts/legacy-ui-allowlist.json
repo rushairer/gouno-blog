@@ -15,6 +15,7 @@
     "BulkActionBar": ["src/components/__tests__/ui.test.tsx"],
     "Button": [
       "src/components/__tests__/ui.test.tsx",
+      "src/components/agent/AdvancedWorkspace.tsx",
       "src/components/agent/ConnectorWorkspace.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/pages/admin/PageEditor.tsx",
@@ -47,6 +48,7 @@
       "src/components/agent/WorkflowWorkspace.tsx"
     ],
     "EmptyState": [
+      "src/components/agent/AdvancedWorkspace.tsx",
       "src/components/agent/ConnectorWorkspace.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/pages/admin/PostEditor.tsx"
@@ -71,12 +73,14 @@
     ],
     "IconButton": [
       "src/components/__tests__/ui.test.tsx",
+      "src/components/agent/AdvancedWorkspace.tsx",
       "src/components/agent/ConnectorWorkspace.tsx",
       "src/components/agent/WorkflowWorkspace.tsx"
     ],
     "Pagination": ["src/components/__tests__/ui.test.tsx"],
     "Panel": ["src/components/agent/ConnectorWorkspace.tsx"],
     "PanelHeader": [
+      "src/components/agent/AdvancedWorkspace.tsx",
       "src/components/agent/ConnectorWorkspace.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/pages/admin/SiteSettings.tsx"
@@ -85,6 +89,7 @@
     "SectionNav": ["src/components/__tests__/ui.test.tsx"],
     "Select": [
       "src/components/__tests__/ui.test.tsx",
+      "src/components/agent/AdvancedWorkspace.tsx",
       "src/components/agent/ConnectorWorkspace.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/pages/admin/PageEditor.tsx",
@@ -92,7 +97,10 @@
     ],
     "Skeleton": ["src/components/__tests__/ui.test.tsx"],
     "StatusBadge": ["src/components/__tests__/ui.test.tsx"],
-    "SubnavTabs": ["src/components/__tests__/ui.test.tsx"],
+    "SubnavTabs": [
+      "src/components/__tests__/ui.test.tsx",
+      "src/components/agent/AdvancedWorkspace.tsx"
+    ],
     "Tab": [
       "src/components/__tests__/ui.test.tsx",
       "src/pages/admin/PageEditor.tsx",
@@ -152,6 +160,7 @@
       "src/pages/admin/Users.tsx"
     ],
     "WorkspacePanel": [
+      "src/components/agent/AdvancedWorkspace.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/pages/admin/SiteSettings.tsx"
     ]

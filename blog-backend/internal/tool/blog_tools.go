@@ -12,7 +12,7 @@ import (
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/knowledge"
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
-	"github.com/rushairer/blog-backend/internal/service"
+	postservice "github.com/rushairer/blog-backend/internal/post/service"
 )
 
 type communityModerationReader interface {
@@ -20,14 +20,14 @@ type communityModerationReader interface {
 }
 
 type BlogTools struct {
-	posts      *service.PostService
+	posts      *postservice.PostService
 	community  communityModerationReader
 	pages      *pageservice.PageService
 	linkClient linkHTTPClient
 	knowledge  *knowledge.Service
 }
 
-func NewBlogRegistry(posts *service.PostService, community communityModerationReader, pages *pageservice.PageService, knowledgeService *knowledge.Service) *Registry {
+func NewBlogRegistry(posts *postservice.PostService, community communityModerationReader, pages *pageservice.PageService, knowledgeService *knowledge.Service) *Registry {
 	tools := &BlogTools{
 		posts: posts, community: community, pages: pages,
 		linkClient: newSafeLinkClient(), knowledge: knowledgeService,
@@ -182,7 +182,7 @@ func NewBlogRegistry(posts *service.PostService, community communityModerationRe
 			Risk:       domain.ToolRiskPropose, Scope: &ScopeRule{AllowsCreate: true}, Propose: tools.proposeTask,
 		},
 		Definition{
-			Name: "content.propose_distribution_draft", Description: "Create an approval-only social, newsletter, FAQ, or image brief from one post. It never sends content to an external service.",
+			Name: "content.propose_distribution_draft", Description: "Create an approval-only social, newsletter, FAQ, or image brief from one post. It never sends content to an external postservice.",
 			Parameters:     schema(`{"post_id":{"type":"integer","minimum":1},"format":{"type":"string","enum":["social","newsletter","faq","image_brief"]},"headline":{"type":"string","maxLength":500},"body":{"type":"string","maxLength":12000},"platform":{"type":"string","maxLength":100},"alt_text":{"type":"string","maxLength":500}}`, "post_id", "format", "body"),
 			Configuration:  schema(`{"format":{"type":"string","enum":["social","newsletter","faq","image_brief"]},"platform":{"type":"string","maxLength":100}}`),
 			DefaultBinding: json.RawMessage(`{"format":"social","platform":"Twitter"}`),
