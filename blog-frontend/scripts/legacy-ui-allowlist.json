@@ -6,10 +6,7 @@
   "legacyPackage": "@gouno/ui-legacy",
   "legacyVersion": "0.1.0",
   "allowedLegacyImports": {
-    "AdminPageState": [
-      "src/pages/admin/PageEditor.tsx",
-      "src/pages/admin/PostEditor.tsx"
-    ],
+    "AdminPageState": ["src/pages/admin/PostEditor.tsx"],
     "AsyncState": ["src/components/__tests__/ui.test.tsx"],
     "Badge": ["src/components/__tests__/ui.test.tsx"],
     "BulkActionBar": ["src/components/__tests__/ui.test.tsx"],
@@ -17,7 +14,6 @@
       "src/components/__tests__/ui.test.tsx",
       "src/components/agent/ConnectorWorkspace.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
-      "src/pages/admin/PageEditor.tsx",
       "src/pages/admin/PostEditor.tsx",
       "src/pages/admin/SiteSettings.tsx"
     ],
@@ -35,7 +31,6 @@
       "src/pages/admin/Categories.tsx",
       "src/pages/admin/MediaLibrary.tsx",
       "src/pages/admin/Notifications.tsx",
-      "src/pages/admin/PageEditor.tsx",
       "src/pages/admin/Pages.tsx",
       "src/pages/admin/PostEditor.tsx",
       "src/pages/admin/Posts.tsx",
@@ -54,7 +49,6 @@
     "Feedback": [
       "src/components/agent/ConnectorWorkspace.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
-      "src/pages/admin/PageEditor.tsx",
       "src/pages/admin/PostEditor.tsx",
       "src/pages/admin/SiteSettings.tsx"
     ],
@@ -87,7 +81,6 @@
       "src/components/__tests__/ui.test.tsx",
       "src/components/agent/ConnectorWorkspace.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
-      "src/pages/admin/PageEditor.tsx",
       "src/pages/admin/PostEditor.tsx"
     ],
     "Skeleton": ["src/components/__tests__/ui.test.tsx"],
@@ -95,14 +88,12 @@
     "SubnavTabs": ["src/components/__tests__/ui.test.tsx"],
     "Tab": [
       "src/components/__tests__/ui.test.tsx",
-      "src/pages/admin/PageEditor.tsx",
       "src/pages/admin/PostEditor.tsx",
       "src/pages/admin/SiteSettings.tsx"
     ],
     "TableSkeleton": ["src/components/__tests__/ui.test.tsx"],
     "TabList": [
       "src/components/__tests__/ui.test.tsx",
-      "src/pages/admin/PageEditor.tsx",
       "src/pages/admin/PostEditor.tsx",
       "src/pages/admin/SiteSettings.tsx"
     ],
@@ -112,7 +103,6 @@
     ],
     "Tabs": [
       "src/components/__tests__/ui.test.tsx",
-      "src/pages/admin/PageEditor.tsx",
       "src/pages/admin/PostEditor.tsx",
       "src/pages/admin/SiteSettings.tsx"
     ],
