@@ -3,6 +3,7 @@ package tool
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/rushairer/blog-backend/internal/domain"
@@ -47,5 +48,13 @@ func TestBindAnalyticsUsesCanonicalSummaryReader(t *testing.T) {
 	}
 	if summary.TotalPosts != 7 {
 		t.Fatalf("total_posts=%d, want 7", summary.TotalPosts)
+	}
+}
+
+func TestBlogRegistryAnalyticsSummaryFailsClosedUntilCanonicalBinding(t *testing.T) {
+	registry := NewBlogRegistry(nil, nil, nil, nil)
+	_, _, _, err := registry.Invoke(context.Background(), []string{"analytics.get_summary"}, "analytics.get_summary", json.RawMessage(`{}`))
+	if !errors.Is(err, errAnalyticsNotBound) {
+		t.Fatalf("err=%v, want errAnalyticsNotBound", err)
 	}
 }
