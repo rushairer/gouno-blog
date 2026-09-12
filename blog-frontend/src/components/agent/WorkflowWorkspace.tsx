@@ -877,12 +877,11 @@ export function WorkflowWorkspace({
                   ))}
                 </div>
                 {versions[workflow.id]?.length ? (
-                  <div className="agent-chip-list">
+                  <div className="flex flex-wrap gap-1.5">
                     {versions[workflow.id].map((version) => (
                       <Button
                         variant="ghost"
                         key={version.version_id}
-                        className="agent-chip"
                         disabled={
                           version.current_version === workflow.current_version
                         }

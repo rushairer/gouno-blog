@@ -30,6 +30,7 @@ const retiredAgentShellSelectors = [
   ".agent-approval-detail",
   ".agent-approval-actions",
   ".feedback-form",
+  ".agent-chip-list",
 ];
 const allowedBlockAtRules = new Set([
   "@layer",
