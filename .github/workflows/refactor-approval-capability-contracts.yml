@@ -1,0 +1,66 @@
+name: One-shot Approval capability convergence
+
+on:
+  push:
+    branches:
+      - refactor/approval-capability-contracts
+
+permissions:
+  contents: write
+
+jobs:
+  converge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: refactor/approval-capability-contracts
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: blog-backend/go.mod
+          cache-dependency-path: blog-backend/go.sum
+
+      - name: Apply fail-closed Approval ownership cutover
+        run: python3 .github/refactor_approval_capability_contracts.py
+
+      - name: Format and verify architecture slice
+        shell: bash
+        run: |
+          set -euo pipefail
+          gofmt -w \
+            blog-backend/cmd/gouno/web.go \
+            blog-backend/internal/agent/approval.go \
+            blog-backend/internal/agent/approval_ports.go \
+            blog-backend/internal/agent/approval_composition.go \
+            blog-backend/internal/agent/approval_test.go \
+            blog-backend/internal/agent/repository/approval_repository.go \
+            blog-backend/internal/operations/approval_effects.go \
+            blog-backend/internal/operations/approval_effects_integration_test.go \
+            blog-backend/internal/repository/approval_repository.go \
+            blog-backend/internal/repository/media_candidate_repository.go
+          git diff --check
+          git diff --exit-code -- blog-backend/internal/connector
+          cd blog-backend
+          go test ./...
+          go test -race ./...
+          go vet ./...
+          go run golang.org/x/vuln/cmd/govulncheck@v1.6.0 ./...
+
+      - name: Commit verified Approval slice
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/refactor-approval-capability-contracts.yml
+          rm .github/refactor_approval_capability_contracts.py
+          git add -A
+          git diff --cached --check
+          git diff --cached --exit-code -- blog-backend/internal/connector
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "refactor(agent): converge approval capability contracts"
+          git push origin HEAD:refactor/approval-capability-contracts
