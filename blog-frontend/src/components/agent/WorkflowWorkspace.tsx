@@ -32,17 +32,20 @@ import {
   Alert,
   Button,
   ButtonLink,
+  Card,
   Checkbox,
   CheckboxField,
   Empty,
   Field,
+  FormActions,
+  FormLayout,
   IconButton,
   Input,
   Modal,
   SearchField,
+  Select,
   Textarea,
 } from "@gouno/ui/core";
-import { EditorPanel, FormActions, FormLayout, Select } from "@gouno/ui-legacy";
 import { StatusPill } from "./StatusPill";
 import { statusLabel } from "./labels";
 import { WorkflowInputForm } from "./WorkflowInputForm";
@@ -162,6 +165,57 @@ function PanelHeader({
       </div>
       {actions ? <div className="shrink-0">{actions}</div> : null}
     </div>
+  );
+}
+
+function selectValue(value: string | string[]) {
+  return Array.isArray(value) ? (value[0] ?? "") : value;
+}
+
+function EditorPanel({
+  title,
+  description,
+  icon,
+  closeLabel,
+  onClose,
+  children,
+  className,
+}: {
+  title: ReactNode;
+  description?: ReactNode;
+  icon?: ReactNode;
+  closeLabel: string;
+  onClose: () => void;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <Card
+      padding="none"
+      className={["editor-panel", "p-4 md:p-6", className]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <PanelHeader
+        title={
+          <span className="flex items-center gap-2">
+            {icon}
+            {title}
+          </span>
+        }
+        description={description}
+        actions={
+          <IconButton
+            variant="ghost"
+            size="small"
+            label={closeLabel}
+            icon={<X />}
+            onClick={onClose}
+          />
+        }
+      />
+      {children}
+    </Card>
   );
 }
 
@@ -886,12 +940,12 @@ export function WorkflowWorkspace({
                   locale === "zh" ? "按状态筛选 Workflow" : "Filter by status"
                 }
                 value={statusFilter}
-                onChange={(event) =>
+                onChange={(value) =>
                   setStatusFilter(
-                    event.target.value as "all" | "enabled" | "disabled",
+                    selectValue(value) as "all" | "enabled" | "disabled",
                   )
                 }
-                size="compact"
+                size="small"
               >
                 <option value="all">
                   {locale === "zh" ? "全部状态" : "All Status"} (
@@ -1429,14 +1483,16 @@ function ResourceQueryBuilder({
         <Field label="资源类型">
           <Select
             value={resourceType}
-            onChange={(event) =>
+            onChange={(value) =>
               onChange({
                 ...step,
-                resource_type: event.target
-                  .value as WorkflowStep["resource_type"],
+                resource_type: selectValue(
+                  value,
+                ) as WorkflowStep["resource_type"],
                 filter: {},
               })
             }
+            aria-label="资源类型"
           >
             {resourceQueryTypes.map(([value, label]) => (
               <option key={value} value={value}>
@@ -1470,9 +1526,10 @@ function ResourceQueryBuilder({
             {filter.type === "select" ? (
               <Select
                 value={String(filters[filter.key] ?? "")}
-                onChange={(event) =>
-                  updateFilter(filter.key, event.target.value, filter.type)
+                onChange={(value) =>
+                  updateFilter(filter.key, selectValue(value), filter.type)
                 }
+                aria-label={filter.label}
               >
                 <option value="">全部</option>
                 {filter.options?.map((option) => (
@@ -1611,11 +1668,11 @@ function SchemaFieldBuilder({
                 <Select
                   value={isArray ? "array" : type}
                   disabled={Boolean(resource)}
-                  onChange={(event) => {
+                  onChange={(value) => {
                     const next: Record<string, unknown> = {
                       ...property,
-                      type: event.target.value,
-                      ...(event.target.value === "array"
+                      type: selectValue(value),
+                      ...(selectValue(value) === "array"
                         ? { items: { type: "string" } }
                         : {}),
                     };
@@ -1623,6 +1680,7 @@ function SchemaFieldBuilder({
                     delete next.default;
                     set(next);
                   }}
+                  aria-label="类型"
                 >
                   <option value="string">字符串</option>
                   <option value="integer">整数</option>
@@ -1634,8 +1692,8 @@ function SchemaFieldBuilder({
               <Field label="资源类型">
                 <Select
                   value={resource}
-                  onChange={(event) => {
-                    const resourceType = event.target.value;
+                  onChange={(value) => {
+                    const resourceType = selectValue(value);
                     if (!resourceType) {
                       const next = { ...property };
                       delete next["x-gouno-resource"];
@@ -1658,6 +1716,7 @@ function SchemaFieldBuilder({
                     delete next.default;
                     set(next);
                   }}
+                  aria-label="资源类型"
                 >
                   <option value="">普通字段</option>
                   <option value="post">文章</option>
@@ -2349,9 +2408,10 @@ function WorkflowEditor({
           >
             <Select
               value={emptyPolicy}
-              onChange={(event) =>
-                setEmptyPolicy(event.target.value as "succeed" | "fail")
+              onChange={(value) =>
+                setEmptyPolicy(selectValue(value) as "succeed" | "fail")
               }
+              aria-label="空结果策略"
             >
               <option value="succeed">成功并记录“无匹配资源”</option>
               <option value="fail">失败并提醒管理员</option>
@@ -2365,9 +2425,10 @@ function WorkflowEditor({
           >
             <Select
               value={forEachStep.continue_on_error ? "continue" : "stop"}
-              onChange={(event) =>
-                updateForEachFailurePolicy(event.target.value === "continue")
+              onChange={(value) =>
+                updateForEachFailurePolicy(selectValue(value) === "continue")
               }
+              aria-label="单项失败处理"
             >
               <option value="stop">立即停止整个运行</option>
               <option value="continue">继续处理其余资源</option>
@@ -2384,8 +2445,8 @@ function WorkflowEditor({
               <Select
                 aria-label="新增步骤类型"
                 defaultValue="model"
-                onChange={(event) =>
-                  addStep(event.target.value as WorkflowStep["type"])
+                onChange={(value) =>
+                  addStep(selectValue(value) as WorkflowStep["type"])
                 }
               >
                 <option value="model">添加模型步骤</option>
@@ -2456,13 +2517,14 @@ function WorkflowEditor({
                     </Field>
                     <Field label="绑定 Agent">
                       <Select
-                        value={step.agent_id || ""}
-                        onChange={(event) =>
+                        value={step.agent_id ? String(step.agent_id) : ""}
+                        onChange={(value) =>
                           updateStep(index, {
                             ...step,
-                            agent_id: Number(event.target.value) || undefined,
+                            agent_id: Number(selectValue(value)) || undefined,
                           })
                         }
+                        aria-label="绑定 Agent"
                       >
                         <option value="">选择 Agent</option>
                         {agents.map((agent) => (
@@ -2572,19 +2634,22 @@ function WorkflowEditor({
                         </Field>
                         <Field label="绑定 Agent">
                           <Select
-                            value={nested.agent_id || ""}
-                            onChange={(event) => {
+                            value={
+                              nested.agent_id ? String(nested.agent_id) : ""
+                            }
+                            onChange={(value) => {
                               const nestedSteps = [...(step.steps || [])];
                               nestedSteps[nestedIndex] = {
                                 ...nested,
                                 agent_id:
-                                  Number(event.target.value) || undefined,
+                                  Number(selectValue(value)) || undefined,
                               };
                               updateStep(index, {
                                 ...step,
                                 steps: nestedSteps,
                               });
                             }}
+                            aria-label="绑定 Agent"
                           >
                             <option value="">选择 Agent</option>
                             {agents.map((agent) => (
@@ -2668,10 +2733,11 @@ function WorkflowEditor({
           hint="可选：将所有模型步骤改绑到同一个 Agent。多 Agent 草案默认留空，请在各步骤查看各自绑定。"
         >
           <Select
-            value={boundAgentID}
-            onChange={(event) =>
-              event.target.value && bindAgent(Number(event.target.value))
+            value={boundAgentID === "" ? "" : String(boundAgentID)}
+            onChange={(value) =>
+              selectValue(value) && bindAgent(Number(selectValue(value)))
             }
+            aria-label="批量绑定 Agent"
           >
             <option value="" disabled>
               选择 Agent
@@ -2696,8 +2762,8 @@ function WorkflowEditor({
             <Select
               aria-label="运行范围"
               value={scopeMode}
-              onChange={(event) =>
-                setScopeMode(event.target.value as "strict" | "unscoped")
+              onChange={(value) =>
+                setScopeMode(selectValue(value) as "strict" | "unscoped")
               }
             >
               <option value="strict">严格限制</option>
