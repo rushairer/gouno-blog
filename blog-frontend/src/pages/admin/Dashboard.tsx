@@ -178,9 +178,7 @@ export default function Dashboard() {
     setClearingAlerts(true);
     try {
       await notificationsApi.markAllRead();
-      setSummary((current) =>
-        current ? { ...current, ai_alerts: [] } : null,
-      );
+      setSummary((current) => (current ? { ...current, ai_alerts: [] } : null));
       window.dispatchEvent(new CustomEvent("community:notifications-changed"));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "标记已读失败");
@@ -417,10 +415,7 @@ export default function Dashboard() {
           </div>
 
           {can("manage", "ai") && summary.ai_alerts?.length ? (
-            <Card
-              padding="none"
-              className="overflow-hidden border-warning/40"
-            >
+            <Card padding="none" className="overflow-hidden border-warning/40">
               <CardHeader className="border-b p-6">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex flex-col gap-1">
@@ -481,11 +476,7 @@ export default function Dashboard() {
                                 .trim()}
                             </span>
                           </div>
-                          <Text
-                            size="xs"
-                            tone="muted"
-                            className="line-clamp-1"
-                          >
+                          <Text size="xs" tone="muted" className="line-clamp-1">
                             {alert.body
                               ? `失败原因：${alert.body}`
                               : "运行未完成，请打开记录查看失败步骤。"}
