@@ -52,7 +52,6 @@ type WebRouterOptions struct {
 	AnalyticsSvc       analyticsservice.Service
 	RecommendationSvc  recommendationservice.Service
 	PostVersionSvc     postversionservice.Service
-	GrowthSvc          *service.GrowthService
 	AgentCtrl          *controller.AgentController
 	Logger             *zap.Logger
 	Verifier           *auth.Verifier
@@ -62,7 +61,7 @@ type WebRouterOptions struct {
 }
 
 func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
-	if opts.PostSvc == nil || opts.PageSvc == nil || opts.MediaSvc == nil || opts.TaxonomySvc == nil || opts.SiteSvc == nil || opts.CommunitySvc == nil || opts.AnalyticsSvc == nil || opts.RecommendationSvc == nil || opts.PostVersionSvc == nil || opts.GrowthSvc == nil {
+	if opts.PostSvc == nil || opts.PageSvc == nil || opts.MediaSvc == nil || opts.TaxonomySvc == nil || opts.SiteSvc == nil || opts.CommunitySvc == nil || opts.AnalyticsSvc == nil || opts.RecommendationSvc == nil || opts.PostVersionSvc == nil {
 		panic("RegisterWebRouterWithOptions: all application services are required")
 	}
 	if opts.Verifier == nil || opts.AccessService == nil {
