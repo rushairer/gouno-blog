@@ -52,7 +52,6 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 		AnalyticsSvc:      analyticsservice.New(analyticsrepository.New(nil)),
 		RecommendationSvc: recommendationservice.New(recommendationrepository.New(nil)),
 		PostVersionSvc:    postversionservice.New(postversionrepository.New(nil)),
-		GrowthSvc:         service.NewGrowthService(repository.NewGrowthRepository(nil)),
 		Verifier:          auth.NewVerifier("http://127.0.0.1:1/jwks"), AccessService: access.NewService(nil, access.Bootstrap{}),
 	})
 
