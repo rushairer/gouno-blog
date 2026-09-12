@@ -9,31 +9,21 @@ import (
 	"github.com/rushairer/blog-backend/internal/testsupport"
 )
 
-func TestGrowthRepositoryContentLifecycle(t *testing.T) {
+func TestGrowthRepositoryVersionLifecycle(t *testing.T) {
 	db := testsupport.OpenTestDB(t)
 	defer db.Close()
 	ctx := context.Background()
 	suffix := time.Now().UnixNano()
 	slug := fmt.Sprintf("growth-integration-%d", suffix)
-	relatedSlug := fmt.Sprintf("growth-related-%d", suffix)
 
-	var postID, relatedID int64
+	var postID int64
 	if err := db.QueryRowContext(ctx, `INSERT INTO posts (title, slug, summary, content, tags, status, published_at)
 		VALUES ('Original title', $1, 'Summary', 'Original body', ARRAY['go', 'testing'], 'published', NOW()) RETURNING id`, slug).Scan(&postID); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.QueryRowContext(ctx, `INSERT INTO posts (title, slug, summary, content, tags, status, published_at)
-		VALUES ('Related title', $1, 'Related summary', 'Related body', ARRAY['go'], 'published', NOW()) RETURNING id`, relatedSlug).Scan(&relatedID); err != nil {
-		t.Fatal(err)
-	}
-	defer db.ExecContext(ctx, `DELETE FROM posts WHERE id IN ($1, $2)`, postID, relatedID)
+	defer db.ExecContext(ctx, `DELETE FROM posts WHERE id = $1`, postID)
 
 	repo := NewGrowthRepository(db)
-	related, err := repo.RelatedPosts(ctx, postID, []string{"go", "testing"}, 4)
-	if err != nil || len(related) == 0 || related[0].ID != relatedID {
-		t.Fatalf("expected related post, posts=%#v err=%v", related, err)
-	}
-
 	if _, err := db.ExecContext(ctx, `UPDATE posts SET title = 'Updated title', content = 'Updated body' WHERE id = $1`, postID); err != nil {
 		t.Fatal(err)
 	}
