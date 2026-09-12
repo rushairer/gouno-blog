@@ -5,12 +5,6 @@
     --agent-border: var(--admin-line);
   }
 
-  .agent-console .tab b {
-    min-width: 18px;
-    color: var(--agent-accent);
-    font-size: 11px;
-  }
-
   .agent-json-preview--explanation {
     color: var(--color-text-muted);
     font-family: inherit;
