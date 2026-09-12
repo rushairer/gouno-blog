@@ -73,14 +73,12 @@ describe("AdminSiteSettings", () => {
       screen.getByText("站点名称、内容定位和作者展示信息。"),
     ).toBeInTheDocument();
     expect(screen.getByText("当前设置已同步")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /保存设置/i }),
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: /保存设置/i })).toBeDisabled();
   });
 
   it("tracks dirty state and returns to synchronized after saving", async () => {
-    vi.mocked(siteApi.updateAdminSettings).mockImplementation(async (value) =>
-      value as any,
+    vi.mocked(siteApi.updateAdminSettings).mockImplementation(
+      async (value) => value as any,
     );
     const user = userEvent.setup();
     renderSettings();
@@ -149,8 +147,6 @@ describe("AdminSiteSettings", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("有未保存修改")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /保存设置/i }),
-    ).toBeEnabled();
+    expect(screen.getByRole("button", { name: /保存设置/i })).toBeEnabled();
   });
 });
