@@ -22,19 +22,18 @@ type communityModerationReader interface {
 type BlogTools struct {
 	posts      *service.PostService
 	community  communityModerationReader
-	growth     *service.GrowthService
 	pages      *pageservice.PageService
 	linkClient linkHTTPClient
 	knowledge  *knowledge.Service
 }
 
-func NewBlogRegistry(posts *service.PostService, community communityModerationReader, growth *service.GrowthService, pages *pageservice.PageService, knowledgeServices ...*knowledge.Service) *Registry {
+func NewBlogRegistry(posts *service.PostService, community communityModerationReader, _ any, pages *pageservice.PageService, knowledgeServices ...*knowledge.Service) *Registry {
 	var knowledgeService *knowledge.Service
 	if len(knowledgeServices) > 0 {
 		knowledgeService = knowledgeServices[0]
 	}
 	tools := &BlogTools{
-		posts: posts, community: community, growth: growth, pages: pages,
+		posts: posts, community: community, pages: pages,
 		linkClient: newSafeLinkClient(), knowledge: knowledgeService,
 	}
 	return New(
