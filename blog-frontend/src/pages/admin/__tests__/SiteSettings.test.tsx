@@ -53,17 +53,53 @@ describe("AdminSiteSettings", () => {
     } as any);
   });
 
-  it("loads and displays site settings", async () => {
-    render(
+  function renderSettings() {
+    return render(
       <MemoryRouter>
         <AppFeedbackProvider>
           <AdminSiteSettings />
         </AppFeedbackProvider>
       </MemoryRouter>,
     );
+  }
+
+  it("loads the Showcase-aligned settings surface without a duplicate panel heading", async () => {
+    renderSettings();
 
     expect(await screen.findByDisplayValue("测试博客")).toBeInTheDocument();
     expect(screen.getByDisplayValue("这是测试描述")).toBeInTheDocument();
+    expect(screen.getAllByText("基础信息")).toHaveLength(1);
+    expect(
+      screen.getByText("站点名称、内容定位和作者展示信息。"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("当前设置已同步")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /保存设置/i }),
+    ).toBeDisabled();
+  });
+
+  it("tracks dirty state and returns to synchronized after saving", async () => {
+    vi.mocked(siteApi.updateAdminSettings).mockImplementation(async (value) =>
+      value as any,
+    );
+    const user = userEvent.setup();
+    renderSettings();
+
+    const input = await screen.findByDisplayValue("测试博客");
+    await user.clear(input);
+    await user.type(input, "新博客名称");
+
+    expect(screen.getByText("有未保存修改")).toBeInTheDocument();
+    const saveButton = screen.getByRole("button", { name: /保存设置/i });
+    expect(saveButton).toBeEnabled();
+
+    await user.click(saveButton);
+
+    await waitFor(() => {
+      expect(siteApi.updateAdminSettings).toHaveBeenCalled();
+      expect(screen.getByText("当前设置已同步")).toBeInTheDocument();
+      expect(saveButton).toBeDisabled();
+    });
   });
 
   it("triggers StepUpMfaModal when update fails with MFA required, and preserves draft", async () => {
@@ -71,13 +107,7 @@ describe("AdminSiteSettings", () => {
       new Error("recent multi-factor authentication required"),
     );
 
-    render(
-      <MemoryRouter>
-        <AppFeedbackProvider>
-          <AdminSiteSettings />
-        </AppFeedbackProvider>
-      </MemoryRouter>,
-    );
+    renderSettings();
 
     const input = await screen.findByDisplayValue("测试博客");
     await userEvent.clear(input);
@@ -91,32 +121,24 @@ describe("AdminSiteSettings", () => {
       expect(screen.getByText("需要进行二次身份验证")).toBeInTheDocument();
     });
 
-    // Draft should be saved in sessionStorage
     const savedPending = sessionStorage.getItem(
       "gouno-blog:pending_site_settings",
     );
     expect(savedPending).not.toBeNull();
     expect(JSON.parse(savedPending!).site_title).toBe("新博客名称");
 
-    // Should NOT show raw error text on screen
     expect(
       screen.queryByText(/recent multi-factor authentication required/i),
     ).not.toBeInTheDocument();
   });
 
-  it("restores unsaved draft from sessionStorage with warning notification", async () => {
+  it("restores unsaved draft as dirty state from sessionStorage", async () => {
     sessionStorage.setItem(
       "gouno-blog:pending_site_settings",
       JSON.stringify({ site_title: "暂存的草稿标题" }),
     );
 
-    render(
-      <MemoryRouter>
-        <AppFeedbackProvider>
-          <AdminSiteSettings />
-        </AppFeedbackProvider>
-      </MemoryRouter>,
-    );
+    renderSettings();
 
     expect(
       await screen.findByDisplayValue("暂存的草稿标题"),
@@ -126,5 +148,9 @@ describe("AdminSiteSettings", () => {
         "已恢复未保存的修改内容。当前尚未生效，请点击“保存设置”以提交生效。",
       ),
     ).toBeInTheDocument();
+    expect(screen.getByText("有未保存修改")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /保存设置/i }),
+    ).toBeEnabled();
   });
 });
