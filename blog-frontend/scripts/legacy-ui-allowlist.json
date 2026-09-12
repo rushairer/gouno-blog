@@ -1,9 +1,0 @@
-{
-  "schemaVersion": 1,
-  "canonicalPackage": "@gouno/ui",
-  "canonicalVersion": "0.3.0",
-  "canonicalSourceSha": "970bc1b0ad49de7b233901a5faf03c63dfa05892",
-  "legacyPackage": "@gouno/ui-legacy",
-  "legacyVersion": "0.1.0",
-  "allowedLegacyImports": {}
-}

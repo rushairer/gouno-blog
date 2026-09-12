@@ -4,15 +4,6 @@ import { fileURLToPath } from "node:url";
 import ts from "typescript";
 
 const root = fileURLToPath(new URL("../src/", import.meta.url));
-const legacyAllowlistPath = fileURLToPath(
-  new URL("./legacy-ui-allowlist.json", import.meta.url),
-);
-const legacyAllowlist = JSON.parse(await readFile(legacyAllowlistPath, "utf8"));
-const allowedLegacyImports = new Map(
-  Object.entries(legacyAllowlist.allowedLegacyImports ?? {}).map(
-    ([symbol, names]) => [symbol, new Set(names)],
-  ),
-);
 const files = [];
 const primitiveStyleFiles = new Set([
   "styles/components.css",
@@ -39,7 +30,6 @@ async function collect(directory) {
 
 await collect(root);
 const failures = [];
-const actualLegacyImports = new Map();
 
 function jsxTagName(node, sourceFile) {
   if (ts.isJsxElement(node))
@@ -108,7 +98,6 @@ function checkUiImports(name, source) {
     true,
     name.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
   );
-  const allowedFile = `src/${name.replaceAll("\\", "/")}`;
 
   for (const statement of sourceFile.statements) {
     if (
@@ -119,11 +108,14 @@ function checkUiImports(name, source) {
     const moduleName = statement.moduleSpecifier.text;
     if (!moduleName.startsWith("@gouno/ui")) continue;
 
-    if (
-      moduleName !== "@gouno/ui" &&
-      moduleName !== "@gouno/ui-legacy" &&
-      !canonicalUiModules.has(moduleName)
-    ) {
+    if (moduleName === "@gouno/ui-legacy") {
+      failures.push(
+        `${name}:${location(sourceFile, statement)} legacy Gouno UI imports are no longer supported`,
+      );
+      continue;
+    }
+
+    if (moduleName !== "@gouno/ui" && !canonicalUiModules.has(moduleName)) {
       failures.push(
         `${name}:${location(sourceFile, statement)} unsupported Gouno UI import entrypoint ${moduleName}`,
       );
@@ -151,34 +143,6 @@ function checkUiImports(name, source) {
             `${name}:${location(sourceFile, element)} ${imported} must import from its canonical @gouno/ui layer subpath`,
           );
         }
-      }
-      continue;
-    }
-
-    if (moduleName !== "@gouno/ui-legacy") continue;
-    for (const element of clause.namedBindings.elements) {
-      const imported = element.propertyName?.text ?? element.name.text;
-      const filesForSymbol = actualLegacyImports.get(imported) ?? new Set();
-      filesForSymbol.add(allowedFile);
-      actualLegacyImports.set(imported, filesForSymbol);
-
-      if (!allowedLegacyImports.get(imported)?.has(allowedFile)) {
-        failures.push(
-          `${name}:${location(sourceFile, element)} new legacy UI import ${imported} is not admitted for ${allowedFile}`,
-        );
-      }
-    }
-  }
-}
-
-function checkLegacyAllowlistIsExact() {
-  for (const [symbol, allowedFiles] of allowedLegacyImports) {
-    const actualFiles = actualLegacyImports.get(symbol) ?? new Set();
-    for (const allowedFile of allowedFiles) {
-      if (!actualFiles.has(allowedFile)) {
-        failures.push(
-          `legacy-ui-allowlist.json stale entry: ${symbol} is no longer imported by ${allowedFile}; remove the pair to ratchet debt down`,
-        );
       }
     }
   }
@@ -297,17 +261,11 @@ for (const path of files) {
   }
 }
 
-checkLegacyAllowlistIsExact();
-
 if (failures.length) {
   console.error(failures.join("\n"));
   process.exit(1);
 }
 
-const legacyPairCount = [...actualLegacyImports.values()].reduce(
-  (total, names) => total + names.size,
-  0,
-);
 console.log(
-  `UI contracts passed across ${files.length} source files; legacy UI debt is fixed at ${actualLegacyImports.size} symbols / ${legacyPairCount} symbol-file pairs.`,
+  `UI contracts passed across ${files.length} source files; legacy Gouno UI imports are forbidden.`,
 );
