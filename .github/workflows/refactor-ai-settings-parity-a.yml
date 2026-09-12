@@ -32,8 +32,7 @@ jobs:
           text = path.read_text()
 
           text = text.replace('import { useRef } from "react";', 'import { useRef, type ReactNode } from "react";')
-          text = text.replace(
-          '''import {
+          old_core = '''import {
             Button,
             Card,
             CardHeader,
@@ -41,8 +40,8 @@ jobs:
             IconButton,
             Segmented,
             Select,
-          } from "@gouno/ui/core";''',
-          '''import {
+          } from "@gouno/ui/core";'''
+          new_core = '''import {
             Alert,
             Button,
             Card,
@@ -51,12 +50,13 @@ jobs:
             Empty,
             IconButton,
             Select,
-            Tab,
             Tabs,
             Tag,
             Text,
-          } from "@gouno/ui/core";'''.replace('    Tab,\n', '')
-          )
+          } from "@gouno/ui/core";'''
+          if old_core not in text:
+              raise SystemExit("core import block not found")
+          text = text.replace(old_core, new_core, 1)
 
           needle = '''function formatCapability(value: string) {
             return value.replace(".", " / ").replaceAll("_", " ");
@@ -92,28 +92,11 @@ jobs:
               raise SystemExit("formatCapability insertion point not found")
           text = text.replace(needle, replacement, 1)
 
-          old_nav = '''      <Segmented<AdvancedSection>
-                aria-label={labels.advanced}
-                block
-                value={advancedSection}
-                onChange={onSelectSection}
-                options={[
-                  { value: "agents", label: labels.agents, icon: <Bot /> },
-                  { value: "skills", label: labels.skills, icon: <ListChecks /> },
-                  { value: "tools", label: "Tools", icon: <GitBranch /> },
-                  {
-                    value: "knowledge",
-                    label: labels.knowledge,
-                    icon: <DatabaseZap />,
-                  },
-                  { value: "providers", label: labels.providers, icon: <KeyRound /> },
-                  {
-                    value: "connectors",
-                    label: locale === "zh" ? "Sandbox 连接器" : "Sandbox connectors",
-                    icon: <LockKeyhole />,
-                  },
-                ]}
-              />'''
+          nav_start = text.find('      <Segmented<AdvancedSection>')
+          nav_end_marker = '      {advancedSection === "providers" && editingProvider ? ('
+          nav_end = text.find(nav_end_marker, nav_start)
+          if nav_start < 0 or nav_end < 0:
+              raise SystemExit("AI Settings navigation range not found")
           new_nav = '''      <Tabs<AdvancedSection>
                 ariaLabel={labels.advanced}
                 activeKey={advancedSection}
@@ -130,22 +113,28 @@ jobs:
                     icon: <LockKeyhole aria-hidden="true" className="size-4" />,
                   },
                 ]}
-              />'''
-          if old_nav not in text:
-              raise SystemExit("Segmented navigation block not found")
-          text = text.replace(old_nav, new_nav, 1)
+              />
 
-          def replace_between(source: str, start: str, end: str, replacement: str) -> str:
-              a = source.find(start)
-              if a < 0:
-                  raise SystemExit(f"start marker not found: {start[:80]}")
-              b = source.find(end, a)
-              if b < 0:
-                  raise SystemExit(f"end marker not found: {end[:80]}")
-              return source[:a] + replacement + "\n\n" + source[b:]
+          '''
+          text = text[:nav_start] + new_nav + text[nav_end:]
 
-          tools_start = '      {!editingAgent && !editingProvider && advancedSection === "tools" ? ('
-          agents_start = '      {!editingAgent && !editingProvider && advancedSection === "agents" ? ('
+          def section_start(source: str, name: str) -> int:
+              token = f'advancedSection === "{name}" ? ('
+              token_index = source.find(token)
+              if token_index < 0:
+                  raise SystemExit(f"section token not found: {name}")
+              marker = source.rfind('      {!editingAgent', 0, token_index)
+              if marker < 0:
+                  raise SystemExit(f"section start not found: {name}")
+              return marker
+
+          def replace_section(source: str, name: str, next_name: str, replacement: str) -> str:
+              start = section_start(source, name)
+              end = section_start(source, next_name)
+              if end <= start:
+                  raise SystemExit(f"invalid section range: {name} -> {next_name}")
+              return source[:start] + replacement + "\n\n" + source[end:]
+
           tools_block = '''      {!editingAgent && !editingProvider && advancedSection === "tools" ? (
                 <div className="flex flex-col gap-5">
                   <TabPanelLead
@@ -184,12 +173,8 @@ jobs:
                   )}
                 </div>
               ) : null}'''
-          text = replace_between(text, tools_start, agents_start, tools_block)
+          text = replace_section(text, "tools", "agents", tools_block)
 
-          skills_start = '''      {!editingAgent &&
-              !editingProvider &&
-              !editingSkill &&
-              advancedSection === "skills" ? ('''
           agents_block = '''      {!editingAgent && !editingProvider && advancedSection === "agents" ? (
                 <div className="flex flex-col gap-5">
                   <TabPanelLead
@@ -342,9 +327,8 @@ jobs:
                   )}
                 </div>
               ) : null}'''
-          text = replace_between(text, agents_start, skills_start, agents_block)
+          text = replace_section(text, "agents", "skills", agents_block)
 
-          providers_start = '      {!editingAgent && !editingProvider && advancedSection === "providers" ? ('
           skills_block = '''      {!editingAgent &&
               !editingProvider &&
               !editingSkill &&
@@ -396,23 +380,21 @@ jobs:
                       {skills.map((skill) => (
                         <Card key={skill.id} padding="base">
                           <div className="flex h-full flex-col gap-4">
-                            <div className="flex flex-wrap items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <strong>{skill.name}</strong>
-                                  <Tag color={skill.system_key ? "primary" : "default"}>
-                                    {skill.system_key
-                                      ? locale === "zh" ? "系统 Skill" : "System Skill"
-                                      : locale === "zh" ? "自定义" : "Custom"}
-                                  </Tag>
-                                  <Tag color={skill.execution_mode === "approval" ? "warning" : "default"}>
-                                    {skill.execution_mode === "approval" ? labels.approvalMode : labels.advisory}
-                                  </Tag>
-                                </div>
-                                <Text size="xs" tone="muted">
-                                  v{skill.version} · {formatDateTime(skill.updated_at)}
-                                </Text>
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <strong>{skill.name}</strong>
+                                <Tag color={skill.system_key ? "primary" : "default"}>
+                                  {skill.system_key
+                                    ? locale === "zh" ? "系统 Skill" : "System Skill"
+                                    : locale === "zh" ? "自定义" : "Custom"}
+                                </Tag>
+                                <Tag color={skill.execution_mode === "approval" ? "warning" : "default"}>
+                                  {skill.execution_mode === "approval" ? labels.approvalMode : labels.advisory}
+                                </Tag>
                               </div>
+                              <Text size="xs" tone="muted">
+                                v{skill.version} · {formatDateTime(skill.updated_at)}
+                              </Text>
                             </div>
                             <Text size="sm" tone="muted">{skill.description}</Text>
                             <div className="flex flex-wrap gap-2">
@@ -464,7 +446,7 @@ jobs:
                   )}
                 </div>
               ) : null}'''
-          text = replace_between(text, skills_start, providers_start, skills_block)
+          text = replace_section(text, "skills", "providers", skills_block)
           path.write_text(text)
 
           test = Path("blog-frontend/src/pages/admin/__tests__/AISettings.test.tsx")
@@ -472,13 +454,16 @@ jobs:
           t = t.replace('findByRole("radio", { name: "Skills" })', 'findByRole("tab", { name: "Skills" })')
           t = t.replace('findByRole("radio", { name: "Providers" })', 'findByRole("tab", { name: "Providers" })')
           t = t.replace('getByRole("radio", { name: "Skills" })', 'getByRole("tab", { name: "Skills" })')
-          t = t.replace(
-          '''    expect(screen.getByRole("heading", { name: "Skills" })).toBeInTheDocument();''',
-          '''    expect(screen.getByRole("tab", { name: "Skills" })).toHaveAttribute(
-                "aria-selected",
-                "true",
-              );'''
-          )
+          old_heading = '''    expect(
+              screen.getByRole("heading", { name: "Skills" }),
+            ).toBeInTheDocument();'''
+          new_heading = '''    expect(screen.getByRole("tab", { name: "Skills" })).toHaveAttribute(
+              "aria-selected",
+              "true",
+            );'''
+          if old_heading not in t:
+              raise SystemExit("Skills heading assertion not found")
+          t = t.replace(old_heading, new_heading, 1)
           insert = '''
 
             it("uses tab-owned navigation and avoids duplicate section headings", async () => {
