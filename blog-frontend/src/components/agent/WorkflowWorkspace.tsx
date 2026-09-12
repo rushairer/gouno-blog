@@ -1056,51 +1056,57 @@ export function WorkflowWorkspace({
                         role="listitem"
                         className="flex flex-col gap-4 p-6 xl:flex-row xl:items-start xl:justify-between"
                       >
-                        <button
+                        <Button
                           type="button"
-                          className="min-w-0 flex-1 text-left"
+                          variant="ghost"
+                          className="h-auto min-w-0 flex-1 justify-start p-0 text-left hover:bg-transparent"
                           onClick={openWorkflow}
                         >
-                          <div className="flex flex-wrap items-center gap-2">
-                            <strong className="text-sm">{workflow.name}</strong>
-                            <Tag
-                              color={workflow.enabled ? "success" : "default"}
-                            >
-                              {workflow.enabled
-                                ? locale === "zh"
-                                  ? "已启用"
-                                  : "Enabled"
-                                : locale === "zh"
-                                  ? "已停用"
-                                  : "Disabled"}
-                            </Tag>
-                          </div>
-                          <Text size="sm" tone="muted" className="mt-1">
-                            {workflow.description}
-                          </Text>
-                          <div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2 xl:grid-cols-4">
-                            <span>
-                              {labels.schedule}:{" "}
-                              {workflow.cron_expression ||
-                                (locale === "zh" ? "仅手动" : "Manual")}
-                              {workflow.cron_expression
-                                ? ` · ${workflow.timezone}`
-                                : ""}
+                          <span className="block min-w-0 flex-1 text-left">
+                            <span className="flex flex-wrap items-center gap-2">
+                              <strong className="text-sm">
+                                {workflow.name}
+                              </strong>
+                              <Tag
+                                color={workflow.enabled ? "success" : "default"}
+                              >
+                                {workflow.enabled
+                                  ? locale === "zh"
+                                    ? "已启用"
+                                    : "Enabled"
+                                  : locale === "zh"
+                                    ? "已停用"
+                                    : "Disabled"}
+                              </Tag>
                             </span>
-                            <span>
-                              {labels.next}: {formatTime(workflow.next_run_at)}
+                            <span className="mt-1 block text-sm text-muted-foreground">
+                              {workflow.description}
                             </span>
-                            <span>
-                              {latestRun
-                                ? `${locale === "zh" ? "最近运行" : "Latest run"}: ${statusLabel(latestRun.status, locale)} · ${formatTime(latestRun.created_at)}`
-                                : labels.never}
+                            <span className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2 xl:grid-cols-4">
+                              <span>
+                                {labels.schedule}:{" "}
+                                {workflow.cron_expression ||
+                                  (locale === "zh" ? "仅手动" : "Manual")}
+                                {workflow.cron_expression
+                                  ? ` · ${workflow.timezone}`
+                                  : ""}
+                              </span>
+                              <span>
+                                {labels.next}:{" "}
+                                {formatTime(workflow.next_run_at)}
+                              </span>
+                              <span>
+                                {latestRun
+                                  ? `${locale === "zh" ? "最近运行" : "Latest run"}: ${statusLabel(latestRun.status, locale)} · ${formatTime(latestRun.created_at)}`
+                                  : labels.never}
+                              </span>
+                              <span>
+                                {labels.metrics}: {metric?.runs || 0} /{" "}
+                                {metric?.failures || 0} / {metric?.tokens || 0}
+                              </span>
                             </span>
-                            <span>
-                              {labels.metrics}: {metric?.runs || 0} /{" "}
-                              {metric?.failures || 0} / {metric?.tokens || 0}
-                            </span>
-                          </div>
-                        </button>
+                          </span>
+                        </Button>
                         <div className="flex min-w-max shrink-0 flex-nowrap items-center gap-1">
                           <IconButton
                             label={

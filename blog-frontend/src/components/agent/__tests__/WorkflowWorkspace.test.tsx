@@ -94,7 +94,8 @@ describe("WorkflowWorkspace", () => {
       />,
     );
 
-    const list = screen.getByRole("table");
+    const list = screen.getByRole("list", { name: "Workflow 列表" });
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
     // Enabled workflows come before disabled workflow despite disabled having a newer timestamp
     expect(list.textContent?.indexOf("Newer enabled")).toBeLessThan(
       list.textContent?.indexOf("Older enabled"),
