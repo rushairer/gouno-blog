@@ -13,11 +13,11 @@ import {
   Modal,
   Skeleton,
   Tag,
+  Text,
 } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
 import { BulkActionBar } from "@gouno/ui/patterns";
 
-import { ConfirmActionModal } from "../../components/ConfirmActionModal";
 import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 import { useAppFeedback } from "../../components/feedback/AppFeedbackProvider";
@@ -62,6 +62,7 @@ export default function Tags() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [tagEdit, setTagEdit] = useState<TagEdit>(null);
+  const [editValue, setEditValue] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [aiOpen, setAIOpen] = useState(false);
@@ -83,21 +84,58 @@ export default function Tags() {
     void load();
   }, [load]);
 
-  const saveTag = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const setSelection = (name: string, checked: boolean) => {
+    setSelected((current) =>
+      checked
+        ? [...new Set([...current, name])]
+        : current.filter((item) => item !== name),
+    );
+  };
+
+  const openEdit = (tag: TagSummary, mode: "rename" | "merge") => {
+    setTagEdit({ tag, mode });
+    setEditValue("");
+    setError("");
+  };
+
+  const closeEdit = () => {
+    setTagEdit(null);
+    setEditValue("");
+  };
+
+  const saveTag = async () => {
     if (!tagEdit) return;
-    const value = String(
-      new FormData(event.currentTarget).get("value") || "",
-    ).trim();
-    if (!value || value === tagEdit.tag.name) return;
+    const value = editValue.trim();
+    if (!value || value === tagEdit.tag.name) {
+      notify("请输入不同于当前标签的有效名称。", "error");
+      return;
+    }
+
+    if (tagEdit.mode === "rename" && tags.some((tag) => tag.name === value)) {
+      notify(`标签“${value}”已经存在。`, "error");
+      return;
+    }
+
+    if (tagEdit.mode === "merge" && !tags.some((tag) => tag.name === value)) {
+      notify("目标标签必须是现有标签。", "error");
+      return;
+    }
+
     try {
       if (tagEdit.mode === "rename") {
         await siteApi.renameTag(tagEdit.tag.name, value);
+        setSelected((current) =>
+          current.map((name) => (name === tagEdit.tag.name ? value : name)),
+        );
+        notify("标签已重命名。");
       } else {
         await siteApi.mergeTags(tagEdit.tag.name, value);
+        setSelected((current) =>
+          current.filter((name) => name !== tagEdit.tag.name),
+        );
+        notify("标签已合并。");
       }
-      notify(tagEdit.mode === "rename" ? "标签已重命名。" : "标签已合并。");
-      setTagEdit(null);
+      closeEdit();
       await load();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "标签操作失败。");
@@ -134,7 +172,11 @@ export default function Tags() {
         }
         return;
       }
+
       await siteApi.deleteTag(deleteTarget.item.name);
+      setSelected((current) =>
+        current.filter((name) => name !== deleteTarget.item.name),
+      );
       notify("标签已从文章中移除。");
       setDeleteTarget(null);
       await load();
@@ -142,6 +184,13 @@ export default function Tags() {
       setError(reason instanceof Error ? reason.message : "删除失败。");
     }
   };
+
+  const deleteDescription =
+    deleteTarget?.kind === "batch"
+      ? `确认删除选中的 ${selected.length} 个标签？这些标签会从文章中移除。`
+      : deleteTarget?.kind === "tag"
+        ? `从所有文章中移除标签“${deleteTarget.item.name}”？`
+        : undefined;
 
   return (
     <div className="flex flex-col gap-6">
@@ -157,7 +206,10 @@ export default function Tags() {
       {selected.length > 0 ? (
         <BulkActionBar
           selectionLabel={`已选择 ${selected.length} 个标签`}
-          onCancel={() => setSelected([])}
+          onCancel={() => {
+            setSelected([]);
+            setAIOpen(false);
+          }}
         >
           <Button size="small" icon={<Bot />} onClick={() => setAIOpen(true)}>
             交给 AI
@@ -195,55 +247,50 @@ export default function Tags() {
           />
         </Card>
       ) : (
-        <div className="tag-admin-grid grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {tags.map((tag) => (
             <Card
               key={tag.name}
               padding="sm"
-              className="tag-admin-card gap-0 transition-colors hover:border-primary/40"
+              className="gap-0 transition-colors hover:border-primary/40"
               data-state={selected.includes(tag.name) ? "selected" : undefined}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-2">
                   <Checkbox
-                    className="tag-admin-card__checkbox"
                     aria-label={`选择标签 ${tag.name}`}
                     checked={selected.includes(tag.name)}
                     onChange={(event) =>
-                      setSelected((current) =>
-                        event.target.checked
-                          ? [...new Set([...current, tag.name])]
-                          : current.filter((key) => key !== tag.name),
-                      )
+                      setSelection(tag.name, event.target.checked)
                     }
                   />
-                  <div className="tag-admin-card__content min-w-0">
-                    <strong className="truncate text-sm font-semibold text-foreground">
-                      {tag.name}
-                    </strong>
-                  </div>
+                  <strong className="truncate text-sm font-semibold text-foreground">
+                    {tag.name}
+                  </strong>
                 </div>
-                <Tag className="shrink-0 font-mono">{tag.post_count} 篇</Tag>
+                <Tag color="default" className="shrink-0 font-mono">
+                  {tag.post_count} 篇
+                </Tag>
               </div>
               <div
-                className="tag-admin-card__actions mt-4 flex flex-wrap items-center justify-end gap-1 border-t pt-3"
+                className="mt-4 flex flex-wrap items-center justify-end gap-1 border-t pt-3"
                 aria-label={`标签 ${tag.name} 操作`}
               >
                 <Button
                   size="small"
                   variant="text"
-                  type="button"
-                  onClick={() => setTagEdit({ tag, mode: "rename" })}
                   icon={<Save />}
+                  aria-label={`重命名标签 ${tag.name}`}
+                  onClick={() => openEdit(tag, "rename")}
                 >
                   重命名
                 </Button>
                 <Button
                   size="small"
                   variant="text"
-                  type="button"
-                  onClick={() => setTagEdit({ tag, mode: "merge" })}
                   icon={<Merge />}
+                  aria-label={`合并标签 ${tag.name}`}
+                  onClick={() => openEdit(tag, "merge")}
                 >
                   合并
                 </Button>
@@ -251,9 +298,9 @@ export default function Tags() {
                   size="small"
                   variant="text"
                   color="error"
-                  type="button"
-                  onClick={() => setDeleteTarget({ kind: "tag", item: tag })}
                   icon={<Trash2 />}
+                  aria-label={`删除标签 ${tag.name}`}
+                  onClick={() => setDeleteTarget({ kind: "tag", item: tag })}
                 >
                   删除
                 </Button>
@@ -268,60 +315,46 @@ export default function Tags() {
         title={tagEdit?.mode === "merge" ? "合并标签" : "重命名标签"}
         description={
           tagEdit?.mode === "merge"
-            ? `将“${tagEdit?.tag.name}”合并至目标标签。`
-            : `为“${tagEdit?.tag.name}”输入新名称。`
+            ? `将“${tagEdit?.tag.name ?? ""}”合并至现有目标标签。`
+            : `为“${tagEdit?.tag.name ?? ""}”输入新名称。`
         }
-        onClose={() => setTagEdit(null)}
-        footer={
-          <>
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => setTagEdit(null)}
-            >
-              取消
-            </Button>
-            <Button
-              variant="solid"
-              color="primary"
-              type="submit"
-              form="tag-edit-form"
-              icon={tagEdit?.mode === "merge" ? <Merge /> : <Save />}
-            >
-              {tagEdit?.mode === "merge" ? "合并标签" : "保存名称"}
-            </Button>
-          </>
-        }
+        onClose={closeEdit}
+        onOk={() => void saveTag()}
+        okText={tagEdit?.mode === "merge" ? "合并标签" : "保存名称"}
+        okButtonProps={{ variant: "solid", color: "primary" }}
       >
-        <form
-          id="tag-edit-form"
-          className="flex flex-col gap-4"
-          onSubmit={saveTag}
+        <FormField
+          label={tagEdit?.mode === "merge" ? "目标标签" : "新标签名称"}
+          required
+          hint={
+            tagEdit?.mode === "merge"
+              ? "输入一个已经存在的标签名称。"
+              : undefined
+          }
         >
-          <FormField
-            label={tagEdit?.mode === "merge" ? "目标标签" : "新标签名称"}
-            required
-          >
-            <Input name="value" required autoFocus />
-          </FormField>
-        </form>
+          <Input
+            aria-label={tagEdit?.mode === "merge" ? "目标标签" : "新标签名称"}
+            value={editValue}
+            onChange={(event) => setEditValue(event.target.value)}
+            autoFocus
+          />
+        </FormField>
       </Modal>
 
-      <ConfirmActionModal
+      <Modal
         open={deleteTarget !== null}
         title={deleteTarget?.kind === "batch" ? "批量删除标签" : "删除标签"}
-        description={
-          deleteTarget?.kind === "batch"
-            ? `确认删除选中的 ${selected.length} 个标签？这些标签会从文章中移除。`
-            : deleteTarget
-              ? `从所有文章中移除标签“${deleteTarget.item.name}”？`
-              : ""
-        }
-        confirmLabel="确认删除"
-        danger
+        description={deleteDescription}
         onClose={() => setDeleteTarget(null)}
-        onConfirm={remove}
-      />
+        onOk={() => void remove()}
+        okText="确认删除"
+        cancelText="取消"
+        okButtonProps={{ variant: "solid", color: "error" }}
+      >
+        <Text size="sm" tone="muted">
+          删除只移除标签关联，不删除文章。
+        </Text>
+      </Modal>
 
       <WorkflowLauncher
         open={aiOpen}
