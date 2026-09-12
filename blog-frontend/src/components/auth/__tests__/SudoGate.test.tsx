@@ -57,9 +57,7 @@ describe("SudoGate", () => {
 
     expect(screen.getByTestId("unlocked-content")).toBeInTheDocument();
     expect(screen.getByText(/Sudo 已解锁 · 剩余约/)).toBeInTheDocument();
-    expect(
-      screen.queryByText("高权限安全保护区域"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("高权限安全保护区域")).not.toBeInTheDocument();
   });
 
   it("supports the Users alert presentation and explicit relock", async () => {
