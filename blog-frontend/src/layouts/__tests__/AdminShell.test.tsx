@@ -97,11 +97,16 @@ describe("AdminShell navigation utilities", () => {
   });
 
   it("uses configured site identity and canonical topbar action semantics", async () => {
-    renderAdminShell(<h1>Dashboard</h1>);
+    const { container } = renderAdminShell(<h1>Dashboard</h1>);
 
     expect(
       await screen.findByRole("link", { name: "Configured Site" }),
     ).toBeInTheDocument();
+
+    const pageContainer = container.querySelector('[data-slot="page-container"]');
+    expect(pageContainer).toContainElement(
+      screen.getByRole("heading", { name: "Dashboard" }),
+    );
 
     const frontsiteLink = screen.getByRole("link", {
       name: "在新窗口查看前台站点",
