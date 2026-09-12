@@ -7,19 +7,19 @@ import (
 	"testing"
 
 	_ "github.com/lib/pq"
+	"github.com/rushairer/blog-backend/internal/dbtx"
 	"github.com/rushairer/blog-backend/internal/domain"
-	"github.com/rushairer/blog-backend/internal/repository"
 	"github.com/rushairer/blog-backend/internal/tool"
 )
 
-func testTransactor(t *testing.T) *repository.Transactor {
+func testTransactor(t *testing.T) *dbtx.Transactor {
 	t.Helper()
 	db, err := sql.Open("postgres", "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	return repository.NewTransactor(db, nil)
+	return dbtx.NewTransactor(db, nil)
 }
 
 func TestRegisterOperationalToolsAreReadOnly(t *testing.T) {

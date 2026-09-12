@@ -81,7 +81,7 @@ This document defines the **immutable architectural rules, security baselines, a
 ## 8. Backend Capability Module Architecture
 
 - `blog-backend` is a complex application and its target organization is **Capability Module**: capability first, layer second. The authoritative project description is `blog-backend/ARCHITECTURE.md`.
-- `blog-backend/internal/domain`, `internal/repository`, `internal/service`, and `internal/controller` are transitional flat-layer migration buckets. Do not add new business ownership to them when a capability-local home exists or can be introduced coherently.
+- `blog-backend/internal/service` has been retired. `internal/domain` remains a deliberate shared-model migration boundary, while `internal/repository` and `internal/controller` are transitional flat-layer migration buckets. Do not add new business ownership to them when a capability-local home exists or can be introduced coherently.
 - New business capabilities should live under `blog-backend/internal/<capability>/` and contain only the `domain`, `repository`, `service`, `controller`, or other internal packages they actually require. Never keep unused layers merely for symmetry after a capability is implemented.
 - Migrate existing flat-layer code by coherent capability slices. The `page` capability is the reference migration: canonical implementation under `internal/page/`, with temporary type/function/error facades in legacy flat packages where moving every consumer would create unnecessary blast radius.
 - Do not perform filename-only moves that leave cross-package ownership unresolved, change behavior accidentally, or create import cycles.

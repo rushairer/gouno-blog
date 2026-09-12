@@ -7,8 +7,9 @@ import (
 	"go.uber.org/zap"
 )
 
-// Transactor is kept as a compatibility alias while capability services move
-// their imports to the shared dbtx infrastructure package.
+// Transactor is retained only for the Connector Module Hold. All non-Connector
+// capabilities and the composition root depend on internal/dbtx directly.
+// Remove this alias when the hold is explicitly lifted and Connector is cut over.
 type Transactor = dbtx.Transactor
 
 func NewTransactor(db *sql.DB, logger *zap.Logger) *Transactor {

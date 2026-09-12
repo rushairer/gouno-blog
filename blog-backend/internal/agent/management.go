@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/robfig/cron/v3"
+	"github.com/rushairer/blog-backend/internal/dberror"
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/provider"
 	"github.com/rushairer/blog-backend/internal/repository"
@@ -140,7 +141,7 @@ func (s *ManagementService) validateProvider(ctx context.Context, profile *domai
 
 func (s *ManagementService) DeleteProvider(ctx context.Context, id int64) error {
 	err := s.repo.DeleteProvider(ctx, id)
-	if errors.Is(err, repository.ErrResourceInUse) || repository.IsConstraintError(err) {
+	if errors.Is(err, repository.ErrResourceInUse) || dberror.IsConstraintError(err) {
 		msg := err.Error()
 		if idx := strings.Index(msg, ": "); idx != -1 {
 			return fmt.Errorf("%w: %s", ErrProviderInUse, msg[idx+2:])
@@ -577,7 +578,7 @@ func translateError(err error) error {
 	if errors.Is(err, sql.ErrNoRows) {
 		return ErrNotFound
 	}
-	if repository.IsConstraintError(err) {
+	if dberror.IsConstraintError(err) {
 		return ErrConflict
 	}
 	return err

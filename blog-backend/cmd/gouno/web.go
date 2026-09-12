@@ -25,6 +25,7 @@ import (
 	communityservice "github.com/rushairer/blog-backend/internal/community/service"
 	"github.com/rushairer/blog-backend/internal/connector"
 	"github.com/rushairer/blog-backend/internal/controller"
+	"github.com/rushairer/blog-backend/internal/dbtx"
 	"github.com/rushairer/blog-backend/internal/knowledge"
 	"github.com/rushairer/blog-backend/internal/media"
 	mediarepository "github.com/rushairer/blog-backend/internal/media/repository"
@@ -271,7 +272,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		}
 	}
 
-	transactor := repository.NewTransactor(cfg.DB, cfg.Logger)
+	transactor := dbtx.NewTransactor(cfg.DB, cfg.Logger)
 	postRepo := postrepository.NewPostRepository(cfg.DB)
 	postSvc := postservice.NewPostService(postRepo)
 	pageSvc := pageservice.NewPageService(pagerepository.NewPageRepository(cfg.DB))

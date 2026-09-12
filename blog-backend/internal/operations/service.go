@@ -12,9 +12,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rushairer/blog-backend/internal/dbtx"
 	"github.com/rushairer/blog-backend/internal/domain"
 	postservice "github.com/rushairer/blog-backend/internal/post/service"
-	"github.com/rushairer/blog-backend/internal/repository"
 	"github.com/rushairer/blog-backend/internal/tool"
 	"go.uber.org/zap"
 )
@@ -35,20 +35,14 @@ type Service struct {
 	toolCalls  GovernanceToolCallWriter
 	approvals  GovernanceApprovalWriter
 	posts      *postservice.PostService
-	transactor *repository.Transactor
-}
-
-// ConfigureGovernance keeps the transitional flat AgentRepository call shape
-// while composition migrates to canonical Run and Approval repositories.
-func (s *Service) ConfigureGovernance(repo *repository.AgentRepository, posts *postservice.PostService) {
-	s.ConfigureGovernanceRepositories(repo, repo, posts)
+	transactor *dbtx.Transactor
 }
 
 func (s *Service) ConfigureGovernanceRepositories(toolCalls GovernanceToolCallWriter, approvals GovernanceApprovalWriter, posts *postservice.PostService) {
 	s.toolCalls, s.approvals, s.posts = toolCalls, approvals, posts
 }
 
-func NewService(db *sql.DB, tools *tool.Registry, logger *zap.Logger, transactor *repository.Transactor) *Service {
+func NewService(db *sql.DB, tools *tool.Registry, logger *zap.Logger, transactor *dbtx.Transactor) *Service {
 	if transactor == nil {
 		panic("operations.NewService: transactor is required")
 	}
