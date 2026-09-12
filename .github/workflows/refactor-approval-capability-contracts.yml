@@ -26,7 +26,11 @@ jobs:
           cache-dependency-path: blog-backend/go.sum
 
       - name: Apply fail-closed Approval ownership cutover
-        run: python3 .github/refactor_approval_capability_contracts.py
+        shell: bash
+        run: |
+          set -euo pipefail
+          sed -i 's/for method in methods:/for method in sorted(methods, key=len, reverse=True):/' .github/refactor_approval_capability_contracts.py
+          python3 .github/refactor_approval_capability_contracts.py
 
       - name: Format and verify architecture slice
         shell: bash
