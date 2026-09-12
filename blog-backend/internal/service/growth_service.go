@@ -16,7 +16,7 @@ type GrowthStore interface {
 }
 
 var (
-	ErrInvalidVersion      = errors.New("invalid version")
+	ErrInvalidVersion       = errors.New("invalid version")
 	ErrAnalyticsUnavailable = errors.New("analytics service unavailable")
 )
 
