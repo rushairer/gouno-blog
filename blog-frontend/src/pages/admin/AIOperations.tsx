@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   Clock3,
   GitBranch,
@@ -30,14 +36,7 @@ import { InboxWorkspace } from "../../components/agent/InboxWorkspace";
 import { RecordsWorkspace } from "../../components/agent/AgentRunRecords";
 import { WorkflowWorkspace } from "../../components/agent/WorkflowWorkspace";
 import { WorkflowRunRecords } from "../../components/agent/WorkflowRunRecords";
-import {
-  Button,
-  Card,
-  Segmented,
-  Skeleton,
-  Tabs,
-  Tag,
-} from "@gouno/ui/core";
+import { Button, Card, Segmented, Skeleton, Tabs, Tag } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
 import { ToastProvider, useToast } from "@gouno/ui-legacy";
 import { useI18n } from "../../i18n";
@@ -481,9 +480,7 @@ function AgentConsoleContent() {
         {tab === "records" ? (
           <div className="records-hub section-stack">
             <Segmented<"workflow" | "agent">
-              aria-label={
-                locale === "zh" ? "运行中心类型" : "Run center type"
-              }
+              aria-label={locale === "zh" ? "运行中心类型" : "Run center type"}
               value={recordType}
               onChange={(next) => {
                 setRecordType(next);
@@ -494,8 +491,7 @@ function AgentConsoleContent() {
               options={[
                 {
                   value: "workflow",
-                  label:
-                    locale === "zh" ? "Workflow 任务" : "Workflow tasks",
+                  label: locale === "zh" ? "Workflow 任务" : "Workflow tasks",
                 },
                 {
                   value: "agent",
