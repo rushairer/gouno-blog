@@ -1,0 +1,39 @@
+name: Phase 39B frontend quality
+
+on:
+  push:
+    branches:
+      - ui/remove-legacy-conformance-phase39b
+
+permissions:
+  contents: read
+
+jobs:
+  frontend-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ui/remove-legacy-conformance-phase39b
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: blog-frontend/package-lock.json
+      - working-directory: blog-frontend
+        run: npm ci
+      - working-directory: blog-frontend
+        run: npm run quality
+      - name: Verify Connector-only legacy allowlist
+        working-directory: blog-frontend
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const allow = JSON.parse(fs.readFileSync('scripts/legacy-ui-allowlist.json', 'utf8')).allowedLegacyImports;
+          const connector = 'src/components/agent/ConnectorWorkspace.tsx';
+          for (const [symbol, files] of Object.entries(allow)) {
+            if (files.length !== 1 || files[0] !== connector) {
+              throw new Error(`non-Connector legacy debt remains: ${symbol} -> ${files.join(', ')}`);
+            }
+          }
+          NODE
