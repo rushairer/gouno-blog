@@ -33,7 +33,6 @@
       "src/components/agent/WorkflowRunDetail.tsx",
       "src/components/agent/WorkflowRunRecords.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
-      "src/components/agent/WorkspaceOverview.tsx",
       "src/components/agent/tools/ToolBindingsEditor.tsx",
       "src/pages/admin/PageEditor.tsx",
       "src/pages/admin/PostEditor.tsx",
@@ -130,8 +129,7 @@
       "src/components/agent/AgentRunRecords.tsx",
       "src/components/agent/ConnectorWorkspace.tsx",
       "src/components/agent/InboxWorkspace.tsx",
-      "src/components/agent/OperationsWorkspace.tsx",
-      "src/components/agent/WorkspaceOverview.tsx"
+      "src/components/agent/OperationsWorkspace.tsx"
     ],
     "PanelHeader": [
       "src/components/agent/AdvancedWorkspace.tsx",
