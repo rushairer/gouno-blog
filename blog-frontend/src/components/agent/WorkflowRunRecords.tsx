@@ -17,6 +17,7 @@ import {
   CardContent,
   Empty,
   IconButton,
+  Modal,
   Select,
   Text,
 } from "@gouno/ui/core";
@@ -75,6 +76,10 @@ export function WorkflowRunRecords({
   const [batchBusy, setBatchBusy] = useState("");
   const [cancelling, setCancelling] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{
+    kind: "cancel" | "delete";
+    run: WorkflowRun;
+  } | null>(null);
   const [imagePreviews, setImagePreviews] = useState<
     Record<number, ArticleImagePreview>
   >({});
@@ -473,19 +478,13 @@ export function WorkflowRunRecords({
     }
   };
 
-  const cancelRunByID = async (run: WorkflowRun) => {
+  const cancelRunByID = async (run: WorkflowRun): Promise<boolean> => {
     if (
       !["queued", "running", "awaiting_approval", "waiting_for_user"].includes(
         run.status,
       )
     )
-      return;
-    if (
-      !window.confirm(
-        zh ? `确定放弃/终止运行 Run #${run.id} 吗？` : `Cancel run #${run.id}?`,
-      )
-    )
-      return;
+      return false;
     setCancelling(true);
     setError("");
     try {
@@ -494,6 +493,7 @@ export function WorkflowRunRecords({
         await inspect(run);
       }
       if (onRefresh) await onRefresh();
+      return true;
     } catch (reason) {
       setError(
         reason instanceof Error
@@ -502,25 +502,29 @@ export function WorkflowRunRecords({
             ? "放弃运行失败。"
             : "Could not cancel run.",
       );
+      return false;
     } finally {
       setCancelling(false);
     }
   };
 
-  const cancelRun = async () => {
-    if (selected) await cancelRunByID(selected.run);
+  const requestCancelRun = (run: WorkflowRun) => {
+    if (
+      ["queued", "running", "awaiting_approval", "waiting_for_user"].includes(
+        run.status,
+      )
+    ) {
+      setConfirmAction({ kind: "cancel", run });
+    }
   };
 
-  const deleteRunByID = async (run: WorkflowRun) => {
-    if (!["succeeded", "failed", "cancelled"].includes(run.status)) return;
-    if (
-      !window.confirm(
-        zh
-          ? `删除运行记录 Run #${run.id} 及其附属日志？文章和媒体文件不会被删除。`
-          : `Delete run #${run.id} and its attached logs? Posts and media files are kept.`,
-      )
-    )
-      return;
+  const cancelRun = async () => {
+    if (selected) requestCancelRun(selected.run);
+  };
+
+  const deleteRunByID = async (run: WorkflowRun): Promise<boolean> => {
+    if (!["succeeded", "failed", "cancelled"].includes(run.status))
+      return false;
     setDeleting(true);
     setError("");
     try {
@@ -532,6 +536,7 @@ export function WorkflowRunRecords({
         window.history.replaceState(null, "", url);
       }
       if (onRefresh) await onRefresh();
+      return true;
     } catch (reason) {
       setError(
         reason instanceof Error
@@ -540,13 +545,29 @@ export function WorkflowRunRecords({
             ? "删除运行记录失败。"
             : "Could not delete run record.",
       );
+      return false;
     } finally {
       setDeleting(false);
     }
   };
 
+  const requestDeleteRun = (run: WorkflowRun) => {
+    if (["succeeded", "failed", "cancelled"].includes(run.status)) {
+      setConfirmAction({ kind: "delete", run });
+    }
+  };
+
   const deleteRun = async () => {
-    if (selected) await deleteRunByID(selected.run);
+    if (selected) requestDeleteRun(selected.run);
+  };
+
+  const confirmRunAction = async () => {
+    if (!confirmAction) return;
+    const completed =
+      confirmAction.kind === "cancel"
+        ? await cancelRunByID(confirmAction.run)
+        : await deleteRunByID(confirmAction.run);
+    if (completed) setConfirmAction(null);
   };
 
   useEffect(() => {
@@ -773,7 +794,7 @@ export function WorkflowRunRecords({
                               label={zh ? "放弃/终止运行" : "Cancel run"}
                               icon={<Ban />}
                               disabled={cancelling}
-                              onClick={() => void cancelRunByID(run)}
+                              onClick={() => requestCancelRun(run)}
                             />
                           ) : null}
                           {["succeeded", "failed", "cancelled"].includes(
@@ -785,7 +806,7 @@ export function WorkflowRunRecords({
                               label={zh ? "删除记录" : "Delete record"}
                               icon={<Trash2 />}
                               disabled={deleting}
-                              onClick={() => void deleteRunByID(run)}
+                              onClick={() => requestDeleteRun(run)}
                             />
                           ) : null}
                         </div>
@@ -798,6 +819,59 @@ export function WorkflowRunRecords({
           )}
         </div>
       )}
+      <Modal
+        open={confirmAction !== null}
+        title={
+          confirmAction?.kind === "cancel"
+            ? zh
+              ? "放弃/终止 Workflow 运行"
+              : "Cancel Workflow run"
+            : zh
+              ? "删除 Workflow 运行记录"
+              : "Delete Workflow run record"
+        }
+        description={
+          confirmAction
+            ? confirmAction.kind === "cancel"
+              ? zh
+                ? `确认放弃/终止 Run #${confirmAction.run.id}？`
+                : `Cancel Run #${confirmAction.run.id}?`
+              : zh
+                ? `确认删除 Run #${confirmAction.run.id} 及其附属日志？`
+                : `Delete Run #${confirmAction.run.id} and its attached logs?`
+            : undefined
+        }
+        onClose={() => {
+          if (!cancelling && !deleting) setConfirmAction(null);
+        }}
+        onOk={() => void confirmRunAction()}
+        okText={
+          confirmAction?.kind === "cancel"
+            ? zh
+              ? "放弃/终止运行"
+              : "Cancel run"
+            : zh
+              ? "删除记录"
+              : "Delete record"
+        }
+        cancelText={zh ? "返回" : "Back"}
+        okButtonProps={{
+          variant: "solid",
+          color: "error",
+          loading: confirmAction?.kind === "cancel" ? cancelling : deleting,
+        }}
+      >
+        <Text size="sm" tone="muted">
+          {confirmAction?.kind === "cancel"
+            ? zh
+              ? "终止后当前运行不会继续推进；已经产生的审计记录会保留。"
+              : "The run stops progressing, while audit evidence already produced is retained."
+            : zh
+              ? "只清理终态运行记录和附属日志；文章与媒体文件不会被删除。"
+              : "Only the terminal run record and attached logs are removed. Posts and media files are kept."}
+        </Text>
+      </Modal>
+
       {previewDialogCandidate && previewDialogPreview ? (
         <ArticlePreviewModal
           candidate={previewDialogCandidate}

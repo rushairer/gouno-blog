@@ -45,6 +45,7 @@ const run = {
 describe("WorkflowRunRecords", () => {
   beforeEach(() => {
     window.history.replaceState(null, "", "/");
+    vi.mocked(apiFetch).mockClear();
     vi.mocked(apiFetch).mockImplementation(async (url) =>
       Response.json({
         data: String(url).endsWith("/resources")
@@ -287,7 +288,6 @@ describe("WorkflowRunRecords", () => {
   it("lets an administrator delete a terminal record and refreshes the list", async () => {
     const user = userEvent.setup();
     const onRefresh = vi.fn(async () => undefined);
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
     render(
       <WorkflowRunRecords
         locale="zh"
@@ -300,6 +300,13 @@ describe("WorkflowRunRecords", () => {
 
     await user.click(screen.getByRole("button", { name: /AI 每日资讯/ }));
     await user.click(await screen.findByRole("button", { name: "删除记录" }));
+    const dialog = screen.getByRole("dialog", {
+      name: "删除 Workflow 运行记录",
+    });
+    expect(apiFetch).not.toHaveBeenCalledWith("/api/admin/ai-workflow-runs/6", {
+      method: "DELETE",
+    });
+    await user.click(within(dialog).getByRole("button", { name: "删除记录" }));
 
     await waitFor(() =>
       expect(apiFetch).toHaveBeenCalledWith("/api/admin/ai-workflow-runs/6", {
@@ -307,7 +314,6 @@ describe("WorkflowRunRecords", () => {
       }),
     );
     expect(onRefresh).toHaveBeenCalledOnce();
-    confirm.mockRestore();
   });
 
   it("supports selecting and applying multiple image candidates in one run", async () => {
@@ -635,7 +641,6 @@ describe("WorkflowRunRecords", () => {
   it("lets an administrator cancel an active workflow run", async () => {
     const user = userEvent.setup();
     const onRefresh = vi.fn(async () => undefined);
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
     const waitingRun = { ...run, id: 99, status: "waiting_for_user" };
     render(
       <WorkflowRunRecords
@@ -651,6 +656,21 @@ describe("WorkflowRunRecords", () => {
     await user.click(
       await screen.findByRole("button", { name: "放弃/终止运行" }),
     );
+    const dialog = screen.getByRole("dialog", {
+      name: "放弃/终止 Workflow 运行",
+    });
+    expect(
+      within(dialog).getByText(
+        "终止后当前运行不会继续推进；已经产生的审计记录会保留。",
+      ),
+    ).toBeInTheDocument();
+    expect(apiFetch).not.toHaveBeenCalledWith(
+      "/api/admin/ai-workflow-runs/99/cancel",
+      { method: "POST" },
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: "放弃/终止运行" }),
+    );
 
     await waitFor(() =>
       expect(apiFetch).toHaveBeenCalledWith(
@@ -659,7 +679,6 @@ describe("WorkflowRunRecords", () => {
       ),
     );
     expect(onRefresh).toHaveBeenCalled();
-    confirm.mockRestore();
   });
 
   it("supports rejecting an individual image candidate and batch rejecting candidates", async () => {
@@ -741,5 +760,42 @@ describe("WorkflowRunRecords", () => {
       screen.getByRole("list", { name: "Workflow 运行列表" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+
+  it("requires canonical confirmation before deleting a terminal Workflow run", async () => {
+    const user = userEvent.setup();
+    const onRefresh = vi.fn(async () => undefined);
+    render(
+      <WorkflowRunRecords
+        locale="zh"
+        workflows={[workflow]}
+        runs={[run]}
+        formatDateTime={(value) => value}
+        onRefresh={onRefresh}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "删除记录" }));
+    const dialog = screen.getByRole("dialog", {
+      name: "删除 Workflow 运行记录",
+    });
+    expect(
+      within(dialog).getByText(
+        "只清理终态运行记录和附属日志；文章与媒体文件不会被删除。",
+      ),
+    ).toBeInTheDocument();
+    const deleteCalls = () =>
+      vi
+        .mocked(apiFetch)
+        .mock.calls.filter(
+          ([url, options]) =>
+            String(url) === "/api/admin/ai-workflow-runs/6" &&
+            options?.method === "DELETE",
+        );
+    expect(deleteCalls()).toHaveLength(0);
+    await user.click(within(dialog).getByRole("button", { name: "删除记录" }));
+
+    await waitFor(() => expect(deleteCalls()).toHaveLength(1));
+    expect(onRefresh).toHaveBeenCalled();
   });
 });
