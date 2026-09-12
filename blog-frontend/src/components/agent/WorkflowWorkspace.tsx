@@ -17,7 +17,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import type { FormEvent } from "react";
+import type { FormEvent, ReactNode } from "react";
 import { workflowApi } from "../../api/workflows";
 import { agentApi } from "../../api/agent";
 import type {
@@ -29,26 +29,20 @@ import type {
   WorkflowStep,
 } from "../../types/agent";
 import {
+  Alert,
+  Button,
   ButtonLink,
   Checkbox,
   CheckboxField,
   Empty,
   Field,
+  IconButton,
   Input,
   Modal,
   SearchField,
   Textarea,
 } from "@gouno/ui/core";
-import {
-  Button,
-  EditorPanel,
-  Feedback,
-  FormActions,
-  FormLayout,
-  IconButton,
-  PanelHeader,
-  Select,
-} from "@gouno/ui-legacy";
+import { EditorPanel, FormActions, FormLayout, Select } from "@gouno/ui-legacy";
 import { StatusPill } from "./StatusPill";
 import { statusLabel } from "./labels";
 import { WorkflowInputForm } from "./WorkflowInputForm";
@@ -133,6 +127,42 @@ function runFeedbackActionLabel(
       ? "继续生成、选择和应用图片"
       : "Continue generating, selecting, and applying images";
   return locale === "zh" ? "查看运行中心" : "Open run center";
+}
+
+function Feedback({
+  type,
+  children,
+}: {
+  type: "success" | "info" | "warning" | "error";
+  children: ReactNode;
+}) {
+  return (
+    <Alert type={type} showIcon role={type === "error" ? "alert" : "status"}>
+      {children}
+    </Alert>
+  );
+}
+
+function PanelHeader({
+  title,
+  description,
+  actions,
+}: {
+  title: ReactNode;
+  description?: ReactNode;
+  actions?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="min-w-0">
+        <h3 className="text-base font-semibold text-foreground">{title}</h3>
+        {description ? (
+          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+        ) : null}
+      </div>
+      {actions ? <div className="shrink-0">{actions}</div> : null}
+    </div>
+  );
 }
 
 export function WorkflowWorkspace({
@@ -466,7 +496,7 @@ export function WorkflowWorkspace({
           <div className="workflow-detail-nav">
             <Button
               variant="ghost"
-              size="compact"
+              size="small"
               type="button"
               onClick={() => {
                 setSelectedWorkflowID(null);
@@ -548,7 +578,7 @@ export function WorkflowWorkspace({
                         {locale === "zh" ? "运行记录" : "Run records"}
                       </ButtonLink>
                       <Button
-                        variant="secondary"
+                        variant="outline"
                         type="button"
                         onClick={() => setEditing(workflow)}
                         icon={<Edit2 />}
@@ -556,7 +586,7 @@ export function WorkflowWorkspace({
                         {locale === "zh" ? "编辑" : "Edit"}
                       </Button>
                       <Button
-                        variant="secondary"
+                        variant="outline"
                         type="button"
                         onClick={() => void loadVersions(workflow)}
                         icon={<History />}
@@ -564,7 +594,7 @@ export function WorkflowWorkspace({
                         {labels.versions}
                       </Button>
                       <Button
-                        variant="secondary"
+                        variant="outline"
                         disabled={!workflow.enabled && Boolean(runBlockReason)}
                         title={
                           !workflow.enabled
@@ -582,7 +612,8 @@ export function WorkflowWorkspace({
                         {workflow.enabled ? labels.disable : labels.enable}
                       </Button>
                       <Button
-                        variant="danger"
+                        variant="solid"
+                        color="error"
                         type="button"
                         onClick={() => setDeleteTarget(workflow)}
                         icon={<Trash2 />}
@@ -642,7 +673,7 @@ export function WorkflowWorkspace({
                 ) : null}
                 <div className="row-actions workflow-detail-actions">
                   <Button
-                    variant="secondary"
+                    variant="outline"
                     loading={Boolean(activeRun?.dryRun)}
                     disabled={Boolean(runBlockReason) || Boolean(activeRun)}
                     title={runBlockReason || undefined}
@@ -657,7 +688,8 @@ export function WorkflowWorkspace({
                       : labels.dry}
                   </Button>
                   <Button
-                    variant="primary"
+                    variant="solid"
+                    color="primary"
                     loading={Boolean(activeRun && !activeRun.dryRun)}
                     disabled={
                       !workflow.enabled ||
@@ -824,7 +856,8 @@ export function WorkflowWorkspace({
             }
             actions={
               <Button
-                variant="primary"
+                variant="solid"
+                color="primary"
                 type="button"
                 onClick={() => setEditing("new")}
                 icon={<Plus />}
@@ -881,7 +914,7 @@ export function WorkflowWorkspace({
               {workflowQuery || statusFilter !== "all" ? (
                 <Button
                   variant="ghost"
-                  size="compact"
+                  size="small"
                   type="button"
                   onClick={() => {
                     setWorkflowQuery("");
@@ -1067,7 +1100,8 @@ export function WorkflowWorkspace({
                               }
                             />
                             <IconButton
-                              variant="danger"
+                              variant="ghost"
+                              color="error"
                               label={locale === "zh" ? "删除" : "Delete"}
                               icon={<Trash2 />}
                               onClick={() => setDeleteTarget(workflow)}
@@ -1341,12 +1375,7 @@ function ResourceQueryBuilder({
           </strong>
           <p>每次计划运行开始时固定目标集合；后续重试会复用同一快照。</p>
         </div>
-        <Button
-          variant="secondary"
-          type="button"
-          onClick={onAdd}
-          icon={<Plus />}
-        >
+        <Button variant="outline" type="button" onClick={onAdd} icon={<Plus />}>
           添加动态资源筛选
         </Button>
       </section>
@@ -1388,7 +1417,7 @@ function ResourceQueryBuilder({
         </div>
         <Button
           variant="ghost"
-          size="compact"
+          size="small"
           type="button"
           onClick={onRemove}
           icon={<X />}
@@ -1532,8 +1561,8 @@ function SchemaFieldBuilder({
           <p>资源字段会自动显示为文章、评论或媒体等选择器。</p>
         </div>
         <Button
-          variant="secondary"
-          size="compact"
+          variant="outline"
+          size="small"
           type="button"
           onClick={add}
           icon={<Plus />}
@@ -1690,7 +1719,7 @@ function SchemaFieldBuilder({
               ) : null}
               <Button
                 variant="ghost"
-                size="compact"
+                size="small"
                 type="button"
                 onClick={() => {
                   const next = { ...properties };
@@ -2198,7 +2227,7 @@ function WorkflowEditor({
             />
             <FormActions>
               <Button
-                variant="secondary"
+                variant="outline"
                 type="button"
                 disabled={planning}
                 onClick={() => void generateDraft()}
@@ -2207,7 +2236,7 @@ function WorkflowEditor({
                 {planning ? "正在生成草案…" : "用 AI 生成 Workflow 草案"}
               </Button>
               <Button
-                variant="secondary"
+                variant="outline"
                 type="button"
                 disabled={draftingAgents || planning}
                 onClick={() => void generateAgentDrafts()}
@@ -2237,7 +2266,7 @@ function WorkflowEditor({
                     <p>{draft.description}</p>
                     <small>{draft.capabilities.join(" · ")}</small>
                     <Button
-                      variant="secondary"
+                      variant="outline"
                       type="button"
                       disabled={savingAgentDraft !== null}
                       onClick={() => void materializeAgentDraft(draft)}
@@ -2392,7 +2421,8 @@ function WorkflowEditor({
                       onClick={() => moveStep(index, 1)}
                     />
                     <IconButton
-                      variant="danger"
+                      variant="ghost"
+                      color="error"
                       label="删除"
                       icon={<Trash2 />}
                       onClick={() => removeStep(index)}
@@ -2565,7 +2595,8 @@ function WorkflowEditor({
                           </Select>
                         </Field>
                         <IconButton
-                          variant="danger"
+                          variant="ghost"
+                          color="error"
                           label="删除嵌套步骤"
                           icon={<Trash2 />}
                           onClick={() =>
@@ -2581,7 +2612,7 @@ function WorkflowEditor({
                     ))}
                     <Button
                       variant="ghost"
-                      size="compact"
+                      size="small"
                       type="button"
                       onClick={() =>
                         updateStep(index, {
@@ -2765,10 +2796,10 @@ function WorkflowEditor({
         </details>
         {editorError ? <Feedback type="error">{editorError}</Feedback> : null}
         <FormActions>
-          <Button variant="secondary" type="button" onClick={onCancel}>
+          <Button variant="outline" type="button" onClick={onCancel}>
             {labels.cancel}
           </Button>
-          <Button variant="primary" type="submit" icon={<Save />}>
+          <Button variant="solid" color="primary" type="submit" icon={<Save />}>
             {labels.save}
           </Button>
         </FormActions>

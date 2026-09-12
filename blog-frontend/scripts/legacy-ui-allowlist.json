@@ -11,8 +11,7 @@
     "BulkActionBar": ["src/components/__tests__/ui.test.tsx"],
     "Button": [
       "src/components/__tests__/ui.test.tsx",
-      "src/components/agent/ConnectorWorkspace.tsx",
-      "src/components/agent/WorkflowWorkspace.tsx"
+      "src/components/agent/ConnectorWorkspace.tsx"
     ],
     "ButtonLink": ["src/components/__tests__/ui.test.tsx"],
     "Card": ["src/components/__tests__/ui.test.tsx"],
@@ -34,10 +33,7 @@
       "src/components/agent/WorkflowWorkspace.tsx"
     ],
     "EmptyState": ["src/components/agent/ConnectorWorkspace.tsx"],
-    "Feedback": [
-      "src/components/agent/ConnectorWorkspace.tsx",
-      "src/components/agent/WorkflowWorkspace.tsx"
-    ],
+    "Feedback": ["src/components/agent/ConnectorWorkspace.tsx"],
     "FormActions": [
       "src/components/__tests__/ui.test.tsx",
       "src/components/agent/WorkflowWorkspace.tsx"
@@ -48,15 +44,11 @@
     ],
     "IconButton": [
       "src/components/__tests__/ui.test.tsx",
-      "src/components/agent/ConnectorWorkspace.tsx",
-      "src/components/agent/WorkflowWorkspace.tsx"
+      "src/components/agent/ConnectorWorkspace.tsx"
     ],
     "Pagination": ["src/components/__tests__/ui.test.tsx"],
     "Panel": ["src/components/agent/ConnectorWorkspace.tsx"],
-    "PanelHeader": [
-      "src/components/agent/ConnectorWorkspace.tsx",
-      "src/components/agent/WorkflowWorkspace.tsx"
-    ],
+    "PanelHeader": ["src/components/agent/ConnectorWorkspace.tsx"],
     "SectionHeading": ["src/components/__tests__/ui.test.tsx"],
     "SectionNav": ["src/components/__tests__/ui.test.tsx"],
     "Select": [
