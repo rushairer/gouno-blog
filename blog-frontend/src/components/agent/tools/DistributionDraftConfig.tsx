@@ -1,6 +1,5 @@
 import { Share2, Sparkles } from "lucide-react";
-import { Button, Field } from "@gouno/ui/core";
-import { Select } from "@gouno/ui-legacy";
+import { Button, Field, Select } from "@gouno/ui/core";
 
 export interface DistributionDraftBinding {
   format?: "social" | "newsletter" | "faq" | "image_brief";
@@ -86,8 +85,12 @@ export function DistributionDraftConfig({
         <Field label={isZh ? "分发格式类型" : "Distribution format"}>
           <Select
             value={format}
-            onChange={(e) =>
-              onChange({ ...value, format: e.target.value as any, platform })
+            onChange={(nextValue) =>
+              onChange({
+                ...value,
+                format: String(nextValue) as DistributionDraftBinding["format"],
+                platform,
+              })
             }
           >
             <option value="social">
