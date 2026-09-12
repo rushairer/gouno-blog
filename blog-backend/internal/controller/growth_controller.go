@@ -16,7 +16,9 @@ type GrowthController struct {
 	postPolicy access.PostPolicy
 }
 
-func NewGrowthController(growth *service.GrowthService, posts *service.PostService) *GrowthController {
+// NewGrowthController retains the third argument only as migration compatibility
+// until Post Version HTTP ownership leaves the legacy Growth controller.
+func NewGrowthController(growth *service.GrowthService, posts *service.PostService, _ any) *GrowthController {
 	return &GrowthController{growth: growth, posts: posts}
 }
 
