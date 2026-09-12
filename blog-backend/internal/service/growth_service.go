@@ -28,6 +28,10 @@ func NewGrowthService(store GrowthStore) *GrowthService {
 	return &GrowthService{store: store, analytics: analyticsservice.New(store)}
 }
 
+func (s *GrowthService) AnalyticsService() analyticsservice.Service {
+	return s.analytics
+}
+
 func (s *GrowthService) RelatedPosts(ctx context.Context, post *domain.Post) ([]*domain.Post, error) {
 	if post == nil || post.ID <= 0 {
 		return nil, ErrPostNotFound
