@@ -18,7 +18,6 @@
       "src/components/agent/AdvancedWorkspace.tsx",
       "src/components/agent/AgentRunRecords.tsx",
       "src/components/agent/ConnectorWorkspace.tsx",
-      "src/components/agent/WorkflowRunDetail.tsx",
       "src/components/agent/WorkflowRunRecords.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/pages/admin/PageEditor.tsx",
@@ -54,7 +53,6 @@
       "src/components/agent/AdvancedWorkspace.tsx",
       "src/components/agent/AgentRunRecords.tsx",
       "src/components/agent/ConnectorWorkspace.tsx",
-      "src/components/agent/WorkflowRunDetail.tsx",
       "src/components/agent/WorkflowRunRecords.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/pages/admin/PostEditor.tsx"
@@ -98,7 +96,6 @@
       "src/components/agent/AdvancedWorkspace.tsx",
       "src/components/agent/AgentRunRecords.tsx",
       "src/components/agent/ConnectorWorkspace.tsx",
-      "src/components/agent/WorkflowRunDetail.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/pages/admin/SiteSettings.tsx"
     ],
@@ -180,7 +177,6 @@
     "WorkspacePanel": [
       "src/components/agent/AdvancedWorkspace.tsx",
       "src/components/agent/AgentRunRecords.tsx",
-      "src/components/agent/WorkflowRunDetail.tsx",
       "src/components/agent/WorkflowRunRecords.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/pages/admin/SiteSettings.tsx"
