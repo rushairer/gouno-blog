@@ -41,19 +41,6 @@ func (ctrl *GrowthController) RelatedPosts(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(posts))
 }
 
-func (ctrl *GrowthController) TrackView(c *gin.Context) {
-	id, ok := ParamPositiveID(c, "id")
-	if !ok {
-		return
-	}
-	actor := c.ClientIP() + "|" + c.GetHeader("User-Agent")
-	if err := ctrl.growth.RecordView(c.Request.Context(), id, actor); err != nil {
-		WriteDomainError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
-}
-
 func (ctrl *GrowthController) ListVersions(c *gin.Context) {
 	id, ok := ParamPositiveID(c, "id")
 	if !ok {
@@ -112,13 +99,4 @@ func (ctrl *GrowthController) RestoreVersion(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(restored))
-}
-
-func (ctrl *GrowthController) Analytics(c *gin.Context) {
-	summary, err := ctrl.growth.AnalyticsSummary(c.Request.Context())
-	if err != nil {
-		WriteDomainError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(summary))
 }
