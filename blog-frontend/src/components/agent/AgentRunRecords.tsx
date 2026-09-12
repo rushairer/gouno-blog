@@ -2,7 +2,15 @@ import { ArrowLeft, Eye, ListChecks, Trash2 } from "lucide-react";
 import type { Agent, AgentRun, AgentToolCall } from "../../types/agent";
 import { RiskPill, StatusPill } from "./StatusPill";
 import { MarkdownRenderer } from "../MarkdownRenderer";
-import { Button, Card, CardHeader, Empty, IconButton } from "@gouno/ui/core";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  Empty,
+  IconButton,
+  Text,
+} from "@gouno/ui/core";
 
 export function JsonPreview({ value }: { value: unknown }) {
   if (
@@ -726,56 +734,48 @@ export function RecordsWorkspace({
   }
 
   return (
-    <div className="agent-runs-list-view section-stack">
+    <div className="agent-runs-list-view flex flex-col gap-5">
       {runs.length === 0 ? (
-        <Empty
-          title={zh ? "还没有 AI 工作记录。" : "No AI work recorded yet."}
-        />
+        <Card padding="base">
+          <Empty
+            title={zh ? "还没有 AI 工作记录。" : "No AI work recorded yet."}
+          />
+        </Card>
       ) : (
-        <Card padding="none" className="agent-table-panel">
-          <div className="table-scroll">
-            <table className="content-table agent-table agent-runs-table">
-              <thead>
-                <tr>
-                  <th>Agent</th>
-                  <th>{zh ? "模型" : "Model"}</th>
-                  <th>{zh ? "状态" : "Status"}</th>
-                  <th>{zh ? "用量" : "Usage"}</th>
-                  <th>{zh ? "触发方式" : "Trigger"}</th>
-                  <th>{zh ? "执行时间" : "Created"}</th>
-                  <th>{zh ? "操作" : "Actions"}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {runs.map((run) => (
-                  <tr key={run.id}>
-                    <td>
-                      <Button
-                        variant="ghost"
-                        className="workflow-name-button"
-                        onClick={() => onInspect(run)}
-                      >
-                        <strong>
-                          {agentMap.get(run.agent_id)?.name ||
-                            `Agent #${run.agent_id}`}
-                        </strong>
-                        <small>Run #{run.id}</small>
-                      </Button>
-                    </td>
-                    <td>
-                      <strong>{run.provider}</strong>
-                      <small className="mono">{run.model}</small>
-                    </td>
-                    <td>
-                      <StatusPill status={run.status} locale={locale} />
-                    </td>
-                    <td>
+        <Card padding="none" className="overflow-hidden">
+          <CardContent className="p-0">
+            <div
+              role="list"
+              aria-label={zh ? "Agent 运行列表" : "Agent run list"}
+              className="divide-y"
+            >
+              {runs.map((run) => (
+                <div
+                  key={run.id}
+                  role="listitem"
+                  className="flex flex-col gap-4 p-6 xl:flex-row xl:items-start xl:justify-between"
+                >
+                  <button
+                    type="button"
+                    className="min-w-0 flex-1 text-left"
+                    onClick={() => onInspect(run)}
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
                       <strong>
-                        {run.input_tokens + run.output_tokens} tokens
+                        {agentMap.get(run.agent_id)?.name ||
+                          `Agent #${run.agent_id}`}
                       </strong>
-                    </td>
-                    <td>
-                      <small>
+                      <StatusPill status={run.status} locale={locale} />
+                      <Text size="xs" tone="muted">
+                        Run #{run.id}
+                      </Text>
+                    </div>
+                    <Text size="sm" tone="muted" className="mt-2">
+                      {run.provider} · {run.model}
+                    </Text>
+                    <div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2 xl:grid-cols-4">
+                      <span>{run.input_tokens + run.output_tokens} tokens</span>
+                      <span>
                         {run.trigger_type === "cron"
                           ? zh
                             ? "计划触发"
@@ -783,36 +783,38 @@ export function RecordsWorkspace({
                           : zh
                             ? "手动触发"
                             : "Manual"}
-                      </small>
-                    </td>
-                    <td>
-                      <small>{formatDateTime(run.created_at)}</small>
-                    </td>
-                    <td>
-                      <div className="agent-row-actions">
-                        <IconButton
-                          label={zh ? "查看详情" : "Inspect"}
-                          icon={<Eye />}
-                          onClick={() => onInspect(run)}
-                        />
-                        {["succeeded", "failed", "cancelled"].includes(
-                          run.status,
-                        ) ? (
-                          <IconButton
-                            variant="outline"
-                            color="error"
-                            label={zh ? "删除记录" : "Delete record"}
-                            icon={<Trash2 />}
-                            onClick={() => onDelete(run)}
-                          />
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      </span>
+                      <span>{formatDateTime(run.created_at)}</span>
+                      <span>
+                        {zh
+                          ? "查看本次运行的结果与执行依据"
+                          : "Inspect results and execution evidence"}
+                      </span>
+                    </div>
+                  </button>
+                  <div className="flex min-w-max shrink-0 flex-nowrap items-center gap-1">
+                    <IconButton
+                      label={zh ? "查看详情" : "Inspect"}
+                      icon={<Eye />}
+                      variant="ghost"
+                      onClick={() => onInspect(run)}
+                    />
+                    {["succeeded", "failed", "cancelled"].includes(
+                      run.status,
+                    ) ? (
+                      <IconButton
+                        variant="ghost"
+                        color="error"
+                        label={zh ? "删除记录" : "Delete record"}
+                        icon={<Trash2 />}
+                        onClick={() => onDelete(run)}
+                      />
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
         </Card>
       )}
     </div>
