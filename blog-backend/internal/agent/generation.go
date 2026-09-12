@@ -13,7 +13,6 @@ import (
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/media"
 	"github.com/rushairer/blog-backend/internal/provider"
-	"github.com/rushairer/blog-backend/internal/repository"
 )
 
 const editorTemplateVersion = 1
@@ -25,8 +24,12 @@ type mediaCreator interface {
 	CreateMedia(context.Context, *domain.MediaAsset) error
 }
 
+type generationAuditRepository interface {
+	RecordGenerationAudit(context.Context, *domain.GenerationAudit) error
+}
+
 type GenerationService struct {
-	repo        *repository.AgentRepository
+	repo        generationAuditRepository
 	management  *ManagementService
 	mediaAssets mediaCreator
 	media       media.Store
@@ -60,7 +63,7 @@ type ImageGenerationRequest struct {
 	Filename           string
 }
 
-func NewGenerationService(repo *repository.AgentRepository, management *ManagementService, mediaAssets mediaCreator, store media.Store) *GenerationService {
+func NewGenerationService(repo generationAuditRepository, management *ManagementService, mediaAssets mediaCreator, store media.Store) *GenerationService {
 	return &GenerationService{repo: repo, management: management, mediaAssets: mediaAssets, media: store}
 }
 
