@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import {
-  Bot,
+  Search,
   Copy,
   ImagePlus,
   Link2,
@@ -21,15 +21,16 @@ import {
   Checkbox,
   Drawer,
   Empty,
-  SearchField,
+  Input,
+  Modal,
   Select,
   Skeleton,
   Tag,
+  Text,
 } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
 import { BulkActionBar } from "@gouno/ui/patterns";
 
-import { ConfirmActionModal } from "../../components/ConfirmActionModal";
 import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
 import {
   MediaAltTextForm,
@@ -52,6 +53,14 @@ function selectValue(value: string | string[]) {
   return Array.isArray(value) ? (value[0] ?? "") : value;
 }
 
+function typeLabel(contentType: string) {
+  return contentType
+    .replace("image/", "")
+    .replace("svg+xml", "SVG")
+    .replace("x-icon", "ICO")
+    .toUpperCase();
+}
+
 function MediaSkeleton() {
   return (
     <div
@@ -62,15 +71,11 @@ function MediaSkeleton() {
     >
       {Array.from({ length: 4 }, (_, index) => (
         <Card key={index} padding="none" className="overflow-hidden">
-          <Skeleton className="aspect-video w-full" />
-          <div className="space-y-3 p-4">
-            <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="aspect-video w-full rounded-none" />
+          <div className="flex flex-col gap-2 p-4">
+            <Skeleton className="h-4 w-2/3" />
             <Skeleton className="h-3 w-1/2" />
-            <Skeleton className="h-3 w-5/6" />
-          </div>
-          <div className="flex justify-between border-t p-2">
-            <Skeleton className="h-8 w-24" />
-            <Skeleton className="h-8 w-20" />
+            <Skeleton className="h-3 w-4/5" />
           </div>
         </Card>
       ))}
@@ -394,8 +399,9 @@ export default function MediaLibrary() {
       <Card padding="base">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
           <div className="min-w-0 flex-1">
-            <SearchField
+            <Input
               aria-label="搜索媒体"
+              prefix={<Search className="size-4" />}
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="搜索文件名或替代文本"
@@ -410,15 +416,15 @@ export default function MediaLibrary() {
               <option value="">全部类型</option>
               {contentTypes.map((item) => (
                 <option key={item} value={item}>
-                  {item.replace("image/", "").toUpperCase()}
+                  {typeLabel(item)}
                 </option>
               ))}
             </Select>
           </div>
           <div className="flex items-center justify-between gap-3 lg:justify-end">
-            <span className="whitespace-nowrap text-sm text-muted-foreground">
+            <Text size="sm" tone="muted" className="whitespace-nowrap">
               {visibleAssets.length} / {assets.length}
-            </span>
+            </Text>
             {hasFilters ? (
               <Button
                 size="small"
@@ -439,7 +445,11 @@ export default function MediaLibrary() {
           selectionLabel={`已选择 ${selectedAssets.length} 个媒体`}
           onCancel={() => setSelectedAssets([])}
         >
-          <Button size="small" icon={<Bot />} onClick={() => setAIOpen(true)}>
+          <Button
+            size="small"
+            icon={<Sparkles />}
+            onClick={() => setAIOpen(true)}
+          >
             交给 AI
           </Button>
           <Button
@@ -534,9 +544,7 @@ export default function MediaLibrary() {
                   >
                     {asset.filename}
                   </strong>
-                  <Tag>
-                    {asset.content_type.replace("image/", "").toUpperCase()}
-                  </Tag>
+                  <Tag>{typeLabel(asset.content_type)}</Tag>
                 </div>
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-xs text-muted-foreground">
                   <span>{Math.ceil(asset.size_bytes / 1024)} KB</span>
@@ -547,21 +555,17 @@ export default function MediaLibrary() {
                     </span>
                   ) : null}
                 </div>
-                <small
-                  className="truncate text-xs text-muted-foreground"
-                  title={
-                    asset.alt_text
-                      ? `${t("altText")}: ${asset.alt_text}`
-                      : undefined
-                  }
+                <Text
+                  size="xs"
+                  tone="muted"
+                  className="truncate"
+                  title={asset.alt_text || undefined}
                 >
-                  {t("altText")}:{" "}
+                  {t("altText")}：
                   {asset.alt_text || (
-                    <span className="italic text-muted-foreground/60">
-                      {t("notSet")}
-                    </span>
+                    <span className="italic opacity-70">{t("notSet")}</span>
                   )}
-                </small>
+                </Text>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2 border-t bg-muted/20 p-2">
                 <div className="flex flex-wrap items-center gap-1">
@@ -711,7 +715,7 @@ export default function MediaLibrary() {
         ) : null}
       </Drawer>
 
-      <ConfirmActionModal
+      <Modal
         open={deleteTarget !== null}
         title={isBatchDeleteTarget(deleteTarget) ? "批量删除媒体" : "删除媒体"}
         description={
@@ -719,14 +723,18 @@ export default function MediaLibrary() {
             ? `确认永久删除选中的 ${selectedAssets.length} 个媒体？仍被文章引用的媒体将保留。`
             : t("deleteMediaConfirm")
         }
-        confirmLabel="永久删除"
-        danger
         onClose={() => {
           setDeleteTarget(null);
           setReferences([]);
         }}
-        onConfirm={remove}
-      />
+        onOk={() => void remove()}
+        okText="永久删除"
+        okButtonProps={{ variant: "solid", color: "error" }}
+      >
+        <Text size="sm" tone="muted">
+          仍被文章引用的媒体必须先移除引用；批量删除时失败项会继续保持选中。
+        </Text>
+      </Modal>
       <WorkflowLauncher
         open={aiOpen}
         resourceType="media_asset"
