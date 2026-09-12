@@ -1,0 +1,45 @@
+name: Close Legacy UI Migration Ledger
+
+on:
+  push:
+    branches:
+      - docs/close-legacy-ui-migration-ledger
+
+permissions:
+  contents: write
+
+jobs:
+  update-ledger:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: docs/close-legacy-ui-migration-ledger
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Update current UI distribution boundary
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const file = 'docs/ui-redesign/MIGRATION.md';
+          let text = fs.readFileSync(file, 'utf8');
+          const start = '## Shared package and distribution evidence — current boundary (2026-09-12)';
+          const end = '## U01c evidence (2026-09-06)';
+          const startIndex = text.indexOf(start);
+          const endIndex = text.indexOf(end, startIndex);
+          if (startIndex < 0 || endIndex < 0) throw new Error('current-boundary section markers not found');
+          const replacement = `## Shared package and distribution evidence — current boundary (2026-09-12)\n\n- Gouno Blog consumes the verified external canonical \`@gouno/ui@0.3.0\` artifact from \`rushairer/gouno-ui@7603773d4ed2be1ad78cb19ee1542fe5d14f7b76\`; the current vendored tgz SHA-256 is \`562fe5df6dbeb36bff32ccf5e695ff1bbfaad17f1040de95b3cb0f56e34c5cf0\`.\n- The active \`@gouno/ui-legacy\` compatibility lifecycle is retired. \`blog-frontend\` has no legacy dependency, lockfile entry, vendor archive/manifest, Tailwind source, import allowlist, or local distributor. The historical \`packages/ui\` tree remains read-only prior art only and is not installable or distributable.\n- Blog product/runtime imports use governed canonical layer subpaths. \`npm run lint:ui\` rejects any attempted \`@gouno/ui-legacy\` import and continues enforcing canonical ownership boundaries.\n- Canonical artifact synchronization is owned solely by \`.github/workflows/sync-gouno-ui.yml\`. The workflow verifies the selected upstream Gouno UI ref, repacks only \`@gouno/ui\`, refreshes provenance/lockfile state, runs the full Blog frontend quality gate, and builds the frontend Docker image before writing back to \`main\`.\n- ConnectorWorkspace is now implemented on canonical Gouno UI primitives. Search Console OAuth, Sandbox/mock OAuth, Outbox approval/delivery/retry/revoke, credentials and idempotency semantics were preserved; no Connector business contract was changed by the UI migration.\n- Gosso Admin maintains its own independently synchronized canonical artifact boundary; Blog no longer depends on a shared legacy bridge or on local distribution from \`packages/ui\`.\n\n`;
+          text = text.slice(0, startIndex) + replacement + text.slice(endIndex);
+          fs.writeFileSync(file, text);
+          NODE
+      - name: Commit ledger update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/ui-redesign/MIGRATION.md
+          git diff --cached --quiet && exit 0
+          git commit -m "docs(ui): close legacy compatibility migration ledger"
+          git push origin HEAD:docs/close-legacy-ui-migration-ledger
