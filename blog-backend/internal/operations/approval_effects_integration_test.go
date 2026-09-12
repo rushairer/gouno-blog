@@ -28,8 +28,8 @@ func TestApprovalEffectsPersistUnderOperationsOwnership(t *testing.T) {
 		t.Fatal(err)
 	}
 	var agentID int64
-	if err := db.QueryRowContext(ctx, `INSERT INTO ai_agents(name,description,provider_profile_id,skill_version_id,enabled,trigger_type,timezone,daily_run_limit,monthly_token_budget)
-		VALUES($1,'',$2,$3,FALSE,'manual','Asia/Shanghai',10,1000000) RETURNING id`, "approval-effects-agent-"+suffix, providerID, skillVersionID).Scan(&agentID); err != nil {
+	if err := db.QueryRowContext(ctx, `INSERT INTO ai_agents(name,description,provider_profile_id,skill_version_id,enabled,trigger_type,timezone,daily_run_limit,monthly_token_budget,creation_origin)
+		VALUES($1,'',$2,$3,FALSE,'manual','Asia/Shanghai',10,1000000,'system') RETURNING id`, "approval-effects-agent-"+suffix, providerID, skillVersionID).Scan(&agentID); err != nil {
 		t.Fatal(err)
 	}
 	var runID int64
