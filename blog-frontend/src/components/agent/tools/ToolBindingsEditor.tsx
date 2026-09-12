@@ -1,8 +1,7 @@
 import { Code2, FormInput, Sliders } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { ToolDefinition } from "../../../types/agent";
-import { Field, Textarea } from "@gouno/ui/core";
-import { Button } from "@gouno/ui-legacy";
+import { Button, Field, Textarea } from "@gouno/ui/core";
 import { DEFAULT_RSS_FEEDS, RssFetchConfig } from "./RssFetchConfig";
 import type { RssFetchBinding } from "./RssFetchConfig";
 import { StalePostsConfig } from "./StalePostsConfig";
@@ -182,8 +181,9 @@ export function ToolBindingsEditor({
         <div className="tool-bindings-editor__mode-switch">
           <Button
             type="button"
-            variant={mode === "visual" ? "primary" : "secondary"}
-            size="compact"
+            variant={mode === "visual" ? "solid" : "outline"}
+            color={mode === "visual" ? "primary" : "default"}
+            size="small"
             onClick={() => setMode("visual")}
             icon={<FormInput size={14} />}
           >
@@ -191,8 +191,9 @@ export function ToolBindingsEditor({
           </Button>
           <Button
             type="button"
-            variant={mode === "json" ? "primary" : "secondary"}
-            size="compact"
+            variant={mode === "json" ? "solid" : "outline"}
+            color={mode === "json" ? "primary" : "default"}
+            size="small"
             onClick={() => setMode("json")}
             icon={<Code2 size={14} />}
           >
