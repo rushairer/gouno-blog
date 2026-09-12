@@ -36,7 +36,16 @@ import { InboxWorkspace } from "../../components/agent/InboxWorkspace";
 import { RecordsWorkspace } from "../../components/agent/AgentRunRecords";
 import { WorkflowWorkspace } from "../../components/agent/WorkflowWorkspace";
 import { WorkflowRunRecords } from "../../components/agent/WorkflowRunRecords";
-import { Button, Card, Segmented, Skeleton, Tabs, Tag } from "@gouno/ui/core";
+import {
+  Button,
+  Card,
+  Modal,
+  Segmented,
+  Skeleton,
+  Tabs,
+  Tag,
+  Text,
+} from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
 
 import { useI18n } from "../../i18n";
@@ -108,6 +117,8 @@ function AgentConsoleContent() {
     run: AgentRun;
     tool_calls: import("../../types/agent").AgentToolCall[];
   } | null>(null);
+  const [deleteRunTarget, setDeleteRunTarget] = useState<AgentRun | null>(null);
+  const [deletingRun, setDeletingRun] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -324,23 +335,21 @@ function AgentConsoleContent() {
     }
   };
 
-  const deleteAgentRun = async (run: AgentRun) => {
-    if (
-      !window.confirm(
-        locale === "zh"
-          ? "删除这条终态 Agent 运行记录及其附属日志？文章和媒体文件不会被删除。"
-          : "Delete this completed Agent run and its attached logs? Posts and media files are kept.",
-      )
-    )
-      return;
+  const deleteAgentRun = async () => {
+    if (!deleteRunTarget) return;
+    const run = deleteRunTarget;
+    setDeletingRun(true);
     try {
       await mutate(() => agentApi.deleteAgentRun(String(run.id)));
       setSelectedRun(null);
+      setDeleteRunTarget(null);
       setNotice(locale === "zh" ? "运行记录已清理。" : "Run record deleted.");
     } catch (reason) {
       setError(
         reason instanceof Error ? reason.message : t("agent.requestFailed"),
       );
+    } finally {
+      setDeletingRun(false);
     }
   };
 
@@ -436,7 +445,7 @@ function AgentConsoleContent() {
         onChange={selectTab}
         aria-label={t("agent.title")}
       />
-      <div className="agent-console__main">
+      <div className="flex min-w-0 flex-col gap-6">
         {tab === "overview" ? (
           <WorkspaceOverview
             locale={locale}
@@ -482,7 +491,7 @@ function AgentConsoleContent() {
         ) : null}
 
         {tab === "records" ? (
-          <div className="records-hub section-stack">
+          <div className="flex flex-col gap-4">
             <Segmented<"workflow" | "agent">
               aria-label={locale === "zh" ? "运行中心类型" : "Run center type"}
               value={recordType}
@@ -511,7 +520,7 @@ function AgentConsoleContent() {
                 selectedRun={selectedRun}
                 onInspect={(run) => void inspectRun(run)}
                 onClearInspect={() => setSelectedRun(null)}
-                onDelete={(run) => void deleteAgentRun(run)}
+                onDelete={setDeleteRunTarget}
                 formatDateTime={formatDateTime}
               />
             ) : (
@@ -526,6 +535,37 @@ function AgentConsoleContent() {
           </div>
         ) : null}
       </div>
+
+      <Modal
+        open={deleteRunTarget !== null}
+        title={
+          locale === "zh" ? "删除 Agent 运行记录" : "Delete Agent run record"
+        }
+        description={
+          deleteRunTarget
+            ? locale === "zh"
+              ? `确认删除 Run #${deleteRunTarget.id} 及其附属日志？`
+              : `Delete Run #${deleteRunTarget.id} and its attached logs?`
+            : undefined
+        }
+        onClose={() => {
+          if (!deletingRun) setDeleteRunTarget(null);
+        }}
+        onOk={() => void deleteAgentRun()}
+        okText={locale === "zh" ? "删除记录" : "Delete record"}
+        cancelText={locale === "zh" ? "取消" : "Cancel"}
+        okButtonProps={{
+          variant: "solid",
+          color: "error",
+          loading: deletingRun,
+        }}
+      >
+        <Text size="sm" tone="muted">
+          {locale === "zh"
+            ? "只清理终态运行记录和附属日志；文章与媒体文件不会被删除。"
+            : "Only the completed run record and attached logs are removed. Posts and media files are kept."}
+        </Text>
+      </Modal>
     </div>
   );
 }
