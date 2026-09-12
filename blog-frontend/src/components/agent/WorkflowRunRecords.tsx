@@ -718,36 +718,41 @@ export function WorkflowRunRecords({
                         role="listitem"
                         className="flex flex-col gap-4 p-6 xl:flex-row xl:items-start xl:justify-between"
                       >
-                        <button
+                        <Button
                           type="button"
-                          className="min-w-0 flex-1 text-left"
+                          variant="ghost"
+                          className="h-auto min-w-0 flex-1 justify-start p-0 text-left hover:bg-transparent"
                           onClick={() => void inspect(run)}
                         >
-                          <div className="flex flex-wrap items-center gap-2">
-                            <strong>
-                              {names.get(run.workflow_id) ||
-                                `Workflow #${run.workflow_id}`}
-                            </strong>
-                            <StatusPill status={run.status} locale={locale} />
-                            <Text size="xs" tone="muted">
-                              Run #{run.id} · v{run.workflow_version_id}
-                            </Text>
-                          </div>
-                          <div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2 xl:grid-cols-4">
-                            <span>{runType}</span>
-                            <span>
-                              {formatDateTime(run.started_at || run.created_at)}
+                          <span className="block min-w-0 flex-1 text-left">
+                            <span className="flex flex-wrap items-center gap-2">
+                              <strong>
+                                {names.get(run.workflow_id) ||
+                                  `Workflow #${run.workflow_id}`}
+                              </strong>
+                              <StatusPill status={run.status} locale={locale} />
+                              <Text size="xs" tone="muted">
+                                Run #{run.id} · v{run.workflow_version_id}
+                              </Text>
                             </span>
-                            <span>
-                              {duration(run.started_at, run.finished_at)}
+                            <span className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2 xl:grid-cols-4">
+                              <span>{runType}</span>
+                              <span>
+                                {formatDateTime(
+                                  run.started_at || run.created_at,
+                                )}
+                              </span>
+                              <span>
+                                {duration(run.started_at, run.finished_at)}
+                              </span>
+                              <span>
+                                {zh
+                                  ? "查看步骤、资源与交互证据"
+                                  : "Inspect steps, resources, and interactions"}
+                              </span>
                             </span>
-                            <span>
-                              {zh
-                                ? "查看步骤、资源与交互证据"
-                                : "Inspect steps, resources, and interactions"}
-                            </span>
-                          </div>
-                        </button>
+                          </span>
+                        </Button>
                         <div className="flex min-w-max shrink-0 flex-nowrap items-center gap-1">
                           <IconButton
                             label={zh ? "查看详情" : "Inspect"}

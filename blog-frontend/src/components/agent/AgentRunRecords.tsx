@@ -755,43 +755,48 @@ export function RecordsWorkspace({
                   role="listitem"
                   className="flex flex-col gap-4 p-6 xl:flex-row xl:items-start xl:justify-between"
                 >
-                  <button
+                  <Button
                     type="button"
-                    className="min-w-0 flex-1 text-left"
+                    variant="ghost"
+                    className="h-auto min-w-0 flex-1 justify-start p-0 text-left hover:bg-transparent"
                     onClick={() => onInspect(run)}
                   >
-                    <div className="flex flex-wrap items-center gap-2">
-                      <strong>
-                        {agentMap.get(run.agent_id)?.name ||
-                          `Agent #${run.agent_id}`}
-                      </strong>
-                      <StatusPill status={run.status} locale={locale} />
-                      <Text size="xs" tone="muted">
-                        Run #{run.id}
+                    <span className="block min-w-0 flex-1 text-left">
+                      <span className="flex flex-wrap items-center gap-2">
+                        <strong>
+                          {agentMap.get(run.agent_id)?.name ||
+                            `Agent #${run.agent_id}`}
+                        </strong>
+                        <StatusPill status={run.status} locale={locale} />
+                        <Text size="xs" tone="muted">
+                          Run #{run.id}
+                        </Text>
+                      </span>
+                      <Text size="sm" tone="muted" className="mt-2">
+                        {run.provider} · {run.model}
                       </Text>
-                    </div>
-                    <Text size="sm" tone="muted" className="mt-2">
-                      {run.provider} · {run.model}
-                    </Text>
-                    <div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2 xl:grid-cols-4">
-                      <span>{run.input_tokens + run.output_tokens} tokens</span>
-                      <span>
-                        {run.trigger_type === "cron"
-                          ? zh
-                            ? "计划触发"
-                            : "Cron"
-                          : zh
-                            ? "手动触发"
-                            : "Manual"}
+                      <span className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2 xl:grid-cols-4">
+                        <span>
+                          {run.input_tokens + run.output_tokens} tokens
+                        </span>
+                        <span>
+                          {run.trigger_type === "cron"
+                            ? zh
+                              ? "计划触发"
+                              : "Cron"
+                            : zh
+                              ? "手动触发"
+                              : "Manual"}
+                        </span>
+                        <span>{formatDateTime(run.created_at)}</span>
+                        <span>
+                          {zh
+                            ? "查看本次运行的结果与执行依据"
+                            : "Inspect results and execution evidence"}
+                        </span>
                       </span>
-                      <span>{formatDateTime(run.created_at)}</span>
-                      <span>
-                        {zh
-                          ? "查看本次运行的结果与执行依据"
-                          : "Inspect results and execution evidence"}
-                      </span>
-                    </div>
-                  </button>
+                    </span>
+                  </Button>
                   <div className="flex min-w-max shrink-0 flex-nowrap items-center gap-1">
                     <IconButton
                       label={zh ? "查看详情" : "Inspect"}
