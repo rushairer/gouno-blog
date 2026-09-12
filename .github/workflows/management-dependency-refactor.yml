@@ -26,6 +26,19 @@ jobs:
           go-version-file: blog-backend/go.mod
           cache-dependency-path: blog-backend/go.sum
 
+      - name: Align script with aliased media import
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('.github/scripts/refactor_management_dependencies.py')
+          text = path.read_text()
+          old = '\\t"github.com/rushairer/blog-backend/internal/media/service"\\n\\t"github.com/rushairer/blog-backend/internal/operations"\\n'
+          new = '\\tmediaservice "github.com/rushairer/blog-backend/internal/media/service"\\n\\t"github.com/rushairer/blog-backend/internal/operations"\\n'
+          if old not in text:
+              raise SystemExit('expected unaliased media import matcher not found')
+          path.write_text(text.replace(old, new, 1))
+          PY
+
       - name: Apply fail-closed Management dependency cutover
         run: python3 .github/scripts/refactor_management_dependencies.py
 
