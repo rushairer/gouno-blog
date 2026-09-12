@@ -25,6 +25,7 @@ var (
 type mediaAssetGateway interface {
 	ListMedia(context.Context, domain.MediaFilter) ([]*domain.MediaAsset, error)
 	CreateMedia(context.Context, *domain.MediaAsset) error
+	DeleteMedia(context.Context, int64) (*domain.MediaAsset, error)
 }
 
 type ApprovalService struct {
@@ -452,7 +453,7 @@ func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, 
 		return fail(code, err.Error())
 	}
 	if err := s.repo.CompleteMediaGeneration(ctx, id, asset.ID, false); err != nil {
-		_, _ = s.growth.DeleteMedia(ctx, asset.ID)
+		_, _ = s.mediaAssets.DeleteMedia(ctx, asset.ID)
 		_ = s.media.Delete(ctx, asset.StorageName)
 		return err
 	}
