@@ -1,0 +1,184 @@
+name: Migrate Post Editor Phase 35
+
+on:
+  push:
+    branches:
+      - ui/post-editor-canonical-phase35
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ui/post-editor-canonical-phase35
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: blog-frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: blog-frontend
+        run: npm ci
+
+      - name: Migrate PostEditor and ratchet legacy imports
+        working-directory: blog-frontend
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+
+          path = Path("src/pages/admin/PostEditor.tsx")
+          source = path.read_text()
+
+          def replace_once(old: str, new: str, label: str):
+              global source
+              if source.count(old) != 1:
+                  raise SystemExit(f"{label}: expected exactly one match, found {source.count(old)}")
+              source = source.replace(old, new, 1)
+
+          replace_once(
+              'import { ChoiceButton, Field, Input, Textarea } from "@gouno/ui/core";\nimport {\n  AdminPageState,\n  Button,\n  ConfirmDialog,\n  EmptyState,\n  Feedback,\n  Select,\n  Tab,\n  TabList,\n  Tabs,\n  useToast,\n} from "@gouno/ui-legacy";',
+              'import {\n  Alert,\n  Button,\n  Card,\n  ChoiceButton,\n  Empty,\n  Field,\n  Input,\n  Modal,\n  Select,\n  Skeleton,\n  Tab,\n  TabList,\n  Tabs,\n  Textarea,\n} from "@gouno/ui/core";\nimport { useToast } from "@gouno/ui-legacy";',
+              "imports",
+          )
+
+          replace_once(
+              'const emptyPost: Post = {\n  id: 0,\n  title: "",\n  slug: "",\n  summary: "",\n  content: "",\n  tags: [],\n  status: "draft",\n  created_at: "",\n};',
+              'const emptyPost: Post = {\n  id: 0,\n  title: "",\n  slug: "",\n  summary: "",\n  content: "",\n  tags: [],\n  status: "draft",\n  created_at: "",\n};\n\nfunction selectValue(value: string | string[]) {\n  return Array.isArray(value) ? (value[0] ?? "") : value;\n}',
+              "select helper",
+          )
+
+          replace_once(
+              '''  if (!isNew && error && !post.id) {\n    return (\n      <AdminPageState\n        title="无法编辑文章"\n        description={error}\n        label="无权限或文章不存在"\n      />\n    );\n  }\n\n  if (!allowed || loading)\n    return (\n      <AdminPageState\n        title={isNew ? "新建文章" : "编辑文章"}\n        description="撰写、预览并管理文章发布状态。"\n        label="正在打开编辑器…"\n      />\n    );''',
+              '''  if (!isNew && error && !post.id) {\n    return (\n      <Alert\n        type="error"\n        showIcon\n        title="无法编辑文章"\n        description={error}\n        action={\n          <Button\n            variant="outline"\n            icon={<ArrowLeft />}\n            onClick={() => navigate("/admin/posts")}\n          >\n            返回文章列表\n          </Button>\n        }\n      />\n    );\n  }\n\n  if (!allowed || loading)\n    return (\n      <Card\n        padding="base"\n        aria-label={isNew ? "新建文章编辑器加载中" : "文章编辑器加载中"}\n      >\n        <div\n          className="flex flex-col gap-5"\n          role="status"\n          aria-live="polite"\n        >\n          <div className="flex items-center justify-between gap-4">\n            <Skeleton className="h-9 w-36" />\n            <Skeleton className="h-9 w-64" />\n          </div>\n          <div className="grid gap-5 xl:grid-cols-[13rem_minmax(0,1fr)_19rem]">\n            <Skeleton className="h-72 w-full" />\n            <Skeleton className="h-[34rem] w-full" />\n            <Skeleton className="h-96 w-full" />\n          </div>\n        </div>\n      </Card>\n    );''',
+              "page states",
+          )
+
+          source = source.replace('variant="primary"', 'variant="solid" color="primary"')
+          source = source.replace('variant="secondary"', 'variant="outline"')
+          source = source.replace('variant="ghost"', 'variant="text"')
+          source = source.replace('size="compact"', 'size="small"')
+
+          source = source.replace(
+              '{error ? <Feedback type="error">{error}</Feedback> : null}',
+              '{error ? <Alert type="error" showIcon title={error} /> : null}',
+          )
+          source = source.replace(
+              '<Feedback type="error">{assistError}</Feedback>',
+              '<Alert type="error" showIcon title={assistError} />',
+          )
+          source = source.replace(
+              '<EmptyState label="暂无历史版本记录" />',
+              '<Empty description="暂无历史版本记录" />',
+          )
+
+          replace_once(
+              '''          <Tabs\n            className="editor-tabs"\n            value={preview ? "preview" : "markdown"}\n            onValueChange={(value) => setPreview(value === "preview")}\n          >''',
+              '''          <Tabs\n            className="editor-tabs"\n            activeKey={preview ? "preview" : "markdown"}\n            onChange={(value) => setPreview(value === "preview")}\n          >''',
+              "tabs",
+          )
+
+          replace_once(
+              '''                <Select\n                  value={publishIntent}\n                  onChange={(event) => {\n                    setPublishIntent(event.target.value as PostStatus);\n                    dirty.current = true;\n                  }}\n                >''',
+              '''                <Select\n                  aria-label="状态"\n                  value={publishIntent}\n                  onChange={(value) => {\n                    setPublishIntent(selectValue(value) as PostStatus);\n                    dirty.current = true;\n                  }}\n                >''',
+              "status select",
+          )
+
+          replace_once(
+              '''                <Select\n                  value={post.category_id || ""}\n                  onChange={(event) =>\n                    update(\n                      "category_id",\n                      event.target.value ? Number(event.target.value) : null,\n                    )\n                  }\n                >''',
+              '''                <Select\n                  aria-label="分类"\n                  value={String(post.category_id || "")}\n                  onChange={(value) => {\n                    const next = selectValue(value);\n                    update("category_id", next ? Number(next) : null);\n                  }}\n                >''',
+              "category select",
+          )
+
+          replace_once(
+              '''      <ConfirmDialog\n        open={restoreTarget !== null}\n        title="恢复历史版本"\n        description={\n          restoreTarget ? (\n            <>\n              恢复 {new Date(restoreTarget.created_at).toLocaleString("zh-CN")}{" "}\n              的版本？当前内容会先保留为历史版本。\n            </>\n          ) : (\n            ""\n          )\n        }\n        confirmLabel="恢复版本"\n        onClose={() => setRestoreTarget(null)}\n        onConfirm={restoreVersion}\n      />''',
+              '''      <Modal\n        open={restoreTarget !== null}\n        title="恢复历史版本"\n        description={\n          restoreTarget ? (\n            <>\n              恢复 {new Date(restoreTarget.created_at).toLocaleString("zh-CN")}{" "}\n              的版本？当前内容会先保留为历史版本。\n            </>\n          ) : (\n            ""\n          )\n        }\n        onOpenChange={(open) => {\n          if (!open) setRestoreTarget(null);\n        }}\n        footer={\n          <>\n            <Button variant="outline" onClick={() => setRestoreTarget(null)}>\n              取消\n            </Button>\n            <Button\n              variant="solid"\n              color="primary"\n              onClick={() => void restoreVersion()}\n            >\n              恢复版本\n            </Button>\n          </>\n        }\n      />''',
+              "restore modal",
+          )
+
+          replace_once(
+              '''      <ConfirmDialog\n        open={confirmExit}\n        title="放弃未保存的更改？"\n        description="离开编辑器后，尚未保存的内容会丢失。"\n        confirmLabel="放弃并离开"\n        danger\n        onClose={() => setConfirmExit(false)}\n        onConfirm={() => navigate("/admin/posts")}\n      />''',
+              '''      <Modal\n        open={confirmExit}\n        title="放弃未保存的更改？"\n        description="离开编辑器后，尚未保存的内容会丢失。"\n        onOpenChange={setConfirmExit}\n        footer={\n          <>\n            <Button variant="outline" onClick={() => setConfirmExit(false)}>\n              继续编辑\n            </Button>\n            <Button\n              variant="solid"\n              color="error"\n              onClick={() => navigate("/admin/posts")}\n            >\n              放弃并离开\n            </Button>\n          </>\n        }\n      />''',
+              "exit modal",
+          )
+
+          for forbidden in ("<AdminPageState", "<ConfirmDialog", "<EmptyState", "<Feedback"):
+              if forbidden in source:
+                  raise SystemExit(f"legacy JSX remains: {forbidden}")
+          if 'variant="primary"' in source or 'variant="secondary"' in source or 'size="compact"' in source:
+              raise SystemExit("legacy Button API remains")
+
+          path.write_text(source)
+
+          test_path = Path("src/pages/admin/__tests__/PostEditor.test.tsx")
+          test = test_path.read_text()
+          old_test = '    await user.selectOptions(screen.getByLabelText("状态"), "published");'
+          new_test = '    await user.click(screen.getByRole("combobox", { name: "状态" }));\n    await user.click(screen.getByRole("option", { name: "立即发布" }));'
+          if test.count(old_test) != 1:
+              raise SystemExit(f"post editor select test: expected one match, found {test.count(old_test)}")
+          test_path.write_text(test.replace(old_test, new_test, 1))
+
+          allowlist_path = Path("scripts/legacy-ui-allowlist.json")
+          data = json.loads(allowlist_path.read_text())
+          target = "src/pages/admin/PostEditor.tsx"
+          keys = [
+              "AdminPageState",
+              "Button",
+              "ConfirmDialog",
+              "EmptyState",
+              "Feedback",
+              "Select",
+              "Tab",
+              "TabList",
+              "Tabs",
+          ]
+          imports = data["allowedLegacyImports"]
+          for key in keys:
+              values = imports.get(key, [])
+              if target not in values:
+                  raise SystemExit(f"allowlist missing expected {key} pair")
+              values = [value for value in values if value != target]
+              if values:
+                  imports[key] = values
+              else:
+                  del imports[key]
+          allowlist_path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+          PY
+
+          npx prettier --write \
+            src/pages/admin/PostEditor.tsx \
+            src/pages/admin/__tests__/PostEditor.test.tsx \
+            scripts/legacy-ui-allowlist.json
+
+      - name: Verify focused migration gates
+        working-directory: blog-frontend
+        run: |
+          npm run format:check
+          npm run lint:ui
+          npx tsc -b
+          npx vitest run src/pages/admin/__tests__/PostEditor.test.tsx
+
+      - name: Commit migration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            blog-frontend/src/pages/admin/PostEditor.tsx \
+            blog-frontend/src/pages/admin/__tests__/PostEditor.test.tsx \
+            blog-frontend/scripts/legacy-ui-allowlist.json
+          if git diff --cached --quiet; then
+            echo "No migration changes produced"
+            exit 1
+          fi
+          git commit -m "refactor(ui): migrate post editor off legacy UI"
+          git push origin HEAD:ui/post-editor-canonical-phase35
