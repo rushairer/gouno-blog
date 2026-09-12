@@ -228,9 +228,7 @@ export function AgentForm({
         >
           <Select
             required
-            value={
-              value.skill_version_id ? String(value.skill_version_id) : ""
-            }
+            value={value.skill_version_id ? String(value.skill_version_id) : ""}
             onChange={(nextValue) => applySkill(Number(nextValue))}
           >
             <option value="" disabled>
@@ -254,10 +252,7 @@ export function AgentForm({
                 suffix = locale === "zh" ? " (当前绑定)" : " (Current)";
               }
               return (
-                <option
-                  key={skill.version_id}
-                  value={String(skill.version_id)}
-                >
+                <option key={skill.version_id} value={String(skill.version_id)}>
                   {skill.name} · v{skill.version}
                   {suffix}
                 </option>

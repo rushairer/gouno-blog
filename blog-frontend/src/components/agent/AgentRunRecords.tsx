@@ -728,7 +728,9 @@ export function RecordsWorkspace({
   return (
     <div className="agent-runs-list-view section-stack">
       {runs.length === 0 ? (
-        <Empty title={zh ? "还没有 AI 工作记录。" : "No AI work recorded yet."} />
+        <Empty
+          title={zh ? "还没有 AI 工作记录。" : "No AI work recorded yet."}
+        />
       ) : (
         <Card padding="none" className="agent-table-panel">
           <div className="table-scroll">
