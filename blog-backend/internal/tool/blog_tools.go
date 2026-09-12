@@ -27,11 +27,7 @@ type BlogTools struct {
 	knowledge  *knowledge.Service
 }
 
-func NewBlogRegistry(posts *service.PostService, community communityModerationReader, _ any, pages *pageservice.PageService, knowledgeServices ...*knowledge.Service) *Registry {
-	var knowledgeService *knowledge.Service
-	if len(knowledgeServices) > 0 {
-		knowledgeService = knowledgeServices[0]
-	}
+func NewBlogRegistry(posts *service.PostService, community communityModerationReader, pages *pageservice.PageService, knowledgeService *knowledge.Service) *Registry {
 	tools := &BlogTools{
 		posts: posts, community: community, pages: pages,
 		linkClient: newSafeLinkClient(), knowledge: knowledgeService,
