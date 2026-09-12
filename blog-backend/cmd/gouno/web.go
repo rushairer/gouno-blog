@@ -296,13 +296,15 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		}
 		agentRepo := repository.NewAgentRepository(cfg.DB)
 		agentDefinitionRepo := agentrepository.NewDefinitionRepository(cfg.DB)
+		agentRunRepo := agentrepository.NewRunRepository(cfg.DB)
+		agentApprovalRepo := agentrepository.NewApprovalRepository(cfg.DB)
 		generationAuditRepo := agentrepository.NewGenerationAuditRepository(cfg.DB)
 		knowledgeSvc := knowledge.NewService(cfg.DB, secrets, cfg.Global.AIAgentConfig.AllowedHosts, cfg.Logger, transactor)
 		knowledgeSvc.Start(ctx)
 		toolRegistry := tool.NewBlogRegistry(postSvc, communitySvc, pageSvc, knowledgeSvc)
 		tool.BindAnalytics(toolRegistry, analyticsSvc)
 		operationsSvc := operations.NewService(cfg.DB, toolRegistry, cfg.Logger, transactor)
-		operationsSvc.ConfigureGovernance(agentRepo, postSvc)
+		operationsSvc.ConfigureGovernanceRepositories(agentRunRepo, agentApprovalRepo, postSvc)
 		if err := operationsSvc.RegisterTools(); err != nil {
 			log.Fatalf("register AI operations tools: %v", err)
 		}
