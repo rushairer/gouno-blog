@@ -1394,11 +1394,6 @@
     gap: 16px;
   }
 
-  .workflow-run-feedback .btn {
-    flex: 0 0 auto;
-    color: var(--ui-text-primary);
-  }
-
   .workflow-progress-spinner {
     width: 22px;
     height: 22px;
@@ -1761,16 +1756,6 @@
     display: flex;
     align-items: center;
     margin-bottom: var(--space-3, 12px);
-  }
-
-  .workflow-detail-nav .btn {
-    gap: 6px;
-    font-weight: 600;
-    color: var(--color-text-muted);
-  }
-
-  .workflow-detail-nav .btn:hover {
-    color: var(--color-text-main);
   }
 
   /* Tool Bindings Editor & RSS Fetch Config */

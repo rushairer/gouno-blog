@@ -801,6 +801,7 @@ export function WorkflowWorkspace({
                       {feedback.runID ? (
                         <ButtonLink
                           variant="outline"
+                          className="shrink-0"
                           to={`/admin/ai-ops?tab=records&record=workflow&workflow=${workflow.id}&run=${feedback.runID}`}
                         >
                           {runFeedbackActionLabel(
