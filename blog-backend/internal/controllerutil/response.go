@@ -146,7 +146,6 @@ func WriteDomainError(c *gin.Context, err error) {
 		errors.Is(err, communityservice.ErrParentCommentNotFound),
 		errors.Is(err, communityservice.ErrInvalidCommentStatus),
 		errors.Is(err, communityservice.ErrReportReasonTooLong),
-		errors.Is(err, service.ErrInvalidVersion),
 		errors.Is(err, postversionservice.ErrInvalidPostID),
 		errors.Is(err, postversionservice.ErrInvalidVersion),
 		errors.Is(err, mediaservice.ErrInvalidMediaPayload),

@@ -280,7 +280,6 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 	analyticsSvc := newAnalyticsService(cfg.DB)
 	recommendationSvc := newRecommendationService(cfg.DB)
 	postVersionSvc := newPostVersionService(cfg.DB)
-	growthSvc := service.NewGrowthService(repository.NewGrowthRepository(cfg.DB))
 	service.StartScheduledPublisher(ctx, postSvc, cfg.Logger)
 
 	var agentCtrl *controller.AgentController
@@ -296,7 +295,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		agentRepo := repository.NewAgentRepository(cfg.DB)
 		knowledgeSvc := knowledge.NewService(cfg.DB, secrets, cfg.Global.AIAgentConfig.AllowedHosts, cfg.Logger, transactor)
 		knowledgeSvc.Start(ctx)
-		toolRegistry := tool.NewBlogRegistry(postSvc, communitySvc, growthSvc, pageSvc, knowledgeSvc)
+		toolRegistry := tool.NewBlogRegistry(postSvc, communitySvc, nil, pageSvc, knowledgeSvc)
 		tool.BindAnalytics(toolRegistry, analyticsSvc)
 		operationsSvc := operations.NewService(cfg.DB, toolRegistry, cfg.Logger, transactor)
 		operationsSvc.ConfigureGovernance(agentRepo, postSvc)
@@ -315,7 +314,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		}
 		runner := agentservice.NewRunner(agentRepo, management, toolRegistry, postSvc)
 		generation := agentservice.NewGenerationService(agentRepo, management, mediaSvc, mediaStore)
-		approvals := agentservice.NewApprovalService(agentRepo, postSvc, management, growthSvc, mediaSvc, mediaStore, pageSvc)
+		approvals := agentservice.NewApprovalService(agentRepo, postSvc, management, postVersionSvc, mediaSvc, mediaStore, pageSvc)
 		approvals.SetGenerationService(generation)
 		workflowSvc := workflowservice.NewService(cfg.DB, runner, management, toolRegistry, transactor)
 		workflowSvc.StartScheduler(ctx, cfg.Global.AIAgentConfig.SchedulerInterval)
@@ -337,7 +336,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		VisitorSecret: visitorSecret, MediaDir: mediaDir, MediaStore: mediaStore,
 		CORSAllowedOrigins: cfg.Global.WebServerConfig.CORSAllowedOrigins,
 		PostSvc:            postSvc, PageSvc: pageSvc, MediaSvc: mediaSvc, TaxonomySvc: taxonomySvc, SiteSvc: siteSvc, CommunitySvc: communitySvc,
-		AnalyticsSvc: analyticsSvc, RecommendationSvc: recommendationSvc, PostVersionSvc: postVersionSvc, GrowthSvc: growthSvc, AgentCtrl: agentCtrl, Logger: cfg.Logger, Verifier: verifier,
+		AnalyticsSvc: analyticsSvc, RecommendationSvc: recommendationSvc, PostVersionSvc: postVersionSvc, AgentCtrl: agentCtrl, Logger: cfg.Logger, Verifier: verifier,
 		AccessService: accessService, SecureCookies: cfg.Global.WebServerConfig.ResolveSecureCookies(cfg.Env),
 		BFFClient: bffClient,
 	})
