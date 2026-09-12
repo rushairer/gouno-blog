@@ -12,10 +12,7 @@
     ],
     "AsyncState": ["src/components/__tests__/ui.test.tsx"],
     "Badge": ["src/components/__tests__/ui.test.tsx"],
-    "BulkActionBar": [
-      "src/components/__tests__/ui.test.tsx",
-      "src/components/agent/OperationsWorkspace.tsx"
-    ],
+    "BulkActionBar": ["src/components/__tests__/ui.test.tsx"],
     "Button": [
       "src/components/__tests__/ui.test.tsx",
       "src/components/agent/AdvancedWorkspace.tsx",
@@ -23,7 +20,6 @@
       "src/components/agent/AgentRunRecords.tsx",
       "src/components/agent/ConnectorWorkspace.tsx",
       "src/components/agent/EmbeddingForm.tsx",
-      "src/components/agent/OperationsWorkspace.tsx",
       "src/components/agent/ProviderForm.tsx",
       "src/components/agent/SkillForm.tsx",
       "src/components/agent/WorkflowInputForm.tsx",
@@ -70,7 +66,6 @@
       "src/components/agent/AdvancedWorkspace.tsx",
       "src/components/agent/AgentRunRecords.tsx",
       "src/components/agent/ConnectorWorkspace.tsx",
-      "src/components/agent/OperationsWorkspace.tsx",
       "src/components/agent/WorkflowRunDetail.tsx",
       "src/components/agent/WorkflowRunRecords.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
@@ -125,8 +120,7 @@
     ],
     "Panel": [
       "src/components/agent/AgentRunRecords.tsx",
-      "src/components/agent/ConnectorWorkspace.tsx",
-      "src/components/agent/OperationsWorkspace.tsx"
+      "src/components/agent/ConnectorWorkspace.tsx"
     ],
     "PanelHeader": [
       "src/components/agent/AdvancedWorkspace.tsx",
