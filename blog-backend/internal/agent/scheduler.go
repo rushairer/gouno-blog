@@ -8,18 +8,22 @@ import (
 	"time"
 
 	"github.com/rushairer/blog-backend/internal/domain"
-	"github.com/rushairer/blog-backend/internal/repository"
 	"go.uber.org/zap"
 )
 
+type schedulerRepository interface {
+	ListDueAgents(context.Context, int) ([]*domain.Agent, error)
+	SetAgentNextRun(context.Context, int64, *time.Time) error
+}
+
 type Scheduler struct {
-	repo     *repository.AgentRepository
+	repo     schedulerRepository
 	runner   *Runner
 	interval time.Duration
 	logger   *zap.Logger
 }
 
-func NewScheduler(repo *repository.AgentRepository, runner *Runner, interval time.Duration, logger *zap.Logger) *Scheduler {
+func NewScheduler(repo schedulerRepository, runner *Runner, interval time.Duration, logger *zap.Logger) *Scheduler {
 	if logger == nil {
 		logger = zap.NewNop()
 	}
