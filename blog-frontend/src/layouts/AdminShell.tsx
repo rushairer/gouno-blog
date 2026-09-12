@@ -1,22 +1,15 @@
-import { useEffect, useLayoutEffect, useState } from "react";
-import type { FormEvent, ReactNode } from "react";
-import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
-import { Bell, ExternalLink, LogOut, Search } from "lucide-react";
-import {
-  Alert,
-  ButtonLink,
-  IconButton,
-  IconButtonLink,
-  SearchField,
-} from "@gouno/ui/core";
+import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
+import { Link, NavLink, useLocation } from "react-router-dom";
+import { LogOut } from "lucide-react";
+import { Alert, IconButton } from "@gouno/ui/core";
 import {
   AppShell,
   NavigationGroup,
   PageContainer,
   navigationItemClass,
 } from "@gouno/ui/gouno";
-import { ThemeToggle, useTheme } from "@gouno/ui/theme";
-import { notificationsApi } from "../api/notifications";
+import { ThemeToggle } from "@gouno/ui/theme";
 import { useUserProfile } from "@gosso/client/react";
 import { type BlogUserProfile, getBlogRoleLabel, logout } from "../auth";
 
@@ -31,9 +24,7 @@ import {
   adminNavigation,
   getFilteredAdminNavigation,
 } from "../utils/navigation";
-import { PAGINATION_LIMITS, MembershipStatus } from "../constants";
-
-const THEME_STORAGE_KEY = "gouno-blog:theme";
+import { MembershipStatus } from "../constants";
 
 function currentLabel(pathname: string) {
   if (pathname === "/admin/posts/new") return "新建文章";
@@ -49,32 +40,13 @@ function currentLabel(pathname: string) {
 
 export default function AdminShell({ children }: { children: ReactNode }) {
   const location = useLocation();
-  const navigate = useNavigate();
   const user = useUserProfile<BlogUserProfile>();
-  const { mode: themeMode, setMode: setThemeMode } = useTheme();
-  const [search, setSearch] = useState(() =>
-    location.pathname === "/admin/posts"
-      ? new URLSearchParams(location.search).get("q") || ""
-      : "",
-  );
   const [siteName, setSiteName] = useState(
     () =>
       getCachedSiteSettings()?.site_title || DEFAULT_SITE_SETTINGS.site_title,
   );
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState("");
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  useLayoutEffect(() => {
-    if (themeMode !== "system") return;
-    let hasStoredPreference = false;
-    try {
-      hasStoredPreference = localStorage.getItem(THEME_STORAGE_KEY) !== null;
-    } catch {
-      // The in-memory theme can still follow the product default.
-    }
-    if (!hasStoredPreference) setThemeMode("dark");
-  }, [setThemeMode, themeMode]);
 
   useEffect(() => {
     siteApi
@@ -95,7 +67,9 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         try {
           const fresh = JSON.parse(event.newValue);
           if (fresh?.site_title) setSiteName(fresh.site_title);
-        } catch {}
+        } catch {
+          // Ignore malformed cross-tab settings and keep the current identity.
+        }
       }
     };
 
@@ -108,48 +82,8 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const label = currentLabel(location.pathname);
-    const prefix = unreadCount > 0 ? `(${unreadCount}) ` : "";
-    document.title = `${prefix}${label} - ${siteName} 后台`;
-  }, [location.pathname, siteName, unreadCount]);
-
-  useEffect(() => {
-    const fetchUnread = async () => {
-      try {
-        const { list } = await notificationsApi.getNotifications({
-          pageSize: PAGINATION_LIMITS.RUNS_PAGE_SIZE,
-        });
-        setUnreadCount(list.filter((item) => !item.read_at).length);
-      } catch {
-        // Keep shell resilient
-      }
-    };
-    void fetchUnread();
-    const handleChanged = () => {
-      void fetchUnread();
-    };
-    window.addEventListener("community:notifications-changed", handleChanged);
-    return () => {
-      window.removeEventListener(
-        "community:notifications-changed",
-        handleChanged,
-      );
-    };
-  }, []);
-
-  useEffect(() => {
-    if (location.pathname === "/admin/posts") {
-      setSearch(new URLSearchParams(location.search).get("q") || "");
-    }
-  }, [location.pathname, location.search]);
-
-  const submitSearch = (event: FormEvent) => {
-    event.preventDefault();
-    const query = search.trim();
-    navigate(
-      query ? `/admin/posts?q=${encodeURIComponent(query)}` : "/admin/posts",
-    );
-  };
+    document.title = `${currentLabel(location.pathname)} - ${siteName} 后台`;
+  }, [location.pathname, siteName]);
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -176,6 +110,8 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   };
 
   const filteredNav = getFilteredAdminNavigation(hasPerm);
+  const displayName =
+    user?.principal?.display_name || user?.name || user?.preferred_username || "U";
 
   return (
     <AppShell
@@ -199,76 +135,26 @@ export default function AdminShell({ children }: { children: ReactNode }) {
           </NavigationGroup>
         ))
       }
-      toolbar={
-        <>
-          <form
-            role="search"
-            onSubmit={submitSearch}
-            className="hidden items-center gap-1 lg:flex"
-          >
-            <SearchField
-              aria-label="搜索文章"
-              type="text"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="搜索文章…"
-            />
-            <IconButton type="submit" label="提交文章搜索" icon={<Search />} />
-          </form>
-          <span className="hidden sm:inline-flex">
-            <IconButtonLink
-              to="/"
-              target="_blank"
-              rel="noreferrer"
-              label="在新窗口查看前台站点"
-              variant="ghost"
-              icon={<ExternalLink />}
-            />
-          </span>
-          <ButtonLink
-            to="/admin/notifications"
-            aria-label="查看通知中心"
-            variant="ghost"
-            size="small"
-            shape={unreadCount > 0 ? "round" : "circle"}
-            icon={<Bell />}
-          >
-            {unreadCount > 0 ? (unreadCount > 99 ? "99+" : unreadCount) : null}
-          </ButtonLink>
-          <ThemeToggle label="切换后台主题" />
-        </>
-      }
-      account={
-        <IconButton
-          variant="ghost"
-          loading={loggingOut}
-          onClick={() => void handleLogout()}
-          label="退出登录"
-          icon={<LogOut />}
-        />
-      }
+      toolbar={<ThemeToggle label="切换后台主题" />}
       footer={
         <div className="flex items-center gap-3 px-3">
           <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-accent text-xs font-semibold text-primary">
-            {(
-              user?.principal?.display_name ||
-              user?.name ||
-              user?.preferred_username ||
-              "U"
-            )
-              .slice(0, 2)
-              .toUpperCase()}
+            {displayName.slice(0, 2).toUpperCase()}
           </span>
-          <div className="min-w-0">
-            <strong className="block truncate text-sm">
-              {user?.principal?.display_name ||
-                user?.name ||
-                user?.preferred_username}
-            </strong>
+          <div className="min-w-0 flex-1">
+            <strong className="block truncate text-sm">{displayName}</strong>
             <p className="text-xs text-muted-foreground">
               {getBlogRoleLabel(user?.role ? String(user.role) : undefined)}
             </p>
           </div>
+          <IconButton
+            className="shrink-0"
+            variant="ghost"
+            loading={loggingOut}
+            onClick={() => void handleLogout()}
+            label="退出登录"
+            icon={<LogOut />}
+          />
         </div>
       }
     >
