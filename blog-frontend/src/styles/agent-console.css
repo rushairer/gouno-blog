@@ -335,52 +335,6 @@
     flex-wrap: wrap;
   }
 
-  .agent-console__main > .panel {
-    min-height: 430px;
-  }
-
-  .agent-empty-state {
-    display: grid;
-    min-height: 420px;
-    place-content: center;
-    justify-items: center;
-    border: 1px dashed var(--agent-border);
-    color: var(--color-text-muted);
-    padding: 36px;
-    text-align: center;
-  }
-
-  .agent-empty-state > svg {
-    width: 36px;
-    height: 36px;
-    color: var(--color-primary);
-    margin-bottom: 16px;
-  }
-
-  .agent-empty-state h2 {
-    color: var(--color-text-main);
-    font-size: 20px;
-  }
-
-  .agent-empty-state p {
-    max-width: 420px;
-    margin-top: 8px;
-    font-size: 14px;
-    line-height: 1.7;
-  }
-
-  .agent-empty-state .text-link {
-    border: 0;
-    background: transparent;
-    cursor: pointer;
-    margin-top: 20px;
-  }
-
-  .agent-empty-state .text-link svg {
-    width: 16px;
-    height: 16px;
-  }
-
   .agent-table {
     width: 100%;
     min-width: 760px;
@@ -442,133 +396,6 @@
     overflow: visible;
     text-overflow: clip;
     white-space: nowrap;
-  }
-
-  .agent-identity__tag {
-    display: inline-block;
-    padding: 1px 6px;
-    border-radius: 4px;
-    background: var(--agent-accent-soft);
-    color: var(--agent-accent);
-    font-size: 11px;
-    font-weight: 600;
-    margin-bottom: 2px;
-  }
-
-  .agent-skill-identity strong {
-    font-size: 13px;
-    line-height: 1.4;
-  }
-
-  .agent-skill-identity small {
-    margin-top: 4px;
-    color: var(--color-text-muted);
-    font-size: 12px;
-  }
-
-  .agent-schedule-cell {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .agent-schedule-main strong {
-    font-size: 13px;
-    line-height: 1.4;
-  }
-
-  .agent-schedule-main small {
-    color: var(--color-text-muted);
-    font-size: 11px;
-    margin-top: 2px;
-  }
-
-  .agent-schedule-meta {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-  }
-
-  .agent-schedule-last-run {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .agent-schedule-last-run small {
-    margin-top: 0;
-    color: var(--color-text-muted);
-    font-size: 11.5px;
-    white-space: nowrap;
-  }
-
-  .agent-schedule-next {
-    color: var(--color-text-muted);
-    font-size: 11px;
-    white-space: nowrap;
-  }
-
-  .agent-identity {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .agent-identity > span {
-    display: grid;
-    width: 42px;
-    height: 42px;
-    flex: 0 0 auto;
-    place-items: center;
-    border-radius: 8px;
-    background: var(--agent-accent-soft);
-    color: var(--agent-accent);
-  }
-
-  .agent-identity svg {
-    width: 20px;
-  }
-
-  .agent-identity small {
-    display: -webkit-box;
-    max-width: 180px;
-    overflow: hidden;
-    margin-top: 5px;
-    color: var(--color-text-muted);
-    font-size: 12px;
-    line-height: 1.45;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-  }
-
-  .agent-state {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    font-weight: 700;
-  }
-
-  .agent-state i {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-  }
-
-  .agent-state--active {
-    color: var(--success-color);
-  }
-
-  .agent-state--active i {
-    background: var(--success-color);
-  }
-
-  .agent-state--paused {
-    color: var(--status-warning-fg);
-  }
-
-  .agent-state--paused i {
-    background: var(--status-warning-fg);
   }
 
   .agent-chip-list {
@@ -954,130 +781,7 @@
     color: var(--status-danger-fg);
   }
 
-  .agent-run-list,
-  .agent-approval-list {
-    overflow: hidden;
-    border: 0;
-    border-right: 1px solid var(--agent-border);
-    border-radius: 0;
-    padding: 0;
-  }
-
-  .agent-master-panel > .state {
-    margin: var(--space-6);
-  }
-
-  .agent-run-list > button {
-    display: grid;
-    width: 100%;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 12px;
-    border: 0;
-    border-bottom: 1px solid var(--agent-border);
-    background: transparent;
-    color: var(--color-text-main);
-    cursor: pointer;
-    padding: 16px;
-    text-align: left;
-  }
-
-  .agent-approval-list > .btn {
-    display: block;
-    width: 100%;
-    border: 0;
-    border-bottom: 1px solid var(--agent-border);
-    border-radius: 0;
-    background: transparent;
-    color: var(--color-text-main);
-    cursor: pointer;
-    padding: 16px;
-    text-align: left;
-  }
-
-  .agent-run-list > .btn:hover,
-  .agent-run-list > .btn.active,
-  .agent-approval-list > .btn:hover,
-  .agent-approval-list > .btn.active {
-    background: var(--agent-accent-soft);
-  }
-
-  .agent-approval-list .btn__label {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    width: 100%;
-  }
-
-  .agent-approval-list .btn__label > span:first-child {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
-  }
-
-  .agent-approval-list .btn__label strong {
-    font-size: 14px;
-    line-height: 1.4;
-    color: var(--color-text-main);
-  }
-
-  .agent-approval-list .btn__label small {
-    color: var(--color-text-muted);
-    font-size: 11px;
-  }
-
-  .agent-approval-list .btn__status {
-    display: flex;
-    align-items: center;
-    flex-shrink: 0;
-  }
-
-  .agent-run-list .btn > span {
-    display: grid;
-    gap: 5px;
-  }
-
-  .agent-run-list small {
-    color: var(--color-text-muted);
-    font-size: 11px;
-  }
-
-  .agent-run-list button > span:last-child {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 11px;
-    text-transform: capitalize;
-  }
-
-  .run-icon {
-    display: grid;
-    width: 34px;
-    height: 34px;
-    place-items: center;
-    border-radius: 50%;
-    background: var(--bg-muted);
-  }
-
-  .run-icon svg {
-    width: 14px;
-  }
-
-  .run-icon--succeeded,
-  .run-icon--awaiting_approval {
-    background: var(--status-success-bg);
-    color: var(--status-success-fg);
-  }
-
-  .run-icon--failed {
-    background: var(--status-danger-bg);
-    color: var(--status-danger-fg);
-  }
-
-  .agent-detail-panel,
-  .agent-approval-detail {
+  .agent-detail-panel {
     border: 0;
     border-radius: 0;
     padding: 26px;
@@ -1279,19 +983,6 @@
     color: var(--agent-accent);
     font-size: 12px;
     padding: 5px 9px;
-  }
-
-  .feedback-form {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    align-items: end;
-    gap: 16px 12px;
-  }
-
-  .feedback-form .form-actions,
-  .feedback-form__actions {
-    display: flex;
-    grid-column: 1 / -1;
   }
 
   .tool-call-detail {
@@ -1661,48 +1352,10 @@
     white-space: pre-wrap;
   }
 
-  .agent-filter {
-    display: flex;
-    gap: 8px;
-    border-bottom: 1px solid var(--agent-border);
-    padding: 14px;
-  }
-
-  .agent-filter .btn {
-    border: 0;
-    border-radius: 6px;
-    background: transparent;
-    color: var(--color-text-muted);
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 750;
-    padding: 8px 12px;
-  }
-
-  .agent-filter .btn.active {
-    background: var(--agent-accent-soft);
-    color: var(--agent-accent);
-  }
-
-  .agent-approval-detail section h3,
   .agent-detail-panel section h3 {
     font-size: 13px;
     margin-bottom: 8px;
     text-transform: uppercase;
-  }
-
-  .agent-approval-detail .panel-heading > div small {
-    display: block;
-    margin-top: 6px;
-    color: var(--color-text-muted);
-  }
-
-  .agent-approval-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    border-top: 1px solid var(--agent-border);
-    padding-top: 18px;
   }
 
   .status-pill--queued,
@@ -1744,8 +1397,7 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .agent-run-metrics--operations,
-    .feedback-form {
+    .agent-run-metrics--operations {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
@@ -1761,12 +1413,6 @@
       gap: 8px;
     }
 
-    .agent-empty-state {
-      min-height: 320px;
-    }
-
-    .agent-run-list,
-    .agent-approval-list,
     .workflow-master-list {
       max-height: 360px;
       border-right: 0;
@@ -1777,14 +1423,9 @@
       padding: 16px;
     }
 
-    .agent-master-panel > .state {
-      margin: var(--space-4);
-    }
-
     .agent-limit-grid,
     .agent-run-metrics,
-    .content-audit__metrics,
-    .feedback-form {
+    .content-audit__metrics {
       grid-template-columns: 1fr;
     }
 
