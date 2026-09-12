@@ -9,9 +9,10 @@ import { Link, MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NavigationProvider } from "@gouno/ui/core";
 import { ThemeProvider } from "@gouno/ui/theme";
-import { ToastProvider } from "@gouno/ui-legacy";
+
 import AdminShell from "../AdminShell";
 import AdminUsers from "../../pages/admin/Users";
+import { AppFeedbackProvider } from "../../components/feedback/AppFeedbackProvider";
 
 const { logoutMock, userProfileMock } = vi.hoisted(() => ({
   logoutMock: vi.fn(),
@@ -152,9 +153,9 @@ describe("AdminShell navigation utilities", () => {
   it("points the identity management action at the gateway route", () => {
     render(
       <MemoryRouter>
-        <ToastProvider>
+        <AppFeedbackProvider>
           <AdminUsers />
-        </ToastProvider>
+        </AppFeedbackProvider>
       </MemoryRouter>,
     );
     expect(

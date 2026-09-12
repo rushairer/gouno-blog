@@ -3,10 +3,11 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import AdminPages from "../Pages";
-import { ToastProvider } from "@gouno/ui-legacy";
+
 import { pagesApi } from "../../../api/pages";
 import type { PaginatedPages } from "../../../types/blog";
 import { GossoProvider } from "@gosso/client/react";
+import { AppFeedbackProvider } from "../../../components/feedback/AppFeedbackProvider";
 
 const snapshot = {
   loggedIn: true,
@@ -73,11 +74,11 @@ describe("AdminPages", () => {
 
     render(
       <GossoProvider client={mockClient}>
-        <ToastProvider>
+        <AppFeedbackProvider>
           <MemoryRouter initialEntries={["/admin/pages"]}>
             <AdminPages />
           </MemoryRouter>
-        </ToastProvider>
+        </AppFeedbackProvider>
       </GossoProvider>,
     );
 

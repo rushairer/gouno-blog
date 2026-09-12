@@ -28,7 +28,7 @@ import {
 } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
 import { BulkActionBar } from "@gouno/ui/patterns";
-import { useToast } from "@gouno/ui-legacy";
+
 import { ConfirmActionModal } from "../../components/ConfirmActionModal";
 import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
 import {
@@ -37,6 +37,7 @@ import {
   MediaUploadForm,
 } from "../../components/media/MediaDrawerForms";
 import { useI18n } from "../../i18n";
+import { useAppFeedback } from "../../components/feedback/AppFeedbackProvider";
 
 type BatchDeleteTarget = { kind: "batch" };
 type DeleteTarget = MediaItem | BatchDeleteTarget | null;
@@ -92,7 +93,7 @@ export function getRelativeMediaUrl(rawUrl: string): string {
 
 export default function MediaLibrary() {
   const { t, formatDateTime } = useI18n();
-  const { notify } = useToast();
+  const { notify } = useAppFeedback();
   const { can } = useAbility();
   const [assets, setAssets] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);

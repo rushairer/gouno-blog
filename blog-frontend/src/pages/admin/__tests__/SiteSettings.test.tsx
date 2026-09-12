@@ -2,9 +2,10 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "@gouno/ui-legacy";
+
 import AdminSiteSettings from "../SiteSettings";
 import { siteApi } from "../../../api/site";
+import { AppFeedbackProvider } from "../../../components/feedback/AppFeedbackProvider";
 
 vi.mock("../../../hooks/useAdminGuard", () => ({
   useAdminGuard: () => true,
@@ -55,9 +56,9 @@ describe("AdminSiteSettings", () => {
   it("loads and displays site settings", async () => {
     render(
       <MemoryRouter>
-        <ToastProvider>
+        <AppFeedbackProvider>
           <AdminSiteSettings />
-        </ToastProvider>
+        </AppFeedbackProvider>
       </MemoryRouter>,
     );
 
@@ -72,9 +73,9 @@ describe("AdminSiteSettings", () => {
 
     render(
       <MemoryRouter>
-        <ToastProvider>
+        <AppFeedbackProvider>
           <AdminSiteSettings />
-        </ToastProvider>
+        </AppFeedbackProvider>
       </MemoryRouter>,
     );
 
@@ -111,9 +112,9 @@ describe("AdminSiteSettings", () => {
 
     render(
       <MemoryRouter>
-        <ToastProvider>
+        <AppFeedbackProvider>
           <AdminSiteSettings />
-        </ToastProvider>
+        </AppFeedbackProvider>
       </MemoryRouter>,
     );
 

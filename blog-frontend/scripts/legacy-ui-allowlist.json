@@ -44,40 +44,7 @@
     "TabList": ["src/components/__tests__/ui.test.tsx"],
     "TabPanel": ["src/components/__tests__/ui.test.tsx"],
     "Tabs": ["src/components/__tests__/ui.test.tsx"],
-    "Toast": ["src/components/auth/GlobalStepUpBoundary.tsx"],
-    "ToastProvider": [
-      "src/App.tsx",
-      "src/components/__tests__/ui.test.tsx",
-      "src/components/auth/__tests__/StepUpMfaModal.test.tsx",
-      "src/layouts/__tests__/AdminShell.test.tsx",
-      "src/pages/__tests__/Pages.test.tsx",
-      "src/pages/admin/AIOperations.tsx",
-      "src/pages/admin/AISettings.tsx",
-      "src/pages/admin/__tests__/Categories.test.tsx",
-      "src/pages/admin/__tests__/MediaLibrary.test.tsx",
-      "src/pages/admin/__tests__/Notifications.test.tsx",
-      "src/pages/admin/__tests__/PageEditor.test.tsx",
-      "src/pages/admin/__tests__/Pages.test.tsx",
-      "src/pages/admin/__tests__/PostEditor.test.tsx",
-      "src/pages/admin/__tests__/Posts.test.tsx",
-      "src/pages/admin/__tests__/SiteSettings.test.tsx",
-      "src/pages/admin/__tests__/Tags.test.tsx",
-      "src/pages/admin/__tests__/Users.test.tsx"
-    ],
-    "useToast": [
-      "src/components/__tests__/ui.test.tsx",
-      "src/pages/admin/AIOperations.tsx",
-      "src/pages/admin/AISettings.tsx",
-      "src/pages/admin/Categories.tsx",
-      "src/pages/admin/MediaLibrary.tsx",
-      "src/pages/admin/Notifications.tsx",
-      "src/pages/admin/PageEditor.tsx",
-      "src/pages/admin/Pages.tsx",
-      "src/pages/admin/PostEditor.tsx",
-      "src/pages/admin/Posts.tsx",
-      "src/pages/admin/SiteSettings.tsx",
-      "src/pages/admin/Tags.tsx",
-      "src/pages/admin/Users.tsx"
-    ]
+    "ToastProvider": ["src/components/__tests__/ui.test.tsx"],
+    "useToast": ["src/components/__tests__/ui.test.tsx"]
   }
 }

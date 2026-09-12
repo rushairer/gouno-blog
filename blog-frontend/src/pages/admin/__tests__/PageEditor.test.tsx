@@ -3,10 +3,11 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import PageEditor from "../PageEditor";
-import { ToastProvider } from "@gouno/ui-legacy";
+
 import { pagesApi } from "../../../api/pages";
 import type { CustomPage } from "../../../types/blog";
 import { GossoProvider } from "@gosso/client/react";
+import { AppFeedbackProvider } from "../../../components/feedback/AppFeedbackProvider";
 
 const snapshot = {
   loggedIn: true,
@@ -21,14 +22,14 @@ const mockClient = {
 function renderEditor(path = "/admin/pages/new") {
   return render(
     <GossoProvider client={mockClient}>
-      <ToastProvider>
+      <AppFeedbackProvider>
         <MemoryRouter initialEntries={[path]}>
           <Routes>
             <Route path="/admin/pages/new" element={<PageEditor />} />
             <Route path="/admin/pages/:id/edit" element={<PageEditor />} />
           </Routes>
         </MemoryRouter>
-      </ToastProvider>
+      </AppFeedbackProvider>
     </GossoProvider>,
   );
 }

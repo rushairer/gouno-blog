@@ -27,12 +27,13 @@ import {
 } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
 import { BulkActionBar } from "@gouno/ui/patterns";
-import { useToast } from "@gouno/ui-legacy";
+
 import { ConfirmActionModal } from "../../components/ConfirmActionModal";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 import { useAbility } from "../../abilities";
 import type { Category, Post } from "../../types/blog";
 import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
+import { useAppFeedback } from "../../components/feedback/AppFeedbackProvider";
 
 type DeleteTarget = { kind: "post"; post: Post } | { kind: "batch" } | null;
 const pageSize = 20;
@@ -80,7 +81,7 @@ function PostsSkeleton() {
 export default function AdminPosts() {
   const allowed = useAdminGuard("/admin/posts");
   const { can } = useAbility();
-  const { notify } = useToast();
+  const { notify } = useAppFeedback();
   const [params, setParams] = useSearchParams();
   const [posts, setPosts] = useState<Post[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);

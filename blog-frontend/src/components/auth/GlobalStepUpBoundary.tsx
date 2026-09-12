@@ -6,8 +6,9 @@ import {
   STEP_UP_MFA_REQUIRED_EVENT,
   isMfaError,
 } from "../../mfa";
-import { Toast } from "@gouno/ui-legacy";
+
 import { StepUpMfaModal } from "./StepUpMfaModal";
+import { useAppFeedback } from "../feedback/AppFeedbackProvider";
 
 function rejectionMessage(reason: unknown): string {
   if (reason instanceof Error && reason.message.trim()) return reason.message;
@@ -17,7 +18,7 @@ function rejectionMessage(reason: unknown): string {
 
 export function GlobalStepUpBoundary({ children }: { children: ReactNode }) {
   const [stepUpOpen, setStepUpOpen] = useState(false);
-  const [unhandledError, setUnhandledError] = useState("");
+  const { notify } = useAppFeedback();
 
   useEffect(() => {
     const query = new URLSearchParams(window.location.search);
@@ -44,7 +45,7 @@ export function GlobalStepUpBoundary({ children }: { children: ReactNode }) {
         event.preventDefault();
         return;
       }
-      setUnhandledError(rejectionMessage(event.reason));
+      notify(rejectionMessage(event.reason), "error");
       event.preventDefault();
     };
 
@@ -59,20 +60,12 @@ export function GlobalStepUpBoundary({ children }: { children: ReactNode }) {
         handleUnhandledRejection,
       );
     };
-  }, []);
+  }, [notify]);
 
   return (
     <>
       {children}
       <StepUpMfaModal open={stepUpOpen} onClose={() => setStepUpOpen(false)} />
-      {unhandledError ? (
-        <div className="toast-region">
-          <Toast
-            toast={{ id: 1, message: unhandledError, tone: "error" }}
-            onDismiss={() => setUnhandledError("")}
-          />
-        </div>
-      ) : null}
     </>
   );
 }

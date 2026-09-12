@@ -133,7 +133,9 @@ export function AppFeedbackProvider({ children }: { children: ReactNode }) {
 export function useAppFeedback(): AppFeedbackApi {
   const value = useContext(AppFeedbackContext);
   if (!value) {
-    throw new Error("useAppFeedback must be used within an AppFeedbackProvider");
+    throw new Error(
+      "useAppFeedback must be used within an AppFeedbackProvider",
+    );
   }
   return value;
 }

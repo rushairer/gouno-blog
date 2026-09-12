@@ -4,8 +4,9 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiFetch, canManageBlog, isLoggedIn } from "../../auth";
 import { I18nProvider } from "../../i18n";
-import { ToastProvider } from "@gouno/ui-legacy";
+
 import AdminPages from "../admin/Pages";
+import { AppFeedbackProvider } from "../../components/feedback/AppFeedbackProvider";
 
 vi.mock("../../auth", async () => {
   const apiFetch = vi.fn();
@@ -39,11 +40,11 @@ const mockPage = {
 function renderPages() {
   return render(
     <I18nProvider>
-      <ToastProvider>
+      <AppFeedbackProvider>
         <MemoryRouter>
           <AdminPages />
         </MemoryRouter>
-      </ToastProvider>
+      </AppFeedbackProvider>
     </I18nProvider>,
   );
 }

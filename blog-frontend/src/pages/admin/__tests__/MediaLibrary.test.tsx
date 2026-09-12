@@ -7,8 +7,9 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "@gouno/ui-legacy";
+
 import MediaLibrary from "../MediaLibrary";
+import { AppFeedbackProvider } from "../../../components/feedback/AppFeedbackProvider";
 
 vi.mock("@gosso/client/react", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@gosso/client/react")>()),
@@ -50,9 +51,9 @@ describe("MediaLibrary", () => {
 
   it("keeps upload in a drawer while the library toolbar remains focused on filtering", async () => {
     render(
-      <ToastProvider>
+      <AppFeedbackProvider>
         <MediaLibrary />
-      </ToastProvider>,
+      </AppFeedbackProvider>,
     );
 
     await screen.findByText("No images uploaded yet.");
@@ -73,9 +74,9 @@ describe("MediaLibrary", () => {
 
   it("opens AI text-to-image drawer with style presets and prompt inputs", async () => {
     render(
-      <ToastProvider>
+      <AppFeedbackProvider>
         <MediaLibrary />
-      </ToastProvider>,
+      </AppFeedbackProvider>,
     );
 
     await screen.findByText("No images uploaded yet.");
@@ -123,9 +124,9 @@ describe("MediaLibrary", () => {
     );
 
     render(
-      <ToastProvider>
+      <AppFeedbackProvider>
         <MediaLibrary />
-      </ToastProvider>,
+      </AppFeedbackProvider>,
     );
 
     expect(await screen.findByText("banner.png")).toBeInTheDocument();
@@ -189,9 +190,9 @@ describe("MediaLibrary", () => {
     );
 
     render(
-      <ToastProvider>
+      <AppFeedbackProvider>
         <MediaLibrary />
-      </ToastProvider>,
+      </AppFeedbackProvider>,
     );
     expect(await screen.findByText("banner.png")).toBeInTheDocument();
 
@@ -234,9 +235,9 @@ describe("MediaLibrary", () => {
       .mockResolvedValueOnce(Response.json({ data: mockUpdated }));
 
     render(
-      <ToastProvider>
+      <AppFeedbackProvider>
         <MediaLibrary />
-      </ToastProvider>,
+      </AppFeedbackProvider>,
     );
     expect(await screen.findByText("banner.png")).toBeInTheDocument();
     expect(screen.getByText(/Old Alt/)).toBeInTheDocument();
@@ -293,9 +294,9 @@ describe("MediaLibrary", () => {
       .mockResolvedValueOnce(Response.json({ data: mockUploaded }));
 
     render(
-      <ToastProvider>
+      <AppFeedbackProvider>
         <MediaLibrary />
-      </ToastProvider>,
+      </AppFeedbackProvider>,
     );
 
     await screen.findByText("No images uploaded yet.");

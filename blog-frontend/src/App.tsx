@@ -9,7 +9,7 @@ import {
 import { I18nProvider, useI18n } from "./i18n";
 import { Button, ButtonLink, Card, Spinner } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
-import { ToastProvider } from "@gouno/ui-legacy";
+
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { GossoProvider, RequireAuth } from "@gosso/client/react";
 import { gossoClient, type BlogUserProfile, logout } from "./auth";
@@ -53,6 +53,7 @@ const AccountNotifications = React.lazy(
   () => import("./pages/AccountNotifications"),
 );
 import CustomPageView from "./pages/CustomPageView";
+import { AppFeedbackProvider } from "./components/feedback/AppFeedbackProvider";
 
 function Public({ children }: { children: React.ReactNode }) {
   const { t } = useI18n();
@@ -276,7 +277,7 @@ export default function App() {
       }
     >
       <I18nProvider>
-        <ToastProvider>
+        <AppFeedbackProvider>
           <ErrorBoundary>
             <BrowserRouter>
               <RouteBrand />
@@ -545,7 +546,7 @@ export default function App() {
               </Routes>
             </BrowserRouter>
           </ErrorBoundary>
-        </ToastProvider>
+        </AppFeedbackProvider>
       </I18nProvider>
     </GossoProvider>
   );

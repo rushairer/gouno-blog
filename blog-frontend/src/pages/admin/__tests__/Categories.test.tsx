@@ -2,8 +2,9 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiFetch } from "../../../auth";
-import { ToastProvider } from "@gouno/ui-legacy";
+
 import Categories from "../Categories";
+import { AppFeedbackProvider } from "../../../components/feedback/AppFeedbackProvider";
 
 vi.mock("../../../auth", async () => {
   const apiFetch = vi.fn();
@@ -19,9 +20,9 @@ vi.mock("../../../hooks/useAdminGuard", () => ({
 function renderCategories() {
   return render(
     <MemoryRouter>
-      <ToastProvider>
+      <AppFeedbackProvider>
         <Categories />
-      </ToastProvider>
+      </AppFeedbackProvider>
     </MemoryRouter>,
   );
 }

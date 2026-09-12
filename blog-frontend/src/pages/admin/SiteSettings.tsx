@@ -27,10 +27,11 @@ import {
   Textarea,
 } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
-import { useToast } from "@gouno/ui-legacy";
+
 import { DEFAULT_SITE_SETTINGS } from "../../config/site-defaults";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 import type { SiteSettings } from "../../types/blog";
+import { useAppFeedback } from "../../components/feedback/AppFeedbackProvider";
 
 type SettingsTab = "basic" | "appearance" | "hero" | "social" | "seo";
 
@@ -85,7 +86,7 @@ function SettingsPanel({
 
 export default function AdminSiteSettings() {
   const allowed = useAdminGuard("/admin/settings");
-  const { notify } = useToast();
+  const { notify } = useAppFeedback();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const faviconInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<SettingsTab>("basic");

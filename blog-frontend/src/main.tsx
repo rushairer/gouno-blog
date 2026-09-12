@@ -7,6 +7,7 @@ import "./styles/tailwind.css";
 import "./styles/accessibility.css";
 import App from "./App";
 import { GlobalStepUpBoundary } from "./components/auth/GlobalStepUpBoundary";
+import { AppFeedbackProvider } from "./components/feedback/AppFeedbackProvider";
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ThemeProvider
@@ -15,9 +16,11 @@ createRoot(document.getElementById("root")!).render(
     >
       <NavigationProvider link={Link}>
         <TooltipProvider>
-          <GlobalStepUpBoundary>
-            <App />
-          </GlobalStepUpBoundary>
+          <AppFeedbackProvider>
+            <GlobalStepUpBoundary>
+              <App />
+            </GlobalStepUpBoundary>
+          </AppFeedbackProvider>
         </TooltipProvider>
       </NavigationProvider>
     </ThemeProvider>

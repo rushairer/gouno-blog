@@ -2,11 +2,12 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "@gouno/ui-legacy";
+
 import { postsApi } from "../../../api/posts";
 import { siteApi } from "../../../api/site";
 import type { Post } from "../../../types/blog";
 import AdminPosts from "../Posts";
+import { AppFeedbackProvider } from "../../../components/feedback/AppFeedbackProvider";
 
 vi.mock("../../../hooks/useAdminGuard", () => ({
   useAdminGuard: () => true,
@@ -47,11 +48,11 @@ const post: Post = {
 
 function renderPosts(entry = "/admin/posts") {
   return render(
-    <ToastProvider>
+    <AppFeedbackProvider>
       <MemoryRouter initialEntries={[entry]}>
         <AdminPosts />
       </MemoryRouter>
-    </ToastProvider>,
+    </AppFeedbackProvider>,
   );
 }
 

@@ -25,9 +25,10 @@ import {
 } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
 import { BulkActionBar } from "@gouno/ui/patterns";
-import { useToast } from "@gouno/ui-legacy";
+
 import { ConfirmActionModal } from "../../components/ConfirmActionModal";
 import { cn } from "../../lib/utils";
+import { useAppFeedback } from "../../components/feedback/AppFeedbackProvider";
 
 type DeleteAction =
   | { kind: "single"; id: number; title: string }
@@ -69,7 +70,7 @@ function NotificationsSkeleton() {
 }
 
 export default function AdminNotifications() {
-  const { notify } = useToast();
+  const { notify } = useAppFeedback();
   const [items, setItems] = useState<Notification[]>([]);
   const [selected, setSelected] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);

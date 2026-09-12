@@ -4,7 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AdminNotifications from "../Notifications";
 import { apiFetch } from "../../../auth";
-import { ToastProvider } from "@gouno/ui-legacy";
+import { AppFeedbackProvider } from "../../../components/feedback/AppFeedbackProvider";
 
 vi.mock("../../../auth", async () => {
   const apiFetch = vi.fn();
@@ -23,11 +23,11 @@ vi.mock("../../../hooks/useAdminGuard", () => ({
 
 function renderNotifications() {
   return render(
-    <ToastProvider>
+    <AppFeedbackProvider>
       <BrowserRouter>
         <AdminNotifications />
       </BrowserRouter>
-    </ToastProvider>,
+    </AppFeedbackProvider>,
   );
 }
 

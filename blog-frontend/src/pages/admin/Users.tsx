@@ -32,11 +32,12 @@ import {
   Tag,
 } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
-import { useToast } from "@gouno/ui-legacy";
+
 import { ConfirmActionModal } from "../../components/ConfirmActionModal";
 import { StepUpMfaModal } from "../../components/auth/StepUpMfaModal";
 import { SudoGate } from "../../components/auth/SudoGate";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
+import { useAppFeedback } from "../../components/feedback/AppFeedbackProvider";
 
 const assignableRoles = ["admin", "editor", "author", "moderator"] as const;
 const assignableRoleSet = new Set<string>(assignableRoles);
@@ -133,7 +134,7 @@ function MembersLoadingState() {
 export default function AdminUsers() {
   const allowed = useAdminGuard("/admin/users");
   const user = useUserProfile<BlogUserProfile>();
-  const { notify } = useToast();
+  const { notify } = useAppFeedback();
   const [members, setMembers] = useState<BlogMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
