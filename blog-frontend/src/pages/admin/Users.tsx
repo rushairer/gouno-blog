@@ -357,6 +357,7 @@ export default function AdminUsers() {
           title="成员与权限安全保护"
           description="修改 Blog 成员角色、移交所有权或暂停成员资格需要近期多因素身份认证。解锁后享有 10 分钟无打扰操作期。"
           actionLabel="解锁以管理成员权限"
+          unlockedPresentation="alert"
         >
           <div className="hidden md:block">
             <Table density="compact" bordered>
