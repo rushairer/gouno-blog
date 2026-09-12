@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	agentrepository "github.com/rushairer/blog-backend/internal/agent/repository"
 	"github.com/rushairer/blog-backend/internal/testsupport"
 	"os"
 	"testing"
@@ -101,7 +102,7 @@ func TestFailedApprovalRemainsActionableAndCanBeReclaimed(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	repo := NewAgentRepository(db)
+	repo := agentrepository.NewApprovalRepository(db)
 	items, total, err := repo.ListApprovals(ctx, string(domain.ApprovalPending), 1000, 0)
 	if err != nil {
 		t.Fatal(err)
