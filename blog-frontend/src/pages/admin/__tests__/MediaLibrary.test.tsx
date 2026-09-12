@@ -207,10 +207,9 @@ describe("MediaLibrary", () => {
 
   it("supports copying relative link to clipboard", async () => {
     const writeTextMock = vi.fn().mockResolvedValue(undefined);
-    Object.assign(navigator, {
-      clipboard: {
-        writeText: writeTextMock,
-      },
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: writeTextMock },
     });
 
     const mockAssets = [
