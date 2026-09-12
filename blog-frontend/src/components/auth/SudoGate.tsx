@@ -1,7 +1,7 @@
 import { type ReactNode } from "react";
-import { KeyRound, Lock, ShieldCheck, Sparkles } from "lucide-react";
+import { KeyRound, Lock, ShieldCheck } from "lucide-react";
 import { useSudoMode } from "../../hooks/useSudoMode";
-import { Button } from "@gouno/ui/core";
+import { Alert, Button, Card, Text } from "@gouno/ui/core";
 
 export interface SudoGateProps {
   children: ReactNode;
@@ -9,11 +9,10 @@ export interface SudoGateProps {
   description?: string;
   actionLabel?: string;
   className?: string;
-  /**
-   * If true, allows users to view form content with an overlay lock,
-   * but prevents interaction until unlocked.
-   */
+  /** Forces the visual lock state for controlled/test scenarios. */
   locked?: boolean;
+  /** Lets product pages own the unlocked status presentation without changing Sudo behavior. */
+  unlockedPresentation?: "compact" | "alert";
 }
 
 export function SudoGate({
@@ -23,66 +22,82 @@ export function SudoGate({
   actionLabel = "解锁以进行修改",
   className = "",
   locked: forceLocked,
+  unlockedPresentation = "compact",
 }: SudoGateProps) {
-  const { isSudoActive, remainingMinutes, activating, activateSudo } =
-    useSudoMode();
+  const {
+    isSudoActive,
+    remainingMinutes,
+    activating,
+    activateSudo,
+    clearSudo,
+  } = useSudoMode();
 
   const isLocked = forceLocked !== undefined ? forceLocked : !isSudoActive;
 
-  if (!isLocked) {
+  if (isLocked) {
     return (
-      <div className={`sudo-gate-container sudo-gate--unlocked ${className}`}>
-        <div
-          className="sudo-gate-header-badge"
-          role="status"
-          aria-label="Sudo 安全提权已生效"
-        >
-          <ShieldCheck className="w-4 h-4 text-[var(--status-success-text)]" />
-          <span>Sudo 已解锁（剩余约 {remainingMinutes} 分钟）</span>
+      <div className={className}>
+        <div className="hidden" inert={true} aria-hidden="true">
+          {children}
         </div>
-        {children}
+        <Card padding="base" className="border-primary/20 bg-accent/20">
+          <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 py-8 text-center">
+            <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Lock aria-hidden="true" className="size-6" />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Text className="text-lg font-semibold">{title}</Text>
+              <Text size="sm" tone="muted" className="leading-relaxed">
+                {description}
+              </Text>
+            </div>
+            <Button
+              variant="solid"
+              color="primary"
+              loading={activating}
+              loadingText="正在打开验证…"
+              onClick={() => void activateSudo()}
+              icon={<KeyRound />}
+            >
+              {actionLabel}
+            </Button>
+            <Text size="xs" tone="muted">
+              安全认证由统一身份中心提供；完成后会自动解锁当前视图。
+            </Text>
+          </div>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className={`sudo-gate-container sudo-gate--locked ${className}`}>
-      <div className="sudo-gate-content-locked" inert={true} aria-hidden="true">
-        {children}
-      </div>
-
-      <div
-        className="sudo-gate-overlay"
-        role="region"
-        aria-label="Sudo 权限锁定"
-      >
-        <div className="sudo-gate-card">
-          <div className="sudo-gate-icon-wrapper" aria-hidden="true">
-            <div className="sudo-gate-icon-glow" />
-            <div className="sudo-gate-icon">
-              <Lock />
-            </div>
-          </div>
-          <div className="sudo-gate-info">
-            <h3 className="sudo-gate-title">{title}</h3>
-            <p className="sudo-gate-desc">{description}</p>
-          </div>
-          <div className="sudo-gate-actions">
-            <Button
-              variant="solid"
-              size="middle"
-              loading={activating}
-              onClick={() => void activateSudo()}
-              icon={activating ? <Sparkles /> : <KeyRound />}
-            >
-              {actionLabel}
+    <div className={`flex flex-col gap-4 ${className}`}>
+      {unlockedPresentation === "alert" ? (
+        <Alert
+          type="success"
+          showIcon
+          title="高权限操作已解锁"
+          description={`近期 MFA 已完成；约 ${remainingMinutes} 分钟后会重新要求验证。`}
+          action={
+            <Button size="small" type="button" onClick={clearSudo}>
+              重新锁定
             </Button>
-          </div>
-          <span className="sudo-gate-tip">
-            ✓ 安全认证由统一身份中心提供，完成后自动解锁当前视图
-          </span>
+          }
+        />
+      ) : (
+        <div
+          className="flex w-fit items-center gap-2 rounded-full border border-border bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground"
+          role="status"
+          aria-label="Sudo 安全提权已生效"
+        >
+          <ShieldCheck
+            aria-hidden="true"
+            className="size-3.5 text-[var(--status-success-text)]"
+          />
+          <span>Sudo 已解锁 · 剩余约 {remainingMinutes} 分钟</span>
         </div>
-      </div>
+      )}
+      {children}
     </div>
   );
 }
