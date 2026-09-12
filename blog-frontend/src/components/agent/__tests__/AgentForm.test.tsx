@@ -69,7 +69,8 @@ describe("AgentForm", () => {
       />,
     );
 
-    // Dropdown contains both the legacy bound version and the latest version
+    // Open the canonical Select before asserting its listbox options.
+    fireEvent.click(screen.getAllByRole("combobox")[1]);
     expect(
       screen.getByRole("option", {
         name: /AI 每日资讯 · v2 \(当前绑定 · 旧版本\)/,
