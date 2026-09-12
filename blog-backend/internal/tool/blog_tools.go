@@ -182,7 +182,7 @@ func NewBlogRegistry(posts *postservice.PostService, community communityModerati
 			Risk:       domain.ToolRiskPropose, Scope: &ScopeRule{AllowsCreate: true}, Propose: tools.proposeTask,
 		},
 		Definition{
-			Name: "content.propose_distribution_draft", Description: "Create an approval-only social, newsletter, FAQ, or image brief from one post. It never sends content to an external postservice.",
+			Name: "content.propose_distribution_draft", Description: "Create an approval-only social, newsletter, FAQ, or image brief from one post. It never sends content to an external service.",
 			Parameters:     schema(`{"post_id":{"type":"integer","minimum":1},"format":{"type":"string","enum":["social","newsletter","faq","image_brief"]},"headline":{"type":"string","maxLength":500},"body":{"type":"string","maxLength":12000},"platform":{"type":"string","maxLength":100},"alt_text":{"type":"string","maxLength":500}}`, "post_id", "format", "body"),
 			Configuration:  schema(`{"format":{"type":"string","enum":["social","newsletter","faq","image_brief"]},"platform":{"type":"string","maxLength":100}}`),
 			DefaultBinding: json.RawMessage(`{"format":"social","platform":"Twitter"}`),
