@@ -31,7 +31,7 @@ export const publicNavigation = [
 export const adminNavigation: Array<{ label: string; items: AdminNavItem[] }> =
   [
     {
-      label: "内容管理",
+      label: "Content 内容管理",
       items: [
         { label: "数据概览", path: "/admin/dashboard", icon: <BarChart3 /> },
         {
@@ -39,12 +39,6 @@ export const adminNavigation: Array<{ label: string; items: AdminNavItem[] }> =
           path: "/admin/posts",
           icon: <FileText />,
           permissions: ["content.author", "content.manage"],
-        },
-        {
-          label: "单页",
-          path: "/admin/pages",
-          icon: <FileCode />,
-          permissions: ["content.manage"],
         },
         {
           label: "分类",
@@ -59,6 +53,19 @@ export const adminNavigation: Array<{ label: string; items: AdminNavItem[] }> =
           permissions: ["content.manage"],
         },
         {
+          label: "单页",
+          path: "/admin/pages",
+          icon: <FileCode />,
+          permissions: ["content.manage"],
+        },
+        {
+          label: "评论",
+          path: "/admin/comments",
+          icon: <MessageSquare />,
+          permissions: ["community.moderate"],
+        },
+        { label: "通知中心", path: "/admin/notifications", icon: <Bell /> },
+        {
           label: "媒体库",
           path: "/admin/media",
           icon: <Image />,
@@ -67,19 +74,7 @@ export const adminNavigation: Array<{ label: string; items: AdminNavItem[] }> =
       ],
     },
     {
-      label: "互动管理",
-      items: [
-        {
-          label: "评论",
-          path: "/admin/comments",
-          icon: <MessageSquare />,
-          permissions: ["community.moderate"],
-        },
-        { label: "通知中心", path: "/admin/notifications", icon: <Bell /> },
-      ],
-    },
-    {
-      label: "AI",
+      label: "AI Automation AI 运营",
       items: [
         {
           label: "AI 运营",
@@ -96,19 +91,19 @@ export const adminNavigation: Array<{ label: string; items: AdminNavItem[] }> =
       ],
     },
     {
-      label: "站点管理",
+      label: "Site 站点管理",
       items: [
-        {
-          label: "站点设置",
-          path: "/admin/settings",
-          icon: <Settings />,
-          permissions: ["site.manage"],
-        },
         {
           label: "成员与权限",
           path: "/admin/users",
           icon: <Users />,
           permissions: ["members.manage"],
+        },
+        {
+          label: "站点设置",
+          path: "/admin/settings",
+          icon: <Settings />,
+          permissions: ["site.manage"],
         },
       ],
     },
