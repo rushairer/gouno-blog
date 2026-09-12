@@ -641,11 +641,7 @@ export default function PageEditor() {
         padding="base"
         aria-label={isNew ? "新建单页编辑器加载中" : "单页编辑器加载中"}
       >
-        <div
-          className="flex flex-col gap-5"
-          role="status"
-          aria-live="polite"
-        >
+        <div className="flex flex-col gap-5" role="status" aria-live="polite">
           <div className="flex items-center justify-between gap-4">
             <Skeleton className="h-9 w-36" />
             <Skeleton className="h-9 w-64" />
