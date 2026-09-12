@@ -44,7 +44,13 @@ const retiredAgentShellSelectors = [
   ".agent-runs-table",
   ".workflow-run-feedback .btn",
   ".workflow-detail-nav .btn",
+  ".workflow-planner__agent-draft .btn",
+  ".workflow-resource-query-heading > .btn",
 ];
+const allowedAgentConsoleButtonSelectors = new Set([
+  // Shared with ConnectorWorkspace, which remains under Module Hold.
+  ".agent-row-actions .btn {",
+]);
 const allowedBlockAtRules = new Set([
   "@layer",
   "@theme",
@@ -228,6 +234,16 @@ for (const file of cssFiles) {
   }
 
   source.split("\n").forEach((line, index) => {
+    const trimmed = line.trim();
+    if (
+      file.relativePath === "styles/agent-console.css" &&
+      trimmed.includes(".btn") &&
+      !allowedAgentConsoleButtonSelectors.has(trimmed)
+    ) {
+      failures.push(
+        `${file.relativePath}:${index + 1}: canonical Button selectors must not be overridden outside the Connector Hold allowlist`,
+      );
+    }
     if (line.includes("!important")) {
       failures.push(
         `${file.relativePath}:${index + 1}: !important is forbidden in source styles`,
