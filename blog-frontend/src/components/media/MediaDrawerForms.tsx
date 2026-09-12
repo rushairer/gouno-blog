@@ -1,7 +1,14 @@
 import type React from "react";
 import { Copy, ImagePlus, LoaderCircle, Pencil, Sparkles } from "lucide-react";
-import { Button, Field, Input, OverlayForm, Textarea } from "@gouno/ui/core";
-import { Feedback, FormActions } from "@gouno/ui-legacy";
+import {
+  Alert,
+  Button,
+  Field,
+  FormActions,
+  Input,
+  OverlayForm,
+  Textarea,
+} from "@gouno/ui/core";
 
 export function MediaUploadForm({
   file,
@@ -82,7 +89,7 @@ export function MediaUploadForm({
           onChange={(event) => onAltTextChange(event.target.value)}
         />
       </Field>
-      {error ? <Feedback type="error">{error}</Feedback> : null}
+      {error ? <Alert type="error" showIcon title={error} /> : null}
     </OverlayForm>
   );
 }
@@ -165,7 +172,7 @@ export function MediaAltTextForm({
           autoFocus
         />
       </Field>
-      {error ? <Feedback type="error">{error}</Feedback> : null}
+      {error ? <Alert type="error" showIcon title={error} /> : null}
     </OverlayForm>
   );
 }
@@ -265,7 +272,7 @@ export function MediaImageGenerationForm({
           disabled={generating}
         />
       </Field>
-      {error ? <Feedback type="error">{error}</Feedback> : null}
+      {error ? <Alert type="error" showIcon title={error} /> : null}
       {generated ? (
         <div className="editor-ai-image-result">
           <div className="editor-ai-image-preview">
