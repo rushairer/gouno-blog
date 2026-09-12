@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Bot, Edit2, Plus, Trash2 } from "lucide-react";
+import { Edit2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { siteApi } from "../../api/site";
 import { agentApi } from "../../api/agent";
 import {
@@ -9,7 +9,11 @@ import {
   Checkbox,
   Drawer,
   Empty,
+  FormField,
   IconButton,
+  Input,
+  InputNumber,
+  Modal,
   Skeleton,
   Table,
   TableBody,
@@ -17,14 +21,13 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  Text,
+  Textarea,
 } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
 import { BulkActionBar } from "@gouno/ui/patterns";
 
-import { ConfirmActionModal } from "../../components/ConfirmActionModal";
 import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
-import { CategoryForm } from "../../components/taxonomy/CategoryForm";
-import type { CategoryFormValue } from "../../components/taxonomy/CategoryForm";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 import type { Category } from "../../types/blog";
 import { useAppFeedback } from "../../components/feedback/AppFeedbackProvider";
@@ -34,7 +37,16 @@ type DeleteTarget =
   | { kind: "batch" }
   | null;
 
-const emptyCategoryForm: CategoryFormValue = {
+type EditorState = { mode: "create" } | { mode: "edit"; item: Category } | null;
+
+type CategoryDraft = {
+  name: string;
+  slug: string;
+  description: string;
+  sort_order: number;
+};
+
+const emptyCategoryDraft: CategoryDraft = {
   name: "",
   slug: "",
   description: "",
@@ -43,31 +55,55 @@ const emptyCategoryForm: CategoryFormValue = {
 
 function CategoriesSkeleton() {
   return (
-    <Card padding="base">
-      <div
-        className="flex flex-col gap-4"
-        role="status"
-        aria-label="分类加载中"
-        aria-live="polite"
-      >
+    <Card padding="base" aria-label="分类加载中">
+      <div className="flex flex-col gap-4" role="status" aria-live="polite">
+        <Text size="sm" tone="muted">
+          正在加载分类…
+        </Text>
         {Array.from({ length: 4 }, (_, index) => (
           <div
             key={index}
-            className="grid gap-3 border-t pt-4 first:border-t-0 first:pt-0 md:grid-cols-[3rem_5rem_minmax(0,1fr)_12rem_6rem_8rem]"
+            className="grid gap-3 border-t pt-4 first:border-t-0 first:pt-0 md:grid-cols-[4rem_minmax(0,1fr)_10rem_6rem]"
           >
-            <Skeleton className="h-5 w-5" />
-            <Skeleton className="h-4 w-8" />
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-3 w-48" />
-            </div>
-            <Skeleton className="h-5 w-28" />
             <Skeleton className="h-4 w-10" />
-            <Skeleton className="h-8 w-20" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-3 w-2/3" />
+            </div>
+            <Skeleton className="h-6 w-28" />
+            <Skeleton className="h-4 w-12" />
           </div>
         ))}
       </div>
     </Card>
+  );
+}
+
+function CategoryActions({
+  category,
+  onEdit,
+  onDelete,
+}: {
+  category: Category;
+  onEdit: (category: Category) => void;
+  onDelete: (category: Category) => void;
+}) {
+  return (
+    <div className="flex min-w-max flex-nowrap items-center justify-end gap-1">
+      <IconButton
+        variant="ghost"
+        label={`编辑分类 ${category.name}`}
+        icon={<Edit2 />}
+        onClick={() => onEdit(category)}
+      />
+      <IconButton
+        variant="ghost"
+        color="error"
+        label={`删除分类 ${category.name}`}
+        icon={<Trash2 />}
+        onClick={() => onDelete(category)}
+      />
+    </div>
   );
 }
 
@@ -77,21 +113,13 @@ export default function Categories() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [creatingCategory, setCreatingCategory] = useState(false);
-  const [createForm, setCreateForm] =
-    useState<CategoryFormValue>(emptyCategoryForm);
-  const [editForm, setEditForm] =
-    useState<CategoryFormValue>(emptyCategoryForm);
+  const [editor, setEditor] = useState<EditorState>(null);
+  const [draft, setDraft] = useState<CategoryDraft>(emptyCategoryDraft);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const [selected, setSelected] = useState<number[]>([]);
   const [aiOpen, setAIOpen] = useState(false);
-
   const [slugLoading, setSlugLoading] = useState(false);
   const [slugCandidates, setSlugCandidates] = useState<string[]>([]);
-  const [activeSlugMode, setActiveSlugMode] = useState<
-    "create" | "edit" | null
-  >(null);
 
   const load = useCallback(async () => {
     if (!allowed) return;
@@ -110,45 +138,47 @@ export default function Categories() {
     void load();
   }, [load]);
 
-  const openCreateDrawer = () => {
-    setCreateForm(emptyCategoryForm);
+  const closeEditor = () => {
+    setEditor(null);
     setSlugCandidates([]);
-    setActiveSlugMode(null);
-    setCreatingCategory(true);
+    setSlugLoading(false);
   };
 
-  const openEditDrawer = (item: Category) => {
-    setEditingCategory(item);
-    setEditForm({
-      name: item.name,
-      slug: item.slug,
-      description: item.description || "",
-      sort_order: item.sort_order || 0,
+  const openCreate = () => {
+    setDraft(emptyCategoryDraft);
+    setSlugCandidates([]);
+    setEditor({ mode: "create" });
+  };
+
+  const openEdit = (category: Category) => {
+    setDraft({
+      name: category.name,
+      slug: category.slug,
+      description: category.description || "",
+      sort_order: category.sort_order || 0,
     });
     setSlugCandidates([]);
-    setActiveSlugMode(null);
+    setEditor({ mode: "edit", item: category });
   };
 
-  const requestCategorySlug = async (mode: "create" | "edit") => {
-    const currentForm = mode === "create" ? createForm : editForm;
-    if (!currentForm.name.trim()) {
+  const requestCategorySlug = async () => {
+    if (!draft.name.trim()) {
       notify("请先填写分类名称，AI 才能分析生成 Slug 标识。", "error");
       return;
     }
     setSlugLoading(true);
-    setActiveSlugMode(mode);
     try {
-      const res = await agentApi.getDraftAssist({
+      const response = await agentApi.getDraftAssist({
         task: "slug",
-        title: currentForm.name,
-        summary: currentForm.description,
+        title: draft.name,
+        summary: draft.description,
       });
-      const list = res.suggestions || [];
-      if (res.metadata?.slug && !list.includes(res.metadata.slug)) {
-        list.unshift(res.metadata.slug);
+      const next = [...(response.suggestions || [])];
+      if (response.metadata?.slug && !next.includes(response.metadata.slug)) {
+        next.unshift(response.metadata.slug);
       }
-      setSlugCandidates(list);
-      if (list.length === 0) {
+      setSlugCandidates(next);
+      if (next.length === 0) {
         notify("未能生成 Slug 候选，请手动填写。", "error");
       } else {
         notify("已生成 Slug 标识候选，点击即可一键应用。", "success");
@@ -163,51 +193,50 @@ export default function Categories() {
     }
   };
 
-  const applySlug = (mode: "create" | "edit", slugValue: string) => {
+  const applySlug = (slugValue: string) => {
     const clean = slugValue.trim().toLowerCase().replace(/\s+/g, "-");
-    if (mode === "create") {
-      setCreateForm((prev) => ({ ...prev, slug: clean }));
-    } else {
-      setEditForm((prev) => ({ ...prev, slug: clean }));
-    }
+    setDraft((current) => ({ ...current, slug: clean }));
     setSlugCandidates([]);
-    setActiveSlugMode(null);
     notify(`已应用 Slug 标识：“${clean}”`, "success");
   };
 
-  const createCategory = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    try {
-      await siteApi.createCategory({
-        name: createForm.name.trim(),
-        slug: createForm.slug.trim().toLowerCase(),
-        description: createForm.description.trim() || undefined,
-        sort_order: Number(createForm.sort_order) || 0,
-      });
-      setCreatingCategory(false);
-      setCreateForm(emptyCategoryForm);
-      notify("分类已创建。", "success");
-      await load();
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "创建失败");
+  const saveCategory = async () => {
+    if (!editor) return;
+    const name = draft.name.trim();
+    const slug = draft.slug.trim().toLowerCase();
+    if (!name || !slug) {
+      notify("分类名称和 Slug 标识都不能为空。", "error");
+      return;
     }
-  };
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+      notify("Slug 只能包含小写字母、数字与连字符。", "error");
+      return;
+    }
 
-  const saveCategory = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!editingCategory) return;
     try {
-      await siteApi.updateCategory(editingCategory.id, {
-        name: editForm.name.trim(),
-        slug: editForm.slug.trim().toLowerCase(),
-        description: editForm.description.trim() || undefined,
-        sort_order: Number(editForm.sort_order) || 0,
-      });
-      setEditingCategory(null);
-      notify("分类已更新。", "success");
+      const payload = {
+        name,
+        slug,
+        description: draft.description.trim() || undefined,
+        sort_order: Number(draft.sort_order) || 0,
+      };
+      if (editor.mode === "create") {
+        await siteApi.createCategory(payload);
+        notify("分类已创建。", "success");
+      } else {
+        await siteApi.updateCategory(editor.item.id, payload);
+        notify("分类已更新。", "success");
+      }
+      closeEditor();
       await load();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "分类更新失败。");
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : editor.mode === "create"
+            ? "创建失败"
+            : "分类更新失败。",
+      );
     }
   };
 
@@ -241,9 +270,13 @@ export default function Categories() {
         }
         return;
       }
+
       await siteApi.deleteCategory(deleteTarget.item.id);
       notify("分类已删除，相关文章已移至未分类。");
       setDeleteTarget(null);
+      setSelected((current) =>
+        current.filter((id) => id !== deleteTarget.item.id),
+      );
       await load();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "删除失败。");
@@ -258,27 +291,16 @@ export default function Categories() {
     );
   };
 
-  const renderActions = (item: Category) => (
-    <>
-      <IconButton
-        variant="ghost"
-        label={`编辑分类 ${item.name}`}
-        icon={<Edit2 />}
-        onClick={() => openEditDrawer(item)}
-      />
-      <IconButton
-        variant="ghost"
-        color="error"
-        label={`删除分类 ${item.name}`}
-        icon={<Trash2 />}
-        onClick={() => setDeleteTarget({ kind: "category", item })}
-      />
-    </>
-  );
-
   const allSelected =
     categories.length > 0 &&
-    categories.every((item) => selected.includes(item.id));
+    categories.every((category) => selected.includes(category.id));
+
+  const deleteDescription =
+    deleteTarget?.kind === "batch"
+      ? `确认删除选中的 ${selected.length} 个分类？相关文章会移至未分类。`
+      : deleteTarget?.kind === "category"
+        ? `删除分类“${deleteTarget.item.name}”？相关文章会移至未分类。`
+        : undefined;
 
   return (
     <div className="flex flex-col gap-6">
@@ -289,9 +311,8 @@ export default function Categories() {
           <Button
             variant="solid"
             color="primary"
-            type="button"
             icon={<Plus />}
-            onClick={openCreateDrawer}
+            onClick={openCreate}
           >
             新建分类
           </Button>
@@ -305,17 +326,23 @@ export default function Categories() {
       {selected.length > 0 ? (
         <BulkActionBar
           selectionLabel={`已选择 ${selected.length} 个分类`}
-          onCancel={() => setSelected([])}
+          onCancel={() => {
+            setSelected([]);
+            setAIOpen(false);
+          }}
         >
-          <Button size="small" icon={<Bot />} onClick={() => setAIOpen(true)}>
+          <Button
+            size="small"
+            icon={<Sparkles />}
+            onClick={() => setAIOpen(true)}
+          >
             交给 AI
           </Button>
           <Button
             size="small"
             color="error"
-            type="button"
-            onClick={() => setDeleteTarget({ kind: "batch" })}
             icon={<Trash2 />}
+            onClick={() => setDeleteTarget({ kind: "batch" })}
           >
             删除
           </Button>
@@ -339,16 +366,16 @@ export default function Categories() {
       ) : categories.length === 0 ? (
         <Card padding="lg">
           <Empty
-            title="还没有分类。创建第一个分类来组织长期主题。"
+            title="还没有分类"
+            description="创建第一个分类来组织长期主题。"
             action={
               <Button
-                size="small"
                 variant="solid"
                 color="primary"
                 icon={<Plus />}
-                onClick={openCreateDrawer}
+                onClick={openCreate}
               >
-                创建第一个分类
+                创建分类
               </Button>
             }
           />
@@ -366,7 +393,7 @@ export default function Categories() {
                       onChange={(event) =>
                         setSelected(
                           event.target.checked
-                            ? categories.map((item) => item.id)
+                            ? categories.map((category) => category.id)
                             : [],
                         )
                       }
@@ -375,53 +402,58 @@ export default function Categories() {
                   <TableHead className="w-20">排序</TableHead>
                   <TableHead>分类名称与描述</TableHead>
                   <TableHead className="w-48">Slug 标识</TableHead>
-                  <TableHead className="w-24">文章数</TableHead>
-                  <TableHead className="w-32 text-right">操作</TableHead>
+                  <TableHead className="w-24 text-right">文章数</TableHead>
+                  <TableHead className="w-28 text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {categories.map((item) => (
-                  <TableRow key={item.id}>
+                {categories.map((category) => (
+                  <TableRow
+                    key={category.id}
+                    data-state={
+                      selected.includes(category.id) ? "selected" : undefined
+                    }
+                  >
                     <TableCell className="text-center">
                       <Checkbox
-                        aria-label={`选择分类 ${item.name}`}
-                        checked={selected.includes(item.id)}
+                        aria-label={`选择分类 ${category.name}`}
+                        checked={selected.includes(category.id)}
                         onChange={(event) =>
-                          setSelectedCategory(item.id, event.target.checked)
+                          setSelectedCategory(category.id, event.target.checked)
                         }
                       />
                     </TableCell>
                     <TableCell>
                       <span className="font-mono text-xs text-muted-foreground">
-                        {item.sort_order ?? 0}
+                        {category.sort_order ?? 0}
                       </span>
                     </TableCell>
-                    <TableCell className="whitespace-normal">
-                      <div className="flex flex-col gap-0.5">
+                    <TableCell className="min-w-72 whitespace-normal">
+                      <div className="flex flex-col gap-1">
                         <strong className="text-sm font-semibold text-foreground">
-                          {item.name}
+                          {category.name}
                         </strong>
-                        {item.description ? (
-                          <span className="line-clamp-1 text-xs text-muted-foreground">
-                            {item.description}
-                          </span>
-                        ) : null}
+                        <span className="text-xs leading-relaxed text-muted-foreground">
+                          {category.description || "暂无描述"}
+                        </span>
                       </div>
                     </TableCell>
                     <TableCell>
                       <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
-                        {item.slug}
+                        {category.slug}
                       </code>
                     </TableCell>
-                    <TableCell>
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {item.post_count ?? 0}
-                      </span>
+                    <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                      {category.post_count ?? 0}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center justify-end gap-1">
-                        {renderActions(item)}
-                      </div>
+                      <CategoryActions
+                        category={category}
+                        onEdit={openEdit}
+                        onDelete={(item) =>
+                          setDeleteTarget({ kind: "category", item })
+                        }
+                      />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -434,41 +466,73 @@ export default function Categories() {
             role="list"
             aria-label="分类列表"
           >
-            {categories.map((item) => (
-              <Card key={item.id} padding="base" role="listitem">
+            {categories.map((category) => (
+              <Card
+                key={category.id}
+                padding="base"
+                role="listitem"
+                className={
+                  selected.includes(category.id)
+                    ? "border-primary/40 bg-accent/20"
+                    : undefined
+                }
+              >
                 <div className="flex flex-col gap-4">
-                  <div className="flex items-start gap-3">
+                  <div className="flex min-w-0 items-start gap-3">
                     <Checkbox
-                      aria-label={`选择分类 ${item.name}`}
-                      checked={selected.includes(item.id)}
+                      aria-label={`选择分类 ${category.name}`}
+                      checked={selected.includes(category.id)}
                       onChange={(event) =>
-                        setSelectedCategory(item.id, event.target.checked)
+                        setSelectedCategory(category.id, event.target.checked)
                       }
                     />
-                    <div className="min-w-0 flex-1 space-y-2">
-                      <div className="flex items-start justify-between gap-3">
-                        <strong className="min-w-0 break-words text-sm font-semibold leading-snug">
-                          {item.name}
-                        </strong>
-                        <span className="shrink-0 font-mono text-xs text-muted-foreground">
-                          {item.post_count ?? 0} 篇
-                        </span>
-                      </div>
-                      {item.description ? (
-                        <p className="text-xs leading-relaxed text-muted-foreground">
-                          {item.description}
-                        </p>
-                      ) : null}
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                        <code className="break-all rounded bg-muted px-1.5 py-0.5 font-mono">
-                          {item.slug}
-                        </code>
-                        <span>排序 {item.sort_order ?? 0}</span>
-                      </div>
+                    <div className="min-w-0 flex-1">
+                      <strong className="block text-sm font-semibold text-foreground">
+                        {category.name}
+                      </strong>
+                      <Text
+                        size="xs"
+                        tone="muted"
+                        className="mt-1 leading-relaxed"
+                      >
+                        {category.description || "暂无描述"}
+                      </Text>
                     </div>
                   </div>
-                  <div className="flex items-center justify-end gap-1">
-                    {renderActions(item)}
+                  <div className="grid grid-cols-2 gap-3 rounded-md bg-muted/35 p-3 text-xs">
+                    <div>
+                      <Text as="div" size="xs" tone="muted">
+                        排序
+                      </Text>
+                      <span className="mt-1 block font-mono text-foreground">
+                        {category.sort_order ?? 0}
+                      </span>
+                    </div>
+                    <div>
+                      <Text as="div" size="xs" tone="muted">
+                        文章数
+                      </Text>
+                      <span className="mt-1 block font-mono text-foreground">
+                        {category.post_count ?? 0}
+                      </span>
+                    </div>
+                    <div className="col-span-2 min-w-0">
+                      <Text as="div" size="xs" tone="muted">
+                        Slug 标识
+                      </Text>
+                      <code className="mt-1 block break-all font-mono text-xs text-foreground">
+                        {category.slug}
+                      </code>
+                    </div>
+                  </div>
+                  <div className="flex justify-end border-t pt-3">
+                    <CategoryActions
+                      category={category}
+                      onEdit={openEdit}
+                      onDelete={(item) =>
+                        setDeleteTarget({ kind: "category", item })
+                      }
+                    />
                   </div>
                 </div>
               </Card>
@@ -478,62 +542,129 @@ export default function Categories() {
       )}
 
       <Drawer
-        open={creatingCategory}
-        title="新建分类"
-        description="创建一个可长期复用的内容主题。"
-        onClose={() => setCreatingCategory(false)}
+        open={editor !== null}
+        title={editor?.mode === "edit" ? "编辑分类" : "新建分类"}
+        description={
+          editor?.mode === "edit"
+            ? "更新名称、URL 标识、描述与排序。"
+            : "创建一个可长期复用的内容主题。"
+        }
+        width={440}
+        onClose={closeEditor}
+        footer={
+          <>
+            <Button onClick={closeEditor}>取消</Button>
+            <Button
+              variant="solid"
+              color="primary"
+              onClick={() => void saveCategory()}
+            >
+              {editor?.mode === "edit" ? "保存修改" : "创建分类"}
+            </Button>
+          </>
+        }
       >
-        <CategoryForm
-          mode="create"
-          value={createForm}
-          slugCandidates={slugCandidates}
-          slugLoading={slugLoading && activeSlugMode === "create"}
-          showSlugCandidates={activeSlugMode === "create"}
-          onChange={setCreateForm}
-          onRequestSlug={() => void requestCategorySlug("create")}
-          onApplySlug={(value) => applySlug("create", value)}
-          onCancel={() => setCreatingCategory(false)}
-          onSubmit={createCategory}
-        />
+        <div className="flex flex-col gap-5">
+          <FormField label="分类名称" required>
+            <Input
+              aria-label="分类名称"
+              required
+              autoFocus
+              value={draft.name}
+              onChange={(event) =>
+                setDraft((current) => ({
+                  ...current,
+                  name: event.target.value,
+                }))
+              }
+            />
+          </FormField>
+          <FormField
+            label="Slug 标识"
+            required
+            hint="用于分类 URL，建议使用稳定的英文短语。"
+          >
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-2">
+                <Input
+                  aria-label="Slug 标识"
+                  required
+                  value={draft.slug}
+                  onChange={(event) =>
+                    setDraft((current) => ({
+                      ...current,
+                      slug: event.target.value,
+                    }))
+                  }
+                />
+                <Button
+                  size="small"
+                  icon={<Sparkles />}
+                  disabled={slugLoading}
+                  onClick={() => void requestCategorySlug()}
+                >
+                  {slugLoading ? "生成中…" : "AI 生成"}
+                </Button>
+              </div>
+              {slugCandidates.length > 0 ? (
+                <div className="flex flex-wrap gap-2" aria-label="Slug 候选">
+                  {slugCandidates.map((candidate) => (
+                    <Button
+                      key={candidate}
+                      size="small"
+                      variant="text"
+                      onClick={() => applySlug(candidate)}
+                    >
+                      {candidate}
+                    </Button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          </FormField>
+          <FormField label="分类描述">
+            <Textarea
+              aria-label="分类描述"
+              rows={4}
+              value={draft.description}
+              onChange={(event) =>
+                setDraft((current) => ({
+                  ...current,
+                  description: event.target.value,
+                }))
+              }
+            />
+          </FormField>
+          <FormField label="排序" hint="数值越小，显示越靠前。">
+            <InputNumber
+              aria-label="分类排序"
+              min={0}
+              value={draft.sort_order}
+              onChange={(value) =>
+                setDraft((current) => ({
+                  ...current,
+                  sort_order: value ?? 0,
+                }))
+              }
+            />
+          </FormField>
+        </div>
       </Drawer>
 
-      <Drawer
-        open={editingCategory !== null}
-        title="编辑分类"
-        description="更新名称、URL 标识、描述与排序。"
-        onClose={() => setEditingCategory(null)}
-      >
-        {editingCategory ? (
-          <CategoryForm
-            mode="edit"
-            value={editForm}
-            slugCandidates={slugCandidates}
-            slugLoading={slugLoading && activeSlugMode === "edit"}
-            showSlugCandidates={activeSlugMode === "edit"}
-            onChange={setEditForm}
-            onRequestSlug={() => void requestCategorySlug("edit")}
-            onApplySlug={(value) => applySlug("edit", value)}
-            onCancel={() => setEditingCategory(null)}
-            onSubmit={saveCategory}
-          />
-        ) : null}
-      </Drawer>
-
-      <ConfirmActionModal
+      <Modal
         open={deleteTarget !== null}
         title={deleteTarget?.kind === "batch" ? "批量删除分类" : "删除分类"}
-        description={
-          deleteTarget?.kind === "batch"
-            ? `确认删除选中的 ${selected.length} 个分类？相关文章会移至未分类。`
-            : deleteTarget?.kind === "category"
-              ? `删除分类“${deleteTarget.item.name}”？相关文章会移至未分类。`
-              : ""
-        }
-        confirmLabel="确认删除"
-        danger
+        description={deleteDescription}
         onClose={() => setDeleteTarget(null)}
-        onConfirm={remove}
-      />
+        onOk={() => void remove()}
+        okText="确认删除"
+        cancelText="取消"
+        okButtonProps={{ variant: "solid", color: "error" }}
+      >
+        <Text size="sm" tone="muted">
+          删除分类不会删除文章，但相关文章需要重新归类。
+        </Text>
+      </Modal>
 
       <WorkflowLauncher
         open={aiOpen}
