@@ -467,10 +467,6 @@
     color: var(--agent-accent);
     overflow-wrap: anywhere;
   }
-  .workflow-planner__agent-draft .btn {
-    justify-self: start;
-  }
-
   .workflow-dependency-plan {
     display: grid;
     gap: 8px;
@@ -547,9 +543,6 @@
     justify-content: space-between;
     gap: 14px;
   }
-  .workflow-resource-query-heading > .btn {
-    flex: 0 0 auto;
-  }
   .workflow-resource-query-core {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -587,9 +580,6 @@
     .workflow-resource-query-heading {
       align-items: stretch;
       flex-direction: column;
-    }
-    .workflow-resource-query-heading > .btn {
-      align-self: flex-end;
     }
     .workflow-resource-query-filters {
       grid-template-columns: 1fr;

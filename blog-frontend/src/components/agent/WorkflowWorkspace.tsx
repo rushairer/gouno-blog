@@ -1461,6 +1461,7 @@ function ResourceQueryBuilder({
         <Button
           variant="ghost"
           size="small"
+          className="shrink-0 max-[540px]:self-end"
           type="button"
           onClick={onRemove}
           icon={<X />}
@@ -1609,6 +1610,7 @@ function SchemaFieldBuilder({
         <Button
           variant="outline"
           size="small"
+          className="shrink-0 max-[540px]:self-end"
           type="button"
           onClick={add}
           icon={<Plus />}
@@ -2315,6 +2317,7 @@ function WorkflowEditor({
                     <small>{draft.capabilities.join(" · ")}</small>
                     <Button
                       variant="outline"
+                      className="justify-self-start"
                       type="button"
                       disabled={savingAgentDraft !== null}
                       onClick={() => void materializeAgentDraft(draft)}
