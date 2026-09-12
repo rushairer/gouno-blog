@@ -244,4 +244,22 @@ describe("AISettings", () => {
     expect(screen.getByText("Failed")).toBeInTheDocument();
     expect(window.location.search).toBe("?section=knowledge");
   });
+
+  it("uses the canonical delete confirmation modal", async () => {
+    const user = userEvent.setup();
+    renderSettings();
+    await screen.findByRole("button", { name: "Create Agent" });
+
+    await user.click(screen.getAllByRole("button", { name: "Delete" })[0]);
+    expect(
+      screen.getByRole("dialog", {
+        name: "Delete this Agent and disable future runs?",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Deletion cannot be undone. Configurations that are still in use remain protected by backend dependency checks.",
+      ),
+    ).toBeInTheDocument();
+  });
 });
