@@ -10,20 +10,25 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rushairer/blog-backend/internal/domain"
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
 )
+
+type FeedPostReader interface {
+	ListPosts(ctx context.Context, tag, search string, page, pageSize int) ([]*domain.Post, int, error)
+}
 
 type SiteSettingsReader interface {
 	GetSiteSettings(ctx context.Context) (map[string]string, error)
 }
 
 type FeedController struct {
-	svc          BlogService
+	svc          FeedPostReader
 	pageSvc      *pageservice.PageService
 	siteSettings SiteSettingsReader
 }
 
-func NewFeedController(svc BlogService, pageSvc *pageservice.PageService, siteSettings SiteSettingsReader) *FeedController {
+func NewFeedController(svc FeedPostReader, pageSvc *pageservice.PageService, siteSettings SiteSettingsReader) *FeedController {
 	return &FeedController{svc: svc, pageSvc: pageSvc, siteSettings: siteSettings}
 }
 
