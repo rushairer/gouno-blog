@@ -1,0 +1,105 @@
+name: Phase 38 migrate confirm actions
+
+on:
+  push:
+    branches:
+      - ui/confirm-action-modal-phase38
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ui/confirm-action-modal-phase38
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        working-directory: blog-frontend
+        run: npm ci
+      - name: Migrate admin confirmations
+        working-directory: blog-frontend
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const pages = [
+            'src/pages/admin/AISettings.tsx',
+            'src/pages/admin/Categories.tsx',
+            'src/pages/admin/MediaLibrary.tsx',
+            'src/pages/admin/Notifications.tsx',
+            'src/pages/admin/Pages.tsx',
+            'src/pages/admin/Posts.tsx',
+            'src/pages/admin/Tags.tsx',
+            'src/pages/admin/Users.tsx',
+          ];
+
+          for (const path of pages) {
+            let text = fs.readFileSync(path, 'utf8');
+            if (!text.includes('ConfirmDialog')) throw new Error(`ConfirmDialog missing from ${path}`);
+
+            const legacyImport = /import\s*\{([\s\S]*?)\}\s*from\s*["']@gouno\/ui-legacy["'];/;
+            const match = text.match(legacyImport);
+            if (!match) throw new Error(`legacy import missing from ${path}`);
+            const names = match[1]
+              .split(',')
+              .map((value) => value.trim())
+              .filter(Boolean);
+            if (!names.includes('ConfirmDialog')) throw new Error(`ConfirmDialog import missing from ${path}`);
+            const remaining = names.filter((name) => name !== 'ConfirmDialog');
+            const replacement = remaining.length
+              ? `import { ${remaining.join(', ')} } from "@gouno/ui-legacy";`
+              : '';
+            text = text.replace(legacyImport, replacement);
+
+            const importAnchor = 'from "@gouno/ui-legacy";';
+            const confirmImport = 'import { ConfirmActionModal } from "../../components/ConfirmActionModal";';
+            if (replacement && text.includes(importAnchor)) {
+              const lineEnd = text.indexOf('\n', text.indexOf(importAnchor));
+              text = text.slice(0, lineEnd + 1) + confirmImport + '\n' + text.slice(lineEnd + 1);
+            } else {
+              const firstImportEnd = text.indexOf('\n');
+              text = text.slice(0, firstImportEnd + 1) + confirmImport + '\n' + text.slice(firstImportEnd + 1);
+            }
+
+            text = text.replaceAll('<ConfirmDialog', '<ConfirmActionModal');
+            if (text.includes('ConfirmDialog')) throw new Error(`stale ConfirmDialog remains in ${path}`);
+            fs.writeFileSync(path, text);
+          }
+
+          const allowPath = 'scripts/legacy-ui-allowlist.json';
+          const allow = JSON.parse(fs.readFileSync(allowPath, 'utf8'));
+          const expected = [...pages].sort();
+          const actual = [...(allow.allowedLegacyImports.ConfirmDialog || [])].sort();
+          if (JSON.stringify(expected) !== JSON.stringify(actual)) {
+            throw new Error(`ConfirmDialog allowlist mismatch: ${JSON.stringify(actual)}`);
+          }
+          delete allow.allowedLegacyImports.ConfirmDialog;
+          fs.writeFileSync(allowPath, JSON.stringify(allow, null, 2) + '\n');
+          NODE
+      - name: Format and focused gates
+        working-directory: blog-frontend
+        run: |
+          npx prettier --write src/components/ConfirmActionModal.tsx src/pages/admin/AISettings.tsx src/pages/admin/Categories.tsx src/pages/admin/MediaLibrary.tsx src/pages/admin/Notifications.tsx src/pages/admin/Pages.tsx src/pages/admin/Posts.tsx src/pages/admin/Tags.tsx src/pages/admin/Users.tsx scripts/legacy-ui-allowlist.json
+          npm run lint:ui
+          npx tsc -b
+          npx vitest run src/pages/admin/__tests__
+      - name: Verify confirmation debt removed
+        working-directory: blog-frontend
+        run: |
+          ! grep -R 'ConfirmDialog' src/pages/admin/AISettings.tsx src/pages/admin/Categories.tsx src/pages/admin/MediaLibrary.tsx src/pages/admin/Notifications.tsx src/pages/admin/Pages.tsx src/pages/admin/Posts.tsx src/pages/admin/Tags.tsx src/pages/admin/Users.tsx
+          node -e 'const a=require("./scripts/legacy-ui-allowlist.json").allowedLegacyImports; if (a.ConfirmDialog) throw new Error("ConfirmDialog allowlist remains")'
+      - name: Commit migration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add blog-frontend/src/components/ConfirmActionModal.tsx blog-frontend/src/pages/admin/AISettings.tsx blog-frontend/src/pages/admin/Categories.tsx blog-frontend/src/pages/admin/MediaLibrary.tsx blog-frontend/src/pages/admin/Notifications.tsx blog-frontend/src/pages/admin/Pages.tsx blog-frontend/src/pages/admin/Posts.tsx blog-frontend/src/pages/admin/Tags.tsx blog-frontend/src/pages/admin/Users.tsx blog-frontend/scripts/legacy-ui-allowlist.json
+          git diff --cached --quiet && exit 0
+          git commit -m "refactor(ui): migrate admin confirmation dialogs"
+          git push origin HEAD:ui/confirm-action-modal-phase38
