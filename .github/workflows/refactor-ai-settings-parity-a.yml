@@ -1,0 +1,522 @@
+name: Refactor AI Settings Parity 3A
+
+on:
+  push:
+    branches:
+      - ui/blog-admin-final-parity-ai-settings-a
+
+permissions:
+  contents: write
+
+jobs:
+  refactor:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ui/blog-admin-final-parity-ai-settings-a
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: blog-frontend/package-lock.json
+      - working-directory: blog-frontend
+        run: npm ci
+      - name: Align AI Settings primary sections
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          path = Path("blog-frontend/src/components/agent/AdvancedWorkspace.tsx")
+          text = path.read_text()
+
+          text = text.replace('import { useRef } from "react";', 'import { useRef, type ReactNode } from "react";')
+          text = text.replace(
+          '''import {
+            Button,
+            Card,
+            CardHeader,
+            Empty,
+            IconButton,
+            Segmented,
+            Select,
+          } from "@gouno/ui/core";''',
+          '''import {
+            Alert,
+            Button,
+            Card,
+            CardContent,
+            CardHeader,
+            Empty,
+            IconButton,
+            Select,
+            Tab,
+            Tabs,
+            Tag,
+            Text,
+          } from "@gouno/ui/core";'''.replace('    Tab,\n', '')
+          )
+
+          needle = '''function formatCapability(value: string) {
+            return value.replace(".", " / ").replaceAll("_", " ");
+          }
+          '''
+          replacement = needle + '''
+          function TabPanelLead({
+            description,
+            actions,
+          }: {
+            description?: ReactNode;
+            actions?: ReactNode;
+          }) {
+            if (!description && !actions) return null;
+
+            return (
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  {description ? (
+                    <Text tone="muted" size="sm" className="max-w-3xl leading-relaxed">
+                      {description}
+                    </Text>
+                  ) : null}
+                </div>
+                {actions ? (
+                  <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
+                ) : null}
+              </div>
+            );
+          }
+          '''
+          if needle not in text:
+              raise SystemExit("formatCapability insertion point not found")
+          text = text.replace(needle, replacement, 1)
+
+          old_nav = '''      <Segmented<AdvancedSection>
+                aria-label={labels.advanced}
+                block
+                value={advancedSection}
+                onChange={onSelectSection}
+                options={[
+                  { value: "agents", label: labels.agents, icon: <Bot /> },
+                  { value: "skills", label: labels.skills, icon: <ListChecks /> },
+                  { value: "tools", label: "Tools", icon: <GitBranch /> },
+                  {
+                    value: "knowledge",
+                    label: labels.knowledge,
+                    icon: <DatabaseZap />,
+                  },
+                  { value: "providers", label: labels.providers, icon: <KeyRound /> },
+                  {
+                    value: "connectors",
+                    label: locale === "zh" ? "Sandbox 连接器" : "Sandbox connectors",
+                    icon: <LockKeyhole />,
+                  },
+                ]}
+              />'''
+          new_nav = '''      <Tabs<AdvancedSection>
+                ariaLabel={labels.advanced}
+                activeKey={advancedSection}
+                onChange={onSelectSection}
+                items={[
+                  { key: "agents", label: labels.agents, icon: <Bot aria-hidden="true" className="size-4" /> },
+                  { key: "skills", label: labels.skills, icon: <ListChecks aria-hidden="true" className="size-4" /> },
+                  { key: "tools", label: "Tools", icon: <GitBranch aria-hidden="true" className="size-4" /> },
+                  { key: "knowledge", label: labels.knowledge, icon: <DatabaseZap aria-hidden="true" className="size-4" /> },
+                  { key: "providers", label: labels.providers, icon: <KeyRound aria-hidden="true" className="size-4" /> },
+                  {
+                    key: "connectors",
+                    label: locale === "zh" ? "Sandbox 连接器" : "Sandbox connectors",
+                    icon: <LockKeyhole aria-hidden="true" className="size-4" />,
+                  },
+                ]}
+              />'''
+          if old_nav not in text:
+              raise SystemExit("Segmented navigation block not found")
+          text = text.replace(old_nav, new_nav, 1)
+
+          def replace_between(source: str, start: str, end: str, replacement: str) -> str:
+              a = source.find(start)
+              if a < 0:
+                  raise SystemExit(f"start marker not found: {start[:80]}")
+              b = source.find(end, a)
+              if b < 0:
+                  raise SystemExit(f"end marker not found: {end[:80]}")
+              return source[:a] + replacement + "\n\n" + source[b:]
+
+          tools_start = '      {!editingAgent && !editingProvider && advancedSection === "tools" ? ('
+          agents_start = '      {!editingAgent && !editingProvider && advancedSection === "agents" ? ('
+          tools_block = '''      {!editingAgent && !editingProvider && advancedSection === "tools" ? (
+                <div className="flex flex-col gap-5">
+                  <TabPanelLead
+                    description={
+                      locale === "zh"
+                        ? "由代码发布的受控能力目录；Workflow 不直接调用 Tool，必须经过 Skill/Agent 授权。"
+                        : "Code-published governed capabilities; Workflows do not invoke Tools directly and must use Skill/Agent authorization."
+                    }
+                  />
+                  {tools.length === 0 ? (
+                    <Card padding="base">
+                      <Empty description={locale === "zh" ? "暂无 Tool" : "No Tools"} />
+                    </Card>
+                  ) : (
+                    <Card padding="none" className="overflow-hidden">
+                      <CardContent className="divide-y p-0">
+                        {tools.map((tool) => (
+                          <div
+                            key={tool.name}
+                            className="grid gap-3 p-6 md:grid-cols-[minmax(0,1fr)_minmax(8rem,0.3fr)_auto] md:items-center"
+                          >
+                            <div className="min-w-0">
+                              <strong className="font-mono text-sm">{tool.name}</strong>
+                              <Text size="xs" tone="muted">
+                                {locale === "zh"
+                                  ? tool.description_zh || tool.description
+                                  : tool.description}
+                              </Text>
+                            </div>
+                            <Text size="sm">{tool.surfaces?.join(", ") || "agent"}</Text>
+                            <RiskPill risk={tool.risk_level} locale={locale} />
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              ) : null}'''
+          text = replace_between(text, tools_start, agents_start, tools_block)
+
+          skills_start = '''      {!editingAgent &&
+              !editingProvider &&
+              !editingSkill &&
+              advancedSection === "skills" ? ('''
+          agents_block = '''      {!editingAgent && !editingProvider && advancedSection === "agents" ? (
+                <div className="flex flex-col gap-5">
+                  <TabPanelLead
+                    description={
+                      locale === "zh"
+                        ? "Skill Version + 模型连接 + 运行计划组成可审计的执行单元。"
+                        : "A Skill Version, model connection, and run schedule form an auditable execution unit."
+                    }
+                    actions={
+                      <Button
+                        size="small"
+                        variant="solid"
+                        color="primary"
+                        onClick={() =>
+                          providers.length > 0
+                            ? onEditAgent("new")
+                            : onError(labels.providerNeeded)
+                        }
+                        icon={<Plus />}
+                      >
+                        {labels.createAgent}
+                      </Button>
+                    }
+                  />
+                  {providers.length === 0 ? (
+                    <Alert
+                      type="warning"
+                      showIcon
+                      title={locale === "zh" ? "先添加模型连接" : "Add a model connection first"}
+                      description={
+                        locale === "zh"
+                          ? "保存首个可用模型连接后再创建 Agent。"
+                          : "Save the first usable model connection before creating an Agent."
+                      }
+                      action={
+                        <Button size="small" type="button" onClick={() => onSelectSection("providers")}>
+                          {locale === "zh" ? "配置模型连接" : "Configure a model connection"}
+                        </Button>
+                      }
+                    />
+                  ) : null}
+                  {agents.length === 0 ? (
+                    <Card padding="lg">
+                      <Empty
+                        title={locale === "zh" ? "暂无 Agent" : "No Agents yet"}
+                        description={
+                          locale === "zh"
+                            ? "创建 Agent 后可配置模型、Skill、调度、配额和启停状态。"
+                            : "Create an Agent to configure its model, Skill, schedule, quotas, and state."
+                        }
+                      />
+                    </Card>
+                  ) : (
+                    <Card padding="none" className="overflow-hidden">
+                      <CardContent className="divide-y p-0">
+                        {agents.map((agent) => {
+                          const defaultWritingProvider = providers.find(
+                            (provider) => provider.enabled && provider.is_default_writing,
+                          );
+                          const provider = agent.provider_profile_id
+                            ? providerMap.get(agent.provider_profile_id)
+                            : defaultWritingProvider;
+                          const latestRun = runs.find((run) => run.agent_id === agent.id);
+                          const toolsForSkill = agent.skill?.capabilities || [];
+                          return (
+                            <div
+                              key={agent.id}
+                              className="flex flex-col gap-4 p-6 xl:flex-row xl:items-start xl:justify-between"
+                            >
+                              <div className="min-w-0 space-y-3">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <strong>{agent.name}</strong>
+                                  <Tag color={agent.enabled ? "success" : "default"}>
+                                    {agent.enabled ? labels.active : labels.paused}
+                                  </Tag>
+                                  {agent.system_key ? (
+                                    <Tag color="primary">
+                                      {locale === "zh" ? "默认能力" : "Default capability"}
+                                    </Tag>
+                                  ) : (
+                                    <Tag>{locale === "zh" ? "自定义" : "Custom"}</Tag>
+                                  )}
+                                </div>
+                                <Text size="sm" tone="muted">{agent.description}</Text>
+                                <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2 xl:grid-cols-4">
+                                  <span>
+                                    {labels.provider}: {provider?.name || (locale === "zh" ? "跟随系统默认" : "Inherit Default")}
+                                  </span>
+                                  <span>
+                                    Skill: {agent.skill?.name || "—"} v{agent.skill?.version || "—"} · {toolsForSkill.length} Tools
+                                  </span>
+                                  <span>
+                                    {agent.trigger_type === "cron" ? agent.cron_expression : labels.manual}
+                                    {agent.trigger_type === "cron" && agent.timezone ? ` · ${agent.timezone}` : ""}
+                                  </span>
+                                  <span className="flex flex-wrap items-center gap-2">
+                                    {latestRun ? (
+                                      <>
+                                        <StatusPill status={latestRun.status} locale={locale} />
+                                        <span>{formatDateTime(latestRun.created_at)}</span>
+                                      </>
+                                    ) : (
+                                      labels.never
+                                    )}
+                                  </span>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {toolsForSkill.map((capability) => (
+                                    <Tag key={capability}>{formatCapability(capability)}</Tag>
+                                  ))}
+                                </div>
+                              </div>
+                              <div className="flex min-w-max shrink-0 flex-nowrap items-center gap-1">
+                                <IconButton
+                                  label={labels.runNow}
+                                  icon={<Play />}
+                                  variant="ghost"
+                                  onClick={() => void onRunAgent(agent)}
+                                  disabled={!agent.enabled}
+                                />
+                                <IconButton
+                                  label={labels.edit}
+                                  icon={<Edit2 />}
+                                  variant="ghost"
+                                  onClick={() => onEditAgent(agent)}
+                                />
+                                <Button
+                                  size="small"
+                                  variant="ghost"
+                                  icon={agent.enabled ? <CirclePause /> : <Play />}
+                                  onClick={() => void onToggleAgentEnabled(agent)}
+                                >
+                                  {agent.enabled ? labels.disable : labels.enable}
+                                </Button>
+                                {!agent.system_key ? (
+                                  <IconButton
+                                    variant="ghost"
+                                    color="error"
+                                    label={labels.delete}
+                                    icon={<Trash2 />}
+                                    onClick={() => onDeleteTarget({ kind: "agent", value: agent })}
+                                  />
+                                ) : null}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              ) : null}'''
+          text = replace_between(text, agents_start, skills_start, agents_block)
+
+          providers_start = '      {!editingAgent && !editingProvider && advancedSection === "providers" ? ('
+          skills_block = '''      {!editingAgent &&
+              !editingProvider &&
+              !editingSkill &&
+              advancedSection === "skills" ? (
+                <div className="flex flex-col gap-5">
+                  <input
+                    ref={skillFileInputRef}
+                    type="file"
+                    accept=".json,application/json"
+                    hidden
+                    onChange={(event) => void onImportSkill(event)}
+                  />
+                  <TabPanelLead
+                    description={
+                      locale === "zh"
+                        ? "管理可复用、可版本化的 AI 能力定义；系统 Skill 与团队副本保持清晰边界。"
+                        : "Manage reusable, versioned AI capability definitions while keeping system Skills and team copies distinct."
+                    }
+                    actions={
+                      <>
+                        <Button
+                          size="small"
+                          variant="outline"
+                          type="button"
+                          onClick={() => skillFileInputRef.current?.click()}
+                          icon={<Upload />}
+                        >
+                          {locale === "zh" ? "导入 Skill" : "Import Skill"}
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="solid"
+                          color="primary"
+                          type="button"
+                          onClick={() => onEditSkill("new")}
+                          icon={<Plus />}
+                        >
+                          {locale === "zh" ? "创建 Skill" : "Create Skill"}
+                        </Button>
+                      </>
+                    }
+                  />
+                  {skills.length === 0 ? (
+                    <Card padding="base">
+                      <Empty description={labels.noSkills} />
+                    </Card>
+                  ) : (
+                    <div className="grid gap-4 lg:grid-cols-2">
+                      {skills.map((skill) => (
+                        <Card key={skill.id} padding="base">
+                          <div className="flex h-full flex-col gap-4">
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <strong>{skill.name}</strong>
+                                  <Tag color={skill.system_key ? "primary" : "default"}>
+                                    {skill.system_key
+                                      ? locale === "zh" ? "系统 Skill" : "System Skill"
+                                      : locale === "zh" ? "自定义" : "Custom"}
+                                  </Tag>
+                                  <Tag color={skill.execution_mode === "approval" ? "warning" : "default"}>
+                                    {skill.execution_mode === "approval" ? labels.approvalMode : labels.advisory}
+                                  </Tag>
+                                </div>
+                                <Text size="xs" tone="muted">
+                                  v{skill.version} · {formatDateTime(skill.updated_at)}
+                                </Text>
+                              </div>
+                            </div>
+                            <Text size="sm" tone="muted">{skill.description}</Text>
+                            <div className="flex flex-wrap gap-2">
+                              {skill.capabilities.map((capability) => (
+                                <Tag key={capability}>{formatCapability(capability)}</Tag>
+                              ))}
+                            </div>
+                            <div className="mt-auto flex flex-wrap gap-2 border-t pt-4">
+                              <Button
+                                size="small"
+                                variant="ghost"
+                                icon={<Download />}
+                                onClick={() => void onExportSkill(skill)}
+                              >
+                                {locale === "zh" ? "导出" : "Export Skill"}
+                              </Button>
+                              <Button
+                                size="small"
+                                variant="ghost"
+                                icon={<Copy />}
+                                onClick={() => void onCopySkill(skill)}
+                              >
+                                {locale === "zh" ? "复制" : "Copy Skill"}
+                              </Button>
+                              <Button
+                                size="small"
+                                variant="ghost"
+                                icon={<Edit2 />}
+                                onClick={() => onEditSkill(skill)}
+                              >
+                                {labels.edit}
+                              </Button>
+                              {!skill.system_key ? (
+                                <Button
+                                  size="small"
+                                  variant="ghost"
+                                  color="error"
+                                  icon={<Trash2 />}
+                                  onClick={() => onDeleteTarget({ kind: "skill", value: skill })}
+                                >
+                                  {labels.delete}
+                                </Button>
+                              ) : null}
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : null}'''
+          text = replace_between(text, skills_start, providers_start, skills_block)
+          path.write_text(text)
+
+          test = Path("blog-frontend/src/pages/admin/__tests__/AISettings.test.tsx")
+          t = test.read_text()
+          t = t.replace('findByRole("radio", { name: "Skills" })', 'findByRole("tab", { name: "Skills" })')
+          t = t.replace('findByRole("radio", { name: "Providers" })', 'findByRole("tab", { name: "Providers" })')
+          t = t.replace('getByRole("radio", { name: "Skills" })', 'getByRole("tab", { name: "Skills" })')
+          t = t.replace(
+          '''    expect(screen.getByRole("heading", { name: "Skills" })).toBeInTheDocument();''',
+          '''    expect(screen.getByRole("tab", { name: "Skills" })).toHaveAttribute(
+                "aria-selected",
+                "true",
+              );'''
+          )
+          insert = '''
+
+            it("uses tab-owned navigation and avoids duplicate section headings", async () => {
+              const user = userEvent.setup();
+              renderSettings();
+              const agentsTab = await screen.findByRole("tab", { name: "Agents" });
+              expect(agentsTab).toHaveAttribute("aria-selected", "true");
+              expect(screen.queryByRole("heading", { name: "Agents" })).not.toBeInTheDocument();
+
+              await user.click(screen.getByRole("tab", { name: "Tools" }));
+              expect(screen.getByRole("tab", { name: "Tools" })).toHaveAttribute(
+                "aria-selected",
+                "true",
+              );
+              expect(screen.queryByRole("heading", { name: "Tools" })).not.toBeInTheDocument();
+              expect(screen.getByText("content.list_posts")).toBeInTheDocument();
+              expect(window.location.search).toBe("?section=tools");
+            });
+          '''
+          pos = t.rfind("\n});")
+          if pos < 0:
+              raise SystemExit("AISettings test suite end not found")
+          t = t[:pos] + insert + t[pos:]
+          test.write_text(t)
+          PY
+      - working-directory: blog-frontend
+        run: npx prettier --write src/components/agent/AdvancedWorkspace.tsx src/pages/admin/__tests__/AISettings.test.tsx
+      - working-directory: blog-frontend
+        run: npm run test:run -- src/pages/admin/__tests__/AISettings.test.tsx
+      - working-directory: blog-frontend
+        run: npx tsc -b
+      - name: Commit verified refactor
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add blog-frontend/src/components/agent/AdvancedWorkspace.tsx blog-frontend/src/pages/admin/__tests__/AISettings.test.tsx
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "refactor(ui): align AI Settings primary sections"
+          git push origin HEAD:ui/blog-admin-final-parity-ai-settings-a
