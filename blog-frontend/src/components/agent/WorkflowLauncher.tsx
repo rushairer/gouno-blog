@@ -2,8 +2,7 @@ import { Play, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { workflowApi } from "../../api/workflows";
 import type { Workflow } from "../../types/agent";
-import { Modal } from "@gouno/ui/core";
-import { Button, Feedback, Select } from "@gouno/ui-legacy";
+import { Alert, Button, ButtonLink, Modal, Select } from "@gouno/ui/core";
 import { WorkflowInputForm } from "./WorkflowInputForm";
 
 function resourceField(workflow: Workflow, type: string): string | undefined {
@@ -67,6 +66,7 @@ export function WorkflowLauncher({
     type: "success" | "error";
     text: string;
   } | null>(null);
+
   useEffect(() => {
     if (!open) return;
     workflowApi
@@ -85,15 +85,18 @@ export function WorkflowLauncher({
         setFeedback({ type: "error", text: reason.message }),
       );
   }, [open, resourceKeys, resourceType]);
+
   const workflow = useMemo(
     () => workflows.find((item) => item.id === workflowID),
     [workflowID, workflows],
   );
+
   const choose = (id: number) => {
     const next = workflows.find((item) => item.id === id);
     setWorkflowID(id);
     setInput(next ? initialInput(next, resourceType, resourceKeys) : {});
   };
+
   const run = async () => {
     if (!workflow) return;
     setBusy(true);
@@ -113,6 +116,7 @@ export function WorkflowLauncher({
       setBusy(false);
     }
   };
+
   return (
     <Modal
       className="workflow-launcher-modal"
@@ -123,11 +127,12 @@ export function WorkflowLauncher({
       onClose={onClose}
       footer={
         <div className="workflow-launcher__footer modal-actions">
-          <Button variant="secondary" type="button" onClick={onClose}>
+          <Button variant="outline" type="button" onClick={onClose}>
             关闭
           </Button>
           <Button
-            variant="primary"
+            variant="solid"
+            color="primary"
             type="button"
             loading={busy}
             disabled={!workflow}
@@ -146,11 +151,11 @@ export function WorkflowLauncher({
               <label className="workflow-launcher__workflow-field">
                 Workflow
                 <Select
-                  value={workflowID}
-                  onChange={(event) => choose(Number(event.target.value))}
+                  value={workflowID === "" ? "" : String(workflowID)}
+                  onChange={(nextValue) => choose(Number(nextValue))}
                 >
                   {workflows.map((item) => (
-                    <option key={item.id} value={item.id}>
+                    <option key={item.id} value={String(item.id)}>
                       {item.name}
                     </option>
                   ))}
@@ -171,16 +176,21 @@ export function WorkflowLauncher({
             </p>
           )}
           {feedback ? (
-            <Feedback type={feedback.type}>
-              {feedback.text}
-              {feedback.type === "success" && workflow ? (
-                <a
-                  href={`/admin/ai-ops?tab=records&record=workflow&workflow=${workflow.id}`}
-                >
-                  打开运行中心
-                </a>
-              ) : null}
-            </Feedback>
+            <Alert
+              type={feedback.type}
+              showIcon
+              title={feedback.text}
+              action={
+                feedback.type === "success" && workflow ? (
+                  <ButtonLink
+                    variant="link"
+                    href={`/admin/ai-ops?tab=records&record=workflow&workflow=${workflow.id}`}
+                  >
+                    打开运行中心
+                  </ButtonLink>
+                ) : undefined
+              }
+            />
           ) : null}
         </div>
       </div>
