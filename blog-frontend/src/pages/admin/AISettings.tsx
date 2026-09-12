@@ -406,7 +406,9 @@ function AISettingsContent() {
         {pageHeader}
         <div
           role="status"
-          aria-label={locale === "zh" ? "正在加载 AI 设置…" : "Loading AI settings…"}
+          aria-label={
+            locale === "zh" ? "正在加载 AI 设置…" : "Loading AI settings…"
+          }
           aria-live="polite"
         >
           <Card padding="base">
