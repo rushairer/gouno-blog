@@ -1,7 +1,9 @@
 package agent
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/rushairer/blog-backend/internal/domain"
@@ -68,5 +70,99 @@ func TestIsImageBriefApproval(t *testing.T) {
 		if isImageBriefApproval(approval) {
 			t.Fatalf("non-image approval %#v should not start generation", approval)
 		}
+	}
+}
+
+type mediaGenerationFailureStub struct {
+	workflowRunID *int64
+	recordErr     error
+	candidateID   int64
+	code          string
+	message       string
+}
+
+func (s *mediaGenerationFailureStub) ClaimMediaGeneration(context.Context, int64) (*domain.MediaCandidate, error) {
+	return nil, errors.New("unused")
+}
+func (s *mediaGenerationFailureStub) CompleteMediaGeneration(context.Context, int64, int64, bool) error {
+	return errors.New("unused")
+}
+func (s *mediaGenerationFailureStub) CancelMediaGeneration(context.Context, int64) error {
+	return errors.New("unused")
+}
+func (s *mediaGenerationFailureStub) RecordMediaGenerationError(_ context.Context, candidateID int64, code, message string) (*int64, error) {
+	s.candidateID, s.code, s.message = candidateID, code, message
+	return s.workflowRunID, s.recordErr
+}
+
+type workflowEventStub struct {
+	events    []*domain.WorkflowRunEvent
+	appendErr error
+}
+
+func (s *workflowEventStub) AppendWorkflowRunEvent(_ context.Context, event *domain.WorkflowRunEvent) error {
+	s.events = append(s.events, event)
+	return s.appendErr
+}
+func (s *workflowEventStub) ListWorkflowRunEvents(context.Context, int64) ([]*domain.WorkflowRunEvent, error) {
+	return nil, nil
+}
+func (s *workflowEventStub) ListMediaCandidateEvents(context.Context, int64) ([]*domain.WorkflowRunEvent, error) {
+	return nil, nil
+}
+
+func TestRecordMediaGenerationFailureOwnsWorkflowOrchestration(t *testing.T) {
+	runID := int64(41)
+	mediaStore := &mediaGenerationFailureStub{workflowRunID: &runID}
+	events := &workflowEventStub{appendErr: errors.New("audit unavailable")}
+	svc := &ApprovalService{mediaGeneration: mediaStore, workflowEvents: events}
+
+	svc.recordMediaGenerationFailure(context.Background(), 7, "image_generation_timeout", "provider timed out")
+
+	if mediaStore.candidateID != 7 || mediaStore.code != "image_generation_timeout" || mediaStore.message != "provider timed out" {
+		t.Fatalf("media failure write = id:%d code:%q message:%q", mediaStore.candidateID, mediaStore.code, mediaStore.message)
+	}
+	if len(events.events) != 1 {
+		t.Fatalf("workflow events = %d, want 1", len(events.events))
+	}
+	event := events.events[0]
+	if event.WorkflowRunID == nil || *event.WorkflowRunID != runID || event.EventType != "image_generation_timed_out" {
+		t.Fatalf("workflow event = %#v", event)
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(event.Payload, &payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload["candidate_id"] != float64(7) || payload["error_code"] != "image_generation_timeout" || payload["error_message"] != "provider timed out" {
+		t.Fatalf("workflow payload = %#v", payload)
+	}
+}
+
+func TestRecordMediaGenerationFailureSkipsWorkflowWhenUnavailable(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		store    *mediaGenerationFailureStub
+		wantSeen int
+	}{
+		{name: "no workflow run", store: &mediaGenerationFailureStub{}},
+		{name: "agent persistence failed", store: &mediaGenerationFailureStub{recordErr: errors.New("write failed")}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			events := &workflowEventStub{}
+			svc := &ApprovalService{mediaGeneration: test.store, workflowEvents: events}
+			svc.recordMediaGenerationFailure(context.Background(), 9, "image_generation_failed", "failed")
+			if len(events.events) != test.wantSeen {
+				t.Fatalf("workflow events = %d, want %d", len(events.events), test.wantSeen)
+			}
+		})
+	}
+}
+
+func TestGenerationFailureEvent(t *testing.T) {
+	if got := generationFailureEvent("image_generation_timeout"); got != "image_generation_timed_out" {
+		t.Fatalf("timeout event = %q", got)
+	}
+	if got := generationFailureEvent("image_generation_failed"); got != "image_generation_failed" {
+		t.Fatalf("failure event = %q", got)
 	}
 }

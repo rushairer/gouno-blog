@@ -14,7 +14,6 @@ import (
 	"github.com/rushairer/blog-backend/internal/media"
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
 	postservice "github.com/rushairer/blog-backend/internal/post/service"
-	"github.com/rushairer/blog-backend/internal/repository"
 )
 
 var (
@@ -33,22 +32,18 @@ type postVersionReader interface {
 }
 
 type ApprovalService struct {
-	repo         *repository.AgentRepository
-	posts        *postservice.PostService
-	pages        *pageservice.PageService
-	management   *ManagementService
-	postVersions postVersionReader
-	mediaAssets  mediaAssetGateway
-	media        media.Store
-	generation   *GenerationService
-}
-
-func (s *ApprovalService) SetGenerationService(generation *GenerationService) {
-	s.generation = generation
-}
-
-func (s *ApprovalService) SetPageService(pages *pageservice.PageService) {
-	s.pages = pages
+	approvals            ApprovalStore
+	mediaCandidates      MediaCandidateStore
+	mediaGeneration      MediaGenerationStore
+	workflowInteractions WorkflowInteractionStore
+	workflowEvents       WorkflowEventPort
+	effects              ApprovalEffectWriter
+	posts                *postservice.PostService
+	pages                *pageservice.PageService
+	postVersions         postVersionReader
+	mediaAssets          mediaAssetGateway
+	media                media.Store
+	generation           *GenerationService
 }
 
 func (s *ApprovalService) List(ctx context.Context, status string, page, pageSize int) ([]*domain.AgentApproval, int, error) {
@@ -61,39 +56,39 @@ func (s *ApprovalService) List(ctx context.Context, status string, page, pageSiz
 	if pageSize > 100 {
 		pageSize = 100
 	}
-	return s.repo.ListApprovals(ctx, status, pageSize, (page-1)*pageSize)
+	return s.approvals.ListApprovals(ctx, status, pageSize, (page-1)*pageSize)
 }
 
 func (s *ApprovalService) ListMediaCandidates(ctx context.Context) ([]*domain.MediaCandidate, error) {
-	return s.repo.ListMediaCandidates(ctx)
+	return s.mediaCandidates.ListMediaCandidates(ctx)
 }
 func (s *ApprovalService) ListMediaCandidatesByWorkflowRun(ctx context.Context, runID int64) ([]*domain.MediaCandidate, error) {
-	return s.repo.ListMediaCandidatesByWorkflowRun(ctx, runID)
+	return s.mediaCandidates.ListMediaCandidatesByWorkflowRun(ctx, runID)
 }
 func (s *ApprovalService) GetMediaCandidate(ctx context.Context, id int64) (*domain.MediaCandidate, error) {
-	return s.repo.GetMediaCandidate(ctx, id)
+	return s.mediaCandidates.GetMediaCandidate(ctx, id)
 }
 
 func (s *ApprovalService) GetInteraction(ctx context.Context, id int64) (*domain.WorkflowInteractionTask, error) {
-	return s.repo.GetInteraction(ctx, id)
+	return s.workflowInteractions.GetInteraction(ctx, id)
 }
 func (s *ApprovalService) ListInteractions(ctx context.Context, runID int64) ([]*domain.WorkflowInteractionTask, error) {
-	return s.repo.ListInteractions(ctx, runID)
+	return s.workflowInteractions.ListInteractions(ctx, runID)
 }
 func (s *ApprovalService) ListPendingInteractions(ctx context.Context) ([]*domain.WorkflowInteractionTask, error) {
-	return s.repo.ListPendingInteractions(ctx)
+	return s.workflowInteractions.ListPendingInteractions(ctx)
 }
 func (s *ApprovalService) ResolveInteraction(ctx context.Context, id int64, token string, response json.RawMessage, principalID int64) (*domain.WorkflowInteractionTask, error) {
-	return s.repo.ResolveInteraction(ctx, id, token, response, principalID)
+	return s.workflowInteractions.ResolveInteraction(ctx, id, token, response, principalID)
 }
 func (s *ApprovalService) CancelInteraction(ctx context.Context, id int64, token string, principalID int64) error {
-	return s.repo.CancelInteraction(ctx, id, token, principalID)
+	return s.workflowInteractions.CancelInteraction(ctx, id, token, principalID)
 }
 func (s *ApprovalService) ListMediaCandidateEvents(ctx context.Context, id int64) ([]*domain.WorkflowRunEvent, error) {
-	return s.repo.ListMediaCandidateEvents(ctx, id)
+	return s.workflowEvents.ListMediaCandidateEvents(ctx, id)
 }
 func (s *ApprovalService) ListWorkflowRunEvents(ctx context.Context, id int64) ([]*domain.WorkflowRunEvent, error) {
-	return s.repo.ListWorkflowRunEvents(ctx, id)
+	return s.workflowEvents.ListWorkflowRunEvents(ctx, id)
 }
 
 func (s *ApprovalService) SelectMediaCandidate(ctx context.Context, id int64, placement, anchor string) error {
@@ -103,7 +98,7 @@ func (s *ApprovalService) SelectMediaCandidate(ctx context.Context, id int64, pl
 	if placement == "inline" && strings.TrimSpace(anchor) == "" {
 		return errors.New("inline image requires an anchor")
 	}
-	if err := s.repo.SelectMediaCandidate(ctx, id, placement, strings.TrimSpace(anchor)); err != nil {
+	if err := s.mediaCandidates.SelectMediaCandidate(ctx, id, placement, strings.TrimSpace(anchor)); err != nil {
 		return err
 	}
 	s.appendCandidateEvent(ctx, id, "candidate_selected", map[string]any{"placement": placement})
@@ -114,14 +109,14 @@ func (s *ApprovalService) SelectMediaCandidates(ctx context.Context, runID int64
 	if runID <= 0 || len(selections) == 0 {
 		return errors.New("at least one image candidate is required")
 	}
-	available, err := s.repo.ListMediaCandidatesByWorkflowRun(ctx, runID)
+	available, err := s.mediaCandidates.ListMediaCandidatesByWorkflowRun(ctx, runID)
 	if err != nil {
 		return err
 	}
 	if err := validateMediaCandidateSelections(available, selections); err != nil {
 		return err
 	}
-	if err := s.repo.SelectMediaCandidates(ctx, selections); err != nil {
+	if err := s.mediaCandidates.SelectMediaCandidates(ctx, selections); err != nil {
 		return err
 	}
 	for _, selection := range selections {
@@ -160,7 +155,7 @@ func validateMediaCandidateSelections(available []*domain.MediaCandidate, select
 }
 
 func (s *ApprovalService) CancelMediaGeneration(ctx context.Context, id int64) error {
-	if err := s.repo.CancelMediaGeneration(ctx, id); err != nil {
+	if err := s.mediaGeneration.CancelMediaGeneration(ctx, id); err != nil {
 		return err
 	}
 	s.appendCandidateEvent(ctx, id, "image_generation_cancelled", map[string]any{})
@@ -168,7 +163,7 @@ func (s *ApprovalService) CancelMediaGeneration(ctx context.Context, id int64) e
 }
 
 func (s *ApprovalService) RejectMediaCandidate(ctx context.Context, id int64) error {
-	if err := s.repo.RejectMediaCandidate(ctx, id, "rejected by administrator"); err != nil {
+	if err := s.mediaCandidates.RejectMediaCandidate(ctx, id, "rejected by administrator"); err != nil {
 		return err
 	}
 	s.appendCandidateEvent(ctx, id, "image_candidate_rejected", map[string]any{})
@@ -179,7 +174,7 @@ func (s *ApprovalService) RejectMediaCandidates(ctx context.Context, runID int64
 	if len(ids) == 0 {
 		return errors.New("at least one candidate id is required")
 	}
-	if err := s.repo.RejectMediaCandidates(ctx, ids); err != nil {
+	if err := s.mediaCandidates.RejectMediaCandidates(ctx, ids); err != nil {
 		return err
 	}
 	for _, id := range ids {
@@ -189,7 +184,7 @@ func (s *ApprovalService) RejectMediaCandidates(ctx context.Context, runID int64
 }
 
 func (s *ApprovalService) ApplyMediaCandidate(ctx context.Context, id int64) (*domain.Post, error) {
-	candidate, err := s.repo.GetMediaCandidate(ctx, id)
+	candidate, err := s.mediaCandidates.GetMediaCandidate(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -231,9 +226,9 @@ func (s *ApprovalService) ApplyMediaCandidate(ctx context.Context, id int64) (*d
 	}
 	versions, _ := s.postVersions.ListVersions(ctx, post.ID)
 	if len(versions) > 0 {
-		_ = s.repo.MarkMediaCandidateApplied(ctx, id, versions[0].ID)
+		_ = s.mediaCandidates.MarkMediaCandidateApplied(ctx, id, versions[0].ID)
 	}
-	_ = s.repo.SyncPostVersionToken(ctx, post.ID, strconv.FormatInt(post.UpdatedAt.Unix(), 10))
+	_ = s.mediaCandidates.SyncPostVersionToken(ctx, post.ID, strconv.FormatInt(post.UpdatedAt.Unix(), 10))
 	s.appendCandidateEvent(ctx, id, "article_version_created", map[string]any{"post_id": post.ID, "placement": candidate.Placement})
 	return post, nil
 }
@@ -245,7 +240,7 @@ func (s *ApprovalService) ApplyMediaCandidates(ctx context.Context, runID int64,
 	if runID <= 0 || len(ids) == 0 {
 		return nil, errors.New("at least one selected image is required")
 	}
-	candidates, err := s.repo.ListMediaCandidatesByWorkflowRun(ctx, runID)
+	candidates, err := s.mediaCandidates.ListMediaCandidatesByWorkflowRun(ctx, runID)
 	if err != nil {
 		return nil, err
 	}
@@ -320,17 +315,17 @@ func (s *ApprovalService) ApplyMediaCandidates(ctx context.Context, runID int64,
 	}
 	for _, id := range ids {
 		if versionID > 0 {
-			_ = s.repo.MarkMediaCandidateApplied(ctx, id, versionID)
+			_ = s.mediaCandidates.MarkMediaCandidateApplied(ctx, id, versionID)
 		}
 		s.appendCandidateEvent(ctx, id, "article_apply_confirmed", map[string]any{"post_id": post.ID, "batch": true})
 		s.appendCandidateEvent(ctx, id, "article_version_created", map[string]any{"post_id": post.ID, "batch": true})
 	}
-	_ = s.repo.SyncPostVersionToken(ctx, post.ID, strconv.FormatInt(post.UpdatedAt.Unix(), 10))
+	_ = s.mediaCandidates.SyncPostVersionToken(ctx, post.ID, strconv.FormatInt(post.UpdatedAt.Unix(), 10))
 	return post, nil
 }
 
 func (s *ApprovalService) PreviewMediaCandidate(ctx context.Context, id int64) (map[string]any, error) {
-	candidate, err := s.repo.GetMediaCandidate(ctx, id)
+	candidate, err := s.mediaCandidates.GetMediaCandidate(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -387,20 +382,44 @@ func (s *ApprovalService) PreviewMediaCandidate(ctx context.Context, id int64) (
 }
 
 func (s *ApprovalService) appendCandidateEvent(ctx context.Context, candidateID int64, eventType string, payload map[string]any) {
-	candidate, err := s.repo.GetMediaCandidate(ctx, candidateID)
+	candidate, err := s.mediaCandidates.GetMediaCandidate(ctx, candidateID)
 	if err != nil || candidate.WorkflowRunID == nil {
 		return
 	}
 	runID := *candidate.WorkflowRunID
 	raw, _ := json.Marshal(payload)
-	_ = s.repo.AppendWorkflowRunEvent(ctx, &domain.WorkflowRunEvent{WorkflowRunID: &runID, WorkflowStepID: candidate.WorkflowStepID, InteractionTaskID: candidate.InteractionTaskID, EventType: eventType, Payload: raw})
+	_ = s.workflowEvents.AppendWorkflowRunEvent(ctx, &domain.WorkflowRunEvent{WorkflowRunID: &runID, WorkflowStepID: candidate.WorkflowStepID, InteractionTaskID: candidate.InteractionTaskID, EventType: eventType, Payload: raw})
+}
+
+func (s *ApprovalService) recordMediaGenerationFailure(ctx context.Context, candidateID int64, code, message string) {
+	workflowRunID, err := s.mediaGeneration.RecordMediaGenerationError(ctx, candidateID, code, message)
+	if err != nil || workflowRunID == nil {
+		return
+	}
+	payload, _ := json.Marshal(map[string]any{
+		"candidate_id":  candidateID,
+		"error_code":    code,
+		"error_message": message,
+	})
+	_ = s.workflowEvents.AppendWorkflowRunEvent(ctx, &domain.WorkflowRunEvent{
+		WorkflowRunID: workflowRunID,
+		EventType:     generationFailureEvent(code),
+		Payload:       payload,
+	})
+}
+
+func generationFailureEvent(code string) string {
+	if code == "image_generation_timeout" {
+		return "image_generation_timed_out"
+	}
+	return "image_generation_failed"
 }
 
 func (s *ApprovalService) ReviewMediaCandidate(ctx context.Context, id int64, action string, reviewerPrincipalID int64, note string) error {
 	if id <= 0 || (action != "ready" && action != "reject") || (action == "reject" && strings.TrimSpace(note) == "") {
 		return ErrInvalid
 	}
-	if err := s.repo.ReviewMediaCandidate(ctx, id, action, reviewerPrincipalID, strings.TrimSpace(note)); err != nil {
+	if err := s.mediaCandidates.ReviewMediaCandidate(ctx, id, action, reviewerPrincipalID, strings.TrimSpace(note)); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrApprovalConflict
 		}
@@ -413,7 +432,7 @@ func (s *ApprovalService) AttachMediaAsset(ctx context.Context, candidateID, med
 	if candidateID <= 0 || mediaAssetID <= 0 {
 		return ErrInvalid
 	}
-	if err := s.repo.AttachMediaAsset(ctx, candidateID, mediaAssetID); err != nil {
+	if err := s.mediaCandidates.AttachMediaAsset(ctx, candidateID, mediaAssetID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrApprovalConflict
 		}
@@ -426,7 +445,7 @@ func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, 
 	if id <= 0 || s.generation == nil {
 		return ErrInvalid
 	}
-	candidate, err := s.repo.ClaimMediaGeneration(ctx, id)
+	candidate, err := s.mediaGeneration.ClaimMediaGeneration(ctx, id)
 	if err != nil {
 		return ErrApprovalConflict
 	}
@@ -435,7 +454,7 @@ func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, 
 	}
 	s.appendCandidateEvent(ctx, id, "image_generation_started", map[string]any{"attempt": candidate.GenerationAttempt})
 	fail := func(code, reason string) error {
-		_ = s.repo.RecordMediaGenerationError(ctx, id, code, reason)
+		s.recordMediaGenerationFailure(ctx, id, code, reason)
 		return errors.New(reason)
 	}
 	prompt := candidate.Brief
@@ -452,7 +471,7 @@ func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, 
 		}
 		return fail(code, err.Error())
 	}
-	if err := s.repo.CompleteMediaGeneration(ctx, id, asset.ID, false); err != nil {
+	if err := s.mediaGeneration.CompleteMediaGeneration(ctx, id, asset.ID, false); err != nil {
 		_, _ = s.mediaAssets.DeleteMedia(ctx, asset.ID)
 		_ = s.media.Delete(ctx, asset.StorageName)
 		return err
@@ -473,7 +492,7 @@ func (s *ApprovalService) SetMediaGenerationInstruction(ctx context.Context, id 
 	if id <= 0 || len([]rune(instruction)) > 2000 {
 		return ErrInvalid
 	}
-	if err := s.repo.SetMediaGenerationInstruction(ctx, id, instruction); err != nil {
+	if err := s.mediaCandidates.SetMediaGenerationInstruction(ctx, id, instruction); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrApprovalConflict
 		}
@@ -486,18 +505,18 @@ func (s *ApprovalService) SetMediaGenerationInstruction(ctx context.Context, id 
 }
 
 func (s *ApprovalService) Reject(ctx context.Context, id int64, reviewerPrincipalID int64, note string) error {
-	if err := s.repo.RejectApproval(ctx, id, reviewerPrincipalID, strings.TrimSpace(note)); err != nil {
+	if err := s.approvals.RejectApproval(ctx, id, reviewerPrincipalID, strings.TrimSpace(note)); err != nil {
 		return ErrApprovalConflict
 	}
 	return nil
 }
 
 func (s *ApprovalService) ReconcileApprovalRun(ctx context.Context, approvalID int64) (*domain.AgentRun, error) {
-	return s.repo.ReconcileApprovalRun(ctx, approvalID)
+	return s.approvals.ReconcileApprovalRun(ctx, approvalID)
 }
 
 func (s *ApprovalService) Approve(ctx context.Context, id int64, reviewerPrincipalID int64, note string) error {
-	approval, err := s.repo.GetApproval(ctx, id)
+	approval, err := s.approvals.GetApproval(ctx, id)
 	if err != nil {
 		return translateError(err)
 	}
@@ -508,34 +527,34 @@ func (s *ApprovalService) Approve(ctx context.Context, id int64, reviewerPrincip
 		return ErrApprovalConflict
 	}
 	if time.Now().After(approval.ExpiresAt) {
-		_ = s.repo.CompleteApproval(ctx, id, domain.ApprovalExpired, "approval expired")
+		_ = s.approvals.CompleteApproval(ctx, id, domain.ApprovalExpired, "approval expired")
 		return ErrApprovalExpired
 	}
 	if err := s.validateConflict(ctx, approval); err != nil {
 		return err
 	}
-	if err := s.repo.ClaimApproval(ctx, id, reviewerPrincipalID, strings.TrimSpace(note)); err != nil {
+	if err := s.approvals.ClaimApproval(ctx, id, reviewerPrincipalID, strings.TrimSpace(note)); err != nil {
 		return ErrApprovalConflict
 	}
 	if err := s.execute(ctx, approval); err != nil {
-		_ = s.repo.CompleteApproval(ctx, id, domain.ApprovalFailed, safeError(err))
+		_ = s.approvals.CompleteApproval(ctx, id, domain.ApprovalFailed, safeError(err))
 		return err
 	}
-	return s.repo.CompleteApproval(ctx, id, domain.ApprovalExecuted, "")
+	return s.approvals.CompleteApproval(ctx, id, domain.ApprovalExecuted, "")
 }
 
 // StartImageGenerationForApprovedBrief bridges the approved image brief to the
 // run-owned image task. It intentionally runs after approval is committed so a
 // retry can never create a second candidate or bypass the existing approval.
 func (s *ApprovalService) StartImageGenerationForApprovedBrief(ctx context.Context, approvalID int64, creatorPrincipalID int64) error {
-	approval, err := s.repo.GetApproval(ctx, approvalID)
+	approval, err := s.approvals.GetApproval(ctx, approvalID)
 	if err != nil {
 		return translateError(err)
 	}
 	if approval.Status != domain.ApprovalExecuted || !isImageBriefApproval(approval) {
 		return nil
 	}
-	candidates, err := s.repo.ListMediaCandidates(ctx)
+	candidates, err := s.mediaCandidates.ListMediaCandidates(ctx)
 	if err != nil {
 		return err
 	}
@@ -618,7 +637,7 @@ func (s *ApprovalService) execute(ctx context.Context, approval *domain.AgentApp
 		if err := s.posts.CreatePost(ctx, post); err != nil {
 			return err
 		}
-		return s.repo.SetApprovalTarget(ctx, approval.ID, post.ID)
+		return s.approvals.SetApprovalTarget(ctx, approval.ID, post.ID)
 	case "update_post", "update_tags":
 		if approval.TargetID == nil {
 			return errors.New("post target is required")
@@ -758,7 +777,7 @@ func (s *ApprovalService) execute(ctx context.Context, approval *domain.AgentApp
 		if payload.CommentID <= 0 || strings.TrimSpace(payload.Content) == "" {
 			return errors.New("invalid reply draft")
 		}
-		return s.repo.CreateReplyDraft(ctx, approval.ID, payload.CommentID, payload.Content)
+		return s.effects.CreateReplyDraft(ctx, approval.ID, payload.CommentID, payload.Content)
 	case "create_editorial_task":
 		var payload struct {
 			Title       string `json:"title"`
@@ -771,21 +790,21 @@ func (s *ApprovalService) execute(ctx context.Context, approval *domain.AgentApp
 		if payload.Priority == "" {
 			payload.Priority = "medium"
 		}
-		return s.repo.CreateEditorialTask(ctx, approval.ID, payload.Title, payload.Description, payload.Priority)
+		return s.effects.CreateEditorialTask(ctx, approval.ID, payload.Title, payload.Description, payload.Priority)
 	case "create_operational_suggestion":
 		var payload domain.OperationalSuggestion
 		if err := json.Unmarshal(approval.ProposedPayload, &payload); err != nil {
 			return err
 		}
 		payload.SourceRunID = &approval.RunID
-		return s.repo.CreateOperationalSuggestion(ctx, &payload)
+		return s.effects.CreateOperationalSuggestion(ctx, &payload)
 	case "create_content_candidates":
-		if err := s.repo.CreateContentCandidateSet(ctx, approval); err != nil {
+		if err := s.effects.CreateContentCandidateSet(ctx, approval); err != nil {
 			return fmt.Errorf("%w: %v", ErrInvalid, err)
 		}
 		return nil
 	case "create_media_candidate":
-		if err := s.repo.CreateMediaCandidate(ctx, approval); err != nil {
+		if err := s.mediaCandidates.CreateMediaCandidate(ctx, approval); err != nil {
 			return fmt.Errorf("%w: %v", ErrInvalid, err)
 		}
 		return nil
@@ -807,7 +826,7 @@ func (s *ApprovalService) execute(ctx context.Context, approval *domain.AgentApp
 		switch payload.Format {
 		case "social", "newsletter", "faq", "image_brief":
 			if payload.Format == "image_brief" {
-				if err := s.repo.CreateMediaCandidate(ctx, approval); err != nil {
+				if err := s.mediaCandidates.CreateMediaCandidate(ctx, approval); err != nil {
 					return fmt.Errorf("%w: %v", ErrInvalid, err)
 				}
 				return nil
