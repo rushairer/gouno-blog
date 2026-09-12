@@ -23,8 +23,8 @@ jobs:
           replacements = {
               "blog-frontend/src/components/agent/__tests__/AgentForm.test.tsx": [
                   (
-                      "    // Dropdown contains both the legacy bound version and the latest version\n    expect(\n      screen.getByRole(\"option\", {\n        name: /AI 每日资讯 · v2 \\\\(当前绑定 · 旧版本\\\\)/,\n      }),\n    ).toBeInTheDocument();\n",
-                      "    // Open the canonical Select before asserting its listbox options.\n    fireEvent.click(screen.getAllByRole(\"combobox\")[1]);\n    expect(\n      screen.getByRole(\"option\", {\n        name: /AI 每日资讯 · v2 \\\\(当前绑定 · 旧版本\\\\)/,\n      }),\n    ).toBeInTheDocument();\n",
+                      "    // Dropdown contains both the legacy bound version and the latest version\n",
+                      "    // Open the canonical Select before asserting its listbox options.\n    fireEvent.click(screen.getAllByRole(\"combobox\")[1]);\n",
                   ),
               ],
               "blog-frontend/src/components/agent/__tests__/WorkflowInputForm.test.tsx": [
@@ -58,7 +58,7 @@ jobs:
               text = path.read_text()
               for old, new in edits:
                   if old not in text:
-                      raise SystemExit(f\"expected snippet not found in {filename}: {old[:80]!r}\")
+                      raise SystemExit("expected snippet not found in " + filename)
                   text = text.replace(old, new, 1)
               path.write_text(text)
       - name: Commit test migration
