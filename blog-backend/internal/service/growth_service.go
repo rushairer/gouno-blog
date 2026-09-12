@@ -14,29 +14,14 @@ type GrowthStore interface {
 	RestoreVersion(context.Context, int64, int64) (*domain.Post, error)
 }
 
-type analyticsSummaryReader interface {
-	AnalyticsSummary(context.Context) (*domain.AnalyticsSummary, error)
-}
-
-var (
-	ErrInvalidVersion       = errors.New("invalid version")
-	ErrAnalyticsUnavailable = errors.New("analytics service unavailable")
-)
+var ErrInvalidVersion = errors.New("invalid version")
 
 type GrowthService struct {
-	store     GrowthStore
-	analytics analyticsSummaryReader
+	store GrowthStore
 }
 
-// NewGrowthService keeps a summary-only Analytics dependency temporarily while
-// the legacy BlogTools source facade is migrated. Runtime HTTP ownership no
-// longer depends on Growth for Analytics.
-func NewGrowthService(store GrowthStore, analytics ...analyticsSummaryReader) *GrowthService {
-	var analyticsReader analyticsSummaryReader
-	if len(analytics) > 0 {
-		analyticsReader = analytics[0]
-	}
-	return &GrowthService{store: store, analytics: analyticsReader}
+func NewGrowthService(store GrowthStore) *GrowthService {
+	return &GrowthService{store: store}
 }
 
 func (s *GrowthService) RelatedPosts(ctx context.Context, post *domain.Post) ([]*domain.Post, error) {
@@ -65,11 +50,4 @@ func (s *GrowthService) RestoreVersion(ctx context.Context, postID, versionID in
 		return nil, ErrPostNotFound
 	}
 	return post, err
-}
-
-func (s *GrowthService) AnalyticsSummary(ctx context.Context) (*domain.AnalyticsSummary, error) {
-	if s.analytics == nil {
-		return nil, ErrAnalyticsUnavailable
-	}
-	return s.analytics.AnalyticsSummary(ctx)
 }
