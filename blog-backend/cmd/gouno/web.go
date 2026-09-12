@@ -37,7 +37,6 @@ import (
 	postrepository "github.com/rushairer/blog-backend/internal/post/repository"
 	postservice "github.com/rushairer/blog-backend/internal/post/service"
 	providerrepository "github.com/rushairer/blog-backend/internal/provider/repository"
-	"github.com/rushairer/blog-backend/internal/repository"
 	"github.com/rushairer/blog-backend/internal/secretbox"
 	siterepository "github.com/rushairer/blog-backend/internal/site/repository"
 	siteservice "github.com/rushairer/blog-backend/internal/site/service"
@@ -299,7 +298,6 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		if err != nil {
 			log.Fatalf("configure AI Agent secret encryption: %v", err)
 		}
-		agentRepo := repository.NewAgentRepository(cfg.DB)
 		agentDefinitionRepo := agentrepository.NewDefinitionRepository(cfg.DB)
 		agentSkillRepo := agentrepository.NewSkillRepository(cfg.DB)
 		providerRepo := providerrepository.New(cfg.DB)
@@ -310,6 +308,8 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		agentApprovalRepo := agentrepository.NewApprovalRepository(cfg.DB)
 		agentMediaCandidateRepo := agentrepository.NewMediaCandidateRepository(cfg.DB)
 		workflowInteractionRepo := workflowrepository.NewInteractionRepository(cfg.DB)
+		workflowScopeRepo := workflowrepository.NewScopeRepository(cfg.DB)
+		runLifecycle := agentservice.NewRunLifecycle(transactor, agentRunRepo, agentMediaCandidateRepo)
 		generationAuditRepo := agentrepository.NewGenerationAuditRepository(cfg.DB)
 		knowledgeSvc := knowledge.NewService(cfg.DB, secrets, cfg.Global.AIAgentConfig.AllowedHosts, cfg.Logger, transactor)
 		knowledgeSvc.Start(ctx)
@@ -334,7 +334,10 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		} else if created > 0 {
 			cfg.Logger.Info("Reconciled AI workspace starter Agents", zap.Int("created", created))
 		}
-		runner := agentservice.NewRunner(agentRepo, management, toolRegistry, postSvc)
+		runner := agentservice.NewRunner(agentservice.RunnerDependencies{
+			Runs: agentRunRepo, Approvals: agentApprovalRepo, WorkflowScopes: workflowScopeRepo,
+			MediaCandidates: agentMediaCandidateRepo, Notifications: notificationRepo, Lifecycle: runLifecycle,
+		}, management, toolRegistry, postSvc)
 		generation := agentservice.NewGenerationService(generationAuditRepo, management, mediaSvc, mediaStore)
 		approvals := agentservice.NewApprovalService(agentservice.ApprovalServiceDependencies{
 			Approvals: agentApprovalRepo, MediaCandidates: agentMediaCandidateRepo, MediaGeneration: agentMediaCandidateRepo,

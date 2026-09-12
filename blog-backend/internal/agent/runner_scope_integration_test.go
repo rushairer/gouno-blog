@@ -15,8 +15,8 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/migrations"
-	"github.com/rushairer/blog-backend/internal/repository"
 	"github.com/rushairer/blog-backend/internal/tool"
+	workflowrepository "github.com/rushairer/blog-backend/internal/workflow/repository"
 )
 
 func TestStrictWorkflowRunScope(t *testing.T) {
@@ -48,7 +48,7 @@ func TestStrictWorkflowRunScope(t *testing.T) {
 	}
 
 	runner := &Runner{
-		repo: repository.NewAgentRepository(db),
+		workflowScopes: workflowrepository.NewScopeRepository(db),
 		tools: tool.New(
 			tool.Definition{Name: "content.get_post", Risk: domain.ToolRiskRead, Scope: &tool.ScopeRule{ResourceType: "post", Argument: "id"}},
 			tool.Definition{Name: "content.propose_update", Risk: domain.ToolRiskPropose, Scope: &tool.ScopeRule{ResourceType: "post", Argument: "id"}},
@@ -77,7 +77,7 @@ func TestStrictWorkflowRunScope(t *testing.T) {
 	if err := runner.recordDiscoveredResources(ctx, run, "content.search_knowledge", discovery); err != nil {
 		t.Fatalf("record authorized discovery: %v", err)
 	}
-	access, exists, err := runner.repo.WorkflowResourceAccess(ctx, runID, "post", "303")
+	access, exists, err := runner.workflowScopes.WorkflowResourceAccess(ctx, runID, "post", "303")
 	if err != nil || !exists || access != "read" {
 		t.Fatalf("discovered resource access = %q, %t, %v", access, exists, err)
 	}

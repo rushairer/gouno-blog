@@ -17,7 +17,6 @@ import (
 	"github.com/rushairer/blog-backend/internal/domain"
 	postservice "github.com/rushairer/blog-backend/internal/post/service"
 	"github.com/rushairer/blog-backend/internal/provider"
-	"github.com/rushairer/blog-backend/internal/repository"
 	"github.com/rushairer/blog-backend/internal/tool"
 )
 
@@ -37,14 +36,23 @@ When a tool result provides citation_id, cite factual claims with [cite:<citatio
 var citationPattern = regexp.MustCompile(`\[cite:([A-Za-z0-9_-]+)\]`)
 
 type Runner struct {
-	repo       *repository.AgentRepository
-	management *ManagementService
-	tools      *tool.Registry
-	posts      *postservice.PostService
+	runs            RunnerRunStore
+	approvals       RunnerApprovalStore
+	workflowScopes  RunnerWorkflowScopeStore
+	mediaCandidates RunnerMediaCandidateStore
+	notifications   RunnerNotificationWriter
+	lifecycle       RunnerRunLifecycle
+	management      *ManagementService
+	tools           *tool.Registry
+	posts           *postservice.PostService
 }
 
-func NewRunner(repo *repository.AgentRepository, management *ManagementService, tools *tool.Registry, posts *postservice.PostService) *Runner {
-	return &Runner{repo: repo, management: management, tools: tools, posts: posts}
+func NewRunner(deps RunnerDependencies, management *ManagementService, tools *tool.Registry, posts *postservice.PostService) *Runner {
+	return &Runner{
+		runs: deps.Runs, approvals: deps.Approvals, workflowScopes: deps.WorkflowScopes,
+		mediaCandidates: deps.MediaCandidates, notifications: deps.Notifications, lifecycle: deps.Lifecycle,
+		management: management, tools: tools, posts: posts,
+	}
 }
 
 func (r *Runner) ListRuns(ctx context.Context, agentID int64, page, pageSize int) ([]*domain.AgentRun, int, error) {
@@ -57,20 +65,20 @@ func (r *Runner) ListRuns(ctx context.Context, agentID int64, page, pageSize int
 	if pageSize > 100 {
 		pageSize = 100
 	}
-	return r.repo.ListRuns(ctx, agentID, pageSize, (page-1)*pageSize)
+	return r.runs.ListRuns(ctx, agentID, pageSize, (page-1)*pageSize)
 }
 
 func (r *Runner) GetRun(ctx context.Context, id int64) (*domain.AgentRun, error) {
-	run, err := r.repo.GetRun(ctx, id)
+	run, err := r.runs.GetRun(ctx, id)
 	return run, translateError(err)
 }
 
 func (r *Runner) DeleteRun(ctx context.Context, id int64) error {
-	return translateError(r.repo.DeleteRun(ctx, id))
+	return translateError(r.lifecycle.DeleteRun(ctx, id))
 }
 
 func (r *Runner) ListToolCalls(ctx context.Context, runID int64) ([]*domain.AgentToolCall, error) {
-	return r.repo.ListToolCalls(ctx, runID)
+	return r.runs.ListToolCalls(ctx, runID)
 }
 
 func (r *Runner) Queue(ctx context.Context, agentID int64, trigger domain.AgentTriggerType, triggeredByPrincipalID *int64, input json.RawMessage, scheduleKey *string) (*domain.AgentRun, error) {
@@ -111,14 +119,14 @@ func (r *Runner) queue(ctx context.Context, agentID int64, trigger domain.AgentT
 	if err != nil {
 		return nil, err
 	}
-	count, err := r.repo.DailyRunCount(ctx, agentID)
+	count, err := r.runs.DailyRunCount(ctx, agentID)
 	if err != nil {
 		return nil, err
 	}
 	if count >= value.DailyRunLimit {
 		return nil, ErrRunLimit
 	}
-	usage, err := r.repo.MonthlyTokenUsage(ctx, agentID)
+	usage, err := r.runs.MonthlyTokenUsage(ctx, agentID)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +140,7 @@ func (r *Runner) queue(ctx context.Context, agentID int64, trigger domain.AgentT
 		WorkflowVersionID: workflowVersionID,
 		WorkflowRunID:     workflowRunID,
 	}
-	if err := r.repo.CreateRun(ctx, run); err != nil {
+	if err := r.runs.CreateRun(ctx, run); err != nil {
 		if dberror.IsConstraintError(err) {
 			return nil, ErrAlreadyRunning
 		}
@@ -153,13 +161,13 @@ func (r *Runner) executeAndFinish(ctx context.Context, runID int64, dryRun bool)
 	if err := r.execute(ctx, runID, dryRun); err != nil {
 		code := "agent_run_failed"
 		message := safeError(err)
-		_ = r.repo.FinishRun(ctx, runID, domain.AgentRunFailed, "", 0, 0, &code, &message)
+		_ = r.lifecycle.FinishRun(ctx, runID, domain.AgentRunFailed, "", 0, 0, &code, &message)
 		r.notifyRunFailure(ctx, runID, message)
 	}
 }
 
 func (r *Runner) notifyRunFailure(ctx context.Context, runID int64, message string) {
-	run, err := r.repo.GetRun(ctx, runID)
+	run, err := r.runs.GetRun(ctx, runID)
 	if err != nil {
 		return
 	}
@@ -173,7 +181,7 @@ func (r *Runner) notifyRunFailure(ctx context.Context, runID int64, message stri
 	} else if agent.CreatedByPrincipalID != nil {
 		recipientPrincipalID = *agent.CreatedByPrincipalID
 	}
-	_ = r.repo.CreateSystemNotification(ctx, recipientPrincipalID, "ai_run_failed",
+	_ = r.notifications.Create(ctx, recipientPrincipalID, "ai_run_failed",
 		"Agent 运行失败："+agent.Name, message, fmt.Sprintf("/admin/ai-ops?tab=records&record=agent&run=%d", runID), fmt.Sprintf("agent-run-%d", runID))
 }
 
@@ -207,7 +215,7 @@ func retryableProviderError(err error) bool {
 }
 
 func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
-	run, err := r.repo.GetRun(ctx, runID)
+	run, err := r.runs.GetRun(ctx, runID)
 	if err != nil {
 		return err
 	}
@@ -227,7 +235,7 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 	if err != nil {
 		return err
 	}
-	if err := r.repo.StartRun(ctx, runID); err != nil {
+	if err := r.runs.StartRun(ctx, runID); err != nil {
 		return err
 	}
 	userInput := "Run your configured blog operation now."
@@ -243,7 +251,7 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 	toolCallCounts := make(map[string]int)
 	runScopeInstruction := ""
 	if run.WorkflowVersionID != nil {
-		policy, err := r.repo.WorkflowScopePolicy(ctx, *run.WorkflowVersionID)
+		policy, err := r.workflowScopes.WorkflowScopePolicy(ctx, *run.WorkflowVersionID)
 		if err != nil {
 			return err
 		}
@@ -260,7 +268,7 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 		) > limits.maxInputTokens*4 {
 			return fmt.Errorf("%w: assembled model input exceeds the agent input limit", ErrInvalid)
 		}
-		usedTokens, err := r.repo.MonthlyTokenUsage(ctx, value.ID)
+		usedTokens, err := r.runs.MonthlyTokenUsage(ctx, value.ID)
 		if err != nil {
 			return err
 		}
@@ -295,7 +303,7 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 			RunID: run.ID, RequestID: requestID, Provider: run.Provider, Model: run.Model,
 			InputTokens: result.InputTokens, OutputTokens: result.OutputTokens, CompletedAt: time.Now().UTC(),
 		}
-		if err := r.repo.RecordUsage(ctx, usage); err != nil {
+		if err := r.runs.RecordUsage(ctx, usage); err != nil {
 			return err
 		}
 		messages = append(messages, provider.Message{
@@ -344,12 +352,12 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 			if call.RiskLevel == "" {
 				call.RiskLevel = domain.ToolRiskRead
 			}
-			if err := r.repo.CreateToolCall(ctx, call); err != nil {
+			if err := r.runs.CreateToolCall(ctx, call); err != nil {
 				return err
 			}
 			if invokeErr != nil {
 				message := safeError(invokeErr)
-				if err := r.repo.FinishToolCall(ctx, call.ID, domain.ToolCallRejected, nil, &message); err != nil {
+				if err := r.runs.FinishToolCall(ctx, call.ID, domain.ToolCallRejected, nil, &message); err != nil {
 					return err
 				}
 				// A rejected Tool call means the configured operation could not be
@@ -367,13 +375,13 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 						TargetType: proposal.TargetType, TargetID: proposal.TargetID,
 						ProposedPayload: proposal.Payload, BeforeSnapshot: proposal.BeforeSnapshot,
 					}
-					if err := r.repo.CreateApproval(ctx, approval); err != nil {
+					if err := r.approvals.CreateApproval(ctx, approval); err != nil {
 						return err
 					}
 					hasApproval = true
 				}
 			}
-			if err := r.repo.FinishToolCall(ctx, call.ID, domain.ToolCallExecuted, rawResult, nil); err != nil {
+			if err := r.runs.FinishToolCall(ctx, call.ID, domain.ToolCallExecuted, rawResult, nil); err != nil {
 				return err
 			}
 			if requested.Name == "rss.fetch" {
@@ -399,10 +407,10 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 		status = domain.AgentRunAwaitingApproval
 	}
 	citations := validateCitations(finalText, citationLedger)
-	if err := r.repo.SaveRunCitations(ctx, run.ID, citations); err != nil {
+	if err := r.runs.SaveRunCitations(ctx, run.ID, citations); err != nil {
 		return err
 	}
-	return r.repo.FinishRun(ctx, run.ID, status, finalText, inputTokens, outputTokens, nil, nil)
+	return r.lifecycle.FinishRun(ctx, run.ID, status, finalText, inputTokens, outputTokens, nil, nil)
 }
 
 type effectiveRunLimits struct {
@@ -526,7 +534,7 @@ func (r *Runner) authorizeScopedTool(ctx context.Context, run *domain.AgentRun, 
 	if run.WorkflowRunID == nil || run.WorkflowVersionID == nil {
 		return nil
 	}
-	policy, err := r.repo.WorkflowScopePolicy(ctx, *run.WorkflowVersionID)
+	policy, err := r.workflowScopes.WorkflowScopePolicy(ctx, *run.WorkflowVersionID)
 	if err != nil {
 		return err
 	}
@@ -564,7 +572,7 @@ func (r *Runner) authorizeScopedTool(ctx context.Context, run *domain.AgentRun, 
 	if number, ok := raw.(float64); ok && number == float64(int64(number)) {
 		key = fmt.Sprintf("%d", int64(number))
 	}
-	access, exists, err := r.repo.WorkflowResourceAccess(ctx, *run.WorkflowRunID, rule.ResourceType, key)
+	access, exists, err := r.workflowScopes.WorkflowResourceAccess(ctx, *run.WorkflowRunID, rule.ResourceType, key)
 	if err != nil {
 		return err
 	}
@@ -581,7 +589,7 @@ func (r *Runner) filterScopedDiscoveryResult(ctx context.Context, run *domain.Ag
 	if run.WorkflowRunID == nil || run.WorkflowVersionID == nil || len(raw) == 0 {
 		return raw, nil
 	}
-	policy, err := r.repo.WorkflowScopePolicy(ctx, *run.WorkflowVersionID)
+	policy, err := r.workflowScopes.WorkflowScopePolicy(ctx, *run.WorkflowVersionID)
 	if err != nil {
 		return nil, err
 	}
@@ -618,7 +626,7 @@ func (r *Runner) filterScopedDiscoveryResult(ctx context.Context, run *domain.Ag
 				if number, ok := rawKey.(float64); ok && number == float64(int64(number)) {
 					key = fmt.Sprintf("%d", int64(number))
 				}
-				_, exists, err := r.repo.WorkflowResourceAccess(ctx, *run.WorkflowRunID, rule.OutputResourceType, key)
+				_, exists, err := r.workflowScopes.WorkflowResourceAccess(ctx, *run.WorkflowRunID, rule.OutputResourceType, key)
 				return typed, exists, err
 			}
 			result := make(map[string]any, len(typed))
@@ -647,7 +655,7 @@ func (r *Runner) recordDiscoveredResources(ctx context.Context, run *domain.Agen
 	if run.WorkflowRunID == nil || run.WorkflowVersionID == nil || len(raw) == 0 {
 		return nil
 	}
-	policy, err := r.repo.WorkflowScopePolicy(ctx, *run.WorkflowVersionID)
+	policy, err := r.workflowScopes.WorkflowScopePolicy(ctx, *run.WorkflowVersionID)
 	if err != nil {
 		return err
 	}
@@ -694,7 +702,7 @@ func (r *Runner) recordDiscoveredResources(ctx context.Context, run *domain.Agen
 					}
 				}
 				snapshot, _ := json.Marshal(map[string]any{"label": label, "status": typed["status"], "slug": typed["slug"]})
-				if err := r.repo.AddDiscoveredWorkflowResource(ctx, *run.WorkflowRunID, rule.OutputResourceType, key, label, snapshot); err != nil {
+				if err := r.workflowScopes.AddDiscoveredWorkflowResource(ctx, *run.WorkflowRunID, rule.OutputResourceType, key, label, snapshot); err != nil {
 					return err
 				}
 			}
@@ -769,7 +777,7 @@ func (r *Runner) createImageTask(ctx context.Context, run *domain.AgentRun, skil
 	if payload.PostID <= 0 || payload.Format != "image_brief" || payload.Body == "" || len([]rune(payload.Headline)) > 500 || len([]rune(payload.Body)) > 12000 || len([]rune(payload.Platform)) > 100 || len([]rune(payload.AltText)) > 500 {
 		return domain.ToolRiskWrite, nil, nil, tool.ErrInvalidArgument
 	}
-	candidateID, workflowRunID, err := r.repo.CreateMediaCandidateFromRun(ctx, run.ID, payload.PostID, payload.Headline, payload.Body, payload.Platform, payload.AltText)
+	candidateID, workflowRunID, err := r.mediaCandidates.CreateMediaCandidateFromRun(ctx, run.ID, payload.PostID, payload.Headline, payload.Body, payload.Platform, payload.AltText)
 	if err != nil {
 		return domain.ToolRiskWrite, nil, nil, err
 	}
