@@ -136,7 +136,9 @@ describe("OperationsWorkspace", () => {
       }),
     );
     expect(screen.getByText("已处理记录")).toBeInTheDocument();
-    expect(container.querySelector(".operations-history")).not.toBeInTheDocument();
+    expect(
+      container.querySelector(".operations-history"),
+    ).not.toBeInTheDocument();
     expect(container.querySelector(".panel-heading")).not.toBeInTheDocument();
     expect(container.querySelector(".feedback-form")).not.toBeInTheDocument();
   });
@@ -172,7 +174,9 @@ describe("OperationsWorkspace", () => {
       screen.queryByRole("heading", { name: "旧的链接检查建议" }),
     ).not.toBeInTheDocument();
     expect(screen.getAllByText("自动已解决").length).toBeGreaterThanOrEqual(1);
-    expect(container.querySelector(".status-pill--resolved")).not.toBeInTheDocument();
+    expect(
+      container.querySelector(".status-pill--resolved"),
+    ).not.toBeInTheDocument();
   });
 
   it("reviews an approved image brief before exposing image generation", async () => {

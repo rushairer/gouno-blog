@@ -251,18 +251,24 @@ export function OperationsWorkspace({
 
       <section
         className="grid grid-cols-1 gap-4 lg:grid-cols-2"
-        aria-label={zh ? "运营建议与候选" : "Operational suggestions and candidates"}
+        aria-label={
+          zh ? "运营建议与候选" : "Operational suggestions and candidates"
+        }
       >
         <ReviewCard
           title={zh ? "运营建议" : "Operational suggestions"}
           description={
-            zh ? "AI 找到的内容维护机会。" : "Content maintenance opportunities found by AI."
+            zh
+              ? "AI 找到的内容维护机会。"
+              : "Content maintenance opportunities found by AI."
           }
           count={actionableSuggestions.length}
         >
           {actionableSuggestions.length === 0 ? (
             <div className="p-6">
-              <Empty title={zh ? "暂无运营建议" : "No operational suggestions"} />
+              <Empty
+                title={zh ? "暂无运营建议" : "No operational suggestions"}
+              />
             </div>
           ) : (
             <div className="divide-y">
@@ -323,7 +329,9 @@ export function OperationsWorkspace({
                         size="small"
                         type="button"
                         onClick={() =>
-                          void mutate(() => operationsApi.convertSuggestion(item.id))
+                          void mutate(() =>
+                            operationsApi.convertSuggestion(item.id),
+                          )
                         }
                         icon={<Check />}
                       >
@@ -353,7 +361,10 @@ export function OperationsWorkspace({
           ) : (
             <div className="divide-y">
               {pendingSets.map((set) => (
-                <article key={`candidate-${set.id}`} className="flex flex-col gap-3 p-6">
+                <article
+                  key={`candidate-${set.id}`}
+                  className="flex flex-col gap-3 p-6"
+                >
                   <div className="flex flex-wrap items-center gap-2">
                     <Check className="size-4 text-muted-foreground" />
                     <strong className="text-sm">
@@ -361,7 +372,9 @@ export function OperationsWorkspace({
                         ? `为文章 #${set.post_id} 选择${fieldLabel(set.field_type, true)}`
                         : `Choose a ${fieldLabel(set.field_type, false)} for post #${set.post_id}`}
                     </strong>
-                    <Tag color="warning">{zh ? "选择建议" : "Choose a proposal"}</Tag>
+                    <Tag color="warning">
+                      {zh ? "选择建议" : "Choose a proposal"}
+                    </Tag>
                   </div>
                   <Text size="sm" tone="muted">
                     {zh
@@ -377,7 +390,10 @@ export function OperationsWorkspace({
                     </summary>
                     <div className="mt-3 flex flex-col gap-3">
                       {set.candidates.map((candidate) => (
-                        <div key={candidate.id} className="rounded-md border p-4">
+                        <div
+                          key={candidate.id}
+                          className="rounded-md border p-4"
+                        >
                           <strong className="text-sm">{candidate.value}</strong>
                           {candidate.rationale ? (
                             <Text size="xs" tone="muted" className="mt-1">
@@ -391,7 +407,10 @@ export function OperationsWorkspace({
                               type="button"
                               onClick={() =>
                                 void mutate(() =>
-                                  operationsApi.selectCandidate(set.id, candidate.id),
+                                  operationsApi.selectCandidate(
+                                    set.id,
+                                    candidate.id,
+                                  ),
                                 )
                               }
                             >
@@ -426,7 +445,10 @@ export function OperationsWorkspace({
           ) : (
             <div className="divide-y">
               {pendingMedia.map((item) => (
-                <article key={`media-brief-${item.id}`} className="flex flex-col gap-4 p-6">
+                <article
+                  key={`media-brief-${item.id}`}
+                  className="flex flex-col gap-4 p-6"
+                >
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <Image className="size-4 text-muted-foreground" />
@@ -485,7 +507,10 @@ export function OperationsWorkspace({
                 </article>
               ))}
               {readyMedia.map((item) => (
-                <article key={`media-${item.id}`} className="flex flex-col gap-4 p-6">
+                <article
+                  key={`media-${item.id}`}
+                  className="flex flex-col gap-4 p-6"
+                >
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <Image className="size-4 text-muted-foreground" />
@@ -513,7 +538,9 @@ export function OperationsWorkspace({
                       size="small"
                       type="button"
                       onClick={() =>
-                        void mutate(() => operationsApi.generateMediaCandidate(item.id))
+                        void mutate(() =>
+                          operationsApi.generateMediaCandidate(item.id),
+                        )
                       }
                       icon={<Play />}
                     >
@@ -539,7 +566,9 @@ export function OperationsWorkspace({
             <div className="p-6">
               <Empty
                 title={
-                  zh ? "没有进行中的编辑任务。" : "There are no open editorial tasks."
+                  zh
+                    ? "没有进行中的编辑任务。"
+                    : "There are no open editorial tasks."
                 }
               />
             </div>
@@ -565,7 +594,10 @@ export function OperationsWorkspace({
                       type="button"
                       onClick={() =>
                         void mutate(() =>
-                          operationsApi.setEditorialTaskStatus(task.id, "cancelled"),
+                          operationsApi.setEditorialTaskStatus(
+                            task.id,
+                            "cancelled",
+                          ),
                         )
                       }
                       icon={<X />}
