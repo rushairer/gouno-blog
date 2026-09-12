@@ -102,10 +102,11 @@ jobs:
                   }
                   const param = arrow.parameters[0].name.text;
                   let replacement = arrow.getText(sf);
-                  const valuePattern = new RegExp(`\\b${param}\\.target\\.value\\b`, 'g');
-                  if (!valuePattern.test(replacement)) {
+                  const valuePattern = new RegExp(`\\b${param}\\.target\\s*\\.\\s*value\\b`, 'g');
+                  if (!replacement.match(valuePattern)) {
                     throw new Error(`Select onChange does not read ${param}.target.value at ${sf.getLineAndCharacterOfPosition(attr.getStart(sf)).line + 1}`);
                   }
+                  valuePattern.lastIndex = 0;
                   replacement = replacement.replace(valuePattern, 'selectValue(value)');
                   replacement = replacement
                     .replace(new RegExp(`^\\(\\s*${param}\\s*\\)\\s*=>`), '(value) =>')
