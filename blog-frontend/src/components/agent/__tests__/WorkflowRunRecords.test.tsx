@@ -551,7 +551,8 @@ describe("WorkflowRunRecords", () => {
     );
 
     await user.click(screen.getByRole("button", { name: /AI 每日资讯/ }));
-    await user.selectOptions(screen.getByRole("combobox"), "inline");
+    await user.click(screen.getByRole("combobox"));
+    await user.click(screen.getByRole("option", { name: "正文插图" }));
     await user.type(
       screen.getByPlaceholderText("锚点文字（小标题或关键句）"),
       "Google 动态",

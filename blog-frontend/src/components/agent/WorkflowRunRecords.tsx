@@ -10,14 +10,7 @@ import type {
   WorkflowRun,
   WorkflowStepRun,
 } from "../../types/agent";
-import {
-  Alert,
-  Button,
-  Card,
-  Empty,
-  IconButton,
-  Select,
-} from "@gouno/ui/core";
+import { Alert, Button, Card, Empty, IconButton, Select } from "@gouno/ui/core";
 import { ArticlePreviewModal } from "./ArticlePreviewModal";
 import { StatusPill } from "./StatusPill";
 import { WorkflowRunDetail } from "./WorkflowRunDetail";
