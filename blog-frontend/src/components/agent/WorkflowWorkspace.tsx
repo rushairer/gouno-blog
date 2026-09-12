@@ -33,6 +33,7 @@ import {
   Button,
   ButtonLink,
   Card,
+  CardContent,
   Checkbox,
   CheckboxField,
   Empty,
@@ -44,6 +45,8 @@ import {
   Modal,
   SearchField,
   Select,
+  Tag,
+  Text,
   Textarea,
 } from "@gouno/ui/core";
 import { StatusPill } from "./StatusPill";
@@ -900,7 +903,7 @@ export function WorkflowWorkspace({
           })()}
         </div>
       ) : (
-        <div className="workflow-list-view section-stack">
+        <div className="workflow-list-view flex flex-col gap-6">
           <PanelHeader
             title={locale === "zh" ? "自动化" : "Automation"}
             description={
@@ -920,91 +923,101 @@ export function WorkflowWorkspace({
               </Button>
             }
           />
+
           {workflows.length > 0 ? (
-            <div className="workflow-list-toolbar flex flex-wrap items-center gap-3">
-              <SearchField
-                aria-label={
-                  locale === "zh" ? "搜索 Workflow" : "Search workflows"
-                }
-                value={workflowQuery}
-                onChange={(event) => setWorkflowQuery(event.target.value)}
-                placeholder={
-                  locale === "zh"
-                    ? "按名称、说明或模板搜索"
-                    : "Search by name, description, or template"
-                }
-                size="small"
-              />
-              <Select
-                aria-label={
-                  locale === "zh" ? "按状态筛选 Workflow" : "Filter by status"
-                }
-                value={statusFilter}
-                onChange={(value) =>
-                  setStatusFilter(
-                    selectValue(value) as "all" | "enabled" | "disabled",
-                  )
-                }
-                size="small"
-              >
-                <option value="all">
-                  {locale === "zh" ? "全部状态" : "All Status"} (
-                  {workflows.length})
-                </option>
-                <option value="enabled">
-                  {locale === "zh" ? "已启用" : "Enabled"} (
-                  {workflows.filter((w) => w.enabled).length})
-                </option>
-                <option value="disabled">
-                  {locale === "zh" ? "已停用" : "Disabled"} (
-                  {workflows.filter((w) => !w.enabled).length})
-                </option>
-              </Select>
-              <span className="filter-bar__count">
-                {locale === "zh"
-                  ? `${visibleWorkflows.length} / ${workflows.length} 个 Workflow`
-                  : `${visibleWorkflows.length} of ${workflows.length} workflows`}
-              </span>
-              {workflowQuery || statusFilter !== "all" ? (
-                <Button
-                  variant="ghost"
-                  size="small"
-                  type="button"
-                  onClick={() => {
-                    setWorkflowQuery("");
-                    setStatusFilter("all");
-                  }}
-                  icon={<X />}
-                >
-                  {locale === "zh" ? "清除" : "Clear"}
-                </Button>
-              ) : null}
-            </div>
+            <Card padding="base">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+                <div className="min-w-0 flex-1">
+                  <SearchField
+                    aria-label={
+                      locale === "zh" ? "搜索 Workflow" : "Search workflows"
+                    }
+                    value={workflowQuery}
+                    onChange={(event) => setWorkflowQuery(event.target.value)}
+                    placeholder={
+                      locale === "zh"
+                        ? "按名称、说明或模板搜索"
+                        : "Search by name, description, or template"
+                    }
+                    size="small"
+                  />
+                </div>
+                <div className="min-w-0 lg:w-48 lg:shrink-0">
+                  <Select
+                    aria-label={
+                      locale === "zh"
+                        ? "按状态筛选 Workflow"
+                        : "Filter by status"
+                    }
+                    value={statusFilter}
+                    onChange={(value) =>
+                      setStatusFilter(
+                        selectValue(value) as "all" | "enabled" | "disabled",
+                      )
+                    }
+                    size="small"
+                  >
+                    <option value="all">
+                      {locale === "zh" ? "全部状态" : "All Status"} (
+                      {workflows.length})
+                    </option>
+                    <option value="enabled">
+                      {locale === "zh" ? "已启用" : "Enabled"} (
+                      {workflows.filter((item) => item.enabled).length})
+                    </option>
+                    <option value="disabled">
+                      {locale === "zh" ? "已停用" : "Disabled"} (
+                      {workflows.filter((item) => !item.enabled).length})
+                    </option>
+                  </Select>
+                </div>
+                <div className="flex items-center justify-between gap-3 lg:justify-end">
+                  <Text size="sm" tone="muted" className="whitespace-nowrap">
+                    {locale === "zh"
+                      ? `${visibleWorkflows.length} / ${workflows.length} 个 Workflow`
+                      : `${visibleWorkflows.length} of ${workflows.length} workflows`}
+                  </Text>
+                  {workflowQuery || statusFilter !== "all" ? (
+                    <Button
+                      variant="text"
+                      size="small"
+                      type="button"
+                      onClick={() => {
+                        setWorkflowQuery("");
+                        setStatusFilter("all");
+                      }}
+                      icon={<X />}
+                    >
+                      {locale === "zh" ? "清除" : "Clear"}
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            </Card>
           ) : null}
+
           {workflows.length === 0 || visibleWorkflows.length === 0 ? (
-            <Empty
-              title={
-                workflows.length > 0
-                  ? locale === "zh"
-                    ? "没有匹配的 Workflow。"
-                    : "No matching workflows."
-                  : labels.empty
-              }
-            />
+            <Card padding="base">
+              <Empty
+                title={
+                  workflows.length > 0
+                    ? locale === "zh"
+                      ? "没有匹配的 Workflow。"
+                      : "No matching workflows."
+                    : labels.empty
+                }
+              />
+            </Card>
           ) : (
-            <div className="table-scroll">
-              <table className="content-table agent-table workflow-table">
-                <thead>
-                  <tr>
-                    <th>{locale === "zh" ? "Workflow" : "Workflow"}</th>
-                    <th>{labels.status}</th>
-                    <th>{labels.schedule}</th>
-                    <th>{locale === "zh" ? "最近运行" : "Latest Run"}</th>
-                    <th>{locale === "zh" ? "运行指标" : "Metrics"}</th>
-                    <th>{locale === "zh" ? "操作" : "Actions"}</th>
-                  </tr>
-                </thead>
-                <tbody>
+            <Card padding="none" className="overflow-hidden">
+              <CardContent className="p-0">
+                <div
+                  role="list"
+                  aria-label={
+                    locale === "zh" ? "Workflow 列表" : "Workflow list"
+                  }
+                  className="divide-y"
+                >
                   {visibleWorkflows.map((workflow) => {
                     const metric = metricMap.get(workflow.id);
                     const latestRun = runs.find(
@@ -1030,144 +1043,114 @@ export function WorkflowWorkspace({
                           ? `关联 Agent“${unavailableAgent.name}”已停用`
                           : `Agent “${unavailableAgent.name}” disabled`
                         : "";
+                    const openWorkflow = () => {
+                      setSelectedWorkflowID(workflow.id);
+                      const url = new URL(window.location.href);
+                      url.searchParams.set("workflow", String(workflow.id));
+                      window.history.replaceState(null, "", url);
+                    };
+
                     return (
-                      <tr
+                      <div
                         key={workflow.id}
-                        className={
-                          workflow.enabled
-                            ? "workflow-row--enabled"
-                            : "workflow-row--disabled"
-                        }
+                        role="listitem"
+                        className="flex flex-col gap-4 p-6 xl:flex-row xl:items-start xl:justify-between"
                       >
-                        <td>
-                          <Button
-                            variant="ghost"
-                            className="workflow-name-button"
-                            onClick={() => {
-                              setSelectedWorkflowID(workflow.id);
-                              const url = new URL(window.location.href);
-                              url.searchParams.set(
-                                "workflow",
-                                String(workflow.id),
-                              );
-                              window.history.replaceState(null, "", url);
-                            }}
-                          >
-                            <strong>{workflow.name}</strong>
-                            <small>{workflow.description}</small>
-                          </Button>
-                        </td>
-                        <td>
-                          <StatusPill
-                            status={workflow.enabled ? "succeeded" : "pending"}
-                            locale={locale}
-                            label={
-                              workflow.enabled
+                        <button
+                          type="button"
+                          className="min-w-0 flex-1 text-left"
+                          onClick={openWorkflow}
+                        >
+                          <div className="flex flex-wrap items-center gap-2">
+                            <strong className="text-sm">{workflow.name}</strong>
+                            <Tag
+                              color={workflow.enabled ? "success" : "default"}
+                            >
+                              {workflow.enabled
                                 ? locale === "zh"
                                   ? "已启用"
                                   : "Enabled"
                                 : locale === "zh"
                                   ? "已停用"
-                                  : "Disabled"
+                                  : "Disabled"}
+                            </Tag>
+                          </div>
+                          <Text size="sm" tone="muted" className="mt-1">
+                            {workflow.description}
+                          </Text>
+                          <div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2 xl:grid-cols-4">
+                            <span>
+                              {labels.schedule}:{" "}
+                              {workflow.cron_expression ||
+                                (locale === "zh" ? "仅手动" : "Manual")}
+                              {workflow.cron_expression
+                                ? ` · ${workflow.timezone}`
+                                : ""}
+                            </span>
+                            <span>
+                              {labels.next}: {formatTime(workflow.next_run_at)}
+                            </span>
+                            <span>
+                              {latestRun
+                                ? `${locale === "zh" ? "最近运行" : "Latest run"}: ${statusLabel(latestRun.status, locale)} · ${formatTime(latestRun.created_at)}`
+                                : labels.never}
+                            </span>
+                            <span>
+                              {labels.metrics}: {metric?.runs || 0} /{" "}
+                              {metric?.failures || 0} / {metric?.tokens || 0}
+                            </span>
+                          </div>
+                        </button>
+                        <div className="flex min-w-max shrink-0 flex-nowrap items-center gap-1">
+                          <IconButton
+                            label={
+                              locale === "zh"
+                                ? "进入详情 / 运行"
+                                : "Inspect / Run"
+                            }
+                            icon={<ChevronRight />}
+                            variant="ghost"
+                            onClick={openWorkflow}
+                          />
+                          <IconButton
+                            label={locale === "zh" ? "编辑" : "Edit"}
+                            icon={<Edit2 />}
+                            variant="ghost"
+                            onClick={() => setEditing(workflow)}
+                          />
+                          <IconButton
+                            label={
+                              !workflow.enabled && runBlockReason
+                                ? runBlockReason
+                                : workflow.enabled
+                                  ? labels.disable
+                                  : labels.enable
+                            }
+                            icon={workflow.enabled ? <CirclePause /> : <Play />}
+                            variant="ghost"
+                            disabled={
+                              !workflow.enabled && Boolean(runBlockReason)
+                            }
+                            onClick={() =>
+                              void workflowApi
+                                .setEnabled(workflow.id, !workflow.enabled)
+                                .then(() => onRefresh?.())
                             }
                           />
-                        </td>
-                        <td>
-                          <strong>
-                            {workflow.cron_expression ||
-                              (locale === "zh" ? "仅手动" : "Manual")}
-                          </strong>
-                          <small>
-                            {workflow.cron_expression
-                              ? workflow.timezone
-                              : locale === "zh"
-                                ? "按需触发"
-                                : "On-demand"}
-                          </small>
-                        </td>
-                        <td>
-                          {latestRun ? (
-                            <>
-                              <StatusPill
-                                status={latestRun.status}
-                                locale={locale}
-                              />
-                              <small>{formatTime(latestRun.created_at)}</small>
-                            </>
-                          ) : (
-                            <small className="muted">{labels.never}</small>
-                          )}
-                        </td>
-                        <td>
-                          <strong>
-                            {metric?.runs || 0}{" "}
-                            {locale === "zh" ? "次运行" : "runs"}
-                          </strong>
-                          <small>
-                            {metric?.failures || 0}{" "}
-                            {locale === "zh" ? "次失败" : "failures"} ·{" "}
-                            {metric?.tokens || 0} tokens
-                          </small>
-                        </td>
-                        <td>
-                          <div className="agent-row-actions">
-                            <IconButton
-                              label={
-                                locale === "zh"
-                                  ? "进入详情 / 运行"
-                                  : "Inspect / Run"
-                              }
-                              icon={<ChevronRight />}
-                              onClick={() => {
-                                setSelectedWorkflowID(workflow.id);
-                                const url = new URL(window.location.href);
-                                url.searchParams.set(
-                                  "workflow",
-                                  String(workflow.id),
-                                );
-                                window.history.replaceState(null, "", url);
-                              }}
-                            />
-                            <IconButton
-                              label={locale === "zh" ? "编辑" : "Edit"}
-                              icon={<Edit2 />}
-                              onClick={() => setEditing(workflow)}
-                            />
-                            <IconButton
-                              label={
-                                !workflow.enabled && runBlockReason
-                                  ? runBlockReason
-                                  : workflow.enabled
-                                    ? labels.disable
-                                    : labels.enable
-                              }
-                              icon={
-                                workflow.enabled ? <CirclePause /> : <Play />
-                              }
-                              disabled={
-                                !workflow.enabled && Boolean(runBlockReason)
-                              }
-                              onClick={() =>
-                                void workflowApi
-                                  .setEnabled(workflow.id, !workflow.enabled)
-                                  .then(() => onRefresh?.())
-                              }
-                            />
-                            <IconButton
-                              variant="ghost"
-                              color="error"
-                              label={locale === "zh" ? "删除" : "Delete"}
-                              icon={<Trash2 />}
-                              onClick={() => setDeleteTarget(workflow)}
-                            />
-                          </div>
-                        </td>
-                      </tr>
+                          <IconButton
+                            variant="ghost"
+                            color="error"
+                            label={locale === "zh" ? "删除" : "Delete"}
+                            icon={<Trash2 />}
+                            onClick={() => setDeleteTarget(workflow)}
+                          />
+                        </div>
+                      </div>
                     );
                   })}
-                </tbody>
-              </table>
-            </div>
+                </div>
+              </CardContent>
+            </Card>
           )}
         </div>
       )}
