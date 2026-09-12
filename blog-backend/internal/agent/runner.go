@@ -14,9 +14,9 @@ import (
 	"time"
 
 	"github.com/rushairer/blog-backend/internal/domain"
+	postservice "github.com/rushairer/blog-backend/internal/post/service"
 	"github.com/rushairer/blog-backend/internal/provider"
 	"github.com/rushairer/blog-backend/internal/repository"
-	"github.com/rushairer/blog-backend/internal/service"
 	"github.com/rushairer/blog-backend/internal/tool"
 )
 
@@ -39,10 +39,10 @@ type Runner struct {
 	repo       *repository.AgentRepository
 	management *ManagementService
 	tools      *tool.Registry
-	posts      *service.PostService
+	posts      *postservice.PostService
 }
 
-func NewRunner(repo *repository.AgentRepository, management *ManagementService, tools *tool.Registry, posts *service.PostService) *Runner {
+func NewRunner(repo *repository.AgentRepository, management *ManagementService, tools *tool.Registry, posts *postservice.PostService) *Runner {
 	return &Runner{repo: repo, management: management, tools: tools, posts: posts}
 }
 

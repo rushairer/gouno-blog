@@ -17,12 +17,12 @@ import (
 	mediaservice "github.com/rushairer/blog-backend/internal/media/service"
 	pagerepository "github.com/rushairer/blog-backend/internal/page/repository"
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
+	postrepository "github.com/rushairer/blog-backend/internal/post/repository"
+	postservice "github.com/rushairer/blog-backend/internal/post/service"
 	postversionrepository "github.com/rushairer/blog-backend/internal/postversion/repository"
 	postversionservice "github.com/rushairer/blog-backend/internal/postversion/service"
 	recommendationrepository "github.com/rushairer/blog-backend/internal/recommendation/repository"
 	recommendationservice "github.com/rushairer/blog-backend/internal/recommendation/service"
-	"github.com/rushairer/blog-backend/internal/repository"
-	"github.com/rushairer/blog-backend/internal/service"
 	siterepository "github.com/rushairer/blog-backend/internal/site/repository"
 	siteservice "github.com/rushairer/blog-backend/internal/site/service"
 	taxonomyrepository "github.com/rushairer/blog-backend/internal/taxonomy/repository"
@@ -39,11 +39,11 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 			t.Fatalf("route registration panicked: %v", recovered)
 		}
 	}()
-	postRepo := repository.NewPostRepository(nil)
+	postRepo := postrepository.NewPostRepository(nil)
 	RegisterWebRouterWithOptions(engine, WebRouterOptions{
 		AuthOptions:   middleware.AuthOptions{Issuer: "http://issuer.test", Audience: "blog-bff", ClientID: "blog-bff"},
 		VisitorSecret: "test-secret", MediaDir: t.TempDir(), MediaStore: media.NewLocal(t.TempDir()),
-		PostSvc:           service.NewPostService(postRepo),
+		PostSvc:           postservice.NewPostService(postRepo),
 		PageSvc:           pageservice.NewPageService(pagerepository.NewPageRepository(nil)),
 		MediaSvc:          mediaservice.New(mediarepository.New(nil)),
 		TaxonomySvc:       taxonomyservice.New(taxonomyrepository.New(nil)),

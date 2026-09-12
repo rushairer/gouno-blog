@@ -31,9 +31,10 @@ import (
 	"github.com/rushairer/blog-backend/internal/operations"
 	pagerepository "github.com/rushairer/blog-backend/internal/page/repository"
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
+	postrepository "github.com/rushairer/blog-backend/internal/post/repository"
+	postservice "github.com/rushairer/blog-backend/internal/post/service"
 	"github.com/rushairer/blog-backend/internal/repository"
 	"github.com/rushairer/blog-backend/internal/secretbox"
-	"github.com/rushairer/blog-backend/internal/service"
 	siterepository "github.com/rushairer/blog-backend/internal/site/repository"
 	siteservice "github.com/rushairer/blog-backend/internal/site/service"
 	taxonomyrepository "github.com/rushairer/blog-backend/internal/taxonomy/repository"
@@ -270,8 +271,8 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 	}
 
 	transactor := repository.NewTransactor(cfg.DB, cfg.Logger)
-	postRepo := repository.NewPostRepository(cfg.DB)
-	postSvc := service.NewPostService(postRepo)
+	postRepo := postrepository.NewPostRepository(cfg.DB)
+	postSvc := postservice.NewPostService(postRepo)
 	pageSvc := pageservice.NewPageService(pagerepository.NewPageRepository(cfg.DB))
 	taxonomySvc := taxonomyservice.New(taxonomyrepository.New(cfg.DB))
 	siteSvc := siteservice.New(siterepository.New(cfg.DB))
@@ -280,7 +281,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 	analyticsSvc := newAnalyticsService(cfg.DB)
 	recommendationSvc := newRecommendationService(cfg.DB)
 	postVersionSvc := newPostVersionService(cfg.DB)
-	service.StartScheduledPublisher(ctx, postSvc, cfg.Logger)
+	postservice.StartScheduledPublisher(ctx, postSvc, cfg.Logger)
 
 	var agentCtrl *controller.AgentController
 	if cfg.Global.AIAgentConfig.Enabled {

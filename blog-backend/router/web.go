@@ -19,12 +19,13 @@ import (
 	mediaservice "github.com/rushairer/blog-backend/internal/media/service"
 	pagecontroller "github.com/rushairer/blog-backend/internal/page/controller"
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
+	postcontroller "github.com/rushairer/blog-backend/internal/post/controller"
+	postservice "github.com/rushairer/blog-backend/internal/post/service"
 	postversioncontroller "github.com/rushairer/blog-backend/internal/postversion/controller"
 	postversionservice "github.com/rushairer/blog-backend/internal/postversion/service"
 	"github.com/rushairer/blog-backend/internal/ratelimit"
 	recommendationcontroller "github.com/rushairer/blog-backend/internal/recommendation/controller"
 	recommendationservice "github.com/rushairer/blog-backend/internal/recommendation/service"
-	"github.com/rushairer/blog-backend/internal/service"
 	sitecontroller "github.com/rushairer/blog-backend/internal/site/controller"
 	siteservice "github.com/rushairer/blog-backend/internal/site/service"
 	taxonomycontroller "github.com/rushairer/blog-backend/internal/taxonomy/controller"
@@ -43,7 +44,7 @@ type WebRouterOptions struct {
 	MediaDir           string
 	MediaStore         media.Store
 	CORSAllowedOrigins []string
-	PostSvc            *service.PostService
+	PostSvc            *postservice.PostService
 	PageSvc            *pageservice.PageService
 	MediaSvc           mediaservice.Service
 	TaxonomySvc        taxonomyservice.Service
@@ -86,7 +87,7 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 	})
 
 	postSvc := opts.PostSvc
-	ctrl := controller.NewPostController(postSvc)
+	ctrl := postcontroller.NewPostController(postSvc)
 
 	pageSvc := opts.PageSvc
 	pageCtrl := pagecontroller.NewPageController(pageSvc)
