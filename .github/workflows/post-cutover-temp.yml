@@ -1,0 +1,173 @@
+name: Temporary Post Runtime Cutover
+
+on:
+  push:
+    branches:
+      - refactor/post-runtime-cutover
+
+permissions:
+  contents: write
+
+jobs:
+  cutover:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: refactor/post-runtime-cutover
+      - uses: actions/setup-go@0aaccfd36b6b5bd29e1f0ad13ec53cd73036b6a6
+        with:
+          go-version-file: blog-backend/go.mod
+          cache-dependency-path: blog-backend/go.sum
+      - name: Apply canonical Post runtime cutover
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          root = "github.com/rushairer/blog-backend/internal/"
+
+          def read(path):
+              return Path(path).read_text()
+
+          def write(path, text):
+              Path(path).write_text(text)
+
+          def replace_required(text, old, new, path, count=None):
+              actual = text.count(old)
+              if actual == 0:
+                  raise SystemExit(f"expected snippet not found in {path}: {old!r}")
+              if count is not None and actual != count:
+                  raise SystemExit(f"unexpected match count in {path}: {old!r}: {actual} != {count}")
+              return text.replace(old, new)
+
+          simple_service_files = [
+              "blog-backend/internal/agent/runner.go",
+              "blog-backend/internal/agent/approval.go",
+              "blog-backend/internal/tool/blog_tools.go",
+              "blog-backend/internal/operations/service.go",
+              "blog-backend/internal/controllerutil/response.go",
+              "blog-backend/internal/post/controller/post_controller.go",
+              "blog-backend/internal/post/controller/post_controller_test.go",
+          ]
+          for path in simple_service_files:
+              text = read(path)
+              text = replace_required(
+                  text,
+                  f'\t"{root}service"\n',
+                  f'\tpostservice "{root}post/service"\n',
+                  path,
+                  1,
+              )
+              text = re.sub(r"\bservice\.", "postservice.", text)
+              write(path, text)
+
+          path = "blog-backend/router/web.go"
+          text = read(path)
+          text = replace_required(
+              text,
+              f'\tpageservice "{root}page/service"\n',
+              f'\tpageservice "{root}page/service"\n\tpostcontroller "{root}post/controller"\n',
+              path,
+              1,
+          )
+          text = replace_required(
+              text,
+              f'\t"{root}service"\n',
+              f'\tpostservice "{root}post/service"\n',
+              path,
+              1,
+          )
+          text = re.sub(r"\bservice\.", "postservice.", text)
+          text = replace_required(text, "controller.NewPostController(postSvc)", "postcontroller.NewPostController(postSvc)", path, 1)
+          write(path, text)
+
+          path = "blog-backend/router/web_test.go"
+          text = read(path)
+          text = replace_required(
+              text,
+              f'\t"{root}repository"\n',
+              f'\tpostrepository "{root}post/repository"\n',
+              path,
+              1,
+          )
+          text = replace_required(
+              text,
+              f'\t"{root}service"\n',
+              f'\tpostservice "{root}post/service"\n',
+              path,
+              1,
+          )
+          text = replace_required(text, "repository.NewPostRepository", "postrepository.NewPostRepository", path, 1)
+          text = re.sub(r"\bservice\.", "postservice.", text)
+          if re.search(r"\brepository\.", text):
+              raise SystemExit("router/web_test.go still depends on flat repository alias")
+          write(path, text)
+
+          path = "blog-backend/cmd/gouno/web.go"
+          text = read(path)
+          text = replace_required(
+              text,
+              f'\t"{root}secretbox"\n\t"{root}service"\n',
+              f'\tpostrepository "{root}post/repository"\n\tpostservice "{root}post/service"\n\t"{root}secretbox"\n',
+              path,
+              1,
+          )
+          text = replace_required(text, "repository.NewPostRepository", "postrepository.NewPostRepository", path, 1)
+          text = re.sub(r"\bservice\.", "postservice.", text)
+          write(path, text)
+
+          path = "blog-backend/ARCHITECTURE.md"
+          text = read(path)
+          marker = "Blog Tools no longer store or depend on any Growth service."
+          paragraph = (
+              "Post persistence, business behavior, scheduled publishing, and HTTP ownership are fully canonical under "
+              "`internal/post/{repository,service,controller}`. The application composition root constructs the canonical "
+              "Post repository/service directly, active Post routes bind to the canonical Post controller, shared HTTP error "
+              "mapping recognizes canonical Post service sentinels, and Agent/Tool/Operations consumers depend on the canonical "
+              "Post service instead of the legacy flat service package. The former flat Post repository/service/controller "
+              "facades and duplicate tests have been removed. As a result, the transitional `internal/service/` bucket is no "
+              "longer needed and has been eliminated.\n\n"
+          )
+          if marker not in text:
+              raise SystemExit("architecture insertion marker missing")
+          text = text.replace(marker, paragraph + marker, 1)
+          write(path, text)
+      - name: Remove legacy Post facades
+        run: |
+          git rm \
+            blog-backend/internal/repository/post_repository.go \
+            blog-backend/internal/service/post_service.go \
+            blog-backend/internal/service/publisher.go \
+            blog-backend/internal/controller/post_controller.go
+      - name: Format and verify ownership
+        run: |
+          gofmt -w \
+            blog-backend/cmd/gouno/web.go \
+            blog-backend/router/web.go \
+            blog-backend/router/web_test.go \
+            blog-backend/internal/agent/runner.go \
+            blog-backend/internal/agent/approval.go \
+            blog-backend/internal/tool/blog_tools.go \
+            blog-backend/internal/operations/service.go \
+            blog-backend/internal/controllerutil/response.go \
+            blog-backend/internal/post/controller/post_controller.go \
+            blog-backend/internal/post/controller/post_controller_test.go
+          if grep -R --line-number --include='*.go' 'github.com/rushairer/blog-backend/internal/service' blog-backend; then
+            echo 'legacy internal/service import remains' >&2
+            exit 1
+          fi
+          test ! -e blog-backend/internal/repository/post_repository.go
+          test ! -e blog-backend/internal/service/post_service.go
+          test ! -e blog-backend/internal/service/publisher.go
+          test ! -e blog-backend/internal/controller/post_controller.go
+      - name: Compile backend
+        working-directory: blog-backend
+        run: go test ./...
+      - name: Commit cutover
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "refactor(post): complete canonical runtime cutover"
+          git push origin HEAD:refactor/post-runtime-cutover
