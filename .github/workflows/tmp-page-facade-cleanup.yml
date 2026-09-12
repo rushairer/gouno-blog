@@ -1,0 +1,61 @@
+name: Temporary Page Facade Cleanup
+
+on:
+  push:
+    branches: [refactor/remove-page-flat-facades]
+    paths:
+      - scripts/tmp-page-facade-cleanup.py
+      - .github/workflows/tmp-page-facade-cleanup.yml
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: refactor/remove-page-flat-facades
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: blog-backend/go.mod
+          cache-dependency-path: blog-backend/go.sum
+
+      - name: Prove consumers and remove Page flat facades
+        run: python3 scripts/tmp-page-facade-cleanup.py
+
+      - name: Verify canonical Page ownership remains complete
+        run: |
+          test -f blog-backend/internal/page/repository/page_repository.go
+          test -f blog-backend/internal/page/service/page_service.go
+          test -f blog-backend/internal/page/service/page_service_test.go
+          test -f blog-backend/internal/page/controller/page_controller.go
+          test -f blog-backend/internal/page/controller/page_controller_test.go
+          test -f blog-backend/internal/domain/page.go
+          test ! -e blog-backend/internal/repository/page_repository.go
+          test ! -e blog-backend/internal/service/page_service.go
+          test ! -e blog-backend/internal/service/page_service_test.go
+          test ! -e blog-backend/internal/controller/page_controller.go
+          test ! -e blog-backend/internal/controller/page_controller_test.go
+
+      - name: Verify backend after facade removal
+        run: |
+          cd blog-backend
+          go test ./...
+          go vet ./...
+
+      - name: Remove migration scaffolding
+        run: rm scripts/tmp-page-facade-cleanup.py .github/workflows/tmp-page-facade-cleanup.yml
+
+      - name: Commit Page facade removal
+        run: |
+          git config user.name Aben
+          git config user.email 5195693+rushairer@users.noreply.github.com
+          git add -A
+          git commit -m 'refactor(page): remove flat compatibility facades'
+          git push origin HEAD:refactor/remove-page-flat-facades
