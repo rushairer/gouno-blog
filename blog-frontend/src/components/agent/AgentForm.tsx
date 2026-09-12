@@ -228,9 +228,7 @@ export function AgentForm({
         >
           <Select
             required
-            value={
-              value.skill_version_id ? String(value.skill_version_id) : ""
-            }
+            value={value.skill_version_id ? String(value.skill_version_id) : ""}
             onChange={(nextValue) => applySkill(Number(nextValue))}
           >
             <option value="" disabled>

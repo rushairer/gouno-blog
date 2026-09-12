@@ -36,13 +36,13 @@ import { RiskPill, StatusPill } from "./StatusPill";
 import { SudoGate } from "../auth/SudoGate";
 import {
   Button,
-  EmptyState,
+  Card,
+  CardHeader,
+  Empty,
   IconButton,
-  PanelHeader,
+  Segmented,
   Select,
-  SubnavTabs,
-  WorkspacePanel,
-} from "@gouno/ui-legacy";
+} from "@gouno/ui/core";
 
 export type AdvancedSection =
   | "agents"
@@ -163,11 +163,12 @@ export function AdvancedWorkspace({
 
   return (
     <>
-      <SubnavTabs
+      <Segmented<AdvancedSection>
         aria-label={labels.advanced}
+        block
         value={advancedSection}
-        onValueChange={(value) => onSelectSection(value as AdvancedSection)}
-        items={[
+        onChange={onSelectSection}
+        options={[
           { value: "agents", label: labels.agents, icon: <Bot /> },
           { value: "skills", label: labels.skills, icon: <ListChecks /> },
           { value: "tools", label: "Tools", icon: <GitBranch /> },
@@ -230,8 +231,8 @@ export function AdvancedWorkspace({
       ) : null}
 
       {!editingAgent && !editingProvider && advancedSection === "tools" ? (
-        <WorkspacePanel className="agent-table-panel">
-          <PanelHeader
+        <Card className="agent-table-panel">
+          <CardHeader
             title="Tools"
             description={
               locale === "zh"
@@ -240,7 +241,7 @@ export function AdvancedWorkspace({
             }
           />
           {tools.length === 0 ? (
-            <EmptyState label={locale === "zh" ? "暂无 Tool" : "No Tools"} />
+            <Empty description={locale === "zh" ? "暂无 Tool" : "No Tools"} />
           ) : (
             <div className="table-scroll">
               <table className="content-table agent-table agent-table--tools">
@@ -272,21 +273,22 @@ export function AdvancedWorkspace({
               </table>
             </div>
           )}
-        </WorkspacePanel>
+        </Card>
       ) : null}
 
       {!editingAgent && !editingProvider && advancedSection === "agents" ? (
-        <WorkspacePanel className="agent-table-panel">
-          <PanelHeader
+        <Card className="agent-table-panel">
+          <CardHeader
             title={labels.agents}
             description={
               locale === "zh"
                 ? "将 Skill Version 部署到模型连接，并配置运行配额、计划与启停。"
                 : "Deploy a Skill Version to a model connection, then configure scheduling, quotas, and state."
             }
-            actions={
+            action={
               <Button
-                variant="primary"
+                variant="solid"
+                color="primary"
                 onClick={() =>
                   providers.length > 0
                     ? onEditAgent("new")
@@ -467,7 +469,8 @@ export function AdvancedWorkspace({
                             />
                             {!agent.system_key ? (
                               <IconButton
-                                variant="danger"
+                                variant="ghost"
+                                color="error"
                                 label={labels.delete}
                                 icon={<Trash2 />}
                                 onClick={() =>
@@ -487,14 +490,14 @@ export function AdvancedWorkspace({
               </table>
             </div>
           )}
-        </WorkspacePanel>
+        </Card>
       ) : null}
 
       {!editingAgent &&
       !editingProvider &&
       !editingSkill &&
       advancedSection === "skills" ? (
-        <WorkspacePanel className="agent-table-panel">
+        <Card className="agent-table-panel">
           <input
             ref={skillFileInputRef}
             type="file"
@@ -502,17 +505,17 @@ export function AdvancedWorkspace({
             hidden
             onChange={(event) => void onImportSkill(event)}
           />
-          <PanelHeader
+          <CardHeader
             title={labels.skills}
             description={
               locale === "zh"
                 ? "管理可复用能力定义与执行边界。"
                 : "Manage reusable capability definitions and execution boundaries."
             }
-            actions={
+            action={
               <>
                 <Button
-                  variant="secondary"
+                  variant="outline"
                   type="button"
                   onClick={() => skillFileInputRef.current?.click()}
                   icon={<Upload />}
@@ -520,7 +523,8 @@ export function AdvancedWorkspace({
                   {locale === "zh" ? "导入 Skill" : "Import Skill"}
                 </Button>
                 <Button
-                  variant="primary"
+                  variant="solid"
+                  color="primary"
                   type="button"
                   onClick={() => onEditSkill("new")}
                   icon={<Plus />}
@@ -531,7 +535,7 @@ export function AdvancedWorkspace({
             }
           />
           {skills.length === 0 ? (
-            <EmptyState label={labels.noSkills} />
+            <Empty description={labels.noSkills} />
           ) : (
             <div className="table-scroll">
               <table className="content-table agent-table">
@@ -609,7 +613,8 @@ export function AdvancedWorkspace({
                           />
                           {!skill.system_key ? (
                             <IconButton
-                              variant="danger"
+                              variant="ghost"
+                              color="error"
                               label={labels.delete}
                               icon={<Trash2 />}
                               onClick={() =>
@@ -625,7 +630,7 @@ export function AdvancedWorkspace({
               </table>
             </div>
           )}
-        </WorkspacePanel>
+        </Card>
       ) : null}
 
       {!editingAgent && !editingProvider && advancedSection === "providers" ? (
@@ -634,7 +639,7 @@ export function AdvancedWorkspace({
           description="添加、修改、导出或删除 AI 模型连接涉及敏感 API Key 凭据。解锁后享有 10 分钟无打扰编辑期。"
           actionLabel="解锁以管理模型连接"
         >
-          <WorkspacePanel className="agent-table-panel">
+          <Card className="agent-table-panel">
             <input
               ref={providerFileInputRef}
               type="file"
@@ -642,17 +647,17 @@ export function AdvancedWorkspace({
               hidden
               onChange={(event) => void onImportProviders(event)}
             />
-            <PanelHeader
+            <CardHeader
               title={labels.providers}
               description={
                 locale === "zh"
                   ? "管理模型连接，并分别指定文本模型与图片生成的默认模型。"
                   : "Manage model connections and defaults."
               }
-              actions={
+              action={
                 <>
                   <Button
-                    variant="secondary"
+                    variant="outline"
                     type="button"
                     onClick={() => void onExportProviders()}
                     icon={<Download />}
@@ -660,7 +665,7 @@ export function AdvancedWorkspace({
                     {labels.exportProviders}
                   </Button>
                   <Button
-                    variant="secondary"
+                    variant="outline"
                     type="button"
                     onClick={() => providerFileInputRef.current?.click()}
                     icon={<Upload />}
@@ -668,7 +673,8 @@ export function AdvancedWorkspace({
                     {labels.importProviders}
                   </Button>
                   <Button
-                    variant="primary"
+                    variant="solid"
+                    color="primary"
                     onClick={() => onEditProvider("new")}
                     icon={<Plus />}
                   >
@@ -690,14 +696,12 @@ export function AdvancedWorkspace({
                 <label>
                   {locale === "zh" ? "文本模型" : "Text Model"}
                   <Select
-                    value={
+                    value={String(
                       providers.find((item) => item.is_default_writing)?.id ||
-                      ""
-                    }
-                    onChange={(event) => {
-                      const id = event.target.value
-                        ? Number(event.target.value)
-                        : 0;
+                        "",
+                    )}
+                    onChange={(value) => {
+                      const id = value ? Number(value) : 0;
                       void onSetDefaultProvider(id, "writing");
                     }}
                   >
@@ -709,7 +713,7 @@ export function AdvancedWorkspace({
                     {providers
                       .filter((item) => item.enabled)
                       .map((item) => (
-                        <option key={item.id} value={item.id}>
+                        <option key={item.id} value={String(item.id)}>
                           {item.name} · {item.model}
                         </option>
                       ))}
@@ -718,13 +722,11 @@ export function AdvancedWorkspace({
                 <label>
                   {locale === "zh" ? "图片生成" : "Image Generation"}
                   <Select
-                    value={
-                      providers.find((item) => item.is_default_image)?.id || ""
-                    }
-                    onChange={(event) => {
-                      const id = event.target.value
-                        ? Number(event.target.value)
-                        : 0;
+                    value={String(
+                      providers.find((item) => item.is_default_image)?.id || "",
+                    )}
+                    onChange={(value) => {
+                      const id = value ? Number(value) : 0;
                       void onSetDefaultProvider(id, "image");
                     }}
                   >
@@ -736,7 +738,7 @@ export function AdvancedWorkspace({
                     {providers
                       .filter((item) => item.enabled)
                       .map((item) => (
-                        <option key={item.id} value={item.id}>
+                        <option key={item.id} value={String(item.id)}>
                           {item.name} · {item.model}
                         </option>
                       ))}
@@ -745,7 +747,7 @@ export function AdvancedWorkspace({
               </section>
             ) : null}
             {providers.length === 0 ? (
-              <EmptyState label={labels.noProviders} />
+              <Empty description={labels.noProviders} />
             ) : (
               <div className="table-scroll">
                 <table className="content-table agent-table">
@@ -847,7 +849,8 @@ export function AdvancedWorkspace({
                               onClick={() => onEditProvider(provider)}
                             />
                             <IconButton
-                              variant="danger"
+                              variant="ghost"
+                              color="error"
                               label={labels.delete}
                               icon={<Trash2 />}
                               onClick={() =>
@@ -865,7 +868,7 @@ export function AdvancedWorkspace({
                 </table>
               </div>
             )}
-          </WorkspacePanel>
+          </Card>
         </SudoGate>
       ) : null}
 
@@ -885,18 +888,18 @@ export function AdvancedWorkspace({
           description="添加、编辑或删除 Embedding 知识库模型及全量重建索引需要近期多因素身份认证。解锁后享有 10 分钟无打扰编辑期。"
           actionLabel="解锁以管理知识库"
         >
-          <WorkspacePanel className="agent-table-panel knowledge-workspace">
-            <PanelHeader
+          <Card className="agent-table-panel knowledge-workspace">
+            <CardHeader
               title={labels.knowledge}
               description={
                 locale === "zh"
                   ? "仅索引已发布文章；Embedding 模型负责把文章转换为可检索的知识库。"
                   : "Published content only; jobs run asynchronously."
               }
-              actions={
+              action={
                 <>
                   <Button
-                    variant="secondary"
+                    variant="outline"
                     type="button"
                     onClick={() => void onRetryIndex()}
                     icon={<RefreshCw />}
@@ -904,7 +907,7 @@ export function AdvancedWorkspace({
                     {locale === "zh" ? "重试失败任务" : "Retry failed"}
                   </Button>
                   <Button
-                    variant="secondary"
+                    variant="outline"
                     type="button"
                     onClick={() => void onRebuildIndex()}
                     icon={<RefreshCw />}
@@ -912,7 +915,8 @@ export function AdvancedWorkspace({
                     {locale === "zh" ? "全量重建" : "Rebuild all"}
                   </Button>
                   <Button
-                    variant="primary"
+                    variant="solid"
+                    color="primary"
                     type="button"
                     onClick={() => onEditEmbedding("new")}
                     icon={<Plus />}
@@ -940,8 +944,8 @@ export function AdvancedWorkspace({
             </div>
             <section className="knowledge-embedding-config">
               {embeddingProfiles.length === 0 ? (
-                <EmptyState
-                  label={
+                <Empty
+                  description={
                     locale === "zh"
                       ? "还没有嵌入配置。"
                       : "No embedding profiles configured."
@@ -1029,7 +1033,8 @@ export function AdvancedWorkspace({
                                 onClick={() => onEditEmbedding(profile)}
                               />
                               <IconButton
-                                variant="danger"
+                                variant="ghost"
+                                color="error"
                                 label={labels.delete}
                                 icon={<Trash2 />}
                                 onClick={() =>
@@ -1048,7 +1053,7 @@ export function AdvancedWorkspace({
                 </div>
               )}
             </section>
-          </WorkspacePanel>
+          </Card>
         </SudoGate>
       ) : null}
     </>

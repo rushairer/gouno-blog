@@ -152,12 +152,14 @@ const resourceFilters: Record<string, ResourceFilter[]> = {
 
 function ResourceStatusTag({ status }: { status: string }) {
   const label =
-    ({
-      published: "已发布",
-      draft: "草稿",
-      scheduled: "定时发布",
-      hidden: "已隐藏",
-    } as Record<string, string>)[status] || status;
+    (
+      {
+        published: "已发布",
+        draft: "草稿",
+        scheduled: "定时发布",
+        hidden: "已隐藏",
+      } as Record<string, string>
+    )[status] || status;
   const color =
     status === "published"
       ? "success"
@@ -358,7 +360,11 @@ function ResourcePicker({
         }
         onClose={() => setOpen(false)}
         footer={
-          <Button variant="outline" type="button" onClick={() => setOpen(false)}>
+          <Button
+            variant="outline"
+            type="button"
+            onClick={() => setOpen(false)}
+          >
             {locale === "zh" ? "完成" : "Done"}
           </Button>
         }
@@ -491,9 +497,7 @@ function ResourcePicker({
               simple
               size="small"
               onChange={(nextPage) => setPage(nextPage)}
-              ariaLabel={
-                locale === "zh" ? "资源分页" : "Resource pagination"
-              }
+              ariaLabel={locale === "zh" ? "资源分页" : "Resource pagination"}
             />
           ) : null}
         </div>
