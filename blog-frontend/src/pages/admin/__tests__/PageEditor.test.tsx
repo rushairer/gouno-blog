@@ -80,7 +80,6 @@ describe("PageEditor", () => {
       "false",
     );
 
-    // Check AI tool buttons
     expect(
       screen.getByRole("button", { name: /AI 写作与润色/ }),
     ).toBeInTheDocument();
@@ -131,17 +130,15 @@ describe("PageEditor", () => {
     expect(
       screen.getByRole("button", { name: "保存草稿" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "保存草稿" })).toHaveClass(
-      "btn-primary",
-    );
     expect(
       screen.queryByRole("button", { name: "发布" }),
     ).not.toBeInTheDocument();
 
-    await user.selectOptions(screen.getByLabelText("状态"), "published");
-    expect(screen.getByRole("button", { name: "保存草稿" })).toHaveClass(
-      "btn-secondary",
-    );
+    await user.click(screen.getByRole("combobox", { name: "状态" }));
+    await user.click(screen.getByRole("option", { name: "立即发布" }));
+    expect(
+      screen.getByRole("button", { name: "保存草稿" }),
+    ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "发布" }));
 
     await waitFor(() => {

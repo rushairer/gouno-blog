@@ -10,24 +10,23 @@ import {
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
+  Alert,
+  Button,
+  Card,
   Checkbox,
   CheckboxField,
   ChoiceButton,
   Field,
   Input,
-  Textarea,
-} from "@gouno/ui/core";
-import {
-  AdminPageState,
-  Button,
-  ConfirmDialog,
-  Feedback,
+  Modal,
   Select,
+  Skeleton,
   Tab,
   TabList,
   Tabs,
-  useToast,
-} from "@gouno/ui-legacy";
+  Textarea,
+} from "@gouno/ui/core";
+import { useToast } from "@gouno/ui-legacy";
 import { MarkdownRenderer } from "../../components/MarkdownRenderer";
 import {
   AiImageGenerationPanel,
@@ -57,6 +56,10 @@ const emptyPage: CustomPage = {
   seo_description: "",
   created_at: "",
 };
+
+function selectValue(value: string | string[]) {
+  return Array.isArray(value) ? (value[0] ?? "") : value;
+}
 
 export default function PageEditor() {
   const { id } = useParams();
@@ -614,21 +617,41 @@ export default function PageEditor() {
 
   if (!isNew && error && !page.id) {
     return (
-      <AdminPageState
+      <Alert
+        type="error"
+        showIcon
         title="无法编辑单页"
         description={error}
-        label="无权限或单页不存在"
+        action={
+          <Button
+            variant="outline"
+            icon={<ArrowLeft />}
+            onClick={() => navigate("/admin/pages")}
+          >
+            返回单页列表
+          </Button>
+        }
       />
     );
   }
 
   if (!allowed || loading) {
     return (
-      <AdminPageState
-        title={isNew ? "新建单页" : "编辑单页"}
-        description="撰写并管理独立单页展示结构与配置。"
-        label="正在打开编辑器…"
-      />
+      <Card
+        padding="base"
+        aria-label={isNew ? "新建单页编辑器加载中" : "单页编辑器加载中"}
+      >
+        <div className="flex flex-col gap-5" role="status" aria-live="polite">
+          <div className="flex items-center justify-between gap-4">
+            <Skeleton className="h-9 w-36" />
+            <Skeleton className="h-9 w-64" />
+          </div>
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_19rem]">
+            <Skeleton className="h-[34rem] w-full" />
+            <Skeleton className="h-96 w-full" />
+          </div>
+        </div>
+      </Card>
     );
   }
 
@@ -637,7 +660,7 @@ export default function PageEditor() {
       <EditorCommandBar>
         <Button
           className="editor-back"
-          variant="ghost"
+          variant="text"
           onClick={leaveEditor}
           icon={<ArrowLeft />}
         >
@@ -663,7 +686,7 @@ export default function PageEditor() {
         </div>
         <EditorCommandActions>
           <Button
-            variant="secondary"
+            variant="outline"
             type="button"
             onClick={() => void openFrontsitePreview()}
             disabled={saving}
@@ -673,7 +696,7 @@ export default function PageEditor() {
           </Button>
           {page.status !== "published" && publishIntent !== "draft" ? (
             <Button
-              variant="secondary"
+              variant="outline"
               type="button"
               onClick={() => void persist("draft")}
               disabled={saving}
@@ -683,7 +706,8 @@ export default function PageEditor() {
             </Button>
           ) : null}
           <Button
-            variant="primary"
+            variant="solid"
+            color="primary"
             type="button"
             onClick={() => void persist(primaryStatus)}
             disabled={saving}
@@ -694,7 +718,7 @@ export default function PageEditor() {
         </EditorCommandActions>
       </EditorCommandBar>
 
-      {error ? <Feedback type="error">{error}</Feedback> : null}
+      {error ? <Alert type="error" showIcon title={error} /> : null}
 
       <div className="editor-workspace">
         <main className="editor-canvas">
@@ -709,7 +733,7 @@ export default function PageEditor() {
             />
             <div className="editor-ai-inline">
               <Button
-                variant="ghost"
+                variant="text"
                 onClick={() => void requestSuggestions("title")}
                 disabled={assistTask !== null}
                 icon={<Sparkles />}
@@ -721,7 +745,7 @@ export default function PageEditor() {
                   {suggestions.map((item) => (
                     <Button
                       key={item}
-                      variant="ghost"
+                      variant="text"
                       onClick={() => applySuggestion("title", item)}
                     >
                       <span>{item}</span>
@@ -744,7 +768,7 @@ export default function PageEditor() {
             />
             <div className="editor-ai-inline">
               <Button
-                variant="ghost"
+                variant="text"
                 onClick={() => void requestSuggestions("summary")}
                 disabled={assistTask !== null}
                 icon={<Sparkles />}
@@ -758,7 +782,7 @@ export default function PageEditor() {
                   {suggestions.map((item) => (
                     <Button
                       key={item}
-                      variant="ghost"
+                      variant="text"
                       onClick={() => applySuggestion("summary", item)}
                     >
                       <span>{item}</span>
@@ -772,8 +796,8 @@ export default function PageEditor() {
 
           <Tabs
             className="editor-tabs"
-            value={preview ? "preview" : "markdown"}
-            onValueChange={(value) => setPreview(value === "preview")}
+            activeKey={preview ? "preview" : "markdown"}
+            onChange={(value) => setPreview(value === "preview")}
           >
             <TabList aria-label="编辑模式">
               <Tab value="markdown">Markdown</Tab>
@@ -781,8 +805,8 @@ export default function PageEditor() {
             </TabList>
             <div className="editor-ai-tools-group">
               <Button
-                variant="ghost"
-                size="compact"
+                variant="text"
+                size="small"
                 className={`editor-ai-tool-control ${showAiWriting ? "active" : ""}`}
                 onClick={() => {
                   setShowAiWriting(!showAiWriting);
@@ -794,8 +818,8 @@ export default function PageEditor() {
                 {showAiWriting ? "收起 AI 写作" : "AI 写作与润色"}
               </Button>
               <Button
-                variant="ghost"
-                size="compact"
+                variant="text"
+                size="small"
                 className={`editor-ai-tool-control ${showAiImage ? "active" : ""}`}
                 onClick={() => {
                   setShowAiImage(!showAiImage);
@@ -869,7 +893,8 @@ export default function PageEditor() {
                   disabled={aiContentLoading}
                 />
                 <Button
-                  variant="primary"
+                  variant="solid"
+                  color="primary"
                   type="button"
                   onClick={() => void handleGenerateContent()}
                   loading={aiContentLoading}
@@ -883,7 +908,7 @@ export default function PageEditor() {
                 </Button>
               </div>
               {assistError ? (
-                <Feedback type="error">{assistError}</Feedback>
+                <Alert type="error" showIcon title={assistError} />
               ) : null}
               {generatedContent ? (
                 <div className="editor-ai-result-box">
@@ -893,21 +918,22 @@ export default function PageEditor() {
                     </strong>
                     <div className="editor-ai-result-actions">
                       <Button
-                        variant="primary"
+                        variant="solid"
+                        color="primary"
                         type="button"
                         onClick={() => applyGeneratedContent("replace")}
                       >
                         替换全文
                       </Button>
                       <Button
-                        variant="secondary"
+                        variant="outline"
                         type="button"
                         onClick={() => applyGeneratedContent("append")}
                       >
                         追加到末尾
                       </Button>
                       <Button
-                        variant="secondary"
+                        variant="outline"
                         type="button"
                         onClick={() => setGeneratedContent(null)}
                       >
@@ -1019,7 +1045,8 @@ export default function PageEditor() {
                   disabled={aiImageLoading}
                 />
                 <Button
-                  variant="primary"
+                  variant="solid"
+                  color="primary"
                   type="button"
                   onClick={() => void handleGenerateAiImage()}
                   loading={aiImageLoading}
@@ -1049,7 +1076,7 @@ export default function PageEditor() {
                         <div className="editor-prompt-text">{promptText}</div>
                         <div className="editor-prompt-candidate-actions">
                           <Button
-                            variant="secondary"
+                            variant="outline"
                             type="button"
                             onClick={() => {
                               if (chDesc) setImageAlt(chDesc);
@@ -1060,7 +1087,8 @@ export default function PageEditor() {
                             ✍️ 填入提示词
                           </Button>
                           <Button
-                            variant="primary"
+                            variant="solid"
+                            color="primary"
                             type="button"
                             disabled={aiImageLoading}
                             onClick={() => {
@@ -1078,7 +1106,7 @@ export default function PageEditor() {
                 </div>
               ) : null}
               {assistError ? (
-                <Feedback type="error">{assistError}</Feedback>
+                <Alert type="error" showIcon title={assistError} />
               ) : null}
               {generatedImage ? (
                 <div className="editor-ai-image-result">
@@ -1094,21 +1122,22 @@ export default function PageEditor() {
                     </div>
                     <div className="editor-ai-image-actions">
                       <Button
-                        variant="primary"
+                        variant="solid"
+                        color="primary"
                         type="button"
                         onClick={copyImageMarkdown}
                       >
                         📋 复制 Markdown
                       </Button>
                       <Button
-                        variant="secondary"
+                        variant="outline"
                         type="button"
                         onClick={insertImageToContent}
                       >
                         ➕ 插入到正文末尾
                       </Button>
                       <Button
-                        variant="secondary"
+                        variant="outline"
                         type="button"
                         onClick={() => setGeneratedImage(null)}
                       >
@@ -1141,7 +1170,8 @@ export default function PageEditor() {
         <aside className="editor-inspector">
           <div className="editor-inspector-ai-banner">
             <Button
-              variant="primary"
+              variant="solid"
+              color="primary"
               type="button"
               onClick={() => void autoFillAllMetadata()}
               loading={metaLoading}
@@ -1156,9 +1186,10 @@ export default function PageEditor() {
             <summary>发布设置</summary>
             <Field label="状态">
               <Select
+                aria-label="状态"
                 value={publishIntent}
-                onChange={(event) => {
-                  setPublishIntent(event.target.value as PostStatus);
+                onChange={(value) => {
+                  setPublishIntent(selectValue(value) as PostStatus);
                   dirty.current = true;
                   setSavedAt(null);
                 }}
@@ -1173,9 +1204,10 @@ export default function PageEditor() {
             <summary>页面配置</summary>
             <Field label="显示模板" hint="选择页面的预设布局结构">
               <Select
+                aria-label="显示模板"
                 value={page.template || "default"}
-                onChange={(event) =>
-                  update("template", event.target.value as PageTemplate)
+                onChange={(value) =>
+                  update("template", selectValue(value) as PageTemplate)
                 }
               >
                 <option value="default">默认标准排版 (Default)</option>
@@ -1216,7 +1248,7 @@ export default function PageEditor() {
             <summary>路径与 SEO</summary>
             <div className="editor-ai-inline editor-inline-box">
               <Button
-                variant="ghost"
+                variant="text"
                 onClick={() => void requestSeo()}
                 disabled={assistTask !== null}
                 icon={<Sparkles />}
@@ -1236,7 +1268,7 @@ export default function PageEditor() {
               />
               <div className="editor-ai-inline">
                 <Button
-                  variant="ghost"
+                  variant="text"
                   onClick={() => void requestSuggestions("slug")}
                   disabled={assistTask !== null}
                   icon={<Sparkles />}
@@ -1248,7 +1280,7 @@ export default function PageEditor() {
                     {suggestions.map((item) => (
                       <Button
                         key={item}
-                        variant="ghost"
+                        variant="text"
                         onClick={() => applySuggestion("slug", item)}
                       >
                         <span className="mono">{item}</span>
@@ -1288,14 +1320,25 @@ export default function PageEditor() {
         </aside>
       </div>
 
-      <ConfirmDialog
+      <Modal
         open={confirmExit}
         title="放弃未保存的更改？"
         description="离开编辑器后，尚未保存的内容会丢失。"
-        confirmLabel="放弃并离开"
-        danger
-        onClose={() => setConfirmExit(false)}
-        onConfirm={() => navigate("/admin/pages")}
+        onOpenChange={setConfirmExit}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setConfirmExit(false)}>
+              继续编辑
+            </Button>
+            <Button
+              variant="solid"
+              color="error"
+              onClick={() => navigate("/admin/pages")}
+            >
+              放弃并离开
+            </Button>
+          </>
+        }
       />
     </ContentEditorFrame>
   );
