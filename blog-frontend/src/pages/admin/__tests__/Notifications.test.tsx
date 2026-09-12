@@ -92,7 +92,7 @@ describe("Admin Notifications Page", () => {
       await screen.findByText("Workflow 运行失败：AI 每日资讯"),
     ).toBeInTheDocument();
 
-    const typeSelect = screen.getByRole("combobox", { name: "类型筛选" });
+    const typeSelect = screen.getByRole("combobox", { name: "通知类型筛选" });
     await user.click(typeSelect);
     await user.click(screen.getByRole("option", { name: "AI 运营告警" }));
 
@@ -120,10 +120,15 @@ describe("Admin Notifications Page", () => {
     const user = userEvent.setup();
     renderNotifications();
 
-    const deleteBtns = await screen.findAllByRole("button", { name: "删除" });
-    await user.click(deleteBtns[0]);
+    const deleteButton = await screen.findByRole("button", {
+      name: "删除通知 Workflow 运行失败：AI 每日资讯",
+    });
+    await user.click(deleteButton);
 
     expect(await screen.findByText("删除通知")).toBeInTheDocument();
+    expect(
+      screen.getByText("删除/清理操作不可恢复，请确认后继续。"),
+    ).toBeInTheDocument();
     const confirmBtn = screen.getByRole("button", { name: "确认删除" });
     await user.click(confirmBtn);
 

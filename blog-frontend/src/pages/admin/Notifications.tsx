@@ -19,14 +19,15 @@ import {
   Card,
   Checkbox,
   Empty,
+  Modal,
   Select,
   Skeleton,
   Tag,
+  Text,
 } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
 import { BulkActionBar } from "@gouno/ui/patterns";
 
-import { ConfirmActionModal } from "../../components/ConfirmActionModal";
 import { cn } from "../../lib/utils";
 import { useAppFeedback } from "../../components/feedback/AppFeedbackProvider";
 
@@ -51,7 +52,10 @@ function NotificationsSkeleton() {
       aria-label="通知加载中"
       aria-live="polite"
     >
-      {Array.from({ length: 5 }, (_, index) => (
+      <Text size="sm" tone="muted">
+        正在加载通知…
+      </Text>
+      {Array.from({ length: 4 }, (_, index) => (
         <Card key={index} padding="base">
           <div className="flex items-start gap-4">
             <Skeleton className="size-4" />
@@ -377,7 +381,7 @@ export default function AdminNotifications() {
             </div>
             <div className="w-44">
               <Select
-                aria-label="状态筛选"
+                aria-label="通知状态筛选"
                 value={statusFilter}
                 onChange={(value) => {
                   setStatusFilter(selectValue(value) as NotificationStatus);
@@ -391,7 +395,7 @@ export default function AdminNotifications() {
             </div>
             <div className="w-40">
               <Select
-                aria-label="类型筛选"
+                aria-label="通知类型筛选"
                 value={typeFilter}
                 onChange={(value) => {
                   setTypeFilter(selectValue(value) as NotificationTypeFilter);
@@ -516,7 +520,7 @@ export default function AdminNotifications() {
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex min-w-0 flex-1 items-start gap-3.5">
                     <Checkbox
-                      aria-label={`选择通知 ${item.id}`}
+                      aria-label={`选择通知 ${displayTitle}`}
                       checked={isChecked}
                       onChange={(event) => {
                         setSelected((current) =>
@@ -529,7 +533,7 @@ export default function AdminNotifications() {
 
                     <div
                       className={cn(
-                        "flex size-9 shrink-0 items-center justify-center rounded-lg",
+                        "flex size-9 shrink-0 items-center justify-center rounded-lg [&_svg]:size-4",
                         iconClass,
                       )}
                     >
@@ -557,20 +561,24 @@ export default function AdminNotifications() {
                       </div>
 
                       {item.body ? (
-                        <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                        <Text
+                          size="xs"
+                          tone="muted"
+                          className="mt-1 line-clamp-2 leading-relaxed"
+                        >
                           {item.body}
-                        </p>
+                        </Text>
                       ) : null}
 
                       {item.post_title ? (
-                        <p className="text-[11px] font-medium text-muted-foreground/80">
-                          关联文章：{item.post_title}
-                        </p>
+                        <Text size="xs" tone="muted" className="mt-1">
+                          关联内容：{item.post_title}
+                        </Text>
                       ) : null}
                     </div>
                   </div>
 
-                  <div className="flex shrink-0 items-center gap-2 self-end sm:self-center">
+                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 self-end sm:self-center">
                     {isUnread ? (
                       <Button
                         size="small"
@@ -597,6 +605,7 @@ export default function AdminNotifications() {
                       color="error"
                       size="small"
                       type="button"
+                      aria-label={`删除通知 ${displayTitle}`}
                       onClick={() =>
                         setDeleteAction({
                           kind: "single",
@@ -616,20 +625,25 @@ export default function AdminNotifications() {
         </div>
       )}
 
-      <ConfirmActionModal
+      <Modal
         open={deleteAction !== null}
         title={confirmTitle}
         description={confirmDescription}
-        confirmLabel={
+        onClose={() => setDeleteAction(null)}
+        onOk={() => void executeDelete()}
+        okText={
           deleteAction?.kind === "clear_all" ||
           deleteAction?.kind === "clear_read"
             ? "确认清空"
             : "确认删除"
         }
-        danger
-        onClose={() => setDeleteAction(null)}
-        onConfirm={executeDelete}
-      />
+        cancelText="取消"
+        okButtonProps={{ variant: "solid", color: "error" }}
+      >
+        <Text size="sm" tone="muted">
+          删除/清理操作不可恢复，请确认后继续。
+        </Text>
+      </Modal>
     </div>
   );
 }
