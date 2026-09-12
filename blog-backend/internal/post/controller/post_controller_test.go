@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/access"
 	"github.com/rushairer/blog-backend/internal/domain"
-	"github.com/rushairer/blog-backend/internal/service"
+	postservice "github.com/rushairer/blog-backend/internal/post/service"
 )
 
 type fakeBlogService struct {
@@ -52,14 +52,14 @@ func (s *fakeBlogService) GetAdminPost(_ context.Context, id int64) (*domain.Pos
 	if p, ok := s.posts[id]; ok {
 		return p, nil
 	}
-	return nil, service.ErrPostNotFound
+	return nil, postservice.ErrPostNotFound
 }
 
 func (s *fakeBlogService) GetAdminPostBySlug(_ context.Context, slug string) (*domain.Post, error) {
 	if p, ok := s.postsBySlug[slug]; ok {
 		return p, nil
 	}
-	return nil, service.ErrPostNotFound
+	return nil, postservice.ErrPostNotFound
 }
 
 func (s *fakeBlogService) BatchPosts(_ context.Context, ids []int64, action string) (int64, error) {
@@ -73,7 +73,7 @@ func (s *fakeBlogService) GetPostBySlug(_ context.Context, slug string) (*domain
 func (s *fakeBlogService) ResolvePostID(_ context.Context, slugOrID string) (int64, error) {
 	s.resolveCalls = append(s.resolveCalls, slugOrID)
 	if slugOrID == "missing" {
-		return 0, service.ErrPostNotFound
+		return 0, postservice.ErrPostNotFound
 	}
 	if post := s.postsBySlug[slugOrID]; post != nil {
 		return post.ID, nil
@@ -166,7 +166,7 @@ func TestGetPostReturnsNotFound(t *testing.T) {
 
 func TestCreatePostValidationErrorReturnsBadRequest(t *testing.T) {
 	svc := newFakeBlogService()
-	svc.createErr = service.ErrPostTitleEmpty
+	svc.createErr = postservice.ErrPostTitleEmpty
 	router := setupControllerRouter(svc)
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/posts", bytes.NewBufferString(`{"title":" ","content":"Body"}`))

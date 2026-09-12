@@ -13,8 +13,8 @@ import (
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/media"
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
+	postservice "github.com/rushairer/blog-backend/internal/post/service"
 	"github.com/rushairer/blog-backend/internal/repository"
-	"github.com/rushairer/blog-backend/internal/service"
 )
 
 var (
@@ -34,7 +34,7 @@ type postVersionReader interface {
 
 type ApprovalService struct {
 	repo         *repository.AgentRepository
-	posts        *service.PostService
+	posts        *postservice.PostService
 	pages        *pageservice.PageService
 	management   *ManagementService
 	postVersions postVersionReader
@@ -43,7 +43,7 @@ type ApprovalService struct {
 	generation   *GenerationService
 }
 
-func NewApprovalService(repo *repository.AgentRepository, posts *service.PostService, management *ManagementService, postVersions postVersionReader, mediaAssets mediaAssetGateway, store media.Store, pages *pageservice.PageService) *ApprovalService {
+func NewApprovalService(repo *repository.AgentRepository, posts *postservice.PostService, management *ManagementService, postVersions postVersionReader, mediaAssets mediaAssetGateway, store media.Store, pages *pageservice.PageService) *ApprovalService {
 	return &ApprovalService{repo: repo, posts: posts, pages: pages, management: management, postVersions: postVersions, mediaAssets: mediaAssets, media: store, generation: NewGenerationService(repo, management, mediaAssets, store)}
 }
 
@@ -202,7 +202,7 @@ func (s *ApprovalService) ApplyMediaCandidate(ctx context.Context, id int64) (*d
 	}
 	post, err := s.posts.GetByID(ctx, candidate.PostID)
 	if err != nil || post == nil {
-		return nil, service.ErrPostNotFound
+		return nil, postservice.ErrPostNotFound
 	}
 	assets, err := s.mediaAssets.ListMedia(ctx, domain.MediaFilter{})
 	if err != nil {
@@ -286,7 +286,7 @@ func (s *ApprovalService) ApplyMediaCandidates(ctx context.Context, runID int64,
 	}
 	post, err := s.posts.GetByID(ctx, postID)
 	if err != nil || post == nil {
-		return nil, service.ErrPostNotFound
+		return nil, postservice.ErrPostNotFound
 	}
 	assets, err := s.mediaAssets.ListMedia(ctx, domain.MediaFilter{})
 	if err != nil {
