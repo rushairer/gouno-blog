@@ -318,8 +318,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		}
 		runner := agentservice.NewRunner(agentRepo, management, toolRegistry, postSvc)
 		generation := agentservice.NewGenerationService(generationAuditRepo, management, mediaSvc, mediaStore)
-		approvals := agentservice.NewApprovalService(agentRepo, postSvc, management, postVersionSvc, mediaSvc, mediaStore, pageSvc)
-		approvals.SetGenerationService(generation)
+		approvals := agentservice.NewApprovalServiceWithGeneration(agentRepo, postSvc, management, postVersionSvc, mediaSvc, mediaStore, pageSvc, generation)
 		workflowSvc := workflowservice.NewService(cfg.DB, runner, management, toolRegistry, transactor)
 		workflowSvc.StartScheduler(ctx, cfg.Global.AIAgentConfig.SchedulerInterval)
 		connectorSvc := connector.NewService(cfg.DB, secrets, transactor, os.Getenv("BLOG_CONNECTOR_OAUTH_REDIRECT_URL"))
