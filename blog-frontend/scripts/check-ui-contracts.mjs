@@ -28,6 +28,7 @@ const canonicalUiModules = new Set([
   "@gouno/ui/gouno",
 ]);
 const canonicalRootAllowlist = new Set(["cn"]);
+const nativeBrowserDialogs = new Set(["alert", "confirm", "prompt"]);
 const rawElevationPattern =
   /(^|[\s"'`])(?:[a-z-]+:)*shadow-(?:xs|sm|md|lg|xl|2xl)(?=[\s"'`]|$)/;
 const canonicalPrimitiveSelector =
@@ -173,6 +174,51 @@ function checkUiImports(name, source) {
   }
 }
 
+function checkBrowserDialogContracts(name, source) {
+  if (
+    (!name.endsWith(".ts") && !name.endsWith(".tsx")) ||
+    name.includes("__tests__")
+  )
+    return;
+
+  const sourceFile = ts.createSourceFile(
+    name,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    name.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+  );
+
+  function visit(node) {
+    if (ts.isCallExpression(node)) {
+      const expression = node.expression;
+      let dialogName = "";
+      if (
+        ts.isPropertyAccessExpression(expression) &&
+        ts.isIdentifier(expression.expression) &&
+        expression.expression.text === "window" &&
+        nativeBrowserDialogs.has(expression.name.text)
+      ) {
+        dialogName = expression.name.text;
+      } else if (
+        ts.isIdentifier(expression) &&
+        nativeBrowserDialogs.has(expression.text)
+      ) {
+        dialogName = expression.text;
+      }
+
+      if (dialogName) {
+        failures.push(
+          `${name}:${location(sourceFile, node)} native browser ${dialogName}() is forbidden; use controlled @gouno/ui feedback or modal primitives`,
+        );
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+}
+
 function checkTsxContracts(name, source) {
   if (!name.endsWith(".tsx") || name.includes("__tests__")) return;
   const sourceFile = ts.createSourceFile(
@@ -299,6 +345,7 @@ for (const path of files) {
     });
   }
   checkUiImports(name, source);
+  checkBrowserDialogContracts(name, source);
   checkTsxContracts(name, source);
 }
 
