@@ -40,9 +40,6 @@ func validateStaticSVGUpload(header *multipart.FileHeader) error {
 	return validateStaticSVG(io.LimitReader(file, maxMediaSize+1))
 }
 
-// validateStaticSVG accepts declarative, self-contained SVG while rejecting
-// browser-active content and external resource loads. The original bytes are
-// stored unchanged only after this validation succeeds.
 func validateStaticSVG(reader io.Reader) error {
 	decoder := xml.NewDecoder(reader)
 	depth := 0

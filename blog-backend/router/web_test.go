@@ -11,6 +11,8 @@ import (
 	communityrepository "github.com/rushairer/blog-backend/internal/community/repository"
 	communityservice "github.com/rushairer/blog-backend/internal/community/service"
 	"github.com/rushairer/blog-backend/internal/media"
+	mediarepository "github.com/rushairer/blog-backend/internal/media/repository"
+	mediaservice "github.com/rushairer/blog-backend/internal/media/service"
 	pagerepository "github.com/rushairer/blog-backend/internal/page/repository"
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
 	"github.com/rushairer/blog-backend/internal/repository"
@@ -37,6 +39,7 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 		VisitorSecret: "test-secret", MediaDir: t.TempDir(), MediaStore: media.NewLocal(t.TempDir()),
 		PostSvc:      service.NewPostService(postRepo),
 		PageSvc:      pageservice.NewPageService(pagerepository.NewPageRepository(nil)),
+		MediaSvc:     mediaservice.New(mediarepository.New(nil)),
 		TaxonomySvc:  taxonomyservice.New(taxonomyrepository.New(nil)),
 		SiteSvc:      siteservice.New(siterepository.New(nil)),
 		CommunitySvc: communityservice.NewCommunityService(communityrepository.NewCommunityRepository(nil), postRepo),
@@ -49,6 +52,8 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 	foundRelated := false
 	foundAnalytics := false
 	foundMedia := false
+	foundAdminMedia := false
+	adminMediaHandler := ""
 	foundBlogSession := false
 	foundHealth := false
 	foundCommunityModeration := false
@@ -75,6 +80,10 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 		if route.Method == "GET" && route.Path == "/media/:filename" {
 			foundMedia = true
 		}
+		if route.Method == "GET" && route.Path == "/api/admin/media" {
+			foundAdminMedia = true
+			adminMediaHandler = route.Handler
+		}
 		if route.Method == "GET" && route.Path == "/healthz" {
 			foundHealth = true
 		}
@@ -98,8 +107,11 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 			siteHandler = route.Handler
 		}
 	}
-	if !foundUpdate || !foundLike || !foundRelated || !foundAnalytics || !foundMedia || !foundHealth || !foundBlogSession || !foundCommunityModeration || !foundPage || !foundTaxonomy || !foundSite {
-		t.Fatalf("expected routes, update=%v like=%v related=%v analytics=%v media=%v health=%v blogSession=%v communityModeration=%v page=%v taxonomy=%v site=%v", foundUpdate, foundLike, foundRelated, foundAnalytics, foundMedia, foundHealth, foundBlogSession, foundCommunityModeration, foundPage, foundTaxonomy, foundSite)
+	if !foundUpdate || !foundLike || !foundRelated || !foundAnalytics || !foundMedia || !foundAdminMedia || !foundHealth || !foundBlogSession || !foundCommunityModeration || !foundPage || !foundTaxonomy || !foundSite {
+		t.Fatalf("expected routes, update=%v like=%v related=%v analytics=%v media=%v adminMedia=%v health=%v blogSession=%v communityModeration=%v page=%v taxonomy=%v site=%v", foundUpdate, foundLike, foundRelated, foundAnalytics, foundMedia, foundAdminMedia, foundHealth, foundBlogSession, foundCommunityModeration, foundPage, foundTaxonomy, foundSite)
+	}
+	if !strings.Contains(adminMediaHandler, "internal/media/controller") {
+		t.Fatalf("admin media must be owned by canonical Media controller, handler=%q", adminMediaHandler)
 	}
 	if !strings.Contains(communityModerationHandler, "internal/community/controller") {
 		t.Fatalf("comments/all must be owned by canonical Community controller, handler=%q", communityModerationHandler)

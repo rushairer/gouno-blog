@@ -14,7 +14,6 @@ import (
 	"github.com/rushairer/blog-backend/internal/media"
 	"github.com/rushairer/blog-backend/internal/provider"
 	"github.com/rushairer/blog-backend/internal/repository"
-	"github.com/rushairer/blog-backend/internal/service"
 )
 
 const editorTemplateVersion = 1
@@ -22,11 +21,15 @@ const editorTemplateVersion = 1
 // GenerationService is the shared, non-Agent execution layer for interactive
 // editor assistance and governed media-generation tasks. It deliberately does
 // not create Agent Runs or grant Tool capabilities.
+type mediaCreator interface {
+	CreateMedia(context.Context, *domain.MediaAsset) error
+}
+
 type GenerationService struct {
-	repo       *repository.AgentRepository
-	management *ManagementService
-	growth     *service.GrowthService
-	media      media.Store
+	repo        *repository.AgentRepository
+	management  *ManagementService
+	mediaAssets mediaCreator
+	media       media.Store
 }
 
 type EditorTextRequest struct {
@@ -57,8 +60,8 @@ type ImageGenerationRequest struct {
 	Filename           string
 }
 
-func NewGenerationService(repo *repository.AgentRepository, management *ManagementService, growth *service.GrowthService, store media.Store) *GenerationService {
-	return &GenerationService{repo: repo, management: management, growth: growth, media: store}
+func NewGenerationService(repo *repository.AgentRepository, management *ManagementService, mediaAssets mediaCreator, store media.Store) *GenerationService {
+	return &GenerationService{repo: repo, management: management, mediaAssets: mediaAssets, media: store}
 }
 
 func (s *GenerationService) GenerateEditorText(ctx context.Context, req EditorTextRequest) (*TextGenerationResult, error) {
@@ -94,7 +97,7 @@ func (s *GenerationService) GenerateEditorText(ctx context.Context, req EditorTe
 }
 
 func (s *GenerationService) GenerateImage(ctx context.Context, req ImageGenerationRequest) (*domain.MediaAsset, error) {
-	if s.management == nil || s.growth == nil || s.media == nil || strings.TrimSpace(req.Prompt) == "" {
+	if s.management == nil || s.mediaAssets == nil || s.media == nil || strings.TrimSpace(req.Prompt) == "" {
 		return nil, ErrInvalid
 	}
 	if req.Deadline <= 0 {
@@ -163,7 +166,7 @@ func (s *GenerationService) GenerateImage(ctx context.Context, req ImageGenerati
 	if req.CreatorPrincipalID > 0 {
 		asset.CreatedByPrincipalID = &req.CreatorPrincipalID
 	}
-	if err = s.growth.CreateMedia(ctx, asset); err != nil {
+	if err = s.mediaAssets.CreateMedia(ctx, asset); err != nil {
 		_ = s.media.Delete(ctx, storageName)
 		s.recordImageAudit(req, string(selected.ProviderType), selected.Model, 0, 0, nil, err)
 		return nil, err
