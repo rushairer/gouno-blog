@@ -18,15 +18,9 @@ import type {
   AdvancedSection,
   DeleteTarget,
 } from "../../components/agent/AdvancedWorkspace";
-import {
-  AdminPage,
-  AdminPageHeader,
-  AdminPageState,
-  Button,
-  ConfirmDialog,
-  ToastProvider,
-  useToast,
-} from "@gouno/ui-legacy";
+import { Button, Card, Skeleton } from "@gouno/ui/core";
+import { PageHeader } from "@gouno/ui/gouno";
+import { ConfirmDialog, ToastProvider, useToast } from "@gouno/ui-legacy";
 import { useI18n } from "../../i18n";
 import "../../styles/agent-console.css";
 
@@ -388,34 +382,47 @@ function AISettingsContent() {
     locale === "zh"
       ? "管理长期稳定的 AI 能力、模型与连接器配置；运行、审批和执行证据留在 AI 运营。"
       : "Manage stable AI capabilities, models, and connector configuration. Runs, approvals, and execution evidence stay in AI Operations.";
+  const pageHeader = (
+    <PageHeader
+      title={title}
+      description={description}
+      actions={
+        <Button
+          variant="outline"
+          size="small"
+          type="button"
+          onClick={() => void refresh()}
+          icon={<RefreshCw />}
+        >
+          {t("agent.refresh")}
+        </Button>
+      }
+    />
+  );
 
   if (loading) {
     return (
-      <AdminPageState
-        title={title}
-        description={description}
-        label={locale === "zh" ? "正在加载 AI 设置…" : "Loading AI settings…"}
-      />
+      <div className="agent-console flex flex-col gap-6">
+        {pageHeader}
+        <div
+          role="status"
+          aria-label={locale === "zh" ? "正在加载 AI 设置…" : "Loading AI settings…"}
+          aria-live="polite"
+        >
+          <Card padding="base">
+            <div className="flex flex-col gap-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-48 w-full" />
+            </div>
+          </Card>
+        </div>
+      </div>
     );
   }
 
   return (
-    <AdminPage className="agent-console">
-      <AdminPageHeader
-        title={title}
-        description={description}
-        actions={
-          <Button
-            variant="secondary"
-            size="compact"
-            type="button"
-            onClick={() => void refresh()}
-            icon={<RefreshCw />}
-          >
-            {t("agent.refresh")}
-          </Button>
-        }
-      />
+    <div className="agent-console flex flex-col gap-6">
+      {pageHeader}
 
       <AdvancedWorkspace
         locale={locale}
@@ -532,7 +539,7 @@ function AISettingsContent() {
         onClose={() => setDeleteTarget(null)}
         onConfirm={deleteSelected}
       />
-    </AdminPage>
+    </div>
   );
 }
 
