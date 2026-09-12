@@ -5,9 +5,13 @@ import ts from "typescript";
 
 const root = fileURLToPath(new URL("../src/", import.meta.url));
 const files = [];
-const primitiveStyleFiles = new Set([
+const retiredProductStyles = new Set([
+  "index.css",
+  "styles/base.css",
   "styles/components.css",
   "styles/design-system-alignment.css",
+  "styles/redesign.css",
+  "styles/tokens.css",
 ]);
 const canonicalUiModules = new Set([
   "@gouno/ui/core",
@@ -18,6 +22,8 @@ const canonicalUiModules = new Set([
 const canonicalRootAllowlist = new Set(["cn"]);
 const rawElevationPattern =
   /(^|[\s"'`])(?:[a-z-]+:)*shadow-(?:xs|sm|md|lg|xl|2xl)(?=[\s"'`]|$)/;
+const canonicalPrimitiveSelector =
+  /^\.(?:panel|field|input-field|btn|btn__label|icon-button|feedback|state|tab|tab-list|ui-card|choice-button|badge)(?=$|[\s:{,[.#>+~])/;
 
 async function collect(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -225,16 +231,39 @@ function checkTsxContracts(name, source) {
 for (const path of files) {
   const name = relative(root, path);
   const source = await readFile(path, "utf8");
-  if (name.endsWith(".css") && name !== "styles/tokens.css") {
+
+  if (retiredProductStyles.has(name)) {
+    failures.push(
+      `${name}: retired legacy stylesheet must not be reintroduced; canonical tokens and primitives are owned by @gouno/ui`,
+    );
+  }
+
+  if (name.endsWith(".css")) {
     source.split("\n").forEach((line, index) => {
+      const selector = line.trim();
       if (/#[\da-f]{3,8}\b|rgba?\(/i.test(line))
-        failures.push(`${name}:${index + 1} concrete color outside tokens.css`);
+        failures.push(
+          `${name}:${index + 1} concrete color is product-local; use canonical @gouno/ui semantic tokens`,
+        );
       if (/\bwhite\b/i.test(line) && !/white-space/i.test(line))
-        failures.push(`${name}:${index + 1} literal white outside tokens.css`);
+        failures.push(
+          `${name}:${index + 1} literal white is product-local; use canonical @gouno/ui semantic tokens`,
+        );
       if (/!important/.test(line))
         failures.push(`${name}:${index + 1} !important is not allowed`);
+      if (canonicalPrimitiveSelector.test(selector)) {
+        failures.push(
+          `${name}:${index + 1} canonical primitive selector must be owned by @gouno/ui, not product CSS`,
+        );
+      }
+      if (selector.includes("[data-slot=")) {
+        failures.push(
+          `${name}:${index + 1} canonical data-slot selectors must be owned by @gouno/ui, not product CSS`,
+        );
+      }
     });
   }
+
   if (name.startsWith("pages/admin/") && name.endsWith(".tsx")) {
     source.split("\n").forEach((line, index) => {
       if (rawElevationPattern.test(line)) {
@@ -246,19 +275,6 @@ for (const path of files) {
   }
   checkUiImports(name, source);
   checkTsxContracts(name, source);
-  if (name.endsWith(".css") && !primitiveStyleFiles.has(name)) {
-    source.split("\n").forEach((line, index) => {
-      if (
-        /^\.(panel|field|input-field|btn|icon-button|feedback|state)\s*[{,:]/.test(
-          line.trim(),
-        )
-      ) {
-        failures.push(
-          `${name}:${index + 1} shared primitive is owned by the design-system style layers`,
-        );
-      }
-    });
-  }
 }
 
 if (failures.length) {
@@ -267,5 +283,5 @@ if (failures.length) {
 }
 
 console.log(
-  `UI contracts passed across ${files.length} source files; legacy Gouno UI imports are forbidden.`,
+  `UI contracts passed across ${files.length} source files; canonical Gouno UI owns shared CSS primitives and data-slot selectors.`,
 );
