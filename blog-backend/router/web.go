@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/access"
 	analyticscontroller "github.com/rushairer/blog-backend/internal/analytics/controller"
+	analyticsservice "github.com/rushairer/blog-backend/internal/analytics/service"
 	"github.com/rushairer/blog-backend/internal/authbff"
 	communitycontroller "github.com/rushairer/blog-backend/internal/community/controller"
 	communityservice "github.com/rushairer/blog-backend/internal/community/service"
@@ -44,6 +45,7 @@ type WebRouterOptions struct {
 	TaxonomySvc        taxonomyservice.Service
 	SiteSvc            siteservice.Service
 	CommunitySvc       *communityservice.CommunityService
+	AnalyticsSvc       analyticsservice.Service
 	GrowthSvc          *service.GrowthService
 	AgentCtrl          *controller.AgentController
 	Logger             *zap.Logger
@@ -54,7 +56,7 @@ type WebRouterOptions struct {
 }
 
 func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
-	if opts.PostSvc == nil || opts.PageSvc == nil || opts.MediaSvc == nil || opts.TaxonomySvc == nil || opts.SiteSvc == nil || opts.CommunitySvc == nil || opts.GrowthSvc == nil {
+	if opts.PostSvc == nil || opts.PageSvc == nil || opts.MediaSvc == nil || opts.TaxonomySvc == nil || opts.SiteSvc == nil || opts.CommunitySvc == nil || opts.AnalyticsSvc == nil || opts.GrowthSvc == nil {
 		panic("RegisterWebRouterWithOptions: all application services are required")
 	}
 	if opts.Verifier == nil || opts.AccessService == nil {
@@ -105,7 +107,7 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 
 	growthSvc := opts.GrowthSvc
 	growthCtrl := controller.NewGrowthController(growthSvc, postSvc, communitySvc)
-	analyticsCtrl := analyticscontroller.New(growthSvc.AnalyticsService(), communitySvc)
+	analyticsCtrl := analyticscontroller.New(opts.AnalyticsSvc, communitySvc)
 
 	if opts.MediaStore != nil {
 		if _, local := opts.MediaStore.LocalPath(".probe"); local && os.MkdirAll(opts.MediaDir, 0o750) == nil {
