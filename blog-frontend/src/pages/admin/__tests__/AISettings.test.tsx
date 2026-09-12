@@ -188,6 +188,8 @@ describe("AISettings", () => {
     expect(
       screen.queryByRole("heading", { name: "Create Agent" }),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Skills" })).toBeInTheDocument();
+    expect(
+    screen.getByRole("heading", { name: "Skills" }),
+  ).toBeInTheDocument();
   });
 });
