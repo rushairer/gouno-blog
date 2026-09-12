@@ -126,7 +126,6 @@
     "Panel": [
       "src/components/agent/AgentRunRecords.tsx",
       "src/components/agent/ConnectorWorkspace.tsx",
-      "src/components/agent/InboxWorkspace.tsx",
       "src/components/agent/OperationsWorkspace.tsx"
     ],
     "PanelHeader": [
