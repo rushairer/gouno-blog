@@ -65,7 +65,6 @@
       "src/components/agent/WorkflowInputForm.tsx",
       "src/components/agent/WorkflowRunRecords.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
-      "src/components/media/MediaDrawerForms.tsx",
       "src/pages/admin/PageEditor.tsx",
       "src/pages/admin/PostEditor.tsx",
       "src/pages/admin/SiteSettings.tsx"
@@ -77,7 +76,6 @@
     "FormActions": [
       "src/components/__tests__/ui.test.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
-      "src/components/media/MediaDrawerForms.tsx",
       "src/pages/admin/SiteSettings.tsx"
     ],
     "FormLayout": [
