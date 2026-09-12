@@ -8,12 +8,7 @@ import type {
   WorkflowRunEvent,
   WorkflowStepRun,
 } from "../../types/agent";
-import {
-  Button,
-  EmptyState,
-  PanelHeader,
-  WorkspacePanel,
-} from "@gouno/ui-legacy";
+import { Button, Card, CardHeader, Empty } from "@gouno/ui/core";
 import { StatusPill } from "./StatusPill";
 import { WorkflowMediaCandidates } from "./WorkflowMediaCandidates";
 import { WorkflowRunOutput } from "./WorkflowRunOutput";
@@ -138,7 +133,7 @@ export function WorkflowRunDetail({
       <div className="workflow-detail-nav">
         <Button
           variant="ghost"
-          size="compact"
+          size="small"
           type="button"
           onClick={onBack}
           icon={<ArrowLeft />}
@@ -146,12 +141,12 @@ export function WorkflowRunDetail({
           {zh ? "返回运行记录列表" : "Back to run records"}
         </Button>
       </div>
-      <WorkspacePanel className="agent-detail-panel">
+      <Card padding="base" className="agent-detail-panel">
         <div className="section-stack">
-          <PanelHeader
+          <CardHeader
             title={workflowName}
             description={`Run #${selected.run.id} · Workflow v${selected.run.workflow_version_id}`}
-            actions={
+            action={
               <div className="row-actions">
                 <StatusPill status={selected.run.status} locale={locale} />
                 {[
@@ -161,7 +156,7 @@ export function WorkflowRunDetail({
                   "waiting_for_user",
                 ].includes(selected.run.status) ? (
                   <Button
-                    variant="secondary"
+                    variant="outline"
                     type="button"
                     disabled={cancelling}
                     onClick={() => void onCancelRun()}
@@ -180,7 +175,7 @@ export function WorkflowRunDetail({
                   selected.run.status,
                 ) ? (
                   <Button
-                    variant="secondary"
+                    variant="outline"
                     type="button"
                     disabled={deleting}
                     onClick={() => void onDeleteRun()}
@@ -248,8 +243,8 @@ export function WorkflowRunDetail({
               <strong>{selected.resources.length}</strong>
             </div>
             {selected.resources.length === 0 ? (
-              <EmptyState
-                label={
+              <Empty
+                title={
                   zh
                     ? "该运行没有结构化资源快照。"
                     : "No structured resource snapshot for this run."
@@ -334,7 +329,7 @@ export function WorkflowRunDetail({
                       Array.isArray(task.options) ? (
                         task.options.map((option, index) => (
                           <Button
-                            variant="secondary"
+                            variant="outline"
                             key={index}
                             onClick={() =>
                               void onResolveInteraction(task, { option })
@@ -345,7 +340,8 @@ export function WorkflowRunDetail({
                         ))
                       ) : (
                         <Button
-                          variant="primary"
+                          variant="solid"
+                          color="primary"
                           onClick={() =>
                             void onResolveInteraction(task, {
                               confirmed: true,
@@ -356,7 +352,7 @@ export function WorkflowRunDetail({
                         </Button>
                       )}
                       <Button
-                        variant="secondary"
+                        variant="outline"
                         onClick={() => void onCancelInteraction(task)}
                       >
                         {zh ? "取消任务" : "Cancel task"}
@@ -452,7 +448,7 @@ export function WorkflowRunDetail({
                   ),
                 ).map((stepID) => (
                   <Button
-                    variant="secondary"
+                    variant="outline"
                     key={stepID}
                     type="button"
                     disabled={retrying !== ""}
@@ -470,8 +466,8 @@ export function WorkflowRunDetail({
               </div>
             </div>
             {selected.steps.length === 0 ? (
-              <EmptyState
-                label={
+              <Empty
+                title={
                   zh ? "该运行没有步骤日志。" : "No step logs for this run."
                 }
               />
@@ -513,7 +509,7 @@ export function WorkflowRunDetail({
                         {step.status === "failed" &&
                         step.iteration !== undefined ? (
                           <Button
-                            variant="secondary"
+                            variant="outline"
                             disabled={retrying !== ""}
                             onClick={() => void onRetryStep(step)}
                           >
@@ -542,7 +538,7 @@ export function WorkflowRunDetail({
             )}
           </section>
         </div>
-      </WorkspacePanel>
+      </Card>
     </div>
   );
 }
