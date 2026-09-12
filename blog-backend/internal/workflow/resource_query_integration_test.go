@@ -18,6 +18,7 @@ import (
 	notificationrepository "github.com/rushairer/blog-backend/internal/notification/repository"
 	providerrepository "github.com/rushairer/blog-backend/internal/provider/repository"
 	"github.com/rushairer/blog-backend/internal/testsupport"
+	workflowrepository "github.com/rushairer/blog-backend/internal/workflow/repository"
 )
 
 func newResourceQueryManagement(db *sql.DB) *agentservice.ManagementService {
@@ -43,7 +44,7 @@ func TestScheduledResourceQueryRetryKeepsSnapshotAndScope(t *testing.T) {
 		cleanupResourceQueryFixture(t, ctx, db, workflowID, versionID, postID)
 	})
 
-	service := &Service{db: db, catalog: NewResourceCatalog(db)}
+	service := &Service{db: db, definitions: workflowrepository.NewDefinitionRepository(db), catalog: NewResourceCatalog(db)}
 	run, err := service.queue(ctx, workflowID, false, json.RawMessage(`{}`), nil, "scheduler", "", true, true)
 	if err != nil {
 		t.Fatal(err)
@@ -104,7 +105,7 @@ func TestResourceQueryEmptyPolicyCanFailWithoutAgentRun(t *testing.T) {
 	if err := db.QueryRowContext(ctx, `INSERT INTO ai_workflow_runs(workflow_id,workflow_version_id,input) VALUES($1,$2,'{}') RETURNING id`, workflowID, versionID).Scan(&runID); err != nil {
 		t.Fatal(err)
 	}
-	service := &Service{db: db, catalog: NewResourceCatalog(db), agents: newResourceQueryManagement(db)}
+	service := &Service{db: db, definitions: workflowrepository.NewDefinitionRepository(db), catalog: NewResourceCatalog(db), agents: newResourceQueryManagement(db)}
 	service.Execute(ctx, runID)
 	var status, message string
 	if err := db.QueryRowContext(ctx, `SELECT status,error_message FROM ai_workflow_runs WHERE id=$1`, runID).Scan(&status, &message); err != nil {
@@ -119,7 +120,7 @@ func TestSavePersistsResourceQueryPreview(t *testing.T) {
 	db := openWorkflowIntegrationDB(t)
 	t.Cleanup(func() { _ = db.Close() })
 	ctx := context.Background()
-	service := &Service{db: db, catalog: NewResourceCatalog(db)}
+	service := &Service{db: db, definitions: workflowrepository.NewDefinitionRepository(db), catalog: NewResourceCatalog(db)}
 	principalID := testsupport.Principal(t, db)
 	value := &domain.Workflow{
 		CreatedByPrincipalID: &principalID,
@@ -203,7 +204,7 @@ func TestForEachCanAggregatePartialFailures(t *testing.T) {
 		{"id": "result", "type": "output", "output_pointer": "/steps/batch"},
 	})
 	t.Cleanup(func() { cleanupResourceQueryFixture(t, ctx, db, workflowID, versionID, 0) })
-	service := &Service{db: db, agents: newResourceQueryManagement(db)}
+	service := &Service{db: db, definitions: workflowrepository.NewDefinitionRepository(db), agents: newResourceQueryManagement(db)}
 	var runID int64
 	input := `{"items":[{"value":"first"},{"missing":true},{"value":"third"}]}`
 	if err := db.QueryRowContext(ctx, `INSERT INTO ai_workflow_runs(workflow_id,workflow_version_id,input) VALUES($1,$2,$3) RETURNING id`, workflowID, versionID, input).Scan(&runID); err != nil {
@@ -255,7 +256,7 @@ func TestRetryFailedForEachIterationUsesOriginalInput(t *testing.T) {
 			"steps": []map[string]any{{"id": "value", "type": "output", "output_pointer": "/item/value"}}},
 	})
 	t.Cleanup(func() { cleanupResourceQueryFixture(t, ctx, db, workflowID, versionID, 0) })
-	service := &Service{db: db}
+	service := &Service{db: db, definitions: workflowrepository.NewDefinitionRepository(db)}
 	var runID int64
 	if err := db.QueryRowContext(ctx, `INSERT INTO ai_workflow_runs(workflow_id,workflow_version_id,input) VALUES($1,$2,'{"items":[{"value":"ok"},{"missing":true}]}') RETURNING id`, workflowID, versionID).Scan(&runID); err != nil {
 		t.Fatal(err)
@@ -297,7 +298,7 @@ func TestWorkflowEventIsIdempotentAndFiltered(t *testing.T) {
 	if _, err := db.ExecContext(ctx, `UPDATE ai_workflows SET event_triggers='[{"event":"post.published","filter":{"post_id":42}}]' WHERE id=$1`, workflowID); err != nil {
 		t.Fatal(err)
 	}
-	service := &Service{db: db, catalog: NewResourceCatalog(db)}
+	service := &Service{db: db, definitions: workflowrepository.NewDefinitionRepository(db), catalog: NewResourceCatalog(db)}
 	queued, err := service.EmitEvent(ctx, "post.published:42", "post.published", json.RawMessage(`{"post_id":42}`), nil)
 	if err != nil || queued != 1 {
 		t.Fatalf("event queue = %d, %v", queued, err)
@@ -330,7 +331,7 @@ func TestEmptyResourceQueryDoesNotCreateAgentRun(t *testing.T) {
 		VALUES($1,$2,'{}') RETURNING id`, workflowID, versionID).Scan(&runID); err != nil {
 		t.Fatal(err)
 	}
-	service := &Service{db: db, catalog: NewResourceCatalog(db)}
+	service := &Service{db: db, definitions: workflowrepository.NewDefinitionRepository(db), catalog: NewResourceCatalog(db)}
 	if err := service.execute(ctx, runID); err != nil {
 		t.Fatal(err)
 	}
@@ -457,7 +458,7 @@ func TestForEachResumeKeepsIterationOutputs(t *testing.T) {
 				{"id": "result", "type": "output", "output_pointer": "/steps/batch"},
 			})
 			t.Cleanup(func() { cleanupResourceQueryFixture(t, ctx, db, workflowID, versionID, 0) })
-			service := &Service{db: db}
+			service := &Service{db: db, definitions: workflowrepository.NewDefinitionRepository(db)}
 			var runID int64
 			if err := db.QueryRowContext(ctx, `INSERT INTO ai_workflow_runs(workflow_id,workflow_version_id,input) VALUES($1,$2,'{"items":[{"value":"first"},{"value":"second"},{"value":"third"}]}') RETURNING id`, workflowID, versionID).Scan(&runID); err != nil {
 				t.Fatal(err)
