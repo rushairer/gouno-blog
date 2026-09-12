@@ -31,7 +31,7 @@ This document is the migration Source of Truth for Capability convergence. `ARCH
 
 `cmd/gouno/web.go` is the sole application composition root. Canonical Post, Page, Taxonomy, Site, Community, Media, Analytics, Recommendation and PostVersion dependencies are constructed there. Shared transaction infrastructure is constructed as `dbtx.Transactor` and injected into non-Connector application services.
 
-Agent remains intentionally mixed while migration is incomplete: the root constructs canonical Definition, Run, Approval and GenerationAudit repositories, but also constructs the flat aggregate `repository.AgentRepository` for ManagementService, Runner and ApprovalService. That mixed graph is migration debt, not a construction pattern to copy.
+Agent remains intentionally mixed while migration is incomplete: the root constructs canonical Definition, Run, Approval and GenerationAudit repositories, but also constructs the flat aggregate `repository.AgentRepository` for ManagementService and Runner. That mixed graph is migration debt, not a construction pattern to copy.
 
 ## Transaction ownership map
 
