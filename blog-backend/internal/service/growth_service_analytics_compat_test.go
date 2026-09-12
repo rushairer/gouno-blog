@@ -4,15 +4,11 @@ import (
 	"context"
 	"testing"
 
+	analyticsservice "github.com/rushairer/blog-backend/internal/analytics/service"
 	"github.com/rushairer/blog-backend/internal/domain"
 )
 
-type growthAnalyticsCompatStore struct {
-	recordedPostID int64
-	eventType      string
-	actorKey       string
-	summary        *domain.AnalyticsSummary
-}
+type growthAnalyticsCompatStore struct{}
 
 func (s *growthAnalyticsCompatStore) RelatedPosts(context.Context, int64, []string, int) ([]*domain.Post, error) {
 	return nil, nil
@@ -26,38 +22,46 @@ func (s *growthAnalyticsCompatStore) RestoreVersion(context.Context, int64, int6
 	return nil, nil
 }
 
-func (s *growthAnalyticsCompatStore) RecordEvent(_ context.Context, postID int64, eventType, actorKey string) error {
+type growthAnalyticsCompatService struct {
+	recordedPostID int64
+	actorKey       string
+	summary        *domain.AnalyticsSummary
+}
+
+func (s *growthAnalyticsCompatService) RecordView(_ context.Context, postID int64, actorKey string) error {
+	if postID <= 0 {
+		return analyticsservice.ErrInvalidPostID
+	}
 	s.recordedPostID = postID
-	s.eventType = eventType
 	s.actorKey = actorKey
 	return nil
 }
 
-func (s *growthAnalyticsCompatStore) AnalyticsSummary(context.Context) (*domain.AnalyticsSummary, error) {
+func (s *growthAnalyticsCompatService) AnalyticsSummary(context.Context) (*domain.AnalyticsSummary, error) {
 	return s.summary, nil
 }
 
 func TestGrowthServicePreservesLegacyAnalyticsCompatibility(t *testing.T) {
-	store := &growthAnalyticsCompatStore{summary: &domain.AnalyticsSummary{TotalPosts: 3}}
-	svc := NewGrowthService(store)
+	analytics := &growthAnalyticsCompatService{summary: &domain.AnalyticsSummary{TotalPosts: 3}}
+	svc := NewGrowthService(&growthAnalyticsCompatStore{}, analytics)
 	ctx := context.Background()
 
 	if err := svc.RecordView(ctx, 0, "actor"); err != ErrInvalidPostID {
 		t.Fatalf("RecordView invalid id error=%v, want legacy ErrInvalidPostID", err)
 	}
-	if store.recordedPostID != 0 || store.eventType != "" {
-		t.Fatalf("invalid view reached compatibility store: postID=%d event=%q", store.recordedPostID, store.eventType)
+	if analytics.recordedPostID != 0 {
+		t.Fatalf("invalid view reached canonical Analytics service: postID=%d", analytics.recordedPostID)
 	}
 
 	if err := svc.RecordView(ctx, 11, "client|agent"); err != nil {
 		t.Fatalf("RecordView valid error=%v", err)
 	}
-	if store.recordedPostID != 11 || store.eventType != "view" || store.actorKey != "client|agent" {
-		t.Fatalf("recorded event=(%d,%q,%q), want (11,view,client|agent)", store.recordedPostID, store.eventType, store.actorKey)
+	if analytics.recordedPostID != 11 || analytics.actorKey != "client|agent" {
+		t.Fatalf("recorded view=(%d,%q), want (11,client|agent)", analytics.recordedPostID, analytics.actorKey)
 	}
 
 	summary, err := svc.AnalyticsSummary(ctx)
-	if err != nil || summary != store.summary {
+	if err != nil || summary != analytics.summary {
 		t.Fatalf("AnalyticsSummary=%#v err=%v, want original summary", summary, err)
 	}
 }
