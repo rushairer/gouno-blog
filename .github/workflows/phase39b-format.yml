@@ -1,0 +1,33 @@
+name: Phase 39B format feedback test
+
+on:
+  push:
+    branches:
+      - ui/remove-legacy-conformance-phase39b
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ui/remove-legacy-conformance-phase39b
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - working-directory: blog-frontend
+        run: npm ci
+      - working-directory: blog-frontend
+        run: npx prettier --write src/components/feedback/__tests__/AppFeedbackProvider.test.tsx
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add blog-frontend/src/components/feedback/__tests__/AppFeedbackProvider.test.tsx
+          git diff --cached --quiet && exit 0
+          git commit -m "style(test): format app feedback provider coverage"
+          git push origin HEAD:ui/remove-legacy-conformance-phase39b
