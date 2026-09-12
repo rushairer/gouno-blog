@@ -501,6 +501,9 @@ func (s *ApprovalService) Approve(ctx context.Context, id int64, reviewerPrincip
 	if err != nil {
 		return translateError(err)
 	}
+	// An execution failure must remain visible for audit, but it must not make
+	// the proposal unreachable. Retrying reclaims the same approval and never
+	// creates a second proposal.
 	if approval.Status != domain.ApprovalPending && approval.Status != domain.ApprovalFailed {
 		return ErrApprovalConflict
 	}
@@ -521,6 +524,9 @@ func (s *ApprovalService) Approve(ctx context.Context, id int64, reviewerPrincip
 	return s.repo.CompleteApproval(ctx, id, domain.ApprovalExecuted, "")
 }
 
+// StartImageGenerationForApprovedBrief bridges the approved image brief to the
+// run-owned image task. It intentionally runs after approval is committed so a
+// retry can never create a second candidate or bypass the existing approval.
 func (s *ApprovalService) StartImageGenerationForApprovedBrief(ctx context.Context, approvalID int64, creatorPrincipalID int64) error {
 	approval, err := s.repo.GetApproval(ctx, approvalID)
 	if err != nil {
@@ -554,6 +560,9 @@ func isImageBriefApproval(approval *domain.AgentApproval) bool {
 }
 
 func (s *ApprovalService) validateConflict(ctx context.Context, approval *domain.AgentApproval) error {
+	// Only approvals that write an existing post or page need optimistic-concurrency
+	// protection. Preparatory approvals (candidate sets and image briefs) do
+	// not mutate the post, and must remain usable after a separate edit.
 	if approval.ActionType == "update_page" {
 		if s.pages == nil || approval.TargetType != "page" || approval.TargetID == nil || len(approval.BeforeSnapshot) == 0 {
 			return nil
@@ -781,6 +790,9 @@ func (s *ApprovalService) execute(ctx context.Context, approval *domain.AgentApp
 		}
 		return nil
 	case "create_distribution_draft":
+		// The approved payload remains in ai_approvals as the audited, copyable
+		// draft. Do not add external delivery here: every connector requires its
+		// own credentials, idempotency controls, and a separate publish approval.
 		var payload struct {
 			PostID int64  `json:"post_id"`
 			Format string `json:"format"`
