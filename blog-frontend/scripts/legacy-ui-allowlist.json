@@ -9,28 +9,22 @@
     "AdminPage": [
       "src/pages/admin/AIOperations.tsx",
       "src/pages/admin/AISettings.tsx",
-      "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/SiteSettings.tsx"
     ],
     "AdminPageHeader": [
       "src/pages/admin/AIOperations.tsx",
       "src/pages/admin/AISettings.tsx",
-      "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/SiteSettings.tsx"
     ],
     "AdminPageState": [
       "src/pages/admin/AIOperations.tsx",
       "src/pages/admin/AISettings.tsx",
-      "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/PageEditor.tsx",
       "src/pages/admin/PostEditor.tsx",
       "src/pages/admin/SiteSettings.tsx"
     ],
     "AsyncState": ["src/components/__tests__/ui.test.tsx"],
-    "Badge": [
-      "src/components/__tests__/ui.test.tsx",
-      "src/pages/admin/Dashboard.tsx"
-    ],
+    "Badge": ["src/components/__tests__/ui.test.tsx"],
     "BulkActionBar": [
       "src/components/__tests__/ui.test.tsx",
       "src/components/agent/OperationsWorkspace.tsx"
@@ -56,29 +50,18 @@
       "src/components/agent/tools/ToolBindingsEditor.tsx",
       "src/pages/admin/AIOperations.tsx",
       "src/pages/admin/AISettings.tsx",
-      "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/PageEditor.tsx",
       "src/pages/admin/PostEditor.tsx",
       "src/pages/admin/SiteSettings.tsx"
     ],
     "ButtonLink": [
       "src/components/__tests__/ui.test.tsx",
-      "src/components/agent/WorkflowWorkspace.tsx",
-      "src/pages/admin/Dashboard.tsx"
+      "src/components/agent/WorkflowWorkspace.tsx"
     ],
-    "Card": [
-      "src/components/__tests__/ui.test.tsx",
-      "src/pages/admin/Dashboard.tsx"
-    ],
-    "CardContent": [
-      "src/components/__tests__/ui.test.tsx",
-      "src/pages/admin/Dashboard.tsx"
-    ],
+    "Card": ["src/components/__tests__/ui.test.tsx"],
+    "CardContent": ["src/components/__tests__/ui.test.tsx"],
     "CardFooter": ["src/components/__tests__/ui.test.tsx"],
-    "CardHeader": [
-      "src/components/__tests__/ui.test.tsx",
-      "src/pages/admin/Dashboard.tsx"
-    ],
+    "CardHeader": ["src/components/__tests__/ui.test.tsx"],
     "ConfirmDialog": [
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/pages/admin/AISettings.tsx",
@@ -92,7 +75,6 @@
       "src/pages/admin/Tags.tsx",
       "src/pages/admin/Users.tsx"
     ],
-    "ContentStack": ["src/pages/admin/Dashboard.tsx"],
     "EditorPanel": [
       "src/components/__tests__/ui.test.tsx",
       "src/components/agent/AgentForm.tsx",
@@ -110,7 +92,6 @@
       "src/components/agent/WorkflowRunDetail.tsx",
       "src/components/agent/WorkflowRunRecords.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
-      "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/PostEditor.tsx"
     ],
     "Feedback": [
@@ -120,7 +101,6 @@
       "src/components/agent/WorkflowRunRecords.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/components/media/MediaDrawerForms.tsx",
-      "src/pages/admin/Dashboard.tsx",
       "src/pages/admin/PageEditor.tsx",
       "src/pages/admin/PostEditor.tsx",
       "src/pages/admin/SiteSettings.tsx"
