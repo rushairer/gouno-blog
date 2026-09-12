@@ -6,12 +6,9 @@
   "legacyPackage": "@gouno/ui-legacy",
   "legacyVersion": "0.1.0",
   "allowedLegacyImports": {
-    "AdminPage": ["src/pages/admin/SiteSettings.tsx"],
-    "AdminPageHeader": ["src/pages/admin/SiteSettings.tsx"],
     "AdminPageState": [
       "src/pages/admin/PageEditor.tsx",
-      "src/pages/admin/PostEditor.tsx",
-      "src/pages/admin/SiteSettings.tsx"
+      "src/pages/admin/PostEditor.tsx"
     ],
     "AsyncState": ["src/components/__tests__/ui.test.tsx"],
     "Badge": ["src/components/__tests__/ui.test.tsx"],
