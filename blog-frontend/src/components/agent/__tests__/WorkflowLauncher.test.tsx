@@ -110,12 +110,16 @@ describe("WorkflowLauncher", () => {
     ).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "运行" })).toBeEnabled();
 
-    await waitFor(() =>
-      expect(apiFetch).toHaveBeenCalledWith(
-        expect.stringContaining("/api/admin/ai-resources/post?key=17"),
-        expect.anything(),
-      ),
-    );
+    await waitFor(() => {
+      expect(
+        vi
+          .mocked(apiFetch)
+          .mock.calls.some(
+            ([path]) =>
+              String(path) === "/api/admin/ai-resources/post?key=17",
+          ),
+      ).toBe(true);
+    });
   });
 
   it("renders the Showcase warning state when no compatible workflow exists", async () => {
