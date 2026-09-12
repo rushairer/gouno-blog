@@ -49,8 +49,11 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 
 	foundUpdate := false
 	foundLike := false
+	foundView := false
+	viewHandler := ""
 	foundRelated := false
 	foundAnalytics := false
+	analyticsHandler := ""
 	foundMedia := false
 	foundAdminMedia := false
 	adminMediaHandler := ""
@@ -71,11 +74,16 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 		if route.Method == "PUT" && route.Path == "/api/posts/:slugOrID/like" {
 			foundLike = true
 		}
+		if route.Method == "POST" && route.Path == "/api/posts/:slugOrID/view" {
+			foundView = true
+			viewHandler = route.Handler
+		}
 		if route.Method == "GET" && route.Path == "/api/posts/:slugOrID/related" {
 			foundRelated = true
 		}
 		if route.Method == "GET" && route.Path == "/api/admin/analytics" {
 			foundAnalytics = true
+			analyticsHandler = route.Handler
 		}
 		if route.Method == "GET" && route.Path == "/media/:filename" {
 			foundMedia = true
@@ -107,8 +115,14 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 			siteHandler = route.Handler
 		}
 	}
-	if !foundUpdate || !foundLike || !foundRelated || !foundAnalytics || !foundMedia || !foundAdminMedia || !foundHealth || !foundBlogSession || !foundCommunityModeration || !foundPage || !foundTaxonomy || !foundSite {
-		t.Fatalf("expected routes, update=%v like=%v related=%v analytics=%v media=%v adminMedia=%v health=%v blogSession=%v communityModeration=%v page=%v taxonomy=%v site=%v", foundUpdate, foundLike, foundRelated, foundAnalytics, foundMedia, foundAdminMedia, foundHealth, foundBlogSession, foundCommunityModeration, foundPage, foundTaxonomy, foundSite)
+	if !foundUpdate || !foundLike || !foundView || !foundRelated || !foundAnalytics || !foundMedia || !foundAdminMedia || !foundHealth || !foundBlogSession || !foundCommunityModeration || !foundPage || !foundTaxonomy || !foundSite {
+		t.Fatalf("expected routes, update=%v like=%v view=%v related=%v analytics=%v media=%v adminMedia=%v health=%v blogSession=%v communityModeration=%v page=%v taxonomy=%v site=%v", foundUpdate, foundLike, foundView, foundRelated, foundAnalytics, foundMedia, foundAdminMedia, foundHealth, foundBlogSession, foundCommunityModeration, foundPage, foundTaxonomy, foundSite)
+	}
+	if !strings.Contains(viewHandler, "internal/analytics/controller") {
+		t.Fatalf("view tracking must be owned by canonical Analytics controller, handler=%q", viewHandler)
+	}
+	if !strings.Contains(analyticsHandler, "internal/analytics/controller") {
+		t.Fatalf("analytics summary must be owned by canonical Analytics controller, handler=%q", analyticsHandler)
 	}
 	if !strings.Contains(adminMediaHandler, "internal/media/controller") {
 		t.Fatalf("admin media must be owned by canonical Media controller, handler=%q", adminMediaHandler)
