@@ -1,5 +1,5 @@
 name: Sync Gouno UI
-# Last explicit upstream sync target: gouno-ui main@cb946376e32bcc0db18d13fb09d89d71b5780dca.
+# Last explicit upstream sync target: gouno-ui main@cb946376e32bcc0db18d13fb09d89d71b5780dca (locale bridge retry).
 
 on:
   push:
