@@ -113,7 +113,7 @@ jobs:
               ('repo.GetSkillVersion(ctx, skill.VersionID)', 'skillRepo.GetSkillVersion(ctx, skill.VersionID)'),
           ]:
               identity = replace_once(identity, old, new, f'identity {old}')
-          if 'repository.NewAgentRepository' in identity or 'repo.ListSkills' in identity:
+          if 'github.com/rushairer/blog-backend/internal/repository"' in identity or 'repo.ListSkills' in identity:
               raise SystemExit('identity tests still use flat AgentRepository')
           identity_path.write_text(identity)
 
@@ -167,7 +167,7 @@ jobs:
           ! grep -q 's\.repo\.' blog-backend/internal/agent/management.go
           ! grep -q 'internal/repository"' blog-backend/internal/agent/management.go
           ! grep -R -q 'NewManagementService(repository.NewAgentRepository' blog-backend
-          ! grep -R -q 'repository.NewAgentRepository(db).BootstrapStarterPack' blog-backend/internal/migrations
+          ! grep -R -q 'github.com/rushairer/blog-backend/internal/repository"' blog-backend/internal/migrations
           ! grep -q 'repo.CreateProvider' blog-backend/internal/repository/agent_repository_integration_test.go
           test ! -e blog-backend/internal/repository/provider_repository.go
           test ! -e blog-backend/internal/repository/skill_repository.go
