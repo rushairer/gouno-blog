@@ -726,4 +726,20 @@ describe("WorkflowRunRecords", () => {
       ),
     );
   });
+
+  it("renders the Workflow run collection as a canonical list surface", () => {
+    render(
+      <WorkflowRunRecords
+        locale="zh"
+        workflows={[workflow]}
+        runs={[run]}
+        formatDateTime={(value) => value}
+      />,
+    );
+
+    expect(
+      screen.getByRole("list", { name: "Workflow 运行列表" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
 });
