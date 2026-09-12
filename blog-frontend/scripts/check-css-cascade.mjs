@@ -46,6 +46,7 @@ const retiredAgentShellSelectors = [
   ".workflow-detail-nav .btn",
   ".workflow-planner__agent-draft .btn",
   ".workflow-resource-query-heading > .btn",
+  ".agent-console .tab",
 ];
 const allowedAgentConsoleButtonSelectors = new Set([
   // Shared with ConnectorWorkspace, which remains under Module Hold.
