@@ -6,16 +6,9 @@
   "legacyPackage": "@gouno/ui-legacy",
   "legacyVersion": "0.1.0",
   "allowedLegacyImports": {
-    "AdminPage": [
-      "src/pages/admin/AISettings.tsx",
-      "src/pages/admin/SiteSettings.tsx"
-    ],
-    "AdminPageHeader": [
-      "src/pages/admin/AISettings.tsx",
-      "src/pages/admin/SiteSettings.tsx"
-    ],
+    "AdminPage": ["src/pages/admin/SiteSettings.tsx"],
+    "AdminPageHeader": ["src/pages/admin/SiteSettings.tsx"],
     "AdminPageState": [
-      "src/pages/admin/AISettings.tsx",
       "src/pages/admin/PageEditor.tsx",
       "src/pages/admin/PostEditor.tsx",
       "src/pages/admin/SiteSettings.tsx"
@@ -45,7 +38,6 @@
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/components/agent/WorkspaceOverview.tsx",
       "src/components/agent/tools/ToolBindingsEditor.tsx",
-      "src/pages/admin/AISettings.tsx",
       "src/pages/admin/PageEditor.tsx",
       "src/pages/admin/PostEditor.tsx",
       "src/pages/admin/SiteSettings.tsx"
