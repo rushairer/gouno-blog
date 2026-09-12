@@ -296,6 +296,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		}
 		agentRepo := repository.NewAgentRepository(cfg.DB)
 		agentDefinitionRepo := agentrepository.NewDefinitionRepository(cfg.DB)
+		generationAuditRepo := agentrepository.NewGenerationAuditRepository(cfg.DB)
 		knowledgeSvc := knowledge.NewService(cfg.DB, secrets, cfg.Global.AIAgentConfig.AllowedHosts, cfg.Logger, transactor)
 		knowledgeSvc.Start(ctx)
 		toolRegistry := tool.NewBlogRegistry(postSvc, communitySvc, pageSvc, knowledgeSvc)
@@ -316,7 +317,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 			cfg.Logger.Info("Reconciled AI workspace starter Agents", zap.Int("created", created))
 		}
 		runner := agentservice.NewRunner(agentRepo, management, toolRegistry, postSvc)
-		generation := agentservice.NewGenerationService(agentRepo, management, mediaSvc, mediaStore)
+		generation := agentservice.NewGenerationService(generationAuditRepo, management, mediaSvc, mediaStore)
 		approvals := agentservice.NewApprovalService(agentRepo, postSvc, management, postVersionSvc, mediaSvc, mediaStore, pageSvc)
 		approvals.SetGenerationService(generation)
 		workflowSvc := workflowservice.NewService(cfg.DB, runner, management, toolRegistry, transactor)
