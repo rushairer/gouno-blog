@@ -1,14 +1,36 @@
 package controller
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/gin-gonic/gin"
+	"github.com/rushairer/blog-backend/internal/domain"
 )
 
+type fakeFeedPostReader struct {
+	posts []*domain.Post
+}
+
+func newFakeFeedPostReader() *fakeFeedPostReader {
+	return &fakeFeedPostReader{posts: []*domain.Post{{
+		ID:      1,
+		Title:   "Hello",
+		Slug:    "hello",
+		Content: "Body",
+		Status:  domain.PostStatusPublished,
+	}}}
+}
+
+func (s *fakeFeedPostReader) ListPosts(context.Context, string, string, int, int) ([]*domain.Post, int, error) {
+	return s.posts, len(s.posts), nil
+}
+
 func TestRSSUsesCanonicalArticleLinksAndForwardedOrigin(t *testing.T) {
-	svc := newFakeBlogService()
+	svc := newFakeFeedPostReader()
 	router := setupFeedRouter(svc)
 	request := httptest.NewRequest(http.MethodGet, "/feed.xml", nil)
 	request.Header.Set("X-Forwarded-Proto", "https")
@@ -31,7 +53,7 @@ func TestRSSUsesCanonicalArticleLinksAndForwardedOrigin(t *testing.T) {
 }
 
 func TestSitemapContainsPublicIndexRoutes(t *testing.T) {
-	svc := newFakeBlogService()
+	svc := newFakeFeedPostReader()
 	router := setupFeedRouter(svc)
 	request := httptest.NewRequest(http.MethodGet, "/sitemap.xml", nil)
 	response := httptest.NewRecorder()
@@ -44,8 +66,9 @@ func TestSitemapContainsPublicIndexRoutes(t *testing.T) {
 	}
 }
 
-func setupFeedRouter(svc *fakeBlogService) http.Handler {
-	router := setupControllerRouter(svc)
+func setupFeedRouter(svc FeedPostReader) http.Handler {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
 	feed := NewFeedController(svc, nil, nil)
 	router.GET("/feed.xml", feed.GetRSS)
 	router.GET("/sitemap.xml", feed.GetSitemap)
