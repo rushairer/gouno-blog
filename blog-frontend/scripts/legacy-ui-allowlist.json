@@ -28,20 +28,11 @@
       "src/pages/admin/Tags.tsx",
       "src/pages/admin/Users.tsx"
     ],
-    "EditorPanel": [
-      "src/components/__tests__/ui.test.tsx",
-      "src/components/agent/WorkflowWorkspace.tsx"
-    ],
+    "EditorPanel": ["src/components/__tests__/ui.test.tsx"],
     "EmptyState": ["src/components/agent/ConnectorWorkspace.tsx"],
     "Feedback": ["src/components/agent/ConnectorWorkspace.tsx"],
-    "FormActions": [
-      "src/components/__tests__/ui.test.tsx",
-      "src/components/agent/WorkflowWorkspace.tsx"
-    ],
-    "FormLayout": [
-      "src/components/__tests__/ui.test.tsx",
-      "src/components/agent/WorkflowWorkspace.tsx"
-    ],
+    "FormActions": ["src/components/__tests__/ui.test.tsx"],
+    "FormLayout": ["src/components/__tests__/ui.test.tsx"],
     "IconButton": [
       "src/components/__tests__/ui.test.tsx",
       "src/components/agent/ConnectorWorkspace.tsx"
@@ -53,8 +44,7 @@
     "SectionNav": ["src/components/__tests__/ui.test.tsx"],
     "Select": [
       "src/components/__tests__/ui.test.tsx",
-      "src/components/agent/ConnectorWorkspace.tsx",
-      "src/components/agent/WorkflowWorkspace.tsx"
+      "src/components/agent/ConnectorWorkspace.tsx"
     ],
     "Skeleton": ["src/components/__tests__/ui.test.tsx"],
     "StatusBadge": ["src/components/__tests__/ui.test.tsx"],

@@ -36,6 +36,19 @@ function render(ui: React.ReactElement) {
   return renderWithRouter(<MemoryRouter>{ui}</MemoryRouter>);
 }
 
+async function chooseOption(
+  user: ReturnType<typeof userEvent.setup>,
+  label: string | RegExp,
+  option: string | RegExp,
+  index = 0,
+) {
+  const controls = screen.getAllByRole("combobox", { name: label });
+  const control = controls[index];
+  if (!control) throw new Error(`Missing combobox: ${String(label)} #${index}`);
+  await user.click(control);
+  await user.click(screen.getByRole("option", { name: option }));
+}
+
 describe("WorkflowWorkspace", () => {
   beforeEach(() => {
     apiFetch.mockReset().mockResolvedValue(Response.json({ data: {} }));
@@ -134,10 +147,7 @@ describe("WorkflowWorkspace", () => {
       />,
     );
 
-    const statusSelect = screen.getByRole("combobox", {
-      name: "按状态筛选 Workflow",
-    });
-    await user.selectOptions(statusSelect, "enabled");
+    await chooseOption(user, "按状态筛选 Workflow", /^已启用/);
     expect(
       screen.getByRole("button", { name: /Active workflow/ }),
     ).toBeInTheDocument();
@@ -145,7 +155,7 @@ describe("WorkflowWorkspace", () => {
       screen.queryByRole("button", { name: /Paused workflow/ }),
     ).not.toBeInTheDocument();
 
-    await user.selectOptions(statusSelect, "disabled");
+    await chooseOption(user, "按状态筛选 Workflow", /^已停用/);
     expect(
       screen.queryByRole("button", { name: /Active workflow/ }),
     ).not.toBeInTheDocument();
@@ -493,10 +503,10 @@ describe("WorkflowWorkspace", () => {
 
     await user.click(screen.getByRole("button", { name: "编辑" }));
     await user.click(screen.getByRole("button", { name: "添加动态资源筛选" }));
-    await user.selectOptions(screen.getByLabelText("状态"), "published");
+    await chooseOption(user, "状态", "published");
     await user.clear(screen.getByLabelText("距今未更新天数"));
     await user.type(screen.getByLabelText("距今未更新天数"), "180");
-    await user.selectOptions(screen.getByLabelText("空结果策略"), "fail");
+    await chooseOption(user, "空结果策略", "失败并提醒管理员");
     await user.click(screen.getByRole("button", { name: "保存 Workflow" }));
 
     await waitFor(() => expect(onSave).toHaveBeenCalled());
@@ -559,8 +569,10 @@ describe("WorkflowWorkspace", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "编辑" }));
-    expect(screen.getByLabelText("批量绑定 Agent")).toHaveValue("5");
-    await user.selectOptions(screen.getByLabelText("单项失败处理"), "continue");
+    expect(
+      screen.getByRole("combobox", { name: "批量绑定 Agent" }),
+    ).toHaveTextContent("Editor");
+    await chooseOption(user, "单项失败处理", "继续处理其余资源");
     await user.click(screen.getByRole("button", { name: "保存 Workflow" }));
 
     await waitFor(() => expect(onSave).toHaveBeenCalled());
@@ -656,8 +668,7 @@ describe("WorkflowWorkspace", () => {
     );
     await user.click(screen.getByRole("button", { name: "创建 Workflow" }));
     await user.click(screen.getByRole("button", { name: "添加字段" }));
-    const selects = screen.getAllByLabelText("资源类型");
-    await user.selectOptions(selects[0], "post");
+    await chooseOption(user, "资源类型", "文章");
     expect(screen.getByLabelText("最少数量")).toBeInTheDocument();
     expect(screen.getByLabelText("最多数量")).toBeInTheDocument();
   });
@@ -735,7 +746,9 @@ describe("WorkflowWorkspace", () => {
       "/api/admin/ai-automation-plans/draft",
       expect.anything(),
     );
-    expect(screen.getByLabelText("批量绑定 Agent")).toHaveValue("");
+    expect(
+      screen.getByRole("combobox", { name: "批量绑定 Agent" }),
+    ).toHaveTextContent("请选择");
     await user.click(screen.getByRole("button", { name: "保存 Workflow" }));
     await waitFor(() => expect(onSave).toHaveBeenCalled());
     expect(onSave.mock.calls[0][0]).toMatchObject({
