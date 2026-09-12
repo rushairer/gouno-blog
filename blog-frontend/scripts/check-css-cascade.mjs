@@ -31,6 +31,17 @@ const retiredAgentShellSelectors = [
   ".agent-approval-actions",
   ".feedback-form",
   ".agent-chip-list",
+  ".workflow-split-view",
+  ".workflow-master-list",
+  ".workflow-list-toolbar",
+  ".workflow-resource-pagination",
+  ".workflow-table",
+  ".workflow-name-button",
+  ".workflow-filter-chips",
+  ".workflow-chip",
+  ".workflow-row--disabled",
+  ".workflow-runs-table",
+  ".agent-runs-table",
 ];
 const allowedBlockAtRules = new Set([
   "@layer",
