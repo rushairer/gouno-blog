@@ -15,6 +15,7 @@ import (
 	"github.com/rushairer/blog-backend/internal/knowledge"
 	mediaservice "github.com/rushairer/blog-backend/internal/media/service"
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
+	postversionservice "github.com/rushairer/blog-backend/internal/postversion/service"
 	recommendationservice "github.com/rushairer/blog-backend/internal/recommendation/service"
 	"github.com/rushairer/blog-backend/internal/service"
 	siteservice "github.com/rushairer/blog-backend/internal/site/service"
@@ -106,6 +107,7 @@ func WriteDomainError(c *gin.Context, err error) {
 		errors.Is(err, service.ErrPostNotFound),
 		errors.Is(err, communityservice.ErrPostNotFound),
 		errors.Is(err, recommendationservice.ErrPostNotFound),
+		errors.Is(err, postversionservice.ErrPostNotFound),
 		errors.Is(err, taxonomyservice.ErrCategoryNotFound),
 		errors.Is(err, mediaservice.ErrMediaNotFound),
 		errors.Is(err, pageservice.ErrPageNotFound),
@@ -145,6 +147,8 @@ func WriteDomainError(c *gin.Context, err error) {
 		errors.Is(err, communityservice.ErrInvalidCommentStatus),
 		errors.Is(err, communityservice.ErrReportReasonTooLong),
 		errors.Is(err, service.ErrInvalidVersion),
+		errors.Is(err, postversionservice.ErrInvalidPostID),
+		errors.Is(err, postversionservice.ErrInvalidVersion),
 		errors.Is(err, mediaservice.ErrInvalidMediaPayload),
 		errors.Is(err, mediaservice.ErrInvalidMediaID),
 		errors.Is(err, taxonomyservice.ErrCategoryNameRequired),
