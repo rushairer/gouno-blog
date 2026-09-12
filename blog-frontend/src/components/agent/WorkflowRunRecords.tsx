@@ -10,7 +10,16 @@ import type {
   WorkflowRun,
   WorkflowStepRun,
 } from "../../types/agent";
-import { Alert, Button, Card, Empty, IconButton, Select } from "@gouno/ui/core";
+import {
+  Alert,
+  Button,
+  Card,
+  CardContent,
+  Empty,
+  IconButton,
+  Select,
+  Text,
+} from "@gouno/ui/core";
 import { ArticlePreviewModal } from "./ArticlePreviewModal";
 import { StatusPill } from "./StatusPill";
 import { WorkflowRunDetail } from "./WorkflowRunDetail";
@@ -611,170 +620,180 @@ export function WorkflowRunRecords({
           onRetryFailedGroup={retryFailedGroup}
         />
       ) : (
-        <div className="workflow-runs-list-view section-stack">
-          <div className="flex flex-wrap items-end gap-3">
-            <Select
-              size="small"
-              aria-label={zh ? "筛选 Workflow" : "Filter Workflow"}
-              value={String(workflowID)}
-              onChange={(nextValue) => {
-                setWorkflowID(Number(nextValue));
-                setSelected(null);
-              }}
-            >
-              <option value="0">
-                {zh ? "全部 Workflow" : "All Workflows"}
-              </option>
-              {workflows.map((workflow) => (
-                <option key={workflow.id} value={String(workflow.id)}>
-                  {workflow.name}
-                </option>
-              ))}
-            </Select>
-            <Select
-              size="small"
-              aria-label={zh ? "筛选状态" : "Filter Status"}
-              value={statusFilter}
-              onChange={(nextValue) => setStatusFilter(String(nextValue))}
-            >
-              <option value="all">{zh ? "全部状态" : "All Status"}</option>
-              <option value="succeeded">{zh ? "成功" : "Succeeded"}</option>
-              <option value="failed">{zh ? "失败" : "Failed"}</option>
-              <option value="running">
-                {zh ? "执行中" : "Running / Queued"}
-              </option>
-              <option value="awaiting">
-                {zh ? "等待处理 / 审批" : "Awaiting user / approval"}
-              </option>
-            </Select>
-            <span className="filter-bar__count">
-              {filtered.length} {zh ? "条记录" : "runs"}
-            </span>
-            {workflowID !== 0 || statusFilter !== "all" ? (
-              <Button
-                variant="ghost"
-                size="small"
-                type="button"
-                onClick={() => {
-                  setWorkflowID(0);
-                  setStatusFilter("all");
-                }}
-                icon={<X />}
-              >
-                {zh ? "清除" : "Clear"}
-              </Button>
-            ) : null}
-          </div>
-          {filtered.length === 0 ? (
-            <Empty
-              title={
-                zh
-                  ? "还没有 Workflow 运行记录。"
-                  : "No Workflow runs recorded yet."
-              }
-            />
-          ) : (
-            <Card padding="none" className="agent-table-panel">
-              <div className="table-scroll">
-                <table className="content-table agent-table workflow-runs-table">
-                  <thead>
-                    <tr>
-                      <th>{zh ? "Workflow 任务" : "Workflow Task"}</th>
-                      <th>{zh ? "类型" : "Type"}</th>
-                      <th>{zh ? "状态" : "Status"}</th>
-                      <th>{zh ? "执行时间" : "Execution Time"}</th>
-                      <th>{zh ? "耗时" : "Duration"}</th>
-                      <th>{zh ? "操作" : "Actions"}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map((run) => (
-                      <tr key={run.id}>
-                        <td>
-                          <Button
-                            variant="ghost"
-                            className="workflow-name-button"
-                            onClick={() => void inspect(run)}
-                          >
-                            <strong>
-                              {names.get(run.workflow_id) ||
-                                `Workflow #${run.workflow_id}`}
-                            </strong>
-                            <small>
-                              Run #{run.id} · v{run.workflow_version_id}
-                            </small>
-                          </Button>
-                        </td>
-                        <td>
-                          <strong>
-                            {run.dry_run
-                              ? zh
-                                ? "试运行"
-                                : "Dry-run"
-                              : run.schedule_key
-                                ? zh
-                                  ? `计划 ${run.schedule_key}`
-                                  : `Scheduled ${run.schedule_key}`
-                                : zh
-                                  ? "手动运行"
-                                  : "Manual"}
-                          </strong>
-                        </td>
-                        <td>
-                          <StatusPill status={run.status} locale={locale} />
-                        </td>
-                        <td>
-                          <span>
-                            {formatDateTime(run.started_at || run.created_at)}
-                          </span>
-                        </td>
-                        <td>
-                          <small>
-                            {duration(run.started_at, run.finished_at)}
-                          </small>
-                        </td>
-                        <td>
-                          <div className="agent-row-actions">
-                            <IconButton
-                              label={zh ? "查看详情" : "Inspect"}
-                              icon={<Eye />}
-                              disabled={loadingID === run.id}
-                              onClick={() => void inspect(run)}
-                            />
-                            {[
-                              "queued",
-                              "running",
-                              "awaiting_approval",
-                              "waiting_for_user",
-                            ].includes(run.status) ? (
-                              <IconButton
-                                variant="outline"
-                                color="error"
-                                label={zh ? "放弃/终止运行" : "Cancel run"}
-                                icon={<Ban />}
-                                disabled={cancelling}
-                                onClick={() => void cancelRunByID(run)}
-                              />
-                            ) : null}
-                            {["succeeded", "failed", "cancelled"].includes(
-                              run.status,
-                            ) ? (
-                              <IconButton
-                                variant="outline"
-                                color="error"
-                                label={zh ? "删除记录" : "Delete record"}
-                                icon={<Trash2 />}
-                                disabled={deleting}
-                                onClick={() => void deleteRunByID(run)}
-                              />
-                            ) : null}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+        <div className="workflow-runs-list-view flex flex-col gap-5">
+          <Card padding="base">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+              <div className="min-w-0 lg:w-64">
+                <Select
+                  size="small"
+                  aria-label={zh ? "筛选 Workflow" : "Filter Workflow"}
+                  value={String(workflowID)}
+                  onChange={(nextValue) => {
+                    setWorkflowID(Number(nextValue));
+                    setSelected(null);
+                  }}
+                >
+                  <option value="0">
+                    {zh ? "全部 Workflow" : "All Workflows"}
+                  </option>
+                  {workflows.map((workflow) => (
+                    <option key={workflow.id} value={String(workflow.id)}>
+                      {workflow.name}
+                    </option>
+                  ))}
+                </Select>
               </div>
+              <div className="min-w-0 lg:w-56">
+                <Select
+                  size="small"
+                  aria-label={zh ? "筛选状态" : "Filter Status"}
+                  value={statusFilter}
+                  onChange={(nextValue) => setStatusFilter(String(nextValue))}
+                >
+                  <option value="all">{zh ? "全部状态" : "All Status"}</option>
+                  <option value="succeeded">{zh ? "成功" : "Succeeded"}</option>
+                  <option value="failed">{zh ? "失败" : "Failed"}</option>
+                  <option value="running">
+                    {zh ? "执行中" : "Running / Queued"}
+                  </option>
+                  <option value="awaiting">
+                    {zh ? "等待处理 / 审批" : "Awaiting user / approval"}
+                  </option>
+                </Select>
+              </div>
+              <div className="flex flex-1 items-center justify-between gap-3 lg:justify-end">
+                <Text size="sm" tone="muted" className="whitespace-nowrap">
+                  {filtered.length} {zh ? "条记录" : "runs"}
+                </Text>
+                {workflowID !== 0 || statusFilter !== "all" ? (
+                  <Button
+                    variant="text"
+                    size="small"
+                    type="button"
+                    onClick={() => {
+                      setWorkflowID(0);
+                      setStatusFilter("all");
+                    }}
+                    icon={<X />}
+                  >
+                    {zh ? "清除" : "Clear"}
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          </Card>
+          {filtered.length === 0 ? (
+            <Card padding="base">
+              <Empty
+                title={
+                  zh
+                    ? "还没有 Workflow 运行记录。"
+                    : "No Workflow runs recorded yet."
+                }
+              />
+            </Card>
+          ) : (
+            <Card padding="none" className="overflow-hidden">
+              <CardContent className="p-0">
+                <div
+                  role="list"
+                  aria-label={zh ? "Workflow 运行列表" : "Workflow run list"}
+                  className="divide-y"
+                >
+                  {filtered.map((run) => {
+                    const runType = run.dry_run
+                      ? zh
+                        ? "试运行"
+                        : "Dry-run"
+                      : run.schedule_key
+                        ? zh
+                          ? `计划 ${run.schedule_key}`
+                          : `Scheduled ${run.schedule_key}`
+                        : zh
+                          ? "手动运行"
+                          : "Manual";
+                    return (
+                      <div
+                        key={run.id}
+                        role="listitem"
+                        className="flex flex-col gap-4 p-6 xl:flex-row xl:items-start xl:justify-between"
+                      >
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="h-auto min-w-0 flex-1 justify-start p-0 text-left hover:bg-transparent"
+                          onClick={() => void inspect(run)}
+                        >
+                          <span className="block min-w-0 flex-1 text-left">
+                            <span className="flex flex-wrap items-center gap-2">
+                              <strong>
+                                {names.get(run.workflow_id) ||
+                                  `Workflow #${run.workflow_id}`}
+                              </strong>
+                              <StatusPill status={run.status} locale={locale} />
+                              <Text size="xs" tone="muted">
+                                Run #{run.id} · v{run.workflow_version_id}
+                              </Text>
+                            </span>
+                            <span className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2 xl:grid-cols-4">
+                              <span>{runType}</span>
+                              <span>
+                                {formatDateTime(
+                                  run.started_at || run.created_at,
+                                )}
+                              </span>
+                              <span>
+                                {duration(run.started_at, run.finished_at)}
+                              </span>
+                              <span>
+                                {zh
+                                  ? "查看步骤、资源与交互证据"
+                                  : "Inspect steps, resources, and interactions"}
+                              </span>
+                            </span>
+                          </span>
+                        </Button>
+                        <div className="flex min-w-max shrink-0 flex-nowrap items-center gap-1">
+                          <IconButton
+                            label={zh ? "查看详情" : "Inspect"}
+                            icon={<Eye />}
+                            variant="ghost"
+                            disabled={loadingID === run.id}
+                            onClick={() => void inspect(run)}
+                          />
+                          {[
+                            "queued",
+                            "running",
+                            "awaiting_approval",
+                            "waiting_for_user",
+                          ].includes(run.status) ? (
+                            <IconButton
+                              variant="ghost"
+                              color="error"
+                              label={zh ? "放弃/终止运行" : "Cancel run"}
+                              icon={<Ban />}
+                              disabled={cancelling}
+                              onClick={() => void cancelRunByID(run)}
+                            />
+                          ) : null}
+                          {["succeeded", "failed", "cancelled"].includes(
+                            run.status,
+                          ) ? (
+                            <IconButton
+                              variant="ghost"
+                              color="error"
+                              label={zh ? "删除记录" : "Delete record"}
+                              icon={<Trash2 />}
+                              disabled={deleting}
+                              onClick={() => void deleteRunByID(run)}
+                            />
+                          ) : null}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
             </Card>
           )}
         </div>
