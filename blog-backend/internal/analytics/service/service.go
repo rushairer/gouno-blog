@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"github.com/rushairer/blog-backend/internal/domain"
 	analyticsrepository "github.com/rushairer/blog-backend/internal/analytics/repository"
+	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 var ErrInvalidPostID = errors.New("invalid post id")
