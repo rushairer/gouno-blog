@@ -3,21 +3,19 @@ import { useEffect, useMemo, useState } from "react";
 import { workflowApi } from "../../api/workflows";
 import type { ResourceOption } from "../../api/workflows";
 import {
+  Alert,
+  Button,
   Checkbox,
   Field,
+  IconButton,
   Input,
   Modal,
+  Pagination,
   SearchField,
+  Select,
+  Tag,
   Textarea,
 } from "@gouno/ui/core";
-import {
-  Button,
-  Feedback,
-  IconButton,
-  Pagination,
-  Select,
-  StatusBadge,
-} from "@gouno/ui-legacy";
 
 type SchemaProperty = {
   type?: string;
@@ -151,6 +149,32 @@ const resourceFilters: Record<string, ResourceFilter[]> = {
     },
   ],
 };
+
+function ResourceStatusTag({ status }: { status: string }) {
+  const label =
+    ({
+      published: "已发布",
+      draft: "草稿",
+      scheduled: "定时发布",
+      hidden: "已隐藏",
+    } as Record<string, string>)[status] || status;
+  const color =
+    status === "published"
+      ? "success"
+      : status === "failed"
+        ? "error"
+        : status === "pending"
+          ? "warning"
+          : "default";
+  return (
+    <Tag
+      color={color}
+      className={`status-badge status-badge--${status} status-pill`}
+    >
+      {label}
+    </Tag>
+  );
+}
 
 function ResourcePicker({
   property,
@@ -314,8 +338,8 @@ function ResourcePicker({
         </p>
       ) : null}
       <Button
-        variant="secondary"
-        size="compact"
+        variant="outline"
+        size="small"
         type="button"
         onClick={() => setOpen(true)}
         icon={<Plus />}
@@ -334,11 +358,7 @@ function ResourcePicker({
         }
         onClose={() => setOpen(false)}
         footer={
-          <Button
-            variant="secondary"
-            type="button"
-            onClick={() => setOpen(false)}
-          >
+          <Button variant="outline" type="button" onClick={() => setOpen(false)}>
             {locale === "zh" ? "完成" : "Done"}
           </Button>
         }
@@ -367,12 +387,12 @@ function ResourcePicker({
                     </span>
                     {filter.type === "select" ? (
                       <Select
-                        size="compact"
+                        size="small"
                         value={filters[filter.key] || ""}
-                        onChange={(event) => {
+                        onChange={(nextValue) => {
                           setFilters((current) => ({
                             ...current,
-                            [filter.key]: event.target.value,
+                            [filter.key]: String(nextValue),
                           }));
                           setPage(1);
                         }}
@@ -407,7 +427,7 @@ function ResourcePicker({
               </div>
             ) : null}
           </div>
-          {error ? <Feedback type="error">{error}</Feedback> : null}
+          {error ? <Alert type="error" showIcon title={error} /> : null}
           {loading ? (
             <p className="muted">
               {locale === "zh" ? "正在查询…" : "Searching…"}
@@ -425,9 +445,9 @@ function ResourcePicker({
                     className={`workflow-resource-card ${checked ? "is-selected" : ""}`}
                     key={`${item.type}:${item.key}`}
                     onClick={() => toggle(item.key)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
                         toggle(item.key);
                       }
                     }}
@@ -449,7 +469,7 @@ function ResourcePicker({
                           {item.label}
                         </strong>
                         {item.status ? (
-                          <StatusBadge status={item.status} />
+                          <ResourceStatusTag status={item.status} />
                         ) : null}
                       </div>
                       {item.description ? (
@@ -465,11 +485,15 @@ function ResourcePicker({
           )}
           {total > 20 ? (
             <Pagination
-              mode="compact"
               page={page}
-              pages={Math.ceil(total / 20)}
+              total={total}
+              pageSize={20}
+              simple
+              size="small"
               onChange={(nextPage) => setPage(nextPage)}
-              label={locale === "zh" ? "资源分页" : "Resource pagination"}
+              ariaLabel={
+                locale === "zh" ? "资源分页" : "Resource pagination"
+              }
             />
           ) : null}
         </div>
@@ -571,12 +595,12 @@ export function WorkflowInputForm({
             >
               <Select
                 value={String(value[name] ?? "")}
-                onChange={(event) =>
+                onChange={(nextValue) =>
                   update(
                     name,
                     property.type === "integer"
-                      ? Number(event.target.value)
-                      : event.target.value,
+                      ? Number(nextValue)
+                      : String(nextValue),
                   )
                 }
               >
@@ -682,7 +706,7 @@ export function WorkflowInputForm({
             }
           }}
         />
-        {rawError ? <Feedback type="error">{rawError}</Feedback> : null}
+        {rawError ? <Alert type="error" showIcon title={rawError} /> : null}
       </details>
     </div>
   );
