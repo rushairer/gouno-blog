@@ -5,27 +5,35 @@ import (
 	"database/sql"
 	"errors"
 
-	analyticsrepository "github.com/rushairer/blog-backend/internal/analytics/repository"
 	analyticsservice "github.com/rushairer/blog-backend/internal/analytics/service"
 	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 type GrowthStore interface {
-	analyticsrepository.Repository
 	RelatedPosts(context.Context, int64, []string, int) ([]*domain.Post, error)
 	ListVersions(context.Context, int64) ([]*domain.PostVersion, error)
 	RestoreVersion(context.Context, int64, int64) (*domain.Post, error)
 }
 
-var ErrInvalidVersion = errors.New("invalid version")
+var (
+	ErrInvalidVersion       = errors.New("invalid version")
+	ErrAnalyticsUnavailable = errors.New("analytics service unavailable")
+)
 
 type GrowthService struct {
 	store     GrowthStore
 	analytics analyticsservice.Service
 }
 
-func NewGrowthService(store GrowthStore) *GrowthService {
-	return &GrowthService{store: store, analytics: analyticsservice.New(store)}
+// NewGrowthService keeps Analytics injection optional only while non-HTTP
+// consumers finish migrating away from the legacy Growth facade. Production
+// composition must inject the canonical Analytics service explicitly.
+func NewGrowthService(store GrowthStore, analytics ...analyticsservice.Service) *GrowthService {
+	var analyticsSvc analyticsservice.Service
+	if len(analytics) > 0 {
+		analyticsSvc = analytics[0]
+	}
+	return &GrowthService{store: store, analytics: analyticsSvc}
 }
 
 func (s *GrowthService) AnalyticsService() analyticsservice.Service {
@@ -61,6 +69,9 @@ func (s *GrowthService) RestoreVersion(ctx context.Context, postID, versionID in
 }
 
 func (s *GrowthService) RecordView(ctx context.Context, postID int64, actorKey string) error {
+	if s.analytics == nil {
+		return ErrAnalyticsUnavailable
+	}
 	err := s.analytics.RecordView(ctx, postID, actorKey)
 	if errors.Is(err, analyticsservice.ErrInvalidPostID) {
 		return ErrInvalidPostID
@@ -69,5 +80,8 @@ func (s *GrowthService) RecordView(ctx context.Context, postID int64, actorKey s
 }
 
 func (s *GrowthService) AnalyticsSummary(ctx context.Context) (*domain.AnalyticsSummary, error) {
+	if s.analytics == nil {
+		return nil, ErrAnalyticsUnavailable
+	}
 	return s.analytics.AnalyticsSummary(ctx)
 }

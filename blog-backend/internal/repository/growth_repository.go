@@ -5,19 +5,15 @@ import (
 	"database/sql"
 
 	"github.com/lib/pq"
-	analyticsrepository "github.com/rushairer/blog-backend/internal/analytics/repository"
 	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 type GrowthRepository struct {
-	db        *sql.DB
-	analytics analyticsrepository.Repository
+	db *sql.DB
 }
 
-var _ analyticsrepository.Repository = (*GrowthRepository)(nil)
-
 func NewGrowthRepository(db *sql.DB) *GrowthRepository {
-	return &GrowthRepository{db: db, analytics: analyticsrepository.New(db)}
+	return &GrowthRepository{db: db}
 }
 
 func scanGrowthPost(scanner interface{ Scan(...any) error }) (*domain.Post, error) {
@@ -103,12 +99,4 @@ func (r *GrowthRepository) RestoreVersion(ctx context.Context, postID, versionID
 		return nil, err
 	}
 	return post, nil
-}
-
-func (r *GrowthRepository) RecordEvent(ctx context.Context, postID int64, eventType, actorKey string) error {
-	return r.analytics.RecordEvent(ctx, postID, eventType, actorKey)
-}
-
-func (r *GrowthRepository) AnalyticsSummary(ctx context.Context) (*domain.AnalyticsSummary, error) {
-	return r.analytics.AnalyticsSummary(ctx)
 }

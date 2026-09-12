@@ -278,7 +278,8 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 	siteSvc := siteservice.New(siterepository.New(cfg.DB))
 	communitySvc := communityservice.NewCommunityService(communityrepository.NewCommunityRepository(cfg.DB), postRepo)
 	mediaSvc := mediaservice.New(mediarepository.New(cfg.DB))
-	growthSvc := service.NewGrowthService(repository.NewGrowthRepository(cfg.DB))
+	analyticsSvc := newAnalyticsService(cfg.DB)
+	growthSvc := service.NewGrowthService(repository.NewGrowthRepository(cfg.DB), analyticsSvc)
 	service.StartScheduledPublisher(ctx, postSvc, cfg.Logger)
 
 	var agentCtrl *controller.AgentController
@@ -295,6 +296,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		knowledgeSvc := knowledge.NewService(cfg.DB, secrets, cfg.Global.AIAgentConfig.AllowedHosts, cfg.Logger, transactor)
 		knowledgeSvc.Start(ctx)
 		toolRegistry := tool.NewBlogRegistry(postSvc, communitySvc, growthSvc, pageSvc, knowledgeSvc)
+		tool.BindAnalytics(toolRegistry, analyticsSvc)
 		operationsSvc := operations.NewService(cfg.DB, toolRegistry, cfg.Logger, transactor)
 		operationsSvc.ConfigureGovernance(agentRepo, postSvc)
 		if err := operationsSvc.RegisterTools(); err != nil {
