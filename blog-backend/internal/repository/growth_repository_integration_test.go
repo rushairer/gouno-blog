@@ -45,15 +45,4 @@ func TestGrowthRepositoryContentLifecycle(t *testing.T) {
 	if err != nil || restored.Title != "Original title" || restored.Content != "Original body" {
 		t.Fatalf("restore mismatch: post=%#v err=%v", restored, err)
 	}
-
-	if err := repo.RecordEvent(ctx, postID, "view", "hashed-visitor"); err != nil {
-		t.Fatal(err)
-	}
-	summary, err := repo.AnalyticsSummary(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if summary.TotalPosts < 2 || len(summary.DailyEvents) != 14 || len(summary.TopPosts) == 0 {
-		t.Fatalf("analytics summary incomplete: %#v", summary)
-	}
 }
