@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/lib/pq"
+	agentrepository "github.com/rushairer/blog-backend/internal/agent/repository"
 	"github.com/rushairer/blog-backend/internal/identitybackfill"
-	"github.com/rushairer/blog-backend/internal/repository"
 )
 
 func isolatedIdentityDB(t *testing.T) *sql.DB {
@@ -152,14 +152,15 @@ func TestIdentityFreshInstallAndSystemBootstrap(t *testing.T) {
 	VALUES('fixture','openai','https://fixture.test','fixture','\x01','\x02','test',1,true,true,60,1024)`)
 	// Even an ordinary existing user must not become the template creator.
 	identityActor(t, db, "https://fixture.test", "ordinary", false)
-	repo := repository.NewAgentRepository(db)
-	if _, err := repo.BootstrapStarterPack(ctx); err != nil {
+	starterPackRepo := agentrepository.NewAgentRepository(db)
+	definitionRepo := agentrepository.NewDefinitionRepository(db)
+	if _, err := starterPackRepo.BootstrapStarterPack(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := repo.BootstrapStarterPack(ctx); err != nil {
+	if _, err := starterPackRepo.BootstrapStarterPack(ctx); err != nil {
 		t.Fatal(err)
 	}
-	agents, err := repo.ListAgents(ctx)
+	agents, err := definitionRepo.ListAgents(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -334,22 +335,22 @@ func TestIdentityOriginConstraintsAndHumanVersions(t *testing.T) {
 	if _, err := db.Exec(`INSERT INTO ai_workflows(name,creation_origin,created_by_principal_id) VALUES('fake system','system',$1)`, actor); err == nil {
 		t.Fatal("system with human identity accepted")
 	}
-	repo := repository.NewAgentRepository(db)
-	skills, err := repo.ListSkills(ctx)
+	skillRepo := agentrepository.NewSkillRepository(db)
+	skills, err := skillRepo.ListSkills(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	skill := skills[0]
 	skill.CreatedByPrincipalID = &actor
 	skill.SystemPrompt += " updated by editor"
-	if err := repo.UpdateSkill(ctx, skill); err != nil {
+	if err := skillRepo.UpdateSkill(ctx, skill); err != nil {
 		t.Fatal(err)
 	}
-	current, err := repo.GetSkill(ctx, skill.ID)
+	current, err := skillRepo.GetSkill(ctx, skill.ID)
 	if err != nil || current.CreationOrigin != "system" || current.CreatedByPrincipalID != nil {
 		t.Fatalf("creator changed: %v", err)
 	}
-	version, err := repo.GetSkillVersion(ctx, skill.VersionID)
+	version, err := skillRepo.GetSkillVersion(ctx, skill.VersionID)
 	if err != nil || version.CreationOrigin != "human" || version.CreatedByPrincipalID == nil || *version.CreatedByPrincipalID != actor {
 		t.Fatalf("version not attributed: %v", err)
 	}

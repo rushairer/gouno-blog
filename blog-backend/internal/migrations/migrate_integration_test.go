@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	_ "github.com/lib/pq"
-	"github.com/rushairer/blog-backend/internal/repository"
+	agentrepository "github.com/rushairer/blog-backend/internal/agent/repository"
 )
 
 func TestNeutralDefaultsMigrationDoesNotExposePersonalEmail(t *testing.T) {
@@ -87,7 +87,7 @@ func TestUpAppliesCurrentSchemaAndIsIdempotent(t *testing.T) {
 		DO UPDATE SET enabled=TRUE,is_default_writing=TRUE,deleted_at=NULL`); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := repository.NewAgentRepository(db).BootstrapStarterPack(ctx); err != nil {
+	if _, err := agentrepository.NewAgentRepository(db).BootstrapStarterPack(ctx); err != nil {
 		t.Fatalf("fresh-install starter bootstrap: %v", err)
 	}
 	for _, table := range []string{
