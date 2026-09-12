@@ -11,14 +11,13 @@ import type {
   WorkflowStepRun,
 } from "../../types/agent";
 import {
+  Alert,
   Button,
-  EmptyState,
-  Feedback,
-  FilterBar,
+  Card,
+  Empty,
   IconButton,
   Select,
-  WorkspacePanel,
-} from "@gouno/ui-legacy";
+} from "@gouno/ui/core";
 import { ArticlePreviewModal } from "./ArticlePreviewModal";
 import { StatusPill } from "./StatusPill";
 import { WorkflowRunDetail } from "./WorkflowRunDetail";
@@ -561,7 +560,7 @@ export function WorkflowRunRecords({
         workflowApi
           .getRuns()
           .then((allRuns) => {
-            const found = allRuns.find((r) => r.id === requestedID);
+            const found = allRuns.find((run) => run.id === requestedID);
             if (found) void inspect(found);
           })
           .catch(() => {});
@@ -574,7 +573,7 @@ export function WorkflowRunRecords({
 
   return (
     <div className="workflow-records section-stack">
-      {error ? <Feedback type="error">{error}</Feedback> : null}
+      {error ? <Alert type="error" showIcon title={error} /> : null}
       {selected ? (
         <WorkflowRunDetail
           selected={selected}
@@ -620,30 +619,30 @@ export function WorkflowRunRecords({
         />
       ) : (
         <div className="workflow-runs-list-view section-stack">
-          <FilterBar>
+          <div className="flex flex-wrap items-end gap-3">
             <Select
-              size="compact"
+              size="small"
               aria-label={zh ? "筛选 Workflow" : "Filter Workflow"}
-              value={workflowID}
-              onChange={(event) => {
-                setWorkflowID(Number(event.target.value));
+              value={String(workflowID)}
+              onChange={(nextValue) => {
+                setWorkflowID(Number(nextValue));
                 setSelected(null);
               }}
             >
-              <option value={0}>
+              <option value="0">
                 {zh ? "全部 Workflow" : "All Workflows"}
               </option>
               {workflows.map((workflow) => (
-                <option key={workflow.id} value={workflow.id}>
+                <option key={workflow.id} value={String(workflow.id)}>
                   {workflow.name}
                 </option>
               ))}
             </Select>
             <Select
-              size="compact"
+              size="small"
               aria-label={zh ? "筛选状态" : "Filter Status"}
               value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value)}
+              onChange={(nextValue) => setStatusFilter(String(nextValue))}
             >
               <option value="all">{zh ? "全部状态" : "All Status"}</option>
               <option value="succeeded">{zh ? "成功" : "Succeeded"}</option>
@@ -661,7 +660,7 @@ export function WorkflowRunRecords({
             {workflowID !== 0 || statusFilter !== "all" ? (
               <Button
                 variant="ghost"
-                size="compact"
+                size="small"
                 type="button"
                 onClick={() => {
                   setWorkflowID(0);
@@ -672,17 +671,17 @@ export function WorkflowRunRecords({
                 {zh ? "清除" : "Clear"}
               </Button>
             ) : null}
-          </FilterBar>
+          </div>
           {filtered.length === 0 ? (
-            <EmptyState
-              label={
+            <Empty
+              title={
                 zh
                   ? "还没有 Workflow 运行记录。"
                   : "No Workflow runs recorded yet."
               }
             />
           ) : (
-            <WorkspacePanel className="agent-table-panel">
+            <Card padding="none" className="agent-table-panel">
               <div className="table-scroll">
                 <table className="content-table agent-table workflow-runs-table">
                   <thead>
@@ -756,7 +755,8 @@ export function WorkflowRunRecords({
                               "waiting_for_user",
                             ].includes(run.status) ? (
                               <IconButton
-                                variant="danger"
+                                variant="outline"
+                                color="error"
                                 label={zh ? "放弃/终止运行" : "Cancel run"}
                                 icon={<Ban />}
                                 disabled={cancelling}
@@ -767,7 +767,8 @@ export function WorkflowRunRecords({
                               run.status,
                             ) ? (
                               <IconButton
-                                variant="danger"
+                                variant="outline"
+                                color="error"
                                 label={zh ? "删除记录" : "Delete record"}
                                 icon={<Trash2 />}
                                 disabled={deleting}
@@ -781,7 +782,7 @@ export function WorkflowRunRecords({
                   </tbody>
                 </table>
               </div>
-            </WorkspacePanel>
+            </Card>
           )}
         </div>
       )}
