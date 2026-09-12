@@ -43,10 +43,6 @@ type ApprovalService struct {
 	generation   *GenerationService
 }
 
-func NewApprovalService(repo *repository.AgentRepository, posts *postservice.PostService, management *ManagementService, postVersions postVersionReader, mediaAssets mediaAssetGateway, store media.Store, pages *pageservice.PageService) *ApprovalService {
-	return &ApprovalService{repo: repo, posts: posts, pages: pages, management: management, postVersions: postVersions, mediaAssets: mediaAssets, media: store, generation: NewGenerationService(repo, management, mediaAssets, store)}
-}
-
 func (s *ApprovalService) SetGenerationService(generation *GenerationService) {
 	s.generation = generation
 }
