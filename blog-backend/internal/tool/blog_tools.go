@@ -326,11 +326,7 @@ func (t *BlogTools) listPendingComments(ctx context.Context, raw json.RawMessage
 }
 
 func (t *BlogTools) analyticsSummary(ctx context.Context, raw json.RawMessage) (any, error) {
-	var args struct{}
-	if err := decodeArguments(raw, &args); err != nil {
-		return nil, err
-	}
-	return t.growth.AnalyticsSummary(ctx)
+	return unboundAnalyticsSummary(ctx, raw)
 }
 
 func (t *BlogTools) proposeDraft(_ context.Context, raw json.RawMessage) (*Proposal, error) {
