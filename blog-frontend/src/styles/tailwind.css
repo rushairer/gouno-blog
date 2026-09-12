@@ -3,4 +3,3 @@
 @import "@gouno/ui/base.css";
 @import "./app.css";
 @source "../../node_modules/@gouno/ui/dist";
-@source "../../node_modules/@gouno/ui-legacy/dist";
