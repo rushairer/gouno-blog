@@ -471,8 +471,8 @@ export default function PageEditor() {
       });
       const cleanList: string[] = [];
       (res.suggestions || []).forEach((item) => {
-        if (item.includes('\",\"')) {
-          item.split('\",\"').forEach((sub) => {
+        if (item.includes('","')) {
+          item.split('","').forEach((sub) => {
             const clean = sub.replace(/^[{"[\s]+|[}"\]\s,]+$/g, "").trim();
             if (clean) cleanList.push(clean);
           });
