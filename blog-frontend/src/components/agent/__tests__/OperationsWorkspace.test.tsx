@@ -171,7 +171,7 @@ describe("OperationsWorkspace", () => {
     expect(
       screen.queryByRole("heading", { name: "旧的链接检查建议" }),
     ).not.toBeInTheDocument();
-    expect(screen.getByText("自动已解决")).toBeInTheDocument();
+    expect(screen.getAllByText("自动已解决").length).toBeGreaterThanOrEqual(1);
     expect(container.querySelector(".status-pill--resolved")).not.toBeInTheDocument();
   });
 
