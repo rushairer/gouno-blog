@@ -32,7 +32,8 @@ import {
   Tag,
 } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
-import { ConfirmDialog, useToast } from "@gouno/ui-legacy";
+import { useToast } from "@gouno/ui-legacy";
+import { ConfirmActionModal } from "../../components/ConfirmActionModal";
 import { StepUpMfaModal } from "../../components/auth/StepUpMfaModal";
 import { SudoGate } from "../../components/auth/SudoGate";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
@@ -595,7 +596,7 @@ export default function AdminUsers() {
         ) : null}
       </Modal>
 
-      <ConfirmDialog
+      <ConfirmActionModal
         open={Boolean(confirm)}
         title={
           confirm?.action === "transfer"

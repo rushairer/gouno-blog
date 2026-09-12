@@ -20,7 +20,8 @@ import {
 } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
 import { BulkActionBar } from "@gouno/ui/patterns";
-import { ConfirmDialog, useToast } from "@gouno/ui-legacy";
+import { useToast } from "@gouno/ui-legacy";
+import { ConfirmActionModal } from "../../components/ConfirmActionModal";
 import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
 import { CategoryForm } from "../../components/taxonomy/CategoryForm";
 import type { CategoryFormValue } from "../../components/taxonomy/CategoryForm";
@@ -517,7 +518,7 @@ export default function Categories() {
         ) : null}
       </Drawer>
 
-      <ConfirmDialog
+      <ConfirmActionModal
         open={deleteTarget !== null}
         title={deleteTarget?.kind === "batch" ? "批量删除分类" : "删除分类"}
         description={

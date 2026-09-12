@@ -18,16 +18,6 @@
     "CardContent": ["src/components/__tests__/ui.test.tsx"],
     "CardFooter": ["src/components/__tests__/ui.test.tsx"],
     "CardHeader": ["src/components/__tests__/ui.test.tsx"],
-    "ConfirmDialog": [
-      "src/pages/admin/AISettings.tsx",
-      "src/pages/admin/Categories.tsx",
-      "src/pages/admin/MediaLibrary.tsx",
-      "src/pages/admin/Notifications.tsx",
-      "src/pages/admin/Pages.tsx",
-      "src/pages/admin/Posts.tsx",
-      "src/pages/admin/Tags.tsx",
-      "src/pages/admin/Users.tsx"
-    ],
     "EditorPanel": ["src/components/__tests__/ui.test.tsx"],
     "EmptyState": ["src/components/agent/ConnectorWorkspace.tsx"],
     "Feedback": ["src/components/agent/ConnectorWorkspace.tsx"],

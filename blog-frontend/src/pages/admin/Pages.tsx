@@ -24,7 +24,8 @@ import {
 } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
 import { BulkActionBar } from "@gouno/ui/patterns";
-import { ConfirmDialog, useToast } from "@gouno/ui-legacy";
+import { useToast } from "@gouno/ui-legacy";
+import { ConfirmActionModal } from "../../components/ConfirmActionModal";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 import { pagesApi } from "../../api/pages";
 import type { CustomPage } from "../../types/blog";
@@ -493,7 +494,7 @@ export default function AdminPages() {
         </div>
       ) : null}
 
-      <ConfirmDialog
+      <ConfirmActionModal
         open={deleteTarget !== null}
         title={deleteTarget?.kind === "page" ? "删除单页" : "批量删除单页"}
         description={

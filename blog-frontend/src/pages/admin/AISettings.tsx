@@ -20,7 +20,8 @@ import type {
 } from "../../components/agent/AdvancedWorkspace";
 import { Button, Card, Skeleton } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
-import { ConfirmDialog, ToastProvider, useToast } from "@gouno/ui-legacy";
+import { ToastProvider, useToast } from "@gouno/ui-legacy";
+import { ConfirmActionModal } from "../../components/ConfirmActionModal";
 import { useI18n } from "../../i18n";
 import "../../styles/agent-console.css";
 
@@ -516,7 +517,7 @@ function AISettingsContent() {
         formatDateTime={formatDateTime}
       />
 
-      <ConfirmDialog
+      <ConfirmActionModal
         open={deleteTarget !== null}
         title={
           deleteTarget?.kind === "agent"
