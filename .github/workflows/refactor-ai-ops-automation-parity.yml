@@ -1,0 +1,306 @@
+name: Refactor AI Ops Automation Parity
+
+on:
+  push:
+    branches:
+      - ui/blog-admin-final-parity-ai-ops-automation
+
+permissions:
+  contents: write
+
+jobs:
+  refactor:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ui/blog-admin-final-parity-ai-ops-automation
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: blog-frontend/package-lock.json
+      - working-directory: blog-frontend
+        run: npm ci
+      - name: Align Workflow automation list composition
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          path = Path("blog-frontend/src/components/agent/WorkflowWorkspace.tsx")
+          text = path.read_text()
+
+          if "  CardContent,\n" not in text:
+              marker = "  Card,\n  Checkbox,"
+              if marker not in text:
+                  raise SystemExit("Card import marker not found")
+              text = text.replace(marker, "  Card,\n  CardContent,\n  Checkbox,", 1)
+          if "  Tag,\n" not in text:
+              marker = "  Select,\n  Textarea,"
+              if marker not in text:
+                  raise SystemExit("Select import marker not found")
+              text = text.replace(marker, "  Select,\n  Tag,\n  Text,\n  Textarea,", 1)
+
+          start_marker = '        <div className="workflow-list-view section-stack">'
+          start = text.find(start_marker)
+          if start < 0:
+              raise SystemExit("workflow list start not found")
+          end_marker = '\n        </div>\n      )}\n      <Modal'
+          end = text.find(end_marker, start)
+          if end < 0:
+              raise SystemExit("workflow list end not found")
+          end += len('\n        </div>')
+
+          block = '''        <div className="workflow-list-view flex flex-col gap-6">
+          <PanelHeader
+            title={locale === "zh" ? "自动化" : "Automation"}
+            description={
+              locale === "zh"
+                ? "选择一项持续运营目标；每次执行都可追溯、可试运行、可回滚。"
+                : "Choose an ongoing goal. Every run is traceable, testable, and reversible."
+            }
+            actions={
+              <Button
+                variant="solid"
+                color="primary"
+                type="button"
+                onClick={() => setEditing("new")}
+                icon={<Plus />}
+              >
+                {labels.add}
+              </Button>
+            }
+          />
+
+          {workflows.length > 0 ? (
+            <Card padding="base">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+                <div className="min-w-0 flex-1">
+                  <SearchField
+                    aria-label={locale === "zh" ? "搜索 Workflow" : "Search workflows"}
+                    value={workflowQuery}
+                    onChange={(event) => setWorkflowQuery(event.target.value)}
+                    placeholder={
+                      locale === "zh"
+                        ? "按名称、说明或模板搜索"
+                        : "Search by name, description, or template"
+                    }
+                    size="small"
+                  />
+                </div>
+                <div className="min-w-0 lg:w-48 lg:shrink-0">
+                  <Select
+                    aria-label={locale === "zh" ? "按状态筛选 Workflow" : "Filter by status"}
+                    value={statusFilter}
+                    onChange={(value) =>
+                      setStatusFilter(
+                        selectValue(value) as "all" | "enabled" | "disabled",
+                      )
+                    }
+                    size="small"
+                  >
+                    <option value="all">
+                      {locale === "zh" ? "全部状态" : "All Status"} ({workflows.length})
+                    </option>
+                    <option value="enabled">
+                      {locale === "zh" ? "已启用" : "Enabled"} ({workflows.filter((item) => item.enabled).length})
+                    </option>
+                    <option value="disabled">
+                      {locale === "zh" ? "已停用" : "Disabled"} ({workflows.filter((item) => !item.enabled).length})
+                    </option>
+                  </Select>
+                </div>
+                <div className="flex items-center justify-between gap-3 lg:justify-end">
+                  <Text size="sm" tone="muted" className="whitespace-nowrap">
+                    {locale === "zh"
+                      ? `${visibleWorkflows.length} / ${workflows.length} 个 Workflow`
+                      : `${visibleWorkflows.length} of ${workflows.length} workflows`}
+                  </Text>
+                  {workflowQuery || statusFilter !== "all" ? (
+                    <Button
+                      variant="text"
+                      size="small"
+                      type="button"
+                      onClick={() => {
+                        setWorkflowQuery("");
+                        setStatusFilter("all");
+                      }}
+                      icon={<X />}
+                    >
+                      {locale === "zh" ? "清除" : "Clear"}
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            </Card>
+          ) : null}
+
+          {workflows.length === 0 || visibleWorkflows.length === 0 ? (
+            <Card padding="base">
+              <Empty
+                title={
+                  workflows.length > 0
+                    ? locale === "zh"
+                      ? "没有匹配的 Workflow。"
+                      : "No matching workflows."
+                    : labels.empty
+                }
+              />
+            </Card>
+          ) : (
+            <Card padding="none" className="overflow-hidden">
+              <CardContent className="p-0">
+                <div
+                  role="list"
+                  aria-label={locale === "zh" ? "Workflow 列表" : "Workflow list"}
+                  className="divide-y"
+                >
+                  {visibleWorkflows.map((workflow) => {
+                    const metric = metricMap.get(workflow.id);
+                    const latestRun = runs.find(
+                      (run) => run.workflow_id === workflow.id && !run.dry_run,
+                    );
+                    const modelSteps = workflow.steps.filter(
+                      (step) => step.type === "model",
+                    );
+                    const unboundStep = modelSteps.find((step) => !step.agent_id);
+                    const unavailableAgent = modelSteps
+                      .map((step) =>
+                        step.agent_id ? agentMap.get(step.agent_id) : undefined,
+                      )
+                      .find((agent) => !agent || !agent.enabled);
+                    const runBlockReason = unboundStep
+                      ? locale === "zh"
+                        ? "未绑定 Agent"
+                        : "No Agent bound"
+                      : unavailableAgent
+                        ? locale === "zh"
+                          ? `关联 Agent“${unavailableAgent.name}”已停用`
+                          : `Agent “${unavailableAgent.name}” disabled`
+                        : "";
+                    const openWorkflow = () => {
+                      setSelectedWorkflowID(workflow.id);
+                      const url = new URL(window.location.href);
+                      url.searchParams.set("workflow", String(workflow.id));
+                      window.history.replaceState(null, "", url);
+                    };
+
+                    return (
+                      <div
+                        key={workflow.id}
+                        role="listitem"
+                        className="flex flex-col gap-4 p-6 xl:flex-row xl:items-start xl:justify-between"
+                      >
+                        <button
+                          type="button"
+                          className="min-w-0 flex-1 text-left"
+                          onClick={openWorkflow}
+                        >
+                          <div className="flex flex-wrap items-center gap-2">
+                            <strong className="text-sm">{workflow.name}</strong>
+                            <Tag color={workflow.enabled ? "success" : "default"}>
+                              {workflow.enabled
+                                ? locale === "zh" ? "已启用" : "Enabled"
+                                : locale === "zh" ? "已停用" : "Disabled"}
+                            </Tag>
+                          </div>
+                          <Text size="sm" tone="muted" className="mt-1">
+                            {workflow.description}
+                          </Text>
+                          <div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2 xl:grid-cols-4">
+                            <span>
+                              {labels.schedule}: {workflow.cron_expression || (locale === "zh" ? "仅手动" : "Manual")}
+                              {workflow.cron_expression ? ` · ${workflow.timezone}` : ""}
+                            </span>
+                            <span>
+                              {labels.next}: {formatTime(workflow.next_run_at)}
+                            </span>
+                            <span>
+                              {latestRun
+                                ? `${locale === "zh" ? "最近运行" : "Latest run"}: ${statusLabel(latestRun.status, locale)} · ${formatTime(latestRun.created_at)}`
+                                : labels.never}
+                            </span>
+                            <span>
+                              {labels.metrics}: {metric?.runs || 0} / {metric?.failures || 0} / {metric?.tokens || 0}
+                            </span>
+                          </div>
+                        </button>
+                        <div className="flex min-w-max shrink-0 flex-nowrap items-center gap-1">
+                          <IconButton
+                            label={locale === "zh" ? "进入详情 / 运行" : "Inspect / Run"}
+                            icon={<ChevronRight />}
+                            variant="ghost"
+                            onClick={openWorkflow}
+                          />
+                          <IconButton
+                            label={locale === "zh" ? "编辑" : "Edit"}
+                            icon={<Edit2 />}
+                            variant="ghost"
+                            onClick={() => setEditing(workflow)}
+                          />
+                          <IconButton
+                            label={
+                              !workflow.enabled && runBlockReason
+                                ? runBlockReason
+                                : workflow.enabled
+                                  ? labels.disable
+                                  : labels.enable
+                            }
+                            icon={workflow.enabled ? <CirclePause /> : <Play />}
+                            variant="ghost"
+                            disabled={!workflow.enabled && Boolean(runBlockReason)}
+                            onClick={() =>
+                              void workflowApi
+                                .setEnabled(workflow.id, !workflow.enabled)
+                                .then(() => onRefresh?.())
+                            }
+                          />
+                          <IconButton
+                            variant="ghost"
+                            color="error"
+                            label={locale === "zh" ? "删除" : "Delete"}
+                            icon={<Trash2 />}
+                            onClick={() => setDeleteTarget(workflow)}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>'''
+
+          text = text[:start] + block + text[end:]
+          if 'content-table agent-table workflow-table' in text:
+              raise SystemExit("legacy workflow table remains after transform")
+          path.write_text(text)
+
+          test_path = Path("blog-frontend/src/components/agent/__tests__/WorkflowWorkspace.test.tsx")
+          test = test_path.read_text()
+          old = '    const list = screen.getByRole("table");'
+          new = '''    const list = screen.getByRole("list", { name: "Workflow 列表" });
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();'''
+          if old not in test:
+              raise SystemExit("workflow list test marker not found")
+          test = test.replace(old, new, 1)
+          test_path.write_text(test)
+          PY
+      - working-directory: blog-frontend
+        run: npx prettier --write src/components/agent/WorkflowWorkspace.tsx src/components/agent/__tests__/WorkflowWorkspace.test.tsx
+      - working-directory: blog-frontend
+        run: npm run test:run -- src/components/agent/__tests__/WorkflowWorkspace.test.tsx
+      - working-directory: blog-frontend
+        run: npx tsc -b
+      - name: Commit verified refactor
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add blog-frontend/src/components/agent/WorkflowWorkspace.tsx blog-frontend/src/components/agent/__tests__/WorkflowWorkspace.test.tsx
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "refactor(ui): align AI Ops workflow list"
+          git push origin HEAD:ui/blog-admin-final-parity-ai-ops-automation
