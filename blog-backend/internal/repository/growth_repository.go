@@ -5,15 +5,19 @@ import (
 	"database/sql"
 
 	"github.com/lib/pq"
+	analyticsrepository "github.com/rushairer/blog-backend/internal/analytics/repository"
 	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 type GrowthRepository struct {
-	db *sql.DB
+	db        *sql.DB
+	analytics analyticsrepository.Repository
 }
 
+var _ analyticsrepository.Repository = (*GrowthRepository)(nil)
+
 func NewGrowthRepository(db *sql.DB) *GrowthRepository {
-	return &GrowthRepository{db: db}
+	return &GrowthRepository{db: db, analytics: analyticsrepository.New(db)}
 }
 
 func scanGrowthPost(scanner interface{ Scan(...any) error }) (*domain.Post, error) {
@@ -102,74 +106,9 @@ func (r *GrowthRepository) RestoreVersion(ctx context.Context, postID, versionID
 }
 
 func (r *GrowthRepository) RecordEvent(ctx context.Context, postID int64, eventType, actorKey string) error {
-	_, err := r.db.ExecContext(ctx, `INSERT INTO analytics_events (post_id, event_type, actor_key)
-		VALUES ($1, $2, $3)`, postID, eventType, actorKey)
-	return err
+	return r.analytics.RecordEvent(ctx, postID, eventType, actorKey)
 }
 
 func (r *GrowthRepository) AnalyticsSummary(ctx context.Context) (*domain.AnalyticsSummary, error) {
-	summary := &domain.AnalyticsSummary{}
-	err := r.db.QueryRowContext(ctx, `SELECT
-		COUNT(*), COUNT(*) FILTER (WHERE status = 'published'),
-		COALESCE(SUM(views_count), 0), COALESCE(SUM(likes_count), 0)
-		FROM posts`).Scan(&summary.TotalPosts, &summary.PublishedPosts, &summary.TotalViews, &summary.TotalLikes)
-	if err != nil {
-		return nil, err
-	}
-	if err := r.db.QueryRowContext(ctx, `SELECT
-		(SELECT COUNT(*) FROM comments),
-		(SELECT COUNT(*) FROM comments WHERE status = 'pending'),
-		(SELECT COUNT(DISTINCT comment_id) FROM comment_reports)`).
-		Scan(&summary.TotalComments, &summary.PendingComments, &summary.ReportedItems); err != nil {
-		return nil, err
-	}
-	rows, err := r.db.QueryContext(ctx, `SELECT `+growthPostColumns+` FROM posts p
-		WHERE p.status = 'published' ORDER BY p.views_count DESC, p.likes_count DESC LIMIT 5`)
-	if err != nil {
-		return nil, err
-	}
-	summary.TopPosts = make([]*domain.Post, 0)
-	for rows.Next() {
-		post, scanErr := scanGrowthPost(rows)
-		if scanErr != nil {
-			rows.Close()
-			return nil, scanErr
-		}
-		summary.TopPosts = append(summary.TopPosts, post)
-	}
-	rows.Close()
-	eventRows, err := r.db.QueryContext(ctx, `SELECT to_char(day, 'YYYY-MM-DD'), COUNT(e.id)
-		FROM generate_series(CURRENT_DATE - INTERVAL '13 day', CURRENT_DATE, INTERVAL '1 day') day
-		LEFT JOIN analytics_events e ON e.created_at >= day AND e.created_at < day + INTERVAL '1 day'
-		GROUP BY day ORDER BY day`)
-	if err != nil {
-		return nil, err
-	}
-	defer eventRows.Close()
-	summary.DailyEvents = make([]domain.DailyEventCount, 0)
-	for eventRows.Next() {
-		var item domain.DailyEventCount
-		if err := eventRows.Scan(&item.Date, &item.Count); err != nil {
-			return nil, err
-		}
-		summary.DailyEvents = append(summary.DailyEvents, item)
-	}
-	if err := eventRows.Err(); err != nil {
-		return nil, err
-	}
-	alertRows, err := r.db.QueryContext(ctx, `SELECT id, type, COALESCE(title,''), COALESCE(body,''), COALESCE(href,''), created_at
-		FROM notifications WHERE type LIKE 'ai_%' AND read_at IS NULL ORDER BY created_at DESC LIMIT 5`)
-	if err != nil {
-		return nil, err
-	}
-	defer alertRows.Close()
-	summary.AIAlerts = make([]domain.SystemAlert, 0)
-	for alertRows.Next() {
-		var alert domain.SystemAlert
-		if err := alertRows.Scan(&alert.ID, &alert.Type, &alert.Title, &alert.Body, &alert.Href, &alert.CreatedAt); err != nil {
-			return nil, err
-		}
-		summary.AIAlerts = append(summary.AIAlerts, alert)
-	}
-	return summary, alertRows.Err()
+	return r.analytics.AnalyticsSummary(ctx)
 }
