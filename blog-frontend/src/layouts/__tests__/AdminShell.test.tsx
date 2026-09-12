@@ -103,7 +103,9 @@ describe("AdminShell navigation utilities", () => {
       await screen.findByRole("link", { name: "Configured Site" }),
     ).toBeInTheDocument();
 
-    const pageContainer = container.querySelector('[data-slot="page-container"]');
+    const pageContainer = container.querySelector(
+      '[data-slot="page-container"]',
+    );
     expect(pageContainer).toContainElement(
       screen.getByRole("heading", { name: "Dashboard" }),
     );
