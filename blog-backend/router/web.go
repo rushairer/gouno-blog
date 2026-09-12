@@ -20,6 +20,8 @@ import (
 	pagecontroller "github.com/rushairer/blog-backend/internal/page/controller"
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
 	"github.com/rushairer/blog-backend/internal/ratelimit"
+	recommendationcontroller "github.com/rushairer/blog-backend/internal/recommendation/controller"
+	recommendationservice "github.com/rushairer/blog-backend/internal/recommendation/service"
 	"github.com/rushairer/blog-backend/internal/service"
 	sitecontroller "github.com/rushairer/blog-backend/internal/site/controller"
 	siteservice "github.com/rushairer/blog-backend/internal/site/service"
@@ -46,6 +48,7 @@ type WebRouterOptions struct {
 	SiteSvc            siteservice.Service
 	CommunitySvc       *communityservice.CommunityService
 	AnalyticsSvc       analyticsservice.Service
+	RecommendationSvc  recommendationservice.Service
 	GrowthSvc          *service.GrowthService
 	AgentCtrl          *controller.AgentController
 	Logger             *zap.Logger
@@ -56,7 +59,7 @@ type WebRouterOptions struct {
 }
 
 func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
-	if opts.PostSvc == nil || opts.PageSvc == nil || opts.MediaSvc == nil || opts.TaxonomySvc == nil || opts.SiteSvc == nil || opts.CommunitySvc == nil || opts.AnalyticsSvc == nil || opts.GrowthSvc == nil {
+	if opts.PostSvc == nil || opts.PageSvc == nil || opts.MediaSvc == nil || opts.TaxonomySvc == nil || opts.SiteSvc == nil || opts.CommunitySvc == nil || opts.AnalyticsSvc == nil || opts.RecommendationSvc == nil || opts.GrowthSvc == nil {
 		panic("RegisterWebRouterWithOptions: all application services are required")
 	}
 	if opts.Verifier == nil || opts.AccessService == nil {
@@ -108,6 +111,7 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 	growthSvc := opts.GrowthSvc
 	growthCtrl := controller.NewGrowthController(growthSvc, postSvc, communitySvc)
 	analyticsCtrl := analyticscontroller.New(opts.AnalyticsSvc, communitySvc)
+	recommendationCtrl := recommendationcontroller.New(opts.RecommendationSvc, communitySvc)
 
 	if opts.MediaStore != nil {
 		if _, local := opts.MediaStore.LocalPath(".probe"); local && os.MkdirAll(opts.MediaDir, 0o750) == nil {
@@ -181,7 +185,7 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 		api.GET("/posts", ctrl.List)
 		api.GET("/posts/:slugOrID", ctrl.Get)
 		api.POST("/posts/:slugOrID/view", analyticsCtrl.TrackView)
-		api.GET("/posts/:slugOrID/related", growthCtrl.RelatedPosts)
+		api.GET("/posts/:slugOrID/related", recommendationCtrl.RelatedPosts)
 		api.GET("/posts/:slugOrID/community", communityCtrl.State)
 		api.POST("/posts/:slugOrID/like", communityCtrl.Like)
 		api.PUT("/posts/:slugOrID/like", communityCtrl.Like)

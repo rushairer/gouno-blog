@@ -278,6 +278,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 	communitySvc := communityservice.NewCommunityService(communityrepository.NewCommunityRepository(cfg.DB), postRepo)
 	mediaSvc := mediaservice.New(mediarepository.New(cfg.DB))
 	analyticsSvc := newAnalyticsService(cfg.DB)
+	recommendationSvc := newRecommendationService(cfg.DB)
 	growthSvc := service.NewGrowthService(repository.NewGrowthRepository(cfg.DB))
 	service.StartScheduledPublisher(ctx, postSvc, cfg.Logger)
 
@@ -335,7 +336,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		VisitorSecret: visitorSecret, MediaDir: mediaDir, MediaStore: mediaStore,
 		CORSAllowedOrigins: cfg.Global.WebServerConfig.CORSAllowedOrigins,
 		PostSvc:            postSvc, PageSvc: pageSvc, MediaSvc: mediaSvc, TaxonomySvc: taxonomySvc, SiteSvc: siteSvc, CommunitySvc: communitySvc,
-		AnalyticsSvc: analyticsSvc, GrowthSvc: growthSvc, AgentCtrl: agentCtrl, Logger: cfg.Logger, Verifier: verifier,
+		AnalyticsSvc: analyticsSvc, RecommendationSvc: recommendationSvc, GrowthSvc: growthSvc, AgentCtrl: agentCtrl, Logger: cfg.Logger, Verifier: verifier,
 		AccessService: accessService, SecureCookies: cfg.Global.WebServerConfig.ResolveSecureCookies(cfg.Env),
 		BFFClient: bffClient,
 	})

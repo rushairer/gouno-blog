@@ -1,44 +1,25 @@
 package controller
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/access"
-	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/service"
 	"github.com/rushairer/blog-backend/middleware"
 	"github.com/rushairer/gouno"
 )
 
-type publishedPostResolver interface {
-	ResolvePublishedPost(context.Context, string) (*domain.Post, error)
-}
-
 type GrowthController struct {
 	growth     *service.GrowthService
 	posts      *service.PostService
-	community  publishedPostResolver
 	postPolicy access.PostPolicy
 }
 
-func NewGrowthController(growth *service.GrowthService, posts *service.PostService, community publishedPostResolver) *GrowthController {
-	return &GrowthController{growth: growth, posts: posts, community: community}
-}
-
-func (ctrl *GrowthController) RelatedPosts(c *gin.Context) {
-	post, err := ctrl.community.ResolvePublishedPost(c.Request.Context(), c.Param("slugOrID"))
-	if err != nil {
-		WriteDomainError(c, err)
-		return
-	}
-	posts, err := ctrl.growth.RelatedPosts(c.Request.Context(), post)
-	if err != nil {
-		WriteDomainError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(posts))
+// NewGrowthController retains the third argument only as migration compatibility
+// until Post Version HTTP ownership leaves the legacy Growth controller.
+func NewGrowthController(growth *service.GrowthService, posts *service.PostService, _ any) *GrowthController {
+	return &GrowthController{growth: growth, posts: posts}
 }
 
 func (ctrl *GrowthController) ListVersions(c *gin.Context) {

@@ -17,6 +17,8 @@ import (
 	mediaservice "github.com/rushairer/blog-backend/internal/media/service"
 	pagerepository "github.com/rushairer/blog-backend/internal/page/repository"
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
+	recommendationrepository "github.com/rushairer/blog-backend/internal/recommendation/repository"
+	recommendationservice "github.com/rushairer/blog-backend/internal/recommendation/service"
 	"github.com/rushairer/blog-backend/internal/repository"
 	"github.com/rushairer/blog-backend/internal/service"
 	siterepository "github.com/rushairer/blog-backend/internal/site/repository"
@@ -39,15 +41,16 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 	RegisterWebRouterWithOptions(engine, WebRouterOptions{
 		AuthOptions:   middleware.AuthOptions{Issuer: "http://issuer.test", Audience: "blog-bff", ClientID: "blog-bff"},
 		VisitorSecret: "test-secret", MediaDir: t.TempDir(), MediaStore: media.NewLocal(t.TempDir()),
-		PostSvc:      service.NewPostService(postRepo),
-		PageSvc:      pageservice.NewPageService(pagerepository.NewPageRepository(nil)),
-		MediaSvc:     mediaservice.New(mediarepository.New(nil)),
-		TaxonomySvc:  taxonomyservice.New(taxonomyrepository.New(nil)),
-		SiteSvc:      siteservice.New(siterepository.New(nil)),
-		CommunitySvc: communityservice.NewCommunityService(communityrepository.NewCommunityRepository(nil), postRepo),
-		AnalyticsSvc: analyticsservice.New(analyticsrepository.New(nil)),
-		GrowthSvc:    service.NewGrowthService(repository.NewGrowthRepository(nil)),
-		Verifier:     auth.NewVerifier("http://127.0.0.1:1/jwks"), AccessService: access.NewService(nil, access.Bootstrap{}),
+		PostSvc:           service.NewPostService(postRepo),
+		PageSvc:           pageservice.NewPageService(pagerepository.NewPageRepository(nil)),
+		MediaSvc:          mediaservice.New(mediarepository.New(nil)),
+		TaxonomySvc:       taxonomyservice.New(taxonomyrepository.New(nil)),
+		SiteSvc:           siteservice.New(siterepository.New(nil)),
+		CommunitySvc:      communityservice.NewCommunityService(communityrepository.NewCommunityRepository(nil), postRepo),
+		AnalyticsSvc:      analyticsservice.New(analyticsrepository.New(nil)),
+		RecommendationSvc: recommendationservice.New(recommendationrepository.New(nil)),
+		GrowthSvc:         service.NewGrowthService(repository.NewGrowthRepository(nil)),
+		Verifier:          auth.NewVerifier("http://127.0.0.1:1/jwks"), AccessService: access.NewService(nil, access.Bootstrap{}),
 	})
 
 	foundUpdate := false
@@ -55,6 +58,7 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 	foundView := false
 	viewHandler := ""
 	foundRelated := false
+	relatedHandler := ""
 	foundAnalytics := false
 	analyticsHandler := ""
 	foundMedia := false
@@ -83,6 +87,7 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 		}
 		if route.Method == "GET" && route.Path == "/api/posts/:slugOrID/related" {
 			foundRelated = true
+			relatedHandler = route.Handler
 		}
 		if route.Method == "GET" && route.Path == "/api/admin/analytics" {
 			foundAnalytics = true
@@ -126,6 +131,9 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 	}
 	if !strings.Contains(analyticsHandler, "internal/analytics/controller") {
 		t.Fatalf("analytics summary must be owned by canonical Analytics controller, handler=%q", analyticsHandler)
+	}
+	if !strings.Contains(relatedHandler, "internal/recommendation/controller") {
+		t.Fatalf("related posts must be owned by canonical Recommendation controller, handler=%q", relatedHandler)
 	}
 	if !strings.Contains(adminMediaHandler, "internal/media/controller") {
 		t.Fatalf("admin media must be owned by canonical Media controller, handler=%q", adminMediaHandler)

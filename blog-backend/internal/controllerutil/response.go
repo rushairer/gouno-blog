@@ -15,6 +15,7 @@ import (
 	"github.com/rushairer/blog-backend/internal/knowledge"
 	mediaservice "github.com/rushairer/blog-backend/internal/media/service"
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
+	recommendationservice "github.com/rushairer/blog-backend/internal/recommendation/service"
 	"github.com/rushairer/blog-backend/internal/service"
 	siteservice "github.com/rushairer/blog-backend/internal/site/service"
 	taxonomyservice "github.com/rushairer/blog-backend/internal/taxonomy/service"
@@ -104,6 +105,7 @@ func WriteDomainError(c *gin.Context, err error) {
 	case errors.Is(err, sql.ErrNoRows),
 		errors.Is(err, service.ErrPostNotFound),
 		errors.Is(err, communityservice.ErrPostNotFound),
+		errors.Is(err, recommendationservice.ErrPostNotFound),
 		errors.Is(err, taxonomyservice.ErrCategoryNotFound),
 		errors.Is(err, mediaservice.ErrMediaNotFound),
 		errors.Is(err, pageservice.ErrPageNotFound),
