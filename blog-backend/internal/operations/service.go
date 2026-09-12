@@ -19,18 +19,33 @@ import (
 	"go.uber.org/zap"
 )
 
+type GovernanceToolCallWriter interface {
+	CreateToolCallTx(context.Context, *sql.Tx, *domain.AgentToolCall) error
+}
+
+type GovernanceApprovalWriter interface {
+	CreateApprovalTx(context.Context, *sql.Tx, *domain.AgentApproval) error
+}
+
 type Service struct {
 	db         *sql.DB
 	tools      *tool.Registry
 	logger     *zap.Logger
 	wg         sync.WaitGroup
-	repo       *repository.AgentRepository
+	toolCalls  GovernanceToolCallWriter
+	approvals  GovernanceApprovalWriter
 	posts      *postservice.PostService
 	transactor *repository.Transactor
 }
 
+// ConfigureGovernance keeps the transitional flat AgentRepository call shape
+// while composition migrates to canonical Run and Approval repositories.
 func (s *Service) ConfigureGovernance(repo *repository.AgentRepository, posts *postservice.PostService) {
-	s.repo, s.posts = repo, posts
+	s.ConfigureGovernanceRepositories(repo, repo, posts)
+}
+
+func (s *Service) ConfigureGovernanceRepositories(toolCalls GovernanceToolCallWriter, approvals GovernanceApprovalWriter, posts *postservice.PostService) {
+	s.toolCalls, s.approvals, s.posts = toolCalls, approvals, posts
 }
 
 func NewService(db *sql.DB, tools *tool.Registry, logger *zap.Logger, transactor *repository.Transactor) *Service {
@@ -662,7 +677,7 @@ func (s *Service) ListCandidateSets(ctx context.Context) ([]*domain.ContentCandi
 }
 
 func (s *Service) SelectCandidate(ctx context.Context, setID, candidateID int64) error {
-	if s.repo == nil || s.posts == nil {
+	if s.toolCalls == nil || s.approvals == nil || s.posts == nil {
 		return errors.New("candidate governance is not configured")
 	}
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -690,13 +705,13 @@ func (s *Service) SelectCandidate(ctx context.Context, setID, candidateID int64)
 	before, _ := json.Marshal(post)
 	call := &domain.AgentToolCall{RunID: runID, ToolName: "content.select_candidate", RiskLevel: domain.ToolRiskPropose,
 		Arguments: json.RawMessage(fmt.Sprintf(`{"candidate_set_id":%d,"candidate_id":%d}`, setID, candidateID)), Status: domain.ToolCallExecuted}
-	if err := s.repo.CreateToolCallTx(ctx, tx, call); err != nil {
+	if err := s.toolCalls.CreateToolCallTx(ctx, tx, call); err != nil {
 		_ = tx.Rollback()
 		return err
 	}
 	approval := &domain.AgentApproval{RunID: runID, ToolCallID: call.ID, ActionType: "update_post", TargetType: "post",
 		TargetID: &postID, ProposedPayload: rawPayload, BeforeSnapshot: before}
-	if err := s.repo.CreateApprovalTx(ctx, tx, approval); err != nil {
+	if err := s.approvals.CreateApprovalTx(ctx, tx, approval); err != nil {
 		_ = tx.Rollback()
 		return err
 	}
