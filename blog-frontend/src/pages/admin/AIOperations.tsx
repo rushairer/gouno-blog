@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   Clock3,
   GitBranch,
@@ -30,19 +36,9 @@ import { InboxWorkspace } from "../../components/agent/InboxWorkspace";
 import { RecordsWorkspace } from "../../components/agent/AgentRunRecords";
 import { WorkflowWorkspace } from "../../components/agent/WorkflowWorkspace";
 import { WorkflowRunRecords } from "../../components/agent/WorkflowRunRecords";
-import {
-  AdminPage,
-  AdminPageHeader,
-  AdminPageState,
-  Button,
-  SubnavTabs,
-  Tab,
-  TabList,
-  TabPanel,
-  Tabs,
-  ToastProvider,
-  useToast,
-} from "@gouno/ui-legacy";
+import { Button, Card, Segmented, Skeleton, Tabs, Tag } from "@gouno/ui/core";
+import { PageHeader } from "@gouno/ui/gouno";
+import { ToastProvider, useToast } from "@gouno/ui-legacy";
 import { useI18n } from "../../i18n";
 import "../../styles/agent-console.css";
 
@@ -344,153 +340,189 @@ function AgentConsoleContent() {
     }
   };
 
+  const pageHeader = (
+    <PageHeader
+      title={t("agent.title")}
+      description={t("agent.pageDescription")}
+      actions={
+        <Button
+          variant="outline"
+          size="small"
+          type="button"
+          onClick={() => void refresh()}
+          icon={<RefreshCw />}
+        >
+          {t("agent.refresh")}
+        </Button>
+      }
+    />
+  );
+
   if (loading)
     return (
-      <AdminPageState
-        title={t("agent.title")}
-        description={t("agent.pageDescription")}
-        label={t("agent.loading")}
-      />
+      <div className="agent-console flex flex-col gap-6">
+        {pageHeader}
+        <div
+          className="flex flex-col gap-6"
+          role="status"
+          aria-label={t("agent.loading")}
+          aria-live="polite"
+        >
+          <div className="grid gap-4 md:grid-cols-3">
+            {Array.from({ length: 3 }, (_, index) => (
+              <Card key={index} padding="base">
+                <Skeleton className="h-20 w-full" />
+              </Card>
+            ))}
+          </div>
+          <Card padding="base">
+            <Skeleton className="h-64 w-full" />
+          </Card>
+        </div>
+      </div>
     );
 
-  const tabs = [
-    ["overview", Sparkles, t("agent.overview")],
-    ["inbox", ShieldCheck, t("agent.inbox")],
-    ["automation", GitBranch, t("agent.automation")],
-    ["records", Clock3, t("agent.records")],
-  ] as const;
+  const tabs: Array<{ key: ConsoleTab; label: ReactNode }> = [
+    {
+      key: "overview",
+      label: (
+        <span className="inline-flex items-center gap-2">
+          <Sparkles aria-hidden="true" className="size-4" />
+          <span>{t("agent.overview")}</span>
+        </span>
+      ),
+    },
+    {
+      key: "inbox",
+      label: (
+        <span className="inline-flex items-center gap-2">
+          <ShieldCheck aria-hidden="true" className="size-4" />
+          <span>{t("agent.inbox")}</span>
+          {pendingCount > 0 ? <Tag color="warning">{pendingCount}</Tag> : null}
+        </span>
+      ),
+    },
+    {
+      key: "automation",
+      label: (
+        <span className="inline-flex items-center gap-2">
+          <GitBranch aria-hidden="true" className="size-4" />
+          <span>{t("agent.automation")}</span>
+        </span>
+      ),
+    },
+    {
+      key: "records",
+      label: (
+        <span className="inline-flex items-center gap-2">
+          <Clock3 aria-hidden="true" className="size-4" />
+          <span>{t("agent.records")}</span>
+        </span>
+      ),
+    },
+  ];
 
   return (
-    <AdminPage className="agent-console">
-      <AdminPageHeader
-        title={t("agent.title")}
-        description={t("agent.pageDescription")}
-        actions={
-          <Button
-            variant="secondary"
-            size="compact"
-            type="button"
-            onClick={() => void refresh()}
-            icon={<RefreshCw />}
-          >
-            {t("agent.refresh")}
-          </Button>
-        }
-      />
-      <Tabs
-        value={tab}
-        onValueChange={(value) => selectTab(value as ConsoleTab)}
+    <div className="agent-console flex flex-col gap-6">
+      {pageHeader}
+      <Tabs<ConsoleTab>
         id="agent-workspace"
-      >
-        <TabList aria-label={t("agent.title")}>
-          {tabs.map(([value, Icon, label]) => (
-            <Tab key={value} value={value}>
-              <Icon aria-hidden="true" />
-              <span>{label}</span>
-              {value === "inbox" && pendingCount > 0 ? (
-                <b>{pendingCount}</b>
-              ) : null}
-            </Tab>
-          ))}
-        </TabList>
-        <TabPanel value={tab}>
-          <div className="agent-console__main">
-            {tab === "overview" ? (
-              <WorkspaceOverview
-                locale={locale}
-                approvals={approvals}
-                suggestions={suggestions}
-                candidateSets={candidateSets}
-                mediaCandidates={mediaCandidates}
-                workflows={workflows}
-                onNavigate={selectTab}
-              />
-            ) : null}
+        activeKey={tab}
+        items={tabs}
+        onChange={selectTab}
+        aria-label={t("agent.title")}
+      />
+      <div className="agent-console__main">
+        {tab === "overview" ? (
+          <WorkspaceOverview
+            locale={locale}
+            approvals={approvals}
+            suggestions={suggestions}
+            candidateSets={candidateSets}
+            mediaCandidates={mediaCandidates}
+            workflows={workflows}
+            onNavigate={selectTab}
+          />
+        ) : null}
 
-            {tab === "automation" ? (
-              <WorkflowWorkspace
+        {tab === "automation" ? (
+          <WorkflowWorkspace
+            workflows={workflows}
+            runs={workflowRuns}
+            metrics={workflowMetrics}
+            agents={agents}
+            tools={tools}
+            locale={locale}
+            onRun={queueWorkflow}
+            onPreflight={preflightWorkflow}
+            onRefresh={refresh}
+            onSave={saveWorkflow}
+          />
+        ) : null}
+
+        {tab === "inbox" ? (
+          <InboxWorkspace
+            locale={locale}
+            approvals={approvals}
+            selectedApproval={selectedApproval}
+            onSelectApproval={setSelectedApproval}
+            onReviewApproval={review}
+            interactions={interactions}
+            onResolvedInteraction={refresh}
+            suggestions={suggestions}
+            candidateSets={candidateSets}
+            mediaCandidates={mediaCandidates}
+            editorialTasks={editorialTasks}
+            onRefresh={refresh}
+          />
+        ) : null}
+
+        {tab === "records" ? (
+          <div className="records-hub section-stack">
+            <Segmented<"workflow" | "agent">
+              aria-label={locale === "zh" ? "运行中心类型" : "Run center type"}
+              value={recordType}
+              onChange={(next) => {
+                setRecordType(next);
+                const url = new URL(window.location.href);
+                url.searchParams.set("record", next);
+                window.history.replaceState(null, "", url);
+              }}
+              options={[
+                {
+                  value: "workflow",
+                  label: locale === "zh" ? "Workflow 任务" : "Workflow tasks",
+                },
+                {
+                  value: "agent",
+                  label: locale === "zh" ? "Agent 运行" : "Agent runs",
+                },
+              ]}
+            />
+            {recordType === "agent" ? (
+              <RecordsWorkspace
+                locale={locale}
+                runs={runs}
+                agents={agents}
+                selectedRun={selectedRun}
+                onInspect={(run) => void inspectRun(run)}
+                onClearInspect={() => setSelectedRun(null)}
+                onDelete={(run) => void deleteAgentRun(run)}
+                formatDateTime={formatDateTime}
+              />
+            ) : (
+              <WorkflowRunRecords
+                locale={locale}
                 workflows={workflows}
                 runs={workflowRuns}
-                metrics={workflowMetrics}
-                agents={agents}
-                tools={tools}
-                locale={locale}
-                onRun={queueWorkflow}
-                onPreflight={preflightWorkflow}
-                onRefresh={refresh}
-                onSave={saveWorkflow}
-              />
-            ) : null}
-
-            {tab === "inbox" ? (
-              <InboxWorkspace
-                locale={locale}
-                approvals={approvals}
-                selectedApproval={selectedApproval}
-                onSelectApproval={setSelectedApproval}
-                onReviewApproval={review}
-                interactions={interactions}
-                onResolvedInteraction={refresh}
-                suggestions={suggestions}
-                candidateSets={candidateSets}
-                mediaCandidates={mediaCandidates}
-                editorialTasks={editorialTasks}
+                formatDateTime={formatDateTime}
                 onRefresh={refresh}
               />
-            ) : null}
-
-            {tab === "records" ? (
-              <div className="records-hub section-stack">
-                <SubnavTabs
-                  aria-label={
-                    locale === "zh" ? "运行中心类型" : "Run center type"
-                  }
-                  value={recordType}
-                  onValueChange={(value) => {
-                    const next = value as typeof recordType;
-                    setRecordType(next);
-                    const url = new URL(window.location.href);
-                    url.searchParams.set("record", next);
-                    window.history.replaceState(null, "", url);
-                  }}
-                  items={[
-                    {
-                      value: "workflow",
-                      label:
-                        locale === "zh" ? "Workflow 任务" : "Workflow tasks",
-                    },
-                    {
-                      value: "agent",
-                      label: locale === "zh" ? "Agent 运行" : "Agent runs",
-                    },
-                  ]}
-                />
-                {recordType === "agent" ? (
-                  <RecordsWorkspace
-                    locale={locale}
-                    runs={runs}
-                    agents={agents}
-                    selectedRun={selectedRun}
-                    onInspect={(run) => void inspectRun(run)}
-                    onClearInspect={() => setSelectedRun(null)}
-                    onDelete={(run) => void deleteAgentRun(run)}
-                    formatDateTime={formatDateTime}
-                  />
-                ) : (
-                  <WorkflowRunRecords
-                    locale={locale}
-                    workflows={workflows}
-                    runs={workflowRuns}
-                    formatDateTime={formatDateTime}
-                    onRefresh={refresh}
-                  />
-                )}
-              </div>
-            ) : null}
+            )}
           </div>
-        </TabPanel>
-      </Tabs>
-    </AdminPage>
+        ) : null}
+      </div>
+    </div>
   );
 }
 

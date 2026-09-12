@@ -7,17 +7,14 @@
   "legacyVersion": "0.1.0",
   "allowedLegacyImports": {
     "AdminPage": [
-      "src/pages/admin/AIOperations.tsx",
       "src/pages/admin/AISettings.tsx",
       "src/pages/admin/SiteSettings.tsx"
     ],
     "AdminPageHeader": [
-      "src/pages/admin/AIOperations.tsx",
       "src/pages/admin/AISettings.tsx",
       "src/pages/admin/SiteSettings.tsx"
     ],
     "AdminPageState": [
-      "src/pages/admin/AIOperations.tsx",
       "src/pages/admin/AISettings.tsx",
       "src/pages/admin/PageEditor.tsx",
       "src/pages/admin/PostEditor.tsx",
@@ -48,7 +45,6 @@
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/components/agent/WorkspaceOverview.tsx",
       "src/components/agent/tools/ToolBindingsEditor.tsx",
-      "src/pages/admin/AIOperations.tsx",
       "src/pages/admin/AISettings.tsx",
       "src/pages/admin/PageEditor.tsx",
       "src/pages/admin/PostEditor.tsx",
@@ -181,12 +177,10 @@
     ],
     "SubnavTabs": [
       "src/components/__tests__/ui.test.tsx",
-      "src/components/agent/AdvancedWorkspace.tsx",
-      "src/pages/admin/AIOperations.tsx"
+      "src/components/agent/AdvancedWorkspace.tsx"
     ],
     "Tab": [
       "src/components/__tests__/ui.test.tsx",
-      "src/pages/admin/AIOperations.tsx",
       "src/pages/admin/PageEditor.tsx",
       "src/pages/admin/PostEditor.tsx",
       "src/pages/admin/SiteSettings.tsx"
@@ -194,19 +188,16 @@
     "TableSkeleton": ["src/components/__tests__/ui.test.tsx"],
     "TabList": [
       "src/components/__tests__/ui.test.tsx",
-      "src/pages/admin/AIOperations.tsx",
       "src/pages/admin/PageEditor.tsx",
       "src/pages/admin/PostEditor.tsx",
       "src/pages/admin/SiteSettings.tsx"
     ],
     "TabPanel": [
       "src/components/__tests__/ui.test.tsx",
-      "src/pages/admin/AIOperations.tsx",
       "src/pages/admin/SiteSettings.tsx"
     ],
     "Tabs": [
       "src/components/__tests__/ui.test.tsx",
-      "src/pages/admin/AIOperations.tsx",
       "src/pages/admin/PageEditor.tsx",
       "src/pages/admin/PostEditor.tsx",
       "src/pages/admin/SiteSettings.tsx"
