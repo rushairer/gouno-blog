@@ -12,8 +12,7 @@
     "Button": [
       "src/components/__tests__/ui.test.tsx",
       "src/components/agent/ConnectorWorkspace.tsx",
-      "src/components/agent/WorkflowWorkspace.tsx",
-      "src/pages/admin/SiteSettings.tsx"
+      "src/components/agent/WorkflowWorkspace.tsx"
     ],
     "ButtonLink": [
       "src/components/__tests__/ui.test.tsx",
@@ -44,19 +43,16 @@
     ],
     "Feedback": [
       "src/components/agent/ConnectorWorkspace.tsx",
-      "src/components/agent/WorkflowWorkspace.tsx",
-      "src/pages/admin/SiteSettings.tsx"
+      "src/components/agent/WorkflowWorkspace.tsx"
     ],
     "FilterBar": ["src/components/agent/WorkflowWorkspace.tsx"],
     "FormActions": [
       "src/components/__tests__/ui.test.tsx",
-      "src/components/agent/WorkflowWorkspace.tsx",
-      "src/pages/admin/SiteSettings.tsx"
+      "src/components/agent/WorkflowWorkspace.tsx"
     ],
     "FormLayout": [
       "src/components/__tests__/ui.test.tsx",
-      "src/components/agent/WorkflowWorkspace.tsx",
-      "src/pages/admin/SiteSettings.tsx"
+      "src/components/agent/WorkflowWorkspace.tsx"
     ],
     "IconButton": [
       "src/components/__tests__/ui.test.tsx",
@@ -67,8 +63,7 @@
     "Panel": ["src/components/agent/ConnectorWorkspace.tsx"],
     "PanelHeader": [
       "src/components/agent/ConnectorWorkspace.tsx",
-      "src/components/agent/WorkflowWorkspace.tsx",
-      "src/pages/admin/SiteSettings.tsx"
+      "src/components/agent/WorkflowWorkspace.tsx"
     ],
     "SectionHeading": ["src/components/__tests__/ui.test.tsx"],
     "SectionNav": ["src/components/__tests__/ui.test.tsx"],
@@ -80,23 +75,11 @@
     "Skeleton": ["src/components/__tests__/ui.test.tsx"],
     "StatusBadge": ["src/components/__tests__/ui.test.tsx"],
     "SubnavTabs": ["src/components/__tests__/ui.test.tsx"],
-    "Tab": [
-      "src/components/__tests__/ui.test.tsx",
-      "src/pages/admin/SiteSettings.tsx"
-    ],
+    "Tab": ["src/components/__tests__/ui.test.tsx"],
     "TableSkeleton": ["src/components/__tests__/ui.test.tsx"],
-    "TabList": [
-      "src/components/__tests__/ui.test.tsx",
-      "src/pages/admin/SiteSettings.tsx"
-    ],
-    "TabPanel": [
-      "src/components/__tests__/ui.test.tsx",
-      "src/pages/admin/SiteSettings.tsx"
-    ],
-    "Tabs": [
-      "src/components/__tests__/ui.test.tsx",
-      "src/pages/admin/SiteSettings.tsx"
-    ],
+    "TabList": ["src/components/__tests__/ui.test.tsx"],
+    "TabPanel": ["src/components/__tests__/ui.test.tsx"],
+    "Tabs": ["src/components/__tests__/ui.test.tsx"],
     "Toast": ["src/components/auth/GlobalStepUpBoundary.tsx"],
     "ToastProvider": [
       "src/App.tsx",
@@ -132,9 +115,6 @@
       "src/pages/admin/Tags.tsx",
       "src/pages/admin/Users.tsx"
     ],
-    "WorkspacePanel": [
-      "src/components/agent/WorkflowWorkspace.tsx",
-      "src/pages/admin/SiteSettings.tsx"
-    ]
+    "WorkspacePanel": ["src/components/agent/WorkflowWorkspace.tsx"]
   }
 }
