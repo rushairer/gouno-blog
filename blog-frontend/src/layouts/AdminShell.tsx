@@ -12,6 +12,7 @@ import {
 import {
   AppShell,
   NavigationGroup,
+  PageContainer,
   navigationItemClass,
 } from "@gouno/ui/gouno";
 import { ThemeToggle, useTheme } from "@gouno/ui/theme";
@@ -271,15 +272,17 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         </div>
       }
     >
-      {logoutError ? (
-        <Alert
-          type="error"
-          showIcon
-          title="退出登录失败"
-          description={logoutError}
-        />
-      ) : null}
-      {children}
+      <PageContainer>
+        {logoutError ? (
+          <Alert
+            type="error"
+            showIcon
+            title="退出登录失败"
+            description={logoutError}
+          />
+        ) : null}
+        {children}
+      </PageContainer>
     </AppShell>
   );
 }
