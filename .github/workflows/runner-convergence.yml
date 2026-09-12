@@ -1,0 +1,78 @@
+name: Runner convergence validation
+
+on:
+  push:
+    branches:
+      - refactor/runner-dependency-model
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: blog-backend/go.mod
+          cache-dependency-path: blog-backend/go.sum
+
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+
+      - name: Apply fail-closed Runner convergence
+        run: python3 scripts/apply_runner_convergence.py
+
+      - name: Format changed Go files
+        run: |
+          gofmt -w \
+            blog-backend/internal/agent/runner.go \
+            blog-backend/internal/agent/runner_ports.go \
+            blog-backend/internal/agent/run_lifecycle.go \
+            blog-backend/internal/agent/runner_scope_integration_test.go \
+            blog-backend/cmd/gouno/web.go
+
+      - name: Enforce ownership cutover
+        run: |
+          test ! -e blog-backend/internal/repository/agent_repository.go
+          test ! -e blog-backend/internal/repository/run_repository.go
+          test ! -e blog-backend/internal/repository/approval_repository.go
+          test ! -e blog-backend/internal/repository/media_candidate_repository.go
+          test ! -e blog-backend/internal/repository/agent_definition_repository.go
+          test ! -e blog-backend/internal/repository/system_notification_repository.go
+          test ! -e blog-backend/internal/repository/workflow_scope_repository.go
+          ! grep -R 'repository.AgentRepository\|repository.NewAgentRepository' blog-backend/internal/agent blog-backend/cmd/gouno
+          ! grep -R 'internal/repository' blog-backend/internal/agent/runner.go blog-backend/internal/agent/runner_scope_integration_test.go blog-backend/cmd/gouno/web.go
+          test -e blog-backend/internal/repository/transaction.go
+
+      - name: Test
+        working-directory: blog-backend
+        run: go test ./...
+
+      - name: Race detector
+        working-directory: blog-backend
+        run: go test -race ./...
+
+      - name: Vet
+        working-directory: blog-backend
+        run: go vet ./...
+
+      - name: Vulnerability scan
+        working-directory: blog-backend
+        run: govulncheck ./...
+
+      - name: Commit validated business change
+        run: |
+          rm scripts/apply_runner_convergence.py .github/workflows/runner-convergence.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'refactor(agent): cut Runner to canonical stores'
+          git push origin HEAD:refactor/runner-dependency-model
