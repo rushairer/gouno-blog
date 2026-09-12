@@ -28,19 +28,23 @@ type mediaAssetGateway interface {
 	DeleteMedia(context.Context, int64) (*domain.MediaAsset, error)
 }
 
-type ApprovalService struct {
-	repo        *repository.AgentRepository
-	posts       *service.PostService
-	pages       *pageservice.PageService
-	management  *ManagementService
-	growth      *service.GrowthService
-	mediaAssets mediaAssetGateway
-	media       media.Store
-	generation  *GenerationService
+type postVersionReader interface {
+	ListVersions(context.Context, int64) ([]*domain.PostVersion, error)
 }
 
-func NewApprovalService(repo *repository.AgentRepository, posts *service.PostService, management *ManagementService, growth *service.GrowthService, mediaAssets mediaAssetGateway, store media.Store, pages *pageservice.PageService) *ApprovalService {
-	return &ApprovalService{repo: repo, posts: posts, pages: pages, management: management, growth: growth, mediaAssets: mediaAssets, media: store, generation: NewGenerationService(repo, management, mediaAssets, store)}
+type ApprovalService struct {
+	repo         *repository.AgentRepository
+	posts        *service.PostService
+	pages        *pageservice.PageService
+	management   *ManagementService
+	postVersions postVersionReader
+	mediaAssets  mediaAssetGateway
+	media        media.Store
+	generation   *GenerationService
+}
+
+func NewApprovalService(repo *repository.AgentRepository, posts *service.PostService, management *ManagementService, postVersions postVersionReader, mediaAssets mediaAssetGateway, store media.Store, pages *pageservice.PageService) *ApprovalService {
+	return &ApprovalService{repo: repo, posts: posts, pages: pages, management: management, postVersions: postVersions, mediaAssets: mediaAssets, media: store, generation: NewGenerationService(repo, management, mediaAssets, store)}
 }
 
 func (s *ApprovalService) SetGenerationService(generation *GenerationService) {
@@ -229,7 +233,7 @@ func (s *ApprovalService) ApplyMediaCandidate(ctx context.Context, id int64) (*d
 	if err := s.posts.UpdatePost(ctx, post); err != nil {
 		return nil, err
 	}
-	versions, _ := s.growth.ListVersions(ctx, post.ID)
+	versions, _ := s.postVersions.ListVersions(ctx, post.ID)
 	if len(versions) > 0 {
 		_ = s.repo.MarkMediaCandidateApplied(ctx, id, versions[0].ID)
 	}
@@ -313,7 +317,7 @@ func (s *ApprovalService) ApplyMediaCandidates(ctx context.Context, runID int64,
 	if err := s.posts.UpdatePost(ctx, post); err != nil {
 		return nil, err
 	}
-	versions, _ := s.growth.ListVersions(ctx, post.ID)
+	versions, _ := s.postVersions.ListVersions(ctx, post.ID)
 	var versionID int64
 	if len(versions) > 0 {
 		versionID = versions[0].ID
