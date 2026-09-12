@@ -33,20 +33,20 @@
 
 | 任务 | 目标 | 前置 | 状态 |
 | --- | --- | --- | --- |
-| U01a | 修复/解释 Blog branch coverage 阻断 | 阶段 0 | planned |
-| U01b | 修正 gosso-admin 测试 URL 的标准 HTTPS 端口契约 | 阶段 0 | planned |
-| U01c | 共享包安装、展示和三品牌主题验收 | U01a、U01b | planned |
+| U01a | 修复/解释 Blog branch coverage 阻断 | 阶段 0 | verified |
+| U01b | 修正 gosso-admin 测试 URL 的标准 HTTPS 端口契约 | 阶段 0 | verified |
+| U01c | 共享包安装、展示和三品牌主题验收 | U01a、U01b | verified |
 | U01d | 共享包阶段独立复核 | U01c | verified |
-| U02a | Blog 公共 Shell 与发现页 | U01d | planned |
-| U02b | Blog 阅读页与公共状态 | U02a | planned |
-| U02c | Blog 公共页面阶段复核 | U02b | planned |
-| U03a | Blog Admin Shell、Dashboard 与列表模板 | U02c | planned |
-| U03b | Posts/Pages 编辑器与草稿发布流程 | U03a | planned |
-| U03c | Taxonomy、Comments、Notifications、Media、Settings | U03a | planned |
-| U03d | Blog Admin 内容阶段复核 | U03b、U03c | planned |
-| U04a | AI 工作台视图迁移 | U03d | planned |
-| U04b | Connector 展示层迁移 | U04a | planned |
-| U04c | AI/Connector 阶段复核 | U04a、U04b | planned |
+| U02a | Blog 公共 Shell 与发现页 | U01d | verified |
+| U02b | Blog 阅读页与公共状态 | U02a | verified |
+| U02c | Blog 公共页面阶段复核 | U02b | verified |
+| U03a | Blog Admin Shell、Dashboard 与列表模板 | U02c | verified |
+| U03b | Posts/Pages 编辑器与草稿发布流程 | U03a | verified |
+| U03c | Taxonomy、Comments、Notifications、Media、Settings | U03a | verified |
+| U03d | Blog Admin 内容阶段复核 | U03b、U03c | review-pending |
+| U04a | AI 工作台视图迁移 | U03d | implemented-ci-verified |
+| U04b | Connector 展示层迁移 | U04a | hold |
+| U04c | AI/Connector 阶段复核 | U04a、U04b | blocked-by-U04b-hold |
 | U05a | gosso-admin 认证与账户 | U01d | planned |
 | U05b | gosso-admin 认证阶段复核 | U05a | planned |
 | U06a | gosso-admin 系统管理 | U05b | planned |

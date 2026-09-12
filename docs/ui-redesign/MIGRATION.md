@@ -2,6 +2,16 @@
 
 The JSON ledger is authoritative. Implementation and real browser verification are tracked independently. No production data or credentials belong in evidence.
 
+## Current Blog Admin reverse-migration reconciliation (2026-09-13)
+
+- Current `gouno-blog/main`: `6f722dcdd34f3495a293d7a77dff4baf35e1120a`. Current Blog vendored `@gouno/ui` provenance and `rushairer/gouno-ui/main` are both `cb946376e32bcc0db18d13fb09d89d71b5780dca`; the earlier consumer/upstream SHA drift is closed.
+- U03c is `verified`: support-page implementation and current automated quality gates are in main. U03d remains `review-pending` because an independent full rendered/browser pass has not been repeated in the current reconciliation session.
+- U04a is `implemented-ci-verified`: Advanced Settings Providers/Knowledge and the other AI sections use canonical composition; native browser dialogs are forbidden; retired AI/Workflow CSS has been pruned. Workflow has zero generic `.btn` CSS overrides. Formal Browser QA is still pending, so U04a is not marked `verified`.
+- `agent-console.css` has one generic Button selector exception, `.agent-row-actions .btn`. It is explicitly allowlisted only because ConnectorWorkspace shares it. All other generic Button selectors in that stylesheet are rejected by `lint:css`; canonical primitive and `[data-slot]` ownership is rejected by `lint:ui`.
+- U04b is `hold`: root `AGENTS.md` places the Connector frontend workspace under Connector Module Hold. Do not continue Connector presentation/behavior refactoring without an explicit user instruction naming Connector work. U04c is therefore blocked on the hold.
+- Latest clean Stage 16 PR #186 passed both CI and Images before merge. This proves formatter/lint/UI-CSS contracts/typecheck/coverage/build and Docker image gates, not pixel-level browser parity.
+
+
 ## Baseline evidence (2026-09-05)
 
 - `@gouno/ui`: `npm run typecheck`, `npm run build`, `npm test` (2 tests) and `npm run showcase:build` pass.

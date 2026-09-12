@@ -4075,4 +4075,62 @@
       "evidence": []
     }
   ]
+,
+  "currentProgramStatus": {
+    "asOf": "2026-09-13",
+    "mainHead": "6f722dcdd34f3495a293d7a77dff4baf35e1120a",
+    "canonicalUi": {
+      "package": "@gouno/ui@0.3.0",
+      "upstreamMainSha": "cb946376e32bcc0db18d13fb09d89d71b5780dca",
+      "blogVendorSourceSha": "cb946376e32bcc0db18d13fb09d89d71b5780dca",
+      "status": "aligned"
+    },
+    "blogAdmin": {
+      "U03c": {
+        "status": "verified",
+        "evidence": "support surfaces are on canonical UI boundaries; latest frontend quality/CI/Image gates pass",
+        "browser": "final independent rendered review belongs to U03d"
+      },
+      "U03d": {
+        "status": "review-pending",
+        "reason": "independent full-route/rendered responsive/theme/interaction review has not been repeated in the current reconciliation session"
+      },
+      "U04a": {
+        "status": "implemented-ci-verified",
+        "evidence": "canonical Advanced Settings composition, controlled dialogs, retired AI/Workflow CSS cleanup, CI and Images green",
+        "browser": "formal independent rendered QA pending"
+      },
+      "U04b": {
+        "status": "hold",
+        "reason": "Connector frontend workspace is protected by the root AGENTS.md Connector Module Hold"
+      },
+      "U04c": {
+        "status": "blocked-by-U04b-hold"
+      }
+    },
+    "cssBoundary": {
+      "retiredProductStyles": [
+        "index.css",
+        "styles/base.css",
+        "styles/components.css",
+        "styles/design-system-alignment.css",
+        "styles/redesign.css",
+        "styles/tokens.css"
+      ],
+      "canonicalDataSlotOverrides": "forbidden-by-lint-ui",
+      "nativeBrowserDialogs": "forbidden-by-lint-ui",
+      "agentConsoleGenericButtonOverrides": [
+        ".agent-row-actions .btn"
+      ],
+      "agentConsoleButtonExceptionReason": "shared with ConnectorWorkspace under Connector Module Hold",
+      "workflowGenericButtonOverrides": 0
+    },
+    "latestValidation": {
+      "pullRequest": 186,
+      "cleanHead": "49f341296d1048446c3a8078305dad633fb15b7f",
+      "ci": "success",
+      "images": "success",
+      "renderedBrowserQa": "not-run-in-current-session"
+    }
+  }
 }
