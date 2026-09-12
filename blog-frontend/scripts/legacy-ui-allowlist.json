@@ -19,7 +19,6 @@
       "src/components/agent/AgentForm.tsx",
       "src/components/agent/AgentRunRecords.tsx",
       "src/components/agent/ConnectorWorkspace.tsx",
-      "src/components/agent/SkillForm.tsx",
       "src/components/agent/WorkflowInputForm.tsx",
       "src/components/agent/WorkflowRunDetail.tsx",
       "src/components/agent/WorkflowRunRecords.tsx",
@@ -52,7 +51,6 @@
     "EditorPanel": [
       "src/components/__tests__/ui.test.tsx",
       "src/components/agent/AgentForm.tsx",
-      "src/components/agent/SkillForm.tsx",
       "src/components/agent/WorkflowWorkspace.tsx"
     ],
     "EmptyState": [
@@ -81,7 +79,6 @@
     "FormActions": [
       "src/components/__tests__/ui.test.tsx",
       "src/components/agent/AgentForm.tsx",
-      "src/components/agent/SkillForm.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/components/media/MediaDrawerForms.tsx",
       "src/pages/admin/SiteSettings.tsx"
@@ -89,7 +86,6 @@
     "FormLayout": [
       "src/components/__tests__/ui.test.tsx",
       "src/components/agent/AgentForm.tsx",
-      "src/components/agent/SkillForm.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",
       "src/pages/admin/SiteSettings.tsx"
     ],
@@ -125,7 +121,6 @@
       "src/components/agent/AdvancedWorkspace.tsx",
       "src/components/agent/AgentForm.tsx",
       "src/components/agent/ConnectorWorkspace.tsx",
-      "src/components/agent/SkillForm.tsx",
       "src/components/agent/WorkflowInputForm.tsx",
       "src/components/agent/WorkflowRunRecords.tsx",
       "src/components/agent/WorkflowWorkspace.tsx",

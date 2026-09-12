@@ -1,4 +1,4 @@
-import { ListChecks, Save } from "lucide-react";
+import { ListChecks, Save, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import type {
@@ -8,20 +8,20 @@ import type {
   ToolDefinition,
 } from "../../types/agent";
 import {
+  Button,
+  Card,
+  CardHeader,
   Checkbox,
   CheckboxField,
   Field,
+  FormActions,
   FormGrid,
+  FormLayout,
+  IconButton,
   Input,
+  Select,
   Textarea,
 } from "@gouno/ui/core";
-import {
-  Button,
-  EditorPanel,
-  FormActions,
-  FormLayout,
-  Select,
-} from "@gouno/ui-legacy";
 import { RiskPill } from "./StatusPill";
 import { ToolBindingsEditor } from "./tools/ToolBindingsEditor";
 
@@ -129,12 +129,18 @@ export function SkillForm({
     }
   };
   return (
-    <EditorPanel
-      title={labels.title}
-      icon={<ListChecks />}
-      closeLabel={labels.cancel}
-      onClose={onCancel}
-    >
+    <Card padding="base" className="editor-panel">
+      <CardHeader
+        title={
+          <span className="flex items-center gap-2">
+            <ListChecks />
+            {labels.title}
+          </span>
+        }
+        action={
+          <IconButton label={labels.cancel} icon={<X />} onClick={onCancel} />
+        }
+      />
       <FormLayout onSubmit={submit}>
         <FormGrid columns={2}>
           <Field label={labels.name}>
@@ -152,8 +158,8 @@ export function SkillForm({
           <Field label={labels.mode}>
             <Select
               value={value.execution_mode}
-              onChange={(event) => {
-                const mode = event.target.value as ExecutionMode;
+              onChange={(nextValue) => {
+                const mode = String(nextValue) as ExecutionMode;
                 setValue((current) => ({
                   ...current,
                   execution_mode: mode,
@@ -210,10 +216,12 @@ export function SkillForm({
         >
           <Select
             value={value.content_publish_mode}
-            onChange={(event) =>
+            onChange={(nextValue) =>
               setValue((current) => ({
                 ...current,
-                content_publish_mode: event.target.value as ContentPublishMode,
+                content_publish_mode: String(
+                  nextValue,
+                ) as ContentPublishMode,
               }))
             }
           >
@@ -390,11 +398,12 @@ export function SkillForm({
           </Field>
         </div>
         <FormActions>
-          <Button variant="secondary" type="button" onClick={onCancel}>
+          <Button variant="outline" type="button" onClick={onCancel}>
             {labels.cancel}
           </Button>
           <Button
-            variant="primary"
+            variant="solid"
+            color="primary"
             type="submit"
             loading={saving}
             icon={<Save />}
@@ -403,6 +412,6 @@ export function SkillForm({
           </Button>
         </FormActions>
       </FormLayout>
-    </EditorPanel>
+    </Card>
   );
 }
