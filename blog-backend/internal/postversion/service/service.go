@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	ErrPostNotFound  = errors.New("文章不存在或已被删除")
-	ErrInvalidPostID = errors.New("invalid post id")
+	ErrPostNotFound   = errors.New("文章不存在或已被删除")
+	ErrInvalidPostID  = errors.New("invalid post id")
 	ErrInvalidVersion = errors.New("invalid version")
 )
 
