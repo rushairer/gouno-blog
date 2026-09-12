@@ -13,6 +13,8 @@ import (
 	communityservice "github.com/rushairer/blog-backend/internal/community/service"
 	"github.com/rushairer/blog-backend/internal/controller"
 	"github.com/rushairer/blog-backend/internal/media"
+	pagecontroller "github.com/rushairer/blog-backend/internal/page/controller"
+	pageservice "github.com/rushairer/blog-backend/internal/page/service"
 	"github.com/rushairer/blog-backend/internal/ratelimit"
 	"github.com/rushairer/blog-backend/internal/service"
 	sitecontroller "github.com/rushairer/blog-backend/internal/site/controller"
@@ -34,7 +36,7 @@ type WebRouterOptions struct {
 	MediaStore         media.Store
 	CORSAllowedOrigins []string
 	PostSvc            *service.PostService
-	PageSvc            *service.PageService
+	PageSvc            *pageservice.PageService
 	TaxonomySvc        taxonomyservice.Service
 	SiteSvc            siteservice.Service
 	CommunitySvc       *communityservice.CommunityService
@@ -76,7 +78,7 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 	ctrl := controller.NewPostController(postSvc)
 
 	pageSvc := opts.PageSvc
-	pageCtrl := controller.NewPageController(pageSvc)
+	pageCtrl := pagecontroller.NewPageController(pageSvc)
 
 	taxonomySvc := opts.TaxonomySvc
 	taxonomyCtrl := taxonomycontroller.New(taxonomySvc)

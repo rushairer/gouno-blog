@@ -11,6 +11,7 @@ import (
 	communitydomain "github.com/rushairer/blog-backend/internal/community/domain"
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/knowledge"
+	pageservice "github.com/rushairer/blog-backend/internal/page/service"
 	"github.com/rushairer/blog-backend/internal/service"
 )
 
@@ -22,12 +23,12 @@ type BlogTools struct {
 	posts      *service.PostService
 	community  communityModerationReader
 	growth     *service.GrowthService
-	pages      *service.PageService
+	pages      *pageservice.PageService
 	linkClient linkHTTPClient
 	knowledge  *knowledge.Service
 }
 
-func NewBlogRegistry(posts *service.PostService, community communityModerationReader, growth *service.GrowthService, pages *service.PageService, knowledgeServices ...*knowledge.Service) *Registry {
+func NewBlogRegistry(posts *service.PostService, community communityModerationReader, growth *service.GrowthService, pages *pageservice.PageService, knowledgeServices ...*knowledge.Service) *Registry {
 	var knowledgeService *knowledge.Service
 	if len(knowledgeServices) > 0 {
 		knowledgeService = knowledgeServices[0]

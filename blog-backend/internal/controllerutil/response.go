@@ -13,6 +13,7 @@ import (
 	communityrepository "github.com/rushairer/blog-backend/internal/community/repository"
 	communityservice "github.com/rushairer/blog-backend/internal/community/service"
 	"github.com/rushairer/blog-backend/internal/knowledge"
+	pageservice "github.com/rushairer/blog-backend/internal/page/service"
 	"github.com/rushairer/blog-backend/internal/service"
 	siteservice "github.com/rushairer/blog-backend/internal/site/service"
 	taxonomyservice "github.com/rushairer/blog-backend/internal/taxonomy/service"
@@ -103,7 +104,7 @@ func WriteDomainError(c *gin.Context, err error) {
 		errors.Is(err, service.ErrPostNotFound),
 		errors.Is(err, communityservice.ErrPostNotFound),
 		errors.Is(err, taxonomyservice.ErrCategoryNotFound),
-		errors.Is(err, service.ErrPageNotFound),
+		errors.Is(err, pageservice.ErrPageNotFound),
 		errors.Is(err, workflowservice.ErrNotFound),
 		errors.Is(err, knowledge.ErrNotFound),
 		errors.Is(err, agentservice.ErrNotFound):
@@ -112,7 +113,7 @@ func WriteDomainError(c *gin.Context, err error) {
 	case errors.Is(err, service.ErrSlugInUse),
 		errors.Is(err, service.ErrMediaInUse),
 		errors.Is(err, taxonomyservice.ErrCategorySlugInUse),
-		errors.Is(err, service.ErrDuplicateSlug),
+		errors.Is(err, pageservice.ErrDuplicateSlug),
 		errors.Is(err, communityrepository.ErrDuplicateInteraction),
 		errors.Is(err, workflowservice.ErrConflict),
 		errors.Is(err, agentservice.ErrConflict),
@@ -153,9 +154,9 @@ func WriteDomainError(c *gin.Context, err error) {
 		errors.Is(err, siteservice.ErrInvalidFaviconURL),
 		errors.Is(err, service.ErrBatchInvalidIDs),
 		errors.Is(err, service.ErrBatchInvalidAction),
-		errors.Is(err, service.ErrReservedSlug),
-		errors.Is(err, service.ErrInvalidSlug),
-		errors.Is(err, service.ErrPageTitleEmpty),
+		errors.Is(err, pageservice.ErrReservedSlug),
+		errors.Is(err, pageservice.ErrInvalidSlug),
+		errors.Is(err, pageservice.ErrPageTitleEmpty),
 		errors.Is(err, communityrepository.ErrParentCommentMismatch),
 		errors.Is(err, communityrepository.ErrCommentDepthExceeded),
 		errors.Is(err, workflowservice.ErrInvalid),

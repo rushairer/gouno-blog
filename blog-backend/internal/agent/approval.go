@@ -12,6 +12,7 @@ import (
 
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/media"
+	pageservice "github.com/rushairer/blog-backend/internal/page/service"
 	"github.com/rushairer/blog-backend/internal/repository"
 	"github.com/rushairer/blog-backend/internal/service"
 )
@@ -24,14 +25,14 @@ var (
 type ApprovalService struct {
 	repo       *repository.AgentRepository
 	posts      *service.PostService
-	pages      *service.PageService
+	pages      *pageservice.PageService
 	management *ManagementService
 	growth     *service.GrowthService
 	media      media.Store
 	generation *GenerationService
 }
 
-func NewApprovalService(repo *repository.AgentRepository, posts *service.PostService, management *ManagementService, growth *service.GrowthService, store media.Store, pages *service.PageService) *ApprovalService {
+func NewApprovalService(repo *repository.AgentRepository, posts *service.PostService, management *ManagementService, growth *service.GrowthService, store media.Store, pages *pageservice.PageService) *ApprovalService {
 	return &ApprovalService{repo: repo, posts: posts, pages: pages, management: management, growth: growth, media: store, generation: NewGenerationService(repo, management, growth, store)}
 }
 
@@ -39,7 +40,7 @@ func (s *ApprovalService) SetGenerationService(generation *GenerationService) {
 	s.generation = generation
 }
 
-func (s *ApprovalService) SetPageService(pages *service.PageService) {
+func (s *ApprovalService) SetPageService(pages *pageservice.PageService) {
 	s.pages = pages
 }
 
