@@ -16,7 +16,7 @@ for (const path of targets) {
     const inlineChildren = children
       .replaceAll("<div", "<span")
       .replaceAll("</div>", "</span>");
-    return `<Button\n  type="button"\n  variant="ghost"\n  className="h-auto min-w-0 flex-1 justify-start p-0 text-left hover:bg-transparent"\n  onClick={${onClick}}\n>${inlineChildren}</Button>`;
+    return `<Button\n  type="button"\n  variant="ghost"\n  className="h-auto min-w-0 flex-1 justify-start p-0 text-left hover:bg-transparent"\n  onClick={${onClick}}\n>\n  <span className="block min-w-0 flex-1 text-left">${inlineChildren}</span>\n</Button>`;
   });
   await writeFile(path, next);
 }
