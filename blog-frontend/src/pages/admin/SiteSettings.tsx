@@ -13,11 +13,9 @@ import { siteApi } from "../../api/site";
 import { isMfaError } from "../../auth";
 import { StepUpMfaModal } from "../../components/auth/StepUpMfaModal";
 import { SudoGate } from "../../components/auth/SudoGate";
-import { Field, Input, Textarea } from "@gouno/ui/core";
+import { Card, Field, Input, Skeleton, Textarea } from "@gouno/ui/core";
+import { PageHeader } from "@gouno/ui/gouno";
 import {
-  AdminPage,
-  AdminPageHeader,
-  AdminPageState,
   Button,
   Feedback,
   FormActions,
@@ -179,21 +177,32 @@ export default function AdminSiteSettings() {
     }
   };
 
-  if (loading)
+  const pageHeader = (
+    <PageHeader
+      title="站点设置"
+      description="管理品牌信息、首页标语、社交入口和默认 SEO 元数据。"
+    />
+  );
+
+  if (loading) {
     return (
-      <AdminPageState
-        title="站点设置"
-        description="管理品牌信息、首页标语、社交入口和默认 SEO 元数据。"
-        label="正在载入站点设置…"
-      />
+      <div className="flex flex-col gap-6">
+        {pageHeader}
+        <div role="status" aria-label="正在载入站点设置…" aria-live="polite">
+          <Card padding="base">
+            <div className="flex flex-col gap-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-48 w-full" />
+            </div>
+          </Card>
+        </div>
+      </div>
     );
+  }
 
   return (
-    <AdminPage>
-      <AdminPageHeader
-        title="站点设置"
-        description="管理品牌信息、首页标语、社交入口和默认 SEO 元数据。"
-      />
+    <div className="flex flex-col gap-6">
+      {pageHeader}
       {error ? <Feedback type="error">{error}</Feedback> : null}
       <SudoGate
         title="站点核心配置保护"
@@ -567,6 +576,6 @@ export default function AdminSiteSettings() {
           }
         }}
       />
-    </AdminPage>
+    </div>
   );
 }
