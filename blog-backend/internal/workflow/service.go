@@ -18,6 +18,7 @@ import (
 	"github.com/rushairer/blog-backend/internal/dbtx"
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/tool"
+	workflowrepository "github.com/rushairer/blog-backend/internal/workflow/repository"
 	"github.com/rushairer/blog-backend/internal/workflowplan"
 )
 
@@ -28,13 +29,14 @@ var (
 )
 
 type Service struct {
-	db         *sql.DB
-	runner     *agentservice.Runner
-	agents     *agentservice.ManagementService
-	tools      *tool.Registry
-	catalog    *ResourceCatalog
-	workerSem  chan struct{}
-	transactor *dbtx.Transactor
+	db          *sql.DB
+	definitions *workflowrepository.DefinitionRepository
+	runner      *agentservice.Runner
+	agents      *agentservice.ManagementService
+	tools       *tool.Registry
+	catalog     *ResourceCatalog
+	workerSem   chan struct{}
+	transactor  *dbtx.Transactor
 }
 
 type PreflightCheck struct {
@@ -178,60 +180,15 @@ func NewService(db *sql.DB, runner *agentservice.Runner, agents *agentservice.Ma
 	if transactor == nil {
 		panic("workflow.NewService: transactor is required")
 	}
-	return &Service{db: db, runner: runner, agents: agents, tools: registry, catalog: NewResourceCatalog(db), workerSem: make(chan struct{}, 4), transactor: transactor}
-}
-
-const workflowColumns = `w.id, w.name, w.description, w.enabled, w.cron_expression, w.timezone, w.next_run_at, w.template_key,
-	w.current_version, v.id, v.input_schema, v.steps, v.scope_policy, w.event_triggers, w.resource_query_preview, w.resource_query_preview_at,
-	w.resource_query_last_count, w.resource_query_last_run_at, w.resource_query_empty_policy, w.created_by_principal_id, w.creation_origin, w.created_at, w.updated_at`
-
-func scanWorkflow(scanner interface{ Scan(...any) error }) (*domain.Workflow, error) {
-	var value domain.Workflow
-	var steps, scopePolicy, eventTriggers, queryPreview []byte
-	err := scanner.Scan(&value.ID, &value.Name, &value.Description, &value.Enabled, &value.CronExpression, &value.Timezone, &value.NextRunAt, &value.TemplateKey,
-		&value.CurrentVersion, &value.VersionID, &value.InputSchema, &steps, &scopePolicy, &eventTriggers, &queryPreview, &value.ResourceQueryPreviewAt,
-		&value.ResourceQueryLastCount, &value.ResourceQueryLastRunAt, &value.ResourceQueryEmptyPolicy, &value.CreatedByPrincipalID, &value.CreationOrigin,
-		&value.CreatedAt, &value.UpdatedAt)
-	if err == nil {
-		err = json.Unmarshal(steps, &value.Steps)
-	}
-	if err == nil {
-		err = json.Unmarshal(scopePolicy, &value.ScopePolicy)
-	}
-	if err == nil && len(eventTriggers) > 0 {
-		err = json.Unmarshal(eventTriggers, &value.EventTriggers)
-	}
-	if err == nil {
-		value.ResourceQueryPreview = json.RawMessage(queryPreview)
-	}
-	return &value, err
+	return &Service{db: db, definitions: workflowrepository.NewDefinitionRepository(db), runner: runner, agents: agents, tools: registry, catalog: NewResourceCatalog(db), workerSem: make(chan struct{}, 4), transactor: transactor}
 }
 
 func (s *Service) List(ctx context.Context) ([]*domain.Workflow, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT `+workflowColumns+`
-		FROM ai_workflows w JOIN ai_workflow_versions v
-		ON v.workflow_id=w.id AND v.version=w.current_version
-		WHERE w.deleted_at IS NULL ORDER BY w.created_at, w.id`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := make([]*domain.Workflow, 0)
-	for rows.Next() {
-		item, err := scanWorkflow(rows)
-		if err != nil {
-			return nil, err
-		}
-		items = append(items, item)
-	}
-	return items, rows.Err()
+	return s.definitions.List(ctx)
 }
 
 func (s *Service) Get(ctx context.Context, id int64) (*domain.Workflow, error) {
-	item, err := scanWorkflow(s.db.QueryRowContext(ctx, `SELECT `+workflowColumns+`
-		FROM ai_workflows w JOIN ai_workflow_versions v
-		ON v.workflow_id=w.id AND v.version=w.current_version
-		WHERE w.id=$1 AND w.deleted_at IS NULL`, id))
+	item, err := s.definitions.Get(ctx, id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -286,40 +243,10 @@ func (s *Service) Save(ctx context.Context, value *domain.Workflow) error {
 	}
 	value.ResourceQueryPreview, value.ResourceQueryPreviewAt = preview, previewAt
 	rawSteps, _ := json.Marshal(value.Steps)
-	rawScope, _ := json.Marshal(value.ScopePolicy)
-	rawEvents, _ := json.Marshal(value.EventTriggers)
 	if len(rawSteps) > 128<<10 {
 		return fmt.Errorf("%w: step definition exceeds 128 KiB", ErrInvalid)
 	}
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	if value.ID == 0 {
-		err = tx.QueryRowContext(ctx, `INSERT INTO ai_workflows
-			(name, description, enabled, cron_expression, timezone, next_run_at, template_key, event_triggers, resource_query_preview, resource_query_preview_at, resource_query_empty_policy, created_by_principal_id)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
-			RETURNING id, current_version, created_at, updated_at`, value.Name, value.Description,
-			value.Enabled, value.CronExpression, value.Timezone, workflowNext(value), value.TemplateKey, rawEvents, value.ResourceQueryPreview, value.ResourceQueryPreviewAt, value.ResourceQueryEmptyPolicy, value.CreatedByPrincipalID).Scan(&value.ID, &value.CurrentVersion, &value.CreatedAt, &value.UpdatedAt)
-	} else {
-		err = tx.QueryRowContext(ctx, `UPDATE ai_workflows SET name=$2, description=$3,
-			enabled=$4, cron_expression=$5, timezone=$6, next_run_at=$7, template_key=$8, event_triggers=$9, resource_query_preview=$10, resource_query_preview_at=$11,
-			resource_query_empty_policy=$12, current_version=current_version+1, updated_at=NOW()
-			WHERE id=$1 AND deleted_at IS NULL
-			RETURNING current_version, created_at, updated_at`, value.ID, value.Name,
-			value.Description, value.Enabled, value.CronExpression, value.Timezone, workflowNext(value), value.TemplateKey, rawEvents, value.ResourceQueryPreview, value.ResourceQueryPreviewAt, value.ResourceQueryEmptyPolicy).Scan(&value.CurrentVersion, &value.CreatedAt, &value.UpdatedAt)
-	}
-	if err == nil {
-		err = tx.QueryRowContext(ctx, `INSERT INTO ai_workflow_versions
-			(workflow_id, version, input_schema, steps, scope_policy, created_by_principal_id)
-			VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`, value.ID, value.CurrentVersion,
-			value.InputSchema, rawSteps, rawScope, value.CreatedByPrincipalID).Scan(&value.VersionID)
-	}
-	if err != nil {
-		_ = tx.Rollback()
-		return workflowSaveError(err)
-	}
-	return tx.Commit()
+	return workflowSaveError(s.definitions.Save(ctx, value, workflowNext(value)))
 }
 
 func workflowSaveError(err error) error {
@@ -621,32 +548,15 @@ func workflowAgentIDs(steps []domain.WorkflowStep) []int64 {
 }
 
 func (s *Service) Versions(ctx context.Context, id int64) ([]*domain.Workflow, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT w.id, w.name, w.description, w.enabled, w.cron_expression, w.timezone, w.next_run_at, w.template_key,
-		v.version, v.id, v.input_schema, v.steps, v.scope_policy, w.event_triggers, w.resource_query_preview, w.resource_query_preview_at,
-		w.resource_query_last_count, w.resource_query_last_run_at, w.resource_query_empty_policy, v.created_by_principal_id, v.creation_origin, w.created_at, v.created_at
-		FROM ai_workflows w JOIN ai_workflow_versions v ON v.workflow_id=w.id
-		WHERE w.id=$1 ORDER BY v.version DESC`, id)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := make([]*domain.Workflow, 0)
-	for rows.Next() {
-		item, err := scanWorkflow(rows)
-		if err != nil {
-			return nil, err
-		}
-		items = append(items, item)
-	}
-	return items, rows.Err()
+	return s.definitions.Versions(ctx, id)
 }
 
 func (s *Service) Rollback(ctx context.Context, id int64, version int) error {
-	var rawSteps []byte
-	if err := s.db.QueryRowContext(ctx, `SELECT steps FROM ai_workflow_versions WHERE workflow_id=$1 AND version=$2`, id, version).Scan(&rawSteps); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return ErrNotFound
-		}
+	rawSteps, err := s.definitions.VersionStepsRaw(ctx, id, version)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrNotFound
+	}
+	if err != nil {
 		return err
 	}
 	var steps []domain.WorkflowStep
@@ -656,13 +566,11 @@ func (s *Service) Rollback(ctx context.Context, id int64, version int) error {
 	if err := s.validateSteps(steps, 0); err != nil {
 		return fmt.Errorf("%w: historical version cannot be reactivated", ErrInvalid)
 	}
-	result, err := s.db.ExecContext(ctx, `UPDATE ai_workflows SET current_version=$2,
-		updated_at=NOW() WHERE id=$1 AND deleted_at IS NULL
-		AND EXISTS (SELECT 1 FROM ai_workflow_versions WHERE workflow_id=$1 AND version=$2)`, id, version)
+	changed, err := s.definitions.SetCurrentVersion(ctx, id, version)
 	if err != nil {
 		return err
 	}
-	if n, _ := result.RowsAffected(); n == 0 {
+	if !changed {
 		return ErrNotFound
 	}
 	return nil
@@ -679,12 +587,11 @@ func (s *Service) SetEnabled(ctx context.Context, id int64, enabled bool) error 
 		}
 	}
 	value.Enabled = enabled
-	result, err := s.db.ExecContext(ctx, `UPDATE ai_workflows SET enabled=$2, next_run_at=$3,
-		updated_at=NOW() WHERE id=$1 AND deleted_at IS NULL`, id, enabled, workflowNext(value))
+	changed, err := s.definitions.SetEnabled(ctx, id, enabled, workflowNext(value))
 	if err != nil {
 		return err
 	}
-	if n, _ := result.RowsAffected(); n == 0 {
+	if !changed {
 		return ErrNotFound
 	}
 	return nil
@@ -693,13 +600,11 @@ func (s *Service) SetEnabled(ctx context.Context, id int64, enabled bool) error 
 // Delete soft-deletes a workflow so its version and run audit trail remain
 // available to administrators while preventing all future scheduled runs.
 func (s *Service) Delete(ctx context.Context, id int64) error {
-	result, err := s.db.ExecContext(ctx, `UPDATE ai_workflows
-		SET enabled=FALSE, next_run_at=NULL, deleted_at=NOW(), updated_at=NOW()
-		WHERE id=$1 AND deleted_at IS NULL`, id)
+	changed, err := s.definitions.Delete(ctx, id)
 	if err != nil {
 		return err
 	}
-	if n, _ := result.RowsAffected(); n == 0 {
+	if !changed {
 		return ErrNotFound
 	}
 	return nil
