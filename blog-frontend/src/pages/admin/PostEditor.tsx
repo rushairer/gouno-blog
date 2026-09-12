@@ -16,19 +16,23 @@ import { agentApi } from "../../api/agent";
 import { postsApi } from "../../api/posts";
 import { siteApi } from "../../api/site";
 import { useAbility } from "../../abilities";
-import { ChoiceButton, Field, Input, Textarea } from "@gouno/ui/core";
 import {
-  AdminPageState,
+  Alert,
   Button,
-  ConfirmDialog,
-  EmptyState,
-  Feedback,
+  Card,
+  ChoiceButton,
+  Empty,
+  Field,
+  Input,
+  Modal,
   Select,
+  Skeleton,
   Tab,
   TabList,
   Tabs,
-  useToast,
-} from "@gouno/ui-legacy";
+  Textarea,
+} from "@gouno/ui/core";
+import { useToast } from "@gouno/ui-legacy";
 import { MarkdownRenderer } from "../../components/MarkdownRenderer";
 import {
   AiImageGenerationPanel,
@@ -67,6 +71,10 @@ const emptyPost: Post = {
   status: "draft",
   created_at: "",
 };
+
+function selectValue(value: string | string[]) {
+  return Array.isArray(value) ? (value[0] ?? "") : value;
+}
 
 export default function PostEditor() {
   const { id } = useParams();
@@ -863,28 +871,49 @@ export default function PostEditor() {
           : "发布";
   if (!isNew && error && !post.id) {
     return (
-      <AdminPageState
+      <Alert
+        type="error"
+        showIcon
         title="无法编辑文章"
         description={error}
-        label="无权限或文章不存在"
+        action={
+          <Button
+            variant="outline"
+            icon={<ArrowLeft />}
+            onClick={() => navigate("/admin/posts")}
+          >
+            返回文章列表
+          </Button>
+        }
       />
     );
   }
 
   if (!allowed || loading)
     return (
-      <AdminPageState
-        title={isNew ? "新建文章" : "编辑文章"}
-        description="撰写、预览并管理文章发布状态。"
-        label="正在打开编辑器…"
-      />
+      <Card
+        padding="base"
+        aria-label={isNew ? "新建文章编辑器加载中" : "文章编辑器加载中"}
+      >
+        <div className="flex flex-col gap-5" role="status" aria-live="polite">
+          <div className="flex items-center justify-between gap-4">
+            <Skeleton className="h-9 w-36" />
+            <Skeleton className="h-9 w-64" />
+          </div>
+          <div className="grid gap-5 xl:grid-cols-[13rem_minmax(0,1fr)_19rem]">
+            <Skeleton className="h-72 w-full" />
+            <Skeleton className="h-[34rem] w-full" />
+            <Skeleton className="h-96 w-full" />
+          </div>
+        </div>
+      </Card>
     );
   return (
     <ContentEditorFrame>
       <EditorCommandBar>
         <Button
           className="editor-back"
-          variant="ghost"
+          variant="text"
           onClick={leaveEditor}
           icon={<ArrowLeft />}
         >
@@ -914,7 +943,7 @@ export default function PostEditor() {
         </div>
         <EditorCommandActions>
           <Button
-            variant="secondary"
+            variant="outline"
             type="button"
             onClick={() => void openFrontsitePreview()}
             disabled={saving}
@@ -926,7 +955,7 @@ export default function PostEditor() {
           post.status !== "published" &&
           publishIntent !== "draft" ? (
             <Button
-              variant="secondary"
+              variant="outline"
               type="button"
               onClick={() => void persist("draft")}
               disabled={saving}
@@ -937,7 +966,8 @@ export default function PostEditor() {
           ) : null}
           {!isReadOnly ? (
             <Button
-              variant="primary"
+              variant="solid"
+              color="primary"
               type="button"
               onClick={() => void persist(primaryStatus)}
               disabled={saving}
@@ -948,14 +978,14 @@ export default function PostEditor() {
           ) : null}
         </EditorCommandActions>
       </EditorCommandBar>
-      {error ? <Feedback type="error">{error}</Feedback> : null}
+      {error ? <Alert type="error" showIcon title={error} /> : null}
       <div className="editor-workspace">
         <aside className="editor-outline">
           <div>
             <h2>{showVersions ? "版本历史" : "文档大纲"}</h2>
             <Button
-              variant="ghost"
-              size="compact"
+              variant="text"
+              size="small"
               onClick={() => setShowVersions(!showVersions)}
               icon={showVersions ? <List /> : <History />}
             >
@@ -965,7 +995,7 @@ export default function PostEditor() {
           {showVersions ? (
             <div className="version-drawer">
               {versions.length === 0 ? (
-                <EmptyState label="暂无历史版本记录" />
+                <Empty description="暂无历史版本记录" />
               ) : (
                 versions.map((version) => (
                   <ChoiceButton
@@ -1029,7 +1059,7 @@ export default function PostEditor() {
             {!isReadOnly ? (
               <div className="editor-ai-inline">
                 <Button
-                  variant="ghost"
+                  variant="text"
                   onClick={() => void requestSuggestions("title")}
                   loading={assistTask === "title"}
                   disabled={assistTask !== null}
@@ -1067,7 +1097,7 @@ export default function PostEditor() {
             {!isReadOnly ? (
               <div className="editor-ai-inline">
                 <Button
-                  variant="ghost"
+                  variant="text"
                   onClick={() => void requestSuggestions("summary")}
                   loading={assistTask === "summary"}
                   disabled={assistTask !== null}
@@ -1095,8 +1125,8 @@ export default function PostEditor() {
           </Field>
           <Tabs
             className="editor-tabs"
-            value={preview ? "preview" : "markdown"}
-            onValueChange={(value) => setPreview(value === "preview")}
+            activeKey={preview ? "preview" : "markdown"}
+            onChange={(value) => setPreview(value === "preview")}
           >
             <TabList aria-label="编辑模式">
               <Tab value="markdown">Markdown</Tab>
@@ -1105,8 +1135,8 @@ export default function PostEditor() {
             {!isReadOnly ? (
               <div className="editor-ai-tools-group">
                 <Button
-                  variant="ghost"
-                  size="compact"
+                  variant="text"
+                  size="small"
                   className={`editor-ai-tool-control ${showAiWriting ? "active" : ""}`}
                   onClick={() => {
                     setShowAiWriting(!showAiWriting);
@@ -1118,8 +1148,8 @@ export default function PostEditor() {
                   {showAiWriting ? "收起 AI 写作" : "AI 写作与润色"}
                 </Button>
                 <Button
-                  variant="ghost"
-                  size="compact"
+                  variant="text"
+                  size="small"
                   className={`editor-ai-tool-control ${showAiImage ? "active" : ""}`}
                   onClick={() => {
                     setShowAiImage(!showAiImage);
@@ -1193,7 +1223,8 @@ export default function PostEditor() {
                   disabled={aiContentLoading}
                 />
                 <Button
-                  variant="primary"
+                  variant="solid"
+                  color="primary"
                   type="button"
                   onClick={() => void handleGenerateContent()}
                   loading={aiContentLoading}
@@ -1207,7 +1238,7 @@ export default function PostEditor() {
                 </Button>
               </div>
               {assistError ? (
-                <Feedback type="error">{assistError}</Feedback>
+                <Alert type="error" showIcon title={assistError} />
               ) : null}
               {generatedContent ? (
                 <div className="editor-ai-result-box">
@@ -1217,21 +1248,22 @@ export default function PostEditor() {
                     </strong>
                     <div className="editor-ai-result-actions">
                       <Button
-                        variant="primary"
+                        variant="solid"
+                        color="primary"
                         type="button"
                         onClick={() => applyGeneratedContent("replace")}
                       >
                         替换全文
                       </Button>
                       <Button
-                        variant="secondary"
+                        variant="outline"
                         type="button"
                         onClick={() => applyGeneratedContent("append")}
                       >
                         追加到末尾
                       </Button>
                       <Button
-                        variant="secondary"
+                        variant="outline"
                         type="button"
                         onClick={() => setGeneratedContent(null)}
                       >
@@ -1342,7 +1374,8 @@ export default function PostEditor() {
                   disabled={aiImageLoading}
                 />
                 <Button
-                  variant="primary"
+                  variant="solid"
+                  color="primary"
                   type="button"
                   onClick={() => void handleGenerateAiImage()}
                   loading={aiImageLoading}
@@ -1372,7 +1405,7 @@ export default function PostEditor() {
                         <div className="editor-prompt-text">{promptText}</div>
                         <div className="editor-prompt-candidate-actions">
                           <Button
-                            variant="secondary"
+                            variant="outline"
                             type="button"
                             onClick={() => {
                               if (chDesc) setImageAlt(chDesc);
@@ -1383,7 +1416,8 @@ export default function PostEditor() {
                             ✍️ 填入提示词
                           </Button>
                           <Button
-                            variant="primary"
+                            variant="solid"
+                            color="primary"
                             type="button"
                             disabled={aiImageLoading}
                             onClick={() => {
@@ -1401,7 +1435,7 @@ export default function PostEditor() {
                 </div>
               ) : null}
               {assistError ? (
-                <Feedback type="error">{assistError}</Feedback>
+                <Alert type="error" showIcon title={assistError} />
               ) : null}
               {generatedImage ? (
                 <div className="editor-ai-image-result">
@@ -1417,28 +1451,29 @@ export default function PostEditor() {
                     </div>
                     <div className="editor-ai-image-actions">
                       <Button
-                        variant="primary"
+                        variant="solid"
+                        color="primary"
                         type="button"
                         onClick={copyImageMarkdown}
                       >
                         📋 复制 Markdown
                       </Button>
                       <Button
-                        variant="secondary"
+                        variant="outline"
                         type="button"
                         onClick={insertImageToContent}
                       >
                         ➕ 插入到正文末尾
                       </Button>
                       <Button
-                        variant="secondary"
+                        variant="outline"
                         type="button"
                         onClick={setGeneratedImageAsCover}
                       >
                         🖼️ 设为文章封面
                       </Button>
                       <Button
-                        variant="secondary"
+                        variant="outline"
                         type="button"
                         onClick={() => setGeneratedImage(null)}
                       >
@@ -1473,7 +1508,8 @@ export default function PostEditor() {
             {!isReadOnly ? (
               <div className="editor-inspector-ai-banner">
                 <Button
-                  variant="primary"
+                  variant="solid"
+                  color="primary"
                   type="button"
                   onClick={() => void autoFillAllMetadata()}
                   loading={metaLoading}
@@ -1488,9 +1524,10 @@ export default function PostEditor() {
               <summary>发布设置</summary>
               <Field label="状态">
                 <Select
+                  aria-label="状态"
                   value={publishIntent}
-                  onChange={(event) => {
-                    setPublishIntent(event.target.value as PostStatus);
+                  onChange={(value) => {
+                    setPublishIntent(selectValue(value) as PostStatus);
                     dirty.current = true;
                   }}
                 >
@@ -1515,13 +1552,12 @@ export default function PostEditor() {
               <summary>分类与标签</summary>
               <Field label="分类">
                 <Select
-                  value={post.category_id || ""}
-                  onChange={(event) =>
-                    update(
-                      "category_id",
-                      event.target.value ? Number(event.target.value) : null,
-                    )
-                  }
+                  aria-label="分类"
+                  value={String(post.category_id || "")}
+                  onChange={(value) => {
+                    const next = selectValue(value);
+                    update("category_id", next ? Number(next) : null);
+                  }}
                 >
                   <option value="">未分类</option>
                   {categories.map((category) => (
@@ -1541,7 +1577,7 @@ export default function PostEditor() {
                 ) : (
                   <div className="editor-ai-inline">
                     <Button
-                      variant="ghost"
+                      variant="text"
                       onClick={() => void requestCategory()}
                       loading={assistTask === "category"}
                       disabled={assistTask !== null || !categories.length}
@@ -1568,7 +1604,7 @@ export default function PostEditor() {
                 />
                 <div className="editor-ai-inline">
                   <Button
-                    variant="ghost"
+                    variant="text"
                     onClick={() => void requestTags()}
                     loading={assistTask === "tags"}
                     disabled={assistTask !== null}
@@ -1613,7 +1649,7 @@ export default function PostEditor() {
                 />
                 <div className="editor-ai-inline">
                   <Button
-                    variant="ghost"
+                    variant="text"
                     onClick={() => void requestSuggestions("cover_prompt")}
                     loading={assistTask === "cover_prompt"}
                     disabled={assistTask !== null}
@@ -1634,7 +1670,8 @@ export default function PostEditor() {
                           <div className="editor-prompt-text">{item}</div>
                           <div className="editor-prompt-candidate-actions">
                             <Button
-                              variant="primary"
+                              variant="solid"
+                              color="primary"
                               type="button"
                               disabled={generatingCoverPrompt !== null}
                               loading={generatingCoverPrompt === item}
@@ -1645,7 +1682,7 @@ export default function PostEditor() {
                                 : "生图"}
                             </Button>
                             <Button
-                              variant="secondary"
+                              variant="outline"
                               type="button"
                               onClick={() => {
                                 void navigator.clipboard.writeText(item);
@@ -1669,7 +1706,7 @@ export default function PostEditor() {
                 />
                 <div className="editor-ai-inline">
                   <Button
-                    variant="ghost"
+                    variant="text"
                     onClick={() => void requestSuggestions("alt")}
                     loading={assistTask === "alt"}
                     disabled={assistTask !== null}
@@ -1697,7 +1734,7 @@ export default function PostEditor() {
               <summary>路径与 SEO</summary>
               <div className="editor-ai-inline editor-inline-box">
                 <Button
-                  variant="ghost"
+                  variant="text"
                   onClick={() => void requestSeo()}
                   loading={assistTask === "seo"}
                   disabled={assistTask !== null}
@@ -1721,7 +1758,7 @@ export default function PostEditor() {
                 />
                 <div className="editor-ai-inline">
                   <Button
-                    variant="ghost"
+                    variant="text"
                     onClick={() => void requestSuggestions("slug")}
                     loading={assistTask === "slug"}
                     disabled={assistTask !== null}
@@ -1778,7 +1815,7 @@ export default function PostEditor() {
           </fieldset>
         </aside>
       </div>
-      <ConfirmDialog
+      <Modal
         open={restoreTarget !== null}
         title="恢复历史版本"
         description={
@@ -1791,18 +1828,43 @@ export default function PostEditor() {
             ""
           )
         }
-        confirmLabel="恢复版本"
-        onClose={() => setRestoreTarget(null)}
-        onConfirm={restoreVersion}
+        onOpenChange={(open) => {
+          if (!open) setRestoreTarget(null);
+        }}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setRestoreTarget(null)}>
+              取消
+            </Button>
+            <Button
+              variant="solid"
+              color="primary"
+              onClick={() => void restoreVersion()}
+            >
+              恢复版本
+            </Button>
+          </>
+        }
       />
-      <ConfirmDialog
+      <Modal
         open={confirmExit}
         title="放弃未保存的更改？"
         description="离开编辑器后，尚未保存的内容会丢失。"
-        confirmLabel="放弃并离开"
-        danger
-        onClose={() => setConfirmExit(false)}
-        onConfirm={() => navigate("/admin/posts")}
+        onOpenChange={setConfirmExit}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setConfirmExit(false)}>
+              继续编辑
+            </Button>
+            <Button
+              variant="solid"
+              color="error"
+              onClick={() => navigate("/admin/posts")}
+            >
+              放弃并离开
+            </Button>
+          </>
+        }
       />
     </ContentEditorFrame>
   );

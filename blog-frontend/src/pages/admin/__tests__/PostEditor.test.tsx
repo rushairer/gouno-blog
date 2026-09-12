@@ -147,7 +147,8 @@ describe("PostEditor", () => {
     renderEditor("/admin/posts/5/edit");
 
     await screen.findByDisplayValue(draftPost.title);
-    await user.selectOptions(screen.getByLabelText("状态"), "published");
+    await user.click(screen.getByRole("combobox", { name: "状态" }));
+    await user.click(screen.getByRole("option", { name: "立即发布" }));
     await user.click(screen.getByRole("button", { name: "发布" }));
 
     await waitFor(() =>
