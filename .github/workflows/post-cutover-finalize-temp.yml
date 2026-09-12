@@ -1,0 +1,56 @@
+name: Temporary Post Cutover Finalize
+
+on:
+  push:
+    branches:
+      - refactor/post-runtime-cutover-main
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: refactor/post-runtime-cutover-main
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
+        with:
+          go-version-file: blog-backend/go.mod
+          cache-dependency-path: blog-backend/go.sum
+      - name: Correct cutover text and verify ownership
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('blog-backend/internal/tool/blog_tools.go')
+          text = p.read_text()
+          bad = 'It never sends content to an external postservice.'
+          good = 'It never sends content to an external service.'
+          if bad not in text:
+              raise SystemExit('expected cutover text regression not found')
+          p.write_text(text.replace(bad, good, 1))
+      - name: Verify no legacy service imports remain
+        run: |
+          if grep -R --line-number --include='*.go' 'github.com/rushairer/blog-backend/internal/service' blog-backend; then
+            echo 'legacy internal/service import remains' >&2
+            exit 1
+          fi
+          test ! -e blog-backend/internal/repository/post_repository.go
+          test ! -e blog-backend/internal/service/post_service.go
+          test ! -e blog-backend/internal/service/publisher.go
+          test ! -e blog-backend/internal/controller/post_controller.go
+      - name: Test backend
+        working-directory: blog-backend
+        run: go test ./...
+      - name: Vet backend
+        working-directory: blog-backend
+        run: go vet ./...
+      - name: Commit verified cutover and remove temporary workflow
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/post-cutover-finalize-temp.yml
+          git add blog-backend/internal/tool/blog_tools.go
+          git commit -m 'fix(post): finalize verified canonical cutover'
+          git push origin HEAD:refactor/post-runtime-cutover-main
