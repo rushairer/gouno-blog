@@ -13,6 +13,8 @@ import (
 	communityservice "github.com/rushairer/blog-backend/internal/community/service"
 	"github.com/rushairer/blog-backend/internal/controller"
 	"github.com/rushairer/blog-backend/internal/media"
+	mediacontroller "github.com/rushairer/blog-backend/internal/media/controller"
+	mediaservice "github.com/rushairer/blog-backend/internal/media/service"
 	pagecontroller "github.com/rushairer/blog-backend/internal/page/controller"
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
 	"github.com/rushairer/blog-backend/internal/ratelimit"
@@ -37,6 +39,7 @@ type WebRouterOptions struct {
 	CORSAllowedOrigins []string
 	PostSvc            *service.PostService
 	PageSvc            *pageservice.PageService
+	MediaSvc           mediaservice.Service
 	TaxonomySvc        taxonomyservice.Service
 	SiteSvc            siteservice.Service
 	CommunitySvc       *communityservice.CommunityService
@@ -50,7 +53,7 @@ type WebRouterOptions struct {
 }
 
 func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
-	if opts.PostSvc == nil || opts.PageSvc == nil || opts.TaxonomySvc == nil || opts.SiteSvc == nil || opts.CommunitySvc == nil || opts.GrowthSvc == nil {
+	if opts.PostSvc == nil || opts.PageSvc == nil || opts.MediaSvc == nil || opts.TaxonomySvc == nil || opts.SiteSvc == nil || opts.CommunitySvc == nil || opts.GrowthSvc == nil {
 		panic("RegisterWebRouterWithOptions: all application services are required")
 	}
 	if opts.Verifier == nil || opts.AccessService == nil {
@@ -97,8 +100,10 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 	}
 	communityCtrl := communitycontroller.NewCommunityController(communitySvc, interactionLimiter, opts.VisitorSecret, opts.Logger)
 
+	mediaCtrl := mediacontroller.New(opts.MediaSvc, opts.MediaStore)
+
 	growthSvc := opts.GrowthSvc
-	growthCtrl := controller.NewGrowthController(growthSvc, postSvc, communitySvc, opts.MediaStore, opts.Logger)
+	growthCtrl := controller.NewGrowthController(growthSvc, postSvc, communitySvc)
 
 	if opts.MediaStore != nil {
 		if _, local := opts.MediaStore.LocalPath(".probe"); local && os.MkdirAll(opts.MediaDir, 0o750) == nil {
@@ -233,11 +238,11 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 			author.POST("/admin/posts/:id/versions/:versionID/restore", growthCtrl.RestoreVersion)
 			author.GET("/admin/categories", taxonomyCtrl.ListCategories)
 			author.GET("/admin/tags", taxonomyCtrl.ListAdminTags)
-			author.GET("/admin/media", growthCtrl.ListMedia)
-			author.POST("/admin/media", growthCtrl.UploadMedia)
-			author.PUT("/admin/media/:id", growthCtrl.UpdateMedia)
-			author.GET("/admin/media/:id/references", growthCtrl.MediaReferences)
-			author.DELETE("/admin/media/:id", growthCtrl.DeleteMedia)
+			author.GET("/admin/media", mediaCtrl.List)
+			author.POST("/admin/media", mediaCtrl.Upload)
+			author.PUT("/admin/media/:id", mediaCtrl.Update)
+			author.GET("/admin/media/:id/references", mediaCtrl.References)
+			author.DELETE("/admin/media/:id", mediaCtrl.Delete)
 			if agentCtrl != nil {
 				author.POST("/admin/ai-draft-assist", agentCtrl.DraftAssist)
 				author.POST("/admin/ai-generate-image", agentCtrl.GenerateImage)

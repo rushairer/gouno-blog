@@ -22,18 +22,24 @@ var (
 	ErrApprovalExpired  = errors.New("approval has expired")
 )
 
-type ApprovalService struct {
-	repo       *repository.AgentRepository
-	posts      *service.PostService
-	pages      *pageservice.PageService
-	management *ManagementService
-	growth     *service.GrowthService
-	media      media.Store
-	generation *GenerationService
+type mediaAssetGateway interface {
+	ListMedia(context.Context, domain.MediaFilter) ([]*domain.MediaAsset, error)
+	CreateMedia(context.Context, *domain.MediaAsset) error
 }
 
-func NewApprovalService(repo *repository.AgentRepository, posts *service.PostService, management *ManagementService, growth *service.GrowthService, store media.Store, pages *pageservice.PageService) *ApprovalService {
-	return &ApprovalService{repo: repo, posts: posts, pages: pages, management: management, growth: growth, media: store, generation: NewGenerationService(repo, management, growth, store)}
+type ApprovalService struct {
+	repo        *repository.AgentRepository
+	posts       *service.PostService
+	pages       *pageservice.PageService
+	management  *ManagementService
+	growth      *service.GrowthService
+	mediaAssets mediaAssetGateway
+	media       media.Store
+	generation  *GenerationService
+}
+
+func NewApprovalService(repo *repository.AgentRepository, posts *service.PostService, management *ManagementService, growth *service.GrowthService, mediaAssets mediaAssetGateway, store media.Store, pages *pageservice.PageService) *ApprovalService {
+	return &ApprovalService{repo: repo, posts: posts, pages: pages, management: management, growth: growth, mediaAssets: mediaAssets, media: store, generation: NewGenerationService(repo, management, mediaAssets, store)}
 }
 
 func (s *ApprovalService) SetGenerationService(generation *GenerationService) {
@@ -193,7 +199,7 @@ func (s *ApprovalService) ApplyMediaCandidate(ctx context.Context, id int64) (*d
 	if err != nil || post == nil {
 		return nil, service.ErrPostNotFound
 	}
-	assets, err := s.growth.ListMedia(ctx, domain.MediaFilter{})
+	assets, err := s.mediaAssets.ListMedia(ctx, domain.MediaFilter{})
 	if err != nil {
 		return nil, err
 	}
@@ -277,7 +283,7 @@ func (s *ApprovalService) ApplyMediaCandidates(ctx context.Context, runID int64,
 	if err != nil || post == nil {
 		return nil, service.ErrPostNotFound
 	}
-	assets, err := s.growth.ListMedia(ctx, domain.MediaFilter{})
+	assets, err := s.mediaAssets.ListMedia(ctx, domain.MediaFilter{})
 	if err != nil {
 		return nil, err
 	}
@@ -334,7 +340,7 @@ func (s *ApprovalService) PreviewMediaCandidate(ctx context.Context, id int64) (
 	if err != nil {
 		return nil, err
 	}
-	assets, err := s.growth.ListMedia(ctx, domain.MediaFilter{})
+	assets, err := s.mediaAssets.ListMedia(ctx, domain.MediaFilter{})
 	if err != nil {
 		return nil, err
 	}

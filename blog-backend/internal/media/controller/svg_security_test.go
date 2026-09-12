@@ -53,7 +53,7 @@ func TestValidateStaticSVGRejectsMalformedOrNonSVGDocuments(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			if err := validateStaticSVG(strings.NewReader(document)); err == nil {
 				t.Fatal("validateStaticSVG() accepted invalid document")
-		}
+			}
 		})
 	}
 }

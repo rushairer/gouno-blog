@@ -26,6 +26,8 @@ import (
 	"github.com/rushairer/blog-backend/internal/controller"
 	"github.com/rushairer/blog-backend/internal/knowledge"
 	"github.com/rushairer/blog-backend/internal/media"
+	mediarepository "github.com/rushairer/blog-backend/internal/media/repository"
+	mediaservice "github.com/rushairer/blog-backend/internal/media/service"
 	"github.com/rushairer/blog-backend/internal/operations"
 	pagerepository "github.com/rushairer/blog-backend/internal/page/repository"
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
@@ -275,6 +277,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 	taxonomySvc := taxonomyservice.New(taxonomyrepository.New(cfg.DB))
 	siteSvc := siteservice.New(siterepository.New(cfg.DB))
 	communitySvc := communityservice.NewCommunityService(communityrepository.NewCommunityRepository(cfg.DB), postRepo)
+	mediaSvc := mediaservice.New(mediarepository.New(cfg.DB))
 	growthSvc := service.NewGrowthService(repository.NewGrowthRepository(cfg.DB))
 	service.StartScheduledPublisher(ctx, postSvc, cfg.Logger)
 
@@ -308,8 +311,8 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 			cfg.Logger.Info("Reconciled AI workspace starter Agents", zap.Int("created", created))
 		}
 		runner := agentservice.NewRunner(agentRepo, management, toolRegistry, postSvc)
-		generation := agentservice.NewGenerationService(agentRepo, management, growthSvc, mediaStore)
-		approvals := agentservice.NewApprovalService(agentRepo, postSvc, management, growthSvc, mediaStore, pageSvc)
+		generation := agentservice.NewGenerationService(agentRepo, management, mediaSvc, mediaStore)
+		approvals := agentservice.NewApprovalService(agentRepo, postSvc, management, growthSvc, mediaSvc, mediaStore, pageSvc)
 		approvals.SetGenerationService(generation)
 		workflowSvc := workflowservice.NewService(cfg.DB, runner, management, toolRegistry, transactor)
 		workflowSvc.StartScheduler(ctx, cfg.Global.AIAgentConfig.SchedulerInterval)
@@ -330,7 +333,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		DB: cfg.DB, AuthOptions: cfg.AuthOptions, RedisDSN: cfg.Global.RedisConfig.DSN,
 		VisitorSecret: visitorSecret, MediaDir: mediaDir, MediaStore: mediaStore,
 		CORSAllowedOrigins: cfg.Global.WebServerConfig.CORSAllowedOrigins,
-		PostSvc:            postSvc, PageSvc: pageSvc, TaxonomySvc: taxonomySvc, SiteSvc: siteSvc, CommunitySvc: communitySvc,
+		PostSvc:            postSvc, PageSvc: pageSvc, MediaSvc: mediaSvc, TaxonomySvc: taxonomySvc, SiteSvc: siteSvc, CommunitySvc: communitySvc,
 		GrowthSvc: growthSvc, AgentCtrl: agentCtrl, Logger: cfg.Logger, Verifier: verifier,
 		AccessService: accessService, SecureCookies: cfg.Global.WebServerConfig.ResolveSecureCookies(cfg.Env),
 		BFFClient: bffClient,
