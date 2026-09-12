@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { X } from "lucide-react";
-import { Alert } from "@gouno/ui/core";
+import { Alert, IconButton } from "@gouno/ui/core";
 
 export type AppFeedbackType = "error" | "success" | "warning" | "info";
 export type AppFeedbackOptions = { duration?: number };
@@ -100,17 +100,20 @@ function RootAppFeedbackProvider({ children }: { children: ReactNode }) {
             key={item.id}
             type={item.type}
             showIcon
-            role={item.type === "error" || item.type === "warning" ? "alert" : "status"}
+            role={
+              item.type === "error" || item.type === "warning"
+                ? "alert"
+                : "status"
+            }
             className="shadow-lg"
             action={
-              <button
-                type="button"
-                aria-label="关闭提示"
-                className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-black/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-white/10"
+              <IconButton
+                variant="ghost"
+                size="small"
+                label="关闭提示"
+                icon={<X />}
                 onClick={() => dismiss(item.id)}
-              >
-                <X aria-hidden="true" className="size-4" />
-              </button>
+              />
             }
           >
             {item.message}
