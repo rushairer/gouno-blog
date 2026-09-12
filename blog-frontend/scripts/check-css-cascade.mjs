@@ -4,6 +4,19 @@ import { fileURLToPath } from "node:url";
 
 const sourceRoot = fileURLToPath(new URL("../src/", import.meta.url));
 const tailwindEntry = "styles/tailwind.css";
+const retiredAgentShellSelectors = [
+  ".workspace-overview",
+  ".approval-queue",
+  ".approval-decision",
+  ".operations-queue",
+  ".operations-task",
+  ".operations-candidates",
+  ".operations-history",
+  ".editorial-task-panel",
+  ".editorial-task-list",
+  ".agent-split-view",
+  ".agent-approval-workspace",
+];
 const allowedBlockAtRules = new Set([
   "@layer",
   "@theme",
@@ -163,6 +176,7 @@ let tailwindImports = 0;
 
 for (const file of cssFiles) {
   const source = await readFile(file.absolutePath, "utf8");
+  const sourceWithoutComments = withoutComments(source);
   const imports =
     source.match(/@import\s+(?:url\()?\s*["']tailwindcss["']/g) ?? [];
   tailwindImports += imports.length;
@@ -175,6 +189,14 @@ for (const file of cssFiles) {
     failures.push(
       `${file.relativePath}: Tailwind must only be imported by ${tailwindEntry}`,
     );
+  }
+
+  for (const retiredSelector of retiredAgentShellSelectors) {
+    if (sourceWithoutComments.includes(retiredSelector)) {
+      failures.push(
+        `${file.relativePath}: retired AI shell selector ${retiredSelector} must not be reintroduced`,
+      );
+    }
   }
 
   source.split("\n").forEach((line, index) => {
