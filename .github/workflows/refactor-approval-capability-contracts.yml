@@ -29,7 +29,22 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sed -i 's/for method in methods:/for method in sorted(methods, key=len, reverse=True):/' .github/refactor_approval_capability_contracts.py
+          python3 <<'PY'
+          from pathlib import Path
+          p = Path('.github/refactor_approval_capability_contracts.py')
+          text = p.read_text()
+          replacements = [
+              ('for method in methods:', 'for method in sorted(methods, key=len, reverse=True):'),
+              ("test_text += r'''", "test_text += '''"),
+              ("write_text(r'''package operations", "write_text('''package operations"),
+          ]
+          for old, new in replacements:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'expected exactly one migration-script marker {old!r}, found {count}')
+              text = text.replace(old, new)
+          p.write_text(text)
+          PY
           python3 .github/refactor_approval_capability_contracts.py
 
       - name: Format and verify architecture slice
