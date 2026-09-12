@@ -67,11 +67,13 @@ describe("AdminUsers list template", () => {
     expect(within(mobileList).getByText("编辑")).toBeInTheDocument();
 
     await user.click(
-      within(mobileList).getByRole("button", { name: "编辑成员与权限" }),
+      within(mobileList).getByRole("button", {
+        name: "编辑 内容编辑 成员与权限",
+      }),
     );
     await waitFor(() => {
       expect(
-        screen.getByRole("dialog", { name: "编辑成员信息与权限" }),
+        screen.getByRole("dialog", { name: "编辑 内容编辑 的成员信息与权限" }),
       ).toBeInTheDocument();
     });
   });

@@ -30,10 +30,10 @@ import {
   TableHeader,
   TableRow,
   Tag,
+  Text,
 } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
 
-import { ConfirmActionModal } from "../../components/ConfirmActionModal";
 import { StepUpMfaModal } from "../../components/auth/StepUpMfaModal";
 import { SudoGate } from "../../components/auth/SudoGate";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
@@ -109,7 +109,9 @@ function MembersLoadingState() {
   return (
     <Card padding="base" aria-label="成员加载中">
       <div className="flex flex-col gap-4" role="status" aria-live="polite">
-        <p className="text-sm text-muted-foreground">正在同步成员目录…</p>
+        <Text size="sm" tone="muted">
+          正在同步成员目录…
+        </Text>
         {Array.from({ length: 4 }, (_, index) => (
           <div
             key={index}
@@ -252,7 +254,7 @@ export default function AdminUsers() {
       <>
         <IconButton
           variant="ghost"
-          label="编辑成员与权限"
+          label={`编辑 ${memberName(member)} 成员与权限`}
           icon={<KeyRound />}
           disabled={busy}
           onClick={() => setEditing(member)}
@@ -260,7 +262,7 @@ export default function AdminUsers() {
         {!isOwner ? (
           <IconButton
             variant="ghost"
-            label="移交所有权"
+            label={`移交所有权给 ${memberName(member)}`}
             icon={<Crown />}
             disabled={busy || member.membership_status !== "active"}
             onClick={() => setConfirm({ member, action: "transfer" })}
@@ -269,7 +271,7 @@ export default function AdminUsers() {
         {isOwner ? null : member.membership_status === "suspended" ? (
           <IconButton
             variant="ghost"
-            label="恢复成员"
+            label={`恢复 ${memberName(member)}`}
             icon={<RotateCcw />}
             disabled={busy}
             onClick={() => setConfirm({ member, action: "restore" })}
@@ -278,7 +280,7 @@ export default function AdminUsers() {
           <IconButton
             variant="ghost"
             color="error"
-            label="暂停成员"
+            label={`暂停 ${memberName(member)}`}
             icon={<Ban />}
             disabled={busy}
             onClick={() => setConfirm({ member, action: "suspend" })}
@@ -397,7 +399,7 @@ export default function AdminUsers() {
                       <Button
                         variant="ghost"
                         size="small"
-                        className="member-id-copy font-mono text-xs"
+                        className="font-mono text-xs"
                         title={`点击复制完整 Subject ID: ${member.principal.subject}`}
                         onClick={(event) => {
                           event.stopPropagation();
@@ -497,7 +499,10 @@ export default function AdminUsers() {
 
       <Modal
         open={Boolean(editing)}
-        title={editing ? "编辑成员信息与权限" : "管理权限"}
+        title={
+          editing ? `编辑 ${memberName(editing)} 的成员信息与权限` : "编辑成员"
+        }
+        description="Blog 角色决定产品内的内容和运营权限；账号密码与 MFA 仍由 GOSSO 管理。"
         onClose={() => setEditing(null)}
         footer={
           editing ? (
@@ -542,9 +547,9 @@ export default function AdminUsers() {
                     <Tag color="warning">所有者</Tag>
                   ) : null}
                 </div>
-                <p className="break-all text-xs text-muted-foreground">
+                <Text size="xs" tone="muted" className="break-all">
                   {editing.principal.email || "GOSSO 已验证身份"}
-                </p>
+                </Text>
               </div>
             </div>
 
@@ -589,20 +594,20 @@ export default function AdminUsers() {
               </Select>
             </FormField>
 
-            <p className="text-xs leading-relaxed text-muted-foreground">
+            <Text size="xs" tone="muted" className="leading-relaxed">
               {editing.roles.includes("owner")
                 ? "拥有 Blog 最高管理权限；所有权仅可通过“移交所有权”操作转让。"
                 : roleDescriptions[editableRole(editing)]}
-            </p>
+            </Text>
           </form>
         ) : null}
       </Modal>
 
-      <ConfirmActionModal
+      <Modal
         open={Boolean(confirm)}
         title={
           confirm?.action === "transfer"
-            ? "移交所有权"
+            ? "移交 Blog 所有权"
             : confirm?.action === "suspend"
               ? "暂停成员"
               : "恢复成员"
@@ -614,18 +619,29 @@ export default function AdminUsers() {
               ? `暂停“${confirm && memberName(confirm.member)}”后，其后台访问权限将立即失效。`
               : `确认恢复“${confirm && memberName(confirm.member)}”的成员资格？`
         }
-        confirmLabel={
+        onClose={() => setConfirm(null)}
+        onOk={() => void executeConfirm()}
+        okText={
           confirm?.action === "transfer"
             ? "确认移交"
             : confirm?.action === "suspend"
               ? "确认暂停"
               : "确认恢复"
         }
-        danger={confirm?.action !== "restore"}
-        busy={saving !== null}
-        onConfirm={executeConfirm}
-        onClose={() => setConfirm(null)}
-      />
+        cancelText="取消"
+        okButtonProps={
+          confirm?.action === "suspend"
+            ? { variant: "solid", color: "error", loading: saving !== null }
+            : { loading: saving !== null }
+        }
+      >
+        <Alert
+          type="warning"
+          showIcon
+          title="这是高权限操作"
+          description="操作仍会经过 Sudo/MFA 最近验证，并由后端再次校验当前操作者权限。"
+        />
+      </Modal>
 
       <StepUpMfaModal
         open={stepUpOpen}
