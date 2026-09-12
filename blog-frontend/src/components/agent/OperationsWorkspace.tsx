@@ -1,4 +1,5 @@
 import {
+  Bot,
   Check,
   ChevronDown,
   Image,
@@ -16,8 +17,8 @@ import type {
   OperationalSuggestion,
 } from "../../types/agent";
 import { operationsApi } from "../../api/operations";
-import { Checkbox } from "@gouno/ui/core";
-import { BulkActionBar, Button, EmptyState, Panel } from "@gouno/ui-legacy";
+import { Button, Card, Checkbox, Empty } from "@gouno/ui/core";
+import { BulkActionBar } from "@gouno/ui/patterns";
 import { StatusPill } from "./StatusPill";
 import { WorkflowLauncher } from "./WorkflowLauncher";
 
@@ -133,7 +134,7 @@ export function OperationsWorkspace({
 
   return (
     <div className="operations-queue section-stack">
-      <Panel className="operations-queue__intro">
+      <Card padding="base" className="operations-queue__intro">
         <div className="panel-heading">
           <div>
             <h2>
@@ -147,7 +148,7 @@ export function OperationsWorkspace({
             </small>
           </div>
           <Button
-            variant="secondary"
+            variant="outline"
             type="button"
             loading={refreshing}
             disabled={refreshing}
@@ -168,7 +169,7 @@ export function OperationsWorkspace({
               : "Creating an editorial task never changes or publishes content."}
           </span>
         </div>
-      </Panel>
+      </Card>
 
       {selectedSuggestions.length ? (
         <BulkActionBar
@@ -177,16 +178,18 @@ export function OperationsWorkspace({
               ? `已选择 ${selectedSuggestions.length} 条建议`
               : `${selectedSuggestions.length} suggestions selected`
           }
-          onAIAssist={() => setAIOpen(true)}
           onCancel={() => setSelectedSuggestions([])}
-          aiLabel={zh ? "交给 AI" : "Send to AI"}
           cancelLabel={zh ? "取消" : "Cancel"}
-        />
+        >
+          <Button size="small" icon={<Bot />} onClick={() => setAIOpen(true)}>
+            {zh ? "交给 AI" : "Send to AI"}
+          </Button>
+        </BulkActionBar>
       ) : null}
 
       {total === 0 ? (
-        <EmptyState
-          label={
+        <Empty
+          title={
             zh
               ? "目前没有需要你决定的运营建议。"
               : "There are no operational suggestions requiring a decision."
@@ -241,8 +244,8 @@ export function OperationsWorkspace({
               </div>
               <div className="operations-task__actions">
                 <Button
-                  variant="secondary"
-                  size="compact"
+                  variant="outline"
+                  size="small"
                   type="button"
                   onClick={() => ignoreSuggestion(item)}
                   icon={<ThumbsDown />}
@@ -250,8 +253,9 @@ export function OperationsWorkspace({
                   {zh ? "暂不处理" : "Defer"}
                 </Button>
                 <Button
-                  variant="primary"
-                  size="compact"
+                  variant="solid"
+                  color="primary"
+                  size="small"
                   type="button"
                   onClick={() =>
                     void mutate(() => operationsApi.convertSuggestion(item.id))
@@ -263,6 +267,7 @@ export function OperationsWorkspace({
               </div>
             </article>
           ))}
+
           {pendingSets.map((set) => (
             <article className="operations-task" key={`candidate-${set.id}`}>
               <div className="operations-task__icon">
@@ -301,8 +306,8 @@ export function OperationsWorkspace({
                           <p>{candidate.rationale}</p>
                         ) : null}
                         <Button
-                          variant="secondary"
-                          size="compact"
+                          variant="outline"
+                          size="small"
                           type="button"
                           onClick={() =>
                             void mutate(() =>
@@ -324,6 +329,7 @@ export function OperationsWorkspace({
               </div>
             </article>
           ))}
+
           {pendingMedia.map((item) => (
             <article className="operations-task" key={`media-brief-${item.id}`}>
               <div className="operations-task__icon">
@@ -358,8 +364,8 @@ export function OperationsWorkspace({
               </div>
               <div className="operations-task__actions">
                 <Button
-                  variant="secondary"
-                  size="compact"
+                  variant="outline"
+                  size="small"
                   type="button"
                   onClick={() =>
                     void mutate(() =>
@@ -377,8 +383,9 @@ export function OperationsWorkspace({
                   {zh ? "拒绝" : "Reject"}
                 </Button>
                 <Button
-                  variant="primary"
-                  size="compact"
+                  variant="solid"
+                  color="primary"
+                  size="small"
                   type="button"
                   onClick={() =>
                     void mutate(() =>
@@ -392,6 +399,7 @@ export function OperationsWorkspace({
               </div>
             </article>
           ))}
+
           {readyMedia.map((item) => (
             <article className="operations-task" key={`media-${item.id}`}>
               <div className="operations-task__icon">
@@ -426,8 +434,9 @@ export function OperationsWorkspace({
               </div>
               <div className="operations-task__actions">
                 <Button
-                  variant="primary"
-                  size="compact"
+                  variant="solid"
+                  color="primary"
+                  size="small"
                   type="button"
                   onClick={() =>
                     void mutate(() =>
@@ -444,7 +453,7 @@ export function OperationsWorkspace({
         </div>
       )}
 
-      <Panel className="editorial-task-panel">
+      <Card padding="base" className="editorial-task-panel">
         <div className="panel-heading">
           <div>
             <h2>{zh ? "编辑任务" : "Editorial tasks"}</h2>
@@ -459,8 +468,8 @@ export function OperationsWorkspace({
           </strong>
         </div>
         {openTasks.length === 0 ? (
-          <EmptyState
-            label={
+          <Empty
+            title={
               zh
                 ? "没有进行中的编辑任务。"
                 : "There are no open editorial tasks."
@@ -481,8 +490,8 @@ export function OperationsWorkspace({
                 </div>
                 <div className="editorial-task-list__actions">
                   <Button
-                    variant="secondary"
-                    size="compact"
+                    variant="outline"
+                    size="small"
                     type="button"
                     onClick={() =>
                       void mutate(() =>
@@ -497,8 +506,9 @@ export function OperationsWorkspace({
                     {zh ? "取消" : "Cancel"}
                   </Button>
                   <Button
-                    variant="primary"
-                    size="compact"
+                    variant="solid"
+                    color="primary"
+                    size="small"
                     type="button"
                     onClick={() =>
                       void mutate(() =>
@@ -514,7 +524,7 @@ export function OperationsWorkspace({
             ))}
           </div>
         )}
-      </Panel>
+      </Card>
 
       {handledSuggestions.length > 0 || closedTasks.length > 0 ? (
         <details className="operations-history">
@@ -563,6 +573,7 @@ export function OperationsWorkspace({
           </div>
         </details>
       ) : null}
+
       <WorkflowLauncher
         open={aiOpen}
         resourceType="operational_suggestion"
