@@ -46,6 +46,27 @@ jobs:
           p.write_text(text)
           PY
           python3 .github/refactor_approval_capability_contracts.py
+          python3 <<'PY'
+          from pathlib import Path
+          p = Path('blog-backend/internal/repository/agent_repository_integration_test.go')
+          text = p.read_text()
+          import_marker = 'import (\n'
+          if text.count(import_marker) != 1:
+              raise SystemExit('agent repository integration test import marker drifted')
+          agent_import = '\tagentrepository "github.com/rushairer/blog-backend/internal/agent/repository"\n'
+          if agent_import in text:
+              raise SystemExit('canonical approval repository import already present unexpectedly')
+          text = text.replace(import_marker, import_marker + agent_import, 1)
+          marker = 'func TestFailedApprovalRemainsActionableAndCanBeReclaimed(t *testing.T) {'
+          before, sep, after = text.partition(marker)
+          if not sep:
+              raise SystemExit('failed approval integration test marker drifted')
+          constructor = 'repo := NewAgentRepository(db)'
+          if after.count(constructor) != 1:
+              raise SystemExit(f'expected one legacy approval repository constructor in test, found {after.count(constructor)}')
+          after = after.replace(constructor, 'repo := agentrepository.NewApprovalRepository(db)', 1)
+          p.write_text(before + sep + after)
+          PY
 
       - name: Format and verify architecture slice
         shell: bash
@@ -60,6 +81,7 @@ jobs:
             blog-backend/internal/agent/repository/approval_repository.go \
             blog-backend/internal/operations/approval_effects.go \
             blog-backend/internal/operations/approval_effects_integration_test.go \
+            blog-backend/internal/repository/agent_repository_integration_test.go \
             blog-backend/internal/repository/approval_repository.go \
             blog-backend/internal/repository/media_candidate_repository.go
           git diff --check
