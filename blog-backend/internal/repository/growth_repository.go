@@ -6,14 +6,18 @@ import (
 
 	"github.com/lib/pq"
 	"github.com/rushairer/blog-backend/internal/domain"
+	recommendationrepository "github.com/rushairer/blog-backend/internal/recommendation/repository"
 )
 
 type GrowthRepository struct {
-	db *sql.DB
+	db             *sql.DB
+	recommendation recommendationrepository.Repository
 }
 
+var _ recommendationrepository.Repository = (*GrowthRepository)(nil)
+
 func NewGrowthRepository(db *sql.DB) *GrowthRepository {
-	return &GrowthRepository{db: db}
+	return &GrowthRepository{db: db, recommendation: recommendationrepository.New(db)}
 }
 
 func scanGrowthPost(scanner interface{ Scan(...any) error }) (*domain.Post, error) {
@@ -29,25 +33,7 @@ const growthPostColumns = `p.id, p.title, p.slug, p.summary, p.content, p.tags, 
 	p.views_count, p.likes_count, p.published_at, p.scheduled_at, p.created_by_principal_id, p.updated_by_principal_id, p.created_at, p.updated_at`
 
 func (r *GrowthRepository) RelatedPosts(ctx context.Context, postID int64, tags []string, limit int) ([]*domain.Post, error) {
-	rows, err := r.db.QueryContext(ctx, `SELECT `+growthPostColumns+`
-		FROM posts p
-		WHERE p.id <> $1 AND p.status = 'published' AND p.tags && $2
-		ORDER BY (SELECT COUNT(*) FROM unnest(p.tags) tag WHERE tag = ANY($2)) DESC,
-		         p.published_at DESC NULLS LAST
-		LIMIT $3`, postID, pq.Array(tags), limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	posts := make([]*domain.Post, 0)
-	for rows.Next() {
-		post, err := scanGrowthPost(rows)
-		if err != nil {
-			return nil, err
-		}
-		posts = append(posts, post)
-	}
-	return posts, rows.Err()
+	return r.recommendation.RelatedPosts(ctx, postID, tags, limit)
 }
 
 func (r *GrowthRepository) ListVersions(ctx context.Context, postID int64) ([]*domain.PostVersion, error) {
