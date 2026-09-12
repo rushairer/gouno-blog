@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/testsupport"
 )
 
@@ -45,34 +44,6 @@ func TestGrowthRepositoryContentLifecycle(t *testing.T) {
 	restored, err := repo.RestoreVersion(ctx, postID, versions[0].ID)
 	if err != nil || restored.Title != "Original title" || restored.Content != "Original body" {
 		t.Fatalf("restore mismatch: post=%#v err=%v", restored, err)
-	}
-
-	asset := &domain.MediaAsset{
-		Filename: "test.png", StorageName: fmt.Sprintf("test-%d.png", suffix), URL: "/media/test.png",
-		ContentType: "image/png", SizeBytes: 128, AltText: "Test image",
-	}
-	if err := repo.CreateMedia(ctx, asset); err != nil {
-		t.Fatal(err)
-	}
-	assets, err := repo.ListMedia(ctx, domain.MediaFilter{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	found := false
-	for _, item := range assets {
-		if item.ID == asset.ID {
-			found = true
-		}
-	}
-	if !found {
-		t.Fatal("created media was not listed")
-	}
-	updatedAsset, err := repo.UpdateMediaAltText(ctx, asset.ID, "Updated alt text", nil)
-	if err != nil || updatedAsset.AltText != "Updated alt text" {
-		t.Fatalf("update alt text failed: asset=%#v err=%v", updatedAsset, err)
-	}
-	if _, err := repo.DeleteMedia(ctx, asset.ID); err != nil {
-		t.Fatal(err)
 	}
 
 	if err := repo.RecordEvent(ctx, postID, "view", "hashed-visitor"); err != nil {

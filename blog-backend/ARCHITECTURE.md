@@ -59,6 +59,8 @@ The former flat `internal/repository/category_repository.go`, `internal/service/
 
 Root content models such as `domain.Category`, `domain.TagSummary`, and `domain.Post` are not moved merely for directory symmetry. Their model boundary must be decided from actual ownership and cross-capability usage before any later relocation.
 
+The legacy flat `GrowthRepository` / `GrowthService` / `GrowthController` bucket is not promoted wholesale into a fake `growth` capability because it currently mixes post recommendations, post-version restore, media assets, and analytics. Decomposition follows real ownership. Media-asset persistence is now canonical under `internal/media/repository`; the legacy `GrowthRepository` retains media methods only as a compatibility delegate while Media service/controller/runtime ownership migrates in later stages. Post-version, recommendation, and analytics behavior remain in the flat Growth bucket until their own seams are established.
+
 Integration database setup discovered during the migration is shared through `internal/testsupport.OpenTestDB`; capability tests must not depend on private helpers owned by another capability's test file.
 
 ## Shared HTTP controller primitives
