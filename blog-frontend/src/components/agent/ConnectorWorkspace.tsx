@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   Check,
+  Inbox,
   KeyRound,
   Play,
   RotateCcw,
@@ -14,14 +15,14 @@ import type {
 } from "../../types/agent";
 import { connectorApi } from "../../api/connectors";
 import {
+  Alert,
   Button,
-  EmptyState,
-  Feedback,
+  Card,
+  CardHeader,
+  Empty,
   IconButton,
-  Panel,
-  PanelHeader,
   Select,
-} from "@gouno/ui-legacy";
+} from "@gouno/ui/core";
 
 type Locale = "en" | "zh";
 
@@ -32,6 +33,10 @@ const kinds: Array<{ value: ConnectorKind; zh: string; en: string }> = [
   { value: "webhook", zh: "Webhook", en: "Webhook" },
 ];
 
+function selectValue(value: string | string[]) {
+  return Array.isArray(value) ? (value[0] ?? "") : value;
+}
+
 function statusLabel(status: ConnectorOutboxItem["status"], zh: boolean) {
   return {
     awaiting_approval: zh ? "待审批" : "Awaiting approval",
@@ -40,6 +45,25 @@ function statusLabel(status: ConnectorOutboxItem["status"], zh: boolean) {
     failed: zh ? "失败，可重试" : "Failed, retryable",
     revoked: zh ? "已撤销" : "Revoked",
   }[status];
+}
+
+function ConnectorSectionHeader({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <CardHeader>
+      <div className="min-w-0">
+        <h2 className="text-base font-semibold tracking-tight">{title}</h2>
+        <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+          {description}
+        </p>
+      </div>
+    </CardHeader>
+  );
 }
 
 export function ConnectorWorkspace({
@@ -208,8 +232,8 @@ export function ConnectorWorkspace({
 
   return (
     <div className="connector-workspace section-stack">
-      <Panel>
-        <PanelHeader
+      <Card as="section" className="shadow-none">
+        <ConnectorSectionHeader
           title={zh ? "受控连接器" : "Controlled connectors"}
           description={
             zh
@@ -217,8 +241,16 @@ export function ConnectorWorkspace({
               : "Search Console supports read-only Google OAuth; all other connectors remain local Sandbox mocks."
           }
         />
-        {error ? <Feedback type="error">{error}</Feedback> : null}
-        {message ? <Feedback type="success">{message}</Feedback> : null}
+        {error ? (
+          <Alert type="error" showIcon>
+            {error}
+          </Alert>
+        ) : null}
+        {message ? (
+          <Alert type="success" showIcon role="status">
+            {message}
+          </Alert>
+        ) : null}
         <div className="connector-form-grid">
           <label>
             {zh ? "名称" : "Name"}
@@ -231,9 +263,10 @@ export function ConnectorWorkspace({
           <label>
             {zh ? "类型" : "Kind"}
             <Select
+              aria-label={zh ? "类型" : "Kind"}
               value={kind}
-              onChange={(event) => {
-                const next = event.target.value as ConnectorKind;
+              onChange={(value) => {
+                const next = selectValue(value) as ConnectorKind;
                 setKind(next);
                 if (next !== "search_console") setSandbox(true);
               }}
@@ -281,7 +314,8 @@ export function ConnectorWorkspace({
             />
           </label>
           <Button
-            variant="primary"
+            variant="solid"
+            color="primary"
             type="button"
             disabled={!name.trim() || (!sandbox && !credential.trim())}
             onClick={() => void saveProfile()}
@@ -291,8 +325,9 @@ export function ConnectorWorkspace({
           </Button>
         </div>
         {profiles.length === 0 ? (
-          <EmptyState
-            label={zh ? "还没有连接器 Profile。" : "No connector profiles yet."}
+          <Empty
+            icon={<Inbox />}
+            title={zh ? "还没有连接器 Profile。" : "No connector profiles yet."}
           />
         ) : (
           <div className="table-scroll">
@@ -323,8 +358,8 @@ export function ConnectorWorkspace({
                     </td>
                     <td>
                       <Button
-                        variant="secondary"
-                        size="compact"
+                        variant="outline"
+                        size="small"
                         type="button"
                         onClick={() => void startOAuth(profile.id)}
                         icon={<KeyRound />}
@@ -358,7 +393,8 @@ export function ConnectorWorkspace({
               />
             </label>
             <Button
-              variant="primary"
+              variant="solid"
+              color="primary"
               type="button"
               onClick={() => void completeOAuth()}
               icon={<Check />}
@@ -367,9 +403,9 @@ export function ConnectorWorkspace({
             </Button>
           </div>
         ) : null}
-      </Panel>
-      <Panel>
-        <PanelHeader
+      </Card>
+      <Card as="section" className="shadow-none">
+        <ConnectorSectionHeader
           title={zh ? "Outbox 沙箱" : "Outbox sandbox"}
           description={
             zh
@@ -381,16 +417,16 @@ export function ConnectorWorkspace({
           <label>
             {zh ? "Profile" : "Profile"}
             <Select
-              value={selectedProfile}
-              onChange={(event) =>
-                setSelectedProfile(
-                  event.target.value ? Number(event.target.value) : "",
-                )
-              }
+              aria-label="Profile"
+              value={selectedProfile === "" ? "" : String(selectedProfile)}
+              onChange={(value) => {
+                const next = selectValue(value);
+                setSelectedProfile(next ? Number(next) : "");
+              }}
             >
               <option value="">{zh ? "选择 Profile" : "Choose profile"}</option>
               {profiles.map((profile) => (
-                <option key={profile.id} value={profile.id}>
+                <option key={profile.id} value={String(profile.id)}>
                   {profile.name}
                 </option>
               ))}
@@ -413,7 +449,8 @@ export function ConnectorWorkspace({
             />
           </label>
           <Button
-            variant="primary"
+            variant="solid"
+            color="primary"
             type="button"
             disabled={!selectedProfile || !key.trim()}
             onClick={() => void queue()}
@@ -423,7 +460,10 @@ export function ConnectorWorkspace({
           </Button>
         </div>
         {outbox.length === 0 ? (
-          <EmptyState label={zh ? "Outbox 为空。" : "Outbox is empty."} />
+          <Empty
+            icon={<Inbox />}
+            title={zh ? "Outbox 为空。" : "Outbox is empty."}
+          />
         ) : (
           <div className="table-scroll">
             <table className="content-table agent-table">
@@ -454,6 +494,7 @@ export function ConnectorWorkspace({
                       <div className="agent-row-actions">
                         {item.status === "awaiting_approval" ? (
                           <IconButton
+                            variant="ghost"
                             label={zh ? "批准" : "Approve"}
                             icon={<Check />}
                             onClick={() =>
@@ -465,6 +506,7 @@ export function ConnectorWorkspace({
                         ) : null}
                         {item.status === "approved" ? (
                           <IconButton
+                            variant="ghost"
                             label={zh ? "Mock 投递" : "Mock deliver"}
                             icon={<Play />}
                             onClick={() =>
@@ -479,6 +521,7 @@ export function ConnectorWorkspace({
                         ) : null}
                         {item.status === "failed" ? (
                           <IconButton
+                            variant="ghost"
                             label={zh ? "重试" : "Retry"}
                             icon={<RotateCcw />}
                             onClick={() =>
@@ -492,7 +535,8 @@ export function ConnectorWorkspace({
                           item.status,
                         ) ? (
                           <IconButton
-                            variant="danger"
+                            variant="solid"
+                            color="error"
                             label={zh ? "撤销" : "Revoke"}
                             icon={<ShieldOff />}
                             onClick={() =>
@@ -513,7 +557,7 @@ export function ConnectorWorkspace({
             </table>
           </div>
         )}
-      </Panel>
+      </Card>
     </div>
   );
 }

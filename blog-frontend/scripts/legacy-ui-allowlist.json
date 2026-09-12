@@ -5,13 +5,5 @@
   "canonicalSourceSha": "970bc1b0ad49de7b233901a5faf03c63dfa05892",
   "legacyPackage": "@gouno/ui-legacy",
   "legacyVersion": "0.1.0",
-  "allowedLegacyImports": {
-    "Button": ["src/components/agent/ConnectorWorkspace.tsx"],
-    "EmptyState": ["src/components/agent/ConnectorWorkspace.tsx"],
-    "Feedback": ["src/components/agent/ConnectorWorkspace.tsx"],
-    "IconButton": ["src/components/agent/ConnectorWorkspace.tsx"],
-    "Panel": ["src/components/agent/ConnectorWorkspace.tsx"],
-    "PanelHeader": ["src/components/agent/ConnectorWorkspace.tsx"],
-    "Select": ["src/components/agent/ConnectorWorkspace.tsx"]
-  }
+  "allowedLegacyImports": {}
 }

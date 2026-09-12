@@ -97,6 +97,59 @@ describe("ConnectorWorkspace", () => {
     );
   });
 
+  it("keeps connector kind and profile selection behavior on canonical Select", async () => {
+    apiFetch.mockImplementation((path: string) => {
+      if (path === "/api/admin/ai-connectors")
+        return Promise.resolve(
+          response([
+            {
+              id: 7,
+              name: "Primary newsletter",
+              kind: "newsletter",
+              sandbox: true,
+              enabled: true,
+              config: {},
+              has_credential: false,
+              credential_last4: "",
+              created_at: "",
+              updated_at: "",
+            },
+          ]),
+        );
+      if (path === "/api/admin/ai-connector-outbox")
+        return Promise.resolve(response([]));
+      return Promise.resolve(response({}));
+    });
+
+    const user = userEvent.setup();
+    render(
+      <ConnectorWorkspace
+        locale="en"
+        onRefresh={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    await screen.findAllByText("Primary newsletter");
+
+    await user.click(screen.getByRole("combobox", { name: "Kind" }));
+    await user.click(screen.getByRole("option", { name: "Search Console" }));
+    expect(
+      screen.getByText("Sandbox (uncheck for read-only Google OAuth)"),
+    ).toBeInTheDocument();
+
+    const queueButton = screen.getByRole("button", {
+      name: "Queue Outbox item",
+    });
+    expect(queueButton).toBeDisabled();
+
+    await user.click(screen.getByRole("combobox", { name: "Profile" }));
+    await user.click(
+      screen.getByRole("option", { name: "Primary newsletter" }),
+    );
+    await user.type(screen.getByPlaceholderText("run-2026-08-03"), "run-2");
+    expect(queueButton).toBeEnabled();
+  });
+
   it("surfaces and consumes a successful Search Console OAuth return", async () => {
     mockEmptyConnectorState();
     window.history.replaceState(
