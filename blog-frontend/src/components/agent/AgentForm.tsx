@@ -1,4 +1,4 @@
-import { Bot, Save, Sparkles } from "lucide-react";
+import { Bot, Save, Sparkles, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import type {
@@ -9,14 +9,19 @@ import type {
 } from "../../types/agent";
 import { emptyAgent } from "../../types/agent";
 import { useFormDraft } from "../../hooks/useFormDraft";
-import { Checkbox, Field, FormGrid, Input } from "@gouno/ui/core";
 import {
   Button,
-  EditorPanel,
+  Card,
+  CardHeader,
+  Checkbox,
+  Field,
   FormActions,
+  FormGrid,
   FormLayout,
+  IconButton,
+  Input,
   Select,
-} from "@gouno/ui-legacy";
+} from "@gouno/ui/core";
 
 type AgentFormValue = Omit<
   Agent,
@@ -132,12 +137,22 @@ export function AgentForm({
   );
 
   return (
-    <EditorPanel
-      title={initial ? labels.editAgent : labels.createAgent}
-      icon={<Bot />}
-      closeLabel={labels.cancel}
-      onClose={handleCancel}
-    >
+    <Card padding="base" className="editor-panel">
+      <CardHeader
+        title={
+          <span className="flex items-center gap-2">
+            <Bot />
+            {initial ? labels.editAgent : labels.createAgent}
+          </span>
+        }
+        action={
+          <IconButton
+            label={labels.cancel}
+            icon={<X />}
+            onClick={handleCancel}
+          />
+        }
+      />
       <FormLayout onSubmit={submit}>
         <FormGrid columns={2}>
           <Field label={labels.agentName}>
@@ -161,12 +176,16 @@ export function AgentForm({
             }
           >
             <Select
-              value={value.provider_profile_id || ""}
-              onChange={(event) =>
+              value={
+                value.provider_profile_id
+                  ? String(value.provider_profile_id)
+                  : ""
+              }
+              onChange={(nextValue) =>
                 setValue((current) => ({
                   ...current,
-                  provider_profile_id: event.target.value
-                    ? Number(event.target.value)
+                  provider_profile_id: nextValue
+                    ? Number(nextValue)
                     : undefined,
                 }))
               }
@@ -179,7 +198,7 @@ export function AgentForm({
               {providers
                 .filter((provider) => provider.enabled)
                 .map((provider) => (
-                  <option key={provider.id} value={provider.id}>
+                  <option key={provider.id} value={String(provider.id)}>
                     {provider.name} · {provider.model}
                   </option>
                 ))}
@@ -209,8 +228,10 @@ export function AgentForm({
         >
           <Select
             required
-            value={value.skill_version_id || ""}
-            onChange={(event) => applySkill(Number(event.target.value))}
+            value={
+              value.skill_version_id ? String(value.skill_version_id) : ""
+            }
+            onChange={(nextValue) => applySkill(Number(nextValue))}
           >
             <option value="" disabled>
               {locale === "zh" ? "选择 Skill" : "Choose a Skill"}
@@ -233,7 +254,7 @@ export function AgentForm({
                 suffix = locale === "zh" ? " (当前绑定)" : " (Current)";
               }
               return (
-                <option key={skill.version_id} value={skill.version_id}>
+                <option key={skill.version_id} value={String(skill.version_id)}>
                   {skill.name} · v{skill.version}
                   {suffix}
                 </option>
@@ -253,8 +274,8 @@ export function AgentForm({
               </span>
             </div>
             <Button
-              size="compact"
-              variant="secondary"
+              size="small"
+              variant="outline"
               type="button"
               onClick={() => applySkill(latestSkill.version_id)}
             >
@@ -285,10 +306,10 @@ export function AgentForm({
           <Field label={labels.trigger}>
             <Select
               value={value.trigger_type}
-              onChange={(event) =>
+              onChange={(nextValue) =>
                 setValue((current) => ({
                   ...current,
-                  trigger_type: event.target.value as TriggerType,
+                  trigger_type: String(nextValue) as TriggerType,
                 }))
               }
             >
@@ -432,11 +453,12 @@ export function AgentForm({
         </label>
 
         <FormActions>
-          <Button variant="secondary" type="button" onClick={onCancel}>
+          <Button variant="outline" type="button" onClick={onCancel}>
             {labels.cancel}
           </Button>
           <Button
-            variant="primary"
+            variant="solid"
+            color="primary"
             type="submit"
             loading={saving}
             disabled={providers.length === 0 || skillOptions.length === 0}
@@ -446,6 +468,6 @@ export function AgentForm({
           </Button>
         </FormActions>
       </FormLayout>
-    </EditorPanel>
+    </Card>
   );
 }
