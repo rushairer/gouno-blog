@@ -26,16 +26,17 @@ jobs:
       - name: Remove locale-sensitive placeholder assertion
         run: |
           python3 <<'PY'
+          import re
           from pathlib import Path
           path = Path('blog-frontend/src/components/agent/__tests__/WorkflowWorkspace.test.tsx')
           text = path.read_text()
-          old = '''    expect(
-              screen.getByRole("combobox", { name: "批量绑定 Agent" }),
-            ).toHaveTextContent("请选择");
-          '''
-          if old not in text:
-              raise SystemExit('locale-sensitive assertion not found')
-          path.write_text(text.replace(old, '', 1))
+          pattern = re.compile(
+              r'\n\s*expect\(\s*screen\.getByRole\("combobox", \{ name: "批量绑定 Agent" \}\),\s*\)\.toHaveTextContent\("请选择"\);'
+          )
+          text, count = pattern.subn('', text, count=1)
+          if count != 1:
+              raise SystemExit(f'expected one locale-sensitive assertion, removed {count}')
+          path.write_text(text)
           PY
       - working-directory: blog-frontend
         run: npx prettier --write src/components/agent/__tests__/WorkflowWorkspace.test.tsx
