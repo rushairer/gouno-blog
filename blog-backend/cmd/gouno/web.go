@@ -295,7 +295,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		agentRepo := repository.NewAgentRepository(cfg.DB)
 		knowledgeSvc := knowledge.NewService(cfg.DB, secrets, cfg.Global.AIAgentConfig.AllowedHosts, cfg.Logger, transactor)
 		knowledgeSvc.Start(ctx)
-		toolRegistry := tool.NewBlogRegistry(postSvc, communitySvc, nil, pageSvc, knowledgeSvc)
+		toolRegistry := tool.NewBlogRegistry(postSvc, communitySvc, pageSvc, knowledgeSvc)
 		tool.BindAnalytics(toolRegistry, analyticsSvc)
 		operationsSvc := operations.NewService(cfg.DB, toolRegistry, cfg.Logger, transactor)
 		operationsSvc.ConfigureGovernance(agentRepo, postSvc)
