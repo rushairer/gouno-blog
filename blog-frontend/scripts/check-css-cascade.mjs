@@ -42,6 +42,8 @@ const retiredAgentShellSelectors = [
   ".workflow-row--disabled",
   ".workflow-runs-table",
   ".agent-runs-table",
+  ".workflow-run-feedback .btn",
+  ".workflow-detail-nav .btn",
 ];
 const allowedBlockAtRules = new Set([
   "@layer",
