@@ -41,6 +41,7 @@ import (
 	"github.com/rushairer/blog-backend/internal/secretbox"
 	siterepository "github.com/rushairer/blog-backend/internal/site/repository"
 	siteservice "github.com/rushairer/blog-backend/internal/site/service"
+	"github.com/rushairer/blog-backend/internal/starterpack"
 	taxonomyrepository "github.com/rushairer/blog-backend/internal/taxonomy/repository"
 	taxonomyservice "github.com/rushairer/blog-backend/internal/taxonomy/service"
 	"github.com/rushairer/blog-backend/internal/tool"
@@ -301,8 +302,9 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		agentRepo := repository.NewAgentRepository(cfg.DB)
 		agentDefinitionRepo := agentrepository.NewDefinitionRepository(cfg.DB)
 		agentSkillRepo := agentrepository.NewSkillRepository(cfg.DB)
-		agentStarterPackRepo := agentrepository.NewAgentRepository(cfg.DB)
 		providerRepo := providerrepository.New(cfg.DB)
+		workflowStarterRepo := workflowrepository.NewStarterRepository()
+		starterPackCoordinator := starterpack.NewCoordinator(transactor, providerRepo, agentSkillRepo, agentDefinitionRepo, workflowStarterRepo)
 		notificationRepo := notificationrepository.NewSystemNotificationRepository(cfg.DB)
 		agentRunRepo := agentrepository.NewRunRepository(cfg.DB)
 		agentApprovalRepo := agentrepository.NewApprovalRepository(cfg.DB)
@@ -322,7 +324,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		management := agentservice.NewManagementService(
 			agentservice.ManagementServiceDependencies{
 				Providers: providerRepo, Agents: agentDefinitionRepo, Skills: agentSkillRepo,
-				Notifications: notificationRepo, StarterPack: agentStarterPackRepo,
+				Notifications: notificationRepo, StarterPack: starterPackCoordinator,
 			},
 			secrets, cfg.Global.AIAgentConfig.AllowedHosts,
 			toolRegistry.AgentNames(), toolRegistry.ProposalNames(),

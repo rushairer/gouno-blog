@@ -152,7 +152,7 @@ func TestIdentityFreshInstallAndSystemBootstrap(t *testing.T) {
 	VALUES('fixture','openai','https://fixture.test','fixture','\x01','\x02','test',1,true,true,60,1024)`)
 	// Even an ordinary existing user must not become the template creator.
 	identityActor(t, db, "https://fixture.test", "ordinary", false)
-	starterPackRepo := agentrepository.NewAgentRepository(db)
+	starterPackRepo := newStarterPackTestCoordinator(db)
 	definitionRepo := agentrepository.NewDefinitionRepository(db)
 	if _, err := starterPackRepo.BootstrapStarterPack(ctx); err != nil {
 		t.Fatal(err)
