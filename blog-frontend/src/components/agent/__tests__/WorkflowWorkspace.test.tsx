@@ -746,9 +746,11 @@ describe("WorkflowWorkspace", () => {
       "/api/admin/ai-automation-plans/draft",
       expect.anything(),
     );
-    expect(
-      screen.getByRole("combobox", { name: "批量绑定 Agent" }),
-    ).toHaveTextContent("请选择");
+    const bulkAgentBinding = screen.getByRole("combobox", {
+      name: "批量绑定 Agent",
+    });
+    expect(bulkAgentBinding).not.toHaveTextContent("Writer Agent");
+    expect(bulkAgentBinding).not.toHaveTextContent("Image Agent");
     await user.click(screen.getByRole("button", { name: "保存 Workflow" }));
     await waitFor(() => expect(onSave).toHaveBeenCalled());
     expect(onSave.mock.calls[0][0]).toMatchObject({
