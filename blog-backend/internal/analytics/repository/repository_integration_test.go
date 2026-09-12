@@ -26,8 +26,10 @@ func TestRepositoryRecordsEventsAndBuildsSummary(t *testing.T) {
 		VALUES ('Analytics secondary', $1, 'Summary', 'Body', ARRAY['analytics'], 'published', NOW()) RETURNING id`, secondSlug).Scan(&secondID); err != nil {
 		t.Fatal(err)
 	}
-	defer db.ExecContext(ctx, `DELETE FROM analytics_events WHERE post_id = $1`, postID)
-	defer db.ExecContext(ctx, `DELETE FROM posts WHERE id IN ($1, $2)`, postID, secondID)
+	defer func() {
+		_, _ = db.ExecContext(ctx, `DELETE FROM analytics_events WHERE post_id = $1`, postID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM posts WHERE id IN ($1, $2)`, postID, secondID)
+	}()
 
 	repo := New(db)
 	if err := repo.RecordEvent(ctx, postID, "view", fmt.Sprintf("analytics-visitor-%d", suffix)); err != nil {
