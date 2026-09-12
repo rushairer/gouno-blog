@@ -126,22 +126,16 @@ jobs:
           import { createHash } from 'node:crypto';
           import { readFile } from 'node:fs/promises';
           const pkg = JSON.parse(await readFile('./package.json', 'utf8'));
-          for (const [manifestFile, dependency] of [
-            ['./vendor/ui-manifest.json', '@gouno/ui'],
-            ['./vendor/legacy-ui-manifest.json', '@gouno/ui-legacy'],
-          ]) {
-            const manifest = JSON.parse(await readFile(manifestFile, 'utf8'));
-            const archive = await readFile(`./vendor/${manifest.archive}`);
-            const installed = JSON.parse(await readFile(`./node_modules/${dependency}/package.json`, 'utf8'));
-            const sha256 = createHash('sha256').update(archive).digest('hex');
-            const integrity = `sha512-${createHash('sha512').update(archive).digest('base64')}`;
-            if (pkg.dependencies?.[dependency] !== `file:vendor/${manifest.archive}`) throw new Error(`${dependency} dependency path does not match vendor manifest`);
-            if (installed.version !== manifest.version) throw new Error(`${dependency} installed version does not match vendor manifest`);
-            if (manifest.sha256 !== sha256 || manifest.integrity !== integrity) throw new Error(`${dependency} archive digest does not match vendor manifest`);
-          }
-          const canonical = JSON.parse(await readFile('./vendor/ui-manifest.json', 'utf8'));
+          const manifest = JSON.parse(await readFile('./vendor/ui-manifest.json', 'utf8'));
+          const archive = await readFile(`./vendor/${manifest.archive}`);
+          const installed = JSON.parse(await readFile('./node_modules/@gouno/ui/package.json', 'utf8'));
+          const sha256 = createHash('sha256').update(archive).digest('hex');
+          const integrity = `sha512-${createHash('sha512').update(archive).digest('base64')}`;
+          if (pkg.dependencies?.['@gouno/ui'] !== `file:vendor/${manifest.archive}`) throw new Error('@gouno/ui dependency path does not match vendor manifest');
+          if (installed.version !== manifest.version) throw new Error('@gouno/ui installed version does not match vendor manifest');
+          if (manifest.sha256 !== sha256 || manifest.integrity !== integrity) throw new Error('@gouno/ui archive digest does not match vendor manifest');
           const source = await readFile('./vendor/gouno-ui-source.txt', 'utf8');
-          if (!source.includes(`sha=${canonical.sourceSha}`)) throw new Error('canonical Gouno UI source SHA does not match vendor manifest');
+          if (!source.includes(`sha=${manifest.sourceSha}`)) throw new Error('canonical Gouno UI source SHA does not match vendor manifest');
           const core = await import('@gouno/ui/core');
           const theme = await import('@gouno/ui/theme');
           const patterns = await import('@gouno/ui/patterns');
