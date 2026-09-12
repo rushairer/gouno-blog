@@ -19,6 +19,7 @@ import (
 	"github.com/rushairer/blog-backend/config"
 	"github.com/rushairer/blog-backend/internal/access"
 	agentservice "github.com/rushairer/blog-backend/internal/agent"
+	agentrepository "github.com/rushairer/blog-backend/internal/agent/repository"
 	"github.com/rushairer/blog-backend/internal/authbff"
 	communityrepository "github.com/rushairer/blog-backend/internal/community/repository"
 	communityservice "github.com/rushairer/blog-backend/internal/community/service"
@@ -294,6 +295,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 			log.Fatalf("configure AI Agent secret encryption: %v", err)
 		}
 		agentRepo := repository.NewAgentRepository(cfg.DB)
+		agentDefinitionRepo := agentrepository.NewDefinitionRepository(cfg.DB)
 		knowledgeSvc := knowledge.NewService(cfg.DB, secrets, cfg.Global.AIAgentConfig.AllowedHosts, cfg.Logger, transactor)
 		knowledgeSvc.Start(ctx)
 		toolRegistry := tool.NewBlogRegistry(postSvc, communitySvc, pageSvc, knowledgeSvc)
@@ -325,7 +327,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 			WorkerCtx: ctx, Knowledge: knowledgeSvc, Workflows: workflowSvc, Operations: operationsSvc,
 			Connectors: connectorSvc, Generation: generation,
 		})
-		agentservice.NewScheduler(agentRepo, runner, cfg.Global.AIAgentConfig.SchedulerInterval, cfg.Logger).Start(ctx)
+		agentservice.NewScheduler(agentDefinitionRepo, runner, cfg.Global.AIAgentConfig.SchedulerInterval, cfg.Logger).Start(ctx)
 	}
 
 	verifier := gounoAuth.NewVerifier(cfg.JWKSURL)
