@@ -6,18 +6,14 @@ import (
 
 	"github.com/lib/pq"
 	"github.com/rushairer/blog-backend/internal/domain"
-	mediarepository "github.com/rushairer/blog-backend/internal/media/repository"
 )
 
 type GrowthRepository struct {
-	db    *sql.DB
-	media mediarepository.Repository
+	db *sql.DB
 }
 
-var _ mediarepository.Repository = (*GrowthRepository)(nil)
-
 func NewGrowthRepository(db *sql.DB) *GrowthRepository {
-	return &GrowthRepository{db: db, media: mediarepository.New(db)}
+	return &GrowthRepository{db: db}
 }
 
 func scanGrowthPost(scanner interface{ Scan(...any) error }) (*domain.Post, error) {
@@ -103,36 +99,6 @@ func (r *GrowthRepository) RestoreVersion(ctx context.Context, postID, versionID
 		return nil, err
 	}
 	return post, nil
-}
-
-var ErrMediaInUse = mediarepository.ErrMediaInUse
-
-func (r *GrowthRepository) CreateMedia(ctx context.Context, asset *domain.MediaAsset) error {
-	return r.media.CreateMedia(ctx, asset)
-}
-
-func (r *GrowthRepository) GetMedia(ctx context.Context, id int64) (*domain.MediaAsset, error) {
-	return r.media.GetMedia(ctx, id)
-}
-
-func (r *GrowthRepository) ListMedia(ctx context.Context, filter domain.MediaFilter) ([]*domain.MediaAsset, error) {
-	return r.media.ListMedia(ctx, filter)
-}
-
-func (r *GrowthRepository) UpdateMediaAltText(ctx context.Context, id int64, altText string, updatedByPrincipalID *int64) (*domain.MediaAsset, error) {
-	return r.media.UpdateMediaAltText(ctx, id, altText, updatedByPrincipalID)
-}
-
-func (r *GrowthRepository) DeleteMedia(ctx context.Context, id int64) (*domain.MediaAsset, error) {
-	return r.media.DeleteMedia(ctx, id)
-}
-
-func (r *GrowthRepository) CountMediaReferences(ctx context.Context, id int64) (int64, error) {
-	return r.media.CountMediaReferences(ctx, id)
-}
-
-func (r *GrowthRepository) ListMediaReferences(ctx context.Context, id int64) ([]*domain.MediaReference, error) {
-	return r.media.ListMediaReferences(ctx, id)
 }
 
 func (r *GrowthRepository) RecordEvent(ctx context.Context, postID int64, eventType, actorKey string) error {
