@@ -51,7 +51,7 @@ jobs:
           text = text.replaceAll('value={nested.agent_id || ""}', 'value={nested.agent_id ? String(nested.agent_id) : ""}');
           text = text.replace('value={boundAgentID}', 'value={boundAgentID === "" ? "" : String(boundAgentID)}');
 
-          let sf = ts.createSourceFile(sourcePath, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+          const sf = ts.createSourceFile(sourcePath, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
           const edits = [];
           const addEdit = (start, end, replacement) => edits.push({ start, end, replacement });
           let selectCount = 0;
@@ -156,6 +156,7 @@ jobs:
           test = test.replace('    await user.selectOptions(screen.getByLabelText("状态"), "published");', '    await chooseOption(user, "状态", "published");');
           test = test.replace('    await user.selectOptions(screen.getByLabelText("空结果策略"), "fail");', '    await chooseOption(user, "空结果策略", "失败并提醒管理员");');
           test = test.replace('    expect(screen.getByLabelText("批量绑定 Agent")).toHaveValue("5");', '    expect(\n      screen.getByRole("combobox", { name: "批量绑定 Agent" }),\n    ).toHaveTextContent("Editor");');
+          test = test.replace('    expect(screen.getByLabelText("批量绑定 Agent")).toHaveValue("");', '    expect(\n      screen.getByRole("combobox", { name: "批量绑定 Agent" }),\n    ).toHaveTextContent("请选择");');
           test = test.replace('    await user.selectOptions(screen.getByLabelText("单项失败处理"), "continue");', '    await chooseOption(user, "单项失败处理", "继续处理其余资源");');
           const resourceTypeBlock = `    const selects = screen.getAllByLabelText("资源类型");\n    await user.selectOptions(selects[0], "post");`;
           if (!test.includes(resourceTypeBlock)) throw new Error('resource type test block not found');
