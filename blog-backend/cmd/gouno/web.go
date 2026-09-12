@@ -30,11 +30,13 @@ import (
 	"github.com/rushairer/blog-backend/internal/media"
 	mediarepository "github.com/rushairer/blog-backend/internal/media/repository"
 	mediaservice "github.com/rushairer/blog-backend/internal/media/service"
+	notificationrepository "github.com/rushairer/blog-backend/internal/notification/repository"
 	"github.com/rushairer/blog-backend/internal/operations"
 	pagerepository "github.com/rushairer/blog-backend/internal/page/repository"
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
 	postrepository "github.com/rushairer/blog-backend/internal/post/repository"
 	postservice "github.com/rushairer/blog-backend/internal/post/service"
+	providerrepository "github.com/rushairer/blog-backend/internal/provider/repository"
 	"github.com/rushairer/blog-backend/internal/repository"
 	"github.com/rushairer/blog-backend/internal/secretbox"
 	siterepository "github.com/rushairer/blog-backend/internal/site/repository"
@@ -298,6 +300,10 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		}
 		agentRepo := repository.NewAgentRepository(cfg.DB)
 		agentDefinitionRepo := agentrepository.NewDefinitionRepository(cfg.DB)
+		agentSkillRepo := agentrepository.NewSkillRepository(cfg.DB)
+		agentStarterPackRepo := agentrepository.NewAgentRepository(cfg.DB)
+		providerRepo := providerrepository.New(cfg.DB)
+		notificationRepo := notificationrepository.NewSystemNotificationRepository(cfg.DB)
 		agentRunRepo := agentrepository.NewRunRepository(cfg.DB)
 		agentApprovalRepo := agentrepository.NewApprovalRepository(cfg.DB)
 		agentMediaCandidateRepo := agentrepository.NewMediaCandidateRepository(cfg.DB)
@@ -314,7 +320,11 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		}
 		operationsSvc.Start(ctx)
 		management := agentservice.NewManagementService(
-			agentRepo, secrets, cfg.Global.AIAgentConfig.AllowedHosts,
+			agentservice.ManagementServiceDependencies{
+				Providers: providerRepo, Agents: agentDefinitionRepo, Skills: agentSkillRepo,
+				Notifications: notificationRepo, StarterPack: agentStarterPackRepo,
+			},
+			secrets, cfg.Global.AIAgentConfig.AllowedHosts,
 			toolRegistry.AgentNames(), toolRegistry.ProposalNames(),
 		)
 		if created, err := management.BootstrapStarterPack(ctx); err != nil {

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	agentrepository "github.com/rushairer/blog-backend/internal/agent/repository"
+	providerrepository "github.com/rushairer/blog-backend/internal/provider/repository"
 	"github.com/rushairer/blog-backend/internal/testsupport"
 	"os"
 	"testing"
@@ -31,8 +32,8 @@ func TestDeleteProviderRevokesCredentialAfterAgentSoftDelete(t *testing.T) {
 		APIKeyCiphertext: []byte("ciphertext"), APIKeyNonce: []byte("nonce"), APIKeyLast4: "1234", KeyVersion: 1,
 		Enabled: true, RequestTimeoutSeconds: 60, MaxOutputTokens: 32,
 	}
-	repo := NewAgentRepository(db)
-	if err := repo.CreateProvider(ctx, profile); err != nil {
+	providerRepo := providerrepository.New(db)
+	if err := providerRepo.CreateProvider(ctx, profile); err != nil {
 		t.Fatal(err)
 	}
 	defer func() {
@@ -52,7 +53,7 @@ func TestDeleteProviderRevokesCredentialAfterAgentSoftDelete(t *testing.T) {
 		name+"-agent", profile.ID, skillVersionID, principalID); err != nil {
 		t.Fatal(err)
 	}
-	if err := repo.DeleteProvider(ctx, profile.ID); err != nil {
+	if err := providerRepo.DeleteProvider(ctx, profile.ID); err != nil {
 		t.Fatal(err)
 	}
 

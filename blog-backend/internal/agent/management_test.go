@@ -36,7 +36,7 @@ func TestNextRunRejectsInvalidCron(t *testing.T) {
 }
 
 func TestValidateAgentRequiresSkillVersion(t *testing.T) {
-	service := NewManagementService(nil, nil, nil, nil, nil)
+	service := NewManagementService(ManagementServiceDependencies{}, nil, nil, nil, nil)
 	pID := int64(1)
 	value := &domain.Agent{
 		Name: "test", ProviderProfileID: &pID, TriggerType: domain.AgentTriggerManual,
@@ -48,7 +48,7 @@ func TestValidateAgentRequiresSkillVersion(t *testing.T) {
 }
 
 func TestValidateAgentAllowsNilProvider(t *testing.T) {
-	service := NewManagementService(nil, nil, nil, nil, nil)
+	service := NewManagementService(ManagementServiceDependencies{}, nil, nil, nil, nil)
 	vID := int64(1)
 	value := &domain.Agent{
 		Name: "test", SkillVersionID: &vID, TriggerType: domain.AgentTriggerManual,
@@ -80,7 +80,7 @@ func TestValidateOverridesOnlyAllowsTighterSkillLimits(t *testing.T) {
 }
 
 func TestValidateSkillRejectsProposalCapabilityInAdvisoryMode(t *testing.T) {
-	service := NewManagementService(nil, nil, nil, []string{"content.propose_update"}, []string{"content.propose_update"})
+	service := NewManagementService(ManagementServiceDependencies{}, nil, nil, []string{"content.propose_update"}, []string{"content.propose_update"})
 	err := service.validateSkill(&domain.AgentSkill{
 		Name: "safe", SystemPrompt: "review", Capabilities: []string{"content.propose_update"},
 		ExecutionMode: domain.AgentModeAdvisory, MaxSteps: 1, MaxInputTokens: 100, MaxOutputTokens: 100,

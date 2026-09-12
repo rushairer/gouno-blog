@@ -12,11 +12,23 @@ import (
 
 	_ "github.com/lib/pq"
 	agentservice "github.com/rushairer/blog-backend/internal/agent"
+	agentrepository "github.com/rushairer/blog-backend/internal/agent/repository"
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/migrations"
-	"github.com/rushairer/blog-backend/internal/repository"
+	notificationrepository "github.com/rushairer/blog-backend/internal/notification/repository"
+	providerrepository "github.com/rushairer/blog-backend/internal/provider/repository"
 	"github.com/rushairer/blog-backend/internal/testsupport"
 )
+
+func newResourceQueryManagement(db *sql.DB) *agentservice.ManagementService {
+	return agentservice.NewManagementService(agentservice.ManagementServiceDependencies{
+		Providers:     providerrepository.New(db),
+		Agents:        agentrepository.NewDefinitionRepository(db),
+		Skills:        agentrepository.NewSkillRepository(db),
+		Notifications: notificationrepository.NewSystemNotificationRepository(db),
+		StarterPack:   agentrepository.NewAgentRepository(db),
+	}, nil, nil, nil, nil)
+}
 
 func TestScheduledResourceQueryRetryKeepsSnapshotAndScope(t *testing.T) {
 	db := openWorkflowIntegrationDB(t)
@@ -92,7 +104,7 @@ func TestResourceQueryEmptyPolicyCanFailWithoutAgentRun(t *testing.T) {
 	if err := db.QueryRowContext(ctx, `INSERT INTO ai_workflow_runs(workflow_id,workflow_version_id,input) VALUES($1,$2,'{}') RETURNING id`, workflowID, versionID).Scan(&runID); err != nil {
 		t.Fatal(err)
 	}
-	service := &Service{db: db, catalog: NewResourceCatalog(db), agents: agentservice.NewManagementService(repository.NewAgentRepository(db), nil, nil, nil, nil)}
+	service := &Service{db: db, catalog: NewResourceCatalog(db), agents: newResourceQueryManagement(db)}
 	service.Execute(ctx, runID)
 	var status, message string
 	if err := db.QueryRowContext(ctx, `SELECT status,error_message FROM ai_workflow_runs WHERE id=$1`, runID).Scan(&status, &message); err != nil {
@@ -191,7 +203,7 @@ func TestForEachCanAggregatePartialFailures(t *testing.T) {
 		{"id": "result", "type": "output", "output_pointer": "/steps/batch"},
 	})
 	t.Cleanup(func() { cleanupResourceQueryFixture(t, ctx, db, workflowID, versionID, 0) })
-	service := &Service{db: db, agents: agentservice.NewManagementService(repository.NewAgentRepository(db), nil, nil, nil, nil)}
+	service := &Service{db: db, agents: newResourceQueryManagement(db)}
 	var runID int64
 	input := `{"items":[{"value":"first"},{"missing":true},{"value":"third"}]}`
 	if err := db.QueryRowContext(ctx, `INSERT INTO ai_workflow_runs(workflow_id,workflow_version_id,input) VALUES($1,$2,$3) RETURNING id`, workflowID, versionID, input).Scan(&runID); err != nil {

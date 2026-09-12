@@ -14,7 +14,7 @@ import (
 	"github.com/rushairer/blog-backend/internal/dberror"
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/provider"
-	"github.com/rushairer/blog-backend/internal/repository"
+	providerrepository "github.com/rushairer/blog-backend/internal/provider/repository"
 	"github.com/rushairer/blog-backend/internal/secretbox"
 )
 
@@ -26,22 +26,28 @@ var (
 )
 
 type ManagementService struct {
-	repo                 *repository.AgentRepository
+	providers            ManagementProviderStore
+	agents               ManagementAgentStore
+	skills               ManagementSkillStore
+	notifications        ManagementNotificationWriter
+	starterPack          StarterPackReconciler
 	secrets              *secretbox.Box
 	allowedHosts         []string
 	allowedCapabilities  []string
 	proposalCapabilities []string
 }
 
-func NewManagementService(repo *repository.AgentRepository, secrets *secretbox.Box, allowedHosts, allowedCapabilities, proposalCapabilities []string) *ManagementService {
+func NewManagementService(deps ManagementServiceDependencies, secrets *secretbox.Box, allowedHosts, allowedCapabilities, proposalCapabilities []string) *ManagementService {
 	return &ManagementService{
-		repo: repo, secrets: secrets, allowedHosts: allowedHosts,
+		providers: deps.Providers, agents: deps.Agents, skills: deps.Skills,
+		notifications: deps.Notifications, starterPack: deps.StarterPack,
+		secrets: secrets, allowedHosts: allowedHosts,
 		allowedCapabilities: allowedCapabilities, proposalCapabilities: proposalCapabilities,
 	}
 }
 
 func (s *ManagementService) ListProviders(ctx context.Context) ([]*domain.ProviderProfile, error) {
-	return s.repo.ListProviders(ctx)
+	return s.providers.ListProviders(ctx)
 }
 
 // DefaultWritingClient is intentionally a narrow capability for dedicated
@@ -61,11 +67,11 @@ func (s *ManagementService) DefaultWritingClient(ctx context.Context) (*domain.P
 }
 
 func (s *ManagementService) Notify(ctx context.Context, recipientPrincipalID int64, eventType, title, body, href, key string) error {
-	return s.repo.CreateSystemNotification(ctx, recipientPrincipalID, eventType, title, body, href, key)
+	return s.notifications.Create(ctx, recipientPrincipalID, eventType, title, body, href, key)
 }
 
 func (s *ManagementService) GetProvider(ctx context.Context, id int64) (*domain.ProviderProfile, error) {
-	value, err := s.repo.GetProvider(ctx, id)
+	value, err := s.providers.GetProvider(ctx, id)
 	return value, translateError(err)
 }
 
@@ -73,7 +79,7 @@ func (s *ManagementService) SetDefaultProvider(ctx context.Context, id int64, pu
 	if purpose != "writing" && purpose != "image" {
 		return ErrInvalid
 	}
-	return translateError(s.repo.SetDefaultProvider(ctx, id, purpose))
+	return translateError(s.providers.SetDefaultProvider(ctx, id, purpose))
 }
 
 func (s *ManagementService) SaveProvider(ctx context.Context, profile *domain.ProviderProfile, apiKey string) error {
@@ -95,7 +101,7 @@ func (s *ManagementService) SaveProvider(ctx context.Context, profile *domain.Pr
 		return fmt.Errorf("%w: API key is required", ErrInvalid)
 	}
 	if isNew {
-		id, err := s.repo.ReserveProviderID(ctx)
+		id, err := s.providers.ReserveProviderID(ctx)
 		if err != nil {
 			return err
 		}
@@ -115,9 +121,9 @@ func (s *ManagementService) SaveProvider(ctx context.Context, profile *domain.Pr
 	}
 	var err error
 	if isNew {
-		err = s.repo.CreateProvider(ctx, profile)
+		err = s.providers.CreateProvider(ctx, profile)
 	} else {
-		err = s.repo.UpdateProvider(ctx, profile, replaceSecret)
+		err = s.providers.UpdateProvider(ctx, profile, replaceSecret)
 	}
 	return translateError(err)
 }
@@ -140,8 +146,8 @@ func (s *ManagementService) validateProvider(ctx context.Context, profile *domai
 }
 
 func (s *ManagementService) DeleteProvider(ctx context.Context, id int64) error {
-	err := s.repo.DeleteProvider(ctx, id)
-	if errors.Is(err, repository.ErrResourceInUse) || dberror.IsConstraintError(err) {
+	err := s.providers.DeleteProvider(ctx, id)
+	if errors.Is(err, providerrepository.ErrResourceInUse) || dberror.IsConstraintError(err) {
 		msg := err.Error()
 		if idx := strings.Index(msg, ": "); idx != -1 {
 			return fmt.Errorf("%w: %s", ErrProviderInUse, msg[idx+2:])
@@ -230,7 +236,7 @@ func (s *ManagementService) TestProvider(ctx context.Context, id int64) (time.Du
 }
 
 func (s *ManagementService) ListAgents(ctx context.Context) ([]*domain.Agent, error) {
-	items, err := s.repo.ListAgents(ctx)
+	items, err := s.agents.ListAgents(ctx)
 	if err != nil {
 		return nil, translateError(err)
 	}
@@ -248,11 +254,11 @@ func (s *ManagementService) ListAgents(ctx context.Context) ([]*domain.Agent, er
 }
 
 func (s *ManagementService) ListSkills(ctx context.Context) ([]*domain.AgentSkill, error) {
-	return s.repo.ListSkills(ctx)
+	return s.skills.ListSkills(ctx)
 }
 
 func (s *ManagementService) GetSkill(ctx context.Context, id int64) (*domain.AgentSkill, error) {
-	value, err := s.repo.GetSkill(ctx, id)
+	value, err := s.skills.GetSkill(ctx, id)
 	return value, translateError(err)
 }
 
@@ -294,9 +300,9 @@ func (s *ManagementService) SaveSkill(ctx context.Context, value *domain.AgentSk
 		return err
 	}
 	if value.ID == 0 {
-		return translateError(s.repo.CreateSkill(ctx, value))
+		return translateError(s.skills.CreateSkill(ctx, value))
 	}
-	return translateError(s.repo.UpdateSkill(ctx, value))
+	return translateError(s.skills.UpdateSkill(ctx, value))
 }
 
 func (s *ManagementService) validateSkill(value *domain.AgentSkill) error {
@@ -368,12 +374,12 @@ func jsonObject(raw json.RawMessage) bool {
 }
 
 func (s *ManagementService) ListSkillVersions(ctx context.Context, id int64) ([]*domain.AgentSkill, error) {
-	items, err := s.repo.ListSkillVersions(ctx, id)
+	items, err := s.skills.ListSkillVersions(ctx, id)
 	return items, translateError(err)
 }
 
 func (s *ManagementService) GetSkillVersion(ctx context.Context, id int64) (*domain.AgentSkill, error) {
-	item, err := s.repo.GetSkillVersion(ctx, id)
+	item, err := s.skills.GetSkillVersion(ctx, id)
 	return item, translateError(err)
 }
 
@@ -418,15 +424,15 @@ func (s *ManagementService) DeleteSkill(ctx context.Context, id int64) error {
 	if skill.SystemKey != nil {
 		return fmt.Errorf("%w: system Skills cannot be deleted", ErrInvalid)
 	}
-	return translateError(s.repo.DeleteSkill(ctx, id))
+	return translateError(s.skills.DeleteSkill(ctx, id))
 }
 
 func (s *ManagementService) BootstrapStarterPack(ctx context.Context) (int, error) {
-	return s.repo.BootstrapStarterPack(ctx)
+	return s.starterPack.BootstrapStarterPack(ctx)
 }
 
 func (s *ManagementService) GetAgent(ctx context.Context, id int64) (*domain.Agent, error) {
-	value, err := s.repo.GetAgent(ctx, id)
+	value, err := s.agents.GetAgent(ctx, id)
 	if err != nil {
 		return value, translateError(err)
 	}
@@ -468,7 +474,7 @@ func (s *ManagementService) SaveAgent(ctx context.Context, value *domain.Agent) 
 	}
 	value.NextRunAt = nextRun
 	if value.ProviderProfileID != nil && *value.ProviderProfileID > 0 {
-		if _, err := s.repo.GetProvider(ctx, *value.ProviderProfileID); err != nil {
+		if _, err := s.providers.GetProvider(ctx, *value.ProviderProfileID); err != nil {
 			return translateError(err)
 		}
 	} else {
@@ -486,9 +492,9 @@ func (s *ManagementService) SaveAgent(ctx context.Context, value *domain.Agent) 
 	}
 	var saveErr error
 	if value.ID == 0 {
-		saveErr = s.repo.CreateAgent(ctx, value)
+		saveErr = s.agents.CreateAgent(ctx, value)
 	} else {
-		saveErr = s.repo.UpdateAgent(ctx, value)
+		saveErr = s.agents.UpdateAgent(ctx, value)
 	}
 	return translateError(saveErr)
 }
@@ -542,7 +548,7 @@ func (s *ManagementService) DeleteAgent(ctx context.Context, id int64) error {
 	if value.SystemKey != nil {
 		return fmt.Errorf("%w: system Agents cannot be deleted", ErrInvalid)
 	}
-	return translateError(s.repo.DeleteAgent(ctx, id))
+	return translateError(s.agents.DeleteAgent(ctx, id))
 }
 
 func (s *ManagementService) SetAgentEnabled(ctx context.Context, id int64, enabled bool) error {
@@ -555,7 +561,7 @@ func (s *ManagementService) SetAgentEnabled(ctx context.Context, id int64, enabl
 	if err != nil {
 		return err
 	}
-	return translateError(s.repo.SetAgentEnabled(ctx, id, enabled, nextRun))
+	return translateError(s.agents.SetAgentEnabled(ctx, id, enabled, nextRun))
 }
 
 func NextRun(value *domain.Agent, after time.Time) (*time.Time, error) {
