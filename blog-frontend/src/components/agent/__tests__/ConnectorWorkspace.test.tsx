@@ -143,7 +143,9 @@ describe("ConnectorWorkspace", () => {
     expect(queueButton).toBeDisabled();
 
     await user.click(screen.getByRole("combobox", { name: "Profile" }));
-    await user.click(screen.getByRole("option", { name: "Primary newsletter" }));
+    await user.click(
+      screen.getByRole("option", { name: "Primary newsletter" }),
+    );
     await user.type(screen.getByPlaceholderText("run-2026-08-03"), "run-2");
     expect(queueButton).toBeEnabled();
   });
