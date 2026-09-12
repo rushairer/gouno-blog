@@ -12,7 +12,8 @@ import { ProposalPreview } from "./ProposalPreview";
 import { StatusPill } from "./StatusPill";
 import { OperationsWorkspace } from "./OperationsWorkspace";
 import { JsonPreview } from "./AgentRunRecords";
-import { Button, EmptyState, Panel } from "@gouno/ui-legacy";
+import { Button, Empty } from "@gouno/ui/core";
+import { Panel } from "@gouno/ui-legacy";
 
 function approvalSummary(
   approval: AgentApproval,
@@ -117,8 +118,8 @@ export function FriendlyApprovalQueue({
         </div>
       </div>
       {approvals.length === 0 ? (
-        <EmptyState
-          label={zh ? "当前没有待审批变更。" : "No changes awaiting approval."}
+        <Empty
+          title={zh ? "当前没有待审批变更。" : "No changes awaiting approval."}
         />
       ) : (
         <div className="agent-approval-workspace">
@@ -218,7 +219,7 @@ export function FriendlyApprovalQueue({
                 {selectedIsActionable ? (
                   <div className="agent-approval-actions">
                     <Button
-                      variant="secondary"
+                      variant="outline"
                       type="button"
                       onClick={() => onReview(selected, false)}
                       icon={<X />}
@@ -226,7 +227,8 @@ export function FriendlyApprovalQueue({
                       {zh ? "拒绝此建议" : "Reject proposal"}
                     </Button>
                     <Button
-                      variant="primary"
+                      variant="solid"
+                      color="primary"
                       type="button"
                       onClick={() => onReview(selected, true)}
                       icon={<ShieldCheck />}
@@ -243,8 +245,8 @@ export function FriendlyApprovalQueue({
                 ) : null}
               </div>
             ) : (
-              <EmptyState
-                label={
+              <Empty
+                title={
                   zh
                     ? "选择一项查看其影响。"
                     : "Select an item to understand its impact."
@@ -315,7 +317,7 @@ export function InteractionInbox({
             Array.isArray(task.options) ? (
               task.options.map((option, index) => (
                 <Button
-                  variant="secondary"
+                  variant="outline"
                   key={index}
                   onClick={() => void resolve(task, { option })}
                 >
@@ -324,7 +326,8 @@ export function InteractionInbox({
               ))
             ) : (
               <Button
-                variant="primary"
+                variant="solid"
+                color="primary"
                 onClick={() => void resolve(task, { confirmed: true })}
               >
                 {zh ? "确认并继续" : "Confirm and continue"}
