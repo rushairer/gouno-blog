@@ -147,7 +147,7 @@ describe("AISettings", () => {
     });
 
     renderSettings();
-    await user.click(await screen.findByRole("radio", { name: "Skills" }));
+    await user.click(await screen.findByRole("tab", { name: "Skills" }));
     await user.click(screen.getByRole("button", { name: "Copy Skill" }));
     await waitFor(() =>
       expect(apiFetch).toHaveBeenCalledWith(
@@ -164,7 +164,7 @@ describe("AISettings", () => {
   it("opens Provider management from the dedicated settings section", async () => {
     const user = userEvent.setup();
     renderSettings();
-    await user.click(await screen.findByRole("radio", { name: "Providers" }));
+    await user.click(await screen.findByRole("tab", { name: "Providers" }));
     expect(screen.getByText("OpenAI")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Export" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Import" })).toBeInTheDocument();
@@ -184,10 +184,34 @@ describe("AISettings", () => {
       screen.getByRole("heading", { name: "Create Agent" }),
     ).toBeInTheDocument();
 
-    await user.click(screen.getByRole("radio", { name: "Skills" }));
+    await user.click(screen.getByRole("tab", { name: "Skills" }));
     expect(
       screen.queryByRole("heading", { name: "Create Agent" }),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Skills" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Skills" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
+  it("uses tab-owned navigation and avoids duplicate section headings", async () => {
+    const user = userEvent.setup();
+    renderSettings();
+    const agentsTab = await screen.findByRole("tab", { name: "Agents" });
+    expect(agentsTab).toHaveAttribute("aria-selected", "true");
+    expect(
+      screen.queryByRole("heading", { name: "Agents" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: "Tools" }));
+    expect(screen.getByRole("tab", { name: "Tools" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(
+      screen.queryByRole("heading", { name: "Tools" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("content.list_posts")).toBeInTheDocument();
+    expect(window.location.search).toBe("?section=tools");
   });
 });

@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, type ReactNode } from "react";
 import {
   Bot,
   CirclePause,
@@ -35,13 +35,17 @@ import { ConnectorWorkspace } from "./ConnectorWorkspace";
 import { RiskPill, StatusPill } from "./StatusPill";
 import { SudoGate } from "../auth/SudoGate";
 import {
+  Alert,
   Button,
   Card,
+  CardContent,
   CardHeader,
   Empty,
   IconButton,
-  Segmented,
   Select,
+  Tabs,
+  Tag,
+  Text,
 } from "@gouno/ui/core";
 
 export type AdvancedSection =
@@ -60,6 +64,33 @@ export type DeleteTarget =
 
 function formatCapability(value: string) {
   return value.replace(".", " / ").replaceAll("_", " ");
+}
+
+function TabPanelLead({
+  description,
+  actions,
+}: {
+  description?: ReactNode;
+  actions?: ReactNode;
+}) {
+  if (!description && !actions) return null;
+
+  return (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="min-w-0">
+        {description ? (
+          <Text tone="muted" size="sm" className="max-w-3xl leading-relaxed">
+            {description}
+          </Text>
+        ) : null}
+      </div>
+      {actions ? (
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {actions}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 interface AdvancedWorkspaceProps {
@@ -163,25 +194,40 @@ export function AdvancedWorkspace({
 
   return (
     <>
-      <Segmented<AdvancedSection>
-        aria-label={labels.advanced}
-        block
-        value={advancedSection}
+      <Tabs<AdvancedSection>
+        ariaLabel={labels.advanced}
+        activeKey={advancedSection}
         onChange={onSelectSection}
-        options={[
-          { value: "agents", label: labels.agents, icon: <Bot /> },
-          { value: "skills", label: labels.skills, icon: <ListChecks /> },
-          { value: "tools", label: "Tools", icon: <GitBranch /> },
+        items={[
           {
-            value: "knowledge",
-            label: labels.knowledge,
-            icon: <DatabaseZap />,
+            key: "agents",
+            label: labels.agents,
+            icon: <Bot aria-hidden="true" className="size-4" />,
           },
-          { value: "providers", label: labels.providers, icon: <KeyRound /> },
           {
-            value: "connectors",
+            key: "skills",
+            label: labels.skills,
+            icon: <ListChecks aria-hidden="true" className="size-4" />,
+          },
+          {
+            key: "tools",
+            label: "Tools",
+            icon: <GitBranch aria-hidden="true" className="size-4" />,
+          },
+          {
+            key: "knowledge",
+            label: labels.knowledge,
+            icon: <DatabaseZap aria-hidden="true" className="size-4" />,
+          },
+          {
+            key: "providers",
+            label: labels.providers,
+            icon: <KeyRound aria-hidden="true" className="size-4" />,
+          },
+          {
+            key: "connectors",
             label: locale === "zh" ? "Sandbox 连接器" : "Sandbox connectors",
-            icon: <LockKeyhole />,
+            icon: <LockKeyhole aria-hidden="true" className="size-4" />,
           },
         ]}
       />
@@ -231,62 +277,57 @@ export function AdvancedWorkspace({
       ) : null}
 
       {!editingAgent && !editingProvider && advancedSection === "tools" ? (
-        <Card className="agent-table-panel">
-          <CardHeader
-            title="Tools"
+        <div className="flex flex-col gap-5">
+          <TabPanelLead
             description={
               locale === "zh"
-                ? "由代码发布的受控能力目录，供 Skill 和 Agent 授权、审计与测试；Workflow 不直接调用 Tool。"
-                : "Code-published governed capabilities for Skill and Agent authorization, audit, and testing. Workflows do not invoke Tools directly."
+                ? "由代码发布的受控能力目录；Workflow 不直接调用 Tool，必须经过 Skill/Agent 授权。"
+                : "Code-published governed capabilities; Workflows do not invoke Tools directly and must use Skill/Agent authorization."
             }
           />
           {tools.length === 0 ? (
-            <Empty description={locale === "zh" ? "暂无 Tool" : "No Tools"} />
+            <Card padding="base">
+              <Empty description={locale === "zh" ? "暂无 Tool" : "No Tools"} />
+            </Card>
           ) : (
-            <div className="table-scroll">
-              <table className="content-table agent-table agent-table--tools">
-                <thead>
-                  <tr>
-                    <th>Tool</th>
-                    <th>{locale === "zh" ? "范围" : "Surface"}</th>
-                    <th>{locale === "zh" ? "风险" : "Risk"}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tools.map((tool) => (
-                    <tr key={tool.name}>
-                      <td>
-                        <strong>{tool.name}</strong>
-                        <small>
-                          {locale === "zh"
-                            ? tool.description_zh || tool.description
-                            : tool.description}
-                        </small>
-                      </td>
-                      <td>{tool.surfaces?.join(", ") || "agent"}</td>
-                      <td>
-                        <RiskPill risk={tool.risk_level} locale={locale} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Card padding="none" className="overflow-hidden">
+              <CardContent className="divide-y p-0">
+                {tools.map((tool) => (
+                  <div
+                    key={tool.name}
+                    className="grid gap-3 p-6 md:grid-cols-[minmax(0,1fr)_minmax(8rem,0.3fr)_auto] md:items-center"
+                  >
+                    <div className="min-w-0">
+                      <strong className="font-mono text-sm">{tool.name}</strong>
+                      <Text size="xs" tone="muted">
+                        {locale === "zh"
+                          ? tool.description_zh || tool.description
+                          : tool.description}
+                      </Text>
+                    </div>
+                    <Text size="sm">
+                      {tool.surfaces?.join(", ") || "agent"}
+                    </Text>
+                    <RiskPill risk={tool.risk_level} locale={locale} />
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
           )}
-        </Card>
+        </div>
       ) : null}
 
       {!editingAgent && !editingProvider && advancedSection === "agents" ? (
-        <Card className="agent-table-panel">
-          <CardHeader
-            title={labels.agents}
+        <div className="flex flex-col gap-5">
+          <TabPanelLead
             description={
               locale === "zh"
-                ? "将 Skill Version 部署到模型连接，并配置运行配额、计划与启停。"
-                : "Deploy a Skill Version to a model connection, then configure scheduling, quotas, and state."
+                ? "Skill Version + 模型连接 + 运行计划组成可审计的执行单元。"
+                : "A Skill Version, model connection, and run schedule form an auditable execution unit."
             }
-            action={
+            actions={
               <Button
+                size="small"
                 variant="solid"
                 color="primary"
                 onClick={() =>
@@ -300,204 +341,176 @@ export function AdvancedWorkspace({
               </Button>
             }
           />
-          {agents.length === 0 ? (
-            <div className="agent-empty-state">
-              <Bot aria-hidden="true" />
-              <h2>
-                {locale === "zh"
+          {providers.length === 0 ? (
+            <Alert
+              type="warning"
+              showIcon
+              title={
+                locale === "zh"
                   ? "先添加模型连接"
-                  : "Add a model connection first"}
-              </h2>
-              <p>
-                {locale === "zh"
-                  ? "保存首个可用模型连接后，系统会自动创建 8 个停用的默认 Agent，供你审核后启用。"
-                  : "Saving the first usable model connection creates eight disabled default Agents for review."}
-              </p>
-              <Button
-                className="text-link"
-                variant="ghost"
-                onClick={() => onSelectSection("providers")}
-                icon={<KeyRound />}
-              >
-                {locale === "zh"
-                  ? "配置模型连接"
-                  : "Configure a model connection"}
-              </Button>
-            </div>
+                  : "Add a model connection first"
+              }
+              description={
+                locale === "zh"
+                  ? "保存首个可用模型连接后再创建 Agent。"
+                  : "Save the first usable model connection before creating an Agent."
+              }
+              action={
+                <Button
+                  size="small"
+                  type="button"
+                  onClick={() => onSelectSection("providers")}
+                >
+                  {locale === "zh"
+                    ? "配置模型连接"
+                    : "Configure a model connection"}
+                </Button>
+              }
+            />
+          ) : null}
+          {agents.length === 0 ? (
+            <Card padding="lg">
+              <Empty
+                title={locale === "zh" ? "暂无 Agent" : "No Agents yet"}
+                description={
+                  locale === "zh"
+                    ? "创建 Agent 后可配置模型、Skill、调度、配额和启停状态。"
+                    : "Create an Agent to configure its model, Skill, schedule, quotas, and state."
+                }
+              />
+            </Card>
           ) : (
-            <div className="table-scroll">
-              <table className="content-table agent-table agent-table--agents">
-                <thead>
-                  <tr>
-                    <th>{labels.agents}</th>
-                    <th>{labels.status}</th>
-                    <th>{labels.provider}</th>
-                    <th>{labels.capabilities}</th>
-                    <th>{labels.scheduleAndRun || labels.schedule}</th>
-                    <th className="text-right">{labels.actions}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {agents.map((agent) => {
-                    const defaultWritingProvider = providers.find(
-                      (p) => p.enabled && p.is_default_writing,
-                    );
-                    const provider = agent.provider_profile_id
-                      ? providerMap.get(agent.provider_profile_id)
-                      : defaultWritingProvider;
-                    const isInherited = !agent.provider_profile_id;
-                    const latestRun = runs.find(
-                      (run) => run.agent_id === agent.id,
-                    );
-                    const toolsForSkill = agent.skill?.capabilities || [];
-                    return (
-                      <tr key={agent.id}>
-                        <td>
-                          <div className="agent-identity">
-                            <span>
-                              <Bot />
-                            </span>
-                            <div>
-                              <strong>{agent.name}</strong>
-                              {agent.system_key ? (
-                                <small className="agent-identity__tag">
-                                  {locale === "zh"
-                                    ? "默认能力"
-                                    : "Default capability"}
-                                </small>
-                              ) : null}
-                              <small>{agent.description}</small>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <span
-                            className={`agent-state agent-state--${agent.enabled ? "active" : "paused"}`}
-                          >
-                            <i />
+            <Card padding="none" className="overflow-hidden">
+              <CardContent className="divide-y p-0">
+                {agents.map((agent) => {
+                  const defaultWritingProvider = providers.find(
+                    (provider) =>
+                      provider.enabled && provider.is_default_writing,
+                  );
+                  const provider = agent.provider_profile_id
+                    ? providerMap.get(agent.provider_profile_id)
+                    : defaultWritingProvider;
+                  const latestRun = runs.find(
+                    (run) => run.agent_id === agent.id,
+                  );
+                  const toolsForSkill = agent.skill?.capabilities || [];
+                  return (
+                    <div
+                      key={agent.id}
+                      className="flex flex-col gap-4 p-6 xl:flex-row xl:items-start xl:justify-between"
+                    >
+                      <div className="min-w-0 space-y-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <strong>{agent.name}</strong>
+                          <Tag color={agent.enabled ? "success" : "default"}>
                             {agent.enabled ? labels.active : labels.paused}
+                          </Tag>
+                          {agent.system_key ? (
+                            <Tag color="primary">
+                              {locale === "zh"
+                                ? "默认能力"
+                                : "Default capability"}
+                            </Tag>
+                          ) : (
+                            <Tag>{locale === "zh" ? "自定义" : "Custom"}</Tag>
+                          )}
+                        </div>
+                        <Text size="sm" tone="muted">
+                          {agent.description}
+                        </Text>
+                        <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2 xl:grid-cols-4">
+                          <span>
+                            {labels.provider}:{" "}
+                            {provider?.name ||
+                              (locale === "zh"
+                                ? "跟随系统默认"
+                                : "Inherit Default")}
                           </span>
-                        </td>
-                        <td>
-                          <div className="provider-identity">
-                            <strong>
-                              {provider?.name ||
-                                (locale === "zh"
-                                  ? "跟随系统默认"
-                                  : "Inherit Default")}
-                            </strong>
-                            {isInherited ? (
-                              <span className="status-pill status-pill--published">
-                                {locale === "zh"
-                                  ? "跟随系统"
-                                  : "Inherit system"}
-                              </span>
+                          <span>
+                            Skill: {agent.skill?.name || "—"} v
+                            {agent.skill?.version || "—"} ·{" "}
+                            {toolsForSkill.length} Tools
+                          </span>
+                          <span>
+                            {agent.trigger_type === "cron"
+                              ? agent.cron_expression
+                              : labels.manual}
+                            {agent.trigger_type === "cron" && agent.timezone
+                              ? ` · ${agent.timezone}`
+                              : ""}
+                          </span>
+                          <span className="flex flex-wrap items-center gap-2">
+                            {latestRun ? (
+                              <>
+                                <StatusPill
+                                  status={latestRun.status}
+                                  locale={locale}
+                                />
+                                <span>
+                                  {formatDateTime(latestRun.created_at)}
+                                </span>
+                              </>
                             ) : (
-                              <small className="mono">
-                                {provider?.model || "—"}
-                              </small>
+                              labels.never
                             )}
-                          </div>
-                        </td>
-                        <td>
-                          <div className="agent-skill-identity">
-                            <strong>{agent.skill?.name || "—"}</strong>
-                            <small>
-                              v{agent.skill?.version || "—"} ·{" "}
-                              {toolsForSkill.length} Tools
-                            </small>
-                          </div>
-                        </td>
-                        <td>
-                          <div className="agent-schedule-cell">
-                            <div className="agent-schedule-main">
-                              <strong>
-                                {agent.trigger_type === "cron"
-                                  ? agent.cron_expression
-                                  : labels.manual}
-                              </strong>
-                              {agent.trigger_type === "cron" &&
-                              agent.timezone ? (
-                                <small>{agent.timezone}</small>
-                              ) : null}
-                            </div>
-                            <div className="agent-schedule-meta">
-                              {latestRun ? (
-                                <div className="agent-schedule-last-run">
-                                  <StatusPill
-                                    status={latestRun.status}
-                                    locale={locale}
-                                  />
-                                  <small>
-                                    {formatDateTime(latestRun.created_at)}
-                                  </small>
-                                </div>
-                              ) : (
-                                <small className="text-muted">
-                                  {labels.never}
-                                </small>
-                              )}
-                              {agent.trigger_type === "cron" &&
-                              agent.next_run_at ? (
-                                <small className="agent-schedule-next">
-                                  {locale === "zh" ? "下次: " : "Next: "}
-                                  {formatDateTime(agent.next_run_at)}
-                                </small>
-                              ) : null}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="text-right">
-                          <div className="agent-row-actions">
-                            <IconButton
-                              label={labels.runNow}
-                              icon={<Play />}
-                              onClick={() => void onRunAgent(agent)}
-                              disabled={!agent.enabled}
-                            />
-                            <IconButton
-                              label={labels.edit}
-                              icon={<Edit2 />}
-                              onClick={() => onEditAgent(agent)}
-                            />
-                            <IconButton
-                              label={
-                                agent.enabled ? labels.disable : labels.enable
-                              }
-                              icon={agent.enabled ? <CirclePause /> : <Play />}
-                              onClick={() => void onToggleAgentEnabled(agent)}
-                            />
-                            {!agent.system_key ? (
-                              <IconButton
-                                variant="ghost"
-                                color="error"
-                                label={labels.delete}
-                                icon={<Trash2 />}
-                                onClick={() =>
-                                  onDeleteTarget({
-                                    kind: "agent",
-                                    value: agent,
-                                  })
-                                }
-                              />
-                            ) : null}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {toolsForSkill.map((capability) => (
+                            <Tag key={capability}>
+                              {formatCapability(capability)}
+                            </Tag>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex min-w-max shrink-0 flex-nowrap items-center gap-1">
+                        <IconButton
+                          label={labels.runNow}
+                          icon={<Play />}
+                          variant="ghost"
+                          onClick={() => void onRunAgent(agent)}
+                          disabled={!agent.enabled}
+                        />
+                        <IconButton
+                          label={labels.edit}
+                          icon={<Edit2 />}
+                          variant="ghost"
+                          onClick={() => onEditAgent(agent)}
+                        />
+                        <Button
+                          size="small"
+                          variant="ghost"
+                          icon={agent.enabled ? <CirclePause /> : <Play />}
+                          onClick={() => void onToggleAgentEnabled(agent)}
+                        >
+                          {agent.enabled ? labels.disable : labels.enable}
+                        </Button>
+                        {!agent.system_key ? (
+                          <IconButton
+                            variant="ghost"
+                            color="error"
+                            label={labels.delete}
+                            icon={<Trash2 />}
+                            onClick={() =>
+                              onDeleteTarget({ kind: "agent", value: agent })
+                            }
+                          />
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
           )}
-        </Card>
+        </div>
       ) : null}
 
       {!editingAgent &&
       !editingProvider &&
       !editingSkill &&
       advancedSection === "skills" ? (
-        <Card className="agent-table-panel">
+        <div className="flex flex-col gap-5">
           <input
             ref={skillFileInputRef}
             type="file"
@@ -505,16 +518,16 @@ export function AdvancedWorkspace({
             hidden
             onChange={(event) => void onImportSkill(event)}
           />
-          <CardHeader
-            title={labels.skills}
+          <TabPanelLead
             description={
               locale === "zh"
-                ? "管理可复用能力定义与执行边界。"
-                : "Manage reusable capability definitions and execution boundaries."
+                ? "管理可复用、可版本化的 AI 能力定义；系统 Skill 与团队副本保持清晰边界。"
+                : "Manage reusable, versioned AI capability definitions while keeping system Skills and team copies distinct."
             }
-            action={
+            actions={
               <>
                 <Button
+                  size="small"
                   variant="outline"
                   type="button"
                   onClick={() => skillFileInputRef.current?.click()}
@@ -523,6 +536,7 @@ export function AdvancedWorkspace({
                   {locale === "zh" ? "导入 Skill" : "Import Skill"}
                 </Button>
                 <Button
+                  size="small"
                   variant="solid"
                   color="primary"
                   type="button"
@@ -535,102 +549,97 @@ export function AdvancedWorkspace({
             }
           />
           {skills.length === 0 ? (
-            <Empty description={labels.noSkills} />
+            <Card padding="base">
+              <Empty description={labels.noSkills} />
+            </Card>
           ) : (
-            <div className="table-scroll">
-              <table className="content-table agent-table">
-                <thead>
-                  <tr>
-                    <th>{labels.skills}</th>
-                    <th>{labels.mode}</th>
-                    <th>{labels.capabilities}</th>
-                    <th>Version</th>
-                    <th>{labels.created}</th>
-                    <th>{labels.actions}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {skills.map((skill) => (
-                    <tr key={skill.id}>
-                      <td>
+            <div className="grid gap-4 lg:grid-cols-2">
+              {skills.map((skill) => (
+                <Card key={skill.id} padding="base">
+                  <div className="flex h-full flex-col gap-4">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
                         <strong>{skill.name}</strong>
-                        {skill.system_key ? (
-                          <small>
-                            {locale === "zh" ? "系统 Skill" : "System Skill"}
-                          </small>
-                        ) : null}
-                        <small>{skill.description}</small>
-                      </td>
-                      <td>
-                        <span
-                          className={`risk-label risk-label--${
+                        <Tag color={skill.system_key ? "primary" : "default"}>
+                          {skill.system_key
+                            ? locale === "zh"
+                              ? "系统 Skill"
+                              : "System Skill"
+                            : locale === "zh"
+                              ? "自定义"
+                              : "Custom"}
+                        </Tag>
+                        <Tag
+                          color={
                             skill.execution_mode === "approval"
-                              ? "propose"
-                              : "read"
-                          }`}
+                              ? "warning"
+                              : "default"
+                          }
                         >
                           {skill.execution_mode === "approval"
                             ? labels.approvalMode
                             : labels.advisory}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="agent-chip-list">
-                          {skill.capabilities.slice(0, 4).map((item) => (
-                            <span key={item}>{formatCapability(item)}</span>
-                          ))}
-                          {skill.capabilities.length > 4 ? (
-                            <span>+{skill.capabilities.length - 4}</span>
-                          ) : null}
-                        </div>
-                      </td>
-                      <td>
-                        <strong>v{skill.version}</strong>
-                      </td>
-                      <td>
-                        <small>{formatDateTime(skill.updated_at)}</small>
-                      </td>
-                      <td>
-                        <div className="agent-row-actions">
-                          <IconButton
-                            label={
-                              locale === "zh" ? "导出 Skill" : "Export Skill"
-                            }
-                            icon={<Download />}
-                            onClick={() => void onExportSkill(skill)}
-                          />
-                          <IconButton
-                            label={
-                              locale === "zh" ? "复制 Skill" : "Copy Skill"
-                            }
-                            icon={<Copy />}
-                            onClick={() => void onCopySkill(skill)}
-                          />
-                          <IconButton
-                            label={labels.edit}
-                            icon={<Edit2 />}
-                            onClick={() => onEditSkill(skill)}
-                          />
-                          {!skill.system_key ? (
-                            <IconButton
-                              variant="ghost"
-                              color="error"
-                              label={labels.delete}
-                              icon={<Trash2 />}
-                              onClick={() =>
-                                onDeleteTarget({ kind: "skill", value: skill })
-                              }
-                            />
-                          ) : null}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        </Tag>
+                      </div>
+                      <Text size="xs" tone="muted">
+                        v{skill.version} · {formatDateTime(skill.updated_at)}
+                      </Text>
+                    </div>
+                    <Text size="sm" tone="muted">
+                      {skill.description}
+                    </Text>
+                    <div className="flex flex-wrap gap-2">
+                      {skill.capabilities.map((capability) => (
+                        <Tag key={capability}>
+                          {formatCapability(capability)}
+                        </Tag>
+                      ))}
+                    </div>
+                    <div className="mt-auto flex flex-wrap gap-2 border-t pt-4">
+                      <Button
+                        size="small"
+                        variant="ghost"
+                        icon={<Download />}
+                        onClick={() => void onExportSkill(skill)}
+                      >
+                        {locale === "zh" ? "导出" : "Export Skill"}
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="ghost"
+                        icon={<Copy />}
+                        onClick={() => void onCopySkill(skill)}
+                      >
+                        {locale === "zh" ? "复制" : "Copy Skill"}
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="ghost"
+                        icon={<Edit2 />}
+                        onClick={() => onEditSkill(skill)}
+                      >
+                        {labels.edit}
+                      </Button>
+                      {!skill.system_key ? (
+                        <Button
+                          size="small"
+                          variant="ghost"
+                          color="error"
+                          icon={<Trash2 />}
+                          onClick={() =>
+                            onDeleteTarget({ kind: "skill", value: skill })
+                          }
+                        >
+                          {labels.delete}
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
+                </Card>
+              ))}
             </div>
           )}
-        </Card>
+        </div>
       ) : null}
 
       {!editingAgent && !editingProvider && advancedSection === "providers" ? (
