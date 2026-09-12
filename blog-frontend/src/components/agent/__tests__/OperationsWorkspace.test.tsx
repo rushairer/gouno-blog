@@ -16,10 +16,11 @@ describe("OperationsWorkspace", () => {
       .mockReset()
       .mockImplementation(() => Promise.resolve(Response.json({ data: {} })));
   });
+
   it("converts evidence-backed suggestions and selects candidates through governed APIs", async () => {
     const user = userEvent.setup();
     const onMutate = vi.fn().mockResolvedValue(undefined);
-    render(
+    const { container } = render(
       <OperationsWorkspace
         locale="en"
         onRefresh={onMutate}
@@ -62,6 +63,12 @@ describe("OperationsWorkspace", () => {
       />,
     );
 
+    expect(screen.getByText("Operational review")).toBeInTheDocument();
+    expect(screen.getByText("Operational suggestions")).toBeInTheDocument();
+    expect(screen.getByText("Content candidates")).toBeInTheDocument();
+    expect(container.querySelector(".operations-task")).not.toBeInTheDocument();
+    expect(container.querySelector(".risk-label")).not.toBeInTheDocument();
+
     await user.click(
       screen.getByRole("button", { name: "Create editorial task" }),
     );
@@ -82,7 +89,7 @@ describe("OperationsWorkspace", () => {
     );
   });
 
-  it("separates open editorial tasks from handled suggestions without a manual feedback form", async () => {
+  it("separates open editorial tasks from handled suggestions without the retired history shell", async () => {
     const user = userEvent.setup();
     const onMutate = vi.fn().mockResolvedValue(undefined);
     const { container } = render(
@@ -118,12 +125,8 @@ describe("OperationsWorkspace", () => {
       />,
     );
 
-    expect(
-      container.querySelector(".operations-queue__counts"),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "编辑任务" }),
-    ).toBeInTheDocument();
+    expect(screen.getByText("运营建议与候选")).toBeInTheDocument();
+    expect(screen.getByText("编辑任务")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "标记完成" }));
     expect(apiFetch).toHaveBeenCalledWith(
       "/api/admin/ai-editorial-tasks/4/status",
@@ -132,12 +135,16 @@ describe("OperationsWorkspace", () => {
         body: JSON.stringify({ status: "done" }),
       }),
     );
-    expect(container.querySelector(".operations-history")).toBeInTheDocument();
+    expect(screen.getByText("已处理记录")).toBeInTheDocument();
+    expect(
+      container.querySelector(".operations-history"),
+    ).not.toBeInTheDocument();
+    expect(container.querySelector(".panel-heading")).not.toBeInTheDocument();
     expect(container.querySelector(".feedback-form")).not.toBeInTheDocument();
   });
 
   it("keeps automatically resolved suggestions out of the decision queue", () => {
-    render(
+    const { container } = render(
       <OperationsWorkspace
         locale="zh"
         onRefresh={vi.fn().mockResolvedValue(undefined)}
@@ -166,13 +173,10 @@ describe("OperationsWorkspace", () => {
     expect(
       screen.queryByRole("heading", { name: "旧的链接检查建议" }),
     ).not.toBeInTheDocument();
+    expect(screen.getAllByText("自动已解决").length).toBeGreaterThanOrEqual(1);
     expect(
-      screen
-        .getAllByText("自动已解决")
-        .some((element) =>
-          element.parentElement?.classList.contains("status-pill--resolved"),
-        ),
-    ).toBe(true);
+      container.querySelector(".status-pill--resolved"),
+    ).not.toBeInTheDocument();
   });
 
   it("reviews an approved image brief before exposing image generation", async () => {
