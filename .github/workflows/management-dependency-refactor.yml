@@ -26,7 +26,7 @@ jobs:
           go-version-file: blog-backend/go.mod
           cache-dependency-path: blog-backend/go.sum
 
-      - name: Align script with aliased media import
+      - name: Align script selectors with current source
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -36,7 +36,12 @@ jobs:
           new = '\\tmediaservice "github.com/rushairer/blog-backend/internal/media/service"\\n\\t"github.com/rushairer/blog-backend/internal/operations"\\n'
           if old not in text:
               raise SystemExit('expected unaliased media import matcher not found')
-          path.write_text(text.replace(old, new, 1))
+          text = text.replace(old, new, 1)
+          old_assertion = 'if "repository.NewAgentRepository" in resource_test or \'internal/repository"\' in resource_test:'
+          new_assertion = 'if "agentservice.NewManagementService(repository." in resource_test or \'internal/repository"\' in resource_test:'
+          if old_assertion not in text:
+              raise SystemExit('expected broad flat repository assertion not found')
+          path.write_text(text.replace(old_assertion, new_assertion, 1))
           PY
 
       - name: Apply fail-closed Management dependency cutover
