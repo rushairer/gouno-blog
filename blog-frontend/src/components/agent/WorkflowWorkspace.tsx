@@ -29,27 +29,25 @@ import type {
   WorkflowStep,
 } from "../../types/agent";
 import {
+  ButtonLink,
   Checkbox,
   CheckboxField,
+  Empty,
   Field,
   Input,
+  Modal,
   SearchField,
   Textarea,
 } from "@gouno/ui/core";
 import {
   Button,
-  ButtonLink,
-  ConfirmDialog,
   EditorPanel,
-  EmptyState,
   Feedback,
-  FilterBar,
   FormActions,
   FormLayout,
   IconButton,
   PanelHeader,
   Select,
-  WorkspacePanel,
 } from "@gouno/ui-legacy";
 import { StatusPill } from "./StatusPill";
 import { statusLabel } from "./labels";
@@ -462,7 +460,7 @@ export function WorkflowWorkspace({
       : "—";
 
   return (
-    <WorkspacePanel className="workflow-workspace">
+    <div className="workflow-workspace">
       {selectedWorkflow ? (
         <div className="workflow-detail-view section-stack">
           <div className="workflow-detail-nav">
@@ -544,7 +542,7 @@ export function WorkflowWorkspace({
                         }
                       />
                       <ButtonLink
-                        variant="secondary"
+                        variant="outline"
                         to={`/admin/ai-ops?tab=records&record=workflow&workflow=${workflow.id}`}
                       >
                         {locale === "zh" ? "运行记录" : "Run records"}
@@ -713,7 +711,7 @@ export function WorkflowWorkspace({
                       <span>{feedback.message}</span>
                       {feedback.runID ? (
                         <ButtonLink
-                          variant="secondary"
+                          variant="outline"
                           to={`/admin/ai-ops?tab=records&record=workflow&workflow=${workflow.id}&run=${feedback.runID}`}
                         >
                           {runFeedbackActionLabel(
@@ -836,7 +834,7 @@ export function WorkflowWorkspace({
             }
           />
           {workflows.length > 0 ? (
-            <FilterBar className="workflow-list-toolbar">
+            <div className="workflow-list-toolbar flex flex-wrap items-center gap-3">
               <SearchField
                 aria-label={
                   locale === "zh" ? "搜索 Workflow" : "Search workflows"
@@ -894,11 +892,11 @@ export function WorkflowWorkspace({
                   {locale === "zh" ? "清除" : "Clear"}
                 </Button>
               ) : null}
-            </FilterBar>
+            </div>
           ) : null}
           {workflows.length === 0 || visibleWorkflows.length === 0 ? (
-            <EmptyState
-              label={
+            <Empty
+              title={
                 workflows.length > 0
                   ? locale === "zh"
                     ? "没有匹配的 Workflow。"
@@ -1085,7 +1083,7 @@ export function WorkflowWorkspace({
           )}
         </div>
       )}
-      <ConfirmDialog
+      <Modal
         open={deleteTarget !== null}
         title={locale === "zh" ? "删除 Workflow？" : "Delete workflow?"}
         description={
@@ -1095,13 +1093,17 @@ export function WorkflowWorkspace({
               : `Deleting “${deleteTarget.name}” stops future runs. Version history and run audits are retained.`
             : ""
         }
-        confirmLabel={locale === "zh" ? "删除 Workflow" : "Delete workflow"}
-        danger
-        busy={deleting}
-        onClose={() => setDeleteTarget(null)}
-        onConfirm={deleteWorkflow}
+        okText={locale === "zh" ? "删除 Workflow" : "Delete workflow"}
+        cancelText={locale === "zh" ? "取消" : "Cancel"}
+        confirmLoading={deleting}
+        onOpenChange={(open) => {
+          if (!open && !deleting) setDeleteTarget(null);
+        }}
+        onOk={deleteWorkflow}
+        okButtonProps={{ variant: "solid", color: "error" }}
+        closeOnBackdrop
       />
-    </WorkspacePanel>
+    </div>
   );
 }
 
