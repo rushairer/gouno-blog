@@ -111,7 +111,10 @@ export default function AdminShell({ children }: { children: ReactNode }) {
 
   const filteredNav = getFilteredAdminNavigation(hasPerm);
   const displayName =
-    user?.principal?.display_name || user?.name || user?.preferred_username || "U";
+    user?.principal?.display_name ||
+    user?.name ||
+    user?.preferred_username ||
+    "U";
 
   return (
     <AppShell

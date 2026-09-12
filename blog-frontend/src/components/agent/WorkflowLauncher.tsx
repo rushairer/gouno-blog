@@ -261,11 +261,14 @@ export function WorkflowLauncher({
             <div className="flex flex-col gap-2 rounded-lg border p-3">
               {resourceKeys.map((key) => {
                 const resource = resourcesByKey.get(String(key));
-                const unavailable = unavailableResourceKeys.includes(String(key));
+                const unavailable = unavailableResourceKeys.includes(
+                  String(key),
+                );
                 return (
                   <div key={String(key)} className="min-w-0">
                     <Text size="sm" className="truncate">
-                      {resource?.label || `${resourceLabels[resourceType]} #${key}`}
+                      {resource?.label ||
+                        `${resourceLabels[resourceType]} #${key}`}
                     </Text>
                     <Text size="xs" tone={unavailable ? "danger" : "muted"}>
                       {unavailable

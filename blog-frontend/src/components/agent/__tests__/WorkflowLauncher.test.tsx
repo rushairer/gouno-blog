@@ -108,9 +108,7 @@ describe("WorkflowLauncher", () => {
     expect(
       within(dialog).getByRole("button", { name: "关闭" }),
     ).toBeInTheDocument();
-    expect(
-      within(dialog).getByRole("button", { name: "运行" }),
-    ).toBeEnabled();
+    expect(within(dialog).getByRole("button", { name: "运行" })).toBeEnabled();
 
     await waitFor(() =>
       expect(apiFetch).toHaveBeenCalledWith(
@@ -139,13 +137,15 @@ describe("WorkflowLauncher", () => {
     );
 
     const dialog = screen.getByRole("dialog", { name: "将所选文章交给 AI" });
-    expect(await within(dialog).findByText("没有兼容 Workflow")).toBeInTheDocument();
     expect(
-      within(dialog).getByText(/真实产品只显示 input schema 声明了当前资源类型/),
+      await within(dialog).findByText("没有兼容 Workflow"),
     ).toBeInTheDocument();
     expect(
-      within(dialog).getByRole("button", { name: "运行" }),
-    ).toBeDisabled();
+      within(dialog).getByText(
+        /真实产品只显示 input schema 声明了当前资源类型/,
+      ),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "运行" })).toBeDisabled();
     expect(
       within(dialog).getByRole("button", { name: "关闭" }),
     ).toBeInTheDocument();
