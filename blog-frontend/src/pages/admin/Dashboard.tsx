@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -17,28 +17,26 @@ import { Link } from "react-router-dom";
 import { analyticsApi } from "../../api/analytics";
 import { notificationsApi } from "../../api/notifications";
 import {
+  Alert,
+  Button,
+  ButtonLink,
+  Card,
+  CardContent,
+  CardHeader,
   CardTitle,
+  Empty,
+  Skeleton,
+  Statistic,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
+  Tag,
+  Text,
 } from "@gouno/ui/core";
-import {
-  AdminPage,
-  AdminPageHeader,
-  AdminPageState,
-  Badge,
-  Button,
-  ButtonLink,
-  Card,
-  CardContent,
-  CardHeader,
-  ContentStack,
-  EmptyState,
-  Feedback,
-} from "@gouno/ui-legacy";
+import { PageHeader } from "@gouno/ui/gouno";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 import { useAbility } from "../../abilities";
 
@@ -79,13 +77,86 @@ function alertPresentation(alert: Summary["ai_alerts"][number]) {
   return {
     destination,
     icon: workflow ? (
-      <GitBranch className="h-4 w-4" aria-hidden="true" />
+      <GitBranch className="size-4" aria-hidden="true" />
     ) : (
-      <Bot className="h-4 w-4" aria-hidden="true" />
+      <Bot className="size-4" aria-hidden="true" />
     ),
     label: workflow ? "Workflow 执行失败" : "Agent 执行失败",
     action: destination.includes("run=") ? "查看失败详情" : "打开运行中心",
   };
+}
+
+function MetricCard({
+  icon,
+  title,
+  value,
+  detail,
+  to,
+}: {
+  icon: ReactNode;
+  title: string;
+  value: ReactNode;
+  detail: ReactNode;
+  to?: string;
+}) {
+  const content = (
+    <Card padding="base" interactive={Boolean(to)} className="h-full">
+      <div className="flex h-full flex-col gap-5">
+        <div className="flex items-start justify-between gap-4">
+          <Statistic title={title} value={value} />
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted/50 text-muted-foreground">
+            {icon}
+          </span>
+        </div>
+        <div className="mt-auto text-xs text-muted-foreground">{detail}</div>
+      </div>
+    </Card>
+  );
+
+  return to ? (
+    <Link
+      to={to}
+      className="block h-full rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      {content}
+    </Link>
+  ) : (
+    content
+  );
+}
+
+function DashboardLoading() {
+  return (
+    <div
+      className="flex flex-col gap-6"
+      role="status"
+      aria-label="数据概览加载中"
+      aria-live="polite"
+    >
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }, (_, index) => (
+          <Card key={index} padding="base">
+            <div className="flex flex-col gap-4">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-8 w-20" />
+              <Skeleton className="h-3 w-36" />
+            </div>
+          </Card>
+        ))}
+      </div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <Card padding="base" className="lg:col-span-2">
+          <Skeleton className="h-64 w-full" />
+        </Card>
+        <Card padding="base">
+          <Skeleton className="h-64 w-full" />
+        </Card>
+      </div>
+      <Card padding="base">
+        <Skeleton className="h-56 w-full" />
+      </Card>
+    </div>
+  );
 }
 
 export default function Dashboard() {
@@ -107,7 +178,7 @@ export default function Dashboard() {
     setClearingAlerts(true);
     try {
       await notificationsApi.markAllRead();
-      setSummary((prev) => (prev ? { ...prev, ai_alerts: [] } : null));
+      setSummary((current) => (current ? { ...current, ai_alerts: [] } : null));
       window.dispatchEvent(new CustomEvent("community:notifications-changed"));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "标记已读失败");
@@ -116,570 +187,402 @@ export default function Dashboard() {
     }
   };
 
-  if (!allowed || (!summary && !error))
-    return (
-      <AdminPageState
-        title="数据概览"
-        description="了解站点整体运营情况，掌握内容表现与用户互动。"
-        label="正在进入内容工作台…"
-      />
-    );
+  const pageHeader = (
+    <PageHeader
+      title="数据概览"
+      description="了解站点整体运营情况，掌握内容表现与用户互动。"
+      actions={
+        can("create", "post") ? (
+          <ButtonLink
+            variant="solid"
+            color="primary"
+            to="/admin/posts/new"
+            icon={<Plus />}
+          >
+            新建文章
+          </ButtonLink>
+        ) : can("moderate", "comment") ? (
+          <ButtonLink
+            variant="solid"
+            color="primary"
+            to="/admin/comments?status=pending"
+            icon={<MessageSquare />}
+          >
+            审核评论
+          </ButtonLink>
+        ) : null
+      }
+    />
+  );
 
-  const max = Math.max(
+  if (!allowed || (!summary && !error)) {
+    return (
+      <div className="flex flex-col gap-6">
+        {pageHeader}
+        <DashboardLoading />
+      </div>
+    );
+  }
+
+  const maxTraffic = Math.max(
     1,
     ...(summary?.daily_events || []).map((item) => item.count),
   );
-
   const draftsCount = Math.max(
     0,
     (summary?.total_posts ?? 0) - (summary?.published_posts ?? 0),
   );
+  const trafficTotal = (summary?.daily_events || []).reduce(
+    (total, item) => total + item.count,
+    0,
+  );
 
   return (
-    <AdminPage>
-      <AdminPageHeader
-        title="数据概览"
-        description="了解站点整体运营情况，掌握内容表现与用户互动。"
-        actions={
-          can("create", "post") ? (
-            <ButtonLink variant="primary" to="/admin/posts/new" icon={<Plus />}>
-              新建文章
-            </ButtonLink>
-          ) : can("moderate", "comment") ? (
-            <ButtonLink
-              variant="primary"
-              to="/admin/comments?status=pending"
-              icon={<MessageSquare />}
-            >
-              审核评论
-            </ButtonLink>
-          ) : null
-        }
-      />
-      <ContentStack className="space-y-6">
-        {error ? <Feedback type="error">{error}</Feedback> : null}
-        {summary ? (
-          <>
-            {/* Top 4 Metrics Cards */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {/* Metric 1: Total Posts */}
-              {can("view", "post") ? (
-                <Link
-                  to="/admin/posts"
-                  className="block focus-visible:outline-none"
-                >
-                  <Card
-                    interactive
-                    className="group relative overflow-hidden transition-all duration-200 hover:border-primary/40 h-full"
-                  >
-                    <div className="p-5 flex flex-col justify-between h-full space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          文章总数
-                        </span>
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 text-primary">
-                          <FileText className="h-4 w-4" />
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-3xl font-bold tracking-tight text-foreground">
-                          {summary.total_posts}
-                        </div>
-                        <p className="mt-1 text-xs text-muted-foreground flex items-center gap-1.5">
-                          <span>已发布 {summary.published_posts}</span>
-                          <span className="text-border">·</span>
-                          <span className="text-amber-400">
-                            草稿 {draftsCount}
-                          </span>
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
-                </Link>
-              ) : (
-                <Card className="group relative overflow-hidden h-full">
-                  <div className="p-5 flex flex-col justify-between h-full space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        文章总数
-                      </span>
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 text-primary">
-                        <FileText className="h-4 w-4" />
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-3xl font-bold tracking-tight text-foreground">
-                        {summary.total_posts}
-                      </div>
-                      <p className="mt-1 text-xs text-muted-foreground flex items-center gap-1.5">
-                        <span>已发布 {summary.published_posts}</span>
-                        <span className="text-border">·</span>
-                        <span className="text-amber-400">
-                          草稿 {draftsCount}
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-              )}
+    <div className="flex flex-col gap-6">
+      {pageHeader}
 
-              {/* Metric 2: Total Views */}
-              {can("view", "post") ? (
-                <Link
-                  to="/admin/posts?status=published"
-                  className="block focus-visible:outline-none"
-                >
-                  <Card
-                    interactive
-                    className="group relative overflow-hidden transition-all duration-200 hover:border-emerald-500/40 h-full"
-                  >
-                    <div className="p-5 flex flex-col justify-between h-full space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          总阅读量
-                        </span>
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
-                          <Eye className="h-4 w-4" />
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-3xl font-bold tracking-tight text-foreground">
-                          {summary.total_views.toLocaleString()}
-                        </div>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          全站累计公开阅读次数
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
-                </Link>
-              ) : (
-                <Card className="group relative overflow-hidden h-full">
-                  <div className="p-5 flex flex-col justify-between h-full space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        总阅读量
-                      </span>
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
-                        <Eye className="h-4 w-4" />
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-3xl font-bold tracking-tight text-foreground">
-                        {summary.total_views.toLocaleString()}
-                      </div>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        全站累计公开阅读次数
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-              )}
+      {error ? <Alert type="error" showIcon title={error} /> : null}
 
-              {/* Metric 3: Total Likes */}
-              {can("view", "post") ? (
-                <Link
-                  to="/admin/posts"
-                  className="block focus-visible:outline-none"
-                >
-                  <Card
-                    interactive
-                    className="group relative overflow-hidden transition-all duration-200 hover:border-pink-500/40 h-full"
-                  >
-                    <div className="p-5 flex flex-col justify-between h-full space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          总获赞数
-                        </span>
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-pink-500/10 text-pink-400">
-                          <Heart className="h-4 w-4" />
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-3xl font-bold tracking-tight text-foreground">
-                          {summary.total_likes.toLocaleString()}
-                        </div>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          读者正向互动累计
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
-                </Link>
-              ) : (
-                <Card className="group relative overflow-hidden h-full">
-                  <div className="p-5 flex flex-col justify-between h-full space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        总获赞数
-                      </span>
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-pink-500/10 text-pink-400">
-                        <Heart className="h-4 w-4" />
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-3xl font-bold tracking-tight text-foreground">
-                        {summary.total_likes.toLocaleString()}
-                      </div>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        读者正向互动累计
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-              )}
+      {summary ? (
+        <>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <MetricCard
+              icon={<FileText className="size-4" />}
+              title="文章总数"
+              value={summary.total_posts.toLocaleString()}
+              detail={
+                <span>
+                  已发布 {summary.published_posts} · 草稿 {draftsCount}
+                </span>
+              }
+              to={can("view", "post") ? "/admin/posts" : undefined}
+            />
+            <MetricCard
+              icon={<Eye className="size-4" />}
+              title="总阅读量"
+              value={summary.total_views.toLocaleString()}
+              detail="全站累计公开阅读次数"
+              to={
+                can("view", "post")
+                  ? "/admin/posts?status=published"
+                  : undefined
+              }
+            />
+            <MetricCard
+              icon={<Heart className="size-4" />}
+              title="总获赞数"
+              value={summary.total_likes.toLocaleString()}
+              detail="读者正向互动累计"
+              to={can("view", "post") ? "/admin/posts" : undefined}
+            />
+            <MetricCard
+              icon={<MessageSquare className="size-4" />}
+              title="评论互动"
+              value={summary.total_comments.toLocaleString()}
+              detail={
+                summary.pending_comments > 0
+                  ? `待审核 ${summary.pending_comments} 条`
+                  : "全站互动良好"
+              }
+              to={
+                can("moderate", "comment")
+                  ? "/admin/comments?status=pending"
+                  : can("view", "media")
+                    ? "/admin/media"
+                    : undefined
+              }
+            />
+          </div>
 
-              {/* Metric 4: Comments / Media */}
-              {can("moderate", "comment") || can("view", "media") ? (
-                <Link
-                  to={
-                    can("moderate", "comment")
-                      ? "/admin/comments?status=pending"
-                      : "/admin/media"
-                  }
-                  className="block focus-visible:outline-none"
-                >
-                  <Card
-                    interactive
-                    className="group relative overflow-hidden transition-all duration-200 hover:border-violet-500/40 h-full"
-                  >
-                    <div className="p-5 flex flex-col justify-between h-full space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          评论互动
-                        </span>
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-400">
-                          <MessageSquare className="h-4 w-4" />
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-3xl font-bold tracking-tight text-foreground">
-                          {summary.total_comments}
-                        </div>
-                        <p className="mt-1 text-xs text-muted-foreground flex items-center gap-1.5">
-                          {summary.pending_comments > 0 ? (
-                            <span className="font-semibold text-amber-400">
-                              待审核 {summary.pending_comments} 条
-                            </span>
-                          ) : (
-                            <span>全站互动良好</span>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
-                </Link>
-              ) : (
-                <Card className="group relative overflow-hidden h-full">
-                  <div className="p-5 flex flex-col justify-between h-full space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        评论互动
-                      </span>
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-400">
-                        <MessageSquare className="h-4 w-4" />
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-3xl font-bold tracking-tight text-foreground">
-                        {summary.total_comments}
-                      </div>
-                      <p className="mt-1 text-xs text-muted-foreground flex items-center gap-1.5">
-                        {summary.pending_comments > 0 ? (
-                          <span className="font-semibold text-amber-400">
-                            待审核 {summary.pending_comments} 条
-                          </span>
-                        ) : (
-                          <span>全站互动良好</span>
-                        )}
-                      </p>
-                    </div>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <Card padding="none" className="overflow-hidden lg:col-span-2">
+              <CardHeader className="border-b p-6">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex flex-col gap-1">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <TrendingUp className="size-4 text-primary" />
+                      30 天访问趋势
+                    </CardTitle>
+                    <Text size="xs" tone="muted">
+                      每日页面访问量分布
+                    </Text>
                   </div>
-                </Card>
-              )}
-            </div>
-
-            {/* Main Section: Traffic Chart & Content Health */}
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-              {/* Traffic Chart (2 cols) */}
-              <Card className="lg:col-span-2 overflow-hidden flex flex-col">
-                <CardHeader className="pb-2 border-b border-border/60">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4 text-primary" />
-                        30 天访问趋势
-                      </CardTitle>
-                      <p className="text-xs text-muted-foreground">
-                        每日页面访问量分布
-                      </p>
-                    </div>
-                    <Badge tone="brand" pill>
-                      近 30 天
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-6 flex-1 flex flex-col justify-end">
+                  <Tag color="primary">
+                    {trafficTotal.toLocaleString()} 次访问
+                  </Tag>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6">
+                {summary.daily_events.length === 0 ? (
+                  <Empty
+                    title="暂无访问趋势"
+                    description="产生公开页面访问后，这里会显示最近 30 天趋势。"
+                  />
+                ) : (
                   <div
-                    className="flex h-48 items-end gap-1.5 sm:gap-2 px-2"
+                    className="flex h-56 items-end gap-1.5 sm:gap-2"
                     role="img"
                     aria-label="最近 30 天访问趋势"
                   >
                     {summary.daily_events.map((item) => {
-                      const pct = Math.max(
+                      const height = Math.max(
                         6,
-                        Math.round((item.count / max) * 100),
+                        Math.round((item.count / maxTraffic) * 100),
                       );
                       return (
                         <div
                           key={item.date}
-                          className="group relative flex-1 flex flex-col items-center justify-end h-full"
+                          className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2"
                           title={`${item.date}: ${item.count} 次访问`}
                         >
                           <div
-                            className="w-full rounded-t-sm bg-primary/70 transition-all duration-200 group-hover:bg-primary"
-                            style={{ height: `${pct}%` }}
+                            className="w-full rounded-t-sm bg-primary/65 transition-opacity hover:bg-primary"
+                            style={{ height: `${height}%` }}
                           />
-                          <span className="mt-2 text-[10px] text-muted-foreground/60 hidden sm:block truncate">
-                            {item.date.slice(8)}
+                          <span className="hidden truncate text-[10px] text-muted-foreground sm:block">
+                            {item.date.slice(-2)}
                           </span>
                         </div>
                       );
                     })}
                   </div>
-                </CardContent>
-              </Card>
-
-              {/* Content Health & Moderation (1 col) */}
-              <Card className="flex flex-col">
-                <CardHeader className="pb-2 border-b border-border/60">
-                  <CardTitle className="text-base">内容治理与指标</CardTitle>
-                  <p className="text-xs text-muted-foreground">
-                    关键待办事项与健康指标
-                  </p>
-                </CardHeader>
-                <CardContent className="pt-6 flex-1 flex flex-col justify-center space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-lg border border-border bg-secondary/40 p-3.5 space-y-1">
-                      <span className="text-xs text-muted-foreground font-medium">
-                        待审核评论
-                      </span>
-                      <div className="text-xl font-bold text-foreground">
-                        {summary.pending_comments}
-                      </div>
-                    </div>
-                    <div className="rounded-lg border border-border bg-secondary/40 p-3.5 space-y-1">
-                      <span className="text-xs text-muted-foreground font-medium">
-                        被举报内容
-                      </span>
-                      <div className="text-xl font-bold text-foreground">
-                        {summary.reported_items}
-                      </div>
-                    </div>
-                    <div className="rounded-lg border border-border bg-secondary/40 p-3.5 space-y-1">
-                      <span className="text-xs text-muted-foreground font-medium">
-                        已发布文章
-                      </span>
-                      <div className="text-xl font-bold text-emerald-400">
-                        {summary.published_posts}
-                      </div>
-                    </div>
-                    <div className="rounded-lg border border-border bg-secondary/40 p-3.5 space-y-1">
-                      <span className="text-xs text-muted-foreground font-medium">
-                        草稿待发布
-                      </span>
-                      <div className="text-xl font-bold text-amber-400">
-                        {draftsCount}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-2 border-t border-border/50 flex items-center justify-between text-xs text-muted-foreground">
-                    <span>系统状态正常</span>
-                    <Link
-                      to="/admin/posts"
-                      className="text-primary hover:underline font-medium inline-flex items-center gap-1"
-                    >
-                      文章管理 <ChevronRight className="h-3 w-3" />
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* AI Operations Alerts Card (if any) */}
-            {can("manage", "ai") && summary.ai_alerts?.length ? (
-              <Card className="border-amber-500/30 bg-amber-950/10 overflow-hidden">
-                <CardHeader className="pb-3 border-b border-amber-500/20">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div className="space-y-1">
-                      <CardTitle className="text-base text-amber-300 flex items-center gap-2">
-                        <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />
-                        AI 运营提醒
-                      </CardTitle>
-                      <p className="text-xs text-muted-foreground">
-                        需要你关注或审批的自动化执行记录，点击可直接查看详情。
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="secondary"
-                        size="compact"
-                        type="button"
-                        disabled={clearingAlerts}
-                        onClick={() => void dismissAllAlerts()}
-                        icon={<CheckCheck className="h-3.5 w-3.5" />}
-                      >
-                        {clearingAlerts ? "正在清除…" : "全部已读"}
-                      </Button>
-                      <ButtonLink
-                        variant="ghost"
-                        size="compact"
-                        to="/admin/ai-ops?tab=records"
-                      >
-                        查看全部记录
-                      </ButtonLink>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-0 divide-y divide-amber-500/10">
-                  {summary.ai_alerts.map((alert) => {
-                    const presentation = alertPresentation(alert);
-                    return (
-                      <Link
-                        key={alert.id}
-                        to={presentation.destination}
-                        className="flex items-center justify-between gap-4 p-4 transition-colors hover:bg-amber-500/5 group"
-                      >
-                        <div className="flex items-start gap-3 min-w-0 flex-1">
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-400 mt-0.5">
-                            {presentation.icon}
-                          </div>
-                          <div className="space-y-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-sm font-semibold text-foreground">
-                                {presentation.label}
-                              </span>
-                              <span className="text-xs font-medium text-amber-300">
-                                {alert.title
-                                  .replace(
-                                    /^(?:AI 自动化|Workflow|Agent)\s*运行失败：?\s*/,
-                                    "",
-                                  )
-                                  .trim()}
-                              </span>
-                            </div>
-                            <p className="text-xs text-muted-foreground line-clamp-1">
-                              {alert.body
-                                ? `失败原因：${alert.body}`
-                                : "运行未完成，请打开记录查看失败步骤。"}
-                            </p>
-                            <time className="text-[11px] text-muted-foreground/60 block">
-                              {new Date(alert.created_at).toLocaleString(
-                                "zh-CN",
-                              )}
-                            </time>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 text-xs font-medium text-primary shrink-0 group-hover:translate-x-0.5 transition-transform">
-                          <span>{presentation.action}</span>
-                          <ChevronRight className="h-3.5 w-3.5" />
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </CardContent>
-              </Card>
-            ) : null}
-
-            {/* Top Posts Table Card */}
-            <Card className="overflow-hidden">
-              <CardHeader className="pb-3 border-b border-border/60">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <CardTitle className="text-base">表现最佳文章</CardTitle>
-                    <p className="text-xs text-muted-foreground">
-                      按全站阅读量与点赞数排序的热门内容
-                    </p>
-                  </div>
-                  {can("view", "post") ? (
-                    <ButtonLink
-                      variant="ghost"
-                      size="compact"
-                      to="/admin/posts"
-                      icon={<ArrowUpRight />}
-                    >
-                      查看全部文章
-                    </ButtonLink>
-                  ) : null}
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                {summary.top_posts.length === 0 ? (
-                  <EmptyState label="暂无表现数据" className="py-12" />
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-12 text-center">排名</TableHead>
-                        <TableHead>文章标题</TableHead>
-                        <TableHead className="w-28 text-right">
-                          阅读量
-                        </TableHead>
-                        <TableHead className="w-28 text-right">
-                          点赞数
-                        </TableHead>
-                        <TableHead className="w-36 text-right">操作</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {summary.top_posts.map((post, index) => {
-                        const canEdit = can("edit", "post", post);
-                        return (
-                          <TableRow key={post.id} className="hover:bg-muted/40">
-                            <TableCell className="text-center font-mono font-medium text-muted-foreground text-xs">
-                              {index + 1}
-                            </TableCell>
-                            <TableCell className="font-medium text-foreground">
-                              {post.title}
-                            </TableCell>
-                            <TableCell className="text-right font-mono text-xs text-muted-foreground">
-                              {post.views_count.toLocaleString()}
-                            </TableCell>
-                            <TableCell className="text-right font-mono text-xs text-muted-foreground">
-                              {post.likes_count.toLocaleString()}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="inline-flex items-center justify-end gap-1.5">
-                                <ButtonLink
-                                  variant="ghost"
-                                  size="compact"
-                                  to={`/admin/posts/${post.id}/edit`}
-                                >
-                                  {canEdit ? "编辑" : "查看"}
-                                </ButtonLink>
-                                <ButtonLink
-                                  variant="ghost"
-                                  size="compact"
-                                  to={`/articles/${post.slug || post.id}`}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                >
-                                  前台
-                                </ButtonLink>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
                 )}
               </CardContent>
             </Card>
-          </>
-        ) : null}
-      </ContentStack>
-    </AdminPage>
+
+            <Card padding="none" className="overflow-hidden">
+              <CardHeader className="border-b p-6">
+                <div className="flex flex-col gap-1">
+                  <CardTitle className="text-base">内容治理与指标</CardTitle>
+                  <Text size="xs" tone="muted">
+                    关键待办事项与健康指标
+                  </Text>
+                </div>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-5 p-6">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg border bg-muted/30 p-4">
+                    <Text size="xs" tone="muted">
+                      待审核评论
+                    </Text>
+                    <div className="mt-1 text-xl font-semibold">
+                      {summary.pending_comments}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border bg-muted/30 p-4">
+                    <Text size="xs" tone="muted">
+                      被举报内容
+                    </Text>
+                    <div className="mt-1 text-xl font-semibold">
+                      {summary.reported_items}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border bg-muted/30 p-4">
+                    <Text size="xs" tone="muted">
+                      已发布文章
+                    </Text>
+                    <div className="mt-1 text-xl font-semibold">
+                      {summary.published_posts}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border bg-muted/30 p-4">
+                    <Text size="xs" tone="muted">
+                      草稿待发布
+                    </Text>
+                    <div className="mt-1 text-xl font-semibold">
+                      {draftsCount}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-3 border-t pt-4">
+                  <Text size="xs" tone="muted">
+                    系统状态正常
+                  </Text>
+                  {can("view", "post") ? (
+                    <ButtonLink
+                      size="small"
+                      variant="text"
+                      to="/admin/posts"
+                      icon={<ChevronRight />}
+                      iconPlacement="end"
+                    >
+                      文章管理
+                    </ButtonLink>
+                  ) : null}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {can("manage", "ai") && summary.ai_alerts?.length ? (
+            <Card padding="none" className="overflow-hidden border-warning/40">
+              <CardHeader className="border-b p-6">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-col gap-1">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <AlertTriangle className="size-4 text-warning" />
+                      AI 运营提醒
+                    </CardTitle>
+                    <Text size="xs" tone="muted">
+                      需要你关注或审批的自动化执行记录，点击可直接查看详情。
+                    </Text>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      size="small"
+                      type="button"
+                      disabled={clearingAlerts}
+                      loading={clearingAlerts}
+                      loadingText="正在清除…"
+                      onClick={() => void dismissAllAlerts()}
+                      icon={<CheckCheck />}
+                    >
+                      全部已读
+                    </Button>
+                    <ButtonLink
+                      variant="text"
+                      size="small"
+                      to="/admin/ai-ops?tab=records"
+                    >
+                      查看全部记录
+                    </ButtonLink>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="divide-y p-0">
+                {summary.ai_alerts.map((alert) => {
+                  const presentation = alertPresentation(alert);
+                  return (
+                    <Link
+                      key={alert.id}
+                      to={presentation.destination}
+                      className="group flex items-center justify-between gap-4 p-4 transition-colors hover:bg-muted/40 sm:p-6"
+                    >
+                      <div className="flex min-w-0 flex-1 items-start gap-3">
+                        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted/40 text-muted-foreground">
+                          {presentation.icon}
+                        </span>
+                        <div className="min-w-0 space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-semibold text-foreground">
+                              {presentation.label}
+                            </span>
+                            <span className="text-xs font-medium text-warning">
+                              {alert.title
+                                .replace(
+                                  /^(?:AI 自动化|Workflow|Agent)\s*运行失败：?\s*/,
+                                  "",
+                                )
+                                .trim()}
+                            </span>
+                          </div>
+                          <Text size="xs" tone="muted" className="line-clamp-1">
+                            {alert.body
+                              ? `失败原因：${alert.body}`
+                              : "运行未完成，请打开记录查看失败步骤。"}
+                          </Text>
+                          <time className="block text-[11px] text-muted-foreground">
+                            {new Date(alert.created_at).toLocaleString("zh-CN")}
+                          </time>
+                        </div>
+                      </div>
+                      <span className="shrink-0 text-xs font-medium text-primary transition-transform group-hover:translate-x-0.5">
+                        {presentation.action}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          ) : null}
+
+          <Card padding="none" className="overflow-hidden">
+            <CardHeader className="border-b p-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-col gap-1">
+                  <CardTitle className="text-base">表现最佳文章</CardTitle>
+                  <Text size="xs" tone="muted">
+                    按全站阅读量与点赞数排序的热门内容
+                  </Text>
+                </div>
+                {can("view", "post") ? (
+                  <ButtonLink
+                    variant="text"
+                    size="small"
+                    to="/admin/posts"
+                    icon={<ArrowUpRight />}
+                  >
+                    查看全部文章
+                  </ButtonLink>
+                ) : null}
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {summary.top_posts.length === 0 ? (
+                <div className="p-6">
+                  <Empty
+                    title="暂无表现数据"
+                    description="发布文章并产生阅读后，这里会出现热门内容排行。"
+                  />
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-16 text-center">排名</TableHead>
+                      <TableHead>文章标题</TableHead>
+                      <TableHead className="w-28 text-right">阅读量</TableHead>
+                      <TableHead className="w-28 text-right">点赞数</TableHead>
+                      <TableHead className="w-36 text-right">操作</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {summary.top_posts.map((post, index) => {
+                      const canEdit = can("edit", "post", post);
+                      return (
+                        <TableRow key={post.id}>
+                          <TableCell className="text-center font-mono text-xs text-muted-foreground">
+                            {index + 1}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {post.title}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                            {post.views_count.toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                            {post.likes_count.toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="inline-flex min-w-max flex-nowrap items-center justify-end gap-1">
+                              <ButtonLink
+                                variant="text"
+                                size="small"
+                                to={`/admin/posts/${post.id}/edit`}
+                              >
+                                {canEdit ? "编辑" : "查看"}
+                              </ButtonLink>
+                              <ButtonLink
+                                variant="text"
+                                size="small"
+                                to={`/articles/${post.slug || post.id}`}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                前台
+                              </ButtonLink>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      ) : null}
+    </div>
   );
 }
