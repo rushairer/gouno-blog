@@ -1,0 +1,195 @@
+name: Phase 39 migrate app feedback
+
+on:
+  push:
+    branches:
+      - ui/app-feedback-canonical-phase39
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ui/app-feedback-canonical-phase39
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        working-directory: blog-frontend
+        run: npm ci
+      - name: Migrate product feedback consumers
+        working-directory: blog-frontend
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+
+          const allowPath = 'scripts/legacy-ui-allowlist.json';
+          const allow = JSON.parse(fs.readFileSync(allowPath, 'utf8'));
+          const priorArt = 'src/components/__tests__/ui.test.tsx';
+          const providerModule = 'src/components/feedback/AppFeedbackProvider';
+
+          function relativeModule(fromFile) {
+            let value = path.posix.relative(path.posix.dirname(fromFile), providerModule);
+            if (!value.startsWith('.')) value = `./${value}`;
+            return value;
+          }
+
+          function removeLegacySymbol(text, symbol, file) {
+            const re = /import\s*\{([^}]*)\}\s*from\s*["']@gouno\/ui-legacy["'];/;
+            const match = text.match(re);
+            if (!match) throw new Error(`legacy import missing in ${file} for ${symbol}`);
+            const names = match[1]
+              .split(',')
+              .map((value) => value.trim())
+              .filter(Boolean);
+            if (!names.includes(symbol)) throw new Error(`${symbol} missing from legacy import in ${file}`);
+            const remaining = names.filter((name) => name !== symbol);
+            return text.replace(
+              re,
+              remaining.length
+                ? `import { ${remaining.join(', ')} } from "@gouno/ui-legacy";`
+                : '',
+            );
+          }
+
+          function ensureNamedImport(text, file, names) {
+            const module = relativeModule(file);
+            const escaped = module.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const re = new RegExp(`import\\s*\\{([^}]*)\\}\\s*from\\s*["']${escaped}["'];`);
+            const match = text.match(re);
+            if (match) {
+              const current = match[1]
+                .split(',')
+                .map((value) => value.trim())
+                .filter(Boolean);
+              const merged = [...new Set([...current, ...names])];
+              return text.replace(re, `import { ${merged.join(', ')} } from "${module}";`);
+            }
+            const imports = [...text.matchAll(/^import[\s\S]*?;$/gm)];
+            if (!imports.length) throw new Error(`no import anchor in ${file}`);
+            const last = imports[imports.length - 1];
+            const end = last.index + last[0].length;
+            return `${text.slice(0, end)}\nimport { ${names.join(', ')} } from "${module}";${text.slice(end)}`;
+          }
+
+          const providerFiles = (allow.allowedLegacyImports.ToastProvider || []).filter(
+            (file) => file !== priorArt,
+          );
+          const hookFiles = (allow.allowedLegacyImports.useToast || []).filter(
+            (file) => file !== priorArt,
+          );
+
+          for (const file of providerFiles) {
+            let text = fs.readFileSync(file, 'utf8');
+            text = removeLegacySymbol(text, 'ToastProvider', file);
+            text = ensureNamedImport(text, file, ['AppFeedbackProvider']);
+            text = text.replaceAll('<ToastProvider>', '<AppFeedbackProvider>');
+            text = text.replaceAll('</ToastProvider>', '</AppFeedbackProvider>');
+            if (text.includes('ToastProvider')) throw new Error(`stale ToastProvider in ${file}`);
+            fs.writeFileSync(file, text);
+          }
+
+          for (const file of hookFiles) {
+            let text = fs.readFileSync(file, 'utf8');
+            text = removeLegacySymbol(text, 'useToast', file);
+            text = ensureNamedImport(text, file, ['useAppFeedback']);
+            text = text.replace(/\buseToast\s*\(/g, 'useAppFeedback(');
+            if (text.includes('useToast')) throw new Error(`stale useToast in ${file}`);
+            fs.writeFileSync(file, text);
+          }
+
+          const boundaryFile = 'src/components/auth/GlobalStepUpBoundary.tsx';
+          let boundary = fs.readFileSync(boundaryFile, 'utf8');
+          boundary = removeLegacySymbol(boundary, 'Toast', boundaryFile);
+          boundary = ensureNamedImport(boundary, boundaryFile, ['useAppFeedback']);
+          boundary = boundary.replace('  const [unhandledError, setUnhandledError] = useState("");\n', '  const { notify } = useAppFeedback();\n');
+          boundary = boundary.replace(
+            '      setUnhandledError(rejectionMessage(event.reason));\n      event.preventDefault();',
+            '      notify(rejectionMessage(event.reason), "error");\n      event.preventDefault();',
+          );
+          boundary = boundary.replace('  }, []);\n\n  return (\n', '  }, [notify]);\n\n  return (\n');
+          boundary = boundary.replace(/\n\s*\{unhandledError \? \([\s\S]*?\) : null\}\n/, '\n');
+          if (boundary.includes('Toast') || boundary.includes('unhandledError')) {
+            throw new Error('stale GlobalStepUpBoundary toast state remains');
+          }
+          fs.writeFileSync(boundaryFile, boundary);
+
+          const mainFile = 'src/main.tsx';
+          let main = fs.readFileSync(mainFile, 'utf8');
+          main = ensureNamedImport(main, mainFile, ['AppFeedbackProvider']);
+          const oldRoot = `        <TooltipProvider>\n          <GlobalStepUpBoundary>\n            <App />\n          </GlobalStepUpBoundary>\n        </TooltipProvider>`;
+          const newRoot = `        <TooltipProvider>\n          <AppFeedbackProvider>\n            <GlobalStepUpBoundary>\n              <App />\n            </GlobalStepUpBoundary>\n          </AppFeedbackProvider>\n        </TooltipProvider>`;
+          if (!main.includes(oldRoot)) throw new Error('main provider anchor not found');
+          main = main.replace(oldRoot, newRoot);
+          fs.writeFileSync(mainFile, main);
+
+          const boundaryTestFile = 'src/components/auth/__tests__/GlobalStepUpBoundary.test.tsx';
+          let boundaryTest = fs.readFileSync(boundaryTestFile, 'utf8');
+          boundaryTest = ensureNamedImport(boundaryTest, boundaryTestFile, ['AppFeedbackProvider']);
+          boundaryTest = boundaryTest.replaceAll(
+            '<GlobalStepUpBoundary>',
+            '<AppFeedbackProvider><GlobalStepUpBoundary>',
+          );
+          boundaryTest = boundaryTest.replaceAll(
+            '</GlobalStepUpBoundary>',
+            '</GlobalStepUpBoundary></AppFeedbackProvider>',
+          );
+          fs.writeFileSync(boundaryTestFile, boundaryTest);
+
+          delete allow.allowedLegacyImports.Toast;
+          allow.allowedLegacyImports.ToastProvider = [priorArt];
+          allow.allowedLegacyImports.useToast = [priorArt];
+          fs.writeFileSync(allowPath, JSON.stringify(allow, null, 2) + '\n');
+          NODE
+      - name: Format and focused gates
+        working-directory: blog-frontend
+        run: |
+          npx prettier --write src/main.tsx src/App.tsx src/components/feedback/AppFeedbackProvider.tsx src/components/auth/GlobalStepUpBoundary.tsx src/components/auth/__tests__/GlobalStepUpBoundary.test.tsx src/components/auth/__tests__/StepUpMfaModal.test.tsx src/layouts/__tests__/AdminShell.test.tsx src/pages/__tests__/Pages.test.tsx src/pages/admin/AIOperations.tsx src/pages/admin/AISettings.tsx src/pages/admin/Categories.tsx src/pages/admin/MediaLibrary.tsx src/pages/admin/Notifications.tsx src/pages/admin/PageEditor.tsx src/pages/admin/Pages.tsx src/pages/admin/PostEditor.tsx src/pages/admin/Posts.tsx src/pages/admin/SiteSettings.tsx src/pages/admin/Tags.tsx src/pages/admin/Users.tsx src/pages/admin/__tests__/*.test.tsx scripts/legacy-ui-allowlist.json
+          npm run lint:ui
+          npx tsc -b
+          npx vitest run src/components/auth/__tests__/GlobalStepUpBoundary.test.tsx src/components/auth/__tests__/StepUpMfaModal.test.tsx src/layouts/__tests__/AdminShell.test.tsx src/pages/__tests__/Pages.test.tsx src/pages/admin/__tests__
+      - name: Verify production feedback debt removed
+        working-directory: blog-frontend
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const root = 'src';
+          const priorArt = 'src/components/__tests__/ui.test.tsx';
+          const banned = ['ToastProvider', 'useToast'];
+          const failures = [];
+          function walk(dir) {
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              const file = path.join(dir, entry.name).replaceAll('\\', '/');
+              if (entry.isDirectory()) walk(file);
+              else if (/\.(ts|tsx)$/.test(entry.name) && file !== priorArt) {
+                const text = fs.readFileSync(file, 'utf8');
+                if (text.includes('@gouno/ui-legacy')) {
+                  for (const symbol of banned) if (text.includes(symbol)) failures.push(`${file}:${symbol}`);
+                  if (file.endsWith('GlobalStepUpBoundary.tsx') && /\bToast\b/.test(text)) failures.push(`${file}:Toast`);
+                }
+              }
+            }
+          }
+          walk(root);
+          if (failures.length) throw new Error(`legacy feedback remains: ${failures.join(', ')}`);
+          const a = JSON.parse(fs.readFileSync('scripts/legacy-ui-allowlist.json', 'utf8')).allowedLegacyImports;
+          if (a.Toast) throw new Error('Toast allowlist remains');
+          if (JSON.stringify(a.ToastProvider) !== JSON.stringify([priorArt])) throw new Error('ToastProvider allowlist not test-only');
+          if (JSON.stringify(a.useToast) !== JSON.stringify([priorArt])) throw new Error('useToast allowlist not test-only');
+          NODE
+      - name: Commit migration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add blog-frontend/src blog-frontend/scripts/legacy-ui-allowlist.json
+          git diff --cached --quiet && exit 0
+          git commit -m "refactor(ui): migrate app feedback off legacy UI"
+          git push origin HEAD:ui/app-feedback-canonical-phase39
