@@ -3,6 +3,7 @@ package tool
 import (
 	"context"
 	"encoding/json"
+	"errors"
 
 	"github.com/rushairer/blog-backend/internal/domain"
 )
@@ -11,8 +12,18 @@ type analyticsSummaryReader interface {
 	AnalyticsSummary(context.Context) (*domain.AnalyticsSummary, error)
 }
 
-// BindAnalytics replaces the legacy Growth-backed analytics tool handler with
-// the canonical Analytics service without changing the public Tool catalog.
+var errAnalyticsNotBound = errors.New("analytics service is not bound")
+
+func unboundAnalyticsSummary(_ context.Context, raw json.RawMessage) (any, error) {
+	var args struct{}
+	if err := decodeArguments(raw, &args); err != nil {
+		return nil, err
+	}
+	return nil, errAnalyticsNotBound
+}
+
+// BindAnalytics connects the public analytics Tool definition to the canonical
+// Analytics service at the application composition boundary.
 func BindAnalytics(registry *Registry, analytics analyticsSummaryReader) {
 	if registry == nil || analytics == nil {
 		return
