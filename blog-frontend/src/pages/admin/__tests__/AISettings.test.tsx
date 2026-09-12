@@ -214,4 +214,34 @@ describe("AISettings", () => {
     expect(screen.getByText("content.list_posts")).toBeInTheDocument();
     expect(window.location.search).toBe("?section=tools");
   });
+
+  it("uses canonical protected Provider and Knowledge surfaces", async () => {
+    const user = userEvent.setup();
+    renderSettings();
+
+    await user.click(await screen.findByRole("tab", { name: "Providers" }));
+    expect(screen.getByRole("tab", { name: "Providers" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(
+      screen.queryByRole("heading", { name: "Providers" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Default Purposes" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("OpenAI")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: "Knowledge index" }));
+    expect(
+      screen.getByRole("tab", { name: "Knowledge index" }),
+    ).toHaveAttribute("aria-selected", "true");
+    expect(
+      screen.queryByRole("heading", { name: "Knowledge index" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Chunks")).toBeInTheDocument();
+    expect(screen.getByText("Queued")).toBeInTheDocument();
+    expect(screen.getByText("Failed")).toBeInTheDocument();
+    expect(window.location.search).toBe("?section=knowledge");
+  });
 });

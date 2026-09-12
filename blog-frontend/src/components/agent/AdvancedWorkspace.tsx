@@ -39,8 +39,8 @@ import {
   Button,
   Card,
   CardContent,
-  CardHeader,
   Empty,
+  Heading,
   IconButton,
   Select,
   Tabs,
@@ -648,7 +648,7 @@ export function AdvancedWorkspace({
           description="添加、修改、导出或删除 AI 模型连接涉及敏感 API Key 凭据。解锁后享有 10 分钟无打扰编辑期。"
           actionLabel="解锁以管理模型连接"
         >
-          <Card className="agent-table-panel">
+          <div className="flex flex-col gap-5">
             <input
               ref={providerFileInputRef}
               type="file"
@@ -656,16 +656,16 @@ export function AdvancedWorkspace({
               hidden
               onChange={(event) => void onImportProviders(event)}
             />
-            <CardHeader
-              title={labels.providers}
+            <TabPanelLead
               description={
                 locale === "zh"
-                  ? "管理模型连接，并分别指定文本模型与图片生成的默认模型。"
-                  : "Manage model connections and defaults."
+                  ? "管理模型连接、密钥状态以及文本与图片生成的默认用途。"
+                  : "Manage model connections, credential state, and default usage for text and image generation."
               }
-              action={
+              actions={
                 <>
                   <Button
+                    size="small"
                     variant="outline"
                     type="button"
                     onClick={() => void onExportProviders()}
@@ -674,6 +674,7 @@ export function AdvancedWorkspace({
                     {labels.exportProviders}
                   </Button>
                   <Button
+                    size="small"
                     variant="outline"
                     type="button"
                     onClick={() => providerFileInputRef.current?.click()}
@@ -682,6 +683,7 @@ export function AdvancedWorkspace({
                     {labels.importProviders}
                   </Button>
                   <Button
+                    size="small"
                     variant="solid"
                     color="primary"
                     onClick={() => onEditProvider("new")}
@@ -692,192 +694,198 @@ export function AdvancedWorkspace({
                 </>
               }
             />
-            {providers.length > 0 ? (
-              <section className="provider-defaults">
-                <div className="provider-defaults__intro">
-                  <h3>{locale === "zh" ? "默认用途" : "Default Purposes"}</h3>
-                  <p>
+            <Alert
+              type="info"
+              showIcon
+              title={
+                locale === "zh"
+                  ? "模型连接与密钥保护"
+                  : "Model connection and credential protection"
+              }
+              description={
+                locale === "zh"
+                  ? "添加、修改、导出或删除模型连接需要近期 MFA；API Key 始终保持掩码显示。"
+                  : "Adding, editing, exporting, or deleting model connections requires recent MFA; API keys remain masked."
+              }
+            />
+            <Card padding="base">
+              <div className="flex flex-col gap-4">
+                <div>
+                  <Heading level={2} className="text-base">
+                    {locale === "zh" ? "默认用途" : "Default Purposes"}
+                  </Heading>
+                  <Text size="sm" tone="muted">
                     {locale === "zh"
-                      ? "决定编辑器、运营分析与图片生成使用的模型。"
-                      : "Determines models used for editing, analysis, and image generation."}
-                  </p>
+                      ? "决定编辑器、运营分析与图片生成默认使用的模型。"
+                      : "Choose the default models used for editing, operations analysis, and image generation."}
+                  </Text>
                 </div>
-                <label>
-                  {locale === "zh" ? "文本模型" : "Text Model"}
-                  <Select
-                    value={String(
-                      providers.find((item) => item.is_default_writing)?.id ||
-                        "",
-                    )}
-                    onChange={(value) => {
-                      const id = value ? Number(value) : 0;
-                      void onSetDefaultProvider(id, "writing");
-                    }}
-                  >
-                    <option value="">
-                      {locale === "zh"
-                        ? "未设置 (取消选择)"
-                        : "Not set (Clear default)"}
-                    </option>
-                    {providers
-                      .filter((item) => item.enabled)
-                      .map((item) => (
-                        <option key={item.id} value={String(item.id)}>
-                          {item.name} · {item.model}
-                        </option>
-                      ))}
-                  </Select>
-                </label>
-                <label>
-                  {locale === "zh" ? "图片生成" : "Image Generation"}
-                  <Select
-                    value={String(
-                      providers.find((item) => item.is_default_image)?.id || "",
-                    )}
-                    onChange={(value) => {
-                      const id = value ? Number(value) : 0;
-                      void onSetDefaultProvider(id, "image");
-                    }}
-                  >
-                    <option value="">
-                      {locale === "zh"
-                        ? "未设置 (取消选择)"
-                        : "Not set (Clear default)"}
-                    </option>
-                    {providers
-                      .filter((item) => item.enabled)
-                      .map((item) => (
-                        <option key={item.id} value={String(item.id)}>
-                          {item.name} · {item.model}
-                        </option>
-                      ))}
-                  </Select>
-                </label>
-              </section>
-            ) : null}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="flex flex-col gap-2">
+                    <Text size="sm">
+                      {locale === "zh" ? "文本模型" : "Text Model"}
+                    </Text>
+                    <Select
+                      value={String(
+                        providers.find((item) => item.is_default_writing)?.id ||
+                          "",
+                      )}
+                      onChange={(value) => {
+                        const id = value ? Number(value) : 0;
+                        void onSetDefaultProvider(id, "writing");
+                      }}
+                    >
+                      <option value="">
+                        {locale === "zh"
+                          ? "未设置 (取消选择)"
+                          : "Not set (Clear default)"}
+                      </option>
+                      {providers
+                        .filter((item) => item.enabled)
+                        .map((item) => (
+                          <option key={item.id} value={String(item.id)}>
+                            {item.name} · {item.model}
+                          </option>
+                        ))}
+                    </Select>
+                  </label>
+                  <label className="flex flex-col gap-2">
+                    <Text size="sm">
+                      {locale === "zh" ? "图片生成" : "Image Generation"}
+                    </Text>
+                    <Select
+                      value={String(
+                        providers.find((item) => item.is_default_image)?.id ||
+                          "",
+                      )}
+                      onChange={(value) => {
+                        const id = value ? Number(value) : 0;
+                        void onSetDefaultProvider(id, "image");
+                      }}
+                    >
+                      <option value="">
+                        {locale === "zh"
+                          ? "未设置 (取消选择)"
+                          : "Not set (Clear default)"}
+                      </option>
+                      {providers
+                        .filter((item) => item.enabled)
+                        .map((item) => (
+                          <option key={item.id} value={String(item.id)}>
+                            {item.name} · {item.model}
+                          </option>
+                        ))}
+                    </Select>
+                  </label>
+                </div>
+              </div>
+            </Card>
             {providers.length === 0 ? (
-              <Empty description={labels.noProviders} />
+              <Card padding="base">
+                <Empty description={labels.noProviders} />
+              </Card>
             ) : (
-              <div className="table-scroll">
-                <table className="content-table agent-table">
-                  <thead>
-                    <tr>
-                      <th>{labels.providerName}</th>
-                      <th>{labels.providerType}</th>
-                      <th>{labels.baseUrl}</th>
-                      <th>{labels.model}</th>
-                      <th>{labels.apiKey}</th>
-                      <th>{labels.status}</th>
-                      <th>{labels.actions}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {providers.map((provider) => (
-                      <tr key={provider.id}>
-                        <td>
-                          <div className="provider-identity">
+              <div className="grid gap-4 lg:grid-cols-2">
+                {providers.map((provider) => {
+                  const testing = testingConnections.includes(
+                    `provider:${provider.id}`,
+                  );
+                  return (
+                    <Card key={provider.id} padding="base">
+                      <div className="flex h-full flex-col gap-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
                             <strong>{provider.name}</strong>
-                            {(provider.is_default_writing ||
-                              provider.is_default_image) && (
-                              <div className="provider-tags">
-                                {provider.is_default_writing ? (
-                                  <span className="status-pill status-pill--published">
-                                    {locale === "zh"
-                                      ? "默认文本模型"
-                                      : "Default Text Model"}
-                                  </span>
-                                ) : null}
-                                {provider.is_default_image ? (
-                                  <span className="status-pill status-pill--published">
-                                    {locale === "zh"
-                                      ? "默认图片模型"
-                                      : "Default Image Model"}
-                                  </span>
-                                ) : null}
-                              </div>
-                            )}
+                            <Text size="xs" tone="muted">
+                              {provider.provider_type} · {provider.model}
+                            </Text>
                           </div>
-                        </td>
-                        <td>{provider.provider_type}</td>
-                        <td className="mono">{provider.base_url}</td>
-                        <td className="mono">{provider.model}</td>
-                        <td>
-                          <span className="secret-mask">
-                            •••• {provider.api_key_last4}
-                          </span>
-                          <small>{labels.keyStored}</small>
-                        </td>
-                        <td>
-                          <span
-                            className={`agent-state agent-state--${provider.enabled ? "active" : "paused"}`}
-                          >
-                            <i />
+                          <Tag color={provider.enabled ? "success" : "default"}>
                             {provider.enabled ? labels.active : labels.paused}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="agent-row-actions">
-                            <IconButton
-                              label={
-                                testingConnections.includes(
-                                  `provider:${provider.id}`,
-                                )
-                                  ? locale === "zh"
-                                    ? "正在测试连接"
-                                    : "Testing connection"
-                                  : labels.test
-                              }
-                              aria-busy={testingConnections.includes(
-                                `provider:${provider.id}`,
-                              )}
-                              disabled={testingConnections.includes(
-                                `provider:${provider.id}`,
-                              )}
-                              onClick={() =>
-                                void onTestConnection(
-                                  "provider",
-                                  provider.id,
-                                  provider.name,
-                                )
-                              }
-                              icon={
-                                <RefreshCw
-                                  className={
-                                    testingConnections.includes(
-                                      `provider:${provider.id}`,
-                                    )
-                                      ? "agent-row-actions__spinner"
-                                      : undefined
-                                  }
-                                />
-                              }
-                            />
-                            <IconButton
-                              label={labels.edit}
-                              icon={<Edit2 />}
-                              onClick={() => onEditProvider(provider)}
-                            />
-                            <IconButton
-                              variant="ghost"
-                              color="error"
-                              label={labels.delete}
-                              icon={<Trash2 />}
-                              onClick={() =>
-                                onDeleteTarget({
-                                  kind: "provider",
-                                  value: provider,
-                                })
-                              }
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          </Tag>
+                        </div>
+                        <Text size="xs" tone="muted" className="break-all">
+                          {provider.base_url}
+                        </Text>
+                        <Text size="xs" tone="muted">
+                          API Key •••• {provider.api_key_last4} ·{" "}
+                          {labels.keyStored}
+                        </Text>
+                        <div className="flex flex-wrap gap-2">
+                          {provider.is_default_writing ? (
+                            <Tag color="primary">
+                              {locale === "zh"
+                                ? "默认文本模型"
+                                : "Default Text Model"}
+                            </Tag>
+                          ) : null}
+                          {provider.is_default_image ? (
+                            <Tag color="primary">
+                              {locale === "zh"
+                                ? "默认图片模型"
+                                : "Default Image Model"}
+                            </Tag>
+                          ) : null}
+                        </div>
+                        <div className="mt-auto flex flex-wrap gap-2 border-t pt-4">
+                          <Button
+                            size="small"
+                            variant="ghost"
+                            icon={
+                              <RefreshCw
+                                className={
+                                  testing
+                                    ? "agent-row-actions__spinner"
+                                    : undefined
+                                }
+                              />
+                            }
+                            aria-busy={testing}
+                            disabled={testing}
+                            onClick={() =>
+                              void onTestConnection(
+                                "provider",
+                                provider.id,
+                                provider.name,
+                              )
+                            }
+                          >
+                            {testing
+                              ? locale === "zh"
+                                ? "正在测试连接"
+                                : "Testing connection"
+                              : labels.test}
+                          </Button>
+                          <Button
+                            size="small"
+                            variant="ghost"
+                            icon={<Edit2 />}
+                            onClick={() => onEditProvider(provider)}
+                          >
+                            {labels.edit}
+                          </Button>
+                          <Button
+                            size="small"
+                            variant="ghost"
+                            color="error"
+                            icon={<Trash2 />}
+                            onClick={() =>
+                              onDeleteTarget({
+                                kind: "provider",
+                                value: provider,
+                              })
+                            }
+                          >
+                            {labels.delete}
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
               </div>
             )}
-          </Card>
+          </div>
         </SudoGate>
       ) : null}
 
@@ -897,17 +905,17 @@ export function AdvancedWorkspace({
           description="添加、编辑或删除 Embedding 知识库模型及全量重建索引需要近期多因素身份认证。解锁后享有 10 分钟无打扰编辑期。"
           actionLabel="解锁以管理知识库"
         >
-          <Card className="agent-table-panel knowledge-workspace">
-            <CardHeader
-              title={labels.knowledge}
+          <div className="flex flex-col gap-5">
+            <TabPanelLead
               description={
                 locale === "zh"
-                  ? "仅索引已发布文章；Embedding 模型负责把文章转换为可检索的知识库。"
-                  : "Published content only; jobs run asynchronously."
+                  ? "仅索引已发布文章；Embedding Profile 负责把内容转换为可检索知识库。"
+                  : "Only published content is indexed; Embedding Profiles convert content into a searchable knowledge base."
               }
-              action={
+              actions={
                 <>
                   <Button
+                    size="small"
                     variant="outline"
                     type="button"
                     onClick={() => void onRetryIndex()}
@@ -916,6 +924,7 @@ export function AdvancedWorkspace({
                     {locale === "zh" ? "重试失败任务" : "Retry failed"}
                   </Button>
                   <Button
+                    size="small"
                     variant="outline"
                     type="button"
                     onClick={() => void onRebuildIndex()}
@@ -924,6 +933,7 @@ export function AdvancedWorkspace({
                     {locale === "zh" ? "全量重建" : "Rebuild all"}
                   </Button>
                   <Button
+                    size="small"
                     variant="solid"
                     color="primary"
                     type="button"
@@ -937,22 +947,58 @@ export function AdvancedWorkspace({
                 </>
               }
             />
-            <div className="agent-run-metrics">
-              <span>
-                <small>{locale === "zh" ? "分段" : "Chunks"}</small>
-                <strong>{indexStatus.chunks}</strong>
-              </span>
-              <span>
-                <small>{locale === "zh" ? "队列" : "Queued"}</small>
-                <strong>{indexStatus.queued}</strong>
-              </span>
-              <span>
-                <small>{locale === "zh" ? "失败" : "Failed"}</small>
-                <strong>{indexStatus.failed}</strong>
-              </span>
+            <Alert
+              type="info"
+              showIcon
+              title={
+                locale === "zh"
+                  ? "敏感配置需要近期 MFA"
+                  : "Recent MFA required for sensitive configuration"
+              }
+              description={
+                locale === "zh"
+                  ? "添加、编辑、删除 Embedding 配置和全量重建需要近期多因素认证。"
+                  : "Adding, editing, deleting Embedding configuration and rebuilding the full index require recent MFA."
+              }
+            />
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Card padding="base">
+                <Text size="xs" tone="muted">
+                  {locale === "zh" ? "分段" : "Chunks"}
+                </Text>
+                <Heading level={2}>{indexStatus.chunks}</Heading>
+              </Card>
+              <Card padding="base">
+                <Text size="xs" tone="muted">
+                  {locale === "zh" ? "队列" : "Queued"}
+                </Text>
+                <Heading level={2}>{indexStatus.queued}</Heading>
+              </Card>
+              <Card padding="base">
+                <Text size="xs" tone="muted">
+                  {locale === "zh" ? "失败" : "Failed"}
+                </Text>
+                <Heading level={2}>{indexStatus.failed}</Heading>
+              </Card>
             </div>
-            <section className="knowledge-embedding-config">
-              {embeddingProfiles.length === 0 ? (
+            {indexStatus.failed > 0 ? (
+              <Alert
+                type="warning"
+                showIcon
+                title={
+                  locale === "zh"
+                    ? "知识索引存在失败任务"
+                    : "Knowledge indexing has failed jobs"
+                }
+                description={
+                  locale === "zh"
+                    ? "优先重试失败项；只有索引结构变化或一致性异常时才执行全量重建。"
+                    : "Retry failed jobs first; rebuild the full index only for schema or consistency problems."
+                }
+              />
+            ) : null}
+            {embeddingProfiles.length === 0 ? (
+              <Card padding="base">
                 <Empty
                   description={
                     locale === "zh"
@@ -960,109 +1006,91 @@ export function AdvancedWorkspace({
                       : "No embedding profiles configured."
                   }
                 />
-              ) : (
-                <div className="table-scroll">
-                  <table className="content-table agent-table">
-                    <thead>
-                      <tr>
-                        <th>{labels.providerName}</th>
-                        <th>{labels.baseUrl}</th>
-                        <th>{labels.model}</th>
-                        <th>{locale === "zh" ? "向量维度" : "Dimensions"}</th>
-                        <th>{labels.apiKey}</th>
-                        <th>{labels.status}</th>
-                        <th>{labels.actions}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {embeddingProfiles.map((profile) => (
-                        <tr key={profile.id}>
-                          <td>
-                            <div className="provider-identity">
-                              <strong>{profile.name}</strong>
-                            </div>
-                          </td>
-                          <td className="mono">{profile.base_url}</td>
-                          <td className="mono">{profile.model}</td>
-                          <td>{profile.dimensions}</td>
-                          <td>
-                            <span className="secret-mask">
-                              •••• {profile.api_key_last4}
-                            </span>
-                            <small>{labels.keyStored}</small>
-                          </td>
-                          <td>
-                            <span
-                              className={`agent-state agent-state--${profile.enabled ? "active" : "paused"}`}
+              </Card>
+            ) : (
+              <Card padding="none" className="overflow-hidden">
+                <CardContent className="divide-y p-0">
+                  {embeddingProfiles.map((profile) => {
+                    const testing = testingConnections.includes(
+                      `embedding:${profile.id}`,
+                    );
+                    return (
+                      <div
+                        key={profile.id}
+                        className="flex flex-col gap-4 p-6 xl:flex-row xl:items-center xl:justify-between"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <strong>{profile.name}</strong>
+                            <Tag
+                              color={profile.enabled ? "success" : "default"}
                             >
-                              <i />
                               {profile.enabled ? labels.active : labels.paused}
-                            </span>
-                          </td>
-                          <td>
-                            <div className="agent-row-actions">
-                              <IconButton
-                                label={
-                                  testingConnections.includes(
-                                    `embedding:${profile.id}`,
-                                  )
-                                    ? locale === "zh"
-                                      ? "正在测试连接"
-                                      : "Testing connection"
-                                    : labels.test
-                                }
-                                aria-busy={testingConnections.includes(
-                                  `embedding:${profile.id}`,
-                                )}
-                                disabled={testingConnections.includes(
-                                  `embedding:${profile.id}`,
-                                )}
-                                onClick={() =>
-                                  void onTestConnection(
-                                    "embedding",
-                                    profile.id,
-                                    profile.name,
-                                  )
-                                }
-                                icon={
-                                  <RefreshCw
-                                    className={
-                                      testingConnections.includes(
-                                        `embedding:${profile.id}`,
-                                      )
-                                        ? "agent-row-actions__spinner"
-                                        : undefined
-                                    }
-                                  />
+                            </Tag>
+                          </div>
+                          <Text size="xs" tone="muted">
+                            {profile.model} · {profile.dimensions} dimensions
+                          </Text>
+                          <Text size="xs" tone="muted" className="break-all">
+                            {profile.base_url} · API Key ••••{" "}
+                            {profile.api_key_last4}
+                          </Text>
+                        </div>
+                        <div className="flex min-w-max flex-nowrap items-center gap-1">
+                          <IconButton
+                            label={
+                              testing
+                                ? locale === "zh"
+                                  ? "正在测试连接"
+                                  : "Testing connection"
+                                : labels.test
+                            }
+                            aria-busy={testing}
+                            disabled={testing}
+                            icon={
+                              <RefreshCw
+                                className={
+                                  testing
+                                    ? "agent-row-actions__spinner"
+                                    : undefined
                                 }
                               />
-                              <IconButton
-                                label={labels.edit}
-                                icon={<Edit2 />}
-                                onClick={() => onEditEmbedding(profile)}
-                              />
-                              <IconButton
-                                variant="ghost"
-                                color="error"
-                                label={labels.delete}
-                                icon={<Trash2 />}
-                                onClick={() =>
-                                  onDeleteTarget({
-                                    kind: "embedding",
-                                    value: profile,
-                                  })
-                                }
-                              />
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </section>
-          </Card>
+                            }
+                            variant="ghost"
+                            onClick={() =>
+                              void onTestConnection(
+                                "embedding",
+                                profile.id,
+                                profile.name,
+                              )
+                            }
+                          />
+                          <IconButton
+                            label={labels.edit}
+                            icon={<Edit2 />}
+                            variant="ghost"
+                            onClick={() => onEditEmbedding(profile)}
+                          />
+                          <IconButton
+                            label={labels.delete}
+                            icon={<Trash2 />}
+                            variant="ghost"
+                            color="error"
+                            onClick={() =>
+                              onDeleteTarget({
+                                kind: "embedding",
+                                value: profile,
+                              })
+                            }
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </SudoGate>
       ) : null}
     </>
