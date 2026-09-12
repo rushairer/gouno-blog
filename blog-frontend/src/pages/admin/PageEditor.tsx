@@ -26,7 +26,7 @@ import {
   Tabs,
   Textarea,
 } from "@gouno/ui/core";
-import { useToast } from "@gouno/ui-legacy";
+
 import { MarkdownRenderer } from "../../components/MarkdownRenderer";
 import {
   AiImageGenerationPanel,
@@ -40,6 +40,7 @@ import { usePageTitle } from "../../hooks/usePageTitle";
 import { pagesApi } from "../../api/pages";
 import { agentApi } from "../../api/agent";
 import type { CustomPage, PageTemplate, PostStatus } from "../../types/blog";
+import { useAppFeedback } from "../../components/feedback/AppFeedbackProvider";
 
 const emptyPage: CustomPage = {
   id: 0,
@@ -68,7 +69,7 @@ export default function PageEditor() {
     isNew ? "/admin/pages/new" : `/admin/pages/${id}/edit`,
   );
   const navigate = useNavigate();
-  const { notify } = useToast();
+  const { notify } = useAppFeedback();
 
   const [page, setPage] = useState<CustomPage>(emptyPage);
   const [publishIntent, setPublishIntent] = useState<PostStatus>("draft");

@@ -20,13 +20,14 @@ import {
 } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
 import { BulkActionBar } from "@gouno/ui/patterns";
-import { useToast } from "@gouno/ui-legacy";
+
 import { ConfirmActionModal } from "../../components/ConfirmActionModal";
 import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
 import { CategoryForm } from "../../components/taxonomy/CategoryForm";
 import type { CategoryFormValue } from "../../components/taxonomy/CategoryForm";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 import type { Category } from "../../types/blog";
+import { useAppFeedback } from "../../components/feedback/AppFeedbackProvider";
 
 type DeleteTarget =
   | { kind: "category"; item: Category }
@@ -72,7 +73,7 @@ function CategoriesSkeleton() {
 
 export default function Categories() {
   const allowed = useAdminGuard("/admin/categories");
-  const { notify } = useToast();
+  const { notify } = useAppFeedback();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");

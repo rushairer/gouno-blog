@@ -38,9 +38,13 @@ import { WorkflowWorkspace } from "../../components/agent/WorkflowWorkspace";
 import { WorkflowRunRecords } from "../../components/agent/WorkflowRunRecords";
 import { Button, Card, Segmented, Skeleton, Tabs, Tag } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
-import { ToastProvider, useToast } from "@gouno/ui-legacy";
+
 import { useI18n } from "../../i18n";
 import "../../styles/agent-console.css";
+import {
+  AppFeedbackProvider,
+  useAppFeedback,
+} from "../../components/feedback/AppFeedbackProvider";
 
 const LEGACY_SETTINGS_SECTIONS = new Set([
   "agents",
@@ -79,7 +83,7 @@ function initialRecordType(): "agent" | "workflow" {
 
 function AgentConsoleContent() {
   const { locale, formatDateTime, t } = useI18n();
-  const { notify } = useToast();
+  const { notify } = useAppFeedback();
   const [tab, setTab] = useState<ConsoleTab>(initialConsoleTab);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [runs, setRuns] = useState<AgentRun[]>([]);
@@ -530,8 +534,8 @@ export default function AgentConsole() {
   const settingsDestination = legacySettingsDestination();
   if (settingsDestination) return <Navigate replace to={settingsDestination} />;
   return (
-    <ToastProvider>
+    <AppFeedbackProvider>
       <AgentConsoleContent />
-    </ToastProvider>
+    </AppFeedbackProvider>
   );
 }

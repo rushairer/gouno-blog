@@ -32,7 +32,7 @@ import {
   Tabs,
   Textarea,
 } from "@gouno/ui/core";
-import { useToast } from "@gouno/ui-legacy";
+
 import { MarkdownRenderer } from "../../components/MarkdownRenderer";
 import {
   AiImageGenerationPanel,
@@ -45,6 +45,7 @@ import { useAdminGuard } from "../../hooks/useAdminGuard";
 import { usePageTitle } from "../../hooks/usePageTitle";
 import { extractMarkdownTOC } from "../../utils/markdown";
 import type { Category, Post, PostStatus } from "../../types/blog";
+import { useAppFeedback } from "../../components/feedback/AppFeedbackProvider";
 
 interface PostVersion extends Post {
   post_id: number;
@@ -83,7 +84,7 @@ export default function PostEditor() {
     isNew ? "/admin/posts/new" : `/admin/posts/${id}/edit`,
   );
   const navigate = useNavigate();
-  const { notify } = useToast();
+  const { notify } = useAppFeedback();
   const { cannot } = useAbility();
   const [post, setPost] = useState<Post>(emptyPost);
   const isReadOnly = Boolean(post.id && cannot("edit", "post", post));

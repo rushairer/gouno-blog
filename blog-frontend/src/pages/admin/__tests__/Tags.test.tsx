@@ -2,8 +2,9 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiFetch } from "../../../auth";
-import { ToastProvider } from "@gouno/ui-legacy";
+
 import Tags from "../Tags";
+import { AppFeedbackProvider } from "../../../components/feedback/AppFeedbackProvider";
 
 vi.mock("../../../auth", async () => {
   const apiFetch = vi.fn();
@@ -28,9 +29,9 @@ describe("Admin Tags", () => {
 
     const { container } = render(
       <MemoryRouter>
-        <ToastProvider>
+        <AppFeedbackProvider>
           <Tags />
-        </ToastProvider>
+        </AppFeedbackProvider>
       </MemoryRouter>,
     );
 

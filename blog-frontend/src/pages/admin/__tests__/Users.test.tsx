@@ -2,9 +2,10 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "@gouno/ui-legacy";
+
 import { membersApi, type BlogMember } from "../../../api/members";
 import AdminUsers from "../Users";
+import { AppFeedbackProvider } from "../../../components/feedback/AppFeedbackProvider";
 
 vi.mock("@gosso/client/react", () => ({
   useUserProfile: () => ({
@@ -50,11 +51,11 @@ describe("AdminUsers list template", () => {
     vi.spyOn(membersApi, "list").mockResolvedValue({ members: [member] });
 
     render(
-      <ToastProvider>
+      <AppFeedbackProvider>
         <MemoryRouter initialEntries={["/admin/users"]}>
           <AdminUsers />
         </MemoryRouter>
-      </ToastProvider>,
+      </AppFeedbackProvider>,
     );
 
     const mobileList = await screen.findByRole("list", { name: "成员列表" });

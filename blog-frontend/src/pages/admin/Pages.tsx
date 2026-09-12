@@ -24,12 +24,13 @@ import {
 } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
 import { BulkActionBar } from "@gouno/ui/patterns";
-import { useToast } from "@gouno/ui-legacy";
+
 import { ConfirmActionModal } from "../../components/ConfirmActionModal";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 import { pagesApi } from "../../api/pages";
 import type { CustomPage } from "../../types/blog";
 import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
+import { useAppFeedback } from "../../components/feedback/AppFeedbackProvider";
 
 type DeleteTarget =
   | { kind: "page"; page: CustomPage }
@@ -76,7 +77,7 @@ function PagesSkeleton() {
 
 export default function AdminPages() {
   const allowed = useAdminGuard("/admin/pages");
-  const { notify } = useToast();
+  const { notify } = useAppFeedback();
   const [params, setParams] = useSearchParams();
   const [pages, setPages] = useState<CustomPage[]>([]);
   const [total, setTotal] = useState(0);

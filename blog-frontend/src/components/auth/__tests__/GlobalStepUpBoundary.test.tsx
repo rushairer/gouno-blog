@@ -2,6 +2,7 @@ import { act, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GlobalStepUpBoundary } from "../GlobalStepUpBoundary";
 import { STEP_UP_MFA_REQUIRED_EVENT } from "../../../mfa";
+import { AppFeedbackProvider } from "../../feedback/AppFeedbackProvider";
 
 vi.mock("../../../auth", () => ({
   stepUpMfa: vi.fn(),
@@ -15,9 +16,11 @@ describe("GlobalStepUpBoundary", () => {
 
   it("opens the high-privilege verification UI when an AI API requests step-up", async () => {
     render(
-      <GlobalStepUpBoundary>
-        <div>AI console</div>
-      </GlobalStepUpBoundary>,
+      <AppFeedbackProvider>
+        <GlobalStepUpBoundary>
+          <div>AI console</div>
+        </GlobalStepUpBoundary>
+      </AppFeedbackProvider>,
     );
 
     act(() => {
@@ -38,9 +41,11 @@ describe("GlobalStepUpBoundary", () => {
     );
 
     render(
-      <GlobalStepUpBoundary>
-        <div>AI console</div>
-      </GlobalStepUpBoundary>,
+      <AppFeedbackProvider>
+        <GlobalStepUpBoundary>
+          <div>AI console</div>
+        </GlobalStepUpBoundary>
+      </AppFeedbackProvider>,
     );
 
     expect(await screen.findByText("高权限安全验证")).toBeInTheDocument();

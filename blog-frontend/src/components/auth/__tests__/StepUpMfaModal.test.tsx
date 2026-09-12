@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { StepUpMfaModal } from "../StepUpMfaModal";
-import { ToastProvider } from "@gouno/ui-legacy";
+
 import * as mfaModule from "../../../mfa";
 
 vi.mock("../../../auth", () => ({
@@ -15,6 +15,7 @@ vi.mock("../../../auth", () => ({
 }));
 
 import { stepUpMfa } from "../../../auth";
+import { AppFeedbackProvider } from "../../feedback/AppFeedbackProvider";
 
 describe("StepUpMfaModal", () => {
   it("starts a provider-owned step-up navigation when popup is not available", async () => {
@@ -24,9 +25,9 @@ describe("StepUpMfaModal", () => {
     vi.spyOn(mfaModule, "openStepUpPopup").mockReturnValue(false);
 
     render(
-      <ToastProvider>
+      <AppFeedbackProvider>
         <StepUpMfaModal open={true} onClose={onClose} onSuccess={onSuccess} />
-      </ToastProvider>,
+      </AppFeedbackProvider>,
     );
 
     expect(screen.getByText("高权限安全验证")).toBeInTheDocument();
@@ -50,9 +51,9 @@ describe("StepUpMfaModal", () => {
     );
 
     render(
-      <ToastProvider>
+      <AppFeedbackProvider>
         <StepUpMfaModal open={true} onClose={onClose} onSuccess={onSuccess} />
-      </ToastProvider>,
+      </AppFeedbackProvider>,
     );
 
     const submitBtn = screen.getByRole("button", { name: "前往统一身份中心" });

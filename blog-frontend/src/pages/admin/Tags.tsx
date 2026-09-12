@@ -16,10 +16,11 @@ import {
 } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
 import { BulkActionBar } from "@gouno/ui/patterns";
-import { useToast } from "@gouno/ui-legacy";
+
 import { ConfirmActionModal } from "../../components/ConfirmActionModal";
 import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
+import { useAppFeedback } from "../../components/feedback/AppFeedbackProvider";
 
 type TagEdit = { tag: TagSummary; mode: "rename" | "merge" } | null;
 type DeleteTarget =
@@ -56,7 +57,7 @@ function TagGridSkeleton() {
 
 export default function Tags() {
   const allowed = useAdminGuard("/admin/tags");
-  const { notify } = useToast();
+  const { notify } = useAppFeedback();
   const [tags, setTags] = useState<TagSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");

@@ -20,10 +20,14 @@ import type {
 } from "../../components/agent/AdvancedWorkspace";
 import { Button, Card, Skeleton } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
-import { ToastProvider, useToast } from "@gouno/ui-legacy";
+
 import { ConfirmActionModal } from "../../components/ConfirmActionModal";
 import { useI18n } from "../../i18n";
 import "../../styles/agent-console.css";
+import {
+  AppFeedbackProvider,
+  useAppFeedback,
+} from "../../components/feedback/AppFeedbackProvider";
 
 const SETTINGS_SECTIONS = new Set<AdvancedSection>([
   "agents",
@@ -48,7 +52,7 @@ function requestError(reason: unknown, fallback: string): string {
 
 function AISettingsContent() {
   const { locale, formatDateTime, t } = useI18n();
-  const { notify } = useToast();
+  const { notify } = useAppFeedback();
   const navigate = useNavigate();
   const labels = new Proxy({} as Record<string, string>, {
     get: (_, prop: string) => t(`agent.${prop}` as any),
@@ -548,8 +552,8 @@ function AISettingsContent() {
 
 export default function AISettings() {
   return (
-    <ToastProvider>
+    <AppFeedbackProvider>
       <AISettingsContent />
-    </ToastProvider>
+    </AppFeedbackProvider>
   );
 }
