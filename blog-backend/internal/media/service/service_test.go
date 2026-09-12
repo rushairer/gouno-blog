@@ -11,22 +11,22 @@ import (
 )
 
 type stubRepository struct {
-	created   *domain.MediaAsset
-	createErr error
-	got       *domain.MediaAsset
-	getErr    error
-	listed    []*domain.MediaAsset
-	listErr   error
-	updated   *domain.MediaAsset
-	updateErr error
+	created    *domain.MediaAsset
+	createErr  error
+	got        *domain.MediaAsset
+	getErr     error
+	listed     []*domain.MediaAsset
+	listErr    error
+	updated    *domain.MediaAsset
+	updateErr  error
 	updatedAlt string
 	updatedBy  *int64
-	deleted   *domain.MediaAsset
-	deleteErr error
-	count     int64
-	countErr  error
-	refs      []*domain.MediaReference
-	refsErr   error
+	deleted    *domain.MediaAsset
+	deleteErr  error
+	count      int64
+	countErr   error
+	refs       []*domain.MediaReference
+	refsErr    error
 }
 
 func (r *stubRepository) CreateMedia(_ context.Context, asset *domain.MediaAsset) error {
