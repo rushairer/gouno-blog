@@ -18,10 +18,9 @@ import type {
   AdvancedSection,
   DeleteTarget,
 } from "../../components/agent/AdvancedWorkspace";
-import { Button, Card, Skeleton } from "@gouno/ui/core";
+import { Button, Card, Modal, Skeleton, Text } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
 
-import { ConfirmActionModal } from "../../components/ConfirmActionModal";
 import { useI18n } from "../../i18n";
 import "../../styles/agent-console.css";
 import {
@@ -521,7 +520,7 @@ function AISettingsContent() {
         formatDateTime={formatDateTime}
       />
 
-      <ConfirmActionModal
+      <Modal
         open={deleteTarget !== null}
         title={
           deleteTarget?.kind === "agent"
@@ -541,11 +540,18 @@ function AISettingsContent() {
                 ? t("agent.deleteSkillConfirm")
                 : t("agent.deleteProviderConfirm")
         }
-        confirmLabel={t("agent.delete")}
-        danger
         onClose={() => setDeleteTarget(null)}
-        onConfirm={deleteSelected}
-      />
+        onOk={() => void deleteSelected()}
+        okText={t("agent.delete")}
+        cancelText={locale === "zh" ? "取消" : "Cancel"}
+        okButtonProps={{ variant: "solid", color: "error" }}
+      >
+        <Text size="sm" tone="muted">
+          {locale === "zh"
+            ? "删除操作不可恢复；受依赖约束的配置仍会由后端拒绝删除。"
+            : "Deletion cannot be undone. Configurations that are still in use remain protected by backend dependency checks."}
+        </Text>
+      </Modal>
     </div>
   );
 }
