@@ -1,10 +1,20 @@
-import { DatabaseZap, Save } from "lucide-react";
+import { DatabaseZap, Save, X } from "lucide-react";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import type { EmbeddingProfile } from "../../types/agent";
 import { useFormDraft } from "../../hooks/useFormDraft";
-import { Checkbox, Field, FormGrid, Input } from "@gouno/ui/core";
-import { Button, EditorPanel, FormActions, FormLayout } from "@gouno/ui-legacy";
+import {
+  Button,
+  Card,
+  CardHeader,
+  Checkbox,
+  Field,
+  FormActions,
+  FormGrid,
+  FormLayout,
+  IconButton,
+  Input,
+} from "@gouno/ui/core";
 
 export type EmbeddingFormValue = {
   id?: number;
@@ -101,12 +111,22 @@ export function EmbeddingForm({
   };
 
   return (
-    <EditorPanel
-      title={labels.title}
-      icon={<DatabaseZap />}
-      closeLabel={labels.cancel}
-      onClose={handleCancel}
-    >
+    <Card padding="base" className="editor-panel">
+      <CardHeader
+        title={
+          <span className="flex items-center gap-2">
+            <DatabaseZap />
+            {labels.title}
+          </span>
+        }
+        action={
+          <IconButton
+            label={labels.cancel}
+            icon={<X />}
+            onClick={handleCancel}
+          />
+        }
+      />
       <FormLayout onSubmit={submit}>
         <FormGrid columns={2}>
           <Field label={labels.name}>
@@ -207,11 +227,12 @@ export function EmbeddingForm({
           {labels.enabled}
         </label>
         <FormActions>
-          <Button variant="secondary" type="button" onClick={onCancel}>
+          <Button variant="outline" type="button" onClick={onCancel}>
             {labels.cancel}
           </Button>
           <Button
-            variant="primary"
+            variant="solid"
+            color="primary"
             type="submit"
             loading={saving}
             icon={<Save />}
@@ -220,6 +241,6 @@ export function EmbeddingForm({
           </Button>
         </FormActions>
       </FormLayout>
-    </EditorPanel>
+    </Card>
   );
 }
