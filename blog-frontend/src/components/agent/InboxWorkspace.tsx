@@ -9,10 +9,19 @@ import type {
 } from "../../types/agent";
 import { workflowApi } from "../../api/workflows";
 import { ProposalPreview } from "./ProposalPreview";
-import { StatusPill } from "./StatusPill";
 import { OperationsWorkspace } from "./OperationsWorkspace";
 import { JsonPreview } from "./AgentRunRecords";
-import { Button, Card, Empty } from "@gouno/ui/core";
+import {
+  Alert,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  Empty,
+  Heading,
+  Tag,
+  Text,
+} from "@gouno/ui/core";
 
 function approvalSummary(
   approval: AgentApproval,
@@ -77,6 +86,22 @@ function approvalSummary(
   };
 }
 
+function approvalStatusLabel(approval: AgentApproval, zh: boolean) {
+  if (approval.status === "failed") return zh ? "执行失败" : "Execution failed";
+  if (approval.status === "pending") return zh ? "待审批" : "Pending";
+  if (approval.status === "approved") return zh ? "已批准" : "Approved";
+  if (approval.status === "rejected") return zh ? "已拒绝" : "Rejected";
+  return approval.status;
+}
+
+function approvalStatusColor(
+  approval: AgentApproval,
+): "error" | "warning" | "default" {
+  if (approval.status === "failed") return "error";
+  if (approval.status === "pending") return "warning";
+  return "default";
+}
+
 export function FriendlyApprovalQueue({
   locale,
   approvals,
@@ -103,158 +128,178 @@ export function FriendlyApprovalQueue({
     selected?.status === "pending" || selected?.status === "failed";
 
   return (
-    <Card padding="base" className="approval-queue">
-      <div className="panel-heading">
-        <div>
-          <h3>
-            {zh ? "需要你决定的内容变更" : "Changes that need your decision"}
-          </h3>
-          <small>
-            {zh
-              ? "先读清楚影响，再决定是否批准。AI 不会绕过你的确认。"
-              : "Understand the impact first, then decide. AI never bypasses your confirmation."}
-          </small>
-        </div>
-      </div>
-      {approvals.length === 0 ? (
-        <Empty
-          title={zh ? "当前没有待审批变更。" : "No changes awaiting approval."}
-        />
-      ) : (
-        <div className="agent-approval-workspace">
-          <div className="agent-master-panel agent-approval-list">
-            {approvals.map((approval) => {
-              const summary = approvalSummary(approval, zh);
-              return (
-                <Button
-                  variant="ghost"
-                  className={selected?.id === approval.id ? "active" : ""}
-                  key={approval.id}
-                  type="button"
-                  onClick={() => onSelect(approval)}
-                >
-                  <span>
-                    <strong>{summary.title}</strong>
-                    <small>
-                      {zh
-                        ? `来自 AI 运行 #${approval.run_id}`
-                        : `From AI run #${approval.run_id}`}
-                    </small>
-                  </span>
-                  <span className="btn__status">
-                    <StatusPill status={approval.status} locale={locale} />
-                  </span>
-                </Button>
-              );
-            })}
+    <Card padding="none" className="overflow-hidden">
+      <CardHeader
+        className="border-b p-6"
+        title={zh ? "需要你决定的内容变更" : "Changes that need your decision"}
+        description={
+          zh
+            ? "先读清楚影响，再决定是否批准。AI 不会绕过你的确认。"
+            : "Understand the impact first, then decide. AI never bypasses your confirmation."
+        }
+      />
+      <CardContent className="p-0">
+        {approvals.length === 0 ? (
+          <div className="p-6">
+            <Empty
+              title={zh ? "当前没有待审批变更" : "No changes awaiting approval"}
+            />
           </div>
-          <div className="agent-approval-detail">
-            {selected && selectedSummary ? (
-              <div className="approval-decision section-stack">
-                <div>
-                  <span className="risk-label risk-label--propose">
-                    {zh ? "请你确认" : "Your confirmation needed"}
-                  </span>
-                  <h2>{selectedSummary.title}</h2>
-                  <p>{selectedSummary.explanation}</p>
-                </div>
-                {selected.status === "failed" ? (
-                  <div className="approval-decision__failure" role="alert">
-                    <strong>
-                      {zh
-                        ? "上次执行失败，提案未丢失"
-                        : "The previous execution failed; the proposal is preserved"}
-                    </strong>
-                    <span>
-                      {selected.review_note ||
+        ) : (
+          <div className="grid min-h-96 grid-cols-1 lg:grid-cols-[minmax(15rem,0.8fr)_minmax(0,1.8fr)]">
+            <div className="border-b lg:border-b-0 lg:border-r">
+              {approvals.map((approval) => {
+                const summary = approvalSummary(approval, zh);
+                return (
+                  <Button
+                    key={approval.id}
+                    type="button"
+                    variant="ghost"
+                    aria-pressed={selected?.id === approval.id}
+                    className={`h-auto w-full justify-start rounded-none border-b p-4 text-left transition-colors last:border-b-0 hover:bg-muted/40 ${selected?.id === approval.id ? "bg-muted/50" : ""}`}
+                    onClick={() => onSelect(approval)}
+                  >
+                    <span className="flex w-full items-start justify-between gap-3 text-left">
+                      <span className="min-w-0">
+                        <strong className="block text-sm">
+                          {summary.title}
+                        </strong>
+                        <span className="text-xs text-muted-foreground">
+                          {zh
+                            ? `来自 AI 运行 #${approval.run_id}`
+                            : `From AI run #${approval.run_id}`}
+                        </span>
+                      </span>
+                      <Tag color={approvalStatusColor(approval)}>
+                        {approvalStatusLabel(approval, zh)}
+                      </Tag>
+                    </span>
+                  </Button>
+                );
+              })}
+            </div>
+            <div className="min-w-0 p-6">
+              {selected && selectedSummary ? (
+                <div className="flex flex-col gap-5">
+                  <div className="flex flex-col gap-2">
+                    <Tag color="warning">
+                      {zh ? "请你确认" : "Your confirmation needed"}
+                    </Tag>
+                    <Heading level={2}>{selectedSummary.title}</Heading>
+                    <Text tone="muted">{selectedSummary.explanation}</Text>
+                  </div>
+                  {selected.status === "failed" ? (
+                    <Alert
+                      type="error"
+                      showIcon
+                      title={
+                        zh
+                          ? "上次执行失败，提案未丢失"
+                          : "The previous execution failed; the proposal is preserved"
+                      }
+                      description={
+                        selected.review_note ||
                         (zh
                           ? "未记录具体错误，请重试；若再次失败请查看服务日志。"
-                          : "No specific error was recorded. Retry, then inspect service logs if it fails again.")}
-                    </span>
+                          : "No specific error was recorded. Retry, then inspect service logs if it fails again.")
+                      }
+                    />
+                  ) : null}
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <Card padding="sm" variant="subtle">
+                      <Text size="xs" tone="muted">
+                        {zh ? "批准后会发生什么" : "What happens if approved"}
+                      </Text>
+                      <strong className="mt-1 block text-sm">
+                        {selectedSummary.title}
+                      </strong>
+                    </Card>
+                    <Card padding="sm" variant="subtle">
+                      <Text size="xs" tone="muted">
+                        {zh ? "不会发生什么" : "What will not happen"}
+                      </Text>
+                      <strong className="mt-1 block text-sm">
+                        {selected.action_type === "create_content_candidates"
+                          ? zh
+                            ? "不会直接修改或发布文章"
+                            : "No article will be edited or published"
+                          : zh
+                            ? "不会影响其他文章或设置"
+                            : "No other post or settings are affected"}
+                      </strong>
+                    </Card>
                   </div>
-                ) : null}
-                <div className="approval-decision__facts">
-                  <section>
-                    <small>
-                      {zh ? "批准后会发生什么" : "What happens if approved"}
-                    </small>
-                    <strong>{selectedSummary.title}</strong>
-                  </section>
-                  <section>
-                    <small>
-                      {zh ? "不会发生什么" : "What will not happen"}
-                    </small>
-                    <strong>
-                      {selected.action_type === "create_content_candidates"
-                        ? zh
-                          ? "不会直接修改或发布文章"
-                          : "No article will be edited or published"
-                        : zh
-                          ? "不会影响其他文章或设置"
-                          : "No other post or settings are affected"}
-                    </strong>
-                  </section>
+                  {proposalPreview}
+                  {selected.before_snapshot ? (
+                    <Card padding="base" variant="subtle">
+                      <Text size="xs" tone="muted">
+                        {zh ? "变更前原始数据" : "Previous raw data"}
+                      </Text>
+                      <div className="mt-3">
+                        <JsonPreview value={selected.before_snapshot} />
+                      </div>
+                    </Card>
+                  ) : null}
+                  {!proposalPreview ? (
+                    <Card padding="base" variant="subtle">
+                      <Text size="xs" tone="muted">
+                        {zh ? "建议的内容" : "Proposed content"}
+                      </Text>
+                      <div className="mt-3">
+                        <JsonPreview value={selected.proposed_payload} />
+                      </div>
+                    </Card>
+                  ) : null}
+                  <details className="rounded-md border p-4">
+                    <summary className="flex cursor-pointer items-center justify-between gap-3 text-sm font-medium">
+                      {zh ? "查看技术详情" : "View technical details"}
+                      <ChevronRight className="size-4" />
+                    </summary>
+                    <div className="mt-4">
+                      <JsonPreview value={selected.proposed_payload} />
+                    </div>
+                  </details>
+                  {selectedIsActionable ? (
+                    <div className="flex flex-wrap justify-end gap-2 border-t pt-5">
+                      <Button
+                        variant="outline"
+                        type="button"
+                        onClick={() => onReview(selected, false)}
+                        icon={<X />}
+                      >
+                        {zh ? "拒绝此建议" : "Reject proposal"}
+                      </Button>
+                      <Button
+                        variant="solid"
+                        color="primary"
+                        type="button"
+                        onClick={() => onReview(selected, true)}
+                        icon={<ShieldCheck />}
+                      >
+                        {selected.status === "failed"
+                          ? zh
+                            ? "重试批准并执行"
+                            : "Retry approval and execution"
+                          : zh
+                            ? "批准并继续"
+                            : "Approve and continue"}
+                      </Button>
+                    </div>
+                  ) : null}
                 </div>
-                {proposalPreview}
-                {selected.before_snapshot ? (
-                  <section className="approval-decision__before">
-                    <small>{zh ? "变更前原始数据" : "Previous raw data"}</small>
-                    <JsonPreview value={selected.before_snapshot} />
-                  </section>
-                ) : null}
-                {!proposalPreview ? (
-                  <section>
-                    <small>{zh ? "建议的内容" : "Proposed content"}</small>
-                    <JsonPreview value={selected.proposed_payload} />
-                  </section>
-                ) : null}
-                <details className="approval-decision__technical">
-                  <summary>
-                    {zh ? "查看技术详情" : "View technical details"}
-                    <ChevronRight />
-                  </summary>
-                  <JsonPreview value={selected.proposed_payload} />
-                </details>
-                {selectedIsActionable ? (
-                  <div className="agent-approval-actions">
-                    <Button
-                      variant="outline"
-                      type="button"
-                      onClick={() => onReview(selected, false)}
-                      icon={<X />}
-                    >
-                      {zh ? "拒绝此建议" : "Reject proposal"}
-                    </Button>
-                    <Button
-                      variant="solid"
-                      color="primary"
-                      type="button"
-                      onClick={() => onReview(selected, true)}
-                      icon={<ShieldCheck />}
-                    >
-                      {selected.status === "failed"
-                        ? zh
-                          ? "重试批准并执行"
-                          : "Retry approval and execution"
-                        : zh
-                          ? "批准并继续"
-                          : "Approve and continue"}
-                    </Button>
-                  </div>
-                ) : null}
-              </div>
-            ) : (
-              <Empty
-                title={
-                  zh
-                    ? "选择一项查看其影响。"
-                    : "Select an item to understand its impact."
-                }
-              />
-            )}
+              ) : (
+                <Empty
+                  title={
+                    zh
+                      ? "选择一项查看其影响"
+                      : "Select an item to understand its impact"
+                  }
+                />
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </CardContent>
     </Card>
   );
 }
@@ -276,65 +321,79 @@ export function InteractionInbox({
   };
 
   return (
-    <Card padding="base" className="approval-queue">
-      <div className="panel-heading">
-        <div>
-          <h3>{zh ? "流程交互" : "Workflow interactions"}</h3>
-          <small>
-            {zh
-              ? "图片选择、确认和输入都在这里处理，并回到原运行。"
-              : "Choices, confirmations, and inputs resume their source run."}
-          </small>
-        </div>
-        <strong>{tasks.length}</strong>
-      </div>
-      <div className="agent-approval-list">
+    <Card padding="none" className="overflow-hidden">
+      <CardHeader
+        className="border-b p-6"
+        title={zh ? "流程交互" : "Workflow interactions"}
+        description={
+          zh
+            ? "图片选择、确认和输入都在这里处理，并回到原运行。"
+            : "Choices, confirmations, and inputs resume their source run."
+        }
+        action={<Tag color="primary">{tasks.length}</Tag>}
+      />
+      <CardContent className="divide-y p-0">
         {tasks.map((task) => (
-          <div className="workflow-interaction" key={task.id}>
-            <div>
-              <strong>
+          <div key={task.id} className="flex flex-col gap-3 p-6">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <strong className="text-sm">
+                  {task.interaction_type === "choice"
+                    ? zh
+                      ? "选择项"
+                      : "Choose an option"
+                    : task.interaction_type === "preview_confirm"
+                      ? zh
+                        ? "确认预览"
+                        : "Confirm preview"
+                      : zh
+                        ? "确认操作"
+                        : "Confirm action"}
+                </strong>
+                <Text size="xs" tone="muted">
+                  {task.workflow_run_id
+                    ? `Run #${task.workflow_run_id}`
+                    : `Agent run #${task.agent_run_id}`}
+                  {task.workflow_step_id ? ` · ${task.workflow_step_id}` : ""}
+                </Text>
+              </div>
+              <Tag>
                 {task.interaction_type === "choice"
                   ? zh
                     ? "选择项"
-                    : "Choose an option"
-                  : task.interaction_type === "preview_confirm"
-                    ? zh
-                      ? "确认预览"
-                      : "Confirm preview"
-                    : zh
-                      ? "确认操作"
-                      : "Confirm action"}
-              </strong>
-              <small>
-                {task.workflow_run_id
-                  ? `Run #${task.workflow_run_id}`
-                  : `Agent run #${task.agent_run_id}`}
-                {task.workflow_step_id ? ` · ${task.workflow_step_id}` : ""}
-              </small>
+                    : "Choice"
+                  : zh
+                    ? "确认"
+                    : "Confirmation"}
+              </Tag>
             </div>
-            {task.interaction_type === "choice" &&
-            Array.isArray(task.options) ? (
-              task.options.map((option, index) => (
+            <div className="flex flex-wrap gap-2">
+              {task.interaction_type === "choice" &&
+              Array.isArray(task.options) ? (
+                task.options.map((option, index) => (
+                  <Button
+                    size="small"
+                    variant="outline"
+                    key={index}
+                    onClick={() => void resolve(task, { option })}
+                  >
+                    {String(option)}
+                  </Button>
+                ))
+              ) : (
                 <Button
-                  variant="outline"
-                  key={index}
-                  onClick={() => void resolve(task, { option })}
+                  size="small"
+                  variant="solid"
+                  color="primary"
+                  onClick={() => void resolve(task, { confirmed: true })}
                 >
-                  {String(option)}
+                  {zh ? "确认并继续" : "Confirm and continue"}
                 </Button>
-              ))
-            ) : (
-              <Button
-                variant="solid"
-                color="primary"
-                onClick={() => void resolve(task, { confirmed: true })}
-              >
-                {zh ? "确认并继续" : "Confirm and continue"}
-              </Button>
-            )}
+              )}
+            </div>
           </div>
         ))}
-      </div>
+      </CardContent>
     </Card>
   );
 }
@@ -367,7 +426,7 @@ export function InboxWorkspace({
   onRefresh: () => Promise<void>;
 }) {
   return (
-    <>
+    <div className="flex flex-col gap-6">
       <InteractionInbox
         locale={locale}
         tasks={interactions}
@@ -388,6 +447,6 @@ export function InboxWorkspace({
         locale={locale}
         onRefresh={onRefresh}
       />
-    </>
+    </div>
   );
 }
