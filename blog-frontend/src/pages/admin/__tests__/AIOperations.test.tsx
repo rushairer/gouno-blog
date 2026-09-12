@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -260,5 +260,59 @@ describe("AIOperations", () => {
       ).toBeInTheDocument(),
     );
     expect(redirectToAuthorize).not.toHaveBeenCalled();
+  });
+
+  it("uses a controlled canonical modal before deleting an Agent run record", async () => {
+    const user = userEvent.setup();
+    const run = {
+      id: 77,
+      agent_id: 1,
+      trigger_type: "manual",
+      status: "succeeded",
+      provider: "openai",
+      model: "gpt-5.6",
+      input_tokens: 120,
+      output_tokens: 80,
+      created_at: "2026-09-12T00:00:00Z",
+    };
+    window.history.replaceState(
+      null,
+      "",
+      "/admin/ai-ops?tab=records&record=agent",
+    );
+    vi.mocked(apiFetch).mockImplementation(async (input, init) => {
+      const url = input.toString();
+      if (url === "/api/admin/agent-runs/77" && init?.method === "DELETE") {
+        return Response.json({ data: null });
+      }
+      if (url.startsWith("/api/admin/agent-runs")) {
+        return Response.json({ data: { list: [run] } });
+      }
+      return Response.json({ data: responseFor(url) });
+    });
+
+    renderConsole();
+    const deleteButton = await screen.findByRole("button", {
+      name: "Delete record",
+    });
+    await user.click(deleteButton);
+
+    const dialog = screen.getByRole("dialog", {
+      name: "Delete Agent run record",
+    });
+    expect(
+      within(dialog).getByText(
+        "Only the completed run record and attached logs are removed. Posts and media files are kept.",
+      ),
+    ).toBeInTheDocument();
+    await user.click(
+      within(dialog).getByRole("button", { name: "Delete record" }),
+    );
+    await waitFor(() =>
+      expect(apiFetch).toHaveBeenCalledWith(
+        "/api/admin/agent-runs/77",
+        expect.objectContaining({ method: "DELETE" }),
+      ),
+    );
   });
 });

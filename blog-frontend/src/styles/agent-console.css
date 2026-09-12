@@ -11,13 +11,6 @@
     font-size: 11px;
   }
 
-  .agent-console__main {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-  }
-
   .workspace-overview__hero {
     display: flex;
     align-items: center;
