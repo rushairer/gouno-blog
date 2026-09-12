@@ -1,0 +1,78 @@
+name: Management Dependency Refactor
+
+on:
+  push:
+    branches: [refactor/management-dependency-model]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: management-dependency-refactor
+  cancel-in-progress: true
+
+jobs:
+  refactor-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: blog-backend/go.mod
+          cache-dependency-path: blog-backend/go.sum
+
+      - name: Apply fail-closed Management dependency cutover
+        run: python3 .github/scripts/refactor_management_dependencies.py
+
+      - name: Format changed Go files
+        run: |
+          gofmt -w \
+            blog-backend/internal/agent/management.go \
+            blog-backend/internal/agent/management_ports.go \
+            blog-backend/internal/agent/management_test.go \
+            blog-backend/cmd/gouno/web.go \
+            blog-backend/internal/workflow/resource_query_integration_test.go \
+            blog-backend/internal/repository/agent_repository.go
+
+      - name: Enforce ownership cutover
+        run: |
+          ! grep -q 's\.repo\.' blog-backend/internal/agent/management.go
+          ! grep -q 'internal/repository"' blog-backend/internal/agent/management.go
+          ! grep -R -q 'NewManagementService(repository.NewAgentRepository' blog-backend
+          test ! -e blog-backend/internal/repository/provider_repository.go
+          test ! -e blog-backend/internal/repository/skill_repository.go
+          grep -q 'Providers: providerRepo' blog-backend/cmd/gouno/web.go
+          grep -q 'Runner still depends on flat `repository.AgentRepository`' blog-backend/ARCHITECTURE_CONVERGENCE.md
+          git diff --check
+
+      - name: Test
+        working-directory: blog-backend
+        run: go test ./...
+
+      - name: Race detector
+        working-directory: blog-backend
+        run: go test -race ./...
+
+      - name: Vet
+        working-directory: blog-backend
+        run: go vet ./...
+
+      - name: Check known Go vulnerabilities
+        working-directory: blog-backend
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.6.0 ./...
+
+      - name: Commit verified business changes
+        run: |
+          rm -f .github/scripts/refactor_management_dependencies.py
+          rm -f .github/workflows/management-dependency-refactor.yml
+          git add -A
+          git diff --cached --check
+          git config user.name "Aben"
+          git config user.email "5195693+rushairer@users.noreply.github.com"
+          git commit -m "refactor(agent): narrow ManagementService dependencies"
+          git push origin HEAD:refactor/management-dependency-model
