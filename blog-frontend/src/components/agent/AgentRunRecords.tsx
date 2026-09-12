@@ -2,14 +2,7 @@ import { ArrowLeft, Eye, ListChecks, Trash2 } from "lucide-react";
 import type { Agent, AgentRun, AgentToolCall } from "../../types/agent";
 import { RiskPill, StatusPill } from "./StatusPill";
 import { MarkdownRenderer } from "../MarkdownRenderer";
-import {
-  Button,
-  EmptyState,
-  IconButton,
-  Panel,
-  PanelHeader,
-  WorkspacePanel,
-} from "@gouno/ui-legacy";
+import { Button, Card, CardHeader, Empty, IconButton } from "@gouno/ui/core";
 
 export function JsonPreview({ value }: { value: unknown }) {
   if (
@@ -476,7 +469,7 @@ export function RunCitations({
 }) {
   if (!run.citations?.length) return null;
   return (
-    <Panel>
+    <Card padding="base">
       <section
         className="related-content-suggestions"
         aria-label={locale === "zh" ? "引用依据" : "Citations"}
@@ -512,7 +505,7 @@ export function RunCitations({
           ))}
         </ul>
       </section>
-    </Panel>
+    </Card>
   );
 }
 
@@ -654,7 +647,7 @@ export function RecordsWorkspace({
         <div className="workflow-detail-nav">
           <Button
             variant="ghost"
-            size="compact"
+            size="small"
             type="button"
             onClick={onClearInspect}
             icon={<ArrowLeft />}
@@ -662,9 +655,9 @@ export function RecordsWorkspace({
             {zh ? "返回 Agent 运行列表" : "Back to Agent runs"}
           </Button>
         </div>
-        <WorkspacePanel className="agent-detail-panel">
+        <Card padding="base" className="agent-detail-panel">
           <div className="section-stack">
-            <PanelHeader
+            <CardHeader
               title={
                 agentMap.get(selectedRun.run.agent_id)?.name ||
                 `Agent #${selectedRun.run.agent_id}`
@@ -674,14 +667,14 @@ export function RecordsWorkspace({
                   ? "本次运行的结果、执行步骤与依据"
                   : "Results, execution steps, and evidence for this run"
               }
-              actions={
+              action={
                 <div className="row-actions">
                   <StatusPill status={selectedRun.run.status} locale={locale} />
                   {["succeeded", "failed", "cancelled"].includes(
                     selectedRun.run.status,
                   ) ? (
                     <Button
-                      variant="secondary"
+                      variant="outline"
                       type="button"
                       onClick={() => onDelete(selectedRun.run)}
                       icon={<Trash2 />}
@@ -727,7 +720,7 @@ export function RecordsWorkspace({
               formatDateTime={formatDateTime}
             />
           </div>
-        </WorkspacePanel>
+        </Card>
       </div>
     );
   }
@@ -735,11 +728,9 @@ export function RecordsWorkspace({
   return (
     <div className="agent-runs-list-view section-stack">
       {runs.length === 0 ? (
-        <EmptyState
-          label={zh ? "还没有 AI 工作记录。" : "No AI work recorded yet."}
-        />
+        <Empty title={zh ? "还没有 AI 工作记录。" : "No AI work recorded yet."} />
       ) : (
-        <WorkspacePanel className="agent-table-panel">
+        <Card padding="none" className="agent-table-panel">
           <div className="table-scroll">
             <table className="content-table agent-table agent-runs-table">
               <thead>
@@ -806,7 +797,8 @@ export function RecordsWorkspace({
                           run.status,
                         ) ? (
                           <IconButton
-                            variant="danger"
+                            variant="outline"
+                            color="error"
                             label={zh ? "删除记录" : "Delete record"}
                             icon={<Trash2 />}
                             onClick={() => onDelete(run)}
@@ -819,7 +811,7 @@ export function RecordsWorkspace({
               </tbody>
             </table>
           </div>
-        </WorkspacePanel>
+        </Card>
       )}
     </div>
   );
