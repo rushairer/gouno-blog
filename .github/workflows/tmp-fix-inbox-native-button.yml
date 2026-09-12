@@ -26,52 +26,42 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           path = Path("blog-frontend/src/components/agent/InboxWorkspace.tsx")
           source = path.read_text()
-          old = '''                  <button
-                    key={approval.id}
-                    type="button"
-                    className={`flex w-full items-start justify-between gap-3 border-b p-4 text-left transition-colors last:border-b-0 hover:bg-muted/40 ${selected?.id === approval.id ? "bg-muted/50" : ""}`}
-                    onClick={() => onSelect(approval)}
-                  >
-                    <span className="min-w-0">
-                      <strong className="block text-sm">{summary.title}</strong>
-                      <span className="text-xs text-muted-foreground">
-                        {zh
-                          ? `来自 AI 运行 #${approval.run_id}`
-                          : `From AI run #${approval.run_id}`}
-                      </span>
-                    </span>
-                    <Tag color={approvalStatusColor(approval)}>
-                      {approvalStatusLabel(approval, zh)}
-                    </Tag>
-                  </button>'''
-          new = '''                  <Button
-                    key={approval.id}
-                    type="button"
-                    variant="ghost"
-                    aria-pressed={selected?.id === approval.id}
-                    className={`h-auto w-full justify-start rounded-none border-b p-4 text-left transition-colors last:border-b-0 hover:bg-muted/40 ${selected?.id === approval.id ? "bg-muted/50" : ""}`}
-                    onClick={() => onSelect(approval)}
-                  >
-                    <span className="flex w-full items-start justify-between gap-3 text-left">
-                      <span className="min-w-0">
-                        <strong className="block text-sm">{summary.title}</strong>
-                        <span className="text-xs text-muted-foreground">
-                          {zh
-                            ? `来自 AI 运行 #${approval.run_id}`
-                            : `From AI run #${approval.run_id}`}
-                        </span>
-                      </span>
-                      <Tag color={approvalStatusColor(approval)}>
-                        {approvalStatusLabel(approval, zh)}
-                      </Tag>
-                    </span>
-                  </Button>'''
-          if source.count(old) != 1:
-              raise SystemExit(f"expected one native approval button block, found {source.count(old)}")
-          path.write_text(source.replace(old, new, 1))
+          pattern = re.compile(
+              r"(?P<indent>[ \t]*)<button\s*\n\s*key=\{approval\.id\}[\s\S]*?</button>"
+          )
+          matches = list(pattern.finditer(source))
+          if len(matches) != 1:
+              raise SystemExit(f"expected one approval row native button, found {len(matches)}")
+          match = matches[0]
+          indent = match.group("indent")
+          block = '''<Button
+            key={approval.id}
+            type="button"
+            variant="ghost"
+            aria-pressed={selected?.id === approval.id}
+            className={`h-auto w-full justify-start rounded-none border-b p-4 text-left transition-colors last:border-b-0 hover:bg-muted/40 ${selected?.id === approval.id ? "bg-muted/50" : ""}`}
+            onClick={() => onSelect(approval)}
+          >
+            <span className="flex w-full items-start justify-between gap-3 text-left">
+              <span className="min-w-0">
+                <strong className="block text-sm">{summary.title}</strong>
+                <span className="text-xs text-muted-foreground">
+                  {zh
+                    ? `来自 AI 运行 #${approval.run_id}`
+                    : `From AI run #${approval.run_id}`}
+                </span>
+              </span>
+              <Tag color={approvalStatusColor(approval)}>
+                {approvalStatusLabel(approval, zh)}
+              </Tag>
+            </span>
+          </Button>'''
+          replacement = "\n".join(indent + line if line else line for line in block.splitlines())
+          path.write_text(source[: match.start()] + replacement + source[match.end() :])
           PY
       - name: Verify targeted frontend contracts
         working-directory: blog-frontend
