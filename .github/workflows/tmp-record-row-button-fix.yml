@@ -1,4 +1,5 @@
 name: Temporary Record Row Button Fix
+# Retry after wrapping canonical Button row content in a single text container.
 on:
   push:
     branches: [ui/blog-admin-final-parity-ai-ops-records-v2]
