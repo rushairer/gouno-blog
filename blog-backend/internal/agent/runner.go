@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rushairer/blog-backend/internal/dberror"
 	"github.com/rushairer/blog-backend/internal/domain"
 	postservice "github.com/rushairer/blog-backend/internal/post/service"
 	"github.com/rushairer/blog-backend/internal/provider"
@@ -132,7 +133,7 @@ func (r *Runner) queue(ctx context.Context, agentID int64, trigger domain.AgentT
 		WorkflowRunID:     workflowRunID,
 	}
 	if err := r.repo.CreateRun(ctx, run); err != nil {
-		if repository.IsConstraintError(err) {
+		if dberror.IsConstraintError(err) {
 			return nil, ErrAlreadyRunning
 		}
 		return nil, err

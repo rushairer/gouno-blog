@@ -19,9 +19,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rushairer/blog-backend/internal/dbtx"
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/provider"
-	"github.com/rushairer/blog-backend/internal/repository"
 	"github.com/rushairer/blog-backend/internal/secretbox"
 	"go.uber.org/zap"
 )
@@ -38,10 +38,10 @@ type Service struct {
 	logger       *zap.Logger
 	cancel       context.CancelFunc
 	wg           sync.WaitGroup
-	transactor   *repository.Transactor
+	transactor   *dbtx.Transactor
 }
 
-func NewService(db *sql.DB, secrets *secretbox.Box, allowedHosts []string, logger *zap.Logger, transactor *repository.Transactor) *Service {
+func NewService(db *sql.DB, secrets *secretbox.Box, allowedHosts []string, logger *zap.Logger, transactor *dbtx.Transactor) *Service {
 	if transactor == nil {
 		panic("knowledge.NewService: transactor is required")
 	}

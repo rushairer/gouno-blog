@@ -14,8 +14,9 @@ import (
 
 	"github.com/robfig/cron/v3"
 	agentservice "github.com/rushairer/blog-backend/internal/agent"
+	"github.com/rushairer/blog-backend/internal/dberror"
+	"github.com/rushairer/blog-backend/internal/dbtx"
 	"github.com/rushairer/blog-backend/internal/domain"
-	"github.com/rushairer/blog-backend/internal/repository"
 	"github.com/rushairer/blog-backend/internal/tool"
 	"github.com/rushairer/blog-backend/internal/workflowplan"
 )
@@ -33,7 +34,7 @@ type Service struct {
 	tools      *tool.Registry
 	catalog    *ResourceCatalog
 	workerSem  chan struct{}
-	transactor *repository.Transactor
+	transactor *dbtx.Transactor
 }
 
 type PreflightCheck struct {
@@ -173,7 +174,7 @@ func containsString(values []string, target string) bool {
 	return false
 }
 
-func NewService(db *sql.DB, runner *agentservice.Runner, agents *agentservice.ManagementService, registry *tool.Registry, transactor *repository.Transactor) *Service {
+func NewService(db *sql.DB, runner *agentservice.Runner, agents *agentservice.ManagementService, registry *tool.Registry, transactor *dbtx.Transactor) *Service {
 	if transactor == nil {
 		panic("workflow.NewService: transactor is required")
 	}
@@ -322,7 +323,7 @@ func (s *Service) Save(ctx context.Context, value *domain.Workflow) error {
 }
 
 func workflowSaveError(err error) error {
-	if repository.IsConstraintError(err) {
+	if dberror.IsConstraintError(err) {
 		return fmt.Errorf("%w: an active Workflow already uses this name or template", ErrConflict)
 	}
 	return err

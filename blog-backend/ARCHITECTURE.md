@@ -22,16 +22,17 @@ A capability MUST contain only the layers it actually needs. Infrastructure capa
 
 ## Transitional flat-layer directories
 
-The following directories are legacy migration buckets:
+The remaining legacy migration boundaries are:
 
 ```text
-internal/domain/
-internal/repository/
-internal/service/
-internal/controller/
+internal/domain/       # deliberate shared-model boundary; classify before moving
+internal/repository/   # transitional repository/facade bucket
+internal/controller/   # transitional HTTP/controller bucket
 ```
 
-Existing code may remain there while it is migrated in coherent capability slices. New business features MUST NOT add new ownership to these flat buckets unless a migration constraint is documented in the same change.
+The former `internal/service/` bucket has been retired. Existing code may remain in the boundaries above only while it is migrated in coherent capability slices. New business features MUST NOT add new ownership to these flat buckets unless a migration constraint is documented in the same change.
+
+The live ownership, dependency, transaction, compatibility-facade, and removal-condition inventory is maintained in [ARCHITECTURE_CONVERGENCE.md](./ARCHITECTURE_CONVERGENCE.md). Treat that map as the migration Source of Truth and update it with every architecture slice.
 
 Migration is intentionally incremental:
 
