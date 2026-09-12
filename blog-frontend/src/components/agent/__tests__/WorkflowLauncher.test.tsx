@@ -112,13 +112,8 @@ describe("WorkflowLauncher", () => {
 
     await waitFor(() => {
       expect(
-        vi
-          .mocked(apiFetch)
-          .mock.calls.some(
-            ([path]) =>
-              String(path) === "/api/admin/ai-resources/post?key=17",
-          ),
-      ).toBe(true);
+        vi.mocked(apiFetch).mock.calls.map(([path]) => String(path)),
+      ).toContain("/api/admin/ai-resources/post?key=17");
     });
   });
 
