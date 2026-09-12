@@ -151,24 +151,30 @@ export function FriendlyApprovalQueue({
               {approvals.map((approval) => {
                 const summary = approvalSummary(approval, zh);
                 return (
-                  <button
+                  <Button
                     key={approval.id}
                     type="button"
-                    className={`flex w-full items-start justify-between gap-3 border-b p-4 text-left transition-colors last:border-b-0 hover:bg-muted/40 ${selected?.id === approval.id ? "bg-muted/50" : ""}`}
+                    variant="ghost"
+                    aria-pressed={selected?.id === approval.id}
+                    className={`h-auto w-full justify-start rounded-none border-b p-4 text-left transition-colors last:border-b-0 hover:bg-muted/40 ${selected?.id === approval.id ? "bg-muted/50" : ""}`}
                     onClick={() => onSelect(approval)}
                   >
-                    <span className="min-w-0">
-                      <strong className="block text-sm">{summary.title}</strong>
-                      <span className="text-xs text-muted-foreground">
-                        {zh
-                          ? `来自 AI 运行 #${approval.run_id}`
-                          : `From AI run #${approval.run_id}`}
+                    <span className="flex w-full items-start justify-between gap-3 text-left">
+                      <span className="min-w-0">
+                        <strong className="block text-sm">
+                          {summary.title}
+                        </strong>
+                        <span className="text-xs text-muted-foreground">
+                          {zh
+                            ? `来自 AI 运行 #${approval.run_id}`
+                            : `From AI run #${approval.run_id}`}
+                        </span>
                       </span>
+                      <Tag color={approvalStatusColor(approval)}>
+                        {approvalStatusLabel(approval, zh)}
+                      </Tag>
                     </span>
-                    <Tag color={approvalStatusColor(approval)}>
-                      {approvalStatusLabel(approval, zh)}
-                    </Tag>
-                  </button>
+                  </Button>
                 );
               })}
             </div>
