@@ -16,7 +16,8 @@ import {
 } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
 import { BulkActionBar } from "@gouno/ui/patterns";
-import { ConfirmDialog, useToast } from "@gouno/ui-legacy";
+import { useToast } from "@gouno/ui-legacy";
+import { ConfirmActionModal } from "../../components/ConfirmActionModal";
 import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 
@@ -305,7 +306,7 @@ export default function Tags() {
         </form>
       </Modal>
 
-      <ConfirmDialog
+      <ConfirmActionModal
         open={deleteTarget !== null}
         title={deleteTarget?.kind === "batch" ? "批量删除标签" : "删除标签"}
         description={

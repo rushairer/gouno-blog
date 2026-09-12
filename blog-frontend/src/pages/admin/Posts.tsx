@@ -27,7 +27,8 @@ import {
 } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
 import { BulkActionBar } from "@gouno/ui/patterns";
-import { ConfirmDialog, useToast } from "@gouno/ui-legacy";
+import { useToast } from "@gouno/ui-legacy";
+import { ConfirmActionModal } from "../../components/ConfirmActionModal";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 import { useAbility } from "../../abilities";
 import type { Category, Post } from "../../types/blog";
@@ -584,7 +585,7 @@ export default function AdminPosts() {
         </div>
       ) : null}
 
-      <ConfirmDialog
+      <ConfirmActionModal
         open={deleteTarget !== null}
         title={deleteTarget?.kind === "post" ? "删除文章" : "批量删除文章"}
         description={

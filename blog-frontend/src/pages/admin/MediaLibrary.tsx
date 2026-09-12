@@ -28,7 +28,8 @@ import {
 } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
 import { BulkActionBar } from "@gouno/ui/patterns";
-import { ConfirmDialog, useToast } from "@gouno/ui-legacy";
+import { useToast } from "@gouno/ui-legacy";
+import { ConfirmActionModal } from "../../components/ConfirmActionModal";
 import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
 import {
   MediaAltTextForm,
@@ -709,7 +710,7 @@ export default function MediaLibrary() {
         ) : null}
       </Drawer>
 
-      <ConfirmDialog
+      <ConfirmActionModal
         open={deleteTarget !== null}
         title={isBatchDeleteTarget(deleteTarget) ? "批量删除媒体" : "删除媒体"}
         description={
