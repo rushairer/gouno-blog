@@ -65,7 +65,7 @@ describe("AdminPosts list template", () => {
     ]);
   });
 
-  it("renders desktop and compact mobile rows and preserves bulk selection", async () => {
+  it("renders the Showcase desktop/mobile composition and preserves real bulk selection", async () => {
     const user = userEvent.setup();
     vi.spyOn(postsApi, "getPosts").mockResolvedValue({
       list: [post],
@@ -76,6 +76,9 @@ describe("AdminPosts list template", () => {
 
     const mobileList = await screen.findByRole("list", { name: "文章列表" });
     expect(screen.getByRole("table")).toBeInTheDocument();
+    expect(
+      screen.getByRole("textbox", { name: "搜索文章" }),
+    ).toBeInTheDocument();
     expect(
       within(mobileList).getByText("面向未来的内容架构"),
     ).toBeInTheDocument();
@@ -99,7 +102,7 @@ describe("AdminPosts list template", () => {
     renderPosts("/admin/posts?q=架构&status=draft&page=2");
 
     expect(
-      await screen.findByRole("button", { name: "重试" }),
+      await screen.findByRole("button", { name: "重新载入" }),
     ).toBeInTheDocument();
     expect(screen.getAllByText("文章服务暂时不可用").length).toBeGreaterThan(0);
     const query = getPosts.mock.calls[0][0] as URLSearchParams;
@@ -115,7 +118,7 @@ describe("AdminPosts list template", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("没有符合当前筛选条件的文章。"),
+        screen.getByText("没有符合当前筛选条件的文章"),
       ).toBeInTheDocument();
     });
     expect(
