@@ -17,9 +17,17 @@ import type {
   OperationalSuggestion,
 } from "../../types/agent";
 import { operationsApi } from "../../api/operations";
-import { Button, Card, Checkbox, Empty } from "@gouno/ui/core";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  Checkbox,
+  Empty,
+  Tag,
+  Text,
+} from "@gouno/ui/core";
 import { BulkActionBar } from "@gouno/ui/patterns";
-import { StatusPill } from "./StatusPill";
 import { WorkflowLauncher } from "./WorkflowLauncher";
 
 function fieldLabel(value: ContentCandidateSet["field_type"], zh: boolean) {
@@ -45,6 +53,14 @@ function priorityLabel(value: OperationalSuggestion["priority"], zh: boolean) {
       : "可稍后处理";
 }
 
+function priorityColor(
+  value: OperationalSuggestion["priority"],
+): "warning" | "primary" | "default" {
+  if (value === "high") return "warning";
+  if (value === "medium") return "primary";
+  return "default";
+}
+
 function taskStatusLabel(status: EditorialTask["status"], zh: boolean) {
   if (!zh)
     return status === "done"
@@ -65,6 +81,38 @@ function suggestionStatusLabel(status: string, zh: boolean) {
     return zh ? "自动已解决" : "Automatically resolved";
   if (status === "selected") return zh ? "已完成选择" : "Selection completed";
   return zh ? "已暂缓" : "Deferred";
+}
+
+function suggestionStatusColor(
+  status: string,
+): "success" | "primary" | "default" {
+  if (status === "resolved" || status === "selected") return "success";
+  if (status === "converted") return "primary";
+  return "default";
+}
+
+function ReviewCard({
+  title,
+  description,
+  count,
+  children,
+}: {
+  title: string;
+  description: string;
+  count: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <Card padding="none" className="overflow-hidden">
+      <CardHeader
+        className="border-b p-6"
+        title={title}
+        description={description}
+        action={<Tag color={count > 0 ? "primary" : "default"}>{count}</Tag>}
+      />
+      <CardContent className="p-0">{children}</CardContent>
+    </Card>
+  );
 }
 
 export function OperationsWorkspace({
@@ -106,6 +154,7 @@ export function OperationsWorkspace({
     pendingSets.length +
     pendingMedia.length +
     readyMedia.length;
+  const mediaReviewCount = pendingMedia.length + readyMedia.length;
   const [refreshing, setRefreshing] = useState(false);
   const [selectedSuggestions, setSelectedSuggestions] = useState<number[]>([]);
   const [aiOpen, setAIOpen] = useState(false);
@@ -133,42 +182,43 @@ export function OperationsWorkspace({
   };
 
   return (
-    <div className="operations-queue section-stack">
-      <Card padding="base" className="operations-queue__intro">
-        <div className="panel-heading">
-          <div>
-            <h2>
-              <Lightbulb />
-              {zh ? "运营建议" : "Operational suggestions"}
-            </h2>
-            <small>
-              {zh
-                ? "AI 发现值得关注的问题；只有创建编辑任务或执行后续审批时，才会产生实际变更。刷新会使用最新检查结果，仍未解决的问题会继续保留。"
-                : "AI highlights items worth attention. Changes only happen after creating an editorial task or approving a later action. Refresh uses the latest checks; unresolved issues remain visible."}
-            </small>
+    <div className="flex flex-col gap-6">
+      <Card padding="none" className="overflow-hidden">
+        <CardHeader
+          className="border-b p-6"
+          title={zh ? "运营建议与候选" : "Operational review"}
+          description={
+            zh
+              ? "AI 发现问题并准备候选；只有你明确创建任务、选择候选、审核或生成时才会产生后续动作。"
+              : "AI finds issues and prepares options. Follow-up work only happens after your explicit task, selection, review, or generation action."
+          }
+          action={
+            <Button
+              size="small"
+              variant="outline"
+              type="button"
+              loading={refreshing}
+              disabled={refreshing}
+              onClick={() => void refreshSuggestions()}
+              icon={<RefreshCw />}
+            >
+              {zh ? "刷新建议" : "Refresh suggestions"}
+            </Button>
+          }
+        />
+        <CardContent className="flex flex-col gap-2 p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-baseline gap-2">
+            <strong className="text-2xl tabular-nums">{total}</strong>
+            <Text size="sm" tone="muted">
+              {zh ? "项待决定" : "items to decide"}
+            </Text>
           </div>
-          <Button
-            variant="outline"
-            type="button"
-            loading={refreshing}
-            disabled={refreshing}
-            onClick={() => void refreshSuggestions()}
-            icon={<RefreshCw />}
-          >
-            {zh ? "刷新建议" : "Refresh suggestions"}
-          </Button>
-        </div>
-        <div className="operations-queue__counts">
-          <span>
-            <strong>{total}</strong>
-            {zh ? " 项待决定" : " items to decide"}
-          </span>
-          <span>
+          <Text size="xs" tone="muted">
             {zh
               ? "创建编辑任务不会修改或发布内容。"
               : "Creating an editorial task never changes or publishes content."}
-          </span>
-        </div>
+          </Text>
+        </CardContent>
       </Card>
 
       {selectedSuggestions.length ? (
@@ -188,390 +238,448 @@ export function OperationsWorkspace({
       ) : null}
 
       {total === 0 ? (
-        <Empty
-          title={
-            zh
-              ? "目前没有需要你决定的运营建议。"
-              : "There are no operational suggestions requiring a decision."
-          }
-        />
-      ) : (
-        <div className="operations-task-list">
-          {actionableSuggestions.map((item) => (
-            <article
-              className={`operations-task operations-task--selectable ${
-                selectedSuggestions.includes(item.id)
-                  ? "operations-task--selected"
-                  : ""
-              }`}
-              key={`suggestion-${item.id}`}
-            >
-              <Checkbox
-                aria-label={`${zh ? "选择建议" : "Select suggestion"} ${item.title}`}
-                checked={selectedSuggestions.includes(item.id)}
-                onChange={(event) =>
-                  setSelectedSuggestions((current) =>
-                    event.target.checked
-                      ? [...new Set([...current, item.id])]
-                      : current.filter((id) => id !== item.id),
-                  )
-                }
-              />
-              <div className="operations-task__icon">
-                <Lightbulb />
-              </div>
-              <div className="operations-task__content">
-                <div className="operations-task__heading">
-                  <div>
-                    <span
-                      className={`risk-label risk-label--${item.priority === "high" ? "propose" : "read"}`}
-                    >
-                      {priorityLabel(item.priority, zh)}
-                    </span>
-                    <h3>{item.title}</h3>
-                  </div>
-                </div>
-                <p>{item.description}</p>
-                <details>
-                  <summary>
-                    {zh ? "查看 AI 的判断依据" : "View AI evidence"}
-                    <ChevronDown />
-                  </summary>
-                  <pre className="agent-json-preview">
-                    {JSON.stringify(item.evidence, null, 2)}
-                  </pre>
-                </details>
-              </div>
-              <div className="operations-task__actions">
-                <Button
-                  variant="outline"
-                  size="small"
-                  type="button"
-                  onClick={() => ignoreSuggestion(item)}
-                  icon={<ThumbsDown />}
-                >
-                  {zh ? "暂不处理" : "Defer"}
-                </Button>
-                <Button
-                  variant="solid"
-                  color="primary"
-                  size="small"
-                  type="button"
-                  onClick={() =>
-                    void mutate(() => operationsApi.convertSuggestion(item.id))
-                  }
-                  icon={<Check />}
-                >
-                  {zh ? "创建编辑任务" : "Create editorial task"}
-                </Button>
-              </div>
-            </article>
-          ))}
-
-          {pendingSets.map((set) => (
-            <article className="operations-task" key={`candidate-${set.id}`}>
-              <div className="operations-task__icon">
-                <Check />
-              </div>
-              <div className="operations-task__content">
-                <div className="operations-task__heading">
-                  <div>
-                    <span className="risk-label risk-label--propose">
-                      {zh ? "选择建议" : "Choose a proposal"}
-                    </span>
-                    <h3>
-                      {zh
-                        ? `为文章 #${set.post_id} 选择${fieldLabel(set.field_type, true)}`
-                        : `Choose a ${fieldLabel(set.field_type, false)} for post #${set.post_id}`}
-                    </h3>
-                  </div>
-                </div>
-                <p>
-                  {zh
-                    ? `AI 提供了 ${set.candidates.length} 个候选。选择后会再生成一项内容变更审批，不会立即修改文章。`
-                    : `AI prepared ${set.candidates.length} alternatives. Choosing one creates a separate change approval; it does not edit the post yet.`}
-                </p>
-                <details>
-                  <summary>
-                    {zh
-                      ? `查看 ${set.candidates.length} 个候选`
-                      : `View ${set.candidates.length} alternatives`}
-                    <ChevronDown />
-                  </summary>
-                  <div className="operations-candidates">
-                    {set.candidates.map((candidate) => (
-                      <div key={candidate.id}>
-                        <strong>{candidate.value}</strong>
-                        {candidate.rationale ? (
-                          <p>{candidate.rationale}</p>
-                        ) : null}
-                        <Button
-                          variant="outline"
-                          size="small"
-                          type="button"
-                          onClick={() =>
-                            void mutate(() =>
-                              operationsApi.selectCandidate(
-                                set.id,
-                                candidate.id,
-                              ),
-                            )
-                          }
-                        >
-                          {zh
-                            ? "选择此建议并创建审批"
-                            : "Choose and create approval"}
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </details>
-              </div>
-            </article>
-          ))}
-
-          {pendingMedia.map((item) => (
-            <article className="operations-task" key={`media-brief-${item.id}`}>
-              <div className="operations-task__icon">
-                <Image />
-              </div>
-              <div className="operations-task__content">
-                <div className="operations-task__heading">
-                  <div>
-                    <span className="risk-label risk-label--propose">
-                      {zh ? "图片方案待审核" : "Image brief to review"}
-                    </span>
-                    <h3>
-                      {item.headline ||
-                        (zh
-                          ? `为文章 #${item.post_id} 准备配图`
-                          : `Review image brief for post #${item.post_id}`)}
-                    </h3>
-                  </div>
-                </div>
-                <p>{item.brief}</p>
-                <details>
-                  <summary>
-                    {zh
-                      ? "查看图片说明与替代文字"
-                      : "View image brief and alt text"}
-                    <ChevronDown />
-                  </summary>
-                  <p>
-                    <b>Alt:</b> {item.alt_text || "—"}
-                  </p>
-                </details>
-              </div>
-              <div className="operations-task__actions">
-                <Button
-                  variant="outline"
-                  size="small"
-                  type="button"
-                  onClick={() =>
-                    void mutate(() =>
-                      operationsApi.reviewMediaCandidate(
-                        item.id,
-                        "reject",
-                        zh
-                          ? "管理员拒绝此图片方案"
-                          : "Image brief rejected by administrator",
-                      ),
-                    )
-                  }
-                  icon={<ThumbsDown />}
-                >
-                  {zh ? "拒绝" : "Reject"}
-                </Button>
-                <Button
-                  variant="solid"
-                  color="primary"
-                  size="small"
-                  type="button"
-                  onClick={() =>
-                    void mutate(() =>
-                      operationsApi.reviewMediaCandidate(item.id, "ready"),
-                    )
-                  }
-                  icon={<Check />}
-                >
-                  {zh ? "审核通过，进入生成" : "Approve for generation"}
-                </Button>
-              </div>
-            </article>
-          ))}
-
-          {readyMedia.map((item) => (
-            <article className="operations-task" key={`media-${item.id}`}>
-              <div className="operations-task__icon">
-                <Image />
-              </div>
-              <div className="operations-task__content">
-                <div className="operations-task__heading">
-                  <div>
-                    <span className="risk-label risk-label--propose">
-                      {zh ? "图片已审核" : "Image brief reviewed"}
-                    </span>
-                    <h3>
-                      {item.headline ||
-                        (zh
-                          ? `为文章 #${item.post_id} 生成配图`
-                          : `Generate image for post #${item.post_id}`)}
-                    </h3>
-                  </div>
-                </div>
-                <p>{item.brief}</p>
-                <details>
-                  <summary>
-                    {zh
-                      ? "查看图片说明与替代文字"
-                      : "View image brief and alt text"}
-                    <ChevronDown />
-                  </summary>
-                  <p>
-                    <b>Alt:</b> {item.alt_text || "—"}
-                  </p>
-                </details>
-              </div>
-              <div className="operations-task__actions">
-                <Button
-                  variant="solid"
-                  color="primary"
-                  size="small"
-                  type="button"
-                  onClick={() =>
-                    void mutate(() =>
-                      operationsApi.generateMediaCandidate(item.id),
-                    )
-                  }
-                  icon={<Play />}
-                >
-                  {zh ? "生成图片" : "Generate image"}
-                </Button>
-              </div>
-            </article>
-          ))}
-        </div>
-      )}
-
-      <Card padding="base" className="editorial-task-panel">
-        <div className="panel-heading">
-          <div>
-            <h2>{zh ? "编辑任务" : "Editorial tasks"}</h2>
-            <small>
-              {zh
-                ? "由运营建议或已批准的 Agent 操作创建；完成或取消只更新任务状态。"
-                : "Created from operational suggestions or approved Agent actions. Completing or cancelling only changes the task status."}
-            </small>
-          </div>
-          <strong>
-            {zh ? `${openTasks.length} 项进行中` : `${openTasks.length} open`}
-          </strong>
-        </div>
-        {openTasks.length === 0 ? (
+        <Card padding="base">
           <Empty
             title={
               zh
-                ? "没有进行中的编辑任务。"
-                : "There are no open editorial tasks."
+                ? "目前没有需要你决定的运营建议。"
+                : "There are no operational suggestions requiring a decision."
             }
           />
-        ) : (
-          <div className="editorial-task-list">
-            {openTasks.map((task) => (
-              <article key={task.id}>
-                <div>
-                  <span
-                    className={`risk-label risk-label--${task.priority === "high" ? "propose" : "read"}`}
+        </Card>
+      ) : null}
+
+      <section
+        className="grid grid-cols-1 gap-4 lg:grid-cols-2"
+        aria-label={
+          zh ? "运营建议与候选" : "Operational suggestions and candidates"
+        }
+      >
+        <ReviewCard
+          title={zh ? "运营建议" : "Operational suggestions"}
+          description={
+            zh
+              ? "AI 找到的内容维护机会。"
+              : "Content maintenance opportunities found by AI."
+          }
+          count={actionableSuggestions.length}
+        >
+          {actionableSuggestions.length === 0 ? (
+            <div className="p-6">
+              <Empty
+                title={zh ? "暂无运营建议" : "No operational suggestions"}
+              />
+            </div>
+          ) : (
+            <div className="divide-y">
+              {actionableSuggestions.map((item) => {
+                const selected = selectedSuggestions.includes(item.id);
+                return (
+                  <article
+                    key={`suggestion-${item.id}`}
+                    className={`flex flex-col gap-4 p-6 ${selected ? "bg-muted/40" : ""}`}
                   >
-                    {priorityLabel(task.priority, zh)}
-                  </span>
-                  <h3>{task.title}</h3>
-                  <p>{task.description}</p>
-                </div>
-                <div className="editorial-task-list__actions">
-                  <Button
-                    variant="outline"
-                    size="small"
-                    type="button"
-                    onClick={() =>
-                      void mutate(() =>
-                        operationsApi.setEditorialTaskStatus(
-                          task.id,
-                          "cancelled",
-                        ),
-                      )
-                    }
-                    icon={<X />}
-                  >
-                    {zh ? "取消" : "Cancel"}
-                  </Button>
-                  <Button
-                    variant="solid"
-                    color="primary"
-                    size="small"
-                    type="button"
-                    onClick={() =>
-                      void mutate(() =>
-                        operationsApi.setEditorialTaskStatus(task.id, "done"),
-                      )
-                    }
-                    icon={<Check />}
-                  >
-                    {zh ? "标记完成" : "Mark complete"}
-                  </Button>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </Card>
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        aria-label={`${zh ? "选择建议" : "Select suggestion"} ${item.title}`}
+                        checked={selected}
+                        onChange={(event) =>
+                          setSelectedSuggestions((current) =>
+                            event.target.checked
+                              ? [...new Set([...current, item.id])]
+                              : current.filter((id) => id !== item.id),
+                          )
+                        }
+                      />
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Lightbulb className="size-4 text-muted-foreground" />
+                          <strong className="text-sm">{item.title}</strong>
+                          <Tag color={priorityColor(item.priority)}>
+                            {priorityLabel(item.priority, zh)}
+                          </Tag>
+                        </div>
+                        <Text size="sm" tone="muted">
+                          {item.description}
+                        </Text>
+                        <details className="rounded-md border p-3">
+                          <summary className="flex cursor-pointer items-center justify-between gap-3 text-sm font-medium">
+                            {zh ? "查看 AI 的判断依据" : "View AI evidence"}
+                            <ChevronDown className="size-4" />
+                          </summary>
+                          <pre className="mt-3 max-h-64 overflow-auto rounded-md bg-muted p-3 text-xs">
+                            {JSON.stringify(item.evidence, null, 2)}
+                          </pre>
+                        </details>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap justify-end gap-2 border-t pt-4">
+                      <Button
+                        variant="outline"
+                        size="small"
+                        type="button"
+                        onClick={() => ignoreSuggestion(item)}
+                        icon={<ThumbsDown />}
+                      >
+                        {zh ? "暂不处理" : "Defer"}
+                      </Button>
+                      <Button
+                        variant="solid"
+                        color="primary"
+                        size="small"
+                        type="button"
+                        onClick={() =>
+                          void mutate(() =>
+                            operationsApi.convertSuggestion(item.id),
+                          )
+                        }
+                        icon={<Check />}
+                      >
+                        {zh ? "创建编辑任务" : "Create editorial task"}
+                      </Button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </ReviewCard>
+
+        <ReviewCard
+          title={zh ? "内容候选" : "Content candidates"}
+          description={
+            zh
+              ? "需要你选择的标题、摘要或封面替代文字候选。"
+              : "Title, summary, or cover-alt candidates that need your choice."
+          }
+          count={pendingSets.length}
+        >
+          {pendingSets.length === 0 ? (
+            <div className="p-6">
+              <Empty title={zh ? "暂无内容候选" : "No content candidates"} />
+            </div>
+          ) : (
+            <div className="divide-y">
+              {pendingSets.map((set) => (
+                <article
+                  key={`candidate-${set.id}`}
+                  className="flex flex-col gap-3 p-6"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Check className="size-4 text-muted-foreground" />
+                    <strong className="text-sm">
+                      {zh
+                        ? `为文章 #${set.post_id} 选择${fieldLabel(set.field_type, true)}`
+                        : `Choose a ${fieldLabel(set.field_type, false)} for post #${set.post_id}`}
+                    </strong>
+                    <Tag color="warning">
+                      {zh ? "选择建议" : "Choose a proposal"}
+                    </Tag>
+                  </div>
+                  <Text size="sm" tone="muted">
+                    {zh
+                      ? `AI 提供了 ${set.candidates.length} 个候选。选择后会生成内容变更审批，不会立即修改文章。`
+                      : `AI prepared ${set.candidates.length} alternatives. Choosing one creates a separate change approval; it does not edit the post yet.`}
+                  </Text>
+                  <details className="rounded-md border p-3">
+                    <summary className="flex cursor-pointer items-center justify-between gap-3 text-sm font-medium">
+                      {zh
+                        ? `查看 ${set.candidates.length} 个候选`
+                        : `View ${set.candidates.length} alternatives`}
+                      <ChevronDown className="size-4" />
+                    </summary>
+                    <div className="mt-3 flex flex-col gap-3">
+                      {set.candidates.map((candidate) => (
+                        <div
+                          key={candidate.id}
+                          className="rounded-md border p-4"
+                        >
+                          <strong className="text-sm">{candidate.value}</strong>
+                          {candidate.rationale ? (
+                            <Text size="xs" tone="muted" className="mt-1">
+                              {candidate.rationale}
+                            </Text>
+                          ) : null}
+                          <div className="mt-3">
+                            <Button
+                              variant="outline"
+                              size="small"
+                              type="button"
+                              onClick={() =>
+                                void mutate(() =>
+                                  operationsApi.selectCandidate(
+                                    set.id,
+                                    candidate.id,
+                                  ),
+                                )
+                              }
+                            >
+                              {zh
+                                ? "选择此建议并创建审批"
+                                : "Choose and create approval"}
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                </article>
+              ))}
+            </div>
+          )}
+        </ReviewCard>
+
+        <ReviewCard
+          title={zh ? "图片任务" : "Image tasks"}
+          description={
+            zh
+              ? "经过审批后等待人工审核或明确生成的媒体方案。"
+              : "Approved media briefs waiting for review or an explicit generation action."
+          }
+          count={mediaReviewCount}
+        >
+          {mediaReviewCount === 0 ? (
+            <div className="p-6">
+              <Empty title={zh ? "暂无图片任务" : "No image tasks"} />
+            </div>
+          ) : (
+            <div className="divide-y">
+              {pendingMedia.map((item) => (
+                <article
+                  key={`media-brief-${item.id}`}
+                  className="flex flex-col gap-4 p-6"
+                >
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Image className="size-4 text-muted-foreground" />
+                      <strong className="text-sm">
+                        {item.headline ||
+                          (zh
+                            ? `为文章 #${item.post_id} 准备配图`
+                            : `Review image brief for post #${item.post_id}`)}
+                      </strong>
+                      <Tag color="warning">
+                        {zh ? "图片方案待审核" : "Image brief to review"}
+                      </Tag>
+                    </div>
+                    <Text size="sm" tone="muted">
+                      {item.brief}
+                    </Text>
+                    <Text size="xs" tone="muted">
+                      Alt: {item.alt_text || "—"}
+                    </Text>
+                  </div>
+                  <div className="flex flex-wrap justify-end gap-2 border-t pt-4">
+                    <Button
+                      variant="outline"
+                      size="small"
+                      type="button"
+                      onClick={() =>
+                        void mutate(() =>
+                          operationsApi.reviewMediaCandidate(
+                            item.id,
+                            "reject",
+                            zh
+                              ? "管理员拒绝此图片方案"
+                              : "Image brief rejected by administrator",
+                          ),
+                        )
+                      }
+                      icon={<ThumbsDown />}
+                    >
+                      {zh ? "拒绝" : "Reject"}
+                    </Button>
+                    <Button
+                      variant="solid"
+                      color="primary"
+                      size="small"
+                      type="button"
+                      onClick={() =>
+                        void mutate(() =>
+                          operationsApi.reviewMediaCandidate(item.id, "ready"),
+                        )
+                      }
+                      icon={<Check />}
+                    >
+                      {zh ? "审核通过，进入生成" : "Approve for generation"}
+                    </Button>
+                  </div>
+                </article>
+              ))}
+              {readyMedia.map((item) => (
+                <article
+                  key={`media-${item.id}`}
+                  className="flex flex-col gap-4 p-6"
+                >
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Image className="size-4 text-muted-foreground" />
+                      <strong className="text-sm">
+                        {item.headline ||
+                          (zh
+                            ? `为文章 #${item.post_id} 生成配图`
+                            : `Generate image for post #${item.post_id}`)}
+                      </strong>
+                      <Tag color="primary">
+                        {zh ? "图片已审核" : "Image brief reviewed"}
+                      </Tag>
+                    </div>
+                    <Text size="sm" tone="muted">
+                      {item.brief}
+                    </Text>
+                    <Text size="xs" tone="muted">
+                      Alt: {item.alt_text || "—"}
+                    </Text>
+                  </div>
+                  <div className="flex justify-end border-t pt-4">
+                    <Button
+                      variant="solid"
+                      color="primary"
+                      size="small"
+                      type="button"
+                      onClick={() =>
+                        void mutate(() =>
+                          operationsApi.generateMediaCandidate(item.id),
+                        )
+                      }
+                      icon={<Play />}
+                    >
+                      {zh ? "生成图片" : "Generate image"}
+                    </Button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </ReviewCard>
+
+        <ReviewCard
+          title={zh ? "编辑任务" : "Editorial tasks"}
+          description={
+            zh
+              ? "由运营建议或已批准的 Agent 操作创建；完成或取消只更新任务状态。"
+              : "Created from operational suggestions or approved Agent actions. Completing or cancelling only changes task status."
+          }
+          count={openTasks.length}
+        >
+          {openTasks.length === 0 ? (
+            <div className="p-6">
+              <Empty
+                title={
+                  zh
+                    ? "没有进行中的编辑任务。"
+                    : "There are no open editorial tasks."
+                }
+              />
+            </div>
+          ) : (
+            <div className="divide-y">
+              {openTasks.map((task) => (
+                <article key={task.id} className="flex flex-col gap-4 p-6">
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <strong className="text-sm">{task.title}</strong>
+                      <Tag color={priorityColor(task.priority)}>
+                        {priorityLabel(task.priority, zh)}
+                      </Tag>
+                    </div>
+                    <Text size="sm" tone="muted">
+                      {task.description}
+                    </Text>
+                  </div>
+                  <div className="flex flex-wrap justify-end gap-2 border-t pt-4">
+                    <Button
+                      variant="outline"
+                      size="small"
+                      type="button"
+                      onClick={() =>
+                        void mutate(() =>
+                          operationsApi.setEditorialTaskStatus(
+                            task.id,
+                            "cancelled",
+                          ),
+                        )
+                      }
+                      icon={<X />}
+                    >
+                      {zh ? "取消" : "Cancel"}
+                    </Button>
+                    <Button
+                      variant="solid"
+                      color="primary"
+                      size="small"
+                      type="button"
+                      onClick={() =>
+                        void mutate(() =>
+                          operationsApi.setEditorialTaskStatus(task.id, "done"),
+                        )
+                      }
+                      icon={<Check />}
+                    >
+                      {zh ? "标记完成" : "Mark complete"}
+                    </Button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </ReviewCard>
+      </section>
 
       {handledSuggestions.length > 0 || closedTasks.length > 0 ? (
-        <details className="operations-history">
-          <summary>
-            {zh ? "已处理记录" : "Handled records"}
-            <ChevronDown />
-          </summary>
-          <div className="operations-history__body">
-            <p>
-              {zh
-                ? "这里保留建议决策和已关闭任务的审计记录；不会自动改变 AI 指令。"
-                : "This retains an audit trail of suggestion decisions and closed tasks. It never changes AI instructions automatically."}
-            </p>
-            <ul>
-              {handledSuggestions.map((item) => (
-                <li key={`suggestion-${item.id}`}>
-                  <div>
-                    <strong>{item.title}</strong>
-                    {item.ignored_reason ? (
-                      <small>
-                        {zh
-                          ? `暂不处理：${item.ignored_reason}`
-                          : `Deferred: ${item.ignored_reason}`}
-                      </small>
-                    ) : (
-                      <small>{suggestionStatusLabel(item.status, zh)}</small>
-                    )}
-                  </div>
-                  <StatusPill status={item.status} locale={locale} />
-                </li>
-              ))}
-              {closedTasks.map((task) => (
-                <li key={`task-${task.id}`}>
-                  <div>
-                    <strong>{task.title}</strong>
-                    <small>{zh ? "编辑任务" : "Editorial task"}</small>
-                  </div>
-                  <span
-                    className={`status-pill status-pill--${task.status === "done" ? "succeeded" : "cancelled"}`}
+        <Card padding="none" className="overflow-hidden">
+          <details>
+            <summary className="flex cursor-pointer items-center justify-between gap-3 border-b p-6 text-sm font-medium">
+              <span>{zh ? "已处理记录" : "Handled records"}</span>
+              <ChevronDown className="size-4" />
+            </summary>
+            <CardContent className="flex flex-col gap-4 p-6">
+              <Text size="sm" tone="muted">
+                {zh
+                  ? "这里保留建议决策和已关闭任务的审计记录；不会自动改变 AI 指令。"
+                  : "This retains an audit trail of suggestion decisions and closed tasks. It never changes AI instructions automatically."}
+              </Text>
+              <div className="divide-y rounded-md border">
+                {handledSuggestions.map((item) => (
+                  <div
+                    key={`suggestion-${item.id}`}
+                    className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between"
                   >
-                    {taskStatusLabel(task.status, zh)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </details>
+                    <div className="min-w-0">
+                      <strong className="text-sm">{item.title}</strong>
+                      <Text size="xs" tone="muted">
+                        {item.ignored_reason
+                          ? zh
+                            ? `暂不处理：${item.ignored_reason}`
+                            : `Deferred: ${item.ignored_reason}`
+                          : suggestionStatusLabel(item.status, zh)}
+                      </Text>
+                    </div>
+                    <Tag color={suggestionStatusColor(item.status)}>
+                      {suggestionStatusLabel(item.status, zh)}
+                    </Tag>
+                  </div>
+                ))}
+                {closedTasks.map((task) => (
+                  <div
+                    key={`task-${task.id}`}
+                    className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="min-w-0">
+                      <strong className="text-sm">{task.title}</strong>
+                      <Text size="xs" tone="muted">
+                        {zh ? "编辑任务" : "Editorial task"}
+                      </Text>
+                    </div>
+                    <Tag color={task.status === "done" ? "success" : "default"}>
+                      {taskStatusLabel(task.status, zh)}
+                    </Tag>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </details>
+        </Card>
       ) : null}
 
       <WorkflowLauncher
