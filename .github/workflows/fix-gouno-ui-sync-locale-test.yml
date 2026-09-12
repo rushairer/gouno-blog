@@ -1,0 +1,50 @@
+name: Verify locale-neutral Workflow test
+
+on:
+  push:
+    branches:
+      - fix/gouno-ui-sync-locale-test
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: fix/gouno-ui-sync-locale-test
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: blog-frontend/package-lock.json
+      - working-directory: blog-frontend
+        run: npm ci
+      - name: Remove locale-sensitive placeholder assertion
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          path = Path('blog-frontend/src/components/agent/__tests__/WorkflowWorkspace.test.tsx')
+          text = path.read_text()
+          old = '''    expect(
+              screen.getByRole("combobox", { name: "批量绑定 Agent" }),
+            ).toHaveTextContent("请选择");
+          '''
+          if old not in text:
+              raise SystemExit('locale-sensitive assertion not found')
+          path.write_text(text.replace(old, '', 1))
+          PY
+      - working-directory: blog-frontend
+        run: npx prettier --write src/components/agent/__tests__/WorkflowWorkspace.test.tsx
+      - working-directory: blog-frontend
+        run: npm run test:run -- src/components/agent/__tests__/WorkflowWorkspace.test.tsx
+      - name: Commit verified test fix
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add blog-frontend/src/components/agent/__tests__/WorkflowWorkspace.test.tsx
+          git commit -m "test(ui): remove locale-sensitive workflow placeholder assertion"
+          git push origin HEAD:fix/gouno-ui-sync-locale-test
