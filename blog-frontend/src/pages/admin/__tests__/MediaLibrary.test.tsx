@@ -96,7 +96,7 @@ describe("MediaLibrary", () => {
     ).toBeDisabled();
   });
 
-  it("renders standard FilterBar with search and type filter, supporting clearing filters", async () => {
+  it("uses the Showcase filter composition and supports clearing filters", async () => {
     const mockAssets = [
       {
         id: 1,
@@ -133,7 +133,7 @@ describe("MediaLibrary", () => {
     expect(screen.getByText("avatar.jpeg")).toBeInTheDocument();
     expect(screen.getByText("2 / 2")).toBeInTheDocument();
 
-    const searchInput = screen.getByRole("searchbox", { name: "搜索媒体" });
+    const searchInput = screen.getByRole("textbox", { name: "搜索媒体" });
     fireEvent.change(searchInput, { target: { value: "banner" } });
 
     expect(screen.getByText("banner.png")).toBeInTheDocument();
@@ -147,6 +147,46 @@ describe("MediaLibrary", () => {
     expect(screen.getByText("banner.png")).toBeInTheDocument();
     expect(screen.getByText("avatar.jpeg")).toBeInTheDocument();
     expect(screen.getByText("2 / 2")).toBeInTheDocument();
+  });
+
+  it("keeps media selection on the canonical card overlay and opens a canonical delete modal", async () => {
+    const user = userEvent.setup();
+    const mockAssets = [
+      {
+        id: 1,
+        filename: "banner.png",
+        url: "/banner.png",
+        content_type: "image/png",
+        size_bytes: 1024,
+        alt_text: "Header Banner",
+        created_at: "2026-08-16T12:00:00Z",
+        usage_count: 0,
+      },
+    ];
+    vi.mocked((await import("../../../auth")).apiFetch).mockResolvedValueOnce(
+      Response.json({ data: mockAssets }),
+    );
+
+    render(
+      <AppFeedbackProvider>
+        <MediaLibrary />
+      </AppFeedbackProvider>,
+    );
+
+    await screen.findByText("banner.png");
+    await user.click(
+      screen.getByRole("checkbox", { name: "选择媒体 banner.png" }),
+    );
+    expect(screen.getByText("已选择 1 个媒体")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "删除" }));
+
+    const dialog = screen.getByRole("dialog", { name: "批量删除媒体" });
+    expect(
+      within(dialog).getByRole("button", { name: "永久删除" }),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/失败项会继续保持选中/),
+    ).toBeInTheDocument();
   });
 
   it("correctly parses relative media url via getRelativeMediaUrl", async () => {
@@ -167,10 +207,9 @@ describe("MediaLibrary", () => {
 
   it("supports copying relative link to clipboard", async () => {
     const writeTextMock = vi.fn().mockResolvedValue(undefined);
-    Object.assign(navigator, {
-      clipboard: {
-        writeText: writeTextMock,
-      },
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: writeTextMock },
     });
 
     const mockAssets = [
