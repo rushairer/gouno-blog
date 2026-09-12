@@ -1,17 +1,22 @@
-import { KeyRound, Save } from "lucide-react";
+import { KeyRound, Save, X } from "lucide-react";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import type { ProviderProfile, ProviderType } from "../../types/agent";
 import { emptyProvider } from "../../types/agent";
 import { useFormDraft } from "../../hooks/useFormDraft";
-import { Checkbox, Field, FormGrid, Input } from "@gouno/ui/core";
 import {
   Button,
-  EditorPanel,
+  Card,
+  CardHeader,
+  Checkbox,
+  Field,
   FormActions,
+  FormGrid,
   FormLayout,
+  IconButton,
+  Input,
   Select,
-} from "@gouno/ui-legacy";
+} from "@gouno/ui/core";
 
 export interface ProviderFormValue {
   id?: number;
@@ -86,12 +91,22 @@ export function ProviderForm({
   };
 
   return (
-    <EditorPanel
-      title={initial ? labels.editProvider : labels.createProvider}
-      icon={<KeyRound />}
-      closeLabel={labels.cancel}
-      onClose={handleCancel}
-    >
+    <Card padding="base" className="editor-panel">
+      <CardHeader
+        title={
+          <span className="flex items-center gap-2">
+            <KeyRound />
+            {initial ? labels.editProvider : labels.createProvider}
+          </span>
+        }
+        action={
+          <IconButton
+            label={labels.cancel}
+            icon={<X />}
+            onClick={handleCancel}
+          />
+        }
+      />
       <FormLayout onSubmit={submit}>
         <FormGrid columns={2}>
           <Field label={labels.providerName}>
@@ -109,8 +124,8 @@ export function ProviderForm({
           <Field label={labels.providerType}>
             <Select
               value={value.provider_type}
-              onChange={(event) => {
-                const providerType = event.target.value as ProviderType;
+              onChange={(nextValue) => {
+                const providerType = String(nextValue) as ProviderType;
                 setValue((current) => {
                   const defaultBaseURL =
                     providerType === "openai"
@@ -146,10 +161,10 @@ export function ProviderForm({
             <Field label={labels.protocolMode || "接口协议模式"}>
               <Select
                 value={value.protocol_mode || "chat_completions"}
-                onChange={(event) =>
+                onChange={(nextValue) =>
                   setValue((current) => ({
                     ...current,
-                    protocol_mode: event.target.value,
+                    protocol_mode: String(nextValue),
                   }))
                 }
               >
@@ -166,10 +181,10 @@ export function ProviderForm({
             <Field label={labels.streamMode || "流式传输 (Stream)"}>
               <Select
                 value={value.stream_mode || "auto"}
-                onChange={(event) =>
+                onChange={(nextValue) =>
                   setValue((current) => ({
                     ...current,
-                    stream_mode: event.target.value,
+                    stream_mode: String(nextValue),
                   }))
                 }
               >
@@ -190,10 +205,10 @@ export function ProviderForm({
             <Field label={labels.protocolMode || "接口协议模式"}>
               <Select
                 value={value.protocol_mode || "generate_content"}
-                onChange={(event) =>
+                onChange={(nextValue) =>
                   setValue((current) => ({
                     ...current,
-                    protocol_mode: event.target.value,
+                    protocol_mode: String(nextValue),
                   }))
                 }
               >
@@ -209,10 +224,10 @@ export function ProviderForm({
             <Field label={labels.streamMode || "流式传输 (Stream)"}>
               <Select
                 value={value.stream_mode || "auto"}
-                onChange={(event) =>
+                onChange={(nextValue) =>
                   setValue((current) => ({
                     ...current,
-                    stream_mode: event.target.value,
+                    stream_mode: String(nextValue),
                   }))
                 }
               >
@@ -232,10 +247,10 @@ export function ProviderForm({
           <Field label={labels.streamMode || "流式传输 (Stream)"}>
             <Select
               value={value.stream_mode || "auto"}
-              onChange={(event) =>
+              onChange={(nextValue) =>
                 setValue((current) => ({
                   ...current,
-                  stream_mode: event.target.value,
+                  stream_mode: String(nextValue),
                 }))
               }
             >
@@ -350,11 +365,12 @@ export function ProviderForm({
           {labels.providerEnabled}
         </label>
         <FormActions>
-          <Button variant="secondary" type="button" onClick={onCancel}>
+          <Button variant="outline" type="button" onClick={onCancel}>
             {labels.cancel}
           </Button>
           <Button
-            variant="primary"
+            variant="solid"
+            color="primary"
             type="submit"
             loading={saving}
             icon={<Save />}
@@ -363,6 +379,6 @@ export function ProviderForm({
           </Button>
         </FormActions>
       </FormLayout>
-    </EditorPanel>
+    </Card>
   );
 }
