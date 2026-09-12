@@ -43,6 +43,7 @@ import (
 	taxonomyservice "github.com/rushairer/blog-backend/internal/taxonomy/service"
 	"github.com/rushairer/blog-backend/internal/tool"
 	workflowservice "github.com/rushairer/blog-backend/internal/workflow"
+	workflowrepository "github.com/rushairer/blog-backend/internal/workflow/repository"
 	"github.com/rushairer/blog-backend/middleware"
 	"github.com/rushairer/blog-backend/router"
 	"github.com/rushairer/blog-backend/utility"
@@ -299,6 +300,8 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		agentDefinitionRepo := agentrepository.NewDefinitionRepository(cfg.DB)
 		agentRunRepo := agentrepository.NewRunRepository(cfg.DB)
 		agentApprovalRepo := agentrepository.NewApprovalRepository(cfg.DB)
+		agentMediaCandidateRepo := agentrepository.NewMediaCandidateRepository(cfg.DB)
+		workflowInteractionRepo := workflowrepository.NewInteractionRepository(cfg.DB)
 		generationAuditRepo := agentrepository.NewGenerationAuditRepository(cfg.DB)
 		knowledgeSvc := knowledge.NewService(cfg.DB, secrets, cfg.Global.AIAgentConfig.AllowedHosts, cfg.Logger, transactor)
 		knowledgeSvc.Start(ctx)
@@ -321,7 +324,11 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		}
 		runner := agentservice.NewRunner(agentRepo, management, toolRegistry, postSvc)
 		generation := agentservice.NewGenerationService(generationAuditRepo, management, mediaSvc, mediaStore)
-		approvals := agentservice.NewApprovalServiceWithGeneration(agentRepo, postSvc, management, postVersionSvc, mediaSvc, mediaStore, pageSvc, generation)
+		approvals := agentservice.NewApprovalService(agentservice.ApprovalServiceDependencies{
+			Approvals: agentApprovalRepo, MediaCandidates: agentMediaCandidateRepo, MediaGeneration: agentMediaCandidateRepo,
+			WorkflowInteractions: workflowInteractionRepo, WorkflowEvents: workflowInteractionRepo, Effects: operationsSvc,
+			Posts: postSvc, Pages: pageSvc, PostVersions: postVersionSvc, MediaAssets: mediaSvc, MediaStore: mediaStore, Generation: generation,
+		})
 		workflowSvc := workflowservice.NewService(cfg.DB, runner, management, toolRegistry, transactor)
 		workflowSvc.StartScheduler(ctx, cfg.Global.AIAgentConfig.SchedulerInterval)
 		connectorSvc := connector.NewService(cfg.DB, secrets, transactor, os.Getenv("BLOG_CONNECTOR_OAUTH_REDIRECT_URL"))
