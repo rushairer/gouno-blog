@@ -168,10 +168,7 @@ export default function PublicShell({ children }: { children: ReactNode }) {
         <div className="mx-auto grid w-full max-w-[1200px] gap-8 px-4 py-10 md:grid-cols-[1fr_1fr] md:px-6">
           <div>
             <Link to="/" className="inline-flex items-center gap-2 font-semibold">
-              <BrandMark
-                src={gounoBlogLogo}
-                className="size-7 text-primary"
-              />
+              <BrandMark src={gounoBlogLogo} className="size-7 text-primary" />
               <span>{siteTitle}</span>
             </Link>
             <p className="mt-2 max-w-md text-sm text-muted-foreground">
