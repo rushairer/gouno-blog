@@ -83,7 +83,7 @@ The authoritative machine-readable inventory is `migration.json.phase0Inventory`
 ## U01c evidence (2026-09-06)
 
 - Preconditions: U01a and U01b are both `verified`; `gouno-blog` started at clean `main` (`b1ee1b70e8214ea98140ffda333de76d6276451a`). Related `gosso-admin` had the expected U01b edits only; its UI manifest was updated in this task.
-- `packages/ui`: `npm ci` exit 0; `npm run typecheck` exit 0; `npm test -- --run` exit 0 (1 file / 5 tests); `npm run build` exit 0; `npm pack --json` exit 0; `npm run showcase:build` exit 0. An initial `npm pack -- --json` invocation exited 1 because npm parsed `--json` as an invalid package version; the corrected command passed. Existing font-resolution, Lightning CSS `@theme`, and Node localStorage warnings remain non-blocking.
+- The historical local `packages/ui` tree was removed after the canonical `gouno-ui` repository became the sole UI owner. Its former validation results are retained only as historical migration evidence.
 - Archive/consumer check: both consumer archives are byte-identical and match the updated manifests (`a9ee…29cc`, `sha512-OQGj…ldA==`); package version is `0.1.0`. Both Tailwind entrypoints import shared `tokens.css`/`base.css` and register the shared `@source`; bootstrap and bundled fonts are present in the package output.
 - Browser: local showcase at `http://127.0.0.1:5173/` visibly rendered the AdminShell/navigation, page/panel layout, form input, feedback, table and status badges. Theme menu exposed 浅色/深色/跟随系统; selecting light yielded `data-theme=light`, selecting dark yielded `data-theme=dark`, and system resolved to the current dark preference. The showcase uses `blog-admin`; all three brand values are covered by package ThemeProvider tests.
 - Not measured: authenticated Blog/gosso-admin application routes, responsive widths, and production-domain browser flows remain outside U01c and were not run. No Connector behavior was changed.
@@ -100,7 +100,7 @@ The authoritative machine-readable inventory is `migration.json.phase0Inventory`
 
 | Workspace | Commands / result |
 | --- | --- |
-| `packages/ui` | `npm run typecheck`, `npm run build`, `npm test -- --run` (2 passed), `npm run showcase:build`: passed; existing font-resolution and Lightning CSS `@theme` warnings |
+| `gouno-ui` | Canonical UI repository; validate there before registry synchronization |
 | `blog-frontend` | formatting, lint, UI-contract, CSS-cascade, `npx tsc -b`, and build passed; 42 files / 160 tests passed; `npm run test:coverage` exits non-zero at 44.58% branches vs 45% threshold |
 | `gosso-admin-frontend` | `npm run quality` passed; 19 files / 108 tests passed; coverage 43.89% statements, 39.22% branches, 31.83% functions, 44.63% lines; existing lint/Vite/jsdom warnings |
 
