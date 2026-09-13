@@ -38,8 +38,10 @@ export function AiSuggestionControl({
               className="editor-ai-candidate"
               onClick={() => onApply(item)}
             >
-              <span className={mono ? "mono" : undefined}>{item}</span>
-              <b>应用</b>
+              <span className="editor-ai-candidate__content">
+                <span className={mono ? "mono" : undefined}>{item}</span>
+                <b>应用</b>
+              </span>
             </Button>
           ))}
         </div>

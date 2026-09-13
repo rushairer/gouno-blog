@@ -53,9 +53,14 @@ describe("editor presentation components", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "生成 Slug" }));
-    await user.click(
-      screen.getByRole("button", { name: /stable-editor.*应用/ }),
-    );
+    const candidate = screen.getByRole("button", {
+      name: /stable-editor.*应用/,
+    });
+    expect(candidate).toHaveClass("editor-ai-candidate");
+    expect(
+      candidate.querySelector(".editor-ai-candidate__content"),
+    ).toBeInTheDocument();
+    await user.click(candidate);
 
     expect(onRequest).toHaveBeenCalledOnce();
     expect(onApply).toHaveBeenCalledWith("stable-editor");
