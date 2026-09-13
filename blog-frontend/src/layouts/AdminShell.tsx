@@ -45,15 +45,20 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     () =>
       getCachedSiteSettings()?.site_title || DEFAULT_SITE_SETTINGS.site_title,
   );
+  const [siteIcon, setSiteIcon] = useState(
+    () =>
+      getCachedSiteSettings()?.favicon_url || DEFAULT_SITE_SETTINGS.favicon_url,
+  );
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState("");
 
   useEffect(() => {
     siteApi
       .getSiteSettings()
-      .then((settings) =>
-        setSiteName(settings.site_title || DEFAULT_SITE_SETTINGS.site_title),
-      )
+      .then((settings) => {
+        setSiteName(settings.site_title || DEFAULT_SITE_SETTINGS.site_title);
+        setSiteIcon(settings.favicon_url || DEFAULT_SITE_SETTINGS.favicon_url);
+      })
       .catch(() => {
         // Keep the administration shell available when public site settings fail.
       });
@@ -61,12 +66,14 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     const handleUpdate = (event: Event) => {
       const fresh = (event as CustomEvent).detail || getCachedSiteSettings();
       if (fresh?.site_title) setSiteName(fresh.site_title);
+      setSiteIcon(fresh?.favicon_url || DEFAULT_SITE_SETTINGS.favicon_url);
     };
     const handleStorage = (event: StorageEvent) => {
       if (event.key === SITE_SETTINGS_STORAGE_KEY && event.newValue) {
         try {
           const fresh = JSON.parse(event.newValue);
           if (fresh?.site_title) setSiteName(fresh.site_title);
+          setSiteIcon(fresh?.favicon_url || DEFAULT_SITE_SETTINGS.favicon_url);
         } catch {
           // Ignore malformed cross-tab settings and keep the current identity.
         }
@@ -118,7 +125,20 @@ export default function AdminShell({ children }: { children: ReactNode }) {
 
   return (
     <AppShell
-      brand={<Link to="/admin/dashboard">{siteName}</Link>}
+      brand={
+        <Link
+          to="/admin/dashboard"
+          className="inline-flex min-w-0 items-center gap-2 text-primary"
+        >
+          <img
+            src={siteIcon}
+            alt=""
+            aria-hidden="true"
+            className="size-6 shrink-0 object-contain"
+          />
+          <span className="truncate">{siteName}</span>
+        </Link>
+      }
       breadcrumbs={<span>{currentLabel(location.pathname)}</span>}
       navigationLabel="后台导航"
       navigation={(close) =>
