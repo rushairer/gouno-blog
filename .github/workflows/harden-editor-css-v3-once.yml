@@ -60,6 +60,7 @@ jobs:
             ['  .editor-ai-candidates > .btn,\n  .editor-ai-candidates > .choice-button {', '  .editor-ai-candidate {'],
             ['  .editor-ai-candidates > .btn .btn__label,\n  .editor-ai-candidates > .choice-button .btn__label {', '  .editor-ai-candidate__content {'],
             ['.editor-inspector-ai-banner .btn {', '.editor-inspector-ai-action {'],
+            ['    .editor-command-actions .btn {', '    .editor-command-actions > * {'],
           ]);
 
           edit('blog-frontend/src/components/editor/AiSuggestionControl.tsx', [[
