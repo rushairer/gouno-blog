@@ -220,6 +220,11 @@ for (const file of cssFiles) {
     if (imports.length !== 1) {
       failures.push(`${tailwindEntry}: must own exactly one Tailwind import`);
     }
+    if (/@import\s+(?:url\()?\s*["']\.\//.test(source)) {
+      failures.push(
+        `${tailwindEntry}: product/feature styles must not be imported into the global Tailwind entry`,
+      );
+    }
   } else if (imports.length > 0) {
     failures.push(
       `${file.relativePath}: Tailwind must only be imported by ${tailwindEntry}`,
