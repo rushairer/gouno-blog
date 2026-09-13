@@ -9,7 +9,7 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
     "lint": "oxlint",
-    "lint:ui": "node scripts/check-ui-contracts.mjs",
+    "lint:ui": "node scripts/check-ui-contracts.mjs && node scripts/check-retired-product-classes.mjs",
     "test": "vitest",
     "test:run": "tsc -b && vitest run",
     "test:coverage": "vitest run --coverage",
@@ -30,7 +30,7 @@
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.18.2",
     "rehype-highlight": "^7.0.2",
-    "remark-gfm": "^4.0.1",
+    "remark-gfm": "^4.1.0",
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
