@@ -39,7 +39,7 @@
 [粘贴通用前缀]
 
 当前阶段：0（基线、入口和依赖盘点）。
-请交叉扫描 blog-frontend 和 gosso-admin-frontend 的路由、条件渲染、弹窗、抽屉、错误/空/加载/无权限状态和 API 依赖，补齐 migration.json 的具体条目。检查共享包消费、Tailwind @source、分发归档和质量脚本。运行两仓库及 canonical gouno-ui 的基线检查，记录准确结果，不实现大规模视觉改动。
+请交叉扫描 blog-frontend 和 gosso-admin-frontend 的路由、条件渲染、弹窗、抽屉、错误/空/加载/无权限状态和 API 依赖，补齐 migration.json 的具体条目。检查共享包消费、Tailwind @source、分发归档和质量脚本。运行两仓库及 packages/ui 的基线检查，记录准确结果，不实现大规模视觉改动。
 ```
 
 ## 阶段 1：共享包与设计系统
@@ -48,7 +48,7 @@
 [粘贴通用前缀]
 
 当前阶段：1（共享包与设计系统定版）。
-完善 canonical gouno-ui 的令牌、ThemeProvider、主题 bootstrap、基础组件、AdminShell、列表/表格、表单、反馈、浮层和独立 showcase。保证 blog、blog-admin、gosso-admin 三品牌及 light/dark/system 可用，处理 SSR/受限运行环境。使用 npm registry 同步流程验证两个消费者的精确版本与 integrity。不要迁移业务页面。
+完善 packages/ui 的令牌、ThemeProvider、主题 bootstrap、基础组件、AdminShell、列表/表格、表单、反馈、浮层和独立 showcase。保证 blog、blog-admin、gosso-admin 三品牌及 light/dark/system 可用，处理 SSR/受限运行环境。使用 npm pack 和分发脚本验证两个消费者的精确归档与 integrity。不要迁移业务页面。
 ```
 
 ## 阶段 2：Blog 公共发现与阅读
@@ -102,7 +102,7 @@
 [粘贴通用前缀]
 
 当前阶段：7（双仓库消费、分发与构建）。
-验证 canonical gouno-ui 的发布版本/integrity 清单、两个前端的 registry 依赖、独立干净检出后的 npm ci、Tailwind @source、Docker 构建、Compose 配置，以及 gosso-admin 根路径和 /identity-admin 构建。修复分发链问题，但不手工编辑归档产物。
+验证 packages/ui 的 npm pack、版本/integrity 清单、两个前端的 file 依赖、独立干净检出后的 npm ci、Tailwind @source、Docker 构建、Compose 配置，以及 gosso-admin 根路径和 /identity-admin 构建。修复分发链问题，但不手工编辑归档产物。
 ```
 
 ## 阶段 8：最终 QA 与交付
