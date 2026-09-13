@@ -7,106 +7,14 @@
     min-width: 0;
   }
 
-  .editor-commandbar {
-    position: sticky;
-    top: 4rem;
-    z-index: 20;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-    align-items: center;
-    gap: 0.75rem;
-    margin: -1.5rem -1rem 1.5rem;
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--border);
-    background: color-mix(in srgb, var(--background) 94%, transparent);
-    backdrop-filter: blur(12px);
-  }
-
-  .editor-back {
-    justify-self: start;
-  }
-
-  .editor-save-state,
-  .editor-readonly-indicator {
-    display: inline-flex;
-    min-width: 0;
-    align-items: center;
-    justify-content: center;
-    gap: 0.375rem;
-    color: var(--muted-foreground);
-    font-size: 0.75rem;
-    white-space: nowrap;
-  }
-
-  .editor-save-state svg,
-  .editor-readonly-indicator svg {
-    width: 0.875rem;
-    height: 0.875rem;
-    color: var(--primary);
-  }
-
-  .editor-command-actions {
+  .editor-canvas {
     display: flex;
     min-width: 0;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 0.5rem;
+    flex-direction: column;
   }
 
   .editor-page-feedback {
     margin-bottom: 1rem;
-  }
-
-  .editor-workspace {
-    display: grid;
-    min-width: 0;
-    grid-template-columns: 12rem minmax(0, 1fr) 17rem;
-    align-items: start;
-    gap: 1rem;
-  }
-
-  .editor-workspace:not(:has(.editor-outline)) {
-    grid-template-columns: minmax(0, 1fr) 17rem;
-  }
-
-  .editor-outline,
-  .editor-inspector {
-    position: sticky;
-    top: 8.75rem;
-    max-height: calc(100dvh - 10rem);
-    min-width: 0;
-    overflow-y: auto;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    background: var(--card);
-    color: var(--card-foreground);
-    box-shadow: var(--shadow-xs);
-  }
-
-  .editor-outline {
-    padding: 0.875rem;
-  }
-
-  .editor-outline > div:first-child {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .editor-outline h2 {
-    font-size: 0.8125rem;
-    font-weight: 600;
-  }
-
-  .editor-outline nav,
-  .version-drawer {
-    display: grid;
-    gap: 0.25rem;
-    margin-top: 0.75rem;
   }
 
   .editor-outline nav a {
@@ -182,18 +90,6 @@
 
   .version-item__action {
     color: var(--primary);
-  }
-
-  .editor-canvas {
-    display: flex;
-    min-width: 0;
-    flex-direction: column;
-    padding: 1.25rem;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    background: var(--card);
-    color: var(--card-foreground);
-    box-shadow: var(--shadow-xs);
   }
 
   .editor-canvas > .editor-form-field {
@@ -431,12 +327,8 @@
     overflow-x: auto;
   }
 
-  .editor-inspector {
-    padding-bottom: 0.5rem;
-  }
-
   .editor-inspector-ai-banner {
-    padding: 0.875rem 0.875rem 0.375rem;
+    padding-bottom: 0.375rem;
   }
 
   .editor-inspector-ai-action {
@@ -444,7 +336,7 @@
   }
 
   .editor-inspector details {
-    padding: 0 0.875rem 0.875rem;
+    padding-block: 1rem;
     border-bottom: 1px solid var(--border);
   }
 
@@ -453,8 +345,7 @@
   }
 
   .editor-inspector summary {
-    padding: 0.875rem 0 0.75rem;
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
     font-weight: 600;
     cursor: pointer;
   }
@@ -499,70 +390,7 @@
     opacity: 0.55;
   }
 
-  @media (min-width: 768px) {
-    .editor-commandbar {
-      margin-inline: -1.5rem;
-      padding-inline: 1.5rem;
-    }
-  }
-
-  @media (min-width: 1280px) {
-    .editor-commandbar {
-      margin-inline: -2rem;
-      padding-inline: 2rem;
-    }
-  }
-
-  @media (max-width: 1199px) {
-    .editor-workspace {
-      grid-template-columns: minmax(0, 1fr) 17rem;
-    }
-
-    .editor-outline {
-      display: none;
-    }
-  }
-
-  @media (max-width: 899px) {
-    .editor-workspace,
-    .editor-workspace:not(:has(.editor-outline)) {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
-    .editor-inspector {
-      position: static;
-      max-height: none;
-    }
-  }
-
   @media (max-width: 639px) {
-    .editor-commandbar {
-      grid-template-columns: minmax(0, 1fr) auto;
-      align-items: start;
-    }
-
-    .editor-save-state {
-      justify-self: end;
-      overflow: hidden;
-      max-width: 9rem;
-      text-overflow: ellipsis;
-    }
-
-    .editor-command-actions {
-      grid-column: 1 / -1;
-      justify-content: stretch;
-      overflow-x: auto;
-      padding-bottom: 0.125rem;
-    }
-
-    .editor-command-actions > * {
-      flex: 1 0 auto;
-    }
-
-    .editor-canvas {
-      padding: 1rem;
-    }
-
     .editor-ai-tools-group {
       width: 100%;
     }

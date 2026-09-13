@@ -24,11 +24,26 @@ describe("editor presentation components", () => {
       </ContentEditorFrame>,
     );
 
-    expect(container.firstChild).toHaveClass("editor-page", "custom-frame");
-    expect(container.querySelector(".editor-commandbar")).toBeInTheDocument();
+    expect(container.firstChild).toHaveClass(
+      "editor-page",
+      "gap-0",
+      "overflow-clip",
+      "custom-frame",
+    );
+    expect(container.firstChild).toHaveAttribute("data-slot", "card");
+    expect(container.querySelector(".editor-commandbar")).toHaveClass(
+      "border-b",
+      "px-6",
+      "py-4",
+      "lg:flex-row",
+    );
     expect(
       container.querySelector(".editor-command-actions"),
     ).toHaveTextContent("操作");
+    expect(container.querySelector(".editor-command-actions")).toHaveClass(
+      "flex-wrap",
+      "lg:justify-end",
+    );
     expect(
       screen.getByRole("region", { name: "AI 写作与润色" }),
     ).toHaveTextContent("写作");
