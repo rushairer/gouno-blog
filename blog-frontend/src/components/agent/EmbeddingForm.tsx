@@ -111,7 +111,7 @@ export function EmbeddingForm({
   };
 
   return (
-    <Card padding="base" className="editor-panel">
+    <Card padding="base">
       <CardHeader
         title={
           <span className="flex items-center gap-2">
@@ -143,7 +143,7 @@ export function EmbeddingForm({
           </Field>
           <Field label={labels.model}>
             <Input
-              className="mono"
+              className="font-mono"
               required
               value={value.model}
               onChange={(event) =>
@@ -157,7 +157,7 @@ export function EmbeddingForm({
         </FormGrid>
         <Field label={labels.base}>
           <Input
-            className="mono"
+            className="font-mono"
             type="url"
             required
             value={value.base_url}
@@ -171,7 +171,7 @@ export function EmbeddingForm({
         </Field>
         <Field label={`${labels.key}${initial ? ` · ${labels.keep}` : ""}`}>
           <Input
-            className="mono"
+            className="font-mono"
             type="password"
             required={!initial}
             autoComplete="new-password"
@@ -214,7 +214,7 @@ export function EmbeddingForm({
             />
           </Field>
         </FormGrid>
-        <label className="checkbox-label">
+        <label className="inline-flex items-center gap-2 text-sm">
           <Checkbox
             checked={value.enabled}
             onChange={(event) =>

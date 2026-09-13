@@ -1293,7 +1293,7 @@ export default function PageEditor() {
               hint="访问路径为 /<slug>"
             >
               <Input
-                className="mono"
+                className="font-mono"
                 value={page.slug}
                 onChange={(event) => update("slug", event.target.value)}
                 placeholder="about"
@@ -1316,7 +1316,7 @@ export default function PageEditor() {
                         variant="text"
                         onClick={() => applySuggestion("slug", item)}
                       >
-                        <span className="mono">{item}</span>
+                        <span className="font-mono">{item}</span>
                         <b>应用</b>
                       </Button>
                     ))}
