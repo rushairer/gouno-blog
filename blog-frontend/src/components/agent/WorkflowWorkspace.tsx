@@ -195,9 +195,7 @@ function EditorPanel({
   return (
     <Card
       padding="none"
-      className={["p-4 md:p-6", className]
-        .filter(Boolean)
-        .join(" ")}
+      className={["p-4 md:p-6", className].filter(Boolean).join(" ")}
     >
       <PanelHeader
         title={
