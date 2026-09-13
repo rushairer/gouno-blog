@@ -55,21 +55,28 @@ describe("PublicShell theme", () => {
     expect(localStorage.getItem("gouno-blog:theme")).toBe("light");
   });
 
-  it("renders the Showcase brand lockup with configured title and fallback icon", async () => {
+  it("renders the Showcase brand lockup with configured title and canonical product mark", async () => {
     renderPublicShell(<h1>Public content</h1>);
 
     const headerBrand = await screen.findByRole("link", {
       name: "Configured Site 首页",
     });
-    expect(
-      headerBrand.querySelector('img[src="/favicon.svg"]'),
-    ).toBeInTheDocument();
+    const headerMark = headerBrand.querySelector('span[aria-hidden="true"]');
+    expect(headerMark).toBeInTheDocument();
+    expect(headerMark).toHaveClass(
+      "inline-block",
+      "shrink-0",
+      "bg-current",
+      "size-8",
+    );
+    expect(headerMark?.getAttribute("style")).toContain("mask");
     expect(headerBrand).toHaveClass("inline-flex", "items-center", "gap-2");
 
     const footerBrand = screen.getByRole("link", { name: "Configured Site" });
-    expect(
-      footerBrand.querySelector('img[src="/favicon.svg"]'),
-    ).toBeInTheDocument();
+    const footerMark = footerBrand.querySelector('span[aria-hidden="true"]');
+    expect(footerMark).toBeInTheDocument();
+    expect(footerMark).toHaveClass("size-7", "text-primary");
+    expect(footerBrand).not.toHaveClass("text-primary");
   });
 
   it("renders configured or fallback footer meta text", async () => {
