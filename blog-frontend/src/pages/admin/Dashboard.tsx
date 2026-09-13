@@ -164,15 +164,26 @@ export default function Dashboard() {
   const { can } = useAbility();
   const [summary, setSummary] = useState<Summary | null>(null);
   const [error, setError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
   const [clearingAlerts, setClearingAlerts] = useState(false);
 
   useEffect(() => {
     if (!allowed) return;
+    setError("");
     analyticsApi
       .getSummary()
-      .then((data) => setSummary(data as unknown as Summary))
+      .then((data) => {
+        setSummary(data as unknown as Summary);
+        setError("");
+      })
       .catch((reason: Error) => setError(reason.message));
-  }, [allowed]);
+  }, [allowed, reloadKey]);
+
+  const reload = () => {
+    setSummary(null);
+    setError("");
+    setReloadKey((key) => key + 1);
+  };
 
   const dismissAllAlerts = async () => {
     setClearingAlerts(true);
@@ -241,7 +252,21 @@ export default function Dashboard() {
     <div className="flex flex-col gap-6">
       {pageHeader}
 
-      {error ? <Alert type="error" showIcon title={error} /> : null}
+      {error && !summary ? (
+        <Alert
+          type="error"
+          showIcon
+          title="数据概览加载失败"
+          description={error}
+          action={
+            <Button size="small" onClick={reload}>
+              重新载入
+            </Button>
+          }
+        />
+      ) : error ? (
+        <Alert type="error" showIcon title={error} />
+      ) : null}
 
       {summary ? (
         <>
