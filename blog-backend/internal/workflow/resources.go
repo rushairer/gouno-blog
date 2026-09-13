@@ -222,14 +222,16 @@ func resourceSnapshot(item *domain.ResourceOption) json.RawMessage {
 }
 
 func (s *Service) persistResource(ctx context.Context, runID int64, item *domain.ResourceOption, source, access string) error {
-	_, err := s.db.ExecContext(ctx, `INSERT INTO ai_workflow_run_resources
-		(workflow_run_id,resource_type,resource_key,source,access_level,label,version_token,snapshot)
-		VALUES($1,$2,$3,$4,$5,$6,$7,$8)
-		ON CONFLICT(workflow_run_id,resource_type,resource_key) DO UPDATE SET
-		access_level=CASE WHEN ai_workflow_run_resources.access_level='target' OR EXCLUDED.access_level='target' THEN 'target' ELSE 'read' END,
-		source=CASE WHEN ai_workflow_run_resources.source='manual' THEN 'manual' ELSE EXCLUDED.source END`,
-		runID, item.Type, item.Key, source, access, item.Label, item.VersionToken, resourceSnapshot(item))
-	return err
+	return s.execution.UpsertRunResource(ctx, &domain.WorkflowResource{
+		WorkflowRunID: runID,
+		ResourceType:  item.Type,
+		ResourceKey:   item.Key,
+		Source:        source,
+		AccessLevel:   access,
+		Label:         item.Label,
+		VersionToken:  item.VersionToken,
+		Snapshot:      resourceSnapshot(item),
+	})
 }
 
 func (s *Service) resolveManualResources(ctx context.Context, schemaRaw json.RawMessage, input any) ([]domain.WorkflowResource, error) {

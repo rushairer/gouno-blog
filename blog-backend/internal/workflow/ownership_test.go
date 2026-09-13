@@ -40,3 +40,26 @@ func TestWorkflowServiceDoesNotOwnRawTransactions(t *testing.T) {
 		t.Fatal("Workflow Service must delegate transaction ownership to application coordinators")
 	}
 }
+
+func TestWorkflowServiceDoesNotOwnDispatchOrExecutionPersistence(t *testing.T) {
+	data, err := os.ReadFile("service.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	forbidden := []string{
+		"INSERT INTO ai_workflow_events",
+		"UPDATE ai_workflow_events",
+		"UPDATE ai_workflows SET next_run_at",
+		"UPDATE ai_workflow_runs SET status=",
+		"INSERT INTO ai_workflow_step_runs",
+		"INSERT INTO workflow_interaction_tasks",
+		"INSERT INTO workflow_run_events",
+		"INSERT INTO ai_workflow_run_resources",
+		"FROM ai_approvals",
+	}
+	for _, fragment := range forbidden {
+		if bytes.Contains(data, []byte(fragment)) {
+			t.Errorf("Workflow Service still owns persistence fragment %q", fragment)
+		}
+	}
+}

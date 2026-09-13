@@ -97,6 +97,19 @@ type ResourceQuery struct {
 	Keys     []string
 }
 
+type WorkflowDispatchEvent struct {
+	EventKey      string          `json:"event_key"`
+	EventType     string          `json:"event_type"`
+	Payload       json.RawMessage `json:"payload"`
+	BatchPrepared bool            `json:"batch_prepared"`
+}
+
+type WorkflowScheduleClaim struct {
+	WorkflowID     int64  `json:"workflow_id"`
+	CronExpression string `json:"cron_expression"`
+	Timezone       string `json:"timezone"`
+}
+
 type WorkflowRun struct {
 	ID                     int64           `json:"id"`
 	WorkflowID             int64           `json:"workflow_id"`

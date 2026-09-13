@@ -120,6 +120,17 @@ The default `gouno-template` Flat Layered structure remains the reference for si
 
 Architecture refactoring and Codegen must preserve the root `AGENTS.md` security contract, especially the confidential BFF boundary and Connector Module Hold. Structural cleanup is not authorization to change OAuth/OIDC, session, connector, credential, deployment, or security behavior.
 
+
+## Workflow dispatch / execution persistence boundary
+
+Workflow trigger dispatch and execution checkpoints are application consistency boundaries rather than Service-local SQL.
+
+- `DispatchCoordinator` owns cron due-row claiming through `dbtx.Transactor`: due Workflow rows are locked with `FOR UPDATE SKIP LOCKED` and their next schedule is advanced in the same transaction before in-memory queueing.
+- Event persistence is behind the same consumer-owned dispatch port. Zero-window emitter preparation and due-event claims both reserve a short persisted lease while the row remains `accepted`, so multiple web instances do not process the same event concurrently and a crashed worker becomes retryable without a new status value or schema migration.
+- `ExecutionCoordinator` owns Run state transitions, Step checkpoints, query-scope persistence and the atomic human-interaction + Workflow-run-event write. `ExecutionRepository` persists only Workflow-owned tables.
+- Workflow no longer queries Agent-owned `ai_approvals` directly. Workflow Service consumes the narrow `ExecutedApprovalTargetReader` contract, canonically backed by Agent `ApprovalRepository.ListExecutedTargets`; that cross-capability read is not folded into the execution persistence coordinator.
+- Workflow Service retains execution policy, Agent invocation, resource discovery and read-model APIs. HTTP routes, auth/BFF, Connector behavior and external API contracts are unchanged.
+
 ## Workflow Run admission / retry / recovery boundary
 
 Workflow Run admission is an application consistency boundary, not a collection of Service-local SQL statements.

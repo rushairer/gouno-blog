@@ -350,7 +350,11 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		workflowMediaRuns := workflowservice.NewMediaRunCoordinator(transactor, workflowMediaRunRepo, agentMediaCandidateRepo)
 		workflowAdmissionRepo := workflowrepository.NewRunAdmissionRepository(cfg.DB)
 		workflowAdmission := workflowservice.NewRunAdmissionCoordinator(transactor, workflowAdmissionRepo)
-		workflowSvc := workflowservice.NewService(cfg.DB, runner, management, toolRegistry, workflowLifecycle, workflowMediaRuns, workflowAdmission)
+		workflowDispatchRepo := workflowrepository.NewDispatchRepository(cfg.DB)
+		workflowDispatch := workflowservice.NewDispatchCoordinator(transactor, workflowDispatchRepo)
+		workflowExecutionRepo := workflowrepository.NewExecutionRepository(cfg.DB)
+		workflowExecution := workflowservice.NewExecutionCoordinator(transactor, workflowExecutionRepo, workflowInteractionRepo)
+		workflowSvc := workflowservice.NewService(cfg.DB, runner, management, toolRegistry, workflowLifecycle, workflowMediaRuns, workflowAdmission, workflowDispatch, workflowExecution, agentApprovalRepo)
 		workflowSvc.StartScheduler(ctx, cfg.Global.AIAgentConfig.SchedulerInterval)
 		connectorSvc := connector.NewService(cfg.DB, secrets, transactor, os.Getenv("BLOG_CONNECTOR_OAUTH_REDIRECT_URL"))
 		agentCtrl = controller.NewAgentControllerWithOptions(controller.AgentControllerOptions{
