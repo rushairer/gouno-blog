@@ -35,7 +35,7 @@ export default function Categories() {
           </span>
         }
       />
-      <Card as="section" className="simple-page__body">
+      <Card as="section" aria-label={`${t("categoriesPage.title")}内容`}>
         {loading ? (
           <div
             role="status"
