@@ -215,3 +215,8 @@ func (r *RunRepository) RecordUsage(ctx context.Context, event *domain.UsageEven
 		event.OutputTokens, event.CompletedAt,
 	).Scan(&event.ID)
 }
+
+func (r *RunRepository) DeleteByWorkflowRunTx(ctx context.Context, tx *sql.Tx, runID int64) error {
+	_, err := tx.ExecContext(ctx, `DELETE FROM ai_agent_runs WHERE workflow_run_id=$1`, runID)
+	return err
+}

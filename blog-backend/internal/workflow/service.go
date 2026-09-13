@@ -15,7 +15,6 @@ import (
 	"github.com/robfig/cron/v3"
 	agentservice "github.com/rushairer/blog-backend/internal/agent"
 	"github.com/rushairer/blog-backend/internal/dberror"
-	"github.com/rushairer/blog-backend/internal/dbtx"
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/tool"
 	workflowrepository "github.com/rushairer/blog-backend/internal/workflow/repository"
@@ -36,7 +35,7 @@ type Service struct {
 	tools       *tool.Registry
 	catalog     *ResourceCatalog
 	workerSem   chan struct{}
-	transactor  *dbtx.Transactor
+	lifecycle   *RunLifecycle
 }
 
 type PreflightCheck struct {
@@ -176,11 +175,11 @@ func containsString(values []string, target string) bool {
 	return false
 }
 
-func NewService(db *sql.DB, runner *agentservice.Runner, agents *agentservice.ManagementService, registry *tool.Registry, transactor *dbtx.Transactor) *Service {
-	if transactor == nil {
-		panic("workflow.NewService: transactor is required")
+func NewService(db *sql.DB, runner *agentservice.Runner, agents *agentservice.ManagementService, registry *tool.Registry, lifecycle *RunLifecycle) *Service {
+	if lifecycle == nil {
+		panic("workflow.NewService: lifecycle is required")
 	}
-	return &Service{db: db, definitions: workflowrepository.NewDefinitionRepository(db), runner: runner, agents: agents, tools: registry, catalog: NewResourceCatalog(db), workerSem: make(chan struct{}, 4), transactor: transactor}
+	return &Service{db: db, definitions: workflowrepository.NewDefinitionRepository(db), runner: runner, agents: agents, tools: registry, catalog: NewResourceCatalog(db), workerSem: make(chan struct{}, 4), lifecycle: lifecycle}
 }
 
 func (s *Service) List(ctx context.Context) ([]*domain.Workflow, error) {
@@ -1020,51 +1019,11 @@ func (s *Service) ReconcileMediaRun(ctx context.Context, runID int64) error {
 }
 
 func (s *Service) Cancel(ctx context.Context, runID int64) error {
-	return s.transactor.Run(ctx, func(tx *sql.Tx) error {
-		result, err := tx.ExecContext(ctx, `UPDATE ai_workflow_runs SET status='cancelled',finished_at=NOW(),error_code='cancelled',error_message='cancelled by administrator'
-			WHERE id=$1 AND status IN ('queued','running','awaiting_approval','waiting_for_user')`, runID)
-		if err != nil {
-			return err
-		}
-		if changed, _ := result.RowsAffected(); changed == 0 {
-			return sql.ErrNoRows
-		}
-		if _, err := tx.ExecContext(ctx, `UPDATE workflow_interaction_tasks SET status='cancelled',updated_at=NOW()
-			WHERE workflow_run_id=$1 AND status='pending'`, runID); err != nil {
-			return err
-		}
-		if _, err := tx.ExecContext(ctx, `UPDATE ai_media_candidates SET generation_status='cancelled',cancelled_at=NOW(),error_code='cancelled',error_message='workflow cancelled by administrator'
-			WHERE workflow_run_id=$1 AND generation_status IN ('brief_ready','ready_to_generate','generating','generated') AND applied_version_id IS NULL`, runID); err != nil {
-			return err
-		}
-		return nil
-	})
+	return s.lifecycle.Cancel(ctx, runID)
 }
 
 func (s *Service) DeleteRun(ctx context.Context, runID int64) error {
-	return s.transactor.Run(ctx, func(tx *sql.Tx) error {
-		var status string
-		if err := tx.QueryRowContext(ctx, `SELECT status FROM ai_workflow_runs WHERE id=$1 FOR UPDATE`, runID).Scan(&status); err != nil {
-			return err
-		}
-		if status != "succeeded" && status != "failed" && status != "cancelled" {
-			return fmt.Errorf("%w: only completed Workflow runs can be deleted", ErrInvalid)
-		}
-		if _, err := tx.ExecContext(ctx, `DELETE FROM ai_media_candidates WHERE workflow_run_id=$1 OR source_run_id IN (SELECT id FROM ai_agent_runs WHERE workflow_run_id=$1)`, runID); err != nil {
-			return err
-		}
-		if _, err := tx.ExecContext(ctx, `DELETE FROM ai_agent_runs WHERE workflow_run_id=$1`, runID); err != nil {
-			return err
-		}
-		result, err := tx.ExecContext(ctx, `DELETE FROM ai_workflow_runs WHERE id=$1`, runID)
-		if err != nil {
-			return err
-		}
-		if changed, _ := result.RowsAffected(); changed == 0 {
-			return sql.ErrNoRows
-		}
-		return nil
-	})
+	return s.lifecycle.DeleteRun(ctx, runID)
 }
 
 func (s *Service) Execute(ctx context.Context, runID int64) {

@@ -44,6 +44,18 @@ class GateTests(unittest.TestCase):
             source.write_text("func TestFresh(t *testing.T) {}\nfunc TestUpgrade(t *testing.T) {}\n")
             self.assertEqual(gate.inventory(root), {"internal/migrations": {"TestFresh", "TestUpgrade"}})
 
+    def test_discovers_capability_repository_tests(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for package in ("internal/migrations", "internal/workflow/repository"):
+                path = root / package
+                path.mkdir(parents=True)
+                (path / "state_integration_test.go").write_text("func TestState(t *testing.T) {}\n")
+            self.assertEqual(gate.inventory(root), {
+                "internal/migrations": {"TestState"},
+                "internal/workflow/repository": {"TestState"},
+            })
+
     def test_existing_database_is_rejected_before_docker(self):
         with tempfile.TemporaryDirectory() as directory:
             with patch.dict(gate.os.environ, {"BLOG_TEST_POSTGRES_DSN": "not-an-owned-test-database"}):
