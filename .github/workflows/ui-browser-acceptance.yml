@@ -1,9 +1,12 @@
 name: UI Browser Acceptance
 
 on:
-  push:
+  pull_request:
     branches:
-      - "ui/browser-acceptance-*"
+      - main
+    paths:
+      - "blog-frontend/**"
+      - ".github/workflows/ui-browser-acceptance.yml"
   workflow_dispatch:
 
 permissions:
