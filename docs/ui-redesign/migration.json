@@ -4089,11 +4089,13 @@
       "U03c": {
         "status": "verified",
         "evidence": "support surfaces are on canonical UI boundaries; latest frontend quality/CI/Image gates pass",
-        "browser": "final independent rendered review belongs to U03d"
+        "browser": "U03d final independent rendered review completed; see U03d evidence"
       },
       "U03d": {
-        "status": "review-pending",
-        "reason": "independent full-route/rendered responsive/theme/interaction review has not been repeated in the current reconciliation session"
+        "status": "verified",
+        "evidence": "U03a/U03b real authenticated browser evidence plus PR #209 support-page Playwright acceptance; run 34756247735 passed 59/59 tests across Categories/Tags/Comments/Notifications/Media/Settings/Users at 1440/1024/768/390 in light/dark, including Media checkbox, Settings retry and Users modal interactions",
+        "browserArtifact": "10316928262 sha256:3499b5d1bd40de075afdd2a3ca52c5cfede66df04d9625c09069d68c7da1ff14",
+        "unverified": ["fresh real Gosso login was not repeated by the fixture-based support-page pass", "destructive member/site mutations were not submitted", "all alternate-role, real MFA/Passkey Step-Up and production-domain flows remain final-QA scope"]
       },
       "U04a": {
         "status": "implemented-ci-verified",
