@@ -1,8 +1,9 @@
-import { readdir, readFile } from "node:fs/promises";
+import { access, readdir, readFile } from "node:fs/promises";
 import { extname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 
+const projectRoot = fileURLToPath(new URL("../", import.meta.url));
 const root = fileURLToPath(new URL("../src/", import.meta.url));
 const files = [];
 const retiredProductStyles = new Set([
@@ -18,6 +19,7 @@ const retiredProductComponents = new Set([
   "components/ConfirmActionModal.tsx",
   "components/taxonomy/CategoryForm.tsx",
 ]);
+const retiredVendoredAssets = ["public/ui-bootstrap.js", "public/favicon.svg"];
 const agentConsoleStyleConsumers = new Set([
   "pages/admin/AISettings.tsx",
   "pages/admin/AIOperations.tsx",
@@ -32,6 +34,7 @@ const canonicalUiModules = new Set([
 const canonicalBrandIconModule =
   /^@gouno\/ui\/brand-icons\/[a-z0-9-]+\.svg$/;
 const canonicalRootAllowlist = new Set(["cn"]);
+const directRadixImport = /(?:\bfrom\s+|\bimport\s*\(\s*)["']@radix-ui\//;
 const nativeBrowserDialogs = new Set(["alert", "confirm", "prompt"]);
 const rawElevationPattern =
   /(^|[\s"'`])(?:[a-z-]+:)*shadow-(?:xs|sm|md|lg|xl|2xl)(?=[\s"'`]|$)/;
@@ -49,8 +52,25 @@ async function collect(directory) {
   }
 }
 
+async function exists(path) {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 await collect(root);
 const failures = [];
+
+for (const relativePath of retiredVendoredAssets) {
+  if (await exists(join(projectRoot, relativePath))) {
+    failures.push(
+      `${relativePath}: vendored Gouno UI runtime/brand asset must not be reintroduced; source it from the installed @gouno/ui release`,
+    );
+  }
+}
 
 function jsxTagName(node, sourceFile) {
   if (ts.isJsxElement(node))
@@ -127,6 +147,13 @@ function checkUiImports(name, source) {
     )
       continue;
     const moduleName = statement.moduleSpecifier.text;
+
+    if (directRadixImport.test(`from \"${moduleName}\"`)) {
+      failures.push(
+        `${name}:${location(sourceFile, statement)} direct @radix-ui imports bypass @gouno/ui ownership; consume the canonical Gouno UI primitive instead`,
+      );
+      continue;
+    }
 
     if (
       agentConsoleStyleImport.test(moduleName) &&
@@ -241,17 +268,16 @@ function checkTsxContracts(name, source) {
     true,
     ts.ScriptKind.TSX,
   );
-  const sharedPrimitive = name.startsWith("components/ui/");
 
   function visit(node) {
     if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) {
       const tag = jsxTagName(node, sourceFile);
-      if (!sharedPrimitive && tag === "button") {
+      if (tag === "button") {
         failures.push(
           `${name}:${location(sourceFile, node)} native button must use Button, ButtonLink, or IconButton`,
         );
       }
-      if (!sharedPrimitive && tag === "select") {
+      if (tag === "select") {
         failures.push(
           `${name}:${location(sourceFile, node)} native select must use the shared Select component`,
         );
@@ -284,18 +310,14 @@ function checkTsxContracts(name, source) {
             `${name}:${location(sourceFile, attribute)} shared button classes must use Button or ButtonLink`,
           );
         }
-        if (!sharedPrimitive && /(^|\s)badge(?:\s|$)/.test(value)) {
+        if (/(^|\s)badge(?:\s|$)/.test(value)) {
           failures.push(
             `${name}:${location(sourceFile, attribute)} shared badge classes must use Badge`,
           );
         }
       }
     }
-    if (
-      !sharedPrimitive &&
-      ts.isIdentifier(node) &&
-      node.text === "buttonClassName"
-    ) {
+    if (ts.isIdentifier(node) && node.text === "buttonClassName") {
       failures.push(
         `${name}:${location(sourceFile, node)} buttonClassName is internal to the shared Button primitive`,
       );
