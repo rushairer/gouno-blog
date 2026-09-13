@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - ui/u04a-browser-acceptance-20260913
-    paths:
-      - .github/workflows/u04a-format-fix.yml
 
 permissions:
   contents: write
@@ -26,28 +24,29 @@ jobs:
 
           path = Path('blog-frontend/src/pages/admin/AISettings.tsx')
           text = path.read_text()
-          text = text.replace(
-              '''  const labels = new Proxy({} as Record<string, string>, {
-          get: (_, prop: string | symbol) =>
-            typeof prop === "string" ? t(`agent.${prop}` as any) : undefined,
-        });''',
-              '''  const labels = new Proxy({} as Record<string, string>, {
-            get: (_, prop: string | symbol) =>
-              typeof prop === "string" ? t(`agent.${prop}` as any) : undefined,
-          });''',
-              1,
-          )
-          text = text.replace(
-              '''    const url = new URL(window.location.href);
-          if (next === "agents") url.searchParams.delete("section");
-          else url.searchParams.set("section", next);
-          window.history.replaceState(null, "", url);''',
-              '''    const url = new URL(window.location.href);
-            if (next === "agents") url.searchParams.delete("section");
-            else url.searchParams.set("section", next);
-            window.history.replaceState(null, "", url);''',
-              1,
-          )
+          bad_proxy = '''  const labels = new Proxy({} as Record<string, string>, {
+  get: (_, prop: string | symbol) =>
+    typeof prop === "string" ? t(`agent.${prop}` as any) : undefined,
+});'''
+          good_proxy = '''  const labels = new Proxy({} as Record<string, string>, {
+    get: (_, prop: string | symbol) =>
+      typeof prop === "string" ? t(`agent.${prop}` as any) : undefined,
+  });'''
+          if bad_proxy not in text:
+              raise SystemExit('expected unformatted labels Proxy block not found')
+          text = text.replace(bad_proxy, good_proxy, 1)
+
+          bad_nav = '''    const url = new URL(window.location.href);
+  if (next === "agents") url.searchParams.delete("section");
+  else url.searchParams.set("section", next);
+  window.history.replaceState(null, "", url);'''
+          good_nav = '''    const url = new URL(window.location.href);
+    if (next === "agents") url.searchParams.delete("section");
+    else url.searchParams.set("section", next);
+    window.history.replaceState(null, "", url);'''
+          if bad_nav not in text:
+              raise SystemExit('expected unformatted selectSection block not found')
+          text = text.replace(bad_nav, good_nav, 1)
           path.write_text(text)
           PY
 
