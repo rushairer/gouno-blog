@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import NotFound from "../NotFound";
-import i18n, { I18nProvider } from "../../i18n";
+import { I18nProvider } from "../../i18n";
 
 function renderWithProviders() {
   return render(
@@ -18,25 +18,24 @@ describe("NotFound Page", () => {
   it("uses the canonical Showcase result surface and navigation actions", () => {
     renderWithProviders();
 
-    const heading = screen.getByRole("heading", {
-      level: 1,
-      name: i18n.t("notFound.heading"),
-    });
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(heading).toHaveAttribute("data-slot", "result-title");
     expect(heading.closest('[data-slot="card"]')).toHaveClass(
       "max-w-[760px]",
     );
 
+    expect(screen.getByRole("link", { name: /首页|home/i })).toHaveAttribute(
+      "href",
+      "/",
+    );
     expect(
-      screen.getByRole("link", { name: i18n.t("nav.home") }),
-    ).toHaveAttribute("href", "/");
-    expect(
-      screen.getByRole("link", { name: i18n.t("notFound.allArticles") }),
+      screen.getByRole("link", { name: /全部文章|all articles/i }),
     ).toHaveAttribute("href", "/articles");
     expect(
-      screen.getByRole("link", { name: i18n.t("searchPosts") }),
+      screen.getByRole("link", { name: /搜索文章|search posts/i }),
     ).toHaveAttribute("href", "/search");
     expect(
-      screen.getByRole("button", { name: i18n.t("back") }),
+      screen.getByRole("button", { name: /返回|back/i }),
     ).toBeInTheDocument();
   });
 
@@ -45,7 +44,7 @@ describe("NotFound Page", () => {
 
     expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: i18n.t("searchPosts") }),
+      screen.getByRole("link", { name: /搜索文章|search posts/i }),
     ).toHaveAttribute("href", "/search");
   });
 });
