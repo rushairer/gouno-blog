@@ -88,7 +88,7 @@ export function ProposalPreview({
           {slug ? (
             <div>
               <dt>Slug</dt>
-              <dd className="mono">{slug}</dd>
+              <dd className="font-mono">{slug}</dd>
             </div>
           ) : null}
           {tags.length > 0 ? (

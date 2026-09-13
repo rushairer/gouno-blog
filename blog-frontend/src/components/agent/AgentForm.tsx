@@ -137,7 +137,7 @@ export function AgentForm({
   );
 
   return (
-    <Card padding="base" className="editor-panel">
+    <Card padding="base">
       <CardHeader
         title={
           <span className="flex items-center gap-2">
@@ -334,7 +334,7 @@ export function AgentForm({
           <FormGrid columns={2}>
             <Field label={labels.cron}>
               <Input
-                className="mono"
+                className="font-mono"
                 required
                 placeholder="0 9 * * 1"
                 value={value.cron_expression || ""}
@@ -348,7 +348,7 @@ export function AgentForm({
             </Field>
             <Field label={labels.timezone}>
               <Input
-                className="mono"
+                className="font-mono"
                 required
                 value={value.timezone}
                 onChange={(event) =>
@@ -362,7 +362,7 @@ export function AgentForm({
           </FormGrid>
         ) : null}
 
-        <div className="agent-limit-grid">
+        <FormGrid columns={2}>
           <Field label={labels.monthlyBudget}>
             <Input
               type="number"
@@ -435,9 +435,9 @@ export function AgentForm({
               }
             />
           </Field>
-        </div>
+        </FormGrid>
 
-        <label className="checkbox-label">
+        <label className="inline-flex items-center gap-2 text-sm">
           <Checkbox
             checked={value.enabled}
             onChange={(event) =>

@@ -1519,7 +1519,7 @@ export default function PostEditor() {
             </div>
           ) : (
             <textarea
-              className="editor-body mono"
+              className="editor-body font-mono"
               value={post.content}
               onChange={(event) => update("content", event.target.value)}
               aria-label="文章正文 Markdown"
@@ -1786,7 +1786,7 @@ export default function PostEditor() {
                 hint="访问路径为 /articles/<slug>"
               >
                 <Input
-                  className="mono"
+                  className="font-mono"
                   value={post.slug}
                   onChange={(event) => update("slug", event.target.value)}
                   required
@@ -1813,7 +1813,7 @@ export default function PostEditor() {
                           key={item}
                           onClick={() => applySuggestion("slug", item)}
                         >
-                          <span className="mono">{item}</span>
+                          <span className="font-mono">{item}</span>
                           <b>应用</b>
                         </ChoiceButton>
                       ))}

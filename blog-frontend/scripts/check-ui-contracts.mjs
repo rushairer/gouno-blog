@@ -347,6 +347,21 @@ function checkTsxContracts(name, source) {
         )
           continue;
         const value = staticClassName(attribute);
+        if (/(^|\s)editor-panel(?:\s|$)/.test(value)) {
+          failures.push(
+            `${name}:${location(sourceFile, attribute)} retired editor-panel compatibility class must not be reintroduced; Card owns the container surface`,
+          );
+        }
+        if (!connectorHold && /(^|\s)mono(?:\s|$)/.test(value)) {
+          failures.push(
+            `${name}:${location(sourceFile, attribute)} retired mono compatibility class must not be reintroduced; use Tailwind font-mono`,
+          );
+        }
+        if (!connectorHold && /(^|\s)checkbox-label(?:\s|$)/.test(value)) {
+          failures.push(
+            `${name}:${location(sourceFile, attribute)} retired checkbox-label compatibility class must not be reintroduced; compose the canonical Checkbox with explicit layout utilities`,
+          );
+        }
         if (/(^|\s)btn(?:\s|$)/.test(value)) {
           failures.push(
             `${name}:${location(sourceFile, attribute)} shared button classes must use Button or ButtonLink`,

@@ -129,7 +129,7 @@ export function SkillForm({
     }
   };
   return (
-    <Card padding="base" className="editor-panel">
+    <Card padding="base">
       <CardHeader
         title={
           <span className="flex items-center gap-2">
@@ -192,7 +192,7 @@ export function SkillForm({
         </Field>
         <Field label={labels.prompt}>
           <Textarea
-            className="mono"
+            className="font-mono"
             rows={8}
             required
             value={value.system_prompt}
@@ -242,7 +242,7 @@ export function SkillForm({
           }
         >
           <Textarea
-            className="mono"
+            className="font-mono"
             rows={6}
             required
             value={schemaText}

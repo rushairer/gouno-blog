@@ -581,12 +581,6 @@
     }
   }
 
-  .agent-limit-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 14px;
-  }
-
   .agent-capabilities {
     display: grid;
     gap: 18px;
