@@ -1174,7 +1174,7 @@ export default function PageEditor() {
             </div>
           ) : (
             <textarea
-              className="editor-body mono"
+              className="editor-body font-mono"
               value={page.content}
               onChange={(event) => update("content", event.target.value)}
               aria-label="单页正文 Markdown"

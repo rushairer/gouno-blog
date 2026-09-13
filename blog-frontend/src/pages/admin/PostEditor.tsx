@@ -1519,7 +1519,7 @@ export default function PostEditor() {
             </div>
           ) : (
             <textarea
-              className="editor-body mono"
+              className="editor-body font-mono"
               value={post.content}
               onChange={(event) => update("content", event.target.value)}
               aria-label="文章正文 Markdown"
