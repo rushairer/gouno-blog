@@ -27,8 +27,9 @@ var (
 )
 
 type Service struct {
-	db              *sql.DB
 	definitions     *workflowrepository.DefinitionRepository
+	runReads        RunReadModel
+	metrics         MetricsReadModel
 	runner          *agentservice.Runner
 	agents          *agentservice.ManagementService
 	tools           *tool.Registry
@@ -179,7 +180,19 @@ func containsString(values []string, target string) bool {
 	return false
 }
 
-func NewService(db *sql.DB, runner *agentservice.Runner, agents *agentservice.ManagementService, registry *tool.Registry, lifecycle *RunLifecycle, mediaRuns *MediaRunCoordinator, admission *RunAdmissionCoordinator, dispatch *DispatchCoordinator, execution *ExecutionCoordinator, approvalTargets ExecutedApprovalTargetReader) *Service {
+func NewService(definitions *workflowrepository.DefinitionRepository, runReads RunReadModel, metrics MetricsReadModel, catalog *ResourceCatalog, runner *agentservice.Runner, agents *agentservice.ManagementService, registry *tool.Registry, lifecycle *RunLifecycle, mediaRuns *MediaRunCoordinator, admission *RunAdmissionCoordinator, dispatch *DispatchCoordinator, execution *ExecutionCoordinator, approvalTargets ExecutedApprovalTargetReader) *Service {
+	if definitions == nil {
+		panic("workflow.NewService: definition repository is required")
+	}
+	if runReads == nil {
+		panic("workflow.NewService: run read model is required")
+	}
+	if metrics == nil {
+		panic("workflow.NewService: metrics read model is required")
+	}
+	if catalog == nil {
+		panic("workflow.NewService: resource catalog is required")
+	}
 	if lifecycle == nil {
 		panic("workflow.NewService: lifecycle is required")
 	}
@@ -198,7 +211,7 @@ func NewService(db *sql.DB, runner *agentservice.Runner, agents *agentservice.Ma
 	if approvalTargets == nil {
 		panic("workflow.NewService: executed approval target reader is required")
 	}
-	return &Service{db: db, definitions: workflowrepository.NewDefinitionRepository(db), runner: runner, agents: agents, tools: registry, catalog: NewResourceCatalog(db), workerSem: make(chan struct{}, 4), lifecycle: lifecycle, mediaRuns: mediaRuns, admission: admission, dispatch: dispatch, execution: execution, approvalTargets: approvalTargets}
+	return &Service{definitions: definitions, runReads: runReads, metrics: metrics, runner: runner, agents: agents, tools: registry, catalog: catalog, workerSem: make(chan struct{}, 4), lifecycle: lifecycle, mediaRuns: mediaRuns, admission: admission, dispatch: dispatch, execution: execution, approvalTargets: approvalTargets}
 }
 
 func (s *Service) List(ctx context.Context) ([]*domain.Workflow, error) {
@@ -915,8 +928,8 @@ func (s *Service) execute(ctx context.Context, runID int64) error {
 	if err != nil {
 		return err
 	}
-	var stepsRaw []byte
-	if err := s.db.QueryRowContext(ctx, `SELECT steps FROM ai_workflow_versions WHERE id=$1`, run.WorkflowVersionID).Scan(&stepsRaw); err != nil {
+	stepsRaw, err := s.definitions.VersionStepsByID(ctx, run.WorkflowVersionID)
+	if err != nil {
 		return err
 	}
 	var steps []domain.WorkflowStep
@@ -996,8 +1009,8 @@ func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, ste
 			} else if found {
 				stepOutput = replay
 				if len(replay) == 0 {
-					var emptyPolicy string
-					if policyErr := s.db.QueryRowContext(ctx, `SELECT resource_query_empty_policy FROM ai_workflows WHERE id=$1`, run.WorkflowID).Scan(&emptyPolicy); policyErr != nil {
+					emptyPolicy, policyErr := s.definitions.ResourceQueryEmptyPolicy(ctx, run.WorkflowID)
+					if policyErr != nil {
 						err = policyErr
 						break
 					}
@@ -1073,8 +1086,8 @@ func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, ste
 			}
 			stepOutput = queryOutput(items)
 			if len(items) == 0 {
-				var emptyPolicy string
-				if policyErr := s.db.QueryRowContext(ctx, `SELECT resource_query_empty_policy FROM ai_workflows WHERE id=$1`, run.WorkflowID).Scan(&emptyPolicy); policyErr != nil {
+				emptyPolicy, policyErr := s.definitions.ResourceQueryEmptyPolicy(ctx, run.WorkflowID)
+				if policyErr != nil {
 					err = policyErr
 					break
 				}
@@ -1410,89 +1423,34 @@ func safeError(err error) string {
 }
 
 func (s *Service) ListRuns(ctx context.Context, workflowID int64) ([]*domain.WorkflowRun, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id, workflow_id, workflow_version_id, dry_run,
-		status, input, output, error_code, error_message, input_tokens, output_tokens, triggered_by_principal_id, trigger_kind, source_ref,
-		schedule_key, retry_of_run_id, retry_step_id, retry_iterations, started_at, finished_at, created_at FROM ai_workflow_runs
-		WHERE ($1=0 OR workflow_id=$1) ORDER BY COALESCE(started_at,created_at) DESC, id DESC LIMIT 100`, workflowID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := make([]*domain.WorkflowRun, 0)
-	for rows.Next() {
-		var item domain.WorkflowRun
-		var output, retryIterations []byte
-		if err := rows.Scan(&item.ID, &item.WorkflowID, &item.WorkflowVersionID, &item.DryRun,
-			&item.Status, &item.Input, &output, &item.ErrorCode, &item.ErrorMessage,
-			&item.InputTokens, &item.OutputTokens, &item.TriggeredByPrincipalID, &item.TriggerKind, &item.SourceRef, &item.ScheduleKey, &item.RetryOfRunID, &item.RetryStepID, &retryIterations, &item.StartedAt,
-			&item.FinishedAt, &item.CreatedAt); err != nil {
-			return nil, err
-		}
-		if len(output) > 0 {
-			item.Output = json.RawMessage(output)
-		}
-		if len(retryIterations) > 0 {
-			_ = json.Unmarshal(retryIterations, &item.RetryIterations)
-		}
-		items = append(items, &item)
-	}
-	return items, rows.Err()
+	return s.runReads.ListRuns(ctx, workflowID)
 }
 
 func (s *Service) RunSteps(ctx context.Context, runID int64) ([]*domain.WorkflowStepRun, error) {
-	var exists bool
-	if err := s.db.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM ai_workflow_runs WHERE id=$1)`, runID).Scan(&exists); err != nil {
+	items, exists, err := s.runReads.RunSteps(ctx, runID)
+	if err != nil {
 		return nil, err
 	}
 	if !exists {
 		return nil, ErrNotFound
 	}
-	rows, err := s.db.QueryContext(ctx, `SELECT id,workflow_run_id,step_id,step_type,NULLIF(iteration,-1),
-		status,input,output,error_message,started_at,finished_at FROM ai_workflow_step_runs
-		WHERE workflow_run_id=$1 ORDER BY started_at,id`, runID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := make([]*domain.WorkflowStepRun, 0)
-	for rows.Next() {
-		var item domain.WorkflowStepRun
-		var input, output []byte
-		if err := rows.Scan(&item.ID, &item.WorkflowRunID, &item.StepID, &item.StepType,
-			&item.Iteration, &item.Status, &input, &output, &item.ErrorMessage,
-			&item.StartedAt, &item.FinishedAt); err != nil {
-			return nil, err
-		}
-		if len(input) > 0 {
-			item.Input = json.RawMessage(input)
-		}
-		if len(output) > 0 {
-			item.Output = json.RawMessage(output)
-		}
-		items = append(items, &item)
-	}
-	return items, rows.Err()
+	return items, nil
 }
 
 func (s *Service) Metrics(ctx context.Context) (map[string]any, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT w.id, w.name, COUNT(r.id),
-		COUNT(r.id) FILTER (WHERE r.status='failed'),
-		COALESCE(SUM(r.input_tokens+r.output_tokens),0)
-		FROM ai_workflows w LEFT JOIN ai_workflow_runs r ON r.workflow_id=w.id
-		WHERE w.deleted_at IS NULL GROUP BY w.id, w.name ORDER BY w.name`)
+	rows, err := s.metrics.ListWorkflowMetrics(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	items := make([]map[string]any, 0)
-	for rows.Next() {
-		var id, runs, failures, tokens int64
-		var name string
-		if err := rows.Scan(&id, &name, &runs, &failures, &tokens); err != nil {
-			return nil, err
-		}
-		items = append(items, map[string]any{"workflow_id": id, "name": name, "runs": runs,
-			"failures": failures, "tokens": tokens})
+	items := make([]map[string]any, 0, len(rows))
+	for _, row := range rows {
+		items = append(items, map[string]any{
+			"workflow_id": row.WorkflowID,
+			"name":        row.Name,
+			"runs":        row.Runs,
+			"failures":    row.Failures,
+			"tokens":      row.Tokens,
+		})
 	}
-	return map[string]any{"workflows": items}, rows.Err()
+	return map[string]any{"workflows": items}, nil
 }

@@ -121,6 +121,16 @@ The default `gouno-template` Flat Layered structure remains the reference for si
 Architecture refactoring and Codegen must preserve the root `AGENTS.md` security contract, especially the confidential BFF boundary and Connector Module Hold. Structural cleanup is not authorization to change OAuth/OIDC, session, connector, credential, deployment, or security behavior.
 
 
+## Workflow read-model boundary
+
+Workflow query persistence is classified by projection instead of being folded into a generic repository aggregate.
+
+- `RunReadModel` / `RunReadRepository` owns the read-only admin projections for Run history, Step detail and persisted Run resource snapshots. Admission, lifecycle and execution repositories keep their operation-specific reads and writes.
+- `MetricsReadModel` / `MetricsRepository` is a separate cross-Run aggregate projection; it is intentionally not a method on the Run repository.
+- Definition/version reads used during execution remain with the canonical `DefinitionRepository`, including version-step loading and resource-query empty-policy lookup. Service owns error/policy decisions, not SQL.
+- `ResourceCatalog` remains a separate resource-discovery adapter because it resolves Post/Page/Media/Operations resources across capability boundaries; it is not a Workflow Run read model.
+- The Workflow Service no longer owns raw SQL or a raw database handle. The composition root wires definition persistence, Run queries, metrics queries and the resource catalog explicitly. HTTP routes and response contracts are unchanged.
+
 ## Workflow dispatch / execution persistence boundary
 
 Workflow trigger dispatch and execution checkpoints are application consistency boundaries rather than Service-local SQL.

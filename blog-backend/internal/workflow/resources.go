@@ -291,21 +291,7 @@ func (s *Service) resolveManualResources(ctx context.Context, schemaRaw json.Raw
 }
 
 func (s *Service) ListResources(ctx context.Context, runID int64) ([]domain.WorkflowResource, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id,workflow_run_id,resource_type,resource_key,source,access_level,label,version_token,snapshot,created_at
-		FROM ai_workflow_run_resources WHERE workflow_run_id=$1 ORDER BY created_at,id`, runID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := make([]domain.WorkflowResource, 0)
-	for rows.Next() {
-		var item domain.WorkflowResource
-		if err := rows.Scan(&item.ID, &item.WorkflowRunID, &item.ResourceType, &item.ResourceKey, &item.Source, &item.AccessLevel, &item.Label, &item.VersionToken, &item.Snapshot, &item.CreatedAt); err != nil {
-			return nil, err
-		}
-		items = append(items, item)
-	}
-	return items, rows.Err()
+	return s.runReads.ListResources(ctx, runID)
 }
 
 func filtersFromRaw(raw json.RawMessage) (map[string]string, error) {
