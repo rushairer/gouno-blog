@@ -1,6 +1,6 @@
 # U04a：AI 工作台
 
-状态：implemented-ci-verified。前置：U03d（正式独立复核仍为 review-pending；本轮实现已提前进入主线）。
+状态：implemented-ci-verified。前置：U03d（已 verified）。
 
 ## 目标与范围
 
@@ -20,4 +20,4 @@
 - Operations / Workflow：native confirm/prompt 已替换为受控 Modal/Form；退休的 overview/approval/operations/editorial/Agent/Workflow shell CSS 已分批删除并加入防回流门禁。Workflow 对 generic `.btn` 的 CSS 覆盖已经归零。
 - CSS 边界：`agent-console.css` 中 generic `.btn` 仅剩 `agent-row-actions .btn` 一个显式白名单；该规则仍与 ConnectorWorkspace 共享，因此在 Connector Module Hold 解除前不越界修改。canonical `[data-slot]` 与 primitive ownership 由 `lint:ui` 强制属于 `@gouno/ui`。
 - 自动化证据：PR #181–#186 的最终 clean heads 持续通过 Frontend quality；#186 的 CI 与 Images 全绿。没有以降低 coverage、删除测试或放宽 contract 获得绿灯。
-- 未完成项：U04a 仍缺正式独立 Browser QA，所以状态不是 `verified`。Connector 展示层属于 U04b，并受仓库根 `AGENTS.md` Connector Module Hold 约束。
+- U03d 已完成独立 Blog Admin 浏览器复核并标记 `verified`；这不会自动提升 U04a 自身状态。U04a 仍缺正式独立 Browser QA，所以状态继续保持 `implemented-ci-verified`。Connector 展示层属于 U04b，并受仓库根 `AGENTS.md` Connector Module Hold 约束。
