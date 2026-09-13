@@ -62,9 +62,9 @@ function AISettingsContent() {
   const { notify } = useAppFeedback();
   const navigate = useNavigate();
   const labels = new Proxy({} as Record<string, string>, {
-  get: (_, prop: string | symbol) =>
-    typeof prop === "string" ? t(`agent.${prop}` as any) : undefined,
-});
+    get: (_, prop: string | symbol) =>
+      typeof prop === "string" ? t(`agent.${prop}` as any) : undefined,
+  });
   const [section, setSection] = useState<AdvancedSection>(
     initialSettingsSection,
   );
@@ -165,9 +165,9 @@ function AISettingsContent() {
     setCopySkillName("");
     setSection(next);
     const url = new URL(window.location.href);
-  if (next === "agents") url.searchParams.delete("section");
-  else url.searchParams.set("section", next);
-  window.history.replaceState(null, "", url);
+    if (next === "agents") url.searchParams.delete("section");
+    else url.searchParams.set("section", next);
+    window.history.replaceState(null, "", url);
   };
 
   const refresh = async () => {
