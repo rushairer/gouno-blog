@@ -85,7 +85,14 @@ func (s *ApprovalService) CancelInteraction(ctx context.Context, id int64, token
 	return s.workflowInteractions.CancelInteraction(ctx, id, token, principalID)
 }
 func (s *ApprovalService) ListMediaCandidateEvents(ctx context.Context, id int64) ([]*domain.WorkflowRunEvent, error) {
-	return s.workflowEvents.ListMediaCandidateEvents(ctx, id)
+	candidate, err := s.mediaCandidates.GetMediaCandidate(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if candidate.WorkflowRunID == nil {
+		return []*domain.WorkflowRunEvent{}, nil
+	}
+	return s.workflowEvents.ListWorkflowRunEvents(ctx, *candidate.WorkflowRunID)
 }
 func (s *ApprovalService) ListWorkflowRunEvents(ctx context.Context, id int64) ([]*domain.WorkflowRunEvent, error) {
 	return s.workflowEvents.ListWorkflowRunEvents(ctx, id)

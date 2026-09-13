@@ -96,19 +96,20 @@ func (s *mediaGenerationFailureStub) RecordMediaGenerationError(_ context.Contex
 }
 
 type workflowEventStub struct {
-	events    []*domain.WorkflowRunEvent
-	appendErr error
+	events        []*domain.WorkflowRunEvent
+	appendErr     error
+	listed        []*domain.WorkflowRunEvent
+	listErr       error
+	lastListRunID int64
 }
 
 func (s *workflowEventStub) AppendWorkflowRunEvent(_ context.Context, event *domain.WorkflowRunEvent) error {
 	s.events = append(s.events, event)
 	return s.appendErr
 }
-func (s *workflowEventStub) ListWorkflowRunEvents(context.Context, int64) ([]*domain.WorkflowRunEvent, error) {
-	return nil, nil
-}
-func (s *workflowEventStub) ListMediaCandidateEvents(context.Context, int64) ([]*domain.WorkflowRunEvent, error) {
-	return nil, nil
+func (s *workflowEventStub) ListWorkflowRunEvents(_ context.Context, runID int64) ([]*domain.WorkflowRunEvent, error) {
+	s.lastListRunID = runID
+	return s.listed, s.listErr
 }
 
 func TestRecordMediaGenerationFailureOwnsWorkflowOrchestration(t *testing.T) {
@@ -164,5 +165,47 @@ func TestGenerationFailureEvent(t *testing.T) {
 	}
 	if got := generationFailureEvent("image_generation_failed"); got != "image_generation_failed" {
 		t.Fatalf("failure event = %q", got)
+	}
+}
+
+type mediaCandidateLookupStub struct {
+	MediaCandidateStore
+	candidate *domain.MediaCandidate
+	err       error
+}
+
+func (s *mediaCandidateLookupStub) GetMediaCandidate(context.Context, int64) (*domain.MediaCandidate, error) {
+	return s.candidate, s.err
+}
+
+func TestListMediaCandidateEventsResolvesCandidateThroughAgentStore(t *testing.T) {
+	runID := int64(73)
+	want := []*domain.WorkflowRunEvent{{ID: 9}}
+	events := &workflowEventStub{listed: want}
+	svc := &ApprovalService{
+		mediaCandidates: &mediaCandidateLookupStub{candidate: &domain.MediaCandidate{WorkflowRunID: &runID}},
+		workflowEvents:  events,
+	}
+	got, err := svc.ListMediaCandidateEvents(context.Background(), 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if events.lastListRunID != runID || len(got) != 1 || got[0].ID != 9 {
+		t.Fatalf("run=%d events=%#v", events.lastListRunID, got)
+	}
+}
+
+func TestListMediaCandidateEventsWithoutWorkflowRunIsEmpty(t *testing.T) {
+	events := &workflowEventStub{}
+	svc := &ApprovalService{
+		mediaCandidates: &mediaCandidateLookupStub{candidate: &domain.MediaCandidate{}},
+		workflowEvents:  events,
+	}
+	got, err := svc.ListMediaCandidateEvents(context.Background(), 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 0 || events.lastListRunID != 0 {
+		t.Fatalf("run=%d events=%#v", events.lastListRunID, got)
 	}
 }
