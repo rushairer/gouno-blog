@@ -1,5 +1,5 @@
 import { Share2, Sparkles } from "lucide-react";
-import { Button, Field, Select } from "@gouno/ui/core";
+import { Button, Field, Input, Select } from "@gouno/ui/core";
 
 export interface DistributionDraftBinding {
   format?: "social" | "newsletter" | "faq" | "image_brief";
@@ -115,9 +115,8 @@ export function DistributionDraftConfig({
               : "e.g. Twitter, Substack, LinkedIn"
           }
         >
-          <input
+          <Input
             type="text"
-            className="input-field"
             value={platform}
             placeholder="Twitter"
             onChange={(e) =>
