@@ -108,6 +108,13 @@ describe("step-up callback window", () => {
 
 describe("account route access", () => {
   it("preserves the requested account route while redirecting an anonymous reader", async () => {
+    setMockSnapshot({
+      accessToken: null,
+      refreshToken: null,
+      profile: null,
+      loggedIn: false,
+      isAdmin: false,
+    });
     window.history.replaceState({}, "", "/account/settings");
     render(<App />);
 
