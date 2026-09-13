@@ -1,82 +1,52 @@
-import { BookOpen, FileText, FolderTree, Home, Search } from "lucide-react";
+import { ArrowLeft, FileText, Home, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useI18n } from "../i18n";
 import { usePageTitle } from "../hooks/usePageTitle";
-import { Button, ButtonLink, Card, Input } from "@gouno/ui/core";
-import { PageHeader } from "@gouno/ui/gouno";
+import { Button, ButtonLink, Card, Result } from "@gouno/ui/core";
 
 export default function NotFound() {
   const navigate = useNavigate();
   const { t } = useI18n();
   usePageTitle(t("notFound.pageTitle"));
 
-  const handleSearch = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const query = new FormData(event.currentTarget).get("q");
-    if (query && String(query).trim()) {
-      navigate(`/search?q=${encodeURIComponent(String(query).trim())}`);
-    }
-  };
-
   return (
-    <div className="flex min-h-[55vh] items-center justify-center">
-      <Card
-        as="section"
-        className="mx-auto w-full max-w-3xl items-center px-5 py-10 text-center sm:px-10"
-      >
-        <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-          <span>404</span>
-          <span aria-hidden="true">/</span>
-          <span>{t("notFound.badge")}</span>
-        </div>
-        <PageHeader
+    <>
+      <Card padding="none" variant="subtle" className="mx-auto max-w-[760px]">
+        <Result
+          status="info"
+          headingLevel={1}
           title={t("notFound.heading")}
           description={t("notFound.description")}
-          className="w-full items-center justify-center text-center md:items-center md:justify-center [&>div]:text-center"
+          extra={
+            <div className="flex flex-wrap justify-center gap-2">
+              <ButtonLink
+                variant="solid"
+                color="primary"
+                to="/"
+                icon={<Home />}
+              >
+                {t("nav.home")}
+              </ButtonLink>
+              <ButtonLink variant="outline" to="/articles" icon={<FileText />}>
+                {t("notFound.allArticles")}
+              </ButtonLink>
+              <ButtonLink variant="text" to="/search" icon={<Search />}>
+                {t("searchPosts")}
+              </ButtonLink>
+            </div>
+          }
         />
-
-        <form
-          className="flex w-full max-w-lg items-center gap-2"
-          onSubmit={handleSearch}
-        >
-          <Search className="size-5 shrink-0 text-muted-foreground" />
-          <Input
-            className="min-w-0 flex-1"
-            name="q"
-            type="search"
-            aria-label={t("searchPosts")}
-            placeholder={t("notFound.searchPlaceholder")}
-            autoComplete="off"
-          />
-          <Button type="submit" variant="solid" color="primary">
-            {t("notFound.searchButton")}
-          </Button>
-        </form>
-
-        <div className="flex w-full flex-col items-center gap-4 border-t pt-6">
-          <span className="text-xs text-muted-foreground">
-            {t("notFound.suggestedLinks")}
-          </span>
-          <div className="grid w-full grid-cols-2 gap-2 sm:grid-cols-4">
-            <ButtonLink variant="outline" to="/" icon={<Home />}>
-              {t("nav.home")}
-            </ButtonLink>
-            <ButtonLink variant="outline" to="/articles" icon={<BookOpen />}>
-              {t("notFound.allArticles")}
-            </ButtonLink>
-            <ButtonLink
-              variant="outline"
-              to="/categories"
-              icon={<FolderTree />}
-            >
-              {t("notFound.contentCategories")}
-            </ButtonLink>
-            <ButtonLink variant="outline" to="/archive" icon={<FileText />}>
-              {t("notFound.siteArchive")}
-            </ButtonLink>
-          </div>
-        </div>
       </Card>
-    </div>
+
+      <div className="mx-auto mt-6 flex max-w-[760px] justify-center">
+        <Button
+          variant="text"
+          icon={<ArrowLeft />}
+          onClick={() => navigate(-1)}
+        >
+          {t("back")}
+        </Button>
+      </div>
+    </>
   );
 }
