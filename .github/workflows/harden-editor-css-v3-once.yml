@@ -1,0 +1,120 @@
+name: Harden editor CSS ownership v3 once
+
+on:
+  push:
+    branches:
+      - ui/editor-css-ownership-hardening-20260913
+    paths:
+      - .github/workflows/harden-editor-css-v3-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  harden:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ui/editor-css-ownership-hardening-20260913
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: blog-frontend/package-lock.json
+      - name: Install dependencies
+        working-directory: blog-frontend
+        run: npm ci
+      - name: Replace legacy primitive selector coupling
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          function edit(path, replacements) {
+            let source = fs.readFileSync(path, 'utf8');
+            for (const [before, after, count = 1] of replacements) {
+              const seen = source.split(before).length - 1;
+              if (seen !== count) throw new Error(`${path}: expected ${count}, found ${seen}: ${before.slice(0, 120)}`);
+              source = source.split(before).join(after);
+            }
+            fs.writeFileSync(path, source);
+          }
+
+          function addInspectorActionClass(path) {
+            let source = fs.readFileSync(path, 'utf8');
+            const pattern = /^(\s*)onClick=\{\(\) => void autoFillAllMetadata\(\)\}/m;
+            const matches = source.match(pattern);
+            if (!matches) throw new Error(`${path}: autoFillAllMetadata action not found`);
+            source = source.replace(pattern, `$1className="editor-inspector-ai-action"\n$1onClick={() => void autoFillAllMetadata()}`);
+            fs.writeFileSync(path, source);
+          }
+
+          edit('blog-frontend/src/styles/editor.css', [
+            ['.editor-page > .feedback {', '.editor-page-feedback {'],
+            ['.version-item.choice-button {', '.version-item {'],
+            ['.version-item .btn__label {', '.version-item__content {'],
+            ['  .editor-ai-candidates > .btn,\n  .editor-ai-candidates > .choice-button {', '  .editor-ai-candidate {'],
+            ['  .editor-ai-candidates > .btn .btn__label,\n  .editor-ai-candidates > .choice-button .btn__label {', '  .editor-ai-candidate__content {'],
+            ['.editor-inspector-ai-banner .btn {', '.editor-inspector-ai-action {'],
+          ]);
+
+          edit('blog-frontend/src/components/editor/AiSuggestionControl.tsx', [[
+            `            >\n              <span className={mono ? "mono" : undefined}>{item}</span>\n              <b>应用</b>\n            </Button>`,
+            `            >\n              <span className="editor-ai-candidate__content">\n                <span className={mono ? "mono" : undefined}>{item}</span>\n                <b>应用</b>\n              </span>\n            </Button>`,
+          ]]);
+
+          for (const task of ['title', 'summary']) {
+            edit('blog-frontend/src/pages/admin/PageEditor.tsx', [[
+              `                    <Button\n                      key={item}\n                      variant="text"\n                      onClick={() => applySuggestion("${task}", item)}\n                    >\n                      <span>{item}</span>\n                      <b>应用</b>\n                    </Button>`,
+              `                    <Button\n                      key={item}\n                      variant="text"\n                      className="editor-ai-candidate"\n                      onClick={() => applySuggestion("${task}", item)}\n                    >\n                      <span className="editor-ai-candidate__content">\n                        <span>{item}</span>\n                        <b>应用</b>\n                      </span>\n                    </Button>`,
+            ]]);
+          }
+          edit('blog-frontend/src/pages/admin/PageEditor.tsx', [[
+            '      {error ? <Alert type="error" showIcon title={error} /> : null}',
+            '      {error ? (\n        <Alert className="editor-page-feedback" type="error" showIcon title={error} />\n      ) : null}',
+          ]]);
+          addInspectorActionClass('blog-frontend/src/pages/admin/PageEditor.tsx');
+
+          for (const task of ['title', 'summary']) {
+            edit('blog-frontend/src/pages/admin/PostEditor.tsx', [[
+              `                      <ChoiceButton\n                        key={item}\n                        onClick={() => applySuggestion("${task}", item)}\n                      >\n                        <span>{item}</span>\n                        <b>应用</b>\n                      </ChoiceButton>`,
+              `                      <ChoiceButton\n                        key={item}\n                        className="editor-ai-candidate"\n                        onClick={() => applySuggestion("${task}", item)}\n                      >\n                        <span className="editor-ai-candidate__content">\n                          <span>{item}</span>\n                          <b>应用</b>\n                        </span>\n                      </ChoiceButton>`,
+            ]]);
+          }
+          edit('blog-frontend/src/pages/admin/PostEditor.tsx', [
+            ['      {error ? <Alert type="error" showIcon title={error} /> : null}', '      {error ? (\n        <Alert className="editor-page-feedback" type="error" showIcon title={error} />\n      ) : null}'],
+            [`                  >\n                    <span className="version-item__title">\n                      {version.title || "无标题草稿"}\n                    </span>\n                    <span className="version-item__meta">\n                      <time className="version-item__time">\n                        {new Date(version.created_at).toLocaleString("zh-CN", {\n                          month: "2-digit",\n                          day: "2-digit",\n                          hour: "2-digit",\n                          minute: "2-digit",\n                        })}\n                      </time>\n                      <span className="version-item__action">恢复</span>\n                    </span>\n                  </ChoiceButton>`,
+             `                  >\n                    <span className="version-item__content">\n                      <span className="version-item__title">\n                        {version.title || "无标题草稿"}\n                      </span>\n                      <span className="version-item__meta">\n                        <time className="version-item__time">\n                          {new Date(version.created_at).toLocaleString("zh-CN", {\n                            month: "2-digit",\n                            day: "2-digit",\n                            hour: "2-digit",\n                            minute: "2-digit",\n                          })}\n                        </time>\n                        <span className="version-item__action">恢复</span>\n                      </span>\n                    </span>\n                  </ChoiceButton>`],
+          ]);
+          addInspectorActionClass('blog-frontend/src/pages/admin/PostEditor.tsx');
+
+          edit('blog-frontend/src/components/editor/__tests__/ContentEditorFrame.test.tsx', [[
+            `    await user.click(\n      screen.getByRole("button", { name: /stable-editor.*应用/ }),\n    );\n\n    expect(onRequest).toHaveBeenCalledOnce();`,
+            `    const candidate = screen.getByRole("button", {\n      name: /stable-editor.*应用/,\n    });\n    expect(candidate).toHaveClass("editor-ai-candidate");\n    expect(\n      candidate.querySelector(".editor-ai-candidate__content"),\n    ).toBeInTheDocument();\n    await user.click(candidate);\n\n    expect(onRequest).toHaveBeenCalledOnce();`,
+          ]]);
+
+          edit('blog-frontend/scripts/check-ui-contracts.mjs', [
+            ['const editorStyleImport = /(?:^|\\/)styles\\/editor\\.css$/;', 'const editorStyleImport = /(?:^|\\/)styles\\/editor\\.css$/;\nconst retiredEditorPrimitiveSelector = /(?:^|[\\s>+~,])\\.(?:btn|btn__label|choice-button|feedback)(?=$|[\\s:{,[.#>+~])/;'],
+            ['      if (selector.includes("[data-slot=")) {\n        failures.push(\n          `${name}:${index + 1} canonical data-slot selectors must be owned by @gouno/ui, not product CSS`,\n        );\n      }', '      if (selector.includes("[data-slot=")) {\n        failures.push(\n          `${name}:${index + 1} canonical data-slot selectors must be owned by @gouno/ui, not product CSS`,\n        );\n      }\n      if (\n        name === "styles/editor.css" &&\n        retiredEditorPrimitiveSelector.test(selector)\n      ) {\n        failures.push(\n          `${name}:${index + 1} editor feature CSS must target product-owned classes instead of retired primitive internals`,\n        );\n      }'],
+          ]);
+          NODE
+      - name: Format frontend sources
+        working-directory: blog-frontend
+        run: npm run format
+      - name: Verify frontend quality
+        working-directory: blog-frontend
+        run: npm run quality
+      - name: Commit editor ownership cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add blog-frontend/src/styles/editor.css blog-frontend/src/components/editor/AiSuggestionControl.tsx blog-frontend/src/components/editor/__tests__/ContentEditorFrame.test.tsx blog-frontend/src/pages/admin/PageEditor.tsx blog-frontend/src/pages/admin/PostEditor.tsx blog-frontend/scripts/check-ui-contracts.mjs
+          git commit -m "refactor(ui): decouple editor css from primitive internals"
+          git push origin HEAD:ui/editor-css-ownership-hardening-20260913
