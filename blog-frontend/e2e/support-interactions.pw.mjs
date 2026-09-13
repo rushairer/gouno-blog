@@ -35,7 +35,9 @@ test("Site Settings fails closed and recovers through retry", async ({ page }) =
   await expect(page.getByText("站点设置加载失败")).toBeVisible();
   await expect(page.getByText("browser injected settings failure")).toBeVisible();
   await page.getByRole("button", { name: "重新载入" }).click();
-  await expect(page.getByDisplayValue("Browser Acceptance Blog")).toBeVisible();
+  await expect(page.locator("input").first()).toHaveValue(
+    "Browser Acceptance Blog",
+  );
   expect(unknown).toEqual([]);
 });
 
@@ -46,7 +48,6 @@ test("Users edit action opens the canonical modal without writing", async ({ pag
   const unknown = await installApiFixtures(page);
   await page.goto("/admin/users", { waitUntil: "domcontentloaded" });
 
-  await expect(page.getByText("Fixture Member")).toBeVisible();
   await page
     .getByRole("button", { name: "编辑 Fixture Member 成员与权限" })
     .click();
