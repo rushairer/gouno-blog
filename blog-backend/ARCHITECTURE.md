@@ -120,6 +120,17 @@ The default `gouno-template` Flat Layered structure remains the reference for si
 
 Architecture refactoring and Codegen must preserve the root `AGENTS.md` security contract, especially the confidential BFF boundary and Connector Module Hold. Structural cleanup is not authorization to change OAuth/OIDC, session, connector, credential, deployment, or security behavior.
 
+## Workflow Run admission / retry / recovery boundary
+
+Workflow Run admission is an application consistency boundary, not a collection of Service-local SQL statements.
+
+- `RunAdmissionCoordinator` owns atomic creation of a queued Run together with its initial manual resource snapshots through `dbtx.Transactor`.
+- Scheduled-run idempotency is resolved under the same transaction: the repository uses the `(workflow_id, schedule_key)` uniqueness contract, locks the existing scheduled Run, and only the coordinator decides whether a failed Run may be requeued.
+- Partial `for_each` retry is one snapshot transaction: source Run state and failed iterations are revalidated while locked, then the retry Run, manual/query resource snapshots, and successful resource-query checkpoints are copied atomically.
+- Startup recovery and user resume are exposed through the same narrow Run-admission persistence port. Scheduler dispatch and execution policy remain in Workflow Service.
+- Workflow repositories stay persistence-only. They never call another repository and never start the application transaction.
+- Event scheduling, due-Workflow claiming, execution checkpoints and Workflow read models remain separate convergence work; this boundary does not claim those responsibilities.
+
 ## Workflow / Agent Media Candidate boundary
 
 `ai_media_candidates` is Agent-owned persistence. Workflow code must not query that table directly.

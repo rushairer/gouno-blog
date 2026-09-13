@@ -30,3 +30,13 @@ func TestWorkflowProductionCodeDoesNotQueryAgentOwnedMediaCandidates(t *testing.
 		t.Fatal(err)
 	}
 }
+
+func TestWorkflowServiceDoesNotOwnRawTransactions(t *testing.T) {
+	data, err := os.ReadFile("service.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(data, []byte(".BeginTx(")) {
+		t.Fatal("Workflow Service must delegate transaction ownership to application coordinators")
+	}
+}
