@@ -1,12 +1,12 @@
 @layer components {
   .agent-console {
-    --agent-accent: var(--brand);
-    --agent-accent-soft: var(--brand-soft);
-    --agent-border: var(--admin-line);
+    --agent-accent: var(--primary);
+    --agent-accent-soft: var(--accent);
+    --agent-border: var(--border);
   }
 
   .agent-json-preview--explanation {
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     font-family: inherit;
     line-height: 1.6;
     white-space: normal;
@@ -17,10 +17,10 @@
     border: 1px solid var(--agent-border);
     border-radius: 8px;
     padding: 16px;
-    background: var(--ui-panel);
+    background: var(--card);
   }
   .proposal-preview__header small {
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     font-size: 12px;
     font-weight: 700;
   }
@@ -31,7 +31,7 @@
   }
   .proposal-preview__summary {
     margin: 0;
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     line-height: 1.65;
   }
   .proposal-preview__metadata {
@@ -44,7 +44,7 @@
     min-width: 0;
   }
   .proposal-preview__metadata dt {
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     font-size: 12px;
   }
   .proposal-preview__metadata dd {
@@ -60,7 +60,7 @@
     border: 1px solid var(--agent-border);
     border-radius: 999px;
     padding: 3px 8px;
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     font-size: 12px;
   }
   .proposal-preview__content {
@@ -76,7 +76,7 @@
   }
   .proposal-preview__unchanged {
     margin: 0;
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
   }
 
   .workflow-runtime-input {
@@ -85,22 +85,23 @@
     padding: 14px 16px;
     border: 1px solid var(--agent-border);
     border-radius: 12px;
-    background: var(--ui-panel);
+    background: var(--card);
   }
 
   .workflow-runtime-input small,
   .workflow-runtime-input p {
     margin: 0;
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
   }
 
   .workflow-records__error,
   .workflow-run-error {
     padding: 12px 14px;
-    border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--agent-border));
+    border: 1px solid
+      color-mix(in srgb, var(--destructive) 45%, var(--agent-border));
     border-radius: 8px;
-    background: color-mix(in srgb, var(--danger) 8%, transparent);
-    color: var(--danger);
+    background: color-mix(in srgb, var(--destructive) 8%, transparent);
+    color: var(--destructive);
   }
 
   .workflow-run-error h3,
@@ -124,16 +125,16 @@
     gap: 3px;
     min-width: 0;
     padding: 9px 10px;
-    border: 1px solid var(--line);
+    border: 1px solid var(--border);
     border-radius: 6px;
-    background: var(--bg-muted);
+    background: var(--muted);
   }
   .workflow-run-resources__list strong,
   .workflow-run-resources__list small {
     overflow-wrap: anywhere;
   }
   .workflow-run-resources__list small {
-    color: var(--text-muted);
+    color: var(--muted-foreground);
   }
 
   .workflow-log-block,
@@ -147,7 +148,7 @@
   .workflow-details-card > summary {
     padding: 12px 14px;
     cursor: pointer;
-    background: var(--ui-panel);
+    background: var(--card);
   }
 
   .workflow-log-block > .agent-json-preview {
@@ -164,7 +165,7 @@
     padding: 18px;
     border: 1px solid var(--agent-border);
     border-radius: 8px;
-    background: var(--bg-muted);
+    background: var(--muted);
   }
 
   .workflow-run-output__summary h3 {
@@ -188,7 +189,7 @@
 
   .tool-call-result-summary {
     padding: 14px;
-    background: var(--bg-muted);
+    background: var(--muted);
   }
 
   .tool-call-result-summary h4 {
@@ -206,7 +207,7 @@
   .tool-call-technical > summary {
     padding: 10px 12px;
     cursor: pointer;
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
   }
 
   .tool-call-technical[open] > summary {
@@ -245,7 +246,7 @@
   }
 
   .workflow-event-timeline time {
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
@@ -254,7 +255,7 @@
     overflow-wrap: anywhere;
   }
   .workflow-event-timeline summary small {
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
   }
 
   @media (max-width: 640px) {
@@ -293,7 +294,7 @@
 
   .agent-table th {
     height: 48px;
-    color: var(--text-3);
+    color: var(--muted-foreground);
     font-size: 11px;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -333,7 +334,7 @@
     max-width: 220px;
     overflow: hidden;
     margin-top: 5px;
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     font-size: 12px;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -352,7 +353,7 @@
   .risk-label {
     border: 1px solid var(--agent-border);
     border-radius: 5px;
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     font-size: 10px;
     padding: 4px 6px;
     text-transform: capitalize;
@@ -374,7 +375,7 @@
     border: 0;
     border-radius: 6px;
     background: transparent;
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     cursor: pointer;
   }
 
@@ -403,8 +404,8 @@
     padding: 18px;
     border: 1px solid
       color-mix(in srgb, var(--agent-accent) 36%, var(--agent-border));
-    border-radius: var(--radius-panel);
-    background: color-mix(in srgb, var(--agent-accent) 8%, var(--bg-panel));
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--agent-accent) 8%, var(--card));
   }
   .workflow-planner h3 {
     margin: 0 0 4px;
@@ -413,7 +414,7 @@
   .workflow-planner p,
   .workflow-advanced > p {
     margin: 0;
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     font-size: 13px;
     line-height: 1.65;
   }
@@ -429,19 +430,19 @@
     margin-top: 4px;
   }
   .workflow-planner__message--error {
-    border: 1px solid var(--ui-danger);
-    background: var(--ui-danger-soft);
-    color: var(--ui-danger);
+    border: 1px solid var(--destructive);
+    background: var(--danger-subtle);
+    color: var(--destructive);
   }
   .workflow-planner__message--success {
-    border: 1px solid var(--ui-success);
-    background: var(--ui-success-soft);
-    color: var(--ui-success);
+    border: 1px solid var(--success);
+    background: var(--success-subtle);
+    color: var(--success);
   }
   .workflow-planner__message--info {
     border: 1px solid
       color-mix(in srgb, var(--agent-accent) 45%, var(--agent-border));
-    background: color-mix(in srgb, var(--agent-accent) 15%, var(--bg-muted));
+    background: color-mix(in srgb, var(--agent-accent) 15%, var(--muted));
     color: var(--agent-accent);
   }
   .workflow-planner__agent-drafts {
@@ -455,7 +456,7 @@
     padding: 14px;
     border: 1px solid var(--agent-border);
     border-radius: var(--radius-control, 8px);
-    background: var(--bg-panel);
+    background: var(--card);
   }
   .workflow-planner__agent-draft small {
     color: var(--agent-accent);
@@ -473,7 +474,7 @@
     gap: 8px;
   }
   .workflow-dependency-plan small {
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     font-size: 12px;
     line-height: 1.5;
   }
@@ -481,7 +482,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 8px 16px;
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     font-size: 12px;
     line-height: 1.5;
   }
@@ -491,7 +492,7 @@
     align-items: baseline;
   }
   .workflow-intent-summary b {
-    color: var(--color-text);
+    color: var(--foreground);
     font-weight: 700;
   }
   .workflow-planner__notice {
@@ -507,7 +508,7 @@
     padding: 16px;
     border: 1px solid var(--agent-border);
     border-radius: var(--radius-control);
-    background: var(--bg-muted);
+    background: var(--muted);
   }
   .workflow-resource-query-builder strong {
     display: inline-flex;
@@ -521,14 +522,14 @@
   }
   .workflow-resource-query-builder p {
     margin: 5px 0 0;
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     font-size: 13px;
     line-height: 1.5;
   }
   .workflow-resource-query-builder small {
     display: block;
     margin-top: 6px;
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     font-size: 12px;
   }
   .workflow-resource-query-heading {
@@ -553,12 +554,12 @@
   }
   .workflow-advanced summary {
     cursor: pointer;
-    color: var(--color-text-main);
+    color: var(--foreground);
     font-weight: 800;
   }
   .workflow-advanced summary small {
     margin-left: 8px;
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     font-weight: 400;
   }
 
@@ -595,7 +596,7 @@
   }
 
   .agent-capabilities legend {
-    color: var(--color-text-main);
+    color: var(--foreground);
     font-weight: 750;
     padding: 0 7px;
   }
@@ -638,7 +639,7 @@
   }
 
   .agent-capability-group label:hover {
-    background: var(--bg-muted);
+    background: var(--muted);
   }
 
   .agent-capability-group span {
@@ -647,12 +648,12 @@
   }
 
   .agent-capability-group b {
-    font-family: "SFMono-Regular", Consolas, monospace;
+    font-family: var(--font-mono);
     font-size: 12px;
   }
 
   .agent-capability-group small {
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     font-size: 12px;
   }
 
@@ -663,20 +664,24 @@
 
   .risk-label--read {
     border-color: color-mix(in srgb, var(--success) 42%, var(--agent-border));
-    background: var(--status-success-bg);
-    color: var(--status-success-fg);
+    background: var(--success-subtle);
+    color: var(--success);
   }
 
   .risk-label--propose {
     border-color: color-mix(in srgb, var(--warning) 42%, var(--agent-border));
-    background: var(--status-warning-bg);
-    color: var(--status-warning-fg);
+    background: var(--warning-subtle);
+    color: var(--warning);
   }
 
   .risk-label--write {
-    border-color: color-mix(in srgb, var(--danger) 42%, var(--agent-border));
-    background: var(--status-danger-bg);
-    color: var(--status-danger-fg);
+    border-color: color-mix(
+      in srgb,
+      var(--destructive) 42%,
+      var(--agent-border)
+    );
+    background: var(--danger-subtle);
+    color: var(--destructive);
   }
 
   .agent-detail-panel {
@@ -686,7 +691,7 @@
   }
 
   .agent-output {
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     line-height: 1.6;
     font-size: 13.5px;
   }
@@ -697,7 +702,7 @@
   }
 
   .agent-output .article-content {
-    color: var(--color-text);
+    color: var(--foreground);
     font-size: 13.5px;
     line-height: 1.65;
   }
@@ -715,7 +720,7 @@
     font-size: 14px;
     font-weight: 600;
     margin: 12px 0 6px;
-    color: var(--color-text);
+    color: var(--foreground);
   }
 
   .agent-output .article-content h4,
@@ -771,16 +776,16 @@
     display: grid;
     gap: 5px;
     padding: 14px 16px;
-    background: var(--ui-panel);
+    background: var(--card);
   }
 
   .agent-run-metrics strong {
     font-size: 1.02rem;
-    color: var(--ui-text-primary);
+    color: var(--foreground);
   }
 
   .agent-run-metrics small {
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     font-size: 0.8rem;
   }
 
@@ -792,7 +797,7 @@
     padding: 12px 16px;
     border: 1px solid var(--agent-border);
     border-radius: var(--radius-control);
-    background: var(--ui-panel);
+    background: var(--card);
   }
 
   .workflow-step-summary__item,
@@ -803,7 +808,7 @@
     padding: 4px 10px;
     border: 1px solid var(--agent-border);
     border-radius: 6px;
-    background: var(--ui-control-bg);
+    background: var(--input);
     font-size: 0.84rem;
     line-height: 1.4;
   }
@@ -814,9 +819,9 @@
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: var(--ui-control-bg);
+    background: var(--input);
     border: 1px solid var(--agent-border);
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     font-size: 11px;
     font-weight: 600;
     line-height: 1;
@@ -826,7 +831,7 @@
   .workflow-step-summary strong {
     font-weight: 600;
     font-size: 0.86rem;
-    color: var(--ui-text-primary);
+    color: var(--foreground);
   }
 
   .workflow-step-summary__type,
@@ -834,16 +839,16 @@
     display: inline-block;
     padding: 2px 7px;
     border-radius: 4px;
-    background: var(--ui-control-hover);
+    background: var(--accent);
     border: 1px solid var(--agent-border);
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     font-size: 0.75rem;
     font-family: var(--font-mono, monospace);
     font-weight: normal;
   }
 
   .workflow-step-summary__arrow {
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     font-size: 0.88rem;
     margin-left: 2px;
     opacity: 0.6;
@@ -870,7 +875,7 @@
   .record-evidence__heading small {
     display: block;
     max-width: 620px;
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     line-height: 1.55;
   }
 
@@ -905,8 +910,8 @@
     font-family: var(--font-mono, monospace);
     font-size: 11px;
     font-weight: 600;
-    color: var(--color-text-muted);
-    background: var(--agent-chip-bg, var(--ui-code-control));
+    color: var(--muted-foreground);
+    background: var(--muted);
     padding: 2px 6px;
     border-radius: 4px;
   }
@@ -921,7 +926,7 @@
   .tool-call-time {
     font-size: 12px;
     font-weight: 400;
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     font-family: var(--font-mono, monospace);
   }
 
@@ -946,7 +951,7 @@
 
   .content-audit__heading small,
   .content-audit__checks p {
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     font-size: 12px;
   }
 
@@ -962,19 +967,19 @@
 
   .content-audit__metrics div {
     min-width: 0;
-    background: var(--bg-panel);
+    background: var(--card);
     padding: 10px;
   }
 
   .content-audit__metrics dt {
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     font-size: 10px;
     line-height: 1.3;
   }
 
   .content-audit__metrics dd {
     margin: 5px 0 0;
-    color: var(--color-text-main);
+    color: var(--foreground);
     font-size: 16px;
     font-weight: 750;
   }
@@ -991,15 +996,15 @@
     display: flex;
     gap: 10px;
     border-left: 3px solid var(--agent-border);
-    background: var(--bg-muted);
+    background: var(--muted);
     padding: 9px 10px;
   }
 
   .content-audit__checks li > span {
     height: max-content;
     border-radius: 4px;
-    background: var(--ui-info-soft);
-    color: var(--ui-info);
+    background: var(--info-subtle);
+    color: var(--info);
     font-size: 10px;
     font-weight: 750;
     padding: 3px 5px;
@@ -1018,18 +1023,18 @@
   }
 
   .content-audit__check--warning {
-    border-left-color: var(--ui-warning);
+    border-left-color: var(--warning);
   }
   .content-audit__check--warning > span {
-    background: var(--ui-warning-soft);
-    color: var(--ui-warning);
+    background: var(--warning-subtle);
+    color: var(--warning);
   }
   .content-audit__check--error {
-    border-left-color: var(--ui-danger);
+    border-left-color: var(--destructive);
   }
   .content-audit__check--error > span {
-    background: var(--ui-danger-soft);
-    color: var(--ui-danger);
+    background: var(--danger-subtle);
+    color: var(--destructive);
   }
 
   .internal-link-suggestions {
@@ -1041,7 +1046,7 @@
 
   .internal-link-suggestions > p {
     margin: 0;
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     font-size: 13px;
   }
 
@@ -1073,7 +1078,7 @@
   .internal-link-suggestions__meta small {
     display: block;
     margin: 4px 0 0;
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     font-size: 12px;
     line-height: 1.45;
   }
@@ -1084,7 +1089,7 @@
   }
 
   .internal-link-suggestions__meta span {
-    color: var(--success-color);
+    color: var(--success);
     font-size: 11px;
     font-weight: 750;
   }
@@ -1098,7 +1103,7 @@
 
   .related-content-suggestions > p {
     margin: 0;
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     font-size: 13px;
   }
 
@@ -1130,13 +1135,13 @@
   .related-content-suggestions small {
     display: block;
     margin: 4px 0 0;
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     font-size: 12px;
     line-height: 1.45;
   }
 
   .related-content-suggestions li > span {
-    color: var(--success-color);
+    color: var(--success);
     font-size: 11px;
     font-weight: 750;
     white-space: nowrap;
@@ -1151,7 +1156,7 @@
 
   .stale-post-suggestions > p {
     margin: 0;
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     font-size: 13px;
   }
 
@@ -1183,7 +1188,7 @@
   .stale-post-suggestions li > small {
     display: block;
     margin: 4px 0 0;
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     font-size: 12px;
     line-height: 1.45;
   }
@@ -1197,7 +1202,7 @@
 
   .orphan-post-suggestions > p {
     margin: 0;
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     font-size: 12px;
     line-height: 1.5;
   }
@@ -1230,7 +1235,7 @@
   .orphan-post-suggestions li > small {
     display: block;
     margin: 4px 0 0;
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     font-size: 12px;
     line-height: 1.45;
   }
@@ -1240,9 +1245,9 @@
     overflow: auto;
     border: 1px solid var(--agent-border);
     border-radius: 7px;
-    background: var(--control-bg-hover);
-    color: var(--ink);
-    font-family: "SFMono-Regular", Consolas, monospace;
+    background: var(--accent);
+    color: var(--foreground);
+    font-family: var(--font-mono);
     font-size: 12px;
     line-height: 1.6;
     margin: 8px 0 0;
@@ -1258,15 +1263,15 @@
 
   .status-pill--queued,
   .status-pill--running {
-    background: var(--status-info-bg);
-    color: var(--status-info-fg);
+    background: var(--info-subtle);
+    color: var(--info);
   }
 
   .agent-console .status-pill--awaiting_approval,
   .agent-console .status-pill--waiting_for_user,
   .agent-console .status-pill--pending {
-    background: var(--status-warning-bg);
-    color: var(--status-warning-fg);
+    background: var(--warning-subtle);
+    color: var(--warning);
   }
 
   .status-pill--succeeded,
@@ -1274,20 +1279,20 @@
   .status-pill--converted,
   .status-pill--resolved,
   .status-pill--selected {
-    background: var(--status-success-bg);
-    color: var(--status-success-fg);
+    background: var(--success-subtle);
+    color: var(--success);
   }
 
   .status-pill--failed,
   .status-pill--rejected,
   .status-pill--cancelled {
-    background: var(--status-danger-bg);
-    color: var(--status-danger-fg);
+    background: var(--danger-subtle);
+    color: var(--destructive);
   }
 
   .agent-console .status-pill--ignored {
-    background: var(--status-warning-bg);
-    color: var(--status-warning-fg);
+    background: var(--warning-subtle);
+    color: var(--warning);
   }
 
   @media (max-width: 1050px) {
@@ -1356,10 +1361,10 @@
     align-items: center;
     gap: 12px;
     padding: 13px 15px;
-    border: 1px solid var(--ui-brand);
+    border: 1px solid var(--primary);
     border-radius: var(--radius-control);
-    background: var(--ui-brand-soft);
-    color: var(--ui-text-primary);
+    background: var(--accent);
+    color: var(--foreground);
   }
 
   .workflow-run-progress > span:last-child {
@@ -1368,7 +1373,7 @@
   }
 
   .workflow-run-progress small {
-    color: var(--ui-text-secondary);
+    color: var(--muted-foreground);
   }
 
   .workflow-run-feedback {
@@ -1400,12 +1405,12 @@
     align-items: center;
     gap: 6px;
     font-size: 0.8rem;
-    color: var(--text-muted);
+    color: var(--muted-foreground);
   }
   .workflow-resource-filter-label {
     white-space: nowrap;
     font-size: 0.8rem;
-    color: var(--text-muted);
+    color: var(--muted-foreground);
   }
   .workflow-resource-filter-item .ui-control,
   .workflow-resource-filter-item select,
@@ -1429,10 +1434,10 @@
     gap: 12px;
     width: 100%;
     padding: 10px 14px;
-    border: 1px solid var(--ui-border, var(--agent-border));
+    border: 1px solid var(--border, var(--agent-border));
     border-radius: var(--radius-control, 8px);
-    background: var(--ui-control, var(--color-surface));
-    color: var(--ui-text, var(--color-text-main));
+    background: var(--input, var(--card));
+    color: var(--foreground, var(--foreground));
     cursor: pointer;
     text-align: left;
     font: inherit;
@@ -1447,16 +1452,16 @@
   }
 
   .workflow-resource-card:hover {
-    border-color: var(--ui-brand, var(--brand));
-    background: var(--ui-control-hover, var(--brand-soft));
+    border-color: var(--primary, var(--primary));
+    background: var(--accent, var(--accent));
   }
 
   .workflow-resource-card.is-selected {
-    border-color: var(--ui-brand, var(--brand));
+    border-color: var(--primary, var(--primary));
     background: color-mix(
       in srgb,
-      var(--ui-brand, var(--brand)) 10%,
-      var(--ui-control, var(--color-surface))
+      var(--primary, var(--primary)) 10%,
+      var(--input, var(--card))
     );
   }
 
@@ -1486,7 +1491,7 @@
   .workflow-resource-card__title {
     font-size: 13.5px;
     font-weight: 600;
-    color: var(--ui-text, var(--color-text-main));
+    color: var(--foreground, var(--foreground));
     line-height: 1.4;
     flex: 1;
     min-width: 0;
@@ -1503,7 +1508,7 @@
     margin: 0;
     font-size: 12px;
     line-height: 1.45;
-    color: var(--ui-text-muted, var(--color-text-muted));
+    color: var(--muted-foreground, var(--muted-foreground));
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -1514,15 +1519,15 @@
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    border: 1.5px solid var(--ui-border-emphasis, var(--text-3));
+    border: 1.5px solid var(--border, var(--muted-foreground));
     display: inline-block;
     position: relative;
     transition: all 0.15s ease;
   }
 
   .workflow-resource-radio.is-checked {
-    border-color: var(--ui-brand, var(--brand));
-    background: var(--ui-brand, var(--brand));
+    border-color: var(--primary, var(--primary));
+    background: var(--primary, var(--primary));
   }
 
   .workflow-resource-radio.is-checked::after {
@@ -1533,7 +1538,7 @@
     width: 5px;
     height: 5px;
     border-radius: 50%;
-    background: var(--ui-on-brand);
+    background: var(--primary-foreground);
   }
   .workflow-scope-summary {
     display: flex;
@@ -1543,18 +1548,18 @@
     padding: 10px 14px;
     border: 1px solid var(--agent-border);
     border-radius: var(--radius-control);
-    background: var(--ui-panel);
+    background: var(--card);
     font-size: 0.84rem;
   }
   .workflow-scope-summary > strong {
-    color: var(--ui-text-primary);
+    color: var(--foreground);
     font-weight: 600;
   }
   .workflow-scope-summary > span {
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
   }
   .workflow-scope-summary small {
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     overflow-wrap: anywhere;
   }
   .modal.workflow-preview-modal {
@@ -1570,9 +1575,9 @@
     width: min(100%, 860px);
     margin: 0 auto;
     padding: clamp(24px, 5vw, 64px);
-    border: 1px solid var(--admin-line);
-    border-radius: var(--radius-panel);
-    background: var(--ui-panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--card);
   }
 
   @media (max-width: 720px) {
@@ -1625,7 +1630,7 @@
     display: grid;
     gap: 0.35rem;
     font-size: 0.82rem;
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
   }
   .connector-form-grid input,
   .connector-form-grid textarea,
@@ -1641,7 +1646,7 @@
     align-items: end;
     margin: 1rem 0;
     padding: 1rem;
-    background: var(--ui-control-hover);
+    background: var(--accent);
   }
   @media (max-width: 900px) {
     .connector-form-grid {
@@ -1665,7 +1670,7 @@
     padding: 14px;
     border: 1px solid var(--agent-border);
     border-radius: var(--radius-control);
-    background: var(--ui-panel);
+    background: var(--card);
   }
   .workflow-schema-field,
   .workflow-step-card {
@@ -1674,7 +1679,7 @@
     padding: 12px;
     border: 1px solid var(--agent-border);
     border-radius: var(--radius-control);
-    background: var(--ui-control);
+    background: var(--input);
   }
   .workflow-step-card:not(
     :has(.form-grid, .workflow-step-field, .workflow-nested-steps)
@@ -1711,10 +1716,10 @@
   .workflow-schema-builder textarea,
   .workflow-step-cards input,
   .workflow-discovery-picker input:not(.ui-checkbox) {
-    border: 1px solid var(--admin-line);
+    border: 1px solid var(--border);
     border-radius: var(--radius-control);
-    background: var(--ui-control);
-    color: var(--color-text-main);
+    background: var(--input);
+    color: var(--foreground);
     padding: 9px 11px;
   }
   .workflow-tool-picker .ui-checkbox {
@@ -1741,7 +1746,7 @@
   .workflow-detail-nav {
     display: flex;
     align-items: center;
-    margin-bottom: var(--space-3, 12px);
+    margin-bottom: 0.75rem;
   }
 
   /* Tool Bindings Editor & RSS Fetch Config */
@@ -1753,7 +1758,7 @@
     border: 1px solid var(--agent-border);
     border-radius: 8px;
     padding: 16px;
-    background: var(--color-surface, var(--bg-panel));
+    background: var(--card, var(--card));
   }
 
   .tool-bindings-editor__toolbar {
@@ -1769,7 +1774,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    color: var(--color-text-main);
+    color: var(--foreground);
     font-size: 14px;
   }
 
@@ -1786,9 +1791,9 @@
 
   .tool-bindings-editor__generic-hint {
     padding: 12px;
-    background: var(--bg-muted);
+    background: var(--muted);
     border-radius: 6px;
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     font-size: 13px;
   }
 
@@ -1798,7 +1803,7 @@
     gap: 4px;
     font-size: 12px;
     font-weight: 600;
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
   }
 
   .rss-config-card__chips {
@@ -1811,8 +1816,8 @@
     padding: 3px 8px;
     border-radius: 4px;
     border: 1px solid var(--agent-border);
-    background: var(--color-surface, var(--bg-panel));
-    color: var(--color-text-main);
+    background: var(--card, var(--card));
+    color: var(--foreground);
     font-size: 11px;
     font-weight: 500;
     cursor: pointer;
@@ -1827,7 +1832,7 @@
   .rss-config-chip--added {
     opacity: 0.5;
     cursor: default;
-    background: var(--bg-muted);
+    background: var(--muted);
   }
 
   .rss-config-table {
@@ -1842,7 +1847,7 @@
     gap: 8px;
     font-size: 12px;
     font-weight: 600;
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     padding: 0 4px;
   }
 
@@ -1867,7 +1872,7 @@
   }
 
   .form-error-inline {
-    color: var(--status-danger-fg);
+    color: var(--destructive);
     font-size: 12px;
     margin-top: 4px;
   }
@@ -1879,7 +1884,7 @@
     padding: 14px;
     border: 1px solid var(--agent-border);
     border-radius: 8px;
-    background: var(--bg-panel, var(--color-surface));
+    background: var(--card, var(--card));
   }
 
   .tool-config-card__header {
@@ -1895,7 +1900,7 @@
     width: 32px;
     height: 32px;
     border-radius: 6px;
-    background: var(--bg-muted);
+    background: var(--muted);
     color: var(--agent-accent);
     flex-shrink: 0;
   }
@@ -1904,12 +1909,12 @@
     margin: 0 0 4px;
     font-size: 14px;
     font-weight: 700;
-    color: var(--color-text-main);
+    color: var(--foreground);
   }
 
   .tool-config-card__hint {
     margin: 0;
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
     font-size: 12px;
     line-height: 1.5;
   }
@@ -1920,7 +1925,7 @@
     flex-wrap: wrap;
     gap: 8px;
     padding: 8px 12px;
-    background: var(--bg-muted);
+    background: var(--muted);
     border-radius: 6px;
   }
 
@@ -1930,7 +1935,7 @@
     gap: 4px;
     font-size: 12px;
     font-weight: 600;
-    color: var(--color-text-muted);
+    color: var(--muted-foreground);
   }
 
   .tool-config-card__chips {
@@ -1951,29 +1956,25 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--space-3);
-    border-color: color-mix(
-      in srgb,
-      var(--ui-warning) 50%,
-      var(--agent-border)
-    );
-    background: color-mix(in srgb, var(--ui-warning) 8%, var(--ui-panel));
+    gap: 0.75rem;
+    border-color: color-mix(in srgb, var(--warning) 50%, var(--agent-border));
+    background: color-mix(in srgb, var(--warning) 8%, var(--card));
   }
 
   .agent-skill-upgrade-notice__content {
     display: flex;
     align-items: center;
-    gap: var(--space-2);
+    gap: 0.5rem;
   }
 
   .agent-skill-upgrade-notice__icon {
     width: 18px;
     height: 18px;
-    color: var(--ui-warning);
+    color: var(--warning);
     flex-shrink: 0;
   }
 
   .agent-skill-upgrade-notice__text {
-    font-size: var(--font-size-body);
+    font-size: 0.875rem;
   }
 }
