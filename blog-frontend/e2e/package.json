@@ -1,0 +1,8 @@
+{
+  "name": "gouno-blog-ui-browser-acceptance",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@playwright/test": "1.55.0"
+  }
+}
