@@ -19,10 +19,7 @@ vi.mock("../../api/pages", () => ({
   pagesApi: { getNavPages: () => Promise.resolve([]) },
 }));
 
-function renderPublicShell(
-  children: React.ReactNode,
-  initialEntry = "/",
-) {
+function renderPublicShell(children: React.ReactNode, initialEntry = "/") {
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <ThemeProvider brand="blog" storageKey="gouno-blog:theme">
