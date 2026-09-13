@@ -1,6 +1,12 @@
 import { expect, test } from "@playwright/test";
 import { installApiFixtures, setTheme } from "./mock-api.mjs";
 
+async function enableSudoUiState(page) {
+  await page.addInitScript(() => {
+    localStorage.setItem("gouno:sudo_activated_at", Date.now().toString());
+  });
+}
+
 test("Media Library selection uses compact canonical checkbox geometry", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await setTheme(page, "dark");
@@ -22,6 +28,7 @@ test("Media Library selection uses compact canonical checkbox geometry", async (
 test("Site Settings fails closed and recovers through retry", async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 768 });
   await setTheme(page, "light");
+  await enableSudoUiState(page);
   const unknown = await installApiFixtures(page, { failSettingsOnce: true });
   await page.goto("/admin/settings", { waitUntil: "domcontentloaded" });
 
@@ -35,6 +42,7 @@ test("Site Settings fails closed and recovers through retry", async ({ page }) =
 test("Users edit action opens the canonical modal without writing", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await setTheme(page, "light");
+  await enableSudoUiState(page);
   const unknown = await installApiFixtures(page);
   await page.goto("/admin/users", { waitUntil: "domcontentloaded" });
 
