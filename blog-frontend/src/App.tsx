@@ -98,11 +98,7 @@ function AdminAccessDenied({ message }: { message?: string }) {
 
   return (
     <PublicShell>
-      <Card
-        padding="none"
-        variant="subtle"
-        className="mx-auto max-w-[760px]"
-      >
+      <Card padding="none" variant="subtle" className="mx-auto max-w-[760px]">
         <Result
           role="alert"
           status="warning"
