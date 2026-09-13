@@ -43,7 +43,7 @@
 | U03a | Blog Admin Shell、Dashboard 与列表模板 | U02c | verified |
 | U03b | Posts/Pages 编辑器与草稿发布流程 | U03a | verified |
 | U03c | Taxonomy、Comments、Notifications、Media、Settings | U03a | verified |
-| U03d | Blog Admin 内容阶段复核 | U03b、U03c | review-pending |
+| U03d | Blog Admin 内容阶段复核 | U03b、U03c | verified |
 | U04a | AI 工作台视图迁移 | U03d | implemented-ci-verified |
 | U04b | Connector 展示层迁移 | U04a | hold |
 | U04c | AI/Connector 阶段复核 | U04a、U04b | blocked-by-U04b-hold |
