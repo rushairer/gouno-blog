@@ -196,7 +196,7 @@
     box-shadow: var(--shadow-xs);
   }
 
-  .editor-canvas > .field {
+  .editor-canvas > .editor-form-field {
     margin-bottom: 1.125rem;
   }
 
@@ -459,7 +459,7 @@
     cursor: pointer;
   }
 
-  .editor-inspector .field + .field {
+  .editor-inspector .editor-form-field + .editor-form-field {
     margin-top: 0.875rem;
   }
 

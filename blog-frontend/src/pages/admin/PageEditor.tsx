@@ -730,7 +730,7 @@ export default function PageEditor() {
 
       <div className="editor-workspace">
         <main className="editor-canvas">
-          <Field label="标题" required>
+          <Field className="editor-form-field" label="标题" required>
             <Textarea
               className="editor-title"
               rows={2}
@@ -768,7 +768,7 @@ export default function PageEditor() {
             </div>
           </Field>
 
-          <Field label="摘要 / 描述">
+          <Field className="editor-form-field" label="摘要 / 描述">
             <Textarea
               className="editor-summary"
               rows={2}
@@ -1199,7 +1199,7 @@ export default function PageEditor() {
 
           <details open>
             <summary>发布设置</summary>
-            <Field label="状态">
+            <Field className="editor-form-field" label="状态">
               <Select
                 aria-label="状态"
                 value={publishIntent}
@@ -1217,7 +1217,11 @@ export default function PageEditor() {
 
           <details open>
             <summary>页面配置</summary>
-            <Field label="显示模板" hint="选择页面的预设布局结构">
+            <Field
+              className="editor-form-field"
+              label="显示模板"
+              hint="选择页面的预设布局结构"
+            >
               <Select
                 aria-label="显示模板"
                 value={page.template || "default"}
@@ -1235,7 +1239,7 @@ export default function PageEditor() {
                 <option value="blank">全宽纯净模板 (Blank)</option>
               </Select>
             </Field>
-            <Field label="主导航栏联动">
+            <Field className="editor-form-field" label="主导航栏联动">
               <CheckboxField>
                 <Checkbox
                   checked={page.show_in_nav}
@@ -1247,7 +1251,11 @@ export default function PageEditor() {
               </CheckboxField>
             </Field>
             {page.show_in_nav ? (
-              <Field label="导航排序权重" hint="数字越小越靠前，如 10, 20">
+              <Field
+                className="editor-form-field"
+                label="导航排序权重"
+                hint="数字越小越靠前，如 10, 20"
+              >
                 <Input
                   type="number"
                   value={page.sort_order}
@@ -1273,7 +1281,12 @@ export default function PageEditor() {
                   : "🎯 智能生成整套 SEO 配置"}
               </Button>
             </div>
-            <Field label="访问路径 (Slug)" required hint="访问路径为 /<slug>">
+            <Field
+              className="editor-form-field"
+              label="访问路径 (Slug)"
+              required
+              hint="访问路径为 /<slug>"
+            >
               <Input
                 className="mono"
                 value={page.slug}
@@ -1307,6 +1320,7 @@ export default function PageEditor() {
               </div>
             </Field>
             <Field
+              className="editor-form-field"
               label="SEO 标题"
               hint={`${(page.seo_title || "").length}/60`}
             >
@@ -1318,6 +1332,7 @@ export default function PageEditor() {
               />
             </Field>
             <Field
+              className="editor-form-field"
               label="SEO 描述"
               hint={`${(page.seo_description || "").length}/160`}
             >

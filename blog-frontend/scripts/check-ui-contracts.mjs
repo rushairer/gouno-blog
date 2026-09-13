@@ -42,7 +42,8 @@ const canonicalPrimitiveSelector =
   /^\.(?:panel|field|input-field|btn|btn__label|icon-button|feedback|state|tab|tab-list|ui-card|choice-button|badge)(?=$|[\s:{,[.#>+~])/;
 const agentConsoleStyleImport = /(?:^|\/)styles\/agent-console\.css$/;
 const editorStyleImport = /(?:^|\/)styles\/editor\.css$/;
-const retiredEditorPrimitiveSelector = /(?:^|[\s>+~,])\.(?:btn|btn__label|choice-button|feedback)(?=$|[\s:{,[.#>+~])/;
+const retiredEditorPrimitiveSelector = /(?:^|[\s>+~,])\.(?:btn|btn__label|choice-button|feedback|field)(?=$|[\s:{,[.#>+~])/;
+const retiredAgentFieldSelector = /(?:^|[\s>+~,])\.field(?=$|[\s:{,[.#>+~])/;
 
 async function collect(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -411,6 +412,14 @@ for (const path of files) {
       ) {
         failures.push(
           `${name}:${index + 1} editor feature CSS must target product-owned classes instead of retired primitive internals`,
+        );
+      }
+      if (
+        name === "styles/agent-console.css" &&
+        retiredAgentFieldSelector.test(selector)
+      ) {
+        failures.push(
+          `${name}:${index + 1} agent feature CSS must target product-owned classes instead of the canonical Field implementation class`,
         );
       }
     });
