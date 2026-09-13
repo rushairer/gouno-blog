@@ -93,9 +93,10 @@ describe("AdminShell navigation utilities", () => {
   it("uses the Showcase shell chrome while preserving real product identity and logout", async () => {
     const { container } = renderAdminShell(<h1>Dashboard</h1>);
 
-    expect(
-      await screen.findByRole("link", { name: "Configured Site" }),
-    ).toBeInTheDocument();
+    const brand = await screen.findByRole("link", { name: "Configured Site" });
+    expect(brand).toBeInTheDocument();
+    expect(brand).toHaveClass("inline-flex", "items-center", "gap-2");
+    expect(brand.querySelector('img[src="/favicon.svg"]')).toBeInTheDocument();
 
     const pageContainer = container.querySelector(
       '[data-slot="page-container"]',

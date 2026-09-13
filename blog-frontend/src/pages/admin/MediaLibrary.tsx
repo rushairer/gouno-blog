@@ -521,6 +521,7 @@ export default function MediaLibrary() {
                 {can("batch", "media") ? (
                   <div className="absolute left-2 top-2 z-10 rounded-md bg-background/85 p-1 backdrop-blur">
                     <Checkbox
+                      className="block"
                       aria-label={`选择媒体 ${asset.filename}`}
                       checked={selectedAssets.includes(asset.id)}
                       onChange={(event) =>

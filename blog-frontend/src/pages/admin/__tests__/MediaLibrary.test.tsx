@@ -174,9 +174,11 @@ describe("MediaLibrary", () => {
     );
 
     await screen.findByText("banner.png");
-    await user.click(
-      screen.getByRole("checkbox", { name: "选择媒体 banner.png" }),
-    );
+    const selector = screen.getByRole("checkbox", {
+      name: "选择媒体 banner.png",
+    });
+    expect(selector).toHaveClass("block");
+    await user.click(selector);
     expect(screen.getByText("已选择 1 个媒体")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "删除" }));
 
