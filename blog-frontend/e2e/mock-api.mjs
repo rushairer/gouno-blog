@@ -10,13 +10,14 @@ import {
 import { adminProfile } from "./session-fixtures.mjs";
 
 const envelope = (data) => JSON.stringify({ data });
+const productApiUrl = /^https?:\/\/[^/]+\/api\//;
 
 export async function installApiFixtures(page, options = {}) {
   const unknown = [];
   const profile = options.profile || adminProfile;
   let failSettingsOnce = Boolean(options.failSettingsOnce);
 
-  await page.route("**/api/**", async (route) => {
+  await page.route(productApiUrl, async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
     const method = request.method();
