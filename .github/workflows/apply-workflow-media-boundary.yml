@@ -7,19 +7,12 @@ on:
     paths:
       - scripts/apply-workflow-media-candidate-boundary.py
       - .github/workflows/apply-workflow-media-boundary.yml
-  pull_request:
-    branches:
-      - main
-    paths:
-      - scripts/apply-workflow-media-candidate-boundary.py
-      - .github/workflows/apply-workflow-media-boundary.yml
 
 permissions:
   contents: write
 
 jobs:
   apply:
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
@@ -29,7 +22,16 @@ jobs:
           fetch-depth: 0
 
       - name: Apply deterministic migration
-        run: python3 scripts/apply-workflow-media-candidate-boundary.py
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/apply-workflow-media-candidate-boundary.py')
+          source = path.read_text()
+          start = source.index('completed_marker = "## Completed convergence slices\\n"')
+          end = source.index('write(conv, conv_content)', start)
+          path.write_text(source[:start] + source[end:])
+          PY
+          python3 scripts/apply-workflow-media-candidate-boundary.py
 
       - name: Format Go sources
         run: |
