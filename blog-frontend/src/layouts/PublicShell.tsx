@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Menu, Rss, Search } from "lucide-react";
+import gounoBlogLogo from "@gouno/ui/brand-icons/gouno-blog.svg";
 import { Drawer, IconButton, Input } from "@gouno/ui/core";
 import { ThemeToggle } from "@gouno/ui/theme";
 import {
@@ -12,6 +13,7 @@ import {
 } from "../config/site-defaults";
 import { pagesApi } from "../api/pages";
 import { siteApi } from "../api/site";
+import { BrandMark } from "../components/branding/BrandMark";
 import { publicNavigation } from "../utils/navigation";
 import type { CustomPage, SiteSettings } from "../types/blog";
 
@@ -83,7 +85,6 @@ export default function PublicShell({ children }: { children: ReactNode }) {
   }, [navPages]);
 
   const siteTitle = site?.site_title || DEFAULT_SITE_SETTINGS.site_title;
-  const siteIcon = site?.favicon_url || DEFAULT_SITE_SETTINGS.favicon_url;
   const search = (event: React.FormEvent) => {
     event.preventDefault();
     const value = query.trim();
@@ -104,18 +105,13 @@ export default function PublicShell({ children }: { children: ReactNode }) {
         跳至正文
       </a>
       <header className="sticky top-0 z-30 border-b bg-background">
-        <div className="mx-auto flex min-h-16 max-w-[1200px] items-center gap-6 px-4 md:px-6">
+        <div className="mx-auto flex min-h-16 w-full max-w-[1200px] items-center gap-6 px-4 md:px-6">
           <Link
             className="mr-auto inline-flex min-w-0 items-center gap-2 text-lg font-semibold tracking-tight text-primary"
             to="/"
             aria-label={`${siteTitle} 首页`}
           >
-            <img
-              src={siteIcon}
-              alt=""
-              aria-hidden="true"
-              className="size-8 shrink-0 object-contain"
-            />
+            <BrandMark src={gounoBlogLogo} className="size-8" />
             <span className="truncate">{siteTitle}</span>
           </Link>
           <nav
@@ -150,7 +146,7 @@ export default function PublicShell({ children }: { children: ReactNode }) {
             aria-label="进入内容后台"
             className="hidden rounded-md p-2 text-muted-foreground hover:text-primary sm:block"
           >
-            <LayoutDashboard className="size-4" />
+            <LayoutDashboard className="size-4" aria-hidden="true" />
           </Link>
           <ThemeToggle label="切换主题" />
           <IconButton
@@ -169,18 +165,13 @@ export default function PublicShell({ children }: { children: ReactNode }) {
         {children}
       </main>
       <footer className="mt-12 border-t">
-        <div className="mx-auto grid max-w-[1200px] gap-8 px-4 py-10 md:grid-cols-[1fr_1fr] md:px-6">
+        <div className="mx-auto grid w-full max-w-[1200px] gap-8 px-4 py-10 md:grid-cols-[1fr_1fr] md:px-6">
           <div>
             <Link
               to="/"
-              className="inline-flex items-center gap-2 font-semibold text-primary"
+              className="inline-flex items-center gap-2 font-semibold"
             >
-              <img
-                src={siteIcon}
-                alt=""
-                aria-hidden="true"
-                className="size-7 shrink-0 object-contain"
-              />
+              <BrandMark src={gounoBlogLogo} className="size-7 text-primary" />
               <span>{siteTitle}</span>
             </Link>
             <p className="mt-2 max-w-md text-sm text-muted-foreground">
@@ -222,12 +213,12 @@ export default function PublicShell({ children }: { children: ReactNode }) {
       <Drawer open={open} title={siteTitle} onClose={() => setOpen(false)}>
         <form role="search" onSubmit={search} className="mb-6 flex gap-2">
           <Input
-            aria-label="搜索文章"
+            aria-label="移动端搜索文章"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="搜索文章…"
           />
-          <IconButton type="submit" label="提交搜索" icon={<Search />} />
+          <IconButton type="submit" label="提交移动端搜索" icon={<Search />} />
         </form>
         <nav aria-label="移动导航" className="flex flex-col gap-2">
           {navItems.map((item) => (
