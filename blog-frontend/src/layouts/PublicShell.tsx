@@ -83,6 +83,7 @@ export default function PublicShell({ children }: { children: ReactNode }) {
   }, [navPages]);
 
   const siteTitle = site?.site_title || DEFAULT_SITE_SETTINGS.site_title;
+  const siteIcon = site?.favicon_url || DEFAULT_SITE_SETTINGS.favicon_url;
   const search = (event: React.FormEvent) => {
     event.preventDefault();
     const value = query.trim();
@@ -105,11 +106,17 @@ export default function PublicShell({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-30 border-b bg-background">
         <div className="mx-auto flex min-h-16 max-w-[1200px] items-center gap-6 px-4 md:px-6">
           <Link
-            className="mr-auto min-w-0 truncate text-lg font-semibold tracking-tight text-primary"
+            className="mr-auto inline-flex min-w-0 items-center gap-2 text-lg font-semibold tracking-tight text-primary"
             to="/"
             aria-label={`${siteTitle} 首页`}
           >
-            {siteTitle}
+            <img
+              src={siteIcon}
+              alt=""
+              aria-hidden="true"
+              className="size-8 shrink-0 object-contain"
+            />
+            <span className="truncate">{siteTitle}</span>
           </Link>
           <nav
             aria-label="主导航"
@@ -164,8 +171,17 @@ export default function PublicShell({ children }: { children: ReactNode }) {
       <footer className="mt-12 border-t">
         <div className="mx-auto grid max-w-[1200px] gap-8 px-4 py-10 md:grid-cols-[1fr_1fr] md:px-6">
           <div>
-            <Link to="/" className="font-semibold">
-              {siteTitle}
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 font-semibold text-primary"
+            >
+              <img
+                src={siteIcon}
+                alt=""
+                aria-hidden="true"
+                className="size-7 shrink-0 object-contain"
+              />
+              <span>{siteTitle}</span>
             </Link>
             <p className="mt-2 max-w-md text-sm text-muted-foreground">
               {site?.site_description || DEFAULT_SITE_SETTINGS.site_description}
