@@ -1,0 +1,87 @@
+name: U03d Site Settings error parity once
+
+on:
+  push:
+    branches:
+      - ui/u03d-site-settings-error-parity-20260913
+
+permissions:
+  contents: write
+
+jobs:
+  align:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: blog-frontend/package-lock.json
+
+      - name: Align Site Settings initial error state to Showcase
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const settingsPath = 'blog-frontend/src/pages/admin/SiteSettings.tsx';
+          let settings = fs.readFileSync(settingsPath, 'utf8');
+
+          const stateBefore = `  const [loading, setLoading] = useState(true);\n  const [saving, setSaving] = useState(false);`;
+          const stateAfter = `  const [loading, setLoading] = useState(true);\n  const [reloadKey, setReloadKey] = useState(0);\n  const [saving, setSaving] = useState(false);`;
+          if (!settings.includes(stateBefore)) throw new Error('Site Settings state anchor not found');
+          settings = settings.replace(stateBefore, stateAfter);
+
+          const effectStartBefore = `  useEffect(() => {\n    if (!allowed) return;\n    siteApi\n      .getAdminSettings()`;
+          const effectStartAfter = `  useEffect(() => {\n    if (!allowed) return;\n    setLoading(true);\n    setError(\"\");\n    siteApi\n      .getAdminSettings()`;
+          if (!settings.includes(effectStartBefore)) throw new Error('Site Settings effect start anchor not found');
+          settings = settings.replace(effectStartBefore, effectStartAfter);
+
+          const effectEndBefore = `      .finally(() => setLoading(false));\n  }, [allowed, notify]);\n\n  const field =`;
+          const effectEndAfter = `      .finally(() => setLoading(false));\n  }, [allowed, notify, reloadKey]);\n\n  const retryLoad = () => {\n    setLoading(true);\n    setError(\"\");\n    setReloadKey((key) => key + 1);\n  };\n\n  const field =`;
+          if (!settings.includes(effectEndBefore)) throw new Error('Site Settings effect end anchor not found');
+          settings = settings.replace(effectEndBefore, effectEndAfter);
+
+          const loadingBlock = `  if (loading) {\n    return (\n      <div className=\"flex flex-col gap-6\">\n        {pageHeader}\n        <LoadingSettings />\n      </div>\n    );\n  }\n\n  const tabs = [`;
+          const loadingAndErrorBlock = `  if (loading) {\n    return (\n      <div className=\"flex flex-col gap-6\">\n        {pageHeader}\n        <LoadingSettings />\n      </div>\n    );\n  }\n\n  if (error) {\n    return (\n      <div className=\"flex flex-col gap-6\">\n        {pageHeader}\n        <Alert\n          type=\"error\"\n          showIcon\n          title=\"站点设置加载失败\"\n          description={error}\n          action={\n            <Button size=\"small\" onClick={retryLoad}>\n              重新载入\n            </Button>\n          }\n        />\n      </div>\n    );\n  }\n\n  const tabs = [`;
+          if (!settings.includes(loadingBlock)) throw new Error('Site Settings loading block anchor not found');
+          settings = settings.replace(loadingBlock, loadingAndErrorBlock);
+
+          const staleAlert = `      {pageHeader}\n      {error ? <Alert type=\"error\" showIcon title={error} /> : null}\n      <SudoGate`;
+          const cleanSurface = `      {pageHeader}\n      <SudoGate`;
+          if (!settings.includes(staleAlert)) throw new Error('Site Settings stale error Alert anchor not found');
+          settings = settings.replace(staleAlert, cleanSurface);
+          fs.writeFileSync(settingsPath, settings);
+
+          const testPath = 'blog-frontend/src/pages/admin/__tests__/SiteSettings.test.tsx';
+          let test = fs.readFileSync(testPath, 'utf8');
+          const closing = '\n});\n';
+          const closingIndex = test.lastIndexOf(closing);
+          if (closingIndex < 0) throw new Error('Site Settings test closing anchor not found');
+          const retryTest = `\n\n  it(\"uses the Showcase initial-load error surface and retries before exposing settings\", async () => {\n    const user = userEvent.setup();\n    vi.mocked(siteApi.getAdminSettings)\n      .mockRejectedValueOnce(new Error(\"settings unavailable\"))\n      .mockResolvedValueOnce({\n        site_title: \"测试博客\",\n        site_description: \"这是测试描述\",\n        rss_url: \"/feed.xml\",\n        favicon_url: \"/favicon.svg\",\n        hero_title: \"欢迎阅读\",\n        hero_description: \"技术博客\",\n      } as any);\n\n    renderSettings();\n\n    expect(await screen.findByText(\"站点设置加载失败\")).toBeInTheDocument();\n    expect(screen.getByText(\"settings unavailable\")).toBeInTheDocument();\n    expect(screen.queryByDisplayValue(\"测试博客\")).not.toBeInTheDocument();\n\n    await user.click(screen.getByRole(\"button\", { name: \"重新载入\" }));\n\n    expect(await screen.findByDisplayValue(\"测试博客\")).toBeInTheDocument();\n    expect(siteApi.getAdminSettings).toHaveBeenCalledTimes(2);\n  });`;
+          test = `${test.slice(0, closingIndex)}${retryTest}${test.slice(closingIndex)}`;
+          fs.writeFileSync(testPath, test);
+          NODE
+
+      - name: Install dependencies
+        working-directory: blog-frontend
+        run: npm ci
+
+      - name: Verify Blog frontend quality
+        working-directory: blog-frontend
+        run: npm run quality
+
+      - name: Commit parity fix
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add blog-frontend/src/pages/admin/SiteSettings.tsx blog-frontend/src/pages/admin/__tests__/SiteSettings.test.tsx
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "fix(ui): align Site Settings error state with Showcase"
+          git push
