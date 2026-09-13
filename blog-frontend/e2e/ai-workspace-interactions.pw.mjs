@@ -125,7 +125,7 @@ test("Workflow run detail contains long output and preserves run query state", a
 
   await expect(page.getByRole("list", { name: "Workflow run list" })).toBeVisible();
   await page.getByRole("button", { name: "Inspect" }).first().click();
-  await expect(page.getByRole("heading", { name: "Run conclusion" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Run summary" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Long-form execution result" })).toBeVisible();
   expect(new URL(page.url()).searchParams.get("run")).toBe("201");
   await expectNoDocumentOverflow(page);
