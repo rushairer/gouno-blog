@@ -123,8 +123,12 @@ test("Workflow run detail contains long output and preserves run query state", a
     { width: 768, height: 1024, theme: "dark" },
   );
 
-  await expect(page.getByRole("list", { name: "Workflow run list" })).toBeVisible();
-  await page.getByRole("button", { name: "Inspect" }).first().click();
+  const workflowRunList = page.getByRole("list", { name: "Workflow run list" });
+  await expect(workflowRunList).toBeVisible();
+  const workflowRunRow = workflowRunList
+    .getByRole("listitem")
+    .filter({ hasText: "Run #201" });
+  await workflowRunRow.getByRole("button", { name: "Inspect" }).click();
   await expect(page.getByRole("heading", { name: "Run summary" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Long-form execution result" })).toBeVisible();
   expect(new URL(page.url()).searchParams.get("run")).toBe("201");
@@ -141,8 +145,9 @@ test("Skill copy uses a controlled modal without submitting a mutation", async (
   );
 
   await page.getByRole("button", { name: "Copy Skill" }).click();
-  const dialog = page.getByRole("dialog", { name: "Copy Skill" });
+  const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText("Copy Skill");
   await expect(dialog.getByRole("textbox", { name: "Copied Skill name" })).toHaveValue(
     "Editorial Operations Copy",
   );
@@ -158,11 +163,13 @@ test("Provider settings expose provider and embedding configuration without writ
     { width: 1440, height: 900, theme: "dark" },
   );
 
-  await expect(page.getByText("OpenAI Primary")).toBeVisible();
-  await expect(page.getByText("Primary Embeddings")).toBeVisible();
+  await expect(page.getByText("OpenAI Primary", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Add Provider" }).click();
   await expect(page.getByRole("heading", { name: "Add Provider" })).toBeVisible();
   await expect(page.getByLabel("API Key")).toBeRequired();
+  await page.getByRole("tab", { name: "Knowledge index" }).click();
+  await expect(page.getByText("Primary Embeddings", { exact: true })).toBeVisible();
+  expect(new URL(page.url()).searchParams.get("section")).toBe("knowledge");
   await expectNoDocumentOverflow(page);
   expectFixtureHealth(fixtureState, consoleProblems);
   await attachScreenshot(page, testInfo, "u04a-provider-editor");
