@@ -28,7 +28,7 @@ import {
 import { PageHeader } from "@gouno/ui/gouno";
 import { BulkActionBar } from "@gouno/ui/patterns";
 
-import { cn } from "../../lib/utils";
+import { cn } from "@gouno/ui";
 import { useAppFeedback } from "../../components/feedback/AppFeedbackProvider";
 
 type DeleteAction =
