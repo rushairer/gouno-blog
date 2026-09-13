@@ -7,6 +7,7 @@ const root = fileURLToPath(new URL("../src/", import.meta.url));
 const files = [];
 const retiredProductStyles = new Set([
   "index.css",
+  "styles/app.css",
   "styles/base.css",
   "styles/components.css",
   "styles/design-system-alignment.css",
@@ -21,6 +22,7 @@ const agentConsoleStyleConsumers = new Set([
   "pages/admin/AISettings.tsx",
   "pages/admin/AIOperations.tsx",
 ]);
+const editorStyleConsumer = "components/editor/ContentEditorFrame.tsx";
 const canonicalUiModules = new Set([
   "@gouno/ui/core",
   "@gouno/ui/theme",
@@ -34,6 +36,7 @@ const rawElevationPattern =
 const canonicalPrimitiveSelector =
   /^\.(?:panel|field|input-field|btn|btn__label|icon-button|feedback|state|tab|tab-list|ui-card|choice-button|badge)(?=$|[\s:{,[.#>+~])/;
 const agentConsoleStyleImport = /(?:^|\/)styles\/agent-console\.css$/;
+const editorStyleImport = /(?:^|\/)styles\/editor\.css$/;
 
 async function collect(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -129,6 +132,12 @@ function checkUiImports(name, source) {
     ) {
       failures.push(
         `${name}:${location(sourceFile, statement)} agent-console.css is feature-scoped to AI Settings and AI Operations`,
+      );
+    }
+
+    if (editorStyleImport.test(moduleName) && name !== editorStyleConsumer) {
+      failures.push(
+        `${name}:${location(sourceFile, statement)} editor.css is feature-scoped to ContentEditorFrame`,
       );
     }
 
