@@ -127,14 +127,3 @@ func (r *InteractionRepository) ListWorkflowRunEvents(ctx context.Context, runID
 	}
 	return items, rows.Err()
 }
-
-func (r *InteractionRepository) ListMediaCandidateEvents(ctx context.Context, candidateID int64) ([]*domain.WorkflowRunEvent, error) {
-	var runID sql.NullInt64
-	if err := r.db.QueryRowContext(ctx, `SELECT workflow_run_id FROM ai_media_candidates WHERE id=$1`, candidateID).Scan(&runID); err != nil {
-		return nil, err
-	}
-	if !runID.Valid {
-		return []*domain.WorkflowRunEvent{}, nil
-	}
-	return r.ListWorkflowRunEvents(ctx, runID.Int64)
-}

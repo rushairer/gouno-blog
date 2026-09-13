@@ -346,7 +346,9 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		})
 		workflowLifecycleRepo := workflowrepository.NewRunLifecycleRepository()
 		workflowLifecycle := workflowservice.NewRunLifecycle(transactor, workflowLifecycleRepo, agentRunRepo, agentMediaCandidateRepo)
-		workflowSvc := workflowservice.NewService(cfg.DB, runner, management, toolRegistry, workflowLifecycle)
+		workflowMediaRunRepo := workflowrepository.NewMediaRunRepository()
+		workflowMediaRuns := workflowservice.NewMediaRunCoordinator(transactor, workflowMediaRunRepo, agentMediaCandidateRepo)
+		workflowSvc := workflowservice.NewService(cfg.DB, runner, management, toolRegistry, workflowLifecycle, workflowMediaRuns)
 		workflowSvc.StartScheduler(ctx, cfg.Global.AIAgentConfig.SchedulerInterval)
 		connectorSvc := connector.NewService(cfg.DB, secrets, transactor, os.Getenv("BLOG_CONNECTOR_OAUTH_REDIRECT_URL"))
 		agentCtrl = controller.NewAgentControllerWithOptions(controller.AgentControllerOptions{

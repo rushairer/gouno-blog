@@ -120,6 +120,13 @@ The default `gouno-template` Flat Layered structure remains the reference for si
 
 Architecture refactoring and Codegen must preserve the root `AGENTS.md` security contract, especially the confidential BFF boundary and Connector Module Hold. Structural cleanup is not authorization to change OAuth/OIDC, session, connector, credential, deployment, or security behavior.
 
+## Workflow / Agent Media Candidate boundary
+
+`ai_media_candidates` is Agent-owned persistence. Workflow code must not query that table directly.
+Workflow run resumption/reconciliation uses `MediaRunCoordinator`, which owns the cross-capability transaction through `dbtx.Transactor`: Agent's Media Candidate repository supplies only consumer-sized tx-aware state reads, while Workflow's `MediaRunRepository` writes only `ai_workflow_runs`. Candidate-event lookup is orchestrated by Agent ApprovalService: it resolves the candidate through the Agent store, then calls Workflow's run-event port with the resolved Workflow Run ID.
+
+This boundary is guarded by tests so Workflow production packages cannot reintroduce direct `ai_media_candidates` SQL.
+
 ## Workflow cancellation and deletion
 
 `internal/workflow.RunLifecycle` is the application transaction owner for run cancellation/deletion across Workflow and Agent state. Consumer-owned ports are defined beside the coordinator; Workflow lifecycle persistence lives in `internal/workflow/repository`, while Agent Run and MediaCandidate repositories own Agent writes. `cmd/gouno/web.go` explicitly composes these dependencies and injects the coordinator into Workflow Service. Repositories neither call each other nor commit caller-owned transactions. Other Workflow execution persistence remains a separate, documented migration slice.

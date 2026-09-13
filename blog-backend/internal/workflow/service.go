@@ -36,6 +36,7 @@ type Service struct {
 	catalog     *ResourceCatalog
 	workerSem   chan struct{}
 	lifecycle   *RunLifecycle
+	mediaRuns   *MediaRunCoordinator
 }
 
 type PreflightCheck struct {
@@ -175,11 +176,14 @@ func containsString(values []string, target string) bool {
 	return false
 }
 
-func NewService(db *sql.DB, runner *agentservice.Runner, agents *agentservice.ManagementService, registry *tool.Registry, lifecycle *RunLifecycle) *Service {
+func NewService(db *sql.DB, runner *agentservice.Runner, agents *agentservice.ManagementService, registry *tool.Registry, lifecycle *RunLifecycle, mediaRuns *MediaRunCoordinator) *Service {
 	if lifecycle == nil {
 		panic("workflow.NewService: lifecycle is required")
 	}
-	return &Service{db: db, definitions: workflowrepository.NewDefinitionRepository(db), runner: runner, agents: agents, tools: registry, catalog: NewResourceCatalog(db), workerSem: make(chan struct{}, 4), lifecycle: lifecycle}
+	if mediaRuns == nil {
+		panic("workflow.NewService: media run coordinator is required")
+	}
+	return &Service{db: db, definitions: workflowrepository.NewDefinitionRepository(db), runner: runner, agents: agents, tools: registry, catalog: NewResourceCatalog(db), workerSem: make(chan struct{}, 4), lifecycle: lifecycle, mediaRuns: mediaRuns}
 }
 
 func (s *Service) List(ctx context.Context) ([]*domain.Workflow, error) {
@@ -969,53 +973,17 @@ func (s *Service) Resume(ctx context.Context, runID int64) error {
 // have all been decided. Human-interaction runs use Resume instead; media
 // candidates remain awaiting user action until they are applied or cancelled.
 func (s *Service) ResumeAfterApproval(ctx context.Context, runID int64) error {
-	result, err := s.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status='queued',finished_at=NULL,error_code=NULL,error_message=NULL
-		WHERE id=$1 AND status='awaiting_approval'
-		AND NOT EXISTS (SELECT 1 FROM ai_media_candidates WHERE workflow_run_id=$1)`, runID)
-	if err != nil {
+	if err := s.mediaRuns.ResumeAfterApproval(ctx, runID); err != nil {
 		return err
-	}
-	if changed, _ := result.RowsAffected(); changed == 0 {
-		return sql.ErrNoRows
 	}
 	go s.Execute(context.Background(), runID)
 	return nil
 }
 
 // ReconcileMediaRun reflects the persisted image-task lifecycle in its source
-// Workflow. It is called after every user-visible image operation.
+// Workflow. Cross-capability reads are coordinated through MediaRunCoordinator.
 func (s *Service) ReconcileMediaRun(ctx context.Context, runID int64) error {
-	var total, pending, applied, failed, cancelled int
-	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*),
-		COUNT(*) FILTER (WHERE applied_version_id IS NULL AND generation_status NOT IN ('rejected','failed','cancelled')),
-		COUNT(*) FILTER (WHERE applied_version_id IS NOT NULL),
-		COUNT(*) FILTER (WHERE generation_status IN ('failed','rejected')),
-		COUNT(*) FILTER (WHERE generation_status='cancelled')
-		FROM ai_media_candidates WHERE workflow_run_id=$1`, runID).Scan(&total, &pending, &applied, &failed, &cancelled); err != nil {
-		return err
-	}
-	if total == 0 {
-		return nil
-	}
-	status := "waiting_for_user"
-	finished := false
-	if pending == 0 && applied > 0 {
-		status, finished = "succeeded", true
-	} else if pending == 0 {
-		status, finished = "cancelled", true
-	}
-	result, err := s.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status=$2,finished_at=CASE WHEN $3 THEN NOW() ELSE NULL END
-		WHERE id=$1 AND status NOT IN ('failed','cancelled','succeeded')`, runID, status, finished)
-	if err != nil {
-		return err
-	}
-	if changed, _ := result.RowsAffected(); changed == 0 {
-		var exists bool
-		if err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM ai_workflow_runs WHERE id=$1)`, runID).Scan(&exists); err != nil || !exists {
-			return ErrNotFound
-		}
-	}
-	return nil
+	return s.mediaRuns.Reconcile(ctx, runID)
 }
 
 func (s *Service) Cancel(ctx context.Context, runID int64) error {
@@ -1105,11 +1073,8 @@ func (s *Service) execute(ctx context.Context, runID int64) error {
 		if queryErr := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM workflow_interaction_tasks WHERE workflow_run_id=$1 AND status='pending'`, runID).Scan(&pending); queryErr == nil && pending > 0 {
 			status = "waiting_for_user"
 		}
-	} else {
-		var pendingMedia int
-		if queryErr := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ai_media_candidates WHERE workflow_run_id=$1 AND applied_version_id IS NULL AND generation_status NOT IN ('rejected','failed','cancelled')`, runID).Scan(&pendingMedia); queryErr == nil && pendingMedia > 0 {
-			status = "waiting_for_user"
-		}
+	} else if pendingMedia, queryErr := s.mediaRuns.HasPending(ctx, runID); queryErr == nil && pendingMedia {
+		status = "waiting_for_user"
 	}
 	rawOutput, _ := json.Marshal(output)
 	_, err = s.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status=$2, output=$3,

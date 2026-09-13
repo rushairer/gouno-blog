@@ -1,4 +1,6 @@
 # Capability branch audit — 2026-09-13
+> Active convergence work after this audit: `refactor/workflow-media-candidate-boundary` was created from current `main` to remove direct Workflow reads of Agent-owned Media Candidate persistence. It is not a historical branch and must be judged by its PR/CI before merge.
+
 
 GitHub default/main inspected at `eb78d165`. No open Capability PR. This is historical inspection evidence; refresh before making branch decisions. `MERGED` below is a PR state, not proof that later commits on its branch were merged. The merged PR head SHA was compared with each branch head: 60 match exactly, so a non-ancestor head alone does not imply post-merge work (squash merge). No unassociated/closed or advanced branch is automatically merged or deleted.
 

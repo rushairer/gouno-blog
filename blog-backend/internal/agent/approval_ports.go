@@ -51,7 +51,6 @@ type WorkflowInteractionStore interface {
 type WorkflowEventPort interface {
 	AppendWorkflowRunEvent(context.Context, *domain.WorkflowRunEvent) error
 	ListWorkflowRunEvents(context.Context, int64) ([]*domain.WorkflowRunEvent, error)
-	ListMediaCandidateEvents(context.Context, int64) ([]*domain.WorkflowRunEvent, error)
 }
 
 type ApprovalEffectWriter interface {
