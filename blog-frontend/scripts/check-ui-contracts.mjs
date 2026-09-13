@@ -31,8 +31,7 @@ const canonicalUiModules = new Set([
   "@gouno/ui/patterns",
   "@gouno/ui/gouno",
 ]);
-const canonicalBrandIconModule =
-  /^@gouno\/ui\/brand-icons\/[a-z0-9-]+\.svg$/;
+const canonicalBrandIconModule = /^@gouno\/ui\/brand-icons\/[a-z0-9-]+\.svg$/;
 const canonicalRootAllowlist = new Set(["cn"]);
 const directRadixImport = /(?:\bfrom\s+|\bimport\s*\(\s*)["']@radix-ui\//;
 const nativeBrowserDialogs = new Set(["alert", "confirm", "prompt"]);
@@ -42,9 +41,11 @@ const canonicalPrimitiveSelector =
   /^\.(?:panel|field|input-field|btn|btn__label|icon-button|feedback|state|tab|tab-list|ui-card|choice-button|badge)(?=$|[\s:{,[.#>+~])/;
 const agentConsoleStyleImport = /(?:^|\/)styles\/agent-console\.css$/;
 const editorStyleImport = /(?:^|\/)styles\/editor\.css$/;
-const retiredEditorPrimitiveSelector = /(?:^|[\s>+~,])\.(?:btn|btn__label|choice-button|feedback|field)(?=$|[\s:{,[.#>+~])/;
+const retiredEditorPrimitiveSelector =
+  /(?:^|[\s>+~,])\.(?:btn|btn__label|choice-button|feedback|field)(?=$|[\s:{,[.#>+~])/;
 const retiredAgentFieldSelector = /(?:^|[\s>+~,])\.field(?=$|[\s:{,[.#>+~])/;
-const retiredAgentTokenReference = /var\(--(?:admin-line|agent-chip-bg|bg-muted|bg-panel|brand|brand-soft|color-surface|color-text|color-text-main|color-text-muted|control-bg-hover|danger|font-size-body|ink|line|radius-panel|space-2|space-3|status-danger-bg|status-danger-fg|status-info-bg|status-info-fg|status-success-bg|status-success-fg|status-warning-bg|status-warning-fg|success-color|text-3|text-muted|ui-border|ui-border-emphasis|ui-brand|ui-brand-soft|ui-code-control|ui-control|ui-control-bg|ui-control-hover|ui-danger|ui-danger-soft|ui-info|ui-info-soft|ui-on-brand|ui-panel|ui-success|ui-success-soft|ui-text|ui-text-muted|ui-text-primary|ui-text-secondary|ui-warning|ui-warning-soft)(?=[,\)])/;
+const retiredAgentTokenReference =
+  /var\(--(?:admin-line|agent-chip-bg|bg-muted|bg-panel|brand|brand-soft|color-surface|color-text|color-text-main|color-text-muted|control-bg-hover|danger|font-size-body|ink|line|radius-panel|space-2|space-3|status-danger-bg|status-danger-fg|status-info-bg|status-info-fg|status-success-bg|status-success-fg|status-warning-bg|status-warning-fg|success-color|text-3|text-muted|ui-border|ui-border-emphasis|ui-brand|ui-brand-soft|ui-code-control|ui-control|ui-control-bg|ui-control-hover|ui-danger|ui-danger-soft|ui-info|ui-info-soft|ui-on-brand|ui-panel|ui-success|ui-success-soft|ui-text|ui-text-muted|ui-text-primary|ui-text-secondary|ui-warning|ui-warning-soft)(?=[,\)])/;
 
 async function collect(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -137,7 +138,9 @@ function hasRetiredControlClass(attribute, sourceFile) {
   const initializer = attribute.initializer;
   if (!initializer) return false;
   const source = initializer.getText(sourceFile);
-  return /(?:^|[\s"'\x60])(?:input-field|checkbox-field)(?:--[a-z0-9-]+)?(?=$|[\s"'\x60])/i.test(source);
+  return /(?:^|[\s"'\x60])(?:input-field|checkbox-field)(?:--[a-z0-9-]+)?(?=$|[\s"'\x60])/i.test(
+    source,
+  );
 }
 
 function checkUiImports(name, source) {
@@ -319,7 +322,11 @@ function checkTsxContracts(name, source) {
           `${name}:${location(sourceFile, node)} visible native input must use the shared Input component`,
         );
       }
-      if (!connectorHold && name.startsWith("components/agent/") && tag === "textarea") {
+      if (
+        !connectorHold &&
+        name.startsWith("components/agent/") &&
+        tag === "textarea"
+      ) {
         failures.push(
           `${name}:${location(sourceFile, node)} native textarea must use the shared Textarea component`,
         );
@@ -350,6 +357,11 @@ function checkTsxContracts(name, source) {
         if (/(^|\s)editor-panel(?:\s|$)/.test(value)) {
           failures.push(
             `${name}:${location(sourceFile, attribute)} retired editor-panel compatibility class must not be reintroduced; Card owns the container surface`,
+          );
+        }
+        if (/(^|\s)fieldset-unstyled(?:\s|$)/.test(value)) {
+          failures.push(
+            `${name}:${location(sourceFile, attribute)} retired fieldset-unstyled compatibility class must not be reintroduced; use explicit min-w-0 border-0 p-0 layout utilities`,
           );
         }
         if (!connectorHold && /(^|\s)mono(?:\s|$)/.test(value)) {
