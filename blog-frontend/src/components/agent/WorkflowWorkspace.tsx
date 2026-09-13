@@ -1492,8 +1492,7 @@ function ResourceQueryBuilder({
           </Select>
         </Field>
         <Field label="单次最多处理">
-          <input
-            className="input-field"
+          <Input
             type="number"
             min="1"
             max="100"
@@ -1533,8 +1532,7 @@ function ResourceQueryBuilder({
                 ))}
               </Select>
             ) : (
-              <input
-                className="input-field"
+              <Input
                 type={filter.type}
                 min={filter.type === "number" ? 0 : undefined}
                 value={resourceQueryInputValue(
@@ -1630,7 +1628,7 @@ function SchemaFieldBuilder({
           <article className="workflow-schema-field" key={key}>
             <div className="form-grid">
               <Field label="字段名">
-                <input
+                <Input
                   value={key}
                   onChange={(event) => {
                     const name = event.target.value.trim();
@@ -1648,7 +1646,7 @@ function SchemaFieldBuilder({
                 />
               </Field>
               <Field label="标题">
-                <input
+                <Input
                   value={String(property.title || "")}
                   onChange={(event) =>
                     set({ ...property, title: event.target.value })
@@ -1740,7 +1738,7 @@ function SchemaFieldBuilder({
               {resource || isArray ? (
                 <>
                   <Field label="最少数量">
-                    <input
+                    <Input
                       type="number"
                       min="0"
                       value={Number(property.minItems || 0)}
@@ -1753,7 +1751,7 @@ function SchemaFieldBuilder({
                     />
                   </Field>
                   <Field label="最多数量">
-                    <input
+                    <Input
                       type="number"
                       min="1"
                       value={Number(property.maxItems || 20)}
@@ -1790,7 +1788,7 @@ function SchemaFieldBuilder({
             {scalar ? (
               <div className="form-grid">
                 <Field label="枚举值" hint="用逗号分隔；留空表示不限制。">
-                  <input
+                  <Input
                     value={enumValues.join(", ")}
                     onChange={(event) => {
                       const values = event.target.value
@@ -1811,7 +1809,7 @@ function SchemaFieldBuilder({
                   />
                 </Field>
                 <Field label="默认值" hint="运行表单仅在未填写时使用此值。">
-                  <input
+                  <Input
                     value={
                       property.default === undefined
                         ? ""
@@ -1829,7 +1827,7 @@ function SchemaFieldBuilder({
               </div>
             ) : null}
             <Field label="说明">
-              <input
+              <Input
                 value={String(property.description || "")}
                 onChange={(event) =>
                   set({ ...property, description: event.target.value })
@@ -2334,8 +2332,7 @@ function WorkflowEditor({
           </section>
         ) : null}
         <Field label="名称" hint="面向日常运营的短名称，例如“发布前内容检查”。">
-          <input
-            className="input-field"
+          <Input
             required
             value={name}
             onChange={(event) => setName(event.target.value)}
@@ -2345,8 +2342,7 @@ function WorkflowEditor({
           label="作用说明"
           hint="说明此流程何时使用、会产出什么，以及人工确认边界。"
         >
-          <input
-            className="input-field"
+          <Input
             value={description}
             onChange={(event) => setDescription(event.target.value)}
           />
@@ -2356,16 +2352,16 @@ function WorkflowEditor({
             label="Cron 执行计划"
             hint="留空表示仅手动运行；例如每天 09:00：0 9 * * *"
           >
-            <input
-              className="input-field mono"
+            <Input
+              className="mono"
               value={cronExpression}
               onChange={(event) => setCronExpression(event.target.value)}
               placeholder="0 9 * * *"
             />
           </Field>
           <Field label="时区" hint="使用 IANA 时区，例如 Asia/Shanghai">
-            <input
-              className="input-field mono"
+            <Input
+              className="mono"
               required
               value={timezone}
               onChange={(event) => setTimezone(event.target.value)}
@@ -2485,7 +2481,7 @@ function WorkflowEditor({
                 {step.type === "model" ? (
                   <div className="form-grid">
                     <Field label="步骤名称">
-                      <input
+                      <Input
                         value={step.name || ""}
                         onChange={(event) =>
                           updateStep(index, {
@@ -2496,7 +2492,7 @@ function WorkflowEditor({
                       />
                     </Field>
                     <Field label="输入 JSON Pointer">
-                      <input
+                      <Input
                         className="mono"
                         value={step.input_pointer || ""}
                         onChange={(event) =>
@@ -2609,7 +2605,7 @@ function WorkflowEditor({
                     {(step.steps || []).map((nested, nestedIndex) => (
                       <div className="form-grid" key={nested.id || nestedIndex}>
                         <Field label="步骤名称">
-                          <input
+                          <Input
                             value={nested.name || ""}
                             onChange={(event) => {
                               const nestedSteps = [...(step.steps || [])];
@@ -2694,7 +2690,7 @@ function WorkflowEditor({
                 ) : null}
                 {step.type === "approval_gate" ? (
                   <Field label="审批说明">
-                    <input
+                    <Input
                       value={step.name || ""}
                       onChange={(event) =>
                         updateStep(index, { ...step, name: event.target.value })
@@ -2704,7 +2700,7 @@ function WorkflowEditor({
                 ) : null}
                 {step.type === "output" ? (
                   <Field label="输出 JSON Pointer">
-                    <input
+                    <Input
                       className="mono"
                       value={step.output_pointer || ""}
                       onChange={(event) =>

@@ -315,7 +315,8 @@ export function ToolBindingsEditor({
             }
           >
             <Textarea
-              className={`mono ${jsonError ? "input-field--error" : ""}`}
+              className="mono"
+              status={jsonError ? "error" : undefined}
               rows={8}
               value={jsonText}
               onChange={(e) => handleJsonChange(e.target.value)}

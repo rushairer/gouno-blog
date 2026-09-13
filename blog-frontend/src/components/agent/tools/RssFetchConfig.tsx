@@ -174,15 +174,14 @@ export function RssFetchConfig({
           <div key={idx} className="rss-config-table__row">
             <Input
               type="text"
-              className="input-field"
               placeholder={isZh ? "如: 机器之心 / OpenAI" : "e.g. OpenAI Blog"}
               value={feed.name}
               onChange={(e) => updateFeed(idx, "name", e.target.value)}
               required
             />
-            <input
+            <Input
               type="url"
-              className="input-field mono"
+              className="mono"
               placeholder="https://example.com/feed.xml"
               value={feed.url}
               onChange={(e) => updateFeed(idx, "url", e.target.value)}
@@ -231,9 +230,8 @@ export function RssFetchConfig({
           label={isZh ? "单个源最大抓取条数" : "Max entries per feed"}
           hint={isZh ? "默认 8，范围 1~20" : "Default 8, range 1-20"}
         >
-          <input
+          <Input
             type="number"
-            className="input-field"
             min={1}
             max={20}
             value={maxPerFeed}
@@ -254,9 +252,8 @@ export function RssFetchConfig({
           label={isZh ? "全局总抓取条数上限" : "Max total entries"}
           hint={isZh ? "默认 20，范围 1~50" : "Default 20, range 1-50"}
         >
-          <input
+          <Input
             type="number"
-            className="input-field"
             min={1}
             max={50}
             value={maxItems}
