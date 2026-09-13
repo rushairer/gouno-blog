@@ -1,0 +1,115 @@
+name: Tighten workflow media boundary transaction
+
+on:
+  push:
+    branches:
+      - refactor/workflow-media-candidate-boundary
+    paths:
+      - .github/workflows/fix-workflow-media-boundary.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/workflow-media-candidate-boundary
+          fetch-depth: 0
+
+      - name: Tighten coordinator and convergence map
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              s = p.read_text()
+              if s.count(old) != 1:
+                  raise SystemExit(f'{path}: expected one match for {old[:80]!r}, found {s.count(old)}')
+              p.write_text(s.replace(old, new, 1))
+
+          coordinator = 'blog-backend/internal/workflow/media_run_coordinator.go'
+          p = Path(coordinator)
+          s = p.read_text()
+          old = 'return c.transactor.Run(ctx, func(tx *sql.Tx) error {'
+          if s.count(old) != 2:
+              raise SystemExit(f'{coordinator}: expected two transaction calls, found {s.count(old)}')
+          p.write_text(s.replace(old, 'return c.transactor.RunIsolation(ctx, sql.LevelSerializable, func(tx *sql.Tx) error {'))
+
+          replace_once(
+              'blog-backend/internal/agent/repository/media_candidate_workflow_state.go',
+              'func (r *MediaCandidateRepository) WorkflowRunCandidateSummaryTx(ctx context.Context, tx *sql.Tx, runID int64) (total, pending, applied, failed, cancelled int, err error) {\n\terr = tx.QueryRowContext(ctx, `SELECT COUNT(*),\n        COUNT(*) FILTER (WHERE applied_version_id IS NULL AND generation_status NOT IN (\'rejected\',\'failed\',\'cancelled\')),\n        COUNT(*) FILTER (WHERE applied_version_id IS NOT NULL),\n        COUNT(*) FILTER (WHERE generation_status IN (\'failed\',\'rejected\')),\n        COUNT(*) FILTER (WHERE generation_status=\'cancelled\')\n        FROM ai_media_candidates WHERE workflow_run_id=$1`, runID).\n\t\tScan(&total, &pending, &applied, &failed, &cancelled)\n\treturn\n}',
+              'func (r *MediaCandidateRepository) WorkflowRunCandidateSummaryTx(ctx context.Context, tx *sql.Tx, runID int64) (total, pending, applied int, err error) {\n\terr = tx.QueryRowContext(ctx, `SELECT COUNT(*),\n        COUNT(*) FILTER (WHERE applied_version_id IS NULL AND generation_status NOT IN (\'rejected\',\'failed\',\'cancelled\')),\n        COUNT(*) FILTER (WHERE applied_version_id IS NOT NULL)\n        FROM ai_media_candidates WHERE workflow_run_id=$1`, runID).\n\t\tScan(&total, &pending, &applied)\n\treturn\n}',
+          )
+          replace_once(
+              coordinator,
+              'WorkflowRunCandidateSummaryTx(context.Context, *sql.Tx, int64) (int, int, int, int, int, error)',
+              'WorkflowRunCandidateSummaryTx(context.Context, *sql.Tx, int64) (int, int, int, error)',
+          )
+          replace_once(
+              coordinator,
+              'total, pending, applied, _, _, err := c.candidates.WorkflowRunCandidateSummaryTx(ctx, tx, runID)',
+              'total, pending, applied, err := c.candidates.WorkflowRunCandidateSummaryTx(ctx, tx, runID)',
+          )
+
+          conv = 'blog-backend/ARCHITECTURE_CONVERGENCE.md'
+          replace_once(
+              conv,
+              '| **Workflow** | Workflow definitions/versions/runs/steps/resources/events/interactions; `ai_workflows`, `ai_workflow_versions`, `ai_workflow_runs`, `ai_workflow_step_runs`, `ai_workflow_run_resources`, `ai_workflow_events`, `workflow_interaction_tasks`, `workflow_run_events` | `internal/workflow`, `internal/workflow/repository` | Uses Agent Runner/Management and Tool registry. Agent consumes canonical Workflow interaction/event/scope contracts rather than Workflow SQL or aggregate delegates. | `RunLifecycle` owns cancellation/deletion transactions through `dbtx.Transactor`; retry snapshot transaction remains in Service. Repositories receive coordinator transactions. | **Definition/version persistence is repository-owned; Agent-consumer ownership is converged.** Cancellation/deletion persistence and coordination are explicit; other Run/event/execution state remains service-local pending Workflow consolidation. HTTP ownership remains flat. |',
+              '| **Workflow** | Workflow definitions/versions/runs/steps/resources/events/interactions; `ai_workflows`, `ai_workflow_versions`, `ai_workflow_runs`, `ai_workflow_step_runs`, `ai_workflow_run_resources`, `ai_workflow_events`, `workflow_interaction_tasks`, `workflow_run_events` | `internal/workflow`, `internal/workflow/repository` | Uses Agent Runner/Management and Tool registry. Agent consumes canonical Workflow interaction/event/scope contracts; Workflow consumes Agent-owned Media Candidate state only through the consumer-sized `MediaCandidateRunStore`. | `RunLifecycle` owns cancellation/deletion transactions; `MediaRunCoordinator` owns MediaCandidate-to-Workflow Run decisions through `dbtx.Transactor` at Serializable isolation; retry snapshot transaction remains in Service. Repositories receive coordinator transactions. | **Definition/version persistence, lifecycle coordination, and Agent MediaCandidate boundary are converged.** Workflow production code no longer queries `ai_media_candidates`; other Run/event/execution state remains service-local pending Workflow consolidation. HTTP ownership remains flat. |',
+          )
+          replace_once(
+              conv,
+              '- **Workflow:** `RunLifecycle` owns cancellation/deletion; `Service.RetryFailed` owns its raw transaction copying Workflow run/resources/steps. Service no longer needs a Transactor for cancellation/deletion.',
+              '- **Workflow:** `RunLifecycle` owns cancellation/deletion. `MediaRunCoordinator` owns Agent Media Candidate read + Workflow Run write decisions through `dbtx.Transactor` at Serializable isolation; Agent and Workflow repositories receive the same caller-owned transaction and never call each other. `Service.RetryFailed` still owns its raw transaction copying Workflow run/resources/steps.',
+          )
+          replace_once(
+              conv,
+              '1. **Workflow consolidation:** Definition/version persistence is now isolated. Cancellation/deletion lifecycle coordination is now explicit. Next design queue/retry/recovery and execution checkpoint persistence as coherent contracts, including resources and event scheduling; do not extract isolated SQL statements.',
+              '1. **Workflow consolidation:** Definition/version persistence, cancellation/deletion lifecycle coordination, and the Agent MediaCandidate/Workflow Run boundary are explicit. Next design queue/retry/recovery and execution checkpoint persistence as coherent contracts, including resources and event scheduling; do not extract isolated SQL statements.',
+          )
+          replace_once(
+              conv,
+              'Completed slices: **Agent Approval / Media Candidate / Workflow Event orchestration**, **Agent ManagementService dependency cutover**, **Starter Pack application coordination**, **Runner dependency/lifecycle convergence**, and **Workflow Definition/Version persistence extraction** now use canonical ownership boundaries and explicit composition-root wiring.',
+              'Completed slices: **Agent Approval / Media Candidate / Workflow Event orchestration**, **Agent ManagementService dependency cutover**, **Starter Pack application coordination**, **Runner dependency/lifecycle convergence**, **Workflow Definition/Version persistence extraction**, **Workflow Run lifecycle coordination**, and **Agent MediaCandidate / Workflow Run boundary convergence** now use canonical ownership boundaries and explicit composition-root wiring.',
+          )
+          marker = '\n\n## Definition of done for a capability\n'
+          p = Path(conv)
+          s = p.read_text()
+          if marker not in s:
+              raise SystemExit('convergence map: definition-of-done marker missing')
+          section = '''\n\n### Agent MediaCandidate / Workflow Run boundary — 2026-09-13\n\n- `ai_media_candidates` remains Agent-owned persistence. No production file under `internal/workflow` may query it directly; `ownership_test.go` enforces this boundary.\n- `MediaRunCoordinator` is the Workflow-side application coordinator. It defines the consumer-owned `MediaCandidateRunStore` and `MediaWorkflowRunStore` ports and owns cross-capability transactions.\n- Agent `MediaCandidateRepository` exposes only the candidate existence, aggregate run-state summary, and pending-state reads required by Workflow. Workflow `MediaRunRepository` writes only `ai_workflow_runs`.\n- ApprovalService resolves `candidate_id -> workflow_run_id` through the Agent store before calling the Workflow run-event port; Workflow event persistence no longer reaches into Agent tables.\n- Resume-after-approval and media reconciliation use a shared Serializable transaction so the Agent-state decision and Workflow-state write are one application-owned consistency boundary.\n- Composition root wires the canonical Agent repository and Workflow repository directly into the coordinator; no compatibility facade or parallel dependency graph was introduced.\n- HTTP routes, auth/BFF behavior, Connector behavior, and external API contracts are unchanged.\n'''
+          if '### Agent MediaCandidate / Workflow Run boundary — 2026-09-13' not in s:
+              p.write_text(s.replace(marker, section + marker, 1))
+
+          audit = Path('blog-backend/ARCHITECTURE_BRANCH_AUDIT.md')
+          s = audit.read_text()
+          note = '> Active convergence work after this audit: `refactor/workflow-media-candidate-boundary` was created from current `main` to remove direct Workflow reads of Agent-owned Media Candidate persistence. It is not a historical branch and must be judged by its PR/CI before merge.\n\n'
+          audit.write_text(s.replace(note, ''))
+          PY
+
+      - name: Format and verify
+        run: |
+          cd blog-backend
+          gofmt -w internal/agent/repository/media_candidate_workflow_state.go internal/workflow/media_run_coordinator.go
+          if grep -R --include='*.go' --exclude='*_test.go' -n 'ai_media_candidates' internal/workflow; then
+            echo 'Workflow production code still queries Agent-owned ai_media_candidates' >&2
+            exit 1
+          fi
+          go test ./internal/agent ./internal/workflow/...
+          go vet ./internal/agent ./internal/workflow/... ./cmd/gouno/...
+          cd ..
+          git diff --check
+
+      - name: Remove one-shot workflow and commit
+        run: |
+          rm .github/workflows/fix-workflow-media-boundary.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'refactor(workflow): tighten media run transaction boundary'
+          git push origin HEAD:refactor/workflow-media-candidate-boundary
