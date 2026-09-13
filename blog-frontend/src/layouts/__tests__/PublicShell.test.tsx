@@ -61,11 +61,15 @@ describe("PublicShell theme", () => {
     const headerBrand = await screen.findByRole("link", {
       name: "Configured Site 首页",
     });
-    expect(headerBrand.querySelector('img[src="/favicon.svg"]')).toBeInTheDocument();
+    expect(
+      headerBrand.querySelector('img[src="/favicon.svg"]'),
+    ).toBeInTheDocument();
     expect(headerBrand).toHaveClass("inline-flex", "items-center", "gap-2");
 
     const footerBrand = screen.getByRole("link", { name: "Configured Site" });
-    expect(footerBrand.querySelector('img[src="/favicon.svg"]')).toBeInTheDocument();
+    expect(
+      footerBrand.querySelector('img[src="/favicon.svg"]'),
+    ).toBeInTheDocument();
   });
 
   it("renders configured or fallback footer meta text", async () => {
