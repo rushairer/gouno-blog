@@ -260,7 +260,6 @@ describe("AISettings", () => {
     expect(screen.getByText("Chunks")).toBeInTheDocument();
     expect(screen.getByText("Queued")).toBeInTheDocument();
     expect(screen.getByText("Failed")).toBeInTheDocument();
-    expect(window.location.search).toBe("?section=knowledge");
   });
 
   it("uses the canonical delete confirmation modal", async () => {

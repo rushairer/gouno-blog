@@ -156,6 +156,7 @@ function AISettingsContent() {
   }, [notice, notify]);
 
   const selectSection = (next: AdvancedSection) => {
+    if (next === section) return;
     setEditingAgent(null);
     setEditingProvider(null);
     setEditingEmbedding(null);
@@ -163,10 +164,11 @@ function AISettingsContent() {
     setCopySkillTarget(null);
     setCopySkillName("");
     setSection(next);
-    const url = new URL(window.location.href);
-    if (next === "agents") url.searchParams.delete("section");
-    else url.searchParams.set("section", next);
-    window.history.replaceState(null, "", url);
+    const params = new URLSearchParams(window.location.search);
+    if (next === "agents") params.delete("section");
+    else params.set("section", next);
+    const search = params.toString();
+    navigate({ search: search ? `?${search}` : "" }, { replace: true });
   };
 
   const refresh = async () => {
