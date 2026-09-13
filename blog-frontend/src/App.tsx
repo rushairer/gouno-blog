@@ -7,7 +7,14 @@ import {
   useLocation,
 } from "react-router-dom";
 import { I18nProvider, useI18n } from "./i18n";
-import { Button, ButtonLink, Card, Spinner } from "@gouno/ui/core";
+import {
+  Alert,
+  Button,
+  ButtonLink,
+  Card,
+  Result,
+  Spinner,
+} from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
 
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -91,21 +98,43 @@ function AdminAccessDenied({ message }: { message?: string }) {
 
   return (
     <PublicShell>
-      <div className="public-container state-page" role="alert">
-        <div className="state-card">
-          <h1>{t("auth.noAdminAccess")}</h1>
-          <p>{message || t("auth.noAdminAccessDesc")}</p>
-          <div className="state__actions">
-            <ButtonLink variant="solid" color="primary" to="/admin/dashboard">
-              {t("common.back")}
-            </ButtonLink>
-            <Button variant="outline" onClick={() => void switchAccount()}>
-              {t("auth.logout")}
-            </Button>
-          </div>
-          {logoutError ? <p className="form-error">{logoutError}</p> : null}
-        </div>
-      </div>
+      <Card
+        padding="none"
+        variant="subtle"
+        className="mx-auto max-w-[760px]"
+      >
+        <Result
+          role="alert"
+          status="warning"
+          headingLevel={1}
+          title={t("auth.noAdminAccess")}
+          description={message || t("auth.noAdminAccessDesc")}
+          extra={
+            <div className="flex w-full flex-col items-center gap-3">
+              <div className="flex flex-wrap justify-center gap-2">
+                <ButtonLink
+                  variant="solid"
+                  color="primary"
+                  to="/admin/dashboard"
+                >
+                  {t("common.back")}
+                </ButtonLink>
+                <Button variant="outline" onClick={() => void switchAccount()}>
+                  {t("auth.logout")}
+                </Button>
+              </div>
+              {logoutError ? (
+                <Alert
+                  className="w-full text-left"
+                  type="error"
+                  description={logoutError}
+                  showIcon
+                />
+              ) : null}
+            </div>
+          }
+        />
+      </Card>
     </PublicShell>
   );
 }
@@ -158,12 +187,12 @@ function Admin({
       }
       fallback={
         <PublicShell>
-          <div className="public-container state-page" role="status">
-            <div className="state-card">
-              <Spinner className="size-5 text-primary" />
-              <h1>正在验证权限</h1>
-              <p>正在前往安全登录页…</p>
-            </div>
+          <div
+            role="status"
+            className="flex min-h-[50vh] items-center justify-center gap-3 text-sm text-muted-foreground"
+          >
+            <Spinner className="size-5 text-primary" />
+            <span>正在前往安全登录页…</span>
           </div>
         </PublicShell>
       }
@@ -179,7 +208,15 @@ function Admin({
     >
       <AdminShell>
         <React.Suspense
-          fallback={<div className="loading">正在载入工作区…</div>}
+          fallback={
+            <div
+              role="status"
+              className="flex min-h-[40vh] items-center justify-center gap-3 text-sm text-muted-foreground"
+            >
+              <Spinner className="size-5 text-primary" />
+              <span>正在载入工作区…</span>
+            </div>
+          }
         >
           {children}
         </React.Suspense>
