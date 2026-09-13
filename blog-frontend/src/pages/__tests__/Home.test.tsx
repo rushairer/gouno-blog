@@ -74,7 +74,7 @@ describe("Home", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    const { container } = renderHome();
+    renderHome();
 
     expect(
       await screen.findByRole("heading", { name: /记录探索与思考/ }),
@@ -88,9 +88,6 @@ describe("Home", () => {
     expect(
       screen.getByRole("heading", { name: "精选文章" }),
     ).toBeInTheDocument();
-    expect(container.querySelector(".featured-layout")).toHaveClass(
-      "featured-layout--1",
-    );
     expect(
       screen.getByRole("heading", { name: "主题索引" }),
     ).toBeInTheDocument();
@@ -192,7 +189,7 @@ describe("Home", () => {
     expect(imgs[0]).toHaveAttribute("src", "/media/cover1.jpg");
   });
 
-  it("uses a balanced two-column layout for three total posts", async () => {
+  it("uses the Showcase two-column grid for three total posts", async () => {
     const threePosts = [
       ...pageOnePosts,
       {
@@ -216,18 +213,19 @@ describe("Home", () => {
       }),
     );
 
-    const { container } = renderHome();
+    renderHome();
 
     await screen.findAllByRole("heading", { name: "No Cover Post" });
-    const featuredLayout = container.querySelector(".featured-layout");
-    expect(featuredLayout).toHaveClass("featured-layout--2");
-    expect(
-      featuredLayout?.querySelectorAll(":scope > .editorial-story"),
-    ).toHaveLength(2);
-    expect(featuredLayout?.querySelector("img")).toBeNull();
+    const featuredSection = screen
+      .getByRole("heading", { name: "精选文章" })
+      .closest("section");
+    const featuredGrid = featuredSection?.querySelector("div.grid");
+    expect(featuredGrid).toHaveClass("gap-x-8", "md:grid-cols-2");
+    expect(featuredSection?.querySelectorAll("article")).toHaveLength(2);
+    expect(featuredSection?.querySelector("img")).toBeNull();
   });
 
-  it("shows up to four featured posts in a balanced two-column layout", async () => {
+  it("shows up to four featured posts in the Showcase two-column grid", async () => {
     const posts = Array.from({ length: 5 }, (_, index) => ({
       id: index + 1,
       title: `Post ${index + 1}`,
@@ -251,20 +249,15 @@ describe("Home", () => {
       }),
     );
 
-    const { container } = renderHome();
+    renderHome();
 
     await screen.findAllByAltText("Featured cover");
-    const featuredLayout = container.querySelector(".featured-layout");
-    expect(featuredLayout).toHaveClass("featured-layout--4");
-    expect(featuredLayout?.querySelectorAll(".editorial-story")).toHaveLength(
-      4,
-    );
-    expect(
-      featuredLayout?.querySelectorAll(".featured-layout__column"),
-    ).toHaveLength(1);
-    expect(
-      featuredLayout?.querySelector(".featured-layout__secondary"),
-    ).toBeInTheDocument();
+    const featuredSection = screen
+      .getByRole("heading", { name: "精选文章" })
+      .closest("section");
+    const featuredGrid = featuredSection?.querySelector("div.grid");
+    expect(featuredGrid).toHaveClass("gap-x-8", "md:grid-cols-2");
+    expect(featuredSection?.querySelectorAll("article")).toHaveLength(4);
   });
 
   it("renders custom hero title, description, and image when configured in site settings", async () => {
