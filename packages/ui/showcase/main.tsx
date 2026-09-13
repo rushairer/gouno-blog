@@ -23,6 +23,7 @@ import {
   Card,
   CardContent,
   CardHeader,
+  Checkbox,
   DataTable,
   DashboardTemplate,
   EditorWorkspaceTemplate,
@@ -274,8 +275,7 @@ function ListDemo({ kind = "posts" }: { kind?: "posts" | "users" | "clients" | "
                   <TableHeader>
                     <TableRow>
                       <TableHead>
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           aria-label="全选"
                           onChange={(e) =>
                             setSelected(
@@ -294,8 +294,7 @@ function ListDemo({ kind = "posts" }: { kind?: "posts" | "users" | "clients" | "
                     {visible.map((row) => (
                       <TableRow key={row[0]}>
                         <TableCell>
-                          <input
-                            type="checkbox"
+                          <Checkbox
                             aria-label={`选择 ${row[0]}`}
                             checked={selected.includes(row[0])}
                             onChange={(e) =>
@@ -390,7 +389,7 @@ function GossoUsersDemo() {
   const [selected, setSelected] = useState<string[]>([]);
   const [dialog, setDialog] = useState<string | null>(null);
   return <ListPageTemplate title="用户管理" description="管理用户、角色、MFA 和账户状态。" action={<Button variant="primary" icon={<Plus />}>添加用户</Button>} stateControls={<StateControls state={state} setState={setState} />}>
-    {state !== "ready" ? <Panel><StatePanel state={state} onRetry={() => setState("ready")} /></Panel> : <Panel><PanelHeader title="用户" description={`${gossoUsers.length} 个账户`} /><FilterBar><Field label="搜索" hideLabel><Input prefixIcon={<Search />} placeholder="搜索用户名或邮箱" /></Field><Button variant="secondary">筛选</Button></FilterBar><DataTable><TableHeader><TableRow><TableHead><input type="checkbox" aria-label="全选" onChange={e => setSelected(e.target.checked ? gossoUsers.map(u => u.id) : [])} /></TableHead><TableHead>用户</TableHead><TableHead>状态</TableHead><TableHead>角色</TableHead><TableHead>操作</TableHead></TableRow></TableHeader><TableBody>{gossoUsers.map(user => <TableRow key={user.id}><TableCell><input type="checkbox" aria-label={`选择 ${user.username}`} checked={selected.includes(user.id)} onChange={e => setSelected(s => e.target.checked ? [...s,user.id] : s.filter(id => id !== user.id))} /></TableCell><TableCell><div className="font-medium">{user.display_name}</div><div className="text-xs text-muted-foreground">{user.username} · {user.id}</div></TableCell><TableCell><Badge tone={user.status === "active" ? "success" : "danger"}>{user.status === "active" ? "活跃" : "已停用"}</Badge></TableCell><TableCell><div className="flex flex-wrap gap-1">{user.roles?.map(r => <Badge key={r.id} tone="neutral" title={r.description}>{r.name}</Badge>)}</div></TableCell><TableCell><ActionGroup><Button size="sm" variant="secondary" onClick={() => setDialog(`角色：${user.display_name}`)}>角色</Button><Button size="sm" variant="secondary" onClick={() => setDialog(`安全操作：${user.display_name}`)}>安全</Button><Button size="sm" variant="danger" onClick={() => setDialog(`删除：${user.display_name}`)}>删除</Button></ActionGroup></TableCell></TableRow>)}</TableBody></DataTable></Panel>}
+    {state !== "ready" ? <Panel><StatePanel state={state} onRetry={() => setState("ready")} /></Panel> : <Panel><PanelHeader title="用户" description={`${gossoUsers.length} 个账户`} /><FilterBar><Field label="搜索" hideLabel><Input prefixIcon={<Search />} placeholder="搜索用户名或邮箱" /></Field><Button variant="secondary">筛选</Button></FilterBar><DataTable><TableHeader><TableRow><TableHead><Checkbox aria-label="全选" onChange={e => setSelected(e.target.checked ? gossoUsers.map(u => u.id) : [])} /></TableHead><TableHead>用户</TableHead><TableHead>状态</TableHead><TableHead>角色</TableHead><TableHead>操作</TableHead></TableRow></TableHeader><TableBody>{gossoUsers.map(user => <TableRow key={user.id}><TableCell><Checkbox aria-label={`选择 ${user.username}`} checked={selected.includes(user.id)} onChange={e => setSelected(s => e.target.checked ? [...s,user.id] : s.filter(id => id !== user.id))} /></TableCell><TableCell><div className="font-medium">{user.display_name}</div><div className="text-xs text-muted-foreground">{user.username} · {user.id}</div></TableCell><TableCell><Badge tone={user.status === "active" ? "success" : "danger"}>{user.status === "active" ? "活跃" : "已停用"}</Badge></TableCell><TableCell><div className="flex flex-wrap gap-1">{user.roles?.map(r => <Badge key={r.id} tone="neutral" title={r.description}>{r.name}</Badge>)}</div></TableCell><TableCell><ActionGroup><Button size="sm" variant="secondary" onClick={() => setDialog(`角色：${user.display_name}`)}>角色</Button><Button size="sm" variant="secondary" onClick={() => setDialog(`安全操作：${user.display_name}`)}>安全</Button><Button size="sm" variant="danger" onClick={() => setDialog(`删除：${user.display_name}`)}>删除</Button></ActionGroup></TableCell></TableRow>)}</TableBody></DataTable></Panel>}
     <Modal open={Boolean(dialog)} onOpenChange={open => !open && setDialog(null)} title={dialog ?? "用户操作"}><div className="space-y-4"><p className="text-sm text-muted-foreground">静态模拟 Gosso Admin 的确认、角色、密码、MFA、锁定和删除操作。</p><Button variant="secondary" onClick={() => setDialog(null)}>取消</Button><Button variant="primary" onClick={() => { setDialog(null); setState("success"); }}>确认</Button></div></Modal>
   </ListPageTemplate>;
 }
