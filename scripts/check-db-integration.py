@@ -25,7 +25,7 @@ IMAGE = "pgvector/pgvector:pg15"
 
 def inventory(root=BACKEND):
     required = {}
-    for source in sorted((root / "internal").glob("*/*_integration_test.go")):
+    for source in sorted((root / "internal").rglob("*_integration_test.go")):
         package = source.parent.relative_to(root).as_posix()
         names = re.findall(r"^func (Test\w+)\(t \*testing\.T\)", source.read_text(), re.M)
         if not names:

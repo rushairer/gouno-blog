@@ -93,6 +93,8 @@ The historical global `internal/service` bucket has already been retired. `inter
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for the authoritative project convention and the repository root [AGENTS.md](../AGENTS.md) for security and migration invariants.
 
+For current owners, inbound/outbound contracts, transaction coordinators and retained facade exit conditions, use [ARCHITECTURE_CONVERGENCE.md](./ARCHITECTURE_CONVERGENCE.md). Database integration must use `python3 scripts/check-db-integration.py` from the repository root; it discovers nested capability tests and rejects skipped/missing required tests.
+
 ## Common Makefile Commands
 
 - `make build`: build the backend binary.
