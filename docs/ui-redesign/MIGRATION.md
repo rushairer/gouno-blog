@@ -6,7 +6,7 @@ The JSON ledger is authoritative. Implementation and real browser verification a
 
 - PR #209 reconciliation baseline: the branch was cut from `gouno-blog/main` at `3a21a24ad192ebbcf69aaa5f004b3cd98fc07d10`; `blog-frontend` consumes registry `@gouno/ui@0.3.5` and no longer carries a product-local/vendored UI implementation.
 - U03c and U03d are `verified`. U03d combines the existing real authenticated U03a/U03b browser evidence with PR #209's independent support-page Chromium pass: 59/59 Playwright tests passed across Categories/Tags/Comments/Notifications/Media/Settings/Users at 1440/1024/768/390 in light/dark, including Media checkbox selection, Settings error→retry and Users Modal presentation. Browser artifact ID `10316928262`, digest `sha256:3499b5d1bd40de075afdd2a3ca52c5cfede66df04d9625c09069d68c7da1ff14`.
-- U04a is `implemented-ci-verified`: Advanced Settings Providers/Knowledge and the other AI sections use canonical composition; native browser dialogs are forbidden; retired AI/Workflow CSS has been pruned. Workflow has zero generic `.btn` CSS overrides. Formal Browser QA is still pending, so U04a is not marked `verified`.
+- U04a is `verified`: PR #211 completed independent Chromium rendered QA with 87 U04a tests (80 four-viewport/light-dark matrix cases + 7 key interactions); the full durable browser gate passed 146/146 tests. Final browser artifact ID `10319540400`, digest `sha256:c380295786ccdf2f8d1d1bde0ce4785ab2ce3c5e10419586a55191c7ae6154d7`. The pass also fixed Workflow long-output containment and a real AISettings Symbol-key Proxy runtime failure without weakening existing contracts.
 - `agent-console.css` has one generic Button selector exception, `.agent-row-actions .btn`. It is explicitly allowlisted only because ConnectorWorkspace shares it. All other generic Button selectors in that stylesheet are rejected by `lint:css`; canonical primitive and `[data-slot]` ownership is rejected by `lint:ui`.
 - U04b is `hold`: root `AGENTS.md` places the Connector frontend workspace under Connector Module Hold. Do not continue Connector presentation/behavior refactoring without an explicit user instruction naming Connector work. U04c is therefore blocked on the hold.
 - Latest clean Stage 16 PR #186 passed both CI and Images before merge. This proves formatter/lint/UI-CSS contracts/typecheck/coverage/build and Docker image gates, not pixel-level browser parity.
@@ -167,7 +167,7 @@ Automated checks do not replace authenticated browser regression. Entries remain
 | blog:pages/PostDetail.tsx | /articles/:slug | migrated | verified |
 | blog:pages/Settings.tsx | /account/settings, /settings | migrated | verified |
 | blog:pages/Tags.tsx | /tags | migrated | verified |
-| blog-admin:pages/admin/AIOperations.tsx | /admin/ai-ops | not-started | not-run |
+| blog-admin:pages/admin/AIOperations.tsx | /admin/ai-ops | migrated | verified |
 | blog-admin:pages/admin/Categories.tsx | /admin/categories | not-started | not-run |
 | blog-admin:pages/admin/Comments.tsx | /admin/comments | not-started | not-run |
 | blog-admin:pages/admin/Dashboard.tsx | /admin, /admin/dashboard | migrated | verified |

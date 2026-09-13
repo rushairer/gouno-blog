@@ -28,7 +28,9 @@
         "result": "format/UI/CSS/typecheck/build pass; 42 files and 160 tests pass; coverage command exits 1 because branches are 44.58% against 45%"
       },
       "gossoAdminFrontend": {
-        "commands": ["npm run quality"],
+        "commands": [
+          "npm run quality"
+        ],
         "result": "pass; 19 files and 108 tests pass; existing lint/Vite/jsdom warnings remain; coverage 43.89/39.22/31.83/44.63%"
       }
     }
@@ -36,29 +38,152 @@
   "phase0Inventory": {
     "routes": {
       "blog": {
-        "public": ["/", "/articles", "/articles/:slug", "/categories", "/categories/:slug", "/tags", "/tags/:slug", "/archive", "/about", "/search", "/:slug", "*"],
-        "account": ["/account/notifications", "/account/settings", "/notifications -> /account/notifications", "/settings -> /account/settings"],
-        "admin": ["/admin -> /admin/dashboard", "/admin/dashboard", "/admin/posts", "/admin/posts/new", "/admin/posts/:id/edit", "/admin/pages", "/admin/pages/new", "/admin/pages/:id/edit", "/admin/categories", "/admin/tags", "/admin/comments", "/admin/notifications", "/admin/media", "/admin/settings", "/admin/users", "/admin/ai-ops"]
+        "public": [
+          "/",
+          "/articles",
+          "/articles/:slug",
+          "/categories",
+          "/categories/:slug",
+          "/tags",
+          "/tags/:slug",
+          "/archive",
+          "/about",
+          "/search",
+          "/:slug",
+          "*"
+        ],
+        "account": [
+          "/account/notifications",
+          "/account/settings",
+          "/notifications -> /account/notifications",
+          "/settings -> /account/settings"
+        ],
+        "admin": [
+          "/admin -> /admin/dashboard",
+          "/admin/dashboard",
+          "/admin/posts",
+          "/admin/posts/new",
+          "/admin/posts/:id/edit",
+          "/admin/pages",
+          "/admin/pages/new",
+          "/admin/pages/:id/edit",
+          "/admin/categories",
+          "/admin/tags",
+          "/admin/comments",
+          "/admin/notifications",
+          "/admin/media",
+          "/admin/settings",
+          "/admin/users",
+          "/admin/ai-ops"
+        ]
       },
       "gossoAdmin": {
-        "auth": ["/callback", "/login", "/forgot-password", "/reset-password"],
-        "account": ["/account-settings -> /account-settings/profile", "/account-settings/:tab"],
-        "system": ["/system-management -> /system-management/clients", "/system-management/:tab"],
-        "fallback": ["*"]
+        "auth": [
+          "/callback",
+          "/login",
+          "/forgot-password",
+          "/reset-password"
+        ],
+        "account": [
+          "/account-settings -> /account-settings/profile",
+          "/account-settings/:tab"
+        ],
+        "system": [
+          "/system-management -> /system-management/clients",
+          "/system-management/:tab"
+        ],
+        "fallback": [
+          "*"
+        ]
       }
     },
     "stateAndOverlayScan": {
       "blog": {
-        "states": ["loading", "empty", "error", "error retry", "unauthorized", "disabled", "success"],
-        "overlays": ["PublicShell mobile Drawer", "PostDetail report/comment surfaces", "ArticlePreviewModal", "WorkflowInputForm/WorkflowLauncher Modal", "StepUpMfaModal", "MediaLibrary and taxonomy drawers"],
-        "interactions": ["search", "pagination/filter", "comments/like/report", "CRUD", "AI generation/suggestions", "workflow/agent run actions", "copy", "logout and step-up"],
-        "apiModules": ["agent", "analytics", "comments", "connectors (display-only during migration)", "media", "members", "notifications", "operations", "pages", "posts", "site", "workflows"]
+        "states": [
+          "loading",
+          "empty",
+          "error",
+          "error retry",
+          "unauthorized",
+          "disabled",
+          "success"
+        ],
+        "overlays": [
+          "PublicShell mobile Drawer",
+          "PostDetail report/comment surfaces",
+          "ArticlePreviewModal",
+          "WorkflowInputForm/WorkflowLauncher Modal",
+          "StepUpMfaModal",
+          "MediaLibrary and taxonomy drawers"
+        ],
+        "interactions": [
+          "search",
+          "pagination/filter",
+          "comments/like/report",
+          "CRUD",
+          "AI generation/suggestions",
+          "workflow/agent run actions",
+          "copy",
+          "logout and step-up"
+        ],
+        "apiModules": [
+          "agent",
+          "analytics",
+          "comments",
+          "connectors (display-only during migration)",
+          "media",
+          "members",
+          "notifications",
+          "operations",
+          "pages",
+          "posts",
+          "site",
+          "workflows"
+        ]
       },
       "gossoAdmin": {
-        "states": ["loading", "empty", "error", "error retry", "unauthorized redirect", "disabled", "success"],
-        "overlays": ["SudoContext Modal", "EmailChangeModal", "MFA enrollment/backup-code dialogs", "Passkey dialogs", "AuditLogDetailModal", "ClientEditorModal", "ClientSecretModal", "AssignRolesModal", "CreateUserModal", "ResetPasswordModal", "UserConsentsModal", "confirm dialogs"],
-        "interactions": ["login/MFA/passkey", "callback handling", "password reset", "profile/email/password/session/MFA/passkey management", "client CRUD/secret rotation", "user CRUD/roles/consents", "audit detail", "site settings", "system status"],
-        "apiServices": ["accountService", "auditService", "clientService", "siteSettingsService", "systemService", "@gosso/client authentication/session APIs"]
+        "states": [
+          "loading",
+          "empty",
+          "error",
+          "error retry",
+          "unauthorized redirect",
+          "disabled",
+          "success"
+        ],
+        "overlays": [
+          "SudoContext Modal",
+          "EmailChangeModal",
+          "MFA enrollment/backup-code dialogs",
+          "Passkey dialogs",
+          "AuditLogDetailModal",
+          "ClientEditorModal",
+          "ClientSecretModal",
+          "AssignRolesModal",
+          "CreateUserModal",
+          "ResetPasswordModal",
+          "UserConsentsModal",
+          "confirm dialogs"
+        ],
+        "interactions": [
+          "login/MFA/passkey",
+          "callback handling",
+          "password reset",
+          "profile/email/password/session/MFA/passkey management",
+          "client CRUD/secret rotation",
+          "user CRUD/roles/consents",
+          "audit detail",
+          "site settings",
+          "system status"
+        ],
+        "apiServices": [
+          "accountService",
+          "auditService",
+          "clientService",
+          "siteSettingsService",
+          "systemService",
+          "@gosso/client authentication/session APIs"
+        ]
       }
     },
     "sharedPackage": {
@@ -66,7 +191,10 @@
       "archive": "gouno-ui-0.1.0.tgz",
       "sha256": "b86698a7ad7409bed50396f64f5b45acae8e995bcc1dec025bbe24fae2c58630",
       "integrity": "sha512-iwi4xaQLfHQzuWEPVRt/9iMzwx3GwkEElfHzctnOJ8ymxPgQbWByilfFiIY9B266FOByDlzwQQaB6iwlRlKX1g==",
-      "consumers": ["blog-frontend", "gosso-admin-frontend"],
+      "consumers": [
+        "blog-frontend",
+        "gosso-admin-frontend"
+      ],
       "tailwindSource": "@source ../../node_modules/@gouno/ui/dist in both consumer Tailwind entrypoints",
       "showcase": "packages/ui/showcase builds independently",
       "u01cValidation": {
@@ -80,8 +208,16 @@
           "npm run showcase:build"
         ],
         "tests": "5 passed",
-        "brands": ["blog", "blog-admin", "gosso-admin"],
-        "modes": ["light", "dark", "system"],
+        "brands": [
+          "blog",
+          "blog-admin",
+          "gosso-admin"
+        ],
+        "modes": [
+          "light",
+          "dark",
+          "system"
+        ],
         "browser": "showcase visibly renders shell, layout, form, feedback, table and status badges; light/dark/system controls verified on blog-admin brand"
       },
       "u01dReview": {
@@ -95,7 +231,12 @@
         ],
         "result": "Blog quality passed (44 files/167 tests; branches 45.03%); gosso-admin quality passed (20 files/110 tests); shared package tests/build/showcase passed. Distribution script exit 0 refreshed all three archives to sha256 b86698a7ad7409bed50396f64f5b45acae8e995bcc1dec025bbe24fae2c58630 with matching integrity sha512-iwi4xaQLfHQzuWEPVRt/9iMzwx3GwkEElfHzctnOJ8ymxPgQbWByilfFiIY9B266FOByDlzwQQaB6iwlRlKX1g==.",
         "browser": "http://127.0.0.1:5173/ visibly rendered showcase shell/layout/form/feedback/table/status; selecting dark yielded documentElement data-theme=dark",
-        "unverified": ["authenticated application routes", "responsive widths", "production domains", "full three-consumer browser run"],
+        "unverified": [
+          "authenticated application routes",
+          "responsive widths",
+          "production domains",
+          "full three-consumer browser run"
+        ],
         "blocker": null
       }
     },
@@ -173,9 +314,30 @@
       "handoff": "U03c 可开始；保留编辑器 API/权限语义，继续完成 Taxonomy、Comments、Notifications、Media、Settings 及 Users 安全展示。"
     },
     "qualityScripts": {
-      "blogFrontend": ["format:check", "lint", "lint:ui", "lint:css", "tsc -b (no typecheck script)", "test:coverage", "build"],
-      "gossoAdminFrontend": ["format:check", "lint", "lint:ui", "lint:css", "typecheck", "test:coverage", "build"],
-      "packagesUi": ["typecheck", "build", "test", "showcase:build"]
+      "blogFrontend": [
+        "format:check",
+        "lint",
+        "lint:ui",
+        "lint:css",
+        "tsc -b (no typecheck script)",
+        "test:coverage",
+        "build"
+      ],
+      "gossoAdminFrontend": [
+        "format:check",
+        "lint",
+        "lint:ui",
+        "lint:css",
+        "typecheck",
+        "test:coverage",
+        "build"
+      ],
+      "packagesUi": [
+        "typecheck",
+        "build",
+        "test",
+        "showcase:build"
+      ]
     },
     "knownBlockers": [
       "existing non-blocking oxlint, Vite config, jsdom navigation, font resolution and Lightning CSS warnings"
@@ -285,7 +447,9 @@
         "disabled",
         "success"
       ],
-      "sharedComponents": ["@gouno/ui:Button"],
+      "sharedComponents": [
+        "@gouno/ui:Button"
+      ],
       "responsive": [
         "desktop",
         "tablet",
@@ -1595,7 +1759,12 @@
         "disabled",
         "success"
       ],
-      "sharedComponents": ["@gouno/ui:Input", "@gouno/ui:IconButton", "@gouno/ui:ThemeToggle", "@gouno/ui:Drawer"],
+      "sharedComponents": [
+        "@gouno/ui:Input",
+        "@gouno/ui:IconButton",
+        "@gouno/ui:ThemeToggle",
+        "@gouno/ui:Drawer"
+      ],
       "responsive": [
         "desktop",
         "tablet",
@@ -1607,7 +1776,9 @@
       ],
       "implementation": "migrated",
       "verification": "verified",
-      "evidence": ["U02a browser: homepage verified at 1440x900, 768x1024 and 390x844 in light and dark themes; U02c independently rendered the data-backed standard-HTTPS homepage and rechecked theme/responsive navigation"]
+      "evidence": [
+        "U02a browser: homepage verified at 1440x900, 768x1024 and 390x844 in light and dark themes; U02c independently rendered the data-backed standard-HTTPS homepage and rechecked theme/responsive navigation"
+      ]
     },
     {
       "id": "blog:pages/About.tsx",
@@ -1719,7 +1890,12 @@
         "disabled",
         "success"
       ],
-      "sharedComponents": ["@gouno/ui:PageHeader", "@gouno/ui:Panel", "@gouno/ui:LoadingState", "@gouno/ui:EmptyState"],
+      "sharedComponents": [
+        "@gouno/ui:PageHeader",
+        "@gouno/ui:Panel",
+        "@gouno/ui:LoadingState",
+        "@gouno/ui:EmptyState"
+      ],
       "responsive": [
         "desktop",
         "tablet",
@@ -1731,7 +1907,9 @@
       ],
       "implementation": "migrated",
       "verification": "verified",
-      "evidence": ["U02a targeted taxonomy/archive tests, full Blog quality pass, and responsive browser verification"]
+      "evidence": [
+        "U02a targeted taxonomy/archive tests, full Blog quality pass, and responsive browser verification"
+      ]
     },
     {
       "id": "blog:pages/ArticleIndex.tsx",
@@ -1765,7 +1943,13 @@
         "disabled",
         "success"
       ],
-      "sharedComponents": ["@gouno/ui:SearchField", "@gouno/ui:Pagination", "@gouno/ui:ArticleListSkeleton", "@gouno/ui:EmptyState", "@gouno/ui:ErrorState"],
+      "sharedComponents": [
+        "@gouno/ui:SearchField",
+        "@gouno/ui:Pagination",
+        "@gouno/ui:ArticleListSkeleton",
+        "@gouno/ui:EmptyState",
+        "@gouno/ui:ErrorState"
+      ],
       "responsive": [
         "desktop",
         "tablet",
@@ -1777,7 +1961,9 @@
       ],
       "implementation": "migrated",
       "verification": "verified",
-      "evidence": ["U02a full Blog quality pass covers article index regressions; U02c verified /categories/ai?page=1 against live data at 390x844 dark with the route/query preserved and no horizontal overflow"]
+      "evidence": [
+        "U02a full Blog quality pass covers article index regressions; U02c verified /categories/ai?page=1 against live data at 390x844 dark with the route/query preserved and no horizontal overflow"
+      ]
     },
     {
       "id": "blog:pages/Categories.tsx",
@@ -1800,7 +1986,12 @@
         "disabled",
         "success"
       ],
-      "sharedComponents": ["@gouno/ui:PageHeader", "@gouno/ui:Panel", "@gouno/ui:LoadingState", "@gouno/ui:EmptyState"],
+      "sharedComponents": [
+        "@gouno/ui:PageHeader",
+        "@gouno/ui:Panel",
+        "@gouno/ui:LoadingState",
+        "@gouno/ui:EmptyState"
+      ],
       "responsive": [
         "desktop",
         "tablet",
@@ -1812,7 +2003,9 @@
       ],
       "implementation": "migrated",
       "verification": "verified",
-      "evidence": ["U02a targeted taxonomy/archive tests and full Blog quality pass; U02c independently rendered /categories against live data at 768x1024 light with canonical category links and no horizontal overflow"]
+      "evidence": [
+        "U02a targeted taxonomy/archive tests and full Blog quality pass; U02c independently rendered /categories against live data at 768x1024 light with canonical category links and no horizontal overflow"
+      ]
     },
     {
       "id": "blog:pages/CustomPageView.tsx",
@@ -1883,7 +2076,13 @@
         "disabled",
         "success"
       ],
-      "sharedComponents": ["@gouno/ui:SectionHeading", "@gouno/ui:Button", "@gouno/ui:Feedback", "@gouno/ui:EmptyState", "@gouno/ui:ArticleListSkeleton"],
+      "sharedComponents": [
+        "@gouno/ui:SectionHeading",
+        "@gouno/ui:Button",
+        "@gouno/ui:Feedback",
+        "@gouno/ui:EmptyState",
+        "@gouno/ui:ArticleListSkeleton"
+      ],
       "responsive": [
         "desktop",
         "tablet",
@@ -1895,7 +2094,9 @@
       ],
       "implementation": "migrated",
       "verification": "verified",
-      "evidence": ["U02a Home tests and full Blog quality pass; homepage verified at 1440x900, 768x1024 and 390x844 in light and dark themes"]
+      "evidence": [
+        "U02a Home tests and full Blog quality pass; homepage verified at 1440x900, 768x1024 and 390x844 in light and dark themes"
+      ]
     },
     {
       "id": "blog:pages/NotFound.tsx",
@@ -2067,7 +2268,12 @@
         "disabled",
         "success"
       ],
-      "sharedComponents": ["@gouno/ui:PageHeader", "@gouno/ui:Panel", "@gouno/ui:LoadingState", "@gouno/ui:EmptyState"],
+      "sharedComponents": [
+        "@gouno/ui:PageHeader",
+        "@gouno/ui:Panel",
+        "@gouno/ui:LoadingState",
+        "@gouno/ui:EmptyState"
+      ],
       "responsive": [
         "desktop",
         "tablet",
@@ -2079,7 +2285,9 @@
       ],
       "implementation": "migrated",
       "verification": "verified",
-      "evidence": ["U02a targeted taxonomy/archive tests, full Blog quality pass, and responsive browser verification"]
+      "evidence": [
+        "U02a targeted taxonomy/archive tests, full Blog quality pass, and responsive browser verification"
+      ]
     },
     {
       "id": "blog-admin:pages/admin/AIOperations.tsx",
@@ -2136,7 +2344,9 @@
       ],
       "implementation": "not-started",
       "verification": "not-run",
-      "evidence": []
+      "evidence": [
+        "PR #211 Chromium U04a browser acceptance: 87/87 U04a cases"
+      ]
     },
     {
       "id": "blog-admin:pages/admin/Categories.tsx",
@@ -4074,8 +4284,7 @@
       "verification": "not-run",
       "evidence": []
     }
-  ]
-,
+  ],
   "currentProgramStatus": {
     "asOf": "2026-09-13",
     "mainHead": "6f722dcdd34f3495a293d7a77dff4baf35e1120a",
@@ -4095,12 +4304,16 @@
         "status": "verified",
         "evidence": "U03a/U03b real authenticated browser evidence plus PR #209 support-page Playwright acceptance; run 34756247735 passed 59/59 tests across Categories/Tags/Comments/Notifications/Media/Settings/Users at 1440/1024/768/390 in light/dark, including Media checkbox, Settings retry and Users modal interactions",
         "browserArtifact": "10316928262 sha256:3499b5d1bd40de075afdd2a3ca52c5cfede66df04d9625c09069d68c7da1ff14",
-        "unverified": ["fresh real Gosso login was not repeated by the fixture-based support-page pass", "destructive member/site mutations were not submitted", "all alternate-role, real MFA/Passkey Step-Up and production-domain flows remain final-QA scope"]
+        "unverified": [
+          "fresh real Gosso login was not repeated by the fixture-based support-page pass",
+          "destructive member/site mutations were not submitted",
+          "all alternate-role, real MFA/Passkey Step-Up and production-domain flows remain final-QA scope"
+        ]
       },
       "U04a": {
-        "status": "implemented-ci-verified",
-        "evidence": "canonical Advanced Settings composition, controlled dialogs, retired AI/Workflow CSS cleanup, CI and Images green",
-        "browser": "formal independent rendered QA pending"
+        "status": "verified",
+        "evidence": "canonical AI workspace composition; controlled dialogs; retired AI/Workflow CSS cleanup; PR #211 Chromium rendered acceptance 87/87 U04a cases; standard CI and Images green",
+        "browser": "verified: run 34761329896; 80 viewport/theme matrix cases plus 7 key interactions; artifact 10319540400 sha256:c380295786ccdf2f8d1d1bde0ce4785ab2ce3c5e10419586a55191c7ae6154d7"
       },
       "U04b": {
         "status": "hold",
