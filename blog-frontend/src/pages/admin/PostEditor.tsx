@@ -1533,7 +1533,7 @@ export default function PostEditor() {
           className="editor-inspector min-w-0 p-6 xl:border-l"
           aria-label="文章元数据 Inspector"
         >
-          <fieldset disabled={isReadOnly} className="fieldset-unstyled">
+          <fieldset disabled={isReadOnly} className="min-w-0 border-0 p-0">
             {!isReadOnly ? (
               <div className="editor-inspector-ai-banner">
                 <Button
