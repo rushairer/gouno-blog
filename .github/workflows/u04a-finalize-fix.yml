@@ -1,0 +1,85 @@
+name: U04a Finalize Fix
+
+on:
+  push:
+    branches:
+      - ui/u04a-browser-acceptance-20260913
+    paths:
+      - .github/workflows/u04a-finalize-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ui/u04a-browser-acceptance-20260913
+          fetch-depth: 0
+      - name: Apply verified browser fix
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('blog-frontend/src/pages/admin/AISettings.tsx')
+          text = path.read_text()
+
+          old_proxy = '''  const labels = new Proxy({} as Record<string, string>, {
+            get: (_, prop: string) => t(`agent.${prop}` as any),
+          });'''
+          new_proxy = '''  const labels = new Proxy({} as Record<string, string>, {
+            get: (_, prop: string | symbol) =>
+              typeof prop === "string" ? t(`agent.${prop}` as any) : undefined,
+          });'''
+          if old_proxy not in text:
+              raise SystemExit('expected labels Proxy block not found')
+          text = text.replace(old_proxy, new_proxy, 1)
+
+          old_nav = '''  const selectSection = (next: AdvancedSection) => {
+            if (next === section) return;
+            setEditingAgent(null);
+            setEditingProvider(null);
+            setEditingEmbedding(null);
+            setEditingSkill(null);
+            setCopySkillTarget(null);
+            setCopySkillName("");
+            setSection(next);
+            const params = new URLSearchParams(window.location.search);
+            if (next === "agents") params.delete("section");
+            else params.set("section", next);
+            const search = params.toString();
+            navigate({ search: search ? `?${search}` : "" }, { replace: true });
+          };'''
+          new_nav = '''  const selectSection = (next: AdvancedSection) => {
+            setEditingAgent(null);
+            setEditingProvider(null);
+            setEditingEmbedding(null);
+            setEditingSkill(null);
+            setCopySkillTarget(null);
+            setCopySkillName("");
+            setSection(next);
+            const url = new URL(window.location.href);
+            if (next === "agents") url.searchParams.delete("section");
+            else url.searchParams.set("section", next);
+            window.history.replaceState(null, "", url);
+          };'''
+          if old_nav not in text:
+              raise SystemExit('expected selectSection block not found')
+          text = text.replace(old_nav, new_nav, 1)
+          path.write_text(text)
+          PY
+
+          rm -f .github/workflows/u04a-browser-diagnostics.yml
+          rm -f blog-frontend/e2e/playwright.diagnostics.config.mjs
+          rm -f blog-frontend/e2e/u04a-diagnostics.pw.mjs
+          rm -f .github/workflows/u04a-finalize-fix.yml
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "fix(ui): stabilize AI settings browser interactions"
+          git push origin HEAD:ui/u04a-browser-acceptance-20260913
