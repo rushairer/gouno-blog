@@ -37,13 +37,13 @@ jobs:
         run: npm ci
 
       - name: Install isolated Playwright runner
-        run: npm install --no-save --package-lock=false @playwright/test@1.55.0
+        run: cd e2e && npm install --package-lock=false
 
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: cd e2e && npx playwright install --with-deps chromium
 
       - name: Run rendered acceptance
-        run: npx playwright test --config=e2e/playwright.config.mjs
+        run: cd e2e && npx playwright test --config=playwright.config.mjs
 
       - name: Retain browser evidence
         if: always()
