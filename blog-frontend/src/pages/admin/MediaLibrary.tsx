@@ -519,7 +519,7 @@ export default function MediaLibrary() {
             >
               <div className="relative aspect-video w-full overflow-hidden border-b bg-muted/40">
                 {can("batch", "media") ? (
-                  <div className="absolute left-2 top-2 z-10 rounded-md bg-background/85 p-0.5 backdrop-blur">
+                  <div className="absolute left-2 top-2 z-10 rounded-md bg-background/85 p-1 backdrop-blur">
                     <Checkbox
                       aria-label={`选择媒体 ${asset.filename}`}
                       checked={selectedAssets.includes(asset.id)}
