@@ -44,6 +44,7 @@ const agentConsoleStyleImport = /(?:^|\/)styles\/agent-console\.css$/;
 const editorStyleImport = /(?:^|\/)styles\/editor\.css$/;
 const retiredEditorPrimitiveSelector = /(?:^|[\s>+~,])\.(?:btn|btn__label|choice-button|feedback|field)(?=$|[\s:{,[.#>+~])/;
 const retiredAgentFieldSelector = /(?:^|[\s>+~,])\.field(?=$|[\s:{,[.#>+~])/;
+const retiredAgentTokenReference = /var\(--(?:admin-line|agent-chip-bg|bg-muted|bg-panel|brand|brand-soft|color-surface|color-text|color-text-main|color-text-muted|control-bg-hover|danger|font-size-body|ink|line|radius-panel|space-2|space-3|status-danger-bg|status-danger-fg|status-info-bg|status-info-fg|status-success-bg|status-success-fg|status-warning-bg|status-warning-fg|success-color|text-3|text-muted|ui-border|ui-border-emphasis|ui-brand|ui-brand-soft|ui-code-control|ui-control|ui-control-bg|ui-control-hover|ui-danger|ui-danger-soft|ui-info|ui-info-soft|ui-on-brand|ui-panel|ui-success|ui-success-soft|ui-text|ui-text-muted|ui-text-primary|ui-text-secondary|ui-warning|ui-warning-soft)(?=[,\)])/;
 
 async function collect(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -427,6 +428,14 @@ for (const path of files) {
       ) {
         failures.push(
           `${name}:${index + 1} agent feature CSS must target product-owned classes instead of the canonical Field implementation class`,
+        );
+      }
+      if (
+        name === "styles/agent-console.css" &&
+        retiredAgentTokenReference.test(line)
+      ) {
+        failures.push(
+          `${name}:${index + 1} agent feature CSS must use canonical @gouno/ui semantic tokens instead of retired product token aliases`,
         );
       }
     });
