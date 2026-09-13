@@ -83,7 +83,7 @@ export default function Home() {
           {posts[0] ? <ArticleTeaser post={posts[0]} featured /> : null}
           {posts.length > 1 ? (
             <section className="mt-10">
-              <div className="mb-7 flex items-center justify-between gap-4">
+              <div className="mb-2 flex items-center justify-between gap-4">
                 <h2 className="text-lg font-semibold">精选文章</h2>
                 <Link
                   className="inline-flex items-center gap-2 text-sm text-primary"
@@ -93,27 +93,10 @@ export default function Home() {
                   <ArrowRight className="size-4" />
                 </Link>
               </div>
-              <div
-                className={`featured-layout featured-layout--${Math.min(posts.length - 1, 4)}`}
-              >
-                {posts.length >= 5 ? (
-                  <>
-                    <div className="featured-layout__column">
-                      {posts.slice(1, 3).map((post) => (
-                        <ArticleTeaser post={post} key={post.id} />
-                      ))}
-                    </div>
-                    <div className="featured-layout__secondary">
-                      {posts.slice(3, 5).map((post) => (
-                        <ArticleTeaser post={post} key={post.id} />
-                      ))}
-                    </div>
-                  </>
-                ) : (
-                  posts
-                    .slice(1, 5)
-                    .map((post) => <ArticleTeaser post={post} key={post.id} />)
-                )}
+              <div className="grid gap-x-8 md:grid-cols-2">
+                {posts.slice(1, 5).map((post) => (
+                  <ArticleTeaser post={post} key={post.id} />
+                ))}
               </div>
             </section>
           ) : null}
@@ -190,7 +173,7 @@ export default function Home() {
 
       {posts.length ? (
         <section>
-          <h2 className="mb-7 text-lg font-semibold">最新文章</h2>
+          <h2 className="mb-2 text-lg font-semibold">最新文章</h2>
           <div className="grid gap-x-10 md:grid-cols-2">
             {posts.slice(0, 8).map((post) => (
               <ArticleTeaser key={post.id} post={post} compact />
