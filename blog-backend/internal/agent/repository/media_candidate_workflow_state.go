@@ -15,14 +15,12 @@ func (r *MediaCandidateRepository) HasWorkflowRunCandidatesTx(ctx context.Contex
 
 // WorkflowRunCandidateSummaryTx returns only the aggregate state needed by the
 // Workflow coordinator; callers never query Agent-owned rows directly.
-func (r *MediaCandidateRepository) WorkflowRunCandidateSummaryTx(ctx context.Context, tx *sql.Tx, runID int64) (total, pending, applied, failed, cancelled int, err error) {
+func (r *MediaCandidateRepository) WorkflowRunCandidateSummaryTx(ctx context.Context, tx *sql.Tx, runID int64) (total, pending, applied int, err error) {
 	err = tx.QueryRowContext(ctx, `SELECT COUNT(*),
         COUNT(*) FILTER (WHERE applied_version_id IS NULL AND generation_status NOT IN ('rejected','failed','cancelled')),
-        COUNT(*) FILTER (WHERE applied_version_id IS NOT NULL),
-        COUNT(*) FILTER (WHERE generation_status IN ('failed','rejected')),
-        COUNT(*) FILTER (WHERE generation_status='cancelled')
+        COUNT(*) FILTER (WHERE applied_version_id IS NOT NULL)
         FROM ai_media_candidates WHERE workflow_run_id=$1`, runID).
-		Scan(&total, &pending, &applied, &failed, &cancelled)
+		Scan(&total, &pending, &applied)
 	return
 }
 

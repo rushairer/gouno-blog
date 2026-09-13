@@ -11,7 +11,7 @@ import (
 // implements it without exposing its broader MediaCandidateRepository surface.
 type MediaCandidateRunStore interface {
 	HasWorkflowRunCandidatesTx(context.Context, *sql.Tx, int64) (bool, error)
-	WorkflowRunCandidateSummaryTx(context.Context, *sql.Tx, int64) (int, int, int, int, int, error)
+	WorkflowRunCandidateSummaryTx(context.Context, *sql.Tx, int64) (int, int, int, error)
 	HasPendingWorkflowRunCandidates(context.Context, int64) (bool, error)
 }
 
@@ -38,7 +38,7 @@ func NewMediaRunCoordinator(transactor *dbtx.Transactor, workflows MediaWorkflow
 }
 
 func (c *MediaRunCoordinator) ResumeAfterApproval(ctx context.Context, runID int64) error {
-	return c.transactor.Run(ctx, func(tx *sql.Tx) error {
+	return c.transactor.RunIsolation(ctx, sql.LevelSerializable, func(tx *sql.Tx) error {
 		hasCandidates, err := c.candidates.HasWorkflowRunCandidatesTx(ctx, tx, runID)
 		if err != nil {
 			return err
@@ -58,8 +58,8 @@ func (c *MediaRunCoordinator) ResumeAfterApproval(ctx context.Context, runID int
 }
 
 func (c *MediaRunCoordinator) Reconcile(ctx context.Context, runID int64) error {
-	return c.transactor.Run(ctx, func(tx *sql.Tx) error {
-		total, pending, applied, _, _, err := c.candidates.WorkflowRunCandidateSummaryTx(ctx, tx, runID)
+	return c.transactor.RunIsolation(ctx, sql.LevelSerializable, func(tx *sql.Tx) error {
+		total, pending, applied, err := c.candidates.WorkflowRunCandidateSummaryTx(ctx, tx, runID)
 		if err != nil {
 			return err
 		}
