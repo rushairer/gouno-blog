@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Menu, Rss, Search } from "lucide-react";
 import gounoBlogLogo from "@gouno/ui/brand-icons/gouno-blog.svg";
 import { Drawer, IconButton, Input } from "@gouno/ui/core";
@@ -17,8 +17,21 @@ import { BrandMark } from "../components/branding/BrandMark";
 import { publicNavigation } from "../utils/navigation";
 import type { CustomPage, SiteSettings } from "../types/blog";
 
+function activePath(currentPath: string, target: string) {
+  if (target === "/articles") {
+    return (
+      currentPath === "/articles" ||
+      currentPath.startsWith("/search") ||
+      currentPath.startsWith("/tags/") ||
+      currentPath.startsWith("/categories/")
+    );
+  }
+  return currentPath === target;
+}
+
 export default function PublicShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [site, setSite] = useState<SiteSettings | null>(() =>
@@ -119,13 +132,16 @@ export default function PublicShell({ children }: { children: ReactNode }) {
             className="hidden items-center gap-6 md:flex"
           >
             {navItems.map((item) => (
-              <NavLink
+              <Link
                 key={item.path}
                 to={item.path}
-                className="py-5 text-sm text-muted-foreground hover:text-primary [&.active]:text-primary"
+                aria-current={
+                  activePath(location.pathname, item.path) ? "page" : undefined
+                }
+                className="py-5 text-sm text-muted-foreground hover:text-primary aria-[current=page]:text-primary"
               >
                 {item.label}
-              </NavLink>
+              </Link>
             ))}
           </nav>
           <form
@@ -222,14 +238,17 @@ export default function PublicShell({ children }: { children: ReactNode }) {
         </form>
         <nav aria-label="移动导航" className="flex flex-col gap-2">
           {navItems.map((item) => (
-            <NavLink
+            <Link
               key={item.path}
               to={item.path}
+              aria-current={
+                activePath(location.pathname, item.path) ? "page" : undefined
+              }
               onClick={() => setOpen(false)}
-              className="rounded-md px-3 py-3 hover:bg-accent [&.active]:bg-accent"
+              className="rounded-md px-3 py-3 hover:bg-accent aria-[current=page]:bg-accent"
             >
               {item.label}
-            </NavLink>
+            </Link>
           ))}
           <Link
             to="/admin"

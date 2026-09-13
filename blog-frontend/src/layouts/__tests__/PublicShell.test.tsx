@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -19,9 +19,9 @@ vi.mock("../../api/pages", () => ({
   pagesApi: { getNavPages: () => Promise.resolve([]) },
 }));
 
-function renderPublicShell(children: React.ReactNode) {
+function renderPublicShell(children: React.ReactNode, initialEntry = "/") {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <ThemeProvider brand="blog" storageKey="gouno-blog:theme">
         <PublicShell>{children}</PublicShell>
       </ThemeProvider>
@@ -87,4 +87,31 @@ describe("PublicShell theme", () => {
     expect(footer).toBeInTheDocument();
     expect(footer?.textContent).toContain(`© ${currentYear}`);
   });
+
+  it.each([
+    ["/search?q=ui", "文章"],
+    ["/tags/react", "文章"],
+    ["/categories/design-systems", "文章"],
+    ["/categories", "分类"],
+    ["/archive", "归档"],
+  ])(
+    "matches Showcase active navigation semantics for %s",
+    async (initialEntry, activeLabel) => {
+      renderPublicShell(<h1>Public content</h1>, initialEntry);
+      await screen.findByRole("link", { name: "Configured Site 首页" });
+
+      const mainNavigation = screen.getByRole("navigation", { name: "主导航" });
+      const activeLink = within(mainNavigation).getByRole("link", {
+        name: activeLabel,
+      });
+      expect(activeLink).toHaveAttribute("aria-current", "page");
+
+      for (const label of ["文章", "分类", "归档"]) {
+        if (label === activeLabel) continue;
+        expect(
+          within(mainNavigation).getByRole("link", { name: label }),
+        ).not.toHaveAttribute("aria-current");
+      }
+    },
+  );
 });
