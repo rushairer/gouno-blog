@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   update:
-    name: Resolve, verify, and pin npm registry release
+    name: Pin and verify npm registry release
     runs-on: ubuntu-latest
 
     steps:
@@ -42,9 +42,10 @@ jobs:
         id: ui
         shell: bash
         env:
-          REQUESTED_VERSION: ${{ inputs.version || '0.3.2' }}
+          REQUESTED_VERSION: ${{ github.event.inputs.version }}
         run: |
           set -euo pipefail
+          REQUESTED_VERSION="${REQUESTED_VERSION:-0.3.2}"
           RESOLVED_VERSION="$(npm view "@gouno/ui@${REQUESTED_VERSION}" version)"
           test -n "$RESOLVED_VERSION"
           echo "version=$RESOLVED_VERSION" >> "$GITHUB_OUTPUT"
@@ -65,25 +66,21 @@ jobs:
         run: |
           node --input-type=module <<'EOF'
           import { readFile } from 'node:fs/promises';
-
           const manifest = JSON.parse(await readFile('./package.json', 'utf8'));
           const lock = JSON.parse(await readFile('./package-lock.json', 'utf8'));
           const installed = JSON.parse(await readFile('./node_modules/@gouno/ui/package.json', 'utf8'));
           const ui = lock.packages?.['node_modules/@gouno/ui'];
           const source = manifest.dependencies?.['@gouno/ui'];
           const exactVersion = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
-          const registryTarball = /^https:\/\/registry\.npmjs\.org\/@gouno\/ui\/-\/ui-[0-9A-Za-z.-]+\.tgz$/;
-
           if (!exactVersion.test(source || '') || source !== process.env.GOUNO_UI_VERSION) {
             throw new Error('blog-frontend must pin the requested exact @gouno/ui registry version');
           }
-          if (!ui || ui.version !== source || !registryTarball.test(ui.resolved || '') || !ui.integrity) {
+          if (!ui || ui.version !== source || !ui.resolved?.startsWith('https://registry.npmjs.org/@gouno/ui/-/ui-') || !ui.integrity) {
             throw new Error('blog-frontend lockfile must resolve @gouno/ui from npm with integrity');
           }
           if (installed.version !== source) {
             throw new Error('installed @gouno/ui version does not match the pinned registry version');
           }
-
           const core = await import('@gouno/ui/core');
           const theme = await import('@gouno/ui/theme');
           const patterns = await import('@gouno/ui/patterns');
@@ -122,23 +119,24 @@ jobs:
           end = text.find(end_marker, start)
           if start < 0 or end < 0:
               raise SystemExit('could not locate Blog CI vendored Gouno UI verification block')
-          replacement = '''      - name: Verify Gouno UI registry release
-            run: |
-              node --input-type=module <<'EOF'
-              import { readFile } from 'node:fs/promises';
-              const manifest = JSON.parse(await readFile('./package.json', 'utf8'));
-              const lock = JSON.parse(await readFile('./package-lock.json', 'utf8'));
-              const ui = lock.packages['node_modules/@gouno/ui'];
-              const source = manifest.dependencies?.['@gouno/ui'];
-              const exactVersion = /^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?$/;
-              const registryTarball = /^https:\\/\\/registry\\.npmjs\\.org\\/@gouno\\/ui\\/-\\/ui-[0-9A-Za-z.-]+\\.tgz$/;
-              if (!exactVersion.test(source || '') || !ui || ui.version !== source ||
-                  !registryTarball.test(ui.resolved || '') || !ui.integrity) {
-                throw new Error('blog-frontend must use an exact @gouno/ui registry version with lockfile integrity');
-              }
-              EOF
-
-'''
+          replacement_lines = [
+              '      - name: Verify Gouno UI registry release',
+              '        run: |',
+              "          node --input-type=module <<'EOF'",
+              "          import { readFile } from 'node:fs/promises';",
+              "          const manifest = JSON.parse(await readFile('./package.json', 'utf8'));",
+              "          const lock = JSON.parse(await readFile('./package-lock.json', 'utf8'));",
+              "          const ui = lock.packages['node_modules/@gouno/ui'];",
+              "          const source = manifest.dependencies?.['@gouno/ui'];",
+              "          const exactVersion = /^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?$/;",
+              "          if (!exactVersion.test(source || '') || !ui || ui.version !== source ||",
+              "              !ui.resolved?.startsWith('https://registry.npmjs.org/@gouno/ui/-/ui-') || !ui.integrity) {",
+              "            throw new Error('blog-frontend must use an exact @gouno/ui registry version with lockfile integrity');",
+              '          }',
+              '          EOF',
+              '',
+          ]
+          replacement = '\n'.join(replacement_lines) + '\n'
           ci.write_text(text[:start] + replacement + text[end:])
 
           replace_once('blog-frontend/Dockerfile', 'COPY vendor/gouno-ui-*.tgz ./vendor/\n', '')
