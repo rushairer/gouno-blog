@@ -37,6 +37,7 @@ type Service struct {
 	workerSem   chan struct{}
 	lifecycle   *RunLifecycle
 	mediaRuns   *MediaRunCoordinator
+	admission   *RunAdmissionCoordinator
 }
 
 type PreflightCheck struct {
@@ -176,14 +177,17 @@ func containsString(values []string, target string) bool {
 	return false
 }
 
-func NewService(db *sql.DB, runner *agentservice.Runner, agents *agentservice.ManagementService, registry *tool.Registry, lifecycle *RunLifecycle, mediaRuns *MediaRunCoordinator) *Service {
+func NewService(db *sql.DB, runner *agentservice.Runner, agents *agentservice.ManagementService, registry *tool.Registry, lifecycle *RunLifecycle, mediaRuns *MediaRunCoordinator, admission *RunAdmissionCoordinator) *Service {
 	if lifecycle == nil {
 		panic("workflow.NewService: lifecycle is required")
 	}
 	if mediaRuns == nil {
 		panic("workflow.NewService: media run coordinator is required")
 	}
-	return &Service{db: db, definitions: workflowrepository.NewDefinitionRepository(db), runner: runner, agents: agents, tools: registry, catalog: NewResourceCatalog(db), workerSem: make(chan struct{}, 4), lifecycle: lifecycle, mediaRuns: mediaRuns}
+	if admission == nil {
+		panic("workflow.NewService: run admission coordinator is required")
+	}
+	return &Service{db: db, definitions: workflowrepository.NewDefinitionRepository(db), runner: runner, agents: agents, tools: registry, catalog: NewResourceCatalog(db), workerSem: make(chan struct{}, 4), lifecycle: lifecycle, mediaRuns: mediaRuns, admission: admission}
 }
 
 func (s *Service) List(ctx context.Context) ([]*domain.Workflow, error) {
@@ -619,7 +623,8 @@ func (s *Service) Queue(ctx context.Context, id int64, dryRun bool, input json.R
 
 // RetryFailed reruns only failed iterations from a partial for_each run. Query
 // step outputs and resource snapshots are copied so a retry cannot drift with
-// a changing dynamic collection.
+// a changing dynamic collection. RunAdmissionCoordinator owns the snapshot
+// transaction; Service keeps only input and Workflow-structure policy.
 func (s *Service) RetryFailed(ctx context.Context, runID int64, childStepID string, iterations []int, triggeredByPrincipalID *int64) (*domain.WorkflowRun, error) {
 	if strings.TrimSpace(childStepID) == "" || len(iterations) == 0 || len(iterations) > maxRunResources {
 		return nil, fmt.Errorf("%w: retry requires one child step and 1-100 iterations", ErrInvalid)
@@ -636,21 +641,14 @@ func (s *Service) RetryFailed(ctx context.Context, runID int64, childStepID stri
 	if len(unique) == 0 {
 		return nil, fmt.Errorf("%w: retry iterations are invalid", ErrInvalid)
 	}
-	var workflowID, versionID int64
-	var dryRun bool
-	var input json.RawMessage
-	var status string
-	if err := s.db.QueryRowContext(ctx, `SELECT workflow_id,workflow_version_id,dry_run,input,status FROM ai_workflow_runs WHERE id=$1`, runID).
-		Scan(&workflowID, &versionID, &dryRun, &input, &status); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotFound
-		}
+	source, err := s.admission.RetrySource(ctx, runID)
+	if err != nil {
 		return nil, err
 	}
-	if status != "succeeded" {
+	if source.Status != "succeeded" {
 		return nil, fmt.Errorf("%w: only a completed partial run can be retried", ErrInvalid)
 	}
-	workflow, err := s.Get(ctx, workflowID)
+	workflow, err := s.Get(ctx, source.WorkflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -658,46 +656,7 @@ func (s *Service) RetryFailed(ctx context.Context, runID int64, childStepID stri
 	if parentStepID == "" {
 		return nil, fmt.Errorf("%w: child step %q is not inside a for_each", ErrInvalid, childStepID)
 	}
-	failed := 0
-	for _, iteration := range unique {
-		var exists bool
-		if err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM ai_workflow_step_runs WHERE workflow_run_id=$1 AND step_id=$2 AND iteration=$3 AND status='failed')`, runID, childStepID, iteration).Scan(&exists); err != nil {
-			return nil, err
-		}
-		if exists {
-			failed++
-		}
-	}
-	if failed != len(unique) {
-		return nil, fmt.Errorf("%w: retry can target only failed resource iterations", ErrInvalid)
-	}
-	rawIterations, _ := json.Marshal(unique)
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = tx.Rollback() }()
-	var retry domain.WorkflowRun
-	retry.WorkflowID, retry.WorkflowVersionID, retry.DryRun, retry.Status = workflowID, versionID, dryRun, "queued"
-	retry.Input, retry.TriggeredByPrincipalID, retry.TriggerKind, retry.SourceRef, retry.RetryOfRunID, retry.RetryStepID, retry.RetryIterations = input, triggeredByPrincipalID, "retry", strconv.FormatInt(runID, 10), &runID, &parentStepID, unique
-	if err := tx.QueryRowContext(ctx, `INSERT INTO ai_workflow_runs(workflow_id,workflow_version_id,dry_run,input,triggered_by_principal_id,trigger_kind,source_ref,retry_of_run_id,retry_step_id,retry_iterations)
-		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id,created_at`, workflowID, versionID, dryRun, input, triggeredByPrincipalID, retry.TriggerKind, retry.SourceRef, runID, parentStepID, rawIterations).
-		Scan(&retry.ID, &retry.CreatedAt); err != nil {
-		return nil, err
-	}
-	if _, err := tx.ExecContext(ctx, `INSERT INTO ai_workflow_run_resources(workflow_run_id,resource_type,resource_key,source,access_level,label,version_token,snapshot)
-		SELECT $2,resource_type,resource_key,source,access_level,label,version_token,snapshot FROM ai_workflow_run_resources WHERE workflow_run_id=$1 AND source IN ('manual','query')`, runID, retry.ID); err != nil {
-		return nil, err
-	}
-	if _, err := tx.ExecContext(ctx, `INSERT INTO ai_workflow_step_runs(workflow_run_id,step_id,step_type,iteration,status,input,output,error_message,started_at,finished_at)
-		SELECT $2,step_id,step_type,iteration,status,input,output,error_message,started_at,finished_at FROM ai_workflow_step_runs
-		WHERE workflow_run_id=$1 AND step_type='resource_query' AND iteration=-1 AND status='succeeded'`, runID, retry.ID); err != nil {
-		return nil, err
-	}
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-	return &retry, nil
+	return s.admission.Retry(ctx, runID, childStepID, parentStepID, unique, triggeredByPrincipalID)
 }
 
 func findForEachParent(steps []domain.WorkflowStep, childID string) string {
@@ -760,49 +719,17 @@ func (s *Service) queue(ctx context.Context, id int64, dryRun bool, input json.R
 	if err := s.validateRunnableSteps(ctx, value.Steps, map[string]any{"input": inputValue, "steps": map[string]any{}}); err != nil {
 		return nil, err
 	}
+	resources, err := s.resolveManualResources(ctx, value.InputSchema, inputValue)
+	if err != nil {
+		return nil, err
+	}
 	run := &domain.WorkflowRun{WorkflowID: id, WorkflowVersionID: value.VersionID,
 		DryRun: dryRun, Status: "queued", Input: input, TriggeredByPrincipalID: triggeredByPrincipalID, TriggerKind: triggerKind, SourceRef: sourceRef}
 	if scheduled && !dryRun && value.CronExpression != nil {
 		key := time.Now().In(workflowLocation(value.Timezone)).Format("2006-01-02")
 		run.ScheduleKey = &key
 	}
-	err = s.db.QueryRowContext(ctx, `INSERT INTO ai_workflow_runs
-		(workflow_id, workflow_version_id, dry_run, input, triggered_by_principal_id, trigger_kind, source_ref, schedule_key)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id, created_at`, run.WorkflowID, run.WorkflowVersionID,
-		run.DryRun, run.Input, run.TriggeredByPrincipalID, run.TriggerKind, run.SourceRef, run.ScheduleKey).Scan(&run.ID, &run.CreatedAt)
-	if err != nil && run.ScheduleKey != nil {
-		existingErr := s.db.QueryRowContext(ctx, `SELECT id,status,created_at FROM ai_workflow_runs
-			WHERE workflow_id=$1 AND schedule_key=$2`, id, *run.ScheduleKey).Scan(&run.ID, &run.Status, &run.CreatedAt)
-		if existingErr == nil {
-			if run.Status == "failed" && retryFailed {
-				err = s.db.QueryRowContext(ctx, `UPDATE ai_workflow_runs SET workflow_version_id=$2,
-					dry_run=FALSE,status='queued',input=$3,output=NULL,error_code=NULL,error_message=NULL,
-					input_tokens=0,output_tokens=0,triggered_by_principal_id=$4,trigger_kind=$5,source_ref=$6,started_at=NULL,finished_at=NULL
-					WHERE id=$1 AND status='failed' RETURNING status,created_at`, run.ID, value.VersionID,
-					input, triggeredByPrincipalID, triggerKind, sourceRef).Scan(&run.Status, &run.CreatedAt)
-				if errors.Is(err, sql.ErrNoRows) {
-					return s.queue(ctx, id, dryRun, input, triggeredByPrincipalID, triggerKind, sourceRef, retryFailed, scheduled)
-				}
-				if err == nil {
-					// Resource queries are resolved once per Workflow Run. Keep their
-					// target snapshot when retrying the same scheduled run so the
-					// replayed Step output and Run Scope remain identical. Discovery
-					// is read-only and may be recomputed on the next Agent attempt.
-					_, _ = s.db.ExecContext(ctx, `DELETE FROM ai_workflow_run_resources WHERE workflow_run_id=$1 AND source <> 'query'`, run.ID)
-					err = s.persistManualResources(ctx, run.ID, value.InputSchema, inputValue)
-				}
-				return run, err
-			}
-			return run, nil
-		}
-	}
-	if err == nil {
-		if resourceErr := s.persistManualResources(ctx, run.ID, value.InputSchema, inputValue); resourceErr != nil {
-			_, _ = s.db.ExecContext(ctx, `DELETE FROM ai_workflow_runs WHERE id=$1 AND status='queued'`, run.ID)
-			return nil, resourceErr
-		}
-	}
-	return run, err
+	return s.admission.Admit(ctx, run, resources, retryFailed)
 }
 
 // validateRunnableSteps rejects malformed or paused Agent bindings before a
@@ -856,9 +783,7 @@ func workflowNext(value *domain.Workflow) *time.Time {
 func (s *Service) StartScheduler(ctx context.Context, interval time.Duration) {
 	// Execution state is persisted. Requeue interrupted work on startup; completed
 	// step rows are replayed, so a recovered run does not repeat successful steps.
-	_, _ = s.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status='queued',
-		error_code=NULL,error_message=NULL,started_at=NULL,finished_at=NULL
-		WHERE status='running'`)
+	_ = s.admission.RecoverInterrupted(ctx)
 	s.recoverQueuedRuns(ctx)
 	go func() {
 		ticker := time.NewTicker(interval)
@@ -876,16 +801,12 @@ func (s *Service) StartScheduler(ctx context.Context, interval time.Duration) {
 }
 
 func (s *Service) recoverQueuedRuns(ctx context.Context) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id FROM ai_workflow_runs WHERE status='queued' ORDER BY created_at LIMIT 20`)
+	ids, err := s.admission.QueuedRunIDs(ctx, 20)
 	if err != nil {
 		return
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var id int64
-		if rows.Scan(&id) == nil {
-			go s.Execute(ctx, id)
-		}
+	for _, id := range ids {
+		go s.Execute(ctx, id)
 	}
 }
 
@@ -958,12 +879,8 @@ func (s *Service) processPendingEvents(ctx context.Context) {
 // Resume marks a user-paused run runnable again. Completed step outputs are
 // replayed by executeSteps, so resolving an interaction does not repeat work.
 func (s *Service) Resume(ctx context.Context, runID int64) error {
-	result, err := s.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status='queued',finished_at=NULL,error_code=NULL,error_message=NULL WHERE id=$1 AND status='waiting_for_user'`, runID)
-	if err != nil {
+	if err := s.admission.ResumeUserRun(ctx, runID); err != nil {
 		return err
-	}
-	if n, _ := result.RowsAffected(); n == 0 {
-		return sql.ErrNoRows
 	}
 	go s.Execute(context.Background(), runID)
 	return nil

@@ -232,15 +232,16 @@ func (s *Service) persistResource(ctx context.Context, runID int64, item *domain
 	return err
 }
 
-func (s *Service) persistManualResources(ctx context.Context, runID int64, schemaRaw json.RawMessage, input any) error {
+func (s *Service) resolveManualResources(ctx context.Context, schemaRaw json.RawMessage, input any) ([]domain.WorkflowResource, error) {
 	fields, err := resourceFields(schemaRaw)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	values, _ := input.(map[string]any)
 	count := 0
 	seen := map[string]bool{}
 	byType := map[string]int{}
+	resources := make([]domain.WorkflowResource, 0)
 	for name, resourceType := range fields {
 		raw, exists := values[name]
 		if !exists {
@@ -264,21 +265,27 @@ func (s *Service) persistManualResources(ctx context.Context, runID int64, schem
 			count++
 			byType[resourceType]++
 			if count > maxRunResources {
-				return fmt.Errorf("%w: workflow input exceeds 100 resources", ErrInvalid)
+				return nil, fmt.Errorf("%w: workflow input exceeds 100 resources", ErrInvalid)
 			}
 			if byType[resourceType] > maxRunResourcesPerType {
-				return fmt.Errorf("%w: workflow input exceeds %d %s resources", ErrInvalid, maxRunResourcesPerType, resourceType)
+				return nil, fmt.Errorf("%w: workflow input exceeds %d %s resources", ErrInvalid, maxRunResourcesPerType, resourceType)
 			}
 			item, err := s.catalog.Resolve(ctx, resourceType, key)
 			if err != nil {
-				return fmt.Errorf("%w: input field %q references unavailable %s %q", ErrInvalid, name, resourceType, key)
+				return nil, fmt.Errorf("%w: input field %q references unavailable %s %q", ErrInvalid, name, resourceType, key)
 			}
-			if err := s.persistResource(ctx, runID, item, "manual", "target"); err != nil {
-				return err
-			}
+			resources = append(resources, domain.WorkflowResource{
+				ResourceType: item.Type,
+				ResourceKey:  item.Key,
+				Source:       "manual",
+				AccessLevel:  "target",
+				Label:        item.Label,
+				VersionToken: item.VersionToken,
+				Snapshot:     resourceSnapshot(item),
+			})
 		}
 	}
-	return nil
+	return resources, nil
 }
 
 func (s *Service) ListResources(ctx context.Context, runID int64) ([]domain.WorkflowResource, error) {
