@@ -149,4 +149,29 @@ describe("AdminSiteSettings", () => {
     expect(screen.getByText("有未保存修改")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /保存设置/i })).toBeEnabled();
   });
+
+  it("uses the Showcase initial-load error surface and retries before exposing settings", async () => {
+    const user = userEvent.setup();
+    vi.mocked(siteApi.getAdminSettings)
+      .mockRejectedValueOnce(new Error("settings unavailable"))
+      .mockResolvedValueOnce({
+        site_title: "测试博客",
+        site_description: "这是测试描述",
+        rss_url: "/feed.xml",
+        favicon_url: "/favicon.svg",
+        hero_title: "欢迎阅读",
+        hero_description: "技术博客",
+      } as any);
+
+    renderSettings();
+
+    expect(await screen.findByText("站点设置加载失败")).toBeInTheDocument();
+    expect(screen.getByText("settings unavailable")).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("测试博客")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "重新载入" }));
+
+    expect(await screen.findByDisplayValue("测试博客")).toBeInTheDocument();
+    expect(siteApi.getAdminSettings).toHaveBeenCalledTimes(2);
+  });
 });
