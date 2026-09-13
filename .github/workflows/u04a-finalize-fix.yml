@@ -23,52 +23,44 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           path = Path('blog-frontend/src/pages/admin/AISettings.tsx')
           text = path.read_text()
 
-          old_proxy = '''  const labels = new Proxy({} as Record<string, string>, {
-            get: (_, prop: string) => t(`agent.${prop}` as any),
-          });'''
-          new_proxy = '''  const labels = new Proxy({} as Record<string, string>, {
+          proxy_pattern = re.compile(
+              r'  const labels = new Proxy\(\{\} as Record<string, string>, \{\n'
+              r'\s+get: \(_, prop: string\) => t\(`agent\.\$\{prop\}` as any\),\n'
+              r'\s+\}\);'
+          )
+          proxy_replacement = '''  const labels = new Proxy({} as Record<string, string>, {
             get: (_, prop: string | symbol) =>
               typeof prop === "string" ? t(`agent.${prop}` as any) : undefined,
           });'''
-          if old_proxy not in text:
-              raise SystemExit('expected labels Proxy block not found')
-          text = text.replace(old_proxy, new_proxy, 1)
+          text, count = proxy_pattern.subn(proxy_replacement, text, count=1)
+          if count != 1:
+              raise SystemExit(f'expected one labels Proxy block, found {count}')
 
-          old_nav = '''  const selectSection = (next: AdvancedSection) => {
-            if (next === section) return;
-            setEditingAgent(null);
-            setEditingProvider(null);
-            setEditingEmbedding(null);
-            setEditingSkill(null);
-            setCopySkillTarget(null);
-            setCopySkillName("");
-            setSection(next);
-            const params = new URLSearchParams(window.location.search);
-            if (next === "agents") params.delete("section");
-            else params.set("section", next);
-            const search = params.toString();
-            navigate({ search: search ? `?${search}` : "" }, { replace: true });
-          };'''
-          new_nav = '''  const selectSection = (next: AdvancedSection) => {
-            setEditingAgent(null);
-            setEditingProvider(null);
-            setEditingEmbedding(null);
-            setEditingSkill(null);
-            setCopySkillTarget(null);
-            setCopySkillName("");
-            setSection(next);
-            const url = new URL(window.location.href);
+          guard = '    if (next === section) return;\n'
+          if guard not in text:
+              raise SystemExit('expected selectSection guard not found')
+          text = text.replace(guard, '', 1)
+
+          nav_pattern = re.compile(
+              r'    const params = new URLSearchParams\(window\.location\.search\);\n'
+              r'    if \(next === "agents"\) params\.delete\("section"\);\n'
+              r'    else params\.set\("section", next\);\n'
+              r'    const search = params\.toString\(\);\n'
+              r'    navigate\(\{ search: search \? `\?\$\{search\}` : "" \}, \{ replace: true \}\);'
+          )
+          nav_replacement = '''    const url = new URL(window.location.href);
             if (next === "agents") url.searchParams.delete("section");
             else url.searchParams.set("section", next);
-            window.history.replaceState(null, "", url);
-          };'''
-          if old_nav not in text:
-              raise SystemExit('expected selectSection block not found')
-          text = text.replace(old_nav, new_nav, 1)
+            window.history.replaceState(null, "", url);'''
+          text, count = nav_pattern.subn(nav_replacement, text, count=1)
+          if count != 1:
+              raise SystemExit(f'expected one selectSection navigation block, found {count}')
+
           path.write_text(text)
           PY
 
