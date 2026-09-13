@@ -23,7 +23,6 @@ import {
   Card,
   CardContent,
   CardHeader,
-  Checkbox,
   DataTable,
   DashboardTemplate,
   EditorWorkspaceTemplate,
@@ -105,16 +104,10 @@ function Foundations() {
           </div>
         </Panel>
         <Panel>
-          <PanelHeader
-            title="状态提示与 Box 间距"
-            description="基础提示统一图标、文字、操作对齐和项目间距。"
-          />
+          <PanelHeader title="状态提示与 Box 间距" description="基础提示统一图标、文字、操作对齐和项目间距。" />
           <div className="flex flex-col gap-3">
             <Feedback type="success">操作已完成。</Feedback>
-            <Feedback type="error">
-              <span>需要修正后才能继续。</span>
-              <Button size="sm">重新载入</Button>
-            </Feedback>
+            <Feedback type="error"><span>需要修正后才能继续。</span><Button size="sm">重新载入</Button></Feedback>
           </div>
         </Panel>
         <Panel>
@@ -200,68 +193,20 @@ function Foundations() {
   );
 }
 
-function ListDemo({
-  kind = "posts",
-}: {
-  kind?: "posts" | "users" | "clients" | "audit";
-}) {
+function ListDemo({ kind = "posts" }: { kind?: "posts" | "users" | "clients" | "audit" }) {
   const [state, setState] = useState<DemoState>("ready");
   const [density, setDensity] = useState<TableDensity>("default");
   const [selected, setSelected] = useState<string[]>([]);
   const [query, setQuery] = useState("");
-  const source =
-    kind === "users"
-      ? [
-          ["admin@example.com", "管理员", "活跃", "2026-09-06"],
-          ["editor@example.com", "编辑", "活跃", "2026-09-05"],
-          ["suspended@example.com", "审核员", "已停用", "2026-09-02"],
-        ]
-      : kind === "clients"
-        ? [
-            [
-              "blog-bff",
-              "Confidential",
-              "https://blog.dev.local/callback",
-              "openid profile",
-            ],
-            [
-              "admin-console",
-              "Public",
-              "https://admin.dev.local/callback",
-              "openid admin",
-            ],
-          ]
-        : kind === "audit"
-          ? [
-              ["登录成功", "admin@example.com", "认证", "2026-09-06 15:24"],
-              ["更新客户端", "admin@example.com", "客户端", "2026-09-06 14:18"],
-              ["撤销会话", "ops@example.com", "会话", "2026-09-06 11:02"],
-            ]
-          : records;
+  const source = kind === "users"
+    ? [["admin@example.com", "管理员", "活跃", "2026-09-06"], ["editor@example.com", "编辑", "活跃", "2026-09-05"], ["suspended@example.com", "审核员", "已停用", "2026-09-02"]]
+    : kind === "clients"
+      ? [["blog-bff", "Confidential", "https://blog.dev.local/callback", "openid profile"], ["admin-console", "Public", "https://admin.dev.local/callback", "openid admin"]]
+      : kind === "audit"
+        ? [["登录成功", "admin@example.com", "认证", "2026-09-06 15:24"], ["更新客户端", "admin@example.com", "客户端", "2026-09-06 14:18"], ["撤销会话", "ops@example.com", "会话", "2026-09-06 11:02"]]
+        : records;
   const visible = source.filter((row) => row[0].includes(query));
-  const copy =
-    kind === "users"
-      ? ["用户管理", "管理用户、角色、MFA 和账户状态。", "用户列表", "创建用户"]
-      : kind === "clients"
-        ? [
-            "客户端管理",
-            "管理 OAuth 客户端、回调地址和授权范围。",
-            "已注册客户端",
-            "注册客户端",
-          ]
-        : kind === "audit"
-          ? [
-              "审计日志",
-              "按时间查看认证与系统管理事件。",
-              "最近事件",
-              "导出日志",
-            ]
-          : [
-              "Posts 列表模板",
-              "筛选、批量操作、状态 Badge、分页和移动端列表的统一参考。",
-              "全部文章",
-              "新建文章",
-            ];
+  const copy = kind === "users" ? ["用户管理", "管理用户、角色、MFA 和账户状态。", "用户列表", "创建用户"] : kind === "clients" ? ["客户端管理", "管理 OAuth 客户端、回调地址和授权范围。", "已注册客户端", "注册客户端"] : kind === "audit" ? ["审计日志", "按时间查看认证与系统管理事件。", "最近事件", "导出日志"] : ["Posts 列表模板", "筛选、批量操作、状态 Badge、分页和移动端列表的统一参考。", "全部文章", "新建文章"];
   return (
     <ListPageTemplate
       title={copy[0]}
@@ -292,11 +237,7 @@ function ListDemo({
           }
         />
         <FilterBar className="posts-filter-bar">
-          <Field
-            label="搜索"
-            className="w-full min-w-0 md:max-w-[34rem] md:flex-1"
-            hideLabel
-          >
+          <Field label="搜索" className="w-full min-w-0 md:max-w-[34rem] md:flex-1" hideLabel>
             <Input
               prefixIcon={<Search />}
               value={query}
@@ -305,12 +246,8 @@ function ListDemo({
             />
           </Field>
           <ActionGroup className="w-full md:w-auto">
-            <Button className="flex-1 md:flex-none" variant="secondary">
-              筛选
-            </Button>
-            <Button className="flex-1 md:flex-none" variant="ghost">
-              导出
-            </Button>
+            <Button className="flex-1 md:flex-none" variant="secondary">筛选</Button>
+            <Button className="flex-1 md:flex-none" variant="ghost">导出</Button>
           </ActionGroup>
         </FilterBar>
         {selected.length > 0 ? (
@@ -334,64 +271,62 @@ function ListDemo({
                 density={density}
                 table={
                   <DataTable density={density}>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>
-                          <Checkbox
-                            aria-label="全选"
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>
+                        <input
+                          type="checkbox"
+                          aria-label="全选"
+                          onChange={(e) =>
+                            setSelected(
+                              e.target.checked ? visible.map((r) => r[0]) : [],
+                            )
+                          }
+                        />
+                      </TableHead>
+                      <TableHead>标题</TableHead>
+                      <TableHead>状态</TableHead>
+                      <TableHead>更新时间</TableHead>
+                      <TableHead className="text-right">操作</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {visible.map((row) => (
+                      <TableRow key={row[0]}>
+                        <TableCell>
+                          <input
+                            type="checkbox"
+                            aria-label={`选择 ${row[0]}`}
+                            checked={selected.includes(row[0])}
                             onChange={(e) =>
                               setSelected(
                                 e.target.checked
-                                  ? visible.map((r) => r[0])
-                                  : [],
+                                  ? [...selected, row[0]]
+                                  : selected.filter((x) => x !== row[0]),
                               )
                             }
                           />
-                        </TableHead>
-                        <TableHead>标题</TableHead>
-                        <TableHead>状态</TableHead>
-                        <TableHead>更新时间</TableHead>
-                        <TableHead className="text-right">操作</TableHead>
+                        </TableCell>
+                        <TableCell className="font-medium">{row[0]}</TableCell>
+                        <TableCell>
+                          <Badge
+                            tone={row[1] === "已发布" ? "success" : "warning"}
+                          >
+                            {row[1]}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{row[3]}</TableCell>
+                        <TableCell>
+                          <div className="flex justify-end gap-2">
+                            <Button size="sm">编辑</Button>
+                            <Button size="sm" variant="ghost">
+                              更多
+                            </Button>
+                          </div>
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {visible.map((row) => (
-                        <TableRow key={row[0]}>
-                          <TableCell>
-                            <Checkbox
-                              aria-label={`选择 ${row[0]}`}
-                              checked={selected.includes(row[0])}
-                              onChange={(e) =>
-                                setSelected(
-                                  e.target.checked
-                                    ? [...selected, row[0]]
-                                    : selected.filter((x) => x !== row[0]),
-                                )
-                              }
-                            />
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {row[0]}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              tone={row[1] === "已发布" ? "success" : "warning"}
-                            >
-                              {row[1]}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{row[3]}</TableCell>
-                          <TableCell>
-                            <div className="flex justify-end gap-2">
-                              <Button size="sm">编辑</Button>
-                              <Button size="sm" variant="ghost">
-                                更多
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
+                    ))}
+                  </TableBody>
                   </DataTable>
                 }
                 mobile={
@@ -454,156 +389,18 @@ function GossoUsersDemo() {
   const [state, setState] = useState<DemoState>("ready");
   const [selected, setSelected] = useState<string[]>([]);
   const [dialog, setDialog] = useState<string | null>(null);
-  return (
-    <ListPageTemplate
-      title="用户管理"
-      description="管理用户、角色、MFA 和账户状态。"
-      action={
-        <Button variant="primary" icon={<Plus />}>
-          添加用户
-        </Button>
-      }
-      stateControls={<StateControls state={state} setState={setState} />}
-    >
-      {state !== "ready" ? (
-        <Panel>
-          <StatePanel state={state} onRetry={() => setState("ready")} />
-        </Panel>
-      ) : (
-        <Panel>
-          <PanelHeader
-            title="用户"
-            description={`${gossoUsers.length} 个账户`}
-          />
-          <FilterBar>
-            <Field label="搜索" hideLabel>
-              <Input prefixIcon={<Search />} placeholder="搜索用户名或邮箱" />
-            </Field>
-            <Button variant="secondary">筛选</Button>
-          </FilterBar>
-          <DataTable>
-            <TableHeader>
-              <TableRow>
-                <TableHead>
-                  <Checkbox
-                    aria-label="全选"
-                    onChange={(e) =>
-                      setSelected(
-                        e.target.checked ? gossoUsers.map((u) => u.id) : [],
-                      )
-                    }
-                  />
-                </TableHead>
-                <TableHead>用户</TableHead>
-                <TableHead>状态</TableHead>
-                <TableHead>角色</TableHead>
-                <TableHead>操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {gossoUsers.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>
-                    <Checkbox
-                      aria-label={`选择 ${user.username}`}
-                      checked={selected.includes(user.id)}
-                      onChange={(e) =>
-                        setSelected((s) =>
-                          e.target.checked
-                            ? [...s, user.id]
-                            : s.filter((id) => id !== user.id),
-                        )
-                      }
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div className="font-medium">{user.display_name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {user.username} · {user.id}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      tone={user.status === "active" ? "success" : "danger"}
-                    >
-                      {user.status === "active" ? "活跃" : "已停用"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {user.roles?.map((r) => (
-                        <Badge key={r.id} tone="neutral" title={r.description}>
-                          {r.name}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <ActionGroup>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => setDialog(`角色：${user.display_name}`)}
-                      >
-                        角色
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() =>
-                          setDialog(`安全操作：${user.display_name}`)
-                        }
-                      >
-                        安全
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="danger"
-                        onClick={() => setDialog(`删除：${user.display_name}`)}
-                      >
-                        删除
-                      </Button>
-                    </ActionGroup>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </DataTable>
-        </Panel>
-      )}
-      <Modal
-        open={Boolean(dialog)}
-        onOpenChange={(open) => !open && setDialog(null)}
-        title={dialog ?? "用户操作"}
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            静态模拟 Gosso Admin 的确认、角色、密码、MFA、锁定和删除操作。
-          </p>
-          <Button variant="secondary" onClick={() => setDialog(null)}>
-            取消
-          </Button>
-          <Button
-            variant="primary"
-            onClick={() => {
-              setDialog(null);
-              setState("success");
-            }}
-          >
-            确认
-          </Button>
-        </div>
-      </Modal>
-    </ListPageTemplate>
-  );
+  return <ListPageTemplate title="用户管理" description="管理用户、角色、MFA 和账户状态。" action={<Button variant="primary" icon={<Plus />}>添加用户</Button>} stateControls={<StateControls state={state} setState={setState} />}>
+    {state !== "ready" ? <Panel><StatePanel state={state} onRetry={() => setState("ready")} /></Panel> : <Panel><PanelHeader title="用户" description={`${gossoUsers.length} 个账户`} /><FilterBar><Field label="搜索" hideLabel><Input prefixIcon={<Search />} placeholder="搜索用户名或邮箱" /></Field><Button variant="secondary">筛选</Button></FilterBar><DataTable><TableHeader><TableRow><TableHead><input type="checkbox" aria-label="全选" onChange={e => setSelected(e.target.checked ? gossoUsers.map(u => u.id) : [])} /></TableHead><TableHead>用户</TableHead><TableHead>状态</TableHead><TableHead>角色</TableHead><TableHead>操作</TableHead></TableRow></TableHeader><TableBody>{gossoUsers.map(user => <TableRow key={user.id}><TableCell><input type="checkbox" aria-label={`选择 ${user.username}`} checked={selected.includes(user.id)} onChange={e => setSelected(s => e.target.checked ? [...s,user.id] : s.filter(id => id !== user.id))} /></TableCell><TableCell><div className="font-medium">{user.display_name}</div><div className="text-xs text-muted-foreground">{user.username} · {user.id}</div></TableCell><TableCell><Badge tone={user.status === "active" ? "success" : "danger"}>{user.status === "active" ? "活跃" : "已停用"}</Badge></TableCell><TableCell><div className="flex flex-wrap gap-1">{user.roles?.map(r => <Badge key={r.id} tone="neutral" title={r.description}>{r.name}</Badge>)}</div></TableCell><TableCell><ActionGroup><Button size="sm" variant="secondary" onClick={() => setDialog(`角色：${user.display_name}`)}>角色</Button><Button size="sm" variant="secondary" onClick={() => setDialog(`安全操作：${user.display_name}`)}>安全</Button><Button size="sm" variant="danger" onClick={() => setDialog(`删除：${user.display_name}`)}>删除</Button></ActionGroup></TableCell></TableRow>)}</TableBody></DataTable></Panel>}
+    <Modal open={Boolean(dialog)} onOpenChange={open => !open && setDialog(null)} title={dialog ?? "用户操作"}><div className="space-y-4"><p className="text-sm text-muted-foreground">静态模拟 Gosso Admin 的确认、角色、密码、MFA、锁定和删除操作。</p><Button variant="secondary" onClick={() => setDialog(null)}>取消</Button><Button variant="primary" onClick={() => { setDialog(null); setState("success"); }}>确认</Button></div></Modal>
+  </ListPageTemplate>;
 }
 
 function EditorDemo() {
   const [state, setState] = useState<DemoState>("ready");
   const [preview, setPreview] = useState(false);
-  const [saveState, setSaveState] = useState<
-    "dirty" | "saved" | "failed" | "conflict"
-  >("dirty");
+  const [saveState, setSaveState] = useState<"dirty" | "saved" | "failed" | "conflict">(
+    "dirty",
+  );
   return (
     <>
       <PageHeader
@@ -622,156 +419,147 @@ function EditorDemo() {
       />
       <StateControls state={state} setState={setState} />
       {state === "ready" ? (
-        <EditorWorkspaceTemplate
-          outline={
-            <>
-              <PanelHeader title="大纲" description="文章结构" />
-              <nav className="flex flex-col gap-2 text-sm">
-                <a
-                  className="rounded-md bg-accent px-3 py-2 text-accent-foreground"
-                  href="#editor-title"
-                >
-                  标题
-                </a>
-                <a
-                  className="rounded-md px-3 py-2 text-muted-foreground hover:bg-muted"
-                  href="#editor-body"
-                >
-                  正文
-                </a>
-                <a
-                  className="rounded-md px-3 py-2 text-muted-foreground hover:bg-muted"
-                  href="#editor-meta"
-                >
-                  元信息
-                </a>
-              </nav>
-            </>
-          }
-          canvas={
-            <Panel className="min-h-[520px]">
-              <PanelHeader
-                title={preview ? "预览" : "编辑内容"}
-                description="Markdown、代码块和表格内容在画布内滚动。"
-              />
-              {saveState === "saved" ? (
-                <Feedback type="success" className="mb-4">
-                  草稿已保存 · 刚刚
-                </Feedback>
-              ) : null}
-              {saveState === "failed" ? (
-                <Feedback type="error" className="mb-4">
-                  保存失败，请检查必填字段后重试。
-                </Feedback>
-              ) : null}
-              {preview ? (
-                <article className="prose max-w-none">
-                  <h2>设计系统迁移计划</h2>
-                  <p>这是静态预览，用来验证阅读宽度、标题层级和内容间距。</p>
-                  <pre className="max-h-48 overflow-auto rounded-md bg-muted p-4">
-                    const density = "default";{`\n`}renderTable(density);
-                  </pre>
-                </article>
-              ) : (
-                <div className="flex flex-col gap-4">
-                  <Field
-                    label="标题"
-                    id="editor-title"
-                    hint="建议控制在 60 个字符以内。"
-                  >
-                    <Input defaultValue="设计系统迁移计划" />
-                  </Field>
-                  <Field
-                    label="正文"
-                    id="editor-body"
-                    hint="支持 Markdown 和富文本粘贴。"
-                  >
-                    <textarea
-                      className="min-h-64 w-full rounded-md border bg-input p-3 text-sm leading-7"
-                      defaultValue="页面级 Demo 让每一个间距和状态都可以被直接评审。"
-                    />
-                  </Field>
-                  <div id="editor-meta" className="grid gap-4 sm:grid-cols-2">
-                    <Field label="摘要">
-                      <Input defaultValue="统一页面视觉语言" />
-                    </Field>
-                    <Field label="作者">
-                      <Select defaultValue="owner">
-                        <option value="owner">Gouno Owner</option>
-                        <option value="editor">Editorial Team</option>
-                      </Select>
-                    </Field>
-                  </div>
-                  <div className="max-h-40 overflow-auto rounded-md border bg-muted/40 p-4 text-sm">
-                    <div className="mb-2 font-medium">
-                      Markdown 表格预览内容
-                    </div>
-                    <code className="whitespace-pre">{`| 状态 | 数量 |\n| --- | ---: |\n| 已发布 | 126 |\n| 草稿 | 32 |`}</code>
-                  </div>
-                </div>
-              )}
-            </Panel>
-          }
-          inspector={
-            <Panel>
-              <PanelHeader
-                title="Inspector"
-                description="页面设置和发布选项。"
-              />
+      <EditorWorkspaceTemplate
+        outline={
+          <>
+          <PanelHeader title="大纲" description="文章结构" />
+          <nav className="flex flex-col gap-2 text-sm">
+            <a
+              className="rounded-md bg-accent px-3 py-2 text-accent-foreground"
+              href="#editor-title"
+            >
+              标题
+            </a>
+            <a
+              className="rounded-md px-3 py-2 text-muted-foreground hover:bg-muted"
+              href="#editor-body"
+            >
+              正文
+            </a>
+            <a
+              className="rounded-md px-3 py-2 text-muted-foreground hover:bg-muted"
+              href="#editor-meta"
+            >
+              元信息
+            </a>
+          </nav>
+          </>
+        }
+        canvas={
+        <Panel className="min-h-[520px]">
+          <PanelHeader
+            title={preview ? "预览" : "编辑内容"}
+            description="Markdown、代码块和表格内容在画布内滚动。"
+          />
+          {saveState === "saved" ? (
+            <Feedback type="success" className="mb-4">
+              草稿已保存 · 刚刚
+            </Feedback>
+          ) : null}
+          {saveState === "failed" ? (
+            <Feedback type="error" className="mb-4">
+              保存失败，请检查必填字段后重试。
+            </Feedback>
+          ) : null}
+          {preview ? (
+              <article className="prose max-w-none">
+                <h2>设计系统迁移计划</h2>
+                <p>这是静态预览，用来验证阅读宽度、标题层级和内容间距。</p>
+                <pre className="max-h-48 overflow-auto rounded-md bg-muted p-4">
+                  const density = "default";{`\n`}renderTable(density);
+                </pre>
+              </article>
+            ) : (
               <div className="flex flex-col gap-4">
-                <Field label="状态">
-                  <Select defaultValue="draft">
-                    <option value="draft">草稿</option>
-                    <option value="published">已发布</option>
-                  </Select>
-                </Field>
-                <Field label="摘要">
-                  <Input defaultValue="统一页面视觉语言" />
-                </Field>
-                <Feedback
-                  type={
-                    saveState === "dirty"
-                      ? "warning"
-                      : saveState === "failed"
-                        ? "error"
-                        : "success"
-                  }
+                <Field
+                  label="标题"
+                  id="editor-title"
+                  hint="建议控制在 60 个字符以内。"
                 >
-                  {saveState === "dirty"
-                    ? "有未保存的修改。"
-                    : saveState === "failed"
-                      ? "保存失败，修改仍保留在本地。"
-                      : saveState === "conflict"
-                        ? "检测到版本冲突，提交已暂停。"
-                        : "所有修改都已保存。"}
-                </Feedback>
-                <ActionGroup>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setSaveState("dirty")}
-                  >
-                    标记未保存
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    onClick={() => setSaveState("failed")}
-                  >
-                    模拟保存失败
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => setSaveState("conflict")}
-                  >
-                    模拟版本冲突
-                  </Button>
-                </ActionGroup>
+                  <Input defaultValue="设计系统迁移计划" />
+                </Field>
+                <Field
+                  label="正文"
+                  id="editor-body"
+                  hint="支持 Markdown 和富文本粘贴。"
+                >
+                  <textarea
+                    className="min-h-64 w-full rounded-md border bg-input p-3 text-sm leading-7"
+                    defaultValue="页面级 Demo 让每一个间距和状态都可以被直接评审。"
+                  />
+                </Field>
+                <div id="editor-meta" className="grid gap-4 sm:grid-cols-2">
+                  <Field label="摘要">
+                    <Input defaultValue="统一页面视觉语言" />
+                  </Field>
+                  <Field label="作者">
+                    <Select defaultValue="owner">
+                      <option value="owner">Gouno Owner</option>
+                      <option value="editor">Editorial Team</option>
+                    </Select>
+                  </Field>
+                </div>
+                <div className="max-h-40 overflow-auto rounded-md border bg-muted/40 p-4 text-sm">
+                  <div className="mb-2 font-medium">Markdown 表格预览内容</div>
+                  <code className="whitespace-pre">{`| 状态 | 数量 |\n| --- | ---: |\n| 已发布 | 126 |\n| 草稿 | 32 |`}</code>
+                </div>
               </div>
-            </Panel>
-          }
-        />
+          )}
+        </Panel>
+        }
+        inspector={
+        <Panel>
+          <PanelHeader title="Inspector" description="页面设置和发布选项。" />
+          <div className="flex flex-col gap-4">
+            <Field label="状态">
+              <Select defaultValue="draft">
+                <option value="draft">草稿</option>
+                <option value="published">已发布</option>
+              </Select>
+            </Field>
+            <Field label="摘要">
+              <Input defaultValue="统一页面视觉语言" />
+            </Field>
+            <Feedback
+              type={
+                saveState === "dirty"
+                  ? "warning"
+                  : saveState === "failed"
+                    ? "error"
+                    : "success"
+              }
+            >
+              {saveState === "dirty"
+                ? "有未保存的修改。"
+                : saveState === "failed"
+                  ? "保存失败，修改仍保留在本地。"
+                  : saveState === "conflict"
+                    ? "检测到版本冲突，提交已暂停。"
+                    : "所有修改都已保存。"}
+            </Feedback>
+            <ActionGroup>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setSaveState("dirty")}
+              >
+                标记未保存
+              </Button>
+              <Button
+                size="sm"
+                variant="danger"
+                onClick={() => setSaveState("failed")}
+              >
+                模拟保存失败
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => setSaveState("conflict")}>
+                模拟版本冲突
+              </Button>
+            </ActionGroup>
+          </div>
+        </Panel>
+        }
+      />
       ) : (
         <Panel>
           <StatePanel state={state} onRetry={() => setState("ready")} />
@@ -855,44 +643,32 @@ function DashboardDemo({ gosso = false }: { gosso?: boolean }) {
           </div>
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
             <Panel>
-              <PanelHeader
+                <PanelHeader
                 title={gosso ? "系统健康度" : "内容表现"}
-                description={
-                  gosso
-                    ? "服务、数据库和队列的实时状态。"
-                    : "过去 7 天的阅读趋势。"
-                }
+                description={gosso ? "服务、数据库和队列的实时状态。" : "过去 7 天的阅读趋势。"}
                 actions={
                   <Button size="sm" variant="ghost">
-                    {gosso ? "查看详情" : "查看分析"}
+                  {gosso ? "查看详情" : "查看分析"}
                   </Button>
                 }
               />
               <div className="flex h-48 items-end gap-2 rounded-lg bg-muted/40 px-4 pb-4 pt-6 sm:gap-4">
-                {[35, 52, 44, 70, 58, 82, 96].map((height, index) => (
-                  <div
-                    key={index}
-                    className="group flex h-full min-w-0 flex-1 flex-col justify-end gap-2"
-                  >
+                {[35, 52, 44, 70, 58, 82, 96].map(
+                  (height, index) => (
                     <div
-                      className="h-full rounded-t-sm bg-primary/70 transition-colors group-hover:bg-primary"
-                      style={{ height: `${height}%` }}
-                    />
-                    <span className="text-center text-[11px] text-muted-foreground">
-                      {
-                        [
-                          "周一",
-                          "周二",
-                          "周三",
-                          "周四",
-                          "周五",
-                          "周六",
-                          "周日",
-                        ][index]
-                      }
-                    </span>
-                  </div>
-                ))}
+                      key={index}
+                      className="group flex h-full min-w-0 flex-1 flex-col justify-end gap-2"
+                    >
+                      <div
+                        className="h-full rounded-t-sm bg-primary/70 transition-colors group-hover:bg-primary"
+                        style={{ height: `${height}%` }}
+                      />
+                      <span className="text-center text-[11px] text-muted-foreground">
+                        {["周一", "周二", "周三", "周四", "周五", "周六", "周日"][index]}
+                      </span>
+                    </div>
+                  ),
+                )}
               </div>
               <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                 <span className="flex items-center gap-2">
@@ -905,10 +681,7 @@ function DashboardDemo({ gosso = false }: { gosso?: boolean }) {
               </div>
             </Panel>
             <Panel>
-              <PanelHeader
-                title={gosso ? "管理入口" : "快捷操作"}
-                description={gosso ? "常用系统管理操作" : "常用工作流"}
-              />
+              <PanelHeader title={gosso ? "管理入口" : "快捷操作"} description={gosso ? "常用系统管理操作" : "常用工作流"} />
               <div className="flex flex-col gap-2">
                 <Button
                   className="justify-start"
@@ -970,15 +743,7 @@ function DashboardDemo({ gosso = false }: { gosso?: boolean }) {
                       {type} · {date}
                     </div>
                   </div>
-                  <Badge
-                    tone={
-                      status === "已发布"
-                        ? "success"
-                        : status === "草稿"
-                          ? "neutral"
-                          : "warning"
-                    }
-                  >
+                  <Badge tone={status === "已发布" ? "success" : status === "草稿" ? "neutral" : "warning"}>
                     {status}
                   </Badge>
                 </div>
@@ -1081,13 +846,11 @@ function App() {
     workspace === "gouno-ui"
       ? "Foundations"
       : workspace === "blog"
-        ? "Blog 公共"
-        : workspace === "blog-admin"
-          ? "Blog Admin"
-          : "Gosso Admin";
-  const navigationGroups = nav.filter(
-    (group) => group.group === workspaceGroup,
-  );
+      ? "Blog 公共"
+      : workspace === "blog-admin"
+        ? "Blog Admin"
+        : "Gosso Admin";
+  const navigationGroups = nav.filter((group) => group.group === workspaceGroup);
   const switchWorkspace = (nextWorkspace: Workspace) => {
     setWorkspace(nextWorkspace);
     if (nextWorkspace !== "gouno-ui") setBrand(nextWorkspace);
@@ -1095,10 +858,10 @@ function App() {
       nextWorkspace === "gouno-ui"
         ? "Foundations"
         : nextWorkspace === "blog"
-          ? "Blog 公共"
-          : nextWorkspace === "blog-admin"
-            ? "Blog Admin"
-            : "Gosso Admin";
+        ? "Blog 公共"
+        : nextWorkspace === "blog-admin"
+          ? "Blog Admin"
+          : "Gosso Admin";
     const belongsToWorkspace = nav
       .find((group) => group.group === nextGroup)
       ?.items.some((item) => item.id === page);
@@ -1107,10 +870,10 @@ function App() {
         nextWorkspace === "gouno-ui"
           ? "foundations"
           : nextWorkspace === "blog"
-            ? "blog-home"
-            : nextWorkspace === "blog-admin"
-              ? "admin-dashboard"
-              : "gosso-system";
+          ? "blog-home"
+          : nextWorkspace === "blog-admin"
+            ? "admin-dashboard"
+            : "gosso-system";
       window.location.hash = defaultPage;
       setPage(defaultPage);
     }
@@ -1204,24 +967,26 @@ function App() {
     }
   };
   const workspaceControl = (
-    <Select
-      aria-label="产品空间"
-      size="compact"
-      value={workspace}
-      onChange={(e) => switchWorkspace(e.target.value as Workspace)}
-    >
-      <option value="gouno-ui">Gouno UI</option>
-      <option value="blog">Blog</option>
-      <option value="blog-admin">Blog Admin</option>
-      <option value="gosso-admin">Gosso Admin</option>
-    </Select>
+      <Select
+        aria-label="产品空间"
+        size="compact"
+        value={workspace}
+        onChange={(e) => switchWorkspace(e.target.value as Workspace)}
+      >
+        <option value="gouno-ui">Gouno UI</option>
+        <option value="blog">Blog</option>
+        <option value="blog-admin">Blog Admin</option>
+        <option value="gosso-admin">Gosso Admin</option>
+      </Select>
   );
   const viewportControl = (
     <Select
       aria-label="预览宽度"
       size="compact"
       value={previewWidth}
-      onChange={(event) => setPreviewWidth(event.target.value as PreviewWidth)}
+      onChange={(event) =>
+        setPreviewWidth(event.target.value as PreviewWidth)
+      }
     >
       <option value="full">全宽</option>
       <option value="desktop">桌面 1024</option>
@@ -1229,26 +994,25 @@ function App() {
       <option value="mobile">移动 390</option>
     </Select>
   );
-  const themeColorControl =
-    workspace === "gouno-ui" ? (
-      <Select
-        aria-label="Gouno UI 主题色"
-        value={brand}
-        onChange={(event) => {
-          const nextBrand = event.target.value as Brand;
-          setBrand(nextBrand);
-          if (embedded && window.parent !== window)
-            window.parent.postMessage(
-              { type: "gouno-showcase:brand", brand: nextBrand },
-              window.location.origin,
-            );
-        }}
-      >
-        <option value="blog">Blog 蓝</option>
-        <option value="blog-admin">Blog Admin 青</option>
-        <option value="gosso-admin">Gosso Admin 紫</option>
-      </Select>
-    ) : null;
+  const themeColorControl = workspace === "gouno-ui" ? (
+    <Select
+      aria-label="Gouno UI 主题色"
+      value={brand}
+      onChange={(event) => {
+        const nextBrand = event.target.value as Brand;
+        setBrand(nextBrand);
+        if (embedded && window.parent !== window)
+          window.parent.postMessage(
+            { type: "gouno-showcase:brand", brand: nextBrand },
+            window.location.origin,
+          );
+      }}
+    >
+      <option value="blog">Blog 蓝</option>
+      <option value="blog-admin">Blog Admin 青</option>
+      <option value="gosso-admin">Gosso Admin 紫</option>
+    </Select>
+  ) : null;
   const shellControls = (
     <ActionGroup>
       {themeColorControl}
@@ -1312,63 +1076,60 @@ function App() {
                     : "mx-auto block rounded-lg border bg-background shadow-sm"
                 }
                 style={{
-                  boxSizing:
-                    previewWidth === "full" ? "border-box" : "content-box",
+                  boxSizing: previewWidth === "full" ? "border-box" : "content-box",
                   width:
                     previewWidth === "full"
                       ? "100%"
                       : previewWidth === "desktop"
-                        ? 1024
-                        : previewWidth === "tablet"
-                          ? 768
-                          : 390,
+                      ? 1024
+                      : previewWidth === "tablet"
+                        ? 768
+                        : 390,
                   height:
                     previewWidth === "full"
                       ? "100%"
                       : previewWidth === "desktop"
-                        ? 768
-                        : previewWidth === "tablet"
-                          ? 1024
-                          : 844,
+                      ? 768
+                      : previewWidth === "tablet"
+                        ? 1024
+                        : 844,
                 }}
               />
             </main>
           </div>
         ) : (
-          <AdminShell
-            brand={
-              embedded ? (
-                <span className="font-semibold text-primary">
-                  {workspaceLabel}
-                </span>
-              ) : (
-                <button
-                  className="font-semibold text-primary"
-                  onClick={() => setPage("foundations")}
-                >
-                  Gouno UI Demo
-                </button>
-              )
-            }
-            toolbar={shellControls}
-            navigation={navigation}
-          >
-            <AdminPage>
-              <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
-                <Menu className="size-4" />
-                页面 Demo / {current?.label} / 预览：
+        <AdminShell
+          brand={
+            embedded ? (
+              <span className="font-semibold text-primary">{workspaceLabel}</span>
+            ) : (
+              <button
+                className="font-semibold text-primary"
+                onClick={() => setPage("foundations")}
+              >
+                Gouno UI Demo
+              </button>
+            )
+          }
+          toolbar={shellControls}
+          navigation={navigation}
+        >
+          <AdminPage>
+            <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
+              <Menu className="size-4" />
+              页面 Demo / {current?.label} / 预览：
+              {
                 {
-                  {
-                    full: "全宽",
-                    desktop: "1024px",
-                    tablet: "768px",
-                    mobile: "390px",
-                  }[embeddedPreview || previewWidth]
-                }
-              </div>
-              {render()}
-            </AdminPage>
-          </AdminShell>
+                  full: "全宽",
+                  desktop: "1024px",
+                  tablet: "768px",
+                  mobile: "390px",
+                }[embeddedPreview || previewWidth]
+              }
+            </div>
+            {render()}
+          </AdminPage>
+        </AdminShell>
         )}
       </ToastProvider>
     </ThemeProvider>
