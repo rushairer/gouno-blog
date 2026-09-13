@@ -46,6 +46,20 @@ func (r *InteractionRepository) CreateInteraction(ctx context.Context, task *dom
 		Scan(&task.ID, &task.CreatedAt, &task.UpdatedAt)
 }
 
+func (r *InteractionRepository) CreateInteractionTx(ctx context.Context, tx *sql.Tx, task *domain.WorkflowInteractionTask) error {
+	if task.WorkflowRunID == nil && task.AgentRunID == nil {
+		return errors.New("interaction requires a run")
+	}
+	if task.ResumeToken == "" {
+		task.ResumeToken = fmt.Sprintf("%x", sha256.Sum256([]byte(fmt.Sprintf("%d:%d", time.Now().UnixNano(), task.ID))))
+	}
+	return tx.QueryRowContext(ctx, `INSERT INTO workflow_interaction_tasks
+        (workflow_run_id,agent_run_id,workflow_step_id,interaction_type,schema,payload,options,resume_token,expires_at)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id,created_at,updated_at`, task.WorkflowRunID, task.AgentRunID,
+		task.WorkflowStepID, task.InteractionType, task.Schema, task.Payload, task.Options, task.ResumeToken, task.ExpiresAt).
+		Scan(&task.ID, &task.CreatedAt, &task.UpdatedAt)
+}
+
 func (r *InteractionRepository) GetInteraction(ctx context.Context, id int64) (*domain.WorkflowInteractionTask, error) {
 	return scanInteraction(r.db.QueryRowContext(ctx, `SELECT `+interactionColumns()+` FROM workflow_interaction_tasks WHERE id=$1`, id))
 }
@@ -108,6 +122,12 @@ func (r *InteractionRepository) CancelInteraction(ctx context.Context, id int64,
 func (r *InteractionRepository) AppendWorkflowRunEvent(ctx context.Context, event *domain.WorkflowRunEvent) error {
 	return r.db.QueryRowContext(ctx, `INSERT INTO workflow_run_events(workflow_run_id,agent_run_id,workflow_step_id,interaction_task_id,event_type,payload)
 		VALUES($1,$2,$3,$4,$5,$6) RETURNING id,created_at`, event.WorkflowRunID, event.AgentRunID, event.WorkflowStepID, event.InteractionTaskID, event.EventType, event.Payload).
+		Scan(&event.ID, &event.CreatedAt)
+}
+
+func (r *InteractionRepository) AppendWorkflowRunEventTx(ctx context.Context, tx *sql.Tx, event *domain.WorkflowRunEvent) error {
+	return tx.QueryRowContext(ctx, `INSERT INTO workflow_run_events(workflow_run_id,agent_run_id,workflow_step_id,interaction_task_id,event_type,payload)
+        VALUES($1,$2,$3,$4,$5,$6) RETURNING id,created_at`, event.WorkflowRunID, event.AgentRunID, event.WorkflowStepID, event.InteractionTaskID, event.EventType, event.Payload).
 		Scan(&event.ID, &event.CreatedAt)
 }
 

@@ -2,7 +2,6 @@ package workflow
 
 import (
 	"context"
-	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -28,16 +27,19 @@ var (
 )
 
 type Service struct {
-	db          *sql.DB
-	definitions *workflowrepository.DefinitionRepository
-	runner      *agentservice.Runner
-	agents      *agentservice.ManagementService
-	tools       *tool.Registry
-	catalog     *ResourceCatalog
-	workerSem   chan struct{}
-	lifecycle   *RunLifecycle
-	mediaRuns   *MediaRunCoordinator
-	admission   *RunAdmissionCoordinator
+	db              *sql.DB
+	definitions     *workflowrepository.DefinitionRepository
+	runner          *agentservice.Runner
+	agents          *agentservice.ManagementService
+	tools           *tool.Registry
+	catalog         *ResourceCatalog
+	workerSem       chan struct{}
+	lifecycle       *RunLifecycle
+	mediaRuns       *MediaRunCoordinator
+	admission       *RunAdmissionCoordinator
+	dispatch        *DispatchCoordinator
+	execution       *ExecutionCoordinator
+	approvalTargets ExecutedApprovalTargetReader
 }
 
 type PreflightCheck struct {
@@ -177,7 +179,7 @@ func containsString(values []string, target string) bool {
 	return false
 }
 
-func NewService(db *sql.DB, runner *agentservice.Runner, agents *agentservice.ManagementService, registry *tool.Registry, lifecycle *RunLifecycle, mediaRuns *MediaRunCoordinator, admission *RunAdmissionCoordinator) *Service {
+func NewService(db *sql.DB, runner *agentservice.Runner, agents *agentservice.ManagementService, registry *tool.Registry, lifecycle *RunLifecycle, mediaRuns *MediaRunCoordinator, admission *RunAdmissionCoordinator, dispatch *DispatchCoordinator, execution *ExecutionCoordinator, approvalTargets ExecutedApprovalTargetReader) *Service {
 	if lifecycle == nil {
 		panic("workflow.NewService: lifecycle is required")
 	}
@@ -187,7 +189,16 @@ func NewService(db *sql.DB, runner *agentservice.Runner, agents *agentservice.Ma
 	if admission == nil {
 		panic("workflow.NewService: run admission coordinator is required")
 	}
-	return &Service{db: db, definitions: workflowrepository.NewDefinitionRepository(db), runner: runner, agents: agents, tools: registry, catalog: NewResourceCatalog(db), workerSem: make(chan struct{}, 4), lifecycle: lifecycle, mediaRuns: mediaRuns, admission: admission}
+	if dispatch == nil {
+		panic("workflow.NewService: dispatch coordinator is required")
+	}
+	if execution == nil {
+		panic("workflow.NewService: execution coordinator is required")
+	}
+	if approvalTargets == nil {
+		panic("workflow.NewService: executed approval target reader is required")
+	}
+	return &Service{db: db, definitions: workflowrepository.NewDefinitionRepository(db), runner: runner, agents: agents, tools: registry, catalog: NewResourceCatalog(db), workerSem: make(chan struct{}, 4), lifecycle: lifecycle, mediaRuns: mediaRuns, admission: admission, dispatch: dispatch, execution: execution, approvalTargets: approvalTargets}
 }
 
 func (s *Service) List(ctx context.Context) ([]*domain.Workflow, error) {
@@ -285,11 +296,8 @@ func (s *Service) EmitEvent(ctx context.Context, eventKey, eventType string, pay
 	if eventKey == "" || eventType == "" || len(eventKey) > 180 || len(eventType) > 80 || len(payload) == 0 || !json.Valid(payload) {
 		return 0, fmt.Errorf("%w: invalid workflow event", ErrInvalid)
 	}
-	var inserted bool
-	if err := s.db.QueryRowContext(ctx, `INSERT INTO ai_workflow_events(event_key,event_type,payload) VALUES($1,$2,$3)
-		ON CONFLICT (event_key) DO NOTHING RETURNING TRUE`, eventKey, eventType, payload).Scan(&inserted); errors.Is(err, sql.ErrNoRows) {
-		return 0, nil
-	} else if err != nil {
+	inserted, err := s.dispatch.AcceptEvent(ctx, eventKey, eventType, payload)
+	if err != nil || !inserted {
 		return 0, err
 	}
 	ready, err := s.prepareEventBatch(ctx, eventKey, eventType, payload)
@@ -320,8 +328,7 @@ func (s *Service) prepareEventBatch(ctx context.Context, eventKey, eventType str
 			}
 		}
 	}
-	if _, err := s.db.ExecContext(ctx, `UPDATE ai_workflow_events SET batch_prepared=TRUE,available_at=NOW()+make_interval(secs=>$2)
-		WHERE event_key=$1 AND status='accepted' AND batch_prepared=FALSE`, eventKey, window); err != nil {
+	if err := s.dispatch.PrepareEvent(ctx, eventKey, window); err != nil {
 		return false, err
 	}
 	return window == 0, nil
@@ -345,8 +352,8 @@ func (s *Service) processStoredEvent(ctx context.Context, eventKey, eventType st
 			}
 			matched++
 			if trigger.CooldownSeconds > 0 {
-				var recent bool
-				if err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM ai_workflow_runs WHERE workflow_id=$1 AND trigger_kind='event' AND source_ref=$2 AND created_at >= NOW()-make_interval(secs=>$3))`, workflow.ID, eventKey, trigger.CooldownSeconds).Scan(&recent); err != nil {
+				recent, err := s.dispatch.EventCoolingDown(ctx, workflow.ID, eventKey, trigger.CooldownSeconds)
+				if err != nil {
 					return queued, err
 				}
 				if recent {
@@ -367,15 +374,12 @@ func (s *Service) processStoredEvent(ctx context.Context, eventKey, eventType st
 	if matched > 0 && queued == 0 {
 		return 0, fmt.Errorf("%w: no matching Workflow could be queued for event %s", ErrInvalid, eventType)
 	}
-	_, _ = s.db.ExecContext(ctx, `UPDATE ai_workflow_events SET status='processed',processed_at=NOW() WHERE event_key=$1`, eventKey)
+	_ = s.dispatch.MarkEventProcessed(ctx, eventKey)
 	return queued, nil
 }
 
 func (s *Service) markEventFailure(ctx context.Context, eventKey string, eventErr error) {
-	message := safeError(eventErr)
-	_, _ = s.db.ExecContext(ctx, `UPDATE ai_workflow_events
-		SET attempts=attempts+1,last_error=$2,available_at=NOW()+make_interval(secs=>LEAST(3600,POWER(2,attempts)))
-		WHERE event_key=$1 AND status='accepted'`, eventKey, message)
+	_ = s.dispatch.MarkEventFailure(ctx, eventKey, safeError(eventErr))
 }
 
 func eventFilterMatches(filter map[string]interface{}, payload any) bool {
@@ -815,32 +819,11 @@ func (s *Service) tick(ctx context.Context) {
 	// Startup recovery is deliberately bounded. Keep draining any larger backlog
 	// on subsequent scheduler ticks instead of leaving runs queued indefinitely.
 	s.recoverQueuedRuns(ctx)
-	// Claim due rows before queueing. SKIP LOCKED keeps multiple web instances
-	// from returning the same queued run to two in-memory workers.
-	rows, err := s.db.QueryContext(ctx, `UPDATE ai_workflows SET next_run_at=NULL
-		WHERE id IN (SELECT id FROM ai_workflows WHERE enabled=TRUE AND cron_expression IS NOT NULL
-		AND next_run_at<=NOW() AND deleted_at IS NULL ORDER BY next_run_at LIMIT 20 FOR UPDATE SKIP LOCKED)
-		RETURNING id`)
+	ids, err := s.dispatch.ClaimDueSchedules(ctx, 20)
 	if err != nil {
 		return
 	}
-	ids := []int64{}
-	for rows.Next() {
-		var id int64
-		if rows.Scan(&id) == nil {
-			ids = append(ids, id)
-		}
-	}
-	_ = rows.Close()
 	for _, id := range ids {
-		value, err := s.Get(ctx, id)
-		if err != nil {
-			continue
-		}
-		next := workflowNext(value)
-		if next != nil {
-			_, _ = s.db.ExecContext(ctx, `UPDATE ai_workflows SET next_run_at=$2,updated_at=NOW() WHERE id=$1`, id, next)
-		}
 		run, err := s.queue(ctx, id, false, json.RawMessage(`{}`), nil, "scheduler", "", false, true)
 		if err == nil && run.Status == "queued" {
 			go s.Execute(ctx, run.ID)
@@ -849,29 +832,22 @@ func (s *Service) tick(ctx context.Context) {
 }
 
 func (s *Service) processPendingEvents(ctx context.Context) {
-	rows, err := s.db.QueryContext(ctx, `SELECT event_key,event_type,payload,batch_prepared FROM ai_workflow_events
-		WHERE status='accepted' AND available_at<=NOW() ORDER BY id LIMIT 20`)
+	events, err := s.dispatch.ClaimDueEvents(ctx, 20)
 	if err != nil {
 		return
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var key, eventType string
-		var payload []byte
-		var prepared bool
-		if rows.Scan(&key, &eventType, &payload, &prepared) == nil {
-			if !prepared {
-				ready, prepareErr := s.prepareEventBatch(ctx, key, eventType, payload)
-				if prepareErr != nil {
-					s.markEventFailure(ctx, key, prepareErr)
-				}
-				if prepareErr != nil || !ready {
-					continue
-				}
+	for _, event := range events {
+		if !event.BatchPrepared {
+			ready, prepareErr := s.prepareEventBatch(ctx, event.EventKey, event.EventType, event.Payload)
+			if prepareErr != nil {
+				s.markEventFailure(ctx, event.EventKey, prepareErr)
 			}
-			if _, eventErr := s.processStoredEvent(ctx, key, eventType, payload, nil); eventErr != nil {
-				s.markEventFailure(ctx, key, eventErr)
+			if prepareErr != nil || !ready {
+				continue
 			}
+		}
+		if _, eventErr := s.processStoredEvent(ctx, event.EventKey, event.EventType, event.Payload, nil); eventErr != nil {
+			s.markEventFailure(ctx, event.EventKey, eventErr)
 		}
 	}
 }
@@ -922,20 +898,12 @@ func (s *Service) Execute(ctx context.Context, runID int64) {
 	}
 	if err := s.execute(ctx, runID); err != nil {
 		code, message := "workflow_failed", safeError(err)
-		result, updateErr := s.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status='failed',
-			error_code=$2, error_message=$3, finished_at=NOW() WHERE id=$1 AND status='running'`, runID, code, message)
-		if updateErr != nil || result == nil {
+		changed, updateErr := s.execution.FailRun(ctx, runID, code, message)
+		if updateErr != nil || !changed {
 			return
 		}
-		if changed, _ := result.RowsAffected(); changed == 0 {
-			return
-		}
-		var recipientPrincipalID *int64
-		var name string
-		var workflowID int64
-		if queryErr := s.db.QueryRowContext(ctx, `SELECT COALESCE(r.triggered_by_principal_id,w.created_by_principal_id),w.name,w.id
-			FROM ai_workflow_runs r JOIN ai_workflows w ON w.id=r.workflow_id WHERE r.id=$1`, runID).
-			Scan(&recipientPrincipalID, &name, &workflowID); queryErr == nil && recipientPrincipalID != nil {
+		recipientPrincipalID, name, workflowID, queryErr := s.execution.FailureNotificationTarget(ctx, runID)
+		if queryErr == nil && recipientPrincipalID != nil {
 			_ = s.agents.Notify(ctx, *recipientPrincipalID, "ai_workflow_failed", "Workflow 运行失败："+name, message,
 				"/admin/ai-ops?tab=records&record=workflow&workflow="+strconv.FormatInt(workflowID, 10)+"&run="+strconv.FormatInt(runID, 10), "workflow-run-"+strconv.FormatInt(runID, 10))
 		}
@@ -943,24 +911,12 @@ func (s *Service) Execute(ctx context.Context, runID int64) {
 }
 
 func (s *Service) execute(ctx context.Context, runID int64) error {
-	var run domain.WorkflowRun
-	var retryIterations []byte
-	run.ID = runID
-	err := s.db.QueryRowContext(ctx, `UPDATE ai_workflow_runs SET status='running', started_at=NOW()
-		WHERE id=$1 AND status='queued'
-		RETURNING workflow_id, workflow_version_id, dry_run, input, triggered_by_principal_id, trigger_kind, source_ref, retry_of_run_id, retry_step_id, retry_iterations, created_at`,
-		runID).Scan(&run.WorkflowID, &run.WorkflowVersionID, &run.DryRun, &run.Input, &run.TriggeredByPrincipalID, &run.TriggerKind, &run.SourceRef, &run.RetryOfRunID, &run.RetryStepID, &retryIterations, &run.CreatedAt)
+	run, err := s.execution.ClaimRun(ctx, runID)
 	if err != nil {
 		return err
 	}
-	if len(retryIterations) > 0 {
-		if err := json.Unmarshal(retryIterations, &run.RetryIterations); err != nil {
-			return err
-		}
-	}
 	var stepsRaw []byte
-	if err := s.db.QueryRowContext(ctx, `SELECT steps FROM ai_workflow_versions WHERE id=$1`,
-		run.WorkflowVersionID).Scan(&stepsRaw); err != nil {
+	if err := s.db.QueryRowContext(ctx, `SELECT steps FROM ai_workflow_versions WHERE id=$1`, run.WorkflowVersionID).Scan(&stepsRaw); err != nil {
 		return err
 	}
 	var steps []domain.WorkflowStep
@@ -973,31 +929,26 @@ func (s *Service) execute(ctx context.Context, runID int64) error {
 	}
 	if hasResourceQuery(steps) {
 		// Retries replay the query snapshot, so only reset the aggregate for a new run.
-		if _, err := s.db.ExecContext(ctx, `UPDATE ai_workflows SET resource_query_last_count=0,resource_query_last_run_at=NOW()
-			WHERE id=$1 AND NOT EXISTS (SELECT 1 FROM ai_workflow_run_resources WHERE workflow_run_id=$2 AND source='query')`, run.WorkflowID, run.ID); err != nil {
+		if err := s.execution.ResetResourceQueryStats(ctx, run.WorkflowID, run.ID); err != nil {
 			return err
 		}
 	}
 	document := map[string]any{"input": input, "steps": map[string]any{}}
-	output, awaiting, inputTokens, outputTokens, err := s.executeSteps(ctx, &run, steps, document, nil, nil)
+	output, awaiting, inputTokens, outputTokens, err := s.executeSteps(ctx, run, steps, document, nil, nil)
 	if err != nil {
 		return err
 	}
 	status := "succeeded"
 	if awaiting {
 		status = "awaiting_approval"
-		var pending int
-		if queryErr := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM workflow_interaction_tasks WHERE workflow_run_id=$1 AND status='pending'`, runID).Scan(&pending); queryErr == nil && pending > 0 {
+		if pending, queryErr := s.execution.PendingInteractionCount(ctx, runID); queryErr == nil && pending > 0 {
 			status = "waiting_for_user"
 		}
 	} else if pendingMedia, queryErr := s.mediaRuns.HasPending(ctx, runID); queryErr == nil && pendingMedia {
 		status = "waiting_for_user"
 	}
 	rawOutput, _ := json.Marshal(output)
-	_, err = s.db.ExecContext(ctx, `UPDATE ai_workflow_runs SET status=$2, output=$3,
-		input_tokens=$4, output_tokens=$5, finished_at=NOW() WHERE id=$1`, runID, status,
-		rawOutput, inputTokens, outputTokens)
-	return err
+	return s.execution.CompleteRun(ctx, runID, status, rawOutput, inputTokens, outputTokens)
 }
 
 func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, steps []domain.WorkflowStep, document map[string]any, item any, iteration *int) (any, bool, int64, int64, error) {
@@ -1017,8 +968,8 @@ func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, ste
 		// is resolved. Match the write key, including the iteration, so resume
 		// never reuses another item's output or repeats completed model calls.
 		if step.Type != "human_interaction" {
-			var previous []byte
-			if queryErr := s.db.QueryRowContext(ctx, `SELECT output FROM ai_workflow_step_runs WHERE workflow_run_id=$1 AND step_id=$2 AND iteration=$3 AND status='succeeded' ORDER BY id DESC LIMIT 1`, run.ID, step.ID, iterationValue).Scan(&previous); queryErr == nil && len(previous) > 0 && json.Unmarshal(previous, &stepOutput) == nil {
+			previous, found, _ := s.execution.CompletedStepOutput(ctx, run.ID, step.ID, iterationValue)
+			if found && len(previous) > 0 && json.Unmarshal(previous, &stepOutput) == nil {
 				if step.Type == "model" {
 					stepOutput, err = s.enrichApprovedModelOutput(ctx, run.ID, stepOutput)
 					if err != nil {
@@ -1030,8 +981,8 @@ func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, ste
 				continue
 			}
 		} else {
-			var response []byte
-			if queryErr := s.db.QueryRowContext(ctx, `SELECT response FROM workflow_interaction_tasks WHERE workflow_run_id=$1 AND workflow_step_id=$2 AND status='resolved' ORDER BY id DESC LIMIT 1`, run.ID, step.ID).Scan(&response); queryErr == nil && len(response) > 0 && json.Unmarshal(response, &stepOutput) == nil {
+			response, found, _ := s.execution.ResolvedInteractionResponse(ctx, run.ID, step.ID)
+			if found && len(response) > 0 && json.Unmarshal(response, &stepOutput) == nil {
 				document["steps"].(map[string]any)[step.ID] = stepOutput
 				output = stepOutput
 				continue
@@ -1069,26 +1020,15 @@ func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, ste
 				err = queryErr
 				break
 			}
+
 			existing := map[string]bool{}
-			rows, countErr := s.db.QueryContext(ctx, `SELECT resource_type,resource_key FROM ai_workflow_run_resources WHERE workflow_run_id=$1 AND access_level='target'`, run.ID)
+			persistedResources, countErr := s.execution.TargetResources(ctx, run.ID)
 			if countErr != nil {
 				err = countErr
 				break
 			}
-			for rows.Next() {
-				var resourceType, resourceKey string
-				if scanErr := rows.Scan(&resourceType, &resourceKey); scanErr != nil {
-					err = scanErr
-					break
-				}
-				existing[resourceType+"\x00"+resourceKey] = true
-			}
-			_ = rows.Close()
-			if err != nil || rows.Err() != nil {
-				if err == nil {
-					err = rows.Err()
-				}
-				break
+			for _, persistedResource := range persistedResources {
+				existing[persistedResource.ResourceType+"\x00"+persistedResource.ResourceKey] = true
 			}
 			newCount := 0
 			existingByType := map[string]int{}
@@ -1127,8 +1067,7 @@ func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, ste
 			if err != nil {
 				break
 			}
-			if _, updateErr := s.db.ExecContext(ctx, `UPDATE ai_workflows SET resource_query_last_count=(SELECT COUNT(*) FROM ai_workflow_run_resources
-				WHERE workflow_run_id=$2 AND source='query' AND access_level='target'),resource_query_last_run_at=NOW() WHERE id=$1`, run.WorkflowID, run.ID); updateErr != nil {
+			if updateErr := s.execution.UpdateResourceQueryStats(ctx, run.WorkflowID, run.ID); updateErr != nil {
 				err = updateErr
 				break
 			}
@@ -1295,19 +1234,16 @@ func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, ste
 			if len(options) == 0 {
 				options = json.RawMessage(`[]`)
 			}
-			token := fmt.Sprintf("%x", sha256.Sum256([]byte(fmt.Sprintf("workflow:%d:%s:%d", run.ID, step.ID, time.Now().UnixNano()))))
-			var taskID int64
-			var expires any
+			var expires *time.Time
 			if step.ExpiresInSeconds > 0 {
-				expires = time.Now().Add(time.Duration(step.ExpiresInSeconds) * time.Second)
+				value := time.Now().Add(time.Duration(step.ExpiresInSeconds) * time.Second)
+				expires = &value
 			}
-			err = s.db.QueryRowContext(ctx, `INSERT INTO workflow_interaction_tasks
-				(workflow_run_id,workflow_step_id,interaction_type,schema,payload,options,resume_token,expires_at)
-				VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`, run.ID, step.ID, interactionType, schema, payload, options, token, expires).Scan(&taskID)
+			var taskID int64
+			taskID, err = s.execution.CreateInteraction(ctx, run.ID, step.ID, interactionType, schema, payload, options, expires)
 			if err == nil {
 				stepOutput = map[string]any{"status": "waiting_for_user", "interaction_task_id": taskID, "interaction_type": interactionType}
 				awaiting = true
-				_, _ = s.db.ExecContext(ctx, `INSERT INTO workflow_run_events(workflow_run_id,workflow_step_id,event_type,payload) VALUES($1,$2,'human_interaction_created',$3)`, run.ID, step.ID, stepOutput)
 			}
 		case "output":
 			stepOutput, err = resolvePointer(document, step.OutputPointer)
@@ -1343,19 +1279,17 @@ func (s *Service) enrichApprovedModelOutput(ctx context.Context, workflowRunID i
 	if !ok || rawRunID <= 0 {
 		return output, nil
 	}
-	rows, err := s.db.QueryContext(ctx, `SELECT target_type,target_id FROM ai_approvals
-		WHERE run_id=$1 AND status='executed' AND target_id IS NOT NULL ORDER BY id`, int64(rawRunID))
+	approvals, err := s.approvalTargets.ListExecutedTargets(ctx, int64(rawRunID))
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 	resources := []map[string]any{}
-	for rows.Next() {
-		var resourceType string
-		var targetID int64
-		if err := rows.Scan(&resourceType, &targetID); err != nil {
-			return nil, err
+	for _, approval := range approvals {
+		if approval.TargetID == nil {
+			continue
 		}
+		resourceType := approval.TargetType
+		targetID := *approval.TargetID
 		item, err := s.catalog.Resolve(ctx, resourceType, strconv.FormatInt(targetID, 10))
 		if err != nil {
 			return nil, err
@@ -1364,9 +1298,6 @@ func (s *Service) enrichApprovedModelOutput(ctx context.Context, workflowRunID i
 			return nil, err
 		}
 		resources = append(resources, map[string]any{"type": resourceType, "id": targetID, "label": item.Label})
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
 	}
 	if len(resources) > 0 {
 		copy := make(map[string]any, len(value)+1)
@@ -1397,15 +1328,9 @@ func inputForStep(document map[string]any, item any, pointer string, includeCont
 }
 
 func (s *Service) replayedResourceQuery(ctx context.Context, runID int64, stepID string) ([]map[string]any, bool, error) {
-	var raw json.RawMessage
-	err := s.db.QueryRowContext(ctx, `SELECT output FROM ai_workflow_step_runs
-		WHERE workflow_run_id=$1 AND step_id=$2 AND iteration=-1 AND status='succeeded'
-		ORDER BY id DESC LIMIT 1`, runID, stepID).Scan(&raw)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, false, nil
-	}
-	if err != nil {
-		return nil, false, err
+	raw, found, err := s.execution.CompletedStepOutput(ctx, runID, stepID, -1)
+	if err != nil || !found {
+		return nil, found, err
 	}
 	var output []map[string]any
 	if err := json.Unmarshal(raw, &output); err != nil {
@@ -1452,19 +1377,25 @@ func resolvePointer(document any, pointer string) (any, error) {
 func (s *Service) recordStep(ctx context.Context, runID int64, step domain.WorkflowStep, iteration *int, input, output any, started time.Time, stepErr error) {
 	rawInput, _ := json.Marshal(input)
 	rawOutput, _ := json.Marshal(output)
-	status, errorMessage := "succeeded", any(nil)
+	status := "succeeded"
+	var errorMessage *string
 	if stepErr != nil {
-		status, errorMessage = "failed", safeError(stepErr)
+		status = "failed"
+		message := safeError(stepErr)
+		errorMessage = &message
 	}
-	iterationValue := -1
-	if iteration != nil {
-		iterationValue = *iteration
+	checkpoint := &domain.WorkflowStepRun{
+		WorkflowRunID: runID,
+		StepID:        step.ID,
+		StepType:      step.Type,
+		Iteration:     iteration,
+		Status:        status,
+		Input:         rawInput,
+		Output:        rawOutput,
+		ErrorMessage:  errorMessage,
+		StartedAt:     started,
 	}
-	_, _ = s.db.ExecContext(ctx, `INSERT INTO ai_workflow_step_runs
-		(workflow_run_id, step_id, step_type, status, input, output, error_message, started_at, iteration, finished_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW())
-		ON CONFLICT (workflow_run_id, step_id, iteration) DO NOTHING`,
-		runID, step.ID, step.Type, status, rawInput, rawOutput, errorMessage, started, iterationValue)
+	_ = s.execution.RecordStep(ctx, checkpoint)
 }
 
 func safeError(err error) string {

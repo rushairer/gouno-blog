@@ -143,3 +143,21 @@ func (r *ApprovalRepository) RejectApproval(ctx context.Context, id int64, revie
 	}
 	return nil
 }
+
+func (r *ApprovalRepository) ListExecutedTargets(ctx context.Context, runID int64) ([]*domain.AgentApproval, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT `+approvalColumns+`
+        FROM ai_approvals ap WHERE ap.run_id=$1 AND ap.status='executed' AND ap.target_id IS NOT NULL ORDER BY ap.id`, runID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := make([]*domain.AgentApproval, 0)
+	for rows.Next() {
+		item, err := scanApproval(rows)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
