@@ -1,0 +1,30 @@
+name: U04a JSON Minimize
+
+on:
+  push:
+    branches:
+      - ui/u04a-browser-acceptance-20260913
+    paths:
+      - .github/workflows/u04a-json-minimize.yml
+
+permissions:
+  contents: write
+
+jobs:
+  minimize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ui/u04a-browser-acceptance-20260913
+          fetch-depth: 0
+      - run: |
+          python3 scripts/minimize-u04a-migration-json.py
+          python3 -m json.tool docs/ui-redesign/migration.json >/dev/null
+          rm -f scripts/minimize-u04a-migration-json.py .github/workflows/u04a-json-minimize.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "docs(ui): minimize U04a migration JSON diff"
+          git push origin HEAD:ui/u04a-browser-acceptance-20260913
