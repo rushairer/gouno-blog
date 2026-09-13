@@ -1,0 +1,114 @@
+name: Harden field CSS ownership once
+
+on:
+  push:
+    branches:
+      - ui/field-css-ownership-20260913
+    paths:
+      - .github/workflows/field-css-ownership-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  harden:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ui/field-css-ownership-20260913
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: blog-frontend/package-lock.json
+      - name: Install dependencies
+        working-directory: blog-frontend
+        run: npm ci
+      - name: Replace field primitive selector coupling
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          function replaceExact(path, before, after, count = 1) {
+            let source = fs.readFileSync(path, 'utf8');
+            const seen = source.split(before).length - 1;
+            if (seen !== count) throw new Error(`${path}: expected ${count}, found ${seen}: ${before}`);
+            source = source.split(before).join(after);
+            fs.writeFileSync(path, source);
+          }
+
+          replaceExact(
+            'blog-frontend/src/styles/editor.css',
+            '.editor-canvas > .field {',
+            '.editor-canvas > .editor-form-field {',
+          );
+          replaceExact(
+            'blog-frontend/src/styles/editor.css',
+            '.editor-inspector .field + .field {',
+            '.editor-inspector .editor-form-field + .editor-form-field {',
+          );
+
+          for (const path of [
+            'blog-frontend/src/pages/admin/PageEditor.tsx',
+            'blog-frontend/src/pages/admin/PostEditor.tsx',
+          ]) {
+            let source = fs.readFileSync(path, 'utf8');
+            const existing = source.match(/<Field\b[^>]*\bclassName=/g) || [];
+            if (existing.length) throw new Error(`${path}: unexpected existing Field className count ${existing.length}`);
+            const beforeCount = (source.match(/<Field\b/g) || []).length;
+            if (!beforeCount) throw new Error(`${path}: no Field elements found`);
+            source = source.replace(/<Field\b/g, '<Field className="editor-form-field"');
+            const afterCount = (source.match(/className="editor-form-field"/g) || []).length;
+            if (afterCount !== beforeCount) throw new Error(`${path}: field class migration ${afterCount}/${beforeCount}`);
+            fs.writeFileSync(path, source);
+          }
+
+          replaceExact(
+            'blog-frontend/src/styles/agent-console.css',
+            '.workflow-step-card:not(:has(.form-grid, .field, .workflow-nested-steps)) {',
+            '.workflow-step-card:not(:has(.form-grid, .workflow-step-field, .workflow-nested-steps)) {',
+          );
+          replaceExact(
+            'blog-frontend/src/components/agent/WorkflowWorkspace.tsx',
+            '<Field label="审批说明">',
+            '<Field className="workflow-step-field" label="审批说明">',
+          );
+          replaceExact(
+            'blog-frontend/src/components/agent/WorkflowWorkspace.tsx',
+            '<Field label="输出 JSON Pointer">',
+            '<Field className="workflow-step-field" label="输出 JSON Pointer">',
+          );
+
+          const guardPath = 'blog-frontend/scripts/check-ui-contracts.mjs';
+          let guard = fs.readFileSync(guardPath, 'utf8');
+          const oldEditorPattern = 'const retiredEditorPrimitiveSelector = /(?:^|[\\s>+~,])\\.(?:btn|btn__label|choice-button|feedback)(?=$|[\\s:{,[.#>+~])/;';
+          const newEditorPattern = 'const retiredEditorPrimitiveSelector = /(?:^|[\\s>+~,])\\.(?:btn|btn__label|choice-button|feedback|field)(?=$|[\\s:{,[.#>+~])/;\nconst retiredAgentFieldSelector = /(?:^|[\\s>+~,])\\.field(?=$|[\\s:{,[.#>+~])/;';
+          if (!guard.includes(oldEditorPattern)) throw new Error('editor primitive guard marker not found');
+          guard = guard.replace(oldEditorPattern, newEditorPattern);
+          const editorGuard = `      if (\n        name === "styles/editor.css" &&\n        retiredEditorPrimitiveSelector.test(selector)\n      ) {\n        failures.push(\n          \`${'${name}:${index + 1}'} editor feature CSS must target product-owned classes instead of retired primitive internals\`,\n        );\n      }`;
+          const extendedGuard = editorGuard + `\n      if (\n        name === "styles/agent-console.css" &&\n        retiredAgentFieldSelector.test(selector)\n      ) {\n        failures.push(\n          \`${'${name}:${index + 1}'} agent feature CSS must target product-owned classes instead of the canonical Field implementation class\`,\n        );\n      }`;
+          if (!guard.includes(editorGuard)) throw new Error('editor CSS guard block not found');
+          guard = guard.replace(editorGuard, extendedGuard);
+          fs.writeFileSync(guardPath, guard);
+          NODE
+      - name: Format frontend sources
+        working-directory: blog-frontend
+        run: npm run format
+      - name: Verify frontend quality
+        working-directory: blog-frontend
+        run: npm run quality
+      - name: Commit field ownership cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add blog-frontend/src/styles/editor.css blog-frontend/src/styles/agent-console.css blog-frontend/src/pages/admin/PageEditor.tsx blog-frontend/src/pages/admin/PostEditor.tsx blog-frontend/src/components/agent/WorkflowWorkspace.tsx blog-frontend/scripts/check-ui-contracts.mjs
+          git commit -m "refactor(ui): decouple feature css from Field internals"
+          git push origin HEAD:ui/field-css-ownership-20260913
