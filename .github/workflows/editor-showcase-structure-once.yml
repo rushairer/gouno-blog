@@ -1,0 +1,299 @@
+name: Align Blog editors with Showcase once
+
+on:
+  push:
+    branches:
+      - ui/editor-showcase-structure-20260913
+    paths:
+      - .github/workflows/editor-showcase-structure-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  align:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ui/editor-showcase-structure-20260913
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: blog-frontend/package-lock.json
+      - name: Install dependencies
+        working-directory: blog-frontend
+        run: npm ci
+      - name: Align editor container model
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          function read(path) {
+            return fs.readFileSync(path, 'utf8');
+          }
+          function write(path, source) {
+            fs.writeFileSync(path, source);
+          }
+          function replaceOnce(source, from, to, label) {
+            const count = source.split(from).length - 1;
+            if (count !== 1) throw new Error(`${label}: expected exactly one match, found ${count}`);
+            return source.replace(from, to);
+          }
+          function removeCssBlock(source, selector, label) {
+            const start = source.indexOf(selector);
+            if (start < 0) throw new Error(`${label}: selector not found: ${selector}`);
+            const open = source.indexOf('{', start + selector.length);
+            if (open < 0) throw new Error(`${label}: opening brace not found: ${selector}`);
+            let depth = 0;
+            let quote = '';
+            let escaped = false;
+            let inComment = false;
+            for (let i = open; i < source.length; i += 1) {
+              const ch = source[i];
+              const next = source[i + 1];
+              if (inComment) {
+                if (ch === '*' && next === '/') {
+                  inComment = false;
+                  i += 1;
+                }
+                continue;
+              }
+              if (quote) {
+                if (escaped) escaped = false;
+                else if (ch === '\\') escaped = true;
+                else if (ch === quote) quote = '';
+                continue;
+              }
+              if (ch === '/' && next === '*') {
+                inComment = true;
+                i += 1;
+                continue;
+              }
+              if (ch === '"' || ch === "'") {
+                quote = ch;
+                continue;
+              }
+              if (ch === '{') depth += 1;
+              else if (ch === '}') {
+                depth -= 1;
+                if (depth === 0) {
+                  let end = i + 1;
+                  while (end < source.length && (source[end] === '\n' || source[end] === '\r')) end += 1;
+                  return source.slice(0, start) + source.slice(end);
+                }
+              }
+            }
+            throw new Error(`${label}: unbalanced block: ${selector}`);
+          }
+          function removeCssBlockIfPresent(source, selector) {
+            return source.includes(selector) ? removeCssBlock(source, selector, selector) : source;
+          }
+
+          const framePath = 'blog-frontend/src/components/editor/ContentEditorFrame.tsx';
+          let frame = read(framePath);
+          frame = replaceOnce(
+            frame,
+            'import { cn } from "@gouno/ui";\n',
+            'import { cn } from "@gouno/ui";\nimport { Card } from "@gouno/ui/core";\n',
+            'ContentEditorFrame Card import',
+          );
+          frame = replaceOnce(
+            frame,
+            '  return <div className={cn("editor-page", className)}>{children}</div>;',
+            '  return (\n    <Card\n      padding="none"\n      className={cn("editor-page gap-0 overflow-clip", className)}\n    >\n      {children}\n    </Card>\n  );',
+            'ContentEditorFrame canonical Card root',
+          );
+          frame = replaceOnce(
+            frame,
+            '  return <header className="editor-commandbar">{children}</header>;',
+            '  return (\n    <header className="editor-commandbar flex flex-col gap-3 border-b px-6 py-4 lg:flex-row lg:items-center">\n      {children}\n    </header>\n  );',
+            'EditorCommandBar Showcase classes',
+          );
+          frame = replaceOnce(
+            frame,
+            '<div className={cn("editor-command-actions", className)}>{children}</div>',
+            '<div\n      className={cn(\n        "editor-command-actions flex flex-wrap items-center gap-2 lg:justify-end",\n        className,\n      )}\n    >\n      {children}\n    </div>',
+            'EditorCommandActions Showcase classes',
+          );
+          write(framePath, frame);
+
+          const postPath = 'blog-frontend/src/pages/admin/PostEditor.tsx';
+          let post = read(postPath);
+          post = replaceOnce(post, '          className="editor-back"\n', '', 'PostEditor retired editor-back');
+          post = replaceOnce(post, '<Check /> 已于{" "}', '<Check className="size-4" /> 已于{" "}', 'PostEditor saved icon');
+          post = replaceOnce(
+            post,
+            '<div className="editor-save-state">',
+            '<div className="editor-save-state flex min-w-0 flex-1 items-center gap-2 text-sm text-muted-foreground" role="status" aria-live="polite">',
+            'PostEditor save state',
+          );
+          post = replaceOnce(
+            post,
+            '<span className="editor-readonly-indicator">',
+            '<span className="editor-readonly-indicator inline-flex min-w-0 items-center gap-1.5">',
+            'PostEditor readonly state',
+          );
+          post = replaceOnce(
+            post,
+            '<div className="editor-workspace">\n        <aside className="editor-outline">',
+            '<div className="editor-workspace grid min-w-0 xl:grid-cols-[13rem_minmax(0,1fr)_19rem]">\n        <aside\n          className="editor-outline min-w-0 border-b p-6 xl:border-b-0 xl:border-r"\n          aria-label="编辑器导航"\n        >',
+            'PostEditor workspace/outline',
+          );
+          post = replaceOnce(
+            post,
+            '          <div>\n            <h2>{showVersions ? "版本历史" : "文档大纲"}</h2>',
+            '          <div className="flex items-start justify-between gap-2 xl:flex-col">\n            <h2 className="text-sm font-semibold">\n              {showVersions ? "版本历史" : "文档大纲"}\n            </h2>',
+            'PostEditor outline heading',
+          );
+          post = replaceOnce(
+            post,
+            '<div className="version-drawer">',
+            '<div className="version-drawer mt-5 flex flex-col gap-2">',
+            'PostEditor version list',
+          );
+          post = replaceOnce(
+            post,
+            '            <nav>\n              {outline.length ? (',
+            '            <nav className="mt-5 flex flex-col gap-2">\n              {outline.length ? (',
+            'PostEditor outline nav',
+          );
+          post = replaceOnce(
+            post,
+            '<main className="editor-canvas">',
+            '<main\n          className="editor-canvas min-w-0 border-b p-6 xl:border-b-0"\n          aria-label="文章编辑画布"\n        >',
+            'PostEditor canvas',
+          );
+          post = replaceOnce(
+            post,
+            '<aside className="editor-inspector">',
+            '<aside\n          className="editor-inspector min-w-0 p-6 xl:border-l"\n          aria-label="文章元数据 Inspector"\n        >',
+            'PostEditor inspector',
+          );
+          write(postPath, post);
+
+          const pagePath = 'blog-frontend/src/pages/admin/PageEditor.tsx';
+          let page = read(pagePath);
+          page = replaceOnce(page, '          className="editor-back"\n', '', 'PageEditor retired editor-back');
+          page = replaceOnce(page, '<Check /> 已于{" "}', '<Check className="size-4" /> 已于{" "}', 'PageEditor saved icon');
+          page = replaceOnce(
+            page,
+            '<div className="editor-save-state">',
+            '<div className="editor-save-state flex min-w-0 flex-1 items-center gap-2 text-sm text-muted-foreground" role="status" aria-live="polite">',
+            'PageEditor save state',
+          );
+          page = replaceOnce(
+            page,
+            '<div className="editor-workspace">\n        <main className="editor-canvas">',
+            '<div className="editor-workspace grid min-w-0 xl:grid-cols-[minmax(0,1fr)_19rem]">\n        <main\n          className="editor-canvas min-w-0 border-b p-6 xl:border-b-0"\n          aria-label="单页编辑画布"\n        >',
+            'PageEditor workspace/canvas',
+          );
+          page = replaceOnce(
+            page,
+            '<aside className="editor-inspector">',
+            '<aside\n          className="editor-inspector min-w-0 p-6 xl:border-l"\n          aria-label="单页元数据 Inspector"\n        >',
+            'PageEditor inspector',
+          );
+          write(pagePath, page);
+
+          const cssPath = 'blog-frontend/src/styles/editor.css';
+          let css = read(cssPath);
+          const removeSelectors = [
+            '  .editor-commandbar',
+            '  .editor-back',
+            '  .editor-save-state,\n  .editor-readonly-indicator',
+            '  .editor-save-state svg,\n  .editor-readonly-indicator svg',
+            '  .editor-command-actions',
+            '  .editor-workspace:not(:has(.editor-outline))',
+            '  .editor-workspace',
+            '  .editor-outline,\n  .editor-inspector',
+            '  .editor-outline > div:first-child',
+            '  .editor-outline h2',
+            '  .editor-outline nav,\n  .version-drawer',
+            '  .editor-outline',
+            '  .editor-canvas',
+            '  .editor-inspector',
+            '  @media (min-width: 768px)',
+            '  @media (min-width: 1280px)',
+            '  @media (max-width: 1199px)',
+            '  @media (max-width: 899px)',
+          ];
+          for (const selector of removeSelectors) css = removeCssBlock(css, selector, selector);
+          // Remove the old mobile-only command/canvas layout overrides but retain feature-specific AI responsive rules.
+          for (const selector of [
+            '    .editor-commandbar',
+            '    .editor-save-state',
+            '    .editor-command-actions > *',
+            '    .editor-command-actions',
+            '    .editor-canvas',
+          ]) {
+            css = removeCssBlockIfPresent(css, selector);
+          }
+          css = replaceOnce(
+            css,
+            '  .editor-page {\n    min-width: 0;\n  }\n\n',
+            '  .editor-page {\n    min-width: 0;\n  }\n\n  .editor-canvas {\n    display: flex;\n    min-width: 0;\n    flex-direction: column;\n  }\n\n',
+            'editor canvas semantic layout',
+          );
+          css = replaceOnce(
+            css,
+            '  .editor-inspector-ai-banner {\n    padding: 0.875rem 0.875rem 0.375rem;\n  }',
+            '  .editor-inspector-ai-banner {\n    padding-bottom: 0.375rem;\n  }',
+            'editor inspector AI banner spacing',
+          );
+          css = replaceOnce(
+            css,
+            '  .editor-inspector details {\n    padding: 0 0.875rem 0.875rem;\n    border-bottom: 1px solid var(--border);\n  }',
+            '  .editor-inspector details {\n    padding-block: 1rem;\n    border-bottom: 1px solid var(--border);\n  }',
+            'editor inspector section spacing',
+          );
+          css = replaceOnce(
+            css,
+            '  .editor-inspector summary {\n    padding: 0.875rem 0 0.75rem;\n    font-size: 0.8125rem;\n    font-weight: 600;\n    cursor: pointer;\n  }',
+            '  .editor-inspector summary {\n    font-size: 0.875rem;\n    font-weight: 600;\n    cursor: pointer;\n  }',
+            'editor inspector summary',
+          );
+          write(cssPath, css);
+
+          const testPath = 'blog-frontend/src/components/editor/__tests__/ContentEditorFrame.test.tsx';
+          let test = read(testPath);
+          test = replaceOnce(
+            test,
+            '    expect(container.firstChild).toHaveClass("editor-page", "custom-frame");\n    expect(container.querySelector(".editor-commandbar")).toBeInTheDocument();',
+            '    expect(container.firstChild).toHaveClass(\n      "editor-page",\n      "gap-0",\n      "overflow-clip",\n      "custom-frame",\n    );\n    expect(container.firstChild).toHaveAttribute("data-slot", "card");\n    expect(container.querySelector(".editor-commandbar")).toHaveClass(\n      "border-b",\n      "px-6",\n      "py-4",\n      "lg:flex-row",\n    );',
+            'ContentEditorFrame canonical surface test',
+          );
+          test = replaceOnce(
+            test,
+            '    expect(\n      container.querySelector(".editor-command-actions"),\n    ).toHaveTextContent("操作");',
+            '    expect(\n      container.querySelector(".editor-command-actions"),\n    ).toHaveTextContent("操作");\n    expect(container.querySelector(".editor-command-actions")).toHaveClass(\n      "flex-wrap",\n      "lg:justify-end",\n    );',
+            'EditorCommandActions Showcase test',
+          );
+          write(testPath, test);
+          NODE
+      - name: Format frontend sources
+        working-directory: blog-frontend
+        run: npm run format
+      - name: Verify frontend quality
+        working-directory: blog-frontend
+        run: npm run quality
+      - name: Commit editor Showcase alignment
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            blog-frontend/src/components/editor/ContentEditorFrame.tsx \
+            blog-frontend/src/components/editor/__tests__/ContentEditorFrame.test.tsx \
+            blog-frontend/src/pages/admin/PostEditor.tsx \
+            blog-frontend/src/pages/admin/PageEditor.tsx \
+            blog-frontend/src/styles/editor.css
+          git commit -m "refactor(ui): align editors with Showcase container model"
+          git push origin HEAD:ui/editor-showcase-structure-20260913
