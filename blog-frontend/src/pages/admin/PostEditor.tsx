@@ -1058,7 +1058,7 @@ export default function PostEditor() {
           )}
         </aside>
         <main className="editor-canvas">
-          <Field label="标题" required>
+          <Field className="editor-form-field" label="标题" required>
             <Textarea
               className="editor-title"
               rows={2}
@@ -1099,7 +1099,7 @@ export default function PostEditor() {
               </div>
             ) : null}
           </Field>
-          <Field label="摘要">
+          <Field className="editor-form-field" label="摘要">
             <Textarea
               className="editor-summary"
               rows={3}
@@ -1542,7 +1542,7 @@ export default function PostEditor() {
             ) : null}
             <details open>
               <summary>发布设置</summary>
-              <Field label="状态">
+              <Field className="editor-form-field" label="状态">
                 <Select
                   aria-label="状态"
                   value={publishIntent}
@@ -1557,7 +1557,7 @@ export default function PostEditor() {
                 </Select>
               </Field>
               {publishIntent === "scheduled" ? (
-                <Field label="发布时间">
+                <Field className="editor-form-field" label="发布时间">
                   <Input
                     type="datetime-local"
                     value={post.scheduled_at?.slice(0, 16) || ""}
@@ -1570,7 +1570,7 @@ export default function PostEditor() {
             </details>
             <details open>
               <summary>分类与标签</summary>
-              <Field label="分类">
+              <Field className="editor-form-field" label="分类">
                 <Select
                   aria-label="分类"
                   value={String(post.category_id || "")}
@@ -1608,7 +1608,11 @@ export default function PostEditor() {
                   </div>
                 )}
               </Field>
-              <Field label="标签" hint="使用逗号分隔，最多建议 10 个。">
+              <Field
+                className="editor-form-field"
+                label="标签"
+                hint="使用逗号分隔，最多建议 10 个。"
+              >
                 <Input
                   value={post.tags.join(", ")}
                   onChange={(event) =>
@@ -1661,7 +1665,7 @@ export default function PostEditor() {
             </details>
             <details open>
               <summary>封面与摘要</summary>
-              <Field label="封面 URL">
+              <Field className="editor-form-field" label="封面 URL">
                 <Input
                   value={post.cover_url || ""}
                   onChange={(event) => update("cover_url", event.target.value)}
@@ -1718,7 +1722,7 @@ export default function PostEditor() {
                   ) : null}
                 </div>
               </Field>
-              <Field label="替代文本">
+              <Field className="editor-form-field" label="替代文本">
                 <Input
                   value={post.cover_alt || ""}
                   onChange={(event) => update("cover_alt", event.target.value)}
@@ -1766,6 +1770,7 @@ export default function PostEditor() {
                 </Button>
               </div>
               <Field
+                className="editor-form-field"
                 label="访问路径 (Slug)"
                 required
                 hint="访问路径为 /articles/<slug>"
@@ -1807,6 +1812,7 @@ export default function PostEditor() {
                 </div>
               </Field>
               <Field
+                className="editor-form-field"
                 label="SEO 标题"
                 hint={`${(post.seo_title || "").length}/60`}
               >
@@ -1818,6 +1824,7 @@ export default function PostEditor() {
                 />
               </Field>
               <Field
+                className="editor-form-field"
                 label="SEO 描述"
                 hint={`${(post.seo_description || "").length}/160`}
               >

@@ -2689,7 +2689,7 @@ function WorkflowEditor({
                   </div>
                 ) : null}
                 {step.type === "approval_gate" ? (
-                  <Field label="审批说明">
+                  <Field className="workflow-step-field" label="审批说明">
                     <Input
                       value={step.name || ""}
                       onChange={(event) =>
@@ -2699,7 +2699,10 @@ function WorkflowEditor({
                   </Field>
                 ) : null}
                 {step.type === "output" ? (
-                  <Field label="输出 JSON Pointer">
+                  <Field
+                    className="workflow-step-field"
+                    label="输出 JSON Pointer"
+                  >
                     <Input
                       className="mono"
                       value={step.output_pointer || ""}

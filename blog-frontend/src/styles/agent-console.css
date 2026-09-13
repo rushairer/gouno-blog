@@ -1676,7 +1676,9 @@
     border-radius: var(--radius-control);
     background: var(--ui-control);
   }
-  .workflow-step-card:not(:has(.form-grid, .field, .workflow-nested-steps)) {
+  .workflow-step-card:not(
+    :has(.form-grid, .workflow-step-field, .workflow-nested-steps)
+  ) {
     display: none;
   }
   .workflow-step-card > header,
