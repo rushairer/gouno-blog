@@ -1,0 +1,160 @@
+name: Canonicalize agent CSS tokens v2 once
+
+on:
+  push:
+    branches:
+      - ui/agent-token-canonicalization-20260913
+    paths:
+      - .github/workflows/canonicalize-agent-tokens-v2-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  canonicalize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ui/agent-token-canonicalization-20260913
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: blog-frontend/package-lock.json
+      - name: Install dependencies
+        working-directory: blog-frontend
+        run: npm ci
+      - name: Replace historical agent tokens
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const cssPath = 'blog-frontend/src/styles/agent-console.css';
+          let css = fs.readFileSync(cssPath, 'utf8');
+
+          const aliasBlock = '    --agent-accent: var(--brand);\n    --agent-accent-soft: var(--brand-soft);\n    --agent-border: var(--admin-line);';
+          if (!css.includes(aliasBlock)) throw new Error('historical agent alias block not found');
+          css = css.replace(
+            aliasBlock,
+            '    --agent-accent: var(--primary);\n    --agent-accent-soft: var(--accent);\n    --agent-border: var(--border);',
+          );
+
+          css = css.replace(/var\(--agent-chip-bg,\s*var\(--ui-code-control\)\)/g, 'var(--muted)');
+          css = css.replace(/var\(--font-size-body\)/g, '0.875rem');
+          css = css.replace(/var\(--space-2\)/g, '0.5rem');
+          css = css.replace(/var\(--space-3(?:,\s*[^)]+)?\)/g, '0.75rem');
+          css = css.replace(/"SFMono-Regular", Consolas, monospace/g, 'var(--font-mono)');
+
+          const mapping = new Map([
+            ['admin-line', 'border'],
+            ['bg-muted', 'muted'],
+            ['bg-panel', 'card'],
+            ['brand', 'primary'],
+            ['brand-soft', 'accent'],
+            ['color-surface', 'card'],
+            ['color-text', 'foreground'],
+            ['color-text-main', 'foreground'],
+            ['color-text-muted', 'muted-foreground'],
+            ['control-bg-hover', 'accent'],
+            ['danger', 'destructive'],
+            ['ink', 'foreground'],
+            ['line', 'border'],
+            ['radius-panel', 'radius-lg'],
+            ['status-danger-bg', 'danger-subtle'],
+            ['status-danger-fg', 'destructive'],
+            ['status-info-bg', 'info-subtle'],
+            ['status-info-fg', 'info'],
+            ['status-success-bg', 'success-subtle'],
+            ['status-success-fg', 'success'],
+            ['status-warning-bg', 'warning-subtle'],
+            ['status-warning-fg', 'warning'],
+            ['success-color', 'success'],
+            ['text-3', 'muted-foreground'],
+            ['text-muted', 'muted-foreground'],
+            ['ui-border', 'border'],
+            ['ui-border-emphasis', 'border'],
+            ['ui-brand', 'primary'],
+            ['ui-brand-soft', 'accent'],
+            ['ui-code-control', 'muted'],
+            ['ui-control', 'input'],
+            ['ui-control-bg', 'input'],
+            ['ui-control-hover', 'accent'],
+            ['ui-danger', 'destructive'],
+            ['ui-danger-soft', 'danger-subtle'],
+            ['ui-info', 'info'],
+            ['ui-info-soft', 'info-subtle'],
+            ['ui-on-brand', 'primary-foreground'],
+            ['ui-panel', 'card'],
+            ['ui-success', 'success'],
+            ['ui-success-soft', 'success-subtle'],
+            ['ui-text', 'foreground'],
+            ['ui-text-muted', 'muted-foreground'],
+            ['ui-text-primary', 'foreground'],
+            ['ui-text-secondary', 'muted-foreground'],
+            ['ui-warning', 'warning'],
+            ['ui-warning-soft', 'warning-subtle'],
+          ]);
+
+          for (const [legacy, canonical] of mapping) {
+            css = css.replace(
+              new RegExp(`var\\(--${legacy}(?=[,\\)])`, 'g'),
+              `var(--${canonical}`,
+            );
+          }
+
+          const retired = [
+            'admin-line', 'agent-chip-bg', 'bg-muted', 'bg-panel', 'brand', 'brand-soft',
+            'color-surface', 'color-text', 'color-text-main', 'color-text-muted', 'control-bg-hover',
+            'danger', 'font-size-body', 'ink', 'line', 'radius-panel', 'space-2', 'space-3',
+            'status-danger-bg', 'status-danger-fg', 'status-info-bg', 'status-info-fg',
+            'status-success-bg', 'status-success-fg', 'status-warning-bg', 'status-warning-fg',
+            'success-color', 'text-3', 'text-muted', 'ui-border', 'ui-border-emphasis',
+            'ui-brand', 'ui-brand-soft', 'ui-code-control', 'ui-control', 'ui-control-bg',
+            'ui-control-hover', 'ui-danger', 'ui-danger-soft', 'ui-info', 'ui-info-soft',
+            'ui-on-brand', 'ui-panel', 'ui-success', 'ui-success-soft', 'ui-text',
+            'ui-text-muted', 'ui-text-primary', 'ui-text-secondary', 'ui-warning', 'ui-warning-soft',
+          ];
+          const leftovers = retired.filter((token) =>
+            new RegExp(`var\\(--${token}(?=[,\\)])`).test(css),
+          );
+          if (leftovers.length) throw new Error(`legacy agent tokens remain: ${leftovers.join(', ')}`);
+          fs.writeFileSync(cssPath, css);
+
+          const guardPath = 'blog-frontend/scripts/check-ui-contracts.mjs';
+          let guard = fs.readFileSync(guardPath, 'utf8');
+          const constantMarker = 'const retiredAgentFieldSelector = /(?:^|[\\s>+~,])\\.field(?=$|[\\s:{,[.#>+~])/;';
+          const constantReplacement =
+            constantMarker +
+            '\nconst retiredAgentTokenReference = /var\\(--(?:' +
+            retired.join('|') +
+            ')(?=[,\\)])/;';
+          if (!guard.includes(constantMarker)) throw new Error('agent field guard marker not found');
+          guard = guard.replace(constantMarker, constantReplacement);
+
+          const guardBlock = `      if (\n        name === "styles/agent-console.css" &&\n        retiredAgentFieldSelector.test(selector)\n      ) {\n        failures.push(\n          \`${'${name}:${index + 1}'} agent feature CSS must target product-owned classes instead of the canonical Field implementation class\`,\n        );\n      }`;
+          const extendedGuardBlock = guardBlock + `\n      if (\n        name === "styles/agent-console.css" &&\n        retiredAgentTokenReference.test(line)\n      ) {\n        failures.push(\n          \`${'${name}:${index + 1}'} agent feature CSS must use canonical @gouno/ui semantic tokens instead of retired product token aliases\`,\n        );\n      }`;
+          if (!guard.includes(guardBlock)) throw new Error('agent CSS guard block not found');
+          guard = guard.replace(guardBlock, extendedGuardBlock);
+          fs.writeFileSync(guardPath, guard);
+          NODE
+      - name: Format frontend sources
+        working-directory: blog-frontend
+        run: npm run format
+      - name: Verify frontend quality
+        working-directory: blog-frontend
+        run: npm run quality
+      - name: Commit canonical token migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add blog-frontend/src/styles/agent-console.css blog-frontend/scripts/check-ui-contracts.mjs
+          git commit -m "refactor(ui): canonicalize agent css tokens"
+          git push origin HEAD:ui/agent-token-canonicalization-20260913
