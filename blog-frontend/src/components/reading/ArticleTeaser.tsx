@@ -3,6 +3,7 @@ import { ArrowUpRight } from "lucide-react";
 import { cn } from "@gouno/ui";
 import { markdownToPlainText } from "../../utils/markdown";
 import type { Post } from "../../types/blog";
+
 export function ArticleTeaser({
   post,
   featured = false,
@@ -16,10 +17,11 @@ export function ArticleTeaser({
     3,
     Math.ceil((post.content?.length || post.summary.length) / 500),
   );
+
   return (
     <article
       className={cn(
-        "editorial-story group grid min-w-0 gap-5 border-b py-6",
+        "group grid min-w-0 gap-5 border-b py-6",
         post.cover_url && !compact && "sm:grid-cols-[minmax(0,1fr)_180px]",
       )}
     >
