@@ -11,11 +11,7 @@ export default function NotFound() {
 
   return (
     <>
-      <Card
-        padding="none"
-        variant="subtle"
-        className="mx-auto max-w-[760px]"
-      >
+      <Card padding="none" variant="subtle" className="mx-auto max-w-[760px]">
         <Result
           status="info"
           headingLevel={1}
@@ -31,11 +27,7 @@ export default function NotFound() {
               >
                 {t("nav.home")}
               </ButtonLink>
-              <ButtonLink
-                variant="outline"
-                to="/articles"
-                icon={<FileText />}
-              >
+              <ButtonLink variant="outline" to="/articles" icon={<FileText />}>
                 {t("notFound.allArticles")}
               </ButtonLink>
               <ButtonLink variant="text" to="/search" icon={<Search />}>

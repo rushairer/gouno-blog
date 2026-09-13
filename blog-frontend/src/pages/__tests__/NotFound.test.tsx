@@ -20,9 +20,7 @@ describe("NotFound Page", () => {
 
     const heading = screen.getByRole("heading", { level: 1 });
     expect(heading).toHaveAttribute("data-slot", "result-title");
-    expect(heading.closest('[data-slot="card"]')).toHaveClass(
-      "max-w-[760px]",
-    );
+    expect(heading.closest('[data-slot="card"]')).toHaveClass("max-w-[760px]");
 
     expect(screen.getByRole("link", { name: /首页|home/i })).toHaveAttribute(
       "href",
