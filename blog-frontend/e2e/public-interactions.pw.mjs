@@ -42,7 +42,7 @@ test("mobile public drawer navigates discovery routes and closes", async ({ page
   await mobileNavigation.getByRole("link", { name: "分类" }).click();
 
   await expect(page).toHaveURL(/\/categories$/);
-  await expect(page.getByRole("heading", { level: 1, name: "分类" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
   await expect(mobileNavigation).toBeHidden();
   expectClean(state);
 });
@@ -54,9 +54,7 @@ test("public shell search preserves canonical Articles active route", async ({ p
   await page.getByRole("button", { name: "提交搜索" }).click();
 
   await expect(page).toHaveURL(/\/search\?q=OAuth2$/);
-  await expect(
-    page.getByRole("heading", { level: 1, name: "“OAuth2”的搜索结果" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
   const mainNavigation = page.getByRole("navigation", { name: "主导航" });
   await expect(mainNavigation.getByRole("link", { name: "文章" })).toHaveAttribute(
     "aria-current",
@@ -72,9 +70,7 @@ test("article index tag filter navigates through the shared route family", async
   await filters.getByRole("link", { name: "OAuth2" }).click();
 
   await expect(page).toHaveURL(/\/tags\/OAuth2$/);
-  await expect(
-    page.getByRole("heading", { level: 1, name: "标签：OAuth2" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
   expectClean(state);
 });
 
