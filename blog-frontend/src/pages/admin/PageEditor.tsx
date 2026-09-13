@@ -659,20 +659,19 @@ export default function PageEditor() {
   return (
     <ContentEditorFrame>
       <EditorCommandBar>
-        <Button
-          className="editor-back"
-          variant="text"
-          onClick={leaveEditor}
-          icon={<ArrowLeft />}
-        >
+        <Button variant="text" onClick={leaveEditor} icon={<ArrowLeft />}>
           返回单页列表
         </Button>
-        <div className="editor-save-state">
+        <div
+          className="editor-save-state flex min-w-0 flex-1 items-center gap-2 text-sm text-muted-foreground"
+          role="status"
+          aria-live="polite"
+        >
           {saving ? (
             "正在保存…"
           ) : savedAt ? (
             <>
-              <Check /> 已于{" "}
+              <Check className="size-4" /> 已于{" "}
               {savedAt.toLocaleTimeString("zh-CN", {
                 hour: "2-digit",
                 minute: "2-digit",
@@ -728,8 +727,11 @@ export default function PageEditor() {
         />
       ) : null}
 
-      <div className="editor-workspace">
-        <main className="editor-canvas">
+      <div className="editor-workspace grid min-w-0 xl:grid-cols-[minmax(0,1fr)_19rem]">
+        <main
+          className="editor-canvas min-w-0 border-b p-6 xl:border-b-0"
+          aria-label="单页编辑画布"
+        >
           <Field className="editor-form-field" label="标题" required>
             <Textarea
               className="editor-title"
@@ -1181,7 +1183,10 @@ export default function PageEditor() {
           )}
         </main>
 
-        <aside className="editor-inspector">
+        <aside
+          className="editor-inspector min-w-0 p-6 xl:border-l"
+          aria-label="单页元数据 Inspector"
+        >
           <div className="editor-inspector-ai-banner">
             <Button
               variant="solid"

@@ -912,24 +912,23 @@ export default function PostEditor() {
   return (
     <ContentEditorFrame>
       <EditorCommandBar>
-        <Button
-          className="editor-back"
-          variant="text"
-          onClick={leaveEditor}
-          icon={<ArrowLeft />}
-        >
+        <Button variant="text" onClick={leaveEditor} icon={<ArrowLeft />}>
           返回文章列表
         </Button>
-        <div className="editor-save-state">
+        <div
+          className="editor-save-state flex min-w-0 flex-1 items-center gap-2 text-sm text-muted-foreground"
+          role="status"
+          aria-live="polite"
+        >
           {isReadOnly ? (
-            <span className="editor-readonly-indicator">
+            <span className="editor-readonly-indicator inline-flex min-w-0 items-center gap-1.5">
               <Eye size={14} /> 只读模式（他人文章）
             </span>
           ) : saving ? (
             "正在保存…"
           ) : savedAt ? (
             <>
-              <Check /> 已于{" "}
+              <Check className="size-4" /> 已于{" "}
               {savedAt.toLocaleTimeString("zh-CN", {
                 hour: "2-digit",
                 minute: "2-digit",
@@ -987,10 +986,15 @@ export default function PostEditor() {
           title={error}
         />
       ) : null}
-      <div className="editor-workspace">
-        <aside className="editor-outline">
-          <div>
-            <h2>{showVersions ? "版本历史" : "文档大纲"}</h2>
+      <div className="editor-workspace grid min-w-0 xl:grid-cols-[13rem_minmax(0,1fr)_19rem]">
+        <aside
+          className="editor-outline min-w-0 border-b p-6 xl:border-b-0 xl:border-r"
+          aria-label="编辑器导航"
+        >
+          <div className="flex items-start justify-between gap-2 xl:flex-col">
+            <h2 className="text-sm font-semibold">
+              {showVersions ? "版本历史" : "文档大纲"}
+            </h2>
             <Button
               variant="text"
               size="small"
@@ -1001,7 +1005,7 @@ export default function PostEditor() {
             </Button>
           </div>
           {showVersions ? (
-            <div className="version-drawer">
+            <div className="version-drawer mt-5 flex flex-col gap-2">
               {versions.length === 0 ? (
                 <Empty description="暂无历史版本记录" />
               ) : (
@@ -1035,7 +1039,7 @@ export default function PostEditor() {
               )}
             </div>
           ) : (
-            <nav>
+            <nav className="mt-5 flex flex-col gap-2">
               {outline.length ? (
                 outline.map((item) => (
                   <a
@@ -1057,7 +1061,10 @@ export default function PostEditor() {
             </nav>
           )}
         </aside>
-        <main className="editor-canvas">
+        <main
+          className="editor-canvas min-w-0 border-b p-6 xl:border-b-0"
+          aria-label="文章编辑画布"
+        >
           <Field className="editor-form-field" label="标题" required>
             <Textarea
               className="editor-title"
@@ -1522,7 +1529,10 @@ export default function PostEditor() {
             />
           )}
         </main>
-        <aside className="editor-inspector">
+        <aside
+          className="editor-inspector min-w-0 p-6 xl:border-l"
+          aria-label="文章元数据 Inspector"
+        >
           <fieldset disabled={isReadOnly} className="fieldset-unstyled">
             {!isReadOnly ? (
               <div className="editor-inspector-ai-banner">

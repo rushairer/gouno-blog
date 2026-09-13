@@ -1,5 +1,6 @@
 import type React from "react";
 import { cn } from "@gouno/ui";
+import { Card } from "@gouno/ui/core";
 import "../../styles/editor.css";
 
 export function ContentEditorFrame({
@@ -9,11 +10,22 @@ export function ContentEditorFrame({
   children: React.ReactNode;
   className?: string;
 }) {
-  return <div className={cn("editor-page", className)}>{children}</div>;
+  return (
+    <Card
+      padding="none"
+      className={cn("editor-page gap-0 overflow-clip", className)}
+    >
+      {children}
+    </Card>
+  );
 }
 
 export function EditorCommandBar({ children }: { children: React.ReactNode }) {
-  return <header className="editor-commandbar">{children}</header>;
+  return (
+    <header className="editor-commandbar flex flex-col gap-3 border-b px-6 py-4 lg:flex-row lg:items-center">
+      {children}
+    </header>
+  );
 }
 
 export function EditorCommandActions({
@@ -21,7 +33,14 @@ export function EditorCommandActions({
   className = "",
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn("editor-command-actions", className)}>{children}</div>
+    <div
+      className={cn(
+        "editor-command-actions flex flex-wrap items-center gap-2 lg:justify-end",
+        className,
+      )}
+    >
+      {children}
+    </div>
   );
 }
 
