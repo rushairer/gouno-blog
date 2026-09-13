@@ -1,5 +1,6 @@
 import type React from "react";
 import { cn } from "@gouno/ui";
+import "../../styles/editor.css";
 
 export function ContentEditorFrame({
   children,
