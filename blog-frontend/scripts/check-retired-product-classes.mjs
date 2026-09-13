@@ -12,6 +12,7 @@ const retiredClasses = new Set([
   "state__actions",
   "simple-page__body",
   "form-error",
+  "footer-meta",
   "loading",
 ]);
 
