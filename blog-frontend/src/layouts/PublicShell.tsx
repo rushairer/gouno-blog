@@ -167,7 +167,10 @@ export default function PublicShell({ children }: { children: ReactNode }) {
       <footer className="mt-12 border-t">
         <div className="mx-auto grid w-full max-w-[1200px] gap-8 px-4 py-10 md:grid-cols-[1fr_1fr] md:px-6">
           <div>
-            <Link to="/" className="inline-flex items-center gap-2 font-semibold">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 font-semibold"
+            >
               <BrandMark src={gounoBlogLogo} className="size-7 text-primary" />
               <span>{siteTitle}</span>
             </Link>
