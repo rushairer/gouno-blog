@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   Calendar,
@@ -41,6 +41,7 @@ import { PageHeader } from "@gouno/ui/gouno";
 import { useI18n } from "../i18n";
 import { useArticleSEO } from "../utils/seo";
 import { MarkdownRenderer } from "../components/MarkdownRenderer";
+import { ArticleTeaser } from "../components/reading/ArticleTeaser";
 import { extractMarkdownTOC } from "../utils/markdown";
 import { SESSION_KEYS } from "../constants";
 import type { Post } from "../types/blog";
@@ -381,7 +382,7 @@ export default function PostDetail() {
       return <NotFound />;
     }
     return (
-      <div className="mx-auto flex min-h-[50vh] max-w-3xl items-center justify-center">
+      <Card padding="none" variant="subtle">
         <Result
           role="alert"
           status="error"
@@ -408,7 +409,7 @@ export default function PostDetail() {
             </div>
           }
         />
-      </div>
+      </Card>
     );
   }
 
@@ -425,10 +426,15 @@ export default function PostDetail() {
   return (
     <>
       <div
-        className="fixed inset-x-0 top-0 z-50 h-1 bg-primary transition-[width]"
-        style={{ width: `${scrollProgress}%` }}
-      />
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
+        aria-hidden="true"
+        className="fixed inset-x-0 top-0 z-50 h-1 bg-muted"
+      >
+        <div
+          className="h-full bg-primary transition-[width]"
+          style={{ width: `${scrollProgress}%` }}
+        />
+      </div>
+      <div className="flex w-full flex-col gap-8">
         {isAdminPreview ? (
           <Alert
             type="warning"
@@ -445,28 +451,29 @@ export default function PostDetail() {
             }
           />
         ) : null}
-        <Link
+        <ButtonLink
+          variant="text"
           to="/articles"
-          className="inline-flex w-fit items-center gap-2 text-sm text-muted-foreground hover:text-primary"
+          className="w-fit px-0"
+          icon={<ArrowLeft size={16} />}
         >
-          <ArrowLeft size={16} />
           {t("backToFeed")}
-        </Link>
+        </ButtonLink>
 
         <div
-          className={`grid min-w-0 gap-8 ${toc.length === 0 ? "mx-auto w-full max-w-4xl" : "lg:grid-cols-[minmax(0,1fr)_16rem]"}`}
+          className={`grid min-w-0 items-start gap-8 ${toc.length === 0 ? "mx-auto w-full max-w-4xl" : "lg:grid-cols-[minmax(0,1fr)_15rem]"}`}
         >
-          <Card as="article" className="gap-8 p-5 sm:p-8">
-            <div className="flex flex-col gap-5 border-b pb-8">
-              {post.cover_url ? (
-                <img
-                  className="max-h-[28rem] w-full rounded-lg border object-cover"
-                  src={post.cover_url}
-                  alt={post.cover_alt || post.title}
-                />
-              ) : null}
+          <Card as="article" padding="none" className="overflow-hidden">
+            {post.cover_url ? (
+              <img
+                className="aspect-[16/7] w-full border-b object-cover"
+                src={post.cover_url}
+                alt={post.cover_alt || post.title}
+              />
+            ) : null}
+            <div className="space-y-8 p-6 sm:p-8">
               <PageHeader title={post.title} description={post.summary} />
-              <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-3 border-y py-4 text-sm text-muted-foreground">
                 <span className="inline-flex items-center gap-1.5">
                   <Calendar size={15} />
                   {formatDate(post.created_at, {
@@ -487,34 +494,33 @@ export default function PostDetail() {
                   <Heart size={15} />
                   {likes}
                 </span>
+                <div className="flex flex-wrap gap-2 sm:ml-auto">
+                  {post.tags.map((tag) => (
+                    <Tag key={tag}>#{tag}</Tag>
+                  ))}
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {post.tags.map((tag) => (
-                  <Tag key={tag}>#{tag}</Tag>
-                ))}
+
+              <MarkdownRenderer content={post.content} />
+
+              <div className="flex justify-center border-t pt-6">
+                <Button
+                  variant="ghost"
+                  onClick={handleLike}
+                  aria-pressed={liked}
+                  icon={
+                    <Heart size={20} fill={liked ? "currentColor" : "none"} />
+                  }
+                >
+                  {likes} {t("likes")}
+                </Button>
               </div>
-            </div>
-
-            <MarkdownRenderer content={post.content} />
-
-            <div className="flex justify-center border-t pt-6">
-              <Button
-                variant="ghost"
-                className={`like-button ${liked ? "liked" : ""}`}
-                onClick={handleLike}
-                aria-pressed={liked}
-                icon={
-                  <Heart size={20} fill={liked ? "currentColor" : "none"} />
-                }
-              >
-                {likes} {t("likes")}
-              </Button>
             </div>
           </Card>
 
           {toc.length > 0 && (
             <aside className="order-first self-start lg:order-none lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-2 lg:[scrollbar-gutter:stable]">
-              <Card className="gap-3 p-4">
+              <Card variant="subtle" padding="sm" className="gap-3">
                 <h2 className="flex items-center gap-2 text-sm font-semibold">
                   <List size={18} />
                   {t("tableOfContents")}
@@ -539,29 +545,22 @@ export default function PostDetail() {
         </div>
 
         {relatedPosts.length > 0 ? (
-          <Card className="gap-5">
-            <h2 className="text-lg font-semibold">{t("relatedPosts")}</h2>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {relatedPosts.map((item) => (
-                <Link
-                  key={item.id}
-                  to={`/articles/${item.slug}`}
-                  className="flex min-w-0 flex-col gap-2 rounded-lg border p-4 hover:border-primary hover:bg-accent/40"
-                >
-                  <strong>{item.title}</strong>
-                  <span className="line-clamp-2 text-sm text-muted-foreground">
-                    {item.summary}
-                  </span>
-                  <small className="text-xs text-muted-foreground">
-                    {item.tags
-                      .slice(0, 3)
-                      .map((tag) => `#${tag}`)
-                      .join(" ")}
-                  </small>
-                </Link>
-              ))}
+          <section
+            aria-labelledby="related-reading"
+            className="mx-auto w-full max-w-[900px]"
+          >
+            <div className="border-b pb-3">
+              <h2
+                id="related-reading"
+                className="text-xl font-semibold tracking-tight"
+              >
+                {t("relatedPosts")}
+              </h2>
             </div>
-          </Card>
+            {relatedPosts.map((item) => (
+              <ArticleTeaser key={item.id} post={item} compact />
+            ))}
+          </section>
         ) : null}
 
         <Card className="gap-6">

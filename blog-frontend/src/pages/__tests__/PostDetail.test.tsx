@@ -107,6 +107,17 @@ describe("PostDetail", () => {
       "src",
       "/media/cover.jpg",
     );
+    const articleCard = screen
+      .getByRole("heading", { name: "Markdown Post" })
+      .closest('[data-slot="card"]');
+    expect(articleCard).toHaveClass("overflow-hidden");
+    expect(articleCard?.querySelector("img")).toHaveClass(
+      "aspect-[16/7]",
+      "border-b",
+    );
+    expect(
+      document.getElementById("related-reading")?.closest("section"),
+    ).toHaveClass("max-w-[900px]");
     expect(await screen.findByText("Great")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /Related Go Post/ }),
