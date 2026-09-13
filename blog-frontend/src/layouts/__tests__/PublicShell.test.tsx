@@ -81,11 +81,10 @@ describe("PublicShell theme", () => {
 
   it("renders configured or fallback footer meta text", async () => {
     const currentYear = new Date().getFullYear();
-    const { container } = renderPublicShell(<h1>Public content</h1>);
+    renderPublicShell(<h1>Public content</h1>);
 
-    const footer = container.querySelector(".footer-meta");
-    expect(footer).toBeInTheDocument();
-    expect(footer?.textContent).toContain(`© ${currentYear}`);
+    const footer = screen.getByRole("contentinfo");
+    expect(footer).toHaveTextContent(`© ${currentYear}`);
   });
 
   it.each([
