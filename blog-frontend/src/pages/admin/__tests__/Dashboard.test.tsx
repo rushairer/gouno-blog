@@ -93,4 +93,29 @@ describe("Admin Dashboard", () => {
       expect(screen.queryByText("AI 运营提醒")).not.toBeInTheDocument();
     });
   });
+
+  it("uses the Showcase error surface and retries dashboard loading", async () => {
+    const user = userEvent.setup();
+    let analyticsAttempts = 0;
+    vi.mocked(apiFetch).mockImplementation(async (url) => {
+      if (String(url).includes("/api/admin/analytics")) {
+        analyticsAttempts += 1;
+        if (analyticsAttempts === 1) throw new Error("analytics unavailable");
+        return Response.json({ data: mockSummary });
+      }
+      return Response.json({ data: null });
+    });
+
+    render(
+      <BrowserRouter>
+        <Dashboard />
+      </BrowserRouter>,
+    );
+
+    expect(await screen.findByText("数据概览加载失败")).toBeInTheDocument();
+    expect(screen.getByText("analytics unavailable")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "重新载入" }));
+    expect(await screen.findByText("AI 运营提醒")).toBeInTheDocument();
+    expect(analyticsAttempts).toBe(2);
+  });
 });
