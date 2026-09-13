@@ -187,26 +187,8 @@ jobs:
           }
           EOF
 
-      - name: Check formatting
-        run: npm run format:check
-
-      - name: Run lint
-        run: npm run lint
-
-      - name: Run UI contracts
-        run: npm run lint:ui
-
-      - name: Run CSS cascade contracts
-        run: npm run lint:css
-
-      - name: Typecheck frontend
-        run: npx tsc -b
-
-      - name: Test with coverage
-        run: npm run test:coverage
-
-      - name: Build frontend
-        run: npm run build
+      - name: Format, lint, UI/CSS contracts, typecheck, coverage and build
+        run: npm run quality
 
   compose:
     name: Compose config
