@@ -2,7 +2,7 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: ".",
-  testMatch: "ui-acceptance.spec.mjs",
+  testMatch: ["support-matrix.spec.mjs", "support-interactions.spec.mjs"],
   fullyParallel: false,
   retries: 1,
   workers: 1,
