@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   browser-acceptance:
-    name: Blog Admin rendered acceptance
+    name: Blog product rendered acceptance
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -52,7 +52,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: blog-admin-browser-acceptance
+          name: blog-browser-acceptance
           path: |
             blog-frontend/playwright-report
             blog-frontend/test-results
