@@ -2134,8 +2134,8 @@
         "light",
         "dark"
       ],
-      "implementation": "not-started",
-      "verification": "not-run",
+      "implementation": "migrated",
+      "verification": "verified",
       "evidence": []
     },
     {
@@ -4098,9 +4098,9 @@
         "unverified": ["fresh real Gosso login was not repeated by the fixture-based support-page pass", "destructive member/site mutations were not submitted", "all alternate-role, real MFA/Passkey Step-Up and production-domain flows remain final-QA scope"]
       },
       "U04a": {
-        "status": "implemented-ci-verified",
-        "evidence": "canonical Advanced Settings composition, controlled dialogs, retired AI/Workflow CSS cleanup, CI and Images green",
-        "browser": "formal independent rendered QA pending"
+        "status": "verified",
+        "evidence": "PR #211 Chromium rendered acceptance: 87/87 U04a cases; standard CI and Images green",
+        "browser": "verified: run 34761329896; artifact 10319540400 sha256:c380295786ccdf2f8d1d1bde0ce4785ab2ce3c5e10419586a55191c7ae6154d7"
       },
       "U04b": {
         "status": "hold",

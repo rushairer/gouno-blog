@@ -62,7 +62,8 @@ function AISettingsContent() {
   const { notify } = useAppFeedback();
   const navigate = useNavigate();
   const labels = new Proxy({} as Record<string, string>, {
-    get: (_, prop: string) => t(`agent.${prop}` as any),
+    get: (_, prop: string | symbol) =>
+      typeof prop === "string" ? t(`agent.${prop}` as any) : undefined,
   });
   const [section, setSection] = useState<AdvancedSection>(
     initialSettingsSection,

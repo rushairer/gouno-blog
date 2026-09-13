@@ -2,7 +2,12 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: ".",
-  testMatch: ["support-matrix.pw.mjs", "support-interactions.pw.mjs"],
+  testMatch: [
+    "support-matrix.pw.mjs",
+    "support-interactions.pw.mjs",
+    "ai-workspace-matrix.pw.mjs",
+    "ai-workspace-interactions.pw.mjs",
+  ],
   fullyParallel: false,
   retries: 1,
   workers: 1,

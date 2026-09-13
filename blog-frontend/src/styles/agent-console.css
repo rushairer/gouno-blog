@@ -152,13 +152,23 @@
   }
 
   .workflow-log-block > .agent-json-preview {
+    max-width: 100%;
+    overflow-x: auto;
     margin: 0;
     border-radius: 0;
   }
 
   .workflow-run-output {
     display: grid;
+    min-width: 0;
+    max-width: 100%;
     gap: 12px;
+  }
+
+  .workflow-run-output__summary,
+  .workflow-run-output__raw {
+    min-width: 0;
+    max-width: 100%;
   }
 
   .workflow-run-output__summary {
