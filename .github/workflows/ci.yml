@@ -156,31 +156,18 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Verify Gouno UI vendor provenance
+      - name: Verify Gouno UI registry release
         run: |
           node --input-type=module <<'EOF'
-          import { createHash } from 'node:crypto';
           import { readFile } from 'node:fs/promises';
-
-          const pkg = JSON.parse(await readFile('./package.json', 'utf8'));
-          const manifest = JSON.parse(await readFile('./vendor/ui-manifest.json', 'utf8'));
-          const archive = await readFile(`./vendor/${manifest.archive}`);
-          const installed = JSON.parse(await readFile('./node_modules/@gouno/ui/package.json', 'utf8'));
-          const sha256 = createHash('sha256').update(archive).digest('hex');
-          const integrity = `sha512-${createHash('sha512').update(archive).digest('base64')}`;
-          if (pkg.dependencies?.['@gouno/ui'] !== `file:vendor/${manifest.archive}`) {
-            throw new Error('@gouno/ui dependency does not match vendor manifest archive');
-          }
-          if (installed.version !== manifest.version) {
-            throw new Error('@gouno/ui installed version does not match vendor manifest');
-          }
-          if (manifest.sha256 !== sha256 || manifest.integrity !== integrity) {
-            throw new Error('@gouno/ui archive digest does not match vendor manifest');
-          }
-
-          const source = await readFile('./vendor/gouno-ui-source.txt', 'utf8');
-          if (!source.includes(`sha=${manifest.sourceSha}`)) {
-            throw new Error('canonical Gouno UI source SHA does not match vendor manifest');
+          const manifest = JSON.parse(await readFile('./package.json', 'utf8'));
+          const lock = JSON.parse(await readFile('./package-lock.json', 'utf8'));
+          const ui = lock.packages['node_modules/@gouno/ui'];
+          const source = manifest.dependencies?.['@gouno/ui'];
+          const exactVersion = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
+          if (!exactVersion.test(source || '') || !ui || ui.version !== source ||
+              !ui.resolved?.startsWith('https://registry.npmjs.org/@gouno/ui/-/ui-') || !ui.integrity) {
+            throw new Error('blog-frontend must use an exact @gouno/ui registry version with lockfile integrity');
           }
           EOF
 

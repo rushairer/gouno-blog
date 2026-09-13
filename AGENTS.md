@@ -58,20 +58,20 @@ This document defines the **immutable architectural rules, security baselines, a
 
 ## 6. Canonical Gouno UI Integrity
 
-- `rushairer/gouno-ui` is the **single canonical design-system owner**. `blog-frontend` consumes its verified vendored artifact as `@gouno/ui`; production code should import canonical components from the explicit `@gouno/ui/core`, `@gouno/ui/theme`, `@gouno/ui/patterns`, or `@gouno/ui/gouno` entrypoint. The package root is not a second ownership layer.
+- `rushairer/gouno-ui` is the **single canonical design-system owner**. `blog-frontend` consumes an exact immutable npm registry release as `@gouno/ui`; production code should import canonical components from the explicit `@gouno/ui/core`, `@gouno/ui/theme`, `@gouno/ui/patterns`, or `@gouno/ui/gouno` entrypoint. The package root is not a second ownership layer.
 - The historical local `packages/ui` tree is **read-only prior art**. It is not an installable or distributable Blog frontend dependency and must never be republished, vendored, aliased, or reintroduced as `@gouno/ui-legacy`.
 - `@gouno/ui-legacy` imports are forbidden in `blog-frontend`. The UI contract must reject any attempted reintroduction. Do not create a Vite or TypeScript alias that redirects canonical `@gouno/ui` imports to the historical local tree.
-- Canonical artifacts are synchronized only through `.github/workflows/sync-gouno-ui.yml`. The workflow must build and verify the selected upstream ref, derive the package version dynamically, update only the canonical archive/dependency/manifest/provenance, run `blog-frontend` quality, and build the frontend Docker image before committing.
-- Keep `blog-frontend/vendor/ui-manifest.json`, `blog-frontend/vendor/gouno-ui-source.txt`, `blog-frontend/package.json`, and the canonical lockfile entry synchronized with the exact external artifact. There is no legacy compatibility archive, manifest, lockfile entry, or Tailwind source.
+- Registry upgrades are performed through `.github/workflows/sync-gouno-ui.yml`. The workflow resolves a published npm version, pins it exactly, refreshes the lockfile, verifies supported package entrypoints, runs `blog-frontend` quality, and builds the frontend Docker image before committing.
+- Keep `blog-frontend/package.json` and the canonical lockfile entry synchronized with the exact npm registry release. The lockfile must retain the registry tarball URL and integrity metadata; local UI archives, manifests, provenance files, compatibility aliases, and legacy Tailwind sources are forbidden.
 - Do not introduce new root-level `@gouno/ui` component imports when a formal layer subpath owns the symbol.
-- Before committing any UI vendor change, run `npm ci` and `npm run quality` in `blog-frontend`, then build the Dockerfile (`docker build -f blog-frontend/Dockerfile blog-frontend`) so package, lockfile, runtime imports, Tailwind sources and container build are verified together.
+- Before committing any Gouno UI dependency change, run `npm ci` and `npm run quality` in `blog-frontend`, then build the Dockerfile (`docker build -f blog-frontend/Dockerfile blog-frontend`) so package, lockfile, runtime imports, Tailwind sources and container build are verified together.
 
 ## 7. UI Refactoring Execution Convention
 
 - Complete a coherent page or shared UI abstraction as a batch before running a browser audit.
 - Do not repeat the full test and build suite for every small visual correction.
 - Do not re-verify an already confirmed behavior unless there is evidence of regression.
-- Run typecheck, tests, builds, and vendored package synchronization at the end of a coherent UI phase.
+- Run typecheck, tests, builds, and registry dependency verification at the end of a coherent UI phase.
 - Use browser verification to confirm actual visual and interaction results; tests and builds do not replace visual confirmation.
 - Continue within the user's authorized scope without pausing for confirmation after every internal implementation step.
 - Preserve uncommitted work, authentication boundaries, the Connector hold, and canonical UI integrity rules.
