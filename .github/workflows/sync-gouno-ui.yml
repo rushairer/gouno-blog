@@ -97,72 +97,6 @@ jobs:
           }
           EOF
 
-      - name: Retire vendored distribution plumbing
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 <<'PY'
-          from pathlib import Path
-
-          def replace_once(path, old, new):
-              p = Path(path)
-              text = p.read_text()
-              if old not in text:
-                  raise SystemExit(f"expected text not found in {path}: {old[:80]!r}")
-              p.write_text(text.replace(old, new, 1))
-
-          ci = Path('.github/workflows/ci.yml')
-          text = ci.read_text()
-          start_marker = '      - name: Verify Gouno UI vendor provenance\n'
-          end_marker = '      - name: Verify shared GOSSO client registry release\n'
-          start = text.find(start_marker)
-          end = text.find(end_marker, start)
-          if start < 0 or end < 0:
-              raise SystemExit('could not locate Blog CI vendored Gouno UI verification block')
-          replacement_lines = [
-              '      - name: Verify Gouno UI registry release',
-              '        run: |',
-              "          node --input-type=module <<'EOF'",
-              "          import { readFile } from 'node:fs/promises';",
-              "          const manifest = JSON.parse(await readFile('./package.json', 'utf8'));",
-              "          const lock = JSON.parse(await readFile('./package-lock.json', 'utf8'));",
-              "          const ui = lock.packages['node_modules/@gouno/ui'];",
-              "          const source = manifest.dependencies?.['@gouno/ui'];",
-              "          const exactVersion = /^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?$/;",
-              "          if (!exactVersion.test(source || '') || !ui || ui.version !== source ||",
-              "              !ui.resolved?.startsWith('https://registry.npmjs.org/@gouno/ui/-/ui-') || !ui.integrity) {",
-              "            throw new Error('blog-frontend must use an exact @gouno/ui registry version with lockfile integrity');",
-              '          }',
-              '          EOF',
-              '',
-          ]
-          replacement = '\n'.join(replacement_lines) + '\n'
-          ci.write_text(text[:start] + replacement + text[end:])
-
-          replace_once('blog-frontend/Dockerfile', 'COPY vendor/gouno-ui-*.tgz ./vendor/\n', '')
-          replace_once(
-              'packages/ui/README.md',
-              '`blog-frontend` consumes its verified vendored artifact as `@gouno/ui`',
-              '`blog-frontend` consumes an exact immutable npm registry release as `@gouno/ui`',
-          )
-
-          agents = Path('AGENTS.md')
-          text = agents.read_text()
-          replacements = [
-              ('`blog-frontend` consumes its verified vendored artifact as `@gouno/ui`', '`blog-frontend` consumes an exact immutable npm registry release as `@gouno/ui`'),
-              ('Canonical artifacts are synchronized only through `.github/workflows/sync-gouno-ui.yml`. The workflow must build and verify the selected upstream ref, derive the package version dynamically, update only the canonical archive/dependency/manifest/provenance, run `blog-frontend` quality, and build the frontend Docker image before committing.', 'Registry upgrades are performed through `.github/workflows/sync-gouno-ui.yml`. The workflow resolves a published npm version, pins it exactly, refreshes the lockfile, verifies supported package entrypoints, runs `blog-frontend` quality, and builds the frontend Docker image before committing.'),
-              ('Keep `blog-frontend/vendor/ui-manifest.json`, `blog-frontend/vendor/gouno-ui-source.txt`, `blog-frontend/package.json`, and the canonical lockfile entry synchronized with the exact external artifact. There is no legacy compatibility archive, manifest, lockfile entry, or Tailwind source.', 'Keep `blog-frontend/package.json` and the canonical lockfile entry synchronized with the exact npm registry release. The lockfile must retain the registry tarball URL and integrity metadata; local UI archives, manifests, provenance files, compatibility aliases, and legacy Tailwind sources are forbidden.'),
-              ('Before committing any UI vendor change, run `npm ci` and `npm run quality` in `blog-frontend`, then build the Dockerfile (`docker build -f blog-frontend/Dockerfile blog-frontend`) so package, lockfile, runtime imports, Tailwind sources and container build are verified together.', 'Before committing any Gouno UI dependency change, run `npm ci` and `npm run quality` in `blog-frontend`, then build the Dockerfile (`docker build -f blog-frontend/Dockerfile blog-frontend`) so package, lockfile, runtime imports, Tailwind sources and container build are verified together.'),
-              ('Run typecheck, tests, builds, and vendored package synchronization at the end of a coherent UI phase.', 'Run typecheck, tests, builds, and registry dependency verification at the end of a coherent UI phase.'),
-          ]
-          for old, new in replacements:
-              if old not in text:
-                  raise SystemExit(f'expected AGENTS.md text not found: {old[:80]!r}')
-              text = text.replace(old, new, 1)
-          agents.write_text(text)
-          PY
-          rm -rf blog-frontend/vendor
-
       - name: Run Blog frontend quality gates
         working-directory: blog-frontend
         run: npm run quality
@@ -170,19 +104,13 @@ jobs:
       - name: Build Blog frontend container
         run: docker build -f blog-frontend/Dockerfile blog-frontend
 
-      - name: Commit registry dependency migration
+      - name: Commit registry dependency update
         shell: bash
         env:
           GOUNO_UI_VERSION: ${{ steps.ui.outputs.version }}
         run: |
           set -euo pipefail
-          git add -A .github/workflows/ci.yml \
-                     AGENTS.md \
-                     packages/ui/README.md \
-                     blog-frontend/Dockerfile \
-                     blog-frontend/vendor \
-                     blog-frontend/package.json \
-                     blog-frontend/package-lock.json
+          git add blog-frontend/package.json blog-frontend/package-lock.json
           if git diff --cached --quiet; then
             echo "@gouno/ui registry dependency is already current."
             exit 0
