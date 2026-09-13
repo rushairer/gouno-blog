@@ -132,6 +132,13 @@ function staticClassName(attribute) {
   return "";
 }
 
+function hasRetiredControlClass(attribute, sourceFile) {
+  const initializer = attribute.initializer;
+  if (!initializer) return false;
+  const source = initializer.getText(sourceFile);
+  return /(?:^|[\s"'\x60])(?:input-field|checkbox-field)(?:--[a-z0-9-]+)?(?=$|[\s"'\x60])/i.test(source);
+}
+
 function checkUiImports(name, source) {
   if (!name.endsWith(".ts") && !name.endsWith(".tsx")) return;
   const sourceFile = ts.createSourceFile(
@@ -349,9 +356,9 @@ function checkTsxContracts(name, source) {
             `${name}:${location(sourceFile, attribute)} shared badge classes must use Badge`,
           );
         }
-        if (/\binput-field(?:--[a-z0-9-]+)?\b/.test(value)) {
+        if (hasRetiredControlClass(attribute, sourceFile)) {
           failures.push(
-            `${name}:${location(sourceFile, attribute)} retired input-field classes must not be reintroduced; use canonical Input/Textarea props`,
+            `${name}:${location(sourceFile, attribute)} retired input-field/checkbox-field classes must not be reintroduced; use canonical Gouno UI controls with product-owned hooks`,
           );
         }
       }

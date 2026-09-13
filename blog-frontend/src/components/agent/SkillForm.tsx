@@ -253,7 +253,7 @@ export function SkillForm({
           <legend>{labels.triggers}</legend>
           <div>
             {(["manual", "cron"] as const).map((trigger) => (
-              <CheckboxField key={trigger}>
+              <CheckboxField key={trigger} className="agent-trigger-option">
                 <Checkbox
                   checked={value.allowed_triggers.includes(trigger)}
                   onChange={(event) =>
