@@ -136,6 +136,7 @@ export default function AdminSiteSettings() {
   const [value, setValue] = useState(DEFAULT_SITE_SETTINGS);
   const [baseline, setBaseline] = useState(DEFAULT_SITE_SETTINGS);
   const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [error, setError] = useState("");
@@ -148,6 +149,8 @@ export default function AdminSiteSettings() {
 
   useEffect(() => {
     if (!allowed) return;
+    setLoading(true);
+    setError("");
     siteApi
       .getAdminSettings()
       .then((data) => {
@@ -173,7 +176,13 @@ export default function AdminSiteSettings() {
         setError(reason.message);
       })
       .finally(() => setLoading(false));
-  }, [allowed, notify]);
+  }, [allowed, notify, reloadKey]);
+
+  const retryLoad = () => {
+    setLoading(true);
+    setError("");
+    setReloadKey((key) => key + 1);
+  };
 
   const field = (key: keyof SiteSettings, next: string) =>
     setValue((current) => ({ ...current, [key]: next }));
@@ -290,6 +299,25 @@ export default function AdminSiteSettings() {
       <div className="flex flex-col gap-6">
         {pageHeader}
         <LoadingSettings />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col gap-6">
+        {pageHeader}
+        <Alert
+          type="error"
+          showIcon
+          title="站点设置加载失败"
+          description={error}
+          action={
+            <Button size="small" onClick={retryLoad}>
+              重新载入
+            </Button>
+          }
+        />
       </div>
     );
   }
@@ -597,7 +625,6 @@ export default function AdminSiteSettings() {
   return (
     <div className="flex flex-col gap-6">
       {pageHeader}
-      {error ? <Alert type="error" showIcon title={error} /> : null}
       <SudoGate
         title="站点核心配置保护"
         description="修改站点品牌、SEO、页脚或联系方式等敏感设置需要近期多因素身份认证。解锁后享有 10 分钟无打扰编辑期。"
