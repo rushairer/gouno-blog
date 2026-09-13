@@ -172,3 +172,15 @@ func (r *DefinitionRepository) Delete(ctx context.Context, id int64) (bool, erro
 	changed, _ := result.RowsAffected()
 	return changed > 0, nil
 }
+
+func (r *DefinitionRepository) VersionStepsByID(ctx context.Context, versionID int64) (json.RawMessage, error) {
+	var raw json.RawMessage
+	err := r.db.QueryRowContext(ctx, `SELECT steps FROM ai_workflow_versions WHERE id=$1`, versionID).Scan(&raw)
+	return raw, err
+}
+
+func (r *DefinitionRepository) ResourceQueryEmptyPolicy(ctx context.Context, workflowID int64) (string, error) {
+	var policy string
+	err := r.db.QueryRowContext(ctx, `SELECT resource_query_empty_policy FROM ai_workflows WHERE id=$1`, workflowID).Scan(&policy)
+	return policy, err
+}

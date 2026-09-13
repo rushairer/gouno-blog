@@ -63,3 +63,32 @@ func TestWorkflowServiceDoesNotOwnDispatchOrExecutionPersistence(t *testing.T) {
 		}
 	}
 }
+
+func TestWorkflowServiceDoesNotOwnReadModelSQL(t *testing.T) {
+	service, err := os.ReadFile("service.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(service, []byte("s.db.")) {
+		t.Fatal("Workflow Service must not retain raw database access after read-model classification")
+	}
+	for _, fragment := range []string{"FROM ai_workflow_runs", "FROM ai_workflow_step_runs", "SELECT steps FROM ai_workflow_versions", "SELECT resource_query_empty_policy FROM ai_workflows"} {
+		if bytes.Contains(service, []byte(fragment)) {
+			t.Errorf("Workflow Service still owns read-model SQL fragment %q", fragment)
+		}
+	}
+	resources, err := os.ReadFile("resources.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(resources, []byte("FROM ai_workflow_run_resources WHERE workflow_run_id")) {
+		t.Fatal("Workflow Service resource listing must delegate to the Run read model")
+	}
+	ports, err := os.ReadFile("read_models.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(ports, []byte("internal/workflow/repository")) {
+		t.Fatal("Workflow read-model ports must not depend on repository implementation types")
+	}
+}
