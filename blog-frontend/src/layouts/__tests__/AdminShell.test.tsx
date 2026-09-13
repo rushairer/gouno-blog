@@ -96,7 +96,18 @@ describe("AdminShell navigation utilities", () => {
     const brand = await screen.findByRole("link", { name: "Configured Site" });
     expect(brand).toBeInTheDocument();
     expect(brand).toHaveClass("inline-flex", "items-center", "gap-2");
-    expect(brand.querySelector('img[src="/favicon.svg"]')).toBeInTheDocument();
+    const brandMark = brand.querySelector('span[aria-hidden="true"]');
+    expect(brandMark).toBeInTheDocument();
+    expect(brandMark).toHaveClass(
+      "inline-block",
+      "shrink-0",
+      "bg-current",
+      "size-6",
+    );
+    expect(brandMark?.getAttribute("style")).toContain("mask");
+    expect(brand.querySelector("span:not([aria-hidden])")).toHaveClass(
+      "font-semibold",
+    );
 
     const pageContainer = container.querySelector(
       '[data-slot="page-container"]',
