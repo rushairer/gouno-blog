@@ -29,6 +29,8 @@ const canonicalUiModules = new Set([
   "@gouno/ui/patterns",
   "@gouno/ui/gouno",
 ]);
+const canonicalBrandIconModule =
+  /^@gouno\/ui\/brand-icons\/[a-z0-9-]+\.svg$/;
 const canonicalRootAllowlist = new Set(["cn"]);
 const nativeBrowserDialogs = new Set(["alert", "confirm", "prompt"]);
 const rawElevationPattern =
@@ -142,6 +144,8 @@ function checkUiImports(name, source) {
     }
 
     if (!moduleName.startsWith("@gouno/ui")) continue;
+
+    if (canonicalBrandIconModule.test(moduleName)) continue;
 
     if (moduleName === "@gouno/ui-legacy") {
       failures.push(
