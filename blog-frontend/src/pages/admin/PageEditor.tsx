@@ -719,7 +719,14 @@ export default function PageEditor() {
         </EditorCommandActions>
       </EditorCommandBar>
 
-      {error ? <Alert type="error" showIcon title={error} /> : null}
+      {error ? (
+        <Alert
+          className="editor-page-feedback"
+          type="error"
+          showIcon
+          title={error}
+        />
+      ) : null}
 
       <div className="editor-workspace">
         <main className="editor-canvas">
@@ -747,10 +754,13 @@ export default function PageEditor() {
                     <Button
                       key={item}
                       variant="text"
+                      className="editor-ai-candidate"
                       onClick={() => applySuggestion("title", item)}
                     >
-                      <span>{item}</span>
-                      <b>应用</b>
+                      <span className="editor-ai-candidate__content">
+                        <span>{item}</span>
+                        <b>应用</b>
+                      </span>
                     </Button>
                   ))}
                 </div>
@@ -784,10 +794,13 @@ export default function PageEditor() {
                     <Button
                       key={item}
                       variant="text"
+                      className="editor-ai-candidate"
                       onClick={() => applySuggestion("summary", item)}
                     >
-                      <span>{item}</span>
-                      <b>应用</b>
+                      <span className="editor-ai-candidate__content">
+                        <span>{item}</span>
+                        <b>应用</b>
+                      </span>
                     </Button>
                   ))}
                 </div>
@@ -1174,6 +1187,7 @@ export default function PageEditor() {
               variant="solid"
               color="primary"
               type="button"
+              className="editor-inspector-ai-action"
               onClick={() => void autoFillAllMetadata()}
               loading={metaLoading}
               disabled={!page.title.trim() && !page.content.trim()}

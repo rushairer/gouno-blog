@@ -979,7 +979,14 @@ export default function PostEditor() {
           ) : null}
         </EditorCommandActions>
       </EditorCommandBar>
-      {error ? <Alert type="error" showIcon title={error} /> : null}
+      {error ? (
+        <Alert
+          className="editor-page-feedback"
+          type="error"
+          showIcon
+          title={error}
+        />
+      ) : null}
       <div className="editor-workspace">
         <aside className="editor-outline">
           <div>
@@ -1004,19 +1011,24 @@ export default function PostEditor() {
                     className="version-item"
                     onClick={() => setRestoreTarget(version)}
                   >
-                    <span className="version-item__title">
-                      {version.title || "无标题草稿"}
-                    </span>
-                    <span className="version-item__meta">
-                      <time className="version-item__time">
-                        {new Date(version.created_at).toLocaleString("zh-CN", {
-                          month: "2-digit",
-                          day: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </time>
-                      <span className="version-item__action">恢复</span>
+                    <span className="version-item__content">
+                      <span className="version-item__title">
+                        {version.title || "无标题草稿"}
+                      </span>
+                      <span className="version-item__meta">
+                        <time className="version-item__time">
+                          {new Date(version.created_at).toLocaleString(
+                            "zh-CN",
+                            {
+                              month: "2-digit",
+                              day: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            },
+                          )}
+                        </time>
+                        <span className="version-item__action">恢复</span>
+                      </span>
                     </span>
                   </ChoiceButton>
                 ))
@@ -1073,10 +1085,13 @@ export default function PostEditor() {
                     {suggestions.map((item) => (
                       <ChoiceButton
                         key={item}
+                        className="editor-ai-candidate"
                         onClick={() => applySuggestion("title", item)}
                       >
-                        <span>{item}</span>
-                        <b>应用</b>
+                        <span className="editor-ai-candidate__content">
+                          <span>{item}</span>
+                          <b>应用</b>
+                        </span>
                       </ChoiceButton>
                     ))}
                   </div>
@@ -1113,10 +1128,13 @@ export default function PostEditor() {
                     {suggestions.map((item) => (
                       <ChoiceButton
                         key={item}
+                        className="editor-ai-candidate"
                         onClick={() => applySuggestion("summary", item)}
                       >
-                        <span>{item}</span>
-                        <b>应用</b>
+                        <span className="editor-ai-candidate__content">
+                          <span>{item}</span>
+                          <b>应用</b>
+                        </span>
                       </ChoiceButton>
                     ))}
                   </div>
@@ -1512,6 +1530,7 @@ export default function PostEditor() {
                   variant="solid"
                   color="primary"
                   type="button"
+                  className="editor-inspector-ai-action"
                   onClick={() => void autoFillAllMetadata()}
                   loading={metaLoading}
                   disabled={!post.title.trim() && !post.content.trim()}

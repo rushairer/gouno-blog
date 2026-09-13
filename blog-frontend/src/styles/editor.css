@@ -53,7 +53,7 @@
     gap: 0.5rem;
   }
 
-  .editor-page > .feedback {
+  .editor-page-feedback {
     margin-bottom: 1rem;
   }
 
@@ -149,7 +149,7 @@
     line-height: 1.6;
   }
 
-  .version-item.choice-button {
+  .version-item {
     width: 100%;
     height: auto;
     justify-content: stretch;
@@ -157,7 +157,7 @@
     white-space: normal;
   }
 
-  .version-item .btn__label {
+  .version-item__content {
     display: grid;
     width: 100%;
     min-width: 0;
@@ -292,8 +292,7 @@
     background: var(--background);
   }
 
-  .editor-ai-candidates > .btn,
-  .editor-ai-candidates > .choice-button {
+  .editor-ai-candidate {
     width: 100%;
     height: auto;
     justify-content: stretch;
@@ -301,8 +300,7 @@
     white-space: normal;
   }
 
-  .editor-ai-candidates > .btn .btn__label,
-  .editor-ai-candidates > .choice-button .btn__label {
+  .editor-ai-candidate__content {
     display: grid;
     width: 100%;
     min-width: 0;
@@ -441,7 +439,7 @@
     padding: 0.875rem 0.875rem 0.375rem;
   }
 
-  .editor-inspector-ai-banner .btn {
+  .editor-inspector-ai-action {
     width: 100%;
   }
 
@@ -557,7 +555,7 @@
       padding-bottom: 0.125rem;
     }
 
-    .editor-command-actions .btn {
+    .editor-command-actions > * {
       flex: 1 0 auto;
     }
 

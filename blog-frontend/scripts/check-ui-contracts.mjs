@@ -42,6 +42,7 @@ const canonicalPrimitiveSelector =
   /^\.(?:panel|field|input-field|btn|btn__label|icon-button|feedback|state|tab|tab-list|ui-card|choice-button|badge)(?=$|[\s:{,[.#>+~])/;
 const agentConsoleStyleImport = /(?:^|\/)styles\/agent-console\.css$/;
 const editorStyleImport = /(?:^|\/)styles\/editor\.css$/;
+const retiredEditorPrimitiveSelector = /(?:^|[\s>+~,])\.(?:btn|btn__label|choice-button|feedback)(?=$|[\s:{,[.#>+~])/;
 
 async function collect(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -365,6 +366,14 @@ for (const path of files) {
       if (selector.includes("[data-slot=")) {
         failures.push(
           `${name}:${index + 1} canonical data-slot selectors must be owned by @gouno/ui, not product CSS`,
+        );
+      }
+      if (
+        name === "styles/editor.css" &&
+        retiredEditorPrimitiveSelector.test(selector)
+      ) {
+        failures.push(
+          `${name}:${index + 1} editor feature CSS must target product-owned classes instead of retired primitive internals`,
         );
       }
     });
