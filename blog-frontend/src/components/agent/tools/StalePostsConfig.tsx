@@ -81,7 +81,6 @@ export function StalePostsConfig({
         >
           <Input
             type="number"
-            className="input-field"
             min={1}
             max={3650}
             value={olderThanDays}
@@ -101,9 +100,8 @@ export function StalePostsConfig({
           label={isZh ? "单次扫描最大篇数" : "Max posts per scan"}
           hint={isZh ? "默认 20，范围 1~100" : "Default 20, range 1-100"}
         >
-          <input
+          <Input
             type="number"
-            className="input-field"
             min={1}
             max={100}
             value={limit}

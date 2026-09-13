@@ -269,6 +269,7 @@ function checkTsxContracts(name, source) {
     true,
     ts.ScriptKind.TSX,
   );
+  const connectorHold = name === "components/agent/ConnectorWorkspace.tsx";
 
   function visit(node) {
     if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) {
@@ -281,6 +282,37 @@ function checkTsxContracts(name, source) {
       if (tag === "select") {
         failures.push(
           `${name}:${location(sourceFile, node)} native select must use the shared Select component`,
+        );
+      }
+      const nativeInputAttributes =
+        tag === "input"
+          ? ts.isJsxElement(node)
+            ? node.openingElement.attributes
+            : node.attributes
+          : null;
+      const nativeFileInput = Boolean(
+        nativeInputAttributes?.properties.some(
+          (attribute) =>
+            ts.isJsxAttribute(attribute) &&
+            attribute.name.text === "type" &&
+            attribute.initializer &&
+            ts.isStringLiteral(attribute.initializer) &&
+            attribute.initializer.text === "file",
+        ),
+      );
+      if (
+        !connectorHold &&
+        name.startsWith("components/agent/") &&
+        tag === "input" &&
+        !nativeFileInput
+      ) {
+        failures.push(
+          `${name}:${location(sourceFile, node)} visible native input must use the shared Input component`,
+        );
+      }
+      if (!connectorHold && name.startsWith("components/agent/") && tag === "textarea") {
+        failures.push(
+          `${name}:${location(sourceFile, node)} native textarea must use the shared Textarea component`,
         );
       }
       if (
@@ -314,6 +346,11 @@ function checkTsxContracts(name, source) {
         if (/(^|\s)badge(?:\s|$)/.test(value)) {
           failures.push(
             `${name}:${location(sourceFile, attribute)} shared badge classes must use Badge`,
+          );
+        }
+        if (/\binput-field(?:--[a-z0-9-]+)?\b/.test(value)) {
+          failures.push(
+            `${name}:${location(sourceFile, attribute)} retired input-field classes must not be reintroduced; use canonical Input/Textarea props`,
           );
         }
       }

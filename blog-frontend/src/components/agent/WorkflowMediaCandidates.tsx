@@ -245,7 +245,6 @@ export function WorkflowMediaCandidates({
                     candidate.placement ||
                     "cover") === "inline" ? (
                     <Input
-                      className="input-field"
                       value={
                         candidateAnchor[candidate.id] ?? candidate.anchor ?? ""
                       }
@@ -267,7 +266,6 @@ export function WorkflowMediaCandidates({
               <p>{candidate.brief || candidate.headline}</p>
               {candidate.generation_status !== "generated" ? (
                 <Textarea
-                  className="input-field"
                   rows={2}
                   aria-label={
                     zh

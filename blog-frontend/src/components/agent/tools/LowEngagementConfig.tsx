@@ -87,7 +87,6 @@ export function LowEngagementConfig({
         >
           <Input
             type="number"
-            className="input-field"
             min={1}
             value={minViews}
             onChange={(e) =>
@@ -108,12 +107,11 @@ export function LowEngagementConfig({
               : "Identified when rate is below this %"
           }
         >
-          <input
+          <Input
             type="number"
             step="0.1"
             min={0.1}
             max={100}
-            className="input-field"
             value={Math.round(maxRate * 1000) / 10}
             onChange={(e) =>
               onChange({
@@ -132,9 +130,8 @@ export function LowEngagementConfig({
           label={isZh ? "单次分析最大篇数" : "Max posts per scan"}
           hint={isZh ? "默认 20，范围 1~100" : "Default 20, range 1-100"}
         >
-          <input
+          <Input
             type="number"
-            className="input-field"
             min={1}
             max={100}
             value={limit}

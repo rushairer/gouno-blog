@@ -72,7 +72,6 @@ export function KnowledgeSearchConfig({
         >
           <Input
             type="number"
-            className="input-field"
             min={1}
             max={20}
             value={limit}
