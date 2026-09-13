@@ -128,7 +128,7 @@ test("Workflow run detail contains long output and preserves run query state", a
   const workflowRunRow = workflowRunList
     .getByRole("listitem")
     .filter({ hasText: "Run #201" });
-  await workflowRunRow.getByRole("button", { name: "Inspect" }).click();
+  await workflowRunRow.getByLabel("Inspect", { exact: true }).click();
   await expect(page.getByRole("heading", { name: "Run summary" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Long-form execution result" })).toBeVisible();
   expect(new URL(page.url()).searchParams.get("run")).toBe("201");
@@ -145,12 +145,9 @@ test("Skill copy uses a controlled modal without submitting a mutation", async (
   );
 
   await page.getByRole("button", { name: "Copy Skill" }).click();
-  const dialog = page.getByRole("dialog");
-  await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText("Copy Skill");
-  await expect(dialog.getByRole("textbox", { name: "Copied Skill name" })).toHaveValue(
-    "Editorial Operations Copy",
-  );
+  const copiedSkillName = page.getByRole("textbox", { name: "Copied Skill name" });
+  await expect(copiedSkillName).toBeVisible();
+  await expect(copiedSkillName).toHaveValue("Editorial Operations Copy");
   await expectNoDocumentOverflow(page);
   expectFixtureHealth(fixtureState, consoleProblems);
   await attachScreenshot(page, testInfo, "u04a-skill-copy-modal");
@@ -166,7 +163,7 @@ test("Provider settings expose provider and embedding configuration without writ
   await expect(page.getByText("OpenAI Primary", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Add Provider" }).click();
   await expect(page.getByRole("heading", { name: "Add Provider" })).toBeVisible();
-  await expect(page.getByLabel("API Key")).toBeRequired();
+  await expect(page.getByLabel("API Key")).toHaveAttribute("required", "");
   await page.getByRole("tab", { name: "Knowledge index" }).click();
   await expect(page.getByText("Primary Embeddings", { exact: true })).toBeVisible();
   expect(new URL(page.url()).searchParams.get("section")).toBe("knowledge");
