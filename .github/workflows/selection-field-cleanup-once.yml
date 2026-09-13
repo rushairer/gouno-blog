@@ -1,0 +1,101 @@
+name: Normalize selection field ownership once
+
+on:
+  push:
+    branches:
+      - ui/selection-field-cleanup-20260913
+    paths:
+      - .github/workflows/selection-field-cleanup-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ui/selection-field-cleanup-20260913
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: blog-frontend/package-lock.json
+      - name: Install dependencies
+        working-directory: blog-frontend
+        run: npm ci
+      - name: Normalize selection field ownership
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          function replaceExact(path, before, after, count = 1) {
+            let source = fs.readFileSync(path, 'utf8');
+            const seen = source.split(before).length - 1;
+            if (seen !== count) throw new Error(`${path}: expected ${count}, found ${seen}: ${before.slice(0, 120)}`);
+            source = source.split(before).join(after);
+            fs.writeFileSync(path, source);
+          }
+
+          const workflowInputPath = 'blog-frontend/src/components/agent/WorkflowInputForm.tsx';
+          replaceExact(
+            workflowInputPath,
+            '  Checkbox,\n  Field,',
+            '  Checkbox,\n  CheckboxField,\n  Field,',
+          );
+          replaceExact(
+            workflowInputPath,
+            '      className={`workflow-resource-field input-field ${className || ""}`.trim()}',
+            '      className={`workflow-resource-field ${className || ""}`.trim()}',
+          );
+          replaceExact(
+            workflowInputPath,
+            `            <label className="checkbox-field" key={name}>\n              <Checkbox\n                checked={Boolean(value[name])}\n                onChange={(event) => update(name, event.target.checked)}\n              />\n              {label}\n            </label>`,
+            `            <CheckboxField key={name} className="workflow-input-checkbox">\n              <Checkbox\n                checked={Boolean(value[name])}\n                onChange={(event) => update(name, event.target.checked)}\n              />\n              <span>{label}</span>\n            </CheckboxField>`,
+          );
+
+          replaceExact(
+            'blog-frontend/src/components/agent/SkillForm.tsx',
+            '<CheckboxField key={trigger}>',
+            '<CheckboxField key={trigger} className="agent-trigger-option">',
+          );
+          replaceExact(
+            'blog-frontend/src/styles/agent-console.css',
+            '.agent-trigger-options .checkbox-field {',
+            '.agent-trigger-options .agent-trigger-option {',
+          );
+
+          const guardPath = 'blog-frontend/scripts/check-ui-contracts.mjs';
+          let guard = fs.readFileSync(guardPath, 'utf8');
+          const helperMarker = `function staticClassName(attribute) {\n  const initializer = attribute.initializer;\n  if (!initializer) return "";\n  if (ts.isStringLiteral(initializer)) return initializer.text;\n  if (\n    ts.isJsxExpression(initializer) &&\n    initializer.expression &&\n    (ts.isStringLiteral(initializer.expression) ||\n      ts.isNoSubstitutionTemplateLiteral(initializer.expression))\n  ) {\n    return initializer.expression.text;\n  }\n  return "";\n}`;
+          const helperReplacement = helperMarker + `\n\nfunction hasRetiredControlClass(attribute, sourceFile) {\n  const initializer = attribute.initializer;\n  if (!initializer) return false;\n  const source = initializer.getText(sourceFile);\n  return /(?:^|[\\s"'\\x60])(?:input-field|checkbox-field)(?:--[a-z0-9-]+)?(?=$|[\\s"'\\x60])/i.test(source);\n}`;
+          if (!guard.includes(helperMarker)) throw new Error('staticClassName helper marker not found');
+          guard = guard.replace(helperMarker, helperReplacement);
+
+          const oldCheck = `        if (/\\binput-field(?:--[a-z0-9-]+)?\\b/.test(value)) {\n          failures.push(\n            \`${'${name}:${location(sourceFile, attribute)}'} retired input-field classes must not be reintroduced; use canonical Input/Textarea props\`,\n          );\n        }`;
+          const newCheck = `        if (hasRetiredControlClass(attribute, sourceFile)) {\n          failures.push(\n            \`${'${name}:${location(sourceFile, attribute)}'} retired input-field/checkbox-field classes must not be reintroduced; use canonical Gouno UI controls with product-owned hooks\`,\n          );\n        }`;
+          if (!guard.includes(oldCheck)) throw new Error('retired input-field guard block not found');
+          guard = guard.replace(oldCheck, newCheck);
+          fs.writeFileSync(guardPath, guard);
+          NODE
+      - name: Format frontend sources
+        working-directory: blog-frontend
+        run: npm run format
+      - name: Verify frontend quality
+        working-directory: blog-frontend
+        run: npm run quality
+      - name: Commit selection field cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add blog-frontend/src/components/agent/WorkflowInputForm.tsx blog-frontend/src/components/agent/SkillForm.tsx blog-frontend/src/styles/agent-console.css blog-frontend/scripts/check-ui-contracts.mjs
+          git commit -m "refactor(ui): normalize selection field ownership"
+          git push origin HEAD:ui/selection-field-cleanup-20260913
