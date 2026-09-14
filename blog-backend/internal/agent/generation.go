@@ -12,6 +12,7 @@ import (
 
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/media"
+	mediadomain "github.com/rushairer/blog-backend/internal/media/domain"
 	"github.com/rushairer/blog-backend/internal/provider"
 )
 
@@ -21,7 +22,7 @@ const editorTemplateVersion = 1
 // editor assistance and governed media-generation tasks. It deliberately does
 // not create Agent Runs or grant Tool capabilities.
 type mediaCreator interface {
-	CreateMedia(context.Context, *domain.MediaAsset) error
+	CreateMedia(context.Context, *mediadomain.MediaAsset) error
 }
 
 type generationAuditRepository interface {
@@ -99,7 +100,7 @@ func (s *GenerationService) GenerateEditorText(ctx context.Context, req EditorTe
 	return &TextGenerationResult{Text: result.Text, Provider: profile.Name, Model: profile.Model}, nil
 }
 
-func (s *GenerationService) GenerateImage(ctx context.Context, req ImageGenerationRequest) (*domain.MediaAsset, error) {
+func (s *GenerationService) GenerateImage(ctx context.Context, req ImageGenerationRequest) (*mediadomain.MediaAsset, error) {
 	if s.management == nil || s.mediaAssets == nil || s.media == nil || strings.TrimSpace(req.Prompt) == "" {
 		return nil, ErrInvalid
 	}
@@ -165,7 +166,7 @@ func (s *GenerationService) GenerateImage(ctx context.Context, req ImageGenerati
 	} else if strings.Contains(filename, "%s") {
 		filename = fmt.Sprintf(filename, ext)
 	}
-	asset := &domain.MediaAsset{Filename: filename, StorageName: storageName, URL: s.media.URL(storageName), ContentType: image.MIMEType, SizeBytes: int64(len(image.Data)), AltText: req.AltText}
+	asset := &mediadomain.MediaAsset{Filename: filename, StorageName: storageName, URL: s.media.URL(storageName), ContentType: image.MIMEType, SizeBytes: int64(len(image.Data)), AltText: req.AltText}
 	if req.CreatorPrincipalID > 0 {
 		asset.CreatedByPrincipalID = &req.CreatorPrincipalID
 	}

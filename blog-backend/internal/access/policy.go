@@ -2,6 +2,7 @@ package access
 
 import (
 	"github.com/rushairer/blog-backend/internal/domain"
+	mediadomain "github.com/rushairer/blog-backend/internal/media/domain"
 	pagedomain "github.com/rushairer/blog-backend/internal/page/domain"
 )
 
@@ -105,14 +106,14 @@ type MediaPolicy struct{}
 
 // ScopeMedia modifies the filter based on the actor's permissions.
 // Both authors and managers can browse media library for insertion into articles.
-func (p *MediaPolicy) ScopeMedia(actor *Snapshot, filter *domain.MediaFilter) {
+func (p *MediaPolicy) ScopeMedia(actor *Snapshot, filter *mediadomain.MediaFilter) {
 	if actor == nil || filter == nil {
 		return
 	}
 }
 
 // CanView checks if the actor can view the media asset.
-func (p *MediaPolicy) CanView(actor *Snapshot, media *domain.MediaAsset) (bool, string) {
+func (p *MediaPolicy) CanView(actor *Snapshot, media *mediadomain.MediaAsset) (bool, string) {
 	if actor == nil || actor.MembershipStatus != "active" {
 		return false, "您尚未登录或无权限查看媒体"
 	}
@@ -135,7 +136,7 @@ func (p *MediaPolicy) CanUpload(actor *Snapshot) (bool, string) {
 
 // CanUpdate checks if the actor can update media alt text.
 // Managers can update any media; Authors can ONLY update their own media.
-func (p *MediaPolicy) CanUpdate(actor *Snapshot, media *domain.MediaAsset) (bool, string) {
+func (p *MediaPolicy) CanUpdate(actor *Snapshot, media *mediadomain.MediaAsset) (bool, string) {
 	if actor == nil || actor.MembershipStatus != "active" {
 		return false, "您尚未登录或无权限编辑媒体"
 	}
@@ -153,7 +154,7 @@ func (p *MediaPolicy) CanUpdate(actor *Snapshot, media *domain.MediaAsset) (bool
 
 // CanDelete checks if the actor can delete the media asset.
 // Managers can delete any unreferenced media; Authors can ONLY delete their own unreferenced media.
-func (p *MediaPolicy) CanDelete(actor *Snapshot, media *domain.MediaAsset, referencesCount int64) (bool, string) {
+func (p *MediaPolicy) CanDelete(actor *Snapshot, media *mediadomain.MediaAsset, referencesCount int64) (bool, string) {
 	if referencesCount > 0 {
 		return false, "该媒体仍被文章引用，移除引用后才能删除。"
 	}

@@ -5,6 +5,7 @@ import (
 
 	"github.com/rushairer/blog-backend/internal/access"
 	"github.com/rushairer/blog-backend/internal/domain"
+	mediadomain "github.com/rushairer/blog-backend/internal/media/domain"
 	pagedomain "github.com/rushairer/blog-backend/internal/page/domain"
 )
 
@@ -106,20 +107,20 @@ func TestMediaPolicy(t *testing.T) {
 
 	authorID := int64(100)
 	otherID := int64(999)
-	myMedia := &domain.MediaAsset{ID: 10, Filename: "mine.png", CreatedByPrincipalID: &authorID}
-	otherMedia := &domain.MediaAsset{ID: 20, Filename: "other.png", CreatedByPrincipalID: &otherID}
-	unownedMedia := &domain.MediaAsset{ID: 30, Filename: "unowned.png", CreatedByPrincipalID: nil}
+	myMedia := &mediadomain.MediaAsset{ID: 10, Filename: "mine.png", CreatedByPrincipalID: &authorID}
+	otherMedia := &mediadomain.MediaAsset{ID: 20, Filename: "other.png", CreatedByPrincipalID: &otherID}
+	unownedMedia := &mediadomain.MediaAsset{ID: 30, Filename: "unowned.png", CreatedByPrincipalID: nil}
 
 	policy := access.MediaPolicy{}
 
 	// Scope check (Both authors and managers can browse all media by default)
-	authorFilter := domain.MediaFilter{}
+	authorFilter := mediadomain.MediaFilter{}
 	policy.ScopeMedia(authorActor, &authorFilter)
 	if authorFilter.CreatedByPrincipalID != nil {
 		t.Fatalf("expected author media filter to default to shared browse mode (nil CreatedByPrincipalID), got %#v", authorFilter.CreatedByPrincipalID)
 	}
 
-	managerFilter := domain.MediaFilter{}
+	managerFilter := mediadomain.MediaFilter{}
 	policy.ScopeMedia(managerActor, &managerFilter)
 	if managerFilter.CreatedByPrincipalID != nil {
 		t.Fatalf("expected manager media filter to have nil CreatedByPrincipalID, got %#v", managerFilter.CreatedByPrincipalID)

@@ -6,7 +6,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/rushairer/blog-backend/internal/domain"
+	mediadomain "github.com/rushairer/blog-backend/internal/media/domain"
 	mediarepository "github.com/rushairer/blog-backend/internal/media/repository"
 )
 
@@ -20,13 +20,13 @@ var (
 // Service owns media-asset validation and persistence coordination.
 // Binary object storage remains outside this service in the parent media package.
 type Service interface {
-	CreateMedia(context.Context, *domain.MediaAsset) error
-	GetMedia(context.Context, int64) (*domain.MediaAsset, error)
-	ListMedia(context.Context, domain.MediaFilter) ([]*domain.MediaAsset, error)
-	UpdateMedia(context.Context, int64, string, *int64) (*domain.MediaAsset, error)
-	DeleteMedia(context.Context, int64) (*domain.MediaAsset, error)
+	CreateMedia(context.Context, *mediadomain.MediaAsset) error
+	GetMedia(context.Context, int64) (*mediadomain.MediaAsset, error)
+	ListMedia(context.Context, mediadomain.MediaFilter) ([]*mediadomain.MediaAsset, error)
+	UpdateMedia(context.Context, int64, string, *int64) (*mediadomain.MediaAsset, error)
+	DeleteMedia(context.Context, int64) (*mediadomain.MediaAsset, error)
 	CountMediaReferences(context.Context, int64) (int64, error)
-	ListMediaReferences(context.Context, int64) ([]*domain.MediaReference, error)
+	ListMediaReferences(context.Context, int64) ([]*mediadomain.MediaReference, error)
 }
 
 type mediaService struct {
@@ -37,14 +37,14 @@ func New(repo mediarepository.Repository) Service {
 	return &mediaService{repo: repo}
 }
 
-func (s *mediaService) CreateMedia(ctx context.Context, asset *domain.MediaAsset) error {
+func (s *mediaService) CreateMedia(ctx context.Context, asset *mediadomain.MediaAsset) error {
 	if asset == nil || strings.TrimSpace(asset.Filename) == "" || strings.TrimSpace(asset.StorageName) == "" {
 		return ErrInvalidMediaPayload
 	}
 	return s.repo.CreateMedia(ctx, asset)
 }
 
-func (s *mediaService) GetMedia(ctx context.Context, id int64) (*domain.MediaAsset, error) {
+func (s *mediaService) GetMedia(ctx context.Context, id int64) (*mediadomain.MediaAsset, error) {
 	if id <= 0 {
 		return nil, ErrInvalidMediaID
 	}
@@ -55,11 +55,11 @@ func (s *mediaService) GetMedia(ctx context.Context, id int64) (*domain.MediaAss
 	return asset, err
 }
 
-func (s *mediaService) ListMedia(ctx context.Context, filter domain.MediaFilter) ([]*domain.MediaAsset, error) {
+func (s *mediaService) ListMedia(ctx context.Context, filter mediadomain.MediaFilter) ([]*mediadomain.MediaAsset, error) {
 	return s.repo.ListMedia(ctx, filter)
 }
 
-func (s *mediaService) UpdateMedia(ctx context.Context, id int64, altText string, updatedByPrincipalID *int64) (*domain.MediaAsset, error) {
+func (s *mediaService) UpdateMedia(ctx context.Context, id int64, altText string, updatedByPrincipalID *int64) (*mediadomain.MediaAsset, error) {
 	if id <= 0 {
 		return nil, ErrInvalidMediaID
 	}
@@ -70,7 +70,7 @@ func (s *mediaService) UpdateMedia(ctx context.Context, id int64, altText string
 	return asset, err
 }
 
-func (s *mediaService) DeleteMedia(ctx context.Context, id int64) (*domain.MediaAsset, error) {
+func (s *mediaService) DeleteMedia(ctx context.Context, id int64) (*mediadomain.MediaAsset, error) {
 	if id <= 0 {
 		return nil, ErrInvalidMediaID
 	}
@@ -88,7 +88,7 @@ func (s *mediaService) CountMediaReferences(ctx context.Context, id int64) (int6
 	return s.repo.CountMediaReferences(ctx, id)
 }
 
-func (s *mediaService) ListMediaReferences(ctx context.Context, id int64) ([]*domain.MediaReference, error) {
+func (s *mediaService) ListMediaReferences(ctx context.Context, id int64) ([]*mediadomain.MediaReference, error) {
 	if id <= 0 {
 		return nil, ErrInvalidMediaID
 	}
