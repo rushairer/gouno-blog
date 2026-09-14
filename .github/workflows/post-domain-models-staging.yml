@@ -1,0 +1,104 @@
+name: Post domain ownership staging
+
+on:
+  push:
+    branches:
+      - refactor/post-domain-models
+
+permissions:
+  contents: write
+
+jobs:
+  migrate-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: blog-backend/go.mod
+          cache-dependency-path: blog-backend/go.sum
+
+      - name: Apply Post domain migration
+        run: python3 .github/scripts/post_domain_models.py
+
+      - name: Format changed Go files
+        run: |
+          git diff --name-only --diff-filter=ACM -- 'blog-backend/**/*.go' | xargs -r gofmt -w
+
+      - name: Full backend tests
+        working-directory: blog-backend
+        run: go test ./...
+
+      - name: Full backend vet
+        working-directory: blog-backend
+        run: go vet ./...
+
+      - name: Ownership and semantic guards
+        run: |
+          test ! -e blog-backend/internal/domain/post.go
+          test -e blog-backend/internal/post/domain/model.go
+          test -e blog-backend/internal/post/domain/ownership_test.go
+          (
+            cd blog-backend
+            go test ./internal/post/domain -run TestRootPostModelsStayRetired -count=1
+          )
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import subprocess
+
+          base = 'fac6a9ad5e724abd21b584f90df7a2b187b673a8'
+          root_import = 'github.com/rushairer/blog-backend/internal/domain'
+          guarded = [
+              'blog-backend/internal/access/policy.go',
+              'blog-backend/internal/access/policy_test.go',
+              'blog-backend/internal/postversion/coordinator.go',
+              'blog-backend/internal/post/restore.go',
+              'blog-backend/internal/postversion/domain/model.go',
+              'blog-backend/internal/analytics/domain/model.go',
+          ]
+
+          def base_alias(text: str) -> str:
+              block = re.search(r'(?m)^\s*(?:(?P<alias>[A-Za-z_][A-Za-z0-9_]*)\s+)?"' + re.escape(root_import) + r'"\s*$', text)
+              single = re.search(r'(?m)^import\s+(?:(?P<alias>[A-Za-z_][A-Za-z0-9_]*)\s+)?"' + re.escape(root_import) + r'"\s*$', text)
+              match = block or single
+              if not match:
+                  raise SystemExit('guarded base file does not import root domain')
+              return match.groupdict().get('alias') or 'domain'
+
+          def without_imports(text: str) -> str:
+              text = re.sub(r'(?s)\n?import\s*\(.*?\)\s*', '\n', text, count=1)
+              text = re.sub(r'(?m)^import\s+(?:(?:[A-Za-z_][A-Za-z0-9_]*)\s+)?"[^"]+"\s*$', '', text)
+              return text
+
+          def compact(text: str) -> str:
+              return re.sub(r'\s+', '', text)
+
+          for path in guarded:
+              before = subprocess.check_output(['git', 'show', f'{base}:{path}'], text=True)
+              after = Path(path).read_text()
+              alias = base_alias(before)
+              normalized = after.replace('postdomain.', alias + '.')
+              if compact(without_imports(normalized)) != compact(without_imports(before)):
+                  raise SystemExit(f'{path} changed beyond Post type ownership/import migration')
+          PY
+          git diff --exit-code fac6a9ad5e724abd21b584f90df7a2b187b673a8 -- \
+            blog-backend/internal/authbff \
+            blog-backend/internal/connector \
+            blog-backend/middleware
+          git diff --check
+
+      - name: Commit validated source and self-clean
+        run: |
+          rm -f .github/scripts/post_domain_models.py
+          rm -f .github/workflows/post-domain-models-staging.yml
+          git config user.name 'Aben'
+          git config user.email '5195693+rushairer@users.noreply.github.com'
+          git add -A
+          git commit -m 'refactor(post): own capability domain models'
+          git push origin HEAD:refactor/post-domain-models
