@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/rushairer/blog-backend/internal/domain"
+	taxonomydomain "github.com/rushairer/blog-backend/internal/taxonomy/domain"
 	taxonomyrepository "github.com/rushairer/blog-backend/internal/taxonomy/repository"
 )
 
@@ -28,8 +29,8 @@ type CategoryRequest struct {
 }
 
 type TagService interface {
-	ListPublishedTagSummaries(ctx context.Context) ([]domain.TagSummary, error)
-	ListAdminTags(ctx context.Context) ([]domain.TagSummary, error)
+	ListPublishedTagSummaries(ctx context.Context) ([]taxonomydomain.TagSummary, error)
+	ListAdminTags(ctx context.Context) ([]taxonomydomain.TagSummary, error)
 	RenameTag(ctx context.Context, oldName, newName string) error
 	DeleteTag(ctx context.Context, name string) error
 	MergeTags(ctx context.Context, source, target string) error
@@ -37,9 +38,9 @@ type TagService interface {
 
 // Service owns Category and Tag business behavior for the taxonomy capability.
 type Service interface {
-	ListCategories(ctx context.Context) ([]domain.Category, error)
+	ListCategories(ctx context.Context) ([]taxonomydomain.Category, error)
 	ListCategoryPosts(ctx context.Context, slug string, page, pageSize int) ([]domain.Post, int, error)
-	CreateCategory(ctx context.Context, req *CategoryRequest) (*domain.Category, error)
+	CreateCategory(ctx context.Context, req *CategoryRequest) (*taxonomydomain.Category, error)
 	UpdateCategory(ctx context.Context, id int64, req *CategoryRequest) error
 	DeleteCategory(ctx context.Context, id int64) error
 
@@ -54,7 +55,7 @@ func New(repo taxonomyrepository.Repository) Service {
 	return &taxonomyService{repo: repo}
 }
 
-func (s *taxonomyService) ListCategories(ctx context.Context) ([]domain.Category, error) {
+func (s *taxonomyService) ListCategories(ctx context.Context) ([]taxonomydomain.Category, error) {
 	return s.repo.ListCategories(ctx)
 }
 
@@ -66,12 +67,12 @@ func (s *taxonomyService) ListCategoryPosts(ctx context.Context, slug string, pa
 	return s.repo.ListCategoryPosts(ctx, cat.ID, page, pageSize)
 }
 
-func (s *taxonomyService) CreateCategory(ctx context.Context, req *CategoryRequest) (*domain.Category, error) {
+func (s *taxonomyService) CreateCategory(ctx context.Context, req *CategoryRequest) (*taxonomydomain.Category, error) {
 	name := strings.TrimSpace(req.Name)
 	if name == "" || !categorySlugPattern.MatchString(req.Slug) {
 		return nil, ErrCategoryNameRequired
 	}
-	item := &domain.Category{
+	item := &taxonomydomain.Category{
 		Name:        name,
 		Slug:        req.Slug,
 		Description: req.Description,
@@ -91,7 +92,7 @@ func (s *taxonomyService) UpdateCategory(ctx context.Context, id int64, req *Cat
 	if name == "" || !categorySlugPattern.MatchString(req.Slug) {
 		return ErrCategoryNameRequired
 	}
-	item := &domain.Category{
+	item := &taxonomydomain.Category{
 		ID:          id,
 		Name:        name,
 		Slug:        req.Slug,
@@ -108,11 +109,11 @@ func (s *taxonomyService) DeleteCategory(ctx context.Context, id int64) error {
 	return s.repo.DeleteCategory(ctx, id)
 }
 
-func (s *taxonomyService) ListAdminTags(ctx context.Context) ([]domain.TagSummary, error) {
+func (s *taxonomyService) ListAdminTags(ctx context.Context) ([]taxonomydomain.TagSummary, error) {
 	return s.repo.ListAdminTags(ctx)
 }
 
-func (s *taxonomyService) ListPublishedTagSummaries(ctx context.Context) ([]domain.TagSummary, error) {
+func (s *taxonomyService) ListPublishedTagSummaries(ctx context.Context) ([]taxonomydomain.TagSummary, error) {
 	return s.repo.ListPublishedTagSummaries(ctx)
 }
 

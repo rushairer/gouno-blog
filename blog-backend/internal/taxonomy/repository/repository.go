@@ -8,6 +8,7 @@ import (
 
 	"github.com/lib/pq"
 	"github.com/rushairer/blog-backend/internal/domain"
+	taxonomydomain "github.com/rushairer/blog-backend/internal/taxonomy/domain"
 )
 
 var (
@@ -16,20 +17,20 @@ var (
 )
 
 type CategoryReader interface {
-	ListCategories(context.Context) ([]domain.Category, error)
-	GetCategoryBySlug(context.Context, string) (*domain.Category, error)
+	ListCategories(context.Context) ([]taxonomydomain.Category, error)
+	GetCategoryBySlug(context.Context, string) (*taxonomydomain.Category, error)
 	ListCategoryPosts(context.Context, int64, int, int) ([]domain.Post, int, error)
 }
 
 type CategoryWriter interface {
-	CreateCategory(context.Context, *domain.Category) error
-	UpdateCategory(context.Context, *domain.Category) error
+	CreateCategory(context.Context, *taxonomydomain.Category) error
+	UpdateCategory(context.Context, *taxonomydomain.Category) error
 	DeleteCategory(context.Context, int64) error
 }
 
 type TagRepository interface {
-	ListPublishedTagSummaries(context.Context) ([]domain.TagSummary, error)
-	ListAdminTags(context.Context) ([]domain.TagSummary, error)
+	ListPublishedTagSummaries(context.Context) ([]taxonomydomain.TagSummary, error)
+	ListAdminTags(context.Context) ([]taxonomydomain.TagSummary, error)
 	RenameTag(context.Context, string, string) error
 	DeleteTag(context.Context, string) error
 	MergeTags(context.Context, string, string) error
@@ -49,7 +50,7 @@ func New(db *sql.DB) Repository {
 	return &postgresRepository{db: db}
 }
 
-func (r *postgresRepository) ListCategories(ctx context.Context) ([]domain.Category, error) {
+func (r *postgresRepository) ListCategories(ctx context.Context) ([]taxonomydomain.Category, error) {
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT c.id, c.name, c.slug, c.description, c.sort_order, c.created_at, c.updated_at,
 		       COUNT(p.id) FILTER (WHERE p.status = 'published') AS post_count
@@ -62,9 +63,9 @@ func (r *postgresRepository) ListCategories(ctx context.Context) ([]domain.Categ
 	}
 	defer rows.Close()
 
-	result := make([]domain.Category, 0)
+	result := make([]taxonomydomain.Category, 0)
 	for rows.Next() {
-		var item domain.Category
+		var item taxonomydomain.Category
 		if err := rows.Scan(&item.ID, &item.Name, &item.Slug, &item.Description, &item.SortOrder, &item.CreatedAt, &item.UpdatedAt, &item.PostCount); err != nil {
 			return nil, err
 		}
@@ -73,8 +74,8 @@ func (r *postgresRepository) ListCategories(ctx context.Context) ([]domain.Categ
 	return result, rows.Err()
 }
 
-func (r *postgresRepository) GetCategoryBySlug(ctx context.Context, slug string) (*domain.Category, error) {
-	var item domain.Category
+func (r *postgresRepository) GetCategoryBySlug(ctx context.Context, slug string) (*taxonomydomain.Category, error) {
+	var item taxonomydomain.Category
 	err := r.db.QueryRowContext(ctx, `SELECT id, name, slug, description, sort_order, created_at, updated_at FROM categories WHERE slug = $1`, slug).
 		Scan(&item.ID, &item.Name, &item.Slug, &item.Description, &item.SortOrder, &item.CreatedAt, &item.UpdatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -117,7 +118,7 @@ func (r *postgresRepository) ListCategoryPosts(ctx context.Context, categoryID i
 	return posts, total, rows.Err()
 }
 
-func (r *postgresRepository) CreateCategory(ctx context.Context, category *domain.Category) error {
+func (r *postgresRepository) CreateCategory(ctx context.Context, category *taxonomydomain.Category) error {
 	err := r.db.QueryRowContext(ctx, `
 		INSERT INTO categories (name, slug, description, sort_order) VALUES ($1, $2, $3, $4)
 		RETURNING id, created_at, updated_at`,
@@ -132,7 +133,7 @@ func (r *postgresRepository) CreateCategory(ctx context.Context, category *domai
 	return nil
 }
 
-func (r *postgresRepository) UpdateCategory(ctx context.Context, category *domain.Category) error {
+func (r *postgresRepository) UpdateCategory(ctx context.Context, category *taxonomydomain.Category) error {
 	result, err := r.db.ExecContext(ctx, `UPDATE categories SET name=$1, slug=$2, description=$3, sort_order=$4, updated_at=NOW() WHERE id=$5`,
 		category.Name, category.Slug, category.Description, category.SortOrder, category.ID)
 	if err != nil {
@@ -158,7 +159,7 @@ func (r *postgresRepository) DeleteCategory(ctx context.Context, id int64) error
 	return nil
 }
 
-func (r *postgresRepository) ListPublishedTagSummaries(ctx context.Context) ([]domain.TagSummary, error) {
+func (r *postgresRepository) ListPublishedTagSummaries(ctx context.Context) ([]taxonomydomain.TagSummary, error) {
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT tag, COUNT(*)
 		FROM posts, unnest(tags) tag
@@ -170,9 +171,9 @@ func (r *postgresRepository) ListPublishedTagSummaries(ctx context.Context) ([]d
 	}
 	defer rows.Close()
 
-	result := make([]domain.TagSummary, 0)
+	result := make([]taxonomydomain.TagSummary, 0)
 	for rows.Next() {
-		var item domain.TagSummary
+		var item taxonomydomain.TagSummary
 		if err := rows.Scan(&item.Name, &item.PostCount); err != nil {
 			return nil, err
 		}
@@ -181,16 +182,16 @@ func (r *postgresRepository) ListPublishedTagSummaries(ctx context.Context) ([]d
 	return result, rows.Err()
 }
 
-func (r *postgresRepository) ListAdminTags(ctx context.Context) ([]domain.TagSummary, error) {
+func (r *postgresRepository) ListAdminTags(ctx context.Context) ([]taxonomydomain.TagSummary, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT tag, COUNT(*) FROM posts, unnest(tags) tag GROUP BY tag ORDER BY COUNT(*) DESC, tag`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	result := make([]domain.TagSummary, 0)
+	result := make([]taxonomydomain.TagSummary, 0)
 	for rows.Next() {
-		var item domain.TagSummary
+		var item taxonomydomain.TagSummary
 		if err := rows.Scan(&item.Name, &item.PostCount); err != nil {
 			return nil, err
 		}
