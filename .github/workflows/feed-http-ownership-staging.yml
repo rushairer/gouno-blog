@@ -80,7 +80,7 @@ jobs:
           	if !strings.Contains(router, "feedcontroller.NewFeedController(") {
           		t.Fatal("router does not construct the capability-owned Feed controller")
           	}
-          	if strings.Contains(router, "controller.NewFeedController(") {
+          	if strings.Contains(router, "\tfeedCtrl := controller.NewFeedController(") {
           		t.Fatal("router still constructs Feed transport from the flat controller package")
           	}
           	for _, route := range []string{"/feed.xml", "/rss", "/sitemap.xml"} {
@@ -167,7 +167,7 @@ jobs:
           assert 'controllerutil.WriteDomainError(' in feed
           router = Path('blog-backend/router/web.go').read_text()
           assert 'feedcontroller.NewFeedController(' in router
-          assert 'controller.NewFeedController(' not in router
+          assert '\tfeedCtrl := controller.NewFeedController(' not in router
           PY
           git diff --exit-code f47f3c431143e092869525d694a59eafed9f9294 -- \
             blog-backend/internal/controller/access_controller.go \
