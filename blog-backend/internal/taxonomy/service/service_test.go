@@ -6,39 +6,40 @@ import (
 	"testing"
 
 	"github.com/rushairer/blog-backend/internal/domain"
+	taxonomydomain "github.com/rushairer/blog-backend/internal/taxonomy/domain"
 	taxonomyrepository "github.com/rushairer/blog-backend/internal/taxonomy/repository"
 )
 
 type stubRepository struct {
-	created    *domain.Category
-	updated    *domain.Category
-	deletedID  int64
+	created     *taxonomydomain.Category
+	updated     *taxonomydomain.Category
+	deletedID   int64
 	renamedFrom string
 	renamedTo   string
-	deletedTag string
-	mergedFrom string
-	mergedTo   string
+	deletedTag  string
+	mergedFrom  string
+	mergedTo    string
 }
 
-func (r *stubRepository) ListCategories(context.Context) ([]domain.Category, error) {
+func (r *stubRepository) ListCategories(context.Context) ([]taxonomydomain.Category, error) {
 	return nil, nil
 }
 
-func (r *stubRepository) GetCategoryBySlug(context.Context, string) (*domain.Category, error) {
-	return &domain.Category{ID: 7}, nil
+func (r *stubRepository) GetCategoryBySlug(context.Context, string) (*taxonomydomain.Category, error) {
+	return &taxonomydomain.Category{ID: 7}, nil
 }
 
 func (r *stubRepository) ListCategoryPosts(context.Context, int64, int, int) ([]domain.Post, int, error) {
 	return nil, 0, nil
 }
 
-func (r *stubRepository) CreateCategory(_ context.Context, item *domain.Category) error {
+func (r *stubRepository) CreateCategory(_ context.Context, item *taxonomydomain.Category) error {
 	r.created = item
 	item.ID = 42
 	return nil
 }
 
-func (r *stubRepository) UpdateCategory(_ context.Context, item *domain.Category) error {
+func (r *stubRepository) UpdateCategory(_ context.Context, item *taxonomydomain.Category) error {
 	r.updated = item
 	return nil
 }
@@ -48,11 +49,11 @@ func (r *stubRepository) DeleteCategory(_ context.Context, id int64) error {
 	return nil
 }
 
-func (r *stubRepository) ListPublishedTagSummaries(context.Context) ([]domain.TagSummary, error) {
+func (r *stubRepository) ListPublishedTagSummaries(context.Context) ([]taxonomydomain.TagSummary, error) {
 	return nil, nil
 }
 
-func (r *stubRepository) ListAdminTags(context.Context) ([]domain.TagSummary, error) {
+func (r *stubRepository) ListAdminTags(context.Context) ([]taxonomydomain.TagSummary, error) {
 	return nil, nil
 }
 

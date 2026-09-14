@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rushairer/blog-backend/internal/domain"
+	taxonomydomain "github.com/rushairer/blog-backend/internal/taxonomy/domain"
 	"github.com/rushairer/blog-backend/internal/testsupport"
 )
 
@@ -17,7 +17,7 @@ func TestTaxonomyRepositoryOwnsCategoryAndTagPersistence(t *testing.T) {
 	suffix := time.Now().UnixNano()
 
 	repo := New(db)
-	category := &domain.Category{
+	category := &taxonomydomain.Category{
 		Name:        fmt.Sprintf("Architecture %d", suffix),
 		Slug:        fmt.Sprintf("architecture-%d", suffix),
 		Description: "taxonomy ownership integration",
