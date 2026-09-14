@@ -1,0 +1,88 @@
+name: PostVersion domain ownership staging
+
+on:
+  push:
+    branches:
+      - refactor/postversion-domain-model
+
+permissions:
+  contents: write
+
+jobs:
+  migrate-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: blog-backend/go.mod
+          cache-dependency-path: blog-backend/go.sum
+
+      - name: Apply PostVersion domain migration
+        run: python3 .github/scripts/postversion_domain_model.py
+
+      - name: Format changed Go files
+        run: |
+          git diff --name-only --diff-filter=ACM -- 'blog-backend/**/*.go' | xargs -r gofmt -w
+
+      - name: Focused tests
+        working-directory: blog-backend
+        run: go test ./internal/postversion/... ./internal/post/... ./internal/agent/...
+
+      - name: Focused vet
+        working-directory: blog-backend
+        run: go vet ./internal/postversion/... ./internal/post/... ./internal/agent/...
+
+      - name: Ownership and transaction-boundary guards
+        run: |
+          test -e blog-backend/internal/postversion/domain/model.go
+          test -e blog-backend/internal/postversion/domain/ownership_test.go
+          (
+            cd blog-backend
+            go test ./internal/postversion/domain -run TestRootPostVersionModelStaysRetired -count=1
+          )
+          if git grep -nE '(^|[^[:alnum:]_])domain\.PostVersion' -- 'blog-backend/**/*.go'; then
+            echo 'PostVersion still consumed through root internal/domain'
+            exit 1
+          fi
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+
+          base = '8ad7c76cddbf0826c5abe5cc7f951d9283082432'
+          path = 'blog-backend/internal/postversion/coordinator.go'
+          before = subprocess.check_output(['git', 'show', f'{base}:{path}'], text=True)
+          after = Path(path).read_text()
+          after = after.replace('\tpostversiondomain "github.com/rushairer/blog-backend/internal/postversion/domain"\n', '')
+          after = after.replace('postversiondomain.PostVersion', 'domain.PostVersion')
+          if after != before:
+              raise SystemExit('RestoreCoordinator semantics changed beyond PostVersion type ownership')
+          PY
+          git diff --exit-code 8ad7c76cddbf0826c5abe5cc7f951d9283082432 -- \
+            blog-backend/internal/post \
+            blog-backend/internal/access \
+            blog-backend/internal/authbff \
+            blog-backend/internal/connector \
+            blog-backend/internal/controller \
+            blog-backend/middleware \
+            blog-backend/internal/workflow \
+            blog-backend/internal/media \
+            blog-backend/internal/operations \
+            blog-backend/internal/analytics \
+            blog-backend/internal/taxonomy
+          git diff --check
+
+      - name: Commit validated source and self-clean
+        run: |
+          rm -f .github/scripts/postversion_domain_model.py
+          rm -f .github/workflows/postversion-domain-model-staging.yml
+          git config user.name 'Aben'
+          git config user.email '5195693+rushairer@users.noreply.github.com'
+          git add -A
+          git commit -m 'refactor(postversion): own capability domain model'
+          git push origin HEAD:refactor/postversion-domain-model
