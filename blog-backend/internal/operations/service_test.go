@@ -9,6 +9,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/rushairer/blog-backend/internal/dbtx"
 	"github.com/rushairer/blog-backend/internal/domain"
+	opsdomain "github.com/rushairer/blog-backend/internal/operations/domain"
 	"github.com/rushairer/blog-backend/internal/tool"
 )
 
@@ -56,13 +57,13 @@ func TestProductionToolCatalogIsJSONSerializable(t *testing.T) {
 
 func TestFeedbackValidationRejectsInvalidTargetsAndLabels(t *testing.T) {
 	service := &Service{}
-	valid := &domain.AIFeedback{TargetType: "run", TargetID: 1, Label: "adopted", CreatedByPrincipalID: 1}
-	if err := service.SaveFeedback(context.Background(), &domain.AIFeedback{
+	valid := &opsdomain.AIFeedback{TargetType: "run", TargetID: 1, Label: "adopted", CreatedByPrincipalID: 1}
+	if err := service.SaveFeedback(context.Background(), &opsdomain.AIFeedback{
 		TargetType: "visitor", TargetID: valid.TargetID, Label: valid.Label, CreatedByPrincipalID: valid.CreatedByPrincipalID,
 	}); err == nil {
 		t.Fatal("visitor feedback target should be rejected")
 	}
-	if err := service.SaveFeedback(context.Background(), &domain.AIFeedback{
+	if err := service.SaveFeedback(context.Background(), &opsdomain.AIFeedback{
 		TargetType: valid.TargetType, TargetID: valid.TargetID, Label: "positive", CreatedByPrincipalID: valid.CreatedByPrincipalID,
 	}); err == nil {
 		t.Fatal("unknown feedback label should be rejected")

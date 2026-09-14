@@ -150,6 +150,15 @@ Operations HTTP transport is capability-owned under `internal/operations/control
 - Operations remains service-local for persistence/orchestration; this HTTP convergence does not introduce an artificial repository layer or move transaction ownership.
 - Connector routes and behavior remain untouched under the Connector Module Hold.
 
+## Operations domain ownership boundary
+
+Operations-owned model values live under `internal/operations/domain`: `OperationalSuggestion`, `EditorialTask`, `ContentCandidate`, `ContentCandidateSet`, and `AIFeedback`.
+
+- These values describe Operations persistence/API concepts and are not a shared kernel merely because Agent approval can propose one of them.
+- Agent approval consumes `OperationalSuggestion` through the existing narrow `ApprovalEffectWriter` contract by importing the leaf Operations domain package; Operations behavior and persistence remain owned by `internal/operations`.
+- The former root `internal/domain/operations.go` migration boundary is retired. `internal/operations/domain/ownership_test.go` rejects reintroduction of these symbols through the root domain package.
+- JSON fields, database schema/queries, approval action types, HTTP routes/responses, authorization/MFA/audit middleware, BFF behavior, and Connector behavior are unchanged.
+
 ## Workflow HTTP ownership boundary
 
 Workflow HTTP transport is capability-owned under `internal/workflow/controller`; the legacy flat `AgentController` is no longer the transport owner for Workflow CRUD, Runs, events, interactions, resource discovery, metrics, planning, or the signed public Workflow webhook.

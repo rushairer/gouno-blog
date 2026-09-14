@@ -9,6 +9,7 @@ import (
 
 	"github.com/rushairer/blog-backend/internal/dbtx"
 	"github.com/rushairer/blog-backend/internal/domain"
+	opsdomain "github.com/rushairer/blog-backend/internal/operations/domain"
 	"github.com/rushairer/blog-backend/internal/testsupport"
 )
 
@@ -85,7 +86,7 @@ func TestApprovalEffectsPersistUnderOperationsOwnership(t *testing.T) {
 	if err := svc.CreateReplyDraft(ctx, approvalID, commentID, "Draft reply"); err != nil {
 		t.Fatal(err)
 	}
-	suggestion := &domain.OperationalSuggestion{SourceType: "approval_test", SourceKey: suffix, SourceRunID: &runID, Title: "Suggestion " + suffix, Description: "description", Priority: "medium", Evidence: json.RawMessage(`{"source":"test"}`)}
+	suggestion := &opsdomain.OperationalSuggestion{SourceType: "approval_test", SourceKey: suffix, SourceRunID: &runID, Title: "Suggestion " + suffix, Description: "description", Priority: "medium", Evidence: json.RawMessage(`{"source":"test"}`)}
 	if err := svc.CreateOperationalSuggestion(ctx, suggestion); err != nil {
 		t.Fatal(err)
 	}

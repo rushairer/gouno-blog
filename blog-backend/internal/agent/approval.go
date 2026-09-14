@@ -12,6 +12,7 @@ import (
 
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/media"
+	opsdomain "github.com/rushairer/blog-backend/internal/operations/domain"
 	pagedomain "github.com/rushairer/blog-backend/internal/page/domain"
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
 	postservice "github.com/rushairer/blog-backend/internal/post/service"
@@ -800,7 +801,7 @@ func (s *ApprovalService) execute(ctx context.Context, approval *domain.AgentApp
 		}
 		return s.effects.CreateEditorialTask(ctx, approval.ID, payload.Title, payload.Description, payload.Priority)
 	case "create_operational_suggestion":
-		var payload domain.OperationalSuggestion
+		var payload opsdomain.OperationalSuggestion
 		if err := json.Unmarshal(approval.ProposedPayload, &payload); err != nil {
 			return err
 		}
