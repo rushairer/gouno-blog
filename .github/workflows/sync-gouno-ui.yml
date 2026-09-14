@@ -59,46 +59,6 @@ jobs:
           npm install --save-exact --package-lock-only --ignore-scripts "@gouno/ui@${GOUNO_UI_VERSION}"
           npm ci
 
-      - name: Align ordinary product loading states
-        shell: python
-        run: |
-          from pathlib import Path
-          import re
-
-          migrations = {
-              "blog-frontend/src/pages/admin/Dashboard.tsx": (
-                  "DashboardLoading",
-                  'function DashboardLoading() {\n  return <PageSkeleton layout="dashboard" aria-label="数据概览加载中" />;\n}',
-              ),
-              "blog-frontend/src/pages/admin/Posts.tsx": (
-                  "PostsSkeleton",
-                  'function PostsSkeleton() {\n  return <PageSkeleton layout="collection" aria-label="文章加载中" />;\n}',
-              ),
-              "blog-frontend/src/pages/admin/Pages.tsx": (
-                  "LoadingPages",
-                  'function LoadingPages() {\n  return <PageSkeleton layout="collection" aria-label="单页加载中" />;\n}',
-              ),
-              "blog-frontend/src/pages/admin/Users.tsx": (
-                  "MembersLoadingState",
-                  'function MembersLoadingState() {\n  return <PageSkeleton layout="collection" aria-label="成员加载中" />;\n}',
-              ),
-          }
-
-          for filename, (function_name, replacement) in migrations.items():
-              path = Path(filename)
-              source = path.read_text()
-              source = source.replace(
-                  'import { PageHeader } from "@gouno/ui/gouno";',
-                  'import { PageHeader, PageSkeleton } from "@gouno/ui/gouno";',
-              )
-              pattern = rf"function {function_name}\(\) \{{.*?\n\}}\n\n(?=(?:export default function|function) )"
-              source, count = re.subn(pattern, replacement + "\n\n", source, count=1, flags=re.S)
-              if count != 1:
-                  raise SystemExit(f"expected exactly one {function_name} in {filename}, got {count}")
-              if "<Skeleton" not in source:
-                  source = source.replace("  Skeleton,\n", "")
-              path.write_text(source)
-
       - name: Verify published package contract
         working-directory: blog-frontend
         env:
@@ -150,20 +110,14 @@ jobs:
           GOUNO_UI_VERSION: ${{ steps.ui.outputs.version }}
         run: |
           set -euo pipefail
-          git add \
-            blog-frontend/package.json \
-            blog-frontend/package-lock.json \
-            blog-frontend/src/pages/admin/Dashboard.tsx \
-            blog-frontend/src/pages/admin/Posts.tsx \
-            blog-frontend/src/pages/admin/Pages.tsx \
-            blog-frontend/src/pages/admin/Users.tsx
+          git add blog-frontend/package.json blog-frontend/package-lock.json
           if git diff --cached --quiet; then
-            echo "@gouno/ui registry dependency and loading alignment are already current."
+            echo "@gouno/ui registry dependency is already current."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "refactor(ui): align admin loading with @gouno/ui ${GOUNO_UI_VERSION}"
+          git commit -m "chore(ui): use @gouno/ui ${GOUNO_UI_VERSION} registry release"
           git fetch origin main
           git rebase origin/main
           git push origin HEAD:main
