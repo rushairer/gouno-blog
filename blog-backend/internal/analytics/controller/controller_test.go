@@ -7,13 +7,14 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	analyticsdomain "github.com/rushairer/blog-backend/internal/analytics/domain"
 	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 type stubService struct {
 	postID   int64
 	actorKey string
-	summary  *domain.AnalyticsSummary
+	summary  *analyticsdomain.AnalyticsSummary
 }
 
 func (s *stubService) RecordView(_ context.Context, postID int64, actorKey string) error {
@@ -22,7 +23,7 @@ func (s *stubService) RecordView(_ context.Context, postID int64, actorKey strin
 	return nil
 }
 
-func (s *stubService) AnalyticsSummary(context.Context) (*domain.AnalyticsSummary, error) {
+func (s *stubService) AnalyticsSummary(context.Context) (*analyticsdomain.AnalyticsSummary, error) {
 	return s.summary, nil
 }
 

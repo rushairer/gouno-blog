@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/rushairer/blog-backend/internal/domain"
+	analyticsdomain "github.com/rushairer/blog-backend/internal/analytics/domain"
 )
 
 type stubRepository struct {
@@ -13,7 +13,7 @@ type stubRepository struct {
 	eventType      string
 	actorKey       string
 	recordErr      error
-	summary        *domain.AnalyticsSummary
+	summary        *analyticsdomain.AnalyticsSummary
 	summaryErr     error
 }
 
@@ -24,7 +24,7 @@ func (r *stubRepository) RecordEvent(_ context.Context, postID int64, eventType,
 	return r.recordErr
 }
 
-func (r *stubRepository) AnalyticsSummary(context.Context) (*domain.AnalyticsSummary, error) {
+func (r *stubRepository) AnalyticsSummary(context.Context) (*analyticsdomain.AnalyticsSummary, error) {
 	return r.summary, r.summaryErr
 }
 
@@ -62,7 +62,7 @@ func TestServicePreservesRepositoryErrorsAndSummary(t *testing.T) {
 		t.Fatalf("AnalyticsSummary error=%v, want repository error", err)
 	}
 
-	expected := &domain.AnalyticsSummary{TotalPosts: 9, TotalViews: 100}
+	expected := &analyticsdomain.AnalyticsSummary{TotalPosts: 9, TotalViews: 100}
 	repo.summaryErr = nil
 	repo.summary = expected
 	got, err := svc.AnalyticsSummary(ctx)

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 
 	"github.com/lib/pq"
+	analyticsdomain "github.com/rushairer/blog-backend/internal/analytics/domain"
 	"github.com/rushairer/blog-backend/internal/domain"
 )
 
@@ -12,7 +13,7 @@ import (
 // analytics read model used by the dashboard and Agent tools.
 type Repository interface {
 	RecordEvent(context.Context, int64, string, string) error
-	AnalyticsSummary(context.Context) (*domain.AnalyticsSummary, error)
+	AnalyticsSummary(context.Context) (*analyticsdomain.AnalyticsSummary, error)
 }
 
 type postgresRepository struct {
@@ -41,8 +42,8 @@ func (r *postgresRepository) RecordEvent(ctx context.Context, postID int64, even
 	return err
 }
 
-func (r *postgresRepository) AnalyticsSummary(ctx context.Context) (*domain.AnalyticsSummary, error) {
-	summary := &domain.AnalyticsSummary{}
+func (r *postgresRepository) AnalyticsSummary(ctx context.Context) (*analyticsdomain.AnalyticsSummary, error) {
+	summary := &analyticsdomain.AnalyticsSummary{}
 	if err := r.db.QueryRowContext(ctx, `SELECT
 		COUNT(*), COUNT(*) FILTER (WHERE status = 'published'),
 		COALESCE(SUM(views_count), 0), COALESCE(SUM(likes_count), 0)
@@ -85,9 +86,9 @@ func (r *postgresRepository) AnalyticsSummary(ctx context.Context) (*domain.Anal
 		return nil, err
 	}
 	defer eventRows.Close()
-	summary.DailyEvents = make([]domain.DailyEventCount, 0)
+	summary.DailyEvents = make([]analyticsdomain.DailyEventCount, 0)
 	for eventRows.Next() {
-		var item domain.DailyEventCount
+		var item analyticsdomain.DailyEventCount
 		if err := eventRows.Scan(&item.Date, &item.Count); err != nil {
 			return nil, err
 		}
@@ -103,9 +104,9 @@ func (r *postgresRepository) AnalyticsSummary(ctx context.Context) (*domain.Anal
 		return nil, err
 	}
 	defer alertRows.Close()
-	summary.AIAlerts = make([]domain.SystemAlert, 0)
+	summary.AIAlerts = make([]analyticsdomain.SystemAlert, 0)
 	for alertRows.Next() {
-		var alert domain.SystemAlert
+		var alert analyticsdomain.SystemAlert
 		if err := alertRows.Scan(&alert.ID, &alert.Type, &alert.Title, &alert.Body, &alert.Href, &alert.CreatedAt); err != nil {
 			return nil, err
 		}
