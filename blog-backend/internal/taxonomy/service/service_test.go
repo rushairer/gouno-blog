@@ -3,9 +3,9 @@ package service
 import (
 	"context"
 	"errors"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"testing"
 
-	"github.com/rushairer/blog-backend/internal/domain"
 	taxonomydomain "github.com/rushairer/blog-backend/internal/taxonomy/domain"
 	taxonomyrepository "github.com/rushairer/blog-backend/internal/taxonomy/repository"
 )
@@ -29,7 +29,7 @@ func (r *stubRepository) GetCategoryBySlug(context.Context, string) (*taxonomydo
 	return &taxonomydomain.Category{ID: 7}, nil
 }
 
-func (r *stubRepository) ListCategoryPosts(context.Context, int64, int, int) ([]domain.Post, int, error) {
+func (r *stubRepository) ListCategoryPosts(context.Context, int64, int, int) ([]postdomain.Post, int, error) {
 	return nil, 0, nil
 }
 

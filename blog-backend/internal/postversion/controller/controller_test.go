@@ -2,18 +2,19 @@ package controller
 
 import (
 	"context"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rushairer/blog-backend/internal/domain"
+
 	postversiondomain "github.com/rushairer/blog-backend/internal/postversion/domain"
 )
 
 type fakeService struct {
 	versions  []*postversiondomain.PostVersion
-	restored  *domain.Post
+	restored  *postdomain.Post
 	postID    int64
 	versionID int64
 }
@@ -23,7 +24,7 @@ func (f *fakeService) ListVersions(_ context.Context, postID int64) ([]*postvers
 	return f.versions, nil
 }
 
-func (f *fakeService) RestoreVersion(_ context.Context, postID, versionID int64) (*domain.Post, error) {
+func (f *fakeService) RestoreVersion(_ context.Context, postID, versionID int64) (*postdomain.Post, error) {
 	f.postID = postID
 	f.versionID = versionID
 	return f.restored, nil
@@ -31,8 +32,8 @@ func (f *fakeService) RestoreVersion(_ context.Context, postID, versionID int64)
 
 type fakePostReader struct{}
 
-func (fakePostReader) GetAdminPost(context.Context, int64) (*domain.Post, error) {
-	return &domain.Post{ID: 1}, nil
+func (fakePostReader) GetAdminPost(context.Context, int64) (*postdomain.Post, error) {
+	return &postdomain.Post{ID: 1}, nil
 }
 
 func TestListVersionsUsesCanonicalService(t *testing.T) {
@@ -54,7 +55,7 @@ func TestListVersionsUsesCanonicalService(t *testing.T) {
 
 func TestRestoreVersionUsesCanonicalService(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	svc := &fakeService{restored: &domain.Post{ID: 3, Title: "restored"}}
+	svc := &fakeService{restored: &postdomain.Post{ID: 3, Title: "restored"}}
 	ctrl := New(svc, fakePostReader{})
 	engine := gin.New()
 	engine.POST("/posts/:id/versions/:versionID/restore", ctrl.RestoreVersion)

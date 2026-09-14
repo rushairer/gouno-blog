@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"strconv"
 	"strings"
 	"time"
@@ -194,7 +195,7 @@ func (s *ApprovalService) RejectMediaCandidates(ctx context.Context, runID int64
 	return nil
 }
 
-func (s *ApprovalService) ApplyMediaCandidate(ctx context.Context, id int64) (*domain.Post, error) {
+func (s *ApprovalService) ApplyMediaCandidate(ctx context.Context, id int64) (*postdomain.Post, error) {
 	candidate, err := s.mediaCandidates.GetMediaCandidate(ctx, id)
 	if err != nil {
 		return nil, err
@@ -247,7 +248,7 @@ func (s *ApprovalService) ApplyMediaCandidate(ctx context.Context, id int64) (*d
 // ApplyMediaCandidates merges all selected images for one run into a single
 // post update. This preserves the article's version history and makes a
 // multi-image workflow atomic from the editor's point of view.
-func (s *ApprovalService) ApplyMediaCandidates(ctx context.Context, runID int64, ids []int64) (*domain.Post, error) {
+func (s *ApprovalService) ApplyMediaCandidates(ctx context.Context, runID int64, ids []int64) (*postdomain.Post, error) {
 	if runID <= 0 || len(ids) == 0 {
 		return nil, errors.New("at least one selected image is required")
 	}
@@ -613,7 +614,7 @@ func (s *ApprovalService) validateConflict(ctx context.Context, approval *domain
 	if approval.TargetType != "post" || approval.TargetID == nil || len(approval.BeforeSnapshot) == 0 {
 		return nil
 	}
-	var before domain.Post
+	var before postdomain.Post
 	if err := json.Unmarshal(approval.BeforeSnapshot, &before); err != nil {
 		return ErrApprovalConflict
 	}
@@ -641,9 +642,9 @@ func (s *ApprovalService) execute(ctx context.Context, approval *domain.AgentApp
 		if err := json.Unmarshal(approval.ProposedPayload, &payload); err != nil {
 			return err
 		}
-		post := &domain.Post{
+		post := &postdomain.Post{
 			Title: payload.Title, Slug: payload.Slug, Summary: payload.Summary,
-			Content: payload.Content, Tags: payload.Tags, Status: domain.PostStatusDraft,
+			Content: payload.Content, Tags: payload.Tags, Status: postdomain.PostStatusDraft,
 		}
 		if err := s.posts.CreatePost(ctx, post); err != nil {
 			return err

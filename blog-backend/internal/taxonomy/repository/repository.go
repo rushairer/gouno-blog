@@ -4,10 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"strings"
 
 	"github.com/lib/pq"
-	"github.com/rushairer/blog-backend/internal/domain"
+
 	taxonomydomain "github.com/rushairer/blog-backend/internal/taxonomy/domain"
 )
 
@@ -19,7 +20,7 @@ var (
 type CategoryReader interface {
 	ListCategories(context.Context) ([]taxonomydomain.Category, error)
 	GetCategoryBySlug(context.Context, string) (*taxonomydomain.Category, error)
-	ListCategoryPosts(context.Context, int64, int, int) ([]domain.Post, int, error)
+	ListCategoryPosts(context.Context, int64, int, int) ([]postdomain.Post, int, error)
 }
 
 type CategoryWriter interface {
@@ -87,7 +88,7 @@ func (r *postgresRepository) GetCategoryBySlug(ctx context.Context, slug string)
 	return &item, nil
 }
 
-func (r *postgresRepository) ListCategoryPosts(ctx context.Context, categoryID int64, page, pageSize int) ([]domain.Post, int, error) {
+func (r *postgresRepository) ListCategoryPosts(ctx context.Context, categoryID int64, page, pageSize int) ([]postdomain.Post, int, error) {
 	var total int
 	if err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM posts WHERE category_id = $1 AND status = 'published'`, categoryID).Scan(&total); err != nil {
 		return nil, 0, err
@@ -105,9 +106,9 @@ func (r *postgresRepository) ListCategoryPosts(ctx context.Context, categoryID i
 	}
 	defer rows.Close()
 
-	posts := make([]domain.Post, 0)
+	posts := make([]postdomain.Post, 0)
 	for rows.Next() {
-		var post domain.Post
+		var post postdomain.Post
 		if err := rows.Scan(&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID,
 			&post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount,
 			&post.LikesCount, &post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt); err != nil {

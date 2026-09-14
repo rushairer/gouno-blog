@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"net/http"
 	"regexp"
 	"strings"
@@ -11,12 +12,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/controllerutil"
-	"github.com/rushairer/blog-backend/internal/domain"
+
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
 )
 
 type FeedPostReader interface {
-	ListPosts(ctx context.Context, tag, search string, page, pageSize int) ([]*domain.Post, int, error)
+	ListPosts(ctx context.Context, tag, search string, page, pageSize int) ([]*postdomain.Post, int, error)
 }
 
 type SiteSettingsReader interface {

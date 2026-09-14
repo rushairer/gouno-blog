@@ -3,9 +3,8 @@ package tool
 import (
 	"context"
 	"encoding/json"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"strings"
-
-	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 type relatedContentSuggestion struct {
@@ -104,7 +103,7 @@ func (t *BlogTools) searchKnowledge(ctx context.Context, raw json.RawMessage) (a
 	return map[string]any{"query": args.Query, "suggestions": items}, nil
 }
 
-func relatedQuery(post *domain.Post) string {
+func relatedQuery(post *postdomain.Post) string {
 	if post == nil {
 		return ""
 	}

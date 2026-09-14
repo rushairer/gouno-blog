@@ -4,10 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"testing"
 	"time"
 
-	"github.com/rushairer/blog-backend/internal/domain"
 	postcapability "github.com/rushairer/blog-backend/internal/post"
 	postversiondomain "github.com/rushairer/blog-backend/internal/postversion/domain"
 )
@@ -41,12 +41,12 @@ func (f *fakeVersionSnapshotReader) GetVersionTx(_ context.Context, _ *sql.Tx, p
 type fakePostRestoreWriter struct {
 	postID   int64
 	snapshot postcapability.RestoreSnapshot
-	result   *domain.Post
+	result   *postdomain.Post
 	err      error
 	called   bool
 }
 
-func (f *fakePostRestoreWriter) RestoreSnapshotTx(_ context.Context, _ *sql.Tx, postID int64, snapshot postcapability.RestoreSnapshot) (*domain.Post, error) {
+func (f *fakePostRestoreWriter) RestoreSnapshotTx(_ context.Context, _ *sql.Tx, postID int64, snapshot postcapability.RestoreSnapshot) (*postdomain.Post, error) {
 	f.called = true
 	f.postID = postID
 	f.snapshot = snapshot
@@ -60,11 +60,11 @@ func TestRestoreCoordinatorMapsVersionIntoPostOwnedCommand(t *testing.T) {
 		ID: 9, PostID: 3, Title: "old title", Slug: "old-slug", Summary: "old summary",
 		Content: "old body", Tags: []string{"go", "architecture"}, CategoryID: &categoryID,
 		CoverURL: "/cover.svg", CoverAlt: "cover", SEOTitle: "seo", SEODescription: "description",
-		Status: domain.PostStatusPublished, PublishedAt: &now, ScheduledAt: &now,
+		Status: postdomain.PostStatusPublished, PublishedAt: &now, ScheduledAt: &now,
 	}
 	runner := &fakeTransactionRunner{}
 	versions := &fakeVersionSnapshotReader{version: version}
-	posts := &fakePostRestoreWriter{result: &domain.Post{ID: 3, Title: "old title"}}
+	posts := &fakePostRestoreWriter{result: &postdomain.Post{ID: 3, Title: "old title"}}
 	coordinator := NewRestoreCoordinator(runner, versions, posts)
 
 	restored, err := coordinator.RestoreVersion(context.Background(), 3, 9)

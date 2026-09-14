@@ -4,39 +4,40 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/access"
-	"github.com/rushairer/blog-backend/internal/domain"
+
 	postservice "github.com/rushairer/blog-backend/internal/post/service"
 )
 
 type fakeBlogService struct {
-	posts        map[int64]*domain.Post
-	postsBySlug  map[string]*domain.Post
+	posts        map[int64]*postdomain.Post
+	postsBySlug  map[string]*postdomain.Post
 	createErr    error
 	resolveCalls []string
-	adminFilter  domain.AdminPostFilter
+	adminFilter  postdomain.AdminPostFilter
 	adminPage    int
 	adminSize    int
 }
 
 func newFakeBlogService() *fakeBlogService {
-	post := &domain.Post{ID: 1, Title: "Hello", Slug: "hello", Content: "Body", Status: domain.PostStatusPublished}
+	post := &postdomain.Post{ID: 1, Title: "Hello", Slug: "hello", Content: "Body", Status: postdomain.PostStatusPublished}
 	return &fakeBlogService{
-		posts:       map[int64]*domain.Post{1: post},
-		postsBySlug: map[string]*domain.Post{"hello": post},
+		posts:       map[int64]*postdomain.Post{1: post},
+		postsBySlug: map[string]*postdomain.Post{"hello": post},
 	}
 }
 
-func (s *fakeBlogService) CreatePost(context.Context, *domain.Post) error {
+func (s *fakeBlogService) CreatePost(context.Context, *postdomain.Post) error {
 	return s.createErr
 }
 
-func (s *fakeBlogService) UpdatePost(context.Context, *domain.Post) error {
+func (s *fakeBlogService) UpdatePost(context.Context, *postdomain.Post) error {
 	return nil
 }
 
@@ -44,18 +45,18 @@ func (s *fakeBlogService) DeletePost(context.Context, int64) error {
 	return nil
 }
 
-func (s *fakeBlogService) GetPost(_ context.Context, id int64) (*domain.Post, error) {
+func (s *fakeBlogService) GetPost(_ context.Context, id int64) (*postdomain.Post, error) {
 	return s.posts[id], nil
 }
 
-func (s *fakeBlogService) GetAdminPost(_ context.Context, id int64) (*domain.Post, error) {
+func (s *fakeBlogService) GetAdminPost(_ context.Context, id int64) (*postdomain.Post, error) {
 	if p, ok := s.posts[id]; ok {
 		return p, nil
 	}
 	return nil, postservice.ErrPostNotFound
 }
 
-func (s *fakeBlogService) GetAdminPostBySlug(_ context.Context, slug string) (*domain.Post, error) {
+func (s *fakeBlogService) GetAdminPostBySlug(_ context.Context, slug string) (*postdomain.Post, error) {
 	if p, ok := s.postsBySlug[slug]; ok {
 		return p, nil
 	}
@@ -66,7 +67,7 @@ func (s *fakeBlogService) BatchPosts(_ context.Context, ids []int64, action stri
 	return int64(len(ids)), nil
 }
 
-func (s *fakeBlogService) GetPostBySlug(_ context.Context, slug string) (*domain.Post, error) {
+func (s *fakeBlogService) GetPostBySlug(_ context.Context, slug string) (*postdomain.Post, error) {
 	return s.postsBySlug[slug], nil
 }
 
@@ -92,13 +93,13 @@ func (s *fakeBlogService) IncrementLikes(context.Context, int64) error {
 	return nil
 }
 
-func (s *fakeBlogService) ListPosts(context.Context, string, string, int, int) ([]*domain.Post, int, error) {
-	return []*domain.Post{s.posts[1]}, 1, nil
+func (s *fakeBlogService) ListPosts(context.Context, string, string, int, int) ([]*postdomain.Post, int, error) {
+	return []*postdomain.Post{s.posts[1]}, 1, nil
 }
 
-func (s *fakeBlogService) ListAdminPosts(_ context.Context, filter domain.AdminPostFilter, page, pageSize int) ([]*domain.Post, int, error) {
+func (s *fakeBlogService) ListAdminPosts(_ context.Context, filter postdomain.AdminPostFilter, page, pageSize int) ([]*postdomain.Post, int, error) {
 	s.adminFilter, s.adminPage, s.adminSize = filter, page, pageSize
-	return []*domain.Post{s.posts[1]}, 1, nil
+	return []*postdomain.Post{s.posts[1]}, 1, nil
 }
 
 func (s *fakeBlogService) ListTags(context.Context) ([]string, error) {
@@ -126,7 +127,7 @@ func TestListAdminPassesSearchFiltersAndPagination(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", response.Code, response.Body.String())
 	}
-	if svc.adminFilter.Query != "system" || svc.adminFilter.Status != domain.PostStatusDraft || svc.adminFilter.Category != "architecture" || svc.adminFilter.Tag != "go" {
+	if svc.adminFilter.Query != "system" || svc.adminFilter.Status != postdomain.PostStatusDraft || svc.adminFilter.Category != "architecture" || svc.adminFilter.Tag != "go" {
 		t.Fatalf("unexpected filters: %#v", svc.adminFilter)
 	}
 	if svc.adminPage != 2 || svc.adminSize != 20 {
@@ -136,7 +137,7 @@ func TestListAdminPassesSearchFiltersAndPagination(t *testing.T) {
 
 func TestGetPostSupportsIDAndSlug(t *testing.T) {
 	svc := newFakeBlogService()
-	numericSlug := &domain.Post{ID: 2, Title: "Numeric slug", Slug: "112", Content: "Body", Status: domain.PostStatusPublished}
+	numericSlug := &postdomain.Post{ID: 2, Title: "Numeric slug", Slug: "112", Content: "Body", Status: postdomain.PostStatusPublished}
 	svc.posts[numericSlug.ID] = numericSlug
 	svc.postsBySlug[numericSlug.Slug] = numericSlug
 	router := setupControllerRouter(svc)
@@ -209,7 +210,7 @@ func TestGetPost_DraftAccessControl(t *testing.T) {
 	authorID := int64(100)
 	otherID := int64(200)
 
-	svc.posts[2] = &domain.Post{ID: 2, Title: "Draft Post", Slug: "draft-post", Status: domain.PostStatusDraft, CreatedByPrincipalID: &authorID}
+	svc.posts[2] = &postdomain.Post{ID: 2, Title: "Draft Post", Slug: "draft-post", Status: postdomain.PostStatusDraft, CreatedByPrincipalID: &authorID}
 	svc.postsBySlug["draft-post"] = svc.posts[2]
 
 	router := setupControllerRouter(svc)

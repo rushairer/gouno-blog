@@ -3,10 +3,10 @@ package service
 import (
 	"context"
 	"errors"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"regexp"
 	"strings"
 
-	"github.com/rushairer/blog-backend/internal/domain"
 	taxonomydomain "github.com/rushairer/blog-backend/internal/taxonomy/domain"
 	taxonomyrepository "github.com/rushairer/blog-backend/internal/taxonomy/repository"
 )
@@ -39,7 +39,7 @@ type TagService interface {
 // Service owns Category and Tag business behavior for the taxonomy capability.
 type Service interface {
 	ListCategories(ctx context.Context) ([]taxonomydomain.Category, error)
-	ListCategoryPosts(ctx context.Context, slug string, page, pageSize int) ([]domain.Post, int, error)
+	ListCategoryPosts(ctx context.Context, slug string, page, pageSize int) ([]postdomain.Post, int, error)
 	CreateCategory(ctx context.Context, req *CategoryRequest) (*taxonomydomain.Category, error)
 	UpdateCategory(ctx context.Context, id int64, req *CategoryRequest) error
 	DeleteCategory(ctx context.Context, id int64) error
@@ -59,7 +59,7 @@ func (s *taxonomyService) ListCategories(ctx context.Context) ([]taxonomydomain.
 	return s.repo.ListCategories(ctx)
 }
 
-func (s *taxonomyService) ListCategoryPosts(ctx context.Context, slug string, page, pageSize int) ([]domain.Post, int, error) {
+func (s *taxonomyService) ListCategoryPosts(ctx context.Context, slug string, page, pageSize int) ([]postdomain.Post, int, error) {
 	cat, err := s.repo.GetCategoryBySlug(ctx, slug)
 	if err != nil {
 		return nil, 0, err

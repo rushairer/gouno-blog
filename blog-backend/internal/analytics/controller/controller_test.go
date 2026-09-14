@@ -2,13 +2,13 @@ package controller
 
 import (
 	"context"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/gin-gonic/gin"
 	analyticsdomain "github.com/rushairer/blog-backend/internal/analytics/domain"
-	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 type stubService struct {
@@ -29,10 +29,10 @@ func (s *stubService) AnalyticsSummary(context.Context) (*analyticsdomain.Analyt
 
 type stubResolver struct {
 	key  string
-	post *domain.Post
+	post *postdomain.Post
 }
 
-func (r *stubResolver) ResolvePublishedPost(_ context.Context, key string) (*domain.Post, error) {
+func (r *stubResolver) ResolvePublishedPost(_ context.Context, key string) (*postdomain.Post, error) {
 	r.key = key
 	return r.post, nil
 }
@@ -40,7 +40,7 @@ func (r *stubResolver) ResolvePublishedPost(_ context.Context, key string) (*dom
 func TestTrackViewResolvesSlugOrIDBeforeRecording(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	svc := &stubService{}
-	resolver := &stubResolver{post: &domain.Post{ID: 42}}
+	resolver := &stubResolver{post: &postdomain.Post{ID: 42}}
 	ctrl := New(svc, resolver)
 	engine := gin.New()
 	engine.POST("/api/posts/:slugOrID/view", ctrl.TrackView)

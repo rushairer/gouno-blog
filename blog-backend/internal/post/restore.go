@@ -1,9 +1,8 @@
 package post
 
 import (
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"time"
-
-	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 // RestoreSnapshot is the Post-owned command used by cross-capability
@@ -19,7 +18,7 @@ type RestoreSnapshot struct {
 	CoverAlt       string
 	SEOTitle       string
 	SEODescription string
-	Status         domain.PostStatus
+	Status         postdomain.PostStatus
 	PublishedAt    *time.Time
 	ScheduledAt    *time.Time
 }

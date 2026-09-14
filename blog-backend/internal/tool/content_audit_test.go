@@ -1,13 +1,12 @@
 package tool
 
 import (
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"testing"
-
-	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 func TestAuditPostReportsDeterministicMetadataAndMarkdownIssues(t *testing.T) {
-	result := auditPost(&domain.Post{
+	result := auditPost(&postdomain.Post{
 		ID: 7, Title: "A very useful article", Content: "## Start\n\n![ ](/image.png)\n\n[External](https://example.com) [Internal](/posts/other)\n\n#### Skipped heading",
 		CoverURL: "https://cdn.example.com/cover.png",
 	})
@@ -33,7 +32,7 @@ func TestAuditPostReportsDeterministicMetadataAndMarkdownIssues(t *testing.T) {
 }
 
 func TestAuditPostDoesNotReportCompliantMetadataIssues(t *testing.T) {
-	result := auditPost(&domain.Post{
+	result := auditPost(&postdomain.Post{
 		ID: 8, Title: "Useful article", Summary: "A helpful summary.",
 		SEOTitle: "Useful article", SEODescription: "A concise search description.",
 		CoverURL: "https://cdn.example.com/cover.png", CoverAlt: "An illustrative cover",

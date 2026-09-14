@@ -2,39 +2,39 @@ package controller
 
 import (
 	"context"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 type stubService struct {
-	post  *domain.Post
-	posts []*domain.Post
+	post  *postdomain.Post
+	posts []*postdomain.Post
 }
 
-func (s *stubService) RelatedPosts(_ context.Context, post *domain.Post) ([]*domain.Post, error) {
+func (s *stubService) RelatedPosts(_ context.Context, post *postdomain.Post) ([]*postdomain.Post, error) {
 	s.post = post
 	return s.posts, nil
 }
 
 type stubResolver struct {
 	key  string
-	post *domain.Post
+	post *postdomain.Post
 }
 
-func (r *stubResolver) ResolvePublishedPost(_ context.Context, key string) (*domain.Post, error) {
+func (r *stubResolver) ResolvePublishedPost(_ context.Context, key string) (*postdomain.Post, error) {
 	r.key = key
 	return r.post, nil
 }
 
 func TestRelatedPostsResolvesSlugBeforeCallingService(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	post := &domain.Post{ID: 7, Slug: "hello-world", Tags: []string{"go"}}
+	post := &postdomain.Post{ID: 7, Slug: "hello-world", Tags: []string{"go"}}
 	resolver := &stubResolver{post: post}
-	svc := &stubService{posts: []*domain.Post{{ID: 9}}}
+	svc := &stubService{posts: []*postdomain.Post{{ID: 9}}}
 	ctrl := New(svc, resolver)
 	engine := gin.New()
 	engine.GET("/api/posts/:slugOrID/related", ctrl.RelatedPosts)

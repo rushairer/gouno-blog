@@ -3,10 +3,10 @@ package repository
 import (
 	"context"
 	"database/sql"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 
 	"github.com/lib/pq"
 	analyticsdomain "github.com/rushairer/blog-backend/internal/analytics/domain"
-	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 // Repository owns the persisted analytics event stream and the cross-capability
@@ -27,8 +27,8 @@ func New(db *sql.DB) Repository {
 const analyticsPostColumns = `p.id, p.title, p.slug, p.summary, p.content, p.tags, p.status,
 	p.views_count, p.likes_count, p.published_at, p.scheduled_at, p.created_by_principal_id, p.updated_by_principal_id, p.created_at, p.updated_at`
 
-func scanAnalyticsPost(scanner interface{ Scan(...any) error }) (*domain.Post, error) {
-	var post domain.Post
+func scanAnalyticsPost(scanner interface{ Scan(...any) error }) (*postdomain.Post, error) {
+	var post postdomain.Post
 	err := scanner.Scan(&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags),
 		&post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt,
 		&post.CreatedByPrincipalID, &post.UpdatedByPrincipalID,
@@ -62,7 +62,7 @@ func (r *postgresRepository) AnalyticsSummary(ctx context.Context) (*analyticsdo
 	if err != nil {
 		return nil, err
 	}
-	summary.TopPosts = make([]*domain.Post, 0)
+	summary.TopPosts = make([]*postdomain.Post, 0)
 	for rows.Next() {
 		post, scanErr := scanAnalyticsPost(rows)
 		if scanErr != nil {

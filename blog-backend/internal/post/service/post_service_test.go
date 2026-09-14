@@ -4,16 +4,15 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 type fakePostRepo struct {
-	posts       map[int64]*domain.Post
-	postsBySlug map[string]*domain.Post
+	posts       map[int64]*postdomain.Post
+	postsBySlug map[string]*postdomain.Post
 	lastLimit   int
 	lastOffset  int
 	updateErr   error
@@ -22,19 +21,19 @@ type fakePostRepo struct {
 
 func newFakePostRepo() *fakePostRepo {
 	return &fakePostRepo{
-		posts:       make(map[int64]*domain.Post),
-		postsBySlug: make(map[string]*domain.Post),
+		posts:       make(map[int64]*postdomain.Post),
+		postsBySlug: make(map[string]*postdomain.Post),
 	}
 }
 
-func (r *fakePostRepo) Create(_ context.Context, post *domain.Post) error {
+func (r *fakePostRepo) Create(_ context.Context, post *postdomain.Post) error {
 	post.ID = int64(len(r.posts) + 1)
 	r.posts[post.ID] = post
 	r.postsBySlug[post.Slug] = post
 	return nil
 }
 
-func (r *fakePostRepo) Update(_ context.Context, post *domain.Post) error {
+func (r *fakePostRepo) Update(_ context.Context, post *postdomain.Post) error {
 	if r.updateErr != nil {
 		return r.updateErr
 	}
@@ -51,11 +50,11 @@ func (r *fakePostRepo) Delete(_ context.Context, id int64) error {
 	return nil
 }
 
-func (r *fakePostRepo) GetByID(_ context.Context, id int64) (*domain.Post, error) {
+func (r *fakePostRepo) GetByID(_ context.Context, id int64) (*postdomain.Post, error) {
 	return r.posts[id], nil
 }
 
-func (r *fakePostRepo) GetBySlug(_ context.Context, slug string) (*domain.Post, error) {
+func (r *fakePostRepo) GetBySlug(_ context.Context, slug string) (*postdomain.Post, error) {
 	return r.postsBySlug[slug], nil
 }
 
@@ -73,54 +72,54 @@ func (r *fakePostRepo) IncrementLikes(_ context.Context, id int64) error {
 	return nil
 }
 
-func (r *fakePostRepo) List(_ context.Context, _, _ string, limit, offset int) ([]*domain.Post, int, error) {
+func (r *fakePostRepo) List(_ context.Context, _, _ string, limit, offset int) ([]*postdomain.Post, int, error) {
 	r.lastLimit = limit
 	r.lastOffset = offset
-	posts := make([]*domain.Post, 0, len(r.posts))
+	posts := make([]*postdomain.Post, 0, len(r.posts))
 	for _, post := range r.posts {
 		posts = append(posts, post)
 	}
 	return posts, len(posts), nil
 }
 
-func (r *fakePostRepo) ListAdmin(_ context.Context, _ domain.AdminPostFilter, limit, offset int) ([]*domain.Post, int, error) {
+func (r *fakePostRepo) ListAdmin(_ context.Context, _ postdomain.AdminPostFilter, limit, offset int) ([]*postdomain.Post, int, error) {
 	return r.List(context.Background(), "", "", limit, offset)
 }
 
-func (r *fakePostRepo) SearchPublished(_ context.Context, query string, limit int) ([]domain.PostSearchResult, error) {
-	results := make([]domain.PostSearchResult, 0, limit)
+func (r *fakePostRepo) SearchPublished(_ context.Context, query string, limit int) ([]postdomain.PostSearchResult, error) {
+	results := make([]postdomain.PostSearchResult, 0, limit)
 	for _, post := range r.posts {
-		if post.Status == domain.PostStatusPublished && strings.Contains(strings.ToLower(post.Title+" "+post.Content), strings.ToLower(query)) {
-			results = append(results, domain.PostSearchResult{Post: post, Score: 1})
+		if post.Status == postdomain.PostStatusPublished && strings.Contains(strings.ToLower(post.Title+" "+post.Content), strings.ToLower(query)) {
+			results = append(results, postdomain.PostSearchResult{Post: post, Score: 1})
 		}
 	}
 	return results, nil
 }
 
-func (r *fakePostRepo) ListStalePublished(_ context.Context, updatedBefore time.Time, limit int) ([]*domain.Post, error) {
-	posts := make([]*domain.Post, 0, limit)
+func (r *fakePostRepo) ListStalePublished(_ context.Context, updatedBefore time.Time, limit int) ([]*postdomain.Post, error) {
+	posts := make([]*postdomain.Post, 0, limit)
 	for _, post := range r.posts {
-		if post.Status == domain.PostStatusPublished && post.UpdatedAt.Before(updatedBefore) {
+		if post.Status == postdomain.PostStatusPublished && post.UpdatedAt.Before(updatedBefore) {
 			posts = append(posts, post)
 		}
 	}
 	return posts, nil
 }
 
-func (r *fakePostRepo) ListOrphanedPublished(_ context.Context, limit int) ([]*domain.Post, error) {
-	posts := make([]*domain.Post, 0, limit)
+func (r *fakePostRepo) ListOrphanedPublished(_ context.Context, limit int) ([]*postdomain.Post, error) {
+	posts := make([]*postdomain.Post, 0, limit)
 	for _, post := range r.posts {
-		if post.Status == domain.PostStatusPublished {
+		if post.Status == postdomain.PostStatusPublished {
 			posts = append(posts, post)
 		}
 	}
 	return posts, nil
 }
 
-func (r *fakePostRepo) ListLowEngagementPublished(_ context.Context, minViews int64, maxEngagementRate float64, limit int) ([]*domain.Post, error) {
-	posts := make([]*domain.Post, 0, limit)
+func (r *fakePostRepo) ListLowEngagementPublished(_ context.Context, minViews int64, maxEngagementRate float64, limit int) ([]*postdomain.Post, error) {
+	posts := make([]*postdomain.Post, 0, limit)
 	for _, post := range r.posts {
-		if post.Status == domain.PostStatusPublished && post.ViewsCount >= minViews && float64(post.LikesCount)/float64(post.ViewsCount) <= maxEngagementRate {
+		if post.Status == postdomain.PostStatusPublished && post.ViewsCount >= minViews && float64(post.LikesCount)/float64(post.ViewsCount) <= maxEngagementRate {
 			posts = append(posts, post)
 		}
 	}
@@ -140,7 +139,7 @@ func (r *fakePostRepo) Batch(_ context.Context, ids []int64, _ string) (int64, e
 func TestCreatePostNormalizesSlugAndSummary(t *testing.T) {
 	repo := newFakePostRepo()
 	svc := NewPostService(repo)
-	post := &domain.Post{
+	post := &postdomain.Post{
 		Title:   "Hello GoUno Blog",
 		Content: "# Hello\nThis is a **long** enough post body.",
 		Tags:    []string{"go"},
@@ -161,7 +160,7 @@ func TestCreatePostNormalizesSlugAndSummary(t *testing.T) {
 func TestCreatePostGeneratesFallbackSlugForNonLatinTitle(t *testing.T) {
 	repo := newFakePostRepo()
 	svc := NewPostService(repo)
-	post := &domain.Post{Title: "中文文章", Content: "正文"}
+	post := &postdomain.Post{Title: "中文文章", Content: "正文"}
 
 	if err := svc.CreatePost(context.Background(), post); err != nil {
 		t.Fatalf("CreatePost returned error: %v", err)
@@ -173,11 +172,11 @@ func TestCreatePostGeneratesFallbackSlugForNonLatinTitle(t *testing.T) {
 
 func TestCreatePostAppendsSuffixForDuplicateSlug(t *testing.T) {
 	repo := newFakePostRepo()
-	existing := &domain.Post{ID: 1, Title: "Existing", Slug: "hello"}
+	existing := &postdomain.Post{ID: 1, Title: "Existing", Slug: "hello"}
 	repo.posts[existing.ID] = existing
 	repo.postsBySlug[existing.Slug] = existing
 	svc := NewPostService(repo)
-	post := &domain.Post{Title: "Hello", Slug: "hello", Content: "Body"}
+	post := &postdomain.Post{Title: "Hello", Slug: "hello", Content: "Body"}
 
 	if err := svc.CreatePost(context.Background(), post); err != nil {
 		t.Fatalf("CreatePost returned error: %v", err)
@@ -189,11 +188,11 @@ func TestCreatePostAppendsSuffixForDuplicateSlug(t *testing.T) {
 
 func TestUpdatePostRejectsSlugUsedByAnotherPost(t *testing.T) {
 	repo := newFakePostRepo()
-	repo.posts[1] = &domain.Post{ID: 1, Title: "Current", Slug: "current", Status: domain.PostStatusDraft}
-	repo.postsBySlug["taken"] = &domain.Post{ID: 42, Slug: "taken"}
+	repo.posts[1] = &postdomain.Post{ID: 1, Title: "Current", Slug: "current", Status: postdomain.PostStatusDraft}
+	repo.postsBySlug["taken"] = &postdomain.Post{ID: 42, Slug: "taken"}
 	svc := NewPostService(repo)
 
-	err := svc.UpdatePost(context.Background(), &domain.Post{ID: 1, Title: "Title", Slug: "taken", Content: "Body"})
+	err := svc.UpdatePost(context.Background(), &postdomain.Post{ID: 1, Title: "Title", Slug: "taken", Content: "Body"})
 	if !errors.Is(err, ErrSlugInUse) {
 		t.Fatalf("error = %v, want ErrSlugInUse", err)
 	}
@@ -234,7 +233,7 @@ func TestListLowEngagementPublishedPostsValidatesRate(t *testing.T) {
 
 func TestResolvePostIDSupportsNumericIDAndSlug(t *testing.T) {
 	repo := newFakePostRepo()
-	post := &domain.Post{ID: 7, Slug: "hello-world", Status: domain.PostStatusPublished}
+	post := &postdomain.Post{ID: 7, Slug: "hello-world", Status: postdomain.PostStatusPublished}
 	repo.posts[post.ID] = post
 	repo.postsBySlug[post.Slug] = post
 	svc := NewPostService(repo)
@@ -249,7 +248,7 @@ func TestResolvePostIDSupportsNumericIDAndSlug(t *testing.T) {
 		t.Fatalf("ResolvePostID by slug = %d, %v; want 7, nil", id, err)
 	}
 
-	numericSlugPost := &domain.Post{ID: 8, Slug: "112", Status: domain.PostStatusPublished}
+	numericSlugPost := &postdomain.Post{ID: 8, Slug: "112", Status: postdomain.PostStatusPublished}
 	repo.posts[numericSlugPost.ID] = numericSlugPost
 	repo.postsBySlug[numericSlugPost.Slug] = numericSlugPost
 	id, err = svc.ResolvePostID(context.Background(), "112")
@@ -261,7 +260,7 @@ func TestResolvePostIDSupportsNumericIDAndSlug(t *testing.T) {
 func TestScheduledPostRequiresFutureShanghaiTime(t *testing.T) {
 	svc := NewPostService(newFakePostRepo())
 	past := time.Now().Add(-time.Minute)
-	err := svc.CreatePost(context.Background(), &domain.Post{Title: "Later", Content: "Body", Status: domain.PostStatusScheduled, ScheduledAt: &past})
+	err := svc.CreatePost(context.Background(), &postdomain.Post{Title: "Later", Content: "Body", Status: postdomain.PostStatusScheduled, ScheduledAt: &past})
 	if err == nil || !errors.Is(err, ErrScheduledPast) {
 		t.Fatalf("CreatePost error = %v, want ErrScheduledPast", err)
 	}
@@ -269,7 +268,7 @@ func TestScheduledPostRequiresFutureShanghaiTime(t *testing.T) {
 
 func TestPublicReadsHideNonPublishedPosts(t *testing.T) {
 	repo := newFakePostRepo()
-	repo.posts[1] = &domain.Post{ID: 1, Slug: "draft", Status: domain.PostStatusDraft}
+	repo.posts[1] = &postdomain.Post{ID: 1, Slug: "draft", Status: postdomain.PostStatusDraft}
 	repo.postsBySlug["draft"] = repo.posts[1]
 	post, err := NewPostService(repo).GetPostBySlug(context.Background(), "draft")
 	if err != nil || post != nil {
@@ -279,7 +278,7 @@ func TestPublicReadsHideNonPublishedPosts(t *testing.T) {
 
 func TestGetAdminPostAllowsDraftWithoutChangingPublicReadPolicy(t *testing.T) {
 	repo := newFakePostRepo()
-	draft := &domain.Post{ID: 1, Slug: "draft", Status: domain.PostStatusDraft}
+	draft := &postdomain.Post{ID: 1, Slug: "draft", Status: postdomain.PostStatusDraft}
 	repo.posts[draft.ID] = draft
 	svc := NewPostService(repo)
 

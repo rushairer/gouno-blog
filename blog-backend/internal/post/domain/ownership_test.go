@@ -13,12 +13,16 @@ import (
 const rootDomainImport = "github.com/rushairer/blog-backend/internal/domain"
 
 var retiredSymbols = map[string]struct{}{
-	"MediaAsset":     {},
-	"MediaFilter":    {},
-	"MediaReference": {},
+	"PostStatusPublished": {},
+	"PostStatusScheduled": {},
+	"PostStatusDraft": {},
+	"PostSearchResult": {},
+	"AdminPostFilter": {},
+	"PostStatus": {},
+	"Post": {},
 }
 
-func TestRootMediaModelsStayRetired(t *testing.T) {
+func TestRootPostModelsStayRetired(t *testing.T) {
 	fset := token.NewFileSet()
 	rootDomain := filepath.Clean("../../domain")
 	err := filepath.WalkDir(rootDomain, func(path string, entry fs.DirEntry, walkErr error) error {
@@ -41,12 +45,12 @@ func TestRootMediaModelsStayRetired(t *testing.T) {
 				switch typed := spec.(type) {
 				case *ast.TypeSpec:
 					if _, retired := retiredSymbols[typed.Name.Name]; retired {
-						t.Errorf("%s redeclares Media-owned symbol %s in root internal/domain", path, typed.Name.Name)
+						t.Errorf("%s redeclares Post-owned symbol %s in root internal/domain", path, typed.Name.Name)
 					}
 				case *ast.ValueSpec:
 					for _, name := range typed.Names {
 						if _, retired := retiredSymbols[name.Name]; retired {
-							t.Errorf("%s redeclares Media-owned symbol %s in root internal/domain", path, name.Name)
+							t.Errorf("%s redeclares Post-owned symbol %s in root internal/domain", path, name.Name)
 						}
 					}
 				}
@@ -80,7 +84,7 @@ func TestRootMediaModelsStayRetired(t *testing.T) {
 			if spec.Name != nil {
 				alias = spec.Name.Name
 				if alias == "." {
-					t.Errorf("%s dot-imports root internal/domain; Media ownership cannot be proven", path)
+					t.Errorf("%s dot-imports root internal/domain; Post ownership cannot be proven", path)
 					continue
 				}
 			}
@@ -102,7 +106,7 @@ func TestRootMediaModelsStayRetired(t *testing.T) {
 				return true
 			}
 			if _, rootAlias := rootAliases[ident.Name]; rootAlias {
-				t.Errorf("%s consumes Media-owned symbol %s through root internal/domain; import internal/media/domain instead", path, selector.Sel.Name)
+				t.Errorf("%s consumes Post-owned symbol %s through root internal/domain; import internal/post/domain instead", path, selector.Sel.Name)
 			}
 			return true
 		})

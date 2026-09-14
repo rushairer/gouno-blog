@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"testing"
 
-	"github.com/rushairer/blog-backend/internal/domain"
 	postversiondomain "github.com/rushairer/blog-backend/internal/postversion/domain"
 )
 
@@ -22,13 +22,13 @@ func (f *fakeVersionReader) ListVersions(_ context.Context, postID int64) ([]*po
 }
 
 type fakeRestorer struct {
-	restored  *domain.Post
+	restored  *postdomain.Post
 	err       error
 	postID    int64
 	versionID int64
 }
 
-func (f *fakeRestorer) RestoreVersion(_ context.Context, postID, versionID int64) (*domain.Post, error) {
+func (f *fakeRestorer) RestoreVersion(_ context.Context, postID, versionID int64) (*postdomain.Post, error) {
 	f.postID = postID
 	f.versionID = versionID
 	return f.restored, f.err
@@ -76,7 +76,7 @@ func TestRestoreVersionMapsMissingSnapshotToPostNotFound(t *testing.T) {
 }
 
 func TestRestoreVersionReturnsRestoredPost(t *testing.T) {
-	restorer := &fakeRestorer{restored: &domain.Post{ID: 3, Title: "restored"}}
+	restorer := &fakeRestorer{restored: &postdomain.Post{ID: 3, Title: "restored"}}
 	svc := New(&fakeVersionReader{}, restorer)
 	post, err := svc.RestoreVersion(context.Background(), 3, 9)
 	if err != nil {
