@@ -23,8 +23,16 @@ assert not model_path.exists(), "provider/domain/model.go already exists"
 model_path.write_text('package domain\n\nimport "time"\n\n' + segment)
 
 text = text[:start] + text[end:]
-text = re.sub(r"\bProviderProfile\b", "providerdomain.ProviderProfile", text)
-text = re.sub(r"\bProviderType\b", "providerdomain.ProviderType", text)
+# Preserve exported field identifiers such as Agent.ProviderProfile while only
+# qualifying the Provider-owned field types that remain in Agent-owned models.
+text, provider_profile_refs = re.subn(
+    r"\*ProviderProfile\b", "*providerdomain.ProviderProfile", text
+)
+text, provider_type_refs = re.subn(
+    r"(\bProvider\s+)ProviderType\b", r"\1providerdomain.ProviderType", text
+)
+assert provider_profile_refs > 0, "expected Agent ProviderProfile type reference"
+assert provider_type_refs > 0, "expected Agent ProviderType field references"
 if '"github.com/rushairer/blog-backend/internal/provider/domain"' not in text:
     text = text.replace(
         'import (\n',
