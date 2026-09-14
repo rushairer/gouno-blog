@@ -17,7 +17,7 @@ var (
 
 type Service interface {
 	ListVersions(context.Context, int64) ([]*postversiondomain.PostVersion, error)
-	RestoreVersion(context.Context, int64, int64) (*postdomain.Post, error)
+	RestoreVersion(context.Context, int64, int64, int64) (*postdomain.Post, error)
 }
 
 type VersionReader interface {
@@ -25,7 +25,7 @@ type VersionReader interface {
 }
 
 type Restorer interface {
-	RestoreVersion(context.Context, int64, int64) (*postdomain.Post, error)
+	RestoreVersion(context.Context, int64, int64, int64) (*postdomain.Post, error)
 }
 
 type postVersionService struct {
@@ -44,11 +44,14 @@ func (s *postVersionService) ListVersions(ctx context.Context, postID int64) ([]
 	return s.versions.ListVersions(ctx, postID)
 }
 
-func (s *postVersionService) RestoreVersion(ctx context.Context, postID, versionID int64) (*postdomain.Post, error) {
+func (s *postVersionService) RestoreVersion(ctx context.Context, postID, versionID, expectedRevision int64) (*postdomain.Post, error) {
 	if postID <= 0 || versionID <= 0 {
 		return nil, ErrInvalidVersion
 	}
-	post, err := s.restorer.RestoreVersion(ctx, postID, versionID)
+	if expectedRevision <= 0 {
+		return nil, postdomain.ErrExpectedRevision
+	}
+	post, err := s.restorer.RestoreVersion(ctx, postID, versionID, expectedRevision)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrPostNotFound
 	}

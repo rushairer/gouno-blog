@@ -56,7 +56,14 @@ func (ctrl *Controller) RestoreVersion(c *gin.Context) {
 	if !ctrl.authorize(c, postID, true) {
 		return
 	}
-	restored, err := ctrl.service.RestoreVersion(c.Request.Context(), postID, versionID)
+	var req struct {
+		ExpectedRevision int64 `json:"expected_revision" binding:"required,gt=0"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		controllerutil.WriteValidationError(c, err)
+		return
+	}
+	restored, err := ctrl.service.RestoreVersion(c.Request.Context(), postID, versionID, req.ExpectedRevision)
 	if err != nil {
 		controllerutil.WriteDomainError(c, err)
 		return

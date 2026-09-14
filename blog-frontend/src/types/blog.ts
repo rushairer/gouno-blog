@@ -12,6 +12,7 @@ export interface Category {
 }
 
 export interface Post {
+  revision?: number;
   id: number;
   title: string;
   slug: string;

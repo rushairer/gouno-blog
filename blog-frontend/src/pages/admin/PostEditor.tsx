@@ -108,6 +108,34 @@ export default function PostEditor() {
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [error, setError] = useState("");
+  const [conflict, setConflict] = useState(false);
+  const [latestPost, setLatestPost] = useState<Post | null>(null);
+  const [confirmReload, setConfirmReload] = useState(false);
+  const savingRef = useRef(false);
+  const recordConflict = (reason: unknown) => {
+    if (
+      typeof reason === "object" &&
+      reason !== null &&
+      "status" in reason &&
+      reason.status === 409
+    )
+      setConflict(true);
+  };
+  const inspectLatest = async () => {
+    try {
+      setLatestPost(await postsApi.getAdminPost(post.id));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "读取最新版本失败");
+    }
+  };
+  const copyDraft = async () => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(post, null, 2));
+      notify("未保存内容已复制", "success");
+    } catch {
+      notify("复制失败，请手动保留编辑内容", "error");
+    }
+  };
   const [preview, setPreview] = useState(false);
   const [showVersions, setShowVersions] = useState(false);
   const [restoreTarget, setRestoreTarget] = useState<PostVersion | null>(null);
@@ -203,6 +231,8 @@ export default function PostEditor() {
         notify(msg, "error");
         return;
       }
+      if (savingRef.current || conflict) return;
+      savingRef.current = true;
       setSaving(true);
       setError("");
       try {
@@ -210,8 +240,14 @@ export default function PostEditor() {
         const saved = post.id
           ? await postsApi.updatePost(post.id, payload)
           : await postsApi.createPost(payload);
-        setPost(saved);
-        dirty.current = false;
+        setPost((current) => {
+          if (current !== post) {
+            dirty.current = true;
+            return { ...current, revision: saved.revision };
+          }
+          dirty.current = false;
+          return saved;
+        });
         setSavedAt(new Date());
         if (!automatic) {
           setPublishIntent(saved.status || "draft");
@@ -227,19 +263,23 @@ export default function PostEditor() {
         if (!post.id)
           navigate(`/admin/posts/${saved.id}/edit`, { replace: true });
       } catch (reason) {
+        recordConflict(reason);
         const msg =
           reason instanceof Error ? reason.message : "保存失败，请稍后重试。";
         setError(msg);
         notify(msg, "error");
       } finally {
+        savingRef.current = false;
         setSaving(false);
       }
     },
-    [navigate, notify, post],
+    [navigate, notify, post, conflict],
   );
 
   useEffect(() => {
     if (
+      conflict ||
+      saving ||
       !dirty.current ||
       !post.id ||
       !post.title.trim() ||
@@ -248,7 +288,7 @@ export default function PostEditor() {
       return;
     const timer = window.setTimeout(() => void persist("draft", true), 1800);
     return () => window.clearTimeout(timer);
-  }, [post, persist]);
+  }, [post, persist, conflict, saving]);
 
   const outline = useMemo(
     () => extractMarkdownTOC(post.content),
@@ -257,7 +297,14 @@ export default function PostEditor() {
   const restoreVersion = async () => {
     if (!post.id || !restoreTarget) return;
     try {
-      const restored = await postsApi.restoreVersion(post.id, restoreTarget.id);
+      const restored =
+        post.revision === undefined
+          ? await postsApi.restoreVersion(post.id, restoreTarget.id)
+          : await postsApi.restoreVersion(
+              post.id,
+              restoreTarget.id,
+              post.revision,
+            );
       setPost(restored);
       setPublishIntent(restored.status || "draft");
       dirty.current = false;
@@ -266,6 +313,7 @@ export default function PostEditor() {
       setRestoreTarget(null);
       notify("已成功恢复历史版本。", "success");
     } catch (reason) {
+      recordConflict(reason);
       const msg = reason instanceof Error ? reason.message : "版本恢复失败";
       setError(msg);
       notify(msg, "error");
@@ -315,6 +363,7 @@ export default function PostEditor() {
         notify(msg, "error");
       }
     } catch (reason) {
+      recordConflict(reason);
       const msg =
         reason instanceof Error ? reason.message : "生成候选失败，请稍后重试。";
       setAssistError(msg);
@@ -368,6 +417,7 @@ export default function PostEditor() {
         notify("未能提炼出有效标签，请稍后重试。", "error");
       }
     } catch (reason) {
+      recordConflict(reason);
       notify(
         reason instanceof Error ? reason.message : "提炼标签失败",
         "error",
@@ -429,6 +479,7 @@ export default function PostEditor() {
         notify("未能匹配到合适分类。", "error");
       }
     } catch (reason) {
+      recordConflict(reason);
       notify(
         reason instanceof Error ? reason.message : "分析分类失败",
         "error",
@@ -495,6 +546,7 @@ export default function PostEditor() {
         notify("未能生成有效的 SEO 配置，请稍后重试。", "error");
       }
     } catch (reason) {
+      recordConflict(reason);
       notify(
         reason instanceof Error ? reason.message : "生成 SEO 配置失败",
         "error",
@@ -560,6 +612,7 @@ export default function PostEditor() {
         notify("未能生成完整元数据，请稍后重试。", "error");
       }
     } catch (reason) {
+      recordConflict(reason);
       notify(
         reason instanceof Error ? reason.message : "一键补全元数据失败",
         "error",
@@ -584,6 +637,7 @@ export default function PostEditor() {
         notify("未能成功生成封面图。", "error");
       }
     } catch (reason) {
+      recordConflict(reason);
       const msg = reason instanceof Error ? reason.message : "生图失败";
       void navigator.clipboard.writeText(promptText);
       notify(`${msg}（提示词已自动复制到剪贴板）`, "error");
@@ -653,6 +707,7 @@ export default function PostEditor() {
         notify(msg, "error");
       }
     } catch (reason) {
+      recordConflict(reason);
       const msg =
         reason instanceof Error
           ? reason.message
@@ -718,6 +773,7 @@ export default function PostEditor() {
         notify("未能生成插画构思，请稍后重试。", "error");
       }
     } catch (reason) {
+      recordConflict(reason);
       const msg =
         reason instanceof Error ? reason.message : "插画构思失败，请稍后重试。";
       setAssistError(msg);
@@ -769,6 +825,7 @@ export default function PostEditor() {
         notify(msg, "error");
       }
     } catch (reason) {
+      recordConflict(reason);
       const msg =
         reason instanceof Error ? reason.message : "AI 生图失败，请稍后重试。";
       setAssistError(msg);
@@ -812,6 +869,7 @@ export default function PostEditor() {
   };
 
   const openFrontsitePreview = async () => {
+    if (savingRef.current || conflict) return;
     let currentPost = post;
     if (dirty.current || !currentPost.id) {
       if (!currentPost.title.trim()) {
@@ -837,6 +895,7 @@ export default function PostEditor() {
         if (!post.id)
           navigate(`/admin/posts/${currentPost.id}/edit`, { replace: true });
       } catch (reason) {
+        recordConflict(reason);
         const msg =
           reason instanceof Error ? reason.message : "保存失败，无法开启预览。";
         setError(msg);
@@ -844,6 +903,7 @@ export default function PostEditor() {
         setSaving(false);
         return;
       } finally {
+        savingRef.current = false;
         setSaving(false);
       }
     }
@@ -978,6 +1038,45 @@ export default function PostEditor() {
           ) : null}
         </EditorCommandActions>
       </EditorCommandBar>
+      {conflict ? (
+        <section aria-label="文章版本冲突">
+          <p>文章已有新版本。你的未保存内容仍保留，请先比较后再加载。</p>
+          <Button onClick={() => void inspectLatest()}>查看最新版本</Button>
+          <Button onClick={() => void copyDraft()}>复制未保存内容</Button>
+          {latestPost ? (
+            <>
+              <h3>{latestPost.title}</h3>
+              <pre>{JSON.stringify(latestPost, null, 2)}</pre>
+              <Button onClick={() => setConfirmReload(true)}>
+                加载最新版本
+              </Button>
+            </>
+          ) : null}
+        </section>
+      ) : null}
+      <Modal
+        open={confirmReload}
+        onClose={() => setConfirmReload(false)}
+        title="替换未保存内容？"
+        footer={
+          <Button
+            onClick={() => {
+              if (!latestPost) return;
+              setPost(latestPost);
+              setPublishIntent(latestPost.status || "draft");
+              dirty.current = false;
+              setConflict(false);
+              setError("");
+              setLatestPost(null);
+              setConfirmReload(false);
+            }}
+          >
+            确认替换并加载
+          </Button>
+        }
+      >
+        <p>当前未保存内容将被替换，请先复制保留。</p>
+      </Modal>
       {error ? (
         <Alert
           className="editor-page-feedback"

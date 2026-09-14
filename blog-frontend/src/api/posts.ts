@@ -7,6 +7,8 @@ import type {
 } from "../types/blog";
 
 export interface PostPayload {
+  revision?: number;
+  expected_revision?: number;
   title: string;
   slug?: string;
   summary?: string;
@@ -71,7 +73,10 @@ export const postsApi = {
   },
 
   async updatePost(id: number | string, payload: PostPayload): Promise<Post> {
-    return apiClient.put<Post>(`/api/posts/${id}`, payload);
+    return apiClient.put<Post>(`/api/posts/${id}`, {
+      ...payload,
+      expected_revision: payload.expected_revision ?? payload.revision,
+    });
   },
 
   async deletePost(id: number | string): Promise<void> {
@@ -85,9 +90,11 @@ export const postsApi = {
   async restoreVersion(
     postID: number | string,
     versionID: number | string,
+    expectedRevision: number | undefined,
   ): Promise<Post> {
     return apiClient.post<Post>(
       `/api/admin/posts/${postID}/versions/${versionID}/restore`,
+      { expected_revision: expectedRevision },
     );
   },
 
@@ -104,7 +111,12 @@ export const postsApi = {
   async batchAction(
     ids: (number | string)[],
     action: "publish" | "draft" | "delete",
+    expectedRevisions?: Record<string, number | undefined>,
   ): Promise<void> {
-    return apiClient.post<void>("/api/admin/posts/batch", { ids, action });
+    return apiClient.post<void>("/api/admin/posts/batch", {
+      ids,
+      action,
+      expected_revisions: expectedRevisions,
+    });
   },
 };

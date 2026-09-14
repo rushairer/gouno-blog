@@ -28,7 +28,7 @@ type fakeRestorer struct {
 	versionID int64
 }
 
-func (f *fakeRestorer) RestoreVersion(_ context.Context, postID, versionID int64) (*postdomain.Post, error) {
+func (f *fakeRestorer) RestoreVersion(_ context.Context, postID, versionID, expectedRevision int64) (*postdomain.Post, error) {
 	f.postID = postID
 	f.versionID = versionID
 	return f.restored, f.err
@@ -60,7 +60,7 @@ func TestRestoreVersionValidatesIdentifiers(t *testing.T) {
 		postID    int64
 		versionID int64
 	}{{0, 1}, {1, 0}, {-1, 2}} {
-		_, err := svc.RestoreVersion(context.Background(), tc.postID, tc.versionID)
+		_, err := svc.RestoreVersion(context.Background(), tc.postID, tc.versionID, 1)
 		if !errors.Is(err, ErrInvalidVersion) {
 			t.Fatalf("RestoreVersion(%d,%d) err=%v, want ErrInvalidVersion", tc.postID, tc.versionID, err)
 		}
@@ -69,7 +69,7 @@ func TestRestoreVersionValidatesIdentifiers(t *testing.T) {
 
 func TestRestoreVersionMapsMissingSnapshotToPostNotFound(t *testing.T) {
 	svc := New(&fakeVersionReader{}, &fakeRestorer{err: sql.ErrNoRows})
-	_, err := svc.RestoreVersion(context.Background(), 3, 9)
+	_, err := svc.RestoreVersion(context.Background(), 3, 9, 1)
 	if !errors.Is(err, ErrPostNotFound) {
 		t.Fatalf("err=%v, want ErrPostNotFound", err)
 	}
@@ -78,7 +78,7 @@ func TestRestoreVersionMapsMissingSnapshotToPostNotFound(t *testing.T) {
 func TestRestoreVersionReturnsRestoredPost(t *testing.T) {
 	restorer := &fakeRestorer{restored: &postdomain.Post{ID: 3, Title: "restored"}}
 	svc := New(&fakeVersionReader{}, restorer)
-	post, err := svc.RestoreVersion(context.Background(), 3, 9)
+	post, err := svc.RestoreVersion(context.Background(), 3, 9, 1)
 	if err != nil {
 		t.Fatal(err)
 	}

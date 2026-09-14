@@ -132,7 +132,7 @@ func (r *fakePostRepo) ListTags(context.Context) ([]string, error) {
 	return []string{"go"}, nil
 }
 
-func (r *fakePostRepo) Batch(_ context.Context, ids []int64, _ string) (int64, error) {
+func (r *fakePostRepo) Batch(_ context.Context, ids []int64, _ string, _ map[int64]int64) (int64, error) {
 	return int64(len(ids)), nil
 }
 
@@ -172,7 +172,7 @@ func TestCreatePostGeneratesFallbackSlugForNonLatinTitle(t *testing.T) {
 
 func TestCreatePostAppendsSuffixForDuplicateSlug(t *testing.T) {
 	repo := newFakePostRepo()
-	existing := &postdomain.Post{ID: 1, Title: "Existing", Slug: "hello"}
+	existing := &postdomain.Post{ID: 1, Revision: 1, Title: "Existing", Slug: "hello"}
 	repo.posts[existing.ID] = existing
 	repo.postsBySlug[existing.Slug] = existing
 	svc := NewPostService(repo)
@@ -188,11 +188,11 @@ func TestCreatePostAppendsSuffixForDuplicateSlug(t *testing.T) {
 
 func TestUpdatePostRejectsSlugUsedByAnotherPost(t *testing.T) {
 	repo := newFakePostRepo()
-	repo.posts[1] = &postdomain.Post{ID: 1, Title: "Current", Slug: "current", Status: postdomain.PostStatusDraft}
+	repo.posts[1] = &postdomain.Post{ID: 1, Revision: 1, Title: "Current", Slug: "current", Status: postdomain.PostStatusDraft}
 	repo.postsBySlug["taken"] = &postdomain.Post{ID: 42, Slug: "taken"}
 	svc := NewPostService(repo)
 
-	err := svc.UpdatePost(context.Background(), &postdomain.Post{ID: 1, Title: "Title", Slug: "taken", Content: "Body"})
+	err := svc.UpdatePost(context.Background(), &postdomain.Post{ID: 1, Revision: 1, Title: "Title", Slug: "taken", Content: "Body"})
 	if !errors.Is(err, ErrSlugInUse) {
 		t.Fatalf("error = %v, want ErrSlugInUse", err)
 	}
@@ -268,7 +268,7 @@ func TestScheduledPostRequiresFutureShanghaiTime(t *testing.T) {
 
 func TestPublicReadsHideNonPublishedPosts(t *testing.T) {
 	repo := newFakePostRepo()
-	repo.posts[1] = &postdomain.Post{ID: 1, Slug: "draft", Status: postdomain.PostStatusDraft}
+	repo.posts[1] = &postdomain.Post{ID: 1, Revision: 1, Slug: "draft", Status: postdomain.PostStatusDraft}
 	repo.postsBySlug["draft"] = repo.posts[1]
 	post, err := NewPostService(repo).GetPostBySlug(context.Background(), "draft")
 	if err != nil || post != nil {
@@ -278,7 +278,7 @@ func TestPublicReadsHideNonPublishedPosts(t *testing.T) {
 
 func TestGetAdminPostAllowsDraftWithoutChangingPublicReadPolicy(t *testing.T) {
 	repo := newFakePostRepo()
-	draft := &postdomain.Post{ID: 1, Slug: "draft", Status: postdomain.PostStatusDraft}
+	draft := &postdomain.Post{ID: 1, Revision: 1, Slug: "draft", Status: postdomain.PostStatusDraft}
 	repo.posts[draft.ID] = draft
 	svc := NewPostService(repo)
 
@@ -303,13 +303,13 @@ func TestDeletePostMapsMissingRowToNotFound(t *testing.T) {
 
 func TestBatchPostsValidation(t *testing.T) {
 	svc := NewPostService(newFakePostRepo())
-	if _, err := svc.BatchPosts(context.Background(), nil, "publish"); !errors.Is(err, ErrBatchInvalidIDs) {
+	if _, err := svc.BatchPosts(context.Background(), nil, "publish", map[int64]int64{1: 1, 2: 1}); !errors.Is(err, ErrBatchInvalidIDs) {
 		t.Fatalf("BatchPosts(nil) err = %v, want ErrBatchInvalidIDs", err)
 	}
-	if _, err := svc.BatchPosts(context.Background(), []int64{1}, "invalid"); !errors.Is(err, ErrBatchInvalidAction) {
+	if _, err := svc.BatchPosts(context.Background(), []int64{1}, "invalid", map[int64]int64{1: 1, 2: 1}); !errors.Is(err, ErrBatchInvalidAction) {
 		t.Fatalf("BatchPosts(invalid) err = %v, want ErrBatchInvalidAction", err)
 	}
-	affected, err := svc.BatchPosts(context.Background(), []int64{1, 2}, "publish")
+	affected, err := svc.BatchPosts(context.Background(), []int64{1, 2}, "publish", map[int64]int64{1: 1, 2: 1})
 	if err != nil || affected != 2 {
 		t.Fatalf("BatchPosts(valid) = (%d, %v), want (2, nil)", affected, err)
 	}

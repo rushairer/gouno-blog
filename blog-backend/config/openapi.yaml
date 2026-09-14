@@ -149,7 +149,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreatePostRequest'
+              $ref: '#/components/schemas/UpdatePostRequest'
       responses:
         '200':
           description: Post updated successfully
@@ -575,7 +575,23 @@ paths:
           required: true
           schema:
             type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expected_revision]
+              properties:
+                expected_revision:
+                  type: integer
+                  format: int64
+                  minimum: 1
       responses:
+        '400':
+          description: Missing or invalid expected_revision; reload the article
+        '409':
+          description: POST_REVISION_CONFLICT; preserve the unsaved draft
         '200':
           description: Restored article; the replaced content is retained as a snapshot
         '404':
@@ -1566,6 +1582,10 @@ components:
     Post:
       type: object
       properties:
+        revision:
+          type: integer
+          format: int64
+          minimum: 1
         id:
           type: integer
         title:
@@ -1634,6 +1654,17 @@ components:
         created_at:
           type: string
           format: date-time
+    UpdatePostRequest:
+      allOf:
+        - $ref: '#/components/schemas/CreatePostRequest'
+        - type: object
+          required: [expected_revision]
+          properties:
+            expected_revision:
+              type: integer
+              format: int64
+              minimum: 1
+              description: Revision from the article being edited. A mismatch returns 409 POST_REVISION_CONFLICT.
     CreatePostRequest:
       type: object
       properties:

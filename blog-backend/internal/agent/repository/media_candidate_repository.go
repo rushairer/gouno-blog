@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/rushairer/blog-backend/internal/agent/domain"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 )
 
 type MediaCandidateRepository struct {
@@ -33,12 +34,26 @@ func (r *MediaCandidateRepository) CreateMediaCandidate(ctx context.Context, app
 	if payload.PostID <= 0 || payload.Format != "image_brief" || strings.TrimSpace(payload.Body) == "" {
 		return errors.New("invalid media candidate")
 	}
-	_, err := r.db.ExecContext(ctx, `INSERT INTO ai_media_candidates
+	var before postdomain.Post
+	if json.Unmarshal(approval.BeforeSnapshot, &before) != nil || before.Revision <= 0 {
+		return postdomain.ErrRevisionConflict
+	}
+	result, err := r.db.ExecContext(ctx, `INSERT INTO ai_media_candidates
 		(post_id,source_run_id,source_approval_id,workflow_run_id,headline,brief,platform,alt_text,provider,model,input_tokens,output_tokens,post_version_token)
-		SELECT $1,$2,$3,ar.workflow_run_id,$4,$5,$6,$7,ar.provider,ar.model,ar.input_tokens,ar.output_tokens,FLOOR(EXTRACT(EPOCH FROM p.updated_at))::bigint::text
-		FROM ai_agent_runs ar JOIN posts p ON p.id=$1 WHERE ar.id=$2`,
-		payload.PostID, approval.RunID, approval.ID, strings.TrimSpace(payload.Headline), strings.TrimSpace(payload.Body), strings.TrimSpace(payload.Platform), strings.TrimSpace(payload.AltText))
-	return err
+		SELECT $1,$2,$3,ar.workflow_run_id,$4,$5,$6,$7,ar.provider,ar.model,ar.input_tokens,ar.output_tokens,'revision:' || p.revision::text
+		FROM ai_agent_runs ar JOIN posts p ON p.id=$1 WHERE ar.id=$2 AND p.revision=$8`,
+		payload.PostID, approval.RunID, approval.ID, strings.TrimSpace(payload.Headline), strings.TrimSpace(payload.Body), strings.TrimSpace(payload.Platform), strings.TrimSpace(payload.AltText), before.Revision)
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows != 1 {
+		return postdomain.ErrRevisionConflict
+	}
+	return nil
 }
 
 func (r *MediaCandidateRepository) CreateMediaCandidateFromRun(ctx context.Context, runID, postID int64, headline, brief, platform, altText string) (int64, *int64, error) {
@@ -46,7 +61,7 @@ func (r *MediaCandidateRepository) CreateMediaCandidateFromRun(ctx context.Conte
 	var workflowRunID sql.NullInt64
 	err := r.db.QueryRowContext(ctx, `INSERT INTO ai_media_candidates
 		(post_id,source_run_id,source_approval_id,workflow_run_id,headline,brief,platform,alt_text,provider,model,input_tokens,output_tokens,post_version_token)
-		SELECT $2,$1,NULL,ar.workflow_run_id,$3,$4,$5,$6,ar.provider,ar.model,ar.input_tokens,ar.output_tokens,FLOOR(EXTRACT(EPOCH FROM p.updated_at))::bigint::text
+		SELECT $2,$1,NULL,ar.workflow_run_id,$3,$4,$5,$6,ar.provider,ar.model,ar.input_tokens,ar.output_tokens,'revision:' || p.revision::text
 		FROM ai_agent_runs ar JOIN posts p ON p.id=$2 WHERE ar.id=$1
 		ON CONFLICT (source_run_id, headline) WHERE source_approval_id IS NULL DO UPDATE SET
 			brief=EXCLUDED.brief,platform=EXCLUDED.platform,alt_text=EXCLUDED.alt_text,

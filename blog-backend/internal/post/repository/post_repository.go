@@ -25,11 +25,11 @@ func (r *PostRepository) Create(ctx context.Context, post *postdomain.Post) erro
 	query := `
 		INSERT INTO posts (title, slug, summary, content, tags, category_id, cover_url, cover_alt, seo_title, seo_description, status, views_count, likes_count, published_at, scheduled_at, created_by_principal_id, updated_by_principal_id, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW(), NOW())
-		RETURNING id, created_at, updated_at
+		RETURNING id, created_at, updated_at, revision
 	`
 	err := r.db.QueryRowContext(ctx, query,
 		post.Title, post.Slug, post.Summary, post.Content, pq.Array(post.Tags), post.CategoryID, post.CoverURL, post.CoverAlt, post.SEOTitle, post.SEODescription, post.Status, post.ViewsCount, post.LikesCount, post.PublishedAt, post.ScheduledAt, post.CreatedByPrincipalID, post.UpdatedByPrincipalID,
-	).Scan(&post.ID, &post.CreatedAt, &post.UpdatedAt)
+	).Scan(&post.ID, &post.CreatedAt, &post.UpdatedAt, &post.Revision)
 	return err
 }
 
@@ -38,14 +38,14 @@ func (r *PostRepository) Update(ctx context.Context, post *postdomain.Post) erro
 		UPDATE posts
 		SET title = $1, slug = $2, summary = $3, content = $4, tags = $5, category_id = $6,
 		    cover_url = $7, cover_alt = $8, seo_title = $9, seo_description = $10,
-		    status = $11, published_at = $12, scheduled_at = $13, updated_by_principal_id = $14, updated_at = NOW()
-		WHERE id = $15
-		RETURNING updated_at
+		    status = $11, published_at = $12, scheduled_at = $13, updated_by_principal_id = $14, updated_at = NOW(), revision = revision + 1
+		WHERE id = $15 AND revision = $16
+		RETURNING updated_at, revision
 	`
 	err := r.db.QueryRowContext(ctx, query,
-		post.Title, post.Slug, post.Summary, post.Content, pq.Array(post.Tags), post.CategoryID, post.CoverURL, post.CoverAlt, post.SEOTitle, post.SEODescription, post.Status, post.PublishedAt, post.ScheduledAt, post.UpdatedByPrincipalID, post.ID,
-	).Scan(&post.UpdatedAt)
-	return err
+		post.Title, post.Slug, post.Summary, post.Content, pq.Array(post.Tags), post.CategoryID, post.CoverURL, post.CoverAlt, post.SEOTitle, post.SEODescription, post.Status, post.PublishedAt, post.ScheduledAt, post.UpdatedByPrincipalID, post.ID, post.Revision,
+	).Scan(&post.UpdatedAt, &post.Revision)
+	return r.writeError(ctx, err, post.ID)
 }
 
 // RestoreSnapshotTx applies a Post-owned restore command inside a caller-owned
@@ -56,20 +56,20 @@ func (r *PostRepository) RestoreSnapshotTx(ctx context.Context, tx *sql.Tx, post
 		title = $2, slug = $3, summary = $4, content = $5, tags = $6,
 		category_id = $7, cover_url = $8, cover_alt = $9,
 		seo_title = $10, seo_description = $11,
-		status = $12, published_at = $13, scheduled_at = $14, updated_at = NOW()
-		WHERE id = $1
+		status = $12, published_at = $13, scheduled_at = $14, updated_at = NOW(), revision = revision + 1
+		WHERE id = $1 AND revision = $15
 		RETURNING id, title, slug, summary, content, tags, status,
 			views_count, likes_count, published_at, scheduled_at,
-			created_by_principal_id, updated_by_principal_id, created_at, updated_at`,
+			created_by_principal_id, updated_by_principal_id, created_at, updated_at, revision`,
 		postID, snapshot.Title, snapshot.Slug, snapshot.Summary, snapshot.Content, pq.Array(snapshot.Tags),
 		snapshot.CategoryID, snapshot.CoverURL, snapshot.CoverAlt, snapshot.SEOTitle, snapshot.SEODescription,
-		snapshot.Status, snapshot.PublishedAt, snapshot.ScheduledAt)
+		snapshot.Status, snapshot.PublishedAt, snapshot.ScheduledAt, snapshot.ExpectedRevision)
 	var restored postdomain.Post
 	err := row.Scan(&restored.ID, &restored.Title, &restored.Slug, &restored.Summary, &restored.Content, pq.Array(&restored.Tags),
 		&restored.Status, &restored.ViewsCount, &restored.LikesCount, &restored.PublishedAt, &restored.ScheduledAt,
-		&restored.CreatedByPrincipalID, &restored.UpdatedByPrincipalID, &restored.CreatedAt, &restored.UpdatedAt)
+		&restored.CreatedByPrincipalID, &restored.UpdatedByPrincipalID, &restored.CreatedAt, &restored.UpdatedAt, &restored.Revision)
 	if err != nil {
-		return nil, err
+		return nil, r.writeError(ctx, err, postID)
 	}
 	return &restored, nil
 }
@@ -89,13 +89,13 @@ func (r *PostRepository) Delete(ctx context.Context, id int64) error {
 
 func (r *PostRepository) GetByID(ctx context.Context, id int64) (*postdomain.Post, error) {
 	query := `
-		SELECT id, title, slug, summary, content, tags, category_id, COALESCE(cover_url, ''), COALESCE(cover_alt, ''), COALESCE(seo_title, ''), COALESCE(seo_description, ''), status, views_count, likes_count, published_at, scheduled_at, created_by_principal_id, updated_by_principal_id, created_at, updated_at
+		SELECT id, title, slug, summary, content, tags, category_id, COALESCE(cover_url, ''), COALESCE(cover_alt, ''), COALESCE(seo_title, ''), COALESCE(seo_description, ''), status, views_count, likes_count, published_at, scheduled_at, created_by_principal_id, updated_by_principal_id, created_at, updated_at, revision
 		FROM posts
 		WHERE id = $1
 	`
 	var post postdomain.Post
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID, &post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt, &post.CreatedByPrincipalID, &post.UpdatedByPrincipalID, &post.CreatedAt, &post.UpdatedAt,
+		&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID, &post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt, &post.CreatedByPrincipalID, &post.UpdatedByPrincipalID, &post.CreatedAt, &post.UpdatedAt, &post.Revision,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -108,13 +108,13 @@ func (r *PostRepository) GetByID(ctx context.Context, id int64) (*postdomain.Pos
 
 func (r *PostRepository) GetBySlug(ctx context.Context, slug string) (*postdomain.Post, error) {
 	query := `
-		SELECT id, title, slug, summary, content, tags, category_id, COALESCE(cover_url, ''), COALESCE(cover_alt, ''), COALESCE(seo_title, ''), COALESCE(seo_description, ''), status, views_count, likes_count, published_at, scheduled_at, created_by_principal_id, updated_by_principal_id, created_at, updated_at
+		SELECT id, title, slug, summary, content, tags, category_id, COALESCE(cover_url, ''), COALESCE(cover_alt, ''), COALESCE(seo_title, ''), COALESCE(seo_description, ''), status, views_count, likes_count, published_at, scheduled_at, created_by_principal_id, updated_by_principal_id, created_at, updated_at, revision
 		FROM posts
 		WHERE slug = $1
 	`
 	var post postdomain.Post
 	err := r.db.QueryRowContext(ctx, query, slug).Scan(
-		&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID, &post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt, &post.CreatedByPrincipalID, &post.UpdatedByPrincipalID, &post.CreatedAt, &post.UpdatedAt,
+		&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID, &post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt, &post.CreatedByPrincipalID, &post.UpdatedByPrincipalID, &post.CreatedAt, &post.UpdatedAt, &post.Revision,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -166,7 +166,7 @@ func (r *PostRepository) List(ctx context.Context, tag, search string, limit, of
 	listArgs := append([]interface{}{}, args...)
 	listArgs = append(listArgs, limit, offset)
 	listQuery = fmt.Sprintf(`
-		SELECT id, title, slug, summary, content, tags, category_id, COALESCE(cover_url, ''), COALESCE(cover_alt, ''), COALESCE(seo_title, ''), COALESCE(seo_description, ''), status, views_count, likes_count, published_at, scheduled_at, created_at, updated_at
+		SELECT id, title, slug, summary, content, tags, category_id, COALESCE(cover_url, ''), COALESCE(cover_alt, ''), COALESCE(seo_title, ''), COALESCE(seo_description, ''), status, views_count, likes_count, published_at, scheduled_at, created_at, updated_at, revision
 		FROM posts
 		WHERE %s
 		ORDER BY published_at DESC, created_at DESC
@@ -183,7 +183,7 @@ func (r *PostRepository) List(ctx context.Context, tag, search string, limit, of
 	for rows.Next() {
 		var post postdomain.Post
 		err := rows.Scan(
-			&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID, &post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt,
+			&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID, &post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt, &post.Revision,
 		)
 		if err != nil {
 			return nil, 0, err
@@ -255,7 +255,7 @@ func (r *PostRepository) ListAdmin(ctx context.Context, filter postdomain.AdminP
 		return nil, 0, err
 	}
 	args = append(args, limit, offset)
-	listQuery := fmt.Sprintf(`SELECT p.id, p.title, p.slug, p.summary, p.content, p.tags, p.category_id, COALESCE(p.cover_url, ''), COALESCE(p.cover_alt, ''), COALESCE(p.seo_title, ''), COALESCE(p.seo_description, ''), p.status, p.views_count, p.likes_count, p.published_at, p.scheduled_at, p.created_by_principal_id, p.updated_by_principal_id, p.created_at, p.updated_at
+	listQuery := fmt.Sprintf(`SELECT p.id, p.title, p.slug, p.summary, p.content, p.tags, p.category_id, COALESCE(p.cover_url, ''), COALESCE(p.cover_alt, ''), COALESCE(p.seo_title, ''), COALESCE(p.seo_description, ''), p.status, p.views_count, p.likes_count, p.published_at, p.scheduled_at, p.created_by_principal_id, p.updated_by_principal_id, p.created_at, p.updated_at, p.revision
 		FROM posts p LEFT JOIN categories c ON c.id = p.category_id%s ORDER BY COALESCE(p.published_at, p.created_at) DESC, p.id DESC LIMIT $%d OFFSET $%d`, whereSQL, len(args)-1, len(args))
 	rows, err := r.db.QueryContext(ctx, listQuery, args...)
 	if err != nil {
@@ -265,7 +265,7 @@ func (r *PostRepository) ListAdmin(ctx context.Context, filter postdomain.AdminP
 	posts := make([]*postdomain.Post, 0)
 	for rows.Next() {
 		var post postdomain.Post
-		if err := rows.Scan(&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID, &post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt, &post.CreatedByPrincipalID, &post.UpdatedByPrincipalID, &post.CreatedAt, &post.UpdatedAt); err != nil {
+		if err := rows.Scan(&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID, &post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt, &post.CreatedByPrincipalID, &post.UpdatedByPrincipalID, &post.CreatedAt, &post.UpdatedAt, &post.Revision); err != nil {
 			return nil, 0, err
 		}
 		posts = append(posts, &post)
@@ -278,7 +278,7 @@ func (r *PostRepository) SearchPublished(ctx context.Context, query string, limi
 		WITH search AS (SELECT websearch_to_tsquery('simple', $1) AS query)
 		SELECT p.id, p.title, p.slug, p.summary, p.content, p.tags, p.category_id,
 		       COALESCE(p.cover_url, ''), COALESCE(p.cover_alt, ''), COALESCE(p.seo_title, ''), COALESCE(p.seo_description, ''),
-		       p.status, p.views_count, p.likes_count, p.published_at, p.scheduled_at, p.created_at, p.updated_at,
+		       p.status, p.views_count, p.likes_count, p.published_at, p.scheduled_at, p.created_at, p.updated_at, p.revision,
 		       ts_headline('simple', p.content, search.query, 'MaxWords=28, MinWords=12, MaxFragments=2'),
 		       ts_rank_cd(p.search_document, search.query)
 		FROM posts p CROSS JOIN search
@@ -295,7 +295,7 @@ func (r *PostRepository) SearchPublished(ctx context.Context, query string, limi
 		var result postdomain.PostSearchResult
 		if err := rows.Scan(&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID,
 			&post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount,
-			&post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt, &result.Snippet, &result.Score); err != nil {
+			&post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt, &post.Revision, &result.Snippet, &result.Score); err != nil {
 			return nil, err
 		}
 		result.Post = &post
@@ -307,7 +307,7 @@ func (r *PostRepository) SearchPublished(ctx context.Context, query string, limi
 func (r *PostRepository) ListStalePublished(ctx context.Context, updatedBefore time.Time, limit int) ([]*postdomain.Post, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT id, title, slug, summary, content, tags, category_id,
 		COALESCE(cover_url, ''), COALESCE(cover_alt, ''), COALESCE(seo_title, ''), COALESCE(seo_description, ''),
-		status, views_count, likes_count, published_at, scheduled_at, created_at, updated_at
+		status, views_count, likes_count, published_at, scheduled_at, created_at, updated_at, revision
 		FROM posts WHERE status = 'published' AND updated_at < $1
 		ORDER BY updated_at ASC LIMIT $2`, updatedBefore, limit)
 	if err != nil {
@@ -319,7 +319,7 @@ func (r *PostRepository) ListStalePublished(ctx context.Context, updatedBefore t
 		var post postdomain.Post
 		if err := rows.Scan(&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID,
 			&post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount,
-			&post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt); err != nil {
+			&post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt, &post.Revision); err != nil {
 			return nil, err
 		}
 		posts = append(posts, &post)
@@ -330,7 +330,7 @@ func (r *PostRepository) ListStalePublished(ctx context.Context, updatedBefore t
 func (r *PostRepository) ListOrphanedPublished(ctx context.Context, limit int) ([]*postdomain.Post, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT target.id, target.title, target.slug, target.summary, target.content, target.tags, target.category_id,
 		COALESCE(target.cover_url, ''), COALESCE(target.cover_alt, ''), COALESCE(target.seo_title, ''), COALESCE(target.seo_description, ''),
-		target.status, target.views_count, target.likes_count, target.published_at, target.scheduled_at, target.created_at, target.updated_at
+		target.status, target.views_count, target.likes_count, target.published_at, target.scheduled_at, target.created_at, target.updated_at, target.revision
 		FROM posts target
 		WHERE target.status = 'published' AND NOT EXISTS (
 			SELECT 1 FROM posts source
@@ -348,7 +348,7 @@ func (r *PostRepository) ListOrphanedPublished(ctx context.Context, limit int) (
 		var post postdomain.Post
 		if err := rows.Scan(&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID,
 			&post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount,
-			&post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt); err != nil {
+			&post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt, &post.Revision); err != nil {
 			return nil, err
 		}
 		posts = append(posts, &post)
@@ -359,7 +359,7 @@ func (r *PostRepository) ListOrphanedPublished(ctx context.Context, limit int) (
 func (r *PostRepository) ListLowEngagementPublished(ctx context.Context, minViews int64, maxEngagementRate float64, limit int) ([]*postdomain.Post, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT id, title, slug, summary, content, tags, category_id,
 		COALESCE(cover_url, ''), COALESCE(cover_alt, ''), COALESCE(seo_title, ''), COALESCE(seo_description, ''),
-		status, views_count, likes_count, published_at, scheduled_at, created_at, updated_at
+		status, views_count, likes_count, published_at, scheduled_at, created_at, updated_at, revision
 		FROM posts
 		WHERE status = 'published' AND views_count >= $1
 		  AND COALESCE(likes_count::DOUBLE PRECISION / NULLIF(views_count, 0), 0) <= $2
@@ -373,7 +373,7 @@ func (r *PostRepository) ListLowEngagementPublished(ctx context.Context, minView
 		var post postdomain.Post
 		if err := rows.Scan(&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID,
 			&post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount,
-			&post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt); err != nil {
+			&post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt, &post.Revision); err != nil {
 			return nil, err
 		}
 		posts = append(posts, &post)
@@ -389,34 +389,57 @@ func (r *PostRepository) PublishScheduled(ctx context.Context) (int64, error) {
 	return result.RowsAffected()
 }
 
-func (r *PostRepository) Batch(ctx context.Context, ids []int64, action string) (int64, error) {
-	var (
-		result sql.Result
-		err    error
-	)
-	switch action {
-	case "publish":
-		var invalidCount int
-		err = r.db.QueryRowContext(ctx, `
-			SELECT COUNT(*) FROM posts
-			WHERE id=ANY($1) AND (btrim(title) = '' OR btrim(content) = '')`,
-			pq.Array(ids)).Scan(&invalidCount)
+// Batch locks its target set in a deterministic order and gates the entire
+// statement on matching revisions. A conflict cannot leave a partially updated batch.
+func (r *PostRepository) Batch(ctx context.Context, ids []int64, action string, expected map[int64]int64) (int64, error) {
+	if action == "delete" {
+		result, err := r.db.ExecContext(ctx, `DELETE FROM posts WHERE id=ANY($1)`, pq.Array(ids))
 		if err != nil {
 			return 0, err
 		}
-		if invalidCount > 0 {
-			return 0, fmt.Errorf("posts must have a title and content before publishing")
-		}
-		result, err = r.db.ExecContext(ctx, `UPDATE posts SET status='published', published_at=COALESCE(published_at, NOW()), scheduled_at=NULL, updated_at=NOW() WHERE id=ANY($1)`, pq.Array(ids))
-	case "draft":
-		result, err = r.db.ExecContext(ctx, `UPDATE posts SET status='draft', published_at=NULL, scheduled_at=NULL, updated_at=NOW() WHERE id=ANY($1)`, pq.Array(ids))
-	case "delete":
-		result, err = r.db.ExecContext(ctx, `DELETE FROM posts WHERE id=ANY($1)`, pq.Array(ids))
-	default:
-		return 0, fmt.Errorf("action must be publish, draft, or delete")
+		return result.RowsAffected()
 	}
+	if action != "publish" && action != "draft" {
+		return 0, fmt.Errorf("invalid batch action")
+	}
+	revisions := make([]int64, len(ids))
+	for i, id := range ids {
+		revisions[i] = expected[id]
+		if revisions[i] <= 0 {
+			return 0, postdomain.ErrExpectedRevision
+		}
+	}
+	var affected int64
+	err := r.db.QueryRowContext(ctx, `WITH targets AS MATERIALIZED (
+ SELECT p.id, p.revision, p.title, p.content, requested.expected
+ FROM posts p JOIN unnest($1::bigint[], $2::bigint[]) AS requested(id,expected) ON p.id=requested.id
+ ORDER BY p.id FOR UPDATE OF p
+ ), changed AS (
+ UPDATE posts p SET status=$3, published_at=CASE WHEN $3='published' THEN COALESCE(p.published_at,NOW()) ELSE NULL END,
+ scheduled_at=NULL, updated_at=NOW(), revision=p.revision+1
+ FROM targets t WHERE p.id=t.id AND p.revision=t.expected
+ AND (SELECT count(*) FROM targets)=cardinality($1::bigint[])
+ AND NOT EXISTS (SELECT 1 FROM targets WHERE revision<>expected OR ($3='published' AND (btrim(title)='' OR btrim(content)='')))
+ RETURNING p.id) SELECT count(*) FROM changed`, pq.Array(ids), pq.Array(revisions), map[string]string{"publish": "published", "draft": "draft"}[action]).Scan(&affected)
 	if err != nil {
 		return 0, err
 	}
-	return result.RowsAffected()
+	if affected != int64(len(ids)) {
+		return 0, postdomain.ErrRevisionConflict
+	}
+	return affected, nil
+}
+
+func (r *PostRepository) writeError(ctx context.Context, err error, id int64) error {
+	if err != sql.ErrNoRows {
+		return err
+	}
+	var exists bool
+	if readErr := r.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM posts WHERE id=$1)`, id).Scan(&exists); readErr != nil {
+		return readErr
+	}
+	if exists {
+		return postdomain.ErrRevisionConflict
+	}
+	return sql.ErrNoRows
 }

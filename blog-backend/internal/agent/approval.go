@@ -208,6 +208,9 @@ func (s *ApprovalService) ApplyMediaCandidate(ctx context.Context, id int64) (*p
 	if err != nil || post == nil {
 		return nil, postservice.ErrPostNotFound
 	}
+	if candidate.PostVersionToken != postdomain.RevisionToken(post.Revision) || post.Revision <= 0 {
+		return nil, postdomain.ErrRevisionConflict
+	}
 	asset, err := s.mediaAssets.GetMedia(ctx, *candidate.MediaAssetID)
 	if err != nil {
 		return nil, err
@@ -234,7 +237,7 @@ func (s *ApprovalService) ApplyMediaCandidate(ctx context.Context, id int64) (*p
 	if len(versions) > 0 {
 		_ = s.mediaCandidates.MarkMediaCandidateApplied(ctx, id, versions[0].ID)
 	}
-	_ = s.mediaCandidates.SyncPostVersionToken(ctx, post.ID, strconv.FormatInt(post.UpdatedAt.Unix(), 10))
+	// Other candidates retain their original revision; they must not be silently rebased.
 	s.appendCandidateEvent(ctx, id, "article_version_created", map[string]any{"post_id": post.ID, "placement": candidate.Placement})
 	return post, nil
 }
@@ -299,6 +302,9 @@ func (s *ApprovalService) ApplyMediaCandidates(ctx context.Context, runID int64,
 	}
 	for _, id := range ids {
 		candidate := byID[id]
+		if candidate.PostVersionToken != postdomain.RevisionToken(post.Revision) || post.Revision <= 0 {
+			return nil, postdomain.ErrRevisionConflict
+		}
 		asset := assetByID[*candidate.MediaAssetID]
 		if candidate.Placement == "inline" {
 			if !strings.Contains(post.Content, candidate.Anchor) {
@@ -327,7 +333,7 @@ func (s *ApprovalService) ApplyMediaCandidates(ctx context.Context, runID int64,
 		s.appendCandidateEvent(ctx, id, "article_apply_confirmed", map[string]any{"post_id": post.ID, "batch": true})
 		s.appendCandidateEvent(ctx, id, "article_version_created", map[string]any{"post_id": post.ID, "batch": true})
 	}
-	_ = s.mediaCandidates.SyncPostVersionToken(ctx, post.ID, strconv.FormatInt(post.UpdatedAt.Unix(), 10))
+	// Other candidates retain their original revision; they must not be silently rebased.
 	return post, nil
 }
 
@@ -352,7 +358,7 @@ func (s *ApprovalService) PreviewMediaCandidate(ctx context.Context, id int64) (
 	}
 	anchorMatches := candidate.Placement != "inline" || (candidate.Anchor != "" && strings.Contains(post.Content, candidate.Anchor))
 	applied := candidate.AppliedVersionID != nil
-	versionMatches := true
+	versionMatches := candidate.PostVersionToken == postdomain.RevisionToken(post.Revision) && post.Revision > 0
 	if applied {
 		if candidate.Placement == "inline" {
 			versionMatches = strings.Contains(post.Content, asset.URL)
@@ -361,9 +367,9 @@ func (s *ApprovalService) PreviewMediaCandidate(ctx context.Context, id int64) (
 		}
 	} else {
 		if candidate.Placement == "inline" {
-			versionMatches = anchorMatches
+			versionMatches = versionMatches && anchorMatches
 		} else {
-			versionMatches = true
+			// Keep the captured revision comparison.
 		}
 	}
 	preview := map[string]any{"post_id": post.ID, "title": post.Title, "placement": candidate.Placement, "image_url": asset.URL, "alt_text": candidate.AltText, "version_matches": versionMatches, "anchor_matches": anchorMatches, "applied": applied, "cover_url": post.CoverURL, "content": post.Content}
@@ -588,14 +594,14 @@ func (s *ApprovalService) validateConflict(ctx context.Context, approval *domain
 		return nil
 	}
 	if approval.TargetType != "post" || approval.TargetID == nil || len(approval.BeforeSnapshot) == 0 {
-		return nil
+		return ErrApprovalConflict
 	}
 	var before postdomain.Post
 	if err := json.Unmarshal(approval.BeforeSnapshot, &before); err != nil {
 		return ErrApprovalConflict
 	}
 	current, err := s.posts.GetAdminPost(ctx, *approval.TargetID)
-	if err != nil || !current.UpdatedAt.Equal(before.UpdatedAt) {
+	if err != nil || current == nil || before.Revision <= 0 || current.Revision != before.Revision {
 		return ErrApprovalConflict
 	}
 	return nil
@@ -663,6 +669,11 @@ func (s *ApprovalService) execute(ctx context.Context, approval *domain.AgentApp
 		if payload.CoverAlt != nil {
 			current.CoverAlt = *payload.CoverAlt
 		}
+		var before postdomain.Post
+		if json.Unmarshal(approval.BeforeSnapshot, &before) != nil || before.Revision <= 0 {
+			return ErrApprovalConflict
+		}
+		current.Revision = before.Revision
 		return s.posts.UpdatePost(ctx, current)
 	case "create_page_draft":
 		if s.pages == nil {

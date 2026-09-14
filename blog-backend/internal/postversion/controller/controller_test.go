@@ -5,6 +5,7 @@ import (
 	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -24,7 +25,7 @@ func (f *fakeService) ListVersions(_ context.Context, postID int64) ([]*postvers
 	return f.versions, nil
 }
 
-func (f *fakeService) RestoreVersion(_ context.Context, postID, versionID int64) (*postdomain.Post, error) {
+func (f *fakeService) RestoreVersion(_ context.Context, postID, versionID, expectedRevision int64) (*postdomain.Post, error) {
 	f.postID = postID
 	f.versionID = versionID
 	return f.restored, nil
@@ -61,7 +62,7 @@ func TestRestoreVersionUsesCanonicalService(t *testing.T) {
 	engine.POST("/posts/:id/versions/:versionID/restore", ctrl.RestoreVersion)
 
 	response := httptest.NewRecorder()
-	engine.ServeHTTP(response, httptest.NewRequest(http.MethodPost, "/posts/3/versions/9/restore", nil))
+	engine.ServeHTTP(response, httptest.NewRequest(http.MethodPost, "/posts/3/versions/9/restore", strings.NewReader(`{"expected_revision":1}`)))
 	if response.Code != http.StatusOK {
 		t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
 	}

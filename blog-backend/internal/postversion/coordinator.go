@@ -39,7 +39,7 @@ func NewRestoreCoordinator(transactor TransactionRunner, versions VersionSnapsho
 	return &RestoreCoordinator{transactor: transactor, versions: versions, posts: posts}
 }
 
-func (c *RestoreCoordinator) RestoreVersion(ctx context.Context, postID, versionID int64) (*postdomain.Post, error) {
+func (c *RestoreCoordinator) RestoreVersion(ctx context.Context, postID, versionID, expectedRevision int64) (*postdomain.Post, error) {
 	var restored *postdomain.Post
 	err := c.transactor.Run(ctx, func(tx *sql.Tx) error {
 		version, err := c.versions.GetVersionTx(ctx, tx, postID, versionID)
@@ -47,19 +47,20 @@ func (c *RestoreCoordinator) RestoreVersion(ctx context.Context, postID, version
 			return err
 		}
 		restored, err = c.posts.RestoreSnapshotTx(ctx, tx, postID, postcapability.RestoreSnapshot{
-			Title:          version.Title,
-			Slug:           version.Slug,
-			Summary:        version.Summary,
-			Content:        version.Content,
-			Tags:           version.Tags,
-			CategoryID:     version.CategoryID,
-			CoverURL:       version.CoverURL,
-			CoverAlt:       version.CoverAlt,
-			SEOTitle:       version.SEOTitle,
-			SEODescription: version.SEODescription,
-			Status:         version.Status,
-			PublishedAt:    version.PublishedAt,
-			ScheduledAt:    version.ScheduledAt,
+			ExpectedRevision: expectedRevision,
+			Title:            version.Title,
+			Slug:             version.Slug,
+			Summary:          version.Summary,
+			Content:          version.Content,
+			Tags:             version.Tags,
+			CategoryID:       version.CategoryID,
+			CoverURL:         version.CoverURL,
+			CoverAlt:         version.CoverAlt,
+			SEOTitle:         version.SEOTitle,
+			SEODescription:   version.SEODescription,
+			Status:           version.Status,
+			PublishedAt:      version.PublishedAt,
+			ScheduledAt:      version.ScheduledAt,
 		})
 		return err
 	})

@@ -37,7 +37,7 @@ func TestRestoreCoordinatorKeepsVersionReadAndPostWriteAtomic(t *testing.T) {
 	}
 	posts := postrepository.NewPostRepository(db)
 	coordinator := NewRestoreCoordinator(dbtx.NewTransactor(db, zap.NewNop()), versions, posts)
-	restored, err := coordinator.RestoreVersion(ctx, postID, items[0].ID)
+	restored, err := coordinator.RestoreVersion(ctx, postID, items[0].ID, 2)
 	if err != nil {
 		t.Fatal(err)
 	}

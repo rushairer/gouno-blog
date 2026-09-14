@@ -15,6 +15,7 @@ import (
 	"github.com/rushairer/blog-backend/internal/knowledge"
 	mediaservice "github.com/rushairer/blog-backend/internal/media/service"
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	postservice "github.com/rushairer/blog-backend/internal/post/service"
 	postversionservice "github.com/rushairer/blog-backend/internal/postversion/service"
 	recommendationservice "github.com/rushairer/blog-backend/internal/recommendation/service"
@@ -101,6 +102,17 @@ func WriteValidationError(c *gin.Context, err error) {
 // WriteDomainError maps known domain and repository errors to standard HTTP status codes.
 // It logs 5xx internal server errors at Error level with full context, and 4xx client errors at Warn level.
 func WriteDomainError(c *gin.Context, err error) {
+	if errors.Is(err, postdomain.ErrRevisionConflict) || errors.Is(err, postdomain.ErrExpectedRevision) {
+		status := http.StatusConflict
+		code := "POST_REVISION_CONFLICT"
+		if errors.Is(err, postdomain.ErrExpectedRevision) {
+			status = http.StatusBadRequest
+			code = "POST_EXPECTED_REVISION_REQUIRED"
+		}
+		c.JSON(status, gin.H{"code": status, "message": err.Error(), "error_code": code})
+		c.Abort()
+		return
+	}
 	status := http.StatusInternalServerError
 	switch {
 	case errors.Is(err, sql.ErrNoRows),

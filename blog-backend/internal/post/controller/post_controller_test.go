@@ -63,7 +63,7 @@ func (s *fakeBlogService) GetAdminPostBySlug(_ context.Context, slug string) (*p
 	return nil, postservice.ErrPostNotFound
 }
 
-func (s *fakeBlogService) BatchPosts(_ context.Context, ids []int64, action string) (int64, error) {
+func (s *fakeBlogService) BatchPosts(_ context.Context, ids []int64, action string, expected map[int64]int64) (int64, error) {
 	return int64(len(ids)), nil
 }
 

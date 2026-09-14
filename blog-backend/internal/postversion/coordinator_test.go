@@ -67,7 +67,7 @@ func TestRestoreCoordinatorMapsVersionIntoPostOwnedCommand(t *testing.T) {
 	posts := &fakePostRestoreWriter{result: &postdomain.Post{ID: 3, Title: "old title"}}
 	coordinator := NewRestoreCoordinator(runner, versions, posts)
 
-	restored, err := coordinator.RestoreVersion(context.Background(), 3, 9)
+	restored, err := coordinator.RestoreVersion(context.Background(), 3, 9, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +86,7 @@ func TestRestoreCoordinatorStopsBeforePostWriteWhenSnapshotReadFails(t *testing.
 	want := errors.New("snapshot read failed")
 	posts := &fakePostRestoreWriter{}
 	coordinator := NewRestoreCoordinator(&fakeTransactionRunner{}, &fakeVersionSnapshotReader{err: want}, posts)
-	_, err := coordinator.RestoreVersion(context.Background(), 3, 9)
+	_, err := coordinator.RestoreVersion(context.Background(), 3, 9, 1)
 	if !errors.Is(err, want) || posts.called {
 		t.Fatalf("err=%v postCalled=%v", err, posts.called)
 	}

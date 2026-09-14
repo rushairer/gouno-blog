@@ -23,7 +23,7 @@ type BlogService interface {
 	GetPost(ctx context.Context, id int64) (*postdomain.Post, error)
 	GetAdminPost(ctx context.Context, id int64) (*postdomain.Post, error)
 	GetAdminPostBySlug(ctx context.Context, slug string) (*postdomain.Post, error)
-	BatchPosts(ctx context.Context, ids []int64, action string) (int64, error)
+	BatchPosts(ctx context.Context, ids []int64, action string, expected map[int64]int64) (int64, error)
 	GetPostBySlug(ctx context.Context, slug string) (*postdomain.Post, error)
 	ResolvePostID(ctx context.Context, slugOrID string) (int64, error)
 	IncrementViews(ctx context.Context, id int64) error
@@ -109,7 +109,10 @@ func (ctrl *PostController) Update(c *gin.Context) {
 		return
 	}
 
-	var req CreatePostRequest
+	var req struct {
+		CreatePostRequest
+		ExpectedRevision int64 `json:"expected_revision" binding:"required,gt=0"`
+	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		WriteValidationError(c, err)
 		return
@@ -139,6 +142,7 @@ func (ctrl *PostController) Update(c *gin.Context) {
 	}
 
 	post := &postdomain.Post{
+		Revision:             req.ExpectedRevision,
 		ID:                   id,
 		Title:                req.Title,
 		Slug:                 req.Slug,
@@ -217,14 +221,15 @@ func (ctrl *PostController) GetAdmin(c *gin.Context) {
 
 func (ctrl *PostController) Batch(c *gin.Context) {
 	var req struct {
-		IDs    []int64 `json:"ids"`
-		Action string  `json:"action"`
+		ExpectedRevisions map[int64]int64 `json:"expected_revisions"`
+		IDs               []int64         `json:"ids"`
+		Action            string          `json:"action"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, "between 1 and 100 post ids are required"))
 		return
 	}
-	affected, err := ctrl.svc.BatchPosts(c.Request.Context(), req.IDs, req.Action)
+	affected, err := ctrl.svc.BatchPosts(c.Request.Context(), req.IDs, req.Action, req.ExpectedRevisions)
 	if err != nil {
 		WriteDomainError(c, err)
 		return

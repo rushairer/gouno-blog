@@ -11,6 +11,7 @@ const (
 )
 
 type Post struct {
+	Revision             int64      `json:"revision"`
 	ID                   int64      `json:"id"`
 	Title                string     `json:"title"`
 	Slug                 string     `json:"slug"`

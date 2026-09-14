@@ -41,7 +41,7 @@ type PostRepository interface {
 	ListLowEngagementPublished(ctx context.Context, minViews int64, maxEngagementRate float64, limit int) ([]*postdomain.Post, error)
 	ListTags(ctx context.Context) ([]string, error)
 	PublishScheduled(ctx context.Context) (int64, error)
-	Batch(ctx context.Context, ids []int64, action string) (int64, error)
+	Batch(ctx context.Context, ids []int64, action string, expected map[int64]int64) (int64, error)
 }
 
 type PostService struct {
@@ -156,6 +156,9 @@ func (s *PostService) UpdatePost(ctx context.Context, post *postdomain.Post) err
 	if existing == nil {
 		return ErrPostNotFound
 	}
+	if existing.Revision != post.Revision {
+		return postdomain.ErrRevisionConflict
+	}
 	if err := s.preparePost(ctx, post, existing); err != nil {
 		return err
 	}
@@ -222,7 +225,7 @@ func (s *PostService) GetAdminPostBySlug(ctx context.Context, slug string) (*pos
 	return post, nil
 }
 
-func (s *PostService) BatchPosts(ctx context.Context, ids []int64, action string) (int64, error) {
+func (s *PostService) BatchPosts(ctx context.Context, ids []int64, action string, expected map[int64]int64) (int64, error) {
 	if len(ids) == 0 || len(ids) > 100 {
 		return 0, ErrBatchInvalidIDs
 	}
@@ -231,7 +234,17 @@ func (s *PostService) BatchPosts(ctx context.Context, ids []int64, action string
 	default:
 		return 0, ErrBatchInvalidAction
 	}
-	return s.repo.Batch(ctx, ids, action)
+	seen := map[int64]bool{}
+	for _, id := range ids {
+		if id <= 0 || seen[id] {
+			return 0, ErrBatchInvalidIDs
+		}
+		seen[id] = true
+		if action != "delete" && expected[id] <= 0 {
+			return 0, postdomain.ErrExpectedRevision
+		}
+	}
+	return s.repo.Batch(ctx, ids, action, expected)
 }
 
 func (s *PostService) GetPostBySlug(ctx context.Context, slug string) (*postdomain.Post, error) {

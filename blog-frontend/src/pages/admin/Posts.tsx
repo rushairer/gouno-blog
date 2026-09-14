@@ -205,7 +205,16 @@ export default function AdminPosts() {
   const batch = async (action: "publish" | "draft" | "delete") => {
     if (selected.length === 0) return;
     try {
-      await postsApi.batchAction(selected, action);
+      await postsApi.batchAction(
+        selected,
+        action,
+        Object.fromEntries(
+          posts
+            .filter((post) => selected.includes(post.id))
+            .map((post) => [post.id, post.revision]),
+        ),
+      );
+      load();
       if (action === "delete") {
         const count = selected.length;
         setPosts((current) =>
