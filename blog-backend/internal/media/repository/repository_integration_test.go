@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rushairer/blog-backend/internal/domain"
+	mediadomain "github.com/rushairer/blog-backend/internal/media/domain"
 	"github.com/rushairer/blog-backend/internal/testsupport"
 )
 
@@ -18,7 +18,7 @@ func TestRepositoryMediaLifecycle(t *testing.T) {
 	suffix := time.Now().UnixNano()
 
 	repo := New(db)
-	asset := &domain.MediaAsset{
+	asset := &mediadomain.MediaAsset{
 		Filename:    "ownership.png",
 		StorageName: fmt.Sprintf("ownership-%d.png", suffix),
 		URL:         fmt.Sprintf("/media/ownership-%d.png", suffix),
@@ -36,7 +36,7 @@ func TestRepositoryMediaLifecycle(t *testing.T) {
 		t.Fatalf("get media mismatch: asset=%#v err=%v", got, err)
 	}
 
-	assets, err := repo.ListMedia(ctx, domain.MediaFilter{})
+	assets, err := repo.ListMedia(ctx, mediadomain.MediaFilter{})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -14,6 +14,7 @@ import (
 
 	"github.com/rushairer/blog-backend/internal/dbtx"
 	"github.com/rushairer/blog-backend/internal/domain"
+	mediadomain "github.com/rushairer/blog-backend/internal/media/domain"
 	opsdomain "github.com/rushairer/blog-backend/internal/operations/domain"
 	postservice "github.com/rushairer/blog-backend/internal/post/service"
 	"github.com/rushairer/blog-backend/internal/tool"
@@ -90,7 +91,7 @@ func (s *Service) getMediaAsset(ctx context.Context, raw json.RawMessage) (any, 
 	if err := decode(raw, &args); err != nil || args.ID <= 0 {
 		return nil, tool.ErrInvalidArgument
 	}
-	var item domain.MediaAsset
+	var item mediadomain.MediaAsset
 	err := s.db.QueryRowContext(ctx, `SELECT id,filename,storage_name,url,content_type,size_bytes,alt_text,created_by_principal_id,created_at FROM media_assets WHERE id=$1`, args.ID).Scan(&item.ID, &item.Filename, &item.StorageName, &item.URL, &item.ContentType, &item.SizeBytes, &item.AltText, &item.CreatedByPrincipalID, &item.CreatedAt)
 	if err != nil {
 		return nil, err

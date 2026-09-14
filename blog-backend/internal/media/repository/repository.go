@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"errors"
 
-	"github.com/rushairer/blog-backend/internal/domain"
+	mediadomain "github.com/rushairer/blog-backend/internal/media/domain"
 )
 
 var ErrMediaInUse = errors.New("media asset is referenced by published or draft posts")
@@ -13,13 +13,13 @@ var ErrMediaInUse = errors.New("media asset is referenced by published or draft 
 // Repository owns persistent media-asset metadata and reference inspection.
 // Binary object storage remains the responsibility of the parent internal/media package.
 type Repository interface {
-	CreateMedia(context.Context, *domain.MediaAsset) error
-	GetMedia(context.Context, int64) (*domain.MediaAsset, error)
-	ListMedia(context.Context, domain.MediaFilter) ([]*domain.MediaAsset, error)
-	UpdateMediaAltText(context.Context, int64, string, *int64) (*domain.MediaAsset, error)
-	DeleteMedia(context.Context, int64) (*domain.MediaAsset, error)
+	CreateMedia(context.Context, *mediadomain.MediaAsset) error
+	GetMedia(context.Context, int64) (*mediadomain.MediaAsset, error)
+	ListMedia(context.Context, mediadomain.MediaFilter) ([]*mediadomain.MediaAsset, error)
+	UpdateMediaAltText(context.Context, int64, string, *int64) (*mediadomain.MediaAsset, error)
+	DeleteMedia(context.Context, int64) (*mediadomain.MediaAsset, error)
 	CountMediaReferences(context.Context, int64) (int64, error)
-	ListMediaReferences(context.Context, int64) ([]*domain.MediaReference, error)
+	ListMediaReferences(context.Context, int64) ([]*mediadomain.MediaReference, error)
 }
 
 type postgresRepository struct {
@@ -30,7 +30,7 @@ func New(db *sql.DB) Repository {
 	return &postgresRepository{db: db}
 }
 
-func (r *postgresRepository) CreateMedia(ctx context.Context, asset *domain.MediaAsset) error {
+func (r *postgresRepository) CreateMedia(ctx context.Context, asset *mediadomain.MediaAsset) error {
 	return r.db.QueryRowContext(ctx, `INSERT INTO media_assets
 		(filename, storage_name, url, content_type, size_bytes, alt_text, created_by_principal_id, updated_by_principal_id)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -38,8 +38,8 @@ func (r *postgresRepository) CreateMedia(ctx context.Context, asset *domain.Medi
 		asset.SizeBytes, asset.AltText, asset.CreatedByPrincipalID, asset.UpdatedByPrincipalID).Scan(&asset.ID, &asset.CreatedAt)
 }
 
-func (r *postgresRepository) GetMedia(ctx context.Context, id int64) (*domain.MediaAsset, error) {
-	var asset domain.MediaAsset
+func (r *postgresRepository) GetMedia(ctx context.Context, id int64) (*mediadomain.MediaAsset, error) {
+	var asset mediadomain.MediaAsset
 	err := r.db.QueryRowContext(ctx, `SELECT m.id, m.filename, m.storage_name, m.url, m.content_type,
 		m.size_bytes, m.alt_text, m.created_by_principal_id, m.updated_by_principal_id, m.created_at,
 		(SELECT COUNT(*) FROM posts p WHERE p.content LIKE '%' || m.url || '%' OR p.cover_url = m.url)
@@ -52,7 +52,7 @@ func (r *postgresRepository) GetMedia(ctx context.Context, id int64) (*domain.Me
 	return &asset, nil
 }
 
-func (r *postgresRepository) ListMedia(ctx context.Context, filter domain.MediaFilter) ([]*domain.MediaAsset, error) {
+func (r *postgresRepository) ListMedia(ctx context.Context, filter mediadomain.MediaFilter) ([]*mediadomain.MediaAsset, error) {
 	query := `SELECT m.id, m.filename, m.storage_name, m.url, m.content_type,
 		m.size_bytes, m.alt_text, m.created_by_principal_id, m.updated_by_principal_id, m.created_at,
 		(SELECT COUNT(*) FROM posts p WHERE p.content LIKE '%' || m.url || '%' OR p.cover_url = m.url)
@@ -69,9 +69,9 @@ func (r *postgresRepository) ListMedia(ctx context.Context, filter domain.MediaF
 		return nil, err
 	}
 	defer rows.Close()
-	assets := make([]*domain.MediaAsset, 0)
+	assets := make([]*mediadomain.MediaAsset, 0)
 	for rows.Next() {
-		var asset domain.MediaAsset
+		var asset mediadomain.MediaAsset
 		if err := rows.Scan(&asset.ID, &asset.Filename, &asset.StorageName, &asset.URL, &asset.ContentType,
 			&asset.SizeBytes, &asset.AltText, &asset.CreatedByPrincipalID, &asset.UpdatedByPrincipalID, &asset.CreatedAt, &asset.UsageCount); err != nil {
 			return nil, err
@@ -89,7 +89,7 @@ func (r *postgresRepository) CountMediaReferences(ctx context.Context, id int64)
 	return count, err
 }
 
-func (r *postgresRepository) ListMediaReferences(ctx context.Context, id int64) ([]*domain.MediaReference, error) {
+func (r *postgresRepository) ListMediaReferences(ctx context.Context, id int64) ([]*mediadomain.MediaReference, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT p.id, p.title, p.slug FROM posts p
 		JOIN media_assets m ON m.id=$1
 		WHERE p.content LIKE '%' || m.url || '%' OR p.cover_url = m.url
@@ -98,9 +98,9 @@ func (r *postgresRepository) ListMediaReferences(ctx context.Context, id int64) 
 		return nil, err
 	}
 	defer rows.Close()
-	items := make([]*domain.MediaReference, 0)
+	items := make([]*mediadomain.MediaReference, 0)
 	for rows.Next() {
-		var item domain.MediaReference
+		var item mediadomain.MediaReference
 		if err := rows.Scan(&item.PostID, &item.PostTitle, &item.PostSlug); err != nil {
 			return nil, err
 		}
@@ -109,14 +109,14 @@ func (r *postgresRepository) ListMediaReferences(ctx context.Context, id int64) 
 	return items, rows.Err()
 }
 
-func (r *postgresRepository) DeleteMedia(ctx context.Context, id int64) (*domain.MediaAsset, error) {
+func (r *postgresRepository) DeleteMedia(ctx context.Context, id int64) (*mediadomain.MediaAsset, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
 
-	var asset domain.MediaAsset
+	var asset mediadomain.MediaAsset
 	err = tx.QueryRowContext(ctx, `SELECT id, filename, storage_name, url, content_type, size_bytes, alt_text, created_by_principal_id, updated_by_principal_id, created_at
 		FROM media_assets WHERE id = $1 FOR UPDATE`, id).
 		Scan(&asset.ID, &asset.Filename, &asset.StorageName, &asset.URL, &asset.ContentType,
@@ -147,8 +147,8 @@ func (r *postgresRepository) DeleteMedia(ctx context.Context, id int64) (*domain
 	return &asset, nil
 }
 
-func (r *postgresRepository) UpdateMediaAltText(ctx context.Context, id int64, altText string, updatedByPrincipalID *int64) (*domain.MediaAsset, error) {
-	var asset domain.MediaAsset
+func (r *postgresRepository) UpdateMediaAltText(ctx context.Context, id int64, altText string, updatedByPrincipalID *int64) (*mediadomain.MediaAsset, error) {
+	var asset mediadomain.MediaAsset
 	err := r.db.QueryRowContext(ctx, `UPDATE media_assets
 		SET alt_text = $1, updated_by_principal_id = COALESCE($3, updated_by_principal_id)
 		WHERE id = $2

@@ -6,49 +6,49 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/rushairer/blog-backend/internal/domain"
+	mediadomain "github.com/rushairer/blog-backend/internal/media/domain"
 	mediarepository "github.com/rushairer/blog-backend/internal/media/repository"
 )
 
 type stubRepository struct {
-	created    *domain.MediaAsset
+	created    *mediadomain.MediaAsset
 	createErr  error
-	got        *domain.MediaAsset
+	got        *mediadomain.MediaAsset
 	getErr     error
-	listed     []*domain.MediaAsset
+	listed     []*mediadomain.MediaAsset
 	listErr    error
-	updated    *domain.MediaAsset
+	updated    *mediadomain.MediaAsset
 	updateErr  error
 	updatedAlt string
 	updatedBy  *int64
-	deleted    *domain.MediaAsset
+	deleted    *mediadomain.MediaAsset
 	deleteErr  error
 	count      int64
 	countErr   error
-	refs       []*domain.MediaReference
+	refs       []*mediadomain.MediaReference
 	refsErr    error
 }
 
-func (r *stubRepository) CreateMedia(_ context.Context, asset *domain.MediaAsset) error {
+func (r *stubRepository) CreateMedia(_ context.Context, asset *mediadomain.MediaAsset) error {
 	r.created = asset
 	return r.createErr
 }
 
-func (r *stubRepository) GetMedia(_ context.Context, _ int64) (*domain.MediaAsset, error) {
+func (r *stubRepository) GetMedia(_ context.Context, _ int64) (*mediadomain.MediaAsset, error) {
 	return r.got, r.getErr
 }
 
-func (r *stubRepository) ListMedia(_ context.Context, _ domain.MediaFilter) ([]*domain.MediaAsset, error) {
+func (r *stubRepository) ListMedia(_ context.Context, _ mediadomain.MediaFilter) ([]*mediadomain.MediaAsset, error) {
 	return r.listed, r.listErr
 }
 
-func (r *stubRepository) UpdateMediaAltText(_ context.Context, _ int64, altText string, updatedByPrincipalID *int64) (*domain.MediaAsset, error) {
+func (r *stubRepository) UpdateMediaAltText(_ context.Context, _ int64, altText string, updatedByPrincipalID *int64) (*mediadomain.MediaAsset, error) {
 	r.updatedAlt = altText
 	r.updatedBy = updatedByPrincipalID
 	return r.updated, r.updateErr
 }
 
-func (r *stubRepository) DeleteMedia(_ context.Context, _ int64) (*domain.MediaAsset, error) {
+func (r *stubRepository) DeleteMedia(_ context.Context, _ int64) (*mediadomain.MediaAsset, error) {
 	return r.deleted, r.deleteErr
 }
 
@@ -56,7 +56,7 @@ func (r *stubRepository) CountMediaReferences(_ context.Context, _ int64) (int64
 	return r.count, r.countErr
 }
 
-func (r *stubRepository) ListMediaReferences(_ context.Context, _ int64) ([]*domain.MediaReference, error) {
+func (r *stubRepository) ListMediaReferences(_ context.Context, _ int64) ([]*mediadomain.MediaReference, error) {
 	return r.refs, r.refsErr
 }
 
@@ -65,7 +65,7 @@ func TestServiceValidatesMediaInput(t *testing.T) {
 	svc := New(repo)
 	ctx := context.Background()
 
-	for _, asset := range []*domain.MediaAsset{
+	for _, asset := range []*mediadomain.MediaAsset{
 		nil,
 		{Filename: " ", StorageName: "asset.png"},
 		{Filename: "asset.png", StorageName: " "},
@@ -75,7 +75,7 @@ func TestServiceValidatesMediaInput(t *testing.T) {
 		}
 	}
 
-	valid := &domain.MediaAsset{Filename: "asset.png", StorageName: "stored.png"}
+	valid := &mediadomain.MediaAsset{Filename: "asset.png", StorageName: "stored.png"}
 	if err := svc.CreateMedia(ctx, valid); err != nil {
 		t.Fatalf("CreateMedia(valid) error=%v", err)
 	}
@@ -134,7 +134,7 @@ func TestServiceMapsNotFoundAndTrimsAltText(t *testing.T) {
 	}
 
 	principalID := int64(42)
-	repo := &stubRepository{updated: &domain.MediaAsset{ID: 7}}
+	repo := &stubRepository{updated: &mediadomain.MediaAsset{ID: 7}}
 	updated, err := New(repo).UpdateMedia(ctx, 7, "  descriptive alt  ", &principalID)
 	if err != nil || updated == nil || updated.ID != 7 {
 		t.Fatalf("UpdateMedia result=%#v err=%v", updated, err)
@@ -149,12 +149,12 @@ func TestServiceMapsNotFoundAndTrimsAltText(t *testing.T) {
 
 func TestServiceDelegatesCollectionsAndReferences(t *testing.T) {
 	ctx := context.Background()
-	assets := []*domain.MediaAsset{{ID: 1}, {ID: 2}}
-	refs := []*domain.MediaReference{{PostID: 9, PostTitle: "Referenced", PostSlug: "referenced"}}
+	assets := []*mediadomain.MediaAsset{{ID: 1}, {ID: 2}}
+	refs := []*mediadomain.MediaReference{{PostID: 9, PostTitle: "Referenced", PostSlug: "referenced"}}
 	repo := &stubRepository{listed: assets, count: 1, refs: refs}
 	svc := New(repo)
 
-	listed, err := svc.ListMedia(ctx, domain.MediaFilter{})
+	listed, err := svc.ListMedia(ctx, mediadomain.MediaFilter{})
 	if err != nil || len(listed) != 2 || listed[1].ID != 2 {
 		t.Fatalf("ListMedia=%#v err=%v", listed, err)
 	}

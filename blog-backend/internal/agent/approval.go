@@ -12,6 +12,7 @@ import (
 
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/media"
+	mediadomain "github.com/rushairer/blog-backend/internal/media/domain"
 	opsdomain "github.com/rushairer/blog-backend/internal/operations/domain"
 	pagedomain "github.com/rushairer/blog-backend/internal/page/domain"
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
@@ -24,9 +25,9 @@ var (
 )
 
 type mediaAssetGateway interface {
-	ListMedia(context.Context, domain.MediaFilter) ([]*domain.MediaAsset, error)
-	CreateMedia(context.Context, *domain.MediaAsset) error
-	DeleteMedia(context.Context, int64) (*domain.MediaAsset, error)
+	ListMedia(context.Context, mediadomain.MediaFilter) ([]*mediadomain.MediaAsset, error)
+	CreateMedia(context.Context, *mediadomain.MediaAsset) error
+	DeleteMedia(context.Context, int64) (*mediadomain.MediaAsset, error)
 }
 
 type postVersionReader interface {
@@ -204,11 +205,11 @@ func (s *ApprovalService) ApplyMediaCandidate(ctx context.Context, id int64) (*d
 	if err != nil || post == nil {
 		return nil, postservice.ErrPostNotFound
 	}
-	assets, err := s.mediaAssets.ListMedia(ctx, domain.MediaFilter{})
+	assets, err := s.mediaAssets.ListMedia(ctx, mediadomain.MediaFilter{})
 	if err != nil {
 		return nil, err
 	}
-	var asset *domain.MediaAsset
+	var asset *mediadomain.MediaAsset
 	for _, item := range assets {
 		if item.ID == *candidate.MediaAssetID {
 			asset = item
@@ -288,11 +289,11 @@ func (s *ApprovalService) ApplyMediaCandidates(ctx context.Context, runID int64,
 	if err != nil || post == nil {
 		return nil, postservice.ErrPostNotFound
 	}
-	assets, err := s.mediaAssets.ListMedia(ctx, domain.MediaFilter{})
+	assets, err := s.mediaAssets.ListMedia(ctx, mediadomain.MediaFilter{})
 	if err != nil {
 		return nil, err
 	}
-	assetByID := make(map[int64]*domain.MediaAsset, len(assets))
+	assetByID := make(map[int64]*mediadomain.MediaAsset, len(assets))
 	for _, asset := range assets {
 		assetByID[asset.ID] = asset
 	}
@@ -345,11 +346,11 @@ func (s *ApprovalService) PreviewMediaCandidate(ctx context.Context, id int64) (
 	if err != nil {
 		return nil, err
 	}
-	assets, err := s.mediaAssets.ListMedia(ctx, domain.MediaFilter{})
+	assets, err := s.mediaAssets.ListMedia(ctx, mediadomain.MediaFilter{})
 	if err != nil {
 		return nil, err
 	}
-	var asset *domain.MediaAsset
+	var asset *mediadomain.MediaAsset
 	for _, item := range assets {
 		if item.ID == *candidate.MediaAssetID {
 			asset = item
@@ -489,7 +490,7 @@ func (s *ApprovalService) GenerateMediaCandidate(ctx context.Context, id int64, 
 	return nil
 }
 
-func (s *ApprovalService) GenerateDirectImage(ctx context.Context, prompt, altText string, creatorPrincipalID int64) (*domain.MediaAsset, error) {
+func (s *ApprovalService) GenerateDirectImage(ctx context.Context, prompt, altText string, creatorPrincipalID int64) (*mediadomain.MediaAsset, error) {
 	if s.generation == nil {
 		return nil, ErrInvalid
 	}

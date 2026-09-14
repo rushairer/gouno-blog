@@ -11,8 +11,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/access"
 	"github.com/rushairer/blog-backend/internal/controllerutil"
-	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/media"
+	mediadomain "github.com/rushairer/blog-backend/internal/media/domain"
 	mediaservice "github.com/rushairer/blog-backend/internal/media/service"
 	"github.com/rushairer/blog-backend/middleware"
 	"github.com/rushairer/gouno"
@@ -43,7 +43,7 @@ func New(service mediaservice.Service, store media.Store) *Controller {
 }
 
 func (ctrl *Controller) List(c *gin.Context) {
-	filter := domain.MediaFilter{}
+	filter := mediadomain.MediaFilter{}
 	if snapshot, ok := middleware.CurrentBlogAccess(c); ok {
 		ctrl.policy.ScopeMedia(&snapshot, &filter)
 	}
@@ -89,7 +89,7 @@ func (ctrl *Controller) Upload(c *gin.Context) {
 		controllerutil.WriteDomainError(c, err)
 		return
 	}
-	asset := &domain.MediaAsset{
+	asset := &mediadomain.MediaAsset{
 		Filename: header.Filename, StorageName: storageName, URL: ctrl.store.URL(storageName),
 		ContentType: contentType, SizeBytes: header.Size, AltText: strings.TrimSpace(c.PostForm("alt_text")),
 	}
