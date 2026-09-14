@@ -1,0 +1,129 @@
+name: Provider domain ownership staging
+
+on:
+  push:
+    branches:
+      - refactor/provider-domain-models
+
+permissions:
+  contents: write
+
+jobs:
+  migrate-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: blog-backend/go.mod
+          cache-dependency-path: blog-backend/go.sum
+
+      - name: Apply Provider domain migration
+        run: python3 .github/scripts/provider_domain_models.py
+
+      - name: Format changed Go files
+        run: |
+          git diff --name-only --diff-filter=ACM -- 'blog-backend/**/*.go' | xargs -r gofmt -w
+
+      - name: Full backend tests
+        working-directory: blog-backend
+        run: go test ./...
+
+      - name: Full backend vet
+        working-directory: blog-backend
+        run: go vet ./...
+
+      - name: Ownership and semantic guards
+        run: |
+          test -e blog-backend/internal/provider/domain/model.go
+          test -e blog-backend/internal/provider/domain/ownership_test.go
+          (
+            cd blog-backend
+            go test ./internal/provider/domain -run TestRootProviderModelsStayRetired -count=1
+          )
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import subprocess
+
+          base = 'a4342310ee2545ba5c660a4efb861d00785381e4'
+          root_import = 'github.com/rushairer/blog-backend/internal/domain'
+          agent_path = 'blog-backend/internal/domain/agent.go'
+          new_model = 'blog-backend/internal/provider/domain/model.go'
+          new_guard = 'blog-backend/internal/provider/domain/ownership_test.go'
+
+          before_agent = subprocess.check_output(['git', 'show', f'{base}:{agent_path}'], text=True)
+          after_agent = Path(agent_path).read_text()
+          start = before_agent.index('type ProviderType string\n')
+          end = before_agent.index('type EmbeddingProfile struct {')
+          extracted = before_agent[start:end].rstrip() + '\n'
+          model = Path(new_model).read_text()
+          model_segment = model[model.index('type ProviderType string\n'):]
+          if model_segment != extracted:
+              raise SystemExit('Provider leaf model does not exactly preserve extracted Provider contract')
+
+          normalized_agent = after_agent.replace('providerdomain.ProviderProfile', 'ProviderProfile').replace('providerdomain.ProviderType', 'ProviderType')
+          normalized_agent = normalized_agent.replace('type EmbeddingProfile struct {', extracted + '\ntype EmbeddingProfile struct {', 1)
+
+          def without_imports(text: str) -> str:
+              text = re.sub(r'(?s)\n?import\s*\(.*?\)\s*', '\n', text, count=1)
+              text = re.sub(r'(?m)^import\s+(?:(?:[A-Za-z_][A-Za-z0-9_]*)\s+)?"[^"]+"\s*$', '', text)
+              return text
+
+          def compact(text: str) -> str:
+              return re.sub(r'\s+', '', text)
+
+          if compact(without_imports(normalized_agent)) != compact(without_imports(before_agent)):
+              raise SystemExit('root agent.go changed beyond Provider extraction/type qualification')
+
+          changed = subprocess.check_output(
+              ['git', 'diff', '--name-only', '--diff-filter=ACM', base, '--', 'blog-backend'], text=True
+          ).splitlines()
+          skip = {agent_path, new_model, new_guard}
+
+          def baseline_alias(text: str):
+              match = re.search(
+                  r'(?m)^\s*(?:(?P<alias>[A-Za-z_][A-Za-z0-9_]*)\s+)?"' + re.escape(root_import) + r'"\s*$', text
+              ) or re.search(
+                  r'(?m)^import\s+(?:(?P<alias>[A-Za-z_][A-Za-z0-9_]*)\s+)?"' + re.escape(root_import) + r'"\s*$', text
+              )
+              if not match:
+                  return None
+              return match.groupdict().get('alias') or 'domain'
+
+          for path in changed:
+              if not path.endswith('.go') or path in skip:
+                  continue
+              try:
+                  before = subprocess.check_output(['git', 'show', f'{base}:{path}'], text=True)
+              except subprocess.CalledProcessError:
+                  raise SystemExit(f'unexpected new Go file outside Provider domain: {path}')
+              alias = baseline_alias(before)
+              if alias is None:
+                  raise SystemExit(f'changed Go file had no root-domain import in baseline: {path}')
+              after = Path(path).read_text()
+              normalized = after.replace('providerdomain.', alias + '.')
+              if compact(without_imports(normalized)) != compact(without_imports(before)):
+                  raise SystemExit(f'{path} changed beyond Provider type owner/import migration')
+          PY
+          git diff --exit-code a4342310ee2545ba5c660a4efb861d00785381e4 -- \
+            blog-backend/internal/authbff \
+            blog-backend/internal/connector \
+            blog-backend/internal/access \
+            blog-backend/middleware
+          git diff --check
+
+      - name: Commit validated source and self-clean
+        run: |
+          rm -f .github/scripts/provider_domain_models.py
+          rm -f .github/workflows/provider-domain-models-staging.yml
+          git config user.name 'Aben'
+          git config user.email '5195693+rushairer@users.noreply.github.com'
+          git add -A
+          git commit -m 'refactor(provider): own capability domain models'
+          git push origin HEAD:refactor/provider-domain-models
