@@ -11,6 +11,7 @@ import (
 	communitydomain "github.com/rushairer/blog-backend/internal/community/domain"
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/knowledge"
+	pagedomain "github.com/rushairer/blog-backend/internal/page/domain"
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
 	postservice "github.com/rushairer/blog-backend/internal/post/service"
 )
@@ -490,11 +491,11 @@ func (t *BlogTools) listPages(ctx context.Context, raw json.RawMessage) (any, er
 	if args.PageSize > 100 {
 		return nil, ErrInvalidArgument
 	}
-	pages, total, err := t.pages.ListAdminPages(ctx, domain.AdminPageFilter{}, args.Page, args.PageSize)
+	pages, total, err := t.pages.ListAdminPages(ctx, pagedomain.AdminPageFilter{}, args.Page, args.PageSize)
 	return map[string]any{"list": compactPages(pages), "total": total}, err
 }
 
-func compactPages(pages []*domain.Page) []map[string]any {
+func compactPages(pages []*pagedomain.Page) []map[string]any {
 	result := make([]map[string]any, 0, len(pages))
 	for _, page := range pages {
 		result = append(result, map[string]any{

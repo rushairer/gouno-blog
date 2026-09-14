@@ -12,6 +12,7 @@ import (
 
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/media"
+	pagedomain "github.com/rushairer/blog-backend/internal/page/domain"
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
 	postservice "github.com/rushairer/blog-backend/internal/post/service"
 )
@@ -593,7 +594,7 @@ func (s *ApprovalService) validateConflict(ctx context.Context, approval *domain
 		if s.pages == nil || approval.TargetType != "page" || approval.TargetID == nil || len(approval.BeforeSnapshot) == 0 {
 			return nil
 		}
-		var before domain.Page
+		var before pagedomain.Page
 		if err := json.Unmarshal(approval.BeforeSnapshot, &before); err != nil {
 			return ErrApprovalConflict
 		}
@@ -706,9 +707,9 @@ func (s *ApprovalService) execute(ctx context.Context, approval *domain.AgentApp
 		if template == "" {
 			template = "default"
 		}
-		return s.pages.CreatePage(ctx, &domain.Page{
+		return s.pages.CreatePage(ctx, &pagedomain.Page{
 			Title: payload.Title, Slug: payload.Slug, Summary: payload.Summary,
-			Content: payload.Content, Template: template, Status: domain.PageStatusDraft,
+			Content: payload.Content, Template: template, Status: pagedomain.PageStatusDraft,
 			ShowInNav: payload.ShowInNav, AllowComments: payload.AllowComments,
 			SortOrder: payload.SortOrder, SEOTitle: payload.SEOTitle, SEODescription: payload.SEODescription,
 		})
@@ -755,7 +756,7 @@ func (s *ApprovalService) execute(ctx context.Context, approval *domain.AgentApp
 			current.Template = *payload.Template
 		}
 		if payload.Status != nil {
-			current.Status = domain.PageStatus(*payload.Status)
+			current.Status = pagedomain.PageStatus(*payload.Status)
 		}
 		if payload.ShowInNav != nil {
 			current.ShowInNav = *payload.ShowInNav
