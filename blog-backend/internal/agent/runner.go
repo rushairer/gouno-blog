@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
+	tooldomain "github.com/rushairer/blog-backend/internal/tool/domain"
 	"io"
 	"net/url"
 	"regexp"
@@ -351,7 +352,7 @@ func (r *Runner) execute(ctx context.Context, runID int64, dryRun bool) error {
 			}
 			call.RiskLevel = risk
 			if call.RiskLevel == "" {
-				call.RiskLevel = domain.ToolRiskRead
+				call.RiskLevel = tooldomain.ToolRiskRead
 			}
 			if err := r.runs.CreateToolCall(ctx, call); err != nil {
 				return err
@@ -531,7 +532,7 @@ func appendRSSSourceLinks(arguments json.RawMessage, links []rssSourceLink) (jso
 	return json.Marshal(payload)
 }
 
-func (r *Runner) authorizeScopedTool(ctx context.Context, run *domain.AgentRun, name string, arguments json.RawMessage, risk domain.ToolRiskLevel) error {
+func (r *Runner) authorizeScopedTool(ctx context.Context, run *domain.AgentRun, name string, arguments json.RawMessage, risk tooldomain.ToolRiskLevel) error {
 	if run.WorkflowRunID == nil || run.WorkflowVersionID == nil {
 		return nil
 	}
@@ -544,19 +545,19 @@ func (r *Runner) authorizeScopedTool(ctx context.Context, run *domain.AgentRun, 
 	}
 	rule, ok := r.tools.Scope(name)
 	if !ok || rule == nil {
-		if risk != domain.ToolRiskRead {
+		if risk != tooldomain.ToolRiskRead {
 			return fmt.Errorf("%w: %s has no resource scope in a strict workflow run", tool.ErrUnauthorized, name)
 		}
 		return nil
 	}
 	if rule.AllowsCreate {
-		if risk != domain.ToolRiskPropose {
+		if risk != tooldomain.ToolRiskPropose {
 			return fmt.Errorf("%w: %s cannot create resources at this risk level", tool.ErrUnauthorized, name)
 		}
 		return nil
 	}
 	if rule.ResourceType == "" || rule.Argument == "" {
-		if risk != domain.ToolRiskRead {
+		if risk != tooldomain.ToolRiskRead {
 			return fmt.Errorf("%w: %s cannot modify resources without a scoped target", tool.ErrUnauthorized, name)
 		}
 		return nil
@@ -580,7 +581,7 @@ func (r *Runner) authorizeScopedTool(ctx context.Context, run *domain.AgentRun, 
 	if !exists {
 		return fmt.Errorf("%w: %s %s is outside this workflow run scope", tool.ErrUnauthorized, rule.ResourceType, key)
 	}
-	if risk == domain.ToolRiskPropose && access != "target" {
+	if risk == tooldomain.ToolRiskPropose && access != "target" {
 		return fmt.Errorf("%w: discovered %s %s is read-only", tool.ErrUnauthorized, rule.ResourceType, key)
 	}
 	return nil
@@ -718,7 +719,7 @@ func (r *Runner) recordDiscoveredResources(ctx context.Context, run *domain.Agen
 	return walk(value)
 }
 
-func (r *Runner) invokeTool(ctx context.Context, run *domain.AgentRun, skill *domain.AgentSkill, name string, arguments json.RawMessage) (domain.ToolRiskLevel, json.RawMessage, *tool.Proposal, error) {
+func (r *Runner) invokeTool(ctx context.Context, run *domain.AgentRun, skill *domain.AgentSkill, name string, arguments json.RawMessage) (tooldomain.ToolRiskLevel, json.RawMessage, *tool.Proposal, error) {
 	if name == "media.create_image_task" {
 		return r.createImageTask(ctx, run, skill, arguments)
 	}
@@ -726,21 +727,21 @@ func (r *Runner) invokeTool(ctx context.Context, run *domain.AgentRun, skill *do
 		return r.tools.Invoke(ctx, skill.Capabilities, name, arguments)
 	}
 	if !slices.Contains(skill.Capabilities, name) || r.posts == nil {
-		return domain.ToolRiskWrite, nil, nil, tool.ErrUnauthorized
+		return tooldomain.ToolRiskWrite, nil, nil, tool.ErrUnauthorized
 	}
 	var payload createPostArguments
 	decoder := json.NewDecoder(bytes.NewReader(arguments))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&payload); err != nil || decoder.Decode(&struct{}{}) != io.EOF || strings.TrimSpace(payload.Title) == "" || strings.TrimSpace(payload.Content) == "" {
-		return domain.ToolRiskWrite, nil, nil, tool.ErrInvalidArgument
+		return tooldomain.ToolRiskWrite, nil, nil, tool.ErrInvalidArgument
 	}
 	payload.Title, payload.Slug, payload.Summary, payload.Content = strings.TrimSpace(payload.Title), strings.TrimSpace(payload.Slug), strings.TrimSpace(payload.Summary), strings.TrimSpace(payload.Content)
 	if len([]rune(payload.Title)) > 500 || len([]rune(payload.Slug)) > 500 || len([]rune(payload.Summary)) > 5000 || len([]rune(payload.Content)) > 200000 || len(payload.Tags) > 30 {
-		return domain.ToolRiskWrite, nil, nil, tool.ErrInvalidArgument
+		return tooldomain.ToolRiskWrite, nil, nil, tool.ErrInvalidArgument
 	}
 	if skill.ContentPublishMode == domain.ContentPublishApproval {
 		raw, _ := json.Marshal(payload)
-		return domain.ToolRiskWrite, json.RawMessage(`{"status":"awaiting_approval"}`), &tool.Proposal{ActionType: "create_draft", TargetType: "post", Payload: raw}, nil
+		return tooldomain.ToolRiskWrite, json.RawMessage(`{"status":"awaiting_approval"}`), &tool.Proposal{ActionType: "create_draft", TargetType: "post", Payload: raw}, nil
 	}
 	status := postdomain.PostStatusDraft
 	if skill.ContentPublishMode == domain.ContentPublishPublish {
@@ -748,15 +749,15 @@ func (r *Runner) invokeTool(ctx context.Context, run *domain.AgentRun, skill *do
 	}
 	post := &postdomain.Post{Title: payload.Title, Slug: payload.Slug, Summary: payload.Summary, Content: payload.Content, Tags: payload.Tags, Status: status}
 	if err := r.posts.CreatePost(ctx, post); err != nil {
-		return domain.ToolRiskWrite, nil, nil, err
+		return tooldomain.ToolRiskWrite, nil, nil, err
 	}
 	raw, _ := json.Marshal(map[string]any{"status": status, "post_id": post.ID})
-	return domain.ToolRiskWrite, raw, nil, nil
+	return tooldomain.ToolRiskWrite, raw, nil, nil
 }
 
-func (r *Runner) createImageTask(ctx context.Context, run *domain.AgentRun, skill *domain.AgentSkill, arguments json.RawMessage) (domain.ToolRiskLevel, json.RawMessage, *tool.Proposal, error) {
+func (r *Runner) createImageTask(ctx context.Context, run *domain.AgentRun, skill *domain.AgentSkill, arguments json.RawMessage) (tooldomain.ToolRiskLevel, json.RawMessage, *tool.Proposal, error) {
 	if run == nil || !slices.Contains(skill.Capabilities, "media.create_image_task") {
-		return domain.ToolRiskWrite, nil, nil, tool.ErrUnauthorized
+		return tooldomain.ToolRiskWrite, nil, nil, tool.ErrUnauthorized
 	}
 	var payload struct {
 		PostID   int64  `json:"post_id"`
@@ -769,25 +770,25 @@ func (r *Runner) createImageTask(ctx context.Context, run *domain.AgentRun, skil
 	decoder := json.NewDecoder(bytes.NewReader(arguments))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&payload); err != nil || decoder.Decode(&struct{}{}) != io.EOF {
-		return domain.ToolRiskWrite, nil, nil, tool.ErrInvalidArgument
+		return tooldomain.ToolRiskWrite, nil, nil, tool.ErrInvalidArgument
 	}
 	payload.Headline = strings.TrimSpace(payload.Headline)
 	payload.Body = strings.TrimSpace(payload.Body)
 	payload.Platform = strings.TrimSpace(payload.Platform)
 	payload.AltText = strings.TrimSpace(payload.AltText)
 	if payload.PostID <= 0 || payload.Format != "image_brief" || payload.Body == "" || len([]rune(payload.Headline)) > 500 || len([]rune(payload.Body)) > 12000 || len([]rune(payload.Platform)) > 100 || len([]rune(payload.AltText)) > 500 {
-		return domain.ToolRiskWrite, nil, nil, tool.ErrInvalidArgument
+		return tooldomain.ToolRiskWrite, nil, nil, tool.ErrInvalidArgument
 	}
 	candidateID, workflowRunID, err := r.mediaCandidates.CreateMediaCandidateFromRun(ctx, run.ID, payload.PostID, payload.Headline, payload.Body, payload.Platform, payload.AltText)
 	if err != nil {
-		return domain.ToolRiskWrite, nil, nil, err
+		return tooldomain.ToolRiskWrite, nil, nil, err
 	}
 	result := map[string]any{"status": "brief_ready", "candidate_id": candidateID}
 	if workflowRunID != nil {
 		result["workflow_run_id"] = *workflowRunID
 	}
 	raw, _ := json.Marshal(result)
-	return domain.ToolRiskWrite, raw, nil, nil
+	return tooldomain.ToolRiskWrite, raw, nil, nil
 }
 
 func collectCitations(raw json.RawMessage, ledger map[string]domain.AgentCitation) {

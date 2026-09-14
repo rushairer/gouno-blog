@@ -3,6 +3,7 @@ package domain
 import (
 	"encoding/json"
 	providerdomain "github.com/rushairer/blog-backend/internal/provider/domain"
+	tooldomain "github.com/rushairer/blog-backend/internal/tool/domain"
 	"time"
 )
 
@@ -135,14 +136,6 @@ type AgentRun struct {
 	WorkflowRunID          *int64                      `json:"workflow_run_id,omitempty"`
 }
 
-type ToolRiskLevel string
-
-const (
-	ToolRiskRead    ToolRiskLevel = "read"
-	ToolRiskPropose ToolRiskLevel = "propose"
-	ToolRiskWrite   ToolRiskLevel = "write"
-)
-
 type ToolCallStatus string
 
 const (
@@ -153,18 +146,18 @@ const (
 )
 
 type AgentToolCall struct {
-	ID             int64           `json:"id"`
-	RunID          int64           `json:"run_id"`
-	ProviderCallID *string         `json:"provider_call_id,omitempty"`
-	ToolName       string          `json:"tool_name"`
-	RiskLevel      ToolRiskLevel   `json:"risk_level"`
-	Arguments      json.RawMessage `json:"arguments"`
-	Result         json.RawMessage `json:"result,omitempty"`
-	Status         ToolCallStatus  `json:"status"`
-	ErrorMessage   *string         `json:"error_message,omitempty"`
-	StartedAt      *time.Time      `json:"started_at,omitempty"`
-	FinishedAt     *time.Time      `json:"finished_at,omitempty"`
-	CreatedAt      time.Time       `json:"created_at"`
+	ID             int64                    `json:"id"`
+	RunID          int64                    `json:"run_id"`
+	ProviderCallID *string                  `json:"provider_call_id,omitempty"`
+	ToolName       string                   `json:"tool_name"`
+	RiskLevel      tooldomain.ToolRiskLevel `json:"risk_level"`
+	Arguments      json.RawMessage          `json:"arguments"`
+	Result         json.RawMessage          `json:"result,omitempty"`
+	Status         ToolCallStatus           `json:"status"`
+	ErrorMessage   *string                  `json:"error_message,omitempty"`
+	StartedAt      *time.Time               `json:"started_at,omitempty"`
+	FinishedAt     *time.Time               `json:"finished_at,omitempty"`
+	CreatedAt      time.Time                `json:"created_at"`
 }
 
 type ApprovalStatus string

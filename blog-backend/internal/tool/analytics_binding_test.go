@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	tooldomain "github.com/rushairer/blog-backend/internal/tool/domain"
 	"testing"
 
 	analyticsdomain "github.com/rushairer/blog-backend/internal/analytics/domain"
-	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 type analyticsBindingStub struct {
@@ -24,7 +24,7 @@ func TestBindAnalyticsUsesCanonicalSummaryReader(t *testing.T) {
 	legacyCalled := false
 	registry := New(Definition{
 		Name: "analytics.get_summary",
-		Risk: domain.ToolRiskRead,
+		Risk: tooldomain.ToolRiskRead,
 		Execute: func(context.Context, json.RawMessage) (any, error) {
 			legacyCalled = true
 			return nil, nil

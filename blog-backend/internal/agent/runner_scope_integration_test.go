@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/rushairer/blog-backend/internal/testsupport"
+	tooldomain "github.com/rushairer/blog-backend/internal/tool/domain"
 	"os"
 	"strings"
 	"testing"
@@ -50,26 +51,26 @@ func TestStrictWorkflowRunScope(t *testing.T) {
 	runner := &Runner{
 		workflowScopes: workflowrepository.NewScopeRepository(db),
 		tools: tool.New(
-			tool.Definition{Name: "content.get_post", Risk: domain.ToolRiskRead, Scope: &tool.ScopeRule{ResourceType: "post", Argument: "id"}},
-			tool.Definition{Name: "content.propose_update", Risk: domain.ToolRiskPropose, Scope: &tool.ScopeRule{ResourceType: "post", Argument: "id"}},
-			tool.Definition{Name: "content.propose_draft", Risk: domain.ToolRiskPropose, Scope: &tool.ScopeRule{AllowsCreate: true}},
-			tool.Definition{Name: "content.create_post", Risk: domain.ToolRiskWrite},
-			tool.Definition{Name: "content.search_knowledge", Risk: domain.ToolRiskRead, Scope: &tool.ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"post_id"}}},
-			tool.Definition{Name: "content.search_posts", Risk: domain.ToolRiskRead, Scope: &tool.ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"id"}}},
+			tool.Definition{Name: "content.get_post", Risk: tooldomain.ToolRiskRead, Scope: &tool.ScopeRule{ResourceType: "post", Argument: "id"}},
+			tool.Definition{Name: "content.propose_update", Risk: tooldomain.ToolRiskPropose, Scope: &tool.ScopeRule{ResourceType: "post", Argument: "id"}},
+			tool.Definition{Name: "content.propose_draft", Risk: tooldomain.ToolRiskPropose, Scope: &tool.ScopeRule{AllowsCreate: true}},
+			tool.Definition{Name: "content.create_post", Risk: tooldomain.ToolRiskWrite},
+			tool.Definition{Name: "content.search_knowledge", Risk: tooldomain.ToolRiskRead, Scope: &tool.ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"post_id"}}},
+			tool.Definition{Name: "content.search_posts", Risk: tooldomain.ToolRiskRead, Scope: &tool.ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"id"}}},
 		),
 	}
 	run := &domain.AgentRun{WorkflowRunID: &runID, WorkflowVersionID: &versionID}
 
-	if err := runner.authorizeScopedTool(ctx, run, "content.get_post", json.RawMessage(`{"id":101}`), domain.ToolRiskRead); err != nil {
+	if err := runner.authorizeScopedTool(ctx, run, "content.get_post", json.RawMessage(`{"id":101}`), tooldomain.ToolRiskRead); err != nil {
 		t.Fatalf("selected target read should be allowed: %v", err)
 	}
-	if err := runner.authorizeScopedTool(ctx, run, "content.propose_update", json.RawMessage(`{"id":101}`), domain.ToolRiskPropose); err != nil {
+	if err := runner.authorizeScopedTool(ctx, run, "content.propose_update", json.RawMessage(`{"id":101}`), tooldomain.ToolRiskPropose); err != nil {
 		t.Fatalf("selected target proposal should be allowed: %v", err)
 	}
-	if err := runner.authorizeScopedTool(ctx, run, "content.propose_draft", json.RawMessage(`{"title":"New draft"}`), domain.ToolRiskPropose); err != nil {
+	if err := runner.authorizeScopedTool(ctx, run, "content.propose_draft", json.RawMessage(`{"title":"New draft"}`), tooldomain.ToolRiskPropose); err != nil {
 		t.Fatalf("explicitly scoped draft creation should be allowed: %v", err)
 	}
-	if err := runner.authorizeScopedTool(ctx, run, "content.get_post", json.RawMessage(`{"id":202}`), domain.ToolRiskRead); !errors.Is(err, tool.ErrUnauthorized) || !strings.Contains(err.Error(), "outside this workflow run scope") {
+	if err := runner.authorizeScopedTool(ctx, run, "content.get_post", json.RawMessage(`{"id":202}`), tooldomain.ToolRiskRead); !errors.Is(err, tool.ErrUnauthorized) || !strings.Contains(err.Error(), "outside this workflow run scope") {
 		t.Fatalf("out-of-scope read error = %v", err)
 	}
 
@@ -81,13 +82,13 @@ func TestStrictWorkflowRunScope(t *testing.T) {
 	if err != nil || !exists || access != "read" {
 		t.Fatalf("discovered resource access = %q, %t, %v", access, exists, err)
 	}
-	if err := runner.authorizeScopedTool(ctx, run, "content.get_post", json.RawMessage(`{"id":303}`), domain.ToolRiskRead); err != nil {
+	if err := runner.authorizeScopedTool(ctx, run, "content.get_post", json.RawMessage(`{"id":303}`), tooldomain.ToolRiskRead); err != nil {
 		t.Fatalf("discovered resource read should be allowed: %v", err)
 	}
-	if err := runner.authorizeScopedTool(ctx, run, "content.propose_update", json.RawMessage(`{"id":303}`), domain.ToolRiskPropose); !errors.Is(err, tool.ErrUnauthorized) || !strings.Contains(err.Error(), "read-only") {
+	if err := runner.authorizeScopedTool(ctx, run, "content.propose_update", json.RawMessage(`{"id":303}`), tooldomain.ToolRiskPropose); !errors.Is(err, tool.ErrUnauthorized) || !strings.Contains(err.Error(), "read-only") {
 		t.Fatalf("discovered resource proposal error = %v", err)
 	}
-	if err := runner.authorizeScopedTool(ctx, run, "content.create_post", json.RawMessage(`{"title":"outside scope"}`), domain.ToolRiskWrite); !errors.Is(err, tool.ErrUnauthorized) || !strings.Contains(err.Error(), "no resource scope") {
+	if err := runner.authorizeScopedTool(ctx, run, "content.create_post", json.RawMessage(`{"title":"outside scope"}`), tooldomain.ToolRiskWrite); !errors.Is(err, tool.ErrUnauthorized) || !strings.Contains(err.Error(), "no resource scope") {
 		t.Fatalf("unscoped write error = %v", err)
 	}
 
