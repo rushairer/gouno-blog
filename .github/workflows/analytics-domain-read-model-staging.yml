@@ -1,0 +1,74 @@
+name: Analytics read-model ownership staging
+
+on:
+  push:
+    branches:
+      - refactor/analytics-domain-read-model
+
+permissions:
+  contents: write
+
+jobs:
+  migrate-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: blog-backend/go.mod
+          cache-dependency-path: blog-backend/go.sum
+
+      - name: Apply Analytics read-model migration
+        run: python3 .github/scripts/analytics_domain_read_model.py
+
+      - name: Format
+        run: |
+          gofmt -w blog-backend/internal/domain/post.go
+          gofmt -w blog-backend/internal/analytics/domain
+          gofmt -w blog-backend/internal/analytics
+          gofmt -w blog-backend/internal/tool/analytics_binding.go blog-backend/internal/tool/analytics_binding_test.go
+
+      - name: Focused tests
+        working-directory: blog-backend
+        run: go test ./internal/analytics/... ./internal/tool/...
+
+      - name: Focused vet
+        working-directory: blog-backend
+        run: go vet ./internal/analytics/... ./internal/tool/...
+
+      - name: Ownership and diff guards
+        run: |
+          test -e blog-backend/internal/analytics/domain/model.go
+          test -e blog-backend/internal/analytics/domain/ownership_test.go
+          (
+            cd blog-backend
+            go test ./internal/analytics/domain -run TestRootAnalyticsReadModelsStayRetired -count=1
+          )
+          if git grep -nE '(^|[^[:alnum:]_])domain\.(AnalyticsSummary|SystemAlert|DailyEventCount)' -- 'blog-backend/**/*.go'; then
+            echo 'Analytics-owned read-model symbol still consumed through root internal/domain'
+            exit 1
+          fi
+          git diff --exit-code 5dd01cdef1df46004fa9ef32b01ab3b6068813b9 -- \
+            blog-backend/internal/access \
+            blog-backend/internal/authbff \
+            blog-backend/internal/connector \
+            blog-backend/internal/controller \
+            blog-backend/middleware \
+            blog-backend/internal/agent \
+            blog-backend/internal/workflow
+          git diff --check
+
+      - name: Commit validated source and self-clean
+        run: |
+          rm -f .github/scripts/analytics_domain_read_model.py
+          rm -f .github/workflows/analytics-domain-read-model-staging.yml
+          git config user.name 'Aben'
+          git config user.email '5195693+rushairer@users.noreply.github.com'
+          git add -A
+          git commit -m 'refactor(analytics): own read-model contracts'
+          git push origin HEAD:refactor/analytics-domain-read-model
