@@ -2,102 +2,12 @@ package controller
 
 import (
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/gouno"
 )
-
-func (ctrl *AgentController) ListSuggestions(c *gin.Context) {
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "100"))
-	if limit < 1 || limit > maxPageSize {
-		limit = maxPageSize
-	}
-	items, err := ctrl.operations.ListSuggestions(c.Request.Context(), c.DefaultQuery("status", "new"), limit)
-	if err != nil {
-		WriteDomainError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
-}
-
-func (ctrl *AgentController) RefreshSuggestions(c *gin.Context) {
-	if err := ctrl.operations.RefreshSuggestions(c.Request.Context()); err != nil {
-		WriteDomainError(c, err)
-		return
-	}
-	c.JSON(http.StatusAccepted, gouno.NewSuccessResponse(nil))
-}
-
-func (ctrl *AgentController) IgnoreSuggestion(c *gin.Context) {
-	id, ok := ParamPositiveID(c, "id")
-	if !ok {
-		return
-	}
-	var req struct {
-		Reason string `json:"reason" binding:"required"`
-	}
-	if err := bindAgentJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
-		return
-	}
-	if err := ctrl.operations.IgnoreSuggestion(c.Request.Context(), id, req.Reason); err != nil {
-		WriteDomainError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
-}
-
-func (ctrl *AgentController) ConvertSuggestion(c *gin.Context) {
-	id, ok := ParamPositiveID(c, "id")
-	if !ok {
-		return
-	}
-	if err := ctrl.operations.ConvertSuggestion(c.Request.Context(), id); err != nil {
-		WriteDomainError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
-}
-
-func (ctrl *AgentController) ListEditorialTasks(c *gin.Context) {
-	items, err := ctrl.operations.ListEditorialTasks(c.Request.Context(), c.Query("status"))
-	if err != nil {
-		WriteDomainError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
-}
-
-func (ctrl *AgentController) UpdateEditorialTaskStatus(c *gin.Context) {
-	id, ok := ParamPositiveID(c, "id")
-	if !ok {
-		return
-	}
-	var req struct {
-		Status string `json:"status" binding:"required"`
-	}
-	if err := bindAgentJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
-		return
-	}
-	if err := ctrl.operations.UpdateEditorialTaskStatus(c.Request.Context(), id, req.Status); err != nil {
-		WriteDomainError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
-}
-
-func (ctrl *AgentController) ListCandidateSets(c *gin.Context) {
-	items, err := ctrl.operations.ListCandidateSets(c.Request.Context())
-	if err != nil {
-		WriteDomainError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
-}
 
 func (ctrl *AgentController) ListMediaCandidates(c *gin.Context) {
 	items, err := ctrl.approvals.ListMediaCandidates(c.Request.Context())
@@ -349,53 +259,6 @@ func (ctrl *AgentController) ImageTaskEvents(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
-}
-
-func (ctrl *AgentController) SelectCandidate(c *gin.Context) {
-	id, ok := ParamPositiveID(c, "id")
-	if !ok {
-		return
-	}
-	var req struct {
-		CandidateID int64 `json:"candidate_id" binding:"required"`
-	}
-	if err := bindAgentJSON(c, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
-		return
-	}
-	if err := ctrl.operations.SelectCandidate(c.Request.Context(), id, req.CandidateID); err != nil {
-		WriteDomainError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(nil))
-}
-
-func (ctrl *AgentController) SaveFeedback(c *gin.Context) {
-	var value domain.AIFeedback
-	if err := bindAgentJSON(c, &value); err != nil {
-		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
-		return
-	}
-	principalID, ok := interactionPrincipalID(c)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "authenticated local principal is required"))
-		return
-	}
-	value.CreatedByPrincipalID = principalID
-	if err := ctrl.operations.SaveFeedback(c.Request.Context(), &value); err != nil {
-		WriteDomainError(c, err)
-		return
-	}
-	c.JSON(http.StatusCreated, gouno.NewSuccessResponse(&value))
-}
-
-func (ctrl *AgentController) OutcomeMetrics(c *gin.Context) {
-	result, err := ctrl.operations.OutcomeMetrics(c.Request.Context())
-	if err != nil {
-		WriteDomainError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gouno.NewSuccessResponse(result))
 }
 
 func (ctrl *AgentController) GenerateImage(c *gin.Context) {

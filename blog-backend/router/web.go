@@ -17,6 +17,7 @@ import (
 	"github.com/rushairer/blog-backend/internal/media"
 	mediacontroller "github.com/rushairer/blog-backend/internal/media/controller"
 	mediaservice "github.com/rushairer/blog-backend/internal/media/service"
+	operationscontroller "github.com/rushairer/blog-backend/internal/operations/controller"
 	pagecontroller "github.com/rushairer/blog-backend/internal/page/controller"
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
 	postcontroller "github.com/rushairer/blog-backend/internal/post/controller"
@@ -55,6 +56,7 @@ type WebRouterOptions struct {
 	RecommendationSvc  recommendationservice.Service
 	PostVersionSvc     postversionservice.Service
 	AgentCtrl          *controller.AgentController
+	OperationsCtrl     *operationscontroller.Controller
 	WorkflowCtrl       *workflowcontroller.Controller
 	Logger             *zap.Logger
 	Verifier           *auth.Verifier
@@ -134,6 +136,7 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 
 	authOptions := opts.AuthOptions
 	agentCtrl := opts.AgentCtrl
+	operationsCtrl := opts.OperationsCtrl
 	workflowCtrl := opts.WorkflowCtrl
 
 	// RSS & Sitemap Routes
@@ -330,6 +333,18 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 				aiOps.GET("/admin/ai-resources/:type", workflowCtrl.ListAIResources)
 				aiOps.GET("/admin/ai-workflow-metrics", workflowCtrl.WorkflowMetrics)
 			}
+			if operationsCtrl != nil {
+				aiOps.GET("/admin/ai-suggestions", operationsCtrl.ListSuggestions)
+				aiOps.POST("/admin/ai-suggestions/refresh", operationsCtrl.RefreshSuggestions)
+				aiOps.POST("/admin/ai-suggestions/:id/ignore", operationsCtrl.IgnoreSuggestion)
+				aiOps.POST("/admin/ai-suggestions/:id/convert", operationsCtrl.ConvertSuggestion)
+				aiOps.GET("/admin/ai-editorial-tasks", operationsCtrl.ListEditorialTasks)
+				aiOps.POST("/admin/ai-editorial-tasks/:id/status", operationsCtrl.UpdateEditorialTaskStatus)
+				aiOps.GET("/admin/ai-candidates", operationsCtrl.ListCandidateSets)
+				aiOps.POST("/admin/ai-candidates/:id/select", operationsCtrl.SelectCandidate)
+				aiOps.POST("/admin/ai-feedback", operationsCtrl.SaveFeedback)
+				aiOps.GET("/admin/ai-outcome-metrics", operationsCtrl.OutcomeMetrics)
+			}
 			if agentCtrl != nil {
 				aiOps.POST("/admin/ai-workflows/agent-drafts", agentCtrl.DraftWorkflowAgents)
 				aiOps.GET("/admin/provider-profiles", agentCtrl.ListProviders)
@@ -390,13 +405,6 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 				aiOps.POST("/admin/ai-connector-outbox/:id/revoke", agentCtrl.RevokeConnectorOutbox)
 				aiOps.POST("/admin/ai-connector-outbox/:id/deliver-mock", agentCtrl.DeliverConnectorOutboxMock)
 				aiOps.POST("/admin/ai-connector-outbox/:id/retry", agentCtrl.RetryConnectorOutbox)
-				aiOps.GET("/admin/ai-suggestions", agentCtrl.ListSuggestions)
-				aiOps.POST("/admin/ai-suggestions/refresh", agentCtrl.RefreshSuggestions)
-				aiOps.POST("/admin/ai-suggestions/:id/ignore", agentCtrl.IgnoreSuggestion)
-				aiOps.POST("/admin/ai-suggestions/:id/convert", agentCtrl.ConvertSuggestion)
-				aiOps.GET("/admin/ai-editorial-tasks", agentCtrl.ListEditorialTasks)
-				aiOps.POST("/admin/ai-editorial-tasks/:id/status", agentCtrl.UpdateEditorialTaskStatus)
-				aiOps.GET("/admin/ai-candidates", agentCtrl.ListCandidateSets)
 				aiOps.GET("/admin/ai-media-candidates", agentCtrl.ListMediaCandidates)
 				aiOps.POST("/admin/ai-media-candidates/:id/review", agentCtrl.ReviewMediaCandidate)
 				aiOps.POST("/admin/ai-media-candidates/:id/attach-media", agentCtrl.AttachMediaAsset)
@@ -408,9 +416,6 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 				aiOps.POST("/admin/ai-image-tasks/:id/apply", agentCtrl.ApplyImageTask)
 				aiOps.GET("/admin/ai-image-tasks/:id/preview", agentCtrl.PreviewImageTask)
 				aiOps.GET("/admin/ai-image-tasks/:id/events", agentCtrl.ImageTaskEvents)
-				aiOps.POST("/admin/ai-candidates/:id/select", agentCtrl.SelectCandidate)
-				aiOps.POST("/admin/ai-feedback", agentCtrl.SaveFeedback)
-				aiOps.GET("/admin/ai-outcome-metrics", agentCtrl.OutcomeMetrics)
 			}
 		}
 	}

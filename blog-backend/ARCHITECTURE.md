@@ -121,6 +121,16 @@ The default `gouno-template` Flat Layered structure remains the reference for si
 Architecture refactoring and Codegen must preserve the root `AGENTS.md` security contract, especially the confidential BFF boundary and Connector Module Hold. Structural cleanup is not authorization to change OAuth/OIDC, session, connector, credential, deployment, or security behavior.
 
 
+## Operations HTTP ownership boundary
+
+Operations HTTP transport is capability-owned under `internal/operations/controller`; the flat `AgentController` no longer receives `*operations.Service` or owns suggestion, editorial-task, candidate-set, feedback, or outcome-metrics endpoints.
+
+- `router.WebRouterOptions` receives a separate Operations controller while preserving the existing `/api/admin/ai-*` URLs and the existing AI-management permission, AAL2, recent-MFA and audit middleware chain.
+- Strict JSON decoding, positive-ID validation, local `blog_principal_id` attribution and response envelopes retain the existing transport semantics.
+- Agent-owned MediaCandidate/image-generation endpoints intentionally remain with Agent HTTP ownership; route proximity under the AI Operations UI does not transfer business ownership to the Operations capability.
+- Operations remains service-local for persistence/orchestration; this HTTP convergence does not introduce an artificial repository layer or move transaction ownership.
+- Connector routes and behavior remain untouched under the Connector Module Hold.
+
 ## Workflow HTTP ownership boundary
 
 Workflow HTTP transport is capability-owned under `internal/workflow/controller`; the legacy flat `AgentController` is no longer the transport owner for Workflow CRUD, Runs, events, interactions, resource discovery, metrics, planning, or the signed public Workflow webhook.
