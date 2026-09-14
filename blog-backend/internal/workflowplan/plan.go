@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	providerdomain "github.com/rushairer/blog-backend/internal/provider/domain"
 	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 	"strings"
 
@@ -226,7 +227,7 @@ func workflowDraftText(result provider.Result) string {
 	return result.Text
 }
 
-func plannerMaxTokens(profile *domain.ProviderProfile) int {
+func plannerMaxTokens(profile *providerdomain.ProviderProfile) int {
 	const defaultBudget = 1200
 	const maximumBudget = 1600
 	if profile == nil || profile.MaxOutputTokens <= 0 {
@@ -258,7 +259,7 @@ func contains(values []string, target string) bool {
 	return false
 }
 
-func resolveAgentProfile(agent *domain.Agent, profiles []*domain.ProviderProfile) *domain.ProviderProfile {
+func resolveAgentProfile(agent *domain.Agent, profiles []*providerdomain.ProviderProfile) *providerdomain.ProviderProfile {
 	if agent.ProviderProfile != nil && agent.ProviderProfile.Enabled {
 		return agent.ProviderProfile
 	}
@@ -477,7 +478,7 @@ func validatePlannerEnvelope(envelope *plannerEnvelope, agents []*domain.Agent, 
 func PlanWorkflow(
 	ctx context.Context,
 	prompt string,
-	profiles []*domain.ProviderProfile,
+	profiles []*providerdomain.ProviderProfile,
 	agents []*domain.Agent,
 	toolsCatalog []tool.CatalogItem,
 	validateDraft func(*workflowdomain.Workflow) error,
@@ -487,7 +488,7 @@ func PlanWorkflow(
 	if prompt == "" || len([]rune(prompt)) > 4000 {
 		return nil, ErrGoalRequired
 	}
-	var selected *domain.ProviderProfile
+	var selected *providerdomain.ProviderProfile
 	for _, profile := range profiles {
 		if profile.Enabled && profile.IsDefaultWriting {
 			selected = profile

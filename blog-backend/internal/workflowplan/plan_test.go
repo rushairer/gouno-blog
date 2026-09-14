@@ -2,6 +2,7 @@ package workflowplan
 
 import (
 	"encoding/json"
+	providerdomain "github.com/rushairer/blog-backend/internal/provider/domain"
 	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 	"strings"
 	"testing"
@@ -27,12 +28,12 @@ func TestWorkflowDraftTextPrefersStructuredToolArguments(t *testing.T) {
 func TestPlannerMaxTokensIsBounded(t *testing.T) {
 	for _, test := range []struct {
 		name  string
-		value *domain.ProviderProfile
+		value *providerdomain.ProviderProfile
 		want  int
 	}{
 		{"default", nil, 1200},
-		{"configured", &domain.ProviderProfile{MaxOutputTokens: 900}, 900},
-		{"capped", &domain.ProviderProfile{MaxOutputTokens: 5000}, 1600},
+		{"configured", &providerdomain.ProviderProfile{MaxOutputTokens: 900}, 900},
+		{"capped", &providerdomain.ProviderProfile{MaxOutputTokens: 5000}, 1600},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			if got := plannerMaxTokens(test.value); got != test.want {
@@ -78,7 +79,7 @@ func TestNormalizePlannerEnvelopeKeepsApprovalWorkflowButRemovesInvalidIntentRef
 }
 
 func TestTypedPlannerEnvelopeValidatesSemanticsWithoutPromptKeywords(t *testing.T) {
-	provider := &domain.ProviderProfile{ID: 1, Enabled: true, IsDefaultWriting: true}
+	provider := &providerdomain.ProviderProfile{ID: 1, Enabled: true, IsDefaultWriting: true}
 	writerSkill := &domain.AgentSkill{VersionID: 2, Capabilities: []string{"content.propose_draft"}, ExecutionMode: domain.AgentModeApproval}
 	imageSkill := &domain.AgentSkill{VersionID: 3, Capabilities: []string{"media.create_image_task"}, ExecutionMode: domain.AgentModeApproval}
 	writer := &domain.Agent{ID: 10, Enabled: true, SkillVersionID: &writerSkill.VersionID, Skill: writerSkill, ProviderProfile: provider}

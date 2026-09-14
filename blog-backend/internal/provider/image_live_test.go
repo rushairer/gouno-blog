@@ -3,12 +3,13 @@ package provider_test
 import (
 	"context"
 	"database/sql"
+	providerdomain "github.com/rushairer/blog-backend/internal/provider/domain"
 	"os"
 	"testing"
 	"time"
 
 	_ "github.com/lib/pq"
-	"github.com/rushairer/blog-backend/internal/domain"
+
 	"github.com/rushairer/blog-backend/internal/provider"
 	"github.com/rushairer/blog-backend/internal/secretbox"
 )
@@ -32,7 +33,7 @@ func TestLiveConfiguredProvidersGenerateImage(t *testing.T) {
 
 	for _, name := range []string{"Image Provider", "GPT-5.6-Luna"} {
 		t.Run(name, func(t *testing.T) {
-			var profile domain.ProviderProfile
+			var profile providerdomain.ProviderProfile
 			if err := db.QueryRowContext(context.Background(), `SELECT id, name, provider_type, base_url, model, api_key_ciphertext, api_key_nonce, key_version, enabled, request_timeout_seconds FROM ai_provider_profiles WHERE name = $1 AND deleted_at IS NULL`, name).Scan(&profile.ID, &profile.Name, &profile.ProviderType, &profile.BaseURL, &profile.Model, &profile.APIKeyCiphertext, &profile.APIKeyNonce, &profile.KeyVersion, &profile.Enabled, &profile.RequestTimeoutSeconds); err != nil {
 				t.Fatalf("load %s: %v", name, err)
 			}
