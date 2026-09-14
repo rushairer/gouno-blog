@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	providerdomain "github.com/rushairer/blog-backend/internal/provider/domain"
 	"strings"
 	"time"
 
@@ -114,7 +115,7 @@ func (s *GenerationService) GenerateImage(ctx context.Context, req ImageGenerati
 		s.recordImageAudit(req, "", "", 0, 0, nil, err)
 		return nil, err
 	}
-	var selected *domain.ProviderProfile
+	var selected *providerdomain.ProviderProfile
 	for _, item := range profiles {
 		if item.IsDefaultImage && item.Enabled {
 			selected = item

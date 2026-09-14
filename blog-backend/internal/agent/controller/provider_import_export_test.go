@@ -1,9 +1,8 @@
 package controller
 
 import (
+	providerdomain "github.com/rushairer/blog-backend/internal/provider/domain"
 	"testing"
-
-	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 func TestResolveUniqueProviderName(t *testing.T) {
@@ -116,7 +115,7 @@ func TestParseProviderImportPayload(t *testing.T) {
 func TestProviderExportItemStructure(t *testing.T) {
 	item := providerExportItem{
 		Name:                  "Test",
-		ProviderType:          domain.ProviderOpenAI,
+		ProviderType:          providerdomain.ProviderOpenAI,
 		BaseURL:               "https://api.openai.com",
 		Model:                 "gpt-4o",
 		Enabled:               true,
@@ -127,7 +126,7 @@ func TestProviderExportItemStructure(t *testing.T) {
 		RequestTimeoutSeconds: 60,
 		MaxOutputTokens:       2000,
 	}
-	if item.Name != "Test" || item.ProviderType != domain.ProviderOpenAI || item.ProtocolMode != "chat_completions" || item.StreamMode != "always" {
+	if item.Name != "Test" || item.ProviderType != providerdomain.ProviderOpenAI || item.ProtocolMode != "chat_completions" || item.StreamMode != "always" {
 		t.Fatalf("unexpected export item: %+v", item)
 	}
 }

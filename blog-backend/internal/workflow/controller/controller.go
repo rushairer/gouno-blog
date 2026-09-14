@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	providerdomain "github.com/rushairer/blog-backend/internal/provider/domain"
 	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 	"io"
 	"net/http"
@@ -32,7 +33,7 @@ const maxWorkflowJSONBody = 256 << 10
 const minWebhookSecretLength = 32
 
 type PlannerAgentCatalog interface {
-	ListProviders(context.Context) ([]*domain.ProviderProfile, error)
+	ListProviders(context.Context) ([]*providerdomain.ProviderProfile, error)
 	ListAgents(context.Context) ([]*domain.Agent, error)
 	ProviderClient(context.Context, int64) (provider.Provider, error)
 }

@@ -2,38 +2,9 @@ package domain
 
 import (
 	"encoding/json"
+	providerdomain "github.com/rushairer/blog-backend/internal/provider/domain"
 	"time"
 )
-
-type ProviderType string
-
-const (
-	ProviderOpenAI    ProviderType = "openai"
-	ProviderAnthropic ProviderType = "anthropic"
-	ProviderGemini    ProviderType = "gemini"
-)
-
-type ProviderProfile struct {
-	ID                    int64        `json:"id"`
-	Name                  string       `json:"name"`
-	ProviderType          ProviderType `json:"provider_type"`
-	BaseURL               string       `json:"base_url"`
-	Model                 string       `json:"model"`
-	APIKeyCiphertext      []byte       `json:"-"`
-	APIKeyNonce           []byte       `json:"-"`
-	APIKeyLast4           string       `json:"api_key_last4,omitempty"`
-	KeyVersion            int          `json:"-"`
-	HasAPIKey             bool         `json:"has_api_key"`
-	Enabled               bool         `json:"enabled"`
-	IsDefaultWriting      bool         `json:"is_default_writing"`
-	IsDefaultImage        bool         `json:"is_default_image"`
-	ProtocolMode          string       `json:"protocol_mode"`
-	StreamMode            string       `json:"stream_mode"`
-	RequestTimeoutSeconds int          `json:"request_timeout_seconds"`
-	MaxOutputTokens       int          `json:"max_output_tokens"`
-	CreatedAt             time.Time    `json:"created_at"`
-	UpdatedAt             time.Time    `json:"updated_at"`
-}
 
 type EmbeddingProfile struct {
 	ID                    int64     `json:"id"`
@@ -92,29 +63,29 @@ const (
 )
 
 type Agent struct {
-	ID                      int64            `json:"id"`
-	SystemKey               *string          `json:"system_key,omitempty"`
-	Name                    string           `json:"name"`
-	Description             string           `json:"description"`
-	ProviderProfileID       *int64           `json:"provider_profile_id,omitempty"`
-	SkillVersionID          *int64           `json:"skill_version_id,omitempty"`
-	Skill                   *AgentSkill      `json:"skill,omitempty"`
-	ProviderProfile         *ProviderProfile `json:"provider_profile,omitempty"`
-	Enabled                 bool             `json:"enabled"`
-	TriggerType             AgentTriggerType `json:"trigger_type"`
-	CronExpression          *string          `json:"cron_expression,omitempty"`
-	Timezone                string           `json:"timezone"`
-	MaxStepsOverride        *int             `json:"max_steps_override,omitempty"`
-	MaxInputTokensOverride  *int             `json:"max_input_tokens_override,omitempty"`
-	MaxOutputTokensOverride *int             `json:"max_output_tokens_override,omitempty"`
-	DailyRunLimit           int              `json:"daily_run_limit"`
-	MonthlyTokenBudget      int64            `json:"monthly_token_budget"`
-	LastRunAt               *time.Time       `json:"last_run_at,omitempty"`
-	NextRunAt               *time.Time       `json:"next_run_at,omitempty"`
-	CreatedByPrincipalID    *int64           `json:"created_by_principal_id,omitempty"`
-	CreationOrigin          string           `json:"creation_origin,omitempty"`
-	CreatedAt               time.Time        `json:"created_at"`
-	UpdatedAt               time.Time        `json:"updated_at"`
+	ID                      int64                           `json:"id"`
+	SystemKey               *string                         `json:"system_key,omitempty"`
+	Name                    string                          `json:"name"`
+	Description             string                          `json:"description"`
+	ProviderProfileID       *int64                          `json:"provider_profile_id,omitempty"`
+	SkillVersionID          *int64                          `json:"skill_version_id,omitempty"`
+	Skill                   *AgentSkill                     `json:"skill,omitempty"`
+	ProviderProfile         *providerdomain.ProviderProfile `json:"provider_profile,omitempty"`
+	Enabled                 bool                            `json:"enabled"`
+	TriggerType             AgentTriggerType                `json:"trigger_type"`
+	CronExpression          *string                         `json:"cron_expression,omitempty"`
+	Timezone                string                          `json:"timezone"`
+	MaxStepsOverride        *int                            `json:"max_steps_override,omitempty"`
+	MaxInputTokensOverride  *int                            `json:"max_input_tokens_override,omitempty"`
+	MaxOutputTokensOverride *int                            `json:"max_output_tokens_override,omitempty"`
+	DailyRunLimit           int                             `json:"daily_run_limit"`
+	MonthlyTokenBudget      int64                           `json:"monthly_token_budget"`
+	LastRunAt               *time.Time                      `json:"last_run_at,omitempty"`
+	NextRunAt               *time.Time                      `json:"next_run_at,omitempty"`
+	CreatedByPrincipalID    *int64                          `json:"created_by_principal_id,omitempty"`
+	CreationOrigin          string                          `json:"creation_origin,omitempty"`
+	CreatedAt               time.Time                       `json:"created_at"`
+	UpdatedAt               time.Time                       `json:"updated_at"`
 }
 
 // AgentSkill is a versioned, non-executable template for safe Agent
@@ -157,28 +128,28 @@ const (
 )
 
 type AgentRun struct {
-	ID                     int64            `json:"id"`
-	AgentID                int64            `json:"agent_id"`
-	AgentName              string           `json:"agent_name,omitempty"`
-	TriggerType            AgentTriggerType `json:"trigger_type"`
-	TriggeredByPrincipalID *int64           `json:"triggered_by_principal_id,omitempty"`
-	ScheduleKey            *string          `json:"-"`
-	Status                 AgentRunStatus   `json:"status"`
-	Input                  json.RawMessage  `json:"input"`
-	OutputSummary          string           `json:"output_summary"`
-	Provider               ProviderType     `json:"provider"`
-	Model                  string           `json:"model"`
-	InputTokens            int64            `json:"input_tokens"`
-	OutputTokens           int64            `json:"output_tokens"`
-	ErrorCode              *string          `json:"error_code,omitempty"`
-	ErrorMessage           *string          `json:"error_message,omitempty"`
-	StartedAt              *time.Time       `json:"started_at,omitempty"`
-	FinishedAt             *time.Time       `json:"finished_at,omitempty"`
-	CreatedAt              time.Time        `json:"created_at"`
-	Citations              []AgentCitation  `json:"citations"`
-	SkillVersionID         *int64           `json:"skill_version_id,omitempty"`
-	WorkflowVersionID      *int64           `json:"workflow_version_id,omitempty"`
-	WorkflowRunID          *int64           `json:"workflow_run_id,omitempty"`
+	ID                     int64                       `json:"id"`
+	AgentID                int64                       `json:"agent_id"`
+	AgentName              string                      `json:"agent_name,omitempty"`
+	TriggerType            AgentTriggerType            `json:"trigger_type"`
+	TriggeredByPrincipalID *int64                      `json:"triggered_by_principal_id,omitempty"`
+	ScheduleKey            *string                     `json:"-"`
+	Status                 AgentRunStatus              `json:"status"`
+	Input                  json.RawMessage             `json:"input"`
+	OutputSummary          string                      `json:"output_summary"`
+	Provider               providerdomain.ProviderType `json:"provider"`
+	Model                  string                      `json:"model"`
+	InputTokens            int64                       `json:"input_tokens"`
+	OutputTokens           int64                       `json:"output_tokens"`
+	ErrorCode              *string                     `json:"error_code,omitempty"`
+	ErrorMessage           *string                     `json:"error_message,omitempty"`
+	StartedAt              *time.Time                  `json:"started_at,omitempty"`
+	FinishedAt             *time.Time                  `json:"finished_at,omitempty"`
+	CreatedAt              time.Time                   `json:"created_at"`
+	Citations              []AgentCitation             `json:"citations"`
+	SkillVersionID         *int64                      `json:"skill_version_id,omitempty"`
+	WorkflowVersionID      *int64                      `json:"workflow_version_id,omitempty"`
+	WorkflowRunID          *int64                      `json:"workflow_run_id,omitempty"`
 }
 
 type ToolRiskLevel string
@@ -245,44 +216,44 @@ type AgentApproval struct {
 // MediaCandidate is a governed hand-off from either an approved proposal or
 // an internal image task. Generation and publication remain separate actions.
 type MediaCandidate struct {
-	ID                      int64        `json:"id"`
-	PostID                  int64        `json:"post_id"`
-	SourceRunID             int64        `json:"source_run_id"`
-	SourceApprovalID        *int64       `json:"source_approval_id,omitempty"`
-	Headline                string       `json:"headline"`
-	Brief                   string       `json:"brief"`
-	Platform                string       `json:"platform,omitempty"`
-	Provider                ProviderType `json:"provider"`
-	Model                   string       `json:"model"`
-	InputTokens             int64        `json:"input_tokens"`
-	OutputTokens            int64        `json:"output_tokens"`
-	GenerationStatus        string       `json:"generation_status"`
-	SafetyStatus            string       `json:"safety_status"`
-	CopyrightStatus         string       `json:"copyright_status"`
-	AltText                 string       `json:"alt_text"`
-	MediaAssetID            *int64       `json:"media_asset_id,omitempty"`
-	MediaAssetURL           string       `json:"media_asset_url,omitempty"`
-	ReviewedByPrincipalID   *int64       `json:"reviewed_by_principal_id,omitempty"`
-	ReviewNote              string       `json:"review_note,omitempty"`
-	ReviewedAt              *time.Time   `json:"reviewed_at,omitempty"`
-	CreatedAt               time.Time    `json:"created_at"`
-	WorkflowRunID           *int64       `json:"workflow_run_id,omitempty"`
-	WorkflowStepID          string       `json:"workflow_step_id,omitempty"`
-	InteractionTaskID       *int64       `json:"interaction_task_id,omitempty"`
-	PostVersionToken        string       `json:"post_version_token,omitempty"`
-	GenerationAttempt       int          `json:"generation_attempt"`
-	SelectedAt              *time.Time   `json:"selected_at,omitempty"`
-	AppliedVersionID        *int64       `json:"applied_version_id,omitempty"`
-	ErrorCode               string       `json:"error_code,omitempty"`
-	ErrorMessage            string       `json:"error_message,omitempty"`
-	Placement               string       `json:"placement"`
-	Anchor                  string       `json:"anchor,omitempty"`
-	Selected                bool         `json:"selected"`
-	AppliedAt               *time.Time   `json:"applied_at,omitempty"`
-	GenerationStartedAt     *time.Time   `json:"generation_started_at,omitempty"`
-	GenerationDeadlineAt    *time.Time   `json:"generation_deadline_at,omitempty"`
-	CancelledAt             *time.Time   `json:"cancelled_at,omitempty"`
-	RegenerationInstruction string       `json:"regeneration_instruction,omitempty"`
+	ID                      int64                       `json:"id"`
+	PostID                  int64                       `json:"post_id"`
+	SourceRunID             int64                       `json:"source_run_id"`
+	SourceApprovalID        *int64                      `json:"source_approval_id,omitempty"`
+	Headline                string                      `json:"headline"`
+	Brief                   string                      `json:"brief"`
+	Platform                string                      `json:"platform,omitempty"`
+	Provider                providerdomain.ProviderType `json:"provider"`
+	Model                   string                      `json:"model"`
+	InputTokens             int64                       `json:"input_tokens"`
+	OutputTokens            int64                       `json:"output_tokens"`
+	GenerationStatus        string                      `json:"generation_status"`
+	SafetyStatus            string                      `json:"safety_status"`
+	CopyrightStatus         string                      `json:"copyright_status"`
+	AltText                 string                      `json:"alt_text"`
+	MediaAssetID            *int64                      `json:"media_asset_id,omitempty"`
+	MediaAssetURL           string                      `json:"media_asset_url,omitempty"`
+	ReviewedByPrincipalID   *int64                      `json:"reviewed_by_principal_id,omitempty"`
+	ReviewNote              string                      `json:"review_note,omitempty"`
+	ReviewedAt              *time.Time                  `json:"reviewed_at,omitempty"`
+	CreatedAt               time.Time                   `json:"created_at"`
+	WorkflowRunID           *int64                      `json:"workflow_run_id,omitempty"`
+	WorkflowStepID          string                      `json:"workflow_step_id,omitempty"`
+	InteractionTaskID       *int64                      `json:"interaction_task_id,omitempty"`
+	PostVersionToken        string                      `json:"post_version_token,omitempty"`
+	GenerationAttempt       int                         `json:"generation_attempt"`
+	SelectedAt              *time.Time                  `json:"selected_at,omitempty"`
+	AppliedVersionID        *int64                      `json:"applied_version_id,omitempty"`
+	ErrorCode               string                      `json:"error_code,omitempty"`
+	ErrorMessage            string                      `json:"error_message,omitempty"`
+	Placement               string                      `json:"placement"`
+	Anchor                  string                      `json:"anchor,omitempty"`
+	Selected                bool                        `json:"selected"`
+	AppliedAt               *time.Time                  `json:"applied_at,omitempty"`
+	GenerationStartedAt     *time.Time                  `json:"generation_started_at,omitempty"`
+	GenerationDeadlineAt    *time.Time                  `json:"generation_deadline_at,omitempty"`
+	CancelledAt             *time.Time                  `json:"cancelled_at,omitempty"`
+	RegenerationInstruction string                      `json:"regeneration_instruction,omitempty"`
 }
 
 // GenerationAudit captures minimal, non-sensitive execution evidence for AI
@@ -314,12 +285,12 @@ type MediaCandidateSelection struct {
 }
 
 type UsageEvent struct {
-	ID           int64        `json:"id"`
-	RunID        int64        `json:"run_id"`
-	RequestID    string       `json:"request_id"`
-	Provider     ProviderType `json:"provider"`
-	Model        string       `json:"model"`
-	InputTokens  int64        `json:"input_tokens"`
-	OutputTokens int64        `json:"output_tokens"`
-	CompletedAt  time.Time    `json:"completed_at"`
+	ID           int64                       `json:"id"`
+	RunID        int64                       `json:"run_id"`
+	RequestID    string                      `json:"request_id"`
+	Provider     providerdomain.ProviderType `json:"provider"`
+	Model        string                      `json:"model"`
+	InputTokens  int64                       `json:"input_tokens"`
+	OutputTokens int64                       `json:"output_tokens"`
+	CompletedAt  time.Time                   `json:"completed_at"`
 }

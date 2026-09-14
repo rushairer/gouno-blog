@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	providerdomain "github.com/rushairer/blog-backend/internal/provider/domain"
 	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 	"io"
 	"net/http"
@@ -62,52 +63,52 @@ func New(opts Options) *Controller {
 }
 
 type providerRequest struct {
-	ID                    int64               `json:"id,omitempty"`
-	Name                  string              `json:"name" binding:"required"`
-	ProviderType          domain.ProviderType `json:"provider_type" binding:"required"`
-	BaseURL               string              `json:"base_url" binding:"required"`
-	Model                 string              `json:"model" binding:"required"`
-	APIKey                string              `json:"api_key"`
-	Enabled               bool                `json:"enabled"`
-	ProtocolMode          string              `json:"protocol_mode"`
-	StreamMode            string              `json:"stream_mode"`
-	RequestTimeoutSeconds int                 `json:"request_timeout_seconds"`
-	MaxOutputTokens       int                 `json:"max_output_tokens"`
-	APIKeyLast4           string              `json:"api_key_last4,omitempty"`
-	HasAPIKey             bool                `json:"has_api_key,omitempty"`
-	IsDefaultWriting      bool                `json:"is_default_writing,omitempty"`
-	IsDefaultImage        bool                `json:"is_default_image,omitempty"`
-	CreatedAt             string              `json:"created_at,omitempty"`
-	UpdatedAt             string              `json:"updated_at,omitempty"`
+	ID                    int64                       `json:"id,omitempty"`
+	Name                  string                      `json:"name" binding:"required"`
+	ProviderType          providerdomain.ProviderType `json:"provider_type" binding:"required"`
+	BaseURL               string                      `json:"base_url" binding:"required"`
+	Model                 string                      `json:"model" binding:"required"`
+	APIKey                string                      `json:"api_key"`
+	Enabled               bool                        `json:"enabled"`
+	ProtocolMode          string                      `json:"protocol_mode"`
+	StreamMode            string                      `json:"stream_mode"`
+	RequestTimeoutSeconds int                         `json:"request_timeout_seconds"`
+	MaxOutputTokens       int                         `json:"max_output_tokens"`
+	APIKeyLast4           string                      `json:"api_key_last4,omitempty"`
+	HasAPIKey             bool                        `json:"has_api_key,omitempty"`
+	IsDefaultWriting      bool                        `json:"is_default_writing,omitempty"`
+	IsDefaultImage        bool                        `json:"is_default_image,omitempty"`
+	CreatedAt             string                      `json:"created_at,omitempty"`
+	UpdatedAt             string                      `json:"updated_at,omitempty"`
 }
 
 type providerExportItem struct {
-	Name                  string              `json:"name"`
-	ProviderType          domain.ProviderType `json:"provider_type"`
-	BaseURL               string              `json:"base_url"`
-	Model                 string              `json:"model"`
-	Enabled               bool                `json:"enabled"`
-	IsDefaultWriting      bool                `json:"is_default_writing,omitempty"`
-	IsDefaultImage        bool                `json:"is_default_image,omitempty"`
-	ProtocolMode          string              `json:"protocol_mode,omitempty"`
-	StreamMode            string              `json:"stream_mode,omitempty"`
-	RequestTimeoutSeconds int                 `json:"request_timeout_seconds"`
-	MaxOutputTokens       int                 `json:"max_output_tokens"`
+	Name                  string                      `json:"name"`
+	ProviderType          providerdomain.ProviderType `json:"provider_type"`
+	BaseURL               string                      `json:"base_url"`
+	Model                 string                      `json:"model"`
+	Enabled               bool                        `json:"enabled"`
+	IsDefaultWriting      bool                        `json:"is_default_writing,omitempty"`
+	IsDefaultImage        bool                        `json:"is_default_image,omitempty"`
+	ProtocolMode          string                      `json:"protocol_mode,omitempty"`
+	StreamMode            string                      `json:"stream_mode,omitempty"`
+	RequestTimeoutSeconds int                         `json:"request_timeout_seconds"`
+	MaxOutputTokens       int                         `json:"max_output_tokens"`
 }
 
 type providerImportItem struct {
-	Name                  string              `json:"name"`
-	ProviderType          domain.ProviderType `json:"provider_type"`
-	BaseURL               string              `json:"base_url"`
-	Model                 string              `json:"model"`
-	APIKey                string              `json:"api_key,omitempty"`
-	Enabled               *bool               `json:"enabled,omitempty"`
-	IsDefaultWriting      bool                `json:"is_default_writing,omitempty"`
-	IsDefaultImage        bool                `json:"is_default_image,omitempty"`
-	ProtocolMode          string              `json:"protocol_mode,omitempty"`
-	StreamMode            string              `json:"stream_mode,omitempty"`
-	RequestTimeoutSeconds int                 `json:"request_timeout_seconds,omitempty"`
-	MaxOutputTokens       int                 `json:"max_output_tokens,omitempty"`
+	Name                  string                      `json:"name"`
+	ProviderType          providerdomain.ProviderType `json:"provider_type"`
+	BaseURL               string                      `json:"base_url"`
+	Model                 string                      `json:"model"`
+	APIKey                string                      `json:"api_key,omitempty"`
+	Enabled               *bool                       `json:"enabled,omitempty"`
+	IsDefaultWriting      bool                        `json:"is_default_writing,omitempty"`
+	IsDefaultImage        bool                        `json:"is_default_image,omitempty"`
+	ProtocolMode          string                      `json:"protocol_mode,omitempty"`
+	StreamMode            string                      `json:"stream_mode,omitempty"`
+	RequestTimeoutSeconds int                         `json:"request_timeout_seconds,omitempty"`
+	MaxOutputTokens       int                         `json:"max_output_tokens,omitempty"`
 }
 
 func parseProviderImportPayload(raw []byte) ([]providerImportItem, error) {
@@ -219,18 +220,18 @@ func (ctrl *Controller) ImportProviders(c *gin.Context) {
 		existingNames[strings.ToLower(strings.TrimSpace(p.Name))] = true
 	}
 
-	importedProfiles := make([]*domain.ProviderProfile, 0, len(items))
+	importedProfiles := make([]*providerdomain.ProviderProfile, 0, len(items))
 	for _, item := range items {
 		pType := item.ProviderType
 		if pType == "" {
-			pType = domain.ProviderOpenAI
+			pType = providerdomain.ProviderOpenAI
 		}
 		baseURL := item.BaseURL
 		if baseURL == "" {
 			switch pType {
-			case domain.ProviderAnthropic:
+			case providerdomain.ProviderAnthropic:
 				baseURL = "https://api.anthropic.com"
-			case domain.ProviderGemini:
+			case providerdomain.ProviderGemini:
 				baseURL = "https://generativelanguage.googleapis.com"
 			default:
 				baseURL = "https://api.openai.com"
@@ -256,7 +257,7 @@ func (ctrl *Controller) ImportProviders(c *gin.Context) {
 			apiKey = "placeholder-key-please-update"
 		}
 
-		profile := &domain.ProviderProfile{
+		profile := &providerdomain.ProviderProfile{
 			Name:                  name,
 			ProviderType:          pType,
 			BaseURL:               baseURL,
@@ -322,7 +323,7 @@ func (ctrl *Controller) saveProvider(c *gin.Context, id int64) {
 		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
 		return
 	}
-	profile := &domain.ProviderProfile{
+	profile := &providerdomain.ProviderProfile{
 		ID: id, Name: req.Name, ProviderType: req.ProviderType, BaseURL: req.BaseURL,
 		Model: req.Model, Enabled: req.Enabled, ProtocolMode: strings.TrimSpace(req.ProtocolMode),
 		StreamMode:            strings.TrimSpace(req.StreamMode),

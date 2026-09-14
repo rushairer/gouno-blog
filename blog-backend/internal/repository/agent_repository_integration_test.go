@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	agentrepository "github.com/rushairer/blog-backend/internal/agent/repository"
+	providerdomain "github.com/rushairer/blog-backend/internal/provider/domain"
 	providerrepository "github.com/rushairer/blog-backend/internal/provider/repository"
 	"github.com/rushairer/blog-backend/internal/testsupport"
 	"os"
@@ -27,8 +28,8 @@ func TestDeleteProviderRevokesCredentialAfterAgentSoftDelete(t *testing.T) {
 
 	ctx := context.Background()
 	name := fmt.Sprintf("provider-revocation-%d", time.Now().UnixNano())
-	profile := &domain.ProviderProfile{
-		Name: name, ProviderType: domain.ProviderOpenAI, BaseURL: "https://api.example.test", Model: "test-model",
+	profile := &providerdomain.ProviderProfile{
+		Name: name, ProviderType: providerdomain.ProviderOpenAI, BaseURL: "https://api.example.test", Model: "test-model",
 		APIKeyCiphertext: []byte("ciphertext"), APIKeyNonce: []byte("nonce"), APIKeyLast4: "1234", KeyVersion: 1,
 		Enabled: true, RequestTimeoutSeconds: 60, MaxOutputTokens: 32,
 	}

@@ -5,9 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	providerdomain "github.com/rushairer/blog-backend/internal/provider/domain"
 	"strings"
-
-	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 var ErrResourceInUse = errors.New("resource is in use")
@@ -24,8 +23,8 @@ func New(db *sql.DB) *Repository {
 	return &Repository{db: db}
 }
 
-func scanProvider(scanner interface{ Scan(...any) error }) (*domain.ProviderProfile, error) {
-	var profile domain.ProviderProfile
+func scanProvider(scanner interface{ Scan(...any) error }) (*providerdomain.ProviderProfile, error) {
+	var profile providerdomain.ProviderProfile
 	err := scanner.Scan(
 		&profile.ID, &profile.Name, &profile.ProviderType, &profile.BaseURL, &profile.Model,
 		&profile.APIKeyCiphertext, &profile.APIKeyNonce, &profile.APIKeyLast4, &profile.KeyVersion,
@@ -45,7 +44,7 @@ func (r *Repository) ReserveProviderID(ctx context.Context) (int64, error) {
 	return id, err
 }
 
-func (r *Repository) CreateProvider(ctx context.Context, profile *domain.ProviderProfile) error {
+func (r *Repository) CreateProvider(ctx context.Context, profile *providerdomain.ProviderProfile) error {
 	if profile.StreamMode == "" {
 		profile.StreamMode = "auto"
 	}
@@ -71,7 +70,7 @@ func (r *Repository) CreateProvider(ctx context.Context, profile *domain.Provide
 	).Scan(&profile.ID, &profile.CreatedAt, &profile.UpdatedAt)
 }
 
-func (r *Repository) UpdateProvider(ctx context.Context, profile *domain.ProviderProfile, replaceSecret bool) error {
+func (r *Repository) UpdateProvider(ctx context.Context, profile *providerdomain.ProviderProfile, replaceSecret bool) error {
 	if profile.StreamMode == "" {
 		profile.StreamMode = "auto"
 	}
@@ -101,19 +100,19 @@ func (r *Repository) UpdateProvider(ctx context.Context, profile *domain.Provide
 	return row.Scan(&profile.CreatedAt, &profile.UpdatedAt)
 }
 
-func (r *Repository) GetProvider(ctx context.Context, id int64) (*domain.ProviderProfile, error) {
+func (r *Repository) GetProvider(ctx context.Context, id int64) (*providerdomain.ProviderProfile, error) {
 	return scanProvider(r.db.QueryRowContext(ctx, `SELECT `+providerColumns+`
 		FROM ai_provider_profiles WHERE id=$1 AND deleted_at IS NULL`, id))
 }
 
-func (r *Repository) ListProviders(ctx context.Context) ([]*domain.ProviderProfile, error) {
+func (r *Repository) ListProviders(ctx context.Context) ([]*providerdomain.ProviderProfile, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT `+providerColumns+`
 		FROM ai_provider_profiles WHERE deleted_at IS NULL ORDER BY name`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	result := make([]*domain.ProviderProfile, 0)
+	result := make([]*providerdomain.ProviderProfile, 0)
 	for rows.Next() {
 		profile, err := scanProvider(rows)
 		if err != nil {
@@ -153,7 +152,7 @@ func (r *Repository) SetDefaultProvider(ctx context.Context, id int64, purpose s
 }
 
 func (r *Repository) DeleteProvider(ctx context.Context, id int64) error {
-	var profile domain.ProviderProfile
+	var profile providerdomain.ProviderProfile
 	err := r.db.QueryRowContext(ctx, `SELECT id, name, is_default_writing, is_default_image FROM ai_provider_profiles WHERE id=$1 AND deleted_at IS NULL`, id).
 		Scan(&profile.ID, &profile.Name, &profile.IsDefaultWriting, &profile.IsDefaultImage)
 	if errors.Is(err, sql.ErrNoRows) {

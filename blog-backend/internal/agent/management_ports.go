@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	providerdomain "github.com/rushairer/blog-backend/internal/provider/domain"
 	"time"
 
 	"github.com/rushairer/blog-backend/internal/domain"
@@ -9,10 +10,10 @@ import (
 
 type ManagementProviderStore interface {
 	ReserveProviderID(context.Context) (int64, error)
-	CreateProvider(context.Context, *domain.ProviderProfile) error
-	UpdateProvider(context.Context, *domain.ProviderProfile, bool) error
-	GetProvider(context.Context, int64) (*domain.ProviderProfile, error)
-	ListProviders(context.Context) ([]*domain.ProviderProfile, error)
+	CreateProvider(context.Context, *providerdomain.ProviderProfile) error
+	UpdateProvider(context.Context, *providerdomain.ProviderProfile, bool) error
+	GetProvider(context.Context, int64) (*providerdomain.ProviderProfile, error)
+	ListProviders(context.Context) ([]*providerdomain.ProviderProfile, error)
 	SetDefaultProvider(context.Context, int64, string) error
 	DeleteProvider(context.Context, int64) error
 }

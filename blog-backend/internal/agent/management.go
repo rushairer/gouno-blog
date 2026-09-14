@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	providerdomain "github.com/rushairer/blog-backend/internal/provider/domain"
 	"slices"
 	"strings"
 	"time"
@@ -46,13 +47,13 @@ func NewManagementService(deps ManagementServiceDependencies, secrets *secretbox
 	}
 }
 
-func (s *ManagementService) ListProviders(ctx context.Context) ([]*domain.ProviderProfile, error) {
+func (s *ManagementService) ListProviders(ctx context.Context) ([]*providerdomain.ProviderProfile, error) {
 	return s.providers.ListProviders(ctx)
 }
 
 // DefaultWritingClient is intentionally a narrow capability for dedicated
 // system jobs; it does not grant content mutation to normal Agents.
-func (s *ManagementService) DefaultWritingClient(ctx context.Context) (*domain.ProviderProfile, provider.Provider, error) {
+func (s *ManagementService) DefaultWritingClient(ctx context.Context) (*providerdomain.ProviderProfile, provider.Provider, error) {
 	profiles, err := s.ListProviders(ctx)
 	if err != nil {
 		return nil, nil, err
@@ -70,7 +71,7 @@ func (s *ManagementService) Notify(ctx context.Context, recipientPrincipalID int
 	return s.notifications.Create(ctx, recipientPrincipalID, eventType, title, body, href, key)
 }
 
-func (s *ManagementService) GetProvider(ctx context.Context, id int64) (*domain.ProviderProfile, error) {
+func (s *ManagementService) GetProvider(ctx context.Context, id int64) (*providerdomain.ProviderProfile, error) {
 	value, err := s.providers.GetProvider(ctx, id)
 	return value, translateError(err)
 }
@@ -82,7 +83,7 @@ func (s *ManagementService) SetDefaultProvider(ctx context.Context, id int64, pu
 	return translateError(s.providers.SetDefaultProvider(ctx, id, purpose))
 }
 
-func (s *ManagementService) SaveProvider(ctx context.Context, profile *domain.ProviderProfile, apiKey string) error {
+func (s *ManagementService) SaveProvider(ctx context.Context, profile *providerdomain.ProviderProfile, apiKey string) error {
 	profile.Name = strings.TrimSpace(profile.Name)
 	profile.BaseURL = strings.TrimRight(strings.TrimSpace(profile.BaseURL), "/")
 	profile.Model = strings.TrimSpace(profile.Model)
@@ -128,11 +129,11 @@ func (s *ManagementService) SaveProvider(ctx context.Context, profile *domain.Pr
 	return translateError(err)
 }
 
-func (s *ManagementService) validateProvider(ctx context.Context, profile *domain.ProviderProfile) error {
+func (s *ManagementService) validateProvider(ctx context.Context, profile *providerdomain.ProviderProfile) error {
 	if profile.Name == "" || profile.Model == "" {
 		return fmt.Errorf("%w: name and model are required", ErrInvalid)
 	}
-	if profile.ProviderType != domain.ProviderOpenAI && profile.ProviderType != domain.ProviderAnthropic && profile.ProviderType != domain.ProviderGemini {
+	if profile.ProviderType != providerdomain.ProviderOpenAI && profile.ProviderType != providerdomain.ProviderAnthropic && profile.ProviderType != providerdomain.ProviderGemini {
 		return fmt.Errorf("%w: unsupported provider type", ErrInvalid)
 	}
 	if err := provider.ValidateUpstreamURL(ctx, profile.BaseURL, s.allowedHosts); err != nil {
@@ -157,7 +158,7 @@ func (s *ManagementService) DeleteProvider(ctx context.Context, id int64) error 
 	return translateError(err)
 }
 
-func (s *ManagementService) ResolveAgentProvider(ctx context.Context, agent *domain.Agent) (*domain.ProviderProfile, error) {
+func (s *ManagementService) ResolveAgentProvider(ctx context.Context, agent *domain.Agent) (*providerdomain.ProviderProfile, error) {
 	if agent.ProviderProfileID != nil && *agent.ProviderProfileID > 0 {
 		return s.GetProvider(ctx, *agent.ProviderProfileID)
 	}
@@ -168,7 +169,7 @@ func (s *ManagementService) ResolveAgentProvider(ctx context.Context, agent *dom
 	return profile, nil
 }
 
-func (s *ManagementService) AgentProviderClient(ctx context.Context, agent *domain.Agent) (*domain.ProviderProfile, provider.Provider, error) {
+func (s *ManagementService) AgentProviderClient(ctx context.Context, agent *domain.Agent) (*providerdomain.ProviderProfile, provider.Provider, error) {
 	if agent.ProviderProfileID != nil && *agent.ProviderProfileID > 0 {
 		profile, err := s.GetProvider(ctx, *agent.ProviderProfileID)
 		if err != nil {
