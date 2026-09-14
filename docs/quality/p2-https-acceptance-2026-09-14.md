@@ -17,3 +17,9 @@ workflow (draft → media/preview → MFA save → publish/schedule → anonymou
 read → edit → restore), dual-tab conflict flow, session-expiry recovery, and
 mobile editor flow remain unverified because this run did not possess an
 interactive owner session or MFA proof. No production content was changed.
+
+## Engineering gates
+
+- Backend `go test ./...`: passed.
+- Frontend `npm run quality`: passed; existing lint warnings remain non-blocking.
+- `docker compose config -q`: passed.

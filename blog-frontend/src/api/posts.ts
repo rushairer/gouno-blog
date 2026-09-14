@@ -90,7 +90,7 @@ export const postsApi = {
   async restoreVersion(
     postID: number | string,
     versionID: number | string,
-    expectedRevision: number | undefined,
+    expectedRevision?: number,
   ): Promise<Post> {
     return apiClient.post<Post>(
       `/api/admin/posts/${postID}/versions/${versionID}/restore`,
