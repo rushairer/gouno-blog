@@ -6,6 +6,7 @@ import (
 
 	"github.com/rushairer/blog-backend/internal/domain"
 	postcapability "github.com/rushairer/blog-backend/internal/post"
+	postversiondomain "github.com/rushairer/blog-backend/internal/postversion/domain"
 )
 
 // TransactionRunner is the narrow transaction boundary required by restore.
@@ -17,7 +18,7 @@ type TransactionRunner interface {
 // VersionSnapshotReader exposes only PostVersion-owned snapshot reads inside
 // a caller-owned transaction.
 type VersionSnapshotReader interface {
-	GetVersionTx(context.Context, *sql.Tx, int64, int64) (*domain.PostVersion, error)
+	GetVersionTx(context.Context, *sql.Tx, int64, int64) (*postversiondomain.PostVersion, error)
 }
 
 // PostRestoreWriter exposes only the Post-owned restore write inside a

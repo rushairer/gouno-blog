@@ -8,16 +8,17 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/domain"
+	postversiondomain "github.com/rushairer/blog-backend/internal/postversion/domain"
 )
 
 type fakeService struct {
-	versions  []*domain.PostVersion
+	versions  []*postversiondomain.PostVersion
 	restored  *domain.Post
 	postID    int64
 	versionID int64
 }
 
-func (f *fakeService) ListVersions(_ context.Context, postID int64) ([]*domain.PostVersion, error) {
+func (f *fakeService) ListVersions(_ context.Context, postID int64) ([]*postversiondomain.PostVersion, error) {
 	f.postID = postID
 	return f.versions, nil
 }
@@ -36,7 +37,7 @@ func (fakePostReader) GetAdminPost(context.Context, int64) (*domain.Post, error)
 
 func TestListVersionsUsesCanonicalService(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	svc := &fakeService{versions: []*domain.PostVersion{{ID: 7, PostID: 3}}}
+	svc := &fakeService{versions: []*postversiondomain.PostVersion{{ID: 7, PostID: 3}}}
 	ctrl := New(svc, fakePostReader{})
 	engine := gin.New()
 	engine.GET("/posts/:id/versions", ctrl.ListVersions)
