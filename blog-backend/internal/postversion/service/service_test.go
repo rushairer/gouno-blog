@@ -9,28 +9,32 @@ import (
 	"github.com/rushairer/blog-backend/internal/domain"
 )
 
-type fakeRepository struct {
-	versions   []*domain.PostVersion
-	restored   *domain.Post
-	listErr    error
-	restoreErr error
-	postID     int64
-	versionID  int64
+type fakeVersionReader struct {
+	versions []*domain.PostVersion
+	err      error
+	postID   int64
 }
 
-func (f *fakeRepository) ListVersions(_ context.Context, postID int64) ([]*domain.PostVersion, error) {
+func (f *fakeVersionReader) ListVersions(_ context.Context, postID int64) ([]*domain.PostVersion, error) {
 	f.postID = postID
-	return f.versions, f.listErr
+	return f.versions, f.err
 }
 
-func (f *fakeRepository) RestoreVersion(_ context.Context, postID, versionID int64) (*domain.Post, error) {
+type fakeRestorer struct {
+	restored  *domain.Post
+	err       error
+	postID    int64
+	versionID int64
+}
+
+func (f *fakeRestorer) RestoreVersion(_ context.Context, postID, versionID int64) (*domain.Post, error) {
 	f.postID = postID
 	f.versionID = versionID
-	return f.restored, f.restoreErr
+	return f.restored, f.err
 }
 
 func TestListVersionsValidatesPostID(t *testing.T) {
-	svc := New(&fakeRepository{})
+	svc := New(&fakeVersionReader{}, &fakeRestorer{})
 	_, err := svc.ListVersions(context.Background(), 0)
 	if !errors.Is(err, ErrInvalidPostID) {
 		t.Fatalf("err=%v, want ErrInvalidPostID", err)
@@ -38,19 +42,19 @@ func TestListVersionsValidatesPostID(t *testing.T) {
 }
 
 func TestListVersionsDelegatesToRepository(t *testing.T) {
-	repo := &fakeRepository{versions: []*domain.PostVersion{{ID: 7, PostID: 3}}}
-	svc := New(repo)
+	reader := &fakeVersionReader{versions: []*domain.PostVersion{{ID: 7, PostID: 3}}}
+	svc := New(reader, &fakeRestorer{})
 	versions, err := svc.ListVersions(context.Background(), 3)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if repo.postID != 3 || len(versions) != 1 || versions[0].ID != 7 {
-		t.Fatalf("unexpected delegation: postID=%d versions=%#v", repo.postID, versions)
+	if reader.postID != 3 || len(versions) != 1 || versions[0].ID != 7 {
+		t.Fatalf("unexpected delegation: postID=%d versions=%#v", reader.postID, versions)
 	}
 }
 
 func TestRestoreVersionValidatesIdentifiers(t *testing.T) {
-	svc := New(&fakeRepository{})
+	svc := New(&fakeVersionReader{}, &fakeRestorer{})
 	for _, tc := range []struct {
 		postID    int64
 		versionID int64
@@ -63,7 +67,7 @@ func TestRestoreVersionValidatesIdentifiers(t *testing.T) {
 }
 
 func TestRestoreVersionMapsMissingSnapshotToPostNotFound(t *testing.T) {
-	svc := New(&fakeRepository{restoreErr: sql.ErrNoRows})
+	svc := New(&fakeVersionReader{}, &fakeRestorer{err: sql.ErrNoRows})
 	_, err := svc.RestoreVersion(context.Background(), 3, 9)
 	if !errors.Is(err, ErrPostNotFound) {
 		t.Fatalf("err=%v, want ErrPostNotFound", err)
@@ -71,13 +75,13 @@ func TestRestoreVersionMapsMissingSnapshotToPostNotFound(t *testing.T) {
 }
 
 func TestRestoreVersionReturnsRestoredPost(t *testing.T) {
-	repo := &fakeRepository{restored: &domain.Post{ID: 3, Title: "restored"}}
-	svc := New(repo)
+	restorer := &fakeRestorer{restored: &domain.Post{ID: 3, Title: "restored"}}
+	svc := New(&fakeVersionReader{}, restorer)
 	post, err := svc.RestoreVersion(context.Background(), 3, 9)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if repo.postID != 3 || repo.versionID != 9 || post == nil || post.Title != "restored" {
-		t.Fatalf("unexpected restore: postID=%d versionID=%d post=%#v", repo.postID, repo.versionID, post)
+	if restorer.postID != 3 || restorer.versionID != 9 || post == nil || post.Title != "restored" {
+		t.Fatalf("unexpected restore: postID=%d versionID=%d post=%#v", restorer.postID, restorer.versionID, post)
 	}
 }

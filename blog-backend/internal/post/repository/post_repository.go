@@ -9,6 +9,7 @@ import (
 
 	"github.com/lib/pq"
 	"github.com/rushairer/blog-backend/internal/domain"
+	postcapability "github.com/rushairer/blog-backend/internal/post"
 )
 
 type PostRepository struct {
@@ -44,6 +45,32 @@ func (r *PostRepository) Update(ctx context.Context, post *domain.Post) error {
 		post.Title, post.Slug, post.Summary, post.Content, pq.Array(post.Tags), post.CategoryID, post.CoverURL, post.CoverAlt, post.SEOTitle, post.SEODescription, post.Status, post.PublishedAt, post.ScheduledAt, post.UpdatedByPrincipalID, post.ID,
 	).Scan(&post.UpdatedAt)
 	return err
+}
+
+// RestoreSnapshotTx applies a Post-owned restore command inside a caller-owned
+// transaction. Cross-capability coordinators may call this port, but Post SQL
+// remains owned by the Post repository.
+func (r *PostRepository) RestoreSnapshotTx(ctx context.Context, tx *sql.Tx, postID int64, snapshot postcapability.RestoreSnapshot) (*domain.Post, error) {
+	row := tx.QueryRowContext(ctx, `UPDATE posts SET
+		title = $2, slug = $3, summary = $4, content = $5, tags = $6,
+		category_id = $7, cover_url = $8, cover_alt = $9,
+		seo_title = $10, seo_description = $11,
+		status = $12, published_at = $13, scheduled_at = $14, updated_at = NOW()
+		WHERE id = $1
+		RETURNING id, title, slug, summary, content, tags, status,
+			views_count, likes_count, published_at, scheduled_at,
+			created_by_principal_id, updated_by_principal_id, created_at, updated_at`,
+		postID, snapshot.Title, snapshot.Slug, snapshot.Summary, snapshot.Content, pq.Array(snapshot.Tags),
+		snapshot.CategoryID, snapshot.CoverURL, snapshot.CoverAlt, snapshot.SEOTitle, snapshot.SEODescription,
+		snapshot.Status, snapshot.PublishedAt, snapshot.ScheduledAt)
+	var restored domain.Post
+	err := row.Scan(&restored.ID, &restored.Title, &restored.Slug, &restored.Summary, &restored.Content, pq.Array(&restored.Tags),
+		&restored.Status, &restored.ViewsCount, &restored.LikesCount, &restored.PublishedAt, &restored.ScheduledAt,
+		&restored.CreatedByPrincipalID, &restored.UpdatedByPrincipalID, &restored.CreatedAt, &restored.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &restored, nil
 }
 
 func (r *PostRepository) Delete(ctx context.Context, id int64) error {

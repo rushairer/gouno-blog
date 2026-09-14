@@ -289,7 +289,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 	mediaSvc := mediaservice.New(mediarepository.New(cfg.DB))
 	analyticsSvc := newAnalyticsService(cfg.DB)
 	recommendationSvc := newRecommendationService(cfg.DB)
-	postVersionSvc := newPostVersionService(cfg.DB)
+	postVersionSvc := newPostVersionService(cfg.DB, transactor, postRepo)
 	postservice.StartScheduledPublisher(ctx, postSvc, cfg.Logger)
 
 	var agentCtrl *agentcontroller.Controller

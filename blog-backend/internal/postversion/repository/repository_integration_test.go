@@ -9,7 +9,7 @@ import (
 	"github.com/rushairer/blog-backend/internal/testsupport"
 )
 
-func TestPostVersionRepositoryLifecycle(t *testing.T) {
+func TestPostVersionRepositoryReadsOwnedSnapshots(t *testing.T) {
 	db := testsupport.OpenTestDB(t)
 	defer db.Close()
 	ctx := context.Background()
@@ -32,8 +32,13 @@ func TestPostVersionRepositoryLifecycle(t *testing.T) {
 		t.Fatalf("version snapshot mismatch: versions=%#v err=%v", versions, err)
 	}
 
-	restored, err := repo.RestoreVersion(ctx, postID, versions[0].ID)
-	if err != nil || restored.Title != "Original title" || restored.Content != "Original body" {
-		t.Fatalf("restore mismatch: post=%#v err=%v", restored, err)
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+	snapshot, err := repo.GetVersionTx(ctx, tx, postID, versions[0].ID)
+	if err != nil || snapshot.Title != "Original title" || snapshot.Content != "Original body" {
+		t.Fatalf("snapshot mismatch: version=%#v err=%v", snapshot, err)
 	}
 }
