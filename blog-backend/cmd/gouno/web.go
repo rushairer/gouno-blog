@@ -45,6 +45,7 @@ import (
 	taxonomyservice "github.com/rushairer/blog-backend/internal/taxonomy/service"
 	"github.com/rushairer/blog-backend/internal/tool"
 	workflowservice "github.com/rushairer/blog-backend/internal/workflow"
+	workflowcontroller "github.com/rushairer/blog-backend/internal/workflow/controller"
 	workflowrepository "github.com/rushairer/blog-backend/internal/workflow/repository"
 	"github.com/rushairer/blog-backend/middleware"
 	"github.com/rushairer/blog-backend/router"
@@ -222,7 +223,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 	if cfg.Env == "production" && visitorSecret == "" {
 		log.Fatal("BLOG_VISITOR_SECRET is required in production")
 	}
-	if cfg.Env == "production" && cfg.Global.AIAgentConfig.Enabled && !controller.ValidWebhookSecret(os.Getenv("GOUNO_AI_WEBHOOK_SECRET")) {
+	if cfg.Env == "production" && cfg.Global.AIAgentConfig.Enabled && !workflowcontroller.ValidWebhookSecret(os.Getenv("GOUNO_AI_WEBHOOK_SECRET")) {
 		log.Fatal("GOUNO_AI_WEBHOOK_SECRET must be at least 32 characters in production when AI Agents are enabled")
 	}
 	mediaDir := os.Getenv("BLOG_MEDIA_DIR")
@@ -289,6 +290,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 	postservice.StartScheduledPublisher(ctx, postSvc, cfg.Logger)
 
 	var agentCtrl *controller.AgentController
+	var workflowCtrl *workflowcontroller.Controller
 	if cfg.Global.AIAgentConfig.Enabled {
 		secrets, err := secretbox.NewKeyring(
 			readSecretFromFileOrEnv(os.Getenv("BLOG_AGENT_MASTER_KEY_FILE"), os.Getenv("BLOG_AGENT_MASTER_KEY")),
@@ -359,6 +361,8 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		workflowMetrics := workflowrepository.NewMetricsRepository(cfg.DB)
 		workflowCatalog := workflowservice.NewResourceCatalog(cfg.DB)
 		workflowSvc := workflowservice.NewService(workflowDefinitionRepo, workflowRunReads, workflowMetrics, workflowCatalog, runner, management, toolRegistry, workflowLifecycle, workflowMediaRuns, workflowAdmission, workflowDispatch, workflowExecution, agentApprovalRepo)
+		workflowInteractions := workflowservice.NewInteractionService(workflowInteractionRepo, workflowSvc)
+		workflowCtrl = workflowcontroller.New(workflowSvc, workflowInteractions, management, toolRegistry, ctx)
 		workflowSvc.StartScheduler(ctx, cfg.Global.AIAgentConfig.SchedulerInterval)
 		connectorSvc := connector.NewService(cfg.DB, secrets, transactor, os.Getenv("BLOG_CONNECTOR_OAUTH_REDIRECT_URL"))
 		agentCtrl = controller.NewAgentControllerWithOptions(controller.AgentControllerOptions{
@@ -378,7 +382,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		VisitorSecret: visitorSecret, MediaDir: mediaDir, MediaStore: mediaStore,
 		CORSAllowedOrigins: cfg.Global.WebServerConfig.CORSAllowedOrigins,
 		PostSvc:            postSvc, PageSvc: pageSvc, MediaSvc: mediaSvc, TaxonomySvc: taxonomySvc, SiteSvc: siteSvc, CommunitySvc: communitySvc,
-		AnalyticsSvc: analyticsSvc, RecommendationSvc: recommendationSvc, PostVersionSvc: postVersionSvc, AgentCtrl: agentCtrl, Logger: cfg.Logger, Verifier: verifier,
+		AnalyticsSvc: analyticsSvc, RecommendationSvc: recommendationSvc, PostVersionSvc: postVersionSvc, AgentCtrl: agentCtrl, WorkflowCtrl: workflowCtrl, Logger: cfg.Logger, Verifier: verifier,
 		AccessService: accessService, SecureCookies: cfg.Global.WebServerConfig.ResolveSecureCookies(cfg.Env),
 		BFFClient: bffClient,
 	})

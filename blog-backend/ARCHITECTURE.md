@@ -121,6 +121,16 @@ The default `gouno-template` Flat Layered structure remains the reference for si
 Architecture refactoring and Codegen must preserve the root `AGENTS.md` security contract, especially the confidential BFF boundary and Connector Module Hold. Structural cleanup is not authorization to change OAuth/OIDC, session, connector, credential, deployment, or security behavior.
 
 
+## Workflow HTTP ownership boundary
+
+Workflow HTTP transport is capability-owned under `internal/workflow/controller`; the legacy flat `AgentController` is no longer the transport owner for Workflow CRUD, Runs, events, interactions, resource discovery, metrics, planning, or the signed public Workflow webhook.
+
+- `router.WebRouterOptions` receives a separate Workflow controller and preserves the existing paths, permission middleware, AAL2/recent-MFA requirements, audit middleware, response envelopes and webhook HMAC/idempotency contract.
+- Human-interaction HTTP operations use Workflow's `InteractionService` over the canonical `InteractionRepository`; the previous controller path through Agent `ApprovalService` is retired. Resolve/cancel still resume/cancel the linked Workflow Run with the historical `sql.ErrNoRows` tolerance.
+- Workflow planning consumes Agent provider/Agent catalog and Tool catalog through narrow controller-facing interfaces. Agent Skill drafting and Agent-owned MediaCandidate actions remain with Agent HTTP ownership even when their route is nested under a Workflow path.
+- The remaining flat Agent controller depends on Workflow only through a narrow lifecycle/reconciliation port used by Agent approval and MediaCandidate orchestration; it no longer receives the full Workflow Service for HTTP routing.
+- Connector routes and behavior remain untouched under the Connector Module Hold.
+
 ## Workflow read-model boundary
 
 Workflow query persistence is classified by projection instead of being folded into a generic repository aggregate.

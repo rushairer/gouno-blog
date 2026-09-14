@@ -31,7 +31,7 @@ func TestWebhookSecurity_Validation(t *testing.T) {
 	os.Setenv("GOUNO_AI_WEBHOOK_SECRET", secret)
 	defer os.Unsetenv("GOUNO_AI_WEBHOOK_SECRET")
 
-	ctrl := &AgentController{}
+	ctrl := &Controller{}
 
 	router := gin.New()
 	router.POST("/api/ai/webhooks/:event", ctrl.ReceiveWorkflowWebhook)
