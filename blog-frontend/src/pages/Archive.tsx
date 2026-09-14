@@ -54,7 +54,7 @@ export default function Archive() {
           </span>
         }
       />
-      <Card as="section" className="simple-page__body">
+      <Card as="section" aria-label={`${t("archivePage.title")}内容`}>
         {loading ? (
           <div
             role="status"

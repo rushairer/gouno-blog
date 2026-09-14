@@ -3,6 +3,8 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: ".",
   testMatch: [
+    "public-matrix.pw.mjs",
+    "public-interactions.pw.mjs",
     "support-matrix.pw.mjs",
     "support-interactions.pw.mjs",
     "ai-workspace-matrix.pw.mjs",

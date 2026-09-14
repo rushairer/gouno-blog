@@ -56,7 +56,7 @@ export default function Tags() {
           </span>
         }
       />
-      <Card as="section" className="simple-page__body">
+      <Card as="section" aria-label={`${t("tagsPage.title")}内容`}>
         {loading ? (
           <div
             role="status"

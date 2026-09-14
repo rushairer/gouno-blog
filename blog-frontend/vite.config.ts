@@ -15,11 +15,16 @@ function gounoUiRuntimeAssets(): Plugin {
   return {
     name: 'gouno-ui-runtime-assets',
     configureServer(server) {
+      const faviconPath = new URL(
+        'favicon.svg',
+        new URL(server.config.base, 'http://localhost'),
+      ).pathname
+
       server.middlewares.use((request, response, next) => {
         const pathname = request.url
           ? new URL(request.url, 'http://localhost').pathname
           : ''
-        if (!pathname.endsWith('/favicon.svg')) {
+        if (pathname !== faviconPath) {
           next()
           return
         }
@@ -29,6 +34,7 @@ function gounoUiRuntimeAssets(): Plugin {
       })
     },
     buildStart() {
+      if (this.meta.watchMode) return
       this.emitFile({
         type: 'asset',
         fileName: 'favicon.svg',

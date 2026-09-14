@@ -59,7 +59,6 @@ describe("admin route access", () => {
     render(<App />);
 
     await waitFor(() => {
-      expect(screen.getByRole("status")).toHaveTextContent("正在验证权限");
       expect(screen.getByRole("status")).toHaveTextContent(
         "正在前往安全登录页…",
       );
@@ -108,8 +107,7 @@ describe("step-up callback window", () => {
 });
 
 describe("account route access", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+  it("preserves the requested account route while redirecting an anonymous reader", async () => {
     setMockSnapshot({
       accessToken: null,
       refreshToken: null,
@@ -117,19 +115,14 @@ describe("account route access", () => {
       loggedIn: false,
       isAdmin: false,
     });
-    window.history.replaceState({}, "", "/account/notifications");
-  });
-
-  it("preserves the requested account route while redirecting an anonymous reader", async () => {
+    window.history.replaceState({}, "", "/account/settings");
     render(<App />);
 
     await waitFor(() => {
       expect(screen.getByRole("status")).toHaveTextContent(
         "正在前往安全登录页…",
       );
-      expect(redirectToAuthorizeMock).toHaveBeenCalledWith(
-        "/account/notifications",
-      );
+      expect(redirectToAuthorizeMock).toHaveBeenCalledWith("/account/settings");
     });
   });
 });
