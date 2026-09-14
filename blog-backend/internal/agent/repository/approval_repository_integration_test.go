@@ -8,6 +8,7 @@ import (
 
 	_ "github.com/lib/pq"
 	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/testsupport"
 )
 
 func TestFailedApprovalRemainsActionableAndCanBeReclaimed(t *testing.T) {
@@ -61,7 +62,8 @@ func TestFailedApprovalRemainsActionableAndCanBeReclaimed(t *testing.T) {
 	if !found {
 		t.Fatal("failed approval was not returned as actionable work")
 	}
-	if err := repo.ClaimApproval(ctx, approvalID, 1, "retry"); err != nil {
+	principalID := testsupport.Principal(t, db)
+	if err := repo.ClaimApproval(ctx, approvalID, principalID, "retry"); err != nil {
 		t.Fatalf("failed approval must be reclaimable: %v", err)
 	}
 	claimed, err := repo.GetApproval(ctx, approvalID)
