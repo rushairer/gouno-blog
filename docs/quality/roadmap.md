@@ -53,8 +53,8 @@
 | Q01a | 新安装与已有库的身份迁移路径修复 | 用户批准历史修订例外 | verified：身份回归及总门禁通过 |
 | Q01b | Workflow 迭代输出与失败重试 | Q01a 实际门禁证据 | verified：本地修复未提交 |
 | Q02 | 文章编辑 revision、冲突响应、草稿保留完整闭环 | Q01a/Q01b 修复且 Q01 剩余验收通过 | implemented：工程门禁通过；真实会话待验收 |
-| Q03 | 配置请求去重、元信息所有权、定位标题不稳定测试 | Q02 在当前基线；技术上可独立，但默认串行 | planned |
-| Q04 | 复核 Q01–Q03 的 diff、数据与页面行为 | Q01–Q03 implemented | planned |
+| Q03 | 配置请求去重、元信息所有权、定位标题不稳定测试 | Q02 在当前基线 | implemented：客户端实现与单测通过；浏览器/SSR 待验收 |
+| Q04 | 复核 Q01–Q03 的 diff、数据与页面行为 | Q01–Q03 implemented | in_progress：真实会话证据待补 |
 | Q05 | 核心安全与身份契约验证，核对文档漂移 | Q04 verified 且修复已集成 | backlog |
 | Q06 | 公开列表 DTO、请求与资源体积基线 | Q04 同上 | backlog |
 | Q07 | 公开页面渲染方案 ADR 与最小验证 | Q03、Q06 已验收 | backlog |
