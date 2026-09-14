@@ -50,23 +50,32 @@ Agent composition is now canonical at the service-dependency layer: the root con
 | --- | --- | --- | --- |
 | `internal/repository.Transactor` and `NewTransactor` | Shared-infrastructure alias | **Connector only after Phase B** | Deferred by Connector Module Hold. Delete immediately after explicitly authorized Connector direct-`dbtx` cutover. |
 | `internal/controller.AgentController` Connector-only transitional shell | Explicit Connector Hold | Connector routes/callback only; Agent, Workflow, Operations and Knowledge transport are capability-local | Retain unchanged until explicit Connector Hold lift; then move Connector transport with dedicated security review/tests. |
+| `internal/controller` response/pagination compatibility helpers | Frozen compatibility facade | Stable Access controller plus Connector-held flat transport | Retire only in a dedicated Access/Connector boundary slice after the relevant security/Hold constraints are explicitly lifted; no new consumers are allowed. |
 | `internal/domain` Agent/Workflow/Operations/Post/Page models | Deliberate model migration boundary, not automatically a facade | Multiple capabilities | Classify each model as capability-owned, shared kernel, cross-capability contract or transport DTO before moving. Never move solely for directory symmetry. |
 
 ## Flat-layer classification
 
 The remaining flat files are not all equivalent debt:
 
-- **A — migrate to capability / retire facade:** Agent, Workflow, Operations, Knowledge and Feed HTTP ownership are canonical under capability controllers; flat Agent repository delegates are retired. Remaining non-held facades require consumer proof before deletion.
+- **A — migrate to capability / retire facade:** Agent, Workflow, Operations, Knowledge and Feed HTTP ownership are canonical under capability controllers; flat Agent repository delegates are retired. The remaining `internal/controller` entries are explicitly classified and allowlist-frozen; there is no unclassified non-held business controller left in that bucket.
 - **B — shared infrastructure:** generic DB transaction execution belongs in `internal/dbtx`; generic SQL error classification belongs in `internal/dberror`; shared HTTP primitives belong in `internal/controllerutil` when/where proven.
 - **C — intentionally shared pending model-boundary decision:** root `internal/domain` types with real cross-capability consumers. These must not be duplicated or moved just to empty the directory.
 - **D — explicit hold:** Connector-related controller/dependency paths. Record the dependency but do not modify it while Connector Module Hold remains active.
 
 ## Migration debt priority
 
-1. **Transitional layer retirement:** retire remaining non-held compatibility facades only after consumer proof and full gates; Connector controller/transactor compatibility remains explicitly blocked by Connector Module Hold.
+1. **Held-boundary retirement:** non-held flat-controller ownership is converged and frozen. Connector controller/transactor compatibility remains explicitly blocked by Connector Module Hold; Access remains a stable security boundary rather than migration debt.
 2. **Shared-model classification:** classify remaining root `internal/domain` models only where a real capability/shared-kernel decision is needed; never move them for directory symmetry.
 
-Completed slices: **Agent Approval / Media Candidate / Workflow Event orchestration**, **Agent ManagementService dependency cutover**, **Starter Pack application coordination**, **Runner dependency/lifecycle convergence**, **Workflow Definition/Version persistence extraction**, **Workflow Run lifecycle coordination**, **Agent MediaCandidate / Workflow Run boundary convergence**, and **Workflow Run admission/retry/recovery convergence**, **Workflow dispatch/execution persistence convergence**, and **Workflow read-model classification**, and **Workflow HTTP ownership convergence**, and **Operations HTTP ownership convergence**, and **Agent HTTP ownership convergence**, and **Knowledge HTTP ownership convergence**, and **PostVersion restore ownership convergence**, and **Feed HTTP ownership convergence** now use canonical ownership boundaries and explicit composition-root wiring. The flat `repository.AgentRepository` aggregate and its Agent/Workflow/Notification delegates are retired; `internal/repository` remains only for the Connector-held Transactor alias until that Hold is explicitly lifted.
+Completed slices: **Agent Approval / Media Candidate / Workflow Event orchestration**, **Agent ManagementService dependency cutover**, **Starter Pack application coordination**, **Runner dependency/lifecycle convergence**, **Workflow Definition/Version persistence extraction**, **Workflow Run lifecycle coordination**, **Agent MediaCandidate / Workflow Run boundary convergence**, and **Workflow Run admission/retry/recovery convergence**, **Workflow dispatch/execution persistence convergence**, and **Workflow read-model classification**, and **Workflow HTTP ownership convergence**, and **Operations HTTP ownership convergence**, and **Agent HTTP ownership convergence**, and **Knowledge HTTP ownership convergence**, and **PostVersion restore ownership convergence**, and **Feed HTTP ownership convergence**, and **flat-controller boundary freeze** now use canonical ownership boundaries and explicit composition-root wiring. The flat `repository.AgentRepository` aggregate and its Agent/Workflow/Notification delegates are retired; `internal/repository` remains only for the Connector-held Transactor alias until that Hold is explicitly lifted.
+
+
+### Flat-controller boundary freeze — 2026-09-14
+
+- The remaining `internal/controller` bucket is allowlist-frozen to the stable Access security boundary, Connector-held transport/shell, and response/pagination compatibility helpers required by those held paths.
+- Workflow draft parsing tests now live with `internal/workflowplan`; Agent/Workflow HTTP ownership assertions now live with `internal/agent/controller`. Tests no longer create false ownership for the flat package.
+- `internal/controllerutil/flat_controller_boundary_test.go` fails if an unclassified file is added to the flat controller bucket or a classified held entry disappears without updating the ownership map.
+- This does not authorize Access or Connector migration. Connector Module Hold, BFF/session rules and Access security behavior remain unchanged.
 
 
 ### Feed HTTP ownership convergence — 2026-09-14

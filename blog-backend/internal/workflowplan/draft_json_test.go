@@ -1,4 +1,4 @@
-package controller
+package workflowplan_test
 
 import (
 	"strings"
