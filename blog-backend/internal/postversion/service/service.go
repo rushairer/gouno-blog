@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"github.com/rushairer/blog-backend/internal/domain"
+	postversiondomain "github.com/rushairer/blog-backend/internal/postversion/domain"
 )
 
 var (
@@ -15,12 +16,12 @@ var (
 )
 
 type Service interface {
-	ListVersions(context.Context, int64) ([]*domain.PostVersion, error)
+	ListVersions(context.Context, int64) ([]*postversiondomain.PostVersion, error)
 	RestoreVersion(context.Context, int64, int64) (*domain.Post, error)
 }
 
 type VersionReader interface {
-	ListVersions(context.Context, int64) ([]*domain.PostVersion, error)
+	ListVersions(context.Context, int64) ([]*postversiondomain.PostVersion, error)
 }
 
 type Restorer interface {
@@ -36,7 +37,7 @@ func New(versions VersionReader, restorer Restorer) Service {
 	return &postVersionService{versions: versions, restorer: restorer}
 }
 
-func (s *postVersionService) ListVersions(ctx context.Context, postID int64) ([]*domain.PostVersion, error) {
+func (s *postVersionService) ListVersions(ctx context.Context, postID int64) ([]*postversiondomain.PostVersion, error) {
 	if postID <= 0 {
 		return nil, ErrInvalidPostID
 	}

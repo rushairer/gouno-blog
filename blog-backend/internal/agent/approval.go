@@ -17,6 +17,7 @@ import (
 	pagedomain "github.com/rushairer/blog-backend/internal/page/domain"
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
 	postservice "github.com/rushairer/blog-backend/internal/post/service"
+	postversiondomain "github.com/rushairer/blog-backend/internal/postversion/domain"
 )
 
 var (
@@ -31,7 +32,7 @@ type mediaAssetGateway interface {
 }
 
 type postVersionReader interface {
-	ListVersions(context.Context, int64) ([]*domain.PostVersion, error)
+	ListVersions(context.Context, int64) ([]*postversiondomain.PostVersion, error)
 }
 
 type ApprovalService struct {

@@ -7,15 +7,16 @@ import (
 	"testing"
 
 	"github.com/rushairer/blog-backend/internal/domain"
+	postversiondomain "github.com/rushairer/blog-backend/internal/postversion/domain"
 )
 
 type fakeVersionReader struct {
-	versions []*domain.PostVersion
+	versions []*postversiondomain.PostVersion
 	err      error
 	postID   int64
 }
 
-func (f *fakeVersionReader) ListVersions(_ context.Context, postID int64) ([]*domain.PostVersion, error) {
+func (f *fakeVersionReader) ListVersions(_ context.Context, postID int64) ([]*postversiondomain.PostVersion, error) {
 	f.postID = postID
 	return f.versions, f.err
 }
@@ -42,7 +43,7 @@ func TestListVersionsValidatesPostID(t *testing.T) {
 }
 
 func TestListVersionsDelegatesToRepository(t *testing.T) {
-	reader := &fakeVersionReader{versions: []*domain.PostVersion{{ID: 7, PostID: 3}}}
+	reader := &fakeVersionReader{versions: []*postversiondomain.PostVersion{{ID: 7, PostID: 3}}}
 	svc := New(reader, &fakeRestorer{})
 	versions, err := svc.ListVersions(context.Background(), 3)
 	if err != nil {

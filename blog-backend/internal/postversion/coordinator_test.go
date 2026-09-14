@@ -9,6 +9,7 @@ import (
 
 	"github.com/rushairer/blog-backend/internal/domain"
 	postcapability "github.com/rushairer/blog-backend/internal/post"
+	postversiondomain "github.com/rushairer/blog-backend/internal/postversion/domain"
 )
 
 type fakeTransactionRunner struct {
@@ -25,13 +26,13 @@ func (f *fakeTransactionRunner) Run(ctx context.Context, fn func(*sql.Tx) error)
 }
 
 type fakeVersionSnapshotReader struct {
-	version   *domain.PostVersion
+	version   *postversiondomain.PostVersion
 	err       error
 	postID    int64
 	versionID int64
 }
 
-func (f *fakeVersionSnapshotReader) GetVersionTx(_ context.Context, _ *sql.Tx, postID, versionID int64) (*domain.PostVersion, error) {
+func (f *fakeVersionSnapshotReader) GetVersionTx(_ context.Context, _ *sql.Tx, postID, versionID int64) (*postversiondomain.PostVersion, error) {
 	f.postID = postID
 	f.versionID = versionID
 	return f.version, f.err
@@ -55,7 +56,7 @@ func (f *fakePostRestoreWriter) RestoreSnapshotTx(_ context.Context, _ *sql.Tx, 
 func TestRestoreCoordinatorMapsVersionIntoPostOwnedCommand(t *testing.T) {
 	now := time.Now().UTC()
 	categoryID := int64(17)
-	version := &domain.PostVersion{
+	version := &postversiondomain.PostVersion{
 		ID: 9, PostID: 3, Title: "old title", Slug: "old-slug", Summary: "old summary",
 		Content: "old body", Tags: []string{"go", "architecture"}, CategoryID: &categoryID,
 		CoverURL: "/cover.svg", CoverAlt: "cover", SEOTitle: "seo", SEODescription: "description",
