@@ -85,11 +85,9 @@ describe("AdminUsers list template", () => {
   it("keeps resolved members visible during a same-query refresh", async () => {
     const user = userEvent.setup();
     let resolveRefresh!: (value: { members: BlogMember[] }) => void;
-    const refreshRequest = new Promise<{ members: BlogMember[] }>(
-      (resolve) => {
-        resolveRefresh = resolve;
-      },
-    );
+    const refreshRequest = new Promise<{ members: BlogMember[] }>((resolve) => {
+      resolveRefresh = resolve;
+    });
     const list = vi
       .spyOn(membersApi, "list")
       .mockResolvedValueOnce({ members: [member] })
@@ -117,6 +115,8 @@ describe("AdminUsers list template", () => {
     renderUsers();
 
     expect(await screen.findByText("成员目录操作失败")).toBeInTheDocument();
-    expect(screen.queryByText("暂未同步到任何登录用户")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("暂未同步到任何登录用户"),
+    ).not.toBeInTheDocument();
   });
 });
