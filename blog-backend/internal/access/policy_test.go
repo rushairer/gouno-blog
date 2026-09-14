@@ -1,10 +1,11 @@
 package access_test
 
 import (
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"testing"
 
 	"github.com/rushairer/blog-backend/internal/access"
-	"github.com/rushairer/blog-backend/internal/domain"
+
 	mediadomain "github.com/rushairer/blog-backend/internal/media/domain"
 	pagedomain "github.com/rushairer/blog-backend/internal/page/domain"
 )
@@ -28,20 +29,20 @@ func TestPostPolicy(t *testing.T) {
 
 	authorID := int64(100)
 	otherID := int64(999)
-	myPost := &domain.Post{ID: 1, Title: "My Post", CreatedByPrincipalID: &authorID}
-	otherPost := &domain.Post{ID: 2, Title: "Other Post", CreatedByPrincipalID: &otherID}
-	unownedPost := &domain.Post{ID: 3, Title: "Legacy Post", CreatedByPrincipalID: nil}
+	myPost := &postdomain.Post{ID: 1, Title: "My Post", CreatedByPrincipalID: &authorID}
+	otherPost := &postdomain.Post{ID: 2, Title: "Other Post", CreatedByPrincipalID: &otherID}
+	unownedPost := &postdomain.Post{ID: 3, Title: "Legacy Post", CreatedByPrincipalID: nil}
 
 	policy := access.PostPolicy{}
 
 	// Scope check (Both authors and managers can browse all items by default)
-	authorFilter := domain.AdminPostFilter{}
+	authorFilter := postdomain.AdminPostFilter{}
 	policy.ScopePosts(authorActor, &authorFilter)
 	if authorFilter.CreatedByPrincipalID != nil {
 		t.Fatalf("expected author filter to default to shared browse mode (nil CreatedByPrincipalID), got %#v", authorFilter.CreatedByPrincipalID)
 	}
 
-	managerFilter := domain.AdminPostFilter{}
+	managerFilter := postdomain.AdminPostFilter{}
 	policy.ScopePosts(managerActor, &managerFilter)
 	if managerFilter.CreatedByPrincipalID != nil {
 		t.Fatalf("expected manager filter to have nil CreatedByPrincipalID, got %#v", managerFilter.CreatedByPrincipalID)
@@ -169,10 +170,10 @@ func TestPostPolicy_CanReadPost_TableDrivenMatrix(t *testing.T) {
 	authorPrincipalID := int64(101)
 	otherPrincipalID := int64(999)
 
-	ownDraftPost := &domain.Post{ID: 1, Title: "Author's Own Draft", Status: domain.PostStatusDraft, CreatedByPrincipalID: &authorPrincipalID}
-	otherDraftPost := &domain.Post{ID: 2, Title: "Other's Draft", Status: domain.PostStatusDraft, CreatedByPrincipalID: &otherPrincipalID}
-	legacyDraftPost := &domain.Post{ID: 3, Title: "Legacy Draft", Status: domain.PostStatusDraft, CreatedByPrincipalID: nil}
-	publishedPost := &domain.Post{ID: 4, Title: "Published Post", Status: domain.PostStatusPublished, CreatedByPrincipalID: &otherPrincipalID}
+	ownDraftPost := &postdomain.Post{ID: 1, Title: "Author's Own Draft", Status: postdomain.PostStatusDraft, CreatedByPrincipalID: &authorPrincipalID}
+	otherDraftPost := &postdomain.Post{ID: 2, Title: "Other's Draft", Status: postdomain.PostStatusDraft, CreatedByPrincipalID: &otherPrincipalID}
+	legacyDraftPost := &postdomain.Post{ID: 3, Title: "Legacy Draft", Status: postdomain.PostStatusDraft, CreatedByPrincipalID: nil}
+	publishedPost := &postdomain.Post{ID: 4, Title: "Published Post", Status: postdomain.PostStatusPublished, CreatedByPrincipalID: &otherPrincipalID}
 
 	tests := []struct {
 		name                string

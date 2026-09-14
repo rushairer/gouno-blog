@@ -1,9 +1,8 @@
 package domain
 
 import (
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"time"
-
-	rootdomain "github.com/rushairer/blog-backend/internal/domain"
 )
 
 type AnalyticsSummary struct {
@@ -14,7 +13,7 @@ type AnalyticsSummary struct {
 	TotalComments   int64              `json:"total_comments"`
 	PendingComments int64              `json:"pending_comments"`
 	ReportedItems   int64              `json:"reported_items"`
-	TopPosts        []*rootdomain.Post `json:"top_posts"`
+	TopPosts        []*postdomain.Post `json:"top_posts"`
 	DailyEvents     []DailyEventCount  `json:"daily_events"`
 	AIAlerts        []SystemAlert      `json:"ai_alerts"`
 }

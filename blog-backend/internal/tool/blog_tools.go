@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"io"
 	"strings"
 
@@ -237,11 +238,11 @@ func (t *BlogTools) listPosts(ctx context.Context, raw json.RawMessage) (any, er
 	if args.PageSize > 100 {
 		return nil, ErrInvalidArgument
 	}
-	posts, total, err := t.posts.ListAdminPosts(ctx, domain.AdminPostFilter{}, args.Page, args.PageSize)
+	posts, total, err := t.posts.ListAdminPosts(ctx, postdomain.AdminPostFilter{}, args.Page, args.PageSize)
 	return map[string]any{"list": compactPosts(posts), "total": total}, err
 }
 
-func compactPosts(posts []*domain.Post) []map[string]any {
+func compactPosts(posts []*postdomain.Post) []map[string]any {
 	result := make([]map[string]any, 0, len(posts))
 	for _, post := range posts {
 		result = append(result, map[string]any{

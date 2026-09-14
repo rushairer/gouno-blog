@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"io"
 	"net/url"
 	"regexp"
@@ -741,11 +742,11 @@ func (r *Runner) invokeTool(ctx context.Context, run *domain.AgentRun, skill *do
 		raw, _ := json.Marshal(payload)
 		return domain.ToolRiskWrite, json.RawMessage(`{"status":"awaiting_approval"}`), &tool.Proposal{ActionType: "create_draft", TargetType: "post", Payload: raw}, nil
 	}
-	status := domain.PostStatusDraft
+	status := postdomain.PostStatusDraft
 	if skill.ContentPublishMode == domain.ContentPublishPublish {
-		status = domain.PostStatusPublished
+		status = postdomain.PostStatusPublished
 	}
-	post := &domain.Post{Title: payload.Title, Slug: payload.Slug, Summary: payload.Summary, Content: payload.Content, Tags: payload.Tags, Status: status}
+	post := &postdomain.Post{Title: payload.Title, Slug: payload.Slug, Summary: payload.Summary, Content: payload.Content, Tags: payload.Tags, Status: status}
 	if err := r.posts.CreatePost(ctx, post); err != nil {
 		return domain.ToolRiskWrite, nil, nil, err
 	}

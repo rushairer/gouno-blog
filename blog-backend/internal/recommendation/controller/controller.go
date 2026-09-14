@@ -2,17 +2,18 @@ package controller
 
 import (
 	"context"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/controllerutil"
-	"github.com/rushairer/blog-backend/internal/domain"
+
 	recommendationservice "github.com/rushairer/blog-backend/internal/recommendation/service"
 	"github.com/rushairer/gouno"
 )
 
 type publishedPostResolver interface {
-	ResolvePublishedPost(context.Context, string) (*domain.Post, error)
+	ResolvePublishedPost(context.Context, string) (*postdomain.Post, error)
 }
 
 type Controller struct {

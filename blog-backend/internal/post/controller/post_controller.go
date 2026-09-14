@@ -3,32 +3,33 @@ package controller
 import (
 	"context"
 	"errors"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/access"
-	"github.com/rushairer/blog-backend/internal/domain"
+
 	postservice "github.com/rushairer/blog-backend/internal/post/service"
 	"github.com/rushairer/blog-backend/middleware"
 	"github.com/rushairer/gouno"
 )
 
 type BlogService interface {
-	CreatePost(ctx context.Context, post *domain.Post) error
-	UpdatePost(ctx context.Context, post *domain.Post) error
+	CreatePost(ctx context.Context, post *postdomain.Post) error
+	UpdatePost(ctx context.Context, post *postdomain.Post) error
 	DeletePost(ctx context.Context, id int64) error
-	GetPost(ctx context.Context, id int64) (*domain.Post, error)
-	GetAdminPost(ctx context.Context, id int64) (*domain.Post, error)
-	GetAdminPostBySlug(ctx context.Context, slug string) (*domain.Post, error)
+	GetPost(ctx context.Context, id int64) (*postdomain.Post, error)
+	GetAdminPost(ctx context.Context, id int64) (*postdomain.Post, error)
+	GetAdminPostBySlug(ctx context.Context, slug string) (*postdomain.Post, error)
 	BatchPosts(ctx context.Context, ids []int64, action string) (int64, error)
-	GetPostBySlug(ctx context.Context, slug string) (*domain.Post, error)
+	GetPostBySlug(ctx context.Context, slug string) (*postdomain.Post, error)
 	ResolvePostID(ctx context.Context, slugOrID string) (int64, error)
 	IncrementViews(ctx context.Context, id int64) error
 	IncrementLikes(ctx context.Context, id int64) error
-	ListPosts(ctx context.Context, tag, search string, page, pageSize int) ([]*domain.Post, int, error)
-	ListAdminPosts(ctx context.Context, filter domain.AdminPostFilter, page, pageSize int) ([]*domain.Post, int, error)
+	ListPosts(ctx context.Context, tag, search string, page, pageSize int) ([]*postdomain.Post, int, error)
+	ListAdminPosts(ctx context.Context, filter postdomain.AdminPostFilter, page, pageSize int) ([]*postdomain.Post, int, error)
 	ListTags(ctx context.Context) ([]string, error)
 }
 
@@ -42,18 +43,18 @@ func NewPostController(svc BlogService) *PostController {
 }
 
 type CreatePostRequest struct {
-	Title          string            `json:"title" binding:"required"`
-	Slug           string            `json:"slug"`
-	Summary        string            `json:"summary"`
-	Content        string            `json:"content"`
-	Tags           []string          `json:"tags"`
-	Status         domain.PostStatus `json:"status"`
-	ScheduledAt    *time.Time        `json:"scheduled_at"`
-	CategoryID     *int64            `json:"category_id"`
-	CoverURL       string            `json:"cover_url"`
-	CoverAlt       string            `json:"cover_alt"`
-	SEOTitle       string            `json:"seo_title"`
-	SEODescription string            `json:"seo_description"`
+	Title          string                `json:"title" binding:"required"`
+	Slug           string                `json:"slug"`
+	Summary        string                `json:"summary"`
+	Content        string                `json:"content"`
+	Tags           []string              `json:"tags"`
+	Status         postdomain.PostStatus `json:"status"`
+	ScheduledAt    *time.Time            `json:"scheduled_at"`
+	CategoryID     *int64                `json:"category_id"`
+	CoverURL       string                `json:"cover_url"`
+	CoverAlt       string                `json:"cover_alt"`
+	SEOTitle       string                `json:"seo_title"`
+	SEODescription string                `json:"seo_description"`
 }
 
 func (ctrl *PostController) Create(c *gin.Context) {
@@ -63,7 +64,7 @@ func (ctrl *PostController) Create(c *gin.Context) {
 		return
 	}
 
-	post := &domain.Post{
+	post := &postdomain.Post{
 		Title:          req.Title,
 		Slug:           req.Slug,
 		Summary:        req.Summary,
@@ -114,7 +115,7 @@ func (ctrl *PostController) Update(c *gin.Context) {
 		return
 	}
 
-	var existing *domain.Post
+	var existing *postdomain.Post
 	if snapshot, hasAccess := middleware.CurrentBlogAccess(c); hasAccess {
 		var getErr error
 		existing, getErr = ctrl.svc.GetAdminPost(c.Request.Context(), id)
@@ -137,7 +138,7 @@ func (ctrl *PostController) Update(c *gin.Context) {
 		createdBy = existing.CreatedByPrincipalID
 	}
 
-	post := &domain.Post{
+	post := &postdomain.Post{
 		ID:                   id,
 		Title:                req.Title,
 		Slug:                 req.Slug,
@@ -167,9 +168,9 @@ func (ctrl *PostController) Update(c *gin.Context) {
 
 func (ctrl *PostController) ListAdmin(c *gin.Context) {
 	page, pageSize := ExtractPagination(c, 50)
-	filter := domain.AdminPostFilter{
+	filter := postdomain.AdminPostFilter{
 		Query:    c.Query("q"),
-		Status:   domain.PostStatus(c.Query("status")),
+		Status:   postdomain.PostStatus(c.Query("status")),
 		Category: c.Query("category"),
 		Tag:      c.Query("tag"),
 	}
@@ -188,7 +189,7 @@ func (ctrl *PostController) ListAdmin(c *gin.Context) {
 
 func (ctrl *PostController) GetAdmin(c *gin.Context) {
 	param := c.Param("id")
-	var post *domain.Post
+	var post *postdomain.Post
 	var err error
 	if id, parseErr := strconv.ParseInt(param, 10, 64); parseErr == nil && id > 0 {
 		post, err = ctrl.svc.GetAdminPost(c.Request.Context(), id)
@@ -259,7 +260,7 @@ func (ctrl *PostController) Get(c *gin.Context) {
 
 	// Try ID first
 	id, err := strconv.ParseInt(slugOrID, 10, 64)
-	var post *domain.Post
+	var post *postdomain.Post
 	if err == nil && id > 0 {
 		post, err = ctrl.svc.GetAdminPost(c.Request.Context(), id)
 		if err != nil && !errors.Is(err, postservice.ErrPostNotFound) {

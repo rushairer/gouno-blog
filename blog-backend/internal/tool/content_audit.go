@@ -3,12 +3,12 @@ package tool
 import (
 	"context"
 	"encoding/json"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"net/url"
 	"regexp"
 	"strings"
 	"unicode/utf8"
 
-	"github.com/rushairer/blog-backend/internal/domain"
 	pagedomain "github.com/rushairer/blog-backend/internal/page/domain"
 )
 
@@ -129,7 +129,7 @@ func auditPage(page *pagedomain.Page) map[string]any {
 	}
 }
 
-func auditPost(post *domain.Post) map[string]any {
+func auditPost(post *postdomain.Post) map[string]any {
 	contentRunes := utf8.RuneCountInString(post.Content)
 	headings := markdownHeadingPattern.FindAllStringSubmatch(post.Content, -1)
 	images := markdownImagePattern.FindAllStringSubmatch(post.Content, -1)

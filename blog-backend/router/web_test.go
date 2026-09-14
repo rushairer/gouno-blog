@@ -2,6 +2,7 @@ package router
 
 import (
 	"context"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -13,7 +14,7 @@ import (
 	analyticsservice "github.com/rushairer/blog-backend/internal/analytics/service"
 	communityrepository "github.com/rushairer/blog-backend/internal/community/repository"
 	communityservice "github.com/rushairer/blog-backend/internal/community/service"
-	"github.com/rushairer/blog-backend/internal/domain"
+
 	"github.com/rushairer/blog-backend/internal/media"
 	mediarepository "github.com/rushairer/blog-backend/internal/media/repository"
 	mediaservice "github.com/rushairer/blog-backend/internal/media/service"
@@ -35,7 +36,7 @@ import (
 
 type routerPostVersionRestorer struct{}
 
-func (routerPostVersionRestorer) RestoreVersion(context.Context, int64, int64) (*domain.Post, error) {
+func (routerPostVersionRestorer) RestoreVersion(context.Context, int64, int64) (*postdomain.Post, error) {
 	return nil, nil
 }
 

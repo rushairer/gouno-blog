@@ -3,8 +3,8 @@ package postversion
 import (
 	"context"
 	"database/sql"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 
-	"github.com/rushairer/blog-backend/internal/domain"
 	postcapability "github.com/rushairer/blog-backend/internal/post"
 	postversiondomain "github.com/rushairer/blog-backend/internal/postversion/domain"
 )
@@ -24,7 +24,7 @@ type VersionSnapshotReader interface {
 // PostRestoreWriter exposes only the Post-owned restore write inside a
 // caller-owned transaction.
 type PostRestoreWriter interface {
-	RestoreSnapshotTx(context.Context, *sql.Tx, int64, postcapability.RestoreSnapshot) (*domain.Post, error)
+	RestoreSnapshotTx(context.Context, *sql.Tx, int64, postcapability.RestoreSnapshot) (*postdomain.Post, error)
 }
 
 // RestoreCoordinator owns the atomic PostVersion-read -> Post-write use case.
@@ -39,8 +39,8 @@ func NewRestoreCoordinator(transactor TransactionRunner, versions VersionSnapsho
 	return &RestoreCoordinator{transactor: transactor, versions: versions, posts: posts}
 }
 
-func (c *RestoreCoordinator) RestoreVersion(ctx context.Context, postID, versionID int64) (*domain.Post, error) {
-	var restored *domain.Post
+func (c *RestoreCoordinator) RestoreVersion(ctx context.Context, postID, versionID int64) (*postdomain.Post, error) {
+	var restored *postdomain.Post
 	err := c.transactor.Run(ctx, func(tx *sql.Tx) error {
 		version, err := c.versions.GetVersionTx(ctx, tx, postID, versionID)
 		if err != nil {

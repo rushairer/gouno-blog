@@ -1,17 +1,16 @@
 package tool
 
 import (
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"testing"
-
-	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 func TestRankInternalLinkCandidatesPrioritizesEvidenceAndExcludesExistingLinks(t *testing.T) {
-	source := &domain.Post{
+	source := &postdomain.Post{
 		ID: 1, Title: "Build a Go API", Tags: []string{"go", "backend"},
 		Content: "This guide uses Go and explains authentication. [Already linked](/articles/auth-guide)",
 	}
-	candidates := []*domain.Post{
+	candidates := []*postdomain.Post{
 		{ID: 2, Title: "Go testing guide", Slug: "go-testing", Summary: "Tests", Tags: []string{"go"}},
 		{ID: 3, Title: "Authentication guide", Slug: "auth-guide", Summary: "Auth", Tags: []string{"backend"}},
 		{ID: 4, Title: "Gardening notes", Slug: "garden", Tags: []string{"life"}},

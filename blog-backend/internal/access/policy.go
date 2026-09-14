@@ -1,7 +1,8 @@
 package access
 
 import (
-	"github.com/rushairer/blog-backend/internal/domain"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
+
 	mediadomain "github.com/rushairer/blog-backend/internal/media/domain"
 	pagedomain "github.com/rushairer/blog-backend/internal/page/domain"
 )
@@ -11,14 +12,14 @@ type PostPolicy struct{}
 
 // ScopePosts modifies the filter based on the actor's permissions.
 // Both authors and managers can browse all posts for team collaboration, unless a specific filter is set.
-func (p *PostPolicy) ScopePosts(actor *Snapshot, filter *domain.AdminPostFilter) {
+func (p *PostPolicy) ScopePosts(actor *Snapshot, filter *postdomain.AdminPostFilter) {
 	if actor == nil || filter == nil {
 		return
 	}
 }
 
 // CanView checks if the actor can view the post in admin (read-only for non-owned posts).
-func (p *PostPolicy) CanView(actor *Snapshot, post *domain.Post) (bool, string) {
+func (p *PostPolicy) CanView(actor *Snapshot, post *postdomain.Post) (bool, string) {
 	if actor == nil || actor.MembershipStatus != "active" {
 		return false, "您尚未登录或无权限访问"
 	}
@@ -34,11 +35,11 @@ func (p *PostPolicy) CanView(actor *Snapshot, post *domain.Post) (bool, string) 
 // 1) Have content.manage permission (Editor, Admin, Owner); OR
 // 2) Have content.author permission AND are the verified creator of the post (post.CreatedByPrincipalID == actor.Principal.ID).
 // Legacy authorless drafts and other authors' drafts are rejected.
-func (p *PostPolicy) CanReadPost(actor *Snapshot, post *domain.Post) (bool, string) {
+func (p *PostPolicy) CanReadPost(actor *Snapshot, post *postdomain.Post) (bool, string) {
 	if post == nil {
 		return false, "post not found"
 	}
-	if post.Status == domain.PostStatusPublished {
+	if post.Status == postdomain.PostStatusPublished {
 		return true, ""
 	}
 	if actor == nil || actor.MembershipStatus != "active" {
@@ -69,7 +70,7 @@ func (p *PostPolicy) CanCreate(actor *Snapshot) (bool, string) {
 
 // CanEdit checks if the actor can update the post.
 // Managers can edit any post; Authors can ONLY edit their own posts.
-func (p *PostPolicy) CanEdit(actor *Snapshot, post *domain.Post) (bool, string) {
+func (p *PostPolicy) CanEdit(actor *Snapshot, post *postdomain.Post) (bool, string) {
 	if actor == nil || actor.MembershipStatus != "active" {
 		return false, "您尚未登录或无权限编辑文章"
 	}
@@ -86,7 +87,7 @@ func (p *PostPolicy) CanEdit(actor *Snapshot, post *domain.Post) (bool, string) 
 }
 
 // CanDelete checks if the actor can delete the post.
-func (p *PostPolicy) CanDelete(actor *Snapshot, post *domain.Post) (bool, string) {
+func (p *PostPolicy) CanDelete(actor *Snapshot, post *postdomain.Post) (bool, string) {
 	if actor == nil || actor.MembershipStatus != "active" {
 		return false, "您尚未登录或无权限删除文章"
 	}
@@ -97,7 +98,7 @@ func (p *PostPolicy) CanDelete(actor *Snapshot, post *domain.Post) (bool, string
 }
 
 // CanRestoreVersion checks if the actor can restore a version of the post.
-func (p *PostPolicy) CanRestoreVersion(actor *Snapshot, post *domain.Post) (bool, string) {
+func (p *PostPolicy) CanRestoreVersion(actor *Snapshot, post *postdomain.Post) (bool, string) {
 	return p.CanEdit(actor, post)
 }
 

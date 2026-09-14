@@ -2,30 +2,30 @@ package controller
 
 import (
 	"context"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 type fakeFeedPostReader struct {
-	posts []*domain.Post
+	posts []*postdomain.Post
 }
 
 func newFakeFeedPostReader() *fakeFeedPostReader {
-	return &fakeFeedPostReader{posts: []*domain.Post{{
+	return &fakeFeedPostReader{posts: []*postdomain.Post{{
 		ID:      1,
 		Title:   "Hello",
 		Slug:    "hello",
 		Content: "Body",
-		Status:  domain.PostStatusPublished,
+		Status:  postdomain.PostStatusPublished,
 	}}}
 }
 
-func (s *fakeFeedPostReader) ListPosts(context.Context, string, string, int, int) ([]*domain.Post, int, error) {
+func (s *fakeFeedPostReader) ListPosts(context.Context, string, string, int, int) ([]*postdomain.Post, int, error) {
 	return s.posts, len(s.posts), nil
 }
 

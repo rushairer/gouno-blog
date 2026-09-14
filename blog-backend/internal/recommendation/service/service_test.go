@@ -3,9 +3,8 @@ package service
 import (
 	"context"
 	"errors"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"testing"
-
-	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 type stubRepository struct {
@@ -13,11 +12,11 @@ type stubRepository struct {
 	postID int64
 	tags   []string
 	limit  int
-	posts  []*domain.Post
+	posts  []*postdomain.Post
 	err    error
 }
 
-func (r *stubRepository) RelatedPosts(_ context.Context, postID int64, tags []string, limit int) ([]*domain.Post, error) {
+func (r *stubRepository) RelatedPosts(_ context.Context, postID int64, tags []string, limit int) ([]*postdomain.Post, error) {
 	r.called = true
 	r.postID = postID
 	r.tags = append([]string(nil), tags...)
@@ -36,7 +35,7 @@ func TestRelatedPostsValidatesPostAndTags(t *testing.T) {
 		t.Fatal("invalid post reached repository")
 	}
 
-	posts, err := svc.RelatedPosts(context.Background(), &domain.Post{ID: 7})
+	posts, err := svc.RelatedPosts(context.Background(), &postdomain.Post{ID: 7})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,11 +45,11 @@ func TestRelatedPostsValidatesPostAndTags(t *testing.T) {
 }
 
 func TestRelatedPostsDelegatesWithBoundedLimit(t *testing.T) {
-	expected := []*domain.Post{{ID: 9, Title: "Related"}}
+	expected := []*postdomain.Post{{ID: 9, Title: "Related"}}
 	repo := &stubRepository{posts: expected}
 	svc := New(repo)
 
-	got, err := svc.RelatedPosts(context.Background(), &domain.Post{ID: 7, Tags: []string{"go", "testing"}})
+	got, err := svc.RelatedPosts(context.Background(), &postdomain.Post{ID: 7, Tags: []string{"go", "testing"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +67,7 @@ func TestRelatedPostsDelegatesWithBoundedLimit(t *testing.T) {
 func TestRelatedPostsPreservesRepositoryError(t *testing.T) {
 	repoErr := errors.New("query failed")
 	repo := &stubRepository{err: repoErr}
-	_, err := New(repo).RelatedPosts(context.Background(), &domain.Post{ID: 7, Tags: []string{"go"}})
+	_, err := New(repo).RelatedPosts(context.Background(), &postdomain.Post{ID: 7, Tags: []string{"go"}})
 	if !errors.Is(err, repoErr) {
 		t.Fatalf("error=%v, want repository error", err)
 	}

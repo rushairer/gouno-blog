@@ -2,19 +2,20 @@ package controller
 
 import (
 	"context"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/access"
 	"github.com/rushairer/blog-backend/internal/controllerutil"
-	"github.com/rushairer/blog-backend/internal/domain"
+
 	postversionservice "github.com/rushairer/blog-backend/internal/postversion/service"
 	"github.com/rushairer/blog-backend/middleware"
 	"github.com/rushairer/gouno"
 )
 
 type adminPostReader interface {
-	GetAdminPost(context.Context, int64) (*domain.Post, error)
+	GetAdminPost(context.Context, int64) (*postdomain.Post, error)
 }
 
 type Controller struct {

@@ -3,12 +3,12 @@ package service
 import (
 	"context"
 	"errors"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"testing"
 	"time"
 
 	communitydomain "github.com/rushairer/blog-backend/internal/community/domain"
 	communityrepository "github.com/rushairer/blog-backend/internal/community/repository"
-	rootdomain "github.com/rushairer/blog-backend/internal/domain"
 )
 
 type fakeCommunityRepo struct {
@@ -65,18 +65,18 @@ func (*fakeCommunityRepo) ClearNotifications(context.Context, int64, bool) (int6
 }
 
 type fakePostLookup struct {
-	post        *rootdomain.Post
-	postsByID   map[int64]*rootdomain.Post
-	postsBySlug map[string]*rootdomain.Post
+	post        *postdomain.Post
+	postsByID   map[int64]*postdomain.Post
+	postsBySlug map[string]*postdomain.Post
 }
 
-func (f fakePostLookup) GetByID(_ context.Context, id int64) (*rootdomain.Post, error) {
+func (f fakePostLookup) GetByID(_ context.Context, id int64) (*postdomain.Post, error) {
 	if f.postsByID != nil {
 		return f.postsByID[id], nil
 	}
 	return f.post, nil
 }
-func (f fakePostLookup) GetBySlug(_ context.Context, slug string) (*rootdomain.Post, error) {
+func (f fakePostLookup) GetBySlug(_ context.Context, slug string) (*postdomain.Post, error) {
 	if f.postsBySlug != nil {
 		return f.postsBySlug[slug], nil
 	}
@@ -84,7 +84,7 @@ func (f fakePostLookup) GetBySlug(_ context.Context, slug string) (*rootdomain.P
 }
 
 func newCommunityServiceForTest(repo *fakeCommunityRepo) *CommunityService {
-	return NewCommunityService(repo, fakePostLookup{post: &rootdomain.Post{ID: 1, Slug: "post", Status: rootdomain.PostStatusPublished}})
+	return NewCommunityService(repo, fakePostLookup{post: &postdomain.Post{ID: 1, Slug: "post", Status: postdomain.PostStatusPublished}})
 }
 
 func TestCommunityCreateCommentUsesAuthenticatedIdentityAndIsVisible(t *testing.T) {
@@ -131,9 +131,9 @@ func TestCommunityRejectsInvalidModerationStateAndDuplicateReport(t *testing.T) 
 }
 
 func TestCommunityResolvesNumericSlugWhenIDDoesNotExist(t *testing.T) {
-	post := &rootdomain.Post{ID: 8, Slug: "112", Status: rootdomain.PostStatusPublished}
+	post := &postdomain.Post{ID: 8, Slug: "112", Status: postdomain.PostStatusPublished}
 	svc := NewCommunityService(&fakeCommunityRepo{}, fakePostLookup{
-		postsByID: map[int64]*rootdomain.Post{}, postsBySlug: map[string]*rootdomain.Post{"112": post},
+		postsByID: map[int64]*postdomain.Post{}, postsBySlug: map[string]*postdomain.Post{"112": post},
 	})
 	resolved, err := svc.ResolvePublishedPost(context.Background(), "112")
 	if err != nil || resolved.ID != post.ID {

@@ -9,12 +9,12 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"strconv"
 	"strings"
 	"time"
 
 	communitydomain "github.com/rushairer/blog-backend/internal/community/domain"
-	rootdomain "github.com/rushairer/blog-backend/internal/domain"
 )
 
 var (
@@ -89,8 +89,8 @@ type CommunityRepository interface {
 }
 
 type PostLookup interface {
-	GetByID(context.Context, int64) (*rootdomain.Post, error)
-	GetBySlug(context.Context, string) (*rootdomain.Post, error)
+	GetByID(context.Context, int64) (*postdomain.Post, error)
+	GetBySlug(context.Context, string) (*postdomain.Post, error)
 }
 
 type CommunityService struct {
@@ -102,15 +102,15 @@ func NewCommunityService(repo CommunityRepository, posts PostLookup) *CommunityS
 	return &CommunityService{repo: repo, posts: posts}
 }
 
-func (s *CommunityService) ResolvePublishedPost(ctx context.Context, value string) (*rootdomain.Post, error) {
-	var post *rootdomain.Post
+func (s *CommunityService) ResolvePublishedPost(ctx context.Context, value string) (*postdomain.Post, error) {
+	var post *postdomain.Post
 	var err error
 	if id, parseErr := parsePositiveID(value); parseErr == nil {
 		post, err = s.posts.GetByID(ctx, id)
 		if err != nil {
 			return nil, err
 		}
-		if post != nil && post.Status == rootdomain.PostStatusPublished {
+		if post != nil && post.Status == postdomain.PostStatusPublished {
 			return post, nil
 		}
 	}
@@ -118,7 +118,7 @@ func (s *CommunityService) ResolvePublishedPost(ctx context.Context, value strin
 	if err != nil {
 		return nil, err
 	}
-	if post == nil || post.Status != rootdomain.PostStatusPublished {
+	if post == nil || post.Status != postdomain.PostStatusPublished {
 		return nil, ErrPostNotFound
 	}
 	return post, nil

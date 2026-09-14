@@ -4,8 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 
-	"github.com/rushairer/blog-backend/internal/domain"
 	postversiondomain "github.com/rushairer/blog-backend/internal/postversion/domain"
 )
 
@@ -17,7 +17,7 @@ var (
 
 type Service interface {
 	ListVersions(context.Context, int64) ([]*postversiondomain.PostVersion, error)
-	RestoreVersion(context.Context, int64, int64) (*domain.Post, error)
+	RestoreVersion(context.Context, int64, int64) (*postdomain.Post, error)
 }
 
 type VersionReader interface {
@@ -25,7 +25,7 @@ type VersionReader interface {
 }
 
 type Restorer interface {
-	RestoreVersion(context.Context, int64, int64) (*domain.Post, error)
+	RestoreVersion(context.Context, int64, int64) (*postdomain.Post, error)
 }
 
 type postVersionService struct {
@@ -44,7 +44,7 @@ func (s *postVersionService) ListVersions(ctx context.Context, postID int64) ([]
 	return s.versions.ListVersions(ctx, postID)
 }
 
-func (s *postVersionService) RestoreVersion(ctx context.Context, postID, versionID int64) (*domain.Post, error) {
+func (s *postVersionService) RestoreVersion(ctx context.Context, postID, versionID int64) (*postdomain.Post, error) {
 	if postID <= 0 || versionID <= 0 {
 		return nil, ErrInvalidVersion
 	}

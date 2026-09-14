@@ -4,11 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"strings"
 	"time"
 
 	"github.com/lib/pq"
-	"github.com/rushairer/blog-backend/internal/domain"
+
 	postcapability "github.com/rushairer/blog-backend/internal/post"
 )
 
@@ -20,7 +21,7 @@ func NewPostRepository(db *sql.DB) *PostRepository {
 	return &PostRepository{db: db}
 }
 
-func (r *PostRepository) Create(ctx context.Context, post *domain.Post) error {
+func (r *PostRepository) Create(ctx context.Context, post *postdomain.Post) error {
 	query := `
 		INSERT INTO posts (title, slug, summary, content, tags, category_id, cover_url, cover_alt, seo_title, seo_description, status, views_count, likes_count, published_at, scheduled_at, created_by_principal_id, updated_by_principal_id, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW(), NOW())
@@ -32,7 +33,7 @@ func (r *PostRepository) Create(ctx context.Context, post *domain.Post) error {
 	return err
 }
 
-func (r *PostRepository) Update(ctx context.Context, post *domain.Post) error {
+func (r *PostRepository) Update(ctx context.Context, post *postdomain.Post) error {
 	query := `
 		UPDATE posts
 		SET title = $1, slug = $2, summary = $3, content = $4, tags = $5, category_id = $6,
@@ -50,7 +51,7 @@ func (r *PostRepository) Update(ctx context.Context, post *domain.Post) error {
 // RestoreSnapshotTx applies a Post-owned restore command inside a caller-owned
 // transaction. Cross-capability coordinators may call this port, but Post SQL
 // remains owned by the Post repository.
-func (r *PostRepository) RestoreSnapshotTx(ctx context.Context, tx *sql.Tx, postID int64, snapshot postcapability.RestoreSnapshot) (*domain.Post, error) {
+func (r *PostRepository) RestoreSnapshotTx(ctx context.Context, tx *sql.Tx, postID int64, snapshot postcapability.RestoreSnapshot) (*postdomain.Post, error) {
 	row := tx.QueryRowContext(ctx, `UPDATE posts SET
 		title = $2, slug = $3, summary = $4, content = $5, tags = $6,
 		category_id = $7, cover_url = $8, cover_alt = $9,
@@ -63,7 +64,7 @@ func (r *PostRepository) RestoreSnapshotTx(ctx context.Context, tx *sql.Tx, post
 		postID, snapshot.Title, snapshot.Slug, snapshot.Summary, snapshot.Content, pq.Array(snapshot.Tags),
 		snapshot.CategoryID, snapshot.CoverURL, snapshot.CoverAlt, snapshot.SEOTitle, snapshot.SEODescription,
 		snapshot.Status, snapshot.PublishedAt, snapshot.ScheduledAt)
-	var restored domain.Post
+	var restored postdomain.Post
 	err := row.Scan(&restored.ID, &restored.Title, &restored.Slug, &restored.Summary, &restored.Content, pq.Array(&restored.Tags),
 		&restored.Status, &restored.ViewsCount, &restored.LikesCount, &restored.PublishedAt, &restored.ScheduledAt,
 		&restored.CreatedByPrincipalID, &restored.UpdatedByPrincipalID, &restored.CreatedAt, &restored.UpdatedAt)
@@ -86,13 +87,13 @@ func (r *PostRepository) Delete(ctx context.Context, id int64) error {
 	return err
 }
 
-func (r *PostRepository) GetByID(ctx context.Context, id int64) (*domain.Post, error) {
+func (r *PostRepository) GetByID(ctx context.Context, id int64) (*postdomain.Post, error) {
 	query := `
 		SELECT id, title, slug, summary, content, tags, category_id, COALESCE(cover_url, ''), COALESCE(cover_alt, ''), COALESCE(seo_title, ''), COALESCE(seo_description, ''), status, views_count, likes_count, published_at, scheduled_at, created_by_principal_id, updated_by_principal_id, created_at, updated_at
 		FROM posts
 		WHERE id = $1
 	`
-	var post domain.Post
+	var post postdomain.Post
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID, &post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt, &post.CreatedByPrincipalID, &post.UpdatedByPrincipalID, &post.CreatedAt, &post.UpdatedAt,
 	)
@@ -105,13 +106,13 @@ func (r *PostRepository) GetByID(ctx context.Context, id int64) (*domain.Post, e
 	return &post, nil
 }
 
-func (r *PostRepository) GetBySlug(ctx context.Context, slug string) (*domain.Post, error) {
+func (r *PostRepository) GetBySlug(ctx context.Context, slug string) (*postdomain.Post, error) {
 	query := `
 		SELECT id, title, slug, summary, content, tags, category_id, COALESCE(cover_url, ''), COALESCE(cover_alt, ''), COALESCE(seo_title, ''), COALESCE(seo_description, ''), status, views_count, likes_count, published_at, scheduled_at, created_by_principal_id, updated_by_principal_id, created_at, updated_at
 		FROM posts
 		WHERE slug = $1
 	`
-	var post domain.Post
+	var post postdomain.Post
 	err := r.db.QueryRowContext(ctx, query, slug).Scan(
 		&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID, &post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt, &post.CreatedByPrincipalID, &post.UpdatedByPrincipalID, &post.CreatedAt, &post.UpdatedAt,
 	)
@@ -134,7 +135,7 @@ func (r *PostRepository) IncrementLikes(ctx context.Context, id int64) error {
 	return err
 }
 
-func (r *PostRepository) List(ctx context.Context, tag, search string, limit, offset int) ([]*domain.Post, int, error) {
+func (r *PostRepository) List(ctx context.Context, tag, search string, limit, offset int) ([]*postdomain.Post, int, error) {
 	var countQuery string
 	var listQuery string
 	args := []interface{}{}
@@ -178,9 +179,9 @@ func (r *PostRepository) List(ctx context.Context, tag, search string, limit, of
 	}
 	defer rows.Close()
 
-	posts := make([]*domain.Post, 0)
+	posts := make([]*postdomain.Post, 0)
 	for rows.Next() {
-		var post domain.Post
+		var post postdomain.Post
 		err := rows.Scan(
 			&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID, &post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt,
 		)
@@ -221,7 +222,7 @@ func (r *PostRepository) ListTags(ctx context.Context) ([]string, error) {
 	return tags, nil
 }
 
-func (r *PostRepository) ListAdmin(ctx context.Context, filter domain.AdminPostFilter, limit, offset int) ([]*domain.Post, int, error) {
+func (r *PostRepository) ListAdmin(ctx context.Context, filter postdomain.AdminPostFilter, limit, offset int) ([]*postdomain.Post, int, error) {
 	args := make([]interface{}, 0, 6)
 	where := make([]string, 0, 4)
 	if filter.Query != "" {
@@ -261,9 +262,9 @@ func (r *PostRepository) ListAdmin(ctx context.Context, filter domain.AdminPostF
 		return nil, 0, err
 	}
 	defer rows.Close()
-	posts := make([]*domain.Post, 0)
+	posts := make([]*postdomain.Post, 0)
 	for rows.Next() {
-		var post domain.Post
+		var post postdomain.Post
 		if err := rows.Scan(&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID, &post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt, &post.CreatedByPrincipalID, &post.UpdatedByPrincipalID, &post.CreatedAt, &post.UpdatedAt); err != nil {
 			return nil, 0, err
 		}
@@ -272,7 +273,7 @@ func (r *PostRepository) ListAdmin(ctx context.Context, filter domain.AdminPostF
 	return posts, total, rows.Err()
 }
 
-func (r *PostRepository) SearchPublished(ctx context.Context, query string, limit int) ([]domain.PostSearchResult, error) {
+func (r *PostRepository) SearchPublished(ctx context.Context, query string, limit int) ([]postdomain.PostSearchResult, error) {
 	rows, err := r.db.QueryContext(ctx, `
 		WITH search AS (SELECT websearch_to_tsquery('simple', $1) AS query)
 		SELECT p.id, p.title, p.slug, p.summary, p.content, p.tags, p.category_id,
@@ -288,10 +289,10 @@ func (r *PostRepository) SearchPublished(ctx context.Context, query string, limi
 		return nil, err
 	}
 	defer rows.Close()
-	results := make([]domain.PostSearchResult, 0)
+	results := make([]postdomain.PostSearchResult, 0)
 	for rows.Next() {
-		var post domain.Post
-		var result domain.PostSearchResult
+		var post postdomain.Post
+		var result postdomain.PostSearchResult
 		if err := rows.Scan(&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID,
 			&post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount,
 			&post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt, &result.Snippet, &result.Score); err != nil {
@@ -303,7 +304,7 @@ func (r *PostRepository) SearchPublished(ctx context.Context, query string, limi
 	return results, rows.Err()
 }
 
-func (r *PostRepository) ListStalePublished(ctx context.Context, updatedBefore time.Time, limit int) ([]*domain.Post, error) {
+func (r *PostRepository) ListStalePublished(ctx context.Context, updatedBefore time.Time, limit int) ([]*postdomain.Post, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT id, title, slug, summary, content, tags, category_id,
 		COALESCE(cover_url, ''), COALESCE(cover_alt, ''), COALESCE(seo_title, ''), COALESCE(seo_description, ''),
 		status, views_count, likes_count, published_at, scheduled_at, created_at, updated_at
@@ -313,9 +314,9 @@ func (r *PostRepository) ListStalePublished(ctx context.Context, updatedBefore t
 		return nil, err
 	}
 	defer rows.Close()
-	posts := make([]*domain.Post, 0)
+	posts := make([]*postdomain.Post, 0)
 	for rows.Next() {
-		var post domain.Post
+		var post postdomain.Post
 		if err := rows.Scan(&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID,
 			&post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount,
 			&post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt); err != nil {
@@ -326,7 +327,7 @@ func (r *PostRepository) ListStalePublished(ctx context.Context, updatedBefore t
 	return posts, rows.Err()
 }
 
-func (r *PostRepository) ListOrphanedPublished(ctx context.Context, limit int) ([]*domain.Post, error) {
+func (r *PostRepository) ListOrphanedPublished(ctx context.Context, limit int) ([]*postdomain.Post, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT target.id, target.title, target.slug, target.summary, target.content, target.tags, target.category_id,
 		COALESCE(target.cover_url, ''), COALESCE(target.cover_alt, ''), COALESCE(target.seo_title, ''), COALESCE(target.seo_description, ''),
 		target.status, target.views_count, target.likes_count, target.published_at, target.scheduled_at, target.created_at, target.updated_at
@@ -342,9 +343,9 @@ func (r *PostRepository) ListOrphanedPublished(ctx context.Context, limit int) (
 		return nil, err
 	}
 	defer rows.Close()
-	posts := make([]*domain.Post, 0)
+	posts := make([]*postdomain.Post, 0)
 	for rows.Next() {
-		var post domain.Post
+		var post postdomain.Post
 		if err := rows.Scan(&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID,
 			&post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount,
 			&post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt); err != nil {
@@ -355,7 +356,7 @@ func (r *PostRepository) ListOrphanedPublished(ctx context.Context, limit int) (
 	return posts, rows.Err()
 }
 
-func (r *PostRepository) ListLowEngagementPublished(ctx context.Context, minViews int64, maxEngagementRate float64, limit int) ([]*domain.Post, error) {
+func (r *PostRepository) ListLowEngagementPublished(ctx context.Context, minViews int64, maxEngagementRate float64, limit int) ([]*postdomain.Post, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT id, title, slug, summary, content, tags, category_id,
 		COALESCE(cover_url, ''), COALESCE(cover_alt, ''), COALESCE(seo_title, ''), COALESCE(seo_description, ''),
 		status, views_count, likes_count, published_at, scheduled_at, created_at, updated_at
@@ -367,9 +368,9 @@ func (r *PostRepository) ListLowEngagementPublished(ctx context.Context, minView
 		return nil, err
 	}
 	defer rows.Close()
-	posts := make([]*domain.Post, 0)
+	posts := make([]*postdomain.Post, 0)
 	for rows.Next() {
-		var post domain.Post
+		var post postdomain.Post
 		if err := rows.Scan(&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags), &post.CategoryID,
 			&post.CoverURL, &post.CoverAlt, &post.SEOTitle, &post.SEODescription, &post.Status, &post.ViewsCount, &post.LikesCount,
 			&post.PublishedAt, &post.ScheduledAt, &post.CreatedAt, &post.UpdatedAt); err != nil {

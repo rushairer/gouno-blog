@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"strings"
 
 	"github.com/rushairer/blog-backend/internal/domain"
@@ -28,7 +29,7 @@ func (s *Service) CreateContentCandidateSet(ctx context.Context, approval *domai
 	if payload.PostID <= 0 || len(payload.Candidates) == 0 {
 		return errors.New("content candidate proposal requires a post and at least one candidate")
 	}
-	var before domain.Post
+	var before postdomain.Post
 	if err := json.Unmarshal(approval.BeforeSnapshot, &before); err != nil {
 		return err
 	}

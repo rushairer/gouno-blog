@@ -3,13 +3,12 @@ package tool
 import (
 	"context"
 	"encoding/json"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"net/url"
 	"slices"
 	"strings"
 	"unicode"
 	"unicode/utf8"
-
-	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 type internalLinkCandidate struct {
@@ -50,7 +49,7 @@ func (t *BlogTools) findInternalLinks(ctx context.Context, raw json.RawMessage) 
 	}, nil
 }
 
-func rankInternalLinkCandidates(source *domain.Post, candidates []*domain.Post, limit int) []internalLinkCandidate {
+func rankInternalLinkCandidates(source *postdomain.Post, candidates []*postdomain.Post, limit int) []internalLinkCandidate {
 	if source == nil || limit <= 0 {
 		return []internalLinkCandidate{}
 	}
@@ -91,7 +90,7 @@ func rankInternalLinkCandidates(source *domain.Post, candidates []*domain.Post, 
 	return result
 }
 
-func internalLinkScore(sourceText string, sourceTags map[string]struct{}, candidate *domain.Post) (int, []string) {
+func internalLinkScore(sourceText string, sourceTags map[string]struct{}, candidate *postdomain.Post) (int, []string) {
 	score := 0
 	hints := make([]string, 0, 3)
 	for _, tag := range candidate.Tags {

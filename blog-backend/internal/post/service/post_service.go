@@ -5,12 +5,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 var (
@@ -27,19 +26,19 @@ var (
 )
 
 type PostRepository interface {
-	Create(ctx context.Context, post *domain.Post) error
-	Update(ctx context.Context, post *domain.Post) error
+	Create(ctx context.Context, post *postdomain.Post) error
+	Update(ctx context.Context, post *postdomain.Post) error
 	Delete(ctx context.Context, id int64) error
-	GetByID(ctx context.Context, id int64) (*domain.Post, error)
-	GetBySlug(ctx context.Context, slug string) (*domain.Post, error)
+	GetByID(ctx context.Context, id int64) (*postdomain.Post, error)
+	GetBySlug(ctx context.Context, slug string) (*postdomain.Post, error)
 	IncrementViews(ctx context.Context, id int64) error
 	IncrementLikes(ctx context.Context, id int64) error
-	List(ctx context.Context, tag, search string, limit, offset int) ([]*domain.Post, int, error)
-	ListAdmin(ctx context.Context, filter domain.AdminPostFilter, limit, offset int) ([]*domain.Post, int, error)
-	SearchPublished(ctx context.Context, query string, limit int) ([]domain.PostSearchResult, error)
-	ListStalePublished(ctx context.Context, updatedBefore time.Time, limit int) ([]*domain.Post, error)
-	ListOrphanedPublished(ctx context.Context, limit int) ([]*domain.Post, error)
-	ListLowEngagementPublished(ctx context.Context, minViews int64, maxEngagementRate float64, limit int) ([]*domain.Post, error)
+	List(ctx context.Context, tag, search string, limit, offset int) ([]*postdomain.Post, int, error)
+	ListAdmin(ctx context.Context, filter postdomain.AdminPostFilter, limit, offset int) ([]*postdomain.Post, int, error)
+	SearchPublished(ctx context.Context, query string, limit int) ([]postdomain.PostSearchResult, error)
+	ListStalePublished(ctx context.Context, updatedBefore time.Time, limit int) ([]*postdomain.Post, error)
+	ListOrphanedPublished(ctx context.Context, limit int) ([]*postdomain.Post, error)
+	ListLowEngagementPublished(ctx context.Context, minViews int64, maxEngagementRate float64, limit int) ([]*postdomain.Post, error)
 	ListTags(ctx context.Context) ([]string, error)
 	PublishScheduled(ctx context.Context) (int64, error)
 	Batch(ctx context.Context, ids []int64, action string) (int64, error)
@@ -53,7 +52,7 @@ func NewPostService(repo PostRepository) *PostService {
 	return &PostService{repo: repo}
 }
 
-func (s *PostService) CreatePost(ctx context.Context, post *domain.Post) error {
+func (s *PostService) CreatePost(ctx context.Context, post *postdomain.Post) error {
 	if strings.TrimSpace(post.Title) == "" {
 		return ErrPostTitleEmpty
 	}
@@ -63,7 +62,7 @@ func (s *PostService) CreatePost(ctx context.Context, post *domain.Post) error {
 	return s.repo.Create(ctx, post)
 }
 
-func (s *PostService) GetByID(ctx context.Context, id int64) (*domain.Post, error) {
+func (s *PostService) GetByID(ctx context.Context, id int64) (*postdomain.Post, error) {
 	if id <= 0 {
 		return nil, ErrPostNotFound
 	}
@@ -77,7 +76,7 @@ func (s *PostService) GetByID(ctx context.Context, id int64) (*domain.Post, erro
 	return post, nil
 }
 
-func (s *PostService) preparePost(ctx context.Context, post *domain.Post, current *domain.Post) error {
+func (s *PostService) preparePost(ctx context.Context, post *postdomain.Post, current *postdomain.Post) error {
 	if post.Slug == "" {
 		post.Slug = generateSlug(post.Title)
 	} else {
@@ -110,30 +109,30 @@ func (s *PostService) preparePost(ctx context.Context, post *domain.Post, curren
 		if current != nil {
 			post.Status = current.Status
 		} else {
-			post.Status = domain.PostStatusDraft
+			post.Status = postdomain.PostStatusDraft
 		}
 	}
-	if post.Status != domain.PostStatusDraft && post.Status != domain.PostStatusScheduled && post.Status != domain.PostStatusPublished {
+	if post.Status != postdomain.PostStatusDraft && post.Status != postdomain.PostStatusScheduled && post.Status != postdomain.PostStatusPublished {
 		return ErrInvalidPostStatus
 	}
-	if post.Status != domain.PostStatusDraft && strings.TrimSpace(post.Content) == "" {
+	if post.Status != postdomain.PostStatusDraft && strings.TrimSpace(post.Content) == "" {
 		return ErrPostContentEmpty
 	}
 
 	shanghai, _ := time.LoadLocation("Asia/Shanghai")
 	now := time.Now().In(shanghai)
 	switch post.Status {
-	case domain.PostStatusDraft:
+	case postdomain.PostStatusDraft:
 		post.ScheduledAt = nil
 		post.PublishedAt = nil
-	case domain.PostStatusScheduled:
+	case postdomain.PostStatusScheduled:
 		if post.ScheduledAt == nil || !post.ScheduledAt.In(shanghai).After(now) {
 			return ErrScheduledPast
 		}
 		post.PublishedAt = nil
-	case domain.PostStatusPublished:
+	case postdomain.PostStatusPublished:
 		post.ScheduledAt = nil
-		if current == nil || current.Status != domain.PostStatusPublished || current.PublishedAt == nil {
+		if current == nil || current.Status != postdomain.PostStatusPublished || current.PublishedAt == nil {
 			publishedAt := now
 			post.PublishedAt = &publishedAt
 		} else {
@@ -143,7 +142,7 @@ func (s *PostService) preparePost(ctx context.Context, post *domain.Post, curren
 	return nil
 }
 
-func (s *PostService) UpdatePost(ctx context.Context, post *domain.Post) error {
+func (s *PostService) UpdatePost(ctx context.Context, post *postdomain.Post) error {
 	if post.ID <= 0 {
 		return ErrInvalidPostID
 	}
@@ -183,9 +182,9 @@ func (s *PostService) DeletePost(ctx context.Context, id int64) error {
 	return nil
 }
 
-func (s *PostService) GetPost(ctx context.Context, id int64) (*domain.Post, error) {
+func (s *PostService) GetPost(ctx context.Context, id int64) (*postdomain.Post, error) {
 	post, err := s.repo.GetByID(ctx, id)
-	if err != nil || post == nil || post.Status != domain.PostStatusPublished {
+	if err != nil || post == nil || post.Status != postdomain.PostStatusPublished {
 		return nil, err
 	}
 	return post, nil
@@ -194,7 +193,7 @@ func (s *PostService) GetPost(ctx context.Context, id int64) (*domain.Post, erro
 // GetAdminPost returns a post regardless of publication status. Callers must
 // already be on an authenticated administrative path; public reads must use
 // GetPost or GetPostBySlug instead.
-func (s *PostService) GetAdminPost(ctx context.Context, id int64) (*domain.Post, error) {
+func (s *PostService) GetAdminPost(ctx context.Context, id int64) (*postdomain.Post, error) {
 	if id <= 0 {
 		return nil, errors.New("invalid post ID")
 	}
@@ -208,7 +207,7 @@ func (s *PostService) GetAdminPost(ctx context.Context, id int64) (*domain.Post,
 	return post, nil
 }
 
-func (s *PostService) GetAdminPostBySlug(ctx context.Context, slug string) (*domain.Post, error) {
+func (s *PostService) GetAdminPostBySlug(ctx context.Context, slug string) (*postdomain.Post, error) {
 	slug = strings.TrimSpace(slug)
 	if slug == "" {
 		return nil, ErrInvalidPostSlug
@@ -235,9 +234,9 @@ func (s *PostService) BatchPosts(ctx context.Context, ids []int64, action string
 	return s.repo.Batch(ctx, ids, action)
 }
 
-func (s *PostService) GetPostBySlug(ctx context.Context, slug string) (*domain.Post, error) {
+func (s *PostService) GetPostBySlug(ctx context.Context, slug string) (*postdomain.Post, error) {
 	post, err := s.repo.GetBySlug(ctx, slug)
-	if err != nil || post == nil || post.Status != domain.PostStatusPublished {
+	if err != nil || post == nil || post.Status != postdomain.PostStatusPublished {
 		return nil, err
 	}
 	return post, nil
@@ -285,7 +284,7 @@ func (s *PostService) IncrementLikes(ctx context.Context, id int64) error {
 	return s.repo.IncrementLikes(ctx, id)
 }
 
-func (s *PostService) ListPosts(ctx context.Context, tag, search string, page, pageSize int) ([]*domain.Post, int, error) {
+func (s *PostService) ListPosts(ctx context.Context, tag, search string, page, pageSize int) ([]*postdomain.Post, int, error) {
 	if page <= 0 || page > 10_000 {
 		page = 1
 	}
@@ -296,7 +295,7 @@ func (s *PostService) ListPosts(ctx context.Context, tag, search string, page, p
 	return s.repo.List(ctx, tag, search, pageSize, offset)
 }
 
-func (s *PostService) ListAdminPosts(ctx context.Context, filter domain.AdminPostFilter, page, pageSize int) ([]*domain.Post, int, error) {
+func (s *PostService) ListAdminPosts(ctx context.Context, filter postdomain.AdminPostFilter, page, pageSize int) ([]*postdomain.Post, int, error) {
 	if page <= 0 || page > 10_000 {
 		page = 1
 	}
@@ -309,10 +308,10 @@ func (s *PostService) ListAdminPosts(ctx context.Context, filter domain.AdminPos
 	return s.repo.ListAdmin(ctx, filter, pageSize, (page-1)*pageSize)
 }
 
-func (s *PostService) SearchPublishedPosts(ctx context.Context, query string, limit int) ([]domain.PostSearchResult, error) {
+func (s *PostService) SearchPublishedPosts(ctx context.Context, query string, limit int) ([]postdomain.PostSearchResult, error) {
 	query = strings.TrimSpace(query)
 	if query == "" {
-		return []domain.PostSearchResult{}, nil
+		return []postdomain.PostSearchResult{}, nil
 	}
 	if len([]rune(query)) > 500 {
 		return nil, errors.New("search query exceeds 500 characters")
@@ -326,7 +325,7 @@ func (s *PostService) SearchPublishedPosts(ctx context.Context, query string, li
 	return s.repo.SearchPublished(ctx, query, limit)
 }
 
-func (s *PostService) ListStalePublishedPosts(ctx context.Context, staleFor time.Duration, limit int) ([]*domain.Post, error) {
+func (s *PostService) ListStalePublishedPosts(ctx context.Context, staleFor time.Duration, limit int) ([]*postdomain.Post, error) {
 	if staleFor < 24*time.Hour || staleFor > 10*365*24*time.Hour {
 		return nil, errors.New("stale duration must be between 1 day and 10 years")
 	}
@@ -339,7 +338,7 @@ func (s *PostService) ListStalePublishedPosts(ctx context.Context, staleFor time
 	return s.repo.ListStalePublished(ctx, time.Now().UTC().Add(-staleFor), limit)
 }
 
-func (s *PostService) ListOrphanedPublishedPosts(ctx context.Context, limit int) ([]*domain.Post, error) {
+func (s *PostService) ListOrphanedPublishedPosts(ctx context.Context, limit int) ([]*postdomain.Post, error) {
 	if limit <= 0 {
 		limit = 20
 	}
@@ -349,7 +348,7 @@ func (s *PostService) ListOrphanedPublishedPosts(ctx context.Context, limit int)
 	return s.repo.ListOrphanedPublished(ctx, limit)
 }
 
-func (s *PostService) ListLowEngagementPublishedPosts(ctx context.Context, minViews int64, maxEngagementRate float64, limit int) ([]*domain.Post, error) {
+func (s *PostService) ListLowEngagementPublishedPosts(ctx context.Context, minViews int64, maxEngagementRate float64, limit int) ([]*postdomain.Post, error) {
 	if minViews < 1 || minViews > 1000000000 {
 		return nil, errors.New("minimum views must be between 1 and 1000000000")
 	}

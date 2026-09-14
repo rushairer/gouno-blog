@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"testing"
 	"time"
 
@@ -60,7 +61,7 @@ func TestApprovalEffectsPersistUnderOperationsOwnership(t *testing.T) {
 	}
 
 	svc := &Service{db: db, transactor: dbtx.NewTransactor(db, nil)}
-	before, _ := json.Marshal(domain.Post{Title: "before title", Summary: "before summary"})
+	before, _ := json.Marshal(postdomain.Post{Title: "before title", Summary: "before summary"})
 	targetID := postID
 	approval := &domain.AgentApproval{
 		ID: approvalID, RunID: runID, TargetID: &targetID, BeforeSnapshot: before,

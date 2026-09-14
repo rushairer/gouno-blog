@@ -3,13 +3,13 @@ package repository
 import (
 	"context"
 	"database/sql"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 
 	"github.com/lib/pq"
-	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 type Repository interface {
-	RelatedPosts(context.Context, int64, []string, int) ([]*domain.Post, error)
+	RelatedPosts(context.Context, int64, []string, int) ([]*postdomain.Post, error)
 }
 
 type postgresRepository struct {
@@ -23,7 +23,7 @@ func New(db *sql.DB) Repository {
 const postColumns = `p.id, p.title, p.slug, p.summary, p.content, p.tags, p.status,
 	p.views_count, p.likes_count, p.published_at, p.scheduled_at, p.created_by_principal_id, p.updated_by_principal_id, p.created_at, p.updated_at`
 
-func (r *postgresRepository) RelatedPosts(ctx context.Context, postID int64, tags []string, limit int) ([]*domain.Post, error) {
+func (r *postgresRepository) RelatedPosts(ctx context.Context, postID int64, tags []string, limit int) ([]*postdomain.Post, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT `+postColumns+`
 		FROM posts p
 		WHERE p.id <> $1 AND p.status = 'published' AND p.tags && $2
@@ -35,9 +35,9 @@ func (r *postgresRepository) RelatedPosts(ctx context.Context, postID int64, tag
 	}
 	defer rows.Close()
 
-	posts := make([]*domain.Post, 0)
+	posts := make([]*postdomain.Post, 0)
 	for rows.Next() {
-		var post domain.Post
+		var post postdomain.Post
 		if err := rows.Scan(&post.ID, &post.Title, &post.Slug, &post.Summary, &post.Content, pq.Array(&post.Tags),
 			&post.Status, &post.ViewsCount, &post.LikesCount, &post.PublishedAt, &post.ScheduledAt,
 			&post.CreatedByPrincipalID, &post.UpdatedByPrincipalID, &post.CreatedAt, &post.UpdatedAt); err != nil {
