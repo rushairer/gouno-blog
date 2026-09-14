@@ -126,10 +126,19 @@ Architecture refactoring and Codegen must preserve the root `AGENTS.md` security
 Agent HTTP transport is capability-owned under `internal/agent/controller`. Provider administration, Agent/Skill management, Runs, Approvals, Agent-owned MediaCandidate/image-generation transport, editor generation, and Agent Skill drafting are wired through the capability controller.
 
 - The canonical Agent controller consumes only Agent services, Tool registry, and the narrow Workflow lifecycle/reconciliation port needed for approval/media coordination.
-- Knowledge transport remains on the transitional flat controller until the dedicated Knowledge HTTP ownership slice.
-- Connector transport remains on that same transitional shell without behavioral changes under Connector Module Hold; the router names this dependency `LegacyAICtrl` to prevent accidental Agent ownership.
+- Knowledge transport is capability-owned under `internal/knowledge/controller` and is composed independently from Agent transport.
+- Connector transport remains on the transitional flat shell without behavioral changes under Connector Module Hold; the router names this dependency `LegacyAICtrl` to prevent accidental Agent/Knowledge ownership.
 - Existing URLs, response contracts, ManageAI/author permissions, AAL2, recent-MFA, audit middleware, BFF behavior, and timeout policy are unchanged.
 - Shared HTTP error/parameter behavior comes directly from `internal/controllerutil`; no new flat-controller dependency is introduced.
+
+## Knowledge HTTP ownership boundary
+
+Knowledge HTTP transport is capability-owned under `internal/knowledge/controller`. Embedding-profile administration and index status/rebuild/retry/evaluation endpoints are wired through the Knowledge controller while the Knowledge service retains its existing persistence and transaction model.
+
+- The controller depends only on `*knowledge.Service` plus shared HTTP primitives from `internal/controllerutil`; it does not import Agent or Connector.
+- Strict JSON decoding, positive-ID validation, status codes and response envelopes preserve the previous transport contract.
+- `router.WebRouterOptions` receives Knowledge and Connector controllers separately; existing `/api/admin/embedding-profiles*` and `/api/admin/ai-index/*` paths remain under the same ManageAI, AAL2, recent-MFA and audit middleware chain.
+- Connector routes, OAuth/callback state, credentials, delivery/outbox behavior and Sandbox semantics remain untouched under Connector Module Hold. The transitional flat controller is now Connector-only.
 
 ## Operations HTTP ownership boundary
 

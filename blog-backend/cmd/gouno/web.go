@@ -28,6 +28,7 @@ import (
 	"github.com/rushairer/blog-backend/internal/controller"
 	"github.com/rushairer/blog-backend/internal/dbtx"
 	"github.com/rushairer/blog-backend/internal/knowledge"
+	knowledgecontroller "github.com/rushairer/blog-backend/internal/knowledge/controller"
 	"github.com/rushairer/blog-backend/internal/media"
 	mediarepository "github.com/rushairer/blog-backend/internal/media/repository"
 	mediaservice "github.com/rushairer/blog-backend/internal/media/service"
@@ -292,6 +293,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 	postservice.StartScheduledPublisher(ctx, postSvc, cfg.Logger)
 
 	var agentCtrl *agentcontroller.Controller
+	var knowledgeCtrl *knowledgecontroller.Controller
 	var legacyAICtrl *controller.AgentController
 	var operationsCtrl *operationscontroller.Controller
 	var workflowCtrl *workflowcontroller.Controller
@@ -319,6 +321,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		generationAuditRepo := agentrepository.NewGenerationAuditRepository(cfg.DB)
 		knowledgeSvc := knowledge.NewService(cfg.DB, secrets, cfg.Global.AIAgentConfig.AllowedHosts, cfg.Logger, transactor)
 		knowledgeSvc.Start(ctx)
+		knowledgeCtrl = knowledgecontroller.New(knowledgeSvc)
 		toolRegistry := tool.NewBlogRegistry(postSvc, communitySvc, pageSvc, knowledgeSvc)
 		tool.BindAnalytics(toolRegistry, analyticsSvc)
 		operationsSvc := operations.NewService(cfg.DB, toolRegistry, cfg.Logger, transactor)
@@ -375,7 +378,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 			WorkerCtx: ctx, Workflows: workflowSvc, Generation: generation,
 		})
 		legacyAICtrl = controller.NewAgentControllerWithOptions(controller.AgentControllerOptions{
-			Knowledge: knowledgeSvc, Connectors: connectorSvc,
+			Connectors: connectorSvc,
 		})
 		agentservice.NewScheduler(agentDefinitionRepo, runner, cfg.Global.AIAgentConfig.SchedulerInterval, cfg.Logger).Start(ctx)
 	}
@@ -389,7 +392,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		VisitorSecret: visitorSecret, MediaDir: mediaDir, MediaStore: mediaStore,
 		CORSAllowedOrigins: cfg.Global.WebServerConfig.CORSAllowedOrigins,
 		PostSvc:            postSvc, PageSvc: pageSvc, MediaSvc: mediaSvc, TaxonomySvc: taxonomySvc, SiteSvc: siteSvc, CommunitySvc: communitySvc,
-		AnalyticsSvc: analyticsSvc, RecommendationSvc: recommendationSvc, PostVersionSvc: postVersionSvc, AgentCtrl: agentCtrl, LegacyAICtrl: legacyAICtrl, OperationsCtrl: operationsCtrl, WorkflowCtrl: workflowCtrl, Logger: cfg.Logger, Verifier: verifier,
+		AnalyticsSvc: analyticsSvc, RecommendationSvc: recommendationSvc, PostVersionSvc: postVersionSvc, AgentCtrl: agentCtrl, KnowledgeCtrl: knowledgeCtrl, LegacyAICtrl: legacyAICtrl, OperationsCtrl: operationsCtrl, WorkflowCtrl: workflowCtrl, Logger: cfg.Logger, Verifier: verifier,
 		AccessService: accessService, SecureCookies: cfg.Global.WebServerConfig.ResolveSecureCookies(cfg.Env),
 		BFFClient: bffClient,
 	})
