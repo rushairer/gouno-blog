@@ -8,13 +8,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/access"
+	accesscontroller "github.com/rushairer/blog-backend/internal/access/controller"
 	agentcontroller "github.com/rushairer/blog-backend/internal/agent/controller"
 	analyticscontroller "github.com/rushairer/blog-backend/internal/analytics/controller"
 	analyticsservice "github.com/rushairer/blog-backend/internal/analytics/service"
 	"github.com/rushairer/blog-backend/internal/authbff"
 	communitycontroller "github.com/rushairer/blog-backend/internal/community/controller"
 	communityservice "github.com/rushairer/blog-backend/internal/community/service"
-	"github.com/rushairer/blog-backend/internal/controller"
+	connectorcontroller "github.com/rushairer/blog-backend/internal/connector/controller"
 	feedcontroller "github.com/rushairer/blog-backend/internal/feed/controller"
 	knowledgecontroller "github.com/rushairer/blog-backend/internal/knowledge/controller"
 	"github.com/rushairer/blog-backend/internal/media"
@@ -60,7 +61,7 @@ type WebRouterOptions struct {
 	PostVersionSvc     postversionservice.Service
 	AgentCtrl          *agentcontroller.Controller
 	KnowledgeCtrl      *knowledgecontroller.Controller
-	LegacyAICtrl       *controller.AgentController
+	ConnectorCtrl      *connectorcontroller.Controller
 	OperationsCtrl     *operationscontroller.Controller
 	WorkflowCtrl       *workflowcontroller.Controller
 	Logger             *zap.Logger
@@ -84,8 +85,8 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 		server.Use(opts.BFFClient.SessionMiddleware())
 		opts.BFFClient.RegisterRoutes(server)
 	}
-	if opts.LegacyAICtrl != nil {
-		server.GET("/api/auth/connectors/google/callback", opts.LegacyAICtrl.CompleteSearchConsoleOAuthCallback)
+	if opts.ConnectorCtrl != nil {
+		server.GET("/api/auth/connectors/google/callback", opts.ConnectorCtrl.CompleteSearchConsoleOAuthCallback)
 	}
 	server.GET("/healthz", func(ctx *gin.Context) {
 		if opts.DB == nil || opts.DB.PingContext(ctx.Request.Context()) != nil {
@@ -142,7 +143,7 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 	authOptions := opts.AuthOptions
 	agentCtrl := opts.AgentCtrl
 	knowledgeCtrl := opts.KnowledgeCtrl
-	legacyAICtrl := opts.LegacyAICtrl
+	connectorCtrl := opts.ConnectorCtrl
 	operationsCtrl := opts.OperationsCtrl
 	workflowCtrl := opts.WorkflowCtrl
 
@@ -160,7 +161,7 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 	accessService := opts.AccessService
 	accessAuth := middleware.BlogAccess(accessService)
 	optionalAccessAuth := middleware.OptionalBlogAccess(accessService)
-	accessCtrl := controller.NewAccessController(accessService)
+	accessCtrl := accesscontroller.New(accessService)
 
 	registerWebTestRouter(server)
 	registerWebIndexRouter(server)
@@ -414,19 +415,19 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 				aiOps.PUT("/admin/ai-index/evaluation-cases", knowledgeCtrl.ReplaceIndexEvaluation)
 				aiOps.POST("/admin/ai-index/evaluate", knowledgeCtrl.EvaluateIndex)
 			}
-			if legacyAICtrl != nil {
-				aiOps.GET("/admin/ai-connectors", legacyAICtrl.ListConnectorProfiles)
-				aiOps.POST("/admin/ai-connectors", legacyAICtrl.SaveConnectorProfile)
-				aiOps.POST("/admin/ai-connectors/:id/oauth/start", legacyAICtrl.BeginConnectorOAuth)
-				aiOps.GET("/admin/ai-connectors/:id/oauth/start", middleware.RequireRecentMFA(), legacyAICtrl.BeginSearchConsoleOAuthRedirect)
-				aiOps.POST("/admin/ai-connectors/oauth/callback", legacyAICtrl.CompleteConnectorOAuth)
-				aiOps.POST("/admin/ai-connectors/:id/search-console/summary", legacyAICtrl.SearchConsoleSummary)
-				aiOps.GET("/admin/ai-connector-outbox", legacyAICtrl.ListConnectorOutbox)
-				aiOps.POST("/admin/ai-connector-outbox", legacyAICtrl.QueueConnectorOutbox)
-				aiOps.POST("/admin/ai-connector-outbox/:id/approve", legacyAICtrl.ApproveConnectorOutbox)
-				aiOps.POST("/admin/ai-connector-outbox/:id/revoke", legacyAICtrl.RevokeConnectorOutbox)
-				aiOps.POST("/admin/ai-connector-outbox/:id/deliver-mock", legacyAICtrl.DeliverConnectorOutboxMock)
-				aiOps.POST("/admin/ai-connector-outbox/:id/retry", legacyAICtrl.RetryConnectorOutbox)
+			if connectorCtrl != nil {
+				aiOps.GET("/admin/ai-connectors", connectorCtrl.ListConnectorProfiles)
+				aiOps.POST("/admin/ai-connectors", connectorCtrl.SaveConnectorProfile)
+				aiOps.POST("/admin/ai-connectors/:id/oauth/start", connectorCtrl.BeginConnectorOAuth)
+				aiOps.GET("/admin/ai-connectors/:id/oauth/start", middleware.RequireRecentMFA(), connectorCtrl.BeginSearchConsoleOAuthRedirect)
+				aiOps.POST("/admin/ai-connectors/oauth/callback", connectorCtrl.CompleteConnectorOAuth)
+				aiOps.POST("/admin/ai-connectors/:id/search-console/summary", connectorCtrl.SearchConsoleSummary)
+				aiOps.GET("/admin/ai-connector-outbox", connectorCtrl.ListConnectorOutbox)
+				aiOps.POST("/admin/ai-connector-outbox", connectorCtrl.QueueConnectorOutbox)
+				aiOps.POST("/admin/ai-connector-outbox/:id/approve", connectorCtrl.ApproveConnectorOutbox)
+				aiOps.POST("/admin/ai-connector-outbox/:id/revoke", connectorCtrl.RevokeConnectorOutbox)
+				aiOps.POST("/admin/ai-connector-outbox/:id/deliver-mock", connectorCtrl.DeliverConnectorOutboxMock)
+				aiOps.POST("/admin/ai-connector-outbox/:id/retry", connectorCtrl.RetryConnectorOutbox)
 			}
 		}
 	}

@@ -20,28 +20,13 @@ The capability is the primary ownership boundary. Layers are secondary implement
 
 A capability MUST contain only the layers it actually needs. Infrastructure capabilities such as encryption, observability, or test support must not create empty `domain`, `repository`, `service`, or `controller` packages merely for symmetry.
 
-## Transitional flat-layer directories
+## Retired generic business-layer directories
 
-The remaining legacy flat-layer boundaries are:
+The former root `internal/domain/`, `internal/service/`, `internal/repository/`, and `internal/controller/` business buckets are retired. They are not extension points and must not be recreated.
 
-```text
-internal/repository/   # frozen Connector-held transaction compatibility boundary
-internal/controller/   # frozen Access / Connector / compatibility HTTP boundary
-```
+Business ownership is capability-local under `internal/<capability>/`. Genuine cross-capability infrastructure remains explicit: transaction execution under `internal/dbtx`, SQL error classification under `internal/dberror`, and shared HTTP adapter primitives under `internal/controllerutil`. Access HTTP transport is canonical under `internal/access/controller`; Connector HTTP transport is canonical under `internal/connector/controller`; Connector consumes `dbtx.Transactor` directly.
 
-The former `internal/service/` and root `internal/domain/` buckets have been retired. Agent-owned models are canonical under `internal/agent/domain`; a global retirement guard prevents recreation or imports of the old root domain path. Existing code may remain in the two held boundaries above only while its documented security/Hold constraint remains active. New business features MUST NOT add new ownership to either flat bucket.
-
-The live ownership, dependency, transaction, compatibility-facade, and removal-condition inventory is maintained in [ARCHITECTURE_CONVERGENCE.md](./ARCHITECTURE_CONVERGENCE.md). Treat that map as the migration Source of Truth and update it with every architecture slice.
-
-Migration is intentionally incremental:
-
-1. identify a capability and its dependency boundary;
-2. extract genuinely shared infrastructure before moving business code;
-3. move domain/repository/service/controller code as one coherent capability slice where practical;
-4. retain narrow compatibility facades when moving all consumers in the same change would create unnecessary blast radius;
-5. update imports and route wiring without changing externally observable behavior;
-6. pass the full backend and repository CI gates before merging;
-7. only then migrate the next capability.
+Terminal guards under `internal/agent/domain`, `internal/controllerutil`, and `internal/dbtx` reject recreation of the retired generic buckets. The live ownership and transaction inventory is maintained in [ARCHITECTURE_CONVERGENCE.md](./ARCHITECTURE_CONVERGENCE.md).
 
 Do not perform filename-only moves that leave package ownership ambiguous or introduce circular dependencies.
 
@@ -87,7 +72,7 @@ internal/controllerutil/
 
 This package is an application-level HTTP adapter utility boundary. Capability controllers may depend on it. It must not depend on capability controller packages.
 
-The legacy `internal/controller` package is now frozen to the stable Access security boundary, the Connector-held transitional shell/transport, and the minimal response compatibility facade still required by those held paths. The unused flat pagination facade and its duplicate regression test are retired; canonical pagination behavior and coverage live in `internal/controllerutil`. `internal/controllerutil/flat_controller_boundary_test.go` enforces the reduced allowlist. No new business controller or unrelated ownership test may be added to the flat bucket; new transport belongs to its capability-local controller package.
+The generic root `internal/controller` package is retired. Access and Connector transport are capability-owned under `internal/access/controller` and `internal/connector/controller`, and both consume shared parameter/error primitives directly from `internal/controllerutil`. `internal/controllerutil/retired_controller_boundary_test.go` prevents recreation of the root controller bucket.
 
 ## Dependency direction
 
@@ -119,7 +104,7 @@ The default `gouno-template` Flat Layered structure remains the reference for si
 
 ## Security and product boundaries
 
-Architecture refactoring and Codegen must preserve the root `AGENTS.md` security contract, especially the confidential BFF boundary and Connector Module Hold. Structural cleanup is not authorization to change OAuth/OIDC, session, connector, credential, deployment, or security behavior.
+Architecture refactoring and Codegen must preserve the root `AGENTS.md` security contract, especially the confidential BFF boundary and Connector product-behavior Hold. Structural ownership may be canonicalized without changing externally observable behavior; structural cleanup is never authorization to change OAuth/OIDC, session, connector, credential, deployment, or security behavior.
 
 
 ## Agent HTTP ownership boundary
@@ -128,7 +113,7 @@ Agent HTTP transport is capability-owned under `internal/agent/controller`. Prov
 
 - The canonical Agent controller consumes only Agent services, Tool registry, and the narrow Workflow lifecycle/reconciliation port needed for approval/media coordination.
 - Knowledge transport is capability-owned under `internal/knowledge/controller` and is composed independently from Agent transport.
-- Connector transport remains on the transitional flat shell without behavioral changes under Connector Module Hold; the router names this dependency `LegacyAICtrl` to prevent accidental Agent/Knowledge ownership.
+- Connector transport is capability-owned under `internal/connector/controller`; the router receives it as `ConnectorCtrl`. The structural move changes no Connector OAuth/callback/credential/outbox/Sandbox behavior and the product-behavior Hold remains active.
 - Existing URLs, response contracts, ManageAI/author permissions, AAL2, recent-MFA, audit middleware, BFF behavior, and timeout policy are unchanged.
 - Shared HTTP error/parameter behavior comes directly from `internal/controllerutil`; no new flat-controller dependency is introduced.
 
@@ -139,7 +124,7 @@ Knowledge HTTP transport is capability-owned under `internal/knowledge/controlle
 - The controller depends only on `*knowledge.Service` plus shared HTTP primitives from `internal/controllerutil`; it does not import Agent or Connector.
 - Strict JSON decoding, positive-ID validation, status codes and response envelopes preserve the previous transport contract.
 - `router.WebRouterOptions` receives Knowledge and Connector controllers separately; existing `/api/admin/embedding-profiles*` and `/api/admin/ai-index/*` paths remain under the same ManageAI, AAL2, recent-MFA and audit middleware chain.
-- Connector routes, OAuth/callback state, credentials, delivery/outbox behavior and Sandbox semantics remain untouched under Connector Module Hold. The transitional flat controller is now Connector-only.
+- Connector routes are capability-owned under `internal/connector/controller`; OAuth/callback state, credentials, delivery/outbox behavior and Sandbox semantics remain unchanged and protected by the Connector Module Hold.
 
 ## Operations HTTP ownership boundary
 

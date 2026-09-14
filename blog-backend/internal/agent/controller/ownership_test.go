@@ -22,16 +22,9 @@ func TestAgentControllerIsCapabilityOwned(t *testing.T) {
 	}
 }
 
-func TestLegacyFlatControllerContainsNoAgentServices(t *testing.T) {
-	data, err := os.ReadFile("../../controller/agent_controller.go")
-	if err != nil {
-		t.Fatal(err)
-	}
-	text := string(data)
-	for _, forbidden := range []string{"ManagementService", "*agentservice.Runner", "ApprovalService", "GenerationService", "WorkflowLifecyclePort"} {
-		if strings.Contains(text, forbidden) {
-			t.Fatalf("legacy flat controller still owns Agent HTTP dependency: %s", forbidden)
-		}
+func TestRetiredFlatControllerIsAbsent(t *testing.T) {
+	if _, err := os.Stat("../../controller"); !os.IsNotExist(err) {
+		t.Fatalf("retired flat controller bucket exists: %v", err)
 	}
 }
 
