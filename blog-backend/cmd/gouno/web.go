@@ -19,6 +19,7 @@ import (
 	"github.com/rushairer/blog-backend/config"
 	"github.com/rushairer/blog-backend/internal/access"
 	agentservice "github.com/rushairer/blog-backend/internal/agent"
+	agentcontroller "github.com/rushairer/blog-backend/internal/agent/controller"
 	agentrepository "github.com/rushairer/blog-backend/internal/agent/repository"
 	"github.com/rushairer/blog-backend/internal/authbff"
 	communityrepository "github.com/rushairer/blog-backend/internal/community/repository"
@@ -290,7 +291,8 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 	postVersionSvc := newPostVersionService(cfg.DB)
 	postservice.StartScheduledPublisher(ctx, postSvc, cfg.Logger)
 
-	var agentCtrl *controller.AgentController
+	var agentCtrl *agentcontroller.Controller
+	var legacyAICtrl *controller.AgentController
 	var operationsCtrl *operationscontroller.Controller
 	var workflowCtrl *workflowcontroller.Controller
 	if cfg.Global.AIAgentConfig.Enabled {
@@ -368,10 +370,12 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		workflowCtrl = workflowcontroller.New(workflowSvc, workflowInteractions, management, toolRegistry, ctx)
 		workflowSvc.StartScheduler(ctx, cfg.Global.AIAgentConfig.SchedulerInterval)
 		connectorSvc := connector.NewService(cfg.DB, secrets, transactor, os.Getenv("BLOG_CONNECTOR_OAUTH_REDIRECT_URL"))
-		agentCtrl = controller.NewAgentControllerWithOptions(controller.AgentControllerOptions{
+		agentCtrl = agentcontroller.New(agentcontroller.Options{
 			Management: management, Runner: runner, Approvals: approvals, Tools: toolRegistry,
-			WorkerCtx: ctx, Knowledge: knowledgeSvc, Workflows: workflowSvc,
-			Connectors: connectorSvc, Generation: generation,
+			WorkerCtx: ctx, Workflows: workflowSvc, Generation: generation,
+		})
+		legacyAICtrl = controller.NewAgentControllerWithOptions(controller.AgentControllerOptions{
+			Knowledge: knowledgeSvc, Connectors: connectorSvc,
 		})
 		agentservice.NewScheduler(agentDefinitionRepo, runner, cfg.Global.AIAgentConfig.SchedulerInterval, cfg.Logger).Start(ctx)
 	}
@@ -385,7 +389,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		VisitorSecret: visitorSecret, MediaDir: mediaDir, MediaStore: mediaStore,
 		CORSAllowedOrigins: cfg.Global.WebServerConfig.CORSAllowedOrigins,
 		PostSvc:            postSvc, PageSvc: pageSvc, MediaSvc: mediaSvc, TaxonomySvc: taxonomySvc, SiteSvc: siteSvc, CommunitySvc: communitySvc,
-		AnalyticsSvc: analyticsSvc, RecommendationSvc: recommendationSvc, PostVersionSvc: postVersionSvc, AgentCtrl: agentCtrl, OperationsCtrl: operationsCtrl, WorkflowCtrl: workflowCtrl, Logger: cfg.Logger, Verifier: verifier,
+		AnalyticsSvc: analyticsSvc, RecommendationSvc: recommendationSvc, PostVersionSvc: postVersionSvc, AgentCtrl: agentCtrl, LegacyAICtrl: legacyAICtrl, OperationsCtrl: operationsCtrl, WorkflowCtrl: workflowCtrl, Logger: cfg.Logger, Verifier: verifier,
 		AccessService: accessService, SecureCookies: cfg.Global.WebServerConfig.ResolveSecureCookies(cfg.Env),
 		BFFClient: bffClient,
 	})

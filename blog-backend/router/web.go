@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/access"
+	agentcontroller "github.com/rushairer/blog-backend/internal/agent/controller"
 	analyticscontroller "github.com/rushairer/blog-backend/internal/analytics/controller"
 	analyticsservice "github.com/rushairer/blog-backend/internal/analytics/service"
 	"github.com/rushairer/blog-backend/internal/authbff"
@@ -55,7 +56,8 @@ type WebRouterOptions struct {
 	AnalyticsSvc       analyticsservice.Service
 	RecommendationSvc  recommendationservice.Service
 	PostVersionSvc     postversionservice.Service
-	AgentCtrl          *controller.AgentController
+	AgentCtrl          *agentcontroller.Controller
+	LegacyAICtrl       *controller.AgentController
 	OperationsCtrl     *operationscontroller.Controller
 	WorkflowCtrl       *workflowcontroller.Controller
 	Logger             *zap.Logger
@@ -79,8 +81,8 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 		server.Use(opts.BFFClient.SessionMiddleware())
 		opts.BFFClient.RegisterRoutes(server)
 	}
-	if opts.AgentCtrl != nil {
-		server.GET("/api/auth/connectors/google/callback", opts.AgentCtrl.CompleteSearchConsoleOAuthCallback)
+	if opts.LegacyAICtrl != nil {
+		server.GET("/api/auth/connectors/google/callback", opts.LegacyAICtrl.CompleteSearchConsoleOAuthCallback)
 	}
 	server.GET("/healthz", func(ctx *gin.Context) {
 		if opts.DB == nil || opts.DB.PingContext(ctx.Request.Context()) != nil {
@@ -136,6 +138,7 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 
 	authOptions := opts.AuthOptions
 	agentCtrl := opts.AgentCtrl
+	legacyAICtrl := opts.LegacyAICtrl
 	operationsCtrl := opts.OperationsCtrl
 	workflowCtrl := opts.WorkflowCtrl
 
@@ -355,16 +358,6 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 				aiOps.DELETE("/admin/provider-profiles/:id", agentCtrl.DeleteProvider)
 				aiOps.POST("/admin/provider-profiles/:id/test", agentCtrl.TestProvider)
 				aiOps.POST("/admin/provider-profiles/:id/default/:purpose", agentCtrl.SetDefaultProvider)
-				aiOps.GET("/admin/embedding-profiles", agentCtrl.ListEmbeddingProfiles)
-				aiOps.POST("/admin/embedding-profiles", agentCtrl.CreateEmbeddingProfile)
-				aiOps.PUT("/admin/embedding-profiles/:id", agentCtrl.UpdateEmbeddingProfile)
-				aiOps.DELETE("/admin/embedding-profiles/:id", agentCtrl.DeleteEmbeddingProfile)
-				aiOps.POST("/admin/embedding-profiles/:id/test", agentCtrl.TestEmbeddingProfile)
-				aiOps.GET("/admin/ai-index/status", agentCtrl.IndexStatus)
-				aiOps.POST("/admin/ai-index/rebuild", agentCtrl.RebuildIndex)
-				aiOps.POST("/admin/ai-index/retry", agentCtrl.RetryIndex)
-				aiOps.PUT("/admin/ai-index/evaluation-cases", agentCtrl.ReplaceIndexEvaluation)
-				aiOps.POST("/admin/ai-index/evaluate", agentCtrl.EvaluateIndex)
 				aiOps.GET("/admin/agents", agentCtrl.ListAgents)
 				aiOps.POST("/admin/agents", agentCtrl.CreateAgent)
 				aiOps.GET("/admin/agents/:id", agentCtrl.GetAgent)
@@ -393,18 +386,6 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 				aiOps.POST("/admin/ai-workflow-runs/:id/media-candidates/select", agentCtrl.SelectWorkflowImageTasks)
 				aiOps.POST("/admin/ai-workflow-runs/:id/media-candidates/apply", agentCtrl.ApplyWorkflowImageTasks)
 				aiOps.POST("/admin/ai-workflow-runs/:id/media-candidates/reject", agentCtrl.RejectWorkflowImageTasks)
-				aiOps.GET("/admin/ai-connectors", agentCtrl.ListConnectorProfiles)
-				aiOps.POST("/admin/ai-connectors", agentCtrl.SaveConnectorProfile)
-				aiOps.POST("/admin/ai-connectors/:id/oauth/start", agentCtrl.BeginConnectorOAuth)
-				aiOps.GET("/admin/ai-connectors/:id/oauth/start", middleware.RequireRecentMFA(), agentCtrl.BeginSearchConsoleOAuthRedirect)
-				aiOps.POST("/admin/ai-connectors/oauth/callback", agentCtrl.CompleteConnectorOAuth)
-				aiOps.POST("/admin/ai-connectors/:id/search-console/summary", agentCtrl.SearchConsoleSummary)
-				aiOps.GET("/admin/ai-connector-outbox", agentCtrl.ListConnectorOutbox)
-				aiOps.POST("/admin/ai-connector-outbox", agentCtrl.QueueConnectorOutbox)
-				aiOps.POST("/admin/ai-connector-outbox/:id/approve", agentCtrl.ApproveConnectorOutbox)
-				aiOps.POST("/admin/ai-connector-outbox/:id/revoke", agentCtrl.RevokeConnectorOutbox)
-				aiOps.POST("/admin/ai-connector-outbox/:id/deliver-mock", agentCtrl.DeliverConnectorOutboxMock)
-				aiOps.POST("/admin/ai-connector-outbox/:id/retry", agentCtrl.RetryConnectorOutbox)
 				aiOps.GET("/admin/ai-media-candidates", agentCtrl.ListMediaCandidates)
 				aiOps.POST("/admin/ai-media-candidates/:id/review", agentCtrl.ReviewMediaCandidate)
 				aiOps.POST("/admin/ai-media-candidates/:id/attach-media", agentCtrl.AttachMediaAsset)
@@ -416,6 +397,30 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 				aiOps.POST("/admin/ai-image-tasks/:id/apply", agentCtrl.ApplyImageTask)
 				aiOps.GET("/admin/ai-image-tasks/:id/preview", agentCtrl.PreviewImageTask)
 				aiOps.GET("/admin/ai-image-tasks/:id/events", agentCtrl.ImageTaskEvents)
+			}
+			if legacyAICtrl != nil {
+				aiOps.GET("/admin/embedding-profiles", legacyAICtrl.ListEmbeddingProfiles)
+				aiOps.POST("/admin/embedding-profiles", legacyAICtrl.CreateEmbeddingProfile)
+				aiOps.PUT("/admin/embedding-profiles/:id", legacyAICtrl.UpdateEmbeddingProfile)
+				aiOps.DELETE("/admin/embedding-profiles/:id", legacyAICtrl.DeleteEmbeddingProfile)
+				aiOps.POST("/admin/embedding-profiles/:id/test", legacyAICtrl.TestEmbeddingProfile)
+				aiOps.GET("/admin/ai-index/status", legacyAICtrl.IndexStatus)
+				aiOps.POST("/admin/ai-index/rebuild", legacyAICtrl.RebuildIndex)
+				aiOps.POST("/admin/ai-index/retry", legacyAICtrl.RetryIndex)
+				aiOps.PUT("/admin/ai-index/evaluation-cases", legacyAICtrl.ReplaceIndexEvaluation)
+				aiOps.POST("/admin/ai-index/evaluate", legacyAICtrl.EvaluateIndex)
+				aiOps.GET("/admin/ai-connectors", legacyAICtrl.ListConnectorProfiles)
+				aiOps.POST("/admin/ai-connectors", legacyAICtrl.SaveConnectorProfile)
+				aiOps.POST("/admin/ai-connectors/:id/oauth/start", legacyAICtrl.BeginConnectorOAuth)
+				aiOps.GET("/admin/ai-connectors/:id/oauth/start", middleware.RequireRecentMFA(), legacyAICtrl.BeginSearchConsoleOAuthRedirect)
+				aiOps.POST("/admin/ai-connectors/oauth/callback", legacyAICtrl.CompleteConnectorOAuth)
+				aiOps.POST("/admin/ai-connectors/:id/search-console/summary", legacyAICtrl.SearchConsoleSummary)
+				aiOps.GET("/admin/ai-connector-outbox", legacyAICtrl.ListConnectorOutbox)
+				aiOps.POST("/admin/ai-connector-outbox", legacyAICtrl.QueueConnectorOutbox)
+				aiOps.POST("/admin/ai-connector-outbox/:id/approve", legacyAICtrl.ApproveConnectorOutbox)
+				aiOps.POST("/admin/ai-connector-outbox/:id/revoke", legacyAICtrl.RevokeConnectorOutbox)
+				aiOps.POST("/admin/ai-connector-outbox/:id/deliver-mock", legacyAICtrl.DeliverConnectorOutboxMock)
+				aiOps.POST("/admin/ai-connector-outbox/:id/retry", legacyAICtrl.RetryConnectorOutbox)
 			}
 		}
 	}

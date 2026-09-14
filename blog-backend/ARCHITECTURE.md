@@ -121,6 +121,16 @@ The default `gouno-template` Flat Layered structure remains the reference for si
 Architecture refactoring and Codegen must preserve the root `AGENTS.md` security contract, especially the confidential BFF boundary and Connector Module Hold. Structural cleanup is not authorization to change OAuth/OIDC, session, connector, credential, deployment, or security behavior.
 
 
+## Agent HTTP ownership boundary
+
+Agent HTTP transport is capability-owned under `internal/agent/controller`. Provider administration, Agent/Skill management, Runs, Approvals, Agent-owned MediaCandidate/image-generation transport, editor generation, and Agent Skill drafting are wired through the capability controller.
+
+- The canonical Agent controller consumes only Agent services, Tool registry, and the narrow Workflow lifecycle/reconciliation port needed for approval/media coordination.
+- Knowledge transport remains on the transitional flat controller until the dedicated Knowledge HTTP ownership slice.
+- Connector transport remains on that same transitional shell without behavioral changes under Connector Module Hold; the router names this dependency `LegacyAICtrl` to prevent accidental Agent ownership.
+- Existing URLs, response contracts, ManageAI/author permissions, AAL2, recent-MFA, audit middleware, BFF behavior, and timeout policy are unchanged.
+- Shared HTTP error/parameter behavior comes directly from `internal/controllerutil`; no new flat-controller dependency is introduced.
+
 ## Operations HTTP ownership boundary
 
 Operations HTTP transport is capability-owned under `internal/operations/controller`; the flat `AgentController` no longer receives `*operations.Service` or owns suggestion, editorial-task, candidate-set, feedback, or outcome-metrics endpoints.
@@ -138,7 +148,7 @@ Workflow HTTP transport is capability-owned under `internal/workflow/controller`
 - `router.WebRouterOptions` receives a separate Workflow controller and preserves the existing paths, permission middleware, AAL2/recent-MFA requirements, audit middleware, response envelopes and webhook HMAC/idempotency contract.
 - Human-interaction HTTP operations use Workflow's `InteractionService` over the canonical `InteractionRepository`; the previous controller path through Agent `ApprovalService` is retired. Resolve/cancel still resume/cancel the linked Workflow Run with the historical `sql.ErrNoRows` tolerance.
 - Workflow planning consumes Agent provider/Agent catalog and Tool catalog through narrow controller-facing interfaces. Agent Skill drafting and Agent-owned MediaCandidate actions remain with Agent HTTP ownership even when their route is nested under a Workflow path.
-- The remaining flat Agent controller depends on Workflow only through a narrow lifecycle/reconciliation port used by Agent approval and MediaCandidate orchestration; it no longer receives the full Workflow Service for HTTP routing.
+- The canonical Agent controller depends on Workflow only through a narrow lifecycle/reconciliation port used by Agent approval and MediaCandidate orchestration; the transitional Knowledge/Connector shell has no Workflow dependency.
 - Connector routes and behavior remain untouched under the Connector Module Hold.
 
 ## Workflow read-model boundary
