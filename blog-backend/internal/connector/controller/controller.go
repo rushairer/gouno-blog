@@ -10,22 +10,16 @@ import (
 	"github.com/rushairer/blog-backend/internal/connector"
 )
 
-type AgentController struct {
+type Controller struct {
 	connectors *connector.Service
 }
 
-type AgentControllerOptions struct {
+type Options struct {
 	Connectors *connector.Service
 }
 
-func NewAgentController(opts AgentControllerOptions) *AgentController {
-	return &AgentController{connectors: opts.Connectors}
-}
-
-// NewAgentControllerWithOptions is retained while Connector transport remains
-// on the explicitly held transitional flat controller shell.
-func NewAgentControllerWithOptions(opts AgentControllerOptions) *AgentController {
-	return NewAgentController(opts)
+func New(opts Options) *Controller {
+	return &Controller{connectors: opts.Connectors}
 }
 
 func bindAgentJSON(c *gin.Context, value any) error {

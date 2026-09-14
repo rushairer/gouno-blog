@@ -8,17 +8,18 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/rushairer/blog-backend/internal/access"
+	"github.com/rushairer/blog-backend/internal/controllerutil"
 	"github.com/rushairer/blog-backend/middleware"
 	"github.com/rushairer/gouno"
 )
 
-type AccessController struct{ service *access.Service }
+type Controller struct{ service *access.Service }
 
-func NewAccessController(service *access.Service) *AccessController {
-	return &AccessController{service: service}
+func New(service *access.Service) *Controller {
+	return &Controller{service: service}
 }
 
-func (ctrl *AccessController) Session(c *gin.Context) {
+func (ctrl *Controller) Session(c *gin.Context) {
 	snapshot, ok := middleware.CurrentBlogAccess(c)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gouno.NewErrorResponse(http.StatusUnauthorized, "invalid authentication"))
@@ -27,19 +28,19 @@ func (ctrl *AccessController) Session(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(snapshot))
 }
 
-func (ctrl *AccessController) ListMembers(c *gin.Context) {
+func (ctrl *Controller) ListMembers(c *gin.Context) {
 	members, err := ctrl.service.ListMembers(c.Request.Context())
 	if err != nil {
-		WriteDomainError(c, err)
+		controllerutil.WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"members": members}))
 }
 
-func (ctrl *AccessController) ListAudits(c *gin.Context) {
+func (ctrl *Controller) ListAudits(c *gin.Context) {
 	audits, err := ctrl.service.ListAudits(c.Request.Context(), 100)
 	if err != nil {
-		WriteDomainError(c, err)
+		controllerutil.WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"audits": audits}))
@@ -52,7 +53,7 @@ type membershipRequest struct {
 	Reason      string   `json:"reason"`
 }
 
-func (ctrl *AccessController) UpdateMember(c *gin.Context) {
+func (ctrl *Controller) UpdateMember(c *gin.Context) {
 	claimsRaw, ok := c.Get("claims")
 	claims, valid := claimsRaw.(jwt.MapClaims)
 	if !ok || !valid || !access.RecentMFA(claims, time.Now()) {
@@ -85,7 +86,7 @@ func (ctrl *AccessController) UpdateMember(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"updated": true}))
 }
 
-func (ctrl *AccessController) TransferOwner(c *gin.Context) {
+func (ctrl *Controller) TransferOwner(c *gin.Context) {
 	claimsRaw, ok := c.Get("claims")
 	claims, valid := claimsRaw.(jwt.MapClaims)
 	if !ok || !valid || !access.RecentMFA(claims, time.Now()) {

@@ -6,43 +6,44 @@ import (
 	"testing"
 )
 
-func TestRouterUsesCapabilityAgentController(t *testing.T) {
+func TestRouterUsesCapabilityOwnedAIControllers(t *testing.T) {
 	data, err := os.ReadFile("web.go")
 	if err != nil {
 		t.Fatal(err)
 	}
 	text := string(data)
 	for _, required := range []string{
-		"AgentCtrl          *agentcontroller.Controller",
-		"LegacyAICtrl",
-		"*controller.AgentController",
+		"*agentcontroller.Controller",
 		"agentCtrl.ListProviders",
 		"agentCtrl.ListAgents",
 		"agentCtrl.ListSkills",
 		"agentCtrl.ListApprovals",
 		"agentCtrl.ListMediaCandidates",
-		"KnowledgeCtrl",
 		"*knowledgecontroller.Controller",
 		"knowledgeCtrl.ListEmbeddingProfiles",
-		"legacyAICtrl.ListConnectorProfiles",
+		"*connectorcontroller.Controller",
+		"connectorCtrl.ListConnectorProfiles",
 	} {
 		if !strings.Contains(text, required) {
-			t.Fatalf("router missing Agent ownership contract %q", required)
+			t.Fatalf("router missing capability ownership contract %q", required)
 		}
 	}
 	for _, forbidden := range []string{
-		"legacyAICtrl.ListProviders",
-		"legacyAICtrl.ListAgents",
-		"legacyAICtrl.ListSkills",
-		"legacyAICtrl.ListApprovals",
-		"legacyAICtrl.ListMediaCandidates",
+		"LegacyAICtrl",
+		"legacyAICtrl",
+		"controller.AgentController",
+		"connectorCtrl.ListProviders",
+		"connectorCtrl.ListAgents",
+		"connectorCtrl.ListSkills",
+		"connectorCtrl.ListApprovals",
+		"connectorCtrl.ListMediaCandidates",
 		"agentCtrl.ListEmbeddingProfiles",
-		"legacyAICtrl.ListEmbeddingProfiles",
+		"connectorCtrl.ListEmbeddingProfiles",
 		"knowledgeCtrl.ListConnectorProfiles",
 		"agentCtrl.ListConnectorProfiles",
 	} {
 		if strings.Contains(text, forbidden) {
-			t.Fatalf("router crossed Agent ownership boundary: %q", forbidden)
+			t.Fatalf("router crossed AI capability ownership boundary: %q", forbidden)
 		}
 	}
 }

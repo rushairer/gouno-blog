@@ -25,7 +25,7 @@ import (
 	communityrepository "github.com/rushairer/blog-backend/internal/community/repository"
 	communityservice "github.com/rushairer/blog-backend/internal/community/service"
 	"github.com/rushairer/blog-backend/internal/connector"
-	"github.com/rushairer/blog-backend/internal/controller"
+	connectorcontroller "github.com/rushairer/blog-backend/internal/connector/controller"
 	"github.com/rushairer/blog-backend/internal/dbtx"
 	"github.com/rushairer/blog-backend/internal/knowledge"
 	knowledgecontroller "github.com/rushairer/blog-backend/internal/knowledge/controller"
@@ -294,7 +294,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 
 	var agentCtrl *agentcontroller.Controller
 	var knowledgeCtrl *knowledgecontroller.Controller
-	var legacyAICtrl *controller.AgentController
+	var connectorCtrl *connectorcontroller.Controller
 	var operationsCtrl *operationscontroller.Controller
 	var workflowCtrl *workflowcontroller.Controller
 	if cfg.Global.AIAgentConfig.Enabled {
@@ -377,7 +377,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 			Management: management, Runner: runner, Approvals: approvals, Tools: toolRegistry,
 			WorkerCtx: ctx, Workflows: workflowSvc, Generation: generation,
 		})
-		legacyAICtrl = controller.NewAgentControllerWithOptions(controller.AgentControllerOptions{
+		connectorCtrl = connectorcontroller.New(connectorcontroller.Options{
 			Connectors: connectorSvc,
 		})
 		agentservice.NewScheduler(agentDefinitionRepo, runner, cfg.Global.AIAgentConfig.SchedulerInterval, cfg.Logger).Start(ctx)
@@ -392,7 +392,7 @@ func newApplication(ctx context.Context, cfg applicationConfig) {
 		VisitorSecret: visitorSecret, MediaDir: mediaDir, MediaStore: mediaStore,
 		CORSAllowedOrigins: cfg.Global.WebServerConfig.CORSAllowedOrigins,
 		PostSvc:            postSvc, PageSvc: pageSvc, MediaSvc: mediaSvc, TaxonomySvc: taxonomySvc, SiteSvc: siteSvc, CommunitySvc: communitySvc,
-		AnalyticsSvc: analyticsSvc, RecommendationSvc: recommendationSvc, PostVersionSvc: postVersionSvc, AgentCtrl: agentCtrl, KnowledgeCtrl: knowledgeCtrl, LegacyAICtrl: legacyAICtrl, OperationsCtrl: operationsCtrl, WorkflowCtrl: workflowCtrl, Logger: cfg.Logger, Verifier: verifier,
+		AnalyticsSvc: analyticsSvc, RecommendationSvc: recommendationSvc, PostVersionSvc: postVersionSvc, AgentCtrl: agentCtrl, KnowledgeCtrl: knowledgeCtrl, ConnectorCtrl: connectorCtrl, OperationsCtrl: operationsCtrl, WorkflowCtrl: workflowCtrl, Logger: cfg.Logger, Verifier: verifier,
 		AccessService: accessService, SecureCookies: cfg.Global.WebServerConfig.ResolveSecureCookies(cfg.Env),
 		BFFClient: bffClient,
 	})

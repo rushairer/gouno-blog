@@ -47,9 +47,8 @@ func TestPrincipalIDRequiresPositiveLocalPrincipal(t *testing.T) {
 	}
 }
 
-func TestFlatAgentControllerDoesNotOwnOperationsHTTP(t *testing.T) {
+func TestOtherCapabilityControllersDoNotOwnOperationsHTTP(t *testing.T) {
 	files := []string{
-		"../../controller/agent_controller.go",
 		"../../agent/controller/controller.go",
 		"../../agent/controller/media.go",
 	}
@@ -71,7 +70,7 @@ func TestFlatAgentControllerDoesNotOwnOperationsHTTP(t *testing.T) {
 		text := string(data)
 		for _, value := range forbidden {
 			if strings.Contains(text, value) {
-				t.Errorf("flat Agent controller %s still owns Operations HTTP dependency/handler: %s", path, value)
+				t.Errorf("another capability controller %s owns Operations HTTP dependency/handler: %s", path, value)
 			}
 		}
 	}

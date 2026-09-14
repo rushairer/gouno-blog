@@ -21,7 +21,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rushairer/blog-backend/internal/repository"
+	"github.com/rushairer/blog-backend/internal/dbtx"
 	"github.com/rushairer/blog-backend/internal/secretbox"
 )
 
@@ -64,10 +64,10 @@ type Service struct {
 	oauthToken     string
 	searchConsole  string
 	redirectURL    string
-	transactor     *repository.Transactor
+	transactor     *dbtx.Transactor
 }
 
-func NewService(db *sql.DB, secrets *secretbox.Box, transactor *repository.Transactor, redirectURL ...string) *Service {
+func NewService(db *sql.DB, secrets *secretbox.Box, transactor *dbtx.Transactor, redirectURL ...string) *Service {
 	if transactor == nil {
 		panic("connector.NewService: transactor is required")
 	}
