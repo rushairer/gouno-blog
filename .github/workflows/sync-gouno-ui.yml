@@ -10,7 +10,7 @@ on:
       version:
         description: Exact @gouno/ui version or npm dist-tag
         required: false
-        default: 0.3.5
+        default: 0.4.0
 
 permissions:
   contents: write
@@ -45,7 +45,7 @@ jobs:
           REQUESTED_VERSION: ${{ github.event.inputs.version }}
         run: |
           set -euo pipefail
-          REQUESTED_VERSION="${REQUESTED_VERSION:-0.3.5}"
+          REQUESTED_VERSION="${REQUESTED_VERSION:-0.4.0}"
           RESOLVED_VERSION="$(npm view "@gouno/ui@${REQUESTED_VERSION}" version)"
           test -n "$RESOLVED_VERSION"
           echo "version=$RESOLVED_VERSION" >> "$GITHUB_OUTPUT"
@@ -89,7 +89,7 @@ jobs:
             ['core', core, ['Button', 'Tabs', 'Card', 'Alert']],
             ['theme', theme, ['ThemeProvider']],
             ['patterns', patterns, ['BulkActionBar']],
-            ['gouno', gouno, ['AppShell', 'PageContainer', 'PageHeader']],
+            ['gouno', gouno, ['AppShell', 'PageContainer', 'PageHeader', 'PageSkeleton']],
           ]) {
             for (const name of names) {
               if (!mod[name]) throw new Error(`canonical ${owner} entrypoint is missing ${name}`);
