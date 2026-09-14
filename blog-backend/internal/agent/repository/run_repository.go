@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 
-	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/agent/domain"
 )
 
 type RunRepository struct {

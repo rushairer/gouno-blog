@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/rushairer/blog-backend/internal/agent/domain"
 	"github.com/rushairer/blog-backend/internal/dbtx"
-	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 const version = 4

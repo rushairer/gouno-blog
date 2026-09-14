@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/agent/domain"
 	"go.uber.org/zap"
 )
 

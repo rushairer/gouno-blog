@@ -21,7 +21,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/rushairer/blog-backend/internal/controllerutil"
-	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/agent/domain"
 	"github.com/rushairer/blog-backend/internal/provider"
 	"github.com/rushairer/blog-backend/internal/tool"
 	workflowservice "github.com/rushairer/blog-backend/internal/workflow"

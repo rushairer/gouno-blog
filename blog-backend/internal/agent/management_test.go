@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/agent/domain"
 )
 
 func TestNextRunUsesAgentTimezone(t *testing.T) {

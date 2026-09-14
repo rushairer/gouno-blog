@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/agent/domain"
 )
 
 // ReconcileApprovalRun resolves the owning Agent Run after one proposal changes

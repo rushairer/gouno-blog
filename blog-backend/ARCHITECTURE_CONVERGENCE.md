@@ -51,7 +51,6 @@ Agent composition is now canonical at the service-dependency layer: the root con
 | `internal/repository.Transactor` and `NewTransactor` | Shared-infrastructure alias | **Connector only after Phase B** | Deferred by Connector Module Hold. Delete immediately after explicitly authorized Connector direct-`dbtx` cutover. |
 | `internal/controller.AgentController` Connector-only transitional shell | Explicit Connector Hold | Connector routes/callback only; Agent, Workflow, Operations and Knowledge transport are capability-local | Retain unchanged until explicit Connector Hold lift; then move Connector transport with dedicated security review/tests. |
 | `internal/controller` response/pagination compatibility helpers | Frozen compatibility facade | Stable Access controller plus Connector-held flat transport | Retire only in a dedicated Access/Connector boundary slice after the relevant security/Hold constraints are explicitly lifted; no new consumers are allowed. |
-| `internal/domain` Agent models | Deliberate model migration boundary, not automatically a facade | Agent consumers | Remaining root models are Agent-owned and are the final shared-model migration slice. Tool/Knowledge/Provider/Workflow/Post-owned models are retired from this boundary. |
 
 ## Flat-layer classification
 
@@ -59,40 +58,49 @@ The remaining flat files are not all equivalent debt:
 
 - **A — migrate to capability / retire facade:** Agent, Workflow, Operations, Knowledge and Feed HTTP ownership are canonical under capability controllers; flat Agent repository delegates are retired. The remaining `internal/controller` entries are explicitly classified and allowlist-frozen; there is no unclassified non-held business controller left in that bucket.
 - **B — shared infrastructure:** generic DB transaction execution belongs in `internal/dbtx`; generic SQL error classification belongs in `internal/dberror`; shared HTTP primitives belong in `internal/controllerutil` when/where proven.
-- **C — final model-migration boundary:** remaining root `internal/domain` models are Agent-owned. Page, Post, Workflow, Provider, Knowledge EmbeddingProfile, and ToolRisk have been classified and their root aliases are retired; the final Agent slice may retire `internal/domain` after full consumer proof.
+- **C — retired root model boundary:** root `internal/domain` is fully retired after the final Agent consumer cutover. Agent models are canonical under `internal/agent/domain`, and the global ownership guard rejects recreation or imports of the retired path.
 - **D — explicit hold:** Connector-related controller/dependency paths. Record the dependency but do not modify it while Connector Module Hold remains active.
 
 ## Migration debt priority
 
 1. **Held-boundary retirement:** non-held flat-controller ownership is converged and frozen. Connector controller/transactor compatibility remains explicitly blocked by Connector Module Hold; Access remains a stable security boundary rather than migration debt.
-2. **Shared-model classification:** Page, Post, Workflow, Provider, Knowledge EmbeddingProfile, and ToolRisk are complete; the remaining root models are Agent-owned and form the final model-migration slice.
+2. **Shared-model classification:** complete. Page, Post, Workflow, Provider, Knowledge EmbeddingProfile, ToolRisk, and Agent values all have capability owners; root `internal/domain` is retired and there is no remaining shared-model migration debt.
 
-Completed slices: **Agent Approval / Media Candidate / Workflow Event orchestration**, **Agent ManagementService dependency cutover**, **Starter Pack application coordination**, **Runner dependency/lifecycle convergence**, **Workflow Definition/Version persistence extraction**, **Workflow Run lifecycle coordination**, **Agent MediaCandidate / Workflow Run boundary convergence**, and **Workflow Run admission/retry/recovery convergence**, **Workflow dispatch/execution persistence convergence**, and **Workflow read-model classification**, and **Workflow HTTP ownership convergence**, and **Operations HTTP ownership convergence**, and **Agent HTTP ownership convergence**, and **Knowledge HTTP ownership convergence**, and **PostVersion restore ownership convergence**, and **Feed HTTP ownership convergence**, and **flat-controller boundary freeze**, and **Page domain alias retirement**, and **Operations domain model ownership convergence**, and **Taxonomy domain model ownership**, and **Analytics read-model ownership**, and **Media domain model ownership**, and **PostVersion domain model ownership**, and **Post domain model ownership**, and **Workflow domain model ownership**, and **Provider domain model ownership**, and **Knowledge EmbeddingProfile domain ownership**, and **ToolRisk domain ownership** now use canonical ownership boundaries and explicit composition-root wiring. The flat `repository.AgentRepository` aggregate and its Agent/Workflow/Notification delegates are retired; `internal/repository` remains only for the Connector-held Transactor alias until that Hold is explicitly lifted.
+Completed slices: **Agent Approval / Media Candidate / Workflow Event orchestration**, **Agent ManagementService dependency cutover**, **Starter Pack application coordination**, **Runner dependency/lifecycle convergence**, **Workflow Definition/Version persistence extraction**, **Workflow Run lifecycle coordination**, **Agent MediaCandidate / Workflow Run boundary convergence**, and **Workflow Run admission/retry/recovery convergence**, **Workflow dispatch/execution persistence convergence**, and **Workflow read-model classification**, and **Workflow HTTP ownership convergence**, and **Operations HTTP ownership convergence**, and **Agent HTTP ownership convergence**, and **Knowledge HTTP ownership convergence**, and **PostVersion restore ownership convergence**, and **Feed HTTP ownership convergence**, and **flat-controller boundary freeze**, and **Page domain alias retirement**, and **Operations domain model ownership convergence**, and **Taxonomy domain model ownership**, and **Analytics read-model ownership**, and **Media domain model ownership**, and **PostVersion domain model ownership**, and **Post domain model ownership**, and **Workflow domain model ownership**, and **Provider domain model ownership**, and **Knowledge EmbeddingProfile domain ownership**, and **ToolRisk domain ownership**, and **Agent domain ownership / root-domain retirement** now use canonical ownership boundaries and explicit composition-root wiring. The flat `repository.AgentRepository` aggregate and its Agent/Workflow/Notification delegates are retired; `internal/repository` remains only for the Connector-held Transactor alias until that Hold is explicitly lifted.
+
+
+### Agent domain ownership and root-domain retirement — 2026-09-14
+
+- `internal/agent/domain` owns Agent definitions, Skills, Runs, Tool Calls, Approvals, Media Candidates, generation audits, usage events, and their enums/value contracts.
+- All Agent and cross-capability consumers import the canonical leaf domain directly; no compatibility aliases remain in a root shared-model package.
+- Root `internal/domain` is deleted after repository-wide consumer proof. `internal/agent/domain/ownership_test.go` rejects both recreation of that directory and any Go import of the retired path.
+- The migration-only per-capability root-domain guards were consolidated into this single terminal guard after the root boundary disappeared.
+- Agent behavior, SQL, JSON contracts, Provider/Tool leaf-domain references, HTTP routes/responses, Auth BFF, Access, Connector, and middleware behavior are unchanged.
 
 
 ### ToolRisk domain ownership — 2026-09-14
 
 - `internal/tool/domain` owns `ToolRiskLevel` and the read/propose/write risk constants; these values are no longer declared by root `internal/domain`.
 - Tool registry/bindings plus Agent, Workflow, and Operations consumers import the Tool-owned leaf contract directly. `AgentToolCall.RiskLevel` explicitly references the leaf Tool contract.
-- `internal/tool/domain/ownership_test.go` rejects redeclaration or future consumption of ToolRisk symbols through root `internal/domain`.
+- `internal/agent/domain/ownership_test.go` rejects redeclaration or future consumption of ToolRisk symbols through root `internal/domain`.
 - Tool invocation/proposal/execution behavior, scope enforcement, approval behavior, SQL, routes/responses, Auth BFF, Access, Connector, and middleware behavior are unchanged.
-- Remaining root model classification is Agent-owned only and is ready for the final whole-file Agent migration after consumer proof.
+- The final Agent migration is complete: root `internal/domain` is retired and the global ownership guard prevents its return.
 
 
 ### Knowledge EmbeddingProfile domain ownership — 2026-09-14
 
 - `internal/knowledge/domain` owns `EmbeddingProfile`; the credential/configuration value is no longer declared by root `internal/domain`.
 - Knowledge service/controller import the leaf contract directly; cohesive Knowledge persistence and transaction ownership stay unchanged.
-- `internal/knowledge/domain/ownership_test.go` rejects redeclaration or future consumption of `EmbeddingProfile` through root `internal/domain`.
+- `internal/agent/domain/ownership_test.go` rejects redeclaration or future consumption of `EmbeddingProfile` through root `internal/domain`.
 - API-key ciphertext/nonce handling, encryption/decryption, upstream URL validation, HTTP client safety, SQL, index/retrieval behavior, routes/responses, Auth BFF, Access, Connector, and middleware behavior are unchanged.
-- Remaining root model classification is Agent-owned only.
+- Root `internal/domain` has since been retired by the final Agent domain migration.
 
 
 ### Provider domain model ownership — 2026-09-14
 
 - `internal/provider/domain` owns `ProviderType`, provider-type constants, and `ProviderProfile`; these values are no longer declared by root `internal/domain`.
 - Provider repository plus Agent management/generation/controller, Workflow planner/controller, and other consumers import the Provider-owned leaf contract directly.
-- `internal/provider/domain/ownership_test.go` rejects redeclaration or future consumption of Provider-owned symbols through root `internal/domain`.
+- `internal/agent/domain/ownership_test.go` rejects redeclaration or future consumption of Provider-owned symbols through root `internal/domain`.
 - Credential ciphertext/nonce fields, encryption associated-data behavior, upstream URL validation, provider runtime protocols, SQL, routes/responses, Auth BFF, Connector, and middleware behavior are unchanged.
 - Remaining root model classification is Agent/Tool-risk only.
 
@@ -101,7 +109,7 @@ Completed slices: **Agent Approval / Media Candidate / Workflow Event orchestrat
 
 - `internal/workflow/domain` owns Workflow definitions, scope/event policy values, resources/query options, dispatch/schedule claims, Run/Step snapshots, interaction status/tasks, and run events; the historical `internal/domain/workflow.go` migration bucket is retired.
 - Workflow service/coordinators/repositories/controllers and cross-capability Agent/planner/Starter Pack consumers import the Workflow-owned leaf contract directly.
-- `internal/workflow/domain/ownership_test.go` rejects redeclaration or future consumption of Workflow-owned symbols through root `internal/domain`.
+- `internal/agent/domain/ownership_test.go` rejects redeclaration or future consumption of Workflow-owned symbols through root `internal/domain`.
 - This slice changes contract ownership only: Workflow SQL, transaction/coordinator ownership, webhook/HTTP behavior, Agent approval/media orchestration, Auth BFF, Connector, and middleware behavior are unchanged.
 - Root `internal/domain` now contains only the final Agent-owned model migration boundary.
 
@@ -110,7 +118,7 @@ Completed slices: **Agent Approval / Media Candidate / Workflow Event orchestrat
 
 - `internal/post/domain` owns `PostStatus`, `Post`, `PostSearchResult`, and `AdminPostFilter`; the historical `internal/domain/post.go` migration bucket is retired.
 - Post repository/service/controller and cross-capability readers import the Post-owned leaf contract directly. This is contract ownership only; Post behavior remains in canonical Post service/repository/controller packages.
-- `internal/post/domain/ownership_test.go` rejects redeclaration or future consumption of Post-owned symbols through root `internal/domain`.
+- `internal/agent/domain/ownership_test.go` rejects redeclaration or future consumption of Post-owned symbols through root `internal/domain`.
 - Access `PostPolicy` behavior, PostVersion restore transaction ownership, SQL, routes/responses, BFF behavior, and Connector behavior are unchanged.
 - Root `internal/domain` remains only for the separately classified mixed Agent/Provider/Knowledge model boundary; Post and Workflow are no longer part of that shared-model migration bucket.
 
@@ -119,7 +127,7 @@ Completed slices: **Agent Approval / Media Candidate / Workflow Event orchestrat
 
 - `internal/postversion/domain` owns the `PostVersion` snapshot value; the historical declaration is removed from `internal/domain/post.go`.
 - PostVersion repository/service/coordinator/tests and Agent approval consume the capability-owned snapshot contract directly. `PostVersion.Status` now uses the Post-owned status contract under `internal/post/domain`.
-- `internal/postversion/domain/ownership_test.go` rejects redeclaration or future consumption of `PostVersion` through root `internal/domain`.
+- `internal/agent/domain/ownership_test.go` rejects redeclaration or future consumption of `PostVersion` through root `internal/domain`.
 - Restore transaction ownership is unchanged: `RestoreCoordinator` still owns the same `dbtx.Transactor` scope, PostVersion repository remains read-only for restore, and Post-owned state is written only through `RestoreSnapshotTx`.
 - Routes, persistence SQL, Access/BFF, and Connector behavior are unchanged.
 
@@ -129,7 +137,7 @@ Completed slices: **Agent Approval / Media Candidate / Workflow Event orchestrat
 - `internal/media/domain` owns `MediaAsset`, `MediaFilter`, and `MediaReference`; their historical declarations are removed from `internal/domain/post.go`.
 - Media repository/service/controller, Access media policy, Agent generation/approval, and Operations consumers import Media-owned value contracts directly. No consumer needs a root-domain compatibility alias.
 - Access authorization rules are unchanged; this slice changes only the concrete import/type owner used by the existing MediaPolicy signatures and tests.
-- `internal/media/domain/ownership_test.go` rejects redeclaration or future consumption of Media-owned symbols through root `internal/domain`.
+- `internal/agent/domain/ownership_test.go` rejects redeclaration or future consumption of Media-owned symbols through root `internal/domain`.
 - Storage behavior, upload validation, SQL, routes/responses, BFF, and Connector behavior are unchanged.
 
 
@@ -137,7 +145,7 @@ Completed slices: **Agent Approval / Media Candidate / Workflow Event orchestrat
 
 - `internal/analytics/domain` owns `AnalyticsSummary`, `SystemAlert`, and `DailyEventCount`; the historical declarations are removed from `internal/domain/post.go`.
 - Analytics repository/service and Tool bindings consume the capability-owned read-model contract. `AnalyticsSummary.TopPosts` references the Post-owned contract under `internal/post/domain`.
-- `internal/analytics/domain/ownership_test.go` rejects redeclaration or future consumption of Analytics-owned read-model symbols through root `internal/domain`.
+- `internal/agent/domain/ownership_test.go` rejects redeclaration or future consumption of Analytics-owned read-model symbols through root `internal/domain`.
 - Analytics SQL projections, notification reads, route/response behavior, Access/BFF, and Connector behavior are unchanged.
 
 
@@ -145,7 +153,7 @@ Completed slices: **Agent Approval / Media Candidate / Workflow Event orchestrat
 
 - `internal/taxonomy/domain` owns `Category` and `TagSummary`; the historical declarations are removed from `internal/domain/post.go`.
 - Taxonomy repository/service/tests consume those values directly from their capability-owned leaf package. No cross-capability consumer requires the root aliases.
-- `internal/taxonomy/domain/ownership_test.go` rejects redeclaration or future consumption of `Category` / `TagSummary` through root `internal/domain`.
+- `internal/agent/domain/ownership_test.go` rejects redeclaration or future consumption of `Category` / `TagSummary` through root `internal/domain`.
 - Post models, PostVersion, Media, Analytics, Access/BFF, and Connector behavior are unchanged in this slice.
 
 
@@ -154,7 +162,7 @@ Completed slices: **Agent Approval / Media Candidate / Workflow Event orchestrat
 - `internal/operations/domain` is the sole owner of `OperationalSuggestion`, `EditorialTask`, `ContentCandidate`, `ContentCandidateSet`, and `AIFeedback`; root `internal/domain/operations.go` is retired.
 - Agent approval imports only the Operations-owned `OperationalSuggestion` value needed by its narrow approval-effect port. This is an explicit cross-capability value contract, not a reason to keep Operations models in a root shared-model bucket.
 - Operations service/controller/tests consume the capability-owned domain package while Agent/Workflow/Post models remain in the root migration boundary pending separate classification.
-- `internal/operations/domain/ownership_test.go` scans backend Go imports/selectors and rejects reintroduction of Operations symbols through root `internal/domain`.
+- `internal/agent/domain/ownership_test.go` scans backend Go imports/selectors and rejects reintroduction of Operations symbols through root `internal/domain`.
 - No persistence schema/query, transaction boundary, route, response payload, authorization, BFF, Access, or Connector behavior changes in this slice.
 
 
@@ -162,7 +170,7 @@ Completed slices: **Agent Approval / Media Candidate / Workflow Event orchestrat
 
 - `internal/page/domain` is the sole owner of Page, PageStatus, PageTemplate and AdminPageFilter model symbols; the root `internal/domain/page.go` compatibility alias file is retired.
 - Access policy, Agent approval and Blog Tool consumers import the Page-owned domain directly where they need Page values; Page behavior remains behind the canonical Page service.
-- `internal/page/domain/ownership_test.go` scans backend Go imports/selector usage and rejects reintroduction of Page symbols through the root `internal/domain` package.
+- `internal/agent/domain/ownership_test.go` scans backend Go imports/selector usage and rejects reintroduction of Page symbols through the root `internal/domain` package.
 - No Page HTTP route, persistence behavior, approval semantics, Access authorization rule, BFF behavior or Connector behavior changes in this slice.
 
 

@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 
-	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/agent/domain"
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 )
 
 type RunnerRunStore interface {

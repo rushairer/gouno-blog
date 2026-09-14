@@ -16,7 +16,7 @@ import (
 	"github.com/robfig/cron/v3"
 	agentservice "github.com/rushairer/blog-backend/internal/agent"
 	"github.com/rushairer/blog-backend/internal/dberror"
-	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/agent/domain"
 	"github.com/rushairer/blog-backend/internal/tool"
 	workflowrepository "github.com/rushairer/blog-backend/internal/workflow/repository"
 	"github.com/rushairer/blog-backend/internal/workflowplan"

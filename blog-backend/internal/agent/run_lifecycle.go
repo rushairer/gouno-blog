@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"errors"
 
+	"github.com/rushairer/blog-backend/internal/agent/domain"
 	"github.com/rushairer/blog-backend/internal/dbtx"
-	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 type RunLifecycle struct {

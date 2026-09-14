@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/agent/domain"
 )
 
 func (r *SkillRepository) ListSystemStarterSkillsTx(ctx context.Context, tx *sql.Tx) ([]*domain.AgentSkill, error) {

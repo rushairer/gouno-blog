@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/agent/domain"
 )
 
 // CompleteAwaitingApproval transitions only a Run that is waiting for approval.

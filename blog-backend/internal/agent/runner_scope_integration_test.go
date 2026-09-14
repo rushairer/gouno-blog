@@ -14,7 +14,7 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
-	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/agent/domain"
 	"github.com/rushairer/blog-backend/internal/migrations"
 	"github.com/rushairer/blog-backend/internal/tool"
 	workflowrepository "github.com/rushairer/blog-backend/internal/workflow/repository"

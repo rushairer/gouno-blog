@@ -17,7 +17,7 @@ import (
 	"github.com/gin-gonic/gin/binding"
 	agentservice "github.com/rushairer/blog-backend/internal/agent"
 	"github.com/rushairer/blog-backend/internal/controllerutil"
-	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/agent/domain"
 	"github.com/rushairer/blog-backend/internal/tool"
 	"github.com/rushairer/gouno"
 )

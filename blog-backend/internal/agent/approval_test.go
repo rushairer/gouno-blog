@@ -7,7 +7,7 @@ import (
 	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 	"testing"
 
-	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/agent/domain"
 )
 
 func TestApprovalMutatesExistingPost(t *testing.T) {

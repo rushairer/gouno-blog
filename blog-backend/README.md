@@ -89,7 +89,7 @@ internal/
 └── ...
 ```
 
-The historical global `internal/service` bucket has already been retired. `internal/domain` remains a deliberate shared-model migration boundary, while `internal/repository` and `internal/controller` are transitional migration buckets. Existing capabilities are migrated incrementally; new business ownership should prefer capability-local packages.
+The historical global `internal/service` and root `internal/domain` buckets have been retired. Agent models are canonical under `internal/agent/domain`. `internal/repository` remains only as a frozen Connector-held transaction compatibility boundary, while `internal/controller` remains frozen to the stable Access security boundary, Connector-held transport/shell, and allowlisted compatibility helpers. New business ownership belongs in capability-local packages.
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for the authoritative project convention and the repository root [AGENTS.md](../AGENTS.md) for security and migration invariants.
 

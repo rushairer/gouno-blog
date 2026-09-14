@@ -22,15 +22,14 @@ A capability MUST contain only the layers it actually needs. Infrastructure capa
 
 ## Transitional flat-layer directories
 
-The remaining legacy migration boundaries are:
+The remaining legacy flat-layer boundaries are:
 
 ```text
-internal/domain/       # deliberate shared-model boundary; classify before moving
-internal/repository/   # transitional repository/facade bucket
-internal/controller/   # transitional HTTP/controller bucket
+internal/repository/   # frozen Connector-held transaction compatibility boundary
+internal/controller/   # frozen Access / Connector / compatibility HTTP boundary
 ```
 
-The former `internal/service/` bucket has been retired. Existing code may remain in the boundaries above only while it is migrated in coherent capability slices. New business features MUST NOT add new ownership to these flat buckets unless a migration constraint is documented in the same change.
+The former `internal/service/` and root `internal/domain/` buckets have been retired. Agent-owned models are canonical under `internal/agent/domain`; a global retirement guard prevents recreation or imports of the old root domain path. Existing code may remain in the two held boundaries above only while its documented security/Hold constraint remains active. New business features MUST NOT add new ownership to either flat bucket.
 
 The live ownership, dependency, transaction, compatibility-facade, and removal-condition inventory is maintained in [ARCHITECTURE_CONVERGENCE.md](./ARCHITECTURE_CONVERGENCE.md). Treat that map as the migration Source of Truth and update it with every architecture slice.
 
@@ -46,7 +45,7 @@ Migration is intentionally incremental:
 
 Do not perform filename-only moves that leave package ownership ambiguous or introduce circular dependencies.
 
-The `page` capability is canonical under `internal/page/{domain,repository,service,controller}`. The application composition root constructs its repository and service directly from the capability packages, `WebRouterOptions.PageSvc` carries the canonical Page service, and active Page routes bind directly to the canonical Page controller. Feed generation, Agent approval handling, Blog Tools, and shared HTTP error mapping also depend on the canonical Page service or its sentinels. The former flat Page repository/service/controller compatibility facades and their duplicate flat service/controller tests have been removed after repository-wide consumer proof and full gates. Root `internal/domain` Page aliases are also retired: Access policy, Agent approval, and Tool consumers that need Page values import `internal/page/domain` directly, while behavior continues to flow through the canonical Page service. `internal/page/domain/ownership_test.go` rejects reintroduction of Page symbols through the root domain boundary.
+The `page` capability is canonical under `internal/page/{domain,repository,service,controller}`. The application composition root constructs its repository and service directly from the capability packages, `WebRouterOptions.PageSvc` carries the canonical Page service, and active Page routes bind directly to the canonical Page controller. Feed generation, Agent approval handling, Blog Tools, and shared HTTP error mapping also depend on the canonical Page service or its sentinels. The former flat Page repository/service/controller compatibility facades and their duplicate flat service/controller tests have been removed after repository-wide consumer proof and full gates. Root `internal/domain` Page aliases are also retired: Access policy, Agent approval, and Tool consumers that need Page values import `internal/page/domain` directly, while behavior continues to flow through the canonical Page service. `internal/agent/domain/ownership_test.go` rejects reintroduction of Page symbols through the root domain boundary.
 
 The `community` capability is fully canonical under `internal/community/{domain,repository,service,controller}`. Its composition root, router, moderation Tool integration, and HTTP error mapping now depend on canonical Community packages or narrow capability contracts. The moderation-only `GET /api/posts/:slugOrID/comments/all` route is owned by the Community controller, so all active Community HTTP routes are capability-owned. Shared interaction rate limiting lives under `internal/ratelimit`, not a business service layer.
 
@@ -158,7 +157,7 @@ Operations-owned model values live under `internal/operations/domain`: `Operatio
 
 - These values describe Operations persistence/API concepts and are not a shared kernel merely because Agent approval can propose one of them.
 - Agent approval consumes `OperationalSuggestion` through the existing narrow `ApprovalEffectWriter` contract by importing the leaf Operations domain package; Operations behavior and persistence remain owned by `internal/operations`.
-- The former root `internal/domain/operations.go` migration boundary is retired. `internal/operations/domain/ownership_test.go` rejects reintroduction of these symbols through the root domain package.
+- The former root `internal/domain/operations.go` migration boundary is retired. `internal/agent/domain/ownership_test.go` rejects reintroduction of these symbols through the root domain package.
 - JSON fields, database schema/queries, approval action types, HTTP routes/responses, authorization/MFA/audit middleware, BFF behavior, and Connector behavior are unchanged.
 
 ## Workflow HTTP ownership boundary

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/agent/domain"
 	"github.com/rushairer/blog-backend/internal/provider"
 	"github.com/rushairer/blog-backend/internal/tool"
 )

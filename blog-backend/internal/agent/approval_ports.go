@@ -3,10 +3,10 @@ package agent
 import (
 	"context"
 	"encoding/json"
-	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 
-	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/agent/domain"
 	opsdomain "github.com/rushairer/blog-backend/internal/operations/domain"
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 )
 
 type ApprovalStore interface {

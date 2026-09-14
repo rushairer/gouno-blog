@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/rushairer/blog-backend/internal/dbtx"
-	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/agent/domain"
 )
 
 type ExecutionStore interface {

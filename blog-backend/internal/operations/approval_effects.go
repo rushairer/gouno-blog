@@ -10,7 +10,7 @@ import (
 	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 	"strings"
 
-	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/agent/domain"
 	opsdomain "github.com/rushairer/blog-backend/internal/operations/domain"
 )
 

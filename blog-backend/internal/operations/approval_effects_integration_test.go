@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/rushairer/blog-backend/internal/dbtx"
-	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/agent/domain"
 	opsdomain "github.com/rushairer/blog-backend/internal/operations/domain"
 	"github.com/rushairer/blog-backend/internal/testsupport"
 )

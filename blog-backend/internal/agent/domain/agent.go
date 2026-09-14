@@ -47,7 +47,7 @@ const (
 )
 
 type Agent struct {
-	ID                      int64                           `json:"id"`
+	ID                      int64                            `json:"id"`
 	SystemKey               *string                         `json:"system_key,omitempty"`
 	Name                    string                          `json:"name"`
 	Description             string                          `json:"description"`

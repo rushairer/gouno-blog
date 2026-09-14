@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/agent/domain"
 )
 
 type DefinitionRepository struct {
