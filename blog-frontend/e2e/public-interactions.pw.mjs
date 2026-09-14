@@ -50,8 +50,9 @@ test("mobile public drawer navigates discovery routes and closes", async ({ page
 test("public shell search preserves canonical Articles active route", async ({ page }) => {
   const state = await openPublic(page, "/");
 
-  await page.getByRole("textbox", { name: "搜索文章" }).fill("OAuth2");
-  await page.getByRole("button", { name: "提交搜索" }).click();
+  const search = page.getByRole("textbox", { name: "搜索文章" });
+  await search.fill("OAuth2");
+  await search.press("Enter");
 
   await expect(page).toHaveURL(/\/search\?q=OAuth2$/);
   await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
