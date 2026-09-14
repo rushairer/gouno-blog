@@ -1,0 +1,90 @@
+name: Media domain ownership staging
+
+on:
+  push:
+    branches:
+      - refactor/media-domain-models
+
+permissions:
+  contents: write
+
+jobs:
+  migrate-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: blog-backend/go.mod
+          cache-dependency-path: blog-backend/go.sum
+
+      - name: Apply Media domain migration
+        run: python3 .github/scripts/media_domain_models.py
+
+      - name: Format changed Go files
+        run: |
+          git diff --name-only --diff-filter=ACM -- 'blog-backend/**/*.go' | xargs -r gofmt -w
+
+      - name: Focused tests
+        working-directory: blog-backend
+        run: go test ./internal/media/... ./internal/access/... ./internal/agent/... ./internal/operations/...
+
+      - name: Focused vet
+        working-directory: blog-backend
+        run: go vet ./internal/media/... ./internal/access/... ./internal/agent/... ./internal/operations/...
+
+      - name: Ownership and security-boundary guards
+        run: |
+          test -e blog-backend/internal/media/domain/model.go
+          test -e blog-backend/internal/media/domain/ownership_test.go
+          (
+            cd blog-backend
+            go test ./internal/media/domain -run TestRootMediaModelsStayRetired -count=1
+          )
+          if git grep -nE '(^|[^[:alnum:]_])domain\.(MediaAsset|MediaFilter|MediaReference)' -- 'blog-backend/**/*.go'; then
+            echo 'Media-owned symbol still consumed through root internal/domain'
+            exit 1
+          fi
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+
+          base = 'cf8633f475684cdd2383e28715296b9cecd9a9eb'
+          paths = [
+              'blog-backend/internal/access/policy.go',
+              'blog-backend/internal/access/policy_test.go',
+          ]
+          for path in paths:
+              before = subprocess.check_output(['git', 'show', f'{base}:{path}'], text=True)
+              after = Path(path).read_text()
+              after = after.replace('\tmediadomain "github.com/rushairer/blog-backend/internal/media/domain"\n', '')
+              after = after.replace('mediadomain.MediaAsset', 'domain.MediaAsset')
+              after = after.replace('mediadomain.MediaFilter', 'domain.MediaFilter')
+              after = after.replace('mediadomain.MediaReference', 'domain.MediaReference')
+              if after != before:
+                  raise SystemExit(f'{path}: Access semantics changed beyond Media type ownership')
+          PY
+          unexpected_access=$(git diff --name-only cf8633f475684cdd2383e28715296b9cecd9a9eb -- blog-backend/internal/access | grep -Ev '^blog-backend/internal/access/(policy.go|policy_test.go)$' || true)
+          test -z "$unexpected_access" || { echo "$unexpected_access"; exit 1; }
+          git diff --exit-code cf8633f475684cdd2383e28715296b9cecd9a9eb -- \
+            blog-backend/internal/authbff \
+            blog-backend/internal/connector \
+            blog-backend/internal/controller \
+            blog-backend/middleware \
+            blog-backend/internal/workflow
+          git diff --check
+
+      - name: Commit validated source and self-clean
+        run: |
+          rm -f .github/scripts/media_domain_models.py
+          rm -f .github/workflows/media-domain-models-staging.yml
+          git config user.name 'Aben'
+          git config user.email '5195693+rushairer@users.noreply.github.com'
+          git add -A
+          git commit -m 'refactor(media): own capability domain models'
+          git push origin HEAD:refactor/media-domain-models
