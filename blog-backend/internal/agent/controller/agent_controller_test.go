@@ -201,6 +201,3 @@ func TestExtractStructuredMetadata(t *testing.T) {
 		t.Fatalf("extractStructuredMetadata with camelCase JSON failed: %v", meta4)
 	}
 }
-
-
-

@@ -50,7 +50,8 @@ func TestPrincipalIDRequiresPositiveLocalPrincipal(t *testing.T) {
 func TestFlatAgentControllerDoesNotOwnOperationsHTTP(t *testing.T) {
 	files := []string{
 		"../../controller/agent_controller.go",
-		"../../controller/agent_media_controller.go",
+		"../../agent/controller/controller.go",
+		"../../agent/controller/media.go",
 	}
 	forbidden := []string{
 		"internal/operations",

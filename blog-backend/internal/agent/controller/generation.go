@@ -2,6 +2,7 @@ package controller
 
 import (
 	"encoding/json"
+	"github.com/rushairer/blog-backend/internal/controllerutil"
 	"net/http"
 	"regexp"
 	"strings"
@@ -44,7 +45,7 @@ type workflowAgentSkillDraft struct {
 	InputSchema  json.RawMessage `json:"input_schema"`
 }
 
-func (ctrl *AgentController) DraftWorkflowAgents(c *gin.Context) {
+func (ctrl *Controller) DraftWorkflowAgents(c *gin.Context) {
 	var req workflowDraftRequest
 	if !bindWorkflowJSON(c, &req) {
 		return
@@ -56,7 +57,7 @@ func (ctrl *AgentController) DraftWorkflowAgents(c *gin.Context) {
 	}
 	profile, client, err := ctrl.svc.DefaultWritingClient(c.Request.Context())
 	if err != nil {
-		WriteDomainError(c, err)
+		controllerutil.WriteDomainError(c, err)
 		return
 	}
 	toolNames := make([]string, 0, len(ctrl.tools.Catalog()))
@@ -75,7 +76,7 @@ func (ctrl *AgentController) DraftWorkflowAgents(c *gin.Context) {
 		ToolChoice:   toolName, MaxTokens: 1600,
 	})
 	if err != nil {
-		WriteDomainError(c, err)
+		controllerutil.WriteDomainError(c, err)
 		return
 	}
 	raw := result.Text
@@ -120,7 +121,7 @@ func (ctrl *AgentController) DraftWorkflowAgents(c *gin.Context) {
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(gin.H{"drafts": clean, "provider": profile.Name, "model": profile.Model}))
 }
 
-func (ctrl *AgentController) DraftAssist(c *gin.Context) {
+func (ctrl *Controller) DraftAssist(c *gin.Context) {
 	var req draftAssistRequest
 	if err := bindAgentJSON(c, &req); err != nil {
 		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
@@ -150,7 +151,7 @@ func (ctrl *AgentController) DraftAssist(c *gin.Context) {
 			c.JSON(http.StatusConflict, gouno.NewErrorResponse(http.StatusConflict, "an enabled default AI provider is required"))
 			return
 		}
-		WriteDomainError(c, err)
+		controllerutil.WriteDomainError(c, err)
 		return
 	}
 	if req.Task == "content" {
@@ -545,14 +546,14 @@ func filterUniqueSuggestions(items []string) []string {
 	return res
 }
 
-func (ctrl *AgentController) WorkflowRunMediaCandidates(c *gin.Context) {
-	id, ok := ParamPositiveID(c, "id")
+func (ctrl *Controller) WorkflowRunMediaCandidates(c *gin.Context) {
+	id, ok := controllerutil.ParamPositiveID(c, "id")
 	if !ok {
 		return
 	}
 	items, err := ctrl.approvals.ListMediaCandidatesByWorkflowRun(c.Request.Context(), id)
 	if err != nil {
-		WriteDomainError(c, err)
+		controllerutil.WriteDomainError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gouno.NewSuccessResponse(items))
