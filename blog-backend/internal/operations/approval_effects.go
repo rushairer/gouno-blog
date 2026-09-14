@@ -10,13 +10,14 @@ import (
 	"strings"
 
 	"github.com/rushairer/blog-backend/internal/domain"
+	opsdomain "github.com/rushairer/blog-backend/internal/operations/domain"
 )
 
 func (s *Service) CreateContentCandidateSet(ctx context.Context, approval *domain.AgentApproval) error {
 	var payload struct {
-		PostID     int64                     `json:"post_id"`
-		FieldType  string                    `json:"field_type"`
-		Candidates []domain.ContentCandidate `json:"candidates"`
+		PostID     int64                        `json:"post_id"`
+		FieldType  string                       `json:"field_type"`
+		Candidates []opsdomain.ContentCandidate `json:"candidates"`
 	}
 	if err := json.Unmarshal(approval.ProposedPayload, &payload); err != nil {
 		return err
@@ -73,7 +74,7 @@ func (s *Service) CreateReplyDraft(ctx context.Context, approvalID, commentID in
 	return err
 }
 
-func (s *Service) CreateOperationalSuggestion(ctx context.Context, value *domain.OperationalSuggestion) error {
+func (s *Service) CreateOperationalSuggestion(ctx context.Context, value *opsdomain.OperationalSuggestion) error {
 	sum := fmt.Sprintf("%x", sha256.Sum256([]byte(strings.Join([]string{value.SourceType, value.SourceKey, value.Title}, ":"))))
 	_, err := s.db.ExecContext(ctx, `INSERT INTO ai_operational_suggestions
 		(source_type,source_key,source_run_id,workflow_run_id,title,description,priority,evidence,

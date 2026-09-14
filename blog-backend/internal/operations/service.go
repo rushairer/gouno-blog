@@ -14,6 +14,7 @@ import (
 
 	"github.com/rushairer/blog-backend/internal/dbtx"
 	"github.com/rushairer/blog-backend/internal/domain"
+	opsdomain "github.com/rushairer/blog-backend/internal/operations/domain"
 	postservice "github.com/rushairer/blog-backend/internal/post/service"
 	"github.com/rushairer/blog-backend/internal/tool"
 	"go.uber.org/zap"
@@ -164,9 +165,9 @@ func (s *Service) proposeCandidates(ctx context.Context, raw json.RawMessage) (*
 		return nil, errors.New("candidate governance is not configured")
 	}
 	var args struct {
-		PostID     int64                     `json:"post_id"`
-		FieldType  string                    `json:"field_type"`
-		Candidates []domain.ContentCandidate `json:"candidates"`
+		PostID     int64                        `json:"post_id"`
+		FieldType  string                       `json:"field_type"`
+		Candidates []opsdomain.ContentCandidate `json:"candidates"`
 	}
 	if err := decode(raw, &args); err != nil {
 		return nil, err
@@ -188,7 +189,7 @@ func (s *Service) proposeCandidates(ctx context.Context, raw json.RawMessage) (*
 }
 
 func (s *Service) proposeSuggestion(_ context.Context, raw json.RawMessage) (*tool.Proposal, error) {
-	var value domain.OperationalSuggestion
+	var value opsdomain.OperationalSuggestion
 	if err := decode(raw, &value); err != nil {
 		return nil, err
 	}
@@ -438,7 +439,7 @@ func parsePGArray(value string) []string {
 	return parts
 }
 
-func (s *Service) ListSuggestions(ctx context.Context, status string, limit int) ([]*domain.OperationalSuggestion, error) {
+func (s *Service) ListSuggestions(ctx context.Context, status string, limit int) ([]*opsdomain.OperationalSuggestion, error) {
 	if limit <= 0 {
 		limit = 100
 	}
@@ -454,9 +455,9 @@ func (s *Service) ListSuggestions(ctx context.Context, status string, limit int)
 		return nil, err
 	}
 	defer rows.Close()
-	items := make([]*domain.OperationalSuggestion, 0)
+	items := make([]*opsdomain.OperationalSuggestion, 0)
 	for rows.Next() {
-		var item domain.OperationalSuggestion
+		var item opsdomain.OperationalSuggestion
 		if err := rows.Scan(&item.ID, &item.SourceType, &item.SourceKey, &item.SourceRunID, &item.WorkflowRunID,
 			&item.Title, &item.Description, &item.Priority, &item.Evidence, &item.WindowStart, &item.WindowEnd,
 			&item.Status, &item.IgnoredReason, &item.CreatedAt, &item.UpdatedAt); err != nil {
@@ -501,7 +502,7 @@ func (s *Service) ConvertSuggestion(ctx context.Context, id int64) error {
 	})
 }
 
-func (s *Service) ListEditorialTasks(ctx context.Context, status string) ([]*domain.EditorialTask, error) {
+func (s *Service) ListEditorialTasks(ctx context.Context, status string) ([]*opsdomain.EditorialTask, error) {
 	if status != "" && status != "all" && status != "open" && status != "done" && status != "cancelled" {
 		return nil, tool.ErrInvalidArgument
 	}
@@ -512,9 +513,9 @@ func (s *Service) ListEditorialTasks(ctx context.Context, status string) ([]*dom
 		return nil, err
 	}
 	defer rows.Close()
-	items := make([]*domain.EditorialTask, 0)
+	items := make([]*opsdomain.EditorialTask, 0)
 	for rows.Next() {
-		var item domain.EditorialTask
+		var item opsdomain.EditorialTask
 		var approvalID, suggestionID sql.NullInt64
 		if err := rows.Scan(&item.ID, &item.Title, &item.Description, &item.Priority, &item.Status, &approvalID, &suggestionID, &item.CreatedAt); err != nil {
 			return nil, err
@@ -544,7 +545,7 @@ func (s *Service) UpdateEditorialTaskStatus(ctx context.Context, id int64, statu
 	return nil
 }
 
-func (s *Service) CreateSuggestion(ctx context.Context, value *domain.OperationalSuggestion) error {
+func (s *Service) CreateSuggestion(ctx context.Context, value *opsdomain.OperationalSuggestion) error {
 	rawKey := strings.Join([]string{value.SourceType, value.SourceKey, value.Title}, ":")
 	sum := sha256.Sum256([]byte(rawKey))
 	value.DedupeKey = hex.EncodeToString(sum[:])
@@ -584,7 +585,7 @@ func (s *Service) RefreshSuggestions(ctx context.Context) error {
 		}
 		evidence, _ := json.Marshal(map[string]any{"post_id": postID, "slug": slug, "broken_links": count, "checked_at": checked})
 		start, end := checked.Add(-7*24*time.Hour), checked
-		if err := s.CreateSuggestion(ctx, &domain.OperationalSuggestion{SourceType: "broken_links", SourceKey: fmt.Sprint(postID),
+		if err := s.CreateSuggestion(ctx, &opsdomain.OperationalSuggestion{SourceType: "broken_links", SourceKey: fmt.Sprint(postID),
 			Title: "Review broken links in " + title, Description: "Cached link checks found one or more failing external links.",
 			Priority: "high", Evidence: evidence, WindowStart: &start, WindowEnd: &end}); err != nil {
 			return err
@@ -621,7 +622,7 @@ func (s *Service) RefreshSuggestions(ctx context.Context) error {
 	if lowUse > 0 {
 		now := time.Now().UTC()
 		evidence, _ := json.Marshal(map[string]any{"total_tags": totalTags, "low_use_tags": lowUse, "threshold": 1})
-		if err := s.CreateSuggestion(ctx, &domain.OperationalSuggestion{SourceType: "tag_bloat", SourceKey: "site",
+		if err := s.CreateSuggestion(ctx, &opsdomain.OperationalSuggestion{SourceType: "tag_bloat", SourceKey: "site",
 			Title: "Consolidate low-use tags", Description: "Aggregate tag counts indicate taxonomy fragmentation.",
 			Priority: "medium", Evidence: evidence, WindowEnd: &now}); err != nil {
 			return err
@@ -634,7 +635,7 @@ func (s *Service) RefreshSuggestions(ctx context.Context) error {
 	return nil
 }
 
-func (s *Service) ListCandidateSets(ctx context.Context) ([]*domain.ContentCandidateSet, error) {
+func (s *Service) ListCandidateSets(ctx context.Context) ([]*opsdomain.ContentCandidateSet, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT id,post_id,source_run_id,source_approval_id,field_type,
 		before_value,status,selected_candidate_id,created_at,updated_at FROM ai_content_candidate_sets
 		ORDER BY created_at DESC LIMIT 100`)
@@ -642,9 +643,9 @@ func (s *Service) ListCandidateSets(ctx context.Context) ([]*domain.ContentCandi
 		return nil, err
 	}
 	defer rows.Close()
-	items := make([]*domain.ContentCandidateSet, 0)
+	items := make([]*opsdomain.ContentCandidateSet, 0)
 	for rows.Next() {
-		var item domain.ContentCandidateSet
+		var item opsdomain.ContentCandidateSet
 		if err := rows.Scan(&item.ID, &item.PostID, &item.SourceRunID, &item.SourceApprovalID, &item.FieldType,
 			&item.BeforeValue, &item.Status, &item.SelectedCandidateID, &item.CreatedAt, &item.UpdatedAt); err != nil {
 			return nil, err
@@ -655,7 +656,7 @@ func (s *Service) ListCandidateSets(ctx context.Context) ([]*domain.ContentCandi
 			return nil, err
 		}
 		for candidateRows.Next() {
-			var candidate domain.ContentCandidate
+			var candidate opsdomain.ContentCandidate
 			if err := candidateRows.Scan(&candidate.ID, &candidate.Value, &candidate.Rationale, &candidate.CreatedAt); err != nil {
 				candidateRows.Close()
 				return nil, err
@@ -717,7 +718,7 @@ func (s *Service) SelectCandidate(ctx context.Context, setID, candidateID int64)
 	return tx.Commit()
 }
 
-func (s *Service) SaveFeedback(ctx context.Context, value *domain.AIFeedback) error {
+func (s *Service) SaveFeedback(ctx context.Context, value *opsdomain.AIFeedback) error {
 	if value.TargetType != "run" && value.TargetType != "approval" && value.TargetType != "suggestion" {
 		return tool.ErrInvalidArgument
 	}

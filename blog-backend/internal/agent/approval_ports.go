@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 
 	"github.com/rushairer/blog-backend/internal/domain"
+	opsdomain "github.com/rushairer/blog-backend/internal/operations/domain"
 )
 
 type ApprovalStore interface {
@@ -57,5 +58,5 @@ type ApprovalEffectWriter interface {
 	CreateContentCandidateSet(context.Context, *domain.AgentApproval) error
 	CreateEditorialTask(context.Context, int64, string, string, string) error
 	CreateReplyDraft(context.Context, int64, int64, string) error
-	CreateOperationalSuggestion(context.Context, *domain.OperationalSuggestion) error
+	CreateOperationalSuggestion(context.Context, *opsdomain.OperationalSuggestion) error
 }

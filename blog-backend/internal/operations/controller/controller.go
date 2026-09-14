@@ -10,8 +10,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/rushairer/blog-backend/internal/controllerutil"
-	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/operations"
+	opsdomain "github.com/rushairer/blog-backend/internal/operations/domain"
 	"github.com/rushairer/gouno"
 )
 
@@ -155,7 +155,7 @@ func (ctrl *Controller) SelectCandidate(c *gin.Context) {
 }
 
 func (ctrl *Controller) SaveFeedback(c *gin.Context) {
-	var value domain.AIFeedback
+	var value opsdomain.AIFeedback
 	if err := bindJSON(c, &value); err != nil {
 		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
 		return
