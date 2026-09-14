@@ -24,7 +24,16 @@ jobs:
           cache-dependency-path: blog-backend/go.sum
 
       - name: Apply Operations domain migration
-        run: python3 .github/scripts/operations_domain_contracts.py
+        run: |
+          python3 .github/scripts/operations_domain_contracts.py
+          sed -i 's/opsopsdomain/opsdomain/g' \
+            blog-backend/internal/operations/service.go \
+            blog-backend/internal/operations/approval_effects.go \
+            blog-backend/internal/operations/controller/controller.go \
+            blog-backend/internal/operations/service_test.go \
+            blog-backend/internal/operations/approval_effects_integration_test.go \
+            blog-backend/internal/agent/approval.go \
+            blog-backend/internal/agent/approval_ports.go
 
       - name: Format
         run: |
