@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	knowledgedomain "github.com/rushairer/blog-backend/internal/knowledge/domain"
 	"io"
 	"math"
 	"net/http"
@@ -20,7 +21,7 @@ import (
 	"time"
 
 	"github.com/rushairer/blog-backend/internal/dbtx"
-	"github.com/rushairer/blog-backend/internal/domain"
+
 	"github.com/rushairer/blog-backend/internal/provider"
 	"github.com/rushairer/blog-backend/internal/secretbox"
 	"go.uber.org/zap"
@@ -51,8 +52,8 @@ func NewService(db *sql.DB, secrets *secretbox.Box, allowedHosts []string, logge
 const embeddingColumns = `id, name, base_url, model, dimensions, api_key_ciphertext,
 	api_key_nonce, api_key_last4, key_version, enabled, request_timeout_seconds, created_at, updated_at`
 
-func scanEmbedding(scanner interface{ Scan(...any) error }) (*domain.EmbeddingProfile, error) {
-	var value domain.EmbeddingProfile
+func scanEmbedding(scanner interface{ Scan(...any) error }) (*knowledgedomain.EmbeddingProfile, error) {
+	var value knowledgedomain.EmbeddingProfile
 	err := scanner.Scan(&value.ID, &value.Name, &value.BaseURL, &value.Model, &value.Dimensions,
 		&value.APIKeyCiphertext, &value.APIKeyNonce, &value.APIKeyLast4, &value.KeyVersion,
 		&value.Enabled, &value.RequestTimeoutSeconds, &value.CreatedAt, &value.UpdatedAt)
@@ -60,14 +61,14 @@ func scanEmbedding(scanner interface{ Scan(...any) error }) (*domain.EmbeddingPr
 	return &value, err
 }
 
-func (s *Service) ListProfiles(ctx context.Context) ([]*domain.EmbeddingProfile, error) {
+func (s *Service) ListProfiles(ctx context.Context) ([]*knowledgedomain.EmbeddingProfile, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT `+embeddingColumns+` FROM ai_embedding_profiles
 		WHERE deleted_at IS NULL ORDER BY name`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := make([]*domain.EmbeddingProfile, 0)
+	items := make([]*knowledgedomain.EmbeddingProfile, 0)
 	for rows.Next() {
 		item, err := scanEmbedding(rows)
 		if err != nil {
@@ -78,7 +79,7 @@ func (s *Service) ListProfiles(ctx context.Context) ([]*domain.EmbeddingProfile,
 	return items, rows.Err()
 }
 
-func (s *Service) GetProfile(ctx context.Context, id int64) (*domain.EmbeddingProfile, error) {
+func (s *Service) GetProfile(ctx context.Context, id int64) (*knowledgedomain.EmbeddingProfile, error) {
 	value, err := scanEmbedding(s.db.QueryRowContext(ctx, `SELECT `+embeddingColumns+`
 		FROM ai_embedding_profiles WHERE id=$1 AND deleted_at IS NULL`, id))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -87,7 +88,7 @@ func (s *Service) GetProfile(ctx context.Context, id int64) (*domain.EmbeddingPr
 	return value, err
 }
 
-func (s *Service) SaveProfile(ctx context.Context, value *domain.EmbeddingProfile, apiKey string) error {
+func (s *Service) SaveProfile(ctx context.Context, value *knowledgedomain.EmbeddingProfile, apiKey string) error {
 	value.Name = strings.TrimSpace(value.Name)
 	value.BaseURL = strings.TrimRight(strings.TrimSpace(value.BaseURL), "/")
 	value.Model = strings.TrimSpace(value.Model)
@@ -157,7 +158,7 @@ func (s *Service) DeleteProfile(ctx context.Context, id int64) error {
 	return nil
 }
 
-func (s *Service) embed(ctx context.Context, profile *domain.EmbeddingProfile, inputs []string) ([][]float64, error) {
+func (s *Service) embed(ctx context.Context, profile *knowledgedomain.EmbeddingProfile, inputs []string) ([][]float64, error) {
 	key, err := s.secrets.Decrypt(profile.APIKeyCiphertext, profile.APIKeyNonce, profile.KeyVersion)
 	if err != nil {
 		return nil, err

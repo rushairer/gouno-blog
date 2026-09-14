@@ -3,13 +3,14 @@ package controller
 import (
 	"encoding/json"
 	"fmt"
+	knowledgedomain "github.com/rushairer/blog-backend/internal/knowledge/domain"
 	"io"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/rushairer/blog-backend/internal/controllerutil"
-	"github.com/rushairer/blog-backend/internal/domain"
+
 	"github.com/rushairer/blog-backend/internal/knowledge"
 	"github.com/rushairer/gouno"
 )
@@ -72,7 +73,7 @@ func (ctrl *Controller) saveEmbeddingProfile(c *gin.Context, id int64) {
 		c.JSON(http.StatusBadRequest, gouno.NewErrorResponse(http.StatusBadRequest, err.Error()))
 		return
 	}
-	value := &domain.EmbeddingProfile{ID: id, Name: req.Name, BaseURL: req.BaseURL,
+	value := &knowledgedomain.EmbeddingProfile{ID: id, Name: req.Name, BaseURL: req.BaseURL,
 		Model: req.Model, Dimensions: req.Dimensions, Enabled: req.Enabled,
 		RequestTimeoutSeconds: req.RequestTimeoutSeconds}
 	if err := ctrl.service.SaveProfile(c.Request.Context(), value, req.APIKey); err != nil {
