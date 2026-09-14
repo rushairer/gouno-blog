@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ThemeProvider } from "@gouno/ui/theme";
 import PublicShell from "../PublicShell";
@@ -26,6 +26,16 @@ function renderPublicShell(children: React.ReactNode, initialEntry = "/") {
         <PublicShell>{children}</PublicShell>
       </ThemeProvider>
     </MemoryRouter>,
+  );
+}
+
+function LocationProbe() {
+  const location = useLocation();
+  return (
+    <output aria-label="当前位置">
+      {location.pathname}
+      {location.search}
+    </output>
   );
 }
 
@@ -85,6 +95,29 @@ describe("PublicShell theme", () => {
 
     const footer = screen.getByRole("contentinfo");
     expect(footer).toHaveTextContent(`© ${currentYear}`);
+  });
+
+  it("submits search with Enter and keeps the admin action aligned with header icon controls", async () => {
+    const user = userEvent.setup();
+    renderPublicShell(<LocationProbe />);
+
+    expect(
+      screen.queryByRole("button", { name: /提交.*搜索/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "进入内容后台" })).toHaveClass(
+      "!size-9",
+      "!rounded-full",
+      "!p-0",
+    );
+
+    await user.type(
+      screen.getByRole("textbox", { name: "搜索文章" }),
+      "OAuth2{Enter}",
+    );
+
+    expect(screen.getByRole("status", { name: "当前位置" })).toHaveTextContent(
+      "/search?q=OAuth2",
+    );
   });
 
   it.each([

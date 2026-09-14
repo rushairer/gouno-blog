@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Menu, Rss, Search } from "lucide-react";
+import { LayoutDashboard, Menu, Rss } from "lucide-react";
 import gounoBlogLogo from "@gouno/ui/brand-icons/gouno-blog.svg";
-import { Drawer, IconButton, Input } from "@gouno/ui/core";
+import { Drawer, IconButton, IconButtonLink, Input } from "@gouno/ui/core";
 import { ThemeToggle } from "@gouno/ui/theme";
 import {
   DEFAULT_SITE_SETTINGS,
@@ -144,26 +144,20 @@ export default function PublicShell({ children }: { children: ReactNode }) {
               </Link>
             ))}
           </nav>
-          <form
-            role="search"
-            onSubmit={search}
-            className="hidden items-center gap-1 lg:flex"
-          >
+          <form role="search" onSubmit={search} className="hidden lg:block">
             <Input
               aria-label="搜索文章"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="搜索文章…"
             />
-            <IconButton type="submit" label="提交搜索" icon={<Search />} />
           </form>
-          <Link
+          <IconButtonLink
             to="/admin"
-            aria-label="进入内容后台"
-            className="hidden rounded-md p-2 text-muted-foreground hover:text-primary sm:block"
-          >
-            <LayoutDashboard className="size-4" aria-hidden="true" />
-          </Link>
+            label="进入内容后台"
+            icon={<LayoutDashboard />}
+            className="hidden !size-9 !rounded-full !p-0 sm:inline-flex"
+          />
           <ThemeToggle label="切换主题" />
           <IconButton
             label="打开主导航"
@@ -227,14 +221,13 @@ export default function PublicShell({ children }: { children: ReactNode }) {
         </div>
       </footer>
       <Drawer open={open} title={siteTitle} onClose={() => setOpen(false)}>
-        <form role="search" onSubmit={search} className="mb-6 flex gap-2">
+        <form role="search" onSubmit={search} className="mb-6">
           <Input
             aria-label="移动端搜索文章"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="搜索文章…"
           />
-          <IconButton type="submit" label="提交移动端搜索" icon={<Search />} />
         </form>
         <nav aria-label="移动导航" className="flex flex-col gap-2">
           {navItems.map((item) => (
