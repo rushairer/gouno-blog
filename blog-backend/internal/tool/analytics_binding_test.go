@@ -6,15 +6,16 @@ import (
 	"errors"
 	"testing"
 
+	analyticsdomain "github.com/rushairer/blog-backend/internal/analytics/domain"
 	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 type analyticsBindingStub struct {
 	called  bool
-	summary *domain.AnalyticsSummary
+	summary *analyticsdomain.AnalyticsSummary
 }
 
-func (s *analyticsBindingStub) AnalyticsSummary(context.Context) (*domain.AnalyticsSummary, error) {
+func (s *analyticsBindingStub) AnalyticsSummary(context.Context) (*analyticsdomain.AnalyticsSummary, error) {
 	s.called = true
 	return s.summary, nil
 }
@@ -29,7 +30,7 @@ func TestBindAnalyticsUsesCanonicalSummaryReader(t *testing.T) {
 			return nil, nil
 		},
 	})
-	analytics := &analyticsBindingStub{summary: &domain.AnalyticsSummary{TotalPosts: 7}}
+	analytics := &analyticsBindingStub{summary: &analyticsdomain.AnalyticsSummary{TotalPosts: 7}}
 	BindAnalytics(registry, analytics)
 
 	_, result, _, err := registry.Invoke(context.Background(), []string{"analytics.get_summary"}, "analytics.get_summary", json.RawMessage(`{}`))
@@ -42,7 +43,7 @@ func TestBindAnalyticsUsesCanonicalSummaryReader(t *testing.T) {
 	if !analytics.called {
 		t.Fatal("canonical Analytics summary reader was not invoked")
 	}
-	var summary domain.AnalyticsSummary
+	var summary analyticsdomain.AnalyticsSummary
 	if err := json.Unmarshal(result, &summary); err != nil {
 		t.Fatal(err)
 	}

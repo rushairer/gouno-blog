@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/rushairer/blog-backend/internal/domain"
+	analyticsdomain "github.com/rushairer/blog-backend/internal/analytics/domain"
 )
 
 type analyticsSummaryReader interface {
-	AnalyticsSummary(context.Context) (*domain.AnalyticsSummary, error)
+	AnalyticsSummary(context.Context) (*analyticsdomain.AnalyticsSummary, error)
 }
 
 var errAnalyticsNotBound = errors.New("analytics service is not bound")
