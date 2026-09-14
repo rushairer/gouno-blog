@@ -24,7 +24,7 @@ This document is the migration Source of Truth for Capability convergence. `ARCH
 | **Notification** | Operator/system notification persistence in `notifications` | `internal/notification/repository` | Agent ManagementService and Runner consume the canonical Notification writer directly. | Single notification write operations; no cross-capability transaction required today. | **Agent consumers converged.** Flat notification delegates are retired. |
 | **Access** | Blog principals, identity aliases, memberships/roles and access policy; includes `blog_principals`, `blog_principal_identities` and access-control tables | `internal/access` | Middleware/controllers consume access snapshots. Identity key is `(issuer, subject)`. | Access service owns security-sensitive SQL transaction boundaries. | **Stable security boundary.** Do not opportunistically refactor during Capability migration. |
 | **Auth BFF** | Confidential OAuth/OIDC session state in Redis; no Blog SQL ownership | `internal/authbff` | Browser only receives Blog-origin session cookie; exchange/refresh/userinfo/revoke remain server-side. | BFF client/store boundary. | **Stable security boundary.** Behavior frozen unless explicitly requested. |
-| **Tool** | Tool registry/contracts/bindings; no owned persistence table | `internal/tool` | Calls capability services/ports; must not become a generic business bucket. | Transaction ownership stays with the called application/capability service. | **Stable boundary.** |
+| **Tool** | Tool registry/contracts/bindings; no owned persistence table | `internal/tool` plus `internal/tool/domain` | Calls capability services/ports; must not become a generic business bucket. | Transaction ownership stays with the called application/capability service. | **Stable boundary and ToolRisk domain ownership converged.** |
 | **Shared DB infrastructure** | Transaction execution and SQL error classification; no business tables | `internal/dbtx`, `internal/dberror` | Capabilities depend directly on these infrastructure packages. | Application/service coordinators decide transaction scope; `dbtx` only executes it. | **Canonical after Phase B.** The flat Transactor alias remains only for Connector Hold. |
 | **Connector (HOLD)** | Connector profiles/outbox/audits; `ai_connector_profiles`, `ai_connector_outbox`, `ai_connector_delivery_audits` | Existing `internal/connector` implementation | No architecture migration is authorized while Hold is active. | Existing behavior preserved. | **Deferred by Connector Module Hold.** Its `repository.Transactor` consumer is the explicit blocker for deleting that alias. |
 
@@ -51,7 +51,7 @@ Agent composition is now canonical at the service-dependency layer: the root con
 | `internal/repository.Transactor` and `NewTransactor` | Shared-infrastructure alias | **Connector only after Phase B** | Deferred by Connector Module Hold. Delete immediately after explicitly authorized Connector direct-`dbtx` cutover. |
 | `internal/controller.AgentController` Connector-only transitional shell | Explicit Connector Hold | Connector routes/callback only; Agent, Workflow, Operations and Knowledge transport are capability-local | Retain unchanged until explicit Connector Hold lift; then move Connector transport with dedicated security review/tests. |
 | `internal/controller` response/pagination compatibility helpers | Frozen compatibility facade | Stable Access controller plus Connector-held flat transport | Retire only in a dedicated Access/Connector boundary slice after the relevant security/Hold constraints are explicitly lifted; no new consumers are allowed. |
-| `internal/domain` Agent mixed models | Deliberate model migration boundary, not automatically a facade | Agent plus Tool consumers | Classify the remaining Agent/Tool-risk model bucket into real owners before moving. Knowledge/Provider/Workflow/Post-owned models are retired from this boundary. Never move solely for directory symmetry. |
+| `internal/domain` Agent models | Deliberate model migration boundary, not automatically a facade | Agent consumers | Remaining root models are Agent-owned and are the final shared-model migration slice. Tool/Knowledge/Provider/Workflow/Post-owned models are retired from this boundary. |
 
 ## Flat-layer classification
 
@@ -59,15 +59,24 @@ The remaining flat files are not all equivalent debt:
 
 - **A — migrate to capability / retire facade:** Agent, Workflow, Operations, Knowledge and Feed HTTP ownership are canonical under capability controllers; flat Agent repository delegates are retired. The remaining `internal/controller` entries are explicitly classified and allowlist-frozen; there is no unclassified non-held business controller left in that bucket.
 - **B — shared infrastructure:** generic DB transaction execution belongs in `internal/dbtx`; generic SQL error classification belongs in `internal/dberror`; shared HTTP primitives belong in `internal/controllerutil` when/where proven.
-- **C — intentionally shared pending model-boundary decision:** remaining root `internal/domain` Agent/Tool-risk mixed models with real cross-capability consumers. Page, Post, Workflow, Provider, and Knowledge EmbeddingProfile have been classified as capability-owned and their root aliases are retired. Remaining models must not be duplicated or moved just to empty the directory.
+- **C — final model-migration boundary:** remaining root `internal/domain` models are Agent-owned. Page, Post, Workflow, Provider, Knowledge EmbeddingProfile, and ToolRisk have been classified and their root aliases are retired; the final Agent slice may retire `internal/domain` after full consumer proof.
 - **D — explicit hold:** Connector-related controller/dependency paths. Record the dependency but do not modify it while Connector Module Hold remains active.
 
 ## Migration debt priority
 
 1. **Held-boundary retirement:** non-held flat-controller ownership is converged and frozen. Connector controller/transactor compatibility remains explicitly blocked by Connector Module Hold; Access remains a stable security boundary rather than migration debt.
-2. **Shared-model classification:** Page, Post, Workflow, Provider, and Knowledge EmbeddingProfile are complete; classify the remaining mixed Agent/Tool-risk root models only where a real capability/shared-kernel/contract decision is needed; never move them for directory symmetry.
+2. **Shared-model classification:** Page, Post, Workflow, Provider, Knowledge EmbeddingProfile, and ToolRisk are complete; the remaining root models are Agent-owned and form the final model-migration slice.
 
-Completed slices: **Agent Approval / Media Candidate / Workflow Event orchestration**, **Agent ManagementService dependency cutover**, **Starter Pack application coordination**, **Runner dependency/lifecycle convergence**, **Workflow Definition/Version persistence extraction**, **Workflow Run lifecycle coordination**, **Agent MediaCandidate / Workflow Run boundary convergence**, and **Workflow Run admission/retry/recovery convergence**, **Workflow dispatch/execution persistence convergence**, and **Workflow read-model classification**, and **Workflow HTTP ownership convergence**, and **Operations HTTP ownership convergence**, and **Agent HTTP ownership convergence**, and **Knowledge HTTP ownership convergence**, and **PostVersion restore ownership convergence**, and **Feed HTTP ownership convergence**, and **flat-controller boundary freeze**, and **Page domain alias retirement**, and **Operations domain model ownership convergence**, and **Taxonomy domain model ownership**, and **Analytics read-model ownership**, and **Media domain model ownership**, and **PostVersion domain model ownership**, and **Post domain model ownership**, and **Workflow domain model ownership**, and **Provider domain model ownership**, and **Knowledge EmbeddingProfile domain ownership** now use canonical ownership boundaries and explicit composition-root wiring. The flat `repository.AgentRepository` aggregate and its Agent/Workflow/Notification delegates are retired; `internal/repository` remains only for the Connector-held Transactor alias until that Hold is explicitly lifted.
+Completed slices: **Agent Approval / Media Candidate / Workflow Event orchestration**, **Agent ManagementService dependency cutover**, **Starter Pack application coordination**, **Runner dependency/lifecycle convergence**, **Workflow Definition/Version persistence extraction**, **Workflow Run lifecycle coordination**, **Agent MediaCandidate / Workflow Run boundary convergence**, and **Workflow Run admission/retry/recovery convergence**, **Workflow dispatch/execution persistence convergence**, and **Workflow read-model classification**, and **Workflow HTTP ownership convergence**, and **Operations HTTP ownership convergence**, and **Agent HTTP ownership convergence**, and **Knowledge HTTP ownership convergence**, and **PostVersion restore ownership convergence**, and **Feed HTTP ownership convergence**, and **flat-controller boundary freeze**, and **Page domain alias retirement**, and **Operations domain model ownership convergence**, and **Taxonomy domain model ownership**, and **Analytics read-model ownership**, and **Media domain model ownership**, and **PostVersion domain model ownership**, and **Post domain model ownership**, and **Workflow domain model ownership**, and **Provider domain model ownership**, and **Knowledge EmbeddingProfile domain ownership**, and **ToolRisk domain ownership** now use canonical ownership boundaries and explicit composition-root wiring. The flat `repository.AgentRepository` aggregate and its Agent/Workflow/Notification delegates are retired; `internal/repository` remains only for the Connector-held Transactor alias until that Hold is explicitly lifted.
+
+
+### ToolRisk domain ownership — 2026-09-14
+
+- `internal/tool/domain` owns `ToolRiskLevel` and the read/propose/write risk constants; these values are no longer declared by root `internal/domain`.
+- Tool registry/bindings plus Agent, Workflow, and Operations consumers import the Tool-owned leaf contract directly. `AgentToolCall.RiskLevel` explicitly references the leaf Tool contract.
+- `internal/tool/domain/ownership_test.go` rejects redeclaration or future consumption of ToolRisk symbols through root `internal/domain`.
+- Tool invocation/proposal/execution behavior, scope enforcement, approval behavior, SQL, routes/responses, Auth BFF, Access, Connector, and middleware behavior are unchanged.
+- Remaining root model classification is Agent-owned only and is ready for the final whole-file Agent migration after consumer proof.
 
 
 ### Knowledge EmbeddingProfile domain ownership — 2026-09-14
@@ -76,7 +85,7 @@ Completed slices: **Agent Approval / Media Candidate / Workflow Event orchestrat
 - Knowledge service/controller import the leaf contract directly; cohesive Knowledge persistence and transaction ownership stay unchanged.
 - `internal/knowledge/domain/ownership_test.go` rejects redeclaration or future consumption of `EmbeddingProfile` through root `internal/domain`.
 - API-key ciphertext/nonce handling, encryption/decryption, upstream URL validation, HTTP client safety, SQL, index/retrieval behavior, routes/responses, Auth BFF, Access, Connector, and middleware behavior are unchanged.
-- Remaining root model classification is Agent/Tool-risk only.
+- Remaining root model classification is Agent-owned only.
 
 
 ### Provider domain model ownership — 2026-09-14
@@ -94,7 +103,7 @@ Completed slices: **Agent Approval / Media Candidate / Workflow Event orchestrat
 - Workflow service/coordinators/repositories/controllers and cross-capability Agent/planner/Starter Pack consumers import the Workflow-owned leaf contract directly.
 - `internal/workflow/domain/ownership_test.go` rejects redeclaration or future consumption of Workflow-owned symbols through root `internal/domain`.
 - This slice changes contract ownership only: Workflow SQL, transaction/coordinator ownership, webhook/HTTP behavior, Agent approval/media orchestration, Auth BFF, Connector, and middleware behavior are unchanged.
-- Root `internal/domain` is now the remaining mixed Agent/Tool-risk model-classification bucket only.
+- Root `internal/domain` now contains only the final Agent-owned model migration boundary.
 
 
 ### Post domain model ownership — 2026-09-14

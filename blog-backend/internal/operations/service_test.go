@@ -4,11 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	tooldomain "github.com/rushairer/blog-backend/internal/tool/domain"
 	"testing"
 
 	_ "github.com/lib/pq"
 	"github.com/rushairer/blog-backend/internal/dbtx"
-	"github.com/rushairer/blog-backend/internal/domain"
+
 	opsdomain "github.com/rushairer/blog-backend/internal/operations/domain"
 	"github.com/rushairer/blog-backend/internal/tool"
 )
@@ -31,16 +32,16 @@ func TestRegisterOperationalToolsAreReadOnly(t *testing.T) {
 	}
 	for _, name := range []string{"content.list_broken_links", "content.list_tag_bloat"} {
 		risk, ok := registry.Risk(name)
-		if !ok || risk != domain.ToolRiskRead {
+		if !ok || risk != tooldomain.ToolRiskRead {
 			t.Fatalf("%s risk=%q registered=%v", name, risk, ok)
 		}
 	}
 	risk, ok := registry.Risk("operations.propose_suggestion")
-	if !ok || risk != domain.ToolRiskPropose {
+	if !ok || risk != tooldomain.ToolRiskPropose {
 		t.Fatalf("suggestion proposal risk=%q registered=%v", risk, ok)
 	}
 	risk, ok = registry.Risk("content.propose_candidates")
-	if !ok || risk != domain.ToolRiskPropose {
+	if !ok || risk != tooldomain.ToolRiskPropose {
 		t.Fatalf("candidate proposal risk=%q registered=%v", risk, ok)
 	}
 }

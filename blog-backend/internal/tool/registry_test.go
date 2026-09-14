@@ -4,15 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	tooldomain "github.com/rushairer/blog-backend/internal/tool/domain"
 	"testing"
-
-	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 func TestRegistryEnforcesCapabilityBeforeExecution(t *testing.T) {
 	executed := false
 	registry := New(Definition{
-		Name: "safe.read", Risk: domain.ToolRiskRead,
+		Name: "safe.read", Risk: tooldomain.ToolRiskRead,
 		Parameters: json.RawMessage(`{"type":"object"}`),
 		Execute: func(context.Context, json.RawMessage) (any, error) {
 			executed = true
@@ -27,7 +26,7 @@ func TestRegistryEnforcesCapabilityBeforeExecution(t *testing.T) {
 
 func TestRegistryCreatesProposalWithoutExecutingWrite(t *testing.T) {
 	registry := New(Definition{
-		Name: "content.propose", Risk: domain.ToolRiskPropose,
+		Name: "content.propose", Risk: tooldomain.ToolRiskPropose,
 		Parameters: json.RawMessage(`{"type":"object"}`),
 		Propose: func(context.Context, json.RawMessage) (*Proposal, error) {
 			return &Proposal{
@@ -39,14 +38,14 @@ func TestRegistryCreatesProposalWithoutExecutingWrite(t *testing.T) {
 	risk, result, proposal, err := registry.Invoke(
 		context.Background(), []string{"content.propose"}, "content.propose", json.RawMessage(`{}`),
 	)
-	if err != nil || risk != domain.ToolRiskPropose || proposal == nil ||
+	if err != nil || risk != tooldomain.ToolRiskPropose || proposal == nil ||
 		!json.Valid(result) || proposal.ActionType != "create_draft" {
 		t.Fatalf("risk=%s result=%s proposal=%#v err=%v", risk, result, proposal, err)
 	}
 }
 
 func TestRegistryRejectsInvalidJSON(t *testing.T) {
-	registry := New(Definition{Name: "safe.read", Risk: domain.ToolRiskRead})
+	registry := New(Definition{Name: "safe.read", Risk: tooldomain.ToolRiskRead})
 	_, _, _, err := registry.Invoke(
 		context.Background(), []string{"safe.read"}, "safe.read", json.RawMessage(`{`),
 	)
@@ -89,8 +88,8 @@ func TestDailyNewsReadToolsValidateTheirBoundary(t *testing.T) {
 
 func TestRegistryExposesOnlyAgentTools(t *testing.T) {
 	registry := New(
-		Definition{Name: "agent.only", Risk: domain.ToolRiskRead},
-		Definition{Name: "also.agent", Surfaces: []string{"agent"}, Risk: domain.ToolRiskRead},
+		Definition{Name: "agent.only", Risk: tooldomain.ToolRiskRead},
+		Definition{Name: "also.agent", Surfaces: []string{"agent"}, Risk: tooldomain.ToolRiskRead},
 	)
 	if names := registry.AgentNames(); len(names) != 2 || names[0] != "agent.only" {
 		t.Fatalf("agent names = %v", names)

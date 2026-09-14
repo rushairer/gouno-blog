@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	tooldomain "github.com/rushairer/blog-backend/internal/tool/domain"
 	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 	"strconv"
 	"strings"
@@ -547,7 +548,7 @@ func (s *Service) validateDiscoveryTools(ctx context.Context, value *workflowdom
 		}
 		if s.tools != nil {
 			risk, ok := s.tools.Risk(name)
-			if !ok || risk != domain.ToolRiskRead {
+			if !ok || risk != tooldomain.ToolRiskRead {
 				return fmt.Errorf("%w: discovery tool %q must be read-only", ErrInvalid, name)
 			}
 		}

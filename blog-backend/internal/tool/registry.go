@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	tooldomain "github.com/rushairer/blog-backend/internal/tool/domain"
 	"slices"
 
-	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/provider"
 )
 
@@ -62,7 +62,7 @@ type Definition struct {
 	DefaultBinding json.RawMessage
 	Output         json.RawMessage
 	Surfaces       []string
-	Risk           domain.ToolRiskLevel
+	Risk           tooldomain.ToolRiskLevel
 	Scope          *ScopeRule
 	Execute        func(context.Context, json.RawMessage) (any, error)
 	Propose        func(context.Context, json.RawMessage) (*Proposal, error)
@@ -73,16 +73,16 @@ type Registry struct {
 }
 
 type CatalogItem struct {
-	Name                string               `json:"name"`
-	Description         string               `json:"description"`
-	DescriptionZH       string               `json:"description_zh,omitempty"`
-	Parameters          json.RawMessage      `json:"parameters"`
-	ConfigurationSchema json.RawMessage      `json:"configuration_schema,omitempty"`
-	DefaultBinding      json.RawMessage      `json:"default_binding,omitempty"`
-	Output              json.RawMessage      `json:"output_schema,omitempty"`
-	Surfaces            []string             `json:"surfaces"`
-	Risk                domain.ToolRiskLevel `json:"risk_level"`
-	Scope               *ScopeRule           `json:"scope,omitempty"`
+	Name                string                   `json:"name"`
+	Description         string                   `json:"description"`
+	DescriptionZH       string                   `json:"description_zh,omitempty"`
+	Parameters          json.RawMessage          `json:"parameters"`
+	ConfigurationSchema json.RawMessage          `json:"configuration_schema,omitempty"`
+	DefaultBinding      json.RawMessage          `json:"default_binding,omitempty"`
+	Output              json.RawMessage          `json:"output_schema,omitempty"`
+	Surfaces            []string                 `json:"surfaces"`
+	Risk                tooldomain.ToolRiskLevel `json:"risk_level"`
+	Scope               *ScopeRule               `json:"scope,omitempty"`
 }
 
 func New(definitions ...Definition) *Registry {
@@ -157,7 +157,7 @@ func MergeBindingArguments(bindings json.RawMessage, name string, arguments json
 	return json.Marshal(supplied)
 }
 
-func (r *Registry) Invoke(ctx context.Context, capabilities []string, name string, arguments json.RawMessage) (domain.ToolRiskLevel, json.RawMessage, *Proposal, error) {
+func (r *Registry) Invoke(ctx context.Context, capabilities []string, name string, arguments json.RawMessage) (tooldomain.ToolRiskLevel, json.RawMessage, *Proposal, error) {
 	if !slices.Contains(capabilities, name) {
 		return "", nil, nil, ErrUnauthorized
 	}
@@ -168,7 +168,7 @@ func (r *Registry) Invoke(ctx context.Context, capabilities []string, name strin
 	if !json.Valid(arguments) {
 		return definition.Risk, nil, nil, ErrInvalidArgument
 	}
-	if definition.Risk == domain.ToolRiskPropose {
+	if definition.Risk == tooldomain.ToolRiskPropose {
 		if definition.Propose == nil {
 			return definition.Risk, nil, nil, fmt.Errorf("%w: proposal handler missing", ErrUnknownTool)
 		}
@@ -239,7 +239,7 @@ func (r *Registry) AgentNames() []string {
 func (r *Registry) ProposalNames() []string {
 	result := make([]string, 0)
 	for name, definition := range r.definitions {
-		if definition.Risk == domain.ToolRiskPropose {
+		if definition.Risk == tooldomain.ToolRiskPropose {
 			result = append(result, name)
 		}
 	}
@@ -247,7 +247,7 @@ func (r *Registry) ProposalNames() []string {
 	return result
 }
 
-func (r *Registry) Risk(name string) (domain.ToolRiskLevel, bool) {
+func (r *Registry) Risk(name string) (tooldomain.ToolRiskLevel, bool) {
 	item, ok := r.definitions[name]
 	return item.Risk, ok
 }

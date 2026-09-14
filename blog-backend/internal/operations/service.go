@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	tooldomain "github.com/rushairer/blog-backend/internal/tool/domain"
 	"strings"
 	"sync"
 	"time"
@@ -60,27 +61,27 @@ func (s *Service) RegisterTools() error {
 		tool.Definition{
 			Name: "content.list_broken_links", Description: "List cached broken-link evidence for published posts.",
 			Parameters: schema(`{"max_age_hours":{"type":"integer","minimum":1,"maximum":720},"limit":{"type":"integer","minimum":1,"maximum":100}}`),
-			Risk:       domain.ToolRiskRead, Scope: &tool.ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"post_id", "id"}}, Execute: s.listBrokenLinks,
+			Risk:       tooldomain.ToolRiskRead, Scope: &tool.ScopeRule{Discovery: true, OutputResourceType: "post", OutputKeys: []string{"post_id", "id"}}, Execute: s.listBrokenLinks,
 		},
 		tool.Definition{
 			Name: "content.propose_candidates", Description: "Propose title, summary, or cover-alt candidates for human selection.",
 			Parameters: json.RawMessage(`{"type":"object","additionalProperties":false,"required":["post_id","field_type","candidates"],"properties":{"post_id":{"type":"integer","minimum":1},"field_type":{"type":"string","enum":["title","summary","cover_alt"]},"candidates":{"type":"array","minItems":2,"maxItems":5,"items":{"type":"object","additionalProperties":false,"required":["value"],"properties":{"value":{"type":"string"},"rationale":{"type":"string"}}}}}}`),
-			Risk:       domain.ToolRiskPropose, Scope: &tool.ScopeRule{ResourceType: "post", Argument: "post_id"}, Propose: s.proposeCandidates,
+			Risk:       tooldomain.ToolRiskPropose, Scope: &tool.ScopeRule{ResourceType: "post", Argument: "post_id"}, Propose: s.proposeCandidates,
 		},
 		tool.Definition{
 			Name: "content.list_tag_bloat", Description: "Identify low-use and case-colliding tags from aggregate post metadata.",
 			Parameters: schema(`{"low_usage_threshold":{"type":"integer","minimum":1,"maximum":20},"limit":{"type":"integer","minimum":1,"maximum":100}}`),
-			Risk:       domain.ToolRiskRead, Scope: &tool.ScopeRule{Discovery: true, OutputResourceType: "tag", OutputKeys: []string{"tag", "name"}}, Execute: s.listTagBloat,
+			Risk:       tooldomain.ToolRiskRead, Scope: &tool.ScopeRule{Discovery: true, OutputResourceType: "tag", OutputKeys: []string{"tag", "name"}}, Execute: s.listTagBloat,
 		},
 		tool.Definition{
 			Name: "operations.propose_suggestion", Description: "Propose an evidence-backed internal operations suggestion.",
 			Parameters: json.RawMessage(`{"type":"object","additionalProperties":false,"required":["source_type","source_key","title","description","priority","evidence"],"properties":{"source_type":{"type":"string"},"source_key":{"type":"string"},"title":{"type":"string"},"description":{"type":"string"},"priority":{"type":"string","enum":["low","medium","high"]},"evidence":{"type":"object"},"window_start":{"type":"string"},"window_end":{"type":"string"}}}`),
-			Risk:       domain.ToolRiskPropose, Propose: s.proposeSuggestion,
+			Risk:       tooldomain.ToolRiskPropose, Propose: s.proposeSuggestion,
 		},
-		tool.Definition{Name: "media.get_asset", Description: "Read metadata for one media asset without returning file bytes.", Parameters: json.RawMessage(`{"type":"object","additionalProperties":false,"required":["id"],"properties":{"id":{"type":"integer","minimum":1}}}`), Risk: domain.ToolRiskRead, Scope: &tool.ScopeRule{ResourceType: "media_asset", Argument: "id"}, Execute: s.getMediaAsset},
-		tool.Definition{Name: "operations.get_suggestion", Description: "Read one internal operational suggestion and its evidence.", Parameters: json.RawMessage(`{"type":"object","additionalProperties":false,"required":["id"],"properties":{"id":{"type":"integer","minimum":1}}}`), Risk: domain.ToolRiskRead, Scope: &tool.ScopeRule{ResourceType: "operational_suggestion", Argument: "id"}, Execute: s.getSuggestion},
-		tool.Definition{Name: "comments.get_comment", Description: "Read one comment with private identity fields removed.", Parameters: json.RawMessage(`{"type":"object","additionalProperties":false,"required":["id"],"properties":{"id":{"type":"integer","minimum":1}}}`), Risk: domain.ToolRiskRead, Scope: &tool.ScopeRule{ResourceType: "comment", Argument: "id"}, Execute: s.getComment},
-		tool.Definition{Name: "content.list_categories", Description: "List blog categories and aggregate post counts.", Parameters: schema(`{}`), Risk: domain.ToolRiskRead, Scope: &tool.ScopeRule{Discovery: true, OutputResourceType: "category", OutputKeys: []string{"id"}}, Execute: s.listCategories},
+		tool.Definition{Name: "media.get_asset", Description: "Read metadata for one media asset without returning file bytes.", Parameters: json.RawMessage(`{"type":"object","additionalProperties":false,"required":["id"],"properties":{"id":{"type":"integer","minimum":1}}}`), Risk: tooldomain.ToolRiskRead, Scope: &tool.ScopeRule{ResourceType: "media_asset", Argument: "id"}, Execute: s.getMediaAsset},
+		tool.Definition{Name: "operations.get_suggestion", Description: "Read one internal operational suggestion and its evidence.", Parameters: json.RawMessage(`{"type":"object","additionalProperties":false,"required":["id"],"properties":{"id":{"type":"integer","minimum":1}}}`), Risk: tooldomain.ToolRiskRead, Scope: &tool.ScopeRule{ResourceType: "operational_suggestion", Argument: "id"}, Execute: s.getSuggestion},
+		tool.Definition{Name: "comments.get_comment", Description: "Read one comment with private identity fields removed.", Parameters: json.RawMessage(`{"type":"object","additionalProperties":false,"required":["id"],"properties":{"id":{"type":"integer","minimum":1}}}`), Risk: tooldomain.ToolRiskRead, Scope: &tool.ScopeRule{ResourceType: "comment", Argument: "id"}, Execute: s.getComment},
+		tool.Definition{Name: "content.list_categories", Description: "List blog categories and aggregate post counts.", Parameters: schema(`{}`), Risk: tooldomain.ToolRiskRead, Scope: &tool.ScopeRule{Discovery: true, OutputResourceType: "category", OutputKeys: []string{"id"}}, Execute: s.listCategories},
 	)
 }
 
@@ -699,7 +700,7 @@ func (s *Service) SelectCandidate(ctx context.Context, setID, candidateID int64)
 	payload[fieldType] = value
 	rawPayload, _ := json.Marshal(payload)
 	before, _ := json.Marshal(post)
-	call := &domain.AgentToolCall{RunID: runID, ToolName: "content.select_candidate", RiskLevel: domain.ToolRiskPropose,
+	call := &domain.AgentToolCall{RunID: runID, ToolName: "content.select_candidate", RiskLevel: tooldomain.ToolRiskPropose,
 		Arguments: json.RawMessage(fmt.Sprintf(`{"candidate_set_id":%d,"candidate_id":%d}`, setID, candidateID)), Status: domain.ToolCallExecuted}
 	if err := s.toolCalls.CreateToolCallTx(ctx, tx, call); err != nil {
 		_ = tx.Rollback()
