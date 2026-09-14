@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 root = Path(__file__).resolve().parents[2]
 backend = root / "blog-backend"
@@ -10,8 +11,8 @@ operations_domain.mkdir(parents=True, exist_ok=True)
 symbols = (
     "OperationalSuggestion",
     "EditorialTask",
-    "ContentCandidate",
     "ContentCandidateSet",
+    "ContentCandidate",
     "AIFeedback",
 )
 
@@ -22,28 +23,32 @@ assert source.startswith("package domain\n")
 (operations_domain / "model.go").write_text(source)
 source_path.unlink()
 
+root_import = '\t"github.com/rushairer/blog-backend/internal/domain"\n'
 ops_import = '\topsdomain "github.com/rushairer/blog-backend/internal/operations/domain"\n'
+root_selector = re.compile(r"(?<![A-Za-z0-9_])domain\.")
+
 
 def migrate_symbols(relative: str) -> None:
     path = backend / relative
     text = path.read_text()
     changed = False
     for symbol in symbols:
-        needle = f"domain.{symbol}"
-        if needle in text:
-            text = text.replace(needle, f"opsdomain.{symbol}")
-            changed = True
+        pattern = re.compile(rf"(?<![A-Za-z0-9_])domain\.{re.escape(symbol)}\b")
+        text, count = pattern.subn(f"opsdomain.{symbol}", text)
+        changed = changed or count > 0
     if not changed:
         return
     if "internal/operations/domain" not in text:
-        root_import = '\t"github.com/rushairer/blog-backend/internal/domain"\n'
         if root_import in text:
             text = text.replace(root_import, root_import + ops_import, 1)
         else:
             marker = "import (\n"
             assert marker in text, relative
             text = text.replace(marker, marker + ops_import, 1)
+    if root_import in text and not root_selector.search(text):
+        text = text.replace(root_import, "", 1)
     path.write_text(text)
+
 
 for relative in (
     "internal/operations/service.go",
