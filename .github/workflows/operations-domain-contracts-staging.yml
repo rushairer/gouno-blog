@@ -24,16 +24,7 @@ jobs:
           cache-dependency-path: blog-backend/go.sum
 
       - name: Apply Operations domain migration
-        run: |
-          python3 .github/scripts/operations_domain_contracts.py
-          sed -i 's/opsopsdomain/opsdomain/g' \
-            blog-backend/internal/operations/service.go \
-            blog-backend/internal/operations/approval_effects.go \
-            blog-backend/internal/operations/controller/controller.go \
-            blog-backend/internal/operations/service_test.go \
-            blog-backend/internal/operations/approval_effects_integration_test.go \
-            blog-backend/internal/agent/approval.go \
-            blog-backend/internal/agent/approval_ports.go
+        run: python3 .github/scripts/operations_domain_contracts.py
 
       - name: Format
         run: |
@@ -58,14 +49,20 @@ jobs:
           test ! -e blog-backend/internal/domain/operations.go
           test -e blog-backend/internal/operations/domain/model.go
           test -e blog-backend/internal/operations/domain/ownership_test.go
-          if git grep -nE 'domain\.(OperationalSuggestion|EditorialTask|ContentCandidate|ContentCandidateSet|AIFeedback)' -- 'blog-backend/**/*.go'; then
+          (
+            cd blog-backend
+            go test ./internal/operations/domain -run TestRootOperationsDomainModelsStayRetired -count=1
+          )
+          if git grep -nE '(^|[^[:alnum:]_])domain\.(OperationalSuggestion|EditorialTask|ContentCandidate|ContentCandidateSet|AIFeedback)' -- 'blog-backend/**/*.go'; then
             echo 'Operations-owned symbol still consumed through root internal/domain'
             exit 1
           fi
-          if git diff --name-only | grep -E '(^|/)internal/connector/|agent_connector_controller\.go|connector_controller\.go'; then
-            echo 'Connector Hold path changed unexpectedly'
-            exit 1
-          fi
+          git diff --exit-code 07f9a3c9c4f1a9fc364d5d03e9654e727b6e8373 -- \
+            blog-backend/internal/access \
+            blog-backend/internal/authbff \
+            blog-backend/internal/connector \
+            blog-backend/internal/controller \
+            blog-backend/middleware
           git diff --check
 
       - name: Commit validated source and self-clean
