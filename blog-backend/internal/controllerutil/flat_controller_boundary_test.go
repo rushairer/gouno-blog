@@ -11,9 +11,7 @@ func TestLegacyFlatControllerBucketIsFrozen(t *testing.T) {
 		"access_controller.go":          "stable Access security boundary",
 		"agent_controller.go":           "Connector-held transitional shell",
 		"agent_connector_controller.go": "Connector-held transport",
-		"pagination.go":                 "compatibility facade for held flat transport",
-		"pagination_test.go":            "compatibility facade regression test",
-		"response.go":                   "compatibility facade for held flat transport",
+		"response.go":                   "minimal Access/Connector-held response facade",
 	}
 
 	entries, err := os.ReadDir("../controller")

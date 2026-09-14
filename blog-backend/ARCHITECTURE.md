@@ -87,7 +87,7 @@ internal/controllerutil/
 
 This package is an application-level HTTP adapter utility boundary. Capability controllers may depend on it. It must not depend on capability controller packages.
 
-The legacy `internal/controller` package is now frozen to the stable Access security boundary, the Connector-held transitional shell/transport, and the small response/pagination compatibility facades still required by those held paths. `internal/controllerutil/flat_controller_boundary_test.go` enforces this allowlist. No new business controller or unrelated ownership test may be added to the flat bucket; new transport belongs to its capability-local controller package.
+The legacy `internal/controller` package is now frozen to the stable Access security boundary, the Connector-held transitional shell/transport, and the minimal response compatibility facade still required by those held paths. The unused flat pagination facade and its duplicate regression test are retired; canonical pagination behavior and coverage live in `internal/controllerutil`. `internal/controllerutil/flat_controller_boundary_test.go` enforces the reduced allowlist. No new business controller or unrelated ownership test may be added to the flat bucket; new transport belongs to its capability-local controller package.
 
 ## Dependency direction
 
