@@ -5,11 +5,12 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 	"testing"
 	"time"
 
 	"github.com/rushairer/blog-backend/internal/dbtx"
-	"github.com/rushairer/blog-backend/internal/domain"
+
 	"github.com/rushairer/blog-backend/internal/testsupport"
 	workflowrepository "github.com/rushairer/blog-backend/internal/workflow/repository"
 )
@@ -35,9 +36,9 @@ func TestRunAdmissionCommitsRunAndInitialResourcesAtomically(t *testing.T) {
 	marker := fmt.Sprintf("admission-%d", time.Now().UnixNano())
 	t.Cleanup(func() { _, _ = db.Exec(`DELETE FROM ai_workflow_runs WHERE source_ref=$1`, marker) })
 
-	run := &domain.WorkflowRun{WorkflowID: workflowID, WorkflowVersionID: versionID, Status: "queued", Input: []byte(`{}`), TriggerKind: "manual", SourceRef: marker}
-	resource := domain.WorkflowResource{ResourceType: "post", ResourceKey: marker, Source: "manual", AccessLevel: "target", Label: "snapshot", VersionToken: "v1", Snapshot: []byte(`{"label":"snapshot"}`)}
-	admitted, err := newTestRunAdmissionCoordinator(db).Admit(ctx, run, []domain.WorkflowResource{resource}, false)
+	run := &workflowdomain.WorkflowRun{WorkflowID: workflowID, WorkflowVersionID: versionID, Status: "queued", Input: []byte(`{}`), TriggerKind: "manual", SourceRef: marker}
+	resource := workflowdomain.WorkflowResource{ResourceType: "post", ResourceKey: marker, Source: "manual", AccessLevel: "target", Label: "snapshot", VersionToken: "v1", Snapshot: []byte(`{"label":"snapshot"}`)}
+	admitted, err := newTestRunAdmissionCoordinator(db).Admit(ctx, run, []workflowdomain.WorkflowResource{resource}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,7 +59,7 @@ var errAdmissionInjected = errors.New("injected admission persistence failure")
 
 type failingAdmissionResources struct{ RunAdmissionStore }
 
-func (s failingAdmissionResources) InsertAdmissionResourcesTx(ctx context.Context, tx *sql.Tx, runID int64, resources []domain.WorkflowResource) error {
+func (s failingAdmissionResources) InsertAdmissionResourcesTx(ctx context.Context, tx *sql.Tx, runID int64, resources []workflowdomain.WorkflowResource) error {
 	if err := s.RunAdmissionStore.InsertAdmissionResourcesTx(ctx, tx, runID, resources); err != nil {
 		return err
 	}
@@ -73,9 +74,9 @@ func TestRunAdmissionRollsBackRunWhenResourcePersistenceFails(t *testing.T) {
 	marker := fmt.Sprintf("admission-rollback-%d", time.Now().UnixNano())
 	base := workflowrepository.NewRunAdmissionRepository(db)
 	coordinator := NewRunAdmissionCoordinator(dbtx.NewTransactor(db, nil), failingAdmissionResources{base})
-	run := &domain.WorkflowRun{WorkflowID: workflowID, WorkflowVersionID: versionID, Status: "queued", Input: []byte(`{}`), TriggerKind: "manual", SourceRef: marker}
-	resource := domain.WorkflowResource{ResourceType: "post", ResourceKey: marker, Source: "manual", AccessLevel: "target", Label: "snapshot", VersionToken: "v1", Snapshot: []byte(`{}`)}
-	if _, err := coordinator.Admit(ctx, run, []domain.WorkflowResource{resource}, false); !errors.Is(err, errAdmissionInjected) {
+	run := &workflowdomain.WorkflowRun{WorkflowID: workflowID, WorkflowVersionID: versionID, Status: "queued", Input: []byte(`{}`), TriggerKind: "manual", SourceRef: marker}
+	resource := workflowdomain.WorkflowResource{ResourceType: "post", ResourceKey: marker, Source: "manual", AccessLevel: "target", Label: "snapshot", VersionToken: "v1", Snapshot: []byte(`{}`)}
+	if _, err := coordinator.Admit(ctx, run, []workflowdomain.WorkflowResource{resource}, false); !errors.Is(err, errAdmissionInjected) {
 		t.Fatalf("admit error=%v", err)
 	}
 	var count int

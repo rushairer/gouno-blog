@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 
 	"github.com/rushairer/blog-backend/internal/domain"
 	opsdomain "github.com/rushairer/blog-backend/internal/operations/domain"
@@ -42,16 +43,16 @@ type MediaGenerationStore interface {
 }
 
 type WorkflowInteractionStore interface {
-	GetInteraction(context.Context, int64) (*domain.WorkflowInteractionTask, error)
-	ListInteractions(context.Context, int64) ([]*domain.WorkflowInteractionTask, error)
-	ListPendingInteractions(context.Context) ([]*domain.WorkflowInteractionTask, error)
-	ResolveInteraction(context.Context, int64, string, json.RawMessage, int64) (*domain.WorkflowInteractionTask, error)
+	GetInteraction(context.Context, int64) (*workflowdomain.WorkflowInteractionTask, error)
+	ListInteractions(context.Context, int64) ([]*workflowdomain.WorkflowInteractionTask, error)
+	ListPendingInteractions(context.Context) ([]*workflowdomain.WorkflowInteractionTask, error)
+	ResolveInteraction(context.Context, int64, string, json.RawMessage, int64) (*workflowdomain.WorkflowInteractionTask, error)
 	CancelInteraction(context.Context, int64, string, int64) error
 }
 
 type WorkflowEventPort interface {
-	AppendWorkflowRunEvent(context.Context, *domain.WorkflowRunEvent) error
-	ListWorkflowRunEvents(context.Context, int64) ([]*domain.WorkflowRunEvent, error)
+	AppendWorkflowRunEvent(context.Context, *workflowdomain.WorkflowRunEvent) error
+	ListWorkflowRunEvents(context.Context, int64) ([]*workflowdomain.WorkflowRunEvent, error)
 }
 
 type ApprovalEffectWriter interface {

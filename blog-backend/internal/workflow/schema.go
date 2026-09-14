@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 	"strings"
 
-	"github.com/rushairer/blog-backend/internal/domain"
 	jsonschema "github.com/santhosh-tekuri/jsonschema/v5"
 )
 
@@ -118,7 +118,7 @@ func resourceFields(schemaRaw json.RawMessage) (map[string]string, error) {
 	return result, nil
 }
 
-func normalizeScopePolicy(policy domain.WorkflowScopePolicy, hasResources bool) (domain.WorkflowScopePolicy, error) {
+func normalizeScopePolicy(policy workflowdomain.WorkflowScopePolicy, hasResources bool) (workflowdomain.WorkflowScopePolicy, error) {
 	if policy.Mode == "" {
 		if hasResources {
 			policy.Mode = "strict"

@@ -3,6 +3,7 @@ package controller
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/rushairer/blog-backend/internal/domain"
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -23,7 +24,7 @@ func TestHumanTemplateBindingUsesAuthenticatedActor(t *testing.T) {
 				case "skill":
 					value = &domain.AgentSkill{}
 				case "workflow":
-					value = &domain.Workflow{}
+					value = &workflowdomain.Workflow{}
 				}
 				if err := bindHumanTemplateJSON(c, value); err != nil {
 					t.Fatal(err)
@@ -37,7 +38,7 @@ func TestHumanTemplateBindingUsesAuthenticatedActor(t *testing.T) {
 				case *domain.AgentSkill:
 					principal = v.CreatedByPrincipalID
 					origin = v.CreationOrigin
-				case *domain.Workflow:
+				case *workflowdomain.Workflow:
 					principal = v.CreatedByPrincipalID
 					origin = v.CreationOrigin
 				}

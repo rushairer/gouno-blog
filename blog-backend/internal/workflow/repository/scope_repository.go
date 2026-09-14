@@ -5,8 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-
-	"github.com/rushairer/blog-backend/internal/domain"
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 )
 
 type ScopeRepository struct {
@@ -17,12 +16,12 @@ func NewScopeRepository(db *sql.DB) *ScopeRepository {
 	return &ScopeRepository{db: db}
 }
 
-func (r *ScopeRepository) WorkflowScopePolicy(ctx context.Context, workflowVersionID int64) (domain.WorkflowScopePolicy, error) {
+func (r *ScopeRepository) WorkflowScopePolicy(ctx context.Context, workflowVersionID int64) (workflowdomain.WorkflowScopePolicy, error) {
 	var raw []byte
 	if err := r.db.QueryRowContext(ctx, `SELECT scope_policy FROM ai_workflow_versions WHERE id=$1`, workflowVersionID).Scan(&raw); err != nil {
-		return domain.WorkflowScopePolicy{}, err
+		return workflowdomain.WorkflowScopePolicy{}, err
 	}
-	var policy domain.WorkflowScopePolicy
+	var policy workflowdomain.WorkflowScopePolicy
 	err := json.Unmarshal(raw, &policy)
 	return policy, err
 }

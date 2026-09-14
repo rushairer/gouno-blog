@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 	"testing"
 
 	"github.com/rushairer/blog-backend/internal/domain"
@@ -96,18 +97,18 @@ func (s *mediaGenerationFailureStub) RecordMediaGenerationError(_ context.Contex
 }
 
 type workflowEventStub struct {
-	events        []*domain.WorkflowRunEvent
+	events        []*workflowdomain.WorkflowRunEvent
 	appendErr     error
-	listed        []*domain.WorkflowRunEvent
+	listed        []*workflowdomain.WorkflowRunEvent
 	listErr       error
 	lastListRunID int64
 }
 
-func (s *workflowEventStub) AppendWorkflowRunEvent(_ context.Context, event *domain.WorkflowRunEvent) error {
+func (s *workflowEventStub) AppendWorkflowRunEvent(_ context.Context, event *workflowdomain.WorkflowRunEvent) error {
 	s.events = append(s.events, event)
 	return s.appendErr
 }
-func (s *workflowEventStub) ListWorkflowRunEvents(_ context.Context, runID int64) ([]*domain.WorkflowRunEvent, error) {
+func (s *workflowEventStub) ListWorkflowRunEvents(_ context.Context, runID int64) ([]*workflowdomain.WorkflowRunEvent, error) {
 	s.lastListRunID = runID
 	return s.listed, s.listErr
 }
@@ -180,7 +181,7 @@ func (s *mediaCandidateLookupStub) GetMediaCandidate(context.Context, int64) (*d
 
 func TestListMediaCandidateEventsResolvesCandidateThroughAgentStore(t *testing.T) {
 	runID := int64(73)
-	want := []*domain.WorkflowRunEvent{{ID: 9}}
+	want := []*workflowdomain.WorkflowRunEvent{{ID: 9}}
 	events := &workflowEventStub{listed: want}
 	svc := &ApprovalService{
 		mediaCandidates: &mediaCandidateLookupStub{candidate: &domain.MediaCandidate{WorkflowRunID: &runID}},

@@ -3,12 +3,12 @@ package workflow
 import (
 	"encoding/json"
 	"errors"
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/lib/pq"
-	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 func TestWorkflowSaveErrorMapsConstraintViolationToConflict(t *testing.T) {
@@ -80,19 +80,19 @@ func TestWorkflowInputSchemaDefaultMustMatchProperty(t *testing.T) {
 
 func TestResourceQueryRulesAndFilters(t *testing.T) {
 	service := &Service{}
-	valid := []domain.WorkflowStep{
+	valid := []workflowdomain.WorkflowStep{
 		{ID: "select", Type: "resource_query", ResourceType: "post", MaxItems: 20, Filter: json.RawMessage(`{"status":"published","updated_before_days":180}`)},
 		{ID: "model", Type: "model", AgentID: 7},
 	}
 	if err := service.validateSteps(valid, 0); err != nil {
 		t.Fatalf("valid resource query: %v", err)
 	}
-	invalid := [][]domain.WorkflowStep{
+	invalid := [][]workflowdomain.WorkflowStep{
 		{{ID: "model", Type: "model", AgentID: 7}, {ID: "select", Type: "resource_query", ResourceType: "post", MaxItems: 20}},
 		{{ID: "select", Type: "resource_query", ResourceType: "post", MaxItems: 101}},
 		{{ID: "select", Type: "resource_query", ResourceType: "post", MaxItems: 20, Filter: json.RawMessage(`{"unknown":true}`)}},
 		{{ID: "model", Type: "model", AgentID: 7, ContinueOnError: true}},
-		{{ID: "loop", Type: "for_each", CollectionPointer: "/input/items", MaxItems: 2, Steps: []domain.WorkflowStep{{ID: "nested", Type: "resource_query", ResourceType: "post", MaxItems: 2}}}},
+		{{ID: "loop", Type: "for_each", CollectionPointer: "/input/items", MaxItems: 2, Steps: []workflowdomain.WorkflowStep{{ID: "nested", Type: "resource_query", ResourceType: "post", MaxItems: 2}}}},
 	}
 	for index, steps := range invalid {
 		if err := service.validateSteps(steps, 0); err == nil {
@@ -111,10 +111,10 @@ func TestResourceQueryRulesAndFilters(t *testing.T) {
 	if err := validateResourceFilters("media_asset", map[string]string{"missing_alt": "true"}); err != nil {
 		t.Fatalf("missing Alt filter error = %v", err)
 	}
-	if err := service.validateSteps([]domain.WorkflowStep{{ID: "loop", Type: "for_each", CollectionPointer: "/input/items", MaxItems: 2, MaxConcurrency: 3}}, 0); err != nil {
+	if err := service.validateSteps([]workflowdomain.WorkflowStep{{ID: "loop", Type: "for_each", CollectionPointer: "/input/items", MaxItems: 2, MaxConcurrency: 3}}, 0); err != nil {
 		t.Fatalf("valid for_each concurrency: %v", err)
 	}
-	if err := service.validateSteps([]domain.WorkflowStep{{ID: "loop", Type: "for_each", CollectionPointer: "/input/items", MaxItems: 2, MaxConcurrency: 11}}, 0); err == nil {
+	if err := service.validateSteps([]workflowdomain.WorkflowStep{{ID: "loop", Type: "for_each", CollectionPointer: "/input/items", MaxItems: 2, MaxConcurrency: 11}}, 0); err == nil {
 		t.Fatal("for_each concurrency above 10 should be rejected")
 	}
 }
@@ -131,8 +131,8 @@ func TestForEachModelCanIncludeRootInput(t *testing.T) {
 }
 
 func TestWorkflowAgentIDsIncludeNestedModels(t *testing.T) {
-	steps := []domain.WorkflowStep{{ID: "outer", Type: "model", AgentID: 3}, {
-		ID: "loop", Type: "for_each", Steps: []domain.WorkflowStep{
+	steps := []workflowdomain.WorkflowStep{{ID: "outer", Type: "model", AgentID: 3}, {
+		ID: "loop", Type: "for_each", Steps: []workflowdomain.WorkflowStep{
 			{ID: "inner", Type: "model", AgentID: 7},
 			{ID: "duplicate", Type: "model", AgentID: 3},
 		},
@@ -144,7 +144,7 @@ func TestWorkflowAgentIDsIncludeNestedModels(t *testing.T) {
 }
 
 func TestResourceSnapshotKeepsOnlyMinimalAuditMetadata(t *testing.T) {
-	item := &domain.ResourceOption{Label: "Comment #17", Description: "private discussion text", Status: "pending", Metadata: map[string]any{"post_id": float64(4), "url": "/media/private.jpg"}}
+	item := &workflowdomain.ResourceOption{Label: "Comment #17", Description: "private discussion text", Status: "pending", Metadata: map[string]any{"post_id": float64(4), "url": "/media/private.jpg"}}
 	raw := resourceSnapshot(item)
 	if strings.Contains(string(raw), "private discussion") || strings.Contains(string(raw), "/media/private.jpg") || !strings.Contains(string(raw), "post_id") {
 		t.Fatalf("resource snapshot = %s", raw)
@@ -153,17 +153,17 @@ func TestResourceSnapshotKeepsOnlyMinimalAuditMetadata(t *testing.T) {
 
 func TestValidateStepsRejectsToolAndUnboundedLoop(t *testing.T) {
 	service := &Service{}
-	if err := service.validateSteps([]domain.WorkflowStep{{ID: "one", Type: "tool"}}, 0); err == nil {
+	if err := service.validateSteps([]workflowdomain.WorkflowStep{{ID: "one", Type: "tool"}}, 0); err == nil {
 		t.Fatal("Workflow must not execute Tools directly")
 	}
-	if err := service.validateSteps([]domain.WorkflowStep{{ID: "loop", Type: "for_each", CollectionPointer: "/items", MaxItems: 101}}, 0); err == nil {
+	if err := service.validateSteps([]workflowdomain.WorkflowStep{{ID: "loop", Type: "for_each", CollectionPointer: "/items", MaxItems: 101}}, 0); err == nil {
 		t.Fatal("unbounded loop should be rejected")
 	}
 }
 
 func TestValidateWorkflowRequiresFixedAgent(t *testing.T) {
 	service := &Service{}
-	steps := []domain.WorkflowStep{
+	steps := []workflowdomain.WorkflowStep{
 		{ID: "model", Type: "model"},
 		{ID: "approval", Type: "approval_gate"},
 		{ID: "result", Type: "output", OutputPointer: "/steps/model"},

@@ -6,11 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 const maxRunResources = 100
@@ -20,11 +19,11 @@ type ResourceCatalog struct{ db *sql.DB }
 
 func NewResourceCatalog(db *sql.DB) *ResourceCatalog { return &ResourceCatalog{db: db} }
 
-func (s *Service) ListCatalog(ctx context.Context, resourceType string, query domain.ResourceQuery) ([]domain.ResourceOption, int, error) {
+func (s *Service) ListCatalog(ctx context.Context, resourceType string, query workflowdomain.ResourceQuery) ([]workflowdomain.ResourceOption, int, error) {
 	return s.catalog.List(ctx, resourceType, query)
 }
 
-func resourcePaging(query domain.ResourceQuery) (int, int) {
+func resourcePaging(query workflowdomain.ResourceQuery) (int, int) {
 	page, size := query.Page, query.PageSize
 	if page < 1 {
 		page = 1
@@ -38,7 +37,7 @@ func resourcePaging(query domain.ResourceQuery) (int, int) {
 	return page, size
 }
 
-func (c *ResourceCatalog) List(ctx context.Context, resourceType string, query domain.ResourceQuery) ([]domain.ResourceOption, int, error) {
+func (c *ResourceCatalog) List(ctx context.Context, resourceType string, query workflowdomain.ResourceQuery) ([]workflowdomain.ResourceOption, int, error) {
 	if !supportedResourceTypes[resourceType] {
 		return nil, 0, fmt.Errorf("%w: unsupported resource type", ErrInvalid)
 	}
@@ -49,7 +48,7 @@ func (c *ResourceCatalog) List(ctx context.Context, resourceType string, query d
 		if len(query.Keys) > maxRunResources {
 			return nil, 0, fmt.Errorf("%w: resource lookup exceeds 100 keys", ErrInvalid)
 		}
-		items := make([]domain.ResourceOption, 0, len(query.Keys))
+		items := make([]workflowdomain.ResourceOption, 0, len(query.Keys))
 		seen := map[string]bool{}
 		for _, rawKey := range query.Keys {
 			key := strings.TrimSpace(rawKey)
@@ -153,10 +152,10 @@ func (c *ResourceCatalog) List(ctx context.Context, resourceType string, query d
 		return nil, 0, err
 	}
 	defer rows.Close()
-	items := make([]domain.ResourceOption, 0)
+	items := make([]workflowdomain.ResourceOption, 0)
 	total := 0
 	for rows.Next() {
-		var item domain.ResourceOption
+		var item workflowdomain.ResourceOption
 		var metadata []byte
 		if err := rows.Scan(&item.Key, &item.Label, &item.Description, &item.Status, &item.VersionToken, &metadata, &total); err != nil {
 			return nil, 0, err
@@ -169,8 +168,8 @@ func (c *ResourceCatalog) List(ctx context.Context, resourceType string, query d
 	return items, total, rows.Err()
 }
 
-func (c *ResourceCatalog) Resolve(ctx context.Context, resourceType, key string) (*domain.ResourceOption, error) {
-	query := domain.ResourceQuery{Page: 1, PageSize: 100, Filters: map[string]string{}}
+func (c *ResourceCatalog) Resolve(ctx context.Context, resourceType, key string) (*workflowdomain.ResourceOption, error) {
+	query := workflowdomain.ResourceQuery{Page: 1, PageSize: 100, Filters: map[string]string{}}
 	items, _, err := c.List(ctx, resourceType, query)
 	if err != nil {
 		return nil, err
@@ -205,12 +204,12 @@ func (c *ResourceCatalog) Resolve(ctx context.Context, resourceType, key string)
 	if err != nil {
 		return nil, err
 	}
-	item := &domain.ResourceOption{Type: resourceType, Key: key, Label: label, Description: description, Status: status, VersionToken: version, Metadata: map[string]any{}}
+	item := &workflowdomain.ResourceOption{Type: resourceType, Key: key, Label: label, Description: description, Status: status, VersionToken: version, Metadata: map[string]any{}}
 	_ = json.Unmarshal(metadata, &item.Metadata)
 	return item, nil
 }
 
-func resourceSnapshot(item *domain.ResourceOption) json.RawMessage {
+func resourceSnapshot(item *workflowdomain.ResourceOption) json.RawMessage {
 	metadata := make(map[string]any, len(item.Metadata))
 	for key, value := range item.Metadata {
 		if key != "url" {
@@ -221,8 +220,8 @@ func resourceSnapshot(item *domain.ResourceOption) json.RawMessage {
 	return raw
 }
 
-func (s *Service) persistResource(ctx context.Context, runID int64, item *domain.ResourceOption, source, access string) error {
-	return s.execution.UpsertRunResource(ctx, &domain.WorkflowResource{
+func (s *Service) persistResource(ctx context.Context, runID int64, item *workflowdomain.ResourceOption, source, access string) error {
+	return s.execution.UpsertRunResource(ctx, &workflowdomain.WorkflowResource{
 		WorkflowRunID: runID,
 		ResourceType:  item.Type,
 		ResourceKey:   item.Key,
@@ -234,7 +233,7 @@ func (s *Service) persistResource(ctx context.Context, runID int64, item *domain
 	})
 }
 
-func (s *Service) resolveManualResources(ctx context.Context, schemaRaw json.RawMessage, input any) ([]domain.WorkflowResource, error) {
+func (s *Service) resolveManualResources(ctx context.Context, schemaRaw json.RawMessage, input any) ([]workflowdomain.WorkflowResource, error) {
 	fields, err := resourceFields(schemaRaw)
 	if err != nil {
 		return nil, err
@@ -243,7 +242,7 @@ func (s *Service) resolveManualResources(ctx context.Context, schemaRaw json.Raw
 	count := 0
 	seen := map[string]bool{}
 	byType := map[string]int{}
-	resources := make([]domain.WorkflowResource, 0)
+	resources := make([]workflowdomain.WorkflowResource, 0)
 	for name, resourceType := range fields {
 		raw, exists := values[name]
 		if !exists {
@@ -276,7 +275,7 @@ func (s *Service) resolveManualResources(ctx context.Context, schemaRaw json.Raw
 			if err != nil {
 				return nil, fmt.Errorf("%w: input field %q references unavailable %s %q", ErrInvalid, name, resourceType, key)
 			}
-			resources = append(resources, domain.WorkflowResource{
+			resources = append(resources, workflowdomain.WorkflowResource{
 				ResourceType: item.Type,
 				ResourceKey:  item.Key,
 				Source:       "manual",
@@ -290,7 +289,7 @@ func (s *Service) resolveManualResources(ctx context.Context, schemaRaw json.Raw
 	return resources, nil
 }
 
-func (s *Service) ListResources(ctx context.Context, runID int64) ([]domain.WorkflowResource, error) {
+func (s *Service) ListResources(ctx context.Context, runID int64) ([]workflowdomain.WorkflowResource, error) {
 	return s.runReads.ListResources(ctx, runID)
 }
 
@@ -345,7 +344,7 @@ func validateResourceFilters(resourceType string, filters map[string]string) err
 	return nil
 }
 
-func queryOutput(items []domain.ResourceOption) []map[string]any {
+func queryOutput(items []workflowdomain.ResourceOption) []map[string]any {
 	result := make([]map[string]any, 0, len(items))
 	for _, item := range items {
 		ref := map[string]any{"type": item.Type, "key": item.Key, "label": item.Label}

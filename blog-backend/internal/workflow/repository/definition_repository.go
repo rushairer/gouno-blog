@@ -4,9 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 	"time"
-
-	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 type DefinitionRepository struct {
@@ -21,8 +20,8 @@ const definitionColumns = `w.id, w.name, w.description, w.enabled, w.cron_expres
 	w.current_version, v.id, v.input_schema, v.steps, v.scope_policy, w.event_triggers, w.resource_query_preview, w.resource_query_preview_at,
 	w.resource_query_last_count, w.resource_query_last_run_at, w.resource_query_empty_policy, w.created_by_principal_id, w.creation_origin, w.created_at, w.updated_at`
 
-func scanDefinition(scanner interface{ Scan(...any) error }) (*domain.Workflow, error) {
-	var value domain.Workflow
+func scanDefinition(scanner interface{ Scan(...any) error }) (*workflowdomain.Workflow, error) {
+	var value workflowdomain.Workflow
 	var steps, scopePolicy, eventTriggers, queryPreview []byte
 	err := scanner.Scan(&value.ID, &value.Name, &value.Description, &value.Enabled, &value.CronExpression, &value.Timezone, &value.NextRunAt, &value.TemplateKey,
 		&value.CurrentVersion, &value.VersionID, &value.InputSchema, &steps, &scopePolicy, &eventTriggers, &queryPreview, &value.ResourceQueryPreviewAt,
@@ -43,7 +42,7 @@ func scanDefinition(scanner interface{ Scan(...any) error }) (*domain.Workflow, 
 	return &value, err
 }
 
-func (r *DefinitionRepository) List(ctx context.Context) ([]*domain.Workflow, error) {
+func (r *DefinitionRepository) List(ctx context.Context) ([]*workflowdomain.Workflow, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT `+definitionColumns+`
 		FROM ai_workflows w JOIN ai_workflow_versions v
 		ON v.workflow_id=w.id AND v.version=w.current_version
@@ -52,7 +51,7 @@ func (r *DefinitionRepository) List(ctx context.Context) ([]*domain.Workflow, er
 		return nil, err
 	}
 	defer rows.Close()
-	items := make([]*domain.Workflow, 0)
+	items := make([]*workflowdomain.Workflow, 0)
 	for rows.Next() {
 		item, err := scanDefinition(rows)
 		if err != nil {
@@ -63,14 +62,14 @@ func (r *DefinitionRepository) List(ctx context.Context) ([]*domain.Workflow, er
 	return items, rows.Err()
 }
 
-func (r *DefinitionRepository) Get(ctx context.Context, id int64) (*domain.Workflow, error) {
+func (r *DefinitionRepository) Get(ctx context.Context, id int64) (*workflowdomain.Workflow, error) {
 	return scanDefinition(r.db.QueryRowContext(ctx, `SELECT `+definitionColumns+`
 		FROM ai_workflows w JOIN ai_workflow_versions v
 		ON v.workflow_id=w.id AND v.version=w.current_version
 		WHERE w.id=$1 AND w.deleted_at IS NULL`, id))
 }
 
-func (r *DefinitionRepository) Save(ctx context.Context, value *domain.Workflow, nextRun *time.Time) error {
+func (r *DefinitionRepository) Save(ctx context.Context, value *workflowdomain.Workflow, nextRun *time.Time) error {
 	rawSteps, err := json.Marshal(value.Steps)
 	if err != nil {
 		return err
@@ -114,7 +113,7 @@ func (r *DefinitionRepository) Save(ctx context.Context, value *domain.Workflow,
 	return tx.Commit()
 }
 
-func (r *DefinitionRepository) Versions(ctx context.Context, id int64) ([]*domain.Workflow, error) {
+func (r *DefinitionRepository) Versions(ctx context.Context, id int64) ([]*workflowdomain.Workflow, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT w.id, w.name, w.description, w.enabled, w.cron_expression, w.timezone, w.next_run_at, w.template_key,
 		v.version, v.id, v.input_schema, v.steps, v.scope_policy, w.event_triggers, w.resource_query_preview, w.resource_query_preview_at,
 		w.resource_query_last_count, w.resource_query_last_run_at, w.resource_query_empty_policy, v.created_by_principal_id, v.creation_origin, w.created_at, v.created_at
@@ -124,7 +123,7 @@ func (r *DefinitionRepository) Versions(ctx context.Context, id int64) ([]*domai
 		return nil, err
 	}
 	defer rows.Close()
-	items := make([]*domain.Workflow, 0)
+	items := make([]*workflowdomain.Workflow, 0)
 	for rows.Next() {
 		item, err := scanDefinition(rows)
 		if err != nil {

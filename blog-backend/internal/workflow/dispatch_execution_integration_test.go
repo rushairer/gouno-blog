@@ -6,12 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 	"testing"
 	"time"
 
 	agentrepository "github.com/rushairer/blog-backend/internal/agent/repository"
 	"github.com/rushairer/blog-backend/internal/dbtx"
-	"github.com/rushairer/blog-backend/internal/domain"
+
 	"github.com/rushairer/blog-backend/internal/testsupport"
 	workflowrepository "github.com/rushairer/blog-backend/internal/workflow/repository"
 )
@@ -147,7 +148,7 @@ var errExecutionInjected = errors.New("injected execution event failure")
 
 type failingExecutionInteractionStore struct{ ExecutionInteractionStore }
 
-func (s failingExecutionInteractionStore) AppendWorkflowRunEventTx(context.Context, *sql.Tx, *domain.WorkflowRunEvent) error {
+func (s failingExecutionInteractionStore) AppendWorkflowRunEventTx(context.Context, *sql.Tx, *workflowdomain.WorkflowRunEvent) error {
 	return errExecutionInjected
 }
 
@@ -198,7 +199,7 @@ func TestExecutionCheckpointOwnsRunAndStepState(t *testing.T) {
 	if err != nil || run.Status != "running" {
 		t.Fatalf("claim run=%#v err=%v", run, err)
 	}
-	if err := coordinator.RecordStep(ctx, &domain.WorkflowStepRun{
+	if err := coordinator.RecordStep(ctx, &workflowdomain.WorkflowStepRun{
 		WorkflowRunID: runID, StepID: "checkpoint", StepType: "output", Status: "succeeded",
 		Input: []byte(`{}`), Output: []byte(`{"ok":true}`), StartedAt: time.Now(),
 	}); err != nil {

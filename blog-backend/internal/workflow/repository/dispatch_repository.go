@@ -5,9 +5,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 	"time"
-
-	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 type DispatchRepository struct {
@@ -55,7 +54,7 @@ func (r *DispatchRepository) MarkEventFailure(ctx context.Context, eventKey, mes
 	return err
 }
 
-func (r *DispatchRepository) ClaimDueEvents(ctx context.Context, limit int) ([]domain.WorkflowDispatchEvent, error) {
+func (r *DispatchRepository) ClaimDueEvents(ctx context.Context, limit int) ([]workflowdomain.WorkflowDispatchEvent, error) {
 	rows, err := r.db.QueryContext(ctx, `WITH due AS (
         SELECT id FROM ai_workflow_events
         WHERE status='accepted' AND available_at<=NOW()
@@ -69,9 +68,9 @@ func (r *DispatchRepository) ClaimDueEvents(ctx context.Context, limit int) ([]d
 		return nil, err
 	}
 	defer rows.Close()
-	items := make([]domain.WorkflowDispatchEvent, 0)
+	items := make([]workflowdomain.WorkflowDispatchEvent, 0)
 	for rows.Next() {
-		var item domain.WorkflowDispatchEvent
+		var item workflowdomain.WorkflowDispatchEvent
 		if err := rows.Scan(&item.EventKey, &item.EventType, &item.Payload, &item.BatchPrepared); err != nil {
 			return nil, err
 		}
@@ -80,7 +79,7 @@ func (r *DispatchRepository) ClaimDueEvents(ctx context.Context, limit int) ([]d
 	return items, rows.Err()
 }
 
-func (r *DispatchRepository) LockDueSchedulesTx(ctx context.Context, tx *sql.Tx, limit int) ([]domain.WorkflowScheduleClaim, error) {
+func (r *DispatchRepository) LockDueSchedulesTx(ctx context.Context, tx *sql.Tx, limit int) ([]workflowdomain.WorkflowScheduleClaim, error) {
 	rows, err := tx.QueryContext(ctx, `SELECT id,cron_expression,timezone FROM ai_workflows
         WHERE enabled=TRUE AND cron_expression IS NOT NULL AND next_run_at<=NOW() AND deleted_at IS NULL
         ORDER BY next_run_at,id LIMIT $1 FOR UPDATE SKIP LOCKED`, limit)
@@ -88,9 +87,9 @@ func (r *DispatchRepository) LockDueSchedulesTx(ctx context.Context, tx *sql.Tx,
 		return nil, err
 	}
 	defer rows.Close()
-	items := make([]domain.WorkflowScheduleClaim, 0)
+	items := make([]workflowdomain.WorkflowScheduleClaim, 0)
 	for rows.Next() {
-		var item domain.WorkflowScheduleClaim
+		var item workflowdomain.WorkflowScheduleClaim
 		if err := rows.Scan(&item.WorkflowID, &item.CronExpression, &item.Timezone); err != nil {
 			return nil, err
 		}

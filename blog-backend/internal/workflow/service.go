@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 	"strconv"
 	"strings"
 	"sync"
@@ -98,7 +99,7 @@ func (s *Service) Preflight(ctx context.Context, id int64, input json.RawMessage
 	return result, nil
 }
 
-func (s *Service) addPlannerPreflightChecks(ctx context.Context, value *domain.Workflow, add func(string, string, string)) {
+func (s *Service) addPlannerPreflightChecks(ctx context.Context, value *workflowdomain.Workflow, add func(string, string, string)) {
 	if value.TemplateKey == nil || strings.TrimSpace(*value.TemplateKey) == "" {
 		add("intent_contract", "skipped", "legacy Workflow has no versioned intent contract")
 		add("template_contract", "skipped", "legacy Workflow has no deterministic template binding")
@@ -214,11 +215,11 @@ func NewService(definitions *workflowrepository.DefinitionRepository, runReads R
 	return &Service{definitions: definitions, runReads: runReads, metrics: metrics, runner: runner, agents: agents, tools: registry, catalog: catalog, workerSem: make(chan struct{}, 4), lifecycle: lifecycle, mediaRuns: mediaRuns, admission: admission, dispatch: dispatch, execution: execution, approvalTargets: approvalTargets}
 }
 
-func (s *Service) List(ctx context.Context) ([]*domain.Workflow, error) {
+func (s *Service) List(ctx context.Context) ([]*workflowdomain.Workflow, error) {
 	return s.definitions.List(ctx)
 }
 
-func (s *Service) Get(ctx context.Context, id int64) (*domain.Workflow, error) {
+func (s *Service) Get(ctx context.Context, id int64) (*workflowdomain.Workflow, error) {
 	item, err := s.definitions.Get(ctx, id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -226,7 +227,7 @@ func (s *Service) Get(ctx context.Context, id int64) (*domain.Workflow, error) {
 	return item, err
 }
 
-func (s *Service) Save(ctx context.Context, value *domain.Workflow) error {
+func (s *Service) Save(ctx context.Context, value *workflowdomain.Workflow) error {
 	value.Name, value.Description = strings.TrimSpace(value.Name), strings.TrimSpace(value.Description)
 	if value.Timezone == "" {
 		value.Timezone = "Asia/Shanghai"
@@ -287,7 +288,7 @@ func workflowSaveError(err error) error {
 	return err
 }
 
-func validateEventTriggers(triggers []domain.WorkflowEventTrigger) error {
+func validateEventTriggers(triggers []workflowdomain.WorkflowEventTrigger) error {
 	if len(triggers) > 20 {
 		return fmt.Errorf("%w: at most 20 event triggers are allowed", ErrInvalid)
 	}
@@ -407,7 +408,7 @@ func eventFilterMatches(filter map[string]interface{}, payload any) bool {
 
 // ValidateDraft applies the exact validation used by Save without changing any
 // persistent state. AI workflow planning is intentionally suggestion-only.
-func (s *Service) ValidateDraft(value *domain.Workflow) error {
+func (s *Service) ValidateDraft(value *workflowdomain.Workflow) error {
 	value.Name = strings.TrimSpace(value.Name)
 	if value.Name == "" || len(value.InputSchema) == 0 || !json.Valid(value.InputSchema) {
 		return fmt.Errorf("%w: name and input schema are required", ErrInvalid)
@@ -427,7 +428,7 @@ func (s *Service) ValidateDraft(value *domain.Workflow) error {
 	return s.validateSteps(value.Steps, 0)
 }
 
-func (s *Service) validateSteps(steps []domain.WorkflowStep, depth int) error {
+func (s *Service) validateSteps(steps []workflowdomain.WorkflowStep, depth int) error {
 	if depth > 3 || len(steps) > 50 {
 		return fmt.Errorf("%w: workflow nesting or step limit exceeded", ErrInvalid)
 	}
@@ -483,7 +484,7 @@ func (s *Service) validateSteps(steps []domain.WorkflowStep, depth int) error {
 	return nil
 }
 
-func hasResourceQuery(steps []domain.WorkflowStep) bool {
+func hasResourceQuery(steps []workflowdomain.WorkflowStep) bool {
 	for _, step := range steps {
 		if step.Type == "resource_query" || hasResourceQuery(step.Steps) {
 			return true
@@ -492,7 +493,7 @@ func hasResourceQuery(steps []domain.WorkflowStep) bool {
 	return false
 }
 
-func (s *Service) previewResourceQueries(ctx context.Context, steps []domain.WorkflowStep) (json.RawMessage, *time.Time, error) {
+func (s *Service) previewResourceQueries(ctx context.Context, steps []workflowdomain.WorkflowStep) (json.RawMessage, *time.Time, error) {
 	type preview struct {
 		StepID         string            `json:"step_id"`
 		ResourceType   string            `json:"resource_type"`
@@ -509,7 +510,7 @@ func (s *Service) previewResourceQueries(ctx context.Context, steps []domain.Wor
 		if err != nil {
 			return nil, nil, err
 		}
-		_, total, err := s.catalog.List(ctx, step.ResourceType, domain.ResourceQuery{Page: 1, PageSize: 1, Filters: filters})
+		_, total, err := s.catalog.List(ctx, step.ResourceType, workflowdomain.ResourceQuery{Page: 1, PageSize: 1, Filters: filters})
 		if err != nil {
 			return nil, nil, err
 		}
@@ -526,7 +527,7 @@ func (s *Service) previewResourceQueries(ctx context.Context, steps []domain.Wor
 	return raw, &now, nil
 }
 
-func (s *Service) validateDiscoveryTools(ctx context.Context, value *domain.Workflow) error {
+func (s *Service) validateDiscoveryTools(ctx context.Context, value *workflowdomain.Workflow) error {
 	if len(value.ScopePolicy.DiscoveryTools) == 0 {
 		return nil
 	}
@@ -554,11 +555,11 @@ func (s *Service) validateDiscoveryTools(ctx context.Context, value *domain.Work
 	return nil
 }
 
-func workflowAgentIDs(steps []domain.WorkflowStep) []int64 {
+func workflowAgentIDs(steps []workflowdomain.WorkflowStep) []int64 {
 	seen := map[int64]bool{}
 	result := make([]int64, 0)
-	var walk func([]domain.WorkflowStep)
-	walk = func(items []domain.WorkflowStep) {
+	var walk func([]workflowdomain.WorkflowStep)
+	walk = func(items []workflowdomain.WorkflowStep) {
 		for _, step := range items {
 			if step.Type == "model" && step.AgentID > 0 && !seen[step.AgentID] {
 				seen[step.AgentID] = true
@@ -571,7 +572,7 @@ func workflowAgentIDs(steps []domain.WorkflowStep) []int64 {
 	return result
 }
 
-func (s *Service) Versions(ctx context.Context, id int64) ([]*domain.Workflow, error) {
+func (s *Service) Versions(ctx context.Context, id int64) ([]*workflowdomain.Workflow, error) {
 	return s.definitions.Versions(ctx, id)
 }
 
@@ -583,7 +584,7 @@ func (s *Service) Rollback(ctx context.Context, id int64, version int) error {
 	if err != nil {
 		return err
 	}
-	var steps []domain.WorkflowStep
+	var steps []workflowdomain.WorkflowStep
 	if err := json.Unmarshal(rawSteps, &steps); err != nil {
 		return fmt.Errorf("%w: invalid historical workflow steps", ErrInvalid)
 	}
@@ -634,7 +635,7 @@ func (s *Service) Delete(ctx context.Context, id int64) error {
 	return nil
 }
 
-func (s *Service) Queue(ctx context.Context, id int64, dryRun bool, input json.RawMessage, triggeredByPrincipalID *int64) (*domain.WorkflowRun, error) {
+func (s *Service) Queue(ctx context.Context, id int64, dryRun bool, input json.RawMessage, triggeredByPrincipalID *int64) (*workflowdomain.WorkflowRun, error) {
 	return s.queue(ctx, id, dryRun, input, triggeredByPrincipalID, "manual", "", true, false)
 }
 
@@ -642,7 +643,7 @@ func (s *Service) Queue(ctx context.Context, id int64, dryRun bool, input json.R
 // step outputs and resource snapshots are copied so a retry cannot drift with
 // a changing dynamic collection. RunAdmissionCoordinator owns the snapshot
 // transaction; Service keeps only input and Workflow-structure policy.
-func (s *Service) RetryFailed(ctx context.Context, runID int64, childStepID string, iterations []int, triggeredByPrincipalID *int64) (*domain.WorkflowRun, error) {
+func (s *Service) RetryFailed(ctx context.Context, runID int64, childStepID string, iterations []int, triggeredByPrincipalID *int64) (*workflowdomain.WorkflowRun, error) {
 	if strings.TrimSpace(childStepID) == "" || len(iterations) == 0 || len(iterations) > maxRunResources {
 		return nil, fmt.Errorf("%w: retry requires one child step and 1-100 iterations", ErrInvalid)
 	}
@@ -676,7 +677,7 @@ func (s *Service) RetryFailed(ctx context.Context, runID int64, childStepID stri
 	return s.admission.Retry(ctx, runID, childStepID, parentStepID, unique, triggeredByPrincipalID)
 }
 
-func findForEachParent(steps []domain.WorkflowStep, childID string) string {
+func findForEachParent(steps []workflowdomain.WorkflowStep, childID string) string {
 	for _, step := range steps {
 		if step.Type != "for_each" {
 			continue
@@ -691,7 +692,7 @@ func findForEachParent(steps []domain.WorkflowStep, childID string) string {
 	return ""
 }
 
-func containsStepID(steps []domain.WorkflowStep, id string) bool {
+func containsStepID(steps []workflowdomain.WorkflowStep, id string) bool {
 	for _, step := range steps {
 		if step.ID == id {
 			return true
@@ -700,7 +701,7 @@ func containsStepID(steps []domain.WorkflowStep, id string) bool {
 	return false
 }
 
-func retryIterationSelected(run *domain.WorkflowRun, stepID string, index int) bool {
+func retryIterationSelected(run *workflowdomain.WorkflowRun, stepID string, index int) bool {
 	if run == nil || run.RetryStepID == nil || *run.RetryStepID != stepID || len(run.RetryIterations) == 0 {
 		return true
 	}
@@ -712,7 +713,7 @@ func retryIterationSelected(run *domain.WorkflowRun, stepID string, index int) b
 	return false
 }
 
-func (s *Service) queue(ctx context.Context, id int64, dryRun bool, input json.RawMessage, triggeredByPrincipalID *int64, triggerKind, sourceRef string, retryFailed, scheduled bool) (*domain.WorkflowRun, error) {
+func (s *Service) queue(ctx context.Context, id int64, dryRun bool, input json.RawMessage, triggeredByPrincipalID *int64, triggerKind, sourceRef string, retryFailed, scheduled bool) (*workflowdomain.WorkflowRun, error) {
 	value, err := s.Get(ctx, id)
 	if err != nil {
 		return nil, err
@@ -740,7 +741,7 @@ func (s *Service) queue(ctx context.Context, id int64, dryRun bool, input json.R
 	if err != nil {
 		return nil, err
 	}
-	run := &domain.WorkflowRun{WorkflowID: id, WorkflowVersionID: value.VersionID,
+	run := &workflowdomain.WorkflowRun{WorkflowID: id, WorkflowVersionID: value.VersionID,
 		DryRun: dryRun, Status: "queued", Input: input, TriggeredByPrincipalID: triggeredByPrincipalID, TriggerKind: triggerKind, SourceRef: sourceRef}
 	if scheduled && !dryRun && value.CronExpression != nil {
 		key := time.Now().In(workflowLocation(value.Timezone)).Format("2006-01-02")
@@ -752,7 +753,7 @@ func (s *Service) queue(ctx context.Context, id int64, dryRun bool, input json.R
 // validateRunnableSteps rejects malformed or paused Agent bindings before a
 // workflow run is persisted. This keeps disabled starter templates harmless
 // until their linked Agent has been deliberately enabled.
-func (s *Service) validateRunnableSteps(ctx context.Context, steps []domain.WorkflowStep, document map[string]any) error {
+func (s *Service) validateRunnableSteps(ctx context.Context, steps []workflowdomain.WorkflowStep, document map[string]any) error {
 	for _, step := range steps {
 		switch step.Type {
 		case "model":
@@ -786,7 +787,7 @@ func scheduledNext(expression, timezone string, from time.Time) (time.Time, erro
 	}
 	return schedule.Next(from.In(workflowLocation(timezone))), nil
 }
-func workflowNext(value *domain.Workflow) *time.Time {
+func workflowNext(value *workflowdomain.Workflow) *time.Time {
 	if !value.Enabled || value.CronExpression == nil {
 		return nil
 	}
@@ -932,7 +933,7 @@ func (s *Service) execute(ctx context.Context, runID int64) error {
 	if err != nil {
 		return err
 	}
-	var steps []domain.WorkflowStep
+	var steps []workflowdomain.WorkflowStep
 	if err := json.Unmarshal(stepsRaw, &steps); err != nil {
 		return err
 	}
@@ -964,7 +965,7 @@ func (s *Service) execute(ctx context.Context, runID int64) error {
 	return s.execution.CompleteRun(ctx, runID, status, rawOutput, inputTokens, outputTokens)
 }
 
-func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, steps []domain.WorkflowStep, document map[string]any, item any, iteration *int) (any, bool, int64, int64, error) {
+func (s *Service) executeSteps(ctx context.Context, run *workflowdomain.WorkflowRun, steps []workflowdomain.WorkflowStep, document map[string]any, item any, iteration *int) (any, bool, int64, int64, error) {
 	iterationValue := -1
 	if iteration != nil {
 		iterationValue = *iteration
@@ -1028,7 +1029,7 @@ func (s *Service) executeSteps(ctx context.Context, run *domain.WorkflowRun, ste
 				err = filterErr
 				break
 			}
-			items, _, queryErr := s.catalog.List(ctx, step.ResourceType, domain.ResourceQuery{Page: 1, PageSize: step.MaxItems, Filters: filters})
+			items, _, queryErr := s.catalog.List(ctx, step.ResourceType, workflowdomain.ResourceQuery{Page: 1, PageSize: step.MaxItems, Filters: filters})
 			if queryErr != nil {
 				err = queryErr
 				break
@@ -1387,7 +1388,7 @@ func resolvePointer(document any, pointer string) (any, error) {
 	return current, nil
 }
 
-func (s *Service) recordStep(ctx context.Context, runID int64, step domain.WorkflowStep, iteration *int, input, output any, started time.Time, stepErr error) {
+func (s *Service) recordStep(ctx context.Context, runID int64, step workflowdomain.WorkflowStep, iteration *int, input, output any, started time.Time, stepErr error) {
 	rawInput, _ := json.Marshal(input)
 	rawOutput, _ := json.Marshal(output)
 	status := "succeeded"
@@ -1397,7 +1398,7 @@ func (s *Service) recordStep(ctx context.Context, runID int64, step domain.Workf
 		message := safeError(stepErr)
 		errorMessage = &message
 	}
-	checkpoint := &domain.WorkflowStepRun{
+	checkpoint := &workflowdomain.WorkflowStepRun{
 		WorkflowRunID: runID,
 		StepID:        step.ID,
 		StepType:      step.Type,
@@ -1422,11 +1423,11 @@ func safeError(err error) string {
 	return message
 }
 
-func (s *Service) ListRuns(ctx context.Context, workflowID int64) ([]*domain.WorkflowRun, error) {
+func (s *Service) ListRuns(ctx context.Context, workflowID int64) ([]*workflowdomain.WorkflowRun, error) {
 	return s.runReads.ListRuns(ctx, workflowID)
 }
 
-func (s *Service) RunSteps(ctx context.Context, runID int64) ([]*domain.WorkflowStepRun, error) {
+func (s *Service) RunSteps(ctx context.Context, runID int64) ([]*workflowdomain.WorkflowStepRun, error) {
 	items, exists, err := s.runReads.RunSteps(ctx, runID)
 	if err != nil {
 		return nil, err
