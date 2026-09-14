@@ -6,7 +6,6 @@ import (
 	"errors"
 
 	"github.com/rushairer/blog-backend/internal/domain"
-	postversionrepository "github.com/rushairer/blog-backend/internal/postversion/repository"
 )
 
 var (
@@ -20,26 +19,35 @@ type Service interface {
 	RestoreVersion(context.Context, int64, int64) (*domain.Post, error)
 }
 
-type postVersionService struct {
-	repo postversionrepository.Repository
+type VersionReader interface {
+	ListVersions(context.Context, int64) ([]*domain.PostVersion, error)
 }
 
-func New(repo postversionrepository.Repository) Service {
-	return &postVersionService{repo: repo}
+type Restorer interface {
+	RestoreVersion(context.Context, int64, int64) (*domain.Post, error)
+}
+
+type postVersionService struct {
+	versions VersionReader
+	restorer Restorer
+}
+
+func New(versions VersionReader, restorer Restorer) Service {
+	return &postVersionService{versions: versions, restorer: restorer}
 }
 
 func (s *postVersionService) ListVersions(ctx context.Context, postID int64) ([]*domain.PostVersion, error) {
 	if postID <= 0 {
 		return nil, ErrInvalidPostID
 	}
-	return s.repo.ListVersions(ctx, postID)
+	return s.versions.ListVersions(ctx, postID)
 }
 
 func (s *postVersionService) RestoreVersion(ctx context.Context, postID, versionID int64) (*domain.Post, error) {
 	if postID <= 0 || versionID <= 0 {
 		return nil, ErrInvalidVersion
 	}
-	post, err := s.repo.RestoreVersion(ctx, postID, versionID)
+	post, err := s.restorer.RestoreVersion(ctx, postID, versionID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrPostNotFound
 	}

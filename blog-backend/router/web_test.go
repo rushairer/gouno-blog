@@ -1,6 +1,7 @@
 package router
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	analyticsservice "github.com/rushairer/blog-backend/internal/analytics/service"
 	communityrepository "github.com/rushairer/blog-backend/internal/community/repository"
 	communityservice "github.com/rushairer/blog-backend/internal/community/service"
+	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/media"
 	mediarepository "github.com/rushairer/blog-backend/internal/media/repository"
 	mediaservice "github.com/rushairer/blog-backend/internal/media/service"
@@ -30,6 +32,12 @@ import (
 	"github.com/rushairer/blog-backend/middleware"
 	auth "github.com/rushairer/gouno/auth"
 )
+
+type routerPostVersionRestorer struct{}
+
+func (routerPostVersionRestorer) RestoreVersion(context.Context, int64, int64) (*domain.Post, error) {
+	return nil, nil
+}
 
 func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 	gin.SetMode(gin.TestMode)
@@ -51,7 +59,7 @@ func TestRegisterWebRouterDoesNotConflictOnPostWildcards(t *testing.T) {
 		CommunitySvc:      communityservice.NewCommunityService(communityrepository.NewCommunityRepository(nil), postRepo),
 		AnalyticsSvc:      analyticsservice.New(analyticsrepository.New(nil)),
 		RecommendationSvc: recommendationservice.New(recommendationrepository.New(nil)),
-		PostVersionSvc:    postversionservice.New(postversionrepository.New(nil)),
+		PostVersionSvc:    postversionservice.New(postversionrepository.New(nil), routerPostVersionRestorer{}),
 		Verifier:          auth.NewVerifier("http://127.0.0.1:1/jwks"), AccessService: access.NewService(nil, access.Bootstrap{}),
 	})
 
