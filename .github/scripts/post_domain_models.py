@@ -51,7 +51,10 @@ def add_post_import(text: str) -> str:
     post_spec = f'\tpostdomain "{post_import_path}"\n'
     if "import (\n" in text:
         return text.replace("import (\n", "import (\n" + post_spec, 1)
-    any_single = re.search(r'(?m)^import[ \t]+(?P<spec>(?:(?:[A-Za-z_][A-Za-z0-9_]*)[ \t]+)?"[^"]+")[ \t]*$', text)
+    any_single = re.search(
+        r'(?m)^import[ \t]+(?P<spec>(?:(?:[A-Za-z_][A-Za-z0-9_]*)[ \t]+)?"[^"]+")[ \t]*$',
+        text,
+    )
     if any_single:
         spec = any_single.group("spec")
         block = "import (\n\t" + spec + "\n" + post_spec + ")"
@@ -103,7 +106,10 @@ assert migrated, "expected root Post model consumers"
 print("Migrated Post model consumers:")
 print("\n".join(migrated))
 
-(post_domain / "ownership_test.go").write_text(r'''package domain_test
+
+def render_ownership_test(test_name: str, owner_label: str, leaf_import: str, symbols: list[str]) -> str:
+    symbol_entries = "\n".join(f'\t"{symbol}": {{}},' for symbol in symbols)
+    template = r'''package domain_test
 
 import (
 	"go/ast"
@@ -117,17 +123,11 @@ import (
 
 const rootDomainImport = "github.com/rushairer/blog-backend/internal/domain"
 
-var retiredPostSymbols = map[string]struct{}{
-	"PostStatus":          {},
-	"PostStatusDraft":     {},
-	"PostStatusScheduled": {},
-	"PostStatusPublished": {},
-	"Post":                {},
-	"PostSearchResult":    {},
-	"AdminPostFilter":     {},
+var retiredSymbols = map[string]struct{}{
+SYMBOL_ENTRIES
 }
 
-func TestRootPostModelsStayRetired(t *testing.T) {
+func TEST_NAME(t *testing.T) {
 	fset := token.NewFileSet()
 	rootDomain := filepath.Clean("../../domain")
 	err := filepath.WalkDir(rootDomain, func(path string, entry fs.DirEntry, walkErr error) error {
@@ -149,15 +149,16 @@ func TestRootPostModelsStayRetired(t *testing.T) {
 			for _, spec := range gen.Specs {
 				switch typed := spec.(type) {
 				case *ast.TypeSpec:
-					if _, retired := retiredPostSymbols[typed.Name.Name]; retired {
-						t.Errorf("%s redeclares Post-owned symbol %s in root internal/domain", path, typed.Name.Name)
+					if _, retired := retiredSymbols[typed.Name.Name]; retired {
+						t.Errorf("%s redeclares OWNER_LABEL-owned symbol %s in root internal/domain", path, typed.Name.Name)
 					}
 				case *ast.ValueSpec:
 					for _, name := range typed.Names {
-						if _, retired := retiredPostSymbols[name.Name]; retired {
-							t.Errorf("%s redeclares Post-owned symbol %s in root internal/domain", path, name.Name)
+						if _, retired := retiredSymbols[name.Name]; retired {
+							t.Errorf("%s redeclares OWNER_LABEL-owned symbol %s in root internal/domain", path, name.Name)
 						}
 					}
+				}
 			}
 		}
 		return nil
@@ -188,7 +189,7 @@ func TestRootPostModelsStayRetired(t *testing.T) {
 			if spec.Name != nil {
 				alias = spec.Name.Name
 				if alias == "." {
-					t.Errorf("%s dot-imports root internal/domain; Post ownership cannot be proven", path)
+					t.Errorf("%s dot-imports root internal/domain; OWNER_LABEL ownership cannot be proven", path)
 					continue
 				}
 			}
@@ -202,7 +203,7 @@ func TestRootPostModelsStayRetired(t *testing.T) {
 			if !ok {
 				return true
 			}
-			if _, retired := retiredPostSymbols[selector.Sel.Name]; !retired {
+			if _, retired := retiredSymbols[selector.Sel.Name]; !retired {
 				return true
 			}
 			ident, ok := selector.X.(*ast.Ident)
@@ -210,7 +211,7 @@ func TestRootPostModelsStayRetired(t *testing.T) {
 				return true
 			}
 			if _, rootAlias := rootAliases[ident.Name]; rootAlias {
-				t.Errorf("%s consumes Post-owned symbol %s through root internal/domain; import internal/post/domain instead", path, selector.Sel.Name)
+				t.Errorf("%s consumes OWNER_LABEL-owned symbol %s through root internal/domain; import LEAF_IMPORT instead", path, selector.Sel.Name)
 			}
 			return true
 		})
@@ -220,7 +221,54 @@ func TestRootPostModelsStayRetired(t *testing.T) {
 		t.Fatal(err)
 	}
 }
-''')
+'''
+    return (
+        template.replace("TEST_NAME", test_name)
+        .replace("OWNER_LABEL", owner_label)
+        .replace("LEAF_IMPORT", leaf_import)
+        .replace("SYMBOL_ENTRIES", symbol_entries)
+    )
+
+
+ownership_specs = [
+    (
+        post_domain / "ownership_test.go",
+        "TestRootPostModelsStayRetired",
+        "Post",
+        "internal/post/domain",
+        retired_symbols,
+    ),
+    (
+        backend / "internal" / "analytics" / "domain" / "ownership_test.go",
+        "TestRootAnalyticsReadModelsStayRetired",
+        "Analytics",
+        "internal/analytics/domain",
+        ["AnalyticsSummary", "SystemAlert", "DailyEventCount"],
+    ),
+    (
+        backend / "internal" / "media" / "domain" / "ownership_test.go",
+        "TestRootMediaModelsStayRetired",
+        "Media",
+        "internal/media/domain",
+        ["MediaAsset", "MediaFilter", "MediaReference"],
+    ),
+    (
+        backend / "internal" / "taxonomy" / "domain" / "ownership_test.go",
+        "TestRootTaxonomyModelsStayRetired",
+        "Taxonomy",
+        "internal/taxonomy/domain",
+        ["Category", "TagSummary"],
+    ),
+    (
+        backend / "internal" / "postversion" / "domain" / "ownership_test.go",
+        "TestRootPostVersionModelStaysRetired",
+        "PostVersion",
+        "internal/postversion/domain",
+        ["PostVersion"],
+    ),
+]
+for path, test_name, owner_label, leaf_import, symbols in ownership_specs:
+    path.write_text(render_ownership_test(test_name, owner_label, leaf_import, symbols))
 
 arch_path = backend / "ARCHITECTURE.md"
 arch = arch_path.read_text()
