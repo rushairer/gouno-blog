@@ -1,6 +1,6 @@
 # Loading Ownership Audit — 2026-09-14
 
-Status: accepted migration input; runtime migration waits for a published `@gouno/ui` release that contains Gouno `PageSkeleton` (PD-076).
+Status: completed against exact registry release `@gouno/ui@0.4.0`; approved initial-loading candidates now use Gouno `PageSkeleton` while product-owned loading states remain local.
 
 ## Purpose
 
@@ -14,29 +14,22 @@ The goal is not to maximize `PageSkeleton` usage. The goal is to give each loadi
 
 ## Infrastructure loading
 
-`blog-frontend/src/App.tsx` is already correct and should not be changed merely because Gouno UI now has `PageSkeleton`.
+`blog-frontend/src/App.tsx` is already correct and should not be changed merely because Gouno UI has `PageSkeleton`.
 
 Session restore, auth guards and React lazy-chunk boundaries use lightweight Spinner-based fallbacks. They do not pretend that unresolved JavaScript or authentication state is already a known business page. Keep this behavior.
 
-## Approved PageSkeleton migration candidates
+## Adopted PageSkeleton boundaries
 
-These routes have initial data regions whose anatomy now matches an admitted `PageSkeleton` layout. The stable page chrome around them must remain rendered.
+These routes have initial data regions whose anatomy matches an admitted `PageSkeleton` layout. The stable page chrome around them remains rendered.
 
 ### Dashboard — `layout="dashboard"`
 
 File: `blog-frontend/src/pages/admin/Dashboard.tsx`
 
-Current `DashboardLoading` repeats the admitted dashboard grammar: statistic cards followed by larger read-dominant dashboard regions. `PageHeader` is already stable outside the loading region.
-
-Migration after the package release:
+`DashboardLoading` now delegates the admitted dashboard grammar to `PageSkeleton`; `PageHeader` remains stable outside the loading region.
 
 ```tsx
-<PageSkeleton
-  layout="dashboard"
-  aria-label="数据概览加载中"
-  statistics={4}
-  sections={3}
-/>
+<PageSkeleton layout="dashboard" aria-label="数据概览加载中" />
 ```
 
 Do not move analytics fetching, retry, alerts or mutation state into Gouno UI.
@@ -45,7 +38,7 @@ Do not move analytics fetching, retry, alerts or mutation state into Gouno UI.
 
 File: `blog-frontend/src/pages/admin/Posts.tsx`
 
-The route has stable `PageHeader`, filters and known table schema before rows resolve. The initial collection loading region can migrate to `PageSkeleton` while preserving real column headings through presentation-only column descriptors.
+The route has stable `PageHeader`, filters and known collection anatomy before rows resolve. Its qualifying unresolved collection state now delegates to `PageSkeleton`.
 
 Do not move search/filter query state, pagination state, row selection, batch actions, permissions, WorkflowLauncher behavior or delete lifecycle into `PageSkeleton`.
 
@@ -55,13 +48,13 @@ Filtering or pagination may legitimately enter a transition state because the pr
 
 File: `blog-frontend/src/pages/admin/Pages.tsx`
 
-The route has the same ownership boundary as Posts: route header and filters are stable; row data is unresolved; table headings are already known. Replace only the initial/transition collection placeholder, not page selection, delete semantics, pagination, AI workflow orchestration or responsive business content.
+The route has the same ownership boundary as Posts: route header and filters are stable while row data is unresolved. The qualifying collection loading state now uses `PageSkeleton`; page selection, delete semantics, pagination, AI workflow orchestration and responsive business content remain product-owned.
 
 ### Users — `layout="collection"`
 
 File: `blog-frontend/src/pages/admin/Users.tsx`
 
-The member directory has stable route structure and known desktop collection headings. Its initial unresolved member collection is a valid `PageSkeleton` collection candidate.
+The member directory has stable route structure and known collection anatomy. Its initial unresolved member collection now uses `PageSkeleton`.
 
 A same-query manual refresh is different from initial loading: if member data is already usable, keep the current directory visible, mark the affected region busy when appropriate, and let the refresh control expose its own loading state. Do not replace resolved members with an initial-loading skeleton during that refresh.
 
@@ -93,9 +86,9 @@ The following surfaces must not be migrated merely because they contain `Skeleto
 
 The production application consumes exact immutable npm releases. Do not import unreleased `gouno-ui/main`, vendor PageSkeleton source, or create a local compatibility copy.
 
-The code migration is allowed only after the registry release containing PD-076 is published and the exact `@gouno/ui` version plus lockfile integrity are updated through the normal dependency upgrade path.
+The migration gate is satisfied by exact `@gouno/ui@0.4.0` plus lockfile integrity through the normal dependency upgrade path. Future PageSkeleton changes must continue to arrive through published registry releases and the same verification path.
 
-## Validation when migration starts
+## Validation baseline
 
 For each migrated route:
 
