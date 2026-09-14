@@ -5,8 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-
-	"github.com/rushairer/blog-backend/internal/domain"
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 )
 
 type RunAdmissionRepository struct {
@@ -20,7 +19,7 @@ func NewRunAdmissionRepository(db *sql.DB) *RunAdmissionRepository {
 	return &RunAdmissionRepository{db: db}
 }
 
-func (r *RunAdmissionRepository) CreateRunTx(ctx context.Context, tx *sql.Tx, run *domain.WorkflowRun) (bool, error) {
+func (r *RunAdmissionRepository) CreateRunTx(ctx context.Context, tx *sql.Tx, run *workflowdomain.WorkflowRun) (bool, error) {
 	query := `INSERT INTO ai_workflow_runs
 		(workflow_id,workflow_version_id,dry_run,input,triggered_by_principal_id,trigger_kind,source_ref,schedule_key)
 		VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id,created_at`
@@ -42,14 +41,14 @@ func (r *RunAdmissionRepository) CreateRunTx(ctx context.Context, tx *sql.Tx, ru
 	return true, nil
 }
 
-func (r *RunAdmissionRepository) LockScheduledRunTx(ctx context.Context, tx *sql.Tx, workflowID int64, scheduleKey string) (*domain.WorkflowRun, error) {
-	var run domain.WorkflowRun
+func (r *RunAdmissionRepository) LockScheduledRunTx(ctx context.Context, tx *sql.Tx, workflowID int64, scheduleKey string) (*workflowdomain.WorkflowRun, error) {
+	var run workflowdomain.WorkflowRun
 	err := tx.QueryRowContext(ctx, `SELECT id,status,created_at FROM ai_workflow_runs
 		WHERE workflow_id=$1 AND schedule_key=$2 FOR UPDATE`, workflowID, scheduleKey).Scan(&run.ID, &run.Status, &run.CreatedAt)
 	return &run, err
 }
 
-func (r *RunAdmissionRepository) RequeueFailedScheduledRunTx(ctx context.Context, tx *sql.Tx, run *domain.WorkflowRun) (bool, error) {
+func (r *RunAdmissionRepository) RequeueFailedScheduledRunTx(ctx context.Context, tx *sql.Tx, run *workflowdomain.WorkflowRun) (bool, error) {
 	err := tx.QueryRowContext(ctx, `UPDATE ai_workflow_runs SET workflow_version_id=$2,
 		dry_run=FALSE,status='queued',input=$3,output=NULL,error_code=NULL,error_message=NULL,
 		input_tokens=0,output_tokens=0,triggered_by_principal_id=$4,trigger_kind=$5,source_ref=$6,started_at=NULL,finished_at=NULL
@@ -61,7 +60,7 @@ func (r *RunAdmissionRepository) RequeueFailedScheduledRunTx(ctx context.Context
 	return err == nil, err
 }
 
-func upsertAdmissionResourceTx(ctx context.Context, tx *sql.Tx, runID int64, item domain.WorkflowResource) error {
+func upsertAdmissionResourceTx(ctx context.Context, tx *sql.Tx, runID int64, item workflowdomain.WorkflowResource) error {
 	_, err := tx.ExecContext(ctx, `INSERT INTO ai_workflow_run_resources
 		(workflow_run_id,resource_type,resource_key,source,access_level,label,version_token,snapshot)
 		VALUES($1,$2,$3,$4,$5,$6,$7,$8)
@@ -72,7 +71,7 @@ func upsertAdmissionResourceTx(ctx context.Context, tx *sql.Tx, runID int64, ite
 	return err
 }
 
-func (r *RunAdmissionRepository) InsertAdmissionResourcesTx(ctx context.Context, tx *sql.Tx, runID int64, resources []domain.WorkflowResource) error {
+func (r *RunAdmissionRepository) InsertAdmissionResourcesTx(ctx context.Context, tx *sql.Tx, runID int64, resources []workflowdomain.WorkflowResource) error {
 	for _, item := range resources {
 		if err := upsertAdmissionResourceTx(ctx, tx, runID, item); err != nil {
 			return err
@@ -81,25 +80,25 @@ func (r *RunAdmissionRepository) InsertAdmissionResourcesTx(ctx context.Context,
 	return nil
 }
 
-func (r *RunAdmissionRepository) ReplaceNonQueryResourcesTx(ctx context.Context, tx *sql.Tx, runID int64, resources []domain.WorkflowResource) error {
+func (r *RunAdmissionRepository) ReplaceNonQueryResourcesTx(ctx context.Context, tx *sql.Tx, runID int64, resources []workflowdomain.WorkflowResource) error {
 	if _, err := tx.ExecContext(ctx, `DELETE FROM ai_workflow_run_resources WHERE workflow_run_id=$1 AND source <> 'query'`, runID); err != nil {
 		return err
 	}
 	return r.InsertAdmissionResourcesTx(ctx, tx, runID, resources)
 }
 
-func scanRetrySource(scanner interface{ Scan(...any) error }) (*domain.WorkflowRun, error) {
-	var run domain.WorkflowRun
+func scanRetrySource(scanner interface{ Scan(...any) error }) (*workflowdomain.WorkflowRun, error) {
+	var run workflowdomain.WorkflowRun
 	err := scanner.Scan(&run.WorkflowID, &run.WorkflowVersionID, &run.DryRun, &run.Input, &run.Status)
 	return &run, err
 }
 
-func (r *RunAdmissionRepository) RetrySource(ctx context.Context, runID int64) (*domain.WorkflowRun, error) {
+func (r *RunAdmissionRepository) RetrySource(ctx context.Context, runID int64) (*workflowdomain.WorkflowRun, error) {
 	return scanRetrySource(r.db.QueryRowContext(ctx, `SELECT workflow_id,workflow_version_id,dry_run,input,status
 		FROM ai_workflow_runs WHERE id=$1`, runID))
 }
 
-func (r *RunAdmissionRepository) LockRetrySourceTx(ctx context.Context, tx *sql.Tx, runID int64) (*domain.WorkflowRun, error) {
+func (r *RunAdmissionRepository) LockRetrySourceTx(ctx context.Context, tx *sql.Tx, runID int64) (*workflowdomain.WorkflowRun, error) {
 	return scanRetrySource(tx.QueryRowContext(ctx, `SELECT workflow_id,workflow_version_id,dry_run,input,status
 		FROM ai_workflow_runs WHERE id=$1 FOR UPDATE`, runID))
 }
@@ -119,7 +118,7 @@ func (r *RunAdmissionRepository) CountFailedIterationsTx(ctx context.Context, tx
 	return failed, nil
 }
 
-func (r *RunAdmissionRepository) CreateRetryRunTx(ctx context.Context, tx *sql.Tx, run *domain.WorkflowRun) error {
+func (r *RunAdmissionRepository) CreateRetryRunTx(ctx context.Context, tx *sql.Tx, run *workflowdomain.WorkflowRun) error {
 	rawIterations, err := json.Marshal(run.RetryIterations)
 	if err != nil {
 		return err

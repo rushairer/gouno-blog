@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 	"strconv"
 	"strings"
 	"time"
@@ -74,32 +75,32 @@ func (s *ApprovalService) GetMediaCandidate(ctx context.Context, id int64) (*dom
 	return s.mediaCandidates.GetMediaCandidate(ctx, id)
 }
 
-func (s *ApprovalService) GetInteraction(ctx context.Context, id int64) (*domain.WorkflowInteractionTask, error) {
+func (s *ApprovalService) GetInteraction(ctx context.Context, id int64) (*workflowdomain.WorkflowInteractionTask, error) {
 	return s.workflowInteractions.GetInteraction(ctx, id)
 }
-func (s *ApprovalService) ListInteractions(ctx context.Context, runID int64) ([]*domain.WorkflowInteractionTask, error) {
+func (s *ApprovalService) ListInteractions(ctx context.Context, runID int64) ([]*workflowdomain.WorkflowInteractionTask, error) {
 	return s.workflowInteractions.ListInteractions(ctx, runID)
 }
-func (s *ApprovalService) ListPendingInteractions(ctx context.Context) ([]*domain.WorkflowInteractionTask, error) {
+func (s *ApprovalService) ListPendingInteractions(ctx context.Context) ([]*workflowdomain.WorkflowInteractionTask, error) {
 	return s.workflowInteractions.ListPendingInteractions(ctx)
 }
-func (s *ApprovalService) ResolveInteraction(ctx context.Context, id int64, token string, response json.RawMessage, principalID int64) (*domain.WorkflowInteractionTask, error) {
+func (s *ApprovalService) ResolveInteraction(ctx context.Context, id int64, token string, response json.RawMessage, principalID int64) (*workflowdomain.WorkflowInteractionTask, error) {
 	return s.workflowInteractions.ResolveInteraction(ctx, id, token, response, principalID)
 }
 func (s *ApprovalService) CancelInteraction(ctx context.Context, id int64, token string, principalID int64) error {
 	return s.workflowInteractions.CancelInteraction(ctx, id, token, principalID)
 }
-func (s *ApprovalService) ListMediaCandidateEvents(ctx context.Context, id int64) ([]*domain.WorkflowRunEvent, error) {
+func (s *ApprovalService) ListMediaCandidateEvents(ctx context.Context, id int64) ([]*workflowdomain.WorkflowRunEvent, error) {
 	candidate, err := s.mediaCandidates.GetMediaCandidate(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 	if candidate.WorkflowRunID == nil {
-		return []*domain.WorkflowRunEvent{}, nil
+		return []*workflowdomain.WorkflowRunEvent{}, nil
 	}
 	return s.workflowEvents.ListWorkflowRunEvents(ctx, *candidate.WorkflowRunID)
 }
-func (s *ApprovalService) ListWorkflowRunEvents(ctx context.Context, id int64) ([]*domain.WorkflowRunEvent, error) {
+func (s *ApprovalService) ListWorkflowRunEvents(ctx context.Context, id int64) ([]*workflowdomain.WorkflowRunEvent, error) {
 	return s.workflowEvents.ListWorkflowRunEvents(ctx, id)
 }
 
@@ -400,7 +401,7 @@ func (s *ApprovalService) appendCandidateEvent(ctx context.Context, candidateID 
 	}
 	runID := *candidate.WorkflowRunID
 	raw, _ := json.Marshal(payload)
-	_ = s.workflowEvents.AppendWorkflowRunEvent(ctx, &domain.WorkflowRunEvent{WorkflowRunID: &runID, WorkflowStepID: candidate.WorkflowStepID, InteractionTaskID: candidate.InteractionTaskID, EventType: eventType, Payload: raw})
+	_ = s.workflowEvents.AppendWorkflowRunEvent(ctx, &workflowdomain.WorkflowRunEvent{WorkflowRunID: &runID, WorkflowStepID: candidate.WorkflowStepID, InteractionTaskID: candidate.InteractionTaskID, EventType: eventType, Payload: raw})
 }
 
 func (s *ApprovalService) recordMediaGenerationFailure(ctx context.Context, candidateID int64, code, message string) {
@@ -413,7 +414,7 @@ func (s *ApprovalService) recordMediaGenerationFailure(ctx context.Context, cand
 		"error_code":    code,
 		"error_message": message,
 	})
-	_ = s.workflowEvents.AppendWorkflowRunEvent(ctx, &domain.WorkflowRunEvent{
+	_ = s.workflowEvents.AppendWorkflowRunEvent(ctx, &workflowdomain.WorkflowRunEvent{
 		WorkflowRunID: workflowRunID,
 		EventType:     generationFailureEvent(code),
 		Payload:       payload,

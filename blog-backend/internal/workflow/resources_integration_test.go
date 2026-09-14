@@ -4,12 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 	"os"
 	"testing"
 	"time"
 
 	_ "github.com/lib/pq"
-	"github.com/rushairer/blog-backend/internal/domain"
+
 	"github.com/rushairer/blog-backend/internal/migrations"
 )
 
@@ -34,7 +35,7 @@ func TestResourceCatalogResolvesRequestedKeys(t *testing.T) {
 	}
 	defer db.ExecContext(ctx, `DELETE FROM posts WHERE id=$1`, postID)
 
-	items, total, err := NewResourceCatalog(db).List(ctx, "post", domain.ResourceQuery{
+	items, total, err := NewResourceCatalog(db).List(ctx, "post", workflowdomain.ResourceQuery{
 		Keys: []string{fmt.Sprint(postID), fmt.Sprint(postID), "999999999999"}, Filters: map[string]string{},
 	})
 	if err != nil {
@@ -50,7 +51,7 @@ func TestResourceCatalogRejectsOversizedKeyLookup(t *testing.T) {
 	for index := range keys {
 		keys[index] = fmt.Sprint(index + 1)
 	}
-	_, _, err := NewResourceCatalog(nil).List(context.Background(), "post", domain.ResourceQuery{Keys: keys, Filters: map[string]string{}})
+	_, _, err := NewResourceCatalog(nil).List(context.Background(), "post", workflowdomain.ResourceQuery{Keys: keys, Filters: map[string]string{}})
 	if err == nil {
 		t.Fatal("resource lookup over 100 keys should be rejected")
 	}

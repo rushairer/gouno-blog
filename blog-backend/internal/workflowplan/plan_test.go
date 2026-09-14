@@ -2,6 +2,7 @@ package workflowplan
 
 import (
 	"encoding/json"
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 	"strings"
 	"testing"
 
@@ -48,7 +49,7 @@ func TestNormalizePlannerEnvelopeKeepsApprovalWorkflowButRemovesInvalidIntentRef
 			{StepID: "review"},
 			{StepID: "cover", DependsOn: []string{"review", "write"}},
 		}},
-		Workflow: domain.Workflow{Steps: []domain.WorkflowStep{
+		Workflow: workflowdomain.Workflow{Steps: []workflowdomain.WorkflowStep{
 			{ID: "write", Type: "model"},
 			{ID: "review", Type: "approval_gate"},
 			{ID: "cover", Type: "model"},
@@ -93,10 +94,10 @@ func TestTypedPlannerEnvelopeValidatesSemanticsWithoutPromptKeywords(t *testing.
 				{StepID: "cover", ResourceMode: "existing", RequiredCapabilities: []string{"media.create_image_task"}, DependsOn: []string{"write"}},
 			},
 		},
-		Workflow: domain.Workflow{
+		Workflow: workflowdomain.Workflow{
 			CronExpression: &cron, Timezone: "Asia/Shanghai",
 			InputSchema: json.RawMessage(`{"type":"object","additionalProperties":false}`),
-			Steps: []domain.WorkflowStep{
+			Steps: []workflowdomain.WorkflowStep{
 				{ID: "write", Type: "model", AgentID: 10, InputPointer: "/input"},
 				{ID: "review", Type: "approval_gate", InputPointer: "/steps/write"},
 				{ID: "cover", Type: "model", AgentID: 11, InputPointer: "/steps/write"},

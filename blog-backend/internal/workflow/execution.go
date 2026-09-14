@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 	"time"
 
 	"github.com/rushairer/blog-backend/internal/dbtx"
@@ -11,7 +12,7 @@ import (
 )
 
 type ExecutionStore interface {
-	ClaimRun(context.Context, int64) (*domain.WorkflowRun, error)
+	ClaimRun(context.Context, int64) (*workflowdomain.WorkflowRun, error)
 	FailRun(context.Context, int64, string, string) (bool, error)
 	FailureNotificationTarget(context.Context, int64) (*int64, string, int64, error)
 	ResetResourceQueryStats(context.Context, int64, int64) error
@@ -19,15 +20,15 @@ type ExecutionStore interface {
 	PendingInteractionCount(context.Context, int64) (int, error)
 	CompletedStepOutput(context.Context, int64, string, int) (json.RawMessage, bool, error)
 	ResolvedInteractionResponse(context.Context, int64, string) (json.RawMessage, bool, error)
-	TargetResources(context.Context, int64) ([]domain.WorkflowResource, error)
-	UpsertRunResource(context.Context, *domain.WorkflowResource) error
+	TargetResources(context.Context, int64) ([]workflowdomain.WorkflowResource, error)
+	UpsertRunResource(context.Context, *workflowdomain.WorkflowResource) error
 	UpdateResourceQueryStats(context.Context, int64, int64) error
-	RecordStep(context.Context, *domain.WorkflowStepRun) error
+	RecordStep(context.Context, *workflowdomain.WorkflowStepRun) error
 }
 
 type ExecutionInteractionStore interface {
-	CreateInteractionTx(context.Context, *sql.Tx, *domain.WorkflowInteractionTask) error
-	AppendWorkflowRunEventTx(context.Context, *sql.Tx, *domain.WorkflowRunEvent) error
+	CreateInteractionTx(context.Context, *sql.Tx, *workflowdomain.WorkflowInteractionTask) error
+	AppendWorkflowRunEventTx(context.Context, *sql.Tx, *workflowdomain.WorkflowRunEvent) error
 }
 
 type ExecutedApprovalTargetReader interface {
@@ -50,7 +51,7 @@ func NewExecutionCoordinator(transactor *dbtx.Transactor, store ExecutionStore, 
 	return &ExecutionCoordinator{transactor: transactor, store: store, interactions: interactions}
 }
 
-func (c *ExecutionCoordinator) ClaimRun(ctx context.Context, runID int64) (*domain.WorkflowRun, error) {
+func (c *ExecutionCoordinator) ClaimRun(ctx context.Context, runID int64) (*workflowdomain.WorkflowRun, error) {
 	return c.store.ClaimRun(ctx, runID)
 }
 
@@ -82,11 +83,11 @@ func (c *ExecutionCoordinator) ResolvedInteractionResponse(ctx context.Context, 
 	return c.store.ResolvedInteractionResponse(ctx, runID, stepID)
 }
 
-func (c *ExecutionCoordinator) TargetResources(ctx context.Context, runID int64) ([]domain.WorkflowResource, error) {
+func (c *ExecutionCoordinator) TargetResources(ctx context.Context, runID int64) ([]workflowdomain.WorkflowResource, error) {
 	return c.store.TargetResources(ctx, runID)
 }
 
-func (c *ExecutionCoordinator) UpsertRunResource(ctx context.Context, resource *domain.WorkflowResource) error {
+func (c *ExecutionCoordinator) UpsertRunResource(ctx context.Context, resource *workflowdomain.WorkflowResource) error {
 	return c.store.UpsertRunResource(ctx, resource)
 }
 
@@ -94,13 +95,13 @@ func (c *ExecutionCoordinator) UpdateResourceQueryStats(ctx context.Context, wor
 	return c.store.UpdateResourceQueryStats(ctx, workflowID, runID)
 }
 
-func (c *ExecutionCoordinator) RecordStep(ctx context.Context, step *domain.WorkflowStepRun) error {
+func (c *ExecutionCoordinator) RecordStep(ctx context.Context, step *workflowdomain.WorkflowStepRun) error {
 	return c.store.RecordStep(ctx, step)
 }
 
 func (c *ExecutionCoordinator) CreateInteraction(ctx context.Context, runID int64, stepID, interactionType string, schema, payload, options json.RawMessage, expiresAt *time.Time) (int64, error) {
 	runIDValue := runID
-	task := &domain.WorkflowInteractionTask{
+	task := &workflowdomain.WorkflowInteractionTask{
 		WorkflowRunID:   &runIDValue,
 		WorkflowStepID:  stepID,
 		InteractionType: interactionType,
@@ -121,7 +122,7 @@ func (c *ExecutionCoordinator) CreateInteraction(ctx context.Context, runID int6
 		if err != nil {
 			return err
 		}
-		event := &domain.WorkflowRunEvent{
+		event := &workflowdomain.WorkflowRunEvent{
 			WorkflowRunID:  &runIDValue,
 			WorkflowStepID: stepID,
 			EventType:      "human_interaction_created",

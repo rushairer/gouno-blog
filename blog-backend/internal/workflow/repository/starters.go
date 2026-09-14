@@ -6,45 +6,44 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-
-	"github.com/rushairer/blog-backend/internal/domain"
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 )
 
 type providerStarterWorkflow struct {
 	key, name, description, cron, agentKey string
 	inputSchema, scopePolicy               json.RawMessage
-	steps                                  func(int64) []domain.WorkflowStep
+	steps                                  func(int64) []workflowdomain.WorkflowStep
 }
 
-func modelResultSteps(agentID int64, approval bool) []domain.WorkflowStep {
-	steps := []domain.WorkflowStep{{ID: "agent", Type: "model", AgentID: agentID}}
+func modelResultSteps(agentID int64, approval bool) []workflowdomain.WorkflowStep {
+	steps := []workflowdomain.WorkflowStep{{ID: "agent", Type: "model", AgentID: agentID}}
 	if approval {
-		steps = append(steps, domain.WorkflowStep{ID: "approval", Type: "approval_gate"})
+		steps = append(steps, workflowdomain.WorkflowStep{ID: "approval", Type: "approval_gate"})
 	}
-	return append(steps, domain.WorkflowStep{ID: "result", Type: "output", OutputPointer: "/steps/agent"})
+	return append(steps, workflowdomain.WorkflowStep{ID: "result", Type: "output", OutputPointer: "/steps/agent"})
 }
 
-func batchSteps(collection string, maxItems int, agentID int64, approval bool) []domain.WorkflowStep {
-	steps := []domain.WorkflowStep{{
+func batchSteps(collection string, maxItems int, agentID int64, approval bool) []workflowdomain.WorkflowStep {
+	steps := []workflowdomain.WorkflowStep{{
 		ID: "batch", Type: "for_each", CollectionPointer: collection, MaxItems: maxItems,
-		Steps: []domain.WorkflowStep{{ID: "agent", Type: "model", AgentID: agentID, IncludeContext: true}},
+		Steps: []workflowdomain.WorkflowStep{{ID: "agent", Type: "model", AgentID: agentID, IncludeContext: true}},
 	}}
 	if approval {
-		steps = append(steps, domain.WorkflowStep{ID: "approval", Type: "approval_gate"})
+		steps = append(steps, workflowdomain.WorkflowStep{ID: "approval", Type: "approval_gate"})
 	}
-	return append(steps, domain.WorkflowStep{ID: "result", Type: "output", OutputPointer: "/steps/batch"})
+	return append(steps, workflowdomain.WorkflowStep{ID: "result", Type: "output", OutputPointer: "/steps/batch"})
 }
 
-func queryBatchSteps(resourceType string, filter json.RawMessage, maxItems int, agentID int64, approval bool) []domain.WorkflowStep {
-	steps := []domain.WorkflowStep{
+func queryBatchSteps(resourceType string, filter json.RawMessage, maxItems int, agentID int64, approval bool) []workflowdomain.WorkflowStep {
+	steps := []workflowdomain.WorkflowStep{
 		{ID: "select_resources", Type: "resource_query", ResourceType: resourceType, Filter: filter, MaxItems: maxItems},
 		{ID: "batch", Type: "for_each", CollectionPointer: "/steps/select_resources", MaxItems: maxItems, ContinueOnError: true,
-			Steps: []domain.WorkflowStep{{ID: "agent", Type: "model", AgentID: agentID, IncludeContext: true}}},
+			Steps: []workflowdomain.WorkflowStep{{ID: "agent", Type: "model", AgentID: agentID, IncludeContext: true}}},
 	}
 	if approval {
-		steps = append(steps, domain.WorkflowStep{ID: "approval", Type: "approval_gate"})
+		steps = append(steps, workflowdomain.WorkflowStep{ID: "approval", Type: "approval_gate"})
 	}
-	return append(steps, domain.WorkflowStep{ID: "result", Type: "output", OutputPointer: "/steps/batch"})
+	return append(steps, workflowdomain.WorkflowStep{ID: "result", Type: "output", OutputPointer: "/steps/batch"})
 }
 
 func providerStarterWorkflows() []providerStarterWorkflow {
@@ -61,35 +60,35 @@ func providerStarterWorkflows() []providerStarterWorkflow {
 	taxonomy := json.RawMessage(`{"type":"object","additionalProperties":false,"properties":{"category_ids":{"title":"分类","type":"array","items":{"type":"integer"},"maxItems":30,"x-gouno-resource":"category","x-gouno-widget":"entity-multi-select"},"tags":{"title":"标签","type":"array","items":{"type":"string"},"maxItems":30,"x-gouno-resource":"tag","x-gouno-widget":"entity-multi-select"}},"anyOf":[{"required":["category_ids"]},{"required":["tags"]}]}`)
 	mixed := json.RawMessage(`{"type":"object","additionalProperties":false,"properties":{"post_ids":{"title":"文章","type":"array","items":{"type":"integer"},"maxItems":20,"x-gouno-resource":"post","x-gouno-widget":"entity-multi-select"},"comment_ids":{"title":"评论","type":"array","items":{"type":"integer"},"maxItems":20,"x-gouno-resource":"comment","x-gouno-widget":"entity-multi-select"},"suggestion_ids":{"title":"运营建议","type":"array","items":{"type":"integer"},"maxItems":20,"x-gouno-resource":"operational_suggestion","x-gouno-widget":"entity-multi-select"}},"anyOf":[{"required":["post_ids"]},{"required":["comment_ids"]},{"required":["suggestion_ids"]}]}`)
 	return []providerStarterWorkflow{
-		{key: "selected_pre_publish_review", name: "批量发布前审校", description: "审校手选文章并为每篇生成可核验建议。", agentKey: "pre_publish_review", inputSchema: posts, scopePolicy: strictKnowledge, steps: func(id int64) []domain.WorkflowStep { return batchSteps("/input/post_ids", 20, id, true) }},
-		{key: "selected_internal_linking", name: "站内链接优化（手选）", description: "为手选文章发现相关内链，只允许修改原目标。", agentKey: "internal_linking", inputSchema: posts, scopePolicy: strictKnowledge, steps: func(id int64) []domain.WorkflowStep { return batchSteps("/input/post_ids", 20, id, true) }},
-		{key: "selected_distribution", name: "内容再分发（手选）", description: "为手选文章生成社媒、Newsletter、FAQ 或图片 Brief。", agentKey: "content_distribution", inputSchema: distribution, scopePolicy: strict, steps: func(id int64) []domain.WorkflowStep { return batchSteps("/input/post_ids", 20, id, true) }},
-		{key: "selected_article_image_generation", name: "生成封面/文配图（手选）", description: "为手选文章创建内部图片任务；无需审批 Brief，生成后由你选择并应用到封面或正文。", agentKey: "content_distribution", inputSchema: imageBrief, scopePolicy: strict, steps: func(id int64) []domain.WorkflowStep { return batchSteps("/input/post_ids", 20, id, false) }},
-		{key: "selected_comment_replies", name: "评论回复草稿（手选）", description: "为手选评论逐条创建待审批回复草稿。", agentKey: "comment_reply_draft", inputSchema: comments, scopePolicy: strict, steps: func(id int64) []domain.WorkflowStep { return batchSteps("/input/comment_ids", 20, id, true) }},
-		{key: "selected_media_review", name: "媒体无障碍检查", description: "检查手选媒体的 Alt 文本与复用质量。", agentKey: "media_alt_review", inputSchema: media, scopePolicy: strict, steps: func(id int64) []domain.WorkflowStep { return batchSteps("/input/media_ids", 30, id, false) }},
-		{key: "selected_page_review", name: "单页审校与优化（手选）", description: "审校手选单页并为每页生成可核验的优化建议。", agentKey: "page_review", inputSchema: pages, scopePolicy: strictKnowledge, steps: func(id int64) []domain.WorkflowStep { return batchSteps("/input/page_ids", 20, id, true) }},
-		{key: "selected_operations_deep_dive", name: "运营建议深挖", description: "补充手选运营建议的证据和优先级。", agentKey: "operations_deep_dive", inputSchema: suggestions, scopePolicy: strict, steps: func(id int64) []domain.WorkflowStep { return batchSteps("/input/suggestion_ids", 20, id, true) }},
-		{key: "selected_taxonomy_review", name: "分类与标签整理", description: "联合分析手选分类与标签的结构质量。", agentKey: "taxonomy_review", inputSchema: taxonomy, scopePolicy: strict, steps: func(id int64) []domain.WorkflowStep { return modelResultSteps(id, false) }},
-		{key: "selected_mixed_review", name: "混合内容复盘", description: "联合复盘手选文章、评论和运营建议。", agentKey: "mixed_content_review", inputSchema: mixed, scopePolicy: strict, steps: func(id int64) []domain.WorkflowStep { return modelResultSteps(id, true) }},
-		{key: "scheduled_stale_resource_review", name: "陈旧文章规则审查", description: "每周固定一批超过 180 天未更新的文章，再逐篇提出更新建议。", cron: "0 9 * * 2", agentKey: "stale_content_refresh", inputSchema: noInput, scopePolicy: strictKnowledge, steps: func(id int64) []domain.WorkflowStep {
+		{key: "selected_pre_publish_review", name: "批量发布前审校", description: "审校手选文章并为每篇生成可核验建议。", agentKey: "pre_publish_review", inputSchema: posts, scopePolicy: strictKnowledge, steps: func(id int64) []workflowdomain.WorkflowStep { return batchSteps("/input/post_ids", 20, id, true) }},
+		{key: "selected_internal_linking", name: "站内链接优化（手选）", description: "为手选文章发现相关内链，只允许修改原目标。", agentKey: "internal_linking", inputSchema: posts, scopePolicy: strictKnowledge, steps: func(id int64) []workflowdomain.WorkflowStep { return batchSteps("/input/post_ids", 20, id, true) }},
+		{key: "selected_distribution", name: "内容再分发（手选）", description: "为手选文章生成社媒、Newsletter、FAQ 或图片 Brief。", agentKey: "content_distribution", inputSchema: distribution, scopePolicy: strict, steps: func(id int64) []workflowdomain.WorkflowStep { return batchSteps("/input/post_ids", 20, id, true) }},
+		{key: "selected_article_image_generation", name: "生成封面/文配图（手选）", description: "为手选文章创建内部图片任务；无需审批 Brief，生成后由你选择并应用到封面或正文。", agentKey: "content_distribution", inputSchema: imageBrief, scopePolicy: strict, steps: func(id int64) []workflowdomain.WorkflowStep { return batchSteps("/input/post_ids", 20, id, false) }},
+		{key: "selected_comment_replies", name: "评论回复草稿（手选）", description: "为手选评论逐条创建待审批回复草稿。", agentKey: "comment_reply_draft", inputSchema: comments, scopePolicy: strict, steps: func(id int64) []workflowdomain.WorkflowStep { return batchSteps("/input/comment_ids", 20, id, true) }},
+		{key: "selected_media_review", name: "媒体无障碍检查", description: "检查手选媒体的 Alt 文本与复用质量。", agentKey: "media_alt_review", inputSchema: media, scopePolicy: strict, steps: func(id int64) []workflowdomain.WorkflowStep { return batchSteps("/input/media_ids", 30, id, false) }},
+		{key: "selected_page_review", name: "单页审校与优化（手选）", description: "审校手选单页并为每页生成可核验的优化建议。", agentKey: "page_review", inputSchema: pages, scopePolicy: strictKnowledge, steps: func(id int64) []workflowdomain.WorkflowStep { return batchSteps("/input/page_ids", 20, id, true) }},
+		{key: "selected_operations_deep_dive", name: "运营建议深挖", description: "补充手选运营建议的证据和优先级。", agentKey: "operations_deep_dive", inputSchema: suggestions, scopePolicy: strict, steps: func(id int64) []workflowdomain.WorkflowStep { return batchSteps("/input/suggestion_ids", 20, id, true) }},
+		{key: "selected_taxonomy_review", name: "分类与标签整理", description: "联合分析手选分类与标签的结构质量。", agentKey: "taxonomy_review", inputSchema: taxonomy, scopePolicy: strict, steps: func(id int64) []workflowdomain.WorkflowStep { return modelResultSteps(id, false) }},
+		{key: "selected_mixed_review", name: "混合内容复盘", description: "联合复盘手选文章、评论和运营建议。", agentKey: "mixed_content_review", inputSchema: mixed, scopePolicy: strict, steps: func(id int64) []workflowdomain.WorkflowStep { return modelResultSteps(id, true) }},
+		{key: "scheduled_stale_resource_review", name: "陈旧文章规则审查", description: "每周固定一批超过 180 天未更新的文章，再逐篇提出更新建议。", cron: "0 9 * * 2", agentKey: "stale_content_refresh", inputSchema: noInput, scopePolicy: strictKnowledge, steps: func(id int64) []workflowdomain.WorkflowStep {
 			return queryBatchSteps("post", json.RawMessage(`{"status":"published","updated_before_days":180}`), 20, id, true)
 		}},
-		{key: "scheduled_post_publish_review", name: "发布后内容复盘", description: "每天复盘最近两天发布的文章，生成需要人工确认的质量改进建议。", cron: "15 10 * * *", agentKey: "pre_publish_review", inputSchema: noInput, scopePolicy: strict, steps: func(id int64) []domain.WorkflowStep {
+		{key: "scheduled_post_publish_review", name: "发布后内容复盘", description: "每天复盘最近两天发布的文章，生成需要人工确认的质量改进建议。", cron: "15 10 * * *", agentKey: "pre_publish_review", inputSchema: noInput, scopePolicy: strict, steps: func(id int64) []workflowdomain.WorkflowStep {
 			return queryBatchSteps("post", json.RawMessage(`{"status":"published","published_within_days":2}`), 20, id, true)
 		}},
-		{key: "scheduled_page_review", name: "定期单页健康审查", description: "定期调度单页审校 Agent，审查超过 90 天未更新的单页。", cron: "0 10 1 * *", agentKey: "page_review", inputSchema: noInput, scopePolicy: strictKnowledge, steps: func(id int64) []domain.WorkflowStep {
+		{key: "scheduled_page_review", name: "定期单页健康审查", description: "定期调度单页审校 Agent，审查超过 90 天未更新的单页。", cron: "0 10 1 * *", agentKey: "page_review", inputSchema: noInput, scopePolicy: strictKnowledge, steps: func(id int64) []workflowdomain.WorkflowStep {
 			return queryBatchSteps("page", json.RawMessage(`{"updated_before_days":90}`), 20, id, true)
 		}},
-		{key: "scheduled_reported_comment_review", name: "被举报评论复盘", description: "每天汇总被举报评论并生成待审批的回复或处理建议。", cron: "30 10 * * *", agentKey: "comment_reply_draft", inputSchema: noInput, scopePolicy: strict, steps: func(id int64) []domain.WorkflowStep {
+		{key: "scheduled_reported_comment_review", name: "被举报评论复盘", description: "每天汇总被举报评论并生成待审批的回复或处理建议。", cron: "30 10 * * *", agentKey: "comment_reply_draft", inputSchema: noInput, scopePolicy: strict, steps: func(id int64) []workflowdomain.WorkflowStep {
 			return queryBatchSteps("comment", json.RawMessage(`{"reported":true}`), 30, id, true)
 		}},
-		{key: "scheduled_missing_alt_review", name: "缺失 Alt 媒体检查", description: "每周检查缺失 Alt 文本的媒体并生成无障碍改进建议。", cron: "0 11 * * 3", agentKey: "media_alt_review", inputSchema: noInput, scopePolicy: strict, steps: func(id int64) []domain.WorkflowStep {
+		{key: "scheduled_missing_alt_review", name: "缺失 Alt 媒体检查", description: "每周检查缺失 Alt 文本的媒体并生成无障碍改进建议。", cron: "0 11 * * 3", agentKey: "media_alt_review", inputSchema: noInput, scopePolicy: strict, steps: func(id int64) []workflowdomain.WorkflowStep {
 			return queryBatchSteps("media_asset", json.RawMessage(`{"missing_alt":true}`), 30, id, false)
 		}},
 	}
 }
 
-func stepsHaveFixedAgents(steps []domain.WorkflowStep) bool {
+func stepsHaveFixedAgents(steps []workflowdomain.WorkflowStep) bool {
 	found := false
 	for _, step := range steps {
 		if step.Type == "model" {
@@ -143,7 +142,7 @@ func ReconcileProviderDependentStarters(ctx context.Context, tx *sql.Tx, systemA
 		} else if err != nil {
 			return created, fmt.Errorf("load starter Workflow %q: %w", definition.key, err)
 		}
-		var decoded []domain.WorkflowStep
+		var decoded []workflowdomain.WorkflowStep
 		valid := len(currentSteps) > 0 && json.Unmarshal(currentSteps, &decoded) == nil && stepsHaveFixedAgents(decoded)
 		if valid {
 			continue

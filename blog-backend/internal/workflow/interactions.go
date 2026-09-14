@@ -5,17 +5,16 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-
-	"github.com/rushairer/blog-backend/internal/domain"
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 )
 
 type InteractionStore interface {
-	GetInteraction(context.Context, int64) (*domain.WorkflowInteractionTask, error)
-	ListInteractions(context.Context, int64) ([]*domain.WorkflowInteractionTask, error)
-	ListPendingInteractions(context.Context) ([]*domain.WorkflowInteractionTask, error)
-	ResolveInteraction(context.Context, int64, string, json.RawMessage, int64) (*domain.WorkflowInteractionTask, error)
+	GetInteraction(context.Context, int64) (*workflowdomain.WorkflowInteractionTask, error)
+	ListInteractions(context.Context, int64) ([]*workflowdomain.WorkflowInteractionTask, error)
+	ListPendingInteractions(context.Context) ([]*workflowdomain.WorkflowInteractionTask, error)
+	ResolveInteraction(context.Context, int64, string, json.RawMessage, int64) (*workflowdomain.WorkflowInteractionTask, error)
 	CancelInteraction(context.Context, int64, string, int64) error
-	ListWorkflowRunEvents(context.Context, int64) ([]*domain.WorkflowRunEvent, error)
+	ListWorkflowRunEvents(context.Context, int64) ([]*workflowdomain.WorkflowRunEvent, error)
 }
 
 type InteractionRunLifecycle interface {
@@ -35,23 +34,23 @@ func NewInteractionService(store InteractionStore, runs InteractionRunLifecycle)
 	return &InteractionService{store: store, runs: runs}
 }
 
-func (s *InteractionService) GetInteraction(ctx context.Context, id int64) (*domain.WorkflowInteractionTask, error) {
+func (s *InteractionService) GetInteraction(ctx context.Context, id int64) (*workflowdomain.WorkflowInteractionTask, error) {
 	return s.store.GetInteraction(ctx, id)
 }
 
-func (s *InteractionService) ListInteractions(ctx context.Context, runID int64) ([]*domain.WorkflowInteractionTask, error) {
+func (s *InteractionService) ListInteractions(ctx context.Context, runID int64) ([]*workflowdomain.WorkflowInteractionTask, error) {
 	return s.store.ListInteractions(ctx, runID)
 }
 
-func (s *InteractionService) ListPendingInteractions(ctx context.Context) ([]*domain.WorkflowInteractionTask, error) {
+func (s *InteractionService) ListPendingInteractions(ctx context.Context) ([]*workflowdomain.WorkflowInteractionTask, error) {
 	return s.store.ListPendingInteractions(ctx)
 }
 
-func (s *InteractionService) ListWorkflowRunEvents(ctx context.Context, runID int64) ([]*domain.WorkflowRunEvent, error) {
+func (s *InteractionService) ListWorkflowRunEvents(ctx context.Context, runID int64) ([]*workflowdomain.WorkflowRunEvent, error) {
 	return s.store.ListWorkflowRunEvents(ctx, runID)
 }
 
-func (s *InteractionService) ResolveInteraction(ctx context.Context, id int64, token string, response json.RawMessage, principalID int64) (*domain.WorkflowInteractionTask, error) {
+func (s *InteractionService) ResolveInteraction(ctx context.Context, id int64, token string, response json.RawMessage, principalID int64) (*workflowdomain.WorkflowInteractionTask, error) {
 	item, err := s.store.ResolveInteraction(ctx, id, token, response, principalID)
 	if err != nil {
 		return nil, err

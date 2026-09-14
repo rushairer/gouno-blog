@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 	"os"
 	"strings"
 	"testing"
@@ -13,7 +14,7 @@ import (
 	_ "github.com/lib/pq"
 	agentservice "github.com/rushairer/blog-backend/internal/agent"
 	agentrepository "github.com/rushairer/blog-backend/internal/agent/repository"
-	"github.com/rushairer/blog-backend/internal/domain"
+
 	"github.com/rushairer/blog-backend/internal/migrations"
 	notificationrepository "github.com/rushairer/blog-backend/internal/notification/repository"
 	providerrepository "github.com/rushairer/blog-backend/internal/provider/repository"
@@ -122,16 +123,16 @@ func TestSavePersistsResourceQueryPreview(t *testing.T) {
 	ctx := context.Background()
 	service := &Service{runReads: workflowrepository.NewRunReadRepository(db), metrics: workflowrepository.NewMetricsRepository(db), execution: newTestExecutionCoordinator(db), dispatch: newTestDispatchCoordinator(db), approvalTargets: newTestApprovalTargetReader(db), admission: newTestRunAdmissionCoordinator(db), mediaRuns: newTestMediaRunCoordinator(db), definitions: workflowrepository.NewDefinitionRepository(db), catalog: NewResourceCatalog(db)}
 	principalID := testsupport.Principal(t, db)
-	value := &domain.Workflow{
+	value := &workflowdomain.Workflow{
 		CreatedByPrincipalID: &principalID,
 		Name:                 fmt.Sprintf("resource-query-preview-%d", time.Now().UnixNano()),
 		Description:          "Resource query preview integration test",
 		InputSchema:          json.RawMessage(`{"type":"object","additionalProperties":false}`),
-		Steps: []domain.WorkflowStep{
+		Steps: []workflowdomain.WorkflowStep{
 			{ID: "select_posts", Type: "resource_query", ResourceType: "post", Filter: json.RawMessage(`{"tag":"__resource_query_no_match__"}`), MaxItems: 20},
 			{ID: "result", Type: "output", OutputPointer: "/steps/select_posts"},
 		},
-		ScopePolicy:              domain.WorkflowScopePolicy{Mode: "strict"},
+		ScopePolicy:              workflowdomain.WorkflowScopePolicy{Mode: "strict"},
 		ResourceQueryEmptyPolicy: "succeed",
 	}
 	if err := service.Save(ctx, value); err != nil {
@@ -178,18 +179,18 @@ func TestRuleBasedResourceFilters(t *testing.T) {
 		}
 	})
 	catalog := NewResourceCatalog(db)
-	posts, total, err := catalog.List(ctx, "post", domain.ResourceQuery{Page: 1, PageSize: 20, Filters: map[string]string{"tag": unique, "published_within_days": "2"}})
+	posts, total, err := catalog.List(ctx, "post", workflowdomain.ResourceQuery{Page: 1, PageSize: 20, Filters: map[string]string{"tag": unique, "published_within_days": "2"}})
 	if err != nil || total != 1 || len(posts) != 1 || posts[0].Key != fmt.Sprint(postID) {
 		t.Fatalf("recent post filter = %#v total %d err %v", posts, total, err)
 	}
 	if _, err := db.ExecContext(ctx, `UPDATE posts SET published_at=NOW()-INTERVAL '10 days' WHERE id=$1`, postID); err != nil {
 		t.Fatal(err)
 	}
-	posts, total, err = catalog.List(ctx, "post", domain.ResourceQuery{Page: 1, PageSize: 20, Filters: map[string]string{"tag": unique, "published_within_days": "2"}})
+	posts, total, err = catalog.List(ctx, "post", workflowdomain.ResourceQuery{Page: 1, PageSize: 20, Filters: map[string]string{"tag": unique, "published_within_days": "2"}})
 	if err != nil || total != 0 || len(posts) != 0 {
 		t.Fatalf("old post filter = %#v total %d err %v", posts, total, err)
 	}
-	media, total, err := catalog.List(ctx, "media_asset", domain.ResourceQuery{Query: unique, Page: 1, PageSize: 20, Filters: map[string]string{"missing_alt": "true"}})
+	media, total, err := catalog.List(ctx, "media_asset", workflowdomain.ResourceQuery{Query: unique, Page: 1, PageSize: 20, Filters: map[string]string{"missing_alt": "true"}})
 	if err != nil || total != 1 || len(media) != 1 || media[0].Key != fmt.Sprint(missingAltID) {
 		t.Fatalf("missing Alt filter = %#v total %d err %v", media, total, err)
 	}
@@ -467,10 +468,10 @@ func TestForEachResumeKeepsIterationOutputs(t *testing.T) {
 			// stopped before recording its parent. Resume must reuse this checkpoint
 			// and execute the other two iterations independently.
 			index := 1
-			child := []domain.WorkflowStep{{ID: "value", Type: "output", OutputPointer: "/item/value"}}
+			child := []workflowdomain.WorkflowStep{{ID: "value", Type: "output", OutputPointer: "/item/value"}}
 			item := map[string]any{"value": "checkpoint-second"}
 			document := map[string]any{"input": map[string]any{}, "steps": map[string]any{}, "item": item}
-			if _, _, _, _, err := service.executeSteps(ctx, &domain.WorkflowRun{ID: runID}, child, document, item, &index); err != nil {
+			if _, _, _, _, err := service.executeSteps(ctx, &workflowdomain.WorkflowRun{ID: runID}, child, document, item, &index); err != nil {
 				t.Fatal(err)
 			}
 			if err := service.execute(ctx, runID); err != nil {

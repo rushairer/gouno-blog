@@ -7,9 +7,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 	"time"
-
-	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 type InteractionRepository struct {
@@ -24,15 +23,15 @@ func interactionColumns() string {
 	return `id,workflow_run_id,agent_run_id,workflow_step_id,interaction_type,schema,payload,options,status,resume_token,response,expires_at,resolved_by_principal_id,resolved_at,created_at,updated_at`
 }
 
-func scanInteraction(scanner interface{ Scan(...any) error }) (*domain.WorkflowInteractionTask, error) {
-	var item domain.WorkflowInteractionTask
+func scanInteraction(scanner interface{ Scan(...any) error }) (*workflowdomain.WorkflowInteractionTask, error) {
+	var item workflowdomain.WorkflowInteractionTask
 	err := scanner.Scan(&item.ID, &item.WorkflowRunID, &item.AgentRunID, &item.WorkflowStepID, &item.InteractionType,
 		&item.Schema, &item.Payload, &item.Options, &item.Status, &item.ResumeToken, &item.Response, &item.ExpiresAt,
 		&item.ResolvedByPrincipalID, &item.ResolvedAt, &item.CreatedAt, &item.UpdatedAt)
 	return &item, err
 }
 
-func (r *InteractionRepository) CreateInteraction(ctx context.Context, task *domain.WorkflowInteractionTask) error {
+func (r *InteractionRepository) CreateInteraction(ctx context.Context, task *workflowdomain.WorkflowInteractionTask) error {
 	if task.WorkflowRunID == nil && task.AgentRunID == nil {
 		return errors.New("interaction requires a run")
 	}
@@ -46,7 +45,7 @@ func (r *InteractionRepository) CreateInteraction(ctx context.Context, task *dom
 		Scan(&task.ID, &task.CreatedAt, &task.UpdatedAt)
 }
 
-func (r *InteractionRepository) CreateInteractionTx(ctx context.Context, tx *sql.Tx, task *domain.WorkflowInteractionTask) error {
+func (r *InteractionRepository) CreateInteractionTx(ctx context.Context, tx *sql.Tx, task *workflowdomain.WorkflowInteractionTask) error {
 	if task.WorkflowRunID == nil && task.AgentRunID == nil {
 		return errors.New("interaction requires a run")
 	}
@@ -60,17 +59,17 @@ func (r *InteractionRepository) CreateInteractionTx(ctx context.Context, tx *sql
 		Scan(&task.ID, &task.CreatedAt, &task.UpdatedAt)
 }
 
-func (r *InteractionRepository) GetInteraction(ctx context.Context, id int64) (*domain.WorkflowInteractionTask, error) {
+func (r *InteractionRepository) GetInteraction(ctx context.Context, id int64) (*workflowdomain.WorkflowInteractionTask, error) {
 	return scanInteraction(r.db.QueryRowContext(ctx, `SELECT `+interactionColumns()+` FROM workflow_interaction_tasks WHERE id=$1`, id))
 }
 
-func (r *InteractionRepository) ListInteractions(ctx context.Context, workflowRunID int64) ([]*domain.WorkflowInteractionTask, error) {
+func (r *InteractionRepository) ListInteractions(ctx context.Context, workflowRunID int64) ([]*workflowdomain.WorkflowInteractionTask, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT `+interactionColumns()+` FROM workflow_interaction_tasks WHERE workflow_run_id=$1 ORDER BY created_at DESC,id DESC`, workflowRunID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := make([]*domain.WorkflowInteractionTask, 0)
+	items := make([]*workflowdomain.WorkflowInteractionTask, 0)
 	for rows.Next() {
 		item, err := scanInteraction(rows)
 		if err != nil {
@@ -81,13 +80,13 @@ func (r *InteractionRepository) ListInteractions(ctx context.Context, workflowRu
 	return items, rows.Err()
 }
 
-func (r *InteractionRepository) ListPendingInteractions(ctx context.Context) ([]*domain.WorkflowInteractionTask, error) {
+func (r *InteractionRepository) ListPendingInteractions(ctx context.Context) ([]*workflowdomain.WorkflowInteractionTask, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT `+interactionColumns()+` FROM workflow_interaction_tasks WHERE status='pending' AND (expires_at IS NULL OR expires_at>NOW()) ORDER BY created_at DESC,id DESC`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := make([]*domain.WorkflowInteractionTask, 0)
+	items := make([]*workflowdomain.WorkflowInteractionTask, 0)
 	for rows.Next() {
 		item, scanErr := scanInteraction(rows)
 		if scanErr != nil {
@@ -98,7 +97,7 @@ func (r *InteractionRepository) ListPendingInteractions(ctx context.Context) ([]
 	return items, rows.Err()
 }
 
-func (r *InteractionRepository) ResolveInteraction(ctx context.Context, id int64, token string, response json.RawMessage, principalID int64) (*domain.WorkflowInteractionTask, error) {
+func (r *InteractionRepository) ResolveInteraction(ctx context.Context, id int64, token string, response json.RawMessage, principalID int64) (*workflowdomain.WorkflowInteractionTask, error) {
 	item, err := scanInteraction(r.db.QueryRowContext(ctx, `UPDATE workflow_interaction_tasks SET status='resolved',response=$3,resolved_by_principal_id=$4,resolved_at=NOW(),updated_at=NOW()
 		WHERE id=$1 AND resume_token=$2 AND status='pending' AND (expires_at IS NULL OR expires_at>NOW()) RETURNING `+interactionColumns(), id, token, response, principalID))
 	if err != nil {
@@ -119,27 +118,27 @@ func (r *InteractionRepository) CancelInteraction(ctx context.Context, id int64,
 	return nil
 }
 
-func (r *InteractionRepository) AppendWorkflowRunEvent(ctx context.Context, event *domain.WorkflowRunEvent) error {
+func (r *InteractionRepository) AppendWorkflowRunEvent(ctx context.Context, event *workflowdomain.WorkflowRunEvent) error {
 	return r.db.QueryRowContext(ctx, `INSERT INTO workflow_run_events(workflow_run_id,agent_run_id,workflow_step_id,interaction_task_id,event_type,payload)
 		VALUES($1,$2,$3,$4,$5,$6) RETURNING id,created_at`, event.WorkflowRunID, event.AgentRunID, event.WorkflowStepID, event.InteractionTaskID, event.EventType, event.Payload).
 		Scan(&event.ID, &event.CreatedAt)
 }
 
-func (r *InteractionRepository) AppendWorkflowRunEventTx(ctx context.Context, tx *sql.Tx, event *domain.WorkflowRunEvent) error {
+func (r *InteractionRepository) AppendWorkflowRunEventTx(ctx context.Context, tx *sql.Tx, event *workflowdomain.WorkflowRunEvent) error {
 	return tx.QueryRowContext(ctx, `INSERT INTO workflow_run_events(workflow_run_id,agent_run_id,workflow_step_id,interaction_task_id,event_type,payload)
         VALUES($1,$2,$3,$4,$5,$6) RETURNING id,created_at`, event.WorkflowRunID, event.AgentRunID, event.WorkflowStepID, event.InteractionTaskID, event.EventType, event.Payload).
 		Scan(&event.ID, &event.CreatedAt)
 }
 
-func (r *InteractionRepository) ListWorkflowRunEvents(ctx context.Context, runID int64) ([]*domain.WorkflowRunEvent, error) {
+func (r *InteractionRepository) ListWorkflowRunEvents(ctx context.Context, runID int64) ([]*workflowdomain.WorkflowRunEvent, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT id,workflow_run_id,agent_run_id,workflow_step_id,interaction_task_id,event_type,payload,created_at FROM workflow_run_events WHERE workflow_run_id=$1 ORDER BY created_at DESC,id DESC`, runID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := make([]*domain.WorkflowRunEvent, 0)
+	items := make([]*workflowdomain.WorkflowRunEvent, 0)
 	for rows.Next() {
-		var item domain.WorkflowRunEvent
+		var item workflowdomain.WorkflowRunEvent
 		if err := rows.Scan(&item.ID, &item.WorkflowRunID, &item.AgentRunID, &item.WorkflowStepID, &item.InteractionTaskID, &item.EventType, &item.Payload, &item.CreatedAt); err != nil {
 			return nil, err
 		}

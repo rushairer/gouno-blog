@@ -4,34 +4,33 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 	"testing"
-
-	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 type interactionStoreStub struct {
-	task      *domain.WorkflowInteractionTask
+	task      *workflowdomain.WorkflowInteractionTask
 	cancelled bool
 }
 
-func (s *interactionStoreStub) GetInteraction(context.Context, int64) (*domain.WorkflowInteractionTask, error) {
+func (s *interactionStoreStub) GetInteraction(context.Context, int64) (*workflowdomain.WorkflowInteractionTask, error) {
 	return s.task, nil
 }
-func (s *interactionStoreStub) ListInteractions(context.Context, int64) ([]*domain.WorkflowInteractionTask, error) {
-	return []*domain.WorkflowInteractionTask{s.task}, nil
+func (s *interactionStoreStub) ListInteractions(context.Context, int64) ([]*workflowdomain.WorkflowInteractionTask, error) {
+	return []*workflowdomain.WorkflowInteractionTask{s.task}, nil
 }
-func (s *interactionStoreStub) ListPendingInteractions(context.Context) ([]*domain.WorkflowInteractionTask, error) {
-	return []*domain.WorkflowInteractionTask{s.task}, nil
+func (s *interactionStoreStub) ListPendingInteractions(context.Context) ([]*workflowdomain.WorkflowInteractionTask, error) {
+	return []*workflowdomain.WorkflowInteractionTask{s.task}, nil
 }
-func (s *interactionStoreStub) ResolveInteraction(context.Context, int64, string, json.RawMessage, int64) (*domain.WorkflowInteractionTask, error) {
+func (s *interactionStoreStub) ResolveInteraction(context.Context, int64, string, json.RawMessage, int64) (*workflowdomain.WorkflowInteractionTask, error) {
 	return s.task, nil
 }
 func (s *interactionStoreStub) CancelInteraction(context.Context, int64, string, int64) error {
 	s.cancelled = true
 	return nil
 }
-func (s *interactionStoreStub) ListWorkflowRunEvents(context.Context, int64) ([]*domain.WorkflowRunEvent, error) {
-	return []*domain.WorkflowRunEvent{}, nil
+func (s *interactionStoreStub) ListWorkflowRunEvents(context.Context, int64) ([]*workflowdomain.WorkflowRunEvent, error) {
+	return []*workflowdomain.WorkflowRunEvent{}, nil
 }
 
 type interactionLifecycleStub struct {
@@ -52,7 +51,7 @@ func (s *interactionLifecycleStub) Cancel(_ context.Context, id int64) error {
 
 func TestInteractionServiceOwnsResolveAndResumeOrchestration(t *testing.T) {
 	runID := int64(77)
-	store := &interactionStoreStub{task: &domain.WorkflowInteractionTask{WorkflowRunID: &runID}}
+	store := &interactionStoreStub{task: &workflowdomain.WorkflowInteractionTask{WorkflowRunID: &runID}}
 	lifecycle := &interactionLifecycleStub{resumeErr: sql.ErrNoRows}
 	service := NewInteractionService(store, lifecycle)
 	item, err := service.ResolveInteraction(context.Background(), 1, "token", json.RawMessage(`{"answer":true}`), 42)
@@ -63,7 +62,7 @@ func TestInteractionServiceOwnsResolveAndResumeOrchestration(t *testing.T) {
 
 func TestInteractionServiceOwnsCancelAndRunCancellation(t *testing.T) {
 	runID := int64(88)
-	store := &interactionStoreStub{task: &domain.WorkflowInteractionTask{WorkflowRunID: &runID}}
+	store := &interactionStoreStub{task: &workflowdomain.WorkflowInteractionTask{WorkflowRunID: &runID}}
 	lifecycle := &interactionLifecycleStub{cancelErr: sql.ErrNoRows}
 	service := NewInteractionService(store, lifecycle)
 	if err := service.CancelInteraction(context.Background(), 2, "token", 42); err != nil {

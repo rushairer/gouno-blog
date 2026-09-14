@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 	"strings"
 
 	"github.com/rushairer/blog-backend/internal/domain"
@@ -61,8 +62,8 @@ type IntentOperation struct {
 }
 
 type plannerEnvelope struct {
-	Intent   WorkflowIntent  `json:"intent"`
-	Workflow domain.Workflow `json:"workflow"`
+	Intent   WorkflowIntent          `json:"intent"`
+	Workflow workflowdomain.Workflow `json:"workflow"`
 }
 
 // Template is only the execution contract for workflows already persisted by
@@ -163,7 +164,7 @@ func ExtractWorkflowDraftJSON(value string) ([]byte, bool) {
 	return nil, false
 }
 
-func WorkflowDraftAgentIDs(steps []domain.WorkflowStep) []int64 {
+func WorkflowDraftAgentIDs(steps []workflowdomain.WorkflowStep) []int64 {
 	ids := []int64{}
 	for _, step := range steps {
 		if step.Type == "model" && step.AgentID > 0 {
@@ -238,14 +239,14 @@ func plannerMaxTokens(profile *domain.ProviderProfile) int {
 }
 
 type WorkflowDraftResult struct {
-	Workflow       domain.Workflow  `json:"workflow"`
-	Provider       string           `json:"provider"`
-	Model          string           `json:"model"`
-	PlannerVersion string           `json:"planner_version"`
-	PlannerWarning string           `json:"planner_warning"`
-	SelectedAgents []map[string]any `json:"selected_agents"`
-	Intent         WorkflowIntent   `json:"intent"`
-	Readiness      map[string]any   `json:"readiness"`
+	Workflow       workflowdomain.Workflow `json:"workflow"`
+	Provider       string                  `json:"provider"`
+	Model          string                  `json:"model"`
+	PlannerVersion string                  `json:"planner_version"`
+	PlannerWarning string                  `json:"planner_warning"`
+	SelectedAgents []map[string]any        `json:"selected_agents"`
+	Intent         WorkflowIntent          `json:"intent"`
+	Readiness      map[string]any          `json:"readiness"`
 }
 
 func contains(values []string, target string) bool {
@@ -282,8 +283,8 @@ func resolveAgentProfile(agent *domain.Agent, profiles []*domain.ProviderProfile
 // model operations only.
 func normalizePlannerEnvelope(envelope *plannerEnvelope) bool {
 	modelSteps := map[string]bool{}
-	var collectModels func([]domain.WorkflowStep)
-	collectModels = func(steps []domain.WorkflowStep) {
+	var collectModels func([]workflowdomain.WorkflowStep)
+	collectModels = func(steps []workflowdomain.WorkflowStep) {
 		for _, step := range steps {
 			if step.Type == "model" {
 				modelSteps[step.ID] = true
@@ -409,9 +410,9 @@ func validatePlannerEnvelope(envelope *plannerEnvelope, agents []*domain.Agent, 
 			agentsByID[agent.ID] = agent
 		}
 	}
-	modelSteps := map[string]domain.WorkflowStep{}
-	var collectModels func([]domain.WorkflowStep)
-	collectModels = func(steps []domain.WorkflowStep) {
+	modelSteps := map[string]workflowdomain.WorkflowStep{}
+	var collectModels func([]workflowdomain.WorkflowStep)
+	collectModels = func(steps []workflowdomain.WorkflowStep) {
 		for _, step := range steps {
 			if step.Type == "model" {
 				modelSteps[step.ID] = step
@@ -479,7 +480,7 @@ func PlanWorkflow(
 	profiles []*domain.ProviderProfile,
 	agents []*domain.Agent,
 	toolsCatalog []tool.CatalogItem,
-	validateDraft func(*domain.Workflow) error,
+	validateDraft func(*workflowdomain.Workflow) error,
 	clientProvider func(ctx context.Context, providerID int64) (provider.Provider, error),
 ) (*WorkflowDraftResult, error) {
 	prompt = strings.TrimSpace(prompt)

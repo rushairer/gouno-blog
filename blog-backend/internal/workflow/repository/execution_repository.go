@@ -5,8 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-
-	"github.com/rushairer/blog-backend/internal/domain"
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 )
 
 type ExecutionRepository struct {
@@ -20,8 +19,8 @@ func NewExecutionRepository(db *sql.DB) *ExecutionRepository {
 	return &ExecutionRepository{db: db}
 }
 
-func (r *ExecutionRepository) ClaimRun(ctx context.Context, runID int64) (*domain.WorkflowRun, error) {
-	run := &domain.WorkflowRun{ID: runID, Status: "running"}
+func (r *ExecutionRepository) ClaimRun(ctx context.Context, runID int64) (*workflowdomain.WorkflowRun, error) {
+	run := &workflowdomain.WorkflowRun{ID: runID, Status: "running"}
 	var retryIterations []byte
 	err := r.db.QueryRowContext(ctx, `UPDATE ai_workflow_runs SET status='running', started_at=NOW()
         WHERE id=$1 AND status='queued'
@@ -97,16 +96,16 @@ func (r *ExecutionRepository) ResolvedInteractionResponse(ctx context.Context, r
 	return response, err == nil, err
 }
 
-func (r *ExecutionRepository) TargetResources(ctx context.Context, runID int64) ([]domain.WorkflowResource, error) {
+func (r *ExecutionRepository) TargetResources(ctx context.Context, runID int64) ([]workflowdomain.WorkflowResource, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT resource_type,resource_key FROM ai_workflow_run_resources
         WHERE workflow_run_id=$1 AND access_level='target'`, runID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := make([]domain.WorkflowResource, 0)
+	items := make([]workflowdomain.WorkflowResource, 0)
 	for rows.Next() {
-		var item domain.WorkflowResource
+		var item workflowdomain.WorkflowResource
 		if err := rows.Scan(&item.ResourceType, &item.ResourceKey); err != nil {
 			return nil, err
 		}
@@ -115,7 +114,7 @@ func (r *ExecutionRepository) TargetResources(ctx context.Context, runID int64) 
 	return items, rows.Err()
 }
 
-func (r *ExecutionRepository) UpsertRunResource(ctx context.Context, resource *domain.WorkflowResource) error {
+func (r *ExecutionRepository) UpsertRunResource(ctx context.Context, resource *workflowdomain.WorkflowResource) error {
 	_, err := r.db.ExecContext(ctx, `INSERT INTO ai_workflow_run_resources
         (workflow_run_id,resource_type,resource_key,source,access_level,label,version_token,snapshot)
         VALUES($1,$2,$3,$4,$5,$6,$7,$8)
@@ -132,7 +131,7 @@ func (r *ExecutionRepository) UpdateResourceQueryStats(ctx context.Context, work
 	return err
 }
 
-func (r *ExecutionRepository) RecordStep(ctx context.Context, step *domain.WorkflowStepRun) error {
+func (r *ExecutionRepository) RecordStep(ctx context.Context, step *workflowdomain.WorkflowStepRun) error {
 	iteration := -1
 	if step.Iteration != nil {
 		iteration = *step.Iteration

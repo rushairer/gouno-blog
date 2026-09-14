@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 	"io"
 	"net/http"
 	"strconv"
@@ -799,7 +800,7 @@ func bindHumanTemplateJSON(c *gin.Context, value any) error {
 	case *domain.AgentSkill:
 		v.CreatedByPrincipalID = &principal
 		v.CreationOrigin = ""
-	case *domain.Workflow:
+	case *workflowdomain.Workflow:
 		v.CreatedByPrincipalID = &principal
 		v.CreationOrigin = ""
 	default:

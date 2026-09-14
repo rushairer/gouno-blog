@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 	"io"
 	"net/http"
 	"os"
@@ -89,7 +90,7 @@ func bindWorkflowJSON(c *gin.Context, value any) bool {
 	return true
 }
 
-func bindHumanWorkflowJSON(c *gin.Context, value *domain.Workflow) error {
+func bindHumanWorkflowJSON(c *gin.Context, value *workflowdomain.Workflow) error {
 	if err := bindJSON(c, value); err != nil {
 		return err
 	}
@@ -185,7 +186,7 @@ func (ctrl *Controller) DeleteWorkflow(c *gin.Context) {
 }
 
 func (ctrl *Controller) saveWorkflow(c *gin.Context, id int64) {
-	var value domain.Workflow
+	var value workflowdomain.Workflow
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxWorkflowJSONBody)
 	if err := bindHumanWorkflowJSON(c, &value); err != nil {
 		if !c.IsAborted() {
@@ -675,7 +676,7 @@ func (ctrl *Controller) ListAIResources(c *gin.Context) {
 		filters[key] = values[0]
 	}
 	keys := c.QueryArray("key")
-	items, total, err := ctrl.workflows.ListCatalog(c.Request.Context(), resourceType, domain.ResourceQuery{Query: c.Query("q"), Page: page, PageSize: pageSize, Filters: filters, Keys: keys})
+	items, total, err := ctrl.workflows.ListCatalog(c.Request.Context(), resourceType, workflowdomain.ResourceQuery{Query: c.Query("q"), Page: page, PageSize: pageSize, Filters: filters, Keys: keys})
 	if err != nil {
 		controllerutil.WriteDomainError(c, err)
 		return

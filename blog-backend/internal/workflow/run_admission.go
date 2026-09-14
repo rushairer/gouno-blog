@@ -5,26 +5,26 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 	"strconv"
 
 	"github.com/rushairer/blog-backend/internal/dbtx"
-	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 // RunAdmissionStore is consumer-owned by Workflow. It exposes only the
 // persistence primitives required to atomically admit, retry, resume and
 // recover Workflow runs; orchestration stays in RunAdmissionCoordinator.
 type RunAdmissionStore interface {
-	CreateRunTx(context.Context, *sql.Tx, *domain.WorkflowRun) (bool, error)
-	LockScheduledRunTx(context.Context, *sql.Tx, int64, string) (*domain.WorkflowRun, error)
-	RequeueFailedScheduledRunTx(context.Context, *sql.Tx, *domain.WorkflowRun) (bool, error)
-	InsertAdmissionResourcesTx(context.Context, *sql.Tx, int64, []domain.WorkflowResource) error
-	ReplaceNonQueryResourcesTx(context.Context, *sql.Tx, int64, []domain.WorkflowResource) error
+	CreateRunTx(context.Context, *sql.Tx, *workflowdomain.WorkflowRun) (bool, error)
+	LockScheduledRunTx(context.Context, *sql.Tx, int64, string) (*workflowdomain.WorkflowRun, error)
+	RequeueFailedScheduledRunTx(context.Context, *sql.Tx, *workflowdomain.WorkflowRun) (bool, error)
+	InsertAdmissionResourcesTx(context.Context, *sql.Tx, int64, []workflowdomain.WorkflowResource) error
+	ReplaceNonQueryResourcesTx(context.Context, *sql.Tx, int64, []workflowdomain.WorkflowResource) error
 
-	RetrySource(context.Context, int64) (*domain.WorkflowRun, error)
-	LockRetrySourceTx(context.Context, *sql.Tx, int64) (*domain.WorkflowRun, error)
+	RetrySource(context.Context, int64) (*workflowdomain.WorkflowRun, error)
+	LockRetrySourceTx(context.Context, *sql.Tx, int64) (*workflowdomain.WorkflowRun, error)
 	CountFailedIterationsTx(context.Context, *sql.Tx, int64, string, []int) (int, error)
-	CreateRetryRunTx(context.Context, *sql.Tx, *domain.WorkflowRun) error
+	CreateRetryRunTx(context.Context, *sql.Tx, *workflowdomain.WorkflowRun) error
 	CopyRetryResourcesTx(context.Context, *sql.Tx, int64, int64) error
 	CopyRetryQueryStepsTx(context.Context, *sql.Tx, int64, int64) error
 
@@ -49,11 +49,11 @@ func NewRunAdmissionCoordinator(transactor *dbtx.Transactor, store RunAdmissionS
 	return &RunAdmissionCoordinator{transactor: transactor, store: store}
 }
 
-func (c *RunAdmissionCoordinator) Admit(ctx context.Context, run *domain.WorkflowRun, resources []domain.WorkflowResource, retryFailed bool) (*domain.WorkflowRun, error) {
+func (c *RunAdmissionCoordinator) Admit(ctx context.Context, run *workflowdomain.WorkflowRun, resources []workflowdomain.WorkflowResource, retryFailed bool) (*workflowdomain.WorkflowRun, error) {
 	if run == nil {
 		return nil, fmt.Errorf("%w: run admission is required", ErrInvalid)
 	}
-	var admitted *domain.WorkflowRun
+	var admitted *workflowdomain.WorkflowRun
 	err := c.transactor.Run(ctx, func(tx *sql.Tx) error {
 		candidate := *run
 		created, err := c.store.CreateRunTx(ctx, tx, &candidate)
@@ -98,7 +98,7 @@ func (c *RunAdmissionCoordinator) Admit(ctx context.Context, run *domain.Workflo
 	return admitted, nil
 }
 
-func (c *RunAdmissionCoordinator) RetrySource(ctx context.Context, runID int64) (*domain.WorkflowRun, error) {
+func (c *RunAdmissionCoordinator) RetrySource(ctx context.Context, runID int64) (*workflowdomain.WorkflowRun, error) {
 	run, err := c.store.RetrySource(ctx, runID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -106,8 +106,8 @@ func (c *RunAdmissionCoordinator) RetrySource(ctx context.Context, runID int64) 
 	return run, err
 }
 
-func (c *RunAdmissionCoordinator) Retry(ctx context.Context, runID int64, childStepID, parentStepID string, iterations []int, triggeredByPrincipalID *int64) (*domain.WorkflowRun, error) {
-	var retry *domain.WorkflowRun
+func (c *RunAdmissionCoordinator) Retry(ctx context.Context, runID int64, childStepID, parentStepID string, iterations []int, triggeredByPrincipalID *int64) (*workflowdomain.WorkflowRun, error) {
+	var retry *workflowdomain.WorkflowRun
 	err := c.transactor.Run(ctx, func(tx *sql.Tx) error {
 		source, err := c.store.LockRetrySourceTx(ctx, tx, runID)
 		if errors.Is(err, sql.ErrNoRows) {
@@ -129,7 +129,7 @@ func (c *RunAdmissionCoordinator) Retry(ctx context.Context, runID int64, childS
 
 		parent := parentStepID
 		sourceID := runID
-		retry = &domain.WorkflowRun{
+		retry = &workflowdomain.WorkflowRun{
 			WorkflowID:             source.WorkflowID,
 			WorkflowVersionID:      source.WorkflowVersionID,
 			DryRun:                 source.DryRun,

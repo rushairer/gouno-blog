@@ -4,10 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 	"time"
 
 	"github.com/rushairer/blog-backend/internal/dbtx"
-	"github.com/rushairer/blog-backend/internal/domain"
 )
 
 type DispatchStore interface {
@@ -16,8 +16,8 @@ type DispatchStore interface {
 	EventCooldownExists(context.Context, int64, string, int) (bool, error)
 	MarkEventProcessed(context.Context, string) error
 	MarkEventFailure(context.Context, string, string) error
-	ClaimDueEvents(context.Context, int) ([]domain.WorkflowDispatchEvent, error)
-	LockDueSchedulesTx(context.Context, *sql.Tx, int) ([]domain.WorkflowScheduleClaim, error)
+	ClaimDueEvents(context.Context, int) ([]workflowdomain.WorkflowDispatchEvent, error)
+	LockDueSchedulesTx(context.Context, *sql.Tx, int) ([]workflowdomain.WorkflowScheduleClaim, error)
 	SetNextRunAtTx(context.Context, *sql.Tx, int64, *time.Time) error
 }
 
@@ -56,7 +56,7 @@ func (c *DispatchCoordinator) MarkEventFailure(ctx context.Context, eventKey, me
 	return c.store.MarkEventFailure(ctx, eventKey, message)
 }
 
-func (c *DispatchCoordinator) ClaimDueEvents(ctx context.Context, limit int) ([]domain.WorkflowDispatchEvent, error) {
+func (c *DispatchCoordinator) ClaimDueEvents(ctx context.Context, limit int) ([]workflowdomain.WorkflowDispatchEvent, error) {
 	return c.store.ClaimDueEvents(ctx, limit)
 }
 

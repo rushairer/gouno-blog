@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 
 	"github.com/rushairer/blog-backend/internal/domain"
 )
@@ -27,7 +28,7 @@ type RunnerApprovalStore interface {
 }
 
 type RunnerWorkflowScopeStore interface {
-	WorkflowScopePolicy(context.Context, int64) (domain.WorkflowScopePolicy, error)
+	WorkflowScopePolicy(context.Context, int64) (workflowdomain.WorkflowScopePolicy, error)
 	WorkflowResourceAccess(context.Context, int64, string, string) (string, bool, error)
 	AddDiscoveredWorkflowResource(context.Context, int64, string, string, string, json.RawMessage) error
 }
