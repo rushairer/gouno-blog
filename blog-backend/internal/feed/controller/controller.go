@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rushairer/blog-backend/internal/controllerutil"
 	"github.com/rushairer/blog-backend/internal/domain"
 	pageservice "github.com/rushairer/blog-backend/internal/page/service"
 )
@@ -71,7 +72,7 @@ type SitemapURL struct {
 func (ctrl *FeedController) GetRSS(c *gin.Context) {
 	posts, _, err := ctrl.svc.ListPosts(c.Request.Context(), "", "", 1, 50)
 	if err != nil {
-		WriteDomainError(c, err)
+		controllerutil.WriteDomainError(c, err)
 		return
 	}
 
@@ -113,7 +114,7 @@ func (ctrl *FeedController) GetRSS(c *gin.Context) {
 func (ctrl *FeedController) GetSitemap(c *gin.Context) {
 	posts, _, err := ctrl.svc.ListPosts(c.Request.Context(), "", "", 1, 500)
 	if err != nil {
-		WriteDomainError(c, err)
+		controllerutil.WriteDomainError(c, err)
 		return
 	}
 

@@ -15,6 +15,7 @@ import (
 	communitycontroller "github.com/rushairer/blog-backend/internal/community/controller"
 	communityservice "github.com/rushairer/blog-backend/internal/community/service"
 	"github.com/rushairer/blog-backend/internal/controller"
+	feedcontroller "github.com/rushairer/blog-backend/internal/feed/controller"
 	knowledgecontroller "github.com/rushairer/blog-backend/internal/knowledge/controller"
 	"github.com/rushairer/blog-backend/internal/media"
 	mediacontroller "github.com/rushairer/blog-backend/internal/media/controller"
@@ -106,7 +107,7 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 	siteSvc := opts.SiteSvc
 	siteCtrl := sitecontroller.New(siteSvc)
 
-	feedCtrl := controller.NewFeedController(postSvc, pageSvc, siteSvc)
+	feedCtrl := feedcontroller.NewFeedController(postSvc, pageSvc, siteSvc)
 
 	communitySvc := opts.CommunitySvc
 	var interactionLimiter ratelimit.Limiter
