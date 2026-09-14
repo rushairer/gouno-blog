@@ -17,7 +17,6 @@ import (
 	"github.com/rushairer/blog-backend/internal/connector"
 	"github.com/rushairer/blog-backend/internal/domain"
 	"github.com/rushairer/blog-backend/internal/knowledge"
-	"github.com/rushairer/blog-backend/internal/operations"
 	"github.com/rushairer/blog-backend/internal/tool"
 	"github.com/rushairer/gouno"
 )
@@ -36,7 +35,6 @@ type AgentController struct {
 	workerCtx  context.Context
 	knowledge  *knowledge.Service
 	workflows  workflowLifecyclePort
-	operations *operations.Service
 	connectors *connector.Service
 	generation *agentservice.GenerationService
 }
@@ -51,7 +49,6 @@ type AgentControllerOptions struct {
 	WorkerCtx  context.Context
 	Knowledge  *knowledge.Service
 	Workflows  workflowLifecyclePort
-	Operations *operations.Service
 	Connectors *connector.Service
 	Generation *agentservice.GenerationService
 }
@@ -65,7 +62,6 @@ func NewAgentController(opts AgentControllerOptions) *AgentController {
 		workerCtx:  opts.WorkerCtx,
 		knowledge:  opts.Knowledge,
 		workflows:  opts.Workflows,
-		operations: opts.Operations,
 		connectors: opts.Connectors,
 		generation: opts.Generation,
 	}
