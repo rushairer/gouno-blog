@@ -22,7 +22,6 @@ import {
   Input,
   Modal,
   Select,
-  Skeleton,
   Table,
   TableBody,
   TableCell,
@@ -32,7 +31,7 @@ import {
   Tag,
   Text,
 } from "@gouno/ui/core";
-import { PageHeader } from "@gouno/ui/gouno";
+import { PageHeader, PageSkeleton } from "@gouno/ui/gouno";
 
 import { StepUpMfaModal } from "../../components/auth/StepUpMfaModal";
 import { SudoGate } from "../../components/auth/SudoGate";
@@ -106,31 +105,7 @@ function editableRole(member: BlogMember) {
 }
 
 function MembersLoadingState() {
-  return (
-    <Card padding="base" aria-label="成员加载中">
-      <div className="flex flex-col gap-4" role="status" aria-live="polite">
-        <Text size="sm" tone="muted">
-          正在同步成员目录…
-        </Text>
-        {Array.from({ length: 4 }, (_, index) => (
-          <div
-            key={index}
-            className="grid gap-3 border-t pt-4 first:border-t-0 first:pt-0 md:grid-cols-[minmax(0,1fr)_9rem_8rem]"
-          >
-            <div className="flex items-center gap-3">
-              <Skeleton className="size-9 rounded-full" />
-              <div className="flex flex-1 flex-col gap-2">
-                <Skeleton className="h-4 w-40" />
-                <Skeleton className="h-3 w-52" />
-              </div>
-            </div>
-            <Skeleton className="h-6 w-20" />
-            <Skeleton className="h-8 w-24" />
-          </div>
-        ))}
-      </div>
-    </Card>
-  );
+  return <PageSkeleton layout="collection" aria-label="成员加载中" />;
 }
 
 export default function AdminUsers() {

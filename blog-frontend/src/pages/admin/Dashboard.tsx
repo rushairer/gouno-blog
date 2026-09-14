@@ -25,7 +25,6 @@ import {
   CardHeader,
   CardTitle,
   Empty,
-  Skeleton,
   Statistic,
   Table,
   TableBody,
@@ -36,7 +35,7 @@ import {
   Tag,
   Text,
 } from "@gouno/ui/core";
-import { PageHeader } from "@gouno/ui/gouno";
+import { PageHeader, PageSkeleton } from "@gouno/ui/gouno";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 import { useAbility } from "../../abilities";
 
@@ -126,37 +125,7 @@ function MetricCard({
 }
 
 function DashboardLoading() {
-  return (
-    <div
-      className="flex flex-col gap-6"
-      role="status"
-      aria-label="数据概览加载中"
-      aria-live="polite"
-    >
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }, (_, index) => (
-          <Card key={index} padding="base">
-            <div className="flex flex-col gap-4">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-8 w-20" />
-              <Skeleton className="h-3 w-36" />
-            </div>
-          </Card>
-        ))}
-      </div>
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <Card padding="base" className="lg:col-span-2">
-          <Skeleton className="h-64 w-full" />
-        </Card>
-        <Card padding="base">
-          <Skeleton className="h-64 w-full" />
-        </Card>
-      </div>
-      <Card padding="base">
-        <Skeleton className="h-56 w-full" />
-      </Card>
-    </div>
-  );
+  return <PageSkeleton layout="dashboard" aria-label="数据概览加载中" />;
 }
 
 export default function Dashboard() {
