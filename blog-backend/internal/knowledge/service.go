@@ -283,41 +283,27 @@ func (s *Service) Start(ctx context.Context) {
 }
 
 func (s *Service) processOne(ctx context.Context) {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
+	jobID, postID, action, version, attempt, found, err := s.claimIndexJob(ctx)
+	if err != nil || !found {
 		return
 	}
-	var jobID, postID int64
-	var action, version string
-	err = tx.QueryRowContext(ctx, `SELECT id, post_id, action, version_key
-		FROM ai_content_index_jobs WHERE status IN ('queued','failed') AND available_at <= NOW()
-		AND attempts < 5 ORDER BY id FOR UPDATE SKIP LOCKED LIMIT 1`).Scan(&jobID, &postID, &action, &version)
-	if errors.Is(err, sql.ErrNoRows) {
-		_ = tx.Rollback()
-		return
-	}
-	if err != nil {
-		_ = tx.Rollback()
-		return
-	}
-	if _, err = tx.ExecContext(ctx, `UPDATE ai_content_index_jobs SET status='running',
-		attempts=attempts+1, claimed_at=NOW(), error_code=NULL WHERE id=$1`, jobID); err != nil {
-		_ = tx.Rollback()
-		return
-	}
-	if err = tx.Commit(); err != nil {
-		return
-	}
+	stopHeartbeat := s.startIndexJobHeartbeat(ctx, jobID, attempt)
+	defer stopHeartbeat()
+
 	err = s.indexPost(ctx, postID, action, version)
+	finalizeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
 	if err != nil {
-		_, _ = s.db.ExecContext(ctx, `UPDATE ai_content_index_jobs SET status='failed',
+		_, _ = s.db.ExecContext(finalizeCtx, `UPDATE ai_content_index_jobs SET status='failed',
 			error_code='index_failed', available_at=NOW() + make_interval(secs => LEAST(300, attempts * attempts * 5))
-			WHERE id=$1`, jobID)
-		s.logger.Warn("AI content indexing failed", zap.Int64("job_id", jobID), zap.Error(err))
+			WHERE id=$1 AND status='running' AND attempts=$2`, jobID, attempt)
+		if s.logger != nil {
+			s.logger.Warn("AI content indexing failed", zap.Int64("job_id", jobID), zap.Error(err))
+		}
 		return
 	}
-	_, _ = s.db.ExecContext(ctx, `UPDATE ai_content_index_jobs SET status='succeeded',
-		finished_at=NOW() WHERE id=$1`, jobID)
+	_, _ = s.db.ExecContext(finalizeCtx, `UPDATE ai_content_index_jobs SET status='succeeded',
+		finished_at=NOW() WHERE id=$1 AND status='running' AND attempts=$2`, jobID, attempt)
 }
 
 func (s *Service) indexPost(ctx context.Context, postID int64, action, version string) error {

@@ -89,7 +89,7 @@ internal/
 └── ...
 ```
 
-The historical global `internal/service` and root `internal/domain` buckets have been retired. Agent models are canonical under `internal/agent/domain`. `internal/repository` remains only as a frozen Connector-held transaction compatibility boundary, while `internal/controller` remains frozen to the stable Access security boundary, Connector-held transport/shell, and allowlisted compatibility helpers. New business ownership belongs in capability-local packages.
+The historical root business-layer buckets `internal/domain`, `internal/service`, `internal/repository`, and `internal/controller` have all been retired. Business ownership belongs in capability-local packages under `internal/<capability>/`. Cross-cutting packages at the root are limited to infrastructure with explicit horizontal semantics, such as `dbtx`, `dberror`, `controllerutil`, `ratelimit`, `secretbox`, and `testsupport`.
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for the authoritative project convention and the repository root [AGENTS.md](../AGENTS.md) for security and migration invariants.
 
@@ -210,9 +210,9 @@ internal/
 └── ...
 ```
 
-历史上的全局 `internal/service` 已经退役。`internal/domain` 仍是有意保留的共享模型迁移边界，`internal/repository` 与 `internal/controller` 则是渐进迁移目录。已有代码按完整 Capability 分批迁移；新的业务 ownership 应优先进入 Capability 自己的目录。
+历史上的根业务分层目录 `internal/domain`、`internal/service`、`internal/repository`、`internal/controller` 已全部退役。业务 ownership 必须进入 `internal/<capability>/` 下的 Capability 本地包；根 `internal/` 只保留具有明确横向基础设施语义的包，例如 `dbtx`、`dberror`、`controllerutil`、`ratelimit`、`secretbox`、`testsupport`。
 
-完整规则见 [ARCHITECTURE.md](./ARCHITECTURE.md)，安全和迁移不变量见仓库根目录 [AGENTS.md](../AGENTS.md)。
+完整规则见 [ARCHITECTURE.md](./ARCHITECTURE.md)，安全和迁移不变量见仓库根目录 [AGENTS.md](../AGENTS.md)。当前 owner、跨 Capability contract、事务 coordinator 与剩余兼容边界说明见 [ARCHITECTURE_CONVERGENCE.md](./ARCHITECTURE_CONVERGENCE.md)。
 
 ## 常用 Makefile 命令
 

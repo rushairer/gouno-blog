@@ -28,7 +28,7 @@ var (
 )
 
 type mediaAssetGateway interface {
-	ListMedia(context.Context, mediadomain.MediaFilter) ([]*mediadomain.MediaAsset, error)
+	GetMedia(context.Context, int64) (*mediadomain.MediaAsset, error)
 	CreateMedia(context.Context, *mediadomain.MediaAsset) error
 	DeleteMedia(context.Context, int64) (*mediadomain.MediaAsset, error)
 }
@@ -208,16 +208,9 @@ func (s *ApprovalService) ApplyMediaCandidate(ctx context.Context, id int64) (*p
 	if err != nil || post == nil {
 		return nil, postservice.ErrPostNotFound
 	}
-	assets, err := s.mediaAssets.ListMedia(ctx, mediadomain.MediaFilter{})
+	asset, err := s.mediaAssets.GetMedia(ctx, *candidate.MediaAssetID)
 	if err != nil {
 		return nil, err
-	}
-	var asset *mediadomain.MediaAsset
-	for _, item := range assets {
-		if item.ID == *candidate.MediaAssetID {
-			asset = item
-			break
-		}
 	}
 	if asset == nil {
 		return nil, errors.New("media asset not found")
@@ -233,10 +226,10 @@ func (s *ApprovalService) ApplyMediaCandidate(ctx context.Context, id int64) (*p
 	} else {
 		post.CoverURL, post.CoverAlt = asset.URL, candidate.AltText
 	}
-	s.appendCandidateEvent(ctx, id, "article_apply_confirmed", map[string]any{"post_id": post.ID, "placement": candidate.Placement})
 	if err := s.posts.UpdatePost(ctx, post); err != nil {
 		return nil, err
 	}
+	s.appendCandidateEvent(ctx, id, "article_apply_confirmed", map[string]any{"post_id": post.ID, "placement": candidate.Placement})
 	versions, _ := s.postVersions.ListVersions(ctx, post.ID)
 	if len(versions) > 0 {
 		_ = s.mediaCandidates.MarkMediaCandidateApplied(ctx, id, versions[0].ID)
@@ -246,9 +239,6 @@ func (s *ApprovalService) ApplyMediaCandidate(ctx context.Context, id int64) (*p
 	return post, nil
 }
 
-// ApplyMediaCandidates merges all selected images for one run into a single
-// post update. This preserves the article's version history and makes a
-// multi-image workflow atomic from the editor's point of view.
 func (s *ApprovalService) ApplyMediaCandidates(ctx context.Context, runID int64, ids []int64) (*postdomain.Post, error) {
 	if runID <= 0 || len(ids) == 0 {
 		return nil, errors.New("at least one selected image is required")
@@ -292,20 +282,24 @@ func (s *ApprovalService) ApplyMediaCandidates(ctx context.Context, runID int64,
 	if err != nil || post == nil {
 		return nil, postservice.ErrPostNotFound
 	}
-	assets, err := s.mediaAssets.ListMedia(ctx, mediadomain.MediaFilter{})
-	if err != nil {
-		return nil, err
-	}
-	assetByID := make(map[int64]*mediadomain.MediaAsset, len(assets))
-	for _, asset := range assets {
-		assetByID[asset.ID] = asset
+	assetByID := make(map[int64]*mediadomain.MediaAsset, len(ids))
+	for _, id := range ids {
+		assetID := *byID[id].MediaAssetID
+		if _, ok := assetByID[assetID]; ok {
+			continue
+		}
+		asset, err := s.mediaAssets.GetMedia(ctx, assetID)
+		if err != nil {
+			return nil, err
+		}
+		if asset == nil {
+			return nil, errors.New("media asset not found")
+		}
+		assetByID[assetID] = asset
 	}
 	for _, id := range ids {
 		candidate := byID[id]
 		asset := assetByID[*candidate.MediaAssetID]
-		if asset == nil {
-			return nil, errors.New("media asset not found")
-		}
 		if candidate.Placement == "inline" {
 			if !strings.Contains(post.Content, candidate.Anchor) {
 				s.appendCandidateEvent(ctx, id, "article_apply_conflict", map[string]any{"reason": "anchor", "batch": true})
@@ -349,16 +343,9 @@ func (s *ApprovalService) PreviewMediaCandidate(ctx context.Context, id int64) (
 	if err != nil {
 		return nil, err
 	}
-	assets, err := s.mediaAssets.ListMedia(ctx, mediadomain.MediaFilter{})
+	asset, err := s.mediaAssets.GetMedia(ctx, *candidate.MediaAssetID)
 	if err != nil {
 		return nil, err
-	}
-	var asset *mediadomain.MediaAsset
-	for _, item := range assets {
-		if item.ID == *candidate.MediaAssetID {
-			asset = item
-			break
-		}
 	}
 	if asset == nil {
 		return nil, errors.New("media asset not found")
@@ -367,9 +354,6 @@ func (s *ApprovalService) PreviewMediaCandidate(ctx context.Context, id int64) (
 	applied := candidate.AppliedVersionID != nil
 	versionMatches := true
 	if applied {
-		// Applying the candidate creates a new article version and therefore
-		// changes UpdatedAt. That expected change must not make the completed
-		// application look like a stale preview.
 		if candidate.Placement == "inline" {
 			versionMatches = strings.Contains(post.Content, asset.URL)
 		} else {
@@ -533,9 +517,6 @@ func (s *ApprovalService) Approve(ctx context.Context, id int64, reviewerPrincip
 	if err != nil {
 		return translateError(err)
 	}
-	// An execution failure must remain visible for audit, but it must not make
-	// the proposal unreachable. Retrying reclaims the same approval and never
-	// creates a second proposal.
 	if approval.Status != domain.ApprovalPending && approval.Status != domain.ApprovalFailed {
 		return ErrApprovalConflict
 	}
@@ -556,9 +537,6 @@ func (s *ApprovalService) Approve(ctx context.Context, id int64, reviewerPrincip
 	return s.approvals.CompleteApproval(ctx, id, domain.ApprovalExecuted, "")
 }
 
-// StartImageGenerationForApprovedBrief bridges the approved image brief to the
-// run-owned image task. It intentionally runs after approval is committed so a
-// retry can never create a second candidate or bypass the existing approval.
 func (s *ApprovalService) StartImageGenerationForApprovedBrief(ctx context.Context, approvalID int64, creatorPrincipalID int64) error {
 	approval, err := s.approvals.GetApproval(ctx, approvalID)
 	if err != nil {
@@ -592,9 +570,6 @@ func isImageBriefApproval(approval *domain.AgentApproval) bool {
 }
 
 func (s *ApprovalService) validateConflict(ctx context.Context, approval *domain.AgentApproval) error {
-	// Only approvals that write an existing post or page need optimistic-concurrency
-	// protection. Preparatory approvals (candidate sets and image briefs) do
-	// not mutate the post, and must remain usable after a separate edit.
 	if approval.ActionType == "update_page" {
 		if s.pages == nil || approval.TargetType != "page" || approval.TargetID == nil || len(approval.BeforeSnapshot) == 0 {
 			return nil
@@ -822,9 +797,6 @@ func (s *ApprovalService) execute(ctx context.Context, approval *domain.AgentApp
 		}
 		return nil
 	case "create_distribution_draft":
-		// The approved payload remains in ai_approvals as the audited, copyable
-		// draft. Do not add external delivery here: every connector requires its
-		// own credentials, idempotency controls, and a separate publish approval.
 		var payload struct {
 			PostID int64  `json:"post_id"`
 			Format string `json:"format"`

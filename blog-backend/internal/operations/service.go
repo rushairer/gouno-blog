@@ -108,16 +108,17 @@ func (s *Service) getSuggestion(ctx context.Context, raw json.RawMessage) (any, 
 	if err := decode(raw, &args); err != nil || args.ID <= 0 {
 		return nil, tool.ErrInvalidArgument
 	}
-	items, err := s.ListSuggestions(ctx, "all", 200)
+	var item opsdomain.OperationalSuggestion
+	err := s.db.QueryRowContext(ctx, `SELECT id,source_type,source_key,source_run_id,
+		workflow_run_id,title,description,priority,evidence,window_start,window_end,status,
+		ignored_reason,created_at,updated_at FROM ai_operational_suggestions WHERE id=$1`, args.ID).
+		Scan(&item.ID, &item.SourceType, &item.SourceKey, &item.SourceRunID, &item.WorkflowRunID,
+			&item.Title, &item.Description, &item.Priority, &item.Evidence, &item.WindowStart, &item.WindowEnd,
+			&item.Status, &item.IgnoredReason, &item.CreatedAt, &item.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
-	for _, item := range items {
-		if item.ID == args.ID {
-			return item, nil
-		}
-	}
-	return nil, sql.ErrNoRows
+	return &item, nil
 }
 
 func (s *Service) getComment(ctx context.Context, raw json.RawMessage) (any, error) {
@@ -223,43 +224,31 @@ func (s *Service) Start(ctx context.Context) {
 }
 
 func (s *Service) processOne(ctx context.Context) {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
+	jobID, postID, attempt, found, err := s.claimLinkHealthJob(ctx)
+	if err != nil || !found {
 		return
 	}
-	var jobID, postID int64
-	err = tx.QueryRowContext(ctx, `SELECT id, post_id FROM ai_link_health_jobs
-		WHERE status IN ('queued','failed') AND available_at<=NOW() AND attempts<5
-		ORDER BY id FOR UPDATE SKIP LOCKED LIMIT 1`).Scan(&jobID, &postID)
-	if errors.Is(err, sql.ErrNoRows) {
-		_ = tx.Rollback()
-		return
-	}
-	if err != nil {
-		_ = tx.Rollback()
-		return
-	}
-	if _, err = tx.ExecContext(ctx, `UPDATE ai_link_health_jobs SET status='running',
-		attempts=attempts+1, claimed_at=NOW(), error_code=NULL WHERE id=$1`, jobID); err != nil {
-		_ = tx.Rollback()
-		return
-	}
-	if err = tx.Commit(); err != nil {
-		return
-	}
+	stopHeartbeat := s.startLinkHealthJobHeartbeat(ctx, jobID, attempt)
+	defer stopHeartbeat()
+
 	args, _ := json.Marshal(map[string]any{"id": postID})
 	_, raw, _, err := s.tools.Invoke(ctx, []string{"content.check_links"}, "content.check_links", args)
 	if err == nil {
 		err = s.saveLinkResults(ctx, postID, raw)
 	}
+	finalizeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
 	if err != nil {
-		_, _ = s.db.ExecContext(ctx, `UPDATE ai_link_health_jobs SET status='failed',
+		_, _ = s.db.ExecContext(finalizeCtx, `UPDATE ai_link_health_jobs SET status='failed',
 			error_code='link_check_failed', available_at=NOW()+make_interval(secs=>LEAST(3600,attempts*attempts*30))
-			WHERE id=$1`, jobID)
-		s.logger.Warn("AI link health job failed", zap.Int64("job_id", jobID), zap.Error(err))
+			WHERE id=$1 AND status='running' AND attempts=$2`, jobID, attempt)
+		if s.logger != nil {
+			s.logger.Warn("AI link health job failed", zap.Int64("job_id", jobID), zap.Error(err))
+		}
 		return
 	}
-	_, _ = s.db.ExecContext(ctx, `UPDATE ai_link_health_jobs SET status='succeeded', finished_at=NOW() WHERE id=$1`, jobID)
+	_, _ = s.db.ExecContext(finalizeCtx, `UPDATE ai_link_health_jobs SET status='succeeded', finished_at=NOW()
+		WHERE id=$1 AND status='running' AND attempts=$2`, jobID, attempt)
 }
 
 func (s *Service) saveLinkResults(ctx context.Context, postID int64, raw json.RawMessage) error {
@@ -291,9 +280,6 @@ func (s *Service) saveLinkResults(ctx context.Context, postID int64, raw json.Ra
 				return err
 			}
 		}
-		// A fresh successful check is authoritative for this post. Close an old
-		// actionable suggestion only after the complete snapshot has been replaced;
-		// a later failing check can reopen the resolved item with new evidence.
 		if _, err := tx.ExecContext(ctx, `UPDATE ai_operational_suggestions
 			SET status='resolved', ignored_reason=NULL, updated_at=NOW()
 			WHERE source_type='broken_links' AND (source_key=$2 OR source_key='post:'||$2) AND status='new'
@@ -599,9 +585,6 @@ func (s *Service) RefreshSuggestions(ctx context.Context) error {
 	if err := rows.Err(); err != nil {
 		return err
 	}
-	// Reconcile the complete snapshot, including posts that no longer have any
-	// failing rows. Without this pass, a successful refresh could leave an old
-	// broken-links suggestion in the actionable queue indefinitely.
 	if _, err := s.db.ExecContext(ctx, `UPDATE ai_operational_suggestions s
 		SET status='resolved', ignored_reason=NULL, updated_at=NOW()
 		WHERE s.source_type='broken_links' AND s.status='new'
