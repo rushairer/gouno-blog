@@ -150,6 +150,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
       toolbar={
         <>
           <IconButtonLink
+            className="!size-9 !rounded-full !p-0"
             to="/"
             target="_blank"
             rel="noreferrer"

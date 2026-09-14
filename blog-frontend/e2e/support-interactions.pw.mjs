@@ -29,6 +29,21 @@ test("Admin shell uses a title-free header and single-language navigation groups
   await expect(storefrontLink).toBeVisible();
   await expect(storefrontLink).toHaveAttribute("href", "/");
   await expect(storefrontLink).toHaveAttribute("target", "_blank");
+  const themeButton = header.getByRole("button", { name: "切换后台主题" });
+  const [storefrontGeometry, themeGeometry] = await Promise.all(
+    [storefrontLink, themeButton].map((control) =>
+      control.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        return {
+          width: rect.width,
+          height: rect.height,
+          borderRadius: Number.parseFloat(getComputedStyle(element).borderRadius),
+        };
+      }),
+    ),
+  );
+  expect(storefrontGeometry).toEqual(themeGeometry);
+  expect(storefrontGeometry.width).toBe(storefrontGeometry.height);
   await expect(navigation.getByRole("heading")).toHaveText([
     "内容管理",
     "AI 运营",

@@ -124,6 +124,9 @@ describe("AdminShell navigation utilities", () => {
       screen.getByRole("link", { name: "在新窗口查看前台站点" }),
     ).toHaveAttribute("target", "_blank");
     expect(
+      screen.getByRole("link", { name: "在新窗口查看前台站点" }),
+    ).toHaveClass("!size-9", "!rounded-full", "!p-0");
+    expect(
       screen.queryByRole("link", { name: "查看通知中心" }),
     ).not.toBeInTheDocument();
     expect(
