@@ -1,0 +1,121 @@
+name: Workflow domain ownership staging
+
+on:
+  push:
+    branches:
+      - refactor/workflow-domain-models
+
+permissions:
+  contents: write
+
+jobs:
+  migrate-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: blog-backend/go.mod
+          cache-dependency-path: blog-backend/go.sum
+
+      - name: Apply Workflow domain migration
+        run: python3 .github/scripts/workflow_domain_models.py
+
+      - name: Format changed Go files
+        run: |
+          git diff --name-only --diff-filter=ACM -- 'blog-backend/**/*.go' | xargs -r gofmt -w
+
+      - name: Full backend tests
+        working-directory: blog-backend
+        run: go test ./...
+
+      - name: Full backend vet
+        working-directory: blog-backend
+        run: go vet ./...
+
+      - name: Ownership and semantic guards
+        run: |
+          test ! -e blog-backend/internal/domain/workflow.go
+          test -e blog-backend/internal/workflow/domain/model.go
+          test -e blog-backend/internal/workflow/domain/ownership_test.go
+          cmp <(git show 2fbef0a504cae6770d9ab56a54056567f893df27:blog-backend/internal/domain/workflow.go) blog-backend/internal/workflow/domain/model.go
+          (
+            cd blog-backend
+            go test ./internal/workflow/domain -run TestRootWorkflowModelsStayRetired -count=1
+          )
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import subprocess
+
+          base = '2fbef0a504cae6770d9ab56a54056567f893df27'
+          root_import = 'github.com/rushairer/blog-backend/internal/domain'
+          changed = subprocess.check_output(
+              ['git', 'diff', '--name-only', '--diff-filter=ACM', base, '--', 'blog-backend'],
+              text=True,
+          ).splitlines()
+          skip = {
+              'blog-backend/internal/workflow/domain/model.go',
+              'blog-backend/internal/workflow/domain/ownership_test.go',
+          }
+
+          def base_alias(text: str):
+              match = re.search(
+                  r'(?m)^\s*(?:(?P<alias>[A-Za-z_][A-Za-z0-9_]*)\s+)?"'
+                  + re.escape(root_import)
+                  + r'"\s*$',
+                  text,
+              ) or re.search(
+                  r'(?m)^import\s+(?:(?P<alias>[A-Za-z_][A-Za-z0-9_]*)\s+)?"'
+                  + re.escape(root_import)
+                  + r'"\s*$',
+                  text,
+              )
+              if not match:
+                  return None
+              return match.groupdict().get('alias') or 'domain'
+
+          def without_imports(text: str) -> str:
+              text = re.sub(r'(?s)\n?import\s*\(.*?\)\s*', '\n', text, count=1)
+              text = re.sub(r'(?m)^import\s+(?:(?:[A-Za-z_][A-Za-z0-9_]*)\s+)?"[^"]+"\s*$', '', text)
+              return text
+
+          def compact(text: str) -> str:
+              return re.sub(r'\s+', '', text)
+
+          for path in changed:
+              if not path.endswith('.go') or path in skip:
+                  continue
+              try:
+                  before = subprocess.check_output(['git', 'show', f'{base}:{path}'], text=True)
+              except subprocess.CalledProcessError:
+                  raise SystemExit(f'unexpected new Go file outside Workflow domain: {path}')
+              alias = base_alias(before)
+              if alias is None:
+                  raise SystemExit(f'changed Go file had no root-domain import in baseline: {path}')
+              after = Path(path).read_text()
+              normalized = after.replace('workflowdomain.', alias + '.')
+              if compact(without_imports(normalized)) != compact(without_imports(before)):
+                  raise SystemExit(f'{path} changed beyond Workflow type owner/import migration')
+          PY
+          git diff --exit-code 2fbef0a504cae6770d9ab56a54056567f893df27 -- \
+            blog-backend/internal/authbff \
+            blog-backend/internal/connector \
+            blog-backend/internal/access \
+            blog-backend/middleware
+          git diff --check
+
+      - name: Commit validated source and self-clean
+        run: |
+          rm -f .github/scripts/workflow_domain_models.py
+          rm -f .github/workflows/workflow-domain-models-staging.yml
+          git config user.name 'Aben'
+          git config user.email '5195693+rushairer@users.noreply.github.com'
+          git add -A
+          git commit -m 'refactor(workflow): own capability domain models'
+          git push origin HEAD:refactor/workflow-domain-models
