@@ -100,12 +100,10 @@ describe("AdminUsers list template", () => {
     await user.click(refresh);
     await waitFor(() => expect(list).toHaveBeenCalledTimes(2));
 
-    expect(screen.getByRole("table")).toBeInTheDocument();
+    const table = screen.getByRole("table");
+    expect(table).toBeInTheDocument();
     expect(screen.queryByLabelText("成员加载中")).not.toBeInTheDocument();
-    expect(screen.getByRole("table").parentElement?.parentElement).toHaveAttribute(
-      "aria-busy",
-      "true",
-    );
+    expect(table.closest('[aria-busy="true"]')).toBeTruthy();
 
     resolveRefresh({ members: [member] });
     await waitFor(() => expect(refresh).not.toBeDisabled());
