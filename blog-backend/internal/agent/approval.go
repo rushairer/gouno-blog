@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/agent/domain"
 	"github.com/rushairer/blog-backend/internal/media"
 	mediadomain "github.com/rushairer/blog-backend/internal/media/domain"
 	opsdomain "github.com/rushairer/blog-backend/internal/operations/domain"

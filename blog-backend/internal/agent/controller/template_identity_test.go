@@ -2,7 +2,7 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/agent/domain"
 	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 	"net/http/httptest"
 	"strings"

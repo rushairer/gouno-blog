@@ -9,7 +9,7 @@ import (
 	workflowdomain "github.com/rushairer/blog-backend/internal/workflow/domain"
 	"strings"
 
-	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/agent/domain"
 	"github.com/rushairer/blog-backend/internal/provider"
 	"github.com/rushairer/blog-backend/internal/tool"
 )

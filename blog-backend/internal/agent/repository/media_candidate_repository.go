@@ -7,7 +7,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/agent/domain"
 )
 
 type MediaCandidateRepository struct {

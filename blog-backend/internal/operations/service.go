@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/rushairer/blog-backend/internal/dbtx"
-	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/agent/domain"
 	mediadomain "github.com/rushairer/blog-backend/internal/media/domain"
 	opsdomain "github.com/rushairer/blog-backend/internal/operations/domain"
 	postservice "github.com/rushairer/blog-backend/internal/post/service"

@@ -13,7 +13,7 @@ import (
 
 	"github.com/robfig/cron/v3"
 	"github.com/rushairer/blog-backend/internal/dberror"
-	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/agent/domain"
 	"github.com/rushairer/blog-backend/internal/provider"
 	providerrepository "github.com/rushairer/blog-backend/internal/provider/repository"
 	"github.com/rushairer/blog-backend/internal/secretbox"

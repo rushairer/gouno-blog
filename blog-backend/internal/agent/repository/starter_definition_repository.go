@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/agent/domain"
 )
 
 func (r *DefinitionRepository) ReconcileSystemAgentTx(ctx context.Context, tx *sql.Tx, skill *domain.AgentSkill) (int64, bool, error) {

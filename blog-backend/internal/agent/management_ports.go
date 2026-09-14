@@ -2,10 +2,10 @@ package agent
 
 import (
 	"context"
-	providerdomain "github.com/rushairer/blog-backend/internal/provider/domain"
 	"time"
 
-	"github.com/rushairer/blog-backend/internal/domain"
+	"github.com/rushairer/blog-backend/internal/agent/domain"
+	providerdomain "github.com/rushairer/blog-backend/internal/provider/domain"
 )
 
 type ManagementProviderStore interface {
