@@ -21,7 +21,9 @@ func TestRouterUsesCapabilityAgentController(t *testing.T) {
 		"agentCtrl.ListSkills",
 		"agentCtrl.ListApprovals",
 		"agentCtrl.ListMediaCandidates",
-		"legacyAICtrl.ListEmbeddingProfiles",
+		"KnowledgeCtrl",
+		"*knowledgecontroller.Controller",
+		"knowledgeCtrl.ListEmbeddingProfiles",
 		"legacyAICtrl.ListConnectorProfiles",
 	} {
 		if !strings.Contains(text, required) {
@@ -35,6 +37,8 @@ func TestRouterUsesCapabilityAgentController(t *testing.T) {
 		"legacyAICtrl.ListApprovals",
 		"legacyAICtrl.ListMediaCandidates",
 		"agentCtrl.ListEmbeddingProfiles",
+		"legacyAICtrl.ListEmbeddingProfiles",
+		"knowledgeCtrl.ListConnectorProfiles",
 		"agentCtrl.ListConnectorProfiles",
 	} {
 		if strings.Contains(text, forbidden) {

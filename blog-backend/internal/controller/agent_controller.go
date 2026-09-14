@@ -8,28 +8,22 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/rushairer/blog-backend/internal/connector"
-	"github.com/rushairer/blog-backend/internal/knowledge"
 )
 
 type AgentController struct {
-	knowledge  *knowledge.Service
 	connectors *connector.Service
 }
 
 type AgentControllerOptions struct {
-	Knowledge  *knowledge.Service
 	Connectors *connector.Service
 }
 
 func NewAgentController(opts AgentControllerOptions) *AgentController {
-	return &AgentController{
-		knowledge:  opts.Knowledge,
-		connectors: opts.Connectors,
-	}
+	return &AgentController{connectors: opts.Connectors}
 }
 
-// NewAgentControllerWithOptions is retained while Knowledge and Connector
-// transport still share this transitional flat controller shell.
+// NewAgentControllerWithOptions is retained while Connector transport remains
+// on the explicitly held transitional flat controller shell.
 func NewAgentControllerWithOptions(opts AgentControllerOptions) *AgentController {
 	return NewAgentController(opts)
 }

@@ -15,6 +15,7 @@ import (
 	communitycontroller "github.com/rushairer/blog-backend/internal/community/controller"
 	communityservice "github.com/rushairer/blog-backend/internal/community/service"
 	"github.com/rushairer/blog-backend/internal/controller"
+	knowledgecontroller "github.com/rushairer/blog-backend/internal/knowledge/controller"
 	"github.com/rushairer/blog-backend/internal/media"
 	mediacontroller "github.com/rushairer/blog-backend/internal/media/controller"
 	mediaservice "github.com/rushairer/blog-backend/internal/media/service"
@@ -57,6 +58,7 @@ type WebRouterOptions struct {
 	RecommendationSvc  recommendationservice.Service
 	PostVersionSvc     postversionservice.Service
 	AgentCtrl          *agentcontroller.Controller
+	KnowledgeCtrl      *knowledgecontroller.Controller
 	LegacyAICtrl       *controller.AgentController
 	OperationsCtrl     *operationscontroller.Controller
 	WorkflowCtrl       *workflowcontroller.Controller
@@ -138,6 +140,7 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 
 	authOptions := opts.AuthOptions
 	agentCtrl := opts.AgentCtrl
+	knowledgeCtrl := opts.KnowledgeCtrl
 	legacyAICtrl := opts.LegacyAICtrl
 	operationsCtrl := opts.OperationsCtrl
 	workflowCtrl := opts.WorkflowCtrl
@@ -398,17 +401,19 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 				aiOps.GET("/admin/ai-image-tasks/:id/preview", agentCtrl.PreviewImageTask)
 				aiOps.GET("/admin/ai-image-tasks/:id/events", agentCtrl.ImageTaskEvents)
 			}
+			if knowledgeCtrl != nil {
+				aiOps.GET("/admin/embedding-profiles", knowledgeCtrl.ListEmbeddingProfiles)
+				aiOps.POST("/admin/embedding-profiles", knowledgeCtrl.CreateEmbeddingProfile)
+				aiOps.PUT("/admin/embedding-profiles/:id", knowledgeCtrl.UpdateEmbeddingProfile)
+				aiOps.DELETE("/admin/embedding-profiles/:id", knowledgeCtrl.DeleteEmbeddingProfile)
+				aiOps.POST("/admin/embedding-profiles/:id/test", knowledgeCtrl.TestEmbeddingProfile)
+				aiOps.GET("/admin/ai-index/status", knowledgeCtrl.IndexStatus)
+				aiOps.POST("/admin/ai-index/rebuild", knowledgeCtrl.RebuildIndex)
+				aiOps.POST("/admin/ai-index/retry", knowledgeCtrl.RetryIndex)
+				aiOps.PUT("/admin/ai-index/evaluation-cases", knowledgeCtrl.ReplaceIndexEvaluation)
+				aiOps.POST("/admin/ai-index/evaluate", knowledgeCtrl.EvaluateIndex)
+			}
 			if legacyAICtrl != nil {
-				aiOps.GET("/admin/embedding-profiles", legacyAICtrl.ListEmbeddingProfiles)
-				aiOps.POST("/admin/embedding-profiles", legacyAICtrl.CreateEmbeddingProfile)
-				aiOps.PUT("/admin/embedding-profiles/:id", legacyAICtrl.UpdateEmbeddingProfile)
-				aiOps.DELETE("/admin/embedding-profiles/:id", legacyAICtrl.DeleteEmbeddingProfile)
-				aiOps.POST("/admin/embedding-profiles/:id/test", legacyAICtrl.TestEmbeddingProfile)
-				aiOps.GET("/admin/ai-index/status", legacyAICtrl.IndexStatus)
-				aiOps.POST("/admin/ai-index/rebuild", legacyAICtrl.RebuildIndex)
-				aiOps.POST("/admin/ai-index/retry", legacyAICtrl.RetryIndex)
-				aiOps.PUT("/admin/ai-index/evaluation-cases", legacyAICtrl.ReplaceIndexEvaluation)
-				aiOps.POST("/admin/ai-index/evaluate", legacyAICtrl.EvaluateIndex)
 				aiOps.GET("/admin/ai-connectors", legacyAICtrl.ListConnectorProfiles)
 				aiOps.POST("/admin/ai-connectors", legacyAICtrl.SaveConnectorProfile)
 				aiOps.POST("/admin/ai-connectors/:id/oauth/start", legacyAICtrl.BeginConnectorOAuth)
