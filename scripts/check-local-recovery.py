@@ -56,7 +56,12 @@ def main():
             time.sleep(1)
         else:
             raise RuntimeError('isolated database not ready')
-        run(['docker','exec',container,'createdb','-U','postgres','blog'])
+        for _ in range(30):
+            if subprocess.run(['docker','exec',container,'createdb','-U','postgres','blog'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+                break
+            time.sleep(1)
+        else:
+            raise RuntimeError('isolated database initialization failed')
         with dump.open('rb') as stream:
             run(['docker','exec','-i',container,'pg_restore','-U','postgres','-d','blog','--exit-on-error','--no-owner','--no-acl'],stdin=stream)
         # Re-dump restored logical data to compare content without printing it.
