@@ -41,6 +41,16 @@ const member: BlogMember = {
   permissions: ["content.manage"],
 };
 
+function renderUsers() {
+  return render(
+    <AppFeedbackProvider>
+      <MemoryRouter initialEntries={["/admin/users"]}>
+        <AdminUsers />
+      </MemoryRouter>
+    </AppFeedbackProvider>,
+  );
+}
+
 describe("AdminUsers list template", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -50,13 +60,7 @@ describe("AdminUsers list template", () => {
     const user = userEvent.setup();
     vi.spyOn(membersApi, "list").mockResolvedValue({ members: [member] });
 
-    render(
-      <AppFeedbackProvider>
-        <MemoryRouter initialEntries={["/admin/users"]}>
-          <AdminUsers />
-        </MemoryRouter>
-      </AppFeedbackProvider>,
-    );
+    renderUsers();
 
     const mobileList = await screen.findByRole("list", { name: "成员列表" });
     expect(screen.getByRole("table")).toBeInTheDocument();
@@ -76,5 +80,43 @@ describe("AdminUsers list template", () => {
         screen.getByRole("dialog", { name: "编辑 内容编辑 的成员信息与权限" }),
       ).toBeInTheDocument();
     });
+  });
+
+  it("keeps resolved members visible during a same-query refresh", async () => {
+    const user = userEvent.setup();
+    let resolveRefresh!: (value: { members: BlogMember[] }) => void;
+    const refreshRequest = new Promise<{ members: BlogMember[] }>((resolve) => {
+      resolveRefresh = resolve;
+    });
+    const list = vi
+      .spyOn(membersApi, "list")
+      .mockResolvedValueOnce({ members: [member] })
+      .mockReturnValueOnce(refreshRequest);
+
+    renderUsers();
+
+    await screen.findByRole("table");
+    const refresh = screen.getByRole("button", { name: "刷新" });
+    await user.click(refresh);
+    await waitFor(() => expect(list).toHaveBeenCalledTimes(2));
+
+    expect(screen.getByRole("table")).toBeInTheDocument();
+    expect(screen.queryByLabelText("成员加载中")).not.toBeInTheDocument();
+    expect(screen.getByRole("table").parentElement?.parentElement).toHaveAttribute(
+      "aria-busy",
+      "true",
+    );
+
+    resolveRefresh({ members: [member] });
+    await waitFor(() => expect(refresh).not.toBeDisabled());
+  });
+
+  it("does not render Empty when the initial member request fails", async () => {
+    vi.spyOn(membersApi, "list").mockRejectedValue(new Error("network down"));
+
+    renderUsers();
+
+    expect(await screen.findByText("成员目录操作失败")).toBeInTheDocument();
+    expect(screen.queryByText("暂未同步到任何登录用户")).not.toBeInTheDocument();
   });
 });

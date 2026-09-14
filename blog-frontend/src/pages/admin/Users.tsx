@@ -294,6 +294,8 @@ export default function AdminUsers() {
     getGossoAdminURL(user) ||
     members.find((member) => member.principal?.issuer)?.principal?.issuer ||
     "";
+  const initialLoading = loading && members.length === 0;
+  const initialLoadFailed = Boolean(error) && members.length === 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -340,9 +342,9 @@ export default function AdminUsers() {
         />
       ) : null}
 
-      {loading ? (
+      {initialLoading ? (
         <MembersLoadingState />
-      ) : members.length === 0 ? (
+      ) : initialLoadFailed ? null : members.length === 0 ? (
         <Card padding="lg">
           <Empty
             title="暂未同步到任何登录用户"
@@ -355,146 +357,148 @@ export default function AdminUsers() {
           />
         </Card>
       ) : (
-        <SudoGate
-          title="成员与权限安全保护"
-          description="修改 Blog 成员角色、移交所有权或暂停成员资格需要近期多因素身份认证。解锁后享有 10 分钟无打扰操作期。"
-          actionLabel="解锁以管理成员权限"
-          unlockedPresentation="alert"
-        >
-          <div className="hidden md:block">
-            <Table density="compact" bordered>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>成员</TableHead>
-                  <TableHead className="w-32">账号 ID</TableHead>
-                  <TableHead className="w-48">Blog 角色</TableHead>
-                  <TableHead className="w-28">状态</TableHead>
-                  <TableHead className="w-36 text-right">操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {members.map((member) => (
-                  <TableRow key={member.principal.id}>
-                    <TableCell className="min-w-64 whitespace-normal">
-                      <div className="flex items-center gap-3">
-                        <span
-                          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary"
-                          aria-hidden="true"
-                        >
-                          {initials(member)}
-                        </span>
-                        <div className="min-w-0">
-                          <strong className="text-sm font-semibold text-foreground">
-                            {memberName(member)}
-                          </strong>
-                          {member.principal.email ? (
-                            <div className="break-all font-mono text-xs text-muted-foreground">
-                              {member.principal.email}
-                            </div>
-                          ) : null}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="small"
-                        className="font-mono text-xs"
-                        title={`点击复制完整 Subject ID: ${member.principal.subject}`}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          copySubject(member);
-                        }}
-                        icon={<Copy size={13} />}
-                      >
-                        {member.principal.subject.slice(0, 8)}
-                      </Button>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {member.roles.length ? (
-                          member.roles.map((role) => (
-                            <RoleTag key={role} role={role} />
-                          ))
-                        ) : (
-                          <span className="text-xs italic text-muted-foreground">
-                            尚未授予角色
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <MembershipTag status={member.membership_status} />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex min-w-max items-center justify-end gap-1">
-                        {renderActions(member)}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-
-          <div
-            className="grid gap-3 md:hidden"
-            role="list"
-            aria-label="成员列表"
+        <div aria-busy={loading || undefined}>
+          <SudoGate
+            title="成员与权限安全保护"
+            description="修改 Blog 成员角色、移交所有权或暂停成员资格需要近期多因素身份认证。解锁后享有 10 分钟无打扰操作期。"
+            actionLabel="解锁以管理成员权限"
+            unlockedPresentation="alert"
           >
-            {members.map((member) => (
-              <Card key={member.principal.id} padding="base" role="listitem">
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-start gap-3">
-                    <span
-                      className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary"
-                      aria-hidden="true"
-                    >
-                      {initials(member)}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-3">
-                        <strong className="min-w-0 break-words text-sm font-semibold leading-snug">
-                          {memberName(member)}
-                        </strong>
-                        <MembershipTag status={member.membership_status} />
-                      </div>
-                      {member.principal.email ? (
-                        <div className="mt-1 break-all font-mono text-xs text-muted-foreground">
-                          {member.principal.email}
-                        </div>
-                      ) : null}
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        {member.roles.length ? (
-                          member.roles.map((role) => (
-                            <RoleTag key={role} role={role} />
-                          ))
-                        ) : (
-                          <span className="text-xs italic text-muted-foreground">
-                            尚未授予角色
+            <div className="hidden md:block">
+              <Table density="compact" bordered>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>成员</TableHead>
+                    <TableHead className="w-32">账号 ID</TableHead>
+                    <TableHead className="w-48">Blog 角色</TableHead>
+                    <TableHead className="w-28">状态</TableHead>
+                    <TableHead className="w-36 text-right">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {members.map((member) => (
+                    <TableRow key={member.principal.id}>
+                      <TableCell className="min-w-64 whitespace-normal">
+                        <div className="flex items-center gap-3">
+                          <span
+                            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary"
+                            aria-hidden="true"
+                          >
+                            {initials(member)}
                           </span>
-                        )}
+                          <div className="min-w-0">
+                            <strong className="text-sm font-semibold text-foreground">
+                              {memberName(member)}
+                            </strong>
+                            {member.principal.email ? (
+                              <div className="break-all font-mono text-xs text-muted-foreground">
+                                {member.principal.email}
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
                         <Button
                           variant="ghost"
                           size="small"
                           className="font-mono text-xs"
                           title={`点击复制完整 Subject ID: ${member.principal.subject}`}
-                          onClick={() => copySubject(member)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            copySubject(member);
+                          }}
                           icon={<Copy size={13} />}
                         >
                           {member.principal.subject.slice(0, 8)}
                         </Button>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {member.roles.length ? (
+                            member.roles.map((role) => (
+                              <RoleTag key={role} role={role} />
+                            ))
+                          ) : (
+                            <span className="text-xs italic text-muted-foreground">
+                              尚未授予角色
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <MembershipTag status={member.membership_status} />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex min-w-max items-center justify-end gap-1">
+                          {renderActions(member)}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div
+              className="grid gap-3 md:hidden"
+              role="list"
+              aria-label="成员列表"
+            >
+              {members.map((member) => (
+                <Card key={member.principal.id} padding="base" role="listitem">
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-start gap-3">
+                      <span
+                        className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary"
+                        aria-hidden="true"
+                      >
+                        {initials(member)}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-3">
+                          <strong className="min-w-0 break-words text-sm font-semibold leading-snug">
+                            {memberName(member)}
+                          </strong>
+                          <MembershipTag status={member.membership_status} />
+                        </div>
+                        {member.principal.email ? (
+                          <div className="mt-1 break-all font-mono text-xs text-muted-foreground">
+                            {member.principal.email}
+                          </div>
+                        ) : null}
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          {member.roles.length ? (
+                            member.roles.map((role) => (
+                              <RoleTag key={role} role={role} />
+                            ))
+                          ) : (
+                            <span className="text-xs italic text-muted-foreground">
+                              尚未授予角色
+                            </span>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="small"
+                            className="font-mono text-xs"
+                            title={`点击复制完整 Subject ID: ${member.principal.subject}`}
+                            onClick={() => copySubject(member)}
+                            icon={<Copy size={13} />}
+                          >
+                            {member.principal.subject.slice(0, 8)}
+                          </Button>
+                        </div>
                       </div>
                     </div>
+                    <div className="flex min-w-max items-center justify-end gap-1">
+                      {renderActions(member)}
+                    </div>
                   </div>
-                  <div className="flex min-w-max items-center justify-end gap-1">
-                    {renderActions(member)}
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </SudoGate>
+                </Card>
+              ))}
+            </div>
+          </SudoGate>
+        </div>
       )}
 
       <Modal
