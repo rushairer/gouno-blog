@@ -118,8 +118,11 @@ describe("AdminShell navigation utilities", () => {
 
     expect(screen.queryByRole("search")).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("link", { name: "在新窗口查看前台站点" }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("link", { name: "在新窗口查看前台站点" }),
+    ).toHaveAttribute("href", "/");
+    expect(
+      screen.getByRole("link", { name: "在新窗口查看前台站点" }),
+    ).toHaveAttribute("target", "_blank");
     expect(
       screen.queryByRole("link", { name: "查看通知中心" }),
     ).not.toBeInTheDocument();

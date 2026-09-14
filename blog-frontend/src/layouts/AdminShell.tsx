@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { LogOut } from "lucide-react";
+import { ExternalLink, LogOut } from "lucide-react";
 import gounoBlogLogo from "@gouno/ui/brand-icons/gouno-blog.svg";
-import { Alert, IconButton } from "@gouno/ui/core";
+import { Alert, IconButton, IconButtonLink } from "@gouno/ui/core";
 import {
   AppShell,
   NavigationGroup,
@@ -147,7 +147,18 @@ export default function AdminShell({ children }: { children: ReactNode }) {
           </NavigationGroup>
         ))
       }
-      toolbar={<ThemeToggle label="切换后台主题" />}
+      toolbar={
+        <>
+          <IconButtonLink
+            to="/"
+            target="_blank"
+            rel="noreferrer"
+            label="在新窗口查看前台站点"
+            icon={<ExternalLink />}
+          />
+          <ThemeToggle label="切换后台主题" />
+        </>
+      }
       footer={
         <div className="flex items-center gap-3 px-3">
           <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-accent text-xs font-semibold text-primary">

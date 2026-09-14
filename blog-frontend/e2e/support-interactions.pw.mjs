@@ -25,6 +25,10 @@ test("Admin shell uses a title-free header and single-language navigation groups
     page.getByRole("heading", { level: 1, name: "媒体库" }),
   ).toBeVisible();
   await expect(header).not.toContainText("媒体库");
+  const storefrontLink = header.getByRole("link", { name: "在新窗口查看前台站点" });
+  await expect(storefrontLink).toBeVisible();
+  await expect(storefrontLink).toHaveAttribute("href", "/");
+  await expect(storefrontLink).toHaveAttribute("target", "_blank");
   await expect(navigation.getByRole("heading")).toHaveText([
     "内容管理",
     "AI 运营",
@@ -57,6 +61,7 @@ test("Media Library selection uses compact canonical checkbox geometry", async (
   await page.goto("/admin/media", { waitUntil: "domcontentloaded" });
 
   await expect(page.getByText("browser-acceptance.svg")).toBeVisible();
+  await expect(page.getByRole("link", { name: "在新窗口查看前台站点" })).toBeVisible();
   const checkbox = page.getByRole("checkbox").first();
   await expect(checkbox).toBeVisible();
   const box = await checkbox.boundingBox();
