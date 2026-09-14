@@ -2,6 +2,7 @@ package access
 
 import (
 	"github.com/rushairer/blog-backend/internal/domain"
+	pagedomain "github.com/rushairer/blog-backend/internal/page/domain"
 )
 
 // PostPolicy defines access and authorization rules for posts.
@@ -177,11 +178,11 @@ type PagePolicy struct{}
 // CanReadPage enforces unified Blog RBAC/ABAC policy for reading pages.
 // Published pages are readable by anyone (including anonymous).
 // Unpublished/draft pages are readable ONLY by active Blog members with content.manage permission (Editor, Admin, Owner).
-func (p *PagePolicy) CanReadPage(actor *Snapshot, page *domain.Page) (bool, string) {
+func (p *PagePolicy) CanReadPage(actor *Snapshot, page *pagedomain.Page) (bool, string) {
 	if page == nil {
 		return false, "page not found"
 	}
-	if page.Status == domain.PageStatusPublished {
+	if page.Status == pagedomain.PageStatusPublished {
 		return true, ""
 	}
 	if actor == nil || actor.MembershipStatus != "active" {

@@ -5,6 +5,7 @@ import (
 
 	"github.com/rushairer/blog-backend/internal/access"
 	"github.com/rushairer/blog-backend/internal/domain"
+	pagedomain "github.com/rushairer/blog-backend/internal/page/domain"
 )
 
 func TestPostPolicy(t *testing.T) {
@@ -173,12 +174,12 @@ func TestPostPolicy_CanReadPost_TableDrivenMatrix(t *testing.T) {
 	publishedPost := &domain.Post{ID: 4, Title: "Published Post", Status: domain.PostStatusPublished, CreatedByPrincipalID: &otherPrincipalID}
 
 	tests := []struct {
-		name                 string
-		actor                *access.Snapshot
-		expectOwnDraft       bool
-		expectOtherDraft     bool
-		expectLegacyDraft    bool
-		expectPublishedPost  bool
+		name                string
+		actor               *access.Snapshot
+		expectOwnDraft      bool
+		expectOtherDraft    bool
+		expectLegacyDraft   bool
+		expectPublishedPost bool
 	}{
 		{
 			name:                "anonymous",
@@ -360,14 +361,14 @@ func TestPostPolicy_CanReadPost_TableDrivenMatrix(t *testing.T) {
 
 func TestPagePolicy_CanReadPage_TableDrivenMatrix(t *testing.T) {
 	policy := access.PagePolicy{}
-	draftPage := &domain.Page{ID: 1, Title: "Draft Page", Slug: "draft-page", Status: domain.PageStatusDraft}
-	publishedPage := &domain.Page{ID: 2, Title: "Published Page", Slug: "pub-page", Status: domain.PageStatusPublished}
+	draftPage := &pagedomain.Page{ID: 1, Title: "Draft Page", Slug: "draft-page", Status: pagedomain.PageStatusDraft}
+	publishedPage := &pagedomain.Page{ID: 2, Title: "Published Page", Slug: "pub-page", Status: pagedomain.PageStatusPublished}
 
 	tests := []struct {
-		name              string
-		actor             *access.Snapshot
-		expectDraftPage   bool
-		expectPubPage     bool
+		name            string
+		actor           *access.Snapshot
+		expectDraftPage bool
+		expectPubPage   bool
 	}{
 		{
 			name:            "anonymous",

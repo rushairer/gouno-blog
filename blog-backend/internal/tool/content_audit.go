@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/rushairer/blog-backend/internal/domain"
+	pagedomain "github.com/rushairer/blog-backend/internal/page/domain"
 )
 
 var (
@@ -54,7 +55,7 @@ func (t *BlogTools) auditPage(ctx context.Context, raw json.RawMessage) (any, er
 	return auditPage(page), nil
 }
 
-func auditPage(page *domain.Page) map[string]any {
+func auditPage(page *pagedomain.Page) map[string]any {
 	contentRunes := utf8.RuneCountInString(page.Content)
 	headings := markdownHeadingPattern.FindAllStringSubmatch(page.Content, -1)
 	images := markdownImagePattern.FindAllStringSubmatch(page.Content, -1)
