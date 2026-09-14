@@ -7,6 +7,49 @@ async function enableSudoUiState(page) {
   });
 }
 
+test("Admin shell uses a title-free header and single-language navigation groups", async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await setTheme(page, "light");
+  const unknown = await installApiFixtures(page);
+  await page.goto("/admin/media", { waitUntil: "domcontentloaded" });
+
+  const shell = page.locator('[data-slot="app-shell"]');
+  const header = shell.locator(":scope > header");
+  const navigation = shell
+    .getByRole("navigation", { name: "后台导航" })
+    .filter({ visible: true });
+
+  await expect(
+    page.getByRole("heading", { level: 1, name: "媒体库" }),
+  ).toBeVisible();
+  await expect(header).not.toContainText("媒体库");
+  await expect(navigation.getByRole("heading")).toHaveText([
+    "内容管理",
+    "AI 运营",
+    "站点管理",
+  ]);
+  await expect(navigation).not.toContainText("Content");
+  await expect(navigation).not.toContainText("AI Automation");
+  await expect(navigation).not.toContainText("Site");
+
+  await navigation.getByRole("link", { name: "分类", exact: true }).click();
+  await expect(page).toHaveURL(/\/admin\/categories$/);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "分类" }),
+  ).toBeVisible();
+
+  const screenshotPath = testInfo.outputPath("admin-shell-navigation.png");
+  await page.screenshot({ path: screenshotPath, fullPage: false });
+  await testInfo.attach("admin-shell-navigation", {
+    path: screenshotPath,
+    contentType: "image/png",
+  });
+
+  expect(unknown).toEqual([]);
+});
+
 test("Media Library selection uses compact canonical checkbox geometry", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await setTheme(page, "dark");

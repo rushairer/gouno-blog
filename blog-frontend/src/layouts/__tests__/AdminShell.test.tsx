@@ -126,6 +126,9 @@ describe("AdminShell navigation utilities", () => {
     expect(
       screen.getByRole("button", { name: "切换后台主题" }),
     ).toBeInTheDocument();
+    expect(
+      container.querySelector(":scope > div > header"),
+    ).not.toHaveTextContent("数据概览");
 
     const logoutButton = screen.getByRole("button", { name: "退出登录" });
     fireEvent.click(logoutButton);
@@ -135,17 +138,17 @@ describe("AdminShell navigation utilities", () => {
     expect(desktopNavigation).not.toBeNull();
     expect(
       within(desktopNavigation as HTMLElement).getByRole("heading", {
-        name: "Content 内容管理",
+        name: "内容管理",
       }),
     ).toBeInTheDocument();
     expect(
       within(desktopNavigation as HTMLElement).getByRole("heading", {
-        name: "AI Automation AI 运营",
+        name: "AI 运营",
       }),
     ).toBeInTheDocument();
     expect(
       within(desktopNavigation as HTMLElement).getByRole("heading", {
-        name: "Site 站点管理",
+        name: "站点管理",
       }),
     ).toBeInTheDocument();
   });

@@ -9,9 +9,7 @@ function source(path: string): string {
 
 describe("Blog Admin AI information architecture", () => {
   it("exposes AI Operations and AI Settings as Showcase-aligned sibling destinations", () => {
-    const aiGroup = adminNavigation.find(
-      (group) => group.label === "AI Automation AI 运营",
-    );
+    const aiGroup = adminNavigation.find((group) => group.label === "AI 运营");
     expect(aiGroup?.items.map((item) => item.path)).toEqual([
       "/admin/ai-ops",
       "/admin/ai-settings",

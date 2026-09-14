@@ -129,7 +129,6 @@ export default function AdminShell({ children }: { children: ReactNode }) {
           <span className="truncate font-semibold">{siteName}</span>
         </Link>
       }
-      breadcrumbs={<span>{currentLabel(location.pathname)}</span>}
       navigationLabel="后台导航"
       navigation={(close) =>
         filteredNav.map((group) => (

@@ -31,7 +31,7 @@ export const publicNavigation = [
 export const adminNavigation: Array<{ label: string; items: AdminNavItem[] }> =
   [
     {
-      label: "Content 内容管理",
+      label: "内容管理",
       items: [
         { label: "数据概览", path: "/admin/dashboard", icon: <BarChart3 /> },
         {
@@ -74,7 +74,7 @@ export const adminNavigation: Array<{ label: string; items: AdminNavItem[] }> =
       ],
     },
     {
-      label: "AI Automation AI 运营",
+      label: "AI 运营",
       items: [
         {
           label: "AI 运营",
@@ -91,7 +91,7 @@ export const adminNavigation: Array<{ label: string; items: AdminNavItem[] }> =
       ],
     },
     {
-      label: "Site 站点管理",
+      label: "站点管理",
       items: [
         {
           label: "成员与权限",
