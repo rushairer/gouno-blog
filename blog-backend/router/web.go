@@ -30,6 +30,7 @@ import (
 	siteservice "github.com/rushairer/blog-backend/internal/site/service"
 	taxonomycontroller "github.com/rushairer/blog-backend/internal/taxonomy/controller"
 	taxonomyservice "github.com/rushairer/blog-backend/internal/taxonomy/service"
+	workflowcontroller "github.com/rushairer/blog-backend/internal/workflow/controller"
 	"github.com/rushairer/blog-backend/middleware"
 	"github.com/rushairer/gouno"
 	auth "github.com/rushairer/gouno/auth"
@@ -54,6 +55,7 @@ type WebRouterOptions struct {
 	RecommendationSvc  recommendationservice.Service
 	PostVersionSvc     postversionservice.Service
 	AgentCtrl          *controller.AgentController
+	WorkflowCtrl       *workflowcontroller.Controller
 	Logger             *zap.Logger
 	Verifier           *auth.Verifier
 	AccessService      *access.Service
@@ -132,6 +134,7 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 
 	authOptions := opts.AuthOptions
 	agentCtrl := opts.AgentCtrl
+	workflowCtrl := opts.WorkflowCtrl
 
 	// RSS & Sitemap Routes
 	server.GET("/feed.xml", feedCtrl.GetRSS)
@@ -180,8 +183,8 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 	api := server.Group("/api")
 	api.Use(optionalAuth, optionalAccessAuth)
 	{
-		if agentCtrl != nil {
-			api.POST("/ai/webhooks/:event", agentCtrl.ReceiveWorkflowWebhook)
+		if workflowCtrl != nil {
+			api.POST("/ai/webhooks/:event", workflowCtrl.ReceiveWorkflowWebhook)
 		}
 		api.GET("/posts", ctrl.List)
 		api.GET("/posts/:slugOrID", ctrl.Get)
@@ -297,8 +300,37 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 		aiOps := api.Group("")
 		aiOps.Use(userAuth, accessAuth, middleware.RequireBlogPermission(accessService, access.PermissionManageAI), middleware.RequireAAL2(), middleware.RequireRecentMFAForUnsafeMethods(), middleware.AuditSensitiveChanges(accessService))
 		{
+			if workflowCtrl != nil {
+				aiOps.POST("/admin/ai-workflows/draft", workflowCtrl.DraftWorkflow)
+				aiOps.GET("/admin/ai-workflows", workflowCtrl.ListWorkflows)
+				aiOps.POST("/admin/ai-workflows", workflowCtrl.CreateWorkflow)
+				aiOps.GET("/admin/ai-workflows/:id", workflowCtrl.GetWorkflow)
+				aiOps.PUT("/admin/ai-workflows/:id", workflowCtrl.UpdateWorkflow)
+				aiOps.DELETE("/admin/ai-workflows/:id", workflowCtrl.DeleteWorkflow)
+				aiOps.GET("/admin/ai-workflows/:id/versions", workflowCtrl.ListWorkflowVersions)
+				aiOps.POST("/admin/ai-workflows/:id/rollback", workflowCtrl.RollbackWorkflow)
+				aiOps.POST("/admin/ai-workflows/:id/enable", workflowCtrl.EnableWorkflow)
+				aiOps.POST("/admin/ai-workflows/:id/disable", workflowCtrl.DisableWorkflow)
+				aiOps.POST("/admin/ai-workflows/:id/run", workflowCtrl.RunWorkflow)
+				aiOps.POST("/admin/ai-workflows/:id/dry-run", workflowCtrl.DryRunWorkflow)
+				aiOps.POST("/admin/ai-workflows/:id/preflight", workflowCtrl.PreflightWorkflow)
+				aiOps.GET("/admin/ai-workflow-runs", workflowCtrl.ListWorkflowRuns)
+				aiOps.DELETE("/admin/ai-workflow-runs/:id", workflowCtrl.DeleteWorkflowRun)
+				aiOps.POST("/admin/ai-workflow-runs/:id/cancel", workflowCtrl.CancelWorkflowRun)
+				aiOps.GET("/admin/ai-workflow-runs/:id/steps", workflowCtrl.WorkflowRunSteps)
+				aiOps.GET("/admin/ai-workflow-runs/:id/resources", workflowCtrl.WorkflowRunResources)
+				aiOps.GET("/admin/ai-workflow-runs/:id/interactions", workflowCtrl.WorkflowRunInteractions)
+				aiOps.GET("/admin/ai-workflow-runs/:id/events", workflowCtrl.WorkflowRunEvents)
+				aiOps.GET("/admin/ai-interactions/:id", workflowCtrl.GetInteraction)
+				aiOps.GET("/admin/ai-interactions", workflowCtrl.ListPendingInteractions)
+				aiOps.POST("/admin/ai-interactions/:id/resolve", workflowCtrl.ResolveInteraction)
+				aiOps.POST("/admin/ai-interactions/:id/cancel", workflowCtrl.CancelInteraction)
+				aiOps.POST("/admin/ai-workflow-runs/:id/retry", workflowCtrl.RetryWorkflowRun)
+				aiOps.POST("/admin/ai-workflow-events", workflowCtrl.EmitWorkflowEvent)
+				aiOps.GET("/admin/ai-resources/:type", workflowCtrl.ListAIResources)
+				aiOps.GET("/admin/ai-workflow-metrics", workflowCtrl.WorkflowMetrics)
+			}
 			if agentCtrl != nil {
-				aiOps.POST("/admin/ai-workflows/draft", agentCtrl.DraftWorkflow)
 				aiOps.POST("/admin/ai-workflows/agent-drafts", agentCtrl.DraftWorkflowAgents)
 				aiOps.GET("/admin/provider-profiles", agentCtrl.ListProviders)
 				aiOps.GET("/admin/provider-profiles/export", middleware.RequireRecentMFA(), agentCtrl.ExportProviders)
@@ -342,35 +374,10 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 				aiOps.GET("/admin/agent-approvals", agentCtrl.ListApprovals)
 				aiOps.POST("/admin/agent-approvals/:id/approve", agentCtrl.Approve)
 				aiOps.POST("/admin/agent-approvals/:id/reject", agentCtrl.Reject)
-				aiOps.GET("/admin/ai-workflows", agentCtrl.ListWorkflows)
-				aiOps.POST("/admin/ai-workflows", agentCtrl.CreateWorkflow)
-				aiOps.GET("/admin/ai-workflows/:id", agentCtrl.GetWorkflow)
-				aiOps.PUT("/admin/ai-workflows/:id", agentCtrl.UpdateWorkflow)
-				aiOps.DELETE("/admin/ai-workflows/:id", agentCtrl.DeleteWorkflow)
-				aiOps.GET("/admin/ai-workflows/:id/versions", agentCtrl.ListWorkflowVersions)
-				aiOps.POST("/admin/ai-workflows/:id/rollback", agentCtrl.RollbackWorkflow)
-				aiOps.POST("/admin/ai-workflows/:id/enable", agentCtrl.EnableWorkflow)
-				aiOps.POST("/admin/ai-workflows/:id/disable", agentCtrl.DisableWorkflow)
-				aiOps.POST("/admin/ai-workflows/:id/run", agentCtrl.RunWorkflow)
-				aiOps.POST("/admin/ai-workflows/:id/dry-run", agentCtrl.DryRunWorkflow)
-				aiOps.POST("/admin/ai-workflows/:id/preflight", agentCtrl.PreflightWorkflow)
-				aiOps.GET("/admin/ai-workflow-runs", agentCtrl.ListWorkflowRuns)
-				aiOps.DELETE("/admin/ai-workflow-runs/:id", agentCtrl.DeleteWorkflowRun)
-				aiOps.POST("/admin/ai-workflow-runs/:id/cancel", agentCtrl.CancelWorkflowRun)
-				aiOps.GET("/admin/ai-workflow-runs/:id/steps", agentCtrl.WorkflowRunSteps)
-				aiOps.GET("/admin/ai-workflow-runs/:id/resources", agentCtrl.WorkflowRunResources)
-				aiOps.GET("/admin/ai-workflow-runs/:id/interactions", agentCtrl.WorkflowRunInteractions)
 				aiOps.GET("/admin/ai-workflow-runs/:id/media-candidates", agentCtrl.WorkflowRunMediaCandidates)
 				aiOps.POST("/admin/ai-workflow-runs/:id/media-candidates/select", agentCtrl.SelectWorkflowImageTasks)
 				aiOps.POST("/admin/ai-workflow-runs/:id/media-candidates/apply", agentCtrl.ApplyWorkflowImageTasks)
 				aiOps.POST("/admin/ai-workflow-runs/:id/media-candidates/reject", agentCtrl.RejectWorkflowImageTasks)
-				aiOps.GET("/admin/ai-workflow-runs/:id/events", agentCtrl.WorkflowRunEvents)
-				aiOps.GET("/admin/ai-interactions/:id", agentCtrl.GetInteraction)
-				aiOps.GET("/admin/ai-interactions", agentCtrl.ListPendingInteractions)
-				aiOps.POST("/admin/ai-interactions/:id/resolve", agentCtrl.ResolveInteraction)
-				aiOps.POST("/admin/ai-interactions/:id/cancel", agentCtrl.CancelInteraction)
-				aiOps.POST("/admin/ai-workflow-runs/:id/retry", agentCtrl.RetryWorkflowRun)
-				aiOps.POST("/admin/ai-workflow-events", agentCtrl.EmitWorkflowEvent)
 				aiOps.GET("/admin/ai-connectors", agentCtrl.ListConnectorProfiles)
 				aiOps.POST("/admin/ai-connectors", agentCtrl.SaveConnectorProfile)
 				aiOps.POST("/admin/ai-connectors/:id/oauth/start", agentCtrl.BeginConnectorOAuth)
@@ -383,8 +390,6 @@ func RegisterWebRouterWithOptions(server *gin.Engine, opts WebRouterOptions) {
 				aiOps.POST("/admin/ai-connector-outbox/:id/revoke", agentCtrl.RevokeConnectorOutbox)
 				aiOps.POST("/admin/ai-connector-outbox/:id/deliver-mock", agentCtrl.DeliverConnectorOutboxMock)
 				aiOps.POST("/admin/ai-connector-outbox/:id/retry", agentCtrl.RetryConnectorOutbox)
-				aiOps.GET("/admin/ai-resources/:type", agentCtrl.ListAIResources)
-				aiOps.GET("/admin/ai-workflow-metrics", agentCtrl.WorkflowMetrics)
 				aiOps.GET("/admin/ai-suggestions", agentCtrl.ListSuggestions)
 				aiOps.POST("/admin/ai-suggestions/refresh", agentCtrl.RefreshSuggestions)
 				aiOps.POST("/admin/ai-suggestions/:id/ignore", agentCtrl.IgnoreSuggestion)

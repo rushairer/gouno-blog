@@ -19,9 +19,14 @@ import (
 	"github.com/rushairer/blog-backend/internal/knowledge"
 	"github.com/rushairer/blog-backend/internal/operations"
 	"github.com/rushairer/blog-backend/internal/tool"
-	workflowservice "github.com/rushairer/blog-backend/internal/workflow"
 	"github.com/rushairer/gouno"
 )
+
+type workflowLifecyclePort interface {
+	ResumeAfterApproval(context.Context, int64) error
+	Cancel(context.Context, int64) error
+	ReconcileMediaRun(context.Context, int64) error
+}
 
 type AgentController struct {
 	svc        *agentservice.ManagementService
@@ -30,18 +35,13 @@ type AgentController struct {
 	tools      *tool.Registry
 	workerCtx  context.Context
 	knowledge  *knowledge.Service
-	workflows  *workflowservice.Service
+	workflows  workflowLifecyclePort
 	operations *operations.Service
 	connectors *connector.Service
 	generation *agentservice.GenerationService
 }
 
 const maxWorkflowJSONBody = 256 << 10
-const minWebhookSecretLength = 32
-
-func ValidWebhookSecret(value string) bool {
-	return len(strings.TrimSpace(value)) >= minWebhookSecretLength
-}
 
 type AgentControllerOptions struct {
 	Management *agentservice.ManagementService
@@ -50,7 +50,7 @@ type AgentControllerOptions struct {
 	Tools      *tool.Registry
 	WorkerCtx  context.Context
 	Knowledge  *knowledge.Service
-	Workflows  *workflowservice.Service
+	Workflows  workflowLifecyclePort
 	Operations *operations.Service
 	Connectors *connector.Service
 	Generation *agentservice.GenerationService
