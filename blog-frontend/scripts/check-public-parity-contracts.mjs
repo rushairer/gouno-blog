@@ -244,6 +244,28 @@ for (const [name, source] of sources) {
 }
 
 {
+  const name = "pages/CustomPageView.tsx";
+  const source = sources.get(name);
+  const file = parse(name, source);
+
+  if (!importsFrom(file, "@gosso/client", "ApiError")) {
+    failures.push(`${name}: custom page lifecycle must distinguish HTTP 404 from transport/server failures`);
+  }
+  if (!source.includes("reason instanceof ApiError && reason.status === 404")) {
+    failures.push(`${name}: only an explicit 404 may enter the NotFound/About fallback path`);
+  }
+  if (!importsFrom(file, "@gouno/ui/core", "Anchor")) {
+    failures.push(`${name}: custom page TOC must delegate navigation behavior to Core Anchor`);
+  }
+  if (!source.includes("<Skeleton") || source.includes("<Spinner")) {
+    failures.push(`${name}: known document anatomy must use route-shaped Skeleton loading`);
+  }
+  if (!source.includes('title="页面载入失败"') || !source.includes("setReloadKey")) {
+    failures.push(`${name}: fatal document load failures must preserve an explicit retry state`);
+  }
+}
+
+{
   const name = "pages/AccountNotifications.tsx";
   const source = sources.get(name);
   if (!source.includes("loadError") || !source.includes("mutationError")) {
