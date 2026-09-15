@@ -1,5 +1,6 @@
 export const STEP_UP_MFA_REQUIRED_EVENT = "gouno:step-up-mfa-required";
 export const STEP_UP_COMPLETED_EVENT = "gouno:step-up-completed";
+export const STEP_UP_CANCELLED_EVENT = "gouno:step-up-cancelled";
 export const SUDO_SESSION_STALE_EVENT = "gouno:sudo-session-stale";
 export const STEP_UP_MFA_QUERY_PARAM = "mfa_step_up";
 export const STEP_UP_POPUP_PARAM = "step_up_popup";
