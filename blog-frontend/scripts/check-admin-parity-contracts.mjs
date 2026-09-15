@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import ts from "typescript";
@@ -16,7 +16,13 @@ const corePages = [
 ];
 
 function sourceFile(name, source) {
-  return ts.createSourceFile(name, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  return ts.createSourceFile(
+    name,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX,
+  );
 }
 
 function lineOf(file, node) {
@@ -30,27 +36,40 @@ function jsxTag(node) {
 }
 
 function staticClassName(node) {
-  const attrs = ts.isJsxElement(node) ? node.openingElement.attributes : node.attributes;
+  const attrs = ts.isJsxElement(node)
+    ? node.openingElement.attributes
+    : node.attributes;
   const attribute = attrs.properties.find(
     (item) => ts.isJsxAttribute(item) && item.name.text === "className",
   );
-  if (!attribute || !ts.isJsxAttribute(attribute) || !attribute.initializer) return "";
+  if (!attribute || !ts.isJsxAttribute(attribute) || !attribute.initializer)
+    return "";
   if (ts.isStringLiteral(attribute.initializer)) return attribute.initializer.text;
   if (
     ts.isJsxExpression(attribute.initializer) &&
     attribute.initializer.expression &&
     (ts.isStringLiteral(attribute.initializer.expression) ||
       ts.isNoSubstitutionTemplateLiteral(attribute.initializer.expression))
-  ) return attribute.initializer.expression.text;
+  )
+    return attribute.initializer.expression.text;
   return "";
 }
 
 for (const name of corePages) {
   const source = await readFile(path.join(adminRoot, name), "utf8");
-  if (!source.includes("flex flex-col gap-6") && !source.includes("ContentEditorFrame")) {
-    failures.push(`${name}: core Admin pages must use the canonical 24px vertical rhythm or ContentEditorFrame workspace grammar`);
+  if (
+    !source.includes("flex flex-col gap-6") &&
+    !source.includes("ContentEditorFrame")
+  ) {
+    failures.push(
+      `${name}: core Admin pages must use the canonical 24px vertical rhythm or ContentEditorFrame workspace grammar`,
+    );
   }
-  if (name === "Dashboard.tsx" || name === "Posts.tsx" || name === "Pages.tsx") {
+  if (
+    name === "Dashboard.tsx" ||
+    name === "Posts.tsx" ||
+    name === "Pages.tsx"
+  ) {
     const header = source.indexOf("<PageHeader");
     if (header < 0) failures.push(`${name}: route-level PageHeader is required`);
     const firstSurface = source.indexOf('<Card padding="base"');
@@ -59,20 +78,35 @@ for (const name of corePages) {
     }
   }
   if (name === "PostEditor.tsx" || name === "PageEditor.tsx") {
-    if (!source.includes("<ContentEditorFrame")) failures.push(`${name}: editor must use ContentEditorFrame`);
-    if (!source.includes("<EditorCommandBar")) failures.push(`${name}: editor must use EditorCommandBar`);
+    if (!source.includes("<ContentEditorFrame"))
+      failures.push(`${name}: editor must use ContentEditorFrame`);
+    if (!source.includes("<EditorCommandBar"))
+      failures.push(`${name}: editor must use EditorCommandBar`);
   }
 }
 
-for (const name of ["Pages.tsx", "Comments.tsx"]) {
+for (const name of ["Dashboard.tsx", "Pages.tsx", "Comments.tsx"]) {
   const source = await readFile(path.join(adminRoot, name), "utf8");
-  if (!source.includes("useAppFeedback")) failures.push(`${name}: transient operation feedback must use AppFeedback/Notification ownership`);
+  if (!source.includes("useAppFeedback")) {
+    failures.push(
+      `${name}: transient operation feedback must use AppFeedback/Notification ownership`,
+    );
+  }
   if (/\btype\s+Notice\b|\bsetNotice\s*\(/.test(source)) {
-    failures.push(`${name}: local Notice state must not recreate transient page feedback`);
+    failures.push(
+      `${name}: local Notice state must not recreate transient page feedback`,
+    );
   }
 }
 
-for (const name of await (await import("node:fs/promises")).readdir(adminRoot)) {
+const dashboard = await readFile(path.join(adminRoot, "Dashboard.tsx"), "utf8");
+if (!dashboard.includes("<IconButtonLink") || !dashboard.includes('variant="ghost"')) {
+  failures.push(
+    "Dashboard.tsx: dense Top Posts row actions must retain the Showcase ghost IconButtonLink grammar",
+  );
+}
+
+for (const name of await readdir(adminRoot)) {
   if (!name.endsWith(".tsx")) continue;
   const source = await readFile(path.join(adminRoot, name), "utf8");
   const file = sourceFile(name, source);
@@ -81,22 +115,35 @@ for (const name of await (await import("node:fs/promises")).readdir(adminRoot)) 
     if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) {
       const tag = jsxTag(node);
       if (["button", "select", "textarea"].includes(tag)) {
-        failures.push(`${name}:${lineOf(file, node)} native ${tag} bypasses canonical @gouno/ui ownership`);
+        failures.push(
+          `${name}:${lineOf(file, node)} native ${tag} bypasses canonical @gouno/ui ownership`,
+        );
       }
       if (tag === "input") {
-        const attrs = ts.isJsxElement(node) ? node.openingElement.attributes : node.attributes;
+        const attrs = ts.isJsxElement(node)
+          ? node.openingElement.attributes
+          : node.attributes;
         const typeAttr = attrs.properties.find(
           (item) => ts.isJsxAttribute(item) && item.name.text === "type",
         );
         const type =
-          typeAttr && ts.isJsxAttribute(typeAttr) && typeAttr.initializer && ts.isStringLiteral(typeAttr.initializer)
+          typeAttr &&
+          ts.isJsxAttribute(typeAttr) &&
+          typeAttr.initializer &&
+          ts.isStringLiteral(typeAttr.initializer)
             ? typeAttr.initializer.text
             : "text";
-        if (type !== "hidden") failures.push(`${name}:${lineOf(file, node)} visible native input bypasses canonical @gouno/ui ownership`);
+        if (type !== "hidden") {
+          failures.push(
+            `${name}:${lineOf(file, node)} visible native input bypasses canonical @gouno/ui ownership`,
+          );
+        }
       }
       const classes = staticClassName(node).split(/\s+/);
       if (classes.includes("fixed")) {
-        failures.push(`${name}:${lineOf(file, node)} product-level fixed positioning is forbidden; overlays and notification stacks belong to @gouno/ui`);
+        failures.push(
+          `${name}:${lineOf(file, node)} product-level fixed positioning is forbidden; overlays and notification stacks belong to @gouno/ui`,
+        );
       }
     }
     ts.forEachChild(node, visit);
@@ -106,7 +153,9 @@ for (const name of await (await import("node:fs/promises")).readdir(adminRoot)) 
 }
 
 if (failures.length) {
-  console.error(`Blog Admin parity contract failed:\n${failures.map((item) => `- ${item}`).join("\n")}`);
+  console.error(
+    `Blog Admin parity contract failed:\n${failures.map((item) => `- ${item}`).join("\n")}`,
+  );
   process.exit(1);
 }
 
