@@ -58,10 +58,7 @@ describe("StepUpMfaModal", () => {
     const onSuccess = vi.fn();
     const onClose = vi.fn();
     const cancelListener = vi.fn();
-    window.addEventListener(
-      mfaModule.STEP_UP_CANCELLED_EVENT,
-      cancelListener,
-    );
+    window.addEventListener(mfaModule.STEP_UP_CANCELLED_EVENT, cancelListener);
 
     vi.spyOn(mfaModule, "openStepUpPopup").mockReturnValue(false);
 
@@ -79,10 +76,7 @@ describe("StepUpMfaModal", () => {
     expect(onClose).toHaveBeenCalledOnce();
     expect(onSuccess).not.toHaveBeenCalled();
     expect(cancelListener).not.toHaveBeenCalled();
-    window.removeEventListener(
-      mfaModule.STEP_UP_CANCELLED_EVENT,
-      cancelListener,
-    );
+    window.removeEventListener(mfaModule.STEP_UP_CANCELLED_EVENT, cancelListener);
   });
 
   it("completes step-up via popup and triggers onSuccess exactly once", async () => {
