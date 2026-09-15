@@ -97,10 +97,6 @@ jobs:
           }
           EOF
 
-      - name: Normalize feedback adapter formatting
-        working-directory: blog-frontend
-        run: npx prettier --write src/components/feedback/__tests__/AppFeedbackProvider.test.tsx
-
       - name: Run Blog frontend quality gates
         working-directory: blog-frontend
         run: npm run quality
@@ -114,14 +110,14 @@ jobs:
           GOUNO_UI_VERSION: ${{ steps.ui.outputs.version }}
         run: |
           set -euo pipefail
-          git add blog-frontend/package.json blog-frontend/package-lock.json blog-frontend/src/components/feedback/__tests__/AppFeedbackProvider.test.tsx
+          git add blog-frontend/package.json blog-frontend/package-lock.json
           if git diff --cached --quiet; then
             echo "@gouno/ui registry dependency is already current."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "chore(ui): normalize Gouno Notification adapter"
+          git commit -m "chore(ui): use @gouno/ui ${GOUNO_UI_VERSION} registry release"
           git fetch origin main
           git rebase origin/main
           git push origin HEAD:main
