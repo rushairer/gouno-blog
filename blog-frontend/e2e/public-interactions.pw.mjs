@@ -198,6 +198,21 @@ test("runtime custom navigation reaches a real custom page", async ({ page }) =>
   expectClean(state);
 });
 
+test("custom page transport failure is recoverable and never masquerades as NotFound", async ({ page }) => {
+  const failures = new Set(["GET /api/pages/links"]);
+  const state = await openPublic(page, "/links", undefined, { fail: failures });
+
+  await expect(page.getByRole("heading", { level: 1, name: "页面载入失败" })).toBeVisible();
+  await expect(page.getByText(/页面不存在|404/)).toHaveCount(0);
+
+  failures.delete("GET /api/pages/links");
+  await page.getByRole("button", { name: "重试" }).click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "常用链接" }),
+  ).toBeVisible();
+  expectClean(state);
+});
+
 test("account notifications mark-one failure preserves the loaded list", async ({ page }) => {
   const state = await openPublic(page, "/account/notifications", undefined, {
     fail: new Set(["PUT /api/me/notifications/301/read"]),
