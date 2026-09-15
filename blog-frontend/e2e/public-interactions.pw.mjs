@@ -258,7 +258,9 @@ test("account notifications mark-one failure preserves the loaded list", async (
   });
 
   await expect(page.getByText("Fixture Reader 回复了你的评论")).toBeVisible();
-  await page.getByRole("button", { name: "标为已读" }).click();
+  await page
+    .getByRole("button", { name: "标为已读", exact: true })
+    .click();
   await expect(page.getByRole("alert")).toBeVisible();
   await expect(page.getByText("Fixture Reader 回复了你的评论")).toBeVisible();
   expectClean(state, { allowInjected503: true });
@@ -271,26 +273,31 @@ test("account notifications support the real mark-all mutation", async ({ page }
   await expect(markAll).toBeEnabled();
   await markAll.click();
   await expect(markAll).toBeDisabled();
-  await expect(page.getByRole("button", { name: "标为已读" })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "标为已读", exact: true }),
+  ).toHaveCount(0);
   expectClean(state);
 });
 
 test("account settings remains an identity handoff instead of a Blog security form", async ({ page }) => {
   const state = await openPublic(page, "/account/settings");
+  const main = page.locator("#public-main");
 
   await expect(
-    page.getByRole("heading", { level: 1, name: "账号设置" }),
+    main.getByRole("heading", { level: 1, name: "账号设置" }),
   ).toBeVisible();
-  await expect(page.getByText(/GOSSO Admin 管理/)).toBeVisible();
-  await expect(page.getByRole("textbox")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /密码|MFA|Passkey/ })).toHaveCount(0);
+  await expect(main.getByText(/GOSSO Admin 管理/)).toBeVisible();
+  await expect(main.getByRole("textbox")).toHaveCount(0);
+  await expect(
+    main.getByRole("button", { name: /密码|MFA|Passkey/ }),
+  ).toHaveCount(0);
   expectClean(state);
 });
 
 test("NotFound canonical navigation returns to a public route", async ({ page }) => {
   const state = await openPublic(page, "/missing/route");
 
-  await page.getByRole("link", { name: "浏览文章" }).click();
+  await page.getByRole("link", { name: "全部文章", exact: true }).click();
   await expect(page).toHaveURL(/\/articles$/);
   await expect(
     page.getByRole("heading", { level: 1, name: "全部文章" }),
