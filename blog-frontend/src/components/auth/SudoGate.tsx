@@ -11,6 +11,8 @@ export interface SudoGateProps {
   className?: string;
   /** Forces the visual lock state for controlled/test scenarios. */
   locked?: boolean;
+  /** @deprecated Presentation is canonical now; this prop is ignored during call-site migration. */
+  unlockedPresentation?: "compact" | "alert";
 }
 
 export function SudoGate({
