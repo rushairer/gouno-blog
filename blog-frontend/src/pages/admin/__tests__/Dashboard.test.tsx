@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Dashboard from "../Dashboard";
 import { apiFetch } from "../../../auth";
+import { AppFeedbackProvider } from "../../../components/feedback/AppFeedbackProvider";
 
 vi.mock("@gosso/client/react", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@gosso/client/react")>()),
@@ -55,6 +56,16 @@ const mockSummary = {
   ],
 };
 
+function renderDashboard() {
+  return render(
+    <AppFeedbackProvider>
+      <BrowserRouter>
+        <Dashboard />
+      </BrowserRouter>
+    </AppFeedbackProvider>,
+  );
+}
+
 describe("Admin Dashboard", () => {
   beforeEach(() => {
     vi.mocked(apiFetch).mockImplementation(async (url) => {
@@ -67,11 +78,7 @@ describe("Admin Dashboard", () => {
 
   it("renders AI operations alerts and clears them when clicking mark all read", async () => {
     const user = userEvent.setup();
-    render(
-      <BrowserRouter>
-        <Dashboard />
-      </BrowserRouter>,
-    );
+    renderDashboard();
 
     expect(await screen.findByText("AI 运营提醒")).toBeInTheDocument();
     expect(
@@ -106,11 +113,7 @@ describe("Admin Dashboard", () => {
       return Response.json({ data: null });
     });
 
-    render(
-      <BrowserRouter>
-        <Dashboard />
-      </BrowserRouter>,
-    );
+    renderDashboard();
 
     expect(await screen.findByText("数据概览加载失败")).toBeInTheDocument();
     expect(screen.getByText("analytics unavailable")).toBeInTheDocument();
