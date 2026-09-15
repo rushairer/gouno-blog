@@ -1,18 +1,87 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { GitBranch, Mail, Rss, ShieldAlert } from "lucide-react";
 import { useParams } from "react-router-dom";
+import { ApiError } from "@gosso/client";
+import { Alert, Anchor, Button, Card, Result, Skeleton } from "@gouno/ui/core";
+import { PageHeader } from "@gouno/ui/gouno";
+import { pagesApi } from "../api/pages";
+import { siteApi } from "../api/site";
 import { MarkdownRenderer } from "../components/MarkdownRenderer";
 import {
   DEFAULT_SITE_SETTINGS,
   getCachedSiteSettings,
 } from "../config/site-defaults";
-import { pagesApi } from "../api/pages";
-import { siteApi } from "../api/site";
-import { extractMarkdownTOC } from "../utils/markdown";
 import type { CustomPage, SiteSettings } from "../types/blog";
-import { Alert, Card, Spinner } from "@gouno/ui/core";
-import { PageHeader } from "@gouno/ui/gouno";
+import { extractMarkdownTOC } from "../utils/markdown";
 import NotFound from "./NotFound";
+
+function isNotFoundError(reason: unknown) {
+  return reason instanceof ApiError && reason.status === 404;
+}
+
+function fallbackAboutPage(): CustomPage {
+  return {
+    id: 0,
+    title: "关于",
+    slug: "about",
+    summary: "关于这个站点，以及持续写作的理由。",
+    content:
+      "这里用于记录值得长期保存的问题、过程与结论。比起只给答案，更重视交代上下文、约束和选择的理由。",
+    template: "about",
+    status: "published",
+    allow_comments: false,
+    show_in_nav: true,
+    sort_order: 10,
+    created_at: "1970-01-01T00:00:00.000Z",
+  };
+}
+
+function CustomPageLoading() {
+  return (
+    <Card
+      padding="none"
+      className="mx-auto w-full max-w-[900px] overflow-hidden"
+      role="status"
+      aria-label="自定义单页加载中"
+    >
+      <div className="space-y-6 p-6 sm:p-8">
+        <Skeleton className="h-8 w-2/3" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-4/5" />
+        <Skeleton className="h-px w-full" />
+        {Array.from({ length: 7 }, (_, index) => (
+          <Skeleton
+            key={index}
+            className={`h-4 ${index % 3 === 0 ? "w-full" : "w-5/6"}`}
+          />
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function DocumentSurface({
+  page,
+  children,
+}: {
+  page: CustomPage;
+  children: ReactNode;
+}) {
+  return (
+    <Card
+      as="article"
+      padding="none"
+      className="mx-auto w-full max-w-[900px] overflow-hidden"
+    >
+      <div className="space-y-7 p-6 sm:p-8">
+        <PageHeader title={page.title} description={page.summary} />
+        <div className="space-y-6 text-[15px] leading-8 text-foreground sm:text-base">
+          {children}
+        </div>
+      </div>
+    </Card>
+  );
+}
 
 export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
   const { slug: routeSlug } = useParams();
@@ -24,6 +93,8 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
   );
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     siteApi
@@ -34,6 +105,8 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
 
   useEffect(() => {
     if (!slug) {
+      setPage(null);
+      setError(null);
       setNotFound(true);
       setLoading(false);
       return;
@@ -41,6 +114,8 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
 
     let ignore = false;
     setLoading(true);
+    setPage(null);
+    setError(null);
     setNotFound(false);
 
     pagesApi
@@ -49,27 +124,23 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
         if (ignore) return;
         setPage(data);
       })
-      .catch(() => {
-        if (!ignore) {
+      .catch((reason: unknown) => {
+        if (ignore) return;
+
+        if (isNotFoundError(reason)) {
           if (slug === "about") {
-            setPage({
-              id: 0,
-              title: "关于",
-              slug: "about",
-              summary: "关于这个站点，以及持续写作的理由。",
-              content:
-                "这里用于记录值得长期保存的问题、过程与结论。比起只给答案，更重视交代上下文、约束和选择的理由。",
-              template: "about",
-              status: "published",
-              allow_comments: false,
-              show_in_nav: true,
-              sort_order: 10,
-              created_at: new Date().toISOString(),
-            });
+            setPage(fallbackAboutPage());
           } else {
             setNotFound(true);
           }
+          return;
         }
+
+        setError(
+          reason instanceof Error
+            ? reason.message
+            : "公开单页接口暂时不可用，请稍后重试。",
+        );
       })
       .finally(() => {
         if (!ignore) setLoading(false);
@@ -78,7 +149,7 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
     return () => {
       ignore = true;
     };
-  }, [slug]);
+  }, [slug, reloadKey]);
 
   useEffect(() => {
     if (page) {
@@ -103,19 +174,36 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
     [page?.content],
   );
 
-  if (notFound) return <NotFound />;
+  if (loading) return <CustomPageLoading />;
 
-  if (loading || !page) {
+  if (error) {
     return (
-      <div
-        className="flex min-h-[50vh] items-center justify-center gap-3 text-sm text-muted-foreground"
-        role="status"
+      <Card
+        padding="none"
+        variant="subtle"
+        className="mx-auto w-full max-w-[900px]"
       >
-        <Spinner className="size-5 text-primary" />
-        <span>正在载入页面…</span>
-      </div>
+        <Result
+          role="alert"
+          status="error"
+          headingLevel={1}
+          title="页面载入失败"
+          description={error}
+          extra={
+            <Button
+              variant="solid"
+              color="primary"
+              onClick={() => setReloadKey((current) => current + 1)}
+            >
+              重试
+            </Button>
+          }
+        />
+      </Card>
     );
   }
+
+  if (notFound || !page) return <NotFound />;
 
   const draftBanner =
     page.status === "draft" ? (
@@ -130,62 +218,43 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
     ) : null;
 
   if (page.template === "about") {
-    const markText =
-      page.title.length > 4 ? page.title.slice(0, 4) : page.title;
-
     return (
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
         {draftBanner}
-        <header className="flex flex-col items-start gap-6 border-b pb-8 sm:flex-row sm:items-center">
-          <div
-            className={`grid size-24 shrink-0 place-items-center rounded-full border-2 border-primary bg-card font-semibold text-primary ${markText.length > 2 ? "text-xl" : "text-3xl"}`}
-          >
-            {markText}
-          </div>
-          <div>
-            <p className="text-xs font-medium tracking-wider text-muted-foreground">
-              {(page.slug || "about").toUpperCase()} /{" "}
-              {(
-                site.site_title || DEFAULT_SITE_SETTINGS.site_title
-              ).toUpperCase()}
-            </p>
-            <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
-              {page.summary || page.title}
-            </h1>
-          </div>
-        </header>
-        <div className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_16rem]">
-          <main className="min-w-0">
-            <MarkdownRenderer content={page.content} />
-          </main>
-          <Card as="aside" className="self-start lg:sticky lg:top-24">
-            <h2 className="font-semibold">订阅与联系</h2>
-            {site.github_url ? (
+        <DocumentSurface page={page}>
+          <MarkdownRenderer content={page.content} />
+          <section aria-labelledby="about-contact" className="space-y-3">
+            <h2 id="about-contact" className="text-2xl font-semibold tracking-tight">
+              订阅与联系
+            </h2>
+            <div className="flex flex-wrap gap-4 text-sm">
+              {site.github_url ? (
+                <a
+                  className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary"
+                  href={site.github_url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <GitBranch className="size-4" /> GitHub
+                </a>
+              ) : null}
+              {site.email ? (
+                <a
+                  className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary"
+                  href={`mailto:${site.email}`}
+                >
+                  <Mail className="size-4" /> Email
+                </a>
+              ) : null}
               <a
-                className="flex items-center gap-2 border-t pt-3 text-sm text-muted-foreground hover:text-primary"
-                href={site.github_url}
-                target="_blank"
-                rel="noreferrer"
+                className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary"
+                href={site.rss_url || "/feed.xml"}
               >
-                <GitBranch className="size-4" /> GitHub
+                <Rss className="size-4" /> RSS
               </a>
-            ) : null}
-            {site.email ? (
-              <a
-                className="flex items-center gap-2 border-t pt-3 text-sm text-muted-foreground hover:text-primary"
-                href={`mailto:${site.email}`}
-              >
-                <Mail className="size-4" /> Email
-              </a>
-            ) : null}
-            <a
-              className="flex items-center gap-2 border-t pt-3 text-sm text-muted-foreground hover:text-primary"
-              href={site.rss_url || "/feed.xml"}
-            >
-              <Rss className="size-4" /> RSS
-            </a>
-          </Card>
-        </div>
+            </div>
+          </section>
+        </DocumentSurface>
       </div>
     );
   }
@@ -291,6 +360,12 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
     );
   }
 
+  const tocItems = toc.map((item) => ({
+    key: item.id,
+    title:
+      item.level > 2 ? <span className="pl-3">{item.text}</span> : item.text,
+  }));
+
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
       {draftBanner}
@@ -302,21 +377,11 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
           <MarkdownRenderer content={page.content} />
         </Card>
 
-        {toc.length > 0 ? (
+        {tocItems.length > 0 ? (
           <aside className="order-first self-start lg:order-none lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-2 lg:[scrollbar-gutter:stable]">
             <Card className="gap-3 p-4">
               <h2 className="text-sm font-semibold">目录导航</h2>
-              <nav className="flex flex-col gap-1" aria-label="目录导航">
-                {toc.map((item) => (
-                  <a
-                    key={item.id}
-                    href={`#${item.id}`}
-                    className={`rounded px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-primary ${item.level > 2 ? "pl-5" : ""}`}
-                  >
-                    {item.text}
-                  </a>
-                ))}
-              </nav>
+              <Anchor items={tocItems} aria-label="目录导航" />
             </Card>
           </aside>
         ) : null}
