@@ -3,6 +3,7 @@ import {
   openStepUpPopup,
   STEP_UP_COMPLETED_EVENT,
   STEP_UP_POPUP_PARAM,
+  SUDO_SESSION_STALE_EVENT,
 } from "../mfa";
 
 const SUDO_STORAGE_KEY = "gouno:sudo_activated_at";
@@ -10,6 +11,7 @@ export const SUDO_MAX_AGE_MS = 10 * 60 * 1000; // 10 minutes, aligns with backen
 
 export interface SudoModeState {
   isSudoActive: boolean;
+  isSudoExpiring: boolean;
   remainingMs: number;
   remainingMinutes: number;
   activating: boolean;
@@ -20,6 +22,7 @@ export interface SudoModeState {
 
 export function useSudoMode(): SudoModeState {
   const [activating, setActivating] = useState(false);
+  const [sudoSessionStale, setSudoSessionStale] = useState(false);
   const [remainingMs, setRemainingMs] = useState<number>(() => {
     try {
       const stored = localStorage.getItem(SUDO_STORAGE_KEY);
@@ -57,6 +60,7 @@ export function useSudoMode(): SudoModeState {
     } catch {
       // Ignore storage errors
     }
+    setSudoSessionStale(false);
     updateRemaining();
   }, [updateRemaining]);
 
@@ -66,6 +70,7 @@ export function useSudoMode(): SudoModeState {
     } catch {
       // Ignore
     }
+    setSudoSessionStale(false);
     setRemainingMs(0);
   }, []);
 
@@ -78,8 +83,13 @@ export function useSudoMode(): SudoModeState {
       setActivating(false);
     };
 
+    const handleSudoSessionStale = () => {
+      setSudoSessionStale(true);
+    };
+
     const handleStorage = (e: StorageEvent) => {
       if (e.key === SUDO_STORAGE_KEY || e.key === "gouno_step_up_event") {
+        if (e.newValue) setSudoSessionStale(false);
         updateRemaining();
         setActivating(false);
       }
@@ -90,11 +100,13 @@ export function useSudoMode(): SudoModeState {
     };
 
     window.addEventListener(STEP_UP_COMPLETED_EVENT, handleCompleted);
+    window.addEventListener(SUDO_SESSION_STALE_EVENT, handleSudoSessionStale);
     window.addEventListener("storage", handleStorage);
     window.addEventListener("focus", handleFocus);
     return () => {
       clearInterval(interval);
       window.removeEventListener(STEP_UP_COMPLETED_EVENT, handleCompleted);
+      window.removeEventListener(SUDO_SESSION_STALE_EVENT, handleSudoSessionStale);
       window.removeEventListener("storage", handleStorage);
       window.removeEventListener("focus", handleFocus);
     };
@@ -128,10 +140,12 @@ export function useSudoMode(): SudoModeState {
   );
 
   const isSudoActive = remainingMs > 0;
+  const isSudoExpiring = isSudoActive && sudoSessionStale;
   const remainingMinutes = Math.ceil(remainingMs / 60000);
 
   return {
     isSudoActive,
+    isSudoExpiring,
     remainingMs,
     remainingMinutes,
     activating,
