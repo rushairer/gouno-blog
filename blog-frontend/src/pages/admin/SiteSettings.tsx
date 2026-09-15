@@ -627,7 +627,7 @@ export default function AdminSiteSettings() {
       {pageHeader}
       <SudoGate
         title="站点核心配置保护"
-        description="修改站点品牌、SEO、页脚或联系方式等敏感设置需要近期多因素身份认证。解锁后享有 10 分钟无打扰编辑期。"
+        description="修改站点品牌、SEO、页脚或联系方式等敏感设置需要近期多因素身份认证。"
         actionLabel="解锁以修改设置"
       >
         <Tabs<SettingsTab>
