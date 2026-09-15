@@ -52,6 +52,10 @@ jobs:
                       '''    expect(container.querySelector(".editor-preview pre")).toHaveClass(\n      "overflow-x-auto",\n    );''',
                       '''    expect(container.querySelector(".editor-preview pre")).toHaveClass(\n      "overflow-auto",\n    );''',
                   ),
+                  (
+                      '''    expect(container.querySelector(".editor-preview table")).toHaveClass(\n      "overflow-x-auto",\n    );''',
+                      '''    const previewTable = container.querySelector(".editor-preview table");\n    expect(previewTable).toHaveClass("min-w-[36rem]");\n    expect(previewTable?.parentElement).toHaveClass("overflow-x-auto");''',
+                  ),
               ],
           }
 
