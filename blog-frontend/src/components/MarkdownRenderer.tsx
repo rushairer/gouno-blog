@@ -1,24 +1,25 @@
-import { isValidElement, useMemo, useState } from "react";
+import { isValidElement, useMemo } from "react";
 import type { ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
-import { Check, Copy } from "lucide-react";
+import { CodeBlock } from "@gouno/ui/core";
 import { useI18n } from "../i18n";
 import { markdownHeadingID } from "../utils/markdown";
-import { Button } from "@gouno/ui/core";
 
 function textContent(value: ReactNode): string {
-  if (typeof value === "string" || typeof value === "number")
+  if (typeof value === "string" || typeof value === "number") {
     return String(value);
+  }
   if (Array.isArray(value)) return value.map(textContent).join("");
-  if (isValidElement<{ children?: ReactNode }>(value))
+  if (isValidElement<{ children?: ReactNode }>(value)) {
     return textContent(value.props.children);
+  }
   return "";
 }
 
-function CodeBlock({
+function MarkdownCodeBlock({
   children,
   className,
 }: {
@@ -26,31 +27,18 @@ function CodeBlock({
   className?: string;
 }) {
   const { t } = useI18n();
-  const [copied, setCopied] = useState(false);
   const code = textContent(children).replace(/\n$/, "");
-
-  const copy = async () => {
-    await navigator.clipboard.writeText(code);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 2000);
-  };
+  const language = className?.match(/(?:^|\s)language-([\w-]+)/)?.[1];
 
   return (
-    <div className="group relative my-7 overflow-hidden rounded-lg border bg-slate-950 text-slate-100 shadow-sm">
-      <Button
-        variant="ghost"
-        className="absolute right-2 top-2 z-10 border-slate-700 bg-slate-900/90 text-slate-200 hover:bg-slate-800 hover:text-white"
-        onClick={() => void copy()}
-        aria-label={t("copyCode")}
-        title={t("copyCode")}
-        icon={copied ? <Check size={14} /> : <Copy size={14} />}
-      >
-        {copied ? t("copied") : t("copyCode")}
-      </Button>
-      <pre className="overflow-x-auto p-5 pt-14 font-mono text-sm leading-7">
-        <code className={className}>{children}</code>
-      </pre>
-    </div>
+    <CodeBlock
+      className="my-7"
+      code={code}
+      language={language}
+      copyLabel={t("copyCode")}
+      copiedLabel={t("copied")}
+      renderCode={() => <span className={className}>{children}</span>}
+    />
   );
 }
 
@@ -62,7 +50,7 @@ function MarkdownHeading({
   children?: ReactNode;
 }) {
   const id = markdownHeadingID(textContent(children));
-  if (level === 1)
+  if (level === 1) {
     return (
       <h2
         id={id}
@@ -71,7 +59,8 @@ function MarkdownHeading({
         {children}
       </h2>
     );
-  if (level === 2)
+  }
+  if (level === 2) {
     return (
       <h3
         id={id}
@@ -80,6 +69,7 @@ function MarkdownHeading({
         {children}
       </h3>
     );
+  }
   return (
     <h4 id={id} className="mt-8 scroll-mt-24 text-lg font-semibold">
       {children}
@@ -126,7 +116,7 @@ export function MarkdownRenderer({ content }: { content: string }) {
           Boolean(className) ||
           (typeof children === "string" && children.includes("\n"));
         return isBlock ? (
-          <CodeBlock className={className}>{children}</CodeBlock>
+          <MarkdownCodeBlock className={className}>{children}</MarkdownCodeBlock>
         ) : (
           <code
             className={`${className || ""} rounded bg-muted px-1.5 py-0.5 font-mono text-[0.9em]`}
@@ -149,17 +139,21 @@ export function MarkdownRenderer({ content }: { content: string }) {
         </blockquote>
       ),
       table: ({ children }) => (
-        <table className="my-7 block max-w-full overflow-x-auto border-collapse text-sm">
-          {children}
-        </table>
+        <div className="my-7 max-w-full overflow-x-auto rounded-lg border">
+          <table className="w-full min-w-[36rem] border-collapse text-sm">
+            {children}
+          </table>
+        </div>
       ),
       th: ({ children }) => (
-        <th className="border bg-muted px-3 py-2 text-left font-semibold">
+        <th className="border-b border-r bg-muted px-3 py-2 text-left font-semibold last:border-r-0">
           {children}
         </th>
       ),
       td: ({ children }) => (
-        <td className="border px-3 py-2 align-top">{children}</td>
+        <td className="border-b border-r px-3 py-2 align-top last:border-r-0">
+          {children}
+        </td>
       ),
       hr: () => <hr className="my-10 border-border" />,
       img: ({ src, alt }) => (
