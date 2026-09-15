@@ -1,51 +1,54 @@
 # Blog Admin Showcase Parity Hardening
 
-Status: in progress
+Status: PR verification complete; main merge and reverse Gouno UI consumer gate remain before task closure.
 
-This document is the live parity inventory and mismatch ledger for the hardening pass started from the current GitHub `main` branches on 2026-09-15. Historical migration claims are not acceptance evidence for this pass.
+This document is the live parity contract for the hardening pass started from GitHub `main` on 2026-09-15. Historical migration reports are background only; current source, contracts, rendered tests and CI are the acceptance evidence for this pass.
 
-## Baseline
+## Baseline and verified reference
 
-- `rushairer/gouno-ui` baseline main: `d890ae3fc2cf2d736f724eb3d51a84f39e39ca71`.
-- `rushairer/gouno-blog` baseline main: `de5068dd69dbc9377b4e5d25d0d5233955c136ca`.
-- `gouno-ui/package.json`: `@gouno/ui` `0.4.1`.
-- `blog-frontend/package.json`: exact registry dependency `@gouno/ui` `0.4.1`.
-- Blog CI already verifies that the lockfile entry is an npm registry tarball with integrity.
-- Browser plugin is not available in the current execution environment. Rendered verification therefore uses the repository Playwright suite and GitHub Actions artifacts. These are deterministic fixture sessions unless a test explicitly says otherwise; they are not described as production-authenticated validation.
+- `rushairer/gouno-ui` starting main: `d890ae3fc2cf2d736f724eb3d51a84f39e39ca71`.
+- `rushairer/gouno-blog` starting main: `de5068dd69dbc9377b4e5d25d0d5233955c136ca`.
+- Gouno UI Showcase/reference hardening merged main: `bc274ccf40dae6ed340566b71143c17a69b2e3b2`.
+- `gouno-ui/package.json` declares `@gouno/ui` `0.4.1`.
+- `blog-frontend/package.json` and lockfile use the exact npm registry dependency `@gouno/ui` `0.4.1`; Blog CI verifies registry tarball integrity.
+- The Gouno UI hardening changed Showcase/reference composition and tests, not the published primitive API, so no new package release or Blog dependency bump was required.
+- Browser plugin was not available in the execution environment. Rendered verification therefore uses repository Playwright suites and GitHub Actions artifacts. Admin sessions are deterministic fixture sessions with a mocked admin profile/API unless explicitly stated; they are not production-authenticated system-session validation.
 
 ## Route inventory
 
-| Showcase owner | Product route | Real product owner | Long-term gate |
-| --- | --- | --- | --- |
-| `blog-admin/dashboard.tsx` | `/admin/dashboard` | `src/pages/admin/Dashboard.tsx` | required |
-| `blog-admin/posts.tsx` | `/admin/posts` | `src/pages/admin/Posts.tsx` | required |
-| `blog-admin/post-editor.tsx` | `/admin/posts/new`, `/admin/posts/:id/edit` | `src/pages/admin/PostEditor.tsx` | required |
-| `blog-admin/pages.tsx` | `/admin/pages` | `src/pages/admin/Pages.tsx` | required |
-| `blog-admin/page-editor.tsx` | `/admin/pages/new`, `/admin/pages/:id/edit` | `src/pages/admin/PageEditor.tsx` | required |
-| `blog-admin/categories.tsx` | `/admin/categories` | `src/pages/admin/Categories.tsx` | retained |
-| `blog-admin/tags.tsx` | `/admin/tags` | `src/pages/admin/Tags.tsx` | retained |
-| `blog-admin/comments.tsx` | `/admin/comments` | `src/pages/admin/Comments.tsx` | retained |
-| `blog-admin/notifications.tsx` | `/admin/notifications` | `src/pages/admin/Notifications.tsx` | retained |
-| `blog-admin/media-library.tsx` | `/admin/media` | `src/pages/admin/MediaLibrary.tsx` | retained |
-| `blog-admin/site-settings.tsx` | `/admin/settings` | `src/pages/admin/SiteSettings.tsx` | retained |
-| `blog-admin/users.tsx` | `/admin/users` | `src/pages/admin/Users.tsx` | retained |
-| `blog-admin/ai/operations/` | `/admin/ai-ops` | `src/pages/admin/AIOperations.tsx` | retained |
-| `blog-admin/ai/settings/` | `/admin/ai-settings` | `src/pages/admin/AISettings.tsx` | retained |
+All 14 current Blog Admin Showcase route families have real-product owners and a parity/audit mapping.
 
-## Binding composition grammar
+| Showcase owner | Product route | Real product owner | Durable coverage |
+| --- | --- | --- | --- |
+| `blog-admin/dashboard.tsx` | `/admin/dashboard` | `src/pages/admin/Dashboard.tsx` | core matrix + parity |
+| `blog-admin/posts.tsx` | `/admin/posts` | `src/pages/admin/Posts.tsx` | core matrix + parity |
+| `blog-admin/post-editor.tsx` | `/admin/posts/new`, `/admin/posts/:id/edit` | `src/pages/admin/PostEditor.tsx` | core matrix + parity |
+| `blog-admin/pages.tsx` | `/admin/pages` | `src/pages/admin/Pages.tsx` | core matrix + parity |
+| `blog-admin/page-editor.tsx` | `/admin/pages/new`, `/admin/pages/:id/edit` | `src/pages/admin/PageEditor.tsx` | core matrix + parity |
+| `blog-admin/categories.tsx` | `/admin/categories` | `src/pages/admin/Categories.tsx` | support matrix |
+| `blog-admin/tags.tsx` | `/admin/tags` | `src/pages/admin/Tags.tsx` | support matrix |
+| `blog-admin/comments.tsx` | `/admin/comments` | `src/pages/admin/Comments.tsx` | support matrix + interaction |
+| `blog-admin/notifications.tsx` | `/admin/notifications` | `src/pages/admin/Notifications.tsx` | support matrix |
+| `blog-admin/media-library.tsx` | `/admin/media` | `src/pages/admin/MediaLibrary.tsx` | support matrix + interaction |
+| `blog-admin/site-settings.tsx` | `/admin/settings` | `src/pages/admin/SiteSettings.tsx` | support matrix + interaction |
+| `blog-admin/users.tsx` | `/admin/users` | `src/pages/admin/Users.tsx` | support matrix + interaction |
+| `blog-admin/ai/operations/` | `/admin/ai-ops` | `src/pages/admin/AIOperations.tsx` | AI matrix + interactions |
+| `blog-admin/ai/settings/` | `/admin/ai-settings` | `src/pages/admin/AISettings.tsx` | AI matrix + interactions |
+
+## Binding composition and semantic grammar
 
 Normal Admin task pages keep the route-level stack in this order:
 
 ```text
 PageHeader
-PageFeedback (fatal/non-fatal page state only)
+PageFeedback (persistent/recoverable page state only)
 Filter/Toolbar surface when present
 BulkActionBar when selection exists
 Loaded | Loading | Empty | Error content state
 Modal/Drawer overlays
 ```
 
-Transient operation success/failure is Notification-owned. A transient result must not be implemented as a page Alert merely because Alert is a canonical primitive.
+Transient operation success/failure is Notification-owned. Persistent failure that preserves recoverable page state may remain an Alert. Field validation belongs to field/form feedback. Dialog/Modal owns destructive confirmation and overlay/focus behavior.
 
 Editors are the explicit workspace exception:
 
@@ -58,39 +61,94 @@ ContentEditorFrame
       Outline / Canvas / Inspector as applicable
 ```
 
-`ContentEditorFrame` owns the editor Card boundary. Feature CSS may own workspace layout but must not restyle canonical control geometry.
+`ContentEditorFrame` owns the editor Card boundary. Feature CSS may own workspace layout, long-content containment and responsive rearrangement, but not canonical control geometry.
 
-## State matrix
+## State and rendered coverage
 
-The durable core matrix covers all four requested viewports (`1440x900`, `1024x768`, `768x1024`, `390x844`) and both light/dark themes for the loaded state. Representative interaction/state tests additionally cover fatal load error + retry, filtered/no-result, selection/bulk toolbar, modal state, new editor, existing editor, validation/save failure, notification feedback, long content and narrow viewport behavior where deterministic fixture support exists.
+The durable core matrix covers 7 core route cases at all requested viewport/theme combinations:
 
-Support-page coverage remains in the existing support matrix and interaction suite. AI route-family coverage remains in the existing AI workspace matrix and interaction suite.
+- `1440x900`, `1024x768`, `768x1024`, `390x844`.
+- light and dark.
+- Dashboard, Posts, Pages, PostEditor new/edit and PageEditor new/edit.
+
+That is 56 core Admin loaded-state cases. The existing support matrix contributes another 56 loaded-state cases for Categories, Tags, Comments, Notifications, Media, Settings and Users, giving 112 explicit core/support Admin viewport-theme cases.
+
+Representative rendered interactions additionally cover fatal load error + retry, selection/bulk toolbar, canonical opaque Notification, editor validation feedback, existing editor loading, modal open/destructive confirmation, long content, narrow viewport behavior and responsive containment. Existing AI/public suites remain enabled.
+
+Final PR browser evidence:
+
+- workflow run `34954854327`.
+- **309/309 Playwright tests passed**.
+- browser artifact `10391220840`, including screenshots/report/test-results, retained 14 days.
+- each Admin matrix case asserts brand/theme, meaningful visible identity, no permission overlay, no console warning/error, no pageerror, no document horizontal overflow and expected canonical page/editor structure.
+
+## Direct Showcase/Product parity gate
+
+The cross-repository parity workflow checks out the current `rushairer/gouno-ui/main` and starts Showcase and Blog side by side. It compares computed style/geometry and retains paired screenshots rather than requiring brittle full-page zero-pixel difference.
+
+Compared style roles include display/position, gap, all padding edges, border widths, radius, background, shadow and opacity. High-risk geometry checks include checkbox/action sizes and modal width.
+
+Direct paired coverage, light + dark:
+
+1. Dashboard Top Posts surface and dense action geometry.
+2. Posts filter surface and checkbox geometry.
+3. Posts destructive Modal, body and overlay.
+4. Posts `390x844` mobile filter/list-card hierarchy and horizontal containment.
+5. Pages filter surface.
+6. PostEditor Card and command bar.
+7. PageEditor Card and command bar.
+
+Final reference rerun:
+
+- workflow run `34954854076`, rerun job `104335010796`.
+- log explicitly checked out `gouno-ui/main` at `bc274ccf40dae6ed340566b71143c17a69b2e3b2`.
+- **14/14 direct parity tests passed**.
+- paired evidence artifact `10390898497`, retained 14 days.
 
 ## Mismatch ledger
 
-| ID | Page / state | Mismatch | Severity | Root cause | Ownership | Planned / applied guard | Status |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| PAR-001 | Pages / copy-delete mutation | Product stores transient results in local `notice` and renders page `Alert`; the app already has canonical Notification feedback. | P0 | semantic drift | Blog | static semantic guard + browser notification assertion | open |
-| PAR-002 | Comments / moderation mutation | Product retains a local Notice/Alert path instead of the app Notification contract for transient operation feedback. | P0 | semantic drift | Blog | static semantic guard + support interaction assertion | open |
-| PAR-003 | Dashboard / Top Posts actions | Real product uses text ButtonLinks while Showcase uses the compact ghost icon action grammar used by dense tables. | P1 | composition drift | Blog | structural/source contract + browser geometry | open |
-| PAR-004 | Core route browser coverage | Dashboard, Posts, Pages, PostEditor and PageEditor are absent from `e2e/playwright.config.mjs`; only support/public/AI suites are durable. | P0 | test-gap / state drift risk | Blog | core admin matrix + interactions | open |
-| PAR-005 | Browser acceptance delivery | Browser workflow runs on pull requests/dispatch but not `main`, so merged rendered regressions lack a durable main-branch evidence run. | P1 | CI gap | Blog | push-to-main browser gate | open |
-| PAR-006 | Consumer primitive recreation | Existing AST guard blocks native button/select and several legacy classes, but visible native input/radio/checkbox rules are not consistently scoped across all Admin/editor consumers. | P1 | static-contract gap | Blog | AST ownership checks with file/hidden exceptions | open |
-| PAR-007 | Product overlays / notification stacks | Existing CSS/data-slot guards are strong, but there is no AST rule preventing product-level fixed overlay/notification stack recreation. | P1 | static-contract gap | Blog | AST fixed-overlay ownership rule | open |
-| PAR-008 | Core page composition | No durable structural contract currently asserts PageHeader/PageFeedback/filter/collection ordering or editor feedback outside the editor Card. | P1 | structural-contract gap | Blog | dedicated AST structural parity checker | open |
-| PAR-009 | Showcase fixture transient notices | Several Showcase Blog Admin fixtures use `Alert` for simulated navigation/mutation notice state, mixing transient feedback with page-level feedback semantics. | P1 | semantic drift in reference | Gouno UI Showcase | canonical fixture notification scope + conformance test | open |
-| PAR-010 | Visual parity | Current screenshots prove rendered health but do not compare or fingerprint Showcase-vs-product composition/style. | P0 | visual-contract gap | both | cross-repo structural/style parity gate + retained screenshots | open |
-| PAR-011 | Notification appearance | Core Notification is opaque `bg-popover` with semantic overlay elevation; any observed translucency must be diagnosed as theme/cascade/build drift, not solved with product CSS. | P1 | potential rendered/token drift | both | computed-style browser assertion + no consumer data-slot override | open |
-| PAR-012 | Current documentation | Migration docs contain historical completion/status data and cannot be treated as current parity evidence. | P2 | stale evidence | Blog | this live contract + final audit update | open |
+| ID | Page / state | Severity | Root cause | Resolution / guard | Status |
+| --- | --- | --- | --- | --- | --- |
+| PAR-001 | Pages copy/delete mutation used local Alert-like notice | P0 | semantic drift | app-level Notification + AST semantic guard + rendered notification assertion | fixed |
+| PAR-002 | Comments moderation mutation used local Notice/Alert | P0 | semantic drift | Notification for transient result; recoverable partial-batch failure remains page Alert | fixed |
+| PAR-003 | Dashboard Top Posts actions diverged from compact Showcase grammar | P1 | composition drift | ghost icon action grammar + direct geometry parity | fixed |
+| PAR-004 | Core routes absent from durable browser matrix | P0 | state/test coverage gap | 56-case core route viewport/theme matrix + interactions | fixed |
+| PAR-005 | Browser acceptance did not run after merge to main | P1 | CI ownership gap | workflow now runs on relevant PR and main pushes, retaining evidence | fixed |
+| PAR-006 | Consumer primitive recreation was incompletely guarded | P1 | static-contract gap | AST ownership checks reject native button/select/textarea/visible input; hidden file bridge is explicit exception | fixed |
+| PAR-007 | Product-level fixed overlay/notification recreation was not guarded | P1 | static-contract gap | AST rejects product fixed positioning; existing CSS guard rejects canonical data-slot/primitive overrides | fixed |
+| PAR-008 | Core page/editor composition lacked durable structural assertions | P1 | structural-contract gap | AST Admin-stack + editor frame/command-bar contracts | fixed |
+| PAR-009 | Showcase transient fixture notices used Alert | P1 | reference semantic drift | canonical FixtureNotification/NotificationProvider + AST fixture conformance | fixed |
+| PAR-010 | No direct Showcase-vs-product rendered parity gate | P0 | visual-contract gap | 14 light/dark computed-style/geometry pair tests + paired screenshots | fixed |
+| PAR-011 | Notification could visually regress toward translucent consumer presentation | P1 | rendered/token drift risk | canonical owner retained; computed-style assertion requires opaque rendered background; consumer data-slot override prohibited | fixed |
+| PAR-012 | Historical migration docs could be mistaken for current completion evidence | P2 | stale evidence | this live contract and current CI/source supersede historical status claims | closed/documented |
 
-## Existing guardrails retained
+Current ledger: **P0 = 0, P1 = 0**.
 
-- TypeScript-AST import/JSX checks already reject direct Radix imports, native browser dialogs, native buttons/selects, legacy Gouno entrypoints and retired compatibility classes.
-- Source CSS already rejects product `[data-slot]` overrides, canonical primitive selectors, concrete colors and `!important`.
-- Admin product source already rejects raw shadow-size utilities.
-- Showcase design-language tests already constrain edge-axis spacing, semantic elevation, Card anatomy, PageHeader-before-Tabs and tab budgets.
-- Existing support browser matrix already covers Categories, Tags, Comments, Notifications, Media, Settings and Users at the four target viewports in light/dark with console/pageerror/overflow checks and screenshots.
+## New and retained guardrails
+
+- `check-admin-parity-contracts.mjs` is part of `lint:ui` and uses the TypeScript AST for Admin stack ordering, editor structure, feedback semantics, primitive ownership and fixed-overlay ownership.
+- Existing UI checks continue to reject direct Radix imports, legacy/unsupported Gouno UI entrypoints, native browser dialogs, retired compatibility classes and raw Admin elevation.
+- Existing CSS checks continue to reject product `[data-slot]` overrides, canonical primitive selectors, concrete colors, `!important` and cascade violations.
+- Gouno UI Showcase now has its own AST conformance guard against transient notice Alerts and product-fixture native primitive recreation.
+- Browser acceptance stores rendered screenshots/traces/reports instead of testing only “page did not crash”.
+- Cross-repository parity runs on Blog changes and scheduled checks against current Gouno UI main.
+- Before task closure, Gouno UI receives the reciprocal consumer parity workflow so a Showcase/UI PR is tested against current Blog main before it can be accepted.
+
+## Intentional differences
+
+- Hidden/screen-reader-only native `input[type=file]` is retained as a nonvisual browser file-picker bridge; the visible trigger and visual controls remain canonical Gouno UI.
+- Showcase FixtureDock and fixture-only scenario controls are outside product flow and are not required in Blog Admin.
+- Fixture data strings, timestamps, IDs and API state differ from real product data. Parity compares semantic structure, component ownership and rendered presentation, not literal business content.
+- Showcase may use a normal anchor to simulate navigation while Blog uses React Router links. Navigation semantics and rendered contract are what bind.
+- Full-page pixel identity is intentionally not a hard gate. DOM/structural assertions + computed style/geometry + paired screenshots are used to detect meaningful design drift without turning dynamic text/font rasterization into CI flakiness.
+
+## Remaining limits / risks
+
+- This environment does not provide a Browser plugin or a production authenticated deployment. The 309-test evidence is deterministic fixture/mocked-API browser QA, not a production login/session E2E claim.
+- The direct visual parity suite intentionally targets representative high-risk surfaces and states rather than every combinatorial state of every route.
+- Dynamic business content is not pixel-normalized and compared as a full-screen image; retained screenshots support review while automated parity binds structure and computed presentation.
+- Dependency installation in CI reports pre-existing audit findings in the Blog/isolated Playwright dependency graphs. This hardening does not change those dependencies and does not claim to close unrelated dependency-security work.
 
 ## Acceptance rule
 
-Hardening is complete only when the ledger has no P0/P1 open items, P2 items are fixed or explicitly justified, both repositories' required CI is green for the final commits, rendered evidence is retained by CI, temporary debug artifacts are absent, and all accepted changes are on `main`.
+This hardening is complete only after the verified Blog changes are merged to `main`, the reciprocal Gouno UI consumer parity gate is merged to `main`, and final main-branch CI/rendered checks are green. No temporary migration/codemod workflows, debug files or vendored Gouno UI assets may remain.
