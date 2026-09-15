@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { ExternalLink, ShieldCheck } from "lucide-react";
 import { stepUpMfa, getGossoAdminURL } from "../../auth";
 import {
+  markSudoSessionStale,
   openStepUpPopup,
   STEP_UP_COMPLETED_EVENT,
   STEP_UP_POPUP_PARAM,
@@ -24,6 +25,8 @@ export function StepUpMfaModal({
 }: StepUpMfaModalProps) {
   useEffect(() => {
     if (!open) return;
+    markSudoSessionStale();
+
     const handleCompleted = async () => {
       onClose();
       if (onSuccess) {
