@@ -22,6 +22,9 @@ async function openPublic(
   fixtureOptions = {},
 ) {
   await page.setViewportSize(viewport);
+  await page.addInitScript(() => {
+    localStorage.setItem("gouno-blog:locale", "zh");
+  });
   await setTheme(page, "light");
   const problems = collectConsoleProblems(page);
   const unknown = await installPublicApiFixtures(page, fixtureOptions);
@@ -33,9 +36,20 @@ async function openPublic(
   return { problems, unknown };
 }
 
-function expectClean({ problems, unknown }) {
+function expectClean(
+  { problems, unknown },
+  { allowInjected503 = false } = {},
+) {
+  const unexpectedProblems = allowInjected503
+    ? problems.filter(
+        (problem) =>
+          !/^error: Failed to load resource: the server responded with a status of 503\b/.test(
+            problem,
+          ),
+      )
+    : problems;
   expect(unknown).toEqual([]);
-  expect(problems).toEqual([]);
+  expect(unexpectedProblems).toEqual([]);
 }
 
 test("mobile public drawer navigates discovery routes and closes", async ({ page }) => {
@@ -92,7 +106,7 @@ test("discovery failure is recoverable and never masquerades as Empty", async ({
   await expect(
     page.getByRole("heading", { level: 2, name: "工程实践" }),
   ).toBeVisible();
-  expectClean(state);
+  expectClean(state, { allowInjected503: true });
 });
 
 test("article detail stays contained on phone width and related navigation works", async ({ page }) => {
@@ -207,7 +221,7 @@ test("article report failure stays inside the report modal", async ({ page }) =>
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole("alert")).toBeVisible();
   await expect(page.getByText("Fixture Reader")).toBeVisible();
-  expectClean(state);
+  expectClean(state, { allowInjected503: true });
 });
 
 test("runtime custom navigation reaches a real custom page", async ({ page }) => {
@@ -235,7 +249,7 @@ test("custom page transport failure is recoverable and never masquerades as NotF
   await expect(
     page.getByRole("heading", { level: 1, name: "常用链接" }),
   ).toBeVisible();
-  expectClean(state);
+  expectClean(state, { allowInjected503: true });
 });
 
 test("account notifications mark-one failure preserves the loaded list", async ({ page }) => {
@@ -247,7 +261,7 @@ test("account notifications mark-one failure preserves the loaded list", async (
   await page.getByRole("button", { name: "标为已读" }).click();
   await expect(page.getByRole("alert")).toBeVisible();
   await expect(page.getByText("Fixture Reader 回复了你的评论")).toBeVisible();
-  expectClean(state);
+  expectClean(state, { allowInjected503: true });
 });
 
 test("account notifications support the real mark-all mutation", async ({ page }) => {

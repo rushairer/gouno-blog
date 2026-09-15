@@ -45,6 +45,9 @@ for (const viewport of viewports) {
       const { path, heading } = route;
       test(`${path} ${viewport.name}px ${theme}`, async ({ page }, testInfo) => {
         await page.setViewportSize({ width: viewport.width, height: viewport.height });
+        await page.addInitScript(() => {
+          localStorage.setItem("gouno-blog:locale", "zh");
+        });
         await setTheme(page, theme);
         const problems = collectConsoleProblems(page);
         const unknown = await installPublicApiFixtures(page);
