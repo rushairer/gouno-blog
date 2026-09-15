@@ -56,6 +56,42 @@ async function openPair(browser, fixtureId, productPath, theme = "light") {
 }
 
 for (const theme of ["light", "dark"]) {
+  test(`Dashboard Top Posts surface and action geometry match Showcase (${theme})`, async ({
+    browser,
+  }, testInfo) => {
+    const { context, showcase, product, unknown } = await openPair(
+      browser,
+      "blog-admin-dashboard",
+      "/admin/dashboard",
+      theme,
+    );
+    const showcaseCard = showcase
+      .getByText("表现最佳文章", { exact: true })
+      .locator('xpath=ancestor::*[@data-slot="card"][1]');
+    const productCard = product
+      .getByText("表现最佳文章", { exact: true })
+      .locator('xpath=ancestor::*[@data-slot="card"][1]');
+    expect(await styleFingerprint(productCard)).toEqual(
+      await styleFingerprint(showcaseCard),
+    );
+
+    const showcaseActions = showcaseCard.getByRole("row").nth(1).getByRole("button");
+    const productActions = productCard.getByRole("row").nth(1).getByRole("link");
+    await expect(showcaseActions).toHaveCount(2);
+    await expect(productActions).toHaveCount(2);
+    for (let index = 0; index < 2; index += 1) {
+      const [showcaseBox, productBox] = await Promise.all([
+        showcaseActions.nth(index).boundingBox(),
+        productActions.nth(index).boundingBox(),
+      ]);
+      expect(productBox?.width).toBe(showcaseBox?.width);
+      expect(productBox?.height).toBe(showcaseBox?.height);
+    }
+    expect(unknown).toEqual([]);
+    await pairScreenshot(showcase, product, `dashboard-${theme}`, testInfo);
+    await context.close();
+  });
+
   test(`Posts filter surface and checkbox geometry match Showcase (${theme})`, async ({
     browser,
   }, testInfo) => {
