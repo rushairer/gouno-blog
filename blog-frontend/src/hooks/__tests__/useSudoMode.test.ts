@@ -1,7 +1,10 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { useSudoMode, SUDO_MAX_AGE_MS } from "../useSudoMode";
-import { STEP_UP_COMPLETED_EVENT } from "../../mfa";
+import {
+  STEP_UP_COMPLETED_EVENT,
+  SUDO_SESSION_STALE_EVENT,
+} from "../../mfa";
 
 describe("useSudoMode", () => {
   beforeEach(() => {
@@ -17,6 +20,7 @@ describe("useSudoMode", () => {
   it("defaults to inactive when no record in localStorage", () => {
     const { result } = renderHook(() => useSudoMode());
     expect(result.current.isSudoActive).toBe(false);
+    expect(result.current.isSudoExpiring).toBe(false);
     expect(result.current.remainingMs).toBe(0);
     expect(result.current.remainingMinutes).toBe(0);
   });
@@ -30,7 +34,28 @@ describe("useSudoMode", () => {
 
     const { result } = renderHook(() => useSudoMode());
     expect(result.current.isSudoActive).toBe(true);
+    expect(result.current.isSudoExpiring).toBe(false);
     expect(result.current.remainingMinutes).toBe(8); // 10 - 2 = 8 minutes
+  });
+
+  it("marks an active sudo session as expiring after a backend step-up requirement", () => {
+    localStorage.setItem("gouno:sudo_activated_at", String(Date.now()));
+    const { result } = renderHook(() => useSudoMode());
+
+    act(() => {
+      window.dispatchEvent(new Event(SUDO_SESSION_STALE_EVENT));
+    });
+
+    expect(result.current.isSudoActive).toBe(true);
+    expect(result.current.isSudoExpiring).toBe(true);
+
+    act(() => {
+      window.dispatchEvent(new Event(STEP_UP_COMPLETED_EVENT));
+    });
+
+    expect(result.current.isSudoActive).toBe(true);
+    expect(result.current.isSudoExpiring).toBe(false);
+    expect(result.current.remainingMinutes).toBe(10);
   });
 
   it("updates automatically when STEP_UP_COMPLETED_EVENT is dispatched", () => {
@@ -42,6 +67,7 @@ describe("useSudoMode", () => {
     });
 
     expect(result.current.isSudoActive).toBe(true);
+    expect(result.current.isSudoExpiring).toBe(false);
     expect(result.current.remainingMinutes).toBe(10);
   });
 
@@ -57,6 +83,7 @@ describe("useSudoMode", () => {
     });
 
     expect(result.current.isSudoActive).toBe(false);
+    expect(result.current.isSudoExpiring).toBe(false);
     expect(result.current.remainingMs).toBe(0);
   });
 });
