@@ -55,7 +55,8 @@ jobs:
       - name: Summarize selection
         env:
           SELECTION: ${{ steps.plan.outputs.selection }}
-        run: echo "Selected images: $SELECTION" >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          echo "Selected images: $SELECTION" >> "$GITHUB_STEP_SUMMARY"
 
   publish-backend:
     name: Publish backend image
