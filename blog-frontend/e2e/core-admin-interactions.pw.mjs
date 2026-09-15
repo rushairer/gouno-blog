@@ -11,7 +11,10 @@ function opaqueBackground(value) {
 test("Dashboard fatal load error remains page-level and retryable", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await setTheme(page, "light");
-  const unknown = await installApiFixtures(page, { failCoreOnce: "dashboard" });
+  const unknown = await installApiFixtures(page, {
+    failCoreKey: "dashboard",
+    failCoreRequests: 2,
+  });
   await page.goto("/admin/dashboard", { waitUntil: "networkidle" });
 
   await expect(page.getByText("数据概览加载失败")).toBeVisible();
@@ -35,6 +38,9 @@ test("Posts selection reveals the canonical contextual bulk action bar", async (
 
 test("Pages transient copy feedback is canonical opaque Notification", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"], {
+    origin: "http://127.0.0.1:4173",
+  });
   await setTheme(page, "light");
   const unknown = await installApiFixtures(page);
   await page.goto("/admin/pages", { waitUntil: "networkidle" });
@@ -82,7 +88,9 @@ test("Existing Page editor loads deterministic content at tablet width", async (
   const unknown = await installApiFixtures(page);
   await page.goto("/admin/pages/201/edit", { waitUntil: "networkidle" });
 
-  await expect(page.getByDisplayValue("Browser Acceptance Page")).toBeVisible();
+  await expect(page.getByPlaceholder("写一个清晰、具体的单页标题")).toHaveValue(
+    "Browser Acceptance Page",
+  );
   await expect(page.locator(".editor-commandbar")).toBeVisible();
   expect(unknown).toEqual([]);
 });
