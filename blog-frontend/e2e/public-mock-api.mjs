@@ -5,6 +5,7 @@ import {
   publicCategories,
   publicComment,
   publicNavPages,
+  publicNotifications,
   publicPosts,
   publicSiteSettings,
   publicTags,
@@ -49,24 +50,17 @@ function paginated(posts, params) {
   };
 }
 
-export async function installPublicApiFixtures(page) {
+export async function installPublicApiFixtures(page, options = {}) {
   const unknown = [];
+  let notifications = publicNotifications.map((item) => ({ ...item }));
+  let likes = publicPosts[0]?.likes_count || 0;
+  let liked = false;
 
   await page.route(productApiUrl, async (route) => {
     const request = route.request();
     const url = new URL(request.url());
     const path = url.pathname;
     const method = request.method();
-
-    if (method !== "GET" && method !== "HEAD") {
-      if (/^\/api\/posts\/\d+\/view$/.test(path)) {
-        await route.fulfill({ status: 204, body: "" });
-        return;
-      }
-      unknown.push(`${method} ${path}`);
-      await route.fulfill({ status: 204, body: "" });
-      return;
-    }
 
     const respond = async (data, status = 200) =>
       route.fulfill({
@@ -75,7 +69,70 @@ export async function installPublicApiFixtures(page) {
         body: envelope(data),
       });
 
+    if (options.fail?.has(`${method} ${path}`)) {
+      return respond({ message: "Browser fixture failure" }, 503);
+    }
+
+    if (method !== "GET" && method !== "HEAD") {
+      if (/^\/api\/posts\/\d+\/view$/.test(path)) {
+        await route.fulfill({ status: 204, body: "" });
+        return;
+      }
+
+      const readMatch = path.match(/^\/api\/me\/notifications\/(\d+)\/read$/);
+      if (method === "PUT" && readMatch) {
+        const id = Number(readMatch[1]);
+        notifications = notifications.map((item) =>
+          item.id === id ? { ...item, read_at: new Date().toISOString() } : item,
+        );
+        await route.fulfill({ status: 204, body: "" });
+        return;
+      }
+      if (method === "PUT" && path === "/api/me/notifications/read-all") {
+        const now = new Date().toISOString();
+        notifications = notifications.map((item) => ({ ...item, read_at: item.read_at || now }));
+        await route.fulfill({ status: 204, body: "" });
+        return;
+      }
+
+      const likeMatch = path.match(/^\/api\/posts\/(\d+)\/like$/);
+      if (likeMatch && (method === "PUT" || method === "DELETE")) {
+        liked = method === "PUT";
+        likes += liked ? 1 : -1;
+        return respond({ liked, likes_count: likes });
+      }
+
+      const commentMatch = path.match(/^\/api\/posts\/(\d+)\/comments$/);
+      if (method === "POST" && commentMatch) {
+        const body = request.postDataJSON();
+        return respond({
+          id: 901,
+          post_id: Number(commentMatch[1]),
+          author: body.author || "Visual Reviewer",
+          author_type: body.author ? "anonymous" : "user",
+          content: body.content,
+          parent_id: body.parent_id,
+          status: "visible",
+          is_visible: true,
+          report_count: 0,
+          created_at: "2026-09-15T10:00:00Z",
+        });
+      }
+
+      if (method === "POST" && /^\/api\/comments\/\d+\/report$/.test(path)) {
+        await route.fulfill({ status: 204, body: "" });
+        return;
+      }
+
+      unknown.push(`${method} ${path}`);
+      await route.fulfill({ status: 204, body: "" });
+      return;
+    }
+
     if (path === "/api/me/blog-session") return respond(adminProfile);
+    if (path === "/api/me/notifications") {
+      return respond({ list: notifications, total: notifications.length });
+    }
     if (path === "/api/site") return respond(publicSiteSettings);
     if (path === "/api/pages/nav") return respond(publicNavPages);
     if (path === "/api/pages/about") return respond(aboutPage);
@@ -85,7 +142,9 @@ export async function installPublicApiFixtures(page) {
     if (path === "/api/tags/summary") return respond(publicTagSummaries);
 
     if (path === "/api/posts") {
-      const filtered = publicPosts.filter((post) => matchesPost(post, url.searchParams));
+      const filtered = publicPosts.filter((post) =>
+        matchesPost(post, url.searchParams),
+      );
       return respond(paginated(filtered, url.searchParams));
     }
 
@@ -93,7 +152,8 @@ export async function installPublicApiFixtures(page) {
     if (categoryMatch) {
       const slug = decodeURIComponent(categoryMatch[1]);
       const filtered = publicPosts.filter(
-        (post) => post.category?.slug === slug && matchesPost(post, url.searchParams),
+        (post) =>
+          post.category?.slug === slug && matchesPost(post, url.searchParams),
       );
       return respond(paginated(filtered, url.searchParams));
     }
@@ -104,15 +164,17 @@ export async function installPublicApiFixtures(page) {
         (item) => item.slug === decodeURIComponent(communityMatch[1]),
       );
       return respond({
-        liked: false,
-        likes_count: post?.likes_count || 0,
+        liked,
+        likes_count: post?.id === 1 ? likes : post?.likes_count || 0,
       });
     }
 
     const relatedMatch = path.match(/^\/api\/posts\/([^/]+)\/related$/);
     if (relatedMatch) {
       const slug = decodeURIComponent(relatedMatch[1]);
-      return respond(publicPosts.filter((post) => post.slug !== slug).slice(0, 2));
+      return respond(
+        publicPosts.filter((post) => post.slug !== slug).slice(0, 2),
+      );
     }
 
     const commentsMatch = path.match(/^\/api\/posts\/(\d+)\/comments$/);

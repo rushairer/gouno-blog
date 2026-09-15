@@ -44,7 +44,13 @@ export const publicCategories = [
   },
 ];
 
-export const publicTags = ["OAuth2", "React", "Go", "Architecture", "Design System"];
+export const publicTags = [
+  "OAuth2",
+  "React",
+  "Go",
+  "Architecture",
+  "Design System",
+];
 
 const categoryBySlug = Object.fromEntries(
   publicCategories.map((category) => [category.slug, category]),
@@ -155,6 +161,31 @@ export const publicComment = {
   report_count: 0,
   created_at: "2026-09-13T10:00:00Z",
 };
+
+export const publicNotifications = [
+  {
+    id: 301,
+    type: "reply",
+    post_id: 1,
+    post_slug: "canonical-oauth2",
+    post_title: "OAuth2 与 BFF：把浏览器边界重新画清楚",
+    comment_id: 101,
+    actor_name: "Fixture Reader",
+    title: "Fixture Reader 回复了你的评论",
+    body: "这条通知用于验证 Account Notifications 的已读状态与窄屏布局。",
+    href: "/articles/canonical-oauth2#comment-101",
+    created_at: "2026-09-14T09:00:00Z",
+  },
+  {
+    id: 302,
+    type: "system",
+    title: "站点事件通知",
+    body: "这是一条已读的确定性浏览器 Fixture 通知。",
+    href: "/account/settings",
+    read_at: "2026-09-14T08:00:00Z",
+    created_at: "2026-09-14T08:00:00Z",
+  },
+];
 
 export const aboutPage = {
   id: 201,
