@@ -15,10 +15,14 @@ const requireText = (source, relativePath, expected, reason) => {
 const gatePath = "components/auth/SudoGate.tsx";
 const sudoPath = "hooks/useSudoMode.ts";
 const stepUpPath = "components/auth/StepUpMfaModal.tsx";
+const usersPath = "pages/admin/Users.tsx";
+const settingsPath = "pages/admin/SiteSettings.tsx";
 const advancedPath = "components/agent/AdvancedWorkspace.tsx";
 const gate = await read(gatePath);
 const sudo = await read(sudoPath);
 const stepUp = await read(stepUpPath);
+const users = await read(usersPath);
+const settings = await read(settingsPath);
 const advanced = await read(advancedPath);
 
 for (const [text, reason] of [
@@ -51,12 +55,11 @@ requireText(
   "Step-Up UI must mark the current sudo session stale before verification",
 );
 
-for (const relativePath of [
-  "pages/admin/Users.tsx",
-  "pages/admin/SiteSettings.tsx",
-  advancedPath,
+for (const [relativePath, source] of [
+  [usersPath, users],
+  [settingsPath, settings],
+  [advancedPath, advanced],
 ]) {
-  const source = relativePath === advancedPath ? advanced : await read(relativePath);
   requireText(
     source,
     relativePath,
@@ -68,7 +71,36 @@ for (const relativePath of [
       `${relativePath}: legacy one-off sudo presentation must not replace the canonical gate`,
     );
   }
+  if (source.includes("unlockedPresentation")) {
+    failures.push(
+      `${relativePath}: legacy presentation selector must stay retired`,
+    );
+  }
+  if (source.includes("无打扰操作期") || source.includes("无打扰编辑期")) {
+    failures.push(
+      `${relativePath}: session lifetime copy belongs to SudoGate state, not page policy descriptions`,
+    );
+  }
 }
+
+requireText(
+  users,
+  usersPath,
+  'description="修改 Blog 成员角色、移交所有权或暂停成员资格需要近期多因素身份认证。"',
+  "member policy description must match Showcase",
+);
+requireText(
+  users,
+  usersPath,
+  'actionLabel="完成 MFA 并解锁"',
+  "member unlock action must match Showcase",
+);
+requireText(
+  settings,
+  settingsPath,
+  'description="修改站点品牌、SEO、页脚或联系方式等敏感设置需要近期多因素身份认证。"',
+  "site settings policy description must match Showcase",
+);
 
 const providerPolicyTitleCount = advanced.split("模型连接与密钥保护").length - 1;
 if (providerPolicyTitleCount !== 1) {
@@ -81,11 +113,18 @@ if (advanced.includes("敏感配置需要近期 MFA")) {
     `${advancedPath}: knowledge policy must not be duplicated by a nested informational Alert`,
   );
 }
-if (advanced.includes("无打扰编辑期")) {
-  failures.push(
-    `${advancedPath}: session lifetime copy belongs to SudoGate state, not page policy descriptions`,
-  );
-}
+requireText(
+  advanced,
+  advancedPath,
+  'description="添加、修改、导出或删除模型连接涉及敏感 API Key 凭据，需要近期多因素身份认证。"',
+  "model credential policy description must match Showcase",
+);
+requireText(
+  advanced,
+  advancedPath,
+  'description="添加、编辑、删除 Embedding 配置或执行全量重建需要近期多因素身份认证。"',
+  "knowledge policy description must match Showcase",
+);
 
 if (failures.length) {
   console.error(
