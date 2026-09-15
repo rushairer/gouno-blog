@@ -9,6 +9,7 @@ async function styleFingerprint(locator) {
     const style = getComputedStyle(element);
     return {
       display: style.display,
+      position: style.position,
       gap: style.gap,
       paddingTop: style.paddingTop,
       paddingRight: style.paddingRight,
@@ -21,6 +22,7 @@ async function styleFingerprint(locator) {
       borderRadius: style.borderRadius,
       backgroundColor: style.backgroundColor,
       boxShadow: style.boxShadow,
+      opacity: style.opacity,
     };
   });
 }
@@ -32,14 +34,21 @@ async function pairScreenshot(showcase, product, label, testInfo) {
   ]) {
     const path = testInfo.outputPath(`${label}-${kind}.png`);
     await page.screenshot({ path, fullPage: true });
-    await testInfo.attach(`${label}-${kind}`, { path, contentType: "image/png" });
+    await testInfo.attach(`${label}-${kind}`, {
+      path,
+      contentType: "image/png",
+    });
   }
 }
 
-async function openPair(browser, fixtureId, productPath, theme = "light") {
-  const context = await browser.newContext({
-    viewport: { width: 1440, height: 900 },
-  });
+async function openPair(
+  browser,
+  fixtureId,
+  productPath,
+  theme = "light",
+  viewport = { width: 1440, height: 900 },
+) {
+  const context = await browser.newContext({ viewport });
   const showcase = await context.newPage();
   const product = await context.newPage();
   await setTheme(showcase, theme);
@@ -75,8 +84,14 @@ for (const theme of ["light", "dark"]) {
       await styleFingerprint(showcaseCard),
     );
 
-    const showcaseActions = showcaseCard.getByRole("row").nth(1).getByRole("button");
-    const productActions = productCard.getByRole("row").nth(1).getByRole("link");
+    const showcaseActions = showcaseCard
+      .getByRole("row")
+      .nth(1)
+      .getByRole("button");
+    const productActions = productCard
+      .getByRole("row")
+      .nth(1)
+      .getByRole("link");
     await expect(showcaseActions).toHaveCount(2);
     await expect(productActions).toHaveCount(2);
     for (let index = 0; index < 2; index += 1) {
@@ -125,6 +140,86 @@ for (const theme of ["light", "dark"]) {
     expect(productBox?.height).toBe(showcaseBox?.height);
     expect(unknown).toEqual([]);
     await pairScreenshot(showcase, product, `posts-${theme}`, testInfo);
+    await context.close();
+  });
+
+  test(`Posts destructive modal and overlay match Showcase (${theme})`, async ({
+    browser,
+  }, testInfo) => {
+    const { context, showcase, product, unknown } = await openPair(
+      browser,
+      "blog-admin-posts",
+      "/admin/posts",
+      theme,
+    );
+
+    await showcase.getByRole("button", { name: "删除文章" }).first().click();
+    await product.getByRole("button", { name: /删除文章/ }).first().click();
+
+    const showcaseDialog = showcase.getByRole("dialog");
+    const productDialog = product.getByRole("dialog");
+    expect(await styleFingerprint(productDialog)).toEqual(
+      await styleFingerprint(showcaseDialog),
+    );
+    const [showcaseDialogBox, productDialogBox] = await Promise.all([
+      showcaseDialog.boundingBox(),
+      productDialog.boundingBox(),
+    ]);
+    expect(productDialogBox?.width).toBe(showcaseDialogBox?.width);
+
+    const showcaseBody = showcaseDialog.locator('[data-slot="modal-body"]');
+    const productBody = productDialog.locator('[data-slot="modal-body"]');
+    expect(await styleFingerprint(productBody)).toEqual(
+      await styleFingerprint(showcaseBody),
+    );
+
+    const showcaseOverlay = showcase.locator('[data-slot="dialog-overlay"]');
+    const productOverlay = product.locator('[data-slot="dialog-overlay"]');
+    expect(await styleFingerprint(productOverlay)).toEqual(
+      await styleFingerprint(showcaseOverlay),
+    );
+
+    expect(unknown).toEqual([]);
+    await pairScreenshot(showcase, product, `posts-modal-${theme}`, testInfo);
+    await context.close();
+  });
+
+  test(`Posts mobile surface hierarchy matches Showcase (${theme})`, async ({
+    browser,
+  }, testInfo) => {
+    const { context, showcase, product, unknown } = await openPair(
+      browser,
+      "blog-admin-posts",
+      "/admin/posts",
+      theme,
+      { width: 390, height: 844 },
+    );
+
+    const showcaseFilter = showcase
+      .getByLabel("搜索文章")
+      .locator('xpath=ancestor::*[@data-slot="card"][1]');
+    const productFilter = product
+      .getByLabel("搜索文章")
+      .locator('xpath=ancestor::*[@data-slot="card"][1]');
+    expect(await styleFingerprint(productFilter)).toEqual(
+      await styleFingerprint(showcaseFilter),
+    );
+
+    const showcaseItem = showcase.getByRole("listitem").first();
+    const productItem = product.getByRole("listitem").first();
+    expect(await styleFingerprint(productItem)).toEqual(
+      await styleFingerprint(showcaseItem),
+    );
+
+    for (const page of [showcase, product]) {
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+      );
+      expect(overflow).toBe(false);
+    }
+
+    expect(unknown).toEqual([]);
+    await pairScreenshot(showcase, product, `posts-mobile-${theme}`, testInfo);
     await context.close();
   });
 
