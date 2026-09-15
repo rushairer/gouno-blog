@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Inbox } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Card, Empty, Spinner } from "@gouno/ui/core";
+import { Alert, Button, Card, Empty } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
 import { postsApi } from "../api/posts";
+import { DiscoveryIndexLoading } from "../components/reading/DiscoveryIndexLoading";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useI18n } from "../i18n";
 import { PAGINATION_LIMITS } from "../constants";
@@ -14,8 +15,12 @@ export default function Archive() {
   usePageTitle(t("archivePage.title"));
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    setLoading(true);
+    setError("");
     postsApi
       .getPosts(
         new URLSearchParams({
@@ -24,8 +29,11 @@ export default function Archive() {
         }),
       )
       .then((data) => setPosts(data.list || []))
+      .catch((reason: unknown) => {
+        setError(reason instanceof Error ? reason.message : t("requestFailed"));
+      })
       .finally(() => setLoading(false));
-  }, []);
+  }, [reloadKey, t]);
 
   const groups = useMemo(
     () =>
@@ -41,6 +49,7 @@ export default function Archive() {
     [posts, formatDate],
   );
   const periods = Object.entries(groups);
+
   return (
     <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-8">
       <PageHeader
@@ -56,13 +65,15 @@ export default function Archive() {
       />
       <Card as="section" aria-label={`${t("archivePage.title")}内容`}>
         {loading ? (
-          <div
-            role="status"
-            className="flex items-center justify-center gap-3 py-12 text-sm text-muted-foreground"
-          >
-            <Spinner className="size-5 text-primary" />
-            <span>{t("archivePage.loading")}</span>
-          </div>
+          <DiscoveryIndexLoading page="archive" />
+        ) : error ? (
+          <Alert
+            type="error"
+            title={`${t("archivePage.title")}加载失败`}
+            description={error}
+            action={<Button onClick={() => setReloadKey((value) => value + 1)}>{t("retry")}</Button>}
+            showIcon
+          />
         ) : periods.length ? (
           <div className="flex flex-col gap-8">
             {periods.map(([period, items]) => (

@@ -38,6 +38,7 @@ export default function PublicShell({ children }: { children: ReactNode }) {
     getCachedSiteSettings(),
   );
   const [navPages, setNavPages] = useState<CustomPage[]>([]);
+
   useEffect(() => {
     siteApi
       .getSiteSettings()
@@ -49,7 +50,7 @@ export default function PublicShell({ children }: { children: ReactNode }) {
       .getNavPages()
       .then(setNavPages)
       .catch(() => {
-        // Graceful fallback to static nav
+        // Graceful fallback to static nav.
       });
 
     const handleUpdate = (event: Event) => {
@@ -61,7 +62,9 @@ export default function PublicShell({ children }: { children: ReactNode }) {
       if (event.key === SITE_SETTINGS_STORAGE_KEY && event.newValue) {
         try {
           setSite(JSON.parse(event.newValue));
-        } catch {}
+        } catch {
+          // Ignore malformed cached metadata and keep the current site state.
+        }
       }
     };
 
@@ -74,41 +77,41 @@ export default function PublicShell({ children }: { children: ReactNode }) {
   }, []);
 
   const navItems = useMemo(() => {
-    if (navPages.length === 0) {
-      return publicNavigation;
-    }
+    if (navPages.length === 0) return publicNavigation;
+
     const defaultItems = [
       { label: "文章", path: "/articles" },
       { label: "分类", path: "/categories" },
       { label: "归档", path: "/archive" },
     ];
-    const customItems = navPages.map((p) => ({
-      label: p.title,
-      path: `/${p.slug}`,
+    const customItems = navPages.map((page) => ({
+      label: page.title,
+      path: `/${page.slug}`,
     }));
     const seen = new Set<string>();
     const merged: Array<{ label: string; path: string }> = [];
     for (const item of [...defaultItems, ...customItems]) {
-      if (!seen.has(item.path)) {
-        seen.add(item.path);
-        merged.push(item);
-      }
+      if (seen.has(item.path)) continue;
+      seen.add(item.path);
+      merged.push(item);
     }
     return merged;
   }, [navPages]);
 
   const siteTitle = site?.site_title || DEFAULT_SITE_SETTINGS.site_title;
+  const footerText =
+    site?.footer_text !== undefined
+      ? site.footer_text
+      : DEFAULT_SITE_SETTINGS.footer_text;
+  const year = new Date().getFullYear();
+
   const search = (event: React.FormEvent) => {
     event.preventDefault();
     const value = query.trim();
     if (value) navigate(`/search?q=${encodeURIComponent(value)}`);
     setOpen(false);
   };
-  const footerText =
-    site?.footer_text !== undefined
-      ? site.footer_text
-      : DEFAULT_SITE_SETTINGS.footer_text;
-  const year = new Date().getFullYear();
+
   return (
     <div className="flex min-h-dvh flex-col bg-background text-foreground">
       <a
@@ -127,10 +130,7 @@ export default function PublicShell({ children }: { children: ReactNode }) {
             <BrandMark src={gounoBlogLogo} className="size-8" />
             <span className="truncate">{siteTitle}</span>
           </Link>
-          <nav
-            aria-label="主导航"
-            className="hidden items-center gap-6 md:flex"
-          >
+          <nav aria-label="主导航" className="hidden items-center gap-6 md:flex">
             {navItems.map((item) => (
               <Link
                 key={item.path}
@@ -156,7 +156,7 @@ export default function PublicShell({ children }: { children: ReactNode }) {
             to="/admin"
             label="进入内容后台"
             icon={<LayoutDashboard />}
-            className="hidden !size-9 !rounded-full !p-0 sm:inline-flex"
+            className="hidden sm:inline-flex"
           />
           <ThemeToggle label="切换主题" />
           <IconButton
@@ -167,6 +167,7 @@ export default function PublicShell({ children }: { children: ReactNode }) {
           />
         </div>
       </header>
+
       <main
         id="public-main"
         tabIndex={-1}
@@ -174,13 +175,11 @@ export default function PublicShell({ children }: { children: ReactNode }) {
       >
         {children}
       </main>
+
       <footer className="mt-12 border-t">
         <div className="mx-auto grid w-full max-w-[1200px] gap-8 px-4 py-10 md:grid-cols-[1fr_1fr] md:px-6">
           <div>
-            <Link
-              to="/"
-              className="inline-flex items-center gap-2 font-semibold"
-            >
+            <Link to="/" className="inline-flex items-center gap-2 font-semibold">
               <BrandMark src={gounoBlogLogo} className="size-7 text-primary" />
               <span>{siteTitle}</span>
             </Link>
@@ -202,7 +201,7 @@ export default function PublicShell({ children }: { children: ReactNode }) {
               className="inline-flex items-center gap-2"
               href={site?.rss_url || "/feed.xml"}
             >
-              <Rss className="size-4" />
+              <Rss className="size-4" aria-hidden="true" />
               RSS
             </a>
             {site?.github_url ? (
@@ -220,6 +219,7 @@ export default function PublicShell({ children }: { children: ReactNode }) {
           </p>
         </div>
       </footer>
+
       <Drawer open={open} title={siteTitle} onClose={() => setOpen(false)}>
         <form role="search" onSubmit={search} className="mb-6">
           <Input
@@ -243,11 +243,7 @@ export default function PublicShell({ children }: { children: ReactNode }) {
               {item.label}
             </Link>
           ))}
-          <Link
-            to="/admin"
-            className="px-3 py-3"
-            onClick={() => setOpen(false)}
-          >
+          <Link to="/admin" className="px-3 py-3" onClick={() => setOpen(false)}>
             管理后台
           </Link>
         </nav>
