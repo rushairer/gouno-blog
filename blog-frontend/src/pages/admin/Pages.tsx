@@ -40,12 +40,12 @@ import { useAdminGuard } from "../../hooks/useAdminGuard";
 import { pagesApi } from "../../api/pages";
 import type { CustomPage } from "../../types/blog";
 import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
+import { useAppFeedback } from "../../components/feedback/AppFeedbackProvider";
 
 type DeleteTarget =
   | { kind: "page"; page: CustomPage }
   | { kind: "batch" }
   | null;
-type Notice = { type: "success" | "info" | "error"; message: string } | null;
 
 const pageSize = 20;
 
@@ -105,12 +105,12 @@ function LoadingPages() {
 
 export default function AdminPages() {
   const allowed = useAdminGuard("/admin/pages");
+  const { notify } = useAppFeedback();
   const [params, setParams] = useSearchParams();
   const [pages, setPages] = useState<CustomPage[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
-  const [notice, setNotice] = useState<Notice>(null);
   const [selected, setSelected] = useState<number[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const [deleting, setDeleting] = useState(false);
@@ -171,19 +171,15 @@ export default function AdminPages() {
       await navigator.clipboard.writeText(
         `${window.location.origin}/${pageItem.slug}`,
       );
-      setNotice({ type: "success", message: "单页链接已复制。" });
+      notify("单页链接已复制。", "success");
     } catch {
-      setNotice({
-        type: "error",
-        message: "复制单页链接失败，请手动复制。",
-      });
+      notify("复制单页链接失败，请手动复制。", "error");
     }
   };
 
   const performDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
-    setNotice(null);
     try {
       if (deleteTarget.kind === "page") {
         await pagesApi.deletePage(deleteTarget.page.id);
@@ -191,7 +187,7 @@ export default function AdminPages() {
           current.filter((item) => item.id !== deleteTarget.page.id),
         );
         setTotal((current) => Math.max(0, current - 1));
-        setNotice({ type: "success", message: "单页已删除。" });
+        notify("单页已删除。", "success");
       } else {
         const count = selected.length;
         await Promise.all(selected.map((id) => pagesApi.deletePage(id)));
@@ -201,18 +197,14 @@ export default function AdminPages() {
         setTotal((current) => Math.max(0, current - count));
         setSelected([]);
         setAIOpen(false);
-        setNotice({
-          type: "success",
-          message: `所选 ${count} 个单页已删除。`,
-        });
+        notify(`所选 ${count} 个单页已删除。`, "success");
       }
       setDeleteTarget(null);
     } catch (reason) {
-      setNotice({
-        type: "error",
-        message:
-          reason instanceof Error ? reason.message : "删除失败，请稍后重试。",
-      });
+      notify(
+        reason instanceof Error ? reason.message : "删除失败，请稍后重试。",
+        "error",
+      );
     } finally {
       setDeleting(false);
     }
@@ -253,15 +245,6 @@ export default function AdminPages() {
           </ButtonLink>
         }
       />
-
-      {notice ? (
-        <Alert
-          type={notice.type}
-          showIcon
-          title={notice.message}
-          closable={{ onClose: () => setNotice(null) }}
-        />
-      ) : null}
 
       <Card padding="base">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
