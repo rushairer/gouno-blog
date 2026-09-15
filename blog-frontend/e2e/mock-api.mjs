@@ -22,7 +22,10 @@ export async function installApiFixtures(page, options = {}) {
   const unknown = [];
   const profile = options.profile || adminProfile;
   let failSettingsOnce = Boolean(options.failSettingsOnce);
-  let failCoreOnce = options.failCoreOnce || "";
+  const failCoreKey = options.failCoreKey || options.failCoreOnce || "";
+  let failCoreRemaining = Number(
+    options.failCoreRequests ?? (failCoreKey ? 1 : 0),
+  );
 
   await page.route(productApiUrl, async (route) => {
     const request = route.request();
@@ -41,9 +44,9 @@ export async function installApiFixtures(page, options = {}) {
         body: envelope(data),
       });
 
-    const failOnce = async (key) => {
-      if (failCoreOnce !== key) return false;
-      failCoreOnce = "";
+    const failCore = async (key) => {
+      if (failCoreKey !== key || failCoreRemaining <= 0) return false;
+      failCoreRemaining -= 1;
       await route.fulfill({
         status: 500,
         contentType: "application/json",
@@ -55,24 +58,24 @@ export async function installApiFixtures(page, options = {}) {
     if (path === "/api/me/blog-session") return respond(profile);
     if (path === "/api/site") return respond(siteSettings);
     if (path === "/api/admin/analytics") {
-      if (await failOnce("dashboard")) return;
+      if (await failCore("dashboard")) return;
       return respond(dashboardSummary);
     }
     if (path === "/api/admin/posts") {
-      if (await failOnce("posts")) return;
+      if (await failCore("posts")) return;
       return respond({ list: [adminPost], total: 1, page: 1, page_size: 20 });
     }
     if (path === "/api/admin/posts/101") {
-      if (await failOnce("post-editor")) return;
+      if (await failCore("post-editor")) return;
       return respond(adminPost);
     }
     if (path === "/api/admin/posts/101/versions") return respond([adminPostVersion]);
     if (path === "/api/admin/pages") {
-      if (await failOnce("pages")) return;
+      if (await failCore("pages")) return;
       return respond({ list: [adminPage], total: 1, page: 1, page_size: 20 });
     }
     if (path === "/api/admin/pages/201") {
-      if (await failOnce("page-editor")) return;
+      if (await failCore("page-editor")) return;
       return respond(adminPage);
     }
     if (path === "/api/admin/categories") return respond([category]);
