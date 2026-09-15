@@ -44,8 +44,7 @@ export function SudoGate({
         title={isLocked ? "高权限操作需要身份验证" : "高权限操作已解锁"}
         description={
           <span>
-            <strong className="font-medium">{title}</strong>
-            ：{description}{" "}
+            <strong className="font-medium">{title}</strong>：{description}{" "}
             {isLocked
               ? "完成近期 MFA 后可继续。"
               : `当前近期 MFA 已完成；约 ${remainingMinutes} 分钟后会重新要求验证。`}
