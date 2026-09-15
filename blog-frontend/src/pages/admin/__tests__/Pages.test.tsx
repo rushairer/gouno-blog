@@ -7,6 +7,7 @@ import AdminPages from "../Pages";
 import { pagesApi } from "../../../api/pages";
 import type { PaginatedPages } from "../../../types/blog";
 import { GossoProvider } from "@gosso/client/react";
+import { AppFeedbackProvider } from "../../../components/feedback/AppFeedbackProvider";
 
 const snapshot = {
   loggedIn: true,
@@ -73,9 +74,11 @@ describe("AdminPages", () => {
 
     render(
       <GossoProvider client={mockClient}>
-        <MemoryRouter initialEntries={["/admin/pages"]}>
-          <AdminPages />
-        </MemoryRouter>
+        <AppFeedbackProvider>
+          <MemoryRouter initialEntries={["/admin/pages"]}>
+            <AdminPages />
+          </MemoryRouter>
+        </AppFeedbackProvider>
       </GossoProvider>,
     );
 
