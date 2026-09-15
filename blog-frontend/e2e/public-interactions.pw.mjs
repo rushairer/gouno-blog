@@ -126,6 +126,31 @@ test("article detail stays contained on phone width and related navigation works
   expectClean(state);
 });
 
+test("article transport failure is recoverable and never masquerades as NotFound", async ({ page }) => {
+  const failures = new Set(["GET /api/posts/canonical-oauth2"]);
+  const state = await openPublic(page, "/articles/canonical-oauth2", undefined, {
+    fail: failures,
+    anonymous: true,
+  });
+
+  await expect(page.getByRole("alert")).toBeVisible();
+  await expect(page.getByRole("button", { name: "重试" })).toBeVisible();
+  await expect(page.getByText(/文章不存在|404/)).toHaveCount(0);
+
+  failures.delete("GET /api/posts/canonical-oauth2");
+  await page.getByRole("button", { name: "重试" }).click();
+  await expect(
+    page.getByRole("heading", {
+      level: 1,
+      name: "OAuth2 与 BFF：把浏览器边界重新画清楚",
+    }),
+  ).toBeVisible();
+  expect(state.unknown).toEqual([]);
+  expect(state.problems.filter((problem) => problem.startsWith("pageerror:"))).toEqual(
+    [],
+  );
+});
+
 test("article TOC keeps real hash navigation and Core CodeBlock owns copy feedback", async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, "clipboard", {
