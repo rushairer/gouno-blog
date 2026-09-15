@@ -2,14 +2,10 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useRef,
-  useState,
   type ReactNode,
 } from "react";
-import { X } from "lucide-react";
-import { Alert, IconButton } from "@gouno/ui/core";
+import { NotificationProvider, useNotification } from "@gouno/ui/core";
 
 export type AppFeedbackType = "error" | "success" | "warning" | "info";
 export type AppFeedbackOptions = { duration?: number };
@@ -25,29 +21,11 @@ export interface AppFeedbackApi {
   showInfo: (message: string) => void;
 }
 
-type FeedbackItem = {
-  id: number;
-  message: string;
-  type: AppFeedbackType;
-};
-
 const AppFeedbackContext = createContext<AppFeedbackApi | null>(null);
+const notificationClosable = { "aria-label": "关闭提示" } as const;
 
-function RootAppFeedbackProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<FeedbackItem[]>([]);
-  const nextID = useRef(1);
-  const timers = useRef(
-    new Map<number, ReturnType<typeof window.setTimeout>>(),
-  );
-
-  const dismiss = useCallback((id: number) => {
-    const timer = timers.current.get(id);
-    if (timer !== undefined) {
-      window.clearTimeout(timer);
-      timers.current.delete(id);
-    }
-    setItems((current) => current.filter((item) => item.id !== id));
-  }, []);
+function AppFeedbackBridge({ children }: { children: ReactNode }) {
+  const { open } = useNotification();
 
   const notify = useCallback(
     (
@@ -55,27 +33,24 @@ function RootAppFeedbackProvider({ children }: { children: ReactNode }) {
       type: AppFeedbackType = "success",
       options?: AppFeedbackOptions,
     ) => {
-      const id = nextID.current++;
-      setItems((current) => [...current, { id, message, type }]);
-      if (options?.duration !== 0) {
-        const timer = window.setTimeout(
-          () => dismiss(id),
-          options?.duration ?? 4000,
-        );
-        timers.current.set(id, timer);
+      if (options?.duration === 0) {
+        open({
+          title: message,
+          type,
+          persistent: true,
+          closable: notificationClosable,
+        });
+        return;
       }
-    },
-    [dismiss],
-  );
 
-  useEffect(
-    () => () => {
-      for (const timer of timers.current.values()) {
-        window.clearTimeout(timer);
-      }
-      timers.current.clear();
+      open({
+        title: message,
+        type,
+        duration: options?.duration ?? 4000,
+        closable: notificationClosable,
+      });
     },
-    [],
+    [open],
   );
 
   const api = useMemo<AppFeedbackApi>(
@@ -91,37 +66,15 @@ function RootAppFeedbackProvider({ children }: { children: ReactNode }) {
   return (
     <AppFeedbackContext.Provider value={api}>
       {children}
-      <div
-        aria-label="应用提示"
-        data-slot="notification-region"
-        className="fixed right-4 top-4 z-[100] flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2"
-      >
-        {items.map((item) => (
-          <Alert
-            key={item.id}
-            type={item.type}
-            showIcon
-            role={
-              item.type === "error" || item.type === "warning"
-                ? "alert"
-                : "status"
-            }
-            className="bg-popover shadow-overlay"
-            action={
-              <IconButton
-                variant="ghost"
-                size="small"
-                label="关闭提示"
-                icon={<X />}
-                onClick={() => dismiss(item.id)}
-              />
-            }
-          >
-            {item.message}
-          </Alert>
-        ))}
-      </div>
     </AppFeedbackContext.Provider>
+  );
+}
+
+function RootAppFeedbackProvider({ children }: { children: ReactNode }) {
+  return (
+    <NotificationProvider>
+      <AppFeedbackBridge>{children}</AppFeedbackBridge>
+    </NotificationProvider>
   );
 }
 

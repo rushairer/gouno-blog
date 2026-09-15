@@ -21,9 +21,9 @@ afterEach(() => {
 });
 
 describe("AppFeedbackProvider", () => {
-  it("preserves status/alert semantics and supports manual dismissal", async () => {
+  it("delegates rendering and lifecycle to Gouno Notification", async () => {
     const user = userEvent.setup();
-    render(
+    const { container } = render(
       <AppFeedbackProvider>
         <FeedbackActions />
       </AppFeedbackProvider>,
@@ -32,21 +32,30 @@ describe("AppFeedbackProvider", () => {
     await user.click(screen.getByRole("button", { name: "成功" }));
     await user.click(screen.getByRole("button", { name: "警告" }));
 
-    const region = screen.getByLabelText("应用提示");
-    expect(region).toHaveAttribute("data-slot", "notification-region");
-    expect(region).toHaveClass("right-4", "top-4", "z-[100]", "w-80", "gap-2");
+    const region = container.querySelector(
+      '[data-slot="notification-region"]',
+    );
+    expect(region).toBeInTheDocument();
+    expect(region).toHaveClass(
+      "right-4",
+      "top-4",
+      "z-[100]",
+      "w-80",
+      "gap-2",
+    );
     expect(region).not.toHaveClass("bottom-4");
 
-    expect(screen.getByRole("status")).toHaveTextContent("已保存");
-    expect(screen.getByRole("status")).toHaveClass(
-      "bg-popover",
-      "shadow-overlay",
-    );
-    expect(screen.getByRole("alert")).toHaveTextContent("需要确认");
-    expect(screen.getByRole("alert")).toHaveClass(
-      "bg-popover",
-      "shadow-overlay",
-    );
+    const status = screen.getByRole("status");
+    expect(status).toHaveTextContent("已保存");
+    expect(status).toHaveAttribute("data-slot", "notification");
+    expect(status).toHaveAttribute("data-type", "success");
+    expect(status).toHaveClass("bg-popover", "shadow-overlay");
+
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("需要确认");
+    expect(alert).toHaveAttribute("data-type", "warning");
+    expect(alert).toHaveAttribute("data-persistent", "true");
+    expect(alert).toHaveClass("bg-popover", "shadow-overlay");
 
     await user.click(screen.getAllByRole("button", { name: "关闭提示" })[0]);
     expect(screen.queryByText("已保存")).not.toBeInTheDocument();
@@ -72,11 +81,17 @@ describe("AppFeedbackProvider", () => {
 
     expect(screen.queryByText("已保存")).not.toBeInTheDocument();
     expect(screen.getByText("需要确认")).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(60_000);
+    });
+
+    expect(screen.getByText("需要确认")).toBeInTheDocument();
   });
 
   it("reuses the outer feedback channel for nested providers", async () => {
     const user = userEvent.setup();
-    render(
+    const { container } = render(
       <AppFeedbackProvider>
         <AppFeedbackProvider>
           <FeedbackActions />
@@ -86,6 +101,8 @@ describe("AppFeedbackProvider", () => {
 
     await user.click(screen.getByRole("button", { name: "成功" }));
     expect(screen.getAllByText("已保存")).toHaveLength(1);
-    expect(screen.getAllByLabelText("应用提示")).toHaveLength(1);
+    expect(
+      container.querySelectorAll('[data-slot="notification-region"]'),
+    ).toHaveLength(1);
   });
 });
