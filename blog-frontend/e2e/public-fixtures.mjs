@@ -217,4 +217,21 @@ export const linksPage = {
   created_at: "2026-09-01T08:00:00Z",
 };
 
+export const designSystemPage = {
+  id: 203,
+  title: "Gouno UI 设计系统说明",
+  slug: "design-system",
+  summary:
+    "记录 Gouno 产品家族如何从真实页面中收敛共享设计语言，而不是先造一个大而全的组件库。",
+  content:
+    "这个单页来自站点内容管理，而不是前端写死的路由组件。\n\n## 为什么单页仍然是产品内容\n\n隐私说明、项目介绍、使用指南等页面都可能由管理员持续维护。\n\n## 公共能力保持窄职责\n\n- PageHeader 只表达标题与说明。\n- CodeBlock 只表达只读代码与复制。",
+  template: "default",
+  status: "published",
+  allow_comments: false,
+  show_in_nav: false,
+  sort_order: 30,
+  created_at: "2026-09-09T08:00:00Z",
+  updated_at: "2026-09-09T08:00:00Z",
+};
+
 export const publicNavPages = [aboutPage, linksPage];
