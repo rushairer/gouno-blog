@@ -10,7 +10,10 @@ export default defineConfig({
   expect: { timeout: 8_000 },
   reporter: [
     ["list"],
-    ["html", { outputFolder: "../playwright-report-showcase-parity", open: "never" }],
+    [
+      "html",
+      { outputFolder: "../playwright-report-showcase-parity", open: "never" },
+    ],
   ],
   outputDir: "../test-results/showcase-parity",
   use: {
@@ -19,13 +22,14 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: "npm run dev -- --host 127.0.0.1 --port 4173",
+      command: "npm --prefix .. run dev -- --host 127.0.0.1 --port 4173",
       url: "http://127.0.0.1:4173",
       reuseExistingServer: false,
       timeout: 120_000,
     },
     {
-      command: "npm --prefix ../upstream-gouno-ui run showcase:dev -- --host 127.0.0.1 --port 4174",
+      command:
+        "npm --prefix ../../upstream-gouno-ui run showcase:dev -- --host 127.0.0.1 --port 4174",
       url: "http://127.0.0.1:4174",
       reuseExistingServer: false,
       timeout: 120_000,
