@@ -22,3 +22,5 @@ jobs:
         run: |
           set -euo pipefail
           gh workflow run ui-browser-acceptance.yml --repo rushairer/gouno-blog --ref main
+
+# Temporary trigger retained only until the Node 24 acceptance rerun completes.
