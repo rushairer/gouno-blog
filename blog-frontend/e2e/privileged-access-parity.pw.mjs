@@ -181,6 +181,7 @@ for (const theme of ["light", "dark"]) {
       { activeSudo: true, ai: true },
     );
 
+    await showcase.getByRole("tab", { name: "模型连接" }).click();
     await expect(showcase.getByText("高权限操作已解锁")).toBeVisible();
     await expect(product.getByText("高权限操作已解锁")).toBeVisible();
     await expectGateParity(showcase, product);
