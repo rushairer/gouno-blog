@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiFetch } from "../../../auth";
 import AdminComments from "../Comments";
+import { AppFeedbackProvider } from "../../../components/feedback/AppFeedbackProvider";
 
 vi.mock("../../../auth", async () => {
   const apiFetch = vi.fn();
@@ -48,9 +49,11 @@ describe("AdminComments canonical UI migration", () => {
   it("keeps the canonical page grammar and passes selected comment IDs to the Workflow launcher", async () => {
     const user = userEvent.setup();
     render(
-      <MemoryRouter>
-        <AdminComments />
-      </MemoryRouter>,
+      <AppFeedbackProvider>
+        <MemoryRouter>
+          <AdminComments />
+        </MemoryRouter>
+      </AppFeedbackProvider>,
     );
 
     expect(

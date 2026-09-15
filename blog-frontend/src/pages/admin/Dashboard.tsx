@@ -5,6 +5,8 @@ import {
   Bot,
   CheckCheck,
   ChevronRight,
+  Edit2,
+  ExternalLink,
   Eye,
   FileText,
   GitBranch,
@@ -25,6 +27,7 @@ import {
   CardHeader,
   CardTitle,
   Empty,
+  IconButtonLink,
   Statistic,
   Table,
   TableBody,
@@ -38,6 +41,7 @@ import {
 import { PageHeader, PageSkeleton } from "@gouno/ui/gouno";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 import { useAbility } from "../../abilities";
+import { useAppFeedback } from "../../components/feedback/AppFeedbackProvider";
 
 interface Summary {
   total_posts: number;
@@ -131,6 +135,7 @@ function DashboardLoading() {
 export default function Dashboard() {
   const allowed = useAdminGuard("/admin/dashboard");
   const { can } = useAbility();
+  const { notify } = useAppFeedback();
   const [summary, setSummary] = useState<Summary | null>(null);
   const [error, setError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
@@ -160,8 +165,12 @@ export default function Dashboard() {
       await notificationsApi.markAllRead();
       setSummary((current) => (current ? { ...current, ai_alerts: [] } : null));
       window.dispatchEvent(new CustomEvent("community:notifications-changed"));
+      notify("AI 运营提醒已全部标记为已读。", "success");
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "标记已读失败");
+      notify(
+        reason instanceof Error ? reason.message : "标记已读失败",
+        "error",
+      );
     } finally {
       setClearingAlerts(false);
     }
@@ -233,8 +242,6 @@ export default function Dashboard() {
             </Button>
           }
         />
-      ) : error ? (
-        <Alert type="error" showIcon title={error} />
       ) : null}
 
       {summary ? (
@@ -527,7 +534,7 @@ export default function Dashboard() {
                       <TableHead>文章标题</TableHead>
                       <TableHead className="w-28 text-right">阅读量</TableHead>
                       <TableHead className="w-28 text-right">点赞数</TableHead>
-                      <TableHead className="w-36 text-right">操作</TableHead>
+                      <TableHead className="w-28 text-right">操作</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -549,22 +556,22 @@ export default function Dashboard() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="inline-flex min-w-max flex-nowrap items-center justify-end gap-1">
-                              <ButtonLink
-                                variant="text"
+                              <IconButtonLink
                                 size="small"
+                                variant="ghost"
+                                icon={<Edit2 />}
+                                label={`${canEdit ? "编辑" : "查看"}文章 ${post.title}`}
                                 to={`/admin/posts/${post.id}/edit`}
-                              >
-                                {canEdit ? "编辑" : "查看"}
-                              </ButtonLink>
-                              <ButtonLink
-                                variant="text"
+                              />
+                              <IconButtonLink
                                 size="small"
+                                variant="ghost"
+                                icon={<ExternalLink />}
+                                label={`打开前台文章 ${post.title}`}
                                 to={`/articles/${post.slug || post.id}`}
                                 target="_blank"
                                 rel="noreferrer"
-                              >
-                                前台
-                              </ButtonLink>
+                              />
                             </div>
                           </TableCell>
                         </TableRow>

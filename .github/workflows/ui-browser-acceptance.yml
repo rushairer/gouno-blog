@@ -7,6 +7,12 @@ on:
     paths:
       - "blog-frontend/**"
       - ".github/workflows/ui-browser-acceptance.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "blog-frontend/**"
+      - ".github/workflows/ui-browser-acceptance.yml"
   workflow_dispatch:
 
 permissions:
@@ -52,9 +58,9 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: blog-browser-acceptance
+          name: blog-browser-acceptance-${{ github.run_id }}
           path: |
             blog-frontend/playwright-report
             blog-frontend/test-results
           if-no-files-found: warn
-          retention-days: 7
+          retention-days: 14

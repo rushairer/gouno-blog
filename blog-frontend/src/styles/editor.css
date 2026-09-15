@@ -293,7 +293,6 @@
     justify-content: flex-end;
   }
 
-  .editor-body,
   .editor-preview {
     width: 100%;
     min-width: 0;
@@ -302,13 +301,6 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     background: var(--background);
-  }
-
-  .editor-body {
-    resize: vertical;
-    font-family: var(--font-mono);
-    font-size: 0.875rem;
-    line-height: 1.75;
   }
 
   .editor-preview {
@@ -404,7 +396,6 @@
       grid-column: auto;
     }
 
-    .editor-body,
     .editor-preview {
       min-height: 24rem;
       padding: 0.875rem;

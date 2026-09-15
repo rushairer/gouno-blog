@@ -1,0 +1,72 @@
+name: Blog Admin Showcase Parity
+
+on:
+  pull_request:
+    paths:
+      - "blog-frontend/**"
+      - ".github/workflows/showcase-parity.yml"
+  push:
+    branches: [main]
+    paths:
+      - "blog-frontend/**"
+      - ".github/workflows/showcase-parity.yml"
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout Blog
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Checkout current Gouno UI main
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: rushairer/gouno-ui
+          ref: main
+          path: upstream-gouno-ui
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: |
+            blog-frontend/package-lock.json
+            upstream-gouno-ui/package-lock.json
+
+      - name: Install Blog dependencies
+        working-directory: blog-frontend
+        run: npm ci
+
+      - name: Install Showcase dependencies
+        working-directory: upstream-gouno-ui
+        run: npm ci
+
+      - name: Install isolated Playwright runtime
+        working-directory: blog-frontend
+        run: |
+          PLAYWRIGHT_VERSION=1.55.0
+          npm install --no-save --ignore-scripts @playwright/test@${PLAYWRIGHT_VERSION}
+          npx playwright install --with-deps chromium
+
+      - name: Compare canonical rendered styles
+        working-directory: blog-frontend
+        run: npx playwright test --config=e2e/showcase-parity.config.mjs
+
+      - name: Upload paired parity evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: blog-admin-showcase-parity-${{ github.run_id }}
+          path: |
+            blog-frontend/playwright-report-showcase-parity
+            blog-frontend/test-results/showcase-parity
+          if-no-files-found: ignore
+          retention-days: 14
