@@ -92,6 +92,9 @@ async function openPublicPair(browser, fixtureId, productPath, theme) {
   const showcase = await context.newPage();
   const product = await context.newPage();
 
+  await product.addInitScript(() => {
+    localStorage.setItem("gouno-blog:locale", "zh");
+  });
   await setTheme(showcase, theme);
   await setTheme(product, theme);
   const unknown = await installPublicApiFixtures(product);
