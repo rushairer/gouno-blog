@@ -167,7 +167,10 @@ export default function Dashboard() {
       window.dispatchEvent(new CustomEvent("community:notifications-changed"));
       notify("AI 运营提醒已全部标记为已读。", "success");
     } catch (reason) {
-      notify(reason instanceof Error ? reason.message : "标记已读失败", "error");
+      notify(
+        reason instanceof Error ? reason.message : "标记已读失败",
+        "error",
+      );
     } finally {
       setClearingAlerts(false);
     }
