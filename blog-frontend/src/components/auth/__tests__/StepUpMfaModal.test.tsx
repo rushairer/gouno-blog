@@ -18,6 +18,20 @@ import { stepUpMfa } from "../../../auth";
 import { AppFeedbackProvider } from "../../feedback/AppFeedbackProvider";
 
 describe("StepUpMfaModal", () => {
+  it("marks the current sudo session stale when step-up becomes required", () => {
+    const listener = vi.fn();
+    window.addEventListener(mfaModule.SUDO_SESSION_STALE_EVENT, listener);
+
+    render(
+      <AppFeedbackProvider>
+        <StepUpMfaModal open={true} onClose={vi.fn()} />
+      </AppFeedbackProvider>,
+    );
+
+    expect(listener).toHaveBeenCalledOnce();
+    window.removeEventListener(mfaModule.SUDO_SESSION_STALE_EVENT, listener);
+  });
+
   it("starts a provider-owned step-up navigation when popup is not available", async () => {
     const onSuccess = vi.fn();
     const onClose = vi.fn();
