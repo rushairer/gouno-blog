@@ -375,10 +375,9 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
       <div
         className={`grid min-w-0 gap-8 ${toc.length === 0 ? "mx-auto w-full max-w-3xl" : "lg:grid-cols-[minmax(0,1fr)_16rem]"}`}
       >
-        <Card as="article" className="gap-8">
-          <PageHeader title={page.title} description={page.summary} />
+        <DocumentSurface page={page}>
           <MarkdownRenderer content={page.content} />
-        </Card>
+        </DocumentSurface>
 
         {tocItems.length > 0 ? (
           <aside className="order-first self-start lg:order-none lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-2 lg:[scrollbar-gutter:stable]">
