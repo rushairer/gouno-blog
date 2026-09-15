@@ -133,7 +133,9 @@ export async function installPublicApiFixtures(page, options = {}) {
       return;
     }
 
-    if (path === "/api/me/blog-session") return respond(adminProfile);
+    if (path === "/api/me/blog-session") {
+      return respond(options.anonymous ? null : adminProfile);
+    }
     if (path === "/api/me/notifications") {
       return respond({ list: notifications, total: notifications.length });
     }
