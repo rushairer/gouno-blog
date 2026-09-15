@@ -103,8 +103,8 @@ async function expectGateParity(showcase, product) {
     await styleFingerprint(showcaseGate),
   );
 
-  const showcaseAlerts = showcaseGate.locator('[data-slot="alert"]');
-  const productAlerts = productGate.locator('[data-slot="alert"]');
+  const showcaseAlerts = showcaseGate.locator(':scope > [data-slot="alert"]');
+  const productAlerts = productGate.locator(':scope > [data-slot="alert"]');
   const showcaseAlertCount = await showcaseAlerts.count();
   const productAlertCount = await productAlerts.count();
 
