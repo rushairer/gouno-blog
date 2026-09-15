@@ -1,0 +1,24 @@
+name: Dispatch UI Browser Acceptance Once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/dispatch-ui-browser-acceptance-once.yml
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  dispatch:
+    if: "${{ github.repository == 'rushairer/gouno-blog' && github.event.head_commit.message == 'test(ui): dispatch browser acceptance' }}"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch canonical browser acceptance
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh workflow run ui-browser-acceptance.yml --repo rushairer/gouno-blog --ref main
