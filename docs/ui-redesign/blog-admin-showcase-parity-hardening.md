@@ -1,6 +1,6 @@
 # Blog Admin Showcase Parity Hardening
 
-Status: PR verification complete; main merge and reverse Gouno UI consumer gate remain before task closure.
+Status: **Completed on main.**
 
 This document is the live parity contract for the hardening pass started from GitHub `main` on 2026-09-15. Historical migration reports are background only; current source, contracts, rendered tests and CI are the acceptance evidence for this pass.
 
@@ -9,6 +9,8 @@ This document is the live parity contract for the hardening pass started from Gi
 - `rushairer/gouno-ui` starting main: `d890ae3fc2cf2d736f724eb3d51a84f39e39ca71`.
 - `rushairer/gouno-blog` starting main: `de5068dd69dbc9377b4e5d25d0d5233955c136ca`.
 - Gouno UI Showcase/reference hardening merged main: `bc274ccf40dae6ed340566b71143c17a69b2e3b2`.
+- Blog Admin parity hardening merged main: `f52d460548809ae6798643c8f04df8ebef809c4b`.
+- Reciprocal Gouno UI Blog-consumer parity gate merged main: `0a3b352013d4dc8bdb2562907dca7f12474715d5`.
 - `gouno-ui/package.json` declares `@gouno/ui` `0.4.1`.
 - `blog-frontend/package.json` and lockfile use the exact npm registry dependency `@gouno/ui` `0.4.1`; Blog CI verifies registry tarball integrity.
 - The Gouno UI hardening changed Showcase/reference composition and tests, not the published primitive API, so no new package release or Blog dependency bump was required.
@@ -75,12 +77,21 @@ That is 56 core Admin loaded-state cases. The existing support matrix contribute
 
 Representative rendered interactions additionally cover fatal load error + retry, selection/bulk toolbar, canonical opaque Notification, editor validation feedback, existing editor loading, modal open/destructive confirmation, long content, narrow viewport behavior and responsive containment. Existing AI/public suites remain enabled.
 
-Final PR browser evidence:
+Pre-merge PR browser evidence:
 
 - workflow run `34954854327`.
 - **309/309 Playwright tests passed**.
 - browser artifact `10391220840`, including screenshots/report/test-results, retained 14 days.
+
+Final main-branch browser evidence:
+
+- Blog main checkout: `f52d460548809ae6798643c8f04df8ebef809c4b`.
+- UI Browser Acceptance workflow run `34957119812`.
+- **309/309 Playwright tests passed** on merged `main`.
+- browser artifact `10391643621`, including screenshots/report/test-results, retained 14 days.
 - each Admin matrix case asserts brand/theme, meaningful visible identity, no permission overlay, no console warning/error, no pageerror, no document horizontal overflow and expected canonical page/editor structure.
+- Blog main CI run `34957119729` succeeded.
+- Blog main Publish Images run `34957119651` succeeded.
 
 ## Direct Showcase/Product parity gate
 
@@ -98,12 +109,28 @@ Direct paired coverage, light + dark:
 6. PostEditor Card and command bar.
 7. PageEditor Card and command bar.
 
-Final reference rerun:
+Pre-merge reference evidence:
 
 - workflow run `34954854076`, rerun job `104335010796`.
 - log explicitly checked out `gouno-ui/main` at `bc274ccf40dae6ed340566b71143c17a69b2e3b2`.
 - **14/14 direct parity tests passed**.
 - paired evidence artifact `10390898497`, retained 14 days.
+
+Final Blog-main parity evidence:
+
+- Blog main checkout: `f52d460548809ae6798643c8f04df8ebef809c4b`.
+- Blog Admin Showcase Parity workflow run `34957119610`.
+- the run checked out `gouno-ui/main` at `bc274ccf40dae6ed340566b71143c17a69b2e3b2`.
+- **14/14 direct parity tests passed**.
+- paired evidence artifact `10391906242`, retained 14 days.
+
+Reciprocal Gouno UI consumer parity is also active. It reuses the same Blog parity harness rather than maintaining a second copy of visual assertions:
+
+- PR gate run `34957255307`: **14/14 passed**, evidence artifact `10391452152`.
+- Gouno UI main-push gate run `34957498108` checked out Blog main `f52d460548809ae6798643c8f04df8ebef809c4b` and Gouno UI main `0a3b352013d4dc8bdb2562907dca7f12474715d5`.
+- **14/14 reciprocal parity tests passed** on merged Gouno UI `main`.
+- reciprocal paired evidence artifact `10392280824`, retained 14 days.
+- Gouno UI Showcase Pages publish run `34957497936` succeeded from `0a3b352013d4dc8bdb2562907dca7f12474715d5`.
 
 ## Mismatch ledger
 
@@ -121,6 +148,7 @@ Final reference rerun:
 | PAR-010 | No direct Showcase-vs-product rendered parity gate | P0 | visual-contract gap | 14 light/dark computed-style/geometry pair tests + paired screenshots | fixed |
 | PAR-011 | Notification could visually regress toward translucent consumer presentation | P1 | rendered/token drift risk | canonical owner retained; computed-style assertion requires opaque rendered background; consumer data-slot override prohibited | fixed |
 | PAR-012 | Historical migration docs could be mistaken for current completion evidence | P2 | stale evidence | this live contract and current CI/source supersede historical status claims | closed/documented |
+| PAR-013 | Gouno UI changes had no reciprocal current-Blog consumer gate | P1 | cross-repository CI ownership gap | Gouno UI Blog Consumer Parity workflow reuses Blog's 14-case rendered parity harness on relevant PR/main changes | fixed |
 
 Current ledger: **P0 = 0, P1 = 0**.
 
@@ -129,10 +157,10 @@ Current ledger: **P0 = 0, P1 = 0**.
 - `check-admin-parity-contracts.mjs` is part of `lint:ui` and uses the TypeScript AST for Admin stack ordering, editor structure, feedback semantics, primitive ownership and fixed-overlay ownership.
 - Existing UI checks continue to reject direct Radix imports, legacy/unsupported Gouno UI entrypoints, native browser dialogs, retired compatibility classes and raw Admin elevation.
 - Existing CSS checks continue to reject product `[data-slot]` overrides, canonical primitive selectors, concrete colors, `!important` and cascade violations.
-- Gouno UI Showcase now has its own AST conformance guard against transient notice Alerts and product-fixture native primitive recreation.
+- Gouno UI Showcase has its own AST conformance guard against transient notice Alerts and product-fixture native primitive recreation.
 - Browser acceptance stores rendered screenshots/traces/reports instead of testing only “page did not crash”.
 - Cross-repository parity runs on Blog changes and scheduled checks against current Gouno UI main.
-- Before task closure, Gouno UI receives the reciprocal consumer parity workflow so a Showcase/UI PR is tested against current Blog main before it can be accepted.
+- Gouno UI now has reciprocal Blog Consumer Parity on relevant PR/main changes, testing candidate Showcase/UI rendering against current Blog main using the same parity harness.
 
 ## Intentional differences
 
@@ -151,4 +179,4 @@ Current ledger: **P0 = 0, P1 = 0**.
 
 ## Acceptance rule
 
-This hardening is complete only after the verified Blog changes are merged to `main`, the reciprocal Gouno UI consumer parity gate is merged to `main`, and final main-branch CI/rendered checks are green. No temporary migration/codemod workflows, debug files or vendored Gouno UI assets may remain.
+**Acceptance satisfied.** Blog hardening is merged to `main`; reciprocal Gouno UI consumer parity is merged to `main`; Blog main CI, direct parity, 309-test rendered acceptance and image publication are green; Gouno UI release verification, reciprocal main parity and Showcase Pages publication are green; `@gouno/ui` remains `0.4.1` with Blog pinned to the exact same registry version; and no temporary migration/codemod workflows, debug files or vendored Gouno UI assets remain in the accepted trees.
