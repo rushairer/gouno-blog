@@ -1,0 +1,85 @@
+name: Editor Textarea Parity Once
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout hardening branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: blog-frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: blog-frontend
+        run: npm ci
+
+      - name: Migrate editor body controls to canonical Textarea
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          files = [
+              Path('blog-frontend/src/pages/admin/PostEditor.tsx'),
+              Path('blog-frontend/src/pages/admin/PageEditor.tsx'),
+          ]
+          for path in files:
+              source = path.read_text()
+              old = '<textarea\n              className="editor-body font-mono"'
+              new = '<Textarea\n              className="min-h-[28rem] font-mono"'
+              if source.count(old) != 1:
+                  raise SystemExit(f'{path}: expected exactly one editor body textarea, found {source.count(old)}')
+              source = source.replace(old, new)
+              path.write_text(source)
+
+          css_path = Path('blog-frontend/src/styles/editor.css')
+          css = css_path.read_text()
+          replacements = [
+              ("  .editor-body,\n  .editor-preview {\n", "  .editor-preview {\n"),
+              ("  .editor-body {\n    resize: vertical;\n    font-family: var(--font-mono);\n    font-size: 0.875rem;\n    line-height: 1.75;\n  }\n\n", ""),
+              ("    .editor-body,\n    .editor-preview {\n", "    .editor-preview {\n"),
+          ]
+          for old, new in replacements:
+              if old not in css:
+                  raise SystemExit(f'editor.css: expected block missing: {old!r}')
+              css = css.replace(old, new, 1)
+          if '.editor-body' in css:
+              raise SystemExit('editor.css: product-owned editor-body primitive geometry remains')
+          css_path.write_text(css)
+          PY
+
+      - name: Format changed files
+        working-directory: blog-frontend
+        run: npx prettier --write src/pages/admin/PostEditor.tsx src/pages/admin/PageEditor.tsx src/styles/editor.css
+
+      - name: Verify focused parity contract
+        working-directory: blog-frontend
+        run: node scripts/check-admin-parity-contracts.mjs
+
+      - name: Commit migration
+        run: |
+          if git diff --quiet; then
+            echo "No migration diff."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add blog-frontend/src/pages/admin/PostEditor.tsx blog-frontend/src/pages/admin/PageEditor.tsx blog-frontend/src/styles/editor.css
+          git commit -m "fix(ui): use canonical Textarea in editors"
+          git pull --rebase origin ${{ github.event.pull_request.head.ref }}
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
