@@ -1,10 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { useSudoMode, SUDO_MAX_AGE_MS } from "../useSudoMode";
-import {
-  STEP_UP_COMPLETED_EVENT,
-  SUDO_SESSION_STALE_EVENT,
-} from "../../mfa";
+import { STEP_UP_COMPLETED_EVENT, SUDO_SESSION_STALE_EVENT } from "../../mfa";
 
 describe("useSudoMode", () => {
   beforeEach(() => {

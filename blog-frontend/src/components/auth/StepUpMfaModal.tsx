@@ -4,7 +4,7 @@ import { stepUpMfa, getGossoAdminURL } from "../../auth";
 import {
   markSudoSessionStale,
   openStepUpPopup,
-  STEP_UP_COMPLETED_EVENT,
+  STEP_UP_CANCELLED_EVENT,
   STEP_UP_POPUP_PARAM,
 } from "../../mfa";
 import { Modal } from "@gouno/ui/core";
@@ -26,23 +26,19 @@ export function StepUpMfaModal({
   useEffect(() => {
     if (!open) return;
     markSudoSessionStale();
+  }, [open]);
 
-    const handleCompleted = async () => {
-      onClose();
-      if (onSuccess) {
-        await onSuccess();
-      }
-    };
-    window.addEventListener(STEP_UP_COMPLETED_EVENT, handleCompleted);
-    return () => {
-      window.removeEventListener(STEP_UP_COMPLETED_EVENT, handleCompleted);
-    };
-  }, [open, onClose, onSuccess]);
+  const handleCancel = () => {
+    window.dispatchEvent(new Event(STEP_UP_CANCELLED_EVENT));
+    onClose();
+  };
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
 
-    // Try seamless in-place popup verification first
+    // Try seamless in-place popup verification first.
+    // openStepUpPopup already consolidates postMessage, storage and
+    // BroadcastChannel completion into one success callback.
     const opened = openStepUpPopup(
       `/admin?${STEP_UP_POPUP_PARAM}=1`,
       async () => {
@@ -52,12 +48,15 @@ export function StepUpMfaModal({
         }
       },
       () => {
-        // Closed without completing
+        // Popup closed without completing. Keep the modal open so the user can
+        // retry or explicitly cancel the pending action.
       },
     );
 
     if (!opened) {
-      // Fallback to top-level navigation if popup was blocked by browser
+      // Fallback to top-level navigation if popup was blocked by browser.
+      // Do not emit a cancellation event: verification is continuing via the
+      // provider-owned top-level flow.
       onClose();
       stepUpMfa();
     }
@@ -67,10 +66,10 @@ export function StepUpMfaModal({
     <Modal
       open={open}
       title="高权限安全验证"
-      onClose={onClose}
+      onClose={handleCancel}
       footer={
         <>
-          <Button variant="outline" type="button" onClick={onClose}>
+          <Button variant="outline" type="button" onClick={handleCancel}>
             取消
           </Button>
           <Button variant="solid" type="submit" form="stepup-mfa-form">

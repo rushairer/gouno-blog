@@ -1,5 +1,4 @@
 import { type ReactNode } from "react";
-import { KeyRound } from "lucide-react";
 import { useSudoMode } from "../../hooks/useSudoMode";
 import { Alert, Button } from "@gouno/ui/core";
 
@@ -11,8 +10,6 @@ export interface SudoGateProps {
   className?: string;
   /** Forces the visual lock state for controlled/test scenarios. */
   locked?: boolean;
-  /** @deprecated Presentation is canonical now; this prop is ignored during call-site migration. */
-  unlockedPresentation?: "compact" | "alert";
 }
 
 export function SudoGate({
@@ -65,12 +62,12 @@ export function SudoGate({
           locked ? (
             <Button
               size="small"
+              type="button"
               variant="solid"
               color="primary"
               loading={activating}
               loadingText="正在打开验证…"
               onClick={() => void activateSudo()}
-              icon={<KeyRound />}
             >
               {actionLabel}
             </Button>

@@ -13,7 +13,11 @@ vi.mock("../../auth", () => ({
 }));
 
 import { apiClient } from "../client";
-import { STEP_UP_MFA_REQUIRED_EVENT } from "../../mfa";
+import {
+  STEP_UP_CANCELLED_EVENT,
+  STEP_UP_COMPLETED_EVENT,
+  STEP_UP_MFA_REQUIRED_EVENT,
+} from "../../mfa";
 
 const listeners: EventListener[] = [];
 
@@ -36,15 +40,57 @@ describe("AI API high-privilege interception", () => {
     }
   });
 
-  it("requests Step-Up UI for a protected AI operation", async () => {
+  it("holds and replays a protected AI operation after successful Step-Up", async () => {
+    const listener = listenForStepUp();
+    postMock
+      .mockRejectedValueOnce(
+        new Error("recent multi-factor authentication required"),
+      )
+      .mockResolvedValueOnce({ ok: true });
+
+    const pending = apiClient.post("/api/admin/provider-profiles/1/test");
+
+    await vi.waitFor(() => expect(listener).toHaveBeenCalledOnce());
+    expect(postMock).toHaveBeenCalledTimes(1);
+
+    window.dispatchEvent(new Event(STEP_UP_COMPLETED_EVENT));
+
+    await expect(pending).resolves.toEqual({ ok: true });
+    expect(postMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects the held AI operation when Step-Up is explicitly cancelled", async () => {
     const listener = listenForStepUp();
     postMock.mockRejectedValueOnce(
       new Error("recent multi-factor authentication required"),
     );
 
-    await expect(
-      apiClient.post("/api/admin/provider-profiles/1/test"),
-    ).rejects.toThrow("recent multi-factor authentication required");
+    const pending = apiClient.post("/api/admin/provider-profiles/1/test");
+
+    await vi.waitFor(() => expect(listener).toHaveBeenCalledOnce());
+    window.dispatchEvent(new Event(STEP_UP_CANCELLED_EVENT));
+
+    await expect(pending).rejects.toThrow(
+      "recent multi-factor authentication required",
+    );
+    expect(postMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not retry indefinitely when the backend still requires MFA", async () => {
+    const listener = listenForStepUp();
+    postMock.mockRejectedValue(
+      new Error("recent multi-factor authentication required"),
+    );
+
+    const pending = apiClient.post("/api/admin/provider-profiles/1/test");
+
+    await vi.waitFor(() => expect(listener).toHaveBeenCalledOnce());
+    window.dispatchEvent(new Event(STEP_UP_COMPLETED_EVENT));
+
+    await expect(pending).rejects.toThrow(
+      "recent multi-factor authentication required",
+    );
+    expect(postMock).toHaveBeenCalledTimes(2);
     expect(listener).toHaveBeenCalledOnce();
   });
 

@@ -83,7 +83,14 @@ async function openPair(
 async function chooseShowcaseSecurity(showcase, accessibleName) {
   const openFixture = showcase.getByRole("button", { name: "打开 Fixture 控制" });
   if (await openFixture.isVisible()) await openFixture.click();
-  await showcase.getByRole("radio", { name: accessibleName }).check();
+
+  const radio = showcase.getByRole("radio", { name: accessibleName });
+  if (!(await radio.isChecked())) {
+    await radio
+      .locator("xpath=ancestor::label[@data-slot='segmented-item']")
+      .click();
+  }
+  await expect(radio).toBeChecked();
 }
 
 async function expectGateParity(showcase, product) {
@@ -181,6 +188,7 @@ for (const theme of ["light", "dark"]) {
       { activeSudo: true, ai: true },
     );
 
+    await showcase.getByRole("tab", { name: "模型连接" }).click();
     await expect(showcase.getByText("高权限操作已解锁")).toBeVisible();
     await expect(product.getByText("高权限操作已解锁")).toBeVisible();
     await expectGateParity(showcase, product);

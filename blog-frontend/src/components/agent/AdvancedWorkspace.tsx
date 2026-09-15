@@ -645,7 +645,7 @@ export function AdvancedWorkspace({
       {!editingAgent && !editingProvider && advancedSection === "providers" ? (
         <SudoGate
           title="模型连接与密钥保护"
-          description="添加、修改、导出或删除 AI 模型连接涉及敏感 API Key 凭据。解锁后享有 10 分钟无打扰编辑期。"
+          description="添加、修改、导出或删除模型连接涉及敏感 API Key 凭据，需要近期多因素身份认证。"
           actionLabel="解锁以管理模型连接"
         >
           <div className="flex flex-col gap-5">
@@ -692,20 +692,6 @@ export function AdvancedWorkspace({
                     {locale === "zh" ? "添加模型连接" : labels.createProvider}
                   </Button>
                 </>
-              }
-            />
-            <Alert
-              type="info"
-              showIcon
-              title={
-                locale === "zh"
-                  ? "模型连接与密钥保护"
-                  : "Model connection and credential protection"
-              }
-              description={
-                locale === "zh"
-                  ? "添加、修改、导出或删除模型连接需要近期 MFA；API Key 始终保持掩码显示。"
-                  : "Adding, editing, exporting, or deleting model connections requires recent MFA; API keys remain masked."
               }
             />
             <Card padding="base">
@@ -902,7 +888,7 @@ export function AdvancedWorkspace({
       advancedSection === "knowledge" ? (
         <SudoGate
           title="知识库与向量模型保护"
-          description="添加、编辑或删除 Embedding 知识库模型及全量重建索引需要近期多因素身份认证。解锁后享有 10 分钟无打扰编辑期。"
+          description="添加、编辑、删除 Embedding 配置或执行全量重建需要近期多因素身份认证。"
           actionLabel="解锁以管理知识库"
         >
           <div className="flex flex-col gap-5">
@@ -945,20 +931,6 @@ export function AdvancedWorkspace({
                       : "Add embedding profile"}
                   </Button>
                 </>
-              }
-            />
-            <Alert
-              type="info"
-              showIcon
-              title={
-                locale === "zh"
-                  ? "敏感配置需要近期 MFA"
-                  : "Recent MFA required for sensitive configuration"
-              }
-              description={
-                locale === "zh"
-                  ? "添加、编辑、删除 Embedding 配置和全量重建需要近期多因素认证。"
-                  : "Adding, editing, deleting Embedding configuration and rebuilding the full index require recent MFA."
               }
             />
             <div className="grid gap-4 sm:grid-cols-3">

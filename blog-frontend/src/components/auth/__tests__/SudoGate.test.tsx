@@ -90,22 +90,8 @@ describe("SudoGate", () => {
       screen.getByText(/下一次高权限写操作将触发 Step-Up/),
     ).toBeInTheDocument();
     expect(screen.getByTestId("provider-settings")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "重新锁定" })).toBeInTheDocument();
-  });
-
-  it("ignores the legacy presentation selector so pages cannot diverge visually", () => {
-    localStorage.setItem("gouno:sudo_activated_at", String(Date.now()));
-
-    render(
-      <SudoGate unlockedPresentation="compact">
-        <div>可编辑的内容</div>
-      </SudoGate>,
-    );
-
-    expect(screen.getByText("高权限操作已解锁")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "重新锁定" }),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/Sudo 已解锁/)).not.toBeInTheDocument();
   });
 });
