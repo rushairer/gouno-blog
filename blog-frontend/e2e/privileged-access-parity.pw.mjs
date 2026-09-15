@@ -103,8 +103,16 @@ async function expectGateParity(showcase, product) {
     await styleFingerprint(showcaseGate),
   );
 
-  const showcaseAlert = showcaseGate.locator('[data-slot="alert"]');
-  const productAlert = productGate.locator('[data-slot="alert"]');
+  const showcaseAlerts = showcaseGate.locator('[data-slot="alert"]');
+  const productAlerts = productGate.locator('[data-slot="alert"]');
+  const showcaseAlertCount = await showcaseAlerts.count();
+  const productAlertCount = await productAlerts.count();
+
+  expect(productAlertCount).toBe(showcaseAlertCount);
+  expect(productAlertCount).toBe(1);
+
+  const showcaseAlert = showcaseAlerts.first();
+  const productAlert = productAlerts.first();
   expect(await styleFingerprint(productAlert)).toEqual(
     await styleFingerprint(showcaseAlert),
   );
@@ -195,6 +203,27 @@ for (const theme of ["light", "dark"]) {
     expect(unknown).toEqual([]);
     expect(unexpectedWrites).toEqual([]);
     await pairScreenshot(showcase, product, `privileged-ai-provider-${theme}`, testInfo);
+    await context.close();
+  });
+
+  test(`AI knowledge privileged gate matches Showcase (${theme})`, async ({
+    browser,
+  }, testInfo) => {
+    const { context, showcase, product, unknown, unexpectedWrites } = await openPair(
+      browser,
+      "blog-admin-ai-settings",
+      "/admin/ai-settings?section=knowledge",
+      theme,
+      { activeSudo: true, ai: true },
+    );
+
+    await showcase.getByRole("tab", { name: "知识库" }).click();
+    await expect(showcase.getByText("高权限操作已解锁")).toBeVisible();
+    await expect(product.getByText("高权限操作已解锁")).toBeVisible();
+    await expectGateParity(showcase, product);
+    expect(unknown).toEqual([]);
+    expect(unexpectedWrites).toEqual([]);
+    await pairScreenshot(showcase, product, `privileged-ai-knowledge-${theme}`, testInfo);
     await context.close();
   });
 }
