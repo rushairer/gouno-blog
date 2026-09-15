@@ -106,7 +106,10 @@ export function useSudoMode(): SudoModeState {
     return () => {
       clearInterval(interval);
       window.removeEventListener(STEP_UP_COMPLETED_EVENT, handleCompleted);
-      window.removeEventListener(SUDO_SESSION_STALE_EVENT, handleSudoSessionStale);
+      window.removeEventListener(
+        SUDO_SESSION_STALE_EVENT,
+        handleSudoSessionStale,
+      );
       window.removeEventListener("storage", handleStorage);
       window.removeEventListener("focus", handleFocus);
     };

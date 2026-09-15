@@ -90,6 +90,8 @@ describe("SudoGate", () => {
       screen.getByText(/下一次高权限写操作将触发 Step-Up/),
     ).toBeInTheDocument();
     expect(screen.getByTestId("provider-settings")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "重新锁定" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "重新锁定" }),
+    ).toBeInTheDocument();
   });
 });

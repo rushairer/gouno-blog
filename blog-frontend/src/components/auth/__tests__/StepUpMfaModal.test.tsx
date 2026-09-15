@@ -76,7 +76,10 @@ describe("StepUpMfaModal", () => {
     expect(onClose).toHaveBeenCalledOnce();
     expect(onSuccess).not.toHaveBeenCalled();
     expect(cancelListener).not.toHaveBeenCalled();
-    window.removeEventListener(mfaModule.STEP_UP_CANCELLED_EVENT, cancelListener);
+    window.removeEventListener(
+      mfaModule.STEP_UP_CANCELLED_EVENT,
+      cancelListener,
+    );
   });
 
   it("completes step-up via popup and triggers onSuccess exactly once", async () => {

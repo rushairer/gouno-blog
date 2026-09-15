@@ -104,7 +104,8 @@ const handler: ProxyHandler<typeof gossoClient> = {
   get(target, property, receiver) {
     const value = Reflect.get(target, property, receiver);
     if (typeof value !== "function") return value;
-    return (...args: unknown[]) => invokeClientMethod(target, value, args, true);
+    return (...args: unknown[]) =>
+      invokeClientMethod(target, value, args, true);
   },
 };
 
