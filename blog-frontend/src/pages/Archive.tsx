@@ -71,7 +71,11 @@ export default function Archive() {
             type="error"
             title={`${t("archivePage.title")}加载失败`}
             description={error}
-            action={<Button onClick={() => setReloadKey((value) => value + 1)}>{t("retry")}</Button>}
+            action={
+              <Button onClick={() => setReloadKey((value) => value + 1)}>
+                {t("retry")}
+              </Button>
+            }
             showIcon
           />
         ) : periods.length ? (

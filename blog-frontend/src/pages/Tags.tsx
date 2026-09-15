@@ -74,7 +74,11 @@ export default function Tags() {
             type="error"
             title={`${t("tagsPage.title")}加载失败`}
             description={error}
-            action={<Button onClick={() => setReloadKey((value) => value + 1)}>{t("retry")}</Button>}
+            action={
+              <Button onClick={() => setReloadKey((value) => value + 1)}>
+                {t("retry")}
+              </Button>
+            }
             showIcon
           />
         ) : tagCounts.length ? (

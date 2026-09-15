@@ -50,7 +50,11 @@ export default function Categories() {
             type="error"
             title={`${t("categoriesPage.title")}加载失败`}
             description={error}
-            action={<Button onClick={() => setReloadKey((value) => value + 1)}>{t("retry")}</Button>}
+            action={
+              <Button onClick={() => setReloadKey((value) => value + 1)}>
+                {t("retry")}
+              </Button>
+            }
             showIcon
           />
         ) : categories.length ? (
@@ -71,7 +75,9 @@ export default function Categories() {
                   {item.description || t("categoriesPage.defaultDescription")}
                 </p>
                 <div className="mt-5 flex items-center justify-between text-sm text-primary">
-                  {t("categoriesPage.postCount", { count: item.post_count || 0 })}
+                  {t("categoriesPage.postCount", {
+                    count: item.post_count || 0,
+                  })}
                   <ArrowRight
                     className="size-4 transition-transform group-hover:translate-x-1"
                     aria-hidden="true"

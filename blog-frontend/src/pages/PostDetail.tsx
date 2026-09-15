@@ -560,7 +560,9 @@ export default function PostDetail() {
           {tocItems.length > 0 ? (
             <aside className="order-first self-start lg:order-none lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-2 lg:[scrollbar-gutter:stable]">
               <Card variant="subtle" padding="sm" className="gap-3">
-                <div className="text-sm font-semibold">{t("tableOfContents")}</div>
+                <div className="text-sm font-semibold">
+                  {t("tableOfContents")}
+                </div>
                 <Anchor aria-label={t("tableOfContents")} items={tocItems} />
               </Card>
             </aside>
@@ -660,7 +662,11 @@ export default function PostDetail() {
             </div>
           )}
 
-          <Card as="section" variant="subtle" aria-labelledby="comment-form-title">
+          <Card
+            as="section"
+            variant="subtle"
+            aria-labelledby="comment-form-title"
+          >
             <div>
               <h3 id="comment-form-title" className="text-base font-semibold">
                 {t("leaveComment")}

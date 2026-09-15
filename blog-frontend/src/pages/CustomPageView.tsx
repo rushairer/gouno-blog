@@ -224,7 +224,10 @@ export default function CustomPageView({ fixedSlug }: { fixedSlug?: string }) {
         <DocumentSurface page={page}>
           <MarkdownRenderer content={page.content} />
           <section aria-labelledby="about-contact" className="space-y-3">
-            <h2 id="about-contact" className="text-2xl font-semibold tracking-tight">
+            <h2
+              id="about-contact"
+              className="text-2xl font-semibold tracking-tight"
+            >
               订阅与联系
             </h2>
             <div className="flex flex-wrap gap-4 text-sm">

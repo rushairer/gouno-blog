@@ -116,7 +116,9 @@ export function MarkdownRenderer({ content }: { content: string }) {
           Boolean(className) ||
           (typeof children === "string" && children.includes("\n"));
         return isBlock ? (
-          <MarkdownCodeBlock className={className}>{children}</MarkdownCodeBlock>
+          <MarkdownCodeBlock className={className}>
+            {children}
+          </MarkdownCodeBlock>
         ) : (
           <code
             className={`${className || ""} rounded bg-muted px-1.5 py-0.5 font-mono text-[0.9em]`}

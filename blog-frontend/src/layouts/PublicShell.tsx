@@ -130,7 +130,10 @@ export default function PublicShell({ children }: { children: ReactNode }) {
             <BrandMark src={gounoBlogLogo} className="size-8" />
             <span className="truncate">{siteTitle}</span>
           </Link>
-          <nav aria-label="主导航" className="hidden items-center gap-6 md:flex">
+          <nav
+            aria-label="主导航"
+            className="hidden items-center gap-6 md:flex"
+          >
             {navItems.map((item) => (
               <Link
                 key={item.path}
@@ -179,7 +182,10 @@ export default function PublicShell({ children }: { children: ReactNode }) {
       <footer className="mt-12 border-t">
         <div className="mx-auto grid w-full max-w-[1200px] gap-8 px-4 py-10 md:grid-cols-[1fr_1fr] md:px-6">
           <div>
-            <Link to="/" className="inline-flex items-center gap-2 font-semibold">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 font-semibold"
+            >
               <BrandMark src={gounoBlogLogo} className="size-7 text-primary" />
               <span>{siteTitle}</span>
             </Link>
@@ -243,7 +249,11 @@ export default function PublicShell({ children }: { children: ReactNode }) {
               {item.label}
             </Link>
           ))}
-          <Link to="/admin" className="px-3 py-3" onClick={() => setOpen(false)}>
+          <Link
+            to="/admin"
+            className="px-3 py-3"
+            onClick={() => setOpen(false)}
+          >
             管理后台
           </Link>
         </nav>

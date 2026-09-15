@@ -21,9 +21,7 @@ export function DiscoveryIndexLoading({ page }: { page: DiscoveryPage }) {
         <Skeleton
           key={index}
           className={
-            page === "archive"
-              ? "h-24 w-full"
-              : "h-36 w-full rounded-lg"
+            page === "archive" ? "h-24 w-full" : "h-36 w-full rounded-lg"
           }
         />
       ))}

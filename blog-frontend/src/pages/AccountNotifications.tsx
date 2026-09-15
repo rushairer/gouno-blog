@@ -2,13 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Bell, CheckCheck, Inbox } from "lucide-react";
 import { notificationsApi } from "../api/notifications";
 import type { Notification } from "../api/notifications";
-import {
-  Alert,
-  Button,
-  Card,
-  Empty,
-  Skeleton,
-} from "@gouno/ui/core";
+import { Alert, Button, Card, Empty, Skeleton } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useI18n } from "../i18n";
@@ -120,7 +114,9 @@ export default function AccountNotifications() {
           role="alert"
           title={t("accountNotifications.loadFailed")}
           description={loadError}
-          action={<Button onClick={() => void load()}>{t("common.retry")}</Button>}
+          action={
+            <Button onClick={() => void load()}>{t("common.retry")}</Button>
+          }
           showIcon
         />
       ) : null}
