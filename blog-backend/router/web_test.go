@@ -36,7 +36,7 @@ import (
 
 type routerPostVersionRestorer struct{}
 
-func (routerPostVersionRestorer) RestoreVersion(context.Context, int64, int64) (*postdomain.Post, error) {
+func (routerPostVersionRestorer) RestoreVersion(context.Context, int64, int64, int64) (*postdomain.Post, error) {
 	return nil, nil
 }
 

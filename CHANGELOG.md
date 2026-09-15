@@ -20,6 +20,8 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ### Fixed
 
+- Keep the router PostVersion restore test adapter aligned with the canonical four-argument restore contract.
+
 - Fix `.panel-header` margin/padding inside `.workspace-panel` to eliminate double horizontal inset and align perfectly with table and form content.
 - Standardize `.panel-header` titles across Knowledge Base and Connector workspaces to plain text titles without inline icons.
 - Align Toast notification layout: vertically center icon and text, set `flex: 1` on message container, and push close button to the far right (`margin-left: auto`).
