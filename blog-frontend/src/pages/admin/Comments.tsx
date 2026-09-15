@@ -117,7 +117,10 @@ export default function AdminComments() {
       );
       setSelected((current) => current.filter((id) => id !== comment.id));
       setError("");
-      notify(next === "visible" ? "评论已通过。" : "评论已隐藏。", "success");
+      notify(
+        next === "visible" ? "评论已通过。" : "评论已隐藏。",
+        "success",
+      );
     } catch (err) {
       notify(err instanceof Error ? err.message : "评论处理失败。", "error");
     }
@@ -156,7 +159,10 @@ export default function AdminComments() {
       return;
     }
     setError("");
-    notify(ids.length > 1 ? `已删除 ${ids.length} 条评论。` : "评论已删除。", "success");
+    notify(
+      ids.length > 1 ? `已删除 ${ids.length} 条评论。` : "评论已删除。",
+      "success",
+    );
   };
 
   const setFilter = (key: string, value: string) => {
