@@ -19,6 +19,7 @@ import { PageHeader } from "@gouno/ui/gouno";
 import { BulkActionBar } from "@gouno/ui/patterns";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
+import { useAppFeedback } from "../../components/feedback/AppFeedbackProvider";
 
 interface Comment {
   id: number;
@@ -34,7 +35,6 @@ interface Comment {
 type CommentStatus = "pending" | "visible" | "hidden";
 type BatchDeleteTarget = { kind: "batch" };
 type DeleteTarget = Comment | BatchDeleteTarget | null;
-type Notice = { type: "success" | "info" | "error"; text: string } | null;
 
 const statusLabels: Record<CommentStatus, string> = {
   pending: "待审核",
@@ -83,13 +83,13 @@ function LoadingComments() {
 
 export default function AdminComments() {
   const allowed = useAdminGuard("/admin/comments");
+  const { notify } = useAppFeedback();
   const [params, setParams] = useSearchParams();
   const status = params.get("status") || "pending";
   const reported = params.get("reported") === "true";
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState<Notice>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const [selected, setSelected] = useState<number[]>([]);
   const [aiOpen, setAIOpen] = useState(false);
@@ -116,12 +116,10 @@ export default function AdminComments() {
         current.filter((item) => item.id !== comment.id),
       );
       setSelected((current) => current.filter((id) => id !== comment.id));
-      setNotice({
-        type: "success",
-        text: next === "visible" ? "评论已通过。" : "评论已隐藏。",
-      });
+      setError("");
+      notify(next === "visible" ? "评论已通过。" : "评论已隐藏。", "success");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "评论处理失败。");
+      notify(err instanceof Error ? err.message : "评论处理失败。", "error");
     }
   };
 
@@ -157,10 +155,8 @@ export default function AdminComments() {
       );
       return;
     }
-    setNotice({
-      type: "success",
-      text: ids.length > 1 ? `已删除 ${ids.length} 条评论。` : "评论已删除。",
-    });
+    setError("");
+    notify(ids.length > 1 ? `已删除 ${ids.length} 条评论。` : "评论已删除。", "success");
   };
 
   const setFilter = (key: string, value: string) => {
@@ -180,15 +176,6 @@ export default function AdminComments() {
         title="评论"
         description="审核讨论、处理举报，并维护高质量的交流空间。"
       />
-
-      {notice ? (
-        <Alert
-          type={notice.type}
-          showIcon
-          title={notice.text}
-          closable={{ onClose: () => setNotice(null) }}
-        />
-      ) : null}
 
       {error && comments.length > 0 ? (
         <Alert type="error" showIcon title="评论操作失败" description={error} />
