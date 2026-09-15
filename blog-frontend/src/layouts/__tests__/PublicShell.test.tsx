@@ -104,11 +104,10 @@ describe("PublicShell theme", () => {
     expect(
       screen.queryByRole("button", { name: /提交.*搜索/ }),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "进入内容后台" })).toHaveClass(
-      "!size-9",
-      "!rounded-full",
-      "!p-0",
-    );
+    const adminLink = screen.getByRole("link", { name: "进入内容后台" });
+    expect(adminLink).toHaveAttribute("data-slot", "button");
+    expect(adminLink).toHaveClass("icon-button", "rounded-full");
+    expect(adminLink).not.toHaveClass("!size-9", "!rounded-full", "!p-0");
 
     await user.type(
       screen.getByRole("textbox", { name: "搜索文章" }),

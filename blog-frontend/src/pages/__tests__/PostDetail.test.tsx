@@ -166,9 +166,8 @@ describe("PostDetail", () => {
     await user.keyboard("{Enter}");
 
     expect(await navigator.clipboard.readText()).toBe("const answer = 42;");
-    expect(
-      screen.getByRole("button", { name: /copy code/i }),
-    ).toHaveTextContent(/copied/i);
+    expect(copy).toHaveTextContent(/copied/i);
+    expect(copy).toHaveAccessibleName(/copied/i);
   });
 
   it("shows inline feedback when a like request fails", async () => {

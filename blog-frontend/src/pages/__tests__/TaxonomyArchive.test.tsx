@@ -48,17 +48,21 @@ describe("public taxonomy and archive pages", () => {
       "/categories/engineering",
     );
   });
-  it("renders an empty category state after an API failure", async () => {
+  it("renders a recoverable category error instead of Empty after an API failure", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(() => Promise.reject(new Error("offline"))),
     );
     renderPage(<Categories />);
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("offline");
+    expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();
     expect(
-      await screen.findByText(
+      screen.queryByText(
         "Category schema is ready. New categories will appear here.",
       ),
-    ).toBeInTheDocument();
+    ).not.toBeInTheDocument();
   });
   it("counts tags and renders the empty state", async () => {
     vi.stubGlobal(
