@@ -11,6 +11,7 @@ import {
   ShieldAlert,
   User,
 } from "lucide-react";
+import { ApiError } from "@gosso/client";
 import { useSession } from "@gosso/client/react";
 import type { BlogUserProfile } from "../auth";
 import { canPreviewUnpublished } from "../abilities";
@@ -181,6 +182,7 @@ export default function PostDetail() {
   const [likeLoading, setLikeLoading] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
   const [commentNotice, setCommentNotice] = useState<string | null>(null);
   const [replyingTo, setReplyingTo] = useState<CommunityComment | null>(null);
   const [reportingComment, setReportingComment] =
@@ -231,6 +233,7 @@ export default function PostDetail() {
     try {
       setLoading(true);
       setError(null);
+      setNotFound(false);
       setComments([]);
       setCommentsError(null);
       let postData: Post | null = null;
@@ -242,6 +245,9 @@ export default function PostDetail() {
           postsApi.getCommunityState(slug),
           postsApi.getRelatedPosts(slug),
         ]);
+
+      const postLoadError =
+        postResult.status === "rejected" ? postResult.reason : null;
 
       if (postResult.status === "fulfilled") {
         postData = postResult.value;
@@ -271,7 +277,15 @@ export default function PostDetail() {
         }
       }
 
-      if (!postData) throw new Error(t("postNotFound"));
+      if (!postData) {
+        if (postLoadError instanceof ApiError && postLoadError.status === 404) {
+          setNotFound(true);
+          return;
+        }
+        throw postLoadError instanceof Error
+          ? postLoadError
+          : new Error(t("failedFetch"));
+      }
 
       setPost(postData);
       setIsAdminPreview(
@@ -421,7 +435,8 @@ export default function PostDetail() {
 
   if (error || !post) {
     const is404 =
-      !post ||
+      notFound ||
+      (!error && !post) ||
       error === t("postNotFound") ||
       Boolean(error?.toLowerCase().includes("not found")) ||
       Boolean(error?.toLowerCase().includes("404"));
