@@ -32,17 +32,9 @@ describe("AppFeedbackProvider", () => {
     await user.click(screen.getByRole("button", { name: "成功" }));
     await user.click(screen.getByRole("button", { name: "警告" }));
 
-    const region = container.querySelector(
-      '[data-slot="notification-region"]',
-    );
+    const region = container.querySelector('[data-slot="notification-region"]');
     expect(region).toBeInTheDocument();
-    expect(region).toHaveClass(
-      "right-4",
-      "top-4",
-      "z-[100]",
-      "w-80",
-      "gap-2",
-    );
+    expect(region).toHaveClass("right-4", "top-4", "z-[100]", "w-80", "gap-2");
     expect(region).not.toHaveClass("bottom-4");
 
     const status = screen.getByRole("status");
