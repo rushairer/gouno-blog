@@ -1,0 +1,86 @@
+name: Temporary Public Test Contract Refresh
+
+on:
+  push:
+    branches:
+      - hardening/blog-public-account-parity
+
+permissions:
+  contents: write
+
+jobs:
+  refresh-tests:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: hardening/blog-public-account-parity
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: blog-frontend/package-lock.json
+      - run: cd blog-frontend && npm ci
+      - name: Refresh tests for canonical ownership contracts
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          replacements = {
+              "blog-frontend/src/layouts/__tests__/PublicShell.test.tsx": [
+                  (
+                      '''    expect(screen.getByRole("link", { name: "进入内容后台" })).toHaveClass(\n      "!size-9",\n      "!rounded-full",\n      "!p-0",\n    );''',
+                      '''    const adminLink = screen.getByRole("link", { name: "进入内容后台" });\n    expect(adminLink).toHaveAttribute("data-slot", "button");\n    expect(adminLink).toHaveClass("icon-button", "rounded-full");\n    expect(adminLink).not.toHaveClass("!size-9", "!rounded-full", "!p-0");''',
+                  ),
+              ],
+              "blog-frontend/src/pages/__tests__/PostDetail.test.tsx": [
+                  (
+                      '''    expect(\n      screen.getByRole("button", { name: /copy code/i }),\n    ).toHaveTextContent(/copied/i);''',
+                      '''    expect(copy).toHaveTextContent(/copied/i);\n    expect(copy).toHaveAccessibleName(/copied/i);''',
+                  ),
+              ],
+              "blog-frontend/src/pages/__tests__/TaxonomyArchive.test.tsx": [
+                  (
+                      '''  it("renders an empty category state after an API failure", async () => {\n    vi.stubGlobal(\n      "fetch",\n      vi.fn(() => Promise.reject(new Error("offline"))),\n    );\n    renderPage(<Categories />);\n    expect(\n      await screen.findByText(\n        "Category schema is ready. New categories will appear here.",\n      ),\n    ).toBeInTheDocument();\n  });''',
+                      '''  it("renders a recoverable category error instead of Empty after an API failure", async () => {\n    vi.stubGlobal(\n      "fetch",\n      vi.fn(() => Promise.reject(new Error("offline"))),\n    );\n    renderPage(<Categories />);\n\n    const alert = await screen.findByRole("alert");\n    expect(alert).toHaveTextContent("offline");\n    expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();\n    expect(\n      screen.queryByText("Category schema is ready. New categories will appear here."),\n    ).not.toBeInTheDocument();\n  });''',
+                  ),
+              ],
+              "blog-frontend/src/pages/admin/__tests__/PostEditor.test.tsx": [
+                  (
+                      '''    expect(container.querySelector(".editor-preview pre")).toHaveClass(\n      "overflow-x-auto",\n    );''',
+                      '''    expect(container.querySelector(".editor-preview pre")).toHaveClass(\n      "overflow-auto",\n    );''',
+                  ),
+              ],
+          }
+
+          for filename, file_replacements in replacements.items():
+              path = Path(filename)
+              text = path.read_text()
+              for old, new in file_replacements:
+                  count = text.count(old)
+                  if count != 1:
+                      raise SystemExit(f"{filename}: expected exactly one match, found {count}: {old[:100]!r}")
+                  text = text.replace(old, new)
+              path.write_text(text)
+          PY
+          cd blog-frontend
+          npx prettier --write \
+            src/layouts/__tests__/PublicShell.test.tsx \
+            src/pages/__tests__/PostDetail.test.tsx \
+            src/pages/__tests__/TaxonomyArchive.test.tsx \
+            src/pages/admin/__tests__/PostEditor.test.tsx
+          npx vitest run \
+            src/layouts/__tests__/PublicShell.test.tsx \
+            src/pages/__tests__/PostDetail.test.tsx \
+            src/pages/__tests__/TaxonomyArchive.test.tsx \
+            src/pages/admin/__tests__/PostEditor.test.tsx
+      - name: Commit refreshed contracts and remove temporary workflow
+        run: |
+          rm .github/workflows/tmp-public-test-contracts.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "test(ui): refresh canonical public assertions"
+          git push origin HEAD:hardening/blog-public-account-parity
