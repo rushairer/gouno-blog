@@ -1,5 +1,6 @@
 export const STEP_UP_MFA_REQUIRED_EVENT = "gouno:step-up-mfa-required";
 export const STEP_UP_COMPLETED_EVENT = "gouno:step-up-completed";
+export const SUDO_SESSION_STALE_EVENT = "gouno:sudo-session-stale";
 export const STEP_UP_MFA_QUERY_PARAM = "mfa_step_up";
 export const STEP_UP_POPUP_PARAM = "step_up_popup";
 export const STEP_UP_MESSAGE_TYPE = "GOUNO_STEP_UP_COMPLETED";
@@ -17,6 +18,11 @@ export function isMfaError(err: unknown): boolean {
 
 export function requestStepUpMfaPrompt(): void {
   window.dispatchEvent(new Event(STEP_UP_MFA_REQUIRED_EVENT));
+}
+
+export function markSudoSessionStale(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(SUDO_SESSION_STALE_EVENT));
 }
 
 /**
