@@ -39,17 +39,22 @@ for (const viewport of viewports) {
         await page.goto(routeCase.path, { waitUntil: "networkidle" });
 
         await expect(page.locator('[data-slot="page-container"]')).toBeVisible();
-        await expect(page.getByText(routeCase.identity, { exact: false }).first()).toBeVisible();
         await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
         await expect(page.locator("html")).toHaveAttribute("data-brand", "blog-admin");
         await expect(page.getByText("正在验证权限")).toHaveCount(0);
 
         if (routeCase.structure === "editor") {
-          await expect(page.locator(".editor-page")).toBeVisible();
+          const editor = page.locator(".editor-page");
+          await expect(editor).toBeVisible();
+          await expect(editor.getByText(routeCase.identity, { exact: false }).first()).toBeVisible();
           await expect(page.locator(".editor-commandbar")).toBeVisible();
-          await expect(page.locator(".editor-page > [data-slot=card]")).toHaveCount(1);
+          await expect(editor.locator(":scope > [data-slot=card]")).toHaveCount(1);
         } else {
-          await expect(page.locator('[data-slot="page-header"]')).toBeVisible();
+          const pageHeader = page.locator('[data-slot="page-header"]');
+          await expect(pageHeader).toBeVisible();
+          await expect(
+            pageHeader.getByRole("heading", { level: 1, name: routeCase.identity }),
+          ).toBeVisible();
         }
 
         const overflow = await page.evaluate(() => {
