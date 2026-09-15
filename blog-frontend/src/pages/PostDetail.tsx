@@ -6,15 +6,12 @@ import {
   Eye,
   Flag,
   Heart,
-  List,
-  MessageSquare,
-  RefreshCw,
   Reply,
   Send,
   ShieldAlert,
   User,
-  X,
 } from "lucide-react";
+import { ApiError } from "@gosso/client";
 import { useSession } from "@gosso/client/react";
 import type { BlogUserProfile } from "../auth";
 import { canPreviewUnpublished } from "../abilities";
@@ -24,12 +21,12 @@ import type { CommunityComment } from "../api/comments";
 import { postsApi } from "../api/posts";
 import {
   Alert,
+  Anchor,
   Button,
   ButtonLink,
   Card,
   Empty,
   Field,
-  IconButton,
   Input,
   Modal,
   Result,
@@ -90,6 +87,20 @@ function ArticleDetailSkeleton({ label }: { label: string }) {
   );
 }
 
+function CommunityLoading() {
+  return (
+    <div role="status" aria-label="评论加载中" className="space-y-3">
+      {Array.from({ length: 2 }, (_, index) => (
+        <Card key={index} padding="sm" className="gap-3">
+          <Skeleton className="h-4 w-1/3" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-4/5" />
+        </Card>
+      ))}
+    </div>
+  );
+}
+
 function CommentItem({
   comment,
   replies,
@@ -99,20 +110,22 @@ function CommentItem({
   const { t, formatDateTime } = useI18n();
   return (
     <div id={`comment-${comment.id}`} className="space-y-3">
-      <div className="rounded-lg border bg-card p-4">
+      <Card padding="sm" className="gap-3">
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <strong>{comment.author}</strong>
+          <strong className="text-sm text-foreground">{comment.author}</strong>
           <Tag>
             {comment.author_type === "user" ? t("signedIn") : t("guest")}
           </Tag>
           <span>{formatDateTime(comment.created_at)}</span>
         </div>
-        <p className="mt-3 whitespace-pre-wrap leading-7">{comment.content}</p>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <p className="whitespace-pre-wrap text-sm leading-7 text-foreground">
+          {comment.content}
+        </p>
+        <div className="flex flex-wrap gap-1">
           {!comment.parent_id ? (
             <Button
               type="button"
-              variant="ghost"
+              variant="text"
               size="small"
               onClick={() => onReply(comment)}
               icon={<Reply size={14} />}
@@ -122,7 +135,8 @@ function CommentItem({
           ) : null}
           <Button
             type="button"
-            variant="ghost"
+            variant="text"
+            color="warning"
             size="small"
             onClick={() => onReport(comment)}
             icon={<Flag size={14} />}
@@ -130,7 +144,7 @@ function CommentItem({
             {t("report")}
           </Button>
         </div>
-      </div>
+      </Card>
       {replies.length > 0 ? (
         <div className="ml-4 space-y-3 border-l pl-4 sm:ml-8">
           {replies.map((reply) => (
@@ -159,18 +173,23 @@ export default function PostDetail() {
   const [isAdminPreview, setIsAdminPreview] = useState(false);
   const [relatedPosts, setRelatedPosts] = useState<Post[]>([]);
   const [comments, setComments] = useState<CommunityComment[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentsError, setCommentsError] = useState<string | null>(null);
   const [commentAuthor, setCommentAuthor] = useState("");
   const [commentContent, setCommentContent] = useState("");
   const [loading, setLoading] = useState(true);
   const [commentLoading, setCommentLoading] = useState(false);
+  const [likeLoading, setLikeLoading] = useState(false);
+  const [reportLoading, setReportLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
   const [commentNotice, setCommentNotice] = useState<string | null>(null);
   const [replyingTo, setReplyingTo] = useState<CommunityComment | null>(null);
   const [reportingComment, setReportingComment] =
     useState<CommunityComment | null>(null);
   const [reportReason, setReportReason] = useState("");
+  const [reportError, setReportError] = useState<string | null>(null);
   const [interactionError, setInteractionError] = useState<string | null>(null);
-
   const [likes, setLikes] = useState(0);
   const [liked, setLiked] = useState(false);
   const [views, setViews] = useState(0);
@@ -187,15 +206,36 @@ export default function PostDetail() {
         );
       }
     };
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  const loadComments = useCallback(
+    async (postID: number) => {
+      setCommentsLoading(true);
+      setCommentsError(null);
+      try {
+        const postComments = await commentsApi.getPostComments(postID);
+        setComments(postComments || []);
+      } catch (reason: unknown) {
+        setCommentsError(
+          reason instanceof Error ? reason.message : t("failedLoadComments"),
+        );
+      } finally {
+        setCommentsLoading(false);
+      }
+    },
+    [t],
+  );
 
   const fetchPostAndComments = useCallback(async () => {
     if (!slug) return;
     try {
       setLoading(true);
       setError(null);
+      setNotFound(false);
+      setComments([]);
+      setCommentsError(null);
       let postData: Post | null = null;
       let adminPreviewActive = false;
 
@@ -205,6 +245,9 @@ export default function PostDetail() {
           postsApi.getCommunityState(slug),
           postsApi.getRelatedPosts(slug),
         ]);
+
+      const postLoadError =
+        postResult.status === "rejected" ? postResult.reason : null;
 
       if (postResult.status === "fulfilled") {
         postData = postResult.value;
@@ -235,7 +278,13 @@ export default function PostDetail() {
       }
 
       if (!postData) {
-        throw new Error(t("postNotFound"));
+        if (postLoadError instanceof ApiError && postLoadError.status === 404) {
+          setNotFound(true);
+          return;
+        }
+        throw postLoadError instanceof Error
+          ? postLoadError
+          : new Error(t("failedFetch"));
       }
 
       setPost(postData);
@@ -252,6 +301,7 @@ export default function PostDetail() {
       setRelatedPosts(
         relatedResult.status === "fulfilled" ? relatedResult.value : [],
       );
+
       const viewKey = `${SESSION_KEYS.POST_VIEWED_PREFIX}${postData.id}`;
       const alreadyViewed = sessionStorage.getItem(viewKey) === "1";
       setViews((postData.views_count || 0) + (alreadyViewed ? 0 : 1));
@@ -261,22 +311,17 @@ export default function PostDetail() {
         analyticsApi.recordView(postData.id).catch((e) => console.error(e));
       }
 
-      try {
-        const postComments = await commentsApi.getPostComments(postData.id);
-        setComments(postComments || []);
-      } catch {
-        setComments([]);
-      }
+      void loadComments(postData.id);
     } catch (err: unknown) {
       console.error(err);
       setError(err instanceof Error ? err.message : t("failedFetch"));
     } finally {
       setLoading(false);
     }
-  }, [slug, isPreviewParam, canPreview, t]);
+  }, [slug, isPreviewParam, canPreview, t, loadComments]);
 
   useEffect(() => {
-    fetchPostAndComments();
+    void fetchPostAndComments();
   }, [fetchPostAndComments]);
 
   const articleSEO = useMemo(
@@ -295,9 +340,10 @@ export default function PostDetail() {
   useArticleSEO(articleSEO);
 
   const handleLike = async () => {
-    if (!post) return;
+    if (!post || likeLoading) return;
     const nextLiked = !liked;
     setInteractionError(null);
+    setLikeLoading(true);
     try {
       const state = await commentsApi.setLike(post.id, nextLiked);
       setLiked(state.liked);
@@ -307,6 +353,8 @@ export default function PostDetail() {
       setInteractionError(
         err instanceof Error ? err.message : t("failedFetch"),
       );
+    } finally {
+      setLikeLoading(false);
     }
   };
 
@@ -316,8 +364,9 @@ export default function PostDetail() {
       !post ||
       (!session.loggedIn && !commentAuthor.trim()) ||
       !commentContent.trim()
-    )
+    ) {
       return;
+    }
 
     setCommentLoading(true);
     setInteractionError(null);
@@ -345,10 +394,23 @@ export default function PostDetail() {
     }
   };
 
+  const beginReport = (comment: CommunityComment) => {
+    setReportingComment(comment);
+    setReportReason("");
+    setReportError(null);
+  };
+
+  const closeReport = () => {
+    setReportingComment(null);
+    setReportReason("");
+    setReportError(null);
+  };
+
   const handleReport = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!reportingComment) return;
-    setInteractionError(null);
+    if (!reportingComment || reportLoading) return;
+    setReportError(null);
+    setReportLoading(true);
     try {
       const result = await commentsApi.reportComment(
         reportingComment.id,
@@ -359,12 +421,11 @@ export default function PostDetail() {
           ? t("alreadyReported")
           : t("reportSubmitted"),
       );
-      setReportingComment(null);
-      setReportReason("");
+      closeReport();
     } catch (err: unknown) {
-      setInteractionError(
-        err instanceof Error ? err.message : t("failedFetch"),
-      );
+      setReportError(err instanceof Error ? err.message : t("failedFetch"));
+    } finally {
+      setReportLoading(false);
     }
   };
 
@@ -374,13 +435,13 @@ export default function PostDetail() {
 
   if (error || !post) {
     const is404 =
-      !post ||
+      notFound ||
+      (!error && !post) ||
       error === t("postNotFound") ||
       Boolean(error?.toLowerCase().includes("not found")) ||
       Boolean(error?.toLowerCase().includes("404"));
-    if (is404) {
-      return <NotFound />;
-    }
+    if (is404) return <NotFound />;
+
     return (
       <Card padding="none" variant="subtle">
         <Result
@@ -394,8 +455,8 @@ export default function PostDetail() {
               <Button
                 variant="solid"
                 color="primary"
-                onClick={fetchPostAndComments}
-                icon={<RefreshCw size={15} />}
+                onClick={() => void fetchPostAndComments()}
+                icon={<RefreshCwIcon />}
               >
                 {t("retry")}
               </Button>
@@ -414,6 +475,11 @@ export default function PostDetail() {
   }
 
   const toc = extractMarkdownTOC(post.content);
+  const tocItems = toc.map((item) => ({
+    key: item.id,
+    title:
+      item.level > 2 ? <span className="pl-3">{item.text}</span> : item.text,
+  }));
   const rootComments = comments.filter((comment) => !comment.parent_id);
   const repliesByParent = new Map<number, CommunityComment[]>();
   comments.forEach((comment) => {
@@ -451,6 +517,7 @@ export default function PostDetail() {
             }
           />
         ) : null}
+
         <ButtonLink
           variant="text"
           to="/articles"
@@ -475,7 +542,7 @@ export default function PostDetail() {
               <PageHeader title={post.title} description={post.summary} />
               <div className="flex flex-wrap items-center gap-x-5 gap-y-3 border-y py-4 text-sm text-muted-foreground">
                 <span className="inline-flex items-center gap-1.5">
-                  <Calendar size={15} />
+                  <Calendar size={15} aria-hidden="true" />
                   {formatDate(post.created_at, {
                     year: "numeric",
                     month: "long",
@@ -483,15 +550,15 @@ export default function PostDetail() {
                   })}
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <User size={15} />
+                  <User size={15} aria-hidden="true" />
                   {t("author")}
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <Eye size={15} />
+                  <Eye size={15} aria-hidden="true" />
                   {views}
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <Heart size={15} />
+                  <Heart size={15} aria-hidden="true" />
                   {likes}
                 </span>
                 <div className="flex flex-wrap gap-2 sm:ml-auto">
@@ -502,46 +569,19 @@ export default function PostDetail() {
               </div>
 
               <MarkdownRenderer content={post.content} />
-
-              <div className="flex justify-center border-t pt-6">
-                <Button
-                  variant="ghost"
-                  onClick={handleLike}
-                  aria-pressed={liked}
-                  icon={
-                    <Heart size={20} fill={liked ? "currentColor" : "none"} />
-                  }
-                >
-                  {likes} {t("likes")}
-                </Button>
-              </div>
             </div>
           </Card>
 
-          {toc.length > 0 && (
+          {tocItems.length > 0 ? (
             <aside className="order-first self-start lg:order-none lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-2 lg:[scrollbar-gutter:stable]">
               <Card variant="subtle" padding="sm" className="gap-3">
-                <h2 className="flex items-center gap-2 text-sm font-semibold">
-                  <List size={18} />
+                <div className="text-sm font-semibold">
                   {t("tableOfContents")}
-                </h2>
-                <nav
-                  className="flex flex-col gap-1"
-                  aria-label={t("tableOfContents")}
-                >
-                  {toc.map((item) => (
-                    <a
-                      key={item.id}
-                      href={`#${item.id}`}
-                      className={`rounded px-2 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-primary ${item.level > 2 ? "pl-5" : ""}`}
-                    >
-                      {item.text}
-                    </a>
-                  ))}
-                </nav>
+                </div>
+                <Anchor aria-label={t("tableOfContents")} items={tocItems} />
               </Card>
             </aside>
-          )}
+          ) : null}
         </div>
 
         {relatedPosts.length > 0 ? (
@@ -563,109 +603,158 @@ export default function PostDetail() {
           </section>
         ) : null}
 
-        <Card className="gap-6">
-          <h2 className="flex items-center gap-2 text-lg font-semibold">
-            <MessageSquare size={20} />
-            {t("discussion", { count: comments.length })}
-          </h2>
+        <section
+          aria-labelledby="article-community"
+          className="mx-auto w-full max-w-[900px] space-y-6"
+        >
+          <div className="flex flex-wrap items-end justify-between gap-4 border-b pb-4">
+            <div>
+              <h2
+                id="article-community"
+                className="text-xl font-semibold tracking-tight"
+              >
+                {t("discussion", { count: comments.length })}
+              </h2>
+            </div>
+            <Button
+              variant={liked ? "solid" : "outline"}
+              color={liked ? "primary" : "default"}
+              icon={<Heart fill={liked ? "currentColor" : "none"} />}
+              aria-pressed={liked}
+              loading={likeLoading}
+              onClick={() => void handleLike()}
+            >
+              {likes} {t("likes")}
+            </Button>
+          </div>
 
-          {comments.length === 0 ? (
+          {interactionError ? (
+            <Alert
+              type="error"
+              role="alert"
+              title={t("requestFailed")}
+              description={interactionError}
+              showIcon
+            />
+          ) : null}
+          {commentNotice ? (
+            <Alert
+              type="success"
+              role="status"
+              description={commentNotice}
+              showIcon
+            />
+          ) : null}
+
+          {commentsLoading ? (
+            <CommunityLoading />
+          ) : commentsError ? (
+            <Alert
+              type="error"
+              role="alert"
+              title={t("failedLoadComments")}
+              description={commentsError}
+              action={
+                <Button onClick={() => void loadComments(post.id)}>
+                  {t("retry")}
+                </Button>
+              }
+              showIcon
+            />
+          ) : rootComments.length === 0 ? (
             <Empty title={t("noComments")} />
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-4" aria-label="评论列表">
               {rootComments.map((comment) => (
                 <CommentItem
                   key={comment.id}
                   comment={comment}
                   replies={repliesByParent.get(comment.id) || []}
                   onReply={setReplyingTo}
-                  onReport={setReportingComment}
+                  onReport={beginReport}
                 />
               ))}
             </div>
           )}
 
-          <form
-            className="flex flex-col gap-4 border-t pt-6"
-            onSubmit={handleAddComment}
+          <Card
+            as="section"
+            variant="subtle"
+            aria-labelledby="comment-form-title"
           >
-            <h3 className="font-semibold">{t("leaveComment")}</h3>
-            {interactionError ? (
-              <Alert type="error" role="alert">
-                {interactionError}
-              </Alert>
-            ) : null}
-            {commentNotice ? (
-              <Alert type="success" role="status">
-                {commentNotice}
-              </Alert>
-            ) : null}
-            {replyingTo ? (
-              <div className="flex items-center justify-between rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm">
-                <span>{t("replyingTo", { name: replyingTo.author })}</span>
-                <IconButton
-                  label={t("cancelReply")}
-                  icon={<X size={16} />}
-                  onClick={() => setReplyingTo(null)}
-                />
-              </div>
-            ) : null}
-            {session.loggedIn ? (
-              <p className="text-sm text-muted-foreground">
-                {t("signedInComment")}
+            <div>
+              <h3 id="comment-form-title" className="text-base font-semibold">
+                {t("leaveComment")}
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {session.loggedIn ? t("signedInComment") : t("typeComment")}
               </p>
-            ) : (
-              <Field label={t("name")}>
-                <Input
-                  type="text"
-                  placeholder={t("yourName")}
-                  value={commentAuthor}
-                  onChange={(event) => setCommentAuthor(event.target.value)}
+            </div>
+
+            {replyingTo ? (
+              <Alert
+                type="info"
+                title={t("replyingTo", { name: replyingTo.author })}
+                action={
+                  <Button
+                    variant="text"
+                    size="small"
+                    onClick={() => setReplyingTo(null)}
+                  >
+                    {t("cancelReply")}
+                  </Button>
+                }
+                showIcon
+              />
+            ) : null}
+
+            <form className="space-y-4" onSubmit={handleAddComment}>
+              {!session.loggedIn ? (
+                <Field label={t("name")} required>
+                  <Input
+                    type="text"
+                    placeholder={t("yourName")}
+                    value={commentAuthor}
+                    onChange={(event) => setCommentAuthor(event.target.value)}
+                    disabled={commentLoading}
+                    required
+                  />
+                </Field>
+              ) : null}
+              <Field label={t("comment")} required>
+                <Textarea
+                  placeholder={t("typeComment")}
+                  rows={5}
+                  value={commentContent}
+                  onChange={(event) => setCommentContent(event.target.value)}
                   disabled={commentLoading}
                   required
                 />
               </Field>
-            )}
-            <Field label={t("comment")}>
-              <Textarea
-                placeholder={t("typeComment")}
-                rows={4}
-                value={commentContent}
-                onChange={(event) => setCommentContent(event.target.value)}
-                disabled={commentLoading}
-                required
-              />
-            </Field>
-            <Button
-              variant="solid"
-              color="primary"
-              type="submit"
-              loading={commentLoading}
-              icon={<Send />}
-            >
-              {commentLoading ? t("posting") : t("postComment")}
-            </Button>
-          </form>
-        </Card>
+              <div className="flex justify-end">
+                <Button
+                  variant="solid"
+                  color="primary"
+                  type="submit"
+                  loading={commentLoading}
+                  icon={<Send />}
+                >
+                  {commentLoading ? t("posting") : t("postComment")}
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </section>
       </div>
+
       <Modal
         open={reportingComment !== null}
         title={t("report")}
         description={t("reportReason")}
-        onClose={() => {
-          setReportingComment(null);
-          setReportReason("");
-        }}
+        onClose={closeReport}
         footer={
           <>
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => {
-                setReportingComment(null);
-                setReportReason("");
-              }}
-            >
+            <Button variant="outline" type="button" onClick={closeReport}>
               {t("cancel")}
             </Button>
             <Button
@@ -674,6 +763,7 @@ export default function PostDetail() {
               type="submit"
               form="report-comment-form"
               icon={<Flag />}
+              loading={reportLoading}
             >
               {t("report")}
             </Button>
@@ -685,17 +775,48 @@ export default function PostDetail() {
           className="flex flex-col gap-4"
           onSubmit={handleReport}
         >
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            {t("reportReason")}
+          {reportError ? (
+            <Alert
+              type="error"
+              role="alert"
+              description={reportError}
+              showIcon
+            />
+          ) : null}
+          <Field label={t("reportReason")} required>
             <Textarea
               rows={4}
               value={reportReason}
-              onChange={(event) => setReportReason(event.target.value)}
+              onChange={(event) => {
+                setReportReason(event.target.value);
+                if (reportError) setReportError(null);
+              }}
+              disabled={reportLoading}
               required
             />
-          </label>
+          </Field>
         </form>
       </Modal>
     </>
+  );
+}
+
+function RefreshCwIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="size-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M21 12a9 9 0 0 1-15.5 6.2L3 16" />
+      <path d="M3 21v-5h5" />
+      <path d="M3 12A9 9 0 0 1 18.5 5.8L21 8" />
+      <path d="M21 3v5h-5" />
+    </svg>
   );
 }

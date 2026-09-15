@@ -44,7 +44,13 @@ export const publicCategories = [
   },
 ];
 
-export const publicTags = ["OAuth2", "React", "Go", "Architecture", "Design System"];
+export const publicTags = [
+  "OAuth2",
+  "React",
+  "Go",
+  "Architecture",
+  "Design System",
+];
 
 const categoryBySlug = Object.fromEntries(
   publicCategories.map((category) => [category.slug, category]),
@@ -156,6 +162,31 @@ export const publicComment = {
   created_at: "2026-09-13T10:00:00Z",
 };
 
+export const publicNotifications = [
+  {
+    id: 301,
+    type: "reply",
+    post_id: 1,
+    post_slug: "canonical-oauth2",
+    post_title: "OAuth2 与 BFF：把浏览器边界重新画清楚",
+    comment_id: 101,
+    actor_name: "Fixture Reader",
+    title: "Fixture Reader 回复了你的评论",
+    body: "这条通知用于验证 Account Notifications 的已读状态与窄屏布局。",
+    href: "/articles/canonical-oauth2#comment-101",
+    created_at: "2026-09-14T09:00:00Z",
+  },
+  {
+    id: 302,
+    type: "system",
+    title: "站点事件通知",
+    body: "这是一条已读的确定性浏览器 Fixture 通知。",
+    href: "/account/settings",
+    read_at: "2026-09-14T08:00:00Z",
+    created_at: "2026-09-14T08:00:00Z",
+  },
+];
+
 export const aboutPage = {
   id: 201,
   title: "关于",
@@ -184,6 +215,23 @@ export const linksPage = {
   show_in_nav: true,
   sort_order: 20,
   created_at: "2026-09-01T08:00:00Z",
+};
+
+export const designSystemPage = {
+  id: 203,
+  title: "Gouno UI 设计系统说明",
+  slug: "design-system",
+  summary:
+    "记录 Gouno 产品家族如何从真实页面中收敛共享设计语言，而不是先造一个大而全的组件库。",
+  content:
+    "这个单页来自站点内容管理，而不是前端写死的路由组件。\n\n## 为什么单页仍然是产品内容\n\n隐私说明、项目介绍、使用指南等页面都可能由管理员持续维护。\n\n## 公共能力保持窄职责\n\n- PageHeader 只表达标题与说明。\n- CodeBlock 只表达只读代码与复制。",
+  template: "default",
+  status: "published",
+  allow_comments: false,
+  show_in_nav: false,
+  sort_order: 30,
+  created_at: "2026-09-09T08:00:00Z",
+  updated_at: "2026-09-09T08:00:00Z",
 };
 
 export const publicNavPages = [aboutPage, linksPage];

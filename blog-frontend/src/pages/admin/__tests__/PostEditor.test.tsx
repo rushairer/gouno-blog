@@ -201,11 +201,11 @@ describe("PostEditor", () => {
     await user.click(screen.getByRole("tab", { name: "预览" }));
 
     expect(container.querySelector(".editor-preview pre")).toHaveClass(
-      "overflow-x-auto",
+      "overflow-auto",
     );
-    expect(container.querySelector(".editor-preview table")).toHaveClass(
-      "overflow-x-auto",
-    );
+    const previewTable = container.querySelector(".editor-preview table");
+    expect(previewTable).toHaveClass("min-w-[36rem]");
+    expect(previewTable?.parentElement).toHaveClass("overflow-x-auto");
   });
 
   it("keeps another author's post read-only for content authors", async () => {

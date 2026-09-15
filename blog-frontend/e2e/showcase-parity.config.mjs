@@ -2,7 +2,11 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: ".",
-  testMatch: ["showcase-parity.pw.mjs", "privileged-access-parity.pw.mjs"],
+  testMatch: [
+    "showcase-parity.pw.mjs",
+    "privileged-access-parity.pw.mjs",
+    "public-showcase-parity.pw.mjs",
+  ],
   fullyParallel: false,
   retries: 1,
   workers: 1,

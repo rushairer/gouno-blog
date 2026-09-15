@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Inbox } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Card, Empty, Spinner } from "@gouno/ui/core";
+import { Alert, Button, Card, Empty } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
 import { postsApi } from "../api/posts";
 import { siteApi } from "../api/site";
+import { DiscoveryIndexLoading } from "../components/reading/DiscoveryIndexLoading";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useI18n } from "../i18n";
 import { PAGINATION_LIMITS } from "../constants";
@@ -16,10 +17,14 @@ export default function Tags() {
   const [tags, setTags] = useState<string[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    setLoading(true);
+    setError("");
     Promise.all([
-      siteApi.getTags().catch(() => []),
+      siteApi.getTags(),
       postsApi.getPosts(
         new URLSearchParams({
           page: "1",
@@ -28,18 +33,23 @@ export default function Tags() {
       ),
     ])
       .then(([tagData, postData]) => {
-        setTags(tagData as string[]);
+        setTags(tagData || []);
         setPosts(postData.list || []);
       })
+      .catch((reason: unknown) => {
+        setError(reason instanceof Error ? reason.message : t("requestFailed"));
+      })
       .finally(() => setLoading(false));
-  }, []);
+  }, [reloadKey, t]);
 
   const tagCounts = useMemo(
     () =>
-      tags.map((tag) => ({
-        tag,
-        count: posts.filter((post) => post.tags.includes(tag)).length,
-      })),
+      tags
+        .map((tag) => ({
+          tag,
+          count: posts.filter((post) => post.tags.includes(tag)).length,
+        }))
+        .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag)),
     [posts, tags],
   );
 
@@ -58,34 +68,38 @@ export default function Tags() {
       />
       <Card as="section" aria-label={`${t("tagsPage.title")}内容`}>
         {loading ? (
-          <div
-            role="status"
-            className="flex items-center justify-center gap-3 py-12 text-sm text-muted-foreground"
-          >
-            <Spinner className="size-5 text-primary" />
-            <span>{t("tagsPage.loading")}</span>
-          </div>
+          <DiscoveryIndexLoading page="tags" />
+        ) : error ? (
+          <Alert
+            type="error"
+            title={`${t("tagsPage.title")}加载失败`}
+            description={error}
+            action={
+              <Button onClick={() => setReloadKey((value) => value + 1)}>
+                {t("retry")}
+              </Button>
+            }
+            showIcon
+          />
         ) : tagCounts.length ? (
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {tagCounts
-              .sort((a, b) => b.count - a.count)
-              .map(({ tag, count }, index) => (
-                <Link
-                  key={tag}
-                  to={`/tags/${encodeURIComponent(tag)}`}
-                  className="group flex items-center gap-4 rounded-md border px-4 py-3 hover:border-primary hover:bg-accent/40"
-                >
-                  <span className="text-xs font-mono text-primary">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <strong className="min-w-0 flex-1 truncate group-hover:text-primary">
-                    {tag}
-                  </strong>
-                  <small className="text-xs text-muted-foreground">
-                    {t("tagsPage.postCount", { count })}
-                  </small>
-                </Link>
-              ))}
+            {tagCounts.map(({ tag, count }, index) => (
+              <Link
+                key={tag}
+                to={`/tags/${encodeURIComponent(tag)}`}
+                className="group flex items-center gap-4 rounded-md border px-4 py-3 hover:border-primary hover:bg-accent/40"
+              >
+                <span className="text-xs font-mono text-primary">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <strong className="min-w-0 flex-1 truncate group-hover:text-primary">
+                  {tag}
+                </strong>
+                <small className="text-xs text-muted-foreground">
+                  {t("tagsPage.postCount", { count })}
+                </small>
+              </Link>
+            ))}
           </div>
         ) : (
           <Empty

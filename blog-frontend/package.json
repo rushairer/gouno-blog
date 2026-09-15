@@ -9,7 +9,7 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
     "lint": "oxlint",
-    "lint:ui": "node scripts/check-ui-contracts.mjs && node scripts/check-retired-product-classes.mjs && node scripts/check-admin-parity-contracts.mjs && node scripts/check-privileged-access-parity.mjs",
+    "lint:ui": "node scripts/check-ui-contracts.mjs && node scripts/check-retired-product-classes.mjs && node scripts/check-admin-parity-contracts.mjs && node scripts/check-privileged-access-parity.mjs && node scripts/check-public-parity-contracts.mjs",
     "test": "vitest",
     "test:run": "tsc -b && vitest run",
     "test:coverage": "vitest run --coverage",

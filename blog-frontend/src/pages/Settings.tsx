@@ -12,7 +12,7 @@ export default function Settings() {
   usePageTitle(t("accountSettings"));
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-6">
+    <main className="mx-auto flex w-full max-w-[900px] flex-col gap-6">
       <PageHeader title={t("accountSettings")} />
 
       <Card as="section">
