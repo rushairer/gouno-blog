@@ -221,6 +221,15 @@ for (const [name, source] of sources) {
   if (!importsFrom(file, "@gouno/ui/core", "Anchor")) {
     failures.push(`${name}: article TOC must delegate navigation behavior to Core Anchor`);
   }
+  if (!importsFrom(file, "@gosso/client", "ApiError")) {
+    failures.push(`${name}: article lifecycle must distinguish HTTP 404 from transport/server failures`);
+  }
+  if (!source.includes("postLoadError instanceof ApiError && postLoadError.status === 404")) {
+    failures.push(`${name}: only an explicit article 404 may enter the NotFound path`);
+  }
+  if (!source.includes("setNotFound(false)") || !source.includes("setNotFound(true)")) {
+    failures.push(`${name}: article retry must own an explicit resettable NotFound state`);
+  }
   if (
     countTag(
       file,
