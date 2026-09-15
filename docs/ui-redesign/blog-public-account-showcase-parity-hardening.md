@@ -1,111 +1,197 @@
 # Gouno Blog Public & Account Showcase Parity Hardening
 
-Status: **In progress.**
+Status: **Complete / accepted.**
 
-This document is the live parity inventory and mismatch ledger for the Public Blog + Blog Account hardening pass started from current GitHub `main` on 2026-09-15. Historical migration reports are background only. Current source, current Showcase fixtures, current package metadata, current tests and current CI are the only acceptance evidence.
+Accepted on 2026-09-16 (Asia/Shanghai). This document records the final engineering evidence for the Public Blog + Blog Account Showcase Parity Hardening pass. Historical migration reports are background only; the accepted source of truth is the GitHub `main` state and the CI evidence recorded below.
 
-## Baseline
+## 1. Baseline and accepted refs
 
-- `rushairer/gouno-ui` starting main: `7e8872a4a216191ce56cf34ed3c3827c03645c37`.
-- `rushairer/gouno-blog` starting main: `3d41e31aca080321457eed9a79dee5f25dec25c6`.
-- `gouno-ui/package.json`: `@gouno/ui` `0.4.1`.
-- `blog-frontend/package.json`: exact `@gouno/ui` `0.4.1` dependency.
-- Latest Gouno UI GitHub release at baseline: `v0.4.1`.
-- No open PR existed in either repository at task start.
-- Blog baseline CI and UI Browser Acceptance for the starting Blog main SHA were green.
-- Browser plugin is not available in the execution environment. Rendered QA therefore uses the repository Playwright suites and GitHub Actions artifacts. Fixture browser sessions are deterministic mocked sessions and are not production-authenticated E2E evidence.
+| Item | Baseline | Accepted |
+| --- | --- | --- |
+| `rushairer/gouno-ui` | `7e8872a4a216191ce56cf34ed3c3827c03645c37` | `4bc9c518626a1c37b3e3e1e5756a5cd7c0f9dd3d` via PR #80 |
+| `rushairer/gouno-blog` | `3d41e31aca080321457eed9a79dee5f25dec25c6` | product/code acceptance SHA `8977f0adb033b9630b2795924998f475cb23a522` via PR #249 |
+| Supporting Blog parity harness fix | n/a | `f19d29936b35cd2a558ad61439e0e29471271612` via PR #252 |
+| `@gouno/ui` package | `0.4.1` | still exact `0.4.1` |
 
-No published `@gouno/ui` contract change has been identified at inventory time. Showcase/test/workflow changes therefore do not justify a package release by themselves.
+No published `@gouno/ui` package API changed in this hardening pass. The Gouno UI changes are Showcase/test-contract changes, so no package version bump or package release was required.
 
-## Canonical route inventory
+The execution environment did not expose an interactive Browser connector. Rendered verification therefore uses the repository Playwright suites in GitHub Actions plus retained screenshots/traces. Those fixture sessions are deterministic browser acceptance evidence; they are not a substitute for production-authenticated end-to-end SSO testing.
 
-| Family | Showcase owner | Product route / owner | Contract |
+## 2. Canonical route inventory
+
+| Family | Showcase owner | Product route / owner | Accepted contract |
 | --- | --- | --- | --- |
 | Home | `showcase/demos/products/blog/home.tsx` | `/` → `src/pages/Home.tsx` | direct parity + public matrix |
 | Article Index | `blog/article-index.tsx` | `/articles` → `ArticleIndex.tsx` | shared route family |
 | Search | `blog/article-index.tsx` | `/search?q=...` → `ArticleIndex mode=search` | shared route family; query preserved |
-| Category Detail | `blog/article-index.tsx` | `/categories/:slug` → `ArticleIndex mode=category` | shared route family, no duplicate Showcase page |
-| Tag Detail | `blog/article-index.tsx` | `/tags/:slug` → `ArticleIndex mode=tag` | shared route family, no duplicate Showcase page |
+| Category Detail | `blog/article-index.tsx` | `/categories/:slug` → `ArticleIndex mode=category` | shared route family |
+| Tag Detail | `blog/article-index.tsx` | `/tags/:slug` → `ArticleIndex mode=tag` | shared route family |
 | Categories Index | `blog/discovery-indexes.tsx` | `/categories` → `Categories.tsx` | discovery grammar |
 | Tags Index | `blog/discovery-indexes.tsx` | `/tags` → `Tags.tsx` | discovery grammar |
 | Archive | `blog/discovery-indexes.tsx` | `/archive` → `Archive.tsx` | discovery grammar |
 | Article Detail | `blog/article-detail.tsx` + `article-community.tsx` | `/articles/:slug` → `PostDetail.tsx` | reading + community grammar |
 | About | `blog/document-pages.tsx` | `/about` → `CustomPageView fixedSlug=about` | Blog-local document grammar + Product lifecycle |
-| Custom Page | `blog/document-pages.tsx` | `/:slug` → `CustomPageView.tsx` | dynamic document lifecycle; specific routes must win first |
+| Custom Page | `blog/document-pages.tsx` | `/:slug` → `CustomPageView.tsx` | dynamic document lifecycle; specific routes win first |
 | Account Notifications | `blog/account-pages.tsx` | `/account/notifications` → `AccountNotifications.tsx` | authenticated public-account grammar |
-| Account Settings | `blog/account-pages.tsx` | `/account/settings` → `Settings.tsx` | Blog account boundary; no GOSSO security form ownership |
+| Account Settings | `blog/account-pages.tsx` | `/account/settings` → `Settings.tsx` | identity/security ownership handoff |
 | Not Found | `blog/not-found.tsx` | `*` → `NotFound.tsx` | canonical Result/navigation grammar |
 
-The user's expected “12 families” groups Article Index/Search/category-detail/tag-detail as one family and Categories/Tags/Archive as their discovery families. The concrete route inventory above lists the executable route modes separately so coverage ownership is unambiguous.
+Redirect-only compatibility routes remain `/notifications` → `/account/notifications` and `/settings` → `/account/settings`. They are routing contracts, not separate Showcase pages.
 
-### Redirect-only routes
+## 3. Product-only contracts preserved
 
-- `/notifications` → `/account/notifications`.
-- `/settings` → `/account/settings`.
-
-These are routing compatibility contracts, not additional Showcase pages.
-
-### Product-only contracts
-
-These remain Product-owned and do not receive fabricated 1:1 Showcase pages:
+The hardening pass intentionally did **not** fabricate 1:1 Showcase pages for Product-only runtime/security behavior. The following remain Blog Product responsibilities:
 
 - root `GossoProvider` session restoration;
 - `RequireAuth` redirect-target preservation for `/account/*`;
-- Step-Up popup callback presentation;
-- runtime site metadata/bootstrap;
-- runtime custom navigation data;
+- Step-Up popup callback handling;
+- runtime site metadata/bootstrap and custom navigation data;
 - unpublished article preview authorization;
 - article mutation authorization and backend failures;
-- SEO/canonical/social metadata side effects.
+- SEO, canonical URL and social metadata side effects.
 
-Public hardening may change presentation around these states but must not alter OAuth/OIDC, cookie/session, redirect, Step-Up, preview or permission semantics.
+OAuth/OIDC, cookie/session, redirect, Step-Up, preview and permission semantics were not redesigned by this work.
 
-## Baseline rendered coverage
+## 4. Final reading and account contracts
 
-`public-matrix.pw.mjs` currently protects 12 loaded public route cases across four viewports (`1440x900`, `1024x768`, `768x1024`, `390x844`) and light/dark themes: **96 cases**. It asserts public shell visibility, H1, brand, theme/brand attributes, no unknown fixture request, no console warning/error/pageerror and no document-level horizontal overflow.
+Public Blog remains an editorial/product surface rather than an Admin shell. It does not use `AppShell` or Admin `PageContainer` grammar. `PublicShell`, article/document/community orchestration and TOC composition remain Blog-owned instead of being promoted into new Gouno Pattern/Gouno APIs.
 
-The matrix does not currently include `/account/notifications` or `/account/settings`. Current public interaction coverage contains only five representative flows: mobile discovery navigation, shell search, article-index tag navigation, article related-navigation/mobile containment and runtime custom navigation.
+Article Detail now keeps one dominant `Card as="article"` reading surface. Markdown remains Blog-owned, while canonical code framing/copy behavior is delegated to Core `CodeBlock`. Article and document TOC navigation delegates to Core `Anchor`. Comment loading/failure is modeled separately from successful Empty state; report failure remains in the report modal; like/comment/report mutation feedback does not replace the reading surface. Explicit HTTP 404 is distinguished from transport/server failure for both articles and custom pages.
 
-Current direct Showcase parity (`e2e/showcase-parity.pw.mjs`) is Blog Admin only. Current Gouno UI `Blog Consumer Parity` reuses that same harness, so its name currently overstates coverage: it protects Blog Admin but not Public/Account.
+Blog Account Notifications now has route-shaped Skeleton loading, persistent load error separate from transient mutation error, real mark-one and mark-all-read behavior, and preserves already-loaded data when a mutation fails. It deliberately does not absorb Admin notification-management features such as delete/clear.
 
-## Mismatch ledger
+Blog Account Settings remains an explicit GOSSO ownership handoff. No password, MFA, Passkey, identity-session or fabricated profile/preferences form was added because the current Blog backend exposes no real Blog-local editable profile/preferences API.
 
-| ID | Route / surface | State | Showcase owner | Product owner | Mismatch / root cause | Severity | Planned fix | Durable guards | Status |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| PUB-001 | PublicShell | loaded | `public-shell.tsx` | `layouts/PublicShell.tsx` | Product Admin entry overrides canonical `IconButtonLink` geometry with `!size-9 !rounded-full !p-0` | P1 | remove primitive geometry takeover | public AST + direct header parity | open |
-| PUB-002 | Article Index | filters | `article-index.tsx` | `ArticleIndex.tsx` | tag navigation is manually styled as canonical-looking control instead of owned action/link primitive | P1 | converge filter action grammar without changing route semantics | public AST + direct index parity | open |
-| PUB-003 | Discovery | loading | `loading.tsx` / `discovery-indexes.tsx` | `Categories.tsx`, `Tags.tsx`, `Archive.tsx` | future structure is known but Product shows generic Spinner; Showcase has route-shaped Skeleton | P1 | route-shaped discovery loading | structural + matrix/direct parity | open |
-| PUB-004 | Discovery | failure | `discovery-indexes.tsx` | Categories/Tags/Archive | Product swallows request failures into successful Empty; Showcase has no discovery error scenario | P0 | add explicit recoverable error + retry to reference and Product | state interaction + structural guard | open |
-| PUB-005 | Markdown | code | `article-detail.tsx` / Core `CodeBlock` | `MarkdownRenderer.tsx` | Product recreates code frame/copy state/shadow instead of canonical Core `CodeBlock` | P1 | keep syntax adapter Product-owned, delegate frame/copy to Core | public AST + code-copy browser/direct parity | open |
-| PUB-006 | Article / document TOC | loaded | `article-detail.tsx` Core `Anchor` | `PostDetail.tsx`, `CustomPageView.tsx` | Product recreates TOC link chrome and behavior | P1 | keep TOC composition Product-owned but use canonical Core `Anchor` | structural + direct parity | open |
-| PUB-007 | Article community | comment load | `article-community.tsx` | `PostDetail.tsx` | comment fetch failure becomes `comments=[]`, making fatal/partial failure indistinguishable from successful Empty | P0 | model comment load error separately and preserve reading | browser state interaction | open |
-| PUB-008 | Article community | composition | `article-community.tsx` | `PostDetail.tsx` | raw bordered comment cards, outer competing Card and raw reply notice drift from canonical community grammar | P1 | canonical Cards/Alert + Blog-owned orchestration | structural + direct community parity | open |
-| PUB-009 | Article community | mutations | `article-community.tsx` | `PostDetail.tsx` | like/comment/report feedback and pending/failure ownership are incomplete; report failure is not presented inside report flow | P1 | separate mutation state, preserve content, local modal failure/pending | rendered interactions | open |
-| PUB-010 | Account Notifications | initial loading | `account-pages.tsx` / `loading.tsx` | `AccountNotifications.tsx` | generic Spinner instead of route-shaped Skeleton | P1 | canonical notification loading anatomy | account matrix + direct parity | open |
-| PUB-011 | Account Notifications | mutation failure | `account-pages.tsx` | `AccountNotifications.tsx` | mark-read failure reuses page-load `error`, replacing already loaded data with fatal Result | P0 | split persistent load error from transient mutation feedback | rendered mutation test | open |
-| PUB-012 | Account Notifications | actions | `account-pages.tsx` | `AccountNotifications.tsx` / `notificationsApi` | API already supports mark-all but Public page omits canonical mark-all action/filter grammar | P1 | expose supported mark-all + unread semantics without Admin-management features | browser + direct parity | open |
-| PUB-013 | Account Settings | canonical scope | `account-pages.tsx` | `Settings.tsx` + backend/API inventory | Showcase invents editable Blog profile/preferences state that current Product/Backend does not expose | P0 | correct Showcase to the real identity-boundary surface; do not invent Product APIs | direct parity + route contract | open |
-| PUB-014 | Account Settings | primitive ownership | `account-pages.tsx` | n/a | Showcase hand-rolls `<button role=switch>` although Core exports canonical `Switch` | P1 | remove/rewrite fictional preference surface; if retained anywhere use Core `Switch` | Showcase conformance | open |
-| PUB-015 | About / Custom Page | loading/error | `document-pages.tsx` / `loading.tsx` | `CustomPageView.tsx` | generic Spinner; generic custom-page transport failure can collapse into NotFound; About grammar has drifted from canonical document surface | P1 | route-shaped loading, separate 404/fatal failure, reconcile Blog-local document surface | structural + interactions + direct parity | open |
-| PUB-016 | Public/Account matrix | loaded responsive/themes | canonical corpus | `public-matrix.pw.mjs` | account routes absent; authenticated fixture contract not durable | P0 | add 2 routes × 4 viewports × 2 themes = 16 account cases without reducing existing 96 | Browser Acceptance | open |
-| PUB-017 | Public interactions | state/mutation/a11y | canonical corpus | `public-interactions.pw.mjs` | only five interactions; article/community/account failure/success paths unprotected | P0 | add representative high-risk interactions | Browser Acceptance | open |
-| PUB-018 | Public structural contract | all | public canonical corpus | Blog scripts | no PublicShell/Article/Document/Account AST contract equivalent to Admin guard | P1 | add `check-public-parity-contracts.mjs` and wire into `lint:ui` | static CI | open |
-| PUB-019 | Direct parity | representative rendered surfaces | Blog Showcase | Blog Product | no Public/Account DOM + computed-style + geometry + paired-screenshot gate | P0 | add a public parity test file sharing Admin helpers | Showcase Parity CI | open |
-| PUB-020 | Reciprocal parity | candidate Gouno UI | Blog consumer | Gouno UI workflow | `Blog Consumer Parity` currently executes Admin-only testMatch | P1 | make shared parity config run Admin + Public/Account harness | Gouno UI Blog Consumer Parity | open |
-| PUB-021 | Parity workflow ownership | CI/artifacts | n/a | Blog workflow | workflow/artifact still named Blog Admin Showcase Parity | P1 | rename to Blog Showcase Parity and retain clear Admin/Public failure files | CI | open |
-| PUB-022 | SEO/a11y durability | documents/article/account | canonical semantics | public routes | current matrix proves visibility/overflow but not enough semantic heading/nav/form/hash ownership | P1 | add focused semantic assertions without brittle DOM locking | structural + Playwright | open |
+## 5. Mismatch closure ledger
 
-Initial ledger: **P0 = 8, P1 = 14**. P2/P3 will be recorded only if rendered reconciliation identifies a justified small or intentional difference.
+Initial ledger: **P0 = 8, P1 = 14**. Final ledger: **P0 = 0, P1 = 0**.
 
-## Ownership decisions fixed before implementation
+| ID | Final resolution | Durable guard | Status |
+| --- | --- | --- | --- |
+| PUB-001 | removed PublicShell canonical-control geometry takeover | Public AST + direct shell parity | resolved |
+| PUB-002 | article-index filter/navigation grammar reconciled without changing route semantics | Showcase tests + direct parity | resolved |
+| PUB-003 | discovery loading changed from generic Spinner to route-shaped Skeleton | Public contract + browser matrix | resolved |
+| PUB-004 | discovery request failure is explicit recoverable Error + retry, never successful Empty | interaction test + Showcase error scenario | resolved |
+| PUB-005 | Markdown code frame/copy ownership delegated to Core `CodeBlock`; syntax adapter remains Blog-owned | AST ownership contract + copy interaction | resolved |
+| PUB-006 | article/document TOC navigation delegated to Core `Anchor` | AST + direct article parity | resolved |
+| PUB-007 | comment load failure modeled separately from Empty while reading remains available | interaction + structural contract | resolved |
+| PUB-008 | community composition reconciled to canonical Card/Alert grammar while orchestration stays Blog-owned | direct article/community parity | resolved |
+| PUB-009 | like/comment/report pending/failure ownership separated; report failure remains modal-local | rendered interactions | resolved |
+| PUB-010 | Account Notifications uses route-shaped Skeleton | account matrix + structural contract | resolved |
+| PUB-011 | page-load and mutation errors split; mark-one failure preserves loaded list | rendered mutation test | resolved |
+| PUB-012 | supported mark-all-read behavior exposed without Admin-management surface | rendered interaction + source contract | resolved |
+| PUB-013 | fictional editable Account Settings removed from canonical Showcase; Product remains identity handoff | direct account parity | resolved |
+| PUB-014 | fictional hand-rolled preference switch surface removed rather than promoting non-existent capability | Showcase conformance tests | resolved |
+| PUB-015 | CustomPage/About loading is route-shaped; 404 vs transport failure separated; retry preserved | AST + interaction + direct parity | resolved |
+| PUB-016 | account routes added to matrix: original 96 retained + 16 account cases = 112 | UI Browser Acceptance | resolved |
+| PUB-017 | high-risk Public/Account interactions expanded from 5 to 15 | UI Browser Acceptance | resolved |
+| PUB-018 | `check-public-parity-contracts.mjs` added and wired into `lint:ui` | static CI | resolved |
+| PUB-019 | Public/Account direct Showcase parity added with shared style/geometry helpers and screenshots | Blog Showcase Parity | resolved |
+| PUB-020 | reciprocal Gouno UI Blog Consumer Parity now executes the same Admin + privileged + Public/Account config | Gouno UI CI | resolved |
+| PUB-021 | workflow/artifact ownership renamed from Blog Admin Showcase Parity to Blog Showcase Parity | workflow contract | resolved |
+| PUB-022 | semantic headings/nav/hash/form/dialog/overflow behavior receives focused source and browser assertions | AST + Playwright | resolved |
 
-- Public Blog does not use `AppShell` or Admin `PageContainer` grammar.
-- `PublicShell`, article/document/community orchestration and TOC composition remain Blog-owned; they are not admitted as new Gouno Pattern/Gouno APIs.
-- `CodeBlock`, `Anchor`, controls, feedback, overlays, cards, fields and selection controls remain canonical Core responsibilities where their semantics match.
-- Blog Account does not own password, MFA, Passkey, identity session or GOSSO policy forms.
-- Literal fixture content is not parity. Structure, semantic responsibility, state presentation, interaction grammar and stable geometry are parity.
-- Full-page zero-pixel image equality is not a gate. Paired screenshots are review evidence alongside structural, computed-style and geometry assertions.
+## 6. Static and structural guardrails
 
-## Acceptance target
+`blog-frontend/scripts/check-public-parity-contracts.mjs` governs 14 Public/Account source files and is part of `lint:ui`. It prevents Public/Account use of Admin `AppShell`/`PageContainer`, native visible controls that bypass canonical Gouno UI primitives, important-utility geometry takeovers on canonical controls, local `CodeBlock`/clipboard recreation, raw code elevation, ambiguous article/custom-page 404 handling, and identity/security forms in Blog Account Settings.
 
-This document is not complete until the ledger reaches **P0 = 0, P1 = 0**, all existing Admin hardening stays green, the existing 96 public matrix cases are retained, Account adds durable authenticated fixture coverage, representative community/account states are rendered, Public direct parity is active in both repositories, reciprocal candidate-Gouno-UI → current Blog Admin + Public/Account verification is green, and the final accepted commits are merged to both `main` branches with post-merge evidence recorded here.
+It also requires the semantic PublicShell (`header`, `main#public-main`, `footer`, desktop/mobile navigation and Drawer), one dominant Article Detail `Card as="article"`, Blog-local Markdown renderer, explicit comment loading/error ownership, Core `Anchor` TOCs, route-shaped Account/CustomPage loading, notification mark-all wiring, and the explicit GOSSO account-management handoff.
+
+Existing generic UI, retired-class, Admin parity and privileged-access contracts remain in the same `lint:ui` chain; none were removed or weakened.
+
+## 7. Rendered browser and direct parity evidence
+
+### UI Browser Acceptance
+
+Accepted Blog main SHA: `8977f0adb033b9630b2795924998f475cb23a522`.
+
+- Run: `34999141877`, job `104482871162`.
+- Result: **335 / 335 passed**.
+- Public route/theme/viewport matrix: **112 cases** = 14 routes × 4 viewports (`1440x900`, `1024x768`, `768x1024`, `390x844`) × light/dark.
+- The original 96 public cases were retained; `/account/notifications` and `/account/settings` add 16 authenticated fixture cases.
+- Focused Public/Account interaction coverage: **15 flows**, including mobile nav, search, tag navigation, discovery recovery, article responsive containment, article transport recovery, TOC hash navigation, Core CodeBlock copy, like/comment mutation, report-modal failure, runtime custom navigation, custom-page recovery, notification mutation failure, mark-all, account identity handoff and NotFound navigation.
+- Evidence artifact: `blog-browser-acceptance-34999141877`, artifact ID `10408329419`.
+
+### Blog → Showcase direct parity
+
+- Workflow: `Blog Showcase Parity` run `34999141733`, job `104482869936`.
+- Checkout pair: Blog `8977f0adb033b9630b2795924998f475cb23a522` + Gouno UI `4bc9c518626a1c37b3e3e1e5756a5cd7c0f9dd3d`.
+- Result: **48 / 48 passed**.
+- Breakdown: **10 privileged-access + 24 Public/Account + 14 existing Blog Admin** tests.
+- Public/Account surfaces: Home, Articles, Search, Categories, Tags, Archive, Article Detail, About, Custom Page, Account Notifications, Account Settings and NotFound in light/dark.
+- Gate compares semantic structure, computed-style fingerprints (including typography), stable geometry and paired screenshots; it intentionally does not require full-page zero-pixel equality.
+- Evidence artifact: `blog-showcase-parity-34999141733`, artifact ID `10407914831`.
+
+### Gouno UI → Blog reciprocal consumer parity
+
+After both product/canonical changes were on `main`, the Gouno UI `Blog Consumer Parity` workflow was rerun against the final pair rather than relying on the earlier Admin-only result.
+
+- Run: `34995964495`, rerun job `104604141306`.
+- Checkout pair: current Blog main `8977f0adb033b9630b2795924998f475cb23a522` + candidate/current Gouno UI main `4bc9c518626a1c37b3e3e1e5756a5cd7c0f9dd3d`.
+- Result: **48 / 48 passed** with the same 10 + 24 + 14 split.
+- Evidence artifact: `gouno-ui-blog-consumer-parity-34995964495`, artifact ID `10422884359`.
+
+This closes reciprocal protection: relevant Gouno UI changes are now checked against the current Blog consumer across Blog Admin, privileged-access and Public/Account surfaces.
+
+## 8. SEO and accessibility durability
+
+The rendered/public contracts now protect semantic H1 presence, desktop/mobile navigation labeling, `aria-current` route behavior, real hash navigation for article TOC, modal/form ownership for report flows, and absence of document-level horizontal overflow across all 112 matrix cases. Account Settings is also guarded against accidental reintroduction of password/MFA/Passkey/session forms.
+
+Runtime SEO/canonical/social metadata remains Product-owned and is intentionally not replaced with a fake Showcase lifecycle. The hardening work preserved rather than relocated those side effects.
+
+## 9. Main CI evidence
+
+| Repository / gate | Accepted ref | Result |
+| --- | --- | --- |
+| Blog CI | `8977f0adb033b9630b2795924998f475cb23a522` | run `34999141826` success |
+| Blog UI Browser Acceptance | same | run `34999141877`: 335/335 passed |
+| Blog Showcase Parity | same + UI `4bc9c518...` | run `34999141733`: 48/48 passed |
+| Gouno UI CI / PR #80 | canonical branch before merge | success |
+| Gouno UI Gosso Admin Consumer Parity / PR #80 | canonical branch before merge | success |
+| Gouno UI reciprocal Blog Consumer Parity | UI `4bc9c518...` + Blog `8977f0ad...` | run `34995964495`: 48/48 passed |
+
+No test was skipped to obtain acceptance, no coverage threshold was raised, and the existing Blog Admin direct parity remained active and green inside the final 48-test rendered parity suite.
+
+## 10. Representative staged commits
+
+The work was intentionally split into reviewable phases instead of one large change. Representative commits include:
+
+- Gouno UI: `329e81f` canonical account fixture reconciliation; `a135a9e` public navigation/discovery hardening; `617010b` public-shell source contract correction; `4d434ea` semantic assertion alignment; merged via PR #80 to `4bc9c518...`.
+- Blog Product/state: `0dee50d` discovery/account states; `abc8241` Core CodeBlock ownership; `ed4240c` article/community ownership; `a115c1e` custom document lifecycle; `48c106a` article transport-vs-404 distinction.
+- Blog contracts/browser: `d9f81c8` Public structural contract; `ba20fa3` account matrix; `e62f46c` Public/Account interactions; `48bb8c3` shared parity helpers; `c86241b` typography fingerprinting; `871224e` deterministic rendered locale; `6f38cc9` Public Showcase coverage.
+- Supporting harness fix: PR #252 merged as `f19d2993...`, narrowing privileged Alert matching to the `SudoGate`-owned direct child without changing Admin Product UI.
+- Blog hardening merged through PR #249 as `8977f0ad...`.
+
+## 11. Intentional differences and residual risks
+
+The Product dynamic CustomPage may expose a Blog-owned TOC when its content provides headings; the canonical document fixture does not need to fabricate that Product lifecycle. Direct parity therefore validates the shared document surface while allowing Product-owned TOC composition.
+
+Literal fixture copy/data is not required to match Product data. Parity is defined around ownership, structure, state presentation, interaction grammar, computed styles and stable geometry.
+
+The browser suites use deterministic mocked Blog sessions. Real IdP login, external redirects and production cookies remain separate security/integration concerns.
+
+CI dependency installation currently reports existing npm audit warnings in the Blog dependency graph (`3 moderate`; the temporary isolated Playwright augmentation reports `5` total: `3 moderate`, `2 high`). This hardening pass did not change dependency versions to hide or bypass those advisories; dependency remediation should remain a separate, explicit maintenance task. GitHub Actions also reports the current Node 20 action-runtime deprecation warning while the runner executes Node 24; it is not a parity-test failure.
+
+## 12. Final acceptance
+
+All originally recorded P0/P1 Public & Account Showcase parity gaps are closed: **P0 = 0, P1 = 0**.
+
+The accepted contract is now:
+
+```text
+Gouno UI Primitive
+        ↓
+Canonical Blog Public / Account Showcase
+        ↓
+ ┌───────────────────────┐
+ │                       │
+Showcase             Blog Product
+ │                       │
+ └── Direct Parity ──────┘
+        ↓
+Static / Structural / State / Browser Contracts
+        ↓
+Reciprocal Gouno UI Consumer Parity
+```
+
+Blog Admin hardening remains green, Public/Account has its own product-appropriate grammar, and both repositories now have durable CI evidence against future drift.
