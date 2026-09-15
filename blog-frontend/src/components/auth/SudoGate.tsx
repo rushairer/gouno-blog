@@ -41,7 +41,9 @@ export function SudoGate({
       <Alert
         type={isLocked ? "info" : "success"}
         showIcon
-        title={isLocked ? "高权限操作需要身份验证" : "高权限操作已解锁"}
+        title={
+          isLocked ? "高权限操作需要身份验证" : "高权限操作已解锁"
+        }
         description={
           <span>
             <strong className="font-medium">{title}</strong>
