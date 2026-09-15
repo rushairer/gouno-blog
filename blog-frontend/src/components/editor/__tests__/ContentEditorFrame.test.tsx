@@ -12,56 +12,59 @@ import {
 } from "../ContentEditorFrame";
 
 describe("editor presentation components", () => {
-  it("keeps page feedback outside the editor card and preserves the stable frame", () => {
-    const { container } = render(
-      <ContentEditorFrame className="custom-frame">
-        <EditorCommandBar>
-          <span>保存状态</span>
-          <EditorCommandActions>操作</EditorCommandActions>
-        </EditorCommandBar>
-        <Alert
-          className="editor-page-feedback"
-          type="error"
-          title="保存失败"
-        />
-        <main>正文</main>
-        <AiWritingPanel>写作</AiWritingPanel>
-        <AiImageGenerationPanel>生图</AiImageGenerationPanel>
-      </ContentEditorFrame>,
-    );
+  it(
+    "keeps page feedback outside the editor card and preserves the stable frame",
+    () => {
+      const { container } = render(
+        <ContentEditorFrame className="custom-frame">
+          <EditorCommandBar>
+            <span>保存状态</span>
+            <EditorCommandActions>操作</EditorCommandActions>
+          </EditorCommandBar>
+          <Alert
+            className="editor-page-feedback"
+            type="error"
+            title="保存失败"
+          />
+          <main>正文</main>
+          <AiWritingPanel>写作</AiWritingPanel>
+          <AiImageGenerationPanel>生图</AiImageGenerationPanel>
+        </ContentEditorFrame>,
+      );
 
-    const wrapper = container.firstElementChild;
-    expect(wrapper).toHaveClass("editor-page", "flex", "gap-6");
-    expect(wrapper?.children[0]).toHaveClass("editor-page-feedback");
-    expect(wrapper?.children[1]).toHaveAttribute("data-slot", "card");
+      const wrapper = container.firstElementChild;
+      expect(wrapper).toHaveClass("editor-page", "flex", "gap-6");
+      expect(wrapper?.children[0]).toHaveClass("editor-page-feedback");
+      expect(wrapper?.children[1]).toHaveAttribute("data-slot", "card");
 
-    const card = wrapper?.children[1];
-    expect(card).toHaveClass(
-      "min-w-0",
-      "gap-0",
-      "overflow-clip",
-      "custom-frame",
-    );
-    expect(container.querySelector(".editor-commandbar")).toHaveClass(
-      "border-b",
-      "px-6",
-      "py-4",
-      "lg:flex-row",
-    );
-    expect(
-      container.querySelector(".editor-command-actions"),
-    ).toHaveTextContent("操作");
-    expect(container.querySelector(".editor-command-actions")).toHaveClass(
-      "flex-wrap",
-      "lg:justify-end",
-    );
-    expect(
-      screen.getByRole("region", { name: "AI 写作与润色" }),
-    ).toHaveTextContent("写作");
-    expect(
-      screen.getByRole("region", { name: "AI 文生图插画" }),
-    ).toHaveTextContent("生图");
-  });
+      const card = wrapper?.children[1];
+      expect(card).toHaveClass(
+        "min-w-0",
+        "gap-0",
+        "overflow-clip",
+        "custom-frame",
+      );
+      expect(container.querySelector(".editor-commandbar")).toHaveClass(
+        "border-b",
+        "px-6",
+        "py-4",
+        "lg:flex-row",
+      );
+      expect(
+        container.querySelector(".editor-command-actions"),
+      ).toHaveTextContent("操作");
+      expect(container.querySelector(".editor-command-actions")).toHaveClass(
+        "flex-wrap",
+        "lg:justify-end",
+      );
+      expect(
+        screen.getByRole("region", { name: "AI 写作与润色" }),
+      ).toHaveTextContent("写作");
+      expect(
+        screen.getByRole("region", { name: "AI 文生图插画" }),
+      ).toHaveTextContent("生图");
+    },
+  );
 
   it("requests and applies an AI suggestion through shared buttons", async () => {
     const user = userEvent.setup();
