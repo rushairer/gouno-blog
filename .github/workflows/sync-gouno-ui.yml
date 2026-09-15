@@ -97,6 +97,10 @@ jobs:
           }
           EOF
 
+      - name: Normalize editor regression formatting
+        working-directory: blog-frontend
+        run: npx prettier --write src/components/editor/__tests__/ContentEditorFrame.test.tsx
+
       - name: Run Blog frontend quality gates
         working-directory: blog-frontend
         run: npm run quality
@@ -110,7 +114,7 @@ jobs:
           GOUNO_UI_VERSION: ${{ steps.ui.outputs.version }}
         run: |
           set -euo pipefail
-          git add blog-frontend/package.json blog-frontend/package-lock.json
+          git add blog-frontend/package.json blog-frontend/package-lock.json blog-frontend/src/components/editor/__tests__/ContentEditorFrame.test.tsx
           if git diff --cached --quiet; then
             echo "@gouno/ui registry dependency is already current."
             exit 0
