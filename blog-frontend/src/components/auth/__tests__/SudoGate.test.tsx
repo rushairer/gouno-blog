@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { SudoGate } from "../SudoGate";
@@ -67,6 +67,30 @@ describe("SudoGate", () => {
     expect(
       screen.getByTestId("member-directory").closest(".hidden"),
     ).not.toBeNull();
+  });
+
+  it("renders the Showcase expiring state while preserving the protected surface", () => {
+    localStorage.setItem("gouno:sudo_activated_at", String(Date.now()));
+
+    render(
+      <SudoGate
+        title="模型连接与密钥保护"
+        description="修改模型连接需要近期多因素身份认证。"
+      >
+        <div data-testid="provider-settings">模型连接</div>
+      </SudoGate>,
+    );
+
+    act(() => {
+      mfaModule.markSudoSessionStale();
+    });
+
+    expect(screen.getByText("近期 MFA 即将过期")).toBeInTheDocument();
+    expect(
+      screen.getByText(/下一次高权限写操作将触发 Step-Up/),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("provider-settings")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "重新锁定" })).toBeInTheDocument();
   });
 
   it("ignores the legacy presentation selector so pages cannot diverge visually", () => {
