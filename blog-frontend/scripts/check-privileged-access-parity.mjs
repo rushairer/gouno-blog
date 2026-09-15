@@ -15,9 +15,11 @@ const requireText = (source, relativePath, expected, reason) => {
 const gatePath = "components/auth/SudoGate.tsx";
 const sudoPath = "hooks/useSudoMode.ts";
 const stepUpPath = "components/auth/StepUpMfaModal.tsx";
+const advancedPath = "components/agent/AdvancedWorkspace.tsx";
 const gate = await read(gatePath);
 const sudo = await read(sudoPath);
 const stepUp = await read(stepUpPath);
+const advanced = await read(advancedPath);
 
 for (const [text, reason] of [
   ['data-slot="blog-privileged-access-gate"', "must expose the canonical privileged-access slot"],
@@ -52,9 +54,9 @@ requireText(
 for (const relativePath of [
   "pages/admin/Users.tsx",
   "pages/admin/SiteSettings.tsx",
-  "components/agent/AdvancedWorkspace.tsx",
+  advancedPath,
 ]) {
-  const source = await read(relativePath);
+  const source = relativePath === advancedPath ? advanced : await read(relativePath);
   requireText(
     source,
     relativePath,
@@ -66,6 +68,23 @@ for (const relativePath of [
       `${relativePath}: legacy one-off sudo presentation must not replace the canonical gate`,
     );
   }
+}
+
+const providerPolicyTitleCount = advanced.split("模型连接与密钥保护").length - 1;
+if (providerPolicyTitleCount !== 1) {
+  failures.push(
+    `${advancedPath}: model credential policy must be rendered exactly once by SudoGate (found ${providerPolicyTitleCount})`,
+  );
+}
+if (advanced.includes("敏感配置需要近期 MFA")) {
+  failures.push(
+    `${advancedPath}: knowledge policy must not be duplicated by a nested informational Alert`,
+  );
+}
+if (advanced.includes("无打扰编辑期")) {
+  failures.push(
+    `${advancedPath}: session lifetime copy belongs to SudoGate state, not page policy descriptions`,
+  );
 }
 
 if (failures.length) {
