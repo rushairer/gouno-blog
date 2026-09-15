@@ -13,10 +13,6 @@
     flex-direction: column;
   }
 
-  .editor-page-feedback {
-    margin-bottom: 1rem;
-  }
-
   .editor-outline nav a {
     overflow: hidden;
     padding: 0.375rem 0.5rem;

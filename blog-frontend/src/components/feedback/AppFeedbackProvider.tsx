@@ -93,7 +93,8 @@ function RootAppFeedbackProvider({ children }: { children: ReactNode }) {
       {children}
       <div
         aria-label="应用提示"
-        className="fixed right-4 bottom-4 z-50 flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-3"
+        data-slot="notification-region"
+        className="fixed right-4 top-4 z-[100] flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2"
       >
         {items.map((item) => (
           <Alert
@@ -105,7 +106,7 @@ function RootAppFeedbackProvider({ children }: { children: ReactNode }) {
                 ? "alert"
                 : "status"
             }
-            className="shadow-lg"
+            className="bg-popover shadow-overlay"
             action={
               <IconButton
                 variant="ghost"

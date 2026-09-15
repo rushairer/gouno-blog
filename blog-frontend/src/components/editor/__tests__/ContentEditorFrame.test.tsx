@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { Alert } from "@gouno/ui/core";
 import { AiSuggestionControl } from "../AiSuggestionControl";
 import {
   AiImageGenerationPanel,
@@ -11,26 +12,36 @@ import {
 } from "../ContentEditorFrame";
 
 describe("editor presentation components", () => {
-  it("keeps the command bar, canvas slot and AI panels in one stable frame", () => {
+  it("keeps page feedback outside the editor card and preserves the stable frame", () => {
     const { container } = render(
       <ContentEditorFrame className="custom-frame">
         <EditorCommandBar>
           <span>保存状态</span>
           <EditorCommandActions>操作</EditorCommandActions>
         </EditorCommandBar>
+        <Alert
+          className="editor-page-feedback"
+          type="error"
+          title="保存失败"
+        />
         <main>正文</main>
         <AiWritingPanel>写作</AiWritingPanel>
         <AiImageGenerationPanel>生图</AiImageGenerationPanel>
       </ContentEditorFrame>,
     );
 
-    expect(container.firstChild).toHaveClass(
-      "editor-page",
+    const wrapper = container.firstElementChild;
+    expect(wrapper).toHaveClass("editor-page", "flex", "gap-6");
+    expect(wrapper?.children[0]).toHaveClass("editor-page-feedback");
+    expect(wrapper?.children[1]).toHaveAttribute("data-slot", "card");
+
+    const card = wrapper?.children[1];
+    expect(card).toHaveClass(
+      "min-w-0",
       "gap-0",
       "overflow-clip",
       "custom-frame",
     );
-    expect(container.firstChild).toHaveAttribute("data-slot", "card");
     expect(container.querySelector(".editor-commandbar")).toHaveClass(
       "border-b",
       "px-6",
