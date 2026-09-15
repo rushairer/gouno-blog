@@ -3,10 +3,10 @@ package repository
 import (
 	"context"
 	"database/sql"
-	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 
 	"github.com/lib/pq"
 	analyticsdomain "github.com/rushairer/blog-backend/internal/analytics/domain"
+	postdomain "github.com/rushairer/blog-backend/internal/post/domain"
 )
 
 // Repository owns the persisted analytics event stream and the cross-capability
@@ -37,9 +37,22 @@ func scanAnalyticsPost(scanner interface{ Scan(...any) error }) (*postdomain.Pos
 }
 
 func (r *postgresRepository) RecordEvent(ctx context.Context, postID int64, eventType, actorKey string) error {
-	_, err := r.db.ExecContext(ctx, `INSERT INTO analytics_events (post_id, event_type, actor_key)
-		VALUES ($1, $2, $3)`, postID, eventType, actorKey)
-	return err
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.ExecContext(ctx, `INSERT INTO analytics_events (post_id, event_type, actor_key)
+		VALUES ($1, $2, $3)`, postID, eventType, actorKey); err != nil {
+		return err
+	}
+	if eventType == "view" {
+		if _, err := tx.ExecContext(ctx, `UPDATE posts SET views_count = views_count + 1 WHERE id = $1`, postID); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 func (r *postgresRepository) AnalyticsSummary(ctx context.Context) (*analyticsdomain.AnalyticsSummary, error) {
