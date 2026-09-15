@@ -14,6 +14,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  image-publish-contract:
+    name: Image publish contract
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Verify change-aware image selection
+        run: python3 .github/scripts/test_image_build_plan.py
+
   backend:
     name: Backend quality
     runs-on: ubuntu-latest
