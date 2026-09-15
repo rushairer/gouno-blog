@@ -142,11 +142,14 @@ def main() -> int:
 
     paths = [] if args.all else _read_files0(args.files0)
     selected = select_images(paths, force_all=args.all)
+    selected_set = set(selected)
     matrix = matrix_for(selected)
 
     print(f"matrix={json.dumps(matrix, separators=(',', ':'))}")
     print(f"has_images={'true' if selected else 'false'}")
     print(f"selection={','.join(selected) if selected else 'none'}")
+    for name in IMAGE_ORDER:
+        print(f"{name}={'true' if name in selected_set else 'false'}")
     return 0
 
 
