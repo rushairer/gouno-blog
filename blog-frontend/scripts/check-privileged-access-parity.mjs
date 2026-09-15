@@ -15,12 +15,14 @@ const requireText = (source, relativePath, expected, reason) => {
 const gatePath = "components/auth/SudoGate.tsx";
 const sudoPath = "hooks/useSudoMode.ts";
 const stepUpPath = "components/auth/StepUpMfaModal.tsx";
+const apiPath = "api/client.ts";
 const usersPath = "pages/admin/Users.tsx";
 const settingsPath = "pages/admin/SiteSettings.tsx";
 const advancedPath = "components/agent/AdvancedWorkspace.tsx";
 const gate = await read(gatePath);
 const sudo = await read(sudoPath);
 const stepUp = await read(stepUpPath);
+const api = await read(apiPath);
 const users = await read(usersPath);
 const settings = await read(settingsPath);
 const advanced = await read(advancedPath);
@@ -54,6 +56,21 @@ requireText(
   "markSudoSessionStale()",
   "Step-Up UI must mark the current sudo session stale before verification",
 );
+requireText(
+  stepUp,
+  stepUpPath,
+  "STEP_UP_CANCELLED_EVENT",
+  "Step-Up UI must distinguish explicit cancellation from verification completion",
+);
+for (const [text, reason] of [
+  ["waitForStepUp", "protected AI operations must wait for Step-Up completion"],
+  ["STEP_UP_COMPLETED_EVENT", "protected AI operations must resume after completed Step-Up"],
+  ["STEP_UP_CANCELLED_EVENT", "protected AI operations must stop when Step-Up is cancelled"],
+  ["retryArgs", "protected AI operations must preserve the pending request for one replay"],
+  ["allowRetry", "protected AI operations must bound Step-Up replay to prevent retry loops"],
+]) {
+  requireText(api, apiPath, text, reason);
+}
 
 for (const [relativePath, source] of [
   [usersPath, users],
