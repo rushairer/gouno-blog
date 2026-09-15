@@ -25,13 +25,26 @@ export function SudoGate({
 }: SudoGateProps) {
   const {
     isSudoActive,
+    isSudoExpiring,
     remainingMinutes,
     activating,
     activateSudo,
     clearSudo,
   } = useSudoMode();
 
-  const isLocked = forceLocked !== undefined ? forceLocked : !isSudoActive;
+  const locked = forceLocked !== undefined ? forceLocked : !isSudoActive;
+  const expiring = forceLocked === undefined && !locked && isSudoExpiring;
+  const type = locked ? "info" : expiring ? "warning" : "success";
+  const statusTitle = locked
+    ? "高权限操作需要身份验证"
+    : expiring
+      ? "近期 MFA 即将过期"
+      : "高权限操作已解锁";
+  const sessionDescription = locked
+    ? "完成近期 MFA 后可继续。"
+    : expiring
+      ? "下一次高权限写操作将触发 Step-Up；待执行动作会被保留并在验证后继续。"
+      : `当前近期 MFA 已完成；约 ${remainingMinutes} 分钟后会重新要求验证。`;
 
   return (
     <div
@@ -39,19 +52,17 @@ export function SudoGate({
       data-slot="blog-privileged-access-gate"
     >
       <Alert
-        type={isLocked ? "info" : "success"}
+        type={type}
         showIcon
-        title={isLocked ? "高权限操作需要身份验证" : "高权限操作已解锁"}
+        title={statusTitle}
         description={
           <span>
             <strong className="font-medium">{title}</strong>：{description}{" "}
-            {isLocked
-              ? "完成近期 MFA 后可继续。"
-              : `当前近期 MFA 已完成；约 ${remainingMinutes} 分钟后会重新要求验证。`}
+            {sessionDescription}
           </span>
         }
         action={
-          isLocked ? (
+          locked ? (
             <Button
               size="small"
               variant="solid"
@@ -76,7 +87,7 @@ export function SudoGate({
         }
       />
 
-      {isLocked ? (
+      {locked ? (
         <div className="hidden" inert={true} aria-hidden="true">
           {children}
         </div>
