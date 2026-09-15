@@ -14,6 +14,7 @@ const corePages = [
   "PostEditor.tsx",
   "PageEditor.tsx",
 ];
+const collectionPages = new Set(["Dashboard.tsx", "Posts.tsx", "Pages.tsx"]);
 
 function sourceFile(name, source) {
   return ts.createSourceFile(
@@ -35,12 +36,15 @@ function jsxTag(node) {
   return "";
 }
 
-function staticClassName(node) {
-  const attrs = ts.isJsxElement(node)
+function jsxAttributes(node) {
+  return ts.isJsxElement(node)
     ? node.openingElement.attributes
     : node.attributes;
-  const attribute = attrs.properties.find(
-    (item) => ts.isJsxAttribute(item) && item.name.text === "className",
+}
+
+function staticAttribute(node, attributeName) {
+  const attribute = jsxAttributes(node).properties.find(
+    (item) => ts.isJsxAttribute(item) && item.name.text === attributeName,
   );
   if (!attribute || !ts.isJsxAttribute(attribute) || !attribute.initializer)
     return "";
@@ -55,6 +59,57 @@ function staticClassName(node) {
   return "";
 }
 
+function staticClassName(node) {
+  return staticAttribute(node, "className");
+}
+
+function isCanonicalAdminStack(node) {
+  if (!ts.isJsxElement(node) || jsxTag(node) !== "div") return false;
+  const classes = new Set(staticClassName(node).split(/\s+/));
+  return classes.has("flex") && classes.has("flex-col") && classes.has("gap-6");
+}
+
+function firstMeaningfulChildIdentity(node) {
+  if (!ts.isJsxElement(node)) return "";
+  for (const child of node.children) {
+    if (ts.isJsxText(child) && child.getText().trim() === "") continue;
+    if (ts.isJsxElement(child) || ts.isJsxSelfClosingElement(child))
+      return jsxTag(child);
+    if (ts.isJsxExpression(child) && child.expression) {
+      if (ts.isIdentifier(child.expression)) return child.expression.text;
+      return "expression";
+    }
+  }
+  return "";
+}
+
+function assertCollectionStack(name, source) {
+  const file = sourceFile(name, source);
+  let stackCount = 0;
+
+  function visit(node) {
+    if (ts.isReturnStatement(node) && node.expression) {
+      let expression = node.expression;
+      while (ts.isParenthesizedExpression(expression)) expression = expression.expression;
+      if (isCanonicalAdminStack(expression)) {
+        stackCount += 1;
+        const first = firstMeaningfulChildIdentity(expression);
+        if (first !== "PageHeader" && first !== "pageHeader") {
+          failures.push(
+            `${name}:${lineOf(file, expression)} Admin page stack must begin with PageHeader/pageHeader before feedback and task surfaces`,
+          );
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+
+  visit(file);
+  if (stackCount === 0) {
+    failures.push(`${name}: route render must expose a canonical flex flex-col gap-6 Admin page stack`);
+  }
+}
+
 for (const name of corePages) {
   const source = await readFile(path.join(adminRoot, name), "utf8");
   if (
@@ -65,17 +120,11 @@ for (const name of corePages) {
       `${name}: core Admin pages must use the canonical 24px vertical rhythm or ContentEditorFrame workspace grammar`,
     );
   }
-  if (
-    name === "Dashboard.tsx" ||
-    name === "Posts.tsx" ||
-    name === "Pages.tsx"
-  ) {
-    const header = source.indexOf("<PageHeader");
-    if (header < 0) failures.push(`${name}: route-level PageHeader is required`);
-    const firstSurface = source.indexOf('<Card padding="base"');
-    if (firstSurface >= 0 && header >= firstSurface) {
-      failures.push(`${name}: PageHeader must precede task surfaces`);
+  if (collectionPages.has(name)) {
+    if (!source.includes("<PageHeader") && !source.includes("const pageHeader")) {
+      failures.push(`${name}: route-level PageHeader is required`);
     }
+    assertCollectionStack(name, source);
   }
   if (name === "PostEditor.tsx" || name === "PageEditor.tsx") {
     if (!source.includes("<ContentEditorFrame"))
@@ -120,27 +169,18 @@ for (const name of await readdir(adminRoot)) {
         );
       }
       if (tag === "input") {
-        const attrs = ts.isJsxElement(node)
-          ? node.openingElement.attributes
-          : node.attributes;
-        const typeAttr = attrs.properties.find(
-          (item) => ts.isJsxAttribute(item) && item.name.text === "type",
-        );
-        const type =
-          typeAttr &&
-          ts.isJsxAttribute(typeAttr) &&
-          typeAttr.initializer &&
-          ts.isStringLiteral(typeAttr.initializer)
-            ? typeAttr.initializer.text
-            : "text";
-        if (type !== "hidden") {
+        const type = staticAttribute(node, "type") || "text";
+        const classes = new Set(staticClassName(node).split(/\s+/));
+        const hiddenFileBridge =
+          type === "file" && (classes.has("sr-only") || classes.has("hidden"));
+        if (type !== "hidden" && !hiddenFileBridge) {
           failures.push(
             `${name}:${lineOf(file, node)} visible native input bypasses canonical @gouno/ui ownership`,
           );
         }
       }
-      const classes = staticClassName(node).split(/\s+/);
-      if (classes.includes("fixed")) {
+      const classes = new Set(staticClassName(node).split(/\s+/));
+      if (classes.has("fixed")) {
         failures.push(
           `${name}:${lineOf(file, node)} product-level fixed positioning is forbidden; overlays and notification stacks belong to @gouno/ui`,
         );
