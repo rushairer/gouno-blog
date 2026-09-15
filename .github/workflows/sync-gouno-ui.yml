@@ -10,7 +10,7 @@ on:
       version:
         description: Exact @gouno/ui version or npm dist-tag
         required: false
-        default: 0.4.0
+        default: 0.4.1
 
 permissions:
   contents: write
@@ -45,7 +45,7 @@ jobs:
           REQUESTED_VERSION: ${{ github.event.inputs.version }}
         run: |
           set -euo pipefail
-          REQUESTED_VERSION="${REQUESTED_VERSION:-0.4.0}"
+          REQUESTED_VERSION="${REQUESTED_VERSION:-0.4.1}"
           RESOLVED_VERSION="$(npm view "@gouno/ui@${REQUESTED_VERSION}" version)"
           test -n "$RESOLVED_VERSION"
           echo "version=$RESOLVED_VERSION" >> "$GITHUB_OUTPUT"
@@ -86,7 +86,7 @@ jobs:
           const patterns = await import('@gouno/ui/patterns');
           const gouno = await import('@gouno/ui/gouno');
           for (const [owner, mod, names] of [
-            ['core', core, ['Button', 'Tabs', 'Card', 'Alert']],
+            ['core', core, ['Button', 'Tabs', 'Card', 'Alert', 'NotificationProvider', 'useNotification']],
             ['theme', theme, ['ThemeProvider']],
             ['patterns', patterns, ['BulkActionBar']],
             ['gouno', gouno, ['AppShell', 'PageContainer', 'PageHeader', 'PageSkeleton']],
