@@ -64,6 +64,7 @@ const routes = [
     fixture: "blog-custom-page",
     path: "/design-system",
     surface: 'article[data-slot="card"]',
+    surfaceWidthParity: false,
   },
   {
     name: "account-notifications",
@@ -173,7 +174,7 @@ for (const theme of ["light", "dark"]) {
         .first();
       await expectStyleParity(showcaseSurface, productSurface);
       await expectGeometryParity(showcaseSurface, productSurface, {
-        width: true,
+        width: route.surfaceWidthParity !== false,
         height: false,
       });
 
@@ -193,6 +194,15 @@ for (const theme of ["light", "dark"]) {
           width: true,
           height: false,
         });
+      }
+
+      if (route.name === "custom-page") {
+        await expect(
+          product.getByRole("navigation", { name: "目录导航" }),
+        ).toBeVisible();
+        await expect(
+          showcase.getByRole("navigation", { name: "目录导航" }),
+        ).toHaveCount(0);
       }
 
       expect(unknown).toEqual([]);
