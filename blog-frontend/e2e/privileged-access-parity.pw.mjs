@@ -83,7 +83,14 @@ async function openPair(
 async function chooseShowcaseSecurity(showcase, accessibleName) {
   const openFixture = showcase.getByRole("button", { name: "打开 Fixture 控制" });
   if (await openFixture.isVisible()) await openFixture.click();
-  await showcase.getByRole("radio", { name: accessibleName }).check();
+
+  const radio = showcase.getByRole("radio", { name: accessibleName });
+  if (!(await radio.isChecked())) {
+    await radio
+      .locator("xpath=ancestor::label[@data-slot='segmented-item']")
+      .click();
+  }
+  await expect(radio).toBeChecked();
 }
 
 async function expectGateParity(showcase, product) {
