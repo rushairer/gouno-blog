@@ -1,6 +1,7 @@
 import { adminProfile } from "./session-fixtures.mjs";
 import {
   aboutPage,
+  designSystemPage,
   linksPage,
   publicCategories,
   publicComment,
@@ -90,7 +91,10 @@ export async function installPublicApiFixtures(page, options = {}) {
       }
       if (method === "PUT" && path === "/api/me/notifications/read-all") {
         const now = new Date().toISOString();
-        notifications = notifications.map((item) => ({ ...item, read_at: item.read_at || now }));
+        notifications = notifications.map((item) => ({
+          ...item,
+          read_at: item.read_at || now,
+        }));
         await route.fulfill({ status: 204, body: "" });
         return;
       }
@@ -137,6 +141,7 @@ export async function installPublicApiFixtures(page, options = {}) {
     if (path === "/api/pages/nav") return respond(publicNavPages);
     if (path === "/api/pages/about") return respond(aboutPage);
     if (path === "/api/pages/links") return respond(linksPage);
+    if (path === "/api/pages/design-system") return respond(designSystemPage);
     if (path === "/api/categories") return respond(publicCategories);
     if (path === "/api/tags") return respond(publicTags);
     if (path === "/api/tags/summary") return respond(publicTagSummaries);
