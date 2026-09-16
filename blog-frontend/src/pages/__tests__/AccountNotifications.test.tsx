@@ -24,35 +24,34 @@ describe("AccountNotifications", () => {
 
   it("renders the empty public account state", async () => {
     vi.spyOn(notificationsApi, "getNotifications").mockResolvedValue({
-      notifications: [],
-      unread_count: 0,
+      list: [],
+      total: 0,
     });
 
     renderNotifications();
 
     expect(
-      await screen.findByText(/No notifications yet|暂无通知/i),
+      await screen.findByText(/No notifications right now|暂无通知/i),
     ).toBeInTheDocument();
   });
 
   it("marks an unread notification as read without changing its route contract", async () => {
     const user = userEvent.setup();
     const markRead = vi
-      .spyOn(notificationsApi, "markNotificationRead")
+      .spyOn(notificationsApi, "markRead")
       .mockResolvedValue(undefined);
     vi.spyOn(notificationsApi, "getNotifications").mockResolvedValue({
-      notifications: [
+      list: [
         {
           id: 9,
           type: "comment_reply",
           title: "New reply",
-          message: "Someone replied to your comment.",
+          body: "Someone replied to your comment.",
           href: "/articles/canonical-oauth2#comments",
-          read_at: null,
           created_at: "2026-09-15T10:00:00Z",
         },
       ],
-      unread_count: 1,
+      total: 1,
     });
 
     renderNotifications();
