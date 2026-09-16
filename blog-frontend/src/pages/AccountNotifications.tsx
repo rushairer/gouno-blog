@@ -65,10 +65,7 @@ export default function AccountNotifications() {
     [items],
   );
   const visibleItems = useMemo(
-    () =>
-      filter === "unread"
-        ? items.filter((item) => !item.read_at)
-        : items,
+    () => (filter === "unread" ? items.filter((item) => !item.read_at) : items),
     [filter, items],
   );
 
