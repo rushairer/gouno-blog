@@ -204,7 +204,8 @@ export default function AccountNotifications() {
       {!loading && !loadError && visibleItems.length > 0 ? (
         <section className="grid gap-3" aria-label={labels.list}>
           {visibleItems.map((item) => {
-            const itemTitle = item.title || t("accountNotifications.systemAlert");
+            const itemTitle =
+              item.title || t("accountNotifications.systemAlert");
             return (
               <Card
                 key={item.id}
