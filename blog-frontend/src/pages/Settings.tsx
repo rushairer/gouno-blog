@@ -6,20 +6,28 @@ import { useI18n } from "../i18n";
 import { usePageTitle } from "../hooks/usePageTitle";
 
 export default function Settings() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const user = useSafeUserProfile();
   const adminURL = getGossoAdminURL(user);
-  usePageTitle(t("accountSettings"));
+  const pageTitle = locale === "zh" ? "账户设置" : t("accountSettings");
+  usePageTitle(pageTitle);
 
   return (
     <main className="mx-auto flex w-full max-w-[900px] flex-col gap-6">
-      <PageHeader title={t("accountSettings")} />
+      <PageHeader
+        title={pageTitle}
+        description={
+          locale === "zh"
+            ? "Blog 只展示当前账户边界；身份安全设置继续由 GOSSO 统一管理。"
+            : undefined
+        }
+      />
 
       <Card as="section">
         <div className="flex min-w-0 flex-col gap-6">
           <div className="flex flex-col gap-4">
             <h2 className="flex items-center gap-2 text-lg font-semibold">
-              <Shield size={18} />
+              <Shield size={18} aria-hidden="true" />
               账户安全由 GOSSO Admin 管理
             </h2>
             <p className="text-sm leading-7 text-muted-foreground">
