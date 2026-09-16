@@ -27,10 +27,10 @@ describe("NotFound Page", () => {
       "/",
     );
     expect(
-      screen.getByRole("link", { name: /全部文章|all articles/i }),
+      screen.getByRole("link", { name: /浏览文章|browse articles/i }),
     ).toHaveAttribute("href", "/articles");
     expect(
-      screen.getByRole("link", { name: /搜索文章|search posts/i }),
+      screen.getByRole("link", { name: /搜索内容|search content/i }),
     ).toHaveAttribute("href", "/search");
     expect(
       screen.getByRole("button", { name: /返回|back/i }),
@@ -42,7 +42,7 @@ describe("NotFound Page", () => {
 
     expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: /搜索文章|search posts/i }),
+      screen.getByRole("link", { name: /搜索内容|search content/i }),
     ).toHaveAttribute("href", "/search");
   });
 });
