@@ -296,7 +296,7 @@ export default function AdminUsers() {
                 rel="noreferrer"
                 icon={<ExternalLink />}
               >
-                前往 GOSSO 管理
+                打开 GOSSO Admin
               </ButtonLink>
             ) : null}
           </>
@@ -326,7 +326,7 @@ export default function AdminUsers() {
             description="成员目录会在用户首次登录 Blog 后建立产品侧成员关系。"
             action={
               <Button size="small" type="button" onClick={() => void load()}>
-                重新加载
+                刷新
               </Button>
             }
           />
@@ -378,6 +378,7 @@ export default function AdminUsers() {
                           size="small"
                           className="font-mono text-xs"
                           title={`点击复制完整 Subject ID: ${member.principal.subject}`}
+                          aria-label={`复制 ${memberName(member)} 完整 Subject ID`}
                           onClick={(event) => {
                             event.stopPropagation();
                             copySubject(member);
@@ -456,6 +457,7 @@ export default function AdminUsers() {
                             size="small"
                             className="font-mono text-xs"
                             title={`点击复制完整 Subject ID: ${member.principal.subject}`}
+                            aria-label={`复制 ${memberName(member)} 完整 Subject ID`}
                             onClick={() => copySubject(member)}
                             icon={<Copy size={13} />}
                           >
