@@ -368,11 +368,7 @@ export default function MediaLibrary() {
         actions={
           can("create", "media") ? (
             <div className="flex flex-wrap items-center justify-end gap-2">
-              <Button
-                type="button"
-                icon={<Sparkles />}
-                onClick={openAiDrawer}
-              >
+              <Button type="button" icon={<Sparkles />} onClick={openAiDrawer}>
                 AI 文生图
               </Button>
               <Button
