@@ -97,7 +97,7 @@ export function getRelativeMediaUrl(rawUrl: string): string {
 }
 
 export default function MediaLibrary() {
-  const { t, formatDateTime } = useI18n();
+  const { t, formatDateTime, locale } = useI18n();
   const { notify } = useAppFeedback();
   const { can } = useAbility();
   const [assets, setAssets] = useState<MediaItem[]>([]);
@@ -325,6 +325,10 @@ export default function MediaLibrary() {
     [assets],
   );
   const hasFilters = Boolean(query || type);
+  const compactMediaLabels =
+    locale === "zh"
+      ? { relative: "相对地址", markdown: "Markdown", alt: "Alt Text" }
+      : { relative: "Relative URL", markdown: "Markdown", alt: "Alt Text" };
 
   const clearFilters = () => {
     setQuery("");
@@ -339,6 +343,19 @@ export default function MediaLibrary() {
     );
   };
 
+  const openUploadDrawer = () => {
+    setUploadError("");
+    setUploadDrawerOpen(true);
+  };
+
+  const openAiDrawer = () => {
+    setAiDrawerOpen(true);
+    setAiGenerated(null);
+    setAiPrompt("");
+    setAiAlt("");
+    setAiError("");
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -347,17 +364,7 @@ export default function MediaLibrary() {
         actions={
           can("create", "media") ? (
             <div className="flex flex-wrap items-center justify-end gap-2">
-              <Button
-                type="button"
-                icon={<Sparkles />}
-                onClick={() => {
-                  setAiDrawerOpen(true);
-                  setAiGenerated(null);
-                  setAiPrompt("");
-                  setAiAlt("");
-                  setAiError("");
-                }}
-              >
+              <Button type="button" icon={<Sparkles />} onClick={openAiDrawer}>
                 AI 文生图
               </Button>
               <Button
@@ -365,10 +372,7 @@ export default function MediaLibrary() {
                 color="primary"
                 type="button"
                 icon={<ImagePlus />}
-                onClick={() => {
-                  setUploadError("");
-                  setUploadDrawerOpen(true);
-                }}
+                onClick={openUploadDrawer}
               >
                 上传图片
               </Button>
@@ -499,6 +503,21 @@ export default function MediaLibrary() {
                 <Button size="small" onClick={clearFilters}>
                   清除筛选
                 </Button>
+              ) : can("create", "media") ? (
+                <div className="flex flex-wrap justify-center gap-2">
+                  <Button
+                    variant="solid"
+                    color="primary"
+                    size="small"
+                    icon={<ImagePlus />}
+                    onClick={openUploadDrawer}
+                  >
+                    {t("uploadImage")}
+                  </Button>
+                  <Button size="small" icon={<Sparkles />} onClick={openAiDrawer}>
+                    {locale === "zh" ? "AI 文生图" : "Generate with AI"}
+                  </Button>
+                </div>
               ) : undefined
             }
           />
@@ -581,7 +600,7 @@ export default function MediaLibrary() {
                     }
                     icon={<Link2 />}
                   >
-                    {t("copyRelativeUrl")}
+                    {compactMediaLabels.relative}
                   </Button>
                   <Button
                     variant="text"
@@ -595,7 +614,7 @@ export default function MediaLibrary() {
                     }
                     icon={<Copy />}
                   >
-                    {t("copyMarkdown")}
+                    {compactMediaLabels.markdown}
                   </Button>
                 </div>
                 <div className="flex flex-wrap items-center gap-1">
@@ -607,7 +626,7 @@ export default function MediaLibrary() {
                       onClick={() => openEditAltDrawer(asset)}
                       icon={<Pencil />}
                     >
-                      {t("editAltText")}
+                      {compactMediaLabels.alt}
                     </Button>
                   ) : null}
                   {can("delete", "media", asset) ? (
