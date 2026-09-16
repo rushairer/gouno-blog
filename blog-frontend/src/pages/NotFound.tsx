@@ -6,8 +6,23 @@ import { Button, ButtonLink, Card, Result } from "@gouno/ui/core";
 
 export default function NotFound() {
   const navigate = useNavigate();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   usePageTitle(t("notFound.pageTitle"));
+
+  const labels =
+    locale === "zh"
+      ? {
+          home: "返回首页",
+          articles: "浏览文章",
+          search: "搜索内容",
+          back: "返回上一页",
+        }
+      : {
+          home: "Back home",
+          articles: "Browse articles",
+          search: "Search content",
+          back: "Go back",
+        };
 
   return (
     <>
@@ -25,13 +40,13 @@ export default function NotFound() {
                 to="/"
                 icon={<Home />}
               >
-                {t("nav.home")}
+                {labels.home}
               </ButtonLink>
               <ButtonLink variant="outline" to="/articles" icon={<FileText />}>
-                {t("notFound.allArticles")}
+                {labels.articles}
               </ButtonLink>
               <ButtonLink variant="text" to="/search" icon={<Search />}>
-                {t("searchPosts")}
+                {labels.search}
               </ButtonLink>
             </div>
           }
@@ -44,7 +59,7 @@ export default function NotFound() {
           icon={<ArrowLeft />}
           onClick={() => navigate(-1)}
         >
-          {t("back")}
+          {labels.back}
         </Button>
       </div>
     </>
