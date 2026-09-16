@@ -82,6 +82,21 @@ describe("AdminUsers list template", () => {
     });
   });
 
+  it("keeps PageHeader refresh and GOSSO handoff on the canonical outline action grammar", async () => {
+    vi.spyOn(membersApi, "list").mockResolvedValue({ members: [member] });
+
+    renderUsers();
+
+    await screen.findByRole("table");
+    const refresh = screen.getByRole("button", { name: "刷新" });
+    const gosso = screen.getByRole("link", { name: "打开 GOSSO Admin" });
+
+    expect(refresh).toHaveAttribute("data-variant", "outline");
+    expect(refresh).toHaveAttribute("data-size", "default");
+    expect(gosso).toHaveAttribute("data-variant", "outline");
+    expect(gosso).toHaveAttribute("data-size", "default");
+  });
+
   it("keeps resolved members visible during a same-query refresh", async () => {
     const user = userEvent.setup();
     let resolveRefresh!: (value: { members: BlogMember[] }) => void;
