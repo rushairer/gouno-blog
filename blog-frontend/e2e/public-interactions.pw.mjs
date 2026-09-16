@@ -284,7 +284,7 @@ test("account settings remains an identity handoff instead of a Blog security fo
   const main = page.locator("#public-main");
 
   await expect(
-    main.getByRole("heading", { level: 1, name: "账号设置" }),
+    main.getByRole("heading", { level: 1, name: "账户设置" }),
   ).toBeVisible();
   await expect(main.getByText(/GOSSO Admin 管理/)).toBeVisible();
   await expect(main.getByRole("textbox")).toHaveCount(0);
@@ -297,7 +297,7 @@ test("account settings remains an identity handoff instead of a Blog security fo
 test("NotFound canonical navigation returns to a public route", async ({ page }) => {
   const state = await openPublic(page, "/missing/route");
 
-  await page.getByRole("link", { name: "全部文章", exact: true }).click();
+  await page.getByRole("link", { name: "浏览文章", exact: true }).click();
   await expect(page).toHaveURL(/\/articles$/);
   await expect(
     page.getByRole("heading", { level: 1, name: "全部文章" }),

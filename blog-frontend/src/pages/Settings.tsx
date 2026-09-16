@@ -9,7 +9,7 @@ export default function Settings() {
   const { t, locale } = useI18n();
   const user = useSafeUserProfile();
   const adminURL = getGossoAdminURL(user);
-  const pageTitle = locale === "zh" ? "账户设置" : t("accountSettings");
+  const pageTitle = t("accountSettings");
   usePageTitle(pageTitle);
 
   return (

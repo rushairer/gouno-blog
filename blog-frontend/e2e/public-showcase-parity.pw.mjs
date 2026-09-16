@@ -128,6 +128,21 @@ async function expectPublicShellParity(showcase, product) {
     height: true,
   });
 
+  const showcaseAdmin = showcase.getByRole("button", {
+    name: "进入内容后台",
+  });
+  const productAdmin = product.getByRole("link", {
+    name: "进入内容后台",
+  });
+  await expect(showcaseAdmin).toBeVisible();
+  await expect(productAdmin).toBeVisible();
+  await expect(productAdmin).toHaveAttribute("href", "/admin");
+  await expectStyleParity(showcaseAdmin, productAdmin);
+  await expectGeometryParity(showcaseAdmin, productAdmin, {
+    width: true,
+    height: true,
+  });
+
   const showcaseMain = showcase.locator("#public-main");
   const productMain = product.locator("#public-main");
   await expectStyleParity(showcaseMain, productMain);
