@@ -328,7 +328,11 @@ export default function MediaLibrary() {
   const compactMediaLabels =
     locale === "zh"
       ? { relative: "相对地址", markdown: "Markdown", alt: "Alt Text" }
-      : { relative: "Relative URL", markdown: "Markdown", alt: "Alt Text" };
+      : {
+          relative: "Relative URL",
+          markdown: "Markdown",
+          alt: "Alt Text",
+        };
 
   const clearFilters = () => {
     setQuery("");
@@ -364,7 +368,11 @@ export default function MediaLibrary() {
         actions={
           can("create", "media") ? (
             <div className="flex flex-wrap items-center justify-end gap-2">
-              <Button type="button" icon={<Sparkles />} onClick={openAiDrawer}>
+              <Button
+                type="button"
+                icon={<Sparkles />}
+                onClick={openAiDrawer}
+              >
                 AI 文生图
               </Button>
               <Button
@@ -514,7 +522,11 @@ export default function MediaLibrary() {
                   >
                     {t("uploadImage")}
                   </Button>
-                  <Button size="small" icon={<Sparkles />} onClick={openAiDrawer}>
+                  <Button
+                    size="small"
+                    icon={<Sparkles />}
+                    onClick={openAiDrawer}
+                  >
                     {locale === "zh" ? "AI 文生图" : "Generate with AI"}
                   </Button>
                 </div>
