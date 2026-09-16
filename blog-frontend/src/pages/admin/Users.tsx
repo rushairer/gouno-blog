@@ -280,7 +280,6 @@ export default function AdminUsers() {
         actions={
           <>
             <Button
-              size="small"
               type="button"
               onClick={() => void load()}
               loading={loading}
@@ -290,7 +289,7 @@ export default function AdminUsers() {
             </Button>
             {targetAdminURL ? (
               <ButtonLink
-                size="small"
+                variant="outline"
                 to={targetAdminURL}
                 target="_blank"
                 rel="noreferrer"
