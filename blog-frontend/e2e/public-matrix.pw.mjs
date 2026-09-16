@@ -16,7 +16,7 @@ const publicRoutes = [
   { path: "/articles/canonical-oauth2", heading: null },
   { path: "/missing/route", heading: null },
   { path: "/account/notifications", heading: "通知" },
-  { path: "/account/settings", heading: "账号设置" },
+  { path: "/account/settings", heading: "账户设置" },
 ];
 
 const viewports = [
