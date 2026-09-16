@@ -1,11 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Bell, CheckCheck, Inbox } from "lucide-react";
+import { Bell, CheckCheck, ExternalLink, Inbox } from "lucide-react";
 import { notificationsApi } from "../api/notifications";
 import type { Notification } from "../api/notifications";
-import { Alert, Button, Card, Empty, Skeleton } from "@gouno/ui/core";
+import {
+  Alert,
+  Button,
+  ButtonLink,
+  Card,
+  Empty,
+  Segmented,
+  Skeleton,
+} from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useI18n } from "../i18n";
+
+type NotificationFilter = "all" | "unread";
 
 function NotificationsLoading() {
   return (
@@ -22,17 +32,41 @@ function NotificationsLoading() {
 }
 
 export default function AccountNotifications() {
-  const { t, formatDateTime } = useI18n();
+  const { t, formatDateTime, locale } = useI18n();
   usePageTitle(t("accountNotifications.title"));
   const [items, setItems] = useState<Notification[]>([]);
+  const [filter, setFilter] = useState<NotificationFilter>("all");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [mutationError, setMutationError] = useState("");
   const [markingAll, setMarkingAll] = useState(false);
 
+  const labels =
+    locale === "zh"
+      ? {
+          all: "全部",
+          unread: "未读",
+          view: "查看",
+          reload: "重新载入",
+          noUnread: "没有未读通知",
+          unreadCount: (count: number) => `${count} 条未读`,
+        }
+      : {
+          all: "All",
+          unread: "Unread",
+          view: "View",
+          reload: "Reload",
+          noUnread: "No unread notifications",
+          unreadCount: (count: number) => `${count} unread`,
+        };
+
   const unreadCount = useMemo(
     () => items.filter((item) => !item.read_at).length,
     [items],
+  );
+  const visibleItems = useMemo(
+    () => (filter === "unread" ? items.filter((item) => !item.read_at) : items),
+    [filter, items],
   );
 
   const load = useCallback(async () => {
@@ -115,7 +149,9 @@ export default function AccountNotifications() {
           title={t("accountNotifications.loadFailed")}
           description={loadError}
           action={
-            <Button onClick={() => void load()}>{t("common.retry")}</Button>
+            <Button size="small" onClick={() => void load()}>
+              {labels.reload}
+            </Button>
           }
           showIcon
         />
@@ -131,54 +167,90 @@ export default function AccountNotifications() {
         />
       ) : null}
 
-      {!loading && !loadError && items.length === 0 ? (
+      {!loading && !loadError ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-4">
+          <Segmented<NotificationFilter>
+            aria-label={locale === "zh" ? "通知筛选" : "Notification filter"}
+            options={[
+              { value: "all", label: labels.all },
+              { value: "unread", label: labels.unread },
+            ]}
+            value={filter}
+            onChange={setFilter}
+          />
+          <span className="text-sm text-muted-foreground">
+            {labels.unreadCount(unreadCount)}
+          </span>
+        </div>
+      ) : null}
+
+      {!loading && !loadError && visibleItems.length === 0 ? (
         <Empty
           icon={<Inbox className="size-5 text-muted-foreground" />}
-          title={t("accountNotifications.empty")}
+          title={
+            filter === "unread"
+              ? labels.noUnread
+              : t("accountNotifications.empty")
+          }
         />
       ) : null}
 
-      {!loading && !loadError && items.length > 0 ? (
+      {!loading && !loadError && visibleItems.length > 0 ? (
         <section className="grid gap-3" aria-label="通知列表">
-          {items.map((item) => (
-            <Card
-              key={item.id}
-              padding="sm"
-              className={
-                item.read_at
-                  ? "gap-3"
-                  : "gap-3 border-primary/30 bg-primary/[0.025]"
-              }
-            >
-              <div className="flex gap-3">
-                <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full border bg-background text-primary">
-                  <Bell className="size-4" aria-hidden="true" />
-                </div>
-                <div className="min-w-0 flex-1 space-y-2">
-                  <strong className="block break-words text-sm">
-                    {item.title || t("accountNotifications.systemAlert")}
-                  </strong>
-                  {item.body ? (
-                    <p className="break-words text-sm leading-6 text-muted-foreground">
-                      {item.body}
-                    </p>
-                  ) : null}
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                    <time>{formatDateTime(item.created_at)}</time>
-                    {!item.read_at ? (
-                      <Button
-                        variant="text"
-                        size="small"
-                        onClick={() => void markRead(item)}
-                      >
-                        {t("accountNotifications.markAsRead")}
-                      </Button>
+          {visibleItems.map((item) => {
+            const itemTitle = item.title || t("accountNotifications.systemAlert");
+            return (
+              <Card
+                key={item.id}
+                padding="sm"
+                className={
+                  item.read_at
+                    ? "gap-3"
+                    : "gap-3 border-primary/30 bg-primary/[0.025]"
+                }
+              >
+                <div className="flex gap-3">
+                  <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full border bg-background text-primary">
+                    <Bell className="size-4" aria-hidden="true" />
+                  </div>
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <strong className="block break-words text-sm">
+                      {itemTitle}
+                    </strong>
+                    {item.body ? (
+                      <p className="break-words text-sm leading-6 text-muted-foreground">
+                        {item.body}
+                      </p>
                     ) : null}
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <time>{formatDateTime(item.created_at)}</time>
+                      {item.href ? (
+                        <ButtonLink
+                          variant="text"
+                          size="small"
+                          to={item.href}
+                          icon={<ExternalLink />}
+                          aria-label={`${labels.view} ${itemTitle}`}
+                          onClick={() => void markRead(item)}
+                        >
+                          {labels.view}
+                        </ButtonLink>
+                      ) : null}
+                      {!item.read_at ? (
+                        <Button
+                          variant="text"
+                          size="small"
+                          onClick={() => void markRead(item)}
+                        >
+                          {t("accountNotifications.markAsRead")}
+                        </Button>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </section>
       ) : null}
     </main>
