@@ -36,8 +36,14 @@ if (!/<ButtonLink\s+[\s\S]{0,240}?variant="outline"[\s\S]{0,240}?打开 GOSSO Ad
 }
 
 const settings = await source("pages/Settings.tsx");
-requireText(settings, "账户设置", "Settings.tsx: canonical Chinese account terminology is 账户设置");
+requireText(settings, 't("accountSettings")', "Settings.tsx: account title must come from the locale resource instead of a locale-specific component literal");
+forbidText(settings, 'locale === "zh" ? "账户设置"', "Settings.tsx: do not bypass canonical locale vocabulary with a component-level Chinese title override");
 requireText(settings, "打开 GOSSO Admin", "Settings.tsx: GOSSO handoff wording must remain consistent");
+
+const zhLocale = JSON.parse(await source("i18n/locales/zh.json"));
+if (zhLocale.accountSettings !== "账户设置") {
+  failures.push("zh.json: canonical Chinese accountSettings terminology must be 账户设置");
+}
 
 const notFound = await source("pages/NotFound.tsx");
 for (const text of ["返回首页", "浏览文章", "搜索内容", "返回上一页"]) {
