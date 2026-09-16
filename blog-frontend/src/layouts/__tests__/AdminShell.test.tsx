@@ -195,7 +195,7 @@ describe("AdminShell navigation utilities", () => {
       </MemoryRouter>,
     );
     expect(
-      screen.getByRole("link", { name: /前往 GOSSO 管理/ }),
+      screen.getByRole("link", { name: /打开 GOSSO Admin/ }),
     ).toHaveAttribute("href", "https://sso.io84.com");
     expect(screen.getByText("成员与权限")).toBeInTheDocument();
   });
