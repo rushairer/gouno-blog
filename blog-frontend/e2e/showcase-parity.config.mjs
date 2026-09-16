@@ -6,6 +6,7 @@ export default defineConfig({
     "showcase-parity.pw.mjs",
     "privileged-access-parity.pw.mjs",
     "public-showcase-parity.pw.mjs",
+    "users-showcase-parity.pw.mjs",
   ],
   fullyParallel: false,
   retries: 1,
