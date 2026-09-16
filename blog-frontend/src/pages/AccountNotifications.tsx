@@ -17,9 +17,9 @@ import { useI18n } from "../i18n";
 
 type NotificationFilter = "all" | "unread";
 
-function NotificationsLoading() {
+function NotificationsLoading({ label }: { label: string }) {
   return (
-    <div role="status" aria-label="通知加载中" className="space-y-5">
+    <div role="status" aria-label={label} className="space-y-5">
       {Array.from({ length: 4 }, (_, index) => (
         <Card key={index} padding="sm">
           <Skeleton className="h-4 w-2/3" />
@@ -48,6 +48,9 @@ export default function AccountNotifications() {
           unread: "未读",
           view: "查看",
           reload: "重新载入",
+          loading: "通知加载中",
+          list: "通知列表",
+          filter: "通知筛选",
           noUnread: "没有未读通知",
           unreadCount: (count: number) => `${count} 条未读`,
         }
@@ -56,6 +59,9 @@ export default function AccountNotifications() {
           unread: "Unread",
           view: "View",
           reload: "Reload",
+          loading: "Loading notifications",
+          list: "Notification list",
+          filter: "Notification filter",
           noUnread: "No unread notifications",
           unreadCount: (count: number) => `${count} unread`,
         };
@@ -140,7 +146,7 @@ export default function AccountNotifications() {
         }
       />
 
-      {loading ? <NotificationsLoading /> : null}
+      {loading ? <NotificationsLoading label={labels.loading} /> : null}
 
       {!loading && loadError ? (
         <Alert
@@ -170,7 +176,7 @@ export default function AccountNotifications() {
       {!loading && !loadError ? (
         <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-4">
           <Segmented<NotificationFilter>
-            aria-label={locale === "zh" ? "通知筛选" : "Notification filter"}
+            aria-label={labels.filter}
             options={[
               { value: "all", label: labels.all },
               { value: "unread", label: labels.unread },
@@ -196,7 +202,7 @@ export default function AccountNotifications() {
       ) : null}
 
       {!loading && !loadError && visibleItems.length > 0 ? (
-        <section className="grid gap-3" aria-label="通知列表">
+        <section className="grid gap-3" aria-label={labels.list}>
           {visibleItems.map((item) => {
             const itemTitle =
               item.title || t("accountNotifications.systemAlert");
