@@ -22,6 +22,18 @@ describe("AccountNotifications", () => {
     vi.restoreAllMocks();
   });
 
+  it("localizes loading accessibility text with the active public locale", () => {
+    vi.spyOn(notificationsApi, "getNotifications").mockReturnValue(
+      new Promise(() => {}),
+    );
+
+    renderNotifications();
+
+    expect(
+      screen.getByRole("status", { name: "Loading notifications" }),
+    ).toBeInTheDocument();
+  });
+
   it("renders the empty public account state", async () => {
     vi.spyOn(notificationsApi, "getNotifications").mockResolvedValue({
       list: [],
@@ -57,6 +69,9 @@ describe("AccountNotifications", () => {
     renderNotifications();
 
     await screen.findByText("New reply");
+    expect(
+      screen.getByRole("region", { name: "Notification list" }),
+    ).toBeInTheDocument();
     await user.click(
       screen.getByRole("button", { name: /Mark as read|标记为已读/i }),
     );
