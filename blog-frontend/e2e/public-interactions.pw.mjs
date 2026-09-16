@@ -284,7 +284,7 @@ test("account settings remains an identity handoff instead of a Blog security fo
   const main = page.locator("#public-main");
 
   await expect(
-    main.getByRole("heading", { level: 1, name: "账号设置" }),
+    main.getByRole("heading", { level: 1, name: "账户设置" }),
   ).toBeVisible();
   await expect(main.getByText(/GOSSO Admin 管理/)).toBeVisible();
   await expect(main.getByRole("textbox")).toHaveCount(0);
