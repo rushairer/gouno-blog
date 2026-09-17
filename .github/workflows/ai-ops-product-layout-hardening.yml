@@ -46,6 +46,7 @@ jobs:
           src/components/agent/DecisionInboxWorkspace.tsx
           src/components/agent/AgentRunRecords.tsx
           src/components/agent/__tests__/WorkflowWorkspaceCanonicalDetail.test.tsx
+          src/components/agent/__tests__/WorkflowWorkspace.test.tsx
           src/components/agent/__tests__/WorkflowInputForm.test.tsx
           src/styles/agent-console.css
           package.json
@@ -60,7 +61,7 @@ jobs:
           PLAYWRIGHT_VERSION=1.55.0
           npm install --no-save --ignore-scripts @playwright/test@${PLAYWRIGHT_VERSION}
           npx playwright install --with-deps chromium
-          git restore package.json package-lock.json
+          git restore package-lock.json
 
       - name: Verify static UI contracts
         working-directory: blog-frontend
@@ -114,6 +115,7 @@ jobs:
           git add \
             blog-frontend/package.json \
             blog-frontend/src/components/agent/__tests__/WorkflowWorkspaceCanonicalDetail.test.tsx \
+            blog-frontend/src/components/agent/__tests__/WorkflowWorkspace.test.tsx \
             blog-frontend/src/components/agent/__tests__/WorkflowInputForm.test.tsx
           git rm .github/scripts/harden-ai-ops-product-layout.mjs .github/workflows/ai-ops-product-layout-hardening.yml
           git commit -m "test(ai-ops): enforce adaptive layout contracts"
