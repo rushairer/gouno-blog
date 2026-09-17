@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@gosso/client": "0.9.3",
-    "@gouno/ui": "0.4.2",
+    "@gouno/ui": "0.4.3",
     "@tailwindcss/vite": "^4.3.3",
     "i18next": "^26.3.6",
     "lucide-react": "^1.21.0",
