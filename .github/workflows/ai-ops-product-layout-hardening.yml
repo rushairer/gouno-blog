@@ -15,7 +15,7 @@ permissions:
 
 concurrency:
   group: one-shot-blog-ai-ops-layout-hardening
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   harden:
