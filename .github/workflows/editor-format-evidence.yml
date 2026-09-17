@@ -9,7 +9,7 @@ on:
       - '.github/workflows/editor-format-evidence.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: editor-format-evidence-${{ github.event.pull_request.number }}
@@ -23,22 +23,21 @@ jobs:
         working-directory: blog-frontend
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.head_ref }}
       - run: node --version && npm --version
       - run: npm ci
       - name: Format migrated editor sources
         run: npm run format
-      - name: Retain formatted editor sources
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: formatted-editor-sources
-          path: |
-            blog-frontend/src/components/editor/editor-ai.ts
-            blog-frontend/src/components/editor/EditorMediaSourceDialog.tsx
-            blog-frontend/src/components/editor/EditorWritingDialog.tsx
-            blog-frontend/src/pages/admin/__tests__/PageEditor.test.tsx
-            blog-frontend/src/pages/admin/__tests__/PostEditor.test.tsx
-            blog-frontend/src/pages/admin/Categories.tsx
-            blog-frontend/src/pages/admin/PageEditor.tsx
-            blog-frontend/src/pages/admin/PostEditor.tsx
-          if-no-files-found: error
-          retention-days: 1
+      - name: Commit formatting when needed
+        working-directory: .
+        run: |
+          if git diff --quiet -- blog-frontend/src; then
+            echo "Editor sources already formatted."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add blog-frontend/src
+          git commit -m "style(editor): apply canonical formatting"
+          git push origin HEAD:${{ github.head_ref }}
