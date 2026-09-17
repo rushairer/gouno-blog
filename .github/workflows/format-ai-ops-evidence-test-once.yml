@@ -1,0 +1,40 @@
+name: Format AI Ops Evidence Test Once
+
+on:
+  push:
+    branches:
+      - fix/ai-ops-showcase-parity-closure
+    paths:
+      - .github/workflows/format-ai-ops-evidence-test-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: fix/ai-ops-showcase-parity-closure
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: blog-frontend/package-lock.json
+      - name: Install dependencies
+        working-directory: blog-frontend
+        run: npm ci
+      - name: Format workflow evidence test
+        working-directory: blog-frontend
+        run: npx prettier@3.8.5 --write src/components/agent/__tests__/WorkflowRunRecords.test.tsx
+      - name: Commit formatting and retire helper
+        run: |
+          set -euo pipefail
+          git config user.name "Aben"
+          git config user.email "5195693+rushairer@users.noreply.github.com"
+          git rm .github/workflows/format-ai-ops-evidence-test-once.yml
+          git add blog-frontend/src/components/agent/__tests__/WorkflowRunRecords.test.tsx
+          git commit -m "style(ai-ops): normalize workflow evidence test"
+          git push origin HEAD:fix/ai-ops-showcase-parity-closure
