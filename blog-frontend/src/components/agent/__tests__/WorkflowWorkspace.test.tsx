@@ -199,7 +199,7 @@ describe("WorkflowWorkspace", () => {
     );
   });
 
-  it("navigates to detail view, shows progress immediately and success feedback after a run completes", async () => {
+  it("keeps the workflow rail visible while showing progress and success feedback", async () => {
     const user = userEvent.setup();
     let complete!: (value: unknown) => void;
     const onRun = vi.fn().mockImplementation(
@@ -221,11 +221,14 @@ describe("WorkflowWorkspace", () => {
       />,
     );
 
-    // Click workflow name to enter detail view
-    await user.click(screen.getByRole("button", { name: /Daily digest/ }));
+    const selectedWorkflow = screen.getByRole("button", {
+      name: "打开 Workflow：Daily digest",
+    });
+    expect(selectedWorkflow).toHaveAttribute("aria-pressed", "true");
     expect(
-      screen.getByRole("button", { name: "返回工作流列表" }),
+      screen.getByRole("searchbox", { name: "搜索 Workflow" }),
     ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "返回工作流列表" })).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "运行" }));
     expect(screen.getByRole("button", { name: "运行中…" })).toBeDisabled();
@@ -257,9 +260,7 @@ describe("WorkflowWorkspace", () => {
     );
     expect(screen.getByRole("button", { name: "运行" })).toBeEnabled();
     expect(onRun).toHaveBeenCalledWith(7, false, {});
-
-    // Can navigate back to list view
-    await user.click(screen.getByRole("button", { name: "返回工作流列表" }));
+    expect(selectedWorkflow).toHaveAttribute("aria-pressed", "true");
     expect(
       screen.getByRole("searchbox", { name: "搜索 Workflow" }),
     ).toBeInTheDocument();
