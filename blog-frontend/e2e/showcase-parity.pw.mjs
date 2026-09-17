@@ -388,3 +388,94 @@ for (const theme of ["light", "dark"]) {
     });
   }
 }
+
+
+test("AI Operations top-level panels, Recent Runs and Run Center match Showcase", async ({
+  browser,
+}, testInfo) => {
+  const { context, showcase, product, unknown } = await openPair(
+    browser,
+    "blog-admin-ai-operations",
+    "/admin/ai-ops",
+    "light",
+    { width: 1440, height: 1000 },
+  );
+
+  for (const tab of ["概览", "待我处理", "自动化", "运行中心"]) {
+    await showcase.getByRole("tab", { name: new RegExp(tab) }).click();
+    await product.getByRole("tab", { name: new RegExp(tab) }).click();
+
+    const showcaseLead = showcase.locator('[data-pattern="tab-panel-lead"]');
+    const productLead = product.locator('[data-pattern="tab-panel-lead"]');
+    await expect(showcaseLead).toHaveCount(1);
+    await expect(productLead).toHaveCount(1);
+    expect(await styleFingerprint(productLead)).toEqual(
+      await styleFingerprint(showcaseLead),
+    );
+
+    const showcaseTitle = showcaseLead.locator("h2");
+    const productTitle = productLead.locator("h2");
+    await expect(showcaseTitle).not.toHaveText("");
+    await expect(productTitle).not.toHaveText("");
+  }
+
+  await showcase.getByRole("tab", { name: /自动化/ }).click();
+  await product.getByRole("tab", { name: /自动化/ }).click();
+
+  const showcaseRecent = showcase.getByRole("region", { name: "最近运行" });
+  const productRecent = product.getByRole("region", { name: "最近运行" });
+  expect(await styleFingerprint(productRecent)).toEqual(
+    await styleFingerprint(showcaseRecent),
+  );
+
+  const showcaseRecentRow = showcase.getByRole("button", {
+    name: /打开最近 Run #/,
+  }).first();
+  const productRecentRow = product.getByRole("link", {
+    name: /查看最近 Run #/,
+  }).first();
+  const [showcaseRecentBox, productRecentBox] = await Promise.all([
+    showcaseRecentRow.boundingBox(),
+    productRecentRow.boundingBox(),
+  ]);
+  expect(productRecentBox?.width).toBe(showcaseRecentBox?.width);
+  expect(productRecentBox?.height).toBe(showcaseRecentBox?.height);
+
+  await showcase.getByRole("tab", { name: /运行中心/ }).click();
+  await product.getByRole("tab", { name: /运行中心/ }).click();
+
+  const showcaseMasterDetail = showcase.locator(
+    '[data-slot="ops-master-detail"]',
+  ).first();
+  const productMasterDetail = product.locator(
+    '[data-slot="ops-master-detail"]',
+  ).first();
+  expect(await styleFingerprint(productMasterDetail)).toEqual(
+    await styleFingerprint(showcaseMasterDetail),
+  );
+
+  const showcaseRail = showcase.locator('[data-slot="ops-rail"]').first();
+  const productRail = product.locator('[data-slot="ops-rail"]').first();
+  const [showcaseRailBox, productRailBox] = await Promise.all([
+    showcaseRail.boundingBox(),
+    productRail.boundingBox(),
+  ]);
+  expect(productRailBox?.width).toBe(showcaseRailBox?.width);
+
+  await showcase.getByRole("button", { name: /Agent 运行/ }).click();
+  await product.getByRole("button", { name: /Agent 运行/ }).click();
+
+  const showcaseAgentRail = showcase.locator('[data-slot="ops-rail"]').first();
+  const productAgentRail = product.locator('[data-slot="ops-rail"]').first();
+  const [showcaseAgentRailBox, productAgentRailBox] = await Promise.all([
+    showcaseAgentRail.boundingBox(),
+    productAgentRail.boundingBox(),
+  ]);
+  expect(productAgentRailBox?.width).toBe(showcaseAgentRailBox?.width);
+
+  await expectNoHorizontalOverflow(showcase);
+  await expectNoHorizontalOverflow(product);
+  expect(unknown).toEqual([]);
+  await pairScreenshot(showcase, product, "ai-operations-parity", testInfo);
+  await context.close();
+});
