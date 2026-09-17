@@ -175,7 +175,7 @@ describe("WorkflowRunRecords", () => {
       expect(screen.getByText("newest_event")).toBeInTheDocument(),
     );
     const labels = Array.from(
-      document.querySelectorAll("[aria-label="运行事件"] summary strong"),
+      document.querySelectorAll('[aria-label="运行事件"] summary strong'),
     ).map((item) => item.textContent);
     expect(labels).toEqual(["newest_event", "older_event"]);
   });
