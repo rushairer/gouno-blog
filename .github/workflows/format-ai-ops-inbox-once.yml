@@ -1,0 +1,56 @@
+name: Format AI Operations inbox reverse migration once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/format-ai-ops-inbox-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  format-once:
+    if: "${{ github.event.head_commit.message == 'ci: format ai operations inbox reverse migration once' }}"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: blog-frontend/package-lock.json
+
+      - name: Format AI Operations inbox sources
+        working-directory: blog-frontend
+        run: |
+          set -euo pipefail
+          npm ci
+          npx prettier --write \
+            src/components/agent/DecisionInboxWorkspace.tsx \
+            src/components/agent/InboxWorkspace.tsx \
+            src/components/agent/__tests__/DecisionInboxWorkspace.test.tsx \
+            src/pages/admin/AIOperations.tsx
+
+      - name: Commit formatted sources and retire helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/format-ai-ops-inbox-once.yml
+          git add blog-frontend/src/components/agent/DecisionInboxWorkspace.tsx \
+                  blog-frontend/src/components/agent/InboxWorkspace.tsx \
+                  blog-frontend/src/components/agent/__tests__/DecisionInboxWorkspace.test.tsx \
+                  blog-frontend/src/pages/admin/AIOperations.tsx
+          git diff --cached --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "style(ai-ops): format decision workbench reverse migration"
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
