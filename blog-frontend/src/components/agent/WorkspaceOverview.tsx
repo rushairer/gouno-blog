@@ -35,8 +35,10 @@ interface WorkspaceOverviewProps {
 
 function runStatusLabel(status: string, zh: boolean) {
   if (status === "failed") return zh ? "失败" : "Failed";
-  if (status === "waiting_for_user") return zh ? "等待用户" : "Waiting for user";
-  if (status === "awaiting_approval") return zh ? "等待审批" : "Awaiting approval";
+  if (status === "waiting_for_user")
+    return zh ? "等待用户" : "Waiting for user";
+  if (status === "awaiting_approval")
+    return zh ? "等待审批" : "Awaiting approval";
   if (status === "running") return zh ? "运行中" : "Running";
   if (status === "queued") return zh ? "已排队" : "Queued";
   if (status === "cancelled") return zh ? "已取消" : "Cancelled";
@@ -113,9 +115,7 @@ export function WorkspaceOverview({
   );
   const attentionRuns = workflowRuns
     .filter((run) =>
-      ["failed", "waiting_for_user", "awaiting_approval"].includes(
-        run.status,
-      ),
+      ["failed", "waiting_for_user", "awaiting_approval"].includes(run.status),
     )
     .slice(0, 4);
   const metricsByWorkflow = new Map(
@@ -132,7 +132,10 @@ export function WorkspaceOverview({
   }
 
   return (
-    <div className="flex flex-col gap-6" aria-label={zh ? "AI 运营概览" : "AI operations overview"}>
+    <div
+      className="flex flex-col gap-6"
+      aria-label={zh ? "AI 运营概览" : "AI operations overview"}
+    >
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-3xl">
           <Heading level={2}>
@@ -192,7 +195,9 @@ export function WorkspaceOverview({
           {
             label: "Token",
             value: tokenUsage.toLocaleString(),
-            detail: zh ? "当前已加载 Workflow Run 合计" : "Loaded Workflow Runs total",
+            detail: zh
+              ? "当前已加载 Workflow Run 合计"
+              : "Loaded Workflow Runs total",
           },
         ]}
       />
@@ -234,7 +239,9 @@ export function WorkspaceOverview({
                     meta={`${formatDateTime(run.started_at || run.created_at)} · v${workflow?.current_version ?? "—"}`}
                     summary={
                       run.error_message ||
-                      (zh ? "查看本次执行证据。" : "Inspect this run's execution evidence.")
+                      (zh
+                        ? "查看本次执行证据。"
+                        : "Inspect this run's execution evidence.")
                     }
                     signals={
                       <>
@@ -256,11 +263,7 @@ export function WorkspaceOverview({
             ) : (
               <div className="p-8">
                 <Empty
-                  title={
-                    zh
-                      ? "暂无需要关注的运行"
-                      : "No runs need attention"
-                  }
+                  title={zh ? "暂无需要关注的运行" : "No runs need attention"}
                 />
               </div>
             )}
@@ -306,7 +309,9 @@ export function WorkspaceOverview({
                     summary={workflow.description}
                     signals={
                       <>
-                        <OperationsMeta>v{workflow.current_version}</OperationsMeta>
+                        <OperationsMeta>
+                          v{workflow.current_version}
+                        </OperationsMeta>
                         <OperationsMeta>
                           {metric
                             ? zh
@@ -318,7 +323,8 @@ export function WorkspaceOverview({
                         </OperationsMeta>
                         {latestRun ? (
                           <OperationsMeta>
-                            {zh ? "最近" : "Latest"} {runStatusLabel(latestRun.status, zh)}
+                            {zh ? "最近" : "Latest"}{" "}
+                            {runStatusLabel(latestRun.status, zh)}
                           </OperationsMeta>
                         ) : null}
                       </>
@@ -334,9 +340,7 @@ export function WorkspaceOverview({
               })
             ) : (
               <div className="p-8">
-                <Empty
-                  title={zh ? "还没有 Workflow" : "No Workflows yet"}
-                />
+                <Empty title={zh ? "还没有 Workflow" : "No Workflows yet"} />
               </div>
             )}
           </div>

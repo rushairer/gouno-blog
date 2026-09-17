@@ -65,10 +65,14 @@ export function OperationsObjectRow({
             {status ? <span className="shrink-0 pt-px">{status}</span> : null}
           </span>
           {meta ? (
-            <span className="block text-xs leading-4 text-muted-foreground">{meta}</span>
+            <span className="block text-xs leading-4 text-muted-foreground">
+              {meta}
+            </span>
           ) : null}
           {summary ? (
-            <span className="block text-sm leading-5 text-foreground/80">{summary}</span>
+            <span className="block text-sm leading-5 text-foreground/80">
+              {summary}
+            </span>
           ) : null}
           {signals ? (
             <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
