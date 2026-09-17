@@ -50,12 +50,39 @@ test("Post editor binds canonical AI review, media, outline, history and save wo
   await expect(page.getByRole("combobox", { name: "分类" })).toHaveValue("1");
   await expect(page.getByLabel("标签")).toHaveValue("Parity, Browser, AI Reviewed");
 
+  await page.getByRole("button", { name: "AI 写作" }).click();
+  await page.getByRole("menuitem", { name: "继续写作" }).click();
+  await page.getByRole("button", { name: "生成 / 执行" }).click();
+  await expect(page.getByText("AI Generated Section", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "追加到末尾" }).click();
+  await expect(page.getByLabel("文章正文 Markdown")).toContainText("AI Generated Section");
+
   await page.getByRole("button", { name: "选择文章封面" }).click();
   await page.getByRole("menuitem", { name: "从媒体库选择" }).click();
   await page.getByRole("button", { name: /browser-acceptance.svg/i }).click();
   await page.getByRole("button", { name: "使用所选" }).click();
   await expect(page.getByLabel("封面 URL")).toHaveValue("/browser-acceptance.svg");
   await expect(page.getByLabel("替代文本")).toHaveValue("Browser Acceptance Media");
+
+  await page.getByRole("button", { name: "选择文章封面" }).click();
+  await page.getByRole("menuitem", { name: "上传图片" }).click();
+  await page.getByLabel("上传图片文件").setInputFiles({
+    name: "acceptance-cover.svg",
+    mimeType: "image/svg+xml",
+    buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"/>'),
+  });
+  await expect(page.getByText("上传完成")).toBeVisible();
+  await page.getByRole("button", { name: "使用已上传图片" }).click();
+  await expect(page.getByLabel("封面 URL")).toHaveValue("/browser-acceptance.svg");
+
+  await page.getByRole("button", { name: "选择文章封面" }).click();
+  await page.getByRole("menuitem", { name: "AI 生成封面" }).click();
+  await page.getByLabel("生图提示词").fill("Browser acceptance AI cover");
+  await page.getByRole("button", { name: "生成单张图片" }).click();
+  await expect(page.getByText("生成结果")).toBeVisible();
+  await expect(page.getByLabel("封面 URL")).toHaveValue("/browser-acceptance.svg");
+  await page.getByRole("button", { name: "使用此封面" }).click();
+  await expect(page.getByLabel("封面 URL")).toHaveValue("/browser-acceptance.svg");
 
   const outlineItem = page.getByRole("button", { name: "跳转到 Browser Acceptance" });
   await expect(outlineItem).toBeVisible();
