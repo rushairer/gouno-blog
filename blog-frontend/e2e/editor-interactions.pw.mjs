@@ -47,7 +47,9 @@ test("Post editor binds canonical AI review, media, outline, history and save wo
   await page.getByRole("button", { name: "AI 推荐分类与标签" }).click();
   await expect(page.getByRole("checkbox", { name: "应用 分类 建议" })).toBeChecked();
   await page.getByRole("button", { name: "应用 2 项建议" }).click();
-  await expect(page.getByRole("combobox", { name: "分类" })).toHaveValue("1");
+  await expect(page.getByRole("combobox", { name: "分类" })).toContainText(
+    "Browser Acceptance Category",
+  );
   await expect(page.getByLabel("标签")).toHaveValue("Parity, Browser, AI Reviewed");
 
   await page.getByRole("button", { name: "AI 写作" }).click();
