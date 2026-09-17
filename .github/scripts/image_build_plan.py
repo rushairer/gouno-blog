@@ -31,6 +31,11 @@ IMAGE_CONFIG = {
     },
 }
 
+IMAGE_PIPELINE_FILES = {
+    ".github/workflows/publish-images.yml",
+    ".github/scripts/image_build_plan.py",
+}
+
 FRONTEND_BUILD_ROOT_FILES = {
     ".npmrc",
     "Dockerfile",
@@ -114,6 +119,9 @@ def select_images(paths: Iterable[str], force_all: bool = False) -> list[str]:
     for raw_path in paths:
         path = raw_path.strip()
         if not path:
+            continue
+        if path in IMAGE_PIPELINE_FILES:
+            selected.update(IMAGE_ORDER)
             continue
         if _backend_impacts_image(path):
             selected.add("backend")
