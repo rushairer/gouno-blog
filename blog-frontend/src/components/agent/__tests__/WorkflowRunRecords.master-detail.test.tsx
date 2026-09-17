@@ -58,7 +58,9 @@ describe("WorkflowRunRecords canonical master detail", () => {
   beforeEach(() => {
     window.history.replaceState(null, "", "/admin/ai-ops?tab=records");
     vi.mocked(apiFetch).mockReset();
-    vi.mocked(apiFetch).mockImplementation(async () =>\n      Response.json({ data: [] }),\n    );
+    vi.mocked(apiFetch).mockImplementation(async () =>
+      Response.json({ data: [] }),
+    );
   });
 
   it("keeps the Run rail visible while switching execution evidence", async () => {
