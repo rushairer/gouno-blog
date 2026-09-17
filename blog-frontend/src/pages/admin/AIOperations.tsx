@@ -454,6 +454,10 @@ function AgentConsoleContent() {
             candidateSets={candidateSets}
             mediaCandidates={mediaCandidates}
             workflows={workflows}
+            workflowRuns={workflowRuns}
+            workflowMetrics={workflowMetrics}
+            editorialTasks={editorialTasks}
+            formatDateTime={formatDateTime}
             onNavigate={selectTab}
           />
         ) : null}
