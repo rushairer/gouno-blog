@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Edit2, Plus, Trash2 } from "lucide-react";
+import { Edit2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { siteApi } from "../../api/site";
 import { agentApi } from "../../api/agent";
 import {
@@ -25,7 +25,7 @@ import {
   Textarea,
 } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
-import { AISuggestionPicker, BulkActionBar } from "@gouno/ui/patterns";
+import { BulkActionBar } from "@gouno/ui/patterns";
 
 import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
@@ -120,7 +120,6 @@ export default function Categories() {
   const [aiOpen, setAIOpen] = useState(false);
   const [slugLoading, setSlugLoading] = useState(false);
   const [slugCandidates, setSlugCandidates] = useState<string[]>([]);
-  const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!allowed) return;
@@ -142,14 +141,12 @@ export default function Categories() {
   const closeEditor = () => {
     setEditor(null);
     setSlugCandidates([]);
-    setSelectedSlug(null);
     setSlugLoading(false);
   };
 
   const openCreate = () => {
     setDraft(emptyCategoryDraft);
     setSlugCandidates([]);
-    setSelectedSlug(null);
     setEditor({ mode: "create" });
   };
 
@@ -161,7 +158,6 @@ export default function Categories() {
       sort_order: category.sort_order || 0,
     });
     setSlugCandidates([]);
-    setSelectedSlug(null);
     setEditor({ mode: "edit", item: category });
   };
 
@@ -182,7 +178,6 @@ export default function Categories() {
         next.unshift(response.metadata.slug);
       }
       setSlugCandidates(next);
-      setSelectedSlug(next[0] ?? null);
       if (next.length === 0) {
         notify("未能生成 Slug 候选，请手动填写。", "error");
       } else {
@@ -202,14 +197,7 @@ export default function Categories() {
     const clean = slugValue.trim().toLowerCase().replace(/\s+/g, "-");
     setDraft((current) => ({ ...current, slug: clean }));
     setSlugCandidates([]);
-    setSelectedSlug(null);
     notify(`已应用 Slug 标识：“${clean}”`, "success");
-  };
-
-  const regenerateCategorySlug = () => {
-    setSlugCandidates([]);
-    setSelectedSlug(null);
-    void requestCategorySlug();
   };
 
   const saveCategory = async () => {
@@ -583,13 +571,12 @@ export default function Categories() {
               required
               autoFocus
               value={draft.name}
-              onChange={(event) => {
+              onChange={(event) =>
                 setDraft((current) => ({
                   ...current,
                   name: event.target.value,
-                }));
-                setSlugCandidates([]);
-              }}
+                }))
+              }
             />
           </FormField>
           <FormField
@@ -603,38 +590,35 @@ export default function Categories() {
                   aria-label="Slug 标识"
                   required
                   value={draft.slug}
-                  onChange={(event) => {
+                  onChange={(event) =>
                     setDraft((current) => ({
                       ...current,
                       slug: event.target.value,
-                    }));
-                    setSlugCandidates([]);
-                  }}
+                    }))
+                  }
                 />
                 <Button
                   size="small"
-                  variant="text"
-                  aria-label="生成 Slug 建议"
-                  title="生成 Slug 建议"
+                  icon={<Sparkles />}
                   disabled={slugLoading}
                   onClick={() => void requestCategorySlug()}
                 >
-                  {slugLoading ? "生成中…" : "生成建议"}
+                  {slugLoading ? "生成中…" : "AI 生成"}
                 </Button>
               </div>
               {slugCandidates.length > 0 ? (
-                <AISuggestionPicker
-                  heading="Slug 建议"
-                  options={slugCandidates.map((value) => ({
-                    value,
-                    monospace: true,
-                  }))}
-                  value={selectedSlug}
-                  onValueChange={setSelectedSlug}
-                  onApply={applySlug}
-                  onRegenerate={regenerateCategorySlug}
-                  onDismiss={() => setSlugCandidates([])}
-                />
+                <div className="flex flex-wrap gap-2" aria-label="Slug 候选">
+                  {slugCandidates.map((candidate) => (
+                    <Button
+                      key={candidate}
+                      size="small"
+                      variant="text"
+                      onClick={() => applySlug(candidate)}
+                    >
+                      {candidate}
+                    </Button>
+                  ))}
+                </div>
               ) : null}
             </div>
           </FormField>

@@ -48,8 +48,7 @@ function staticAttribute(node, attributeName) {
   );
   if (!attribute || !ts.isJsxAttribute(attribute) || !attribute.initializer)
     return "";
-  if (ts.isStringLiteral(attribute.initializer))
-    return attribute.initializer.text;
+  if (ts.isStringLiteral(attribute.initializer)) return attribute.initializer.text;
   if (
     ts.isJsxExpression(attribute.initializer) &&
     attribute.initializer.expression &&
@@ -91,8 +90,7 @@ function assertCollectionStack(name, source) {
   function visit(node) {
     if (ts.isReturnStatement(node) && node.expression) {
       let expression = node.expression;
-      while (ts.isParenthesizedExpression(expression))
-        expression = expression.expression;
+      while (ts.isParenthesizedExpression(expression)) expression = expression.expression;
       if (isCanonicalAdminStack(expression)) {
         stackCount += 1;
         const first = firstMeaningfulChildIdentity(expression);
@@ -108,9 +106,7 @@ function assertCollectionStack(name, source) {
 
   visit(file);
   if (stackCount === 0) {
-    failures.push(
-      `${name}: route render must expose a canonical flex flex-col gap-6 Admin page stack`,
-    );
+    failures.push(`${name}: route render must expose a canonical flex flex-col gap-6 Admin page stack`);
   }
 }
 
@@ -125,10 +121,7 @@ for (const name of corePages) {
     );
   }
   if (collectionPages.has(name)) {
-    if (
-      !source.includes("<PageHeader") &&
-      !source.includes("const pageHeader")
-    ) {
+    if (!source.includes("<PageHeader") && !source.includes("const pageHeader")) {
       failures.push(`${name}: route-level PageHeader is required`);
     }
     assertCollectionStack(name, source);
@@ -155,21 +148,8 @@ for (const name of ["Dashboard.tsx", "Pages.tsx", "Comments.tsx"]) {
   }
 }
 
-const categories = await readFile(
-  path.join(adminRoot, "Categories.tsx"),
-  "utf8",
-);
-if (!categories.includes("AISuggestionPicker")) {
-  failures.push(
-    "Categories.tsx: Slug AI must use canonical AISuggestionPicker",
-  );
-}
-
 const dashboard = await readFile(path.join(adminRoot, "Dashboard.tsx"), "utf8");
-if (
-  !dashboard.includes("<IconButtonLink") ||
-  !dashboard.includes('variant="ghost"')
-) {
+if (!dashboard.includes("<IconButtonLink") || !dashboard.includes('variant="ghost"')) {
   failures.push(
     "Dashboard.tsx: dense Top Posts row actions must retain the Showcase ghost IconButtonLink grammar",
   );
