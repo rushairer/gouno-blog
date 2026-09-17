@@ -1,3 +1,4 @@
+// Compares drift-prone AI Operations composition markers with current gouno-ui/main.
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
