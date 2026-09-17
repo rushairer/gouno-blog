@@ -10,7 +10,7 @@ import type {
   WorkflowMetric,
   WorkflowRun,
 } from "../../types/agent";
-import { Button, Empty, Tag, Text } from "@gouno/ui/core";
+import { Button, Empty, Tag } from "@gouno/ui/core";
 import {
   OperationsMeta,
   OperationsObjectRow,
