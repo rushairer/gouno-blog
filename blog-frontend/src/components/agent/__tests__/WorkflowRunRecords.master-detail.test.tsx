@@ -76,6 +76,8 @@ describe("WorkflowRunRecords canonical master detail", () => {
     const latestButton = within(rail).getByRole("button", { name: /Run #7/ });
     const failedButton = within(rail).getByRole("button", { name: /Run #6/ });
 
+    await waitFor(() => expect(latestButton).not.toBeDisabled());
+    await user.click(latestButton);
     await waitFor(() =>
       expect(
         screen.getByRole("heading", { level: 2, name: "Run #7 · AI 每日资讯" }),
