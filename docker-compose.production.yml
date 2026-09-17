@@ -55,7 +55,8 @@ services:
 
   gosso:
     <<: *hardened
-    image: ${GOSSO_IMAGE:?set GOSSO_IMAGE to version@sha256:digest}
+    image: ${GOSSO_IMAGE:-ghcr.io/rushairer/gosso:main}
+    pull_policy: always
     # Podman needs a writable mountpoint before it can bind file secrets into a
     # read-only root filesystem.
     tmpfs: [/tmp, /run/secrets]
@@ -100,7 +101,8 @@ services:
 
   gosso-admin-seed:
     <<: *hardened
-    image: ${GOSSO_ADMIN_SEED_IMAGE:?set GOSSO_ADMIN_SEED_IMAGE to version@sha256:digest}
+    image: ${GOSSO_ADMIN_SEED_IMAGE:-ghcr.io/rushairer/gosso-admin-seed:main}
+    pull_policy: always
     restart: 'no'
     tmpfs: [/tmp, /run/secrets]
     environment:
@@ -117,7 +119,8 @@ services:
 
   blog-seed:
     <<: *hardened
-    image: ${GOUNO_BLOG_SEED_IMAGE:?set GOUNO_BLOG_SEED_IMAGE to version@sha256:digest}
+    image: ${GOUNO_BLOG_SEED_IMAGE:-ghcr.io/rushairer/gouno-blog-seed:main}
+    pull_policy: always
     restart: 'no'
     tmpfs: [/tmp, /run/secrets]
     environment:
@@ -148,7 +151,8 @@ services:
       gosso-admin-seed: {condition: service_completed_successfully}
 
   blog-media-init:
-    image: ${GOUNO_BLOG_BACKEND_IMAGE:?set GOUNO_BLOG_BACKEND_IMAGE to version@sha256:digest}
+    image: ${GOUNO_BLOG_BACKEND_IMAGE:-ghcr.io/rushairer/gouno-blog-backend:main}
+    pull_policy: always
     user: "0:0"
     entrypoint: ["/bin/sh", "-c"]
     command: ["chown -R 10001:10001 /app/data/media"]
@@ -162,7 +166,8 @@ services:
 
   blog-backend:
     <<: *hardened
-    image: ${GOUNO_BLOG_BACKEND_IMAGE:?set GOUNO_BLOG_BACKEND_IMAGE to version@sha256:digest}
+    image: ${GOUNO_BLOG_BACKEND_IMAGE:-ghcr.io/rushairer/gouno-blog-backend:main}
+    pull_policy: always
     tmpfs: [/tmp, /run/secrets]
     environment:
       GOUNO_DATABASE_DRIVERS_POSTGRES_DSN_FILE: /run/secrets/blog_database_dsn
@@ -227,14 +232,16 @@ services:
 
   blog-frontend:
     <<: *hardened
-    image: ${GOUNO_BLOG_FRONTEND_IMAGE:?set GOUNO_BLOG_FRONTEND_IMAGE to version@sha256:digest}
+    image: ${GOUNO_BLOG_FRONTEND_IMAGE:-ghcr.io/rushairer/gouno-blog-frontend:main}
+    pull_policy: always
     tmpfs: [/tmp:mode=1777, /var/cache/nginx:mode=1777, /var/run:mode=1777]
     depends_on:
       blog-backend: {condition: service_healthy}
 
   gosso-admin-frontend:
     <<: *hardened
-    image: ${GOSSO_ADMIN_FRONTEND_IMAGE:?set GOSSO_ADMIN_FRONTEND_IMAGE to version@sha256:digest}
+    image: ${GOSSO_ADMIN_FRONTEND_IMAGE:-ghcr.io/rushairer/gosso-admin-frontend:main}
+    pull_policy: always
     tmpfs: [/tmp:mode=1777, /var/cache/nginx:mode=1777, /var/run:mode=1777]
     depends_on:
       gosso: {condition: service_started}

@@ -112,5 +112,5 @@ for (const path of ["blog-frontend/security-headers.conf", "blog-backend/middlew
 
 console.log("Authentication deployment contract is intact.");
 
-// Also enforce production image digest pinning.
+// Also enforce the production image channel policy.
 await import("./check-production-digest.mjs");

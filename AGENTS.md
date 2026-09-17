@@ -28,7 +28,9 @@ This document defines the **immutable architectural rules, security baselines, a
 2. **Local Source Development (`docker-compose.source.yml`)**:
    - Uses `:local` tag and `build:` contexts for live local code development.
 3. **Production Deployment (`docker-compose.production.yml`)**:
-   - Requires explicit image parameters (Release tags like `:v1.4.0` or audited immutable digests).
+   - First-party application images default to the floating `:main` channel and use `pull_policy: always`.
+   - Use a fixed release tag or audited immutable digest only when the user explicitly requests a pinned deployment.
+   - Third-party infrastructure images remain pinned to audited immutable digests.
    - Production secrets must be provided via Docker Secret files; raw env var secrets are rejected.
 
 ---

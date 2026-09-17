@@ -77,9 +77,10 @@ Git SSH URL 或浮动版本。当前验证版本以各消费者 `package.json` �
 容易漂移的版本号。消费者依赖更新必须晚于 SDK 稳定版发布，并在无 SSH 凭据的干净目录中
 通过 `npm ci`。
 
-生产镜像同时必须固定 version 与 digest；SDK 的 breaking change 必须按 SemVer 提供迁移
-说明。Blog、GOSSO Admin 与 `@gosso/client` 的跨仓身份契约变更必须同时执行各自 quality
-checks 与 Blog authentication deployment contract。
+生产的一方应用镜像默认跟随 `main`，只有用户明确指定时才固定 release tag 或 digest；
+第三方基础镜像仍固定 digest。SDK 的 breaking change 必须按 SemVer 提供迁移说明。
+Blog、GOSSO Admin 与 `@gosso/client` 的跨仓身份契约变更必须同时执行各自 quality checks
+与 Blog authentication deployment contract。
 
 ## 兼容策略
 

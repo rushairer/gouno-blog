@@ -1,10 +1,9 @@
 /**
- * Production image digest enforcement script.
+ * Production image channel enforcement script.
  *
- * Verifies that all image references in production compose files use
- * immutable digest references (e.g. @sha256:abc123...) rather than
- * floating tags (e.g. :latest, :v1.2.3). This prevents accidental
- * deployment of an older or tampered image.
+ * First-party application images follow main unless an operator explicitly
+ * overrides their Compose variables. Third-party infrastructure images stay
+ * pinned to immutable digests.
  *
  * Usage: node scripts/check-production-digest.mjs
  */
@@ -14,9 +13,8 @@ const COMPOSE_FILES = [
   "docker-compose.production.yml",
 ];
 
-// Capture the complete YAML scalar, including Compose interpolation messages
-// that contain spaces (for example `${GOSSO_IMAGE:?set ...@sha256:digest}`).
 const IMAGE_LINE_RE = /^\s*image:\s*(.+?)\s*$/gm;
+const FIRST_PARTY_IMAGE_RE = /ghcr\.io\/rushairer\/(?:gosso|gosso-admin-seed|gosso-admin-frontend|gouno-blog-seed|gouno-blog-backend|gouno-blog-frontend):/;
 
 const failures = [];
 const checked = [];
@@ -35,9 +33,15 @@ for (const file of COMPOSE_FILES) {
     const imageRef = match[1].replace(/\s+#.*$/, "").trim();
     checked.push(`${file}: ${imageRef}`);
 
-    if (!imageRef.includes("@sha256:")) {
+    if (FIRST_PARTY_IMAGE_RE.test(imageRef)) {
+      if (!imageRef.includes(":main}")) {
+        failures.push(
+          `${file}: first-party image "${imageRef}" must default to :main`,
+        );
+      }
+    } else if (!imageRef.includes("@sha256:")) {
       failures.push(
-        `${file}: image "${imageRef}" must use a digest reference (@sha256:...), not a floating tag`,
+        `${file}: third-party image "${imageRef}" must use a digest reference (@sha256:...)`,
       );
     }
   }
@@ -48,14 +52,14 @@ if (checked.length === 0) {
 }
 
 if (failures.length > 0) {
-  console.error("FAIL: Production image digest enforcement");
+  console.error("FAIL: Production image channel enforcement");
   for (const f of failures) {
     console.error(`  - ${f}`);
   }
   process.exit(1);
 }
 
-console.log(`OK: All ${checked.length} production image references use digest pinning.`);
+console.log(`OK: All ${checked.length} production image references follow the production channel policy.`);
 for (const c of checked) {
   console.log(`  ✓ ${c}`);
 }

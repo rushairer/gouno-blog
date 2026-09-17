@@ -113,7 +113,7 @@ docker compose up -d
 
 自建服务镜像（`ghcr.io/rushairer/*`）默认使用浮动的 `main` 标签，并设置了 `pull_policy: always`：各仓库推送到 `main` 后，镜像会以 `main`、`sha-<commit>` 标签发布，发布 `v*` 时再追加版本标签。本地开发只需 `docker compose up -d` 即会拉取最新 `main` 镜像，无需手改摘要或额外 `pull`。第三方基础镜像（PostgreSQL、Redis、Mailpit、Caddy）仍固定不可变摘要以保证可复现。
 
-生产编排使用完整的不可变镜像引用；以 `vX.Y.Z@sha256:<digest>` 覆盖对应变量：
+生产编排中的自建服务镜像也默认使用 `main`，并设置 `pull_policy: always`，部署时会主动拉取最新镜像。只有明确需要固定版本时，才以 release tag 或 `vX.Y.Z@sha256:<digest>` 覆盖对应变量：
 
 ```bash
 export GOUNO_BLOG_BACKEND_IMAGE=ghcr.io/rushairer/gouno-blog-backend:vX.Y.Z@sha256:...
@@ -239,10 +239,11 @@ BLOG_AGENT_MASTER_KEY_VERSION=2
 
 ## 开发与生产部署边界
 
-根目录 `docker-compose.yml` 仅用于本地开发，其中的固定凭据和浮动
-`main` 镜像不得用于生产。生产部署使用 `docker-compose.production.yml`，
-所有应用与第三方镜像都必须以 `version@sha256:digest` 提供，所有密码、
-签名密钥、TOTP key、pepper、数据库 DSN 和 Agent key 都必须显式设置。
+根目录 `docker-compose.yml` 仅用于本地开发，其中的固定凭据不得用于生产。
+生产部署使用 `docker-compose.production.yml`；自建应用镜像默认跟随 `main`，
+除非部署时明确通过镜像变量固定 release tag 或 digest。第三方基础镜像继续
+使用 `version@sha256:digest`，所有密码、签名密钥、TOTP key、pepper、
+数据库 DSN 和 Agent key 都必须显式设置。
 
 生产身份链路有两个不可省略的部署契约：GOSSO 的
 `GOUNO_AUTH_LOGIN_URL` 固定为 `/login`。Blog 不提供 `/login`

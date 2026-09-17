@@ -7,6 +7,7 @@ this file. The format follows Keep a Changelog and Semantic Versioning.
 
 ### Changed
 
+- Make first-party production application images follow the floating `main` channel with always-pull semantics by default; fixed release tags or digests remain explicit deployment overrides, while third-party infrastructure images stay digest-pinned.
 - Upgrade the frontend's confidential-BFF client dependency from `@gosso/client` 0.9.2 to the registry-published 0.9.3 release.
 - Align the bundled Gosso deployment contract with the final 1.6 security baseline: keep only the explicit Docker private back-channel subnet, advance the production Gosso image example to v1.6.1, and gate confidential-BFF RFC 7009 revocation against the published v1.6.1 artifact.
 - Standardize Modal structure and design system alignment: move modal action buttons out of form/body content into unified sticky `footer` prop across all modals (Step-Up MFA, Tags, Users, Post Reports, Article Preview), and maintain stable close button geometry anchored to the title bar regardless of subtitle presence.
