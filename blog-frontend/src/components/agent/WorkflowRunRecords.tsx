@@ -1,4 +1,4 @@
-import { Ban, Eye, Trash2, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { operationsApi } from "../../api/operations";
 import type { ArticleImagePreview } from "../../api/operations";
@@ -10,17 +10,7 @@ import type {
   WorkflowRun,
   WorkflowStepRun,
 } from "../../types/agent";
-import {
-  Alert,
-  Button,
-  Card,
-  CardContent,
-  Empty,
-  IconButton,
-  Modal,
-  Select,
-  Text,
-} from "@gouno/ui/core";
+import { Alert, Button, Empty, Modal, Select, Text } from "@gouno/ui/core";
 import { ArticlePreviewModal } from "./ArticlePreviewModal";
 import { StatusPill } from "./StatusPill";
 import { WorkflowRunDetail } from "./WorkflowRunDetail";

@@ -32,7 +32,6 @@ import {
   Button,
   ButtonLink,
   Card,
-  CardContent,
   Checkbox,
   CheckboxField,
   DropdownMenu,
@@ -907,12 +906,21 @@ export function WorkflowWorkspace({
                                 : (metric?.runs || 0) + " runs",
                           },
                           {
-                            label: locale === "zh" ? "累计运行" : "Total runs",
-                            value: metric?.runs || 0,
-                            detail: latestRun
-                              ? (locale === "zh" ? "最近 " : "Latest ") +
-                                statusLabel(latestRun.status, locale)
+                            label:
+                              locale === "zh"
+                                ? "最近正式运行"
+                                : "Latest live run",
+                            value: latestRun
+                              ? statusLabel(latestRun.status, locale)
                               : labels.never,
+                            detail: latestDryRun
+                              ? (locale === "zh"
+                                  ? "最近试运行："
+                                  : "Latest dry-run: ") +
+                                statusLabel(latestDryRun.status, locale)
+                              : locale === "zh"
+                                ? (metric?.runs || 0) + " 次累计运行"
+                                : (metric?.runs || 0) + " total runs",
                           },
                           {
                             label: locale === "zh" ? "失败次数" : "Failures",

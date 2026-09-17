@@ -470,7 +470,7 @@ function AgentConsoleContent() {
             workflowRuns={workflowRuns}
             workflowMetrics={workflowMetrics}
             editorialTasks={editorialTasks}
-            formatDateTime={formatDateTime}
+            formatDateTime={(value) => (value ? formatDateTime(value) : "—")}
             onNavigate={selectTab}
           />
         ) : null}
@@ -504,7 +504,7 @@ function AgentConsoleContent() {
             mediaCandidates={mediaCandidates}
             editorialTasks={editorialTasks}
             onRefresh={refresh}
-            formatDateTime={formatDateTime}
+            formatDateTime={(value) => (value ? formatDateTime(value) : "—")}
           />
         ) : null}
 

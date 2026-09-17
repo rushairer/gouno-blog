@@ -1,6 +1,5 @@
 import {
   Check,
-  CircleAlert,
   Image,
   Lightbulb,
   ListTodo,
@@ -33,7 +32,6 @@ import {
 } from "@gouno/ui/core";
 import { JsonPreview } from "./AgentRunRecords";
 import {
-  OperationsMeta,
   OperationsObjectRow,
   OperationsRegionHeading,
 } from "./OperationsPatterns";
