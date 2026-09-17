@@ -43,3 +43,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "refactor(ai-ops): reverse migrate run center master detail"
           git push origin HEAD:main
+
+# Retry after repairing the one-shot migration generator.
