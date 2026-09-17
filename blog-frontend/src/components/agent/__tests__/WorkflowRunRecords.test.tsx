@@ -556,9 +556,7 @@ describe("WorkflowRunRecords", () => {
     );
 
     await user.click(screen.getByRole("button", { name: /AI 每日资讯/ }));
-    await user.click(
-      screen.getByRole("combobox", { name: "图片位置 15" }),
-    );
+    await user.click(screen.getByRole("combobox", { name: "图片位置 15" }));
     await user.click(screen.getByRole("option", { name: "正文插图" }));
     await user.type(
       screen.getByPlaceholderText("锚点文字（小标题或关键句）"),
