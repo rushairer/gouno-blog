@@ -36,11 +36,11 @@ import { InboxWorkspace } from "../../components/agent/InboxWorkspace";
 import { RecordsWorkspace } from "../../components/agent/AgentRunRecords";
 import { WorkflowWorkspace } from "../../components/agent/WorkflowWorkspace";
 import { WorkflowRunRecords } from "../../components/agent/WorkflowRunRecords";
+import { OperationsPanelLead } from "../../components/agent/OperationsPatterns";
 import {
   Button,
   Card,
   Modal,
-  Segmented,
   Skeleton,
   Tabs,
   Tag,
@@ -134,7 +134,13 @@ function AgentConsoleContent() {
     const requestedID = Number(
       new URLSearchParams(window.location.search).get("run"),
     );
-    if (!requestedID) return;
+    if (!requestedID) {
+      if (runs.length > 0) {
+        inspectedAgentRunFromURL.current = true;
+        void inspectRun(runs[0]);
+      }
+      return;
+    }
     const requested = runs.find((run) => run.id === requestedID);
     if (!requested) {
       if (runs.length > 0) {
@@ -154,6 +160,16 @@ function AgentConsoleContent() {
     setTab(nextTab);
     const url = new URL(window.location.href);
     url.searchParams.set("tab", nextTab);
+    window.history.replaceState(null, "", url);
+  };
+
+  const selectRecordType = (next: "workflow" | "agent") => {
+    setRecordType(next);
+    setSelectedRun(null);
+    inspectedAgentRunFromURL.current = false;
+    const url = new URL(window.location.href);
+    url.searchParams.set("record", next);
+    url.searchParams.delete("run");
     window.history.replaceState(null, "", url);
   };
 
@@ -509,26 +525,39 @@ function AgentConsoleContent() {
         ) : null}
 
         {tab === "records" ? (
-          <div className="flex flex-col gap-4">
-            <Segmented<"workflow" | "agent">
-              aria-label={locale === "zh" ? "运行中心类型" : "Run center type"}
-              value={recordType}
-              onChange={(next) => {
-                setRecordType(next);
-                const url = new URL(window.location.href);
-                url.searchParams.set("record", next);
-                window.history.replaceState(null, "", url);
-              }}
-              options={[
-                {
-                  value: "workflow",
-                  label: locale === "zh" ? "Workflow 任务" : "Workflow tasks",
-                },
-                {
-                  value: "agent",
-                  label: locale === "zh" ? "Agent 运行" : "Agent runs",
-                },
-              ]}
+          <div className="flex flex-col gap-5">
+            <OperationsPanelLead
+              title={locale === "zh" ? "运行证据中心" : "Run evidence center"}
+              description={
+                locale === "zh"
+                  ? "从一次 Run 追溯执行步骤、资源边界、人工交互、媒体候选、Tool Call 与持久化事件；这里是证据中心，不是 Workflow 配置页。"
+                  : "Trace execution steps, resource boundaries, human interactions, media candidates, Tool Calls, and persisted events from a single Run. This is an evidence center, not a Workflow configuration page."
+              }
+              actions={
+                <div
+                  className="flex flex-wrap gap-2"
+                  aria-label={
+                    locale === "zh" ? "运行中心类型" : "Run center type"
+                  }
+                >
+                  <Button
+                    variant={recordType === "workflow" ? "solid" : "outline"}
+                    color={recordType === "workflow" ? "primary" : undefined}
+                    onClick={() => selectRecordType("workflow")}
+                    icon={<GitBranch />}
+                  >
+                    {locale === "zh" ? "Workflow 任务" : "Workflow tasks"}
+                  </Button>
+                  <Button
+                    variant={recordType === "agent" ? "solid" : "outline"}
+                    color={recordType === "agent" ? "primary" : undefined}
+                    onClick={() => selectRecordType("agent")}
+                    icon={<Clock3 />}
+                  >
+                    {locale === "zh" ? "Agent 运行" : "Agent runs"}
+                  </Button>
+                </div>
+              }
             />
             {recordType === "agent" ? (
               <RecordsWorkspace
@@ -537,7 +566,6 @@ function AgentConsoleContent() {
                 agents={agents}
                 selectedRun={selectedRun}
                 onInspect={(run) => void inspectRun(run)}
-                onClearInspect={() => setSelectedRun(null)}
                 onDelete={setDeleteRunTarget}
                 formatDateTime={formatDateTime}
               />
