@@ -71,7 +71,7 @@ export interface WorkflowRunDetailProps {
     React.SetStateAction<Record<number, string>>
   >;
   imagePreviews: Record<number, ArticleImagePreview>;
-  onBack: () => void;
+  onBack?: () => void;
   onCancelRun: () => Promise<void>;
   onDeleteRun: () => Promise<void>;
   onResolveInteraction: (
@@ -210,19 +210,24 @@ export function WorkflowRunDetail({
 
   return (
     <div className="workflow-run-detail-view flex min-w-0 flex-col gap-6">
-      <div>
-        <Button
-          variant="ghost"
-          size="small"
-          type="button"
-          onClick={onBack}
-          icon={<ArrowLeft />}
-        >
-          {zh ? "返回运行记录列表" : "Back to run records"}
-        </Button>
-      </div>
+      {onBack ? (
+        <div>
+          <Button
+            variant="ghost"
+            size="small"
+            type="button"
+            onClick={onBack}
+            icon={<ArrowLeft />}
+          >
+            {zh ? "返回运行记录列表" : "Back to run records"}
+          </Button>
+        </div>
+      ) : null}
 
-      <section className="flex flex-col gap-4" aria-label={zh ? "Run 摘要" : "Run summary"}>
+      <section
+        className="flex flex-col gap-4"
+        aria-label={zh ? "Run 摘要" : "Run summary"}
+      >
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -292,7 +297,10 @@ export function WorkflowRunDetail({
                 : zh
                   ? "仍在运行"
                   : "Still running",
-              detail: duration(selected.run.started_at, selected.run.finished_at),
+              detail: duration(
+                selected.run.started_at,
+                selected.run.finished_at,
+              ),
             },
             {
               label: "Token",
@@ -457,7 +465,9 @@ export function WorkflowRunDetail({
             <div className="grid gap-6 p-6 md:grid-cols-2">
               <section>
                 <div className="mb-3 flex items-center justify-between gap-3">
-                  <strong className="text-sm">{zh ? "资源" : "Resources"}</strong>
+                  <strong className="text-sm">
+                    {zh ? "资源" : "Resources"}
+                  </strong>
                   <Tag>{selected.resources.length}</Tag>
                 </div>
                 <ResourceEvidence resources={selected.resources} zh={zh} />
@@ -595,7 +605,9 @@ export function WorkflowRunDetail({
             ) : (
               <div className="p-6">
                 <Text size="sm" tone="muted">
-                  {zh ? "本次运行没有事件记录。" : "No persisted events for this run."}
+                  {zh
+                    ? "本次运行没有事件记录。"
+                    : "No persisted events for this run."}
                 </Text>
               </div>
             )}
@@ -658,7 +670,10 @@ export function WorkflowRunDetail({
             </Text>
             <div className="mt-2">
               {selected.run.output !== undefined ? (
-                <WorkflowRunOutput output={selected.run.output} locale={locale} />
+                <WorkflowRunOutput
+                  output={selected.run.output}
+                  locale={locale}
+                />
               ) : (
                 <Text size="sm" tone="muted">
                   {zh ? "暂无最终输出。" : "No final output yet."}
