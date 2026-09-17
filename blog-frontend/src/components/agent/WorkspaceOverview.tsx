@@ -6,6 +6,7 @@ import type {
   MediaCandidate,
   OperationalSuggestion,
   Workflow,
+  WorkflowInteractionTask,
   WorkflowMetric,
   WorkflowRun,
 } from "../../types/agent";
@@ -22,6 +23,7 @@ export type ConsoleTab = "overview" | "inbox" | "automation" | "records";
 interface WorkspaceOverviewProps {
   locale: "en" | "zh";
   approvals: AgentApproval[];
+  interactions?: WorkflowInteractionTask[];
   suggestions: OperationalSuggestion[];
   candidateSets: ContentCandidateSet[];
   mediaCandidates: MediaCandidate[];
@@ -65,6 +67,7 @@ function totalTokens(run: WorkflowRun) {
 export function WorkspaceOverview({
   locale,
   approvals,
+  interactions = [],
   suggestions,
   candidateSets,
   mediaCandidates,
@@ -76,6 +79,9 @@ export function WorkspaceOverview({
   onNavigate,
 }: WorkspaceOverviewProps) {
   const zh = locale === "zh";
+  const pendingInteractions = interactions.filter(
+    (item) => item.status === "pending",
+  ).length;
   const actionableApprovals = approvals.filter(
     (item) => item.status === "pending" || item.status === "failed",
   ).length;
@@ -85,15 +91,16 @@ export function WorkspaceOverview({
   const pendingCandidates = candidateSets.filter(
     (item) => item.status === "pending",
   ).length;
-  const actionableMedia = mediaCandidates.filter((item) =>
-    ["brief_ready", "ready_to_generate", "failed"].includes(
-      item.generation_status,
-    ),
+  const actionableMedia = mediaCandidates.filter(
+    (item) =>
+      !item.workflow_run_id &&
+      ["brief_ready", "ready_to_generate"].includes(item.generation_status),
   ).length;
   const openEditorialTasks = editorialTasks.filter(
     (item) => item.status === "open",
   ).length;
   const decisionCount =
+    pendingInteractions +
     actionableApprovals +
     actionableSuggestions +
     pendingCandidates +
