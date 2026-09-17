@@ -167,7 +167,7 @@ const composition = String.raw`  return (
                           <StatusPill status={run.status} locale={locale} />
                         </span>
                         <span className="text-xs leading-4 text-muted-foreground">
-                          {names.get(run.workflow_id) || `Workflow #${run.workflow_id}`} · v{run.workflow_version_id}
+                          {names.get(run.workflow_id) || "Workflow #" + run.workflow_id} · v{run.workflow_version_id}
                         </span>
                         <span className="text-sm leading-5 text-foreground/80">
                           {run.error_message ||
@@ -196,7 +196,7 @@ const composition = String.raw`  return (
                 locale={locale}
                 workflowName={
                   names.get(selected.run.workflow_id) ||
-                  `Workflow #${selected.run.workflow_id}`
+                  "Workflow #" + selected.run.workflow_id
                 }
                 formatDateTime={formatDateTime}
                 cancelling={cancelling}
