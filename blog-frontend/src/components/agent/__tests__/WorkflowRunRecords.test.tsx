@@ -271,9 +271,7 @@ describe("WorkflowRunRecords", () => {
         screen.getByRole("button", { name: "重试 sources" }),
       ).toBeInTheDocument(),
     );
-    await user.click(
-      screen.getByRole("button", { name: "重试 sources" }),
-    );
+    await user.click(screen.getByRole("button", { name: "重试 sources" }));
     await waitFor(() =>
       expect(apiFetch).toHaveBeenCalledWith(
         "/api/admin/ai-workflow-runs/6/retry",
