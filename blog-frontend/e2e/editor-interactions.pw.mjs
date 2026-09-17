@@ -36,7 +36,9 @@ test("Post editor binds canonical AI review, media, outline, history and save wo
   await page.getByRole("button", { name: "AI 根据正文生成摘要" }).click();
   await expect(page.getByRole("radio", { name: "Browser AI Summary 1" })).toBeChecked();
   await page.getByRole("button", { name: "使用所选" }).click();
-  await expect(page.getByLabel("摘要")).toHaveValue("Browser AI Summary 1");
+  await expect(
+    page.getByRole("textbox", { name: "摘要", exact: true }),
+  ).toHaveValue("Browser AI Summary 1");
 
   await page.getByRole("button", { name: "AI 优化路径与 SEO" }).click();
   await expect(page.getByRole("checkbox", { name: "应用 SEO 描述 建议" })).toBeChecked();
@@ -52,7 +54,9 @@ test("Post editor binds canonical AI review, media, outline, history and save wo
   await expect(page.getByRole("combobox", { name: "分类" })).toContainText(
     "Browser Acceptance Category",
   );
-  await expect(page.getByLabel("标签")).toHaveValue("Parity, Browser, AI Reviewed");
+  await expect(
+    page.getByRole("textbox", { name: "标签", exact: true }),
+  ).toHaveValue("Parity, Browser, AI Reviewed");
 
   await page.getByRole("button", { name: "AI 写作" }).click();
   await page.getByRole("menuitem", { name: "继续写作" }).click();
