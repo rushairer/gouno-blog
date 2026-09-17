@@ -34,6 +34,10 @@ IMAGE_CONFIG = {
 IMAGE_PIPELINE_FILES = {
     ".github/workflows/publish-images.yml",
     ".github/scripts/image_build_plan.py",
+    # This guard controls whether automation-written runtime commits reach the
+    # registry. Treat changes to it as release-control-plane changes and force
+    # a conservative republish of all deployable images.
+    ".github/scripts/main_writer_publish_contract.py",
 }
 
 FRONTEND_BUILD_ROOT_FILES = {
