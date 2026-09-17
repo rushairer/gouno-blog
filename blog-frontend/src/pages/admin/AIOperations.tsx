@@ -165,10 +165,18 @@ function AgentConsoleContent() {
         return [] as WorkflowRun[];
       }
     };
+    const loadInteractions = async () => {
+      try {
+        return await agentApi.getInteractions();
+      } catch {
+        return [] as WorkflowInteractionTask[];
+      }
+    };
     const [
       agentData,
       runData,
       approvalData,
+      interactionData,
       toolData,
       workflowData,
       workflowRunData,
@@ -181,6 +189,7 @@ function AgentConsoleContent() {
       agentApi.getAgents(),
       agentApi.getAgentRuns(100),
       agentApi.getAgentApprovals("pending", 100),
+      loadInteractions(),
       agentApi.getToolCatalog(),
       workflowApi.getWorkflows(),
       loadWorkflowRuns(),
@@ -193,6 +202,7 @@ function AgentConsoleContent() {
     setAgents(agentData);
     setRuns(runData || []);
     setApprovals(approvalData || []);
+    setInteractions(interactionData);
     setTools(toolData);
     setWorkflows(workflowData);
     setWorkflowRuns(workflowRunData);
@@ -208,14 +218,6 @@ function AgentConsoleContent() {
         null,
     );
   }, []);
-
-  useEffect(() => {
-    if (tab !== "inbox") return;
-    void agentApi
-      .getInteractions()
-      .then(setInteractions)
-      .catch(() => setInteractions([]));
-  }, [tab]);
 
   useEffect(() => {
     let ignore = false;
@@ -244,9 +246,19 @@ function AgentConsoleContent() {
     setNotice("");
   }, [notice, notify]);
 
-  const pendingCount = approvals.filter(
-    (item) => item.status === "pending",
-  ).length;
+  const pendingCount =
+    interactions.filter((item) => item.status === "pending").length +
+    approvals.filter(
+      (item) => item.status === "pending" || item.status === "failed",
+    ).length +
+    suggestions.filter((item) => item.status === "new").length +
+    candidateSets.filter((item) => item.status === "pending").length +
+    mediaCandidates.filter(
+      (item) =>
+        !item.workflow_run_id &&
+        ["brief_ready", "ready_to_generate"].includes(item.generation_status),
+    ).length +
+    editorialTasks.filter((item) => item.status === "open").length;
 
   const refresh = async () => {
     setError("");
@@ -450,6 +462,7 @@ function AgentConsoleContent() {
           <WorkspaceOverview
             locale={locale}
             approvals={approvals}
+            interactions={interactions}
             suggestions={suggestions}
             candidateSets={candidateSets}
             mediaCandidates={mediaCandidates}
