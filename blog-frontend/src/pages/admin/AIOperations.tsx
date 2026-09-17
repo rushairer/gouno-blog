@@ -491,6 +491,7 @@ function AgentConsoleContent() {
             mediaCandidates={mediaCandidates}
             editorialTasks={editorialTasks}
             onRefresh={refresh}
+            formatDateTime={formatDateTime}
           />
         ) : null}
 
