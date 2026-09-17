@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { installApiFixtures, setTheme } from "./mock-api.mjs";
+import { installAiFixtures } from "./ai-mock-api.mjs";
 
 const showcaseOrigin = "http://127.0.0.1:4174";
 
@@ -62,6 +63,29 @@ async function openPair(
     waitUntil: "networkidle",
   });
   return { context, showcase, product, unknown };
+}
+
+async function openAiPair(
+  browser,
+  fixtureId,
+  productPath,
+  theme = "light",
+  viewport = { width: 1440, height: 900 },
+) {
+  const context = await browser.newContext({ viewport });
+  const showcase = await context.newPage();
+  const product = await context.newPage();
+  await setTheme(showcase, theme);
+  await setTheme(product, theme);
+  const { unknown, unexpectedWrites } = await installAiFixtures(product);
+  await showcase.goto(
+    `${showcaseOrigin}/?embedded=1&workspace=blog-admin&brand=blog-admin#${fixtureId}`,
+    { waitUntil: "networkidle" },
+  );
+  await product.goto(`http://127.0.0.1:4173${productPath}`, {
+    waitUntil: "networkidle",
+  });
+  return { context, showcase, product, unknown, unexpectedWrites };
 }
 
 async function expectNoHorizontalOverflow(page) {
@@ -399,13 +423,14 @@ for (const theme of ["light", "dark"]) {
 test("AI Operations top-level panels, Recent Runs and Run Center match Showcase", async ({
   browser,
 }, testInfo) => {
-  const { context, showcase, product, unknown } = await openPair(
-    browser,
-    "blog-admin-ai-operations",
-    "/admin/ai-ops",
-    "light",
-    { width: 1440, height: 1000 },
-  );
+  const { context, showcase, product, unknown, unexpectedWrites } =
+    await openAiPair(
+      browser,
+      "blog-admin-ai-operations",
+      "/admin/ai-ops",
+      "light",
+      { width: 1440, height: 1000 },
+    );
 
   for (const tab of ["概览", "待我处理", "自动化", "运行中心"]) {
     await showcase.getByRole("tab", { name: new RegExp(tab) }).click();
@@ -486,6 +511,7 @@ test("AI Operations top-level panels, Recent Runs and Run Center match Showcase"
   await expectNoHorizontalOverflow(showcase);
   await expectNoHorizontalOverflow(product);
   expect(unknown).toEqual([]);
+  expect(unexpectedWrites).toEqual([]);
   await pairScreenshot(showcase, product, "ai-operations-parity", testInfo);
   await context.close();
 });
