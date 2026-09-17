@@ -89,9 +89,9 @@ export function AgentForm({
 
   const hasUpgrade = Boolean(
     latestSkill &&
-      selectedSkill &&
-      latestSkill.version_id !== selectedSkill.version_id &&
-      latestSkill.version > selectedSkill.version,
+    selectedSkill &&
+    latestSkill.version_id !== selectedSkill.version_id &&
+    latestSkill.version > selectedSkill.version,
   );
 
   const applySkill = (versionID: number) => {
@@ -143,7 +143,11 @@ export function AgentForm({
     <FormLayout onSubmit={submit}>
       <div className="flex flex-col gap-5">
         <AISettingsEditorHeader
-          title={initial ? `${labels.editAgent}：${initial.name}` : labels.createAgent}
+          title={
+            initial
+              ? `${labels.editAgent}：${initial.name}`
+              : labels.createAgent
+          }
           description={
             locale === "zh"
               ? "Agent 绑定稳定的模型与 Skill Version；运行计划、预算和限制覆盖属于运行治理，不复制 Skill 的安全边界。"
@@ -291,7 +295,8 @@ export function AgentForm({
                         } else if (isOlder) {
                           suffix = locale === "zh" ? " (旧版本)" : " (Legacy)";
                         } else if (isCurrent) {
-                          suffix = locale === "zh" ? " (当前绑定)" : " (Current)";
+                          suffix =
+                            locale === "zh" ? " (当前绑定)" : " (Current)";
                         }
                         return (
                           <option

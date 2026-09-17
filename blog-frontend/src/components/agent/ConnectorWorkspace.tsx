@@ -405,7 +405,9 @@ export function ConnectorWorkspace({
                             ? "已停用"
                             : "Disabled"}
                       </Tag>
-                      <Tag>{profile.sandbox ? "Sandbox" : "Read-only OAuth"}</Tag>
+                      <Tag>
+                        {profile.sandbox ? "Sandbox" : "Read-only OAuth"}
+                      </Tag>
                     </div>
                     <Text size="xs" tone="muted" className="mt-2">
                       {profile.kind} ·{" "}

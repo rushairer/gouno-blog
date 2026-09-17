@@ -91,12 +91,7 @@ describe("AI Settings canonical editors", () => {
 
   it("keeps Skill governance limits inside the execution boundary", () => {
     render(
-      <SkillForm
-        tools={[]}
-        locale="zh"
-        onSave={vi.fn()}
-        onCancel={vi.fn()}
-      />,
+      <SkillForm tools={[]} locale="zh" onSave={vi.fn()} onCancel={vi.fn()} />,
     );
 
     expect(screen.getByText("能力定义")).toBeInTheDocument();
@@ -123,9 +118,7 @@ describe("AI Settings canonical editors", () => {
   });
 
   it("groups Embedding configuration into index semantics and connectivity", () => {
-    render(
-      <EmbeddingForm locale="zh" onSave={vi.fn()} onCancel={vi.fn()} />,
-    );
+    render(<EmbeddingForm locale="zh" onSave={vi.fn()} onCancel={vi.fn()} />);
 
     expect(screen.getByText("索引模型")).toBeInTheDocument();
     expect(screen.getByText("连接与凭据")).toBeInTheDocument();

@@ -193,7 +193,9 @@ export function EmbeddingForm({
           </AISettingsEditorSection>
 
           <AISettingsEditorSection
-            title={locale === "zh" ? "连接与凭据" : "Connection and credentials"}
+            title={
+              locale === "zh" ? "连接与凭据" : "Connection and credentials"
+            }
             description={
               locale === "zh"
                 ? "端点、API Key 与超时只负责连接行为，不改变索引模型本身的语义配置。"
@@ -215,7 +217,9 @@ export function EmbeddingForm({
                   }
                 />
               </Field>
-              <Field label={`${labels.key}${initial ? ` · ${labels.keep}` : ""}`}>
+              <Field
+                label={`${labels.key}${initial ? ` · ${labels.keep}` : ""}`}
+              >
                 <Input
                   className="font-mono"
                   type="password"

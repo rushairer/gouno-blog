@@ -346,10 +346,7 @@ export function SkillForm({
                                   : item.description}
                               </Text>
                             </span>
-                            <RiskPill
-                              risk={item.risk_level}
-                              locale={locale}
-                            />
+                            <RiskPill risk={item.risk_level} locale={locale} />
                           </label>
                         ))}
                       </div>
@@ -399,9 +396,7 @@ export function SkillForm({
                 </Field>
                 <Field
                   label={
-                    locale === "zh"
-                      ? "默认日运行上限"
-                      : "Default daily limit"
+                    locale === "zh" ? "默认日运行上限" : "Default daily limit"
                   }
                 >
                   <Input

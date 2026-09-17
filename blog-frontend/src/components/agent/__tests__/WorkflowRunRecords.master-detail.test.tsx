@@ -82,7 +82,9 @@ describe("WorkflowRunRecords canonical master detail", () => {
       ).toBeInTheDocument(),
     );
     expect(latestButton).toHaveAttribute("aria-pressed", "true");
-    expect(screen.queryByRole("button", { name: "返回运行记录列表" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "返回运行记录列表" }),
+    ).toBeNull();
 
     await user.click(failedButton);
 
@@ -91,7 +93,9 @@ describe("WorkflowRunRecords canonical master detail", () => {
         screen.getByRole("heading", { level: 2, name: "Run #6 · AI 每日资讯" }),
       ).toBeInTheDocument(),
     );
-    expect(screen.getByRole("complementary", { name: "Workflow Runs" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("complementary", { name: "Workflow Runs" }),
+    ).toBeInTheDocument();
     expect(failedButton).toHaveAttribute("aria-pressed", "true");
     expect(latestButton).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByRole("alert")).toHaveTextContent("Provider timeout");

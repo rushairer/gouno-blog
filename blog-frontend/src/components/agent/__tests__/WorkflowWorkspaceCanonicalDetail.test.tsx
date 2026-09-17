@@ -1,7 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import type { Workflow, WorkflowMetric, WorkflowRun } from "../../../types/agent";
+import type {
+  Workflow,
+  WorkflowMetric,
+  WorkflowRun,
+} from "../../../types/agent";
 import { WorkflowWorkspace } from "../WorkflowWorkspace";
 
 const workflow: Workflow = {
@@ -16,8 +20,20 @@ const workflow: Workflow = {
   version_id: 14,
   input_schema: { type: "object", additionalProperties: false },
   steps: [
-    { id: "discover", name: "发现资讯", type: "resource_query", resource_type: "post", filter: {}, max_items: 20 },
-    { id: "result", name: "输出摘要", type: "output", output_pointer: "/steps/discover" },
+    {
+      id: "discover",
+      name: "发现资讯",
+      type: "resource_query",
+      resource_type: "post",
+      filter: {},
+      max_items: 20,
+    },
+    {
+      id: "result",
+      name: "输出摘要",
+      type: "output",
+      output_pointer: "/steps/discover",
+    },
   ],
   scope_policy: { mode: "strict", discovery_tools: ["content.find_related"] },
   resource_query_empty_policy: "succeed",
@@ -63,7 +79,9 @@ describe("AI Operations Workflow canonical operational detail", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("list", { name: "Workflow 列表" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("list", { name: "Workflow 列表" }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "打开 Workflow：Daily digest" }),
     ).toHaveAttribute("aria-pressed", "true");
@@ -72,8 +90,12 @@ describe("AI Operations Workflow canonical operational detail", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("成功率")).toBeInTheDocument();
     expect(screen.getByText("83%")).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "最近运行" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "查看最近 Run #21" })).toHaveAttribute(
+    expect(
+      screen.getByRole("region", { name: "最近运行" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "查看最近 Run #21" }),
+    ).toHaveAttribute(
       "href",
       "/admin/ai-ops?tab=records&record=workflow&workflow=7&run=21",
     );
