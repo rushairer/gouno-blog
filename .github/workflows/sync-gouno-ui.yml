@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: update-gouno-ui
@@ -105,6 +106,7 @@ jobs:
         run: docker build -f blog-frontend/Dockerfile blog-frontend
 
       - name: Commit registry dependency update
+        id: commit
         shell: bash
         env:
           GOUNO_UI_VERSION: ${{ steps.ui.outputs.version }}
@@ -113,6 +115,7 @@ jobs:
           git add blog-frontend/package.json blog-frontend/package-lock.json
           if git diff --cached --quiet; then
             echo "@gouno/ui registry dependency is already current."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           git config user.name "github-actions[bot]"
@@ -121,3 +124,10 @@ jobs:
           git fetch origin main
           git rebase origin/main
           git push origin HEAD:main
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Publish updated frontend image
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run publish-images.yml --ref main -f image=frontend
