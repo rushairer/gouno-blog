@@ -1,7 +1,12 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import type { Workflow, WorkflowMetric, WorkflowRun } from "../../../types/agent";
+import type {
+  Workflow,
+  WorkflowInteractionTask,
+  WorkflowMetric,
+  WorkflowRun,
+} from "../../../types/agent";
 import { WorkspaceOverview } from "../WorkspaceOverview";
 
 const workflow: Workflow = {
@@ -38,6 +43,18 @@ const failedRun: WorkflowRun = {
   created_at: "2026-09-17T08:30:00Z",
 };
 
+const interaction: WorkflowInteractionTask = {
+  id: 31,
+  workflow_run_id: 901,
+  workflow_step_id: "choose-cover",
+  interaction_type: "choice",
+  schema: {},
+  payload: { title: "选择文章封面方向" },
+  options: ["极简架构图", "科技插画"],
+  status: "pending",
+  created_at: "2026-09-17T08:31:00Z",
+};
+
 const metric: WorkflowMetric = {
   workflow_id: workflow.id,
   name: workflow.name,
@@ -47,7 +64,7 @@ const metric: WorkflowMetric = {
 };
 
 describe("AI Operations canonical overview", () => {
-  it("binds Showcase hierarchy to real Workflow run and metric data", async () => {
+  it("binds Showcase hierarchy to real Workflow run, handoff and metric data", async () => {
     const user = userEvent.setup();
     const onNavigate = vi.fn();
 
@@ -55,6 +72,7 @@ describe("AI Operations canonical overview", () => {
       <WorkspaceOverview
         locale="zh"
         approvals={[]}
+        interactions={[interaction]}
         suggestions={[]}
         candidateSets={[]}
         mediaCandidates={[]}
@@ -74,6 +92,9 @@ describe("AI Operations canonical overview", () => {
     expect(screen.getByText("provider timeout")).toBeInTheDocument();
     expect(screen.getByText("12 次运行 · 2 次失败")).toBeInTheDocument();
     expect(screen.getByText("1,540")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "待我处理 1" }),
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "进入运行中心" }));
     expect(onNavigate).toHaveBeenCalledWith("records");
