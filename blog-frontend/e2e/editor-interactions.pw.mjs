@@ -94,7 +94,7 @@ test("Post editor binds canonical AI review, media, outline, history and save wo
 
   const outlineItem = page.getByRole("button", { name: "跳转到 Browser Acceptance" });
   await expect(outlineItem).toBeVisible();
-  const outlineTextStyle = await outlineItem.locator("span").first().evaluate((element) => {
+  const outlineTextStyle = await outlineItem.locator("span.truncate").evaluate((element) => {
     const style = getComputedStyle(element);
     return {
       whiteSpace: style.whiteSpace,
