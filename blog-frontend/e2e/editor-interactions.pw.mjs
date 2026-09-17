@@ -112,7 +112,11 @@ test("Post editor binds canonical AI review, media, outline, history and save wo
   await page.getByRole("button", { name: "取消" }).click();
 
   await page.getByRole("button", { name: "更新文章" }).click();
-  await expect(page.locator('[data-slot="notification"]')).toContainText("文章已成功发布");
+  await expect(
+    page.locator('[data-slot="notification"]').filter({
+      hasText: "文章已成功发布",
+    }),
+  ).toBeVisible();
   await expectNoHorizontalOverflow(page);
   expect(unknown).toEqual([]);
 });
