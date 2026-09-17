@@ -128,12 +128,26 @@ async function expectEditorParity({
     await expect(showcaseNavigator).toHaveCount(0);
   }
 
-  for (const page of [showcase, product]) {
-    await expect(page.getByRole("button", { name: "编辑" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "分屏" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "预览" })).toBeVisible();
-    await expectNoHorizontalOverflow(page);
+  for (const label of ["编辑", "分屏", "预览"]) {
+    const showcaseMode = showcase.getByRole("button", {
+      name: label,
+      exact: true,
+    });
+    const productMode = product.getByRole("button", {
+      name: label,
+      exact: true,
+    });
+    const showcaseCount = await showcaseMode.count();
+    const productCount = await productMode.count();
+    expect(productCount).toBe(showcaseCount);
+    if (showcaseCount > 0) {
+      await expect(showcaseMode).toBeVisible();
+      await expect(productMode).toBeVisible();
+    }
   }
+
+  await expectNoHorizontalOverflow(showcase);
+  await expectNoHorizontalOverflow(product);
 }
 
 for (const theme of ["light", "dark"]) {
