@@ -775,7 +775,8 @@ describe("WorkflowRunRecords", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "删除记录" }));
+    await user.click(screen.getByRole("button", { name: /AI 每日资讯/ }));
+    await user.click(await screen.findByRole("button", { name: "删除记录" }));
     const dialog = screen.getByRole("dialog", {
       name: "删除 Workflow 运行记录",
     });
