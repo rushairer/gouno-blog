@@ -77,6 +77,9 @@ async function openAiPair(
   const product = await context.newPage();
   await setTheme(showcase, theme);
   await setTheme(product, theme);
+  await product.addInitScript(() => {
+    localStorage.setItem("gouno-blog:locale", "zh");
+  });
   const { unknown, unexpectedWrites } = await installAiFixtures(product);
   await showcase.goto(
     `${showcaseOrigin}/?embedded=1&workspace=blog-admin&brand=blog-admin#${fixtureId}`,
