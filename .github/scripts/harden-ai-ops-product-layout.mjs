@@ -185,6 +185,15 @@ await edit("blog-frontend/src/components/agent/__tests__/WorkflowInputForm.test.
   return source.slice(0, close) + test + source.slice(close);
 });
 
+await edit("blog-frontend/src/components/agent/__tests__/WorkflowWorkspace.test.tsx", (source) => {
+  return replaceOnce(
+    source,
+    '    await user.click(screen.getByRole("button", { name: "Delete" }));',
+    '    await user.click(screen.getByRole("button", { name: "More Workflow actions" }));\n    await user.click(screen.getByRole("menuitem", { name: "Delete Workflow" }));',
+    "stale direct Workflow delete test",
+  );
+});
+
 await edit("blog-frontend/package.json", (source) => {
   const from = '"lint:ui": "node scripts/check-ui-contracts.mjs && node scripts/check-retired-product-classes.mjs && node scripts/check-admin-parity-contracts.mjs && node scripts/check-privileged-access-parity.mjs && node scripts/check-public-parity-contracts.mjs && node scripts/check-action-grammar-contracts.mjs"';
   const to = '"lint:ui": "node scripts/check-ui-contracts.mjs && node scripts/check-retired-product-classes.mjs && node scripts/check-admin-parity-contracts.mjs && node scripts/check-privileged-access-parity.mjs && node scripts/check-public-parity-contracts.mjs && node scripts/check-action-grammar-contracts.mjs && node scripts/check-ai-ops-layout-contracts.mjs"';
