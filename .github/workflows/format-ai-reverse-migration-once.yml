@@ -1,0 +1,57 @@
+name: Format AI reverse migration once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/format-ai-reverse-migration-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  format-once:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: blog-frontend/package-lock.json
+
+      - name: Format AI reverse migration files
+        working-directory: blog-frontend
+        run: |
+          set -euo pipefail
+          npm ci
+          npx prettier --write \
+            src/components/agent/__tests__/AISettingsEditors.canonical.test.tsx \
+            src/components/agent/__tests__/WorkflowRunRecords.master-detail.test.tsx \
+            src/components/agent/__tests__/WorkflowWorkspaceCanonicalDetail.test.tsx \
+            src/components/agent/AgentForm.tsx \
+            src/components/agent/ConnectorWorkspace.tsx \
+            src/components/agent/EmbeddingForm.tsx \
+            src/components/agent/SkillForm.tsx
+
+      - name: Commit formatting
+        run: |
+          set -euo pipefail
+          git add blog-frontend/src/components/agent
+          git diff --cached --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --cached --quiet; then
+            echo "No formatting changes required"
+            exit 0
+          fi
+          git commit -m "style(ai): format reverse migrated workspaces"
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
