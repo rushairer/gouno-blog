@@ -88,7 +88,9 @@ test("failed approval keeps a long governed proposal readable on mobile", async 
   );
 
   await expect(
-    page.getByText("Injected approval failure remains actionable and visibly explained."),
+    page
+      .getByRole("alert")
+      .getByText("Injected approval failure remains actionable and visibly explained."),
   ).toBeVisible();
   await expect(
     page.getByRole("region", { name: "Content proposal preview" }),
@@ -128,7 +130,7 @@ test("Workflow run detail contains long output and preserves run query state", a
   const workflowRunRow = workflowRunList
     .getByRole("listitem")
     .filter({ hasText: "Run #201" });
-  await workflowRunRow.getByLabel("Inspect", { exact: true }).click();
+  await workflowRunRow.getByRole("button").click();
   await expect(page.getByRole("heading", { name: "Run summary" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Long-form execution result" })).toBeVisible();
   expect(new URL(page.url()).searchParams.get("run")).toBe("201");
