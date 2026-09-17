@@ -7,8 +7,7 @@ if (!canonicalRoot) {
 }
 
 const failures = [];
-const readCanonical = (path) =>
-  readFile(resolve(canonicalRoot, path), "utf8");
+const readCanonical = (path) => readFile(resolve(canonicalRoot, path), "utf8");
 const readBlog = (path) => readFile(resolve(path), "utf8");
 
 const canonicalLead = await readCanonical(

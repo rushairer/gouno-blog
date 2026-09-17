@@ -72,7 +72,9 @@ for (const path of railFiles) {
   );
 }
 
-const workflowWorkspace = await source("src/components/agent/WorkflowWorkspace.tsx");
+const workflowWorkspace = await source(
+  "src/components/agent/WorkflowWorkspace.tsx",
+);
 if (workflowWorkspace.includes("section-stack")) {
   failures.push(
     "src/components/agent/WorkflowWorkspace.tsx: retired section-stack composition must not return",

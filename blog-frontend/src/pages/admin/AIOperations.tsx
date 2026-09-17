@@ -37,15 +37,7 @@ import { RecordsWorkspace } from "../../components/agent/AgentRunRecords";
 import { WorkflowWorkspace } from "../../components/agent/WorkflowWorkspace";
 import { WorkflowRunRecords } from "../../components/agent/WorkflowRunRecords";
 import { OperationsPanelLead } from "../../components/agent/OperationsPatterns";
-import {
-  Button,
-  Card,
-  Modal,
-  Skeleton,
-  Tabs,
-  Tag,
-  Text,
-} from "@gouno/ui/core";
+import { Button, Card, Modal, Skeleton, Tabs, Tag, Text } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
 
 import { useI18n } from "../../i18n";

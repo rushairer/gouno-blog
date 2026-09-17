@@ -158,7 +158,9 @@ export function WorkspaceOverview({
               icon={<ShieldCheck />}
               onClick={() => onNavigate("inbox")}
             >
-              {zh ? `待我处理 ${decisionCount}` : `Review queue ${decisionCount}`}
+              {zh
+                ? `待我处理 ${decisionCount}`
+                : `Review queue ${decisionCount}`}
             </Button>
             <Button
               variant="solid"

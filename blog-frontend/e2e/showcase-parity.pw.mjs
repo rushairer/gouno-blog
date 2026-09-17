@@ -66,7 +66,9 @@ async function openPair(
 
 async function expectNoHorizontalOverflow(page) {
   const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+    () =>
+      document.documentElement.scrollWidth >
+      document.documentElement.clientWidth + 1,
   );
   expect(overflow).toBe(false);
 }
@@ -108,7 +110,9 @@ async function expectEditorParity({
   );
 
   for (const slot of ["document-editor-canvas", "document-editor-inspector"]) {
-    expect(await styleFingerprint(productCard.locator(`[data-slot="${slot}"]`))).toEqual(
+    expect(
+      await styleFingerprint(productCard.locator(`[data-slot="${slot}"]`)),
+    ).toEqual(
       await styleFingerprint(showcaseCard.locator(`[data-slot="${slot}"]`)),
     );
   }
@@ -240,7 +244,10 @@ for (const theme of ["light", "dark"]) {
     );
 
     await showcase.getByRole("button", { name: "删除文章" }).first().click();
-    await product.getByRole("button", { name: /删除文章/ }).first().click();
+    await product
+      .getByRole("button", { name: /删除文章/ })
+      .first()
+      .click();
 
     const showcaseDialog = showcase.getByRole("dialog");
     const productDialog = product.getByRole("dialog");
@@ -389,7 +396,6 @@ for (const theme of ["light", "dark"]) {
   }
 }
 
-
 test("AI Operations top-level panels, Recent Runs and Run Center match Showcase", async ({
   browser,
 }, testInfo) => {
@@ -428,12 +434,16 @@ test("AI Operations top-level panels, Recent Runs and Run Center match Showcase"
     await styleFingerprint(showcaseRecent),
   );
 
-  const showcaseRecentRow = showcase.getByRole("button", {
-    name: /打开最近 Run #/,
-  }).first();
-  const productRecentRow = product.getByRole("link", {
-    name: /查看最近 Run #/,
-  }).first();
+  const showcaseRecentRow = showcase
+    .getByRole("button", {
+      name: /打开最近 Run #/,
+    })
+    .first();
+  const productRecentRow = product
+    .getByRole("link", {
+      name: /查看最近 Run #/,
+    })
+    .first();
   const [showcaseRecentBox, productRecentBox] = await Promise.all([
     showcaseRecentRow.boundingBox(),
     productRecentRow.boundingBox(),
@@ -444,12 +454,12 @@ test("AI Operations top-level panels, Recent Runs and Run Center match Showcase"
   await showcase.getByRole("tab", { name: /运行中心/ }).click();
   await product.getByRole("tab", { name: /运行中心/ }).click();
 
-  const showcaseMasterDetail = showcase.locator(
-    '[data-slot="ops-master-detail"]',
-  ).first();
-  const productMasterDetail = product.locator(
-    '[data-slot="ops-master-detail"]',
-  ).first();
+  const showcaseMasterDetail = showcase
+    .locator('[data-slot="ops-master-detail"]')
+    .first();
+  const productMasterDetail = product
+    .locator('[data-slot="ops-master-detail"]')
+    .first();
   expect(await styleFingerprint(productMasterDetail)).toEqual(
     await styleFingerprint(showcaseMasterDetail),
   );

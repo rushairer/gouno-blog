@@ -8,12 +8,7 @@ import {
   OperationsRegionHeading,
   OperationsSummaryStrip,
 } from "./OperationsPatterns";
-import {
-  Button,
-  Card,
-  Empty,
-  Text,
-} from "@gouno/ui/core";
+import { Button, Card, Empty, Text } from "@gouno/ui/core";
 
 export function JsonPreview({ value }: { value: unknown }) {
   if (
@@ -701,13 +696,18 @@ export function RecordsWorkspace({
                           {run.model ? ` · ${run.model}` : ""}
                         </OperationsMeta>
                         <OperationsMeta>
-                          {(run.input_tokens + run.output_tokens).toLocaleString()} Token
+                          {(
+                            run.input_tokens + run.output_tokens
+                          ).toLocaleString()}{" "}
+                          Token
                         </OperationsMeta>
                       </>
                     }
                     selected={selectedRun?.run.id === run.id}
                     onClick={() => onInspect(run)}
-                    ariaLabel={zh ? `查看 Run #${run.id}` : `Inspect Run #${run.id}`}
+                    ariaLabel={
+                      zh ? `查看 Run #${run.id}` : `Inspect Run #${run.id}`
+                    }
                   />
                 </div>
               ))}
@@ -728,9 +728,14 @@ export function RecordsWorkspace({
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="text-xl font-semibold tracking-tight">
-                      Run #{selectedRun.run.id} · {agentMap.get(selectedRun.run.agent_id)?.name || `Agent #${selectedRun.run.agent_id}`}
+                      Run #{selectedRun.run.id} ·{" "}
+                      {agentMap.get(selectedRun.run.agent_id)?.name ||
+                        `Agent #${selectedRun.run.agent_id}`}
                     </h2>
-                    <StatusPill status={selectedRun.run.status} locale={locale} />
+                    <StatusPill
+                      status={selectedRun.run.status}
+                      locale={locale}
+                    />
                   </div>
                   <Text className="mt-2 max-w-4xl" tone="muted">
                     {selectedRun.run.error_message ||
@@ -775,7 +780,8 @@ export function RecordsWorkspace({
                   {
                     label: "Token",
                     value: (
-                      selectedRun.run.input_tokens + selectedRun.run.output_tokens
+                      selectedRun.run.input_tokens +
+                      selectedRun.run.output_tokens
                     ).toLocaleString(),
                     detail: `${selectedRun.run.input_tokens} in / ${selectedRun.run.output_tokens} out`,
                   },
@@ -816,7 +822,9 @@ export function RecordsWorkspace({
                 <div className="p-5">
                   <div className="agent-output">
                     {selectedRun.run.output_summary ? (
-                      <MarkdownRenderer content={selectedRun.run.output_summary} />
+                      <MarkdownRenderer
+                        content={selectedRun.run.output_summary}
+                      />
                     ) : selectedRun.run.error_message ? (
                       <pre>{selectedRun.run.error_message}</pre>
                     ) : (
