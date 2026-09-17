@@ -52,7 +52,7 @@ describe("Admin Categories", () => {
     expect(within(dialog).getByLabelText("分类描述")).toBeInTheDocument();
     expect(within(dialog).getByLabelText("分类排序")).toBeInTheDocument();
     expect(
-      within(dialog).getByRole("button", { name: "AI 生成" }),
+      within(dialog).getByRole("button", { name: "AI 生成 Slug 建议" }),
     ).toBeInTheDocument();
     expect(
       within(dialog).getByRole("button", { name: "创建分类" }),

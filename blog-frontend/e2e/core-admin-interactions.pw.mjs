@@ -67,7 +67,7 @@ test("Pages transient copy feedback is canonical opaque Notification", async ({ 
   expect(unknown).toEqual([]);
 });
 
-test("Post editor validation uses Notification while feedback stays outside editor Card", async ({ page }) => {
+test("Post editor validation uses Notification while canonical shell stays overflow-safe", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await setTheme(page, "dark");
   const unknown = await installApiFixtures(page);
@@ -75,9 +75,20 @@ test("Post editor validation uses Notification while feedback stays outside edit
 
   await page.getByRole("button", { name: "保存草稿" }).click();
   await expect(page.locator('[data-slot="notification"]')).toContainText("请先填写文章标题");
-  const editor = page.locator(".editor-page");
-  await expect(editor.locator(":scope > [data-slot=card]")).toHaveCount(1);
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+  await expect(page.locator('[data-slot="document-editor-shell"]')).toHaveCount(1);
+  await expect(page.locator('[data-slot="document-editor-command-bar"]')).toBeVisible();
+  await expect(page.locator('[data-slot="document-editor-canvas"]')).toBeVisible();
+  await expect(page.locator('[data-slot="document-editor-inspector"]')).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "编辑", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator('button[aria-label="分屏"]')).toBeHidden();
+  await expect(
+    page.getByRole("button", { name: "预览", exact: true }),
+  ).toBeVisible();
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+  );
   expect(overflow).toBe(false);
   expect(unknown).toEqual([]);
 });
@@ -91,6 +102,12 @@ test("Existing Page editor loads deterministic content at tablet width", async (
   await expect(page.getByPlaceholder("写一个清晰、具体的单页标题")).toHaveValue(
     "Browser Acceptance Page",
   );
-  await expect(page.locator(".editor-commandbar")).toBeVisible();
+  await expect(page.locator('[data-slot="document-editor-command-bar"]')).toBeVisible();
+  await expect(page.locator('[data-slot="document-editor-navigator"]')).toHaveCount(0);
+  await page.getByRole("button", { name: "预览", exact: true }).click();
+  await expect(page.getByLabel("单页预览")).toBeVisible();
+  await page.getByRole("button", { name: "分屏", exact: true }).click();
+  await expect(page.getByLabel("单页正文 Markdown")).toBeVisible();
+  await expect(page.getByLabel("单页预览")).toBeVisible();
   expect(unknown).toEqual([]);
 });

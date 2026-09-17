@@ -1,27 +1,32 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import PageEditor from "../PageEditor";
+import { GossoProvider } from "@gosso/client/react";
 
+import PageEditor from "../PageEditor";
+import { agentApi } from "../../../api/agent";
 import { pagesApi } from "../../../api/pages";
 import type { CustomPage } from "../../../types/blog";
-import { GossoProvider } from "@gosso/client/react";
 import { AppFeedbackProvider } from "../../../components/feedback/AppFeedbackProvider";
 
 const snapshot = {
   loggedIn: true,
   isAdmin: true,
-  profile: { sub: "admin", roles: ["admin"] },
+  profile: {
+    sub: "admin",
+    roles: ["admin"],
+    permissions: ["content.manage", "ai.manage"],
+  },
 };
 const mockClient = {
   subscribe: () => () => {},
   getSnapshot: () => snapshot,
 } as any;
 
-function renderEditor(path = "/admin/pages/new") {
+function renderEditor(path = "/admin/pages/new", client = mockClient) {
   return render(
-    <GossoProvider client={mockClient}>
+    <GossoProvider client={client}>
       <AppFeedbackProvider>
         <MemoryRouter initialEntries={[path]}>
           <Routes>
@@ -55,76 +60,95 @@ describe("PageEditor", () => {
     vi.restoreAllMocks();
   });
 
-  it("loads page via getAdminPage and renders fields and AI assistant tools", async () => {
+  it("loads the page and uses DocumentEditorShell + MarkdownEditor without a post navigator", async () => {
     const getAdminPageSpy = vi
       .spyOn(pagesApi, "getAdminPage")
       .mockResolvedValue(draftPage);
-
     renderEditor("/admin/pages/3/edit");
 
-    await waitFor(() => {
-      expect(getAdminPageSpy).toHaveBeenCalledWith("3");
-    });
-
+    await waitFor(() => expect(getAdminPageSpy).toHaveBeenCalledWith("3"));
     expect(await screen.findByDisplayValue("关于我们")).toBeInTheDocument();
     expect(screen.getByDisplayValue("本站与团队介绍页面")).toBeInTheDocument();
     expect(screen.getByDisplayValue("about-us")).toBeInTheDocument();
     expect(screen.getByLabelText("单页正文 Markdown")).toHaveValue(
-      "## 关于我们\n\n欢迎来到我们的博客。",
+      draftPage.content,
     );
-    expect(screen.getByRole("tab", { name: "Markdown" })).toHaveAttribute(
-      "aria-selected",
+    expect(screen.getByRole("button", { name: "编辑" })).toHaveAttribute(
+      "aria-pressed",
       "true",
     );
-    expect(screen.getByRole("tab", { name: "预览" })).toHaveAttribute(
-      "aria-selected",
+    expect(screen.getByRole("button", { name: "预览" })).toHaveAttribute(
+      "aria-pressed",
       "false",
     );
+    expect(screen.getByRole("button", { name: "AI 写作" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "插图" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("文档导航视图")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Slug 候选/ }),
+    ).not.toBeInTheDocument();
+  });
 
+  it("uses AISuggestionPicker for title and regenerates through the real AI endpoint", async () => {
+    const user = userEvent.setup();
+    const assistSpy = vi
+      .spyOn(agentApi, "getDraftAssist")
+      .mockResolvedValueOnce({ suggestions: ["关于 Gouno", "团队与项目"] })
+      .mockResolvedValueOnce({ suggestions: ["重新生成的单页标题"] });
+    renderEditor();
+
+    await user.type(
+      await screen.findByLabelText("单页正文 Markdown"),
+      "页面正文",
+    );
+    await user.click(screen.getByRole("button", { name: "AI 生成标题候选" }));
     expect(
-      screen.getByRole("button", { name: /AI 写作与润色/ }),
-    ).toBeInTheDocument();
+      await screen.findByRole("radio", { name: "关于 Gouno" }),
+    ).toBeChecked();
+    await user.click(screen.getByRole("button", { name: "重新生成 AI 建议" }));
     expect(
-      screen.getByRole("button", { name: /AI 文生图插画/ }),
-    ).toBeInTheDocument();
+      await screen.findByRole("radio", { name: "重新生成的单页标题" }),
+    ).toBeChecked();
+    expect(assistSpy).toHaveBeenCalledTimes(2);
+    await user.click(screen.getByRole("button", { name: "使用所选" }));
+    expect(screen.getByLabelText("标题")).toHaveValue("重新生成的单页标题");
+  });
+
+  it("reviews slug and SEO together instead of exposing a standalone slug AI action", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(pagesApi, "getAdminPage").mockResolvedValue(draftPage);
+    vi.spyOn(agentApi, "getDraftAssist").mockResolvedValue({
+      suggestions: [],
+      metadata: {
+        slug: "about-gouno",
+        seo_title: "About Gouno",
+        seo_description: "Gouno project introduction",
+      },
+    });
+    renderEditor("/admin/pages/3/edit");
+
+    await screen.findByDisplayValue(draftPage.title);
     expect(
-      screen.getByRole("button", { name: /AI 一键补全元数据/ }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: /生成 Slug/ }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "AI 优化路径与 SEO" }));
+    await screen.findByRole("checkbox", { name: "应用 Slug 建议" });
+    await user.click(screen.getByRole("button", { name: "应用 3 项建议" }));
+
+    expect(screen.getByLabelText("访问路径 (Slug)")).toHaveValue("about-gouno");
+    expect(screen.getByLabelText("SEO 标题")).toHaveValue("About Gouno");
+    expect(screen.getByLabelText("SEO 描述")).toHaveValue(
+      "Gouno project introduction",
+    );
   });
 
   it("matches the post editor publish intent actions", async () => {
     const user = userEvent.setup();
-    vi.spyOn(pagesApi, "getAdminPage").mockResolvedValue({
-      id: 3,
-      title: "关于我们",
-      slug: "about-us",
-      summary: "",
-      content: "页面正文",
-      template: "default",
-      status: "draft",
-      allow_comments: false,
-      show_in_nav: false,
-      sort_order: 0,
-      seo_title: "",
-      seo_description: "",
-      created_at: new Date().toISOString(),
-    });
+    vi.spyOn(pagesApi, "getAdminPage").mockResolvedValue(draftPage);
     const updatePageSpy = vi.spyOn(pagesApi, "updatePage").mockResolvedValue({
-      id: 3,
-      title: "关于我们",
-      slug: "about-us",
-      summary: "",
-      content: "页面正文",
-      template: "default",
+      ...draftPage,
       status: "published",
-      allow_comments: false,
-      show_in_nav: false,
-      sort_order: 0,
-      seo_title: "",
-      seo_description: "",
-      created_at: new Date().toISOString(),
     });
-
     renderEditor("/admin/pages/3/edit");
 
     await screen.findByDisplayValue("关于我们");
@@ -137,17 +161,14 @@ describe("PageEditor", () => {
 
     await user.click(screen.getByRole("combobox", { name: "状态" }));
     await user.click(screen.getByRole("option", { name: "立即发布" }));
-    expect(
-      screen.getByRole("button", { name: "保存草稿" }),
-    ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "发布" }));
 
-    await waitFor(() => {
+    await waitFor(() =>
       expect(updatePageSpy).toHaveBeenCalledWith(
         3,
         expect.objectContaining({ status: "published" }),
-      );
-    });
+      ),
+    );
     expect(
       screen.getByRole("button", { name: "更新单页" }),
     ).toBeInTheDocument();
@@ -206,7 +227,7 @@ describe("PageEditor", () => {
     expect(openSpy).toHaveBeenCalledWith("/preview-page", "_blank");
   });
 
-  it("shows the backend conflict message without masking it", async () => {
+  it("shows backend save conflicts without masking them", async () => {
     const user = userEvent.setup();
     vi.spyOn(pagesApi, "getAdminPage").mockResolvedValue(draftPage);
     vi.spyOn(pagesApi, "updatePage").mockRejectedValue(
@@ -216,9 +237,35 @@ describe("PageEditor", () => {
 
     await screen.findByDisplayValue(draftPage.title);
     await user.click(screen.getByRole("button", { name: "保存草稿" }));
-
     expect(
       await screen.findAllByText("单页已被其他编辑者更新（409 冲突）"),
     ).not.toHaveLength(0);
+  });
+
+  it("renders existing pages read-only when content.manage is absent", async () => {
+    const viewerSnapshot = {
+      loggedIn: true,
+      isAdmin: true,
+      profile: {
+        sub: "author",
+        roles: ["author"],
+        permissions: ["content.author"],
+      },
+    };
+    const viewerClient = {
+      subscribe: () => () => {},
+      getSnapshot: () => viewerSnapshot,
+    } as any;
+    vi.spyOn(pagesApi, "getAdminPage").mockResolvedValue(draftPage);
+    renderEditor("/admin/pages/3/edit", viewerClient);
+
+    expect(await screen.findByText("只读模式")).toBeInTheDocument();
+    expect(screen.getByDisplayValue(draftPage.title)).toBeDisabled();
+    expect(
+      screen.queryByRole("button", { name: "保存草稿" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "AI 写作" }),
+    ).not.toBeInTheDocument();
   });
 });

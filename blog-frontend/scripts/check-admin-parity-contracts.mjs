@@ -15,6 +15,7 @@ const corePages = [
   "PageEditor.tsx",
 ];
 const collectionPages = new Set(["Dashboard.tsx", "Posts.tsx", "Pages.tsx"]);
+const editorPages = new Set(["PostEditor.tsx", "PageEditor.tsx"]);
 
 function sourceFile(name, source) {
   return ts.createSourceFile(
@@ -40,6 +41,12 @@ function jsxAttributes(node) {
   return ts.isJsxElement(node)
     ? node.openingElement.attributes
     : node.attributes;
+}
+
+function hasAttribute(node, attributeName) {
+  return jsxAttributes(node).properties.some(
+    (item) => ts.isJsxAttribute(item) && item.name.text === attributeName,
+  );
 }
 
 function staticAttribute(node, attributeName) {
@@ -110,14 +117,93 @@ function assertCollectionStack(name, source) {
   }
 }
 
+function assertCanonicalEditor(name, source) {
+  const file = sourceFile(name, source);
+  let shellCount = 0;
+  let markdownCount = 0;
+  let pickerCount = 0;
+  let reviewCount = 0;
+  let shellHasNavigator = false;
+
+  function visit(node) {
+    if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) {
+      const tag = jsxTag(node);
+      if (tag === "DocumentEditorShell") {
+        shellCount += 1;
+        shellHasNavigator ||= hasAttribute(node, "navigator");
+      }
+      if (tag === "MarkdownEditor") markdownCount += 1;
+      if (tag === "AISuggestionPicker" || tag === "AISuggestionReview") {
+        if (tag === "AISuggestionPicker") pickerCount += 1;
+        else reviewCount += 1;
+        if (!hasAttribute(node, "onRegenerate")) {
+          failures.push(
+            `${name}:${lineOf(file, node)} ${tag} must bind onRegenerate to a fresh AI request`,
+          );
+        }
+      }
+      if (["ContentEditorFrame", "EditorCommandBar", "AiSuggestionControl"].includes(tag)) {
+        failures.push(
+          `${name}:${lineOf(file, node)} ${tag} is retired presentation; use canonical Gouno UI editor patterns`,
+        );
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+
+  visit(file);
+
+  if (shellCount !== 1)
+    failures.push(`${name}: editor must render exactly one DocumentEditorShell`);
+  if (markdownCount !== 1)
+    failures.push(`${name}: editor must render exactly one canonical MarkdownEditor`);
+  if (pickerCount < 2)
+    failures.push(`${name}: title and summary AI must use AISuggestionPicker`);
+  if (reviewCount < 1)
+    failures.push(`${name}: path/SEO AI must use AISuggestionReview`);
+  if (name === "PostEditor.tsx" && !shellHasNavigator)
+    failures.push(`${name}: post editor must provide its Outline/History navigator to DocumentEditorShell`);
+  if (name === "PageEditor.tsx" && shellHasNavigator)
+    failures.push(`${name}: page editor must not copy the post-only navigator`);
+  if (!source.includes("renderPreview") || !source.includes("<MarkdownRenderer"))
+    failures.push(`${name}: MarkdownEditor preview must stay bound to Blog's MarkdownRenderer`);
+  if (!source.includes("EditorMediaSourceDialog"))
+    failures.push(`${name}: editor media actions must bind the Blog-owned real media workflow`);
+  if (/\bContentEditorFrame\b|\bEditorCommandBar\b/.test(source))
+    failures.push(`${name}: retired local editor shell/command presentation must not remain imported or referenced`);
+}
+
+function assertCategorySlugPicker(source) {
+  const name = "Categories.tsx";
+  const file = sourceFile(name, source);
+  let pickerCount = 0;
+
+  function visit(node) {
+    if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) {
+      const tag = jsxTag(node);
+      if (tag === "AISuggestionPicker") {
+        pickerCount += 1;
+        if (!hasAttribute(node, "onRegenerate")) {
+          failures.push(`${name}:${lineOf(file, node)} Slug AISuggestionPicker must support regeneration`);
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+
+  visit(file);
+  if (pickerCount < 1) failures.push(`${name}: category Slug AI must use AISuggestionPicker`);
+  if (!source.includes('aria-label="AI 生成 Slug 建议"'))
+    failures.push(`${name}: category Slug field must expose the icon-only Sparkles AI trigger`);
+  if (!source.includes('applyLabel="使用所选 Slug"'))
+    failures.push(`${name}: category Slug suggestion must require explicit unified apply`);
+}
+
 for (const name of corePages) {
   const source = await readFile(path.join(adminRoot, name), "utf8");
-  if (
-    !source.includes("flex flex-col gap-6") &&
-    !source.includes("ContentEditorFrame")
-  ) {
+  if (!source.includes("flex flex-col gap-6")) {
     failures.push(
-      `${name}: core Admin pages must use the canonical 24px vertical rhythm or ContentEditorFrame workspace grammar`,
+      `${name}: core Admin pages must retain the canonical 24px vertical rhythm`,
     );
   }
   if (collectionPages.has(name)) {
@@ -126,13 +212,11 @@ for (const name of corePages) {
     }
     assertCollectionStack(name, source);
   }
-  if (name === "PostEditor.tsx" || name === "PageEditor.tsx") {
-    if (!source.includes("<ContentEditorFrame"))
-      failures.push(`${name}: editor must use ContentEditorFrame`);
-    if (!source.includes("<EditorCommandBar"))
-      failures.push(`${name}: editor must use EditorCommandBar`);
-  }
+  if (editorPages.has(name)) assertCanonicalEditor(name, source);
 }
+
+const categories = await readFile(path.join(adminRoot, "Categories.tsx"), "utf8");
+assertCategorySlugPicker(categories);
 
 for (const name of ["Dashboard.tsx", "Pages.tsx", "Comments.tsx"]) {
   const source = await readFile(path.join(adminRoot, name), "utf8");

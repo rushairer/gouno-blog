@@ -1,13 +1,14 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import PostEditor from "../PostEditor";
+import { GossoProvider } from "@gosso/client/react";
 
+import PostEditor from "../PostEditor";
+import { agentApi } from "../../../api/agent";
 import { postsApi } from "../../../api/posts";
 import { siteApi } from "../../../api/site";
 import type { Post } from "../../../types/blog";
-import { GossoProvider } from "@gosso/client/react";
 import { AppFeedbackProvider } from "../../../components/feedback/AppFeedbackProvider";
 
 const snapshot = {
@@ -44,7 +45,7 @@ const draftPost: Post = {
   title: "每日AI资讯：2026年8月21日",
   slug: "daily-ai-news-2026-08-21",
   summary: "AI 资讯摘要",
-  content: "AI 运营生成的正文内容。",
+  content: "## 今日要点\n\nAI 运营生成的正文内容。",
   tags: ["AI", "资讯"],
   status: "draft",
   created_at: new Date().toISOString(),
@@ -53,11 +54,13 @@ const draftPost: Post = {
 describe("PostEditor", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    vi.spyOn(siteApi, "getCategories").mockResolvedValue([]);
+    vi.spyOn(siteApi, "getCategories").mockResolvedValue([
+      { id: 9, name: "AI 工程", slug: "ai-engineering" },
+    ]);
     vi.spyOn(postsApi, "getVersions").mockResolvedValue([]);
   });
 
-  it("loads draft posts via getAdminPost and renders fields", async () => {
+  it("loads draft posts through the admin API and renders the canonical MarkdownEditor", async () => {
     const getAdminPostSpy = vi
       .spyOn(postsApi, "getAdminPost")
       .mockResolvedValue(draftPost);
@@ -65,29 +68,28 @@ describe("PostEditor", () => {
 
     renderEditor("/admin/posts/5/edit");
 
-    await waitFor(() => {
-      expect(getAdminPostSpy).toHaveBeenCalledWith("5");
-    });
-
+    await waitFor(() => expect(getAdminPostSpy).toHaveBeenCalledWith("5"));
     expect(getPostSpy).not.toHaveBeenCalled();
     expect(
-      await screen.findByDisplayValue("每日AI资讯：2026年8月21日"),
+      await screen.findByDisplayValue(draftPost.title),
     ).toBeInTheDocument();
     expect(screen.getByDisplayValue("AI 资讯摘要")).toBeInTheDocument();
     expect(
       screen.getByDisplayValue("daily-ai-news-2026-08-21"),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("文章正文 Markdown")).toHaveValue(
-      "AI 运营生成的正文内容。",
+      draftPost.content,
     );
-    expect(screen.getByRole("tab", { name: "Markdown" })).toHaveAttribute(
-      "aria-selected",
+    expect(screen.getByRole("button", { name: "编辑" })).toHaveAttribute(
+      "aria-pressed",
       "true",
     );
-    expect(screen.getByRole("tab", { name: "预览" })).toHaveAttribute(
-      "aria-selected",
+    expect(screen.getByRole("button", { name: "预览" })).toHaveAttribute(
+      "aria-pressed",
       "false",
     );
+    expect(screen.getByRole("button", { name: "AI 写作" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "插图" })).toBeInTheDocument();
   });
 
   it("keeps unsaved input mounted when the responsive layout changes", async () => {
@@ -108,6 +110,81 @@ describe("PostEditor", () => {
     expect(title).toHaveValue("不会丢失的草稿");
     expect(body).toHaveValue("```ts\nconst wide = true;\n```");
     expect(screen.getByText("有未保存的更改")).toBeInTheDocument();
+  });
+
+  it("uses AISuggestionPicker and makes regenerate issue a new AI request", async () => {
+    const user = userEvent.setup();
+    const assistSpy = vi
+      .spyOn(agentApi, "getDraftAssist")
+      .mockResolvedValueOnce({ suggestions: ["标题候选 A", "标题候选 B"] })
+      .mockResolvedValueOnce({ suggestions: ["重新生成的标题"] });
+    renderEditor();
+
+    await user.type(
+      await screen.findByLabelText("文章正文 Markdown"),
+      "先写一点正文",
+    );
+    await user.click(screen.getByRole("button", { name: "AI 生成标题候选" }));
+    expect(
+      await screen.findByRole("radio", { name: "标题候选 A" }),
+    ).toBeChecked();
+
+    await user.click(screen.getByRole("button", { name: "重新生成 AI 建议" }));
+    expect(
+      await screen.findByRole("radio", { name: "重新生成的标题" }),
+    ).toBeChecked();
+    expect(assistSpy).toHaveBeenCalledTimes(2);
+
+    await user.click(screen.getByRole("button", { name: "使用所选" }));
+    expect(screen.getByLabelText("标题")).toHaveValue("重新生成的标题");
+  });
+
+  it("reviews SEO suggestions and applies only checked fields", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(postsApi, "getAdminPost").mockResolvedValue(draftPost);
+    vi.spyOn(agentApi, "getDraftAssist").mockResolvedValue({
+      suggestions: [],
+      metadata: {
+        slug: "reviewed-slug",
+        seo_title: "Reviewed SEO title",
+        seo_description: "Reviewed SEO description",
+      },
+    });
+    renderEditor("/admin/posts/5/edit");
+
+    await screen.findByDisplayValue(draftPost.title);
+    await user.click(screen.getByRole("button", { name: "AI 优化路径与 SEO" }));
+    await screen.findByRole("checkbox", { name: "应用 SEO 描述 建议" });
+    await user.click(
+      screen.getByRole("checkbox", { name: "应用 SEO 描述 建议" }),
+    );
+    await user.click(screen.getByRole("button", { name: "应用 2 项建议" }));
+
+    expect(screen.getByLabelText("访问路径 (Slug)")).toHaveValue(
+      "reviewed-slug",
+    );
+    expect(screen.getByLabelText("SEO 标题")).toHaveValue("Reviewed SEO title");
+    expect(screen.getByLabelText("SEO 描述")).toHaveValue("");
+  });
+
+  it("only accepts existing categories and additively merges reviewed tag suggestions", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(postsApi, "getAdminPost").mockResolvedValue(draftPost);
+    vi.spyOn(agentApi, "getDraftAssist").mockResolvedValue({
+      suggestions: [],
+      metadata: { category: "AI 工程", tags: ["AI", "Agent", "治理"] },
+    });
+    renderEditor("/admin/posts/5/edit");
+
+    await screen.findByDisplayValue(draftPost.title);
+    await user.click(screen.getByRole("button", { name: "AI 推荐分类与标签" }));
+    await screen.findByRole("checkbox", { name: "应用 分类 建议" });
+    await user.click(screen.getByRole("button", { name: "应用 2 项建议" }));
+
+    expect(screen.getByRole("combobox", { name: "分类" })).toHaveTextContent(
+      "AI 工程",
+    );
+    expect(screen.getByLabelText("标签")).toHaveValue("AI, 资讯, Agent, 治理");
   });
 
   it("saves a draft without changing the existing create payload contract", async () => {
@@ -161,6 +238,7 @@ describe("PostEditor", () => {
     expect(
       await screen.findAllByText("内容已被其他编辑者更新（409 冲突）"),
     ).not.toHaveLength(0);
+    expect(screen.getByText("文章已有新版本")).toBeInTheDocument();
   });
 
   it("restores a selected history version after confirmation", async () => {
@@ -179,8 +257,10 @@ describe("PostEditor", () => {
       .mockResolvedValue(version);
     renderEditor("/admin/posts/5/edit");
 
-    await user.click(await screen.findByRole("button", { name: /版本历史/ }));
-    await user.click(screen.getByRole("button", { name: /历史标题/ }));
+    await user.click(await screen.findByRole("tab", { name: /历史 1/ }));
+    await user.click(
+      screen.getByRole("button", { name: /历史标题.*历史版本/ }),
+    );
     await user.click(screen.getByRole("button", { name: "恢复版本" }));
 
     await waitFor(() => expect(restoreSpy).toHaveBeenCalledWith(5, 42));
@@ -198,7 +278,7 @@ describe("PostEditor", () => {
     const { container } = renderEditor("/admin/posts/5/edit");
 
     await screen.findByDisplayValue(draftPost.title);
-    await user.click(screen.getByRole("tab", { name: "预览" }));
+    await user.click(screen.getByRole("button", { name: "预览" }));
 
     expect(container.querySelector(".editor-preview pre")).toHaveClass(
       "overflow-auto",
@@ -236,6 +316,9 @@ describe("PostEditor", () => {
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "发布" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "AI 写作" }),
     ).not.toBeInTheDocument();
   });
 });

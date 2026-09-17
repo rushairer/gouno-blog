@@ -1,12 +1,17 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   ArrowLeft,
   Check,
   ExternalLink,
   Eye,
-  History,
   Image as ImageIcon,
-  List,
   Save,
   Send,
   Sparkles,
@@ -21,46 +26,73 @@ import {
   Button,
   Card,
   ChoiceButton,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
   Empty,
   Field,
   Input,
   Modal,
   Select,
   Skeleton,
-  Tab,
-  TabList,
   Tabs,
+  Text,
   Textarea,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
 } from "@gouno/ui/core";
+import {
+  AISuggestionPicker,
+  AISuggestionReview,
+  DocumentEditorShell,
+  MarkdownEditor,
+  type MarkdownEditorMode,
+  type MarkdownEditorRef,
+  type MarkdownEditorSelection,
+} from "@gouno/ui/patterns";
 
 import { MarkdownRenderer } from "../../components/MarkdownRenderer";
 import {
-  AiImageGenerationPanel,
-  AiWritingPanel,
-  ContentEditorFrame,
-  EditorCommandActions,
-  EditorCommandBar,
-} from "../../components/editor/ContentEditorFrame";
+  EditorMediaSourceDialog,
+  type MediaResult,
+  type MediaSource,
+} from "../../components/editor/EditorMediaSourceDialog";
+import {
+  EditorWritingDialog,
+  type WritingApplyMode,
+} from "../../components/editor/EditorWritingDialog";
+import {
+  cleanAiSuggestions,
+  metadataFromAssist,
+} from "../../components/editor/editor-ai";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 import { usePageTitle } from "../../hooks/usePageTitle";
-import { extractMarkdownTOC } from "../../utils/markdown";
-import type { Category, Post, PostStatus } from "../../types/blog";
+import {
+  extractMarkdownTOC,
+  normalizedMarkdownText,
+  type MarkdownTOCItem,
+} from "../../utils/markdown";
+import type { Category, Post, PostStatus, PostVersion } from "../../types/blog";
 import { useAppFeedback } from "../../components/feedback/AppFeedbackProvider";
 
-interface PostVersion extends Post {
-  post_id: number;
-}
-type AssistTask =
-  | "title"
-  | "summary"
-  | "slug"
-  | "content"
-  | "tags"
-  | "seo"
-  | "alt"
-  | "category"
-  | "cover_prompt"
-  | "metadata_all";
+type NavigatorMode = "outline" | "history";
+type FieldSuggestionTask = "title" | "summary";
+type MediaPurpose = "body" | "cover";
+
+type MetadataSuggestion = {
+  slug?: string;
+  seo_title?: string;
+  seo_description?: string;
+};
+
+type TaxonomySuggestion = {
+  category?: Category;
+  tags: string[];
+};
 
 const emptyPost: Post = {
   id: 0,
@@ -75,6 +107,95 @@ const emptyPost: Post = {
 
 function selectValue(value: string | string[]) {
   return Array.isArray(value) ? (value[0] ?? "") : value;
+}
+
+function InspectorSection({
+  title,
+  action,
+  children,
+}: {
+  title: string;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <details open className="relative border-b py-4 last:border-b-0">
+      <summary className="cursor-pointer select-none pr-12 text-sm font-semibold">
+        {title}
+      </summary>
+      {action ? (
+        <div className="absolute right-0 top-2.5 z-10">{action}</div>
+      ) : null}
+      <div className="mt-4 flex flex-col gap-4">{children}</div>
+    </details>
+  );
+}
+
+function FieldActionHeader({
+  label,
+  actionLabel,
+  onAction,
+  disabled = false,
+  loading = false,
+  required = false,
+}: {
+  label: string;
+  actionLabel: string;
+  onAction: () => void;
+  disabled?: boolean;
+  loading?: boolean;
+  required?: boolean;
+}) {
+  return (
+    <div className="mb-2 flex min-h-8 items-center justify-between gap-3">
+      <div className="text-sm font-medium">
+        {label}
+        {required ? (
+          <span aria-hidden="true" className="text-destructive">
+            *
+          </span>
+        ) : null}
+      </div>
+      <Button
+        type="button"
+        size="small"
+        variant="text"
+        icon={<Sparkles />}
+        onClick={onAction}
+        disabled={disabled || loading}
+        loading={loading}
+        aria-label={actionLabel}
+        title={actionLabel}
+        className="size-8 px-0"
+      />
+    </div>
+  );
+}
+
+function versionExcerpt(content: string) {
+  return (
+    content
+      .split("\n")
+      .map((line) => line.trim())
+      .find((line) => line && !line.startsWith("#")) ?? "暂无版本摘要"
+  );
+}
+
+function headingSelection(content: string, item: MarkdownTOCItem) {
+  const normalized = content.replace(/\r\n/g, "\n");
+  let offset = 0;
+  for (const line of normalized.split("\n")) {
+    const match = /^(#{1,6})\s+(.+?)(?:\s+#+)?\s*$/.exec(line);
+    if (
+      match &&
+      match[1].length === item.level &&
+      normalizedMarkdownText(match[2]) === item.text
+    ) {
+      return { start: offset, end: offset + line.length };
+    }
+    offset += line.length + 1;
+  }
+  return null;
 }
 
 export default function PostEditor() {
@@ -101,6 +222,7 @@ export default function PostEditor() {
         ? `编辑: ${post.title}`
         : "编辑文章";
   usePageTitle(editorTitle, { admin: true });
+
   const [publishIntent, setPublishIntent] = useState<PostStatus>("draft");
   const [categories, setCategories] = useState<Category[]>([]);
   const [versions, setVersions] = useState<PostVersion[]>([]);
@@ -111,64 +233,53 @@ export default function PostEditor() {
   const [conflict, setConflict] = useState(false);
   const [latestPost, setLatestPost] = useState<Post | null>(null);
   const [confirmReload, setConfirmReload] = useState(false);
+  const [restoreTarget, setRestoreTarget] = useState<PostVersion | null>(null);
+  const [confirmExit, setConfirmExit] = useState(false);
+
+  const [editorMode, setEditorMode] = useState<MarkdownEditorMode>("edit");
+  const [navigatorMode, setNavigatorMode] = useState<NavigatorMode>("outline");
+  const [editorSelection, setEditorSelection] =
+    useState<MarkdownEditorSelection | null>(null);
+  const editorRef = useRef<MarkdownEditorRef>(null);
+
+  const [fieldLoading, setFieldLoading] = useState<FieldSuggestionTask | null>(
+    null,
+  );
+  const [titleCandidates, setTitleCandidates] = useState<string[]>([]);
+  const [selectedTitle, setSelectedTitle] = useState<string | null>(null);
+  const [summaryCandidates, setSummaryCandidates] = useState<string[]>([]);
+  const [selectedSummary, setSelectedSummary] = useState<string | null>(null);
+  const [metadataLoading, setMetadataLoading] = useState(false);
+  const [metadataSuggestion, setMetadataSuggestion] =
+    useState<MetadataSuggestion | null>(null);
+  const [metadataSelection, setMetadataSelection] = useState<string[]>([]);
+  const [taxonomyLoading, setTaxonomyLoading] = useState(false);
+  const [taxonomySuggestion, setTaxonomySuggestion] =
+    useState<TaxonomySuggestion | null>(null);
+  const [taxonomySelection, setTaxonomySelection] = useState<string[]>([]);
+
+  const [writingOpen, setWritingOpen] = useState(false);
+  const [writingPrompt, setWritingPrompt] = useState("");
+  const [mediaSource, setMediaSource] = useState<MediaSource>(null);
+  const [mediaPurpose, setMediaPurpose] = useState<MediaPurpose>("body");
+
+  const dirty = useRef(false);
   const savingRef = useRef(false);
+
   const recordConflict = (reason: unknown) => {
     if (
       typeof reason === "object" &&
       reason !== null &&
       "status" in reason &&
       reason.status === 409
-    )
+    ) {
       setConflict(true);
-  };
-  const inspectLatest = async () => {
-    try {
-      setLatestPost(await postsApi.getAdminPost(post.id));
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "读取最新版本失败");
+      return;
+    }
+    if (reason instanceof Error && reason.message.includes("409")) {
+      setConflict(true);
     }
   };
-  const copyDraft = async () => {
-    try {
-      await navigator.clipboard.writeText(JSON.stringify(post, null, 2));
-      notify("未保存内容已复制", "success");
-    } catch {
-      notify("复制失败，请手动保留编辑内容", "error");
-    }
-  };
-  const [preview, setPreview] = useState(false);
-  const [showVersions, setShowVersions] = useState(false);
-  const [restoreTarget, setRestoreTarget] = useState<PostVersion | null>(null);
-  const [confirmExit, setConfirmExit] = useState(false);
-  const [assistTask, setAssistTask] = useState<AssistTask | null>(null);
-  const [suggestionTask, setSuggestionTask] = useState<AssistTask | null>(null);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [assistError, setAssistError] = useState("");
-  const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
-  const [categorySuggestion, setCategorySuggestion] = useState<string | null>(
-    null,
-  );
-  const [metaLoading, setMetaLoading] = useState(false);
-  const [generatingCoverPrompt, setGeneratingCoverPrompt] = useState<
-    string | null
-  >(null);
-  const [showAiWriting, setShowAiWriting] = useState(false);
-  const [contentPrompt, setContentPrompt] = useState("");
-  const [aiContentLoading, setAiContentLoading] = useState(false);
-  const [generatedContent, setGeneratedContent] = useState<string | null>(null);
-  const [showAiImage, setShowAiImage] = useState(false);
-  const [imagePrompt, setImagePrompt] = useState("");
-  const [imageAlt, setImageAlt] = useState("");
-  const [imagePromptCandidates, setImagePromptCandidates] = useState<string[]>(
-    [],
-  );
-  const [aiIdeateLoading, setAiIdeateLoading] = useState(false);
-  const [aiImageLoading, setAiImageLoading] = useState(false);
-  const [generatedImage, setGeneratedImage] = useState<{
-    url: string;
-    alt: string;
-  } | null>(null);
-  const dirty = useRef(false);
 
   useEffect(() => {
     if (!allowed) return;
@@ -182,15 +293,12 @@ export default function PostEditor() {
           setPublishIntent(value.status || "draft");
         }),
       );
-      requests.push(
-        postsApi.getVersions(id).then((v) => setVersions(v as PostVersion[])),
-      );
+      requests.push(postsApi.getVersions(id).then(setVersions));
     }
     Promise.all(requests)
       .catch((reason: Error) => {
-        const msg = reason.message;
-        setError(msg);
-        notify(msg, "error");
+        setError(reason.message);
+        notify(reason.message, "error");
       })
       .finally(() => setLoading(false));
   }, [allowed, id, notify]);
@@ -203,35 +311,54 @@ export default function PostEditor() {
     return () => window.removeEventListener("beforeunload", beforeUnload);
   }, []);
 
+  const invalidateDerivedSuggestions = (key: keyof Post) => {
+    if (key === "title" || key === "summary" || key === "content") {
+      setMetadataSuggestion(null);
+      setMetadataSelection([]);
+      setTaxonomySuggestion(null);
+      setTaxonomySelection([]);
+    }
+    if (key === "title") {
+      setTitleCandidates([]);
+      setSelectedTitle(null);
+    }
+    if (key === "summary") {
+      setSummaryCandidates([]);
+      setSelectedSummary(null);
+    }
+  };
+
   const update = <K extends keyof Post>(key: K, value: Post[K]) => {
     setPost((current) => ({ ...current, [key]: value }));
     dirty.current = true;
     setSavedAt(null);
+    invalidateDerivedSuggestions(key);
   };
 
   const persist = useCallback(
     async (status: PostStatus, automatic = false) => {
       if (!post.title.trim()) {
-        const msg = "请先填写文章标题。";
+        const message = "请先填写文章标题。";
         if (!automatic) {
-          setError(msg);
-          notify(msg, "error");
+          setError(message);
+          notify(message, "error");
         }
         return;
       }
       if (status !== "draft" && !post.content.trim()) {
-        const msg = "发布前需要填写正文。";
-        setError(msg);
-        notify(msg, "error");
+        const message = "发布前需要填写正文。";
+        setError(message);
+        notify(message, "error");
         return;
       }
       if (status === "scheduled" && !post.scheduled_at) {
-        const msg = "定时发布需要选择发布时间。";
-        setError(msg);
-        notify(msg, "error");
+        const message = "定时发布需要选择发布时间。";
+        setError(message);
+        notify(message, "error");
         return;
       }
-      if (savingRef.current || conflict) return;
+      if (savingRef.current || conflict || isReadOnly) return;
+
       savingRef.current = true;
       setSaving(true);
       setError("");
@@ -264,38 +391,63 @@ export default function PostEditor() {
           navigate(`/admin/posts/${saved.id}/edit`, { replace: true });
       } catch (reason) {
         recordConflict(reason);
-        const msg =
+        const message =
           reason instanceof Error ? reason.message : "保存失败，请稍后重试。";
-        setError(msg);
-        notify(msg, "error");
+        setError(message);
+        notify(message, "error");
       } finally {
         savingRef.current = false;
         setSaving(false);
       }
     },
-    [navigate, notify, post, conflict],
+    [conflict, isReadOnly, navigate, notify, post],
   );
 
   useEffect(() => {
     if (
+      isReadOnly ||
       conflict ||
       saving ||
       !dirty.current ||
       !post.id ||
       !post.title.trim() ||
       post.status !== "draft"
-    )
+    ) {
       return;
+    }
     const timer = window.setTimeout(() => void persist("draft", true), 1800);
     return () => window.clearTimeout(timer);
-  }, [post, persist, conflict, saving]);
+  }, [conflict, isReadOnly, persist, post, saving]);
 
   const outline = useMemo(
     () => extractMarkdownTOC(post.content),
     [post.content],
   );
+
+  const leaveEditor = () => {
+    if (dirty.current) setConfirmExit(true);
+    else navigate("/admin/posts");
+  };
+
+  const inspectLatest = async () => {
+    try {
+      setLatestPost(await postsApi.getAdminPost(post.id));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "读取最新版本失败");
+    }
+  };
+
+  const copyDraft = async () => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(post, null, 2));
+      notify("未保存内容已复制", "success");
+    } catch {
+      notify("复制失败，请手动保留编辑内容", "error");
+    }
+  };
+
   const restoreVersion = async () => {
-    if (!post.id || !restoreTarget) return;
+    if (!post.id || !restoreTarget || isReadOnly) return;
     try {
       const restored =
         post.revision === undefined
@@ -309,563 +461,278 @@ export default function PostEditor() {
       setPublishIntent(restored.status || "draft");
       dirty.current = false;
       setSavedAt(new Date());
-      setShowVersions(false);
       setRestoreTarget(null);
+      setNavigatorMode("outline");
       notify("已成功恢复历史版本。", "success");
     } catch (reason) {
       recordConflict(reason);
-      const msg = reason instanceof Error ? reason.message : "版本恢复失败";
-      setError(msg);
-      notify(msg, "error");
+      const message = reason instanceof Error ? reason.message : "版本恢复失败";
+      setError(message);
+      notify(message, "error");
     }
-  };
-  const leaveEditor = () => {
-    if (dirty.current) setConfirmExit(true);
-    else navigate("/admin/posts");
   };
 
-  const requestSuggestions = async (task: AssistTask) => {
+  const requestFieldSuggestions = async (task: FieldSuggestionTask) => {
     if (!post.title.trim() && !post.content.trim()) {
-      const msg = "先写下标题或正文，AI 才能理解这篇文章。";
-      setAssistError(msg);
-      notify(msg, "error");
+      notify("先写下标题或正文，AI 才能理解这篇文章。", "error");
       return;
     }
-    setAssistTask(task);
-    setSuggestionTask(null);
-    setSuggestions([]);
-    setAssistError("");
+    setFieldLoading(task);
+    if (task === "title") {
+      setTitleCandidates([]);
+      setSelectedTitle(null);
+    } else {
+      setSummaryCandidates([]);
+      setSelectedSummary(null);
+    }
     try {
-      const res = await agentApi.getDraftAssist({
+      const response = await agentApi.getDraftAssist({
         task,
         title: post.title,
         summary: post.summary,
         content: post.content,
-        categories: categories.map((c) => c.name),
+        categories: categories.map((category) => category.name),
       });
-      const cleanList: string[] = [];
-      (res.suggestions || []).forEach((item) => {
-        if (item.includes('","')) {
-          item.split('","').forEach((sub) => {
-            const clean = sub.replace(/^[{"[\s]+|[}"\]\s,]+$/g, "").trim();
-            if (clean) cleanList.push(clean);
-          });
-        } else {
-          const clean = item.replace(/^[{"[\s]+|[}"\]\s,]+$/g, "").trim();
-          if (clean) cleanList.push(clean);
-        }
-      });
-      setSuggestions(cleanList);
-      setSuggestionTask(task);
-      if (!cleanList.length) {
-        const msg = "这次没有生成可用候选，请稍后重试。";
-        setAssistError(msg);
-        notify(msg, "error");
+      const candidates = cleanAiSuggestions(response.suggestions);
+      if (!candidates.length) {
+        notify("这次没有生成可用候选，请稍后重试。", "error");
+        return;
       }
-    } catch (reason) {
-      recordConflict(reason);
-      const msg =
-        reason instanceof Error ? reason.message : "生成候选失败，请稍后重试。";
-      setAssistError(msg);
-      notify(msg, "error");
-    } finally {
-      setAssistTask(null);
-    }
-  };
-
-  const applySuggestion = (task: AssistTask, value: string) => {
-    if (task === "alt") {
-      update("cover_alt", value);
-      notify("已应用封面替代文本。", "success");
-    } else {
-      update(task as keyof Post, value);
-    }
-    setSuggestions([]);
-    setSuggestionTask(null);
-    setAssistError("");
-  };
-
-  const requestTags = async () => {
-    if (!post.title.trim() && !post.content.trim()) {
-      notify("先写下标题或正文，AI 才能提炼标签。", "error");
-      return;
-    }
-    setAssistTask("tags");
-    try {
-      const res = await agentApi.getDraftAssist({
-        task: "tags",
-        title: post.title,
-        summary: post.summary,
-        content: post.content,
-      });
-      const cleanList: string[] = [];
-      (res.suggestions || []).forEach((item) => {
-        if (item.includes('","')) {
-          item.split('","').forEach((sub) => {
-            const clean = sub.replace(/^[{"[\s]+|[}"\]\s,]+$/g, "").trim();
-            if (clean) cleanList.push(clean);
-          });
-        } else {
-          const clean = item.replace(/^[{"[\s]+|[}"\]\s,]+$/g, "").trim();
-          if (clean) cleanList.push(clean);
-        }
-      });
-      setTagSuggestions(cleanList);
-      if (cleanList.length) {
-        notify(`已提炼出 ${cleanList.length} 个推荐标签。`, "success");
+      if (task === "title") {
+        setTitleCandidates(candidates);
+        setSelectedTitle(candidates[0] ?? null);
       } else {
-        notify("未能提炼出有效标签，请稍后重试。", "error");
+        setSummaryCandidates(candidates);
+        setSelectedSummary(candidates[0] ?? null);
       }
     } catch (reason) {
       recordConflict(reason);
       notify(
-        reason instanceof Error ? reason.message : "提炼标签失败",
+        reason instanceof Error ? reason.message : "生成候选失败，请稍后重试。",
         "error",
       );
     } finally {
-      setAssistTask(null);
+      setFieldLoading(null);
     }
   };
 
-  const addTag = (tag: string) => {
-    const trimmed = tag.trim();
-    if (!trimmed) return;
-    if (!post.tags.includes(trimmed)) {
-      const nextTags = [...post.tags, trimmed];
-      update("tags", nextTags);
-      notify(`已添加标签：${trimmed}`, "success");
-    }
-  };
-
-  const addAllTags = () => {
-    const nextTags = [...post.tags];
-    let addedCount = 0;
-    tagSuggestions.forEach((tag) => {
-      const trimmed = tag.trim();
-      if (trimmed && !nextTags.includes(trimmed)) {
-        nextTags.push(trimmed);
-        addedCount++;
-      }
-    });
-    if (addedCount > 0) {
-      update("tags", nextTags);
-      notify(`已添加 ${addedCount} 个推荐标签。`, "success");
-    }
-  };
-
-  const requestCategory = async () => {
+  const requestMetadataSuggestions = async () => {
     if (!post.title.trim() && !post.content.trim()) {
-      notify("先写下标题或正文，AI 才能分析分类。", "error");
+      notify("先写下标题或正文，AI 才能优化路径与 SEO。", "error");
       return;
     }
-    if (!categories.length) {
-      notify("当前站点尚未创建任何分类。", "error");
-      return;
-    }
-    setAssistTask("category");
+    setMetadataLoading(true);
+    setMetadataSuggestion(null);
+    setMetadataSelection([]);
     try {
-      const res = await agentApi.getDraftAssist({
-        task: "category",
-        title: post.title,
-        summary: post.summary,
-        content: post.content,
-        categories: categories.map((c) => c.name),
-      });
-      if (res.suggestions?.length) {
-        const catName = res.suggestions[0].trim();
-        setCategorySuggestion(catName);
-        notify(`推荐归属分类：${catName}`, "success");
-      } else {
-        notify("未能匹配到合适分类。", "error");
-      }
-    } catch (reason) {
-      recordConflict(reason);
-      notify(
-        reason instanceof Error ? reason.message : "分析分类失败",
-        "error",
-      );
-    } finally {
-      setAssistTask(null);
-    }
-  };
-
-  const applyCategory = (categoryName: string) => {
-    const matched = categories.find(
-      (c) => c.name.toLowerCase() === categoryName.toLowerCase(),
-    );
-    if (matched) {
-      update("category_id", matched.id);
-      notify(`已选择分类：${matched.name}`, "success");
-      setCategorySuggestion(null);
-    } else {
-      notify(`未找到名为 "${categoryName}" 的分类`, "error");
-    }
-  };
-
-  const requestSeo = async () => {
-    if (!post.title.trim() && !post.content.trim()) {
-      notify("先写下标题或正文，AI 才能优化 SEO。", "error");
-      return;
-    }
-    setAssistTask("seo");
-    try {
-      const res = await agentApi.getDraftAssist({
+      const response = await agentApi.getDraftAssist({
         task: "seo",
         title: post.title,
         summary: post.summary,
         content: post.content,
       });
-      let seoTitle = "";
-      let seoDesc = "";
-      let seoSlug = "";
-      if (res.metadata) {
-        seoTitle = res.metadata.seo_title || "";
-        seoDesc = res.metadata.seo_description || "";
-        seoSlug = res.metadata.slug || "";
-      } else if (res.suggestions?.length) {
-        try {
-          const parsed = JSON.parse(res.suggestions[0]);
-          seoTitle = parsed.seo_title || "";
-          seoDesc = parsed.seo_description || "";
-          seoSlug = parsed.slug || "";
-        } catch {
-          // parse failed
-        }
+      const metadata = metadataFromAssist(response);
+      const suggestion: MetadataSuggestion = {
+        slug: metadata?.slug?.trim(),
+        seo_title: metadata?.seo_title?.trim(),
+        seo_description: metadata?.seo_description?.trim(),
+      };
+      const keys = Object.entries(suggestion)
+        .filter(([, value]) => Boolean(value))
+        .map(([key]) => key);
+      if (!keys.length) {
+        notify("未能生成有效的路径与 SEO 建议，请稍后重试。", "error");
+        return;
       }
-      if (seoTitle || seoDesc || seoSlug) {
-        setPost((current) => ({
-          ...current,
-          seo_title: seoTitle || current.seo_title,
-          seo_description: seoDesc || current.seo_description,
-          slug: seoSlug || current.slug,
-        }));
-        dirty.current = true;
-        setSavedAt(null);
-        notify("SEO 标题、描述与 Slug 已自动生成！", "success");
-      } else {
-        notify("未能生成有效的 SEO 配置，请稍后重试。", "error");
-      }
+      setMetadataSuggestion(suggestion);
+      setMetadataSelection(keys);
     } catch (reason) {
       recordConflict(reason);
       notify(
-        reason instanceof Error ? reason.message : "生成 SEO 配置失败",
+        reason instanceof Error ? reason.message : "生成 SEO 建议失败",
         "error",
       );
     } finally {
-      setAssistTask(null);
+      setMetadataLoading(false);
     }
   };
 
-  const autoFillAllMetadata = async () => {
+  const applyMetadataSuggestions = () => {
+    if (!metadataSuggestion) return;
+    const selected = new Set(metadataSelection);
+    setPost((current) => ({
+      ...current,
+      slug:
+        selected.has("slug") && metadataSuggestion.slug
+          ? metadataSuggestion.slug
+          : current.slug,
+      seo_title:
+        selected.has("seo_title") && metadataSuggestion.seo_title
+          ? metadataSuggestion.seo_title
+          : current.seo_title,
+      seo_description:
+        selected.has("seo_description") && metadataSuggestion.seo_description
+          ? metadataSuggestion.seo_description
+          : current.seo_description,
+    }));
+    dirty.current = true;
+    setSavedAt(null);
+    setMetadataSuggestion(null);
+    setMetadataSelection([]);
+  };
+
+  const requestTaxonomySuggestions = async () => {
     if (!post.title.trim() && !post.content.trim()) {
-      notify("请先填写标题或正文，AI 才能提炼全套元数据。", "error");
+      notify("先写下标题或正文，AI 才能推荐分类与标签。", "error");
       return;
     }
-    setMetaLoading(true);
+    setTaxonomyLoading(true);
+    setTaxonomySuggestion(null);
+    setTaxonomySelection([]);
     try {
-      const res = await agentApi.getDraftAssist({
+      const response = await agentApi.getDraftAssist({
         task: "metadata_all",
         title: post.title,
         summary: post.summary,
         content: post.content,
-        categories: categories.map((c) => c.name),
+        categories: categories.map((category) => category.name),
       });
-      let meta = res.metadata;
-      if (!meta && res.suggestions?.length) {
-        try {
-          meta = JSON.parse(res.suggestions[0]);
-        } catch {
-          // ignore
-        }
+      const metadata = metadataFromAssist(response);
+      const categoryName = metadata?.category?.trim();
+      const category = categoryName
+        ? categories.find(
+            (candidate) =>
+              candidate.name.toLowerCase() === categoryName.toLowerCase(),
+          )
+        : undefined;
+      const tags: string[] = Array.isArray(metadata?.tags)
+        ? Array.from(
+            new Set<string>(
+              metadata.tags
+                .map((tag) => String(tag).trim())
+                .filter((tag) => tag && !post.tags.includes(tag)),
+            ),
+          )
+        : [];
+      const suggestion: TaxonomySuggestion = { category, tags };
+      const keys = [
+        category ? "category" : null,
+        tags.length ? "tags" : null,
+      ].filter((key): key is string => Boolean(key));
+      if (!keys.length) {
+        notify(
+          categoryName && !category
+            ? `AI 推荐了不存在的分类“${categoryName}”，已按规则忽略。`
+            : "未能生成可用的分类与标签建议。",
+          "error",
+        );
+        return;
       }
-      if (meta) {
-        setPost((current) => {
-          let catId = current.category_id;
-          if (meta?.category) {
-            const found = categories.find(
-              (c) => c.name.toLowerCase() === meta?.category?.toLowerCase(),
-            );
-            if (found) catId = found.id;
-          }
-          const nextTags = [...current.tags];
-          if (Array.isArray(meta?.tags)) {
-            meta.tags.forEach((t) => {
-              const clean = String(t).trim();
-              if (clean && !nextTags.includes(clean)) nextTags.push(clean);
-            });
-          }
-          return {
-            ...current,
-            summary: meta?.summary || current.summary,
-            slug: meta?.slug || current.slug,
-            seo_title: meta?.seo_title || current.seo_title,
-            seo_description: meta?.seo_description || current.seo_description,
-            cover_alt: meta?.cover_alt || current.cover_alt,
-            category_id: catId,
-            tags: nextTags,
-          };
-        });
-        dirty.current = true;
-        setSavedAt(null);
-        notify("⚡ 全套元数据已成功自动补全！", "success");
-      } else {
-        notify("未能生成完整元数据，请稍后重试。", "error");
-      }
+      setTaxonomySuggestion(suggestion);
+      setTaxonomySelection(keys);
     } catch (reason) {
       recordConflict(reason);
       notify(
-        reason instanceof Error ? reason.message : "一键补全元数据失败",
+        reason instanceof Error ? reason.message : "分类与标签建议生成失败",
         "error",
       );
     } finally {
-      setMetaLoading(false);
+      setTaxonomyLoading(false);
     }
   };
 
-  const handleGenerateCover = async (promptText: string) => {
-    setGeneratingCoverPrompt(promptText);
-    try {
-      notify("正在根据提示词生成封面图，请稍候…", "success");
-      const res = await agentApi.generateImage({
-        prompt: promptText,
-        alt_text: post.cover_alt || post.title || "文章封面",
-      });
-      if (res?.url) {
-        update("cover_url", res.url);
-        notify("🎨 封面图已成功生成并填入！", "success");
-      } else {
-        notify("未能成功生成封面图。", "error");
-      }
-    } catch (reason) {
-      recordConflict(reason);
-      const msg = reason instanceof Error ? reason.message : "生图失败";
-      void navigator.clipboard.writeText(promptText);
-      notify(`${msg}（提示词已自动复制到剪贴板）`, "error");
-    } finally {
-      setGeneratingCoverPrompt(null);
-    }
+  const applyTaxonomySuggestions = () => {
+    if (!taxonomySuggestion) return;
+    const selected = new Set(taxonomySelection);
+    setPost((current) => ({
+      ...current,
+      category_id:
+        selected.has("category") && taxonomySuggestion.category
+          ? taxonomySuggestion.category.id
+          : current.category_id,
+      tags: selected.has("tags")
+        ? Array.from(new Set([...current.tags, ...taxonomySuggestion.tags]))
+        : current.tags,
+    }));
+    dirty.current = true;
+    setSavedAt(null);
+    setTaxonomySuggestion(null);
+    setTaxonomySelection([]);
   };
 
-  const sanitizeAiMarkdown = (raw: string): string => {
-    let text = raw.trim();
-    if (text.startsWith("{") || text.startsWith("```json")) {
-      try {
-        const trimmed = text.replace(/^```json\s*/i, "").replace(/\s*```$/, "");
-        const parsed = JSON.parse(trimmed);
-        if (Array.isArray(parsed?.suggestions) && parsed.suggestions[0]) {
-          text = String(parsed.suggestions[0]);
-        } else if (parsed?.content) {
-          text = String(parsed.content);
-        }
-      } catch {
-        const match = text.match(/"suggestions"\s*:\s*\[\s*"([\s\S]*)"\s*\]/);
-        if (match && match[1]) {
-          text = match[1]
-            .replace(/\\n/g, "\n")
-            .replace(/\\"/g, '"')
-            .replace(/\\t/g, "\t");
-        }
-      }
-    }
-    if (text.startsWith("```markdown") && text.endsWith("```")) {
-      text = text.slice(11, -3).trim();
-    } else if (text.startsWith("```md") && text.endsWith("```")) {
-      text = text.slice(5, -3).trim();
-    } else if (text.startsWith("```") && text.endsWith("```")) {
-      text = text.slice(3, -3).trim();
-    }
-    return text.trim();
+  const openWritingAssistant = (prompt: string) => {
+    setWritingPrompt(prompt);
+    setWritingOpen(true);
   };
 
-  const handleGenerateContent = async (promptText?: string) => {
-    const effectivePrompt = (
-      promptText !== undefined ? promptText : contentPrompt
-    ).trim();
-    if (!effectivePrompt && !post.title.trim() && !post.content.trim()) {
-      const msg = "请先填写文章标题、正文或输入提示词。";
-      setAssistError(msg);
-      notify(msg, "error");
-      return;
-    }
-    setAiContentLoading(true);
-    setAssistError("");
-    setGeneratedContent(null);
-    try {
-      const res = await agentApi.getDraftAssist({
-        task: "content",
-        title: post.title,
-        summary: post.summary,
-        content: post.content,
-        prompt: effectivePrompt,
-      });
-      if (res.suggestions?.length && res.suggestions[0].trim()) {
-        setGeneratedContent(sanitizeAiMarkdown(res.suggestions[0]));
-        notify("正文已生成完毕，请在下方预览并确认。", "success");
-      } else {
-        const msg = "AI 未能生成正文，请稍后重试或调整提示词。";
-        setAssistError(msg);
-        notify(msg, "error");
-      }
-    } catch (reason) {
-      recordConflict(reason);
-      const msg =
-        reason instanceof Error
-          ? reason.message
-          : "AI 生成正文失败，请稍后重试。";
-      setAssistError(msg);
-      notify(msg, "error");
-    } finally {
-      setAiContentLoading(false);
-    }
-  };
-
-  const applyGeneratedContent = (mode: "replace" | "append") => {
-    if (!generatedContent) return;
-    if (mode === "replace") {
-      update("content", generatedContent);
-      notify("已替换文章正文。", "success");
-    } else {
-      update(
-        "content",
-        post.content
-          ? `${post.content.trim()}\n\n${generatedContent}`
-          : generatedContent,
+  const applyWritingResult = (result: string, mode: WritingApplyMode) => {
+    if (
+      mode === "replace-selection" &&
+      editorSelection &&
+      editorSelection.end > editorSelection.start
+    ) {
+      const next = `${post.content.slice(0, editorSelection.start)}${result}${post.content.slice(editorSelection.end)}`;
+      const selectionStart = editorSelection.start;
+      update("content", next);
+      setEditorMode("edit");
+      queueMicrotask(() =>
+        editorRef.current?.setSelection(
+          selectionStart,
+          selectionStart + result.length,
+        ),
       );
-      notify("已将生成内容追加到文末。", "success");
-    }
-    setGeneratedContent(null);
-    setShowAiWriting(false);
-  };
-
-  const handleIdeateImagePrompts = async () => {
-    if (!post.title.trim() && !post.content.trim()) {
-      const msg = "请先填写文章标题或正文，AI 才能理解内容并构思插画。";
-      setAssistError(msg);
-      notify(msg, "error");
       return;
     }
-    setAiIdeateLoading(true);
-    setAssistError("");
-    try {
-      notify("AI 正在深度阅读文章并构思插画方案，请稍候…", "success");
-      const res = await agentApi.getDraftAssist({
-        task: "cover_prompt",
-        title: post.title,
-        summary: post.summary,
-        content: post.content,
-      });
-      const cleanList: string[] = [];
-      (res.suggestions || []).forEach((item) => {
-        if (item.includes('","')) {
-          item.split('","').forEach((sub) => {
-            const clean = sub.replace(/^[{"[\s]+|[}"\]\s,]+$/g, "").trim();
-            if (clean) cleanList.push(clean);
-          });
-        } else {
-          const clean = item.replace(/^[{"[\s]+|[}"\]\s,]+$/g, "").trim();
-          if (clean) cleanList.push(clean);
-        }
-      });
-      setImagePromptCandidates(cleanList);
-      if (cleanList.length) {
-        notify(`已结合文章构思出 ${cleanList.length} 组插画方案！`, "success");
-      } else {
-        notify("未能生成插画构思，请稍后重试。", "error");
-      }
-    } catch (reason) {
-      recordConflict(reason);
-      const msg =
-        reason instanceof Error ? reason.message : "插画构思失败，请稍后重试。";
-      setAssistError(msg);
-      notify(msg, "error");
-    } finally {
-      setAiIdeateLoading(false);
-    }
+    update(
+      "content",
+      mode === "replace"
+        ? result
+        : post.content
+          ? `${post.content.trimEnd()}\n\n${result}`
+          : result,
+    );
   };
 
-  const handleGenerateAiImage = async (presetPrompt?: string) => {
-    const effectivePrompt = (
-      presetPrompt !== undefined ? presetPrompt : imagePrompt
-    ).trim();
-    if (!effectivePrompt && !post.title.trim() && !post.content.trim()) {
-      const msg = "请输入生图提示词或先填写文章标题。";
-      setAssistError(msg);
-      notify(msg, "error");
+  const openMedia = (
+    purpose: MediaPurpose,
+    source: Exclude<MediaSource, null>,
+  ) => {
+    setMediaPurpose(purpose);
+    setMediaSource(source);
+  };
+
+  const applyMedia = (result: MediaResult) => {
+    if (mediaPurpose === "cover") {
+      setPost((current) => ({
+        ...current,
+        cover_url: result.url,
+        cover_alt: result.alt,
+      }));
+      dirty.current = true;
+      setSavedAt(null);
+      notify("已更新文章封面。", "success");
       return;
     }
-    setAiImageLoading(true);
-    setAssistError("");
-    try {
-      notify("AI 正在绘制插图中（通常需 15~40 秒），请稍候…", "success");
-      const finalPrompt =
-        effectivePrompt ||
-        `Modern artistic illustration representing: ${post.title}`;
-      let finalAlt = imageAlt.trim();
-      if (!finalAlt) {
-        const match = finalPrompt.match(/\[中文说明:\s*([^\]]+)\]/);
-        if (match && match[1]) {
-          finalAlt = match[1].trim();
-        } else {
-          finalAlt = post.title || "文章插图";
-        }
-      }
-      const res = await agentApi.generateImage({
-        prompt: finalPrompt,
-        alt_text: finalAlt,
+
+    const markdown = `![${result.alt || "文章插图"}](${result.url})`;
+    setEditorMode("edit");
+    queueMicrotask(() => {
+      editorRef.current?.insertText(`\n\n${markdown}\n`, {
+        replaceSelection: false,
       });
-      if (res?.url) {
-        setGeneratedImage({ url: res.url, alt: finalAlt });
-        notify(
-          "🎨 插图已成功生成，支持复制 Markdown 或直接插入正文！",
-          "success",
-        );
-      } else {
-        const msg = "AI 未能成功生成图片，请稍后重试。";
-        setAssistError(msg);
-        notify(msg, "error");
-      }
-    } catch (reason) {
-      recordConflict(reason);
-      const msg =
-        reason instanceof Error ? reason.message : "AI 生图失败，请稍后重试。";
-      setAssistError(msg);
-      notify(msg, "error");
-    } finally {
-      setAiImageLoading(false);
-    }
+      editorRef.current?.focus();
+    });
+    notify("已在编辑位置插入图片。", "success");
   };
 
-  const copyImageMarkdown = () => {
-    if (!generatedImage) return;
-    const md = `![${generatedImage.alt || "文章插图"}](${generatedImage.url})`;
-    void navigator.clipboard.writeText(md);
-    notify("Markdown 图片代码已复制到剪贴板！", "success");
-  };
-
-  const insertImageToContent = () => {
-    if (!generatedImage) return;
-    const md = `\n\n![${generatedImage.alt || "文章插图"}](${generatedImage.url})\n\n`;
-    setPost((current) => ({
-      ...current,
-      content: current.content
-        ? `${current.content.trimEnd()}${md}`
-        : `![${generatedImage.alt || "文章插图"}](${generatedImage.url})\n\n`,
-    }));
-    dirty.current = true;
-    setSavedAt(null);
-    notify("已成功将插图插入到正文末尾！", "success");
-  };
-
-  const setGeneratedImageAsCover = () => {
-    if (!generatedImage) return;
-    setPost((current) => ({
-      ...current,
-      cover_url: generatedImage.url,
-      cover_alt: generatedImage.alt || current.cover_alt,
-    }));
-    dirty.current = true;
-    setSavedAt(null);
-    notify("已成功将该图片设为文章封面！", "success");
+  const focusOutlineItem = (item: MarkdownTOCItem) => {
+    const selection = headingSelection(post.content, item);
+    if (!selection) return;
+    setEditorMode("edit");
+    queueMicrotask(() => {
+      editorRef.current?.setSelection(selection.start, selection.end);
+      editorRef.current?.focus();
+    });
   };
 
   const openFrontsitePreview = async () => {
@@ -873,11 +740,12 @@ export default function PostEditor() {
     let currentPost = post;
     if (dirty.current || !currentPost.id) {
       if (!currentPost.title.trim()) {
-        const msg = "请先填写文章标题。";
-        setError(msg);
-        notify(msg, "error");
+        const message = "请先填写文章标题。";
+        setError(message);
+        notify(message, "error");
         return;
       }
+      savingRef.current = true;
       setSaving(true);
       setError("");
       try {
@@ -896,11 +764,10 @@ export default function PostEditor() {
           navigate(`/admin/posts/${currentPost.id}/edit`, { replace: true });
       } catch (reason) {
         recordConflict(reason);
-        const msg =
+        const message =
           reason instanceof Error ? reason.message : "保存失败，无法开启预览。";
-        setError(msg);
-        notify(msg, "error");
-        setSaving(false);
+        setError(message);
+        notify(message, "error");
         return;
       } finally {
         savingRef.current = false;
@@ -930,6 +797,7 @@ export default function PostEditor() {
         : post.status === "published"
           ? "更新文章"
           : "发布";
+
   if (!isNew && error && !post.id) {
     return (
       <Alert
@@ -950,7 +818,7 @@ export default function PostEditor() {
     );
   }
 
-  if (!allowed || loading)
+  if (!allowed || loading) {
     return (
       <Card
         padding="base"
@@ -961,1008 +829,792 @@ export default function PostEditor() {
             <Skeleton className="h-9 w-36" />
             <Skeleton className="h-9 w-64" />
           </div>
-          <div className="grid gap-5 xl:grid-cols-[13rem_minmax(0,1fr)_19rem]">
+          <div className="grid gap-5 xl:grid-cols-[14rem_minmax(0,1fr)_20rem]">
             <Skeleton className="h-72 w-full" />
-            <Skeleton className="h-[34rem] w-full" />
+            <Skeleton className="h-[38rem] w-full" />
             <Skeleton className="h-96 w-full" />
           </div>
         </div>
       </Card>
     );
-  return (
-    <ContentEditorFrame>
-      <EditorCommandBar>
-        <Button variant="text" onClick={leaveEditor} icon={<ArrowLeft />}>
-          返回文章列表
-        </Button>
-        <div
-          className="editor-save-state flex min-w-0 flex-1 items-center gap-2 text-sm text-muted-foreground"
-          role="status"
-          aria-live="polite"
+  }
+
+  const commandBar = (
+    <>
+      <Button variant="text" onClick={leaveEditor} icon={<ArrowLeft />}>
+        返回文章列表
+      </Button>
+      <div
+        className="flex min-w-0 flex-1 items-center gap-2 text-sm text-muted-foreground"
+        role="status"
+        aria-live="polite"
+      >
+        {isReadOnly ? (
+          <>
+            <Eye className="size-4" /> 只读模式（他人文章）
+          </>
+        ) : saving ? (
+          "正在保存…"
+        ) : savedAt ? (
+          <>
+            <Check className="size-4" /> 已于{" "}
+            {savedAt.toLocaleTimeString("zh-CN", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}{" "}
+            保存
+          </>
+        ) : dirty.current ? (
+          "有未保存的更改"
+        ) : (
+          "所有更改已保存"
+        )}
+      </div>
+      <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+        <Button
+          variant="outline"
+          type="button"
+          onClick={() => void openFrontsitePreview()}
+          disabled={saving}
+          icon={<ExternalLink />}
         >
-          {isReadOnly ? (
-            <span className="editor-readonly-indicator inline-flex min-w-0 items-center gap-1.5">
-              <Eye size={14} /> 只读模式（他人文章）
-            </span>
-          ) : saving ? (
-            "正在保存…"
-          ) : savedAt ? (
-            <>
-              <Check className="size-4" /> 已于{" "}
-              {savedAt.toLocaleTimeString("zh-CN", {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}{" "}
-              保存
-            </>
-          ) : dirty.current ? (
-            "有未保存的更改"
-          ) : (
-            "所有更改已保存"
-          )}
-        </div>
-        <EditorCommandActions>
+          预览前台页面
+        </Button>
+        {!isReadOnly &&
+        post.status !== "published" &&
+        publishIntent !== "draft" ? (
           <Button
             variant="outline"
             type="button"
-            onClick={() => void openFrontsitePreview()}
+            onClick={() => void persist("draft")}
             disabled={saving}
-            icon={<ExternalLink />}
+            icon={<Save />}
           >
-            预览前台页面
+            保存草稿
           </Button>
-          {!isReadOnly &&
-          post.status !== "published" &&
-          publishIntent !== "draft" ? (
+        ) : null}
+        {!isReadOnly ? (
+          <Button
+            variant="solid"
+            color="primary"
+            type="button"
+            onClick={() => void persist(primaryStatus)}
+            disabled={saving}
+            icon={<Send />}
+          >
+            {primaryLabel}
+          </Button>
+        ) : null}
+      </div>
+    </>
+  );
+
+  const navigatorPanel = (
+    <div className="min-w-0">
+      <Tabs<NavigatorMode>
+        aria-label="文档导航视图"
+        size="small"
+        activeKey={navigatorMode}
+        onChange={setNavigatorMode}
+        items={[
+          { key: "outline", label: `大纲 ${outline.length}` },
+          { key: "history", label: `历史 ${versions.length}` },
+        ]}
+      />
+      <div className="mt-3 flex flex-col gap-1.5">
+        {navigatorMode === "outline" ? (
+          outline.length ? (
+            <TooltipProvider delayDuration={350}>
+              {outline.map((item) => (
+                <Tooltip key={`${item.id}-${item.level}`}>
+                  <TooltipTrigger asChild>
+                    <ChoiceButton
+                      type="button"
+                      aria-label={`跳转到 ${item.text}`}
+                      className="w-full min-w-0 overflow-hidden rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground [&>span]:min-w-0 [&>span]:w-full"
+                      style={{
+                        paddingLeft: `${8 + Math.max(0, item.level - 2) * 12}px`,
+                      }}
+                      onClick={() => focusOutlineItem(item)}
+                    >
+                      <span className="block min-w-0 truncate">
+                        {item.text}
+                      </span>
+                    </ChoiceButton>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-80">
+                    {item.text}
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+            </TooltipProvider>
+          ) : (
+            <Text size="sm" tone="muted">
+              在正文中添加 Markdown 标题后，大纲会自动生成。
+            </Text>
+          )
+        ) : versions.length ? (
+          <div className="flex flex-col gap-1" data-slot="post-history-list">
+            {versions.map((version) => (
+              <ChoiceButton
+                key={version.id}
+                type="button"
+                className="h-auto min-h-0 w-full items-start rounded-md px-2.5 py-2.5 text-left text-sm whitespace-normal transition-colors hover:bg-muted/70 [&>span]:min-w-0 [&>span]:w-full"
+                onClick={() => setRestoreTarget(version)}
+                aria-label={`查看 ${version.title || "无标题草稿"} 历史版本`}
+              >
+                <span className="flex min-w-0 w-full flex-col gap-1">
+                  <span className="flex w-full items-baseline justify-between gap-2">
+                    <span className="truncate font-medium text-foreground">
+                      {version.title || "无标题草稿"}
+                    </span>
+                    <span className="shrink-0 text-[11px] font-normal text-muted-foreground">
+                      {new Date(version.created_at).toLocaleString("zh-CN", {
+                        month: "2-digit",
+                        day: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </span>
+                  <span className="line-clamp-2 text-xs font-normal leading-5 text-muted-foreground">
+                    {versionExcerpt(version.content)}
+                  </span>
+                </span>
+              </ChoiceButton>
+            ))}
+          </div>
+        ) : (
+          <Empty description="暂无历史版本记录" />
+        )}
+      </div>
+    </div>
+  );
+
+  const metadataItems: {
+    key: string;
+    label: string;
+    value: string;
+    monospace?: boolean;
+  }[] = metadataSuggestion
+    ? [
+        ...(metadataSuggestion.slug
+          ? [
+              {
+                key: "slug",
+                label: "Slug",
+                value: metadataSuggestion.slug,
+                monospace: true,
+              },
+            ]
+          : []),
+        ...(metadataSuggestion.seo_title
+          ? [
+              {
+                key: "seo_title",
+                label: "SEO 标题",
+                value: metadataSuggestion.seo_title,
+              },
+            ]
+          : []),
+        ...(metadataSuggestion.seo_description
+          ? [
+              {
+                key: "seo_description",
+                label: "SEO 描述",
+                value: metadataSuggestion.seo_description,
+              },
+            ]
+          : []),
+      ]
+    : [];
+
+  const taxonomyItems = taxonomySuggestion
+    ? [
+        taxonomySuggestion.category
+          ? {
+              key: "category",
+              label: "分类",
+              value: taxonomySuggestion.category.name,
+            }
+          : null,
+        taxonomySuggestion.tags.length
+          ? {
+              key: "tags",
+              label: "标签补充",
+              value: taxonomySuggestion.tags.join("、"),
+            }
+          : null,
+      ].filter((item): item is { key: string; label: string; value: string } =>
+        Boolean(item),
+      )
+    : [];
+
+  const inspector = (
+    <fieldset disabled={isReadOnly} className="min-w-0 border-0 p-0">
+      <div className="min-h-9 border-b pb-3">
+        <Text className="font-semibold">属性</Text>
+        <Text size="xs" tone="muted" className="mt-0.5 block">
+          发布、组织、封面与 SEO。
+        </Text>
+      </div>
+
+      <InspectorSection title="发布设置">
+        <Field label="状态">
+          <Select
+            aria-label="状态"
+            value={publishIntent}
+            onChange={(value) => {
+              setPublishIntent(selectValue(value) as PostStatus);
+              dirty.current = true;
+              setSavedAt(null);
+            }}
+          >
+            <option value="draft">草稿</option>
+            <option value="published">立即发布</option>
+            <option value="scheduled">定时发布</option>
+          </Select>
+        </Field>
+        {publishIntent === "scheduled" ? (
+          <Field label="发布时间">
+            <Input
+              aria-label="发布时间"
+              type="datetime-local"
+              value={post.scheduled_at?.slice(0, 16) || ""}
+              onChange={(event) => update("scheduled_at", event.target.value)}
+            />
+          </Field>
+        ) : null}
+      </InspectorSection>
+
+      <InspectorSection
+        title="分类与标签"
+        action={
+          !isReadOnly ? (
             <Button
-              variant="outline"
               type="button"
-              onClick={() => void persist("draft")}
-              disabled={saving}
-              icon={<Save />}
-            >
-              保存草稿
-            </Button>
-          ) : null}
-          {!isReadOnly ? (
+              size="small"
+              variant="text"
+              icon={<Sparkles />}
+              aria-label="AI 推荐分类与标签"
+              title="AI 推荐分类与标签"
+              className="size-8 px-0"
+              loading={taxonomyLoading}
+              disabled={
+                taxonomyLoading || (!post.title.trim() && !post.content.trim())
+              }
+              onClick={() => void requestTaxonomySuggestions()}
+            />
+          ) : undefined
+        }
+      >
+        {taxonomySuggestion && taxonomyItems.length ? (
+          <AISuggestionReview
+            aria-label="AI 分类与标签建议"
+            groupLabel="分类与标签建议"
+            description="分类只从现有分类中推荐；标签只补充勾选的新标签，不覆盖手工标签。"
+            items={taxonomyItems}
+            selectedKeys={taxonomySelection}
+            onSelectedKeysChange={setTaxonomySelection}
+            onCancel={() => {
+              setTaxonomySuggestion(null);
+              setTaxonomySelection([]);
+            }}
+            onRegenerate={() => void requestTaxonomySuggestions()}
+            onApply={applyTaxonomySuggestions}
+          />
+        ) : null}
+        <Field label="分类">
+          <Select
+            aria-label="分类"
+            value={String(post.category_id || "")}
+            onChange={(value) => {
+              const next = selectValue(value);
+              update("category_id", next ? Number(next) : null);
+            }}
+          >
+            <option value="">未分类</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="标签" hint="使用逗号分隔。">
+          <Input
+            aria-label="标签"
+            value={post.tags.join(", ")}
+            onChange={(event) =>
+              update(
+                "tags",
+                event.target.value
+                  .split(",")
+                  .map((tag) => tag.trim())
+                  .filter(Boolean),
+              )
+            }
+            placeholder="Go, OIDC, 安全"
+          />
+        </Field>
+      </InspectorSection>
+
+      <InspectorSection
+        title="封面"
+        action={
+          !isReadOnly ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  size="small"
+                  variant="text"
+                  icon={<ImageIcon />}
+                  aria-label="选择文章封面"
+                  title="选择文章封面"
+                  className="size-8 px-0"
+                />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem
+                  onSelect={() => openMedia("cover", "library")}
+                >
+                  从媒体库选择
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => openMedia("cover", "upload")}>
+                  上传图片
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => openMedia("cover", "ai")}>
+                  AI 生成封面
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : undefined
+        }
+      >
+        <Field label="封面 URL">
+          <Input
+            aria-label="封面 URL"
+            value={post.cover_url || ""}
+            onChange={(event) => update("cover_url", event.target.value)}
+            placeholder="/media/cover.webp"
+          />
+        </Field>
+        <Field label="替代文本">
+          <Input
+            aria-label="替代文本"
+            value={post.cover_alt || ""}
+            onChange={(event) => update("cover_alt", event.target.value)}
+            placeholder="描述封面图场景与主题"
+          />
+        </Field>
+      </InspectorSection>
+
+      <InspectorSection
+        title="路径与 SEO"
+        action={
+          !isReadOnly ? (
             <Button
-              variant="solid"
-              color="primary"
               type="button"
-              onClick={() => void persist(primaryStatus)}
-              disabled={saving}
-              icon={<Send />}
-            >
-              {primaryLabel}
-            </Button>
-          ) : null}
-        </EditorCommandActions>
-      </EditorCommandBar>
-      {conflict ? (
-        <section aria-label="文章版本冲突">
-          <p>文章已有新版本。你的未保存内容仍保留，请先比较后再加载。</p>
-          <Button onClick={() => void inspectLatest()}>查看最新版本</Button>
-          <Button onClick={() => void copyDraft()}>复制未保存内容</Button>
-          {latestPost ? (
+              size="small"
+              variant="text"
+              icon={<Sparkles />}
+              aria-label="AI 优化路径与 SEO"
+              title="AI 优化路径与 SEO"
+              className="size-8 px-0"
+              loading={metadataLoading}
+              disabled={
+                metadataLoading || (!post.title.trim() && !post.content.trim())
+              }
+              onClick={() => void requestMetadataSuggestions()}
+            />
+          ) : undefined
+        }
+      >
+        {metadataSuggestion && metadataItems.length ? (
+          <AISuggestionReview
+            aria-label="AI 路径与 SEO 建议"
+            groupLabel="路径与 SEO 建议"
+            description="审阅后只应用勾选的路径与 SEO 修改。"
+            items={metadataItems}
+            selectedKeys={metadataSelection}
+            onSelectedKeysChange={setMetadataSelection}
+            onCancel={() => {
+              setMetadataSuggestion(null);
+              setMetadataSelection([]);
+            }}
+            onRegenerate={() => void requestMetadataSuggestions()}
+            onApply={applyMetadataSuggestions}
+          />
+        ) : null}
+        <Field
+          label="访问路径 (Slug)"
+          required
+          hint="访问路径为 /articles/<slug>"
+        >
+          <Input
+            aria-label="访问路径 (Slug)"
+            className="font-mono"
+            value={post.slug}
+            onChange={(event) => update("slug", event.target.value)}
+            required
+          />
+        </Field>
+        <Field label="SEO 标题" hint={`${(post.seo_title || "").length}/60`}>
+          <Input
+            aria-label="SEO 标题"
+            value={post.seo_title || ""}
+            maxLength={60}
+            onChange={(event) => update("seo_title", event.target.value)}
+            placeholder="留空时默认使用标题"
+          />
+        </Field>
+        <Field
+          label="SEO 描述"
+          hint={`${(post.seo_description || "").length}/160`}
+        >
+          <Textarea
+            aria-label="SEO 描述"
+            rows={4}
+            value={post.seo_description || ""}
+            maxLength={160}
+            onChange={(event) => update("seo_description", event.target.value)}
+            placeholder="留空时默认使用摘要"
+          />
+        </Field>
+      </InspectorSection>
+    </fieldset>
+  );
+
+  const aiToolbarActions = !isReadOnly ? (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            size="small"
+            variant="text"
+            icon={<Sparkles />}
+            aria-label="AI 写作"
+            title="AI 写作"
+            className="size-8 px-0"
+          />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-56">
+          {editorSelection?.text ? (
             <>
-              <h3>{latestPost.title}</h3>
-              <pre>{JSON.stringify(latestPost, null, 2)}</pre>
+              <DropdownMenuItem
+                onSelect={() =>
+                  openWritingAssistant(
+                    "保持原意，润色当前选中的文字，提升连贯性和表达质量",
+                  )
+                }
+              >
+                润色所选
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() =>
+                  openWritingAssistant(
+                    "扩写当前选中的文字，补充必要背景、技术细节和例子",
+                  )
+                }
+              >
+                扩写所选
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() =>
+                  openWritingAssistant("压缩当前选中的文字，保留核心事实和结论")
+                }
+              >
+                缩写所选
+              </DropdownMenuItem>
+            </>
+          ) : (
+            <>
+              <DropdownMenuItem
+                onSelect={() =>
+                  openWritingAssistant(
+                    "基于标题和摘要撰写结构严谨的完整文章初稿",
+                  )
+                }
+              >
+                起草文章
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() =>
+                  openWritingAssistant(
+                    "延续当前正文继续写作，保持已有结构、语气和 Markdown 风格",
+                  )
+                }
+              >
+                继续写作
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() =>
+                  openWritingAssistant(
+                    "重构全文结构，减少重复，让论点和结论更清晰",
+                  )
+                }
+              >
+                重构全文
+              </DropdownMenuItem>
+            </>
+          )}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => openWritingAssistant("")}>
+            自定义指令…
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            size="small"
+            variant="text"
+            icon={<ImageIcon />}
+            aria-label="插图"
+            title="插图"
+            className="size-8 px-0"
+          />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-52">
+          <DropdownMenuItem onSelect={() => openMedia("body", "library")}>
+            从媒体库选择
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => openMedia("body", "upload")}>
+            上传图片
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={() => openMedia("body", "ai")}>
+            AI 生成配图
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
+  ) : null;
+
+  return (
+    <div className="flex flex-col gap-6">
+      {conflict ? (
+        <Alert
+          type="warning"
+          showIcon
+          title="文章已有新版本"
+          description="你的未保存内容仍保留。请先比较或复制当前草稿，再决定是否加载服务器最新版本。"
+          action={
+            <div className="flex flex-wrap gap-2">
+              <Button size="small" onClick={() => void inspectLatest()}>
+                查看最新版本
+              </Button>
+              <Button size="small" onClick={() => void copyDraft()}>
+                复制未保存内容
+              </Button>
+            </div>
+          }
+        />
+      ) : null}
+      {latestPost ? (
+        <Card padding="base">
+          <div className="flex flex-col gap-3">
+            <Text className="font-semibold">
+              服务器最新版本：{latestPost.title || "无标题"}
+            </Text>
+            <Text size="sm" tone="muted">
+              Revision {latestPost.revision ?? "-"}
+            </Text>
+            <div className="max-h-48 overflow-auto rounded-md bg-muted/20 p-3 text-sm">
+              <MarkdownRenderer content={latestPost.content || "暂无正文"} />
+            </div>
+            <div className="flex justify-end">
               <Button onClick={() => setConfirmReload(true)}>
                 加载最新版本
               </Button>
-            </>
-          ) : null}
-        </section>
-      ) : null}
-      <Modal
-        open={confirmReload}
-        onClose={() => setConfirmReload(false)}
-        title="替换未保存内容？"
-        footer={
-          <Button
-            onClick={() => {
-              if (!latestPost) return;
-              setPost(latestPost);
-              setPublishIntent(latestPost.status || "draft");
-              dirty.current = false;
-              setConflict(false);
-              setError("");
-              setLatestPost(null);
-              setConfirmReload(false);
-            }}
-          >
-            确认替换并加载
-          </Button>
-        }
-      >
-        <p>当前未保存内容将被替换，请先复制保留。</p>
-      </Modal>
-      {error ? (
-        <Alert
-          className="editor-page-feedback"
-          type="error"
-          showIcon
-          title={error}
-        />
-      ) : null}
-      <div className="editor-workspace grid min-w-0 xl:grid-cols-[13rem_minmax(0,1fr)_19rem]">
-        <aside
-          className="editor-outline min-w-0 border-b p-6 xl:border-b-0 xl:border-r"
-          aria-label="编辑器导航"
-        >
-          <div className="flex items-start justify-between gap-2 xl:flex-col">
-            <h2 className="text-sm font-semibold">
-              {showVersions ? "版本历史" : "文档大纲"}
-            </h2>
-            <Button
-              variant="text"
-              size="small"
-              onClick={() => setShowVersions(!showVersions)}
-              icon={showVersions ? <List /> : <History />}
-            >
-              {showVersions ? "查看大纲" : `版本历史 (${versions.length})`}
-            </Button>
+            </div>
           </div>
-          {showVersions ? (
-            <div className="version-drawer mt-5 flex flex-col gap-2">
-              {versions.length === 0 ? (
-                <Empty description="暂无历史版本记录" />
-              ) : (
-                versions.map((version) => (
-                  <ChoiceButton
-                    key={version.id}
-                    className="version-item"
-                    onClick={() => setRestoreTarget(version)}
-                  >
-                    <span className="version-item__content">
-                      <span className="version-item__title">
-                        {version.title || "无标题草稿"}
-                      </span>
-                      <span className="version-item__meta">
-                        <time className="version-item__time">
-                          {new Date(version.created_at).toLocaleString(
-                            "zh-CN",
-                            {
-                              month: "2-digit",
-                              day: "2-digit",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            },
-                          )}
-                        </time>
-                        <span className="version-item__action">恢复</span>
-                      </span>
-                    </span>
-                  </ChoiceButton>
-                ))
-              )}
-            </div>
-          ) : (
-            <nav className="mt-5 flex flex-col gap-2">
-              {outline.length ? (
-                outline.map((item) => (
-                  <a
-                    key={item.id}
-                    href={`#${item.id}`}
-                    className={`level-${item.level}`}
-                    onClick={() => {
-                      if (!preview) setPreview(true);
-                    }}
-                  >
-                    {item.text}
-                  </a>
-                ))
-              ) : (
-                <p>
-                  在正文中添加 Markdown 标题（如 # 或 ##）后，大纲会自动生成。
-                </p>
-              )}
-            </nav>
-          )}
-        </aside>
-        <main
-          className="editor-canvas min-w-0 border-b p-6 xl:border-b-0"
-          aria-label="文章编辑画布"
-        >
-          <Field className="editor-form-field" label="标题" required>
-            <Textarea
-              className="editor-title"
-              rows={2}
-              value={post.title}
-              onChange={(event) => update("title", event.target.value)}
-              placeholder="写一个清晰、具体的标题"
-              disabled={isReadOnly}
-              readOnly={isReadOnly}
-              required
-            />
+        </Card>
+      ) : null}
+      {error ? <Alert type="error" showIcon title={error} /> : null}
+
+      <DocumentEditorShell
+        aria-label="文章编辑器"
+        header={commandBar}
+        navigator={navigatorPanel}
+        inspector={inspector}
+        navigatorAriaLabel="编辑器导航"
+        canvasAriaLabel="文章编辑画布"
+        inspectorAriaLabel="文章元数据 Inspector"
+      >
+        <div className="flex min-w-0 flex-col gap-5">
+          <div>
             {!isReadOnly ? (
-              <div className="editor-ai-inline">
-                <Button
-                  variant="text"
-                  onClick={() => void requestSuggestions("title")}
-                  loading={assistTask === "title"}
-                  disabled={assistTask !== null}
-                  icon={<Sparkles />}
-                >
-                  {assistTask === "title" ? "正在想标题…" : "生成标题候选"}
-                </Button>
-                {suggestionTask === "title" && suggestions.length > 0 ? (
-                  <div className="editor-ai-candidates" aria-label="标题候选">
-                    {suggestions.map((item) => (
-                      <ChoiceButton
-                        key={item}
-                        className="editor-ai-candidate"
-                        onClick={() => applySuggestion("title", item)}
-                      >
-                        <span className="editor-ai-candidate__content">
-                          <span>{item}</span>
-                          <b>应用</b>
-                        </span>
-                      </ChoiceButton>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-          </Field>
-          <Field className="editor-form-field" label="摘要">
-            <Textarea
-              className="editor-summary"
-              rows={3}
-              value={post.summary}
-              onChange={(event) => update("summary", event.target.value)}
-              maxLength={300}
-              placeholder="用两三句话说明文章解决的问题"
-              disabled={isReadOnly}
-              readOnly={isReadOnly}
-            />
-            {!isReadOnly ? (
-              <div className="editor-ai-inline">
-                <Button
-                  variant="text"
-                  onClick={() => void requestSuggestions("summary")}
-                  loading={assistTask === "summary"}
-                  disabled={assistTask !== null}
-                  icon={<Sparkles />}
-                >
-                  {assistTask === "summary"
-                    ? "正在提炼摘要…"
-                    : "根据正文生成摘要"}
-                </Button>
-                {suggestionTask === "summary" && suggestions.length > 0 ? (
-                  <div className="editor-ai-candidates" aria-label="摘要候选">
-                    {suggestions.map((item) => (
-                      <ChoiceButton
-                        key={item}
-                        className="editor-ai-candidate"
-                        onClick={() => applySuggestion("summary", item)}
-                      >
-                        <span className="editor-ai-candidate__content">
-                          <span>{item}</span>
-                          <b>应用</b>
-                        </span>
-                      </ChoiceButton>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-          </Field>
-          <Tabs
-            className="editor-tabs"
-            activeKey={preview ? "preview" : "markdown"}
-            onChange={(value) => setPreview(value === "preview")}
-          >
-            <TabList aria-label="编辑模式">
-              <Tab value="markdown">Markdown</Tab>
-              <Tab value="preview">预览</Tab>
-            </TabList>
-            {!isReadOnly ? (
-              <div className="editor-ai-tools-group">
-                <Button
-                  variant="text"
-                  size="small"
-                  className={`editor-ai-tool-control ${showAiWriting ? "active" : ""}`}
-                  onClick={() => {
-                    setShowAiWriting(!showAiWriting);
-                    setShowAiImage(false);
-                    setAssistError("");
-                  }}
-                  icon={<Sparkles />}
-                >
-                  {showAiWriting ? "收起 AI 写作" : "AI 写作与润色"}
-                </Button>
-                <Button
-                  variant="text"
-                  size="small"
-                  className={`editor-ai-tool-control ${showAiImage ? "active" : ""}`}
-                  onClick={() => {
-                    setShowAiImage(!showAiImage);
-                    setShowAiWriting(false);
-                    setAssistError("");
-                  }}
-                  icon={<ImageIcon />}
-                >
-                  {showAiImage ? "收起 AI 插图" : "AI 文生图插画"}
-                </Button>
-              </div>
-            ) : null}
-          </Tabs>
-          {showAiWriting ? (
-            <AiWritingPanel>
-              <div className="editor-ai-panel-header">
-                <div className="editor-ai-presets">
-                  <ChoiceButton
-                    onClick={() =>
-                      void handleGenerateContent(
-                        "基于文章标题和摘要，撰写结构严谨、内容丰富的 Markdown 完整文章初稿，包含引言、分章节深入论述和总结。",
-                      )
-                    }
-                    disabled={aiContentLoading}
-                  >
-                    ✍️ 一键起草初稿
-                  </ChoiceButton>
-                  <ChoiceButton
-                    onClick={() =>
-                      void handleGenerateContent(
-                        "保持文章原意与核心论点，优化段落连贯性、语言流畅度与错别字，并完善 Markdown 排版格式。",
-                      )
-                    }
-                    disabled={aiContentLoading || !post.content.trim()}
-                  >
-                    ✨ 润色与排版
-                  </ChoiceButton>
-                  <ChoiceButton
-                    onClick={() =>
-                      void handleGenerateContent(
-                        "对现有正文进行扩写与深化，补充背景说明、技术细节、论据案例或实践经验，使文章更具深度。",
-                      )
-                    }
-                    disabled={aiContentLoading || !post.content.trim()}
-                  >
-                    ➕ 扩充内容细节
-                  </ChoiceButton>
-                  <ChoiceButton
-                    onClick={() =>
-                      void handleGenerateContent(
-                        "在保留核心论点与关键信息的前提下，精简冗余表述，提炼要点，使语言更加精炼有力。",
-                      )
-                    }
-                    disabled={aiContentLoading || !post.content.trim()}
-                  >
-                    📝 精简提炼
-                  </ChoiceButton>
-                </div>
-              </div>
-              <div className="editor-ai-prompt-box">
-                <Input
-                  placeholder="输入自定义写作或修改提示词（例如：按“背景-方案-实操”三部分撰写，增加代码示例…）"
-                  value={contentPrompt}
-                  onChange={(e) => setContentPrompt(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      void handleGenerateContent();
-                    }
-                  }}
-                  disabled={aiContentLoading}
-                />
-                <Button
-                  variant="solid"
-                  color="primary"
-                  type="button"
-                  onClick={() => void handleGenerateContent()}
-                  loading={aiContentLoading}
-                  disabled={
-                    !contentPrompt.trim() &&
-                    !post.title.trim() &&
-                    !post.content.trim()
-                  }
-                >
-                  {aiContentLoading ? "正在生成…" : "生成 / 执行"}
-                </Button>
-              </div>
-              {assistError ? (
-                <Alert type="error" showIcon title={assistError} />
-              ) : null}
-              {generatedContent ? (
-                <div className="editor-ai-result-box">
-                  <div className="editor-ai-result-header">
-                    <strong>
-                      <Sparkles /> 生成结果预览
-                    </strong>
-                    <div className="editor-ai-result-actions">
-                      <Button
-                        variant="solid"
-                        color="primary"
-                        type="button"
-                        onClick={() => applyGeneratedContent("replace")}
-                      >
-                        替换全文
-                      </Button>
-                      <Button
-                        variant="outline"
-                        type="button"
-                        onClick={() => applyGeneratedContent("append")}
-                      >
-                        追加到末尾
-                      </Button>
-                      <Button
-                        variant="outline"
-                        type="button"
-                        onClick={() => setGeneratedContent(null)}
-                      >
-                        放弃
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="editor-ai-result-preview">
-                    <MarkdownRenderer content={generatedContent} />
-                  </div>
-                </div>
-              ) : null}
-            </AiWritingPanel>
-          ) : null}
-          {showAiImage ? (
-            <AiImageGenerationPanel>
-              <div className="editor-ai-panel-header">
-                <div className="editor-ai-presets">
-                  <ChoiceButton
-                    className="editor-ai-ideate-control"
-                    onClick={() => void handleIdeateImagePrompts()}
-                    loading={aiIdeateLoading}
-                    disabled={aiIdeateLoading || aiImageLoading}
-                    icon={<Sparkles />}
-                  >
-                    {aiIdeateLoading ? "正在构思画面…" : "结合文章智能构思画面"}
-                  </ChoiceButton>
-                  <ChoiceButton
-                    onClick={() =>
-                      void handleGenerateAiImage(
-                        post.title
-                          ? `A sleek modern architectural diagram illustration showing system components for ${post.title}, clean lines, isometric view, tech palette`
-                          : "A sleek modern architectural diagram illustration showing system components, clean lines, isometric view, tech palette",
-                      )
-                    }
-                    disabled={aiImageLoading}
-                  >
-                    📊 架构图解风
-                  </ChoiceButton>
-                  <ChoiceButton
-                    onClick={() =>
-                      void handleGenerateAiImage(
-                        post.title
-                          ? `A modern minimal editorial vector illustration about ${post.title}, clean flat design, subtle gradients`
-                          : "A modern minimal editorial vector illustration about technology and human intelligence, clean flat design, subtle gradients",
-                      )
-                    }
-                    disabled={aiImageLoading}
-                  >
-                    🖼️ 科技插画风
-                  </ChoiceButton>
-                  <ChoiceButton
-                    onClick={() =>
-                      void handleGenerateAiImage(
-                        post.title
-                          ? `Cinematic concept art for ${post.title}, hyper-detailed futuristic scene, volumetric lighting, 8k wallpaper quality`
-                          : "Cinematic concept art, hyper-detailed futuristic scene, volumetric lighting, 8k wallpaper quality",
-                      )
-                    }
-                    disabled={aiImageLoading}
-                  >
-                    🎬 电影概念风
-                  </ChoiceButton>
-                  <ChoiceButton
-                    onClick={() =>
-                      void handleGenerateAiImage(
-                        post.title
-                          ? `Cute 3D isometric clay render illustration representing ${post.title}, soft studio lighting, playful tech scene`
-                          : "Cute 3D isometric clay render illustration, soft studio lighting, playful tech scene",
-                      )
-                    }
-                    disabled={aiImageLoading}
-                  >
-                    🎨 3D 立体风
-                  </ChoiceButton>
-                  <ChoiceButton
-                    onClick={() =>
-                      void handleGenerateAiImage(
-                        post.title
-                          ? `Cute and simple 2D cartoon flat illustration representing ${post.title}, clean line art, playful vibrant colors, minimal modern aesthetic`
-                          : "Cute and simple 2D cartoon flat illustration, clean line art, playful vibrant colors, minimal modern aesthetic",
-                      )
-                    }
-                    disabled={aiImageLoading}
-                  >
-                    🧸 简单卡通风
-                  </ChoiceButton>
-                </div>
-              </div>
-              <div className="editor-ai-prompt-box">
-                <Input
-                  placeholder="输入生图提示词（或点击上方“智能构思画面”，也可直接描述场景）"
-                  value={imagePrompt}
-                  onChange={(e) => setImagePrompt(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      void handleGenerateAiImage();
-                    }
-                  }}
-                  disabled={aiImageLoading}
-                />
-                <Input
-                  className="editor-alt-input"
-                  placeholder="图片描述 (Alt)"
-                  value={imageAlt}
-                  onChange={(e) => setImageAlt(e.target.value)}
-                  disabled={aiImageLoading}
-                />
-                <Button
-                  variant="solid"
-                  color="primary"
-                  type="button"
-                  onClick={() => void handleGenerateAiImage()}
-                  loading={aiImageLoading}
-                  disabled={!imagePrompt.trim() && !post.title.trim()}
-                >
-                  {aiImageLoading ? "正在绘制…" : "开始生图"}
-                </Button>
-              </div>
-              {imagePromptCandidates.length > 0 ? (
-                <div
-                  className="editor-ai-candidates editor-ai-candidates--spaced"
-                  aria-label="画面构思候选"
-                >
-                  {imagePromptCandidates.map((item) => {
-                    const match = item.match(/\[中文说明:\s*([^\]]+)\]/);
-                    const chDesc = match && match[1] ? match[1].trim() : "";
-                    const promptText = item
-                      .replace(/\[中文说明:\s*[^\]]+\]/g, "")
-                      .trim();
-                    return (
-                      <div key={item} className="editor-prompt-candidate">
-                        {chDesc ? (
-                          <div className="editor-prompt-badge">
-                            <Sparkles size={13} /> {chDesc}
-                          </div>
-                        ) : null}
-                        <div className="editor-prompt-text">{promptText}</div>
-                        <div className="editor-prompt-candidate-actions">
-                          <Button
-                            variant="outline"
-                            type="button"
-                            onClick={() => {
-                              if (chDesc) setImageAlt(chDesc);
-                              setImagePrompt(promptText);
-                              notify("已填入生图提示词！", "success");
-                            }}
-                          >
-                            ✍️ 填入提示词
-                          </Button>
-                          <Button
-                            variant="solid"
-                            color="primary"
-                            type="button"
-                            disabled={aiImageLoading}
-                            onClick={() => {
-                              if (chDesc) setImageAlt(chDesc);
-                              setImagePrompt(promptText);
-                              void handleGenerateAiImage(promptText);
-                            }}
-                          >
-                            🎨 一键生图
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : null}
-              {assistError ? (
-                <Alert type="error" showIcon title={assistError} />
-              ) : null}
-              {generatedImage ? (
-                <div className="editor-ai-image-result">
-                  <div className="editor-ai-image-preview">
-                    <img
-                      src={generatedImage.url}
-                      alt={generatedImage.alt || "AI 生成插图"}
-                    />
-                  </div>
-                  <div className="editor-ai-image-info">
-                    <div className="editor-ai-image-code">
-                      {`![${generatedImage.alt || "文章插图"}](${generatedImage.url})`}
-                    </div>
-                    <div className="editor-ai-image-actions">
-                      <Button
-                        variant="solid"
-                        color="primary"
-                        type="button"
-                        onClick={copyImageMarkdown}
-                      >
-                        📋 复制 Markdown
-                      </Button>
-                      <Button
-                        variant="outline"
-                        type="button"
-                        onClick={insertImageToContent}
-                      >
-                        ➕ 插入到正文末尾
-                      </Button>
-                      <Button
-                        variant="outline"
-                        type="button"
-                        onClick={setGeneratedImageAsCover}
-                      >
-                        🖼️ 设为文章封面
-                      </Button>
-                      <Button
-                        variant="outline"
-                        type="button"
-                        onClick={() => setGeneratedImage(null)}
-                      >
-                        放弃
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-            </AiImageGenerationPanel>
-          ) : null}
-          {preview ? (
-            <div className="editor-preview">
-              <MarkdownRenderer
-                content={post.content || "开始写作后，预览会出现在这里。"}
-              />
-            </div>
-          ) : (
-            <Textarea
-              className="min-h-[28rem] font-mono"
-              value={post.content}
-              onChange={(event) => update("content", event.target.value)}
-              aria-label="文章正文 Markdown"
-              placeholder={"## 从问题开始\n\n写下背景、约束、判断与实现…"}
-              disabled={isReadOnly}
-              readOnly={isReadOnly}
-            />
-          )}
-        </main>
-        <aside
-          className="editor-inspector min-w-0 p-6 xl:border-l"
-          aria-label="文章元数据 Inspector"
-        >
-          <fieldset disabled={isReadOnly} className="min-w-0 border-0 p-0">
-            {!isReadOnly ? (
-              <div className="editor-inspector-ai-banner">
-                <Button
-                  variant="solid"
-                  color="primary"
-                  type="button"
-                  className="editor-inspector-ai-action"
-                  onClick={() => void autoFillAllMetadata()}
-                  loading={metaLoading}
-                  disabled={!post.title.trim() && !post.content.trim()}
-                  icon={<Sparkles />}
-                >
-                  {metaLoading ? "正在智能分析全文…" : "AI 一键补全元数据"}
-                </Button>
-              </div>
-            ) : null}
-            <details open>
-              <summary>发布设置</summary>
-              <Field className="editor-form-field" label="状态">
-                <Select
-                  aria-label="状态"
-                  value={publishIntent}
-                  onChange={(value) => {
-                    setPublishIntent(selectValue(value) as PostStatus);
-                    dirty.current = true;
-                  }}
-                >
-                  <option value="draft">草稿</option>
-                  <option value="published">立即发布</option>
-                  <option value="scheduled">定时发布</option>
-                </Select>
-              </Field>
-              {publishIntent === "scheduled" ? (
-                <Field className="editor-form-field" label="发布时间">
-                  <Input
-                    type="datetime-local"
-                    value={post.scheduled_at?.slice(0, 16) || ""}
-                    onChange={(event) =>
-                      update("scheduled_at", event.target.value)
-                    }
-                  />
-                </Field>
-              ) : null}
-            </details>
-            <details open>
-              <summary>分类与标签</summary>
-              <Field className="editor-form-field" label="分类">
-                <Select
-                  aria-label="分类"
-                  value={String(post.category_id || "")}
-                  onChange={(value) => {
-                    const next = selectValue(value);
-                    update("category_id", next ? Number(next) : null);
-                  }}
-                >
-                  <option value="">未分类</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </Select>
-                {categorySuggestion ? (
-                  <ChoiceButton
-                    className="category-ai-badge"
-                    onClick={() => applyCategory(categorySuggestion)}
-                    icon={<Sparkles />}
-                  >
-                    推荐: {categorySuggestion} (点击应用)
-                  </ChoiceButton>
-                ) : (
-                  <div className="editor-ai-inline">
-                    <Button
-                      variant="text"
-                      onClick={() => void requestCategory()}
-                      loading={assistTask === "category"}
-                      disabled={assistTask !== null || !categories.length}
-                      icon={<Sparkles />}
-                    >
-                      {assistTask === "category" ? "分析分类…" : "推荐最佳分类"}
-                    </Button>
-                  </div>
-                )}
-              </Field>
-              <Field
-                className="editor-form-field"
-                label="标签"
-                hint="使用逗号分隔，最多建议 10 个。"
-              >
-                <Input
-                  value={post.tags.join(", ")}
-                  onChange={(event) =>
-                    update(
-                      "tags",
-                      event.target.value
-                        .split(",")
-                        .map((tag) => tag.trim())
-                        .filter(Boolean),
-                    )
-                  }
-                  placeholder="Go, OIDC, 安全"
-                />
-                <div className="editor-ai-inline">
-                  <Button
-                    variant="text"
-                    onClick={() => void requestTags()}
-                    loading={assistTask === "tags"}
-                    disabled={assistTask !== null}
-                    icon={<Sparkles />}
-                  >
-                    {assistTask === "tags" ? "正在提炼标签…" : "提取推荐标签"}
-                  </Button>
-                </div>
-                {tagSuggestions.length > 0 ? (
-                  <div className="editor-tag-pills">
-                    <span className="editor-tag-hint">点击标签添加：</span>
-                    {tagSuggestions.map((tag) => {
-                      const isAdded = post.tags.includes(tag);
-                      return (
-                        <ChoiceButton
-                          key={tag}
-                          className={`editor-tag-pill ${isAdded ? "is-added" : ""}`}
-                          onClick={() => !isAdded && addTag(tag)}
-                          title={isAdded ? "已添加" : "点击添加此标签"}
-                        >
-                          {isAdded ? "✓" : "+"} {tag}
-                        </ChoiceButton>
-                      );
-                    })}
-                    <ChoiceButton
-                      className="editor-tag-pill-all"
-                      onClick={addAllTags}
-                    >
-                      + 添加全部
-                    </ChoiceButton>
-                  </div>
-                ) : null}
-              </Field>
-            </details>
-            <details open>
-              <summary>封面与摘要</summary>
-              <Field className="editor-form-field" label="封面 URL">
-                <Input
-                  value={post.cover_url || ""}
-                  onChange={(event) => update("cover_url", event.target.value)}
-                  placeholder="/media/cover.webp"
-                />
-                <div className="editor-ai-inline">
-                  <Button
-                    variant="text"
-                    onClick={() => void requestSuggestions("cover_prompt")}
-                    loading={assistTask === "cover_prompt"}
-                    disabled={assistTask !== null}
-                    icon={<Sparkles />}
-                  >
-                    {assistTask === "cover_prompt"
-                      ? "生成生图提示词…"
-                      : "生成生图 Prompt"}
-                  </Button>
-                  {suggestionTask === "cover_prompt" &&
-                  suggestions.length > 0 ? (
-                    <div
-                      className="editor-ai-candidates"
-                      aria-label="Prompt 候选"
-                    >
-                      {suggestions.map((item) => (
-                        <div key={item} className="editor-prompt-candidate">
-                          <div className="editor-prompt-text">{item}</div>
-                          <div className="editor-prompt-candidate-actions">
-                            <Button
-                              variant="solid"
-                              color="primary"
-                              type="button"
-                              disabled={generatingCoverPrompt !== null}
-                              loading={generatingCoverPrompt === item}
-                              onClick={() => void handleGenerateCover(item)}
-                            >
-                              {generatingCoverPrompt === item
-                                ? "正在生图…"
-                                : "生图"}
-                            </Button>
-                            <Button
-                              variant="outline"
-                              type="button"
-                              onClick={() => {
-                                void navigator.clipboard.writeText(item);
-                                notify("生图提示词已复制到剪贴板！", "success");
-                              }}
-                            >
-                              📋 复制
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              </Field>
-              <Field className="editor-form-field" label="替代文本">
-                <Input
-                  value={post.cover_alt || ""}
-                  onChange={(event) => update("cover_alt", event.target.value)}
-                  placeholder="描述封面图场景与主题"
-                />
-                <div className="editor-ai-inline">
-                  <Button
-                    variant="text"
-                    onClick={() => void requestSuggestions("alt")}
-                    loading={assistTask === "alt"}
-                    disabled={assistTask !== null}
-                    icon={<Sparkles />}
-                  >
-                    {assistTask === "alt" ? "正在生成 Alt…" : "生成 Alt 描述"}
-                  </Button>
-                  {suggestionTask === "alt" && suggestions.length > 0 ? (
-                    <div className="editor-ai-candidates" aria-label="Alt 候选">
-                      {suggestions.map((item) => (
-                        <ChoiceButton
-                          key={item}
-                          onClick={() => applySuggestion("alt", item)}
-                        >
-                          <span>{item}</span>
-                          <b>应用</b>
-                        </ChoiceButton>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              </Field>
-            </details>
-            <details open>
-              <summary>路径与 SEO</summary>
-              <div className="editor-ai-inline editor-inline-box">
-                <Button
-                  variant="text"
-                  onClick={() => void requestSeo()}
-                  loading={assistTask === "seo"}
-                  disabled={assistTask !== null}
-                  icon={<Sparkles />}
-                >
-                  {assistTask === "seo"
-                    ? "正在优化 SEO…"
-                    : "智能生成整套 SEO 配置"}
-                </Button>
-              </div>
-              <Field
-                className="editor-form-field"
-                label="访问路径 (Slug)"
+              <FieldActionHeader
+                label="标题"
                 required
-                hint="访问路径为 /articles/<slug>"
-              >
-                <Input
-                  className="font-mono"
-                  value={post.slug}
-                  onChange={(event) => update("slug", event.target.value)}
-                  required
-                />
-                <div className="editor-ai-inline">
-                  <Button
-                    variant="text"
-                    onClick={() => void requestSuggestions("slug")}
-                    loading={assistTask === "slug"}
-                    disabled={assistTask !== null}
-                    icon={<Sparkles />}
-                  >
-                    {assistTask === "slug"
-                      ? "正在生成 Slug…"
-                      : "生成 Slug 候选"}
-                  </Button>
-                  {suggestionTask === "slug" && suggestions.length > 0 ? (
-                    <div
-                      className="editor-ai-candidates"
-                      aria-label="Slug 候选"
-                    >
-                      {suggestions.map((item) => (
-                        <ChoiceButton
-                          key={item}
-                          onClick={() => applySuggestion("slug", item)}
-                        >
-                          <span className="font-mono">{item}</span>
-                          <b>应用</b>
-                        </ChoiceButton>
-                      ))}
-                    </div>
-                  ) : null}
+                actionLabel="AI 生成标题候选"
+                onAction={() => void requestFieldSuggestions("title")}
+                loading={fieldLoading === "title"}
+                disabled={fieldLoading !== null && fieldLoading !== "title"}
+              />
+            ) : null}
+            <Field label="标题" required hideLabel={!isReadOnly}>
+              <Textarea
+                aria-label="标题"
+                rows={2}
+                value={post.title}
+                onChange={(event) => update("title", event.target.value)}
+                placeholder="写一个清晰、具体的标题"
+                disabled={isReadOnly}
+                readOnly={isReadOnly}
+                required
+              />
+            </Field>
+            {titleCandidates.length ? (
+              <AISuggestionPicker
+                className="mt-2"
+                aria-label="标题 AI 建议"
+                groupLabel="标题候选"
+                description="选择一个候选，再统一应用到标题。"
+                options={titleCandidates.map((value) => ({ value }))}
+                value={selectedTitle}
+                onValueChange={setSelectedTitle}
+                onDismiss={() => {
+                  setTitleCandidates([]);
+                  setSelectedTitle(null);
+                }}
+                onRegenerate={() => void requestFieldSuggestions("title")}
+                onApply={(value) => {
+                  update("title", value);
+                  setTitleCandidates([]);
+                  setSelectedTitle(null);
+                }}
+              />
+            ) : null}
+          </div>
+
+          <div>
+            {!isReadOnly ? (
+              <FieldActionHeader
+                label="摘要"
+                actionLabel="AI 根据正文生成摘要"
+                onAction={() => void requestFieldSuggestions("summary")}
+                loading={fieldLoading === "summary"}
+                disabled={
+                  !post.content.trim() ||
+                  (fieldLoading !== null && fieldLoading !== "summary")
+                }
+              />
+            ) : null}
+            <Field
+              label="摘要"
+              hideLabel={!isReadOnly}
+              hint={`${post.summary.length}/300`}
+            >
+              <Textarea
+                aria-label="摘要"
+                rows={3}
+                maxLength={300}
+                value={post.summary}
+                onChange={(event) => update("summary", event.target.value)}
+                placeholder="用两三句话说明文章解决的问题"
+                disabled={isReadOnly}
+                readOnly={isReadOnly}
+              />
+            </Field>
+            {summaryCandidates.length ? (
+              <AISuggestionPicker
+                className="mt-2"
+                aria-label="摘要 AI 建议"
+                groupLabel="摘要候选"
+                description="从候选摘要中选择一个，再应用到当前字段。"
+                options={summaryCandidates.map((value) => ({ value }))}
+                value={selectedSummary}
+                onValueChange={setSelectedSummary}
+                onDismiss={() => {
+                  setSummaryCandidates([]);
+                  setSelectedSummary(null);
+                }}
+                onRegenerate={() => void requestFieldSuggestions("summary")}
+                onApply={(value) => {
+                  update("summary", value);
+                  setSummaryCandidates([]);
+                  setSelectedSummary(null);
+                }}
+              />
+            ) : null}
+          </div>
+
+          <div>
+            <div className="mb-2">
+              <Text className="font-medium">正文</Text>
+              <Text size="xs" tone="muted" className="mt-1 block">
+                Markdown 编辑、分屏与预览共用同一编辑器。
+              </Text>
+            </div>
+            <MarkdownEditor
+              ref={editorRef}
+              value={post.content}
+              onChange={(value) => update("content", value)}
+              mode={editorMode}
+              onModeChange={setEditorMode}
+              onSelectionChange={setEditorSelection}
+              renderPreview={(value) => (
+                <div className="editor-preview">
+                  <MarkdownRenderer
+                    content={value || "开始写作后，预览会出现在这里。"}
+                  />
                 </div>
-              </Field>
-              <Field
-                className="editor-form-field"
-                label="SEO 标题"
-                hint={`${(post.seo_title || "").length}/60`}
-              >
-                <Input
-                  value={post.seo_title || ""}
-                  maxLength={60}
-                  onChange={(event) => update("seo_title", event.target.value)}
-                  placeholder="留空时默认使用标题"
-                />
-              </Field>
-              <Field
-                className="editor-form-field"
-                label="SEO 描述"
-                hint={`${(post.seo_description || "").length}/160`}
-              >
-                <Textarea
-                  rows={4}
-                  value={post.seo_description || ""}
-                  maxLength={160}
-                  onChange={(event) =>
-                    update("seo_description", event.target.value)
-                  }
-                  placeholder="留空时默认使用摘要"
-                />
-              </Field>
-            </details>
-          </fieldset>
-        </aside>
-      </div>
+              )}
+              toolbarActions={aiToolbarActions}
+              placeholder={"## 从问题开始\n\n写下背景、约束、判断与实现…"}
+              readOnly={isReadOnly}
+              textareaAriaLabel="文章正文 Markdown"
+              previewAriaLabel="文章预览"
+              editorClassName="min-h-[28rem]"
+            />
+          </div>
+        </div>
+      </DocumentEditorShell>
+
+      <EditorWritingDialog
+        open={writingOpen && !isReadOnly}
+        onOpenChange={setWritingOpen}
+        documentLabel="文章"
+        title={post.title}
+        summary={post.summary}
+        content={post.content}
+        selection={editorSelection}
+        initialPrompt={writingPrompt}
+        onApply={applyWritingResult}
+      />
+
+      <EditorMediaSourceDialog
+        source={mediaSource}
+        onSourceChange={setMediaSource}
+        title={post.title}
+        summary={post.summary}
+        content={post.content}
+        defaultAlt={
+          mediaPurpose === "cover"
+            ? post.cover_alt ||
+              (post.title.trim() ? `${post.title.trim()}封面` : "文章封面")
+            : post.title.trim()
+              ? `${post.title.trim()}插图`
+              : "文章插图"
+        }
+        purpose={mediaPurpose === "cover" ? "文章封面" : "正文插图"}
+        onUse={applyMedia}
+      />
+
       <Modal
         open={restoreTarget !== null}
         title="恢复历史版本"
         description={
-          restoreTarget ? (
-            <>
-              恢复 {new Date(restoreTarget.created_at).toLocaleString("zh-CN")}{" "}
-              的版本？当前内容会先保留为历史版本。
-            </>
-          ) : (
-            ""
-          )
+          restoreTarget
+            ? `恢复 ${new Date(restoreTarget.created_at).toLocaleString("zh-CN")} 的版本？当前内容会先保留为历史版本。`
+            : ""
         }
         onOpenChange={(open) => {
           if (!open) setRestoreTarget(null);
@@ -1982,6 +1634,37 @@ export default function PostEditor() {
           </>
         }
       />
+
+      <Modal
+        open={confirmReload}
+        title="替换未保存内容？"
+        description="当前未保存内容将被服务器最新版本替换，请先复制保留。"
+        onOpenChange={setConfirmReload}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setConfirmReload(false)}>
+              取消
+            </Button>
+            <Button
+              variant="solid"
+              color="error"
+              onClick={() => {
+                if (!latestPost) return;
+                setPost(latestPost);
+                setPublishIntent(latestPost.status || "draft");
+                dirty.current = false;
+                setConflict(false);
+                setError("");
+                setLatestPost(null);
+                setConfirmReload(false);
+              }}
+            >
+              确认替换并加载
+            </Button>
+          </>
+        }
+      />
+
       <Modal
         open={confirmExit}
         title="放弃未保存的更改？"
@@ -2002,6 +1685,6 @@ export default function PostEditor() {
           </>
         }
       />
-    </ContentEditorFrame>
+    </div>
   );
 }

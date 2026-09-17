@@ -64,6 +64,92 @@ async function openPair(
   return { context, showcase, product, unknown };
 }
 
+async function expectNoHorizontalOverflow(page) {
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+  );
+  expect(overflow).toBe(false);
+}
+
+async function expectEditorParity({
+  showcase,
+  product,
+  ariaLabel,
+  hasNavigator,
+}) {
+  const showcaseCard = showcase.locator(
+    `[data-slot="card"][aria-label="${ariaLabel}"]`,
+  );
+  const productCard = product.locator(
+    `[data-slot="card"][aria-label="${ariaLabel}"]`,
+  );
+  expect(await styleFingerprint(productCard)).toEqual(
+    await styleFingerprint(showcaseCard),
+  );
+
+  const showcaseCommandBar = showcaseCard.locator(
+    '[data-slot="document-editor-command-bar"]',
+  );
+  const productCommandBar = productCard.locator(
+    '[data-slot="document-editor-command-bar"]',
+  );
+  expect(await styleFingerprint(productCommandBar)).toEqual(
+    await styleFingerprint(showcaseCommandBar),
+  );
+
+  const showcaseWorkspace = showcaseCard.locator(
+    '[data-slot="document-editor-workspace"]',
+  );
+  const productWorkspace = productCard.locator(
+    '[data-slot="document-editor-workspace"]',
+  );
+  expect(await styleFingerprint(productWorkspace)).toEqual(
+    await styleFingerprint(showcaseWorkspace),
+  );
+
+  for (const slot of ["document-editor-canvas", "document-editor-inspector"]) {
+    expect(await styleFingerprint(productCard.locator(`[data-slot="${slot}"]`))).toEqual(
+      await styleFingerprint(showcaseCard.locator(`[data-slot="${slot}"]`)),
+    );
+  }
+
+  const showcaseNavigator = showcaseCard.locator(
+    '[data-slot="document-editor-navigator"]',
+  );
+  const productNavigator = productCard.locator(
+    '[data-slot="document-editor-navigator"]',
+  );
+  if (hasNavigator) {
+    expect(await styleFingerprint(productNavigator)).toEqual(
+      await styleFingerprint(showcaseNavigator),
+    );
+  } else {
+    await expect(productNavigator).toHaveCount(0);
+    await expect(showcaseNavigator).toHaveCount(0);
+  }
+
+  for (const label of ["编辑", "分屏", "预览"]) {
+    const showcaseMode = showcase.getByRole("button", {
+      name: label,
+      exact: true,
+    });
+    const productMode = product.getByRole("button", {
+      name: label,
+      exact: true,
+    });
+    const showcaseCount = await showcaseMode.count();
+    const productCount = await productMode.count();
+    expect(productCount).toBe(showcaseCount);
+    if (showcaseCount > 0) {
+      await expect(showcaseMode).toBeVisible();
+      await expect(productMode).toBeVisible();
+    }
+  }
+
+  await expectNoHorizontalOverflow(showcase);
+  await expectNoHorizontalOverflow(product);
+}
+
 for (const theme of ["light", "dark"]) {
   test(`Dashboard Top Posts surface and action geometry match Showcase (${theme})`, async ({
     browser,
@@ -211,12 +297,8 @@ for (const theme of ["light", "dark"]) {
       await styleFingerprint(showcaseItem),
     );
 
-    for (const page of [showcase, product]) {
-      const overflow = await page.evaluate(
-        () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
-      );
-      expect(overflow).toBe(false);
-    }
+    await expectNoHorizontalOverflow(showcase);
+    await expectNoHorizontalOverflow(product);
 
     expect(unknown).toEqual([]);
     await pairScreenshot(showcase, product, `posts-mobile-${theme}`, testInfo);
@@ -246,57 +328,63 @@ for (const theme of ["light", "dark"]) {
     await context.close();
   });
 
-  test(`Post editor Card and command bar match Showcase (${theme})`, async ({
-    browser,
-  }, testInfo) => {
-    const { context, showcase, product, unknown } = await openPair(
+  for (const viewport of [
+    { name: "desktop", width: 1440, height: 1000 },
+    { name: "tablet", width: 768, height: 900 },
+    { name: "mobile", width: 390, height: 844 },
+  ]) {
+    test(`Post editor canonical shell matches Showcase (${theme}, ${viewport.name})`, async ({
       browser,
-      "blog-admin-post-editor",
-      "/admin/posts/101/edit",
-      theme,
-    );
-    const showcaseCard = showcase.locator(
-      '[data-slot="card"][aria-label="文章编辑器"]',
-    );
-    const productCard = product.locator(".editor-page > [data-slot=card]");
-    expect(await styleFingerprint(productCard)).toEqual(
-      await styleFingerprint(showcaseCard),
-    );
+    }, testInfo) => {
+      const { context, showcase, product, unknown } = await openPair(
+        browser,
+        "blog-admin-post-editor",
+        "/admin/posts/101/edit",
+        theme,
+        { width: viewport.width, height: viewport.height },
+      );
 
-    const showcaseCommandBar = showcaseCard.locator("header").first();
-    const productCommandBar = product.locator(".editor-commandbar");
-    expect(await styleFingerprint(productCommandBar)).toEqual(
-      await styleFingerprint(showcaseCommandBar),
-    );
-    expect(unknown).toEqual([]);
-    await pairScreenshot(showcase, product, `post-editor-${theme}`, testInfo);
-    await context.close();
-  });
+      await expectEditorParity({
+        showcase,
+        product,
+        ariaLabel: "文章编辑器",
+        hasNavigator: true,
+      });
+      expect(unknown).toEqual([]);
+      await pairScreenshot(
+        showcase,
+        product,
+        `post-editor-${viewport.name}-${theme}`,
+        testInfo,
+      );
+      await context.close();
+    });
 
-  test(`Page editor Card and command bar match Showcase (${theme})`, async ({
-    browser,
-  }, testInfo) => {
-    const { context, showcase, product, unknown } = await openPair(
+    test(`Page editor canonical shell matches Showcase (${theme}, ${viewport.name})`, async ({
       browser,
-      "blog-admin-page-editor",
-      "/admin/pages/201/edit",
-      theme,
-    );
-    const showcaseCard = showcase.locator(
-      '[data-slot="card"][aria-label="单页编辑器"]',
-    );
-    const productCard = product.locator(".editor-page > [data-slot=card]");
-    expect(await styleFingerprint(productCard)).toEqual(
-      await styleFingerprint(showcaseCard),
-    );
+    }, testInfo) => {
+      const { context, showcase, product, unknown } = await openPair(
+        browser,
+        "blog-admin-page-editor",
+        "/admin/pages/201/edit",
+        theme,
+        { width: viewport.width, height: viewport.height },
+      );
 
-    const showcaseCommandBar = showcaseCard.locator("header").first();
-    const productCommandBar = product.locator(".editor-commandbar");
-    expect(await styleFingerprint(productCommandBar)).toEqual(
-      await styleFingerprint(showcaseCommandBar),
-    );
-    expect(unknown).toEqual([]);
-    await pairScreenshot(showcase, product, `page-editor-${theme}`, testInfo);
-    await context.close();
-  });
+      await expectEditorParity({
+        showcase,
+        product,
+        ariaLabel: "单页编辑器",
+        hasNavigator: false,
+      });
+      expect(unknown).toEqual([]);
+      await pairScreenshot(
+        showcase,
+        product,
+        `page-editor-${viewport.name}-${theme}`,
+        testInfo,
+      );
+      await context.close();
+    });
+  }
 }

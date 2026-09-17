@@ -25,9 +25,10 @@ import {
   Textarea,
 } from "@gouno/ui/core";
 import { PageHeader } from "@gouno/ui/gouno";
-import { BulkActionBar } from "@gouno/ui/patterns";
+import { AISuggestionPicker, BulkActionBar } from "@gouno/ui/patterns";
 
 import { WorkflowLauncher } from "../../components/agent/WorkflowLauncher";
+import { cleanAiSuggestions } from "../../components/editor/editor-ai";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 import type { Category } from "../../types/blog";
 import { useAppFeedback } from "../../components/feedback/AppFeedbackProvider";
@@ -120,6 +121,7 @@ export default function Categories() {
   const [aiOpen, setAIOpen] = useState(false);
   const [slugLoading, setSlugLoading] = useState(false);
   const [slugCandidates, setSlugCandidates] = useState<string[]>([]);
+  const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!allowed) return;
@@ -138,15 +140,20 @@ export default function Categories() {
     void load();
   }, [load]);
 
+  const clearSlugSuggestion = () => {
+    setSlugCandidates([]);
+    setSelectedSlug(null);
+  };
+
   const closeEditor = () => {
     setEditor(null);
-    setSlugCandidates([]);
+    clearSlugSuggestion();
     setSlugLoading(false);
   };
 
   const openCreate = () => {
     setDraft(emptyCategoryDraft);
-    setSlugCandidates([]);
+    clearSlugSuggestion();
     setEditor({ mode: "create" });
   };
 
@@ -157,7 +164,7 @@ export default function Categories() {
       description: category.description || "",
       sort_order: category.sort_order || 0,
     });
-    setSlugCandidates([]);
+    clearSlugSuggestion();
     setEditor({ mode: "edit", item: category });
   };
 
@@ -167,22 +174,21 @@ export default function Categories() {
       return;
     }
     setSlugLoading(true);
+    clearSlugSuggestion();
     try {
       const response = await agentApi.getDraftAssist({
         task: "slug",
         title: draft.name,
         summary: draft.description,
       });
-      const next = [...(response.suggestions || [])];
-      if (response.metadata?.slug && !next.includes(response.metadata.slug)) {
-        next.unshift(response.metadata.slug);
-      }
-      setSlugCandidates(next);
-      if (next.length === 0) {
-        notify("未能生成 Slug 候选，请手动填写。", "error");
-      } else {
-        notify("已生成 Slug 标识候选，点击即可一键应用。", "success");
-      }
+      const candidates = cleanAiSuggestions([
+        ...(response.metadata?.slug ? [response.metadata.slug] : []),
+        ...(response.suggestions || []),
+      ]).map((value) => value.trim().toLowerCase().replace(/\s+/g, "-"));
+      const unique = Array.from(new Set(candidates)).filter(Boolean);
+      setSlugCandidates(unique);
+      setSelectedSlug(unique[0] ?? null);
+      if (!unique.length) notify("未能生成 Slug 候选，请手动填写。", "error");
     } catch (reason) {
       notify(
         reason instanceof Error ? reason.message : "生成 Slug 失败",
@@ -196,8 +202,7 @@ export default function Categories() {
   const applySlug = (slugValue: string) => {
     const clean = slugValue.trim().toLowerCase().replace(/\s+/g, "-");
     setDraft((current) => ({ ...current, slug: clean }));
-    setSlugCandidates([]);
-    notify(`已应用 Slug 标识：“${clean}”`, "success");
+    clearSlugSuggestion();
   };
 
   const saveCategory = async () => {
@@ -571,12 +576,13 @@ export default function Categories() {
               required
               autoFocus
               value={draft.name}
-              onChange={(event) =>
+              onChange={(event) => {
                 setDraft((current) => ({
                   ...current,
                   name: event.target.value,
-                }))
-              }
+                }));
+                clearSlugSuggestion();
+              }}
             />
           </FormField>
           <FormField
@@ -590,35 +596,43 @@ export default function Categories() {
                   aria-label="Slug 标识"
                   required
                   value={draft.slug}
-                  onChange={(event) =>
+                  onChange={(event) => {
                     setDraft((current) => ({
                       ...current,
                       slug: event.target.value,
-                    }))
-                  }
+                    }));
+                    clearSlugSuggestion();
+                  }}
                 />
                 <Button
+                  type="button"
                   size="small"
+                  variant="text"
                   icon={<Sparkles />}
+                  className="size-8 shrink-0 px-0"
                   disabled={slugLoading}
+                  loading={slugLoading}
+                  aria-label="AI 生成 Slug 建议"
+                  title="AI 生成 Slug 建议"
                   onClick={() => void requestCategorySlug()}
-                >
-                  {slugLoading ? "生成中…" : "AI 生成"}
-                </Button>
+                />
               </div>
               {slugCandidates.length > 0 ? (
-                <div className="flex flex-wrap gap-2" aria-label="Slug 候选">
-                  {slugCandidates.map((candidate) => (
-                    <Button
-                      key={candidate}
-                      size="small"
-                      variant="text"
-                      onClick={() => applySlug(candidate)}
-                    >
-                      {candidate}
-                    </Button>
-                  ))}
-                </div>
+                <AISuggestionPicker
+                  heading="Slug 建议"
+                  description="选择一个 Slug 候选，再统一应用到当前分类。"
+                  groupLabel="Slug 候选"
+                  options={slugCandidates.map((value) => ({
+                    value,
+                    monospace: true,
+                  }))}
+                  value={selectedSlug}
+                  onValueChange={setSelectedSlug}
+                  onRegenerate={() => void requestCategorySlug()}
+                  onDismiss={clearSlugSuggestion}
+                  applyLabel="使用所选 Slug"
+                  onApply={applySlug}
+                />
               ) : null}
             </div>
           </FormField>
@@ -641,10 +655,7 @@ export default function Categories() {
               min={0}
               value={draft.sort_order}
               onChange={(value) =>
-                setDraft((current) => ({
-                  ...current,
-                  sort_order: value ?? 0,
-                }))
+                setDraft((current) => ({ ...current, sort_order: value ?? 0 }))
               }
             />
           </FormField>
