@@ -1,8 +1,6 @@
 import {
   ArrowDown,
-  ArrowLeft,
   ArrowUp,
-  ChevronRight,
   CirclePause,
   Database,
   Edit2,
@@ -52,6 +50,7 @@ import {
 import { StatusPill } from "./StatusPill";
 import { statusLabel } from "./labels";
 import { WorkflowInputForm } from "./WorkflowInputForm";
+import { OperationsMeta, OperationsObjectRow } from "./OperationsPatterns";
 
 type WorkflowValue = {
   id?: number;
@@ -369,9 +368,13 @@ export function WorkflowWorkspace({
       ),
     );
   }, [sortedWorkflows, statusFilter, workflowQuery]);
-  const selectedWorkflow = selectedWorkflowID
-    ? workflows.find((workflow) => workflow.id === selectedWorkflowID) || null
-    : null;
+  const selectedWorkflow =
+    (selectedWorkflowID
+      ? workflows.find((workflow) => workflow.id === selectedWorkflowID) || null
+      : null) ??
+    visibleWorkflows[0] ??
+    sortedWorkflows[0] ??
+    null;
   const loadVersions = async (workflow: Workflow) => {
     const items = await workflowApi.getVersions(workflow.id);
     setVersions((current) => ({ ...current, [workflow.id]: items }));
@@ -545,618 +548,522 @@ export function WorkflowWorkspace({
       : "—";
 
   return (
-    <div className="workflow-workspace">
+    <div className="workflow-workspace flex flex-col gap-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <Text tone="muted" className="max-w-3xl">
+          {locale === "zh"
+            ? "Workflow 是持续运行的版本化自动化资产。左侧选择资产，右侧直接查看状态、边界、定义与人工执行。"
+            : "Workflows are versioned automation assets. Select one on the left to inspect status, boundaries, definition, and manual execution."}
+        </Text>
+        <Button
+          variant="solid"
+          color="primary"
+          type="button"
+          onClick={() => setEditing("new")}
+          icon={<Plus />}
+        >
+          {labels.add}
+        </Button>
+      </div>
+
       {selectedWorkflow ? (
-        <div className="workflow-detail-view section-stack">
-          <div className="workflow-detail-nav">
-            <Button
-              variant="ghost"
-              size="small"
-              type="button"
-              onClick={() => {
-                setSelectedWorkflowID(null);
-                const url = new URL(window.location.href);
-                url.searchParams.delete("workflow");
-                window.history.replaceState(null, "", url);
-              }}
-              icon={<ArrowLeft />}
+        <div className="grid min-w-0 gap-5 xl:grid-cols-[21rem_minmax(0,1fr)]">
+          <aside
+            className="min-w-0 overflow-hidden rounded-lg border bg-background"
+            aria-label={
+              locale === "zh" ? "Workflow 导航" : "Workflow navigation"
+            }
+          >
+            <div className="border-b bg-muted/20 p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <strong className="text-sm">Workflows</strong>
+                  <Text size="xs" tone="muted" className="mt-0.5">
+                    {locale === "zh"
+                      ? visibleWorkflows.length + " 项自动化资产"
+                      : visibleWorkflows.length + " automation assets"}
+                  </Text>
+                </div>
+                <Tag>
+                  {workflows.filter((workflow) => workflow.enabled).length}{" "}
+                  {locale === "zh" ? "已启用" : "enabled"}
+                </Tag>
+              </div>
+              <div className="flex flex-col gap-2">
+                <SearchField
+                  aria-label={
+                    locale === "zh" ? "搜索 Workflow" : "Search workflows"
+                  }
+                  value={workflowQuery}
+                  onChange={(event) => setWorkflowQuery(event.target.value)}
+                  placeholder={
+                    locale === "zh" ? "搜索 Workflow" : "Search workflows"
+                  }
+                  size="small"
+                />
+                <Select
+                  aria-label={
+                    locale === "zh"
+                      ? "按状态筛选 Workflow"
+                      : "Filter workflows by status"
+                  }
+                  value={statusFilter}
+                  onChange={(value) =>
+                    setStatusFilter(
+                      selectValue(value) as "all" | "enabled" | "disabled",
+                    )
+                  }
+                  size="small"
+                >
+                  <option value="all">
+                    {locale === "zh" ? "全部状态" : "All status"}
+                  </option>
+                  <option value="enabled">
+                    {locale === "zh" ? "已启用" : "Enabled"}
+                  </option>
+                  <option value="disabled">
+                    {locale === "zh" ? "已停用" : "Disabled"}
+                  </option>
+                </Select>
+              </div>
+            </div>
+            <div
+              role="list"
+              aria-label={locale === "zh" ? "Workflow 列表" : "Workflow list"}
+              className="max-h-[48rem] overflow-y-auto"
             >
-              {locale === "zh" ? "返回工作流列表" : "Back to workflows"}
-            </Button>
-          </div>
-          {(() => {
-            const workflow = selectedWorkflow;
-            const metric = metricMap.get(workflow.id);
-            const latestRun = runs.find(
-              (run) => run.workflow_id === workflow.id && !run.dry_run,
-            );
-            const latestDryRun = runs.find(
-              (run) => run.workflow_id === workflow.id && run.dry_run,
-            );
-            const inputValue =
-              inputByID[workflow.id] ?? exampleInput(workflow.input_schema);
-            const inputProperties =
-              workflow.input_schema.properties &&
-              typeof workflow.input_schema.properties === "object"
-                ? Object.keys(
-                    workflow.input_schema.properties as Record<string, unknown>,
-                  )
-                : [];
-            const hasRuntimeInput = inputProperties.length > 0;
-            const runInput = () => (hasRuntimeInput ? inputValue : {});
-            const activeRun =
-              runningAction?.workflowID === workflow.id ? runningAction : null;
-            const feedback =
-              runFeedback?.workflowID === workflow.id ? runFeedback : null;
-            const modelSteps = workflow.steps.filter(
-              (step) => step.type === "model",
-            );
-            const unboundStep = modelSteps.find((step) => !step.agent_id);
-            const unavailableAgent = modelSteps
-              .map((step) =>
-                step.agent_id ? agentMap.get(step.agent_id) : undefined,
-              )
-              .find((agent) => !agent || !agent.enabled);
-            const runBlockReason = unboundStep
-              ? locale === "zh"
-                ? "此 Workflow 尚未绑定 Agent，请先完成模型连接初始化。"
-                : "This Workflow has no bound Agent. Complete model setup first."
-              : unavailableAgent
-                ? locale === "zh"
-                  ? `关联 Agent“${unavailableAgent.name}”未启用，请先在 Agent 页面启用它。`
-                  : `Linked Agent “${unavailableAgent.name}” is disabled. Enable it first.`
-                : "";
-            return (
-              <div className="section-stack">
-                <PanelHeader
-                  title={workflow.name}
-                  description={`${workflow.description} · v${workflow.current_version}`}
-                  actions={
-                    <div className="row-actions">
-                      <StatusPill
-                        status={workflow.enabled ? "succeeded" : "pending"}
-                        locale={locale}
-                        label={
-                          workflow.enabled
-                            ? locale === "zh"
-                              ? "已启用"
-                              : "Enabled"
-                            : locale === "zh"
-                              ? "已停用"
-                              : "Disabled"
+              {visibleWorkflows.length ? (
+                visibleWorkflows.map((workflow) => {
+                  const latestRun = runs.find(
+                    (run) => run.workflow_id === workflow.id && !run.dry_run,
+                  );
+                  return (
+                    <div key={workflow.id} role="listitem">
+                      <OperationsObjectRow
+                        leading={<GitBranch className="size-4" />}
+                        title={workflow.name}
+                        status={
+                          <Tag color={workflow.enabled ? "success" : undefined}>
+                            {workflow.enabled
+                              ? locale === "zh"
+                                ? "已启用"
+                                : "Enabled"
+                              : locale === "zh"
+                                ? "已停用"
+                                : "Disabled"}
+                          </Tag>
+                        }
+                        meta={
+                          (workflow.cron_expression ||
+                            (locale === "zh" ? "仅手动" : "Manual")) +
+                          " · v" +
+                          workflow.current_version
+                        }
+                        summary={workflow.description}
+                        signals={
+                          <>
+                            <OperationsMeta>
+                              {labels.next} {formatTime(workflow.next_run_at)}
+                            </OperationsMeta>
+                            {latestRun ? (
+                              <OperationsMeta>
+                                {locale === "zh" ? "最近 " : "Latest "}
+                                {statusLabel(latestRun.status, locale)}
+                              </OperationsMeta>
+                            ) : null}
+                          </>
+                        }
+                        selected={selectedWorkflow.id === workflow.id}
+                        onClick={() => {
+                          setSelectedWorkflowID(workflow.id);
+                          const url = new URL(window.location.href);
+                          url.searchParams.set("workflow", String(workflow.id));
+                          window.history.replaceState(null, "", url);
+                        }}
+                        ariaLabel={
+                          (locale === "zh"
+                            ? "打开 Workflow："
+                            : "Open Workflow: ") + workflow.name
                         }
                       />
-                      <ButtonLink
-                        variant="outline"
-                        to={`/admin/ai-ops?tab=records&record=workflow&workflow=${workflow.id}`}
-                      >
-                        {locale === "zh" ? "运行记录" : "Run records"}
-                      </ButtonLink>
-                      <Button
-                        variant="outline"
-                        type="button"
-                        onClick={() => setEditing(workflow)}
-                        icon={<Edit2 />}
-                      >
-                        {locale === "zh" ? "编辑" : "Edit"}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        type="button"
-                        onClick={() => void loadVersions(workflow)}
-                        icon={<History />}
-                      >
-                        {labels.versions}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        disabled={!workflow.enabled && Boolean(runBlockReason)}
-                        title={
-                          !workflow.enabled
-                            ? runBlockReason || undefined
-                            : undefined
-                        }
-                        type="button"
-                        onClick={() =>
-                          void workflowApi
-                            .setEnabled(workflow.id, !workflow.enabled)
-                            .then(() => onRefresh?.())
-                        }
-                        icon={workflow.enabled ? <CirclePause /> : <Play />}
-                      >
-                        {workflow.enabled ? labels.disable : labels.enable}
-                      </Button>
-                      <Button
-                        variant="solid"
-                        color="error"
-                        type="button"
-                        onClick={() => setDeleteTarget(workflow)}
-                        icon={<Trash2 />}
-                      >
-                        {locale === "zh" ? "删除" : "Delete"}
-                      </Button>
                     </div>
-                  }
-                />
-                {hasRuntimeInput ? (
-                  <WorkflowInputForm
-                    schema={workflow.input_schema}
-                    value={inputValue}
-                    onChange={(next) =>
-                      setInputByID((current) => ({
-                        ...current,
-                        [workflow.id]: next,
-                      }))
+                  );
+                })
+              ) : (
+                <div className="p-6">
+                  <Empty
+                    title={
+                      locale === "zh"
+                        ? "没有符合条件的 Workflow。"
+                        : "No matching workflows."
                     }
-                    locale={locale}
                   />
-                ) : (
-                  <div className="workflow-runtime-input">
-                    <small>{labels.input}</small>
-                    <strong>
-                      {locale === "zh"
-                        ? "无需手动填写"
-                        : "No manual input required"}
-                    </strong>
-                    <p>
-                      {locale === "zh"
-                        ? "此流程使用计划规则或 Agent 的受控只读工具获取运行上下文。"
-                        : "This workflow obtains context from scheduled rules or governed read tools."}
-                    </p>
-                  </div>
-                )}
-                <div className="workflow-scope-summary">
-                  <strong>{locale === "zh" ? "运行范围" : "Run scope"}</strong>
-                  <span>
-                    {workflow.scope_policy?.mode === "strict"
-                      ? locale === "zh"
-                        ? "严格限制所选资源"
-                        : "Strictly limited to selected resources"
-                      : locale === "zh"
-                        ? "兼容模式"
-                        : "Compatibility mode"}
-                  </span>
-                  {workflow.scope_policy?.discovery_tools?.length ? (
-                    <small>
-                      {locale === "zh" ? "允许发现：" : "Discovery: "}
-                      {workflow.scope_policy.discovery_tools.join(", ")}
-                    </small>
-                  ) : null}
                 </div>
-                {runBlockReason ? (
-                  <Feedback type="error">{runBlockReason}</Feedback>
-                ) : null}
-                <div className="row-actions workflow-detail-actions">
-                  <Button
-                    variant="outline"
-                    loading={Boolean(activeRun?.dryRun)}
-                    disabled={Boolean(runBlockReason) || Boolean(activeRun)}
-                    title={runBlockReason || undefined}
-                    type="button"
-                    onClick={() => void runWorkflow(workflow, true, runInput())}
-                    icon={<TestTube2 />}
-                  >
-                    {activeRun?.dryRun
-                      ? locale === "zh"
-                        ? "试运行中…"
-                        : "Dry-running…"
-                      : labels.dry}
-                  </Button>
-                  <Button
-                    variant="solid"
-                    color="primary"
-                    loading={Boolean(activeRun && !activeRun.dryRun)}
-                    disabled={
-                      !workflow.enabled ||
-                      latestRun?.status === "running" ||
-                      Boolean(runBlockReason) ||
-                      Boolean(activeRun)
-                    }
-                    title={runBlockReason || undefined}
-                    type="button"
-                    onClick={() =>
-                      void runWorkflow(workflow, false, runInput())
-                    }
-                    icon={<Play />}
-                  >
-                    {activeRun && !activeRun.dryRun
-                      ? locale === "zh"
-                        ? "运行中…"
-                        : "Running…"
-                      : latestRun?.status === "failed"
-                        ? labels.retry
-                        : labels.run}
-                  </Button>
-                </div>
-                {activeRun ? (
-                  <div
-                    className="workflow-run-progress"
-                    role="status"
-                    aria-live="polite"
-                  >
-                    <span
-                      className="spinner workflow-progress-spinner"
-                      aria-hidden="true"
-                    />
-                    <span>
-                      <strong>
-                        {locale === "zh"
-                          ? `${activeRun.dryRun ? "试运行" : "Workflow"} 正在执行`
-                          : `${activeRun.dryRun ? "Dry-run" : "Workflow"} is running`}
-                      </strong>
-                      <small>
-                        {locale === "zh"
-                          ? "请勿重复点击；完成后会自动刷新状态和运行记录。"
-                          : "Do not submit again. Status and run records refresh automatically when complete."}
-                      </small>
-                    </span>
-                  </div>
-                ) : null}
-                {feedback ? (
-                  <Feedback type={feedback.type}>
-                    <div className="workflow-run-feedback">
-                      <span>{feedback.message}</span>
-                      {feedback.runID ? (
+              )}
+            </div>
+          </aside>
+
+          <div className="workflow-detail-view section-stack min-w-0">
+            {(() => {
+              const workflow = selectedWorkflow;
+              const metric = metricMap.get(workflow.id);
+              const latestRun = runs.find(
+                (run) => run.workflow_id === workflow.id && !run.dry_run,
+              );
+              const latestDryRun = runs.find(
+                (run) => run.workflow_id === workflow.id && run.dry_run,
+              );
+              const inputValue =
+                inputByID[workflow.id] ?? exampleInput(workflow.input_schema);
+              const inputProperties =
+                workflow.input_schema.properties &&
+                typeof workflow.input_schema.properties === "object"
+                  ? Object.keys(
+                      workflow.input_schema.properties as Record<
+                        string,
+                        unknown
+                      >,
+                    )
+                  : [];
+              const hasRuntimeInput = inputProperties.length > 0;
+              const runInput = () => (hasRuntimeInput ? inputValue : {});
+              const activeRun =
+                runningAction?.workflowID === workflow.id
+                  ? runningAction
+                  : null;
+              const feedback =
+                runFeedback?.workflowID === workflow.id ? runFeedback : null;
+              const modelSteps = workflow.steps.filter(
+                (step) => step.type === "model",
+              );
+              const unboundStep = modelSteps.find((step) => !step.agent_id);
+              const unavailableAgent = modelSteps
+                .map((step) =>
+                  step.agent_id ? agentMap.get(step.agent_id) : undefined,
+                )
+                .find((agent) => !agent || !agent.enabled);
+              const runBlockReason = unboundStep
+                ? locale === "zh"
+                  ? "此 Workflow 尚未绑定 Agent，请先完成模型连接初始化。"
+                  : "This Workflow has no bound Agent. Complete model setup first."
+                : unavailableAgent
+                  ? locale === "zh"
+                    ? `关联 Agent“${unavailableAgent.name}”未启用，请先在 Agent 页面启用它。`
+                    : `Linked Agent “${unavailableAgent.name}” is disabled. Enable it first.`
+                  : "";
+              return (
+                <div className="section-stack">
+                  <PanelHeader
+                    title={workflow.name}
+                    description={`${workflow.description} · v${workflow.current_version}`}
+                    actions={
+                      <div className="row-actions">
+                        <StatusPill
+                          status={workflow.enabled ? "succeeded" : "pending"}
+                          locale={locale}
+                          label={
+                            workflow.enabled
+                              ? locale === "zh"
+                                ? "已启用"
+                                : "Enabled"
+                              : locale === "zh"
+                                ? "已停用"
+                                : "Disabled"
+                          }
+                        />
                         <ButtonLink
                           variant="outline"
-                          className="shrink-0"
-                          to={`/admin/ai-ops?tab=records&record=workflow&workflow=${workflow.id}&run=${feedback.runID}`}
+                          to={`/admin/ai-ops?tab=records&record=workflow&workflow=${workflow.id}`}
                         >
-                          {runFeedbackActionLabel(
-                            feedback.action || "viewRun",
-                            locale,
-                          )}
+                          {locale === "zh" ? "运行记录" : "Run records"}
                         </ButtonLink>
-                      ) : null}
-                    </div>
-                  </Feedback>
-                ) : null}
-                <div className="agent-run-metrics">
-                  <span>
-                    <small>{labels.schedule}</small>
-                    <strong>
-                      {workflow.cron_expression ||
-                        (locale === "zh" ? "仅手动" : "Manual only")}
-                    </strong>
-                    <small>
-                      {workflow.cron_expression ? workflow.timezone : ""}
-                    </small>
-                  </span>
-                  <span>
-                    <small>{labels.next}</small>
-                    <strong>{formatTime(workflow.next_run_at)}</strong>
-                  </span>
-                  <span>
-                    <small>{labels.metrics}</small>
-                    <strong>
-                      {metric?.runs || 0} / {metric?.failures || 0} /{" "}
-                      {metric?.tokens || 0}
-                    </strong>
-                  </span>
-                  <span>
-                    <small>
-                      {locale === "zh" ? "最近正式运行" : "Latest live run"}
-                    </small>
-                    <strong>
-                      {latestRun ? statusLabel(latestRun.status, locale) : "—"}
-                    </strong>
-                    {latestDryRun ? (
-                      <small>
+                        <Button
+                          variant="outline"
+                          type="button"
+                          onClick={() => setEditing(workflow)}
+                          icon={<Edit2 />}
+                        >
+                          {locale === "zh" ? "编辑" : "Edit"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          type="button"
+                          onClick={() => void loadVersions(workflow)}
+                          icon={<History />}
+                        >
+                          {labels.versions}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          disabled={
+                            !workflow.enabled && Boolean(runBlockReason)
+                          }
+                          title={
+                            !workflow.enabled
+                              ? runBlockReason || undefined
+                              : undefined
+                          }
+                          type="button"
+                          onClick={() =>
+                            void workflowApi
+                              .setEnabled(workflow.id, !workflow.enabled)
+                              .then(() => onRefresh?.())
+                          }
+                          icon={workflow.enabled ? <CirclePause /> : <Play />}
+                        >
+                          {workflow.enabled ? labels.disable : labels.enable}
+                        </Button>
+                        <Button
+                          variant="solid"
+                          color="error"
+                          type="button"
+                          onClick={() => setDeleteTarget(workflow)}
+                          icon={<Trash2 />}
+                        >
+                          {locale === "zh" ? "删除" : "Delete"}
+                        </Button>
+                      </div>
+                    }
+                  />
+                  {hasRuntimeInput ? (
+                    <WorkflowInputForm
+                      schema={workflow.input_schema}
+                      value={inputValue}
+                      onChange={(next) =>
+                        setInputByID((current) => ({
+                          ...current,
+                          [workflow.id]: next,
+                        }))
+                      }
+                      locale={locale}
+                    />
+                  ) : (
+                    <div className="workflow-runtime-input">
+                      <small>{labels.input}</small>
+                      <strong>
                         {locale === "zh"
-                          ? `最近试运行：${statusLabel(latestDryRun.status, locale)}`
-                          : `Latest dry-run: ${statusLabel(latestDryRun.status, locale)}`}
+                          ? "无需手动填写"
+                          : "No manual input required"}
+                      </strong>
+                      <p>
+                        {locale === "zh"
+                          ? "此流程使用计划规则或 Agent 的受控只读工具获取运行上下文。"
+                          : "This workflow obtains context from scheduled rules or governed read tools."}
+                      </p>
+                    </div>
+                  )}
+                  <div className="workflow-scope-summary">
+                    <strong>
+                      {locale === "zh" ? "运行范围" : "Run scope"}
+                    </strong>
+                    <span>
+                      {workflow.scope_policy?.mode === "strict"
+                        ? locale === "zh"
+                          ? "严格限制所选资源"
+                          : "Strictly limited to selected resources"
+                        : locale === "zh"
+                          ? "兼容模式"
+                          : "Compatibility mode"}
+                    </span>
+                    {workflow.scope_policy?.discovery_tools?.length ? (
+                      <small>
+                        {locale === "zh" ? "允许发现：" : "Discovery: "}
+                        {workflow.scope_policy.discovery_tools.join(", ")}
                       </small>
                     ) : null}
-                  </span>
-                </div>
-                <div
-                  className="workflow-step-summary"
-                  aria-label={locale === "zh" ? "步骤流程" : "Workflow steps"}
-                >
-                  {workflow.steps.map((step, index) => (
-                    <div className="workflow-step-summary__item" key={step.id}>
-                      <span className="workflow-step-summary__badge">
-                        {index + 1}
+                  </div>
+                  {runBlockReason ? (
+                    <Feedback type="error">{runBlockReason}</Feedback>
+                  ) : null}
+                  <div className="row-actions workflow-detail-actions">
+                    <Button
+                      variant="outline"
+                      loading={Boolean(activeRun?.dryRun)}
+                      disabled={Boolean(runBlockReason) || Boolean(activeRun)}
+                      title={runBlockReason || undefined}
+                      type="button"
+                      onClick={() =>
+                        void runWorkflow(workflow, true, runInput())
+                      }
+                      icon={<TestTube2 />}
+                    >
+                      {activeRun?.dryRun
+                        ? locale === "zh"
+                          ? "试运行中…"
+                          : "Dry-running…"
+                        : labels.dry}
+                    </Button>
+                    <Button
+                      variant="solid"
+                      color="primary"
+                      loading={Boolean(activeRun && !activeRun.dryRun)}
+                      disabled={
+                        !workflow.enabled ||
+                        latestRun?.status === "running" ||
+                        Boolean(runBlockReason) ||
+                        Boolean(activeRun)
+                      }
+                      title={runBlockReason || undefined}
+                      type="button"
+                      onClick={() =>
+                        void runWorkflow(workflow, false, runInput())
+                      }
+                      icon={<Play />}
+                    >
+                      {activeRun && !activeRun.dryRun
+                        ? locale === "zh"
+                          ? "运行中…"
+                          : "Running…"
+                        : latestRun?.status === "failed"
+                          ? labels.retry
+                          : labels.run}
+                    </Button>
+                  </div>
+                  {activeRun ? (
+                    <div
+                      className="workflow-run-progress"
+                      role="status"
+                      aria-live="polite"
+                    >
+                      <span
+                        className="spinner workflow-progress-spinner"
+                        aria-hidden="true"
+                      />
+                      <span>
+                        <strong>
+                          {locale === "zh"
+                            ? `${activeRun.dryRun ? "试运行" : "Workflow"} 正在执行`
+                            : `${activeRun.dryRun ? "Dry-run" : "Workflow"} is running`}
+                        </strong>
+                        <small>
+                          {locale === "zh"
+                            ? "请勿重复点击；完成后会自动刷新状态和运行记录。"
+                            : "Do not submit again. Status and run records refresh automatically when complete."}
+                        </small>
                       </span>
-                      <strong className="workflow-step-summary__name">
-                        {step.name || step.id}
-                      </strong>
-                      <span className="workflow-step-summary__type">
-                        {step.type}
-                      </span>
-                      {index < workflow.steps.length - 1 ? (
-                        <span
-                          className="workflow-step-summary__arrow"
-                          aria-hidden="true"
-                        >
-                          →
-                        </span>
-                      ) : null}
                     </div>
-                  ))}
-                </div>
-                {versions[workflow.id]?.length ? (
-                  <div className="flex flex-wrap gap-1.5">
-                    {versions[workflow.id].map((version) => (
-                      <Button
-                        variant="ghost"
-                        key={version.version_id}
-                        disabled={
-                          version.current_version === workflow.current_version
-                        }
-                        onClick={() =>
-                          void workflowApi
-                            .rollback(workflow.id, version.current_version || 0)
-                            .then(() => onRefresh?.())
-                        }
-                        icon={<RotateCcw />}
+                  ) : null}
+                  {feedback ? (
+                    <Feedback type={feedback.type}>
+                      <div className="workflow-run-feedback">
+                        <span>{feedback.message}</span>
+                        {feedback.runID ? (
+                          <ButtonLink
+                            variant="outline"
+                            className="shrink-0"
+                            to={`/admin/ai-ops?tab=records&record=workflow&workflow=${workflow.id}&run=${feedback.runID}`}
+                          >
+                            {runFeedbackActionLabel(
+                              feedback.action || "viewRun",
+                              locale,
+                            )}
+                          </ButtonLink>
+                        ) : null}
+                      </div>
+                    </Feedback>
+                  ) : null}
+                  <div className="agent-run-metrics">
+                    <span>
+                      <small>{labels.schedule}</small>
+                      <strong>
+                        {workflow.cron_expression ||
+                          (locale === "zh" ? "仅手动" : "Manual only")}
+                      </strong>
+                      <small>
+                        {workflow.cron_expression ? workflow.timezone : ""}
+                      </small>
+                    </span>
+                    <span>
+                      <small>{labels.next}</small>
+                      <strong>{formatTime(workflow.next_run_at)}</strong>
+                    </span>
+                    <span>
+                      <small>{labels.metrics}</small>
+                      <strong>
+                        {metric?.runs || 0} / {metric?.failures || 0} /{" "}
+                        {metric?.tokens || 0}
+                      </strong>
+                    </span>
+                    <span>
+                      <small>
+                        {locale === "zh" ? "最近正式运行" : "Latest live run"}
+                      </small>
+                      <strong>
+                        {latestRun
+                          ? statusLabel(latestRun.status, locale)
+                          : "—"}
+                      </strong>
+                      {latestDryRun ? (
+                        <small>
+                          {locale === "zh"
+                            ? `最近试运行：${statusLabel(latestDryRun.status, locale)}`
+                            : `Latest dry-run: ${statusLabel(latestDryRun.status, locale)}`}
+                        </small>
+                      ) : null}
+                    </span>
+                  </div>
+                  <div
+                    className="workflow-step-summary"
+                    aria-label={locale === "zh" ? "步骤流程" : "Workflow steps"}
+                  >
+                    {workflow.steps.map((step, index) => (
+                      <div
+                        className="workflow-step-summary__item"
+                        key={step.id}
                       >
-                        v{version.current_version}
-                      </Button>
+                        <span className="workflow-step-summary__badge">
+                          {index + 1}
+                        </span>
+                        <strong className="workflow-step-summary__name">
+                          {step.name || step.id}
+                        </strong>
+                        <span className="workflow-step-summary__type">
+                          {step.type}
+                        </span>
+                        {index < workflow.steps.length - 1 ? (
+                          <span
+                            className="workflow-step-summary__arrow"
+                            aria-hidden="true"
+                          >
+                            →
+                          </span>
+                        ) : null}
+                      </div>
                     ))}
                   </div>
-                ) : null}
-              </div>
-            );
-          })()}
-        </div>
-      ) : (
-        <div className="workflow-list-view flex flex-col gap-6">
-          <PanelHeader
-            title={locale === "zh" ? "自动化" : "Automation"}
-            description={
-              locale === "zh"
-                ? "选择一项持续运营目标；每次执行都可追溯、可试运行、可回滚。"
-                : "Choose an ongoing goal. Every run is traceable, testable, and reversible."
-            }
-            actions={
-              <Button
-                variant="solid"
-                color="primary"
-                type="button"
-                onClick={() => setEditing("new")}
-                icon={<Plus />}
-              >
-                {labels.add}
-              </Button>
-            }
-          />
-
-          {workflows.length > 0 ? (
-            <Card padding="base">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
-                <div className="min-w-0 flex-1">
-                  <SearchField
-                    aria-label={
-                      locale === "zh" ? "搜索 Workflow" : "Search workflows"
-                    }
-                    value={workflowQuery}
-                    onChange={(event) => setWorkflowQuery(event.target.value)}
-                    placeholder={
-                      locale === "zh"
-                        ? "按名称、说明或模板搜索"
-                        : "Search by name, description, or template"
-                    }
-                    size="small"
-                  />
-                </div>
-                <div className="min-w-0 lg:w-48 lg:shrink-0">
-                  <Select
-                    aria-label={
-                      locale === "zh"
-                        ? "按状态筛选 Workflow"
-                        : "Filter by status"
-                    }
-                    value={statusFilter}
-                    onChange={(value) =>
-                      setStatusFilter(
-                        selectValue(value) as "all" | "enabled" | "disabled",
-                      )
-                    }
-                    size="small"
-                  >
-                    <option value="all">
-                      {locale === "zh" ? "全部状态" : "All Status"} (
-                      {workflows.length})
-                    </option>
-                    <option value="enabled">
-                      {locale === "zh" ? "已启用" : "Enabled"} (
-                      {workflows.filter((item) => item.enabled).length})
-                    </option>
-                    <option value="disabled">
-                      {locale === "zh" ? "已停用" : "Disabled"} (
-                      {workflows.filter((item) => !item.enabled).length})
-                    </option>
-                  </Select>
-                </div>
-                <div className="flex items-center justify-between gap-3 lg:justify-end">
-                  <Text size="sm" tone="muted" className="whitespace-nowrap">
-                    {locale === "zh"
-                      ? `${visibleWorkflows.length} / ${workflows.length} 个 Workflow`
-                      : `${visibleWorkflows.length} of ${workflows.length} workflows`}
-                  </Text>
-                  {workflowQuery || statusFilter !== "all" ? (
-                    <Button
-                      variant="text"
-                      size="small"
-                      type="button"
-                      onClick={() => {
-                        setWorkflowQuery("");
-                        setStatusFilter("all");
-                      }}
-                      icon={<X />}
-                    >
-                      {locale === "zh" ? "清除" : "Clear"}
-                    </Button>
+                  {versions[workflow.id]?.length ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {versions[workflow.id].map((version) => (
+                        <Button
+                          variant="ghost"
+                          key={version.version_id}
+                          disabled={
+                            version.current_version === workflow.current_version
+                          }
+                          onClick={() =>
+                            void workflowApi
+                              .rollback(
+                                workflow.id,
+                                version.current_version || 0,
+                              )
+                              .then(() => onRefresh?.())
+                          }
+                          icon={<RotateCcw />}
+                        >
+                          v{version.current_version}
+                        </Button>
+                      ))}
+                    </div>
                   ) : null}
                 </div>
-              </div>
-            </Card>
-          ) : null}
-
-          {workflows.length === 0 || visibleWorkflows.length === 0 ? (
-            <Card padding="base">
-              <Empty
-                title={
-                  workflows.length > 0
-                    ? locale === "zh"
-                      ? "没有匹配的 Workflow。"
-                      : "No matching workflows."
-                    : labels.empty
-                }
-              />
-            </Card>
-          ) : (
-            <Card padding="none" className="overflow-hidden">
-              <CardContent className="p-0">
-                <div
-                  role="list"
-                  aria-label={
-                    locale === "zh" ? "Workflow 列表" : "Workflow list"
-                  }
-                  className="divide-y"
-                >
-                  {visibleWorkflows.map((workflow) => {
-                    const metric = metricMap.get(workflow.id);
-                    const latestRun = runs.find(
-                      (run) => run.workflow_id === workflow.id && !run.dry_run,
-                    );
-                    const modelSteps = workflow.steps.filter(
-                      (step) => step.type === "model",
-                    );
-                    const unboundStep = modelSteps.find(
-                      (step) => !step.agent_id,
-                    );
-                    const unavailableAgent = modelSteps
-                      .map((step) =>
-                        step.agent_id ? agentMap.get(step.agent_id) : undefined,
-                      )
-                      .find((agent) => !agent || !agent.enabled);
-                    const runBlockReason = unboundStep
-                      ? locale === "zh"
-                        ? "未绑定 Agent"
-                        : "No Agent bound"
-                      : unavailableAgent
-                        ? locale === "zh"
-                          ? `关联 Agent“${unavailableAgent.name}”已停用`
-                          : `Agent “${unavailableAgent.name}” disabled`
-                        : "";
-                    const openWorkflow = () => {
-                      setSelectedWorkflowID(workflow.id);
-                      const url = new URL(window.location.href);
-                      url.searchParams.set("workflow", String(workflow.id));
-                      window.history.replaceState(null, "", url);
-                    };
-
-                    return (
-                      <div
-                        key={workflow.id}
-                        role="listitem"
-                        className="flex flex-col gap-4 p-6 xl:flex-row xl:items-start xl:justify-between"
-                      >
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          className="h-auto min-w-0 flex-1 justify-start p-0 text-left hover:bg-transparent"
-                          onClick={openWorkflow}
-                        >
-                          <span className="block min-w-0 flex-1 text-left">
-                            <span className="flex flex-wrap items-center gap-2">
-                              <strong className="text-sm">
-                                {workflow.name}
-                              </strong>
-                              <Tag
-                                color={workflow.enabled ? "success" : "default"}
-                              >
-                                {workflow.enabled
-                                  ? locale === "zh"
-                                    ? "已启用"
-                                    : "Enabled"
-                                  : locale === "zh"
-                                    ? "已停用"
-                                    : "Disabled"}
-                              </Tag>
-                            </span>
-                            <span className="mt-1 block text-sm text-muted-foreground">
-                              {workflow.description}
-                            </span>
-                            <span className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2 xl:grid-cols-4">
-                              <span>
-                                {labels.schedule}:{" "}
-                                {workflow.cron_expression ||
-                                  (locale === "zh" ? "仅手动" : "Manual")}
-                                {workflow.cron_expression
-                                  ? ` · ${workflow.timezone}`
-                                  : ""}
-                              </span>
-                              <span>
-                                {labels.next}:{" "}
-                                {formatTime(workflow.next_run_at)}
-                              </span>
-                              <span>
-                                {latestRun
-                                  ? `${locale === "zh" ? "最近运行" : "Latest run"}: ${statusLabel(latestRun.status, locale)} · ${formatTime(latestRun.created_at)}`
-                                  : labels.never}
-                              </span>
-                              <span>
-                                {labels.metrics}: {metric?.runs || 0} /{" "}
-                                {metric?.failures || 0} / {metric?.tokens || 0}
-                              </span>
-                            </span>
-                          </span>
-                        </Button>
-                        <div className="flex min-w-max shrink-0 flex-nowrap items-center gap-1">
-                          <IconButton
-                            label={
-                              locale === "zh"
-                                ? "进入详情 / 运行"
-                                : "Inspect / Run"
-                            }
-                            icon={<ChevronRight />}
-                            variant="ghost"
-                            onClick={openWorkflow}
-                          />
-                          <IconButton
-                            label={locale === "zh" ? "编辑" : "Edit"}
-                            icon={<Edit2 />}
-                            variant="ghost"
-                            onClick={() => setEditing(workflow)}
-                          />
-                          <IconButton
-                            label={
-                              !workflow.enabled && runBlockReason
-                                ? runBlockReason
-                                : workflow.enabled
-                                  ? labels.disable
-                                  : labels.enable
-                            }
-                            icon={workflow.enabled ? <CirclePause /> : <Play />}
-                            variant="ghost"
-                            disabled={
-                              !workflow.enabled && Boolean(runBlockReason)
-                            }
-                            onClick={() =>
-                              void workflowApi
-                                .setEnabled(workflow.id, !workflow.enabled)
-                                .then(() => onRefresh?.())
-                            }
-                          />
-                          <IconButton
-                            variant="ghost"
-                            color="error"
-                            label={locale === "zh" ? "删除" : "Delete"}
-                            icon={<Trash2 />}
-                            onClick={() => setDeleteTarget(workflow)}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+              );
+            })()}
+          </div>
         </div>
+      ) : (
+        <Card padding="base">
+          <Empty title={labels.empty} />
+        </Card>
       )}
       <Modal
         open={deleteTarget !== null}
