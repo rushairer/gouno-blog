@@ -34,7 +34,7 @@ describe("RecordsWorkspace", () => {
     const onInspect = vi.fn();
     const onDelete = vi.fn();
 
-    render(
+    const { rerender } = render(
       <RecordsWorkspace
         locale="zh"
         runs={[run]}
@@ -51,8 +51,22 @@ describe("RecordsWorkspace", () => {
       screen.getByRole("list", { name: "Agent 运行列表" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "查看详情" }));
+    await user.click(screen.getByRole("button", { name: "查看 Run #9" }));
     expect(onInspect).toHaveBeenCalledWith(run);
+
+    rerender(
+      <RecordsWorkspace
+        locale="zh"
+        runs={[run]}
+        agents={[agent]}
+        selectedRun={{ run, tool_calls: [] }}
+        onInspect={onInspect}
+        onClearInspect={vi.fn()}
+        onDelete={onDelete}
+        formatDateTime={(value) => value}
+      />,
+    );
+
     await user.click(screen.getByRole("button", { name: "删除记录" }));
     expect(onDelete).toHaveBeenCalledWith(run);
   });
