@@ -181,7 +181,9 @@ describe("PostEditor", () => {
     await screen.findByRole("checkbox", { name: "应用 分类 建议" });
     await user.click(screen.getByRole("button", { name: "应用 2 项建议" }));
 
-    expect(screen.getByRole("combobox", { name: "分类" })).toHaveValue("9");
+    expect(screen.getByRole("combobox", { name: "分类" })).toHaveTextContent(
+      "AI 工程",
+    );
     expect(screen.getByLabelText("标签")).toHaveValue("AI, 资讯, Agent, 治理");
   });
 
