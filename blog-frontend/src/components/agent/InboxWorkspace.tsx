@@ -9,7 +9,7 @@ import type {
 } from "../../types/agent";
 import { workflowApi } from "../../api/workflows";
 import { ProposalPreview } from "./ProposalPreview";
-import { OperationsWorkspace } from "./OperationsWorkspace";
+import { DecisionInboxWorkspace } from "./DecisionInboxWorkspace";
 import { JsonPreview } from "./AgentRunRecords";
 import {
   Alert,
@@ -411,6 +411,7 @@ export function InboxWorkspace({
   mediaCandidates,
   editorialTasks,
   onRefresh,
+  formatDateTime,
 }: {
   locale: "en" | "zh";
   approvals: AgentApproval[];
@@ -424,29 +425,23 @@ export function InboxWorkspace({
   mediaCandidates: MediaCandidate[];
   editorialTasks: EditorialTask[];
   onRefresh: () => Promise<void>;
+  formatDateTime?: (value?: string) => string;
 }) {
   return (
-    <div className="flex flex-col gap-6">
-      <InteractionInbox
-        locale={locale}
-        tasks={interactions}
-        onResolved={onResolvedInteraction}
-      />
-      <FriendlyApprovalQueue
-        locale={locale}
-        approvals={approvals}
-        selected={selectedApproval}
-        onSelect={onSelectApproval}
-        onReview={onReviewApproval}
-      />
-      <OperationsWorkspace
-        suggestions={suggestions}
-        candidateSets={candidateSets}
-        mediaCandidates={mediaCandidates}
-        editorialTasks={editorialTasks}
-        locale={locale}
-        onRefresh={onRefresh}
-      />
-    </div>
+    <DecisionInboxWorkspace
+      locale={locale}
+      approvals={approvals}
+      selectedApproval={selectedApproval}
+      onSelectApproval={onSelectApproval}
+      onReviewApproval={onReviewApproval}
+      interactions={interactions}
+      onResolvedInteraction={onResolvedInteraction}
+      suggestions={suggestions}
+      candidateSets={candidateSets}
+      mediaCandidates={mediaCandidates}
+      editorialTasks={editorialTasks}
+      onRefresh={onRefresh}
+      formatDateTime={formatDateTime}
+    />
   );
 }
