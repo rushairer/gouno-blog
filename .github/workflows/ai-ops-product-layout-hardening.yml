@@ -7,6 +7,7 @@ on:
       - ".github/scripts/harden-ai-ops-product-layout.mjs"
       - ".github/workflows/ai-ops-product-layout-hardening.yml"
       - "blog-frontend/scripts/check-ai-ops-layout-contracts.mjs"
+      - "blog-frontend/e2e/ai-workspace-interactions.pw.mjs"
   workflow_dispatch:
 
 permissions:
