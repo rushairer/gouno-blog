@@ -7,6 +7,7 @@ export default defineConfig({
     "public-interactions.pw.mjs",
     "core-admin-matrix.pw.mjs",
     "core-admin-interactions.pw.mjs",
+    "editor-interactions.pw.mjs",
     "support-matrix.pw.mjs",
     "support-interactions.pw.mjs",
     "ai-workspace-matrix.pw.mjs",
