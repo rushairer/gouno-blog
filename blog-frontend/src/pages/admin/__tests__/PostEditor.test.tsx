@@ -70,12 +70,24 @@ describe("PostEditor", () => {
 
     await waitFor(() => expect(getAdminPostSpy).toHaveBeenCalledWith("5"));
     expect(getPostSpy).not.toHaveBeenCalled();
-    expect(await screen.findByDisplayValue(draftPost.title)).toBeInTheDocument();
+    expect(
+      await screen.findByDisplayValue(draftPost.title),
+    ).toBeInTheDocument();
     expect(screen.getByDisplayValue("AI 资讯摘要")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("daily-ai-news-2026-08-21")).toBeInTheDocument();
-    expect(screen.getByLabelText("文章正文 Markdown")).toHaveValue(draftPost.content);
-    expect(screen.getByRole("button", { name: "编辑" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "预览" })).toHaveAttribute("aria-pressed", "false");
+    expect(
+      screen.getByDisplayValue("daily-ai-news-2026-08-21"),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("文章正文 Markdown")).toHaveValue(
+      draftPost.content,
+    );
+    expect(screen.getByRole("button", { name: "编辑" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "预览" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
     expect(screen.getByRole("button", { name: "AI 写作" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "插图" })).toBeInTheDocument();
   });
@@ -89,7 +101,10 @@ describe("PostEditor", () => {
     await user.type(title, "不会丢失的草稿");
     await user.type(body, "```ts\nconst wide = true;\n```");
 
-    Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      value: 390,
+    });
     fireEvent(window, new Event("resize"));
 
     expect(title).toHaveValue("不会丢失的草稿");
@@ -105,12 +120,19 @@ describe("PostEditor", () => {
       .mockResolvedValueOnce({ suggestions: ["重新生成的标题"] });
     renderEditor();
 
-    await user.type(await screen.findByLabelText("文章正文 Markdown"), "先写一点正文");
+    await user.type(
+      await screen.findByLabelText("文章正文 Markdown"),
+      "先写一点正文",
+    );
     await user.click(screen.getByRole("button", { name: "AI 生成标题候选" }));
-    expect(await screen.findByRole("radio", { name: "标题候选 A" })).toBeChecked();
+    expect(
+      await screen.findByRole("radio", { name: "标题候选 A" }),
+    ).toBeChecked();
 
     await user.click(screen.getByRole("button", { name: "重新生成 AI 建议" }));
-    expect(await screen.findByRole("radio", { name: "重新生成的标题" })).toBeChecked();
+    expect(
+      await screen.findByRole("radio", { name: "重新生成的标题" }),
+    ).toBeChecked();
     expect(assistSpy).toHaveBeenCalledTimes(2);
 
     await user.click(screen.getByRole("button", { name: "使用所选" }));
@@ -133,10 +155,14 @@ describe("PostEditor", () => {
     await screen.findByDisplayValue(draftPost.title);
     await user.click(screen.getByRole("button", { name: "AI 优化路径与 SEO" }));
     await screen.findByRole("checkbox", { name: "应用 SEO 描述 建议" });
-    await user.click(screen.getByRole("checkbox", { name: "应用 SEO 描述 建议" }));
+    await user.click(
+      screen.getByRole("checkbox", { name: "应用 SEO 描述 建议" }),
+    );
     await user.click(screen.getByRole("button", { name: "应用 2 项建议" }));
 
-    expect(screen.getByLabelText("访问路径 (Slug)")).toHaveValue("reviewed-slug");
+    expect(screen.getByLabelText("访问路径 (Slug)")).toHaveValue(
+      "reviewed-slug",
+    );
     expect(screen.getByLabelText("SEO 标题")).toHaveValue("Reviewed SEO title");
     expect(screen.getByLabelText("SEO 描述")).toHaveValue("");
   });
@@ -168,13 +194,21 @@ describe("PostEditor", () => {
     });
     renderEditor();
 
-    await user.type(await screen.findByPlaceholderText("写一个清晰、具体的标题"), "新草稿");
+    await user.type(
+      await screen.findByPlaceholderText("写一个清晰、具体的标题"),
+      "新草稿",
+    );
     await user.type(screen.getByLabelText("文章正文 Markdown"), "草稿正文");
     await user.click(screen.getByRole("button", { name: "保存草稿" }));
 
     await waitFor(() =>
       expect(createPostSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ title: "新草稿", content: "草稿正文", status: "draft", tags: [] }),
+        expect.objectContaining({
+          title: "新草稿",
+          content: "草稿正文",
+          status: "draft",
+          tags: [],
+        }),
       ),
     );
     expect(await screen.findByText("草稿已保存。")).toBeInTheDocument();
@@ -194,9 +228,14 @@ describe("PostEditor", () => {
     await user.click(screen.getByRole("button", { name: "发布" }));
 
     await waitFor(() =>
-      expect(updatePostSpy).toHaveBeenCalledWith(5, expect.objectContaining({ status: "published" })),
+      expect(updatePostSpy).toHaveBeenCalledWith(
+        5,
+        expect.objectContaining({ status: "published" }),
+      ),
     );
-    expect(await screen.findAllByText("内容已被其他编辑者更新（409 冲突）")).not.toHaveLength(0);
+    expect(
+      await screen.findAllByText("内容已被其他编辑者更新（409 冲突）"),
+    ).not.toHaveLength(0);
     expect(screen.getByText("文章已有新版本")).toBeInTheDocument();
   });
 
@@ -211,11 +250,15 @@ describe("PostEditor", () => {
     };
     vi.spyOn(postsApi, "getAdminPost").mockResolvedValue(draftPost);
     vi.spyOn(postsApi, "getVersions").mockResolvedValue([version]);
-    const restoreSpy = vi.spyOn(postsApi, "restoreVersion").mockResolvedValue(version);
+    const restoreSpy = vi
+      .spyOn(postsApi, "restoreVersion")
+      .mockResolvedValue(version);
     renderEditor("/admin/posts/5/edit");
 
     await user.click(await screen.findByRole("tab", { name: /历史 1/ }));
-    await user.click(screen.getByRole("button", { name: /历史标题.*历史版本/ }));
+    await user.click(
+      screen.getByRole("button", { name: /历史标题.*历史版本/ }),
+    );
     await user.click(screen.getByRole("button", { name: "恢复版本" }));
 
     await waitFor(() => expect(restoreSpy).toHaveBeenCalledWith(5, 42));
@@ -235,7 +278,9 @@ describe("PostEditor", () => {
     await screen.findByDisplayValue(draftPost.title);
     await user.click(screen.getByRole("button", { name: "预览" }));
 
-    expect(container.querySelector(".editor-preview pre")).toHaveClass("overflow-auto");
+    expect(container.querySelector(".editor-preview pre")).toHaveClass(
+      "overflow-auto",
+    );
     const previewTable = container.querySelector(".editor-preview table");
     expect(previewTable).toHaveClass("min-w-[36rem]");
     expect(previewTable?.parentElement).toHaveClass("overflow-x-auto");
@@ -264,8 +309,14 @@ describe("PostEditor", () => {
 
     expect(await screen.findByText(/只读模式/)).toBeInTheDocument();
     expect(screen.getByDisplayValue(draftPost.title)).toBeDisabled();
-    expect(screen.queryByRole("button", { name: "保存草稿" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "发布" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "AI 写作" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "保存草稿" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "发布" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "AI 写作" }),
+    ).not.toBeInTheDocument();
   });
 });

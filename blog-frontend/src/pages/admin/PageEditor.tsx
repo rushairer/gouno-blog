@@ -108,7 +108,9 @@ function InspectorSection({
       <summary className="cursor-pointer select-none pr-12 text-sm font-semibold">
         {title}
       </summary>
-      {action ? <div className="absolute right-0 top-2.5 z-10">{action}</div> : null}
+      {action ? (
+        <div className="absolute right-0 top-2.5 z-10">{action}</div>
+      ) : null}
       <div className="mt-4 flex flex-col gap-4">{children}</div>
     </details>
   );
@@ -133,7 +135,11 @@ function FieldActionHeader({
     <div className="mb-2 flex min-h-8 items-center justify-between gap-3">
       <div className="text-sm font-medium">
         {label}
-        {required ? <span aria-hidden="true" className="text-destructive">*</span> : null}
+        {required ? (
+          <span aria-hidden="true" className="text-destructive">
+            *
+          </span>
+        ) : null}
       </div>
       <Button
         type="button"
@@ -185,16 +191,20 @@ export default function PageEditor() {
   const dirty = useRef(false);
 
   const [editorMode, setEditorMode] = useState<MarkdownEditorMode>("edit");
-  const [editorSelection, setEditorSelection] = useState<MarkdownEditorSelection | null>(null);
+  const [editorSelection, setEditorSelection] =
+    useState<MarkdownEditorSelection | null>(null);
   const editorRef = useRef<MarkdownEditorRef>(null);
 
-  const [fieldLoading, setFieldLoading] = useState<FieldSuggestionTask | null>(null);
+  const [fieldLoading, setFieldLoading] = useState<FieldSuggestionTask | null>(
+    null,
+  );
   const [titleCandidates, setTitleCandidates] = useState<string[]>([]);
   const [selectedTitle, setSelectedTitle] = useState<string | null>(null);
   const [summaryCandidates, setSummaryCandidates] = useState<string[]>([]);
   const [selectedSummary, setSelectedSummary] = useState<string | null>(null);
   const [metadataLoading, setMetadataLoading] = useState(false);
-  const [metadataSuggestion, setMetadataSuggestion] = useState<MetadataSuggestion | null>(null);
+  const [metadataSuggestion, setMetadataSuggestion] =
+    useState<MetadataSuggestion | null>(null);
   const [metadataSelection, setMetadataSelection] = useState<string[]>([]);
 
   const [writingOpen, setWritingOpen] = useState(false);
@@ -297,11 +307,16 @@ export default function PageEditor() {
         dirty.current = false;
         setSavedAt(new Date());
         if (!automatic) {
-          notify(status === "published" ? "单页已成功发布！" : "单页草稿已保存。", "success");
+          notify(
+            status === "published" ? "单页已成功发布！" : "单页草稿已保存。",
+            "success",
+          );
         }
-        if (!page.id) navigate(`/admin/pages/${result.id}/edit`, { replace: true });
+        if (!page.id)
+          navigate(`/admin/pages/${result.id}/edit`, { replace: true });
       } catch (reason) {
-        const message = reason instanceof Error ? reason.message : "保存失败，请稍后重试。";
+        const message =
+          reason instanceof Error ? reason.message : "保存失败，请稍后重试。";
         setError(message);
         notify(message, "error");
       } finally {
@@ -386,7 +401,10 @@ export default function PageEditor() {
       setMetadataSuggestion(suggestion);
       setMetadataSelection(keys);
     } catch (reason) {
-      notify(reason instanceof Error ? reason.message : "生成 SEO 建议失败", "error");
+      notify(
+        reason instanceof Error ? reason.message : "生成 SEO 建议失败",
+        "error",
+      );
     } finally {
       setMetadataLoading(false);
     }
@@ -432,7 +450,10 @@ export default function PageEditor() {
       update("content", next);
       setEditorMode("edit");
       queueMicrotask(() =>
-        editorRef.current?.setSelection(selectionStart, selectionStart + result.length),
+        editorRef.current?.setSelection(
+          selectionStart,
+          selectionStart + result.length,
+        ),
       );
       return;
     }
@@ -450,7 +471,9 @@ export default function PageEditor() {
     const markdown = `![${result.alt || "单页插图"}](${result.url})`;
     setEditorMode("edit");
     queueMicrotask(() => {
-      editorRef.current?.insertText(`\n\n${markdown}\n`, { replaceSelection: false });
+      editorRef.current?.insertText(`\n\n${markdown}\n`, {
+        replaceSelection: false,
+      });
       editorRef.current?.focus();
     });
     notify("已在编辑位置插入图片。", "success");
@@ -486,9 +509,12 @@ export default function PageEditor() {
         setPage(result);
         dirty.current = false;
         setSavedAt(new Date());
-        if (!page.id) navigate(`/admin/pages/${result.id}/edit`, { replace: true });
+        if (!page.id)
+          navigate(`/admin/pages/${result.id}/edit`, { replace: true });
       } catch (reason) {
-        setError(reason instanceof Error ? reason.message : "保存失败，无法开启预览。");
+        setError(
+          reason instanceof Error ? reason.message : "保存失败，无法开启预览。",
+        );
         return;
       } finally {
         setSaving(false);
@@ -497,7 +523,8 @@ export default function PageEditor() {
     if (currentPage.slug) window.open(`/${currentPage.slug}`, "_blank");
   };
 
-  const primaryStatus: PostStatus = publishIntent === "draft" ? "draft" : "published";
+  const primaryStatus: PostStatus =
+    publishIntent === "draft" ? "draft" : "published";
   const primaryLabel =
     publishIntent === "draft"
       ? page.status === "published"
@@ -515,7 +542,11 @@ export default function PageEditor() {
         title="无法编辑单页"
         description={error}
         action={
-          <Button variant="outline" icon={<ArrowLeft />} onClick={() => navigate("/admin/pages")}>
+          <Button
+            variant="outline"
+            icon={<ArrowLeft />}
+            onClick={() => navigate("/admin/pages")}
+          >
             返回单页列表
           </Button>
         }
@@ -525,7 +556,10 @@ export default function PageEditor() {
 
   if (!allowed || loading) {
     return (
-      <Card padding="base" aria-label={isNew ? "新建单页编辑器加载中" : "单页编辑器加载中"}>
+      <Card
+        padding="base"
+        aria-label={isNew ? "新建单页编辑器加载中" : "单页编辑器加载中"}
+      >
         <div className="flex flex-col gap-5" role="status" aria-live="polite">
           <div className="flex items-center justify-between gap-4">
             <Skeleton className="h-9 w-36" />
@@ -551,12 +585,19 @@ export default function PageEditor() {
         aria-live="polite"
       >
         {isReadOnly ? (
-          <><Eye className="size-4" /> 只读模式</>
+          <>
+            <Eye className="size-4" /> 只读模式
+          </>
         ) : saving ? (
           "正在保存…"
         ) : savedAt ? (
           <>
-            <Check className="size-4" /> 已于 {savedAt.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })} 保存
+            <Check className="size-4" /> 已于{" "}
+            {savedAt.toLocaleTimeString("zh-CN", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}{" "}
+            保存
           </>
         ) : dirty.current ? (
           "有未保存的更改"
@@ -574,13 +615,28 @@ export default function PageEditor() {
         >
           预览前台页面
         </Button>
-        {!isReadOnly && page.status !== "published" && publishIntent !== "draft" ? (
-          <Button variant="outline" type="button" onClick={() => void persist("draft")} disabled={saving} icon={<Save />}>
+        {!isReadOnly &&
+        page.status !== "published" &&
+        publishIntent !== "draft" ? (
+          <Button
+            variant="outline"
+            type="button"
+            onClick={() => void persist("draft")}
+            disabled={saving}
+            icon={<Save />}
+          >
             保存草稿
           </Button>
         ) : null}
         {!isReadOnly ? (
-          <Button variant="solid" color="primary" type="button" onClick={() => void persist(primaryStatus)} disabled={saving} icon={<Send />}>
+          <Button
+            variant="solid"
+            color="primary"
+            type="button"
+            onClick={() => void persist(primaryStatus)}
+            disabled={saving}
+            icon={<Send />}
+          >
             {primaryLabel}
           </Button>
         ) : null}
@@ -588,26 +644,51 @@ export default function PageEditor() {
     </>
   );
 
-  const metadataItems: { key: string; label: string; value: string; monospace?: boolean }[] =
-    metadataSuggestion
-      ? [
-          ...(metadataSuggestion.slug
-            ? [{ key: "slug", label: "Slug", value: metadataSuggestion.slug, monospace: true }]
-            : []),
-          ...(metadataSuggestion.seo_title
-            ? [{ key: "seo_title", label: "SEO 标题", value: metadataSuggestion.seo_title }]
-            : []),
-          ...(metadataSuggestion.seo_description
-            ? [{ key: "seo_description", label: "SEO 描述", value: metadataSuggestion.seo_description }]
-            : []),
-        ]
-      : [];
+  const metadataItems: {
+    key: string;
+    label: string;
+    value: string;
+    monospace?: boolean;
+  }[] = metadataSuggestion
+    ? [
+        ...(metadataSuggestion.slug
+          ? [
+              {
+                key: "slug",
+                label: "Slug",
+                value: metadataSuggestion.slug,
+                monospace: true,
+              },
+            ]
+          : []),
+        ...(metadataSuggestion.seo_title
+          ? [
+              {
+                key: "seo_title",
+                label: "SEO 标题",
+                value: metadataSuggestion.seo_title,
+              },
+            ]
+          : []),
+        ...(metadataSuggestion.seo_description
+          ? [
+              {
+                key: "seo_description",
+                label: "SEO 描述",
+                value: metadataSuggestion.seo_description,
+              },
+            ]
+          : []),
+      ]
+    : [];
 
   const inspector = (
     <fieldset disabled={isReadOnly} className="min-w-0 border-0 p-0">
       <div className="min-h-9 border-b pb-3">
         <Text className="font-semibold">属性</Text>
-        <Text size="xs" tone="muted" className="mt-0.5 block">发布、页面配置与 SEO。</Text>
+        <Text size="xs" tone="muted" className="mt-0.5 block">
+          发布、页面配置与 SEO。
+        </Text>
       </div>
 
       <InspectorSection title="发布设置">
@@ -632,7 +713,9 @@ export default function PageEditor() {
           <Select
             aria-label="显示模板"
             value={page.template || "default"}
-            onChange={(value) => update("template", selectValue(value) as PageTemplate)}
+            onChange={(value) =>
+              update("template", selectValue(value) as PageTemplate)
+            }
           >
             <option value="default">默认标准排版 (Default)</option>
             <option value="about">关于页专用模板 (About)</option>
@@ -658,7 +741,9 @@ export default function PageEditor() {
             <Input
               type="number"
               value={page.sort_order}
-              onChange={(event) => update("sort_order", Number(event.target.value) || 0)}
+              onChange={(event) =>
+                update("sort_order", Number(event.target.value) || 0)
+              }
             />
           </Field>
         ) : null}
@@ -666,20 +751,24 @@ export default function PageEditor() {
 
       <InspectorSection
         title="路径与 SEO"
-        action={!isReadOnly ? (
-          <Button
-            type="button"
-            size="small"
-            variant="text"
-            icon={<Sparkles />}
-            aria-label="AI 优化路径与 SEO"
-            title="AI 优化路径与 SEO"
-            className="size-8 px-0"
-            loading={metadataLoading}
-            disabled={metadataLoading || (!page.title.trim() && !page.content.trim())}
-            onClick={() => void requestMetadataSuggestions()}
-          />
-        ) : undefined}
+        action={
+          !isReadOnly ? (
+            <Button
+              type="button"
+              size="small"
+              variant="text"
+              icon={<Sparkles />}
+              aria-label="AI 优化路径与 SEO"
+              title="AI 优化路径与 SEO"
+              className="size-8 px-0"
+              loading={metadataLoading}
+              disabled={
+                metadataLoading || (!page.title.trim() && !page.content.trim())
+              }
+              onClick={() => void requestMetadataSuggestions()}
+            />
+          ) : undefined
+        }
       >
         {metadataSuggestion && metadataItems.length ? (
           <AISuggestionReview
@@ -716,7 +805,10 @@ export default function PageEditor() {
             placeholder="留空时默认使用标题"
           />
         </Field>
-        <Field label="SEO 描述" hint={`${(page.seo_description || "").length}/160`}>
+        <Field
+          label="SEO 描述"
+          hint={`${(page.seo_description || "").length}/160`}
+        >
           <Textarea
             aria-label="SEO 描述"
             rows={4}
@@ -747,19 +839,65 @@ export default function PageEditor() {
         <DropdownMenuContent align="start" className="w-56">
           {editorSelection?.text ? (
             <>
-              <DropdownMenuItem onSelect={() => openWritingAssistant("保持原意，润色当前选中的文字，提升连贯性和表达质量")}>润色所选</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => openWritingAssistant("扩写当前选中的文字，补充必要背景和细节")}>扩写所选</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => openWritingAssistant("压缩当前选中的文字，保留核心信息")}>缩写所选</DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() =>
+                  openWritingAssistant(
+                    "保持原意，润色当前选中的文字，提升连贯性和表达质量",
+                  )
+                }
+              >
+                润色所选
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() =>
+                  openWritingAssistant("扩写当前选中的文字，补充必要背景和细节")
+                }
+              >
+                扩写所选
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() =>
+                  openWritingAssistant("压缩当前选中的文字，保留核心信息")
+                }
+              >
+                缩写所选
+              </DropdownMenuItem>
             </>
           ) : (
             <>
-              <DropdownMenuItem onSelect={() => openWritingAssistant("基于标题和摘要撰写结构清晰的完整单页初稿")}>起草单页</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => openWritingAssistant("延续当前正文继续写作，保持已有结构、语气和 Markdown 风格")}>继续写作</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => openWritingAssistant("重构全文结构，减少重复，让页面信息更清晰")}>重构全文</DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() =>
+                  openWritingAssistant(
+                    "基于标题和摘要撰写结构清晰的完整单页初稿",
+                  )
+                }
+              >
+                起草单页
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() =>
+                  openWritingAssistant(
+                    "延续当前正文继续写作，保持已有结构、语气和 Markdown 风格",
+                  )
+                }
+              >
+                继续写作
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() =>
+                  openWritingAssistant(
+                    "重构全文结构，减少重复，让页面信息更清晰",
+                  )
+                }
+              >
+                重构全文
+              </DropdownMenuItem>
             </>
           )}
           <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => openWritingAssistant("")}>自定义指令…</DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => openWritingAssistant("")}>
+            自定义指令…
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -776,10 +914,16 @@ export default function PageEditor() {
           />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-52">
-          <DropdownMenuItem onSelect={() => setMediaSource("library")}>从媒体库选择</DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => setMediaSource("upload")}>上传图片</DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => setMediaSource("library")}>
+            从媒体库选择
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => setMediaSource("upload")}>
+            上传图片
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => setMediaSource("ai")}>AI 生成配图</DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => setMediaSource("ai")}>
+            AI 生成配图
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </>
@@ -849,10 +993,17 @@ export default function PageEditor() {
                 actionLabel="AI 根据正文生成摘要"
                 onAction={() => void requestFieldSuggestions("summary")}
                 loading={fieldLoading === "summary"}
-                disabled={!page.content.trim() || (fieldLoading !== null && fieldLoading !== "summary")}
+                disabled={
+                  !page.content.trim() ||
+                  (fieldLoading !== null && fieldLoading !== "summary")
+                }
               />
             ) : null}
-            <Field label="摘要 / 描述" hideLabel={!isReadOnly} hint={`${page.summary.length}/300`}>
+            <Field
+              label="摘要 / 描述"
+              hideLabel={!isReadOnly}
+              hint={`${page.summary.length}/300`}
+            >
               <Textarea
                 aria-label="摘要 / 描述"
                 rows={3}
@@ -903,7 +1054,9 @@ export default function PageEditor() {
               onSelectionChange={setEditorSelection}
               renderPreview={(value) => (
                 <div className="editor-preview">
-                  <MarkdownRenderer content={value || "开始写作后，预览会出现在这里。"} />
+                  <MarkdownRenderer
+                    content={value || "开始写作后，预览会出现在这里。"}
+                  />
                 </div>
               )}
               toolbarActions={aiToolbarActions}
@@ -947,8 +1100,16 @@ export default function PageEditor() {
         onOpenChange={setConfirmExit}
         footer={
           <>
-            <Button variant="outline" onClick={() => setConfirmExit(false)}>继续编辑</Button>
-            <Button variant="solid" color="error" onClick={() => navigate("/admin/pages")}>放弃并离开</Button>
+            <Button variant="outline" onClick={() => setConfirmExit(false)}>
+              继续编辑
+            </Button>
+            <Button
+              variant="solid"
+              color="error"
+              onClick={() => navigate("/admin/pages")}
+            >
+              放弃并离开
+            </Button>
           </>
         }
       />

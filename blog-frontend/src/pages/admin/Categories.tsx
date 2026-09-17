@@ -58,7 +58,9 @@ function CategoriesSkeleton() {
   return (
     <Card padding="base" aria-label="分类加载中">
       <div className="flex flex-col gap-4" role="status" aria-live="polite">
-        <Text size="sm" tone="muted">正在加载分类…</Text>
+        <Text size="sm" tone="muted">
+          正在加载分类…
+        </Text>
         {Array.from({ length: 4 }, (_, index) => (
           <div
             key={index}
@@ -188,7 +190,10 @@ export default function Categories() {
       setSelectedSlug(unique[0] ?? null);
       if (!unique.length) notify("未能生成 Slug 候选，请手动填写。", "error");
     } catch (reason) {
-      notify(reason instanceof Error ? reason.message : "生成 Slug 失败", "error");
+      notify(
+        reason instanceof Error ? reason.message : "生成 Slug 失败",
+        "error",
+      );
     } finally {
       setSlugLoading(false);
     }
@@ -259,7 +264,8 @@ export default function Categories() {
         await load();
         if (failed.length) {
           const reason = results.find(
-            (result): result is PromiseRejectedResult => result.status === "rejected",
+            (result): result is PromiseRejectedResult =>
+              result.status === "rejected",
           )?.reason;
           setError(
             `已删除 ${removed.length} 个分类；${failed.length} 个未删除：${reason instanceof Error ? reason.message : "请稍后重试。"}`,
@@ -273,7 +279,9 @@ export default function Categories() {
       await siteApi.deleteCategory(deleteTarget.item.id);
       notify("分类已删除，相关文章已移至未分类。");
       setDeleteTarget(null);
-      setSelected((current) => current.filter((id) => id !== deleteTarget.item.id));
+      setSelected((current) =>
+        current.filter((id) => id !== deleteTarget.item.id),
+      );
       await load();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "删除失败。");
@@ -289,7 +297,8 @@ export default function Categories() {
   };
 
   const allSelected =
-    categories.length > 0 && categories.every((category) => selected.includes(category.id));
+    categories.length > 0 &&
+    categories.every((category) => selected.includes(category.id));
 
   const deleteDescription =
     deleteTarget?.kind === "batch"
@@ -304,13 +313,20 @@ export default function Categories() {
         title="分类"
         description="建立长期稳定的内容脉络与主题结构。"
         actions={
-          <Button variant="solid" color="primary" icon={<Plus />} onClick={openCreate}>
+          <Button
+            variant="solid"
+            color="primary"
+            icon={<Plus />}
+            onClick={openCreate}
+          >
             新建分类
           </Button>
         }
       />
 
-      {error && categories.length > 0 ? <Alert type="error" showIcon title={error} /> : null}
+      {error && categories.length > 0 ? (
+        <Alert type="error" showIcon title={error} />
+      ) : null}
 
       {selected.length > 0 ? (
         <BulkActionBar
@@ -320,7 +336,11 @@ export default function Categories() {
             setAIOpen(false);
           }}
         >
-          <Button size="small" icon={<Sparkles />} onClick={() => setAIOpen(true)}>
+          <Button
+            size="small"
+            icon={<Sparkles />}
+            onClick={() => setAIOpen(true)}
+          >
             交给 AI
           </Button>
           <Button
@@ -342,7 +362,11 @@ export default function Categories() {
           showIcon
           title="分类加载失败"
           description={error}
-          action={<Button size="small" onClick={() => void load()}>重新载入</Button>}
+          action={
+            <Button size="small" onClick={() => void load()}>
+              重新载入
+            </Button>
+          }
         />
       ) : categories.length === 0 ? (
         <Card padding="lg">
@@ -350,7 +374,12 @@ export default function Categories() {
             title="还没有分类"
             description="创建第一个分类来组织长期主题。"
             action={
-              <Button variant="solid" color="primary" icon={<Plus />} onClick={openCreate}>
+              <Button
+                variant="solid"
+                color="primary"
+                icon={<Plus />}
+                onClick={openCreate}
+              >
                 创建分类
               </Button>
             }
@@ -386,7 +415,9 @@ export default function Categories() {
                 {categories.map((category) => (
                   <TableRow
                     key={category.id}
-                    data-state={selected.includes(category.id) ? "selected" : undefined}
+                    data-state={
+                      selected.includes(category.id) ? "selected" : undefined
+                    }
                   >
                     <TableCell className="text-center">
                       <Checkbox
@@ -424,7 +455,9 @@ export default function Categories() {
                       <CategoryActions
                         category={category}
                         onEdit={openEdit}
-                        onDelete={(item) => setDeleteTarget({ kind: "category", item })}
+                        onDelete={(item) =>
+                          setDeleteTarget({ kind: "category", item })
+                        }
                       />
                     </TableCell>
                   </TableRow>
@@ -433,13 +466,21 @@ export default function Categories() {
             </Table>
           </div>
 
-          <div className="grid gap-3 md:hidden" role="list" aria-label="分类列表">
+          <div
+            className="grid gap-3 md:hidden"
+            role="list"
+            aria-label="分类列表"
+          >
             {categories.map((category) => (
               <Card
                 key={category.id}
                 padding="base"
                 role="listitem"
-                className={selected.includes(category.id) ? "border-primary/40 bg-accent/20" : undefined}
+                className={
+                  selected.includes(category.id)
+                    ? "border-primary/40 bg-accent/20"
+                    : undefined
+                }
               >
                 <div className="flex flex-col gap-4">
                   <div className="flex min-w-0 items-start gap-3">
@@ -454,26 +495,36 @@ export default function Categories() {
                       <strong className="block text-sm font-semibold text-foreground">
                         {category.name}
                       </strong>
-                      <Text size="xs" tone="muted" className="mt-1 leading-relaxed">
+                      <Text
+                        size="xs"
+                        tone="muted"
+                        className="mt-1 leading-relaxed"
+                      >
                         {category.description || "暂无描述"}
                       </Text>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3 rounded-md bg-muted/35 p-3 text-xs">
                     <div>
-                      <Text as="div" size="xs" tone="muted">排序</Text>
+                      <Text as="div" size="xs" tone="muted">
+                        排序
+                      </Text>
                       <span className="mt-1 block font-mono text-foreground">
                         {category.sort_order ?? 0}
                       </span>
                     </div>
                     <div>
-                      <Text as="div" size="xs" tone="muted">文章数</Text>
+                      <Text as="div" size="xs" tone="muted">
+                        文章数
+                      </Text>
                       <span className="mt-1 block font-mono text-foreground">
                         {category.post_count ?? 0}
                       </span>
                     </div>
                     <div className="col-span-2 min-w-0">
-                      <Text as="div" size="xs" tone="muted">Slug 标识</Text>
+                      <Text as="div" size="xs" tone="muted">
+                        Slug 标识
+                      </Text>
                       <code className="mt-1 block break-all font-mono text-xs text-foreground">
                         {category.slug}
                       </code>
@@ -483,7 +534,9 @@ export default function Categories() {
                     <CategoryActions
                       category={category}
                       onEdit={openEdit}
-                      onDelete={(item) => setDeleteTarget({ kind: "category", item })}
+                      onDelete={(item) =>
+                        setDeleteTarget({ kind: "category", item })
+                      }
                     />
                   </div>
                 </div>
@@ -506,7 +559,11 @@ export default function Categories() {
         footer={
           <>
             <Button onClick={closeEditor}>取消</Button>
-            <Button variant="solid" color="primary" onClick={() => void saveCategory()}>
+            <Button
+              variant="solid"
+              color="primary"
+              onClick={() => void saveCategory()}
+            >
               {editor?.mode === "edit" ? "保存修改" : "创建分类"}
             </Button>
           </>
@@ -520,7 +577,10 @@ export default function Categories() {
               autoFocus
               value={draft.name}
               onChange={(event) => {
-                setDraft((current) => ({ ...current, name: event.target.value }));
+                setDraft((current) => ({
+                  ...current,
+                  name: event.target.value,
+                }));
                 clearSlugSuggestion();
               }}
             />
@@ -537,7 +597,10 @@ export default function Categories() {
                   required
                   value={draft.slug}
                   onChange={(event) => {
-                    setDraft((current) => ({ ...current, slug: event.target.value }));
+                    setDraft((current) => ({
+                      ...current,
+                      slug: event.target.value,
+                    }));
                     clearSlugSuggestion();
                   }}
                 />
@@ -559,7 +622,10 @@ export default function Categories() {
                   heading="Slug 建议"
                   description="选择一个 Slug 候选，再统一应用到当前分类。"
                   groupLabel="Slug 候选"
-                  options={slugCandidates.map((value) => ({ value, monospace: true }))}
+                  options={slugCandidates.map((value) => ({
+                    value,
+                    monospace: true,
+                  }))}
                   value={selectedSlug}
                   onValueChange={setSelectedSlug}
                   onRegenerate={() => void requestCategorySlug()}
@@ -576,7 +642,10 @@ export default function Categories() {
               rows={4}
               value={draft.description}
               onChange={(event) =>
-                setDraft((current) => ({ ...current, description: event.target.value }))
+                setDraft((current) => ({
+                  ...current,
+                  description: event.target.value,
+                }))
               }
             />
           </FormField>

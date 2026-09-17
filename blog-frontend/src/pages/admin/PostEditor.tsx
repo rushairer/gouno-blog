@@ -123,7 +123,9 @@ function InspectorSection({
       <summary className="cursor-pointer select-none pr-12 text-sm font-semibold">
         {title}
       </summary>
-      {action ? <div className="absolute right-0 top-2.5 z-10">{action}</div> : null}
+      {action ? (
+        <div className="absolute right-0 top-2.5 z-10">{action}</div>
+      ) : null}
       <div className="mt-4 flex flex-col gap-4">{children}</div>
     </details>
   );
@@ -148,7 +150,11 @@ function FieldActionHeader({
     <div className="mb-2 flex min-h-8 items-center justify-between gap-3">
       <div className="text-sm font-medium">
         {label}
-        {required ? <span aria-hidden="true" className="text-destructive">*</span> : null}
+        {required ? (
+          <span aria-hidden="true" className="text-destructive">
+            *
+          </span>
+        ) : null}
       </div>
       <Button
         type="button"
@@ -232,19 +238,24 @@ export default function PostEditor() {
 
   const [editorMode, setEditorMode] = useState<MarkdownEditorMode>("edit");
   const [navigatorMode, setNavigatorMode] = useState<NavigatorMode>("outline");
-  const [editorSelection, setEditorSelection] = useState<MarkdownEditorSelection | null>(null);
+  const [editorSelection, setEditorSelection] =
+    useState<MarkdownEditorSelection | null>(null);
   const editorRef = useRef<MarkdownEditorRef>(null);
 
-  const [fieldLoading, setFieldLoading] = useState<FieldSuggestionTask | null>(null);
+  const [fieldLoading, setFieldLoading] = useState<FieldSuggestionTask | null>(
+    null,
+  );
   const [titleCandidates, setTitleCandidates] = useState<string[]>([]);
   const [selectedTitle, setSelectedTitle] = useState<string | null>(null);
   const [summaryCandidates, setSummaryCandidates] = useState<string[]>([]);
   const [selectedSummary, setSelectedSummary] = useState<string | null>(null);
   const [metadataLoading, setMetadataLoading] = useState(false);
-  const [metadataSuggestion, setMetadataSuggestion] = useState<MetadataSuggestion | null>(null);
+  const [metadataSuggestion, setMetadataSuggestion] =
+    useState<MetadataSuggestion | null>(null);
   const [metadataSelection, setMetadataSelection] = useState<string[]>([]);
   const [taxonomyLoading, setTaxonomyLoading] = useState(false);
-  const [taxonomySuggestion, setTaxonomySuggestion] = useState<TaxonomySuggestion | null>(null);
+  const [taxonomySuggestion, setTaxonomySuggestion] =
+    useState<TaxonomySuggestion | null>(null);
   const [taxonomySelection, setTaxonomySelection] = useState<string[]>([]);
 
   const [writingOpen, setWritingOpen] = useState(false);
@@ -376,10 +387,12 @@ export default function PostEditor() {
             "success",
           );
         }
-        if (!post.id) navigate(`/admin/posts/${saved.id}/edit`, { replace: true });
+        if (!post.id)
+          navigate(`/admin/posts/${saved.id}/edit`, { replace: true });
       } catch (reason) {
         recordConflict(reason);
-        const message = reason instanceof Error ? reason.message : "保存失败，请稍后重试。";
+        const message =
+          reason instanceof Error ? reason.message : "保存失败，请稍后重试。";
         setError(message);
         notify(message, "error");
       } finally {
@@ -406,7 +419,10 @@ export default function PostEditor() {
     return () => window.clearTimeout(timer);
   }, [conflict, isReadOnly, persist, post, saving]);
 
-  const outline = useMemo(() => extractMarkdownTOC(post.content), [post.content]);
+  const outline = useMemo(
+    () => extractMarkdownTOC(post.content),
+    [post.content],
+  );
 
   const leaveEditor = () => {
     if (dirty.current) setConfirmExit(true);
@@ -436,7 +452,11 @@ export default function PostEditor() {
       const restored =
         post.revision === undefined
           ? await postsApi.restoreVersion(post.id, restoreTarget.id)
-          : await postsApi.restoreVersion(post.id, restoreTarget.id, post.revision);
+          : await postsApi.restoreVersion(
+              post.id,
+              restoreTarget.id,
+              post.revision,
+            );
       setPost(restored);
       setPublishIntent(restored.status || "draft");
       dirty.current = false;
@@ -487,7 +507,10 @@ export default function PostEditor() {
       }
     } catch (reason) {
       recordConflict(reason);
-      notify(reason instanceof Error ? reason.message : "生成候选失败，请稍后重试。", "error");
+      notify(
+        reason instanceof Error ? reason.message : "生成候选失败，请稍后重试。",
+        "error",
+      );
     } finally {
       setFieldLoading(null);
     }
@@ -525,7 +548,10 @@ export default function PostEditor() {
       setMetadataSelection(keys);
     } catch (reason) {
       recordConflict(reason);
-      notify(reason instanceof Error ? reason.message : "生成 SEO 建议失败", "error");
+      notify(
+        reason instanceof Error ? reason.message : "生成 SEO 建议失败",
+        "error",
+      );
     } finally {
       setMetadataLoading(false);
     }
@@ -575,7 +601,8 @@ export default function PostEditor() {
       const categoryName = metadata?.category?.trim();
       const category = categoryName
         ? categories.find(
-            (candidate) => candidate.name.toLowerCase() === categoryName.toLowerCase(),
+            (candidate) =>
+              candidate.name.toLowerCase() === categoryName.toLowerCase(),
           )
         : undefined;
       const tags: string[] = Array.isArray(metadata?.tags)
@@ -588,9 +615,10 @@ export default function PostEditor() {
           )
         : [];
       const suggestion: TaxonomySuggestion = { category, tags };
-      const keys = [category ? "category" : null, tags.length ? "tags" : null].filter(
-        (key): key is string => Boolean(key),
-      );
+      const keys = [
+        category ? "category" : null,
+        tags.length ? "tags" : null,
+      ].filter((key): key is string => Boolean(key));
       if (!keys.length) {
         notify(
           categoryName && !category
@@ -604,7 +632,10 @@ export default function PostEditor() {
       setTaxonomySelection(keys);
     } catch (reason) {
       recordConflict(reason);
-      notify(reason instanceof Error ? reason.message : "分类与标签建议生成失败", "error");
+      notify(
+        reason instanceof Error ? reason.message : "分类与标签建议生成失败",
+        "error",
+      );
     } finally {
       setTaxonomyLoading(false);
     }
@@ -645,7 +676,10 @@ export default function PostEditor() {
       update("content", next);
       setEditorMode("edit");
       queueMicrotask(() =>
-        editorRef.current?.setSelection(selectionStart, selectionStart + result.length),
+        editorRef.current?.setSelection(
+          selectionStart,
+          selectionStart + result.length,
+        ),
       );
       return;
     }
@@ -659,7 +693,10 @@ export default function PostEditor() {
     );
   };
 
-  const openMedia = (purpose: MediaPurpose, source: Exclude<MediaSource, null>) => {
+  const openMedia = (
+    purpose: MediaPurpose,
+    source: Exclude<MediaSource, null>,
+  ) => {
     setMediaPurpose(purpose);
     setMediaSource(source);
   };
@@ -680,7 +717,9 @@ export default function PostEditor() {
     const markdown = `![${result.alt || "文章插图"}](${result.url})`;
     setEditorMode("edit");
     queueMicrotask(() => {
-      editorRef.current?.insertText(`\n\n${markdown}\n`, { replaceSelection: false });
+      editorRef.current?.insertText(`\n\n${markdown}\n`, {
+        replaceSelection: false,
+      });
       editorRef.current?.focus();
     });
     notify("已在编辑位置插入图片。", "success");
@@ -721,10 +760,12 @@ export default function PostEditor() {
         setPost(currentPost);
         dirty.current = false;
         setSavedAt(new Date());
-        if (!post.id) navigate(`/admin/posts/${currentPost.id}/edit`, { replace: true });
+        if (!post.id)
+          navigate(`/admin/posts/${currentPost.id}/edit`, { replace: true });
       } catch (reason) {
         recordConflict(reason);
-        const message = reason instanceof Error ? reason.message : "保存失败，无法开启预览。";
+        const message =
+          reason instanceof Error ? reason.message : "保存失败，无法开启预览。";
         setError(message);
         notify(message, "error");
         return;
@@ -734,7 +775,10 @@ export default function PostEditor() {
       }
     }
     const target = currentPost.slug || String(currentPost.id);
-    window.open(`/articles/${encodeURIComponent(target)}?preview=true`, "_blank");
+    window.open(
+      `/articles/${encodeURIComponent(target)}?preview=true`,
+      "_blank",
+    );
   };
 
   const primaryStatus: PostStatus =
@@ -762,7 +806,11 @@ export default function PostEditor() {
         title="无法编辑文章"
         description={error}
         action={
-          <Button variant="outline" icon={<ArrowLeft />} onClick={() => navigate("/admin/posts")}>
+          <Button
+            variant="outline"
+            icon={<ArrowLeft />}
+            onClick={() => navigate("/admin/posts")}
+          >
             返回文章列表
           </Button>
         }
@@ -772,7 +820,10 @@ export default function PostEditor() {
 
   if (!allowed || loading) {
     return (
-      <Card padding="base" aria-label={isNew ? "新建文章编辑器加载中" : "文章编辑器加载中"}>
+      <Card
+        padding="base"
+        aria-label={isNew ? "新建文章编辑器加载中" : "文章编辑器加载中"}
+      >
         <div className="flex flex-col gap-5" role="status" aria-live="polite">
           <div className="flex items-center justify-between gap-4">
             <Skeleton className="h-9 w-36" />
@@ -799,12 +850,19 @@ export default function PostEditor() {
         aria-live="polite"
       >
         {isReadOnly ? (
-          <><Eye className="size-4" /> 只读模式（他人文章）</>
+          <>
+            <Eye className="size-4" /> 只读模式（他人文章）
+          </>
         ) : saving ? (
           "正在保存…"
         ) : savedAt ? (
           <>
-            <Check className="size-4" /> 已于 {savedAt.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })} 保存
+            <Check className="size-4" /> 已于{" "}
+            {savedAt.toLocaleTimeString("zh-CN", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}{" "}
+            保存
           </>
         ) : dirty.current ? (
           "有未保存的更改"
@@ -822,13 +880,28 @@ export default function PostEditor() {
         >
           预览前台页面
         </Button>
-        {!isReadOnly && post.status !== "published" && publishIntent !== "draft" ? (
-          <Button variant="outline" type="button" onClick={() => void persist("draft")} disabled={saving} icon={<Save />}>
+        {!isReadOnly &&
+        post.status !== "published" &&
+        publishIntent !== "draft" ? (
+          <Button
+            variant="outline"
+            type="button"
+            onClick={() => void persist("draft")}
+            disabled={saving}
+            icon={<Save />}
+          >
             保存草稿
           </Button>
         ) : null}
         {!isReadOnly ? (
-          <Button variant="solid" color="primary" type="button" onClick={() => void persist(primaryStatus)} disabled={saving} icon={<Send />}>
+          <Button
+            variant="solid"
+            color="primary"
+            type="button"
+            onClick={() => void persist(primaryStatus)}
+            disabled={saving}
+            icon={<Send />}
+          >
             {primaryLabel}
           </Button>
         ) : null}
@@ -859,18 +932,26 @@ export default function PostEditor() {
                       type="button"
                       aria-label={`跳转到 ${item.text}`}
                       className="w-full min-w-0 overflow-hidden rounded-md px-2 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground [&>span]:min-w-0 [&>span]:w-full"
-                      style={{ paddingLeft: `${8 + Math.max(0, item.level - 2) * 12}px` }}
+                      style={{
+                        paddingLeft: `${8 + Math.max(0, item.level - 2) * 12}px`,
+                      }}
                       onClick={() => focusOutlineItem(item)}
                     >
-                      <span className="block min-w-0 truncate">{item.text}</span>
+                      <span className="block min-w-0 truncate">
+                        {item.text}
+                      </span>
                     </ChoiceButton>
                   </TooltipTrigger>
-                  <TooltipContent className="max-w-80">{item.text}</TooltipContent>
+                  <TooltipContent className="max-w-80">
+                    {item.text}
+                  </TooltipContent>
                 </Tooltip>
               ))}
             </TooltipProvider>
           ) : (
-            <Text size="sm" tone="muted">在正文中添加 Markdown 标题后，大纲会自动生成。</Text>
+            <Text size="sm" tone="muted">
+              在正文中添加 Markdown 标题后，大纲会自动生成。
+            </Text>
           )
         ) : versions.length ? (
           <div className="flex flex-col gap-1" data-slot="post-history-list">
@@ -884,9 +965,16 @@ export default function PostEditor() {
               >
                 <span className="flex min-w-0 w-full flex-col gap-1">
                   <span className="flex w-full items-baseline justify-between gap-2">
-                    <span className="truncate font-medium text-foreground">{version.title || "无标题草稿"}</span>
+                    <span className="truncate font-medium text-foreground">
+                      {version.title || "无标题草稿"}
+                    </span>
                     <span className="shrink-0 text-[11px] font-normal text-muted-foreground">
-                      {new Date(version.created_at).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                      {new Date(version.created_at).toLocaleString("zh-CN", {
+                        month: "2-digit",
+                        day: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </span>
                   </span>
                   <span className="line-clamp-2 text-xs font-normal leading-5 text-muted-foreground">
@@ -903,37 +991,72 @@ export default function PostEditor() {
     </div>
   );
 
-  const metadataItems: { key: string; label: string; value: string; monospace?: boolean }[] =
-    metadataSuggestion
-      ? [
-          ...(metadataSuggestion.slug
-            ? [{ key: "slug", label: "Slug", value: metadataSuggestion.slug, monospace: true }]
-            : []),
-          ...(metadataSuggestion.seo_title
-            ? [{ key: "seo_title", label: "SEO 标题", value: metadataSuggestion.seo_title }]
-            : []),
-          ...(metadataSuggestion.seo_description
-            ? [{ key: "seo_description", label: "SEO 描述", value: metadataSuggestion.seo_description }]
-            : []),
-        ]
-      : [];
+  const metadataItems: {
+    key: string;
+    label: string;
+    value: string;
+    monospace?: boolean;
+  }[] = metadataSuggestion
+    ? [
+        ...(metadataSuggestion.slug
+          ? [
+              {
+                key: "slug",
+                label: "Slug",
+                value: metadataSuggestion.slug,
+                monospace: true,
+              },
+            ]
+          : []),
+        ...(metadataSuggestion.seo_title
+          ? [
+              {
+                key: "seo_title",
+                label: "SEO 标题",
+                value: metadataSuggestion.seo_title,
+              },
+            ]
+          : []),
+        ...(metadataSuggestion.seo_description
+          ? [
+              {
+                key: "seo_description",
+                label: "SEO 描述",
+                value: metadataSuggestion.seo_description,
+              },
+            ]
+          : []),
+      ]
+    : [];
 
   const taxonomyItems = taxonomySuggestion
     ? [
         taxonomySuggestion.category
-          ? { key: "category", label: "分类", value: taxonomySuggestion.category.name }
+          ? {
+              key: "category",
+              label: "分类",
+              value: taxonomySuggestion.category.name,
+            }
           : null,
         taxonomySuggestion.tags.length
-          ? { key: "tags", label: "标签补充", value: taxonomySuggestion.tags.join("、") }
+          ? {
+              key: "tags",
+              label: "标签补充",
+              value: taxonomySuggestion.tags.join("、"),
+            }
           : null,
-      ].filter((item): item is { key: string; label: string; value: string } => Boolean(item))
+      ].filter((item): item is { key: string; label: string; value: string } =>
+        Boolean(item),
+      )
     : [];
 
   const inspector = (
     <fieldset disabled={isReadOnly} className="min-w-0 border-0 p-0">
       <div className="min-h-9 border-b pb-3">
         <Text className="font-semibold">属性</Text>
-        <Text size="xs" tone="muted" className="mt-0.5 block">发布、组织、封面与 SEO。</Text>
+        <Text size="xs" tone="muted" className="mt-0.5 block">
+          发布、组织、封面与 SEO。
+        </Text>
       </div>
 
       <InspectorSection title="发布设置">
@@ -966,20 +1089,24 @@ export default function PostEditor() {
 
       <InspectorSection
         title="分类与标签"
-        action={!isReadOnly ? (
-          <Button
-            type="button"
-            size="small"
-            variant="text"
-            icon={<Sparkles />}
-            aria-label="AI 推荐分类与标签"
-            title="AI 推荐分类与标签"
-            className="size-8 px-0"
-            loading={taxonomyLoading}
-            disabled={taxonomyLoading || (!post.title.trim() && !post.content.trim())}
-            onClick={() => void requestTaxonomySuggestions()}
-          />
-        ) : undefined}
+        action={
+          !isReadOnly ? (
+            <Button
+              type="button"
+              size="small"
+              variant="text"
+              icon={<Sparkles />}
+              aria-label="AI 推荐分类与标签"
+              title="AI 推荐分类与标签"
+              className="size-8 px-0"
+              loading={taxonomyLoading}
+              disabled={
+                taxonomyLoading || (!post.title.trim() && !post.content.trim())
+              }
+              onClick={() => void requestTaxonomySuggestions()}
+            />
+          ) : undefined
+        }
       >
         {taxonomySuggestion && taxonomyItems.length ? (
           <AISuggestionReview
@@ -1008,7 +1135,9 @@ export default function PostEditor() {
           >
             <option value="">未分类</option>
             {categories.map((category) => (
-              <option key={category.id} value={category.id}>{category.name}</option>
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
             ))}
           </Select>
         </Field>
@@ -1019,7 +1148,10 @@ export default function PostEditor() {
             onChange={(event) =>
               update(
                 "tags",
-                event.target.value.split(",").map((tag) => tag.trim()).filter(Boolean),
+                event.target.value
+                  .split(",")
+                  .map((tag) => tag.trim())
+                  .filter(Boolean),
               )
             }
             placeholder="Go, OIDC, 安全"
@@ -1029,27 +1161,37 @@ export default function PostEditor() {
 
       <InspectorSection
         title="封面"
-        action={!isReadOnly ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                size="small"
-                variant="text"
-                icon={<ImageIcon />}
-                aria-label="选择文章封面"
-                title="选择文章封面"
-                className="size-8 px-0"
-              />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuItem onSelect={() => openMedia("cover", "library")}>从媒体库选择</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => openMedia("cover", "upload")}>上传图片</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => openMedia("cover", "ai")}>AI 生成封面</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : undefined}
+        action={
+          !isReadOnly ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  size="small"
+                  variant="text"
+                  icon={<ImageIcon />}
+                  aria-label="选择文章封面"
+                  title="选择文章封面"
+                  className="size-8 px-0"
+                />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem
+                  onSelect={() => openMedia("cover", "library")}
+                >
+                  从媒体库选择
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => openMedia("cover", "upload")}>
+                  上传图片
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => openMedia("cover", "ai")}>
+                  AI 生成封面
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : undefined
+        }
       >
         <Field label="封面 URL">
           <Input
@@ -1071,20 +1213,24 @@ export default function PostEditor() {
 
       <InspectorSection
         title="路径与 SEO"
-        action={!isReadOnly ? (
-          <Button
-            type="button"
-            size="small"
-            variant="text"
-            icon={<Sparkles />}
-            aria-label="AI 优化路径与 SEO"
-            title="AI 优化路径与 SEO"
-            className="size-8 px-0"
-            loading={metadataLoading}
-            disabled={metadataLoading || (!post.title.trim() && !post.content.trim())}
-            onClick={() => void requestMetadataSuggestions()}
-          />
-        ) : undefined}
+        action={
+          !isReadOnly ? (
+            <Button
+              type="button"
+              size="small"
+              variant="text"
+              icon={<Sparkles />}
+              aria-label="AI 优化路径与 SEO"
+              title="AI 优化路径与 SEO"
+              className="size-8 px-0"
+              loading={metadataLoading}
+              disabled={
+                metadataLoading || (!post.title.trim() && !post.content.trim())
+              }
+              onClick={() => void requestMetadataSuggestions()}
+            />
+          ) : undefined
+        }
       >
         {metadataSuggestion && metadataItems.length ? (
           <AISuggestionReview
@@ -1102,7 +1248,11 @@ export default function PostEditor() {
             onApply={applyMetadataSuggestions}
           />
         ) : null}
-        <Field label="访问路径 (Slug)" required hint="访问路径为 /articles/<slug>">
+        <Field
+          label="访问路径 (Slug)"
+          required
+          hint="访问路径为 /articles/<slug>"
+        >
           <Input
             aria-label="访问路径 (Slug)"
             className="font-mono"
@@ -1120,7 +1270,10 @@ export default function PostEditor() {
             placeholder="留空时默认使用标题"
           />
         </Field>
-        <Field label="SEO 描述" hint={`${(post.seo_description || "").length}/160`}>
+        <Field
+          label="SEO 描述"
+          hint={`${(post.seo_description || "").length}/160`}
+        >
           <Textarea
             aria-label="SEO 描述"
             rows={4}
@@ -1151,19 +1304,67 @@ export default function PostEditor() {
         <DropdownMenuContent align="start" className="w-56">
           {editorSelection?.text ? (
             <>
-              <DropdownMenuItem onSelect={() => openWritingAssistant("保持原意，润色当前选中的文字，提升连贯性和表达质量")}>润色所选</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => openWritingAssistant("扩写当前选中的文字，补充必要背景、技术细节和例子")}>扩写所选</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => openWritingAssistant("压缩当前选中的文字，保留核心事实和结论")}>缩写所选</DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() =>
+                  openWritingAssistant(
+                    "保持原意，润色当前选中的文字，提升连贯性和表达质量",
+                  )
+                }
+              >
+                润色所选
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() =>
+                  openWritingAssistant(
+                    "扩写当前选中的文字，补充必要背景、技术细节和例子",
+                  )
+                }
+              >
+                扩写所选
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() =>
+                  openWritingAssistant("压缩当前选中的文字，保留核心事实和结论")
+                }
+              >
+                缩写所选
+              </DropdownMenuItem>
             </>
           ) : (
             <>
-              <DropdownMenuItem onSelect={() => openWritingAssistant("基于标题和摘要撰写结构严谨的完整文章初稿")}>起草文章</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => openWritingAssistant("延续当前正文继续写作，保持已有结构、语气和 Markdown 风格")}>继续写作</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => openWritingAssistant("重构全文结构，减少重复，让论点和结论更清晰")}>重构全文</DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() =>
+                  openWritingAssistant(
+                    "基于标题和摘要撰写结构严谨的完整文章初稿",
+                  )
+                }
+              >
+                起草文章
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() =>
+                  openWritingAssistant(
+                    "延续当前正文继续写作，保持已有结构、语气和 Markdown 风格",
+                  )
+                }
+              >
+                继续写作
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() =>
+                  openWritingAssistant(
+                    "重构全文结构，减少重复，让论点和结论更清晰",
+                  )
+                }
+              >
+                重构全文
+              </DropdownMenuItem>
             </>
           )}
           <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => openWritingAssistant("")}>自定义指令…</DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => openWritingAssistant("")}>
+            自定义指令…
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -1180,10 +1381,16 @@ export default function PostEditor() {
           />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-52">
-          <DropdownMenuItem onSelect={() => openMedia("body", "library")}>从媒体库选择</DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => openMedia("body", "upload")}>上传图片</DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => openMedia("body", "library")}>
+            从媒体库选择
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => openMedia("body", "upload")}>
+            上传图片
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => openMedia("body", "ai")}>AI 生成配图</DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => openMedia("body", "ai")}>
+            AI 生成配图
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </>
@@ -1199,8 +1406,12 @@ export default function PostEditor() {
           description="你的未保存内容仍保留。请先比较或复制当前草稿，再决定是否加载服务器最新版本。"
           action={
             <div className="flex flex-wrap gap-2">
-              <Button size="small" onClick={() => void inspectLatest()}>查看最新版本</Button>
-              <Button size="small" onClick={() => void copyDraft()}>复制未保存内容</Button>
+              <Button size="small" onClick={() => void inspectLatest()}>
+                查看最新版本
+              </Button>
+              <Button size="small" onClick={() => void copyDraft()}>
+                复制未保存内容
+              </Button>
             </div>
           }
         />
@@ -1208,13 +1419,19 @@ export default function PostEditor() {
       {latestPost ? (
         <Card padding="base">
           <div className="flex flex-col gap-3">
-            <Text className="font-semibold">服务器最新版本：{latestPost.title || "无标题"}</Text>
-            <Text size="sm" tone="muted">Revision {latestPost.revision ?? "-"}</Text>
+            <Text className="font-semibold">
+              服务器最新版本：{latestPost.title || "无标题"}
+            </Text>
+            <Text size="sm" tone="muted">
+              Revision {latestPost.revision ?? "-"}
+            </Text>
             <div className="max-h-48 overflow-auto rounded-md bg-muted/20 p-3 text-sm">
               <MarkdownRenderer content={latestPost.content || "暂无正文"} />
             </div>
             <div className="flex justify-end">
-              <Button onClick={() => setConfirmReload(true)}>加载最新版本</Button>
+              <Button onClick={() => setConfirmReload(true)}>
+                加载最新版本
+              </Button>
             </div>
           </div>
         </Card>
@@ -1284,10 +1501,17 @@ export default function PostEditor() {
                 actionLabel="AI 根据正文生成摘要"
                 onAction={() => void requestFieldSuggestions("summary")}
                 loading={fieldLoading === "summary"}
-                disabled={!post.content.trim() || (fieldLoading !== null && fieldLoading !== "summary")}
+                disabled={
+                  !post.content.trim() ||
+                  (fieldLoading !== null && fieldLoading !== "summary")
+                }
               />
             ) : null}
-            <Field label="摘要" hideLabel={!isReadOnly} hint={`${post.summary.length}/300`}>
+            <Field
+              label="摘要"
+              hideLabel={!isReadOnly}
+              hint={`${post.summary.length}/300`}
+            >
               <Textarea
                 aria-label="摘要"
                 rows={3}
@@ -1338,7 +1562,9 @@ export default function PostEditor() {
               onSelectionChange={setEditorSelection}
               renderPreview={(value) => (
                 <div className="editor-preview">
-                  <MarkdownRenderer content={value || "开始写作后，预览会出现在这里。"} />
+                  <MarkdownRenderer
+                    content={value || "开始写作后，预览会出现在这里。"}
+                  />
                 </div>
               )}
               toolbarActions={aiToolbarActions}
@@ -1372,7 +1598,8 @@ export default function PostEditor() {
         content={post.content}
         defaultAlt={
           mediaPurpose === "cover"
-            ? post.cover_alt || (post.title.trim() ? `${post.title.trim()}封面` : "文章封面")
+            ? post.cover_alt ||
+              (post.title.trim() ? `${post.title.trim()}封面` : "文章封面")
             : post.title.trim()
               ? `${post.title.trim()}插图`
               : "文章插图"
@@ -1394,8 +1621,16 @@ export default function PostEditor() {
         }}
         footer={
           <>
-            <Button variant="outline" onClick={() => setRestoreTarget(null)}>取消</Button>
-            <Button variant="solid" color="primary" onClick={() => void restoreVersion()}>恢复版本</Button>
+            <Button variant="outline" onClick={() => setRestoreTarget(null)}>
+              取消
+            </Button>
+            <Button
+              variant="solid"
+              color="primary"
+              onClick={() => void restoreVersion()}
+            >
+              恢复版本
+            </Button>
           </>
         }
       />
@@ -1407,7 +1642,9 @@ export default function PostEditor() {
         onOpenChange={setConfirmReload}
         footer={
           <>
-            <Button variant="outline" onClick={() => setConfirmReload(false)}>取消</Button>
+            <Button variant="outline" onClick={() => setConfirmReload(false)}>
+              取消
+            </Button>
             <Button
               variant="solid"
               color="error"
@@ -1435,8 +1672,16 @@ export default function PostEditor() {
         onOpenChange={setConfirmExit}
         footer={
           <>
-            <Button variant="outline" onClick={() => setConfirmExit(false)}>继续编辑</Button>
-            <Button variant="solid" color="error" onClick={() => navigate("/admin/posts")}>放弃并离开</Button>
+            <Button variant="outline" onClick={() => setConfirmExit(false)}>
+              继续编辑
+            </Button>
+            <Button
+              variant="solid"
+              color="error"
+              onClick={() => navigate("/admin/posts")}
+            >
+              放弃并离开
+            </Button>
           </>
         }
       />

@@ -108,7 +108,9 @@ export function EditorWritingDialog({
             color="primary"
             onClick={() => void generate()}
             loading={loading}
-            disabled={loading || (!prompt.trim() && !title.trim() && !content.trim())}
+            disabled={
+              loading || (!prompt.trim() && !title.trim() && !content.trim())
+            }
           >
             生成 / 执行
           </Button>
@@ -120,16 +122,34 @@ export function EditorWritingDialog({
               <Text className="font-semibold">生成结果预览</Text>
               <div className="flex flex-wrap gap-2">
                 {selection?.text ? (
-                  <Button size="small" variant="solid" color="primary" onClick={() => apply("replace-selection")}>
+                  <Button
+                    size="small"
+                    variant="solid"
+                    color="primary"
+                    onClick={() => apply("replace-selection")}
+                  >
                     替换所选
                   </Button>
                 ) : (
-                  <Button size="small" variant="solid" color="primary" onClick={() => apply("replace")}>
+                  <Button
+                    size="small"
+                    variant="solid"
+                    color="primary"
+                    onClick={() => apply("replace")}
+                  >
                     替换全文
                   </Button>
                 )}
-                <Button size="small" onClick={() => apply("append")}>追加到末尾</Button>
-                <Button size="small" variant="text" onClick={() => setResult(null)}>放弃</Button>
+                <Button size="small" onClick={() => apply("append")}>
+                  追加到末尾
+                </Button>
+                <Button
+                  size="small"
+                  variant="text"
+                  onClick={() => setResult(null)}
+                >
+                  放弃
+                </Button>
               </div>
             </div>
             <div className="mt-3 max-h-80 overflow-auto rounded-md bg-muted/20 p-3">

@@ -1,6 +1,8 @@
 import type { DraftAssistResponse, DraftMetadataResult } from "../../api/agent";
 
-export function cleanAiSuggestions(values: readonly string[] | undefined): string[] {
+export function cleanAiSuggestions(
+  values: readonly string[] | undefined,
+): string[] {
   const result: string[] = [];
   const push = (value: string) => {
     const clean = value.replace(/^[{"[\s]+|[}"\]\s,]+$/g, "").trim();
