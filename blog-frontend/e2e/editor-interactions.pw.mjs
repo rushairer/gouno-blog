@@ -29,7 +29,9 @@ test("Post editor binds canonical AI review, media, outline, history and save wo
   await page.getByRole("button", { name: "重新生成 AI 建议" }).click();
   await expect(page.getByRole("radio", { name: "Browser AI Title Regenerated 2" })).toBeChecked();
   await page.getByRole("button", { name: "使用所选" }).click();
-  await expect(page.getByLabel("标题")).toHaveValue("Browser AI Title Regenerated 2");
+  await expect(
+    page.getByRole("textbox", { name: "标题", exact: true }),
+  ).toHaveValue("Browser AI Title Regenerated 2");
 
   await page.getByRole("button", { name: "AI 根据正文生成摘要" }).click();
   await expect(page.getByRole("radio", { name: "Browser AI Summary 1" })).toBeChecked();
@@ -117,7 +119,7 @@ test("Post editor exposes revision conflict without dropping the working draft",
     conflictPostSaveRequests: 1,
   });
 
-  const title = page.getByLabel("标题");
+  const title = page.getByRole("textbox", { name: "标题", exact: true });
   await title.fill("Unsaved conflict draft");
   await page.getByRole("button", { name: "更新文章" }).click();
   await expect(page.getByText("文章已有新版本")).toBeVisible();
@@ -134,7 +136,9 @@ test("Page editor keeps Post-only navigator out and reviews title summary metada
   await page.getByRole("button", { name: "AI 生成标题候选" }).click();
   await page.getByRole("button", { name: "重新生成 AI 建议" }).click();
   await page.getByRole("button", { name: "使用所选" }).click();
-  await expect(page.getByLabel("标题")).toHaveValue("Browser AI Title Regenerated 2");
+  await expect(
+    page.getByRole("textbox", { name: "标题", exact: true }),
+  ).toHaveValue("Browser AI Title Regenerated 2");
 
   await page.getByRole("button", { name: "AI 根据正文生成摘要" }).click();
   await page.getByRole("button", { name: "使用所选" }).click();
@@ -152,16 +156,26 @@ test("Page editor keeps Post-only navigator out and reviews title summary metada
   expect(unknown).toEqual([]);
 });
 
-test("Read-only editor permissions remove write and AI actions", async ({ page }) => {
+test("Read-only post editor removes write and AI actions for another author's post", async ({ page }) => {
   await page.setViewportSize({ width: 768, height: 900 });
-  const unknown = await openAdmin(page, "/admin/pages/201/edit", {
-    profile: limitedProfile,
+  const unknown = await openAdmin(page, "/admin/posts/101/edit", {
+    profile: {
+      ...limitedProfile,
+      sub: "browser-acceptance-author",
+      principal: {
+        ...limitedProfile.principal,
+        id: 7,
+        subject: "browser-acceptance-author",
+      },
+    },
   });
 
-  await expect(page.getByText("只读模式")).toBeVisible();
-  await expect(page.getByLabel("标题")).toBeDisabled();
+  await expect(page.getByText(/只读模式/)).toBeVisible();
+  await expect(
+    page.getByRole("textbox", { name: "标题", exact: true }),
+  ).toBeDisabled();
   await expect(page.getByRole("button", { name: "AI 写作" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "更新单页" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "更新文章" })).toHaveCount(0);
   expect(unknown).toEqual([]);
 });
 
