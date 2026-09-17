@@ -668,7 +668,7 @@ export function WorkflowRunRecords({
             className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border bg-background"
             aria-label={zh ? "Workflow Runs" : "Workflow Runs"}
           >
-            <div className="shrink-0 border-b px-[18px] py-4>
+            <div className="shrink-0 border-b px-[18px] py-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <strong className="text-sm">Workflow Runs</strong>
