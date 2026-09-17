@@ -83,7 +83,7 @@ export function EditorMediaSourceDialog({
   }, [defaultAlt, source]);
 
   const close = () => onSourceChange(null);
-  const confirm = (result: MediaResult | null) => {
+  const applyMediaResult = (result: MediaResult | null) => {
     if (!result) return;
     onUse(result);
     close();
@@ -229,7 +229,7 @@ export function EditorMediaSourceDialog({
                   variant="solid"
                   color="primary"
                   disabled={!selected}
-                  onClick={() => confirm(selected)}
+                  onClick={() => applyMediaResult(selected)}
                 >
                   使用所选
                 </Button>
@@ -290,7 +290,7 @@ export function EditorMediaSourceDialog({
                     <Button
                       variant="solid"
                       color="primary"
-                      onClick={() => confirm(selected)}
+                      onClick={() => applyMediaResult(selected)}
                     >
                       使用已上传图片
                     </Button>
@@ -378,7 +378,7 @@ export function EditorMediaSourceDialog({
                     <Button
                       variant="solid"
                       color="primary"
-                      onClick={() => confirm(generated)}
+                      onClick={() => applyMediaResult(generated)}
                     >
                       {purpose === "文章封面" ? "使用此封面" : "插入此图片"}
                     </Button>
