@@ -58,6 +58,7 @@ import { WorkflowInputForm } from "./WorkflowInputForm";
 import {
   OperationsMeta,
   OperationsObjectRow,
+  OperationsPanelLead,
   OperationsRegionHeading,
   OperationsSummaryStrip,
 } from "./OperationsPatterns";
@@ -538,18 +539,36 @@ export function WorkflowWorkspace({
   };
   if (editing)
     return (
-      <WorkflowEditor
-        initial={editing === "new" ? undefined : editing}
-        labels={labels}
-        agents={agents}
-        tools={tools}
-        locale={locale}
-        onCancel={() => setEditing(null)}
-        onSave={async (value) => {
-          await onSave(value);
-          setEditing(null);
-        }}
-      />
+      <div className="flex flex-col gap-5">
+        <OperationsPanelLead
+          title={
+            editing === "new"
+              ? locale === "zh"
+                ? "创建自动化"
+                : "Create automation"
+              : locale === "zh"
+                ? "编辑自动化"
+                : "Edit automation"
+          }
+          description={
+            locale === "zh"
+              ? "编辑 Workflow 的输入契约、流程定义、执行计划与运行边界；保存形成新版本，运行证据继续进入运行中心。"
+              : "Edit the Workflow input contract, flow definition, schedule, and execution boundaries. Saving creates a new version while evidence remains in the run center."
+          }
+        />
+        <WorkflowEditor
+          initial={editing === "new" ? undefined : editing}
+          labels={labels}
+          agents={agents}
+          tools={tools}
+          locale={locale}
+          onCancel={() => setEditing(null)}
+          onSave={async (value) => {
+            await onSave(value);
+            setEditing(null);
+          }}
+        />
+      </div>
     );
 
   const formatTime = (value?: string) =>
@@ -559,22 +578,25 @@ export function WorkflowWorkspace({
 
   return (
     <div className="workflow-workspace flex flex-col gap-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <Text tone="muted" className="max-w-3xl">
-          {locale === "zh"
-            ? "Workflow 是持续运行的版本化自动化资产。左侧选择资产，右侧直接查看状态、边界、定义与人工执行。"
-            : "Workflows are versioned automation assets. Select one on the left to inspect status, boundaries, definition, and manual execution."}
-        </Text>
-        <Button
-          variant="solid"
-          color="primary"
-          type="button"
-          onClick={() => setEditing("new")}
-          icon={<Plus />}
-        >
-          {labels.add}
-        </Button>
-      </div>
+      <OperationsPanelLead
+        title={locale === "zh" ? "自动化资产" : "Automation assets"}
+        description={
+          locale === "zh"
+            ? "Workflow 是持续运行的版本化自动化资产。左侧选择资产，右侧直接查看健康度、调度、运行记录、定义与人工执行。"
+            : "Workflows are versioned automation assets. Select one on the left to inspect health, scheduling, run history, definition, and manual execution."
+        }
+        actions={
+          <Button
+            variant="solid"
+            color="primary"
+            type="button"
+            onClick={() => setEditing("new")}
+            icon={<Plus />}
+          >
+            {labels.add}
+          </Button>
+        }
+      />
 
       {selectedWorkflow ? (
         <div
@@ -1059,7 +1081,7 @@ export function WorkflowWorkspace({
                               key={run.id}
                               variant="ghost"
                               block
-                              className="h-auto w-full rounded-none px-6 py-3.5 text-left font-normal hover:bg-muted/35"
+                              className="grid h-auto w-full min-w-0 grid-cols-1 gap-3 whitespace-normal rounded-none px-6 py-3.5 text-left font-normal transition-colors hover:bg-muted/35 sm:grid-cols-[7rem_7rem_minmax(7rem,0.7fr)_6rem_minmax(0,1.5fr)] sm:items-center [&>span]:contents"
                               to={
                                 "/admin/ai-ops?tab=records&record=workflow&workflow=" +
                                 workflow.id +
@@ -1072,7 +1094,7 @@ export function WorkflowWorkspace({
                                   : "Open recent Run #") + run.id
                               }
                             >
-                              <span className="grid w-full min-w-0 grid-cols-1 gap-3 sm:grid-cols-[6.5rem_7rem_minmax(8rem,0.8fr)_5rem_minmax(0,1.5fr)] sm:items-center">
+                              <span className="contents">
                                 <strong className="text-sm">
                                   Run #{run.id}
                                 </strong>
