@@ -79,9 +79,13 @@ test("Post editor validation uses Notification while canonical shell stays overf
   await expect(page.locator('[data-slot="document-editor-command-bar"]')).toBeVisible();
   await expect(page.locator('[data-slot="document-editor-canvas"]')).toBeVisible();
   await expect(page.locator('[data-slot="document-editor-inspector"]')).toBeVisible();
-  await expect(page.getByRole("button", { name: "编辑" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "分屏" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "预览" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "编辑", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator('button[aria-label="分屏"]')).toBeHidden();
+  await expect(
+    page.getByRole("button", { name: "预览", exact: true }),
+  ).toBeVisible();
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
   );
@@ -100,9 +104,9 @@ test("Existing Page editor loads deterministic content at tablet width", async (
   );
   await expect(page.locator('[data-slot="document-editor-command-bar"]')).toBeVisible();
   await expect(page.locator('[data-slot="document-editor-navigator"]')).toHaveCount(0);
-  await page.getByRole("button", { name: "预览" }).click();
+  await page.getByRole("button", { name: "预览", exact: true }).click();
   await expect(page.getByLabel("单页预览")).toBeVisible();
-  await page.getByRole("button", { name: "分屏" }).click();
+  await page.getByRole("button", { name: "分屏", exact: true }).click();
   await expect(page.getByLabel("单页正文 Markdown")).toBeVisible();
   await expect(page.getByLabel("单页预览")).toBeVisible();
   expect(unknown).toEqual([]);
