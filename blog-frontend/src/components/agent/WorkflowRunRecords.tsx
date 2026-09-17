@@ -608,7 +608,6 @@ export function WorkflowRunRecords({
 
       <div className="grid gap-3 md:grid-cols-2">
         <Select
-          size="small"
           aria-label={zh ? "筛选 Workflow" : "Filter Workflow"}
           value={String(workflowID)}
           onChange={(nextValue) => {
@@ -628,7 +627,6 @@ export function WorkflowRunRecords({
           ))}
         </Select>
         <Select
-          size="small"
           aria-label={zh ? "筛选状态" : "Filter Status"}
           value={statusFilter}
           onChange={(nextValue) => {
@@ -663,14 +661,14 @@ export function WorkflowRunRecords({
       ) : (
         <div
           data-slot="ops-master-detail"
-          className="grid min-w-0 items-stretch gap-5 xl:grid-cols-[20rem_minmax(0,1fr)]"
+          className="grid min-w-0 items-stretch gap-6 xl:grid-cols-[19rem_minmax(0,1fr)]"
         >
           <aside
             data-slot="ops-rail"
             className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border bg-background"
             aria-label={zh ? "Workflow Runs" : "Workflow Runs"}
           >
-            <div className="shrink-0 border-b bg-muted/20 px-4 py-3">
+            <div className="shrink-0 border-b px-[18px] py-4>
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <strong className="text-sm">Workflow Runs</strong>
