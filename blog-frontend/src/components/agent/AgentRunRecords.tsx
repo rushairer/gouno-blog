@@ -547,7 +547,7 @@ export function RecordEvidence({
             : `${run.tool_calls.length} steps`}
         </strong>
       </div>
-      <div className="section-stack">
+      <div className="flex flex-col gap-5">
         {run.tool_calls.map((call, index) => {
           const summary = toolResultSummary(call.result);
           const hasStructuredResult = [
@@ -651,7 +651,7 @@ export function RecordsWorkspace({
 
   if (selectedRun) {
     return (
-      <div className="agent-run-detail-view section-stack">
+      <div className="agent-run-detail-view flex min-w-0 flex-col gap-5">
         <div className="workflow-detail-nav">
           <Button
             variant="ghost"
@@ -664,7 +664,7 @@ export function RecordsWorkspace({
           </Button>
         </div>
         <Card padding="base" className="agent-detail-panel">
-          <div className="section-stack">
+          <div className="flex flex-col gap-5">
             <CardHeader
               title={
                 agentMap.get(selectedRun.run.agent_id)?.name ||

@@ -661,12 +661,16 @@ export function WorkflowRunRecords({
           />
         </div>
       ) : (
-        <div className="grid min-w-0 gap-5 xl:grid-cols-[20rem_minmax(0,1fr)]">
+        <div
+          data-slot="ops-master-detail"
+          className="grid min-w-0 items-stretch gap-5 xl:grid-cols-[20rem_minmax(0,1fr)]"
+        >
           <aside
-            className="min-w-0 overflow-hidden rounded-lg border bg-background"
+            data-slot="ops-rail"
+            className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border bg-background"
             aria-label={zh ? "Workflow Runs" : "Workflow Runs"}
           >
-            <div className="border-b bg-muted/20 px-4 py-3">
+            <div className="shrink-0 border-b bg-muted/20 px-4 py-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <strong className="text-sm">Workflow Runs</strong>
@@ -697,8 +701,9 @@ export function WorkflowRunRecords({
             </div>
             <div
               role="list"
+              data-slot="ops-rail-body"
               aria-label={zh ? "Workflow 运行列表" : "Workflow run list"}
-              className="max-h-[56rem] overflow-y-auto"
+              className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
             >
               {filtered.map((run) => {
                 const runType = run.dry_run

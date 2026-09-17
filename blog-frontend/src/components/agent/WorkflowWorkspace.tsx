@@ -577,14 +577,18 @@ export function WorkflowWorkspace({
       </div>
 
       {selectedWorkflow ? (
-        <div className="grid min-w-0 gap-5 xl:grid-cols-[21rem_minmax(0,1fr)]">
+        <div
+          data-slot="ops-master-detail"
+          className="grid min-w-0 items-stretch gap-5 xl:grid-cols-[21rem_minmax(0,1fr)]"
+        >
           <aside
-            className="min-w-0 overflow-hidden rounded-lg border bg-background"
+            data-slot="ops-rail"
+            className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border bg-background"
             aria-label={
               locale === "zh" ? "Workflow 导航" : "Workflow navigation"
             }
           >
-            <div className="border-b bg-muted/20 p-4">
+            <div className="shrink-0 border-b bg-muted/20 p-4">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
                   <strong className="text-sm">Workflows</strong>
@@ -639,8 +643,9 @@ export function WorkflowWorkspace({
             </div>
             <div
               role="list"
+              data-slot="ops-rail-body"
               aria-label={locale === "zh" ? "Workflow 列表" : "Workflow list"}
-              className="max-h-[48rem] overflow-y-auto"
+              className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
             >
               {visibleWorkflows.length ? (
                 visibleWorkflows.map((workflow) => {
@@ -713,7 +718,7 @@ export function WorkflowWorkspace({
             </div>
           </aside>
 
-          <div className="workflow-detail-view section-stack min-w-0">
+          <div className="workflow-detail-view min-w-0">
             {(() => {
               const workflow = selectedWorkflow;
               const metric = metricMap.get(workflow.id);
@@ -771,7 +776,10 @@ export function WorkflowWorkspace({
                   )
                 : 0;
               return (
-                <div className="section-stack">
+                <div
+                  data-slot="ops-detail-stack"
+                  className="flex min-w-0 flex-col gap-5"
+                >
                   <section
                     className="overflow-hidden rounded-lg border bg-background"
                     aria-label={
@@ -2539,7 +2547,11 @@ function WorkflowEditor({
       closeLabel={labels.cancel}
       onClose={onCancel}
     >
-      <FormLayout onSubmit={submit}>
+      <FormLayout
+        data-slot="workflow-editor-form"
+        className="workflow-editor-form"
+        onSubmit={submit}
+      >
         {!initial ? (
           <section className="workflow-planner">
             <div>

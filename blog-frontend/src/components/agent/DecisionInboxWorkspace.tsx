@@ -554,12 +554,16 @@ export function DecisionInboxWorkspace({
         ))}
       </div>
 
-      <div className="grid min-w-0 overflow-hidden rounded-lg border bg-background xl:grid-cols-[22rem_minmax(0,1fr)]">
+      <div
+        data-slot="ops-master-detail"
+        className="grid min-w-0 items-stretch overflow-hidden rounded-lg border bg-background xl:grid-cols-[22rem_minmax(0,1fr)]"
+      >
         <aside
-          className="border-b xl:border-b-0 xl:border-r"
+          data-slot="ops-rail"
+          className="flex min-h-0 min-w-0 flex-col border-b xl:border-b-0 xl:border-r"
           aria-label={zh ? "决策队列" : "Decision queue"}
         >
-          <div className="border-b bg-muted/20 px-4 py-3">
+          <div className="shrink-0 border-b bg-muted/20 px-4 py-3">
             <strong className="text-sm">
               {zh ? "决策队列" : "Decision queue"}
             </strong>
@@ -571,8 +575,9 @@ export function DecisionInboxWorkspace({
           </div>
           <div
             role="list"
+            data-slot="ops-rail-body"
             aria-label={zh ? "待处理列表" : "Decision items"}
-            className="max-h-[48rem] overflow-y-auto"
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
           >
             {visibleItems.length ? (
               visibleItems.map((item) => (
