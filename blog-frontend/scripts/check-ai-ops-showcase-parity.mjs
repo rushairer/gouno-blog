@@ -1,4 +1,5 @@
 // Compares drift-prone AI Operations composition markers with current gouno-ui/main.
+// Keep this source-level guard paired with rendered Playwright parity; neither layer is sufficient alone.
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
