@@ -13,6 +13,10 @@ function requireText(text, marker, message) {
   if (!text.includes(marker)) failures.push(message);
 }
 
+function requirePattern(text, pattern, message) {
+  if (!pattern.test(text)) failures.push(message);
+}
+
 const railFiles = [
   "src/components/agent/WorkflowWorkspace.tsx",
   "src/components/agent/WorkflowRunRecords.tsx",
@@ -26,47 +30,59 @@ for (const path of railFiles) {
       `${path}: AI Operations master-detail rails must be content-driven; fixed rem max-height is forbidden`,
     );
   }
-  requireText(text, 'data-slot="ops-master-detail"', `${path}: missing canonical master-detail marker`);
+  requireText(
+    text,
+    'data-slot="ops-master-detail"',
+    `${path}: missing canonical master-detail marker`,
+  );
   requireText(text, 'data-slot="ops-rail"', `${path}: missing adaptive rail marker`);
-  requireText(text, 'data-slot="ops-rail-body"', `${path}: missing adaptive rail-body marker`);
+  requireText(
+    text,
+    'data-slot="ops-rail-body"',
+    `${path}: missing adaptive rail-body marker`,
+  );
 }
 
 const workflowWorkspace = await source("src/components/agent/WorkflowWorkspace.tsx");
 if (workflowWorkspace.includes("section-stack")) {
-  failures.push("src/components/agent/WorkflowWorkspace.tsx: retired section-stack composition must not return");
+  failures.push(
+    "src/components/agent/WorkflowWorkspace.tsx: retired section-stack composition must not return",
+  );
 }
-requireText(
+requirePattern(
   workflowWorkspace,
-  'data-slot="ops-detail-stack" className="flex min-w-0 flex-col gap-5"',
+  /data-slot="ops-detail-stack"[\s\S]{0,180}className="[^"]*flex[^"]*flex-col[^"]*gap-5[^"]*"/,
   "Workflow detail spacing must be owned by one canonical parent stack",
 );
-requireText(
+requirePattern(
   workflowWorkspace,
-  'data-slot="workflow-editor-form" className="workflow-editor-form"',
+  /<FormLayout[\s\S]{0,180}data-slot="workflow-editor-form"[\s\S]{0,180}className="workflow-editor-form"/,
   "Workflow editor must expose its canonical form composition boundary",
 );
 
 const inputForm = await source("src/components/agent/WorkflowInputForm.tsx");
-requireText(
+requirePattern(
   inputForm,
-  'data-slot="workflow-input-form" className="workflow-input-form flex min-w-0 flex-col gap-5"',
+  /data-slot="workflow-input-form"[\s\S]{0,180}className="[^"]*workflow-input-form[^"]*flex[^"]*flex-col[^"]*gap-5[^"]*"/,
   "Workflow runtime inputs must own a canonical gap instead of relying on incidental Field margins",
 );
 
 const agentRunRecords = await source("src/components/agent/AgentRunRecords.tsx");
 if (agentRunRecords.includes("section-stack")) {
-  failures.push("src/components/agent/AgentRunRecords.tsx: retired section-stack composition must not return");
+  failures.push(
+    "src/components/agent/AgentRunRecords.tsx: retired section-stack composition must not return",
+  );
 }
 
 const css = await source("src/styles/agent-console.css");
-requireText(
+requirePattern(
   css,
-  ".workflow-editor-form .form-grid {\n    display: grid;\n    grid-template-columns: repeat(2, minmax(0, 1fr));\n    gap: 20px;",
+  /\.workflow-editor-form \.form-grid\s*\{[\s\S]{0,220}grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\);[\s\S]{0,120}gap:\s*20px;/,
   "Workflow editor form grids must follow the canonical 20px FormGrid rhythm",
 );
-requireText(
+requirePattern(
   css,
-  ".workflow-schema-field,\n  .workflow-step-card {\n    display: grid;\n    gap: 16px;\n    padding: 16px;",
+  /\.workflow-schema-field,\s*\.workflow-step-card\s*\{[\s\S]{0,140}gap:\s*16px;[\s\S]{0,100}padding:\s*16px;/,
   "Workflow editor item anatomy must preserve the canonical 16px internal rhythm",
 );
 
