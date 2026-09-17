@@ -10,10 +10,11 @@ import type {
   WorkflowMetric,
   WorkflowRun,
 } from "../../types/agent";
-import { Button, Empty, Heading, Tag, Text } from "@gouno/ui/core";
+import { Button, Empty, Tag, Text } from "@gouno/ui/core";
 import {
   OperationsMeta,
   OperationsObjectRow,
+  OperationsPanelLead,
   OperationsRegionHeading,
   OperationsSummaryStrip,
 } from "./OperationsPatterns";
@@ -143,35 +144,33 @@ export function WorkspaceOverview({
       className="flex flex-col gap-6"
       aria-label={zh ? "AI 运营概览" : "AI operations overview"}
     >
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="max-w-3xl">
-          <Heading level={2}>
-            {zh ? "今天需要关注什么" : "What needs attention today"}
-          </Heading>
-          <Text className="mt-1" tone="muted">
-            {zh
-              ? "先处理失败与等待人工的运行，再决定建议、候选和后续编辑任务；AI 不会绕过人工边界直接发布内容。"
-              : "Handle failed and human-blocked runs first, then review proposals, candidates, and editorial follow-up. AI never bypasses the human publishing boundary."}
-          </Text>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            icon={<ShieldCheck />}
-            onClick={() => onNavigate("inbox")}
-          >
-            {zh ? `待我处理 ${decisionCount}` : `Review queue ${decisionCount}`}
-          </Button>
-          <Button
-            variant="solid"
-            color="primary"
-            icon={<GitBranch />}
-            onClick={() => onNavigate("automation")}
-          >
-            {zh ? "查看自动化" : "Open automation"}
-          </Button>
-        </div>
-      </div>
+      <OperationsPanelLead
+        title={zh ? "今天需要关注什么" : "What needs attention today"}
+        description={
+          zh
+            ? "先处理失败与等待人工的运行，再决定建议、候选和后续编辑任务；AI 不会绕过人工边界直接发布内容。"
+            : "Handle failed and human-blocked runs first, then review proposals, candidates, and editorial follow-up. AI never bypasses the human publishing boundary."
+        }
+        actions={
+          <>
+            <Button
+              variant="outline"
+              icon={<ShieldCheck />}
+              onClick={() => onNavigate("inbox")}
+            >
+              {zh ? `待我处理 ${decisionCount}` : `Review queue ${decisionCount}`}
+            </Button>
+            <Button
+              variant="solid"
+              color="primary"
+              icon={<GitBranch />}
+              onClick={() => onNavigate("automation")}
+            >
+              {zh ? "查看自动化" : "Open automation"}
+            </Button>
+          </>
+        }
+      />
 
       <OperationsSummaryStrip
         ariaLabel={zh ? "AI 运营健康度" : "AI operations health"}
