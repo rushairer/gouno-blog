@@ -703,7 +703,7 @@ export function RecordsWorkspace({
                         </OperationsMeta>
                       </>
                     }
-                    selected={selectedRun?.run.id === run.id}
+                    selected={selectedRun?.run?.id === run.id}
                     onClick={() => onInspect(run)}
                     ariaLabel={
                       zh ? `查看 Run #${run.id}` : `Inspect Run #${run.id}`
