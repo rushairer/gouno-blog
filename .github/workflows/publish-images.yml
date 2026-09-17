@@ -4,6 +4,18 @@ on:
   push:
     branches: [main, master]
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      image:
+        description: Image to publish
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - backend
+          - frontend
+          - seed
 
 permissions:
   contents: read
@@ -36,7 +48,36 @@ jobs:
           BEFORE_SHA: ${{ github.event.before }}
           AFTER_SHA: ${{ github.sha }}
           REF_TYPE: ${{ github.ref_type }}
+          EVENT_NAME: ${{ github.event_name }}
+          REQUESTED_IMAGE: ${{ inputs.image }}
         run: |
+          set -euo pipefail
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            case "${REQUESTED_IMAGE:-all}" in
+              all)
+                python3 .github/scripts/image_build_plan.py --all >> "$GITHUB_OUTPUT"
+                ;;
+              backend)
+                printf 'blog-backend/Dockerfile\0' > "$RUNNER_TEMP/image-build-paths"
+                python3 .github/scripts/image_build_plan.py --files0 "$RUNNER_TEMP/image-build-paths" >> "$GITHUB_OUTPUT"
+                ;;
+              frontend)
+                printf 'blog-frontend/Dockerfile\0' > "$RUNNER_TEMP/image-build-paths"
+                python3 .github/scripts/image_build_plan.py --files0 "$RUNNER_TEMP/image-build-paths" >> "$GITHUB_OUTPUT"
+                ;;
+              seed)
+                printf 'seed/Dockerfile\0' > "$RUNNER_TEMP/image-build-paths"
+                python3 .github/scripts/image_build_plan.py --files0 "$RUNNER_TEMP/image-build-paths" >> "$GITHUB_OUTPUT"
+                ;;
+              *)
+                echo "Unsupported image selection: $REQUESTED_IMAGE" >&2
+                exit 1
+                ;;
+            esac
+            exit 0
+          fi
+
           if [ "$REF_TYPE" = "tag" ]; then
             python3 .github/scripts/image_build_plan.py --all >> "$GITHUB_OUTPUT"
             exit 0
