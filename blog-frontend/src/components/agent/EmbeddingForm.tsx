@@ -1,20 +1,21 @@
-import { DatabaseZap, Save, X } from "lucide-react";
+import { DatabaseZap, Save } from "lucide-react";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import type { EmbeddingProfile } from "../../types/agent";
 import { useFormDraft } from "../../hooks/useFormDraft";
 import {
   Button,
-  Card,
-  CardHeader,
   Checkbox,
   Field,
   FormActions,
   FormGrid,
   FormLayout,
-  IconButton,
   Input,
 } from "@gouno/ui/core";
+import {
+  AISettingsEditorHeader,
+  AISettingsEditorSection,
+} from "./AISettingsEditorPatterns";
 
 export type EmbeddingFormValue = {
   id?: number;
@@ -111,123 +112,144 @@ export function EmbeddingForm({
   };
 
   return (
-    <Card padding="base">
-      <CardHeader
-        title={
-          <span className="flex items-center gap-2">
-            <DatabaseZap />
-            {labels.title}
-          </span>
-        }
-        action={
-          <IconButton
-            label={labels.cancel}
-            icon={<X />}
-            onClick={handleCancel}
-          />
-        }
-      />
-      <FormLayout onSubmit={submit}>
-        <FormGrid columns={2}>
-          <Field label={labels.name}>
-            <Input
-              required
-              value={value.name}
-              onChange={(event) =>
-                setValue((current) => ({
-                  ...current,
-                  name: event.target.value,
-                }))
-              }
-            />
-          </Field>
-          <Field label={labels.model}>
-            <Input
-              className="font-mono"
-              required
-              value={value.model}
-              onChange={(event) =>
-                setValue((current) => ({
-                  ...current,
-                  model: event.target.value,
-                }))
-              }
-            />
-          </Field>
-        </FormGrid>
-        <Field label={labels.base}>
-          <Input
-            className="font-mono"
-            type="url"
-            required
-            value={value.base_url}
-            onChange={(event) =>
-              setValue((current) => ({
-                ...current,
-                base_url: event.target.value,
-              }))
+    <FormLayout onSubmit={submit}>
+      <div className="flex flex-col gap-5">
+        <AISettingsEditorHeader
+          title={initial ? `${labels.title}：${initial.name}` : labels.title}
+          description={
+            locale === "zh"
+              ? "Embedding 配置决定知识索引使用的模型、维度与连接凭据；索引状态和重建操作仍留在知识库工作区。"
+              : "Embedding profiles define the model, dimensions, and credentials used by the knowledge index. Index status and rebuild actions remain in the knowledge workspace."
+          }
+          icon={<DatabaseZap />}
+        />
+
+        <div className="grid gap-5 xl:grid-cols-2">
+          <AISettingsEditorSection
+            title={locale === "zh" ? "索引模型" : "Index model"}
+            description={
+              locale === "zh"
+                ? "配置名称、模型和向量维度共同标识知识索引的语义空间。"
+                : "Profile name, model, and vector dimensions define the semantic space of the knowledge index."
             }
-          />
-        </Field>
-        <Field label={`${labels.key}${initial ? ` · ${labels.keep}` : ""}`}>
-          <Input
-            className="font-mono"
-            type="password"
-            required={!initial}
-            autoComplete="new-password"
-            value={value.api_key}
-            onChange={(event) =>
-              setValue((current) => ({
-                ...current,
-                api_key: event.target.value,
-              }))
+          >
+            <div className="flex flex-col gap-5">
+              <Field label={labels.name}>
+                <Input
+                  required
+                  value={value.name}
+                  onChange={(event) =>
+                    setValue((current) => ({
+                      ...current,
+                      name: event.target.value,
+                    }))
+                  }
+                />
+              </Field>
+              <FormGrid columns={2}>
+                <Field label={labels.model}>
+                  <Input
+                    className="font-mono"
+                    required
+                    value={value.model}
+                    onChange={(event) =>
+                      setValue((current) => ({
+                        ...current,
+                        model: event.target.value,
+                      }))
+                    }
+                  />
+                </Field>
+                <Field label={labels.dimensions}>
+                  <Input
+                    type="number"
+                    min="64"
+                    max="4096"
+                    value={value.dimensions}
+                    onChange={(event) =>
+                      setValue((current) => ({
+                        ...current,
+                        dimensions: Number(event.target.value),
+                      }))
+                    }
+                  />
+                </Field>
+              </FormGrid>
+              <Field label={locale === "zh" ? "状态" : "Status"}>
+                <label className="inline-flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={value.enabled}
+                    onChange={(event) =>
+                      setValue((current) => ({
+                        ...current,
+                        enabled: event.target.checked,
+                      }))
+                    }
+                  />
+                  {labels.enabled}
+                </label>
+              </Field>
+            </div>
+          </AISettingsEditorSection>
+
+          <AISettingsEditorSection
+            title={locale === "zh" ? "连接与凭据" : "Connection and credentials"}
+            description={
+              locale === "zh"
+                ? "端点、API Key 与超时只负责连接行为，不改变索引模型本身的语义配置。"
+                : "Endpoint, API key, and timeout govern connectivity without changing the index model semantics."
             }
-          />
-        </Field>
-        <FormGrid columns={2}>
-          <Field label={labels.dimensions}>
-            <Input
-              type="number"
-              min="64"
-              max="4096"
-              value={value.dimensions}
-              onChange={(event) =>
-                setValue((current) => ({
-                  ...current,
-                  dimensions: Number(event.target.value),
-                }))
-              }
-            />
-          </Field>
-          <Field label={labels.timeout}>
-            <Input
-              type="number"
-              min="1"
-              max="600"
-              value={value.request_timeout_seconds}
-              onChange={(event) =>
-                setValue((current) => ({
-                  ...current,
-                  request_timeout_seconds: Number(event.target.value),
-                }))
-              }
-            />
-          </Field>
-        </FormGrid>
-        <label className="inline-flex items-center gap-2 text-sm">
-          <Checkbox
-            checked={value.enabled}
-            onChange={(event) =>
-              setValue((current) => ({
-                ...current,
-                enabled: event.target.checked,
-              }))
-            }
-          />
-          {labels.enabled}
-        </label>
+          >
+            <div className="flex flex-col gap-5">
+              <Field label={labels.base}>
+                <Input
+                  className="font-mono"
+                  type="url"
+                  required
+                  value={value.base_url}
+                  onChange={(event) =>
+                    setValue((current) => ({
+                      ...current,
+                      base_url: event.target.value,
+                    }))
+                  }
+                />
+              </Field>
+              <Field label={`${labels.key}${initial ? ` · ${labels.keep}` : ""}`}>
+                <Input
+                  className="font-mono"
+                  type="password"
+                  required={!initial}
+                  autoComplete="new-password"
+                  value={value.api_key}
+                  onChange={(event) =>
+                    setValue((current) => ({
+                      ...current,
+                      api_key: event.target.value,
+                    }))
+                  }
+                />
+              </Field>
+              <Field label={labels.timeout}>
+                <Input
+                  type="number"
+                  min="1"
+                  max="600"
+                  value={value.request_timeout_seconds}
+                  onChange={(event) =>
+                    setValue((current) => ({
+                      ...current,
+                      request_timeout_seconds: Number(event.target.value),
+                    }))
+                  }
+                />
+              </Field>
+            </div>
+          </AISettingsEditorSection>
+        </div>
+
         <FormActions>
-          <Button variant="outline" type="button" onClick={onCancel}>
+          <Button variant="outline" type="button" onClick={handleCancel}>
             {labels.cancel}
           </Button>
           <Button
@@ -240,7 +262,7 @@ export function EmbeddingForm({
             {saving ? labels.saving : labels.save}
           </Button>
         </FormActions>
-      </FormLayout>
-    </Card>
+      </div>
+    </FormLayout>
   );
 }
