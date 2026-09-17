@@ -181,7 +181,10 @@ describe("WorkflowWorkspace", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Delete" }));
+    await user.click(
+      screen.getByRole("button", { name: "More Workflow actions" }),
+    );
+    await user.click(screen.getByRole("menuitem", { name: "Delete Workflow" }));
     const dialog = screen.getByRole("dialog");
     expect(
       within(dialog).getByText(

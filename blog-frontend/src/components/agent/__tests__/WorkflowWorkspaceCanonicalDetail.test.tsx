@@ -82,6 +82,17 @@ describe("AI Operations Workflow canonical operational detail", () => {
     expect(
       screen.getByRole("list", { name: "Workflow 列表" }),
     ).toBeInTheDocument();
+    const workflowList = screen.getByRole("list", { name: "Workflow 列表" });
+    expect(workflowList).toHaveAttribute("data-slot", "ops-rail-body");
+    expect(workflowList.className).toContain("flex-1");
+    expect(workflowList.className).not.toContain("max-h-[");
+    expect(workflowList.closest('[data-slot="ops-rail"]')).toHaveClass(
+      "flex",
+      "min-h-0",
+    );
+    expect(
+      workflowList.closest('[data-slot="ops-master-detail"]'),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "打开 Workflow：Daily digest" }),
     ).toHaveAttribute("aria-pressed", "true");

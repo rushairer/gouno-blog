@@ -221,4 +221,24 @@ describe("WorkflowInputForm", () => {
     expect(screen.getByText("固定模板参数")).toBeInTheDocument();
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
+
+  it("owns canonical vertical field rhythm", () => {
+    const { container } = render(
+      <WorkflowInputForm
+        schema={{
+          type: "object",
+          properties: {
+            title: { type: "string", title: "标题" },
+            format: { type: "string", title: "输出格式" },
+          },
+        }}
+        value={{ title: "", format: "" }}
+        onChange={vi.fn()}
+        locale="zh"
+      />,
+    );
+    const form = container.querySelector('[data-slot="workflow-input-form"]');
+    expect(form).toBeInTheDocument();
+    expect(form).toHaveClass("flex", "flex-col", "gap-5");
+  });
 });
