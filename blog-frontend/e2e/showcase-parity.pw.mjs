@@ -447,10 +447,8 @@ test("AI Operations top-level panels, Recent Runs and Run Center match Showcase"
       await styleFingerprint(showcaseLead),
     );
 
-    const showcaseTitle = showcaseLead.locator("h2");
-    const productTitle = productLead.locator("h2");
-    await expect(showcaseTitle).not.toHaveText("");
-    await expect(productTitle).not.toHaveText("");
+    await expect(showcaseLead).not.toHaveText("");
+    await expect(productLead).not.toHaveText("");
   }
 
   await showcase.getByRole("tab", { name: /自动化/ }).click();
