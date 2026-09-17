@@ -548,7 +548,10 @@ export function WorkflowInputForm({
   const update = (name: string, next: unknown) =>
     onChange({ ...value, [name]: next });
   return (
-    <div className="workflow-input-form">
+    <div
+      data-slot="workflow-input-form"
+      className="workflow-input-form flex min-w-0 flex-col gap-5"
+    >
       {Object.entries(properties).map(([name, property]) => {
         const label = property.title || name.replaceAll("_", " ");
         if (property["x-gouno-resource"])
@@ -675,7 +678,7 @@ export function WorkflowInputForm({
           </Field>
         );
       })}
-      <details className="workflow-advanced-input">
+      <details className="workflow-advanced-input border-t pt-5">
         <summary>
           {locale === "zh"
             ? "高级：查看或编辑输入 JSON"

@@ -1670,17 +1670,24 @@
   .workflow-step-cards,
   .workflow-discovery-picker {
     display: grid;
-    gap: 10px;
-    padding: 14px;
+    gap: 20px;
+    padding: 20px;
     border: 1px solid var(--agent-border);
     border-radius: var(--radius-control);
     background: var(--card);
   }
+  .workflow-editor-form .form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+    align-items: start;
+  }
+
   .workflow-schema-field,
   .workflow-step-card {
     display: grid;
-    gap: 8px;
-    padding: 12px;
+    gap: 16px;
+    padding: 16px;
     border: 1px solid var(--agent-border);
     border-radius: var(--radius-control);
     background: var(--input);
@@ -1737,6 +1744,12 @@
   .workflow-tool-picker__historical {
     opacity: 0.72;
   }
+  @media (max-width: 900px) {
+    .workflow-editor-form .form-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
   @media (max-width: 640px) {
     .workflow-step-card > header {
       align-items: flex-start;
@@ -1745,6 +1758,14 @@
     .workflow-step-card > header .agent-row-actions {
       margin-left: 0;
     }
+  }
+
+  .workflow-advanced-input[open] > textarea {
+    margin-top: 16px;
+  }
+
+  .workflow-advanced-input[open] > [role="alert"] {
+    margin-top: 12px;
   }
 
   .workflow-detail-nav {
