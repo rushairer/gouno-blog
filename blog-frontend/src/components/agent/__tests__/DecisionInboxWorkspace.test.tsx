@@ -1,7 +1,10 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import type { AgentApproval, WorkflowInteractionTask } from "../../../types/agent";
+import type {
+  AgentApproval,
+  WorkflowInteractionTask,
+} from "../../../types/agent";
 import { DecisionInboxWorkspace } from "../DecisionInboxWorkspace";
 
 const interaction: WorkflowInteractionTask = {
@@ -10,7 +13,10 @@ const interaction: WorkflowInteractionTask = {
   workflow_step_id: "choose-cover",
   interaction_type: "choice",
   schema: {},
-  payload: { title: "选择文章封面方向", reason: "当前 Run 需要人工选择后才能继续。" },
+  payload: {
+    title: "选择文章封面方向",
+    reason: "当前 Run 需要人工选择后才能继续。",
+  },
   options: ["极简架构图", "科技插画"],
   status: "pending",
   created_at: "2026-09-17T08:30:00Z",
@@ -59,7 +65,9 @@ describe("AI Operations unified decision workbench", () => {
     expect(
       screen.getByRole("heading", { level: 2, name: "待我处理" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("list", { name: "待处理列表" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("list", { name: "待处理列表" }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { level: 2, name: "选择文章封面方向" }),
     ).toBeInTheDocument();
@@ -73,7 +81,9 @@ describe("AI Operations unified decision workbench", () => {
         name: "对文章 #4应用内容建议",
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText("不会影响其他文章或站点设置。")).toBeInTheDocument();
+    expect(
+      screen.getByText("不会影响其他文章或站点设置。"),
+    ).toBeInTheDocument();
 
     await user.click(
       screen.getByRole("button", { name: "处理：对文章 #4应用内容建议" }),
