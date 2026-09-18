@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import type {
@@ -64,7 +64,7 @@ const run: WorkflowRun = {
 };
 
 describe("AI Operations Workflow canonical operational detail", () => {
-  it("keeps the Workflow rail and operational detail in one workspace", () => {
+  it("moves from the Workflow list into one dedicated operational detail", () => {
     render(
       <MemoryRouter>
         <WorkflowWorkspace
@@ -79,23 +79,15 @@ describe("AI Operations Workflow canonical operational detail", () => {
       </MemoryRouter>,
     );
 
-    expect(
-      screen.getByRole("list", { name: "Workflow 列表" }),
-    ).toBeInTheDocument();
-    const workflowList = screen.getByRole("list", { name: "Workflow 列表" });
-    expect(workflowList).toHaveAttribute("data-slot", "ops-rail-body");
-    expect(workflowList.className).toContain("flex-1");
-    expect(workflowList.className).not.toContain("max-h-[");
-    expect(workflowList.closest('[data-slot="ops-rail"]')).toHaveClass(
-      "flex",
-      "min-h-0",
-    );
-    expect(
-      workflowList.closest('[data-slot="ops-master-detail"]'),
-    ).toBeInTheDocument();
-    expect(
+    expect(screen.getByRole("list", { name: "Workflow 列表" })).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Daily digest Workflow 概览" })).toBeNull();
+
+    fireEvent.click(
       screen.getByRole("button", { name: "打开 Workflow：Daily digest" }),
-    ).toHaveAttribute("aria-pressed", "true");
+    );
+
+    expect(screen.queryByRole("list", { name: "Workflow 列表" })).toBeNull();
+    expect(screen.queryByTestId("ops-master-detail")).toBeNull();
     expect(
       screen.getByRole("region", { name: "Daily digest Workflow 概览" }),
     ).toBeInTheDocument();
@@ -119,6 +111,8 @@ describe("AI Operations Workflow canonical operational detail", () => {
     expect(
       screen.getByRole("button", { name: "更多 Workflow 操作" }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "返回工作流列表" })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "返回 Workflow 列表" }),
+    ).toBeInTheDocument();
   });
 });
