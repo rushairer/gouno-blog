@@ -259,9 +259,7 @@ describe("WorkflowWorkspace", () => {
         "今日已有成功运行 Run #21，本次未重复执行",
       ),
     );
-    await user.click(
-      screen.getByRole("button", { name: "查看运行中心" }),
-    );
+    await user.click(screen.getByRole("button", { name: "查看运行中心" }));
     expect(onOpenRun).toHaveBeenCalledWith(7, 21);
     expect(screen.getByRole("button", { name: "运行" })).toBeEnabled();
     expect(onRun).toHaveBeenCalledWith(7, false, {});
@@ -371,9 +369,7 @@ describe("WorkflowWorkspace", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "运行失败：RSS source validation failed",
     );
-    await user.click(
-      screen.getByRole("button", { name: "查看运行中心" }),
-    );
+    await user.click(screen.getByRole("button", { name: "查看运行中心" }));
     expect(onOpenRun).toHaveBeenCalledWith(7, 22);
     expect(screen.queryByText(/运行成功/)).not.toBeInTheDocument();
   });
