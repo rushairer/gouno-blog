@@ -90,9 +90,7 @@ describe("AI Operations Workflow canonical operational detail", () => {
       screen.getByRole("button", { name: "打开 Workflow：Daily digest" }),
     );
 
-    expect(
-      screen.queryByRole("list", { name: "Workflow 列表" }),
-    ).toBeNull();
+    expect(screen.queryByRole("list", { name: "Workflow 列表" })).toBeNull();
     expect(screen.queryByTestId("ops-master-detail")).toBeNull();
     expect(
       screen.getByRole("region", { name: "Daily digest Workflow 概览" }),
