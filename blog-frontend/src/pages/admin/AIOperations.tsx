@@ -535,7 +535,10 @@ function AgentConsoleContent() {
         ) : null}
 
         {tab === "records" ? (
-          <div className="flex flex-col gap-5" aria-label={locale === "zh" ? "运行中心" : "Run center"}>
+          <div
+            className="flex flex-col gap-5"
+            aria-label={locale === "zh" ? "运行中心" : "Run center"}
+          >
             <OperationsPanelLead
               description={
                 locale === "zh"
