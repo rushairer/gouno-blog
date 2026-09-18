@@ -466,8 +466,8 @@ test("AI Operations top-level panels, Recent Runs and Run Center match Showcase"
     })
     .first();
   const productRecentRow = product
-    .getByRole("link", {
-      name: /查看最近 Run #/,
+    .getByRole("button", {
+      name: /打开最近 Run #/,
     })
     .first();
   const [showcaseRecentBox, productRecentBox] = await Promise.all([
