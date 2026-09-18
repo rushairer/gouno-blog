@@ -93,6 +93,11 @@ requireText(
   "sm:grid-cols-[7rem_7rem_minmax(7rem,0.7fr)_6rem_minmax(0,1.5fr)]",
   "Workflow Recent Runs must preserve the canonical five-column responsive anatomy",
 );
+requirePattern(
+  workflowWorkspace,
+  /recentRuns\.length[\s\S]{0,180}<div className="divide-y">/,
+  "Workflow Recent Runs must preserve the canonical divider container",
+);
 requireText(
   workflowWorkspace,
   "[&>span]:contents",
