@@ -702,10 +702,6 @@
     font-size: 13.5px;
   }
 
-  .agent-output [data-slot="code-block"] {
-    max-width: 100%;
-  }
-
   .agent-output > pre {
     white-space: pre-wrap;
     font-size: 12.5px;
