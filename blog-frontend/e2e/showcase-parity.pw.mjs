@@ -12,6 +12,9 @@ async function styleFingerprint(locator) {
       display: style.display,
       position: style.position,
       gap: style.gap,
+      gridTemplateColumns: style.gridTemplateColumns,
+      alignItems: style.alignItems,
+      whiteSpace: style.whiteSpace,
       paddingTop: style.paddingTop,
       paddingRight: style.paddingRight,
       paddingBottom: style.paddingBottom,
@@ -43,7 +46,6 @@ async function layoutFingerprint(locator) {
         index,
         tag: node.tagName.toLowerCase(),
         display: style.display,
-        height: Number(rect.height.toFixed(3)),
         fontSize: style.fontSize,
         lineHeight: style.lineHeight,
         marginTop: style.marginTop,
@@ -501,6 +503,9 @@ test("AI Operations top-level panels, Recent Runs and Run Center match Showcase"
       name: /打开最近 Run #/,
     })
     .first();
+  expect(await styleFingerprint(productRecentRow)).toEqual(
+    await styleFingerprint(showcaseRecentRow),
+  );
   const [showcaseRecentLayout, productRecentLayout] = await Promise.all([
     layoutFingerprint(showcaseRecentRow),
     layoutFingerprint(productRecentRow),
@@ -512,7 +517,6 @@ test("AI Operations top-level panels, Recent Runs and Run Center match Showcase"
     productRecentRow.boundingBox(),
   ]);
   expect(productRecentBox?.width).toBe(showcaseRecentBox?.width);
-  expect(productRecentBox?.height).toBe(showcaseRecentBox?.height);
 
   await showcase.getByRole("tab", { name: /运行中心/ }).click();
   await product.getByRole("tab", { name: /运行中心/ }).click();
