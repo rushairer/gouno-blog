@@ -487,6 +487,11 @@ test("AI Operations top-level panels, Recent Runs and Run Center match Showcase"
   await showcase.getByRole("tab", { name: /自动化/ }).click();
   await product.getByRole("tab", { name: /自动化/ }).click();
 
+  // Automation now uses list -> dedicated detail. Enter one Workflow on both
+  // surfaces before comparing detail-only regions such as Recent Runs.
+  await showcase.getByRole("button", { name: /打开 Workflow：/ }).first().click();
+  await product.getByRole("button", { name: /打开 Workflow：/ }).first().click();
+
   const showcaseRecent = showcase.getByRole("region", { name: "最近运行" });
   const productRecent = product.getByRole("region", { name: "最近运行" });
   expect(await styleFingerprint(productRecent)).toEqual(
