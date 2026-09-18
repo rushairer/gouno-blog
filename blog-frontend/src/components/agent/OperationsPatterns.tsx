@@ -101,23 +101,23 @@ export function OperationsObjectRow({
         ) : null}
         <span className="flex min-w-0 flex-1 flex-col gap-1.5">
           <span className="flex min-w-0 items-start justify-between gap-3">
-            <strong className="min-w-0 flex-1 text-sm font-semibold leading-5 text-foreground">
+            <strong className="min-w-0 flex-1 text-sm font-semibold leading-5 text-foreground [overflow-wrap:anywhere]">
               {title}
             </strong>
             {status ? <span className="shrink-0 pt-px">{status}</span> : null}
           </span>
           {meta ? (
-            <span className="block text-xs leading-4 text-muted-foreground">
+            <span className="block text-xs leading-4 text-muted-foreground [overflow-wrap:anywhere]">
               {meta}
             </span>
           ) : null}
           {summary ? (
-            <span className="block text-sm leading-5 text-foreground/80">
+            <span className="block text-sm leading-5 text-foreground/80 [overflow-wrap:anywhere]">
               {summary}
             </span>
           ) : null}
           {signals ? (
-            <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+            <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground [overflow-wrap:anywhere]">
               {signals}
             </span>
           ) : null}
