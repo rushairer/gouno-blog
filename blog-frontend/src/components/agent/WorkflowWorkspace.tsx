@@ -805,8 +805,10 @@ export function WorkflowWorkspace({
                   data-slot="ops-detail-stack"
                   className="flex min-w-0 flex-col gap-5"
                 >
-                  <section
-                    className="overflow-hidden rounded-lg border bg-background"
+                  <Card
+                    padding="none"
+                    className="overflow-hidden"
+                    role="region"
                     aria-label={
                       locale === "zh"
                         ? workflow.name + " Workflow 概览"
@@ -1035,10 +1037,12 @@ export function WorkflowWorkspace({
                         </div>
                       </div>
                     </div>
-                  </section>
+                  </Card>
 
-                  <section
-                    className="overflow-hidden rounded-lg border bg-background"
+                  <Card
+                    padding="none"
+                    className="overflow-hidden"
+                    role="region"
                     aria-label={locale === "zh" ? "最近运行" : "Recent runs"}
                   >
                     <div className="border-b px-6 py-4">
@@ -1133,11 +1137,13 @@ export function WorkflowWorkspace({
                         </Text>
                       </div>
                     )}
-                  </section>
+                  </Card>
 
                   <div className="grid gap-5 2xl:grid-cols-[minmax(0,1.05fr)_minmax(20rem,0.95fr)]">
-                    <section
-                      className="overflow-hidden rounded-lg border bg-background"
+                    <Card
+                      padding="none"
+                      className="overflow-hidden"
+                      role="region"
                       aria-label={
                         locale === "zh"
                           ? "Workflow 流程定义"
@@ -1187,11 +1193,12 @@ export function WorkflowWorkspace({
                           </li>
                         ))}
                       </ol>
-                    </section>
+                    </Card>
 
                     <div className="flex min-w-0 flex-col gap-5">
-                      <section
-                        className="rounded-lg border bg-background p-6"
+                      <Card
+                        padding="base"
+                        role="region"
                         aria-label={
                           locale === "zh"
                             ? "Workflow 运行边界"
@@ -1252,10 +1259,11 @@ export function WorkflowWorkspace({
                             </dd>
                           </div>
                         </dl>
-                      </section>
+                      </Card>
 
-                      <section
-                        className="rounded-lg border bg-background p-6"
+                      <Card
+                        padding="base"
+                        role="region"
                         aria-label={
                           locale === "zh"
                             ? "运行当前 Workflow"
@@ -1412,7 +1420,7 @@ export function WorkflowWorkspace({
                             </Feedback>
                           </div>
                         ) : null}
-                      </section>
+                      </Card>
                     </div>
                   </div>
 
