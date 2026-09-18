@@ -51,7 +51,6 @@ for (const path of panelConsumers) {
 }
 
 const railFiles = [
-  "src/components/agent/WorkflowWorkspace.tsx",
   "src/components/agent/WorkflowRunRecords.tsx",
   "src/components/agent/DecisionInboxWorkspace.tsx",
   "src/components/agent/AgentRunRecords.tsx",
@@ -83,6 +82,25 @@ for (const path of railFiles) {
 const workflowWorkspace = await source(
   "src/components/agent/WorkflowWorkspace.tsx",
 );
+requireText(
+  workflowWorkspace,
+  'data-slot="workflow-detail"',
+  "WorkflowWorkspace: selected Workflow must use a dedicated detail surface",
+);
+requireText(
+  workflowWorkspace,
+  "返回 Workflow 列表",
+  "WorkflowWorkspace: dedicated detail must expose an explicit return path",
+);
+if (
+  workflowWorkspace.includes('data-slot="ops-master-detail"') ||
+  workflowWorkspace.includes('data-slot="ops-rail"') ||
+  workflowWorkspace.includes('data-slot="ops-rail-body"')
+) {
+  failures.push(
+    "WorkflowWorkspace: retired master-detail rail must not return; Automation uses list -> dedicated detail",
+  );
+}
 if (workflowWorkspace.includes("section-stack")) {
   failures.push(
     "src/components/agent/WorkflowWorkspace.tsx: retired section-stack composition must not return",
