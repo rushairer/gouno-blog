@@ -1094,43 +1094,41 @@ export function WorkflowWorkspace({
                                   : "Open recent Run #") + run.id
                               }
                             >
-                                <strong className="text-sm">
-                                  Run #{run.id}
-                                </strong>
-                                <span>
-                                  <StatusPill
-                                    status={run.status}
-                                    locale={locale}
-                                  />
-                                </span>
-                                <Text size="xs" tone="muted">
-                                  {formatTime(startedAt)}
+                              <strong className="text-sm">Run #{run.id}</strong>
+                              <span>
+                                <StatusPill
+                                  status={run.status}
+                                  locale={locale}
+                                />
+                              </span>
+                              <Text size="xs" tone="muted">
+                                {formatTime(startedAt)}
+                              </Text>
+                              <Text size="xs" tone="muted">
+                                {durationSeconds
+                                  ? durationSeconds.toFixed(1) + " s"
+                                  : "—"}
+                              </Text>
+                              <span className="min-w-0">
+                                <Text size="sm" className="truncate">
+                                  {run.error_message ||
+                                    (locale === "zh"
+                                      ? "运行证据已记录"
+                                      : "Run evidence recorded")}
                                 </Text>
-                                <Text size="xs" tone="muted">
-                                  {durationSeconds
-                                    ? durationSeconds.toFixed(1) + " s"
-                                    : "—"}
+                                <Text
+                                  size="xs"
+                                  tone="muted"
+                                  className="mt-0.5"
+                                >
+                                  {(
+                                    (run.input_tokens || 0) +
+                                    (run.output_tokens || 0)
+                                  ).toLocaleString()}{" "}
+                                  Token
+                                  {run.dry_run ? " · Dry-run" : ""}
                                 </Text>
-                                <span className="min-w-0">
-                                  <Text size="sm" className="truncate">
-                                    {run.error_message ||
-                                      (locale === "zh"
-                                        ? "运行证据已记录"
-                                        : "Run evidence recorded")}
-                                  </Text>
-                                  <Text
-                                    size="xs"
-                                    tone="muted"
-                                    className="mt-0.5"
-                                  >
-                                    {(
-                                      (run.input_tokens || 0) +
-                                      (run.output_tokens || 0)
-                                    ).toLocaleString()}{" "}
-                                    Token
-                                    {run.dry_run ? " · Dry-run" : ""}
-                                  </Text>
-                                </span>
+                              </span>
                             </ButtonLink>
                           );
                         })}
