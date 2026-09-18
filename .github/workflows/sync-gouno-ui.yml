@@ -6,6 +6,8 @@ on:
     paths:
       - .github/workflows/sync-gouno-ui.yml
       - blog-frontend/scripts/check-ai-ops-showcase-parity.mjs
+      - blog-frontend/src/components/agent/OperationsPatterns.tsx
+      - blog-frontend/src/pages/admin/AIOperations.tsx
   workflow_dispatch:
     inputs:
       version:
