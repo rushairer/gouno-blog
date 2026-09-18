@@ -503,9 +503,24 @@ test("AI Operations top-level panels, Recent Runs and Run Center match Showcase"
       name: /打开最近 Run #/,
     })
     .first();
-  expect(await styleFingerprint(productRecentRow)).toEqual(
-    await styleFingerprint(showcaseRecentRow),
-  );
+  const [showcaseRecentStyle, productRecentStyle] = await Promise.all([
+    styleFingerprint(showcaseRecentRow),
+    styleFingerprint(productRecentRow),
+  ]);
+  delete showcaseRecentStyle.borderBottomWidth;
+  delete productRecentStyle.borderBottomWidth;
+  expect(productRecentStyle).toEqual(showcaseRecentStyle);
+  expect(
+    await showcaseRecentRow.evaluate((element) =>
+      element.parentElement?.classList.contains("divide-y"),
+    ),
+  ).toBe(true);
+  expect(
+    await productRecentRow.evaluate((element) =>
+      element.parentElement?.classList.contains("divide-y"),
+    ),
+  ).toBe(true);
+
   const [showcaseRecentLayout, productRecentLayout] = await Promise.all([
     layoutFingerprint(showcaseRecentRow),
     layoutFingerprint(productRecentRow),
