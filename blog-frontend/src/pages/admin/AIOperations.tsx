@@ -535,9 +535,8 @@ function AgentConsoleContent() {
         ) : null}
 
         {tab === "records" ? (
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-5" aria-label={locale === "zh" ? "运行中心" : "Run center"}>
             <OperationsPanelLead
-              title={locale === "zh" ? "运行证据中心" : "Run evidence center"}
               description={
                 locale === "zh"
                   ? "从一次 Run 追溯执行步骤、资源边界、人工交互、媒体候选、Tool Call 与持久化事件；这里是证据中心，不是 Workflow 配置页。"

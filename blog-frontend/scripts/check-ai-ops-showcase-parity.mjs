@@ -82,13 +82,26 @@ requireBoth(
   "Agent Run Center rail width",
 );
 
-for (const marker of ["运行证据中心", "Workflow 任务", "Agent 运行"]) {
+for (const marker of ["Workflow 任务", "Agent 运行"]) {
   if (!canonicalRecords.includes(marker)) {
     failures.push(`Canonical Run Center contract changed: missing ${marker}`);
   }
   if (!blogPage.includes(marker)) {
     failures.push(`Blog Run Center missing canonical marker: ${marker}`);
   }
+}
+
+if (!canonicalRecords.includes('aria-label="运行中心"')) {
+  failures.push("Canonical Run Center must expose the route-level 运行中心 label");
+}
+if (!blogPage.includes('"运行中心" : "Run center"')) {
+  failures.push("Blog Run Center must expose the canonical route-level label");
+}
+if (canonicalRecords.includes('title="运行证据中心"')) {
+  failures.push("Canonical Run Center must not echo the active tab with a panel title");
+}
+if (blogPage.includes('"运行证据中心"') || blogPage.includes('"Run evidence center"')) {
+  failures.push("Blog Run Center still echoes the active tab with a redundant panel title");
 }
 
 if (!canonicalContract.includes("TabPanelLead")) {
