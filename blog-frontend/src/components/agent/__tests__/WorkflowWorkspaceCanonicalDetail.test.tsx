@@ -79,14 +79,20 @@ describe("AI Operations Workflow canonical operational detail", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("list", { name: "Workflow 列表" })).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Daily digest Workflow 概览" })).toBeNull();
+    expect(
+      screen.getByRole("list", { name: "Workflow 列表" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: "Daily digest Workflow 概览" }),
+    ).toBeNull();
 
     fireEvent.click(
       screen.getByRole("button", { name: "打开 Workflow：Daily digest" }),
     );
 
-    expect(screen.queryByRole("list", { name: "Workflow 列表" })).toBeNull();
+    expect(
+      screen.queryByRole("list", { name: "Workflow 列表" }),
+    ).toBeNull();
     expect(screen.queryByTestId("ops-master-detail")).toBeNull();
     expect(
       screen.getByRole("region", { name: "Daily digest Workflow 概览" }),
