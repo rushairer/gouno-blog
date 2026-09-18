@@ -30,7 +30,6 @@ import type {
 import {
   Alert,
   Button,
-  ButtonLink,
   Card,
   Checkbox,
   CheckboxField,
@@ -241,6 +240,8 @@ export function WorkflowWorkspace({
   onPreflight,
   onRefresh,
   onSave,
+  onOpenRecords,
+  onOpenRun,
 }: {
   workflows: Workflow[];
   runs: WorkflowRun[];
@@ -263,6 +264,8 @@ export function WorkflowWorkspace({
   }>;
   onRefresh?: () => Promise<void>;
   onSave: (value: WorkflowValue) => Promise<void>;
+  onOpenRecords?: (workflowID: number) => void;
+  onOpenRun?: (workflowID: number, runID: number) => void;
 }) {
   const [editing, setEditing] = useState<Workflow | "new" | null>(null);
   const [inputByID, setInputByID] = useState<
@@ -842,16 +845,14 @@ export function WorkflowWorkspace({
                         className="flex flex-wrap items-center gap-2"
                         data-slot="workflow-management-actions"
                       >
-                        <ButtonLink
+                        <Button
                           size="small"
                           variant="outline"
-                          to={
-                            "/admin/ai-ops?tab=records&record=workflow&workflow=" +
-                            workflow.id
-                          }
+                          type="button"
+                          onClick={() => onOpenRecords?.(workflow.id)}
                         >
                           {locale === "zh" ? "运行记录" : "Run records"}
-                        </ButtonLink>
+                        </Button>
                         <Button
                           size="small"
                           variant="outline"
@@ -1049,16 +1050,14 @@ export function WorkflowWorkspace({
                             : "Review recent results here, then open the run center for full steps, resources, and human interaction evidence."
                         }
                         action={
-                          <ButtonLink
+                          <Button
                             size="small"
                             variant="ghost"
-                            to={
-                              "/admin/ai-ops?tab=records&record=workflow&workflow=" +
-                              workflow.id
-                            }
+                            type="button"
+                            onClick={() => onOpenRecords?.(workflow.id)}
                           >
                             {locale === "zh" ? "查看全部" : "View all"}
-                          </ButtonLink>
+                          </Button>
                         }
                       />
                     </div>
@@ -1077,20 +1076,18 @@ export function WorkflowWorkspace({
                               ? Math.max(0, (finish - start) / 1000)
                               : 0;
                           return (
-                            <ButtonLink
+                            <Button
                               key={run.id}
+                              type="button"
                               variant="ghost"
                               block
                               className="grid h-auto w-full min-w-0 grid-cols-1 gap-3 whitespace-normal rounded-none px-6 py-3.5 text-left font-normal transition-colors hover:bg-muted/35 sm:grid-cols-[7rem_7rem_minmax(7rem,0.7fr)_6rem_minmax(0,1.5fr)] sm:items-center [&>span]:contents"
-                              to={
-                                "/admin/ai-ops?tab=records&record=workflow&workflow=" +
-                                workflow.id +
-                                "&run=" +
-                                run.id
+                              onClick={() =>
+                                onOpenRun?.(workflow.id, run.id)
                               }
                               aria-label={
                                 (locale === "zh"
-                                  ? "查看最近 Run #"
+                                  ? "打开最近 Run #"
                                   : "Open recent Run #") + run.id
                               }
                             >
@@ -1129,7 +1126,7 @@ export function WorkflowWorkspace({
                                   {run.dry_run ? " · Dry-run" : ""}
                                 </Text>
                               </span>
-                            </ButtonLink>
+                            </Button>
                           );
                         })}
                       </div>
@@ -1400,21 +1397,22 @@ export function WorkflowWorkspace({
                               <div className="flex flex-wrap items-center justify-between gap-3">
                                 <span>{feedback.message}</span>
                                 {feedback.runID ? (
-                                  <ButtonLink
+                                  <Button
                                     variant="outline"
                                     className="shrink-0"
-                                    to={
-                                      "/admin/ai-ops?tab=records&record=workflow&workflow=" +
-                                      workflow.id +
-                                      "&run=" +
-                                      feedback.runID
+                                    type="button"
+                                    onClick={() =>
+                                      onOpenRun?.(
+                                        workflow.id,
+                                        feedback.runID as number,
+                                      )
                                     }
                                   >
                                     {runFeedbackActionLabel(
                                       feedback.action || "viewRun",
                                       locale,
                                     )}
-                                  </ButtonLink>
+                                  </Button>
                                 ) : null}
                               </div>
                             </Feedback>
