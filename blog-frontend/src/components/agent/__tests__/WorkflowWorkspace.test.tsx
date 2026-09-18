@@ -202,7 +202,7 @@ describe("WorkflowWorkspace", () => {
     );
   });
 
-  it("keeps the workflow rail visible while showing progress and success feedback", async () => {
+  it("keeps dedicated Workflow detail stable while showing progress and success feedback", async () => {
     const user = userEvent.setup();
     let complete!: (value: unknown) => void;
     const onRun = vi.fn().mockImplementation(
@@ -226,14 +226,19 @@ describe("WorkflowWorkspace", () => {
       />,
     );
 
-    const selectedWorkflow = screen.getByRole("button", {
+    const workflowEntry = screen.getByRole("button", {
       name: "打开 Workflow：Daily digest",
     });
-    expect(selectedWorkflow).toHaveAttribute("aria-pressed", "true");
     expect(
       screen.getByRole("searchbox", { name: "搜索 Workflow" }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "返回工作流列表" })).toBeNull();
+    await user.click(workflowEntry);
+    expect(
+      screen.getByRole("button", { name: "返回 Workflow 列表" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("searchbox", { name: "搜索 Workflow" }),
+    ).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "运行" }));
     expect(screen.getByRole("button", { name: "运行中…" })).toBeDisabled();
@@ -263,10 +268,12 @@ describe("WorkflowWorkspace", () => {
     expect(onOpenRun).toHaveBeenCalledWith(7, 21);
     expect(screen.getByRole("button", { name: "运行" })).toBeEnabled();
     expect(onRun).toHaveBeenCalledWith(7, false, {});
-    expect(selectedWorkflow).toHaveAttribute("aria-pressed", "true");
     expect(
-      screen.getByRole("searchbox", { name: "搜索 Workflow" }),
+      screen.getByRole("button", { name: "返回 Workflow 列表" }),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("searchbox", { name: "搜索 Workflow" }),
+    ).toBeNull();
   });
 
   it("shows an actionable failure message and restores the run button", async () => {
