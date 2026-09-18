@@ -43,10 +43,7 @@ export function toolResultSummary(value: unknown): string | null {
   return null;
 }
 
-export function agentRunSummary(
-  run: AgentRun,
-  locale: "en" | "zh",
-): string {
+export function agentRunSummary(run: AgentRun, locale: "en" | "zh"): string {
   const fallback =
     locale === "zh"
       ? "打开查看本次执行证据。"
