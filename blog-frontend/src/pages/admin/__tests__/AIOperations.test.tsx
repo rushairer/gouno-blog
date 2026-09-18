@@ -73,6 +73,7 @@ function responseFor(url: string) {
       },
     ];
   if (url === "/api/admin/ai-workflows") return [];
+  if (url === "/api/admin/ai-interactions") return [];
   if (url === "/api/admin/ai-workflow-runs") return [];
   if (url === "/api/admin/ai-workflow-metrics") return { workflows: [] };
   if (url === "/api/admin/ai-suggestions?status=all") return [];
@@ -109,10 +110,10 @@ describe("AIOperations", () => {
     renderConsole();
     expect(
       await screen.findByRole("heading", {
-        name: "Start with what you want to improve",
+        name: "What needs attention today",
       }),
     ).toBeInTheDocument();
-    await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(11));
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledTimes(12));
 
     expect(screen.getByRole("tab", { name: "Overview" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /To review/ })).toBeInTheDocument();
@@ -143,8 +144,9 @@ describe("AIOperations", () => {
                 id: 4,
                 run_id: 12,
                 tool_call_id: 8,
-                action_type: "create_draft",
+                action_type: "update_post",
                 target_type: "post",
+                target_id: 42,
                 status: "pending",
                 proposed_payload: {
                   title: "AI Daily Briefing",
@@ -152,6 +154,10 @@ describe("AIOperations", () => {
                   summary: "Today's verified AI news.",
                   tags: ["AI", "Daily news"],
                   content: "## Headlines\n\nA readable **Markdown** preview.",
+                },
+                before_snapshot: {
+                  title: "Existing briefing",
+                  slug: "existing-ai-daily",
                 },
                 expires_at: "2026-08-03T00:00:00Z",
                 created_at: "2026-08-02T00:00:00Z",
@@ -171,11 +177,11 @@ describe("AIOperations", () => {
       screen.getByRole("heading", { name: "AI Daily Briefing" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Today's verified AI news.")).toBeInTheDocument();
-    const technicalDetails = screen
-      .getByText("View technical details")
+    const previousRawData = screen
+      .getByText("View previous raw data")
       .closest("details");
-    await user.click(screen.getByText("View technical details"));
-    expect(technicalDetails).toHaveTextContent('"slug": "ai-daily-briefing"');
+    await user.click(screen.getByText("View previous raw data"));
+    expect(previousRawData).toHaveTextContent('"slug": "existing-ai-daily"');
   });
 
   it("keeps a failed approval actionable and retries the same proposal", async () => {
@@ -284,6 +290,9 @@ describe("AIOperations", () => {
       const url = input.toString();
       if (url === "/api/admin/agent-runs/77" && init?.method === "DELETE") {
         return Response.json({ data: null });
+      }
+      if (url === "/api/admin/agent-runs/77") {
+        return Response.json({ data: { run, tool_calls: [] } });
       }
       if (url.startsWith("/api/admin/agent-runs")) {
         return Response.json({ data: { list: [run] } });

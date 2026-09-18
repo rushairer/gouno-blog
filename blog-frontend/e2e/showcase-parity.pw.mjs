@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { installApiFixtures, setTheme } from "./mock-api.mjs";
+import { installAiFixtures } from "./ai-mock-api.mjs";
 
 const showcaseOrigin = "http://127.0.0.1:4174";
 
@@ -11,6 +12,9 @@ async function styleFingerprint(locator) {
       display: style.display,
       position: style.position,
       gap: style.gap,
+      gridTemplateColumns: style.gridTemplateColumns,
+      alignItems: style.alignItems,
+      whiteSpace: style.whiteSpace,
       paddingTop: style.paddingTop,
       paddingRight: style.paddingRight,
       paddingBottom: style.paddingBottom,
@@ -24,6 +28,36 @@ async function styleFingerprint(locator) {
       boxShadow: style.boxShadow,
       opacity: style.opacity,
     };
+  });
+}
+
+async function layoutFingerprint(locator) {
+  await expect(locator).toBeVisible();
+  return locator.evaluate((element) => {
+    const root = element;
+    const content = root.firstElementChild;
+    const nodes = content
+      ? [content, ...Array.from(content.children), ...Array.from(content.children).flatMap((child) => Array.from(child.children))]
+      : [];
+    return nodes.map((node, index) => {
+      const style = getComputedStyle(node);
+      const rect = node.getBoundingClientRect();
+      return {
+        index,
+        tag: node.tagName.toLowerCase(),
+        display: style.display,
+        fontSize: style.fontSize,
+        lineHeight: style.lineHeight,
+        marginTop: style.marginTop,
+        marginBottom: style.marginBottom,
+        paddingTop: style.paddingTop,
+        paddingBottom: style.paddingBottom,
+        borderTopWidth: style.borderTopWidth,
+        borderBottomWidth: style.borderBottomWidth,
+        minHeight: style.minHeight,
+        alignSelf: style.alignSelf,
+      };
+    });
   });
 }
 
@@ -64,9 +98,37 @@ async function openPair(
   return { context, showcase, product, unknown };
 }
 
+async function openAiPair(
+  browser,
+  fixtureId,
+  productPath,
+  theme = "light",
+  viewport = { width: 1440, height: 900 },
+) {
+  const context = await browser.newContext({ viewport });
+  const showcase = await context.newPage();
+  const product = await context.newPage();
+  await setTheme(showcase, theme);
+  await setTheme(product, theme);
+  await product.addInitScript(() => {
+    localStorage.setItem("gouno-blog:locale", "zh");
+  });
+  const { unknown, unexpectedWrites } = await installAiFixtures(product);
+  await showcase.goto(
+    `${showcaseOrigin}/?embedded=1&workspace=blog-admin&brand=blog-admin#${fixtureId}`,
+    { waitUntil: "networkidle" },
+  );
+  await product.goto(`http://127.0.0.1:4173${productPath}`, {
+    waitUntil: "networkidle",
+  });
+  return { context, showcase, product, unknown, unexpectedWrites };
+}
+
 async function expectNoHorizontalOverflow(page) {
   const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+    () =>
+      document.documentElement.scrollWidth >
+      document.documentElement.clientWidth + 1,
   );
   expect(overflow).toBe(false);
 }
@@ -108,7 +170,9 @@ async function expectEditorParity({
   );
 
   for (const slot of ["document-editor-canvas", "document-editor-inspector"]) {
-    expect(await styleFingerprint(productCard.locator(`[data-slot="${slot}"]`))).toEqual(
+    expect(
+      await styleFingerprint(productCard.locator(`[data-slot="${slot}"]`)),
+    ).toEqual(
       await styleFingerprint(showcaseCard.locator(`[data-slot="${slot}"]`)),
     );
   }
@@ -240,7 +304,10 @@ for (const theme of ["light", "dark"]) {
     );
 
     await showcase.getByRole("button", { name: "删除文章" }).first().click();
-    await product.getByRole("button", { name: /删除文章/ }).first().click();
+    await product
+      .getByRole("button", { name: /删除文章/ })
+      .first()
+      .click();
 
     const showcaseDialog = showcase.getByRole("dialog");
     const productDialog = product.getByRole("dialog");
@@ -388,3 +455,120 @@ for (const theme of ["light", "dark"]) {
     });
   }
 }
+
+test("AI Operations top-level panels, Recent Runs and Run Center match Showcase", async ({
+  browser,
+}, testInfo) => {
+  const { context, showcase, product, unknown, unexpectedWrites } =
+    await openAiPair(
+      browser,
+      "blog-admin-ai-operations",
+      "/admin/ai-ops",
+      "light",
+      { width: 1440, height: 1000 },
+    );
+
+  for (const tab of ["概览", "待我处理", "自动化", "运行中心"]) {
+    await showcase.getByRole("tab", { name: new RegExp(tab) }).click();
+    await product.getByRole("tab", { name: new RegExp(tab) }).click();
+
+    const showcaseLead = showcase.locator('[data-pattern="tab-panel-lead"]');
+    const productLead = product.locator('[data-pattern="tab-panel-lead"]');
+    await expect(showcaseLead).toHaveCount(1);
+    await expect(productLead).toHaveCount(1);
+    expect(await styleFingerprint(productLead)).toEqual(
+      await styleFingerprint(showcaseLead),
+    );
+
+    await expect(showcaseLead).not.toHaveText("");
+    await expect(productLead).not.toHaveText("");
+  }
+
+  await showcase.getByRole("tab", { name: /自动化/ }).click();
+  await product.getByRole("tab", { name: /自动化/ }).click();
+
+  const showcaseRecent = showcase.getByRole("region", { name: "最近运行" });
+  const productRecent = product.getByRole("region", { name: "最近运行" });
+  expect(await styleFingerprint(productRecent)).toEqual(
+    await styleFingerprint(showcaseRecent),
+  );
+
+  const showcaseRecentRow = showcase
+    .getByRole("button", {
+      name: /打开最近 Run #/,
+    })
+    .first();
+  const productRecentRow = product
+    .getByRole("button", {
+      name: /打开最近 Run #/,
+    })
+    .first();
+  const [showcaseRecentStyle, productRecentStyle] = await Promise.all([
+    styleFingerprint(showcaseRecentRow),
+    styleFingerprint(productRecentRow),
+  ]);
+  delete showcaseRecentStyle.borderBottomWidth;
+  delete productRecentStyle.borderBottomWidth;
+  expect(productRecentStyle).toEqual(showcaseRecentStyle);
+  expect(
+    await showcaseRecentRow.evaluate((element) =>
+      element.parentElement?.classList.contains("divide-y"),
+    ),
+  ).toBe(true);
+  expect(
+    await productRecentRow.evaluate((element) =>
+      element.parentElement?.classList.contains("divide-y"),
+    ),
+  ).toBe(true);
+
+  const [showcaseRecentLayout, productRecentLayout] = await Promise.all([
+    layoutFingerprint(showcaseRecentRow),
+    layoutFingerprint(productRecentRow),
+  ]);
+  expect(productRecentLayout).toEqual(showcaseRecentLayout);
+
+  const [showcaseRecentBox, productRecentBox] = await Promise.all([
+    showcaseRecentRow.boundingBox(),
+    productRecentRow.boundingBox(),
+  ]);
+  expect(productRecentBox?.width).toBe(showcaseRecentBox?.width);
+
+  await showcase.getByRole("tab", { name: /运行中心/ }).click();
+  await product.getByRole("tab", { name: /运行中心/ }).click();
+
+  const showcaseMasterDetail = showcase
+    .locator('[data-slot="ops-master-detail"]')
+    .first();
+  const productMasterDetail = product
+    .locator('[data-slot="ops-master-detail"]')
+    .first();
+  expect(await styleFingerprint(productMasterDetail)).toEqual(
+    await styleFingerprint(showcaseMasterDetail),
+  );
+
+  const showcaseRail = showcase.locator('[data-slot="ops-rail"]').first();
+  const productRail = product.locator('[data-slot="ops-rail"]').first();
+  const [showcaseRailBox, productRailBox] = await Promise.all([
+    showcaseRail.boundingBox(),
+    productRail.boundingBox(),
+  ]);
+  expect(productRailBox?.width).toBe(showcaseRailBox?.width);
+
+  await showcase.getByRole("button", { name: /Agent 运行/ }).click();
+  await product.getByRole("button", { name: /Agent 运行/ }).click();
+
+  const showcaseAgentRail = showcase.locator('[data-slot="ops-rail"]').first();
+  const productAgentRail = product.locator('[data-slot="ops-rail"]').first();
+  const [showcaseAgentRailBox, productAgentRailBox] = await Promise.all([
+    showcaseAgentRail.boundingBox(),
+    productAgentRail.boundingBox(),
+  ]);
+  expect(productAgentRailBox?.width).toBe(showcaseAgentRailBox?.width);
+
+  await expectNoHorizontalOverflow(showcase);
+  await expectNoHorizontalOverflow(product);
+  expect(unknown).toEqual([]);
+  expect(unexpectedWrites).toEqual([]);
+  await pairScreenshot(showcase, product, "ai-operations-parity", testInfo);
+  await context.close();
+});

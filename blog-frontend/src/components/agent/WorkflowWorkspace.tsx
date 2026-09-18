@@ -30,7 +30,6 @@ import type {
 import {
   Alert,
   Button,
-  ButtonLink,
   Card,
   Checkbox,
   CheckboxField,
@@ -58,6 +57,7 @@ import { WorkflowInputForm } from "./WorkflowInputForm";
 import {
   OperationsMeta,
   OperationsObjectRow,
+  OperationsPanelLead,
   OperationsRegionHeading,
   OperationsSummaryStrip,
 } from "./OperationsPatterns";
@@ -240,6 +240,8 @@ export function WorkflowWorkspace({
   onPreflight,
   onRefresh,
   onSave,
+  onOpenRecords,
+  onOpenRun,
 }: {
   workflows: Workflow[];
   runs: WorkflowRun[];
@@ -262,6 +264,8 @@ export function WorkflowWorkspace({
   }>;
   onRefresh?: () => Promise<void>;
   onSave: (value: WorkflowValue) => Promise<void>;
+  onOpenRecords?: (workflowID: number) => void;
+  onOpenRun?: (workflowID: number, runID: number) => void;
 }) {
   const [editing, setEditing] = useState<Workflow | "new" | null>(null);
   const [inputByID, setInputByID] = useState<
@@ -538,18 +542,36 @@ export function WorkflowWorkspace({
   };
   if (editing)
     return (
-      <WorkflowEditor
-        initial={editing === "new" ? undefined : editing}
-        labels={labels}
-        agents={agents}
-        tools={tools}
-        locale={locale}
-        onCancel={() => setEditing(null)}
-        onSave={async (value) => {
-          await onSave(value);
-          setEditing(null);
-        }}
-      />
+      <div className="flex flex-col gap-5">
+        <OperationsPanelLead
+          title={
+            editing === "new"
+              ? locale === "zh"
+                ? "创建自动化"
+                : "Create automation"
+              : locale === "zh"
+                ? "编辑自动化"
+                : "Edit automation"
+          }
+          description={
+            locale === "zh"
+              ? "编辑 Workflow 的输入契约、流程定义、执行计划与运行边界；保存形成新版本，运行证据继续进入运行中心。"
+              : "Edit the Workflow input contract, flow definition, schedule, and execution boundaries. Saving creates a new version while evidence remains in the run center."
+          }
+        />
+        <WorkflowEditor
+          initial={editing === "new" ? undefined : editing}
+          labels={labels}
+          agents={agents}
+          tools={tools}
+          locale={locale}
+          onCancel={() => setEditing(null)}
+          onSave={async (value) => {
+            await onSave(value);
+            setEditing(null);
+          }}
+        />
+      </div>
     );
 
   const formatTime = (value?: string) =>
@@ -559,22 +581,25 @@ export function WorkflowWorkspace({
 
   return (
     <div className="workflow-workspace flex flex-col gap-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <Text tone="muted" className="max-w-3xl">
-          {locale === "zh"
-            ? "Workflow 是持续运行的版本化自动化资产。左侧选择资产，右侧直接查看状态、边界、定义与人工执行。"
-            : "Workflows are versioned automation assets. Select one on the left to inspect status, boundaries, definition, and manual execution."}
-        </Text>
-        <Button
-          variant="solid"
-          color="primary"
-          type="button"
-          onClick={() => setEditing("new")}
-          icon={<Plus />}
-        >
-          {labels.add}
-        </Button>
-      </div>
+      <OperationsPanelLead
+        title={locale === "zh" ? "自动化资产" : "Automation assets"}
+        description={
+          locale === "zh"
+            ? "Workflow 是持续运行的版本化自动化资产。左侧选择资产，右侧直接查看健康度、调度、运行记录、定义与人工执行。"
+            : "Workflows are versioned automation assets. Select one on the left to inspect health, scheduling, run history, definition, and manual execution."
+        }
+        actions={
+          <Button
+            variant="solid"
+            color="primary"
+            type="button"
+            onClick={() => setEditing("new")}
+            icon={<Plus />}
+          >
+            {labels.add}
+          </Button>
+        }
+      />
 
       {selectedWorkflow ? (
         <div
@@ -820,16 +845,14 @@ export function WorkflowWorkspace({
                         className="flex flex-wrap items-center gap-2"
                         data-slot="workflow-management-actions"
                       >
-                        <ButtonLink
+                        <Button
                           size="small"
                           variant="outline"
-                          to={
-                            "/admin/ai-ops?tab=records&record=workflow&workflow=" +
-                            workflow.id
-                          }
+                          type="button"
+                          onClick={() => onOpenRecords?.(workflow.id)}
                         >
                           {locale === "zh" ? "运行记录" : "Run records"}
-                        </ButtonLink>
+                        </Button>
                         <Button
                           size="small"
                           variant="outline"
@@ -1027,16 +1050,14 @@ export function WorkflowWorkspace({
                             : "Review recent results here, then open the run center for full steps, resources, and human interaction evidence."
                         }
                         action={
-                          <ButtonLink
+                          <Button
                             size="small"
                             variant="ghost"
-                            to={
-                              "/admin/ai-ops?tab=records&record=workflow&workflow=" +
-                              workflow.id
-                            }
+                            type="button"
+                            onClick={() => onOpenRecords?.(workflow.id)}
                           >
                             {locale === "zh" ? "查看全部" : "View all"}
-                          </ButtonLink>
+                          </Button>
                         }
                       />
                     </div>
@@ -1055,63 +1076,51 @@ export function WorkflowWorkspace({
                               ? Math.max(0, (finish - start) / 1000)
                               : 0;
                           return (
-                            <ButtonLink
+                            <Button
                               key={run.id}
+                              type="button"
                               variant="ghost"
                               block
-                              className="h-auto w-full rounded-none px-6 py-3.5 text-left font-normal hover:bg-muted/35"
-                              to={
-                                "/admin/ai-ops?tab=records&record=workflow&workflow=" +
-                                workflow.id +
-                                "&run=" +
-                                run.id
-                              }
+                              className="grid h-auto w-full min-w-0 grid-cols-1 gap-3 whitespace-normal rounded-none px-6 py-3.5 text-left font-normal transition-colors hover:bg-muted/35 sm:grid-cols-[7rem_7rem_minmax(7rem,0.7fr)_6rem_minmax(0,1.5fr)] sm:items-center [&>span]:contents"
+                              onClick={() => onOpenRun?.(workflow.id, run.id)}
                               aria-label={
                                 (locale === "zh"
-                                  ? "查看最近 Run #"
+                                  ? "打开最近 Run #"
                                   : "Open recent Run #") + run.id
                               }
                             >
-                              <span className="grid w-full min-w-0 grid-cols-1 gap-3 sm:grid-cols-[6.5rem_7rem_minmax(8rem,0.8fr)_5rem_minmax(0,1.5fr)] sm:items-center">
-                                <strong className="text-sm">
-                                  Run #{run.id}
-                                </strong>
-                                <span>
-                                  <StatusPill
-                                    status={run.status}
-                                    locale={locale}
-                                  />
-                                </span>
-                                <Text size="xs" tone="muted">
-                                  {formatTime(startedAt)}
-                                </Text>
-                                <Text size="xs" tone="muted">
-                                  {durationSeconds
-                                    ? durationSeconds.toFixed(1) + " s"
-                                    : "—"}
-                                </Text>
-                                <span className="min-w-0">
-                                  <Text size="sm" className="truncate">
-                                    {run.error_message ||
-                                      (locale === "zh"
-                                        ? "运行证据已记录"
-                                        : "Run evidence recorded")}
-                                  </Text>
-                                  <Text
-                                    size="xs"
-                                    tone="muted"
-                                    className="mt-0.5"
-                                  >
-                                    {(
-                                      (run.input_tokens || 0) +
-                                      (run.output_tokens || 0)
-                                    ).toLocaleString()}{" "}
-                                    Token
-                                    {run.dry_run ? " · Dry-run" : ""}
-                                  </Text>
-                                </span>
+                              <strong className="text-sm">Run #{run.id}</strong>
+                              <span>
+                                <StatusPill
+                                  status={run.status}
+                                  locale={locale}
+                                />
                               </span>
-                            </ButtonLink>
+                              <Text size="xs" tone="muted">
+                                {formatTime(startedAt)}
+                              </Text>
+                              <Text size="xs" tone="muted">
+                                {durationSeconds
+                                  ? durationSeconds.toFixed(1) + " s"
+                                  : "—"}
+                              </Text>
+                              <span className="min-w-0">
+                                <Text size="sm" className="truncate">
+                                  {run.error_message ||
+                                    (locale === "zh"
+                                      ? "运行证据已记录"
+                                      : "Run evidence recorded")}
+                                </Text>
+                                <Text size="xs" tone="muted" className="mt-0.5">
+                                  {(
+                                    (run.input_tokens || 0) +
+                                    (run.output_tokens || 0)
+                                  ).toLocaleString()}{" "}
+                                  Token
+                                  {run.dry_run ? " · Dry-run" : ""}
+                                </Text>
+                              </span>
+                            </Button>
                           );
                         })}
                       </div>
@@ -1382,21 +1391,22 @@ export function WorkflowWorkspace({
                               <div className="flex flex-wrap items-center justify-between gap-3">
                                 <span>{feedback.message}</span>
                                 {feedback.runID ? (
-                                  <ButtonLink
+                                  <Button
                                     variant="outline"
                                     className="shrink-0"
-                                    to={
-                                      "/admin/ai-ops?tab=records&record=workflow&workflow=" +
-                                      workflow.id +
-                                      "&run=" +
-                                      feedback.runID
+                                    type="button"
+                                    onClick={() =>
+                                      onOpenRun?.(
+                                        workflow.id,
+                                        feedback.runID as number,
+                                      )
                                     }
                                   >
                                     {runFeedbackActionLabel(
                                       feedback.action || "viewRun",
                                       locale,
                                     )}
-                                  </ButtonLink>
+                                  </Button>
                                 ) : null}
                               </div>
                             </Feedback>

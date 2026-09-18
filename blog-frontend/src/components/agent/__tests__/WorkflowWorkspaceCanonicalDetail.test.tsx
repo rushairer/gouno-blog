@@ -105,11 +105,8 @@ describe("AI Operations Workflow canonical operational detail", () => {
       screen.getByRole("region", { name: "最近运行" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "查看最近 Run #21" }),
-    ).toHaveAttribute(
-      "href",
-      "/admin/ai-ops?tab=records&record=workflow&workflow=7&run=21",
-    );
+      screen.getByRole("button", { name: "打开最近 Run #21" }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("region", { name: "Workflow 流程定义" }),
     ).toBeInTheDocument();

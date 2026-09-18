@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { RecordsWorkspace } from "../AgentRunRecords";
+import { agentRunSummary, RecordsWorkspace } from "../AgentRunRecords";
 
 const agent = {
   id: 3,
@@ -29,12 +29,27 @@ const run = {
 };
 
 describe("RecordsWorkspace", () => {
+  it("keeps navigation summaries concise while preserving full Markdown for detail output", () => {
+    const summary = agentRunSummary(
+      {
+        ...run,
+        output_summary:
+          "## Long-form execution result\n\n" +
+          "LONG_UNBROKEN_DIAGNOSTIC_TOKEN_".repeat(40),
+      },
+      "zh",
+    );
+
+    expect(summary).toBe("Long-form execution result");
+    expect(summary).not.toContain("LONG_UNBROKEN_DIAGNOSTIC_TOKEN");
+  });
+
   it("renders Agent runs as a canonical list and preserves inspect/delete actions", async () => {
     const user = userEvent.setup();
     const onInspect = vi.fn();
     const onDelete = vi.fn();
 
-    render(
+    const { rerender } = render(
       <RecordsWorkspace
         locale="zh"
         runs={[run]}
@@ -51,8 +66,22 @@ describe("RecordsWorkspace", () => {
       screen.getByRole("list", { name: "Agent 运行列表" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "查看详情" }));
+    await user.click(screen.getByRole("button", { name: "查看 Run #9" }));
     expect(onInspect).toHaveBeenCalledWith(run);
+
+    rerender(
+      <RecordsWorkspace
+        locale="zh"
+        runs={[run]}
+        agents={[agent]}
+        selectedRun={{ run, tool_calls: [] }}
+        onInspect={onInspect}
+        onClearInspect={vi.fn()}
+        onDelete={onDelete}
+        formatDateTime={(value) => value}
+      />,
+    );
+
     await user.click(screen.getByRole("button", { name: "删除记录" }));
     expect(onDelete).toHaveBeenCalledWith(run);
   });

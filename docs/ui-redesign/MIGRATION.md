@@ -122,11 +122,11 @@ Automated checks do not replace authenticated browser regression. Entries remain
 | blog:components/MarkdownRenderer.tsx |  | migrated | verified |
 | blog-admin:components/agent/AdvancedWorkspace.tsx | /admin/ai-ops | not-started | not-run |
 | blog-admin:components/agent/AgentForm.tsx | /admin/ai-ops | not-started | not-run |
-| blog-admin:components/agent/AgentRunRecords.tsx | /admin/ai-ops | not-started | not-run |
+| blog-admin:components/agent/AgentRunRecords.tsx | /admin/ai-ops | migrated | verified |
 | blog-admin:components/agent/ArticlePreviewModal.tsx | /admin/ai-ops | not-started | not-run |
 | connector:components/agent/ConnectorWorkspace.tsx | /admin/ai-ops | not-started | not-run |
 | blog-admin:components/agent/EmbeddingForm.tsx | /admin/ai-ops | not-started | not-run |
-| blog-admin:components/agent/InboxWorkspace.tsx | /admin/ai-ops | not-started | not-run |
+| blog-admin:components/agent/InboxWorkspace.tsx | /admin/ai-ops | migrated | verified |
 | blog-admin:components/agent/OperationsWorkspace.tsx | /admin/ai-ops | not-started | not-run |
 | blog-admin:components/agent/ProposalPreview.tsx | /admin/ai-ops | not-started | not-run |
 | blog-admin:components/agent/ProviderForm.tsx | /admin/ai-ops | not-started | not-run |
@@ -137,9 +137,9 @@ Automated checks do not replace authenticated browser regression. Entries remain
 | blog-admin:components/agent/WorkflowMediaCandidates.tsx | /admin/ai-ops | not-started | not-run |
 | blog-admin:components/agent/WorkflowRunDetail.tsx | /admin/ai-ops | not-started | not-run |
 | blog-admin:components/agent/WorkflowRunOutput.tsx | /admin/ai-ops | not-started | not-run |
-| blog-admin:components/agent/WorkflowRunRecords.tsx | /admin/ai-ops | not-started | not-run |
-| blog-admin:components/agent/WorkflowWorkspace.tsx | /admin/ai-ops | not-started | not-run |
-| blog-admin:components/agent/WorkspaceOverview.tsx | /admin/ai-ops | not-started | not-run |
+| blog-admin:components/agent/WorkflowRunRecords.tsx | /admin/ai-ops | migrated | verified |
+| blog-admin:components/agent/WorkflowWorkspace.tsx | /admin/ai-ops | migrated | verified |
+| blog-admin:components/agent/WorkspaceOverview.tsx | /admin/ai-ops | migrated | verified |
 | blog-admin:components/agent/tools/DistributionDraftConfig.tsx | /admin/ai-ops | not-started | not-run |
 | blog-admin:components/agent/tools/KnowledgeSearchConfig.tsx | /admin/ai-ops | not-started | not-run |
 | blog-admin:components/agent/tools/LowEngagementConfig.tsx | /admin/ai-ops | not-started | not-run |

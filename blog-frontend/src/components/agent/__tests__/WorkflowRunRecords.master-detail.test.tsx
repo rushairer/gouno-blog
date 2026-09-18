@@ -58,7 +58,9 @@ describe("WorkflowRunRecords canonical master detail", () => {
   beforeEach(() => {
     window.history.replaceState(null, "", "/admin/ai-ops?tab=records");
     vi.mocked(apiFetch).mockReset();
-    vi.mocked(apiFetch).mockResolvedValue(Response.json({ data: [] }));
+    vi.mocked(apiFetch).mockImplementation(async () =>
+      Response.json({ data: [] }),
+    );
   });
 
   it("keeps the Run rail visible while switching execution evidence", async () => {
@@ -76,6 +78,8 @@ describe("WorkflowRunRecords canonical master detail", () => {
     const latestButton = within(rail).getByRole("button", { name: /Run #7/ });
     const failedButton = within(rail).getByRole("button", { name: /Run #6/ });
 
+    await waitFor(() => expect(latestButton).not.toBeDisabled());
+    await user.click(latestButton);
     await waitFor(() =>
       expect(
         screen.getByRole("heading", { level: 2, name: "Run #7 · AI 每日资讯" }),

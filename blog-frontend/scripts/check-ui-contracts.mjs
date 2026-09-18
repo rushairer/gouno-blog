@@ -89,7 +89,7 @@ function location(sourceFile, node) {
   );
 }
 
-function buttonChildIcon(node, sourceFile) {
+function buttonChildIcon(node, sourceFile, iconComponentNames) {
   let icon = null;
   function visitChild(child) {
     if (icon || !child) return;
@@ -102,7 +102,7 @@ function buttonChildIcon(node, sourceFile) {
       return;
     }
     const tag = jsxTagName(child, sourceFile);
-    if (tag && (tag === "svg" || /^[A-Z]/.test(tag))) {
+    if (tag && (tag === "svg" || iconComponentNames.has(tag))) {
       icon = child;
       return;
     }
@@ -282,6 +282,21 @@ function checkTsxContracts(name, source) {
     ts.ScriptKind.TSX,
   );
   const connectorHold = name === "components/agent/ConnectorWorkspace.tsx";
+  const iconComponentNames = new Set();
+  for (const statement of sourceFile.statements) {
+    if (
+      !ts.isImportDeclaration(statement) ||
+      !ts.isStringLiteral(statement.moduleSpecifier) ||
+      statement.moduleSpecifier.text !== "lucide-react"
+    ) {
+      continue;
+    }
+    const bindings = statement.importClause?.namedBindings;
+    if (!bindings || !ts.isNamedImports(bindings)) continue;
+    for (const element of bindings.elements) {
+      iconComponentNames.add(element.name.text);
+    }
+  }
 
   function visit(node) {
     if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) {
@@ -336,7 +351,7 @@ function checkTsxContracts(name, source) {
         ["Button", "ButtonLink", "ChoiceButton"].includes(tag)
       ) {
         for (const child of node.children) {
-          const icon = buttonChildIcon(child, sourceFile);
+          const icon = buttonChildIcon(child, sourceFile, iconComponentNames);
           if (icon) {
             failures.push(
               `${name}:${location(sourceFile, icon)} ${tag} icons must use the icon prop, not children`,

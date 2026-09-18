@@ -3,7 +3,9 @@ import { riskLabel, statusLabel } from "./labels";
 
 function statusColor(status: string): TagColor {
   if (
-    /^(success|published|completed|active|approved|delivered)$/.test(status)
+    /^(success|succeeded|published|completed|active|approved|delivered|executed|converted|resolved|selected)$/.test(
+      status,
+    )
   ) {
     return "success";
   }

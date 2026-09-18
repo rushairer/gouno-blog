@@ -222,6 +222,11 @@ export function WorkflowMediaCandidates({
                 <div className="workflow-candidate-fields">
                   <Select
                     size="small"
+                    aria-label={
+                      zh
+                        ? `图片位置 ${candidate.id}`
+                        : `Image placement ${candidate.id}`
+                    }
                     value={
                       candidatePlacement[candidate.id] ||
                       candidate.placement ||

@@ -125,14 +125,15 @@ describe("WorkflowRunRecords", () => {
     expect(screen.getByText(/"retry_count": 2/)).toBeInTheDocument();
     expect(screen.getAllByText("2.0 s")).toHaveLength(2);
     expect(screen.getByText("Structured AI inputs")).toBeInTheDocument();
-    expect(screen.getByText(/手选 · 目标/)).toBeInTheDocument();
+    expect(screen.getByText("手选")).toBeInTheDocument();
+    expect(screen.getByText("目标")).toBeInTheDocument();
     expect(
-      document.querySelector(".workflow-run-resources__list--single"),
+      screen.getByRole("region", { name: "运行证据" }),
     ).toBeInTheDocument();
     expect(
-      document.querySelector(".workflow-event-timeline"),
+      screen.getByRole("region", { name: "运行事件" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("image candidates created")).toBeInTheDocument();
+    expect(screen.getByText("image_candidates_created")).toBeInTheDocument();
   });
 
   it("shows persisted run events with the newest event first", async () => {
@@ -171,12 +172,12 @@ describe("WorkflowRunRecords", () => {
     await user.click(screen.getByRole("button", { name: /AI 每日资讯/ }));
 
     await waitFor(() =>
-      expect(screen.getByText("newest event")).toBeInTheDocument(),
+      expect(screen.getByText("newest_event")).toBeInTheDocument(),
     );
     const labels = Array.from(
-      document.querySelectorAll(".workflow-event-timeline summary strong"),
+      document.querySelectorAll('[aria-label="运行事件"] summary strong'),
     ).map((item) => item.textContent);
-    expect(labels).toEqual(["newest event", "older event"]);
+    expect(labels).toEqual(["newest_event", "older_event"]);
   });
 
   it("renders an AI output summary as readable Markdown and keeps raw data collapsible", async () => {
@@ -267,12 +268,10 @@ describe("WorkflowRunRecords", () => {
     await user.click(screen.getByRole("button", { name: /AI 每日资讯/ }));
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: "重试 sources 的全部失败项" }),
+        screen.getByRole("button", { name: "重试 sources" }),
       ).toBeInTheDocument(),
     );
-    await user.click(
-      screen.getByRole("button", { name: "重试 sources 的全部失败项" }),
-    );
+    await user.click(screen.getByRole("button", { name: "重试 sources" }));
     await waitFor(() =>
       expect(apiFetch).toHaveBeenCalledWith(
         "/api/admin/ai-workflow-runs/6/retry",
@@ -557,7 +556,7 @@ describe("WorkflowRunRecords", () => {
     );
 
     await user.click(screen.getByRole("button", { name: /AI 每日资讯/ }));
-    await user.click(screen.getByRole("combobox"));
+    await user.click(screen.getByRole("combobox", { name: "图片位置 15" }));
     await user.click(screen.getByRole("option", { name: "正文插图" }));
     await user.type(
       screen.getByPlaceholderText("锚点文字（小标题或关键句）"),
@@ -775,7 +774,8 @@ describe("WorkflowRunRecords", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "删除记录" }));
+    await user.click(screen.getByRole("button", { name: /AI 每日资讯/ }));
+    await user.click(await screen.findByRole("button", { name: "删除记录" }));
     const dialog = screen.getByRole("dialog", {
       name: "删除 Workflow 运行记录",
     });

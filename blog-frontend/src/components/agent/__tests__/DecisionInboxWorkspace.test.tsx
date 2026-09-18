@@ -63,7 +63,7 @@ describe("AI Operations unified decision workbench", () => {
     );
 
     expect(
-      screen.getByRole("heading", { level: 2, name: "待我处理" }),
+      screen.getByRole("heading", { level: 2, name: "人工决策队列" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("list", { name: "待处理列表" }),

@@ -32,7 +32,7 @@ function MarkdownCodeBlock({
 
   return (
     <CodeBlock
-      className="my-7"
+      className="my-7 max-w-full"
       code={code}
       language={language}
       copyLabel={t("copyCode")}

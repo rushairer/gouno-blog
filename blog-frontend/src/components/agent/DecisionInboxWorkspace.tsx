@@ -33,6 +33,7 @@ import {
 import { JsonPreview } from "./AgentRunRecords";
 import {
   OperationsObjectRow,
+  OperationsPanelLead,
   OperationsRegionHeading,
 } from "./OperationsPatterns";
 import { ProposalPreview } from "./ProposalPreview";
@@ -509,23 +510,23 @@ export function DecisionInboxWorkspace({
       className="flex flex-col gap-6"
       aria-label={zh ? "待我处理" : "Review queue"}
     >
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="max-w-3xl">
-          <Heading level={2}>{zh ? "待我处理" : "Review queue"}</Heading>
-          <Text className="mt-1" tone="muted">
-            {zh
-              ? "所有需要人工接力的审批、选择、运营建议和后续任务都在同一个工作台处理；完成后回到原来的 Run 或业务流程。"
-              : "Approvals, choices, operational proposals, and follow-up tasks that need a human handoff are handled in one workbench and return to their source run or business flow."}
-          </Text>
-        </div>
-        <Button
-          variant="outline"
-          icon={<RefreshCw />}
-          onClick={() => void onRefresh()}
-        >
-          {zh ? "刷新" : "Refresh"}
-        </Button>
-      </div>
+      <OperationsPanelLead
+        title={zh ? "人工决策队列" : "Human decision queue"}
+        description={
+          zh
+            ? "把审批、选择、确认、运营建议和后续编辑任务放进同一人工决策队列；完成后回到原来的 Run 或业务流程。"
+            : "Approvals, choices, confirmations, operational proposals, and editorial follow-up share one human decision queue before returning to the originating Run or business flow."
+        }
+        actions={
+          <Button
+            variant="outline"
+            icon={<RefreshCw />}
+            onClick={() => void onRefresh()}
+          >
+            {zh ? "刷新" : "Refresh"}
+          </Button>
+        }
+      />
 
       {actionError ? (
         <Alert
