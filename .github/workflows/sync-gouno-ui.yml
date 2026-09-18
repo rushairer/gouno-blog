@@ -13,7 +13,7 @@ on:
       version:
         description: Exact @gouno/ui version or npm dist-tag
         required: false
-        default: 0.4.5
+        default: 0.4.6
 
 permissions:
   contents: write
@@ -57,7 +57,7 @@ jobs:
           REQUESTED_VERSION: ${{ github.event.inputs.version }}
         run: |
           set -euo pipefail
-          REQUESTED_VERSION="${REQUESTED_VERSION:-0.4.5}"
+          REQUESTED_VERSION="${REQUESTED_VERSION:-0.4.6}"
           RESOLVED_VERSION="$(npm view "@gouno/ui@${REQUESTED_VERSION}" version)"
           test -n "$RESOLVED_VERSION"
           echo "version=$RESOLVED_VERSION" >> "$GITHUB_OUTPUT"
