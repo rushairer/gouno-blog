@@ -28,6 +28,37 @@ async function styleFingerprint(locator) {
   });
 }
 
+async function layoutFingerprint(locator) {
+  await expect(locator).toBeVisible();
+  return locator.evaluate((element) => {
+    const root = element;
+    const content = root.firstElementChild;
+    const nodes = content
+      ? [content, ...Array.from(content.children), ...Array.from(content.children).flatMap((child) => Array.from(child.children))]
+      : [];
+    return nodes.map((node, index) => {
+      const style = getComputedStyle(node);
+      const rect = node.getBoundingClientRect();
+      return {
+        index,
+        tag: node.tagName.toLowerCase(),
+        display: style.display,
+        height: Number(rect.height.toFixed(3)),
+        fontSize: style.fontSize,
+        lineHeight: style.lineHeight,
+        marginTop: style.marginTop,
+        marginBottom: style.marginBottom,
+        paddingTop: style.paddingTop,
+        paddingBottom: style.paddingBottom,
+        borderTopWidth: style.borderTopWidth,
+        borderBottomWidth: style.borderBottomWidth,
+        minHeight: style.minHeight,
+        alignSelf: style.alignSelf,
+      };
+    });
+  });
+}
+
 async function pairScreenshot(showcase, product, label, testInfo) {
   for (const [kind, page] of [
     ["showcase", showcase],
@@ -470,6 +501,12 @@ test("AI Operations top-level panels, Recent Runs and Run Center match Showcase"
       name: /打开最近 Run #/,
     })
     .first();
+  const [showcaseRecentLayout, productRecentLayout] = await Promise.all([
+    layoutFingerprint(showcaseRecentRow),
+    layoutFingerprint(productRecentRow),
+  ]);
+  expect(productRecentLayout).toEqual(showcaseRecentLayout);
+
   const [showcaseRecentBox, productRecentBox] = await Promise.all([
     showcaseRecentRow.boundingBox(),
     productRecentRow.boundingBox(),
