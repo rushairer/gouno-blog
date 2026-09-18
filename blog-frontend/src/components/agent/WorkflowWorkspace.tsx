@@ -1082,9 +1082,7 @@ export function WorkflowWorkspace({
                               variant="ghost"
                               block
                               className="grid h-auto w-full min-w-0 grid-cols-1 gap-3 whitespace-normal rounded-none px-6 py-3.5 text-left font-normal transition-colors hover:bg-muted/35 sm:grid-cols-[7rem_7rem_minmax(7rem,0.7fr)_6rem_minmax(0,1.5fr)] sm:items-center [&>span]:contents"
-                              onClick={() =>
-                                onOpenRun?.(workflow.id, run.id)
-                              }
+                              onClick={() => onOpenRun?.(workflow.id, run.id)}
                               aria-label={
                                 (locale === "zh"
                                   ? "打开最近 Run #"
@@ -1113,11 +1111,7 @@ export function WorkflowWorkspace({
                                       ? "运行证据已记录"
                                       : "Run evidence recorded")}
                                 </Text>
-                                <Text
-                                  size="xs"
-                                  tone="muted"
-                                  className="mt-0.5"
-                                >
+                                <Text size="xs" tone="muted" className="mt-0.5">
                                   {(
                                     (run.input_tokens || 0) +
                                     (run.output_tokens || 0)
