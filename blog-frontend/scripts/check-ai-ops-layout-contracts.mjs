@@ -90,6 +90,16 @@ requireText(
   "[&>span]:contents",
   "Workflow Recent Runs must flatten the Button/ButtonLink content wrapper like Showcase",
 );
+requireText(
+  workflowWorkspace,
+  "onOpenRun?.(workflow.id, run.id)",
+  "Workflow Recent Runs must delegate product routing through the canonical Button callback",
+);
+if (workflowWorkspace.includes("ButtonLink")) {
+  failures.push(
+    "WorkflowWorkspace: canonical automation actions and Recent Runs must not regress to ButtonLink anchor anatomy",
+  );
+}
 requirePattern(
   workflowWorkspace,
   /data-slot="ops-detail-stack"[\s\S]{0,180}className="[^"]*flex[^"]*flex-col[^"]*gap-5[^"]*"/,
