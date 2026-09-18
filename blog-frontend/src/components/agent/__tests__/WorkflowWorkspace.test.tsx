@@ -49,6 +49,15 @@ async function chooseOption(
   await user.click(screen.getByRole("option", { name: option }));
 }
 
+async function openWorkflowDetail(
+  user: ReturnType<typeof userEvent.setup>,
+  name = "Daily digest",
+) {
+  await user.click(
+    screen.getByRole("button", { name: new RegExp(`Workflow.*${name}`) }),
+  );
+}
+
 describe("WorkflowWorkspace", () => {
   beforeEach(() => {
     apiFetch.mockReset().mockResolvedValue(Response.json({ data: {} }));
@@ -181,6 +190,7 @@ describe("WorkflowWorkspace", () => {
       />,
     );
 
+    await openWorkflowDetail(user);
     await user.click(
       screen.getByRole("button", { name: "More Workflow actions" }),
     );
@@ -513,6 +523,7 @@ describe("WorkflowWorkspace", () => {
       />,
     );
 
+    await openWorkflowDetail(user);
     await user.click(screen.getByRole("button", { name: "编辑" }));
     await user.click(screen.getByRole("button", { name: "添加动态资源筛选" }));
     await chooseOption(user, "状态", "published");
@@ -580,6 +591,7 @@ describe("WorkflowWorkspace", () => {
       />,
     );
 
+    await openWorkflowDetail(user);
     await user.click(screen.getByRole("button", { name: "编辑" }));
     expect(
       screen.getByRole("combobox", { name: "批量绑定 Agent" }),
@@ -654,6 +666,7 @@ describe("WorkflowWorkspace", () => {
       />,
     );
 
+    await openWorkflowDetail(user);
     await user.click(screen.getByRole("button", { name: "编辑" }));
     expect(screen.getByText("content.find_related")).toBeInTheDocument();
     expect(
@@ -830,6 +843,7 @@ describe("WorkflowWorkspace", () => {
       />,
     );
 
+    await openWorkflowDetail(user);
     await user.click(screen.getByRole("button", { name: "编辑" }));
     expect(screen.getByLabelText("枚举值")).toHaveValue("image_brief");
     expect(screen.getByLabelText("默认值")).toHaveValue("image_brief");
