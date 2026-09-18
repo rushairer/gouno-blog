@@ -88,7 +88,9 @@ export default function Home() {
           {posts.length > 1 ? (
             <section className="mt-10">
               <div className="mb-2 flex items-center justify-between gap-4">
-                <Heading level={2} variant="subsection">精选文章</Heading>
+                <Heading level={2} variant="subsection">
+                  精选文章
+                </Heading>
                 <Link
                   className="inline-flex items-center gap-2 type-body-sm text-primary"
                   to="/articles"
@@ -108,10 +110,16 @@ export default function Home() {
         <aside className="flex flex-col gap-8 lg:sticky lg:top-24">
           {categories.length || tagSummaries.length ? (
             <section>
-              <Heading level={2} variant="label" className="mb-5">主题索引</Heading>
+              <Heading level={2} variant="label" className="mb-5">
+                主题索引
+              </Heading>
               {categories.length ? (
                 <div className="flex flex-col gap-3">
-                  <Heading level={3} variant="micro" className="text-muted-foreground">
+                  <Heading
+                    level={3}
+                    variant="micro"
+                    className="text-muted-foreground"
+                  >
                     核心分类
                   </Heading>
                   {categories.map((category) => (
@@ -130,7 +138,11 @@ export default function Home() {
               ) : null}
               {tagSummaries.length ? (
                 <div className="mt-6">
-                  <Heading level={3} variant="micro" className="mb-3 text-muted-foreground">
+                  <Heading
+                    level={3}
+                    variant="micro"
+                    className="mb-3 text-muted-foreground"
+                  >
                     热门标签
                   </Heading>
                   <div className="flex flex-wrap gap-2">
@@ -155,7 +167,9 @@ export default function Home() {
             <span className="mb-4 flex size-10 items-center justify-center rounded-md bg-accent type-weight-semibold text-primary">
               {authorInitials(site.author_name)}
             </span>
-            <Heading level={2} variant="compact">{site.author_name}</Heading>
+            <Heading level={2} variant="compact">
+              {site.author_name}
+            </Heading>
             <p className="mt-2 type-reading-sm text-muted-foreground">
               {site.author_bio}
             </p>
@@ -179,7 +193,9 @@ export default function Home() {
 
       {posts.length ? (
         <section>
-          <Heading level={2} variant="subsection" className="mb-2">最新文章</Heading>
+          <Heading level={2} variant="subsection" className="mb-2">
+            最新文章
+          </Heading>
           <div className="grid gap-x-10 md:grid-cols-2">
             {posts.slice(0, 8).map((post) => (
               <ArticleTeaser key={post.id} post={post} compact />
@@ -190,7 +206,9 @@ export default function Home() {
 
       <section className="flex flex-col justify-between gap-5 border-t pt-8 sm:flex-row sm:items-center">
         <div>
-          <Heading level={2} variant="subsection">订阅更新</Heading>
+          <Heading level={2} variant="subsection">
+            订阅更新
+          </Heading>
           <p className="mt-2 type-body-sm text-muted-foreground">
             每当有新文章发布，都可以通过你熟悉的方式收到。
           </p>
