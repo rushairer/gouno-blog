@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { RecordsWorkspace } from "../AgentRunRecords";
+import { agentRunSummary, RecordsWorkspace } from "../AgentRunRecords";
 
 const agent = {
   id: 3,
@@ -29,6 +29,21 @@ const run = {
 };
 
 describe("RecordsWorkspace", () => {
+  it("keeps navigation summaries concise while preserving full Markdown for detail output", () => {
+    const summary = agentRunSummary(
+      {
+        ...run,
+        output_summary:
+          "## Long-form execution result\n\n" +
+          "LONG_UNBROKEN_DIAGNOSTIC_TOKEN_".repeat(40),
+      },
+      "zh",
+    );
+
+    expect(summary).toBe("Long-form execution result");
+    expect(summary).not.toContain("LONG_UNBROKEN_DIAGNOSTIC_TOKEN");
+  });
+
   it("renders Agent runs as a canonical list and preserves inspect/delete actions", async () => {
     const user = userEvent.setup();
     const onInspect = vi.fn();
