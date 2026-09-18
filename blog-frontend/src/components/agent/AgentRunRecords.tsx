@@ -63,9 +63,7 @@ export function agentRunSummary(run: AgentRun, locale: "en" | "zh"): string {
     .replaceAll(String.fromCharCode(96), "")
     .trim();
   const summary = plain || fallback;
-  return summary.length > 160
-    ? summary.slice(0, 159).trimEnd() + "…"
-    : summary;
+  return summary.length > 160 ? summary.slice(0, 159).trimEnd() + "…" : summary;
 }
 
 type AuditCheck = { code?: string; severity?: string; message?: string };
