@@ -1094,7 +1094,6 @@ export function WorkflowWorkspace({
                                   : "Open recent Run #") + run.id
                               }
                             >
-                              <span className="contents">
                                 <strong className="text-sm">
                                   Run #{run.id}
                                 </strong>
@@ -1132,7 +1131,6 @@ export function WorkflowWorkspace({
                                     {run.dry_run ? " · Dry-run" : ""}
                                   </Text>
                                 </span>
-                              </span>
                             </ButtonLink>
                           );
                         })}
