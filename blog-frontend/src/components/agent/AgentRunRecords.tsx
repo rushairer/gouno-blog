@@ -43,6 +43,34 @@ export function toolResultSummary(value: unknown): string | null {
   return null;
 }
 
+export function agentRunSummary(
+  run: AgentRun,
+  locale: "en" | "zh",
+): string {
+  const fallback =
+    locale === "zh"
+      ? "打开查看本次执行证据。"
+      : "Open to inspect this run's execution evidence.";
+  const source = run.error_message?.trim() || run.output_summary?.trim();
+  if (!source) return fallback;
+
+  const firstMeaningfulLine =
+    source
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .find(Boolean) || source;
+  const plain = firstMeaningfulLine
+    .replace(/^#{1,6}\s+/, "")
+    .replace(/^(?:[-*+]\s+|\d+\.\s+)/, "")
+    .replace(/[*_~]/g, "")
+    .replaceAll(String.fromCharCode(96), "")
+    .trim();
+  const summary = plain || fallback;
+  return summary.length > 160
+    ? summary.slice(0, 159).trimEnd() + "…"
+    : summary;
+}
+
 type AuditCheck = { code?: string; severity?: string; message?: string };
 type AuditResult = {
   post_id?: number;
@@ -682,13 +710,7 @@ export function RecordsWorkspace({
                     title={`Run #${run.id}`}
                     status={<StatusPill status={run.status} locale={locale} />}
                     meta={`${agentMap.get(run.agent_id)?.name || `Agent #${run.agent_id}`} · ${formatDateTime(run.started_at || run.created_at)}`}
-                    summary={
-                      run.error_message ||
-                      run.output_summary ||
-                      (zh
-                        ? "打开查看本次执行证据。"
-                        : "Open to inspect this run's execution evidence.")
-                    }
+                    summary={agentRunSummary(run, locale)}
                     signals={
                       <>
                         <OperationsMeta>
@@ -738,11 +760,7 @@ export function RecordsWorkspace({
                     />
                   </div>
                   <Text className="mt-2 max-w-4xl" tone="muted">
-                    {selectedRun.run.error_message ||
-                      selectedRun.run.output_summary ||
-                      (zh
-                        ? "本次 Agent Run 的输出与执行证据。"
-                        : "Output and execution evidence for this Agent Run.")}
+                    {agentRunSummary(selectedRun.run, locale)}
                   </Text>
                   <Text size="xs" tone="muted" className="mt-1">
                     {selectedRun.run.provider}
