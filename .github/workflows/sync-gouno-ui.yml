@@ -1,4 +1,5 @@
 name: Update Gouno UI Registry Dependency
+# FI-001 consumer certification target: 0.4.6
 
 on:
   push:
