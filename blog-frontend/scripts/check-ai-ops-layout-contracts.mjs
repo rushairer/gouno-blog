@@ -27,6 +27,14 @@ requireText(
   "AI Operations panel lead must expose the shared semantic pattern marker",
 );
 
+const objectRowOverflowGuards =
+  patterns.match(/\[overflow-wrap:anywhere\]/g)?.length ?? 0;
+if (objectRowOverflowGuards < 4) {
+  failures.push(
+    "OperationsObjectRow: variable title/meta/summary/signals must contain unbroken AI evidence without widening the rail",
+  );
+}
+
 const panelConsumers = [
   "src/components/agent/WorkspaceOverview.tsx",
   "src/components/agent/DecisionInboxWorkspace.tsx",
@@ -109,6 +117,20 @@ requirePattern(
   workflowWorkspace,
   /<FormLayout[\s\S]{0,180}data-slot="workflow-editor-form"[\s\S]{0,180}className="workflow-editor-form"/,
   "Workflow editor must expose its canonical form composition boundary",
+);
+
+const agentRunRecords = await source(
+  "src/components/agent/AgentRunRecords.tsx",
+);
+requireText(
+  agentRunRecords,
+  "summary={agentRunSummary(run, locale)}",
+  "Agent Run rail must use a bounded navigation summary instead of full AI output",
+);
+requireText(
+  agentRunRecords,
+  "{agentRunSummary(selectedRun.run, locale)}",
+  "Agent Run detail header must keep full Markdown inside the AI output region",
 );
 
 for (const path of [
