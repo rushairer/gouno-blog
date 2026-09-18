@@ -173,9 +173,16 @@ export function OperationsRegionHeading({
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
       <div className="min-w-0">
-        <Heading level={3} variant="label">{title}</Heading>
+        <Heading level={3} variant="label">
+          {title}
+        </Heading>
         {description ? (
-          <Text size="xs" tone="muted" leading="relaxed" className="mt-1 max-w-3xl">
+          <Text
+            size="xs"
+            tone="muted"
+            leading="relaxed"
+            className="mt-1 max-w-3xl"
+          >
             {description}
           </Text>
         ) : null}
