@@ -211,6 +211,7 @@ describe("WorkflowWorkspace", () => {
           complete = resolve;
         }),
     );
+    const onOpenRun = vi.fn();
     render(
       <WorkflowWorkspace
         workflows={[workflow]}
@@ -221,6 +222,7 @@ describe("WorkflowWorkspace", () => {
         onMutate={vi.fn()}
         onRun={onRun}
         onSave={vi.fn()}
+        onOpenRun={onOpenRun}
       />,
     );
 
@@ -257,10 +259,10 @@ describe("WorkflowWorkspace", () => {
         "今日已有成功运行 Run #21，本次未重复执行",
       ),
     );
-    expect(screen.getByRole("link", { name: "查看运行中心" })).toHaveAttribute(
-      "href",
-      "/admin/ai-ops?tab=records&record=workflow&workflow=7&run=21",
+    await user.click(
+      screen.getByRole("button", { name: "查看运行中心" }),
     );
+    expect(onOpenRun).toHaveBeenCalledWith(7, 21);
     expect(screen.getByRole("button", { name: "运行" })).toBeEnabled();
     expect(onRun).toHaveBeenCalledWith(7, false, {});
     expect(selectedWorkflow).toHaveAttribute("aria-pressed", "true");
@@ -336,6 +338,7 @@ describe("WorkflowWorkspace", () => {
 
   it("does not report success when the backend returns a failed run", async () => {
     const user = userEvent.setup();
+    const onOpenRun = vi.fn();
     const onRun = vi.fn().mockResolvedValue({
       id: 22,
       workflow_id: 7,
@@ -358,6 +361,7 @@ describe("WorkflowWorkspace", () => {
         onMutate={vi.fn()}
         onRun={onRun}
         onSave={vi.fn()}
+        onOpenRun={onOpenRun}
       />,
     );
 
@@ -367,15 +371,16 @@ describe("WorkflowWorkspace", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "运行失败：RSS source validation failed",
     );
-    expect(screen.getByRole("link", { name: "查看运行中心" })).toHaveAttribute(
-      "href",
-      "/admin/ai-ops?tab=records&record=workflow&workflow=7&run=22",
+    await user.click(
+      screen.getByRole("button", { name: "查看运行中心" }),
     );
+    expect(onOpenRun).toHaveBeenCalledWith(7, 22);
     expect(screen.queryByText(/运行成功/)).not.toBeInTheDocument();
   });
 
   it("links a run-owned image task directly to its continuation workspace without approval", async () => {
     const user = userEvent.setup();
+    const onOpenRun = vi.fn();
     const onRun = vi.fn().mockResolvedValue({
       id: 31,
       workflow_id: 7,
@@ -397,22 +402,21 @@ describe("WorkflowWorkspace", () => {
         onMutate={vi.fn()}
         onRun={onRun}
         onSave={vi.fn()}
+        onOpenRun={onOpenRun}
       />,
     );
 
     await user.click(screen.getByRole("button", { name: /Daily digest/ }));
     await user.click(screen.getByRole("button", { name: "运行" }));
 
-    const link = await screen.findByRole("link", {
+    const continueButton = await screen.findByRole("button", {
       name: "继续生成、选择和应用图片",
     });
     expect(screen.getByRole("status")).toHaveTextContent(
       "无需前往“待我处理”审批",
     );
-    expect(link).toHaveAttribute(
-      "href",
-      "/admin/ai-ops?tab=records&record=workflow&workflow=7&run=31",
-    );
+    await user.click(continueButton);
+    expect(onOpenRun).toHaveBeenCalledWith(7, 31);
   });
 
   it("does not let a successful dry-run hide a failed live run in detail view", async () => {
