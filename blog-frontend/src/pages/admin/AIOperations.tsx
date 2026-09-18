@@ -165,6 +165,20 @@ function AgentConsoleContent() {
     window.history.replaceState(null, "", url);
   };
 
+  const openWorkflowRecords = (workflowID: number, runID?: number) => {
+    setRecordType("workflow");
+    setSelectedRun(null);
+    inspectedAgentRunFromURL.current = false;
+    setTab("records");
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", "records");
+    url.searchParams.set("record", "workflow");
+    url.searchParams.set("workflow", String(workflowID));
+    if (runID) url.searchParams.set("run", String(runID));
+    else url.searchParams.delete("run");
+    window.history.replaceState(null, "", url);
+  };
+
   const load = useCallback(async () => {
     const loadWorkflowRuns = async () => {
       try {
@@ -495,6 +509,10 @@ function AgentConsoleContent() {
             onPreflight={preflightWorkflow}
             onRefresh={refresh}
             onSave={saveWorkflow}
+            onOpenRecords={(workflowID) => openWorkflowRecords(workflowID)}
+            onOpenRun={(workflowID, runID) =>
+              openWorkflowRecords(workflowID, runID)
+            }
           />
         ) : null}
 
