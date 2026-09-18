@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, GitBranch, Mail, Rss } from "lucide-react";
-import { Alert, Button, Empty, Skeleton } from "@gouno/ui/core";
+import { Alert, Button, Empty, Heading, Skeleton } from "@gouno/ui/core";
 import { DEFAULT_SITE_SETTINGS, authorInitials } from "../config/site-defaults";
 import { ArticleTeaser } from "../components/reading/ArticleTeaser";
 import { usePublicHome } from "../features/public/usePublicHome";
@@ -34,10 +34,14 @@ export default function Home() {
     <div className="flex flex-col gap-12 md:gap-16">
       <section className="grid items-center gap-8 border-b pb-10 md:grid-cols-[minmax(0,1fr)_320px]">
         <div>
-          <h1 className="max-w-3xl whitespace-pre-line text-3xl font-semibold leading-tight tracking-tight md:text-[40px]">
+          <Heading
+            level={1}
+            variant="display"
+            className="max-w-3xl whitespace-pre-line"
+          >
             {site.hero_title || DEFAULT_SITE_SETTINGS.hero_title}
-          </h1>
-          <p className="mt-5 max-w-2xl text-base leading-8 text-muted-foreground">
+          </Heading>
+          <p className="mt-5 max-w-2xl type-reading-lead text-muted-foreground">
             {site.hero_description ?? DEFAULT_SITE_SETTINGS.hero_description}
           </p>
         </div>
@@ -51,7 +55,7 @@ export default function Home() {
               className="aspect-[4/3] w-full rounded-lg object-cover"
             />
             {site.hero_image_caption ? (
-              <figcaption className="mt-2 text-xs text-muted-foreground">
+              <figcaption className="mt-2 type-caption text-muted-foreground">
                 {site.hero_image_caption}
               </figcaption>
             ) : null}
@@ -84,9 +88,9 @@ export default function Home() {
           {posts.length > 1 ? (
             <section className="mt-10">
               <div className="mb-2 flex items-center justify-between gap-4">
-                <h2 className="text-lg font-semibold">精选文章</h2>
+                <Heading level={2} variant="subsection">精选文章</Heading>
                 <Link
-                  className="inline-flex items-center gap-2 text-sm text-primary"
+                  className="inline-flex items-center gap-2 type-body-sm text-primary"
                   to="/articles"
                 >
                   查看全部
@@ -104,18 +108,20 @@ export default function Home() {
         <aside className="flex flex-col gap-8 lg:sticky lg:top-24">
           {categories.length || tagSummaries.length ? (
             <section>
-              <h2 className="mb-5 text-sm font-semibold">主题索引</h2>
+              <Heading level={2} variant="label" className="mb-5">主题索引</Heading>
               {categories.length ? (
                 <div className="flex flex-col gap-3">
-                  <h3 className="text-xs text-muted-foreground">核心分类</h3>
+                  <Heading level={3} variant="micro" className="text-muted-foreground">
+                    核心分类
+                  </Heading>
                   {categories.map((category) => (
                     <Link
-                      className="flex items-center justify-between gap-3 text-sm hover:text-primary"
+                      className="flex items-center justify-between gap-3 type-body-sm hover:text-primary"
                       key={category.id}
                       to={`/categories/${encodeURIComponent(category.slug)}`}
                     >
                       <span>{category.name}</span>
-                      <span className="text-xs tabular-nums text-muted-foreground">
+                      <span className="type-caption tabular-nums text-muted-foreground">
                         {category.post_count || 0} 篇
                       </span>
                     </Link>
@@ -124,15 +130,15 @@ export default function Home() {
               ) : null}
               {tagSummaries.length ? (
                 <div className="mt-6">
-                  <h3 className="mb-3 text-xs text-muted-foreground">
+                  <Heading level={3} variant="micro" className="mb-3 text-muted-foreground">
                     热门标签
-                  </h3>
+                  </Heading>
                   <div className="flex flex-wrap gap-2">
                     {tagSummaries.slice(0, 16).map(({ name, post_count }) => (
                       <Link
                         key={name}
                         to={`/tags/${encodeURIComponent(name)}`}
-                        className="rounded-md bg-muted px-2 py-1 text-xs hover:bg-accent"
+                        className="rounded-md bg-muted px-2 py-1 type-caption hover:bg-accent"
                       >
                         {name}{" "}
                         <span className="text-muted-foreground">
@@ -146,14 +152,14 @@ export default function Home() {
             </section>
           ) : null}
           <section className="border-t pt-6">
-            <span className="mb-4 flex size-10 items-center justify-center rounded-md bg-accent font-semibold text-primary">
+            <span className="mb-4 flex size-10 items-center justify-center rounded-md bg-accent type-weight-semibold text-primary">
               {authorInitials(site.author_name)}
             </span>
-            <h2 className="font-semibold">{site.author_name}</h2>
-            <p className="mt-2 text-sm leading-7 text-muted-foreground">
+            <Heading level={2} variant="compact">{site.author_name}</Heading>
+            <p className="mt-2 type-reading-sm text-muted-foreground">
               {site.author_bio}
             </p>
-            <div className="mt-4 flex flex-wrap gap-4 text-sm text-primary">
+            <div className="mt-4 flex flex-wrap gap-4 type-body-sm text-primary">
               <Link to="/about">关于本站</Link>
               {site.github_url ? (
                 <a
@@ -173,7 +179,7 @@ export default function Home() {
 
       {posts.length ? (
         <section>
-          <h2 className="mb-2 text-lg font-semibold">最新文章</h2>
+          <Heading level={2} variant="subsection" className="mb-2">最新文章</Heading>
           <div className="grid gap-x-10 md:grid-cols-2">
             {posts.slice(0, 8).map((post) => (
               <ArticleTeaser key={post.id} post={post} compact />
@@ -184,12 +190,12 @@ export default function Home() {
 
       <section className="flex flex-col justify-between gap-5 border-t pt-8 sm:flex-row sm:items-center">
         <div>
-          <h2 className="text-lg font-semibold">订阅更新</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <Heading level={2} variant="subsection">订阅更新</Heading>
+          <p className="mt-2 type-body-sm text-muted-foreground">
             每当有新文章发布，都可以通过你熟悉的方式收到。
           </p>
         </div>
-        <div className="flex gap-5 text-sm text-primary">
+        <div className="flex gap-5 type-body-sm text-primary">
           <a
             className="inline-flex items-center gap-2"
             href={site.rss_url || "/feed.xml"}

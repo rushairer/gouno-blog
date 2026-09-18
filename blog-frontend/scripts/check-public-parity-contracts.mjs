@@ -195,6 +195,38 @@ for (const [name, source] of sources) {
 }
 
 {
+  const name = "pages/Home.tsx";
+  const source = sources.get(name);
+  const file = parse(name, source);
+
+  if (!importsFrom(file, "@gouno/ui/core", "Heading")) {
+    failures.push(`${name}: Public Home headings must use Core Heading`);
+  }
+  if (/<h[1-6]\b/.test(source)) {
+    failures.push(`${name}: Public Home must not recreate heading typography with raw h1-h6`);
+  }
+  if (!source.includes('variant="display"') || !source.includes("type-reading-lead")) {
+    failures.push(`${name}: Home must use the canonical display Typography role and reading lead rhythm`);
+  }
+}
+
+{
+  const name = "components/reading/ArticleTeaser.tsx";
+  const source = sources.get(name);
+  const file = parse(name, source);
+
+  if (!importsFrom(file, "@gouno/ui/core", "Heading")) {
+    failures.push(`${name}: Article teasers must use Core Heading`);
+  }
+  if (/<h[1-6]\b/.test(source)) {
+    failures.push(`${name}: Article teasers must not recreate heading typography with raw h1-h6`);
+  }
+  if (!source.includes('featured ? "hero" : compact ? "compact" : "section"')) {
+    failures.push(`${name}: teaser title variants must stay aligned with the canonical Showcase hierarchy`);
+  }
+}
+
+{
   const name = "components/MarkdownRenderer.tsx";
   const source = sources.get(name);
   const file = parse(name, source);
