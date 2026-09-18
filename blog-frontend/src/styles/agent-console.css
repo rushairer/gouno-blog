@@ -695,9 +695,15 @@
   }
 
   .agent-output {
+    min-width: 0;
+    max-width: 100%;
     color: var(--muted-foreground);
     line-height: 1.6;
     font-size: 13.5px;
+  }
+
+  .agent-output [data-slot="code-block"] {
+    max-width: 100%;
   }
 
   .agent-output > pre {
@@ -860,6 +866,8 @@
 
   .record-evidence {
     display: grid;
+    min-width: 0;
+    max-width: 100%;
     gap: 16px;
     border-top: 1px solid var(--agent-border);
     padding-top: 22px;
@@ -890,6 +898,13 @@
     color: var(--agent-accent);
     font-size: 12px;
     padding: 5px 9px;
+  }
+
+  .tool-call-detail,
+  .tool-call-result-summary,
+  .tool-call-technical {
+    min-width: 0;
+    max-width: 100%;
   }
 
   .tool-call-detail {
@@ -1245,6 +1260,9 @@
   }
 
   .agent-json-preview {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
     max-height: 340px;
     overflow: auto;
     border: 1px solid var(--agent-border);
