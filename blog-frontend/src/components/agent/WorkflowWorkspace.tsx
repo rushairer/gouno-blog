@@ -613,7 +613,9 @@ export function WorkflowWorkspace({
                   window.scrollTo({ top: 0, left: 0, behavior: "auto" });
                 }}
               >
-                {locale === "zh" ? "返回 Workflow 列表" : "Back to Workflow list"}
+                {locale === "zh"
+                  ? "返回 Workflow 列表"
+                  : "Back to Workflow list"}
               </Button>
             </div>
             {(() => {
@@ -1337,36 +1339,64 @@ export function WorkflowWorkspace({
           </div>
         </div>
       ) : (
-        <Card padding="none" className="overflow-hidden" role="region" aria-label={locale === "zh" ? "Workflow 资产" : "Workflow assets"}>
+        <Card
+          padding="none"
+          className="overflow-hidden"
+          role="region"
+          aria-label={locale === "zh" ? "Workflow 资产" : "Workflow assets"}
+        >
           <div className="flex flex-col gap-3 border-b bg-muted/[0.12] px-4 py-4 lg:flex-row lg:items-center">
             <div className="min-w-0 flex-1">
               <SearchField
-                aria-label={locale === "zh" ? "搜索 Workflow" : "Search workflows"}
+                aria-label={
+                  locale === "zh" ? "搜索 Workflow" : "Search workflows"
+                }
                 value={workflowQuery}
                 onChange={(event) => setWorkflowQuery(event.target.value)}
-                placeholder={locale === "zh" ? "搜索 Workflow" : "Search workflows"}
+                placeholder={
+                  locale === "zh" ? "搜索 Workflow" : "Search workflows"
+                }
               />
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <div className="sm:w-44">
                 <Select
-                  aria-label={locale === "zh" ? "按状态筛选 Workflow" : "Filter workflows by status"}
+                  aria-label={
+                    locale === "zh"
+                      ? "按状态筛选 Workflow"
+                      : "Filter workflows by status"
+                  }
                   value={statusFilter}
                   onChange={(value) =>
-                    setStatusFilter(selectValue(value) as "all" | "enabled" | "disabled")
+                    setStatusFilter(
+                      selectValue(value) as "all" | "enabled" | "disabled",
+                    )
                   }
                 >
-                  <option value="all">{locale === "zh" ? "全部状态" : "All status"}</option>
-                  <option value="enabled">{locale === "zh" ? "已启用" : "Enabled"}</option>
-                  <option value="disabled">{locale === "zh" ? "已停用" : "Disabled"}</option>
+                  <option value="all">
+                    {locale === "zh" ? "全部状态" : "All status"}
+                  </option>
+                  <option value="enabled">
+                    {locale === "zh" ? "已启用" : "Enabled"}
+                  </option>
+                  <option value="disabled">
+                    {locale === "zh" ? "已停用" : "Disabled"}
+                  </option>
                 </Select>
               </div>
-              <Text size="xs" tone="muted" className="shrink-0 sm:min-w-16 sm:text-right">
+              <Text
+                size="xs"
+                tone="muted"
+                className="shrink-0 sm:min-w-16 sm:text-right"
+              >
                 {visibleWorkflows.length} / {workflows.length}
               </Text>
             </div>
           </div>
-          <div role="list" aria-label={locale === "zh" ? "Workflow 列表" : "Workflow list"}>
+          <div
+            role="list"
+            aria-label={locale === "zh" ? "Workflow 列表" : "Workflow list"}
+          >
             {visibleWorkflows.length ? (
               visibleWorkflows.map((workflow) => {
                 const latestRun = runs.find(
@@ -1380,18 +1410,26 @@ export function WorkflowWorkspace({
                       status={
                         <Tag color={workflow.enabled ? "success" : undefined}>
                           {workflow.enabled
-                            ? locale === "zh" ? "已启用" : "Enabled"
-                            : locale === "zh" ? "已停用" : "Disabled"}
+                            ? locale === "zh"
+                              ? "已启用"
+                              : "Enabled"
+                            : locale === "zh"
+                              ? "已停用"
+                              : "Disabled"}
                         </Tag>
                       }
                       meta={
-                        (workflow.cron_expression || (locale === "zh" ? "仅手动" : "Manual")) +
-                        " · v" + workflow.current_version
+                        (workflow.cron_expression ||
+                          (locale === "zh" ? "仅手动" : "Manual")) +
+                        " · v" +
+                        workflow.current_version
                       }
                       summary={workflow.description}
                       signals={
                         <>
-                          <OperationsMeta>{labels.next} {formatTime(workflow.next_run_at)}</OperationsMeta>
+                          <OperationsMeta>
+                            {labels.next} {formatTime(workflow.next_run_at)}
+                          </OperationsMeta>
                           {latestRun ? (
                             <OperationsMeta>
                               {locale === "zh" ? "最近 " : "Latest "}
@@ -1407,14 +1445,24 @@ export function WorkflowWorkspace({
                         window.history.replaceState(null, "", url);
                         window.scrollTo({ top: 0, left: 0, behavior: "auto" });
                       }}
-                      ariaLabel={(locale === "zh" ? "打开 Workflow：" : "Open Workflow: ") + workflow.name}
+                      ariaLabel={
+                        (locale === "zh"
+                          ? "打开 Workflow："
+                          : "Open Workflow: ") + workflow.name
+                      }
                     />
                   </div>
                 );
               })
             ) : (
               <div className="p-6">
-                <Empty title={locale === "zh" ? "没有符合条件的 Workflow。" : "No matching workflows."} />
+                <Empty
+                  title={
+                    locale === "zh"
+                      ? "没有符合条件的 Workflow。"
+                      : "No matching workflows."
+                  }
+                />
               </div>
             )}
           </div>
