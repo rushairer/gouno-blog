@@ -230,7 +230,7 @@ export function ProviderForm({
     );
 
   return (
-    <FormLayout onSubmit={submit}>
+    <FormLayout id="ai-settings-provider-editor" onSubmit={submit}>
       <div
         data-pattern="editor-form-composition"
         className="flex flex-col gap-5"
@@ -398,20 +398,22 @@ export function ProviderForm({
           </AISettingsEditorSection>
         </div>
 
-        <FormActions>
-          <Button variant="outline" type="button" onClick={handleCancel}>
-            {labels.cancel}
-          </Button>
-          <Button
-            variant="solid"
-            color="primary"
-            type="submit"
-            loading={saving}
-            icon={<Save />}
-          >
-            {saving ? labels.saving : labels.saveProvider}
-          </Button>
-        </FormActions>
+        {surface === "page" ? (
+          <FormActions>
+            <Button variant="outline" type="button" onClick={handleCancel}>
+              {labels.cancel}
+            </Button>
+            <Button
+              variant="solid"
+              color="primary"
+              type="submit"
+              loading={saving}
+              icon={<Save />}
+            >
+              {saving ? labels.saving : labels.saveProvider}
+            </Button>
+          </FormActions>
+        ) : null}
       </div>
     </FormLayout>
   );
