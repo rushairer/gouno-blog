@@ -68,7 +68,7 @@ test("legacy advanced deep link redirects to the dedicated Provider settings sec
   );
 
   await expect(page.getByRole("heading", { level: 1, name: "AI Settings" })).toBeVisible();
-  await expect(page.getByRole("tab", { name: "Providers" })).toHaveAttribute(
+  await expect(page.getByRole("tab", { name: "Model connections" })).toHaveAttribute(
     "aria-selected",
     "true",
   );
