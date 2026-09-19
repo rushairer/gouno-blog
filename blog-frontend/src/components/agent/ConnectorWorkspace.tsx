@@ -34,6 +34,7 @@ import {
   Textarea,
 } from "@gouno/ui/core";
 import { AISettingsEditorSection } from "./AISettingsEditorPatterns";
+import { TabPanelFeedback, TabPanelLead } from "../patterns/TabPanelLead";
 
 type Locale = "en" | "zh";
 
@@ -265,45 +266,48 @@ export function ConnectorWorkspace({
 
   return (
     <div className="flex min-w-0 flex-col gap-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <Text size="sm" tone="muted" className="max-w-3xl leading-relaxed">
-          {zh
-            ? "管理 Agent 可访问的 Sandbox 外部能力、OAuth 边界与 Outbox 审批链路。"
-            : "Manage Sandbox external capabilities available to Agents, OAuth boundaries, and the Outbox approval path."}
-        </Text>
-        <Button
-          size="small"
-          variant="solid"
-          color="primary"
-          type="button"
-          icon={<Plus />}
-          onClick={() => openProfileEditor("new")}
-        >
-          {zh ? "添加 Connector Profile" : "Add Connector Profile"}
-        </Button>
-      </div>
-
-      <Alert
-        type="info"
-        showIcon
-        title={zh ? "Sandbox connector 边界" : "Sandbox connector boundary"}
+      <TabPanelLead
         description={
           zh
-            ? "Search Console 可使用只读 Google OAuth；其余连接器保持 Sandbox Mock。Outbox 必须先审批，再进行不可外发的 Mock 投递。"
-            : "Search Console may use read-only Google OAuth. Other connectors remain Sandbox mocks. Outbox items require approval before non-network Mock delivery."
+            ? "管理 Agent 可访问的 Sandbox 外部能力、OAuth 边界与 Outbox 审批链路。"
+            : "Manage Sandbox external capabilities available to Agents, OAuth boundaries, and the Outbox approval path."
+        }
+        actions={
+          <Button
+            size="small"
+            variant="solid"
+            color="primary"
+            type="button"
+            icon={<Plus />}
+            onClick={() => openProfileEditor("new")}
+          >
+            {zh ? "添加 Connector Profile" : "Add Connector Profile"}
+          </Button>
         }
       />
 
-      {error ? (
-        <Alert type="error" showIcon>
-          {error}
-        </Alert>
-      ) : null}
-      {message ? (
-        <Alert type="success" showIcon role="status">
-          {message}
-        </Alert>
-      ) : null}
+      <TabPanelFeedback>
+        <Alert
+          type="info"
+          showIcon
+          title={zh ? "Sandbox connector 边界" : "Sandbox connector boundary"}
+          description={
+            zh
+              ? "Search Console 可使用只读 Google OAuth；其余连接器保持 Sandbox Mock。Outbox 必须先审批，再进行不可外发的 Mock 投递。"
+              : "Search Console may use read-only Google OAuth. Other connectors remain Sandbox mocks. Outbox items require approval before non-network Mock delivery."
+          }
+        />
+        {error ? (
+          <Alert type="error" showIcon>
+            {error}
+          </Alert>
+        ) : null}
+        {message ? (
+          <Alert type="success" showIcon role="status">
+            {message}
+          </Alert>
+        ) : null}
+      </TabPanelFeedback>
 
       <Card padding="none" className="overflow-hidden">
         <div className="border-b px-6 py-5">
