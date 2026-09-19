@@ -85,6 +85,11 @@ for (const path of railFiles) {
   );
   requireText(
     text,
+    'data-pattern="master-detail-composition"',
+    `${path}: missing canonical master-detail composition contract`,
+  );
+  requireText(
+    text,
     'data-slot="ops-rail"',
     `${path}: missing adaptive rail marker`,
   );
@@ -107,6 +112,21 @@ requireText(
   workflowWorkspace,
   "返回 Workflow 列表",
   "WorkflowWorkspace: dedicated detail must expose an explicit return path",
+);
+requireText(
+  workflowWorkspace,
+  'data-pattern="dedicated-list-editor"',
+  "WorkflowWorkspace: create/edit must use the canonical Dedicated Editor composition",
+);
+requireText(
+  workflowWorkspace,
+  "DedicatedEditorLead",
+  "WorkflowWorkspace: create/edit must expose a Dedicated Editor lead",
+);
+requireText(
+  workflowWorkspace,
+  'data-pattern="editor-form-composition"',
+  "WorkflowWorkspace: Workflow editor must expose the shared editor form composition",
 );
 if (
   workflowWorkspace.includes('data-slot="ops-master-detail"') ||
@@ -158,8 +178,22 @@ requirePattern(
   "Workflow editor must expose its canonical form composition boundary",
 );
 
+const workflowRunDetail = await source(
+  "src/components/agent/WorkflowRunDetail.tsx",
+);
+requireText(
+  workflowRunDetail,
+  'data-pattern="record-detail-composition"',
+  "WorkflowRunDetail: selected Run must expose the canonical record-detail composition",
+);
+
 const agentRunRecords = await source(
   "src/components/agent/AgentRunRecords.tsx",
+);
+requireText(
+  agentRunRecords,
+  'data-pattern="record-detail-composition"',
+  "AgentRunRecords: selected Run must expose the canonical record-detail composition",
 );
 requireText(
   agentRunRecords,
