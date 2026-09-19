@@ -115,7 +115,9 @@ describe("WorkflowLauncher", () => {
       ),
     ).toBe(true);
     expect(
-      closeButtons.some((button) => button.getAttribute("data-slot") === "button"),
+      closeButtons.some(
+        (button) => button.getAttribute("data-slot") === "button",
+      ),
     ).toBe(true);
     expect(within(dialog).getByRole("button", { name: "运行" })).toBeEnabled();
 
@@ -164,7 +166,9 @@ describe("WorkflowLauncher", () => {
       ),
     ).toBe(true);
     expect(
-      closeButtons.some((button) => button.getAttribute("data-slot") === "button"),
+      closeButtons.some(
+        (button) => button.getAttribute("data-slot") === "button",
+      ),
     ).toBe(true);
   });
 });
