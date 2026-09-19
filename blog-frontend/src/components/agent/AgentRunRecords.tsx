@@ -689,8 +689,10 @@ export function RecordsWorkspace({
             aria-label="Agent Runs"
           >
             <div className="shrink-0 border-b px-[18px] py-4">
-              <strong className="text-sm">Agent Runs</strong>
-              <Text size="xs" tone="muted" className="mt-0.5">
+              <strong className="type-body-sm type-weight-semibold">
+                Agent Runs
+              </strong>
+              <Text size="xs" tone="muted">
                 {runs.length} {zh ? "条运行记录" : "run records"}
               </Text>
             </div>
