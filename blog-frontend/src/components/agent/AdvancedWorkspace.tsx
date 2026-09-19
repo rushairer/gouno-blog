@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import {
   Bot,
   CirclePause,
@@ -39,6 +39,7 @@ import {
   Button,
   Card,
   CardContent,
+  Drawer,
   Empty,
   Heading,
   IconButton,
@@ -47,6 +48,7 @@ import {
   Tag,
   Text,
 } from "@gouno/ui/core";
+import { DedicatedEditorLead } from "./DedicatedEditorPatterns";
 
 export type AdvancedSection =
   | "agents"
@@ -192,6 +194,15 @@ export function AdvancedWorkspace({
   const skillFileInputRef = useRef<HTMLInputElement>(null);
   const providerMap = new Map(providers.map((item) => [item.id, item]));
 
+  useEffect(() => {
+    if (!editingAgent && !editingSkill) return;
+    const frame = window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      document.scrollingElement?.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [editingAgent, editingSkill]);
+
   return (
     <>
       <Tabs<AdvancedSection>
@@ -232,48 +243,70 @@ export function AdvancedWorkspace({
         ]}
       />
 
-      {advancedSection === "providers" && editingProvider ? (
-        <ProviderForm
-          key={editingProvider === "new" ? "new" : editingProvider.id}
-          initial={editingProvider === "new" ? undefined : editingProvider}
-          labels={labels}
-          onSave={onSaveProvider}
-          onCancel={() => onEditProvider(null)}
-        />
-      ) : null}
-
-      {advancedSection === "knowledge" && editingEmbedding ? (
-        <EmbeddingForm
-          key={editingEmbedding === "new" ? "new" : editingEmbedding.id}
-          initial={editingEmbedding === "new" ? undefined : editingEmbedding}
-          locale={locale}
-          onSave={onSaveEmbedding}
-          onCancel={() => onEditEmbedding(null)}
-        />
-      ) : null}
-
       {advancedSection === "agents" && editingAgent ? (
-        <AgentForm
-          key={editingAgent === "new" ? "new" : editingAgent.id}
-          initial={editingAgent === "new" ? undefined : editingAgent}
-          providers={providers}
-          skills={skills}
-          locale={locale}
-          labels={labels}
-          onSave={onSaveAgent}
-          onCancel={() => onEditAgent(null)}
-        />
+        <div data-pattern="dedicated-list-editor" className="flex flex-col gap-5">
+          <DedicatedEditorLead
+            title={
+              editingAgent === "new"
+                ? locale === "zh"
+                  ? "创建 Agent"
+                  : "Create Agent"
+                : locale === "zh"
+                  ? `编辑 Agent：${editingAgent.name}`
+                  : `Edit Agent: ${editingAgent.name}`
+            }
+            description={
+              locale === "zh"
+                ? "Agent 是独立的配置任务：绑定模型与 Skill Version，并设置运行计划、预算与更严格的运行限制。"
+                : "Agent editing is a dedicated configuration task for model/Skill binding, schedules, budgets, and stricter runtime limits."
+            }
+            backLabel={locale === "zh" ? "返回 Agent 列表" : "Back to Agent list"}
+            onBack={() => onEditAgent(null)}
+          />
+          <AgentForm
+            key={editingAgent === "new" ? "new" : editingAgent.id}
+            initial={editingAgent === "new" ? undefined : editingAgent}
+            providers={providers}
+            skills={skills}
+            locale={locale}
+            labels={labels}
+            onSave={onSaveAgent}
+            onCancel={() => onEditAgent(null)}
+            surface="dedicated"
+          />
+        </div>
       ) : null}
 
       {advancedSection === "skills" && editingSkill ? (
-        <SkillForm
-          key={editingSkill === "new" ? "new" : editingSkill.id}
-          initial={editingSkill === "new" ? undefined : editingSkill}
-          tools={tools}
-          locale={locale}
-          onSave={onSaveSkill}
-          onCancel={() => onEditSkill(null)}
-        />
+        <div data-pattern="dedicated-list-editor" className="flex flex-col gap-5">
+          <DedicatedEditorLead
+            title={
+              editingSkill === "new"
+                ? locale === "zh"
+                  ? "创建 Skill"
+                  : "Create Skill"
+                : locale === "zh"
+                  ? `编辑 Skill：${editingSkill.name}`
+                  : `Edit Skill: ${editingSkill.name}`
+            }
+            description={
+              locale === "zh"
+                ? "Skill Version 是独立的配置任务：固定行为指令、Tool 授权、发布策略与默认治理边界。"
+                : "Skill editing is a dedicated configuration task for immutable behavior, Tool authorization, publication policy, and governance defaults."
+            }
+            backLabel={locale === "zh" ? "返回 Skill 列表" : "Back to Skill list"}
+            onBack={() => onEditSkill(null)}
+          />
+          <SkillForm
+            key={editingSkill === "new" ? "new" : editingSkill.id}
+            initial={editingSkill === "new" ? undefined : editingSkill}
+            tools={tools}
+            locale={locale}
+            onSave={onSaveSkill}
+            onCancel={() => onEditSkill(null)}
+            surface="dedicated"
+          />
+        </div>
       ) : null}
 
       {!editingAgent && !editingProvider && advancedSection === "tools" ? (
@@ -642,7 +675,7 @@ export function AdvancedWorkspace({
         </div>
       ) : null}
 
-      {!editingAgent && !editingProvider && advancedSection === "providers" ? (
+      {!editingAgent && !editingSkill && advancedSection === "providers" ? (
         <SudoGate
           title="模型连接与密钥保护"
           description="添加、修改、导出或删除模型连接涉及敏感 API Key 凭据，需要近期多因素身份认证。"
@@ -876,15 +909,13 @@ export function AdvancedWorkspace({
       ) : null}
 
       {!editingAgent &&
-      !editingProvider &&
-      !editingEmbedding &&
+      !editingSkill &&
       advancedSection === "connectors" ? (
         <ConnectorWorkspace locale={locale} onRefresh={onRefresh} />
       ) : null}
 
       {!editingAgent &&
-      !editingProvider &&
-      !editingEmbedding &&
+      !editingSkill &&
       advancedSection === "knowledge" ? (
         <SudoGate
           title="知识库与向量模型保护"
@@ -1065,6 +1096,71 @@ export function AdvancedWorkspace({
           </div>
         </SudoGate>
       ) : null}
+      <Drawer
+        open={advancedSection === "providers" && editingProvider !== null}
+        title={
+          editingProvider === "new"
+            ? locale === "zh"
+              ? "添加模型连接"
+              : "Add model connection"
+            : locale === "zh"
+              ? `编辑模型连接：${editingProvider?.name || ""}`
+              : `Edit model connection: ${editingProvider?.name || ""}`
+        }
+        description={
+          locale === "zh"
+            ? "在当前模型连接列表上下文中编辑连接身份、端点、模型与凭据。"
+            : "Edit connection identity, endpoint, model, and credentials without leaving the provider collection."
+        }
+        width={720}
+        onClose={() => onEditProvider(null)}
+      >
+        {editingProvider ? (
+          <div data-pattern="contextual-list-editor">
+            <ProviderForm
+              key={editingProvider === "new" ? "new" : editingProvider.id}
+              initial={editingProvider === "new" ? undefined : editingProvider}
+              labels={labels}
+              onSave={onSaveProvider}
+              onCancel={() => onEditProvider(null)}
+              surface="drawer"
+            />
+          </div>
+        ) : null}
+      </Drawer>
+
+      <Drawer
+        open={advancedSection === "knowledge" && editingEmbedding !== null}
+        title={
+          editingEmbedding === "new"
+            ? locale === "zh"
+              ? "添加 Embedding 模型"
+              : "Add embedding profile"
+            : locale === "zh"
+              ? `编辑 Embedding：${editingEmbedding?.name || ""}`
+              : `Edit embedding: ${editingEmbedding?.name || ""}`
+        }
+        description={
+          locale === "zh"
+            ? "在知识库上下文中调整索引模型、维度、端点与凭据。"
+            : "Adjust index model, dimensions, endpoint, and credentials in the knowledge context."
+        }
+        width={720}
+        onClose={() => onEditEmbedding(null)}
+      >
+        {editingEmbedding ? (
+          <div data-pattern="contextual-list-editor">
+            <EmbeddingForm
+              key={editingEmbedding === "new" ? "new" : editingEmbedding.id}
+              initial={editingEmbedding === "new" ? undefined : editingEmbedding}
+              locale={locale}
+              onSave={onSaveEmbedding}
+              onCancel={() => onEditEmbedding(null)}
+              surface="drawer"
+            />
+          </div>
+        ) : null}
+      </Drawer>
     </>
   );
 }
