@@ -143,20 +143,23 @@ export function AgentForm({
 
   return (
     <FormLayout onSubmit={submit}>
-      <div data-pattern="editor-form-composition" className="flex flex-col gap-5">
+      <div
+        data-pattern="editor-form-composition"
+        className="flex flex-col gap-5"
+      >
         {surface === "page" ? (
           <AISettingsEditorHeader
-          title={
-            initial
-              ? `${labels.editAgent}：${initial.name}`
-              : labels.createAgent
-          }
-          description={
-            locale === "zh"
-              ? "Agent 绑定稳定的模型与 Skill Version；运行计划、预算和限制覆盖属于运行治理，不复制 Skill 的安全边界。"
-              : "Agents bind stable model and Skill versions. Schedule, budget, and stricter overrides belong to runtime governance."
-          }
-          icon={<Bot />}
+            title={
+              initial
+                ? `${labels.editAgent}：${initial.name}`
+                : labels.createAgent
+            }
+            description={
+              locale === "zh"
+                ? "Agent 绑定稳定的模型与 Skill Version；运行计划、预算和限制覆盖属于运行治理，不复制 Skill 的安全边界。"
+                : "Agents bind stable model and Skill versions. Schedule, budget, and stricter overrides belong to runtime governance."
+            }
+            icon={<Bot />}
           />
         ) : null}
 
