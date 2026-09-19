@@ -12,8 +12,14 @@ const readBlog = (path) => readFile(resolve(path), "utf8");
 const canonicalSettings = await readCanonical(
   "showcase/demos/products/blog-admin/ai/settings/index.tsx",
 );
+const canonicalLead = await readCanonical(
+  "showcase/components/tab-panel-lead.tsx",
+);
 const canonicalGovernance = await readCanonical("docs/product-interface-governance.md");
 
+const sharedLead = await readBlog(
+  "src/components/patterns/TabPanelLead.tsx",
+);
 const workspace = await readBlog("src/components/agent/AdvancedWorkspace.tsx");
 const connectorWorkspace = await readBlog(
   "src/components/agent/ConnectorWorkspace.tsx",
@@ -38,6 +44,44 @@ function requireBlog(marker, text, label) {
     failures.push(`Blog Admin drifted from Showcase ${label}: ${marker}`);
   }
 }
+
+for (const [marker, label] of [
+  ['data-pattern="tab-panel-lead"', "Tab panel lead semantic marker"],
+  ['className="flex min-h-9 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"', "Tab panel lead minimum-height rhythm"],
+]) {
+  if (!canonicalLead.includes(marker)) {
+    failures.push(`Canonical TabPanelLead changed: missing ${label}: ${marker}`);
+  }
+  requireBlog(marker, sharedLead, label);
+}
+if (workspace.includes("function TabPanelLead(")) {
+  failures.push("AI Settings must not maintain a private TabPanelLead copy");
+}
+requireBlog(
+  'from "../patterns/TabPanelLead"',
+  workspace,
+  "shared TabPanelLead ownership",
+);
+requireBlog(
+  "<TabPanelLead",
+  connectorWorkspace,
+  "Connector shared TabPanelLead usage",
+);
+requireBlog(
+  "<TabPanelFeedback>",
+  connectorWorkspace,
+  "Connector shared TabPanelFeedback usage",
+);
+requireBlog(
+  "type-family-mono type-body-sm type-weight-semibold",
+  workspace,
+  "Tools canonical typography token",
+);
+requireBlog(
+  '<Heading level={2} variant="compact">',
+  workspace,
+  "Provider default-purpose heading typography",
+);
 
 for (const [marker, label] of [
   ['data-pattern="dedicated-list-editor"', "Dedicated Editor collection replacement"],
