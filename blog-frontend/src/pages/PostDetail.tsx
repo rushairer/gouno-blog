@@ -114,7 +114,9 @@ function CommentItem({
     <div id={`comment-${comment.id}`} className="space-y-3">
       <Card padding="sm" className="gap-3">
         <div className="flex flex-wrap items-center gap-2 type-caption text-muted-foreground">
-          <strong className="type-body-sm text-foreground">{comment.author}</strong>
+          <strong className="type-body-sm text-foreground">
+            {comment.author}
+          </strong>
           <Tag>
             {comment.author_type === "user" ? t("signedIn") : t("guest")}
           </Tag>
@@ -592,11 +594,7 @@ export default function PostDetail() {
             className="mx-auto w-full max-w-[900px]"
           >
             <div className="border-b pb-3">
-              <Heading
-                id="related-reading"
-                level={2}
-                variant="section"
-              >
+              <Heading id="related-reading" level={2} variant="section">
                 {t("relatedPosts")}
               </Heading>
             </div>
@@ -612,11 +610,7 @@ export default function PostDetail() {
         >
           <div className="flex flex-wrap items-end justify-between gap-4 border-b pb-4">
             <div>
-              <Heading
-                id="article-community"
-                level={2}
-                variant="section"
-              >
+              <Heading id="article-community" level={2} variant="section">
                 {t("discussion", { count: comments.length })}
               </Heading>
             </div>
@@ -687,19 +681,10 @@ export default function PostDetail() {
             aria-labelledby="comment-form-title"
           >
             <div>
-              <Heading
-                id="comment-form-title"
-                level={3}
-                variant="compact"
-              >
+              <Heading id="comment-form-title" level={3} variant="compact">
                 {t("leaveComment")}
               </Heading>
-              <Text
-                as="p"
-                size="sm"
-                tone="muted"
-                className="mt-1"
-              >
+              <Text as="p" size="sm" tone="muted" className="mt-1">
                 {session.loggedIn ? t("signedInComment") : t("typeComment")}
               </Text>
             </div>
