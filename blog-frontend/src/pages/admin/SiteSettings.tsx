@@ -32,38 +32,12 @@ import { DEFAULT_SITE_SETTINGS } from "../../config/site-defaults";
 import { useAdminGuard } from "../../hooks/useAdminGuard";
 import type { SiteSettings } from "../../types/blog";
 import { useAppFeedback } from "../../components/feedback/AppFeedbackProvider";
+import { TabPanelLead } from "../../components/patterns/TabPanelLead";
 
 type SettingsTab = "basic" | "appearance" | "hero" | "social" | "seo";
 
 const commonImageAccept =
   "image/jpeg,image/png,image/webp,image/gif,image/svg+xml,image/x-icon,image/vnd.microsoft.icon,image/avif,image/bmp,.svg,.ico,.avif,.bmp";
-
-function TabPanelLead({
-  description,
-  actions,
-}: {
-  description?: ReactNode;
-  actions?: ReactNode;
-}) {
-  if (!description && !actions) return null;
-
-  return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-      <div className="min-w-0">
-        {description ? (
-          <Text tone="muted" size="sm" className="max-w-3xl leading-relaxed">
-            {description}
-          </Text>
-        ) : null}
-      </div>
-      {actions ? (
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          {actions}
-        </div>
-      ) : null}
-    </div>
-  );
-}
 
 function SettingsSurface({
   description,
