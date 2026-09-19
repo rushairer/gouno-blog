@@ -105,9 +105,18 @@ describe("WorkflowLauncher", () => {
     expect(
       within(dialog).queryByRole("button", { name: `移除 ${longTitle}` }),
     ).not.toBeInTheDocument();
+    const closeButtons = within(dialog).getAllByRole("button", {
+      name: "关闭",
+    });
+    expect(closeButtons).toHaveLength(2);
     expect(
-      within(dialog).getByRole("button", { name: "关闭" }),
-    ).toBeInTheDocument();
+      closeButtons.some(
+        (button) => button.getAttribute("data-slot") === "dialog-close",
+      ),
+    ).toBe(true);
+    expect(
+      closeButtons.some((button) => button.getAttribute("data-slot") === "button"),
+    ).toBe(true);
     expect(within(dialog).getByRole("button", { name: "运行" })).toBeEnabled();
 
     await waitFor(() => {
@@ -145,8 +154,17 @@ describe("WorkflowLauncher", () => {
       ),
     ).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "运行" })).toBeDisabled();
+    const closeButtons = within(dialog).getAllByRole("button", {
+      name: "关闭",
+    });
+    expect(closeButtons).toHaveLength(2);
     expect(
-      within(dialog).getByRole("button", { name: "关闭" }),
-    ).toBeInTheDocument();
+      closeButtons.some(
+        (button) => button.getAttribute("data-slot") === "dialog-close",
+      ),
+    ).toBe(true);
+    expect(
+      closeButtons.some((button) => button.getAttribute("data-slot") === "button"),
+    ).toBe(true);
   });
 });
