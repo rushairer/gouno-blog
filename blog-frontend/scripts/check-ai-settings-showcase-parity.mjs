@@ -15,6 +15,9 @@ const canonicalSettings = await readCanonical(
 const canonicalGovernance = await readCanonical("docs/product-interface-governance.md");
 
 const workspace = await readBlog("src/components/agent/AdvancedWorkspace.tsx");
+const connectorWorkspace = await readBlog(
+  "src/components/agent/ConnectorWorkspace.tsx",
+);
 const forms = await Promise.all(
   [
     "src/components/agent/AgentForm.tsx",
@@ -56,6 +59,23 @@ if (!workspace.includes('surface="dedicated"')) {
 
 if (!canonicalSettings.includes("drawerEditor") || !workspace.includes('surface="drawer"')) {
   failures.push("Provider/Embedding editing must remain contextual Drawer editing");
+}
+for (const marker of [
+  "<Drawer",
+  'data-pattern="contextual-list-editor"',
+  'data-pattern="editor-form-composition"',
+  'form="ai-settings-connector-editor"',
+]) {
+  requireBlog(marker, connectorWorkspace, "Connector contextual Drawer editing");
+}
+if (
+  !canonicalSettings.includes("drawerEditorPresentation.formId") ||
+  !workspace.includes('form="ai-settings-provider-editor"') ||
+  !workspace.includes('form="ai-settings-embedding-editor"')
+) {
+  failures.push(
+    "Provider/Embedding Drawer footers must submit the stable editor form owned by the contextual task surface",
+  );
 }
 
 if (!canonicalSettings.includes("window.scrollTo({ top: 0")) {
