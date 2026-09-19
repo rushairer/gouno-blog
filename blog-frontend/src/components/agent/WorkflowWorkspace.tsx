@@ -571,7 +571,7 @@ export function WorkflowWorkspace({
                 : "Back to Workflow list"
           }
           status={
-            editingWorkflow ? <Tag>v{editingWorkflow.version}</Tag> : undefined
+            editingWorkflow ? <Tag>v{editingWorkflow.current_version}</Tag> : undefined
           }
           onBack={() => setEditing(null)}
         />
