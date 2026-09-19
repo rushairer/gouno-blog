@@ -373,33 +373,35 @@ export function AdvancedWorkspace({
               </Button>
             }
           />
-          {providers.length === 0 ? (
-            <Alert
-              type="warning"
-              showIcon
-              title={
-                locale === "zh"
-                  ? "先添加模型连接"
-                  : "Add a model connection first"
-              }
-              description={
-                locale === "zh"
-                  ? "保存首个可用模型连接后再创建 Agent。"
-                  : "Save the first usable model connection before creating an Agent."
-              }
-              action={
-                <Button
-                  size="small"
-                  type="button"
-                  onClick={() => onSelectSection("providers")}
-                >
-                  {locale === "zh"
-                    ? "配置模型连接"
-                    : "Configure a model connection"}
-                </Button>
-              }
-            />
-          ) : null}
+          <TabPanelFeedback>
+            {providers.length === 0 ? (
+              <Alert
+                type="warning"
+                showIcon
+                title={
+                  locale === "zh"
+                    ? "先添加模型连接"
+                    : "Add a model connection first"
+                }
+                description={
+                  locale === "zh"
+                    ? "保存首个可用模型连接后再创建 Agent。"
+                    : "Save the first usable model connection before creating an Agent."
+                }
+                action={
+                  <Button
+                    size="small"
+                    type="button"
+                    onClick={() => onSelectSection("providers")}
+                  >
+                    {locale === "zh"
+                      ? "配置模型连接"
+                      : "Configure a model connection"}
+                  </Button>
+                }
+              />
+            ) : null}
+          </TabPanelFeedback>
           {agents.length === 0 ? (
             <Card padding="lg">
               <Empty
@@ -969,6 +971,24 @@ export function AdvancedWorkspace({
                   </>
                 }
               />
+              <TabPanelFeedback>
+                {indexStatus.failed > 0 ? (
+                <Alert
+                  type="warning"
+                  showIcon
+                  title={
+                    locale === "zh"
+                      ? "知识索引存在失败任务"
+                      : "Knowledge indexing has failed jobs"
+                  }
+                  description={
+                    locale === "zh"
+                      ? "优先重试失败项；只有索引结构变化或一致性异常时才执行全量重建。"
+                      : "Retry failed jobs first; rebuild the full index only for schema or consistency problems."
+                  }
+                />
+                ) : null}
+              </TabPanelFeedback>
               <div className="grid gap-4 sm:grid-cols-3">
                 <Card padding="base">
                   <Text size="xs" tone="muted">
@@ -989,22 +1009,6 @@ export function AdvancedWorkspace({
                   <Heading level={2}>{indexStatus.failed}</Heading>
                 </Card>
               </div>
-              {indexStatus.failed > 0 ? (
-                <Alert
-                  type="warning"
-                  showIcon
-                  title={
-                    locale === "zh"
-                      ? "知识索引存在失败任务"
-                      : "Knowledge indexing has failed jobs"
-                  }
-                  description={
-                    locale === "zh"
-                      ? "优先重试失败项；只有索引结构变化或一致性异常时才执行全量重建。"
-                      : "Retry failed jobs first; rebuild the full index only for schema or consistency problems."
-                  }
-                />
-              ) : null}
               {embeddingProfiles.length === 0 ? (
                 <Card padding="base">
                   <Empty
