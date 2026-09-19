@@ -15,10 +15,35 @@ function requireCount(text, marker, count, message) {
   if (found < count) failures.push(`${message} (expected >= ${count}, found ${found})`);
 }
 
+const sharedLead = await source("src/components/patterns/TabPanelLead.tsx");
 const workspace = await source("src/components/agent/AdvancedWorkspace.tsx");
 const connectorWorkspace = await source(
   "src/components/agent/ConnectorWorkspace.tsx",
 );
+requireText(
+  sharedLead,
+  'data-pattern="tab-panel-lead"',
+  "Shared TabPanelLead must expose the semantic pattern marker",
+);
+requireText(
+  sharedLead,
+  "flex min-h-9 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between",
+  "Shared TabPanelLead must preserve the canonical minimum-height rhythm",
+);
+if (workspace.includes("function TabPanelLead(")) {
+  failures.push("AdvancedWorkspace must not carry a private TabPanelLead implementation");
+}
+requireText(
+  workspace,
+  'from "../patterns/TabPanelLead"',
+  "AI Settings must consume the shared TabPanelLead pattern",
+);
+requireText(
+  connectorWorkspace,
+  "<TabPanelLead",
+  "Connector collection must consume the shared TabPanelLead pattern",
+);
+
 requireText(
   workspace,
   "DedicatedEditorLead",
