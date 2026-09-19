@@ -120,7 +120,7 @@ export default function PublicShell({ children }: { children: ReactNode }) {
       >
         跳至正文
       </a>
-      <header className="sticky top-0 z-30 border-b bg-background">
+      <header className="sticky top-0 layer-shell border-b bg-background">
         <div className="mx-auto flex min-h-16 w-full max-w-[1200px] items-center gap-6 px-4 md:px-6">
           <Link
             className="mr-auto inline-flex min-w-0 items-center gap-2 text-lg font-semibold tracking-tight text-primary"
