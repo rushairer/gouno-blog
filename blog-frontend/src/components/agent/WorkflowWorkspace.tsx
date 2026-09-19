@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   ArrowUp,
   CirclePause,
+  Clock3,
   Database,
   Edit2,
   GitBranch,
@@ -43,6 +44,7 @@ import {
   Field,
   FormActions,
   FormLayout,
+  Heading,
   IconButton,
   Input,
   Modal,
@@ -60,7 +62,6 @@ import {
   OperationsObjectRow,
   OperationsPanelLead,
   OperationsRegionHeading,
-  OperationsSummaryStrip,
 } from "./OperationsPatterns";
 import { DedicatedEditorLead } from "./DedicatedEditorPatterns";
 
@@ -77,6 +78,62 @@ type WorkflowValue = {
   scope_policy: { mode: "strict" | "unscoped"; discovery_tools: string[] };
   resource_query_empty_policy: "succeed" | "fail";
 };
+
+function WorkflowMetricCard({
+  label,
+  value,
+  detail,
+  progress,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+  progress?: number;
+}) {
+  return (
+    <div className="rounded-lg border bg-muted/[0.18] p-4">
+      <Text size="xs" tone="muted">
+        {label}
+      </Text>
+      <strong className="mt-2 block type-metric-value">{value}</strong>
+      {progress !== undefined ? (
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted">
+          <div
+            className="h-full rounded-full bg-primary transition-[width]"
+            style={{ width: `${Math.max(0, Math.min(progress, 100))}%` }}
+          />
+        </div>
+      ) : null}
+      <Text size="xs" tone="muted" className="mt-2">
+        {detail}
+      </Text>
+    </div>
+  );
+}
+
+function ScheduleFact({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+}) {
+  return (
+    <div className="min-w-0 px-4 py-4 first:pl-0 last:pr-0">
+      <Text size="xs" tone="muted">
+        {label}
+      </Text>
+      <strong className="mt-1 block type-body-sm type-weight-semibold">
+        {value}
+      </strong>
+      <Text size="xs" tone="muted" className="mt-1">
+        {detail}
+      </Text>
+    </div>
+  );
+}
 
 function exampleInput(
   schema: Record<string, unknown>,
@@ -607,7 +664,7 @@ export function WorkflowWorkspace({
       : "—";
 
   return (
-    <div className="workflow-workspace flex flex-col gap-6">
+    <div className="workflow-workspace flex flex-col gap-5">
       <OperationsPanelLead
         description={
           selectedWorkflow
@@ -733,14 +790,14 @@ export function WorkflowWorkspace({
                   >
                     <div className="flex flex-col gap-4 border-b p-6 lg:flex-row lg:items-start lg:justify-between">
                       <div className="flex min-w-0 items-start gap-3">
-                        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-primary/15 bg-primary/[0.08] text-primary">
+                        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/15 bg-primary/[0.08] text-primary">
                           <GitBranch className="size-5" aria-hidden="true" />
                         </div>
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <h2 className="text-xl font-semibold tracking-tight">
+                            <Heading level={2} variant="section">
                               {workflow.name}
-                            </h2>
+                            </Heading>
                             <Tag
                               color={workflow.enabled ? "success" : undefined}
                             >
@@ -767,6 +824,7 @@ export function WorkflowWorkspace({
                           size="small"
                           variant="outline"
                           type="button"
+                          icon={<Clock3 />}
                           onClick={() => onOpenRecords?.(workflow.id)}
                         >
                           {locale === "zh" ? "运行记录" : "Run records"}
@@ -838,120 +896,89 @@ export function WorkflowWorkspace({
                       </div>
                     </div>
 
-                    <div className="p-6">
-                      <OperationsSummaryStrip
-                        ariaLabel={
+                    <div className="grid gap-3 p-6 sm:grid-cols-2 2xl:grid-cols-4">
+                      <WorkflowMetricCard
+                        label={locale === "zh" ? "成功率" : "Success rate"}
+                        value={`${successRate}%`}
+                        detail={
                           locale === "zh"
-                            ? "Workflow 运行摘要"
-                            : "Workflow run summary"
+                            ? `${metric?.runs || 0} 次运行中的完成率`
+                            : `${metric?.runs || 0} runs`
                         }
-                        items={[
-                          {
-                            label: locale === "zh" ? "成功率" : "Success rate",
-                            value: successRate + "%",
-                            detail:
-                              locale === "zh"
-                                ? (metric?.runs || 0) + " 次运行中的完成率"
-                                : (metric?.runs || 0) + " runs",
-                          },
-                          {
-                            label:
-                              locale === "zh"
-                                ? "最近正式运行"
-                                : "Latest live run",
-                            value: latestRun
-                              ? statusLabel(latestRun.status, locale)
-                              : labels.never,
-                            detail: latestDryRun
-                              ? (locale === "zh"
-                                  ? "最近试运行："
-                                  : "Latest dry-run: ") +
-                                statusLabel(latestDryRun.status, locale)
-                              : locale === "zh"
-                                ? (metric?.runs || 0) + " 次累计运行"
-                                : (metric?.runs || 0) + " total runs",
-                          },
-                          {
-                            label: locale === "zh" ? "失败次数" : "Failures",
-                            value: metric?.failures || 0,
-                            detail:
-                              (metric?.failures || 0) > 0
-                                ? locale === "zh"
-                                  ? "可在运行中心追溯失败证据"
-                                  : "Inspect evidence in the run center"
-                                : locale === "zh"
-                                  ? "暂无失败记录"
-                                  : "No failures",
-                          },
-                          {
-                            label: "Token",
-                            value: (metric?.tokens || 0).toLocaleString(),
-                            detail:
-                              locale === "zh"
-                                ? "累计 Workflow Run"
-                                : "All Workflow Runs",
-                          },
-                        ]}
+                        progress={successRate}
                       />
+                      <WorkflowMetricCard
+                        label={locale === "zh" ? "累计运行" : "Total runs"}
+                        value={String(metric?.runs || 0)}
+                        detail={
+                          latestRun
+                            ? `${locale === "zh" ? "最近" : "Latest"} ${statusLabel(latestRun.status, locale)}`
+                            : latestDryRun
+                              ? `${locale === "zh" ? "最近试运行" : "Latest dry-run"} ${statusLabel(latestDryRun.status, locale)}`
+                              : labels.never
+                        }
+                      />
+                      <WorkflowMetricCard
+                        label={locale === "zh" ? "失败次数" : "Failures"}
+                        value={String(metric?.failures || 0)}
+                        detail={
+                          (metric?.failures || 0) > 0
+                            ? locale === "zh"
+                              ? "可在运行中心追溯失败证据"
+                              : "Inspect evidence in the run center"
+                            : locale === "zh"
+                              ? "暂无失败记录"
+                              : "No failures"
+                        }
+                      />
+                      <WorkflowMetricCard
+                        label={locale === "zh" ? "Token 消耗" : "Token usage"}
+                        value={(metric?.tokens || 0).toLocaleString()}
+                        detail={
+                          locale === "zh"
+                            ? "累计 Workflow Run"
+                            : "All Workflow Runs"
+                        }
+                      />
+                    </div>
 
-                      <div className="grid border-b sm:grid-cols-2 xl:grid-cols-4 xl:divide-x">
-                        <div className="min-w-0 py-4 xl:pr-5">
-                          <Text size="xs" tone="muted">
-                            {labels.next}
-                          </Text>
-                          <strong className="mt-1 block text-sm">
-                            {formatTime(workflow.next_run_at)}
-                          </strong>
-                          <Text size="xs" tone="muted" className="mt-1">
-                            {workflow.enabled
-                              ? locale === "zh"
-                                ? "Scheduler 已启用"
-                                : "Scheduler enabled"
-                              : locale === "zh"
-                                ? "Workflow 已停用"
-                                : "Workflow disabled"}
-                          </Text>
-                        </div>
-                        <div className="min-w-0 py-4 xl:px-5">
-                          <Text size="xs" tone="muted">
-                            {labels.schedule}
-                          </Text>
-                          <strong className="mt-1 block text-sm">
-                            {workflow.cron_expression ||
-                              (locale === "zh" ? "仅手动" : "Manual only")}
-                          </strong>
-                          <Text size="xs" tone="muted" className="mt-1">
-                            {workflow.timezone}
-                          </Text>
-                        </div>
-                        <div className="min-w-0 py-4 xl:px-5">
-                          <Text size="xs" tone="muted">
-                            {locale === "zh" ? "当前版本" : "Current version"}
-                          </Text>
-                          <strong className="mt-1 block text-sm">
-                            v{workflow.current_version}
-                          </strong>
-                          <Text size="xs" tone="muted" className="mt-1">
-                            {workflow.template_key ||
-                              (locale === "zh"
-                                ? "自定义 Workflow"
-                                : "Custom Workflow")}
-                          </Text>
-                        </div>
-                        <div className="min-w-0 py-4 xl:pl-5">
-                          <Text size="xs" tone="muted">
-                            {locale === "zh" ? "流程规模" : "Flow size"}
-                          </Text>
-                          <strong className="mt-1 block text-sm">
-                            {workflow.steps.length}{" "}
-                            {locale === "zh" ? "个步骤" : "steps"}
-                          </strong>
-                          <Text size="xs" tone="muted" className="mt-1">
-                            {inputProperties.length}{" "}
-                            {locale === "zh" ? "项运行输入" : "runtime inputs"}
-                          </Text>
-                        </div>
-                      </div>
+                    <div className="mx-6 grid border-t sm:grid-cols-2 xl:grid-cols-4 xl:divide-x">
+                      <ScheduleFact
+                        label={labels.next}
+                        value={formatTime(workflow.next_run_at)}
+                        detail={
+                          workflow.enabled
+                            ? locale === "zh"
+                              ? "Scheduler 已启用"
+                              : "Scheduler enabled"
+                            : locale === "zh"
+                              ? "Workflow 已停用"
+                              : "Workflow disabled"
+                        }
+                      />
+                      <ScheduleFact
+                        label={labels.schedule}
+                        value={
+                          workflow.cron_expression ||
+                          (locale === "zh" ? "仅手动" : "Manual only")
+                        }
+                        detail={workflow.timezone}
+                      />
+                      <ScheduleFact
+                        label={locale === "zh" ? "当前版本" : "Current version"}
+                        value={`v${workflow.current_version}`}
+                        detail={
+                          workflow.template_key ||
+                          (locale === "zh"
+                            ? "自定义 Workflow"
+                            : "Custom Workflow")
+                        }
+                      />
+                      <ScheduleFact
+                        label={locale === "zh" ? "流程规模" : "Flow size"}
+                        value={`${workflow.steps.length} ${locale === "zh" ? "个步骤" : "steps"}`}
+                        detail={`${inputProperties.length} ${locale === "zh" ? "项运行输入" : "runtime inputs"}`}
+                      />
                     </div>
                   </Card>
 
@@ -1009,7 +1036,9 @@ export function WorkflowWorkspace({
                                   : "Open recent Run #") + run.id
                               }
                             >
-                              <strong className="text-sm">Run #{run.id}</strong>
+                              <strong className="type-body-sm type-weight-semibold">
+                                Run #{run.id}
+                              </strong>
                               <span>
                                 <StatusPill
                                   status={run.status}
