@@ -2191,6 +2191,7 @@ function WorkflowEditor({
   locale,
   onSave,
   onCancel,
+  surface = "panel",
 }: {
   initial?: Workflow;
   labels: Record<string, string>;
@@ -2199,6 +2200,7 @@ function WorkflowEditor({
   locale: "en" | "zh";
   onSave: (value: WorkflowValue) => Promise<void>;
   onCancel: () => void;
+  surface?: "panel" | "dedicated";
 }) {
   const [name, setName] = useState(initial?.name || "");
   const [description, setDescription] = useState(initial?.description || "");
