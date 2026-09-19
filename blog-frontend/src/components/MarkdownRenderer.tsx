@@ -136,7 +136,7 @@ export function MarkdownRenderer({ content }: { content: string }) {
         <ol className="my-5 list-decimal space-y-2 pl-6">{children}</ol>
       ),
       blockquote: ({ children }) => (
-        <blockquote className="my-7 border-l-4 border-primary bg-muted/40 px-5 py-2 text-muted-foreground">
+        <blockquote className="my-7 edge-s-accent border-s-primary/40 bg-muted/40 px-5 py-2 text-muted-foreground">
           {children}
         </blockquote>
       ),
