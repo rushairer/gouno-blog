@@ -18,6 +18,9 @@ const canonicalLead = await readCanonical(
 const canonicalAutomation = await readCanonical(
   "showcase/demos/products/blog-admin/ai/operations/automation-management.tsx",
 );
+const canonicalOverviewInbox = await readCanonical(
+  "showcase/demos/products/blog-admin/ai/operations/overview-inbox.tsx",
+);
 const canonicalRecords = await readCanonical(
   "showcase/demos/products/blog-admin/ai/operations/automation-records.tsx",
 );
@@ -30,6 +33,12 @@ const blogPatterns = await readBlog(
 );
 const blogAutomation = await readBlog(
   "src/components/agent/WorkflowWorkspace.tsx",
+);
+const blogOverview = await readBlog(
+  "src/components/agent/WorkspaceOverview.tsx",
+);
+const blogInbox = await readBlog(
+  "src/components/agent/DecisionInboxWorkspace.tsx",
 );
 const blogWorkflowRecords = await readBlog(
   "src/components/agent/WorkflowRunRecords.tsx",
@@ -97,6 +106,43 @@ requireBoth(
   blogAutomation,
   "Workflow Dedicated Editor lead",
 );
+
+for (const [text, marker, label] of [
+  [
+    blogAutomation,
+    'title={locale === "zh" ? "自动化资产" : "Automation assets"}',
+    "Automation active-tab echo",
+  ],
+  [
+    blogOverview,
+    'title={zh ? "今天需要关注什么" : "What needs attention today"}',
+    "Overview panel title echo",
+  ],
+  [
+    blogInbox,
+    'title={zh ? "人工决策队列" : "Human decision queue"}',
+    "Inbox panel title echo",
+  ],
+]) {
+  if (text.includes(marker)) {
+    failures.push(
+      `Blog AI Operations must not repeat active-tab semantics as a panel H2: ${label}`,
+    );
+  }
+}
+if (
+  canonicalOverviewInbox.includes('title="今天需要关注什么"') ||
+  canonicalOverviewInbox.includes('title="人工决策队列"')
+) {
+  failures.push(
+    "Canonical Overview/Inbox unexpectedly reintroduced redundant TabPanelLead titles",
+  );
+}
+if (canonicalAutomation.includes('title="自动化资产"')) {
+  failures.push(
+    "Canonical Automation unexpectedly reintroduced a redundant TabPanelLead title",
+  );
+}
 requireBoth(
   'data-pattern="master-detail-composition"',
   canonicalRecords,
