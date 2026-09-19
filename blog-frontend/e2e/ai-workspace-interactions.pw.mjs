@@ -163,7 +163,7 @@ test("Provider settings expose provider and embedding configuration without writ
   );
 
   await expect(page.getByText("OpenAI Primary", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Add Provider" }).click();
+  await page.getByRole("button", { name: "Add model connection" }).click();
   const providerDrawer = page.getByRole("dialog", { name: "Add model connection" });
   await expect(providerDrawer).toBeVisible();
   await expect(providerDrawer.getByLabel("API Key")).toHaveAttribute("required", "");
