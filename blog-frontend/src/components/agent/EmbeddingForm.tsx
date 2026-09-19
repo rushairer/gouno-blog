@@ -1,4 +1,4 @@
-import { DatabaseZap, Save } from "lucide-react";
+import { Save } from "lucide-react";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import type { EmbeddingProfile } from "../../types/agent";
@@ -6,13 +6,13 @@ import { useFormDraft } from "../../hooks/useFormDraft";
 import {
   Button,
   Checkbox,
-  Field,
-  FormActions,
+  Field
   FormGrid,
   FormLayout,
   Input,
 } from "@gouno/ui/core";
 import {
+  AISettingsEditorActions,
   AISettingsEditorHeader,
   AISettingsEditorSection,
 } from "./AISettingsEditorPatterns";
@@ -33,11 +33,13 @@ export function EmbeddingForm({
   locale,
   onSave,
   onCancel,
+  surface = "page",
 }: {
   initial?: EmbeddingProfile;
   locale: "en" | "zh";
   onSave: (value: EmbeddingFormValue) => Promise<void>;
   onCancel: () => void;
+  surface?: "page" | "drawer";
 }) {
   const labels =
     locale === "zh"
@@ -113,16 +115,24 @@ export function EmbeddingForm({
 
   return (
     <FormLayout onSubmit={submit}>
-      <div className="flex flex-col gap-5">
-        <AISettingsEditorHeader
-          title={initial ? `${labels.title}：${initial.name}` : labels.title}
-          description={
-            locale === "zh"
-              ? "Embedding 配置决定知识索引使用的模型、维度与连接凭据；索引状态和重建操作仍留在知识库工作区。"
-              : "Embedding profiles define the model, dimensions, and credentials used by the knowledge index. Index status and rebuild actions remain in the knowledge workspace."
-          }
-          icon={<DatabaseZap />}
-        />
+      <div
+        data-pattern="editor-form-composition"
+        className="flex flex-col gap-5"
+      >
+        {surface === "page" ? (
+          <AISettingsEditorHeader
+            title={initial ? `${labels.title}：${initial.name}` : labels.title}
+            description={
+              locale === "zh"
+                ? "Embedding 配置决定知识索引使用的模型、维度与连接凭据；索引状态和重建操作仍留在知识库工作区。"
+                : "Embedding profiles define the model, dimensions, and credentials used by the knowledge index. Index status and rebuild actions remain in the knowledge workspace."
+            }
+            backLabel={
+              locale === "zh" ? "返回知识库设置" : "Back to knowledge settings"
+            }
+            onBack={handleCancel}
+          />
+        ) : null}
 
         <div className="grid gap-5 xl:grid-cols-2">
           <AISettingsEditorSection
@@ -252,7 +262,7 @@ export function EmbeddingForm({
           </AISettingsEditorSection>
         </div>
 
-        <FormActions>
+        <AISettingsEditorActions>
           <Button variant="outline" type="button" onClick={handleCancel}>
             {labels.cancel}
           </Button>
@@ -265,7 +275,7 @@ export function EmbeddingForm({
           >
             {saving ? labels.saving : labels.save}
           </Button>
-        </FormActions>
+        </AISettingsEditorActions>
       </div>
     </FormLayout>
   );
