@@ -35,6 +35,17 @@ if (objectRowOverflowGuards < 4) {
   );
 }
 
+requireText(
+  patterns,
+  "edge-s-emphasis",
+  "OperationsObjectRow: canonical selected rail edge must use the logical-start emphasis utility",
+);
+if (/border-l-(?:2|primary|transparent)/.test(patterns)) {
+  failures.push(
+    "OperationsObjectRow: physical left-border ownership is retired; use canonical logical-start edge semantics",
+  );
+}
+
 const panelConsumers = [
   "src/components/agent/WorkspaceOverview.tsx",
   "src/components/agent/DecisionInboxWorkspace.tsx",
@@ -57,6 +68,11 @@ const railFiles = [
 ];
 for (const path of railFiles) {
   const text = await source(path);
+  if (/border-l-(?:2|primary|transparent)/.test(text)) {
+    failures.push(
+      `${path}: adaptive rails must not regress to physical left-border state markers`,
+    );
+  }
   if (/max-h-\[(?:42|44|46|48|56)rem\]/.test(text)) {
     failures.push(
       `${path}: AI Operations master-detail rails must be content-driven; fixed rem max-height is forbidden`,
