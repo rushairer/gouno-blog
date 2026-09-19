@@ -50,11 +50,7 @@ export function AISettingsPanelLead({
   );
 }
 
-export function AISettingsPanelFeedback({
-  children,
-}: {
-  children?: ReactNode;
-}) {
+export function AISettingsPanelFeedback({ children }: { children?: ReactNode }) {
   if (!children) return null;
   return (
     <div
@@ -141,11 +137,7 @@ export function AISettingsEditorSection({
   );
 }
 
-export function AISettingsEditorActions({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export function AISettingsEditorActions({ children }: { children: ReactNode }) {
   return (
     <div data-slot="ai-settings-dedicated-editor-actions">
       <FormActions>{children}</FormActions>
