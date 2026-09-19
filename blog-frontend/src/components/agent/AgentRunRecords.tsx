@@ -8,7 +8,7 @@ import {
   OperationsRegionHeading,
   OperationsSummaryStrip,
 } from "./OperationsPatterns";
-import { Button, Card, Empty, Text } from "@gouno/ui/core";
+import { Button, Card, Empty, Heading, Text } from "@gouno/ui/core";
 
 export function JsonPreview({ value }: { value: unknown }) {
   if (
@@ -746,11 +746,11 @@ export function RecordsWorkspace({
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-xl font-semibold tracking-tight">
+                    <Heading level={2}>
                       Run #{selectedRun.run.id} ·{" "}
                       {agentMap.get(selectedRun.run.agent_id)?.name ||
                         `Agent #${selectedRun.run.agent_id}`}
-                    </h2>
+                    </Heading>
                     <StatusPill
                       status={selectedRun.run.status}
                       locale={locale}
