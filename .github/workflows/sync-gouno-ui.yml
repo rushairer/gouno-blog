@@ -1,5 +1,4 @@
 name: Update Gouno UI Registry Dependency
-# FI-001 consumer certification target: 0.4.6
 
 on:
   push:
@@ -12,9 +11,8 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Exact @gouno/ui version or npm dist-tag
+        description: Exact @gouno/ui version or npm dist-tag; leave blank to verify the currently pinned version
         required: false
-        default: 0.4.6
 
 permissions:
   contents: write
@@ -58,8 +56,13 @@ jobs:
           REQUESTED_VERSION: ${{ github.event.inputs.version }}
         run: |
           set -euo pipefail
-          REQUESTED_VERSION="${REQUESTED_VERSION:-0.4.6}"
-          RESOLVED_VERSION="$(npm view "@gouno/ui@${REQUESTED_VERSION}" version)"
+          if [ -n "${REQUESTED_VERSION:-}" ]; then
+            TARGET_VERSION="$REQUESTED_VERSION"
+          else
+            TARGET_VERSION="$(node --input-type=module -e "import { readFile } from 'node:fs/promises'; const pkg = JSON.parse(await readFile('blog-frontend/package.json', 'utf8')); process.stdout.write(pkg.dependencies?.['@gouno/ui'] || '');")"
+          fi
+          test -n "$TARGET_VERSION"
+          RESOLVED_VERSION="$(npm view "@gouno/ui@${TARGET_VERSION}" version)"
           test -n "$RESOLVED_VERSION"
           echo "version=$RESOLVED_VERSION" >> "$GITHUB_OUTPUT"
 
