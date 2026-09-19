@@ -727,7 +727,7 @@ export function AdvancedWorkspace({
                       type="button"
                       onClick={() => void onExportProviders()}
                       icon={<Download />}
-                  >
+                    >
                       {labels.exportProviders}
                     </Button>
                     <Button
@@ -736,7 +736,7 @@ export function AdvancedWorkspace({
                       type="button"
                       onClick={() => providerFileInputRef.current?.click()}
                       icon={<Upload />}
-                  >
+                    >
                       {labels.importProviders}
                     </Button>
                     <Button
@@ -745,7 +745,7 @@ export function AdvancedWorkspace({
                       color="primary"
                       onClick={() => onEditProvider("new")}
                       icon={<Plus />}
-                  >
+                    >
                       {locale === "zh" ? "添加模型连接" : labels.createProvider}
                     </Button>
                   </>
@@ -770,14 +770,14 @@ export function AdvancedWorkspace({
                       </Text>
                       <Select
                         value={String(
-                          providers.find((item) => item.is_default_writing)?.id ||
-                            "",
+                          providers.find((item) => item.is_default_writing)
+                            ?.id || "",
                         )}
                         onChange={(value) => {
                           const id = value ? Number(value) : 0;
                           void onSetDefaultProvider(id, "writing");
                         }}
-                    >
+                      >
                         <option value="">
                           {locale === "zh"
                             ? "未设置 (取消选择)"
@@ -805,7 +805,7 @@ export function AdvancedWorkspace({
                           const id = value ? Number(value) : 0;
                           void onSetDefaultProvider(id, "image");
                         }}
-                    >
+                      >
                         <option value="">
                           {locale === "zh"
                             ? "未设置 (取消选择)"
@@ -843,7 +843,9 @@ export function AdvancedWorkspace({
                                 {provider.provider_type} · {provider.model}
                               </Text>
                             </div>
-                            <Tag color={provider.enabled ? "success" : "default"}>
+                            <Tag
+                              color={provider.enabled ? "success" : "default"}
+                            >
                               {provider.enabled ? labels.active : labels.paused}
                             </Tag>
                           </div>
@@ -892,7 +894,7 @@ export function AdvancedWorkspace({
                                   provider.name,
                                 )
                               }
-                          >
+                            >
                               {testing
                                 ? locale === "zh"
                                   ? "正在测试连接"
@@ -904,7 +906,7 @@ export function AdvancedWorkspace({
                               variant="ghost"
                               icon={<Edit2 />}
                               onClick={() => onEditProvider(provider)}
-                          >
+                            >
                               {labels.edit}
                             </Button>
                             <Button
@@ -918,7 +920,7 @@ export function AdvancedWorkspace({
                                   value: provider,
                                 })
                               }
-                          >
+                            >
                               {labels.delete}
                             </Button>
                           </div>
@@ -933,17 +935,13 @@ export function AdvancedWorkspace({
         </div>
       ) : null}
 
-      {!editingAgent &&
-      !editingSkill &&
-      advancedSection === "connectors" ? (
+      {!editingAgent && !editingSkill && advancedSection === "connectors" ? (
         <div data-pattern="settings-composition" className="contents">
           <ConnectorWorkspace locale={locale} onRefresh={onRefresh} />
         </div>
       ) : null}
 
-      {!editingAgent &&
-      !editingSkill &&
-      advancedSection === "knowledge" ? (
+      {!editingAgent && !editingSkill && advancedSection === "knowledge" ? (
         <div data-pattern="settings-composition" className="contents">
           <SudoGate
             title="知识库与向量模型保护"
@@ -965,7 +963,7 @@ export function AdvancedWorkspace({
                       type="button"
                       onClick={() => void onRetryIndex()}
                       icon={<RefreshCw />}
-                  >
+                    >
                       {locale === "zh" ? "重试失败任务" : "Retry failed"}
                     </Button>
                     <Button
@@ -974,7 +972,7 @@ export function AdvancedWorkspace({
                       type="button"
                       onClick={() => void onRebuildIndex()}
                       icon={<RefreshCw />}
-                  >
+                    >
                       {locale === "zh" ? "全量重建" : "Rebuild all"}
                     </Button>
                     <Button
@@ -984,7 +982,7 @@ export function AdvancedWorkspace({
                       type="button"
                       onClick={() => onEditEmbedding("new")}
                       icon={<Plus />}
-                  >
+                    >
                       {locale === "zh"
                         ? "添加 Embedding 模型"
                         : "Add embedding profile"}
@@ -1049,14 +1047,16 @@ export function AdvancedWorkspace({
                         <div
                           key={profile.id}
                           className="flex flex-col gap-4 p-6 xl:flex-row xl:items-center xl:justify-between"
-                      >
+                        >
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
                               <strong>{profile.name}</strong>
                               <Tag
                                 color={profile.enabled ? "success" : "default"}
-                            >
-                                {profile.enabled ? labels.active : labels.paused}
+                              >
+                                {profile.enabled
+                                  ? labels.active
+                                  : labels.paused}
                               </Tag>
                             </div>
                             <Text size="xs" tone="muted">
@@ -1122,7 +1122,7 @@ export function AdvancedWorkspace({
                 </Card>
               )}
             </div>
-        </SudoGate>
+          </SudoGate>
         </div>
       ) : null}
       <Drawer
@@ -1148,9 +1148,7 @@ export function AdvancedWorkspace({
           <div data-pattern="contextual-list-editor">
             <ProviderForm
               key={editingProvider === "new" ? "new" : editingProvider.id}
-              initial={
-                editingProvider === "new" ? undefined : editingProvider
-              }
+              initial={editingProvider === "new" ? undefined : editingProvider}
               labels={labels}
               onSave={onSaveProvider}
               onCancel={() => onEditProvider(null)}
