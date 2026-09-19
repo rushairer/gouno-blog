@@ -8,7 +8,7 @@ import type {
   WorkflowRunEvent,
   WorkflowStepRun,
 } from "../../types/agent";
-import { Alert, Button, Empty, Tag, Text } from "@gouno/ui/core";
+import { Alert, Button, Empty, Heading, Tag, Text } from "@gouno/ui/core";
 import {
   OperationsRegionHeading,
   OperationsSummaryStrip,
@@ -209,7 +209,10 @@ export function WorkflowRunDetail({
   );
 
   return (
-    <div className="workflow-run-detail-view flex min-w-0 flex-col gap-6">
+    <div
+      data-pattern="record-detail-composition"
+      className="workflow-run-detail-view flex min-w-0 flex-col gap-6"
+    >
       {onBack ? (
         <div>
           <Button
@@ -231,9 +234,9 @@ export function WorkflowRunDetail({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-xl font-semibold tracking-tight">
+              <Heading level={2}>
                 Run #{selected.run.id} · {workflowName}
-              </h2>
+              </Heading>
               <StatusPill status={selected.run.status} locale={locale} />
               {selected.run.dry_run ? <Tag>Dry-run</Tag> : null}
             </div>

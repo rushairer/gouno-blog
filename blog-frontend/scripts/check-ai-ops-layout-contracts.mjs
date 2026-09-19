@@ -26,6 +26,16 @@ requireText(
   'data-pattern="tab-panel-lead"',
   "AI Operations panel lead must expose the shared semantic pattern marker",
 );
+requireText(
+  patterns,
+  "export function OperationsDedicatedEditorLead",
+  "Missing canonical AI Operations Dedicated Editor lead",
+);
+requireText(
+  patterns,
+  'data-pattern="dedicated-editor-lead"',
+  "AI Operations Dedicated Editor lead must expose the shared semantic pattern marker",
+);
 
 const objectRowOverflowGuards =
   patterns.match(/\[overflow-wrap:anywhere\]/g)?.length ?? 0;
@@ -105,6 +115,16 @@ requireText(
 );
 requireText(
   workflowWorkspace,
+  'data-pattern="dedicated-list-editor"',
+  "WorkflowWorkspace: Workflow create/edit must use the Dedicated List Editor composition",
+);
+requireText(
+  workflowWorkspace,
+  "OperationsDedicatedEditorLead",
+  "WorkflowWorkspace: Workflow create/edit must use the canonical Dedicated Editor lead",
+);
+requireText(
+  workflowWorkspace,
   "返回 Workflow 列表",
   "WorkflowWorkspace: dedicated detail must expose an explicit return path",
 );
@@ -181,6 +201,59 @@ for (const path of [
     text,
     "xl:grid-cols-[19rem_minmax(0,1fr)]",
     `${path}: Run Center rail width must match Showcase`,
+  );
+}
+
+const decisionInbox = await source(
+  "src/components/agent/DecisionInboxWorkspace.tsx",
+);
+requireText(
+  decisionInbox,
+  'data-pattern="master-detail-composition"',
+  "DecisionInboxWorkspace: decision queue must expose the canonical Master-Detail composition",
+);
+requireText(
+  decisionInbox,
+  "xl:grid-cols-[minmax(18rem,0.72fr)_minmax(0,1.55fr)]",
+  "DecisionInboxWorkspace: decision queue rail width must match Showcase",
+);
+
+const workflowRunRecords = await source(
+  "src/components/agent/WorkflowRunRecords.tsx",
+);
+requireText(
+  workflowRunRecords,
+  'data-pattern="master-detail-composition"',
+  "WorkflowRunRecords: Run Center must expose the canonical Master-Detail composition",
+);
+
+const workflowRunDetail = await source(
+  "src/components/agent/WorkflowRunDetail.tsx",
+);
+requireText(
+  workflowRunDetail,
+  'data-pattern="record-detail-composition"',
+  "WorkflowRunDetail: Workflow Run evidence must expose the canonical Record Detail composition",
+);
+if (/<h2\b/.test(workflowRunDetail)) {
+  failures.push(
+    "WorkflowRunDetail: canonical Run heading must use the shared Heading owner instead of raw h2 typography",
+  );
+}
+
+requireText(
+  agentRunRecords,
+  'data-pattern="master-detail-composition"',
+  "AgentRunRecords: Agent Run Center must expose the canonical Master-Detail composition",
+);
+requireText(
+  agentRunRecords,
+  'data-pattern="record-detail-composition"',
+  "AgentRunRecords: Agent Run evidence must expose the canonical Record Detail composition",
+);
+if (/<h2\b/.test(agentRunRecords)) {
+  failures.push(
+    "AgentRunRecords: canonical Run heading must use the shared Heading owner instead of raw h2 typography",
   );
 }
 

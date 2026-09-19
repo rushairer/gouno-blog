@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ArrowLeft } from "lucide-react";
 import { Button, Heading, Text } from "@gouno/ui/core";
 
 export type OperationsSummaryItem = {
@@ -22,7 +23,7 @@ export function OperationsPanelLead({
     <div
       data-slot="ops-panel-lead"
       data-pattern="tab-panel-lead"
-      className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
+      className="flex min-h-9 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
     >
       <div className="min-w-0">
         {title ? <Heading level={2}>{title}</Heading> : null}
@@ -46,6 +47,56 @@ export function OperationsPanelLead({
   );
 }
 
+export function OperationsDedicatedEditorLead({
+  title,
+  description,
+  backLabel,
+  onBack,
+  status,
+}: {
+  title: ReactNode;
+  description: ReactNode;
+  backLabel: ReactNode;
+  onBack: () => void;
+  status?: ReactNode;
+}) {
+  return (
+    <header
+      data-slot="ops-dedicated-editor-lead"
+      data-pattern="dedicated-editor-lead"
+      className="flex flex-col gap-4 border-b pb-5"
+    >
+      <div>
+        <Button
+          type="button"
+          size="small"
+          variant="ghost"
+          icon={<ArrowLeft />}
+          onClick={onBack}
+        >
+          {backLabel}
+        </Button>
+      </div>
+      <div className="min-w-0">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <Heading level={2} variant="task">
+            {title}
+          </Heading>
+          {status}
+        </div>
+        <Text
+          size="sm"
+          tone="muted"
+          leading="relaxed"
+          className="mt-1 max-w-3xl"
+        >
+          {description}
+        </Text>
+      </div>
+    </header>
+  );
+}
+
 export function OperationsObjectRow({
   title,
   status,
@@ -56,6 +107,7 @@ export function OperationsObjectRow({
   selected = false,
   onClick,
   ariaLabel,
+  disabled = false,
 }: {
   title: ReactNode;
   status?: ReactNode;
@@ -66,6 +118,7 @@ export function OperationsObjectRow({
   selected?: boolean;
   onClick?: () => void;
   ariaLabel?: string;
+  disabled?: boolean;
 }) {
   return (
     <Button
@@ -73,6 +126,7 @@ export function OperationsObjectRow({
       block
       aria-label={ariaLabel}
       aria-pressed={selected}
+      disabled={disabled}
       className={[
         "group relative h-auto items-stretch justify-start whitespace-normal rounded-none border-b edge-s-emphasis px-4 py-4 text-left transition-colors last:border-b-0",
         "focus-visible:ring-inset",

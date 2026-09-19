@@ -63,6 +63,23 @@ export async function installAiFixtures(page) {
     if (path === "/api/admin/agent-skills") return respond([aiSkill]);
     if (path === "/api/admin/provider-profiles") return respond([aiProvider]);
     if (path === "/api/admin/embedding-profiles") return respond([embeddingProfile]);
+    if (path === "/api/admin/ai-connectors") {
+      return respond([
+        {
+          id: 801,
+          name: "Search Console Sandbox",
+          kind: "search_console",
+          sandbox: true,
+          enabled: true,
+          config: { site_url: "sc-domain:example.test" },
+          credential_last4: "1234",
+          has_credential: true,
+          created_at: "2026-09-18T08:00:00Z",
+          updated_at: "2026-09-19T08:00:00Z",
+        },
+      ]);
+    }
+    if (path === "/api/admin/ai-connector-outbox") return respond([]);
     if (path === "/api/admin/ai-index/status") return respond(indexStatus);
 
     if (path === "/api/admin/agent-runs") return respond({ list: agentRuns });

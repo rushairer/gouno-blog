@@ -21,6 +21,15 @@ const canonicalAutomation = await readCanonical(
 const canonicalRecords = await readCanonical(
   "showcase/demos/products/blog-admin/ai/operations/automation-records.tsx",
 );
+const canonicalInbox = await readCanonical(
+  "showcase/demos/products/blog-admin/ai/operations/overview-inbox.tsx",
+);
+const canonicalSettings = await readCanonical(
+  "showcase/demos/products/blog-admin/ai/settings/index.tsx",
+);
+const canonicalSettingsEditors = await readCanonical(
+  "showcase/demos/products/blog-admin/ai/settings/editors.tsx",
+);
 const canonicalContract = await readCanonical(
   "tests/product-blog-admin-ai-operations-run-center-contract.test.ts",
 );
@@ -38,6 +47,25 @@ const blogAgentRecords = await readBlog(
   "src/components/agent/AgentRunRecords.tsx",
 );
 const blogPage = await readBlog("src/pages/admin/AIOperations.tsx");
+const blogDecisionInbox = await readBlog(
+  "src/components/agent/DecisionInboxWorkspace.tsx",
+);
+const blogWorkflowDetail = await readBlog(
+  "src/components/agent/WorkflowRunDetail.tsx",
+);
+const blogSettingsWorkspace = await readBlog(
+  "src/components/agent/AdvancedWorkspace.tsx",
+);
+const blogSettingsPatterns = await readBlog(
+  "src/components/agent/AISettingsEditorPatterns.tsx",
+);
+const blogAgentForm = await readBlog("src/components/agent/AgentForm.tsx");
+const blogSkillForm = await readBlog("src/components/agent/SkillForm.tsx");
+const blogProviderForm = await readBlog("src/components/agent/ProviderForm.tsx");
+const blogEmbeddingForm = await readBlog("src/components/agent/EmbeddingForm.tsx");
+const blogConnector = await readBlog(
+  "src/components/agent/ConnectorWorkspace.tsx",
+);
 
 function requireBoth(marker, canonical, consumer, label) {
   if (!canonical.includes(marker)) {
@@ -118,12 +146,92 @@ if (blogPage.includes("<Segmented")) {
   );
 }
 
+requireBoth(
+  'data-pattern="master-detail-composition"',
+  canonicalInbox,
+  blogDecisionInbox,
+  "Inbox Master-Detail composition",
+);
+requireBoth(
+  "xl:grid-cols-[minmax(18rem,0.72fr)_minmax(0,1.55fr)]",
+  canonicalInbox,
+  blogDecisionInbox,
+  "Inbox adaptive rail anatomy",
+);
+for (const [consumer, label] of [
+  [blogWorkflowRecords, "Workflow Run Center"],
+  [blogAgentRecords, "Agent Run Center"],
+]) {
+  requireBoth(
+    'data-pattern="master-detail-composition"',
+    canonicalRecords,
+    consumer,
+    `${label} Master-Detail composition`,
+  );
+}
+for (const [consumer, label] of [
+  [blogWorkflowDetail, "Workflow Run detail"],
+  [blogAgentRecords, "Agent Run detail"],
+]) {
+  requireBoth(
+    'data-pattern="record-detail-composition"',
+    canonicalRecords,
+    consumer,
+    `${label} Record-Detail composition`,
+  );
+}
+requireBoth(
+  'data-pattern="dedicated-list-editor"',
+  canonicalAutomation,
+  blogAutomation,
+  "Workflow Dedicated List Editor composition",
+);
+
+requireBoth(
+  'data-pattern="settings-composition"',
+  canonicalSettings,
+  blogSettingsWorkspace,
+  "AI Settings composition",
+);
+if (!canonicalSettings.includes('data-pattern="dedicated-list-editor"')) {
+  failures.push("Canonical AI Settings no longer exposes Dedicated List Editor composition");
+}
+if ((blogSettingsWorkspace.match(/data-pattern="dedicated-list-editor"/g) || []).length < 2) {
+  failures.push("Blog AI Settings must keep Agent and Skill as Dedicated List Editors");
+}
+if (!canonicalSettings.includes('data-pattern="contextual-list-editor"')) {
+  failures.push("Canonical AI Settings no longer exposes Contextual List Editor composition");
+}
+if ((blogSettingsWorkspace.match(/data-pattern="contextual-list-editor"/g) || []).length < 2) {
+  failures.push("Blog AI Settings must keep Provider and Embedding as contextual Drawer editors");
+}
+if (!blogConnector.includes('data-pattern="contextual-list-editor"')) {
+  failures.push("Blog AI Settings Connector creation must use the contextual Drawer editor composition");
+}
+if (!canonicalSettingsEditors.includes('data-pattern="editor-form-composition"')) {
+  failures.push("Canonical AI Settings editors no longer expose Editor Form composition");
+}
+for (const [consumer, label] of [
+  [blogAgentForm, "Agent"],
+  [blogSkillForm, "Skill"],
+  [blogProviderForm, "Provider"],
+  [blogEmbeddingForm, "Embedding"],
+  [blogConnector, "Connector"],
+]) {
+  if (!consumer.includes('data-pattern="editor-form-composition"')) {
+    failures.push(`Blog AI Settings ${label} editor is missing canonical Editor Form composition`);
+  }
+}
+if (!blogSettingsPatterns.includes('data-pattern="dedicated-editor-lead"')) {
+  failures.push("Blog AI Settings must keep a canonical Dedicated Editor lead owner");
+}
+
 if (failures.length) {
-  console.error("AI Operations cross-repository Showcase parity failed:\n");
+  console.error("Blog Admin AI cross-repository Showcase parity failed:\n");
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
 
 console.log(
-  "AI Operations cross-repository Showcase parity passed against current gouno-ui/main.",
+  "Blog Admin AI Operations + AI Settings Showcase parity passed against current gouno-ui/main.",
 );

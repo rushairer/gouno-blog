@@ -6,8 +6,11 @@ on:
     paths:
       - .github/workflows/sync-gouno-ui.yml
       - blog-frontend/scripts/check-ai-ops-showcase-parity.mjs
-      - blog-frontend/src/components/agent/OperationsPatterns.tsx
+      - blog-frontend/scripts/check-ai-ops-layout-contracts.mjs
+      - blog-frontend/scripts/check-ai-settings-layout-contracts.mjs
+      - blog-frontend/src/components/agent/**
       - blog-frontend/src/pages/admin/AIOperations.tsx
+      - blog-frontend/src/pages/admin/AISettings.tsx
   workflow_dispatch:
     inputs:
       version:
@@ -113,7 +116,7 @@ jobs:
           }
           EOF
 
-      - name: Verify AI Operations Showcase parity contract
+      - name: Verify Blog Admin AI Showcase parity contract
         working-directory: blog-frontend
         env:
           GOUNO_UI_CANONICAL_ROOT: ../.canonical/gouno-ui

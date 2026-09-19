@@ -1,4 +1,4 @@
-import { Bot, Save, Sparkles } from "lucide-react";
+import { Save, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import type {
@@ -13,7 +13,6 @@ import {
   Button,
   Checkbox,
   Field,
-  FormActions,
   FormGrid,
   FormLayout,
   Input,
@@ -22,6 +21,7 @@ import {
   Textarea,
 } from "@gouno/ui/core";
 import {
+  AISettingsEditorActions,
   AISettingsEditorHeader,
   AISettingsEditorSection,
 } from "./AISettingsEditorPatterns";
@@ -141,7 +141,10 @@ export function AgentForm({
 
   return (
     <FormLayout onSubmit={submit}>
-      <div className="flex flex-col gap-5">
+      <div
+        data-pattern="editor-form-composition"
+        className="flex flex-col gap-5"
+      >
         <AISettingsEditorHeader
           title={
             initial
@@ -153,10 +156,14 @@ export function AgentForm({
               ? "Agent 绑定稳定的模型与 Skill Version；运行计划、预算和限制覆盖属于运行治理，不复制 Skill 的安全边界。"
               : "Agents bind stable model and Skill versions. Schedule, budget, and stricter overrides belong to runtime governance."
           }
-          icon={<Bot />}
+          backLabel={locale === "zh" ? "返回 Agent 列表" : "Back to Agent list"}
+          onBack={onCancel}
         />
 
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.12fr)_minmax(20rem,0.88fr)]">
+        <div
+          data-pattern="dedicated-editor-layout"
+          className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)]"
+        >
           <div className="flex min-w-0 flex-col gap-5">
             <AISettingsEditorSection
               title={locale === "zh" ? "基础信息" : "Identity"}
@@ -538,7 +545,7 @@ export function AgentForm({
           </div>
         </div>
 
-        <FormActions>
+        <AISettingsEditorActions>
           <Button variant="outline" type="button" onClick={handleCancel}>
             {labels.cancel}
           </Button>
@@ -552,7 +559,7 @@ export function AgentForm({
           >
             {saving ? labels.saving : labels.saveAgent}
           </Button>
-        </FormActions>
+        </AISettingsEditorActions>
       </div>
     </FormLayout>
   );

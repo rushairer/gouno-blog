@@ -1,4 +1,4 @@
-import { ListChecks, Save } from "lucide-react";
+import { Save } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import type {
@@ -12,7 +12,6 @@ import {
   Checkbox,
   CheckboxField,
   Field,
-  FormActions,
   FormGrid,
   FormLayout,
   Input,
@@ -21,6 +20,7 @@ import {
   Textarea,
 } from "@gouno/ui/core";
 import {
+  AISettingsEditorActions,
   AISettingsEditorHeader,
   AISettingsEditorSection,
 } from "./AISettingsEditorPatterns";
@@ -132,7 +132,10 @@ export function SkillForm({
 
   return (
     <FormLayout onSubmit={submit}>
-      <div className="flex flex-col gap-5">
+      <div
+        data-pattern="editor-form-composition"
+        className="flex flex-col gap-5"
+      >
         <AISettingsEditorHeader
           title={initial ? `${labels.title}：${initial.name}` : labels.title}
           description={
@@ -140,10 +143,14 @@ export function SkillForm({
               ? "Skill Version 是行为与安全边界的不可变快照；固定指令、Tool 授权、发布策略和默认治理限制都在这里定义。"
               : "A Skill Version is an immutable behavior and safety snapshot defining instructions, Tool authorization, publication policy, and governance defaults."
           }
-          icon={<ListChecks />}
+          backLabel={locale === "zh" ? "返回 Skill 列表" : "Back to Skill list"}
+          onBack={onCancel}
         />
 
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(22rem,0.95fr)]">
+        <div
+          data-pattern="dedicated-editor-layout"
+          className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)]"
+        >
           <AISettingsEditorSection
             title={locale === "zh" ? "能力定义" : "Capability definition"}
             description={
@@ -463,7 +470,7 @@ export function SkillForm({
           </AISettingsEditorSection>
         </div>
 
-        <FormActions>
+        <AISettingsEditorActions>
           <Button variant="outline" type="button" onClick={onCancel}>
             {labels.cancel}
           </Button>
@@ -476,7 +483,7 @@ export function SkillForm({
           >
             {saving ? labels.saving : labels.save}
           </Button>
-        </FormActions>
+        </AISettingsEditorActions>
       </div>
     </FormLayout>
   );
