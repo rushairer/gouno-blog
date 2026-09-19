@@ -1,0 +1,47 @@
+name: Format Blog Admin AI parity once
+
+on:
+  push:
+    branches:
+      - reverse-migration/blog-admin-ai-full-parity
+    paths:
+      - .github/workflows/format-blog-admin-ai-parity-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: reverse-migration/blog-admin-ai-full-parity
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: blog-frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: blog-frontend
+        run: npm ci
+
+      - name: Apply repository Prettier
+        working-directory: blog-frontend
+        run: npx prettier --write src/components/agent/AdvancedWorkspace.tsx src/components/agent/AISettingsEditorPatterns.tsx
+
+      - name: Commit canonical formatting and remove one-shot workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/format-blog-admin-ai-parity-once.yml
+          git add blog-frontend/src/components/agent/AdvancedWorkspace.tsx blog-frontend/src/components/agent/AISettingsEditorPatterns.tsx
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "style(ai): apply repository Prettier output"
+          git push origin HEAD:reverse-migration/blog-admin-ai-full-parity
