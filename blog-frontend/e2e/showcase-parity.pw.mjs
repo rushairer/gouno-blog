@@ -104,15 +104,19 @@ async function openAiPair(
   productPath,
   theme = "light",
   viewport = { width: 1440, height: 900 },
+  activeSudo = false,
 ) {
   const context = await browser.newContext({ viewport });
   const showcase = await context.newPage();
   const product = await context.newPage();
   await setTheme(showcase, theme);
   await setTheme(product, theme);
-  await product.addInitScript(() => {
+  await product.addInitScript((sudo) => {
     localStorage.setItem("gouno-blog:locale", "zh");
-  });
+    if (sudo) {
+      localStorage.setItem("gouno:sudo_activated_at", Date.now().toString());
+    }
+  }, activeSudo);
   const { unknown, unexpectedWrites } = await installAiFixtures(product);
   await showcase.goto(
     `${showcaseOrigin}/?embedded=1&workspace=blog-admin&brand=blog-admin#${fixtureId}`,
@@ -575,5 +579,110 @@ test("AI Operations top-level panels, Recent Runs and Run Center match Showcase"
   expect(unknown).toEqual([]);
   expect(unexpectedWrites).toEqual([]);
   await pairScreenshot(showcase, product, "ai-operations-parity", testInfo);
+  await context.close();
+});
+
+
+test("AI Settings route family matches canonical Settings and editor compositions", async ({
+  browser,
+}, testInfo) => {
+  const { context, showcase, product, unknown, unexpectedWrites } =
+    await openAiPair(
+      browser,
+      "blog-admin-ai-settings",
+      "/admin/ai-settings",
+      "light",
+      { width: 1440, height: 1000 },
+      true,
+    );
+
+  const tabNames = [
+    "Agents",
+    "Skills",
+    "Tools",
+    "知识库",
+    "模型连接",
+    "Sandbox 连接器",
+  ];
+
+  for (const name of tabNames) {
+    await showcase.getByRole("tab", { name }).click();
+    await product.getByRole("tab", { name }).click();
+
+    const showcaseLead = showcase.locator('[data-pattern="tab-panel-lead"]');
+    const productLead = product.locator('[data-pattern="tab-panel-lead"]');
+    await expect(showcaseLead).toHaveCount(1);
+    await expect(productLead).toHaveCount(1);
+    expect(await styleFingerprint(productLead)).toEqual(
+      await styleFingerprint(showcaseLead),
+    );
+
+    await expect(showcase.locator('[data-pattern="settings-composition"]')).toHaveCount(1);
+    await expect(product.locator('[data-pattern="settings-composition"]')).toHaveCount(1);
+  }
+
+  await showcase.getByRole("tab", { name: "Agents" }).click();
+  await product.getByRole("tab", { name: "Agents" }).click();
+  await showcase.getByRole("button", { name: "创建 Agent" }).click();
+  await product.getByRole("button", { name: "创建 Agent" }).click();
+
+  const showcaseDedicated = showcase.locator('[data-pattern="dedicated-list-editor"]');
+  const productDedicated = product.locator('[data-pattern="dedicated-list-editor"]');
+  await expect(showcaseDedicated).toHaveCount(1);
+  await expect(productDedicated).toHaveCount(1);
+
+  const showcaseDedicatedLead = showcase.locator('[data-pattern="dedicated-editor-lead"]');
+  const productDedicatedLead = product.locator('[data-pattern="dedicated-editor-lead"]');
+  expect(await styleFingerprint(productDedicatedLead)).toEqual(
+    await styleFingerprint(showcaseDedicatedLead),
+  );
+  await expect(showcase.locator('[data-pattern="dedicated-editor-layout"]')).toHaveCount(1);
+  await expect(product.locator('[data-pattern="dedicated-editor-layout"]')).toHaveCount(1);
+
+  await showcase.getByRole("button", { name: "返回 Agent 列表" }).click();
+  await product.getByRole("button", { name: "返回 Agent 列表" }).click();
+
+  await showcase.getByRole("tab", { name: "模型连接" }).click();
+  await product.getByRole("tab", { name: "模型连接" }).click();
+  await showcase.getByRole("button", { name: "添加模型连接" }).click();
+  await product.getByRole("button", { name: "添加模型连接" }).click();
+
+  const showcaseProviderDrawer = showcase.getByRole("dialog");
+  const productProviderDrawer = product.getByRole("dialog");
+  await expect(showcaseProviderDrawer).toBeVisible();
+  await expect(productProviderDrawer).toBeVisible();
+  const [showcaseProviderBox, productProviderBox] = await Promise.all([
+    showcaseProviderDrawer.boundingBox(),
+    productProviderDrawer.boundingBox(),
+  ]);
+  expect(productProviderBox?.width).toBe(showcaseProviderBox?.width);
+  await expect(showcaseProviderDrawer.locator('[data-pattern="contextual-list-editor"]')).toHaveCount(1);
+  await expect(productProviderDrawer.locator('[data-pattern="contextual-list-editor"]')).toHaveCount(1);
+  await expect(showcaseProviderDrawer.locator('[data-pattern="editor-form-composition"]')).toHaveCount(1);
+  await expect(productProviderDrawer.locator('[data-pattern="editor-form-composition"]')).toHaveCount(1);
+
+  await showcaseProviderDrawer.getByRole("button", { name: "取消" }).click();
+  await productProviderDrawer.getByRole("button", { name: "取消" }).click();
+
+  await showcase.getByRole("tab", { name: "Sandbox 连接器" }).click();
+  await product.getByRole("tab", { name: "Sandbox 连接器" }).click();
+  await showcase.getByRole("button", { name: "添加 Connector Profile" }).click();
+  await product.getByRole("button", { name: "添加 Connector Profile" }).click();
+
+  const showcaseConnectorDrawer = showcase.getByRole("dialog");
+  const productConnectorDrawer = product.getByRole("dialog");
+  const [showcaseConnectorBox, productConnectorBox] = await Promise.all([
+    showcaseConnectorDrawer.boundingBox(),
+    productConnectorDrawer.boundingBox(),
+  ]);
+  expect(productConnectorBox?.width).toBe(showcaseConnectorBox?.width);
+  await expect(productConnectorDrawer.locator('[data-pattern="contextual-list-editor"]')).toHaveCount(1);
+  await expect(productConnectorDrawer.locator('[data-pattern="editor-form-composition"]')).toHaveCount(1);
+
+  await expectNoHorizontalOverflow(showcase);
+  await expectNoHorizontalOverflow(product);
+  expect(unknown).toEqual([]);
+  expect(unexpectedWrites).toEqual([]);
+  await pairScreenshot(showcase, product, "ai-settings-parity", testInfo);
   await context.close();
 });
