@@ -164,11 +164,25 @@ test("Provider settings expose provider and embedding configuration without writ
 
   await expect(page.getByText("OpenAI Primary", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Add Provider" }).click();
-  await expect(page.getByRole("heading", { name: "Add Provider" })).toBeVisible();
-  await expect(page.getByLabel("API Key")).toHaveAttribute("required", "");
+  const providerDrawer = page.getByRole("dialog", { name: "Add model connection" });
+  await expect(providerDrawer).toBeVisible();
+  await expect(providerDrawer.getByLabel("API Key")).toHaveAttribute("required", "");
+  await page.keyboard.press("Escape");
+  await expect(providerDrawer).toBeHidden();
+
   await page.getByRole("tab", { name: "Knowledge index" }).click();
   await expect(page.getByText("Primary Embeddings", { exact: true })).toBeVisible();
   expect(new URL(page.url()).searchParams.get("section")).toBe("knowledge");
+
+  await page.getByRole("button", { name: "Add embedding profile" }).click();
+  const embeddingDrawer = page.getByRole("dialog", {
+    name: "Add embedding profile",
+  });
+  await expect(embeddingDrawer).toBeVisible();
+  await expect(embeddingDrawer.getByLabel("API Key")).toHaveAttribute(
+    "required",
+    "",
+  );
   await expectNoDocumentOverflow(page);
   expectFixtureHealth(fixtureState, consoleProblems);
   await attachScreenshot(page, testInfo, "u04a-provider-editor");
