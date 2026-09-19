@@ -244,7 +244,10 @@ export function AdvancedWorkspace({
       />
 
       {advancedSection === "agents" && editingAgent ? (
-        <div data-pattern="dedicated-list-editor" className="flex flex-col gap-5">
+        <div
+          data-pattern="dedicated-list-editor"
+          className="flex flex-col gap-5"
+        >
           <DedicatedEditorLead
             title={
               editingAgent === "new"
@@ -260,7 +263,9 @@ export function AdvancedWorkspace({
                 ? "Agent 是独立的配置任务：绑定模型与 Skill Version，并设置运行计划、预算与更严格的运行限制。"
                 : "Agent editing is a dedicated configuration task for model/Skill binding, schedules, budgets, and stricter runtime limits."
             }
-            backLabel={locale === "zh" ? "返回 Agent 列表" : "Back to Agent list"}
+            backLabel={
+              locale === "zh" ? "返回 Agent 列表" : "Back to Agent list"
+            }
             onBack={() => onEditAgent(null)}
           />
           <AgentForm
@@ -278,7 +283,10 @@ export function AdvancedWorkspace({
       ) : null}
 
       {advancedSection === "skills" && editingSkill ? (
-        <div data-pattern="dedicated-list-editor" className="flex flex-col gap-5">
+        <div
+          data-pattern="dedicated-list-editor"
+          className="flex flex-col gap-5"
+        >
           <DedicatedEditorLead
             title={
               editingSkill === "new"
@@ -294,7 +302,9 @@ export function AdvancedWorkspace({
                 ? "Skill Version 是独立的配置任务：固定行为指令、Tool 授权、发布策略与默认治理边界。"
                 : "Skill editing is a dedicated configuration task for immutable behavior, Tool authorization, publication policy, and governance defaults."
             }
-            backLabel={locale === "zh" ? "返回 Skill 列表" : "Back to Skill list"}
+            backLabel={
+              locale === "zh" ? "返回 Skill 列表" : "Back to Skill list"
+            }
             onBack={() => onEditSkill(null)}
           />
           <SkillForm
@@ -310,7 +320,10 @@ export function AdvancedWorkspace({
       ) : null}
 
       {!editingAgent && !editingSkill && advancedSection === "tools" ? (
-        <div data-pattern="settings-composition" className="flex flex-col gap-5">
+        <div
+          data-pattern="settings-composition"
+          className="flex flex-col gap-5"
+        >
           <TabPanelLead
             description={
               locale === "zh"
@@ -351,7 +364,10 @@ export function AdvancedWorkspace({
       ) : null}
 
       {!editingAgent && !editingSkill && advancedSection === "agents" ? (
-        <div data-pattern="settings-composition" className="flex flex-col gap-5">
+        <div
+          data-pattern="settings-composition"
+          className="flex flex-col gap-5"
+        >
           <TabPanelLead
             description={
               locale === "zh"
@@ -543,7 +559,10 @@ export function AdvancedWorkspace({
       !editingProvider &&
       !editingSkill &&
       advancedSection === "skills" ? (
-        <div data-pattern="settings-composition" className="flex flex-col gap-5">
+        <div
+          data-pattern="settings-composition"
+          className="flex flex-col gap-5"
+        >
           <input
             ref={skillFileInputRef}
             type="file"
@@ -677,11 +696,11 @@ export function AdvancedWorkspace({
 
       {!editingAgent && !editingSkill && advancedSection === "providers" ? (
         <div data-pattern="settings-composition" className="contents">
-        <SudoGate
-          title="模型连接与密钥保护"
-          description="添加、修改、导出或删除模型连接涉及敏感 API Key 凭据，需要近期多因素身份认证。"
-          actionLabel="解锁以管理模型连接"
-        >
+          <SudoGate
+            title="模型连接与密钥保护"
+            description="添加、修改、导出或删除模型连接涉及敏感 API Key 凭据，需要近期多因素身份认证。"
+            actionLabel="解锁以管理模型连接"
+          >
           <div className="flex flex-col gap-5">
             <input
               ref={providerFileInputRef}
@@ -906,7 +925,7 @@ export function AdvancedWorkspace({
               </div>
             )}
           </div>
-        </SudoGate>
+          </SudoGate>
         </div>
       ) : null}
 
@@ -922,11 +941,11 @@ export function AdvancedWorkspace({
       !editingSkill &&
       advancedSection === "knowledge" ? (
         <div data-pattern="settings-composition" className="contents">
-        <SudoGate
-          title="知识库与向量模型保护"
-          description="添加、编辑、删除 Embedding 配置或执行全量重建需要近期多因素身份认证。"
-          actionLabel="解锁以管理知识库"
-        >
+          <SudoGate
+            title="知识库与向量模型保护"
+            description="添加、编辑、删除 Embedding 配置或执行全量重建需要近期多因素身份认证。"
+            actionLabel="解锁以管理知识库"
+          >
           <div className="flex flex-col gap-5">
             <TabPanelLead
               description={
