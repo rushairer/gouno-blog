@@ -16,6 +16,9 @@ function requireCount(text, marker, count, message) {
 }
 
 const workspace = await source("src/components/agent/AdvancedWorkspace.tsx");
+const connectorWorkspace = await source(
+  "src/components/agent/ConnectorWorkspace.tsx",
+);
 requireText(
   workspace,
   "DedicatedEditorLead",
@@ -62,6 +65,36 @@ requireText(
   "window.scrollTo({ top: 0",
   "Entering a Dedicated Editor must reset page scroll",
 );
+for (const [formId, label] of [
+  ["ai-settings-provider-editor", "Provider"],
+  ["ai-settings-embedding-editor", "Embedding"],
+]) {
+  requireText(
+    workspace,
+    `form="${formId}"`,
+    `${label} Drawer footer must own the submit action for its editor form`,
+  );
+}
+requireText(
+  connectorWorkspace,
+  "<Drawer",
+  "Connector editing must use a contextual Drawer task surface",
+);
+requireText(
+  connectorWorkspace,
+  'data-pattern="contextual-list-editor"',
+  "Connector editor must remain contextual to the Connector collection",
+);
+requireText(
+  connectorWorkspace,
+  'data-pattern="editor-form-composition"',
+  "Connector Drawer body must use the shared editor form composition",
+);
+requireText(
+  connectorWorkspace,
+  'form="ai-settings-connector-editor"',
+  "Connector Drawer footer must own the submit action",
+);
 
 for (const path of [
   "src/components/agent/AgentForm.tsx",
@@ -103,6 +136,11 @@ for (const path of [
     text,
     'surface === "page"',
     `${path}: Drawer must own editor identity instead of rendering a second page header`,
+  );
+  requireText(
+    text,
+    'id="ai-settings-',
+    `${path}: contextual editor form must expose a stable form id for Drawer footer submission`,
   );
 }
 
