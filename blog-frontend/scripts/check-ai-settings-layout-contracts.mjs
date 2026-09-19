@@ -1,3 +1,6 @@
+// Fail closed on the canonical AI Settings composition. A newer @gouno/ui
+// package version does not by itself prove that Blog Admin has reverse-migrated
+// the current Settings, Dedicated Editor and Contextual Editor contracts.
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
