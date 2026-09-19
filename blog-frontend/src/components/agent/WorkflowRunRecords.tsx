@@ -648,18 +648,7 @@ export function WorkflowRunRecords({
         </Select>
       </div>
 
-      {filtered.length === 0 ? (
-        <div className="rounded-lg border bg-background p-8">
-          <Empty
-            title={
-              zh
-                ? "还没有符合条件的 Workflow 运行记录。"
-                : "No matching Workflow runs yet."
-            }
-          />
-        </div>
-      ) : (
-        <div
+      <div
           data-slot="ops-master-detail"
           data-pattern="master-detail-composition"
           className="grid min-w-0 items-stretch gap-6 xl:grid-cols-[19rem_minmax(0,1fr)]"
@@ -735,6 +724,17 @@ export function WorkflowRunRecords({
                   </div>
                 );
               })}
+              {filtered.length === 0 ? (
+                <div className="p-8">
+                  <Empty
+                    title={
+                      zh
+                        ? "没有符合条件的 Workflow Run"
+                        : "No matching Workflow Runs"
+                    }
+                  />
+                </div>
+              ) : null}
             </div>
           </aside>
 
@@ -777,21 +777,20 @@ export function WorkflowRunRecords({
                 onRetryFailedGroup={retryFailedGroup}
               />
             ) : (
-              <div className="rounded-lg border bg-background p-8">
-                <Text tone="muted">
-                  {loadingID
+              <Empty
+                title={
+                  loadingID
                     ? zh
                       ? "正在载入 Run 证据…"
                       : "Loading Run evidence…"
                     : zh
-                      ? "选择一次 Run 查看完整执行证据。"
-                      : "Select a Run to inspect complete execution evidence."}
-                </Text>
-              </div>
+                      ? "选择一个 Run 查看证据"
+                      : "Select a Run to inspect evidence"
+                }
+              />
             )}
           </div>
-        </div>
-      )}
+      </div>
       <Modal
         open={confirmAction !== null}
         title={
