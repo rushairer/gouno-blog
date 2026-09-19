@@ -123,7 +123,7 @@ export default function PublicShell({ children }: { children: ReactNode }) {
       <header className="sticky top-0 layer-shell border-b bg-background">
         <div className="mx-auto flex min-h-16 w-full max-w-[1200px] items-center gap-6 px-4 md:px-6">
           <Link
-            className="mr-auto inline-flex min-w-0 items-center gap-2 text-lg font-semibold tracking-tight text-primary"
+            className="mr-auto inline-flex min-w-0 items-center gap-2 type-body-lg type-weight-semibold type-tracking-title text-primary"
             to="/"
             aria-label={`${siteTitle} 首页`}
           >
@@ -141,7 +141,7 @@ export default function PublicShell({ children }: { children: ReactNode }) {
                 aria-current={
                   activePath(location.pathname, item.path) ? "page" : undefined
                 }
-                className="py-5 text-sm text-muted-foreground hover:text-primary aria-[current=page]:text-primary"
+                className="py-5 type-body-sm text-muted-foreground hover:text-primary aria-[current=page]:text-primary"
               >
                 {item.label}
               </Link>
@@ -184,18 +184,18 @@ export default function PublicShell({ children }: { children: ReactNode }) {
           <div>
             <Link
               to="/"
-              className="inline-flex items-center gap-2 font-semibold"
+              className="inline-flex items-center gap-2 type-weight-semibold"
             >
               <BrandMark src={gounoBlogLogo} className="size-7 text-primary" />
               <span>{siteTitle}</span>
             </Link>
-            <p className="mt-2 max-w-md text-sm text-muted-foreground">
+            <p className="mt-2 max-w-md type-body-sm text-muted-foreground">
               {site?.site_description || DEFAULT_SITE_SETTINGS.site_description}
             </p>
           </div>
           <nav
             aria-label="页脚导航"
-            className="flex flex-wrap items-start gap-5 text-sm text-muted-foreground"
+            className="flex flex-wrap items-start gap-5 type-body-sm text-muted-foreground"
           >
             {navItems.map((item) => (
               <Link key={item.path} to={item.path}>
@@ -216,7 +216,7 @@ export default function PublicShell({ children }: { children: ReactNode }) {
               </a>
             ) : null}
           </nav>
-          <p className="text-xs text-muted-foreground md:col-span-2">
+          <p className="type-caption text-muted-foreground md:col-span-2">
             {!footerText
               ? `© ${year} ${siteTitle}`
               : footerText.startsWith("©")
