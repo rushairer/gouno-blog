@@ -42,6 +42,7 @@ import {
   Field,
   FormActions,
   FormLayout,
+  Heading,
   IconButton,
   Input,
   Modal,
@@ -55,6 +56,7 @@ import { StatusPill } from "./StatusPill";
 import { statusLabel } from "./labels";
 import { WorkflowInputForm } from "./WorkflowInputForm";
 import {
+  OperationsDedicatedEditorLead,
   OperationsMeta,
   OperationsObjectRow,
   OperationsPanelLead,
@@ -536,27 +538,45 @@ export function WorkflowWorkspace({
       setRunningAction(null);
     }
   };
-  if (editing)
+  if (editing) {
+    const editingWorkflow = editing === "new" ? null : editing;
     return (
-      <div className="flex flex-col gap-5">
-        <OperationsPanelLead
+      <div data-pattern="dedicated-list-editor" className="flex flex-col gap-5">
+        <OperationsDedicatedEditorLead
           title={
-            editing === "new"
+            editingWorkflow
               ? locale === "zh"
-                ? "创建自动化"
-                : "Create automation"
+                ? `编辑 Workflow：${editingWorkflow.name}`
+                : `Edit Workflow: ${editingWorkflow.name}`
               : locale === "zh"
-                ? "编辑自动化"
-                : "Edit automation"
+                ? "创建 Workflow"
+                : "Create Workflow"
           }
           description={
-            locale === "zh"
-              ? "编辑 Workflow 的输入契约、流程定义、执行计划与运行边界；保存形成新版本，运行证据继续进入运行中心。"
-              : "Edit the Workflow input contract, flow definition, schedule, and execution boundaries. Saving creates a new version while evidence remains in the run center."
+            editingWorkflow
+              ? locale === "zh"
+                ? "编辑 Workflow 是独立的资产配置任务：保存形成新版本，运行证据继续进入运行中心。"
+                : "Editing a Workflow is a dedicated asset configuration task. Saving creates a new version while evidence remains in the run center."
+              : locale === "zh"
+                ? "创建 Workflow 是独立的资产配置任务：定义输入契约、流程步骤、执行计划与运行边界。"
+                : "Creating a Workflow is a dedicated asset configuration task for inputs, steps, scheduling, and execution boundaries."
           }
+          backLabel={
+            editingWorkflow
+              ? locale === "zh"
+                ? "返回 Workflow 详情"
+                : "Back to Workflow detail"
+              : locale === "zh"
+                ? "返回 Workflow 列表"
+                : "Back to Workflow list"
+          }
+          status={
+            editingWorkflow ? <Tag>v{editingWorkflow.version}</Tag> : undefined
+          }
+          onBack={() => setEditing(null)}
         />
         <WorkflowEditor
-          initial={editing === "new" ? undefined : editing}
+          initial={editingWorkflow ?? undefined}
           labels={labels}
           agents={agents}
           tools={tools}
@@ -569,6 +589,7 @@ export function WorkflowWorkspace({
         />
       </div>
     );
+  }
 
   const formatTime = (value?: string) =>
     value
@@ -696,9 +717,9 @@ export function WorkflowWorkspace({
                         </div>
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <h2 className="text-xl font-semibold tracking-tight">
+                            <Heading level={2} variant="section">
                               {workflow.name}
-                            </h2>
+                            </Heading>
                             <Tag
                               color={workflow.enabled ? "success" : undefined}
                             >
