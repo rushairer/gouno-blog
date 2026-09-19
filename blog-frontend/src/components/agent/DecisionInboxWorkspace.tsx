@@ -1,8 +1,6 @@
 import {
   Check,
   Clock3,
-Lightbulb,
-MessageSquareMore,
   Play,
   RefreshCw,
   ShieldCheck,
