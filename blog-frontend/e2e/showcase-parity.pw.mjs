@@ -31,6 +31,21 @@ async function styleFingerprint(locator) {
   });
 }
 
+async function tabPanelLeadFingerprint(locator) {
+  await expect(locator).toBeVisible();
+  return locator.evaluate((element) => {
+    const style = getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    return {
+      display: style.display,
+      minHeight: style.minHeight,
+      gap: style.gap,
+      alignItems: style.alignItems,
+      height: Math.round(rect.height * 100) / 100,
+    };
+  });
+}
+
 async function layoutFingerprint(locator) {
   await expect(locator).toBeVisible();
   return locator.evaluate((element) => {
@@ -104,15 +119,24 @@ async function openAiPair(
   productPath,
   theme = "light",
   viewport = { width: 1440, height: 900 },
+  { activeSudo = false } = {},
 ) {
   const context = await browser.newContext({ viewport });
   const showcase = await context.newPage();
   const product = await context.newPage();
   await setTheme(showcase, theme);
   await setTheme(product, theme);
-  await product.addInitScript(() => {
-    localStorage.setItem("gouno-blog:locale", "zh");
-  });
+  await product.addInitScript(
+    ({ sudo }) => {
+      localStorage.setItem("gouno-blog:locale", "zh");
+      if (sudo) {
+        localStorage.setItem("gouno:sudo_activated_at", Date.now().toString());
+      } else {
+        localStorage.removeItem("gouno:sudo_activated_at");
+      }
+    },
+    { sudo: activeSudo },
+  );
   const { unknown, unexpectedWrites } = await installAiFixtures(product);
   await showcase.goto(
     `${showcaseOrigin}/?embedded=1&workspace=blog-admin&brand=blog-admin#${fixtureId}`,
@@ -455,6 +479,57 @@ for (const theme of ["light", "dark"]) {
     });
   }
 }
+
+test("AI Settings tab leads and section rhythm match Showcase", async ({
+  browser,
+}, testInfo) => {
+  const { context, showcase, product, unknown, unexpectedWrites } =
+    await openAiPair(
+      browser,
+      "blog-admin-ai-settings",
+      "/admin/ai-settings",
+      "light",
+      { width: 1440, height: 1000 },
+      { activeSudo: true },
+    );
+
+  for (const tab of [
+    "Agents",
+    "Skills",
+    "Tools",
+    "知识库",
+    "模型连接",
+    "Sandbox 连接器",
+  ]) {
+    await showcase.getByRole("tab", { name: tab, exact: true }).click();
+    await product.getByRole("tab", { name: tab, exact: true }).click();
+
+    const showcaseLead = showcase.locator('[data-pattern="tab-panel-lead"]');
+    const productLead = product.locator('[data-pattern="tab-panel-lead"]');
+    await expect(showcaseLead).toHaveCount(1);
+    await expect(productLead).toHaveCount(1);
+
+    const [showcaseFingerprint, productFingerprint] = await Promise.all([
+      tabPanelLeadFingerprint(showcaseLead),
+      tabPanelLeadFingerprint(productLead),
+    ]);
+    expect(productFingerprint).toEqual(showcaseFingerprint);
+    expect(productFingerprint.minHeight).toBe("36px");
+
+    await pairScreenshot(
+      showcase,
+      product,
+      `ai-settings-${tab.replaceAll(" ", "-")}`,
+      testInfo,
+    );
+  }
+
+  await expectNoHorizontalOverflow(showcase);
+  await expectNoHorizontalOverflow(product);
+  expect(unknown).toEqual([]);
+  expect(unexpectedWrites).toEqual([]);
+  await context.close();
+});
 
 test("AI Operations top-level panels, Recent Runs and Run Center match Showcase", async ({
   browser,
