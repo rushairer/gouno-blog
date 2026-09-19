@@ -452,7 +452,7 @@ export function AdvancedWorkspace({
                         <Text size="sm" tone="muted">
                           {agent.description}
                         </Text>
-                        <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2 xl:grid-cols-4">
+                        <div className="grid gap-2 type-caption text-muted-foreground sm:grid-cols-2 xl:grid-cols-4">
                           <span>
                             {labels.provider}:{" "}
                             {provider?.name ||
