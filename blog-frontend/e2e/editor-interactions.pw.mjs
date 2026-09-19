@@ -192,13 +192,17 @@ test("Category Slug suggestions regenerate, invalidate on edits and require expl
   const unknown = await openAdmin(page, "/admin/categories");
 
   await page.getByRole("button", { name: /编辑分类 Browser Acceptance Category/ }).click();
+  const slugInput = page.getByRole("textbox", {
+    name: "Slug 标识",
+    exact: true,
+  });
   await page.getByRole("button", { name: "AI 生成 Slug 建议" }).click();
   await expect(page.getByRole("radio", { name: "browser-category-1" })).toBeChecked();
   await page.getByRole("button", { name: "重新生成 AI 建议" }).click();
   await expect(page.getByRole("radio", { name: "browser-category-2" })).toBeChecked();
-  await expect(page.getByLabel("Slug 标识")).toHaveValue("browser-acceptance");
+  await expect(slugInput).toHaveValue("browser-acceptance");
   await page.getByRole("button", { name: "使用所选 Slug" }).click();
-  await expect(page.getByLabel("Slug 标识")).toHaveValue("browser-category-2");
+  await expect(slugInput).toHaveValue("browser-category-2");
 
   await page.getByRole("button", { name: "AI 生成 Slug 建议" }).click();
   await expect(page.getByRole("radio", { name: "browser-category-3" })).toBeVisible();
@@ -208,7 +212,7 @@ test("Category Slug suggestions regenerate, invalidate on edits and require expl
   await page.getByRole("button", { name: "取消" }).click();
   await page.getByRole("button", { name: /编辑分类 Browser Acceptance Category/ }).click();
   await expect(page.getByRole("radio")).toHaveCount(0);
-  await page.getByLabel("Slug 标识").fill("browser-category-saved");
+  await slugInput.fill("browser-category-saved");
   await page.getByRole("button", { name: "保存修改" }).click();
   await expect(page.locator('[data-slot="notification"]')).toContainText("分类已更新");
   await expectNoHorizontalOverflow(page);
