@@ -231,16 +231,19 @@ export function ProviderForm({
 
   return (
     <FormLayout onSubmit={submit}>
-      <div data-pattern="editor-form-composition" className="flex flex-col gap-5">
+      <div
+        data-pattern="editor-form-composition"
+        className="flex flex-col gap-5"
+      >
         {surface === "page" ? (
           <AISettingsEditorHeader
-          title={
-            initial
-              ? `${labels.editProvider}：${initial.name}`
-              : labels.createProvider
-          }
-          description="模型连接把供应商身份、协议、端点、模型和凭据收敛到一个可测试、可切换的连接配置。"
-          icon={<KeyRound />}
+            title={
+              initial
+                ? `${labels.editProvider}：${initial.name}`
+                : labels.createProvider
+            }
+            description="模型连接把供应商身份、协议、端点、模型和凭据收敛到一个可测试、可切换的连接配置。"
+            icon={<KeyRound />}
           />
         ) : null}
 
