@@ -417,7 +417,11 @@ export function ConnectorWorkspace({
         footer={
           editingProfile ? (
             <>
-              <Button variant="outline" type="button" onClick={closeProfileEditor}>
+              <Button
+                variant="outline"
+                type="button"
+                onClick={closeProfileEditor}
+              >
                 {zh ? "取消" : "Cancel"}
               </Button>
               <Button
@@ -509,7 +513,9 @@ export function ConnectorWorkspace({
                         <label className="inline-flex items-center gap-2 text-sm">
                           <Checkbox
                             checked={sandbox}
-                            onChange={(event) => setSandbox(event.target.checked)}
+                            onChange={(event) =>
+                              setSandbox(event.target.checked)
+                            }
                           />
                           {zh
                             ? "Sandbox（取消以启用只读 Google OAuth）"
