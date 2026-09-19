@@ -192,6 +192,21 @@ for (const [name, source] of sources) {
   if (!source.includes('label="打开主导航"')) {
     failures.push(`${name}: canonical mobile navigation trigger is required`);
   }
+  if (!source.includes("sticky top-0 layer-shell")) {
+    failures.push(`${name}: sticky public header must use the canonical semantic shell layer`);
+  }
+  if (/sticky top-0 z-\d+/.test(source)) {
+    failures.push(`${name}: raw z-index ownership is retired for the public shell header`);
+  }
+  if (
+    !source.includes("type-body-lg type-weight-semibold type-tracking-title") ||
+    !source.includes("type-caption text-muted-foreground")
+  ) {
+    failures.push(`${name}: PublicShell brand/footer typography must consume canonical semantic roles`);
+  }
+  if (/\b(?:text-lg|text-sm|text-xs|font-semibold|tracking-tight)\b/.test(source)) {
+    failures.push(`${name}: PublicShell must not recreate canonical typography with raw metric utilities`);
+  }
 }
 
 {
@@ -243,6 +258,21 @@ for (const [name, source] of sources) {
   if (/shadow-(?:sm|md|lg|xl|2xl)/.test(source)) {
     failures.push(`${name}: MarkdownRenderer must not recreate canonical code elevation`);
   }
+  if (!source.includes("edge-s-accent") || !source.includes("border-s-primary/40")) {
+    failures.push(`${name}: reading blockquotes must use the canonical logical-start accent edge`);
+  }
+  if (/border-l-4\b/.test(source)) {
+    failures.push(`${name}: physical left-border reading accents are retired`);
+  }
+  if (!importsFrom(file, "@gouno/ui/core", "Heading")) {
+    failures.push(`${name}: Markdown headings must use Core Heading semantic roles`);
+  }
+  if (/<h[1-6]\b/.test(source)) {
+    failures.push(`${name}: MarkdownRenderer must not recreate heading typography with raw heading elements`);
+  }
+  if (!source.includes("type-reading-body")) {
+    failures.push(`${name}: Markdown reading rhythm must use the canonical reading-body role`);
+  }
 }
 
 {
@@ -278,6 +308,18 @@ for (const [name, source] of sources) {
     failures.push(
       `${name}: comment loading/failure must be modeled separately from successful Empty state`,
     );
+  }
+  if (!source.includes("fixed inset-x-0 top-0 layer-shell h-1 bg-muted")) {
+    failures.push(`${name}: reading progress must use the canonical semantic shell layer`);
+  }
+  if (/fixed inset-x-0 top-0 z-\d+ h-1 bg-muted/.test(source)) {
+    failures.push(`${name}: reading progress must not own a raw global z-index`);
+  }
+  if (!importsFrom(file, "@gouno/ui/core", "Heading")) {
+    failures.push(`${name}: article section headings must use Core Heading`);
+  }
+  if (/<h[1-6]\b/.test(source)) {
+    failures.push(`${name}: Article Detail must not recreate canonical heading typography with raw h1-h6`);
   }
   if (!source.includes('aria-labelledby="article-community"')) {
     failures.push(`${name}: community must remain an explicit ground-level article section`);

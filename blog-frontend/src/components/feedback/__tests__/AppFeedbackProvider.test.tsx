@@ -34,8 +34,14 @@ describe("AppFeedbackProvider", () => {
 
     const region = container.querySelector('[data-slot="notification-region"]');
     expect(region).toBeInTheDocument();
-    expect(region).toHaveClass("right-4", "top-4", "z-[100]", "w-80", "gap-2");
-    expect(region).not.toHaveClass("bottom-4");
+    expect(region).toHaveClass(
+      "right-4",
+      "top-4",
+      "layer-notice",
+      "w-80",
+      "gap-2",
+    );
+    expect(region).not.toHaveClass("bottom-4", "z-[100]");
 
     const status = screen.getByRole("status");
     expect(status).toHaveTextContent("已保存");
