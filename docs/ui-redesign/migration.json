@@ -496,9 +496,11 @@
         "light",
         "dark"
       ],
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": [
+        "AI Settings canonical reverse migration: six governed collections, Dedicated Editor for Agent/Skill, contextual Drawer for model connection/Embedding, source parity gates and rendered/browser acceptance"
+      ]
     },
     {
       "id": "blog-admin:components/agent/AgentForm.tsx",
@@ -647,9 +649,11 @@
         "light",
         "dark"
       ],
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": [
+        "AI Settings canonical reverse migration: contextual Connector Drawer create/edit while preserving OAuth and Outbox behavior; source parity, unit and browser acceptance coverage"
+      ]
     },
     {
       "id": "blog-admin:components/agent/EmbeddingForm.tsx",
@@ -683,9 +687,11 @@
         "light",
         "dark"
       ],
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": [
+        "AI Settings canonical reverse migration: contextual Drawer form body with Drawer-owned footer submission; source parity and browser acceptance coverage"
+      ]
     },
     {
       "id": "blog-admin:components/agent/InboxWorkspace.tsx",
@@ -832,9 +838,11 @@
         "light",
         "dark"
       ],
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": [
+        "AI Settings canonical reverse migration: contextual model-connection Drawer form body with Drawer-owned footer submission; source parity and browser acceptance coverage"
+      ]
     },
     {
       "id": "blog-admin:components/agent/SkillForm.tsx",
@@ -4213,9 +4221,11 @@
         "/admin/ai-ops"
       ],
       "subview": "records:agent",
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": [
+        "AI Operations reverse migration: canonical run-center master/detail plus record-detail composition, source parity and responsive browser matrix coverage"
+      ]
     },
     {
       "id": "blog-admin:ai-workspaces:records:workflow",
@@ -4224,9 +4234,11 @@
         "/admin/ai-ops"
       ],
       "subview": "records:workflow",
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": [
+        "AI Operations reverse migration: canonical run-center master/detail plus record-detail composition, source parity and responsive browser matrix coverage"
+      ]
     },
     {
       "id": "blog-admin:ai-workspaces:advanced:agents",
@@ -4235,9 +4247,11 @@
         "/admin/ai-ops"
       ],
       "subview": "advanced:agents",
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": [
+        "AI Settings reverse migration: Agent collection plus Dedicated Editor task surface, settings composition gate and responsive browser matrix coverage"
+      ]
     },
     {
       "id": "blog-admin:ai-workspaces:advanced:skills",
@@ -4246,9 +4260,11 @@
         "/admin/ai-ops"
       ],
       "subview": "advanced:skills",
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": [
+        "AI Settings reverse migration: Skill collection plus Dedicated Editor task surface, settings composition gate and responsive browser matrix coverage"
+      ]
     },
     {
       "id": "blog-admin:ai-workspaces:advanced:tools",
@@ -4257,9 +4273,11 @@
         "/admin/ai-ops"
       ],
       "subview": "advanced:tools",
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": [
+        "AI Settings reverse migration: canonical settings composition, source parity gate and responsive browser matrix coverage"
+      ]
     },
     {
       "id": "blog-admin:ai-workspaces:advanced:knowledge",
@@ -4268,9 +4286,11 @@
         "/admin/ai-ops"
       ],
       "subview": "advanced:knowledge",
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": [
+        "AI Settings reverse migration: canonical knowledge composition plus contextual Embedding Drawer, source parity and responsive browser matrix coverage"
+      ]
     },
     {
       "id": "blog-admin:ai-workspaces:advanced:providers",
@@ -4279,9 +4299,11 @@
         "/admin/ai-ops"
       ],
       "subview": "advanced:providers",
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": [
+        "AI Settings reverse migration: canonical model-connection composition plus contextual Drawer, legacy deep-link acceptance and source parity coverage"
+      ]
     },
     {
       "id": "blog-admin:ai-workspaces:advanced:connectors",
@@ -4290,9 +4312,11 @@
         "/admin/ai-ops"
       ],
       "subview": "advanced:connectors",
-      "implementation": "not-started",
-      "verification": "not-run",
-      "evidence": []
+      "implementation": "migrated",
+      "verification": "verified",
+      "evidence": [
+        "AI Settings reverse migration: canonical Connector collection with contextual Drawer while preserving OAuth/Outbox behavior; source parity and browser coverage"
+      ]
     }
   ],
   "currentProgramStatus": {
