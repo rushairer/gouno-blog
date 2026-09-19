@@ -1,4 +1,3 @@
-import { X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { operationsApi } from "../../api/operations";
 import type { ArticleImagePreview } from "../../api/operations";
@@ -10,11 +9,12 @@ import type {
   WorkflowRun,
   WorkflowStepRun,
 } from "../../types/agent";
-import { Alert, Button, Empty, Modal, Select, Text } from "@gouno/ui/core";
+import { Alert, Empty, Modal, Select, Text } from "@gouno/ui/core";
 import { ArticlePreviewModal } from "./ArticlePreviewModal";
 import { StatusPill } from "./StatusPill";
 import { WorkflowRunDetail } from "./WorkflowRunDetail";
 import type { WorkflowRunDetailData } from "./WorkflowRunDetail";
+import { OperationsMeta, OperationsObjectRow } from "./OperationsPatterns";
 
 function duration(start?: string, finish?: string): string {
   if (!start) return "—";
@@ -603,7 +603,7 @@ export function WorkflowRunRecords({
   }, [filtered, inspect, loadingID, selected]);
 
   return (
-    <div className="workflow-records flex min-w-0 flex-col gap-5">
+    <div className="workflow-records flex min-w-0 flex-col gap-4">
       {error ? <Alert type="error" showIcon title={error} /> : null}
 
       <div className="grid gap-3 md:grid-cols-2">
@@ -670,33 +670,12 @@ export function WorkflowRunRecords({
             aria-label={zh ? "Workflow Runs" : "Workflow Runs"}
           >
             <div className="shrink-0 border-b px-[18px] py-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <strong className="text-sm">Workflow Runs</strong>
-                  <Text size="xs" tone="muted" className="mt-0.5">
-                    {filtered.length} {zh ? "条运行证据" : "run records"}
-                  </Text>
-                </div>
-                {workflowID !== 0 || statusFilter !== "all" ? (
-                  <Button
-                    variant="ghost"
-                    size="small"
-                    type="button"
-                    onClick={() => {
-                      setWorkflowID(0);
-                      setStatusFilter("all");
-                      setSelected(null);
-                      autoInspectedRunID.current = null;
-                      const url = new URL(window.location.href);
-                      url.searchParams.delete("run");
-                      window.history.replaceState(null, "", url);
-                    }}
-                    icon={<X />}
-                  >
-                    {zh ? "清除" : "Clear"}
-                  </Button>
-                ) : null}
-              </div>
+              <strong className="type-body-sm type-weight-semibold">
+                Workflow Runs
+              </strong>
+              <Text size="xs" tone="muted">
+                {filtered.length} {zh ? "条运行记录" : "run records"}
+              </Text>
             </div>
             <div
               role="list"
@@ -714,53 +693,45 @@ export function WorkflowRunRecords({
                       : "Manual";
                 return (
                   <div key={run.id} role="listitem">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      block
-                      aria-pressed={selected?.run.id === run.id}
-                      className={[
-                        "group h-auto items-stretch justify-start whitespace-normal rounded-none border-b edge-s-emphasis px-4 py-4 text-left last:border-b-0",
-                        selected?.run.id === run.id
-                          ? "border-s-primary bg-primary/[0.08] hover:bg-primary/[0.08]"
-                          : "border-s-transparent hover:bg-muted/45",
-                      ].join(" ")}
-                      disabled={loadingID === run.id}
-                      onClick={() => void inspect(run)}
-                    >
-                      <span className="flex w-full min-w-0 flex-col gap-1.5 text-left">
-                        <span className="flex min-w-0 items-start justify-between gap-3">
-                          <strong className="text-sm">Run #{run.id}</strong>
-                          <StatusPill status={run.status} locale={locale} />
-                        </span>
-                        <span className="text-xs leading-4 text-muted-foreground">
-                          {names.get(run.workflow_id) ||
-                            "Workflow #" + run.workflow_id}{" "}
-                          · v{run.workflow_version_id}
-                        </span>
-                        <span className="text-sm leading-5 text-foreground/80">
-                          {run.error_message ||
-                            (zh
-                              ? "查看本次执行证据。"
-                              : "Inspect this run's execution evidence.")}
-                        </span>
-                        <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                          <span>{runType}</span>
-                          <span>
+                    <OperationsObjectRow
+                      title={`Run #${run.id}`}
+                      status={
+                        <StatusPill status={run.status} locale={locale} />
+                      }
+                      meta={`${names.get(run.workflow_id) || `Workflow #${run.workflow_id}`} · v${run.workflow_version_id}`}
+                      summary={
+                        run.error_message ||
+                        (zh
+                          ? "查看本次执行证据。"
+                          : "Inspect this run's execution evidence.")
+                      }
+                      signals={
+                        <>
+                          <OperationsMeta>{runType}</OperationsMeta>
+                          <OperationsMeta>
                             {formatDateTime(run.started_at || run.created_at)}
-                          </span>
-                          <span>
+                          </OperationsMeta>
+                          <OperationsMeta>
                             {duration(run.started_at, run.finished_at)}
-                          </span>
-                          <span>
+                          </OperationsMeta>
+                          <OperationsMeta>
                             {(
-                              (run.input_tokens || 0) + (run.output_tokens || 0)
+                              (run.input_tokens || 0) +
+                              (run.output_tokens || 0)
                             ).toLocaleString()}{" "}
                             Token
-                          </span>
-                        </span>
-                      </span>
-                    </Button>
+                          </OperationsMeta>
+                        </>
+                      }
+                      selected={selected?.run.id === run.id}
+                      disabled={loadingID === run.id}
+                      onClick={() => void inspect(run)}
+                      ariaLabel={
+                        zh
+                          ? `查看 Workflow Run #${run.id}`
+                          : `Inspect Workflow Run #${run.id}`
+                      }
+                    />
                   </div>
                 );
               })}
