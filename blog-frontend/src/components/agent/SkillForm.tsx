@@ -134,16 +134,19 @@ export function SkillForm({
 
   return (
     <FormLayout onSubmit={submit}>
-      <div data-pattern="editor-form-composition" className="flex flex-col gap-5">
+      <div
+        data-pattern="editor-form-composition"
+        className="flex flex-col gap-5"
+      >
         {surface === "page" ? (
           <AISettingsEditorHeader
-          title={initial ? `${labels.title}：${initial.name}` : labels.title}
-          description={
-            locale === "zh"
-              ? "Skill Version 是行为与安全边界的不可变快照；固定指令、Tool 授权、发布策略和默认治理限制都在这里定义。"
-              : "A Skill Version is an immutable behavior and safety snapshot defining instructions, Tool authorization, publication policy, and governance defaults."
-          }
-          icon={<ListChecks />}
+            title={initial ? `${labels.title}：${initial.name}` : labels.title}
+            description={
+              locale === "zh"
+                ? "Skill Version 是行为与安全边界的不可变快照；固定指令、Tool 授权、发布策略和默认治理限制都在这里定义。"
+                : "A Skill Version is an immutable behavior and safety snapshot defining instructions, Tool authorization, publication policy, and governance defaults."
+            }
+            icon={<ListChecks />}
           />
         ) : null}
 
