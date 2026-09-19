@@ -557,10 +557,7 @@ export function WorkflowWorkspace({
   };
   if (editing)
     return (
-      <div
-        data-pattern="dedicated-list-editor"
-        className="flex flex-col gap-5"
-      >
+      <div data-pattern="dedicated-list-editor" className="flex flex-col gap-5">
         <DedicatedEditorLead
           title={
             editing === "new"
